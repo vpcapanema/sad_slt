@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel gestor — Admin SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/admin-painel-page.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+</head>
+<body class="painel-dashboard-page admin-data-page layout-with-sidebar page-admin-painel">
+  <div class="layout-with-sidebar-grid">
+    <header class="layout-sidebar-header">
+      <div class="layout-sidebar-header-inner">
+        <a href="../index.html" class="layout-sidebar-home-link" title="Página inicial">
+          <img
+            src="../assets/img/slt-icon.svg"
+            alt=""
+            class="sidebar-app-icon"
+            width="36"
+            height="36"
+          >
+          <div class="app-brand">
+            Apoio à Tomada de Decisão
+            <small>Painel do gestor</small>
+          </div>
+        </a>
+      </div>
+    </header>
+
+    <header class="app-header layout-main-header">
+      <div class="app-header-inner app-header-inner--nav-only">
+        <nav class="app-nav">
+          <a href="../index.html">Início</a>
+          <a href="../cadastro/">Cadastro</a>
+          <a href="../ahp/">AHP</a>
+          <a href="../painel/">Painel</a>
+          <a href="./" class="active">Admin</a>
+        </nav>
+      </div>
+    </header>
+
+    <aside class="layout-sidebar painel-dashboard-sidebar" aria-label="Projetos">
+      <div class="layout-sidebar-body">
+        <div class="nav-section painel-layers-section">
+          <nav class="sidebar-restricted-nav" aria-label="Área restrita">
+            <a href="index.html">Admin</a>
+            <a href="painel.html" class="is-active" aria-current="page">Painel gestor</a>
+            <a href="demandas.html">Demandas</a>
+            <a href="objetos.html">Objetos AHP</a>
+          </nav>
+          <div id="painel-layers-root" class="layer-group layer-group--root">
+            <button type="button" class="layer-group-header layer-group-header--section" id="toggle-projetos-section" aria-expanded="true" aria-controls="layers-container">
+              <span class="layer-group-toggle" aria-hidden="true">▼</span>
+              <span class="layer-group-name">Projetos</span>
+              <span id="projetos-count" class="layer-group-active-count"></span>
+            </button>
+            <div id="layers-container" class="layer-group-body layers-container" role="list" aria-label="Projetos"></div>
+            <p id="lista-vazia-projetos" class="layers-empty hint hidden">Nenhum projeto registrado.</p>
+          </div>
+        </div>
+      </div>
+      <footer class="layout-sidebar-footer">
+        Desenvolvido e implementado por
+        <strong>VPC-Geotecnologias e Websistemas</strong>
+      </footer>
+    </aside>
+
+    <div class="layout-main">
+      <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+
+      <main class="painel-dashboard-map" aria-label="Mapa de projetos">
+        <div id="map-painel"></div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="../assets/js/status-colors.js"></script>
+  <script src="../assets/js/admin-api.js"></script>
+  <script src="../assets/js/admin-auth.js"></script>
+  <script src="../assets/js/sigma-read.js"></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/admin-labels.js"></script>
+  <script src="../assets/js/admin-ui.js"></script>
+  <script src="painel.js"></script>
+</body>
+</html>

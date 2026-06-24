@@ -1,0 +1,343 @@
+/* Tema sidebar — alinhado ao PLI Smart Router (https://pli-smartrouter.56-125-163-194.sslip.io/) */
+
+.layout-with-sidebar {
+  --sb-primary: #003b5a;
+  --sb-secondary: #1c3d59;
+  --sb-green: #4ade80;
+  --sb-green-brand: #3ec26e;
+  --sb-text: #ffffff;
+  --sb-muted: rgba(255, 255, 255, 0.58);
+  --sb-border: rgba(255, 255, 255, 0.1);
+  --sb-border-light: rgba(255, 255, 255, 0.05);
+  --sb-surface: rgba(255, 255, 255, 0.08);
+  --sb-surface-hover: rgba(255, 255, 255, 0.12);
+  --sb-tabs-bg: rgba(255, 255, 255, 0.05);
+  /* Escala compacta — faixa superior e sidebar (proporcional ao app-header padrão) */
+  --sb-topbar-padding-y: 1rem;
+  --sb-topbar-padding-x: 1rem;
+  --sb-navbar-padding-y: 1rem;
+  --sb-navbar-padding-x: 1.5rem;
+  --sb-icon-size: 36px;
+  --sb-icon-radius: 9px;
+  --sb-brand-size: 0.88rem;
+  --sb-brand-small-size: 0.62rem;
+  --sb-layers-padding: 0.75rem 0.85rem;
+  --sb-layer-section-name: 0.72rem;
+  --sb-layer-toggle-size: 0.75rem;
+  --sb-layer-toggle-font: 0.52rem;
+  --sb-layer-count-size: 0.52rem;
+  --sb-layer-row-padding-y: 0.22rem;
+  --sb-layer-name-size: 0.68rem;
+  --sb-layers-font: 0.72rem;
+  --sb-layers-empty-size: 0.72rem;
+  --sb-record-name-size: 0.68rem;
+  --sb-record-padding-y: 0.22rem;
+  --sb-badge-size: 0.55rem;
+  --sb-nav-back-size: 0.72rem;
+}
+
+.layout-sidebar-header {
+  padding: var(--sb-topbar-padding-y) var(--sb-topbar-padding-x);
+  background: linear-gradient(135deg, var(--sb-primary) 0%, var(--sb-secondary) 100%);
+  color: var(--sb-text);
+  border-bottom: 1px solid var(--sb-border);
+}
+
+.layout-sidebar-header-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  text-align: left;
+}
+
+.layout-sidebar-home-link {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  flex: 1;
+  text-decoration: none;
+  color: inherit;
+}
+
+.layout-sidebar-home-link:hover .app-brand {
+  color: var(--sb-green);
+}
+
+.layout-sidebar-home-link:hover .app-brand small {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.sidebar-app-icon {
+  display: block;
+  width: var(--sb-icon-size);
+  height: var(--sb-icon-size);
+  margin: 0;
+  flex-shrink: 0;
+  border-radius: var(--sb-icon-radius);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+}
+
+.layout-sidebar,
+.layout-sidebar-body,
+.layout-with-sidebar .admin-dashboard-sidebar,
+.layout-with-sidebar .painel-dashboard-sidebar,
+.layout-with-sidebar .painel-layers-section {
+  background: var(--sb-primary);
+}
+
+.layout-sidebar {
+  color: var(--sb-text);
+  border-right: 1px solid var(--sb-border);
+}
+
+.layout-sidebar-body {
+  color: var(--sb-text);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+.layout-sidebar-header .app-brand {
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: var(--sb-brand-size);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--sb-green-brand);
+  line-height: 1.15;
+  width: 100%;
+  text-align: left;
+}
+
+.layout-sidebar-header .app-brand small {
+  display: block;
+  margin-top: 0.1rem;
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: var(--sb-brand-small-size);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+  opacity: 1;
+}
+
+.layout-sidebar-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.layout-sidebar-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.layout-sidebar-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.layout-sidebar-body:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.layout-with-sidebar .layers-empty {
+  color: var(--sb-muted);
+}
+
+.layout-with-sidebar .layers-empty a {
+  color: var(--sb-green);
+}
+
+.layout-with-sidebar .layers-empty a:hover {
+  color: var(--sb-green-brand);
+}
+
+/* Menu horizontal — área restrita (admin; não aparece no painel público) */
+.sidebar-restricted-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--sb-border-light);
+}
+
+.sidebar-restricted-nav a {
+  text-decoration: none;
+  color: var(--sb-muted);
+  font-size: var(--sb-nav-back-size);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.sidebar-restricted-nav a:hover {
+  color: var(--sb-green);
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-restricted-nav a.is-active {
+  color: var(--sb-green);
+  border-color: rgba(74, 222, 128, 0.35);
+  background: rgba(74, 222, 128, 0.12);
+}
+
+/* Nav de seções — análise de demanda / objeto AHP (estilo Camadas) */
+.admin-section-nav {
+  padding-top: 0.5rem;
+}
+
+.admin-section-nav .admin-dashboard-back {
+  display: inline-block;
+  margin-bottom: 0.55rem;
+  text-decoration: none;
+  color: var(--sb-muted);
+  font-size: var(--sb-nav-back-size);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.admin-section-nav .admin-dashboard-back:hover {
+  color: var(--sb-green);
+}
+
+.layout-sidebar-footer {
+  flex-shrink: 0;
+  padding: 0.65rem 0.85rem;
+  border-top: 1px solid var(--sb-border);
+  text-align: center;
+  font-size: 0.62rem;
+  line-height: 1.45;
+  color: var(--sb-muted);
+}
+
+.layout-sidebar-footer strong {
+  display: block;
+  margin-top: 0.15rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+  font-size: 0.65rem;
+  letter-spacing: 0.01em;
+}
+
+.admin-records-list {
+  gap: 0;
+}
+
+/* Registro individual (demanda / projeto) subordinado ao título da seção */
+.layer-group--record {
+  display: flex;
+  flex-direction: column;
+}
+
+.layer-group-header--record {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: var(--sb-record-padding-y) 0.25rem var(--sb-record-padding-y) calc(var(--layer-tree-x) + var(--layer-tree-branch));
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 0.25rem;
+  transition: background 0.12s ease;
+  text-align: left;
+}
+
+.layer-group-header--record::before {
+  content: "";
+  position: absolute;
+  left: var(--layer-tree-x);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.layer-group--record:last-child > .layer-group-header--record::before {
+  bottom: 50%;
+}
+
+.layer-group-header--record::after {
+  content: "";
+  position: absolute;
+  left: var(--layer-tree-x);
+  top: 50%;
+  width: var(--layer-tree-branch);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.layer-group-header--record:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.layer-group--record.is-selected > .layer-group-header--record {
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.layer-group--record.collapsed .layer-group-header--record .layer-group-toggle {
+  transform: rotate(-90deg);
+}
+
+.layer-group--record.collapsed .admin-record-sections {
+  display: none;
+}
+
+.layer-group-header--record .layer-group-name {
+  font-size: var(--sb-record-name-size);
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--sb-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.layer-group-header--record .badge-status {
+  flex-shrink: 0;
+  margin: 0;
+  max-width: 38%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--sb-badge-size);
+  padding: 0.06rem 0.28rem;
+}
+
+/* Seções do registro expandido (nível 2 da árvore) */
+.admin-record-sections {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.05rem;
+  padding-left: calc(var(--layer-tree-branch) + 0.15rem);
+  --layer-tree-x: calc(0.25rem + 0.45rem + var(--layer-tree-branch));
+}
+
+.admin-dashboard-nav a.layer-row {
+  text-decoration: none;
+  color: inherit;
+}
+
+.admin-dashboard-nav .layer-row.is-active {
+  background: rgba(74, 222, 128, 0.14);
+}
+
+@media (max-width: 900px) {
+  .layout-with-sidebar-grid > .layout-sidebar {
+    border-bottom-color: var(--sb-border);
+  }
+}

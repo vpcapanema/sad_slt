@@ -1,0 +1,964 @@
+{
+  "Dimensoes de Criterios": [
+    [
+      "#",
+      "Dimensao",
+      "N criterios",
+      "Justificativa (com referencia)"
+    ],
+    [
+      "1",
+      "Tecnica",
+      "7",
+      "Agrupa criterios de engenharia e operacao que medem a necessidade fisica de intervencao (demanda, saturacao, congestionamento, conservacao, geometria e maturidade). Justifica-se por ser a base da apreciacao de projetos rodoviarios na literatura tecnica consagrada, que separa desempenho operacional e condicao da infraestrutura como eixo proprio. Ref.: Highway Capacity Manual (TRB, 2016); HDM-4 (Banco Mundial/PIARC); AASHTO A Policy on Geometric Design (Green Book); UK DfT WebTAG."
+    ],
+    [
+      "2",
+      "Financeiro",
+      "6",
+      "Reune os criterios de custo e retorno monetario do investimento (Capex, Opex, B/C, alavancagem privada e custo logistico). O agrupamento separa a dimensao estritamente financeira da economica, conforme a analise custo-beneficio padrao em apreciacao de transportes, garantindo comparabilidade de eficiencia do gasto publico. Ref.: US DOT Benefit-Cost Analysis Guidance; HM Treasury Green Book (2022); HEATCO (UE, 2006); World Bank PPP Reference Guide v3."
+    ],
+    [
+      "3",
+      "Economica",
+      "8",
+      "Captura os impactos economicos amplos (wider economic impacts): emprego, producao, competitividade, tempos de viagem e desenvolvimento modal. Distingue-se do Financeiro por medir externalidades e ganhos sistemicos para a economia regional, e nao o fluxo de caixa do projeto. Ref.: UK DfT WebTAG (wider economic impacts); HEATCO (UE, 2006); Macharis & Bernardini (2015, Transport Policy 37:177-186)."
+    ],
+    [
+      "4",
+      "Social",
+      "6",
+      "Agrupa criterios de equidade e acesso (desigualdades regionais, populacao beneficiada, acessibilidade a servicos essenciais e comunidades isoladas). Justifica-se pela exigencia de avaliar impactos distributivos e de acessibilidade, separadamente da eficiencia, conforme a teoria de acessibilidade em uso do solo e transporte. Ref.: Geurs & van Wee (2004, J. Transport Geography 12:127-140); UK DfT WebTAG (Social & Distributional Impacts)."
+    ],
+    [
+      "5",
+      "Seguranca",
+      "4",
+      "Concentra a sinistralidade viaria (acidentes com vitimas, usuarios vulneraveis, cargas perigosas e pontos criticos). O agrupamento proprio decorre da natureza nao-compensatoria do criterio (vidas humanas) e do alinhamento ao Programa Vida no Transito e ao PNATRANS. Ref.: iRAP Star Ratings; UK DfT WebTAG (accidents); PNATRANS (Brasil)."
+    ],
+    [
+      "6",
+      "Ambiental",
+      "6",
+      "Reune emissoes de GEE, poluentes locais, eficiencia energetica, matriz modal, impacto sobre areas protegidas e licenciamento. O agrupamento responde a obrigacao legal de considerar mudancas climaticas e a sustentabilidade como pilar do PLI-SP 2050. Ref.: Lei Estadual 13.798/2009 (PEMC); GHG Protocol; IPCC; Lei 6.938/1981; Decreto 4.297/2002 (ZEE); Resolucao CONAMA 237/1997."
+    ],
+    [
+      "7",
+      "Territorial",
+      "6",
+      "Agrupa a relacao do projeto com o territorio e o uso do solo (conflitos urbanos, integracao intermodal, conexao inter-regional, planos diretores e polos geradores). Justifica-se pela necessidade de avaliar a insercao espacial e a coerencia com o ordenamento territorial. Ref.: Lei 10.257/2001 (Estatuto da Cidade); Highway Capacity Manual (TRB); ITE Trip Generation; Macharis & Bernardini (2015)."
+    ],
+    [
+      "8",
+      "Institucional",
+      "6",
+      "Reune a viabilidade institucional e juridica (complexidade, prazo, pendencias juridicas, alinhamento a planos, consenso entre atores e demanda social). O agrupamento decorre da abordagem multi-ator (MAMCA), que trata a legitimidade e a governanca como dimensao de avaliacao. Ref.: Macharis & Bernardini (2015) - MAMCA; HM Treasury Green Book (stage-gate); Lei 14.133/2021."
+    ],
+    [
+      "9",
+      "Risco",
+      "6",
+      "Concentra as incertezas que afetam a entrega do beneficio (resiliencia climatica, risco de demanda, de execucao, de desapropriacao, de interdependencia e socioambiental). Justifica-se pela evidencia de vies de otimismo e sobrecustos em grandes projetos, exigindo tratamento explicito do risco. Ref.: Flyvbjerg (2009, Oxford Review of Economic Policy 25(3):344-367); HM Treasury Green Book (optimism bias); World Bank ESF (2017); Convencao 169 OIT; Decreto-Lei 3.365/1941."
+    ]
+  ],
+  "Criterios": [
+    [
+      "Dimensao",
+      "#",
+      "Criterio",
+      "Relacao",
+      "Mandatorio"
+    ],
+    [
+      "Tecnica",
+      "1",
+      "VDM - Volume Diario Medio",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Tecnica",
+      "2",
+      "Nivel de Servico (NS) / Saturacao",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Tecnica",
+      "3",
+      "Congestionamento real (\"tempo lento\")",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Tecnica",
+      "4",
+      "Estado de conservacao do pavimento",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Tecnica",
+      "5",
+      "Deficiencia geometrica (rampas/alcas/raios)",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Tecnica",
+      "6",
+      "Prontidao/maturidade do projeto",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Tecnica",
+      "7",
+      "Trafego sazonal (fins de semana e feriados)",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Financeiro",
+      "1",
+      "Capex (custo de investimento)",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Financeiro",
+      "2",
+      "Opex (operacao e manutencao)",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Financeiro",
+      "3",
+      "Relacao Beneficio/Custo",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Financeiro",
+      "4",
+      "Potencial de financiamento privado/concessao",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Financeiro",
+      "5",
+      "Custos logisticos diferenciados (porto/corredor)",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Financeiro",
+      "6",
+      "Beneficio social na priorizacao",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "1",
+      "Empregos/producao envolvida",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "2",
+      "Competitividade da producao paulista",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "3",
+      "Reducao de tempos de viagem",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "4",
+      "Inducao de producao e emprego regional",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "5",
+      "Atendimento a cargas sem alternativa eficiente",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "6",
+      "Suporte a cadeias estrategicas (Pre-Sal/agro/sucro)",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "7",
+      "Participacao da hidrovia na matriz",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "8",
+      "Desenvolvimento ferroviario estadual",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Social",
+      "1",
+      "Reducao de desigualdades regionais",
+      "↑ Positiva",
+      "Sim"
+    ],
+    [
+      "Social",
+      "2",
+      "Populacao beneficiada",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Social",
+      "3",
+      "Equidade no acesso ao transporte",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Social",
+      "4",
+      "Acesso a servicos essenciais (saude/educacao)",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Social",
+      "5",
+      "Acessibilidade a polos (portos/aeroportos)",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Social",
+      "6",
+      "Atendimento a comunidades isoladas",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Seguranca",
+      "1",
+      "Acidentes com vitimas (gravidade)",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Seguranca",
+      "2",
+      "Acidentes com usuarios vulneraveis",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Seguranca",
+      "3",
+      "Transporte de cargas perigosas",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Seguranca",
+      "4",
+      "Concentracao de pontos criticos (\"black spots\")",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Ambiental",
+      "1",
+      "Reducao de emissoes de GEE",
+      "↓ Negativa",
+      "Sim"
+    ],
+    [
+      "Ambiental",
+      "2",
+      "Reducao de poluentes locais",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Ambiental",
+      "3",
+      "Eficiencia energetica",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Ambiental",
+      "4",
+      "Otimizacao da matriz modal",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Ambiental",
+      "5",
+      "Impacto sobre areas sensiveis/protegidas",
+      "↓ Negativa",
+      "Sim"
+    ],
+    [
+      "Ambiental",
+      "6",
+      "Complexidade do licenciamento ambiental",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Territorial",
+      "1",
+      "Conflito com trafego urbano/conurbacoes",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Territorial",
+      "2",
+      "Conflito com trafego urbano portuario",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Territorial",
+      "3",
+      "Integracao intermodal",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Territorial",
+      "4",
+      "Conexao inter-regional / vazios logisticos",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Territorial",
+      "5",
+      "Aderencia aos Planos Diretores municipais",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Territorial",
+      "6",
+      "Polos atratores/geradores de trafego",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Institucional",
+      "1",
+      "Nivel de complexidade",
+      "↓ Negativa",
+      "Sim"
+    ],
+    [
+      "Institucional",
+      "2",
+      "Prazo para implantacao",
+      "↓ Negativa",
+      "Sim"
+    ],
+    [
+      "Institucional",
+      "3",
+      "Pendencias juridicas/jurisdicionais",
+      "↓ Negativa",
+      "Sim"
+    ],
+    [
+      "Institucional",
+      "4",
+      "Alinhamento a planos (PPA/PEF/PAN/PNLT)",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Institucional",
+      "5",
+      "Consenso/apoio institucional dos atores",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Institucional",
+      "6",
+      "Demanda social/contribuicoes recebidas",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Risco",
+      "1",
+      "Resiliencia climatica (Blue Spot)",
+      "↑ Positiva",
+      "Nao"
+    ],
+    [
+      "Risco",
+      "2",
+      "Risco de demanda (incerteza de projecao)",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Risco",
+      "3",
+      "Risco de execucao (atrasos/sobrecustos)",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Risco",
+      "4",
+      "Risco de desapropriacao/interferencias",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Risco",
+      "5",
+      "Dependencia de pre-requisitos (interdependencia)",
+      "↓ Negativa",
+      "Nao"
+    ],
+    [
+      "Risco",
+      "6",
+      "Risco socioambiental (comunidades tradicionais)",
+      "↓ Negativa",
+      "Nao"
+    ]
+  ],
+  "Matriz de Criterios e Premissas": [
+    [
+      "Dimensao",
+      "Criterio",
+      "Premissa",
+      "Relacao",
+      "Metricas",
+      "Fonte",
+      "Mandatorio"
+    ],
+    [
+      "Tecnica",
+      "VDM - Volume Diario Medio",
+      "Demanda instalada indica saturacao atual e pressao por intervencao",
+      "↑ Positiva",
+      "veiculos/dia (VDM) / modelo gravitacional",
+      "[PPT s.30] WebTAG (UK DfT); HCM (TRB) - https://www.gov.uk/guidance/transport-analysis-guidance-tag",
+      "Nao"
+    ],
+    [
+      "Tecnica",
+      "Nivel de Servico (NS) / Saturacao",
+      "Trechos com NS E/F exigem intervencao prioritaria",
+      "↓ Negativa",
+      "NS A-F; % V/C ano base e futuro",
+      "[PPT s.30, 50] Highway Capacity Manual (TRB) - https://www.trb.org/Main/Blurbs/175169.aspx",
+      "Nao"
+    ],
+    [
+      "Tecnica",
+      "Congestionamento real (\"tempo lento\")",
+      "Lentidao em mapeamento web indica gargalo de capacidade real",
+      "↓ Negativa",
+      "minutos adicionais vs. fluxo livre / Google API",
+      "[PPT s.50, 51] WebTAG (UK DfT) - reliability - https://www.gov.uk/guidance/transport-analysis-guidance-tag",
+      "Nao"
+    ],
+    [
+      "Tecnica",
+      "Estado de conservacao do pavimento",
+      "Pavimento degradado eleva custo operacional e risco",
+      "↓ Negativa",
+      "IRI/PCI / idade do pavimento",
+      "[PROPOSTA] HDM-4 (Banco Mundial/PIARC); IRI ASTM E1926 - https://documents.worldbank.org/en/publication/documents-reports/documentdetail/793271468171847482",
+      "Nao"
+    ],
+    [
+      "Tecnica",
+      "Deficiencia geometrica (rampas/alcas/raios)",
+      "Geometria inadequada gera gargalo e acidente",
+      "↓ Negativa",
+      "% inclinacao; raio de curva (m); velocidade (km/h)",
+      "[PPT s.50, 51, 31] AASHTO Green Book; iRAP - https://irap.org/rap-tools/infrastructure-ratings/star-ratings/",
+      "Nao"
+    ],
+    [
+      "Tecnica",
+      "Prontidao/maturidade do projeto",
+      "Projeto mais maduro entrega beneficio antes",
+      "↑ Positiva",
+      "escala ideia->estudo->basico->executivo",
+      "[PROPOSTA] HM Treasury Green Book (stage-gate) - https://www.gov.uk/government/publications/the-green-book-appraisal-and-evaluation-in-central-government",
+      "Nao"
+    ],
+    [
+      "Tecnica",
+      "Trafego sazonal (fins de semana e feriados)",
+      "Picos sazonais estressam capacidade fora do dia util",
+      "↓ Negativa",
+      "VDM sazonal/VDM medio",
+      "[PPT s.50, 51] HCM (TRB) - https://www.trb.org/Main/Blurbs/175169.aspx",
+      "Nao"
+    ],
+    [
+      "Financeiro",
+      "Capex (custo de investimento)",
+      "Custo de implantacao menor libera recursos",
+      "↓ Negativa",
+      "R$ (custo total de investimento)",
+      "[PPT s.9, 30, 50] US DOT BCA Guidance; HEATCO (2006) - https://www.transportation.gov/mission/office-secretary/office-policy/transportation-policy/benefit-cost-analysis-guidance",
+      "Nao"
+    ],
+    [
+      "Financeiro",
+      "Opex (operacao e manutencao)",
+      "Sustentabilidade financeira de longo prazo",
+      "↓ Negativa",
+      "R$/ano",
+      "[PPT s.30] HDM-4 (custos de operacao); HEATCO (2006) - https://documents.worldbank.org/en/publication/documents-reports/documentdetail/793271468171847482",
+      "Nao"
+    ],
+    [
+      "Financeiro",
+      "Relacao Beneficio/Custo",
+      "Maior retorno por real investido",
+      "↑ Positiva",
+      "B/C; VPL; TIR",
+      "[PROPOSTA] HM Treasury Green Book; US DOT BCA; WebTAG (VfM) - https://www.gov.uk/government/publications/the-green-book-appraisal-and-evaluation-in-central-government",
+      "Nao"
+    ],
+    [
+      "Financeiro",
+      "Potencial de financiamento privado/concessao",
+      "Alavancar capital privado preserva o caixa publico",
+      "↑ Positiva",
+      "% alavancagem PPP/concessao",
+      "[PROPOSTA] World Bank PPP Reference Guide v3; Leis 8.987/1995 e 11.079/2004 - https://ppp.worldbank.org/sites/default/files/2024-08/PPP%20Reference%20Guide%20Version%203.pdf",
+      "Nao"
+    ],
+    [
+      "Financeiro",
+      "Custos logisticos diferenciados (porto/corredor)",
+      "Diferencial de custo influencia priorizacao",
+      "↓ Negativa",
+      "US$/ton (ex.: +US$5/ton soja Santos)",
+      "[PPT s.54] HEATCO (2006) - https://trimis.ec.europa.eu/project/developing-harmonised-european-approaches-transport-costing-and-project-assessment",
+      "Nao"
+    ],
+    [
+      "Financeiro",
+      "Beneficio social na priorizacao",
+      "Alinhar selecao ao maior beneficio social agregado",
+      "↑ Positiva",
+      "VPL social; B/C social",
+      "[PPT s.57] HM Treasury Green Book; US DOT BCA - https://www.gov.uk/government/publications/the-green-book-appraisal-and-evaluation-in-central-government",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "Empregos/producao envolvida",
+      "Projetos que impactam maior base produtiva tem prioridade",
+      "↑ Positiva",
+      "empregos; R$/ano de producao",
+      "[PPT s.30] WebTAG - wider economic impacts - https://www.gov.uk/guidance/transport-analysis-guidance-tag",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "Competitividade da producao paulista",
+      "Reduzir custo logistico mantem/amplia mercado",
+      "↑ Positiva",
+      "participacao de mercado; custo logistico total",
+      "[PPT s.14-20] WebTAG (UK DfT) - https://www.gov.uk/guidance/transport-analysis-guidance-tag",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "Reducao de tempos de viagem",
+      "Menos tempo = mais produtividade",
+      "↓ Negativa",
+      "min/km; tempo total OD",
+      "[PPT s.57] HEATCO (2006); WebTAG (VTTS) - https://trimis.ec.europa.eu/project/developing-harmonised-european-approaches-transport-costing-and-project-assessment",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "Inducao de producao e emprego regional",
+      "Infraestrutura induz desenvolvimento em regioes-alvo",
+      "↑ Positiva",
+      "empregos e PIB induzidos por regiao",
+      "[PPT s.14-20] WebTAG - wider economic impacts - https://www.gov.uk/guidance/transport-analysis-guidance-tag",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "Atendimento a cargas sem alternativa eficiente",
+      "Destravar cargas hoje marginalizadas",
+      "↑ Positiva",
+      "ton/ano de carga atendida",
+      "[PPT s.14-20] Macharis & Bernardini (2015) - https://trid.trb.org/view/1334470",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "Suporte a cadeias estrategicas (Pre-Sal/agro/sucro)",
+      "Viabilizar logistica de cadeias-chave do Estado",
+      "↑ Positiva",
+      "ton/ano movimentadas das cadeias-alvo",
+      "[PPT s.14-20, 39, 47] Macharis & Bernardini (2015) - https://trid.trb.org/view/1334470",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "Participacao da hidrovia na matriz",
+      "Aumentar papel da Tiete-Parana",
+      "↑ Positiva",
+      "% TKM hidroviario",
+      "[PPT s.57] Macharis & Bernardini (2015) - https://trid.trb.org/view/1334470",
+      "Nao"
+    ],
+    [
+      "Economica",
+      "Desenvolvimento ferroviario estadual",
+      "Viabilizar short lines; reduzir ociosidade",
+      "↑ Positiva",
+      "km de malha ativa; TKM ferroviario",
+      "[PPT s.57] Macharis & Bernardini (2015) - https://trid.trb.org/view/1334470",
+      "Nao"
+    ],
+    [
+      "Social",
+      "Reducao de desigualdades regionais",
+      "Investimento preferencial em regioes menos desenvolvidas",
+      "↑ Positiva",
+      "IDH regional; PIB per capita regional",
+      "[PPT s.3] WebTAG (Social & Distributional Impacts) - https://www.gov.uk/guidance/transport-analysis-guidance-tag",
+      "Sim"
+    ],
+    [
+      "Social",
+      "Populacao beneficiada",
+      "Mais pessoas atendidas = maior retorno social",
+      "↑ Positiva",
+      "habitantes na area de influencia",
+      "[PPT s.30] WebTAG (UK DfT) - https://www.gov.uk/guidance/transport-analysis-guidance-tag",
+      "Nao"
+    ],
+    [
+      "Social",
+      "Equidade no acesso ao transporte",
+      "Ampliar acesso a populacoes hoje subatendidas",
+      "↑ Positiva",
+      "% populacao atendida por servico publico",
+      "[PPT s.57] Geurs & van Wee (2004); WebTAG (accessibility) - https://research.utwente.nl/en/publications/accessibility-evaluation-of-land-use-and-transport-strategies-rev",
+      "Nao"
+    ],
+    [
+      "Social",
+      "Acesso a servicos essenciais (saude/educacao)",
+      "Conectar populacao a UBS, hospitais e escolas",
+      "↑ Positiva",
+      "pop. com acesso a servico essencial via projeto",
+      "[PPT s.36] Geurs & van Wee (2004) - https://research.utwente.nl/en/publications/accessibility-evaluation-of-land-use-and-transport-strategies-rev",
+      "Nao"
+    ],
+    [
+      "Social",
+      "Acessibilidade a polos (portos/aeroportos)",
+      "Melhorar acesso terrestre a Santos/Sao Sebastiao/Viracopos",
+      "↑ Positiva",
+      "tempo medio de acesso; NS do acesso",
+      "[PPT s.57] Geurs & van Wee (2004) - https://research.utwente.nl/en/publications/accessibility-evaluation-of-land-use-and-transport-strategies-rev",
+      "Nao"
+    ],
+    [
+      "Social",
+      "Atendimento a comunidades isoladas",
+      "Reduzir isolamento territorial de populacoes",
+      "↑ Positiva",
+      "n de comunidades conectadas",
+      "[PPT s.47] Geurs & van Wee (2004) - https://research.utwente.nl/en/publications/accessibility-evaluation-of-land-use-and-transport-strategies-rev",
+      "Nao"
+    ],
+    [
+      "Seguranca",
+      "Acidentes com vitimas (gravidade)",
+      "Reduzir mortes e feridos graves na rede",
+      "↓ Negativa",
+      "obitos + feridos graves/km (InfoSiga)",
+      "[PPT s.32, 50] iRAP; WebTAG (accidents) - https://irap.org/rap-tools/infrastructure-ratings/star-ratings/",
+      "Nao"
+    ],
+    [
+      "Seguranca",
+      "Acidentes com usuarios vulneraveis",
+      "Proteger pedestres, ciclistas e motociclistas",
+      "↓ Negativa",
+      "ocorrencias com vulneraveis/ano (InfoSiga)",
+      "[PPT s.32, 50] iRAP (vulnerable road users) - https://irap.org/rap-tools/infrastructure-ratings/star-ratings/",
+      "Nao"
+    ],
+    [
+      "Seguranca",
+      "Transporte de cargas perigosas",
+      "Mitigar risco antes/durante/pos-acidente",
+      "↓ Negativa",
+      "ocorrencias/ano; severidade",
+      "[PPT s.33, 50] iRAP - https://irap.org/rap-tools/infrastructure-ratings/star-ratings/",
+      "Nao"
+    ],
+    [
+      "Seguranca",
+      "Concentracao de pontos criticos (\"black spots\")",
+      "Trechos com cluster de acidentes exigem intervencao",
+      "↓ Negativa",
+      "densidade de acidentes/km",
+      "[PROPOSTA] iRAP; PNATRANS (Brasil) - https://irap.org/rap-tools/infrastructure-ratings/star-ratings/",
+      "Nao"
+    ],
+    [
+      "Ambiental",
+      "Reducao de emissoes de GEE",
+      "Diretriz da Politica Estadual de Mudancas Climaticas",
+      "↓ Negativa",
+      "tCO2eq/ano evitados",
+      "[PPT s.57] + Lei 13.798/2009; GHG Protocol; IPCC - https://www.al.sp.gov.br/repositorio/legislacao/lei/2009/lei-13798-09.11.2009.html",
+      "Sim"
+    ],
+    [
+      "Ambiental",
+      "Reducao de poluentes locais",
+      "Saude publica e qualidade do ar",
+      "↓ Negativa",
+      "g NOx/km; MP",
+      "[PPT s.57] HEATCO (2006); WebTAG (air quality) - https://trimis.ec.europa.eu/project/developing-harmonised-european-approaches-transport-costing-and-project-assessment",
+      "Nao"
+    ],
+    [
+      "Ambiental",
+      "Eficiencia energetica",
+      "Menos energia consumida por ton.km",
+      "↑ Positiva",
+      "MJ/ton.km evitados",
+      "[PPT s.57] IPCC - https://www.ipcc.ch/",
+      "Nao"
+    ],
+    [
+      "Ambiental",
+      "Otimizacao da matriz modal",
+      "Migracao para modais mais sustentaveis",
+      "↑ Positiva",
+      "% migracao rodoviario->ferroviario/hidroviario",
+      "[PPT s.57] Macharis & Bernardini (2015) - https://trid.trb.org/view/1334470",
+      "Nao"
+    ],
+    [
+      "Ambiental",
+      "Impacto sobre areas sensiveis/protegidas",
+      "Evitar dano a APP/UC e zona costeira",
+      "↓ Negativa",
+      "area protegida afetada; conflito com ZEE",
+      "[PPT s.40] Lei 6.938/1981; Decreto 4.297/2002 (ZEE) - https://www.planalto.gov.br/ccivil_03/decreto/2002/d4297.htm",
+      "Sim"
+    ],
+    [
+      "Ambiental",
+      "Complexidade do licenciamento ambiental",
+      "Passivo ambiental atrasa ou inviabiliza a execucao",
+      "↓ Negativa",
+      "grau/prazo do licenciamento",
+      "[PPT s.40] Resolucao CONAMA 237/1997 - https://conama.mma.gov.br/?option=com_sisconama&task=arquivo.download&id=237",
+      "Nao"
+    ],
+    [
+      "Territorial",
+      "Conflito com trafego urbano/conurbacoes",
+      "Conurbacao concentra conflito urbano-regional",
+      "↓ Negativa",
+      "horas de pico; indice de conflito",
+      "[PPT s.50, 51, 14-20] HCM (TRB) - https://www.trb.org/Main/Blurbs/175169.aspx",
+      "Nao"
+    ],
+    [
+      "Territorial",
+      "Conflito com trafego urbano portuario",
+      "Conflito urbano-portuario penaliza eficiencia",
+      "↓ Negativa",
+      "indice de interferencia urbana",
+      "[PPT s.14, 16, 18, 20] Macharis & Bernardini (2015) - https://trid.trb.org/view/1334470",
+      "Nao"
+    ],
+    [
+      "Territorial",
+      "Integracao intermodal",
+      "Conexao a portos/ferrovias/aeroportos amplia beneficio",
+      "↑ Positiva",
+      "n de conexoes modais",
+      "[PPT s.38, 14-20] Macharis & Bernardini (2015) - https://trid.trb.org/view/1334470",
+      "Nao"
+    ],
+    [
+      "Territorial",
+      "Conexao inter-regional / vazios logisticos",
+      "Integrar regioes hoje mal conectadas",
+      "↑ Positiva",
+      "novas ligacoes inter-regionais; freq.",
+      "[PPT s.57] Geurs & van Wee (2004) - https://research.utwente.nl/en/publications/accessibility-evaluation-of-land-use-and-transport-strategies-rev",
+      "Nao"
+    ],
+    [
+      "Territorial",
+      "Aderencia aos Planos Diretores municipais",
+      "Compatibilidade com uso do solo planejado",
+      "↑ Positiva",
+      "grau de compatibilidade",
+      "[PPT s.41] Lei 10.257/2001 (Estatuto da Cidade) - https://www.planalto.gov.br/ccivil_03/leis/leis_2001/l10257.htm",
+      "Nao"
+    ],
+    [
+      "Territorial",
+      "Polos atratores/geradores de trafego",
+      "Polos ampliam demanda local sobre a via",
+      "↑ Positiva",
+      "entradas/saidas de terminais/dia",
+      "[PPT s.50, 51] ITE Trip Generation; HCM (TRB) - https://www.trb.org/Main/Blurbs/175169.aspx",
+      "Nao"
+    ],
+    [
+      "Institucional",
+      "Nivel de complexidade",
+      "Projetos menos complexos entregam resultado mais rapido",
+      "↓ Negativa",
+      "escala qualitativa 1-5",
+      "[PPT s.3] HM Treasury Green Book - https://www.gov.uk/government/publications/the-green-book-appraisal-and-evaluation-in-central-government",
+      "Sim"
+    ],
+    [
+      "Institucional",
+      "Prazo para implantacao",
+      "Prazos curtos geram beneficio antes",
+      "↓ Negativa",
+      "meses ate operacao",
+      "[PPT s.3] HM Treasury Green Book - https://www.gov.uk/government/publications/the-green-book-appraisal-and-evaluation-in-central-government",
+      "Sim"
+    ],
+    [
+      "Institucional",
+      "Pendencias juridicas/jurisdicionais",
+      "Ausencia de impedimento viabiliza execucao",
+      "↓ Negativa",
+      "n pendencias; grau de risco juridico",
+      "[PPT s.3] Lei 14.133/2021 - https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2021/lei/l14133.htm",
+      "Sim"
+    ],
+    [
+      "Institucional",
+      "Alinhamento a planos (PPA/PEF/PAN/PNLT)",
+      "Coerencia com o planejamento vigente",
+      "↑ Positiva",
+      "grau de aderencia aos planos",
+      "[PPT s.9, 25, 38] Macharis & Bernardini (2015) - https://trid.trb.org/view/1334470",
+      "Nao"
+    ],
+    [
+      "Institucional",
+      "Consenso/apoio institucional dos atores",
+      "Convergencia entre atores facilita execucao",
+      "↑ Positiva",
+      "grau de consenso (atores s.58)",
+      "[PPT s.58] Macharis & Bernardini (2015) - MAMCA - https://trid.trb.org/view/1334470",
+      "Nao"
+    ],
+    [
+      "Institucional",
+      "Demanda social/contribuicoes recebidas",
+      "Legitimidade participativa na priorizacao",
+      "↑ Positiva",
+      "n de mencoes/contribuicoes",
+      "[PPT s.50] Macharis & Bernardini (2015) - multi-actor - https://trid.trb.org/view/1334470",
+      "Nao"
+    ],
+    [
+      "Risco",
+      "Resiliencia climatica (Blue Spot)",
+      "Reduzir risco de interrupcao por eventos extremos",
+      "↑ Positiva",
+      "% rede resiliente; n Blue Spots mitigados",
+      "[PPT s.47] (BID); IPCC (adaptacao) - https://www.ipcc.ch/",
+      "Nao"
+    ],
+    [
+      "Risco",
+      "Risco de demanda (incerteza de projecao)",
+      "Projecoes incertas elevam o risco do investimento",
+      "↓ Negativa",
+      "variancia/cenarios de demanda",
+      "[PPT s.38, 53] Flyvbjerg (2009); HM Treasury (optimism bias) - https://academic.oup.com/oxrep/article-abstract/25/3/344/424009",
+      "Nao"
+    ],
+    [
+      "Risco",
+      "Risco de execucao (atrasos/sobrecustos)",
+      "Historico de desvio de prazo/custo penaliza",
+      "↓ Negativa",
+      "desvio historico de prazo/custo",
+      "[PROPOSTA] Flyvbjerg (2009); HM Treasury Green Book - https://academic.oup.com/oxrep/article-abstract/25/3/344/424009",
+      "Nao"
+    ],
+    [
+      "Risco",
+      "Risco de desapropriacao/interferencias",
+      "Desapropriacoes e redes atrasam a obra",
+      "↓ Negativa",
+      "n de desapropriacoes; interferencias",
+      "[PROPOSTA] World Bank ESF (2017); Decreto-Lei 3.365/1941 - https://www.planalto.gov.br/ccivil_03/decreto-lei/del3365.htm",
+      "Nao"
+    ],
+    [
+      "Risco",
+      "Dependencia de pre-requisitos (interdependencia)",
+      "Projeto refem de predecessor tem risco maior",
+      "↓ Negativa",
+      "n de projetos predecessores",
+      "[PPT s.38] PMI PMBOK; HM Treasury Green Book - https://www.gov.uk/government/publications/the-green-book-appraisal-and-evaluation-in-central-government",
+      "Nao"
+    ],
+    [
+      "Risco",
+      "Risco socioambiental (comunidades tradicionais)",
+      "Presenca de quilombolas/indigenas exige cuidado redobrado",
+      "↓ Negativa",
+      "presenca/grau de conflito socioambiental",
+      "[PPT s.36] Convencao 169 OIT; Decreto 6.040/2007; World Bank ESS7 - https://www.ilo.org/pt-pt/resource/other/convencao-no-169-da-oit-sobre-povos-indigenas-e-tribais-traduzida-para",
+      "Nao"
+    ]
+  ]
+}

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cadastro de demandas — SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" crossorigin="">
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Apoio à Tomada de Decisão
+        <small>Cadastro de demandas</small>
+      </div>
+      <nav class="app-nav">
+        <a href="../index.html">Início</a>
+        <a href="./" class="active">Cadastro</a>
+        <a href="../ahp/">AHP</a>
+        <a href="../painel/">Painel</a>
+        <a href="../admin/">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section class="card">
+      <h2>Nova demanda</h2>
+      <p class="step-intro">
+        Siga os passos abaixo para registrar a demanda. Revise as informações no final antes de enviar.
+      </p>
+      <div id="cadastro-load-hint" class="field-help" aria-live="polite"></div>
+    </section>
+
+    <form id="form-cadastro" novalidate>
+      <!-- Passo 1 -->
+      <section class="card step-panel" data-step="1">
+        <h2>1. Contexto institucional</h2>
+        <p class="step-intro">Selecione a instituição demandante, a diretoria e o plano no qual a demanda se encaixa.</p>
+        <div class="form-grid">
+          <div class="full">
+            <label for="instituicao">Instituição demandante <span class="req">*</span></label>
+            <select id="instituicao" name="instituicao" required disabled>
+              <option value="">Carregando instituições…</option>
+            </select>
+            <p class="field-help">
+              Se a instituição não aparecer na lista,
+              <a href="http://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener">cadastre-a antes de continuar ↗</a>
+            </p>
+          </div>
+          <div class="full">
+            <label for="cnpj">CNPJ</label>
+            <input type="text" id="cnpj" name="cnpj" readonly placeholder="Selecione a instituição">
+          </div>
+          <div>
+            <label for="diretoria">Diretoria <span class="req">*</span></label>
+            <select id="diretoria" name="diretoria" required></select>
+            <div class="field-help-row">
+              <a class="link-catalogo" href="catalogo-diretorias.html" target="_blank" rel="noopener">
+                Consulte como escolher a diretoria ↗
+              </a>
+            </div>
+            <div id="hint-diretoria" class="context-hint hidden" aria-live="polite"></div>
+          </div>
+          <div>
+            <label for="plano">Plano <span class="req">*</span></label>
+            <select id="plano" name="plano" required disabled>
+              <option value="">Selecione a diretoria primeiro</option>
+            </select>
+            <div class="field-help-row">
+              <a class="link-catalogo" id="link-catalogo-planos" href="catalogo-planos.html" target="_blank" rel="noopener">
+                Consulte os planos PLI-SP 2050 e PEF-SP 2050 ↗
+              </a>
+            </div>
+            <div id="hint-plano" class="context-hint hidden" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary btn-next" data-next="2">Continuar</button>
+        </div>
+      </section>
+
+      <!-- Passo 2 -->
+      <section class="card step-panel hidden" data-step="2">
+        <h2>2. Projeto</h2>
+        <p class="step-intro">Informe os dados do projeto, selecione o representante legal e indique a localização geográfica.</p>
+
+        <div class="form-subsection">
+          <h3>2.1 Informações cadastrais</h3>
+          <p class="step-intro">Informe o nome e descreva brevemente o objetivo e o escopo da demanda.</p>
+          <div class="form-grid">
+            <div class="full">
+              <label for="nome">Nome do projeto <span class="req">*</span></label>
+              <input type="text" id="nome" name="nome" required maxlength="200" placeholder="Ex.: Duplicação BR-xxx trecho norte">
+            </div>
+            <div class="full">
+              <label for="descricao">Descrição</label>
+              <textarea id="descricao" name="descricao" placeholder="Objetivo, escopo resumido, justificativa…"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-subsection">
+          <h3>2.2 Representante legal</h3>
+          <p class="step-intro">Selecione quem responde legalmente pela demanda em nome da instituição.</p>
+          <div class="form-grid">
+            <div class="full">
+              <label for="representante">Representante <span class="req">*</span></label>
+              <select id="representante" name="representante" required disabled>
+                <option value="">Carregando pessoas…</option>
+              </select>
+            </div>
+            <div>
+              <label for="rep_email">E-mail</label>
+              <input type="email" id="rep_email" readonly tabindex="-1">
+            </div>
+            <div>
+              <label for="rep_telefone">Telefone</label>
+              <input type="text" id="rep_telefone" readonly tabindex="-1" inputmode="tel">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-subsection">
+          <h3>2.3 Localização geográfica</h3>
+          <p class="step-intro">Indique a localização por ponto ou perímetro e confira a latitude e a longitude informadas.</p>
+          <div class="form-grid">
+            <div class="full map-toolbar">
+              <button type="button" class="btn btn-ghost active" id="btn-modo-ponto">Ponto</button>
+              <button type="button" class="btn btn-ghost" id="btn-modo-perimetro">Perímetro</button>
+              <button type="button" class="btn btn-secondary" id="btn-limpar-mapa">Limpar</button>
+            </div>
+            <div>
+              <label for="lat">Latitude <span class="req">*</span></label>
+              <input type="number" id="lat" step="any" placeholder="-23.550520" required>
+            </div>
+            <div>
+              <label for="lng">Longitude <span class="req">*</span></label>
+              <input type="number" id="lng" step="any" placeholder="-46.633308" required>
+            </div>
+            <div class="full" id="bloco-ponto">
+              <div class="field-help-row">
+                <button type="button" class="btn btn-ghost" id="btn-apontar-mapa">Apontar no mapa</button>
+              </div>
+              <p class="field-help">Digite as coordenadas, clique no mapa ou use o botão acima para apontar o local.</p>
+            </div>
+            <div class="full hidden" id="bloco-perimetro">
+              <label for="upload-perimetro">Arquivo do perímetro</label>
+              <input type="file" id="upload-perimetro" accept=".zip,.gpkg,application/zip">
+              <p class="field-help">Envie um shapefile (.zip) ou GeoPackage (.gpkg). As coordenadas serão preenchidas automaticamente.</p>
+            </div>
+            <div class="full">
+              <div id="map"></div>
+              <p id="map-status" class="field-help">Localização ainda não definida.</p>
+              <p id="map-error" class="error-msg hidden"></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-prev" data-prev="1">Voltar</button>
+          <button type="button" class="btn btn-primary btn-next" data-next="3">Continuar</button>
+        </div>
+      </section>
+
+      <!-- Passo 3 -->
+      <section class="card step-panel hidden" data-step="3">
+        <h2>3. Classificação no plano</h2>
+        <p class="step-intro">Classifique a demanda de acordo com o plano selecionado no passo 1.</p>
+        <div id="classificacao-pli" class="hidden">
+          <label for="frente">Frente de atuação (PLI-SP) <span class="req">*</span></label>
+          <select id="frente" name="frente"></select>
+          <div class="field-help-row">
+            <a class="link-catalogo" href="catalogo-frentes-pli.html" target="_blank" rel="noopener">Consulte como escolher a frente PLI ↗</a>
+          </div>
+          <div id="hint-frente" class="context-hint hidden" aria-live="polite"></div>
+        </div>
+        <div id="classificacao-pef" class="hidden">
+          <label for="eixo">Eixo ferroviário (PEF-SP) <span class="req">*</span></label>
+          <select id="eixo" name="eixo"></select>
+          <div class="field-help-row">
+            <a class="link-catalogo" href="catalogo-eixos-pef.html" target="_blank" rel="noopener">Consulte como escolher o eixo PEF ↗</a>
+          </div>
+          <div id="hint-eixo" class="context-hint hidden" aria-live="polite"></div>
+          <div id="bloco-tic" class="hidden" style="margin-top: 1rem;">
+            <label for="corredor_tic">Corredor TIC (opcional)</label>
+            <select id="corredor_tic" name="corredor_tic">
+              <option value="">— Não especificado —</option>
+            </select>
+          </div>
+        </div>
+        <p id="classificacao-hint" class="hint">Selecione diretoria e plano no passo 1 para classificar a demanda.</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-prev" data-prev="2">Voltar</button>
+          <button type="button" class="btn btn-primary btn-next" data-next="4">Continuar</button>
+        </div>
+      </section>
+
+      <!-- Passo 4 -->
+      <section class="card step-panel hidden" data-step="4">
+        <div class="collapsible-hdr" id="toggle-complementos">
+          <h2>4. Complementos (opcionais)</h2>
+          <span aria-hidden="true">▼</span>
+        </div>
+        <p class="step-intro">Informe dados complementares, se aplicável.</p>
+        <div class="collapsible-body" id="complementos-body">
+          <div class="form-grid">
+            <div>
+              <label for="modal">Modal</label>
+              <select id="modal" name="modal"><option value="">— Opcional —</option></select>
+            </div>
+            <div>
+              <label for="tipologia">Tipologia de intervenção</label>
+              <select id="tipologia" name="tipologia"><option value="">— Opcional —</option></select>
+            </div>
+            <div class="full">
+              <label for="carteira">Carteira de projetos</label>
+              <select id="carteira" name="carteira"><option value="">— Opcional —</option></select>
+            </div>
+          </div>
+        </div>
+        <h2 style="margin-top: 1.25rem;">Revisão</h2>
+        <p class="step-intro">Confira os dados abaixo e clique em Enviar demanda para concluir o cadastro.</p>
+        <div id="review" class="review-box"></div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-prev" data-prev="3">Voltar</button>
+          <button type="submit" class="btn btn-primary">Enviar demanda</button>
+        </div>
+      </section>
+    </form>
+  </main>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js" crossorigin=""></script>
+  <script src="../assets/js/sigma-read.js"></script>
+  <script src="../assets/js/storage.js"></script>
+  <script src="../assets/js/demandas-api.js"></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="geometria.js"></script>
+  <script src="cadastro.js"></script>
+</body>
+</html>

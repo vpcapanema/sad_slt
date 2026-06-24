@@ -1,0 +1,377 @@
+{
+  "version": "1.0",
+  "gerado_de": "Catalogo_Hierarquico_SLT.xlsx",
+  "diretorias": [
+    {
+      "id": "DIR-PLAN",
+      "nome_oficial": "Diretoria de Planejamento de Logística e Transportes",
+      "descricao": "Planos, intermodalidade, estudos e financiamento de empreendimentos logísticos",
+      "decreto_ref": "Art. 36",
+      "ativo": "SIM"
+    },
+    {
+      "id": "DIR-GEST",
+      "nome_oficial": "Diretoria de Gestão de Transportes",
+      "descricao": "Operação, manutenção e conservação; hidrovia; travessias; convênios de delegação",
+      "decreto_ref": "Art. 37",
+      "ativo": "SIM"
+    },
+    {
+      "id": "DIR-INFRA",
+      "nome_oficial": "Diretoria de Infraestrutura de Transportes",
+      "descricao": "Obras, carteira de projetos, contratações, sistema georreferenciado de transportes",
+      "decreto_ref": "Art. 38",
+      "ativo": "SIM"
+    }
+  ],
+  "planos": [
+    {
+      "id": "PLANO-PLI",
+      "nome_oficial": "Plano de Logística e Investimentos do Estado de São Paulo",
+      "sigla": "PLI-SP 2050",
+      "diretoria_id": "DIR-PLAN",
+      "horizonte": "2050",
+      "descricao": "Plano estadual multimodal de logística e investimentos em transportes",
+      "classificacao_pos_projeto": "Frente de atuação",
+      "ativo": "SIM"
+    },
+    {
+      "id": "PLANO-PEF",
+      "nome_oficial": "Plano Estratégico Ferroviário do Estado de São Paulo",
+      "sigla": "PEF-SP 2050",
+      "diretoria_id": "DIR-PLAN",
+      "horizonte": "2050",
+      "descricao": "Plano setorial ferroviário articulado ao PLI-SP; passageiros, carga e malha ociosa",
+      "classificacao_pos_projeto": "Eixo ferroviário",
+      "ativo": "SIM"
+    }
+  ],
+  "frentes_pli": [
+    {
+      "id": "FRENTE-01",
+      "nome_oficial": "Polos de Desenvolvimento Regional",
+      "descricao": "Identificação e estruturação de áreas estratégicas para investimentos, empregos e dinamização regional.",
+      "plano_id": "PLANO-PLI",
+      "ativo": "SIM"
+    },
+    {
+      "id": "FRENTE-02",
+      "nome_oficial": "Ligação Planalto-Litoral",
+      "descricao": "Conexão interior–litoral; escoamento de cargas e acesso aos portos.",
+      "plano_id": "PLANO-PLI",
+      "ativo": "SIM"
+    },
+    {
+      "id": "FRENTE-03",
+      "nome_oficial": "Ramais Ferroviários",
+      "descricao": "Mapeamento, desenvolvimento e reativação de trechos ferroviários com potencial logístico.",
+      "plano_id": "PLANO-PLI",
+      "ativo": "SIM"
+    },
+    {
+      "id": "FRENTE-04",
+      "nome_oficial": "Transporte para Biocombustíveis",
+      "descricao": "Logística e infraestrutura associadas a biocombustíveis e dutovias.",
+      "plano_id": "PLANO-PLI",
+      "ativo": "SIM"
+    },
+    {
+      "id": "FRENTE-05",
+      "nome_oficial": "Ampliação de Hidrovias",
+      "descricao": "Expansão e modernização da navegação fluvial e da logística hidroviária.",
+      "plano_id": "PLANO-PLI",
+      "ativo": "SIM"
+    },
+    {
+      "id": "FRENTE-06",
+      "nome_oficial": "Mobilidade Paulista",
+      "descricao": "Mobilidade e integração territorial com inclusão social e sustentabilidade.",
+      "plano_id": "PLANO-PLI",
+      "ativo": "SIM"
+    }
+  ],
+  "eixos_pef": [
+    {
+      "id": "EIXO-PEF-01",
+      "nome_oficial": "Reativação de Malha Ociosa e Ramais",
+      "descricao": "Recuperação e reativação de trechos ferroviários abandonados ou subutilizados no Estado.",
+      "plano_id": "PLANO-PEF",
+      "ativo": "SIM"
+    },
+    {
+      "id": "EIXO-PEF-02",
+      "nome_oficial": "Trens Intercidades",
+      "descricao": "Corredores de passageiros inter-regionais sobre trilhos (TIC), integrando polos metropolitanos e interior.",
+      "plano_id": "PLANO-PEF",
+      "ativo": "SIM"
+    },
+    {
+      "id": "EIXO-PEF-03",
+      "nome_oficial": "Carga Ferroviária e Expresso Carga",
+      "descricao": "Transporte de cargas por ferrovia, integração caminhão–trem e terminais de transferência.",
+      "plano_id": "PLANO-PEF",
+      "ativo": "SIM"
+    },
+    {
+      "id": "EIXO-PEF-04",
+      "nome_oficial": "Anel Metropolitano Ferroviário",
+      "descricao": "Integração ferroviária metropolitana e corredores de ligação radial–metropolitana.",
+      "plano_id": "PLANO-PEF",
+      "ativo": "SIM"
+    },
+    {
+      "id": "EIXO-PEF-05",
+      "nome_oficial": "Terminais e Interfaces Intermodais",
+      "descricao": "Terminais ferroviários, intercambio modal e plataformas logísticas sobre trilhos.",
+      "plano_id": "PLANO-PEF",
+      "ativo": "SIM"
+    },
+    {
+      "id": "EIXO-PEF-06",
+      "nome_oficial": "Shortlines e Ferrovias Regionais",
+      "descricao": "Linhas de trajeto curto, autorizações ferroviárias e operações regionais (marco PL ferrovias SP).",
+      "plano_id": "PLANO-PEF",
+      "ativo": "SIM"
+    },
+    {
+      "id": "EIXO-PEF-07",
+      "nome_oficial": "Novos Corredores Ferroviários",
+      "descricao": "Expansão greenfield e novos traçados ferroviários de longo prazo.",
+      "plano_id": "PLANO-PEF",
+      "ativo": "SIM"
+    }
+  ],
+  "corredores_tic": [
+    {
+      "id": "TIC-NORTE",
+      "nome_oficial": "Trem Intercidades São Paulo–Campinas (Eixo Norte)",
+      "eixo_pef_id": "EIXO-PEF-02",
+      "descricao": "Ligação capital–Campinas e eixo norte",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIC-LESTE",
+      "nome_oficial": "Trem Intercidades São Paulo–Sorocaba (Eixo Leste)",
+      "eixo_pef_id": "EIXO-PEF-02",
+      "descricao": "Ligação capital–Sorocaba",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIC-SUL",
+      "nome_oficial": "Trem Intercidades São Paulo–Santos (Eixo Sul)",
+      "eixo_pef_id": "EIXO-PEF-02",
+      "descricao": "Ligação capital–litoral / porto",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIC-OESTE",
+      "nome_oficial": "Trem Intercidades São Paulo–São José dos Campos (Eixo Oeste)",
+      "eixo_pef_id": "EIXO-PEF-02",
+      "descricao": "Ligação capital–Vale do Paraíba",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIC-MAR-SOR",
+      "nome_oficial": "Trem Intercidades Marília–Sorocaba",
+      "eixo_pef_id": "EIXO-PEF-02",
+      "descricao": "Corredor interior oeste",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIC-SOR-CAM",
+      "nome_oficial": "Trem Intercidades Sorocaba–Campinas",
+      "eixo_pef_id": "EIXO-PEF-02",
+      "descricao": "Corredor interior central",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIC-CAM-RIB",
+      "nome_oficial": "Trem Intercidades Campinas–Ribeirão Preto",
+      "eixo_pef_id": "EIXO-PEF-02",
+      "descricao": "Corredor noroeste paulista",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIC-RIB-FRA",
+      "nome_oficial": "Trem Intercidades Ribeirão Preto–Franca",
+      "eixo_pef_id": "EIXO-PEF-02",
+      "descricao": "Extensão noroeste",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIC-SAN-CAJ",
+      "nome_oficial": "Trem Intercidades Santos–Cajati",
+      "eixo_pef_id": "EIXO-PEF-02",
+      "descricao": "Ligação litoral–serra",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIC-CAM-ARA",
+      "nome_oficial": "Trem Intercidades Campinas–Araraquara",
+      "eixo_pef_id": "EIXO-PEF-02",
+      "descricao": "Corredor leste interior",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIC-SJC-TAU",
+      "nome_oficial": "Trem Intercidades São José dos Campos–Taubaté",
+      "eixo_pef_id": "EIXO-PEF-02",
+      "descricao": "Corredor Vale do Paraíba",
+      "ativo": "SIM"
+    }
+  ],
+  "modais": [
+    {
+      "id": "MOD-RODO",
+      "nome": "Rodoviário",
+      "descricao": "Rodovias, acessos, contornos, duplicações",
+      "ativo": "SIM"
+    },
+    {
+      "id": "MOD-FERR",
+      "nome": "Ferroviário",
+      "descricao": "Malha ferroviária, terminais, ramais",
+      "ativo": "SIM"
+    },
+    {
+      "id": "MOD-HIDR",
+      "nome": "Hidroviário",
+      "descricao": "Hidrovias e terminais fluviais",
+      "ativo": "SIM"
+    },
+    {
+      "id": "MOD-PORT",
+      "nome": "Portuário",
+      "descricao": "Portos e acessos portuários",
+      "ativo": "SIM"
+    },
+    {
+      "id": "MOD-AERO",
+      "nome": "Aeroportuário",
+      "descricao": "Aeroportos e integração logística aérea",
+      "ativo": "SIM"
+    },
+    {
+      "id": "MOD-INTER",
+      "nome": "Intermodal",
+      "descricao": "Terminais e elos multimodais",
+      "ativo": "SIM"
+    }
+  ],
+  "tipologias": [
+    {
+      "id": "TIP-OBRA",
+      "nome": "Obra de infraestrutura",
+      "descricao": "Construção ou ampliação física",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIP-DUP",
+      "nome": "Duplicação / melhoria viária",
+      "descricao": "Duplicação, faixas, contornos rodoviários",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIP-REAT",
+      "nome": "Reativação ferroviária",
+      "descricao": "Recuperação e retomada de operação sobre trilhos",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIP-TERM",
+      "nome": "Terminal intermodal",
+      "descricao": "Terminal de cargas, passageiros ou transferência modal",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIP-HIDR",
+      "nome": "Intervenção hidroviária",
+      "descricao": "Dragagem, eclusas, estruturas de apoio à navegação",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIP-PORT",
+      "nome": "Intervenção portuária",
+      "descricao": "Berços, acessos, infraestrutura portuária",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIP-EST",
+      "nome": "Estudo e projeto",
+      "descricao": "Estudo de viabilidade, plano básico, projeto executivo",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIP-CONS",
+      "nome": "Conservação e operação",
+      "descricao": "Manutenção, conservação especial, operação",
+      "ativo": "SIM"
+    },
+    {
+      "id": "TIP-DIG",
+      "nome": "Plataforma e dados",
+      "descricao": "Sistemas, automação, geoinformação",
+      "ativo": "SIM"
+    }
+  ],
+  "carteiras": [
+    {
+      "id": "CART-PLI-2026",
+      "nome": "Carteira PLI-SP 2026",
+      "plano_id": "PLANO-PLI",
+      "referencia": "Ciclo corrente de priorização PLI",
+      "ativo": "SIM"
+    },
+    {
+      "id": "CART-PEF-2026",
+      "nome": "Carteira PEF-SP 2026",
+      "plano_id": "PLANO-PEF",
+      "referencia": "Ciclo corrente de priorização ferroviária",
+      "ativo": "SIM"
+    }
+  ],
+  "entidades": [
+    {
+      "id": "DEM-DER",
+      "nome": "Departamento de Estradas de Rodagem (DER-SP)",
+      "tipo": "Estadual",
+      "ativo": "SIM"
+    },
+    {
+      "id": "DEM-CPTM",
+      "nome": "CPTM",
+      "tipo": "Estadual",
+      "ativo": "SIM"
+    },
+    {
+      "id": "DEM-CDSS",
+      "nome": "Companhia Docas de São Sebastião",
+      "tipo": "Estadual",
+      "ativo": "SIM"
+    },
+    {
+      "id": "DEM-MUN",
+      "nome": "Município / consórcio intermunicipal",
+      "tipo": "Municipal",
+      "ativo": "SIM"
+    },
+    {
+      "id": "DEM-PRIV",
+      "nome": "Setor privado / concessionária",
+      "tipo": "Privado",
+      "ativo": "SIM"
+    },
+    {
+      "id": "DEM-OUT-SEC",
+      "nome": "Outra secretaria estadual",
+      "tipo": "Estadual",
+      "ativo": "SIM"
+    },
+    {
+      "id": "DEM-OUT",
+      "nome": "Outra entidade",
+      "tipo": "Outro",
+      "ativo": "SIM"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+@import url("sidebar-layout.css");
+@import url("painel-layers.css");
+@import url("admin-analysis-layout.css");
+
+/* Admin — análise de objeto AHP */
+
+body.page-admin-objeto {
+  background: var(--pli-bg);
+}
+
+.page-admin-objeto .layout-with-sidebar .admin-dashboard-sidebar {
+  border-right: none;
+  min-height: 0;
+}
+
+.page-admin-objeto .layout-sidebar-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}

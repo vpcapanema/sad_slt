@@ -1,0 +1,9 @@
+@import url("sidebar-layout.css");
+@import url("painel-shared.css");
+@import url("painel-layers.css");
+
+/* Painel gestor — mapa unificado de projetos */
+
+.page-admin-painel .layout-main .admin-session-bar {
+  border-bottom: 1px solid var(--pli-border);
+}

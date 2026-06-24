@@ -1,0 +1,20 @@
+@import url("sidebar-layout.css");
+@import url("painel-layers.css");
+@import url("admin-analysis-layout.css");
+
+/* Admin — análise de demanda */
+
+body.page-admin-demanda {
+  background: var(--pli-bg);
+}
+
+.page-admin-demanda .layout-with-sidebar .admin-dashboard-sidebar {
+  border-right: none;
+  min-height: 0;
+}
+
+.page-admin-demanda .layout-sidebar-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}

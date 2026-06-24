@@ -1,0 +1,28 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "SLT — Aplicação Web"
+    }
+  ],
+  "settings": {
+    "python.terminal.useEnvFile": true,
+    "python.analysis.extraPaths": ["${workspaceFolder}"],
+    "sqltools.useNodeRuntime": true,
+    "djlint.showInstallError": false,
+    "files.associations": {
+      "*.session.sql": "sql"
+    },
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/*.pyc": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "mtxr.sqltools",
+      "mtxr.sqltools-driver-pg",
+      "ms-python.python"
+    ]
+  }
+}

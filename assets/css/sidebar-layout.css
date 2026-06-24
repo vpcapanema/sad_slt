@@ -1,0 +1,136 @@
+/* Estrutura compartilhada: grid sidebar + cabeçalho alinhado (importado pelas páginas com sidebar) */
+@import url("sidebar-theme.css");
+
+body.layout-with-sidebar {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.layout-with-sidebar-grid {
+  display: grid;
+  grid-template-columns: min(400px, 38vw) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100vh;
+  min-height: 0;
+}
+
+.layout-with-sidebar-grid--narrow {
+  grid-template-columns: min(280px, 34vw) minmax(0, 1fr);
+}
+
+.layout-sidebar-header {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.layout-main-header {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+}
+
+.layout-with-sidebar .layout-main-header.app-header {
+  padding: var(--sb-navbar-padding-y) var(--sb-navbar-padding-x);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.layout-with-sidebar-grid > .layout-sidebar {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.layout-with-sidebar-grid > .layout-main {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.layout-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.layout-sidebar-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.layout-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: var(--pli-bg);
+}
+
+.layout-with-sidebar .layout-main-header .app-header-inner {
+  max-width: none;
+  margin: 0;
+  width: 100%;
+}
+
+.layout-with-sidebar .layout-main-header .app-header-inner--nav-only {
+  justify-content: flex-end;
+}
+
+.layout-with-sidebar .layout-main .admin-session-bar {
+  flex-shrink: 0;
+}
+
+.layout-main-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+  body.layout-with-sidebar {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  .layout-with-sidebar-grid,
+  .layout-with-sidebar-grid--narrow {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .layout-sidebar-header {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .layout-main-header {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .layout-with-sidebar-grid > .layout-sidebar {
+    grid-column: 1;
+    grid-row: 3;
+    min-height: 0;
+    max-height: none;
+    border-right: none;
+  }
+
+  .layout-with-sidebar-grid > .layout-main {
+    grid-column: 1;
+    grid-row: 4;
+    min-height: 0;
+  }
+
+  .layout-sidebar-body {
+    max-height: 38vh;
+  }
+}

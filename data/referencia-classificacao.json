@@ -1,0 +1,356 @@
+{
+  "versao": "1.0",
+  "atualizado": "2026-06-17",
+  "intro_pli": {
+    "titulo": "Frentes de atuação do PLI-SP 2050",
+    "sintese": "As seis frentes organizam a estratégia multimodal do PLI-SP. Cada frente agrupa desafios territoriais e tipos de intervenção que o plano trata como prioritários. Ao cadastrar um projeto no PLI, a frente correta é o enquadramento que orienta comparação com pares na hierarquização AHP — demandas de frentes distintas não devem ser comparadas diretamente sem critério de compatibilidade.",
+    "criterio_escolha": "Pergunte: qual desafio logístico ou territorial principal o projeto resolve? Se envolve mais de uma frente, escolha aquela que define o objetivo dominante e registre complementos no passo 4 (modal, tipologia).",
+    "fontes": [
+      { "titulo": "PLI-SP — Frentes de atuação", "url": "https://pli.semil.sp.gov.br/frentes-de-atucao/" },
+      { "titulo": "PLI-SP — Sobre o plano", "url": "https://pli.semil.sp.gov.br/sobre-o-pli-2050/" }
+    ]
+  },
+  "frentes_pli": [
+    {
+      "id": "FRENTE-01",
+      "nome": "Polos de Desenvolvimento Regional",
+      "descricao_oficial": "Identificação e estruturação de áreas estratégicas para atrair investimentos, gerar empregos e dinamizar a economia nas diferentes regiões do estado.",
+      "contexto": "São Paulo tem desequilíbrios marcantes entre a macro-metrópole e o interior. Polos regionais concentram indústria, agronegócio e serviços, mas dependem de infraestrutura logística adequada para competir. Esta frente trata de qualificar territórios — não apenas um trecho isolado — como plataformas de investimento.",
+      "desafios": [
+        "Deficiência de conectividade multimodal em cidades médias e polos interioranos.",
+        "Gargalos de acesso a polos industriais, agrícolas e turísticos regionais.",
+        "Necessidade de integrar planejamento urbano-regional com corredores logísticos.",
+        "Capacidade limitada de atrair investimento privado sem infraestrutura base."
+      ],
+      "modais_enfatizados": ["Rodoviário", "Ferroviário", "Intermodal", "Aeroportuário (acesso regional)"],
+      "cadastre_quando": [
+        "O projeto estrutura ou qualifica um polo territorial (industrial, agro, turismo, distribuição).",
+        "Envolve distrito logístico, hub regional ou pacote integrado de acessos a uma área estratégica.",
+        "A justificativa principal é desenvolvimento regional, emprego e atração de investimento — não apenas duplicar rodovia genérica.",
+        "Integra múltiplas intervenções coordenadas em torno de um território definido."
+      ],
+      "nao_cadastre_quando": [
+        "É apenas ligação planalto–litoral para escoamento portuário — use Frente 02.",
+        "É exclusivamente hidrovia ou dragagem fluvial — use Frente 05.",
+        "É corredor ferroviário intercity ou TIC — use PEF-SP (Eixo TIC)."
+      ],
+      "exemplos_demandas": [
+        "Distrito logístico em polo agroindustrial do noroeste paulista.",
+        "Integração aeroporto–rodovia–terminal de cargas em cidade média.",
+        "Plano de acessos multimodais a complexo industrial regional.",
+        "Estudo de viabilidade de hub de distribuição e-commerce regional."
+      ],
+      "regioes_tipicas": ["Macro Ribeirão Preto", "Macro Sorocaba", "Macro Bauru", "Vale do Paraíba (polo interior)", "Triângulo Mineiro paulista"]
+    },
+    {
+      "id": "FRENTE-02",
+      "nome": "Ligação Planalto-Litoral",
+      "descricao_oficial": "Qualificar a conexão interior–litoral, assegurando eficiência no escoamento de cargas e no acesso aos portos.",
+      "contexto": "O escoamento interior–porto é gargalo estrutural de SP: produção no planalto (Oeste, Norte, Centro) depende de corredores rodoviários congestionados (BRs, SPs) para Santos e São Sebastião. A frente trata da conexão sistemática planalto–litoral, incluindo modais alternativos.",
+      "desafios": [
+        "Congestionamento crônico em corredores de exportação (soja, açúcar, celulose, containers).",
+        "Dependência rodoviária para acesso portuário.",
+        "Desnível altimétrico Serra do Mar e vulnerabilidade climática.",
+        "Integração porto–ferrovia–hidrovia ainda insuficiente."
+      ],
+      "modais_enfatizados": ["Rodoviário", "Ferroviário", "Portuário", "Intermodal"],
+      "cadastre_quando": [
+        "O projeto melhora escoamento de cargas ou passageiros entre interior paulista e litoral/portos.",
+        "Trata de acesso ao Porto de Santos, São Sebastião ou corredores de serra.",
+        "Articula planalto com terminal portuário ou zona de transferência de cargas.",
+        "Reduz gargalo conhecido de exportação/importação via litoral sul/sudeste."
+      ],
+      "nao_cadastre_quando": [
+        "É mobilidade urbana metropolitana sem interface exportação — Frente 06.",
+        "É hidrovia fluvial sem foco planalto–litoral — Frente 05.",
+        "É TIC ou passageiros inter-regionais sobre trilhos — PEF Eixo 02."
+      ],
+      "exemplos_demandas": [
+        "Duplicação ou contorno rodoviário em corredor de escoamento portuário.",
+        "Terminal de transbordo rodoviário–ferroviário orientado a grãos.",
+        "Acesso logístico ao Porto de Santos / CDSS.",
+        "Estudo de corredor multimodal planalto–litoral via Serra do Mar."
+      ],
+      "regioes_tipicas": ["Oeste paulista → Santos", "Norte/Centro → Santos", "Vale do Paraíba → litoral", "Ribeirão Preto/Catanduva → porto"]
+    },
+    {
+      "id": "FRENTE-03",
+      "nome": "Ramais Ferroviários",
+      "descricao_oficial": "Mapeamento, desenvolvimento e reativação de trechos ferroviários com potencial logístico.",
+      "contexto": "SP possui extensa malha ferroviária histórica, com ramais industriais, trechos ociosos e potencial para carga de médio fluxo. No PLI, a frente enfatiza o papel dos ramais na logística multimodal — no PEF-SP o tema também aparece com foco setorial ferroviário.",
+      "desafios": [
+        "Ramais abandonados ou subutilizados próximos a polos produtivos.",
+        "Desconexão entre industria/planta e malha ferroviária principal.",
+        "Incerteza jurídica e patrimonial sobre faixas de domínio.",
+        "Necessidade de estudos de tráfego e modelagem operacional antes de investimento."
+      ],
+      "modais_enfatizados": ["Ferroviário", "Intermodal"],
+      "cadastre_quando": [
+        "Demanda sobre ramal existente, ocioso ou industrial — reativação, modernização ou extensão curta.",
+        "Conexão fábrica/porto secundário–malha principal por trilho.",
+        "Estudo de viabilidade logística de ramal no contexto PLI multimodal."
+      ],
+      "nao_cadastre_quando": [
+        "É corredor TIC de passageiros intercity — PEF Eixo 02.",
+        "É greenfield ferroviário de longo curso — PEF Eixo 07.",
+        "É apenas rodoviário sem componente ferroviário."
+      ],
+      "exemplos_demandas": [
+        "Reativação de ramal para escoamento de grãos.",
+        "Modernização de pátio industrial ferroviário.",
+        "Estudo de integração planta siderúrgica–malha.",
+        "Mapeamento de ramais ociosos em região produtiva."
+      ],
+      "regioes_tipicas": ["Interior agrícola", "Corredores industriais", "Proximidade malha MRS/Rumo/ALL"]
+    },
+    {
+      "id": "FRENTE-04",
+      "nome": "Transporte para Biocombustíveis",
+      "descricao_oficial": "Viabilidade e planejamento de corredores dutoviários e logística associada a biocombustíveis.",
+      "contexto": "SP é líder nacional em etanol e biocombustíveis; a logística depende hoje fortemente de rodoviário (caminhão-tanque). A frente examina dutos, terminais, integração modal e infraestrutura para reduzir custo e emissão no transporte de etanol, biodiesel e correntes associadas.",
+      "desafios": [
+        "Elevada participação rodoviária no transporte de etanol.",
+        "Necessidade de terminais e infraestrutura de transbordo.",
+        "Integração usina–duto–porto–consumo.",
+        "Regulação, segurança e licenciamento de dutos."
+      ],
+      "modais_enfatizados": ["Dutoviário", "Rodoviário", "Ferroviário", "Portuário"],
+      "cadastre_quando": [
+        "Projeto de duto, terminal de biocombustível ou corredor logístico dedicado.",
+        "Estudo de viabilidade multimodal para etanol/biodiesel.",
+        "Integração infraestrutura de escoamento de usinas e refino."
+      ],
+      "nao_cadastre_quando": [
+        "É logística geral de cargas sem vínculo biocombustível.",
+        "É hidrovia genérica — Frente 05."
+      ],
+      "exemplos_demandas": [
+        "Corredor dutoviário etanol interior–porto.",
+        "Terminal de transbordo etanol–ferrovia.",
+        "Estudo logístico região canavieira.",
+        "Integração duto com polo industrial."
+      ],
+      "regioes_tipicas": ["Ribeirão Preto/região canavieira", "Oeste paulista", "Corredores usina–porto"]
+    },
+    {
+      "id": "FRENTE-05",
+      "nome": "Ampliação de Hidrovias",
+      "descricao_oficial": "Expandir e modernizar navegação fluvial com eficiência logística e menor impacto ambiental.",
+      "contexto": "A SLT/SEMIL administra trechos da Hidrovia Tietê–Paraná (Rio Tietê) e atua sobre logística hidroviária estadual. A frente PLI endereça dragagem, eclusas, terminais fluviais, integração hidrovia–rodovia–ferrovia e expansão da navegabilidade.",
+      "desafios": [
+        "Manutenção de calado e dragagem periódica.",
+        "Sazonalidade e restrições ambientais.",
+        "Terminais fluviais insuficientes ou desatualizados.",
+        "Integração hidroviária com exportação portuária."
+      ],
+      "modais_enfatizados": ["Hidroviário", "Intermodal", "Portuário"],
+      "cadastre_quando": [
+        "Intervenção em hidrovia, eclusa, dragagem estruturante ou terminal fluvial.",
+        "Estudo de expansão de navegação ou modernização hidroviária.",
+        "Integração logística fluvial com corredor de cargas."
+      ],
+      "nao_cadastre_quando": [
+        "É operação corrente de conservação — pode ser DIR-GEST, não cadastro PLI.",
+        "É apenas rodoviário ou ferroviário sem componente fluvial."
+      ],
+      "exemplos_demandas": [
+        "Dragagem programada trecho Tietê.",
+        "Terminal hidroviário de cargas.",
+        "Estudo de ampliação de navegabilidade.",
+        "Integração fluvial–porto interior."
+      ],
+      "regioes_tipicas": ["Bacia Tietê", "Confluências Paraná/Tietê", "Interior com navegação fluvial"]
+    },
+    {
+      "id": "FRENTE-06",
+      "nome": "Mobilidade Paulista",
+      "descricao_oficial": "Qualificar mobilidade e integração territorial com inclusão social e sustentabilidade.",
+      "contexto": "Além de carga, o PLI-SP reconhece mobilidade de pessoas como dimensão logística territorial — especialmente integração intermunicipal e inter-regional fora do núcleo metro-metropolitano exclusivo CPTM/Metrô. Abrange corredores de ônibus de alto nível, integração modal passageiros, acessibilidade e inclusão.",
+      "desafios": [
+        "Deficiência de integração tarifária e física entre modos no interior.",
+        "Dependência de transporte individual em regiões pouco servidas.",
+        "Desigualdade de acesso a emprego, saúde e educação por falta de mobilidade.",
+        "Emissões e externalidades de frota rodoviária de passageiros."
+      ],
+      "modais_enfatizados": ["Rodoviário (passageiros)", "Ferroviário (regional)", "Intermodal"],
+      "cadastre_quando": [
+        "Projeto de mobilidade regional/intermunicipal de passageiros (não metro pesado capital).",
+        "Integração terminal rodoviário–ferroviário para passageiros.",
+        "Corredor dedicado de mobilidade com impacto territorial amplo.",
+        "Infraestrutura de acessibilidade e inclusão em sistema de transporte."
+      ],
+      "nao_cadastre_quando": [
+        "É TIC ou trem intercity estadual — PEF Eixo 02.",
+        "É obra rodoviária exclusivamente para carga/exportação — Frente 02.",
+        "É expansão de metrô/trem metropoliano capital — SPI/CPTM/Metrô."
+      ],
+      "exemplos_demandas": [
+        "Terminal intermodal de passageiros interior.",
+        "Corredor BRT/intermunicipal em região metropoliana média.",
+        "Integração tarifária e física entre modos regionais.",
+        "Estudo de mobilidade inclusiva em corredor logístico."
+      ],
+      "regioes_tipicas": ["Regiões metropolitanas médias", "Interior com fluxo pendular", "Corredores turismo/trabalho"]
+    }
+  ],
+  "intro_pef": {
+    "titulo": "Eixos ferroviários do PEF-SP 2050",
+    "sintese": "O PEF-SP organiza a estratégia ferroviária estadual em sete eixos. Diferente do PLI (multimodal), aqui o enquadramento assume que a solução central passa por trilhos — reativação, passageiros inter-regionais, carga, terminais ou novos corredores. Projetos do programa SP nos Trilhos (SPI) frequentemente se enquadram nestes eixos.",
+    "criterio_escolha": "Se a essência da demanda é ferroviária, use PEF. Se a ferrovia é apenas um componente de solução multimodal maior, pode ser PLI (ex.: Frente 02 ou 03).",
+    "fontes": [
+      { "titulo": "SEMIL — PEF integrado ao PLI", "url": "https://semil.sp.gov.br/2025/10/semil-destaca-plano-de-logistica-e-investimentos-em-evento-nacional-sobre-mobilidade-urbana/" },
+      { "titulo": "SP nos Trilhos", "url": "https://www.sp.gov.br/spnostrilhos/" }
+    ]
+  },
+  "eixos_pef": [
+    {
+      "id": "EIXO-PEF-01",
+      "nome": "Reativação de Malha Ociosa e Ramais",
+      "descricao": "Recuperação e reativação de trechos ferroviários abandonados ou subutilizados no Estado.",
+      "contexto": "Malha histórica paulista inclui trechos sem operação regular ou com potencial imediato de retorno. Reativação exige diagnóstico patrimonial, engenharia, modelagem de tráfego e, muitas vezes, autorização/regulação.",
+      "cadastre_quando": ["Trecho ocioso com estudo de retorno operacional.", "Recuperação de infraestrutura ferroviária abandonada.", "Ramal industrial ou regional subutilizado."],
+      "nao_cadastre_quando": ["É TIC passageiros intercity greenfield — Eixo 02.", "É novo corredor longo sem trilho existente — Eixo 07."],
+      "exemplos_demandas": ["Reativação trecho para grãos.", "Recuperação ponte viaduto ferroviário.", "Estudo patrimonial faixa de domínio."],
+      "interface_spi": "Projetos mapeados no SP nos Trilhos podem incluir reativações priorizadas."
+    },
+    {
+      "id": "EIXO-PEF-02",
+      "nome": "Trens Intercidades (TIC)",
+      "descricao": "Corredores de passageiros inter-regionais sobre trilhos integrando capital, interior e litoral.",
+      "contexto": "TIC são trens de média/alta velocidade inter-municipais (não metro). SP avança projetos como TIC Eixo Norte (SP–Campinas), TIC Sorocaba, integração TIM/L7. Corredor TIC é subnível opcional no cadastro quando este eixo é selecionado.",
+      "cadastre_quando": ["Passageiros inter-regionais sobre trilhos.", "Estação/apeamento TIC.", "Estudo ou obra de corredor intercity ferroviário."],
+      "nao_cadastre_quando": ["É carga ferroviária — Eixo 03.", "É metrô/trem metropoliano — Eixo 04 ou SPI."],
+      "exemplos_demandas": ["TIC São Paulo–Campinas.", "TIC São Paulo–Sorocaba.", "Estação intermodal TIC."],
+      "interface_spi": "TIC Eixo Norte (~R$ 14 bi), TIC Sorocaba (~R$ 12 bi) — programas SPI 2025."
+    },
+    {
+      "id": "EIXO-PEF-03",
+      "nome": "Carga Ferroviária e Expresso Carga",
+      "descricao": "Transporte de cargas por ferrovia, integração caminhão–trem e terminais de transferência.",
+      "contexto": "Modal ferroviário de carga reduz emissão e custo em longas distâncias; Expresso Carga e terminais de transbordo são prioridade logística. Integração porto–ferrovia–industria.",
+      "cadastre_quando": ["Terminal de cargas ferroviário.", "Corredor graneleiro ou container.", "Integração caminhão–trem."],
+      "nao_cadastre_quando": ["Passageiros intercity — Eixo 02.", "Shortline municipal pequena — Eixo 06."],
+      "exemplos_demandas": ["Terminal Expresso Carga.", "Pátio classificação.", "Integração porto–ferrovia grãos."],
+      "interface_spi": "Projetos carga no portfólio SP nos Trilhos."
+    },
+    {
+      "id": "EIXO-PEF-04",
+      "nome": "Anel Metropolitano Ferroviário",
+      "descricao": "Integração ferroviária metropolitana e corredores radial–metropolitana.",
+      "contexto": "Articula CPTM, Metrô, trens metropolitanos e ligações radiais (TIM, etc.). Foco integração capital–RM e corredores suburbana-regional sobre trilhos.",
+      "cadastre_quando": ["Integração radial ferroviária metropolitana.", "Interface CPTM–interior.", "Corredor metropolitano sobre trilhos existentes."],
+      "nao_cadastre_quando": ["TIC longo curso interior — Eixo 02.", "Obra rodoviária sem trilho."],
+      "exemplos_demandas": ["Integração TIM–TIC.", "Extensão metropolitana ferroviária.", "Modernização interface radial."],
+      "interface_spi": "Linha 6-Laranja, trens metropolitanos, VLTs."
+    },
+    {
+      "id": "EIXO-PEF-05",
+      "nome": "Terminais e Interfaces Intermodais",
+      "descricao": "Terminais ferroviários, intercâmbio modal e plataformas logísticas sobre trilhos.",
+      "contexto": "Terminais são nós críticos: passageiros, carga ou ambos. Inclui intermodal porto–ferrovia, pátios, estações de transbordo.",
+      "cadastre_quando": ["Novo terminal ou reforma estrutural intermodal.", "Interface porto–ferrovia.", "Plataforma logística sobre trilhos."],
+      "nao_cadastre_quando": ["Terminal exclusivamente rodoviário — PLI.", "Estação TIC já classificada — Eixo 02 + corredor TIC."],
+      "exemplos_demandas": ["Terminal intermodal Campinas.", "Interface ferroportuária.", "Pátio intermodal interior."],
+      "interface_spi": "Terminais vinculados a projetos SPI."
+    },
+    {
+      "id": "EIXO-PEF-06",
+      "nome": "Shortlines e Ferrovias Regionais",
+      "descricao": "Linhas de trajeto curto, autorizações ferroviárias e operações regionais.",
+      "contexto": "Marco legal ferroviário SP permite ferrovias regionais e shortlines. Municípios podem propor via SPI; operação de baixo volume e trajeto curto.",
+      "cadastre_quando": ["Ferrovia regional municipal/consorciada.", "Shortline industrial.", "Pedido autorização operação regional."],
+      "nao_cadastre_quando": ["Corredor TIC estadual — Eixo 02.", "Malha ociosa longa — Eixo 01."],
+      "exemplos_demandas": ["Ferrovia turística/logística regional.", "Shortline planta–malha.", "Projeto prefeito via SPI."],
+      "interface_spi": "Municípios encaminham sugestões à SPI para avaliação."
+    },
+    {
+      "id": "EIXO-PEF-07",
+      "nome": "Novos Corredores Ferroviários",
+      "descricao": "Expansão greenfield e novos traçados ferroviários de longo prazo.",
+      "contexto": "Traçados novos fora de malha existente — alto custo, longo prazo, modelagem PPP. Diferencia de reativação (Eixo 01).",
+      "cadastre_quando": ["Estudo traçado greenfield.", "Novo corredor ferroviário longo curso.", "Modelagem PPP ferroviária expansão."],
+      "nao_cadastre_quando": ["Reativação trilho existente — Eixo 01.", "TIC sobre alinhamento já estudado — Eixo 02."],
+      "exemplos_demandas": ["Estudo corredor ferroviário interior greenfield.", "Nova ligação regional ferroviária.", "Pré-viabilidade PPP ferrovia."],
+      "interface_spi": "Projetos em modelagem no portfólio estadual."
+    }
+  ],
+  "corredores_tic": [
+    {
+      "id": "TIC-NORTE",
+      "nome": "Trem Intercidades São Paulo–Campinas (Eixo Norte)",
+      "ligacao": "Capital ↔ Campinas",
+      "contexto": "Principal corredor TIC em modelagem; integração TIM, Linha 7-Rubi; investimento estimado ~R$ 14 bi; obras previstas 2026.",
+      "quando_especificar": "Demanda localizada no eixo SP–Campinas, Jundiaí, região metropoliana de Campinas ou estação deste corredor."
+    },
+    {
+      "id": "TIC-LESTE",
+      "nome": "Trem Intercidades São Paulo–Sorocaba (Eixo Leste)",
+      "ligacao": "Capital ↔ Sorocaba",
+      "contexto": "Corredor interior sudeste; audiências públicas concluídas 2025; ~R$ 12 bi; até 50 mil pax/dia estimados.",
+      "quando_especificar": "Demanda no eixo SP–Sorocaba ou cidades intermediárias deste alinhamento."
+    },
+    {
+      "id": "TIC-SUL",
+      "nome": "Trem Intercidades São Paulo–Santos (Eixo Sul)",
+      "ligacao": "Capital ↔ Litoral / Porto",
+      "contexto": "Ligação metrópole–litoral sul; interface logística e passageiros; relevância portuária.",
+      "quando_especificar": "Trecho metropolitano–Santos ou integração TIC–porto."
+    },
+    {
+      "id": "TIC-OESTE",
+      "nome": "Trem Intercidades São Paulo–São José dos Campos (Eixo Oeste)",
+      "ligacao": "Capital ↔ Vale do Paraíba",
+      "contexto": "Corredor Vale do Paraíba; polo aeroespacial e industrial; integração regional.",
+      "quando_especificar": "Demanda SJC, Taubaté ou eixo paraíba capital."
+    },
+    {
+      "id": "TIC-MAR-SOR",
+      "nome": "Trem Intercidades Marília–Sorocaba",
+      "ligacao": "Interior oeste ↔ Sorocaba",
+      "contexto": "Corredor interior oeste conectando polos agroindustriais.",
+      "quando_especificar": "Intervenção entre Marília e Sorocaba ou cidades do corredor."
+    },
+    {
+      "id": "TIC-SOR-CAM",
+      "nome": "Trem Intercidades Sorocaba–Campinas",
+      "ligacao": "Interior central",
+      "contexto": "Articula dois polos interioranos sem passagem obrigatória pela capital.",
+      "quando_especificar": "Demanda entre Sorocaba e Campinas."
+    },
+    {
+      "id": "TIC-CAM-RIB",
+      "nome": "Trem Intercidades Campinas–Ribeirão Preto",
+      "ligacao": "Noroeste paulista",
+      "contexto": "Corredor Campinas–Ribeirão; agroindústria e universidades.",
+      "quando_especificar": "Eixo Campinas–Ribeirão Preto ou intermediários."
+    },
+    {
+      "id": "TIC-RIB-FRA",
+      "nome": "Trem Intercidades Ribeirão Preto–Franca",
+      "ligacao": "Extensão noroeste",
+      "contexto": "Extensão do corredor noroeste em direção a Franca.",
+      "quando_especificar": "Demanda Ribeirão–Franca."
+    },
+    {
+      "id": "TIC-SAN-CAJ",
+      "nome": "Trem Intercidades Santos–Cajati",
+      "ligacao": "Litoral–serra",
+      "contexto": "Ligação litoral sul com serra/interior na Baixada Santista.",
+      "quando_especificar": "Trecho Santos–Cajati ou Baixada."
+    },
+    {
+      "id": "TIC-CAM-ARA",
+      "nome": "Trem Intercidades Campinas–Araraquara",
+      "ligacao": "Leste interior",
+      "contexto": "Conexão Campinas com Araraquara/região de SJRP leste.",
+      "quando_especificar": "Demanda Campinas–Araraquara."
+    },
+    {
+      "id": "TIC-SJC-TAU",
+      "nome": "Trem Intercidades São José dos Campos–Taubaté",
+      "ligacao": "Vale do Paraíba",
+      "contexto": "Corredor intra-paraíba conectando polos do vale.",
+      "quando_especificar": "Intervenção entre SJC e Taubaté."
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eixos PEF-SP 2050</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body class="ref-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Eixos PEF-SP
+        <small>Guia para classificar no plano ferroviário</small>
+      </div>
+      <nav class="app-nav">
+        <a href="index.html">← Cadastro</a>
+        <a href="catalogo-planos.html#PLANO-PEF">Plano PEF</a>
+        <a href="catalogo-frentes-pli.html">Frentes PLI</a>
+      </nav>
+    </div>
+  </header>
+  <main class="app-main ref-main">
+    <section class="card ref-alert">
+      <h2>Como escolher o eixo</h2>
+      <p class="step-intro">Leia a descrição de cada eixo e, se necessário, indique o corredor TIC correspondente.</p>
+    </section>
+    <div id="conteudo"></div>
+  </main>
+  <script src="referencia-render.js"></script>
+  <script>
+    SLTReferencia.loadReferencia("../").then(() => {
+      SLTReferencia.renderEixosPage(document.getElementById("conteudo"));
+      const hash = location.hash.replace("#", "");
+      if (hash) document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+    });
+  </script>
+</body>
+</html>

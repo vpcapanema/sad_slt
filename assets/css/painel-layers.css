@@ -1,0 +1,249 @@
+/* Seção Camadas — espelha PLI Smart Router (sem checkboxes) */
+
+.painel-layers-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: var(--sb-layers-padding);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.layer-group--root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  /* Centro do chevron (padding do header + metade da largura do toggle) */
+  --layer-tree-x: calc(0.25rem + 0.45rem);
+  --layer-tree-branch: 0.7rem;
+}
+
+.layer-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.25rem;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 0.25rem;
+  transition: background 0.12s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.layer-group-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.layer-group-header--section {
+  position: relative;
+  margin-bottom: 0.25rem;
+  padding: 0.1rem 0.15rem;
+}
+
+.layer-group-header--section .layer-group-name {
+  font-size: var(--sb-layer-section-name);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sb-green, #4ade80);
+}
+
+/* Conector vertical do título da seção até os filhos */
+.layer-group--root:not(.collapsed) .layer-group-header--section::after {
+  content: "";
+  position: absolute;
+  left: var(--layer-tree-x);
+  bottom: -0.4rem;
+  width: 1px;
+  height: 0.4rem;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.layer-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--sb-layer-toggle-size);
+  height: var(--sb-layer-toggle-size);
+  font-size: var(--sb-layer-toggle-font);
+  line-height: 1;
+  font-family: monospace;
+  color: rgba(255, 255, 255, 0.72);
+  transition: transform 0.15s ease, color 0.12s ease;
+}
+
+.layer-group-header:hover .layer-group-toggle {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.layer-group--root.collapsed .layer-group-toggle {
+  transform: rotate(-90deg);
+}
+
+.layer-group--root.collapsed .layer-group-body {
+  display: none;
+}
+
+.layer-group--root.collapsed .layers-empty {
+  display: none;
+}
+
+.layer-group--root.collapsed .layer-group-header--section::after {
+  display: none;
+}
+
+.layer-group-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--sb-text, #fff);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.layer-group-active-count {
+  font-size: var(--sb-layer-count-size);
+  background: var(--sb-green, #4ade80);
+  color: var(--sb-primary, #003b5a);
+  padding: 0.02rem 0.28rem;
+  border-radius: 0.25rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  min-width: 0.95rem;
+  text-align: center;
+  line-height: 1.35;
+}
+
+.layer-group-active-count:empty {
+  display: none;
+}
+
+.layer-group-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin-top: 0.15rem;
+  padding-left: 0;
+}
+
+.layers-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  font-size: var(--sb-layers-font);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+.layers-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.layers-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+/* Filhos indentados com linhas de árvore ligadas ao título da seção */
+.layer-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: var(--sb-layer-row-padding-y) 0.15rem var(--sb-layer-row-padding-y) calc(var(--layer-tree-x) + var(--layer-tree-branch));
+  cursor: pointer;
+  border-radius: 0.25rem;
+  transition: background 0.12s ease;
+  position: relative;
+}
+
+.layer-row::before {
+  content: "";
+  position: absolute;
+  left: var(--layer-tree-x);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.layer-row:last-child::before {
+  bottom: 50%;
+}
+
+.layer-row::after {
+  content: "";
+  position: absolute;
+  left: var(--layer-tree-x);
+  top: 50%;
+  width: var(--layer-tree-branch);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.layer-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.layer-row.is-selected {
+  background: rgba(74, 222, 128, 0.14);
+}
+
+.layer-row-line {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.layer-name {
+  font-size: var(--sb-layer-name-size);
+  color: var(--sb-text, #fff);
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.layer-row .badge-status {
+  flex-shrink: 0;
+  margin: 0;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layers-empty {
+  margin: 0.5rem 0 0;
+  padding-left: calc(var(--layer-tree-x) + var(--layer-tree-branch));
+  font-size: var(--sb-layers-empty-size);
+  line-height: 1.45;
+  color: var(--sb-muted, rgba(255, 255, 255, 0.58));
+}
+
+.layers-empty a {
+  color: var(--sb-green, #4ade80);
+}
+
+.layers-empty.hidden {
+  display: none;
+}
+

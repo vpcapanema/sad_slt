@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Objetos AHP — Admin SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body class="admin-data-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Apoio à Tomada de Decisão
+        <small>Admin — Objetos AHP</small>
+      </div>
+      <nav class="app-nav">
+        <a href="../index.html">Início</a>
+        <a href="../cadastro/">Cadastro</a>
+        <a href="../ahp/">AHP</a>
+        <a href="../painel/">Painel</a>
+        <a href="./" class="active">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+
+  <main class="app-main admin-main">
+    <section class="card">
+      <h2>Objetos para hierarquização AHP</h2>
+      <p class="step-intro">
+        Demandas aprovadas promovidas para a fila AHP. Clique em uma linha para abrir a página de análise.
+      </p>
+
+      <div class="admin-toolbar">
+        <div class="form-field">
+          <label for="filtro-status">Status AHP</label>
+          <select id="filtro-status">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="form-field" style="flex: 1; min-width: 220px;">
+          <label for="filtro-busca">Buscar</label>
+          <input type="text" id="filtro-busca" placeholder="Nome, código ou instituição…" autocomplete="off">
+        </div>
+        <a href="index.html" class="btn btn-secondary" style="align-self: flex-end;">Voltar</a>
+      </div>
+
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Projeto</th>
+              <th>Demanda origem</th>
+              <th>Instituição</th>
+              <th>Grupo comparável</th>
+              <th>Status AHP</th>
+              <th>Aprovado em</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-objetos"></tbody>
+        </table>
+      </div>
+      <p id="lista-vazia" class="hint hidden">Nenhum objeto AHP registrado. Aprove demandas em <a href="demandas.html">Demandas</a>.</p>
+    </section>
+  </main>
+
+  <script src="../assets/js/admin-api.js"></script>
+  <script src="../assets/js/admin-auth.js"></script>
+  <script src="../assets/js/sigma-read.js"></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/admin-labels.js"></script>
+  <script src="../assets/js/admin-ui.js"></script>
+  <script src="objetos.js"></script>
+</body>
+</html>

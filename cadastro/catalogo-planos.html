@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Planos PLI-SP e PEF-SP</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body class="ref-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Planos estratégicos
+        <small>PLI-SP 2050 e PEF-SP 2050</small>
+      </div>
+      <nav class="app-nav">
+        <a href="index.html">← Voltar ao cadastro</a>
+        <a href="catalogo-diretorias.html">Diretorias</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-main ref-main">
+    <section class="card ref-alert">
+      <h2>Como escolher o plano</h2>
+      <p class="step-intro">
+        Consulte objetivos e critérios de cada plano e escolha aquele no qual a demanda se encaixa.
+      </p>
+    </section>
+    <div id="conteudo"></div>
+  </main>
+
+  <script src="referencia-render.js"></script>
+  <script>
+    (async function () {
+      await SLTReferencia.loadReferencia("../");
+      const params = new URLSearchParams(location.search);
+      SLTReferencia.renderPlanosPage(document.getElementById("conteudo"), {
+        diretoriaId: params.get("diretoria") || "",
+      });
+      const hash = location.hash.replace("#", "");
+      if (hash) document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+    })();
+  </script>
+</body>
+</html>

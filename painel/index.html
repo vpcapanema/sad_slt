@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel — SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/painel-page.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+</head>
+<body class="painel-dashboard-page layout-with-sidebar">
+  <div class="layout-with-sidebar-grid">
+    <header class="layout-sidebar-header">
+      <div class="layout-sidebar-header-inner">
+        <a href="../index.html" class="layout-sidebar-home-link" title="Página inicial">
+          <img
+            src="../assets/img/slt-icon.svg"
+            alt=""
+            class="sidebar-app-icon"
+            width="36"
+            height="36"
+          >
+          <div class="app-brand">
+            Apoio à Tomada de Decisão
+            <small>Painel de acompanhamento</small>
+          </div>
+        </a>
+      </div>
+    </header>
+
+    <header class="app-header layout-main-header">
+      <div class="app-header-inner app-header-inner--nav-only">
+        <nav class="app-nav">
+          <a href="../index.html">Início</a>
+          <a href="../cadastro/">Cadastro</a>
+          <a href="../ahp/">AHP</a>
+          <a href="./" class="active">Painel</a>
+          <a href="../admin/">Admin</a>
+        </nav>
+      </div>
+    </header>
+
+    <aside class="layout-sidebar painel-dashboard-sidebar" aria-label="Demandas registradas">
+      <div class="layout-sidebar-body">
+        <div class="nav-section painel-layers-section">
+          <div id="painel-layers-root" class="layer-group layer-group--root">
+            <button type="button" class="layer-group-header layer-group-header--section" id="toggle-demandas-section" aria-expanded="true" aria-controls="layers-container">
+              <span class="layer-group-toggle" aria-hidden="true">▼</span>
+              <span class="layer-group-name">Demandas registradas</span>
+              <span id="demandas-count" class="layer-group-active-count"></span>
+            </button>
+            <div id="layers-container" class="layer-group-body layers-container" role="list" aria-label="Demandas registradas"></div>
+            <p id="lista-vazia" class="layers-empty hint hidden">
+              Nenhuma demanda registrada. <a href="../cadastro/">Cadastre a primeira demanda</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+      <footer class="layout-sidebar-footer">
+        Desenvolvido e implementado por
+        <strong>VPC-Geotecnologias e Websistemas</strong>
+      </footer>
+    </aside>
+
+    <div class="layout-main">
+      <main class="painel-dashboard-map" aria-label="Mapa das demandas">
+        <div id="map-painel"></div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="../assets/js/status-colors.js"></script>
+  <script src="../assets/js/storage.js"></script>
+  <script src="../assets/js/demandas-api.js"></script>
+  <script src="painel.js"></script>
+</body>
+</html>

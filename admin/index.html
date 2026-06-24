@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administração — SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Apoio à Tomada de Decisão
+        <small>Administração do sistema</small>
+      </div>
+      <nav class="app-nav">
+        <a href="../index.html">Início</a>
+        <a href="../cadastro/">Cadastro</a>
+        <a href="../ahp/">AHP</a>
+        <a href="../painel/">Painel</a>
+        <a href="./" class="active">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+
+  <main class="app-main admin-main">
+    <section class="card">
+      <h2>Administração</h2>
+      <p class="step-intro">
+        Gerencie demandas cadastradas e objetos elegíveis à hierarquização AHP.
+        Os rótulos exibidos são amigáveis — IDs internos e UUIDs não aparecem na interface.
+      </p>
+      <div class="admin-stats" id="admin-stats">
+        <div class="admin-stat"><span>Demandas</span><strong id="stat-demandas">—</strong></div>
+        <div class="admin-stat"><span>Na fila</span><strong id="stat-fila">—</strong></div>
+        <div class="admin-stat"><span>Objetos AHP</span><strong id="stat-objetos">—</strong></div>
+        <div class="admin-stat"><span>Elegíveis AHP</span><strong id="stat-elegiveis">—</strong></div>
+      </div>
+    </section>
+
+    <div class="hub-grid">
+      <a class="hub-card" href="painel.html">
+        <span class="badge">Mapa</span>
+        <h3>Painel do gestor</h3>
+        <p>Demandas e objetos AHP unificados no mapa — um pin por projeto, sempre com o status mais atual.</p>
+      </a>
+      <a class="hub-card" href="demandas.html">
+        <span class="badge">Cadastro</span>
+        <h3>Demandas</h3>
+        <p>Visualize e edite demandas de projeto: status, classificação, complementos e dados do demandante.</p>
+      </a>
+      <a class="hub-card" href="objetos.html">
+        <span class="badge">AHP</span>
+        <h3>Objetos AHP</h3>
+        <p>Gerencie objetos aprovados para hierarquização: status da fila AHP, agrupamento e metadados.</p>
+      </a>
+    </div>
+  </main>
+
+  <script src="../assets/js/admin-api.js"></script>
+  <script src="../assets/js/admin-auth.js"></script>
+  <script src="../assets/js/sigma-read.js"></script>
+  <script src="../assets/js/catalog.js"></script>
+  <script src="../assets/js/admin-labels.js"></script>
+  <script src="../assets/js/admin-ui.js"></script>
+  <script>
+    async function loadAdminStats() {
+      const [demandas, objetos] = await Promise.all([
+        SLTAdminApi.listDemandas(),
+        SLTAdminApi.listObjetosAhp(),
+      ]);
+      document.getElementById("stat-demandas").textContent = demandas.length;
+      document.getElementById("stat-fila").textContent = demandas.filter(
+        (d) => d.status === "fila_hierarquizacao" || d.status === "em_analise"
+      ).length;
+      document.getElementById("stat-objetos").textContent = objetos.length;
+      document.getElementById("stat-elegiveis").textContent = objetos.filter(
+        (o) => o.status === "elegivel_ahp"
+      ).length;
+    }
+
+    (async function () {
+      const user = await SLTAdminAuth.requireAuth();
+      if (!user) return;
+      try {
+        await SLTAdminLabels.init("../");
+      } catch (err) {
+        console.warn("Catálogos admin indisponíveis:", err);
+      }
+      await loadAdminStats();
+    })().catch((err) => {
+      console.error(err);
+      if (err.code === "UNAUTHORIZED") {
+        location.replace(SLTAdminAuth.loginUrl());
+        return;
+      }
+      SLTAdminUi.showToast(err.message || "Não foi possível carregar os totais.", true);
+    });
+  </script>
+</body>
+</html>

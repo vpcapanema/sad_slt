@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Como escolher a diretoria</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body class="ref-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Como escolher a diretoria
+        <small>Guia para o passo 1 do cadastro</small>
+      </div>
+      <nav class="app-nav">
+        <a href="index.html">← Voltar ao cadastro</a>
+        <a href="catalogo-planos.html">Planos PLI / PEF</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-main ref-main">
+    <div id="conteudo"></div>
+  </main>
+
+  <script src="referencia-render.js"></script>
+  <script>
+    SLTReferencia.loadReferencia("../").then(() => {
+      SLTReferencia.renderDiretoriasPage(document.getElementById("conteudo"));
+      const hash = location.hash.replace("#", "");
+      if (hash) document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+    });
+  </script>
+</body>
+</html>

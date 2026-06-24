@@ -1,0 +1,298 @@
+{
+  "versao": "1.0",
+  "atualizado": "2026-06-17",
+  "slt": {
+    "titulo": "Subsecretaria de Logística e Transportes (SLT)",
+    "orgao_superior": "Secretaria de Meio Ambiente, Infraestrutura e Logística (SEMIL)",
+    "sintese": "A SLT é a unidade da SEMIL responsável pelo planejamento, pela infraestrutura e pela gestão dos transportes inter-regionais no Estado de São Paulo. Atua sobre a malha sob responsabilidade estadual e sobre políticas que articulam modais, investimentos e integração territorial — não substitui DER-SP, ARTESP, CPTM ou Metrô, mas coordena visão estratégica, planos (PLI-SP, PEF-SP) e priorização de demandas logísticas.",
+    "competencias_subsecretaria": [
+      "Assessorar o Secretário nas áreas de planejamento, infraestrutura e gestão de transportes inter-regionais (Art. 35, I).",
+      "Formular, implementar, coordenar e monitorar políticas de transporte inter-regional com eficiência, segurança, equidade, acessibilidade e resiliência (Art. 35, II).",
+      "Estabelecer estratégias institucionais de investimento e gestão do setor logístico (Art. 35, III).",
+      "Propor, coordenar e monitorar programas, planos, projetos e normas de transportes e mobilidade inter-regional (Art. 35, IV).",
+      "Promover integração da infraestrutura de cargas e passageiros com outros modais, em articulação com municípios (Art. 35, V).",
+      "Relacionar-se com secretarias, agências reguladoras, concessionárias e entidades setoriais (Art. 35, VI).",
+      "Promover, priorizar e acompanhar investimentos em infraestrutura inter-regional (Art. 35, VII).",
+      "Propor qualificação de projetos no PPI e subsidiar estudos de concessões/PPPs (Art. 35, VIII)."
+    ],
+    "contexto_territorial": "São Paulo concentra cerca de 31% do PIB nacional e aproximadamente 46% do fluxo de cargas do país. A SLT organiza respostas logísticas que conectam interior, litoral, portos (Santos, São Sebastião), corredores de exportação e polos metropolitanos.",
+    "fontes": [
+      {
+        "titulo": "Decreto nº 69.376/2025 — Estrutura da SEMIL (Arts. 35–38)",
+        "url": "https://www.al.sp.gov.br/repositorio/legislacao/decreto/2025/decreto-69376-26.02.2025.html"
+      },
+      {
+        "titulo": "SEMIL — Subsecretaria de Logística e Transportes",
+        "url": "https://semil.sp.gov.br/slt/"
+      }
+    ]
+  },
+  "diretorias": [
+    {
+      "id": "DIR-PLAN",
+      "nome_oficial": "Diretoria de Planejamento de Logística e Transportes",
+      "decreto_ref": "Art. 36, Decreto 69.376/2025",
+      "sintese": "Unidade de planejamento estratégico e formulador de planos. É aqui que se encaixam demandas vinculadas a programas e planos estaduais (PLI-SP 2050, PEF-SP 2050), estudos de intermodalidade, diretrizes de investimento, modelagem de cenários e manifestações técnicas sobre parcerias e desestatizações compatíveis com a política de transportes.",
+      "competencias_legais": [
+        "Elaborar programas e planos de transportes e mobilidade inter-regional, com foco em intermodalidade e multimodalidade (Art. 36, I).",
+        "Propor diretrizes e contribuir para o planejamento estratégico estadual de logística e transportes regional (Art. 36, II).",
+        "Formular políticas de incentivo à inovação tecnológica e mobilidade sustentável (Art. 36, III).",
+        "Monitorar metas e resultados do planejamento plurianual de logística e transportes (Art. 36, IV).",
+        "Assistir tecnicamente a SLT em manifestações sobre parcerias/desestatizações e compatibilidade com prioridades do setor (Art. 36, V).",
+        "Promover estudos técnicos e econômicos para identificar fontes de recursos e instrumentos de financiamento de empreendimentos logísticos (Art. 36, VI)."
+      ],
+      "cadastre_quando": [
+        "A demanda se relaciona a um plano estratégico estadual (PLI-SP ou PEF-SP) ou a estudos que alimentam esses planos.",
+        "Trata-se de integração multimodal, corredores logísticos, priorização de investimentos ou qualificação de projetos para carteira/planejamento.",
+        "É estudo, diagnóstico, modelagem ou proposta de política/instrumento normativo de transporte inter-regional.",
+        "A intervenção exige enquadramento em frente de atuação (PLI) ou eixo ferroviário (PEF) antes da hierarquização."
+      ],
+      "nao_cadastre_quando": [
+        "A demanda é exclusivamente operacional ou de conservação de ativo já em operação (ex.: manutenção rotineira de hidrovia ou travessia) — tende a DIR-GEST.",
+        "A demanda é obra/contratação/execução de engenharia já definida na carteira, sem redefinição de plano — tende a DIR-INFRA.",
+        "A demanda é rodoviária delegada/concessionada sem interface com plano estadual — pode ser DER-SP/ARTESP, não SLT."
+      ],
+      "exemplos_demandas": [
+        "Corredor logístico interior–litoral integrando rodovia, ferrovia e porto (PLI — Frente Ligação Planalto-Litoral).",
+        "Estudo de viabilidade de reativação ferroviária regional enquadrado no PEF (Eixo Malha Ociosa).",
+        "Proposta de terminal intermodal associada ao PLI e ao planejamento multimodal.",
+        "Qualificação de projeto para inclusão na carteira PLI-SP 2026."
+      ],
+      "modais_tipicos": ["Intermodal", "Rodoviário (estratégico)", "Ferroviário (planejamento)", "Hidroviário (planejamento)", "Portuário (acesso/integração)"],
+      "planos_vinculados": ["PLANO-PLI", "PLANO-PEF"],
+      "orgaos_interface": ["DER-SP", "ARTESP", "CPTM", "CDSS", "SPI/PPI", "DNIT (interface federal)", "Municípios e consórcios"]
+    },
+    {
+      "id": "DIR-GEST",
+      "nome_oficial": "Diretoria de Gestão de Transportes",
+      "decreto_ref": "Art. 37, Decreto 69.376/2025",
+      "sintese": "Unidade de operação, manutenção e conservação dos meios de transporte sob responsabilidade da SEMIL/SLT. Abrange gestão de hidrovias estaduais, travessias, apoio a operações portuárias estaduais, segurança viária associada, modernização operacional e cumprimento de convênios de delegação — o foco é manter e operar, não formular plano estratégico de longo prazo.",
+      "competencias_legais": [
+        "Coordenar e gerir operação, manutenção e conservação dos meios de transportes de responsabilidade da Secretaria (Art. 37, I).",
+        "Participar, apoiar e promover programas de segurança viária (Art. 37, II).",
+        "Acompanhar e avaliar estratégias de ciclomobilidade no âmbito estadual (Art. 37, III).",
+        "Estimular automação e modernização de processos logísticos (Art. 37, IV).",
+        "Apoiar e supervisionar convênios de delegação (Art. 37, V).",
+        "Coordenar prestação de informações a ANTAQ, ANVISA, Capitania dos Portos, DECEA, Anatel e CETESB (Art. 37, VI)."
+      ],
+      "cadastre_quando": [
+        "A demanda diz respeito à operação, manutenção ou conservação de infraestrutura de transporte já existente sob gestão estadual.",
+        "Envolve hidrovia (ex.: trechos do Tietê), travessias litorâneas, sistemas de balsas ou represa de Paraibuna.",
+        "Refere-se a modernização operacional, automação de processos logísticos ou segurança viária em ativos estaduais.",
+        "Trata de supervisão de convênio de delegação ou interface regulatória (ANTAQ, Capitania etc.)."
+      ],
+      "nao_cadastre_quando": [
+        "É projeto greenfield de grande infraestrutura ou nova obra de engenharia — tende a DIR-INFRA (execução) ou DIR-PLAN (se ainda em estudo/plano).",
+        "É demanda de plano estratégico multimodal ou hierarquização PLI/PEF — tende a DIR-PLAN.",
+        "É intervenção em rodovia estadual não delegada típica do DER — verificar competência do DER-SP."
+      ],
+      "exemplos_demandas": [
+        "Dragagem programada e manutenção de canal em hidrovia sob gestão estadual.",
+        "Modernização operacional de travessia litorânea ou sistema de balsas.",
+        "Plano de conservação especial de ativo hidroviário.",
+        "Adequação operacional vinculada ao Porto de São Sebastião (acompanhamento SLT/CDSS)."
+      ],
+      "modais_tipicos": ["Hidroviário", "Portuário (operação)", "Rodoviário (travessias/delegação)"],
+      "planos_vinculados": [],
+      "orgaos_interface": ["ANTAQ", "Capitania dos Portos", "CDSS", "CETESB", "DER-SP", "Concessionárias delegatárias"]
+    },
+    {
+      "id": "DIR-INFRA",
+      "nome_oficial": "Diretoria de Infraestrutura de Transportes",
+      "decreto_ref": "Art. 38, Decreto 69.376/2025",
+      "sintese": "Unidade de engenharia e execução: construção, ampliação, reforma e modernização de infraestrutura; contratações; acompanhamento de obras; subsídio à carteira de projetos; e sistema georreferenciado de transportes. Demandas de obra física, licitação, projeto executivo e geoinformação aplicada à malha estadual se enquadram aqui.",
+      "competencias_legais": [
+        "Propor e coordenar construção, ampliação, reforma e modernização da infraestrutura de transportes (Art. 38, I).",
+        "Planejar, coordenar e acompanhar contratação e execução de obras, bens e serviços de engenharia (Art. 38, II).",
+        "Subsidiar a proposição da carteira de projetos e planos de investimentos do setor (Art. 38, III).",
+        "Estruturar e manter sistema de dados georreferenciados de transportes (Art. 38, IV).",
+        "Acompanhar ou coordenar licenciamento ambiental de empreendimentos estratégicos de infraestrutura (Art. 38, V)."
+      ],
+      "cadastre_quando": [
+        "A demanda é obra, ampliação, reforma ou modernização física de infraestrutura de transportes.",
+        "Envolve contratação, licitação, projeto executivo, supervisão de obra ou serviço de engenharia.",
+        "Refere-se ao sistema georreferenciado de transportes ou base espacial institucional.",
+        "É projeto já qualificado para carteira de investimentos e entrando em fase de implementação."
+      ],
+      "nao_cadastre_quando": [
+        "A demanda ainda é apenas estudo estratégico ou enquadramento em plano — pode ser DIR-PLAN primeiro.",
+        "É operação/manutenção corrente sem intervenção de engenharia — DIR-GEST.",
+        "É política setorial ou hierarquização AHP de carteira — fluxo DIR-PLAN / planos PLI-PEF."
+      ],
+      "exemplos_demandas": [
+        "Duplicação ou recuperação estrutural de trecho hidroviário com contratação de obras.",
+        "Implantação de terminal fluvial ou reforma de infraestrutura portuária estadual.",
+        "Cadastro georreferenciado de ativo de transporte no sistema estadual.",
+        "Obra de acesso ou interface física vinculada a corredor logístico já aprovado na carteira."
+      ],
+      "modais_tipicos": ["Rodoviário", "Hidroviário", "Portuário", "Ferroviário", "Intermodal"],
+      "planos_vinculados": [],
+      "orgaos_interface": ["DER-SP", "CETESB", "SPI", "Unidades de licenciamento", "Contratadas de engenharia"]
+    }
+  ],
+  "planos": [
+    {
+      "id": "PLANO-PLI",
+      "sigla": "PLI-SP 2050",
+      "nome_oficial": "Plano de Logística e Investimentos do Estado de São Paulo",
+      "diretoria_id": "DIR-PLAN",
+      "horizonte": "2050",
+      "status_elaboracao": "Em construção (lançado em 2023; conclusão prevista 2026)",
+      "coordenacao": "SEMIL / SLT, com apoio técnico do consórcio Transplan-Concremat",
+      "sintese": "Instrumento estratégico multimodal de longo prazo para orientar investimentos públicos e privados em rodovias, ferrovias, hidrovias, portos, aeroportos e dutos. Integra diagnóstico, cenários futuros, participação social e carteira de intervenções logísticas. Não é diretoria nem unidade orgânica — é plano estadual no mesmo nível hierárquico de referência que o PEF-SP.",
+      "objetivos": [
+        "Diagnosticar gargalos multimodais e definir prioridades de investimento.",
+        "Ampliar intermodalidade e reduzir dependência exclusiva do modal rodoviário.",
+        "Reduzir custos logísticos e emissões, aumentando eficiência energética.",
+        "Planejar com cenários para 2028, 2033, 2038 e 2043.",
+        "Fortalecer integração regional e conexão de SP com corredores de comércio exterior.",
+        "Subsidiar decisões de governo com transparência e participação social (fóruns regionais, contribuições online)."
+      ],
+      "etapas_elaboracao": [
+        "Etapa 1 — Plano de Trabalho (até mar/2025): 54 atividades em cinco fases.",
+        "Diagnóstico da infraestrutura multimodal.",
+        "Simulação de cenários futuros.",
+        "Consultas públicas — 9 fóruns regionais e workshops temáticos.",
+        "Plataforma digital de acompanhamento.",
+        "Etapa 4 — Plano de Ação: proposta de intervenções logísticas (até ago/2026)."
+      ],
+      "classificacao_pos_cadastro": "Frente de atuação (6 frentes oficiais)",
+      "cadastre_quando": [
+        "A demanda é projeto, estudo ou intervenção multimodal que se encaixa em uma das seis frentes PLI.",
+        "Busca inclusão ou priorização na carteira de investimentos logísticos estadual.",
+        "Articula modais (ex.: porto + ferrovia + rodovia) ou corredor logístico regional.",
+        "É proposta originada de fórum regional, entidade demandante ou órgão setorial para o ciclo PLI."
+      ],
+      "nao_cadastre_quando": [
+        "A demanda é exclusivamente ferroviária setorial sem interface multimodal — avaliar PEF-SP.",
+        "É operação/conservação corrente sem vínculo com investimento estratégico.",
+        "É obra já deslocada para execução direta sem passagem por plano — verificar DIR-INFRA."
+      ],
+      "frentes": [
+        {
+          "id": "FRENTE-01",
+          "nome": "Polos de Desenvolvimento Regional",
+          "descricao_oficial": "Identificação e estruturação de áreas estratégicas para atrair investimentos, gerar empregos e dinamizar a economia nas diferentes regiões do estado.",
+          "exemplos": ["Distrito logístico regional", "Integração infraestrutura–polo industrial", "Hub multimodal em polo de desenvolvimento"]
+        },
+        {
+          "id": "FRENTE-02",
+          "nome": "Ligação Planalto-Litoral",
+          "descricao_oficial": "Qualificar a conexão interior–litoral, assegurando eficiência no escoamento de cargas e no acesso aos portos.",
+          "exemplos": ["Acesso rodoviário/ferroviário ao litoral", "Corredor exportação agrícola–porto", "Gargalo planalto–Santos/São Sebastião"]
+        },
+        {
+          "id": "FRENTE-03",
+          "nome": "Ramais Ferroviários",
+          "descricao_oficial": "Mapeamento, desenvolvimento e reativação de trechos ferroviários com potencial logístico.",
+          "exemplos": ["Reativação de ramal para grãos", "Conexão industria–malha principal", "Estudo de ramal ocioso"]
+        },
+        {
+          "id": "FRENTE-04",
+          "nome": "Transporte para Biocombustíveis",
+          "descricao_oficial": "Viabilidade e planejamento de corredores dutoviários e logística associada a biocombustíveis.",
+          "exemplos": ["Corredor dutoviário etanol", "Terminal e integração dutos–rodovia–ferrovia"]
+        },
+        {
+          "id": "FRENTE-05",
+          "nome": "Ampliação de Hidrovias",
+          "descricao_oficial": "Expandir e modernizar navegação fluvial com eficiência logística e menor impacto ambiental.",
+          "exemplos": ["Dragagem estruturante", "Terminal hidroviário", "Integração hidrovia–porto interior"]
+        },
+        {
+          "id": "FRENTE-06",
+          "nome": "Mobilidade Paulista",
+          "descricao_oficial": "Qualificar mobilidade e integração territorial com inclusão social e sustentabilidade.",
+          "exemplos": ["Integração regional de passageiros", "Intermodal passageiros interior", "Corredor mobilidade intermunicipal"]
+        }
+      ],
+      "fontes": [
+        { "titulo": "PLI-SP 2050 — site oficial", "url": "https://pli.semil.sp.gov.br/" },
+        { "titulo": "Sobre o PLI-SP 2050", "url": "https://pli.semil.sp.gov.br/sobre-o-pli-2050/" },
+        { "titulo": "Frentes de atuação", "url": "https://pli.semil.sp.gov.br/frentes-de-atucao/" },
+        { "titulo": "SEMIL — Plano de Trabalho PLI (mar/2025)", "url": "https://semil.sp.gov.br/2025/03/governo-de-sao-paulo-apresenta-plano-de-trabalho-do-pli-sp-2050/" }
+      ]
+    },
+    {
+      "id": "PLANO-PEF",
+      "sigla": "PEF-SP 2050",
+      "nome_oficial": "Plano Estratégico Ferroviário do Estado de São Paulo",
+      "diretoria_id": "DIR-PLAN",
+      "horizonte": "2050",
+      "status_elaboracao": "Plano setorial articulado ao PLI-SP; interface com programa SP nos Trilhos (SPI)",
+      "coordenacao": "SEMIL / SLT (planejamento); execução de projetos ferroviários também via SPI — SP nos Trilhos",
+      "sintese": "Plano setorial ferroviário que organiza a participação do modal ferroviário na matriz de transporte paulista: malha ociosa, passageiros inter-regionais (TIC), carga, anel metropolitano, terminais intermodais, shortlines e novos corredores. Complementa o PLI-SP sem substituí-lo — PLI é multimodal; PEF aprofunda a estratégia sobre trilhos.",
+      "objetivos": [
+        "Reativar e integrar malha ociosa e ramais com potencial logístico ou de passageiros.",
+        "Estruturar corredores de Trens Intercidades (TIC) entre polos metropolitanos e interior.",
+        "Expandir carga ferroviária e soluções caminhão–trem / Expresso Carga.",
+        "Integrar ferrovias metropolitanas e radiais (anel metropolitano).",
+        "Desenvolver terminais e interfaces intermodais sobre trilhos.",
+        "Viabilizar shortlines e ferrovias regionais (marco legal estadual).",
+        "Planejar novos corredores greenfield de longo prazo."
+      ],
+      "relacao_pli_spi": "O PLI-SP 2050 integra o PEF-SP como braço ferroviário. O programa SP nos Trilhos (Secretaria de Parcerias em Investimentos) concentra dezenas de projetos ferroviários concretos (TIC, metrô, VLT, trens metropolitanos) com modelagem de investimentos — o PEF orienta estrategicamente; o SP nos Trilhos viabiliza projetos.",
+      "classificacao_pos_cadastro": "Eixo ferroviário (7 eixos); subnível Corredor TIC quando eixo = Trens Intercidades",
+      "cadastre_quando": [
+        "A demanda é ferroviária: reativação, corredor de passageiros, carga, terminal sobre trilhos ou autorização ferroviária regional.",
+        "Envolve TIC, malha ociosa, shortline ou terminal ferroviário intermodal.",
+        "Busca enquadramento na carteira ferroviária PEF-SP 2026."
+      ],
+      "nao_cadastre_quando": [
+        "A demanda é multimodal genérica sem foco ferroviário — use PLI-SP.",
+        "É projeto exclusivamente rodoviário ou hidroviário.",
+        "É operação CPTM/Metrô já institucionalizada sem nova demanda de cadastro SLT."
+      ],
+      "eixos": [
+        {
+          "id": "EIXO-PEF-01",
+          "nome": "Reativação de Malha Ociosa e Ramais",
+          "descricao": "Recuperação e reativação de trechos abandonados ou subutilizados.",
+          "exemplos": ["Estudo de reativação de ramal industrial", "Recuperação de ponte/tunnel ferroviário", "Autorização para operação regional"]
+        },
+        {
+          "id": "EIXO-PEF-02",
+          "nome": "Trens Intercidades",
+          "descricao": "Corredores de passageiros inter-regionais (TIC) integrando capital, interior e litoral.",
+          "exemplos": ["TIC São Paulo–Campinas", "TIC São Paulo–Sorocaba", "TIC São Paulo–Santos"],
+          "nota": "11 corredores TIC catalogados; seleção opcional no cadastro quando este eixo é escolhido."
+        },
+        {
+          "id": "EIXO-PEF-03",
+          "nome": "Carga Ferroviária e Expresso Carga",
+          "descricao": "Transporte de cargas, integração caminhão–trem e terminais de transferência.",
+          "exemplos": ["Terminal de transbordo", "Corredor graneleiro ferroviário", "Expresso carga intermodal"]
+        },
+        {
+          "id": "EIXO-PEF-04",
+          "nome": "Anel Metropolitano Ferroviário",
+          "descricao": "Integração ferroviária metropolitana e ligações radial–metropolitana.",
+          "exemplos": ["Integração CPTM–interior", "Conexão radial TIM", "Interface metropolitana ferroviária"]
+        },
+        {
+          "id": "EIXO-PEF-05",
+          "nome": "Terminais e Interfaces Intermodais",
+          "descricao": "Terminais ferroviários de carga/passageiros e plataformas logísticas sobre trilhos.",
+          "exemplos": ["Terminal intermodal interior", "Interface porto–ferrovia", "Pátio de classificação"]
+        },
+        {
+          "id": "EIXO-PEF-06",
+          "nome": "Shortlines e Ferrovias Regionais",
+          "descricao": "Linhas de trajeto curto e operações regionais (marco PL ferrovias SP).",
+          "exemplos": ["Ferrovia regional municipal", "Shortline industrial", "Projeto prefeito–SPI"]
+        },
+        {
+          "id": "EIXO-PEF-07",
+          "nome": "Novos Corredores Ferroviários",
+          "descricao": "Expansão greenfield e novos traçados de longo prazo.",
+          "exemplos": ["Novo corredor interior", "Estudo de traçado greenfield", "Modelagem PPP ferroviária"]
+        }
+      ],
+      "fontes": [
+        { "titulo": "SEMIL — PLI integra PEF-SP", "url": "https://semil.sp.gov.br/2025/10/semil-destaca-plano-de-logistica-e-investimentos-em-evento-nacional-sobre-mobilidade-urbana/" },
+        { "titulo": "SP nos Trilhos — SPI", "url": "https://www.sp.gov.br/spnostrilhos/" },
+        { "titulo": "Agência SP — SP nos Trilhos (investimentos)", "url": "https://www.agenciasp.sp.gov.br/sp-nos-trilhos-consolida-maior-expansao-ferroviaria-da-historia-do-estado-com-r-190-bilhoes-em-investimentos/" }
+      ]
+    }
+  ]
+}

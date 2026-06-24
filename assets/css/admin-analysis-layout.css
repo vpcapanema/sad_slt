@@ -1,0 +1,430 @@
+/* Layout e tipografia — páginas de análise admin (demanda / objeto AHP) */
+
+.admin-dashboard-page {
+  --admin-label-color: #003b5a;
+  --admin-value-color: #116593;
+  --admin-field-border: #003b5a;
+  --admin-blue-50: #f0f6fa;
+  --admin-blue-100: #dceaf3;
+  --admin-blue-200: #b8d4e8;
+  --admin-blue-border: rgba(0, 59, 90, 0.2);
+}
+
+/* ── Área principal compacta ── */
+.page-admin-demanda .admin-dashboard-content,
+.page-admin-objeto .admin-dashboard-content {
+  padding: 0.65rem 0.85rem 2rem;
+  display: block;
+  min-width: 0;
+  font-size: 0.8125rem;
+}
+
+.admin-dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.admin-dashboard-page .admin-dashboard-section.card {
+  margin-bottom: 0;
+  padding: 0.65rem 0.85rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.admin-dashboard-section {
+  scroll-margin-top: 0.65rem;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: auto;
+}
+
+.admin-dashboard-page #sec-analise.admin-dashboard-section {
+  min-height: auto;
+  overflow: visible;
+}
+
+.admin-dashboard-section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--admin-label-color);
+}
+
+/* ── Informações do projeto ── */
+.admin-info-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-dashboard-page #sec-info .admin-dashboard-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: stretch;
+}
+
+.admin-dashboard-page #sec-info .admin-dashboard-col:first-child {
+  min-width: 0;
+}
+
+.admin-dashboard-page #sec-info .admin-dashboard-col:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-dashboard-page #sec-info .admin-info-map {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-dashboard-page #sec-info .admin-info-map #admin-preview-map-wrap {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 10rem;
+}
+
+.admin-dashboard-page #sec-info .admin-info-map-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 10rem;
+}
+
+.admin-dashboard-page #sec-info .admin-info-map-empty {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 10rem;
+}
+
+.admin-info-subcard {
+  background: var(--admin-blue-100);
+  border: 1px solid var(--admin-blue-border);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem 0.6rem;
+  box-shadow: none;
+}
+
+.admin-info-subcard-title {
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--admin-blue-border);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--admin-label-color);
+  line-height: 1.25;
+  text-transform: none;
+}
+
+.admin-info-row {
+  display: grid;
+  gap: 0.45rem 0.55rem;
+  margin-bottom: 0.45rem;
+}
+
+.admin-info-row:last-child {
+  margin-bottom: 0;
+}
+
+.admin-info-row--1 {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.admin-info-row--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-info-row--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-info-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-height: 2.65rem;
+  padding: 0.32rem 0.5rem;
+  background: var(--admin-blue-50);
+  border: 0.5pt solid var(--admin-blue-border);
+  border-radius: 6px;
+  box-shadow: none;
+  outline: none;
+}
+
+.admin-info-field {
+  min-width: 0;
+  width: 100%;
+}
+
+.admin-info-label {
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--admin-label-color);
+  line-height: 1.2;
+  text-transform: none;
+}
+
+.admin-info-value {
+  margin: 0;
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--admin-value-color);
+  text-transform: capitalize;
+  word-break: break-word;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.admin-info-value--plain {
+  text-transform: none;
+}
+
+.admin-info-value code,
+.admin-info-value .badge-status,
+.admin-info-value a {
+  text-transform: none;
+}
+
+/* Campos avulsos (fora dos subcards) */
+.admin-info-fields > .admin-info-field .admin-info-input {
+  width: 100%;
+}
+
+#sec-info.admin-dashboard-section.card,
+#sec-analise.admin-dashboard-section.card {
+  box-shadow: none;
+  border: 1px solid #dce3ea;
+}
+
+/* ── Card Análise ── */
+.admin-analise-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.admin-analise-subcard {
+  background: var(--admin-blue-100);
+  border: 1px solid var(--admin-blue-border);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem 0.6rem;
+  box-shadow: none;
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+}
+
+.admin-dashboard-page #sec-analise .admin-dashboard-col .admin-dashboard-section {
+  flex: none;
+}
+
+.admin-analise-subcard h3 {
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--admin-blue-border);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--admin-label-color);
+  line-height: 1.25;
+  text-transform: none;
+}
+
+.admin-form-grid--3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem 0.55rem;
+}
+
+.admin-dashboard-page .admin-field-readonly,
+.admin-dashboard-page .admin-form-grid .form-field input.admin-field-readonly {
+  opacity: 0.85;
+  cursor: default;
+  background: var(--admin-blue-50);
+}
+
+.admin-dashboard-page .admin-field-readonly--plain {
+  text-transform: none;
+}
+
+.admin-dashboard-page #sec-analise .admin-form-grid .form-field input,
+.admin-dashboard-page #sec-analise .admin-form-grid .form-field select,
+.admin-dashboard-page #sec-analise .admin-form-grid .form-field textarea {
+  background: var(--admin-blue-50);
+  border-color: var(--admin-blue-border);
+}
+
+.admin-info-map {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: #eef2f6;
+  border: 1px solid var(--pli-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.admin-info-map-canvas {
+  flex: 1;
+  min-height: 10rem;
+  width: 100%;
+}
+
+.admin-info-map-empty {
+  margin: auto;
+  padding: 0.65rem;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--pli-muted);
+}
+
+.admin-info-coords {
+  margin: 0;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.65rem;
+  font-family: ui-monospace, monospace;
+  color: var(--pli-muted);
+  background: var(--pli-white);
+  border-top: 1px solid var(--pli-border);
+}
+
+/* ── Seções editáveis — colunas ── */
+.admin-dashboard-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  align-items: start;
+  min-height: auto;
+}
+
+.admin-dashboard-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+  min-height: auto;
+}
+
+.admin-dashboard-col .admin-dashboard-section {
+  flex: none;
+}
+
+.admin-dashboard-section .admin-form-grid {
+  gap: 0.45rem 0.65rem;
+  align-content: start;
+}
+
+/* Labels e inputs — área de edição */
+.admin-dashboard-page .admin-form-grid .form-field label {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--admin-label-color);
+  text-transform: none;
+}
+
+.admin-dashboard-page .admin-form-grid .form-field input,
+.admin-dashboard-page .admin-form-grid .form-field select,
+.admin-dashboard-page .admin-form-grid .form-field textarea {
+  width: 100%;
+  padding: 0.28rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--admin-value-color);
+  background: #fff;
+  border: 0.5pt solid var(--admin-field-border);
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.admin-dashboard-page .admin-form-grid .form-field input[type="email"],
+.admin-dashboard-page .admin-form-grid .form-field input[type="number"],
+.admin-dashboard-page .admin-form-grid .form-field textarea,
+.admin-dashboard-page .admin-form-grid .form-field select {
+  text-transform: none;
+}
+
+.admin-dashboard-page .admin-form-grid .form-field textarea {
+  min-height: 3.25rem;
+  resize: vertical;
+}
+
+.admin-dashboard-page .admin-field-motivo {
+  min-height: 6.5rem;
+  resize: vertical;
+}
+
+.admin-dashboard-page .admin-form-grid .form-field input:focus,
+.admin-dashboard-page .admin-form-grid .form-field select:focus,
+.admin-dashboard-page .admin-form-grid .form-field textarea:focus {
+  outline: none;
+  border-color: var(--admin-value-color);
+  background: #fff;
+  box-shadow: none;
+}
+
+.admin-dashboard-page .admin-form-grid .form-field input:disabled,
+.admin-dashboard-page .admin-form-grid .form-field select:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.admin-dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.admin-dashboard-page .admin-dashboard-actions .btn {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 1100px) {
+  .admin-dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard-page #sec-info .admin-dashboard-columns,
+  .admin-dashboard-page #sec-analise .admin-dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard-col .admin-dashboard-section {
+    flex: none;
+  }
+
+  .admin-dashboard-page #sec-analise .admin-analise-subcard {
+    flex: none;
+  }
+
+  .admin-info-map {
+    min-height: 180px;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-info-row--2,
+  .admin-info-row--3,
+  .admin-form-grid--3 {
+    grid-template-columns: 1fr;
+  }
+}

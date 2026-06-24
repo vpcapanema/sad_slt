@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acesso Restrito — Administração SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Apoio à Tomada de Decisão
+        <small>Acesso administrativo</small>
+      </div>
+      <nav class="app-nav">
+        <a href="../index.html">Início</a>
+        <a href="../cadastro/">Cadastro</a>
+        <a href="../ahp/">AHP</a>
+        <a href="../painel/">Painel</a>
+        <a href="login.html" class="active">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-main auth-main">
+    <section class="card auth-card">
+      <header class="auth-card-head">
+        <img
+          src="../assets/img/slt-icon.svg"
+          alt=""
+          class="auth-app-icon"
+          width="56"
+          height="56"
+        >
+        <h2 class="auth-card-title">Acesso Restrito</h2>
+        <p class="auth-area-badge">Administração</p>
+        <p class="auth-card-intro">
+          Use o mesmo usuário e senha do SIGMA-PLI. Apenas perfil <strong>Gestor</strong>
+          acessa a administração de demandas e objetos AHP do SLT.
+        </p>
+      </header>
+
+      <form id="form-login" class="auth-form" autocomplete="on" novalidate>
+        <div class="auth-field">
+          <label class="auth-label" for="login">Usuário</label>
+          <div class="auth-input-wrap">
+            <span class="auth-input-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" focusable="false">
+                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+              </svg>
+            </span>
+            <input
+              type="text"
+              id="login"
+              name="login"
+              class="auth-input"
+              placeholder="E-mail institucional ou usuário"
+              required
+              autocomplete="username"
+              autofocus
+            >
+          </div>
+        </div>
+
+        <div class="auth-field">
+          <label class="auth-label" for="senha">Senha</label>
+          <div class="auth-input-wrap">
+            <span class="auth-input-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" focusable="false">
+                <path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2zm-5 6.7a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM10 8V6a2 2 0 1 1 4 0v2h-4z"/>
+              </svg>
+            </span>
+            <input
+              type="password"
+              id="senha"
+              name="senha"
+              class="auth-input"
+              placeholder="Sua senha"
+              required
+              autocomplete="current-password"
+            >
+            <button
+              type="button"
+              class="auth-toggle-pw"
+              id="btn-toggle-senha"
+              aria-label="Mostrar senha"
+              aria-pressed="false"
+              title="Mostrar senha"
+            >
+              <svg class="icon-eye" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" focusable="false">
+                <path d="M12 5C7 5 2.7 8.1 1 12c1.7 3.9 6 7 11 7s9.3-3.1 11-7c-1.7-3.9-6-7-11-7zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <p id="login-erro" class="auth-feedback hidden" role="alert"></p>
+
+        <button type="submit" class="btn btn-primary btn-block" id="btn-entrar">Entrar</button>
+      </form>
+
+      <p class="auth-forgot">
+        <a
+          href="https://56.125.163.194/auth/recuperacao-senha-acesso-geral"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Esqueceu a senha?</a>
+      </p>
+
+      <div class="auth-divider" aria-hidden="true">
+        <span></span>
+        <span class="auth-divider-text">ou</span>
+        <span></span>
+      </div>
+
+      <a
+        class="btn btn-ghost btn-block auth-alt-link"
+        href="https://56.125.163.194/cadastro/sigma"
+        target="_blank"
+        rel="noopener noreferrer"
+      >Criar conta no SIGMA-PLI</a>
+    </section>
+  </main>
+
+  <script src="../assets/js/admin-api.js"></script>
+  <script src="../assets/js/admin-ui.js"></script>
+  <script src="login.js"></script>
+</body>
+</html>
