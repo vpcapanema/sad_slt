@@ -1,13 +1,16 @@
 """Autenticação de gestores via banco SIGMA + auditoria SLT."""
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from api.exceptions import AuthError
+from api.exceptions import AuthError, DatabaseUnavailableError
 from api.repositories import auditoria_repository, sigma_usuario_repository
 from api.services.session_service import SessionUser, create_token
 from api.sigma_password import verify_password
+
+logger = logging.getLogger(__name__)
 
 
 def _display_name(row: dict[str, Any]) -> str:
@@ -41,27 +44,30 @@ def _audit_auth(
     user_agent: str | None = None,
     operacao: str = "LOGIN",
 ) -> None:
-    auditoria_repository.registrar(
-        nivel="AUDIT",
-        categoria="auth",
-        operacao=operacao,
-        schema_nome="usuarios",
-        tabela="usuario",
-        registro_id=usuario_id,
-        usuario_id=usuario_id,
-        usuario_nome=usuario_nome,
-        mensagem=mensagem,
-        dados_novos={
-            "sucesso": sucesso,
-            "login": _mask_login(login),
-            "motivo": motivo,
-            "tipo_esperado": "GESTOR",
-        },
-        contexto={"modulo": "admin"},
-        ip_address=ip_address,
-        user_agent=user_agent,
-        origem="web",
-    )
+    try:
+        auditoria_repository.registrar(
+            nivel="AUDIT",
+            categoria="auth",
+            operacao=operacao,
+            schema_nome="usuarios",
+            tabela="usuario",
+            registro_id=usuario_id,
+            usuario_id=usuario_id,
+            usuario_nome=usuario_nome,
+            mensagem=mensagem,
+            dados_novos={
+                "sucesso": sucesso,
+                "login": _mask_login(login),
+                "motivo": motivo,
+                "tipo_esperado": "GESTOR",
+            },
+            contexto={"modulo": "admin"},
+            ip_address=ip_address,
+            user_agent=user_agent,
+            origem="web",
+        )
+    except DatabaseUnavailableError as exc:
+        logger.warning("Auditoria SLT indisponível — login não bloqueado: %s", exc)
 
 
 def authenticate_gestor(
@@ -152,19 +158,22 @@ def logout_gestor(
     ip_address: str | None = None,
     user_agent: str | None = None,
 ) -> None:
-    auditoria_repository.registrar(
-        nivel="AUDIT",
-        categoria="auth",
-        operacao="LOGIN",
-        schema_nome="usuarios",
-        tabela="usuario",
-        registro_id=user.id,
-        usuario_id=user.id,
-        usuario_nome=user.nome,
-        mensagem="Logout admin",
-        dados_novos={"sucesso": True, "evento": "logout"},
-        contexto={"modulo": "admin"},
-        ip_address=ip_address,
-        user_agent=user_agent,
-        origem="web",
-    )
+    try:
+        auditoria_repository.registrar(
+            nivel="AUDIT",
+            categoria="auth",
+            operacao="LOGIN",
+            schema_nome="usuarios",
+            tabela="usuario",
+            registro_id=user.id,
+            usuario_id=user.id,
+            usuario_nome=user.nome,
+            mensagem="Logout admin",
+            dados_novos={"sucesso": True, "evento": "logout"},
+            contexto={"modulo": "admin"},
+            ip_address=ip_address,
+            user_agent=user_agent,
+            origem="web",
+        )
+    except DatabaseUnavailableError as exc:
+        logger.warning("Auditoria SLT indisponível — logout não bloqueado: %s", exc)

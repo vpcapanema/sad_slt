@@ -56,7 +56,13 @@ async def login(
     except AuthError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Serviço de autenticação temporariamente indisponível. "
+                "Verifique a conexão com o banco SIGMA (SIGMA_POSTGRES_* no .env)."
+            ),
+        ) from exc
 
     _set_session_cookie(response, token)
     return LoginResponseSchema(user=_user_schema(user))

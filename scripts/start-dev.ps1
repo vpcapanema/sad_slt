@@ -103,12 +103,19 @@ function Show-ServerLogTail([string]$LogPath, [int]$Lines = 25) {
 function Test-PythonEnv([string]$ProjectRoot) {
     Push-Location $ProjectRoot
     try {
-        $ver = python --version 2>&1
+        $venvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+        if (-not (Test-Path $venvPython)) {
+            Write-Info "Criando ambiente virtual (.venv)..."
+            python -m venv .venv
+        }
+
+        $ver = & $venvPython --version 2>&1
         Write-Ok "Python: $ver"
-        python -c "import fastapi, uvicorn, httpx" 2>$null
+
+        & $venvPython -c "import fastapi, uvicorn, httpx" 2>$null
         if ($LASTEXITCODE -ne 0) {
             Write-Info "Instalando dependencias (requirements.txt)..."
-            pip install -r requirements.txt -q
+            & $venvPython -m pip install -r requirements.txt -q
         }
         Write-Ok "Dependencias Python prontas"
     } finally {
@@ -142,6 +149,52 @@ function Wait-ServerReady([string]$Url, [int]$TimeoutSec, [System.Diagnostics.Pr
         Show-ServerLogTail -LogPath $LogPath
     }
     return $false
+}
+
+function Test-DockerDaemon {
+    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+        return $false
+    }
+    try {
+        docker info 2>$null | Out-Null
+        return $LASTEXITCODE -eq 0
+    } catch {
+        return $false
+    }
+}
+
+function Start-SltDatabase {
+    Write-Step "Verificando banco SLT (slt_postgres :5434)"
+
+    if (-not (Test-DockerDaemon)) {
+        Write-Warn "Docker indisponivel - suba o Docker Desktop e rode .\scripts\start-db.ps1"
+        Write-Warn "Login admin funciona sem auditoria; cadastro e painel exigem o banco SLT."
+        return $false
+    }
+
+    Push-Location $Root
+    try {
+        docker compose up -d slt_postgres 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warn "Nao foi possivel subir slt_postgres via docker compose"
+            return $false
+        }
+
+        $deadline = (Get-Date).AddSeconds(60)
+        while ((Get-Date) -lt $deadline) {
+            $status = docker inspect -f "{{.State.Health.Status}}" slt_postgres 2>$null
+            if ($status -eq "healthy") {
+                Write-Ok "slt_postgres saudavel em 127.0.0.1:5434"
+                return $true
+            }
+            Start-Sleep -Seconds 2
+        }
+
+        Write-Warn "slt_postgres nao ficou healthy a tempo - confira: docker compose logs slt_postgres"
+        return $false
+    } finally {
+        Pop-Location
+    }
 }
 
 function Show-ReadyReport([string]$Url) {
@@ -202,6 +255,8 @@ Write-Ok "Porta $Port disponivel para bind"
 Write-Step "Verificando ambiente Python"
 Test-PythonEnv -ProjectRoot $Root
 
+Start-SltDatabase | Out-Null
+
 Write-Step "Iniciando backend (porta $Port)"
 Push-Location $Root
 
@@ -224,7 +279,7 @@ if (-not $env:SIGMA_DATABASE_URL -and -not $env:SIGMA_POSTGRES_PASSWORD) {
 
 $serverProc = $null
 $serverLog = Join-Path $Root ".dev-server.log"
-$serverCmd = "python -m api.server >> `"$serverLog`" 2>&1"
+    $serverCmd = ".\.venv\Scripts\python.exe -m api.server >> `"$serverLog`" 2>&1"
 try {
     if (Test-Path $serverLog) {
         Remove-Item $serverLog -Force -ErrorAction SilentlyContinue
