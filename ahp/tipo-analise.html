@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tipo de análise — AHP — SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body class="ahp-module-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Apoio à Tomada de Decisão
+        <small>Hierarquização AHP</small>
+      </div>
+      <nav class="app-nav">
+        <a href="../index.html">Início</a>
+        <a href="../cadastro/">Cadastro</a>
+        <a href="./" class="active">AHP</a>
+        <a href="../painel/">Painel</a>
+        <a href="../admin/">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-main ahp-main">
+    <section class="card">
+      <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+        <a href="index.html">Calculadora AHP</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <span class="ahp-breadcrumb-current">Tipo de análise</span>
+      </nav>
+      <h1 class="ahp-page-title">
+        <i class="fas fa-code-branch" aria-hidden="true"></i>
+        Escolha o tipo de análise
+      </h1>
+      <p class="ahp-page-desc">
+        Antes de definir critérios e comparações pareadas, indique se a hierarquização será
+        independente (avulsa) ou vinculada a um portfólio de projetos já cadastrados no SLT.
+      </p>
+      <p class="ahp-info-note">
+        <i class="fas fa-info-circle" aria-hidden="true"></i>
+        <span>
+          Esta escolha orienta como alternativas e projetos serão carregados nas etapas seguintes.
+          O fluxo de comparação pareada e cálculo AHP segue o mesmo motor SIGMA em ambos os modos.
+        </span>
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="ahp-section-label">
+        <i class="fas fa-sliders" aria-hidden="true"></i>
+        <span>Modo da hierarquização</span>
+      </div>
+
+      <form id="form-tipo-analise" novalidate>
+        <div class="ahp-tipo-grid">
+          <label class="ahp-tipo-card" data-tipo="avulsa">
+            <input type="radio" name="tipo_analise" value="avulsa" required>
+            <div class="ahp-tipo-card__icon"><i class="fas fa-flask" aria-hidden="true"></i></div>
+            <h3>Análise avulsa</h3>
+            <p>
+              Hierarquize fenômenos ou alternativas sem vínculo com demandas ou objetos AHP do
+              portfólio SLT. Indicada para estudos exploratórios, simulações ou comparações
+              pontuais.
+            </p>
+            <ul>
+              <li>Critérios e premissas definidos pelo analista</li>
+              <li>Alternativas informadas manualmente no fluxo</li>
+              <li>Resultado salvo como análise independente</li>
+            </ul>
+          </label>
+
+          <label class="ahp-tipo-card" data-tipo="portfolio">
+            <input type="radio" name="tipo_analise" value="portfolio" required>
+            <div class="ahp-tipo-card__icon"><i class="fas fa-folder-tree" aria-hidden="true"></i></div>
+            <h3>Análise de portfólio SLT</h3>
+            <p>
+              Compare projetos já homologados como objetos AHP, agrupados por grupo de comparação.
+              Integra o ranking à gestão de demandas da Subsecretaria.
+            </p>
+            <ul>
+              <li>Projetos carregados de <code>objeto_ahp</code> por grupo</li>
+              <li>Critérios alinhados à matriz PLI-SP</li>
+              <li>Ranking pode refletir na priorização do portfólio</li>
+            </ul>
+          </label>
+        </div>
+
+        <div class="ahp-form-actions">
+          <a href="index.html" class="btn btn-secondary">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i>
+            Voltar
+          </a>
+          <button type="submit" class="btn btn-primary">
+            Continuar
+            <i class="fas fa-arrow-right icon-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="js/tipo-analise.js"></script>
+</body>
+</html>

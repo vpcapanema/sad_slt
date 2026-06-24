@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hierarquização AHP — SLT</title>
   <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
-<body>
+<body class="ahp-module-page">
   <header class="app-header">
     <div class="app-header-inner">
       <div class="app-brand">
@@ -23,20 +25,142 @@
     </div>
   </header>
 
-  <main class="app-main">
+  <main class="app-main ahp-main">
     <section class="card">
-      <span class="badge badge-soon">Em breve</span>
-      <h2>Hierarquização AHP</h2>
-      <p class="step-intro">
-        Compare demandas em pares, calcule pesos dos critérios, verifique a consistência das respostas
-        e consulte o ranking dos projetos.
+      <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+        <a href="../index.html">Início</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <span class="ahp-breadcrumb-current">Calculadora AHP</span>
+      </nav>
+      <h1 class="ahp-page-title">
+        <i class="fas fa-diagram-project" aria-hidden="true"></i>
+        Calculadora AHP
+      </h1>
+      <p class="ahp-page-desc">
+        Ferramenta de apoio multicritério para estruturar comparações pareadas, calcular pesos e
+        verificar a consistência das decisões com base no método de Saaty.
       </p>
-      <p class="step-intro">
-        Enquanto este módulo não estiver disponível, cadastre demandas e acompanhe-as no painel.
+      <p class="ahp-info-note">
+        <i class="fas fa-info-circle" aria-hidden="true"></i>
+        <span>
+          Este módulo integra o motor SIGMA AHP ao fluxo do SLT. Antes das comparações pareadas,
+          você escolherá o tipo de análise (avulsa ou portfólio) e, em seguida, seguirá o fluxo
+          guiado da calculadora.
+        </span>
       </p>
-      <div class="btn-row">
-        <a class="btn btn-primary" href="../cadastro/">Ir para cadastro</a>
-        <a class="btn btn-secondary" href="../painel/">Ver painel</a>
+    </section>
+
+    <section class="card">
+      <div class="ahp-section-label">
+        <i class="fas fa-compass" aria-hidden="true"></i>
+        <span>Visão Geral</span>
+      </div>
+      <div class="ahp-summary-grid">
+        <article class="ahp-summary-card">
+          <div class="ahp-summary-card__icon"><i class="fas fa-sitemap" aria-hidden="true"></i></div>
+          <h2><i class="fas fa-sitemap" aria-hidden="true"></i> Fluxo orientado</h2>
+          <p>
+            O processo é dividido em etapas claras: definição dos critérios, nomeação, escolha do
+            método, comparações e análise final.
+          </p>
+        </article>
+        <article class="ahp-summary-card">
+          <div class="ahp-summary-card__icon"><i class="fas fa-scale-balanced" aria-hidden="true"></i></div>
+          <h2><i class="fas fa-scale-balanced" aria-hidden="true"></i> Comparação pareada</h2>
+          <p>
+            Cada critério é comparado com os demais pela escala de importância do AHP, permitindo
+            obter prioridades relativas de forma estruturada.
+          </p>
+        </article>
+        <article class="ahp-summary-card">
+          <div class="ahp-summary-card__icon"><i class="fas fa-file-export" aria-hidden="true"></i></div>
+          <h2><i class="fas fa-file-export" aria-hidden="true"></i> Saída operacional</h2>
+          <p>
+            Ao final, a aplicação calcula os pesos, mede a razão de consistência e permite exportar
+            os resultados para compartilhamento.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="ahp-section-label">
+        <i class="fas fa-sliders" aria-hidden="true"></i>
+        <span>Funcionalidades</span>
+      </div>
+      <div class="ahp-features-grid">
+        <div class="ahp-feature-card">
+          <div class="ahp-feature-icon"><i class="fas fa-calculator" aria-hidden="true"></i></div>
+          <h3>Cálculo Automático</h3>
+          <p>
+            Processamento automático dos pesos e índices de consistência usando o método AHP de
+            Saaty com validação matemática completa.
+          </p>
+        </div>
+        <div class="ahp-feature-card">
+          <div class="ahp-feature-icon"><i class="fas fa-chart-bar" aria-hidden="true"></i></div>
+          <h3>Visualização Gráfica</h3>
+          <p>
+            Gráficos e indicadores resumem os pesos dos critérios para acelerar a interpretação dos
+            resultados e apoiar a comunicação técnica.
+          </p>
+        </div>
+        <div class="ahp-feature-card">
+          <div class="ahp-feature-icon"><i class="fas fa-file-export" aria-hidden="true"></i></div>
+          <h3>Exportação Múltipla</h3>
+          <p>
+            Resultados podem ser exportados em PDF, CSV, JSON ou XLSX para relatórios, auditoria e
+            reaproveitamento em outras rotinas.
+          </p>
+        </div>
+        <div class="ahp-feature-card">
+          <div class="ahp-feature-icon"><i class="fas fa-tasks" aria-hidden="true"></i></div>
+          <h3>Interface Guiada</h3>
+          <p>
+            O preenchimento pode ser manual ou por upload de matriz, com progressão em etapas e
+            validações de consistência ao longo do fluxo.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="ahp-section-label">
+        <i class="fas fa-layer-group" aria-hidden="true"></i>
+        <span>Fluxo do Processo</span>
+      </div>
+      <div class="ahp-process-grid">
+        <div class="ahp-process-card">
+          <div class="ahp-process-number">1</div>
+          <h3>Seleção de Critérios</h3>
+          <p>Defina a quantidade de critérios que participarão da análise multicritério.</p>
+        </div>
+        <div class="ahp-process-card">
+          <div class="ahp-process-number">2</div>
+          <h3>Nomeação dos Critérios</h3>
+          <p>Atribua nomes claros e únicos para cada dimensão analisada.</p>
+        </div>
+        <div class="ahp-process-card">
+          <div class="ahp-process-number">3</div>
+          <h3>Escolha do Método</h3>
+          <p>Selecione entre matriz direta ou formulário assistido para realizar as comparações.</p>
+        </div>
+        <div class="ahp-process-card">
+          <div class="ahp-process-number">4</div>
+          <h3>Comparação Pareada</h3>
+          <p>Compare os critérios usando a escala de intensidade de Saaty e gere a matriz recíproca.</p>
+        </div>
+        <div class="ahp-process-card">
+          <div class="ahp-process-number">5</div>
+          <h3>Análise de Resultados</h3>
+          <p>Visualize pesos, índices de consistência, faixas percentuais e opções de exportação.</p>
+        </div>
+      </div>
+      <div class="ahp-welcome-actions">
+        <a href="tipo-analise.html" class="btn btn-primary">
+          <i class="fas fa-play" aria-hidden="true"></i>
+          Iniciar Calculadora AHP
+        </a>
       </div>
     </section>
   </main>

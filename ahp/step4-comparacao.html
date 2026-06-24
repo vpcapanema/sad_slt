@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Etapa 4: Comparação Pareada — AHP — SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+</head>
+<body class="ahp-module-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Apoio à Tomada de Decisão
+        <small>Hierarquização AHP</small>
+      </div>
+      <nav class="app-nav">
+        <a href="../index.html">Início</a>
+        <a href="../cadastro/">Cadastro</a>
+        <a href="./" class="active">AHP</a>
+        <a href="../painel/">Painel</a>
+        <a href="../admin/">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+<main class="app-main ahp-main">
+        
+            <section class="card ahp-step-intro">
+                <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+                        <a href="index.html">Início</a>
+                        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+                        <a href="step3-metodo.html">Etapa 3</a>
+                        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+                        <span class="ahp-breadcrumb-current">Etapa 4</span>
+                    </nav>
+                    <h1 class="ahp-page-title"><i class="fas fa-scale-balanced app-template-title-icon" aria-hidden="true"></i>Etapa 4: Comparação Pareada</h1>
+                    <p class="ahp-page-desc">Preencha a matriz ou o formulário assistido para refletir a importância relativa entre os critérios definidos nas etapas anteriores.</p>
+            </section>
+
+            <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>Os valores informados nesta etapa determinam diretamente os pesos finais e a razão de consistência da análise.</p>
+
+            <div class="ahp-progress card"><div class="ahp-progress-bar"><div class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Critérios</span></div><div class="ahp-progress-step completed"><div class="ahp-progress-circle">2</div><span>Nomes</span></div><div class="ahp-progress-step completed"><div class="ahp-progress-circle">3</div><span>Método</span></div><div class="ahp-progress-step active"><div class="ahp-progress-circle">4</div><span>Comparação</span></div><div class="ahp-progress-step"><div class="ahp-progress-circle">5</div><span>Resultados</span></div></div></div>
+
+            <section class="card ahp-step-section">
+                <div class="ahp-section-label"><i class="fas fa-compass app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Contexto da Etapa</span></div>
+                <div class="ahp-section-body">
+                    <section class="ahp-section info-card"><div class="ahp-info-card-header"><i class="fas fa-info-circle"></i><h2>Sobre esta Etapa: Comparação Pareada</h2></div><div class="info-card-content"><p>Nesta etapa, você irá <strong>comparar os critérios par a par</strong> utilizando a Escala de Saaty para definir a importância relativa entre eles.</p><div class="ahp-info-highlights"><div class="ahp-info-item"><i class="fas fa-balance-scale"></i><div><strong>Comparação Relativa</strong><p>Compare dois critérios por vez, indicando qual é mais importante e em que intensidade.</p></div></div><div class="ahp-info-item"><i class="fas fa-sync-alt"></i><div><strong>Valores Recíprocos</strong><p>Os valores simétricos na matriz são calculados automaticamente. Exemplo: se A comparado a B = 3, então B comparado a A = 1/3.</p></div></div><div class="ahp-info-item"><i class="fas fa-check-circle"></i><div><strong>Índice de Consistência</strong><p>Após preencher, o sistema calculará o índice de consistência (CR). Valores abaixo de 0,10 indicam comparações consistentes.</p></div></div></div></div></section>
+                </div>
+            </section>
+
+            <section class="card ahp-step-section">
+                <div class="ahp-section-label"><i class="fas fa-layer-group app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Preenchimento da Matriz</span></div>
+                <div class="ahp-section-body">
+                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">4</span><span>Comparação Pareada</span></h2><div class="info-card info-card--spaced"><div class="ahp-info-card-header"><i class="fas fa-balance-scale"></i><h3>4.1 Escala de Intensidade de Importância</h3></div><div class="info-card-content"><p class="saaty-description">A <strong>Escala de Intensidade de Importância de Saaty</strong> é utilizada no método AHP para quantificar as preferências entre critérios durante a comparação pareada. Esta escala fundamental varia de 1 a 9, onde <strong>1 representa igual importância</strong> entre dois critérios e <strong>9 representa importância extrema</strong> de um critério sobre o outro. Os valores intermediários (3, 5, 7) representam níveis moderado, forte e muito forte de importância, respectivamente. Os valores recíprocos (1/3, 1/5, 1/7, 1/9) são utilizados quando o segundo critério é mais importante que o primeiro.</p><div class="saaty-image-container"><img src="https://vpc-geoser-ahp-tool-calculator.onrender.com/img_folder/escala_intensidade_importancia_criterios_ahp.png" alt="Escala de Intensidade de Importância - Método AHP" class="ahp-saaty-image"></div></div></div><div class="info-card info-card--spaced"><div class="ahp-info-card-header"><i class="fas fa-table" id="methodIcon"></i><h3 id="methodCardTitle">4.2 Matriz de Comparação Pareada</h3></div><div class="info-card-content"><div id="instructions" class="ahp-instructions"><p id="instructionsText" class="instructions-text"></p></div><div id="comparisonContent" class="ahp-comparison-content"></div></div></div><div class="ahp-form-actions"><a href="step3-metodo.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><button onclick="calculateResults()" class="btn btn-primary">Calcular Resultados<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></button></div></section>
+                </div>
+            </section>
+    </main>
+    <script src="js/script.js"></script><script>
+        // Step 4 specific initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedCriteria = localStorage.getItem('ahp_criteria');
+            const savedMethod = localStorage.getItem('ahp_chosenMethod');
+
+            if (!savedCriteria || !savedMethod) {
+                alert('Dados incompletos. Redirecionando...');
+                window.location.href = 'step1-criterios.html';
+                return;
+            }
+
+            criteria = JSON.parse(savedCriteria);
+            const method = savedMethod;
+
+            const methodCardTitle = document.getElementById('methodCardTitle');
+            const methodIcon = document.getElementById('methodIcon');
+            const instructionsText = document.getElementById('instructionsText');
+
+            if (method === 'matrix') {
+                methodIcon.className = 'fas fa-table';
+                methodCardTitle.textContent = '4.2 Matriz de Comparação Pareada';
+                instructionsText.innerHTML = '<strong>Como preencher a Matriz:</strong> Compare SEMPRE a linha com a coluna.Você pode preencher <strong>qualquer célula da matriz</strong> (exceto a diagonal principal). Ao selecionar um valor em uma célula, o sistema automaticamente ajustará a célula simétrica oposta com o valor recíproco oposto. Use a Escala de Saaty apresentada acima para suas comparações.';
+                generateDirectMatrixStep4();
+            } else {
+                methodIcon.className = 'fas fa-clipboard-list';
+                methodCardTitle.textContent = '4.2 Formulário de Comparação Pareada';
+                instructionsText.innerHTML = '<strong>Como preencher o Formulário:</strong> Para cada par de critérios apresentado, selecione a intensidade de importância usando a Escala de Saaty. Compare o <strong>Critério 1 com o Critério 2</strong>, indicando quanto o Critério 1 é mais ou menos importante que o Critério 2. O sistema irá processar automaticamente as comparações recíprocas.';
+                generatePairwiseFormStep4();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Etapa 2: Nomear Critérios — AHP — SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+</head>
+<body class="ahp-module-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Apoio à Tomada de Decisão
+        <small>Hierarquização AHP</small>
+      </div>
+      <nav class="app-nav">
+        <a href="../index.html">Início</a>
+        <a href="../cadastro/">Cadastro</a>
+        <a href="./" class="active">AHP</a>
+        <a href="../painel/">Painel</a>
+        <a href="../admin/">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+<main class="app-main ahp-main">
+        
+            <section class="card ahp-step-intro">
+                <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+                        <a href="index.html">Início</a>
+                        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+                        <a href="step1-criterios.html">Etapa 1</a>
+                        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+                        <span class="ahp-breadcrumb-current">Etapa 2</span>
+                    </nav>
+                    <h1 class="ahp-page-title"><i class="fas fa-tags app-template-title-icon" aria-hidden="true"></i>Etapa 2: Nomear Critérios</h1>
+                    <p class="ahp-page-desc">Atribua nomes claros, distintos e operacionais para cada critério que será comparado ao longo da matriz AHP.</p>
+            </section>
+
+            <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>Nomes bem definidos tornam a leitura da matriz e dos resultados mais objetiva e evitam ambiguidades nas comparações.</p>
+
+            <div class="ahp-progress card"><div class="ahp-progress-bar"><div class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Critérios</span></div><div class="ahp-progress-step active"><div class="ahp-progress-circle">2</div><span>Nomes</span></div><div class="ahp-progress-step"><div class="ahp-progress-circle">3</div><span>Método</span></div><div class="ahp-progress-step"><div class="ahp-progress-circle">4</div><span>Comparação</span></div><div class="ahp-progress-step"><div class="ahp-progress-circle">5</div><span>Resultados</span></div></div></div>
+
+            <section class="card ahp-step-section">
+                <div class="ahp-section-label"><i class="fas fa-compass app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Contexto da Etapa</span></div>
+                <div class="ahp-section-body">
+                    <section class="ahp-section info-card"><div class="ahp-info-card-header"><i class="fas fa-info-circle"></i><h2>Sobre esta Etapa: Nomear Critérios</h2></div><div class="info-card-content"><p>Agora você irá <strong>atribuir nomes descritivos</strong> para cada um dos critérios que serão comparados no processo de decisão.</p><div class="ahp-info-highlights"><div class="ahp-info-item"><i class="fas fa-tag"></i><div><strong>Nomes claros e específicos</strong><p>Use termos que reflitam exatamente o que cada critério representa. Por exemplo: Custo Total, Qualidade do Produto, Prazo de Entrega.</p></div></div><div class="ahp-info-item"><i class="fas fa-spell-check"></i><div><strong>Evite ambiguidades</strong><p>Escolha nomes que não deixem dúvidas sobre o que está sendo avaliado. Nomes genéricos podem confundir na hora da comparação.</p></div></div><div class="ahp-info-item"><i class="fas fa-arrow-right"></i><div><strong>Próximos passos</strong><p>Após nomear todos os critérios, você escolherá o método de comparação, matriz direta ou formulário guiado.</p></div></div></div></div></section>
+                </div>
+            </section>
+
+            <section class="card ahp-step-section">
+                <div class="ahp-section-label"><i class="fas fa-sliders app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Cadastro dos Nomes</span></div>
+                <div class="ahp-section-body">
+                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">2</span>Digite os nomes dos critérios</h2><div id="criteriaInputs" class="ahp-criteria-inputs"></div><div class="ahp-form-actions"><a href="step1-criterios.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><button onclick="processCriteriaNames()" class="btn btn-primary">Continuar<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></button></div></section>
+                </div>
+            </section>
+    </main>
+    <script src="js/script.js"></script><script>document.addEventListener('DOMContentLoaded',function(){const count=localStorage.getItem('ahp_criteriaCount');if(!count||count<1){alert('Número de critérios não encontrado. Redirecionando para a Etapa 1.');window.location.href='step1-criterios.html';return;}const container=document.getElementById('criteriaInputs');const savedCriteria=JSON.parse(localStorage.getItem('ahp_criteria')||'[]');for(let i=1;i<=count;i++){const formGroup=document.createElement('div');formGroup.className='c-form-group';const label=document.createElement('label');label.className='c-form-label';label.setAttribute('for',`criteria${i}`);label.innerHTML=`<i class="fas fa-tag"></i> Critério ${i}`;const input=document.createElement('input');input.type='text';input.id=`criteria${i}`;input.name=`criteria${i}`;input.className='c-form-control';input.placeholder=`Digite o nome do critério ${i}`;input.value=savedCriteria[i-1]||'';input.required=true;const helpText=document.createElement('small');helpText.className='form-help';helpText.innerHTML='<i class="fas fa-info-circle"></i> Use um nome descritivo e específico';formGroup.appendChild(label);formGroup.appendChild(input);formGroup.appendChild(helpText);container.appendChild(formGroup);}});function processCriteriaNames(){const count=parseInt(localStorage.getItem('ahp_criteriaCount'),10);const criteria=[];let valid=true;for(let i=1;i<=count;i++){const input=document.getElementById(`criteria${i}`);const value=input.value.trim();if(!value){input.style.borderColor='var(--pli-error)';valid=false;}else{input.style.borderColor='';criteria.push(value);}}if(!valid){alert('Por favor, preencha todos os nomes dos critérios.');return;}const duplicates=criteria.filter((name,index)=>criteria.indexOf(name)!==index);if(duplicates.length>0){alert('Atenção: Há critérios com nomes duplicados. Use nomes únicos para cada critério.');return;}localStorage.setItem('ahp_criteria',JSON.stringify(criteria));window.location.href='step3-metodo.html';}</script>
+</body>
+</html>

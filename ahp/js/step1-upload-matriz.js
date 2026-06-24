@@ -1,0 +1,186 @@
+/**
+ * Etapa 1 — upload da matriz de critérios e premissas (XLSX/CSV).
+ */
+(function () {
+  "use strict";
+
+  var uploadedPremissasData = null;
+  var uploadedFileName = "";
+
+  function showNotification(message, type) {
+    var notificationDiv = document.createElement("div");
+    notificationDiv.className = "ahp-notification ahp-notification--" + type;
+    notificationDiv.innerHTML =
+      '<i class="fas fa-' +
+      (type === "success" ? "check-circle" : type === "error" ? "exclamation-circle" : "info-circle") +
+      '"></i><span>' +
+      message +
+      "</span>";
+    document.body.appendChild(notificationDiv);
+    setTimeout(function () {
+      notificationDiv.style.opacity = "0";
+      setTimeout(function () {
+        notificationDiv.remove();
+      }, 300);
+    }, 4000);
+  }
+
+  function toggleInputMethod() {
+    var manualRadio = document.getElementById("method-manual");
+    var uploadRadio = document.getElementById("method-upload");
+    var manualContent = document.getElementById("manual-method-content");
+    var uploadContent = document.getElementById("upload-method-content");
+    var continueBtn = document.getElementById("continue-btn");
+
+    if (manualRadio.checked) {
+      manualContent.style.display = "block";
+      uploadContent.style.display = "none";
+      continueBtn.textContent = "Continuar";
+      continueBtn.innerHTML =
+        'Continuar<i class="fas fa-arrow-right icon-right" aria-hidden="true"></i>';
+      continueBtn.onclick = processCriteriaCount;
+    } else if (uploadRadio.checked) {
+      manualContent.style.display = "none";
+      uploadContent.style.display = "block";
+      continueBtn.textContent = "Processar Matriz";
+      continueBtn.innerHTML =
+        '<i class="fas fa-check" aria-hidden="true"></i> Processar Matriz';
+      continueBtn.onclick = processUploadedMatrix;
+    }
+  }
+
+  function handleFileSelect(event) {
+    var file = event.target.files[0];
+    var fileInfo = document.getElementById("file-info");
+    uploadedPremissasData = null;
+    uploadedFileName = "";
+
+    if (!file) {
+      fileInfo.innerHTML = "";
+      return;
+    }
+
+    uploadedFileName = file.name;
+    var fileSize = (file.size / 1024).toFixed(2) + " KB";
+    var fileExtension = file.name.split(".").pop().toLowerCase();
+
+    fileInfo.innerHTML =
+      '<div class="ahp-selected-file"><i class="fas fa-file-alt"></i><div><strong>' +
+      file.name +
+      "</strong><small>" +
+      fileSize +
+      "</small></div></div>";
+
+    if (fileExtension === "csv") {
+      var textReader = new FileReader();
+      textReader.onload = function (e) {
+        try {
+          uploadedPremissasData = SltMatrizPremissas.parseCsvContent(e.target.result);
+          showNotification(
+            uploadedPremissasData.length +
+              " critério(s) carregado(s). Clique em Processar Matriz para continuar.",
+            "success"
+          );
+        } catch (error) {
+          showNotification("Erro ao ler CSV: " + error.message, "error");
+          uploadedPremissasData = null;
+        }
+      };
+      textReader.onerror = function () {
+        showNotification("Erro ao ler o arquivo CSV.", "error");
+      };
+      textReader.readAsText(file, "UTF-8");
+      return;
+    }
+
+    if (fileExtension === "xlsx") {
+      var binReader = new FileReader();
+      binReader.onload = function (e) {
+        try {
+          uploadedPremissasData = SltMatrizPremissas.parseXlsxArrayBuffer(e.target.result);
+          showNotification(
+            uploadedPremissasData.length +
+              " critério(s) carregado(s). Clique em Processar Matriz para continuar.",
+            "success"
+          );
+        } catch (error) {
+          showNotification("Erro ao ler XLSX: " + error.message, "error");
+          uploadedPremissasData = null;
+        }
+      };
+      binReader.onerror = function () {
+        showNotification("Erro ao ler o arquivo XLSX.", "error");
+      };
+      binReader.readAsArrayBuffer(file);
+      return;
+    }
+
+    showNotification("Formato não suportado. Use XLSX ou CSV.", "error");
+  }
+
+  function processUploadedMatrix() {
+    if (!uploadedPremissasData || !uploadedPremissasData.length) {
+      showNotification("Selecione e carregue um arquivo de matriz primeiro.", "error");
+      return;
+    }
+
+    try {
+      var criteria = uploadedPremissasData.map(function (row) {
+        return row.criterio;
+      });
+
+      var duplicates = criteria.filter(function (name, index) {
+        return criteria.indexOf(name) !== index;
+      });
+      if (duplicates.length) {
+        showNotification(
+          "Critérios duplicados na matriz: " + duplicates.join(", "),
+          "error"
+        );
+        return;
+      }
+
+      SltMatrizPremissas.saveMatrizPremissas(uploadedPremissasData, uploadedFileName);
+      localStorage.setItem("ahp_inputMethod", "upload_matriz");
+      localStorage.setItem("ahp_criteriaCount", String(criteria.length));
+      localStorage.setItem("ahp_criteria", JSON.stringify(criteria));
+      localStorage.removeItem("ahp_uploadedMatrix");
+      localStorage.removeItem("ahp_pairwiseMatrix");
+
+      showNotification("Matriz processada. Avançando para a próxima etapa…", "info");
+      setTimeout(function () {
+        window.location.href = "step2-nomes.html";
+      }, 600);
+    } catch (error) {
+      showNotification("Erro ao processar matriz: " + error.message, "error");
+    }
+  }
+
+  function processCriteriaCount() {
+    var countSelect = document.getElementById("criteria-count");
+    var criteriaCount = parseInt(countSelect.value, 10);
+    SltMatrizPremissas.clearMatrizPremissas();
+    localStorage.removeItem("ahp_uploadedMatrix");
+    localStorage.removeItem("ahp_pairwiseMatrix");
+    localStorage.setItem("ahp_inputMethod", "manual");
+    localStorage.setItem("ahp_criteriaCount", String(criteriaCount));
+    window.location.href = "step2-nomes.html";
+  }
+
+  global.toggleInputMethod = toggleInputMethod;
+  global.handleFileSelect = handleFileSelect;
+  global.processUploadedMatrix = processUploadedMatrix;
+  global.processCriteriaCount = processCriteriaCount;
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var savedCount = localStorage.getItem("ahp_criteriaCount");
+    if (savedCount) {
+      document.getElementById("criteria-count").value = savedCount;
+    }
+    var savedMethod = localStorage.getItem("ahp_inputMethod");
+    if (savedMethod === "upload_matriz") {
+      document.getElementById("method-upload").checked = true;
+      toggleInputMethod();
+    }
+  });
+})();
