@@ -1,7 +1,7 @@
 /**
  * Etapa 1 — upload da matriz de critérios e premissas (XLSX/CSV).
  */
-(function () {
+(function (global) {
   "use strict";
 
   var uploadedPremissasData = null;
@@ -33,15 +33,15 @@
     var continueBtn = document.getElementById("continue-btn");
 
     if (manualRadio.checked) {
-      manualContent.style.display = "block";
-      uploadContent.style.display = "none";
+      manualContent.classList.remove("method-content--hidden");
+      uploadContent.classList.add("method-content--hidden");
       continueBtn.textContent = "Continuar";
       continueBtn.innerHTML =
         'Continuar<i class="fas fa-arrow-right icon-right" aria-hidden="true"></i>';
       continueBtn.onclick = processCriteriaCount;
     } else if (uploadRadio.checked) {
-      manualContent.style.display = "none";
-      uploadContent.style.display = "block";
+      manualContent.classList.add("method-content--hidden");
+      uploadContent.classList.remove("method-content--hidden");
       continueBtn.textContent = "Processar Matriz";
       continueBtn.innerHTML =
         '<i class="fas fa-check" aria-hidden="true"></i> Processar Matriz';
@@ -183,4 +183,4 @@
       toggleInputMethod();
     }
   });
-})();
+})(window);
