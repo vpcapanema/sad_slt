@@ -8,14 +8,55 @@
   margin: 0 0 0.35rem;
   font-size: 1.45rem;
   color: var(--pli-deep);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .ahp-page-desc {
-  margin: 0 0 1.25rem;
+  margin: 0 auto 1.25rem;
   font-size: 0.9375rem;
   color: var(--pli-muted);
   line-height: 1.6;
   max-width: 820px;
+}
+
+.ahp-module-page .ahp-step-intro,
+.ahp-module-page .app-main.ahp-main > .card:first-child {
+  text-align: center;
+}
+
+.ahp-module-page .ahp-breadcrumb {
+  justify-content: center;
+}
+
+.ahp-module-page .ahp-page-title {
+  justify-content: center;
+}
+
+.ahp-module-page .ahp-info-note {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.ahp-module-page .ahp-info-note i {
+  margin-top: 0;
+}
+
+.ahp-module-page .ahp-section-label {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.ahp-module-page .info-card-content {
+  text-align: center;
+}
+
+.ahp-module-page .ahp-step-title {
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .ahp-breadcrumb {
@@ -88,11 +129,14 @@
 .ahp-summary-card {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.65rem;
   padding: 1.15rem;
   border-radius: var(--pli-radius);
   border: 1px solid var(--pli-border);
   background: #f7f9fb;
+  box-shadow: var(--pli-shadow);
+  text-align: center;
 }
 
 .ahp-summary-card__icon {
@@ -113,6 +157,7 @@
   color: var(--pli-deep);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
 }
 
@@ -159,9 +204,9 @@
   border: 1px solid var(--pli-border);
   background: var(--pli-white);
   box-shadow: var(--pli-shadow);
-}
-
-.ahp-feature-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
 }
 
@@ -204,7 +249,7 @@
 .ahp-process-number {
   width: 36px;
   height: 36px;
-  margin-bottom: 0.65rem;
+  margin: 0 0 0.65rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -220,6 +265,7 @@
   flex-wrap: wrap;
   gap: 0.65rem;
   margin-top: 1.25rem;
+  justify-content: center;
 }
 
 .ahp-progress {
@@ -323,10 +369,6 @@
 }
 
 .ahp-info-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
   gap: 0.65rem;
 }
 
@@ -419,17 +461,61 @@
 }
 
 .ahp-template-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.875rem;
   margin-top: 0.5rem;
 }
 
-.ahp-template-buttons a.btn {
+.ahp-template-download-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: center;
+  gap: 0.625rem;
+  min-height: 46px;
+  width: 100%;
+  padding: 0 20px;
+  border: 1px solid rgba(17, 101, 147, 0.45);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--pli-blue);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
   text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.ahp-template-download-btn:hover {
+  background: transparent;
+  color: var(--pli-blue);
+  text-decoration: none;
+  transform: translateY(-2px);
+}
+
+.ahp-upload-select-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  min-height: 46px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 14px;
+  background: #e8edf2;
+  color: var(--pli-deep);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.ahp-upload-select-btn:hover {
+  transform: translateY(-2px);
+  background: #dfe7ee;
 }
 
 .ahp-selected-file {
@@ -475,12 +561,131 @@
 }
 
 .ahp-method-features,
-.ahp-info-list {
-  margin: 0.65rem 0 0;
-  padding-left: 1.1rem;
+.method-features,
+.ahp-info-list,
+.info-list {
+  margin: 0.65rem auto 0;
+  padding: 0;
   font-size: 0.875rem;
   color: var(--pli-muted);
+  text-align: center;
+  list-style: none;
+}
+
+.ahp-method-features li,
+.method-features li,
+.ahp-info-list li,
+.info-list li {
+  margin-bottom: 0.35rem;
+}
+
+.ahp-method-features li i,
+.method-features li i,
+.ahp-info-list li i,
+.info-list li i {
+  margin-right: 0.35rem;
+  color: var(--pli-green-dark);
+}
+
+.ahp-module-page .method-option-header,
+.ahp-module-page .method-option-body,
+.ahp-module-page .method-option-footer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ahp-module-page .method-option-footer {
+  margin-top: 0.75rem;
+}
+
+.ahp-module-page .ahp-recommendation,
+.ahp-module-page .ahp-instructions {
+  flex-direction: column;
+  align-items: flex-start;
   text-align: left;
+}
+
+.ahp-module-page .info-box {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  text-align: left;
+  gap: 0.875rem;
+}
+
+.ahp-module-page .ahp-method-choice,
+.ahp-module-page .method-content,
+.ahp-module-page .ahp-upload-step,
+.ahp-module-page .step-content,
+.ahp-module-page .upload-area {
+  text-align: left;
+}
+
+.ahp-module-page .method-content .c-form-group,
+.ahp-module-page .upload-area {
+  max-width: 520px;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.ahp-module-page .ahp-template-buttons {
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.ahp-module-page .ahp-template-download-btn {
+  box-shadow: none;
+}
+
+.ahp-module-page .ahp-template-download-btn:hover {
+  filter: none;
+}
+
+.ahp-module-page .upload-area {
+  display: grid;
+  gap: 0.875rem;
+}
+
+.ahp-module-page .upload-area .file-info {
+  margin-top: 0;
+}
+
+.ahp-module-page .info-box__content {
+  min-width: 0;
+}
+
+.ahp-module-page .info-box__content strong {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.ahp-module-page .info-list {
+  margin: 0;
+  padding-left: 1.125rem;
+  text-align: left;
+  list-style: disc;
+}
+
+.ahp-module-page .info-list li {
+  margin-bottom: 0.35rem;
+  line-height: 1.55;
+}
+
+.ahp-module-page .info-list li:last-child {
+  margin-bottom: 0;
+}
+
+.ahp-module-page .ahp-method-choice-header,
+.ahp-module-page .ahp-step-title {
+  justify-content: flex-start;
+}
+
+.ahp-module-page .ahp-step-title .ahp-step-number {
+  margin-left: 0;
 }
 
 .ahp-tipo-card {
@@ -492,6 +697,10 @@
   box-shadow: var(--pli-shadow);
   cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .ahp-tipo-card:hover {
@@ -512,7 +721,7 @@
 .ahp-tipo-card__icon {
   width: 48px;
   height: 48px;
-  margin-bottom: 0.75rem;
+  margin: 0 auto 0.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -530,10 +739,16 @@
 
 .ahp-tipo-card ul {
   margin: 0.65rem 0 0;
-  padding-left: 1.1rem;
+  padding: 0;
   font-size: 0.875rem;
   color: var(--pli-muted);
   line-height: 1.55;
+  list-style: none;
+  text-align: center;
+}
+
+.ahp-tipo-card ul li {
+  margin-bottom: 0.35rem;
 }
 
 .ahp-form-actions {
@@ -541,6 +756,7 @@
   flex-wrap: wrap;
   gap: 0.65rem;
   margin-top: 1.25rem;
+  justify-content: center;
 }
 
 .ahp-form-actions .btn i {

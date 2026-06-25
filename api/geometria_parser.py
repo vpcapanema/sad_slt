@@ -2,31 +2,39 @@
 from __future__ import annotations
 
 import io
+import importlib
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence, cast
 
 from fastapi import HTTPException
+import shapefile  # pyshp
+import shapely.geometry
+from shapely.geometry import GeometryCollection, mapping, shape as to_shape
+from shapely.geometry.base import BaseGeometry
+from shapely.ops import unary_union
 
 
-def _geojson_from_geometries(geoms: list, properties: list[dict] | None = None) -> dict[str, Any]:
-    import shapely.geometry
-    from shapely.geometry import mapping
-    from shapely.ops import unary_union
-
-    shapes = []
+def _geojson_from_geometries(
+    geoms: Sequence[BaseGeometry | dict[str, Any]],
+    properties: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Consolida geometrias suportadas em uma única feature GeoJSON."""
+    shapes: list[BaseGeometry] = []
     for geom in geoms:
-        if geom is None:
-            continue
-        if not hasattr(geom, "is_valid"):
-            geom = shapely.geometry.shape(geom)
-        if geom.geom_type == "GeometryCollection":
-            for g in geom.geoms:
+        parsed_geom: BaseGeometry
+        if isinstance(geom, BaseGeometry):
+            parsed_geom = geom
+        else:
+            parsed_geom = shapely.geometry.shape(geom)
+
+        if isinstance(parsed_geom, GeometryCollection):
+            for g in parsed_geom.geoms:
                 if g.geom_type in ("Polygon", "MultiPolygon", "LineString", "MultiLineString"):
                     shapes.append(g)
-        elif geom.geom_type in ("Polygon", "MultiPolygon", "LineString", "MultiLineString"):
-            shapes.append(geom)
+        elif parsed_geom.geom_type in ("Polygon", "MultiPolygon", "LineString", "MultiLineString"):
+            shapes.append(parsed_geom)
     if not shapes:
         raise HTTPException(400, "Nenhuma geometria de área ou linha encontrada no arquivo.")
 
@@ -48,8 +56,7 @@ def _geojson_from_geometries(geoms: list, properties: list[dict] | None = None) 
 
 
 def parse_shapefile_zip(content: bytes) -> dict[str, Any]:
-    import shapefile  # pyshp
-
+    """Lê um ZIP com shapefile e retorna a geometria consolidada em GeoJSON."""
     with zipfile.ZipFile(io.BytesIO(content)) as zf:
         shp_names = [n for n in zf.namelist() if n.lower().endswith(".shp")]
         if not shp_names:
@@ -67,21 +74,23 @@ def parse_shapefile_zip(content: bytes) -> dict[str, Any]:
             zf.extract(m, extract_dir)
         shp_path = str(Path(extract_dir) / Path(shp_name).name)
         reader = shapefile.Reader(shp_path)
-        geoms = []
+        geoms: list[dict[str, Any]] = []
         for sr in reader.shapeRecords():
-            geoms.append(sr.shape.__geo_interface__)
-    from shapely.geometry import shape
-
+            shp_record = sr.shape
+            if shp_record is None:
+                continue
+            geoms.append(cast(dict[str, Any], shp_record.__geo_interface__))
     supported = ("Polygon", "MultiPolygon", "LineString", "MultiLineString")
-    parsed = [shape(g) for g in geoms if g.get("type") in supported]
+    parsed = [to_shape(g) for g in geoms if g.get("type") in supported]
     if not parsed:
         raise HTTPException(400, "Shapefile não contém polígonos ou linhas.")
     return _geojson_from_geometries(parsed)
 
 
 def parse_geopackage(content: bytes) -> dict[str, Any]:
+    """Lê um GeoPackage e retorna a geometria consolidada em GeoJSON."""
     try:
-        import geopandas as gpd
+        gpd = importlib.import_module("geopandas")
     except ImportError as e:
         raise HTTPException(
             501,
@@ -103,6 +112,7 @@ def parse_geopackage(content: bytes) -> dict[str, Any]:
 
 
 def parse_upload(filename: str, content: bytes) -> dict[str, Any]:
+    """Despacha o parser adequado conforme a extensão do arquivo enviado."""
     name = (filename or "").lower()
     if name.endswith(".zip"):
         feature = parse_shapefile_zip(content)

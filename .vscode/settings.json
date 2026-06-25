@@ -5,5 +5,7 @@
   "python.analysis.diagnosticMode": "workspace",
   "python.linting.pylintEnabled": true,
   "python.linting.pylintPath": "${workspaceFolder}/.venv/Scripts/pylint.exe",
-  "pylint.args": ["--init-hook=import sys; sys.path.insert(0, '.')"]
+  "pylint.args": ["--init-hook=import sys; sys.path.insert(0, '.')"],
+  "cursorpyright.analysis.diagnosticMode": "workspace",
+  "cursorpyright.analysis.extraPaths": ["${workspaceFolder}"]
 }

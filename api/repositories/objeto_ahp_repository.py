@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import psycopg
+from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
@@ -90,6 +92,7 @@ _INSERT_SQL = """
 
 
 def prepare_params(data: dict[str, Any]) -> dict[str, Any]:
+    """Normaliza campos JSON/GeoJSON antes da persistência."""
     params = dict(data)
     for key in ("classificacao", "complementos"):
         val = params.get(key)
@@ -100,12 +103,17 @@ def prepare_params(data: dict[str, Any]) -> dict[str, Any]:
     return params
 
 
-def insert_with_connection(conn, row: dict[str, Any]) -> Any:
+def insert_with_connection(conn: psycopg.Connection[dict[str, Any]], row: dict[str, Any]) -> Any:
+    """Insere um objeto AHP usando a conexão/transação já aberta."""
     cur = conn.execute(_INSERT_SQL, prepare_params(row))
-    return cur.fetchone()["id"]
+    inserted = cur.fetchone()
+    if not inserted:
+        raise RuntimeError("Insert de objeto AHP não retornou id.")
+    return inserted["id"]
 
 
 def insert(row: dict[str, Any]) -> dict[str, Any]:
+    """Insere um objeto AHP e retorna a linha persistida."""
     with get_connection() as conn:
         inserted_id = insert_with_connection(conn, row)
         conn.commit()
@@ -116,35 +124,39 @@ def insert(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def list_all(*, status: str | None = None, grupo: str | None = None) -> list[dict[str, Any]]:
-    sql = _SELECT_BASE + " WHERE 1=1"
+    """Lista objetos AHP com filtros opcionais por status e grupo."""
+    query = _SELECT_BASE + " WHERE 1=1"
     params: list[Any] = []
     if status:
-        sql += " AND o.status = %s"
+        query += " AND o.status = %s"
         params.append(status)
     if grupo:
-        sql += " AND o.grupo_comparacao = %s"
+        query += " AND o.grupo_comparacao = %s"
         params.append(grupo)
-    sql += " ORDER BY o.aprovado_em DESC"
+    query += " ORDER BY o.aprovado_em DESC"
     with get_connection() as conn:
-        return list(conn.execute(sql, params).fetchall())
+        return list(conn.execute(query, params).fetchall())
 
 
 def get_by_id(objeto_id: Any) -> dict[str, Any] | None:
-    sql = _SELECT_BASE + " WHERE o.id = %s"
+    """Busca um objeto AHP pelo identificador UUID."""
+    query = _SELECT_BASE + " WHERE o.id = %s"
     with get_connection() as conn:
-        return conn.execute(sql, (objeto_id,)).fetchone()
+        return conn.execute(query, (objeto_id,)).fetchone()
 
 
 def get_by_demanda_id(demanda_id: Any) -> dict[str, Any] | None:
-    sql = _SELECT_BASE + " WHERE o.demanda_id = %s"
+    """Busca o objeto AHP vinculado a uma demanda."""
+    query = _SELECT_BASE + " WHERE o.demanda_id = %s"
     with get_connection() as conn:
-        return conn.execute(sql, (demanda_id,)).fetchone()
+        return conn.execute(query, (demanda_id,)).fetchone()
 
 
 def get_by_codigo(codigo: str) -> dict[str, Any] | None:
-    sql = _SELECT_BASE + " WHERE o.codigo = %s"
+    """Busca um objeto AHP pelo código legível."""
+    query = _SELECT_BASE + " WHERE o.codigo = %s"
     with get_connection() as conn:
-        return conn.execute(sql, (codigo,)).fetchone()
+        return conn.execute(query, (codigo,)).fetchone()
 
 
 _UPDATE_ALLOWED = {
@@ -163,6 +175,7 @@ _UPDATE_ALLOWED = {
 
 
 def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
+    """Atualiza os campos permitidos do objeto AHP e retorna o registro final."""
     if not data:
         return get_by_codigo(codigo)
 
@@ -180,8 +193,16 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
     if not sets:
         return get_by_codigo(codigo)
 
-    sql = f"UPDATE ahp.objeto_ahp SET {', '.join(sets)} WHERE codigo = %(codigo)s"
+    assignments = [
+        sql.SQL("{} = {}").format(sql.Identifier(_UPDATE_ALLOWED[key]), sql.Placeholder(key))
+        for key in params
+        if key != "codigo"
+    ]
+    query = sql.SQL("UPDATE ahp.objeto_ahp SET {} WHERE codigo = {}").format(
+        sql.SQL(", ").join(assignments),
+        sql.Placeholder("codigo"),
+    )
     with get_connection() as conn:
-        conn.execute(sql, params)
+        conn.execute(query, params)
         conn.commit()
     return get_by_codigo(codigo)

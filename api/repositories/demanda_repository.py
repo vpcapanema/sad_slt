@@ -5,6 +5,7 @@ import json
 from typing import Any
 
 from psycopg import errors
+from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
@@ -85,10 +86,14 @@ _INSERT_SQL = """
 
 
 def insert(row: dict[str, Any]) -> dict[str, Any]:
+    """Insere uma demanda e retorna a linha persistida."""
     with get_connection() as conn:
         try:
             cur = conn.execute(_INSERT_SQL, row)
-            inserted_id = cur.fetchone()["id"]
+            inserted = cur.fetchone()
+            if not inserted:
+                raise RuntimeError("Insert de demanda não retornou id.")
+            inserted_id = inserted["id"]
             conn.commit()
         except errors.UniqueViolation as exc:
             conn.rollback()
@@ -100,21 +105,24 @@ def insert(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def list_all() -> list[dict[str, Any]]:
-    sql = _SELECT_BASE + " ORDER BY d.criado_em DESC"
+    """Lista todas as demandas ordenadas da mais recente para a mais antiga."""
+    query = _SELECT_BASE + " ORDER BY d.criado_em DESC"
     with get_connection() as conn:
-        return list(conn.execute(sql).fetchall())
+        return list(conn.execute(query).fetchall())
 
 
 def get_by_codigo(codigo: str) -> dict[str, Any] | None:
-    sql = _SELECT_BASE + " WHERE d.codigo = %s"
+    """Busca uma demanda pelo código legível."""
+    query = _SELECT_BASE + " WHERE d.codigo = %s"
     with get_connection() as conn:
-        return conn.execute(sql, (codigo,)).fetchone()
+        return conn.execute(query, (codigo,)).fetchone()
 
 
 def get_by_uuid(demanda_id: Any) -> dict[str, Any] | None:
-    sql = _SELECT_BASE + " WHERE d.id = %s"
+    """Busca uma demanda pelo identificador UUID."""
+    query = _SELECT_BASE + " WHERE d.id = %s"
     with get_connection() as conn:
-        return conn.execute(sql, (demanda_id,)).fetchone()
+        return conn.execute(query, (demanda_id,)).fetchone()
 
 
 def prepare_insert_params(data: dict[str, Any]) -> dict[str, Any]:
@@ -148,6 +156,7 @@ _UPDATE_ALLOWED = {
 
 
 def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
+    """Atualiza os campos permitidos de uma demanda e retorna o registro final."""
     if not data:
         return get_by_codigo(codigo)
 
@@ -165,8 +174,16 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
     if not sets:
         return get_by_codigo(codigo)
 
-    sql = f"UPDATE cadastro.cadastro_demanda SET {', '.join(sets)} WHERE codigo = %(codigo)s"
+    assignments = [
+        sql.SQL("{} = {}").format(sql.Identifier(_UPDATE_ALLOWED[key]), sql.Placeholder(key))
+        for key in params
+        if key != "codigo"
+    ]
+    query = sql.SQL("UPDATE cadastro.cadastro_demanda SET {} WHERE codigo = {}").format(
+        sql.SQL(", ").join(assignments),
+        sql.Placeholder("codigo"),
+    )
     with get_connection() as conn:
-        conn.execute(sql, params)
+        conn.execute(query, params)
         conn.commit()
     return get_by_codigo(codigo)

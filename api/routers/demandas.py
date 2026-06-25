@@ -15,6 +15,7 @@ router = APIRouter(prefix="/demandas", tags=["demandas"])
 
 @router.post("", response_model=DemandaResponseSchema, status_code=201)
 async def criar_demanda(body: DemandaCreateSchema) -> DemandaResponseSchema:
+    """Cria uma nova demanda de projeto."""
     try:
         return demanda_service.criar_demanda(body)
     except DemandaValidationError as exc:
@@ -25,6 +26,7 @@ async def criar_demanda(body: DemandaCreateSchema) -> DemandaResponseSchema:
 
 @router.get("", response_model=list[DemandaResponseSchema])
 async def listar_demandas() -> list[DemandaResponseSchema]:
+    """Lista as demandas cadastradas."""
     try:
         return demanda_service.listar_demandas()
     except DatabaseUnavailableError as exc:
@@ -33,6 +35,7 @@ async def listar_demandas() -> list[DemandaResponseSchema]:
 
 @router.get("/{codigo}", response_model=DemandaResponseSchema)
 async def obter_demanda(codigo: str) -> DemandaResponseSchema:
+    """Obtém os detalhes de uma demanda pelo código."""
     try:
         return demanda_service.obter_demanda(codigo)
     except DemandaNotFoundError as exc:
@@ -48,12 +51,12 @@ async def aprovar_demanda(
     user: SessionUser = Depends(require_gestor),
 ) -> ObjetoAhpResponseSchema:
     """Aprova demanda e insere objeto em ahp.objeto_ahp (única fonte do módulo AHP)."""
-    payload = body or AprovarDemandaSchema()
-    aprovado_por = payload.aprovado_por or user.id
+    motivo = body.motivo if body else None
+    aprovado_por = (body.aprovado_por if body else None) or user.id
     try:
         return objeto_ahp_service.aprovar_demanda(
             codigo,
-            motivo=payload.motivo,
+            motivo=motivo,
             aprovado_por=aprovado_por,
         )
     except DemandaNotFoundError as exc:
@@ -70,6 +73,7 @@ async def atualizar_demanda(
     body: DemandaUpdateSchema,
     _user: SessionUser = Depends(require_gestor),
 ) -> DemandaResponseSchema:
+    """Atualiza uma demanda existente."""
     try:
         return demanda_service.atualizar_demanda(codigo, body)
     except DemandaNotFoundError as exc:

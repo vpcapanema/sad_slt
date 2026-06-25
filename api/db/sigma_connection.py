@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Generator
+from typing import Any, Generator, cast
 
 import psycopg
 from psycopg.rows import dict_row
@@ -10,9 +10,12 @@ from psycopg.rows import dict_row
 from api.config import get_settings
 from api.exceptions import DatabaseUnavailableError
 
+SigmaConnectionDict = psycopg.Connection[dict[str, Any]]
+
 
 @contextmanager
-def get_sigma_connection() -> Generator[psycopg.Connection, None, None]:
+def get_sigma_connection() -> Generator[SigmaConnectionDict, None, None]:
+    """Retorna conexão read-only com o banco SIGMA em formato dict."""
     dsn = get_settings().sigma_database_url
     if not dsn:
         raise DatabaseUnavailableError(
@@ -21,7 +24,14 @@ def get_sigma_connection() -> Generator[psycopg.Connection, None, None]:
             "(mesmo padrão do PLI-HazardTrack)."
         )
     try:
-        with psycopg.connect(dsn, row_factory=dict_row, connect_timeout=8) as conn:
+        with cast(
+            SigmaConnectionDict,
+            psycopg.connect(
+                dsn,
+                row_factory=cast(Any, dict_row),
+                connect_timeout=8,
+            ),
+        ) as conn:
             conn.execute("SET default_transaction_read_only = ON")
             yield conn
     except DatabaseUnavailableError:
