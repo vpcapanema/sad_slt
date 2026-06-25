@@ -1,7 +1,7 @@
 /**
  * Etapa 3 — exibe matriz de premissas e critérios importada na Etapa 1.
  */
-(function () {
+(function (global) {
   "use strict";
 
   document.addEventListener("DOMContentLoaded", function () {
@@ -24,4 +24,4 @@
   }
 
   global.selectMethod = selectMethod;
-})();
+})(window);

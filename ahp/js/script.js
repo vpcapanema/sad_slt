@@ -646,26 +646,188 @@ function applyColorScheme(selectElement, reciprocalCell, val) {
 // -----------------------------------------------------------
 // Step 4: Gera formulário pareado específico para step4-comparacao.html
 // -----------------------------------------------------------
+// Graduações da escala de Saaty (centrada em 1), conforme a imagem de referência
+const SAATY_STEPS = [
+  { v: 1 / 9, label: "1/9", desc: "Extremamente" },
+  { v: 1 / 7, label: "1/7", desc: "Bastante" },
+  { v: 1 / 5, label: "1/5", desc: "Médio" },
+  { v: 1 / 3, label: "1/3", desc: "Pouco" },
+  { v: 1, label: "1", desc: "Igual" },
+  { v: 3, label: "3", desc: "Pouco" },
+  { v: 5, label: "5", desc: "Médio" },
+  { v: 7, label: "7", desc: "Bastante" },
+  { v: 9, label: "9", desc: "Extremamente" },
+];
+const SAATY_CENTER = 4;
+
+function escAhp(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function generatePairwiseFormStep4() {
   const n = criteria.length;
-  const container = document.getElementById('comparisonContent');
-  let html = '<table class="matrix-table">';
-  html += '<thead><tr>';
-  html += '<th style="background: var(--pli-deep); color: white;">Critério 1</th>';
-  html += '<th style="background: var(--pli-deep); color: white;">Critério 2</th>';
-  html += '<th style="background: var(--pli-deep); color: white;">Importância (Escala AHP)</th>';
-  html += '</tr></thead><tbody>';
+  const container = document.getElementById("comparisonContent");
+  let html = '<div class="saaty-form">';
   for (let i = 0; i < n - 1; i++) {
     for (let j = i + 1; j < n; j++) {
-      html += '<tr>';
-      html += `<td><strong>${criteria[i]}</strong></td>`;
-      html += `<td><strong>${criteria[j]}</strong></td>`;
-      html += `<td>${createSelectInput(i, j)}</td>`;
-      html += '</tr>';
+      html += buildSaatyPair(i, j);
     }
   }
-  html += '</tbody></table>';
+  html += "</div>";
   container.innerHTML = html;
+  initSaatySliders();
+}
+
+function buildSaatyPair(i, j) {
+  const pid = i + "_" + j;
+  let ticks = "";
+  SAATY_STEPS.forEach((s, idx) => {
+    const pct = (idx / (SAATY_STEPS.length - 1)) * 100;
+    ticks +=
+      '<div class="saaty-tick" style="left:' + pct + '%">' +
+      '<span class="saaty-tick-val">' + s.label + "</span>" +
+      '<span class="saaty-tick-desc">' + s.desc + "</span>" +
+      '<span class="saaty-tick-mark"></span>' +
+      "</div>";
+  });
+  return (
+    '<div class="saaty-pair" data-i="' + i + '" data-j="' + j + '">' +
+    '<div class="saaty-widget">' +
+    '<div class="saaty-scale" data-pid="' + pid +
+    '" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="8" aria-valuenow="4" aria-label="Comparação entre ' +
+    escAhp(criteria[i]) + " e " + escAhp(criteria[j]) + '">' +
+    '<div class="saaty-arrow"></div>' +
+    '<div class="saaty-rail">' + ticks + '<div class="saaty-handle"></div></div>' +
+    "</div>" +
+    '<div class="saaty-dir"><span><i class="fas fa-arrow-left"></i> Menos importante</span>' +
+    '<span>Mais importante <i class="fas fa-arrow-right"></i></span></div>' +
+    "</div>" +
+    '<div class="saaty-criteria">' +
+    '<span class="saaty-crit saaty-crit--left"><span class="saaty-crit__tag">1</span><span class="saaty-crit__name">' +
+    escAhp(criteria[i]) + "</span></span>" +
+    '<span class="saaty-vs">vs</span>' +
+    '<span class="saaty-crit saaty-crit--right"><span class="saaty-crit__tag">2</span><span class="saaty-crit__name">' +
+    escAhp(criteria[j]) + "</span></span>" +
+    "</div>" +
+    '<div class="saaty-readout" id="readout_' + pid + '"></div>' +
+    '<input type="hidden" id="pair_' + pid + '" value="1">' +
+    "</div>"
+  );
+}
+
+function initSaatySliders() {
+  // Largura única para todas as setas: cobre o par de critérios mais largo
+  // (ou um mínimo que comporte as 9 graduações da escala).
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const fam = getComputedStyle(document.body).fontFamily || "sans-serif";
+  ctx.font = "700 16px " + fam;
+  let maxPair = 0;
+  for (let i = 0; i < criteria.length - 1; i++) {
+    for (let j = i + 1; j < criteria.length; j++) {
+      const w = ctx.measureText(criteria[i]).width + ctx.measureText(criteria[j]).width;
+      if (w > maxPair) maxPair = w;
+    }
+  }
+  const width = Math.max(Math.round(maxPair + 120), 740);
+  document.documentElement.style.setProperty("--saaty-w", width + "px");
+
+  document.querySelectorAll(".saaty-pair").forEach(wireSaaty);
+}
+
+function wireSaaty(pair) {
+  const scale = pair.querySelector(".saaty-scale");
+  const rail = pair.querySelector(".saaty-rail");
+  const handle = pair.querySelector(".saaty-handle");
+  const pid = scale.dataset.pid;
+  const input = document.getElementById("pair_" + pid);
+  const lastIdx = SAATY_STEPS.length - 1;
+  let idx = SAATY_CENTER;
+  let dragging = false;
+
+  function apply(newIdx) {
+    idx = Math.max(0, Math.min(lastIdx, newIdx));
+    handle.style.left = (idx / lastIdx) * 100 + "%";
+    scale.setAttribute("aria-valuenow", idx);
+    input.value = SAATY_STEPS[idx].v;
+    updateSaatyReadout(pair, idx);
+  }
+
+  function idxFromX(clientX) {
+    const r = rail.getBoundingClientRect();
+    let ratio = (clientX - r.left) / r.width;
+    ratio = Math.max(0, Math.min(1, ratio));
+    return Math.round(ratio * lastIdx);
+  }
+
+  function pointerX(e) {
+    return e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+  }
+  function down(e) {
+    dragging = true;
+    scale.classList.add("saaty-scale--active");
+    apply(idxFromX(pointerX(e)));
+    e.preventDefault();
+  }
+  function move(e) {
+    if (!dragging) return;
+    apply(idxFromX(pointerX(e)));
+    e.preventDefault();
+  }
+  function up() {
+    dragging = false;
+    scale.classList.remove("saaty-scale--active");
+  }
+
+  scale.addEventListener("mousedown", down);
+  document.addEventListener("mousemove", move);
+  document.addEventListener("mouseup", up);
+  scale.addEventListener("touchstart", down, { passive: false });
+  document.addEventListener("touchmove", move, { passive: false });
+  document.addEventListener("touchend", up);
+
+  scale.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+      apply(idx - 1);
+      e.preventDefault();
+    } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+      apply(idx + 1);
+      e.preventDefault();
+    } else if (e.key === "Home") {
+      apply(0);
+      e.preventDefault();
+    } else if (e.key === "End") {
+      apply(lastIdx);
+      e.preventDefault();
+    }
+  });
+
+  apply(SAATY_CENTER);
+}
+
+function updateSaatyReadout(pair, idx) {
+  const el = pair.querySelector(".saaty-readout");
+  if (!el) return;
+  const c1 = criteria[Number(pair.dataset.i)];
+  const c2 = criteria[Number(pair.dataset.j)];
+  const step = SAATY_STEPS[idx];
+  let txt;
+  let mod = "eq";
+  if (idx === SAATY_CENTER) {
+    txt = "Igual importância entre \u201C" + c1 + "\u201D e \u201C" + c2 + "\u201D (1)";
+  } else if (idx > SAATY_CENTER) {
+    txt = "\u201C" + c1 + "\u201D é " + step.desc.toLowerCase() + " mais importante que \u201C" + c2 + "\u201D (" + step.label + ")";
+    mod = "pos";
+  } else {
+    txt = "\u201C" + c2 + "\u201D é " + step.desc.toLowerCase() + " mais importante que \u201C" + c1 + "\u201D (" + step.label + ")";
+    mod = "neg";
+  }
+  el.textContent = txt;
+  el.className = "saaty-readout saaty-readout--" + mod;
 }
 
 // -----------------------------------------------------------

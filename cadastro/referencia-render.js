@@ -96,6 +96,25 @@
       }
     </article>`;
 
+    if (!planos.length) {
+      const dirNome = filtro ? ref.diretorias.find((d) => d.id === filtro)?.nome_oficial || filtro : "";
+      html += `<article class="ref-entity card">
+        <section class="ref-block ref-guide-no ref-block-first">
+          <h3>Nenhum plano vinculado</h3>
+          <p>${
+            filtro
+              ? `A diretoria <strong>${esc(dirNome)}</strong> não possui planos estratégicos vinculados.`
+              : "Não há planos cadastrados no momento."
+          } Os planos estratégicos (PLI-SP 2050 e PEF-SP 2050) pertencem à <strong>Diretoria de Planejamento</strong>.</p>
+        </section>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="catalogo-planos.html">Ver todos os planos</a>
+        </div>
+      </article>`;
+      container.innerHTML = html;
+      return;
+    }
+
     html += `<nav class="ref-toc card"><h2>Índice — Planos</h2><ol>${planos
       .map((p) => `<li><a href="#${esc(p.id)}">${esc(p.sigla)}</a></li>`)
       .join("")}</ol></nav>`;

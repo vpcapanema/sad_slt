@@ -248,6 +248,12 @@
         ? `<span class="field-help"><a href="catalogo-planos.html?diretoria=${encodeURIComponent(p.diretoria_id || dirId)}#${encodeURIComponent(planoId)}" target="_blank" rel="noopener">${escapeHtml(p.sigla)} — ${escapeHtml(p.nome_oficial)}</a></span>`
         : "";
       hintPlano.classList.toggle("hidden", !p);
+    } else if (dirId && SLTCatalog.planosPorDiretoria(dirId).length === 0) {
+      const d = cat.diretorias.find((x) => x.id === dirId);
+      hintPlano.innerHTML = `<span class="field-help" style="color:#a15c00;"><strong>Atenção:</strong> a diretoria ${escapeHtml(
+        d?.nome_oficial || dirId
+      )} não possui planos vinculados. Os planos estratégicos (PLI-SP 2050 e PEF-SP 2050) pertencem à Diretoria de Planejamento.</span>`;
+      hintPlano.classList.remove("hidden");
     } else hintPlano.classList.add("hidden");
   }
 
@@ -378,7 +384,12 @@
       const planos = id ? SLTCatalog.planosPorDiretoria(id) : [];
       const sel = $("#plano");
       sel.disabled = !id;
-      fillSelect(sel, planos, "id", (p) => p.sigla, id ? "Selecione…" : "Selecione a diretoria primeiro");
+      const planoPlaceholder = !id
+        ? "Selecione a diretoria primeiro"
+        : planos.length
+          ? "Selecione…"
+          : "Nenhum plano vinculado a esta diretoria";
+      fillSelect(sel, planos, "id", (p) => p.sigla, planoPlaceholder);
       updateClassificacaoUI();
       updateCarteiras();
       updateContextHints();
