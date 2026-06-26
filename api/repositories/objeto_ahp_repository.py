@@ -1,4 +1,4 @@
-"""Acesso a dados — ahp.objeto_ahp."""
+"""Acesso a dados — demandas_aprovadas.projetos (projetos aprovados, universo da AHP)."""
 from __future__ import annotations
 
 import json
@@ -19,10 +19,11 @@ _SELECT_BASE = """
         o.status,
         o.status_atualizado_em,
         o.grupo_comparacao,
+        o.programa_id,
         o.nome,
         o.descricao,
-        o.diretoria_id,
-        o.plano_id,
+        cd.diretoria_id,
+        cd.plano_id,
         o.classificacao,
         o.complementos,
         o.instituicao_nome,
@@ -39,20 +40,20 @@ _SELECT_BASE = """
         o.motivo_aprovacao,
         o.criado_em,
         o.atualizado_em
-    FROM ahp.objeto_ahp o
+    FROM demandas_aprovadas.projetos o
+    LEFT JOIN cadastro.projeto cd ON cd.id = o.demanda_id
 """
 
 _INSERT_SQL = """
-    INSERT INTO ahp.objeto_ahp (
+    INSERT INTO demandas_aprovadas.projetos (
         codigo,
         demanda_id,
         demanda_codigo,
         status,
         grupo_comparacao,
+        programa_id,
         nome,
         descricao,
-        diretoria_id,
-        plano_id,
         classificacao,
         complementos,
         instituicao_nome,
@@ -69,10 +70,9 @@ _INSERT_SQL = """
         %(demanda_codigo)s,
         %(status)s,
         %(grupo_comparacao)s,
+        %(programa_id)s,
         %(nome)s,
         %(descricao)s,
-        %(diretoria_id)s,
-        %(plano_id)s,
         %(classificacao)s,
         %(complementos)s,
         %(instituicao_nome)s,
@@ -162,10 +162,9 @@ def get_by_codigo(codigo: str) -> dict[str, Any] | None:
 _UPDATE_ALLOWED = {
     "status": "status",
     "grupo_comparacao": "grupo_comparacao",
+    "programa_id": "programa_id",
     "nome": "nome",
     "descricao": "descricao",
-    "diretoria_id": "diretoria_id",
-    "plano_id": "plano_id",
     "classificacao": "classificacao",
     "complementos": "complementos",
     "instituicao_nome": "instituicao_nome",
@@ -198,7 +197,7 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
         for key in params
         if key != "codigo"
     ]
-    query = sql.SQL("UPDATE ahp.objeto_ahp SET {} WHERE codigo = {}").format(
+    query = sql.SQL("UPDATE demandas_aprovadas.projetos SET {} WHERE codigo = {}").format(
         sql.SQL(", ").join(assignments),
         sql.Placeholder("codigo"),
     )

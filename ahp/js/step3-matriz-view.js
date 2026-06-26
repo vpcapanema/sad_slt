@@ -1,5 +1,5 @@
 /**
- * Etapa 3 — exibe matriz de premissas e critérios importada na Etapa 1.
+ * Etapa 3 — exibe a Tabela de Premissas e Critérios importada na Etapa 1.
  */
 (function (global) {
   "use strict";

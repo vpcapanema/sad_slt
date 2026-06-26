@@ -49,14 +49,14 @@ async def check_slt_database() -> dict[str, Any]:
                 """
                 SELECT EXISTS (
                     SELECT 1 FROM information_schema.tables
-                    WHERE table_schema = 'cadastro' AND table_name = 'cadastro_demanda'
+                    WHERE table_schema = 'cadastro' AND table_name = 'projeto'
                 )
                 """
             ).fetchone()
             schema_ok = bool(row[0]) if row else False
         msg = "Conexão OK"
         if schema_ok:
-            msg += " · cadastro.cadastro_demanda presente"
+            msg += " · cadastro.projeto presente"
         else:
             msg += " · schema pendente (rode scripts/apply-database.ps1)"
         return {"ok": True, "configured": True, "schema_ready": schema_ok, "message": msg}

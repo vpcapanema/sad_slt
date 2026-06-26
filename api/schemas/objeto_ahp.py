@@ -44,8 +44,7 @@ class ObjetoAhpUpdateSchema(BaseModel):
     nome: str | None = Field(None, min_length=1, max_length=200)
     descricao: str | None = None
     grupo_comparacao: str | None = Field(None, max_length=120)
-    diretoria_id: str | None = None
-    plano_id: str | None = None
+    programa_id: str | None = None
     classificacao: dict[str, Any] | None = None
     complementos: dict[str, Any] | None = None
     instituicao_nome: str | None = None

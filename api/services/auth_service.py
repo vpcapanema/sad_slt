@@ -5,12 +5,17 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
+import httpx
+
+from api.config import get_settings
 from api.exceptions import AuthError, DatabaseUnavailableError
 from api.repositories import auditoria_repository, sigma_usuario_repository
 from api.services.session_service import SessionUser, create_token
 from api.sigma_password import verify_password
 
 logger = logging.getLogger(__name__)
+
+GESTOR_PROFILE = "GESTOR"
 
 
 def _display_name(row: dict[str, Any]) -> str:
@@ -68,6 +73,143 @@ def _audit_auth(
         )
     except DatabaseUnavailableError as exc:
         logger.warning("Auditoria SLT indisponível — login não bloqueado: %s", exc)
+
+
+async def _authenticate_via_api(login: str, password: str) -> SessionUser | None:
+    """Valida credenciais na API HTTP do SIGMA (porta 80).
+
+    Retorna ``None`` para credencial inválida. Levanta
+    ``DatabaseUnavailableError`` quando o SIGMA está inacessível (rede/5xx),
+    permitindo o fallback para o banco direto.
+    """
+    base = get_settings().sigma_api_base
+    if not base:
+        raise DatabaseUnavailableError("SIGMA_API_BASE não configurado.")
+
+    url = f"{base}/api/auth/login"
+    payload = {
+        "identifier": login,
+        "password": password,
+        "tipo_usuario": GESTOR_PROFILE,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=12.0) as client:
+            res = await client.post(url, json=payload)
+    except httpx.HTTPError as exc:
+        raise DatabaseUnavailableError(f"SIGMA API indisponível: {exc}") from exc
+
+    # 401 = credencial inválida; 422 = payload rejeitado (ex.: senha curta);
+    # 429 = rate limit. Em todos, tratamos como credencial inválida.
+    if res.status_code in (401, 422, 429):
+        return None
+    if res.status_code >= 500:
+        raise DatabaseUnavailableError(f"SIGMA API erro HTTP {res.status_code}.")
+    if res.status_code != 200:
+        logger.warning(
+            "SIGMA login resposta inesperada (%s): %s",
+            res.status_code,
+            res.text[:300],
+        )
+        return None
+
+    try:
+        data = res.json()
+    except ValueError as exc:
+        raise DatabaseUnavailableError("Resposta inválida do SIGMA.") from exc
+
+    user = data.get("user") if isinstance(data, dict) else None
+    if not isinstance(user, dict):
+        return None
+
+    tipo = str(user.get("tipo_usuario", "")).strip().upper()
+    if tipo != GESTOR_PROFILE:
+        return None
+
+    user_id = user.get("id")
+    username = user.get("username")
+    if not user_id or not username:
+        return None
+
+    email = user.get("email_institucional") or user.get("email")
+    nome = (
+        user.get("nome_completo")
+        or user.get("nome_pessoa")
+        or user.get("nome")
+        or ""
+    )
+    return SessionUser(
+        id=str(user_id),
+        email=str(email) if email else login,
+        username=str(username),
+        nome=str(nome).strip(),
+        tipo_usuario=tipo,
+    )
+
+
+async def login_gestor(
+    login: str,
+    password: str,
+    *,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+) -> tuple[SessionUser, str]:
+    """Autentica um gestor preferindo a API HTTP do SIGMA.
+
+    Espelha a estratégia das aplicações PLI (HazardTrack/Reporta/SmartRouter):
+    usa o endpoint HTTP ``/api/auth/login`` (porta 80, sempre acessível) e só
+    recorre ao PostgreSQL direto (porta 5433) como fallback.
+    """
+    login = (login or "").strip()
+    password = password or ""
+
+    if not login or not password:
+        _audit_auth(
+            mensagem="Tentativa de login admin sem credenciais completas",
+            sucesso=False,
+            login=login or "?",
+            motivo="credenciais_incompletas",
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        raise AuthError("Informe e-mail/usuário e senha.")
+
+    if get_settings().sigma_api_base:
+        try:
+            user = await _authenticate_via_api(login, password)
+        except DatabaseUnavailableError as exc:
+            logger.warning(
+                "SIGMA API indisponível, tentando banco direto: %s", exc
+            )
+        else:
+            if user is None:
+                _audit_auth(
+                    mensagem="Falha de login admin via API SIGMA",
+                    sucesso=False,
+                    login=login,
+                    motivo="credenciais_invalidas",
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                )
+                raise AuthError("Credenciais inválidas.")
+            token = create_token(user)
+            _audit_auth(
+                mensagem="Login admin realizado com sucesso (API SIGMA)",
+                sucesso=True,
+                login=login,
+                usuario_id=user.id,
+                usuario_nome=user.nome,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            return user, token
+
+    return authenticate_gestor(
+        login,
+        password,
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
 
 
 def authenticate_gestor(

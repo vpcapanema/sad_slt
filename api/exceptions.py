@@ -23,3 +23,11 @@ class DemandaNotFoundError(SLTError):
 
 class AuthError(SLTError):
     """Falha de autenticação ou autorização."""
+
+
+class ConfigMulticriterioNotFoundError(SLTError):
+    """Configuração da análise multicritério não encontrada."""
+
+
+class HierarquizacaoNotFoundError(SLTError):
+    """Hierarquização de projetos não encontrada."""

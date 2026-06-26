@@ -492,25 +492,25 @@ function exportXLSX() {
 function generateDirectMatrixStep4() {
   const n = criteria.length;
   const container = document.getElementById('comparisonContent');
-  let html = '<div style="overflow-x: auto;"><table class="matrix-table">';
-  html += '<thead><tr><th></th>';
+  let html = '<div class="matrix-table-wrap"><table class="matrix-table">';
+  html += '<thead><tr><th class="matrix-corner"></th>';
   for (let j = 0; j < n; j++) {
-    html += `<th>${criteria[j]}</th>`;
+    html += `<th class="matrix-head matrix-head--col">${criteria[j]}</th>`;
   }
   html += '</tr></thead><tbody>';
   for (let i = 0; i < n; i++) {
     html += '<tr>';
-    html += `<th>${criteria[i]}</th>`;
+    html += `<th class="matrix-head matrix-head--row">${criteria[i]}</th>`;
     for (let j = 0; j < n; j++) {
       if (i === j) {
-        html += '<td><strong>1</strong></td>';
+        html += '<td class="matrix-cell matrix-cell--diagonal"><strong>1</strong></td>';
       } else if (i < j) {
-        html += `<td>${createSelectInputStep4(i, j)}</td>`;
+        html += `<td class="matrix-cell matrix-cell--input">${createSelectInputStep4(i, j)}</td>`;
       } else {
         const key = "pair_" + j + "_" + i;
         const currentVal = pairwiseValues[key] || 1;
         const reciprocal = (1 / currentVal).toFixed(4);
-        html += `<td id="recip_${i}_${j}">${reciprocal}</td>`;
+        html += `<td class="matrix-cell matrix-cell--recip" id="recip_${i}_${j}">${reciprocal}</td>`;
       }
     }
     html += '</tr>';
@@ -520,6 +520,7 @@ function generateDirectMatrixStep4() {
   html += '<p style="margin: 0; color: #856404; font-size: 0.9rem; text-align: justify;"><i class="fas fa-info-circle"></i> <strong>Nota:</strong> Todas as células podem ser preenchidas. Ao selecionar um valor em qualquer célula, a célula oposta (simétrica) será automaticamente preenchida com o valor recíproco. Exemplo: se você selecionar 3 na célula [A,B], a célula [B,A] será automaticamente ajustada para 1/3.</p>';
   html += '</div>';
   container.innerHTML = html;
+  if (typeof updateLiveMetrics === "function") updateLiveMetrics();
 }
 
 // -----------------------------------------------------------
@@ -586,6 +587,9 @@ function updateReciprocalStep4(i, j) {
 
   // Aplica esquema de cores para relacionar valores opostos
   applyColorScheme(selectElement, cell, val);
+
+  // Atualiza métricas instantâneas
+  if (typeof updateLiveMetrics === "function") updateLiveMetrics();
 }
 
 // -----------------------------------------------------------
@@ -628,17 +632,22 @@ function applyColorScheme(selectElement, reciprocalCell, val) {
     borderColor = 'rgba(108, 117, 125, 0.3)';
   }
 
-  // Aplica cor ao select
-  selectElement.style.backgroundColor = bgColor;
+  // Pinta a CÉLULA inteira do seletor (não apenas o select)
+  const inputCell = selectElement.closest('td');
+  if (inputCell) {
+    inputCell.style.backgroundColor = bgColor;
+    inputCell.style.borderColor = borderColor;
+  }
+  // Seletor transparente para mostrar a cor da célula
+  selectElement.style.backgroundColor = 'transparent';
   selectElement.style.color = textColor;
   selectElement.style.borderColor = borderColor;
 
-  // Aplica a mesma cor à célula recíproca
+  // Aplica a mesma cor à célula recíproca (inteira)
   if (reciprocalCell) {
     reciprocalCell.style.backgroundColor = bgColor;
     reciprocalCell.style.color = textColor;
-    reciprocalCell.style.padding = '8px 12px';
-    reciprocalCell.style.borderRadius = '8px';
+    reciprocalCell.style.borderColor = borderColor;
     reciprocalCell.style.fontWeight = '600';
   }
 }
@@ -755,6 +764,7 @@ function wireSaaty(pair) {
     scale.setAttribute("aria-valuenow", idx);
     input.value = SAATY_STEPS[idx].v;
     updateSaatyReadout(pair, idx);
+    if (typeof updateLiveMetrics === "function") updateLiveMetrics();
   }
 
   function idxFromX(clientX) {
@@ -818,16 +828,63 @@ function updateSaatyReadout(pair, idx) {
   let txt;
   let mod = "eq";
   if (idx === SAATY_CENTER) {
-    txt = "Igual importância entre \u201C" + c1 + "\u201D e \u201C" + c2 + "\u201D (1)";
+    txt = "\u201C" + c1 + "\u201D tem igual importância que \u201C" + c2 + "\u201D (1)";
   } else if (idx > SAATY_CENTER) {
     txt = "\u201C" + c1 + "\u201D é " + step.desc.toLowerCase() + " mais importante que \u201C" + c2 + "\u201D (" + step.label + ")";
     mod = "pos";
   } else {
-    txt = "\u201C" + c2 + "\u201D é " + step.desc.toLowerCase() + " mais importante que \u201C" + c1 + "\u201D (" + step.label + ")";
+    txt = "\u201C" + c1 + "\u201D é " + step.desc.toLowerCase() + " menos importante que \u201C" + c2 + "\u201D (" + step.label + ")";
     mod = "neg";
   }
   el.textContent = txt;
   el.className = "saaty-readout saaty-readout--" + mod;
+}
+
+// -----------------------------------------------------------
+// Step 4: Métricas instantâneas (RC, IC, λmáx)
+// -----------------------------------------------------------
+function buildLiveMatrix() {
+  const n = criteria.length;
+  if (!n || typeof SLTAhp === "undefined") return null;
+  return SLTAhp.matrixFromUpper(n, function (i, j) {
+    const el = document.getElementById("pair_" + i + "_" + j);
+    const v = el ? parseFloat(el.value) : 1;
+    return isFinite(v) && v > 0 ? v : 1;
+  });
+}
+
+function isAllOnes(matrix) {
+  for (let i = 0; i < matrix.length; i++) {
+    for (let j = 0; j < matrix.length; j++) {
+      if (Math.abs(matrix[i][j] - 1) > 1e-9) return false;
+    }
+  }
+  return true;
+}
+
+function updateLiveMetrics() {
+  const container = document.getElementById("liveMetrics");
+  if (!container || typeof SLTAhp === "undefined") return;
+  const matrix = buildLiveMatrix();
+  if (!matrix) return;
+
+  const res = SLTAhp.analyzeMatrix(matrix);
+  const rcEl = document.getElementById("metricRCValue");
+  const icEl = document.getElementById("metricICValue");
+  const lambdaEl = document.getElementById("metricLambdaValue");
+  if (rcEl) rcEl.textContent = res.CR.toFixed(4);
+  if (icEl) icEl.textContent = res.CI.toFixed(4);
+  if (lambdaEl) lambdaEl.textContent = res.lambdaMax.toFixed(4);
+
+  let state;
+  if (isAllOnes(matrix)) {
+    state = "is-initial";
+  } else if (res.CR <= 0.1) {
+    state = "is-success";
+  } else {
+    state = "is-failure";
+  }
+  container.className = "ahp-live-metrics " + state;
 }
 
 // -----------------------------------------------------------

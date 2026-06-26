@@ -1,7 +1,7 @@
 """
 Servidor SLT — estáticos + API local.
 
-SIGMA: somente LEITURA. Demandas: banco PostgreSQL SLT (cadastro.cadastro_demanda).
+SIGMA: somente LEITURA. Demandas: banco PostgreSQL SLT (cadastro.projeto).
 """
 from __future__ import annotations
 

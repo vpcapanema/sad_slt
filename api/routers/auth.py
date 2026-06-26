@@ -47,7 +47,7 @@ async def login(
 ):
     meta = get_request_meta(request)
     try:
-        user, token = auth_service.authenticate_gestor(
+        user, token = await auth_service.login_gestor(
             body.login,
             body.senha,
             ip_address=meta["ip_address"],
@@ -60,7 +60,8 @@ async def login(
             status_code=503,
             detail=(
                 "Serviço de autenticação temporariamente indisponível. "
-                "Verifique a conexão com o banco SIGMA (SIGMA_POSTGRES_* no .env)."
+                "Verifique a conexão com o SIGMA (API HTTP SIGMA_API_BASE "
+                "ou banco SIGMA_POSTGRES_* no .env)."
             ),
         ) from exc
 

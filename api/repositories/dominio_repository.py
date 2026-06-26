@@ -18,7 +18,7 @@ def list_status_demanda() -> list[dict]:
 def list_status_objeto_ahp() -> list[dict]:
     sql = """
         SELECT codigo, nome, descricao, ordem
-        FROM ahp.dom_status_objeto
+        FROM demandas_aprovadas.dom_status_demandas_aprovadas
         WHERE ativo = TRUE
         ORDER BY ordem
     """

@@ -1,5 +1,5 @@
 /**
- * Matriz de Critérios e Premissas — parse, persistência e renderização.
+ * Tabela de Premissas e Critérios — parse, persistência e renderização.
  */
 (function (global) {
   "use strict";
@@ -7,6 +7,8 @@
   var STORAGE_ROWS = "slt_ahp_matriz_premissas";
   var STORAGE_FILE = "slt_ahp_matriz_arquivo_nome";
   var SHEET_NAMES = [
+    "Tabela de Premissas e Criterios",
+    "Tabela de Premissas e Critérios",
     "Matriz de Criterios e Premissas",
     "Matriz de Critérios e Premissas",
   ];
@@ -261,10 +263,10 @@
       container.innerHTML =
         '<div class="ahp-matriz-empty">' +
         '<div class="ahp-matriz-empty__icon"><i class="fas fa-file-circle-xmark" aria-hidden="true"></i></div>' +
-        "<h3>Nenhuma matriz importada</h3>" +
+        "<h3>Nenhuma tabela importada</h3>" +
         (inputMethod === "upload_matriz"
           ? "<p>Os dados do upload não foram encontrados. Volte à Etapa 1 e envie novamente o arquivo XLSX ou CSV.</p>"
-          : "<p>Na Etapa 1 você escolheu o método manual. Para visualizar a matriz de premissas e critérios, use <strong>Upload de Matriz</strong> na Etapa 1.</p>") +
+          : "<p>Na Etapa 1 você escolheu o método manual. Para visualizar a Tabela de Premissas e Critérios, use <strong>Upload de Tabela</strong> na Etapa 1.</p>") +
         '<div class="ahp-matriz-empty__actions">' +
         '<a href="step1-criterios.html" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Etapa 1</a>' +
         "</div></div>";
@@ -285,18 +287,18 @@
     var html =
       '<div class="ahp-matriz-panel">' +
       '<div class="ahp-matriz-meta">' +
-      '<div class="ahp-matriz-meta__item"><i class="fas fa-file-lines"></i><span><strong>Arquivo</strong>' +
-      escapeHtml(fileName || "Matriz importada") +
-      "</span></div>" +
-      '<div class="ahp-matriz-meta__item"><i class="fas fa-list-ol"></i><span><strong>' +
+      '<div class="ahp-matriz-meta__item"><div class="ahp-matriz-meta__head"><i class="fas fa-file-lines"></i><span class="ahp-matriz-meta__title">Arquivo</span></div><div class="ahp-matriz-meta__value">' +
+      escapeHtml(fileName || "Tabela importada") +
+      "</div></div>" +
+      '<div class="ahp-matriz-meta__item"><div class="ahp-matriz-meta__head"><i class="fas fa-list-ol"></i><span class="ahp-matriz-meta__title">Critérios</span></div><div class="ahp-matriz-meta__value">' +
       summary.total +
-      "</strong> critérios</span></div>" +
-      '<div class="ahp-matriz-meta__item"><i class="fas fa-layer-group"></i><span><strong>' +
+      "</div></div>" +
+      '<div class="ahp-matriz-meta__item"><div class="ahp-matriz-meta__head"><i class="fas fa-layer-group"></i><span class="ahp-matriz-meta__title">Dimensões</span></div><div class="ahp-matriz-meta__value">' +
       summary.dimensoes +
-      "</strong> dimensões</span></div>" +
-      '<div class="ahp-matriz-meta__item"><i class="fas fa-star"></i><span><strong>' +
+      "</div></div>" +
+      '<div class="ahp-matriz-meta__item"><div class="ahp-matriz-meta__head"><i class="fas fa-star"></i><span class="ahp-matriz-meta__title">Mandatórios</span></div><div class="ahp-matriz-meta__value">' +
       summary.mandatorios +
-      "</strong> mandatórios</span></div>" +
+      "</div></div>" +
       "</div>" +
       '<div class="ahp-matriz-toolbar">' +
       '<label for="' +
@@ -315,7 +317,7 @@
     html +=
       "</select></div>" +
       '<div class="ahp-matriz-table-wrap">' +
-      '<table class="ahp-matriz-table" aria-label="Matriz de premissas e critérios">' +
+      '<table class="ahp-matriz-table" aria-label="Tabela de premissas e critérios">' +
       "<thead><tr>";
 
     COLUMNS.forEach(function (col) {

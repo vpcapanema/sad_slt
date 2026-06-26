@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Etapa 6: Priorização das Alternativas — AHP — SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="js/ahp-core.js"></script>
+  <script src="js/analise-api.js"></script>
+</head>
+<body class="ahp-module-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Apoio à Tomada de Decisão
+        <small>Hierarquização AHP</small>
+      </div>
+      <nav class="app-nav">
+        <a href="../index.html">Início</a>
+        <a href="../cadastro/">Cadastro</a>
+        <a href="./" class="active">AHP</a>
+        <a href="../painel/">Painel</a>
+        <a href="../admin/">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-main ahp-main">
+    <section class="card ahp-step-intro">
+      <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+        <a href="index.html">Início</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <a href="tipo-analise.html">Tipo de análise</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <a href="step1-criterios.html">Etapa 1: Critérios</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <a href="step2-nomes.html">Etapa 2: Nomes</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <a href="step3-metodo.html">Etapa 3: Método</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <a href="step4-comparacao.html">Etapa 4: Comparação</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <a href="step5-resultados.html">Etapa 5: Resultados</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <span class="ahp-breadcrumb-current">Etapa 6: Alternativas</span>
+      </nav>
+      <h1 class="ahp-page-title"><i class="fas fa-ranking-star app-template-title-icon" aria-hidden="true"></i>Etapa 6: Priorização das Alternativas</h1>
+      <p class="ahp-page-desc">Compare as alternativas (ou projetos do portfólio) em cada critério e obtenha o ranking final ponderado pelos pesos calculados. Modo atual: <strong id="a6-tipo-label">—</strong>.</p>
+    </section>
+
+    <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>Esta etapa conclui o método AHP: score(alternativa) = Σ (peso do critério × prioridade local da alternativa naquele critério).</p>
+
+    <section class="card ahp-step-section">
+      <div class="ahp-section-label"><i class="fas fa-percent app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Pesos dos Critérios (Etapas 1–4)</span></div>
+      <div class="ahp-section-body">
+        <div class="info-card info-card--spaced"><div class="info-card-content"><div id="a6-criterios"></div></div></div>
+      </div>
+    </section>
+
+    <section class="card ahp-step-section">
+      <div class="ahp-section-label"><i class="fas fa-list-check app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>6.1 Alternativas a comparar (<span id="a6-alt-count">0</span>)</span></div>
+      <div class="ahp-section-body">
+        <div class="info-card info-card--spaced"><div class="info-card-content">
+          <div style="margin-bottom:1rem;">
+            <label for="a6-titulo"><strong>Título da análise</strong></label>
+            <input type="text" id="a6-titulo" placeholder="Ex.: Priorização de projetos da Frente 01">
+          </div>
+          <div id="a6-alternativas"></div>
+          <div class="ahp-form-actions">
+            <button type="button" class="btn btn-primary" id="a6-judge-btn" disabled>Definir julgamentos <i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></button>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="card ahp-step-section">
+      <div class="ahp-section-label"><i class="fas fa-scale-balanced app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>6.2 Julgamento das Alternativas por Critério</span></div>
+      <div class="ahp-section-body">
+        <div class="info-card info-card--spaced"><div class="info-card-content">
+          <div id="a6-julgamento"><p class="field-help">Defina as alternativas acima e clique em “Definir julgamentos”.</p></div>
+          <div class="ahp-form-actions">
+            <button type="button" class="btn btn-secondary" id="a6-calc-btn" disabled><i class="fas fa-calculator"></i> Pré-visualizar ranking</button>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="card ahp-step-section hidden" id="a6-ranking-card">
+      <div class="ahp-section-label"><i class="fas fa-trophy app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>6.3 Ranking Final</span></div>
+      <div class="ahp-section-body">
+        <div class="info-card info-card--spaced"><div class="info-card-content">
+          <div id="a6-ranking"></div>
+          <p id="a6-saved-info" class="field-help hidden">Análise persistida: <strong id="a6-codigo-label"></strong> <span id="a6-homolog-status" class="a6-homolog-badge hidden"></span></p>
+          <div class="ahp-form-actions">
+            <button type="button" class="btn btn-primary" id="a6-save-btn" disabled><i class="fas fa-floppy-disk"></i> Salvar e calcular no servidor</button>
+            <button type="button" class="btn btn-secondary" id="a6-homolog-btn" disabled><i class="fas fa-stamp"></i> Homologar (gestor)</button>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <div class="ahp-form-actions">
+      <a href="step5-resultados.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar aos pesos</a>
+      <a href="tipo-analise.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a>
+    </div>
+  </main>
+
+  <div id="a6-toast" class="a6-toast"></div>
+  <script src="js/step6-alternativas.js"></script>
+</body>
+</html>

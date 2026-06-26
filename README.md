@@ -90,6 +90,33 @@ Demandas: persistidas em `cadastro.cadastro_demanda` via `POST /api/demandas` (p
 | `POST` | `/api/demandas` | Registra demanda do formulário |
 | `GET` | `/api/demandas` | Lista demandas (painel) |
 | `GET` | `/api/demandas/{codigo}` | Detalhe por código `DEM-...` |
+| `PATCH` | `/api/demandas/{codigo}` | Atualiza demanda (gestor) |
+| `POST` | `/api/demandas/{codigo}/aprovar` | Aprova e cria objeto AHP (gestor) |
+
+### API de objetos e análises AHP
+
+| Método | Rota | Auth | Uso |
+|--------|------|------|-----|
+| `GET` | `/api/ahp/objetos` | Gestor | Lista objetos AHP (filtros `status`, `grupo`) |
+| `GET` | `/api/ahp/objetos/{codigo}` | Gestor | Detalhe do objeto |
+| `PATCH` | `/api/ahp/objetos/{codigo}` | Gestor | Atualiza status/grupo |
+| `POST` | `/api/ahp/analises` | Sessão opc. | Cria análise (`tipo`: `avulsa`\|`portfolio`) |
+| `GET` | `/api/ahp/analises?tipo=` | Sessão opc. | Lista análises |
+| `GET` | `/api/ahp/analises/{tipo}/{codigo}` | Sessão opc. | Detalhe |
+| `PATCH` | `/api/ahp/analises/{tipo}/{codigo}` | Sessão opc. | Salva etapas (critérios, alternativas, julgamentos) |
+| `POST` | `/api/ahp/analises/{tipo}/{codigo}/calcular` | Sessão opc. | Calcula pesos + ranking (servidor) |
+| `POST` | `/api/ahp/analises/{tipo}/{codigo}/homologar` | Gestor | Homologa o ranking |
+
+Persistência: `ahp.analise_avulsa` (alternativas manuais) e `ahp.analise_portfolio` (projetos de `ahp.objeto_ahp`, por `grupo_comparacao`).
+
+### Fluxo AHP (frontend `ahp/`)
+
+1. `tipo-analise` → escolhe avulsa/portfólio.
+2. `step1`–`step4` → critérios e comparação pareada (escala de Saaty).
+3. `step5` → pesos dos critérios + consistência (λmax, CI, CR).
+4. `step6` → alternativas (manuais ou objetos AHP), julgamento par-a-par por critério, **ranking final** e persistência via API.
+
+O motor de cálculo é único: `ahp/js/ahp-core.js` (frontend) e `api/services/analise_service.py` (servidor, fonte da verdade no `calcular`).
 
 ### Backend (camadas)
 

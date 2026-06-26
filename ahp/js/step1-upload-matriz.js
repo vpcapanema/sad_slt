@@ -1,5 +1,5 @@
 /**
- * Etapa 1 — upload da matriz de critérios e premissas (XLSX/CSV).
+ * Etapa 1 — upload da Tabela de Premissas e Critérios (XLSX/CSV).
  */
 (function (global) {
   "use strict";
@@ -42,9 +42,9 @@
     } else if (uploadRadio.checked) {
       manualContent.classList.add("method-content--hidden");
       uploadContent.classList.remove("method-content--hidden");
-      continueBtn.textContent = "Processar Matriz";
+      continueBtn.textContent = "Processar Tabela";
       continueBtn.innerHTML =
-        '<i class="fas fa-check" aria-hidden="true"></i> Processar Matriz';
+        '<i class="fas fa-check" aria-hidden="true"></i> Processar Tabela';
       continueBtn.onclick = processUploadedMatrix;
     }
   }
@@ -78,7 +78,7 @@
           uploadedPremissasData = SltMatrizPremissas.parseCsvContent(e.target.result);
           showNotification(
             uploadedPremissasData.length +
-              " critério(s) carregado(s). Clique em Processar Matriz para continuar.",
+              " critério(s) carregado(s). Clique em Processar Tabela para continuar.",
             "success"
           );
         } catch (error) {
@@ -100,7 +100,7 @@
           uploadedPremissasData = SltMatrizPremissas.parseXlsxArrayBuffer(e.target.result);
           showNotification(
             uploadedPremissasData.length +
-              " critério(s) carregado(s). Clique em Processar Matriz para continuar.",
+              " critério(s) carregado(s). Clique em Processar Tabela para continuar.",
             "success"
           );
         } catch (error) {
@@ -120,7 +120,7 @@
 
   function processUploadedMatrix() {
     if (!uploadedPremissasData || !uploadedPremissasData.length) {
-      showNotification("Selecione e carregue um arquivo de matriz primeiro.", "error");
+      showNotification("Selecione e carregue um arquivo de tabela primeiro.", "error");
       return;
     }
 
@@ -134,7 +134,7 @@
       });
       if (duplicates.length) {
         showNotification(
-          "Critérios duplicados na matriz: " + duplicates.join(", "),
+          "Critérios duplicados na tabela: " + duplicates.join(", "),
           "error"
         );
         return;
@@ -147,12 +147,12 @@
       localStorage.removeItem("ahp_uploadedMatrix");
       localStorage.removeItem("ahp_pairwiseMatrix");
 
-      showNotification("Matriz processada. Avançando para a próxima etapa…", "info");
+      showNotification("Tabela processada. Avançando para a próxima etapa…", "info");
       setTimeout(function () {
         window.location.href = "step2-nomes.html";
       }, 600);
     } catch (error) {
-      showNotification("Erro ao processar matriz: " + error.message, "error");
+      showNotification("Erro ao processar tabela: " + error.message, "error");
     }
   }
 

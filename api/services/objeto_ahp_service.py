@@ -103,10 +103,9 @@ def _build_objeto_row_from_demanda(
             "demanda_codigo": demanda["codigo"],
             "status": "elegivel_ahp",
             "grupo_comparacao": _grupo_comparacao(demanda["plano_id"], classificacao),
+            "programa_id": demanda.get("programa_id"),
             "nome": demanda["nome"],
             "descricao": demanda.get("descricao"),
-            "diretoria_id": demanda["diretoria_id"],
-            "plano_id": demanda["plano_id"],
             "classificacao": classificacao,
             "complementos": demanda.get("complementos"),
             "instituicao_nome": demanda.get("instituicao_nome"),
@@ -126,7 +125,7 @@ def aprovar_demanda(
     motivo: str | None = None,
     aprovado_por: str | None = None,
 ) -> ObjetoAhpResponseSchema:
-    """Aprova demanda e promove snapshot para ahp.objeto_ahp (transação única)."""
+    """Aprova demanda e promove snapshot para demandas_aprovadas.projetos (transação única)."""
     demanda = demanda_repository.get_by_codigo(codigo)
     if not demanda:
         raise DemandaNotFoundError(codigo)
@@ -147,9 +146,9 @@ def aprovar_demanda(
 
     with get_connection() as conn:
         try:
-            cur = conn.execute(
+            conn.execute(
                 """
-                UPDATE cadastro.cadastro_demanda
+                UPDATE cadastro.projeto
                 SET status = 'aprovada'
                 WHERE id = %s AND status = ANY(%s)
                 """,
@@ -198,11 +197,11 @@ def atualizar_objeto(codigo: str, payload: ObjetoAhpUpdateSchema) -> ObjetoAhpRe
     if "status" in data and data["status"] not in _status_objeto_validos():
         raise DemandaValidationError(f"Status inválido: {data['status']}.", field="status")
 
-    plano_id = data.get("plano_id", row["plano_id"])
+    plano_id = row.get("plano_id")
     classificacao = data.get("classificacao", row.get("classificacao"))
     if isinstance(classificacao, str):
         classificacao = json.loads(classificacao)
-    if ("plano_id" in data or "classificacao" in data) and "grupo_comparacao" not in data:
+    if "classificacao" in data and "grupo_comparacao" not in data and plano_id:
         data["grupo_comparacao"] = _grupo_comparacao(plano_id, classificacao)
 
     updated = objeto_ahp_repository.update(codigo, data)

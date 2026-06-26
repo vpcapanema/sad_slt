@@ -1,4 +1,4 @@
-"""Acesso a dados — cadastro.cadastro_demanda."""
+"""Acesso a dados — cadastro.projeto."""
 from __future__ import annotations
 
 import json
@@ -25,6 +25,7 @@ _SELECT_BASE = """
         d.representante_telefone,
         d.diretoria_id,
         d.plano_id,
+        d.programa_id,
         d.nome,
         d.descricao,
         d.latitude,
@@ -36,11 +37,11 @@ _SELECT_BASE = """
         END AS geometria_geojson,
         d.classificacao,
         d.complementos
-    FROM cadastro.cadastro_demanda d
+    FROM cadastro.projeto d
 """
 
 _INSERT_SQL = """
-    INSERT INTO cadastro.cadastro_demanda (
+    INSERT INTO cadastro.projeto (
         codigo,
         status,
         sigma_instituicao_id,
@@ -179,7 +180,7 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
         for key in params
         if key != "codigo"
     ]
-    query = sql.SQL("UPDATE cadastro.cadastro_demanda SET {} WHERE codigo = {}").format(
+    query = sql.SQL("UPDATE cadastro.projeto SET {} WHERE codigo = {}").format(
         sql.SQL(", ").join(assignments),
         sql.Placeholder("codigo"),
     )

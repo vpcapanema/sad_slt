@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Gera planilha-modelo para etapa conceitual da análise AHP (upload no SLT).
 
-Aba principal: mesmas colunas A–G de «Matriz de Criterios e Premissas»
+Aba principal: «Tabela de Premissas e Critérios» (colunas A–G)
   Dimensao | Criterio | Premissa | Relacao | Metricas | Fonte | Mandatorio
 
 - Listas suspensas: Dimensao, Relacao, Mandatorio
@@ -159,7 +159,7 @@ def _add_validations(ws, listas_ws) -> None:
 
 def _aba_matriz_preenchimento(wb: Workbook) -> None:
     ws = wb.active
-    ws.title = "Matriz de Criterios e Premissas"
+    ws.title = "Tabela de Premissas e Critérios"
     ws.append(HEADERS)
     _style_header(ws, len(HEADERS))
     _col_widths(ws)
@@ -182,9 +182,9 @@ def _aba_exemplo(wb: Workbook) -> None:
     ws = wb.create_sheet("Exemplo de preenchimento")
 
     instrucoes = [
-        "INSTRUCOES DE PREENCHIMENTO — Matriz de Criterios e Premissas (Analise AHP)",
+        "INSTRUCOES DE PREENCHIMENTO — Tabela de Premissas e Criterios (Analise AHP)",
         "",
-        "1. Use a aba «Matriz de Criterios e Premissas» para cadastrar a etapa conceitual da sua analise.",
+        "1. Use a aba «Tabela de Premissas e Critérios» para cadastrar a etapa conceitual da sua analise.",
         "2. Preencha UMA LINHA por criterio. A premissa e obrigatoria: explica por que o criterio importa (logica da decisao).",
         "3. Dimensao, Relacao e Mandatorio: selecione sempre na lista suspensa (nao digite texto livre).",
         "4. Relacao: ↑ Positiva = quanto maior o indicador, maior a prioridade; ↓ Negativa = quanto pior o indicador, maior a prioridade; ↕ Condicional = depende do contexto da premissa.",
@@ -193,7 +193,7 @@ def _aba_exemplo(wb: Workbook) -> None:
         "7. Apos preencher, salve o arquivo e faca upload no modulo AHP do SLT (etapa conceitual).",
         "8. Nao altere os titulos da linha 1 nem oculte as colunas A–G.",
         "",
-        "Exemplos reais (matriz de referencia PLI-SP) — abaixo:",
+        "Exemplos reais (tabela de referencia PLI-SP) — abaixo:",
     ]
 
     row = 1
@@ -256,7 +256,7 @@ def main() -> None:
 
     print(f"Modelo gerado: {OUT}")
     print(f"Modelo CSV: {OUT_CSV}")
-    print(f"  - Abas: Matriz de Criterios e Premissas, Exemplo de preenchimento, _Listas (oculta)")
+    print(f"  - Abas: Tabela de Premissas e Critérios, Exemplo de preenchimento, _Listas (oculta)")
     print(f"  - Validacao: Dimensao ({len(DIMENSOES)}), Relacao ({len(RELACOES)}), Mandatorio (2)")
     print(f"  - Linhas editaveis na matriz: 2–{MAX_DATA_ROW}")
 
