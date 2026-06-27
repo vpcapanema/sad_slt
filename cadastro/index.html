@@ -245,45 +245,64 @@
 
     <form id="form-plano" class="tipo-form hidden" data-tipo="plano" novalidate>
       <section class="card">
-        <h2>Cadastro de Plano</h2>
+        <h2>1. Plano</h2>
         <p class="step-intro">Plano é o nível 1 da hierarquia (diretriz estratégica de uma diretoria).</p>
-        <div class="form-grid">
-          <div>
-            <label for="pl-diretoria">Diretoria <span class="req">*</span></label>
-            <select id="pl-diretoria" required></select>
+
+        <div class="form-subsection">
+          <h3>1.1 Contexto institucional</h3>
+          <p class="step-intro">Indique a diretoria responsável e o gestor do plano, se aplicável.</p>
+          <div class="form-grid">
+            <div>
+              <label for="pl-diretoria">Diretoria <span class="req">*</span></label>
+              <select id="pl-diretoria" required></select>
+            </div>
+            <div>
+              <label for="pl-responsavel">Responsável</label>
+              <input type="text" id="pl-responsavel" maxlength="200">
+            </div>
           </div>
-          <div>
-            <label for="pl-responsavel">Responsável</label>
-            <input type="text" id="pl-responsavel" maxlength="200">
+        </div>
+
+        <div class="form-subsection">
+          <h3>1.2 Informações cadastrais</h3>
+          <p class="step-intro">Informe o nome, a descrição e o objetivo estratégico do plano.</p>
+          <div class="form-grid">
+            <div class="full">
+              <label for="pl-nome">Nome do plano <span class="req">*</span></label>
+              <input type="text" id="pl-nome" required maxlength="200">
+            </div>
+            <div class="full">
+              <label for="pl-descricao">Descrição <span class="req">*</span></label>
+              <textarea id="pl-descricao" required></textarea>
+            </div>
+            <div class="full">
+              <label for="pl-objetivo">Objetivo estratégico</label>
+              <textarea id="pl-objetivo"></textarea>
+            </div>
           </div>
-          <div class="full">
-            <label for="pl-nome">Nome do plano <span class="req">*</span></label>
-            <input type="text" id="pl-nome" required maxlength="200">
-          </div>
-          <div class="full">
-            <label for="pl-descricao">Descrição <span class="req">*</span></label>
-            <textarea id="pl-descricao" required></textarea>
-          </div>
-          <div class="full">
-            <label for="pl-objetivo">Objetivo estratégico</label>
-            <textarea id="pl-objetivo"></textarea>
-          </div>
-          <div>
-            <label for="pl-vig-ini">Vigência início</label>
-            <input type="date" id="pl-vig-ini">
-          </div>
-          <div>
-            <label for="pl-vig-fim">Vigência fim</label>
-            <input type="date" id="pl-vig-fim">
-          </div>
-          <div>
-            <label for="pl-valor">Valor global (R$)</label>
-            <input type="number" step="any" id="pl-valor">
+        </div>
+
+        <div class="form-subsection">
+          <h3>1.3 Vigência e recursos</h3>
+          <p class="step-intro">Informe o período de vigência e o valor global estimado, se aplicável.</p>
+          <div class="form-grid">
+            <div>
+              <label for="pl-vig-ini">Vigência início</label>
+              <input type="date" id="pl-vig-ini">
+            </div>
+            <div>
+              <label for="pl-vig-fim">Vigência fim</label>
+              <input type="date" id="pl-vig-fim">
+            </div>
+            <div>
+              <label for="pl-valor">Valor global (R$)</label>
+              <input type="number" step="any" id="pl-valor">
+            </div>
           </div>
         </div>
       </section>
       <section class="card">
-        <h2>Área de abrangência <span class="req">*</span></h2>
+        <h2>2. Área de abrangência <span class="req">*</span></h2>
         <p class="step-intro">Selecione as unidades territoriais de atuação do plano e confira no mapa.</p>
         <div id="pl-abrangencia"></div>
       </section>
@@ -294,47 +313,66 @@
 
     <form id="form-programa" class="tipo-form hidden" data-tipo="programa" novalidate>
       <section class="card">
-        <h2>Cadastro de Programa</h2>
+        <h2>1. Programa</h2>
         <p class="step-intro">Programa é o nível 2 da hierarquia (vinculado a um plano).</p>
-        <div class="form-grid">
-          <div class="full">
-            <label for="pg-plano">Plano <span class="req">*</span></label>
-            <select id="pg-plano" required disabled>
-              <option value="">Carregando planos…</option>
-            </select>
+
+        <div class="form-subsection">
+          <h3>1.1 Vínculo ao plano</h3>
+          <p class="step-intro">Selecione o plano ao qual este programa pertence.</p>
+          <div class="form-grid">
+            <div class="full">
+              <label for="pg-plano">Plano <span class="req">*</span></label>
+              <select id="pg-plano" required disabled>
+                <option value="">Carregando planos…</option>
+              </select>
+            </div>
           </div>
-          <div class="full">
-            <label for="pg-nome">Nome do programa <span class="req">*</span></label>
-            <input type="text" id="pg-nome" required maxlength="200">
+        </div>
+
+        <div class="form-subsection">
+          <h3>1.2 Informações cadastrais</h3>
+          <p class="step-intro">Informe o nome, a descrição e o objetivo do programa.</p>
+          <div class="form-grid">
+            <div class="full">
+              <label for="pg-nome">Nome do programa <span class="req">*</span></label>
+              <input type="text" id="pg-nome" required maxlength="200">
+            </div>
+            <div class="full">
+              <label for="pg-descricao">Descrição <span class="req">*</span></label>
+              <textarea id="pg-descricao" required></textarea>
+            </div>
+            <div class="full">
+              <label for="pg-objetivo">Objetivo</label>
+              <textarea id="pg-objetivo"></textarea>
+            </div>
           </div>
-          <div class="full">
-            <label for="pg-descricao">Descrição <span class="req">*</span></label>
-            <textarea id="pg-descricao" required></textarea>
-          </div>
-          <div class="full">
-            <label for="pg-objetivo">Objetivo</label>
-            <textarea id="pg-objetivo"></textarea>
-          </div>
-          <div class="full">
-            <label for="pg-publico">Público-alvo</label>
-            <textarea id="pg-publico"></textarea>
-          </div>
-          <div class="full">
-            <label for="pg-justificativa">Justificativa</label>
-            <textarea id="pg-justificativa"></textarea>
-          </div>
-          <div>
-            <label for="pg-orgao">Órgão responsável</label>
-            <input type="text" id="pg-orgao" maxlength="200">
-          </div>
-          <div>
-            <label for="pg-valor">Valor global (R$)</label>
-            <input type="number" step="any" id="pg-valor">
+        </div>
+
+        <div class="form-subsection">
+          <h3>1.3 Público, justificativa e recursos</h3>
+          <p class="step-intro">Informe dados complementares sobre o programa e sua execução.</p>
+          <div class="form-grid">
+            <div class="full">
+              <label for="pg-publico">Público-alvo</label>
+              <textarea id="pg-publico"></textarea>
+            </div>
+            <div class="full">
+              <label for="pg-justificativa">Justificativa</label>
+              <textarea id="pg-justificativa"></textarea>
+            </div>
+            <div>
+              <label for="pg-orgao">Órgão responsável</label>
+              <input type="text" id="pg-orgao" maxlength="200">
+            </div>
+            <div>
+              <label for="pg-valor">Valor global (R$)</label>
+              <input type="number" step="any" id="pg-valor">
+            </div>
           </div>
         </div>
       </section>
       <section class="card">
-        <h2>Área de abrangência <span class="req">*</span></h2>
+        <h2>2. Área de abrangência <span class="req">*</span></h2>
         <p class="step-intro">Selecione as unidades territoriais de atuação do programa e confira no mapa.</p>
         <div id="pg-abrangencia"></div>
       </section>

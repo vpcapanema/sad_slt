@@ -23,7 +23,7 @@
     <section class="card">
       <h2>Administração</h2>
       <p class="step-intro">
-        Gerencie demandas cadastradas e objetos elegíveis à hierarquização AHP.
+        Gerencie demandas cadastradas, configure a análise multicritério e execute a hierarquização.
         Os rótulos exibidos são amigáveis — IDs internos e UUIDs não aparecem na interface.
       </p>
       <div class="admin-stats" id="admin-stats">
@@ -37,18 +37,23 @@
     <div class="hub-grid">
       <a class="hub-card" href="painel.html">
         <span class="badge">Mapa</span>
-        <h3>Painel do gestor</h3>
-        <p>Demandas e objetos AHP unificados no mapa — um pin por projeto, sempre com o status mais atual.</p>
+        <h3>Painel de demandas</h3>
+        <p>Demandas unificadas no mapa — um pin por demanda, sempre com o status mais atual.</p>
       </a>
       <a class="hub-card" href="demandas.html">
-        <span class="badge">Cadastro</span>
-        <h3>Demandas</h3>
-        <p>Visualize e edite demandas de projeto: status, classificação, complementos e dados do demandante.</p>
+        <span class="badge">Demandas</span>
+        <h3>Tabela de demandas</h3>
+        <p>Tabela única por tipo de demanda (plano, programa, projeto): status, classificação e complementos.</p>
       </a>
-      <a class="hub-card" href="objetos.html">
-        <span class="badge">AHP</span>
-        <h3>Objetos AHP</h3>
-        <p>Gerencie objetos aprovados para hierarquização: status da fila AHP, agrupamento e metadados.</p>
+      <a class="hub-card" href="../ahp/">
+        <span class="badge">Multicritério</span>
+        <h3>Configuração da Análise Multicritério</h3>
+        <p>Defina critérios, compare par a par e homologue os pesos (consistência) que servirão à hierarquização.</p>
+      </a>
+      <a class="hub-card" href="../hierarquizacao_demandas/">
+        <span class="badge">Hierarquização</span>
+        <h3>Hierarquização de demandas</h3>
+        <p>Priorize projetos com base em uma configuração homologada e consulte o ranking resultante.</p>
       </a>
     </div>
   </main>

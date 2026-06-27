@@ -50,6 +50,22 @@
     return !AHP_STATUS.has(status);
   }
 
+  function tipoLabelAtual() {
+    return TIPOS.find((t) => t.id === tipo)?.label || tipo;
+  }
+
+  function demandHeadHtml(d) {
+    return `
+      <header class="admin-demand-head card">
+        <p class="admin-demand-head-kicker">${escapeHtml(tipoLabelAtual())}</p>
+        <h1 class="admin-demand-head-title">${escapeHtml(d.nome || d.id)}</h1>
+        <p class="admin-demand-head-meta">
+          <code>${escapeHtml(d.id)}</code>
+          <span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span>
+        </p>
+      </header>`;
+  }
+
   function actionsHtml(d, { withApprove }) {
     return `
       <div class="form-field span-2">
@@ -182,6 +198,8 @@
   function projetoPageHtml(d) {
     return `
       <div class="admin-dashboard-layout">
+        ${demandHeadHtml(d)}
+        <div class="admin-demand-body">
         ${projectInfoHtml(d)}
 
         <section id="sec-analise" class="card admin-dashboard-section">
@@ -278,6 +296,7 @@
               </section>
           </div>
         </section>
+        </div>
       </div>`;
   }
 
@@ -353,10 +372,10 @@
   function planoPageHtml(d) {
     return `
       <div class="admin-dashboard-layout">
+        ${demandHeadHtml(d)}
+        <div class="admin-demand-body">
         <section id="sec-info" class="card admin-dashboard-section">
-          <h2>Informações do Plano
-            <span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span>
-          </h2>
+          <h2>Informações do Plano</h2>
           <div class="admin-form-grid">
             <div class="form-field">
               <label for="fld-codigo">Código</label>
@@ -406,6 +425,7 @@
             ${actionsHtml(d, { withApprove: canApprove(d.status) })}
           </div>
         </section>
+        </div>
       </div>`;
   }
 
@@ -433,10 +453,10 @@
   function programaPageHtml(d) {
     return `
       <div class="admin-dashboard-layout">
+        ${demandHeadHtml(d)}
+        <div class="admin-demand-body">
         <section id="sec-info" class="card admin-dashboard-section">
-          <h2>Informações do Programa
-            <span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span>
-          </h2>
+          <h2>Informações do Programa</h2>
           <div class="admin-form-grid">
             <div class="form-field">
               <label for="fld-codigo">Código</label>
@@ -486,6 +506,7 @@
             ${actionsHtml(d, { withApprove: canApprove(d.status) })}
           </div>
         </section>
+        </div>
       </div>`;
   }
 

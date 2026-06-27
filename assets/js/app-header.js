@@ -57,6 +57,13 @@
   function upgradeHeaderInner(inner) {
     if (inner.dataset.sadHeader === "1") return;
 
+    // Painéis com sidebar: título só na coluna esquerda; navbar ocupa a faixa superior direita.
+    if (inner.closest(".layout-main-header")) {
+      inner.classList.remove("app-header-inner--nav-only");
+      inner.dataset.sadHeader = "1";
+      return;
+    }
+
     let subtitle = DEFAULT_SUBTITLE;
     const legacyBrand = inner.querySelector(":scope > .app-brand");
     if (legacyBrand) {

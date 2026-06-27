@@ -39,9 +39,8 @@
         <div class="nav-section painel-layers-section admin-section-nav">
           <nav class="sidebar-restricted-nav" aria-label="Área restrita">
             <a href="index.html">Admin</a>
-            <a href="painel.html">Painel gestor</a>
-            <a href="demandas.html" class="is-active" aria-current="page">Demandas</a>
-            <a href="objetos.html">Objetos AHP</a>
+            <a href="painel.html">Painel de demandas</a>
+            <a href="demandas.html" class="is-active" aria-current="page">Tabela de demandas</a>
           </nav>
           <div id="records-root" class="layer-group layer-group--root">
             <button
@@ -52,10 +51,10 @@
               aria-controls="records-list"
             >
               <span class="layer-group-toggle" aria-hidden="true">▼</span>
-              <span class="layer-group-name">Demanda</span>
+              <span class="layer-group-name">Demandas</span>
               <span id="records-count" class="layer-group-active-count"></span>
             </button>
-            <div id="records-list" class="layer-group-body layers-container admin-records-list"></div>
+            <div id="records-list" class="layer-group-body layers-container admin-records-list demandas-tree"></div>
           </div>
         </div>
       </div>
@@ -81,6 +80,7 @@
   <script src="../assets/js/catalog.js"></script>
   <script src="../assets/js/admin-labels.js"></script>
   <script src="../assets/js/admin-ui.js"></script>
+  <script src="../assets/js/grouped-sidebar.js"></script>
   <script src="../assets/js/admin-dashboard.js"></script>
   <script src="../assets/js/admin-analysis-info.js"></script>
   <script src="../assets/js/admin-analysis-map.js"></script>

@@ -79,10 +79,11 @@ body.layout-with-sidebar {
   width: 100%;
   flex: 1;
   min-width: 0;
+  justify-content: flex-end;
 }
 
 .layout-with-sidebar .layout-main-header .app-header-brand {
-  max-width: min(48%, 480px);
+  display: none;
 }
 
 .layout-with-sidebar .layout-main-header .app-header-inner .app-nav {

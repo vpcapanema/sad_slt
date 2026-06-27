@@ -57,10 +57,28 @@
   flex-direction: row;
   align-items: center;
   gap: 0.65rem;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 100%;
   text-decoration: none;
   color: inherit;
+}
+
+.layout-sidebar-header .layout-sidebar-home-link.app-header-brand {
+  max-width: 100%;
+}
+
+.layout-sidebar-header .layout-sidebar-home-link .app-brand {
+  flex: 1;
+  min-width: 0;
+}
+
+.layout-sidebar-header .layout-sidebar-home-link .app-brand-title,
+.layout-sidebar-header .layout-sidebar-home-link .app-brand small {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
 }
 
 .layout-sidebar-home-link:hover .app-brand {
@@ -250,7 +268,7 @@
   gap: 0.35rem;
   width: 100%;
   padding: var(--sb-record-padding-y) 0.25rem var(--sb-record-padding-y)
-    calc(var(--layer-tree-x) + var(--layer-tree-branch) + var(--tree-level-indent, 1.25rem));
+    calc(var(--layer-tree-x, 0.7rem) + var(--layer-tree-branch, 0.85rem));
   border: none;
   background: transparent;
   font-family: inherit;
@@ -326,13 +344,17 @@
   padding: 0.06rem 0.28rem;
 }
 
-/* Seções do registro expandido (nível 2 da árvore) */
+/* Seções do registro expandido — indentação extra dentro de .demandas-tree (painel-layers.css) */
 .admin-record-sections {
   display: flex;
   flex-direction: column;
   margin-top: 0.05rem;
-  padding-left: calc(var(--tree-level-indent, 1.25rem) + 0.35rem);
-  --layer-tree-x: calc(var(--layer-tree-x) + var(--layer-tree-branch) + var(--tree-level-indent, 1.25rem));
+  padding-left: calc(var(--tree-level-indent, 1.75rem) + 0.35rem);
+}
+
+.demandas-tree .layer-group-header--record::before,
+.demandas-tree .layer-group-header--record::after {
+  display: none;
 }
 
 .admin-dashboard-nav a.layer-row {

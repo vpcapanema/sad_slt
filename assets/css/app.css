@@ -73,7 +73,7 @@ a {
   color: inherit;
   min-width: 0;
   flex: 0 1 auto;
-  max-width: min(52%, 520px);
+  max-width: min(68%, 680px);
 }
 
 .app-header-icon {
@@ -108,7 +108,7 @@ a {
 .app-nav {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
@@ -786,7 +786,7 @@ body.admin-data-page .app-header-inner {
 }
 
 body.admin-data-page .layout-main-header .app-header-brand {
-  max-width: min(46%, 460px);
+  display: none;
 }
 
 body.admin-data-page .layout-main-header .app-nav a {

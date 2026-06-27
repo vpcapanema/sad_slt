@@ -406,7 +406,7 @@
 
   function initLayersSectionCollapse() {
     const root = $("painel-layers-root");
-    const btn = $("toggle-projetos-section");
+    const btn = $("toggle-demandas-section");
     btn.addEventListener("click", () => {
       const collapsed = root.classList.toggle("collapsed");
       btn.setAttribute("aria-expanded", String(!collapsed));

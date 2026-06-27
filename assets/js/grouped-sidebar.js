@@ -79,15 +79,21 @@
     const container = document.querySelector(options.containerSelector || "#records-list");
     if (!container) return;
 
+    container.classList.add("demandas-tree");
+
     const groups = options.groups || [];
     const getRecordId = options.getRecordId || ((r) => r.id);
     const total = groups.reduce((acc, g) => acc + (g.records || []).length, 0);
     const selectedId = options.selectedId ?? null;
 
-    const countEl = document.querySelector(options.countSelector || "#records-count");
+    const countEl = options.countSelector
+      ? document.querySelector(options.countSelector)
+      : document.querySelector("#records-count");
     if (countEl) countEl.textContent = total ? String(total) : "";
 
-    const emptyEl = document.querySelector(options.emptySelector || "");
+    const emptyEl = options.emptySelector
+      ? document.querySelector(options.emptySelector)
+      : null;
     if (emptyEl) emptyEl.classList.toggle("hidden", total > 0);
 
     if (!total) {

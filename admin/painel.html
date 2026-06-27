@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Painel gestor — Admin SLT</title>
+  <title>Painel de demandas — Admin SLT</title>
   <link rel="stylesheet" href="../assets/css/app.css">
   <link rel="stylesheet" href="../assets/css/admin-painel-page.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
@@ -22,7 +22,7 @@
           >
           <div class="app-brand">
             Apoio à Tomada de Decisão
-            <small>Painel do gestor</small>
+            <small>Painel administrativo de demandas</small>
           </div>
         </a>
       </div>
@@ -34,23 +34,22 @@
       </div>
     </header>
 
-    <aside class="layout-sidebar painel-dashboard-sidebar" aria-label="Projetos">
+    <aside class="layout-sidebar painel-dashboard-sidebar" aria-label="Demandas">
       <div class="layout-sidebar-body">
         <div class="nav-section painel-layers-section">
           <nav class="sidebar-restricted-nav" aria-label="Área restrita">
             <a href="index.html">Admin</a>
-            <a href="painel.html" class="is-active" aria-current="page">Painel gestor</a>
-            <a href="demandas.html">Demandas</a>
-            <a href="objetos.html">Objetos AHP</a>
+            <a href="painel.html" class="is-active" aria-current="page">Painel de demandas</a>
+            <a href="demandas.html">Tabela de demandas</a>
           </nav>
           <div id="painel-layers-root" class="layer-group layer-group--root">
-            <button type="button" class="layer-group-header layer-group-header--section" id="toggle-projetos-section" aria-expanded="true" aria-controls="layers-container">
+            <button type="button" class="layer-group-header layer-group-header--section" id="toggle-demandas-section" aria-expanded="true" aria-controls="layers-container">
               <span class="layer-group-toggle" aria-hidden="true">▼</span>
-              <span class="layer-group-name">Projetos</span>
+              <span class="layer-group-name">Demandas</span>
               <span id="projetos-count" class="layer-group-active-count"></span>
             </button>
-            <div id="layers-container" class="layer-group-body layers-container" role="list" aria-label="Projetos"></div>
-            <p id="lista-vazia-projetos" class="layers-empty hint hidden">Nenhum projeto registrado.</p>
+            <div id="layers-container" class="layer-group-body layers-container demandas-tree" role="list" aria-label="Demandas"></div>
+            <p id="lista-vazia-projetos" class="layers-empty hint hidden">Nenhuma demanda registrada.</p>
           </div>
         </div>
       </div>
@@ -63,7 +62,7 @@
     <div class="layout-main">
       <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 
-      <main class="painel-dashboard-map" aria-label="Mapa de projetos">
+      <main class="painel-dashboard-map" aria-label="Mapa de demandas">
         <div id="map-painel"></div>
       </main>
     </div>

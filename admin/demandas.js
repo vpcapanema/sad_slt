@@ -63,7 +63,9 @@
   }
 
   function renderHead() {
-    $("#tabela-head").innerHTML = COLUMNS[tipo]
+    const head = $("#tabela-head");
+    if (!head) return;
+    head.innerHTML = COLUMNS[tipo]
       .map((c) => `<th>${escapeHtml(c.label)}</th>`)
       .join("");
   }
