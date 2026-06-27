@@ -3,12 +3,14 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from api.schemas.demanda import RepresentanteSchema
+
 
 class ProgramaCreateSchema(BaseModel):
     """Payload de cadastro de um programa (nível 2 — filho de um plano)."""
 
     codigo: str | None = Field(None, max_length=64)
-    plano_codigo: str = Field(..., description="Código legível do plano pai")
+    plano_codigo: str | None = Field(None, description="Código legível do plano pai (opcional sem vínculo institucional)")
     nome: str = Field(..., min_length=1, max_length=200)
     descricao: str = Field(..., min_length=1)
     objetivo: str | None = None
@@ -16,6 +18,8 @@ class ProgramaCreateSchema(BaseModel):
     orgao_responsavel: str | None = None
     justificativa: str | None = None
     valor_global: float | None = None
+    pessoa_id: str | None = None
+    representante: RepresentanteSchema
     unidades_espaciais: list[str] = Field(default_factory=list)
 
 
@@ -36,6 +40,9 @@ class ProgramaResponseSchema(BaseModel):
     orgao_responsavel: str | None = None
     justificativa: str | None = None
     valor_global: float | None = None
+    pessoa_id: str | None = None
+    representante: RepresentanteSchema | None = None
+    unidades_espaciais: list[str] = Field(default_factory=list)
 
 
 class ProgramaUpdateSchema(BaseModel):

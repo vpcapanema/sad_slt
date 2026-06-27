@@ -33,7 +33,7 @@ class DemandaCreateSchema(BaseModel):
     representante: RepresentanteSchema
     diretoria_id: str
     plano_id: str
-    programa_codigo: str = Field(..., description="Código legível do programa pai")
+    programa_codigo: str | None = Field(None, description="Código legível do programa (opcional sem vínculo institucional)")
     nome: str = Field(..., min_length=1, max_length=200)
     descricao: str | None = None
     geometria: GeometriaSchema | None = None

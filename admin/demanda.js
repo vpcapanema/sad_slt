@@ -227,7 +227,7 @@
                 <h3>Institucional e Projeto</h3>
                 <div class="admin-form-grid">
                   <div class="form-field">
-                    <label for="fld-instituicao">Instituição</label>
+                    <label for="fld-instituicao">Instituição interessada</label>
                     <input type="text" id="fld-instituicao" class="admin-field-readonly admin-field-readonly--plain" value="${escapeHtml(instituicaoLabel(d))}" readonly aria-readonly="true">
                   </div>
                   <div class="form-field">
@@ -398,7 +398,7 @@
               <textarea id="fld-objetivo" rows="2">${escapeHtml(d.objetivo_estrategico || "")}</textarea>
             </div>
             <div class="form-field">
-              <label for="fld-responsavel">Responsável</label>
+              <label for="fld-responsavel">Instituição interessada</label>
               <input type="text" id="fld-responsavel" value="${escapeHtml(d.responsavel || "")}">
             </div>
             <div class="form-field">

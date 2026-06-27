@@ -91,11 +91,19 @@ def _build_persist_row(payload: DemandaCreateSchema) -> dict[str, Any]:
         payload.geometria.model_dump() if payload.geometria else None
     )
 
-    programa = programa_repository.get_by_codigo(payload.programa_codigo.strip())
-    if not programa:
-        raise DemandaValidationError(
-            f"Programa não encontrado: {payload.programa_codigo}.", field="programa_codigo"
-        )
+    programa_id = None
+    if payload.programa_codigo and payload.programa_codigo.strip():
+        programa = programa_repository.get_by_codigo(payload.programa_codigo.strip())
+        if not programa:
+            raise DemandaValidationError(
+                f"Programa não encontrado: {payload.programa_codigo}.", field="programa_codigo"
+            )
+        programa_id = str(programa["id"])
+
+    if not payload.diretoria_id or not str(payload.diretoria_id).strip():
+        raise DemandaValidationError("Diretoria é obrigatória.", field="diretoria_id")
+    if not payload.plano_id or not str(payload.plano_id).strip():
+        raise DemandaValidationError("Plano é obrigatório.", field="plano_id")
 
     return demanda_repository.prepare_insert_params(
         {
@@ -108,9 +116,9 @@ def _build_persist_row(payload: DemandaCreateSchema) -> dict[str, Any]:
             "representante_nome": (payload.representante.nome or "").strip() or "—",
             "representante_email": payload.representante.email,
             "representante_telefone": payload.representante.telefone,
-            "diretoria_id": payload.diretoria_id,
-            "plano_id": payload.plano_id,
-            "programa_id": str(programa["id"]),
+            "diretoria_id": payload.diretoria_id.strip(),
+            "plano_id": payload.plano_id.strip(),
+            "programa_id": programa_id,
             "nome": payload.nome.strip(),
             "descricao": payload.descricao,
             "latitude": payload.lat,

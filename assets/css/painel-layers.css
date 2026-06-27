@@ -54,16 +54,9 @@
   color: var(--sb-green, #4ade80);
 }
 
-/* Conector vertical do título da seção até os filhos */
+/* Conector discreto do título raiz até os filhos */
 .layer-group--root:not(.collapsed) .layer-group-header--section::after {
-  content: "";
-  position: absolute;
-  left: var(--layer-tree-x);
-  bottom: -0.4rem;
-  width: 1px;
-  height: 0.4rem;
-  background: rgba(255, 255, 255, 0.22);
-  pointer-events: none;
+  display: none;
 }
 
 .layer-group-toggle {
@@ -100,11 +93,10 @@
   display: none;
 }
 
-/* Grupos irmãos: PLANO | PROGRAMA | PROJETOS — indentação hierárquica explícita */
+/* Grupos irmãos: PLANO | PROGRAMA | PROJETOS — indentação hierárquica */
 .demandas-tree {
-  --tree-step: 2.25rem;
-  --tree-rail: 0.85rem;
-  --tree-line: rgba(255, 255, 255, 0.2);
+  --tree-step: 1.125rem;
+  --tree-guide: rgba(255, 255, 255, 0.14);
 }
 
 .layer-group--tipo {
@@ -121,37 +113,19 @@
 
 /* Nível 1 — tipo (PLANO | PROGRAMA | PROJETOS) */
 .demandas-tree > .layer-group--tipo > .layer-group-header--tipo {
-  position: relative;
   margin-left: var(--tree-step);
-  padding-left: calc(var(--tree-rail) + 0.15rem);
+  padding-left: 0.3rem;
 }
 
-.demandas-tree > .layer-group--tipo > .layer-group-header--tipo::before {
-  content: "";
-  position: absolute;
-  left: calc(var(--tree-step) * -0.55);
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--tree-line);
-  pointer-events: none;
-}
-
+.demandas-tree > .layer-group--tipo > .layer-group-header--tipo::before,
 .demandas-tree > .layer-group--tipo > .layer-group-header--tipo::after {
-  content: "";
-  position: absolute;
-  left: calc(var(--tree-step) * -0.55);
-  top: 50%;
-  width: calc(var(--tree-step) * 0.45);
-  height: 1px;
-  background: var(--tree-line);
-  pointer-events: none;
+  display: none;
 }
 
 .demandas-tree > .layer-group--tipo > .layer-group-body {
-  margin-left: calc(var(--tree-step) * 1.35);
-  padding-left: calc(var(--tree-step) * 0.35);
-  border-left: 1px solid var(--tree-line);
+  margin-left: var(--tree-step);
+  padding-left: 0.45rem;
+  border-left: 1px solid var(--tree-guide);
 }
 
 .layer-group-header--tipo .layer-group-name {
@@ -164,28 +138,29 @@
 
 /* Nível 2 — nome da demanda */
 .demandas-tree .layer-group--record > .layer-group-header--record {
-  margin-left: var(--tree-step);
-  padding-left: calc(var(--tree-rail) + 0.15rem) !important;
+  margin-left: 0;
+  padding-left: 0.3rem !important;
 }
 
 /* Nível 3 — seções do formulário (análise de demanda) */
 .demandas-tree .layer-group--record > .admin-record-sections {
-  margin-left: calc(var(--tree-step) * 2);
-  padding-left: calc(var(--tree-step) * 0.4);
-  border-left: 1px solid var(--tree-line);
+  margin-left: var(--tree-step);
+  padding-left: 0.45rem;
+  border-left: 1px solid var(--tree-guide);
 }
 
 .demandas-tree .admin-record-sections .layer-row {
-  padding-left: calc(var(--tree-rail) + 0.2rem) !important;
+  padding-left: 0.25rem !important;
 }
 
-.demandas-tree .admin-record-sections .layer-row::before {
-  left: 0.15rem;
-}
-
+.demandas-tree .admin-record-sections .layer-row::before,
 .demandas-tree .admin-record-sections .layer-row::after {
-  left: 0.15rem;
-  width: calc(var(--tree-rail) - 0.1rem);
+  display: none;
+}
+
+.demandas-tree .layer-group-header--record::before,
+.demandas-tree .layer-group-header--record::after {
+  display: none;
 }
 
 .admin-records-list {
@@ -195,7 +170,7 @@
 }
 
 .layers-empty--nested {
-  padding: 0.35rem 0.5rem 0.35rem 1.25rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.65rem;
   font-size: 0.78rem;
   opacity: 0.65;
 }
@@ -258,42 +233,21 @@
   border-radius: 4px;
 }
 
-/* Filhos indentados com linhas de árvore ligadas ao título da seção */
+/* Filhos fora da árvore demandas-tree (legado) — sem garfos, só recuo */
 .layer-row {
   display: flex;
   align-items: flex-start;
   gap: 0.4rem;
-  padding: var(--sb-layer-row-padding-y) 0.15rem var(--sb-layer-row-padding-y) calc(var(--layer-tree-x) + var(--layer-tree-branch));
+  padding: var(--sb-layer-row-padding-y) 0.15rem;
   cursor: pointer;
   border-radius: 0.25rem;
   transition: background 0.12s ease;
   position: relative;
 }
 
-.layer-row::before {
-  content: "";
-  position: absolute;
-  left: var(--layer-tree-x);
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: rgba(255, 255, 255, 0.22);
-  pointer-events: none;
-}
-
-.layer-row:last-child::before {
-  bottom: 50%;
-}
-
+.layer-row::before,
 .layer-row::after {
-  content: "";
-  position: absolute;
-  left: var(--layer-tree-x);
-  top: 50%;
-  width: var(--layer-tree-branch);
-  height: 1px;
-  background: rgba(255, 255, 255, 0.22);
-  pointer-events: none;
+  display: none;
 }
 
 .layer-row:hover {

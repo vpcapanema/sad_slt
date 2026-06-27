@@ -159,7 +159,7 @@
           <dt>Plano</dt><dd>${escapeHtml(d.nome)}</dd>
           <dt>Descrição</dt><dd>${escapeHtml(d.descricao || "—")}</dd>
           <dt>Objetivo estratégico</dt><dd>${escapeHtml(d.objetivo_estrategico || "—")}</dd>
-          <dt>Responsável</dt><dd>${escapeHtml(d.responsavel || "—")}</dd>
+          <dt>Instituição interessada</dt><dd>${escapeHtml(d.responsavel || "—")}</dd>
           <dt>Vigência</dt><dd>${escapeHtml([d.vigencia_inicio, d.vigencia_fim].filter(Boolean).join(" — ") || "—")}</dd>
           <dt>Valor global</dt><dd>${d.valor_global != null ? escapeHtml(String(d.valor_global)) : "—"}</dd>
           <dt>Abrangência</dt><dd>${escapeHtml(abrangenciaText(d))}</dd>
@@ -200,7 +200,7 @@
         <dl>
           <dt>Código da demanda</dt><dd><code>${escapeHtml(d.id)}</code></dd>
           <dt>Status</dt><dd><span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span></dd>
-          <dt>Instituição demandante</dt><dd>${escapeHtml(instituicaoLabel(d))}</dd>
+          <dt>Instituição interessada</dt><dd>${escapeHtml(instituicaoLabel(d))}</dd>
           <dt>CNPJ</dt><dd>${escapeHtml(d.instituicao_cnpj || "—")}</dd>
           <dt>Representante legal</dt><dd>${escapeHtml(representanteLabel(d))}</dd>
           <dt>E-mail</dt><dd>${escapeHtml(rep.email || "—")}</dd>

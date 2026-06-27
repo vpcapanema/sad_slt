@@ -45,7 +45,7 @@
     const homeEsc = escapeHtml(home);
     const icon = escapeHtml(iconSrc());
     return `
-      <a href="${homeEsc}" class="app-header-brand layout-sidebar-home-link" title="Página inicial">
+      <a href="${homeEsc}" class="app-header-brand" title="Página inicial">
         <img src="${icon}" alt="" class="app-header-icon sidebar-app-icon" width="36" height="36">
         <div class="app-brand">
           <span class="app-brand-title">${TITLE}</span>

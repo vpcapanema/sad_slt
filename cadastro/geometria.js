@@ -1,7 +1,171 @@
 (function (global) {
   let map, drawnItems, markerLayer, drawControl;
+  let parentLayer = null;
+  let parentFc = null;
+  let parentBounds = null;
+  let parentLabel = "";
   let modo = "ponto";
   let geometria = null;
+
+  const PARENT_STYLE = {
+    color: "#b45309",
+    weight: 2,
+    dashArray: "6 4",
+    fillColor: "#f59e0b",
+    fillOpacity: 0.14,
+  };
+
+  const USER_POLY_STYLE = { color: "#116593", weight: 3, fillOpacity: 0.32, fillColor: "#116593" };
+  const USER_LINE_STYLE = { color: "#116593", weight: 3 };
+  let spatialOutside = false;
+  let lastContainment = null;
+  let regionalidades = null;
+  let onAnalysisChange = null;
+
+  const TIPO_REGIAO_LABEL = {
+    municipio: "Município",
+    regiao_governo: "Região de Governo",
+    regiao_administrativa: "Região Administrativa",
+    regiao_metropolitana: "Região Metropolitana",
+    zona_zee: "Zona de Gestão ZEE-SP",
+  };
+
+  function setOnAnalysisChange(fn) {
+    onAnalysisChange = typeof fn === "function" ? fn : null;
+  }
+
+  function getRegionalidades() {
+    return regionalidades;
+  }
+
+  function getContainment() {
+    return lastContainment;
+  }
+
+  function notifyAnalysisChange() {
+    onAnalysisChange?.();
+  }
+
+  function resetSpatialAck() {
+    spatialOutside = false;
+    const ack = document.getElementById("map-spatial-ack");
+    if (ack) ack.checked = false;
+    const row = document.getElementById("map-spatial-ack-row");
+    const warn = document.getElementById("map-spatial-warn");
+    if (row) row.classList.add("hidden");
+    if (warn) warn.textContent = "";
+  }
+
+  function updateSpatialWarning(geom) {
+    const row = document.getElementById("map-spatial-ack-row");
+    const warn = document.getElementById("map-spatial-warn");
+    if (!geom || !global.SLTSpatialConstraint?.hasParent()) {
+      resetSpatialAck();
+      return;
+    }
+    const check = SLTSpatialConstraint.checkDemandaGeometria(geom);
+    if (check.intersects) {
+      resetSpatialAck();
+      return;
+    }
+    spatialOutside = true;
+    if (warn) warn.textContent = check.message || SLTSpatialConstraint.getOutsideMessage();
+    if (row) row.classList.remove("hidden");
+    const ack = document.getElementById("map-spatial-ack");
+    if (ack) ack.checked = false;
+  }
+
+  function isOutsideParent() {
+    return spatialOutside;
+  }
+
+  function isSpatialAcknowledged() {
+    if (!spatialOutside) return true;
+    return Boolean(document.getElementById("map-spatial-ack")?.checked);
+  }
+
+  function updateParentHint() {
+    const el = document.getElementById("map-parent-hint");
+    if (!el) return;
+    if (parentFc?.features?.length) {
+      el.textContent = parentLabel
+        ? `Contorno tracejado: abrangência do ${parentLabel} (referência do vínculo institucional).`
+        : "Contorno tracejado: abrangência do vínculo institucional (referência para validação espacial).";
+      el.classList.remove("hidden");
+    } else {
+      el.textContent = "";
+      el.classList.add("hidden");
+    }
+  }
+
+  function collectUserBounds() {
+    const boxes = [];
+    if (drawnItems) {
+      drawnItems.eachLayer((l) => {
+        if (typeof l.getBounds === "function") {
+          const b = l.getBounds();
+          if (b.isValid()) boxes.push(b);
+        }
+      });
+    }
+    if (markerLayer) {
+      markerLayer.eachLayer((l) => {
+        if (l instanceof L.Marker || l instanceof L.CircleMarker) {
+          const ll = l.getLatLng();
+          boxes.push(L.latLngBounds([ll, ll]));
+        }
+      });
+    }
+    return boxes;
+  }
+
+  function fitMapView() {
+    if (!map) return;
+    const boxes = [];
+    if (parentBounds?.isValid()) boxes.push(parentBounds);
+    boxes.push(...collectUserBounds());
+    if (!boxes.length) {
+      map.setView([-22.5, -48.5], 7);
+      return;
+    }
+    let combined = boxes[0];
+    for (let i = 1; i < boxes.length; i++) combined = combined.extend(boxes[i]);
+    map.fitBounds(combined.pad(0.1));
+  }
+
+  function renderParentReference() {
+    if (!map) return;
+    if (parentLayer) {
+      map.removeLayer(parentLayer);
+      parentLayer = null;
+      parentBounds = null;
+    }
+    if (!parentFc?.features?.length) {
+      updateParentHint();
+      fitMapView();
+      return;
+    }
+    parentLayer = L.geoJSON(parentFc, {
+      interactive: false,
+      pane: "parentReferencePane",
+      style: PARENT_STYLE,
+    }).addTo(map);
+    parentLayer.bringToBack();
+    const b = parentLayer.getBounds();
+    parentBounds = b.isValid() ? b : null;
+    updateParentHint();
+    fitMapView();
+  }
+
+  function setParentReference(fc, label) {
+    parentFc = fc?.features?.length ? fc : null;
+    parentLabel = label || "";
+    renderParentReference();
+  }
+
+  function clearParentReference() {
+    setParentReference(null);
+  }
 
   function setStatus(text) {
     const el = document.getElementById("map-status");
@@ -129,7 +293,13 @@
     geometria = geom;
     clearLayers();
     if (!geom || !map) {
-      setStatus("Localização ainda não definida.");
+      resetSpatialAck();
+      setStatus(
+        parentFc?.features?.length
+          ? "Indique a localização no mapa. A área tracejada laranja é a abrangência do vínculo."
+          : "Localização ainda não definida."
+      );
+      fitMapView();
       return;
     }
 
@@ -138,15 +308,19 @@
 
     if (geom.tipo === "Point") {
       const [lng, lat] = geom.coordinates;
-      const m = L.marker([lat, lng]);
+      const m = L.marker([lat, lng], { pane: "userGeometryPane" });
       markerLayer.addLayer(m);
-      map.setView([lat, lng], Math.max(map.getZoom(), 12));
+      if (parentLayer) parentLayer.bringToBack();
+      m.bringToFront();
+      fitMapView();
       setStatus(`Ponto: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
     } else if (geom.tipo === "Polygon") {
       const latlngs = geom.coordinates[0].map(([lng, lat]) => [lat, lng]);
-      const poly = L.polygon(latlngs, { color: "#116593", weight: 3, fillOpacity: 0.2 });
+      const poly = L.polygon(latlngs, { ...USER_POLY_STYLE, pane: "userGeometryPane" });
       drawnItems.addLayer(poly);
-      map.fitBounds(poly.getBounds().pad(0.1));
+      if (parentLayer) parentLayer.bringToBack();
+      poly.bringToFront();
+      fitMapView();
       const n = geom.coordinates[0].length - 1;
       if (ref) {
         const cm = L.circleMarker([ref.lat, ref.lng], {
@@ -165,9 +339,11 @@
       }
     } else if (geom.tipo === "LineString") {
       const latlngs = geom.coordinates.map(([lng, lat]) => [lat, lng]);
-      const line = L.polyline(latlngs, { color: "#116593", weight: 3 });
+      const line = L.polyline(latlngs, { ...USER_LINE_STYLE, pane: "userGeometryPane" });
       drawnItems.addLayer(line);
-      map.fitBounds(line.getBounds().pad(0.1));
+      if (parentLayer) parentLayer.bringToBack();
+      line.bringToFront();
+      fitMapView();
       if (ref) {
         const cm = L.circleMarker([ref.lat, ref.lng], {
           radius: 6,
@@ -182,6 +358,8 @@
         );
       }
     }
+    setError("");
+    updateSpatialWarning(geom);
   }
 
   function buildGeometriaPayload(tipo, coordinates) {
@@ -240,7 +418,12 @@
     clearLayers();
     clearCoordInputs();
     setError("");
-    setStatus("Nenhuma geometria definida.");
+    resetSpatialAck();
+    setStatus(
+      parentFc?.features?.length
+        ? "Indique a localização no mapa. A área tracejada laranja é a abrangência do vínculo."
+        : "Nenhuma geometria definida."
+    );
 
     const blocoPonto = document.getElementById("bloco-ponto");
     const blocoPerimetro = document.getElementById("bloco-perimetro");
@@ -251,6 +434,7 @@
     document.getElementById("btn-modo-perimetro")?.classList.toggle("active", modo === "perimetro");
 
     if (modo === "ponto") enableMapClick();
+    fitMapView();
   }
 
   async function parseUpload(file) {
@@ -266,6 +450,10 @@
 
   function init() {
     map = L.map("map").setView([-22.5, -48.5], 7);
+    map.createPane("parentReferencePane");
+    map.getPane("parentReferencePane").style.zIndex = 350;
+    map.createPane("userGeometryPane");
+    map.getPane("userGeometryPane").style.zIndex = 450;
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; OpenStreetMap",
       maxZoom: 19,
@@ -291,8 +479,14 @@
       clearLayers();
       clearCoordInputs();
       document.getElementById("upload-perimetro").value = "";
-      setStatus("Localização ainda não definida.");
+      resetSpatialAck();
+      setStatus(
+        parentFc?.features?.length
+          ? "Indique a localização no mapa. A área tracejada laranja é a abrangência do vínculo."
+          : "Localização ainda não definida."
+      );
       setError("");
+      fitMapView();
       if (modo === "ponto") enableMapClick();
     });
 
@@ -316,10 +510,16 @@
     document.getElementById("btn-modo-perimetro")?.addEventListener("click", () => setModo("perimetro"));
 
     setModo("ponto");
+    renderParentReference();
   }
 
   function invalidateSize() {
-    if (map) map.invalidateSize();
+    if (!map) return;
+    map.invalidateSize();
+    setTimeout(() => {
+      renderParentReference();
+      fitMapView();
+    }, 120);
   }
 
   function getGeometria() {
@@ -346,5 +546,9 @@
     getCoordenadas,
     hasLocalizacaoValida,
     setModo,
+    setParentReference,
+    clearParentReference,
+    isOutsideParent,
+    isSpatialAcknowledged,
   };
 })(window);

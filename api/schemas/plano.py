@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from api.schemas.demanda import RepresentanteSchema
+
 
 class PlanoCreateSchema(BaseModel):
     """Payload de cadastro de um plano (nível 1 — interno)."""
@@ -13,6 +15,8 @@ class PlanoCreateSchema(BaseModel):
     descricao: str = Field(..., min_length=1)
     objetivo_estrategico: str | None = None
     responsavel: str | None = None
+    pessoa_id: str | None = None
+    representante: RepresentanteSchema
     vigencia_inicio: str | None = None
     vigencia_fim: str | None = None
     valor_global: float | None = None
@@ -30,9 +34,12 @@ class PlanoResponseSchema(BaseModel):
     descricao: str | None = None
     objetivo_estrategico: str | None = None
     responsavel: str | None = None
+    pessoa_id: str | None = None
+    representante: RepresentanteSchema | None = None
     vigencia_inicio: str | None = None
     vigencia_fim: str | None = None
     valor_global: float | None = None
+    unidades_espaciais: list[str] = Field(default_factory=list)
 
 
 class PlanoUpdateSchema(BaseModel):

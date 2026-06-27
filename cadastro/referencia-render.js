@@ -155,7 +155,9 @@
 
         <section class="ref-block">
           <h3>${p.frentes ? "Frentes de atuação" : "Eixos ferroviários"} (${subItems.length})</h3>
-          <p class="field-help">Referência densa: <a href="${p.frentes ? "catalogo-frentes-pli.html" : "catalogo-eixos-pef.html"}">${p.frentes ? "Frentes PLI" : "Eixos PEF e TIC"}</a></p>
+          <div class="field-help-row">
+            <a class="link-catalogo" href="${p.frentes ? "catalogo-frentes-pli.html" : "catalogo-eixos-pef.html"}" target="_blank" rel="noopener">Consulte ${p.frentes ? "as frentes PLI" : "os eixos PEF e TIC"} ↗</a>
+          </div>
           <div class="ref-subgrid">
             ${subItems
               .map(
@@ -262,7 +264,9 @@
             <p><strong>Ligação:</strong> ${esc(tic.ligacao)}</p>
             <p>${esc(tic.contexto)}</p>
             <p class="field-help"><strong>Quando especificar:</strong> ${esc(tic.quando_especificar)}</p>
-            <a class="link-catalogo" href="${cadastroUrl({ plano: "PLANO-PEF", diretoria: "DIR-PLAN", eixo: "EIXO-PEF-02", corredor_tic: tic.id, step: "3" })}">Cadastrar com ${esc(tic.id)}</a>
+            <div class="field-help-row">
+              <a class="link-catalogo" href="${cadastroUrl({ plano: "PLANO-PEF", diretoria: "DIR-PLAN", eixo: "EIXO-PEF-02", corredor_tic: tic.id, step: "3" })}">Cadastrar com ${esc(tic.id)} ↗</a>
+            </div>
           </div>`;
         });
         html += `</div></section>`;

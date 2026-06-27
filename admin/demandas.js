@@ -18,7 +18,7 @@
     projeto: [
       { label: "Código", value: (d) => `<code>${escapeHtml(d.id)}</code>` },
       { label: "Projeto", value: (d) => escapeHtml(d.nome) },
-      { label: "Instituição", value: (d) => escapeHtml(instituicaoLabel(d)) },
+      { label: "Instituição interessada", value: (d) => escapeHtml(instituicaoLabel(d)) },
       { label: "Plano", value: (d) => escapeHtml(planoLabel(d.plano_id)) },
       { label: "Classificação", value: (d) => escapeHtml(classificacaoLabel(d.classificacao, d.plano_id)) },
       { label: "Status", value: statusCell },
@@ -36,7 +36,7 @@
       { label: "Código", value: (d) => `<code>${escapeHtml(d.id)}</code>` },
       { label: "Plano", value: (d) => escapeHtml(d.nome) },
       { label: "Diretoria", value: (d) => escapeHtml(diretoriaLabel(d.diretoria_id)) },
-      { label: "Responsável", value: (d) => escapeHtml(d.responsavel || "—") },
+      { label: "Instituição interessada", value: (d) => escapeHtml(d.responsavel || "—") },
       { label: "Status", value: statusCell },
       { label: "Cadastro", value: (d) => escapeHtml(formatDate(d.criadoEm)) },
     ],

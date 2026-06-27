@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cadastro de demandas — SLT</title>
-  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/app.css?v=20250627g">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" crossorigin="">
 </head>
@@ -23,200 +23,235 @@
     <section class="card">
       <h2>Nova demanda</h2>
       <p class="step-intro">
-        Selecione o tipo de demanda e preencha o formulário correspondente.
+        Selecione o tipo de demanda e preencha o formulário correspondente ao nível escolhido.
       </p>
       <div class="tipo-demanda-selector" id="tipo-selector" role="tablist" aria-label="Tipo de demanda">
-        <button type="button" class="tipo-card" data-tipo="plano" role="tab" aria-selected="false">
+        <button type="button" class="tipo-card is-active" data-tipo="plano" role="tab" aria-selected="true">
           <strong>Plano</strong><span>Nível 1 — diretriz estratégica da diretoria</span>
         </button>
         <button type="button" class="tipo-card" data-tipo="programa" role="tab" aria-selected="false">
           <strong>Programa</strong><span>Nível 2 — vinculado a um plano</span>
         </button>
-        <button type="button" class="tipo-card is-active" data-tipo="projeto" role="tab" aria-selected="true">
+        <button type="button" class="tipo-card" data-tipo="projeto" role="tab" aria-selected="false">
           <strong>Projeto</strong><span>Nível 3 — vinculado a um programa</span>
         </button>
       </div>
       <div id="cadastro-load-hint" class="field-help" aria-live="polite"></div>
     </section>
 
-    <form id="form-cadastro" class="tipo-form" data-tipo="projeto" novalidate>
-      <!-- Passo 1 -->
-      <section class="card step-panel" data-step="1">
-        <h2>1. Contexto institucional</h2>
-        <p class="step-intro">Selecione a instituição demandante, a diretoria e o plano no qual a demanda se encaixa.</p>
+    <form id="form-cadastro" class="tipo-form cadastro-incremental-form hidden" data-tipo="projeto" novalidate>
+      <!-- Passo 1 — informações cadastrais e vínculo -->
+      <section class="card step-panel cadastro-section" data-step="1">
+        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Informações cadastrais</span></h2>
+        <p class="step-intro">Informe o nome e descreva brevemente o objetivo e o escopo da demanda.</p>
         <div class="form-grid">
           <div class="full">
-            <label for="instituicao">Instituição demandante <span class="req">*</span></label>
-            <select id="instituicao" name="instituicao" required disabled>
-              <option value="">Carregando instituições…</option>
-            </select>
-            <p class="field-help">
-              Se a instituição não aparecer na lista,
-              <a href="http://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener">cadastre-a antes de continuar ↗</a>
-            </p>
+            <label for="nome">Nome do projeto <span class="req">*</span></label>
+            <input type="text" id="nome" name="nome" required maxlength="200" placeholder="Ex.: Duplicação BR-xxx trecho norte">
           </div>
           <div class="full">
-            <label for="cnpj">CNPJ</label>
-            <input type="text" id="cnpj" name="cnpj" readonly placeholder="Selecione a instituição">
-          </div>
-          <div>
-            <label for="diretoria">Diretoria <span class="req">*</span></label>
-            <select id="diretoria" name="diretoria" required></select>
-            <div class="field-help-row">
-              <a class="link-catalogo" href="catalogo-diretorias.html" target="_blank" rel="noopener">
-                Consulte como escolher a diretoria ↗
-              </a>
-            </div>
-            <div id="hint-diretoria" class="context-hint hidden" aria-live="polite"></div>
-          </div>
-          <div>
-            <label for="plano">Plano <span class="req">*</span></label>
-            <select id="plano" name="plano" required disabled>
-              <option value="">Selecione a diretoria primeiro</option>
-            </select>
-            <div class="field-help-row">
-              <a class="link-catalogo" id="link-catalogo-planos" href="catalogo-planos.html" target="_blank" rel="noopener">
-                Consulte os planos PLI-SP 2050 e PEF-SP 2050 ↗
-              </a>
-            </div>
-            <div id="hint-plano" class="context-hint hidden" aria-live="polite"></div>
-          </div>
-          <div class="full">
-            <label for="programa">Programa <span class="req">*</span></label>
-            <select id="programa" name="programa" required disabled>
-              <option value="">Selecione a diretoria primeiro</option>
-            </select>
-            <p class="field-help">O projeto deve estar vinculado a um programa já cadastrado.</p>
+            <label for="descricao">Descrição</label>
+            <textarea id="descricao" name="descricao" placeholder="Objetivo, escopo resumido, justificativa…"></textarea>
           </div>
         </div>
+
+        <div class="cadastro-vinculo-pergunta cadastro-vinculo-pergunta--embedded">
+          <h3>Vínculo institucional</h3>
+          <p class="cadastro-vinculo-pergunta-enunciado">
+            Este projeto possui vínculo a um programa ou plano já cadastrado?
+          </p>
+          <div class="cadastro-vinculo-resposta" role="radiogroup" aria-label="Vínculo institucional do projeto">
+            <label>
+              <input type="radio" name="pj-vinculo" value="sim">
+              Sim
+            </label>
+            <label>
+              <input type="radio" name="pj-vinculo" value="nao">
+              Não
+            </label>
+          </div>
+        </div>
+
         <div class="btn-row">
-          <button type="button" class="btn btn-primary btn-next" data-next="2">Continuar</button>
+          <button type="button" class="btn btn-primary btn-next">Continuar</button>
         </div>
       </section>
 
-      <!-- Passo 2 -->
-      <section class="card step-panel hidden" data-step="2">
-        <h2>2. Projeto</h2>
-        <p class="step-intro">Informe os dados do projeto, selecione o representante legal e indique a localização geográfica.</p>
+      <!-- Passo 2 — contexto institucional (somente se marcou vínculo) -->
+      <section class="card step-panel cadastro-section hidden" data-step="2" id="pj-vinculo-inst-step">
+        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Contexto institucional estratégico</span></h2>
+        <p class="step-intro">Selecione o programa ou o plano cadastrado que enquadra este projeto e confira o contexto herdado.</p>
 
         <div class="form-subsection">
-          <h3>2.1 Informações cadastrais</h3>
-          <p class="step-intro">Informe o nome e descreva brevemente o objetivo e o escopo da demanda.</p>
-          <div class="form-grid">
-            <div class="full">
-              <label for="nome">Nome do projeto <span class="req">*</span></label>
-              <input type="text" id="nome" name="nome" required maxlength="200" placeholder="Ex.: Duplicação BR-xxx trecho norte">
-            </div>
-            <div class="full">
-              <label for="descricao">Descrição</label>
-              <textarea id="descricao" name="descricao" placeholder="Objetivo, escopo resumido, justificativa…"></textarea>
-            </div>
+          <h3><span class="cadastro-subsec-num">1.1</span> <span data-subsection-title>Tipo de vínculo</span></h3>
+          <p class="step-intro">Indique se o projeto se vincula a um programa cadastrado ou diretamente a um plano (ex.: PLI-SP sem programa intermediário).</p>
+          <div class="cadastro-vinculo-tipo" role="radiogroup" aria-label="Tipo de vínculo institucional">
+            <label>
+              <input type="radio" name="pj-vinculo-tipo" value="programa" checked>
+              Programa cadastrado
+            </label>
+            <label>
+              <input type="radio" name="pj-vinculo-tipo" value="plano">
+              Plano cadastrado (direto)
+            </label>
           </div>
         </div>
 
-        <div class="form-subsection">
-          <h3>2.2 Representante legal</h3>
-          <p class="step-intro">Selecione quem responde legalmente pela demanda em nome da instituição.</p>
+        <div class="form-subsection" id="pj-bloco-programa">
+          <h3><span class="cadastro-subsec-num">1.2</span> <span data-subsection-title>Vínculo ao programa</span></h3>
+          <p class="step-intro">Selecione o programa cadastrado que enquadra este projeto no contexto estratégico maior.</p>
           <div class="form-grid">
             <div class="full">
-              <label for="representante">Representante <span class="req">*</span></label>
-              <select id="representante" name="representante" required disabled>
-                <option value="">Carregando pessoas…</option>
+              <label for="programa">Programa <span class="req pj-req-vinculo">*</span></label>
+              <select id="programa" name="programa" disabled>
+                <option value="">Carregando programas…</option>
               </select>
             </div>
-            <div>
-              <label for="rep_email">E-mail</label>
-              <input type="email" id="rep_email" readonly tabindex="-1">
-            </div>
-            <div>
-              <label for="rep_telefone">Telefone</label>
-              <input type="text" id="rep_telefone" readonly tabindex="-1" inputmode="tel">
+          </div>
+        </div>
+
+        <div class="form-subsection hidden" id="pj-bloco-plano">
+          <h3><span class="cadastro-subsec-num">1.2</span> <span data-subsection-title>Vínculo ao plano</span></h3>
+          <p class="step-intro">Selecione o plano cadastrado ao qual este projeto se vincula diretamente.</p>
+          <div class="form-grid">
+            <div class="full">
+              <label for="pj-plano-vinculo">Plano <span class="req pj-req-vinculo">*</span></label>
+              <select id="pj-plano-vinculo" disabled>
+                <option value="">Carregando planos…</option>
+              </select>
+              <div class="field-help-row">
+                <a class="link-catalogo" href="catalogo-planos.html" target="_blank" rel="noopener">
+                  Consulte os planos PLI-SP 2050 e PEF-SP 2050 ↗
+                </a>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="form-subsection">
-          <h3>2.3 Localização geográfica</h3>
-          <p class="step-intro">Indique a localização por ponto ou perímetro e confira a latitude e a longitude informadas.</p>
-          <div class="form-grid">
-            <div class="full map-toolbar">
-              <button type="button" class="btn btn-ghost active" id="btn-modo-ponto">Ponto</button>
-              <button type="button" class="btn btn-ghost" id="btn-modo-perimetro">Perímetro</button>
-              <button type="button" class="btn btn-secondary" id="btn-limpar-mapa">Limpar</button>
-            </div>
-            <div>
-              <label for="lat">Latitude <span class="req">*</span></label>
-              <input type="number" id="lat" step="any" placeholder="-23.550520" required>
-            </div>
-            <div>
-              <label for="lng">Longitude <span class="req">*</span></label>
-              <input type="number" id="lng" step="any" placeholder="-46.633308" required>
-            </div>
-            <div class="full" id="bloco-ponto">
-              <div class="field-help-row">
-                <button type="button" class="btn btn-ghost" id="btn-apontar-mapa">Apontar no mapa</button>
+          <h3><span class="cadastro-subsec-num">1.3</span> <span data-subsection-title>Contexto estratégico herdado</span></h3>
+          <p class="step-intro">Confira abaixo o enquadramento institucional definido pela seleção acima (somente leitura).</p>
+          <div id="pj-contexto-estrategico" class="cadastro-inherited-block hidden" aria-live="polite"></div>
+          <p id="pj-contexto-vazio" class="field-help">Selecione um programa ou plano acima para visualizar diretoria e demais dados herdados.</p>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
+          <button type="button" class="btn btn-primary btn-next">Continuar</button>
+        </div>
+      </section>
+
+      <!-- Passo 3 — proponente e classificação -->
+      <section class="card step-panel cadastro-section hidden" data-step="3">
+        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Proponente e classificação</span></h2>
+        <p class="step-intro">Informe a instituição interessada, o representante legal e a classificação desta demanda no plano.</p>
+
+        <div class="form-subsection">
+          <h3><span class="cadastro-subsec-num">1.1</span> <span data-subsection-title>Instituição e representante</span></h3>
+          <div class="proponente-fields">
+            <div class="proponente-grupo proponente-grupo--instituicao">
+              <label for="instituicao">Instituição interessada <span class="req">*</span></label>
+              <select id="instituicao" name="instituicao" required disabled>
+                <option value="">Carregando instituições…</option>
+              </select>
+              <p class="field-help">Selecione a pessoa jurídica interessada. Caso não a encontre na lista, <a class="link-catalogo" href="http://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener">cadastre-a antes de continuar ↗</a>.</p>
+              <div class="proponente-cnpj">
+                <label for="cnpj">CNPJ</label>
+                <input type="text" id="cnpj" name="cnpj" readonly placeholder="Selecione a instituição">
               </div>
-              <p class="field-help">Digite as coordenadas, clique no mapa ou use o botão acima para apontar o local.</p>
             </div>
-            <div class="full hidden" id="bloco-perimetro">
-              <label for="upload-perimetro">Arquivo do perímetro</label>
-              <input type="file" id="upload-perimetro" accept=".zip,.gpkg,application/zip">
-              <p class="field-help">Envie um shapefile (.zip) ou GeoPackage (.gpkg). As coordenadas serão preenchidas automaticamente.</p>
+            <div class="proponente-grupo proponente-grupo--representante">
+              <div class="form-grid">
+                <div class="form-field-block full">
+                  <label for="representante">Representante legal <span class="req">*</span></label>
+                  <select id="representante" name="representante" required disabled>
+                    <option value="">Carregando pessoas…</option>
+                  </select>
+                  <p class="field-help">Selecione a pessoa física que responde legalmente por este cadastro.</p>
+                </div>
+                <div class="form-field-block">
+                  <label for="rep_email">E-mail</label>
+                  <input type="email" id="rep_email" readonly tabindex="-1">
+                </div>
+                <div class="form-field-block">
+                  <label for="rep_telefone">Telefone</label>
+                  <input type="text" id="rep_telefone" readonly tabindex="-1" inputmode="tel">
+                </div>
+              </div>
             </div>
-            <div class="full">
-              <div id="map"></div>
-              <p id="map-status" class="field-help">Localização ainda não definida.</p>
-              <p id="map-error" class="error-msg hidden"></p>
+          </div>
+        </div>
+
+        <div class="form-subsection">
+          <h3><span class="cadastro-subsec-num">1.2</span> <span data-subsection-title>Classificação no plano</span></h3>
+          <p class="step-intro">Selecione a frente ou o eixo que melhor classifica esta demanda, conforme o plano de referência.</p>
+
+          <div id="pj-enquadramento-catalogo" class="pj-classificacao-bloco">
+            <h4 class="pj-classificacao-subtitulo">Enquadramento estratégico</h4>
+            <p class="step-intro">Como não há vínculo institucional acima, indique a diretoria e o plano do catálogo que orientam a classificação desta demanda.</p>
+            <div class="form-grid">
+              <div class="full">
+                <label for="cls-diretoria">Diretoria <span class="req">*</span></label>
+                <select id="cls-diretoria"></select>
+                <div class="field-help-row">
+                  <a class="link-catalogo" href="catalogo-diretorias.html" target="_blank" rel="noopener">
+                    Consulte os critérios para escolher a diretoria ↗
+                  </a>
+                </div>
+              </div>
+              <div class="full">
+                <label for="cls-plano">Plano <span class="req">*</span></label>
+                <select id="cls-plano"></select>
+                <div class="field-help-row">
+                  <a class="link-catalogo" id="cls-link-planos" href="catalogo-planos.html" target="_blank" rel="noopener">
+                    Consulte os planos PLI-SP 2050 e PEF-SP 2050 ↗
+                  </a>
+                </div>
+              </div>
             </div>
+          </div>
+
+          <div class="pj-classificacao-bloco">
+            <h4 class="pj-classificacao-subtitulo" id="pj-classificacao-titulo">Classificação</h4>
+            <div id="classificacao-pli" class="hidden">
+              <label for="frente">Frente de atuação (PLI-SP) <span class="req">*</span></label>
+              <select id="frente" name="frente"></select>
+              <div class="field-help-row">
+                <a class="link-catalogo" href="catalogo-frentes-pli.html" target="_blank" rel="noopener">Consulte os critérios para escolher a frente PLI ↗</a>
+              </div>
+              <div id="hint-frente" class="context-hint hidden" aria-live="polite"></div>
+            </div>
+            <div id="classificacao-pef" class="hidden">
+              <label for="eixo">Eixo ferroviário (PEF-SP) <span class="req">*</span></label>
+              <select id="eixo" name="eixo"></select>
+              <div class="field-help-row">
+                <a class="link-catalogo" href="catalogo-eixos-pef.html" target="_blank" rel="noopener">Consulte os critérios para escolher o eixo PEF ↗</a>
+              </div>
+              <div id="hint-eixo" class="context-hint hidden" aria-live="polite"></div>
+              <div id="bloco-tic" class="hidden" style="margin-top: 1rem;">
+                <label for="corredor_tic">Corredor TIC (opcional)</label>
+                <select id="corredor_tic" name="corredor_tic">
+                  <option value="">— Não especificado —</option>
+                </select>
+              </div>
+            </div>
+            <p id="classificacao-hint" class="hint">Selecione diretoria e plano acima, ou informe o vínculo institucional na seção inicial, para classificar a demanda.</p>
           </div>
         </div>
 
         <div class="btn-row">
-          <button type="button" class="btn btn-secondary btn-prev" data-prev="1">Voltar</button>
-          <button type="button" class="btn btn-primary btn-next" data-next="3">Continuar</button>
+          <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
+          <button type="button" class="btn btn-primary btn-next">Continuar</button>
         </div>
       </section>
 
-      <!-- Passo 3 -->
-      <section class="card step-panel hidden" data-step="3">
-        <h2>3. Classificação no plano</h2>
-        <p class="step-intro">Classifique a demanda de acordo com o plano selecionado no passo 1.</p>
-        <div id="classificacao-pli" class="hidden">
-          <label for="frente">Frente de atuação (PLI-SP) <span class="req">*</span></label>
-          <select id="frente" name="frente"></select>
-          <div class="field-help-row">
-            <a class="link-catalogo" href="catalogo-frentes-pli.html" target="_blank" rel="noopener">Consulte como escolher a frente PLI ↗</a>
-          </div>
-          <div id="hint-frente" class="context-hint hidden" aria-live="polite"></div>
-        </div>
-        <div id="classificacao-pef" class="hidden">
-          <label for="eixo">Eixo ferroviário (PEF-SP) <span class="req">*</span></label>
-          <select id="eixo" name="eixo"></select>
-          <div class="field-help-row">
-            <a class="link-catalogo" href="catalogo-eixos-pef.html" target="_blank" rel="noopener">Consulte como escolher o eixo PEF ↗</a>
-          </div>
-          <div id="hint-eixo" class="context-hint hidden" aria-live="polite"></div>
-          <div id="bloco-tic" class="hidden" style="margin-top: 1rem;">
-            <label for="corredor_tic">Corredor TIC (opcional)</label>
-            <select id="corredor_tic" name="corredor_tic">
-              <option value="">— Não especificado —</option>
-            </select>
-          </div>
-        </div>
-        <p id="classificacao-hint" class="hint">Selecione diretoria e plano no passo 1 para classificar a demanda.</p>
-        <div class="btn-row">
-          <button type="button" class="btn btn-secondary btn-prev" data-prev="2">Voltar</button>
-          <button type="button" class="btn btn-primary btn-next" data-next="4">Continuar</button>
-        </div>
-      </section>
-
-      <!-- Passo 4 -->
-      <section class="card step-panel hidden" data-step="4">
+      <!-- Passo 4 — complementos -->
+      <section class="card step-panel cadastro-section hidden" data-step="4">
         <div class="collapsible-hdr" id="toggle-complementos">
-          <h2>4. Complementos (opcionais)</h2>
+          <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Complementos (opcionais)</span></h2>
           <span aria-hidden="true">▼</span>
         </div>
-        <p class="step-intro">Informe dados complementares, se aplicável.</p>
+        <p class="step-intro">Informe dados complementares, se desejar.</p>
         <div class="collapsible-body" id="complementos-body">
           <div class="form-grid">
             <div>
@@ -233,77 +268,169 @@
             </div>
           </div>
         </div>
-        <h2 style="margin-top: 1.25rem;">Revisão</h2>
-        <p class="step-intro">Confira os dados abaixo e clique em Enviar demanda para concluir o cadastro.</p>
-        <div id="review" class="review-box"></div>
         <div class="btn-row">
-          <button type="button" class="btn btn-secondary btn-prev" data-prev="3">Voltar</button>
+          <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
+          <button type="button" class="btn btn-primary btn-next">Continuar</button>
+        </div>
+      </section>
+
+      <!-- Passo 5 — localização e revisão -->
+      <section class="card step-panel cadastro-section hidden" data-step="5">
+        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Localização geográfica</span></h2>
+        <p class="step-intro">Indique a localização por ponto ou perímetro e confira a latitude e a longitude informadas.</p>
+        <div class="form-grid">
+          <div class="full map-toolbar">
+            <button type="button" class="btn btn-ghost active" id="btn-modo-ponto">Ponto</button>
+            <button type="button" class="btn btn-ghost" id="btn-modo-perimetro">Perímetro</button>
+            <button type="button" class="btn btn-secondary" id="btn-limpar-mapa">Limpar</button>
+          </div>
+          <div>
+            <label for="lat">Latitude <span class="req">*</span></label>
+            <input type="number" id="lat" step="any" placeholder="-23.550520" required>
+          </div>
+          <div>
+            <label for="lng">Longitude <span class="req">*</span></label>
+            <input type="number" id="lng" step="any" placeholder="-46.633308" required>
+          </div>
+          <div class="full" id="bloco-ponto">
+            <div class="field-help-row">
+              <button type="button" class="btn btn-ghost" id="btn-apontar-mapa">Apontar no mapa</button>
+            </div>
+            <p class="field-help">Digite as coordenadas, clique no mapa ou use o botão acima para apontar o local.</p>
+          </div>
+          <div class="full hidden" id="bloco-perimetro">
+            <label for="upload-perimetro">Arquivo do perímetro</label>
+            <input type="file" id="upload-perimetro" accept=".zip,.gpkg,application/zip">
+            <p class="field-help">Envie um shapefile (.zip) ou GeoPackage (.gpkg). As coordenadas serão preenchidas automaticamente.</p>
+          </div>
+          <div class="full">
+            <p id="map-parent-hint" class="field-help abrangencia-parent-hint hidden" aria-live="polite"></p>
+            <div id="map"></div>
+            <p id="map-status" class="field-help">Localização ainda não definida.</p>
+            <p id="map-error" class="error-msg hidden"></p>
+            <div id="map-spatial-ack-row" class="spatial-ack-row hidden">
+              <p id="map-spatial-warn" class="error-msg" role="alert"></p>
+              <label class="spatial-ack-label">
+                <input type="checkbox" id="map-spatial-ack">
+                Confirmo que desejo cadastrar fora da abrangência vinculada.
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-subsection">
+          <h3><span class="cadastro-subsec-num">1.1</span> <span data-subsection-title>Revisão</span></h3>
+          <p class="step-intro">Confira todos os dados informados nas seções anteriores e clique em Enviar demanda para concluir o cadastro.</p>
+          <div id="review" class="review-box"></div>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
           <button type="submit" class="btn btn-primary">Enviar demanda</button>
         </div>
       </section>
     </form>
 
-    <form id="form-plano" class="tipo-form hidden" data-tipo="plano" novalidate>
+    <form id="form-plano" class="tipo-form" data-tipo="plano" novalidate>
       <section class="card">
-        <h2>1. Plano</h2>
-        <p class="step-intro">Plano é o nível 1 da hierarquia (diretriz estratégica de uma diretoria).</p>
+        <h2>1. Informações cadastrais</h2>
+        <p class="step-intro">Informe o nome, a descrição e o objetivo que identificam este plano no cadastro.</p>
+        <div class="form-grid">
+          <div class="full">
+            <label for="pl-nome">Nome do plano <span class="req">*</span></label>
+            <input type="text" id="pl-nome" required maxlength="200" placeholder="Ex.: PLI-SP 2050 — Plano de Logística e Investimentos">
+          </div>
+          <div class="full">
+            <label for="pl-descricao">Descrição <span class="req">*</span></label>
+            <textarea id="pl-descricao" required placeholder="Escopo, horizonte de planejamento e síntese do plano…"></textarea>
+          </div>
+          <div class="full">
+            <label for="pl-objetivo">Objetivo estratégico</label>
+            <textarea id="pl-objetivo" placeholder="Propósito de longo prazo e metas estratégicas do plano…"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>2. Contexto institucional estratégico</h2>
+        <p class="step-intro">Defina o enquadramento institucional que programas e projetos vinculados irão herdar.</p>
 
         <div class="form-subsection">
-          <h3>1.1 Contexto institucional</h3>
-          <p class="step-intro">Indique a diretoria responsável e o gestor do plano, se aplicável.</p>
+          <h3>2.1 Diretoria</h3>
+          <p class="step-intro">Selecione a diretoria da SLT responsável por este plano — ela estabelece o âmbito institucional e a linha estratégica herdada pelos níveis abaixo.</p>
           <div class="form-grid">
-            <div>
+            <div class="full">
               <label for="pl-diretoria">Diretoria <span class="req">*</span></label>
               <select id="pl-diretoria" required></select>
-            </div>
-            <div>
-              <label for="pl-responsavel">Responsável</label>
-              <input type="text" id="pl-responsavel" maxlength="200">
-            </div>
-          </div>
-        </div>
-
-        <div class="form-subsection">
-          <h3>1.2 Informações cadastrais</h3>
-          <p class="step-intro">Informe o nome, a descrição e o objetivo estratégico do plano.</p>
-          <div class="form-grid">
-            <div class="full">
-              <label for="pl-nome">Nome do plano <span class="req">*</span></label>
-              <input type="text" id="pl-nome" required maxlength="200">
-            </div>
-            <div class="full">
-              <label for="pl-descricao">Descrição <span class="req">*</span></label>
-              <textarea id="pl-descricao" required></textarea>
-            </div>
-            <div class="full">
-              <label for="pl-objetivo">Objetivo estratégico</label>
-              <textarea id="pl-objetivo"></textarea>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-subsection">
-          <h3>1.3 Vigência e recursos</h3>
-          <p class="step-intro">Informe o período de vigência e o valor global estimado, se aplicável.</p>
-          <div class="form-grid">
-            <div>
-              <label for="pl-vig-ini">Vigência início</label>
-              <input type="date" id="pl-vig-ini">
-            </div>
-            <div>
-              <label for="pl-vig-fim">Vigência fim</label>
-              <input type="date" id="pl-vig-fim">
-            </div>
-            <div>
-              <label for="pl-valor">Valor global (R$)</label>
-              <input type="number" step="any" id="pl-valor">
+              <div class="field-help-row">
+                <a class="link-catalogo" href="catalogo-diretorias.html" target="_blank" rel="noopener">
+                  Consulte os critérios para escolher a diretoria ↗
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </section>
+
       <section class="card">
-        <h2>2. Área de abrangência <span class="req">*</span></h2>
-        <p class="step-intro">Selecione as unidades territoriais de atuação do plano e confira no mapa.</p>
+        <h2>3. Proponente do cadastro</h2>
+        <p class="step-intro">Informe a instituição interessada e o representante legal responsáveis por este cadastro.</p>
+        <div class="proponente-fields">
+          <div class="proponente-grupo proponente-grupo--instituicao">
+            <label for="pl-instituicao">Instituição interessada</label>
+            <select id="pl-instituicao" disabled>
+              <option value="">Carregando instituições…</option>
+            </select>
+            <p class="field-help">Selecione a pessoa jurídica vinculada a este plano. Caso não a encontre na lista, <a class="link-catalogo" href="http://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener">cadastre-a antes de continuar ↗</a>.</p>
+            <div class="proponente-cnpj">
+              <label for="pl-cnpj">CNPJ</label>
+              <input type="text" id="pl-cnpj" readonly placeholder="Selecione a instituição">
+            </div>
+          </div>
+          <div class="proponente-grupo proponente-grupo--representante">
+            <div class="form-grid">
+              <div class="form-field-block full">
+                <label for="pl-representante">Representante legal <span class="req">*</span></label>
+                <select id="pl-representante" required disabled>
+                  <option value="">Carregando pessoas…</option>
+                </select>
+                <p class="field-help">Selecione a pessoa física que responde legalmente por este cadastro.</p>
+              </div>
+              <div class="form-field-block">
+                <label for="pl-rep_email">E-mail</label>
+                <input type="email" id="pl-rep_email" readonly tabindex="-1">
+              </div>
+              <div class="form-field-block">
+                <label for="pl-rep_telefone">Telefone</label>
+                <input type="text" id="pl-rep_telefone" readonly tabindex="-1" inputmode="tel">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>4. Vigência e recursos</h2>
+        <p class="step-intro">Informe o período de vigência e o valor global estimado, se souber.</p>
+        <div class="form-grid">
+          <div>
+            <label for="pl-vig-ini">Vigência início</label>
+            <input type="date" id="pl-vig-ini">
+          </div>
+          <div>
+            <label for="pl-vig-fim">Vigência fim</label>
+            <input type="date" id="pl-vig-fim">
+          </div>
+          <div class="full">
+            <label for="pl-valor">Valor global (R$)</label>
+            <input type="number" step="any" id="pl-valor" min="0">
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>5. Área de abrangência <span class="req">*</span></h2>
+        <p class="step-intro">Defina a granularidade territorial e confira o preview da área no mapa.</p>
         <div id="pl-abrangencia"></div>
       </section>
       <div class="btn-row">
@@ -311,74 +438,158 @@
       </div>
     </form>
 
-    <form id="form-programa" class="tipo-form hidden" data-tipo="programa" novalidate>
-      <section class="card">
-        <h2>1. Programa</h2>
-        <p class="step-intro">Programa é o nível 2 da hierarquia (vinculado a um plano).</p>
+    <form id="form-programa" class="tipo-form cadastro-incremental-form hidden" data-tipo="programa" novalidate>
+      <section class="card step-panel pg-step-panel cadastro-section" data-step="1">
+        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Informações detalhadas</span></h2>
+        <p class="step-intro">Informe o nome, a descrição e o objetivo que identificam este programa no cadastro.</p>
+        <div class="form-grid">
+          <div class="full">
+            <label for="pg-nome">Nome do programa <span class="req">*</span></label>
+            <input type="text" id="pg-nome" required maxlength="200" placeholder="Ex.: SP nos Trilhos — Expansão ferroviária">
+          </div>
+          <div class="full">
+            <label for="pg-descricao">Descrição <span class="req">*</span></label>
+            <textarea id="pg-descricao" required placeholder="Escopo, finalidade e síntese do programa…"></textarea>
+          </div>
+          <div class="full">
+            <label for="pg-objetivo">Objetivo</label>
+            <textarea id="pg-objetivo" placeholder="Meta operacional do programa dentro do plano…"></textarea>
+          </div>
+        </div>
+
+        <div class="cadastro-vinculo-pergunta cadastro-vinculo-pergunta--embedded">
+          <h3>Vínculo institucional</h3>
+          <p class="cadastro-vinculo-pergunta-enunciado">
+            Este programa possui vínculo a um plano já cadastrado?
+          </p>
+          <div class="cadastro-vinculo-resposta" role="radiogroup" aria-label="Vínculo institucional do programa">
+            <label>
+              <input type="radio" name="pg-vinculo" value="sim">
+              Sim
+            </label>
+            <label>
+              <input type="radio" name="pg-vinculo" value="nao">
+              Não
+            </label>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary btn-next">Continuar</button>
+        </div>
+      </section>
+
+      <section class="card step-panel pg-step-panel cadastro-section cadastro-section--vinculo hidden" data-step="2" id="pg-vinculo-inst-step">
+        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Contexto institucional estratégico</span></h2>
+        <p class="step-intro">Selecione o plano cadastrado que servirá de referência estratégica para este programa.</p>
 
         <div class="form-subsection">
-          <h3>1.1 Vínculo ao plano</h3>
-          <p class="step-intro">Selecione o plano ao qual este programa pertence.</p>
+          <h3><span class="cadastro-subsec-num">1.1</span> <span data-subsection-title>Vínculo ao plano</span></h3>
           <div class="form-grid">
             <div class="full">
-              <label for="pg-plano">Plano <span class="req">*</span></label>
-              <select id="pg-plano" required disabled>
+              <label for="pg-plano">Plano <span class="req pg-req-vinculo">*</span></label>
+              <select id="pg-plano" disabled>
                 <option value="">Carregando planos…</option>
               </select>
+              <div class="field-help-row">
+                <a class="link-catalogo" id="pg-link-planos" href="catalogo-planos.html" target="_blank" rel="noopener">
+                  Consulte os planos PLI-SP 2050 e PEF-SP 2050 ↗
+                </a>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="form-subsection">
-          <h3>1.2 Informações cadastrais</h3>
-          <p class="step-intro">Informe o nome, a descrição e o objetivo do programa.</p>
-          <div class="form-grid">
-            <div class="full">
-              <label for="pg-nome">Nome do programa <span class="req">*</span></label>
-              <input type="text" id="pg-nome" required maxlength="200">
-            </div>
-            <div class="full">
-              <label for="pg-descricao">Descrição <span class="req">*</span></label>
-              <textarea id="pg-descricao" required></textarea>
-            </div>
-            <div class="full">
-              <label for="pg-objetivo">Objetivo</label>
-              <textarea id="pg-objetivo"></textarea>
-            </div>
-          </div>
+          <h3><span class="cadastro-subsec-num">1.2</span> <span data-subsection-title>Contexto estratégico herdado</span></h3>
+          <p class="step-intro">Confira abaixo o enquadramento institucional definido pelo plano (somente leitura).</p>
+          <div id="pg-contexto-estrategico" class="cadastro-inherited-block hidden" aria-live="polite"></div>
+          <p id="pg-contexto-vazio" class="field-help">Selecione um plano acima para visualizar a diretoria e demais dados herdados.</p>
         </div>
 
-        <div class="form-subsection">
-          <h3>1.3 Público, justificativa e recursos</h3>
-          <p class="step-intro">Informe dados complementares sobre o programa e sua execução.</p>
-          <div class="form-grid">
-            <div class="full">
-              <label for="pg-publico">Público-alvo</label>
-              <textarea id="pg-publico"></textarea>
-            </div>
-            <div class="full">
-              <label for="pg-justificativa">Justificativa</label>
-              <textarea id="pg-justificativa"></textarea>
-            </div>
-            <div>
-              <label for="pg-orgao">Órgão responsável</label>
-              <input type="text" id="pg-orgao" maxlength="200">
-            </div>
-            <div>
-              <label for="pg-valor">Valor global (R$)</label>
-              <input type="number" step="any" id="pg-valor">
-            </div>
-          </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
+          <button type="button" class="btn btn-primary btn-next">Continuar</button>
         </div>
       </section>
-      <section class="card">
-        <h2>2. Área de abrangência <span class="req">*</span></h2>
-        <p class="step-intro">Selecione as unidades territoriais de atuação do programa e confira no mapa.</p>
+
+      <section class="card step-panel pg-step-panel cadastro-section hidden" data-step="3">
+        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Proponente do cadastro</span></h2>
+        <p class="step-intro">Informe a instituição interessada e o representante legal responsáveis por este cadastro.</p>
+        <div class="proponente-fields">
+          <div class="proponente-grupo proponente-grupo--instituicao">
+            <label for="pg-instituicao">Instituição interessada</label>
+            <select id="pg-instituicao" disabled>
+              <option value="">Carregando instituições…</option>
+            </select>
+            <p class="field-help">Selecione a pessoa jurídica vinculada a este programa. Caso não a encontre na lista, <a class="link-catalogo" href="http://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener">cadastre-a antes de continuar ↗</a>.</p>
+            <div class="proponente-cnpj">
+              <label for="pg-cnpj">CNPJ</label>
+              <input type="text" id="pg-cnpj" readonly placeholder="Selecione a instituição">
+            </div>
+          </div>
+          <div class="proponente-grupo proponente-grupo--representante">
+            <div class="form-grid">
+              <div class="form-field-block full">
+                <label for="pg-representante">Representante legal <span class="req">*</span></label>
+                <select id="pg-representante" required disabled>
+                  <option value="">Carregando pessoas…</option>
+                </select>
+                <p class="field-help">Selecione a pessoa física que responde legalmente por este cadastro.</p>
+              </div>
+              <div class="form-field-block">
+                <label for="pg-rep_email">E-mail</label>
+                <input type="email" id="pg-rep_email" readonly tabindex="-1">
+              </div>
+              <div class="form-field-block">
+                <label for="pg-rep_telefone">Telefone</label>
+                <input type="text" id="pg-rep_telefone" readonly tabindex="-1" inputmode="tel">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
+          <button type="button" class="btn btn-primary btn-next">Continuar</button>
+        </div>
+      </section>
+
+      <section class="card step-panel pg-step-panel cadastro-section hidden" data-step="4">
+        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Área de abrangência</span> <span class="req">*</span></h2>
+        <p class="step-intro">Defina a granularidade territorial e confira o preview da área no mapa.</p>
         <div id="pg-abrangencia"></div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
+          <button type="submit" class="btn btn-primary">Cadastrar programa</button>
+        </div>
       </section>
-      <div class="btn-row">
-        <button type="submit" class="btn btn-primary">Cadastrar programa</button>
-      </div>
+
+      <section class="card step-panel pg-step-panel cadastro-section cadastro-section--suspended hidden" data-step="5" hidden aria-hidden="true">
+        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Execução e recursos</span></h2>
+        <p class="step-intro">Descreva o público-alvo, a justificativa e os dados de execução deste programa, se souber.</p>
+        <div class="form-grid">
+          <div class="full">
+            <label for="pg-publico">Público-alvo</label>
+            <textarea id="pg-publico" placeholder="Quem se beneficia diretamente deste programa…"></textarea>
+          </div>
+          <div class="full">
+            <label for="pg-justificativa">Justificativa</label>
+            <textarea id="pg-justificativa" placeholder="Por que este programa é necessário no contexto do plano…"></textarea>
+          </div>
+          <div>
+            <label for="pg-orgao">Órgão responsável</label>
+            <input type="text" id="pg-orgao" maxlength="200" placeholder="Ex.: SEMIL / CPTM">
+          </div>
+          <div>
+            <label for="pg-valor">Valor global (R$)</label>
+            <input type="number" step="any" id="pg-valor" min="0">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
+          <button type="button" class="btn btn-primary btn-next">Continuar</button>
+        </div>
+      </section>
     </form>
   </main>
 
@@ -390,8 +601,9 @@
   <script src="../assets/js/storage.js"></script>
   <script src="../assets/js/demandas-api.js"></script>
   <script src="../assets/js/catalog.js"></script>
+  <script src="spatial-constraint.js"></script>
   <script src="geometria.js"></script>
-  <script src="abrangencia.js"></script>
+  <script src="abrangencia.js?v=20250627i"></script>
   <script src="../assets/js/app-header.js"></script>
   <script src="../assets/js/navbar.js"></script>
   <script src="cadastro.js"></script>

@@ -69,6 +69,38 @@
     return request(`/api/geo/unidades/geojson?ids=${encodeURIComponent(q)}`);
   }
 
+  async function analyzeContainment(payload) {
+    return request("/api/geo/analyze/containment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async function analyzeContainmentPrograma(payload) {
+    return request("/api/geo/analyze/containment-programa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async function locateGeometry(geometry) {
+    return request("/api/geo/analyze/locate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ geometry }),
+    });
+  }
+
+  async function analyzeProgramaRegionalidades(unidadeIds) {
+    return request("/api/geo/analyze/programa-regionalidades", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ unidade_ids: unidadeIds }),
+    });
+  }
+
   global.SLTDemandasApi = {
     createDemanda,
     listDemandas,
@@ -80,5 +112,9 @@
     listGeoTipos,
     listGeoUnidades,
     geoUnidadesGeojson,
+    analyzeContainment,
+    analyzeContainmentPrograma,
+    locateGeometry,
+    analyzeProgramaRegionalidades,
   };
 })(window);

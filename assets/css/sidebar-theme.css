@@ -52,7 +52,7 @@
   text-align: left;
 }
 
-.layout-sidebar-home-link {
+.layout-sidebar-header .layout-sidebar-home-link {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -81,11 +81,11 @@
   line-height: 1.3;
 }
 
-.layout-sidebar-home-link:hover .app-brand {
+.layout-sidebar-header .layout-sidebar-home-link:hover .app-brand {
   color: var(--sb-green);
 }
 
-.layout-sidebar-home-link:hover .app-brand small {
+.layout-sidebar-header .layout-sidebar-home-link:hover .app-brand small {
   color: rgba(255, 255, 255, 0.95);
 }
 
@@ -267,8 +267,7 @@
   align-items: center;
   gap: 0.35rem;
   width: 100%;
-  padding: var(--sb-record-padding-y) 0.25rem var(--sb-record-padding-y)
-    calc(var(--layer-tree-x, 0.7rem) + var(--layer-tree-branch, 0.85rem));
+  padding: var(--sb-record-padding-y) 0.25rem;
   border: none;
   background: transparent;
   font-family: inherit;
@@ -280,30 +279,9 @@
   text-align: left;
 }
 
-.layer-group-header--record::before {
-  content: "";
-  position: absolute;
-  left: var(--layer-tree-x);
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: rgba(255, 255, 255, 0.22);
-  pointer-events: none;
-}
-
-.layer-group--record:last-child > .layer-group-header--record::before {
-  bottom: 50%;
-}
-
+.layer-group-header--record::before,
 .layer-group-header--record::after {
-  content: "";
-  position: absolute;
-  left: var(--layer-tree-x);
-  top: 50%;
-  width: var(--layer-tree-branch);
-  height: 1px;
-  background: rgba(255, 255, 255, 0.22);
-  pointer-events: none;
+  display: none;
 }
 
 .layer-group-header--record:hover {
@@ -344,12 +322,12 @@
   padding: 0.06rem 0.28rem;
 }
 
-/* Seções do registro expandido — indentação extra dentro de .demandas-tree (painel-layers.css) */
+/* Seções do registro expandido */
 .admin-record-sections {
   display: flex;
   flex-direction: column;
   margin-top: 0.05rem;
-  padding-left: calc(var(--tree-level-indent, 1.75rem) + 0.35rem);
+  padding-left: 0;
 }
 
 .demandas-tree .layer-group-header--record::before,

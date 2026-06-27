@@ -22,9 +22,22 @@ _SELECT_BASE = """
         pg.orgao_responsavel,
         pg.justificativa,
         pg.valor_global,
+        pg.sigma_pessoa_id,
+        pg.representante_nome,
+        pg.representante_email,
+        pg.representante_telefone,
         pg.status,
         pg.criado_em,
-        pg.atualizado_em
+        pg.atualizado_em,
+        COALESCE(
+            (
+                SELECT array_agg(pue.unidade_espacial_id::text ORDER BY ue.nome)
+                FROM demandas.programa_unidade_espacial pue
+                JOIN geo.unidade_espacial ue ON ue.id = pue.unidade_espacial_id
+                WHERE pue.programa_id = pg.id
+            ),
+            ARRAY[]::text[]
+        ) AS unidades_espaciais
     FROM demandas.programa pg
     LEFT JOIN demandas.plano pl ON pl.id = pg.plano_id
 """
@@ -33,11 +46,15 @@ _INSERT_SQL = """
     INSERT INTO demandas.programa (
         codigo, plano_id, nome, descricao,
         objetivo, publico_alvo, orgao_responsavel, justificativa,
-        valor_global, status
+        valor_global,
+        sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
+        status
     ) VALUES (
         %(codigo)s, %(plano_id)s, %(nome)s, %(descricao)s,
         %(objetivo)s, %(publico_alvo)s, %(orgao_responsavel)s, %(justificativa)s,
-        %(valor_global)s, %(status)s
+        %(valor_global)s,
+        %(sigma_pessoa_id)s, %(representante_nome)s, %(representante_email)s, %(representante_telefone)s,
+        %(status)s
     )
     RETURNING id
 """

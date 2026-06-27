@@ -54,9 +54,9 @@ body.page-admin-demanda {
 }
 
 .admin-demand-body {
-  margin-left: 1.75rem;
-  padding-left: 1.35rem;
-  border-left: 2px solid rgba(0, 59, 90, 0.14);
+  margin-left: 0.875rem;
+  padding-left: 0.675rem;
+  border-left: 1px solid rgba(0, 59, 90, 0.18);
 }
 
 .admin-demand-body > .admin-dashboard-section,
@@ -66,7 +66,7 @@ body.page-admin-demanda {
 
 @media (max-width: 720px) {
   .admin-demand-body {
-    margin-left: 0.85rem;
-    padding-left: 0.85rem;
+    margin-left: 0.45rem;
+    padding-left: 0.45rem;
   }
 }

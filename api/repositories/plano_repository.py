@@ -16,23 +16,40 @@ _SELECT_BASE = """
         p.descricao,
         p.objetivo_estrategico,
         p.responsavel,
+        p.sigma_pessoa_id,
+        p.representante_nome,
+        p.representante_email,
+        p.representante_telefone,
         p.vigencia_inicio,
         p.vigencia_fim,
         p.valor_global,
         p.status,
         p.criado_em,
-        p.atualizado_em
+        p.atualizado_em,
+        COALESCE(
+            (
+                SELECT array_agg(pue.unidade_espacial_id::text ORDER BY ue.nome)
+                FROM demandas.plano_unidade_espacial pue
+                JOIN geo.unidade_espacial ue ON ue.id = pue.unidade_espacial_id
+                WHERE pue.plano_id = p.id
+            ),
+            ARRAY[]::text[]
+        ) AS unidades_espaciais
     FROM demandas.plano p
 """
 
 _INSERT_SQL = """
     INSERT INTO demandas.plano (
         codigo, diretoria_id, nome, descricao,
-        objetivo_estrategico, responsavel, vigencia_inicio, vigencia_fim,
+        objetivo_estrategico, responsavel,
+        sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
+        vigencia_inicio, vigencia_fim,
         valor_global, status
     ) VALUES (
         %(codigo)s, %(diretoria_id)s, %(nome)s, %(descricao)s,
-        %(objetivo_estrategico)s, %(responsavel)s, %(vigencia_inicio)s, %(vigencia_fim)s,
+        %(objetivo_estrategico)s, %(responsavel)s,
+        %(sigma_pessoa_id)s, %(representante_nome)s, %(representante_email)s, %(representante_telefone)s,
+        %(vigencia_inicio)s, %(vigencia_fim)s,
         %(valor_global)s, %(status)s
     )
     RETURNING id
