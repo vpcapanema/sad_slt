@@ -65,6 +65,7 @@ def _columns(tipo: str) -> list[str]:
     cols = list(_COMMON_COLUMNS)
     if _cfg(tipo)["has_grupo"]:
         cols.append("grupo_comparacao")
+        cols.append("tipo_demanda_id")
     return cols
 
 
@@ -125,7 +126,11 @@ def get_by_codigo(tipo: str, codigo: str) -> dict[str, Any] | None:
 
 
 def list_all(
-    tipo: str, *, status: str | None = None, grupo: str | None = None
+    tipo: str,
+    *,
+    status: str | None = None,
+    grupo: str | None = None,
+    tipo_demanda_id: int | None = None,
 ) -> list[dict[str, Any]]:
     cfg = _cfg(tipo)
     clauses: list[sql.Composable] = []
@@ -136,6 +141,9 @@ def list_all(
     if grupo and cfg["has_grupo"]:
         clauses.append(sql.SQL("grupo_comparacao = %s"))
         params.append(grupo)
+    if tipo_demanda_id is not None and cfg["has_grupo"]:
+        clauses.append(sql.SQL("tipo_demanda_id = %s"))
+        params.append(tipo_demanda_id)
     where = sql.SQL("")
     if clauses:
         where = sql.SQL(" WHERE ") + sql.SQL(" AND ").join(clauses)

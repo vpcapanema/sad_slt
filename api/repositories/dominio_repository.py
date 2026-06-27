@@ -7,7 +7,7 @@ from api.db.connection import get_connection
 def list_status_demanda() -> list[dict]:
     sql = """
         SELECT codigo, nome, descricao, ordem
-        FROM cadastro.dom_status_demanda
+        FROM demandas.dom_status_demanda
         WHERE ativo = TRUE
         ORDER BY ordem
     """
@@ -16,9 +16,22 @@ def list_status_demanda() -> list[dict]:
 
 
 def list_status_objeto_ahp() -> list[dict]:
+    """Status da fase de hierarquização (ciclo unificado, ordem >= 70)."""
     sql = """
         SELECT codigo, nome, descricao, ordem
-        FROM demandas_aprovadas.dom_status_demandas_aprovadas
+        FROM demandas.dom_status_demanda
+        WHERE ativo = TRUE AND ordem >= 70
+        ORDER BY ordem
+    """
+    with get_connection() as conn:
+        return list(conn.execute(sql).fetchall())
+
+
+def list_tipo_demanda() -> list[dict]:
+    """Domínio dos níveis de demanda (plano/programa/projeto)."""
+    sql = """
+        SELECT id, codigo, nome, descricao, ordem
+        FROM demandas.dom_tipo_demanda
         WHERE ativo = TRUE
         ORDER BY ordem
     """

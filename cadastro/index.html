@@ -15,13 +15,7 @@
         Apoio à Tomada de Decisão
         <small>Cadastro de demandas</small>
       </div>
-      <nav class="app-nav">
-        <a href="../index.html">Início</a>
-        <a href="./" class="active">Cadastro</a>
-        <a href="../ahp/">AHP</a>
-        <a href="../painel/">Painel</a>
-        <a href="../admin/">Admin</a>
-      </nav>
+      <nav class="app-nav" aria-label="Navegação principal"></nav>
     </div>
   </header>
 
@@ -29,12 +23,23 @@
     <section class="card">
       <h2>Nova demanda</h2>
       <p class="step-intro">
-        Siga os passos abaixo para registrar a demanda. Revise as informações no final antes de enviar.
+        Selecione o tipo de demanda e preencha o formulário correspondente.
       </p>
+      <div class="tipo-demanda-selector" id="tipo-selector" role="tablist" aria-label="Tipo de demanda">
+        <button type="button" class="tipo-card" data-tipo="plano" role="tab" aria-selected="false">
+          <strong>Plano</strong><span>Nível 1 — diretriz estratégica da diretoria</span>
+        </button>
+        <button type="button" class="tipo-card" data-tipo="programa" role="tab" aria-selected="false">
+          <strong>Programa</strong><span>Nível 2 — vinculado a um plano</span>
+        </button>
+        <button type="button" class="tipo-card is-active" data-tipo="projeto" role="tab" aria-selected="true">
+          <strong>Projeto</strong><span>Nível 3 — vinculado a um programa</span>
+        </button>
+      </div>
       <div id="cadastro-load-hint" class="field-help" aria-live="polite"></div>
     </section>
 
-    <form id="form-cadastro" novalidate>
+    <form id="form-cadastro" class="tipo-form" data-tipo="projeto" novalidate>
       <!-- Passo 1 -->
       <section class="card step-panel" data-step="1">
         <h2>1. Contexto institucional</h2>
@@ -75,6 +80,13 @@
               </a>
             </div>
             <div id="hint-plano" class="context-hint hidden" aria-live="polite"></div>
+          </div>
+          <div class="full">
+            <label for="programa">Programa <span class="req">*</span></label>
+            <select id="programa" name="programa" required disabled>
+              <option value="">Selecione a diretoria primeiro</option>
+            </select>
+            <p class="field-help">O projeto deve estar vinculado a um programa já cadastrado.</p>
           </div>
         </div>
         <div class="btn-row">
@@ -230,6 +242,106 @@
         </div>
       </section>
     </form>
+
+    <form id="form-plano" class="tipo-form hidden" data-tipo="plano" novalidate>
+      <section class="card">
+        <h2>Cadastro de Plano</h2>
+        <p class="step-intro">Plano é o nível 1 da hierarquia (diretriz estratégica de uma diretoria).</p>
+        <div class="form-grid">
+          <div>
+            <label for="pl-diretoria">Diretoria <span class="req">*</span></label>
+            <select id="pl-diretoria" required></select>
+          </div>
+          <div>
+            <label for="pl-responsavel">Responsável</label>
+            <input type="text" id="pl-responsavel" maxlength="200">
+          </div>
+          <div class="full">
+            <label for="pl-nome">Nome do plano <span class="req">*</span></label>
+            <input type="text" id="pl-nome" required maxlength="200">
+          </div>
+          <div class="full">
+            <label for="pl-descricao">Descrição <span class="req">*</span></label>
+            <textarea id="pl-descricao" required></textarea>
+          </div>
+          <div class="full">
+            <label for="pl-objetivo">Objetivo estratégico</label>
+            <textarea id="pl-objetivo"></textarea>
+          </div>
+          <div>
+            <label for="pl-vig-ini">Vigência início</label>
+            <input type="date" id="pl-vig-ini">
+          </div>
+          <div>
+            <label for="pl-vig-fim">Vigência fim</label>
+            <input type="date" id="pl-vig-fim">
+          </div>
+          <div>
+            <label for="pl-valor">Valor global (R$)</label>
+            <input type="number" step="any" id="pl-valor">
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Área de abrangência <span class="req">*</span></h2>
+        <p class="step-intro">Selecione as unidades territoriais de atuação do plano e confira no mapa.</p>
+        <div id="pl-abrangencia"></div>
+      </section>
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary">Cadastrar plano</button>
+      </div>
+    </form>
+
+    <form id="form-programa" class="tipo-form hidden" data-tipo="programa" novalidate>
+      <section class="card">
+        <h2>Cadastro de Programa</h2>
+        <p class="step-intro">Programa é o nível 2 da hierarquia (vinculado a um plano).</p>
+        <div class="form-grid">
+          <div class="full">
+            <label for="pg-plano">Plano <span class="req">*</span></label>
+            <select id="pg-plano" required disabled>
+              <option value="">Carregando planos…</option>
+            </select>
+          </div>
+          <div class="full">
+            <label for="pg-nome">Nome do programa <span class="req">*</span></label>
+            <input type="text" id="pg-nome" required maxlength="200">
+          </div>
+          <div class="full">
+            <label for="pg-descricao">Descrição <span class="req">*</span></label>
+            <textarea id="pg-descricao" required></textarea>
+          </div>
+          <div class="full">
+            <label for="pg-objetivo">Objetivo</label>
+            <textarea id="pg-objetivo"></textarea>
+          </div>
+          <div class="full">
+            <label for="pg-publico">Público-alvo</label>
+            <textarea id="pg-publico"></textarea>
+          </div>
+          <div class="full">
+            <label for="pg-justificativa">Justificativa</label>
+            <textarea id="pg-justificativa"></textarea>
+          </div>
+          <div>
+            <label for="pg-orgao">Órgão responsável</label>
+            <input type="text" id="pg-orgao" maxlength="200">
+          </div>
+          <div>
+            <label for="pg-valor">Valor global (R$)</label>
+            <input type="number" step="any" id="pg-valor">
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Área de abrangência <span class="req">*</span></h2>
+        <p class="step-intro">Selecione as unidades territoriais de atuação do programa e confira no mapa.</p>
+        <div id="pg-abrangencia"></div>
+      </section>
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary">Cadastrar programa</button>
+      </div>
+    </form>
   </main>
 
   <div id="toast" class="toast" role="status"></div>
@@ -241,6 +353,9 @@
   <script src="../assets/js/demandas-api.js"></script>
   <script src="../assets/js/catalog.js"></script>
   <script src="geometria.js"></script>
+  <script src="abrangencia.js"></script>
+  <script src="../assets/js/app-header.js"></script>
+  <script src="../assets/js/navbar.js"></script>
   <script src="cadastro.js"></script>
 </body>
 </html>

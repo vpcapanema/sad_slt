@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+from api.constants import TIPO_DEMANDA_ID_TO_COD
 from api.exceptions import (
     ConfigMulticriterioNotFoundError,
     DemandaValidationError,
@@ -64,7 +65,8 @@ def _row_to_response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
         config_codigo=row.get("config_codigo"),
         nome=row["nome"],
         descricao=row.get("descricao"),
-        grupo_comparacao=row["grupo_comparacao"],
+        tipo_demanda=TIPO_DEMANDA_ID_TO_COD.get(row.get("tipo_demanda_id")),
+        grupo_id=row.get("grupo_id"),
         status=row["status"],
         objetos=row.get("objetos") or [],
         julgamento_projetos=row.get("julgamento_projetos"),
@@ -88,7 +90,8 @@ def criar_hierarquizacao(
         "config_id": config["id"],
         "nome": payload.nome.strip(),
         "descricao": payload.descricao,
-        "grupo_comparacao": config["grupo_comparacao"],
+        "tipo_demanda_id": config.get("tipo_demanda_id"),
+        "grupo_id": payload.grupo_id,
         "status": "rascunho",
     }
     if payload.objetos is not None:

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from api.deps.auth import require_gestor
 from api.exceptions import DatabaseUnavailableError
 from api.repositories import dominio_repository
-from api.schemas.dominio import StatusDominioSchema
+from api.schemas.dominio import StatusDominioSchema, TipoDemandaSchema
 from api.services.session_service import SessionUser
 
 router = APIRouter(prefix="/dominios", tags=["dominios"])
@@ -40,5 +40,24 @@ async def listar_status_objeto_ahp(
 ) -> list[StatusDominioSchema]:
     try:
         return _map_status(dominio_repository.list_status_objeto_ahp())
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/tipo-demanda", response_model=list[TipoDemandaSchema])
+async def listar_tipo_demanda(
+    _user: SessionUser = Depends(require_gestor),
+) -> list[TipoDemandaSchema]:
+    try:
+        return [
+            TipoDemandaSchema(
+                id=int(row["id"]),
+                codigo=row["codigo"],
+                nome=row["nome"],
+                descricao=row.get("descricao"),
+                ordem=int(row["ordem"]),
+            )
+            for row in dominio_repository.list_tipo_demanda()
+        ]
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

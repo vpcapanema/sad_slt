@@ -16,13 +16,7 @@
         Apoio à Tomada de Decisão
         <small>Hierarquização AHP</small>
       </div>
-      <nav class="app-nav">
-        <a href="../index.html">Início</a>
-        <a href="../cadastro/">Cadastro</a>
-        <a href="./" class="active">AHP</a>
-        <a href="../painel/">Painel</a>
-        <a href="../admin/">Admin</a>
-      </nav>
+      <nav class="app-nav" aria-label="Navegação principal"></nav>
     </div>
   </header>
 
@@ -60,5 +54,7 @@
             </section>
     </main>
     <script src="js/script.js"></script><script>document.addEventListener('DOMContentLoaded',function(){const count=localStorage.getItem('ahp_criteriaCount');if(!count||count<1){alert('Número de critérios não encontrado. Redirecionando para a Etapa 1.');window.location.href='step1-criterios.html';return;}const container=document.getElementById('criteriaInputs');const savedCriteria=JSON.parse(localStorage.getItem('ahp_criteria')||'[]');const isUpload=(localStorage.getItem('ahp_inputMethod')||'manual')==='upload_matriz';if(isUpload){const set=(id,txt)=>{const el=document.getElementById(id);if(el)el.textContent=txt;};set('pageTitleText','Etapa 2: Conferir Critérios');set('pageDesc','Os critérios foram importados da matriz enviada. Revise os nomes abaixo e confirme para prosseguir.');set('cadastroLabel','Conferência dos Nomes');set('stepTitleText','Confira os nomes dos critérios');set('continueBtnText','Confirmar e Continuar');const note=document.getElementById('reviewNote');if(note){note.className='ahp-recommendation';note.innerHTML='<div class="ahp-recommendation__head"><i class="fas fa-clipboard-check"></i><strong>Critérios importados.</strong></div><p>Os nomes abaixo vieram da Tabela de Premissas e Critérios que você enviou na etapa anterior. Confira se estão corretos e ajuste se necessário antes de confirmar.</p>';}}for(let i=1;i<=count;i++){const formGroup=document.createElement('div');formGroup.className='c-form-group';const label=document.createElement('label');label.className='c-form-label';label.setAttribute('for',`criteria${i}`);label.innerHTML=`<i class="fas fa-tag"></i> Critério ${i}`;const input=document.createElement('input');input.type='text';input.id=`criteria${i}`;input.name=`criteria${i}`;input.className='c-form-control';input.placeholder=`Digite o nome do critério ${i}`;input.value=savedCriteria[i-1]||'';input.required=true;const helpText=document.createElement('small');helpText.className='form-help';helpText.innerHTML=isUpload?'<i class="fas fa-file-import"></i> Importado da matriz — ajuste se necessário':'<i class="fas fa-info-circle"></i> Use um nome descritivo e específico';formGroup.appendChild(label);formGroup.appendChild(input);formGroup.appendChild(helpText);container.appendChild(formGroup);}});function processCriteriaNames(){const count=parseInt(localStorage.getItem('ahp_criteriaCount'),10);const criteria=[];let valid=true;for(let i=1;i<=count;i++){const input=document.getElementById(`criteria${i}`);const value=input.value.trim();if(!value){input.style.borderColor='var(--pli-error)';valid=false;}else{input.style.borderColor='';criteria.push(value);}}if(!valid){alert('Por favor, preencha todos os nomes dos critérios.');return;}const duplicates=criteria.filter((name,index)=>criteria.indexOf(name)!==index);if(duplicates.length>0){alert('Atenção: Há critérios com nomes duplicados. Use nomes únicos para cada critério.');return;}localStorage.setItem('ahp_criteria',JSON.stringify(criteria));window.location.href='step3-metodo.html';}</script>
+  <script src="../assets/js/app-header.js"></script>
+  <script src="../assets/js/navbar.js"></script>
 </body>
 </html>

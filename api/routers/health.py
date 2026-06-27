@@ -15,7 +15,7 @@ async def health():
         "status": "ok",
         "sigma_base": SIGMA_BASE,
         "sigma_mode": "read_only",
-        "slt_db": "cadastro.projeto",
+        "slt_db": "demandas.projeto",
     }
 
 

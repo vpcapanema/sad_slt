@@ -1,17 +1,23 @@
 (function () {
   const Lb = () => SLTAdminLabels;
 
+  const SIDEBAR_GRUPOS = [
+    { id: "plano", label: "Plano", match: (e) => e.kind === "plano" },
+    { id: "programa", label: "Programa", match: (e) => e.kind === "programa" },
+    { id: "projeto", label: "Projetos", match: (e) => e.kind === "projeto" || e.kind === "objeto" },
+  ];
+
   let map;
-  let demandas = [];
+  let painelItems = [];
   let objetos = [];
-  let projetos = [];
+  let entries = [];
   let layersByKey = new Map();
   let selectedKey = null;
   let popoverEl = null;
   let anchorMode = null;
   let anchorRef = null;
   let mapAnchorLatLng = null;
-  let openItem = null;
+  let openEntry = null;
 
   const PIN_H = 42;
   const PIN_CONTAINER = 56;
@@ -57,13 +63,24 @@
     return Lb().statusDemandaLabel(item.status);
   }
 
-  /** Demanda só entra se ainda não tiver objeto AHP (fonte mais atual). */
-  function buildProjetos() {
+  function buildEntries() {
     const demandasComObjeto = new Set(objetos.map((o) => o.demanda_codigo));
-    projetos = [];
+    entries = [];
+
+    painelItems
+      .filter((d) => d.tipo === "plano")
+      .forEach((d) => {
+        entries.push({ kind: "plano", id: d.id, data: d, sortAt: d.criadoEm || "" });
+      });
+
+    painelItems
+      .filter((d) => d.tipo === "programa")
+      .forEach((d) => {
+        entries.push({ kind: "programa", id: d.id, data: d, sortAt: d.criadoEm || "" });
+      });
 
     objetos.forEach((o) => {
-      projetos.push({
+      entries.push({
         kind: "objeto",
         id: o.codigo,
         data: o,
@@ -71,26 +88,21 @@
       });
     });
 
-    demandas
-      .filter((d) => !demandasComObjeto.has(d.id))
+    painelItems
+      .filter((d) => d.tipo === "projeto" && !demandasComObjeto.has(d.id))
       .forEach((d) => {
-        projetos.push({
-          kind: "demanda",
-          id: d.id,
-          data: d,
-          sortAt: d.criadoEm || "",
-        });
+        entries.push({ kind: "projeto", id: d.id, data: d, sortAt: d.criadoEm || "" });
       });
 
-    projetos.sort((a, b) => new Date(b.sortAt) - new Date(a.sortAt));
+    entries.sort((a, b) => new Date(b.sortAt) - new Date(a.sortAt));
   }
 
-  function findProjeto(kind, id) {
-    return projetos.find((p) => p.kind === kind && p.id === id);
+  function findEntry(kind, id) {
+    return entries.find((e) => e.kind === kind && e.id === id);
   }
 
   function createDemandaPinIcon(status) {
-    const { text } = statusStyle("demanda", status);
+    const { text } = statusStyle("projeto", status);
     return L.divIcon({
       className: "painel-pin-wrap",
       html:
@@ -126,23 +138,56 @@
     return null;
   }
 
-  function boundsItem(item) {
-    const ref = coordsItem(item);
-    if (ref) return L.latLngBounds([ref, ref]);
-    if (item.geometria?.tipo === "Polygon") {
-      const latlngs = item.geometria.coordinates[0].map(([lng, lat]) => [lat, lng]);
-      return L.latLngBounds(latlngs);
-    }
-    if (item.geometria?.tipo === "LineString") {
-      const latlngs = item.geometria.coordinates.map(([lng, lat]) => [lat, lng]);
-      return L.latLngBounds(latlngs);
-    }
-    return null;
-  }
-
   function geomStyle(kind, status) {
     const { text } = statusStyle(kind, status);
     return { color: text, weight: 2.5, fillColor: text, fillOpacity: 0.18, opacity: 0.9 };
+  }
+
+  function abrangenciaText(d) {
+    if (d.abrangencia?.length) return d.abrangencia.join(", ");
+    return "—";
+  }
+
+  function planoDetailHtml(d) {
+    const { escapeHtml, formatDate, statusDemandaLabel, statusBadgeClass } = Lb();
+    return `
+      <div class="admin-readonly-block">
+        <dl>
+          <dt>Código</dt><dd><code>${escapeHtml(d.id)}</code></dd>
+          <dt>Status</dt><dd><span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span></dd>
+          <dt>Diretoria</dt><dd>${escapeHtml(Lb().diretoriaLabel(d.diretoria_id))}</dd>
+          <dt>Plano</dt><dd>${escapeHtml(d.nome)}</dd>
+          <dt>Descrição</dt><dd>${escapeHtml(d.descricao || "—")}</dd>
+          <dt>Objetivo estratégico</dt><dd>${escapeHtml(d.objetivo_estrategico || "—")}</dd>
+          <dt>Responsável</dt><dd>${escapeHtml(d.responsavel || "—")}</dd>
+          <dt>Vigência</dt><dd>${escapeHtml([d.vigencia_inicio, d.vigencia_fim].filter(Boolean).join(" — ") || "—")}</dd>
+          <dt>Valor global</dt><dd>${d.valor_global != null ? escapeHtml(String(d.valor_global)) : "—"}</dd>
+          <dt>Abrangência</dt><dd>${escapeHtml(abrangenciaText(d))}</dd>
+          <dt>Cadastrado em</dt><dd>${escapeHtml(formatDate(d.criadoEm))}</dd>
+        </dl>
+      </div>`;
+  }
+
+  function programaDetailHtml(d) {
+    const { escapeHtml, formatDate, statusDemandaLabel, statusBadgeClass } = Lb();
+    return `
+      <div class="admin-readonly-block">
+        <dl>
+          <dt>Código</dt><dd><code>${escapeHtml(d.id)}</code></dd>
+          <dt>Status</dt><dd><span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span></dd>
+          <dt>Diretoria</dt><dd>${escapeHtml(Lb().diretoriaLabel(d.diretoria_id))}</dd>
+          <dt>Plano</dt><dd>${escapeHtml(d.plano_nome || d.plano_codigo || "—")}</dd>
+          <dt>Programa</dt><dd>${escapeHtml(d.nome)}</dd>
+          <dt>Descrição</dt><dd>${escapeHtml(d.descricao || "—")}</dd>
+          <dt>Objetivo</dt><dd>${escapeHtml(d.objetivo || "—")}</dd>
+          <dt>Público-alvo</dt><dd>${escapeHtml(d.publico_alvo || "—")}</dd>
+          <dt>Órgão responsável</dt><dd>${escapeHtml(d.orgao_responsavel || "—")}</dd>
+          <dt>Justificativa</dt><dd>${escapeHtml(d.justificativa || "—")}</dd>
+          <dt>Valor global</dt><dd>${d.valor_global != null ? escapeHtml(String(d.valor_global)) : "—"}</dd>
+          <dt>Abrangência</dt><dd>${escapeHtml(abrangenciaText(d))}</dd>
+          <dt>Cadastrado em</dt><dd>${escapeHtml(formatDate(d.criadoEm))}</dd>
+        </dl>
+      </div>`;
   }
 
   function demandaDetailHtml(d) {
@@ -182,7 +227,7 @@
         <dl>
           <dt>Código do objeto</dt><dd><code>${escapeHtml(o.codigo)}</code></dd>
           <dt>Status AHP</dt><dd><span class="${statusBadgeClass(o.status)}">${escapeHtml(statusObjetoLabel(o.status))}</span></dd>
-          <dt>Demanda de origem</dt><dd><a href="demanda.html?id=${encodeURIComponent(o.demanda_codigo)}">${escapeHtml(o.demanda_codigo)}</a></dd>
+          <dt>Demanda de origem</dt><dd><a href="demanda.html?tipo=projeto&id=${encodeURIComponent(o.demanda_codigo)}">${escapeHtml(o.demanda_codigo)}</a></dd>
           <dt>Instituição</dt><dd>${escapeHtml(o.instituicao_nome || "—")}</dd>
           <dt>CNPJ</dt><dd>${escapeHtml(o.instituicao_cnpj || "—")}</dd>
           <dt>Grupo comparável</dt><dd>${escapeHtml(grupoComparacaoLabel(o.grupo_comparacao, o.plano_id))}</dd>
@@ -198,6 +243,22 @@
           <dt>Aprovado em</dt><dd>${escapeHtml(formatDate(o.aprovadoEm))}</dd>
         </dl>
       </div>`;
+  }
+
+  function detailHtml(entry) {
+    const { kind, data } = entry;
+    if (kind === "plano") return planoDetailHtml(data);
+    if (kind === "programa") return programaDetailHtml(data);
+    if (kind === "objeto") return objetoDetailHtml(data);
+    return demandaDetailHtml(data);
+  }
+
+  function kickerText(entry) {
+    const { kind, data } = entry;
+    if (kind === "plano") return `Plano · ${statusLabel(kind, data)}`;
+    if (kind === "programa") return `Programa · ${statusLabel(kind, data)}`;
+    if (kind === "objeto") return `AHP · ${statusLabel(kind, data)}`;
+    return statusLabel(kind, data);
   }
 
   function ensurePopover() {
@@ -269,62 +330,77 @@
     popoverEl.dataset.arrow = arrow;
   }
 
-  function showPopover(projeto) {
-    const { kind, data: item } = projeto;
-    const st = statusStyle(kind, item.status);
+  function showPopover(entry) {
+    const st = statusStyle(entry.kind, entry.data.status);
     const pop = ensurePopover();
     const header = pop.querySelector(".painel-detail-header");
     header.style.background = st.bg;
     header.style.color = st.text;
-    pop.querySelector(".painel-detail-kicker").textContent =
-      kind === "objeto" ? `AHP · ${statusLabel(kind, item)}` : statusLabel(kind, item);
-    pop.querySelector(".painel-detail-title").textContent = item.nome;
-    pop.querySelector(".painel-detail-body").innerHTML =
-      kind === "objeto" ? objetoDetailHtml(item) : demandaDetailHtml(item);
+    pop.querySelector(".painel-detail-kicker").textContent = kickerText(entry);
+    pop.querySelector(".painel-detail-title").textContent = entry.data.nome;
+    pop.querySelector(".painel-detail-body").innerHTML = detailHtml(entry);
     pop.classList.remove("hidden");
-    openItem = projeto;
+    openEntry = entry;
     requestAnimationFrame(repositionPopover);
   }
 
   function closePopover() {
     popoverEl?.classList.add("hidden");
-    openItem = null;
+    openEntry = null;
     anchorMode = null;
     anchorRef = null;
     mapAnchorLatLng = null;
   }
 
-  function renderProjetosList() {
-    const container = $("layers-container");
-    const vazia = $("lista-vazia-projetos");
-    const countEl = $("projetos-count");
-    countEl.textContent = projetos.length ? String(projetos.length) : "";
+  function selectedIdFromKey() {
+    return selectedKey ? selectedKey.split(":")[1] : null;
+  }
 
-    if (!projetos.length) {
-      container.innerHTML = "";
-      vazia.classList.remove("hidden");
-      return;
-    }
+  function sidebarRecord(entry) {
+    return { ...entry.data, __kind: entry.kind, id: entry.id };
+  }
 
-    vazia.classList.add("hidden");
-    container.innerHTML = projetos
-      .map((p) => {
-        const key = itemKey(p.kind, p.id);
-        return `<div class="layer-row${selectedKey === key ? " is-selected" : ""}"
-          data-kind="${Lb().escapeHtml(p.kind)}" data-id="${Lb().escapeHtml(p.id)}" role="listitem">
-          <div class="layer-row-line">
-            <span class="layer-name">${Lb().escapeHtml(p.data.nome)}</span>
-            <span class="${SLTStatusColors.badgeClass(p.data.status)}">${Lb().escapeHtml(statusLabel(p.kind, p.data))}</span>
-          </div>
-        </div>`;
-      })
-      .join("");
+  function renderEntriesList() {
+    SLTGroupedSidebar.renderGroupedDemandasSidebar({
+      containerSelector: "#layers-container",
+      countSelector: "#demandas-count",
+      emptySelector: "#lista-vazia-projetos",
+      groups: SIDEBAR_GRUPOS.map((g) => ({
+        id: g.id,
+        label: g.label,
+        records: entries.filter(g.match).map(sidebarRecord),
+      })),
+      selectedId: selectedIdFromKey(),
+      getRecordId: (r) => r.id,
+      getRecordLabel: (r) => r.nome,
+      getRecordBadgeHtml: (r) =>
+        `<span class="${SLTStatusColors.badgeClass(r.status)}">${Lb().escapeHtml(statusLabel(r.__kind, r))}</span>`,
+      sectionsFor: () => [],
+      emptyMessage: "Nenhuma demanda registrada.",
+      onSelect: (id, record) => {
+        if (!record) return;
+        const anchorEl = document.querySelector(
+          `.layer-group--record[data-record-id="${CSS.escape(id)}"]`
+        );
+        openDetail(record.__kind, id, { anchorEl });
+      },
+    });
+  }
 
-    container.querySelectorAll(".layer-row").forEach((row) => {
-      row.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openDetail(row.dataset.kind, row.dataset.id, { anchorEl: row });
-      });
+  function highlightSidebar(kind, id) {
+    selectedKey = itemKey(kind, id);
+    document.querySelectorAll(".layer-group--record").forEach((el) => {
+      const on = el.dataset.recordId === id;
+      el.classList.toggle("is-selected", on);
+      el.classList.toggle("collapsed", !on);
+      el.querySelector(".layer-group-header--record")?.setAttribute("aria-expanded", String(on));
+    });
+    document.querySelectorAll(".layer-group--tipo").forEach((grp) => {
+      const hit = grp.querySelector(`.layer-group--record[data-record-id="${CSS.escape(id)}"]`);
+      if (hit) {
+        grp.classList.remove("collapsed");
+        grp.querySelector(".layer-group-header")?.setAttribute("aria-expanded", "true");
+      }
     });
   }
 
@@ -337,77 +413,75 @@
     });
   }
 
-  function addProjetoLayers(group, projeto) {
-    const { kind, id, data: item } = projeto;
+  function addEntryLayers(group, entry) {
+    const { kind, id, data: item } = entry;
     const style = geomStyle(kind, item.status);
     const key = itemKey(kind, id);
-    const entry = { layers: [], bounds: boundsItem(item), latlng: null };
+    const entryLayers = { layers: [], bounds: null, latlng: null };
 
     const onMapClick = (e) => {
       L.DomEvent.stopPropagation(e);
       openDetail(kind, id, { mapEvent: e });
     };
 
-    if (item.geometria?.tipo === "Polygon") {
-      const latlngs = item.geometria.coordinates[0].map(([lng, lat]) => [lat, lng]);
-      const layer = L.polygon(latlngs, style);
-      layer.on("click", onMapClick);
-      entry.layers.push(layer);
-      group.addLayer(layer);
-    } else if (item.geometria?.tipo === "LineString") {
-      const latlngs = item.geometria.coordinates.map(([lng, lat]) => [lat, lng]);
-      const layer = L.polyline(latlngs, style);
-      layer.on("click", onMapClick);
-      entry.layers.push(layer);
-      group.addLayer(layer);
+    if (item.geometria) {
+      const gj = L.geoJSON(
+        { type: item.geometria.tipo, coordinates: item.geometria.coordinates },
+        { style: () => style }
+      );
+      gj.eachLayer((layer) => {
+        layer.on("click", onMapClick);
+        entryLayers.layers.push(layer);
+        group.addLayer(layer);
+      });
+      if (gj.getLayers().length) entryLayers.bounds = gj.getBounds();
     }
 
     const ref = coordsItem(item);
-    if (ref) {
+    if (ref && (kind === "projeto" || kind === "objeto")) {
       const icon = kind === "objeto" ? createObjetoPinIcon(item.status) : createDemandaPinIcon(item.status);
       const marker = L.marker([ref.lat, ref.lng], { icon });
       marker.on("click", onMapClick);
-      entry.layers.push(marker);
-      entry.latlng = L.latLng(ref.lat, ref.lng);
+      entryLayers.layers.push(marker);
+      entryLayers.latlng = L.latLng(ref.lat, ref.lng);
       group.addLayer(marker);
+      if (!entryLayers.bounds) entryLayers.bounds = L.latLngBounds([ref, ref]);
     }
 
-    if (entry.layers.length) layersByKey.set(key, entry);
+    if (entryLayers.layers.length) layersByKey.set(key, entryLayers);
   }
 
   function buildMapLayers() {
     layersByKey.clear();
     const group = L.featureGroup();
-    projetos.forEach((p) => addProjetoLayers(group, p));
+    entries.forEach((e) => addEntryLayers(group, e));
     group.addTo(map);
     if (group.getLayers().length) map.fitBounds(group.getBounds().pad(0.12));
   }
 
   function selectItem(kind, id, scrollSidebar) {
-    selectedKey = itemKey(kind, id);
-    document.querySelectorAll(".layer-row").forEach((el) => {
-      el.classList.toggle("is-selected", el.dataset.kind === kind && el.dataset.id === id);
-    });
+    highlightSidebar(kind, id);
     if (scrollSidebar) {
       document
-        .querySelector(`.layer-row[data-kind="${kind}"][data-id="${CSS.escape(id)}"]`)
+        .querySelector(`.layer-group--record[data-record-id="${CSS.escape(id)}"]`)
         ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }
 
-  function focusMapOnItem(item) {
-    const ref = coordsItem(item);
-    if (ref) {
-      map.setView([ref.lat, ref.lng], 14, { animate: true });
+  function focusMapOnItem(kind, id) {
+    const entry = layersByKey.get(itemKey(kind, id));
+    if (entry?.bounds?.isValid()) {
+      map.fitBounds(entry.bounds.pad(0.12), { animate: true });
       return;
     }
-    const entry = layersByKey.get(selectedKey);
-    if (entry?.bounds) map.setView(entry.bounds.getCenter(), 13, { animate: true });
+    const e = findEntry(kind, id);
+    const ref = e ? coordsItem(e.data) : null;
+    if (ref) map.setView([ref.lat, ref.lng], 14, { animate: true });
   }
 
   function openDetail(kind, id, opts) {
-    const projeto = findProjeto(kind, id);
-    if (!projeto) return;
+    const entry = findEntry(kind, id);
+    if (!entry) return;
 
     selectItem(kind, id, !!opts?.anchorEl);
 
@@ -417,8 +491,8 @@
       mapAnchorLatLng = null;
     } else if (opts?.mapEvent) {
       anchorMode = "map";
-      const entry = layersByKey.get(itemKey(kind, id));
-      mapAnchorLatLng = opts.mapEvent.latlng || entry?.latlng || null;
+      const layerEntry = layersByKey.get(itemKey(kind, id));
+      mapAnchorLatLng = opts.mapEvent.latlng || layerEntry?.latlng || layerEntry?.bounds?.getCenter() || null;
       anchorRef = mapAnchorLatLng;
     } else {
       anchorMode = null;
@@ -426,8 +500,10 @@
       mapAnchorLatLng = null;
     }
 
-    showPopover(projeto);
-    focusMapOnItem(projeto.data);
+    if (opts?.anchorEl) {
+      focusMapOnItem(kind, id);
+    }
+    showPopover(entry);
     if (anchorMode === "map") map.once("moveend", repositionPopover);
   }
 
@@ -438,7 +514,7 @@
       maxZoom: 19,
     }).addTo(map);
     map.on("move zoom", () => {
-      if (openItem && anchorMode === "map" && mapAnchorLatLng) {
+      if (openEntry && anchorMode === "map" && mapAnchorLatLng) {
         anchorRef = mapAnchorLatLng;
         repositionPopover();
       }
@@ -455,15 +531,15 @@
     if (!user) return;
     await SLTAdminLabels.init("../");
 
-    [demandas, objetos] = await Promise.all([
-      SLTAdminApi.listDemandas(),
+    [painelItems, objetos] = await Promise.all([
+      SLTAdminApi.listPainelDemandas(),
       SLTAdminApi.listObjetosAhp(),
     ]);
 
-    buildProjetos();
+    buildEntries();
     initMap();
     initLayersSectionCollapse();
-    renderProjetosList();
+    renderEntriesList();
     buildMapLayers();
   }
 

@@ -14,15 +14,16 @@ class GeometriaSchema(BaseModel):
 class ObjetoAhpResponseSchema(BaseModel):
     id: str
     codigo: str
-    demanda_id: str
-    demanda_codigo: str
+    demanda_id: str | None = None
+    demanda_codigo: str | None = None
     status: str
     statusAtualizadoEm: str
-    grupo_comparacao: str
+    grupo_comparacao: str | None = None
+    programa_id: str | None = None
     nome: str
     descricao: str | None = None
-    diretoria_id: str
-    plano_id: str
+    diretoria_id: str | None = None
+    plano_id: str | None = None
     classificacao: dict[str, Any] | None = None
     complementos: dict[str, Any] | None = None
     instituicao_nome: str | None = None
@@ -30,7 +31,7 @@ class ObjetoAhpResponseSchema(BaseModel):
     lat: float
     lng: float
     geometria: GeometriaSchema | None = None
-    aprovadoEm: str
+    aprovadoEm: str | None = None
     motivo_aprovacao: str | None = None
 
 

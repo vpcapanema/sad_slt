@@ -6,6 +6,9 @@
   let classificacaoRef = null;
   let instituicoes = [];
   let pessoas = [];
+  let programasCache = [];
+  let plAbr = null;
+  let pgAbr = null;
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
@@ -53,6 +56,10 @@
     if (step === 1) {
       if (!$("#instituicao").value || !$("#diretoria").value || !$("#plano").value) {
         showToast("Selecione instituição, diretoria e plano.");
+        return false;
+      }
+      if (!$("#programa").value) {
+        showToast("Selecione o programa ao qual o projeto pertence.");
         return false;
       }
     }
@@ -345,6 +352,7 @@
       },
       diretoria_id: $("#diretoria").value,
       plano_id: $("#plano").value,
+      programa_codigo: $("#programa").value,
       nome: $("#nome").value.trim(),
       descricao: $("#descricao").value.trim(),
       geometria: geom
@@ -362,6 +370,137 @@
         carteira_id: $("#carteira").value || null,
       },
     };
+  }
+
+  function selectTipo(tipo) {
+    $$(".tipo-card").forEach((c) => {
+      const on = c.dataset.tipo === tipo;
+      c.classList.toggle("is-active", on);
+      c.setAttribute("aria-selected", String(on));
+    });
+    $$(".tipo-form").forEach((f) => {
+      f.classList.toggle("hidden", f.dataset.tipo !== tipo);
+    });
+    if (tipo === "plano" && plAbr) plAbr.invalidateSize();
+    if (tipo === "programa" && pgAbr) pgAbr.invalidateSize();
+  }
+
+  function updateProgramasProjeto() {
+    const dirId = $("#diretoria").value;
+    const sel = $("#programa");
+    const items = dirId
+      ? programasCache.filter((p) => !p.diretoria_id || p.diretoria_id === dirId)
+      : [];
+    sel.disabled = !dirId;
+    const placeholder = !dirId
+      ? "Selecione a diretoria primeiro"
+      : items.length
+        ? "Selecione o programa…"
+        : "Nenhum programa cadastrado para esta diretoria";
+    fillSelect(sel, items, "id", (p) => p.nome, placeholder);
+  }
+
+  async function loadProgramasCache() {
+    try {
+      programasCache = await SLTDemandasApi.listProgramas();
+    } catch (err) {
+      programasCache = [];
+    }
+    updateProgramasProjeto();
+  }
+
+  function initTipoSelector() {
+    $$(".tipo-card").forEach((card) => {
+      card.addEventListener("click", () => selectTipo(card.dataset.tipo));
+    });
+  }
+
+  function initPlanoForm() {
+    const cat = SLTCatalog.catalog;
+    fillSelect($("#pl-diretoria"), SLTCatalog.ativos(cat.diretorias), "id", (d) => d.nome_oficial, "Selecione…");
+    plAbr = SLTAbrangencia.create({ container: $("#pl-abrangencia") });
+
+    $("#form-plano").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const unidades = plAbr.getSelectedIds();
+      if (!$("#pl-nome").value.trim() || !$("#pl-descricao").value.trim() || !$("#pl-diretoria").value) {
+        showToast("Preencha nome, descrição e diretoria do plano.");
+        return;
+      }
+      if (!unidades.length) {
+        showToast("Selecione ao menos uma unidade de abrangência.");
+        return;
+      }
+      const payload = {
+        diretoria_id: $("#pl-diretoria").value,
+        nome: $("#pl-nome").value.trim(),
+        descricao: $("#pl-descricao").value.trim(),
+        objetivo_estrategico: $("#pl-objetivo").value.trim() || null,
+        responsavel: $("#pl-responsavel").value.trim() || null,
+        vigencia_inicio: $("#pl-vig-ini").value || null,
+        vigencia_fim: $("#pl-vig-fim").value || null,
+        valor_global: $("#pl-valor").value ? Number($("#pl-valor").value) : null,
+        unidades_espaciais: unidades,
+      };
+      const btn = e.submitter;
+      if (btn) btn.disabled = true;
+      try {
+        await SLTDemandasApi.createPlano(payload);
+        showToast("Plano cadastrado com sucesso.");
+        setTimeout(() => (window.location.href = "../painel/"), 1500);
+      } catch (err) {
+        showToast(err.message || "Erro ao cadastrar plano.");
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+
+  async function initProgramaForm() {
+    pgAbr = SLTAbrangencia.create({ container: $("#pg-abrangencia") });
+    const sel = $("#pg-plano");
+    try {
+      const planos = await SLTDemandasApi.listPlanos();
+      sel.disabled = false;
+      fillSelect(sel, planos, "id", (p) => p.nome, planos.length ? "Selecione…" : "Nenhum plano cadastrado");
+    } catch (err) {
+      sel.innerHTML = '<option value="">Falha ao carregar planos</option>';
+    }
+
+    $("#form-programa").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const unidades = pgAbr.getSelectedIds();
+      if (!$("#pg-plano").value || !$("#pg-nome").value.trim() || !$("#pg-descricao").value.trim()) {
+        showToast("Preencha plano, nome e descrição do programa.");
+        return;
+      }
+      if (!unidades.length) {
+        showToast("Selecione ao menos uma unidade de abrangência.");
+        return;
+      }
+      const payload = {
+        plano_codigo: $("#pg-plano").value,
+        nome: $("#pg-nome").value.trim(),
+        descricao: $("#pg-descricao").value.trim(),
+        objetivo: $("#pg-objetivo").value.trim() || null,
+        publico_alvo: $("#pg-publico").value.trim() || null,
+        justificativa: $("#pg-justificativa").value.trim() || null,
+        orgao_responsavel: $("#pg-orgao").value.trim() || null,
+        valor_global: $("#pg-valor").value ? Number($("#pg-valor").value) : null,
+        unidades_espaciais: unidades,
+      };
+      const btn = e.submitter;
+      if (btn) btn.disabled = true;
+      try {
+        await SLTDemandasApi.createPrograma(payload);
+        showToast("Programa cadastrado com sucesso.");
+        setTimeout(() => (window.location.href = "../painel/"), 1500);
+      } catch (err) {
+        showToast(err.message || "Erro ao cadastrar programa.");
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
   }
 
   async function init() {
@@ -393,6 +532,7 @@
       updateClassificacaoUI();
       updateCarteiras();
       updateContextHints();
+      updateProgramasProjeto();
     });
 
     $("#plano").addEventListener("change", () => {
@@ -442,7 +582,14 @@
     });
 
     SLTGeometria.init();
+    initTipoSelector();
+    initPlanoForm();
+    initProgramaForm();
+    loadProgramasCache();
     applyUrlParams();
+
+    const tipoParam = new URLSearchParams(window.location.search).get("tipo");
+    if (tipoParam) selectTipo(tipoParam);
   }
 
   init().catch((err) => {

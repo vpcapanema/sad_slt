@@ -31,12 +31,14 @@ body.layout-with-sidebar {
   grid-row: 1;
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .layout-with-sidebar .layout-main-header.app-header {
   padding: var(--sb-navbar-padding-y) var(--sb-navbar-padding-x);
   width: 100%;
   box-sizing: border-box;
+  min-width: 0;
 }
 
 .layout-with-sidebar-grid > .layout-sidebar {
@@ -75,10 +77,17 @@ body.layout-with-sidebar {
   max-width: none;
   margin: 0;
   width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
-.layout-with-sidebar .layout-main-header .app-header-inner--nav-only {
-  justify-content: flex-end;
+.layout-with-sidebar .layout-main-header .app-header-brand {
+  max-width: min(48%, 480px);
+}
+
+.layout-with-sidebar .layout-main-header .app-header-inner .app-nav {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .layout-with-sidebar .layout-main .admin-session-bar {

@@ -27,5 +27,58 @@
     return request("/api/demandas");
   }
 
-  global.SLTDemandasApi = { createDemanda, listDemandas };
+  async function listPainelDemandas() {
+    return request("/api/painel/demandas");
+  }
+
+  async function createPlano(payload) {
+    return request("/api/planos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async function createPrograma(payload) {
+    return request("/api/programas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async function listPlanos() {
+    return request("/api/planos");
+  }
+
+  async function listProgramas() {
+    return request("/api/programas");
+  }
+
+  async function listGeoTipos() {
+    return request("/api/geo/tipos");
+  }
+
+  async function listGeoUnidades(tipo) {
+    const qs = tipo ? `?tipo=${encodeURIComponent(tipo)}` : "";
+    return request(`/api/geo/unidades${qs}`);
+  }
+
+  async function geoUnidadesGeojson(ids) {
+    const q = (ids || []).join(",");
+    return request(`/api/geo/unidades/geojson?ids=${encodeURIComponent(q)}`);
+  }
+
+  global.SLTDemandasApi = {
+    createDemanda,
+    listDemandas,
+    listPainelDemandas,
+    createPlano,
+    createPrograma,
+    listPlanos,
+    listProgramas,
+    listGeoTipos,
+    listGeoUnidades,
+    geoUnidadesGeojson,
+  };
 })(window);

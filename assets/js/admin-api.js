@@ -24,6 +24,10 @@
     return request("/api/demandas");
   }
 
+  async function listPainelDemandas() {
+    return request("/api/painel/demandas");
+  }
+
   async function getDemanda(codigo) {
     return request(`/api/demandas/${encodeURIComponent(codigo)}`);
   }
@@ -42,6 +46,60 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload || {}),
     });
+  }
+
+  async function listPlanos() {
+    return request("/api/planos");
+  }
+
+  async function getPlano(codigo) {
+    return request(`/api/planos/${encodeURIComponent(codigo)}`);
+  }
+
+  async function updatePlano(codigo, payload) {
+    return request(`/api/planos/${encodeURIComponent(codigo)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async function aprovarPlano(codigo, payload) {
+    return request(`/api/planos/${encodeURIComponent(codigo)}/aprovar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {}),
+    });
+  }
+
+  async function listProgramas() {
+    return request("/api/programas");
+  }
+
+  async function getPrograma(codigo) {
+    return request(`/api/programas/${encodeURIComponent(codigo)}`);
+  }
+
+  async function updatePrograma(codigo, payload) {
+    return request(`/api/programas/${encodeURIComponent(codigo)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async function aprovarPrograma(codigo, payload) {
+    return request(`/api/programas/${encodeURIComponent(codigo)}/aprovar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {}),
+    });
+  }
+
+  async function listDemandasByTipo(tipo) {
+    if (tipo === "plano") return listPlanos();
+    if (tipo === "programa") return listProgramas();
+    return listDemandas();
   }
 
   async function listObjetosAhp(params) {
@@ -90,9 +148,19 @@
 
   global.SLTAdminApi = {
     listDemandas,
+    listPainelDemandas,
     getDemanda,
     updateDemanda,
     aprovarDemanda,
+    listPlanos,
+    getPlano,
+    updatePlano,
+    aprovarPlano,
+    listProgramas,
+    getPrograma,
+    updatePrograma,
+    aprovarPrograma,
+    listDemandasByTipo,
     listObjetosAhp,
     getObjetoAhp,
     updateObjetoAhp,

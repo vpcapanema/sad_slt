@@ -9,7 +9,7 @@ from typing import Any
 from psycopg import errors
 
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
-from api.repositories import demanda_repository, dominio_repository
+from api.repositories import demanda_repository, dominio_repository, programa_repository
 from api.schemas.demanda import DemandaCreateSchema, DemandaResponseSchema, DemandaUpdateSchema, GeometriaSchema, RepresentanteSchema
 _ALLOWED_GEOM = frozenset({"Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon"})
 
@@ -65,6 +65,7 @@ def _row_to_response(row: dict[str, Any]) -> DemandaResponseSchema:
         ),
         diretoria_id=row["diretoria_id"],
         plano_id=row["plano_id"],
+        programa_id=str(row["programa_id"]) if row.get("programa_id") else None,
         nome=row["nome"],
         descricao=row.get("descricao"),
         geometria=geometria,
@@ -90,6 +91,12 @@ def _build_persist_row(payload: DemandaCreateSchema) -> dict[str, Any]:
         payload.geometria.model_dump() if payload.geometria else None
     )
 
+    programa = programa_repository.get_by_codigo(payload.programa_codigo.strip())
+    if not programa:
+        raise DemandaValidationError(
+            f"Programa não encontrado: {payload.programa_codigo}.", field="programa_codigo"
+        )
+
     return demanda_repository.prepare_insert_params(
         {
             "codigo": payload.id.strip(),
@@ -103,6 +110,7 @@ def _build_persist_row(payload: DemandaCreateSchema) -> dict[str, Any]:
             "representante_telefone": payload.representante.telefone,
             "diretoria_id": payload.diretoria_id,
             "plano_id": payload.plano_id,
+            "programa_id": str(programa["id"]),
             "nome": payload.nome.strip(),
             "descricao": payload.descricao,
             "latitude": payload.lat,

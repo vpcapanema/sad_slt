@@ -100,6 +100,81 @@
   display: none;
 }
 
+/* Grupos irmãos: PLANO | PROGRAMA | PROJETOS — indentação hierárquica */
+.demandas-tree {
+  --layer-tree-x: calc(0.25rem + 0.45rem);
+  --layer-tree-branch: 0.95rem;
+  --tree-level-indent: 1.25rem;
+}
+
+.demandas-tree > .layer-group-body {
+  padding-left: calc(var(--layer-tree-x) + var(--layer-tree-branch));
+}
+
+.layer-group--tipo {
+  margin-top: 0.1rem;
+}
+
+.layer-group--tipo.collapsed .layer-group-toggle {
+  transform: rotate(-90deg);
+}
+
+.layer-group--tipo.collapsed > .layer-group-body {
+  display: none;
+}
+
+.demandas-tree .layer-group--tipo > .layer-group-header--tipo {
+  position: relative;
+  padding-left: calc(var(--layer-tree-x) + var(--layer-tree-branch) + var(--tree-level-indent));
+}
+
+.demandas-tree .layer-group--tipo > .layer-group-header--tipo::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--layer-tree-x) + var(--layer-tree-branch));
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.demandas-tree .layer-group--tipo > .layer-group-header--tipo::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--layer-tree-x) + var(--layer-tree-branch));
+  top: 50%;
+  width: var(--tree-level-indent);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.demandas-tree .layer-group--tipo > .layer-group-body {
+  padding-left: calc(var(--tree-level-indent) + 0.65rem);
+  --layer-tree-x: calc(var(--layer-tree-x) + var(--layer-tree-branch) + var(--tree-level-indent));
+}
+
+.layer-group-header--tipo .layer-group-name {
+  font-size: var(--sb-layer-section-name, 0.72rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pli-green, var(--sb-green, #4ade80));
+}
+
+.admin-records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.layers-empty--nested {
+  padding: 0.35rem 0.5rem 0.35rem 1.25rem;
+  font-size: 0.78rem;
+  opacity: 0.65;
+}
+
 .layer-group-name {
   font-size: 0.8rem;
   font-weight: 600;
@@ -136,6 +211,7 @@
   margin-top: 0.15rem;
   padding-left: 0;
 }
+
 
 .layers-container {
   display: flex;

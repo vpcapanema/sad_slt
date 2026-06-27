@@ -19,7 +19,8 @@ _SELECT_BASE = """
         c.codigo AS config_codigo,
         h.nome,
         h.descricao,
-        h.grupo_comparacao,
+        h.tipo_demanda_id,
+        h.grupo_id,
         h.status,
         h.objetos,
         h.julgamento_projetos,
@@ -74,15 +75,24 @@ def get_by_codigo(codigo: str) -> dict[str, Any] | None:
         return conn.execute(query, (codigo,)).fetchone()
 
 
-def list_all(*, status: str | None = None, grupo: str | None = None, config_id: Any = None) -> list[dict[str, Any]]:
+def list_all(
+    *,
+    status: str | None = None,
+    grupo: str | None = None,
+    tipo_demanda_id: int | None = None,
+    config_id: Any = None,
+) -> list[dict[str, Any]]:
     query = _SELECT_BASE + " WHERE 1=1"
     params: list[Any] = []
     if status:
         query += " AND h.status = %s"
         params.append(status)
     if grupo:
-        query += " AND h.grupo_comparacao = %s"
+        query += " AND h.grupo_id = %s"
         params.append(grupo)
+    if tipo_demanda_id is not None:
+        query += " AND h.tipo_demanda_id = %s"
+        params.append(tipo_demanda_id)
     if config_id:
         query += " AND h.config_id = %s"
         params.append(config_id)

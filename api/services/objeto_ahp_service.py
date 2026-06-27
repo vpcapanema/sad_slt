@@ -1,4 +1,9 @@
-"""Regras de negócio — objetos alvo da AHP."""
+"""Regras de negócio — universo AHP de projetos (demandas.projeto).
+
+Após o colapso do modelo dual, aprovar uma demanda é uma transição de status
+in-place (não há mais snapshot em outra tabela). O universo do AHP são os
+projetos em fase de hierarquização.
+"""
 from __future__ import annotations
 
 import json
@@ -6,9 +11,6 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from psycopg import errors
-
-from api.db.connection import get_connection
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import demanda_repository, dominio_repository, objeto_ahp_repository
 from api.schemas.objeto_ahp import GeometriaSchema, ObjetoAhpResponseSchema, ObjetoAhpUpdateSchema
@@ -16,23 +18,16 @@ from api.schemas.objeto_ahp import GeometriaSchema, ObjetoAhpResponseSchema, Obj
 _STATUS_APROVACAO_PERMITIDOS = frozenset({"fila_hierarquizacao", "em_analise"})
 
 
-def _iso(value: Any) -> str:
+def _iso(value: Any) -> str | None:
+    if value is None:
+        return None
     if isinstance(value, datetime):
         return value.isoformat()
     return str(value)
 
 
-def _grupo_comparacao(plano_id: str, classificacao: dict[str, Any] | None) -> str:
-    if not classificacao:
-        return f"{plano_id}|GERAL"
-    tipo = classificacao.get("tipo")
-    if tipo == "frente_pli":
-        return f"{plano_id}|{classificacao.get('frente_id') or 'GERAL'}"
-    if tipo == "eixo_pef":
-        eixo = classificacao.get("eixo_id") or "GERAL"
-        tic = classificacao.get("corredor_tic_id")
-        return f"{plano_id}|{eixo}" + (f"|{tic}" if tic else "")
-    return f"{plano_id}|GERAL"
+def _str_or_none(value: Any) -> str | None:
+    return str(value) if value is not None else None
 
 
 def _geometria_from_row(row: dict[str, Any]) -> GeometriaSchema | None:
@@ -51,15 +46,16 @@ def _row_to_response(row: dict[str, Any]) -> ObjetoAhpResponseSchema:
     return ObjetoAhpResponseSchema(
         id=str(row["id"]),
         codigo=row["codigo"],
-        demanda_id=str(row["demanda_id"]),
-        demanda_codigo=row["demanda_codigo"],
+        demanda_id=str(row["id"]),
+        demanda_codigo=row["codigo"],
         status=row["status"],
-        statusAtualizadoEm=_iso(row["status_atualizado_em"]),
-        grupo_comparacao=row["grupo_comparacao"],
+        statusAtualizadoEm=_iso(row.get("status_atualizado_em")) or "",
+        grupo_comparacao=_str_or_none(row.get("programa_id")),
+        programa_id=_str_or_none(row.get("programa_id")),
         nome=row["nome"],
         descricao=row.get("descricao"),
-        diretoria_id=row["diretoria_id"],
-        plano_id=row["plano_id"],
+        diretoria_id=_str_or_none(row.get("diretoria_id")),
+        plano_id=_str_or_none(row.get("plano_id")),
         classificacao=row.get("classificacao"),
         complementos=row.get("complementos"),
         instituicao_nome=row.get("instituicao_nome"),
@@ -67,56 +63,9 @@ def _row_to_response(row: dict[str, Any]) -> ObjetoAhpResponseSchema:
         lat=float(row["latitude"]),
         lng=float(row["longitude"]),
         geometria=_geometria_from_row(row),
-        aprovadoEm=_iso(row["aprovado_em"]),
+        aprovadoEm=_iso(row.get("aprovado_em")),
         motivo_aprovacao=row.get("motivo_aprovacao"),
     )
-
-
-def _build_objeto_row_from_demanda(
-    demanda: dict[str, Any],
-    *,
-    motivo: str | None,
-    aprovado_por: str | None,
-) -> dict[str, Any]:
-    classificacao = demanda.get("classificacao")
-    if isinstance(classificacao, str):
-        classificacao = json.loads(classificacao)
-
-    geo_json = demanda.get("geometria_geojson")
-    if geo_json is not None and not isinstance(geo_json, str):
-        geo_json = json.dumps(geo_json)
-    if not geo_json:
-        geo_json = json.dumps(
-            {"type": "Point", "coordinates": [demanda["longitude"], demanda["latitude"]]}
-        )
-
-    aprovado_uuid = None
-    if aprovado_por:
-        try:
-            aprovado_uuid = str(uuid.UUID(aprovado_por))
-        except (ValueError, TypeError) as exc:
-            raise DemandaValidationError("aprovado_por inválido (UUID esperado).", field="aprovado_por") from exc
-
-    return {
-            "codigo": demanda["codigo"],
-            "demanda_id": demanda["id"],
-            "demanda_codigo": demanda["codigo"],
-            "status": "elegivel_ahp",
-            "grupo_comparacao": _grupo_comparacao(demanda["plano_id"], classificacao),
-            "programa_id": demanda.get("programa_id"),
-            "nome": demanda["nome"],
-            "descricao": demanda.get("descricao"),
-            "classificacao": classificacao,
-            "complementos": demanda.get("complementos"),
-            "instituicao_nome": demanda.get("instituicao_nome"),
-            "instituicao_cnpj": demanda.get("instituicao_cnpj"),
-            "latitude": demanda["latitude"],
-            "longitude": demanda["longitude"],
-            "geometria_tipo": demanda.get("geometria_tipo"),
-            "geometria_geojson": geo_json,
-            "aprovado_por": aprovado_uuid,
-            "motivo_aprovacao": motivo,
-        }
 
 
 def aprovar_demanda(
@@ -125,7 +74,7 @@ def aprovar_demanda(
     motivo: str | None = None,
     aprovado_por: str | None = None,
 ) -> ObjetoAhpResponseSchema:
-    """Aprova demanda e promove snapshot para demandas_aprovadas.projetos (transação única)."""
+    """Aprova a demanda promovendo-a ao universo AHP (transição de status in-place)."""
     demanda = demanda_repository.get_by_codigo(codigo)
     if not demanda:
         raise DemandaNotFoundError(codigo)
@@ -136,37 +85,21 @@ def aprovar_demanda(
             field="status",
         )
 
-    if objeto_ahp_repository.get_by_demanda_id(demanda["id"]):
-        raise DemandaValidationError(
-            f"Demanda {codigo} já possui objeto AHP.",
-            field="codigo",
-        )
-
-    objeto_row = _build_objeto_row_from_demanda(demanda, motivo=motivo, aprovado_por=aprovado_por)
-
-    with get_connection() as conn:
+    aprovado_uuid = None
+    if aprovado_por:
         try:
-            conn.execute(
-                """
-                UPDATE cadastro.projeto
-                SET status = 'aprovada'
-                WHERE id = %s AND status = ANY(%s)
-                """,
-                (demanda["id"], list(_STATUS_APROVACAO_PERMITIDOS)),
-            )
-            objeto_id = objeto_ahp_repository.insert_with_connection(conn, objeto_row)
-            conn.commit()
-        except errors.UniqueViolation as exc:
-            conn.rollback()
-            raise DemandaValidationError(f"Demanda {codigo} já possui objeto AHP.", field="codigo") from exc
-        except Exception:
-            conn.rollback()
-            raise
+            aprovado_uuid = str(uuid.UUID(aprovado_por))
+        except (ValueError, TypeError) as exc:
+            raise DemandaValidationError(
+                "aprovado_por inválido (UUID esperado).", field="aprovado_por"
+            ) from exc
 
-    found = objeto_ahp_repository.get_by_id(objeto_id)
-    if not found:
-        raise RuntimeError("Objeto AHP criado mas não recuperado.")
-    return _row_to_response(found)
+    updated = objeto_ahp_repository.aprovar(codigo, aprovado_por=aprovado_uuid, motivo=motivo)
+    if not updated:
+        raise DemandaValidationError(
+            f"Demanda {codigo} não pôde ser aprovada (status alterado).", field="status"
+        )
+    return _row_to_response(updated)
 
 
 def listar_objetos(*, status: str | None = None, grupo: str | None = None) -> list[ObjetoAhpResponseSchema]:
@@ -196,13 +129,6 @@ def atualizar_objeto(codigo: str, payload: ObjetoAhpUpdateSchema) -> ObjetoAhpRe
 
     if "status" in data and data["status"] not in _status_objeto_validos():
         raise DemandaValidationError(f"Status inválido: {data['status']}.", field="status")
-
-    plano_id = row.get("plano_id")
-    classificacao = data.get("classificacao", row.get("classificacao"))
-    if isinstance(classificacao, str):
-        classificacao = json.loads(classificacao)
-    if "classificacao" in data and "grupo_comparacao" not in data and plano_id:
-        data["grupo_comparacao"] = _grupo_comparacao(plano_id, classificacao)
 
     updated = objeto_ahp_repository.update(codigo, data)
     if not updated:

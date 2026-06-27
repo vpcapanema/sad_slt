@@ -1,13 +1,19 @@
 (function () {
+  const SIDEBAR_GRUPOS = [
+    { id: "plano", label: "Plano", tipo: "plano" },
+    { id: "programa", label: "Programa", tipo: "programa" },
+    { id: "projeto", label: "Projetos", tipo: "projeto" },
+  ];
+
   let map;
-  let demandas = [];
-  let layersById = new Map();
-  let selectedId = null;
+  let items = [];
+  let layersByKey = new Map();
+  let selectedKey = null;
   let popoverEl = null;
   let anchorMode = null;
   let anchorRef = null;
   let mapAnchorLatLng = null;
-  let openDemanda = null;
+  let openItem = null;
 
   function pinSvg(statusColor) {
     return (
@@ -28,6 +34,10 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function itemKey(tipo, id) {
+    return `${tipo}:${id}`;
   }
 
   function statusStyle(codigo) {
@@ -55,25 +65,11 @@
     });
   }
 
-  function coordsDemanda(d) {
+  function coordsItem(d) {
     if (d.lat != null && d.lng != null) return { lat: d.lat, lng: d.lng };
     if (d.geometria?.tipo === "Point") {
       const [lng, lat] = d.geometria.coordinates;
       return { lat, lng };
-    }
-    return null;
-  }
-
-  function boundsDemanda(d) {
-    const ref = coordsDemanda(d);
-    if (ref) return L.latLngBounds([ref, ref]);
-    if (d.geometria?.tipo === "Polygon") {
-      const latlngs = d.geometria.coordinates[0].map(([lng, lat]) => [lat, lng]);
-      return L.latLngBounds(latlngs);
-    }
-    if (d.geometria?.tipo === "LineString") {
-      const latlngs = d.geometria.coordinates.map(([lng, lat]) => [lat, lng]);
-      return L.latLngBounds(latlngs);
     }
     return null;
   }
@@ -89,8 +85,38 @@
     };
   }
 
+  function tipoLabel(tipo) {
+    if (tipo === "plano") return "Plano";
+    if (tipo === "programa") return "Programa";
+    return "Projeto";
+  }
+
+  function abrangenciaText(d) {
+    if (d.abrangencia?.length) return d.abrangencia.join(", ");
+    return "—";
+  }
+
   function detailBodyHtml(d) {
-    const entLabel = d.instituicao_label || d.entidade_label || d.instituicao_id || "—";
+    if (d.tipo === "plano") {
+      return `
+      <dl>
+        <dt>Tipo</dt><dd>${escapeHtml(tipoLabel(d.tipo))}</dd>
+        <dt>Plano</dt><dd>${escapeHtml(d.nome)}</dd>
+        <dt>Descrição</dt><dd class="painel-detail-desc">${escapeHtml(d.descricao || "—")}</dd>
+        <dt>Abrangência</dt><dd>${escapeHtml(abrangenciaText(d))}</dd>
+      </dl>`;
+    }
+    if (d.tipo === "programa") {
+      return `
+      <dl>
+        <dt>Tipo</dt><dd>${escapeHtml(tipoLabel(d.tipo))}</dd>
+        <dt>Programa</dt><dd>${escapeHtml(d.nome)}</dd>
+        <dt>Plano</dt><dd>${escapeHtml(d.plano_nome || d.plano_codigo || "—")}</dd>
+        <dt>Descrição</dt><dd class="painel-detail-desc">${escapeHtml(d.descricao || "—")}</dd>
+        <dt>Abrangência</dt><dd>${escapeHtml(abrangenciaText(d))}</dd>
+      </dl>`;
+    }
+    const entLabel = d.instituicao_label || d.instituicao_id || "—";
     return `
       <dl>
         <dt>Instituição</dt><dd>${escapeHtml(entLabel)}</dd>
@@ -98,6 +124,10 @@
         <dt>Projeto</dt><dd>${escapeHtml(d.nome)}</dd>
         <dt>Descrição</dt><dd class="painel-detail-desc">${escapeHtml(d.descricao || "—")}</dd>
       </dl>`;
+  }
+
+  function findItem(tipo, id) {
+    return items.find((x) => x.tipo === tipo && x.id === id);
   }
 
   function ensurePopover() {
@@ -190,61 +220,70 @@
     header.style.background = st.bg;
     header.style.color = st.text;
 
-    pop.querySelector(".painel-detail-kicker").textContent = st.nome;
+    pop.querySelector(".painel-detail-kicker").textContent = `${tipoLabel(d.tipo)} · ${st.nome}`;
     pop.querySelector(".painel-detail-title").textContent = d.nome;
     pop.querySelector(".painel-detail-body").innerHTML = detailBodyHtml(d);
 
     pop.classList.remove("hidden");
-    openDemanda = d;
+    openItem = d;
     requestAnimationFrame(repositionPopover);
   }
 
   function closePopover() {
     popoverEl?.classList.add("hidden");
-    openDemanda = null;
+    openItem = null;
     anchorMode = null;
     anchorRef = null;
     mapAnchorLatLng = null;
   }
 
-  function updateDemandasCount(n) {
-    const el = $("demandas-count");
-    el.textContent = n ? String(n) : "";
+  function selectedIdFromKey() {
+    return selectedKey ? selectedKey.split(":")[1] : null;
   }
 
   function renderSidebar() {
-    const container = $("layers-container");
-    const vazia = $("lista-vazia");
+    SLTGroupedSidebar.renderGroupedDemandasSidebar({
+      containerSelector: "#layers-container",
+      countSelector: "#demandas-count",
+      emptySelector: "#lista-vazia",
+      groups: SIDEBAR_GRUPOS.map((g) => ({
+        id: g.id,
+        label: g.label,
+        records: items.filter((d) => d.tipo === g.tipo),
+      })),
+      selectedId: selectedIdFromKey(),
+      getRecordId: (r) => r.id,
+      getRecordLabel: (r) => r.nome,
+      getRecordBadgeHtml: (r) => {
+        const st = statusStyle(r.status);
+        return `<span class="${SLTStatusColors.badgeClass(r.status)}">${escapeHtml(st.nome)}</span>`;
+      },
+      sectionsFor: () => [],
+      emptyMessage: "Nenhuma demanda registrada.",
+      onSelect: (id, record) => {
+        if (!record) return;
+        const anchorEl = document.querySelector(
+          `.layer-group--record[data-record-id="${CSS.escape(id)}"]`
+        );
+        openDetail(record.tipo, id, { anchorEl });
+      },
+    });
+  }
 
-    updateDemandasCount(demandas.length);
-
-    if (!demandas.length) {
-      container.innerHTML = "";
-      vazia.classList.remove("hidden");
-      return;
-    }
-
-    vazia.classList.add("hidden");
-    container.innerHTML = demandas
-      .slice()
-      .reverse()
-      .map((d) => {
-        const st = statusStyle(d.status);
-        return `
-          <div class="layer-row${selectedId === d.id ? " is-selected" : ""}" data-id="${escapeHtml(d.id)}" role="listitem">
-            <div class="layer-row-line">
-              <span class="layer-name">${escapeHtml(d.nome)}</span>
-              <span class="${SLTStatusColors.badgeClass(d.status)}">${escapeHtml(st.nome)}</span>
-            </div>
-          </div>`;
-      })
-      .join("");
-
-    container.querySelectorAll(".layer-row").forEach((row) => {
-      row.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openDemandaDetail(row.dataset.id, { anchorEl: row });
-      });
+  function highlightSidebar(tipo, id) {
+    selectedKey = itemKey(tipo, id);
+    document.querySelectorAll(".layer-group--record").forEach((el) => {
+      const on = el.dataset.recordId === id;
+      el.classList.toggle("is-selected", on);
+      el.classList.toggle("collapsed", !on);
+      el.querySelector(".layer-group-header--record")?.setAttribute("aria-expanded", String(on));
+    });
+    document.querySelectorAll(".layer-group--tipo").forEach((grp) => {
+      const hit = grp.querySelector(`.layer-group--record[data-record-id="${CSS.escape(id)}"]`);
+      if (hit) {
+        grp.classList.remove("collapsed");
+        grp.querySelector(".layer-group-header")?.setAttribute("aria-expanded", "true");
+      }
     });
   }
 
@@ -258,79 +297,75 @@
     });
   }
 
+  function addItemLayers(group, d) {
+    const style = geomStyle(d.status);
+    const key = itemKey(d.tipo, d.id);
+    const entry = { layers: [], bounds: null, latlng: null };
+
+    const onMapClick = (e) => {
+      L.DomEvent.stopPropagation(e);
+      openDetail(d.tipo, d.id, { mapEvent: e });
+    };
+
+    if (d.geometria) {
+      const gj = L.geoJSON(
+        { type: d.geometria.tipo, coordinates: d.geometria.coordinates },
+        { style: () => style }
+      );
+      gj.eachLayer((layer) => {
+        layer.on("click", onMapClick);
+        entry.layers.push(layer);
+        group.addLayer(layer);
+      });
+      if (gj.getLayers().length) entry.bounds = gj.getBounds();
+    }
+
+    const ref = coordsItem(d);
+    if (ref && d.tipo === "projeto") {
+      const marker = L.marker([ref.lat, ref.lng], { icon: createPinIcon(d.status) });
+      marker.on("click", onMapClick);
+      entry.layers.push(marker);
+      entry.latlng = L.latLng(ref.lat, ref.lng);
+      group.addLayer(marker);
+      if (!entry.bounds) entry.bounds = L.latLngBounds([ref, ref]);
+    }
+
+    if (entry.layers.length) layersByKey.set(key, entry);
+  }
+
   function buildMapLayers() {
-    layersById.clear();
+    layersByKey.clear();
     const group = L.featureGroup();
-
-    demandas.forEach((d) => {
-      const style = geomStyle(d.status);
-      const entry = { layers: [], bounds: boundsDemanda(d) };
-
-      const onMapClick = (e) => {
-        L.DomEvent.stopPropagation(e);
-        openDemandaDetail(d.id, { mapEvent: e });
-      };
-
-      if (d.geometria?.tipo === "Polygon") {
-        const latlngs = d.geometria.coordinates[0].map(([lng, lat]) => [lat, lng]);
-        const layer = L.polygon(latlngs, style);
-        layer.on("click", onMapClick);
-        entry.layers.push(layer);
-        group.addLayer(layer);
-      } else if (d.geometria?.tipo === "LineString") {
-        const latlngs = d.geometria.coordinates.map(([lng, lat]) => [lat, lng]);
-        const layer = L.polyline(latlngs, style);
-        layer.on("click", onMapClick);
-        entry.layers.push(layer);
-        group.addLayer(layer);
-      }
-
-      const ref = coordsDemanda(d);
-      if (ref) {
-        const marker = L.marker([ref.lat, ref.lng], { icon: createPinIcon(d.status) });
-        marker.on("click", onMapClick);
-        entry.layers.push(marker);
-        entry.latlng = L.latLng(ref.lat, ref.lng);
-        group.addLayer(marker);
-      }
-
-      if (entry.layers.length) layersById.set(d.id, entry);
-    });
-
+    items.forEach((d) => addItemLayers(group, d));
     group.addTo(map);
     if (group.getLayers().length) map.fitBounds(group.getBounds().pad(0.12));
   }
 
-  function selectDemanda(id, scrollSidebar) {
-    selectedId = id;
-    document.querySelectorAll(".layer-row").forEach((el) => {
-      el.classList.toggle("is-selected", el.dataset.id === id);
-    });
+  function selectItem(tipo, id, scrollSidebar) {
+    highlightSidebar(tipo, id);
     if (scrollSidebar) {
-      document.querySelector(`.layer-row[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
+      document
+        .querySelector(`.layer-group--record[data-record-id="${CSS.escape(id)}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }
 
-  function focusMapOnDemanda(d) {
-    const ref = coordsDemanda(d);
-    if (ref) {
-      map.setView([ref.lat, ref.lng], 14, { animate: true });
+  function focusMapOnItem(tipo, id) {
+    const entry = layersByKey.get(itemKey(tipo, id));
+    if (entry?.bounds?.isValid()) {
+      map.fitBounds(entry.bounds.pad(0.12), { animate: true });
       return;
     }
-    const entry = layersById.get(d.id);
-    if (entry?.bounds) {
-      map.setView(entry.bounds.getCenter(), 13, { animate: true });
-    }
+    const d = findItem(tipo, id);
+    const ref = d ? coordsItem(d) : null;
+    if (ref) map.setView([ref.lat, ref.lng], 14, { animate: true });
   }
 
-  function openDemandaDetail(id, opts) {
-    const d = demandas.find((x) => x.id === id);
+  function openDetail(tipo, id, opts) {
+    const d = findItem(tipo, id);
     if (!d) return;
 
-    selectDemanda(id, !!opts?.anchorEl);
+    selectItem(tipo, id, !!opts?.anchorEl);
 
     if (opts?.anchorEl) {
       anchorMode = "element";
@@ -338,8 +373,8 @@
       mapAnchorLatLng = null;
     } else if (opts?.mapEvent) {
       anchorMode = "map";
-      const entry = layersById.get(id);
-      mapAnchorLatLng = opts.mapEvent.latlng || entry?.latlng || null;
+      const entry = layersByKey.get(itemKey(tipo, id));
+      mapAnchorLatLng = opts.mapEvent.latlng || entry?.latlng || entry?.bounds?.getCenter() || null;
       anchorRef = mapAnchorLatLng;
     } else {
       anchorMode = null;
@@ -347,8 +382,10 @@
       mapAnchorLatLng = null;
     }
 
+    if (opts?.anchorEl) {
+      focusMapOnItem(tipo, id);
+    }
     showPopover(d);
-    focusMapOnDemanda(d);
 
     if (anchorMode === "map") {
       map.once("moveend", repositionPopover);
@@ -363,7 +400,7 @@
     }).addTo(map);
 
     map.on("move zoom", () => {
-      if (openDemanda && anchorMode === "map" && mapAnchorLatLng) {
+      if (openItem && anchorMode === "map" && mapAnchorLatLng) {
         anchorRef = mapAnchorLatLng;
         repositionPopover();
       }
@@ -378,10 +415,10 @@
 
   async function init() {
     try {
-      demandas = await SLTDemandasApi.listDemandas();
+      items = await SLTDemandasApi.listPainelDemandas();
     } catch (err) {
       console.error(err);
-      demandas = SLTStorage.loadDemandas();
+      items = (SLTStorage.loadDemandas() || []).map((d) => ({ ...d, tipo: "projeto" }));
     }
 
     initLayersSectionCollapse();

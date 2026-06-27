@@ -1897,3 +1897,35 @@ a.ahp-progress-step:hover {
 .a6-toast--error {
   background: #c82333;
 }
+
+/* Campos de formulário da Etapa 5 (Configuração Multicritério) */
+.ahp-field {
+  margin-bottom: 1rem;
+}
+
+.ahp-field label {
+  display: block;
+  font-weight: 600;
+  color: var(--pli-deep, #003b5a);
+  margin-bottom: 0.35rem;
+}
+
+.ahp-field input,
+.ahp-field textarea,
+.ahp-field select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #cdd6df;
+  border-radius: 8px;
+  font: inherit;
+  color: #1f2a36;
+  background: #fff;
+}
+
+.ahp-field input:focus,
+.ahp-field textarea:focus,
+.ahp-field select:focus {
+  outline: none;
+  border-color: var(--pli-blue, #116593);
+  box-shadow: 0 0 0 3px rgba(17, 101, 147, 0.15);
+}

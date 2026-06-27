@@ -20,13 +20,7 @@
         Apoio à Tomada de Decisão
         <small>Hierarquização AHP</small>
       </div>
-      <nav class="app-nav">
-        <a href="../index.html">Início</a>
-        <a href="../cadastro/">Cadastro</a>
-        <a href="./" class="active">AHP</a>
-        <a href="../painel/">Painel</a>
-        <a href="../admin/">Admin</a>
-      </nav>
+      <nav class="app-nav" aria-label="Navegação principal"></nav>
     </div>
   </header>
 
@@ -480,5 +474,7 @@ async function exportAll(btn){
 }
 function downloadFile(content,filename,contentType){const blob=new Blob([content],{type:contentType});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();document.body.removeChild(link);URL.revokeObjectURL(url);}
 </script>
+  <script src="../assets/js/app-header.js"></script>
+  <script src="../assets/js/navbar.js"></script>
 </body>
 </html>

@@ -1,29 +1,71 @@
 (function () {
   const { escapeHtml, formatDate, formatCnpj, statusDemandaLabel, instituicaoLabel, planoLabel,
-    classificacaoLabel, representanteLabel, geometriaResumo, fillSelect, statusBadgeClass,
+    classificacaoLabel, representanteLabel, fillSelect, statusBadgeClass,
     diretoriaLabel, labelById, PLANO_PLI, PLANO_PEF } = SLTAdminLabels;
 
-  let demanda = null;
-  let allDemandas = [];
-  let selectedId = null;
+  const AHP_STATUS = new Set([
+    "elegivel_ahp", "em_hierarquizacao", "hierarquizado", "suspenso", "retirado",
+  ]);
 
-  const SECTIONS = [
-    { id: "sec-info", label: "Informações do Projeto" },
-    { id: "sec-analise", label: "Análise" },
-    { id: "sec-cadastro", label: "Cadastro" },
-    { id: "sec-institucional", label: "Institucional e Projeto" },
-    { id: "sec-representante", label: "Representante Legal" },
-    { id: "sec-acoes", label: "Ações" },
+  const TIPOS = [
+    { id: "plano", label: "Plano" },
+    { id: "programa", label: "Programa" },
+    { id: "projeto", label: "Projetos" },
   ];
+
+  const SECTIONS = {
+    projeto: [
+      { id: "sec-info", label: "Informações do Projeto" },
+      { id: "sec-analise", label: "Análise" },
+      { id: "sec-cadastro", label: "Cadastro" },
+      { id: "sec-institucional", label: "Institucional e Projeto" },
+      { id: "sec-representante", label: "Representante Legal" },
+      { id: "sec-acoes", label: "Ações" },
+    ],
+    plano: [
+      { id: "sec-info", label: "Informações do Plano" },
+      { id: "sec-acoes", label: "Ações" },
+    ],
+    programa: [
+      { id: "sec-info", label: "Informações do Programa" },
+      { id: "sec-acoes", label: "Ações" },
+    ],
+  };
+
+  let tipo = "projeto";
+  let record = null;
+  let selectedId = null;
+  const lists = { projeto: [], programa: [], plano: [] };
 
   function $(sel, root) {
     return (root || document).querySelector(sel);
   }
 
-  function codigoFromUrl() {
-    return new URLSearchParams(location.search).get("id");
+  function paramsFromUrl() {
+    const sp = new URLSearchParams(location.search);
+    return { tipo: sp.get("tipo"), id: sp.get("id") };
   }
 
+  function canApprove(status) {
+    return !AHP_STATUS.has(status);
+  }
+
+  function actionsHtml(d, { withApprove }) {
+    return `
+      <div class="form-field span-2">
+        <label for="fld-motivo-aprov">Motivo (Aprovação — Opcional)</label>
+        <textarea id="fld-motivo-aprov" class="admin-field-motivo" rows="3" placeholder="Usado ao clicar em Aprovar"></textarea>
+      </div>
+      <div class="admin-dashboard-actions span-2">
+        <a href="demandas.html" class="btn btn-secondary">Voltar à lista</a>
+        ${withApprove ? '<button type="button" class="btn btn-primary" id="btn-aprovar">Aprovar → elegível AHP</button>' : ""}
+        <button type="button" class="btn btn-primary" id="btn-salvar">Salvar alterações</button>
+      </div>`;
+  }
+
+  // ===========================================================================
+  // PROJETO (detalhe completo — mantém o comportamento atual)
+  // ===========================================================================
   function buildClassificacaoFields(planoId) {
     if (planoId === PLANO_PLI) {
       return `
@@ -85,23 +127,6 @@
     $("#fld-eixo")?.addEventListener("change", () => refreshTicSelect({ classificacao: {} }));
   }
 
-  function actionsHtml(d) {
-    const canApprove = d.status === "fila_hierarquizacao" || d.status === "em_analise";
-    return `
-      <div class="form-field span-2">
-        <label for="fld-motivo-aprov">Motivo (Aprovação — Opcional)</label>
-        <textarea id="fld-motivo-aprov" class="admin-field-motivo" rows="3" placeholder="Usado ao clicar em Aprovar"></textarea>
-      </div>
-      <div class="admin-dashboard-actions span-2">
-        <a href="demandas.html" class="btn btn-secondary">Voltar à lista</a>
-        ${canApprove ? '<button type="button" class="btn btn-primary" id="btn-aprovar">Aprovar → objeto AHP</button>' : ""}
-        <button type="button" class="btn btn-secondary" id="btn-analise">Em análise</button>
-        <button type="button" class="btn btn-secondary" id="btn-reprovar">Reprovar</button>
-        <button type="button" class="btn btn-secondary" id="btn-arquivar">Arquivar</button>
-        <button type="button" class="btn btn-primary" id="btn-salvar">Salvar alterações</button>
-      </div>`;
-  }
-
   function catalogLabel(list, id) {
     return labelById(list, id, "nome");
   }
@@ -154,7 +179,7 @@
       </section>`;
   }
 
-  function pageHtml(d) {
+  function projetoPageHtml(d) {
     return `
       <div class="admin-dashboard-layout">
         ${projectInfoHtml(d)}
@@ -248,7 +273,7 @@
               <section id="sec-acoes" class="admin-analise-subcard admin-dashboard-section">
                 <h3>Ações</h3>
                 <div class="admin-form-grid">
-                  ${actionsHtml(d)}
+                  ${actionsHtml(d, { withApprove: canApprove(d.status) })}
                 </div>
               </section>
           </div>
@@ -256,7 +281,7 @@
       </div>`;
   }
 
-  function bindEvents(d) {
+  function bindProjeto(d) {
     fillSelect($("#fld-diretoria"), SLTCatalog.ativos(SLTCatalog.catalog.diretorias), "id", (x) => x.nome_oficial);
     $("#fld-diretoria").value = d.diretoria_id;
 
@@ -285,14 +310,10 @@
 
     $("#fld-eixo")?.addEventListener("change", () => refreshTicSelect({ classificacao: {} }));
 
-    $("#btn-salvar")?.addEventListener("click", () => saveDemanda());
-    $("#btn-aprovar")?.addEventListener("click", () => approveDemanda());
-    $("#btn-analise")?.addEventListener("click", () => quickStatus("em_analise"));
-    $("#btn-reprovar")?.addEventListener("click", () => quickStatus("reprovada"));
-    $("#btn-arquivar")?.addEventListener("click", () => quickStatus("arquivada"));
+    SLTAdminAnalysisMap.initPreviewMap("admin-preview-map-wrap", d);
   }
 
-  function collectPayload() {
+  function collectProjeto() {
     const planoId = $("#fld-plano").value;
     let classificacao = null;
     if (planoId === PLANO_PLI && $("#fld-frente")?.value) {
@@ -309,7 +330,7 @@
     if ($("#fld-tipologia").value) complementos.tipologia_id = $("#fld-tipologia").value;
     if ($("#fld-carteira").value) complementos.carteira_id = $("#fld-carteira").value;
 
-    const payload = {
+    return {
       nome: $("#fld-nome").value.trim(),
       descricao: $("#fld-descricao").value.trim() || null,
       diretoria_id: $("#fld-diretoria").value,
@@ -324,96 +345,302 @@
         telefone: $("#fld-rep-tel").value.trim() || null,
       },
     };
-    return payload;
   }
 
+  // ===========================================================================
+  // PLANO
+  // ===========================================================================
+  function planoPageHtml(d) {
+    return `
+      <div class="admin-dashboard-layout">
+        <section id="sec-info" class="card admin-dashboard-section">
+          <h2>Informações do Plano
+            <span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span>
+          </h2>
+          <div class="admin-form-grid">
+            <div class="form-field">
+              <label for="fld-codigo">Código</label>
+              <input type="text" id="fld-codigo" class="admin-field-readonly" value="${escapeHtml(d.id)}" readonly aria-readonly="true">
+            </div>
+            <div class="form-field">
+              <label for="fld-diretoria">Diretoria</label>
+              <select id="fld-diretoria"></select>
+            </div>
+            <div class="form-field span-2">
+              <label for="fld-nome">Nome do Plano</label>
+              <input type="text" id="fld-nome" maxlength="200" value="${escapeHtml(d.nome)}">
+            </div>
+            <div class="form-field span-2">
+              <label for="fld-descricao">Descrição</label>
+              <textarea id="fld-descricao" rows="3">${escapeHtml(d.descricao || "")}</textarea>
+            </div>
+            <div class="form-field span-2">
+              <label for="fld-objetivo">Objetivo estratégico</label>
+              <textarea id="fld-objetivo" rows="2">${escapeHtml(d.objetivo_estrategico || "")}</textarea>
+            </div>
+            <div class="form-field">
+              <label for="fld-responsavel">Responsável</label>
+              <input type="text" id="fld-responsavel" value="${escapeHtml(d.responsavel || "")}">
+            </div>
+            <div class="form-field">
+              <label for="fld-valor">Valor global (R$)</label>
+              <input type="number" step="any" id="fld-valor" value="${d.valor_global ?? ""}">
+            </div>
+            <div class="form-field">
+              <label for="fld-vig-ini">Vigência início</label>
+              <input type="date" id="fld-vig-ini" value="${escapeHtml((d.vigencia_inicio || "").slice(0, 10))}">
+            </div>
+            <div class="form-field">
+              <label for="fld-vig-fim">Vigência fim</label>
+              <input type="date" id="fld-vig-fim" value="${escapeHtml((d.vigencia_fim || "").slice(0, 10))}">
+            </div>
+            <div class="form-field span-2">
+              <span class="field-help">Cadastrado em ${escapeHtml(formatDate(d.criadoEm))}.</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="sec-acoes" class="card admin-dashboard-section">
+          <h3>Ações</h3>
+          <div class="admin-form-grid">
+            ${actionsHtml(d, { withApprove: canApprove(d.status) })}
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function bindPlano(d) {
+    fillSelect($("#fld-diretoria"), SLTCatalog.ativos(SLTCatalog.catalog.diretorias), "id", (x) => x.nome_oficial);
+    $("#fld-diretoria").value = d.diretoria_id || "";
+  }
+
+  function collectPlano() {
+    return {
+      nome: $("#fld-nome").value.trim(),
+      descricao: $("#fld-descricao").value.trim() || null,
+      diretoria_id: $("#fld-diretoria").value || null,
+      objetivo_estrategico: $("#fld-objetivo").value.trim() || null,
+      responsavel: $("#fld-responsavel").value.trim() || null,
+      valor_global: $("#fld-valor").value ? parseFloat($("#fld-valor").value) : null,
+      vigencia_inicio: $("#fld-vig-ini").value || null,
+      vigencia_fim: $("#fld-vig-fim").value || null,
+    };
+  }
+
+  // ===========================================================================
+  // PROGRAMA
+  // ===========================================================================
+  function programaPageHtml(d) {
+    return `
+      <div class="admin-dashboard-layout">
+        <section id="sec-info" class="card admin-dashboard-section">
+          <h2>Informações do Programa
+            <span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span>
+          </h2>
+          <div class="admin-form-grid">
+            <div class="form-field">
+              <label for="fld-codigo">Código</label>
+              <input type="text" id="fld-codigo" class="admin-field-readonly" value="${escapeHtml(d.id)}" readonly aria-readonly="true">
+            </div>
+            <div class="form-field">
+              <label for="fld-plano">Plano</label>
+              <input type="text" id="fld-plano" class="admin-field-readonly admin-field-readonly--plain" value="${escapeHtml(d.plano_nome || d.plano_codigo || "—")}" readonly aria-readonly="true">
+            </div>
+            <div class="form-field span-2">
+              <label for="fld-nome">Nome do Programa</label>
+              <input type="text" id="fld-nome" maxlength="200" value="${escapeHtml(d.nome)}">
+            </div>
+            <div class="form-field span-2">
+              <label for="fld-descricao">Descrição</label>
+              <textarea id="fld-descricao" rows="3">${escapeHtml(d.descricao || "")}</textarea>
+            </div>
+            <div class="form-field span-2">
+              <label for="fld-objetivo">Objetivo</label>
+              <textarea id="fld-objetivo" rows="2">${escapeHtml(d.objetivo || "")}</textarea>
+            </div>
+            <div class="form-field span-2">
+              <label for="fld-publico">Público-alvo</label>
+              <textarea id="fld-publico" rows="2">${escapeHtml(d.publico_alvo || "")}</textarea>
+            </div>
+            <div class="form-field span-2">
+              <label for="fld-justificativa">Justificativa</label>
+              <textarea id="fld-justificativa" rows="2">${escapeHtml(d.justificativa || "")}</textarea>
+            </div>
+            <div class="form-field">
+              <label for="fld-orgao">Órgão responsável</label>
+              <input type="text" id="fld-orgao" value="${escapeHtml(d.orgao_responsavel || "")}">
+            </div>
+            <div class="form-field">
+              <label for="fld-valor">Valor global (R$)</label>
+              <input type="number" step="any" id="fld-valor" value="${d.valor_global ?? ""}">
+            </div>
+            <div class="form-field span-2">
+              <span class="field-help">Cadastrado em ${escapeHtml(formatDate(d.criadoEm))}.</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="sec-acoes" class="card admin-dashboard-section">
+          <h3>Ações</h3>
+          <div class="admin-form-grid">
+            ${actionsHtml(d, { withApprove: canApprove(d.status) })}
+          </div>
+        </section>
+      </div>`;
+  }
+
+  function collectPrograma() {
+    return {
+      nome: $("#fld-nome").value.trim(),
+      descricao: $("#fld-descricao").value.trim() || null,
+      objetivo: $("#fld-objetivo").value.trim() || null,
+      publico_alvo: $("#fld-publico").value.trim() || null,
+      justificativa: $("#fld-justificativa").value.trim() || null,
+      orgao_responsavel: $("#fld-orgao").value.trim() || null,
+      valor_global: $("#fld-valor").value ? parseFloat($("#fld-valor").value) : null,
+    };
+  }
+
+  // ===========================================================================
+  // Dispatch por tipo
+  // ===========================================================================
+  const API = {
+    projeto: { get: (id) => SLTAdminApi.getDemanda(id), update: (id, p) => SLTAdminApi.updateDemanda(id, p), aprovar: (id, p) => SLTAdminApi.aprovarDemanda(id, p) },
+    plano: { get: (id) => SLTAdminApi.getPlano(id), update: (id, p) => SLTAdminApi.updatePlano(id, p), aprovar: (id, p) => SLTAdminApi.aprovarPlano(id, p) },
+    programa: { get: (id) => SLTAdminApi.getPrograma(id), update: (id, p) => SLTAdminApi.updatePrograma(id, p), aprovar: (id, p) => SLTAdminApi.aprovarPrograma(id, p) },
+  };
+
+  function pageHtml(d) {
+    if (tipo === "plano") return planoPageHtml(d);
+    if (tipo === "programa") return programaPageHtml(d);
+    return projetoPageHtml(d);
+  }
+
+  function bindEvents(d) {
+    if (tipo === "projeto") bindProjeto(d);
+    if (tipo === "plano") bindPlano(d);
+    $("#btn-salvar")?.addEventListener("click", () => saveRecord());
+    $("#btn-aprovar")?.addEventListener("click", () => approveRecord());
+  }
+
+  function collectPayload() {
+    if (tipo === "plano") return collectPlano();
+    if (tipo === "programa") return collectPrograma();
+    return collectProjeto();
+  }
+
+  // ===========================================================================
+  // Sidebar (agrupada por tipo) + seleção
+  // ===========================================================================
   function renderSidebar() {
-    SLTAdminDashboard.renderRecordsSidebar({
-      records: allDemandas,
+    SLTAdminDashboard.renderGroupedRecordsSidebar({
+      groups: TIPOS.map((t) => ({ id: t.id, label: t.label, records: lists[t.id] })),
       selectedId,
-      getRecordId: (d) => d.id,
-      getRecordLabel: (d) => d.nome || d.id,
-      getRecordBadgeHtml: (d) =>
-        `<span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span>`,
-      sections: SECTIONS,
+      getRecordId: (r) => r.id,
+      getRecordLabel: (r) => r.nome || r.id,
+      getRecordBadgeHtml: (r) =>
+        `<span class="${statusBadgeClass(r.status)}">${escapeHtml(statusDemandaLabel(r.status))}</span>`,
+      sectionsFor: (r) => SECTIONS[r.__tipo] || SECTIONS.projeto,
       emptyMessage: "Nenhuma demanda registrada.",
-      onSelect: (id) => selectDemanda(id),
+      onSelect: (id) => onSelectFromSidebar(id),
     });
   }
 
+  function findTipoOf(id) {
+    for (const t of TIPOS) {
+      if ((lists[t.id] || []).some((r) => r.id === id)) return t.id;
+    }
+    return tipo;
+  }
+
+  function onSelectFromSidebar(id) {
+    const novoTipo = findTipoOf(id);
+    selectRecord(novoTipo, id);
+  }
+
   function renderPage(d) {
-    demanda = d;
+    record = d;
     selectedId = d.id;
-    document.title = `${d.id} — Demanda — Admin SLT`;
+    document.title = `${d.id} — ${tipo} — Admin SLT`;
     $("#dashboard-content").innerHTML = pageHtml(d);
     bindEvents(d);
-    SLTAdminAnalysisMap.initPreviewMap("admin-preview-map-wrap", d);
     renderSidebar();
     SLTAdminDashboard.initSectionNav({
       navSelector: ".layer-group--record.is-selected .admin-record-sections",
     });
   }
 
-  async function selectDemanda(id, { updateUrl = true } = {}) {
+  async function selectRecord(novoTipo, id, { updateUrl = true } = {}) {
+    tipo = novoTipo;
     selectedId = id;
     renderSidebar();
-    $("#dashboard-content").innerHTML = '<p class="hint">Carregando demanda…</p>';
+    $("#dashboard-content").innerHTML = '<p class="hint">Carregando…</p>';
     if (updateUrl) {
-      history.replaceState(null, "", `demanda.html?id=${encodeURIComponent(id)}`);
+      history.replaceState(null, "", `demanda.html?tipo=${encodeURIComponent(tipo)}&id=${encodeURIComponent(id)}`);
     }
-    const d = await SLTAdminApi.getDemanda(id);
+    const d = await API[tipo].get(id);
     renderPage(d);
     const active = document.querySelector(`.layer-group--record[data-record-id="${CSS.escape(id)}"]`);
     active?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
-  async function reloadDemanda() {
-    const codigo = codigoFromUrl();
-    if (!codigo) {
-      if (allDemandas.length) {
-        await selectDemanda(allDemandas[0].id);
-        return;
-      }
-      $("#dashboard-content").innerHTML =
-        '<p class="hint">Nenhuma demanda registrada. <a href="demandas.html">Voltar à lista</a>.</p>';
-      renderSidebar();
-      return;
-    }
-    await selectDemanda(codigo, { updateUrl: false });
+  async function refreshLists() {
+    const [projeto, programa, plano] = await Promise.all([
+      SLTAdminApi.listDemandas().catch(() => []),
+      SLTAdminApi.listProgramas().catch(() => []),
+      SLTAdminApi.listPlanos().catch(() => []),
+    ]);
+    lists.projeto = projeto.map((r) => ({ ...r, __tipo: "projeto" }));
+    lists.programa = programa.map((r) => ({ ...r, __tipo: "programa" }));
+    lists.plano = plano.map((r) => ({ ...r, __tipo: "plano" }));
   }
 
-  async function saveDemanda() {
+  async function saveRecord() {
     try {
-      const updated = await SLTAdminApi.updateDemanda(demanda.id, collectPayload());
-      SLTAdminUi.showToast("Demanda atualizada.");
-      allDemandas = await SLTAdminApi.listDemandas();
+      const updated = await API[tipo].update(record.id, collectPayload());
+      SLTAdminUi.showToast("Alterações salvas.");
+      await refreshLists();
       renderPage(updated);
     } catch (err) {
       SLTAdminUi.showToast(err.message, true);
     }
   }
 
-  async function approveDemanda() {
-    if (!confirm("Aprovar esta demanda e criar objeto na fila AHP?")) return;
+  async function approveRecord() {
+    if (!confirm("Aprovar esta demanda e torná-la elegível à hierarquização?")) return;
     try {
       const motivo = $("#fld-motivo-aprov")?.value.trim() || null;
-      const objeto = await SLTAdminApi.aprovarDemanda(demanda.id, { motivo });
-      SLTAdminUi.showToast("Demanda aprovada — redirecionando ao objeto AHP.");
-      location.href = `objeto.html?id=${encodeURIComponent(objeto.codigo)}`;
+      const updated = await API[tipo].aprovar(record.id, { motivo });
+      SLTAdminUi.showToast("Demanda aprovada — agora elegível ao AHP.");
+      await refreshLists();
+      renderPage(updated);
     } catch (err) {
       SLTAdminUi.showToast(err.message, true);
     }
   }
 
-  async function quickStatus(status) {
-    try {
-      const updated = await SLTAdminApi.updateDemanda(demanda.id, { status });
-      SLTAdminUi.showToast(`Status alterado para ${statusDemandaLabel(status)}.`);
-      allDemandas = await SLTAdminApi.listDemandas();
-      renderPage(updated);
-    } catch (err) {
-      SLTAdminUi.showToast(err.message, true);
+  function firstAvailable() {
+    for (const t of TIPOS) {
+      if ((lists[t.id] || []).length) return { tipo: t.id, id: lists[t.id][0].id };
     }
+    return null;
+  }
+
+  async function boot() {
+    const { tipo: urlTipo, id } = paramsFromUrl();
+    if (id) {
+      const t = urlTipo && lists[urlTipo] ? urlTipo : findTipoOf(id);
+      await selectRecord(t, id, { updateUrl: false });
+      return;
+    }
+    const first = firstAvailable();
+    if (first) {
+      await selectRecord(first.tipo, first.id);
+      return;
+    }
+    $("#dashboard-content").innerHTML =
+      '<p class="hint">Nenhuma demanda registrada. <a href="demandas.html">Voltar à lista</a>.</p>';
+    renderSidebar();
   }
 
   async function init() {
@@ -421,8 +648,8 @@
     if (!user) return;
     await SLTAdminLabels.init("../");
     SLTAdminDashboard.initRecordsRootCollapse({});
-    allDemandas = await SLTAdminApi.listDemandas();
-    await reloadDemanda();
+    await refreshLists();
+    await boot();
   }
 
   init().catch((err) => {

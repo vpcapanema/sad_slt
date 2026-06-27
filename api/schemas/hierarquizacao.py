@@ -15,6 +15,9 @@ class HierarquizacaoCreateSchema(BaseModel):
     config_codigo: str = Field(..., description="Código da config_multicriterio_portfolio homologada/calculada")
     nome: str = Field(..., min_length=1, max_length=200)
     descricao: str | None = None
+    grupo_id: str | None = Field(
+        None, max_length=64, description="Conjunto comparável (pai): diretoria/plano/programa"
+    )
     objetos: list[dict[str, Any]] | None = None
 
 
@@ -33,7 +36,8 @@ class HierarquizacaoResponseSchema(BaseModel):
     config_codigo: str | None = None
     nome: str
     descricao: str | None = None
-    grupo_comparacao: str
+    tipo_demanda: str | None = None
+    grupo_id: str | None = None
     status: str
     objetos: list[dict[str, Any]] = []
     julgamento_projetos: list[dict[str, Any]] | None = None

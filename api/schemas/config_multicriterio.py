@@ -19,6 +19,9 @@ class ConfigCreateSchema(BaseModel):
     nome: str = Field(..., min_length=1, max_length=200)
     descricao: str | None = None
     grupo_comparacao: str | None = Field(None, max_length=120)
+    tipo_demanda: str | None = Field(
+        None, description="plano | programa | projeto (obrigatório para portfólio)"
+    )
 
 
 class ConfigUpdateSchema(BaseModel):
@@ -44,6 +47,7 @@ class ConfigResponseSchema(BaseModel):
     nome: str
     descricao: str | None = None
     grupo_comparacao: str | None = None
+    tipo_demanda: str | None = None
     status: str
     metodo_entrada: str
     metodo_comparacao: str | None = None

@@ -13,11 +13,7 @@
         Eixos PEF-SP
         <small>Guia para classificar no plano ferroviário</small>
       </div>
-      <nav class="app-nav">
-        <a href="index.html">← Cadastro</a>
-        <a href="catalogo-planos.html#PLANO-PEF">Plano PEF</a>
-        <a href="catalogo-frentes-pli.html">Frentes PLI</a>
-      </nav>
+      <nav class="app-nav" aria-label="Navegação principal"></nav>
     </div>
   </header>
   <main class="app-main ref-main">
@@ -35,5 +31,7 @@
       if (hash) document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
     });
   </script>
+  <script src="../assets/js/app-header.js"></script>
+  <script src="../assets/js/navbar.js"></script>
 </body>
 </html>

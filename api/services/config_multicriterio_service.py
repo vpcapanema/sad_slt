@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
+from api.constants import TIPO_DEMANDA_COD_TO_ID, TIPO_DEMANDA_ID_TO_COD
 from api.exceptions import ConfigMulticriterioNotFoundError, DemandaValidationError
 from api.repositories import config_multicriterio_repository as repo
 from api.schemas.config_multicriterio import (
@@ -89,6 +90,7 @@ def _row_to_response(row: dict[str, Any]) -> ConfigResponseSchema:
         nome=row["nome"],
         descricao=row.get("descricao"),
         grupo_comparacao=row.get("grupo_comparacao"),
+        tipo_demanda=TIPO_DEMANDA_ID_TO_COD.get(row.get("tipo_demanda_id")),
         status=row["status"],
         metodo_entrada=row.get("metodo_entrada") or "manual",
         metodo_comparacao=row.get("metodo_comparacao"),
@@ -117,6 +119,11 @@ def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) 
             "grupo_comparacao é obrigatório para configuração de portfólio.",
             field="grupo_comparacao",
         )
+    if payload.tipo == "portfolio" and not payload.tipo_demanda:
+        raise DemandaValidationError(
+            "tipo_demanda é obrigatório para configuração de portfólio.",
+            field="tipo_demanda",
+        )
     data: dict[str, Any] = {
         "codigo": _gerar_codigo(payload.tipo),
         "nome": payload.nome.strip(),
@@ -128,14 +135,34 @@ def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) 
         data["criado_por"] = criado_uuid
     if payload.tipo == "portfolio":
         data["grupo_comparacao"] = payload.grupo_comparacao
+        tipo_id = TIPO_DEMANDA_COD_TO_ID.get(payload.tipo_demanda)
+        if tipo_id is None:
+            raise DemandaValidationError(
+                f"tipo_demanda inválido: {payload.tipo_demanda}.", field="tipo_demanda"
+            )
+        data["tipo_demanda_id"] = tipo_id
     return _row_to_response(repo.insert(payload.tipo, data))
 
 
 def listar_configs(
-    tipo: str, *, status: str | None = None, grupo: str | None = None
+    tipo: str,
+    *,
+    status: str | None = None,
+    grupo: str | None = None,
+    tipo_demanda: str | None = None,
 ) -> list[ConfigResponseSchema]:
     _validar_tipo(tipo)
-    return [_row_to_response(r) for r in repo.list_all(tipo, status=status, grupo=grupo)]
+    tipo_demanda_id = None
+    if tipo_demanda:
+        tipo_demanda_id = TIPO_DEMANDA_COD_TO_ID.get(tipo_demanda)
+        if tipo_demanda_id is None:
+            raise DemandaValidationError(
+                f"tipo_demanda inválido: {tipo_demanda}.", field="tipo_demanda"
+            )
+    return [
+        _row_to_response(r)
+        for r in repo.list_all(tipo, status=status, grupo=grupo, tipo_demanda_id=tipo_demanda_id)
+    ]
 
 
 def obter_config(tipo: str, codigo: str) -> ConfigResponseSchema:

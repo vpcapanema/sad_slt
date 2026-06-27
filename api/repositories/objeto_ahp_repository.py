@@ -1,29 +1,32 @@
-"""Acesso a dados — demandas_aprovadas.projetos (projetos aprovados, universo da AHP)."""
+"""Acesso a dados — universo AHP de PROJETOS (demandas.projeto por status).
+
+Com o colapso do modelo dual, não há mais tabela-espelho: o "objeto AHP" é a
+própria demanda de projeto quando está numa das fases de hierarquização. A
+aprovação é feita in-place (UPDATE de status), não há mais INSERT de snapshot.
+"""
 from __future__ import annotations
 
-import json
 from typing import Any
 
-import psycopg
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
 
+# Fases do ciclo de vida que compõem o universo do AHP (ordem >= 70 no domínio).
+AHP_STATUSES = ("elegivel_ahp", "em_hierarquizacao", "hierarquizado")
+
 _SELECT_BASE = """
     SELECT
         o.id,
         o.codigo,
-        o.demanda_id,
-        o.demanda_codigo,
         o.status,
         o.status_atualizado_em,
-        o.grupo_comparacao,
         o.programa_id,
+        o.plano_id,
+        o.diretoria_id,
         o.nome,
         o.descricao,
-        cd.diretoria_id,
-        cd.plano_id,
         o.classificacao,
         o.complementos,
         o.instituicao_nome,
@@ -40,128 +43,72 @@ _SELECT_BASE = """
         o.motivo_aprovacao,
         o.criado_em,
         o.atualizado_em
-    FROM demandas_aprovadas.projetos o
-    LEFT JOIN cadastro.projeto cd ON cd.id = o.demanda_id
+    FROM demandas.projeto o
 """
-
-_INSERT_SQL = """
-    INSERT INTO demandas_aprovadas.projetos (
-        codigo,
-        demanda_id,
-        demanda_codigo,
-        status,
-        grupo_comparacao,
-        programa_id,
-        nome,
-        descricao,
-        classificacao,
-        complementos,
-        instituicao_nome,
-        instituicao_cnpj,
-        latitude,
-        longitude,
-        geometria_tipo,
-        geometria,
-        aprovado_por,
-        motivo_aprovacao
-    ) VALUES (
-        %(codigo)s,
-        %(demanda_id)s,
-        %(demanda_codigo)s,
-        %(status)s,
-        %(grupo_comparacao)s,
-        %(programa_id)s,
-        %(nome)s,
-        %(descricao)s,
-        %(classificacao)s,
-        %(complementos)s,
-        %(instituicao_nome)s,
-        %(instituicao_cnpj)s,
-        %(latitude)s,
-        %(longitude)s,
-        %(geometria_tipo)s,
-        CASE
-            WHEN %(geometria_geojson)s::text IS NULL THEN NULL
-            ELSE ST_SetSRID(ST_GeomFromGeoJSON(%(geometria_geojson)s::text), 4326)
-        END,
-        %(aprovado_por)s,
-        %(motivo_aprovacao)s
-    )
-    RETURNING id
-"""
-
-
-def prepare_params(data: dict[str, Any]) -> dict[str, Any]:
-    """Normaliza campos JSON/GeoJSON antes da persistência."""
-    params = dict(data)
-    for key in ("classificacao", "complementos"):
-        val = params.get(key)
-        params[key] = Jsonb(val) if val is not None else None
-    geo = params.get("geometria_geojson")
-    if geo is not None and not isinstance(geo, str):
-        params["geometria_geojson"] = json.dumps(geo)
-    return params
-
-
-def insert_with_connection(conn: psycopg.Connection[dict[str, Any]], row: dict[str, Any]) -> Any:
-    """Insere um objeto AHP usando a conexão/transação já aberta."""
-    cur = conn.execute(_INSERT_SQL, prepare_params(row))
-    inserted = cur.fetchone()
-    if not inserted:
-        raise RuntimeError("Insert de objeto AHP não retornou id.")
-    return inserted["id"]
-
-
-def insert(row: dict[str, Any]) -> dict[str, Any]:
-    """Insere um objeto AHP e retorna a linha persistida."""
-    with get_connection() as conn:
-        inserted_id = insert_with_connection(conn, row)
-        conn.commit()
-        found = get_by_id(inserted_id)
-        if not found:
-            raise RuntimeError("Objeto AHP inserido mas não recuperado.")
-        return found
 
 
 def list_all(*, status: str | None = None, grupo: str | None = None) -> list[dict[str, Any]]:
-    """Lista objetos AHP com filtros opcionais por status e grupo."""
+    """Lista projetos do universo AHP. Sem status, retorna as fases de hierarquização."""
     query = _SELECT_BASE + " WHERE 1=1"
     params: list[Any] = []
     if status:
         query += " AND o.status = %s"
         params.append(status)
+    else:
+        query += " AND o.status = ANY(%s)"
+        params.append(list(AHP_STATUSES))
     if grupo:
-        query += " AND o.grupo_comparacao = %s"
+        query += " AND o.programa_id::text = %s"
         params.append(grupo)
-    query += " ORDER BY o.aprovado_em DESC"
+    query += " ORDER BY o.aprovado_em DESC NULLS LAST, o.criado_em DESC"
     with get_connection() as conn:
         return list(conn.execute(query, params).fetchall())
 
 
 def get_by_id(objeto_id: Any) -> dict[str, Any] | None:
-    """Busca um objeto AHP pelo identificador UUID."""
+    """Busca um projeto pelo identificador UUID."""
     query = _SELECT_BASE + " WHERE o.id = %s"
     with get_connection() as conn:
         return conn.execute(query, (objeto_id,)).fetchone()
 
 
-def get_by_demanda_id(demanda_id: Any) -> dict[str, Any] | None:
-    """Busca o objeto AHP vinculado a uma demanda."""
-    query = _SELECT_BASE + " WHERE o.demanda_id = %s"
-    with get_connection() as conn:
-        return conn.execute(query, (demanda_id,)).fetchone()
-
-
 def get_by_codigo(codigo: str) -> dict[str, Any] | None:
-    """Busca um objeto AHP pelo código legível."""
+    """Busca um projeto pelo código legível."""
     query = _SELECT_BASE + " WHERE o.codigo = %s"
     with get_connection() as conn:
         return conn.execute(query, (codigo,)).fetchone()
 
 
+_PRE_APROVACAO = ("fila_hierarquizacao", "em_analise")
+
+
+def aprovar(codigo: str, *, aprovado_por: Any = None, motivo: str | None = None) -> dict[str, Any] | None:
+    """Promove a demanda ao universo AHP in-place (status -> elegivel_ahp)."""
+    query = """
+        UPDATE demandas.projeto
+        SET status = 'elegivel_ahp',
+            aprovado_em = CURRENT_TIMESTAMP,
+            aprovado_por = %(aprovado_por)s,
+            motivo_aprovacao = %(motivo)s
+        WHERE codigo = %(codigo)s AND status = ANY(%(pre)s)
+        RETURNING id
+    """
+    params = {
+        "codigo": codigo,
+        "aprovado_por": aprovado_por,
+        "motivo": motivo,
+        "pre": list(_PRE_APROVACAO),
+    }
+    with get_connection() as conn:
+        row = conn.execute(query, params).fetchone()
+        conn.commit()
+    if not row:
+        return None
+    return get_by_codigo(codigo)
+
+
 _UPDATE_ALLOWED = {
     "status": "status",
-    "grupo_comparacao": "grupo_comparacao",
     "programa_id": "programa_id",
     "nome": "nome",
     "descricao": "descricao",
@@ -174,30 +121,28 @@ _UPDATE_ALLOWED = {
 
 
 def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
-    """Atualiza os campos permitidos do objeto AHP e retorna o registro final."""
+    """Atualiza os campos permitidos do projeto e retorna o registro final."""
     if not data:
         return get_by_codigo(codigo)
 
-    sets: list[str] = []
     params: dict[str, Any] = {"codigo": codigo}
-    for key, column in _UPDATE_ALLOWED.items():
+    for key in _UPDATE_ALLOWED:
         if key not in data:
             continue
         val = data[key]
         if key in ("classificacao", "complementos"):
             val = Jsonb(val) if val is not None else None
-        sets.append(f"{column} = %({key})s")
         params[key] = val
-
-    if not sets:
-        return get_by_codigo(codigo)
 
     assignments = [
         sql.SQL("{} = {}").format(sql.Identifier(_UPDATE_ALLOWED[key]), sql.Placeholder(key))
         for key in params
         if key != "codigo"
     ]
-    query = sql.SQL("UPDATE demandas_aprovadas.projetos SET {} WHERE codigo = {}").format(
+    if not assignments:
+        return get_by_codigo(codigo)
+
+    query = sql.SQL("UPDATE demandas.projeto SET {} WHERE codigo = {}").format(
         sql.SQL(", ").join(assignments),
         sql.Placeholder("codigo"),
     )

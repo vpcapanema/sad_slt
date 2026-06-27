@@ -9,3 +9,11 @@ class StatusDominioSchema(BaseModel):
     nome: str
     descricao: str | None = None
     ordem: int
+
+
+class TipoDemandaSchema(BaseModel):
+    id: int
+    codigo: str
+    nome: str
+    descricao: str | None = None
+    ordem: int
