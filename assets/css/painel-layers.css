@@ -392,12 +392,15 @@ body.is-layer-reorder-active {
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M3 5a1 1 0 0 1 1-1h16a1 1 0 0 1 .8 1.6l-6.4 8.53V19a1 1 0 0 1-.55.9l-4 2A1 1 0 0 1 8 21v-6.87L1.2 5.6A1 1 0 0 1 3 5z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
+/* Dropdowns customizados (campo e valor) — visual 100% idêntico entre os dois */
 .painel-layer-filter-field,
 .painel-layer-filter-value {
+  position: relative;
+  box-sizing: border-box;
   min-width: 0;
   width: 100%;
   max-width: 100%;
-  padding: 0.2rem 0.32rem;
+  padding: 0.2rem 1.3rem 0.2rem 0.32rem;
   border: 1px solid rgba(0, 59, 90, 0.14);
   border-radius: 0.25rem;
   background: var(--filter-select-bg);
@@ -406,44 +409,125 @@ body.is-layer-reorder-active {
   font-size: var(--sb-layers-font, 0.72rem);
   line-height: 1.25;
   font-weight: 700;
-  appearance: none;
-  -webkit-appearance: none;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.painel-layer-filter-field .slt-dd-label,
+.painel-layer-filter-value .slt-dd-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.painel-layer-filter-field .slt-dd-arrow,
+.painel-layer-filter-value .slt-dd-arrow {
+  position: absolute;
+  top: 50%;
+  right: 0.4rem;
+  width: 0;
+  height: 0;
+  border-left: 0.28rem solid transparent;
+  border-right: 0.28rem solid transparent;
+  border-top: 0.32rem solid currentColor;
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.painel-layer-filter-field.is-open .slt-dd-arrow,
+.painel-layer-filter-value.is-open .slt-dd-arrow {
+  transform: translateY(-50%) rotate(180deg);
 }
 
 .painel-layer-filter-field.is-placeholder,
 .painel-layer-filter-value.is-placeholder {
+  background: var(--filter-select-bg);
   color: var(--filter-select-deep);
   font-weight: 700;
 }
 
+/* Valor selecionado no campo: fundo azul PLI + fonte verde PLI (cada campo independente) */
 .painel-layer-filter-field.has-selection,
 .painel-layer-filter-value.has-selection {
+  background: var(--filter-select-deep);
   color: var(--filter-select-green);
+  border-color: var(--filter-select-green);
   font-weight: 700;
 }
 
+.painel-layer-filter-field.has-selection .slt-dd-arrow,
+.painel-layer-filter-value.has-selection .slt-dd-arrow {
+  opacity: 0.95;
+}
+
+.painel-layer-filter-field.is-disabled,
+.painel-layer-filter-value.is-disabled {
+  background: var(--filter-select-bg);
+  cursor: not-allowed;
+}
+
 .painel-layer-filter-field:focus,
-.painel-layer-filter-value:focus {
+.painel-layer-filter-value:focus,
+.painel-layer-filter-field.is-open,
+.painel-layer-filter-value.is-open {
   outline: none;
   border-color: rgba(74, 222, 128, 0.55);
   box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.35);
 }
 
-.painel-layer-filter-field option,
-.painel-layer-filter-value option {
-  font-size: var(--sb-layers-font, 0.72rem);
-  line-height: 1.3;
-  color: var(--filter-select-deep);
+.painel-layer-filter-field .slt-dd-list,
+.painel-layer-filter-value .slt-dd-list {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 1200;
+  margin: 0;
+  padding: 0.15rem;
+  list-style: none;
+  max-height: 14rem;
+  overflow-y: auto;
   background: var(--filter-select-bg);
-  font-weight: 700;
-  padding: 0.15rem 0.25rem;
+  border: 1px solid rgba(0, 59, 90, 0.2);
+  border-radius: 0.25rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
 }
 
-.painel-layer-filter-field option[disabled],
-.painel-layer-filter-value option[disabled] {
-  color: var(--filter-select-deep);
-  background: var(--filter-select-bg);
+.painel-layer-filter-field .slt-dd-option,
+.painel-layer-filter-value .slt-dd-option {
+  padding: 0.22rem 0.35rem;
+  border-radius: 0.2rem;
+  font-size: var(--sb-layers-font, 0.72rem);
   font-weight: 700;
+  color: var(--filter-select-deep);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+/* Na lista, o destaque é SÓ o fundo da célula — a fonte permanece azul PLI */
+.painel-layer-filter-field .slt-dd-option:hover,
+.painel-layer-filter-value .slt-dd-option:hover,
+.painel-layer-filter-field .slt-dd-option.is-active,
+.painel-layer-filter-value .slt-dd-option.is-active {
+  background: rgba(0, 59, 90, 0.16);
+  color: var(--filter-select-deep);
+}
+
+.painel-layer-filter-field .slt-dd-empty,
+.painel-layer-filter-value .slt-dd-empty {
+  padding: 0.22rem 0.35rem;
+  font-size: var(--sb-layers-font, 0.72rem);
+  font-weight: 700;
+  color: var(--filter-select-deep);
+  opacity: 0.6;
 }
 
 .painel-layer-filter-btn {

@@ -165,23 +165,54 @@ body.painel-dashboard-page {
 }
 
 .slt-map-zoom-scale {
+  display: none;
+}
+
+.slt-map-status-bar {
   position: absolute;
-  left: 50%;
-  bottom: 0.55rem;
-  transform: translateX(-50%);
-  z-index: 800;
-  pointer-events: none;
-  padding: 0.28rem 0.65rem;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-  font-size: 0.75rem;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 850;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 1.65rem;
+  padding: 0.2rem 0.65rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.06);
+  font-size: 0.6875rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: #334155;
   line-height: 1.2;
+  pointer-events: none;
+  user-select: none;
+}
+
+.slt-map-status-item {
   white-space: nowrap;
+}
+
+.slt-map-status-coords {
+  min-width: 11.5rem;
+}
+
+.slt-map-status-sep {
+  flex-shrink: 0;
+  width: 1px;
+  height: 0.85rem;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.slt-map-status-spacer {
+  flex: 1;
+  min-width: 0.5rem;
+}
+
+.slt-map-status-zoom {
+  color: #475569;
 }
 
 .leaflet-top.leaflet-left .slt-map-reset-zoom-control {

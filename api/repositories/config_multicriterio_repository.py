@@ -1,8 +1,8 @@
 """Acesso a dados — ahp.config_multicriterio_avulsa e ahp.config_multicriterio_portfolio.
 
-Interface única; ``tipo`` ("avulsa"|"portfolio") seleciona a tabela. A coluna
-``grupo_comparacao`` só existe (e é obrigatória) no portfólio. O binário
-``arquivo_conteudo`` nunca é exposto pela API.
+Interface única; ``tipo`` ("avulsa"|"portfolio") seleciona a tabela. As colunas de
+portfólio (``tipo_demanda_id`` e os refinos ``diretoria_id``/``plano_id``/``programa_id``)
+só existem na tabela de portfólio. O binário ``arquivo_conteudo`` nunca é exposto pela API.
 """
 from __future__ import annotations
 
@@ -14,15 +14,23 @@ from psycopg.types.json import Jsonb
 from api.db.connection import get_connection
 
 TIPO_CONFIG: dict[str, dict[str, Any]] = {
-    "avulsa": {"table": ("ahp", "config_multicriterio_avulsa"), "has_grupo": False},
-    "portfolio": {"table": ("ahp", "config_multicriterio_portfolio"), "has_grupo": True},
+    "avulsa": {"table": ("ahp", "config_multicriterio_avulsa"), "has_portfolio": False},
+    "portfolio": {"table": ("ahp", "config_multicriterio_portfolio"), "has_portfolio": True},
 }
+
+# Colunas exclusivas da tabela de portfólio (nível + refino do universo).
+# ``subconjunto`` (JSONB) guarda toda a configuração do recorte do universo.
+_PORTFOLIO_COLUMNS = ["tipo_demanda_id", "diretoria_id", "plano_id", "programa_id", "subconjunto"]
 
 # Colunas comuns às duas tabelas (sem arquivo_conteudo).
 _COMMON_COLUMNS = [
     "id",
     "codigo",
     "nome",
+    "area_conhecimento",
+    "tema",
+    "fenomeno",
+    "objetivo",
     "descricao",
     "status",
     "metodo_entrada",
@@ -47,7 +55,7 @@ _COMMON_COLUMNS = [
     "atualizado_em",
 ]
 
-_JSON_FIELDS = {"criterios", "matriz_comparacao", "pesos", "configuracao_completa"}
+_JSON_FIELDS = {"criterios", "matriz_comparacao", "pesos", "configuracao_completa", "subconjunto"}
 
 
 def _cfg(tipo: str) -> dict[str, Any]:
@@ -63,9 +71,8 @@ def _table(tipo: str) -> sql.Identifier:
 
 def _columns(tipo: str) -> list[str]:
     cols = list(_COMMON_COLUMNS)
-    if _cfg(tipo)["has_grupo"]:
-        cols.append("grupo_comparacao")
-        cols.append("tipo_demanda_id")
+    if _cfg(tipo)["has_portfolio"]:
+        cols.extend(_PORTFOLIO_COLUMNS)
     return cols
 
 
@@ -78,7 +85,6 @@ def _normalize(tipo: str, row: dict[str, Any] | None) -> dict[str, Any] | None:
         return None
     out = dict(row)
     out["tipo"] = tipo
-    out.setdefault("grupo_comparacao", None)
     return out
 
 
@@ -129,7 +135,6 @@ def list_all(
     tipo: str,
     *,
     status: str | None = None,
-    grupo: str | None = None,
     tipo_demanda_id: int | None = None,
 ) -> list[dict[str, Any]]:
     cfg = _cfg(tipo)
@@ -138,10 +143,7 @@ def list_all(
     if status:
         clauses.append(sql.SQL("status = %s"))
         params.append(status)
-    if grupo and cfg["has_grupo"]:
-        clauses.append(sql.SQL("grupo_comparacao = %s"))
-        params.append(grupo)
-    if tipo_demanda_id is not None and cfg["has_grupo"]:
+    if tipo_demanda_id is not None and cfg["has_portfolio"]:
         clauses.append(sql.SQL("tipo_demanda_id = %s"))
         params.append(tipo_demanda_id)
     where = sql.SQL("")

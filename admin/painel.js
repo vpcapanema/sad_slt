@@ -586,6 +586,18 @@
     }
   }
 
+  function mapFocusBounds() {
+    return (
+      SLTPainelMapControls.largestVisibleLayerBounds(layersByKey, (key) => {
+        const sep = key.indexOf(":");
+        if (sep === -1) return false;
+        const kind = key.slice(0, sep);
+        const id = key.slice(sep + 1);
+        return isEntryMapVisible(kind, id);
+      }) || mapLayerGroup?.getBounds?.()
+    );
+  }
+
   function buildMapLayers() {
     layersByKey.clear();
     if (mapLayerGroup) map.removeLayer(mapLayerGroup);
@@ -596,7 +608,11 @@
     sorted.forEach((e) => syncEntryVisibility(e.kind, e.id));
     applyMapLayerZOrder();
     if (mapLayerGroup.getLayers().length) {
-      SLTPainelMapControls.establishInitialPainelMapView(map, mapLayerGroup.getBounds());
+      const bounds = mapFocusBounds();
+      // setTimeout 0 garante rodar APÓS o invalidateSize agendado em initMap
+      setTimeout(() => {
+        SLTPainelMapControls.establishInitialPainelMapView(map, bounds);
+      }, 0);
     } else {
       SLTPainelMapControls.markInitialMapViewReady(map);
     }
@@ -614,7 +630,7 @@
   function focusMapOnItem(kind, id) {
     const entry = layersByKey.get(itemKey(kind, id));
     if (entry?.bounds?.isValid()) {
-      SLTPainelMapControls.fitMapToDefaultBounds(map, entry.bounds, { animate: true, rememberDefault: false });
+      SLTPainelMapControls.focusMapOnBounds(map, entry.bounds);
       return;
     }
     const e = findEntry(kind, id);

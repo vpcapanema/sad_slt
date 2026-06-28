@@ -461,6 +461,18 @@
     }
   }
 
+  function mapFocusBounds() {
+    return (
+      SLTPainelMapControls.largestVisibleLayerBounds(layersByKey, (key) => {
+        const sep = key.indexOf(":");
+        if (sep === -1) return false;
+        const tipo = key.slice(0, sep);
+        const id = key.slice(sep + 1);
+        return isRecordMapVisible(tipo, id);
+      }) || mapLayerGroup?.getBounds?.()
+    );
+  }
+
   function buildMapLayers() {
     layersByKey.clear();
     if (mapLayerGroup) map.removeLayer(mapLayerGroup);
@@ -471,7 +483,10 @@
     sorted.forEach((d) => syncEntryVisibility(d.tipo, d.id));
     applyMapLayerZOrder();
     if (mapLayerGroup.getLayers().length) {
-      SLTPainelMapControls.establishInitialPainelMapView(map, mapLayerGroup.getBounds());
+      const bounds = mapFocusBounds();
+      setTimeout(() => {
+        SLTPainelMapControls.establishInitialPainelMapView(map, bounds);
+      }, 0);
     } else {
       SLTPainelMapControls.markInitialMapViewReady(map);
     }
@@ -489,7 +504,7 @@
   function focusMapOnItem(tipo, id) {
     const entry = layersByKey.get(itemKey(tipo, id));
     if (entry?.bounds?.isValid()) {
-      SLTPainelMapControls.fitMapToDefaultBounds(map, entry.bounds, { animate: true, rememberDefault: false });
+      SLTPainelMapControls.focusMapOnBounds(map, entry.bounds);
       return;
     }
     const d = findItem(tipo, id);

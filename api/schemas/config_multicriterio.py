@@ -17,18 +17,27 @@ TipoConfig = Literal["avulsa", "portfolio"]
 class ConfigCreateSchema(BaseModel):
     tipo: TipoConfig
     nome: str = Field(..., min_length=1, max_length=200)
+    area_conhecimento: str | None = None
+    tema: str | None = None
+    fenomeno: str | None = None
+    objetivo: str | None = None
     descricao: str | None = None
-    grupo_comparacao: str | None = Field(None, max_length=120)
     tipo_demanda: str | None = Field(
         None, description="plano | programa | projeto (obrigatório para portfólio)"
     )
+    # Recorte do universo (portfólio) gravado como JSON único: filtros campo/valor.
+    subconjunto: dict[str, Any] | None = None
 
 
 class ConfigUpdateSchema(BaseModel):
     nome: str | None = Field(None, min_length=1, max_length=200)
+    area_conhecimento: str | None = None
+    tema: str | None = None
+    fenomeno: str | None = None
+    objetivo: str | None = None
     descricao: str | None = None
     status: str | None = None
-    grupo_comparacao: str | None = Field(None, max_length=120)
+    subconjunto: dict[str, Any] | None = None
     metodo_entrada: str | None = None
     metodo_comparacao: str | None = None
     n_criterios: int | None = Field(None, ge=0)
@@ -45,9 +54,14 @@ class ConfigResponseSchema(BaseModel):
     codigo: str
     tipo: TipoConfig
     nome: str
+    area_conhecimento: str | None = None
+    tema: str | None = None
+    fenomeno: str | None = None
+    objetivo: str | None = None
     descricao: str | None = None
-    grupo_comparacao: str | None = None
     tipo_demanda: str | None = None
+    tipo_demanda_nome: str | None = None
+    subconjunto: dict[str, Any] | None = None
     status: str
     metodo_entrada: str
     metodo_comparacao: str | None = None

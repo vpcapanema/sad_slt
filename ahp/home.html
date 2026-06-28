@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configuração da Análise Multicritério — SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body class="ahp-module-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Apoio à Tomada de Decisão
+        <small>Configuração da Análise Multicritério</small>
+      </div>
+      <nav class="app-nav" aria-label="Navegação principal"></nav>
+    </div>
+  </header>
+
+  <main class="app-main ahp-main">
+    <section class="card">
+      <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+        <a href="../index.html">Início</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <span class="ahp-breadcrumb-current">Configuração da Análise Multicritério</span>
+      </nav>
+      <h1 class="ahp-page-title">
+        <i class="fas fa-scale-balanced" aria-hidden="true"></i>
+        Configuração da Análise Multicritério
+      </h1>
+      <p class="ahp-page-desc">
+        Boas-vindas! Este é o ponto de partida do Sistema de Apoio à Decisão (SAD) para estruturar,
+        de forma transparente e auditável, <strong>como</strong> as demandas serão comparadas. Aqui
+        você define os critérios de decisão e calcula o peso de cada um deles.
+      </p>
+      <p class="ahp-info-note">
+        <i class="fas fa-info-circle" aria-hidden="true"></i>
+        <span>
+          Atenção: neste módulo <strong>não há hierarquização de demandas</strong>. O que se faz
+          aqui é a <strong>comparação pareada de critérios</strong> (método AHP), que produz os
+          pesos consistentes consumidos, em seguida, pelo módulo de Hierarquização de demandas.
+        </span>
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="ahp-section-label">
+        <i class="fas fa-circle-question" aria-hidden="true"></i>
+        <span>O que é uma análise multicritério?</span>
+      </div>
+      <p class="ahp-page-desc">
+        Decisões públicas raramente dependem de um único fator. Custo, impacto social, risco,
+        aderência estratégica e maturidade técnica costumam puxar para lados diferentes. A
+        <strong>análise multicritério</strong> é o conjunto de métodos que torna explícito esse
+        trade-off: em vez de decidir "no olho", você declara quais critérios importam e o quanto
+        cada um pesa, de modo que a priorização final seja justificável e reproduzível.
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="ahp-section-label">
+        <i class="fas fa-diagram-project" aria-hidden="true"></i>
+        <span>O método: AHP (Analytic Hierarchy Process)</span>
+      </div>
+      <p class="ahp-page-desc">
+        Adotamos o <strong>AHP</strong>, de Thomas L. Saaty, como ferramenta deste módulo. Em vez de
+        atribuir pesos diretamente (o que é difícil e tendencioso), o AHP trabalha com
+        <strong>comparações pareadas</strong>: você compara os critérios dois a dois usando a escala
+        de importância de Saaty. A partir dessa matriz, o sistema calcula os pesos relativos e,
+        crucialmente, mede a <strong>razão de consistência (RC)</strong> — um indicador que aponta se
+        os julgamentos foram coerentes entre si (RC &lt; 0,10).
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="ahp-section-label">
+        <i class="fas fa-sitemap" aria-hidden="true"></i>
+        <span>Onde esta etapa entra no SAD</span>
+      </div>
+      <p class="ahp-page-desc">
+        O SAD é composto por dois módulos encadeados. Este — a <strong>Configuração da Análise
+        Multicritério</strong> — é o antecessor; o módulo sucessor é a
+        <strong>Hierarquização de demandas</strong>, onde de fato os planos, programas ou projetos
+        são ranqueados. A hierarquização depende veementemente desta etapa: sem critérios definidos e
+        pesos consistentes e homologados aqui, não há régua com que comparar as demandas lá.
+      </p>
+      <div class="ahp-summary-grid">
+        <article class="ahp-summary-card">
+          <div class="ahp-summary-card__icon"><i class="fas fa-list-check" aria-hidden="true"></i></div>
+          <h2><i class="fas fa-list-check" aria-hidden="true"></i> O que se faz aqui</h2>
+          <p>
+            Estabelece-se o núcleo lógico e teórico da análise multicritério: ao definir as
+            <strong>premissas</strong> e, em seguida, os <strong>critérios</strong> que as
+            satisfazem, monta-se o arcabouço teórico-conceitual do fluxo que leva à hierarquização
+            das demandas.
+          </p>
+        </article>
+        <article class="ahp-summary-card">
+          <div class="ahp-summary-card__icon"><i class="fas fa-arrow-right-arrow-left" aria-hidden="true"></i></div>
+          <h2><i class="fas fa-arrow-right-arrow-left" aria-hidden="true"></i> Onde entra no fluxo</h2>
+          <p>
+            É o primeiro elo da decisão: a saída (critérios + pesos consistentes) alimenta
+            diretamente a rodada de hierarquização das demandas elegíveis.
+          </p>
+        </article>
+        <article class="ahp-summary-card">
+          <div class="ahp-summary-card__icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></div>
+          <h2><i class="fas fa-shield-halved" aria-hidden="true"></i> Por que importa</h2>
+          <p>
+            Garante que a priorização seja transparente, consistente e auditável — e não fruto de
+            preferências pontuais e não documentadas.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="ahp-section-label">
+        <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+        <span>Explore a ferramenta</span>
+      </div>
+      <p class="ahp-page-desc">
+        Implementamos esta etapa no SAD como uma <strong>calculadora interativa</strong> que conduz
+        você, passo a passo, da definição dos critérios até os pesos finais com verificação de
+        consistência. Comece agora.
+      </p>
+      <div class="ahp-welcome-actions">
+        <a href="index.html" class="btn btn-primary">
+          <i class="fas fa-play" aria-hidden="true"></i>
+          Explorar a calculadora
+        </a>
+      </div>
+    </section>
+  </main>
+  <script src="../assets/js/app-header.js"></script>
+  <script src="../assets/js/navbar.js"></script>
+</body>
+</html>

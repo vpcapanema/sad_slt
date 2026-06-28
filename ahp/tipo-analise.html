@@ -22,34 +22,40 @@
   <main class="app-main ahp-main">
     <section class="card">
       <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+        <a href="home.html">Configuração da Análise Multicritério</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
         <a href="index.html">Calculadora AHP</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
         <span class="ahp-breadcrumb-current">Tipo de análise</span>
       </nav>
       <h1 class="ahp-page-title">
         <i class="fas fa-code-branch" aria-hidden="true"></i>
-        Escolha o tipo de análise
+        Vamos começar a configuração
       </h1>
       <p class="ahp-page-desc">
-        Antes de definir critérios e comparações pareadas, indique se a hierarquização será
-        independente (avulsa) ou vinculada a um portfólio de projetos já cadastrados no SLT.
+        Esta é a porta de entrada da calculadora. Primeiro escolha o destino da análise (avulsa ou
+        portfólio); no portfólio, defina o universo de demandas. Em seguida, defina o escopo da
+        análise. Nas próximas etapas, você estrutura os critérios e faz as comparações pareadas
+        (método AHP/Saaty) para obter os pesos.
       </p>
       <p class="ahp-info-note">
         <i class="fas fa-info-circle" aria-hidden="true"></i>
         <span>
-          Esta escolha orienta como alternativas e projetos serão carregados nas etapas seguintes.
-          O fluxo de comparação pareada e cálculo AHP segue o mesmo motor SIGMA em ambos os modos.
+          Lembre-se: este módulo faz a <strong>comparação pareada de critérios</strong> (AHP), não a
+          hierarquização. No modo <strong>portfólio</strong>, você apenas define o nível de demanda
+          (plano, programa ou projeto) e refina o universo que depois será hierarquizado no módulo
+          seguinte. O fluxo de cálculo AHP é o mesmo nos dois modos.
         </span>
       </p>
     </section>
 
-    <section class="card">
-      <div class="ahp-section-label">
-        <i class="fas fa-sliders" aria-hidden="true"></i>
-        <span>Modo da hierarquização</span>
-      </div>
+    <form id="form-tipo-analise" novalidate>
+      <section class="card">
+        <div class="ahp-section-label">
+          <i class="fas fa-sliders" aria-hidden="true"></i>
+          <span>Destino da análise</span>
+        </div>
 
-      <form id="form-tipo-analise" novalidate>
         <div class="ahp-tipo-grid">
           <label class="ahp-tipo-card" data-tipo="avulsa">
             <input type="radio" name="tipo_analise" value="avulsa" required>
@@ -72,31 +78,169 @@
             <div class="ahp-tipo-card__icon"><i class="fas fa-folder-tree" aria-hidden="true"></i></div>
             <h3>Análise de portfólio SLT</h3>
             <p>
-              Compare projetos já homologados como objetos AHP, agrupados por grupo de comparação.
-              Integra o ranking à gestão de demandas da Subsecretaria.
+              Compare demandas já cadastradas no SLT (plano, programa ou projeto), agrupadas pelo
+              universo que você definir. Integra o ranking à gestão de demandas da Subsecretaria.
             </p>
             <ul>
-              <li>Projetos carregados de <code>objeto_ahp</code> por grupo</li>
+              <li>Demandas carregadas do schema <code>demandas</code> por nível</li>
               <li>Critérios alinhados à matriz PLI-SP</li>
               <li>Ranking pode refletir na priorização do portfólio</li>
             </ul>
           </label>
         </div>
+      </section>
 
-        <div class="ahp-form-actions">
-          <a href="index.html" class="btn btn-secondary">
-            <i class="fas fa-arrow-left" aria-hidden="true"></i>
-            Voltar
-          </a>
-          <button type="submit" class="btn btn-primary">
-            Continuar
-            <i class="fas fa-arrow-right icon-right" aria-hidden="true"></i>
-          </button>
+      <section class="card is-hidden" id="portfolio-section">
+        <div class="ahp-section-label">
+          <i class="fas fa-folder-tree" aria-hidden="true"></i>
+          <span>Universo da análise</span>
         </div>
-      </form>
-    </section>
+        <p class="ahp-page-desc">
+          Defina o universo populacional (o nível de demanda) e, em seguida, o universo amostral
+          (o recorte). O contador ao final mostra quantas demandas elegíveis entram no universo
+          com os filtros atuais.
+        </p>
+
+        <div class="ahp-subcard">
+          <div class="ahp-subsection-title">
+            <i class="fas fa-layer-group" aria-hidden="true"></i>
+            <span>Universo populacional</span>
+          </div>
+
+          <div class="c-form-group">
+            <label for="config-tipo-demanda" class="c-form-label">
+              <i class="fas fa-layer-group" aria-hidden="true"></i> Tipo de demanda
+            </label>
+            <select id="config-tipo-demanda" name="tipo_demanda_id" class="c-form-control">
+              <option value="">Selecione o tipo de demanda…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ahp-subcard">
+          <div class="ahp-subsection-title">
+            <i class="fas fa-filter" aria-hidden="true"></i>
+            <span>Universo amostral</span>
+          </div>
+
+          <div class="ahp-subsubcard">
+            <div class="ahp-subsubsection-title">
+              <i class="fas fa-sliders" aria-hidden="true"></i>
+              <span>Filtro simples</span>
+            </div>
+            <p class="ahp-page-desc">
+              Combine <strong>campo</strong> e <strong>valor</strong>. As condições são aplicadas
+              em conjunto (E).
+            </p>
+            <div id="portfolio-filtros"></div>
+            <button type="button" class="btn btn-secondary btn-sm" id="add-filtro">
+              <i class="fas fa-plus" aria-hidden="true"></i> Adicionar filtro
+            </button>
+          </div>
+
+          <div class="ahp-subsubcard">
+            <div class="ahp-subsubsection-title">
+              <i class="fas fa-code-branch" aria-hidden="true"></i>
+              <span>Filtros lógicos</span>
+            </div>
+            <p class="ahp-page-desc">
+              Combine condições com operadores booleanos (<strong>E</strong>/<strong>OU</strong>) e
+              por operador (igual, diferente, contém).
+            </p>
+            <div id="filtros-logicos"></div>
+            <button type="button" class="btn btn-secondary btn-sm" id="add-logico">
+              <i class="fas fa-plus" aria-hidden="true"></i> Adicionar condição
+            </button>
+          </div>
+
+          <div class="ahp-subsubcard">
+            <div class="ahp-subsubsection-title">
+              <i class="fas fa-table" aria-hidden="true"></i>
+              <span>Resumo</span>
+            </div>
+            <div id="portfolio-preview" class="ahp-universo-preview" role="status" aria-live="polite">
+              <i class="fas fa-database" aria-hidden="true"></i>
+              <span id="portfolio-preview-text">Selecione o tipo de demanda para ver o universo.</span>
+            </div>
+            <div id="amostra-resumo" class="ahp-resumo-wrap"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="ahp-section-label">
+          <i class="fas fa-bullseye" aria-hidden="true"></i>
+          <span>Definição do escopo da análise do portfólio</span>
+        </div>
+
+        <div class="ahp-escopo-grid">
+          <div class="c-form-group">
+            <label for="config-fenomeno" class="c-form-label">
+              <i class="fas fa-wave-square" aria-hidden="true"></i> Fenômeno
+            </label>
+            <select id="config-fenomeno" class="c-form-control">
+              <option value="">Objeto medido pelos critérios. Ex.: Favorabilidade…</option>
+            </select>
+            <input type="text" id="config-fenomeno-custom" class="c-form-control is-hidden"
+                   maxlength="200" placeholder="Digite o fenômeno">
+          </div>
+
+          <div class="c-form-group">
+            <label for="config-area" class="c-form-label">
+              <i class="fas fa-book" aria-hidden="true"></i> Área do conhecimento
+            </label>
+            <select id="config-area" class="c-form-control">
+              <option value="">Campo em que a comparação se insere. Ex.: Logística e transporte…</option>
+            </select>
+            <input type="text" id="config-area-custom" class="c-form-control is-hidden"
+                   maxlength="200" placeholder="Digite a área do conhecimento">
+          </div>
+
+          <div class="c-form-group">
+            <label for="config-tema" class="c-form-label">
+              <i class="fas fa-hashtag" aria-hidden="true"></i> Tema
+            </label>
+            <select id="config-tema" class="c-form-control">
+              <option value="">Aspecto sob o qual avalia-se. Ex.: Execução…</option>
+            </select>
+            <input type="text" id="config-tema-custom" class="c-form-control is-hidden"
+                   maxlength="200" placeholder="Digite o tema">
+          </div>
+        </div>
+
+        <div class="c-form-group">
+          <label for="config-nome" class="c-form-label">
+            <i class="fas fa-tag" aria-hidden="true"></i> Escopo (título) da análise
+          </label>
+          <input type="text" id="config-nome" name="nome" class="c-form-control"
+                 maxlength="200" required readonly
+                 placeholder="Gerado automaticamente: fenômeno + alternativas + área + à + tema">
+        </div>
+
+        <div class="c-form-group">
+          <label for="config-descricao" class="c-form-label">
+            <i class="fas fa-align-left" aria-hidden="true"></i> Descrição
+          </label>
+          <textarea id="config-descricao" name="descricao" class="c-form-control" rows="4"
+                    placeholder="Detalhamento: quais critérios serão comparados, contexto e premissas que orientam esta comparação pareada."></textarea>
+        </div>
+      </section>
+
+      <div class="ahp-form-actions">
+        <a href="index.html" class="btn btn-secondary">
+          <i class="fas fa-arrow-left" aria-hidden="true"></i>
+          Voltar
+        </a>
+        <button type="submit" class="btn btn-primary">
+          Continuar
+          <i class="fas fa-arrow-right icon-right" aria-hidden="true"></i>
+        </button>
+      </div>
+    </form>
   </main>
 
+  <script src="../assets/js/catalog.js"></script>
+  <script src="js/config-api.js"></script>
   <script src="js/tipo-analise.js"></script>
   <script src="../assets/js/app-header.js"></script>
   <script src="../assets/js/navbar.js"></script>

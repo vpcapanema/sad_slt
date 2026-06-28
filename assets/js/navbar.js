@@ -13,7 +13,7 @@
     { href: "/index.html", label: "Início" },
     { href: "/admin/painel.html", label: "Painel de demandas" },
     { href: "/admin/demandas.html", label: "Tabela de demandas" },
-    { href: "/ahp/", label: "Configuração da Análise Multicritério" },
+    { href: "/ahp/home.html", label: "Configuração da Análise Multicritério" },
     { href: "/hierarquizacao_demandas/", label: "Hierarquização de demandas" },
   ];
 

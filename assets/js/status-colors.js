@@ -674,12 +674,16 @@
     }
   }
 
+  function legendStartsExpanded(host) {
+    return host?.dataset?.legendStart !== "collapsed";
+  }
+
   function bindMapLegendToggle(host) {
     const btn = host.querySelector(".status-legend-map-toggle");
     const panel = host.querySelector(".status-legend-map-panel");
     if (!btn || !panel) return;
 
-    setMapLegendCollapsed(host, false, { silent: true });
+    setMapLegendCollapsed(host, !legendStartsExpanded(host), { silent: true });
 
     btn.addEventListener("click", () => {
       setMapLegendCollapsed(host, !host.classList.contains("is-collapsed"));
@@ -705,7 +709,14 @@
       if (overlapW > 0) right = Math.ceil(overlapW + 4);
     }
 
-    return { top, right, bottom: 8, left };
+    return { top, right, bottom: statusBarBottomPadding(), left };
+  }
+
+  function statusBarBottomPadding() {
+    const bar = document.querySelector(".slt-map-status-bar");
+    if (!bar) return 8;
+    const h = bar.getBoundingClientRect().height;
+    return h > 0 ? Math.ceil(h + 4) : 8;
   }
 
   function getMapViewportPadding(options) {
@@ -727,7 +738,7 @@
     }
 
     if (!el?.classList.contains("status-color-legend-host--map")) {
-      return { top: 8, right: 8, bottom: 8, left: sidebarLeft };
+      return { top: 8, right: 8, bottom: statusBarBottomPadding(), left: sidebarLeft };
     }
 
     if (opts.legendExpanded) {

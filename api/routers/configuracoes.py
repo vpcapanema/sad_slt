@@ -41,12 +41,11 @@ async def criar_config(
 async def listar_configs(
     tipo: str = Query(..., description="avulsa | portfolio"),
     status: str | None = Query(None),
-    grupo: str | None = Query(None),
     tipo_demanda: str | None = Query(None, description="plano | programa | projeto"),
     _user: SessionUser | None = Depends(get_optional_session),
 ) -> list[ConfigResponseSchema]:
     try:
-        return service.listar_configs(tipo, status=status, grupo=grupo, tipo_demanda=tipo_demanda)
+        return service.listar_configs(tipo, status=status, tipo_demanda=tipo_demanda)
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:

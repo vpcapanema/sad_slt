@@ -102,6 +102,156 @@
     return (items || []).filter((item) => matches(item, activeFilter));
   }
 
+  const openDropdowns = new Set();
+
+  function closeAllDropdowns(except) {
+    openDropdowns.forEach((dd) => {
+      if (dd !== except) dd.close();
+    });
+  }
+
+  if (typeof document !== "undefined") {
+    document.addEventListener("click", (e) => {
+      openDropdowns.forEach((dd) => {
+        if (!dd.el.contains(e.target)) dd.close();
+      });
+    });
+  }
+
+  /**
+   * Dropdown customizado (substitui o <select> nativo, que o Windows/Chrome
+   * renderiza de forma inconsistente). Mantém as classes do <select> original
+   * para herdar exatamente o mesmo CSS — garantindo campo e valor idênticos.
+   */
+  function createDropdown(originalEl, config) {
+    const cfg = config || {};
+    const root = document.createElement("div");
+    root.className = `slt-dd ${originalEl.className}`.trim();
+    root.tabIndex = 0;
+    root.setAttribute("role", "combobox");
+    root.setAttribute("aria-haspopup", "listbox");
+    root.setAttribute("aria-expanded", "false");
+    if (cfg.ariaLabel) root.setAttribute("aria-label", cfg.ariaLabel);
+    root.innerHTML =
+      `<span class="slt-dd-label"></span>` +
+      `<span class="slt-dd-arrow" aria-hidden="true"></span>` +
+      `<ul class="slt-dd-list" role="listbox" hidden></ul>`;
+    originalEl.replaceWith(root);
+
+    const labelEl = root.querySelector(".slt-dd-label");
+    const listEl = root.querySelector(".slt-dd-list");
+
+    let items = [];
+    let value = "";
+    let disabled = false;
+    let placeholder = cfg.placeholder || "";
+    let onChange = cfg.onChange || (() => {});
+
+    function selected() {
+      return items.find((it) => it.value === value) || null;
+    }
+
+    function syncLabel() {
+      const sel = selected();
+      const isPlaceholder = !sel;
+      labelEl.textContent = sel ? sel.label : placeholder;
+      root.classList.toggle("is-placeholder", isPlaceholder);
+      root.classList.toggle("has-selection", !isPlaceholder);
+    }
+
+    function renderList() {
+      if (!items.length) {
+        listEl.innerHTML = `<li class="slt-dd-empty" aria-disabled="true">—</li>`;
+        return;
+      }
+      listEl.innerHTML = items
+        .map(
+          (it) =>
+            `<li class="slt-dd-option${it.value === value ? " is-active" : ""}" role="option" data-value="${escapeHtml(
+              it.value
+            )}" title="${escapeHtml(it.label)}">${escapeHtml(it.label)}</li>`
+        )
+        .join("");
+    }
+
+    function open() {
+      if (disabled || !items.length) return;
+      closeAllDropdowns(api);
+      renderList();
+      listEl.hidden = false;
+      root.classList.add("is-open");
+      root.setAttribute("aria-expanded", "true");
+      openDropdowns.add(api);
+    }
+
+    function close() {
+      listEl.hidden = true;
+      root.classList.remove("is-open");
+      root.setAttribute("aria-expanded", "false");
+      openDropdowns.delete(api);
+    }
+
+    function toggle() {
+      if (listEl.hidden) open();
+      else close();
+    }
+
+    root.addEventListener("click", (e) => {
+      const opt = e.target.closest(".slt-dd-option");
+      if (opt) {
+        const next = opt.getAttribute("data-value") || "";
+        close();
+        if (next !== value) {
+          value = next;
+          syncLabel();
+          onChange(value);
+        }
+        return;
+      }
+      toggle();
+    });
+
+    root.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggle();
+      } else if (e.key === "Escape") {
+        close();
+      }
+    });
+
+    const api = {
+      el: root,
+      close,
+      setOptions(list) {
+        items = list || [];
+        if (!items.some((it) => it.value === value)) value = "";
+        renderList();
+        syncLabel();
+      },
+      setValue(v) {
+        value = v || "";
+        renderList();
+        syncLabel();
+      },
+      getValue() {
+        return value;
+      },
+      setDisabled(d) {
+        disabled = !!d;
+        root.classList.toggle("is-disabled", disabled);
+        if (disabled) close();
+      },
+      setPlaceholder(p) {
+        placeholder = p || "";
+        syncLabel();
+      },
+    };
+
+    syncLabel();
+    return api;
+  }
+
   function init(options) {
     const root =
       typeof options.container === "string"
@@ -109,11 +259,11 @@
         : options.container;
     if (!root) return null;
 
-    const fieldSel = root.querySelector(".painel-layer-filter-field");
-    const valueSel = root.querySelector(".painel-layer-filter-value");
+    const fieldOriginal = root.querySelector(".painel-layer-filter-field");
+    const valueOriginal = root.querySelector(".painel-layer-filter-value");
     const applyBtn = root.querySelector(".painel-layer-filter-btn--apply");
     const clearBtn = root.querySelector(".painel-layer-filter-btn--clear");
-    if (!fieldSel || !valueSel || !applyBtn || !clearBtn) return null;
+    if (!fieldOriginal || !valueOriginal || !applyBtn || !clearBtn) return null;
 
     let activeFilter = null;
     let selectedRawValue = "";
@@ -122,71 +272,54 @@
       statusLabel: options.statusLabel || ((code) => code),
     };
 
-    fieldSel.innerHTML =
-      `<option value="${PLACEHOLDER_VALUE}" disabled hidden>Selecione um campo</option>` +
-      FILTER_FIELDS.map(
-        (f) => `<option value="${escapeHtml(f.key)}">${escapeHtml(f.label)}</option>`
-      ).join("");
-    fieldSel.value = PLACEHOLDER_VALUE;
+    const fieldDD = createDropdown(fieldOriginal, {
+      placeholder: "Selecione um campo",
+      ariaLabel: "Campo do filtro",
+      onChange: () => {
+        selectedRawValue = "";
+        refreshValueOptions();
+      },
+    });
+    fieldDD.setOptions(FILTER_FIELDS.map((f) => ({ value: f.key, label: f.label })));
 
-    function syncFieldPlaceholderUi() {
-      const empty = !fieldSel.value;
-      fieldSel.classList.toggle("is-placeholder", empty);
-      fieldSel.classList.toggle("has-selection", !empty);
-    }
+    const valueDD = createDropdown(valueOriginal, {
+      placeholder: "Selecione um valor",
+      ariaLabel: "Valor do filtro",
+      onChange: (v) => {
+        selectedRawValue = v || "";
+      },
+    });
+    valueDD.setDisabled(true);
 
     function getAllItems() {
       const source = options.getAllItems || options.getItems;
       return (source?.() || []).map((item) => options.normalizeItem?.(item) || item);
     }
 
-    function syncValuePlaceholderUi() {
-      const empty = !valueSel.value;
-      valueSel.classList.toggle("is-placeholder", empty);
-      valueSel.classList.toggle("has-selection", !empty);
-    }
-
     function refreshValueOptions() {
-      const field = fieldSel.value;
+      const field = fieldDD.getValue();
       if (!field) {
-        valueSel.innerHTML = `<option value="${PLACEHOLDER_VALUE}" disabled hidden>Selecione um valor</option>`;
-        valueSel.disabled = true;
+        valueDD.setOptions([]);
+        valueDD.setValue("");
+        valueDD.setDisabled(true);
         selectedRawValue = "";
-        valueSel.value = PLACEHOLDER_VALUE;
-        syncValuePlaceholderUi();
         return;
       }
 
       const values = collectFieldValues(getAllItems(), field, helpers);
       const prev = activeFilter?.field === field ? activeFilter.value : selectedRawValue;
 
-      const optionsHtml = values
-        .map(
-          (v) =>
-            `<option value="${escapeHtml(v.raw)}" title="${escapeHtml(v.label)}">${escapeHtml(v.label)}</option>`
-        )
-        .join("");
-
-      valueSel.innerHTML = `<option value="${PLACEHOLDER_VALUE}" disabled hidden>Selecione um valor</option>${optionsHtml}`;
-      valueSel.disabled = !values.length;
-
-      if (!values.length) {
-        valueSel.innerHTML = `<option value="${PLACEHOLDER_VALUE}" disabled hidden>Selecione um valor</option><option value="">—</option>`;
-        selectedRawValue = "";
-        valueSel.value = PLACEHOLDER_VALUE;
-        syncValuePlaceholderUi();
-        return;
-      }
+      valueDD.setOptions(values.map((v) => ({ value: v.raw, label: v.label })));
+      valueDD.setDisabled(!values.length);
 
       const hit = values.find((v) => v.raw === prev);
       if (hit) {
-        valueSel.value = hit.raw;
+        valueDD.setValue(hit.raw);
         selectedRawValue = hit.raw;
       } else {
-        valueSel.value = PLACEHOLDER_VALUE;
+        valueDD.setValue("");
         selectedRawValue = "";
       }
-      syncValuePlaceholderUi();
     }
 
     function syncActiveUi() {
@@ -199,38 +332,23 @@
       syncActiveUi();
     }
 
-    fieldSel.addEventListener("change", () => {
-      selectedRawValue = "";
-      syncFieldPlaceholderUi();
-      refreshValueOptions();
-    });
-
-    valueSel.addEventListener("change", () => {
-      selectedRawValue = valueSel.value || "";
-      syncValuePlaceholderUi();
-    });
-
     applyBtn.addEventListener("click", () => {
-      const field = fieldSel.value;
-      const value = valueSel.value;
+      const field = fieldDD.getValue();
+      const value = valueDD.getValue();
       if (!field || !value) return;
       activeFilter = { field, value };
       selectedRawValue = value;
-      syncFieldPlaceholderUi();
-      syncValuePlaceholderUi();
       emitChange();
     });
 
     clearBtn.addEventListener("click", () => {
       activeFilter = null;
       selectedRawValue = "";
-      fieldSel.value = PLACEHOLDER_VALUE;
-      syncFieldPlaceholderUi();
+      fieldDD.setValue("");
       refreshValueOptions();
       emitChange();
     });
 
-    syncFieldPlaceholderUi();
     refreshValueOptions();
     syncActiveUi();
 

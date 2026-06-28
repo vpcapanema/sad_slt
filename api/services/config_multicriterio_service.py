@@ -23,12 +23,22 @@ from api.services import ahp_engine
 
 _STATUS_VALIDOS = frozenset({"rascunho", "calculada", "homologada", "arquivada"})
 
+# Rótulo exibível do nível de demanda (demandas.dom_tipo_demanda.nome).
+_TIPO_DEMANDA_NOME = {1: "Plano", 2: "Programa", 3: "Projeto"}
+
+# Refino do universo obrigatório por nível (agrupador natural / "pai").
+_GRUPO_OBRIGATORIO = {"plano": "diretoria_id", "programa": "plano_id", "projeto": "programa_id"}
+
 _UPDATE_FIELDS = frozenset(
     {
         "nome",
+        "area_conhecimento",
+        "tema",
+        "fenomeno",
+        "objetivo",
         "descricao",
         "status",
-        "grupo_comparacao",
+        "subconjunto",
         "metodo_entrada",
         "metodo_comparacao",
         "n_criterios",
@@ -83,14 +93,20 @@ def _criterio_nomes(criterios: list[dict[str, Any]]) -> list[str]:
 
 
 def _row_to_response(row: dict[str, Any]) -> ConfigResponseSchema:
+    tid = row.get("tipo_demanda_id")
     return ConfigResponseSchema(
         id=str(row["id"]),
         codigo=row["codigo"],
         tipo=row["tipo"],
         nome=row["nome"],
+        area_conhecimento=row.get("area_conhecimento"),
+        tema=row.get("tema"),
+        fenomeno=row.get("fenomeno"),
+        objetivo=row.get("objetivo"),
         descricao=row.get("descricao"),
-        grupo_comparacao=row.get("grupo_comparacao"),
-        tipo_demanda=TIPO_DEMANDA_ID_TO_COD.get(row.get("tipo_demanda_id")),
+        tipo_demanda=TIPO_DEMANDA_ID_TO_COD.get(tid) if tid is not None else None,
+        tipo_demanda_nome=_TIPO_DEMANDA_NOME.get(tid) if tid is not None else None,
+        subconjunto=row.get("subconjunto"),
         status=row["status"],
         metodo_entrada=row.get("metodo_entrada") or "manual",
         metodo_comparacao=row.get("metodo_comparacao"),
@@ -114,11 +130,6 @@ def _row_to_response(row: dict[str, Any]) -> ConfigResponseSchema:
 
 
 def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) -> ConfigResponseSchema:
-    if payload.tipo == "portfolio" and not payload.grupo_comparacao:
-        raise DemandaValidationError(
-            "grupo_comparacao é obrigatório para configuração de portfólio.",
-            field="grupo_comparacao",
-        )
     if payload.tipo == "portfolio" and not payload.tipo_demanda:
         raise DemandaValidationError(
             "tipo_demanda é obrigatório para configuração de portfólio.",
@@ -127,6 +138,10 @@ def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) 
     data: dict[str, Any] = {
         "codigo": _gerar_codigo(payload.tipo),
         "nome": payload.nome.strip(),
+        "area_conhecimento": payload.area_conhecimento,
+        "tema": payload.tema,
+        "fenomeno": payload.fenomeno,
+        "objetivo": payload.objetivo,
         "descricao": payload.descricao,
         "status": "rascunho",
     }
@@ -134,13 +149,23 @@ def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) 
     if criado_uuid:
         data["criado_por"] = criado_uuid
     if payload.tipo == "portfolio":
-        data["grupo_comparacao"] = payload.grupo_comparacao
-        tipo_id = TIPO_DEMANDA_COD_TO_ID.get(payload.tipo_demanda)
+        tipo_id = TIPO_DEMANDA_COD_TO_ID.get(payload.tipo_demanda or "")
         if tipo_id is None:
             raise DemandaValidationError(
                 f"tipo_demanda inválido: {payload.tipo_demanda}.", field="tipo_demanda"
             )
         data["tipo_demanda_id"] = tipo_id
+
+        # Recorte do universo persistido como JSON único (não em colunas fixas).
+        subconjunto = dict(payload.subconjunto or {})
+        obrigatorio = _GRUPO_OBRIGATORIO.get(payload.tipo_demanda or "")
+        if obrigatorio and not subconjunto.get(obrigatorio):
+            raise DemandaValidationError(
+                f"{obrigatorio} é obrigatório para configuração de portfólio do tipo "
+                f"{payload.tipo_demanda}.",
+                field=obrigatorio,
+            )
+        data["subconjunto"] = subconjunto
     return _row_to_response(repo.insert(payload.tipo, data))
 
 
@@ -148,20 +173,19 @@ def listar_configs(
     tipo: str,
     *,
     status: str | None = None,
-    grupo: str | None = None,
     tipo_demanda: str | None = None,
 ) -> list[ConfigResponseSchema]:
     _validar_tipo(tipo)
     tipo_demanda_id = None
     if tipo_demanda:
-        tipo_demanda_id = TIPO_DEMANDA_COD_TO_ID.get(tipo_demanda)
+        tipo_demanda_id = TIPO_DEMANDA_COD_TO_ID.get(tipo_demanda or "")
         if tipo_demanda_id is None:
             raise DemandaValidationError(
                 f"tipo_demanda inválido: {tipo_demanda}.", field="tipo_demanda"
             )
     return [
         _row_to_response(r)
-        for r in repo.list_all(tipo, status=status, grupo=grupo, tipo_demanda_id=tipo_demanda_id)
+        for r in repo.list_all(tipo, status=status, tipo_demanda_id=tipo_demanda_id)
     ]
 
 

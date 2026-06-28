@@ -113,8 +113,63 @@
     return Number.isInteger(z) ? String(z) : z.toFixed(2).replace(/\.?0+$/, "");
   }
 
+  function attachMapStatusBar(map, options) {
+    if (!map || map._sltStatusBarEl) return map._sltStatusBarEl;
+
+    const opts = options || {};
+    const crsCode = opts.crs || "EPSG:4326";
+    const crsName = opts.crsName || "WGS 84";
+
+    const bar = L.DomUtil.create("div", "slt-map-status-bar");
+    bar.setAttribute("aria-label", "Informações do mapa");
+    bar.innerHTML = `
+      <span class="slt-map-status-item slt-map-status-coords" aria-live="polite">—</span>
+      <span class="slt-map-status-sep" aria-hidden="true"></span>
+      <span class="slt-map-status-item slt-map-status-crs">${crsCode} (${crsName})</span>
+      <span class="slt-map-status-sep" aria-hidden="true"></span>
+      <span class="slt-map-status-item slt-map-status-scale">Escala 1:—</span>
+      <span class="slt-map-status-spacer" aria-hidden="true"></span>
+      <span class="slt-map-status-item slt-map-status-zoom">Zoom —</span>`;
+    map.getContainer().appendChild(bar);
+
+    const coordsEl = bar.querySelector(".slt-map-status-coords");
+    const scaleEl = bar.querySelector(".slt-map-status-scale");
+    const zoomEl = bar.querySelector(".slt-map-status-zoom");
+
+    function formatCoord(value) {
+      return Number(value).toFixed(5);
+    }
+
+    function mapScaleDenominator() {
+      const lat = (map.getCenter().lat * Math.PI) / 180;
+      const metersPerPixel = (156543.03392 * Math.cos(lat)) / Math.pow(2, map.getZoom());
+      return Math.max(1, Math.round(metersPerPixel * 96 * 39.3700787));
+    }
+
+    function formatScale(denominator) {
+      return `Escala 1:${denominator.toLocaleString("pt-BR")}`;
+    }
+
+    function updateStaticLabels() {
+      scaleEl.textContent = formatScale(mapScaleDenominator());
+      zoomEl.textContent = `Zoom ${formatZoomLabel(map.getZoom())}`;
+    }
+
+    map.on("mousemove", (e) => {
+      coordsEl.textContent = `${formatCoord(e.latlng.lat)}°, ${formatCoord(e.latlng.lng)}°`;
+    });
+    map.on("mouseout", () => {
+      coordsEl.textContent = "—";
+    });
+    map.on("zoom zoomend moveend", updateStaticLabels);
+    updateStaticLabels();
+
+    map._sltStatusBarEl = bar;
+    return bar;
+  }
+
   function attachZoomScale(map) {
-    if (!map || map._sltZoomScaleEl) return map._sltZoomScaleEl;
+    if (!map || map._sltZoomScaleEl || map._sltStatusBarEl) return map._sltZoomScaleEl;
 
     const el = L.DomUtil.create("div", "slt-map-zoom-scale");
     el.setAttribute("aria-live", "polite");
@@ -205,7 +260,7 @@
 
     new FineZoom({ position: "topleft" }).addTo(map);
     attachResetZoomControl(map);
-    attachZoomScale(map);
+    attachMapStatusBar(map);
 
     return map;
   }
@@ -224,8 +279,9 @@
     if (!map || !padding || !global.L) return;
     const zoom = map.getZoom();
     const centerPx = map.project(map.getCenter(), zoom);
-    const dx = (padding.left - padding.right) / 2;
-    const dy = (padding.top - padding.bottom) / 2;
+    // Centro do mapa compensa assimetria de padding (equivalente a mover conteúdo para oeste quando right > left)
+    const dx = (padding.right - padding.left) / 2;
+    const dy = (padding.bottom - padding.top) / 2;
     const next = map.unproject(L.point(centerPx.x + dx, centerPx.y + dy), zoom);
     map.setView(next, zoom, { animate: true });
   }
@@ -263,15 +319,57 @@
     return bestLatLng;
   }
 
-  function legendLayoutPanDx(prev, next) {
-    return ((prev.right || 0) - (next.right || 0)) / 2;
+  function largestVisibleLayerBounds(layersByKey, isVisibleFn) {
+    if (!layersByKey?.size) return null;
+    let bestBounds = null;
+    let bestArea = 0;
+    layersByKey.forEach((entry, key) => {
+      if (isVisibleFn && !isVisibleFn(key, entry)) return;
+      let bounds = entry.bounds;
+      if (!bounds?.isValid?.() && entry.latlng) {
+        bounds = L.latLngBounds([entry.latlng, entry.latlng]);
+      }
+      const area = boundsEnvelopeArea(bounds);
+      if (area > bestArea) {
+        bestArea = area;
+        bestBounds = bounds;
+      }
+    });
+    return bestBounds?.isValid?.() ? bestBounds : null;
   }
 
-  function panMapHorizontally(map, dx, animate) {
+  /**
+   * Deslocamento horizontal do CONTEÚDO geográfico na tela (panBy do Leaflet):
+   *   dx > 0  → polígonos/marcadores movem para a ESQUERDA (oeste visual)
+   *   dx < 0  → polígonos/marcadores movem para a DIREITA  (leste visual)
+   */
+  function panMapContentX(map, dx, animate) {
     if (!map || !global.L || Math.abs(dx) < 1) return;
     const zoom = map.getZoom();
     map.panBy([dx, 0], { animate: animate !== false });
     if (map.getZoom() !== zoom) map.setZoom(zoom);
+  }
+
+  /** Delta de padding.right entre dois estados → pixels para panMapContentX. */
+  function paddingRightDeltaToContentPanDx(prev, next) {
+    return ((next.right || 0) - (prev.right || 0)) / 2;
+  }
+
+  /** Metade do espaço à direita que a legenda expandida ocupa além da margem neutra. */
+  function legendWestOffsetFromCenterPx() {
+    const neutralRight = 8;
+    const expanded =
+      global.SLTStatusColors?.getMapViewportPadding?.() || { right: neutralRight };
+    return Math.max(0, ((expanded.right || 0) - neutralRight) / 2);
+  }
+
+  /** Largura, em pixels (zoom atual), do retângulo envolvente. */
+  function boundsPixelWidth(map, bounds) {
+    if (!map || !bounds?.isValid?.() || !global.L) return 0;
+    const zoom = map.getZoom();
+    const west = map.project(bounds.getNorthWest(), zoom);
+    const east = map.project(bounds.getNorthEast(), zoom);
+    return Math.abs(east.x - west.x);
   }
 
   function adjustMapForLegendLayout(map, options) {
@@ -288,14 +386,14 @@
       map._sltLastLegendPadding = next;
       return;
     }
-    panMapHorizontally(map, legendLayoutPanDx(prev, next), true);
+    panMapContentX(map, paddingRightDeltaToContentPanDx(prev, next), true);
     map._sltLastLegendPadding = next;
   }
 
-  function markInitialMapViewReady(map) {
+  function markInitialMapViewReady(map, rememberPadding) {
     if (!map) return;
     map._sltInitialViewReady = true;
-    rememberLegendPadding(map);
+    if (rememberPadding !== false) rememberLegendPadding(map);
   }
 
   function fitMapToDefaultBounds(map, bounds, extraOptions) {
@@ -315,23 +413,89 @@
     rememberLegendPadding(map);
   }
 
+  /**
+   * Largura horizontal (px no container) disponível para centralizar as camadas:
+   * largura do canvas do mapa MENOS a faixa ocupada pelo card da legenda expandida.
+   * Retorna { availableWidth, height }.
+   */
+  function availableCenteringArea(map) {
+    const mapEl = map.getContainer();
+    const mapRect = mapEl.getBoundingClientRect();
+    const legendEl = document.getElementById("status-legend");
+    let legendLeft = mapRect.right; // sem legenda → usa o canvas inteiro
+    if (legendEl) {
+      const lr = legendEl.getBoundingClientRect();
+      if (lr.width && lr.height) legendLeft = lr.left;
+    }
+    const availableWidth = Math.max(0, legendLeft - mapRect.left);
+    return { availableWidth, height: mapRect.height };
+  }
+
+  /**
+   * Zoom-in numa camada (clique na sidebar). Usa padding pequeno e simétrico,
+   * SEM o padding da legenda expandida (que faria o mapa diminuir o zoom).
+   */
+  function focusMapOnBounds(map, bounds, opts) {
+    if (!map || !bounds?.isValid?.() || !global.L) return;
+    const options = opts || {};
+    const isPoint = bounds.getSouthWest().equals(bounds.getNorthEast());
+    if (isPoint) {
+      map.setView(bounds.getCenter(), options.pointZoom || 13, { animate: true });
+      return;
+    }
+    map.fitBounds(bounds.pad(0.12), {
+      padding: [30, 30],
+      maxZoom: options.maxZoom || 14,
+      animate: true,
+    });
+  }
+
   function establishInitialPainelMapView(map, bounds) {
     if (!map || !bounds?.isValid?.()) {
       markInitialMapViewReady(map);
       return;
     }
+    // Tamanho real do container ANTES de qualquer cálculo (evita fit em tamanho errado)
+    map.invalidateSize();
+
+    // Legenda expandida no estado final (data-legend-start="expanded" no HTML)
     global.SLTStatusColors?.setMapLegendCollapsed?.("status-legend", false, { silent: true });
     map.invalidateSize();
-    fitMapToDefaultBounds(map, bounds, {
+
+    // 1) Zoom fixo 7,5 (fitBounds só para fixar a escala; o centro é recalculado abaixo)
+    map.fitBounds(bounds.pad(MAP_BOUNDS_GEO_PAD), {
       maxZoom: DEFAULT_PAINEL_ZOOM,
       minZoom: DEFAULT_PAINEL_ZOOM,
     });
     if (Math.abs(map.getZoom() - DEFAULT_PAINEL_ZOOM) > 0.01) {
       map.setZoom(DEFAULT_PAINEL_ZOOM);
     }
-    rememberLegendPadding(map);
+
+    // 2) Centraliza o envelope das camadas na faixa = (canvas − card da legenda)
+    const zoom = map.getZoom();
+    const size = map.getSize();
+    const { availableWidth } = availableCenteringArea(map);
+    const targetX = availableWidth / 2; // centro horizontal da área livre (à esquerda da legenda)
+    const targetY = size.y / 2; // mesma latitude (vertical inalterado)
+
+    const boundsCenterPx = map.project(bounds.getCenter(), zoom);
+    // containerPoint(latlng) = project(latlng) - project(center) + size/2
+    // Para que o centro do envelope caia em (targetX, targetY):
+    const centerPx = L.point(
+      boundsCenterPx.x + size.x / 2 - targetX,
+      boundsCenterPx.y + size.y / 2 - targetY
+    );
+    map.setView(map.unproject(centerPx, zoom), zoom, { animate: false });
+
+    map._sltLastLegendPadding =
+      global.SLTStatusColors?.getMapViewportPadding?.() || {
+        top: 8,
+        right: 8,
+        bottom: 8,
+        left: 8,
+      };
     saveDefaultMapView(map, { legendExpanded: true });
-    markInitialMapViewReady(map);
+    markInitialMapViewReady(map, false);
   }
 
   global.SLTPainelMapControls = {
@@ -349,13 +513,16 @@
     zoomStepForLevel,
     formatZoomLabel,
     attachZoomScale,
+    attachMapStatusBar,
     initPainelMap,
     fitMapToDefaultBounds,
+    focusMapOnBounds,
     establishInitialPainelMapView,
     saveDefaultMapView,
     DEFAULT_PAINEL_ZOOM,
     panMapToViewportPadding,
     largestVisibleFocusLatLng,
+    largestVisibleLayerBounds,
     adjustMapForLegendLayout,
     markInitialMapViewReady,
     rememberLegendPadding,

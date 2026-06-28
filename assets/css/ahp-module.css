@@ -18,11 +18,12 @@
 }
 
 .ahp-page-desc {
-  margin: 0 auto 1.25rem;
+  margin: 0 0 1.25rem;
   font-size: 0.9375rem;
   color: var(--pli-muted);
   line-height: 1.6;
   max-width: 820px;
+  text-align: left;
 }
 
 .ahp-module-page .ahp-step-intro,
@@ -1928,4 +1929,249 @@ a.ahp-progress-step:hover {
   outline: none;
   border-color: var(--pli-blue, #116593);
   box-shadow: 0 0 0 3px rgba(17, 101, 147, 0.15);
+}
+
+/* ===========================================================================
+   Tipo de análise: cabeçalho + universo do portfólio
+   =========================================================================== */
+.ahp-module-page .is-hidden {
+  display: none !important;
+}
+
+/* Garante largura plena dos campos do cabeçalho/refino nestas seções */
+.ahp-module-page #portfolio-section .c-form-group,
+.ahp-module-page #form-tipo-analise > .card > .c-form-group {
+  max-width: 640px;
+}
+
+.ahp-escopo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.ahp-escopo-grid .c-form-group {
+  margin-bottom: 0;
+}
+
+.ahp-escopo-grid input[id$="-custom"] {
+  margin-top: 0.5rem;
+}
+
+/* Subseções dentro de um card (ex.: Universo populacional / amostral) */
+/* Subcard: caixa com a mesma borda dos cards de "Destino da análise". */
+.ahp-subcard {
+  padding: 1.25rem;
+  border: 2px solid var(--pli-border);
+  border-radius: var(--pli-radius);
+  background: var(--pli-white);
+  box-shadow: var(--pli-shadow);
+}
+
+.ahp-subcard + .ahp-subcard {
+  margin-top: 1rem;
+}
+
+/* Subtítulo de subseção: ícone + título, SEM cabeçalho preenchido. */
+.ahp-subsection-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pli-deep, #0d3b66);
+}
+
+.ahp-subsection-title i {
+  font-size: 0.9rem;
+  color: var(--pli-green);
+}
+
+/* Tipo de demanda ocupa a largura total do card */
+#config-tipo-demanda {
+  width: 100%;
+}
+
+/* Linha de filtro do universo amostral: campo + valor + remover */
+.ahp-filtro-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.5rem;
+  align-items: start;
+  margin-bottom: 0.5rem;
+}
+
+/* Cabeçalho de colunas das grades de filtro */
+.ahp-filtro-head {
+  margin-bottom: 0.25rem;
+}
+
+.ahp-filtro-head span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--pli-muted, #64748b);
+}
+
+.ahp-valor-cell input[type="text"] {
+  margin-top: 0.4rem;
+}
+
+.ahp-filtro-remove {
+  border: 1px solid var(--pli-border);
+  background: var(--pli-white);
+  color: var(--pli-muted, #64748b);
+  border-radius: var(--pli-radius);
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+}
+
+.ahp-filtro-remove:hover {
+  color: #c0392b;
+  border-color: #c0392b;
+}
+
+#add-filtro,
+#add-logico {
+  margin: 0.25rem 0 0.75rem;
+}
+
+/* Caixa de subseção interna (Filtro simples / lógicos / Resumo) */
+.ahp-subsubcard {
+  border: 1px solid var(--pli-border);
+  border-radius: var(--pli-radius);
+  padding: 0.9rem 1rem;
+  background: #fbfdff;
+}
+
+.ahp-subsubcard + .ahp-subsubcard {
+  margin-top: 0.75rem;
+}
+
+/* Célula de valor: select único ou período (dois date inputs) */
+.ahp-valor-cell {
+  display: block;
+}
+
+.ahp-valor-cell select {
+  width: 100%;
+}
+
+.ahp-valor-cell--data {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+/* Subtítulo de subseção interna (Filtro simples / lógicos / Resumo) */
+.ahp-subsubsection-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 1rem 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--pli-muted, #475569);
+}
+
+.ahp-subsubsection-title i {
+  color: var(--pli-green);
+}
+
+.ahp-subsubcard .ahp-subsubsection-title:first-child {
+  margin-top: 0;
+}
+
+/* Linha de filtro lógico: conector + campo + operador + valor + remover */
+.ahp-logico-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 130px 1fr auto;
+  gap: 0.5rem;
+  align-items: start;
+  margin-bottom: 0.5rem;
+}
+
+.ahp-conector-fixo {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--pli-muted, #64748b);
+  text-align: center;
+}
+
+/* Tabela de resumo da amostra */
+.ahp-resumo-wrap {
+  margin-top: 0.75rem;
+  overflow-x: auto;
+}
+
+.ahp-resumo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.ahp-resumo-table th,
+.ahp-resumo-table td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--pli-border, #e2e8f0);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ahp-resumo-table thead th {
+  background: var(--pli-deep, #0d3b66);
+  color: #fff;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+}
+
+.ahp-resumo-table tbody tr:nth-child(even) {
+  background: #f7fafc;
+}
+
+/* Título gerado automaticamente: somente leitura, com destaque suave */
+.ahp-module-page #config-nome[readonly] {
+  background: #f3f8fc;
+  font-weight: 700;
+  color: var(--pli-deep, #0d3b66);
+  cursor: default;
+}
+
+.ahp-refino-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.ahp-refino-grid .c-form-group {
+  margin-bottom: 0;
+}
+
+.ahp-universo-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--pli-border, #c9d6e2);
+  border-radius: 8px;
+  background: #f3f8fc;
+  font-size: 0.875rem;
+  color: var(--pli-deep, #0d3b66);
+  font-weight: 600;
+}
+
+.ahp-universo-preview i {
+  color: var(--pli-blue, #116593);
 }
