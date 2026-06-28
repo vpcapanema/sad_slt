@@ -306,6 +306,11 @@
     const allRecords = groups.flatMap((g) => g.records || []);
     const findRecord = (id) => allRecords.find((r) => getRecordId(r) === id);
     const expandState = expandStateForContainer(container);
+    if (options.defaultGroupsExpanded) {
+      groups.forEach((group) => {
+        if (expandState[group.id] === undefined) expandState[group.id] = true;
+      });
+    }
 
     container.innerHTML = groups
       .map((group) => {

@@ -481,6 +481,7 @@
       containerSelector: "#layers-container",
       countSelector: "#projetos-count",
       emptySelector: "#lista-vazia-projetos",
+      defaultGroupsExpanded: true,
       groups: SIDEBAR_GRUPOS.map((g) => ({
         id: g.id,
         label: g.label,

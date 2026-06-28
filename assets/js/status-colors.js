@@ -659,22 +659,30 @@
     style.textContent = `:root{\n${rootVars.join("\n")}\n}\n${rules.join("\n")}\n${pulseCss}`;
   }
 
+  function setMapLegendCollapsed(hostOrId, collapsed, options) {
+    const host =
+      typeof hostOrId === "string" ? document.querySelector(hostOrId) : hostOrId;
+    if (!host) return;
+    const btn = host.querySelector(".status-legend-map-toggle");
+    const panel = host.querySelector(".status-legend-map-panel");
+    if (!btn || !panel) return;
+    host.classList.toggle("is-collapsed", collapsed);
+    btn.setAttribute("aria-expanded", String(!collapsed));
+    panel.hidden = collapsed;
+    if (!options?.silent) {
+      host.dispatchEvent(new CustomEvent("slt-legend-layout", { bubbles: true }));
+    }
+  }
+
   function bindMapLegendToggle(host) {
     const btn = host.querySelector(".status-legend-map-toggle");
     const panel = host.querySelector(".status-legend-map-panel");
     if (!btn || !panel) return;
 
-    const setCollapsed = (collapsed) => {
-      host.classList.toggle("is-collapsed", collapsed);
-      btn.setAttribute("aria-expanded", String(!collapsed));
-      panel.hidden = collapsed;
-      host.dispatchEvent(new CustomEvent("slt-legend-layout", { bubbles: true }));
-    };
-
-    setCollapsed(true);
+    setMapLegendCollapsed(host, false, { silent: true });
 
     btn.addEventListener("click", () => {
-      setCollapsed(!host.classList.contains("is-collapsed"));
+      setMapLegendCollapsed(host, !host.classList.contains("is-collapsed"));
     });
   }
 
@@ -840,6 +848,7 @@
     decorateLeafletLayer,
     injectTheme,
     renderLegend,
+    setMapLegendCollapsed,
     getMapLegendPadding,
     getMapViewportPadding,
     mapFitBoundsOptions,

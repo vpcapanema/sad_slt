@@ -358,6 +358,7 @@
       containerSelector: "#layers-container",
       countSelector: "#demandas-count",
       emptySelector: "#lista-vazia",
+      defaultGroupsExpanded: true,
       groups: SIDEBAR_GRUPOS.map((g) => ({
         id: g.id,
         label: g.label,

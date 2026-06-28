@@ -148,12 +148,18 @@
 
   const DEFAULT_PAINEL_ZOOM = 7.5;
 
-  function saveDefaultMapView(map) {
+  function saveDefaultMapView(map, options) {
     if (!map) return;
     map._sltDefaultCenter = map.getCenter();
     map._sltDefaultZoom = map.getZoom();
+    map._sltDefaultLegendExpanded = options?.legendExpanded !== false;
     map._sltRestoreDefaultView = () => {
       if (!map._sltDefaultCenter) return;
+      global.SLTStatusColors?.setMapLegendCollapsed?.(
+        "status-legend",
+        !map._sltDefaultLegendExpanded,
+        { silent: true }
+      );
       map.setView(map._sltDefaultCenter, map._sltDefaultZoom, { animate: true });
       rememberLegendPadding(map);
     };
@@ -257,14 +263,6 @@
     return bestLatLng;
   }
 
-  function collapsedLegendWestOffsetPx() {
-    const collapsed =
-      global.SLTStatusColors?.getMapViewportPadding?.() || { right: 8, left: 8, top: 8, bottom: 8 };
-    const expanded =
-      global.SLTStatusColors?.getMapViewportPadding?.({ legendExpanded: true }) || collapsed;
-    return Math.max(0, ((expanded.right || 0) - (collapsed.right || 0)) / 2);
-  }
-
   function legendLayoutPanDx(prev, next) {
     return ((prev.right || 0) - (next.right || 0)) / 2;
   }
@@ -322,6 +320,8 @@
       markInitialMapViewReady(map);
       return;
     }
+    global.SLTStatusColors?.setMapLegendCollapsed?.("status-legend", false, { silent: true });
+    map.invalidateSize();
     fitMapToDefaultBounds(map, bounds, {
       maxZoom: DEFAULT_PAINEL_ZOOM,
       minZoom: DEFAULT_PAINEL_ZOOM,
@@ -329,9 +329,8 @@
     if (Math.abs(map.getZoom() - DEFAULT_PAINEL_ZOOM) > 0.01) {
       map.setZoom(DEFAULT_PAINEL_ZOOM);
     }
-    panMapHorizontally(map, collapsedLegendWestOffsetPx(), false);
     rememberLegendPadding(map);
-    saveDefaultMapView(map);
+    saveDefaultMapView(map, { legendExpanded: true });
     markInitialMapViewReady(map);
   }
 
