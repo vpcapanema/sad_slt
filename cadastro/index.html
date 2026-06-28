@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cadastro de demandas — SLT</title>
-  <link rel="stylesheet" href="../assets/css/app.css?v=20250627g">
+  <link rel="stylesheet" href="../assets/css/app.css?v=20250627t">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" crossorigin="">
 </head>
-<body>
+<body class="cadastro-page">
   <header class="app-header">
     <div class="app-header-inner">
       <div class="app-brand">
@@ -321,7 +322,7 @@
         <div class="form-subsection">
           <h3><span class="cadastro-subsec-num">1.1</span> <span data-subsection-title>Revisão</span></h3>
           <p class="step-intro">Confira todos os dados informados nas seções anteriores e clique em Enviar demanda para concluir o cadastro.</p>
-          <div id="review" class="review-box"></div>
+          <div id="review" class="review-panel" aria-live="polite"></div>
         </div>
 
         <div class="btn-row">
@@ -558,13 +559,90 @@
         <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Área de abrangência</span> <span class="req">*</span></h2>
         <p class="step-intro">Defina a granularidade territorial e confira o preview da área no mapa.</p>
         <div id="pg-abrangencia"></div>
+        <div class="form-subsection">
+          <h3><span class="cadastro-subsec-num">1.1</span> <span data-subsection-title>Revisão</span></h3>
+          <p class="step-intro">Confira os dados informados nas seções anteriores. Os valores são atualizados automaticamente conforme você preenche o formulário.</p>
+          <div id="pg-review" class="review-panel" aria-live="polite">
+            <section class="review-section">
+              <h4 class="review-section-title">Informações cadastrais</h4>
+              <div class="review-rows">
+                <div class="review-row">
+                  <span class="review-label">Nome do programa</span>
+                  <span class="review-value" id="pg-review-nome">—</span>
+                </div>
+                <div class="review-row">
+                  <span class="review-label">Descrição</span>
+                  <span class="review-value" id="pg-review-descricao">—</span>
+                </div>
+                <div class="review-row">
+                  <span class="review-label">Objetivo</span>
+                  <span class="review-value" id="pg-review-objetivo">—</span>
+                </div>
+                <div class="review-row">
+                  <span class="review-label">Vínculo institucional</span>
+                  <span class="review-value" id="pg-review-vinculo">—</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="review-section pg-review-conditional hidden" id="pg-review-sec-contexto">
+              <h4 class="review-section-title">Contexto institucional estratégico</h4>
+              <div class="review-rows">
+                <div class="review-row" id="pg-review-plano-row">
+                  <span class="review-label">Plano vinculado</span>
+                  <span class="review-value" id="pg-review-plano">—</span>
+                </div>
+                <div class="review-row" id="pg-review-diretoria-row">
+                  <span class="review-label">Diretoria (herdada)</span>
+                  <span class="review-value" id="pg-review-diretoria">—</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="review-section">
+              <h4 class="review-section-title">Proponente do cadastro</h4>
+              <div class="review-rows">
+                <div class="review-row">
+                  <span class="review-label">Instituição interessada</span>
+                  <span class="review-value" id="pg-review-instituicao">—</span>
+                </div>
+                <div class="review-row">
+                  <span class="review-label">CNPJ</span>
+                  <span class="review-value" id="pg-review-cnpj">—</span>
+                </div>
+                <div class="review-row">
+                  <span class="review-label">Representante legal</span>
+                  <span class="review-value" id="pg-review-representante">—</span>
+                </div>
+                <div class="review-row">
+                  <span class="review-label">E-mail</span>
+                  <span class="review-value" id="pg-review-email">—</span>
+                </div>
+                <div class="review-row">
+                  <span class="review-label">Telefone</span>
+                  <span class="review-value" id="pg-review-telefone">—</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="review-section">
+              <div id="pg-review-enquadramento"></div>
+              <div class="review-rows">
+                <div class="review-row review-row--warn pg-review-conditional hidden" id="pg-review-containment-row">
+                  <span class="review-label">Confronto com a abrangência do plano vinculado</span>
+                  <span class="review-value" id="pg-review-containment">—</span>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
         <div class="btn-row">
           <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
           <button type="submit" class="btn btn-primary">Cadastrar programa</button>
         </div>
       </section>
 
-      <section class="card step-panel pg-step-panel cadastro-section cadastro-section--suspended hidden" data-step="5" hidden aria-hidden="true">
+      <section class="card step-panel pg-step-panel cadastro-section cadastro-section--suspended hidden" data-step="5" hidden inert>
         <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Execução e recursos</span></h2>
         <p class="step-intro">Descreva o público-alvo, a justificativa e os dados de execução deste programa, se souber.</p>
         <div class="form-grid">
@@ -602,10 +680,10 @@
   <script src="../assets/js/demandas-api.js"></script>
   <script src="../assets/js/catalog.js"></script>
   <script src="spatial-constraint.js"></script>
-  <script src="geometria.js"></script>
-  <script src="abrangencia.js?v=20250627i"></script>
+  <script src="geometria.js?v=20250627n"></script>
+  <script src="abrangencia.js?v=20250627s"></script>
   <script src="../assets/js/app-header.js"></script>
   <script src="../assets/js/navbar.js"></script>
-  <script src="cadastro.js"></script>
+  <script src="cadastro.js?v=20250627t"></script>
 </body>
 </html>

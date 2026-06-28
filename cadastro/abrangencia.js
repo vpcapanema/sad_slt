@@ -307,7 +307,13 @@
         const sel = $("tipo");
         sel.innerHTML =
           '<option value="">Selecione…</option>' +
-          tipos.map((t) => `<option value="${escapeHtml(t.codigo)}">${escapeHtml(t.nome)}</option>`).join("");
+          tipos
+            .map((t) => {
+              const label =
+                t.descricao && t.descricao !== t.nome ? t.descricao : t.nome;
+              return `<option value="${escapeHtml(t.codigo)}">${escapeHtml(label)}</option>`;
+            })
+            .join("");
       } catch (err) {
         $("tipo").innerHTML = '<option value="">Falha ao carregar regionalizações</option>';
       }
@@ -352,6 +358,8 @@
 
     return {
       getSelectedIds: () => Array.from(selected.keys()),
+      getSelectedItems: () =>
+        Array.from(selected.entries()).map(([id, info]) => ({ id, nome: info.nome, tipo: info.tipo })),
       reset: () => {
         selected.clear();
         renderChips();
@@ -374,7 +382,10 @@
       clearParentReference: () => setParentReference(null),
       isOutsideParent: () => Boolean(lastContainment && lastContainment.status !== "inside"),
       getContainment: () => lastContainment,
-      isSpatialAcknowledged: () => Boolean($("spatial-ack")?.checked),
+      isSpatialAcknowledged: () => {
+        if (!lastContainment || lastContainment.status === "inside") return true;
+        return Boolean($("spatial-ack")?.checked);
+      },
       setSubsectionNumbers: (sectionNumber) => applySubsectionNumbers(container, sectionNumber),
     };
   }

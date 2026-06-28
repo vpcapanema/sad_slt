@@ -48,6 +48,7 @@
 
   function resetSpatialAck() {
     spatialOutside = false;
+    lastContainment = null;
     const ack = document.getElementById("map-spatial-ack");
     if (ack) ack.checked = false;
     const row = document.getElementById("map-spatial-ack-row");
@@ -56,31 +57,64 @@
     if (warn) warn.textContent = "";
   }
 
-  function updateSpatialWarning(geom) {
+  async function updateSpatialWarning(geom) {
     const row = document.getElementById("map-spatial-ack-row");
     const warn = document.getElementById("map-spatial-warn");
     if (!geom || !global.SLTSpatialConstraint?.hasParent()) {
       resetSpatialAck();
       return;
     }
-    const check = SLTSpatialConstraint.checkDemandaGeometria(geom);
-    if (check.intersects) {
-      resetSpatialAck();
+    const meta = SLTSpatialConstraint.getMeta() || {};
+    try {
+      const result = await SLTDemandasApi.analyzeContainment({
+        geometry: { type: geom.tipo, coordinates: geom.coordinates },
+        parent_unidade_ids: SLTSpatialConstraint.getParentIds(),
+        child_kind: meta.childKind || "projeto",
+        ref_kind: meta.refKind || "plano",
+      });
+      lastContainment = result;
+      spatialOutside = result.status !== "inside";
+      if (result.status === "inside") {
+        if (row) row.classList.add("hidden");
+        if (warn) warn.textContent = "";
+        const ack = document.getElementById("map-spatial-ack");
+        if (ack) ack.checked = false;
+        return;
+      }
+      if (warn) warn.textContent = result.message || "";
+      if (row) row.classList.remove("hidden");
+      const ack = document.getElementById("map-spatial-ack");
+      if (ack) ack.checked = false;
+    } catch (err) {
+      lastContainment = null;
+      spatialOutside = false;
+      if (row) row.classList.add("hidden");
+      if (warn) warn.textContent = "";
+    }
+  }
+
+  async function refreshRegionalidades(geom) {
+    if (!geom) {
+      regionalidades = null;
       return;
     }
-    spatialOutside = true;
-    if (warn) warn.textContent = check.message || SLTSpatialConstraint.getOutsideMessage();
-    if (row) row.classList.remove("hidden");
-    const ack = document.getElementById("map-spatial-ack");
-    if (ack) ack.checked = false;
+    try {
+      const result = await SLTDemandasApi.locateGeometry({
+        type: geom.tipo,
+        coordinates: geom.coordinates,
+      });
+      regionalidades = result.regionalidades || null;
+    } catch (err) {
+      regionalidades = null;
+    }
   }
 
   function isOutsideParent() {
-    return spatialOutside;
+    return Boolean(lastContainment && lastContainment.status !== "inside");
   }
 
   function isSpatialAcknowledged() {
-    if (!spatialOutside) return true;
+    if (!isOutsideParent()) return true;
     return Boolean(document.getElementById("map-spatial-ack")?.checked);
   }
 
@@ -213,9 +247,19 @@
   function clearLayers() {
     if (drawnItems) drawnItems.clearLayers();
     if (markerLayer) markerLayer.clearLayers();
+  }
+
+  function disableDrawControl() {
     if (drawControl) {
       drawControl.disable();
       drawControl = null;
+    }
+  }
+
+  /** Ordem visual: panes (user 450 > parent 350) + referência do vínculo ao fundo. */
+  function stackUserGeometryAboveParent() {
+    if (parentLayer && typeof parentLayer.bringToBack === "function") {
+      parentLayer.bringToBack();
     }
   }
 
@@ -294,6 +338,8 @@
     clearLayers();
     if (!geom || !map) {
       resetSpatialAck();
+      regionalidades = null;
+      notifyAnalysisChange();
       setStatus(
         parentFc?.features?.length
           ? "Indique a localização no mapa. A área tracejada laranja é a abrangência do vínculo."
@@ -308,18 +354,16 @@
 
     if (geom.tipo === "Point") {
       const [lng, lat] = geom.coordinates;
-      const m = L.marker([lat, lng], { pane: "userGeometryPane" });
-      markerLayer.addLayer(m);
-      if (parentLayer) parentLayer.bringToBack();
-      m.bringToFront();
+      const marker = L.marker([lat, lng], { pane: "userGeometryPane" });
+      markerLayer.addLayer(marker);
+      stackUserGeometryAboveParent();
       fitMapView();
       setStatus(`Ponto: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
     } else if (geom.tipo === "Polygon") {
       const latlngs = geom.coordinates[0].map(([lng, lat]) => [lat, lng]);
       const poly = L.polygon(latlngs, { ...USER_POLY_STYLE, pane: "userGeometryPane" });
       drawnItems.addLayer(poly);
-      if (parentLayer) parentLayer.bringToBack();
-      poly.bringToFront();
+      stackUserGeometryAboveParent();
       fitMapView();
       const n = geom.coordinates[0].length - 1;
       if (ref) {
@@ -329,6 +373,7 @@
           fillColor: "#e74c3c",
           fillOpacity: 0.9,
           weight: 2,
+          pane: "userGeometryPane",
         });
         markerLayer.addLayer(cm);
         setStatus(
@@ -341,8 +386,7 @@
       const latlngs = geom.coordinates.map(([lng, lat]) => [lat, lng]);
       const line = L.polyline(latlngs, { ...USER_LINE_STYLE, pane: "userGeometryPane" });
       drawnItems.addLayer(line);
-      if (parentLayer) parentLayer.bringToBack();
-      line.bringToFront();
+      stackUserGeometryAboveParent();
       fitMapView();
       if (ref) {
         const cm = L.circleMarker([ref.lat, ref.lng], {
@@ -351,6 +395,7 @@
           fillColor: "#e74c3c",
           fillOpacity: 0.9,
           weight: 2,
+          pane: "userGeometryPane",
         });
         markerLayer.addLayer(cm);
         setStatus(
@@ -359,7 +404,9 @@
       }
     }
     setError("");
-    updateSpatialWarning(geom);
+    updateSpatialWarning(geom).then(() =>
+      refreshRegionalidades(geom).then(() => notifyAnalysisChange())
+    );
   }
 
   function buildGeometriaPayload(tipo, coordinates) {
@@ -390,10 +437,7 @@
   }
 
   function enableMapClick() {
-    if (drawControl) {
-      drawControl.disable();
-      drawControl = null;
-    }
+    disableDrawControl();
     map.off("click", onMapClick);
     map.on("click", onMapClick);
   }
@@ -405,9 +449,9 @@
 
   function enableDrawMarker() {
     map.off("click", onMapClick);
-    if (drawControl) drawControl.disable();
+    disableDrawControl();
     drawControl = new L.Draw.Marker(map, {
-      shapeOptions: { color: "#116593" },
+      shapeOptions: { color: "#116593", pane: "userGeometryPane" },
     });
     drawControl.enable();
   }
@@ -463,10 +507,12 @@
     markerLayer = new L.FeatureGroup().addTo(map);
 
     map.on(L.Draw.Event.CREATED, (e) => {
-      if (e.layer instanceof L.Marker) {
-        const ll = e.layer.getLatLng();
-        setPointFromLatLng(ll.lat, ll.lng);
-      }
+      if (!(e.layer instanceof L.Marker)) return;
+      const ll = e.layer.getLatLng();
+      if (e.layer._map) e.layer._map.removeLayer(e.layer);
+      disableDrawControl();
+      setPointFromLatLng(ll.lat, ll.lng);
+      enableMapClick();
     });
 
     document.getElementById("lat")?.addEventListener("change", syncPointFromInputs);
@@ -550,5 +596,8 @@
     clearParentReference,
     isOutsideParent,
     isSpatialAcknowledged,
+    getRegionalidades,
+    getContainment,
+    setOnAnalysisChange,
   };
 })(window);

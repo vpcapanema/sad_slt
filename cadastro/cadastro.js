@@ -17,9 +17,133 @@
   let projetoMaxRevealed = 1;
   let programaMaxRevealed = 1;
   let parentConstraintLoadId = 0;
+  let programaRegionalidades = null;
+
+  const TERRITORIO_TIPO_NOME = {
+    municipio: "Município",
+    regiao_governo: "Região de Governo",
+    regiao_administrativa: "Região Administrativa",
+    regiao_metropolitana: "Região Metropolitana",
+    ugrhi: "Unidade de Gerenciamento de Recursos Hídricos",
+    zona_zee: "Zona de Gestão do Zoneamento Ecológico-Econômico (ZEE-SP)",
+  };
+
+  const ENQUADRAMENTO_PRINCIPAL_LABEL = {
+    municipio: "Município",
+    regiao_governo: "Região de Governo",
+    regiao_administrativa: "Região Administrativa",
+    regiao_metropolitana: "Região Metropolitana",
+    ugrhi: "Unidade de Gerenciamento de Recursos Hídricos",
+    zona_zee: "Zona de Gestão do Zoneamento Ecológico-Econômico (ZEE-SP)",
+  };
+
+  const ENQUADRAMENTO_REGIONAL_LABEL = {
+    municipio: "Enquadramento municipal",
+    regiao_governo: "Enquadramento regional de governo (Região de Governo)",
+    regiao_administrativa: "Enquadramento regional administrativo (Região Administrativa)",
+    regiao_metropolitana: "Enquadramento regional metropolitano (Região Metropolitana)",
+    ugrhi:
+      "Enquadramento regional hídrico (Unidade de Gerenciamento de Recursos Hídricos)",
+    zona_zee:
+      "Enquadramento regional ecológico-econômico (Zona de Gestão ZEE-SP)",
+  };
+
+  const PROJETO_TIPOS_ORDEM = [
+    "municipio",
+    "regiao_governo",
+    "regiao_administrativa",
+    "regiao_metropolitana",
+    "ugrhi",
+    "zona_zee",
+  ];
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
+
+  function cadastroSectionIcon(titleText) {
+    const t = (titleText || "").toLowerCase();
+    if (t.includes("nova demanda")) return "fa-layer-group";
+    if (t.includes("informações") || t.includes("informacoes")) return "fa-file-lines";
+    if (t.includes("contexto institucional")) return "fa-sitemap";
+    if (t.includes("proponente")) return "fa-id-card";
+    if (t.includes("complemento")) return "fa-sliders";
+    if (t.includes("localização") || t.includes("localizacao")) return "fa-location-dot";
+    if (
+      t.includes("vigência") ||
+      t.includes("vigencia") ||
+      t.includes("execução") ||
+      t.includes("execucao")
+    ) {
+      return "fa-calendar-days";
+    }
+    if (t.includes("abrangência") || t.includes("abrangencia")) return "fa-map";
+    return "fa-folder-open";
+  }
+
+  function cadastroSectionTitleText(h2) {
+    return (
+      h2.querySelector("[data-section-title]")?.textContent?.trim() ||
+      h2.textContent.replace(/\s+/g, " ").trim()
+    );
+  }
+
+  function findCadastroSectionNumEl(sec) {
+    return (
+      sec.querySelector(":scope > .cadastro-section-label .cadastro-sec-num") ||
+      sec.querySelector(".cadastro-section-label.collapsible-hdr .cadastro-sec-num") ||
+      sec.querySelector(":scope > h2 .cadastro-sec-num") ||
+      sec.querySelector(".collapsible-hdr .cadastro-sec-num")
+    );
+  }
+
+  function initCadastroSectionCards() {
+    document.querySelectorAll(".cadastro-page .card").forEach((card) => {
+      if (card.dataset.sectionCardReady) return;
+
+      const collapsibleHdr = card.querySelector(":scope > .collapsible-hdr");
+      const h2 = collapsibleHdr?.querySelector("h2") || card.querySelector(":scope > h2");
+      if (!h2) return;
+
+      card.dataset.sectionCardReady = "1";
+      card.classList.add("cadastro-card");
+
+      const label = document.createElement("div");
+      label.className = "cadastro-section-label";
+      if (collapsibleHdr) {
+        label.classList.add("collapsible-hdr");
+        if (collapsibleHdr.id) label.id = collapsibleHdr.id;
+      }
+
+      const icon = document.createElement("i");
+      icon.className = `fas ${cadastroSectionIcon(cadastroSectionTitleText(h2))}`;
+      icon.setAttribute("aria-hidden", "true");
+
+      const titleSpan = document.createElement("span");
+      titleSpan.className = "cadastro-section-title";
+      titleSpan.innerHTML = h2.innerHTML;
+
+      label.appendChild(icon);
+      label.appendChild(titleSpan);
+
+      if (collapsibleHdr) {
+        const toggle = collapsibleHdr.querySelector("span[aria-hidden]");
+        if (toggle) {
+          toggle.classList.add("collapsible-toggle");
+          label.appendChild(toggle);
+        }
+        collapsibleHdr.replaceWith(label);
+      } else {
+        h2.replaceWith(label);
+      }
+
+      const body = document.createElement("div");
+      body.className = "cadastro-section-body";
+      [...card.childNodes].forEach((node) => {
+        if (node !== label) body.appendChild(node);
+      });
+      card.appendChild(body);
+    });
+  }
 
   function showToast(msg) {
     const t = $("#toast");
@@ -77,9 +201,7 @@
     formEl.querySelectorAll(".cadastro-section").forEach((sec) => {
       if (sec.classList.contains("cadastro-section--vinculo") && !vinculoActive) return;
       if (sec.classList.contains("cadastro-section--suspended")) return;
-      const numEl =
-        sec.querySelector(":scope > h2 .cadastro-sec-num") ||
-        sec.querySelector(".collapsible-hdr .cadastro-sec-num");
+      const numEl = findCadastroSectionNumEl(sec);
       if (numEl) numEl.textContent = String(n);
       sec.querySelectorAll(".form-subsection").forEach((sub, idx) => {
         const sn = sub.querySelector(".cadastro-subsec-num");
@@ -104,7 +226,7 @@
       const panel = form.querySelector(`.step-panel[data-step="${stepNum}"]`);
       if (!panel?.classList.contains("cadastro-section")) return;
       if (stepNum === 2 && !isPjVinculoAtivo()) return;
-      const numEl = panel.querySelector(":scope > h2 .cadastro-sec-num, .collapsible-hdr .cadastro-sec-num");
+      const numEl = findCadastroSectionNumEl(panel);
       if (numEl) numEl.textContent = String(n);
       let subIdx = 0;
       panel.querySelectorAll(":scope > .form-subsection").forEach((sub) => {
@@ -140,6 +262,13 @@
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function syncWizardPanelA11y(panel, visible) {
+    panel.classList.toggle("hidden", !visible);
+    panel.inert = !visible;
+    panel.removeAttribute("aria-hidden");
+    if (visible) panel.hidden = false;
+  }
+
   function syncProgramaPanelsVisibility() {
     const form = $("#form-programa");
     if (!form) return;
@@ -147,18 +276,19 @@
     form.querySelectorAll(".pg-step-panel").forEach((p) => {
       const s = Number(p.dataset.step);
       if (s === 1) {
-        p.classList.remove("hidden");
+        syncWizardPanelA11y(p, true);
         return;
       }
       if (s === 2) {
-        p.classList.toggle("hidden", !vinculo || programaMaxRevealed < 2);
+        syncWizardPanelA11y(p, vinculo && programaMaxRevealed >= 2);
         return;
       }
       if (s === PROGRAMA_STEP_EXECUCAO_SUSPENDED) {
-        p.classList.add("hidden");
+        syncWizardPanelA11y(p, false);
+        p.hidden = true;
         return;
       }
-      p.classList.toggle("hidden", programaMaxRevealed < s);
+      syncWizardPanelA11y(p, programaMaxRevealed >= s);
     });
     renumberProgramaSections();
   }
@@ -170,14 +300,14 @@
     form.querySelectorAll(".step-panel").forEach((p) => {
       const s = Number(p.dataset.step);
       if (s === 1) {
-        p.classList.remove("hidden");
+        syncWizardPanelA11y(p, true);
         return;
       }
       if (s === 2) {
-        p.classList.toggle("hidden", !vinculo || projetoMaxRevealed < 2);
+        syncWizardPanelA11y(p, vinculo && projetoMaxRevealed >= 2);
         return;
       }
-      p.classList.toggle("hidden", projetoMaxRevealed < s);
+      syncWizardPanelA11y(p, projetoMaxRevealed >= s);
     });
     renumberProjetoSections();
   }
@@ -187,7 +317,10 @@
     currentProgramaStep = n;
     syncProgramaPanelsVisibility();
     if (n === 4 && pgAbr) {
-      setTimeout(() => pgAbr.invalidateSize(), 120);
+      setTimeout(() => {
+        pgAbr.invalidateSize();
+        renderProgramaReview();
+      }, 120);
     }
     scrollToProgramaStep(n);
   }
@@ -213,10 +346,7 @@
     $$('input[name="pg-vinculo"]').forEach((el) => {
       el.checked = false;
     });
-    $$("#form-programa .pg-step-panel").forEach((p) => {
-      p.classList.toggle("hidden", Number(p.dataset.step) > 1);
-    });
-    renumberProgramaSections();
+    syncProgramaPanelsVisibility();
   }
 
   function resetProjetoWizard() {
@@ -225,10 +355,7 @@
     $$('input[name="pj-vinculo"]').forEach((el) => {
       el.checked = false;
     });
-    $$("#form-cadastro .step-panel").forEach((p) => {
-      p.classList.toggle("hidden", Number(p.dataset.step) > 1);
-    });
-    renumberProjetoSections();
+    syncProjetoPanelsVisibility();
   }
 
   function getNextProgramaStep(from) {
@@ -346,6 +473,7 @@
     if (!val) return;
     updatePgVinculoPanel();
     renumberProgramaSections();
+    renderProgramaReview();
   }
 
   function onPjVinculoChoice() {
@@ -600,6 +728,7 @@
     const inst = SLTSigmaRead.findInstituicao(instituicoes, $("#pg-instituicao").value);
     $("#pg-cnpj").value = inst ? SLTSigmaRead.cnpjDisplay(inst) : "";
     syncFieldFilledState($("#pg-cnpj"));
+    renderProgramaReview();
   }
 
   function onInstituicaoChange() {
@@ -802,6 +931,7 @@
       renderInheritedBlock(block, []);
       if (empty) empty.classList.remove("hidden");
       syncProgramaParentSpatialConstraint();
+      renderProgramaReview();
       return;
     }
 
@@ -825,6 +955,7 @@
       buildPlanoCatalogLinks(planoCodigo, planoApi.diretoria_id)
     );
     syncProgramaParentSpatialConstraint();
+    renderProgramaReview();
   }
 
   function updateProjetoStrategicContext() {
@@ -942,7 +1073,7 @@
     try {
       const fc = await SLTDemandasApi.geoUnidadesGeojson(unidadeIds);
       if (loadId !== parentConstraintLoadId) return;
-      SLTSpatialConstraint.setParent(fc, meta);
+      SLTSpatialConstraint.setParent(fc, meta, unidadeIds);
       pgAbr?.setParentReference?.(fc, label);
       SLTGeometria.setParentReference?.(fc, label);
     } catch (err) {
@@ -1000,18 +1131,270 @@
     });
   }
 
-  async function validateSelectedUnitsWithinParent(ids) {
-    if (!SLTSpatialConstraint.hasParent() || !ids?.length) return true;
+  function territorioTipoNome(tipo, tipoNome) {
+    return TERRITORIO_TIPO_NOME[tipo] || tipoNome || tipo;
+  }
+
+  function formatTerritorioValores(nomes) {
+    return escapeHtml((nomes || []).join(", "));
+  }
+
+  function enquadramentoPrincipalLabel(tipo, tipoNome) {
+    return ENQUADRAMENTO_PRINCIPAL_LABEL[tipo] || territorioTipoNome(tipo, tipoNome);
+  }
+
+  function enquadramentoRegionalLabel(tipo, tipoNome) {
+    return (
+      ENQUADRAMENTO_REGIONAL_LABEL[tipo] ||
+      `Enquadramento regional (${territorioTipoNome(tipo, tipoNome)})`
+    );
+  }
+
+  function collectRegionalidadesMap(regionalidades, itens) {
+    const byTipo = new Map();
+    if (itens?.length) {
+      itens.forEach((item) => {
+        if (item.tipo !== "estado" && item.nomes?.length) {
+          byTipo.set(item.tipo, item.nomes.slice());
+        }
+      });
+      return byTipo;
+    }
+    if (regionalidades) {
+      Object.entries(regionalidades).forEach(([tipo, nomes]) => {
+        if (tipo !== "estado" && nomes?.length) byTipo.set(tipo, nomes.slice());
+      });
+    }
+    return byTipo;
+  }
+
+  function buildEnquadramentoBlocksHtml(entity, principalHtml, outrosHtml, extraHtml = "") {
+    const nome = entity === "programa" ? "programa" : "projeto";
+    return `
+      <div class="review-abrangencia-block">
+        <h5 class="review-abrangencia-heading">Enquadramento territorial principal do ${nome}</h5>
+        <div class="review-rows">${principalHtml || reviewRow("—", "—")}</div>
+      </div>
+      <div class="review-abrangencia-block">
+        <h5 class="review-abrangencia-heading">Outros enquadramentos territoriais</h5>
+        <div class="review-rows">${outrosHtml || reviewRow("—", "—")}</div>
+      </div>
+      ${extraHtml ? `<div class="review-rows">${extraHtml}</div>` : ""}`;
+  }
+
+  function macroItensOrdenados(itens) {
+    return (itens || [])
+      .filter((item) => item.tipo !== "estado" && item.nomes?.length)
+      .sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999));
+  }
+
+  function formatAbrangenciaPrincipalRows(items) {
+    if (!items?.length) {
+      return [reviewRow("—", "—")];
+    }
+    const groups = new Map();
+    items.forEach((item) => {
+      const tipo = item.tipo || "outro";
+      if (!groups.has(tipo)) groups.set(tipo, []);
+      groups.get(tipo).push(item.nome);
+    });
+    const rows = [];
+    const ordered = [...PROJETO_TIPOS_ORDEM];
+    groups.forEach((_nomes, tipo) => {
+      if (!ordered.includes(tipo)) ordered.push(tipo);
+    });
+    ordered.forEach((tipo) => {
+      const nomes = groups.get(tipo);
+      if (!nomes?.length) return;
+      rows.push(
+        reviewRow(enquadramentoPrincipalLabel(tipo), formatTerritorioValores(nomes))
+      );
+    });
+    return rows;
+  }
+
+  function formatEnquadramentoRegionalRows(itens) {
+    return macroItensOrdenados(itens).map((item) =>
+      reviewRow(
+        enquadramentoRegionalLabel(item.tipo, item.tipo_nome),
+        formatTerritorioValores(item.nomes)
+      )
+    );
+  }
+
+  function formatProjetoEnquadramentoRows(regionalidades, itens) {
+    const byTipo = collectRegionalidadesMap(regionalidades, itens);
+    if (!byTipo.size) {
+      return { principalHtml: reviewRow("—", "—"), outrosHtml: reviewRow("—", "—") };
+    }
+
+    let principalTipo = null;
+    for (const tipo of PROJETO_TIPOS_ORDEM) {
+      if (byTipo.has(tipo)) {
+        principalTipo = tipo;
+        break;
+      }
+    }
+
+    const principalHtml = principalTipo
+      ? reviewRow(
+          enquadramentoPrincipalLabel(principalTipo),
+          formatTerritorioValores(byTipo.get(principalTipo))
+        )
+      : reviewRow("—", "—");
+
+    const outrosRows = PROJETO_TIPOS_ORDEM.filter(
+      (tipo) => tipo !== principalTipo && byTipo.has(tipo)
+    ).map((tipo) =>
+      reviewRow(enquadramentoRegionalLabel(tipo), formatTerritorioValores(byTipo.get(tipo)))
+    );
+
+    return {
+      principalHtml,
+      outrosHtml: outrosRows.length ? outrosRows.join("") : reviewRow("—", "—"),
+    };
+  }
+
+  function renderProgramaAbrangenciaReview() {
+    const wrap = $("#pg-review-enquadramento");
+    if (!wrap) return;
+
+    const items = pgAbr?.getSelectedItems?.() || [];
+    const principalHtml = formatAbrangenciaPrincipalRows(items).join("");
+    let outrosHtml = reviewRow("—", "—");
+
+    if (items.length) {
+      const macroRows = formatEnquadramentoRegionalRows(programaRegionalidades?.itens);
+      if (macroRows.length) {
+        outrosHtml = macroRows.join("");
+      } else if (programaRegionalidades === null) {
+        outrosHtml = reviewRow("—", "Calculando…");
+      } else {
+        outrosHtml = reviewRow("—", "Nenhum enquadramento adicional identificado.");
+      }
+    }
+
+    wrap.innerHTML = buildEnquadramentoBlocksHtml("programa", principalHtml, outrosHtml);
+  }
+
+  async function refreshProgramaRegionalidades(ids) {
+    if (!ids?.length) {
+      programaRegionalidades = null;
+      renderProgramaReview();
+      return;
+    }
     try {
-      const fc = await SLTDemandasApi.geoUnidadesGeojson(ids);
-      return SLTSpatialConstraint.featuresWithinParent(fc);
+      programaRegionalidades = await SLTDemandasApi.analyzeProgramaRegionalidades(ids);
     } catch (err) {
-      return false;
+      programaRegionalidades = null;
+    }
+    renderProgramaReview();
+  }
+
+  function onProgramaSpatialAnalysis() {
+    renderProgramaReview();
+    refreshProgramaRegionalidades(pgAbr?.getSelectedIds() || []);
+  }
+
+  function setPgReviewText(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const text = typeof value === "string" ? value.trim() : value;
+    el.textContent = text || "—";
+  }
+
+  function togglePgReviewRow(rowId, visible) {
+    document.getElementById(rowId)?.classList.toggle("hidden", !visible);
+  }
+
+  function renderProgramaReviewRegionalidades() {
+    renderProgramaAbrangenciaReview();
+  }
+
+  function renderProgramaReview() {
+    if (!$("#pg-review")) return;
+
+    setPgReviewText("pg-review-nome", $("#pg-nome")?.value.trim() || "—");
+    setPgReviewText("pg-review-descricao", $("#pg-descricao")?.value.trim() || "—");
+    setPgReviewText("pg-review-objetivo", $("#pg-objetivo")?.value.trim() || "—");
+
+    const vinculoChecked = document.querySelector('input[name="pg-vinculo"]:checked');
+    const vinculoAtivo = isPgVinculoAtivo();
+    setPgReviewText(
+      "pg-review-vinculo",
+      vinculoChecked ? (vinculoAtivo ? "Sim" : "Não") : "—"
+    );
+
+    const planoApi = planosCache.find((p) => p.id === $("#pg-plano")?.value);
+    const planoCat = SLTCatalog.getPlano($("#pg-plano")?.value);
+    $("#pg-review-sec-contexto")?.classList.toggle("hidden", !vinculoAtivo);
+    if (vinculoAtivo) {
+      setPgReviewText(
+        "pg-review-plano",
+        planoCat
+          ? `${planoCat.sigla} — ${planoCat.nome_oficial}`
+          : planoApi?.nome || "—"
+      );
+      const cat = SLTCatalog.catalog;
+      const dir = planoApi ? cat.diretorias.find((x) => x.id === planoApi.diretoria_id) : null;
+      setPgReviewText("pg-review-diretoria", dir?.nome_oficial || planoApi?.diretoria_id || "—");
+    }
+
+    const inst = SLTSigmaRead.findInstituicao(instituicoes, $("#pg-instituicao")?.value);
+    setPgReviewText(
+      "pg-review-instituicao",
+      inst ? SLTSigmaRead.labelInstituicao(inst) : "—"
+    );
+    setPgReviewText("pg-review-cnpj", $("#pg-cnpj")?.value || "—");
+
+    const pessoa = SLTSigmaRead.findPessoa(pessoas, $("#pg-representante")?.value);
+    setPgReviewText(
+      "pg-review-representante",
+      pessoa ? SLTSigmaRead.labelPessoa(pessoa) : "—"
+    );
+    setPgReviewText("pg-review-email", $("#pg-rep_email")?.value || "—");
+    setPgReviewText("pg-review-telefone", $("#pg-rep_telefone")?.value || "—");
+
+    renderProgramaAbrangenciaReview();
+
+    const containment = pgAbr?.getContainment?.();
+    const showContainment = vinculoAtivo && containment && containment.status !== "inside";
+    togglePgReviewRow("pg-review-containment-row", showContainment);
+    if (showContainment) {
+      setPgReviewText("pg-review-containment", containment.message || "—");
     }
   }
 
-  function reviewRow(label, valueHtml) {
-    return `<dt>${escapeHtml(label)}</dt><dd>${valueHtml}</dd>`;
+  function initProgramaReviewSync() {
+    const form = $("#form-programa");
+    if (!form) return;
+
+    ["pg-nome", "pg-descricao", "pg-objetivo"].forEach((id) => {
+      form.querySelector(`#${id}`)?.addEventListener("input", renderProgramaReview);
+    });
+
+    $$('input[name="pg-vinculo"]').forEach((el) => {
+      el.addEventListener("change", () => {
+        setTimeout(renderProgramaReview, 0);
+      });
+    });
+
+    $("#pg-plano")?.addEventListener("change", renderProgramaReview);
+    $("#pg-instituicao")?.addEventListener("change", renderProgramaReview);
+    $("#pg-representante")?.addEventListener("change", renderProgramaReview);
+
+    renderProgramaReview();
+  }
+
+  function reviewRow(label, valueHtml, extraClass = "") {
+    const cls = extraClass ? `review-row ${extraClass}` : "review-row";
+    return `<div class="${cls}"><span class="review-label">${escapeHtml(label)}</span><span class="review-value">${valueHtml}</span></div>`;
+  }
+
+  function reviewSection(title, rowsHtml, lead = "") {
+    if (!rowsHtml && !lead) return "";
+    const leadHtml = lead ? `<p class="review-section-lead">${escapeHtml(lead)}</p>` : "";
+    return `<section class="review-section"><h4 class="review-section-title">${escapeHtml(title)}</h4>${leadHtml}<div class="review-rows">${rowsHtml || ""}</div></section>`;
   }
 
   function renderReview() {
@@ -1025,36 +1408,37 @@
     const modal = cat.modais.find((m) => m.id === $("#modal").value);
     const tipologia = cat.tipologias.find((t) => t.id === $("#tipologia").value);
     const carteira = cat.carteiras.find((c) => c.id === $("#carteira").value);
-    const rows = [];
 
-    rows.push(reviewRow("Nome do projeto", escapeHtml($("#nome").value.trim() || "—")));
-    rows.push(reviewRow("Descrição", escapeHtml($("#descricao").value.trim() || "—")));
-    rows.push(reviewRow("Vínculo institucional", isPjVinculoAtivo() ? "Sim" : "Não"));
+    const cadastroRows = [
+      reviewRow("Nome do projeto", escapeHtml($("#nome").value.trim() || "—")),
+      reviewRow("Descrição", escapeHtml($("#descricao").value.trim() || "—")),
+      reviewRow("Vínculo institucional", isPjVinculoAtivo() ? "Sim" : "Não"),
+    ];
 
+    const contextoRows = [];
     if (isPjVinculoAtivo()) {
       if (getPjVinculoTipo() === "programa") {
-        rows.push(reviewRow("Programa vinculado", escapeHtml(prog?.nome || "—")));
+        contextoRows.push(reviewRow("Programa vinculado", escapeHtml(prog?.nome || "—")));
+        contextoRows.push(
+          reviewRow(
+            "Plano (herdado)",
+            plano
+              ? escapeHtml(`${plano.sigla} — ${plano.nome_oficial}`)
+              : escapeHtml(prog?.plano_nome || "—")
+          )
+        );
       } else {
         const planoApi = planosCache.find((p) => p.id === $("#pj-plano-vinculo")?.value);
-        rows.push(reviewRow("Plano vinculado", escapeHtml(planoApi?.nome || "—")));
+        contextoRows.push(reviewRow("Plano vinculado", escapeHtml(planoApi?.nome || "—")));
       }
-    }
-
-    if (isPjVinculoAtivo() && getPjVinculoTipo() === "programa") {
-      rows.push(
-        reviewRow(
-          "Plano (herdado)",
-          plano ? escapeHtml(`${plano.sigla} — ${plano.nome_oficial}`) : escapeHtml(prog?.plano_nome || "—")
-        )
-      );
-    } else if (!isPjVinculoAtivo()) {
-      rows.push(
+    } else {
+      contextoRows.push(
         reviewRow(
           "Diretoria",
           escapeHtml(labelById(cat.diretorias, getProjetoDiretoriaId(), "nome_oficial"))
         )
       );
-      rows.push(
+      contextoRows.push(
         reviewRow(
           "Plano",
           plano ? escapeHtml(`${plano.sigla} — ${plano.nome_oficial}`) : "—"
@@ -1062,37 +1446,72 @@
       );
     }
 
-    rows.push(reviewRow("Instituição interessada", escapeHtml(inst ? SLTSigmaRead.labelInstituicao(inst) : "—")));
-    rows.push(reviewRow("CNPJ", escapeHtml($("#cnpj").value || "—")));
-    rows.push(
-      reviewRow("Representante legal", escapeHtml(pessoa ? SLTSigmaRead.labelPessoa(pessoa) : "—"))
-    );
-    rows.push(reviewRow("E-mail", escapeHtml($("#rep_email").value || "—")));
-    rows.push(reviewRow("Telefone", escapeHtml($("#rep_telefone").value || "—")));
+    const proponenteRows = [
+      reviewRow("Instituição interessada", escapeHtml(inst ? SLTSigmaRead.labelInstituicao(inst) : "—")),
+      reviewRow("CNPJ", escapeHtml($("#cnpj").value || "—")),
+      reviewRow("Representante legal", escapeHtml(pessoa ? SLTSigmaRead.labelPessoa(pessoa) : "—")),
+      reviewRow("E-mail", escapeHtml($("#rep_email").value || "—")),
+      reviewRow("Telefone", escapeHtml($("#rep_telefone").value || "—")),
+    ];
 
+    const classificacaoRows = [];
     if (plano?.id === PLANO_PLI) {
-      rows.push(reviewRow("Frente PLI", escapeHtml(labelById(cat.frentes_pli, $("#frente").value))));
+      classificacaoRows.push(reviewRow("Frente PLI", escapeHtml(labelById(cat.frentes_pli, $("#frente").value))));
     } else if (plano?.id === PLANO_PEF) {
-      rows.push(reviewRow("Eixo PEF", escapeHtml(labelById(cat.eixos_pef, $("#eixo").value))));
+      classificacaoRows.push(reviewRow("Eixo PEF", escapeHtml(labelById(cat.eixos_pef, $("#eixo").value))));
       if ($("#corredor_tic").value) {
-        rows.push(
+        classificacaoRows.push(
           reviewRow("Corredor TIC", escapeHtml(labelById(cat.corredores_tic, $("#corredor_tic").value)))
         );
       }
     }
 
-    rows.push(reviewRow("Modal", escapeHtml(modal?.nome || "—")));
-    rows.push(reviewRow("Tipologia", escapeHtml(tipologia?.nome || "—")));
-    rows.push(reviewRow("Carteira", escapeHtml(carteira?.nome || "—")));
-    rows.push(
-      reviewRow(
-        "Coordenadas",
-        coords ? escapeHtml(`${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`) : "—"
-      )
-    );
-    rows.push(reviewRow("Localização no mapa", escapeHtml(geom ? labelGeometria(geom.tipo) : "—")));
+    const complementosRows = [
+      reviewRow("Modal", escapeHtml(modal?.nome || "—")),
+      reviewRow("Tipologia", escapeHtml(tipologia?.nome || "—")),
+      reviewRow("Carteira", escapeHtml(carteira?.nome || "—")),
+    ];
 
-    $("#review").innerHTML = `<dl>${rows.join("")}</dl>`;
+    const containment = SLTGeometria.getContainment?.();
+    let extraLocalizacaoHtml = "";
+    if (isPjVinculoAtivo() && containment && containment.status !== "inside") {
+      extraLocalizacaoHtml = reviewRow(
+        "Confronto com a abrangência do vínculo institucional",
+        escapeHtml(containment.message || "—"),
+        "review-row--warn"
+      );
+    }
+
+    const regionalidades = SLTGeometria.getRegionalidades?.();
+    const { principalHtml, outrosHtml } = formatProjetoEnquadramentoRows(regionalidades, null);
+
+    const localizacaoMeta = [
+      reviewRow(
+        "Coordenadas (latitude, longitude)",
+        coords ? escapeHtml(`${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`) : "—"
+      ),
+      reviewRow("Marcação no mapa", escapeHtml(geom ? labelGeometria(geom.tipo) : "—")),
+    ].join("");
+
+    const localizacaoBody = `${localizacaoMeta}${buildEnquadramentoBlocksHtml(
+      "projeto",
+      principalHtml,
+      outrosHtml,
+      extraLocalizacaoHtml
+    )}`;
+
+    $("#review").innerHTML = [
+      reviewSection("Informações cadastrais", cadastroRows.join("")),
+      reviewSection("Contexto institucional estratégico", contextoRows.join("")),
+      reviewSection("Proponente do cadastro", proponenteRows.join("")),
+      classificacaoRows.length
+        ? reviewSection("Classificação no plano", classificacaoRows.join(""))
+        : "",
+      reviewSection("Complementos", complementosRows.join("")),
+      reviewSection("Localização geográfica", localizacaoBody),
+    ]
+      .filter(Boolean)
+      .join("");
   }
 
   function buildDemanda() {
@@ -1137,6 +1556,7 @@
         modal_id: $("#modal").value || null,
         tipologia_id: $("#tipologia").value || null,
         carteira_id: $("#carteira").value || null,
+        regionalidades: SLTGeometria.getRegionalidades?.() || null,
       },
     };
   }
@@ -1287,16 +1707,20 @@
   async function initProgramaForm() {
     pgAbr = SLTAbrangencia.create({
       container: $("#pg-abrangencia"),
+      onSpatialAnalysis: onProgramaSpatialAnalysis,
     });
+
+    initProgramaReviewSync();
 
     $$('input[name="pg-vinculo"]').forEach((el) => {
       el.addEventListener("change", onPgVinculoChoice);
     });
     $("#pg-plano")?.addEventListener("change", updateProgramaStrategicContext);
     $("#pg-instituicao").addEventListener("change", onProgramaInstituicaoChange);
-    $("#pg-representante").addEventListener("change", () =>
-      onRepresentanteFieldChange("#pg-representante", "#pg-rep_email", "#pg-rep_telefone")
-    );
+    $("#pg-representante").addEventListener("change", () => {
+      onRepresentanteFieldChange("#pg-representante", "#pg-rep_email", "#pg-rep_telefone");
+      renderProgramaReview();
+    });
 
     $$("#form-programa .btn-next").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -1348,6 +1772,7 @@
   }
 
   async function init() {
+    initCadastroSectionCards();
     await loadSigmaCadastros();
 
     await SLTCatalog.loadCatalog("../");
@@ -1418,6 +1843,9 @@
     });
 
     SLTGeometria.init();
+    SLTGeometria.setOnAnalysisChange(() => {
+      if (currentProjetoStep >= 4) renderReview();
+    });
     initTipoSelector();
     initFieldFilledSync();
     await loadPlanosCache();
@@ -1425,6 +1853,8 @@
     initPlanoForm();
     initProgramaForm();
     loadProgramasCache();
+    syncProgramaPanelsVisibility();
+    syncProjetoPanelsVisibility();
 
     const tipoParam = new URLSearchParams(window.location.search).get("tipo");
     if (tipoParam) selectTipo(tipoParam);

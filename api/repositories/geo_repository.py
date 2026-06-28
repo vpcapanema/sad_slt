@@ -63,7 +63,7 @@ def _union_from_ids(alias: str) -> str:
 
 _CONTAINMENT_SQL = """
 WITH user_g AS (
-    SELECT geom AS src FROM (
+    SELECT src FROM (
         {user_geom_source}
     ) s
 ),
@@ -214,20 +214,18 @@ WITH sel AS (
     JOIN geo.tipo_regionalizacao tr ON tr.codigo = ue.tipo_regionalizacao
     WHERE ue.id = ANY(%(ids)s::uuid[])
 ),
-overlaps AS (
+regioes_sobrepostas AS (
     SELECT ue.tipo_regionalizacao, tr.nome AS tipo_nome, tr.ordem, ue.nome
     FROM geo.unidade_espacial ue
     JOIN geo.tipo_regionalizacao tr ON tr.codigo = ue.tipo_regionalizacao
     CROSS JOIN sel s
     WHERE s.g IS NOT NULL
-      AND (
-        tr.ordem > s.sel_ordem
-        OR ue.tipo_regionalizacao = 'estado'
-      )
+      AND tr.ordem > s.sel_ordem
+      AND ue.tipo_regionalizacao <> 'estado'
       AND ST_Intersects(ue.geom, s.g)
 )
 SELECT tipo_regionalizacao, tipo_nome, ordem, array_agg(nome ORDER BY nome) AS nomes
-FROM overlaps
+FROM regioes_sobrepostas
 GROUP BY tipo_regionalizacao, tipo_nome, ordem
 ORDER BY ordem, tipo_nome
 """
@@ -244,11 +242,14 @@ def programa_regionalidades_sobrepostas(unidade_ids: list[str]) -> dict[str, Any
     itens = []
     regionalidades: dict[str, list[str]] = {}
     for row in rows:
+        if row["tipo_regionalizacao"] == "estado":
+            continue
         nomes = list(row["nomes"] or [])
         itens.append(
             {
                 "tipo": row["tipo_regionalizacao"],
                 "tipo_nome": row["tipo_nome"],
+                "ordem": row["ordem"],
                 "nomes": nomes,
             }
         )
