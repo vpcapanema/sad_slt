@@ -288,6 +288,7 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+.layer-group--record.is-selected > .layer-group-header-row .layer-group-header--record,
 .layer-group--record.is-selected > .layer-group-header--record {
   background: rgba(74, 222, 128, 0.1);
 }

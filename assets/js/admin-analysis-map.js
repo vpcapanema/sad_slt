@@ -8,6 +8,10 @@
     return { lat, lng };
   }
 
+  function tipoDemandaFromRecord(record, options) {
+    return options?.tipoDemanda || record?.tipo || record?.__tipo || "projeto";
+  }
+
   function createStatusPinIcon(status) {
     return global.SLTStatusColors?.leafletPinIcon?.(status, "demanda", global.L);
   }
@@ -24,25 +28,21 @@
   }
 
   function geometryLayers(map, geometria, status, tipoDemanda) {
-    if (!geometria?.tipo || !geometria.coordinates) return [];
+    if (!geometria?.tipo || !geometria.coordinates || !global.L) return [];
+    const style = pathStyleForStatus(status, tipoDemanda);
     const layers = [];
-    const opts = pathStyleForStatus(status, tipoDemanda);
 
-    if (geometria.tipo === "Polygon") {
-      const latlngs = geometria.coordinates[0].map(([lng, lat]) => [lat, lng]);
-      layers.push(L.polygon(latlngs, opts));
-    } else if (geometria.tipo === "LineString") {
-      const latlngs = geometria.coordinates.map(([lng, lat]) => [lat, lng]);
-      layers.push(L.polyline(latlngs, opts));
-    } else if (geometria.tipo === "Point") {
-      const [lng, lat] = geometria.coordinates;
-      layers.push(L.circleMarker([lat, lng], { radius: 6, ...opts }));
-    }
+    const gj = L.geoJSON(
+      { type: geometria.tipo, coordinates: geometria.coordinates },
+      { style: () => style }
+    );
 
-    layers.forEach((layer) => {
+    gj.eachLayer((layer) => {
       global.SLTStatusColors?.decorateLeafletLayer?.(layer, status);
       layer.addTo(map);
+      layers.push(layer);
     });
+
     return layers;
   }
 
@@ -117,11 +117,11 @@
     }).addTo(map);
 
     const status = record?.status || "";
-    const tipoDemanda = record?.tipo || record?.__tipo || "projeto";
+    const tipoDemanda = tipoDemandaFromRecord(record, options);
     const overlays = geometryLayers(map, record.geometria, status, tipoDemanda);
     const mapLayers = [...overlays];
 
-    if (coords) {
+    if (coords && tipoDemanda === "projeto") {
       const icon = createStatusPinIcon(status);
       if (icon) {
         const marker = L.marker([coords.lat, coords.lng], { icon }).addTo(map);

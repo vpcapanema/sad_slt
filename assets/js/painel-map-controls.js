@@ -146,6 +146,41 @@
     },
   });
 
+  function setDefaultMapViewRestore(map, bounds) {
+    if (!map || !bounds?.isValid?.()) {
+      if (map) map._sltRestoreDefaultView = null;
+      return;
+    }
+    map._sltRestoreDefaultView = () => {
+      fitMapToDefaultBounds(map, bounds, { animate: true, rememberDefault: false });
+    };
+  }
+
+  function attachResetZoomControl(map) {
+    if (!map || map._sltResetZoomAttached) return;
+    map._sltResetZoomAttached = true;
+
+    const ResetZoom = L.Control.extend({
+      options: { position: "topleft" },
+      onAdd(m) {
+        const container = L.DomUtil.create("div", "leaflet-bar leaflet-control slt-map-reset-zoom-control");
+        const link = L.DomUtil.create("a", "slt-map-reset-zoom", container);
+        link.href = "#";
+        link.title = "Restaurar zoom original";
+        link.setAttribute("aria-label", "Restaurar zoom original");
+        link.innerHTML = '<span aria-hidden="true">⌂</span>';
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.on(link, "click", (e) => {
+          L.DomEvent.preventDefault(e);
+          if (typeof m._sltRestoreDefaultView === "function") m._sltRestoreDefaultView();
+        });
+        return container;
+      },
+    });
+
+    new ResetZoom().addTo(map);
+  }
+
   function initPainelMap(containerId, viewOptions) {
     const view = viewOptions || { center: [-22.5, -48.5], zoom: 7 };
     const map = L.map(containerId, {
@@ -160,13 +195,51 @@
     }).addTo(map);
 
     new FineZoom({ position: "topleft" }).addTo(map);
+    attachResetZoomControl(map);
     attachZoomScale(map);
 
     return map;
   }
 
+  function rememberLegendPadding(map) {
+    if (!map) return;
+    map._sltLastLegendPadding = global.SLTStatusColors?.getMapViewportPadding?.() || {
+      top: 8,
+      right: 8,
+      bottom: 8,
+      left: 8,
+    };
+  }
+
+  function panMapToViewportPadding(map, padding) {
+    if (!map || !padding || !global.L) return;
+    const zoom = map.getZoom();
+    const centerPx = map.project(map.getCenter(), zoom);
+    const dx = (padding.left - padding.right) / 2;
+    const dy = (padding.top - padding.bottom) / 2;
+    const next = map.unproject(L.point(centerPx.x + dx, centerPx.y + dy), zoom);
+    map.setView(next, zoom, { animate: true });
+  }
+
+  function adjustMapForLegendLayout(map) {
+    if (!map || !global.L) return;
+    const next =
+      global.SLTStatusColors?.getMapViewportPadding?.() || {
+        top: 8,
+        right: 8,
+        bottom: 8,
+        left: 8,
+      };
+    const prev = map._sltLastLegendPadding || next;
+    const dx = (next.left - next.right - (prev.left - prev.right)) / 2;
+    const dy = (next.top - next.bottom - (prev.top - prev.bottom)) / 2;
+    if (dx || dy) map.panBy([dx, dy], { animate: true });
+    map._sltLastLegendPadding = next;
+  }
+
   function fitMapToDefaultBounds(map, bounds, extraOptions) {
     if (!map || !bounds?.isValid?.()) return;
+    const opts = extraOptions || {};
     const legendOpts =
       global.SLTStatusColors?.mapFitBoundsOptions?.() || {
         paddingTopLeft: [8, 8],
@@ -174,8 +247,12 @@
       };
     map.fitBounds(bounds.pad(MAP_BOUNDS_GEO_PAD), {
       ...legendOpts,
-      ...(extraOptions || {}),
+      ...opts,
     });
+    rememberLegendPadding(map);
+    if (opts.rememberDefault !== false) {
+      setDefaultMapViewRestore(map, bounds);
+    }
   }
 
   global.SLTPainelMapControls = {
@@ -195,5 +272,9 @@
     attachZoomScale,
     initPainelMap,
     fitMapToDefaultBounds,
+    setDefaultMapViewRestore,
+    panMapToViewportPadding,
+    adjustMapForLegendLayout,
+    rememberLegendPadding,
   };
 })(window);

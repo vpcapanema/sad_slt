@@ -221,6 +221,40 @@
     });
   }
 
+  function bindGroupLabelToggle(container, options) {
+    if (!options.onGroupLabelToggle) return;
+    container.querySelectorAll(".layer-group-label-toggle").forEach((btn) => {
+      btn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const groupId = btn.dataset.groupId;
+        const next = !btn.classList.contains("is-active");
+        btn.classList.toggle("is-active", next);
+        btn.setAttribute("aria-pressed", String(next));
+        options.onGroupLabelToggle(groupId, next);
+      });
+    });
+  }
+
+  function groupLabelToggleHtml(group, options) {
+    if (!options.onGroupLabelToggle) return "";
+    const on = !!options.groupLabelsOn?.[group.id];
+    return `<button type="button" class="layer-group-label-toggle${on ? " is-active" : ""}"
+      data-group-id="${escapeAttr(group.id)}"
+      aria-pressed="${on ? "true" : "false"}"
+      aria-label="Exibir rótulos de ${escapeAttr(group.label)} no mapa"
+      title="Rótulos no mapa">
+      <span class="layer-group-label-toggle-icon layer-group-label-toggle-icon--${escapeAttr(group.id)}" aria-hidden="true"></span>
+    </button>`;
+  }
+
+  const tipoExpandStateByContainer = new Map();
+
+  function expandStateForContainer(container) {
+    const key = container.id || container.getAttribute("aria-label") || "sidebar";
+    if (!tipoExpandStateByContainer.has(key)) tipoExpandStateByContainer.set(key, {});
+    return tipoExpandStateByContainer.get(key);
+  }
+
   function sortRecordsForGroup(group, options, getRecordKey) {
     const records = group.records || [];
     const order = options.recordOrder?.[group.id];
@@ -246,7 +280,11 @@
     const groups = options.groups || [];
     const getRecordId = options.getRecordId || ((r) => r.id);
     const getRecordGroupId = options.getRecordGroupId || ((r, g) => g.id);
-    const total = groups.reduce((acc, g) => acc + (g.records || []).length, 0);
+    const getRecordKey = options.getRecordKey || ((r) => String(getRecordId(r)));
+    const total = groups.reduce(
+      (acc, g) => acc + sortRecordsForGroup(g, options, getRecordKey).length,
+      0
+    );
     const selectedId = options.selectedId ?? null;
     const visibility = options.visibility;
 
@@ -267,14 +305,14 @@
 
     const allRecords = groups.flatMap((g) => g.records || []);
     const findRecord = (id) => allRecords.find((r) => getRecordId(r) === id);
-
-    const getRecordKey = options.getRecordKey || ((r) => String(getRecordId(r)));
+    const expandState = expandStateForContainer(container);
 
     container.innerHTML = groups
       .map((group) => {
         const records = sortRecordsForGroup(group, options, getRecordKey);
         const hasSelected = records.some((r) => getRecordId(r) === selectedId);
-        const open = hasSelected || group.open;
+        if (hasSelected) expandState[group.id] = true;
+        const open = expandState[group.id] === true;
         const groupVisible = visibility ? visibility.isGroupVisible(group.id) : true;
         const visHtml = visibility
           ? visibilityToggleHtml("group", { "group-id": group.id }, groupVisible)
@@ -297,6 +335,7 @@
                 aria-expanded="${open ? "true" : "false"}">
                 <span class="layer-group-toggle" aria-hidden="true">▼</span>
                 <span class="layer-group-name layer-group-name--tipo">${escapeHtml((group.label || "").toUpperCase())}</span>
+                ${groupLabelToggleHtml(group, options)}
                 <span class="layer-group-active-count">${records.length || ""}</span>
               </button>
             </div>
@@ -310,12 +349,15 @@
         const grp = btn.closest(".layer-group--tipo");
         const collapsed = grp.classList.toggle("collapsed");
         btn.setAttribute("aria-expanded", String(!collapsed));
+        const groupId = grp.dataset.groupId;
+        if (groupId) expandState[groupId] = !collapsed;
       });
     });
 
     bindRecordClicks(container, { ...options, findRecord });
     bindVisibilityControls(container, options);
     bindRecordReorder(container, options);
+    bindGroupLabelToggle(container, options);
   }
 
   global.SLTGroupedSidebar = { renderGroupedDemandasSidebar };

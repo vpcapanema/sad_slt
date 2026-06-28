@@ -15,6 +15,8 @@
   let layersByKey = new Map();
   let layerVisibility = SLTPainelMapControls.createLayerVisibility(["plano", "programa", "projeto"]);
   let recordOrder = {};
+  let layerFilterApi = null;
+  let groupLabelsOn = { plano: false, programa: false, projeto: false };
   let selectedKey = null;
   let popoverEl = null;
   let anchorMode = null;
@@ -346,6 +348,78 @@
     applyMapLayerZOrder();
   }
 
+  function entryFilterItem(entry) {
+    const d = entry.data;
+    const tipo = entry.kind === "objeto" ? "projeto" : entry.kind;
+    return { ...d, tipo };
+  }
+
+  function matchesEntryFilter(entry) {
+    return SLTPainelLayerFilter.matches(entryFilterItem(entry), layerFilterApi?.getFilter?.());
+  }
+
+  function filteredEntries() {
+    return entries.filter(matchesEntryFilter);
+  }
+
+  function isEntryMapVisible(kind, id) {
+    const entry = findEntry(kind, id);
+    if (entry && !matchesEntryFilter(entry)) return false;
+    const groupId = SLTPainelMapControls.groupIdFromKind(kind);
+    return layerVisibility.isRecordVisible(groupId, recordVisibilityKey(kind, id));
+  }
+
+  function syncAllMapVisibility() {
+    entries.forEach((e) => syncEntryVisibility(e.kind, e.id));
+    SIDEBAR_GRUPOS.forEach((g) => {
+      if (groupLabelsOn[g.id]) refreshGroupLabels(g.id);
+    });
+    resolveAllLabelCollisions();
+  }
+
+  function resolveAllLabelCollisions() {
+    SLTPainelLayerLabels.scheduleResolveCollisions(map, mapLayerGroup, layersByKey);
+  }
+
+  function refreshGroupLabels(groupId) {
+    if (!mapLayerGroup) return;
+    filteredEntries()
+      .filter((e) => SLTPainelMapControls.groupIdFromKind(e.kind) === groupId)
+      .forEach((e) => {
+        const entryLayers = layersByKey.get(itemKey(e.kind, e.id));
+        if (!entryLayers?.labelLayers?.length) return;
+        const show = groupLabelsOn[groupId] && isEntryMapVisible(e.kind, e.id);
+        entryLayers.labelLayers.forEach((layer) => {
+          if (show) {
+            if (!mapLayerGroup.hasLayer(layer)) mapLayerGroup.addLayer(layer);
+          } else if (mapLayerGroup.hasLayer(layer)) {
+            mapLayerGroup.removeLayer(layer);
+          }
+        });
+      });
+    resolveAllLabelCollisions();
+  }
+
+  function onGroupLabelToggle(groupId, active) {
+    groupLabelsOn[groupId] = active;
+    refreshGroupLabels(groupId);
+  }
+
+  function initLayerFilter() {
+    layerFilterApi = SLTPainelLayerFilter.init({
+      container: "#painel-layer-filter",
+      getAllItems: () => entries.map(entryFilterItem),
+      statusLabel: (code) =>
+        SLTStatusColors.STATUS_OBJETO[code]
+          ? SLTStatusColors.getStatusObjeto(code).nome
+          : SLTStatusColors.getStatusDemanda(code).nome,
+      onFilterChange: () => {
+        renderEntriesList();
+        syncAllMapVisibility();
+      },
+    });
+  }
+
   function recordVisibilityKey(kind, id) {
     return itemKey(kind, id);
   }
@@ -369,9 +443,19 @@
 
   function syncEntryVisibility(kind, id) {
     const groupId = SLTPainelMapControls.groupIdFromKind(kind);
-    const entry = layersByKey.get(itemKey(kind, id));
-    const visible = layerVisibility.isRecordVisible(groupId, recordVisibilityKey(kind, id));
-    SLTPainelMapControls.applyEntryVisibility(entry, mapLayerGroup, visible);
+    const entryLayers = layersByKey.get(itemKey(kind, id));
+    const visible = isEntryMapVisible(kind, id);
+    SLTPainelMapControls.applyEntryVisibility(entryLayers, mapLayerGroup, visible);
+    if (entryLayers?.labelLayers?.length) {
+      const showLabels = groupLabelsOn[groupId] && visible;
+      entryLayers.labelLayers.forEach((layer) => {
+        if (showLabels) {
+          if (!mapLayerGroup.hasLayer(layer)) mapLayerGroup.addLayer(layer);
+        } else if (mapLayerGroup.hasLayer(layer)) {
+          mapLayerGroup.removeLayer(layer);
+        }
+      });
+    }
   }
 
   function onGroupVisibilityChange(groupId, visible) {
@@ -400,7 +484,7 @@
       groups: SIDEBAR_GRUPOS.map((g) => ({
         id: g.id,
         label: g.label,
-        records: entries.filter(g.match).map(sidebarRecord),
+        records: filteredEntries().filter(g.match).map(sidebarRecord),
       })),
       selectedId: selectedIdFromKey(),
       getRecordId: (r) => r.id,
@@ -413,6 +497,8 @@
       recordOrder,
       getRecordKey: (r) => itemKey(r.__kind, r.id),
       onRecordReorder,
+      groupLabelsOn,
+      onGroupLabelToggle,
       onGroupVisibilityChange,
       onRecordVisibilityChange,
       onSelect: (id, record) => {
@@ -487,7 +573,16 @@
       if (!entryLayers.bounds) entryLayers.bounds = L.latLngBounds([ref, ref]);
     }
 
-    if (entryLayers.layers.length) layersByKey.set(key, entryLayers);
+    if (entryLayers.layers.length) {
+      entryLayers.labelLayers = SLTPainelLayerLabels.buildEntryLabels(
+        entryLayers,
+        item,
+        kind,
+        style.color,
+        L
+      );
+      layersByKey.set(key, entryLayers);
+    }
   }
 
   function buildMapLayers() {
@@ -516,7 +611,7 @@
   function focusMapOnItem(kind, id) {
     const entry = layersByKey.get(itemKey(kind, id));
     if (entry?.bounds?.isValid()) {
-      SLTPainelMapControls.fitMapToDefaultBounds(map, entry.bounds, { animate: true });
+      SLTPainelMapControls.fitMapToDefaultBounds(map, entry.bounds, { animate: true, rememberDefault: false });
       return;
     }
     const e = findEntry(kind, id);
@@ -560,6 +655,9 @@
         repositionPopover();
       }
     });
+    map.on("zoomend moveend", () => {
+      if (Object.values(groupLabelsOn).some(Boolean)) resolveAllLabelCollisions();
+    });
     setTimeout(() => map.invalidateSize(), 0);
     window.addEventListener("resize", () => {
       map.invalidateSize();
@@ -569,8 +667,8 @@
 
   function bindLegendLayoutRefresh() {
     $("status-legend")?.addEventListener("slt-legend-layout", () => {
-      if (!mapLayerGroup?.getLayers().length) return;
-      SLTPainelMapControls.fitMapToDefaultBounds(map, mapLayerGroup.getBounds(), { animate: true });
+      if (!map) return;
+      SLTPainelMapControls.adjustMapForLegendLayout(map);
     });
   }
 
@@ -586,6 +684,7 @@
 
     buildEntries();
     initRecordOrder();
+    initLayerFilter();
     initMap();
     initLayersSectionCollapse();
     SLTStatusColors.renderLegend("#status-legend", {

@@ -184,6 +184,79 @@ body.painel-dashboard-page {
   white-space: nowrap;
 }
 
+.leaflet-top.leaflet-left .slt-map-reset-zoom-control {
+  margin-top: 0.35rem;
+  clear: both;
+}
+
+.slt-map-reset-zoom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #334155;
+  text-decoration: none;
+  background: #fff;
+}
+
+.slt-map-reset-zoom:hover,
+.slt-map-reset-zoom:focus {
+  background: #f4f4f4;
+  color: #111;
+}
+
+.slt-map-label-wrap {
+  background: transparent !important;
+  border: none !important;
+}
+
+.slt-map-label-wrap--polygon {
+  margin-left: 0 !important;
+  margin-top: 0 !important;
+}
+
+.slt-map-label-wrap--polygon .slt-map-label {
+  display: block;
+  transform: translate(
+    calc(-50% + var(--label-stack-x, 0px)),
+    calc(-50% + var(--label-stack-y, 0px))
+  );
+  text-align: center;
+}
+
+.slt-map-label-wrap--pin {
+  overflow: visible !important;
+}
+
+.slt-map-label-wrap--pin .slt-map-label {
+  display: block;
+  transform: translate(
+    calc(0.35rem + var(--label-stack-x, 0px)),
+    calc(-0.15rem + var(--label-stack-y, 0px))
+  );
+  text-align: left;
+}
+
+.slt-map-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--label-color, #003b5a);
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow:
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px 1px 0 #fff,
+    0 0 4px #fff,
+    0 0 2px #fff;
+}
+
 .painel-detail-popover {
   position: fixed;
   z-index: 1100;

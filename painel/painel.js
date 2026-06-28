@@ -11,6 +11,8 @@
   let layersByKey = new Map();
   let layerVisibility = SLTPainelMapControls.createLayerVisibility(["plano", "programa", "projeto"]);
   let recordOrder = {};
+  let layerFilterApi = null;
+  let groupLabelsOn = { plano: false, programa: false, projeto: false };
   let selectedKey = null;
   let popoverEl = null;
   let anchorMode = null;
@@ -236,8 +238,74 @@
     applyMapLayerZOrder();
   }
 
+  function matchesLayerFilter(item) {
+    const filter = layerFilterApi?.getFilter?.();
+    return SLTPainelLayerFilter.matches(item, filter);
+  }
+
+  function filteredItems() {
+    return items.filter(matchesLayerFilter);
+  }
+
+  function isRecordMapVisible(tipo, id) {
+    const groupId = SLTPainelMapControls.groupIdFromKind(tipo);
+    const item = findItem(tipo, id);
+    if (item && !matchesLayerFilter(item)) return false;
+    return layerVisibility.isRecordVisible(groupId, recordVisibilityKey(tipo, id));
+  }
+
+  function syncAllMapVisibility() {
+    items.forEach((d) => syncEntryVisibility(d.tipo, d.id));
+    SIDEBAR_GRUPOS.forEach((g) => {
+      if (groupLabelsOn[g.id]) refreshGroupLabels(g.id);
+    });
+    resolveAllLabelCollisions();
+  }
+
+  function resolveAllLabelCollisions() {
+    SLTPainelLayerLabels.scheduleResolveCollisions(map, mapLayerGroup, layersByKey);
+  }
+
+  function refreshGroupLabels(groupId) {
+    if (!mapLayerGroup) return;
+    filteredItems()
+      .filter((d) => d.tipo === groupId)
+      .forEach((d) => {
+        const entry = layersByKey.get(itemKey(d.tipo, d.id));
+        if (!entry?.labelLayers?.length) return;
+        const show =
+          groupLabelsOn[groupId] &&
+          isRecordMapVisible(d.tipo, d.id);
+        entry.labelLayers.forEach((layer) => {
+          if (show) {
+            if (!mapLayerGroup.hasLayer(layer)) mapLayerGroup.addLayer(layer);
+          } else if (mapLayerGroup.hasLayer(layer)) {
+            mapLayerGroup.removeLayer(layer);
+          }
+        });
+      });
+    resolveAllLabelCollisions();
+  }
+
+  function onGroupLabelToggle(groupId, active) {
+    groupLabelsOn[groupId] = active;
+    refreshGroupLabels(groupId);
+  }
+
   function recordVisibilityKey(tipo, id) {
     return itemKey(tipo, id);
+  }
+
+  function initLayerFilter() {
+    layerFilterApi = SLTPainelLayerFilter.init({
+      container: "#painel-layer-filter",
+      getAllItems: () => items,
+      statusLabel: (code) => SLTStatusColors.getStatusDemanda(code).nome,
+      onFilterChange: () => {
+        renderSidebar();
+        syncAllMapVisibility();
+      },
+    });
   }
 
   function visibilityApi() {
@@ -254,8 +322,18 @@
   function syncEntryVisibility(tipo, id) {
     const groupId = SLTPainelMapControls.groupIdFromKind(tipo);
     const entry = layersByKey.get(itemKey(tipo, id));
-    const visible = layerVisibility.isRecordVisible(groupId, recordVisibilityKey(tipo, id));
+    const visible = isRecordMapVisible(tipo, id);
     SLTPainelMapControls.applyEntryVisibility(entry, mapLayerGroup, visible);
+    if (entry?.labelLayers?.length) {
+      const showLabels = groupLabelsOn[groupId] && visible;
+      entry.labelLayers.forEach((layer) => {
+        if (showLabels) {
+          if (!mapLayerGroup.hasLayer(layer)) mapLayerGroup.addLayer(layer);
+        } else if (mapLayerGroup.hasLayer(layer)) {
+          mapLayerGroup.removeLayer(layer);
+        }
+      });
+    }
   }
 
   function onGroupVisibilityChange(groupId, visible) {
@@ -283,7 +361,7 @@
       groups: SIDEBAR_GRUPOS.map((g) => ({
         id: g.id,
         label: g.label,
-        records: items.filter((d) => d.tipo === g.tipo),
+        records: filteredItems().filter((d) => d.tipo === g.tipo),
       })),
       selectedId: selectedIdFromKey(),
       getRecordId: (r) => r.id,
@@ -300,6 +378,8 @@
       recordOrder,
       getRecordKey: (r) => recordKey(r.tipo, r.id),
       onRecordReorder,
+      groupLabelsOn,
+      onGroupLabelToggle,
       onGroupVisibilityChange,
       onRecordVisibilityChange,
       onSelect: (id, record) => {
@@ -373,7 +453,11 @@
       if (!entry.bounds) entry.bounds = L.latLngBounds([ref, ref]);
     }
 
-    if (entry.layers.length) layersByKey.set(key, entry);
+    if (entry.layers.length) {
+      const style = geomStyle(d.status, d.tipo);
+      entry.labelLayers = SLTPainelLayerLabels.buildEntryLabels(entry, d, d.tipo, style.color, L);
+      layersByKey.set(key, entry);
+    }
   }
 
   function buildMapLayers() {
@@ -402,7 +486,7 @@
   function focusMapOnItem(tipo, id) {
     const entry = layersByKey.get(itemKey(tipo, id));
     if (entry?.bounds?.isValid()) {
-      SLTPainelMapControls.fitMapToDefaultBounds(map, entry.bounds, { animate: true });
+      SLTPainelMapControls.fitMapToDefaultBounds(map, entry.bounds, { animate: true, rememberDefault: false });
       return;
     }
     const d = findItem(tipo, id);
@@ -450,6 +534,9 @@
         repositionPopover();
       }
     });
+    map.on("zoomend moveend", () => {
+      if (Object.values(groupLabelsOn).some(Boolean)) resolveAllLabelCollisions();
+    });
 
     setTimeout(() => map.invalidateSize(), 0);
     window.addEventListener("resize", () => {
@@ -460,8 +547,8 @@
 
   function bindLegendLayoutRefresh() {
     $("status-legend")?.addEventListener("slt-legend-layout", () => {
-      if (!mapLayerGroup?.getLayers().length) return;
-      SLTPainelMapControls.fitMapToDefaultBounds(map, mapLayerGroup.getBounds(), { animate: true });
+      if (!map) return;
+      SLTPainelMapControls.adjustMapForLegendLayout(map);
     });
   }
 
@@ -474,6 +561,7 @@
     }
 
     initRecordOrder();
+    initLayerFilter();
     initLayersSectionCollapse();
     initMap();
     SLTStatusColors.renderLegend("#status-legend", {

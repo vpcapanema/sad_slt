@@ -1945,9 +1945,11 @@ body.admin-data-page .admin-card--revisao-status {
   z-index: 450;
   margin: 0;
   width: min(17.5rem, calc(100% - 5.5rem));
-  max-height: calc(100% - 4.5rem);
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
+  border: 1px solid var(--pli-border);
+  border-radius: var(--pli-radius);
+  background: var(--pli-white);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.08),
     0 8px 24px rgba(0, 0, 0, 0.1);
@@ -1966,27 +1968,65 @@ body.admin-data-page .admin-card--revisao-status {
   gap: 0.5rem;
   width: 100%;
   margin: 0;
-  padding: 0.5rem 0.65rem;
+  padding: 0.55rem 0.65rem;
   border: none;
-  background: #fafbfc;
-  color: inherit;
+  border-radius: var(--pli-radius) var(--pli-radius) 0 0;
+  background: var(--pli-deep);
+  color: #fff;
   cursor: pointer;
   text-align: left;
+  font-family: "Montserrat", Verdana, sans-serif;
+}
+
+.status-legend-map-toggle-start {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.status-legend-map-icon {
+  flex-shrink: 0;
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--pli-green);
+}
+
+.status-legend-map-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
 }
 
 .status-legend-map-toggle:hover {
-  background: #f3f6f9;
+  background: linear-gradient(135deg, var(--pli-deep) 0%, var(--pli-navy) 100%);
 }
 
 .status-legend-map-toggle .status-color-legend-title {
   margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.status-color-legend-host--map.is-collapsed .status-legend-map-toggle {
+  border-radius: var(--pli-radius);
 }
 
 .status-legend-map-chevron {
   flex-shrink: 0;
   font-size: 0.75rem;
   line-height: 1;
-  color: var(--pli-muted);
+  color: var(--pli-green);
   transition: transform 0.15s ease;
 }
 
@@ -1995,13 +2035,79 @@ body.admin-data-page .admin-card--revisao-status {
 }
 
 .status-legend-map-panel {
-  padding: 0 0.65rem 0.65rem;
-  max-height: min(62vh, calc(100vh - 11rem));
-  overflow-y: auto;
+  padding: 0;
+  overflow: visible;
+  background: var(--pli-white);
 }
 
 .status-color-legend-host--map.is-collapsed .status-legend-map-panel {
   display: none;
+}
+
+.status-color-legend-host--map .status-legend-intro {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--pli-muted);
+  background: #fafbfc;
+  border-bottom: 1px solid var(--pli-border);
+}
+
+.status-color-legend-host--map .status-color-legend-stack {
+  gap: 0;
+}
+
+.status-color-legend-host--map .status-color-legend-fase + .status-color-legend-fase {
+  border-top: 1px solid var(--pli-border);
+}
+
+.status-color-legend-host--map .status-color-legend-layer-title {
+  margin: 0;
+  padding: 0.42rem 0.65rem 0.2rem;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--pli-deep);
+  background: transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.status-color-legend-host--map .status-color-legend {
+  padding: 0.45rem 0.65rem 0.55rem;
+}
+
+.status-color-legend-host--map .status-color-legend-label {
+  color: var(--pli-deep);
+}
+
+.status-color-legend-host--map .status-legend-symbology {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--pli-border);
+}
+
+.status-color-legend-host--map .status-legend-symbology-hint {
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--pli-muted);
+  background: #fafbfc;
+  border-bottom: 1px solid var(--pli-border);
+}
+
+.status-color-legend-host--map .status-legend-symbology-list {
+  padding: 0.45rem 0.65rem 0.55rem;
+}
+
+.status-color-legend-host--map .status-legend-symbology-text {
+  color: var(--pli-deep);
 }
 
 .status-color-legend-title {

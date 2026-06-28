@@ -145,6 +145,45 @@
     return labelById(list, id, "nome");
   }
 
+  function analysisMapColumnHtml(d) {
+    const coords = SLTAdminAnalysisMap.coordsFromRecord(d);
+    const coordText = coords ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}` : "—";
+    return `
+      <div class="admin-info-map">
+        <div id="admin-preview-map-wrap"></div>
+        <p class="admin-info-coords">${escapeHtml(coordText)}</p>
+      </div>`;
+  }
+
+  function mountAnalysisMap(d, demandTipo) {
+    const record = { ...d, tipo: demandTipo };
+    const render = (payload) => {
+      SLTAdminAnalysisMap.initPreviewMap("admin-preview-map-wrap", payload);
+    };
+
+    if (record.geometria?.tipo && record.geometria.coordinates) {
+      render(record);
+      return;
+    }
+
+    SLTAdminApi.listPainelDemandas()
+      .then((items) => {
+        const hit = (items || []).find((item) => item.tipo === demandTipo && item.id === d.id);
+        if (!hit) {
+          render(record);
+          return;
+        }
+        render({
+          ...record,
+          geometria: hit.geometria || record.geometria,
+          lat: record.lat ?? hit.lat,
+          lng: record.lng ?? hit.lng,
+          status: record.status || hit.status,
+        });
+      })
+      .catch(() => render(record));
+  }
+
   function projectInfoHtml(d) {
     const { buildProjectInfoFields } = SLTAdminAnalysisInfo;
     const cat = SLTCatalog.catalog;
@@ -184,10 +223,7 @@
             <div class="admin-info-fields">${fieldsHtml}</div>
           </div>
           <div class="admin-dashboard-col">
-            <div class="admin-info-map">
-              <div id="admin-preview-map-wrap"></div>
-              <p class="admin-info-coords">${escapeHtml(coordText)}</p>
-            </div>
+            ${analysisMapColumnHtml(d)}
           </div>
         </div>
       </section>`;
@@ -327,7 +363,7 @@
 
     $("#fld-eixo")?.addEventListener("change", () => refreshTicSelect({ classificacao: {} }));
 
-    SLTAdminAnalysisMap.initPreviewMap("admin-preview-map-wrap", { ...d, tipo });
+    mountAnalysisMap(d, "projeto");
   }
 
   function collectProjeto() {
@@ -374,6 +410,8 @@
         <div class="admin-demand-body">
         <section id="sec-info" class="card admin-dashboard-section">
           <h2>Informações do Plano</h2>
+          <div class="admin-dashboard-columns">
+            <div class="admin-dashboard-col">
           <div class="admin-form-grid">
             <div class="form-field">
               <label for="fld-codigo">Código</label>
@@ -415,6 +453,11 @@
               <span class="field-help">Cadastrado em ${escapeHtml(formatDate(d.criadoEm))}.</span>
             </div>
           </div>
+            </div>
+            <div class="admin-dashboard-col">
+              ${analysisMapColumnHtml(d)}
+            </div>
+          </div>
         </section>
 
         <section id="sec-acoes" class="card admin-dashboard-section">
@@ -430,6 +473,7 @@
   function bindPlano(d) {
     fillSelect($("#fld-diretoria"), SLTCatalog.ativos(SLTCatalog.catalog.diretorias), "id", (x) => x.nome_oficial);
     $("#fld-diretoria").value = d.diretoria_id || "";
+    mountAnalysisMap(d, "plano");
   }
 
   function collectPlano() {
@@ -455,6 +499,8 @@
         <div class="admin-demand-body">
         <section id="sec-info" class="card admin-dashboard-section">
           <h2>Informações do Programa</h2>
+          <div class="admin-dashboard-columns">
+            <div class="admin-dashboard-col">
           <div class="admin-form-grid">
             <div class="form-field">
               <label for="fld-codigo">Código</label>
@@ -496,6 +542,11 @@
               <span class="field-help">Cadastrado em ${escapeHtml(formatDate(d.criadoEm))}.</span>
             </div>
           </div>
+            </div>
+            <div class="admin-dashboard-col">
+              ${analysisMapColumnHtml(d)}
+            </div>
+          </div>
         </section>
 
         <section id="sec-acoes" class="card admin-dashboard-section">
@@ -506,6 +557,10 @@
         </section>
         </div>
       </div>`;
+  }
+
+  function bindPrograma(d) {
+    mountAnalysisMap(d, "programa");
   }
 
   function collectPrograma() {
@@ -538,6 +593,7 @@
   function bindEvents(d) {
     if (tipo === "projeto") bindProjeto(d);
     if (tipo === "plano") bindPlano(d);
+    if (tipo === "programa") bindPrograma(d);
     $("#btn-salvar")?.addEventListener("click", () => saveRecord());
     $("#btn-aprovar")?.addEventListener("click", () => approveRecord());
   }

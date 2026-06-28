@@ -617,16 +617,43 @@
       );
     });
 
+    [...STATUS_ACAO_GESTOR].forEach((codigo) => {
+      rules.push(
+        `.admin-table tbody tr.status-acao-gestor[data-status="${codigo}"] td{--slt-pulse-accent:var(--status-${codigo}-text);--slt-pulse-row:var(--status-${codigo}-row);}`
+      );
+    });
+
     const pulseCss = `
 @keyframes slt-status-pulse {
-  0%, 100% { opacity: 1; filter: brightness(1); }
-  50% { opacity: 0.72; filter: brightness(1.06); }
+  0%, 100% { opacity: 1; filter: brightness(1) saturate(1); }
+  50% { opacity: 0.45; filter: brightness(1.18) saturate(1.25); }
 }
-.status-acao-gestor.badge-status { animation: slt-status-pulse 1.25s ease-in-out infinite; }
-.admin-table tbody tr.status-acao-gestor td { animation: slt-status-pulse 1.25s ease-in-out infinite; }
-.slt-geom-acao-gestor { animation: slt-status-pulse 1.25s ease-in-out infinite; }
+@keyframes slt-status-badge-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(192, 86, 33, 0.55); transform: scale(1); }
+  50% { box-shadow: 0 0 0 5px rgba(192, 86, 33, 0.2); transform: scale(1.03); }
+}
+@keyframes slt-status-row-glow {
+  0%, 100% {
+    box-shadow: inset 4px 0 0 var(--slt-pulse-accent, #c05621);
+    background-color: color-mix(in srgb, var(--slt-pulse-row, #fdebd0) 100%, transparent);
+  }
+  50% {
+    box-shadow: inset 7px 0 0 var(--slt-pulse-accent, #c05621), inset 0 0 28px rgba(192, 86, 33, 0.28);
+    background-color: color-mix(in srgb, var(--slt-pulse-row, #fdebd0) 72%, #fff);
+  }
+}
+.status-acao-gestor.badge-status {
+  animation: slt-status-pulse 0.8s ease-in-out infinite, slt-status-badge-glow 0.8s ease-in-out infinite;
+}
+.admin-table tbody tr.status-acao-gestor td {
+  animation: slt-status-pulse 0.8s ease-in-out infinite;
+}
+.admin-table tbody tr.status-acao-gestor td:first-child {
+  animation: slt-status-row-glow 0.8s ease-in-out infinite;
+}
+.slt-geom-acao-gestor { animation: slt-status-pulse 0.8s ease-in-out infinite; }
 .painel-pin-wrap.status-acao-gestor .painel-pin-halo {
-  animation: painel-halo-gradient-pulse 1.1s ease-out infinite, slt-status-pulse 1.25s ease-in-out infinite;
+  animation: painel-halo-gradient-pulse 0.9s ease-out infinite, slt-status-pulse 0.8s ease-in-out infinite;
 }`;
 
     style.textContent = `:root{\n${rootVars.join("\n")}\n}\n${rules.join("\n")}\n${pulseCss}`;
@@ -651,31 +678,45 @@
     });
   }
 
-  function getMapLegendPadding() {
+  function getMapViewportPadding() {
     const el = document.getElementById("status-legend");
-    const fallback = { top: 8, right: 8, bottom: 8, left: 8 };
-    if (!el || !el.classList.contains("status-color-legend-host--map")) return fallback;
-
     const mapEl = document.getElementById("map-painel");
+    const fallback = { top: 8, right: 8, bottom: 8, left: 8 };
     if (!mapEl) return fallback;
 
-    const legendRect = el.getBoundingClientRect();
     const mapRect = mapEl.getBoundingClientRect();
-    if (!legendRect.width || !legendRect.height || !mapRect.width || !mapRect.height) return fallback;
+    if (!mapRect.width || !mapRect.height) return fallback;
 
-    const overlapLeft = Math.max(mapRect.left, legendRect.left);
-    const overlapTop = Math.max(mapRect.top, legendRect.top);
-    const overlapRight = Math.min(mapRect.right, legendRect.right);
-    const overlapBottom = Math.min(mapRect.bottom, legendRect.bottom);
-    const overlapW = Math.max(0, overlapRight - overlapLeft);
-    const overlapH = Math.max(0, overlapBottom - overlapTop);
+    let left = 8;
+    const sidebar = document.querySelector(".layout-with-sidebar .layout-sidebar");
+    if (sidebar) {
+      const sbRect = sidebar.getBoundingClientRect();
+      const sidebarOverlap = sbRect.right - mapRect.left;
+      if (sidebarOverlap > 0) left = Math.ceil(sidebarOverlap + 4);
+    }
 
-    return {
-      top: overlapH > 0 ? Math.ceil(overlapH + 4) : 8,
-      right: overlapW > 0 ? Math.ceil(overlapW + 4) : 8,
-      bottom: 8,
-      left: 8,
-    };
+    let top = 8;
+    let right = 8;
+
+    if (el?.classList.contains("status-color-legend-host--map")) {
+      const legendRect = el.getBoundingClientRect();
+      if (legendRect.width && legendRect.height) {
+        const overlapLeft = Math.max(mapRect.left, legendRect.left);
+        const overlapTop = Math.max(mapRect.top, legendRect.top);
+        const overlapRight = Math.min(mapRect.right, legendRect.right);
+        const overlapBottom = Math.min(mapRect.bottom, legendRect.bottom);
+        const overlapW = Math.max(0, overlapRight - overlapLeft);
+        const overlapH = Math.max(0, overlapBottom - overlapTop);
+        if (overlapH > 0) top = Math.ceil(overlapH + 4);
+        if (overlapW > 0) right = Math.ceil(overlapW + 4);
+      }
+    }
+
+    return { top, right, bottom: 8, left };
+  }
+
+  function getMapLegendPadding() {
+    return getMapViewportPadding();
   }
 
   function mapFitBoundsOptions(extra) {
@@ -721,7 +762,14 @@
 
     if (isMapHost) {
       el.innerHTML = `<button type="button" class="status-legend-map-toggle" aria-expanded="false" aria-controls="status-legend-panel">
-        <span class="status-color-legend-title">${escapeHtml(title || "Legenda de status")}</span>
+        <span class="status-legend-map-toggle-start">
+          <span class="status-legend-map-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" focusable="false">
+              <path d="M12 2 3 7.5 12 12l9-4.5L12 2zm-8 7.8 8 4.4 8-4.4v2.4l-8 4.4-8-4.4v-2.4zm0 4.8 8 4.4 8-4.4V19l-8 4.5-8-4.5v-4.4z"/>
+            </svg>
+          </span>
+          <span class="status-color-legend-title">${escapeHtml(title || "Legenda de status")}</span>
+        </span>
         <span class="status-legend-map-chevron" aria-hidden="true">▸</span>
       </button>
       <div id="status-legend-panel" class="status-legend-map-panel" hidden>${innerContent}</div>`;
@@ -763,6 +811,7 @@
     injectTheme,
     renderLegend,
     getMapLegendPadding,
+    getMapViewportPadding,
     mapFitBoundsOptions,
   };
 })(window);

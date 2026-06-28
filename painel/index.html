@@ -38,6 +38,13 @@
       <div class="layout-sidebar-body">
         <div class="nav-section painel-layers-section">
           <div id="painel-layers-root" class="layer-group layer-group--root">
+            <div id="painel-layer-filter" class="painel-layer-filter" aria-label="Filtro de camadas">
+              <span class="painel-layer-filter-icon" aria-hidden="true"></span>
+              <select class="painel-layer-filter-field" aria-label="Campo do filtro"></select>
+              <select class="painel-layer-filter-value" aria-label="Valor do filtro"></select>
+              <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--apply" aria-label="Aplicar filtro"><span aria-hidden="true">✓</span></button>
+              <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--clear" aria-label="Limpar filtro"><span aria-hidden="true">✕</span></button>
+            </div>
             <button type="button" class="layer-group-header layer-group-header--section" id="toggle-demandas-section" aria-expanded="true" aria-controls="layers-container">
               <span class="layer-group-toggle" aria-hidden="true">▼</span>
               <span class="layer-group-name">Demandas</span>
@@ -67,6 +74,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="../assets/js/status-colors.js"></script>
   <script src="../assets/js/painel-map-controls.js"></script>
+  <script src="../assets/js/painel-layer-filter.js"></script>
+  <script src="../assets/js/painel-layer-labels.js"></script>
   <script src="../assets/js/storage.js"></script>
   <script src="../assets/js/demandas-api.js"></script>
   <script src="../assets/js/grouped-sidebar.js"></script>
