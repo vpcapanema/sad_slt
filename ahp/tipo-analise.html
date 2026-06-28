@@ -52,41 +52,194 @@
     <form id="form-tipo-analise" novalidate>
       <section class="card">
         <div class="ahp-section-label">
-          <i class="fas fa-sliders" aria-hidden="true"></i>
-          <span>Destino da análise</span>
+          <i class="fas fa-bullseye" aria-hidden="true"></i>
+          <span>Definição do escopo da análise</span>
+        </div>
+        <p class="ahp-page-desc ahp-help-text">
+          Defina o escopo da análise — o que será comparado e por quê. Ex.: «Aptidão de Projetos de
+          Infraestrutura à manutenção».
+        </p>
+
+        <div class="ahp-subcard">
+          <div class="ahp-subsection-title">
+            <i class="fas fa-sliders" aria-hidden="true"></i>
+            <span>Destino e objeto da análise</span>
+          </div>
+          <p class="ahp-page-desc ahp-help-text">
+            Selecione o destino da análise e, em seguida, o objeto a ser analisado.
+            <strong>Avulsa</strong>: estudo exploratório, sem vínculo. <strong>Portfólio SLT</strong>:
+            demandas reais (plano, programa ou projeto).
+          </p>
+
+          <div class="ahp-escopo-grid">
+            <div class="ahp-mini-card is-hidden" id="mini-dimensao">
+              <label for="config-tipo-demanda" class="c-form-label">
+                <i class="fas fa-layer-group" aria-hidden="true"></i> Objeto da análise
+              </label>
+              <select id="config-tipo-demanda" name="tipo_demanda_id" class="c-form-control">
+                <option value="">Selecione o tipo de demanda…</option>
+              </select>
+              <p class="ahp-mini-help">
+                O objeto da análise corresponde ao tipo de demanda — é a chave que delimita
+                o universo (não mistura plano, programa e projeto) e entra no título. Ex.: Projetos.
+              </p>
+            </div>
+
+            <div class="ahp-mini-card is-hidden" id="mini-objeto-avulsa">
+              <label for="config-objeto" class="c-form-label">
+                <i class="fas fa-cube" aria-hidden="true"></i> Objeto da análise
+              </label>
+              <select id="config-objeto" class="c-form-control">
+                <option value="">Selecione o objeto…</option>
+              </select>
+              <input type="text" id="config-objeto-custom" class="c-form-control is-hidden"
+                     maxlength="200" placeholder="Digite o objeto">
+              <p class="ahp-mini-help">
+                O objeto é o que será comparado (na avulsa não há tipo de demanda) —
+                ex.: alternativas, empreendimentos, intervenções.
+              </p>
+            </div>
+          </div>
+
+          <div class="ahp-tipo-grid ahp-tipo-grid--compact">
+            <label class="ahp-tipo-card ahp-tipo-card--compact" data-tipo="portfolio">
+              <input type="radio" name="tipo_analise" value="portfolio" required>
+              <div class="ahp-tipo-card__icon"><i class="fas fa-folder-tree" aria-hidden="true"></i></div>
+              <h3>Análise de portfólio SLT</h3>
+            </label>
+
+            <label class="ahp-tipo-card ahp-tipo-card--compact" data-tipo="avulsa">
+              <input type="radio" name="tipo_analise" value="avulsa" required>
+              <div class="ahp-tipo-card__icon"><i class="fas fa-flask" aria-hidden="true"></i></div>
+              <h3>Análise avulsa</h3>
+            </label>
+          </div>
         </div>
 
-        <div class="ahp-tipo-grid">
-          <label class="ahp-tipo-card" data-tipo="avulsa">
-            <input type="radio" name="tipo_analise" value="avulsa" required>
-            <div class="ahp-tipo-card__icon"><i class="fas fa-flask" aria-hidden="true"></i></div>
-            <h3>Análise avulsa</h3>
-            <p>
-              Hierarquize fenômenos ou alternativas sem vínculo com demandas ou objetos AHP do
-              portfólio SLT. Indicada para estudos exploratórios, simulações ou comparações
-              pontuais.
-            </p>
-            <ul>
-              <li>Critérios e premissas definidos pelo analista</li>
-              <li>Alternativas informadas manualmente no fluxo</li>
-              <li>Resultado salvo como análise independente</li>
-            </ul>
-          </label>
+        <div class="ahp-subcard ahp-escopo-fields">
+          <div class="ahp-subsection-title">
+            <i class="fas fa-pen-fancy" aria-hidden="true"></i>
+            <span>Escopo da análise</span>
+          </div>
+          <p class="ahp-page-desc ahp-help-text">
+            Preencha os elementos que compõem o título (fenômeno, área e tema). O sistema
+            gera três versões; escolha, edite se quiser e confirme.
+          </p>
 
-          <label class="ahp-tipo-card" data-tipo="portfolio">
-            <input type="radio" name="tipo_analise" value="portfolio" required>
-            <div class="ahp-tipo-card__icon"><i class="fas fa-folder-tree" aria-hidden="true"></i></div>
-            <h3>Análise de portfólio SLT</h3>
-            <p>
-              Compare demandas já cadastradas no SLT (plano, programa ou projeto), agrupadas pelo
-              universo que você definir. Integra o ranking à gestão de demandas da Subsecretaria.
+          <div class="ahp-escopo-grid">
+            <div class="ahp-mini-card">
+              <label for="config-fenomeno" class="c-form-label">
+                <i class="fas fa-wave-square" aria-hidden="true"></i> Fenômeno
+              </label>
+              <select id="config-fenomeno" class="c-form-control">
+                <option value="">Selecione o fenômeno…</option>
+              </select>
+              <input type="text" id="config-fenomeno-custom" class="c-form-control is-hidden"
+                     maxlength="200" placeholder="Digite o fenômeno">
+              <p class="ahp-mini-help">
+                Escolha o fenômeno medido pelos critérios. É a propriedade avaliada —
+                ex.: Aptidão, Favorabilidade.
+              </p>
+            </div>
+
+            <div class="ahp-mini-card">
+              <label for="config-area" class="c-form-label">
+                <i class="fas fa-book" aria-hidden="true"></i> Área do conhecimento
+              </label>
+              <select id="config-area" class="c-form-control">
+                <option value="">Selecione a área do conhecimento…</option>
+              </select>
+              <input type="text" id="config-area-custom" class="c-form-control is-hidden"
+                     maxlength="200" placeholder="Digite a área do conhecimento">
+              <p class="ahp-mini-help">
+                Escolha a área do conhecimento em que a comparação se insere —
+                ex.: Infraestrutura, Mobilidade urbana.
+              </p>
+            </div>
+
+            <div class="ahp-mini-card">
+              <label for="config-tema" class="c-form-label">
+                <i class="fas fa-hashtag" aria-hidden="true"></i> Tema
+              </label>
+              <select id="config-tema" class="c-form-control">
+                <option value="">Selecione o tema…</option>
+              </select>
+              <input type="text" id="config-tema-custom" class="c-form-control is-hidden"
+                     maxlength="200" placeholder="Digite o tema">
+              <p class="ahp-mini-help">
+                Escolha o aspecto sob o qual as alternativas são avaliadas —
+                ex.: Manutenção, Execução.
+              </p>
+            </div>
+          </div>
+
+          <div id="sug-escopo" class="ahp-sugestoes is-hidden"></div>
+          <input type="hidden" id="config-nome" name="nome">
+        </div>
+
+        <div class="ahp-subcard ahp-escopo-fields">
+          <div class="ahp-subsection-title">
+            <i class="fas fa-bullseye" aria-hidden="true"></i>
+            <span>Objetivo</span>
+          </div>
+          <p class="ahp-page-desc ahp-help-text">
+            Escolha o verbo da ação; o sistema gera três versões do objetivo a partir do
+            escopo. Escolha, edite se quiser e confirme.
+          </p>
+
+          <div class="ahp-escopo-grid">
+            <div class="ahp-mini-card">
+              <label for="config-acao" class="c-form-label">
+                <i class="fas fa-flag-checkered" aria-hidden="true"></i> Verbo de Ação
+              </label>
+              <select id="config-acao" class="c-form-control">
+                <option value="">Selecione o verbo da ação…</option>
+              </select>
+              <input type="text" id="config-acao-custom" class="c-form-control is-hidden"
+                     maxlength="200" placeholder="Digite o verbo da ação">
+              <p class="ahp-mini-help">
+                Escolha o verbo da ação que a análise produz — ex.: ranquear, priorizar,
+                classificar. O texto é ajustado automaticamente.
+              </p>
+            </div>
+          </div>
+
+          <div id="sug-objetivo" class="ahp-sugestoes is-hidden"></div>
+          <input type="hidden" id="config-objetivo" name="objetivo">
+        </div>
+
+        <div class="ahp-subcard ahp-escopo-fields">
+          <div class="ahp-subsection-title">
+            <i class="fas fa-align-left" aria-hidden="true"></i>
+            <span>Descrição</span>
+          </div>
+          <p class="ahp-page-desc ahp-help-text">
+            A descrição é gerada a partir do escopo e do objetivo. Decida se inclui as
+            dimensões dos critérios e confirme para ver as três versões.
+          </p>
+
+          <div class="ahp-mini-card" id="mini-incluir-dim">
+            <span class="c-form-label">
+              <i class="fas fa-layer-group" aria-hidden="true"></i> Incluir dimensões dos critérios?
+            </span>
+            <div class="ahp-radio-row" id="incluir-dim-radios">
+              <label><input type="radio" name="incluir-dimensoes" value="sim"> Sim</label>
+              <label><input type="radio" name="incluir-dimensoes" value="nao"> Não</label>
+            </div>
+            <div id="config-dimensoes" class="ahp-dim-checks is-hidden"></div>
+            <p class="ahp-mini-help">
+              Escolha se os critérios serão organizados em dimensões (ex.: ambientais,
+              sociais, econômicas, técnicas) e confirme.
             </p>
-            <ul>
-              <li>Demandas carregadas do schema <code>demandas</code> por nível</li>
-              <li>Critérios alinhados à matriz PLI-SP</li>
-              <li>Ranking pode refletir na priorização do portfólio</li>
-            </ul>
-          </label>
+            <div class="ahp-dim-confirm-wrap">
+              <button type="button" id="dim-confirmar" class="btn btn-primary btn-sm" disabled>
+                <i class="fas fa-circle-check" aria-hidden="true"></i> Confirmar
+              </button>
+            </div>
+          </div>
+
+          <div id="sug-descricao" class="ahp-sugestoes is-hidden"></div>
+          <input type="hidden" id="config-descricao" name="descricao">
         </div>
       </section>
 
@@ -95,134 +248,51 @@
           <i class="fas fa-folder-tree" aria-hidden="true"></i>
           <span>Universo da análise</span>
         </div>
-        <p class="ahp-page-desc">
-          Defina o universo populacional (o nível de demanda) e, em seguida, o universo amostral
-          (o recorte). O contador ao final mostra quantas demandas elegíveis entram no universo
-          com os filtros atuais.
+        <p class="ahp-page-desc ahp-help-text">
+          Recorte as demandas que entram na análise a partir da dimensão escolhida no escopo. O
+          contador ao final mostra quantas demandas elegíveis restam.
         </p>
 
         <div class="ahp-subcard">
           <div class="ahp-subsection-title">
-            <i class="fas fa-layer-group" aria-hidden="true"></i>
-            <span>Universo populacional</span>
+            <i class="fas fa-sliders" aria-hidden="true"></i>
+            <span>Filtro simples</span>
           </div>
-
-          <div class="c-form-group">
-            <label for="config-tipo-demanda" class="c-form-label">
-              <i class="fas fa-layer-group" aria-hidden="true"></i> Tipo de demanda
-            </label>
-            <select id="config-tipo-demanda" name="tipo_demanda_id" class="c-form-control">
-              <option value="">Selecione o tipo de demanda…</option>
-            </select>
-          </div>
+          <p class="ahp-page-desc ahp-help-text">
+            Combine <strong>campo</strong> e <strong>valor</strong>; as condições somam-se em
+            conjunto (E).
+          </p>
+          <div id="portfolio-filtros"></div>
+          <button type="button" class="btn btn-secondary btn-sm" id="add-filtro">
+            <i class="fas fa-plus" aria-hidden="true"></i> Adicionar filtro
+          </button>
         </div>
 
         <div class="ahp-subcard">
           <div class="ahp-subsection-title">
-            <i class="fas fa-filter" aria-hidden="true"></i>
-            <span>Universo amostral</span>
+            <i class="fas fa-code-branch" aria-hidden="true"></i>
+            <span>Filtros lógicos</span>
           </div>
-
-          <div class="ahp-subsubcard">
-            <div class="ahp-subsubsection-title">
-              <i class="fas fa-sliders" aria-hidden="true"></i>
-              <span>Filtro simples</span>
-            </div>
-            <p class="ahp-page-desc">
-              Combine <strong>campo</strong> e <strong>valor</strong>. As condições são aplicadas
-              em conjunto (E).
-            </p>
-            <div id="portfolio-filtros"></div>
-            <button type="button" class="btn btn-secondary btn-sm" id="add-filtro">
-              <i class="fas fa-plus" aria-hidden="true"></i> Adicionar filtro
-            </button>
-          </div>
-
-          <div class="ahp-subsubcard">
-            <div class="ahp-subsubsection-title">
-              <i class="fas fa-code-branch" aria-hidden="true"></i>
-              <span>Filtros lógicos</span>
-            </div>
-            <p class="ahp-page-desc">
-              Combine condições com operadores booleanos (<strong>E</strong>/<strong>OU</strong>) e
-              por operador (igual, diferente, contém).
-            </p>
-            <div id="filtros-logicos"></div>
-            <button type="button" class="btn btn-secondary btn-sm" id="add-logico">
-              <i class="fas fa-plus" aria-hidden="true"></i> Adicionar condição
-            </button>
-          </div>
-
-          <div class="ahp-subsubcard">
-            <div class="ahp-subsubsection-title">
-              <i class="fas fa-table" aria-hidden="true"></i>
-              <span>Resumo</span>
-            </div>
-            <div id="portfolio-preview" class="ahp-universo-preview" role="status" aria-live="polite">
-              <i class="fas fa-database" aria-hidden="true"></i>
-              <span id="portfolio-preview-text">Selecione o tipo de demanda para ver o universo.</span>
-            </div>
-            <div id="amostra-resumo" class="ahp-resumo-wrap"></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="ahp-section-label">
-          <i class="fas fa-bullseye" aria-hidden="true"></i>
-          <span>Definição do escopo da análise do portfólio</span>
+          <p class="ahp-page-desc ahp-help-text">
+            Combine condições com <strong>E</strong>/<strong>OU</strong> e operadores (igual,
+            diferente, contém).
+          </p>
+          <div id="filtros-logicos"></div>
+          <button type="button" class="btn btn-secondary btn-sm" id="add-logico">
+            <i class="fas fa-plus" aria-hidden="true"></i> Adicionar condição
+          </button>
         </div>
 
-        <div class="ahp-escopo-grid">
-          <div class="c-form-group">
-            <label for="config-fenomeno" class="c-form-label">
-              <i class="fas fa-wave-square" aria-hidden="true"></i> Fenômeno
-            </label>
-            <select id="config-fenomeno" class="c-form-control">
-              <option value="">Objeto medido pelos critérios. Ex.: Favorabilidade…</option>
-            </select>
-            <input type="text" id="config-fenomeno-custom" class="c-form-control is-hidden"
-                   maxlength="200" placeholder="Digite o fenômeno">
+        <div class="ahp-subcard">
+          <div class="ahp-subsection-title">
+            <i class="fas fa-table" aria-hidden="true"></i>
+            <span>Resumo</span>
           </div>
-
-          <div class="c-form-group">
-            <label for="config-area" class="c-form-label">
-              <i class="fas fa-book" aria-hidden="true"></i> Área do conhecimento
-            </label>
-            <select id="config-area" class="c-form-control">
-              <option value="">Campo em que a comparação se insere. Ex.: Logística e transporte…</option>
-            </select>
-            <input type="text" id="config-area-custom" class="c-form-control is-hidden"
-                   maxlength="200" placeholder="Digite a área do conhecimento">
+          <div id="portfolio-preview" class="ahp-universo-preview" role="status" aria-live="polite">
+            <i class="fas fa-database" aria-hidden="true"></i>
+            <span id="portfolio-preview-text">Selecione a dimensão (tipo de demanda) para ver o universo.</span>
           </div>
-
-          <div class="c-form-group">
-            <label for="config-tema" class="c-form-label">
-              <i class="fas fa-hashtag" aria-hidden="true"></i> Tema
-            </label>
-            <select id="config-tema" class="c-form-control">
-              <option value="">Aspecto sob o qual avalia-se. Ex.: Execução…</option>
-            </select>
-            <input type="text" id="config-tema-custom" class="c-form-control is-hidden"
-                   maxlength="200" placeholder="Digite o tema">
-          </div>
-        </div>
-
-        <div class="c-form-group">
-          <label for="config-nome" class="c-form-label">
-            <i class="fas fa-tag" aria-hidden="true"></i> Escopo (título) da análise
-          </label>
-          <input type="text" id="config-nome" name="nome" class="c-form-control"
-                 maxlength="200" required readonly
-                 placeholder="Gerado automaticamente: fenômeno + alternativas + área + à + tema">
-        </div>
-
-        <div class="c-form-group">
-          <label for="config-descricao" class="c-form-label">
-            <i class="fas fa-align-left" aria-hidden="true"></i> Descrição
-          </label>
-          <textarea id="config-descricao" name="descricao" class="c-form-control" rows="4"
-                    placeholder="Detalhamento: quais critérios serão comparados, contexto e premissas que orientam esta comparação pareada."></textarea>
+          <div id="amostra-resumo" class="ahp-resumo-wrap"></div>
         </div>
       </section>
 
@@ -242,6 +312,7 @@
   <script src="../assets/js/catalog.js"></script>
   <script src="js/config-api.js"></script>
   <script src="js/tipo-analise.js"></script>
+  <script src="../assets/js/field-filled.js"></script>
   <script src="../assets/js/app-header.js"></script>
   <script src="../assets/js/navbar.js"></script>
 </body>

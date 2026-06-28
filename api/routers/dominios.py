@@ -21,7 +21,7 @@ def _map_status(rows: list[dict]) -> list[StatusDominioSchema]:
             nome=row["nome"],
             descricao=row.get("descricao"),
             ordem=int(row["ordem"]),
-            camada=row.get("camada"),
+            fase=row.get("fase"),
             rotulos_por_tipo=STATUS_ROTULOS_POR_TIPO.get(row["codigo"]),
         )
         for row in rows
@@ -32,7 +32,7 @@ def _map_status(rows: list[dict]) -> list[StatusDominioSchema]:
 async def listar_status_demanda(
     _user: SessionUser = Depends(require_gestor),
 ) -> list[StatusDominioSchema]:
-    """Lista domínio de status do ciclo de vida (Camada 1 → hierarquização → pós)."""
+    """Lista domínio de status do ciclo de vida (cadastro/análise → hierarquização → execução)."""
     try:
         return _map_status(dominio_repository.list_status_demanda())
     except DatabaseUnavailableError as exc:
@@ -54,7 +54,7 @@ async def listar_transicoes_status_demanda(
 async def listar_status_objeto_ahp(
     _user: SessionUser = Depends(require_gestor),
 ) -> list[StatusDominioSchema]:
-    """Status da fase de hierarquização (camada hierarquizacao)."""
+    """Status da fase de hierarquização (fase hierarquizacao)."""
     try:
         return _map_status(dominio_repository.list_status_objeto_ahp())
     except DatabaseUnavailableError as exc:

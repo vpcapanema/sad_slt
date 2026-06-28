@@ -6,7 +6,7 @@ from api.db.connection import get_connection
 
 def list_status_demanda() -> list[dict]:
     sql = """
-        SELECT codigo, nome, descricao, ordem, camada
+        SELECT codigo, nome, descricao, ordem, fase
         FROM demandas.dom_status_demanda
         WHERE ativo = TRUE
         ORDER BY ordem
@@ -16,15 +16,12 @@ def list_status_demanda() -> list[dict]:
 
 
 def list_status_objeto_ahp() -> list[dict]:
-    """Status da fase de hierarquização (camada hierarquizacao)."""
+    """Status da fase de hierarquização (fase hierarquizacao)."""
     sql = """
-        SELECT codigo, nome, descricao, ordem, camada
+        SELECT codigo, nome, descricao, ordem, fase
         FROM demandas.dom_status_demanda
         WHERE ativo = TRUE
-          AND (
-            camada = 'hierarquizacao'
-            OR (camada IS NULL AND ordem >= 70 AND ordem < 100)
-          )
+          AND fase = 'hierarquizacao'
         ORDER BY ordem
     """
     with get_connection() as conn:

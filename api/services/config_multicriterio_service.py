@@ -11,7 +11,12 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
-from api.constants import TIPO_DEMANDA_COD_TO_ID, TIPO_DEMANDA_ID_TO_COD
+from api.constants import (
+    STATUS_EM_HIERARQUIZACAO,
+    STATUS_POS_APROVACAO,
+    TIPO_DEMANDA_COD_TO_ID,
+    TIPO_DEMANDA_ID_TO_COD,
+)
 from api.exceptions import ConfigMulticriterioNotFoundError, DemandaValidationError
 from api.repositories import config_multicriterio_repository as repo
 from api.schemas.config_multicriterio import (
@@ -25,9 +30,6 @@ _STATUS_VALIDOS = frozenset({"rascunho", "calculada", "homologada", "arquivada"}
 
 # Rótulo exibível do nível de demanda (demandas.dom_tipo_demanda.nome).
 _TIPO_DEMANDA_NOME = {1: "Plano", 2: "Programa", 3: "Projeto"}
-
-# Refino do universo obrigatório por nível (agrupador natural / "pai").
-_GRUPO_OBRIGATORIO = {"plano": "diretoria_id", "programa": "plano_id", "projeto": "programa_id"}
 
 _UPDATE_FIELDS = frozenset(
     {
@@ -107,6 +109,7 @@ def _row_to_response(row: dict[str, Any]) -> ConfigResponseSchema:
         tipo_demanda=TIPO_DEMANDA_ID_TO_COD.get(tid) if tid is not None else None,
         tipo_demanda_nome=_TIPO_DEMANDA_NOME.get(tid) if tid is not None else None,
         subconjunto=row.get("subconjunto"),
+        universo_objetos=row.get("universo_objetos") or [],
         status=row["status"],
         metodo_entrada=row.get("metodo_entrada") or "manual",
         metodo_comparacao=row.get("metodo_comparacao"),
@@ -148,6 +151,7 @@ def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) 
     criado_uuid = _uuid_or_none(criado_por)
     if criado_uuid:
         data["criado_por"] = criado_uuid
+    status_transicao: dict[str, Any] | None = None
     if payload.tipo == "portfolio":
         tipo_id = TIPO_DEMANDA_COD_TO_ID.get(payload.tipo_demanda or "")
         if tipo_id is None:
@@ -157,16 +161,28 @@ def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) 
         data["tipo_demanda_id"] = tipo_id
 
         # Recorte do universo persistido como JSON único (não em colunas fixas).
+        # O refino "pai" (diretoria_id/plano_id/programa_id) NÃO é obrigatório:
+        # o universo amostral é definido pelos filtros do próprio subconjunto.
         subconjunto = dict(payload.subconjunto or {})
-        obrigatorio = _GRUPO_OBRIGATORIO.get(payload.tipo_demanda or "")
-        if obrigatorio and not subconjunto.get(obrigatorio):
-            raise DemandaValidationError(
-                f"{obrigatorio} é obrigatório para configuração de portfólio do tipo "
-                f"{payload.tipo_demanda}.",
-                field=obrigatorio,
-            )
         data["subconjunto"] = subconjunto
-    return _row_to_response(repo.insert(payload.tipo, data))
+
+        # Universo confirmado (snapshot congelado) é obrigatório no portfólio.
+        objetos = payload.universo_objetos or []
+        if not objetos:
+            raise DemandaValidationError(
+                "Confirme o universo da análise (ao menos um objeto) antes de criar a configuração.",
+                field="universo_objetos",
+            )
+        data["universo_objetos"] = objetos
+        # Mesma transação do insert: apta → em hierarquização.
+        ids = [o.get("id") for o in objetos if o.get("id")]
+        status_transicao = {
+            "tabela": ("demandas", payload.tipo_demanda),
+            "ids": ids,
+            "de": STATUS_POS_APROVACAO,
+            "para": STATUS_EM_HIERARQUIZACAO,
+        }
+    return _row_to_response(repo.insert(payload.tipo, data, status_transicao=status_transicao))
 
 
 def listar_configs(

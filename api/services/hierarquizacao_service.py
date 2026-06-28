@@ -55,6 +55,7 @@ def _gerar_codigo() -> str:
 
 
 def _row_to_response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
+    tid = row.get("tipo_demanda_id")
     return HierarquizacaoResponseSchema(
         id=str(row["id"]),
         codigo=row["codigo"],
@@ -62,7 +63,7 @@ def _row_to_response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
         config_codigo=row.get("config_codigo"),
         nome=row["nome"],
         descricao=row.get("descricao"),
-        tipo_demanda=TIPO_DEMANDA_ID_TO_COD.get(row.get("tipo_demanda_id")),
+        tipo_demanda=TIPO_DEMANDA_ID_TO_COD.get(tid) if tid is not None else None,
         grupo_id=row.get("grupo_id"),
         status=row["status"],
         objetos=row.get("objetos") or [],
@@ -75,7 +76,10 @@ def _row_to_response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
     )
 
 
-def criar_hierarquizacao(payload: HierarquizacaoCreateSchema, *, criado_por: str | None = None) -> HierarquizacaoResponseSchema:
+def criar_hierarquizacao(
+    payload: HierarquizacaoCreateSchema, *, criado_por: str | None = None
+) -> HierarquizacaoResponseSchema:
+    """Cria uma hierarquização (rascunho) vinculada a uma configuração de portfólio."""
     config = config_repo.get_by_codigo("portfolio", payload.config_codigo)
     if not config:
         raise ConfigMulticriterioNotFoundError(payload.config_codigo)
@@ -97,15 +101,22 @@ def criar_hierarquizacao(payload: HierarquizacaoCreateSchema, *, criado_por: str
     return _row_to_response(repo.insert(data))
 
 
-def listar_hierarquizacoes(*, status: str | None = None, grupo: str | None = None) -> list[HierarquizacaoResponseSchema]:
+def listar_hierarquizacoes(
+    *, status: str | None = None, grupo: str | None = None
+) -> list[HierarquizacaoResponseSchema]:
+    """Lista hierarquizações, opcionalmente filtrando por status e grupo."""
     return [_row_to_response(r) for r in repo.list_all(status=status, grupo=grupo)]
 
 
 def obter_hierarquizacao(codigo: str) -> HierarquizacaoResponseSchema:
+    """Retorna uma hierarquização pelo código."""
     return _row_to_response(_carregar(codigo))
 
 
-def atualizar_hierarquizacao(codigo: str, payload: HierarquizacaoUpdateSchema) -> HierarquizacaoResponseSchema:
+def atualizar_hierarquizacao(
+    codigo: str, payload: HierarquizacaoUpdateSchema
+) -> HierarquizacaoResponseSchema:
+    """Atualiza campos editáveis de uma hierarquização."""
     _carregar(codigo)
     data = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if k in _UPDATE_FIELDS}
     if "status" in data and data["status"] not in _STATUS_VALIDOS:
@@ -130,7 +141,8 @@ def calcular_hierarquizacao(codigo: str) -> HierarquizacaoResponseSchema:
     weights = pesos_cfg.get("weights") or []
     if not criteria or not weights:
         raise DemandaValidationError(
-            "A configuração multicritério precisa estar calculada (pesos de critérios) antes de hierarquizar.",
+            "A configuração multicritério precisa estar calculada (pesos de critérios) "
+            "antes de hierarquizar.",
             field="config_id",
         )
     weight_by_crit = dict(zip(criteria, weights))
@@ -192,7 +204,10 @@ def calcular_hierarquizacao(codigo: str) -> HierarquizacaoResponseSchema:
     return _row_to_response(updated)
 
 
-def homologar_hierarquizacao(codigo: str, *, homologado_por: str | None = None) -> HierarquizacaoResponseSchema:
+def homologar_hierarquizacao(
+    codigo: str, *, homologado_por: str | None = None
+) -> HierarquizacaoResponseSchema:
+    """Homologa uma hierarquização já calculada (com ranking)."""
     row = _carregar(codigo)
     if not row.get("ranking"):
         raise DemandaValidationError("Calcule a hierarquização antes de homologar.", field="status")

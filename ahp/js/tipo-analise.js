@@ -10,8 +10,15 @@
   const cards = document.querySelectorAll(".ahp-tipo-card");
   const nomeInput = document.getElementById("config-nome");
   const descInput = document.getElementById("config-descricao");
+  const objInput = document.getElementById("config-objetivo");
   // Comboboxes (select + campo "Outro") criados na inicialização.
   let areaCombo, temaCombo, fenomenoCombo;
+  // Comboboxes da construção do objetivo.
+  let acaoCombo, objetoCombo;
+  // Comboboxes da construção da descrição.
+  let perspectivaCombo, finalidadeCombo;
+  // Instâncias do componente de Sugestões (escopo / objetivo / descrição).
+  let sugEscopo, sugObjetivo, sugDescricao;
   const portfolioSection = document.getElementById("portfolio-section");
   const tipoDemandaSel = document.getElementById("config-tipo-demanda");
   const filtrosWrap = document.getElementById("portfolio-filtros");
@@ -56,6 +63,123 @@
     "Impacto",
   ];
 
+  // ---- Bibliotecas para a construção do objetivo ----
+  // Ação final: verbo da ação que a análise produz. O sistema pode reescrever o
+  // verbo para uma redação mais formal (ex.: "ranquear" -> "Estabelecer um ranking de").
+  const SUGESTOES_ACAO = [
+    "Ranquear",
+    "Priorizar",
+    "Classificar",
+    "Selecionar",
+    "Comparar",
+  ];
+
+  // Objeto (somente avulsa — no portfólio vem do tipo de demanda).
+  const SUGESTOES_OBJETO = [
+    "alternativas",
+    "projetos",
+    "empreendimentos",
+    "intervenções",
+  ];
+
+  // ---- Bibliotecas para a construção da descrição ----
+  // Perspectiva: abordagem do estudo (vira verbo no infinitivo na frase).
+  const SUGESTOES_PERSPECTIVA = ["Análise", "Avaliação", "Exame"];
+  const PERSPECTIVA_INF = {
+    análise: "Analisar",
+    analise: "Analisar",
+    avaliação: "Avaliar",
+    avaliacao: "Avaliar",
+    exame: "Examinar",
+  };
+
+  // Finalidade do estudo (propósito final da frase).
+  const SUGESTOES_FINALIDADE = [
+    "apoiar a decisão",
+    "estruturar a análise",
+    "comparar alternativas",
+  ];
+  const FINALIDADE_FRASE = {
+    "apoiar a decisão": "apoiar a tomada de decisão",
+  };
+
+  // Dimensões dos critérios (conceito metodológico adiantado para esta seção).
+  const DIMENSOES = [
+    "ambientais",
+    "sociais",
+    "econômicas",
+    "técnicas",
+    "institucionais",
+    "territoriais",
+  ];
+  const DIMENSOES_PADRAO = ["ambientais", "sociais", "econômicas", "técnicas"];
+
+  function perspectivaInfinitivo(p) {
+    const k = (p || "").trim().toLowerCase();
+    if (!k) return "";
+    return PERSPECTIVA_INF[k] || ucFirst(k);
+  }
+
+  function finalidadeFrase(f) {
+    const k = (f || "").trim().toLowerCase();
+    if (!k) return "";
+    return FINALIDADE_FRASE[k] || k;
+  }
+
+  // Junta lista com vírgulas e "e" antes do último item.
+  function juntarLista(itens) {
+    const xs = itens.filter(Boolean);
+    if (xs.length === 0) return "";
+    if (xs.length === 1) return xs[0];
+    return xs.slice(0, -1).join(", ") + " e " + xs[xs.length - 1];
+  }
+
+  // Reescrita do verbo para uma forma de objetivo (verbo + complemento).
+  // Mapa de verbos conhecidos; verbos livres caem no fallback infinitivo.
+  const VERBO_FRAG = {
+    ranquear: "Estabelecer um ranking de",
+    rankear: "Estabelecer um ranking de",
+    priorizar: "Priorizar",
+    hierarquizar: "Hierarquizar",
+    classificar: "Classificar",
+    ordenar: "Ordenar",
+    selecionar: "Selecionar",
+    comparar: "Comparar",
+  };
+
+  // Fragmento da ação já ligado ao objeto (cada verbo conecta diferente).
+  function acaoFragmento(verbo, objeto) {
+    const v = (verbo || "").trim().toLowerCase();
+    const obj = (objeto || "").trim();
+    if (!v || !obj) return "";
+    const frag = VERBO_FRAG[v] || ucFirst(v);
+    return frag + " " + obj;
+  }
+
+  // Artigo do construto (fenômeno): "da" (fem.) por padrão, "do" p/ masculinos.
+  const CONSTRUTO_MASC = new Set(["risco", "impacto"]);
+  function artigoConstruto(fen) {
+    return CONSTRUTO_MASC.has((fen || "").trim().toLowerCase()) ? "do" : "da";
+  }
+
+  // Conector do recorte (tema): "à sua" (fem.) ou "ao seu" (masc.).
+  const RECORTE_MASC = new Set([
+    "planejamento",
+    "investimento",
+    "desenvolvimento",
+  ]);
+  function conectorRecorte(tema) {
+    return RECORTE_MASC.has((tema || "").trim().toLowerCase()) ? "ao seu" : "à sua";
+  }
+
+  // Contração simples a+artigo: "à" (fem.) ou "ao" (masc.) — usada na descrição.
+  function artigoA(tema) {
+    return RECORTE_MASC.has((tema || "").trim().toLowerCase()) ? "ao" : "à";
+  }
+
+  // No AHP a base de julgamento é sempre o conjunto de critérios — implícito.
+  const BASE_JULGAMENTO = "um conjunto de critérios";
+
   function preencherSelect(sel, valores) {
     if (!sel) return;
     sel.querySelectorAll("option:not(:first-child)").forEach((o) => o.remove());
@@ -68,9 +192,10 @@
   }
 
   // Combobox: lista suspensa que já serve os valores da biblioteca + "Outro (digitar)".
-  function makeCombo(selectId, customId, valores) {
+  function makeCombo(selectId, customId, valores, onChange) {
     const sel = document.getElementById(selectId);
     const cust = document.getElementById(customId);
+    const notify = onChange || onEscopoChange;
     preencherSelect(sel, valores);
     const outro = document.createElement("option");
     outro.value = "__outro__";
@@ -83,9 +208,9 @@
     sel.addEventListener("change", function () {
       sync();
       if (sel.value === "__outro__") cust.focus();
-      onEscopoChange();
+      notify();
     });
-    cust.addEventListener("input", onEscopoChange);
+    cust.addEventListener("input", notify);
 
     return {
       get() {
@@ -134,23 +259,127 @@
     return /s$/i.test(n) ? n : n + "s";
   }
 
-  // O escopo é uma frase DESCRITIVA, liderada pelo fenômeno (a vedete): mede-se a
-  // favorabilidade DOS PROJETOS (alternativas) à execução (tema/aspecto), dentro
-  // de uma área. Padrão: {Fenômeno} de {Alternativas} de {Área} à {Tema}.
-  // Ex.: "Favorabilidade de Projetos de Logística e transporte à execução."
-  // O objetivo (verbo + objeto + contexto) é o goal e será definido depois.
-  function comporTitulo() {
+  // Artigo simples do construto: "a" (fem.) / "o" (masc.).
+  function artSimplesConstruto(fen) {
+    return CONSTRUTO_MASC.has((fen || "").trim().toLowerCase()) ? "o" : "a";
+  }
+
+  // Objeto do escopo: no portfólio vem do tipo de demanda (plural); na avulsa,
+  // do campo objeto.
+  function objetoEscopo() {
+    if (tipoSelecionado() === "portfolio") return alternativaNome();
+    return objetoCombo ? ucFirst(objetoCombo.get()) : "";
+  }
+
+  // ---- Geradores de 3 versões "polidas" para o componente de Sugestões ----
+
+  // Escopo (título): {Fenômeno} de {Objeto} de {Área} à {Tema} (e variações).
+  function escopoVariantes() {
     const fen = fenomenoCombo ? fenomenoCombo.get() : "";
-    const tema = temaCombo ? temaCombo.get() : "";
     const area = areaCombo ? areaCombo.get() : "";
-    const alt = tipoSelecionado() === "portfolio" ? alternativaNome() : "";
+    const tema = temaCombo ? temaCombo.get() : "";
+    const obj = objetoEscopo();
+    if (!fen && !area && !tema && !obj) return ["", "", ""];
+    const temaL = lcFirst(tema);
+    const aTema = artigoA(tema);
 
-    let titulo = fen || "";
-    if (alt) titulo += (titulo ? " de " : "") + alt;
-    if (area) titulo += (titulo ? " de " : "") + area;
-    if (tema) titulo += (titulo ? " à " : "") + lcFirst(tema);
+    let v1 = fen;
+    if (obj) v1 += (v1 ? " de " : "") + obj;
+    if (area) v1 += (v1 ? " de " : "") + area;
+    if (tema) v1 += (v1 ? " " + aTema + " " : "") + temaL;
 
-    nomeInput.value = ucFirst(titulo.trim());
+    let v2 = fen;
+    if (obj) v2 += (v2 ? " de " : "") + obj;
+    if (area) v2 += (v2 ? " em " : "") + area;
+    if (tema) v2 += (v2 ? " quanto " + aTema + " " : "") + temaL;
+
+    let v3 = fen;
+    if (tema) v3 += (v3 ? " " + aTema + " " : "") + temaL;
+    if (obj) v3 += (v3 ? " de " : "") + obj;
+    if (area) v3 += (v3 ? " no campo de " : "") + area;
+
+    return [ucFirst(v1.trim()), ucFirst(v2.trim()), ucFirst(v3.trim())];
+  }
+
+  // Objetivo: [Ação+objeto] de [domínio] ... comparação pareada de critérios.
+  function objetivoVariantes() {
+    const isPort = tipoSelecionado() === "portfolio";
+    const acao = acaoCombo ? acaoCombo.get() : "";
+    const objeto = isPort
+      ? alternativaNome().toLowerCase()
+      : (objetoCombo ? objetoCombo.get() : "").toLowerCase();
+    const frag = acaoFragmento(acao, objeto);
+    if (!frag) return ["", "", ""];
+    const dominio = (areaCombo ? areaCombo.get() : "").toLowerCase();
+    const construto = (fenomenoCombo ? fenomenoCombo.get() : "").toLowerCase();
+    const recorte = (temaCombo ? temaCombo.get() : "").toLowerCase();
+    const dom = dominio ? " de " + dominio : "";
+    const aC = artigoConstruto(construto);
+    const aCs = artSimplesConstruto(construto);
+    const cr = conectorRecorte(recorte);
+    const ar = artigoA(recorte);
+
+    let v1 = frag + dom;
+    if (construto) v1 += " com base na análise " + aC + " " + construto;
+    if (recorte) v1 += " " + cr + " " + recorte;
+    v1 += ", obtida por meio da comparação pareada de " + BASE_JULGAMENTO + ".";
+
+    let v2 = frag + dom;
+    if (construto) v2 += " segundo " + aCs + " " + construto;
+    if (recorte) v2 += " " + ar + " " + recorte;
+    v2 += ", mediante comparação pareada de critérios.";
+
+    let v3 = frag + dom;
+    if (construto) v3 += ", considerando " + aCs + " " + construto;
+    if (recorte) v3 += " " + ar + " " + recorte;
+    v3 += ", por meio de comparação pareada de um conjunto de critérios.";
+
+    return [v1, v2, v3];
+  }
+
+  // Descrição: [Perspectiva-inf] [objeto] de [domínio] ... dimensões ... propósito.
+  function descricaoVariantes() {
+    const isPort = tipoSelecionado() === "portfolio";
+    const persp = perspectivaInfinitivo(perspectivaCombo ? perspectivaCombo.get() : "");
+    const objeto = isPort
+      ? alternativaNome().toLowerCase()
+      : (objetoCombo ? objetoCombo.get() : "").toLowerCase();
+    if (!persp || !objeto) return ["", "", ""];
+    const dominio = (areaCombo ? areaCombo.get() : "").toLowerCase();
+    const construto = (fenomenoCombo ? fenomenoCombo.get() : "").toLowerCase();
+    const recorte = (temaCombo ? temaCombo.get() : "").toLowerCase();
+    const fin = finalidadeFrase(finalidadeCombo ? finalidadeCombo.get() : "");
+    const dims = juntarLista(state.dimensoes);
+    const dom = dominio ? " de " + dominio : "";
+    const aC = artigoConstruto(construto);
+    const aCs = artSimplesConstruto(construto);
+    const ar = artigoA(recorte);
+
+    let v1 = persp + " " + objeto + dom;
+    if (construto) v1 += " sob o escopo " + aC + " " + construto;
+    if (recorte) v1 += " " + ar + " " + recorte;
+    v1 += ", considerando sua aderência a um conjunto de critérios";
+    if (dims) v1 += ", cujos critérios podem abranger dimensões " + dims;
+    if (fin) v1 += ", com o propósito de " + fin;
+    v1 += ".";
+
+    let v2 = persp + " " + objeto + dom;
+    if (construto) v2 += " a partir " + aC + " " + construto;
+    if (recorte) v2 += " " + ar + " " + recorte;
+    v2 += ", com base em um conjunto de critérios";
+    if (dims) v2 += " das dimensões " + dims;
+    if (fin) v2 += ", visando " + fin;
+    v2 += ".";
+
+    let v3 = persp + " " + objeto + dom;
+    if (construto) v3 += ", examinando " + aCs + " " + construto;
+    if (recorte) v3 += " " + ar + " " + recorte;
+    v3 += " por meio de critérios";
+    if (dims) v3 += " que abrangem dimensões " + dims;
+    if (fin) v3 += ", a fim de " + fin;
+    v3 += ".";
+
+    return [v1, v2, v3];
   }
 
   const state = {
@@ -162,7 +391,238 @@
     campos: [], // metadados dos campos: [{campo, rotulo, tipo:'data'|'texto'}]
     subconjunto: [], // filtro simples: [{campo, valor}] ou {campo, de, ate} (data)
     logicos: [], // filtros lógicos: [{conector, campo, operador, valor}] ou data com de/ate
+    universoConfirmado: false, // conjunto de objetos travado pelo usuário
+    universoObjetos: [], // snapshot confirmado: [{id, codigo, nome, tipo_demanda}]
+    universoSig: "", // assinatura do conjunto confirmado (auto-invalidação)
+    dimensoes: DIMENSOES_PADRAO.slice(), // dimensões marcadas (descrição)
+    // Estado das Sugestões por seção: textos (3), travas de edição, seleção e
+    // texto confirmado (o que persiste).
+    sug: {
+      escopo: { textos: ["", "", ""], editados: [false, false, false], sel: -1, confirmado: "" },
+      objetivo: { textos: ["", "", ""], editados: [false, false, false], sel: -1, confirmado: "" },
+      descricao: { textos: ["", "", ""], editados: [false, false, false], sel: -1, confirmado: "" },
+    },
   };
+
+  // Fábrica do componente de Sugestões. Renderiza 3 versões geradas, permite
+  // selecionar (clique no card), editar/cancelar/salvar (ícones) e confirmar.
+  function criarSugestoes(opts) {
+    const container = document.getElementById(opts.containerId);
+    const st = state.sug[opts.chave];
+    const editando = [false, false, false]; // estado de edição (não persistido)
+    let textareaEdicao = null;
+
+    function persistirEstado() {
+      saveDraft();
+    }
+
+    function regenerar() {
+      const novos = opts.gerar();
+      for (let i = 0; i < 3; i++) {
+        if (!st.editados[i]) st.textos[i] = novos[i] || "";
+      }
+      // Cascata: se o texto selecionado mudou em relação ao confirmado, a
+      // confirmação deixa de valer (e destrava as etapas seguintes).
+      if (st.confirmado && (st.sel < 0 || st.confirmado !== st.textos[st.sel])) {
+        st.confirmado = "";
+        opts.aoConfirmar("");
+      }
+      render();
+      refreshGates();
+    }
+
+    function estaConfirmado() {
+      return (
+        st.sel >= 0 &&
+        !!st.confirmado &&
+        st.confirmado === st.textos[st.sel] &&
+        (!opts.podeMostrar || opts.podeMostrar())
+      );
+    }
+
+    function selecionar(i) {
+      if (editando[i]) return;
+      st.sel = i;
+      persistirEstado();
+      render();
+      refreshGates();
+    }
+
+    function iniciarEdicao(i) {
+      editando[i] = true;
+      st.preEdicao = st.preEdicao || ["", "", ""];
+      st.preEdicao[i] = st.textos[i];
+      render();
+      if (textareaEdicao) textareaEdicao.focus();
+    }
+
+    function cancelarEdicao(i) {
+      editando[i] = false;
+      if (st.preEdicao) st.textos[i] = st.preEdicao[i];
+      render();
+    }
+
+    function salvarEdicao(i) {
+      if (textareaEdicao) st.textos[i] = textareaEdicao.value.trim();
+      st.editados[i] = true;
+      editando[i] = false;
+      // Editar invalida a confirmação anterior — exige reconfirmar.
+      if (st.confirmado && (st.sel < 0 || st.confirmado !== st.textos[st.sel])) {
+        st.confirmado = "";
+        opts.aoConfirmar("");
+      }
+      persistirEstado();
+      render();
+      refreshGates();
+    }
+
+    function confirmar() {
+      if (st.sel < 0) return;
+      st.confirmado = st.textos[st.sel];
+      opts.aoConfirmar(st.confirmado);
+      persistirEstado();
+      render();
+      refreshGates();
+    }
+
+    function iconBtn(icon, titulo, variante, onClick) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn btn-icon " + (variante || "btn-secondary");
+      b.title = titulo;
+      b.innerHTML = '<i class="fas ' + icon + '" aria-hidden="true"></i>';
+      b.addEventListener("click", function (e) {
+        e.stopPropagation();
+        onClick();
+      });
+      return b;
+    }
+
+    function render() {
+      container.innerHTML = "";
+      // O card de Sugestões inteiro fica oculto até a etapa estar liberada
+      // (o card pai encolhe/expande dinamicamente).
+      const liberado = !opts.podeMostrar || opts.podeMostrar();
+      const temConteudo = st.textos.some((t) => t && t.trim());
+      if (!liberado || !temConteudo) {
+        container.classList.add("is-hidden");
+        return;
+      }
+      container.classList.remove("is-hidden");
+
+      const head = document.createElement("div");
+      head.className = "ahp-sug-head";
+      head.innerHTML = '<i class="fas fa-lightbulb" aria-hidden="true"></i> Sugestões';
+      container.appendChild(head);
+
+      const list = document.createElement("div");
+      list.className = "ahp-sug-list";
+      textareaEdicao = null;
+
+      st.textos.forEach((texto, i) => {
+        const item = document.createElement("div");
+        item.className = "ahp-sug-item";
+        if (st.sel === i) item.classList.add("selected");
+        if (st.confirmado && st.confirmado === texto && st.sel === i) {
+          item.classList.add("confirmado");
+        }
+
+        const card = document.createElement("div");
+        card.className = "ahp-sug-card";
+
+        if (editando[i]) {
+          const ta = document.createElement("textarea");
+          ta.className = "c-form-control ahp-sug-edit";
+          ta.value = texto;
+          card.appendChild(ta);
+          textareaEdicao = ta;
+        } else {
+          card.addEventListener("click", function () {
+            selecionar(i);
+          });
+          if (st.confirmado && st.confirmado === texto && st.sel === i) {
+            const badge = document.createElement("span");
+            badge.className = "ahp-sug-badge";
+            badge.textContent = "Confirmada";
+            card.appendChild(badge);
+          }
+          const p = document.createElement("p");
+          p.className = "ahp-sug-text";
+          p.textContent = texto || "—";
+          card.appendChild(p);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "ahp-sug-actions";
+        if (editando[i]) {
+          actions.appendChild(
+            iconBtn("fa-floppy-disk", "Salvar edição", "btn-primary", function () {
+              salvarEdicao(i);
+            })
+          );
+          actions.appendChild(
+            iconBtn("fa-xmark", "Cancelar edição", "btn-secondary", function () {
+              cancelarEdicao(i);
+            })
+          );
+        } else {
+          actions.appendChild(
+            iconBtn("fa-pencil", "Editar esta versão", "btn-secondary", function () {
+              iniciarEdicao(i);
+            })
+          );
+        }
+
+        item.appendChild(card);
+        item.appendChild(actions);
+        list.appendChild(item);
+      });
+      container.appendChild(list);
+
+      const confirmWrap = document.createElement("div");
+      confirmWrap.className = "ahp-sug-confirm-wrap";
+      const confirmBtn = document.createElement("button");
+      confirmBtn.type = "button";
+      confirmBtn.className = "btn btn-primary";
+      confirmBtn.textContent =
+        st.confirmado && st.confirmado === st.textos[st.sel] ? "Confirmado" : "Confirmar";
+      confirmBtn.disabled = st.sel < 0 || editando.some(Boolean);
+      confirmBtn.addEventListener("click", confirmar);
+      confirmWrap.appendChild(confirmBtn);
+      container.appendChild(confirmWrap);
+    }
+
+    return { regenerar: regenerar, render: render };
+  }
+
+  // Monta os checkboxes de dimensões dos critérios.
+  function renderDimensoes() {
+    const wrap = document.getElementById("config-dimensoes");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    DIMENSOES.forEach((dim) => {
+      const label = document.createElement("label");
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.value = dim;
+      chk.checked = state.dimensoes.indexOf(dim) !== -1;
+      chk.addEventListener("change", function () {
+        if (chk.checked) {
+          if (state.dimensoes.indexOf(dim) === -1) state.dimensoes.push(dim);
+        } else {
+          state.dimensoes = state.dimensoes.filter((d) => d !== dim);
+        }
+        // Reordena conforme a ordem canônica das dimensões.
+        state.dimensoes = DIMENSOES.filter((d) => state.dimensoes.indexOf(d) !== -1);
+        onDescricaoChange();
+      });
+      const span = document.createElement("span");
+      span.textContent = dim;
+      label.appendChild(chk);
+      label.appendChild(span);
+      wrap.appendChild(label);
+    });
+  }
 
   const OPERADORES = [
     { value: "eq", label: "igual a" },
@@ -200,11 +660,21 @@
       area_conhecimento: areaCombo ? areaCombo.get() : "",
       tema: temaCombo ? temaCombo.get() : "",
       fenomeno: fenomenoCombo ? fenomenoCombo.get() : "",
-      descricao: descInput.value,
+      descricao: descInput ? descInput.value : "",
+      objetivo: objInput ? objInput.value : "",
+      acao: acaoCombo ? acaoCombo.get() : "",
+      objeto: objetoCombo ? objetoCombo.get() : "",
+      perspectiva: perspectivaCombo ? perspectivaCombo.get() : "",
+      finalidade: finalidadeCombo ? finalidadeCombo.get() : "",
+      dimensoes: state.dimensoes,
+      sug: state.sug,
       tipo: tipoSelecionado(),
       tipo_demanda_id: tipoDemandaSel.value || null,
       subconjunto: state.subconjunto,
       logicos: state.logicos,
+      universoConfirmado: state.universoConfirmado,
+      universoObjetos: state.universoObjetos,
+      universoSig: state.universoSig,
     };
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -221,9 +691,18 @@
     }
   }
 
+  const miniDimensao = document.getElementById("mini-dimensao");
+  const miniObjetoAvulsa = document.getElementById("mini-objeto-avulsa");
+
   function togglePortfolio() {
-    const isPortfolio = tipoSelecionado() === "portfolio";
+    const tipo = tipoSelecionado();
+    const isPortfolio = tipo === "portfolio";
     portfolioSection.classList.toggle("is-hidden", !isPortfolio);
+    // A dimensão (tipo de demanda) só faz sentido no portfólio: é a chave que
+    // delimita o universo e entra no título.
+    if (miniDimensao) miniDimensao.classList.toggle("is-hidden", !isPortfolio);
+    // Objeto manual só na avulsa (no portfólio o objeto vem do tipo de demanda).
+    if (miniObjetoAvulsa) miniObjetoAvulsa.classList.toggle("is-hidden", tipo !== "avulsa");
   }
 
   // Campos disponíveis para estratificar (ricos, vindos do backend).
@@ -300,7 +779,7 @@
     } else {
       const sel = document.createElement("select");
       sel.className = "c-form-control";
-      sel.appendChild(makeOption("", "Selecione o valor correspondente ao campo…"));
+      sel.appendChild(makeOption("", "Selecione o valor…"));
       let conhecido = false;
       if (cond.campo) {
         valoresDe(cond.campo).forEach((v) => {
@@ -570,14 +1049,93 @@
     return cols;
   }
 
+  // Assinatura do conjunto (ids ordenados) — base da auto-invalidação.
+  function sigDe(linhas) {
+    return linhas
+      .map((d) => String(d.id))
+      .sort()
+      .join(",");
+  }
+
+  // Snapshot enxuto e congelado do conjunto confirmado.
+  function objetoSnapshot(linhas) {
+    const tipo = tipoDemandaCodigo();
+    return linhas.map((d) => ({
+      id: String(d.id),
+      codigo: d.codigo,
+      nome: d.nome,
+      tipo_demanda: tipo,
+    }));
+  }
+
+  function confirmarUniverso(linhas) {
+    state.universoObjetos = objetoSnapshot(linhas);
+    state.universoSig = sigDe(linhas);
+    state.universoConfirmado = true;
+    saveDraft();
+    renderResumo();
+  }
+
+  function refazerUniverso() {
+    state.universoConfirmado = false;
+    state.universoObjetos = [];
+    state.universoSig = "";
+    saveDraft();
+    renderResumo();
+  }
+
+  function renderResumoAcoes(linhas) {
+    const acoes = document.createElement("div");
+    acoes.className = "ahp-universo-confirm";
+
+    if (state.universoConfirmado) {
+      const banner = document.createElement("p");
+      banner.className = "ahp-universo-confirm__ok";
+      banner.innerHTML =
+        '<i class="fas fa-circle-check" aria-hidden="true"></i> Universo confirmado: <strong>' +
+        state.universoObjetos.length +
+        " objeto(s)</strong>. Estes entram na hierarquização ao continuar.";
+      acoes.appendChild(banner);
+
+      const refazer = document.createElement("button");
+      refazer.type = "button";
+      refazer.className = "btn btn-secondary btn-sm";
+      refazer.innerHTML = '<i class="fas fa-rotate-left" aria-hidden="true"></i> Refazer seleção';
+      refazer.addEventListener("click", refazerUniverso);
+      acoes.appendChild(refazer);
+    } else {
+      const confirmar = document.createElement("button");
+      confirmar.type = "button";
+      confirmar.className = "btn btn-primary btn-sm";
+      confirmar.disabled = linhas.length === 0;
+      confirmar.innerHTML =
+        '<i class="fas fa-circle-check" aria-hidden="true"></i> Confirmar universo de análise';
+      confirmar.addEventListener("click", function () {
+        confirmarUniverso(amostraFiltrada());
+      });
+      acoes.appendChild(confirmar);
+    }
+    return acoes;
+  }
+
   function renderResumo() {
     if (!resumoWrap) return;
     resumoWrap.innerHTML = "";
     const codigo = tipoDemandaCodigo();
     if (!codigo) return;
     const linhas = amostraFiltrada();
+
+    // Auto-invalidação: se o conjunto mudou após confirmar, destrava.
+    if (state.universoConfirmado && sigDe(linhas) !== state.universoSig) {
+      state.universoConfirmado = false;
+      state.universoObjetos = [];
+      state.universoSig = "";
+      saveDraft();
+    }
+
     if (linhas.length === 0) {
       resumoWrap.innerHTML = '<p class="ahp-page-desc">Nenhum registro com os filtros atuais.</p>';
+      resumoWrap.appendChild(renderResumoAcoes(linhas));
       return;
     }
     const cols = colunasResumo();
@@ -616,12 +1174,14 @@
         "Exibindo " + RESUMO_MAX + " de " + linhas.length + " registros.";
       resumoWrap.appendChild(more);
     }
+
+    resumoWrap.appendChild(renderResumoAcoes(linhas));
   }
 
   function atualizarPreview() {
     const codigo = tipoDemandaCodigo();
     if (!codigo) {
-      previewText.textContent = "Selecione o tipo de demanda para ver o universo.";
+      previewText.textContent = "Selecione a dimensão (tipo de demanda) para ver o universo.";
       if (resumoWrap) resumoWrap.innerHTML = "";
       return;
     }
@@ -714,11 +1274,21 @@
 
   async function prefill() {
     const draft = loadDraft();
-    if (draft.nome) nomeInput.value = draft.nome;
     if (areaCombo) areaCombo.set(draft.area_conhecimento);
     if (temaCombo) temaCombo.set(draft.tema);
     if (fenomenoCombo) fenomenoCombo.set(draft.fenomeno);
-    if (draft.descricao) descInput.value = draft.descricao;
+    if (acaoCombo) acaoCombo.set(draft.acao);
+    if (objetoCombo) objetoCombo.set(draft.objeto);
+    if (perspectivaCombo) perspectivaCombo.set(draft.perspectiva);
+    if (finalidadeCombo) finalidadeCombo.set(draft.finalidade);
+    if (Array.isArray(draft.dimensoes)) state.dimensoes = draft.dimensoes;
+    renderDimensoes();
+    // Restaura o estado das Sugestões e reflete os valores confirmados nos
+    // campos ocultos que vão ao backend.
+    if (draft.sug) state.sug = draft.sug;
+    if (nomeInput) nomeInput.value = state.sug.escopo.confirmado || "";
+    if (objInput) objInput.value = state.sug.objetivo.confirmado || "";
+    if (descInput) descInput.value = state.sug.descricao.confirmado || "";
     const tipo = draft.tipo || localStorage.getItem(TIPO_KEY);
     if (tipo === "avulsa" || tipo === "portfolio") {
       const input = form.querySelector('input[value="' + tipo + '"]');
@@ -729,6 +1299,11 @@
     }
     if (Array.isArray(draft.logicos)) {
       state.logicos = draft.logicos;
+    }
+    if (draft.universoConfirmado && Array.isArray(draft.universoObjetos)) {
+      state.universoConfirmado = true;
+      state.universoObjetos = draft.universoObjetos;
+      state.universoSig = draft.universoSig || "";
     }
     syncCards();
     togglePortfolio();
@@ -747,8 +1322,7 @@
       input.checked = true;
       syncCards();
       togglePortfolio();
-      comporTitulo();
-      saveDraft();
+      onEscopoChange();
       if (tipoSelecionado() === "portfolio") atualizarPreview();
     });
   });
@@ -757,8 +1331,7 @@
     // Trocar o nível reinicia a amostra (campos/valores mudam por tipo).
     state.subconjunto = [];
     state.logicos = [];
-    comporTitulo();
-    saveDraft();
+    onEscopoChange();
     await carregarDemandas();
     renderFiltros();
     renderLogicos();
@@ -781,11 +1354,21 @@
     });
   }
 
+  // Mudança no escopo afeta título, objetivo e descrição (todos reaproveitam).
   function onEscopoChange() {
-    comporTitulo();
+    if (sugEscopo) sugEscopo.regenerar();
+    if (sugObjetivo) sugObjetivo.regenerar();
+    if (sugDescricao) sugDescricao.regenerar();
     saveDraft();
   }
-  descInput.addEventListener("input", saveDraft);
+  function onObjetivoChange() {
+    if (sugObjetivo) sugObjetivo.regenerar();
+    saveDraft();
+  }
+  function onDescricaoChange() {
+    if (sugDescricao) sugDescricao.regenerar();
+    saveDraft();
+  }
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
@@ -795,10 +1378,9 @@
       alert("Selecione o tipo de análise para continuar.");
       return;
     }
-    comporTitulo();
     const nome = nomeInput.value.trim();
     if (!nome) {
-      alert("Preencha os campos do escopo (área, tema e/ou fenômeno) para gerar o título.");
+      alert("Confirme o escopo (título) nas Sugestões antes de continuar.");
       if (areaCombo) areaCombo.focus();
       return;
     }
@@ -810,6 +1392,7 @@
       tema: (temaCombo ? temaCombo.get() : "") || null,
       fenomeno: (fenomenoCombo ? fenomenoCombo.get() : "") || null,
       descricao: descInput.value.trim() || null,
+      objetivo: (objInput ? objInput.value.trim() : "") || null,
     };
 
     if (tipo === "portfolio") {
@@ -829,12 +1412,21 @@
         return;
       }
 
+      if (!state.universoConfirmado || state.universoObjetos.length === 0) {
+        alert(
+          "Confirme o universo da análise (botão «Confirmar universo de análise» no Resumo) antes de continuar."
+        );
+        return;
+      }
+
       // Recorte do universo gravado como JSON único (configuração dos campos).
       payload.subconjunto = {
         tipo_demanda: codigo,
         filtros: filtros,
         logicos: logicos,
       };
+      // Snapshot congelado do conjunto confirmado (alvo da hierarquização).
+      payload.universo_objetos = state.universoObjetos;
     }
 
     const submitBtn = form.querySelector('button[type="submit"]');
@@ -860,8 +1452,56 @@
     areaCombo = makeCombo("config-area", "config-area-custom", SUGESTOES_AREA);
     temaCombo = makeCombo("config-tema", "config-tema-custom", SUGESTOES_TEMA);
     fenomenoCombo = makeCombo("config-fenomeno", "config-fenomeno-custom", SUGESTOES_FENOMENO);
+    acaoCombo = makeCombo("config-acao", "config-acao-custom", SUGESTOES_ACAO, onObjetivoChange);
+    objetoCombo = makeCombo("config-objeto", "config-objeto-custom", SUGESTOES_OBJETO, function () {
+      // Objeto (avulsa) alimenta tanto o objetivo quanto a descrição.
+      onObjetivoChange();
+      onDescricaoChange();
+    });
+    perspectivaCombo = makeCombo(
+      "config-perspectiva",
+      "config-perspectiva-custom",
+      SUGESTOES_PERSPECTIVA,
+      onDescricaoChange
+    );
+    finalidadeCombo = makeCombo(
+      "config-finalidade",
+      "config-finalidade-custom",
+      SUGESTOES_FINALIDADE,
+      onDescricaoChange
+    );
+    renderDimensoes();
+
+    // Componentes de Sugestões (3 versões + ações + confirmar).
+    sugEscopo = criarSugestoes({
+      containerId: "sug-escopo",
+      chave: "escopo",
+      gerar: escopoVariantes,
+      aoConfirmar: function (texto) {
+        if (nomeInput) nomeInput.value = texto || "";
+      },
+    });
+    sugObjetivo = criarSugestoes({
+      containerId: "sug-objetivo",
+      chave: "objetivo",
+      gerar: objetivoVariantes,
+      aoConfirmar: function (texto) {
+        if (objInput) objInput.value = texto || "";
+      },
+    });
+    sugDescricao = criarSugestoes({
+      containerId: "sug-descricao",
+      chave: "descricao",
+      gerar: descricaoVariantes,
+      aoConfirmar: function (texto) {
+        if (descInput) descInput.value = texto || "";
+      },
+    });
+
     await Promise.all([carregarDominios(), carregarFontesPortfolio()]);
     await prefill();
-    comporTitulo();
+    sugEscopo.regenerar();
+    sugObjetivo.regenerar();
+    sugDescricao.regenerar();
   })();
 })();

@@ -27,6 +27,8 @@ class ConfigCreateSchema(BaseModel):
     )
     # Recorte do universo (portfólio) gravado como JSON único: filtros campo/valor.
     subconjunto: dict[str, Any] | None = None
+    # Snapshot do conjunto confirmado de objetos: [{id, codigo, nome, tipo_demanda}].
+    universo_objetos: list[dict[str, Any]] | None = None
 
 
 class ConfigUpdateSchema(BaseModel):
@@ -38,6 +40,7 @@ class ConfigUpdateSchema(BaseModel):
     descricao: str | None = None
     status: str | None = None
     subconjunto: dict[str, Any] | None = None
+    universo_objetos: list[dict[str, Any]] | None = None
     metodo_entrada: str | None = None
     metodo_comparacao: str | None = None
     n_criterios: int | None = Field(None, ge=0)
@@ -62,6 +65,7 @@ class ConfigResponseSchema(BaseModel):
     tipo_demanda: str | None = None
     tipo_demanda_nome: str | None = None
     subconjunto: dict[str, Any] | None = None
+    universo_objetos: list[dict[str, Any]] = []
     status: str
     metodo_entrada: str
     metodo_comparacao: str | None = None

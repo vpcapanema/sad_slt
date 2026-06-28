@@ -48,7 +48,7 @@ def validar_transicao_status(*, de: str, para: str) -> None:
     if not destino:
         raise DemandaValidationError("Status de destino é obrigatório.", field="status")
 
-    if destino == "aprovada":
+    if destino == "analise_aprovada":
         raise DemandaValidationError(
             "Use a ação Aprovar para promover a demanda; não altere para «aprovada» via PATCH.",
             field="status",
@@ -56,9 +56,9 @@ def validar_transicao_status(*, de: str, para: str) -> None:
 
     permitidos = destinos_permitidos(origem)
     if destino not in permitidos:
-        if destino == "elegivel_ahp" and origem in {"em_analise", "aprovada"}:
+        if destino == "hierarq_apta" and origem in {"analise_em_avaliacao", "analise_aprovada"}:
             raise DemandaValidationError(
-                "Use POST /aprovar para promover a demanda a «aguardando hierarquização».",
+                "Use POST /aprovar para promover a demanda a «apta à hierarquização».",
                 field="status",
             )
         raise DemandaValidationError(

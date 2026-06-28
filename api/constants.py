@@ -24,21 +24,23 @@ SISTEMA_SIGMA_PESSOA_ID = "00000000-0000-0000-0000-000000000001"
 SISTEMA_REPRESENTANTE_NOME = "Sistema SLT"
 SISTEMA_REPRESENTANTE_EMAIL = "sistema@slt.local"
 
-# Status — camadas do ciclo de vida (demandas.dom_status_demanda.camada)
-STATUS_CAMADA_ANALISE = "analise"
-STATUS_CAMADA_HIERARQUIZACAO = "hierarquizacao"
-STATUS_CAMADA_POS_HIERARQUIZADO = "pos_hierarquizado"
-STATUS_CAMADA_TRANSVERSAL = "transversal"
+# Status — fases do ciclo de vida (demandas.dom_status_demanda.fase)
+STATUS_FASE_CADASTRO_ANALISE = "cadastro_analise"
+STATUS_FASE_HIERARQUIZACAO = "hierarquizacao"
+STATUS_FASE_EXECUCAO = "execucao"
 
-STATUS_INICIAL_DEMANDA = "rascunho"
-STATUS_POS_APROVACAO = "elegivel_ahp"
+STATUS_INICIAL_DEMANDA = "analise_rascunho"
+STATUS_POS_APROVACAO = "hierarq_apta"
+# Confirmação do universo da análise (módulo de configuração) move a demanda
+# de "apta" para "em hierarquização" — todo o Bloco 2 vive neste status.
+STATUS_EM_HIERARQUIZACAO = "hierarq_em_andamento"
 
-# Origens permitidas para POST /aprovar (handoff → aguardando hierarquização)
-STATUS_PRE_APROVACAO = frozenset({"em_analise", "aprovada"})
+# Origens permitidas para POST /aprovar (handoff → apta à hierarquização)
+STATUS_PRE_APROVACAO = frozenset({"analise_em_avaliacao", "analise_aprovada"})
 
-# Universo AHP comparável (rodada ativa ou fila)
+# Universo AHP comparável (apta, em hierarquização ou já hierarquizada/salva)
 STATUS_UNIVERSO_AHP = frozenset(
-    {"elegivel_ahp", "fila_hierarquizacao", "em_hierarquizacao", "hierarquizado"}
+    {"hierarq_apta", "hierarq_em_andamento", "hierarq_finalizada"}
 )
 
 # Rótulos de exibição por tipo (plano / programa / projeto) — Camada 2 e pós-hierarquizado
@@ -50,55 +52,55 @@ def _rotulos_tipo(*, plano: str, programa: str, projeto: str) -> dict[str, str]:
 
 
 STATUS_ROTULOS_POR_TIPO: dict[str, dict[str, str]] = {
-    "elegivel_ahp": _rotulos_tipo(
-        plano="Plano aguardando hierarquização",
-        programa="Programa aguardando hierarquização",
-        projeto="Projeto aguardando hierarquização",
+    "hierarq_apta": _rotulos_tipo(
+        plano="Plano apto à hierarquização",
+        programa="Programa apto à hierarquização",
+        projeto="Projeto apto à hierarquização",
     ),
-    "fila_hierarquizacao": _rotulos_tipo(
-        plano="Plano na fila de hierarquização",
-        programa="Programa na fila de hierarquização",
-        projeto="Projeto na fila de hierarquização",
-    ),
-    "em_hierarquizacao": _rotulos_tipo(
+    "hierarq_em_andamento": _rotulos_tipo(
         plano="Plano em hierarquização",
         programa="Programa em hierarquização",
         projeto="Projeto em hierarquização",
     ),
-    "hierarquizado": _rotulos_tipo(
-        plano="Plano hierarquizado",
-        programa="Programa hierarquizado",
-        projeto="Projeto hierarquizado",
+    "hierarq_finalizada": _rotulos_tipo(
+        plano="Plano hierarquizado (não publicado)",
+        programa="Programa hierarquizado (não publicado)",
+        projeto="Projeto hierarquizado (não publicado)",
     ),
-    "em_execucao": _rotulos_tipo(
-        plano="Plano em execução",
-        programa="Programa em execução",
-        projeto="Projeto em execução",
+    "hierarq_ranqueada": _rotulos_tipo(
+        plano="Plano ranqueado",
+        programa="Programa ranqueado",
+        projeto="Projeto ranqueado",
     ),
-    "finalizado": _rotulos_tipo(
-        plano="Plano finalizado",
-        programa="Programa finalizado",
-        projeto="Projeto finalizado",
+    "hierarq_suspensa": _rotulos_tipo(
+        plano="Plano suspenso na hierarquização",
+        programa="Programa suspenso na hierarquização",
+        projeto="Projeto suspenso na hierarquização",
     ),
-    "cancelado": _rotulos_tipo(
-        plano="Plano cancelado",
-        programa="Programa cancelado",
-        projeto="Projeto cancelado",
-    ),
-    "suspenso": _rotulos_tipo(
-        plano="Plano suspenso",
-        programa="Programa suspenso",
-        projeto="Projeto suspenso",
-    ),
-    "retirado": _rotulos_tipo(
+    "hierarq_retirada": _rotulos_tipo(
         plano="Plano retirado do ranking",
         programa="Programa retirado do ranking",
         projeto="Projeto retirado do ranking",
     ),
-    "arquivada": _rotulos_tipo(
-        plano="Plano arquivado",
-        programa="Programa arquivado",
-        projeto="Projeto arquivado",
+    "exec_em_execucao": _rotulos_tipo(
+        plano="Plano em execução",
+        programa="Programa em execução",
+        projeto="Projeto em execução",
+    ),
+    "exec_suspensa": _rotulos_tipo(
+        plano="Plano com execução suspensa",
+        programa="Programa com execução suspensa",
+        projeto="Projeto com execução suspensa",
+    ),
+    "exec_finalizada": _rotulos_tipo(
+        plano="Plano finalizado",
+        programa="Programa finalizado",
+        projeto="Projeto finalizado",
+    ),
+    "exec_cancelada": _rotulos_tipo(
+        plano="Plano cancelado",
+        programa="Programa cancelado",
+        projeto="Projeto cancelado",
     ),
 }
 
@@ -109,7 +111,7 @@ def rotulo_status_demanda(
     nome: str,
     tipo: str | None = None,
 ) -> str:
-    """Rótulo amigável: Camada 1 usa ``nome`` do banco; demais camadas usam prefixo por tipo."""
+    """Rótulo amigável: Fase 1 usa ``nome`` do banco; demais fases usam prefixo por tipo."""
     if tipo and tipo in _STATUS_T:
         tipado = STATUS_ROTULOS_POR_TIPO.get(codigo, {}).get(tipo)
         if tipado:

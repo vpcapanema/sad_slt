@@ -3,7 +3,7 @@
     classificacaoLabel, representanteLabel, fillSelect,
     diretoriaLabel, labelById, PLANO_PLI, PLANO_PEF } = SLTAdminLabels;
 
-  const STATUS_PRE_APROVACAO = new Set(["em_analise", "aprovada"]);
+  const STATUS_PRE_APROVACAO = new Set(["analise_em_avaliacao", "analise_aprovada"]);
 
   const TIPOS = [
     { id: "plano", label: "Plano" },

@@ -13,8 +13,8 @@ from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
 
-# Fases do ciclo de vida que compõem o universo do AHP (ordem >= 70 no domínio).
-AHP_STATUSES = ("elegivel_ahp", "em_hierarquizacao", "hierarquizado")
+# Status da fase de hierarquização que compõem o universo do AHP.
+AHP_STATUSES = ("hierarq_apta", "hierarq_em_andamento", "hierarq_finalizada")
 
 _SELECT_BASE = """
     SELECT

@@ -1563,7 +1563,7 @@
     const geom = getGeometria();
     const coords = getCoordenadas();
     return {
-      status: "rascunho",
+      status: "analise_rascunho",
       criadoEm: new Date().toISOString(),
       ...buildInstituicaoPayload("#instituicao", "#cnpj"),
       pessoa_id: pessoaId || null,

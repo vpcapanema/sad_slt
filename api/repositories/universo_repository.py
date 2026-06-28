@@ -97,6 +97,7 @@ def colunas(tipo: str) -> list[dict[str, str]]:
 
 
 def colunas_validas(tipo: str) -> set[str]:
+    """Conjunto de nomes de colunas filtráveis válidas para o tipo."""
     return {c["campo"] for c in colunas(tipo)}
 
 
@@ -125,4 +126,4 @@ def list_elegiveis(tipo: str, *, status: str | None = None) -> list[dict[str, An
         params.append(list(AHP_STATUSES))
     query += " ORDER BY codigo"
     with get_connection() as conn:
-        return list(conn.execute(query, params).fetchall())
+        return list(conn.execute(query, params).fetchall())  # pyright: ignore[reportArgumentType]

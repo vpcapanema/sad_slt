@@ -12,6 +12,8 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="js/ahp-core.js"></script>
+  <script src="js/config-api.js"></script>
+  <script src="js/config-artefatos.js"></script>
 </head>
 <body class="ahp-module-page">
   <header class="app-header">
@@ -59,18 +61,123 @@
             <section class="card ahp-step-section">
                 <div class="ahp-section-label"><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Saída da Análise</span></div>
                 <div class="ahp-section-body">
-                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">5</span>Resultados e Exportação</h2><div id="resultsContent"></div><div class="ahp-form-actions"><a href="step4-comparacao.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><a href="step6-alternativas.html" class="btn btn-primary">Priorizar alternativas<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a><a href="tipo-analise.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a></div></section>
+                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">5</span>Resultados e Exportação</h2><div id="resultsContent"></div><div id="config-artefatos"></div><div class="ahp-form-actions"><a href="step4-comparacao.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><a href="step6-alternativas.html" class="btn btn-primary">Priorizar alternativas<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a><a href="tipo-analise.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a></div></section>
                 </div>
             </section>
     </main>
     <script src="js/script.js"></script><script>
 document.addEventListener('DOMContentLoaded',function(){
+  // Fonte da verdade = configuração no banco. O localStorage é apenas fallback.
+  if(window.SLTConfigBridge && window.SLTConfigBridge.getConfigAtual()){
+    initFromBanco();
+  }else{
+    initFromLocal();
+  }
+});
+
+function initFromLocal(){
   const criteria=JSON.parse(localStorage.getItem('ahp_criteria')||'[]');
   const matrix=JSON.parse(localStorage.getItem('ahp_pairwiseMatrix')||'[]');
   if(criteria.length===0||matrix.length===0){alert('Dados incompletos. Redirecionando...');window.location.href='step1-criterios.html';return;}
   const results=calculateAHP(matrix);
   displayResults(criteria,results,matrix);
-});
+}
+
+// Calcula no servidor (persiste pesos+métricas) e renderiza a partir do banco.
+function initFromBanco(){
+  const localMatrix=JSON.parse(localStorage.getItem('ahp_pairwiseMatrix')||'[]');
+  window.SLTConfigBridge.obterConfig()
+    .then(function(cfg){
+      if(!cfg){initFromLocal();return Promise.reject('local');}
+      // Já homologada: não recalcular (calcular rebaixaria o status). Renderiza direto.
+      if(cfg.status==='homologada' && cfg.pesos){return cfg;}
+      const temMatriz=Array.isArray(cfg.matriz_comparacao)&&cfg.matriz_comparacao.length>0;
+      // Garante a matriz no banco (se só houver no cache local) antes de calcular.
+      const ensure=temMatriz?Promise.resolve():(localMatrix.length?window.SLTConfigBridge.persistMatriz(localMatrix):Promise.resolve());
+      return ensure.then(function(){return window.SLTConfigBridge.calcular();});
+    })
+    .then(function(config){
+      if(!config || !Array.isArray(config.matriz_comparacao) || config.matriz_comparacao.length===0){
+        initFromLocal();return null;
+      }
+      renderFromConfig(config);
+      return config;
+    })
+    .catch(function(err){
+      if(err==='local')return; // já tratado (sem config no banco)
+      console.warn('Falha ao calcular no servidor; usando dados locais.',err);
+      initFromLocal();
+    });
+}
+
+function renderFromConfig(config){
+  const matrix=config.matriz_comparacao;
+  const criteria=(config.pesos && Array.isArray(config.pesos.criteria) && config.pesos.criteria.length)
+    ? config.pesos.criteria
+    : (config.criterios||[]).map(function(c){return c.criterio;});
+  const results={
+    weights:(config.pesos && config.pesos.weights) ? config.pesos.weights : calculateAHP(matrix).weights,
+    lambdaMax:config.lambda_max,
+    CI:config.indice_consistencia,
+    CR:config.razao_consistencia,
+    RI:config.indice_aleatorio
+  };
+  try{
+    localStorage.setItem('ahp_criteria',JSON.stringify(criteria));
+    localStorage.setItem('ahp_pairwiseMatrix',JSON.stringify(matrix));
+  }catch(e){/* cache best-effort */}
+  displayResults(criteria,results,matrix);
+  renderArtefatos(config);
+}
+
+// Card de artefatos do módulo de configuração (handoff) + homologação.
+function renderArtefatos(config){
+  const wrap=document.getElementById('config-artefatos');
+  if(!wrap)return;
+  const consistente=config.consistente===true;
+  const homologada=config.status==='homologada';
+  let html='';
+  html+='<div class="info-card info-card--spaced"><div class="ahp-info-card-header"><i class="fas fa-share-nodes"></i><h3>5.4 Artefatos da configuração</h3></div><div class="info-card-content">';
+  html+='<p style="margin-bottom:1rem;">Estes artefatos ligam-se pela <strong>configuração ('+(config.codigo||'')+')</strong> e alimentam o módulo de hierarquização. O artefato de <strong>pesos</strong> é o handoff e exige homologação.</p>';
+  if(!consistente){
+    html+='<p class="ahp-info-note" style="margin-bottom:1rem;"><i class="fas fa-triangle-exclamation"></i> A análise não está consistente (RC &ge; 0,10). Revise a Etapa 4 para liberar a matriz e os pesos.</p>';
+  }
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem;margin-bottom:1rem;">';
+  html+='<button id="art-objetos" class="btn btn-secondary"><i class="fas fa-list-check"></i> Exportar objetos</button>';
+  html+='<button id="art-matriz" class="btn btn-secondary"'+(consistente?'':' disabled')+'><i class="fas fa-table-cells"></i> Exportar matriz</button>';
+  html+='<button id="art-pesos" class="btn btn-secondary"'+((consistente&&homologada)?'':' disabled')+'><i class="fas fa-scale-balanced"></i> Exportar pesos (handoff)</button>';
+  html+='</div>';
+  html+='<div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:center;">';
+  html+='<button id="art-homologar" class="btn btn-primary"'+((consistente&&!homologada)?'':' disabled')+'><i class="fas fa-stamp"></i> '+(homologada?'Homologada':'Homologar')+'</button>';
+  html+='<label class="btn btn-secondary" style="margin:0;cursor:pointer;"><i class="fas fa-file-import"></i> Importar matriz<input type="file" id="art-import" accept="application/json,.json" style="display:none;"></label>';
+  html+='<span id="art-feedback" role="status" aria-live="polite" style="font-size:0.875rem;"></span>';
+  html+='</div></div></div>';
+  wrap.innerHTML=html;
+
+  const fb=document.getElementById('art-feedback');
+  function setFb(msg,kind){fb.textContent=msg||'';fb.style.color=kind==='error'?'#c82333':(kind==='ok'?'#1e7e34':'#116593');}
+  function expHandler(tipo){return function(){setFb('Gerando…');window.SLTConfigBridge.exportar(tipo).then(function(){setFb('Artefato exportado.','ok');}).catch(function(e){setFb(e.message,'error');});};}
+
+  const bObj=document.getElementById('art-objetos');if(bObj)bObj.addEventListener('click',expHandler('objetos'));
+  const bMat=document.getElementById('art-matriz');if(bMat&&!bMat.disabled)bMat.addEventListener('click',expHandler('matriz'));
+  const bPes=document.getElementById('art-pesos');if(bPes&&!bPes.disabled)bPes.addEventListener('click',expHandler('pesos'));
+
+  const bHom=document.getElementById('art-homologar');
+  if(bHom&&!bHom.disabled){
+    bHom.addEventListener('click',function(){
+      setFb('Homologando…');
+      window.SLTConfigBridge.homologar().then(function(cfg){setFb('Configuração homologada.','ok');renderArtefatos(cfg);}).catch(function(e){setFb(e.message,'error');});
+    });
+  }
+  const imp=document.getElementById('art-import');
+  if(imp){
+    imp.addEventListener('change',function(){
+      if(!imp.files||!imp.files[0])return;
+      setFb('Importando…');
+      window.SLTConfigBridge.importarArquivo(imp.files[0]).then(function(){setFb('Matriz importada. Recalculando…','ok');initFromBanco();}).catch(function(e){setFb(e.message,'error');});
+    });
+  }
+}
 
 function calculateAHP(matrix){return SLTAhp.analyzeMatrix(matrix);}
 
@@ -474,6 +581,7 @@ async function exportAll(btn){
 }
 function downloadFile(content,filename,contentType){const blob=new Blob([content],{type:contentType});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();document.body.removeChild(link);URL.revokeObjectURL(url);}
 </script>
+  <script src="../assets/js/field-filled.js"></script>
   <script src="../assets/js/app-header.js"></script>
   <script src="../assets/js/navbar.js"></script>
 </body>

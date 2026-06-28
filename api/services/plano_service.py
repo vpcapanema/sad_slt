@@ -107,7 +107,7 @@ def criar_plano(payload: PlanoCreateSchema) -> PlanoResponseSchema:
         "vigencia_inicio": payload.vigencia_inicio or None,
         "vigencia_fim": payload.vigencia_fim or None,
         "valor_global": payload.valor_global,
-        "status": "rascunho",
+        "status": "analise_rascunho",
     }
     normalizar_plano(row, pessoa_id=pessoa_id)
     inserted = plano_repository.insert(row, payload.unidades_espaciais)

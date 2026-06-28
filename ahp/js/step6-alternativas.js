@@ -138,7 +138,7 @@
     const listHost = $("#a6-objetos-list");
     listHost.innerHTML = '<p class="field-help">Carregando…</p>';
     try {
-      const params = { status: "elegivel_ahp" };
+      const params = { status: "hierarq_apta" };
       if (grupo) params.grupo = grupo;
       const objetos = await global.SLTAnaliseApi.listarObjetos(params);
       if (!objetos.length) {

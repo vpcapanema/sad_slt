@@ -4,99 +4,116 @@
    * pins do mapa e legendas. Não duplique cores em CSS estático; use injectTheme().
    */
   const STATUS_DEMANDA = {
-    rascunho: {
-      nome: "Demanda em rascunho",
+    // Fase 1 — cadastro e análise da demanda
+    analise_rascunho: {
+      nome: "Em rascunho",
       bg: "#e8eef3",
       text: "#2c5282",
       row: "#dce4eb",
       halo: "rgba(44, 82, 130, 0.4)",
     },
-    em_analise: {
-      nome: "Demanda em análise",
+    analise_em_avaliacao: {
+      nome: "Em análise",
       bg: "#fff8e1",
       text: "#6d4c41",
       row: "#ffecb3",
       halo: "rgba(109, 76, 65, 0.4)",
     },
-    aprovada: {
-      nome: "Demanda aprovada",
+    analise_aprovada: {
+      nome: "Aprovada",
       bg: "#e8f5e9",
       text: "#2e7d32",
       row: "#c8e6c9",
       halo: "rgba(46, 125, 50, 0.4)",
     },
-    reprovada: {
-      nome: "Demanda reprovada",
+    analise_reprovada: {
+      nome: "Reprovada na análise",
       bg: "#ffebee",
       text: "#c62828",
       row: "#ffcdd2",
       halo: "rgba(198, 40, 40, 0.4)",
     },
-    arquivada: {
-      nome: "Arquivada",
-      bg: "#eceff1",
-      text: "#455a64",
-      row: "#e0e0e0",
-      halo: "rgba(69, 90, 100, 0.35)",
-    },
-    suspenso: {
-      nome: "Suspenso",
+    analise_suspensa: {
+      nome: "Análise suspensa",
       bg: "#eceff1",
       text: "#546e7a",
       row: "#dfe6e9",
       halo: "rgba(84, 110, 122, 0.35)",
     },
-    retirado: {
-      nome: "Retirado",
-      bg: "#fbe9e7",
-      text: "#d84315",
-      row: "#ffccbc",
-      halo: "rgba(216, 67, 21, 0.4)",
+    analise_cancelada: {
+      nome: "Cadastro cancelado",
+      bg: "#eceff1",
+      text: "#455a64",
+      row: "#e0e0e0",
+      halo: "rgba(69, 90, 100, 0.35)",
     },
-    elegivel_ahp: {
-      nome: "Aguardando hierarquização",
+    // Fase 2 — hierarquização e ranqueamento
+    hierarq_apta: {
+      nome: "Apta à hierarquização",
       bg: "#e3f2fd",
       text: "#1565c0",
       row: "#bbdefb",
       halo: "rgba(21, 101, 192, 0.4)",
     },
-    fila_hierarquizacao: {
-      nome: "Na fila de hierarquização",
-      bg: "#e0f7fa",
-      text: "#00838f",
-      row: "#b2ebf2",
-      halo: "rgba(0, 131, 143, 0.4)",
-    },
-    em_hierarquizacao: {
+    hierarq_em_andamento: {
       nome: "Em hierarquização",
       bg: "#fff3e0",
       text: "#e65100",
       row: "#ffe0b2",
       halo: "rgba(230, 81, 0, 0.4)",
     },
-    hierarquizado: {
-      nome: "Hierarquizado",
+    hierarq_finalizada: {
+      nome: "Hierarquização concluída",
       bg: "#e0f2f1",
       text: "#00695c",
       row: "#b2dfdb",
       halo: "rgba(0, 105, 92, 0.4)",
     },
-    em_execucao: {
+    hierarq_ranqueada: {
+      nome: "Ranqueada (publicada)",
+      bg: "#e0f7fa",
+      text: "#00838f",
+      row: "#b2ebf2",
+      halo: "rgba(0, 131, 143, 0.4)",
+    },
+    hierarq_suspensa: {
+      nome: "Hierarquização suspensa",
+      bg: "#eceff1",
+      text: "#546e7a",
+      row: "#dfe6e9",
+      halo: "rgba(84, 110, 122, 0.35)",
+    },
+    hierarq_retirada: {
+      nome: "Retirada do ranking",
+      bg: "#fbe9e7",
+      text: "#d84315",
+      row: "#ffccbc",
+      halo: "rgba(216, 67, 21, 0.4)",
+    },
+    // Fase 3 — pós-ranqueamento / execução
+    exec_em_execucao: {
       nome: "Em execução",
       bg: "#e8eaf6",
       text: "#283593",
       row: "#c5cae9",
       halo: "rgba(40, 53, 147, 0.4)",
     },
-    finalizado: {
-      nome: "Finalizado",
+    exec_suspensa: {
+      nome: "Execução suspensa",
+      bg: "#eceff1",
+      text: "#546e7a",
+      row: "#dfe6e9",
+      halo: "rgba(84, 110, 122, 0.35)",
+    },
+    exec_finalizada: {
+      nome: "Finalizada",
       bg: "#e8f5e9",
       text: "#1b5e20",
       row: "#a5d6a7",
       halo: "rgba(27, 94, 32, 0.4)",
     },
-    cancelado: {
-      nome: "Cancelado",
+    exec_cancelada: {
+      nome: "Cancelada",
       bg: "#ffebee",
       text: "#b71c1c",
       row: "#ef9a9a",
@@ -108,18 +125,32 @@
   const LEGEND_FASES = [
     {
       id: "analise",
-      title: "Fase 1 — Análise",
-      codes: ["rascunho", "em_analise", "aprovada", "reprovada", "arquivada"],
+      title: "Fase 1 — Cadastro e análise",
+      codes: [
+        "analise_rascunho",
+        "analise_em_avaliacao",
+        "analise_aprovada",
+        "analise_reprovada",
+        "analise_suspensa",
+        "analise_cancelada",
+      ],
     },
     {
       id: "hierarquizacao",
-      title: "Fase 2 — Hierarquização",
-      codes: ["elegivel_ahp", "fila_hierarquizacao", "em_hierarquizacao", "hierarquizado"],
+      title: "Fase 2 — Hierarquização e ranqueamento",
+      codes: [
+        "hierarq_apta",
+        "hierarq_em_andamento",
+        "hierarq_finalizada",
+        "hierarq_ranqueada",
+        "hierarq_suspensa",
+        "hierarq_retirada",
+      ],
     },
     {
       id: "execucao",
-      title: "Fase 3 — Ranqueamento e execução",
-      codes: ["em_execucao", "finalizado", "cancelado", "suspenso", "retirado"],
+      title: "Fase 3 — Pós-ranqueamento e execução",
+      codes: ["exec_em_execucao", "exec_suspensa", "exec_finalizada", "exec_cancelada"],
     },
   ];
 
@@ -129,13 +160,18 @@
   const LEGEND_LAYERS = LEGEND_FASES;
 
   const STATUS_OBJETO = Object.fromEntries(
-    ["elegivel_ahp", "fila_hierarquizacao", "em_hierarquizacao", "hierarquizado", "suspenso", "retirado"].map(
-      (c) => [c, STATUS_DEMANDA[c]]
-    )
+    [
+      "hierarq_apta",
+      "hierarq_em_andamento",
+      "hierarq_finalizada",
+      "hierarq_ranqueada",
+      "hierarq_suspensa",
+      "hierarq_retirada",
+    ].map((c) => [c, STATUS_DEMANDA[c]])
   );
 
   /** Status que exigem ação imediata do gestor (linha + badge piscam). */
-  const STATUS_ACAO_GESTOR = new Set(["em_analise"]);
+  const STATUS_ACAO_GESTOR = new Set(["analise_em_avaliacao"]);
 
   const TIPO_DEMANDA = {
     plano: { label: "Plano", hint: "Listras diagonais" },
@@ -526,9 +562,9 @@
   function renderSymbologyBlock() {
     registerLegendPattern("plano", "_sym", SYM_SAMPLE);
     registerLegendPattern("programa", "_sym", SYM_SAMPLE);
-    const pinFase1 = pinSwatchHtml("em_analise");
-    const pinFase2 = pinSwatchHtml("elegivel_ahp");
-    const pinFase3 = pinSwatchHtml("em_execucao");
+    const pinFase1 = pinSwatchHtml("analise_em_avaliacao");
+    const pinFase2 = pinSwatchHtml("hierarq_apta");
+    const pinFase3 = pinSwatchHtml("exec_em_execucao");
     return `<div class="status-legend-symbology" data-legend="symbology">
       <p class="status-color-legend-layer-title">Simbologia no mapa</p>
       <p class="status-legend-symbology-hint">Cor = status (acima). Forma e textura = tipo de demanda.</p>

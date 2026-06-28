@@ -135,7 +135,7 @@ def analyze_containment(
 
     sql = _CONTAINMENT_SQL.format(user_geom_source=user_source)
     with get_connection() as conn:
-        row = conn.execute(sql, params).fetchone()
+        row = conn.execute(sql, params).fetchone()  # pyright: ignore[reportArgumentType]
 
     if not row:
         return {"status": "outside", "pct_inside": 0.0, "pct_outside": 100.0, "message": ""}

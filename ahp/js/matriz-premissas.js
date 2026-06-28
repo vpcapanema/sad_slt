@@ -358,8 +358,181 @@
     }
   }
 
+  // -------------------------------------------------------------------------
+  // Editor — edição do conteúdo da matriz (valores das células + add/remover
+  // linhas), mantendo as 7 colunas fixas.
+  // -------------------------------------------------------------------------
+  var EDITABLE_COLUMNS = ["dimensao", "criterio", "premissa", "relacao", "metricas", "fonte"];
+
+  function cellEditor(key, value) {
+    if (key === "mandatorio") {
+      var v = normHeader(value);
+      var simSel = /^sim$/.test(v) ? " selected" : "";
+      var naoSel = /^n(ao)?$/.test(v) ? " selected" : "";
+      return (
+        '<select class="c-form-control ahp-matriz-edit-input" data-key="mandatorio">' +
+        '<option value="">—</option>' +
+        '<option value="Sim"' + simSel + ">Sim</option>" +
+        '<option value="Não"' + naoSel + ">Não</option>" +
+        "</select>"
+      );
+    }
+    return (
+      '<input type="text" class="c-form-control ahp-matriz-edit-input" data-key="' +
+      key +
+      '" value="' +
+      escapeHtml(value) +
+      '">'
+    );
+  }
+
+  function editorRowHtml(row) {
+    var html = '<tr class="ahp-matriz-edit-row">';
+    COLUMNS.forEach(function (col) {
+      html += '<td data-col="' + col.key + '">' + cellEditor(col.key, row[col.key]) + "</td>";
+    });
+    html +=
+      '<td class="ahp-matriz-edit-actions">' +
+      '<button type="button" class="ahp-matriz-row-remove" title="Remover critério" aria-label="Remover critério">' +
+      '<i class="fas fa-trash" aria-hidden="true"></i></button></td>';
+    html += "</tr>";
+    return html;
+  }
+
+  function collectEditorRows(container) {
+    var rows = [];
+    container.querySelectorAll(".ahp-matriz-edit-row").forEach(function (tr) {
+      var row = {};
+      tr.querySelectorAll(".ahp-matriz-edit-input").forEach(function (input) {
+        row[input.getAttribute("data-key")] = String(input.value || "").trim();
+      });
+      COLUMNS.forEach(function (col) {
+        if (row[col.key] === undefined) row[col.key] = "";
+      });
+      rows.push(row);
+    });
+    return rows;
+  }
+
+  function validateRows(rows) {
+    if (!rows.length) {
+      return "Inclua ao menos um critério.";
+    }
+    var nomes = [];
+    for (var i = 0; i < rows.length; i++) {
+      if (!rows[i].criterio) {
+        return "Linha " + (i + 1) + ": o critério é obrigatório.";
+      }
+      if (!rows[i].premissa) {
+        return "Linha " + (i + 1) + ": a premissa é obrigatória para «" + rows[i].criterio + "».";
+      }
+      if (nomes.indexOf(rows[i].criterio) !== -1) {
+        return "Critério duplicado: «" + rows[i].criterio + "». Use nomes únicos.";
+      }
+      nomes.push(rows[i].criterio);
+    }
+    return null;
+  }
+
+  function emptyRow() {
+    return { dimensao: "", criterio: "", premissa: "", relacao: "", metricas: "", fonte: "", mandatorio: "" };
+  }
+
+  function renderMatrizPremissasEditor(container, options) {
+    if (!container) return;
+    options = options || {};
+    var rows = (options.rows && options.rows.slice()) || loadMatrizPremissas();
+    var fileName = options.fileName || loadMatrizArquivoNome();
+    if (!rows.length) rows = [emptyRow()];
+
+    var headHtml = "";
+    COLUMNS.forEach(function (col) {
+      headHtml += '<th scope="col">' + col.label + "</th>";
+    });
+    headHtml += '<th scope="col" class="ahp-matriz-edit-actions-head" aria-label="Ações"></th>';
+
+    var bodyHtml = rows.map(editorRowHtml).join("");
+
+    container.innerHTML =
+      '<div class="ahp-matriz-panel ahp-matriz-panel--edit">' +
+      '<div class="ahp-matriz-meta">' +
+      '<div class="ahp-matriz-meta__item"><div class="ahp-matriz-meta__head"><i class="fas fa-file-lines"></i>' +
+      '<span class="ahp-matriz-meta__title">Arquivo</span></div>' +
+      '<div class="ahp-matriz-meta__value">' + escapeHtml(fileName || "Tabela importada") + "</div></div>" +
+      '<div class="ahp-matriz-meta__item"><div class="ahp-matriz-meta__head"><i class="fas fa-list-ol"></i>' +
+      '<span class="ahp-matriz-meta__title">Critérios</span></div>' +
+      '<div class="ahp-matriz-meta__value" data-role="count">' + rows.length + "</div></div>" +
+      "</div>" +
+      '<div class="ahp-matriz-table-wrap">' +
+      '<table class="ahp-matriz-table ahp-matriz-table--edit" aria-label="Editar tabela de premissas e critérios">' +
+      "<thead><tr>" + headHtml + "</tr></thead>" +
+      '<tbody data-role="rows">' + bodyHtml + "</tbody>" +
+      "</table></div>" +
+      '<div class="ahp-matriz-edit-toolbar">' +
+      '<button type="button" class="btn btn-secondary btn-sm" data-role="add">' +
+      '<i class="fas fa-plus" aria-hidden="true"></i> Adicionar critério</button>' +
+      '<button type="button" class="btn btn-primary" data-role="save">' +
+      '<i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar alterações</button>' +
+      "</div>" +
+      '<p class="ahp-matriz-edit-feedback" data-role="feedback" role="status" aria-live="polite"></p>' +
+      "</div>";
+
+    var tbody = container.querySelector('[data-role="rows"]');
+    var countEl = container.querySelector('[data-role="count"]');
+    var feedback = container.querySelector('[data-role="feedback"]');
+
+    function refreshCount() {
+      if (countEl) countEl.textContent = String(tbody.querySelectorAll(".ahp-matriz-edit-row").length);
+    }
+
+    function setFeedback(message, kind) {
+      if (!feedback) return;
+      feedback.textContent = message || "";
+      feedback.className = "ahp-matriz-edit-feedback" + (kind ? " is-" + kind : "");
+    }
+
+    container.querySelector('[data-role="add"]').addEventListener("click", function () {
+      tbody.insertAdjacentHTML("beforeend", editorRowHtml(emptyRow()));
+      refreshCount();
+      var added = tbody.querySelector(".ahp-matriz-edit-row:last-child .ahp-matriz-edit-input");
+      if (added) added.focus();
+    });
+
+    tbody.addEventListener("click", function (event) {
+      var btn = event.target.closest(".ahp-matriz-row-remove");
+      if (!btn) return;
+      var tr = btn.closest(".ahp-matriz-edit-row");
+      if (tr) tr.remove();
+      if (!tbody.querySelectorAll(".ahp-matriz-edit-row").length) {
+        tbody.insertAdjacentHTML("beforeend", editorRowHtml(emptyRow()));
+      }
+      refreshCount();
+    });
+
+    container.querySelector('[data-role="save"]').addEventListener("click", function () {
+      var collected = collectEditorRows(container);
+      var error = validateRows(collected);
+      if (error) {
+        setFeedback(error, "error");
+        return;
+      }
+      setFeedback("Salvando…", "info");
+      var maybePromise = options.onSave ? options.onSave(collected, fileName) : null;
+      Promise.resolve(maybePromise)
+        .then(function () {
+          setFeedback("Alterações salvas.", "success");
+        })
+        .catch(function (err) {
+          setFeedback("Não foi possível salvar: " + (err && err.message ? err.message : err), "error");
+        });
+    });
+
+    refreshCount();
+  }
+
   global.SltMatrizPremissas = {
     COLUMNS: COLUMNS,
+    EDITABLE_COLUMNS: EDITABLE_COLUMNS,
     STORAGE_ROWS: STORAGE_ROWS,
     STORAGE_FILE: STORAGE_FILE,
     parseCsvContent: parseCsvContent,
@@ -369,6 +542,8 @@
     saveMatrizPremissas: saveMatrizPremissas,
     clearMatrizPremissas: clearMatrizPremissas,
     summarize: summarize,
+    validateRows: validateRows,
     renderMatrizPremissasPanel: renderMatrizPremissasPanel,
+    renderMatrizPremissasEditor: renderMatrizPremissasEditor,
   };
 })(window);

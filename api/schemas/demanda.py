@@ -26,7 +26,7 @@ class DemandaCreateSchema(BaseModel):
         max_length=64,
         description="Ignorado na criação — o servidor gera PRJ-XXXXXXXX",
     )
-    status: str = "rascunho"
+    status: str = "analise_rascunho"
     criadoEm: str | None = None
     instituicao_id: str
     instituicao_label: str | None = None

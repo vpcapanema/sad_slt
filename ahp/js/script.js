@@ -910,5 +910,13 @@ function calculateResults() {
     }
   }
   localStorage.setItem('ahp_pairwiseMatrix', JSON.stringify(pairwiseMatrix));
-  window.location.href = 'step5-resultados.html';
+  // Persiste a matriz na configuração (banco) antes de seguir; o localStorage é
+  // apenas cache. Navega em seguida, mesmo se a persistência falhar (offline).
+  if (window.SLTConfigBridge && typeof window.SLTConfigBridge.persistMatriz === 'function') {
+    Promise.resolve(window.SLTConfigBridge.persistMatriz(pairwiseMatrix)).finally(function () {
+      window.location.href = 'step5-resultados.html';
+    });
+  } else {
+    window.location.href = 'step5-resultados.html';
+  }
 }

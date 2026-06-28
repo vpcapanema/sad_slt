@@ -10,82 +10,75 @@
       .replace(/"/g, "&quot;");
   }
 
-  /** Proposta de camadas e rótulos — editável aqui até migrar para o banco. */
+  /** Modelo de fases e rótulos — espelha demandas.dom_status_demanda (migração 030). */
   const PROPOSTA = {
     cadastro_analise: {
       id: "cadastro_analise",
-      titulo: "Camada 1 — Cadastro e análise",
+      titulo: "Fase 1 — Cadastro e análise",
       descricao:
-        "Enquanto a entidade ainda é demanda: intake, triagem e parecer de factibilidade. Após aprovação, deixa de ser demanda e passa a plano, programa ou projeto.",
+        "Enquanto a entidade ainda é demanda: cadastro, análise e parecer de factibilidade. Após aprovação, deixa de ser demanda e passa a plano, programa ou projeto.",
       prefixo: "Demanda",
       css: "status-camada-chip--1",
       status: [
         {
-          codigo: "rascunho",
-          nomeProposto: "Demanda em rascunho",
+          codigo: "analise_rascunho",
+          nomeProposto: "Em rascunho",
           descricaoProposta: "Cadastro iniciado, ainda não submetido à análise.",
         },
         {
-          codigo: "em_analise",
-          nomeProposto: "Demanda em análise",
+          codigo: "analise_em_avaliacao",
+          nomeProposto: "Em análise",
           descricaoProposta: "Equipe avalia factibilidade e consistência do cadastro.",
         },
         {
-          codigo: "aprovada",
-          nomeProposto: "Demanda aprovada",
+          codigo: "analise_aprovada",
+          nomeProposto: "Aprovada",
           descricaoProposta:
-            "Parecer positivo — último status como demanda. Handoff direto para aguardando hierarquização (tipado).",
+            "Parecer positivo — apta a virar objeto. Handoff via Aprovar para apta à hierarquização.",
         },
         {
-          codigo: "reprovada",
-          nomeProposto: "Demanda reprovada",
+          codigo: "analise_reprovada",
+          nomeProposto: "Reprovada na análise",
           descricaoProposta: "Parecer negativo na análise de cadastro.",
         },
         {
-          codigo: "arquivada",
-          nomeProposto: "Demanda arquivada",
-          descricaoProposta: "Encerrada na camada de análise, sem seguir para hierarquização.",
+          codigo: "analise_suspensa",
+          nomeProposto: "Análise suspensa",
+          descricaoProposta: "Análise temporariamente pausada.",
+        },
+        {
+          codigo: "analise_cancelada",
+          nomeProposto: "Cadastro cancelado",
+          descricaoProposta: "Encerrada na fase de análise, sem seguir para hierarquização.",
         },
       ],
     },
     hierarquizacao: {
       id: "hierarquizacao",
-      titulo: "Camada 2 — Hierarquização",
+      titulo: "Fase 2 — Hierarquização e ranqueamento",
       descricao:
-        "Demanda aprovada vai direto para aguardando hierarquização — não existe status «aprovado para hierarquização». Rótulos variam por tipo; códigos internos permanecem para migração.",
+        "Demanda aprovada vira objeto e segue para hierarquização da favorabilidade. Rótulos variam por tipo (plano/programa/projeto).",
       css: "status-camada-chip--2",
       fluxoResumo: [
-        "Demanda aprovada",
-        "Aguardando hierarquização",
-        "Fila de hierarquização",
+        "Apta à hierarquização",
         "Em hierarquização",
-        "Hierarquizado",
+        "Hierarquização concluída",
+        "Ranqueada (publicada)",
       ],
       status: [
         {
-          codigo: "elegivel_ahp",
+          codigo: "hierarq_apta",
           ordemProposta: 1,
           nomesPorTipo: {
-            plano: "Plano aguardando hierarquização",
-            programa: "Programa aguardando hierarquização",
-            projeto: "Projeto aguardando hierarquização",
+            plano: "Plano apto à hierarquização",
+            programa: "Programa apto à hierarquização",
+            projeto: "Projeto apto à hierarquização",
           },
-          descricaoProposta:
-            "Primeiro status da Camada 2 (handoff da Demanda aprovada). Código legado: elegivel_ahp.",
+          descricaoProposta: "Apto a compor o universo comparável (handoff da Aprovada).",
         },
         {
-          codigo: "fila_hierarquizacao",
+          codigo: "hierarq_em_andamento",
           ordemProposta: 2,
-          nomesPorTipo: {
-            plano: "Plano na fila de hierarquização",
-            programa: "Programa na fila de hierarquização",
-            projeto: "Projeto na fila de hierarquização",
-          },
-          descricaoProposta: "Entrou na fila da rodada de hierarquização.",
-        },
-        {
-          codigo: "em_hierarquizacao",
-          ordemProposta: 3,
           nomesPorTipo: {
             plano: "Plano em hierarquização",
             programa: "Programa em hierarquização",
@@ -94,32 +87,55 @@
           descricaoProposta: "Participando ativamente da comparação AHP na rodada.",
         },
         {
-          codigo: "hierarquizado",
+          codigo: "hierarq_finalizada",
+          ordemProposta: 3,
+          nomesPorTipo: {
+            plano: "Plano hierarquizado (não publicado)",
+            programa: "Programa hierarquizado (não publicado)",
+            projeto: "Projeto hierarquizado (não publicado)",
+          },
+          descricaoProposta: "Hierarquização concluída e salva no banco, ainda não publicada.",
+        },
+        {
+          codigo: "hierarq_ranqueada",
           ordemProposta: 4,
           nomesPorTipo: {
-            plano: "Plano hierarquizado",
-            programa: "Programa hierarquizado",
-            projeto: "Projeto hierarquizado",
+            plano: "Plano ranqueado",
+            programa: "Programa ranqueado",
+            projeto: "Projeto ranqueado",
           },
-          descricaoProposta: "Ranking concluído em rodada homologada.",
+          descricaoProposta: "Ranking publicado na página pública oficial.",
+        },
+        {
+          codigo: "hierarq_suspensa",
+          nomesPorTipo: {
+            plano: "Plano suspenso na hierarquização",
+            programa: "Programa suspenso na hierarquização",
+            projeto: "Projeto suspenso na hierarquização",
+          },
+          descricaoProposta: "Pausa temporária durante a hierarquização.",
+        },
+        {
+          codigo: "hierarq_retirada",
+          nomesPorTipo: {
+            plano: "Plano retirado do ranking",
+            programa: "Programa retirado do ranking",
+            projeto: "Projeto retirado do ranking",
+          },
+          descricaoProposta: "Removida do universo de hierarquização.",
         },
       ],
     },
-    pos_hierarquizado: {
-      id: "pos_hierarquizado",
-      titulo: "Após hierarquizado — desfechos",
+    execucao: {
+      id: "execucao",
+      titulo: "Fase 3 — Pós-ranqueamento e execução",
       descricao:
-        "Status sequentes possíveis depois de hierarquizado: execução, conclusão, pausa, saída do ranking, cancelamento ou arquivamento.",
+        "Após o ranqueamento, status globais genéricos de execução do objeto.",
       css: "status-camada-chip--pos",
-      fluxoResumo: [
-        "Hierarquizado",
-        "Em execução",
-        "Finalizado",
-        "Suspenso · Retirado · Cancelado · Arquivado",
-      ],
+      fluxoResumo: ["Em execução", "Finalizada", "Suspensa · Cancelada"],
       status: [
         {
-          codigo: "em_execucao",
+          codigo: "exec_em_execucao",
           ordemProposta: 1,
           nomesPorTipo: {
             plano: "Plano em execução",
@@ -129,7 +145,7 @@
           descricaoProposta: "Aprovado no ranking e em implementação operacional.",
         },
         {
-          codigo: "finalizado",
+          codigo: "exec_finalizada",
           ordemProposta: 2,
           nomesPorTipo: {
             plano: "Plano finalizado",
@@ -139,72 +155,34 @@
           descricaoProposta: "Execução concluída com êxito.",
         },
         {
-          codigo: "suspenso",
+          codigo: "exec_suspensa",
           nomesPorTipo: {
-            plano: "Plano suspenso",
-            programa: "Programa suspenso",
-            projeto: "Projeto suspenso",
+            plano: "Plano com execução suspensa",
+            programa: "Programa com execução suspensa",
+            projeto: "Projeto com execução suspensa",
           },
-          descricaoProposta: "Pausa temporária após hierarquização (também aplicável durante a Camada 2).",
+          descricaoProposta: "Execução temporariamente pausada.",
         },
         {
-          codigo: "retirado",
-          nomesPorTipo: {
-            plano: "Plano retirado do ranking",
-            programa: "Programa retirado do ranking",
-            projeto: "Projeto retirado do ranking",
-          },
-          descricaoProposta: "Removido do ranking ou do universo AHP ativo.",
-        },
-        {
-          codigo: "cancelado",
+          codigo: "exec_cancelada",
           nomesPorTipo: {
             plano: "Plano cancelado",
             programa: "Programa cancelado",
             projeto: "Projeto cancelado",
           },
-          descricaoProposta: "Encerrado antes da conclusão — decisão de não prosseguir com a execução.",
-        },
-        {
-          codigo: "arquivada",
-          nomesPorTipo: {
-            plano: "Plano arquivado",
-            programa: "Programa arquivado",
-            projeto: "Projeto arquivado",
-          },
-          descricaoProposta:
-            "Encerramento definitivo após hierarquização. Na Camada 1 o mesmo código aparece como Demanda arquivada.",
-        },
-      ],
-    },
-    transversal: {
-      id: "transversal",
-      titulo: "Transversais (Camada 1)",
-      descricao:
-        "Suspenso e retirado também podem ocorrer na análise de demanda, antes da hierarquização.",
-      css: "status-camada-chip--x",
-      status: [
-        {
-          codigo: "suspenso",
-          nomeCamada1: "Demanda suspensa",
-          descricaoProposta: "Pausa temporária durante cadastro ou análise.",
-        },
-        {
-          codigo: "retirado",
-          nomeCamada1: "Demanda retirada",
-          descricaoProposta: "Removido do fluxo de análise antes de virar plano/programa/projeto.",
+          descricaoProposta: "Encerrado antes da conclusão da execução.",
         },
       ],
     },
   };
 
   const NOTAS = [
-    "Não existe status «aprovado para hierarquização» — <code>aprovada</code> vai direto para <code>elegivel_ahp</code> com rótulo «aguardando hierarquização».",
-    "Mapeamento de códigos legados: <code>elegivel_ahp</code> → aguardando · <code>fila_hierarquizacao</code> → fila · <code>em_hierarquizacao</code> → em hierarquização.",
-    "Camada 1: prefixo <strong>Demanda</strong>. Camada 2 e pós-hierarquizado: prefixo <strong>Plano / Programa / Projeto</strong>.",
-    "Após <code>hierarquizado</code>: em execução, finalizado, suspenso, retirado, cancelado ou arquivado (códigos novos: <code>em_execucao</code>, <code>finalizado</code>, <code>cancelado</code>).",
-    "Hoje <code>fila_hierarquizacao</code> ainda aparece na Camada 1 no banco — na proposta ela fica só na hierarquização.",
-    "Depois de validar, migração SQL em <code>dom_status_demanda</code> (camada, rótulos por tipo e matriz de transição).",
+    "Três fases: <strong>cadastro_analise</strong> · <strong>hierarquizacao</strong> · <strong>execucao</strong> (coluna <code>fase</code>).",
+    "Não há status «transversais»: suspensão/retirada têm código próprio em cada fase (<code>analise_suspensa</code>, <code>hierarq_suspensa</code>, <code>hierarq_retirada</code>, <code>exec_suspensa</code>).",
+    "Aprovação dedicada: <code>analise_aprovada</code> / <code>analise_em_avaliacao</code> → <code>hierarq_apta</code> via POST /aprovar.",
+    "Distinção da Fase 2: <code>hierarq_finalizada</code> = salva no banco (privada); <code>hierarq_ranqueada</code> = publicada no ranking público.",
+    "Fase 1: prefixo <strong>Demanda</strong>. Fases 2 e 3: rótulos por tipo <strong>Plano / Programa / Projeto</strong>.",
+    "Modelo aplicado pela migração SQL <code>030_status_fases.sql</code> em <code>dom_status_demanda</code>.",
   ];
 
   function $(sel) {
@@ -232,11 +210,7 @@
   }
 
   function camadaCurta(titulo) {
-    return titulo
-      .replace(/^Camada 1 — /, "")
-      .replace(/^Camada 2 — /, "")
-      .replace(/^Após hierarquizado — /, "Pós-hierarquização")
-      .replace("Transversais (Camada 1)", "Transversal");
+    return titulo.replace(/^Fase \d+ — /, "");
   }
 
   function renderStatusCard(item, camada, atualMap) {
@@ -353,7 +327,7 @@
     const prefixoHint =
       camada.id === "cadastro_analise"
         ? `<p class="hint">Prefixo de exibição: <strong>Demanda · …</strong></p>`
-        : camada.id === "hierarquizacao" || camada.id === "pos_hierarquizado"
+        : camada.id === "hierarquizacao" || camada.id === "execucao"
           ? `<p class="hint">Rótulos por tipo: <strong>Plano / Programa / Projeto · …</strong></p>`
           : "";
 
@@ -374,7 +348,7 @@
                 <tr>
                   <th>Código</th>
                   <th>Nome atual (banco)</th>
-                  <th>Camada</th>
+                  <th>Fase</th>
                   ${headTipos}
                   <th>Descrição proposta</th>
                   <th>Ordem</th>

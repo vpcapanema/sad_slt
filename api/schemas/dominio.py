@@ -9,7 +9,7 @@ class StatusDominioSchema(BaseModel):
     nome: str
     descricao: str | None = None
     ordem: int
-    camada: str | None = None
+    fase: str | None = None
     rotulos_por_tipo: dict[str, str] | None = None
 
 

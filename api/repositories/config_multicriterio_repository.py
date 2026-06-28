@@ -20,7 +20,14 @@ TIPO_CONFIG: dict[str, dict[str, Any]] = {
 
 # Colunas exclusivas da tabela de portfólio (nível + refino do universo).
 # ``subconjunto`` (JSONB) guarda toda a configuração do recorte do universo.
-_PORTFOLIO_COLUMNS = ["tipo_demanda_id", "diretoria_id", "plano_id", "programa_id", "subconjunto"]
+_PORTFOLIO_COLUMNS = [
+    "tipo_demanda_id",
+    "diretoria_id",
+    "plano_id",
+    "programa_id",
+    "subconjunto",
+    "universo_objetos",
+]
 
 # Colunas comuns às duas tabelas (sem arquivo_conteudo).
 _COMMON_COLUMNS = [
@@ -55,7 +62,14 @@ _COMMON_COLUMNS = [
     "atualizado_em",
 ]
 
-_JSON_FIELDS = {"criterios", "matriz_comparacao", "pesos", "configuracao_completa", "subconjunto"}
+_JSON_FIELDS = {
+    "criterios",
+    "matriz_comparacao",
+    "pesos",
+    "configuracao_completa",
+    "subconjunto",
+    "universo_objetos",
+}
 
 
 def _cfg(tipo: str) -> dict[str, Any]:
@@ -94,8 +108,34 @@ def _prepare(key: str, value: Any) -> Any:
     return value
 
 
-def insert(tipo: str, data: dict[str, Any]) -> dict[str, Any]:
-    """Cria uma configuração (rascunho) e retorna a linha normalizada."""
+def _aplicar_transicao_status(conn: Any, transicao: dict[str, Any]) -> None:
+    """Move o status das demandas do universo dentro da MESMA transação do insert.
+
+    ``transicao`` = {"tabela": (schema, table), "ids": [...], "de": str, "para": str}.
+    Só altera quem está exatamente no status de origem (idempotente e seguro).
+    """
+    ids = [i for i in (transicao.get("ids") or []) if i]
+    if not ids:
+        return
+    schema, table = transicao["tabela"]
+    query = sql.SQL(
+        "UPDATE {tbl} SET status = %s WHERE id = ANY(%s) AND status = %s"
+    ).format(tbl=sql.Identifier(schema, table))
+    conn.execute(query, (transicao["para"], ids, transicao["de"]))
+
+
+def insert(
+    tipo: str,
+    data: dict[str, Any],
+    *,
+    status_transicao: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Cria uma configuração (rascunho) e retorna a linha normalizada.
+
+    Quando ``status_transicao`` é informado, a transição de status das demandas
+    do universo ocorre na MESMA transação do insert: se algo falhar, nada é
+    persistido (rollback atômico via context manager da conexão).
+    """
     _cfg(tipo)
     columns = list(data.keys())
     query = sql.SQL("INSERT INTO {table} ({cols}) VALUES ({vals}) RETURNING id").format(
@@ -108,6 +148,8 @@ def insert(tipo: str, data: dict[str, Any]) -> dict[str, Any]:
         inserted = conn.execute(query, params).fetchone()
         if not inserted:
             raise RuntimeError("Insert de configuração não retornou id.")
+        if status_transicao:
+            _aplicar_transicao_status(conn, status_transicao)
         conn.commit()
     found = get_by_id(tipo, inserted["id"])
     if not found:

@@ -6,6 +6,39 @@
 
   var uploadedPremissasData = null;
   var uploadedFileName = "";
+  var CONFIG_KEY = "slt_ahp_config_atual";
+
+  function getConfigAtual() {
+    try {
+      var raw = localStorage.getItem(CONFIG_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      return parsed && parsed.tipo && parsed.codigo ? parsed : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function persistMatrizNoBanco(rows, fileName) {
+    var cfg = getConfigAtual();
+    if (!cfg || !global.SLTConfigApi) {
+      return Promise.resolve(false);
+    }
+    var ext = (fileName.split(".").pop() || "").toLowerCase();
+    return global.SLTConfigApi.atualizar(cfg.tipo, cfg.codigo, {
+      criterios: rows,
+      n_criterios: rows.length,
+      metodo_entrada: "upload_tabela",
+      arquivo_nome: fileName,
+      arquivo_tipo: ext === "xlsx" || ext === "csv" ? ext : null,
+    })
+      .then(function () {
+        return true;
+      })
+      .catch(function () {
+        return false;
+      });
+  }
 
   function showNotification(message, type) {
     var notificationDiv = document.createElement("div");
@@ -147,10 +180,17 @@
       localStorage.removeItem("ahp_uploadedMatrix");
       localStorage.removeItem("ahp_pairwiseMatrix");
 
-      showNotification("Tabela processada. Avançando para a próxima etapa…", "info");
-      setTimeout(function () {
-        window.location.href = "step2-nomes.html";
-      }, 600);
+      persistMatrizNoBanco(uploadedPremissasData, uploadedFileName).then(function (saved) {
+        showNotification(
+          saved
+            ? "Tabela processada e salva. Avançando para a próxima etapa…"
+            : "Tabela processada. Avançando para a próxima etapa…",
+          "info"
+        );
+        setTimeout(function () {
+          window.location.href = "step2-nomes.html";
+        }, 600);
+      });
     } catch (error) {
       showNotification("Erro ao processar tabela: " + error.message, "error");
     }

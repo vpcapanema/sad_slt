@@ -24,33 +24,29 @@
     <section class="card admin-card admin-card--revisao-status">
       <div class="pli-section-label">
         <i class="fas fa-layer-group" aria-hidden="true"></i>
-        <span class="pli-section-title">Proposta: duas camadas de status</span>
+        <span class="pli-section-title">Status em 3 fases do ciclo de vida</span>
       </div>
       <div class="admin-card-body">
         <p class="step-intro">
-          Esta tela é só para <strong>decidir nomes e camadas</strong> antes de alterar
-          <code>demandas.dom_status_demanda</code>. Os códigos internos (<code>codigo</code>) permanecem
-          estáveis. Na <strong>Camada 1</strong> tudo é «Demanda …»; após aprovação deixa de ser demanda e,
-          na <strong>Camada 2</strong>, o rótulo passa a ser <em>Plano</em>, <em>Programa</em> ou
-          <em>Projeto</em> conforme o tipo.
+          Modelo de status em <strong>3 fases</strong> de <code>demandas.dom_status_demanda</code>
+          (coluna <code>fase</code>). Na <strong>Fase 1</strong> tudo é «Demanda …»; após aprovação deixa de
+          ser demanda e, nas <strong>Fases 2 e 3</strong>, o rótulo passa a ser <em>Plano</em>,
+          <em>Programa</em> ou <em>Projeto</em> conforme o tipo. Não há status «transversais»: suspensão e
+          retirada têm código próprio em cada fase.
         </p>
 
         <div class="status-camada-legend">
           <div class="status-camada-chip status-camada-chip--1">
-            <strong>Camada 1</strong>
-            <span>Demanda em rascunho, análise, aprovada, reprovada ou arquivada</span>
+            <strong>Fase 1 — Cadastro e análise</strong>
+            <span>Em rascunho, em análise, aprovada, reprovada, suspensa ou cancelada</span>
           </div>
           <div class="status-camada-chip status-camada-chip--2">
-            <strong>Camada 2</strong>
-            <span>Aguardando → fila → em hierarquização → hierarquizado</span>
+            <strong>Fase 2 — Hierarquização</strong>
+            <span>Apta → em hierarquização → concluída → ranqueada (publicada)</span>
           </div>
           <div class="status-camada-chip status-camada-chip--pos">
-            <strong>Pós-hierarquizado</strong>
-            <span>Execução, finalizado, suspenso, retirado, cancelado ou arquivado</span>
-          </div>
-          <div class="status-camada-chip status-camada-chip--x">
-            <strong>Transversal</strong>
-            <span>Pode aplicar-se às duas camadas</span>
+            <strong>Fase 3 — Pós-ranqueamento</strong>
+            <span>Em execução, finalizada, suspensa ou cancelada</span>
           </div>
         </div>
 

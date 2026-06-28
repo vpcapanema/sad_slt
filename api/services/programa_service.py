@@ -122,7 +122,7 @@ def criar_programa(payload: ProgramaCreateSchema) -> ProgramaResponseSchema:
         "representante_nome": (payload.representante.nome or "").strip(),
         "representante_email": payload.representante.email,
         "representante_telefone": payload.representante.telefone,
-        "status": "rascunho",
+        "status": "analise_rascunho",
     }
     normalizar_programa(row, pessoa_id=pessoa_id)
     inserted = programa_repository.insert(row, payload.unidades_espaciais)
