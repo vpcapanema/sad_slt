@@ -50,4 +50,22 @@ COMMENT ON TABLE demandas.plano IS
 COMMENT ON TABLE demandas.programa IS
     'Cadastro de programas — nível 2. Inclui PROG-OUTROS (sentinela para projetos sem pai).';
 
+INSERT INTO demandas.plano_unidade_espacial (plano_id, unidade_espacial_id)
+SELECT p.id, ue.id
+FROM demandas.plano p
+CROSS JOIN geo.unidade_espacial ue
+WHERE p.codigo = 'PLANO-OUTROS'
+  AND ue.tipo_regionalizacao = 'estado'
+  AND ue.codigo = '35'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO demandas.programa_unidade_espacial (programa_id, unidade_espacial_id)
+SELECT pg.id, ue.id
+FROM demandas.programa pg
+CROSS JOIN geo.unidade_espacial ue
+WHERE pg.codigo = 'PROG-OUTROS'
+  AND ue.tipo_regionalizacao = 'estado'
+  AND ue.codigo = '35'
+ON CONFLICT DO NOTHING;
+
 COMMIT;

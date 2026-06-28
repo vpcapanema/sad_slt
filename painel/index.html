@@ -50,7 +50,6 @@
           </div>
         </div>
       </div>
-      <div id="status-legend" class="status-color-legend-host status-color-legend-host--sidebar" aria-label="Legenda de cores por status"></div>
       <footer class="layout-sidebar-footer">
         Desenvolvido e implementado por
         <strong>VPC-Geotecnologias e Websistemas</strong>
@@ -60,12 +59,14 @@
     <div class="layout-main">
       <main class="painel-dashboard-map" aria-label="Mapa das demandas">
         <div id="map-painel"></div>
+        <div id="status-legend" class="status-color-legend-host status-color-legend-host--map" aria-label="Legenda de cores por status"></div>
       </main>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="../assets/js/status-colors.js"></script>
+  <script src="../assets/js/painel-map-controls.js"></script>
   <script src="../assets/js/storage.js"></script>
   <script src="../assets/js/demandas-api.js"></script>
   <script src="../assets/js/grouped-sidebar.js"></script>

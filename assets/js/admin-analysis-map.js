@@ -8,10 +8,25 @@
     return { lat, lng };
   }
 
-  function geometryLayers(map, geometria, style) {
+  function createStatusPinIcon(status) {
+    return global.SLTStatusColors?.leafletPinIcon?.(status, "demanda", global.L);
+  }
+
+  function pathStyleForStatus(status, tipoDemanda) {
+    return (
+      global.SLTStatusColors?.leafletPathStyle?.(status, "demanda", tipoDemanda) || {
+        color: "#116593",
+        weight: 3,
+        fillColor: "#116593",
+        fillOpacity: 0.25,
+      }
+    );
+  }
+
+  function geometryLayers(map, geometria, status, tipoDemanda) {
     if (!geometria?.tipo || !geometria.coordinates) return [];
     const layers = [];
-    const opts = style || { color: "#116593", weight: 3, fillOpacity: 0.15 };
+    const opts = pathStyleForStatus(status, tipoDemanda);
 
     if (geometria.tipo === "Polygon") {
       const latlngs = geometria.coordinates[0].map(([lng, lat]) => [lat, lng]);
@@ -24,7 +39,10 @@
       layers.push(L.circleMarker([lat, lng], { radius: 6, ...opts }));
     }
 
-    layers.forEach((layer) => layer.addTo(map));
+    layers.forEach((layer) => {
+      global.SLTStatusColors?.decorateLeafletLayer?.(layer, status);
+      layer.addTo(map);
+    });
     return layers;
   }
 
@@ -74,7 +92,8 @@
     destroyMap(container);
 
     const coords = coordsFromRecord(record);
-    if (!coords) {
+    const hasGeom = Boolean(record?.geometria?.tipo && record.geometria.coordinates);
+    if (!coords && !hasGeom) {
       syncInfoMapHeight(container);
       container.innerHTML = '<p class="admin-info-map-empty">Coordenadas não informadas.</p>';
       return null;
@@ -83,7 +102,7 @@
     syncInfoMapHeight(container);
 
     const mapId = `admin-preview-map-${++mapSeq}`;
-    container.innerHTML = `<div id="${mapId}" class="admin-info-map-canvas" role="img" aria-label="Mapa da localização do projeto"></div>`;
+    container.innerHTML = `<div id="${mapId}" class="admin-info-map-canvas" role="img" aria-label="Mapa da localização"></div>`;
 
     const mapEl = document.getElementById(mapId);
     const map = L.map(mapEl, {
@@ -97,13 +116,23 @@
       attribution: "&copy; OpenStreetMap",
     }).addTo(map);
 
-    const overlays = geometryLayers(map, record.geometria);
-    const marker = L.marker([coords.lat, coords.lng]).addTo(map);
+    const status = record?.status || "";
+    const tipoDemanda = record?.tipo || record?.__tipo || "projeto";
+    const overlays = geometryLayers(map, record.geometria, status, tipoDemanda);
+    const mapLayers = [...overlays];
 
-    const boundsGroup = L.featureGroup([marker, ...overlays]);
-    if (overlays.length) {
+    if (coords) {
+      const icon = createStatusPinIcon(status);
+      if (icon) {
+        const marker = L.marker([coords.lat, coords.lng], { icon }).addTo(map);
+        mapLayers.push(marker);
+      }
+    }
+
+    if (mapLayers.length) {
+      const boundsGroup = L.featureGroup(mapLayers);
       map.fitBounds(boundsGroup.getBounds().pad(0.2));
-    } else {
+    } else if (coords) {
       map.setView([coords.lat, coords.lng], options?.zoom ?? 14);
     }
 

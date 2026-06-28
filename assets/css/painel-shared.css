@@ -81,32 +81,38 @@ body.painel-dashboard-page {
   width: var(--head-size, 21px);
   height: var(--head-size, 21px);
   border-radius: 50%;
-  background: transparent;
-  border: 2.5px solid var(--pin-halo-color);
+  border: none;
   box-sizing: border-box;
-  opacity: 0.9;
   z-index: 0;
   pointer-events: none;
   transform: translate(-50%, -50%) scale(1);
   transform-origin: center center;
-  animation: painel-halo-pulse 2s ease-out infinite;
+  background: radial-gradient(
+    circle,
+    var(--pin-halo-dark, rgba(0, 0, 0, 0.45)) 0%,
+    var(--pin-halo-dark, rgba(0, 0, 0, 0.38)) 28%,
+    var(--pin-halo-mid, rgba(0, 0, 0, 0.2)) 48%,
+    var(--pin-halo-light, rgba(255, 255, 255, 0.08)) 68%,
+    transparent 100%
+  );
+  animation: painel-halo-gradient-pulse 2.2s ease-out infinite;
 }
 
 .painel-pin-halo--delay {
-  animation-delay: 1s;
+  animation-delay: 1.1s;
 }
 
-@keyframes painel-halo-pulse {
+@keyframes painel-halo-gradient-pulse {
   0% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.92;
   }
   70% {
-    transform: translate(-50%, -50%) scale(2.85);
-    opacity: 0.2;
+    transform: translate(-50%, -50%) scale(2.75);
+    opacity: 0.22;
   }
   100% {
-    transform: translate(-50%, -50%) scale(3.4);
+    transform: translate(-50%, -50%) scale(3.25);
     opacity: 0;
   }
 }
@@ -124,8 +130,58 @@ body.painel-dashboard-page {
   pointer-events: none;
 }
 
+.painel-pin--fase-hierarquizacao .painel-pin-halo {
+  border-radius: 4px;
+}
+
+.painel-pin--fase-execucao .painel-pin-halo {
+  border-radius: 2px;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  top: var(--head-y, 22px);
+  animation: painel-halo-gradient-pulse-exec 2.2s ease-out infinite;
+}
+
+.painel-pin--fase-execucao .painel-pin-halo--delay {
+  animation-delay: 1.1s;
+}
+
+@keyframes painel-halo-gradient-pulse-exec {
+  0% {
+    transform: translate(-50%, -58%) scale(0.9);
+    opacity: 0.92;
+  }
+  70% {
+    transform: translate(-50%, -58%) scale(2.75);
+    opacity: 0.22;
+  }
+  100% {
+    transform: translate(-50%, -58%) scale(3.25);
+    opacity: 0;
+  }
+}
+
 .painel-pin--objeto .painel-pin-halo {
   border-radius: 4px;
+}
+
+.slt-map-zoom-scale {
+  position: absolute;
+  left: 50%;
+  bottom: 0.55rem;
+  transform: translateX(-50%);
+  z-index: 800;
+  pointer-events: none;
+  padding: 0.28rem 0.65rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #334155;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .painel-detail-popover {

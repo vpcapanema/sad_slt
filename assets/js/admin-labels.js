@@ -129,7 +129,8 @@
 
   function statusBadgeHtml(codigo, tipoDemanda) {
     const label = statusDemandaLabel(codigo, tipoDemanda);
-    return `<span class="${statusBadgeClass(codigo)}">${escapeHtml(label)}</span>`;
+    const acao = global.SLTStatusColors?.actionClass?.(codigo) || "";
+    return `<span class="${statusBadgeClass(codigo)}${acao}">${escapeHtml(label)}</span>`;
   }
 
   function statusDestinosPermitidos(codigoAtual) {

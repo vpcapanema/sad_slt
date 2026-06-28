@@ -472,12 +472,13 @@
       .map((d) => {
         const checked = selected.has(d.id) ? " checked" : "";
         const editing = editMode && selected.has(d.id) ? " is-editing" : "";
+        const gestor = SLTStatusColors.requiresGestorAction(d.status) ? " status-acao-gestor" : "";
         const sentinel = isSentinel(d);
         const cb = sentinel
           ? ""
           : `<input type="checkbox" class="row-select" data-codigo="${escapeHtml(d.id)}" aria-label="Selecionar ${escapeHtml(d.id)}"${checked}>`;
         return `
-        <tr data-codigo="${escapeHtml(d.id)}" data-status="${escapeHtml(d.status || "")}" class="${editing.trim()}">
+        <tr data-codigo="${escapeHtml(d.id)}" data-status="${escapeHtml(d.status || "")}" class="${(editing + gestor).trim()}">
           <td class="col-select">${cb}</td>
           ${cols
             .map((c) => {
@@ -713,7 +714,9 @@
 
   function renderStatusLegend() {
     SLTStatusColors.renderLegend("#status-legend", {
+      layout: "demandas",
       labelFn: (codigo) => SLTAdminLabels.statusDemandaLabel(codigo, tipo),
+      tipoDemanda: tipo,
     });
   }
 

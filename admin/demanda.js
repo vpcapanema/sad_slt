@@ -327,7 +327,7 @@
 
     $("#fld-eixo")?.addEventListener("change", () => refreshTicSelect({ classificacao: {} }));
 
-    SLTAdminAnalysisMap.initPreviewMap("admin-preview-map-wrap", d);
+    SLTAdminAnalysisMap.initPreviewMap("admin-preview-map-wrap", { ...d, tipo });
   }
 
   function collectProjeto() {

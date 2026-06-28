@@ -8,10 +8,13 @@
   ];
 
   let map;
+  let mapLayerGroup;
   let painelItems = [];
   let objetos = [];
   let entries = [];
   let layersByKey = new Map();
+  let layerVisibility = SLTPainelMapControls.createLayerVisibility(["plano", "programa", "projeto"]);
+  let recordOrder = {};
   let selectedKey = null;
   let popoverEl = null;
   let anchorMode = null;
@@ -19,29 +22,12 @@
   let mapAnchorLatLng = null;
   let openEntry = null;
 
-  const PIN_H = 42;
-  const PIN_CONTAINER = 56;
-  const DEM_HEAD_Y = PIN_CONTAINER - PIN_H + (10 / 36) * PIN_H;
-  const DEM_HEAD_SIZE = (18 / 36) * PIN_H;
-  const OBJ_HEAD_Y = PIN_CONTAINER - PIN_H + (8 / 36) * PIN_H;
-  const OBJ_HEAD_SIZE = (14 / 36) * PIN_H;
-
-  function pinSvgDemanda(statusColor) {
-    return (
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" aria-hidden="true">' +
-      '<path fill="#111111" stroke="#ffffff" stroke-width="1.2" d="M12 1C7.03 1 3 5.03 3 10c0 7.08 9 17.5 9 17.5S21 17.08 21 10c0-4.97-4.03-9-9-9zm0 13a4 4 0 110-8 4 4 0 010 8z"/>' +
-      `<circle cx="12" cy="10" r="4" fill="${statusColor}"/>` +
-      "</svg>"
-    );
+  function createDemandaPinIcon(status) {
+    return SLTStatusColors.leafletPinIcon(status, "demanda", L);
   }
 
-  function pinSvgObjeto(statusColor) {
-    return (
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" aria-hidden="true">' +
-      '<path fill="#111111" stroke="#ffffff" stroke-width="1.2" d="M5 2h14a2 2 0 0 1 2 2v10c0 5.5-2.5 9.8-8 18-5.5-8.2-8-12.5-8-18V4a2 2 0 0 1 2-2z"/>' +
-      `<rect x="8" y="5" width="8" height="8" rx="1.5" fill="${statusColor}"/>` +
-      "</svg>"
-    );
+  function createObjetoPinIcon(status) {
+    return SLTStatusColors.leafletPinIcon(status, "objeto", L);
   }
 
   function $(id) {
@@ -108,34 +94,6 @@
     return entries.find((e) => e.kind === kind && e.id === id);
   }
 
-  function createDemandaPinIcon(status) {
-    const { text } = statusStyle("projeto", status);
-    return L.divIcon({
-      className: "painel-pin-wrap",
-      html:
-        `<div class="painel-pin" style="--pin-halo-color:${text};--head-y:${DEM_HEAD_Y}px;--head-size:${DEM_HEAD_SIZE}px">` +
-        `<span class="painel-pin-halo"></span><span class="painel-pin-halo painel-pin-halo--delay"></span>` +
-        pinSvgDemanda(text) +
-        `</div>`,
-      iconSize: [PIN_CONTAINER, PIN_CONTAINER],
-      iconAnchor: [PIN_CONTAINER / 2, PIN_CONTAINER - 4],
-    });
-  }
-
-  function createObjetoPinIcon(status) {
-    const { text } = statusStyle("objeto", status);
-    return L.divIcon({
-      className: "painel-pin-wrap",
-      html:
-        `<div class="painel-pin painel-pin--objeto" style="--pin-halo-color:${text};--head-y:${OBJ_HEAD_Y}px;--head-size:${OBJ_HEAD_SIZE}px">` +
-        `<span class="painel-pin-halo"></span><span class="painel-pin-halo painel-pin-halo--delay"></span>` +
-        pinSvgObjeto(text) +
-        `</div>`,
-      iconSize: [PIN_CONTAINER, PIN_CONTAINER],
-      iconAnchor: [PIN_CONTAINER / 2, PIN_CONTAINER - 4],
-    });
-  }
-
   function coordsItem(item) {
     if (item.lat != null && item.lng != null) return { lat: item.lat, lng: item.lng };
     if (item.geometria?.tipo === "Point") {
@@ -146,8 +104,8 @@
   }
 
   function geomStyle(kind, status) {
-    const { text } = statusStyle(kind, status);
-    return { color: text, weight: 2.5, fillColor: text, fillOpacity: 0.18, opacity: 0.9 };
+    const tipo = kind === "objeto" ? "projeto" : kind;
+    return SLTStatusColors.leafletPathStyle(status, kind === "objeto" ? "objeto" : "demanda", tipo);
   }
 
   function abrangenciaText(d) {
@@ -367,10 +325,77 @@
     return { ...entry.data, __kind: entry.kind, id: entry.id };
   }
 
+  function initRecordOrder() {
+    recordOrder = SLTPainelMapControls.createRecordOrderState(
+      SIDEBAR_GRUPOS,
+      (g) => entries.filter(g.match).map(sidebarRecord),
+      (r) => itemKey(r.__kind, r.id)
+    );
+  }
+
+  function applyMapLayerZOrder() {
+    SLTPainelMapControls.applyStackZOrder(
+      mapLayerGroup,
+      layersByKey,
+      SLTPainelMapControls.buildStackKeys(SIDEBAR_GRUPOS, recordOrder)
+    );
+  }
+
+  function onRecordReorder(groupId, recordKeys) {
+    SLTPainelMapControls.syncRecordOrderState(recordOrder, groupId, recordKeys);
+    applyMapLayerZOrder();
+  }
+
+  function recordVisibilityKey(kind, id) {
+    return itemKey(kind, id);
+  }
+
+  function visibilityApi() {
+    return {
+      isGroupVisible(groupId) {
+        return layerVisibility.isGroupVisible(groupId);
+      },
+      isRecordVisible(groupId, recordId) {
+        const kind = findEntryKind(recordId);
+        return layerVisibility.isRecordVisible(groupId, recordVisibilityKey(kind, recordId));
+      },
+    };
+  }
+
+  function findEntryKind(id) {
+    const hit = entries.find((e) => e.id === id);
+    return hit?.kind || "projeto";
+  }
+
+  function syncEntryVisibility(kind, id) {
+    const groupId = SLTPainelMapControls.groupIdFromKind(kind);
+    const entry = layersByKey.get(itemKey(kind, id));
+    const visible = layerVisibility.isRecordVisible(groupId, recordVisibilityKey(kind, id));
+    SLTPainelMapControls.applyEntryVisibility(entry, mapLayerGroup, visible);
+  }
+
+  function onGroupVisibilityChange(groupId, visible) {
+    layerVisibility.setGroupVisible(groupId, visible);
+    entries
+      .filter((e) => SLTPainelMapControls.groupIdFromKind(e.kind) === groupId)
+      .forEach((e) => syncEntryVisibility(e.kind, e.id));
+    renderEntriesList();
+  }
+
+  function onRecordVisibilityChange(groupId, recordId, visible) {
+    const kind = findEntryKind(recordId);
+    layerVisibility.setRecordVisible(recordVisibilityKey(kind, recordId), visible);
+    syncEntryVisibility(kind, recordId);
+    const row = document.querySelector(
+      `.layer-group--record[data-record-id="${CSS.escape(recordId)}"][data-group-id="${CSS.escape(groupId)}"]`
+    );
+    row?.classList.toggle("is-map-hidden", !visible || !layerVisibility.isGroupVisible(groupId));
+  }
+
   function renderEntriesList() {
     SLTGroupedSidebar.renderGroupedDemandasSidebar({
       containerSelector: "#layers-container",
-      countSelector: "#demandas-count",
+      countSelector: "#projetos-count",
       emptySelector: "#lista-vazia-projetos",
       groups: SIDEBAR_GRUPOS.map((g) => ({
         id: g.id,
@@ -379,10 +404,17 @@
       })),
       selectedId: selectedIdFromKey(),
       getRecordId: (r) => r.id,
+      getRecordGroupId: (r) => SLTPainelMapControls.groupIdFromKind(r.__kind),
       getRecordLabel: (r) => r.nome,
       getRecordBadgeHtml: (r) => statusBadgeFor(r.__kind, r),
       sectionsFor: () => [],
       emptyMessage: "Nenhuma demanda registrada.",
+      visibility: visibilityApi(),
+      recordOrder,
+      getRecordKey: (r) => itemKey(r.__kind, r.id),
+      onRecordReorder,
+      onGroupVisibilityChange,
+      onRecordVisibilityChange,
       onSelect: (id, record) => {
         if (!record) return;
         const anchorEl = document.querySelector(
@@ -399,7 +431,7 @@
       const on = el.dataset.recordId === id;
       el.classList.toggle("is-selected", on);
       el.classList.toggle("collapsed", !on);
-      el.querySelector(".layer-group-header--record")?.setAttribute("aria-expanded", String(on));
+      el.querySelector(".layer-group-header-row .layer-group-header--record")?.setAttribute("aria-expanded", String(on));
     });
     document.querySelectorAll(".layer-group--tipo").forEach((grp) => {
       const hit = grp.querySelector(`.layer-group--record[data-record-id="${CSS.escape(id)}"]`);
@@ -437,6 +469,7 @@
       );
       gj.eachLayer((layer) => {
         layer.on("click", onMapClick);
+        SLTStatusColors.decorateLeafletLayer(layer, item.status);
         entryLayers.layers.push(layer);
         group.addLayer(layer);
       });
@@ -459,10 +492,16 @@
 
   function buildMapLayers() {
     layersByKey.clear();
-    const group = L.featureGroup();
-    entries.forEach((e) => addEntryLayers(group, e));
-    group.addTo(map);
-    if (group.getLayers().length) map.fitBounds(group.getBounds().pad(0.12));
+    if (mapLayerGroup) map.removeLayer(mapLayerGroup);
+    mapLayerGroup = L.featureGroup();
+    const sorted = SLTPainelMapControls.sortByLayerOrder(entries, (e) => e.kind);
+    sorted.forEach((e) => addEntryLayers(mapLayerGroup, e));
+    mapLayerGroup.addTo(map);
+    sorted.forEach((e) => syncEntryVisibility(e.kind, e.id));
+    applyMapLayerZOrder();
+    if (mapLayerGroup.getLayers().length) {
+      SLTPainelMapControls.fitMapToDefaultBounds(map, mapLayerGroup.getBounds());
+    }
   }
 
   function selectItem(kind, id, scrollSidebar) {
@@ -477,7 +516,7 @@
   function focusMapOnItem(kind, id) {
     const entry = layersByKey.get(itemKey(kind, id));
     if (entry?.bounds?.isValid()) {
-      map.fitBounds(entry.bounds.pad(0.12), { animate: true });
+      SLTPainelMapControls.fitMapToDefaultBounds(map, entry.bounds, { animate: true });
       return;
     }
     const e = findEntry(kind, id);
@@ -514,11 +553,7 @@
   }
 
   function initMap() {
-    map = L.map("map-painel", { zoomControl: true }).setView([-22.5, -48.5], 7);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap",
-      maxZoom: 19,
-    }).addTo(map);
+    map = SLTPainelMapControls.initPainelMap("map-painel");
     map.on("move zoom", () => {
       if (openEntry && anchorMode === "map" && mapAnchorLatLng) {
         anchorRef = mapAnchorLatLng;
@@ -529,6 +564,13 @@
     window.addEventListener("resize", () => {
       map.invalidateSize();
       repositionPopover();
+    });
+  }
+
+  function bindLegendLayoutRefresh() {
+    $("status-legend")?.addEventListener("slt-legend-layout", () => {
+      if (!mapLayerGroup?.getLayers().length) return;
+      SLTPainelMapControls.fitMapToDefaultBounds(map, mapLayerGroup.getBounds(), { animate: true });
     });
   }
 
@@ -543,11 +585,14 @@
     ]);
 
     buildEntries();
+    initRecordOrder();
     initMap();
     initLayersSectionCollapse();
     SLTStatusColors.renderLegend("#status-legend", {
-      labelFn: (codigo) => SLTAdminLabels.statusDemandaLabel(codigo, "projeto"),
+      layout: "painel",
+      labelFn: (codigo) => SLTStatusColors.getStatusDemanda(codigo).nome,
     });
+    bindLegendLayoutRefresh();
     renderEntriesList();
     buildMapLayers();
   }

@@ -6,8 +6,11 @@
   ];
 
   let map;
+  let mapLayerGroup;
   let items = [];
   let layersByKey = new Map();
+  let layerVisibility = SLTPainelMapControls.createLayerVisibility(["plano", "programa", "projeto"]);
+  let recordOrder = {};
   let selectedKey = null;
   let popoverEl = null;
   let anchorMode = null;
@@ -15,13 +18,8 @@
   let mapAnchorLatLng = null;
   let openItem = null;
 
-  function pinSvg(statusColor) {
-    return (
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" aria-hidden="true">' +
-      '<path fill="#111111" stroke="#ffffff" stroke-width="1.2" d="M12 1C7.03 1 3 5.03 3 10c0 7.08 9 17.5 9 17.5S21 17.08 21 10c0-4.97-4.03-9-9-9zm0 13a4 4 0 110-8 4 4 0 010 8z"/>' +
-      `<circle cx="12" cy="10" r="4" fill="${statusColor}"/>` +
-      "</svg>"
-    );
+  function createPinIcon(status) {
+    return SLTStatusColors.leafletPinIcon(status, "demanda", L);
   }
 
   function $(id) {
@@ -44,27 +42,6 @@
     return SLTStatusColors.getStatusDemanda(codigo);
   }
 
-  const PIN_W = 34;
-  const PIN_H = 42;
-  const PIN_CONTAINER = 56;
-  const PIN_HEAD_Y = PIN_CONTAINER - PIN_H + (10 / 36) * PIN_H;
-  const PIN_HEAD_SIZE = (18 / 36) * PIN_H;
-
-  function createPinIcon(status) {
-    const { text } = statusStyle(status);
-    return L.divIcon({
-      className: "painel-pin-wrap",
-      html:
-        `<div class="painel-pin" style="--pin-halo-color:${text};--head-y:${PIN_HEAD_Y}px;--head-size:${PIN_HEAD_SIZE}px">` +
-        `<span class="painel-pin-halo"></span>` +
-        `<span class="painel-pin-halo painel-pin-halo--delay"></span>` +
-        pinSvg(text) +
-        `</div>`,
-      iconSize: [PIN_CONTAINER, PIN_CONTAINER],
-      iconAnchor: [PIN_CONTAINER / 2, PIN_CONTAINER - 4],
-    });
-  }
-
   function coordsItem(d) {
     if (d.lat != null && d.lng != null) return { lat: d.lat, lng: d.lng };
     if (d.geometria?.tipo === "Point") {
@@ -74,15 +51,8 @@
     return null;
   }
 
-  function geomStyle(status) {
-    const { text } = statusStyle(status);
-    return {
-      color: text,
-      weight: 2.5,
-      fillColor: text,
-      fillOpacity: 0.18,
-      opacity: 0.9,
-    };
+  function geomStyle(status, tipo) {
+    return SLTStatusColors.leafletPathStyle(status, "demanda", tipo);
   }
 
   function tipoLabel(tipo) {
@@ -241,6 +211,70 @@
     return selectedKey ? selectedKey.split(":")[1] : null;
   }
 
+  function recordKey(tipo, id) {
+    return itemKey(tipo, id);
+  }
+
+  function initRecordOrder() {
+    recordOrder = SLTPainelMapControls.createRecordOrderState(
+      SIDEBAR_GRUPOS,
+      (g) => items.filter((d) => d.tipo === g.tipo),
+      (d) => recordKey(d.tipo, d.id)
+    );
+  }
+
+  function applyMapLayerZOrder() {
+    SLTPainelMapControls.applyStackZOrder(
+      mapLayerGroup,
+      layersByKey,
+      SLTPainelMapControls.buildStackKeys(SIDEBAR_GRUPOS, recordOrder)
+    );
+  }
+
+  function onRecordReorder(groupId, recordKeys) {
+    SLTPainelMapControls.syncRecordOrderState(recordOrder, groupId, recordKeys);
+    applyMapLayerZOrder();
+  }
+
+  function recordVisibilityKey(tipo, id) {
+    return itemKey(tipo, id);
+  }
+
+  function visibilityApi() {
+    return {
+      isGroupVisible(groupId) {
+        return layerVisibility.isGroupVisible(groupId);
+      },
+      isRecordVisible(groupId, recordId) {
+        return layerVisibility.isRecordVisible(groupId, recordVisibilityKey(groupId, recordId));
+      },
+    };
+  }
+
+  function syncEntryVisibility(tipo, id) {
+    const groupId = SLTPainelMapControls.groupIdFromKind(tipo);
+    const entry = layersByKey.get(itemKey(tipo, id));
+    const visible = layerVisibility.isRecordVisible(groupId, recordVisibilityKey(tipo, id));
+    SLTPainelMapControls.applyEntryVisibility(entry, mapLayerGroup, visible);
+  }
+
+  function onGroupVisibilityChange(groupId, visible) {
+    layerVisibility.setGroupVisible(groupId, visible);
+    items
+      .filter((d) => SLTPainelMapControls.groupIdFromKind(d.tipo) === groupId)
+      .forEach((d) => syncEntryVisibility(d.tipo, d.id));
+    renderSidebar();
+  }
+
+  function onRecordVisibilityChange(groupId, recordId, visible) {
+    layerVisibility.setRecordVisible(recordVisibilityKey(groupId, recordId), visible);
+    syncEntryVisibility(groupId, recordId);
+    const row = document.querySelector(
+      `.layer-group--record[data-record-id="${CSS.escape(recordId)}"][data-group-id="${CSS.escape(groupId)}"]`
+    );
+    row?.classList.toggle("is-map-hidden", !visible || !layerVisibility.isGroupVisible(groupId));
+  }
+
   function renderSidebar() {
     SLTGroupedSidebar.renderGroupedDemandasSidebar({
       containerSelector: "#layers-container",
@@ -253,13 +287,21 @@
       })),
       selectedId: selectedIdFromKey(),
       getRecordId: (r) => r.id,
+      getRecordGroupId: (r) => r.tipo,
       getRecordLabel: (r) => r.nome,
       getRecordBadgeHtml: (r) => {
         const st = statusStyle(r.status);
-        return `<span class="${SLTStatusColors.badgeClass(r.status)}">${escapeHtml(st.nome)}</span>`;
+        const acao = SLTStatusColors.actionClass(r.status);
+        return `<span class="${SLTStatusColors.badgeClass(r.status)}${acao}">${escapeHtml(st.nome)}</span>`;
       },
       sectionsFor: () => [],
       emptyMessage: "Nenhuma demanda registrada.",
+      visibility: visibilityApi(),
+      recordOrder,
+      getRecordKey: (r) => recordKey(r.tipo, r.id),
+      onRecordReorder,
+      onGroupVisibilityChange,
+      onRecordVisibilityChange,
       onSelect: (id, record) => {
         if (!record) return;
         const anchorEl = document.querySelector(
@@ -276,7 +318,7 @@
       const on = el.dataset.recordId === id;
       el.classList.toggle("is-selected", on);
       el.classList.toggle("collapsed", !on);
-      el.querySelector(".layer-group-header--record")?.setAttribute("aria-expanded", String(on));
+      el.querySelector(".layer-group-header-row .layer-group-header--record")?.setAttribute("aria-expanded", String(on));
     });
     document.querySelectorAll(".layer-group--tipo").forEach((grp) => {
       const hit = grp.querySelector(`.layer-group--record[data-record-id="${CSS.escape(id)}"]`);
@@ -298,7 +340,7 @@
   }
 
   function addItemLayers(group, d) {
-    const style = geomStyle(d.status);
+    const style = geomStyle(d.status, d.tipo);
     const key = itemKey(d.tipo, d.id);
     const entry = { layers: [], bounds: null, latlng: null };
 
@@ -314,6 +356,7 @@
       );
       gj.eachLayer((layer) => {
         layer.on("click", onMapClick);
+        SLTStatusColors.decorateLeafletLayer(layer, d.status);
         entry.layers.push(layer);
         group.addLayer(layer);
       });
@@ -335,10 +378,16 @@
 
   function buildMapLayers() {
     layersByKey.clear();
-    const group = L.featureGroup();
-    items.forEach((d) => addItemLayers(group, d));
-    group.addTo(map);
-    if (group.getLayers().length) map.fitBounds(group.getBounds().pad(0.12));
+    if (mapLayerGroup) map.removeLayer(mapLayerGroup);
+    mapLayerGroup = L.featureGroup();
+    const sorted = SLTPainelMapControls.sortByLayerOrder(items, (d) => d.tipo);
+    sorted.forEach((d) => addItemLayers(mapLayerGroup, d));
+    mapLayerGroup.addTo(map);
+    sorted.forEach((d) => syncEntryVisibility(d.tipo, d.id));
+    applyMapLayerZOrder();
+    if (mapLayerGroup.getLayers().length) {
+      SLTPainelMapControls.fitMapToDefaultBounds(map, mapLayerGroup.getBounds());
+    }
   }
 
   function selectItem(tipo, id, scrollSidebar) {
@@ -353,7 +402,7 @@
   function focusMapOnItem(tipo, id) {
     const entry = layersByKey.get(itemKey(tipo, id));
     if (entry?.bounds?.isValid()) {
-      map.fitBounds(entry.bounds.pad(0.12), { animate: true });
+      SLTPainelMapControls.fitMapToDefaultBounds(map, entry.bounds, { animate: true });
       return;
     }
     const d = findItem(tipo, id);
@@ -393,11 +442,7 @@
   }
 
   function initMap() {
-    map = L.map("map-painel", { zoomControl: true }).setView([-22.5, -48.5], 7);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap",
-      maxZoom: 19,
-    }).addTo(map);
+    map = SLTPainelMapControls.initPainelMap("map-painel");
 
     map.on("move zoom", () => {
       if (openItem && anchorMode === "map" && mapAnchorLatLng) {
@@ -413,6 +458,13 @@
     });
   }
 
+  function bindLegendLayoutRefresh() {
+    $("status-legend")?.addEventListener("slt-legend-layout", () => {
+      if (!mapLayerGroup?.getLayers().length) return;
+      SLTPainelMapControls.fitMapToDefaultBounds(map, mapLayerGroup.getBounds(), { animate: true });
+    });
+  }
+
   async function init() {
     try {
       items = await SLTDemandasApi.listPainelDemandas();
@@ -421,9 +473,14 @@
       items = (SLTStorage.loadDemandas() || []).map((d) => ({ ...d, tipo: "projeto" }));
     }
 
+    initRecordOrder();
     initLayersSectionCollapse();
     initMap();
-    SLTStatusColors.renderLegend("#status-legend");
+    SLTStatusColors.renderLegend("#status-legend", {
+      layout: "painel",
+      labelFn: (codigo) => SLTStatusColors.getStatusDemanda(codigo).nome,
+    });
+    bindLegendLayoutRefresh();
     renderSidebar();
     buildMapLayers();
   }

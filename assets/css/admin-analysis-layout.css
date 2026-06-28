@@ -1,4 +1,5 @@
 /* Layout e tipografia — páginas de análise admin (demanda / objeto AHP) */
+@import url("painel-shared.css");
 
 .admin-dashboard-page {
   --admin-label-color: #003b5a;

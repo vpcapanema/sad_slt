@@ -10,25 +10,44 @@ alwaysApply: false
 
 Todas as cores de status vivem em `assets/js/status-colors.js`:
 
-- `bg` — badge e swatch da legenda
-- `text` — texto do badge e cor do pin no mapa
-- `row` — tint das linhas da tabela admin
+- `bg` — badge e fundo claro
+- `text` — texto do badge e contorno no mapa
+- `row` — tint das linhas da tabela admin e preenchimento liso (projeto)
 - `halo` — halo animado no mapa
 
 **Não** defina cores por status em `app.css`, HTML ou JS avulso.
 
+## Fases (legenda)
+
+Três fases na legenda (`LEGEND_FASES`):
+
+1. **Fase 1 — Análise**
+2. **Fase 2 — Hierarquização**
+3. **Fase 3 — Ranqueamento e execução**
+
+## Texturas por tipo de demanda (mapa)
+
+Textura no **preenchimento de polígonos**, não por fase:
+
+| Tipo | Geometria | Textura |
+|------|-----------|---------|
+| Plano | polígono | listras diagonais |
+| Programa | polígono | malha cruzada |
+| Projeto | alfinete | liso (sem textura) |
+
+Use `SLTStatusColors.leafletPathStyle(codigo, kind, tipoDemanda)` nos mapas.
+Padrões SVG em `#slt-map-patterns` via `registerPattern()`.
+
 ## Injeção automática
 
-`SLTStatusColors.injectTheme()` gera variáveis CSS (`--status-{codigo}-*`) e estilos de badge/linha. É chamado ao carregar o script.
+`SLTStatusColors.injectTheme()` gera variáveis CSS (`--status-{codigo}-*`) e estilos de badge/linha.
 
 ## Legendas
 
-Use `SLTStatusColors.renderLegend(container, { labelFn })` em:
+Use `SLTStatusColors.renderLegend(container, { labelFn, tipoDemanda?, tipoLegend? })`:
 
-- `admin/demandas.html` — abaixo da barra de ações em lote
-- `painel/index.html` e `admin/painel.html` — sidebar
-
-Rótulos tipados: `labelFn: (c) => SLTAdminLabels.statusDemandaLabel(c, tipo)`.
+- Painéis (tipos mistos): swatches de status sólidos + bloco «Tipo de demanda»
+- `admin/demandas`: passe `tipoDemanda: tipo` para swatches com textura do tipo filtrado
 
 ## Novo status
 
