@@ -595,7 +595,9 @@
     sorted.forEach((e) => syncEntryVisibility(e.kind, e.id));
     applyMapLayerZOrder();
     if (mapLayerGroup.getLayers().length) {
-      SLTPainelMapControls.fitMapToDefaultBounds(map, mapLayerGroup.getBounds());
+      SLTPainelMapControls.establishInitialPainelMapView(map, mapLayerGroup.getBounds());
+    } else {
+      SLTPainelMapControls.markInitialMapViewReady(map);
     }
   }
 
@@ -649,6 +651,7 @@
 
   function initMap() {
     map = SLTPainelMapControls.initPainelMap("map-painel");
+    map._sltInitialViewReady = false;
     map.on("move zoom", () => {
       if (openEntry && anchorMode === "map" && mapAnchorLatLng) {
         anchorRef = mapAnchorLatLng;
@@ -665,10 +668,20 @@
     });
   }
 
+  function getMapFocusLatLng() {
+    return SLTPainelMapControls.largestVisibleFocusLatLng(layersByKey, (key) => {
+      const sep = key.indexOf(":");
+      if (sep === -1) return false;
+      const kind = key.slice(0, sep);
+      const id = key.slice(sep + 1);
+      return isEntryMapVisible(kind, id);
+    });
+  }
+
   function bindLegendLayoutRefresh() {
     $("status-legend")?.addEventListener("slt-legend-layout", () => {
-      if (!map) return;
-      SLTPainelMapControls.adjustMapForLegendLayout(map);
+      if (!map || map._sltInitialViewReady !== true) return;
+      SLTPainelMapControls.adjustMapForLegendLayout(map, { getFocusLatLng: getMapFocusLatLng });
     });
   }
 

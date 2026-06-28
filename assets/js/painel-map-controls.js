@@ -146,13 +146,16 @@
     },
   });
 
-  function setDefaultMapViewRestore(map, bounds) {
-    if (!map || !bounds?.isValid?.()) {
-      if (map) map._sltRestoreDefaultView = null;
-      return;
-    }
+  const DEFAULT_PAINEL_ZOOM = 7.5;
+
+  function saveDefaultMapView(map) {
+    if (!map) return;
+    map._sltDefaultCenter = map.getCenter();
+    map._sltDefaultZoom = map.getZoom();
     map._sltRestoreDefaultView = () => {
-      fitMapToDefaultBounds(map, bounds, { animate: true, rememberDefault: false });
+      if (!map._sltDefaultCenter) return;
+      map.setView(map._sltDefaultCenter, map._sltDefaultZoom, { animate: true });
+      rememberLegendPadding(map);
     };
   }
 
@@ -221,8 +224,60 @@
     map.setView(next, zoom, { animate: true });
   }
 
-  function adjustMapForLegendLayout(map) {
-    if (!map || !global.L) return;
+  function boundsEnvelopeArea(bounds) {
+    if (!bounds?.isValid?.()) return 0;
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+    return Math.abs(ne.lat - sw.lat) * Math.abs(ne.lng - sw.lng);
+  }
+
+  function entryFocusLatLng(entry) {
+    if (!entry) return null;
+    if (entry.bounds?.isValid?.()) return entry.bounds.getCenter();
+    if (entry.latlng) return entry.latlng;
+    return null;
+  }
+
+  function largestVisibleFocusLatLng(layersByKey, isVisibleFn) {
+    if (!layersByKey?.size) return null;
+    let bestLatLng = null;
+    let bestArea = 0;
+    layersByKey.forEach((entry, key) => {
+      if (isVisibleFn && !isVisibleFn(key, entry)) return;
+      let bounds = entry.bounds;
+      if (!bounds?.isValid?.() && entry.latlng) {
+        bounds = L.latLngBounds([entry.latlng, entry.latlng]);
+      }
+      const area = boundsEnvelopeArea(bounds);
+      if (area > bestArea) {
+        bestArea = area;
+        bestLatLng = entryFocusLatLng(entry);
+      }
+    });
+    return bestLatLng;
+  }
+
+  function collapsedLegendWestOffsetPx() {
+    const collapsed =
+      global.SLTStatusColors?.getMapViewportPadding?.() || { right: 8, left: 8, top: 8, bottom: 8 };
+    const expanded =
+      global.SLTStatusColors?.getMapViewportPadding?.({ legendExpanded: true }) || collapsed;
+    return Math.max(0, ((expanded.right || 0) - (collapsed.right || 0)) / 2);
+  }
+
+  function legendLayoutPanDx(prev, next) {
+    return ((prev.right || 0) - (next.right || 0)) / 2;
+  }
+
+  function panMapHorizontally(map, dx, animate) {
+    if (!map || !global.L || Math.abs(dx) < 1) return;
+    const zoom = map.getZoom();
+    map.panBy([dx, 0], { animate: animate !== false });
+    if (map.getZoom() !== zoom) map.setZoom(zoom);
+  }
+
+  function adjustMapForLegendLayout(map, options) {
+    if (!map || !global.L || map._sltInitialViewReady !== true) return;
     const next =
       global.SLTStatusColors?.getMapViewportPadding?.() || {
         top: 8,
@@ -231,15 +286,25 @@
         left: 8,
       };
     const prev = map._sltLastLegendPadding || next;
-    const dx = (next.left - next.right - (prev.left - prev.right)) / 2;
-    const dy = (next.top - next.bottom - (prev.top - prev.bottom)) / 2;
-    if (dx || dy) map.panBy([dx, dy], { animate: true });
+    if (!options?.getFocusLatLng?.()) {
+      map._sltLastLegendPadding = next;
+      return;
+    }
+    panMapHorizontally(map, legendLayoutPanDx(prev, next), true);
     map._sltLastLegendPadding = next;
+  }
+
+  function markInitialMapViewReady(map) {
+    if (!map) return;
+    map._sltInitialViewReady = true;
+    rememberLegendPadding(map);
   }
 
   function fitMapToDefaultBounds(map, bounds, extraOptions) {
     if (!map || !bounds?.isValid?.()) return;
     const opts = extraOptions || {};
+    const fitOpts = { ...opts };
+    delete fitOpts.rememberDefault;
     const legendOpts =
       global.SLTStatusColors?.mapFitBoundsOptions?.() || {
         paddingTopLeft: [8, 8],
@@ -247,12 +312,27 @@
       };
     map.fitBounds(bounds.pad(MAP_BOUNDS_GEO_PAD), {
       ...legendOpts,
-      ...opts,
+      ...fitOpts,
     });
     rememberLegendPadding(map);
-    if (opts.rememberDefault !== false) {
-      setDefaultMapViewRestore(map, bounds);
+  }
+
+  function establishInitialPainelMapView(map, bounds) {
+    if (!map || !bounds?.isValid?.()) {
+      markInitialMapViewReady(map);
+      return;
     }
+    fitMapToDefaultBounds(map, bounds, {
+      maxZoom: DEFAULT_PAINEL_ZOOM,
+      minZoom: DEFAULT_PAINEL_ZOOM,
+    });
+    if (Math.abs(map.getZoom() - DEFAULT_PAINEL_ZOOM) > 0.01) {
+      map.setZoom(DEFAULT_PAINEL_ZOOM);
+    }
+    panMapHorizontally(map, collapsedLegendWestOffsetPx(), false);
+    rememberLegendPadding(map);
+    saveDefaultMapView(map);
+    markInitialMapViewReady(map);
   }
 
   global.SLTPainelMapControls = {
@@ -272,9 +352,13 @@
     attachZoomScale,
     initPainelMap,
     fitMapToDefaultBounds,
-    setDefaultMapViewRestore,
+    establishInitialPainelMapView,
+    saveDefaultMapView,
+    DEFAULT_PAINEL_ZOOM,
     panMapToViewportPadding,
+    largestVisibleFocusLatLng,
     adjustMapForLegendLayout,
+    markInitialMapViewReady,
     rememberLegendPadding,
   };
 })(window);

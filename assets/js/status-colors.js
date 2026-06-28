@@ -678,7 +678,30 @@
     });
   }
 
-  function getMapViewportPadding() {
+  function readMapViewportPadding(mapRect, legendRect, sidebarLeft) {
+    const fallback = { top: 8, right: 8, bottom: 8, left: sidebarLeft ?? 8 };
+    if (!mapRect?.width || !mapRect?.height) return fallback;
+
+    let left = sidebarLeft ?? 8;
+    let top = 8;
+    let right = 8;
+
+    if (legendRect?.width && legendRect?.height) {
+      const overlapLeft = Math.max(mapRect.left, legendRect.left);
+      const overlapTop = Math.max(mapRect.top, legendRect.top);
+      const overlapRight = Math.min(mapRect.right, legendRect.right);
+      const overlapBottom = Math.min(mapRect.bottom, legendRect.bottom);
+      const overlapW = Math.max(0, overlapRight - overlapLeft);
+      const overlapH = Math.max(0, overlapBottom - overlapTop);
+      if (overlapH > 0) top = Math.ceil(overlapH + 4);
+      if (overlapW > 0) right = Math.ceil(overlapW + 4);
+    }
+
+    return { top, right, bottom: 8, left };
+  }
+
+  function getMapViewportPadding(options) {
+    const opts = options || {};
     const el = document.getElementById("status-legend");
     const mapEl = document.getElementById("map-painel");
     const fallback = { top: 8, right: 8, bottom: 8, left: 8 };
@@ -687,44 +710,51 @@
     const mapRect = mapEl.getBoundingClientRect();
     if (!mapRect.width || !mapRect.height) return fallback;
 
-    let left = 8;
+    let sidebarLeft = 8;
     const sidebar = document.querySelector(".layout-with-sidebar .layout-sidebar");
     if (sidebar) {
       const sbRect = sidebar.getBoundingClientRect();
       const sidebarOverlap = sbRect.right - mapRect.left;
-      if (sidebarOverlap > 0) left = Math.ceil(sidebarOverlap + 4);
+      if (sidebarOverlap > 0) sidebarLeft = Math.ceil(sidebarOverlap + 4);
     }
 
-    let top = 8;
-    let right = 8;
+    if (!el?.classList.contains("status-color-legend-host--map")) {
+      return { top: 8, right: 8, bottom: 8, left: sidebarLeft };
+    }
 
-    if (el?.classList.contains("status-color-legend-host--map")) {
+    if (opts.legendExpanded) {
+      const panel = el.querySelector(".status-legend-map-panel");
+      const toggle = el.querySelector(".status-legend-map-toggle");
+      const wasCollapsed = el.classList.contains("is-collapsed");
+      const panelWasHidden = panel?.hidden ?? true;
+      el.classList.remove("is-collapsed");
+      if (panel) panel.hidden = false;
+      if (toggle) toggle.setAttribute("aria-expanded", "true");
       const legendRect = el.getBoundingClientRect();
-      if (legendRect.width && legendRect.height) {
-        const overlapLeft = Math.max(mapRect.left, legendRect.left);
-        const overlapTop = Math.max(mapRect.top, legendRect.top);
-        const overlapRight = Math.min(mapRect.right, legendRect.right);
-        const overlapBottom = Math.min(mapRect.bottom, legendRect.bottom);
-        const overlapW = Math.max(0, overlapRight - overlapLeft);
-        const overlapH = Math.max(0, overlapBottom - overlapTop);
-        if (overlapH > 0) top = Math.ceil(overlapH + 4);
-        if (overlapW > 0) right = Math.ceil(overlapW + 4);
+      const pad = readMapViewportPadding(mapRect, legendRect, sidebarLeft);
+      if (wasCollapsed) {
+        el.classList.add("is-collapsed");
+        if (panel) panel.hidden = panelWasHidden;
+        if (toggle) toggle.setAttribute("aria-expanded", "false");
       }
+      return pad;
     }
 
-    return { top, right, bottom: 8, left };
+    return readMapViewportPadding(mapRect, el.getBoundingClientRect(), sidebarLeft);
   }
 
-  function getMapLegendPadding() {
-    return getMapViewportPadding();
+  function getMapLegendPadding(options) {
+    return getMapViewportPadding(options);
   }
 
   function mapFitBoundsOptions(extra) {
-    const pad = getMapLegendPadding();
+    const src = extra || {};
+    const pad = getMapLegendPadding(src.legendExpanded ? { legendExpanded: true } : undefined);
+    const { legendExpanded, ...leafletExtra } = src;
     return {
       paddingTopLeft: [pad.left, pad.top],
       paddingBottomRight: [pad.right, pad.bottom],
-      ...(extra || {}),
+      ...leafletExtra,
     };
   }
 
