@@ -9,7 +9,11 @@ from api.schemas.demanda import RepresentanteSchema
 class ProgramaCreateSchema(BaseModel):
     """Payload de cadastro de um programa (nível 2 — filho de um plano)."""
 
-    codigo: str | None = Field(None, max_length=64)
+    codigo: str | None = Field(
+        None,
+        max_length=64,
+        description="Ignorado na criação — o servidor gera PRO-XXXXXXXX",
+    )
     plano_codigo: str | None = Field(None, description="Código legível do plano pai (opcional sem vínculo institucional)")
     vinculo_institucional: bool = False
     nome: str = Field(..., min_length=1, max_length=200)

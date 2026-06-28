@@ -5,10 +5,12 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
+from api.codigos_demanda import gerar_codigo_plano, gerar_codigo_unico
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import plano_repository
 from api.schemas.demanda import RepresentanteSchema
 from api.schemas.plano import PlanoCreateSchema, PlanoResponseSchema, PlanoUpdateSchema
+from api.services.campos_demanda import normalizar_plano
 
 
 def _iso(value: Any) -> str | None:
@@ -63,10 +65,6 @@ def _row_to_response(row: dict[str, Any]) -> PlanoResponseSchema:
     )
 
 
-def _gerar_codigo() -> str:
-    return f"PLA-{uuid.uuid4().hex[:8].upper()}"
-
-
 def _resolve_pessoa_id(payload: PlanoCreateSchema) -> str:
     pessoa_id = payload.pessoa_id or payload.representante.pessoa_id
     if not pessoa_id:
@@ -81,11 +79,11 @@ def _resolve_instituicao_id(payload: PlanoCreateSchema) -> str:
 
 
 def criar_plano(payload: PlanoCreateSchema) -> PlanoResponseSchema:
-    codigo = (payload.codigo or "").strip() or _gerar_codigo()
-    if plano_repository.get_by_codigo(codigo):
-        raise DemandaValidationError(f"Código de plano já existe: {codigo}.", field="codigo")
+    codigo = gerar_codigo_unico(gerar_codigo_plano, plano_repository.get_by_codigo)
     pessoa_id = _resolve_pessoa_id(payload)
     instituicao_id = _resolve_instituicao_id(payload)
+    if not (payload.representante.nome or "").strip():
+        raise DemandaValidationError("Nome do representante legal é obrigatório.", field="representante.nome")
     row = {
         "codigo": codigo,
         "diretoria_id": payload.diretoria_id,
@@ -99,7 +97,7 @@ def criar_plano(payload: PlanoCreateSchema) -> PlanoResponseSchema:
         "instituicao_nome_fantasia": payload.instituicao_nome_fantasia,
         "instituicao_cnpj": payload.instituicao_cnpj,
         "sigma_pessoa_id": pessoa_id,
-        "representante_nome": (payload.representante.nome or "").strip() or "—",
+        "representante_nome": (payload.representante.nome or "").strip(),
         "representante_email": payload.representante.email,
         "representante_telefone": payload.representante.telefone,
         "vigencia_inicio": payload.vigencia_inicio or None,
@@ -107,6 +105,7 @@ def criar_plano(payload: PlanoCreateSchema) -> PlanoResponseSchema:
         "valor_global": payload.valor_global,
         "status": "rascunho",
     }
+    normalizar_plano(row, pessoa_id=pessoa_id)
     inserted = plano_repository.insert(row, payload.unidades_espaciais)
     return _row_to_response(inserted)
 

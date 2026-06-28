@@ -4,6 +4,7 @@ Consome os pesos de critérios de uma ``config_multicriterio_portfolio`` e os
 julgamentos pareados dos projetos para produzir o ranking final. O cálculo é a
 fonte da verdade no servidor.
 """
+
 from __future__ import annotations
 
 import secrets
@@ -26,13 +27,9 @@ from api.schemas.hierarquizacao import (
 )
 from api.services import ahp_engine
 
-_STATUS_VALIDOS = frozenset(
-    {"rascunho", "em_julgamento", "calculada", "homologada", "arquivada"}
-)
+_STATUS_VALIDOS = frozenset({"rascunho", "em_julgamento", "calculada", "homologada", "arquivada"})
 
-_UPDATE_FIELDS = frozenset(
-    {"nome", "descricao", "status", "objetos", "julgamento_projetos"}
-)
+_UPDATE_FIELDS = frozenset({"nome", "descricao", "status", "objetos", "julgamento_projetos"})
 
 
 def _iso(value: Any) -> str | None:
@@ -78,9 +75,7 @@ def _row_to_response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
     )
 
 
-def criar_hierarquizacao(
-    payload: HierarquizacaoCreateSchema, *, criado_por: str | None = None
-) -> HierarquizacaoResponseSchema:
+def criar_hierarquizacao(payload: HierarquizacaoCreateSchema, *, criado_por: str | None = None) -> HierarquizacaoResponseSchema:
     config = config_repo.get_by_codigo("portfolio", payload.config_codigo)
     if not config:
         raise ConfigMulticriterioNotFoundError(payload.config_codigo)
@@ -102,9 +97,7 @@ def criar_hierarquizacao(
     return _row_to_response(repo.insert(data))
 
 
-def listar_hierarquizacoes(
-    *, status: str | None = None, grupo: str | None = None
-) -> list[HierarquizacaoResponseSchema]:
+def listar_hierarquizacoes(*, status: str | None = None, grupo: str | None = None) -> list[HierarquizacaoResponseSchema]:
     return [_row_to_response(r) for r in repo.list_all(status=status, grupo=grupo)]
 
 
@@ -112,9 +105,7 @@ def obter_hierarquizacao(codigo: str) -> HierarquizacaoResponseSchema:
     return _row_to_response(_carregar(codigo))
 
 
-def atualizar_hierarquizacao(
-    codigo: str, payload: HierarquizacaoUpdateSchema
-) -> HierarquizacaoResponseSchema:
+def atualizar_hierarquizacao(codigo: str, payload: HierarquizacaoUpdateSchema) -> HierarquizacaoResponseSchema:
     _carregar(codigo)
     data = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if k in _UPDATE_FIELDS}
     if "status" in data and data["status"] not in _STATUS_VALIDOS:
@@ -201,9 +192,7 @@ def calcular_hierarquizacao(codigo: str) -> HierarquizacaoResponseSchema:
     return _row_to_response(updated)
 
 
-def homologar_hierarquizacao(
-    codigo: str, *, homologado_por: str | None = None
-) -> HierarquizacaoResponseSchema:
+def homologar_hierarquizacao(codigo: str, *, homologado_por: str | None = None) -> HierarquizacaoResponseSchema:
     row = _carregar(codigo)
     if not row.get("ranking"):
         raise DemandaValidationError("Calcule a hierarquização antes de homologar.", field="status")

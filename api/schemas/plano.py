@@ -19,7 +19,11 @@ class InstituicaoFormSchema(BaseModel):
 class PlanoCreateSchema(BaseModel):
     """Payload de cadastro de um plano (nível 1 — interno)."""
 
-    codigo: str | None = Field(None, max_length=64)
+    codigo: str | None = Field(
+        None,
+        max_length=64,
+        description="Ignorado na criação — o servidor gera PLA-XXXXXXXX",
+    )
     diretoria_id: str
     nome: str = Field(..., min_length=1, max_length=200)
     descricao: str = Field(..., min_length=1)

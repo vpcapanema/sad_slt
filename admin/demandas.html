@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Demandas — Admin SLT</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="../assets/css/app.css">
 </head>
 <body class="admin-data-page">
@@ -20,39 +21,44 @@
   <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 
   <main class="app-main admin-main">
-    <section class="card">
-      <h2>Demandas cadastradas</h2>
-      <p class="step-intro">Selecione o tipo de demanda e clique em uma linha para abrir a análise detalhada.</p>
-
-      <div class="admin-tabs" id="tipo-tabs" role="tablist" aria-label="Tipo de demanda">
-        <button type="button" class="admin-tab" data-tipo="plano" role="tab" aria-selected="false">Plano</button>
-        <button type="button" class="admin-tab" data-tipo="programa" role="tab" aria-selected="false">Programa</button>
-        <button type="button" class="admin-tab is-active" data-tipo="projeto" role="tab" aria-selected="true">Projeto</button>
+    <section class="card admin-card">
+      <div class="pli-section-label">
+        <i class="fas fa-table-list" aria-hidden="true"></i>
+        <span class="pli-section-title">Demandas cadastradas</span>
       </div>
+      <div class="admin-card-body">
+        <p class="step-intro">Selecione o tipo de demanda e clique em uma linha para abrir a análise detalhada.</p>
 
-      <div class="admin-toolbar">
-        <div class="form-field">
-          <label for="filtro-status">Status</label>
-          <select id="filtro-status">
-            <option value="">Todos</option>
-          </select>
+        <div class="admin-tabs" id="tipo-tabs" role="tablist" aria-label="Tipo de demanda">
+          <button type="button" class="admin-tab" data-tipo="plano" role="tab" aria-selected="false">Plano</button>
+          <button type="button" class="admin-tab" data-tipo="programa" role="tab" aria-selected="false">Programa</button>
+          <button type="button" class="admin-tab is-active" data-tipo="projeto" role="tab" aria-selected="true">Projeto</button>
         </div>
-        <div class="form-field" style="flex: 1; min-width: 220px;">
-          <label for="filtro-busca">Buscar</label>
-          <input type="text" id="filtro-busca" placeholder="Nome, código ou instituição…" autocomplete="off">
-        </div>
-        <a href="index.html" class="btn btn-secondary" style="align-self: flex-end;">Voltar</a>
-      </div>
 
-      <div class="admin-table-wrap">
-        <table class="admin-table">
-          <thead>
-            <tr id="tabela-head"></tr>
-          </thead>
-          <tbody id="tabela-demandas"></tbody>
-        </table>
+        <div class="admin-toolbar">
+          <div class="form-field">
+            <label for="filtro-status">Status</label>
+            <select id="filtro-status">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="form-field admin-toolbar-search">
+            <label for="filtro-busca">Buscar</label>
+            <input type="text" id="filtro-busca" placeholder="Nome, código ou instituição…" autocomplete="off">
+          </div>
+          <a href="index.html" class="btn btn-secondary admin-toolbar-back">Voltar</a>
+        </div>
+
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr id="tabela-head"></tr>
+            </thead>
+            <tbody id="tabela-demandas"></tbody>
+          </table>
+        </div>
+        <p id="lista-vazia" class="hint hidden">Nenhuma demanda encontrada.</p>
       </div>
-      <p id="lista-vazia" class="hint hidden">Nenhuma demanda encontrada.</p>
     </section>
   </main>
 

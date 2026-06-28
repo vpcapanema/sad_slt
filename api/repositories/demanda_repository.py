@@ -28,6 +28,8 @@ _SELECT_BASE = """
         d.diretoria_id,
         d.plano_id,
         d.programa_id,
+        pg.codigo AS programa_codigo,
+        pg.nome   AS programa_nome,
         d.vinculo_institucional,
         d.vinculo_tipo,
         d.nome,
@@ -42,6 +44,7 @@ _SELECT_BASE = """
         d.classificacao,
         d.complementos
     FROM demandas.projeto d
+    LEFT JOIN demandas.programa pg ON pg.id = d.programa_id
 """
 
 _INSERT_SQL = """
@@ -69,7 +72,9 @@ _INSERT_SQL = """
         geometria_tipo,
         geometria,
         classificacao,
-        complementos
+        complementos,
+        criado_por,
+        atualizado_por
     ) VALUES (
         %(codigo)s,
         %(status)s,
@@ -94,7 +99,9 @@ _INSERT_SQL = """
         %(geometria_tipo)s,
         ST_SetSRID(ST_GeomFromGeoJSON(%(geometria_geojson)s::text), 4326),
         %(classificacao)s,
-        %(complementos)s
+        %(complementos)s,
+        %(criado_por)s,
+        %(atualizado_por)s
     )
     RETURNING id
 """

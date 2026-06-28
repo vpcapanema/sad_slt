@@ -1,6 +1,10 @@
 (function (global) {
   const PLANO_PLI = "PLANO-PLI";
   const PLANO_PEF = "PLANO-PEF";
+  const CODIGO_PLANO_OUTROS = "PLANO-OUTROS";
+  const CODIGO_PROGRAMA_OUTROS = "PROG-OUTROS";
+  const NOME_PLANO_OUTROS = "Outros planos";
+  const NOME_PROGRAMA_OUTROS = "Outros programas";
 
   const state = {
     statusDemanda: [],
@@ -37,6 +41,51 @@
     return global.SLTSigmaRead?.cnpjDisplay?.({ cnpj: raw }) || raw || "—";
   }
 
+  function formatMoney(value) {
+    if (value == null || value === "") return "—";
+    const n = Number(value);
+    if (Number.isNaN(n)) return "—";
+    return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  function formatVigencia(inicio, fim) {
+    if (!inicio && !fim) return "—";
+    const fmt = (iso) => {
+      if (!iso) return "—";
+      try {
+        return new Date(iso).toLocaleDateString("pt-BR");
+      } catch {
+        return iso;
+      }
+    };
+    if (inicio && fim) return `${fmt(inicio)} – ${fmt(fim)}`;
+    return fmt(inicio || fim);
+  }
+
+  function truncate(text, maxLen) {
+    const s = String(text ?? "").trim();
+    if (!s) return "—";
+    const limit = maxLen || 72;
+    return s.length <= limit ? s : `${s.slice(0, limit - 1)}…`;
+  }
+
+  function vinculoInstitucionalLabel(flag, tipo) {
+    if (!flag) return "Não";
+    if (tipo === "programa") return "Sim · programa";
+    if (tipo === "plano") return "Sim · plano";
+    return "Sim";
+  }
+
+  function abrangenciaLabel(unidades) {
+    const n = (unidades || []).length;
+    if (!n) return "—";
+    return `${n} unidade${n > 1 ? "s" : ""}`;
+  }
+
+  function instituicaoRowLabel(row) {
+    return instituicaoLabel(row);
+  }
+
   async function init(basePath) {
     basePath = basePath || "../";
     await SLTCatalog.loadCatalog(basePath);
@@ -68,8 +117,31 @@
   }
 
   function planoLabel(id) {
+    if (id === CODIGO_PLANO_OUTROS) return NOME_PLANO_OUTROS;
     const p = SLTCatalog.getPlano(id) || SLTCatalog.getItem(SLTCatalog.catalog?.planos, id);
-    return p?.sigla || p?.nome_oficial || "—";
+    return p?.sigla || p?.nome_oficial || id || "—";
+  }
+
+  function planoCadastradoLabel(row) {
+    const codigo = row?.plano_codigo || row?.id;
+    if (codigo === CODIGO_PLANO_OUTROS) return NOME_PLANO_OUTROS;
+    if (row?.plano_nome && row?.plano_codigo) {
+      return `${row.plano_codigo} — ${row.plano_nome}`;
+    }
+    if (row?.plano_nome) return row.plano_nome;
+    if (row?.plano_codigo) return row.plano_codigo;
+    return "—";
+  }
+
+  function programaCadastradoLabel(row) {
+    if (row?.programa_codigo === CODIGO_PROGRAMA_OUTROS) return NOME_PROGRAMA_OUTROS;
+    if (row?.programa_codigo) {
+      return row.programa_nome
+        ? `${row.programa_codigo} — ${row.programa_nome}`
+        : row.programa_codigo;
+    }
+    if (!row?.vinculo_institucional) return NOME_PROGRAMA_OUTROS;
+    return "—";
   }
 
   function classificacaoLabel(classificacao, planoId) {
@@ -169,6 +241,10 @@
   global.SLTAdminLabels = {
     PLANO_PLI,
     PLANO_PEF,
+    CODIGO_PLANO_OUTROS,
+    CODIGO_PROGRAMA_OUTROS,
+    NOME_PLANO_OUTROS,
+    NOME_PROGRAMA_OUTROS,
     init,
     escapeHtml,
     formatDate,
@@ -177,6 +253,8 @@
     statusObjetoLabel,
     diretoriaLabel,
     planoLabel,
+    planoCadastradoLabel,
+    programaCadastradoLabel,
     classificacaoLabel,
     complementosLabel,
     instituicaoLabel,
@@ -186,6 +264,12 @@
     fillSelect,
     labelById,
     statusBadgeClass,
+    formatMoney,
+    formatVigencia,
+    truncate,
+    vinculoInstitucionalLabel,
+    abrangenciaLabel,
+    instituicaoRowLabel,
     get statusDemanda() {
       return state.statusDemanda;
     },

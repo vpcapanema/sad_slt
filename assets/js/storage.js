@@ -22,7 +22,8 @@
   }
 
   function uid() {
-    return "DEM-" + Date.now().toString(36).toUpperCase() + "-" + Math.random().toString(36).slice(2, 6).toUpperCase();
+    const hex = Math.random().toString(16).slice(2, 10).padEnd(8, "0").toUpperCase();
+    return "PRJ-" + hex;
   }
 
   global.SLTStorage = { loadDemandas, saveDemandas, addDemanda, uid, STORAGE_KEY };

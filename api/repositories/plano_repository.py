@@ -51,7 +51,7 @@ _INSERT_SQL = """
         instituicao_nome_fantasia, instituicao_cnpj,
         sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
         vigencia_inicio, vigencia_fim,
-        valor_global, status
+        valor_global, status, criado_por, atualizado_por
     ) VALUES (
         %(codigo)s, %(diretoria_id)s, %(nome)s, %(descricao)s,
         %(objetivo_estrategico)s, %(responsavel)s,
@@ -59,7 +59,7 @@ _INSERT_SQL = """
         %(instituicao_nome_fantasia)s, %(instituicao_cnpj)s,
         %(sigma_pessoa_id)s, %(representante_nome)s, %(representante_email)s, %(representante_telefone)s,
         %(vigencia_inicio)s, %(vigencia_fim)s,
-        %(valor_global)s, %(status)s
+        %(valor_global)s, %(status)s, %(criado_por)s, %(atualizado_por)s
     )
     RETURNING id
 """

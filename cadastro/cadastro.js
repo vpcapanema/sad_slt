@@ -10,6 +10,16 @@
   let pessoas = [];
   let programasCache = [];
   let planosCache = [];
+  const CODIGO_PLANO_OUTROS = "PLANO-OUTROS";
+  const CODIGO_PROGRAMA_OUTROS = "PROG-OUTROS";
+
+  function planosParaVinculo(list) {
+    return (list || []).filter((p) => p.id !== CODIGO_PLANO_OUTROS);
+  }
+
+  function programasParaVinculo(list) {
+    return (list || []).filter((p) => p.id !== CODIGO_PROGRAMA_OUTROS);
+  }
   let plAbr = null;
   let pgAbr = null;
   let currentProjetoStep = 1;
@@ -116,7 +126,7 @@
       card.classList.add("cadastro-card");
 
       const label = document.createElement("div");
-      label.className = "cadastro-section-label";
+      label.className = "cadastro-section-label pli-section-label";
       if (collapsibleHdr) {
         label.classList.add("collapsible-hdr");
         if (collapsibleHdr.id) label.id = collapsibleHdr.id;
@@ -127,7 +137,7 @@
       icon.setAttribute("aria-hidden", "true");
 
       const titleSpan = document.createElement("span");
-      titleSpan.className = "cadastro-section-title";
+      titleSpan.className = "cadastro-section-title pli-section-title";
       titleSpan.innerHTML = h2.innerHTML;
 
       label.appendChild(icon);
@@ -1553,7 +1563,6 @@
     const geom = getGeometria();
     const coords = getCoordenadas();
     return {
-      id: SLTStorage.uid(),
       status: "fila_hierarquizacao",
       criadoEm: new Date().toISOString(),
       ...buildInstituicaoPayload("#instituicao", "#cnpj"),
@@ -1615,7 +1624,7 @@
 
   function updateProgramasSelect() {
     const sel = $("#programa");
-    const items = programasCache;
+    const items = programasParaVinculo(programasCache);
     const placeholder = items.length
       ? "Selecione o programa…"
       : "Nenhum programa cadastrado";
@@ -1639,23 +1648,24 @@
       planosCache = [];
     }
     const pgSel = $("#pg-plano");
+    const planosVinculo = planosParaVinculo(planosCache);
     if (pgSel) {
       fillSelect(
         pgSel,
-        planosCache,
+        planosVinculo,
         "id",
         (p) => p.nome,
-        planosCache.length ? "Selecione…" : "Nenhum plano cadastrado"
+        planosVinculo.length ? "Selecione…" : "Nenhum plano cadastrado"
       );
     }
     const pjSel = $("#pj-plano-vinculo");
     if (pjSel) {
       fillSelect(
         pjSel,
-        planosCache,
+        planosVinculo,
         "id",
         (p) => p.nome,
-        planosCache.length ? "Selecione…" : "Nenhum plano cadastrado"
+        planosVinculo.length ? "Selecione…" : "Nenhum plano cadastrado"
       );
     }
     updatePgVinculoPanel();

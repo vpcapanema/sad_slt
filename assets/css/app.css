@@ -832,13 +832,10 @@ textarea {
   border-left: none;
 }
 
-/* Cadastro de demandas — cards-seção no padrão AHP (cabeçalho azul PLI + ícone verde) */
-.cadastro-page .cadastro-card {
-  padding: 0;
-  overflow: hidden;
-}
-
-.cadastro-page .cadastro-section-label {
+/* Cabeçalho de seção PLI (cadastro + catálogos de referência) */
+.pli-section-label,
+.cadastro-page .cadastro-section-label,
+.ref-page .pli-section-label {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -855,13 +852,17 @@ textarea {
   border-radius: var(--pli-radius) var(--pli-radius) 0 0;
 }
 
-.cadastro-page .cadastro-section-label i {
+.pli-section-label i,
+.cadastro-page .cadastro-section-label i,
+.ref-page .pli-section-label i {
   font-size: 0.9rem;
   color: var(--pli-green);
   flex-shrink: 0;
 }
 
-.cadastro-page .cadastro-section-title {
+.pli-section-title,
+.cadastro-page .cadastro-section-title,
+.ref-page .pli-section-title {
   flex: 1;
   min-width: 0;
   text-align: left;
@@ -870,6 +871,26 @@ textarea {
   letter-spacing: inherit;
   text-transform: inherit;
   color: inherit;
+}
+
+.pli-section-label--sub {
+  font-size: 0.6875rem;
+  padding: 0.55rem 1rem;
+  border-radius: 0;
+}
+
+.pli-section-label .badge {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+/* Cadastro de demandas — cards-seção */
+.cadastro-page .cadastro-card {
+  padding: 0;
+  overflow: hidden;
 }
 
 .cadastro-page .cadastro-section-label .req {
@@ -896,6 +917,36 @@ textarea {
   font-size: 0.75rem;
   opacity: 0.85;
   flex-shrink: 0;
+}
+
+/* Catálogos de referência — cards no mesmo padrão */
+.ref-page .ref-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.ref-page .ref-card-body {
+  padding: 1rem 1.5rem 1.25rem;
+}
+
+.ref-page .ref-card-body > .ref-lead:first-child,
+.ref-page .ref-card-body > .step-intro:first-child,
+.ref-page .ref-card-body > .hint:first-child {
+  margin-top: 0;
+}
+
+.ref-page .ref-entity-badge-meta {
+  padding: 0.35rem 1.5rem 0;
+  color: var(--pli-muted);
+  font-size: var(--font-intro-sub);
+}
+
+.ref-page .ref-block {
+  margin-top: 0.85rem;
+}
+
+.ref-page .ref-block:first-child {
+  margin-top: 0;
 }
 
 .cadastro-link-toggle {
@@ -1043,23 +1094,27 @@ textarea {
 }
 
 .ref-entity {
-  scroll-margin-top: 1rem;
+  scroll-margin-top: 5rem;
 }
 
 .ref-entity-hdr {
-  margin-bottom: 0.75rem;
+  display: none;
 }
 
 .ref-block {
-  margin: 1.25rem 0;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--pli-border);
+  margin: 0.85rem 0 0;
+}
+
+.ref-block:first-child {
+  margin-top: 0;
 }
 
 .ref-block h3 {
-  font-size: 0.9rem;
-  color: var(--pli-deep);
-  margin: 0 0 0.65rem;
+  display: none;
+}
+
+.ref-block-inner {
+  padding-top: 0.65rem;
 }
 
 .ref-list {
@@ -1079,18 +1134,16 @@ textarea {
 
 .ref-guide-yes {
   background: #f4faf6;
-  margin-left: -0.5rem;
-  margin-right: -0.5rem;
-  padding: 0.75rem 0.5rem;
-  border-top-color: #c8e6d4;
+  margin-left: -1.5rem;
+  margin-right: -1.5rem;
+  padding: 0 1.5rem 0.75rem;
 }
 
 .ref-guide-no {
   background: #fdf6f5;
-  margin-left: -0.5rem;
-  margin-right: -0.5rem;
-  padding: 0.75rem 0.5rem;
-  border-top-color: #ecd5d2;
+  margin-left: -1.5rem;
+  margin-right: -1.5rem;
+  padding: 0 1.5rem 0.75rem;
 }
 
 .ref-cols {
@@ -1146,21 +1199,8 @@ textarea {
   margin-bottom: 1rem;
 }
 
-.ref-intro-short {
-  padding: 1rem 1.25rem;
-}
-
-.ref-intro-short h2 {
-  margin: 0 0 0.35rem;
-  font-size: 1rem;
-}
-
 .ref-intro-short .hint {
   margin: 0;
-}
-
-.ref-toc-compact {
-  padding: 0.85rem 1.25rem;
 }
 
 .ref-toc-compact ol {
@@ -1169,13 +1209,7 @@ textarea {
 }
 
 .ref-entity-compact .ref-block-first {
-  border-top: none;
-  padding-top: 0;
-}
-
-.ref-entity-compact .ref-entity-hdr h2 {
-  font-size: 1.05rem;
-  margin: 0 0 0.75rem;
+  margin-top: 0;
 }
 
 .sigma-aviso {
@@ -1289,10 +1323,33 @@ body.admin-data-page .admin-table td code {
 }
 
 .admin-tab.is-active {
-  background: #fff;
-  border-color: var(--pli-border);
-  border-bottom-color: #fff;
+  background: var(--pli-deep);
+  border-color: var(--pli-deep);
+  border-bottom-color: var(--pli-deep);
+  color: #fff;
   font-weight: 600;
+}
+
+body.admin-data-page .admin-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+body.admin-data-page .admin-card-body {
+  padding: 1rem 1.5rem 1.25rem;
+}
+
+body.admin-data-page .admin-card-body > .step-intro:first-child {
+  margin-top: 0;
+}
+
+body.admin-data-page .admin-toolbar-search {
+  flex: 1;
+  min-width: 220px;
+}
+
+body.admin-data-page .admin-toolbar-back {
+  align-self: flex-end;
 }
 
 .admin-toolbar {
@@ -1332,6 +1389,7 @@ body.admin-data-page .admin-table td code {
 
 .admin-table-wrap {
   overflow-x: auto;
+  max-width: 100%;
   border: 1px solid var(--pli-border);
   border-radius: var(--pli-radius);
 }
@@ -1351,10 +1409,20 @@ body.admin-data-page .admin-table td code {
 }
 
 .admin-table th {
-  background: #f6f8fa;
-  font-weight: 600;
-  color: var(--pli-deep);
+  background: var(--pli-deep);
+  color: #fff;
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   white-space: nowrap;
+  border-bottom: none;
+  padding: 0.75rem 0.75rem;
+}
+
+.admin-table th + th {
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .admin-table tbody tr:hover {

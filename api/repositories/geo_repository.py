@@ -1,4 +1,5 @@
 """Acesso a dados — catálogo geo (unidades espaciais de atuação)."""
+
 from __future__ import annotations
 
 import json

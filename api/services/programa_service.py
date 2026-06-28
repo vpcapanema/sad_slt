@@ -5,8 +5,11 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
+from api.codigos_demanda import gerar_codigo_programa, gerar_codigo_unico
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
-from api.repositories import plano_repository, programa_repository
+from api.repositories import programa_repository
+from api.services.campos_demanda import normalizar_programa
+from api.services.hierarquia_outros import resolve_plano_pai_id
 from api.schemas.demanda import RepresentanteSchema
 from api.schemas.programa import ProgramaCreateSchema, ProgramaResponseSchema, ProgramaUpdateSchema
 
@@ -67,10 +70,6 @@ def _row_to_response(row: dict[str, Any]) -> ProgramaResponseSchema:
     )
 
 
-def _gerar_codigo() -> str:
-    return f"PRO-{uuid.uuid4().hex[:8].upper()}"
-
-
 def _resolve_pessoa_id(payload: ProgramaCreateSchema) -> str:
     pessoa_id = payload.pessoa_id or payload.representante.pessoa_id
     if not pessoa_id:
@@ -85,19 +84,20 @@ def _resolve_instituicao_id(payload: ProgramaCreateSchema) -> str:
 
 
 def criar_programa(payload: ProgramaCreateSchema) -> ProgramaResponseSchema:
-    plano_id = None
-    if payload.plano_codigo and payload.plano_codigo.strip():
-        plano = plano_repository.get_by_codigo(payload.plano_codigo.strip())
-        if not plano:
-            raise DemandaValidationError(
-                f"Plano não encontrado: {payload.plano_codigo}.", field="plano_codigo"
-            )
-        plano_id = str(plano["id"])
-    codigo = (payload.codigo or "").strip() or _gerar_codigo()
-    if programa_repository.get_by_codigo(codigo):
-        raise DemandaValidationError(f"Código de programa já existe: {codigo}.", field="codigo")
+    if payload.vinculo_institucional and not (payload.plano_codigo or "").strip():
+        raise DemandaValidationError(
+            "Selecione o plano cadastrado ou indique que não há vínculo institucional.",
+            field="plano_codigo",
+        )
+    plano_id = resolve_plano_pai_id(
+        plano_codigo=payload.plano_codigo,
+        vinculo_institucional=bool(payload.vinculo_institucional),
+    )
+    codigo = gerar_codigo_unico(gerar_codigo_programa, programa_repository.get_by_codigo)
     pessoa_id = _resolve_pessoa_id(payload)
     instituicao_id = _resolve_instituicao_id(payload)
+    if not (payload.representante.nome or "").strip():
+        raise DemandaValidationError("Nome do representante legal é obrigatório.", field="representante.nome")
     row = {
         "codigo": codigo,
         "plano_id": plano_id,
@@ -115,11 +115,12 @@ def criar_programa(payload: ProgramaCreateSchema) -> ProgramaResponseSchema:
         "instituicao_nome_fantasia": payload.instituicao_nome_fantasia,
         "instituicao_cnpj": payload.instituicao_cnpj,
         "sigma_pessoa_id": pessoa_id,
-        "representante_nome": (payload.representante.nome or "").strip() or "—",
+        "representante_nome": (payload.representante.nome or "").strip(),
         "representante_email": payload.representante.email,
         "representante_telefone": payload.representante.telefone,
         "status": "rascunho",
     }
+    normalizar_programa(row, pessoa_id=pessoa_id)
     inserted = programa_repository.insert(row, payload.unidades_espaciais)
     return _row_to_response(inserted)
 

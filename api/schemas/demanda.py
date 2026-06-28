@@ -19,9 +19,13 @@ class GeometriaSchema(BaseModel):
 
 
 class DemandaCreateSchema(BaseModel):
-    """Payload enviado pelo formulário (espelho de buildDemanda)."""
+    """Payload enviado pelo formulário. O código legível é gerado pelo servidor."""
 
-    id: str = Field(..., min_length=3, max_length=64, description="Código legível DEM-...")
+    id: str | None = Field(
+        None,
+        max_length=64,
+        description="Ignorado na criação — o servidor gera PRJ-XXXXXXXX",
+    )
     status: str = "fila_hierarquizacao"
     criadoEm: str | None = None
     instituicao_id: str
@@ -61,6 +65,8 @@ class DemandaResponseSchema(BaseModel):
     diretoria_id: str
     plano_id: str
     programa_id: str | None = None
+    programa_codigo: str | None = None
+    programa_nome: str | None = None
     vinculo_institucional: bool = False
     vinculo_tipo: str | None = None
     nome: str

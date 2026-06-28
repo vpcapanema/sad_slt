@@ -8,8 +8,11 @@ from typing import Any
 
 from psycopg import errors
 
+from api.codigos_demanda import gerar_codigo_projeto, gerar_codigo_unico
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
-from api.repositories import demanda_repository, dominio_repository, programa_repository
+from api.repositories import demanda_repository, dominio_repository
+from api.services.campos_demanda import normalizar_projeto
+from api.services.hierarquia_outros import resolve_programa_pai_id
 from api.schemas.demanda import DemandaCreateSchema, DemandaResponseSchema, DemandaUpdateSchema, GeometriaSchema, RepresentanteSchema
 _ALLOWED_GEOM = frozenset({"Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon"})
 
@@ -66,6 +69,8 @@ def _row_to_response(row: dict[str, Any]) -> DemandaResponseSchema:
         diretoria_id=row["diretoria_id"],
         plano_id=row["plano_id"],
         programa_id=str(row["programa_id"]) if row.get("programa_id") else None,
+        programa_codigo=row.get("programa_codigo"),
+        programa_nome=row.get("programa_nome"),
         vinculo_institucional=bool(row.get("vinculo_institucional")),
         vinculo_tipo=row.get("vinculo_tipo"),
         nome=row["nome"],
@@ -86,21 +91,28 @@ def _validate_payload(payload: DemandaCreateSchema) -> None:
         raise DemandaValidationError("Coordenadas fora do intervalo válido.", field="lat")
 
 
-def _build_persist_row(payload: DemandaCreateSchema) -> dict[str, Any]:
+def _build_persist_row(payload: DemandaCreateSchema, codigo: str) -> dict[str, Any]:
     _validate_payload(payload)
     pessoa_id = payload.pessoa_id or payload.representante.pessoa_id
     geom_tipo, geom_json = _geometria_to_geojson_str(
         payload.geometria.model_dump() if payload.geometria else None
     )
 
-    programa_id = None
-    if payload.programa_codigo and payload.programa_codigo.strip():
-        programa = programa_repository.get_by_codigo(payload.programa_codigo.strip())
-        if not programa:
-            raise DemandaValidationError(
-                f"Programa não encontrado: {payload.programa_codigo}.", field="programa_codigo"
-            )
-        programa_id = str(programa["id"])
+    programa_id = resolve_programa_pai_id(
+        programa_codigo=payload.programa_codigo,
+        vinculo_institucional=bool(payload.vinculo_institucional),
+        vinculo_tipo=payload.vinculo_tipo,
+    )
+
+    if (
+        payload.vinculo_institucional
+        and payload.vinculo_tipo == "programa"
+        and not (payload.programa_codigo or "").strip()
+    ):
+        raise DemandaValidationError(
+            "Selecione o programa cadastrado ou indique que não há vínculo institucional.",
+            field="programa_codigo",
+        )
 
     if not payload.diretoria_id or not str(payload.diretoria_id).strip():
         raise DemandaValidationError("Diretoria é obrigatória.", field="diretoria_id")
@@ -109,43 +121,45 @@ def _build_persist_row(payload: DemandaCreateSchema) -> dict[str, Any]:
     if payload.vinculo_tipo and payload.vinculo_tipo not in {"programa", "plano"}:
         raise DemandaValidationError("Tipo de vínculo inválido.", field="vinculo_tipo")
 
-    return demanda_repository.prepare_insert_params(
-        {
-            "codigo": payload.id.strip(),
-            "status": payload.status or "fila_hierarquizacao",
-            "sigma_instituicao_id": _parse_uuid(payload.instituicao_id, "instituicao_id"),
-            "instituicao_nome": payload.instituicao_label,
-            "instituicao_cnpj": payload.instituicao_cnpj,
-            "instituicao_razao_social": payload.instituicao_razao_social,
-            "instituicao_nome_fantasia": payload.instituicao_nome_fantasia,
-            "sigma_pessoa_id": _parse_uuid(str(pessoa_id), "pessoa_id"),
-            "representante_nome": (payload.representante.nome or "").strip() or "—",
-            "representante_email": payload.representante.email,
-            "representante_telefone": payload.representante.telefone,
-            "diretoria_id": payload.diretoria_id.strip(),
-            "plano_id": payload.plano_id.strip(),
-            "programa_id": programa_id,
-            "vinculo_institucional": bool(payload.vinculo_institucional),
-            "vinculo_tipo": payload.vinculo_tipo,
-            "nome": payload.nome.strip(),
-            "descricao": payload.descricao,
-            "latitude": payload.lat,
-            "longitude": payload.lng,
-            "geometria_tipo": geom_tipo,
-            "geometria_geojson": geom_json,
-            "classificacao": payload.classificacao,
-            "complementos": payload.complementos,
-        }
-    )
+    if not (payload.representante.nome or "").strip():
+        raise DemandaValidationError("Nome do representante legal é obrigatório.", field="representante.nome")
+
+    row = {
+        "codigo": codigo,
+        "status": payload.status or "fila_hierarquizacao",
+        "sigma_instituicao_id": _parse_uuid(payload.instituicao_id, "instituicao_id"),
+        "instituicao_nome": payload.instituicao_label,
+        "instituicao_cnpj": payload.instituicao_cnpj,
+        "instituicao_razao_social": payload.instituicao_razao_social,
+        "instituicao_nome_fantasia": payload.instituicao_nome_fantasia,
+        "sigma_pessoa_id": _parse_uuid(str(pessoa_id), "pessoa_id"),
+        "representante_nome": (payload.representante.nome or "").strip(),
+        "representante_email": payload.representante.email,
+        "representante_telefone": payload.representante.telefone,
+        "diretoria_id": payload.diretoria_id.strip(),
+        "plano_id": payload.plano_id.strip(),
+        "programa_id": programa_id,
+        "vinculo_institucional": bool(payload.vinculo_institucional),
+        "vinculo_tipo": payload.vinculo_tipo,
+        "nome": payload.nome.strip(),
+        "descricao": payload.descricao,
+        "latitude": payload.lat,
+        "longitude": payload.lng,
+        "geometria_tipo": geom_tipo,
+        "geometria_geojson": geom_json,
+        "classificacao": payload.classificacao,
+        "complementos": payload.complementos,
+    }
+    normalizar_projeto(row, pessoa_id=str(pessoa_id))
+    return demanda_repository.prepare_insert_params(row)
 
 
 def criar_demanda(payload: DemandaCreateSchema) -> DemandaResponseSchema:
-    if demanda_repository.get_by_codigo(payload.id.strip()):
-        raise DemandaValidationError(f"Código de demanda já existe: {payload.id}.", field="id")
+    codigo = gerar_codigo_unico(gerar_codigo_projeto, demanda_repository.get_by_codigo)
     try:
-        row = demanda_repository.insert(_build_persist_row(payload))
+        row = demanda_repository.insert(_build_persist_row(payload, codigo))
     except errors.UniqueViolation as exc:
-        raise DemandaValidationError(f"Código de demanda já existe: {payload.id}.", field="id") from exc
+        raise DemandaValidationError("Não foi possível gerar código único para o projeto.", field="id") from exc
     return _row_to_response(row)
 
 
