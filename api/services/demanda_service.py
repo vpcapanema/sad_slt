@@ -9,10 +9,12 @@ from typing import Any
 from psycopg import errors
 
 from api.codigos_demanda import gerar_codigo_projeto, gerar_codigo_unico
+from api.constants import STATUS_INICIAL_DEMANDA
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import demanda_repository, dominio_repository
 from api.services.campos_demanda import normalizar_projeto
 from api.services.hierarquia_outros import resolve_programa_pai_id
+from api.services.patch_helpers import apply_instituicao, apply_representante
 from api.schemas.demanda import DemandaCreateSchema, DemandaResponseSchema, DemandaUpdateSchema, GeometriaSchema, RepresentanteSchema
 _ALLOWED_GEOM = frozenset({"Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon"})
 
@@ -126,7 +128,7 @@ def _build_persist_row(payload: DemandaCreateSchema, codigo: str) -> dict[str, A
 
     row = {
         "codigo": codigo,
-        "status": payload.status or "fila_hierarquizacao",
+        "status": payload.status or STATUS_INICIAL_DEMANDA,
         "sigma_instituicao_id": _parse_uuid(payload.instituicao_id, "instituicao_id"),
         "instituicao_nome": payload.instituicao_label,
         "instituicao_cnpj": payload.instituicao_cnpj,
@@ -186,31 +188,36 @@ def atualizar_demanda(codigo: str, payload: DemandaUpdateSchema) -> DemandaRespo
     if not data:
         return obter_demanda(codigo)
 
-    if data.get("status") == "aprovada":
-        raise DemandaValidationError(
-            "Use POST /api/demandas/{codigo}/aprovar para aprovar e criar objeto AHP.",
-            field="status",
-        )
-
     if "status" in data and data["status"] not in _status_demanda_validos():
         raise DemandaValidationError(f"Status inválido: {data['status']}.", field="status")
+
+    existing = demanda_repository.get_by_codigo(codigo)
+    if not existing:
+        raise DemandaNotFoundError(codigo)
+
+    if "status" in data:
+        from api.services.status_transicoes import validar_transicao_status
+
+        validar_transicao_status(de=existing["status"], para=data["status"])
+
+    if "programa_codigo" in data:
+        programa_id = resolve_programa_pai_id(
+            programa_codigo=data.pop("programa_codigo"),
+            vinculo_institucional=bool(existing.get("vinculo_institucional")),
+            vinculo_tipo=existing.get("vinculo_tipo"),
+        )
+        data["programa_id"] = programa_id
+
+    apply_instituicao(data, data)
+    apply_representante(data, data)
 
     if "lat" in data:
         data["latitude"] = data.pop("lat")
     if "lng" in data:
         data["longitude"] = data.pop("lng")
 
-    if "instituicao_label" in data:
-        data["instituicao_nome"] = data.pop("instituicao_label")
-
-    rep = data.pop("representante", None)
-    if rep:
-        if rep.get("nome") is not None:
-            data["representante_nome"] = rep["nome"]
-        if rep.get("email") is not None:
-            data["representante_email"] = rep["email"]
-        if rep.get("telefone") is not None:
-            data["representante_telefone"] = rep["telefone"]
+    for key in ("instituicao_id", "instituicao_label", "pessoa_id", "representante"):
+        data.pop(key, None)
 
     lat = data.get("latitude")
     lng = data.get("longitude")
@@ -223,3 +230,10 @@ def atualizar_demanda(codigo: str, payload: DemandaUpdateSchema) -> DemandaRespo
     if not row:
         raise DemandaNotFoundError(codigo)
     return _row_to_response(row)
+
+
+def excluir_demanda(codigo: str) -> None:
+    if not demanda_repository.get_by_codigo(codigo):
+        raise DemandaNotFoundError(codigo)
+    if not demanda_repository.delete_by_codigo(codigo):
+        raise DemandaNotFoundError(codigo)

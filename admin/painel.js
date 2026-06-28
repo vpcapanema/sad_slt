@@ -58,9 +58,16 @@
       : SLTStatusColors.getStatusDemanda(codigo);
   }
 
+  function statusTipo(kind) {
+    return kind === "objeto" ? "projeto" : kind;
+  }
+
   function statusLabel(kind, item) {
-    if (kind === "objeto") return Lb().statusObjetoLabel(item.status);
-    return Lb().statusDemandaLabel(item.status);
+    return Lb().statusDemandaLabel(item.status, statusTipo(kind));
+  }
+
+  function statusBadgeFor(kind, item) {
+    return Lb().statusBadgeHtml(item.status, statusTipo(kind));
   }
 
   function buildEntries() {
@@ -149,12 +156,12 @@
   }
 
   function planoDetailHtml(d) {
-    const { escapeHtml, formatDate, statusDemandaLabel, statusBadgeClass } = Lb();
+    const { escapeHtml, formatDate } = Lb();
     return `
       <div class="admin-readonly-block">
         <dl>
           <dt>Código</dt><dd><code>${escapeHtml(d.id)}</code></dd>
-          <dt>Status</dt><dd><span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span></dd>
+          <dt>Status</dt><dd>${statusBadgeFor("plano", d)}</dd>
           <dt>Diretoria</dt><dd>${escapeHtml(Lb().diretoriaLabel(d.diretoria_id))}</dd>
           <dt>Plano</dt><dd>${escapeHtml(d.nome)}</dd>
           <dt>Descrição</dt><dd>${escapeHtml(d.descricao || "—")}</dd>
@@ -169,12 +176,12 @@
   }
 
   function programaDetailHtml(d) {
-    const { escapeHtml, formatDate, statusDemandaLabel, statusBadgeClass } = Lb();
+    const { escapeHtml, formatDate } = Lb();
     return `
       <div class="admin-readonly-block">
         <dl>
           <dt>Código</dt><dd><code>${escapeHtml(d.id)}</code></dd>
-          <dt>Status</dt><dd><span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span></dd>
+          <dt>Status</dt><dd>${statusBadgeFor("programa", d)}</dd>
           <dt>Diretoria</dt><dd>${escapeHtml(Lb().diretoriaLabel(d.diretoria_id))}</dd>
           <dt>Plano</dt><dd>${escapeHtml(d.plano_nome || d.plano_codigo || "—")}</dd>
           <dt>Programa</dt><dd>${escapeHtml(d.nome)}</dd>
@@ -192,14 +199,14 @@
 
   function demandaDetailHtml(d) {
     const { escapeHtml, formatDate, instituicaoLabel, planoLabel, classificacaoLabel,
-      complementosLabel, representanteLabel, geometriaResumo, statusDemandaLabel, statusBadgeClass } = Lb();
+      complementosLabel, representanteLabel, geometriaResumo } = Lb();
     const rep = d.representante || {};
     const coords = coordsItem(d);
     return `
       <div class="admin-readonly-block">
         <dl>
           <dt>Código da demanda</dt><dd><code>${escapeHtml(d.id)}</code></dd>
-          <dt>Status</dt><dd><span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span></dd>
+          <dt>Status</dt><dd>${statusBadgeFor("projeto", d)}</dd>
           <dt>Instituição interessada</dt><dd>${escapeHtml(instituicaoLabel(d))}</dd>
           <dt>CNPJ</dt><dd>${escapeHtml(d.instituicao_cnpj || "—")}</dd>
           <dt>Representante legal</dt><dd>${escapeHtml(representanteLabel(d))}</dd>
@@ -220,13 +227,13 @@
 
   function objetoDetailHtml(o) {
     const { escapeHtml, formatDate, planoLabel, classificacaoLabel, complementosLabel,
-      grupoComparacaoLabel, geometriaResumo, statusObjetoLabel, statusBadgeClass } = Lb();
+      grupoComparacaoLabel, geometriaResumo } = Lb();
     const coords = coordsItem(o);
     return `
       <div class="admin-readonly-block">
         <dl>
           <dt>Código do objeto</dt><dd><code>${escapeHtml(o.codigo)}</code></dd>
-          <dt>Status AHP</dt><dd><span class="${statusBadgeClass(o.status)}">${escapeHtml(statusObjetoLabel(o.status))}</span></dd>
+          <dt>Status</dt><dd>${statusBadgeFor("objeto", o)}</dd>
           <dt>Demanda de origem</dt><dd><a href="demanda.html?tipo=projeto&id=${encodeURIComponent(o.demanda_codigo)}">${escapeHtml(o.demanda_codigo)}</a></dd>
           <dt>Instituição</dt><dd>${escapeHtml(o.instituicao_nome || "—")}</dd>
           <dt>CNPJ</dt><dd>${escapeHtml(o.instituicao_cnpj || "—")}</dd>
@@ -373,8 +380,7 @@
       selectedId: selectedIdFromKey(),
       getRecordId: (r) => r.id,
       getRecordLabel: (r) => r.nome,
-      getRecordBadgeHtml: (r) =>
-        `<span class="${SLTStatusColors.badgeClass(r.status)}">${Lb().escapeHtml(statusLabel(r.__kind, r))}</span>`,
+      getRecordBadgeHtml: (r) => statusBadgeFor(r.__kind, r),
       sectionsFor: () => [],
       emptyMessage: "Nenhuma demanda registrada.",
       onSelect: (id, record) => {
@@ -539,6 +545,9 @@
     buildEntries();
     initMap();
     initLayersSectionCollapse();
+    SLTStatusColors.renderLegend("#status-legend", {
+      labelFn: (codigo) => SLTAdminLabels.statusDemandaLabel(codigo, "projeto"),
+    });
     renderEntriesList();
     buildMapLayers();
   }

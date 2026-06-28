@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Revisão de status — Admin SLT</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body class="admin-data-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Apoio à Tomada de Decisão
+        <small>Admin — Revisão de status</small>
+      </div>
+      <nav class="app-nav" aria-label="Navegação principal"></nav>
+    </div>
+  </header>
+
+  <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+
+  <main class="app-main admin-main">
+    <section class="card admin-card admin-card--revisao-status">
+      <div class="pli-section-label">
+        <i class="fas fa-layer-group" aria-hidden="true"></i>
+        <span class="pli-section-title">Proposta: duas camadas de status</span>
+      </div>
+      <div class="admin-card-body">
+        <p class="step-intro">
+          Esta tela é só para <strong>decidir nomes e camadas</strong> antes de alterar
+          <code>demandas.dom_status_demanda</code>. Os códigos internos (<code>codigo</code>) permanecem
+          estáveis. Na <strong>Camada 1</strong> tudo é «Demanda …»; após aprovação deixa de ser demanda e,
+          na <strong>Camada 2</strong>, o rótulo passa a ser <em>Plano</em>, <em>Programa</em> ou
+          <em>Projeto</em> conforme o tipo.
+        </p>
+
+        <div class="status-camada-legend">
+          <div class="status-camada-chip status-camada-chip--1">
+            <strong>Camada 1</strong>
+            <span>Demanda em rascunho, análise, aprovada, reprovada ou arquivada</span>
+          </div>
+          <div class="status-camada-chip status-camada-chip--2">
+            <strong>Camada 2</strong>
+            <span>Aguardando → fila → em hierarquização → hierarquizado</span>
+          </div>
+          <div class="status-camada-chip status-camada-chip--pos">
+            <strong>Pós-hierarquizado</strong>
+            <span>Execução, finalizado, suspenso, retirado, cancelado ou arquivado</span>
+          </div>
+          <div class="status-camada-chip status-camada-chip--x">
+            <strong>Transversal</strong>
+            <span>Pode aplicar-se às duas camadas</span>
+          </div>
+        </div>
+
+        <p id="revisao-api-hint" class="hint hidden">Nomes atuais carregados do banco.</p>
+        <p id="revisao-erro" class="hint hidden" role="alert"></p>
+        <div id="revisao-camadas"></div>
+
+        <div class="status-revisao-notas card admin-card-nested">
+          <h3 class="status-revisao-notas-title">Pontos a decidir</h3>
+          <ul class="status-revisao-list" id="revisao-notas"></ul>
+        </div>
+
+        <div class="admin-dashboard-actions">
+          <a href="index.html" class="btn btn-secondary">Voltar ao admin</a>
+          <a href="demandas.html" class="btn btn-secondary">Tabela de demandas</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="../assets/js/admin-api.js"></script>
+  <script src="../assets/js/admin-auth.js"></script>
+  <script src="../assets/js/admin-labels.js"></script>
+  <script src="../assets/js/admin-ui.js"></script>
+  <script src="revisao-status.js"></script>
+  <script src="../assets/js/app-header.js"></script>
+  <script src="../assets/js/navbar.js"></script>
+</body>
+</html>

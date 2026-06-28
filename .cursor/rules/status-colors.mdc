@@ -1,0 +1,37 @@
+---
+description: Paleta e uso sistêmico das cores de status de demanda no SLT
+globs: assets/js/status-colors.js,assets/css/app.css,admin/**/*.js,admin/**/*.html,painel/**/*
+alwaysApply: false
+---
+
+# Cores de status (SLT)
+
+## Fonte única
+
+Todas as cores de status vivem em `assets/js/status-colors.js`:
+
+- `bg` — badge e swatch da legenda
+- `text` — texto do badge e cor do pin no mapa
+- `row` — tint das linhas da tabela admin
+- `halo` — halo animado no mapa
+
+**Não** defina cores por status em `app.css`, HTML ou JS avulso.
+
+## Injeção automática
+
+`SLTStatusColors.injectTheme()` gera variáveis CSS (`--status-{codigo}-*`) e estilos de badge/linha. É chamado ao carregar o script.
+
+## Legendas
+
+Use `SLTStatusColors.renderLegend(container, { labelFn })` em:
+
+- `admin/demandas.html` — abaixo da barra de ações em lote
+- `painel/index.html` e `admin/painel.html` — sidebar
+
+Rótulos tipados: `labelFn: (c) => SLTAdminLabels.statusDemandaLabel(c, tipo)`.
+
+## Novo status
+
+1. Adicionar em `database/*_dom_status_demanda*.sql`
+2. Entrada em `STATUS_DEMANDA` + `LEGEND_ORDER` em `status-colors.js`
+3. Se tipado, `STATUS_ROTULOS_POR_TIPO` em `api/constants.py`

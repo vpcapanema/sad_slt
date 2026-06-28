@@ -6,10 +6,14 @@ from datetime import date, datetime
 from typing import Any
 
 from api.codigos_demanda import gerar_codigo_programa, gerar_codigo_unico
+from api.constants import CODIGO_PROGRAMA_OUTROS, CODIGOS_SENTINELA_HIERARQUIA
+from api.constants import STATUS_PRE_APROVACAO
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
-from api.repositories import programa_repository
+from api.repositories import demanda_repository, dominio_repository, programa_repository
 from api.services.campos_demanda import normalizar_programa
 from api.services.hierarquia_outros import resolve_plano_pai_id
+from api.services.patch_helpers import apply_instituicao, apply_representante
+from api.services.status_transicoes import validar_transicao_status
 from api.schemas.demanda import RepresentanteSchema
 from api.schemas.programa import ProgramaCreateSchema, ProgramaResponseSchema, ProgramaUpdateSchema
 
@@ -138,19 +142,76 @@ def obter_programa(codigo: str) -> ProgramaResponseSchema:
 
 def aprovar_programa(codigo: str, *, motivo: str | None = None,
                      aprovado_por: str | None = None) -> ProgramaResponseSchema:
-    if not programa_repository.get_by_codigo(codigo):
-        raise DemandaNotFoundError(codigo)
-    row = programa_repository.aprovar(codigo, aprovado_por=aprovado_por, motivo=motivo)
+    row = programa_repository.get_by_codigo(codigo)
     if not row:
         raise DemandaNotFoundError(codigo)
-    return _row_to_response(row)
+    if row["status"] not in STATUS_PRE_APROVACAO:
+        raise DemandaValidationError(
+            f"Programa em status '{row['status']}' não pode ser aprovado.",
+            field="status",
+        )
+    updated = programa_repository.aprovar(codigo, aprovado_por=aprovado_por, motivo=motivo)
+    if not updated:
+        raise DemandaValidationError(
+            f"Programa {codigo} não pôde ser aprovado (status alterado).", field="status"
+        )
+    return _row_to_response(updated)
 
 
 def atualizar_programa(codigo: str, payload: ProgramaUpdateSchema) -> ProgramaResponseSchema:
     if not programa_repository.get_by_codigo(codigo):
         raise DemandaNotFoundError(codigo)
     data = payload.model_dump(exclude_unset=True)
+    if not data:
+        return obter_programa(codigo)
+
+    if "status" in data:
+        row = programa_repository.get_by_codigo(codigo)
+        if not row:
+            raise DemandaNotFoundError(codigo)
+        valid = {r["codigo"] for r in dominio_repository.list_status_demanda()}
+        if data["status"] not in valid:
+            raise DemandaValidationError(f"Status inválido: {data['status']}.", field="status")
+        validar_transicao_status(de=row["status"], para=data["status"])
+
+    existing = programa_repository.get_by_codigo(codigo)
+    if not existing:
+        raise DemandaNotFoundError(codigo)
+
+    if "plano_codigo" in data:
+        plano_id = resolve_plano_pai_id(
+            plano_codigo=data.pop("plano_codigo"),
+            vinculo_institucional=bool(existing.get("vinculo_institucional")),
+        )
+        data["plano_id"] = plano_id
+
+    apply_instituicao(data, data)
+    apply_representante(data, data)
+    for key in ("instituicao_id", "instituicao_label", "pessoa_id", "representante"):
+        data.pop(key, None)
+
     row = programa_repository.update(codigo, data)
     if not row:
         raise DemandaNotFoundError(codigo)
     return _row_to_response(row)
+
+
+def excluir_programa(codigo: str) -> None:
+    if codigo in CODIGOS_SENTINELA_HIERARQUIA:
+        raise DemandaValidationError(
+            f"Não é permitido excluir o registro sentinela «{codigo}».",
+            field="codigo",
+        )
+    row = programa_repository.get_by_codigo(codigo)
+    if not row:
+        raise DemandaNotFoundError(codigo)
+
+    if demanda_repository.list_codigos_by_programa_id(row["id"]):
+        raise DemandaValidationError(
+            "Não é possível excluir o programa: existem projetos vinculados. "
+            "Remova ou reassocie os projetos antes de excluir o programa.",
+            field="codigo",
+        )
+
+    if not programa_repository.delete_by_codigo(codigo):
+        raise DemandaNotFoundError(codigo)

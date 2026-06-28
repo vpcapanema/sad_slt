@@ -26,7 +26,7 @@ class DemandaCreateSchema(BaseModel):
         max_length=64,
         description="Ignorado na criação — o servidor gera PRJ-XXXXXXXX",
     )
-    status: str = "fila_hierarquizacao"
+    status: str = "rascunho"
     criadoEm: str | None = None
     instituicao_id: str
     instituicao_label: str | None = None
@@ -77,6 +77,7 @@ class DemandaResponseSchema(BaseModel):
 
 
 class RepresentanteUpdateSchema(BaseModel):
+    pessoa_id: str | None = None
     nome: str | None = Field(None, max_length=200)
     email: str | None = Field(None, max_length=200)
     telefone: str | None = Field(None, max_length=50)
@@ -90,10 +91,13 @@ class DemandaUpdateSchema(BaseModel):
     descricao: str | None = None
     diretoria_id: str | None = None
     plano_id: str | None = None
+    programa_codigo: str | None = None
     classificacao: dict[str, Any] | None = None
     complementos: dict[str, Any] | None = None
+    instituicao_id: str | None = None
     instituicao_label: str | None = None
     instituicao_cnpj: str | None = None
+    pessoa_id: str | None = None
     lat: float | None = None
     lng: float | None = None
     representante: RepresentanteUpdateSchema | None = None

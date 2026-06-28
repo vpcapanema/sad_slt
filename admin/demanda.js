@@ -1,11 +1,9 @@
 (function () {
-  const { escapeHtml, formatDate, formatCnpj, statusDemandaLabel, instituicaoLabel, planoLabel,
-    classificacaoLabel, representanteLabel, fillSelect, statusBadgeClass,
+  const { escapeHtml, formatDate, formatCnpj, statusBadgeHtml, instituicaoLabel, planoLabel,
+    classificacaoLabel, representanteLabel, fillSelect,
     diretoriaLabel, labelById, PLANO_PLI, PLANO_PEF } = SLTAdminLabels;
 
-  const AHP_STATUS = new Set([
-    "elegivel_ahp", "em_hierarquizacao", "hierarquizado", "suspenso", "retirado",
-  ]);
+  const STATUS_PRE_APROVACAO = new Set(["em_analise", "aprovada"]);
 
   const TIPOS = [
     { id: "plano", label: "Plano" },
@@ -47,7 +45,7 @@
   }
 
   function canApprove(status) {
-    return !AHP_STATUS.has(status);
+    return STATUS_PRE_APROVACAO.has(status);
   }
 
   function tipoLabelAtual() {
@@ -61,7 +59,7 @@
         <h1 class="admin-demand-head-title">${escapeHtml(d.nome || d.id)}</h1>
         <p class="admin-demand-head-meta">
           <code>${escapeHtml(d.id)}</code>
-          <span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span>
+          ${statusBadgeHtml(d.status, tipo)}
         </p>
       </header>`;
   }
@@ -74,7 +72,7 @@
       </div>
       <div class="admin-dashboard-actions span-2">
         <a href="demandas.html" class="btn btn-secondary">Voltar à lista</a>
-        ${withApprove ? '<button type="button" class="btn btn-primary" id="btn-aprovar">Aprovar → elegível AHP</button>' : ""}
+        ${withApprove ? '<button type="button" class="btn btn-primary" id="btn-aprovar">Aprovar → aguardando hierarquização</button>' : ""}
         <button type="button" class="btn btn-primary" id="btn-salvar">Salvar alterações</button>
       </div>`;
   }
@@ -159,7 +157,7 @@
       codigo: `<code>${escapeHtml(d.id)}</code>`,
       descricao: escapeHtml(d.descricao || "—"),
       dataCadastro: escapeHtml(formatDate(d.criadoEm)),
-      status: `<span class="${statusBadgeClass(d.status)}">${escapeHtml(statusDemandaLabel(d.status))}</span>`,
+      status: statusBadgeHtml(d.status, tipo),
       instituicao: escapeHtml(instituicaoLabel(d)),
       cnpj: escapeHtml(formatCnpj(d.instituicao_cnpj)),
       diretoria: escapeHtml(diretoriaLabel(d.diretoria_id)),
@@ -559,8 +557,7 @@
       selectedId,
       getRecordId: (r) => r.id,
       getRecordLabel: (r) => r.nome || r.id,
-      getRecordBadgeHtml: (r) =>
-        `<span class="${statusBadgeClass(r.status)}">${escapeHtml(statusDemandaLabel(r.status))}</span>`,
+      getRecordBadgeHtml: (r) => statusBadgeHtml(r.status, r.__tipo),
       sectionsFor: (r) => SECTIONS[r.__tipo] || SECTIONS.projeto,
       emptyMessage: "Nenhuma demanda registrada.",
       onSelect: (id) => onSelectFromSidebar(id),
@@ -628,11 +625,11 @@
   }
 
   async function approveRecord() {
-    if (!confirm("Aprovar esta demanda e torná-la elegível à hierarquização?")) return;
+    if (!confirm("Aprovar esta demanda e promovê-la a aguardando hierarquização?")) return;
     try {
       const motivo = $("#fld-motivo-aprov")?.value.trim() || null;
       const updated = await API[tipo].aprovar(record.id, { motivo });
-      SLTAdminUi.showToast("Demanda aprovada — agora elegível ao AHP.");
+      SLTAdminUi.showToast("Aprovada — aguardando hierarquização.");
       await refreshLists();
       renderPage(updated);
     } catch (err) {

@@ -82,3 +82,19 @@ async def atualizar_demanda(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.delete("/{codigo}", status_code=204)
+async def excluir_demanda(
+    codigo: str,
+    _user: SessionUser = Depends(require_gestor),
+) -> None:
+    """Exclui um projeto (demanda nível 3)."""
+    try:
+        demanda_service.excluir_demanda(codigo)
+    except DemandaNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

@@ -203,7 +203,11 @@ def locate_geometry(geometry: dict[str, Any]) -> dict[str, Any]:
         grouped[tipo]["nomes"].append(row["nome"])
         regionalidades[tipo].append(row["nome"])
 
-    itens = sorted(grouped.values(), key=lambda x: _PROJETO_TIPOS.index(x["tipo"]) if x["tipo"] in _PROJETO_TIPOS else 999)
+    def _tipo_sort_key(entry: dict) -> int:
+        t = entry["tipo"]
+        return _PROJETO_TIPOS.index(t) if t in _PROJETO_TIPOS else 999
+
+    itens = sorted(grouped.values(), key=_tipo_sort_key)
     return {"regionalidades": regionalidades, "itens": itens}
 
 

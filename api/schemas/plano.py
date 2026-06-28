@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from api.schemas.demanda import RepresentanteSchema
+from api.schemas.demanda import RepresentanteSchema, RepresentanteUpdateSchema
 
 
 class InstituicaoFormSchema(BaseModel):
@@ -78,3 +78,8 @@ class PlanoUpdateSchema(BaseModel):
     vigencia_inicio: str | None = None
     vigencia_fim: str | None = None
     valor_global: float | None = None
+    instituicao_id: str | None = None
+    instituicao_label: str | None = None
+    instituicao_cnpj: str | None = None
+    pessoa_id: str | None = None
+    representante: RepresentanteUpdateSchema | None = None

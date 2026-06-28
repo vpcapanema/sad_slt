@@ -423,6 +423,7 @@
 
     initLayersSectionCollapse();
     initMap();
+    SLTStatusColors.renderLegend("#status-legend");
     renderSidebar();
     buildMapLayers();
   }

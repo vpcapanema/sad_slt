@@ -79,14 +79,16 @@ def get_by_codigo(codigo: str) -> dict[str, Any] | None:
         return conn.execute(query, (codigo,)).fetchone()
 
 
-_PRE_APROVACAO = ("fila_hierarquizacao", "em_analise")
+from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO
+
+_PRE_APROVACAO = tuple(STATUS_PRE_APROVACAO)
 
 
 def aprovar(codigo: str, *, aprovado_por: Any = None, motivo: str | None = None) -> dict[str, Any] | None:
     """Promove a demanda ao universo AHP in-place (status -> elegivel_ahp)."""
     query = """
         UPDATE demandas.projeto
-        SET status = 'elegivel_ahp',
+        SET status = %(pos_aprovacao)s,
             aprovado_em = CURRENT_TIMESTAMP,
             aprovado_por = %(aprovado_por)s,
             motivo_aprovacao = %(motivo)s
@@ -98,6 +100,7 @@ def aprovar(codigo: str, *, aprovado_por: Any = None, motivo: str | None = None)
         "aprovado_por": aprovado_por,
         "motivo": motivo,
         "pre": list(_PRE_APROVACAO),
+        "pos_aprovacao": STATUS_POS_APROVACAO,
     }
     with get_connection() as conn:
         row = conn.execute(query, params).fetchone()

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from api.schemas.demanda import RepresentanteSchema
+from api.schemas.demanda import RepresentanteSchema, RepresentanteUpdateSchema
 
 
 class ProgramaCreateSchema(BaseModel):
@@ -72,3 +72,9 @@ class ProgramaUpdateSchema(BaseModel):
     orgao_responsavel: str | None = None
     justificativa: str | None = None
     valor_global: float | None = None
+    plano_codigo: str | None = None
+    instituicao_id: str | None = None
+    instituicao_label: str | None = None
+    instituicao_cnpj: str | None = None
+    pessoa_id: str | None = None
+    representante: RepresentanteUpdateSchema | None = None

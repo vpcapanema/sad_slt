@@ -9,6 +9,7 @@
   const state = {
     statusDemanda: [],
     statusObjeto: [],
+    transicoesStatus: {},
     instituicoes: [],
     pessoas: [],
   };
@@ -90,26 +91,51 @@
     basePath = basePath || "../";
     await SLTCatalog.loadCatalog(basePath);
     const sigma = global.SLTSigmaRead;
-    const [statusDemanda, statusObjeto, instituicoes, pessoas] = await Promise.all([
+    const [statusDemanda, statusObjeto, transicoesResp, instituicoes, pessoas] = await Promise.all([
       SLTAdminApi.listStatusDemanda(),
       SLTAdminApi.listStatusObjetoAhp(),
+      SLTAdminApi.listTransicoesStatusDemanda().catch(() => ({ transicoes: {} })),
       sigma ? sigma.listInstituicoes().catch(() => []) : Promise.resolve([]),
       sigma ? sigma.listPessoas().catch(() => []) : Promise.resolve([]),
     ]);
     state.statusDemanda = statusDemanda;
     state.statusObjeto = statusObjeto;
+    state.transicoesStatus = transicoesResp?.transicoes || {};
     state.instituicoes = instituicoes;
     state.pessoas = pessoas;
   }
 
-  function statusDemandaLabel(codigo) {
-    const row = state.statusDemanda.find((s) => s.codigo === codigo);
-    return row?.nome || codigo || "—";
+  function findStatus(codigo) {
+    return state.statusDemanda.find((s) => s.codigo === codigo);
+  }
+
+  function statusDemandaLabel(codigo, tipoDemanda) {
+    const row = findStatus(codigo);
+    if (!row) return codigo || "—";
+    const tipo = tipoDemanda && String(tipoDemanda).trim();
+    if (tipo && row.rotulos_por_tipo?.[tipo]) return row.rotulos_por_tipo[tipo];
+    return row.nome || codigo || "—";
   }
 
   function statusObjetoLabel(codigo) {
-    const row = state.statusObjeto.find((s) => s.codigo === codigo);
-    return row?.nome || codigo || "—";
+    return statusDemandaLabel(codigo, "projeto");
+  }
+
+  function statusBadgeClass(codigo) {
+    const base = global.SLTStatusColors?.badgeClass?.(codigo);
+    if (base) return base;
+    return `badge-status ${String(codigo || "").replace(/\s+/g, "")}`;
+  }
+
+  function statusBadgeHtml(codigo, tipoDemanda) {
+    const label = statusDemandaLabel(codigo, tipoDemanda);
+    return `<span class="${statusBadgeClass(codigo)}">${escapeHtml(label)}</span>`;
+  }
+
+  function statusDestinosPermitidos(codigoAtual) {
+    const destinos = state.transicoesStatus[codigoAtual];
+    if (Array.isArray(destinos) && destinos.length) return destinos;
+    return codigoAtual ? [codigoAtual] : [];
   }
 
   function diretoriaLabel(id) {
@@ -234,10 +260,6 @@
     el.innerHTML = opts.join("");
   }
 
-  function statusBadgeClass(codigo) {
-    return `badge-status ${escapeHtml(codigo || "")}`;
-  }
-
   global.SLTAdminLabels = {
     PLANO_PLI,
     PLANO_PEF,
@@ -251,6 +273,8 @@
     formatCnpj,
     statusDemandaLabel,
     statusObjetoLabel,
+    statusBadgeHtml,
+    statusDestinosPermitidos,
     diretoriaLabel,
     planoLabel,
     planoCadastradoLabel,
@@ -275,6 +299,12 @@
     },
     get statusObjeto() {
       return state.statusObjeto;
+    },
+    get instituicoes() {
+      return state.instituicoes;
+    },
+    get pessoas() {
+      return state.pessoas;
     },
   };
 })(window);

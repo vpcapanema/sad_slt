@@ -6,6 +6,7 @@ from typing import Any
 from psycopg import sql
 
 from api.db.connection import get_connection
+from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO
 
 _SELECT_BASE = """
     SELECT
@@ -98,6 +99,16 @@ _UPDATE_ALLOWED = {
     "vigencia_inicio": "vigencia_inicio",
     "vigencia_fim": "vigencia_fim",
     "valor_global": "valor_global",
+    "sigma_instituicao_id": "sigma_instituicao_id",
+    "instituicao_nome": "instituicao_nome",
+    "instituicao_cnpj": "instituicao_cnpj",
+    "instituicao_razao_social": "instituicao_razao_social",
+    "instituicao_nome_fantasia": "instituicao_nome_fantasia",
+    "sigma_pessoa_id": "sigma_pessoa_id",
+    "representante_nome": "representante_nome",
+    "representante_email": "representante_email",
+    "representante_telefone": "representante_telefone",
+    "atualizado_por": "atualizado_por",
 }
 
 
@@ -117,20 +128,30 @@ def get_by_codigo(codigo: str) -> dict[str, Any] | None:
 
 _APROVAR_SQL = """
     UPDATE demandas.plano
-       SET status = 'elegivel_ahp',
+       SET status = %(pos_aprovacao)s,
            aprovado_em = CURRENT_TIMESTAMP,
            aprovado_por = %(aprovado_por)s,
            motivo_aprovacao = NULLIF(%(motivo)s, '')
      WHERE codigo = %(codigo)s
+       AND status = ANY(%(pre)s)
+     RETURNING id
 """
 
 
 def aprovar(codigo: str, *, aprovado_por: str | None, motivo: str | None) -> dict[str, Any] | None:
     """Promove o plano ao universo AHP (transição de status in-place)."""
-    params = {"codigo": codigo, "aprovado_por": aprovado_por, "motivo": motivo}
+    params = {
+        "codigo": codigo,
+        "aprovado_por": aprovado_por,
+        "motivo": motivo,
+        "pre": list(STATUS_PRE_APROVACAO),
+        "pos_aprovacao": STATUS_POS_APROVACAO,
+    }
     with get_connection() as conn:
-        conn.execute(_APROVAR_SQL, params)
+        row = conn.execute(_APROVAR_SQL, params).fetchone()
         conn.commit()
+    if not row:
+        return None
     return get_by_codigo(codigo)
 
 
@@ -153,3 +174,16 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
         conn.execute(query, params)
         conn.commit()
     return get_by_codigo(codigo)
+
+
+def delete_by_codigo(codigo: str) -> bool:
+    """Remove um plano pelo código legível."""
+    with get_connection() as conn:
+        conn.execute(
+            "DELETE FROM demandas.indicadores WHERE plano_id = (SELECT id FROM demandas.plano WHERE codigo = %s)",
+            (codigo,),
+        )
+        cur = conn.execute("DELETE FROM demandas.plano WHERE codigo = %s RETURNING id", (codigo,))
+        deleted = cur.fetchone()
+        conn.commit()
+    return deleted is not None

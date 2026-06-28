@@ -163,11 +163,17 @@ _UPDATE_ALLOWED = {
     "status": "status",
     "instituicao_nome": "instituicao_nome",
     "instituicao_cnpj": "instituicao_cnpj",
+    "instituicao_razao_social": "instituicao_razao_social",
+    "instituicao_nome_fantasia": "instituicao_nome_fantasia",
+    "sigma_instituicao_id": "sigma_instituicao_id",
     "representante_nome": "representante_nome",
     "representante_email": "representante_email",
     "representante_telefone": "representante_telefone",
+    "sigma_pessoa_id": "sigma_pessoa_id",
+    "atualizado_por": "atualizado_por",
     "diretoria_id": "diretoria_id",
     "plano_id": "plano_id",
+    "programa_id": "programa_id",
     "nome": "nome",
     "descricao": "descricao",
     "latitude": "latitude",
@@ -209,3 +215,24 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
         conn.execute(query, params)
         conn.commit()
     return get_by_codigo(codigo)
+
+
+def list_codigos_by_programa_id(programa_id: Any) -> list[str]:
+    """Lista códigos de projetos vinculados a um programa."""
+    query = "SELECT codigo FROM demandas.projeto WHERE programa_id = %s"
+    with get_connection() as conn:
+        rows = conn.execute(query, (programa_id,)).fetchall()
+    return [row["codigo"] for row in rows]
+
+
+def delete_by_codigo(codigo: str) -> bool:
+    """Remove um projeto pelo código legível."""
+    with get_connection() as conn:
+        cur = conn.execute(
+            "DELETE FROM demandas.indicadores WHERE projeto_id = (SELECT id FROM demandas.projeto WHERE codigo = %s)",
+            (codigo,),
+        )
+        cur = conn.execute("DELETE FROM demandas.projeto WHERE codigo = %s RETURNING id", (codigo,))
+        deleted = cur.fetchone()
+        conn.commit()
+    return deleted is not None

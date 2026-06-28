@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from api.constants import STATUS_UNIVERSO_AHP
 from api.db.connection import get_connection
 
-AHP_STATUSES = ("elegivel_ahp", "em_hierarquizacao", "hierarquizado")
+AHP_STATUSES = tuple(STATUS_UNIVERSO_AHP)
 
 # tipo -> (tabela, coluna do pai usada como grupo comparável)
 _TIPO_QUERY: dict[str, dict[str, str]] = {
@@ -21,7 +22,12 @@ _TIPO_QUERY: dict[str, dict[str, str]] = {
 }
 
 
-def list_elegiveis(tipo: str, *, status: str | None = None, grupo: str | None = None) -> list[dict[str, Any]]:
+def list_elegiveis(
+    tipo: str,
+    *,
+    status: str | None = None,
+    grupo: str | None = None,
+) -> list[dict[str, Any]]:
     """Lista demandas de um tipo nas fases de hierarquização (universo do AHP)."""
     cfg = _TIPO_QUERY.get(tipo)
     if cfg is None:

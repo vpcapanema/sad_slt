@@ -6,11 +6,15 @@ from datetime import date, datetime
 from typing import Any
 
 from api.codigos_demanda import gerar_codigo_plano, gerar_codigo_unico
+from api.constants import CODIGOS_SENTINELA_HIERARQUIA
+from api.constants import STATUS_PRE_APROVACAO
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
-from api.repositories import plano_repository
+from api.repositories import dominio_repository, plano_repository, programa_repository
 from api.schemas.demanda import RepresentanteSchema
 from api.schemas.plano import PlanoCreateSchema, PlanoResponseSchema, PlanoUpdateSchema
 from api.services.campos_demanda import normalizar_plano
+from api.services.patch_helpers import apply_instituicao, apply_representante
+from api.services.status_transicoes import validar_transicao_status
 
 
 def _iso(value: Any) -> str | None:
@@ -123,19 +127,65 @@ def obter_plano(codigo: str) -> PlanoResponseSchema:
 
 def aprovar_plano(codigo: str, *, motivo: str | None = None,
                   aprovado_por: str | None = None) -> PlanoResponseSchema:
-    if not plano_repository.get_by_codigo(codigo):
-        raise DemandaNotFoundError(codigo)
-    row = plano_repository.aprovar(codigo, aprovado_por=aprovado_por, motivo=motivo)
+    row = plano_repository.get_by_codigo(codigo)
     if not row:
         raise DemandaNotFoundError(codigo)
-    return _row_to_response(row)
+    if row["status"] not in STATUS_PRE_APROVACAO:
+        raise DemandaValidationError(
+            f"Plano em status '{row['status']}' não pode ser aprovado.",
+            field="status",
+        )
+    updated = plano_repository.aprovar(codigo, aprovado_por=aprovado_por, motivo=motivo)
+    if not updated:
+        raise DemandaValidationError(
+            f"Plano {codigo} não pôde ser aprovado (status alterado).", field="status"
+        )
+    return _row_to_response(updated)
 
 
 def atualizar_plano(codigo: str, payload: PlanoUpdateSchema) -> PlanoResponseSchema:
     if not plano_repository.get_by_codigo(codigo):
         raise DemandaNotFoundError(codigo)
     data = payload.model_dump(exclude_unset=True)
+    if not data:
+        return obter_plano(codigo)
+
+    if "status" in data:
+        row = plano_repository.get_by_codigo(codigo)
+        if not row:
+            raise DemandaNotFoundError(codigo)
+        valid = {r["codigo"] for r in dominio_repository.list_status_demanda()}
+        if data["status"] not in valid:
+            raise DemandaValidationError(f"Status inválido: {data['status']}.", field="status")
+        validar_transicao_status(de=row["status"], para=data["status"])
+
+    apply_instituicao(data, data)
+    apply_representante(data, data)
+    for key in ("instituicao_id", "instituicao_label", "pessoa_id", "representante"):
+        data.pop(key, None)
+
     row = plano_repository.update(codigo, data)
     if not row:
         raise DemandaNotFoundError(codigo)
     return _row_to_response(row)
+
+
+def excluir_plano(codigo: str) -> None:
+    if codigo in CODIGOS_SENTINELA_HIERARQUIA:
+        raise DemandaValidationError(
+            f"Não é permitido excluir o registro sentinela «{codigo}».",
+            field="codigo",
+        )
+    row = plano_repository.get_by_codigo(codigo)
+    if not row:
+        raise DemandaNotFoundError(codigo)
+
+    if programa_repository.list_by_plano_id(row["id"]):
+        raise DemandaValidationError(
+            "Não é possível excluir o plano: existem programas vinculados. "
+            "Remova ou reassocie os programas antes de excluir o plano.",
+            field="codigo",
+        )
+
+    if not plano_repository.delete_by_codigo(codigo):
+        raise DemandaNotFoundError(codigo)

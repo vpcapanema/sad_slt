@@ -1563,7 +1563,7 @@
     const geom = getGeometria();
     const coords = getCoordenadas();
     return {
-      status: "fila_hierarquizacao",
+      status: "rascunho",
       criadoEm: new Date().toISOString(),
       ...buildInstituicaoPayload("#instituicao", "#cnpj"),
       pessoa_id: pessoaId || null,

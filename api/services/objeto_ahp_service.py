@@ -11,11 +11,10 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+from api.constants import STATUS_PRE_APROVACAO
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import demanda_repository, dominio_repository, objeto_ahp_repository
 from api.schemas.objeto_ahp import GeometriaSchema, ObjetoAhpResponseSchema, ObjetoAhpUpdateSchema
-
-_STATUS_APROVACAO_PERMITIDOS = frozenset({"fila_hierarquizacao", "em_analise"})
 
 
 def _iso(value: Any) -> str | None:
@@ -79,7 +78,7 @@ def aprovar_demanda(
     if not demanda:
         raise DemandaNotFoundError(codigo)
 
-    if demanda["status"] not in _STATUS_APROVACAO_PERMITIDOS:
+    if demanda["status"] not in STATUS_PRE_APROVACAO:
         raise DemandaValidationError(
             f"Demanda em status '{demanda['status']}' não pode ser aprovada.",
             field="status",

@@ -78,3 +78,19 @@ async def atualizar_programa(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.delete("/{codigo}", status_code=204)
+async def excluir_programa(
+    codigo: str,
+    _user: SessionUser = Depends(require_gestor),
+) -> None:
+    """Exclui um programa (somente o registro do programa)."""
+    try:
+        programa_service.excluir_programa(codigo)
+    except DemandaNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

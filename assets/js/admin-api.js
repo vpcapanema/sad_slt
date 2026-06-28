@@ -40,6 +40,10 @@
     });
   }
 
+  async function deleteDemanda(codigo) {
+    return request(`/api/demandas/${encodeURIComponent(codigo)}`, { method: "DELETE" });
+  }
+
   async function aprovarDemanda(codigo, payload) {
     return request(`/api/demandas/${encodeURIComponent(codigo)}/aprovar`, {
       method: "POST",
@@ -62,6 +66,10 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+  }
+
+  async function deletePlano(codigo) {
+    return request(`/api/planos/${encodeURIComponent(codigo)}`, { method: "DELETE" });
   }
 
   async function aprovarPlano(codigo, payload) {
@@ -88,6 +96,10 @@
     });
   }
 
+  async function deletePrograma(codigo) {
+    return request(`/api/programas/${encodeURIComponent(codigo)}`, { method: "DELETE" });
+  }
+
   async function aprovarPrograma(codigo, payload) {
     return request(`/api/programas/${encodeURIComponent(codigo)}/aprovar`, {
       method: "POST",
@@ -100,6 +112,18 @@
     if (tipo === "plano") return listPlanos();
     if (tipo === "programa") return listProgramas();
     return listDemandas();
+  }
+
+  async function updateDemandaByTipo(tipo, codigo, payload) {
+    if (tipo === "plano") return updatePlano(codigo, payload);
+    if (tipo === "programa") return updatePrograma(codigo, payload);
+    return updateDemanda(codigo, payload);
+  }
+
+  async function deleteDemandaByTipo(tipo, codigo) {
+    if (tipo === "plano") return deletePlano(codigo);
+    if (tipo === "programa") return deletePrograma(codigo);
+    return deleteDemanda(codigo);
   }
 
   async function listObjetosAhp(params) {
@@ -124,6 +148,10 @@
 
   async function listStatusDemanda() {
     return request("/api/dominios/status-demanda");
+  }
+
+  async function listTransicoesStatusDemanda() {
+    return request("/api/dominios/transicoes-status-demanda");
   }
 
   async function listStatusObjetoAhp() {
@@ -151,20 +179,26 @@
     listPainelDemandas,
     getDemanda,
     updateDemanda,
+    deleteDemanda,
     aprovarDemanda,
     listPlanos,
     getPlano,
     updatePlano,
+    deletePlano,
     aprovarPlano,
     listProgramas,
     getPrograma,
     updatePrograma,
+    deletePrograma,
     aprovarPrograma,
     listDemandasByTipo,
+    updateDemandaByTipo,
+    deleteDemandaByTipo,
     listObjetosAhp,
     getObjetoAhp,
     updateObjetoAhp,
     listStatusDemanda,
+    listTransicoesStatusDemanda,
     listStatusObjetoAhp,
     login,
     fetchSession,

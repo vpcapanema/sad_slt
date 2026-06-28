@@ -6,6 +6,7 @@ from typing import Any
 from psycopg import sql
 
 from api.db.connection import get_connection
+from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO
 
 _SELECT_BASE = """
     SELECT
@@ -95,6 +96,7 @@ def insert(row: dict[str, Any], unidades: list[str] | None = None) -> dict[str, 
 
 _UPDATE_ALLOWED = {
     "status": "status",
+    "plano_id": "plano_id",
     "nome": "nome",
     "descricao": "descricao",
     "objetivo": "objetivo",
@@ -102,6 +104,16 @@ _UPDATE_ALLOWED = {
     "orgao_responsavel": "orgao_responsavel",
     "justificativa": "justificativa",
     "valor_global": "valor_global",
+    "sigma_instituicao_id": "sigma_instituicao_id",
+    "instituicao_nome": "instituicao_nome",
+    "instituicao_cnpj": "instituicao_cnpj",
+    "instituicao_razao_social": "instituicao_razao_social",
+    "instituicao_nome_fantasia": "instituicao_nome_fantasia",
+    "sigma_pessoa_id": "sigma_pessoa_id",
+    "representante_nome": "representante_nome",
+    "representante_email": "representante_email",
+    "representante_telefone": "representante_telefone",
+    "atualizado_por": "atualizado_por",
 }
 
 
@@ -121,20 +133,30 @@ def get_by_codigo(codigo: str) -> dict[str, Any] | None:
 
 _APROVAR_SQL = """
     UPDATE demandas.programa
-       SET status = 'elegivel_ahp',
+       SET status = %(pos_aprovacao)s,
            aprovado_em = CURRENT_TIMESTAMP,
            aprovado_por = %(aprovado_por)s,
            motivo_aprovacao = NULLIF(%(motivo)s, '')
      WHERE codigo = %(codigo)s
+       AND status = ANY(%(pre)s)
+     RETURNING id
 """
 
 
 def aprovar(codigo: str, *, aprovado_por: str | None, motivo: str | None) -> dict[str, Any] | None:
     """Promove o programa ao universo AHP (transição de status in-place)."""
-    params = {"codigo": codigo, "aprovado_por": aprovado_por, "motivo": motivo}
+    params = {
+        "codigo": codigo,
+        "aprovado_por": aprovado_por,
+        "motivo": motivo,
+        "pre": list(STATUS_PRE_APROVACAO),
+        "pos_aprovacao": STATUS_POS_APROVACAO,
+    }
     with get_connection() as conn:
-        conn.execute(_APROVAR_SQL, params)
+        row = conn.execute(_APROVAR_SQL, params).fetchone()
         conn.commit()
+    if not row:
+        return None
     return get_by_codigo(codigo)
 
 
@@ -157,3 +179,23 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
         conn.execute(query, params)
         conn.commit()
     return get_by_codigo(codigo)
+
+
+def list_by_plano_id(plano_id: Any) -> list[dict[str, Any]]:
+    """Lista programas filhos de um plano."""
+    query = _SELECT_BASE + " WHERE pg.plano_id = %s ORDER BY pg.criado_em DESC"
+    with get_connection() as conn:
+        return list(conn.execute(query, (plano_id,)).fetchall())
+
+
+def delete_by_codigo(codigo: str) -> bool:
+    """Remove um programa pelo código legível."""
+    with get_connection() as conn:
+        conn.execute(
+            "DELETE FROM demandas.indicadores WHERE programa_id = (SELECT id FROM demandas.programa WHERE codigo = %s)",
+            (codigo,),
+        )
+        cur = conn.execute("DELETE FROM demandas.programa WHERE codigo = %s RETURNING id", (codigo,))
+        deleted = cur.fetchone()
+        conn.commit()
+    return deleted is not None
