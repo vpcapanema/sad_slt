@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cadastro de demandas — SLT</title>
-  <link rel="stylesheet" href="../assets/css/app.css?v=20250627t">
+  <link rel="stylesheet" href="../assets/css/app.css?v=20250627u">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" crossorigin="">
@@ -564,7 +564,10 @@
           <p class="step-intro">Confira os dados informados nas seções anteriores. Os valores são atualizados automaticamente conforme você preenche o formulário.</p>
           <div id="pg-review" class="review-panel" aria-live="polite">
             <section class="review-section">
-              <h4 class="review-section-title">Informações cadastrais</h4>
+              <div class="review-section-label">
+                <i class="fas fa-file-lines" aria-hidden="true"></i>
+                <span class="review-section-title">Informações cadastrais</span>
+              </div>
               <div class="review-rows">
                 <div class="review-row">
                   <span class="review-label">Nome do programa</span>
@@ -586,7 +589,10 @@
             </section>
 
             <section class="review-section pg-review-conditional hidden" id="pg-review-sec-contexto">
-              <h4 class="review-section-title">Contexto institucional estratégico</h4>
+              <div class="review-section-label">
+                <i class="fas fa-sitemap" aria-hidden="true"></i>
+                <span class="review-section-title">Contexto institucional estratégico</span>
+              </div>
               <div class="review-rows">
                 <div class="review-row" id="pg-review-plano-row">
                   <span class="review-label">Plano vinculado</span>
@@ -600,7 +606,10 @@
             </section>
 
             <section class="review-section">
-              <h4 class="review-section-title">Proponente do cadastro</h4>
+              <div class="review-section-label">
+                <i class="fas fa-id-card" aria-hidden="true"></i>
+                <span class="review-section-title">Proponente do cadastro</span>
+              </div>
               <div class="review-rows">
                 <div class="review-row">
                   <span class="review-label">Instituição interessada</span>
@@ -684,6 +693,6 @@
   <script src="abrangencia.js?v=20250627s"></script>
   <script src="../assets/js/app-header.js"></script>
   <script src="../assets/js/navbar.js"></script>
-  <script src="cadastro.js?v=20250627t"></script>
+  <script src="cadastro.js?v=20250627w"></script>
 </body>
 </html>

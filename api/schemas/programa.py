@@ -11,6 +11,7 @@ class ProgramaCreateSchema(BaseModel):
 
     codigo: str | None = Field(None, max_length=64)
     plano_codigo: str | None = Field(None, description="Código legível do plano pai (opcional sem vínculo institucional)")
+    vinculo_institucional: bool = False
     nome: str = Field(..., min_length=1, max_length=200)
     descricao: str = Field(..., min_length=1)
     objetivo: str | None = None
@@ -18,6 +19,11 @@ class ProgramaCreateSchema(BaseModel):
     orgao_responsavel: str | None = None
     justificativa: str | None = None
     valor_global: float | None = None
+    instituicao_id: str
+    instituicao_label: str | None = None
+    instituicao_cnpj: str | None = None
+    instituicao_razao_social: str | None = None
+    instituicao_nome_fantasia: str | None = None
     pessoa_id: str | None = None
     representante: RepresentanteSchema
     unidades_espaciais: list[str] = Field(default_factory=list)
@@ -40,6 +46,12 @@ class ProgramaResponseSchema(BaseModel):
     orgao_responsavel: str | None = None
     justificativa: str | None = None
     valor_global: float | None = None
+    vinculo_institucional: bool = False
+    instituicao_id: str | None = None
+    instituicao_label: str | None = None
+    instituicao_cnpj: str | None = None
+    instituicao_razao_social: str | None = None
+    instituicao_nome_fantasia: str | None = None
     pessoa_id: str | None = None
     representante: RepresentanteSchema | None = None
     unidades_espaciais: list[str] = Field(default_factory=list)

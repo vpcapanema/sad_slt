@@ -27,6 +27,8 @@ class DemandaCreateSchema(BaseModel):
     instituicao_id: str
     instituicao_label: str | None = None
     instituicao_cnpj: str | None = None
+    instituicao_razao_social: str | None = None
+    instituicao_nome_fantasia: str | None = None
     pessoa_id: str | None = None
     lat: float
     lng: float
@@ -34,6 +36,8 @@ class DemandaCreateSchema(BaseModel):
     diretoria_id: str
     plano_id: str
     programa_codigo: str | None = Field(None, description="Código legível do programa (opcional sem vínculo institucional)")
+    vinculo_institucional: bool = False
+    vinculo_tipo: str | None = Field(None, description="programa ou plano quando há vínculo institucional")
     nome: str = Field(..., min_length=1, max_length=200)
     descricao: str | None = None
     geometria: GeometriaSchema | None = None
@@ -57,6 +61,8 @@ class DemandaResponseSchema(BaseModel):
     diretoria_id: str
     plano_id: str
     programa_id: str | None = None
+    vinculo_institucional: bool = False
+    vinculo_tipo: str | None = None
     nome: str
     descricao: str | None = None
     geometria: GeometriaSchema | None = None

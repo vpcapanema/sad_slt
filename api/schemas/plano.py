@@ -6,6 +6,16 @@ from pydantic import BaseModel, Field
 from api.schemas.demanda import RepresentanteSchema
 
 
+class InstituicaoFormSchema(BaseModel):
+    """Instituição interessada (origem SIGMA)."""
+
+    instituicao_id: str
+    instituicao_label: str | None = None
+    instituicao_cnpj: str | None = None
+    instituicao_razao_social: str | None = None
+    instituicao_nome_fantasia: str | None = None
+
+
 class PlanoCreateSchema(BaseModel):
     """Payload de cadastro de um plano (nível 1 — interno)."""
 
@@ -15,6 +25,11 @@ class PlanoCreateSchema(BaseModel):
     descricao: str = Field(..., min_length=1)
     objetivo_estrategico: str | None = None
     responsavel: str | None = None
+    instituicao_id: str
+    instituicao_label: str | None = None
+    instituicao_cnpj: str | None = None
+    instituicao_razao_social: str | None = None
+    instituicao_nome_fantasia: str | None = None
     pessoa_id: str | None = None
     representante: RepresentanteSchema
     vigencia_inicio: str | None = None
@@ -34,6 +49,11 @@ class PlanoResponseSchema(BaseModel):
     descricao: str | None = None
     objetivo_estrategico: str | None = None
     responsavel: str | None = None
+    instituicao_id: str | None = None
+    instituicao_label: str | None = None
+    instituicao_cnpj: str | None = None
+    instituicao_razao_social: str | None = None
+    instituicao_nome_fantasia: str | None = None
     pessoa_id: str | None = None
     representante: RepresentanteSchema | None = None
     vigencia_inicio: str | None = None

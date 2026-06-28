@@ -77,7 +77,15 @@
       return "fa-calendar-days";
     }
     if (t.includes("abrangência") || t.includes("abrangencia")) return "fa-map";
+    if (t.includes("classificação") || t.includes("classificacao")) return "fa-tags";
+    if (t.includes("enquadramento territorial principal")) return "fa-map";
+    if (t.includes("outros enquadramentos")) return "fa-map-location-dot";
     return "fa-folder-open";
+  }
+
+  function reviewSectionHeader(title, iconClass) {
+    const icon = iconClass || cadastroSectionIcon(title);
+    return `<div class="review-section-label"><i class="fas ${icon}" aria-hidden="true"></i><span class="review-section-title">${escapeHtml(title)}</span></div>`;
   }
 
   function cadastroSectionTitleText(h2) {
@@ -152,28 +160,36 @@
     setTimeout(() => t.classList.remove("show"), 3200);
   }
 
-  /** Destaque visual compartilhado: seletores com valor e campos derivados preenchidos. */
+  const FIELD_FILLED_SELECTOR =
+    "select, textarea, input:not([type=radio]):not([type=checkbox]):not([type=file]):not([type=hidden]):not([type=button]):not([type=submit]):not([type=reset])";
+
+  function isFieldFilledSyncTarget(el) {
+    return Boolean(el?.matches?.(FIELD_FILLED_SELECTOR));
+  }
+
+  /** Destaque visual compartilhado: seletores e campos de texto com valor preenchido. */
   function syncFieldFilledState(el) {
     if (!el) return;
     const value = String(el.value ?? "").trim();
     const filled =
-      el.tagName === "SELECT" ? !el.disabled && value !== "" : value !== "";
+      el.tagName === "SELECT"
+        ? !el.disabled && value !== ""
+        : value !== "";
     el.classList.toggle("field-filled", filled);
   }
 
   function syncFieldFilledStates(root) {
     const scope = root || document;
-    scope.querySelectorAll("select, input[readonly]").forEach(syncFieldFilledState);
+    scope.querySelectorAll(FIELD_FILLED_SELECTOR).forEach(syncFieldFilledState);
   }
 
   function initFieldFilledSync() {
     document.querySelectorAll("#form-cadastro, .tipo-form").forEach((form) => {
-      form.addEventListener("change", (e) => {
-        const t = e.target;
-        if (t instanceof HTMLSelectElement || (t instanceof HTMLInputElement && t.readOnly)) {
-          syncFieldFilledState(t);
-        }
-      });
+      const syncFromEvent = (e) => {
+        if (isFieldFilledSyncTarget(e.target)) syncFieldFilledState(e.target);
+      };
+      form.addEventListener("change", syncFromEvent);
+      form.addEventListener("input", syncFromEvent);
     });
     syncFieldFilledStates(document);
   }
@@ -390,6 +406,10 @@
       return true;
     }
     if (step === 3) {
+      if (!$("#pg-instituicao").value) {
+        showToast("Selecione a instituição interessada.");
+        return false;
+      }
       if (!$("#pg-representante").value) {
         showToast("Selecione o representante legal.");
         return false;
@@ -760,6 +780,18 @@
         email: $(emailId).value.trim() || null,
         telefone: $(phoneId).value.trim() || null,
       },
+    };
+  }
+
+  function buildInstituicaoPayload(selectId, cnpjId) {
+    const instId = $(selectId)?.value;
+    const inst = SLTSigmaRead.findInstituicao(instituicoes, instId);
+    return {
+      instituicao_id: instId || null,
+      instituicao_label: inst ? SLTSigmaRead.labelInstituicao(inst) : null,
+      instituicao_cnpj: $(cnpjId)?.value?.trim() || (inst ? SLTSigmaRead.cnpjDisplay(inst) : null),
+      instituicao_razao_social: inst?.razao_social || null,
+      instituicao_nome_fantasia: inst?.nome_fantasia || inst?.nome || null,
     };
   }
 
@@ -1172,11 +1204,11 @@
     const nome = entity === "programa" ? "programa" : "projeto";
     return `
       <div class="review-abrangencia-block">
-        <h5 class="review-abrangencia-heading">Enquadramento territorial principal do ${nome}</h5>
+        ${reviewSectionHeader(`Enquadramento territorial principal do ${nome}`, "fa-map")}
         <div class="review-rows">${principalHtml || reviewRow("—", "—")}</div>
       </div>
       <div class="review-abrangencia-block">
-        <h5 class="review-abrangencia-heading">Outros enquadramentos territoriais</h5>
+        ${reviewSectionHeader("Outros enquadramentos territoriais", "fa-map-location-dot")}
         <div class="review-rows">${outrosHtml || reviewRow("—", "—")}</div>
       </div>
       ${extraHtml ? `<div class="review-rows">${extraHtml}</div>` : ""}`;
@@ -1394,7 +1426,7 @@
   function reviewSection(title, rowsHtml, lead = "") {
     if (!rowsHtml && !lead) return "";
     const leadHtml = lead ? `<p class="review-section-lead">${escapeHtml(lead)}</p>` : "";
-    return `<section class="review-section"><h4 class="review-section-title">${escapeHtml(title)}</h4>${leadHtml}<div class="review-rows">${rowsHtml || ""}</div></section>`;
+    return `<section class="review-section">${reviewSectionHeader(title)}${leadHtml}<div class="review-rows">${rowsHtml || ""}</div></section>`;
   }
 
   function renderReview() {
@@ -1515,10 +1547,7 @@
   }
 
   function buildDemanda() {
-    const prog = getSelectedPrograma();
-    const planoId = getProjetoPlanoId();
-    const plano = SLTCatalog.getPlano(planoId);
-    const inst = SLTSigmaRead.findInstituicao(instituicoes, $("#instituicao").value);
+    const plano = SLTCatalog.getPlano(getProjetoPlanoId());
     const pessoaId = $("#representante").value;
     const pessoa = SLTSigmaRead.findPessoa(pessoas, pessoaId);
     const geom = getGeometria();
@@ -1527,9 +1556,7 @@
       id: SLTStorage.uid(),
       status: "fila_hierarquizacao",
       criadoEm: new Date().toISOString(),
-      instituicao_id: $("#instituicao").value,
-      instituicao_label: inst ? SLTSigmaRead.labelInstituicao(inst) : null,
-      instituicao_cnpj: $("#cnpj").value || null,
+      ...buildInstituicaoPayload("#instituicao", "#cnpj"),
       pessoa_id: pessoaId || null,
       lat: coords?.lat ?? null,
       lng: coords?.lng ?? null,
@@ -1539,6 +1566,8 @@
         email: $("#rep_email").value.trim(),
         telefone: $("#rep_telefone").value.trim(),
       },
+      vinculo_institucional: isPjVinculoAtivo(),
+      vinculo_tipo: isPjVinculoAtivo() ? getPjVinculoTipo() : null,
       diretoria_id: getProjetoDiretoriaId(),
       plano_id: getProjetoPlanoId(),
       programa_codigo:
@@ -1667,6 +1696,10 @@
         showToast("Preencha nome, descrição e diretoria do plano.");
         return;
       }
+      if (!$("#pl-instituicao").value) {
+        showToast("Selecione a instituição interessada.");
+        return;
+      }
       if (!$("#pl-representante").value) {
         showToast("Selecione o representante legal.");
         return;
@@ -1675,14 +1708,14 @@
         showToast("Selecione ao menos uma unidade de abrangência.");
         return;
       }
-      const plInst = SLTSigmaRead.findInstituicao(instituicoes, $("#pl-instituicao").value);
       const rep = buildRepresentantePayload("#pl-representante", "#pl-rep_email", "#pl-rep_telefone");
+      const inst = buildInstituicaoPayload("#pl-instituicao", "#pl-cnpj");
       const payload = {
         diretoria_id: $("#pl-diretoria").value,
         nome: $("#pl-nome").value.trim(),
         descricao: $("#pl-descricao").value.trim(),
         objetivo_estrategico: $("#pl-objetivo").value.trim() || null,
-        responsavel: plInst ? SLTSigmaRead.labelInstituicao(plInst) : null,
+        ...inst,
         pessoa_id: rep.pessoa_id,
         representante: rep.representante,
         vigencia_inicio: $("#pl-vig-ini").value || null,
@@ -1743,9 +1776,11 @@
       if (isPgVinculoAtivo() && !validateProgramaStep(2)) return;
       if (!ensureSpatialAcknowledgedForSubmit("programa")) return;
       const rep = buildRepresentantePayload("#pg-representante", "#pg-rep_email", "#pg-rep_telefone");
+      const inst = buildInstituicaoPayload("#pg-instituicao", "#pg-cnpj");
       const unidades = pgAbr.getSelectedIds();
       const payload = {
         plano_codigo: isPgVinculoAtivo() ? $("#pg-plano").value : null,
+        vinculo_institucional: isPgVinculoAtivo(),
         nome: $("#pg-nome").value.trim(),
         descricao: $("#pg-descricao").value.trim(),
         objetivo: $("#pg-objetivo").value.trim() || null,
@@ -1753,6 +1788,7 @@
         justificativa: $("#pg-justificativa").value.trim() || null,
         orgao_responsavel: $("#pg-orgao").value.trim() || null,
         valor_global: $("#pg-valor").value ? Number($("#pg-valor").value) : null,
+        ...inst,
         pessoa_id: rep.pessoa_id,
         representante: rep.representante,
         unidades_espaciais: unidades,

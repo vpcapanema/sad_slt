@@ -66,6 +66,8 @@ def _row_to_response(row: dict[str, Any]) -> DemandaResponseSchema:
         diretoria_id=row["diretoria_id"],
         plano_id=row["plano_id"],
         programa_id=str(row["programa_id"]) if row.get("programa_id") else None,
+        vinculo_institucional=bool(row.get("vinculo_institucional")),
+        vinculo_tipo=row.get("vinculo_tipo"),
         nome=row["nome"],
         descricao=row.get("descricao"),
         geometria=geometria,
@@ -104,6 +106,8 @@ def _build_persist_row(payload: DemandaCreateSchema) -> dict[str, Any]:
         raise DemandaValidationError("Diretoria é obrigatória.", field="diretoria_id")
     if not payload.plano_id or not str(payload.plano_id).strip():
         raise DemandaValidationError("Plano é obrigatório.", field="plano_id")
+    if payload.vinculo_tipo and payload.vinculo_tipo not in {"programa", "plano"}:
+        raise DemandaValidationError("Tipo de vínculo inválido.", field="vinculo_tipo")
 
     return demanda_repository.prepare_insert_params(
         {
@@ -112,6 +116,8 @@ def _build_persist_row(payload: DemandaCreateSchema) -> dict[str, Any]:
             "sigma_instituicao_id": _parse_uuid(payload.instituicao_id, "instituicao_id"),
             "instituicao_nome": payload.instituicao_label,
             "instituicao_cnpj": payload.instituicao_cnpj,
+            "instituicao_razao_social": payload.instituicao_razao_social,
+            "instituicao_nome_fantasia": payload.instituicao_nome_fantasia,
             "sigma_pessoa_id": _parse_uuid(str(pessoa_id), "pessoa_id"),
             "representante_nome": (payload.representante.nome or "").strip() or "—",
             "representante_email": payload.representante.email,
@@ -119,6 +125,8 @@ def _build_persist_row(payload: DemandaCreateSchema) -> dict[str, Any]:
             "diretoria_id": payload.diretoria_id.strip(),
             "plano_id": payload.plano_id.strip(),
             "programa_id": programa_id,
+            "vinculo_institucional": bool(payload.vinculo_institucional),
+            "vinculo_tipo": payload.vinculo_tipo,
             "nome": payload.nome.strip(),
             "descricao": payload.descricao,
             "latitude": payload.lat,

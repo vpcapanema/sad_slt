@@ -49,6 +49,11 @@ def _row_to_response(row: dict[str, Any]) -> PlanoResponseSchema:
         descricao=row.get("descricao"),
         objetivo_estrategico=row.get("objetivo_estrategico"),
         responsavel=row.get("responsavel"),
+        instituicao_id=str(row["sigma_instituicao_id"]) if row.get("sigma_instituicao_id") else None,
+        instituicao_label=row.get("instituicao_nome"),
+        instituicao_cnpj=row.get("instituicao_cnpj"),
+        instituicao_razao_social=row.get("instituicao_razao_social"),
+        instituicao_nome_fantasia=row.get("instituicao_nome_fantasia"),
         pessoa_id=str(row["sigma_pessoa_id"]) if row.get("sigma_pessoa_id") else None,
         representante=rep,
         vigencia_inicio=_iso(row.get("vigencia_inicio")),
@@ -69,11 +74,18 @@ def _resolve_pessoa_id(payload: PlanoCreateSchema) -> str:
     return _parse_uuid(str(pessoa_id), "pessoa_id")
 
 
+def _resolve_instituicao_id(payload: PlanoCreateSchema) -> str:
+    if not payload.instituicao_id:
+        raise DemandaValidationError("Instituição interessada é obrigatória.", field="instituicao_id")
+    return _parse_uuid(str(payload.instituicao_id), "instituicao_id")
+
+
 def criar_plano(payload: PlanoCreateSchema) -> PlanoResponseSchema:
     codigo = (payload.codigo or "").strip() or _gerar_codigo()
     if plano_repository.get_by_codigo(codigo):
         raise DemandaValidationError(f"Código de plano já existe: {codigo}.", field="codigo")
     pessoa_id = _resolve_pessoa_id(payload)
+    instituicao_id = _resolve_instituicao_id(payload)
     row = {
         "codigo": codigo,
         "diretoria_id": payload.diretoria_id,
@@ -81,6 +93,11 @@ def criar_plano(payload: PlanoCreateSchema) -> PlanoResponseSchema:
         "descricao": payload.descricao.strip(),
         "objetivo_estrategico": payload.objetivo_estrategico,
         "responsavel": payload.responsavel,
+        "sigma_instituicao_id": instituicao_id,
+        "instituicao_nome": payload.instituicao_label,
+        "instituicao_razao_social": payload.instituicao_razao_social,
+        "instituicao_nome_fantasia": payload.instituicao_nome_fantasia,
+        "instituicao_cnpj": payload.instituicao_cnpj,
         "sigma_pessoa_id": pessoa_id,
         "representante_nome": (payload.representante.nome or "").strip() or "—",
         "representante_email": payload.representante.email,

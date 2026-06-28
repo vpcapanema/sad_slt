@@ -16,6 +16,11 @@ _SELECT_BASE = """
         p.descricao,
         p.objetivo_estrategico,
         p.responsavel,
+        p.sigma_instituicao_id,
+        p.instituicao_nome,
+        p.instituicao_razao_social,
+        p.instituicao_nome_fantasia,
+        p.instituicao_cnpj,
         p.sigma_pessoa_id,
         p.representante_nome,
         p.representante_email,
@@ -42,12 +47,16 @@ _INSERT_SQL = """
     INSERT INTO demandas.plano (
         codigo, diretoria_id, nome, descricao,
         objetivo_estrategico, responsavel,
+        sigma_instituicao_id, instituicao_nome, instituicao_razao_social,
+        instituicao_nome_fantasia, instituicao_cnpj,
         sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
         vigencia_inicio, vigencia_fim,
         valor_global, status
     ) VALUES (
         %(codigo)s, %(diretoria_id)s, %(nome)s, %(descricao)s,
         %(objetivo_estrategico)s, %(responsavel)s,
+        %(sigma_instituicao_id)s, %(instituicao_nome)s, %(instituicao_razao_social)s,
+        %(instituicao_nome_fantasia)s, %(instituicao_cnpj)s,
         %(sigma_pessoa_id)s, %(representante_nome)s, %(representante_email)s, %(representante_telefone)s,
         %(vigencia_inicio)s, %(vigencia_fim)s,
         %(valor_global)s, %(status)s
