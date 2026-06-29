@@ -862,6 +862,19 @@ function isAllOnes(matrix) {
   return true;
 }
 
+function invalidateStep5Validation() {
+  if (!lastValidatedMatrix && !lastValidationConsistent) return;
+  lastValidationConsistent = false;
+  lastValidatedMatrix = null;
+  setSalvarConfigEnabled(false);
+  var link = document.getElementById("step5-go-resultados");
+  if (link) link.classList.add("is-hidden");
+  setStep5Feedback(
+    "Matriz alterada. Valide novamente antes de salvar a configuração da Fase 2.",
+    "info"
+  );
+}
+
 function updateLiveMetrics() {
   const container = document.getElementById("liveMetrics");
   if (!container || typeof SLTAhp === "undefined") return;
@@ -885,38 +898,121 @@ function updateLiveMetrics() {
     state = "is-failure";
   }
   container.className = "ahp-live-metrics " + state;
+
+  if (!isAllOnes(matrix)) {
+    invalidateStep5Validation();
+  }
 }
 
 // -----------------------------------------------------------
-// Step 4: Calcula resultados e redireciona para step5
+// Etapa 5: monta matriz pareada a partir do DOM
 // -----------------------------------------------------------
-function calculateResults() {
+var lastValidatedMatrix = null;
+var lastValidationConsistent = false;
+
+function buildPairwiseMatrixFromDom() {
   const n = criteria.length;
-  pairwiseMatrix = [];
+  const matrix = [];
   for (let i = 0; i < n; i++) {
-    pairwiseMatrix[i] = [];
+    matrix[i] = [];
     for (let j = 0; j < n; j++) {
       if (i === j) {
-        pairwiseMatrix[i][j] = 1;
+        matrix[i][j] = 1;
       } else if (i < j) {
-        const selectId = 'pair_' + i + '_' + j;
-        const val = parseFloat(document.getElementById(selectId).value);
-        pairwiseMatrix[i][j] = val;
+        const selectId = "pair_" + i + "_" + j;
+        const el = document.getElementById(selectId);
+        const val = el ? parseFloat(el.value) : 1;
+        matrix[i][j] = val;
       } else {
-        const selectId = 'pair_' + j + '_' + i;
-        const val = parseFloat(document.getElementById(selectId).value);
-        pairwiseMatrix[i][j] = 1 / val;
+        const selectId = "pair_" + j + "_" + i;
+        const el = document.getElementById(selectId);
+        const val = el ? parseFloat(el.value) : 1;
+        matrix[i][j] = 1 / val;
       }
     }
   }
-  localStorage.setItem('ahp_pairwiseMatrix', JSON.stringify(pairwiseMatrix));
-  // Persiste a matriz na configuração (banco) antes de seguir; o localStorage é
-  // apenas cache. Navega em seguida, mesmo se a persistência falhar (offline).
-  if (window.SLTConfigBridge && typeof window.SLTConfigBridge.persistMatriz === 'function') {
-    Promise.resolve(window.SLTConfigBridge.persistMatriz(pairwiseMatrix)).finally(function () {
-      window.location.href = 'step6-resultados.html';
-    });
-  } else {
-    window.location.href = 'step6-resultados.html';
-  }
+  return matrix;
 }
+
+function setSalvarConfigEnabled(enabled) {
+  const btn = document.getElementById("btn-salvar-config-fase2");
+  if (btn) btn.disabled = !enabled;
+}
+
+function setStep5Feedback(message, kind) {
+  const fb = document.getElementById("step5-save-feedback");
+  if (!fb) return;
+  fb.textContent = message || "";
+  fb.className = "ahp-matriz-edit-feedback" + (kind ? " is-" + kind : "");
+}
+
+function validarMatrizComparacao() {
+  const matrix = buildPairwiseMatrixFromDom();
+  lastValidatedMatrix = matrix;
+  localStorage.setItem("ahp_pairwiseMatrix", JSON.stringify(matrix));
+
+  const results = typeof SLTAhp !== "undefined" ? SLTAhp.analyzeMatrix(matrix) : calculateAHP(matrix);
+  lastValidationConsistent = results.CR < 0.10;
+
+  const panel = document.getElementById("diagnostico-consistencia-panel");
+  if (panel && window.SLTAhpDiagnostico) {
+    panel.classList.remove("is-hidden");
+    window.SLTAhpDiagnostico.renderDiagnostico(panel, criteria, matrix, results, {
+      title: "Diagnóstico de Consistência",
+      stepLabel: "5.3",
+    });
+  }
+
+  setSalvarConfigEnabled(lastValidationConsistent);
+  if (lastValidationConsistent) {
+    setStep5Feedback(
+      "Matriz consistente (RC < 0,10). Você pode salvar a configuração da Fase 2.",
+      "success"
+    );
+  } else {
+    setStep5Feedback(
+      "Matriz inconsistente (RC ≥ 0,10). Revise as comparações e valide novamente.",
+      "error"
+    );
+  }
+  return results;
+}
+
+function salvarConfigFase2() {
+  if (!lastValidationConsistent || !lastValidatedMatrix) {
+    alert("Valide a matriz de comparação pareada antes de salvar. A RC deve ficar abaixo de 0,10.");
+    return;
+  }
+  if (!window.SLTConfigBridge || typeof window.SLTConfigBridge.persistMatriz !== "function") {
+    alert("Configuração atual não encontrada. Carregue uma configuração na Etapa 2.");
+    return;
+  }
+
+  setStep5Feedback("Salvando configuração da Fase 2…", "info");
+  setSalvarConfigEnabled(false);
+
+  window.SLTConfigBridge.persistMatriz(lastValidatedMatrix)
+    .then(function (saved) {
+      if (!saved) throw new Error("Não foi possível salvar no banco.");
+      if (window.SLTAhpAlertas) window.SLTAhpAlertas.limparPendentes();
+      setStep5Feedback(
+        "Configuração da Fase 2 salva. Avance para a Etapa 6 para calcular os pesos.",
+        "success"
+      );
+      const link = document.getElementById("step5-go-resultados");
+      if (link) link.classList.remove("is-hidden");
+      setSalvarConfigEnabled(true);
+    })
+    .catch(function (err) {
+      setStep5Feedback(err && err.message ? err.message : String(err), "error");
+      setSalvarConfigEnabled(lastValidationConsistent);
+    });
+}
+
+// Compatibilidade: redireciona para validação (não salva nem avança automaticamente).
+function calculateResults() {
+  validarMatrizComparacao();
+}
+
+window.validarMatrizComparacao = validarMatrizComparacao;
+window.salvarConfigFase2 = salvarConfigFase2;

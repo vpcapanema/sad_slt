@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="../assets/css/app.css">
   <link rel="stylesheet" href="../assets/css/ahp-module.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="js/ahp-page-reset.js"></script>
+  <script src="../assets/js/admin-auth.js"></script>
+  <script src="js/ahp-auth.js"></script>
 </head>
 <body class="ahp-module-page">
   <header class="app-header">
@@ -19,7 +22,9 @@
     </div>
   </header>
 
-  <main class="app-main ahp-main">
+  
+  <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+<main class="app-main ahp-main">
     <section class="card">
       <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
         <a href="../index.html">Início</a>

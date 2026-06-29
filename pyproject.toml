@@ -19,6 +19,7 @@ dependencies = [
 
 [tool.pyright]
 include = ["api"]
+exclude = ["scripts/**", "**/__pycache__", "**/.venv"]
 extraPaths = ["."]
 pythonVersion = "3.11"
 typeCheckingMode = "basic"
@@ -26,3 +27,27 @@ typeCheckingMode = "basic"
 [tool.flake8]
 max-line-length = 88
 extend-ignore = ["E203", "W503"]
+
+[tool.pylint.main]
+init-hook = 'import sys; sys.path.insert(0, ".")'
+py-version = "3.11"
+max-line-length = 88
+jobs = 0
+disable = [
+    "duplicate-code",
+    "missing-function-docstring",
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "too-few-public-methods",
+    "too-many-return-statements",
+    "import-outside-toplevel",
+    "broad-exception-caught",
+    "ungrouped-imports",
+    "unused-import",
+    "line-too-long",
+    "trailing-newlines",
+    "missing-final-newline",
+    "wrong-import-position",
+    "invalid-character-carriage-return",
+    "invalid-name",
+]

@@ -18,6 +18,10 @@
       "**/*.pyc": true,
     },
     "cursorpyright.analysis.extraPaths": ["${workspaceFolder}"],
+    "cursorpyright.analysis.exclude": ["scripts/**"],
+    "python.linting.pylintEnabled": false,
+    "python.linting.pylintPath": "${workspaceFolder}/.venv/Scripts/pylint.exe",
+    "pylint.args": [],
   },
   "extensions": {
     "recommendations": [

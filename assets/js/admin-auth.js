@@ -1,5 +1,4 @@
 (function (global) {
-  const LOGIN_PATH = "login.html";
   const SESSION_BAR_ID = "admin-session-bar";
 
   const TIPO_LABELS = {
@@ -9,9 +8,16 @@
     VISUALIZADOR: "Visualizador",
   };
 
+  function resolveLoginPath() {
+    const path = String(location.pathname || "").replace(/\\/g, "/");
+    if (path.includes("/ahp/")) return "../admin/login.html";
+    if (path.includes("/admin/")) return "login.html";
+    return "/admin/login.html";
+  }
+
   function loginUrl(nextPath) {
     const next = nextPath || location.pathname + location.search;
-    return `${LOGIN_PATH}?next=${encodeURIComponent(next)}`;
+    return `${resolveLoginPath()}?next=${encodeURIComponent(next)}`;
   }
 
   async function fetchMe() {
@@ -52,13 +58,20 @@
       location.replace(loginUrl());
       return null;
     }
-    renderSessionBar(user);
+    const bar = document.getElementById(SESSION_BAR_ID);
+    if (bar) {
+      renderSessionBar(user);
+    } else {
+      document.addEventListener("DOMContentLoaded", function () {
+        renderSessionBar(user);
+      }, { once: true });
+    }
     return user;
   }
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
-    location.href = LOGIN_PATH;
+    location.href = resolveLoginPath();
   }
 
   function escapeHtml(s) {

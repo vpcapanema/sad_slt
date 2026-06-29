@@ -3,9 +3,10 @@
   "python.analysis.extraPaths": ["${workspaceFolder}"],
   "python.terminal.activateEnvironment": true,
   "python.analysis.diagnosticMode": "workspace",
-  "python.linting.pylintEnabled": true,
+  "python.analysis.exclude": ["scripts"],
+  "python.linting.pylintEnabled": false,
   "python.linting.pylintPath": "${workspaceFolder}/.venv/Scripts/pylint.exe",
-  "pylint.args": ["--init-hook=import sys; sys.path.insert(0, '.')"],
+  "pylint.args": [],
   "cursorpyright.analysis.diagnosticMode": "workspace",
   "cursorpyright.analysis.extraPaths": ["${workspaceFolder}"]
 }

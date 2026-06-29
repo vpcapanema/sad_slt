@@ -18,6 +18,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl.worksheet.worksheet import Worksheet
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "Modelo_Matriz_Criterios_Premissas_Analise.xlsx"
@@ -28,8 +29,9 @@ _spec = importlib.util.spec_from_file_location(
     "export_matriz_excel",
     Path(__file__).parent / "export_matriz_excel.py",
 )
+if _spec is None or _spec.loader is None:
+    raise ImportError("Não foi possível carregar export_matriz_excel.py")
 _mod = importlib.util.module_from_spec(_spec)
-assert _spec.loader is not None
 _spec.loader.exec_module(_mod)
 
 DIMENSOES = _mod.DIMENSOES
@@ -111,7 +113,7 @@ def _aba_listas(wb: Workbook):
     return ws
 
 
-def _add_validations(ws, listas_ws) -> None:
+def _add_validations(ws, _listas_ws) -> None:
     last_dim = len(DIMENSOES) + 1
     last_rel = len(RELACOES) + 1
     last_mand = len(MANDATORIO) + 1
@@ -157,8 +159,15 @@ def _add_validations(ws, listas_ws) -> None:
     dv_mand.add(f"G2:G{MAX_DATA_ROW}")
 
 
-def _aba_matriz_preenchimento(wb: Workbook) -> None:
+def _require_active_sheet(wb: Workbook) -> Worksheet:
     ws = wb.active
+    if ws is None:
+        raise RuntimeError("Workbook sem aba ativa.")
+    return ws
+
+
+def _aba_matriz_preenchimento(wb: Workbook) -> None:
+    ws = _require_active_sheet(wb)
     ws.title = "Tabela de Premissas e Critérios"
     ws.append(HEADERS)
     _style_header(ws, len(HEADERS))
@@ -256,7 +265,7 @@ def main() -> None:
 
     print(f"Modelo gerado: {OUT}")
     print(f"Modelo CSV: {OUT_CSV}")
-    print(f"  - Abas: Tabela de Premissas e Critérios, Exemplo de preenchimento, _Listas (oculta)")
+    print("  - Abas: Tabela de Premissas e Critérios, Exemplo de preenchimento, _Listas (oculta)")
     print(f"  - Validacao: Dimensao ({len(DIMENSOES)}), Relacao ({len(RELACOES)}), Mandatorio (2)")
     print(f"  - Linhas editaveis na matriz: 2–{MAX_DATA_ROW}")
 

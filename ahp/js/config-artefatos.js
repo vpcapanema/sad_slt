@@ -39,20 +39,29 @@
     });
   }
 
-  // Persiste a matriz de comparação pareada (Etapa 4) na configuração.
-  function persistMatriz(matriz) {
+  // Persiste a matriz de comparação pareada (Etapa 5) na configuração.
+  function persistMatriz(matriz, extra) {
+    extra = extra || {};
     var cfg = getConfigAtual();
     if (!cfg || !api()) return Promise.resolve(null);
-    // O fluxo (localStorage) usa "matrix"; o banco aceita "matriz" | "formulario".
     var metodo = global.localStorage.getItem("ahp_chosenMethod");
     if (metodo === "matrix") metodo = "matriz";
     if (metodo !== "matriz" && metodo !== "formulario") metodo = null;
+    var alertas =
+      extra.alertas_conceituais !== undefined
+        ? extra.alertas_conceituais
+        : global.SLTAhpAlertas
+          ? global.SLTAhpAlertas.listarPendentes()
+          : [];
+    var payload = {
+      matriz_comparacao: matriz,
+      metodo_comparacao: metodo,
+      n_criterios: matriz.length,
+      alertas_conceituais: alertas,
+      pacote_fase: "fase_2",
+    };
     return api()
-      .atualizar(cfg.tipo, cfg.codigo, {
-        matriz_comparacao: matriz,
-        metodo_comparacao: metodo,
-        n_criterios: matriz.length,
-      })
+      .atualizar(cfg.tipo, cfg.codigo, payload)
       .catch(function () {
         return null;
       });
@@ -88,12 +97,15 @@
     return {
       artefato: "objetos",
       versao: 1,
+      pacote_fase: "fase_1",
       config_codigo: config.codigo,
       escopo: config.nome || null,
       objetivo: config.objetivo || null,
       descricao: config.descricao || null,
       tipo_demanda: config.tipo_demanda || null,
       objetos: config.universo_objetos || [],
+      criado_em: config.criadoEm || null,
+      atualizado_em: config.atualizadoEm || null,
       gerado_em: new Date().toISOString(),
     };
   }
@@ -102,12 +114,14 @@
     return {
       artefato: "matriz",
       versao: 1,
+      pacote_fase: "fase_2",
       config_codigo: config.codigo,
-      // Matriz de premissas e critérios (linhas completas).
       criterios: config.criterios || [],
-      // Matriz de comparação pareada (Saaty n×n).
       matriz_comparacao: config.matriz_comparacao || [],
       metricas: metricasDe(config),
+      alertas_conceituais: config.alertas_conceituais || [],
+      criado_em: config.criadoEm || null,
+      atualizado_em: config.atualizadoEm || null,
       gerado_em: new Date().toISOString(),
     };
   }
@@ -116,6 +130,7 @@
     return {
       artefato: "pesos",
       versao: 1,
+      pacote_fase: "fase_2",
       config_codigo: config.codigo,
       escopo: config.nome || null,
       objetivo: config.objetivo || null,
@@ -125,7 +140,10 @@
       pesos: config.pesos || null,
       metricas: metricasDe(config),
       universo_objetos: config.universo_objetos || [],
+      alertas_conceituais: config.alertas_conceituais || [],
       homologado_em: config.homologadoEm || null,
+      criado_em: config.criadoEm || null,
+      atualizado_em: config.atualizadoEm || null,
       gerado_em: new Date().toISOString(),
     };
   }

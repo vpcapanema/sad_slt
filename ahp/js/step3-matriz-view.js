@@ -1,10 +1,5 @@
 /**
- * Etapa 3 — exibe e edita a Tabela de Premissas e Critérios.
- *
- * A matriz é recuperada do banco (coluna ``criterios`` da configuração atual),
- * renderizada em modo edição (valores das células + adicionar/remover critérios)
- * e salva de volta via PATCH. O localStorage é mantido em sincronia para o
- * restante do fluxo (Etapas 4–5).
+ * Etapa 3 — Tabela de Premissas e Critérios (abaixo do cadastro de nomes).
  */
 (function (global) {
   "use strict";
@@ -40,45 +35,194 @@
   }
 
   function invalidarComparacao() {
-    // Critérios mudaram: a matriz pareada e os pesos não valem mais.
     localStorage.removeItem("ahp_pairwiseMatrix");
     localStorage.removeItem("ahp_uploadedMatrix");
     localStorage.removeItem("ahp_chosenMethod");
   }
 
-  function makeSaveHandler(cfg, fileName, baselineSignature) {
-    return function (rows) {
-      syncLocalStorage(rows, fileName);
-      var mudou = criteriaSignature(rows) !== baselineSignature;
-      var payload = { criterios: rows, n_criterios: rows.length };
-      if (mudou) {
-        invalidarComparacao();
-        // Critérios mudaram: a matriz pareada salva não vale mais. NÃO mexemos no
-        // status (todo o Bloco 2 permanece em hierarquização).
-        payload.matriz_comparacao = [];
-      }
-      var done = cfg && global.SLTConfigApi
+  function executeSave(rows, cfg, fileName, baselineSignature) {
+    if (global.SLTAhpTextoPt && global.SLTAhpTextoPt.normalizarLinhasMatriz) {
+      rows = global.SLTAhpTextoPt.normalizarLinhasMatriz(rows);
+    }
+    syncLocalStorage(rows, fileName);
+    var mudou = criteriaSignature(rows) !== baselineSignature;
+    var payload = { criterios: rows, n_criterios: rows.length };
+    if (mudou) {
+      invalidarComparacao();
+      payload.matriz_comparacao = [];
+    }
+    var done =
+      cfg && global.SLTConfigApi
         ? global.SLTConfigApi.atualizar(cfg.tipo, cfg.codigo, payload)
         : Promise.resolve();
-      return done.then(function () {
-        if (mudou) {
-          global.alert(
-            "Os critérios foram alterados. A comparação pareada foi reiniciada — refaça as Etapas 4 e 5."
+    return done.then(function () {
+      if (mudou) {
+        global.alert(
+          "Os critérios foram alterados. A comparação pareada foi reiniciada — refaça as Etapas 4 e 5."
+        );
+      }
+      return criteriaSignature(rows);
+    });
+  }
+
+  function makeSaveHandler(cfg, fileName, baselineSignature) {
+    return function (rows) {
+      var runSave = function () {
+        return executeSave(rows, cfg, fileName, baselineSignature).then(function (nextSig) {
+          baselineSignature = nextSig;
+          global.__step3MatrizBaseline = nextSig;
+        });
+      };
+
+      if (!global.SLTAhpCoerencia || !global.SLTAhpCoerenciaUI) {
+        return runSave();
+      }
+
+      return global.SLTAhpCoerencia.validateMatriz(rows)
+        .then(function (res) {
+          return global.SLTAhpCoerenciaUI.confirmarSeNecessario(
+            res,
+            {
+              etapa: "Etapa 3",
+              titulo: "Divergências na matriz de premissas",
+              intro:
+                "Alguns critérios ou premissas divergem do catálogo PLI-SP ou das dimensões da configuração. Revise ou prossiga mesmo assim.",
+            },
+            runSave
           );
-        }
-        // Nova linha de base após salvar com sucesso.
-        baselineSignature = criteriaSignature(rows);
-      });
+        })
+        .catch(function (err) {
+          if (err && err.code === "COERENCIA_CANCELADA") {
+            return Promise.reject(
+              new Error("Salvamento cancelado. Revise os avisos e tente novamente.")
+            );
+          }
+          return Promise.reject(err);
+        });
     };
   }
 
+  function emptyMatrizRow() {
+    return {
+      dimensao: "",
+      criterio: "",
+      premissa: "",
+      relacao: "",
+      metricas: "",
+      fonte: "",
+      mandatorio: "",
+    };
+  }
+
+  function getExpectedCriteriaCount() {
+    var count = parseInt(localStorage.getItem("ahp_criteriaCount") || "0", 10);
+    if (count > 0) return count;
+    try {
+      var nomes = JSON.parse(localStorage.getItem("ahp_criteria") || "[]");
+      return Array.isArray(nomes) ? nomes.length : 0;
+    } catch (_e) {
+      return 0;
+    }
+  }
+
+  function getCriteriaNamesFromPageOrStorage() {
+    var count = getExpectedCriteriaCount();
+    var names = [];
+    var i;
+    for (i = 1; i <= count; i++) {
+      var inp = document.getElementById("criteria" + i);
+      names.push(inp ? inp.value.trim() : "");
+    }
+    if (names.some(function (n) {
+      return n;
+    })) {
+      return names;
+    }
+    try {
+      var stored = JSON.parse(localStorage.getItem("ahp_criteria") || "[]");
+      if (Array.isArray(stored)) {
+        while (stored.length < count) stored.push("");
+        return stored.slice(0, count);
+      }
+    } catch (_e2) {
+      /* ignore */
+    }
+    while (names.length < count) names.push("");
+    return names;
+  }
+
+  function seedFromManualCriteria(rows) {
+    var inputMethod = localStorage.getItem("ahp_inputMethod") || "manual";
+    if (inputMethod === "upload_matriz") {
+      return rows && rows.length ? rows : [];
+    }
+
+    var expected = getExpectedCriteriaCount();
+    var names = getCriteriaNamesFromPageOrStorage();
+    rows = (rows && rows.slice()) || [];
+
+    if (!expected && !rows.length && !names.some(function (n) {
+      return n;
+    })) {
+      return rows;
+    }
+
+    var target = expected || Math.max(rows.length, names.length) || 1;
+
+    while (rows.length < target) {
+      rows.push(emptyMatrizRow());
+    }
+    if (expected > 0 && rows.length > expected) {
+      rows = rows.slice(0, expected);
+    }
+
+    for (var i = 0; i < target; i++) {
+      if (names[i]) {
+        rows[i].criterio = names[i];
+      }
+    }
+
+    return rows;
+  }
+
   function renderEditor(panel, rows, fileName, cfg) {
+    rows = seedFromManualCriteria(rows);
+    var baseline = criteriaSignature(rows);
+    global.__step3MatrizBaseline = baseline;
+    global.__step3MatrizSave = makeSaveHandler(cfg, fileName, baseline);
     SltMatrizPremissas.renderMatrizPremissasEditor(panel, {
       rows: rows,
       fileName: fileName,
-      onSave: makeSaveHandler(cfg, fileName, criteriaSignature(rows)),
+      onSave: global.__step3MatrizSave,
     });
   }
+
+  function boot(panel, rows, fileName, cfg) {
+    rows = seedFromManualCriteria(rows);
+    if (rows.length) syncLocalStorage(rows, fileName);
+    renderEditor(panel, rows, fileName, cfg);
+    syncNamesFromInputs();
+  }
+
+  function syncNamesFromInputs() {
+    var panel = document.getElementById("matriz-premissas-panel");
+    if (!panel || !global.SltMatrizPremissas) return;
+    var names = getCriteriaNamesFromPageOrStorage();
+    SltMatrizPremissas.syncCriterioFromNames(panel, names);
+  }
+
+  function onCriteriaInputsReady() {
+    syncNamesFromInputs();
+  }
+
+  global.SLTStep3Matriz = {
+    syncNamesFromInputs: syncNamesFromInputs,
+    onCriteriaInputsReady: onCriteriaInputsReady,
+    renderEditor: renderEditor,
+    getConfigAtual: getConfigAtual,
+    executeSave: executeSave,
+    criteriaSignature: criteriaSignature,
+  };
 
   document.addEventListener("DOMContentLoaded", function () {
     var panel = document.getElementById("matriz-premissas-panel");
@@ -94,24 +238,14 @@
           var rows = (config && config.criterios) || [];
           var fileName = (config && config.arquivo_nome) || localFile;
           if (!rows.length) rows = localRows;
-          if (rows.length) {
-            syncLocalStorage(rows, fileName);
-          }
-          renderEditor(panel, rows, fileName, cfg);
+          boot(panel, rows, fileName, cfg);
         })
         .catch(function () {
-          renderEditor(panel, localRows, localFile, cfg);
+          boot(panel, localRows, localFile, cfg);
         });
       return;
     }
 
-    renderEditor(panel, localRows, localFile, cfg);
+    boot(panel, localRows, localFile, cfg);
   });
-
-  function selectMethod(method) {
-    localStorage.setItem("ahp_chosenMethod", method);
-    window.location.href = "step5-comparacao.html";
-  }
-
-  global.selectMethod = selectMethod;
 })(window);

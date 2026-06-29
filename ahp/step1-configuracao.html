@@ -7,6 +7,10 @@
   <link rel="stylesheet" href="../assets/css/app.css">
   <link rel="stylesheet" href="../assets/css/ahp-module.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="js/ahp-page-reset.js"></script>
+  <script src="../assets/js/admin-auth.js"></script>
+  <script src="js/ahp-auth.js"></script>
+  <script src="js/ahp-texto-pt.js"></script>
 </head>
 <body class="ahp-module-page">
   <header class="app-header">
@@ -19,36 +23,42 @@
     </div>
   </header>
 
-  <main class="app-main ahp-main">
-            <div class="ahp-progress card"><div class="ahp-progress-bar"><a href="step1-configuracao.html" class="ahp-progress-step active"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="step2-criterios.html" class="ahp-progress-step"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="step3-nomes.html" class="ahp-progress-step"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="step4-metodo.html" class="ahp-progress-step"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="step5-comparacao.html" class="ahp-progress-step"><div class="ahp-progress-circle">5</div><span>Comparação</span></a><a href="step6-resultados.html" class="ahp-progress-step"><div class="ahp-progress-circle">6</div><span>Resultados</span></a></div></div>
+  
+  <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+<main class="app-main ahp-main">
+            <nav class="ahp-phase-nav card" aria-label="Fases do módulo">
+              <a href="step1-configuracao.html" class="ahp-phase active"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e obtenção dos objetos</span></a>
+              <a href="step2-criterios.html" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Critérios e matriz de comparação</span></a>
+              <a href="step6-resultados.html" class="ahp-phase"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Resultados e pesos</span></a>
+            </nav>
+            <div class="ahp-progress card"><div class="ahp-progress-bar"><a href="step1-configuracao.html" class="ahp-progress-step active"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="step2-criterios.html" class="ahp-progress-step"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="step3-nomes.html" class="ahp-progress-step"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="step4-metodo.html" class="ahp-progress-step"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="step5-comparacao.html" class="ahp-progress-step"><div class="ahp-progress-circle">5</div><span>Comparação pareada</span></a><a href="step6-resultados.html" class="ahp-progress-step"><div class="ahp-progress-circle">6</div><span>Geração de pesos</span></a></div></div>
 
-    <section class="card">
+    <section class="card ahp-step-intro">
       <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
-        <a href="home.html">Configuração da Análise Multicritério</a>
+        <a href="index.html">Início</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-        <a href="index.html">Calculadora AHP</a>
-        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-        <span class="ahp-breadcrumb-current">Etapa 1: Configuração</span>
+        <span class="ahp-breadcrumb-current">Etapa 1: Cadastro e Obtenção dos Objetos</span>
       </nav>
-      <h1 class="ahp-page-title">
-        <i class="fas fa-code-branch" aria-hidden="true"></i>
-        Vamos começar a configuração
-      </h1>
-      <p class="ahp-page-desc">
-        Esta é a porta de entrada da calculadora. Primeiro escolha o destino da análise (avulsa ou
-        portfólio); no portfólio, defina o universo de demandas. Em seguida, defina o escopo da
-        análise. Nas próximas etapas, você estrutura os critérios e faz as comparações pareadas
-        (método AHP/Saaty) para obter os pesos.
-      </p>
-      <p class="ahp-info-note">
-        <i class="fas fa-info-circle" aria-hidden="true"></i>
+      <h1 class="ahp-page-title"><i class="fas fa-code-branch app-template-title-icon" aria-hidden="true"></i>Etapa 1: Cadastro e Obtenção do Conjunto de Objetos de Análise</h1>
+      <p class="ahp-info-note card">
+        <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
         <span>
-          Lembre-se: este módulo faz a <strong>comparação pareada de critérios</strong> (AHP), não a
-          hierarquização. No modo <strong>portfólio</strong>, você apenas define o nível de demanda
-          (plano, programa ou projeto) e refina o universo que depois será hierarquizado no módulo
-          seguinte. O fluxo de cálculo AHP é o mesmo nos dois modos.
+          As escolhas feitas aqui são combinadas pelo sistema para gerar automaticamente três versões
+          de <strong>título</strong>, <strong>objetivo</strong> e <strong>descrição</strong>, que você
+          pode revisar e editar livremente antes de confirmar. A configuração resultante fica salva e
+          é reutilizada nas próximas fases da calculadora, preservando a coerência entre o que foi
+          definido e os pesos calculados — o que torna a análise <strong>rastreável e auditável</strong>
+          de ponta a ponta. Nenhum dado é ponderado nesta etapa: aqui você apenas delimita o objeto de
+          estudo.
         </span>
       </p>
+    </section>
+
+    <section class="card ahp-step-section">
+      <div class="ahp-section-label"><i class="fas fa-compass app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Contexto da Etapa</span></div>
+      <div class="ahp-section-body">
+        <section class="ahp-section info-card"><div class="ahp-info-card-header"><i class="fas fa-info-circle"></i><h2>Sobre esta Etapa: Cadastro e Obtenção dos Objetos</h2></div><div class="info-card-content"><p>Nesta etapa, você <strong>define o destino da análise</strong> e monta o <strong>conjunto de objetos</strong> que será avaliado ao longo de toda a calculadora AHP. A configuração é organizada em duas seções complementares, descritas abaixo.</p><div class="ahp-info-highlights"><div class="ahp-info-item"><i class="fas fa-diagram-project"></i><div><strong>Destino da análise</strong><p>Antes de tudo, escolha entre análise <strong>avulsa</strong> (estudo exploratório, sem vínculo com dados reais) e <strong>portfólio SLT</strong> (demandas cadastradas: plano, programa ou projeto). O destino define a origem do objeto comparado e determina se a seção de universo será habilitada.</p></div></div><div class="ahp-info-item"><i class="fas fa-bullseye"></i><div><strong>Seção «Definição do escopo da análise»</strong><p>Estrutura a identidade da análise: o objeto, o título (formado por fenômeno, área do conhecimento e tema), o objetivo (verbo de ação) e a descrição. Para cada elemento o sistema redige automaticamente três versões, que você escolhe, edita e confirma — podendo ainda organizar os critérios em dimensões.</p></div></div><div class="ahp-info-item"><i class="fas fa-folder-tree"></i><div><strong>Seção «Universo da análise»</strong><p>Disponível no modo portfólio, é onde você delimita o conjunto de demandas a avaliar por meio de <strong>grupos de condições</strong>: um registro entra quando satisfaz <strong>todas</strong> as condições de <strong>pelo menos um</strong> grupo (E dentro do grupo, OU entre grupos). O total elegível é recalculado em tempo real até você confirmar o universo.</p></div></div></div></div></section>
+      </div>
     </section>
 
     <form id="form-tipo-analise" novalidate>
@@ -64,7 +74,7 @@
 
         <div class="ahp-subcard">
           <div class="ahp-subsection-title">
-            <i class="fas fa-sliders" aria-hidden="true"></i>
+            <span class="ahp-subsection-num">1</span>
             <span>Destino e objeto da análise</span>
           </div>
           <p class="ahp-page-desc ahp-help-text">
@@ -120,7 +130,7 @@
 
         <div class="ahp-subcard ahp-escopo-fields">
           <div class="ahp-subsection-title">
-            <i class="fas fa-pen-fancy" aria-hidden="true"></i>
+            <span class="ahp-subsection-num">2</span>
             <span>Escopo da análise</span>
           </div>
           <p class="ahp-page-desc ahp-help-text">
@@ -181,7 +191,7 @@
 
         <div class="ahp-subcard ahp-escopo-fields">
           <div class="ahp-subsection-title">
-            <i class="fas fa-bullseye" aria-hidden="true"></i>
+            <span class="ahp-subsection-num">3</span>
             <span>Objetivo</span>
           </div>
           <p class="ahp-page-desc ahp-help-text">
@@ -212,7 +222,7 @@
 
         <div class="ahp-subcard ahp-escopo-fields">
           <div class="ahp-subsection-title">
-            <i class="fas fa-align-left" aria-hidden="true"></i>
+            <span class="ahp-subsection-num">4</span>
             <span>Descrição</span>
           </div>
           <p class="ahp-page-desc ahp-help-text">
@@ -262,13 +272,12 @@
         </div>
         <p class="ahp-info-note card">
           <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
-          <span>Monte o conjunto de <strong class="universo-obj-ref">objetos</strong> que será
-          hierarquizado no próximo módulo usando <strong>grupos de condições</strong>. Um registro
-          entra no universo quando atende a <strong>qualquer um dos grupos</strong>; dentro de cada
-          grupo, ele precisa satisfazer <strong>todas as condições</strong>. Assim você expressa
-          combinações como «(A e B) ou C» sem ambiguidade. Os registros que atendem aparecem em
-          tempo real no resumo; ao concluir, clique em
-          <strong>Confirmar universo de análise</strong>.</span>
+          <span>O objeto escolhido no escopo delimita este universo: <strong class="universo-obj-ref">objetos</strong>
+          de tipos diferentes (plano, programa e projeto) nunca são misturados na mesma análise.
+          Deixe um grupo <strong>sem condições</strong> para abranger todos os registros elegíveis, ou
+          combine vários grupos para recortes mais específicos. O conjunto que você
+          <strong>confirmar</strong> aqui é exatamente o que será levado, sem alterações, para a
+          hierarquização no módulo seguinte.</span>
         </p>
         <p class="ahp-universo-objeto" id="universo-objeto-sel">
           Tipo de demanda/objeto selecionado: <strong id="universo-objeto-valor">—</strong>
@@ -276,7 +285,7 @@
 
         <div class="ahp-subcard">
           <div class="ahp-subsection-title">
-            <i class="fas fa-filter" aria-hidden="true"></i>
+            <span class="ahp-subsection-num">5</span>
             <span>Filtros do universo</span>
           </div>
           <p class="ahp-page-desc ahp-help-text">
@@ -292,7 +301,7 @@
 
         <div class="ahp-subcard">
           <div class="ahp-subsection-title">
-            <i class="fas fa-table" aria-hidden="true"></i>
+            <span class="ahp-subsection-num">6</span>
             <span>Resumo</span>
           </div>
           <div id="portfolio-preview" class="ahp-universo-preview" role="status" aria-live="polite">
@@ -302,6 +311,19 @@
           <div id="amostra-resumo" class="ahp-resumo-wrap"></div>
           <div id="amostra-acoes" class="ahp-universo-acoes"></div>
         </div>
+      </section>
+
+      <section class="card ahp-step-section" id="conferencia-artefato-section">
+        <div class="ahp-section-label">
+          <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+          <span>Conferência de artefato</span>
+        </div>
+        <p class="step-intro">
+          Revise abaixo todos os campos que serão enviados ao servidor e gravados no banco de dados
+          ao clicar em <strong>Continuar</strong>. Os valores são atualizados conforme você preenche
+          a página, na mesma ordem das seções acima.
+        </p>
+        <div id="conferencia-artefato-body" class="ahp-conferencia-artefato" aria-live="polite"></div>
       </section>
 
       <div class="ahp-form-actions">

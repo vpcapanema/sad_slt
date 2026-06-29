@@ -85,6 +85,11 @@
     comparar: "Comparar",
     classificar: "Classificar",
     selecionar: "Selecionar",
+    priorizar: "Priorizar",
+    ranquear: "Ranquear",
+    rankear: "Ranquear",
+    hierarquizar: "Hierarquizar",
+    ordenar: "Ordenar",
   };
   function perspectivaDoVerbo() {
     const v = (acaoCombo ? acaoCombo.get() : "").trim().toLowerCase();
@@ -112,6 +117,28 @@
     if (xs.length === 0) return "";
     if (xs.length === 1) return xs[0];
     return xs.slice(0, -1).join(", ") + " e " + xs[xs.length - 1];
+  }
+
+  function textoPt() {
+    return window.SLTAhpTextoPt || null;
+  }
+
+  function polirTitulo(s) {
+    const T = textoPt();
+    return T ? T.normalizarTitulo(s) : String(s || "").trim().replace(/[.!?]+$/, "");
+  }
+
+  function polirParagrafo(s) {
+    const T = textoPt();
+    if (T) return T.normalizarParagrafo(s);
+    const t = String(s || "").trim();
+    if (!t) return "";
+    return /[.!?]$/.test(t) ? t : t + ".";
+  }
+
+  function polirCampo(s) {
+    const T = textoPt();
+    return T ? T.normalizarCampo(s) : String(s || "").trim();
   }
 
   // Reescrita do verbo para uma forma de objetivo (verbo + complemento).
@@ -283,7 +310,11 @@
     if (obj) v3 += (v3 ? " de " : "") + obj;
     if (area) v3 += (v3 ? " no campo de " : "") + area;
 
-    return [ucFirst(v1.trim()), ucFirst(v2.trim()), ucFirst(v3.trim())];
+    return [
+      polirTitulo(ucFirst(v1.trim())),
+      polirTitulo(ucFirst(v2.trim())),
+      polirTitulo(ucFirst(v3.trim())),
+    ];
   }
 
   // Objetivo: [Ação+objeto] de [domínio] ... comparação pareada de critérios.
@@ -310,16 +341,16 @@
     v1 += ", obtida por meio da comparação pareada de " + BASE_JULGAMENTO + ".";
 
     let v2 = frag + dom;
-    if (construto) v2 += " segundo " + aCs + " " + construto;
+    if (construto) v2 += " à luz " + aC + " " + construto;
     if (recorte) v2 += " " + ar + " " + recorte;
-    v2 += ", mediante comparação pareada de critérios.";
+    v2 += ", mediante a comparação pareada entre critérios.";
 
     let v3 = frag + dom;
     if (construto) v3 += ", considerando " + aCs + " " + construto;
     if (recorte) v3 += " " + ar + " " + recorte;
-    v3 += ", por meio de comparação pareada de um conjunto de critérios.";
+    v3 += ", por meio da comparação pareada de um conjunto de critérios.";
 
-    return [v1, v2, v3];
+    return [polirParagrafo(v1), polirParagrafo(v2), polirParagrafo(v3)];
   }
 
   // Descrição: [Perspectiva-inf] [objeto] de [domínio] ... dimensões ... propósito.
@@ -345,7 +376,7 @@
     if (construto) v1 += " sob o escopo " + aC + " " + construto;
     if (recorte) v1 += " " + ar + " " + recorte;
     v1 += ", considerando sua aderência a um conjunto de critérios";
-    if (dims) v1 += ", cujos critérios podem abranger dimensões " + dims;
+    if (dims) v1 += ", cujos critérios podem abranger as dimensões " + dims;
     if (fin) v1 += ", com o propósito de " + fin;
     v1 += ".";
 
@@ -353,19 +384,19 @@
     if (construto) v2 += " a partir " + aC + " " + construto;
     if (recorte) v2 += " " + ar + " " + recorte;
     v2 += ", com base em um conjunto de critérios";
-    if (dims) v2 += " das dimensões " + dims;
+    if (dims) v2 += " abrangendo as dimensões " + dims;
     if (fin) v2 += ", visando " + fin;
     v2 += ".";
 
     let v3 = persp + " " + objeto + dom;
     if (construto) v3 += ", examinando " + aCs + " " + construto;
     if (recorte) v3 += " " + ar + " " + recorte;
-    v3 += " por meio de critérios";
-    if (dims) v3 += " que abrangem dimensões " + dims;
+    v3 += " por meio dos critérios";
+    if (dims) v3 += " que abrangem as dimensões " + dims;
     if (fin) v3 += ", a fim de " + fin;
     v3 += ".";
 
-    return [v1, v2, v3];
+    return [polirParagrafo(v1), polirParagrafo(v2), polirParagrafo(v3)];
   }
 
   const state = {
@@ -407,10 +438,14 @@
       saveDraft();
     }
 
+    function polirSugestao(texto) {
+      return opts.chave === "escopo" ? polirTitulo(texto) : polirParagrafo(texto);
+    }
+
     function regenerar() {
       const novos = opts.gerar();
       for (let i = 0; i < 3; i++) {
-        if (!st.editados[i]) st.textos[i] = novos[i] || "";
+        if (!st.editados[i]) st.textos[i] = polirSugestao(novos[i] || "");
       }
       // Cascata: se o texto selecionado mudou em relação ao confirmado, a
       // confirmação deixa de valer (e destrava as etapas seguintes).
@@ -454,7 +489,7 @@
     }
 
     function salvarEdicao(i) {
-      if (textareaEdicao) st.textos[i] = textareaEdicao.value.trim();
+      if (textareaEdicao) st.textos[i] = polirSugestao(textareaEdicao.value);
       st.editados[i] = true;
       editando[i] = false;
       // Editar invalida a confirmação anterior — exige reconfirmar.
@@ -469,7 +504,8 @@
 
     function confirmar() {
       if (st.sel < 0) return;
-      st.confirmado = st.textos[st.sel];
+      st.confirmado = polirSugestao(st.textos[st.sel]);
+      st.textos[st.sel] = st.confirmado;
       opts.aoConfirmar(st.confirmado);
       persistirEstado();
       render();
@@ -642,6 +678,237 @@
     });
   }
 
+  function condicaoPreenchida(c) {
+    return !!c.campo && (!!c.valor || !!c.de || !!c.ate);
+  }
+
+  function buildSubconjuntoPayload() {
+    const codigo = tipoDemandaCodigo();
+    if (!codigo) return null;
+    const grupos = state.grupos
+      .map(function (g) {
+        return { condicoes: (g.condicoes || []).filter(condicaoPreenchida) };
+      })
+      .filter(function (g) {
+        return g.condicoes.length > 0;
+      });
+    return {
+      tipo_demanda: codigo,
+      modo: "dnf",
+      grupos: grupos,
+    };
+  }
+
+  function buildCreatePayload() {
+    const tipo = tipoSelecionado();
+    const payload = {
+      tipo: tipo,
+      nome: polirTitulo(nomeInput.value) || null,
+      area_conhecimento: polirCampo(areaCombo ? areaCombo.get() : "") || null,
+      tema: polirCampo(temaCombo ? temaCombo.get() : "") || null,
+      fenomeno: polirCampo(fenomenoCombo ? fenomenoCombo.get() : "") || null,
+      descricao: polirParagrafo(descInput.value) || null,
+      objetivo: polirParagrafo(objInput ? objInput.value : "") || null,
+      configuracao_completa: {
+        incluir_dimensoes: state.incluirDim || null,
+        dimensoes: state.dimensoes.slice(),
+      },
+    };
+
+    if (tipo === "portfolio") {
+      payload.tipo_demanda = tipoDemandaCodigo();
+      payload.subconjunto = buildSubconjuntoPayload();
+      payload.universo_objetos = state.universoConfirmado ? state.universoObjetos.slice() : null;
+    }
+
+    return payload;
+  }
+
+  function escapeConfHtml(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function formatTipoAnalise(tipo) {
+    if (tipo === "portfolio") return "Análise de portfólio SLT (portfolio)";
+    if (tipo === "avulsa") return "Análise avulsa (avulsa)";
+    return null;
+  }
+
+  function formatTipoDemanda(codigo) {
+    if (!codigo) return null;
+    const found = state.tiposDemanda.find(function (t) {
+      return t.codigo === codigo;
+    });
+    return found ? found.nome + " (" + codigo + ")" : codigo;
+  }
+
+  function formatConfScalar(val) {
+    if (val === null || val === undefined || val === "") return null;
+    return String(val);
+  }
+
+  function formatConfJson(val) {
+    if (val === null || val === undefined) return null;
+    try {
+      return JSON.stringify(val, null, 2);
+    } catch (_e) {
+      return String(val);
+    }
+  }
+
+  function renderConfRow(campo, alias, valor, opts) {
+    opts = opts || {};
+    const pendente = valor === null || valor === undefined || valor === "";
+    const display = pendente ? opts.pendenteTexto || "(pendente)" : valor;
+    const isBlock =
+      opts.block || (!pendente && typeof display === "string" && display.indexOf("\n") !== -1);
+    const valueClass =
+      "ahp-conf-value" + (pendente ? " is-pending" : "") + (isBlock ? " ahp-conf-value--block" : "");
+    const valueHtml = isBlock
+      ? '<dd class="ahp-conf-value-wrap"><pre class="' +
+        valueClass +
+        '">' +
+        escapeConfHtml(display) +
+        "</pre></dd>"
+      : '<dd class="' + valueClass + '">' + escapeConfHtml(display) + "</dd>";
+    return (
+      '<div class="ahp-conf-item">' +
+      '<dt class="ahp-conf-label">' +
+      '<span class="ahp-conf-field-key">' +
+      escapeConfHtml(campo) +
+      "</span>" +
+      '<strong class="ahp-conf-field-name">' +
+      escapeConfHtml(alias) +
+      "</strong>" +
+      "</dt>" +
+      valueHtml +
+      "</div>"
+    );
+  }
+
+  function renderConferenciaGrupo(titulo, rowsHtml) {
+    if (!rowsHtml) return "";
+    return (
+      '<div class="ahp-conf-group">' +
+      '<h3 class="ahp-conf-group-title">' +
+      escapeConfHtml(titulo) +
+      "</h3>" +
+      '<dl class="ahp-conf-list">' +
+      rowsHtml +
+      "</dl></div>"
+    );
+  }
+
+  function renderConferenciaArtefato() {
+    const host = document.getElementById("conferencia-artefato-body");
+    if (!host) return;
+
+    const payload = buildCreatePayload();
+    const tipo = payload.tipo;
+    let html = "";
+
+    html += renderConferenciaGrupo(
+      "1 — Destino e objeto da análise",
+      renderConfRow("tipo", "Destino da análise", formatTipoAnalise(tipo)) +
+        (tipo === "portfolio"
+          ? renderConfRow(
+              "tipo_demanda",
+              "Objeto da análise (tipo de demanda)",
+              formatTipoDemanda(payload.tipo_demanda)
+            )
+          : "")
+    );
+
+    html += renderConferenciaGrupo(
+      "2 — Escopo da análise",
+      renderConfRow("fenomeno", "Fenômeno", formatConfScalar(payload.fenomeno)) +
+        renderConfRow("area_conhecimento", "Área do conhecimento", formatConfScalar(payload.area_conhecimento)) +
+        renderConfRow("tema", "Tema", formatConfScalar(payload.tema)) +
+        renderConfRow("nome", "Título confirmado", formatConfScalar(payload.nome), {
+          pendenteTexto: "(confirme o escopo nas sugestões)",
+        })
+    );
+
+    html += renderConferenciaGrupo(
+      "3 — Objetivo",
+      renderConfRow("objetivo", "Objetivo confirmado", formatConfScalar(payload.objetivo), {
+        pendenteTexto: "(confirme o objetivo nas sugestões)",
+      })
+    );
+
+    const incluirDim =
+      payload.configuracao_completa.incluir_dimensoes === "sim"
+        ? "Sim"
+        : payload.configuracao_completa.incluir_dimensoes === "nao"
+          ? "Não"
+          : null;
+    const dims =
+      payload.configuracao_completa.incluir_dimensoes === "sim" && payload.configuracao_completa.dimensoes.length
+        ? payload.configuracao_completa.dimensoes.join(", ")
+        : payload.configuracao_completa.incluir_dimensoes === "nao"
+          ? "—"
+          : null;
+
+    html += renderConferenciaGrupo(
+      "4 — Descrição",
+      renderConfRow(
+        "configuracao_completa.incluir_dimensoes",
+        "Incluir dimensões dos critérios",
+        incluirDim
+      ) +
+        (payload.configuracao_completa.incluir_dimensoes === "sim"
+          ? renderConfRow(
+              "configuracao_completa.dimensoes",
+              "Dimensões selecionadas",
+              dims,
+              { pendenteTexto: "(confirme a lista de dimensões)" }
+            )
+          : "") +
+        renderConfRow("descricao", "Descrição confirmada", formatConfScalar(payload.descricao), {
+          pendenteTexto: "(confirme a descrição nas sugestões)",
+        })
+    );
+
+    if (tipo === "portfolio") {
+      const subPayload = payload.subconjunto || buildSubconjuntoPayload();
+      const subText =
+        subPayload && subPayload.grupos && subPayload.grupos.length
+          ? formatConfJson(subPayload)
+          : formatConfJson(subPayload) +
+            "\n\n(sem filtros — todos os registros elegíveis do tipo selecionado)";
+      html += renderConferenciaGrupo(
+        "5 — Universo da análise · Filtros",
+        renderConfRow("subconjunto", "Recorte do universo (JSON)", subText, { block: true })
+      );
+
+      const universoVal = payload.universo_objetos
+        ? payload.universo_objetos.length +
+          " objeto(s)\n\n" +
+          formatConfJson(payload.universo_objetos)
+        : null;
+      html += renderConferenciaGrupo(
+        "6 — Universo da análise · Conjunto confirmado",
+        renderConfRow("universo_objetos", "Snapshot dos objetos", universoVal, {
+          block: true,
+          pendenteTexto: "(confirme o universo no resumo)",
+        })
+      );
+    }
+
+    html += renderConferenciaGrupo(
+      "Metadados gerados pelo sistema",
+      renderConfRow("codigo", "Código da configuração", "(gerado automaticamente ao salvar)") +
+        renderConfRow("status", "Status inicial", "rascunho") +
+        renderConfRow("metodo_entrada", "Método de entrada", "manual") +
+        renderConfRow("criado_por", "Autor (sessão ativa)", "(usuário logado — UUID da sessão)")
+    );
+
+    host.innerHTML = html || '<p class="ahp-conf-empty">Preencha o formulário para visualizar o artefato.</p>';
+  }
+
   function saveDraft() {
     const draft = {
       nome: nomeInput.value,
@@ -669,6 +936,7 @@
     } catch (e) {
       /* ignore */
     }
+    renderConferenciaArtefato();
   }
 
   function loadDraft() {
@@ -1519,54 +1787,32 @@
       alert("Selecione o tipo de análise para continuar.");
       return;
     }
-    const nome = nomeInput.value.trim();
-    if (!nome) {
+
+    const payload = buildCreatePayload();
+
+    if (!payload.nome) {
       alert("Confirme o escopo (título) nas Sugestões antes de continuar.");
       if (areaCombo) areaCombo.focus();
       return;
     }
 
-    const payload = {
-      tipo: tipo,
-      nome: nome,
-      area_conhecimento: (areaCombo ? areaCombo.get() : "") || null,
-      tema: (temaCombo ? temaCombo.get() : "") || null,
-      fenomeno: (fenomenoCombo ? fenomenoCombo.get() : "") || null,
-      descricao: descInput.value.trim() || null,
-      objetivo: (objInput ? objInput.value.trim() : "") || null,
-    };
+    if (nomeInput) nomeInput.value = payload.nome;
+    if (objInput && payload.objetivo) objInput.value = payload.objetivo;
+    if (descInput && payload.descricao) descInput.value = payload.descricao;
 
-    if (tipo === "portfolio") {
-      const codigo = tipoDemandaCodigo();
-      if (!codigo) {
+    if (payload.tipo === "portfolio") {
+      if (!payload.tipo_demanda) {
         alert("Selecione o tipo de demanda do portfólio.");
         tipoDemandaSel.focus();
         return;
       }
-      payload.tipo_demanda = codigo;
 
-      if (!state.universoConfirmado || state.universoObjetos.length === 0) {
+      if (!state.universoConfirmado || !payload.universo_objetos || payload.universo_objetos.length === 0) {
         alert(
           "Confirme o universo da análise (botão «Confirmar universo de análise» no Resumo) antes de continuar."
         );
         return;
       }
-
-      // Condição preenchida: texto (valor) ou data (período de/até).
-      const preenchida = (c) => !!c.campo && (!!c.valor || !!c.de || !!c.ate);
-      // Serializa só os grupos/condições efetivamente preenchidos (DNF).
-      const grupos = state.grupos
-        .map((g) => ({ condicoes: (g.condicoes || []).filter(preenchida) }))
-        .filter((g) => g.condicoes.length > 0);
-
-      // Recorte do universo gravado como JSON único (configuração dos campos).
-      payload.subconjunto = {
-        tipo_demanda: codigo,
-        modo: "dnf", // grupos combinados por OU; condições internas por E
-        grupos: grupos,
-      };
-      // Snapshot congelado do conjunto confirmado (alvo da hierarquização).
-      payload.universo_objetos = state.universoObjetos;
     }
 
     const submitBtn = form.querySelector('button[type="submit"]');
@@ -1580,7 +1826,11 @@
         JSON.stringify({ tipo: created.tipo, codigo: created.codigo })
       );
       saveDraft();
-      window.location.href = "step2-criterios.html";
+      if (window.SLTAhpNav && window.SLTAhpNav.irPara) {
+        window.SLTAhpNav.irPara("step2-criterios.html");
+      } else {
+        window.location.href = "step2-criterios.html";
+      }
     } catch (err) {
       alert("Não foi possível criar a configuração: " + (err && err.message ? err.message : err));
       if (submitBtn) submitBtn.disabled = false;
@@ -1636,11 +1886,11 @@
     });
 
     await Promise.all([carregarDominios(), carregarFontesPortfolio()]);
-    await prefill();
     sugEscopo.regenerar();
     sugObjetivo.regenerar();
     sugDescricao.regenerar();
     refreshGates();
+    renderConferenciaArtefato();
     if (window.SLTFieldFilled) window.SLTFieldFilled.syncAll(document);
   })();
 })();

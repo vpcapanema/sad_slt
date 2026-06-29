@@ -29,6 +29,7 @@ class ConfigCreateSchema(BaseModel):
     subconjunto: dict[str, Any] | None = None
     # Snapshot do conjunto confirmado de objetos: [{id, codigo, nome, tipo_demanda}].
     universo_objetos: list[dict[str, Any]] | None = None
+    configuracao_completa: dict[str, Any] | None = None
 
 
 class ConfigUpdateSchema(BaseModel):

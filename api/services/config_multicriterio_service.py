@@ -182,6 +182,8 @@ def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) 
             "de": STATUS_POS_APROVACAO,
             "para": STATUS_EM_HIERARQUIZACAO,
         }
+    if payload.configuracao_completa is not None:
+        data["configuracao_completa"] = payload.configuracao_completa
     return _row_to_response(repo.insert(payload.tipo, data, status_transicao=status_transicao))
 
 

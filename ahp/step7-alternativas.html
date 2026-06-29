@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="../assets/css/app.css">
   <link rel="stylesheet" href="../assets/css/ahp-module.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="js/ahp-page-reset.js"></script>
+  <script src="../assets/js/admin-auth.js"></script>
+  <script src="js/ahp-auth.js"></script>
   <script src="js/ahp-core.js"></script>
   <script src="js/analise-api.js"></script>
 </head>
@@ -21,7 +24,14 @@
     </div>
   </header>
 
-  <main class="app-main ahp-main">
+  
+  <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+<main class="app-main ahp-main">
+            <nav class="ahp-phase-nav card" aria-label="Fases do módulo">
+              <a href="step1-configuracao.html" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e obtenção dos objetos</span></a>
+              <a href="step2-criterios.html" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Critérios e matriz de comparação</span></a>
+              <a href="step6-resultados.html" class="ahp-phase active"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Resultados e pesos</span></a>
+            </nav>
     <section class="card ahp-step-intro">
       <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
         <a href="index.html">Início</a>
@@ -34,17 +44,15 @@
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
         <a href="step4-metodo.html">Etapa 4: Método</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-        <a href="step5-comparacao.html">Etapa 5: Comparação</a>
+        <a href="step5-comparacao.html">Etapa 5: Comparação pareada</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-        <a href="step6-resultados.html">Etapa 6: Resultados</a>
+        <a href="step6-resultados.html">Etapa 6: Geração de pesos</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
         <span class="ahp-breadcrumb-current">Etapa 7: Alternativas</span>
       </nav>
       <h1 class="ahp-page-title"><i class="fas fa-ranking-star app-template-title-icon" aria-hidden="true"></i>Etapa 6: Priorização das Alternativas</h1>
-      <p class="ahp-page-desc">Compare as alternativas (ou projetos do portfólio) em cada critério e obtenha o ranking final ponderado pelos pesos calculados. Modo atual: <strong id="a6-tipo-label">—</strong>.</p>
+      <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i><span>Nesta etapa final você aplica os pesos calculados para priorizar as alternativas — ou os projetos do portfólio — comparando-as em cada critério para obter o ranking ponderado. Modo atual: <strong id="a6-tipo-label">—</strong>. O score de cada alternativa é a soma, sobre todos os critérios, do peso do critério multiplicado pela prioridade local da alternativa naquele critério: score = Σ (peso do critério × prioridade local). O resultado conclui o método AHP e entrega a ordenação final que apoia a tomada de decisão.</span></p>
     </section>
-
-    <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>Esta etapa conclui o método AHP: score(alternativa) = Σ (peso do critério × prioridade local da alternativa naquele critério).</p>
 
     <section class="card ahp-step-section">
       <div class="ahp-section-label"><i class="fas fa-percent app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Pesos dos Critérios (Etapas 1–4)</span></div>

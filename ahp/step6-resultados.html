@@ -3,17 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Etapa 5: Resultados — AHP — SLT</title>
+  <title>Etapa 6: Geração de pesos — AHP — SLT</title>
   <link rel="stylesheet" href="../assets/css/app.css">
   <link rel="stylesheet" href="../assets/css/ahp-module.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="js/ahp-page-reset.js"></script>
+  <script src="../assets/js/admin-auth.js"></script>
+  <script src="js/ahp-auth.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="js/ahp-core.js"></script>
-  <script src="js/config-api.js"></script>
-  <script src="js/config-artefatos.js"></script>
+    <script src="js/config-api.js"></script>
+    <script src="js/config-artefatos.js"></script>
+    <script src="js/ahp-contexto-ui.js"></script>
+    <script src="js/ahp-diagnostico-consistencia.js"></script>
+    <script src="js/ahp-pacote-fase.js"></script>
 </head>
 <body class="ahp-module-page">
   <header class="app-header">
@@ -26,9 +32,15 @@
     </div>
   </header>
 
+
+  <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="app-main ahp-main">
-        
-            <div class="ahp-progress card"><div class="ahp-progress-bar"><a href="step1-configuracao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="step2-criterios.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="step3-nomes.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="step4-metodo.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="step5-comparacao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">5</div><span>Comparação</span></a><a href="step6-resultados.html" class="ahp-progress-step active"><div class="ahp-progress-circle">6</div><span>Resultados</span></a></div></div>
+            <nav class="ahp-phase-nav card" aria-label="Fases do módulo">
+              <a href="step1-configuracao.html" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e obtenção dos objetos</span></a>
+              <a href="step2-criterios.html" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Critérios e matriz de comparação</span></a>
+              <a href="step6-resultados.html" class="ahp-phase active"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Resultados e pesos</span></a>
+            </nav>
+            <div class="ahp-progress card"><div class="ahp-progress-bar"><a href="step1-configuracao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="step2-criterios.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="step3-nomes.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="step4-metodo.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="step5-comparacao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">5</div><span>Comparação pareada</span></a><a href="step6-resultados.html" class="ahp-progress-step active"><div class="ahp-progress-circle">6</div><span>Geração de pesos</span></a></div></div>
 
             <section class="card ahp-step-intro">
                 <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
@@ -42,91 +54,222 @@
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
                         <a href="step4-metodo.html">Etapa 4: Método</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <a href="step5-comparacao.html">Etapa 5: Comparação</a>
+                        <a href="step5-comparacao.html">Etapa 5: Comparação pareada</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <span class="ahp-breadcrumb-current">Etapa 6: Resultados</span>
+                        <span class="ahp-breadcrumb-current">Etapa 6: Geração de pesos</span>
                     </nav>
-                    <h1 class="ahp-page-title"><i class="fas fa-chart-column app-template-title-icon" aria-hidden="true"></i>Etapa 6: Resultados</h1>
-                    <p class="ahp-page-desc">Avalie a consistência da matriz, consulte os pesos calculados e exporte os resultados consolidados da análise AHP.</p>
+                    <h1 class="ahp-page-title"><i class="fas fa-chart-column app-template-title-icon" aria-hidden="true"></i>Etapa 6: Geração de pesos</h1>
+                    <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i><span>Carregue o <strong>contexto de análise</strong> produzido ao final da Fase 2: objetos da Fase 1, cadastro conceitual, matriz de comparação pareada salva na Etapa 5, métricas validáveis e alertas de coerência. Em seguida a etapa <strong>valida a matriz</strong>, <strong>calcula os pesos</strong> e emite o <strong>parecer</strong>.</span></p>
             </section>
 
-            <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>Esta etapa consolida a decisão multicritério e expõe os dados para conferência técnica, documentação e compartilhamento.</p>
             <section class="card ahp-step-section">
                 <div class="ahp-section-label"><i class="fas fa-compass app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Contexto da Etapa</span></div>
                 <div class="ahp-section-body">
-                    <section class="ahp-section info-card"><div class="ahp-info-card-header"><i class="fas fa-check-circle"></i><h2>Resultados da Análise AHP</h2></div><div class="info-card-content"><p>Confira abaixo a <strong>consistência das comparações</strong>, os <strong>pesos calculados</strong> para cada critério e as opções de exportação.</p><div class="ahp-info-highlights"><div class="ahp-info-item"><i class="fas fa-check-double"></i><div><strong>Razão de Consistência (RC)</strong><p>Valores abaixo de 0,10 indicam que as comparações são consistentes e confiáveis.</p></div></div><div class="ahp-info-item"><i class="fas fa-percent"></i><div><strong>Pesos dos Critérios</strong><p>Indicam a importância relativa de cada critério no processo decisório.</p></div></div><div class="ahp-info-item"><i class="fas fa-file-download"></i><div><strong>Exportar Resultados</strong><p>Salve os resultados em PDF, Excel ou CSV para documentação e compartilhamento.</p></div></div></div></div></section>
+                    <section class="ahp-section info-card"><div class="ahp-info-card-header"><i class="fas fa-check-circle"></i><h2>Resultados da Análise AHP</h2></div><div class="info-card-content"><p>A Fase 3 consome o pacote completo gerado na Fase 2. Após carregar o contexto abaixo, confira a <strong>consistência da matriz pareada</strong>, os <strong>pesos calculados</strong> e o <strong>parecer</strong> (incluindo alertas de validação lógica registrados na configuração).</p><div class="ahp-info-highlights"><div class="ahp-info-item"><i class="fas fa-check-double"></i><div><strong>Validação da matriz</strong><p>Motor AHP (RC, IC, λ<sub>max</sub>) sobre a matriz salva na Etapa 5.</p></div></div><div class="ahp-info-item"><i class="fas fa-percent"></i><div><strong>Pesos dos critérios</strong><p>Calculados a partir da matriz pareada validada.</p></div></div><div class="ahp-info-item"><i class="fas fa-clipboard-check"></i><div><strong>Parecer</strong><p>Consolida alertas de coerência conceitual confirmados na Fase 2.</p></div></div></div></div></section>
+                </div>
+            </section>
+
+            <section class="card ahp-step-section">
+                <div class="ahp-section-label"><i class="fas fa-folder-open app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Carregar contexto de análise</span></div>
+                <div class="ahp-section-body">
+                    <section class="ahp-section ahp-config-loader ahp-contexto-fase2">
+                        <p class="ahp-page-desc">Selecione a configuração salva ou importe o artefato JSON exportado ao final da Fase 2. O sistema conferirá se o pacote inclui objetos, cadastro conceitual, matriz pareada (Etapa 5), métricas e alertas de coerência.</p>
+                        <div class="ahp-method-choice">
+                            <div class="ahp-method-choice-header">
+                                <input type="radio" id="cfg-method-saved" name="cfg-source" value="saved" checked onchange="toggleConfigSource()">
+                                <label for="cfg-method-saved"><i class="fas fa-database"></i> <strong>Selecionar configuração salva (Fase 2 concluída)</strong></label>
+                            </div>
+                            <div id="cfg-saved-content" class="method-content">
+                                <div class="c-form-group">
+                                    <label for="cfg-saved-select" class="c-form-label"><i class="fas fa-list"></i> Configurações salvas</label>
+                                    <select id="cfg-saved-select" class="c-form-control" data-pacote-fase-esperado="fase_2" title="Selecione a configuração com pacote fase_2">
+                                        <option value="">Selecione a configuração…</option>
+                                    </select>
+                                    <small class="form-help" id="cfg-saved-help"><i class="fas fa-info-circle"></i> Apenas configurações com matriz pareada salva na Etapa 5 estão prontas para esta etapa.</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ahp-method-choice">
+                            <div class="ahp-method-choice-header">
+                                <input type="radio" id="cfg-method-file" name="cfg-source" value="file" onchange="toggleConfigSource()">
+                                <label for="cfg-method-file"><i class="fas fa-file-arrow-up"></i> <strong>Importar artefato da Fase 2</strong></label>
+                            </div>
+                            <div id="cfg-file-content" class="method-content method-content--hidden">
+                                <p>Envie o JSON de <strong>matriz</strong> ou <strong>pesos</strong> exportado na Fase 2 (artefato vinculado por <code>config_codigo</code>).</p>
+                                <div class="upload-area">
+                                    <label for="cfg-file-input" class="visually-hidden">Selecionar artefato JSON da Fase 2</label>
+                                    <input type="file" id="cfg-file-input" accept=".json,application/json" class="hidden-file-input" title="Artefato JSON da Fase 2" onchange="handleConfigFile(event)">
+                                    <button type="button" onclick="document.getElementById('cfg-file-input').click()" class="ahp-upload-select-btn"><i class="fas fa-folder-open"></i> Selecionar Arquivo</button>
+                                    <div id="cfg-file-info" class="file-info"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="cfg-loaded-summary" class="ahp-recommendation is-hidden"></div>
+                        <div id="ctx-fase2-checklist" class="ahp-contexto-checklist-host" aria-live="polite"></div>
+                    </section>
                 </div>
             </section>
 
             <section class="card ahp-step-section">
                 <div class="ahp-section-label"><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Saída da Análise</span></div>
                 <div class="ahp-section-body">
-                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">6</span>Resultados e Exportação</h2><div id="resultsContent"></div><div id="config-artefatos"></div><div class="ahp-form-actions"><a href="step5-comparacao.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><a href="step7-alternativas.html" class="btn btn-primary">Priorizar alternativas<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a><a href="step1-configuracao.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a></div></section>
+                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">6</span>Geração de pesos e exportação</h2><div id="resultsContent"></div><div id="config-artefatos"></div><div class="ahp-form-actions"><a href="step5-comparacao.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><a href="step7-alternativas.html" class="btn btn-primary" onclick="if(window.SLTAhpNav){event.preventDefault();window.SLTAhpNav.irPara('step7-alternativas.html');}">Priorizar alternativas<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a><a href="step1-configuracao.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a></div></section>
                 </div>
             </section>
     </main>
+    <script src="js/ahp-formato-data.js"></script>
+    <script src="js/config-loader.js"></script>
+    <script src="js/step6-contexto-loader.js"></script>
     <script src="js/script.js"></script><script>
 document.addEventListener('DOMContentLoaded',function(){
-  // Fonte da verdade = configuração no banco. O localStorage é apenas fallback.
-  if(window.SLTConfigBridge && window.SLTConfigBridge.getConfigAtual()){
-    initFromBanco();
-  }else{
-    initFromLocal();
+  var sel=document.getElementById('cfg-saved-select');
+  if(sel){
+    sel.addEventListener('change',function(){
+      setTimeout(initEtapa6,80);
+    });
   }
+  initEtapa6();
 });
 
-function initFromLocal(){
-  const criteria=JSON.parse(localStorage.getItem('ahp_criteria')||'[]');
-  const matrix=JSON.parse(localStorage.getItem('ahp_pairwiseMatrix')||'[]');
-  if(criteria.length===0||matrix.length===0){alert('Dados incompletos. Redirecionando...');window.location.href='step2-criterios.html';return;}
-  const results=calculateAHP(matrix);
-  displayResults(criteria,results,matrix);
+function getConfigAlertas(){return window.__sltConfigAlertas||[];}
+function setConfigAlertas(alertas){window.__sltConfigAlertas=Array.isArray(alertas)?alertas:[];}
+
+function renderContextoFase2(cfg){
+  if(window.SLTAhpContextoUI&&cfg)window.SLTAhpContextoUI.apply(cfg);
+  var checklist=document.getElementById('ctx-fase2-checklist');
+  var summary=document.getElementById('cfg-loaded-summary');
+  if(!window.SLTStep6Contexto||!cfg){
+    if(checklist)checklist.innerHTML='';
+    return null;
+  }
+  if(summary)window.SLTStep6Contexto.renderResumoConfig(summary,cfg);
+  var verificacao=window.SLTStep6Contexto.verificarPacoteFase2(cfg);
+  window.SLTStep6Contexto.renderChecklist(checklist,verificacao);
+  return verificacao;
 }
 
-// Calcula no servidor (persiste pesos+métricas) e renderiza a partir do banco.
-function initFromBanco(){
-  const localMatrix=JSON.parse(localStorage.getItem('ahp_pairwiseMatrix')||'[]');
+function showSelecioneConfigState(){
+  if(window.SLTAhpContextoUI)window.SLTAhpContextoUI.reset();
+  var host=document.getElementById('resultsContent');
+  var art=document.getElementById('config-artefatos');
+  var checklist=document.getElementById('ctx-fase2-checklist');
+  if(checklist)checklist.innerHTML='';
+  if(art)art.innerHTML='';
+  if(host){
+    host.className='ahp-recommendation';
+    host.innerHTML='<div class="ahp-recommendation__head"><i class="fas fa-circle-info"></i><strong>Carregue o contexto de análise.</strong></div><p>Na seção <strong>Carregar contexto de análise</strong>, selecione a configuração com o pacote completo da Fase 2 (cadastro conceitual, matriz pareada da Etapa 5 e alertas de coerência).</p>';
+  }
+}
+
+function showLoadingState(msg){
+  var host=document.getElementById('resultsContent');
+  if(!host)return;
+  host.className='ahp-recommendation';
+  host.innerHTML='<div class="ahp-recommendation__head"><i class="fas fa-spinner fa-spin"></i><strong>'+(msg||'Processando configuração…')+'</strong></div><p>Carregando matriz, validando consistência e calculando pesos.</p>';
+}
+
+function showMatrizNaoSalvaState(config){
+  var host=document.getElementById('resultsContent');
+  var art=document.getElementById('config-artefatos');
+  if(art)art.innerHTML='';
+  renderContextoFase2(config);
+  var codigo=config&&config.codigo?' ('+config.codigo+')':'';
+  if(host){
+    host.className='ahp-recommendation';
+    host.innerHTML='<div class="ahp-recommendation__head"><i class="fas fa-circle-info"></i><strong>Pacote incompleto'+codigo+'.</strong></div><p>Faltam itens obrigatórios da Fase 2. Conclua o cadastro de critérios, salve a matriz pareada na <a href="step5-comparacao.html">Etapa 5</a> (RC &lt; 0,10) e retorne aqui.</p>';
+  }
+}
+
+function showPacoteIncompletoState(config, verificacao){
+  renderContextoFase2(config);
+  var host=document.getElementById('resultsContent');
+  var art=document.getElementById('config-artefatos');
+  if(art)art.innerHTML='';
+  if(host){
+    host.className='ahp-recommendation';
+    host.innerHTML='<div class="ahp-recommendation__head"><i class="fas fa-ban"></i><strong>Não é possível calcular os pesos.</strong></div><p>A configuração não contém o pacote mínimo da Fase 2. Revise os itens em vermelho na conferência acima e complete as etapas pendentes.</p>';
+  }
+}
+
+function initEtapa6(){
+  if(!window.SLTConfigBridge||!window.SLTConfigBridge.getConfigAtual()){
+    showSelecioneConfigState();
+    return;
+  }
+  carregarEProcessarConfig();
+}
+window.initEtapa6=initEtapa6;
+
+function carregarEProcessarConfig(){
+  showLoadingState();
   window.SLTConfigBridge.obterConfig()
     .then(function(cfg){
-      if(!cfg){initFromLocal();return Promise.reject('local');}
-      // Já homologada: não recalcular (calcular rebaixaria o status). Renderiza direto.
-      if(cfg.status==='homologada' && cfg.pesos){return cfg;}
-      const temMatriz=Array.isArray(cfg.matriz_comparacao)&&cfg.matriz_comparacao.length>0;
-      // Garante a matriz no banco (se só houver no cache local) antes de calcular.
-      const ensure=temMatriz?Promise.resolve():(localMatrix.length?window.SLTConfigBridge.persistMatriz(localMatrix):Promise.resolve());
-      return ensure.then(function(){return window.SLTConfigBridge.calcular();});
+      if(!cfg)throw new Error('Configuração não encontrada no servidor.');
+      if(window.SLTPacoteFase&&!window.SLTPacoteFase.ehPacote(cfg,window.SLTPacoteFase.FASE_2)){
+        window.__sltCurrentConfig=cfg;
+        var verificacao=renderContextoFase2(cfg);
+        showPacoteIncompletoState(cfg,verificacao);
+        return null;
+      }
+      window.__sltCurrentConfig=cfg;
+      var verificacao=renderContextoFase2(cfg);
+      if(!verificacao||!verificacao.canProcess){
+        showPacoteIncompletoState(cfg,verificacao);
+        return null;
+      }
+      if(cfg.status==='homologada'&&cfg.pesos){
+        return cfg;
+      }
+      return window.SLTConfigBridge.calcular();
     })
     .then(function(config){
-      if(!config || !Array.isArray(config.matriz_comparacao) || config.matriz_comparacao.length===0){
-        initFromLocal();return null;
+      if(!config)return null;
+      var verificacao=renderContextoFase2(config);
+      if(!verificacao||!verificacao.canProcess){
+        showPacoteIncompletoState(config,verificacao);
+        return null;
       }
       renderFromConfig(config);
       return config;
     })
     .catch(function(err){
-      if(err==='local')return; // já tratado (sem config no banco)
-      console.warn('Falha ao calcular no servidor; usando dados locais.',err);
-      initFromLocal();
+      console.warn('Falha ao processar configuração na Etapa 6.',err);
+      var host=document.getElementById('resultsContent');
+      if(host){
+        host.className='ahp-recommendation';
+        host.innerHTML='<div class="ahp-recommendation__head"><i class="fas fa-circle-xmark"></i><strong>Não foi possível processar a configuração.</strong></div><p>'+(err&&err.message?err.message:String(err))+'</p>';
+      }
     });
 }
 
+function initFromLocal(){
+  if(!window.SLTConfigBridge||!window.SLTConfigBridge.getConfigAtual()){
+    showSelecioneConfigState();
+    return;
+  }
+  carregarEProcessarConfig();
+}
+
 function renderFromConfig(config){
+  window.__sltCurrentConfig=config;
   const matrix=config.matriz_comparacao;
   const criteria=(config.pesos && Array.isArray(config.pesos.criteria) && config.pesos.criteria.length)
     ? config.pesos.criteria
-    : (config.criterios||[]).map(function(c){return c.criterio;});
+    : (config.criterios||[]).map(function(c){return typeof c==='string'?c:c.criterio;});
+  const motorResults=calculateAHP(matrix);
   const results={
-    weights:(config.pesos && config.pesos.weights) ? config.pesos.weights : calculateAHP(matrix).weights,
-    lambdaMax:config.lambda_max,
-    CI:config.indice_consistencia,
-    CR:config.razao_consistencia,
-    RI:config.indice_aleatorio
+    weights:(config.pesos&&Array.isArray(config.pesos.weights)&&config.pesos.weights.length)?config.pesos.weights:motorResults.weights,
+    lambdaMax:motorResults.lambdaMax,
+    CI:motorResults.CI,
+    CR:motorResults.CR,
+    RI:motorResults.RI,
   };
   try{
     localStorage.setItem('ahp_criteria',JSON.stringify(criteria));
     localStorage.setItem('ahp_pairwiseMatrix',JSON.stringify(matrix));
   }catch(e){/* cache best-effort */}
-  displayResults(criteria,results,matrix);
+  setConfigAlertas(config.alertas_conceituais||[]);
+  displayResults(criteria,results,matrix,getConfigAlertas(),config);
   renderArtefatos(config);
 }
 
@@ -137,10 +280,10 @@ function renderArtefatos(config){
   const consistente=config.consistente===true;
   const homologada=config.status==='homologada';
   let html='';
-  html+='<div class="info-card info-card--spaced"><div class="ahp-info-card-header"><i class="fas fa-share-nodes"></i><h3>5.4 Artefatos da configuração</h3></div><div class="info-card-content">';
+  html+='<div class="info-card info-card--spaced ahp-etapa6-block"><div class="ahp-info-card-header"><i class="fas fa-share-nodes"></i><h3>6.5 Artefatos da configuração</h3></div><div class="info-card-content">';
   html+='<p style="margin-bottom:1rem;">Estes artefatos ligam-se pela <strong>configuração ('+(config.codigo||'')+')</strong> e alimentam o módulo de hierarquização. O artefato de <strong>pesos</strong> é o handoff e exige homologação.</p>';
   if(!consistente){
-    html+='<p class="ahp-info-note" style="margin-bottom:1rem;"><i class="fas fa-triangle-exclamation"></i> A análise não está consistente (RC &ge; 0,10). Revise a Etapa 4 para liberar a matriz e os pesos.</p>';
+    html+='<p class="ahp-info-note" style="margin-bottom:1rem;"><i class="fas fa-triangle-exclamation"></i> A análise não está consistente (RC &ge; 0,10). Revise a <a href="step5-comparacao.html">Etapa 5</a> para liberar a matriz e os pesos.</p>';
   }
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem;margin-bottom:1rem;">';
   html+='<button id="art-objetos" class="btn btn-secondary"><i class="fas fa-list-check"></i> Exportar objetos</button>';
@@ -174,12 +317,17 @@ function renderArtefatos(config){
     imp.addEventListener('change',function(){
       if(!imp.files||!imp.files[0])return;
       setFb('Importando…');
-      window.SLTConfigBridge.importarArquivo(imp.files[0]).then(function(){setFb('Matriz importada. Recalculando…','ok');initFromBanco();}).catch(function(e){setFb(e.message,'error');});
+      window.SLTConfigBridge.importarArquivo(imp.files[0]).then(function(){setFb('Matriz importada. Recalculando…','ok');carregarEProcessarConfig();}).catch(function(e){setFb(e.message,'error');});
     });
   }
 }
 
 function calculateAHP(matrix){return SLTAhp.analyzeMatrix(matrix);}
+
+/** Valida matriz via motor AHP (métricas; pesos locais se ainda não persistidos). */
+function validarMatrizEMetricas(matrix){
+  return calculateAHP(matrix);
+}
 
 function fmtSaaty(v){
   if(!isFinite(v)) return '—';
@@ -206,94 +354,71 @@ function findTopInconsistencies(criteria,matrix,weights,limit){
   return list.slice(0,limit||3);
 }
 
-function displayResults(criteria,results,matrix){
+function displayResults(criteria,results,matrix,alertas,config){
+  var host=document.getElementById('resultsContent');
+  if(!host)return;
+  host.className='ahp-results-output';
+
   matrix=matrix||JSON.parse(localStorage.getItem('ahp_pairwiseMatrix')||'[]');
+  config=config||window.__sltCurrentConfig||{};
+  setConfigAlertas(alertas!=null?alertas:getConfigAlertas());
+  results=validarMatrizEMetricas(matrix);
+  if(config.razao_consistencia!=null&&isFinite(Number(config.razao_consistencia))){
+    results.CR=Number(config.razao_consistencia);
+  }
+  if(config.lambda_max!=null&&isFinite(Number(config.lambda_max))){
+    results.lambdaMax=Number(config.lambda_max);
+  }
+  if(config.indice_consistencia!=null&&isFinite(Number(config.indice_consistencia))){
+    results.CI=Number(config.indice_consistencia);
+  }
+  if(window.__sltCurrentConfig&&window.__sltCurrentConfig.pesos&&Array.isArray(window.__sltCurrentConfig.pesos.weights)&&window.__sltCurrentConfig.pesos.weights.length){
+    results.weights=window.__sltCurrentConfig.pesos.weights;
+  }
+  window.__sltLastResults=results;
   var n=criteria.length;
   var isConsistent=results.CR<0.10;
-  var accent=isConsistent?'#1e7e34':'#c82333';
-  var accentBg=isConsistent?'#e7f6ec':'#fdecea';
-  var accentSoft=isConsistent?'#256b35':'#a71d2a';
 
-  /* =================== 5.1 Métricas de Consistência =================== */
-  var metrics='';
-  metrics+='<div class="info-card info-card--spaced">';
-  metrics+='<div class="ahp-info-card-header"><i class="fas fa-check-circle"></i><h3>5.1 Métricas de Consistência</h3></div>';
-  metrics+='<div class="info-card-content">';
-  metrics+='<div style="padding:1.1rem 1.25rem;border-radius:10px;margin-bottom:1.5rem;border:2px solid '+accent+';background:'+accentBg+';">';
-  metrics+='<div style="display:flex;align-items:center;gap:0.85rem;">';
-  metrics+='<i class="fas '+(isConsistent?'fa-circle-check':'fa-circle-xmark')+'" style="font-size:1.9rem;color:'+accent+';"></i>';
-  metrics+='<p style="margin:0;font-size:1.05rem;font-weight:700;color:'+accent+';text-align:left;">'+(isConsistent?'Análise consistente — os julgamentos são confiáveis.':'Análise inconsistente — revise as comparações.')+'</p>';
-  metrics+='</div>';
-  metrics+='<p style="margin:0.5rem 0 0;font-size:0.9rem;color:'+accentSoft+';text-align:left;">'+(isConsistent?'A razão de consistência (RC = '+results.CR.toFixed(4)+') ficou abaixo de 0,10 (10%).':'A razão de consistência (RC = '+results.CR.toFixed(4)+') ficou em ou acima de 0,10 (10%). Recomenda-se rever os julgamentos da Etapa 4.')+'</p>';
-  metrics+='</div>';
-  metrics+='<p style="margin-bottom: 1rem;text-align:justify;">A avaliação da comparação pareada do método AHP é realizada por três métricas, que verificam se os julgamentos informados são logicamente coerentes entre si. A ideia é simples: se o critério <strong>A</strong> foi considerado muito mais importante que o <strong>B</strong>, e o <strong>B</strong> mais importante que o <strong>C</strong>, espera-se que o <strong>A</strong> seja ainda mais importante que o <strong>C</strong>. Contradições nesse tipo de raciocínio reduzem a confiabilidade da hierarquização.</p>';
-  metrics+='<p style="margin-bottom: 1rem;text-align:justify;">As três métricas são complementares e devem ser lidas em conjunto, sendo a Razão de Consistência (RC) o indicador final que define se os pesos calculados podem ser utilizados com segurança ou se há necessidade de revisar os julgamentos da Etapa 4:</p>';
-  metrics+='<ul style="margin:0 0 1.5rem;padding-left:1.5rem;line-height:1.8;text-align:justify;">';
-  metrics+='<li style="margin-bottom:1.6rem;"><strong>Lambda Máximo (λ<sub>max</sub>):</strong> é o maior autovalor da matriz de comparação pareada. A matriz possui um autovetor principal que, depois de normalizado, fornece os próprios pesos dos critérios; o autovalor associado a esse autovetor é justamente o λ<sub>max</sub>. Em uma análise perfeitamente coerente, ele equivale a n (o número de critérios). Qualquer inconsistência nos julgamentos empurra o λ<sub>max</sub> para cima de n, e é esse excesso (a diferença em relação a n) que o Índice de Consistência e a Razão de Consistência quantificam. O Lambda Máximo é calculado por:'
+  /* 6.1 Resultado da conferência da matriz */
+  var sec61='';
+  sec61+='<div class="info-card info-card--spaced ahp-etapa6-block">';
+  sec61+='<div class="ahp-info-card-header"><i class="fas fa-check-double"></i><h3>6.1 Resultado da conferência da matriz de comparação pareada</h3></div>';
+  sec61+='<div class="info-card-content">';
+  sec61+='<div id="diagnostico-matriz-panel"></div>';
+  sec61+='<div class="ahp-metricas-complemento">';
+  sec61+='<h4 style="margin:1.5rem 0 1rem;color:var(--pli-deep);text-align:left;"><i class="fas fa-book-open"></i> Complemento — Interpretação das métricas</h4>';
+  sec61+='<p style="margin-bottom: 1rem;text-align:justify;">A avaliação da comparação pareada do método AHP é realizada por três métricas, que verificam se os julgamentos informados são logicamente coerentes entre si. A ideia é simples: se o critério <strong>A</strong> foi considerado muito mais importante que o <strong>B</strong>, e o <strong>B</strong> mais importante que o <strong>C</strong>, espera-se que o <strong>A</strong> seja ainda mais importante que o <strong>C</strong>. Contradições nesse tipo de raciocínio reduzem a confiabilidade da hierarquização.</p>';
+  sec61+='<p style="margin-bottom: 1rem;text-align:justify;">As três métricas são complementares e devem ser lidas em conjunto, sendo a Razão de Consistência (RC) o indicador final que define se os pesos calculados podem ser utilizados com segurança ou se há necessidade de revisar os julgamentos da Etapa 5:</p>';
+  sec61+='<ul style="margin:0 0 1.5rem;padding-left:1.5rem;line-height:1.8;text-align:justify;">';
+  sec61+='<li style="margin-bottom:1.6rem;"><strong>Lambda Máximo (λ<sub>max</sub>):</strong> é o maior autovalor da matriz de comparação pareada. A matriz possui um autovetor principal que, depois de normalizado, fornece os próprios pesos dos critérios; o autovalor associado a esse autovetor é justamente o λ<sub>max</sub>. Em uma análise perfeitamente coerente, ele equivale a n (o número de critérios). Qualquer inconsistência nos julgamentos empurra o λ<sub>max</sub> para cima de n, e é esse excesso (a diferença em relação a n) que o Índice de Consistência e a Razão de Consistência quantificam. O Lambda Máximo é calculado por:'
   +'<div style="text-align:center;margin:0.5rem 0 0.25rem;font-family:Georgia,\'Times New Roman\',serif;font-style:italic;font-size:1.05rem;color:var(--pli-deep);">λ<sub>max</sub> = (1/n) · ∑<sub>i</sub> ( (A·w)<sub>i</sub> / w<sub>i</sub> )</div>'
   +'<div style="text-align:left;font-size:0.8rem;color:#777;margin-top:0.35rem;">em que: <strong>λ<sub>max</sub></strong> = maior autovalor da matriz; <strong>n</strong> = número de critérios; <strong>A</strong> = matriz de comparação pareada; <strong>w</strong> = vetor de pesos (autovetor principal normalizado); <strong>(A·w)<sub>i</sub></strong> = i-ésimo elemento do produto da matriz A pelo vetor w; <strong>w<sub>i</sub></strong> = peso do i-ésimo critério; <strong>∑<sub>i</sub></strong> = somatório sobre todos os critérios.</div></li>';
-  metrics+='<li style="margin-bottom:1.6rem;"><strong>Índice de Consistência (IC):</strong> calculado a partir do Lambda Máximo e do número de critérios, expressa o grau de inconsistência das comparações em relação à consistência ideal — a situação em que todos os julgamentos são perfeitamente coerentes entre si, sem nenhuma contradição (caso em que λ<sub>max</sub> = n e, portanto, IC = 0). Quanto mais próximo de zero, mais alinhados estão os julgamentos. O Índice de Consistência é calculado por:'
+  sec61+='<li style="margin-bottom:1.6rem;"><strong>Índice de Consistência (IC):</strong> calculado a partir do Lambda Máximo e do número de critérios, expressa o grau de inconsistência das comparações em relação à consistência ideal — a situação em que todos os julgamentos são perfeitamente coerentes entre si, sem nenhuma contradição (caso em que λ<sub>max</sub> = n e, portanto, IC = 0). Quanto mais próximo de zero, mais alinhados estão os julgamentos. O Índice de Consistência é calculado por:'
   +'<div style="text-align:center;margin:0.5rem 0 0.25rem;font-family:Georgia,\'Times New Roman\',serif;font-style:italic;font-size:1.05rem;color:var(--pli-deep);">IC = (λ<sub>max</sub> − n) / (n − 1)</div>'
   +'<div style="text-align:left;font-size:0.8rem;color:#777;margin-top:0.35rem;">em que: <strong>IC</strong> = índice de consistência; <strong>λ<sub>max</sub></strong> = maior autovalor da matriz; <strong>n</strong> = número de critérios.</div></li>';
-  metrics+='<li style="margin-bottom:0.4rem;"><strong>Razão de Consistência (RC):</strong> é o indicador final da avaliação, obtido pela relação entre o Índice de Consistência e um valor de referência esperado. Resultados abaixo de 0,10 (10%) indicam comparações consistentes e adequadas ao uso dos pesos; valores iguais ou superiores a 0,10 recomendam a revisão dos julgamentos da Etapa 4. A Razão de Consistência é calculada por:'
+  sec61+='<li style="margin-bottom:0.4rem;"><strong>Razão de Consistência (RC):</strong> é o indicador final da avaliação, obtido pela relação entre o Índice de Consistência e um valor de referência esperado. Resultados abaixo de 0,10 (10%) indicam comparações consistentes e adequadas ao uso dos pesos; valores iguais ou superiores a 0,10 recomendam a revisão dos julgamentos da Etapa 5. A Razão de Consistência é calculada por:'
   +'<div style="text-align:center;margin:0.5rem 0 0.25rem;font-family:Georgia,\'Times New Roman\',serif;font-style:italic;font-size:1.05rem;color:var(--pli-deep);">RC = IC / IA</div>'
   +'<div style="text-align:left;font-size:0.8rem;color:#777;margin-top:0.35rem;">em que: <strong>RC</strong> = razão de consistência; <strong>IC</strong> = índice de consistência; <strong>IA</strong> = índice aleatório (valor de referência tabelado conforme o número de critérios n).</div></li>';
-  metrics+='</ul>';
-  metrics+='<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">';
-  metrics+='<div style="padding: 1.5rem; background: '+accentBg+'; border-radius: 8px; border: 2px solid '+accent+';">';
-  metrics+='<div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;"><i class="fas fa-superscript" style="font-size: 1.5rem; color: '+accent+';"></i><h4 style="margin: 0; color: var(--pli-deep);">Lambda Máximo (λ<sub>max</sub>)</h4></div>';
-  metrics+='<p style="font-size: 2rem; font-weight: bold; color: '+accent+'; margin: 0.5rem 0;">'+results.lambdaMax.toFixed(4)+'</p>';
-  metrics+='<p style="margin: 0; color: #666; font-size: 0.9rem;">Maior autovalor da matriz de comparação pareada.</p></div>';
-  metrics+='<div style="padding: 1.5rem; background: '+accentBg+'; border-radius: 8px; border: 2px solid '+accent+';">';
-  metrics+='<div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;"><i class="fas fa-calculator" style="font-size: 1.5rem; color: '+accent+';"></i><h4 style="margin: 0; color: var(--pli-deep);">Índice de Consistência (IC)</h4></div>';
-  metrics+='<p style="font-size: 2rem; font-weight: bold; color: '+accent+'; margin: 0.5rem 0;">'+results.CI.toFixed(4)+'</p>';
-  metrics+='<p style="margin: 0; color: #666; font-size: 0.9rem;">Grau de inconsistência das comparações em relação à consistência ideal.</p></div>';
-  var crColor=isConsistent?'#1e7e34':'#c82333';
-  var crStatus=isConsistent?'✓ Consistente':'✗ Inconsistente';
-  metrics+='<div style="padding: 1.5rem; background: '+accentBg+'; border-radius: 8px; border: 2px solid '+crColor+';">';
-  metrics+='<div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;"><i class="fas fa-check-double" style="font-size: 1.5rem; color: '+crColor+';"></i><h4 style="margin: 0; color: var(--pli-deep);">Razão de Consistência (RC)</h4></div>';
-  metrics+='<p style="font-size: 2rem; font-weight: bold; color: '+crColor+'; margin: 0.5rem 0;">'+results.CR.toFixed(4)+'</p>';
-  metrics+='<p style="margin: 0; color: '+crColor+'; font-weight: bold; font-size: 0.9rem;">'+crStatus+'</p></div>';
-  metrics+='</div>';
+  sec61+='</ul>';
+  sec61+='<div style="background: #e3f2fd; padding: 1.25rem; border-radius: 8px; margin-top: 1.25rem;">';
+  sec61+='<h4 style="margin-top: 0; color: var(--pli-deep);text-align:left;"><i class="fas fa-info-circle"></i> Como interpretar os valores:</h4>';
+  sec61+='<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8; text-align: justify;">';
+  sec61+='<li><strong>Lambda Máximo (λ<sub>max</sub>):</strong> igual a n = '+n+' &rarr; consistência ideal. Quanto mais acima de '+n+', menor a consistência.</li>';
+  sec61+='<li><strong>Índice de Consistência (IC):</strong> igual a 0 &rarr; perfeitamente consistente. Quanto maior o valor, mais inconsistente.</li>';
+  sec61+='<li><strong>Razão de Consistência (RC):</strong> menor que 0,10 &rarr; <strong style="color:#1e7e34;">consistente</strong>; maior ou igual a 0,10 &rarr; <strong style="color:#c82333;">inconsistente</strong>.</li>';
+  sec61+='</ul></div>';
+  sec61+='</div></div></div>';
 
-  /* ---- Maiores inconsistências ---- */
-  if(n>=3 && !matrixAllOnes(matrix)){
-    var top=findTopInconsistencies(criteria,matrix,results.weights,3);
-    var meaningful=top.filter(function(it){return it.dev>1e-6;});
-    if(meaningful.length){
-      var incAccent=isConsistent?'#b8860b':'#c82333';
-      var incBg=isConsistent?'#fff8e6':'#fdecea';
-      var incTitle=isConsistent?'Comparações com maior desvio (dentro do limite aceitável)':'Onde estão as maiores inconsistências — revise estes julgamentos';
-      metrics+='<div style="margin-top:0.5rem;padding:1.25rem;border-radius:8px;border:2px solid '+incAccent+';background:'+incBg+';">';
-      metrics+='<h4 style="margin-top:0;margin-bottom:0.75rem;color:var(--pli-deep);text-align:left;"><i class="fas fa-triangle-exclamation" style="color:'+incAccent+';"></i> '+incTitle+'</h4>';
-      metrics+='<ol style="margin:0;padding-left:1.25rem;line-height:1.9;text-align:justify;">';
-      meaningful.forEach(function(it){
-        var fator=Math.round(Math.exp(it.dev)*10)/10;
-        var dir=it.aij>it.ideal?'superestimou':'subestimou';
-        metrics+='<li style="margin-bottom:0.5rem;"><strong>«'+criteria[it.i]+'» vs «'+criteria[it.j]+'»:</strong> você informou <strong>'+fmtSaaty(it.aij)+'</strong>, mas o valor coerente com os pesos seria &asymp; <strong>'+fmtSaaty(it.ideal)+'</strong> <span style="color:'+incAccent+';font-weight:700;">(desvio de '+fator+'&times;)</span>. Você '+dir+' a importância de «'+criteria[it.i]+'» em relação a «'+criteria[it.j]+'».</li>';
-      });
-      metrics+='</ol>';
-      metrics+='<p style="margin:0.85rem 0 0;font-size:0.85rem;color:#555;text-align:center;">Dica: ajuste primeiro a comparação com maior desvio. Pequenas correções nos pares acima costumam reduzir bastante o RC.</p>';
-      metrics+='</div>';
-    }
-  }
-
-  metrics+='<div style="background: #e3f2fd; padding: 1.25rem; border-radius: 8px; margin-top: 1.25rem;">';
-  metrics+='<h4 style="margin-top: 0; color: var(--pli-deep);text-align:left;"><i class="fas fa-info-circle"></i> Como interpretar os valores:</h4>';
-  metrics+='<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8; text-align: justify;">';
-  metrics+='<li><strong>Lambda Máximo (λ<sub>max</sub>):</strong> igual a n = '+n+' &rarr; consistência ideal. Quanto mais acima de '+n+', menor a consistência.</li>';
-  metrics+='<li><strong>Índice de Consistência (IC):</strong> igual a 0 &rarr; perfeitamente consistente. Quanto maior o valor, mais inconsistente.</li>';
-  metrics+='<li><strong>Razão de Consistência (RC):</strong> menor que 0,10 &rarr; <strong style="color:#1e7e34;">consistente</strong>; maior ou igual a 0,10 &rarr; <strong style="color:#c82333;">inconsistente</strong>.</li>';
-  metrics+='</ul></div>';
-  metrics+='</div></div>';
-
-  /* =================== 5.2 Pesos dos Critérios =================== */
+  /* 6.2 Pesos dos Critérios */
   var weightsHtml='';
-  weightsHtml+='<div class="info-card info-card--spaced">';
-  weightsHtml+='<div class="ahp-info-card-header"><i class="fas fa-chart-bar"></i><h3>5.2 Pesos dos Critérios</h3></div>';
+  weightsHtml+='<div class="info-card info-card--spaced ahp-etapa6-block">';
+  weightsHtml+='<div class="ahp-info-card-header"><i class="fas fa-chart-bar"></i><h3>6.2 Pesos dos Critérios</h3></div>';
   weightsHtml+='<div class="info-card-content">';
-  weightsHtml+='<p style="margin-bottom: 1.5rem;">Os pesos representam a importância relativa de cada critério na decisão. Foram calculados utilizando o método da média geométrica.</p>';
-  weightsHtml+='<table class="ahp-matrix-table"><thead><tr>';
+  if(!isConsistent){
+    weightsHtml+='<p class="ahp-info-note" style="margin-bottom:1rem;text-align:left;"><i class="fas fa-triangle-exclamation"></i> A matriz está inconsistente (RC &ge; 0,10). Os pesos abaixo foram calculados, mas recomenda-se revisar a <a href="step5-comparacao.html">Etapa 5</a> antes de homologar.</p>';
+  }
+  weightsHtml+='<p style="margin-bottom: 1.5rem;">Os pesos representam a importância relativa de cada critério na decisão, obtidos a partir da matriz de comparação pareada validada acima.</p>';
+  weightsHtml+='<div class="ahp-table-scroll"><table class="ahp-matrix-table"><thead><tr>';
   weightsHtml+='<th style="background: var(--pli-deep); color: white;">Critério</th>';
   weightsHtml+='<th style="background: var(--pli-deep); color: white;">Peso</th>';
   weightsHtml+='<th style="background: var(--pli-deep); color: white;">Percentual</th>';
@@ -308,15 +433,35 @@ function displayResults(criteria,results,matrix){
     weightsHtml+='<td><div style="display:flex;align-items:center;gap:8px;min-width:170px;"><div style="flex:1;background:#eef1f4;border-radius:6px;height:22px;overflow:hidden;border:1px solid #e0e4e9;"><div style="height:100%;width:'+barWidth+'%;background:linear-gradient(90deg,var(--pli-blue),var(--pli-green));border-radius:6px;"></div></div><span style="font-size:0.8rem;font-weight:700;color:var(--pli-deep);min-width:48px;text-align:right;">'+percent+'%</span></div></td>';
     weightsHtml+='</tr>';
   });
-  weightsHtml+='</tbody></table></div></div>';
+  weightsHtml+='</tbody></table></div></div></div>';
 
-  /* =================== 5.3 Exportar Resultados =================== */
+  /* 6.3 Matriz de Comparação Pareada */
+  var matrizHtml='';
+  matrizHtml+='<div class="info-card info-card--spaced ahp-etapa6-block">';
+  matrizHtml+='<div class="ahp-info-card-header"><i class="fas fa-table-cells"></i><h3>6.3 Matriz de Comparação Pareada</h3></div>';
+  matrizHtml+='<div class="info-card-content">';
+  matrizHtml+='<p style="margin-bottom:1rem;">Matriz salva na Etapa 5 e utilizada para calcular os pesos desta etapa.</p>';
+  matrizHtml+='<div class="ahp-table-scroll"><table class="ahp-matrix-table"><thead><tr><th style="background:var(--pli-deep);color:#fff;"></th>';
+  criteria.forEach(function(c){matrizHtml+='<th style="background:var(--pli-deep);color:#fff;">'+c+'</th>';});
+  matrizHtml+='</tr></thead><tbody>';
+  criteria.forEach(function(c,i){
+    matrizHtml+='<tr><td style="text-align:left;background:var(--pli-deep);color:#fff;font-weight:700;">'+c+'</td>';
+    matrix[i].forEach(function(v,j){
+      var cell=i===j?'1':fmtSaaty(v);
+      var bg=i===j?'background:#116593;color:#fff;font-weight:700;':(i===j-1||j===i-1)?'':'';
+      matrizHtml+='<td style="'+bg+'">'+cell+'</td>';
+    });
+    matrizHtml+='</tr>';
+  });
+  matrizHtml+='</tbody></table></div></div></div>';
+
+  /* 6.4 Exportar Resultados */
   var exp='';
-  exp+='<div class="info-card info-card--spaced">';
-  exp+='<div class="ahp-info-card-header"><i class="fas fa-download"></i><h3>5.3 Exportar Resultados</h3></div>';
+  exp+='<div class="info-card info-card--spaced ahp-etapa6-block">';
+  exp+='<div class="ahp-info-card-header"><i class="fas fa-download"></i><h3>6.4 Exportar Resultados</h3></div>';
   exp+='<div class="info-card-content">';
   exp+='<p style="margin-bottom: 1.5rem;">Exporte os resultados da análise AHP em diferentes formatos para uso em relatórios, apresentações ou outras ferramentas.</p>';
-  exp+='<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">';
+  exp+='<div class="ahp-export-grid">';
   exp+='<button onclick="exportToCSV()" class="btn btn-primary" style="width: 100%;"><i class="fas fa-file-csv"></i> Exportar CSV</button>';
   exp+='<button onclick="exportToJSON()" class="btn btn-primary" style="width: 100%;"><i class="fas fa-file-code"></i> Exportar JSON</button>';
   exp+='<button onclick="exportToPDF()" class="btn btn-primary" style="width: 100%;"><i class="fas fa-file-pdf"></i> Exportar PDF</button>';
@@ -324,11 +469,33 @@ function displayResults(criteria,results,matrix){
   exp+='<button onclick="exportAll(this)" class="btn btn-primary" style="width: 100%;"><i class="fas fa-file-zipper"></i> Exportar tudo (.zip)</button>';
   exp+='</div></div></div>';
 
-  document.getElementById('resultsContent').innerHTML=metrics+weightsHtml+exp;
+  host.innerHTML=sec61+weightsHtml+'<div id="parecer-alertas-panel"></div>'+matrizHtml+exp;
+  if(window.SLTAhpDiagnostico){
+    window.SLTAhpDiagnostico.renderDiagnostico(
+      document.getElementById('diagnostico-matriz-panel'),
+      criteria,
+      matrix,
+      results,
+      {
+        bare:true,
+        inconsistentHint:'A matriz salva nesta configuração está inconsistente. Revise os julgamentos na Etapa 5 antes de homologar.',
+      }
+    );
+    window.SLTAhpDiagnostico.renderParecerAlertas(document.getElementById('parecer-alertas-panel'),getConfigAlertas());
+  }
 }
 
-function buildCSV(){const criteria=JSON.parse(localStorage.getItem('ahp_criteria'));const matrix=JSON.parse(localStorage.getItem('ahp_pairwiseMatrix'));const results=calculateAHP(matrix);let csv='Critério,Peso,Percentual\n';criteria.forEach((c,i)=>{csv+=c+','+results.weights[i].toFixed(4)+','+(results.weights[i]*100).toFixed(2)+'%\n';});csv+='\nMétricas de Consistência\n';csv+='Lambda Máximo (λmax),'+results.lambdaMax.toFixed(4)+'\n';csv+='Índice de Consistência (IC),'+results.CI.toFixed(4)+'\n';csv+='Razão de Consistência (RC),'+results.CR.toFixed(4)+'\n';return csv;}
-function buildJSON(){const criteria=JSON.parse(localStorage.getItem('ahp_criteria'));const matrix=JSON.parse(localStorage.getItem('ahp_pairwiseMatrix'));const results=calculateAHP(matrix);const data={criteria:criteria,weights:results.weights,metrics:{lambdaMax:results.lambdaMax,CI:results.CI,CR:results.CR},matrix:matrix,timestamp:new Date().toISOString()};return JSON.stringify(data,null,2);}
+function appendAlertasToCsv(csv){
+  var alertas=getConfigAlertas();
+  if(!alertas.length)return csv;
+  csv+='\nAlertas de Coerência Conceitual\nCódigo,Etapa,Mensagem\n';
+  alertas.forEach(function(a){
+    csv+=(a.codigo||'')+','+(a.etapa||'')+',"'+String(a.mensagem||'').replace(/"/g,'""')+'"\n';
+  });
+  return csv;
+}
+function buildCSV(){const criteria=JSON.parse(localStorage.getItem('ahp_criteria'));const matrix=JSON.parse(localStorage.getItem('ahp_pairwiseMatrix'));const results=calculateAHP(matrix);let csv='Critério,Peso,Percentual\n';criteria.forEach((c,i)=>{csv+=c+','+results.weights[i].toFixed(4)+','+(results.weights[i]*100).toFixed(2)+'%\n';});csv+='\nMétricas de Consistência\n';csv+='Lambda Máximo (λmax),'+results.lambdaMax.toFixed(4)+'\n';csv+='Índice de Consistência (IC),'+results.CI.toFixed(4)+'\n';csv+='Razão de Consistência (RC),'+results.CR.toFixed(4)+'\n';return appendAlertasToCsv(csv);}
+function buildJSON(){const criteria=JSON.parse(localStorage.getItem('ahp_criteria'));const matrix=JSON.parse(localStorage.getItem('ahp_pairwiseMatrix'));const results=calculateAHP(matrix);const data={criteria:criteria,weights:results.weights,metrics:{lambdaMax:results.lambdaMax,CI:results.CI,CR:results.CR},matrix:matrix,alertas_conceituais:getConfigAlertas(),timestamp:new Date().toISOString()};return JSON.stringify(data,null,2);}
 function exportToCSV(){downloadFile(buildCSV(),'resultados_ahp.csv','text/csv');}
 function exportToJSON(){downloadFile(buildJSON(),'resultados_ahp.json','application/json');}
 var _pdfFonts=null;var _pdfFontPromise=null;
@@ -407,6 +574,21 @@ function buildPDFDoc(){
       headStyles:{fillColor:(isC?AMBER:RED),textColor:255,fontStyle:'bold',halign:'center'},
       bodyStyles:{fontSize:8.5,valign:'middle',overflow:'linebreak'},
       columnStyles:{0:{cellWidth:'auto'},1:{halign:'center',cellWidth:22},2:{halign:'center',cellWidth:22},3:{halign:'center',cellWidth:18},4:{cellWidth:46}}});
+    y=doc.lastAutoTable.finalY+9;
+  }
+
+  var alertasPdf=getConfigAlertas();
+  if(alertasPdf.length){
+    sectionTitle('Parecer — Coerência conceitual');
+    doc.setFont(FONT,'normal');doc.setFontSize(9);
+    doc.text('O gestor prosseguiu apesar dos avisos abaixo; isso consta no registro oficial desta configuração.',M,y);
+    y+=6;
+    doc.autoTable({startY:y,head:[['Código','Etapa','Mensagem']],
+      body:alertasPdf.map(function(a){return [a.codigo||'AVISO',a.etapa||'—',a.mensagem||''];}),
+      theme:'grid',margin:{left:M,right:M},styles:{font:FONT},
+      headStyles:{fillColor:AMBER,textColor:255,fontStyle:'bold',halign:'center'},
+      bodyStyles:{fontSize:8.5,valign:'middle',overflow:'linebreak'},
+      columnStyles:{0:{cellWidth:36},1:{cellWidth:22,halign:'center'},2:{cellWidth:'auto'}}});
     y=doc.lastAutoTable.finalY+9;
   }
 
@@ -559,6 +741,20 @@ function buildWorkbook(){
     for(var mj=0;mj<n;mj++){var cc=1+mj;S(ws3,fr,cc,(mi===mj)?DIAG:CELLC);S(ws3,dr,cc,(mi===mj)?DIAG:CELLC);}
   }
   XLSX.utils.book_append_sheet(wb,ws3,'Matriz');
+
+  var alertasXlsx=getConfigAlertas();
+  if(alertasXlsx.length){
+    var ax=[['Parecer — Coerência conceitual'],[],['Código','Etapa','Mensagem']];
+    alertasXlsx.forEach(function(a){ax.push([a.codigo||'AVISO',a.etapa||'—',a.mensagem||'']);});
+    var wsA=XLSX.utils.aoa_to_sheet(ax);
+    wsA['!cols']=hideFrom(autoCols(ax,3,[0],8),3,16383);
+    wsA['!merges']=[{s:{r:0,c:0},e:{r:0,c:2}}];
+    wsA['!rows']=[{hpt:24}];
+    rowS(wsA,0,0,2,TITLE);
+    rowS(wsA,2,0,2,HEAD);
+    for(var ai=0;ai<alertasXlsx.length;ai++){var ar=3+ai;S(wsA,ar,0,CELLC);S(wsA,ar,1,CELLC);S(wsA,ar,2,CELLL);}
+    XLSX.utils.book_append_sheet(wb,wsA,'Alertas');
+  }
 
   return wb;
 }

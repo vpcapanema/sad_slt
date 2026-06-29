@@ -24,6 +24,9 @@
     if (!cfg || !global.SLTConfigApi) {
       return Promise.resolve(false);
     }
+    if (global.SLTAhpTextoPt && global.SLTAhpTextoPt.normalizarLinhasMatriz) {
+      rows = global.SLTAhpTextoPt.normalizarLinhasMatriz(rows);
+    }
     var ext = (fileName.split(".").pop() || "").toLowerCase();
     return global.SLTConfigApi.atualizar(cfg.tipo, cfg.codigo, {
       criterios: rows,
@@ -151,6 +154,31 @@
     showNotification("Formato não suportado. Use XLSX ou CSV.", "error");
   }
 
+  function finalizeUploadedMatrix(criteria) {
+    SltMatrizPremissas.saveMatrizPremissas(uploadedPremissasData, uploadedFileName);
+    localStorage.setItem("ahp_inputMethod", "upload_matriz");
+    localStorage.setItem("ahp_criteriaCount", String(criteria.length));
+    localStorage.setItem("ahp_criteria", JSON.stringify(criteria));
+    localStorage.removeItem("ahp_uploadedMatrix");
+    localStorage.removeItem("ahp_pairwiseMatrix");
+
+    persistMatrizNoBanco(uploadedPremissasData, uploadedFileName).then(function (saved) {
+      showNotification(
+        saved
+          ? "Tabela processada e salva. Avançando para a próxima etapa…"
+          : "Tabela processada. Avançando para a próxima etapa…",
+        "info"
+      );
+      setTimeout(function () {
+        if (global.SLTAhpNav && global.SLTAhpNav.irPara) {
+          global.SLTAhpNav.irPara("step3-nomes.html");
+        } else {
+          global.location.href = "step3-nomes.html";
+        }
+      }, 600);
+    });
+  }
+
   function processUploadedMatrix() {
     if (!uploadedPremissasData || !uploadedPremissasData.length) {
       showNotification("Selecione e carregue um arquivo de tabela primeiro.", "error");
@@ -173,24 +201,33 @@
         return;
       }
 
-      SltMatrizPremissas.saveMatrizPremissas(uploadedPremissasData, uploadedFileName);
-      localStorage.setItem("ahp_inputMethod", "upload_matriz");
-      localStorage.setItem("ahp_criteriaCount", String(criteria.length));
-      localStorage.setItem("ahp_criteria", JSON.stringify(criteria));
-      localStorage.removeItem("ahp_uploadedMatrix");
-      localStorage.removeItem("ahp_pairwiseMatrix");
+      if (!global.SLTAhpCoerencia || !global.SLTAhpCoerenciaUI) {
+        finalizeUploadedMatrix(criteria);
+        return;
+      }
 
-      persistMatrizNoBanco(uploadedPremissasData, uploadedFileName).then(function (saved) {
-        showNotification(
-          saved
-            ? "Tabela processada e salva. Avançando para a próxima etapa…"
-            : "Tabela processada. Avançando para a próxima etapa…",
-          "info"
-        );
-        setTimeout(function () {
-          window.location.href = "step3-nomes.html";
-        }, 600);
-      });
+      global.SLTAhpCoerencia.validateMatriz(uploadedPremissasData)
+        .then(function (res) {
+          return global.SLTAhpCoerenciaUI.confirmarSeNecessario(
+            res,
+            {
+              etapa: "Etapa 2",
+              titulo: "Divergências na tabela importada",
+              intro:
+                "A tabela enviada apresenta itens que divergem do catálogo PLI-SP ou das dimensões declaradas na configuração. Revise ou prossiga mesmo assim.",
+            },
+            function () {
+              finalizeUploadedMatrix(criteria);
+            }
+          );
+        })
+        .catch(function (err) {
+          if (err && err.code === "COERENCIA_CANCELADA") return;
+          showNotification(
+            "Erro na validação conceitual: " + (err && err.message ? err.message : String(err)),
+            "error"
+          );
+        });
     } catch (error) {
       showNotification("Erro ao processar tabela: " + error.message, "error");
     }
@@ -204,7 +241,11 @@
     localStorage.removeItem("ahp_pairwiseMatrix");
     localStorage.setItem("ahp_inputMethod", "manual");
     localStorage.setItem("ahp_criteriaCount", String(criteriaCount));
-    window.location.href = "step3-nomes.html";
+    if (global.SLTAhpNav && global.SLTAhpNav.irPara) {
+      global.SLTAhpNav.irPara("step3-nomes.html");
+    } else {
+      global.location.href = "step3-nomes.html";
+    }
   }
 
   global.toggleInputMethod = toggleInputMethod;
@@ -212,15 +253,4 @@
   global.processUploadedMatrix = processUploadedMatrix;
   global.processCriteriaCount = processCriteriaCount;
 
-  document.addEventListener("DOMContentLoaded", function () {
-    var savedCount = localStorage.getItem("ahp_criteriaCount");
-    if (savedCount) {
-      document.getElementById("criteria-count").value = savedCount;
-    }
-    var savedMethod = localStorage.getItem("ahp_inputMethod");
-    if (savedMethod === "upload_matriz") {
-      document.getElementById("method-upload").checked = true;
-      toggleInputMethod();
-    }
-  });
 })(window);

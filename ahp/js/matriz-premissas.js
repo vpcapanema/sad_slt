@@ -23,6 +23,28 @@
     { key: "mandatorio", label: "Mandatório" },
   ];
 
+  // Vocabulários controlados (espelham o modelo XLSX / export_matriz_excel.py).
+  var DIMENSOES = [
+    "Técnica",
+    "Financeiro",
+    "Econômica",
+    "Social",
+    "Segurança",
+    "Ambiental",
+    "Territorial",
+    "Institucional",
+    "Risco",
+  ];
+  var RELACOES = ["↑ Positiva", "↓ Negativa", "↕ Condicional"];
+  var MANDATORIOS = ["Sim", "Não"];
+
+  var PLACEHOLDERS = {
+    criterio: "Ex.: VDM — Volume Diário Médio",
+    premissa: "Por que o critério importa (lógica da decisão)",
+    metricas: "Como medir (unidade, escala, fonte do dado)",
+    fonte: "https://… ou referência/norma",
+  };
+
   var HEADER_MAP = {
     dimensao: "dimensao",
     dimensão: "dimensao",
@@ -125,6 +147,13 @@
     };
   }
 
+  function normalizarRow(row) {
+    if (global.SLTAhpTextoPt && global.SLTAhpTextoPt.normalizarLinhaMatriz) {
+      return global.SLTAhpTextoPt.normalizarLinhaMatriz(row);
+    }
+    return row;
+  }
+
   function parseRowsFromMatrix(matrix) {
     if (!matrix || !matrix.length) {
       throw new Error("Planilha vazia.");
@@ -140,7 +169,7 @@
         return v == null ? "" : String(v).trim();
       });
       var row = rowFromValues(values, indexes, i + 1);
-      if (row) rows.push(row);
+      if (row) rows.push(normalizarRow(row));
     }
 
     if (!rows.length) {
@@ -212,6 +241,9 @@
   }
 
   function saveMatrizPremissas(rows, fileName) {
+    if (global.SLTAhpTextoPt && global.SLTAhpTextoPt.normalizarLinhasMatriz) {
+      rows = global.SLTAhpTextoPt.normalizarLinhasMatriz(rows);
+    }
     global.localStorage.setItem(STORAGE_ROWS, JSON.stringify(rows));
     if (fileName) {
       global.localStorage.setItem(STORAGE_FILE, fileName);
@@ -287,8 +319,9 @@
     var html =
       '<div class="ahp-matriz-panel">' +
       '<div class="ahp-matriz-meta">' +
-      '<div class="ahp-matriz-meta__item"><div class="ahp-matriz-meta__head"><i class="fas fa-file-lines"></i><span class="ahp-matriz-meta__title">Arquivo</span></div><div class="ahp-matriz-meta__value">' +
-      escapeHtml(fileName || "Tabela importada") +
+      '<div class="ahp-matriz-meta__item"><div class="ahp-matriz-meta__head"><i class="fas fa-database"></i><span class="ahp-matriz-meta__title">Origem</span></div><div class="ahp-matriz-meta__value">' +
+      escapeHtml(inputMethod === "upload_matriz" ? "Upload de arquivo" : "Entrada manual") +
+      (inputMethod === "upload_matriz" && fileName ? " <small>(" + escapeHtml(fileName) + ")</small>" : "") +
       "</div></div>" +
       '<div class="ahp-matriz-meta__item"><div class="ahp-matriz-meta__head"><i class="fas fa-list-ol"></i><span class="ahp-matriz-meta__title">Critérios</span></div><div class="ahp-matriz-meta__value">' +
       summary.total +
@@ -364,26 +397,57 @@
   // -------------------------------------------------------------------------
   var EDITABLE_COLUMNS = ["dimensao", "criterio", "premissa", "relacao", "metricas", "fonte"];
 
-  function cellEditor(key, value) {
-    if (key === "mandatorio") {
-      var v = normHeader(value);
-      var simSel = /^sim$/.test(v) ? " selected" : "";
-      var naoSel = /^n(ao)?$/.test(v) ? " selected" : "";
-      return (
-        '<select class="c-form-control ahp-matriz-edit-input" data-key="mandatorio">' +
-        '<option value="">—</option>' +
-        '<option value="Sim"' + simSel + ">Sim</option>" +
-        '<option value="Não"' + naoSel + ">Não</option>" +
-        "</select>"
-      );
+  // Dropdown de vocabulário controlado. Se o valor atual (ex.: vindo de upload)
+  // não constar na lista, é preservado como uma opção extra selecionada.
+  function buildSelect(key, value, list) {
+    var v = String(value == null ? "" : value).trim();
+    var opts = '<option value="">—</option>';
+    var found = false;
+    list.forEach(function (item) {
+      var sel = normHeader(item) === normHeader(v) ? " selected" : "";
+      if (sel) found = true;
+      opts += '<option value="' + escapeHtml(item) + '"' + sel + ">" + escapeHtml(item) + "</option>";
+    });
+    if (v && !found) {
+      opts += '<option value="' + escapeHtml(value) + '" selected>' + escapeHtml(value) + "</option>";
     }
     return (
-      '<input type="text" class="c-form-control ahp-matriz-edit-input" data-key="' +
-      key +
-      '" value="' +
-      escapeHtml(value) +
-      '">'
+      '<select class="c-form-control ahp-matriz-edit-input" data-key="' + key + '">' + opts + "</select>"
     );
+  }
+
+  function cellEditor(key, value) {
+    if (key === "dimensao") return buildSelect("dimensao", value, DIMENSOES);
+    if (key === "relacao") return buildSelect("relacao", value, RELACOES);
+    if (key === "mandatorio") return buildSelect("mandatorio", value, MANDATORIOS);
+
+    var type = key === "fonte" ? "url" : "text";
+    var maxlen = key === "premissa" ? 600 : key === "criterio" ? 160 : 240;
+    var ph = PLACEHOLDERS[key] || "";
+    return (
+      '<input type="' + type + '" class="c-form-control ahp-matriz-edit-input" data-key="' + key +
+      '" maxlength="' + maxlen + '" placeholder="' + escapeHtml(ph) + '" value="' + escapeHtml(value) + '">'
+    );
+  }
+
+  // Máscara de formato de dado (normalização) — aplicada no blur para não
+  // atrapalhar a digitação; a formatação visual (field-filled) é independente.
+  function normalizeText(value, capitalize) {
+    var v = String(value || "").replace(/\s+/g, " ").trim();
+    if (capitalize && v) v = v.charAt(0).toUpperCase() + v.slice(1);
+    return v;
+  }
+
+  function attachMasks(scope) {
+    scope.querySelectorAll("input.ahp-matriz-edit-input[data-key]").forEach(function (inp) {
+      if (inp.__maskBound) return;
+      inp.__maskBound = true;
+      var key = inp.getAttribute("data-key");
+      inp.addEventListener("blur", function () {
+        inp.value = normalizeText(inp.value, key === "criterio" || key === "premissa");
+        if (global.SLTFieldFilled) global.SLTFieldFilled.sync(inp);
+      });
+    });
   }
 
   function editorRowHtml(row) {
@@ -414,22 +478,31 @@
     return rows;
   }
 
-  function validateRows(rows) {
+  // requireFull = entrada manual: além de critério/premissa, exige dimensão,
+  // relação e mandatório (cerne conceitual). Em upload, mantém o mínimo.
+  function validateRows(rows, requireFull) {
     if (!rows.length) {
       return "Inclua ao menos um critério.";
     }
     var nomes = [];
     for (var i = 0; i < rows.length; i++) {
-      if (!rows[i].criterio) {
-        return "Linha " + (i + 1) + ": o critério é obrigatório.";
+      var n = i + 1;
+      var r = rows[i];
+      if (!r.criterio) {
+        return "Linha " + n + ": o critério é obrigatório.";
       }
-      if (!rows[i].premissa) {
-        return "Linha " + (i + 1) + ": a premissa é obrigatória para «" + rows[i].criterio + "».";
+      if (!r.premissa) {
+        return "Linha " + n + ": a premissa é obrigatória para «" + r.criterio + "».";
       }
-      if (nomes.indexOf(rows[i].criterio) !== -1) {
-        return "Critério duplicado: «" + rows[i].criterio + "». Use nomes únicos.";
+      if (requireFull) {
+        if (!r.dimensao) return "Linha " + n + ": selecione a dimensão de «" + r.criterio + "».";
+        if (!r.relacao) return "Linha " + n + ": selecione a relação de «" + r.criterio + "».";
+        if (!r.mandatorio) return "Linha " + n + ": informe se «" + r.criterio + "» é mandatório.";
       }
-      nomes.push(rows[i].criterio);
+      if (nomes.indexOf(r.criterio) !== -1) {
+        return "Critério duplicado: «" + r.criterio + "». Use nomes únicos.";
+      }
+      nomes.push(r.criterio);
     }
     return null;
   }
@@ -441,9 +514,14 @@
   function renderMatrizPremissasEditor(container, options) {
     if (!container) return;
     options = options || {};
-    var rows = (options.rows && options.rows.slice()) || loadMatrizPremissas();
+    var rows = (options && options.rows && options.rows.slice()) || loadMatrizPremissas();
     var fileName = options.fileName || loadMatrizArquivoNome();
     if (!rows.length) rows = [emptyRow()];
+
+    var inputMethod = global.localStorage.getItem("ahp_inputMethod") || "manual";
+    var isUpload = inputMethod === "upload_matriz";
+    var requireFull = !isUpload;
+    var origem = isUpload ? "Upload de arquivo" : "Entrada manual";
 
     var headHtml = "";
     COLUMNS.forEach(function (col) {
@@ -456,9 +534,10 @@
     container.innerHTML =
       '<div class="ahp-matriz-panel ahp-matriz-panel--edit">' +
       '<div class="ahp-matriz-meta">' +
-      '<div class="ahp-matriz-meta__item"><div class="ahp-matriz-meta__head"><i class="fas fa-file-lines"></i>' +
-      '<span class="ahp-matriz-meta__title">Arquivo</span></div>' +
-      '<div class="ahp-matriz-meta__value">' + escapeHtml(fileName || "Tabela importada") + "</div></div>" +
+      '<div class="ahp-matriz-meta__item"><div class="ahp-matriz-meta__head"><i class="fas fa-database"></i>' +
+      '<span class="ahp-matriz-meta__title">Origem</span></div>' +
+      '<div class="ahp-matriz-meta__value">' + escapeHtml(origem) +
+      (isUpload && fileName ? ' <small>(' + escapeHtml(fileName) + ")</small>" : "") + "</div></div>" +
       '<div class="ahp-matriz-meta__item"><div class="ahp-matriz-meta__head"><i class="fas fa-list-ol"></i>' +
       '<span class="ahp-matriz-meta__title">Critérios</span></div>' +
       '<div class="ahp-matriz-meta__value" data-role="count">' + rows.length + "</div></div>" +
@@ -493,6 +572,7 @@
 
     container.querySelector('[data-role="add"]').addEventListener("click", function () {
       tbody.insertAdjacentHTML("beforeend", editorRowHtml(emptyRow()));
+      attachMasks(tbody);
       refreshCount();
       var added = tbody.querySelector(".ahp-matriz-edit-row:last-child .ahp-matriz-edit-input");
       if (added) added.focus();
@@ -505,13 +585,14 @@
       if (tr) tr.remove();
       if (!tbody.querySelectorAll(".ahp-matriz-edit-row").length) {
         tbody.insertAdjacentHTML("beforeend", editorRowHtml(emptyRow()));
+        attachMasks(tbody);
       }
       refreshCount();
     });
 
     container.querySelector('[data-role="save"]').addEventListener("click", function () {
       var collected = collectEditorRows(container);
-      var error = validateRows(collected);
+      var error = validateRows(collected, requireFull);
       if (error) {
         setFeedback(error, "error");
         return;
@@ -527,7 +608,41 @@
         });
     });
 
+    attachMasks(container);
+    if (global.SLTFieldFilled) global.SLTFieldFilled.syncAll(container);
     refreshCount();
+  }
+
+  /** Atualiza a coluna Critério a partir dos nomes digitados na Etapa 3. */
+  function syncCriterioFromNames(container, names) {
+    if (!container || !Array.isArray(names)) return;
+    var tbody = container.querySelector('[data-role="rows"]');
+    if (!tbody) return;
+
+    while (tbody.querySelectorAll(".ahp-matriz-edit-row").length < names.length) {
+      tbody.insertAdjacentHTML("beforeend", editorRowHtml(emptyRow()));
+    }
+
+    var rows = tbody.querySelectorAll(".ahp-matriz-edit-row");
+    while (rows.length > names.length && names.length > 0) {
+      rows[rows.length - 1].remove();
+      rows = tbody.querySelectorAll(".ahp-matriz-edit-row");
+    }
+
+    names.forEach(function (nome, idx) {
+      var tr = rows[idx];
+      if (!tr) return;
+      var cell = tr.querySelector('[data-col="criterio"] input, [data-col="criterio"] textarea');
+      if (cell) cell.value = String(nome || "").trim();
+    });
+
+    attachMasks(tbody);
+    if (global.SLTFieldFilled) global.SLTFieldFilled.syncAll(tbody);
+
+    var countEl = container.querySelector('[data-role="count"]');
+    if (countEl) {
+      countEl.textContent = String(tbody.querySelectorAll(".ahp-matriz-edit-row").length);
+    }
   }
 
   global.SltMatrizPremissas = {
@@ -545,5 +660,6 @@
     validateRows: validateRows,
     renderMatrizPremissasPanel: renderMatrizPremissasPanel,
     renderMatrizPremissasEditor: renderMatrizPremissasEditor,
+    syncCriterioFromNames: syncCriterioFromNames,
   };
 })(window);

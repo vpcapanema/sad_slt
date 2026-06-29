@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Preenchimento colaborativo — Matriz AHP — SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="js/ahp-core.js"></script>
+</head>
+<body class="ahp-module-page ahp-colaborativa-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">Preenchimento colaborativo<small>Matriz de comparação pareada AHP</small></div>
+    </div>
+  </header>
+  <main class="app-main ahp-main">
+    <section class="card ahp-step-section">
+      <div class="ahp-section-label"><i class="fas fa-compass"></i><span>Contextualização</span></div>
+      <div class="ahp-section-body" id="collab-context"></div>
+    </section>
+    <section class="card ahp-step-section">
+      <div class="ahp-section-label"><i class="fas fa-id-card"></i><span>Identificação</span></div>
+      <div class="ahp-section-body">
+        <p class="step-intro">Informe seus dados. O e-mail deve ser o mesmo convidado pelo gestor da análise.</p>
+        <div class="c-form-group"><label for="colab-nome" class="c-form-label">Nome completo</label><input id="colab-nome" class="c-form-control" required></div>
+        <div class="c-form-group"><label for="colab-inst" class="c-form-label">Instituição vinculada</label><input id="colab-inst" class="c-form-control" required></div>
+        <div class="c-form-group"><label for="colab-email" class="c-form-label">E-mail</label><input id="colab-email" type="email" class="c-form-control" required></div>
+        <button type="button" class="btn btn-primary" id="btn-liberar-form"><i class="fas fa-unlock c-btn__icon"></i>Liberar formulário</button>
+        <p id="colab-id-feedback" class="ahp-matriz-edit-feedback" role="status"></p>
+      </div>
+    </section>
+    <section class="card ahp-step-section is-hidden" id="collab-form-section">
+      <div class="ahp-section-label"><i class="fas fa-scale-balanced"></i><span>Comparação pareada</span></div>
+      <div class="ahp-section-body">
+        <div id="liveMetrics" class="ahp-live-metrics is-initial">
+          <div class="ahp-metric-card"><div class="ahp-metric-card__label">RC</div><div class="ahp-metric-card__value" id="metricRCValue">—</div></div>
+          <div class="ahp-metric-card"><div class="ahp-metric-card__label">IC</div><div class="ahp-metric-card__value" id="metricICValue">—</div></div>
+          <div class="ahp-metric-card"><div class="ahp-metric-card__label">λmax</div><div class="ahp-metric-card__value" id="metricLambdaValue">—</div></div>
+        </div>
+        <div id="comparisonContent" class="ahp-comparison-content"></div>
+        <p id="collab-submit-feedback" class="ahp-matriz-edit-feedback" role="status"></p>
+        <button type="button" class="btn btn-success" id="btn-enviar-resposta" disabled><i class="fas fa-paper-plane c-btn__icon"></i>Enviar resposta</button>
+      </div>
+    </section>
+  </main>
+  <script src="js/colaborativa-api.js"></script>
+  <script src="js/script.js"></script>
+  <script src="js/colaborativa.js"></script>
+</body>
+</html>

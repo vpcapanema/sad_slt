@@ -11,6 +11,7 @@ from typing import Any
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
+from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO
 from api.db.connection import get_connection
 
 # Status da fase de hierarquização que compõem o universo do AHP.
@@ -79,12 +80,12 @@ def get_by_codigo(codigo: str) -> dict[str, Any] | None:
         return conn.execute(query, (codigo,)).fetchone()
 
 
-from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO
-
 _PRE_APROVACAO = tuple(STATUS_PRE_APROVACAO)
 
 
-def aprovar(codigo: str, *, aprovado_por: Any = None, motivo: str | None = None) -> dict[str, Any] | None:
+def aprovar(
+    codigo: str, *, aprovado_por: Any = None, motivo: str | None = None
+) -> dict[str, Any] | None:
     """Promove a demanda ao universo AHP in-place (status -> elegivel_ahp)."""
     query = """
         UPDATE demandas.projeto

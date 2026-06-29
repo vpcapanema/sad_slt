@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Etapa 4: Comparação Pareada — AHP — SLT</title>
+  <title>Etapa 5: Comparação pareada — AHP — SLT</title>
   <link rel="stylesheet" href="../assets/css/app.css">
   <link rel="stylesheet" href="../assets/css/ahp-module.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-
+  <script src="js/ahp-page-reset.js"></script>
+  <script src="../assets/js/admin-auth.js"></script>
+  <script src="js/ahp-auth.js"></script>
 </head>
 <body class="ahp-module-page">
   <header class="app-header">
@@ -20,9 +22,15 @@
     </div>
   </header>
 
+
+  <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="app-main ahp-main">
-        
-            <div class="ahp-progress card"><div class="ahp-progress-bar"><a href="step1-configuracao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="step2-criterios.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="step3-nomes.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="step4-metodo.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="step5-comparacao.html" class="ahp-progress-step active"><div class="ahp-progress-circle">5</div><span>Comparação</span></a><a href="step6-resultados.html" class="ahp-progress-step"><div class="ahp-progress-circle">6</div><span>Resultados</span></a></div></div>
+            <nav class="ahp-phase-nav card" aria-label="Fases do módulo">
+              <a href="step1-configuracao.html" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e obtenção dos objetos</span></a>
+              <a href="step2-criterios.html" class="ahp-phase active"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Critérios e matriz de comparação</span></a>
+              <a href="step6-resultados.html" class="ahp-phase"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Resultados e pesos</span></a>
+            </nav>
+            <div class="ahp-progress card"><div class="ahp-progress-bar"><a href="step1-configuracao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="step2-criterios.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="step3-nomes.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="step4-metodo.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="step5-comparacao.html" class="ahp-progress-step active"><div class="ahp-progress-circle">5</div><span>Comparação pareada</span></a><a href="step6-resultados.html" class="ahp-progress-step"><div class="ahp-progress-circle">6</div><span>Geração de pesos</span></a></div></div>
 
             <section class="card ahp-step-intro">
                 <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
@@ -36,13 +44,11 @@
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
                         <a href="step4-metodo.html">Etapa 4: Método</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <span class="ahp-breadcrumb-current">Etapa 5: Comparação</span>
+                        <span class="ahp-breadcrumb-current">Etapa 5: Comparação pareada</span>
                     </nav>
-                    <h1 class="ahp-page-title"><i class="fas fa-scale-balanced app-template-title-icon" aria-hidden="true"></i>Etapa 5: Comparação Pareada</h1>
-                    <p class="ahp-page-desc">Preencha a matriz ou o formulário assistido para refletir a importância relativa entre os critérios definidos nas etapas anteriores.</p>
+                    <h1 class="ahp-page-title"><i class="fas fa-scale-balanced app-template-title-icon" aria-hidden="true"></i>Etapa 5: Comparação pareada</h1>
+                    <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i><span>Nesta etapa você preenche a matriz de comparação pareada (escala de Saaty, 1 a 9). As métricas instantâneas (RC, IC, λmáx) ajudam no ajuste, mas o fluxo oficial é: preencher → <strong>Validar matriz de comparação pareada</strong> (RC &lt; 0,10) → <strong>Salvar configuração da Fase 2</strong> → avançar para a Etapa 6, onde os pesos são calculados a partir da configuração salva.</span></p>
             </section>
-
-            <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>Os valores informados nesta etapa determinam diretamente os pesos finais e a razão de consistência da análise.</p>
             <section class="card ahp-step-section">
                 <div class="ahp-section-label"><i class="fas fa-compass app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Contexto da Etapa</span></div>
                 <div class="ahp-section-body">
@@ -50,22 +56,35 @@
                 </div>
             </section>
 
+            <section class="card ahp-step-section is-hidden" id="collab-consolidacao-section">
+                <div class="ahp-section-label"><i class="fas fa-people-group"></i><span>Consolidar respostas colaborativas</span></div>
+                <div class="ahp-section-body">
+                    <p class="step-intro">Analise as respostas recebidas e escolha uma matriz como ponto de partida para o preenchimento final abaixo.</p>
+                    <div id="collab-respostas-panel" aria-live="polite"></div>
+                </div>
+            </section>
+
             <section class="card ahp-step-section">
                 <div class="ahp-section-label"><i class="fas fa-layer-group app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Preenchimento da Matriz de Comparação Pareada</span></div>
                 <div class="ahp-section-body">
-                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">5</span><span>Comparação Pareada</span></h2><div class="info-card info-card--spaced"><div class="ahp-info-card-header"><i class="fas fa-balance-scale"></i><h3>5.1 Escala de Intensidade de Importância</h3></div><div class="info-card-content"><p class="saaty-description">A <strong>Escala de Intensidade de Importância de Saaty</strong> é utilizada no método AHP para quantificar as preferências entre critérios durante a comparação pareada. Esta escala fundamental varia de 1 a 9, onde <strong>1 representa igual importância</strong> entre dois critérios e <strong>9 representa importância extrema</strong> de um critério sobre o outro. Os valores intermediários (3, 5, 7) representam níveis moderado, forte e muito forte de importância, respectivamente. Os valores recíprocos (1/3, 1/5, 1/7, 1/9) são utilizados quando o segundo critério é mais importante que o primeiro.</p><div class="saaty-image-container"><img src="https://vpc-geoser-ahp-tool-calculator.onrender.com/img_folder/escala_intensidade_importancia_criterios_ahp.png" alt="Escala de Intensidade de Importância - Método AHP" class="ahp-saaty-image"></div></div></div><div class="info-card info-card--spaced"><div class="ahp-info-card-header"><i class="fas fa-table" id="methodIcon"></i><h3 id="methodCardTitle">4.2 Matriz de Comparação Pareada</h3></div><div class="info-card-content"><div id="instructions" class="ahp-instructions"><p id="instructionsText" class="instructions-text"></p></div><div id="liveMetrics" class="ahp-live-metrics is-initial"><div class="ahp-metric-card"><div class="ahp-metric-card__label">Razão de Consistência (RC)</div><div class="ahp-metric-card__value" id="metricRCValue">—</div><div class="ahp-metric-card__sub">instantâneo</div></div><div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice de Consistência (IC)</div><div class="ahp-metric-card__value" id="metricICValue">—</div><div class="ahp-metric-card__sub">instantâneo</div></div><div class="ahp-metric-card"><div class="ahp-metric-card__label">Lambda Máximo (λmáx)</div><div class="ahp-metric-card__value" id="metricLambdaValue">—</div><div class="ahp-metric-card__sub">instantâneo</div></div></div><div id="comparisonContent" class="ahp-comparison-content"></div></div></div><div class="ahp-form-actions"><a href="step3-metodo.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><button onclick="calculateResults()" class="btn btn-primary">Calcular Resultados<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></button></div></section>
+                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">5</span><span>Comparação pareada</span></h2><div class="info-card info-card--spaced"><div class="ahp-info-card-header"><i class="fas fa-balance-scale"></i><h3>5.1 Escala de Intensidade de Importância</h3></div><div class="info-card-content"><p class="saaty-description">A <strong>Escala de Intensidade de Importância de Saaty</strong> é utilizada no método AHP para quantificar as preferências entre critérios durante a comparação pareada. Esta escala fundamental varia de 1 a 9, onde <strong>1 representa igual importância</strong> entre dois critérios e <strong>9 representa importância extrema</strong> de um critério sobre o outro. Os valores intermediários (3, 5, 7) representam níveis moderado, forte e muito forte de importância, respectivamente. Os valores recíprocos (1/3, 1/5, 1/7, 1/9) são utilizados quando o segundo critério é mais importante que o primeiro.</p><div class="saaty-image-container"><img src="https://vpc-geoser-ahp-tool-calculator.onrender.com/img_folder/escala_intensidade_importancia_criterios_ahp.png" alt="Escala de Intensidade de Importância - Método AHP" class="ahp-saaty-image"></div></div></div><div class="info-card info-card--spaced"><div class="ahp-info-card-header"><i class="fas fa-table" id="methodIcon"></i><h3 id="methodCardTitle">4.2 Matriz de Comparação Pareada</h3></div><div class="info-card-content"><div id="instructions" class="ahp-instructions"><p id="instructionsText" class="instructions-text"></p></div><div id="liveMetrics" class="ahp-live-metrics is-initial"><div class="ahp-metric-card"><div class="ahp-metric-card__label">Razão de Consistência (RC)</div><div class="ahp-metric-card__value" id="metricRCValue">—</div><div class="ahp-metric-card__sub">instantâneo</div></div><div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice de Consistência (IC)</div><div class="ahp-metric-card__value" id="metricICValue">—</div><div class="ahp-metric-card__sub">instantâneo</div></div><div class="ahp-metric-card"><div class="ahp-metric-card__label">Lambda Máximo (λmáx)</div><div class="ahp-metric-card__value" id="metricLambdaValue">—</div><div class="ahp-metric-card__sub">instantâneo</div></div></div><div id="comparisonContent" class="ahp-comparison-content"></div></div></div><div id="diagnostico-consistencia-panel" class="ahp-diagnostico-panel info-card info-card--spaced is-hidden"></div><div id="step5-save-feedback" class="ahp-matriz-edit-feedback" role="status" aria-live="polite"></div><div class="ahp-form-actions"><a href="step4-metodo.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><button type="button" id="btn-validar-matriz" onclick="validarMatrizComparacao()" class="btn btn-primary"><i class="fas fa-check-double c-btn__icon"></i>Validar matriz de comparação pareada</button><button type="button" id="btn-salvar-config-fase2" onclick="salvarConfigFase2()" class="btn btn-success" disabled><i class="fas fa-save c-btn__icon"></i>Salvar configuração da Fase 2</button><a id="step5-go-resultados" href="step6-resultados.html" class="btn btn-primary is-hidden">Ir para Geração de pesos<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a></div></section>
                 </div>
             </section>
     </main>
-    <script src="js/ahp-core.js"></script><script src="js/config-api.js"></script><script src="js/config-artefatos.js"></script><script src="js/script.js"></script><script>
+    <script src="js/ahp-core.js"></script><script src="js/config-api.js"></script><script src="js/config-artefatos.js"></script><script src="js/ahp-contexto-ui.js"></script><script src="js/ahp-alertas.js"></script><script src="js/ahp-diagnostico-consistencia.js"></script><script src="js/colaborativa-api.js"></script><script src="js/step5-colaborativa.js"></script><script src="js/script.js"></script><script>
         // Step 4 specific initialization
         document.addEventListener('DOMContentLoaded', function() {
             const savedCriteria = localStorage.getItem('ahp_criteria');
             const savedMethod = localStorage.getItem('ahp_chosenMethod');
 
             if (!savedCriteria || !savedMethod) {
-                alert('Dados incompletos. Redirecionando...');
-                window.location.href = 'step2-criterios.html';
+                const host = document.getElementById('comparisonContainer') || document.querySelector('.ahp-section');
+                if (host) {
+                    const note = document.createElement('div');
+                    note.className = 'ahp-recommendation';
+                    note.innerHTML = '<div class="ahp-recommendation__head"><i class="fas fa-circle-info"></i><strong>Comparação indisponível.</strong></div><p>Defina os critérios na <a href="step2-criterios.html">Etapa 2</a> e escolha o método na <a href="step4-metodo.html">Etapa 4</a> para realizar as comparações.</p>';
+                    host.appendChild(note);
+                }
                 return;
             }
 

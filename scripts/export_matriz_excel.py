@@ -21,6 +21,7 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.worksheet import Worksheet
 
 # --------------------------------------------------------------------------- #
 # Dados                                                                        #
@@ -517,8 +518,15 @@ def apply_grid(ws, nrows: int, ncols: int) -> None:
 # Construção das abas                                                          #
 # --------------------------------------------------------------------------- #
 
-def aba_dimensoes(wb: Workbook) -> None:
+def _require_active_sheet(wb: Workbook) -> Worksheet:
     ws = wb.active
+    if ws is None:
+        raise RuntimeError("Workbook sem aba ativa.")
+    return ws
+
+
+def aba_dimensoes(wb: Workbook) -> None:
+    ws = _require_active_sheet(wb)
     ws.title = "Dimensões de Critérios"
     ws.append(["#", "Dimensão", "Justificativa (com referência)"])
     for i, (nome, just) in enumerate(DIMENSOES, start=1):
