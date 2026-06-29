@@ -421,7 +421,7 @@
     if (key === "relacao") return buildSelect("relacao", value, RELACOES);
     if (key === "mandatorio") return buildSelect("mandatorio", value, MANDATORIOS);
 
-    var type = key === "fonte" ? "url" : "text";
+    var type = "text";
     var maxlen = key === "premissa" ? 600 : key === "criterio" ? 160 : 240;
     var ph = PLACEHOLDERS[key] || "";
     return (
@@ -658,6 +658,7 @@
     clearMatrizPremissas: clearMatrizPremissas,
     summarize: summarize,
     validateRows: validateRows,
+    collectEditorRows: collectEditorRows,
     renderMatrizPremissasPanel: renderMatrizPremissasPanel,
     renderMatrizPremissasEditor: renderMatrizPremissasEditor,
     syncCriterioFromNames: syncCriterioFromNames,
