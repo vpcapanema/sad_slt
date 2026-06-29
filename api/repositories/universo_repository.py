@@ -57,6 +57,24 @@ _EXCLUDE_COLS = {
     "geom",
 }
 
+# Campos NÃO coletivos: identificam/descrevem um único registro e, por isso, não
+# servem para formar grupos comparáveis (texto livre, identificadores, contatos,
+# coordenadas). Tudo que não estiver aqui é tratado como coletivo (compartilhável
+# por vários registros) e fica disponível no seletor de filtros.
+_NAO_COLETIVO = {
+    "id",
+    "codigo",
+    "nome",
+    "descricao",
+    "objetivo",
+    "justificativa",
+    "motivo_aprovacao",
+    "latitude",
+    "longitude",
+    "representante_email",
+    "representante_telefone",
+}
+
 _colunas_cache: dict[str, list[dict[str, str]]] = {}
 
 
@@ -88,12 +106,18 @@ def colunas(tipo: str) -> list[dict[str, str]]:
             "campo": r["column_name"],
             "tipo": "data" if r["data_type"] in _DATE_TYPES else "texto",
             "data_type": r["data_type"],
+            "coletivo": r["column_name"] not in _NAO_COLETIVO,
         }
         for r in rows
         if r["data_type"] in _ALLOWED_TYPES and r["column_name"] not in _EXCLUDE_COLS
     ]
     _colunas_cache[tipo] = cols
     return cols
+
+
+def colunas_coletivas(tipo: str) -> list[dict[str, str]]:
+    """Apenas colunas coletivas (compartilháveis por vários registros)."""
+    return [c for c in colunas(tipo) if c.get("coletivo")]
 
 
 def colunas_validas(tipo: str) -> set[str]:

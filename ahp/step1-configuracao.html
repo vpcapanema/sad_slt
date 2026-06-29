@@ -20,13 +20,15 @@
   </header>
 
   <main class="app-main ahp-main">
+            <div class="ahp-progress card"><div class="ahp-progress-bar"><a href="step1-configuracao.html" class="ahp-progress-step active"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="step2-criterios.html" class="ahp-progress-step"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="step3-nomes.html" class="ahp-progress-step"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="step4-metodo.html" class="ahp-progress-step"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="step5-comparacao.html" class="ahp-progress-step"><div class="ahp-progress-circle">5</div><span>Comparação</span></a><a href="step6-resultados.html" class="ahp-progress-step"><div class="ahp-progress-circle">6</div><span>Resultados</span></a></div></div>
+
     <section class="card">
       <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
         <a href="home.html">Configuração da Análise Multicritério</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
         <a href="index.html">Calculadora AHP</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-        <span class="ahp-breadcrumb-current">Tipo de análise</span>
+        <span class="ahp-breadcrumb-current">Etapa 1: Configuração</span>
       </nav>
       <h1 class="ahp-page-title">
         <i class="fas fa-code-branch" aria-hidden="true"></i>
@@ -72,7 +74,7 @@
           </p>
 
           <div class="ahp-escopo-grid">
-            <div class="ahp-mini-card is-hidden" id="mini-dimensao">
+            <div class="ahp-mini-card" id="mini-dimensao">
               <label for="config-tipo-demanda" class="c-form-label">
                 <i class="fas fa-layer-group" aria-hidden="true"></i> Objeto da análise
               </label>
@@ -226,11 +228,21 @@
               <label><input type="radio" name="incluir-dimensoes" value="sim"> Sim</label>
               <label><input type="radio" name="incluir-dimensoes" value="nao"> Não</label>
             </div>
-            <div id="config-dimensoes" class="ahp-dim-checks is-hidden"></div>
             <p class="ahp-mini-help">
               Escolha se os critérios serão organizados em dimensões (ex.: ambientais,
-              sociais, econômicas, técnicas) e confirme.
+              sociais, econômicas, técnicas). Ao escolher «Sim», confira e confirme a lista
+              abaixo.
             </p>
+          </div>
+
+          <div class="ahp-mini-card is-hidden" id="mini-dimensoes-lista">
+            <span class="c-form-label">
+              <i class="fas fa-list-check" aria-hidden="true"></i> Dimensões dos critérios do sistema
+            </span>
+            <p class="ahp-mini-help">
+              Confira as dimensões que os critérios podem abranger e confirme.
+            </p>
+            <div id="config-dimensoes" class="ahp-dim-checks"></div>
             <div class="ahp-dim-confirm-wrap">
               <button type="button" id="dim-confirmar" class="btn btn-primary btn-sm" disabled>
                 <i class="fas fa-circle-check" aria-hidden="true"></i> Confirmar
@@ -243,43 +255,38 @@
         </div>
       </section>
 
-      <section class="card is-hidden" id="portfolio-section">
+      <section class="card" id="portfolio-section">
         <div class="ahp-section-label">
           <i class="fas fa-folder-tree" aria-hidden="true"></i>
           <span>Universo da análise</span>
         </div>
-        <p class="ahp-page-desc ahp-help-text">
-          Recorte as demandas que entram na análise a partir da dimensão escolhida no escopo. O
-          contador ao final mostra quantas demandas elegíveis restam.
+        <p class="ahp-info-note card">
+          <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
+          <span>Monte o conjunto de <strong class="universo-obj-ref">objetos</strong> que será
+          hierarquizado no próximo módulo usando <strong>grupos de condições</strong>. Um registro
+          entra no universo quando atende a <strong>qualquer um dos grupos</strong>; dentro de cada
+          grupo, ele precisa satisfazer <strong>todas as condições</strong>. Assim você expressa
+          combinações como «(A e B) ou C» sem ambiguidade. Os registros que atendem aparecem em
+          tempo real no resumo; ao concluir, clique em
+          <strong>Confirmar universo de análise</strong>.</span>
+        </p>
+        <p class="ahp-universo-objeto" id="universo-objeto-sel">
+          Tipo de demanda/objeto selecionado: <strong id="universo-objeto-valor">—</strong>
         </p>
 
         <div class="ahp-subcard">
           <div class="ahp-subsection-title">
-            <i class="fas fa-sliders" aria-hidden="true"></i>
-            <span>Filtro simples</span>
+            <i class="fas fa-filter" aria-hidden="true"></i>
+            <span>Filtros do universo</span>
           </div>
           <p class="ahp-page-desc ahp-help-text">
-            Combine <strong>campo</strong> e <strong>valor</strong>; as condições somam-se em
-            conjunto (E).
+            Cada grupo reúne condições combinadas por <strong>E</strong> (todas precisam valer).
+            Vários grupos são combinados por <strong>OU</strong> (basta um valer). Deixe sem
+            condições para incluir todos os registros elegíveis.
           </p>
-          <div id="portfolio-filtros"></div>
-          <button type="button" class="btn btn-secondary btn-sm" id="add-filtro">
-            <i class="fas fa-plus" aria-hidden="true"></i> Adicionar filtro
-          </button>
-        </div>
-
-        <div class="ahp-subcard">
-          <div class="ahp-subsection-title">
-            <i class="fas fa-code-branch" aria-hidden="true"></i>
-            <span>Filtros lógicos</span>
-          </div>
-          <p class="ahp-page-desc ahp-help-text">
-            Combine condições com <strong>E</strong>/<strong>OU</strong> e operadores (igual,
-            diferente, contém).
-          </p>
-          <div id="filtros-logicos"></div>
-          <button type="button" class="btn btn-secondary btn-sm" id="add-logico">
-            <i class="fas fa-plus" aria-hidden="true"></i> Adicionar condição
+          <div id="universo-grupos"></div>
+          <button type="button" class="btn btn-secondary btn-sm" id="add-grupo">
+            <i class="fas fa-plus" aria-hidden="true"></i> Adicionar grupo (OU)
           </button>
         </div>
 
@@ -293,6 +300,7 @@
             <span id="portfolio-preview-text">Selecione a dimensão (tipo de demanda) para ver o universo.</span>
           </div>
           <div id="amostra-resumo" class="ahp-resumo-wrap"></div>
+          <div id="amostra-acoes" class="ahp-universo-acoes"></div>
         </div>
       </section>
 

@@ -268,7 +268,7 @@
           ? "<p>Os dados do upload não foram encontrados. Volte à Etapa 1 e envie novamente o arquivo XLSX ou CSV.</p>"
           : "<p>Na Etapa 1 você escolheu o método manual. Para visualizar a Tabela de Premissas e Critérios, use <strong>Upload de Tabela</strong> na Etapa 1.</p>") +
         '<div class="ahp-matriz-empty__actions">' +
-        '<a href="step1-criterios.html" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Etapa 1</a>' +
+        '<a href="step2-criterios.html" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Etapa 2</a>' +
         "</div></div>";
       return;
     }

@@ -28,25 +28,25 @@
 
 <main class="app-main ahp-main">
         
-            <div class="ahp-progress card"><div class="ahp-progress-bar"><a href="step1-criterios.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Critérios</span></a><a href="step2-nomes.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">2</div><span>Nomes</span></a><a href="step3-metodo.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">3</div><span>Método</span></a><a href="step4-comparacao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">4</div><span>Comparação</span></a><a href="step5-resultados.html" class="ahp-progress-step active"><div class="ahp-progress-circle">5</div><span>Resultados</span></a></div></div>
+            <div class="ahp-progress card"><div class="ahp-progress-bar"><a href="step1-configuracao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="step2-criterios.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="step3-nomes.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="step4-metodo.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="step5-comparacao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">5</div><span>Comparação</span></a><a href="step6-resultados.html" class="ahp-progress-step active"><div class="ahp-progress-circle">6</div><span>Resultados</span></a></div></div>
 
             <section class="card ahp-step-intro">
                 <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
                         <a href="index.html">Início</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <a href="tipo-analise.html">Tipo de análise</a>
+                        <a href="step1-configuracao.html">Etapa 1: Configuração</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <a href="step1-criterios.html">Etapa 1: Critérios</a>
+                        <a href="step2-criterios.html">Etapa 2: Critérios</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <a href="step2-nomes.html">Etapa 2: Nomes</a>
+                        <a href="step3-nomes.html">Etapa 3: Nomes</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <a href="step3-metodo.html">Etapa 3: Método</a>
+                        <a href="step4-metodo.html">Etapa 4: Método</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <a href="step4-comparacao.html">Etapa 4: Comparação</a>
+                        <a href="step5-comparacao.html">Etapa 5: Comparação</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <span class="ahp-breadcrumb-current">Etapa 5: Resultados</span>
+                        <span class="ahp-breadcrumb-current">Etapa 6: Resultados</span>
                     </nav>
-                    <h1 class="ahp-page-title"><i class="fas fa-chart-column app-template-title-icon" aria-hidden="true"></i>Etapa 5: Resultados</h1>
+                    <h1 class="ahp-page-title"><i class="fas fa-chart-column app-template-title-icon" aria-hidden="true"></i>Etapa 6: Resultados</h1>
                     <p class="ahp-page-desc">Avalie a consistência da matriz, consulte os pesos calculados e exporte os resultados consolidados da análise AHP.</p>
             </section>
 
@@ -61,7 +61,7 @@
             <section class="card ahp-step-section">
                 <div class="ahp-section-label"><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Saída da Análise</span></div>
                 <div class="ahp-section-body">
-                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">5</span>Resultados e Exportação</h2><div id="resultsContent"></div><div id="config-artefatos"></div><div class="ahp-form-actions"><a href="step4-comparacao.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><a href="step6-alternativas.html" class="btn btn-primary">Priorizar alternativas<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a><a href="tipo-analise.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a></div></section>
+                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">6</span>Resultados e Exportação</h2><div id="resultsContent"></div><div id="config-artefatos"></div><div class="ahp-form-actions"><a href="step5-comparacao.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><a href="step7-alternativas.html" class="btn btn-primary">Priorizar alternativas<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a><a href="step1-configuracao.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a></div></section>
                 </div>
             </section>
     </main>
@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded',function(){
 function initFromLocal(){
   const criteria=JSON.parse(localStorage.getItem('ahp_criteria')||'[]');
   const matrix=JSON.parse(localStorage.getItem('ahp_pairwiseMatrix')||'[]');
-  if(criteria.length===0||matrix.length===0){alert('Dados incompletos. Redirecionando...');window.location.href='step1-criterios.html';return;}
+  if(criteria.length===0||matrix.length===0){alert('Dados incompletos. Redirecionando...');window.location.href='step2-criterios.html';return;}
   const results=calculateAHP(matrix);
   displayResults(criteria,results,matrix);
 }

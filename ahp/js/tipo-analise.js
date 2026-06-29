@@ -15,17 +15,14 @@
   let areaCombo, temaCombo, fenomenoCombo;
   // Comboboxes da construção do objetivo.
   let acaoCombo, objetoCombo;
-  // Comboboxes da construção da descrição.
-  let perspectivaCombo, finalidadeCombo;
   // Instâncias do componente de Sugestões (escopo / objetivo / descrição).
   let sugEscopo, sugObjetivo, sugDescricao;
   const portfolioSection = document.getElementById("portfolio-section");
   const tipoDemandaSel = document.getElementById("config-tipo-demanda");
-  const filtrosWrap = document.getElementById("portfolio-filtros");
-  const addFiltroBtn = document.getElementById("add-filtro");
-  const logicosWrap = document.getElementById("filtros-logicos");
-  const addLogicoBtn = document.getElementById("add-logico");
+  const gruposWrap = document.getElementById("universo-grupos");
+  const addGrupoBtn = document.getElementById("add-grupo");
   const resumoWrap = document.getElementById("amostra-resumo");
+  const acoesWrap = document.getElementById("amostra-acoes");
   const previewText = document.getElementById("portfolio-preview-text");
 
   // Biblioteca de sugestões para orientar a construção do escopo, do geral ao
@@ -82,26 +79,21 @@
     "intervenções",
   ];
 
-  // ---- Bibliotecas para a construção da descrição ----
-  // Perspectiva: abordagem do estudo (vira verbo no infinitivo na frase).
-  const SUGESTOES_PERSPECTIVA = ["Análise", "Avaliação", "Exame"];
-  const PERSPECTIVA_INF = {
-    análise: "Analisar",
-    analise: "Analisar",
-    avaliação: "Avaliar",
-    avaliacao: "Avaliar",
-    exame: "Examinar",
+  // ---- Construção da descrição ----
+  // A perspectiva (verbo no infinitivo da descrição) deriva do verbo do objetivo.
+  const PERSPECTIVA_DO_VERBO = {
+    comparar: "Comparar",
+    classificar: "Classificar",
+    selecionar: "Selecionar",
   };
+  function perspectivaDoVerbo() {
+    const v = (acaoCombo ? acaoCombo.get() : "").trim().toLowerCase();
+    if (!v) return "";
+    return PERSPECTIVA_DO_VERBO[v] || "Analisar";
+  }
 
-  // Finalidade do estudo (propósito final da frase).
-  const SUGESTOES_FINALIDADE = [
-    "apoiar a decisão",
-    "estruturar a análise",
-    "comparar alternativas",
-  ];
-  const FINALIDADE_FRASE = {
-    "apoiar a decisão": "apoiar a tomada de decisão",
-  };
+  // A finalidade é a do próprio sistema (apoio à decisão) — inserida sempre.
+  const FINALIDADE_FIXA = "apoiar a tomada de decisão";
 
   // Dimensões dos critérios (conceito metodológico adiantado para esta seção).
   const DIMENSOES = [
@@ -113,18 +105,6 @@
     "territoriais",
   ];
   const DIMENSOES_PADRAO = ["ambientais", "sociais", "econômicas", "técnicas"];
-
-  function perspectivaInfinitivo(p) {
-    const k = (p || "").trim().toLowerCase();
-    if (!k) return "";
-    return PERSPECTIVA_INF[k] || ucFirst(k);
-  }
-
-  function finalidadeFrase(f) {
-    const k = (f || "").trim().toLowerCase();
-    if (!k) return "";
-    return FINALIDADE_FRASE[k] || k;
-  }
 
   // Junta lista com vírgulas e "e" antes do último item.
   function juntarLista(itens) {
@@ -237,6 +217,11 @@
       focus() {
         sel.focus();
       },
+      setDisabled(d) {
+        sel.disabled = !!d;
+        cust.disabled = !!d;
+        if (window.SLTFieldFilled) window.SLTFieldFilled.sync(sel);
+      },
     };
   }
 
@@ -340,7 +325,7 @@
   // Descrição: [Perspectiva-inf] [objeto] de [domínio] ... dimensões ... propósito.
   function descricaoVariantes() {
     const isPort = tipoSelecionado() === "portfolio";
-    const persp = perspectivaInfinitivo(perspectivaCombo ? perspectivaCombo.get() : "");
+    const persp = perspectivaDoVerbo();
     const objeto = isPort
       ? alternativaNome().toLowerCase()
       : (objetoCombo ? objetoCombo.get() : "").toLowerCase();
@@ -348,8 +333,9 @@
     const dominio = (areaCombo ? areaCombo.get() : "").toLowerCase();
     const construto = (fenomenoCombo ? fenomenoCombo.get() : "").toLowerCase();
     const recorte = (temaCombo ? temaCombo.get() : "").toLowerCase();
-    const fin = finalidadeFrase(finalidadeCombo ? finalidadeCombo.get() : "");
-    const dims = juntarLista(state.dimensoes);
+    const fin = FINALIDADE_FIXA;
+    // Inclui as dimensões só quando o usuário escolheu "Sim".
+    const dims = state.incluirDim === "sim" ? juntarLista(state.dimensoes) : "";
     const dom = dominio ? " de " + dominio : "";
     const aC = artigoConstruto(construto);
     const aCs = artSimplesConstruto(construto);
@@ -389,12 +375,17 @@
     programas: [], // [{id, nome, plano_id}]
     demandas: [], // universo do tipo atual (colunas ricas)
     campos: [], // metadados dos campos: [{campo, rotulo, tipo:'data'|'texto'}]
-    subconjunto: [], // filtro simples: [{campo, valor}] ou {campo, de, ate} (data)
-    logicos: [], // filtros lógicos: [{conector, campo, operador, valor}] ou data com de/ate
+    // Universo (DNF): lista de grupos; registro entra se atende a QUALQUER grupo
+    // e, dentro do grupo, a TODAS as condições.
+    // grupos: [{ condicoes: [{campo, operador, valor} | {campo, de, ate} (data)] }]
+    grupos: [],
     universoConfirmado: false, // conjunto de objetos travado pelo usuário
     universoObjetos: [], // snapshot confirmado: [{id, codigo, nome, tipo_demanda}]
     universoSig: "", // assinatura do conjunto confirmado (auto-invalidação)
+    excluidos: [], // ids desmarcados manualmente no resumo (ajuste fino)
     dimensoes: DIMENSOES_PADRAO.slice(), // dimensões marcadas (descrição)
+    incluirDim: "", // "sim" | "nao" — incluir dimensões dos critérios?
+    dimConfirmado: false, // usuário confirmou a escolha das dimensões
     // Estado das Sugestões por seção: textos (3), travas de edição, seleção e
     // texto confirmado (o que persiste).
     sug: {
@@ -592,36 +583,33 @@
       container.appendChild(confirmWrap);
     }
 
-    return { regenerar: regenerar, render: render };
+    return { regenerar: regenerar, render: render, estaConfirmado: estaConfirmado };
   }
 
-  // Monta os checkboxes de dimensões dos critérios.
+  // Mudança nas dimensões invalida a confirmação (exige reconfirmar) e atualiza
+  // a sugestão de descrição.
+  function onDimensoesMudou() {
+    state.dimConfirmado = false;
+    refreshGates();
+    if (sugDescricao) sugDescricao.regenerar();
+    saveDraft();
+  }
+
+  // Lista apenas (sem caixas seletoras): ao incluir dimensões, o sistema considera
+  // TODAS as dimensões cadastradas. A lista é só para conferência.
   function renderDimensoes() {
     const wrap = document.getElementById("config-dimensoes");
     if (!wrap) return;
+    state.dimensoes = DIMENSOES.slice();
     wrap.innerHTML = "";
+    const ul = document.createElement("ul");
+    ul.className = "ahp-dim-list";
     DIMENSOES.forEach((dim) => {
-      const label = document.createElement("label");
-      const chk = document.createElement("input");
-      chk.type = "checkbox";
-      chk.value = dim;
-      chk.checked = state.dimensoes.indexOf(dim) !== -1;
-      chk.addEventListener("change", function () {
-        if (chk.checked) {
-          if (state.dimensoes.indexOf(dim) === -1) state.dimensoes.push(dim);
-        } else {
-          state.dimensoes = state.dimensoes.filter((d) => d !== dim);
-        }
-        // Reordena conforme a ordem canônica das dimensões.
-        state.dimensoes = DIMENSOES.filter((d) => state.dimensoes.indexOf(d) !== -1);
-        onDescricaoChange();
-      });
-      const span = document.createElement("span");
-      span.textContent = dim;
-      label.appendChild(chk);
-      label.appendChild(span);
-      wrap.appendChild(label);
+      const li = document.createElement("li");
+      li.textContent = dim;
+      ul.appendChild(li);
     });
+    wrap.appendChild(ul);
   }
 
   const OPERADORES = [
@@ -664,17 +652,17 @@
       objetivo: objInput ? objInput.value : "",
       acao: acaoCombo ? acaoCombo.get() : "",
       objeto: objetoCombo ? objetoCombo.get() : "",
-      perspectiva: perspectivaCombo ? perspectivaCombo.get() : "",
-      finalidade: finalidadeCombo ? finalidadeCombo.get() : "",
       dimensoes: state.dimensoes,
+      incluirDim: state.incluirDim,
+      dimConfirmado: state.dimConfirmado,
       sug: state.sug,
       tipo: tipoSelecionado(),
       tipo_demanda_id: tipoDemandaSel.value || null,
-      subconjunto: state.subconjunto,
-      logicos: state.logicos,
+      grupos: state.grupos,
       universoConfirmado: state.universoConfirmado,
       universoObjetos: state.universoObjetos,
       universoSig: state.universoSig,
+      excluidos: state.excluidos,
     };
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -696,13 +684,13 @@
 
   function togglePortfolio() {
     const tipo = tipoSelecionado();
-    const isPortfolio = tipo === "portfolio";
-    portfolioSection.classList.toggle("is-hidden", !isPortfolio);
-    // A dimensão (tipo de demanda) só faz sentido no portfólio: é a chave que
-    // delimita o universo e entra no título.
-    if (miniDimensao) miniDimensao.classList.toggle("is-hidden", !isPortfolio);
-    // Objeto manual só na avulsa (no portfólio o objeto vem do tipo de demanda).
-    if (miniObjetoAvulsa) miniObjetoAvulsa.classList.toggle("is-hidden", tipo !== "avulsa");
+    // A seção "Universo da análise" fica SEMPRE visível; o conteúdo depende apenas
+    // de haver um tipo de demanda (objeto) selecionado.
+    if (portfolioSection) portfolioSection.classList.remove("is-hidden");
+    // O card "Objeto da análise" fica SEMPRE visível: por padrão mostra a variante
+    // de portfólio (tipo de demanda) e só troca para o objeto manual na avulsa.
+    if (miniDimensao) miniDimensao.classList.toggle("is-hidden", tipo === "avulsa");
+    if (miniObjetoAvulsa) miniObjetoAvulsa.classList.toggle("is-hidden", tipo === "avulsa" ? false : true);
   }
 
   // Campos disponíveis para estratificar (ricos, vindos do backend).
@@ -858,120 +846,108 @@
     return btn;
   }
 
-  function renderFiltros() {
-    filtrosWrap.innerHTML = "";
+  // ---- Construtor do universo (grupos em forma normal disjuntiva) ----
+  // Renderiza todos os grupos; cada grupo tem suas condições (campo/operador/valor)
+  // combinadas por E. Os grupos entre si combinam por OU.
+  function renderUniverso() {
+    if (!gruposWrap) return;
+    gruposWrap.innerHTML = "";
     if (!tipoDemandaCodigo()) return;
-    if (state.subconjunto.length === 0) state.subconjunto.push({ campo: "" });
+    if (state.grupos.length === 0) state.grupos.push({ condicoes: [{ campo: "" }] });
 
-    filtrosWrap.appendChild(headerRow(["Campo", "Valor", ""], "ahp-filtro-row"));
+    state.grupos.forEach((grupo, gi) => {
+      if (!Array.isArray(grupo.condicoes) || grupo.condicoes.length === 0) {
+        grupo.condicoes = [{ campo: "" }];
+      }
 
-    state.subconjunto.forEach((filtro, idx) => {
-      const row = document.createElement("div");
-      row.className = "ahp-filtro-row";
+      if (gi > 0) {
+        const ou = document.createElement("div");
+        ou.className = "ahp-grupo-ou";
+        ou.textContent = "OU";
+        gruposWrap.appendChild(ou);
+      }
 
-      const campoSel = campoSelect(filtro.campo);
-      campoSel.addEventListener("change", function () {
-        state.subconjunto[idx] = { campo: campoSel.value || "" };
-        renderFiltros();
-        saveDraft();
-        atualizarPreview();
-      });
+      const card = document.createElement("div");
+      card.className = "ahp-grupo-card";
 
-      const cell = valorCell(filtro, function () {
-        saveDraft();
-        atualizarPreview();
-      });
-
-      const removeBtn = removeButton("Remover filtro", function () {
-        state.subconjunto.splice(idx, 1);
-        renderFiltros();
-        saveDraft();
-        atualizarPreview();
-      });
-
-      row.appendChild(campoSel);
-      row.appendChild(cell);
-      row.appendChild(removeBtn);
-      filtrosWrap.appendChild(row);
-    });
-  }
-
-  // ---- Filtros lógicos (operadores booleanos E/OU + operador por condição) ----
-  function renderLogicos() {
-    logicosWrap.innerHTML = "";
-    if (!tipoDemandaCodigo()) return;
-    if (state.logicos.length > 0) {
-      logicosWrap.appendChild(
-        headerRow(["", "Campo", "Operador", "Valor", ""], "ahp-logico-row")
-      );
-    }
-
-    state.logicos.forEach((cond, idx) => {
-      const row = document.createElement("div");
-      row.className = "ahp-logico-row";
-
-      if (idx > 0) {
-        const conSel = document.createElement("select");
-        conSel.className = "c-form-control ahp-conector";
-        conSel.appendChild(makeOption("and", "E"));
-        conSel.appendChild(makeOption("or", "OU"));
-        conSel.value = cond.conector || "and";
-        conSel.addEventListener("change", function () {
-          state.logicos[idx].conector = conSel.value;
+      const head = document.createElement("div");
+      head.className = "ahp-grupo-head";
+      const titulo = document.createElement("span");
+      titulo.className = "ahp-grupo-titulo";
+      titulo.innerHTML =
+        '<i class="fas fa-layer-group" aria-hidden="true"></i> Grupo ' +
+        (gi + 1) +
+        " — atende a <strong>todas</strong> as condições";
+      head.appendChild(titulo);
+      if (state.grupos.length > 1) {
+        const rmGrupo = removeButton("Remover grupo", function () {
+          state.grupos.splice(gi, 1);
+          renderUniverso();
           saveDraft();
           atualizarPreview();
         });
-        row.appendChild(conSel);
-      } else {
-        const spacer = document.createElement("span");
-        spacer.className = "ahp-conector ahp-conector-fixo";
-        spacer.textContent = "Onde";
-        row.appendChild(spacer);
+        head.appendChild(rmGrupo);
       }
+      card.appendChild(head);
 
-      const campoSel = campoSelect(cond.campo);
+      card.appendChild(headerRow(["Campo", "Operador", "Valor", ""], "ahp-cond-row"));
 
-      const isData = cond.campo && campoTipo(cond.campo) === "data";
-      const opSel = document.createElement("select");
-      opSel.className = "c-form-control";
-      OPERADORES.forEach((o) => opSel.appendChild(makeOption(o.value, o.label)));
-      opSel.value = cond.operador || "eq";
-      if (isData) {
-        opSel.disabled = true; // data usa período (de/até)
-      }
+      grupo.condicoes.forEach((cond, ci) => {
+        const row = document.createElement("div");
+        row.className = "ahp-cond-row";
 
-      const cell = valorCell(cond, function () {
-        saveDraft();
-        atualizarPreview();
+        const campoSel = campoSelect(cond.campo);
+        const isData = cond.campo && campoTipo(cond.campo) === "data";
+
+        const opSel = document.createElement("select");
+        opSel.className = "c-form-control";
+        OPERADORES.forEach((o) => opSel.appendChild(makeOption(o.value, o.label)));
+        opSel.value = cond.operador || "eq";
+        if (isData) opSel.disabled = true; // data usa período (de/até)
+
+        const cell = valorCell(cond, function () {
+          saveDraft();
+          atualizarPreview();
+        });
+
+        campoSel.addEventListener("change", function () {
+          grupo.condicoes[ci] = { campo: campoSel.value || "", operador: "eq" };
+          renderUniverso();
+          saveDraft();
+          atualizarPreview();
+        });
+        opSel.addEventListener("change", function () {
+          grupo.condicoes[ci].operador = opSel.value;
+          saveDraft();
+          atualizarPreview();
+        });
+        const rmCond = removeButton("Remover condição", function () {
+          grupo.condicoes.splice(ci, 1);
+          if (grupo.condicoes.length === 0) grupo.condicoes.push({ campo: "" });
+          renderUniverso();
+          saveDraft();
+          atualizarPreview();
+        });
+
+        row.appendChild(campoSel);
+        row.appendChild(opSel);
+        row.appendChild(cell);
+        row.appendChild(rmCond);
+        card.appendChild(row);
       });
 
-      campoSel.addEventListener("change", function () {
-        state.logicos[idx] = {
-          conector: cond.conector || "and",
-          campo: campoSel.value || "",
-          operador: "eq",
-        };
-        renderLogicos();
+      const addCond = document.createElement("button");
+      addCond.type = "button";
+      addCond.className = "btn btn-secondary btn-sm ahp-grupo-add-cond";
+      addCond.innerHTML = '<i class="fas fa-plus" aria-hidden="true"></i> Adicionar condição (E)';
+      addCond.addEventListener("click", function () {
+        grupo.condicoes.push({ campo: "", operador: "eq" });
+        renderUniverso();
         saveDraft();
-        atualizarPreview();
       });
-      opSel.addEventListener("change", function () {
-        state.logicos[idx].operador = opSel.value;
-        saveDraft();
-        atualizarPreview();
-      });
-      const removeBtn = removeButton("Remover condição", function () {
-        state.logicos.splice(idx, 1);
-        renderLogicos();
-        saveDraft();
-        atualizarPreview();
-      });
+      card.appendChild(addCond);
 
-      row.appendChild(campoSel);
-      row.appendChild(opSel);
-      row.appendChild(cell);
-      row.appendChild(removeBtn);
-      logicosWrap.appendChild(row);
+      gruposWrap.appendChild(card);
     });
   }
 
@@ -1009,29 +985,24 @@
     return String(v) === String(cond.valor); // eq (padrão)
   }
 
-  function matchLogicos(d) {
-    if (state.logicos.length === 0) return true;
-    let acc = null;
-    state.logicos.forEach((cond, i) => {
-      const r = matchCondicao(d, cond);
-      if (i === 0) acc = r;
-      else acc = cond.conector === "or" ? acc || r : acc && r;
-    });
-    return acc === null ? true : acc;
+  // Um grupo é satisfeito quando TODAS as suas condições preenchidas batem (E).
+  function matchGrupo(d, grupo) {
+    const conds = (grupo && grupo.condicoes) || [];
+    return conds.every((c) => matchCondicao(d, c));
   }
 
-  // Filtro simples: igualdade (texto) ou período (data), combinados por E.
-  function matchSimples(d) {
-    return state.subconjunto.every((f) => {
-      if (!f.campo) return true;
-      if (campoTipo(f.campo) === "data") return matchData(d[f.campo], f.de, f.ate);
-      return !f.valor || String(d[f.campo]) === String(f.valor);
-    });
+  // Universo (DNF): registro entra se atende a QUALQUER grupo (OU). Grupos vazios
+  // (sem condições preenchidas) não restringem nada.
+  function gruposAtivos() {
+    return state.grupos.filter((g) =>
+      (g.condicoes || []).some((c) => c.campo && (c.valor || c.de || c.ate))
+    );
   }
 
-  // Amostra final = filtro simples (E) combinado com filtros lógicos.
   function amostraFiltrada() {
-    return state.demandas.filter((d) => matchSimples(d) && matchLogicos(d));
+    const ativos = gruposAtivos();
+    if (ativos.length === 0) return state.demandas.slice();
+    return state.demandas.filter((d) => ativos.some((g) => matchGrupo(d, g)));
   }
 
   // ---- Resumo: tabela com os registros filtrados ----
@@ -1043,8 +1014,17 @@
       { campo: "nome", rotulo: "Nome" },
       { campo: "status", rotulo: "Status" },
     ];
-    camposDisponiveis().forEach((c) => {
-      if (c.campo !== "status") cols.push(c);
+    // Acrescenta só os campos efetivamente usados nas condições (resultado focado).
+    const usados = [];
+    const addUsado = (campo) => {
+      if (!campo) return;
+      if (["codigo", "nome", "status"].indexOf(campo) !== -1) return;
+      if (usados.indexOf(campo) === -1) usados.push(campo);
+    };
+    state.grupos.forEach((g) => (g.condicoes || []).forEach((c) => addUsado(c.campo)));
+    usados.forEach((campo) => {
+      const meta = camposDisponiveis().find((c) => c.campo === campo);
+      cols.push({ campo, rotulo: meta ? meta.rotulo : campo });
     });
     return cols;
   }
@@ -1066,6 +1046,11 @@
       nome: d.nome,
       tipo_demanda: tipo,
     }));
+  }
+
+  // Linhas que entram de fato no universo: filtradas E não desmarcadas no resumo.
+  function linhasSelecionadas() {
+    return amostraFiltrada().filter((d) => state.excluidos.indexOf(String(d.id)) === -1);
   }
 
   function confirmarUniverso(linhas) {
@@ -1111,7 +1096,7 @@
       confirmar.innerHTML =
         '<i class="fas fa-circle-check" aria-hidden="true"></i> Confirmar universo de análise';
       confirmar.addEventListener("click", function () {
-        confirmarUniverso(amostraFiltrada());
+        confirmarUniverso(linhasSelecionadas());
       });
       acoes.appendChild(confirmar);
     }
@@ -1121,12 +1106,14 @@
   function renderResumo() {
     if (!resumoWrap) return;
     resumoWrap.innerHTML = "";
+    if (acoesWrap) acoesWrap.innerHTML = "";
     const codigo = tipoDemandaCodigo();
     if (!codigo) return;
     const linhas = amostraFiltrada();
+    const selecionadas = linhasSelecionadas();
 
-    // Auto-invalidação: se o conjunto mudou após confirmar, destrava.
-    if (state.universoConfirmado && sigDe(linhas) !== state.universoSig) {
+    // Auto-invalidação: se o conjunto selecionado mudou após confirmar, destrava.
+    if (state.universoConfirmado && sigDe(selecionadas) !== state.universoSig) {
       state.universoConfirmado = false;
       state.universoObjetos = [];
       state.universoSig = "";
@@ -1135,15 +1122,31 @@
 
     if (linhas.length === 0) {
       resumoWrap.innerHTML = '<p class="ahp-page-desc">Nenhum registro com os filtros atuais.</p>';
-      resumoWrap.appendChild(renderResumoAcoes(linhas));
+      if (acoesWrap) acoesWrap.appendChild(renderResumoAcoes(selecionadas));
       return;
     }
     const cols = colunasResumo();
+    const travado = state.universoConfirmado;
     const table = document.createElement("table");
     table.className = "ahp-resumo-table";
 
     const thead = document.createElement("thead");
     const trh = document.createElement("tr");
+    // Coluna de seleção (incluir/excluir registro do universo).
+    const thSel = document.createElement("th");
+    thSel.className = "ahp-resumo-sel";
+    const todas = document.createElement("input");
+    todas.type = "checkbox";
+    todas.title = "Selecionar todos";
+    todas.checked = selecionadas.length === linhas.length;
+    todas.disabled = travado;
+    todas.addEventListener("change", function () {
+      state.excluidos = todas.checked ? [] : linhas.map((d) => String(d.id));
+      saveDraft();
+      renderResumo();
+    });
+    thSel.appendChild(todas);
+    trh.appendChild(thSel);
     cols.forEach((c) => {
       const th = document.createElement("th");
       th.textContent = c.rotulo;
@@ -1154,7 +1157,29 @@
 
     const tbody = document.createElement("tbody");
     linhas.slice(0, RESUMO_MAX).forEach((d) => {
+      const id = String(d.id);
       const tr = document.createElement("tr");
+      const incluido = state.excluidos.indexOf(id) === -1;
+      if (!incluido) tr.classList.add("is-excluido");
+
+      const tdSel = document.createElement("td");
+      tdSel.className = "ahp-resumo-sel";
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.checked = incluido;
+      chk.disabled = travado;
+      chk.addEventListener("change", function () {
+        if (chk.checked) {
+          state.excluidos = state.excluidos.filter((x) => x !== id);
+        } else if (state.excluidos.indexOf(id) === -1) {
+          state.excluidos.push(id);
+        }
+        saveDraft();
+        renderResumo();
+      });
+      tdSel.appendChild(chk);
+      tr.appendChild(tdSel);
+
       cols.forEach((c) => {
         const td = document.createElement("td");
         const raw = d[c.campo];
@@ -1175,7 +1200,15 @@
       resumoWrap.appendChild(more);
     }
 
-    resumoWrap.appendChild(renderResumoAcoes(linhas));
+    // Contagem de selecionados para conferência rápida.
+    const cont = document.createElement("p");
+    cont.className = "ahp-resumo-contagem";
+    cont.innerHTML =
+      "<strong>" + selecionadas.length + "</strong> de " + linhas.length +
+      " registro(s) selecionado(s) para o universo.";
+    resumoWrap.appendChild(cont);
+
+    if (acoesWrap) acoesWrap.appendChild(renderResumoAcoes(selecionadas));
   }
 
   function atualizarPreview() {
@@ -1279,26 +1312,33 @@
     if (fenomenoCombo) fenomenoCombo.set(draft.fenomeno);
     if (acaoCombo) acaoCombo.set(draft.acao);
     if (objetoCombo) objetoCombo.set(draft.objeto);
-    if (perspectivaCombo) perspectivaCombo.set(draft.perspectiva);
-    if (finalidadeCombo) finalidadeCombo.set(draft.finalidade);
     if (Array.isArray(draft.dimensoes)) state.dimensoes = draft.dimensoes;
+    state.incluirDim = draft.incluirDim || "";
+    state.dimConfirmado = !!draft.dimConfirmado;
     renderDimensoes();
+    // Reflete a escolha Sim/Não e a visibilidade do card de dimensões.
+    if (state.incluirDim) {
+      const r = form.querySelector('input[name="incluir-dimensoes"][value="' + state.incluirDim + '"]');
+      if (r) r.checked = true;
+    }
+    const dimCard = document.getElementById("mini-dimensoes-lista");
+    if (dimCard) dimCard.classList.toggle("is-hidden", state.incluirDim !== "sim");
     // Restaura o estado das Sugestões e reflete os valores confirmados nos
     // campos ocultos que vão ao backend.
     if (draft.sug) state.sug = draft.sug;
     if (nomeInput) nomeInput.value = state.sug.escopo.confirmado || "";
     if (objInput) objInput.value = state.sug.objetivo.confirmado || "";
     if (descInput) descInput.value = state.sug.descricao.confirmado || "";
-    const tipo = draft.tipo || localStorage.getItem(TIPO_KEY);
+    const tipo = draft.tipo;
     if (tipo === "avulsa" || tipo === "portfolio") {
       const input = form.querySelector('input[value="' + tipo + '"]');
       if (input) input.checked = true;
     }
-    if (Array.isArray(draft.subconjunto)) {
-      state.subconjunto = draft.subconjunto;
+    if (Array.isArray(draft.grupos)) {
+      state.grupos = draft.grupos;
     }
-    if (Array.isArray(draft.logicos)) {
-      state.logicos = draft.logicos;
+    if (Array.isArray(draft.excluidos)) {
+      state.excluidos = draft.excluidos.map((x) => String(x));
     }
     if (draft.universoConfirmado && Array.isArray(draft.universoObjetos)) {
       state.universoConfirmado = true;
@@ -1311,9 +1351,8 @@
       tipoDemandaSel.value = draft.tipo_demanda_id;
       await carregarDemandas();
     }
-    renderFiltros();
-    renderLogicos();
-    if (tipoSelecionado() === "portfolio") atualizarPreview();
+    renderUniverso();
+    atualizarPreview();
   }
 
   cards.forEach((card) => {
@@ -1323,35 +1362,111 @@
       syncCards();
       togglePortfolio();
       onEscopoChange();
-      if (tipoSelecionado() === "portfolio") atualizarPreview();
+      atualizarPreview();
     });
   });
 
   tipoDemandaSel.addEventListener("change", async function () {
     // Trocar o nível reinicia a amostra (campos/valores mudam por tipo).
-    state.subconjunto = [];
-    state.logicos = [];
+    state.grupos = [];
+    state.excluidos = [];
+    state.universoConfirmado = false;
+    state.universoObjetos = [];
+    state.universoSig = "";
     onEscopoChange();
     await carregarDemandas();
-    renderFiltros();
-    renderLogicos();
+    renderUniverso();
     atualizarPreview();
   });
 
-  if (addFiltroBtn) {
-    addFiltroBtn.addEventListener("click", function () {
-      state.subconjunto.push({ campo: "", valor: "" });
-      renderFiltros();
+  if (addGrupoBtn) {
+    addGrupoBtn.addEventListener("click", function () {
+      state.grupos.push({ condicoes: [{ campo: "", operador: "eq" }] });
+      renderUniverso();
       saveDraft();
     });
   }
 
-  if (addLogicoBtn) {
-    addLogicoBtn.addEventListener("click", function () {
-      state.logicos.push({ conector: "and", campo: "", operador: "eq", valor: "" });
-      renderLogicos();
-      saveDraft();
+  // ---- Liberação progressiva (gating) + validação visual ----
+  function objetoPreenchido() {
+    return tipoSelecionado() === "portfolio"
+      ? !!tipoDemandaSel.value
+      : !!(objetoCombo && objetoCombo.get());
+  }
+  function escopoPodeMostrar() {
+    return (
+      !!tipoSelecionado() &&
+      objetoPreenchido() &&
+      !!(fenomenoCombo && fenomenoCombo.get()) &&
+      !!(areaCombo && areaCombo.get()) &&
+      !!(temaCombo && temaCombo.get())
+    );
+  }
+  function objetivoPodeMostrar() {
+    return !!(sugEscopo && sugEscopo.estaConfirmado()) && !!(acaoCombo && acaoCombo.get());
+  }
+  function descricaoPodeMostrar() {
+    return !!(sugObjetivo && sugObjetivo.estaConfirmado()) && state.dimConfirmado;
+  }
+
+  // Habilita/desabilita seletores conforme a etapa liberada e reseta o que
+  // depende de etapas anteriores ainda não cumpridas.
+  // Texto "Tipo de demanda/objeto selecionado: …" no topo do Universo da análise.
+  function objetoSelecionadoLabel() {
+    if (tipoSelecionado() === "portfolio") {
+      const f = state.tiposDemanda.find(
+        (t) => String(t.id) === String(tipoDemandaSel.value)
+      );
+      return f ? f.nome : "";
+    }
+    return (objetoCombo && objetoCombo.get()) || "";
+  }
+  function pluralizar(palavra) {
+    const p = palavra.trim();
+    if (!p) return p;
+    if (/s$/i.test(p)) return p;
+    if (/[aeiou]$/i.test(p)) return p + "s";
+    if (/r$|z$/i.test(p)) return p + "es";
+    if (/m$/i.test(p)) return p.slice(0, -1) + "ns";
+    return p + "s";
+  }
+  function atualizarUniversoObjeto() {
+    const label = objetoSelecionadoLabel();
+    const el = document.getElementById("universo-objeto-valor");
+    if (el) el.textContent = label || "—";
+    const plural = label ? pluralizar(label).toLowerCase() : "objetos";
+    document.querySelectorAll(".universo-obj-ref").forEach((s) => {
+      s.textContent = plural;
     });
+  }
+
+  function refreshGates() {
+    atualizarUniversoObjeto();
+    const destinoOk = !!tipoSelecionado();
+    const objOk = objetoPreenchido();
+    const escopoOk = !!(sugEscopo && sugEscopo.estaConfirmado());
+    const objetivoOk = !!(sugObjetivo && sugObjetivo.estaConfirmado());
+
+    // Escopo: fenômeno/área/tema só ativos após destino + objeto.
+    const escopoSelEnabled = destinoOk && objOk;
+    [fenomenoCombo, areaCombo, temaCombo].forEach((c) => {
+      if (c) c.setDisabled(!escopoSelEnabled);
+    });
+
+    // Objetivo: verbo só ativo após escopo confirmado.
+    if (acaoCombo) acaoCombo.setDisabled(!escopoOk);
+
+    // Descrição: incluir dimensões só após objetivo confirmado.
+    const dimEnabled = escopoOk && objetivoOk;
+    const radios = form.querySelectorAll('input[name="incluir-dimensoes"]');
+    radios.forEach((r) => {
+      r.disabled = !dimEnabled;
+    });
+    const dimConfirmar = document.getElementById("dim-confirmar");
+    // Confirmar só vale para "Sim" (no "Não" a escolha já confirma).
+    if (dimConfirmar) dimConfirmar.disabled = !dimEnabled || state.incluirDim !== "sim";
+    // Se a etapa anterior caiu, a confirmação de dimensões deixa de valer.
+    if (!dimEnabled && state.dimConfirmado) state.dimConfirmado = false;
   }
 
   // Mudança no escopo afeta título, objetivo e descrição (todos reaproveitam).
@@ -1359,15 +1474,41 @@
     if (sugEscopo) sugEscopo.regenerar();
     if (sugObjetivo) sugObjetivo.regenerar();
     if (sugDescricao) sugDescricao.regenerar();
+    refreshGates();
     saveDraft();
   }
   function onObjetivoChange() {
     if (sugObjetivo) sugObjetivo.regenerar();
+    if (sugDescricao) sugDescricao.regenerar();
+    refreshGates();
     saveDraft();
   }
-  function onDescricaoChange() {
-    if (sugDescricao) sugDescricao.regenerar();
-    saveDraft();
+
+  // Incluir dimensões? (Sim/Não):
+  // - "Sim" mostra o card da lista de dimensões para conferir e confirmar.
+  // - "Não" já confirma (a sugestão de descrição aparece sem dimensões).
+  form.querySelectorAll('input[name="incluir-dimensoes"]').forEach((r) => {
+    r.addEventListener("change", function () {
+      state.incluirDim = r.value;
+      const ehSim = state.incluirDim === "sim";
+      state.dimConfirmado = !ehSim; // "Não" confirma direto; "Sim" exige confirmar
+      const dimCard = document.getElementById("mini-dimensoes-lista");
+      if (dimCard) dimCard.classList.toggle("is-hidden", !ehSim);
+      refreshGates();
+      if (sugDescricao) sugDescricao.regenerar();
+      saveDraft();
+    });
+  });
+
+  const dimConfirmarBtn = document.getElementById("dim-confirmar");
+  if (dimConfirmarBtn) {
+    dimConfirmarBtn.addEventListener("click", function () {
+      if (!state.incluirDim) return;
+      state.dimConfirmado = true;
+      if (sugDescricao) sugDescricao.regenerar();
+      refreshGates();
+      saveDraft();
+    });
   }
 
   form.addEventListener("submit", async function (event) {
@@ -1404,14 +1545,6 @@
       }
       payload.tipo_demanda = codigo;
 
-      // Filtros válidos (campo e valor preenchidos).
-      const filtros = state.subconjunto.filter((f) => f.campo && f.valor);
-      const logicos = state.logicos.filter((f) => f.campo && f.valor);
-      if (filtros.length === 0 && logicos.length === 0) {
-        alert("Adicione ao menos um filtro (campo e valor) no universo amostral.");
-        return;
-      }
-
       if (!state.universoConfirmado || state.universoObjetos.length === 0) {
         alert(
           "Confirme o universo da análise (botão «Confirmar universo de análise» no Resumo) antes de continuar."
@@ -1419,11 +1552,18 @@
         return;
       }
 
+      // Condição preenchida: texto (valor) ou data (período de/até).
+      const preenchida = (c) => !!c.campo && (!!c.valor || !!c.de || !!c.ate);
+      // Serializa só os grupos/condições efetivamente preenchidos (DNF).
+      const grupos = state.grupos
+        .map((g) => ({ condicoes: (g.condicoes || []).filter(preenchida) }))
+        .filter((g) => g.condicoes.length > 0);
+
       // Recorte do universo gravado como JSON único (configuração dos campos).
       payload.subconjunto = {
         tipo_demanda: codigo,
-        filtros: filtros,
-        logicos: logicos,
+        modo: "dnf", // grupos combinados por OU; condições internas por E
+        grupos: grupos,
       };
       // Snapshot congelado do conjunto confirmado (alvo da hierarquização).
       payload.universo_objetos = state.universoObjetos;
@@ -1440,7 +1580,7 @@
         JSON.stringify({ tipo: created.tipo, codigo: created.codigo })
       );
       saveDraft();
-      window.location.href = "step1-criterios.html";
+      window.location.href = "step2-criterios.html";
     } catch (err) {
       alert("Não foi possível criar a configuração: " + (err && err.message ? err.message : err));
       if (submitBtn) submitBtn.disabled = false;
@@ -1449,34 +1589,29 @@
 
   // Inicialização
   (async function init() {
+    // A cada carregamento/recarregamento a página começa limpa: campos vazios e
+    // seletores nos placeholders padrão (não restauramos rascunho anterior).
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch (e) {
+      /* ignore */
+    }
     areaCombo = makeCombo("config-area", "config-area-custom", SUGESTOES_AREA);
     temaCombo = makeCombo("config-tema", "config-tema-custom", SUGESTOES_TEMA);
     fenomenoCombo = makeCombo("config-fenomeno", "config-fenomeno-custom", SUGESTOES_FENOMENO);
     acaoCombo = makeCombo("config-acao", "config-acao-custom", SUGESTOES_ACAO, onObjetivoChange);
     objetoCombo = makeCombo("config-objeto", "config-objeto-custom", SUGESTOES_OBJETO, function () {
-      // Objeto (avulsa) alimenta tanto o objetivo quanto a descrição.
-      onObjetivoChange();
-      onDescricaoChange();
+      // Objeto (avulsa) é parte do escopo e do objetivo/descrição.
+      onEscopoChange();
     });
-    perspectivaCombo = makeCombo(
-      "config-perspectiva",
-      "config-perspectiva-custom",
-      SUGESTOES_PERSPECTIVA,
-      onDescricaoChange
-    );
-    finalidadeCombo = makeCombo(
-      "config-finalidade",
-      "config-finalidade-custom",
-      SUGESTOES_FINALIDADE,
-      onDescricaoChange
-    );
     renderDimensoes();
 
-    // Componentes de Sugestões (3 versões + ações + confirmar).
+    // Componentes de Sugestões (3 versões + ações + confirmar) com gating.
     sugEscopo = criarSugestoes({
       containerId: "sug-escopo",
       chave: "escopo",
       gerar: escopoVariantes,
+      podeMostrar: escopoPodeMostrar,
       aoConfirmar: function (texto) {
         if (nomeInput) nomeInput.value = texto || "";
       },
@@ -1485,6 +1620,7 @@
       containerId: "sug-objetivo",
       chave: "objetivo",
       gerar: objetivoVariantes,
+      podeMostrar: objetivoPodeMostrar,
       aoConfirmar: function (texto) {
         if (objInput) objInput.value = texto || "";
       },
@@ -1493,6 +1629,7 @@
       containerId: "sug-descricao",
       chave: "descricao",
       gerar: descricaoVariantes,
+      podeMostrar: descricaoPodeMostrar,
       aoConfirmar: function (texto) {
         if (descInput) descInput.value = texto || "";
       },
@@ -1503,5 +1640,7 @@
     sugEscopo.regenerar();
     sugObjetivo.regenerar();
     sugDescricao.regenerar();
+    refreshGates();
+    if (window.SLTFieldFilled) window.SLTFieldFilled.syncAll(document);
   })();
 })();

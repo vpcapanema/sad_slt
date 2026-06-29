@@ -54,7 +54,7 @@
     const matrix = JSON.parse(localStorage.getItem("ahp_pairwiseMatrix") || "[]");
     if (!state.criteria.length || !matrix.length) {
       alert("Dados das etapas anteriores incompletos. Redirecionando...");
-      window.location.href = "step1-criterios.html";
+      window.location.href = "step2-criterios.html";
       return;
     }
     const r = global.SLTAhp.analyzeMatrix(matrix);

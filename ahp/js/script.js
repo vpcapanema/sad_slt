@@ -487,7 +487,7 @@ function exportXLSX() {
 }
 
 // -----------------------------------------------------------
-// Step 4: Gera matriz direta específica para step4-comparacao.html
+// Step 5: Gera matriz direta específica para step5-comparacao.html
 // -----------------------------------------------------------
 function generateDirectMatrixStep4() {
   const n = criteria.length;
@@ -653,7 +653,7 @@ function applyColorScheme(selectElement, reciprocalCell, val) {
 }
 
 // -----------------------------------------------------------
-// Step 4: Gera formulário pareado específico para step4-comparacao.html
+// Step 5: Gera formulário pareado específico para step5-comparacao.html
 // -----------------------------------------------------------
 // Graduações da escala de Saaty (centrada em 1), conforme a imagem de referência
 const SAATY_STEPS = [
@@ -914,9 +914,9 @@ function calculateResults() {
   // apenas cache. Navega em seguida, mesmo se a persistência falhar (offline).
   if (window.SLTConfigBridge && typeof window.SLTConfigBridge.persistMatriz === 'function') {
     Promise.resolve(window.SLTConfigBridge.persistMatriz(pairwiseMatrix)).finally(function () {
-      window.location.href = 'step5-resultados.html';
+      window.location.href = 'step6-resultados.html';
     });
   } else {
-    window.location.href = 'step5-resultados.html';
+    window.location.href = 'step6-resultados.html';
   }
 }

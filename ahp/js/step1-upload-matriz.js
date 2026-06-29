@@ -188,7 +188,7 @@
           "info"
         );
         setTimeout(function () {
-          window.location.href = "step2-nomes.html";
+          window.location.href = "step3-nomes.html";
         }, 600);
       });
     } catch (error) {
@@ -204,7 +204,7 @@
     localStorage.removeItem("ahp_pairwiseMatrix");
     localStorage.setItem("ahp_inputMethod", "manual");
     localStorage.setItem("ahp_criteriaCount", String(criteriaCount));
-    window.location.href = "step2-nomes.html";
+    window.location.href = "step3-nomes.html";
   }
 
   global.toggleInputMethod = toggleInputMethod;

@@ -110,7 +110,7 @@
 
   function selectMethod(method) {
     localStorage.setItem("ahp_chosenMethod", method);
-    window.location.href = "step4-comparacao.html";
+    window.location.href = "step5-comparacao.html";
   }
 
   global.selectMethod = selectMethod;

@@ -75,7 +75,7 @@ def listar_campos(tipo: str) -> list[CampoUniversoSchema]:
         raise DemandaValidationError(f"Tipo de demanda inválido: {tipo}.", field="tipo")
     return [
         CampoUniversoSchema(campo=c["campo"], rotulo=_rotulo(c["campo"], tipo), tipo=c["tipo"])
-        for c in repo.colunas(tipo)
+        for c in repo.colunas_coletivas(tipo)
     ]
 
 
