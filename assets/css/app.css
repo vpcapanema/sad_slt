@@ -1,3 +1,4 @@
+/* cspell:disable */
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@400;500&display=swap");
 
 :root {
@@ -454,6 +455,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -908,6 +910,7 @@ textarea {
 
 .cadastro-page .cadastro-section-label.collapsible-hdr {
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -973,6 +976,7 @@ textarea {
   opacity: 0.42;
   filter: grayscale(0.12);
   pointer-events: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -1515,8 +1519,8 @@ body.admin-data-page .admin-toolbar-back {
   color: var(--pli-text);
   box-sizing: border-box;
   cursor: pointer;
-  appearance: none;
   -webkit-appearance: none;
+  appearance: none;
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;

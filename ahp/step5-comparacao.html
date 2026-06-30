@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -49,15 +49,15 @@
                     <h1 class="ahp-page-title"><i class="fas fa-scale-balanced app-template-title-icon" aria-hidden="true"></i>Etapa 5: Comparação pareada</h1>
                     <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i><span>Nesta etapa você preenche a matriz de comparação pareada (escala de Saaty, 1 a 9). As métricas instantâneas (RC, IC, λmáx) ajudam no ajuste, mas o fluxo oficial é: preencher → <strong>Validar matriz de comparação pareada</strong> (RC &lt; 0,10) → <strong>Salvar configuração da Fase 2</strong> → avançar para a Etapa 6, onde os pesos são calculados a partir da configuração salva.</span></p>
             </section>
-            <section class="card ahp-step-section">
-                <div class="ahp-section-label"><i class="fas fa-compass app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Contexto da Etapa</span></div>
+            <section class="card ahp-step-section ahp-step-section--contexto">
+                <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">5.1</span><span>Contexto da Etapa</span></div>
                 <div class="ahp-section-body">
-                    <section class="ahp-section info-card"><div class="ahp-info-card-header"><i class="fas fa-info-circle"></i><h2>Sobre esta Etapa: Comparação Pareada</h2></div><div class="info-card-content"><p>Nesta etapa, você irá <strong>comparar os critérios par a par</strong> utilizando a Escala de Saaty para definir a importância relativa entre eles.</p><div class="ahp-info-highlights"><div class="ahp-info-item"><i class="fas fa-balance-scale"></i><div><strong>Comparação Relativa</strong><p>Compare dois critérios por vez, indicando qual é mais importante e em que intensidade.</p></div></div><div class="ahp-info-item"><i class="fas fa-sync-alt"></i><div><strong>Valores Recíprocos</strong><p>Os valores simétricos na matriz são calculados automaticamente. Exemplo: se A comparado a B = 3, então B comparado a A = 1/3.</p></div></div><div class="ahp-info-item"><i class="fas fa-check-circle"></i><div><strong>Índice de Consistência</strong><p>Após preencher, o sistema calculará o índice de consistência (CR). Valores abaixo de 0,10 indicam comparações consistentes.</p></div></div></div></div></section>
+                    <section class="ahp-section info-card"><div class="ahp-info-card-header"><i class="fas fa-info-circle"></i><h2>Sobre esta Etapa: Comparação Pareada</h2></div><div class="info-card-content"><p>Nesta etapa, você irá <strong>comparar os critérios par a par</strong> utilizando a Escala de Saaty para definir a importância relativa entre eles.</p><div class="ahp-info-highlights"><div class="ahp-info-item"><i class="fas fa-balance-scale"></i><div><strong>Comparação Relativa</strong><p>Compare dois critérios por vez, indicando qual é mais importante e em que intensidade.</p></div></div><div class="ahp-info-item"><i class="fas fa-sync-alt"></i><div><strong>Valores Recíprocos</strong><p>Os valores simétricos na matriz são calculados automaticamente. Exemplo: se A comparado a B = 3, então B comparado a A = 1/3.</p></div></div><div class="ahp-info-item"><i class="fas fa-check-circle"></i><div><strong>Índice de Consistência</strong><p>Após preencher, o sistema calculará o índice de consistência (CR). Valores abaixo de 0,10 indicam comparações consistentes.</p></div></div></div></div>
                 </div>
             </section>
 
             <section class="card ahp-step-section is-hidden" id="collab-consolidacao-section">
-                <div class="ahp-section-label"><i class="fas fa-people-group"></i><span>Consolidar respostas colaborativas</span></div>
+                <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">5.2</span><span>Consolidar respostas colaborativas</span></div>
                 <div class="ahp-section-body">
                     <p class="step-intro">Analise as respostas recebidas e escolha uma matriz como ponto de partida para o preenchimento final abaixo.</p>
                     <div id="collab-respostas-panel" aria-live="polite"></div>
@@ -65,9 +65,152 @@
             </section>
 
             <section class="card ahp-step-section">
-                <div class="ahp-section-label"><i class="fas fa-layer-group app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Preenchimento da Matriz de Comparação Pareada</span></div>
+                <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">5.3</span><span>Preenchimento da Matriz de Comparação Pareada</span></div>
                 <div class="ahp-section-body">
-                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">5</span><span>Comparação pareada</span></h2><div class="info-card info-card--spaced"><div class="ahp-info-card-header"><i class="fas fa-balance-scale"></i><h3>5.1 Escala de Intensidade de Importância</h3></div><div class="info-card-content"><p class="saaty-description">A <strong>Escala de Intensidade de Importância de Saaty</strong> é utilizada no método AHP para quantificar as preferências entre critérios durante a comparação pareada. Esta escala fundamental varia de 1 a 9, onde <strong>1 representa igual importância</strong> entre dois critérios e <strong>9 representa importância extrema</strong> de um critério sobre o outro. Os valores intermediários (3, 5, 7) representam níveis moderado, forte e muito forte de importância, respectivamente. Os valores recíprocos (1/3, 1/5, 1/7, 1/9) são utilizados quando o segundo critério é mais importante que o primeiro.</p><div class="saaty-image-container"><img src="https://vpc-geoser-ahp-tool-calculator.onrender.com/img_folder/escala_intensidade_importancia_criterios_ahp.png" alt="Escala de Intensidade de Importância - Método AHP" class="ahp-saaty-image"></div></div></div><div class="info-card info-card--spaced"><div class="ahp-info-card-header"><i class="fas fa-table" id="methodIcon"></i><h3 id="methodCardTitle">4.2 Matriz de Comparação Pareada</h3></div><div class="info-card-content"><div id="instructions" class="ahp-instructions"><p id="instructionsText" class="instructions-text"></p></div><div id="liveMetrics" class="ahp-live-metrics is-initial"><div class="ahp-metric-card"><div class="ahp-metric-card__label">Razão de Consistência (RC)</div><div class="ahp-metric-card__value" id="metricRCValue">—</div><div class="ahp-metric-card__sub">instantâneo</div></div><div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice de Consistência (IC)</div><div class="ahp-metric-card__value" id="metricICValue">—</div><div class="ahp-metric-card__sub">instantâneo</div></div><div class="ahp-metric-card"><div class="ahp-metric-card__label">Lambda Máximo (λmáx)</div><div class="ahp-metric-card__value" id="metricLambdaValue">—</div><div class="ahp-metric-card__sub">instantâneo</div></div></div><div id="comparisonContent" class="ahp-comparison-content"></div></div></div><div id="diagnostico-consistencia-panel" class="ahp-diagnostico-panel info-card info-card--spaced is-hidden"></div><div id="step5-save-feedback" class="ahp-matriz-edit-feedback" role="status" aria-live="polite"></div><div class="ahp-form-actions"><a href="step4-metodo.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><button type="button" id="btn-validar-matriz" onclick="validarMatrizComparacao()" class="btn btn-primary"><i class="fas fa-check-double c-btn__icon"></i>Validar matriz de comparação pareada</button><button type="button" id="btn-salvar-config-fase2" onclick="salvarConfigFase2()" class="btn btn-success" disabled><i class="fas fa-save c-btn__icon"></i>Salvar configuração da Fase 2</button><a id="step5-go-resultados" href="step6-resultados.html" class="btn btn-primary is-hidden">Ir para Geração de pesos<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a></div></section>
+                    <div class="ahp-subcard info-card info-card--spaced" id="saaty-scale-subcard"><div class="ahp-subsection-title ahp-subsection-title--roman ahp-subsection-title--collapsible" id="saaty-scale-toggle" onclick="toggleSaatyScale()" role="button" tabindex="0" aria-expanded="false" aria-controls="saaty-scale-extras"><span class="ahp-subsection-num ahp-subsection-num--roman">I</span><span>Escala de Intensidade de Importância</span><span class="ahp-collapse-chevron" id="saaty-scale-chevron"><i class="fas fa-chevron-down" aria-hidden="true"></i></span></div><div class="info-card-content">
+
+<!-- Subcard A: texto descritivo -->
+<div class="saaty-inner-card saaty-inner-card--texto saaty-scale-extra is-hidden">
+<p class="saaty-description">A <strong>Escala de Intensidade de Importância de Saaty</strong> quantifica a preferência entre dois critérios durante a comparação pareada do AHP. O valor <strong>1 indica igual importância</strong>; os valores de <strong>2 a 9</strong> indicam que o critério A é progressivamente <strong>mais importante</strong> que B; os <strong>recíprocos (1/2 a 1/9)</strong> indicam que A é <strong>menos importante</strong> que B — e são preenchidos automaticamente pelo sistema.</p>
+<p class="saaty-description saaty-description--highlight" id="saaty-intro-dinamico">Na prática, você responderá com os valores desta escala <strong>tomando como referência um único critério por vez</strong>, que será comparado par a par com todos os demais. A pergunta que norteia cada julgamento é sempre: <em>"Para o escopo <span id="saaty-intro-escopo">desta análise</span>, o critério <span id="saaty-intro-crit-ref">critério A (critério referência)</span> é mais — ou menos — importante que o critério <span id="saaty-intro-crit-outro">critério B (critério comparado)</span>? E em que intensidade?"</em> Concentre-se no par em tela e julgue com base na sua experiência e no contexto do problema.</p>
+</div>
+
+<!-- Subcard B: escala visual -->
+<div class="saaty-inner-card saaty-inner-card--escala">
+<h3 class="saaty-escala-titulo">Escala de Intensidade de Importância de Saaty</h3>
+<div class="saaty-ref-wrap">
+  <!-- Labels acima da barra -->
+  <div class="saaty-ref-labels-row">
+    <span class="saaty-ref-pole saaty-ref-pole--left"><i class="fas fa-arrow-left" aria-hidden="true"></i> B mais importante</span>
+    <span class="saaty-ref-pole saaty-ref-pole--right">A mais importante <i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+  </div>
+  <!-- Barra bidirecional: ocupa toda a largura dos cards -->
+  <div class="saaty-ref-bar">
+    <div class="saaty-ref-gradient"></div>
+    <div class="saaty-ref-ticks">
+      <span class="saaty-ref-tick saaty-ref-tick--recip">1/9</span>
+      <span class="saaty-ref-tick saaty-ref-tick--recip">1/8</span>
+      <span class="saaty-ref-tick saaty-ref-tick--recip">1/7</span>
+      <span class="saaty-ref-tick saaty-ref-tick--recip">1/6</span>
+      <span class="saaty-ref-tick saaty-ref-tick--recip">1/5</span>
+      <span class="saaty-ref-tick saaty-ref-tick--recip">1/4</span>
+      <span class="saaty-ref-tick saaty-ref-tick--recip">1/3</span>
+      <span class="saaty-ref-tick saaty-ref-tick--recip">1/2</span>
+      <span class="saaty-ref-tick saaty-ref-tick--center">1</span>
+      <span class="saaty-ref-tick">2</span>
+      <span class="saaty-ref-tick">3</span>
+      <span class="saaty-ref-tick">4</span>
+      <span class="saaty-ref-tick">5</span>
+      <span class="saaty-ref-tick">6</span>
+      <span class="saaty-ref-tick">7</span>
+      <span class="saaty-ref-tick">8</span>
+      <span class="saaty-ref-tick">9</span>
+    </div>
+  </div>
+  <div class="saaty-ref-cards">
+    <div class="saaty-ref-card saaty-ref-card--recip" data-val="r9"><span class="saaty-ref-num">1/9</span><span class="saaty-ref-label">Extrema<br>(inv.)</span></div>
+    <div class="saaty-ref-card saaty-ref-card--recip" data-val="r8"><span class="saaty-ref-num">1/8</span><span class="saaty-ref-label">M. forte<br>a extr.</span></div>
+    <div class="saaty-ref-card saaty-ref-card--recip" data-val="r7"><span class="saaty-ref-num">1/7</span><span class="saaty-ref-label">Muito<br>forte</span></div>
+    <div class="saaty-ref-card saaty-ref-card--recip" data-val="r6"><span class="saaty-ref-num">1/6</span><span class="saaty-ref-label">Forte a<br>m. forte</span></div>
+    <div class="saaty-ref-card saaty-ref-card--recip" data-val="r5"><span class="saaty-ref-num">1/5</span><span class="saaty-ref-label">Forte</span></div>
+    <div class="saaty-ref-card saaty-ref-card--recip" data-val="r4"><span class="saaty-ref-num">1/4</span><span class="saaty-ref-label">Mod. a<br>forte</span></div>
+    <div class="saaty-ref-card saaty-ref-card--recip" data-val="r3"><span class="saaty-ref-num">1/3</span><span class="saaty-ref-label">Moderada</span></div>
+    <div class="saaty-ref-card saaty-ref-card--recip" data-val="r2"><span class="saaty-ref-num">1/2</span><span class="saaty-ref-label">Fraca</span></div>
+    <div class="saaty-ref-card saaty-ref-card--center" data-val="1"><span class="saaty-ref-num">1</span><span class="saaty-ref-label">Igual</span></div>
+    <div class="saaty-ref-card" data-val="2"><span class="saaty-ref-num">2</span><span class="saaty-ref-label">Fraca</span></div>
+    <div class="saaty-ref-card" data-val="3"><span class="saaty-ref-num">3</span><span class="saaty-ref-label">Moderada</span></div>
+    <div class="saaty-ref-card" data-val="4"><span class="saaty-ref-num">4</span><span class="saaty-ref-label">Mod. a<br>forte</span></div>
+    <div class="saaty-ref-card" data-val="5"><span class="saaty-ref-num">5</span><span class="saaty-ref-label">Forte</span></div>
+    <div class="saaty-ref-card" data-val="6"><span class="saaty-ref-num">6</span><span class="saaty-ref-label">Forte a<br>m. forte</span></div>
+    <div class="saaty-ref-card" data-val="7"><span class="saaty-ref-num">7</span><span class="saaty-ref-label">Muito<br>forte</span></div>
+    <div class="saaty-ref-card" data-val="8"><span class="saaty-ref-num">8</span><span class="saaty-ref-label">M. forte<br>a extr.</span></div>
+    <div class="saaty-ref-card" data-val="9"><span class="saaty-ref-num">9</span><span class="saaty-ref-label">Extrema</span></div>
+  </div>
+  <p class="saaty-ref-note"><i class="fas fa-circle-info" aria-hidden="true"></i> Os recíprocos (1/2 a 1/9) são preenchidos <strong>automaticamente</strong> pelo sistema — representam o quanto o critério A é <strong>menos importante</strong> que o critério B.</p>
+</div><!-- /saaty-ref-wrap -->
+</div><!-- /saaty-inner-card--escala -->
+
+<!-- Subcard C: exemplo prático -->
+<div class="saaty-inner-card saaty-inner-card--exemplo saaty-scale-extra is-hidden">
+<div class="saaty-example-box" id="saaty-example-box">
+  <div class="saaty-example-title"><i class="fas fa-lightbulb" aria-hidden="true"></i> <span id="saaty-ex-title">Exemplo prático</span> — como escolher a intensidade certa?</div>
+  <div class="saaty-example-body">
+
+    <!-- Subcard 1: contexto e perguntas -->
+    <div class="saaty-ex-subcard saaty-ex-subcard--contexto">
+      <div class="saaty-ex-subcard-titulo">Perguntas Intuitivas</div>
+      <p class="saaty-ex-narrativa">Suponhamos que precisemos comparar critérios de um estudo cujo escopo é <em class="saaty-ex-escopo-frase" id="saaty-ex-escopo">favorabilidade à execução de projetos de infraestrutura e logística para priorizar projetos de maior impacto regional</em>. Dentre o conjunto de critérios, deseja-se então comparar par a par os critérios, iniciando por <strong><em id="saaty-ex-crit-a">A — Proximidade a centros urbanos</em></strong> e <strong><em id="saaty-ex-crit-b">B — Disponibilidade de infraestrutura</em></strong>.</p>
+      <p class="saaty-ex-narrativa saaty-ex-narrativa--intro-q">Para que a comparação seja lógica, vamos elaborar algumas perguntas intuitivas que ajudarão na seleção da intensidade de importância de acordo com a escala proposta por Saaty:</p>
+      <p class="saaty-example-q"><i class="fas fa-circle-question" aria-hidden="true"></i> <strong>Pergunta intuitiva 1 — o critério A é mais ou menos importante?</strong><br>
+      "Para o escopo <em id="saaty-ex-q-escopo">'favorabilidade à execução de projetos de infraestrutura e logística para priorizar projetos de maior impacto regional'</em>, o critério&nbsp;<strong><em id="saaty-ex-q-a">Proximidade a centros urbanos</em></strong> é mais importante ou menos importante que <em id="saaty-ex-q-b">Disponibilidade de infraestrutura</em>?"</p>
+      <p class="saaty-example-q saaty-example-q--2"><i class="fas fa-circle-question" aria-hidden="true"></i> <strong>Pergunta intuitiva 2 — o quão mais ou menos?</strong><br>
+      "O quão mais — ou menos — importante o critério <strong><em class="saaty-ex-inline-a">Proximidade a centros urbanos</em></strong> é em relação ao critério <em class="saaty-ex-inline-b">Disponibilidade de infraestrutura</em>, para este escopo?"</p>
+    </div><!-- /saaty-ex-subcard--contexto -->
+
+    <!-- Subcard 2: respostas -->
+    <div class="saaty-ex-subcard saaty-ex-subcard--respostas">
+    <div class="saaty-ex-subcard-titulo">Respostas Intuitivas</div>
+    <div class="saaty-example-answers">
+      <!-- = 1: largura total -->
+      <div class="saaty-ans-row saaty-ans--equal saaty-ans--full">
+        <span class="saaty-ans-badge saaty-ans-badge--equal">1</span>
+        <div class="saaty-ans-text"><div class="saaty-ans-direcao saaty-ans-direcao--igual"><strong>Importância relativa selecionada = 1</strong> <span class="saaty-ans-direcao-sub">— Igualdade de importância</span></div><div class="saaty-ans-magnitude"><strong><span class="saaty-ex-inline-a">Proximidade a centros urbanos</span></strong> e <strong><span class="saaty-ex-inline-b">Disponibilidade de infraestrutura</span></strong> são igualmente importantes.</div><div class="saaty-ans-measures"><span class="saaty-ans-m saaty-ans-m--frac">A/B = 1</span><span class="saaty-ans-m saaty-ans-m--dec">1,00×</span><span class="saaty-ans-m saaty-ans-m--pct">50% / 50%</span></div></div>
+      </div>
+      <!-- Cabeçalho das colunas -->
+      <div class="saaty-ans-col-head">
+        <span><i class="fas fa-arrow-right" aria-hidden="true"></i> A tem <strong>maior</strong> importância relativa que B</span>
+        <span><i class="fas fa-arrow-left" aria-hidden="true"></i> A tem <strong>menor</strong> importância relativa que B</span>
+      </div>
+      <!-- Par 3 vs 1/3 -->
+      <div class="saaty-ans-pair">
+        <div class="saaty-ans-row saaty-ans--low">
+          <span class="saaty-ans-badge saaty-ans-badge--low">3</span>
+          <div class="saaty-ans-text"><div class="saaty-ans-direcao saaty-ans-direcao--maior"><strong>Importância relativa selecionada = 3</strong> <span class="saaty-ans-direcao-sub">— Importância moderada</span></div><div class="saaty-ans-magnitude"><strong><span class="saaty-ex-inline-a">Proximidade a centros urbanos</span></strong> é <em>moderadamente mais importante</em> que <strong><span class="saaty-ex-inline-b">Disponibilidade de infraestrutura</span></strong>.</div><div class="saaty-ans-measures"><span class="saaty-ans-m saaty-ans-m--frac">A/B = 3</span><span class="saaty-ans-m saaty-ans-m--dec">3,00×</span><span class="saaty-ans-m saaty-ans-m--pct">75% / 25%</span></div></div>
+        </div>
+        <div class="saaty-ans-row saaty-ans--recip">
+          <span class="saaty-ans-badge saaty-ans-badge--recip">1/3</span>
+          <div class="saaty-ans-text"><div class="saaty-ans-direcao saaty-ans-direcao--menor"><strong>Importância relativa selecionada = 1/3</strong> <span class="saaty-ans-direcao-sub">— Importância moderada (B sobre A)</span></div><div class="saaty-ans-magnitude"><strong><span class="saaty-ex-inline-a">Proximidade a centros urbanos</span></strong> é <em>moderadamente menos importante</em> que <strong><span class="saaty-ex-inline-b">Disponibilidade de infraestrutura</span></strong>.</div><div class="saaty-ans-measures"><span class="saaty-ans-m saaty-ans-m--frac">A/B = 1/3</span><span class="saaty-ans-m saaty-ans-m--dec">0,33×</span><span class="saaty-ans-m saaty-ans-m--pct">25% / 75%</span></div></div>
+        </div>
+      </div>
+      <!-- Par 5 vs 1/5 -->
+      <div class="saaty-ans-pair">
+        <div class="saaty-ans-row saaty-ans--mid">
+          <span class="saaty-ans-badge saaty-ans-badge--mid">5</span>
+          <div class="saaty-ans-text"><div class="saaty-ans-direcao saaty-ans-direcao--maior"><strong>Importância relativa selecionada = 5</strong> <span class="saaty-ans-direcao-sub">— Importância forte</span></div><div class="saaty-ans-magnitude"><strong><span class="saaty-ex-inline-a">Proximidade a centros urbanos</span></strong> é <em>fortemente mais importante</em> que <strong><span class="saaty-ex-inline-b">Disponibilidade de infraestrutura</span></strong>.</div><div class="saaty-ans-measures"><span class="saaty-ans-m saaty-ans-m--frac">A/B = 5</span><span class="saaty-ans-m saaty-ans-m--dec">5,00×</span><span class="saaty-ans-m saaty-ans-m--pct">83% / 17%</span></div></div>
+        </div>
+        <div class="saaty-ans-row saaty-ans--recip">
+          <span class="saaty-ans-badge saaty-ans-badge--recip">1/5</span>
+          <div class="saaty-ans-text"><div class="saaty-ans-direcao saaty-ans-direcao--menor"><strong>Importância relativa selecionada = 1/5</strong> <span class="saaty-ans-direcao-sub">— Importância forte (B sobre A)</span></div><div class="saaty-ans-magnitude"><strong><span class="saaty-ex-inline-a">Proximidade a centros urbanos</span></strong> é <em>fortemente menos importante</em> que <strong><span class="saaty-ex-inline-b">Disponibilidade de infraestrutura</span></strong>.</div><div class="saaty-ans-measures"><span class="saaty-ans-m saaty-ans-m--frac">A/B = 1/5</span><span class="saaty-ans-m saaty-ans-m--dec">0,20×</span><span class="saaty-ans-m saaty-ans-m--pct">17% / 83%</span></div></div>
+        </div>
+      </div>
+      <!-- Par 9 vs 1/9 -->
+      <div class="saaty-ans-pair">
+        <div class="saaty-ans-row saaty-ans--high">
+          <span class="saaty-ans-badge saaty-ans-badge--high">9</span>
+          <div class="saaty-ans-text"><div class="saaty-ans-direcao saaty-ans-direcao--maior"><strong>Importância relativa selecionada = 9</strong> <span class="saaty-ans-direcao-sub">— Importância extrema (absoluta)</span></div><div class="saaty-ans-magnitude"><strong><span class="saaty-ex-inline-a">Proximidade a centros urbanos</span></strong> é <em>absolutamente mais importante</em> que <strong><span class="saaty-ex-inline-b">Disponibilidade de infraestrutura</span></strong>.</div><div class="saaty-ans-measures"><span class="saaty-ans-m saaty-ans-m--frac">A/B = 9</span><span class="saaty-ans-m saaty-ans-m--dec">9,00×</span><span class="saaty-ans-m saaty-ans-m--pct">90% / 10%</span></div></div>
+        </div>
+        <div class="saaty-ans-row saaty-ans--recip">
+          <span class="saaty-ans-badge saaty-ans-badge--recip">1/9</span>
+          <div class="saaty-ans-text"><div class="saaty-ans-direcao saaty-ans-direcao--menor"><strong>Importância relativa selecionada = 1/9</strong> <span class="saaty-ans-direcao-sub">— Importância extrema (B sobre A)</span></div><div class="saaty-ans-magnitude"><strong><span class="saaty-ex-inline-a">Proximidade a centros urbanos</span></strong> é <em>absolutamente menos importante</em> que <strong><span class="saaty-ex-inline-b">Disponibilidade de infraestrutura</span></strong>.</div><div class="saaty-ans-measures"><span class="saaty-ans-m saaty-ans-m--frac">A/B = 1/9</span><span class="saaty-ans-m saaty-ans-m--dec">0,11×</span><span class="saaty-ans-m saaty-ans-m--pct">10% / 90%</span></div></div>
+        </div>
+      </div>
+    </div>
+    </div><!-- /saaty-ex-subcard--respostas -->
+  </div>
+</div><!-- /saaty-example-box -->
+</div><!-- /saaty-inner-card--exemplo -->
+</div></div></div><div class="ahp-subcard info-card info-card--spaced"><div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">II</span><span><span id="methodCardTitle">Estratégia visual de preenchimento da matriz de comparação pareada</span></span></div><div class="info-card-content"><div id="instructions" class="ahp-instructions"><p id="instructionsText" class="instructions-text"></p></div><div id="liveMetrics" class="ahp-live-metrics is-initial"><div class="ahp-metric-card"><div class="ahp-metric-card__label">Razão de Consistência (RC)</div><div class="ahp-metric-card__value" id="metricRCValue">—</div><div class="ahp-metric-card__sub">instantâneo</div></div><div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice de Consistência (IC)</div><div class="ahp-metric-card__value" id="metricICValue">—</div><div class="ahp-metric-card__sub">instantâneo</div></div><div class="ahp-metric-card"><div class="ahp-metric-card__label">Lambda Máximo (λmáx)</div><div class="ahp-metric-card__value" id="metricLambdaValue">—</div><div class="ahp-metric-card__sub">instantâneo</div></div></div><div id="comparisonContent" class="ahp-comparison-content"></div></div></div><div id="diagnostico-consistencia-panel" class="ahp-diagnostico-panel info-card info-card--spaced is-hidden"></div><div id="step5-save-feedback" class="ahp-matriz-edit-feedback" role="status" aria-live="polite"></div></section>
+                </div>
+            </section>
+
+            <section class="card ahp-step-section" id="step5-nav-section">
+                <div class="ahp-section-body">
+                    <div class="ahp-form-actions ahp-final-actions-row">
+                        <a href="step4-metodo.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a>
+                        <button type="button" id="btn-validar-matriz" onclick="validarMatrizComparacao()" class="btn btn-primary"><i class="fas fa-check-double c-btn__icon"></i>Validar matriz</button>
+                        <button type="button" id="btn-salvar-config-fase2" onclick="salvarConfigFase2()" class="btn btn-success" disabled><i class="fas fa-save c-btn__icon"></i>Salvar configuração</button>
+                        <button type="button" id="step5-go-resultados" class="btn btn-primary" disabled onclick="window.location.href='step6-resultados.html'">Continuar<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></button>
+                    </div>
                 </div>
             </section>
     </main>
@@ -77,7 +220,7 @@
             const savedCriteria = localStorage.getItem('ahp_criteria');
             const savedMethod = localStorage.getItem('ahp_chosenMethod');
 
-            if (!savedCriteria || !savedMethod) {
+            if (!savedCriteria) {
                 const host = document.getElementById('comparisonContainer') || document.querySelector('.ahp-section');
                 if (host) {
                     const note = document.createElement('div');
@@ -92,17 +235,12 @@
             const method = savedMethod;
 
             const methodCardTitle = document.getElementById('methodCardTitle');
-            const methodIcon = document.getElementById('methodIcon');
             const instructionsText = document.getElementById('instructionsText');
 
             if (method === 'matrix') {
-                methodIcon.className = 'fas fa-table';
-                methodCardTitle.textContent = '5.2 Matriz de Comparação Pareada';
                 instructionsText.innerHTML = '<strong>Como preencher a Matriz:</strong> Compare SEMPRE a linha com a coluna.Você pode preencher <strong>qualquer célula da matriz</strong> (exceto a diagonal principal). Ao selecionar um valor em uma célula, o sistema automaticamente ajustará a célula simétrica oposta com o valor recíproco oposto. Use a Escala de Saaty apresentada acima para suas comparações.';
                 generateDirectMatrixStep4();
             } else {
-                methodIcon.className = 'fas fa-clipboard-list';
-                methodCardTitle.textContent = '5.2 Formulário de Comparação Pareada';
                 instructionsText.innerHTML = '<strong>Como preencher o Formulário:</strong> Para cada par de critérios apresentado, selecione a intensidade de importância usando a Escala de Saaty. Compare o <strong>Critério 1 com o Critério 2</strong>, indicando quanto o Critério 1 é mais ou menos importante que o Critério 2. O sistema irá processar automaticamente as comparações recíprocas.';
                 generatePairwiseFormStep4();
             }
@@ -110,6 +248,30 @@
     </script>
   <script src="../assets/js/field-filled.js"></script>
   <script src="../assets/js/app-header.js"></script>
-  <script src="../assets/js/navbar.js"></script>
-</body>
+  <script src="../assets/js/navbar.js"></script>  <script>
+    function toggleSaatyScale() {
+      var toggle = document.getElementById('saaty-scale-toggle');
+      var extras = document.querySelectorAll('.saaty-scale-extra');
+      var chevron = document.getElementById('saaty-scale-chevron').querySelector('i');
+      var expanded = toggle.getAttribute('aria-expanded') === 'true';
+      // alternar
+      toggle.setAttribute('aria-expanded', !expanded);
+      extras.forEach(function(el) { el.classList.toggle('is-hidden', expanded); });
+      chevron.className = expanded ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+    }
+    // acessibilidade: Enter/Space ativam o toggle
+    document.addEventListener('DOMContentLoaded', function() {
+      var toggle = document.getElementById('saaty-scale-toggle');
+      if (toggle) toggle.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSaatyScale(); }
+      });
+    });
+  </script></body>
 </html>
+
+
+
+
+
+
+

@@ -867,8 +867,7 @@ function invalidateStep5Validation() {
   lastValidationConsistent = false;
   lastValidatedMatrix = null;
   setSalvarConfigEnabled(false);
-  var link = document.getElementById("step5-go-resultados");
-  if (link) link.classList.add("is-hidden");
+  setStep5ContinueEnabled(false);
   setStep5Feedback(
     "Matriz alterada. Valide novamente antes de salvar a configuração da Fase 2.",
     "info"
@@ -939,6 +938,33 @@ function setSalvarConfigEnabled(enabled) {
   if (btn) btn.disabled = !enabled;
 }
 
+function setStep5ContinueEnabled(enabled) {
+  const btn = document.getElementById("step5-go-resultados");
+  if (btn) btn.disabled = !enabled;
+}
+
+function setupStep5FinalActions() {
+  const navActions = document.querySelector("#step5-nav-section .ahp-form-actions");
+  const backBtn = navActions ? navActions.querySelector('a[href="step4-metodo.html"]') : null;
+  const continueBtn = document.getElementById("step5-go-resultados");
+  const validateBtn = document.getElementById("btn-validar-matriz");
+  const saveBtn = document.getElementById("btn-salvar-config-fase2");
+  if (!navActions || !backBtn || !continueBtn || !validateBtn || !saveBtn) return;
+
+  validateBtn.innerHTML = '<i class="fas fa-check-double c-btn__icon"></i>Validar matriz';
+  saveBtn.innerHTML = '<i class="fas fa-save c-btn__icon"></i>Salvar configuração';
+
+  if (validateBtn.parentElement !== navActions) {
+    navActions.insertBefore(validateBtn, continueBtn);
+  }
+  if (saveBtn.parentElement !== navActions) {
+    navActions.insertBefore(saveBtn, continueBtn);
+  }
+
+  navActions.classList.add("ahp-final-actions-row");
+  setStep5ContinueEnabled(lastValidationConsistent);
+}
+
 function setStep5Feedback(message, kind) {
   const fb = document.getElementById("step5-save-feedback");
   if (!fb) return;
@@ -999,8 +1025,7 @@ function salvarConfigFase2() {
         "Configuração da Fase 2 salva. Avance para a Etapa 6 para calcular os pesos.",
         "success"
       );
-      const link = document.getElementById("step5-go-resultados");
-      if (link) link.classList.remove("is-hidden");
+      setStep5ContinueEnabled(true);
       setSalvarConfigEnabled(true);
     })
     .catch(function (err) {
@@ -1016,3 +1041,7 @@ function calculateResults() {
 
 window.validarMatrizComparacao = validarMatrizComparacao;
 window.salvarConfigFase2 = salvarConfigFase2;
+
+document.addEventListener("DOMContentLoaded", function () {
+  setupStep5FinalActions();
+});

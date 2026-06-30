@@ -108,6 +108,7 @@
     if (!introHtml) {
       if (existing) existing.remove();
       if (genericP) genericP.classList.remove("is-hidden");
+      personalizarExemploSaaty(null);
       return;
     }
 
@@ -121,6 +122,82 @@
       body.insertAdjacentHTML("beforeend", cardHtml);
     }
     if (genericP) genericP.classList.add("is-hidden");
+
+    personalizarExemploSaaty(cfg);
+  }
+
+  /* -------------------------------------------------------
+   * Personalização do bloco de exemplo da Escala de Saaty
+   * Preenche com os 2 primeiros critérios reais da config.
+   * Chamado quando a config é carregada (apply) ou limpa (reset).
+   * ------------------------------------------------------- */
+  var DEFAULTS = {
+    critA: "Proximidade a centros urbanos",
+    critB: "Disponibilidade de infraestrutura",
+    titulo: "Exemplo prático",
+    objetivo: "esta decisão",
+  };
+
+  function personalizarExemploSaaty(cfg) {
+    var box = global.document.getElementById("saaty-example-box");
+    if (!box) return;
+
+    var criterios = cfg && cfg.criterios ? cfg.criterios : [];
+    var nomeA = criterios.length > 0
+      ? String(criterios[0].criterio || criterios[0] || "").trim() || DEFAULTS.critA
+      : DEFAULTS.critA;
+    var nomeB = criterios.length > 1
+      ? String(criterios[1].criterio || criterios[1] || "").trim() || DEFAULTS.critB
+      : DEFAULTS.critB;
+    var area      = cfg && cfg.area_conhecimento ? String(cfg.area_conhecimento).trim() : "";
+    var tema      = cfg && cfg.tema             ? String(cfg.tema).trim()             : "";
+    var fenomeno  = cfg && cfg.fenomeno         ? String(cfg.fenomeno).trim()         : "";
+    var objetivo  = cfg && cfg.objetivo         ? String(cfg.objetivo).trim()         : "";
+    var escopo    = cfg && (cfg.nome || cfg.escopo) ? String(cfg.nome || cfg.escopo).trim() : "";
+
+    var titulo = escopo ? "Exemplo com sua configuração (" + escopo + ")" : DEFAULTS.titulo;
+
+    /* Monta frase de escopo a partir dos 4 componentes disponíveis */
+    var partes = [area, tema, fenomeno].filter(Boolean);
+    var escopoFrase = partes.length > 0 ? partes.join(" · ") : "favorabilidade à execução de projetos";
+    if (objetivo) escopoFrase += " — " + objetivo;
+
+    function setText(id, val) {
+      var el = global.document.getElementById(id);
+      if (el) el.textContent = val;
+    }
+
+    setText("saaty-ex-title",    titulo);
+    setText("saaty-ex-crit-a",   "A — " + nomeA);
+    setText("saaty-ex-crit-b",   "B — " + nomeB);
+    /* Frase única de escopo no breadcrumb e nas perguntas */
+    setText("saaty-ex-escopo",   escopoFrase);
+    setText("saaty-ex-q-escopo", "'" + escopoFrase + "'");
+    /* Critérios nas perguntas */
+    setText("saaty-ex-q-a",  nomeA);
+    setText("saaty-ex-q-b",  nomeB);
+    /* Parágrafo dinâmico da introdução da escala */
+    setText("saaty-intro-escopo",    escopoFrase || "desta análise");
+    setText("saaty-intro-crit-ref",  nomeA || "em foco");
+    setText("saaty-intro-crit-outro", nomeB || "comparado");
+
+    /* Atualiza menções inline dentro das respostas */
+    box.querySelectorAll(".saaty-ex-inline-a").forEach(function (el) {
+      el.textContent = nomeA;
+    });
+    box.querySelectorAll(".saaty-ex-inline-b").forEach(function (el) {
+      el.textContent = nomeB;
+    });
+    box.querySelectorAll(".saaty-ex-inline-fenomeno").forEach(function (el) {
+      el.textContent = fenomeno || tema || escopoFrase;
+    });
+
+    /* Destaca visualmente o box quando personalizado */
+    if (cfg) {
+      box.classList.add("saaty-example-box--personalizado");
+    } else {
+      box.classList.remove("saaty-example-box--personalizado");
+    }
   }
 
   function reset() {

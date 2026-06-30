@@ -41,6 +41,7 @@ _UPDATE_FIELDS = frozenset(
         "descricao",
         "status",
         "subconjunto",
+        "universo_objetos",
         "metodo_entrada",
         "metodo_comparacao",
         "n_criterios",
@@ -50,8 +51,79 @@ _UPDATE_FIELDS = frozenset(
         "arquivo_tipo",
         "arquivo_hash",
         "configuracao_completa",
+        "alertas_conceituais",
+        "pacote_fase",
+        "denominacao",
     }
 )
+
+
+# ---------------------------------------------------------------------------
+# Builders dos artefatos JSON de fase
+# ---------------------------------------------------------------------------
+
+def _build_arquivo_fase1(row: dict[str, Any]) -> dict[str, Any]:
+    """Artefato da Fase 1: escopo, universo e metadados de criação."""
+    tid = row.get("tipo_demanda_id")
+    return {
+        "versao": 1,
+        "fase": "fase_1",
+        "gerado_em": datetime.now(timezone.utc).isoformat(),
+        "denominacao": row.get("denominacao"),
+        "nome_arquivo": (row.get("denominacao") or row.get("codigo", "config")) + "_fase1.json",
+        "codigo": row.get("codigo"),
+        "tipo": row.get("tipo"),
+        "nome": row.get("nome"),
+        "area_conhecimento": row.get("area_conhecimento"),
+        "tema": row.get("tema"),
+        "fenomeno": row.get("fenomeno"),
+        "objetivo": row.get("objetivo"),
+        "descricao": row.get("descricao"),
+        "tipo_demanda": TIPO_DEMANDA_ID_TO_COD.get(tid) if tid is not None else None,
+        "tipo_demanda_nome": _TIPO_DEMANDA_NOME.get(tid) if tid is not None else None,
+        "subconjunto": row.get("subconjunto"),
+        "universo_objetos": row.get("universo_objetos") or [],
+        "criado_em": _iso(row.get("criado_em")),
+    }
+
+
+def _build_arquivo_fase2(row: dict[str, Any]) -> dict[str, Any]:
+    """Artefato da Fase 2: Fase 1 + critérios, premissas e matriz pareada."""
+    base = _build_arquivo_fase1(row)
+    base.update({
+        "versao": 1,
+        "fase": "fase_2",
+        "gerado_em": datetime.now(timezone.utc).isoformat(),
+        "nome_arquivo": (row.get("denominacao") or row.get("codigo", "config")) + "_fase2.json",
+        "metodo_entrada": row.get("metodo_entrada"),
+        "metodo_comparacao": row.get("metodo_comparacao"),
+        "n_criterios": int(row.get("n_criterios") or 0),
+        "criterios": row.get("criterios") or [],
+        "matriz_comparacao": row.get("matriz_comparacao") or [],
+        "alertas_conceituais": row.get("alertas_conceituais") or [],
+        "atualizado_em": _iso(row.get("atualizado_em")),
+    })
+    return base
+
+
+def _build_arquivo_homologado(row: dict[str, Any]) -> dict[str, Any]:
+    """Artefato homologado: Fase 2 + pesos, métricas e registro de homologação."""
+    base = _build_arquivo_fase2(row)
+    base.update({
+        "versao": 1,
+        "fase": "homologado",
+        "gerado_em": datetime.now(timezone.utc).isoformat(),
+        "nome_arquivo": (row.get("denominacao") or row.get("codigo", "config")) + "_homologado.json",
+        "pesos": row.get("pesos"),
+        "lambda_max": _float(row.get("lambda_max")),
+        "indice_consistencia": _float(row.get("indice_consistencia")),
+        "indice_aleatorio": _float(row.get("indice_aleatorio")),
+        "razao_consistencia": _float(row.get("razao_consistencia")),
+        "consistente": row.get("consistente"),
+        "homologado_em": _iso(row.get("homologado_em")),
+        "homologado_por": str(row.get("homologado_por")) if row.get("homologado_por") else None,
+    })
+    return base
 
 
 def _iso(value: Any) -> str | None:
@@ -126,6 +198,12 @@ def _row_to_response(row: dict[str, Any]) -> ConfigResponseSchema:
         arquivo_tipo=row.get("arquivo_tipo"),
         arquivo_hash=row.get("arquivo_hash"),
         configuracao_completa=row.get("configuracao_completa"),
+        alertas_conceituais=row.get("alertas_conceituais") or [],
+        pacote_fase=row.get("pacote_fase") or "fase_1",
+        arquivo_config_fase1=row.get("arquivo_config_fase1"),
+        arquivo_config_fase2=row.get("arquivo_config_fase2"),
+        arquivo_config_homologado=row.get("arquivo_config_homologado"),
+        denominacao=row.get("denominacao"),
         criadoEm=_iso(row.get("criado_em")) or "",
         atualizadoEm=_iso(row.get("atualizado_em")) or "",
         homologadoEm=_iso(row.get("homologado_em")),
@@ -184,7 +262,14 @@ def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) 
         }
     if payload.configuracao_completa is not None:
         data["configuracao_completa"] = payload.configuracao_completa
-    return _row_to_response(repo.insert(payload.tipo, data, status_transicao=status_transicao))
+    if payload.denominacao is not None:
+        data["denominacao"] = payload.denominacao.strip()
+    inserted = repo.insert(payload.tipo, data, status_transicao=status_transicao)
+    # Gera e persiste o artefato da Fase 1 imediatamente após a criação.
+    arquivo_fase1 = _build_arquivo_fase1(inserted)
+    repo.update(payload.tipo, inserted["codigo"], {"arquivo_config_fase1": arquivo_fase1})
+    final = repo.get_by_codigo(payload.tipo, inserted["codigo"]) or inserted
+    return _row_to_response(final)
 
 
 def listar_configs(
@@ -221,6 +306,11 @@ def atualizar_config(tipo: str, codigo: str, payload: ConfigUpdateSchema) -> Con
     updated = repo.update(tipo, codigo, data)
     if not updated:
         raise ConfigMulticriterioNotFoundError(codigo)
+    # Quando o update marca pacote_fase = "fase_2", gera o artefato da Fase 2.
+    if data.get("pacote_fase") == "fase_2":
+        arquivo_fase2 = _build_arquivo_fase2(updated)
+        repo.update(tipo, codigo, {"arquivo_config_fase2": arquivo_fase2})
+        updated = repo.get_by_codigo(tipo, codigo) or updated
     return _row_to_response(updated)
 
 
@@ -259,6 +349,10 @@ def calcular_config(tipo: str, codigo: str) -> ConfigResponseSchema:
     updated = repo.update(tipo, codigo, update_data)
     if not updated:
         raise ConfigMulticriterioNotFoundError(codigo)
+    # Após calcular, regenera o artefato da Fase 2 com as métricas atualizadas.
+    if updated.get("pacote_fase") == "fase_2":
+        repo.update(tipo, codigo, {"arquivo_config_fase2": _build_arquivo_fase2(updated)})
+        updated = repo.get_by_codigo(tipo, codigo) or updated
     return _row_to_response(updated)
 
 
@@ -278,7 +372,11 @@ def homologar_config(
     updated = repo.update(tipo, codigo, data)
     if not updated:
         raise ConfigMulticriterioNotFoundError(codigo)
-    return _row_to_response(updated)
+    # Gera e persiste o artefato homologado (fase2 + pesos + métricas + registro).
+    arquivo_homologado = _build_arquivo_homologado(updated)
+    repo.update(tipo, codigo, {"arquivo_config_homologado": arquivo_homologado})
+    final = repo.get_by_codigo(tipo, codigo) or updated
+    return _row_to_response(final)
 
 
 def _validar_tipo(tipo: str) -> None:

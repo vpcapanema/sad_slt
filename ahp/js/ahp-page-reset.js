@@ -125,7 +125,7 @@
     var checklist = doc.getElementById("ctx-fase2-checklist");
     if (checklist) checklist.innerHTML = "";
 
-    ["criteriaInputs", "reviewNote", "matriz-premissas-panel", "resultsContent", "config-artefatos", "file-info", "cfg-file-info"].forEach(
+    ["criteriaInputs", "reviewNote", "matriz-premissas-panel", "results-conferencia", "results-pesos", "results-parecer", "config-artefatos", "file-info", "cfg-file-info"].forEach(
       function (id) {
         var el = doc.getElementById(id);
         if (el) el.innerHTML = "";

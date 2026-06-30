@@ -44,48 +44,55 @@
                     <h1 class="ahp-page-title"><i class="fas fa-list-check app-template-title-icon" aria-hidden="true"></i>Etapa 2: Seleção de Critérios</h1>
                     <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i><span>Nesta etapa você estrutura a base da análise: define quantos critérios participarão da matriz de comparação (de 1 a 20) e a forma de entrada dos dados. Você pode carregar a configuração salva na Fase 1 (escopo, objeto e universo de análise), informar manualmente a quantidade de critérios ou importar uma tabela/matriz já pronta. A quantidade e a origem dos critérios determinam o tamanho da matriz e condicionam todas as comparações e pesos calculados nas próximas etapas.</span></p>
             </section>
-            <section class="card ahp-step-section">
-                <div class="ahp-section-label"><i class="fas fa-compass app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Contexto da Etapa</span></div>
+            <section class="card ahp-step-section ahp-step-section--contexto">
+                <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">2.1</span><span>Contexto da Etapa</span></div>
                 <div class="ahp-section-body">
                     <section class="ahp-section info-card"><div class="ahp-info-card-header"><i class="fas fa-info-circle"></i><h2>Sobre esta Etapa: Seleção de Critérios</h2></div><div class="info-card-content"><p>Nesta primeira etapa, você definirá a <strong>quantidade de critérios</strong> que deseja comparar no processo de decisão multicritério.</p><div class="ahp-info-highlights"><div class="ahp-info-item"><i class="fas fa-lightbulb"></i><div><strong>O que são critérios?</strong><p>Critérios são os fatores ou características que você deseja avaliar e comparar para tomar uma decisão. Por exemplo: custo, qualidade, tempo, risco, etc.</p></div></div><div class="ahp-info-item"><i class="fas fa-list-ol"></i><div><strong>Quantos critérios escolher?</strong><p>Você pode selecionar de <strong>1 a 20 critérios</strong>. Recomendamos entre 3 e 9 critérios para uma análise equilibrada e gerenciável.</p></div></div><div class="ahp-info-item"><i class="fas fa-arrow-right"></i><div><strong>Próximos passos</strong><p>Após definir a quantidade, você nomeará cada critério na próxima etapa e depois fará as comparações pareadas.</p></div></div></div></div></section>
                 </div>
             </section>
 
             <section class="card ahp-step-section">
-                <div class="ahp-section-label"><i class="fas fa-folder-open app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Carregar contexto de análise</span></div>
+                <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">2.2</span><span>Carregar contexto de análise</span></div>
                 <div class="ahp-section-body">
-                    <section class="ahp-section ahp-config-loader">
+                    <section class="ahp-section ahp-subcard ahp-config-loader">
+                        <div class="ahp-subsection-title ahp-subsection-title--roman">
+                            <span class="ahp-subsection-num ahp-subsection-num--roman">I</span>
+                            <span>Origem do contexto</span>
+                        </div>
                         <p class="ahp-page-desc">Carregue o pacote de parâmetros produzido na <strong>Fase 1</strong> (escopo, objeto e universo de análise). Apenas configurações identificadas como <code>fase_1</code> aparecem na lista abaixo.</p>
 
-                        <div class="ahp-method-choice">
-                            <div class="ahp-method-choice-header">
-                                <input type="radio" id="cfg-method-saved" name="cfg-source" value="saved" checked onchange="toggleConfigSource()">
-                                <label for="cfg-method-saved"><i class="fas fa-database"></i> <strong>Selecionar configuração salva (Fase 1)</strong></label>
-                            </div>
-                            <div id="cfg-saved-content" class="method-content">
-                                <p>Escolha uma configuração criada e salva na Fase 1.</p>
-                                <div class="c-form-group">
-                                    <label for="cfg-saved-select" class="c-form-label"><i class="fas fa-list"></i> Configurações salvas</label>
-                                    <select id="cfg-saved-select" class="c-form-control" data-pacote-fase-esperado="fase_1" title="Selecione uma configuração com pacote fase_1">
-                                        <option value="">Selecione a configuração…</option>
-                                    </select>
-                                    <small class="form-help" id="cfg-saved-help"><i class="fas fa-info-circle"></i> Somente pacotes da Fase 1 (portfólio e avulsa).</small>
+                        <div class="ahp-method-choice-row">
+                            <div class="ahp-method-choice">
+                                <div class="ahp-method-choice-header">
+                                    <input type="radio" id="cfg-method-saved" name="cfg-source" value="saved" autocomplete="off" onchange="toggleConfigSource()">
+                                    <label for="cfg-method-saved"><i class="fas fa-database"></i> <strong>Selecionar configuração</strong></label>
+                                </div>
+                                <div id="cfg-saved-content" class="method-content method-content--hidden">
+                                    <div class="c-form-group">
+                                        <p class="form-desc">Selecione uma configuração criada e salva na Fase 1. Somente pacotes <code>fase_1</code> (portfólio e avulsa) estão disponíveis.</p>
+                                        <select id="cfg-saved-select" class="c-form-control" data-pacote-fase-esperado="fase_1" title="Selecione uma configuração com pacote fase_1">
+                                            <option value="">Selecione a configuração…</option>
+                                        </select>
+                                        <small class="form-help" id="cfg-saved-help"><i class="fas fa-info-circle"></i> Somente pacotes da Fase 1 (portfólio e avulsa).</small>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="ahp-method-choice">
-                            <div class="ahp-method-choice-header">
-                                <input type="radio" id="cfg-method-file" name="cfg-source" value="file" onchange="toggleConfigSource()">
-                                <label for="cfg-method-file"><i class="fas fa-file-arrow-up"></i> <strong>Importar artefato da Fase 1</strong></label>
-                            </div>
-                            <div id="cfg-file-content" class="method-content method-content--hidden">
-                                <p>Envie o arquivo <code>.json</code> de objetos exportado na Fase 1 (<code>pacote_fase: fase_1</code>).</p>
-                                <div class="upload-area">
-                                    <label for="cfg-file-input" class="visually-hidden">Selecionar arquivo de configuração (JSON)</label>
-                                    <input type="file" id="cfg-file-input" accept=".json" class="hidden-file-input" title="Selecionar arquivo de configuração (JSON)" onchange="handleConfigFile(event)">
-                                    <button type="button" onclick="document.getElementById('cfg-file-input').click()" class="ahp-upload-select-btn"><i class="fas fa-folder-open"></i> Selecionar Arquivo</button>
-                                    <div id="cfg-file-info" class="file-info"></div>
+                            <div class="ahp-method-choice">
+                                <div class="ahp-method-choice-header">
+                                    <input type="radio" id="cfg-method-file" name="cfg-source" value="file" autocomplete="off" onchange="toggleConfigSource()">
+                                    <label for="cfg-method-file"><i class="fas fa-file-arrow-up"></i> <strong>Importar arquivo de configuração</strong></label>
+                                </div>
+                                <div id="cfg-file-content" class="method-content method-content--hidden">
+                                    <div class="c-form-group">
+                                        <p class="form-desc">Envie o arquivo <code>.json</code> de objetos exportado na Fase 1 (<code>pacote_fase: fase_1</code>).</p>
+                                        <div class="upload-area">
+                                            <label for="cfg-file-input" class="visually-hidden">Selecionar arquivo de configuração (JSON)</label>
+                                            <input type="file" id="cfg-file-input" accept=".json" class="hidden-file-input" title="Selecionar arquivo de configuração (JSON)" onchange="handleConfigFile(event)">
+                                            <button type="button" onclick="document.getElementById('cfg-file-input').click()" class="ahp-upload-select-btn"><i class="fas fa-folder-open"></i> Selecionar Arquivo</button>
+                                        </div>
+                                        <small class="form-help" id="cfg-file-help"><i class="fas fa-info-circle"></i> <span id="cfg-file-info"></span>Selecione um arquivo <code>.json</code> exportado pelo módulo AHP.</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -96,11 +103,77 @@
             </section>
 
             <section class="card ahp-step-section">
-                <div class="ahp-section-label"><i class="fas fa-sliders app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Definição da Análise</span></div>
+                <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">2.3</span><span>Cadastrar critérios</span></div>
                 <div class="ahp-section-body">
-                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">2</span>Escolha como deseja preencher a análise AHP</h2><div class="ahp-recommendation"><div class="ahp-recommendation__head"><i class="fas fa-lightbulb"></i><strong>Dica Importante:</strong></div><p>Se você possui <strong>mais de 20 critérios</strong> ou já tem uma matriz calculada em outra ferramenta (Excel, Python, R), use a opção <strong>Upload de Tabela</strong> para economizar tempo e evitar preenchimento manual extenso.</p></div><div class="ahp-method-choice"><div class="ahp-method-choice-header"><input type="radio" id="method-manual" name="input-method" value="manual" checked onchange="toggleInputMethod()"><label for="method-manual"><i class="fas fa-edit"></i> <strong>Método Manual</strong></label></div><div id="manual-method-content" class="method-content"><p>Preencha manualmente os critérios e comparações através do processo guiado passo a passo.</p><div class="c-form-group"><label for="criteria-count" class="c-form-label"><i class="fas fa-calculator"></i> Número de Critérios</label><select id="criteria-count" class="c-form-control" title="Selecione a quantidade de critérios"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select><small class="form-help"><i class="fas fa-info-circle"></i> Recomendamos entre 3 e 9 critérios para uma análise equilibrada</small></div></div></div><div class="ahp-method-choice"><div class="ahp-method-choice-header"><input type="radio" id="method-upload" name="input-method" value="upload" onchange="toggleInputMethod()"><label for="method-upload"><i class="fas fa-upload"></i> <strong>Upload de Tabela</strong></label></div><div id="upload-method-content" class="method-content method-content--hidden"><p>Envie a Tabela de Premissas e Critérios preenchida (modelo XLSX ou CSV).</p><div class="ahp-upload-steps"><div class="ahp-upload-step"><div class="ahp-upload-step__head"><div class="ahp-step-badge">1</div><strong>Baixe o modelo</strong></div><div class="step-content"><p>Escolha o formato de arquivo que preferir:</p><div class="ahp-template-buttons"><a href="../data/Modelo_Matriz_Criterios_Premissas_Analise.xlsx" download="Modelo_Matriz_Criterios_Premissas_Analise.xlsx" class="ahp-template-download-btn"><i class="fas fa-file-excel"></i> Baixar Modelo XLSX</a><a href="../data/Modelo_Matriz_Criterios_Premissas_Analise.csv" download="Modelo_Matriz_Criterios_Premissas_Analise.csv" class="ahp-template-download-btn"><i class="fas fa-file-csv"></i> Baixar Modelo CSV</a></div></div></div><div class="ahp-upload-step"><div class="ahp-upload-step__head"><div class="ahp-step-badge">2</div><strong>Preencha a tabela</strong></div><div class="step-content"><p>Informe uma linha por critério, com premissa obrigatória. Use as listas suspensas do XLSX para Dimensão, Relação e Mandatório.</p><div class="info-box"><i class="fas fa-info-circle"></i><div class="info-box__content"><strong>Formato esperado:</strong><ul class="info-list"><li>XLSX: planilha «Tabela de Premissas e Critérios» (colunas A–G), com listas suspensas</li><li>CSV: mesmas colunas Dimensao, Criterio, Premissa, Relacao, Metricas, Fonte, Mandatorio</li><li>Consulte a aba «Exemplo de preenchimento» no XLSX para referência</li></ul></div></div></div></div><div class="ahp-upload-step"><div class="ahp-upload-step__head"><div class="ahp-step-badge">3</div><strong>Faça o upload</strong></div><div class="step-content"><p>Selecione o arquivo preenchido para processar:</p><div class="upload-area"><label for="matrix-file-input" class="visually-hidden">Selecionar arquivo de matriz AHP (CSV ou JSON)</label><input type="file" id="matrix-file-input" accept=".xlsx,.csv" onchange="handleFileSelect(event)" class="hidden-file-input" title="Selecionar arquivo da matriz de critérios e premissas (XLSX ou CSV)"><button onclick="document.getElementById('matrix-file-input').click()" class="ahp-upload-select-btn"><i class="fas fa-folder-open"></i> Selecionar Arquivo</button><div id="file-info" class="file-info"></div></div></div></div></div></div></div><div class="ahp-form-actions"><a href="step1-configuracao.html" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a><button id="continue-btn" onclick="processCriteriaCount()" class="btn btn-primary">Continuar<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></button></div></section>
-                </div>
-            </section>
+                    <section class="ahp-section ahp-subcard">
+                        <div class="ahp-subsection-title ahp-subsection-title--roman">
+                            <span class="ahp-subsection-num ahp-subsection-num--roman">II</span>
+                            <span>Método de cadastro dos critérios</span>
+                        </div>
+                        <p class="ahp-page-desc">Se você possui <strong>mais de 20 critérios</strong> ou já tem uma matriz calculada em outra ferramenta (Excel, Python, R), use a opção <strong>Upload de arquivo local</strong> para economizar tempo e evitar preenchimento manual extenso.</p>
+
+                        <div class="ahp-method-choice-row">
+                            <div class="ahp-method-choice">
+                                <div class="ahp-method-choice-header">
+                                    <input type="radio" id="method-manual" name="input-method" value="manual" autocomplete="off" onchange="toggleInputMethod()">
+                                    <label for="method-manual"><i class="fas fa-edit"></i> <strong>Método Manual</strong></label>
+                                </div>
+                                <div id="manual-method-content" class="method-content method-content--hidden">
+                                    <div class="c-form-group">
+                                        <p class="form-desc">Preencha manualmente os critérios e comparações através do processo guiado passo a passo.</p>
+                                        <select id="criteria-count" class="c-form-control" title="Selecione a quantidade de critérios">
+                                            <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option>
+                                        </select>
+                                        <small class="form-help"><i class="fas fa-info-circle"></i> Recomendamos entre 3 e 9 critérios para uma análise equilibrada.</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ahp-method-choice">
+                                <div class="ahp-method-choice-header">
+                                    <input type="radio" id="method-upload" name="input-method" value="upload" autocomplete="off" onchange="toggleInputMethod()">
+                                    <label for="method-upload"><i class="fas fa-upload"></i> <strong>Upload de arquivo local</strong></label>
+                                </div>
+                                <div id="upload-method-content" class="method-content method-content--hidden">
+                                    <div class="c-form-group">
+                                        <p class="form-desc">Envie a Tabela de Premissas e Critérios preenchida (modelo XLSX ou CSV).</p>
+                                        <div class="ahp-upload-steps">
+                                            <div class="ahp-upload-step">
+                                                <div class="ahp-upload-step__head"><div class="ahp-step-badge">1</div><strong>Baixe o modelo</strong></div>
+                                                <div class="step-content">
+                                                    <p>Escolha o formato de arquivo que preferir:</p>
+                                                    <div class="ahp-template-buttons">
+                                                        <a href="../data/Modelo_Matriz_Criterios_Premissas_Analise.xlsx" download="Modelo_Matriz_Criterios_Premissas_Analise.xlsx" class="ahp-template-download-btn"><i class="fas fa-file-excel"></i> Baixar Modelo XLSX</a>
+                                                        <a href="../data/Modelo_Matriz_Criterios_Premissas_Analise.csv" download="Modelo_Matriz_Criterios_Premissas_Analise.csv" class="ahp-template-download-btn"><i class="fas fa-file-csv"></i> Baixar Modelo CSV</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="ahp-upload-step">
+                                                <div class="ahp-upload-step__head"><div class="ahp-step-badge">2</div><strong>Preencha a tabela</strong></div>
+                                                <div class="step-content">
+                                                    <p>Informe uma linha por critério, com premissa obrigatória. Use as listas suspensas do XLSX para Dimensão, Relação e Mandatório.</p>
+                                                    <div class="info-box"><i class="fas fa-info-circle"></i><div class="info-box__content"><strong>Formato esperado:</strong><ul class="info-list"><li>XLSX: planilha «Tabela de Premissas e Critérios» (colunas A–G), com listas suspensas</li><li>CSV: mesmas colunas Dimensao, Criterio, Premissa, Relacao, Metricas, Fonte, Mandatorio</li><li>Consulte a aba «Exemplo de preenchimento» no XLSX para referência</li></ul></div></div>
+                                                </div>
+                                            </div>
+                                            <div class="ahp-upload-step">
+                                                <div class="ahp-upload-step__head"><div class="ahp-step-badge">3</div><strong>Faça o upload</strong></div>
+                                                <div class="step-content">
+                                                    <p>Selecione o arquivo preenchido para processar:</p>
+                                                    <div class="upload-area">
+                                                        <label for="matrix-file-input" class="visually-hidden">Selecionar arquivo de matriz AHP (CSV ou JSON)</label>
+                                                        <input type="file" id="matrix-file-input" accept=".xlsx,.csv" onchange="handleFileSelect(event)" class="hidden-file-input" title="Selecionar arquivo da matriz de critérios e premissas (XLSX ou CSV)">
+                                                        <button onclick="document.getElementById('matrix-file-input').click()" class="ahp-upload-select-btn"><i class="fas fa-folder-open"></i> Selecionar Arquivo</button>
+                                                        <div id="file-info" class="file-info"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <small class="form-help"><i class="fas fa-info-circle"></i> Formatos aceitos: <code>.xlsx</code> e <code>.csv</code>.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section></div></section><section class="card ahp-step-section" id="step2-nav-section"><div class="ahp-section-body"><div class="ahp-form-actions"><a href="step1-configuracao.html" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a><button id="continue-btn" onclick="processCriteriaCount()" class="btn btn-primary">Continuar<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></button></div></div></section>
     </main>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="js/script.js"></script>
@@ -110,6 +183,14 @@
     <script src="js/ahp-pacote-fase.js"></script>
     <script src="js/ahp-formato-data.js"></script>
     <script src="js/config-loader.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('input[name="cfg-source"]').forEach(function (r) { r.checked = false; });
+      document.querySelectorAll('input[name="input-method"]').forEach(function (r) { r.checked = false; });
+      if (typeof toggleConfigSource === 'function') toggleConfigSource();
+      if (typeof toggleInputMethod === 'function') toggleInputMethod();
+    });
+    </script>
     <script src="js/matriz-premissas.js"></script>
     <script src="js/ahp-alertas.js"></script>
     <script src="js/ahp-coerencia.js"></script>
@@ -120,3 +201,5 @@
   <script src="../assets/js/navbar.js"></script>
 </body>
 </html>
+
+

@@ -123,9 +123,9 @@ html.ahp-auth-pending body {
 .ahp-info-note span {
   flex: 1;
   text-align: justify;
-  hyphens: auto;
   -webkit-hyphens: auto;
   -ms-hyphens: auto;
+  hyphens: auto;
 }
 
 .ahp-section-label {
@@ -147,6 +147,22 @@ html.ahp-auth-pending body {
 .ahp-section-label i {
   font-size: 0.9rem;
   color: var(--pli-green);
+}
+
+.ahp-section-index-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, var(--pli-green), var(--pli-blue));
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .ahp-summary-grid {
@@ -521,6 +537,18 @@ a.ahp-progress-step:hover {
   color: var(--pli-deep);
 }
 
+.ahp-method-choice-row {
+  display: flex;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.ahp-method-choice-row .ahp-method-choice {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
 .ahp-method-choice {
   padding: 1rem;
   margin-bottom: 0.85rem;
@@ -651,6 +679,49 @@ a.ahp-progress-step:hover {
   background: #dfe7ee;
 }
 
+/* Select de configuração salva — visual igual ao botão de upload */
+#cfg-saved-select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 2.2rem 0 1rem;
+  background: #e8edf2;
+  color: var(--pli-blue);
+  border: none;
+  border-radius: 14px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23116593' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 10px 7px;
+  transition: background 0.2s ease;
+  box-sizing: border-box;
+}
+
+#cfg-saved-select:hover {
+  background-color: #dfe7ee;
+}
+
+#cfg-saved-select:focus {
+  outline: 2px solid rgba(17, 101, 147, 0.3);
+  outline-offset: 2px;
+}
+
+#cfg-saved-select option {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--pli-text);
+  background: #fff;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .ahp-selected-file {
   display: inline-flex;
   align-items: center;
@@ -762,6 +833,149 @@ a.ahp-progress-step:hover {
   max-width: 520px;
   margin-left: 0;
   margin-right: 0;
+}
+
+.ahp-collab-inline {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: stretch;
+  width: 100%;
+}
+
+.ahp-collab-inline .c-form-control {
+  min-width: 0;
+  width: 100%;
+}
+
+.ahp-collab-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  align-items: end;
+}
+
+.ahp-collab-grid2 .c-form-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  margin-bottom: 0;
+}
+
+.ahp-collab-deadline-inline {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: stretch;
+  width: 100%;
+}
+
+.ahp-collab-deadline-inline .c-form-control {
+  min-width: 0;
+  width: 100%;
+  height: 2.5rem;
+  box-sizing: border-box;
+}
+
+#collab-email-input.c-form-control {
+  height: 2.5rem;
+  box-sizing: border-box;
+}
+
+.ahp-collab-add-btn {
+  width: 2.65rem;
+  min-width: 2.65rem;
+  height: 100%;
+  min-height: 2.5rem;
+  border-radius: 10px;
+  border: 1px solid var(--pli-border);
+  background: #fff;
+  color: var(--pli-blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.ahp-collab-add-btn:hover {
+  border-color: var(--pli-blue);
+  background: rgba(17, 101, 147, 0.06);
+}
+
+.ahp-collab-add-btn:focus-visible {
+  outline: 2px solid rgba(17, 101, 147, 0.35);
+  outline-offset: 1px;
+}
+
+.ahp-collab-chk-col {
+  width: 2.2rem;
+  text-align: center;
+}
+
+.ahp-collab-table .collab-row-chk {
+  cursor: pointer;
+  accent-color: var(--pli-blue);
+  width: 1rem;
+  height: 1rem;
+}
+
+.ahp-collab-table-wrap {
+  border: 1px solid var(--pli-border);
+  border-radius: var(--pli-radius);
+  overflow: hidden;
+}
+
+.ahp-collab-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.ahp-collab-table thead th {
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  background: #f4f7fb;
+  color: var(--pli-deep);
+  border-bottom: 1px solid var(--pli-border);
+  white-space: nowrap;
+}
+
+.ahp-collab-table tbody td {
+  padding: 0.6rem 0.75rem;
+  border-top: 1px solid rgba(17, 101, 147, 0.1);
+  color: var(--pli-muted);
+}
+
+.ahp-collab-table tbody tr:first-child td {
+  border-top: none;
+}
+
+.ahp-collab-row-empty td {
+  text-align: center;
+  color: var(--pli-muted);
+  font-style: italic;
+}
+
+.ahp-collab-row-valid td {
+  background: rgba(42, 163, 88, 0.06);
+}
+
+.ahp-collab-row-new td {
+  box-shadow: inset 0 0 0 9999px rgba(42, 163, 88, 0.12);
+}
+
+.ahp-collab-valid-dot {
+  color: #17803a;
+  font-size: 0.72rem;
+  vertical-align: middle;
+}
+
+@media (max-width: 900px) {
+  .ahp-collab-grid2 {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
 }
 
 /* A seção de carregamento da configuração ocupa a largura inteira do card. */
@@ -944,6 +1158,17 @@ a.ahp-progress-step:hover {
   justify-content: center;
 }
 
+.ahp-final-actions-row {
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.ahp-final-actions-row .btn {
+  white-space: nowrap;
+}
+
 .ahp-step3-continue {
   margin-top: 1.75rem;
   padding-top: 0.25rem;
@@ -1098,7 +1323,13 @@ a.ahp-progress-step:hover {
 
 /* Aliases SIGMA → SLT (páginas de etapa adaptadas) */
 .ahp-step-section.card {
-  margin-bottom: 1rem;
+  margin: 0 0 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #b7c7d8;
+  background: #fff;
+  height: auto;
+  min-height: 0;
+  box-sizing: border-box;
 }
 
 .ahp-step-header {
@@ -1112,12 +1343,37 @@ a.ahp-progress-step:hover {
   background: transparent;
 }
 
+.ahp-section-body .ahp-section.ahp-subcard {
+  padding: 1rem;
+  border: 2px solid var(--pli-border);
+  border-radius: var(--pli-radius);
+  background: #e7f0f7;
+  box-shadow: var(--pli-shadow);
+  box-sizing: border-box;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
 .ahp-section-body .info-card {
+  margin: 0; /* gap do section-body controla espaçamento */
   padding: 1.25rem 1.4rem;
   border: 1.5px solid #c9d6e2;
   border-radius: 14px;
   box-shadow: 0 2px 8px rgba(13, 59, 102, 0.06);
   background: #fff;
+}
+
+.ahp-section-body .info-card.ahp-subcard {
+  padding: 1rem;
+  border: 2px solid var(--pli-border);
+  border-radius: var(--pli-radius);
+  background: #e7f0f7;
+  box-shadow: var(--pli-shadow);
+  box-sizing: border-box;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
 }
 
 .c-form-group {
@@ -1152,8 +1408,15 @@ a.ahp-progress-step:hover {
   margin-top: 0.25rem;
 }
 
+.form-desc {
+  margin: 0 0 0.65rem;
+  font-size: 0.85rem;
+  color: var(--pli-muted);
+  line-height: 1.5;
+}
+
 .info-card {
-  margin-bottom: 1rem;
+  margin-bottom: 0; /* margens controladas pelo gap do container pai */
   border: 1.5px solid #c9d6e2;
   border-radius: 14px;
   background: #fff;
@@ -1162,7 +1425,7 @@ a.ahp-progress-step:hover {
 }
 
 .info-card--spaced {
-  margin-top: 1rem;
+  margin-top: 0; /* gap do container substitui esta margem */
 }
 
 .info-card-content {
@@ -1216,6 +1479,579 @@ a.ahp-progress-step:hover {
   font-size: 0.875rem;
   color: var(--pli-muted);
   line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+
+.saaty-description--highlight {
+  background: #eef4fb;
+  border-left: 3px solid var(--pli-blue);
+  border-radius: 0 8px 8px 0;
+  padding: 0.55rem 0.85rem;
+  color: var(--pli-navy);
+  margin-top: 0;
+}
+
+/* ======================================================
+   Referência visual da Escala de Saaty — bidirecional
+   1 no centro | recíprocos à esquerda | positivos à direita
+   ====================================================== */
+.saaty-ref-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: 100%;
+}
+
+/* Labels acima da barra: B ← ... → A */
+.saaty-ref-labels-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.saaty-ref-pole {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--pli-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  line-height: 1;
+}
+
+.saaty-ref-pole--left i { color: #c0392b; }
+.saaty-ref-pole--right i { color: var(--pli-blue); }
+
+/* Barra: ocupa 100% da largura */
+.saaty-ref-bar {
+  width: 100%;
+  position: relative;
+}
+
+/* Gradiente bicolor: vermelho esquerda, branco centro, azul direita */
+.saaty-ref-gradient {
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%; transform: translateY(-50%);
+  height: 10px;
+  background: linear-gradient(to right,
+    #7b1a1a 0%,
+    #c0392b 18%,
+    #f4a7a0 40%,
+    #f5f5f5 50%,
+    #a9cdec 60%,
+    #2f6fad 82%,
+    #0d3b66 100%
+  );
+  /* borda bicolor: vermelho à esquerda do centro, azul à direita */
+  border-width: 1px;
+  border-style: solid;
+  border-image: linear-gradient(to right,
+    #8b1a1a 0%, #c0392b 48%,
+    #2f6fad 52%, #0d3b66 100%
+  ) 1;
+  z-index: 0;
+}
+
+/* Seta esquerda (vermelha) e direita (azul) */
+.saaty-ref-gradient::before,
+.saaty-ref-gradient::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0; height: 0;
+}
+.saaty-ref-gradient::before {
+  left: -13px;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-right: 13px solid #7b1a1a;
+}
+.saaty-ref-gradient::after {
+  right: -13px;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-left: 13px solid #0d3b66;
+}
+
+/* Ticks: mesmo grid dos cards → alinhamento perfeito */
+.saaty-ref-ticks {
+  display: grid;
+  grid-template-columns: repeat(17, 1fr);
+  gap: 0.2rem;
+  position: relative;
+  z-index: 1;
+  padding: 4px 0;
+}
+
+/* Tick base: sem posicionamento absoluto, centralizado na célula do grid */
+.saaty-ref-tick {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto;
+  font-size: 0.58rem;
+  font-weight: 800;
+  font-family: "Montserrat", Verdana, sans-serif;
+  border: 1.5px solid rgba(0,0,0,0.18);
+  line-height: 1;
+  white-space: nowrap;
+  position: relative; z-index: 2;
+}
+
+/* Centro "1" — maior */
+.saaty-ref-tick--center {
+  width: 24px; height: 24px;
+  font-size: 0.75rem;
+  border: 2px solid rgba(0,0,0,0.25);
+}
+
+/* Background dos ticks = cor do degradê na posição correspondente */
+.saaty-ref-tick:nth-child(1)  { background: #7b1a1a; color: #fff; }
+.saaty-ref-tick:nth-child(2)  { background: #8b2020; color: #fff; }
+.saaty-ref-tick:nth-child(3)  { background: #9e2a2a; color: #fff; }
+.saaty-ref-tick:nth-child(4)  { background: #b43232; color: #fff; }
+.saaty-ref-tick:nth-child(5)  { background: #c0392b; color: #fff; }
+.saaty-ref-tick:nth-child(6)  { background: #d45b50; color: #fff; }
+.saaty-ref-tick:nth-child(7)  { background: #e07e75; color: #333; }
+.saaty-ref-tick:nth-child(8)  { background: #eca79e; color: #333; }
+.saaty-ref-tick:nth-child(9)  { background: #f5f5f5; color: #333; }
+.saaty-ref-tick:nth-child(10) { background: #a9cdec; color: #333; }
+.saaty-ref-tick:nth-child(11) { background: #8fbde2; color: #333; }
+.saaty-ref-tick:nth-child(12) { background: #74add8; color: #333; }
+.saaty-ref-tick:nth-child(13) { background: #5a9cce; color: #fff; }
+.saaty-ref-tick:nth-child(14) { background: #408bc4; color: #fff; }
+.saaty-ref-tick:nth-child(15) { background: #2f7ab8; color: #fff; }
+.saaty-ref-tick:nth-child(16) { background: #2065a0; color: #fff; }
+.saaty-ref-tick:nth-child(17) { background: #0d3b66; color: #fff; }
+
+/* Grid de 17 cards */
+.saaty-ref-cards {
+  display: grid;
+  grid-template-columns: repeat(17, 1fr);
+  gap: 0.2rem;
+}
+
+/* Base de todos os cards */
+.saaty-ref-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.4rem 0.1rem 0.35rem;
+  border-radius: 8px;
+  border: 1.5px solid rgba(0,0,0,0.14);
+  text-align: center;
+  transition: filter 0.15s, box-shadow 0.15s;
+}
+
+.saaty-ref-card:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+}
+
+/* Background dos cards = cor do degradê na posição correspondente */
+.saaty-ref-card--recip[data-val="r9"] { background: #7b1a1a; }
+.saaty-ref-card--recip[data-val="r8"] { background: #8b2020; }
+.saaty-ref-card--recip[data-val="r7"] { background: #9e2a2a; }
+.saaty-ref-card--recip[data-val="r6"] { background: #b43232; }
+.saaty-ref-card--recip[data-val="r5"] { background: #c0392b; }
+.saaty-ref-card--recip[data-val="r4"] { background: #d45b50; }
+.saaty-ref-card--recip[data-val="r3"] { background: #e07e75; }
+.saaty-ref-card--recip[data-val="r2"] { background: #eca79e; }
+.saaty-ref-card--center              { background: #f5f5f5; }
+.saaty-ref-card[data-val="2"]        { background: #a9cdec; }
+.saaty-ref-card[data-val="3"]        { background: #8fbde2; }
+.saaty-ref-card[data-val="4"]        { background: #74add8; }
+.saaty-ref-card[data-val="5"]        { background: #5a9cce; }
+.saaty-ref-card[data-val="6"]        { background: #408bc4; }
+.saaty-ref-card[data-val="7"]        { background: #2f7ab8; }
+.saaty-ref-card[data-val="8"]        { background: #2065a0; }
+.saaty-ref-card[data-val="9"]        { background: #0d3b66; }
+
+/* Texto claro em fundos escuros */
+.saaty-ref-card--recip[data-val="r9"] .saaty-ref-num,
+.saaty-ref-card--recip[data-val="r9"] .saaty-ref-label,
+.saaty-ref-card--recip[data-val="r8"] .saaty-ref-num,
+.saaty-ref-card--recip[data-val="r8"] .saaty-ref-label,
+.saaty-ref-card--recip[data-val="r7"] .saaty-ref-num,
+.saaty-ref-card--recip[data-val="r7"] .saaty-ref-label,
+.saaty-ref-card--recip[data-val="r6"] .saaty-ref-num,
+.saaty-ref-card--recip[data-val="r6"] .saaty-ref-label,
+.saaty-ref-card--recip[data-val="r5"] .saaty-ref-num,
+.saaty-ref-card--recip[data-val="r5"] .saaty-ref-label,
+.saaty-ref-card--recip[data-val="r4"] .saaty-ref-num,
+.saaty-ref-card--recip[data-val="r4"] .saaty-ref-label { color: #fff; }
+
+.saaty-ref-card[data-val="5"] .saaty-ref-num,
+.saaty-ref-card[data-val="5"] .saaty-ref-label,
+.saaty-ref-card[data-val="6"] .saaty-ref-num,
+.saaty-ref-card[data-val="6"] .saaty-ref-label,
+.saaty-ref-card[data-val="7"] .saaty-ref-num,
+.saaty-ref-card[data-val="7"] .saaty-ref-label,
+.saaty-ref-card[data-val="8"] .saaty-ref-num,
+.saaty-ref-card[data-val="8"] .saaty-ref-label,
+.saaty-ref-card[data-val="9"] .saaty-ref-num,
+.saaty-ref-card[data-val="9"] .saaty-ref-label { color: #fff; }
+
+.saaty-ref-num {
+  font-size: 0.9rem;
+  font-weight: 800;
+  font-family: "Montserrat", Verdana, sans-serif;
+  color: #333;
+  line-height: 1;
+}
+
+/* =====================================================
+   Bloco de exemplo didático da Escala de Saaty
+   ===================================================== */
+/* Subcards internos da seção de Escala de Saaty */
+.saaty-inner-card {
+  background: #fff;
+  border: 1.5px solid #c9d6e2;
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.saaty-inner-card:last-child {
+  margin-bottom: 0;
+}
+
+.saaty-inner-card--texto {
+  border-left: 4px solid var(--pli-blue);
+}
+
+.saaty-inner-card--escala {
+  background: #f8fafc;
+  border-color: #b7c7d8;
+}
+
+.saaty-inner-card--exemplo {
+  padding: 0;
+  overflow: hidden;
+  border-color: #c9d6e2;
+}
+
+.saaty-example-box {
+  background: #fff;
+  box-shadow: none;
+  border: none;
+  border-radius: 0;
+}
+
+.saaty-example-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 1rem;
+  background: var(--pli-deep);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: "Montserrat", Verdana, sans-serif;
+  letter-spacing: 0.02em;
+}
+
+/* Quando personalizado com dados reais da config */
+.saaty-example-box--personalizado .saaty-example-title {
+  background: var(--pli-green, #2e7d32);
+}
+
+.saaty-example-title i { color: #ffd54f; font-size: 0.95rem; }
+
+.saaty-example-body {
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Linha de critérios A vs B */
+.saaty-example-crits {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.saaty-ex-crit {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.saaty-ex-crit--a {
+  background: #dce8f4;
+  color: #0d3b66;
+  border: 1.5px solid #2f6fad;
+}
+
+.saaty-ex-crit--b {
+  background: #fce8e6;
+  color: #7b1a1a;
+  border: 1.5px solid #c0392b;
+}
+
+.saaty-ex-versus {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--pli-muted);
+  flex-shrink: 0;
+}
+
+/* Pergunta guia */
+.saaty-example-q {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--pli-navy);
+  background: #f5f8fb;
+  border-left: 3px solid var(--pli-blue);
+  border-radius: 0 6px 6px 0;
+  padding: 0.5rem 0.75rem;
+  line-height: 1.5;
+}
+
+.saaty-example-q i { color: var(--pli-blue); margin-right: 0.3rem; }
+
+/* Forçar inline em toda a área do exemplo e nota — app.css pode ter strong{display:block} */
+.saaty-example-box strong,
+.saaty-example-box em,
+.saaty-example-box span,
+.saaty-ref-note strong,
+.saaty-ref-note em,
+.saaty-description strong,
+.saaty-description em,
+.saaty-ref-note i {
+  display: inline !important;
+}
+
+.saaty-example-q--2 {
+  background: #f9f5fb;
+  border-left-color: #7e57c2;
+}
+.saaty-example-q--2 i { color: #7e57c2; }
+
+/* Breadcrumb de escopo */
+.saaty-example-escopo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  background: #eef3f8;
+  border: 1px solid #c9d6e2;
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  margin-bottom: 0.1rem;
+}
+.saaty-ex-escopo-label {
+  font-weight: 700;
+  color: var(--pli-muted);
+  white-space: nowrap;
+}
+.saaty-ex-escopo-frase {
+  font-style: italic;
+  color: var(--pli-deep);
+  font-weight: 600;
+}
+
+/* Linhas de resposta — flex coluna (estrutura por pares) */
+.saaty-example-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* = 1: ocupa largura total */
+.saaty-ans--full {
+  width: 100%;
+}
+
+/* Cabeçalho das colunas Maior | Menor */
+.saaty-ans-col-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.saaty-ans-col-head span:first-child {
+  color: #1565c0;
+  background: #e3f0fb;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.saaty-ans-col-head span:last-child {
+  color: #c0392b;
+  background: #fdecea;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+/* Par de respostas: positivo + recíproco lado a lado */
+.saaty-ans-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.saaty-ans-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+.saaty-ans--equal  { background: #f5f5f5; border-color: #ddd; }
+.saaty-ans--low    { background: #f0f5fb; border-color: #c9d6e2; }
+.saaty-ans--mid    { background: #e8f0f8; border-color: #a9c0d8; }
+.saaty-ans--high   { background: #dde8f4; border-color: #7da5c8; }
+.saaty-ans--recip  { background: #fdf2f1; border-color: #e8a09a; }
+
+.saaty-ans-badge {
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 8px;
+  display: block;
+  line-height: 2.6rem;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-family: "Montserrat", Verdana, sans-serif;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.saaty-ans-badge--equal { background: #e0e0e0; color: #333; border: 1.5px solid #bbb; }
+.saaty-ans-badge--low   { background: #dce8f4; color: #0d3b66; border: 1.5px solid #2f6fad; }
+.saaty-ans-badge--mid   { background: #2f6fad; color: #fff; border: 1.5px solid #1a4f8a; }
+.saaty-ans-badge--high  { background: #0d3b66; color: #fff; border: 1.5px solid #061e33; }
+.saaty-ans-badge--recip { background: #c0392b; color: #fff; border: 1.5px solid #8b1a1a; font-size: 0.65rem; }
+
+.saaty-ans-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--pli-navy);
+  line-height: 1.45;
+}
+
+/* Bloco 1: direção (maior / menor / igual importância relativa) */
+.saaty-ans-direcao {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  width: fit-content;
+}
+.saaty-ans-direcao i { font-size: 0.7rem; }
+.saaty-ans-direcao--maior  { background: #e3f0fb; color: #1565c0; }
+.saaty-ans-direcao--menor  { background: #fdecea; color: #c0392b; }
+.saaty-ans-direcao--igual  { background: #f5f5f5; color: #555; }
+
+/* Bloco 2: magnitude (texto da resposta) */
+.saaty-ans-magnitude {
+  font-size: 0.78rem;
+  color: var(--pli-navy);
+  font-style: italic;
+}
+
+/* Medidas (fração, decimal, %) */
+.saaty-ans-measures {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.saaty-ans-m {
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-family: "Montserrat", Verdana, sans-serif;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.saaty-ans-m--frac { background: #e8f0f8; color: #0d3b66; border: 1px solid #c9d6e2; }
+.saaty-ans-m--dec  { background: #e8f4ec; color: #1a5e2a; border: 1px solid #b2d4b8; }
+.saaty-ans-m--pct  { background: #fdf2e9; color: #7d3c0a; border: 1px solid #f0c090; }
+
+/* Dica final */
+.saaty-example-tip {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--pli-muted);
+  background: #fffbe6;
+  border: 1px solid #f0d060;
+  border-radius: 7px;
+  padding: 0.5rem 0.75rem;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.saaty-example-tip i { color: #d4a017; flex-shrink: 0; margin-top: 0.1rem; }
+
+.saaty-ref-label {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--pli-muted);
+  line-height: 1.25;
+  text-align: center;
+}
+
+/* Nota sobre recíprocos */
+.saaty-ref-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--pli-muted);
+  background: #f5f8fb;
+  border: 1px solid #dde6ef;
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.saaty-ref-note i { color: var(--pli-blue); flex-shrink: 0; }
+
+@media (max-width: 900px) {
+  .saaty-ref-cards { grid-template-columns: repeat(9, 1fr); gap: 0.2rem; }
+  .saaty-ref-card--recip { display: none; }
+  .saaty-ref-card--center { display: flex; }
+}
+@media (max-width: 560px) {
+  .saaty-ref-cards { grid-template-columns: repeat(5, 1fr); }
+  .saaty-ref-bar-row { flex-direction: column; }
+  .saaty-ref-pole { width: 100%; }
 }
 
 .instructions-text {
@@ -1324,7 +2160,7 @@ a.ahp-progress-step:hover {
 
 .ahp-matriz-filter {
   max-width: 280px;
-  min-height: auto;
+  min-height: 0;
   padding: 0.45rem 0.65rem;
 }
 
@@ -2356,15 +3192,20 @@ a.ahp-progress-step:hover {
 /* Subseções dentro de um card (ex.: Universo populacional / amostral) */
 /* Subcard: caixa com a mesma borda dos cards de "Destino da análise". */
 .ahp-subcard {
-  padding: 1.25rem;
+  margin: 0;
+  padding: 1rem;
   border: 2px solid var(--pli-border);
   border-radius: var(--pli-radius);
-  background: var(--pli-white);
+  background: #e7f0f7;
   box-shadow: var(--pli-shadow);
+  box-sizing: border-box;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
 }
 
 .ahp-subcard + .ahp-subcard {
-  margin-top: 1rem;
+  margin-top: 0; /* gap do flex container controla o espaçamento */
 }
 
 /* Subtítulo de subseção: ícone + título, SEM cabeçalho preenchido. */
@@ -2372,13 +3213,24 @@ a.ahp-progress-step:hover {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin: 0 0 0.75rem;
+  margin: -1rem -1rem 0.9rem;
+  padding: 0.72rem 1rem;
   font-family: "Montserrat", Verdana, sans-serif;
   font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--pli-deep, #0d3b66);
+  color: #fff;
+  background: rgba(17, 101, 147, 0.4);
+  border-bottom: 1px solid rgba(17, 101, 147, 0.35);
+  border-radius: var(--pli-radius) var(--pli-radius) 0 0;
+}
+
+.ahp-subsection-title > span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
 }
 
 .ahp-subsection-title i {
@@ -2394,11 +3246,143 @@ a.ahp-progress-step:hover {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--pli-green), var(--pli-blue));
+  background: var(--pli-green);
   color: #fff;
   font-weight: 800;
   font-size: 0.78rem;
   line-height: 1;
+}
+
+:not(.ahp-step-section--contexto) .ahp-subsection-title--roman {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-start;
+}
+
+:not(.ahp-step-section--contexto) .ahp-subsection-num--roman {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--pli-green);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.ahp-subcard > .ahp-step-title:first-child,
+.ahp-subcard > .ahp-info-card-header:first-child {
+  margin: -1rem -1rem 0.9rem;
+  padding: 0.72rem 1rem;
+  background: rgba(17, 101, 147, 0.4);
+  border-bottom: 1px solid rgba(17, 101, 147, 0.35);
+  border-radius: var(--pli-radius) var(--pli-radius) 0 0;
+  color: #fff;
+}
+
+.ahp-subcard > .ahp-step-title:first-child .ahp-step-number {
+  width: 26px;
+  height: 26px;
+  font-size: 0.72rem;
+  background: var(--pli-green);
+}
+
+.ahp-subcard > .ahp-info-card-header:first-child i {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--pli-green);
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 0.95rem;
+}
+
+.ahp-subcard > .ahp-info-card-header:first-child h2,
+.ahp-subcard > .ahp-info-card-header:first-child h3 {
+  color: #fff;
+}
+
+.ahp-step-section .ahp-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem; /* token único: espaçamento entre subcards */
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.ahp-step-section--contexto .ahp-section-body {
+  gap: 0;
+}
+
+.ahp-subcard .info-card-content,
+.ahp-subcard .step-intro,
+.ahp-subcard .ahp-page-desc {
+  text-align: left;
+}
+
+.ahp-subcard .ahp-table-scroll,
+.ahp-subcard .ahp-collab-table-wrap,
+.ahp-subcard #comparisonContainer,
+.ahp-subcard #results-conferencia,
+.ahp-subcard #results-pesos,
+.ahp-subcard #results-parecer,
+.ahp-subcard #resultsExportContent,
+.ahp-subcard #config-artefatos {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.ahp-subcard .ahp-matrix-table {
+  width: 100%;
+}
+
+.ahp-subcard .ahp-method-grid,
+.ahp-subcard .ahp-tipo-grid,
+.ahp-subcard .ahp-collab-grid2,
+.ahp-subcard .ahp-criteria-inputs {
+  width: 100%;
+}
+
+.ahp-subcard .ahp-method-card,
+.ahp-subcard .ahp-info-item,
+.ahp-subcard .ahp-mini-card {
+  min-width: 0;
+}
+
+.ahp-subcard,
+.ahp-subcard .info-card-content,
+.ahp-subcard .ahp-info-highlights,
+.ahp-subcard .ahp-method-grid,
+.ahp-subcard .ahp-collab-grid2,
+.ahp-subcard .ahp-criteria-inputs,
+.ahp-subcard .ahp-recommendation,
+.ahp-subcard .ahp-table-scroll,
+.ahp-subcard .ahp-matrix-panel-root {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+@media (max-width: 768px) {
+  .ahp-step-section.card {
+    padding: 1rem;
+  }
+
+  .ahp-subcard {
+    padding: 0.9rem;
+  }
+
+  .ahp-subsection-title {
+    margin: -0.9rem -0.9rem 0.8rem;
+    padding: 0.65rem 0.9rem;
+  }
+}
+
+.ahp-block-gap-md {
+  margin-bottom: 1rem;
 }
 
 /* Tipo de demanda ocupa a largura total do card */
@@ -2771,6 +3755,7 @@ a.ahp-progress-step:hover {
   justify-content: center;
   padding: 1.25rem;
   background: rgba(0, 59, 90, 0.55);
+  -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
 
@@ -2965,6 +3950,18 @@ a.ahp-progress-step:hover {
   margin-top: 1.25rem;
 }
 
+/* Espaçamento interno dos host divs das subseções */
+.ahp-results-output {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* cfg-loaded-summary: espaço acima quando exibido */
+#cfg-loaded-summary:not(.is-hidden) {
+  margin-top: 0.85rem;
+}
+
 #resultsContent.ahp-results-output {
   display: block;
   width: 100%;
@@ -3044,7 +4041,94 @@ a.ahp-progress-step:hover {
   margin-top: 1rem;
 }
 
-.ahp-contexto-checklist__list {
+/* ── Grid de métricas 3×2 ── */
+.ctx-checklist-wrapper {
+  padding: 0.25rem 0 0.5rem;
+}
+
+.ctx-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.ctx-metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--pli-border);
+  background: #f7f9fb;
+}
+
+.ctx-metric-card.is-ok   { border-left: 3px solid var(--pli-green, #34a853); }
+.ctx-metric-card.is-warn { border-left: 3px solid #d97706; }
+.ctx-metric-card.is-fail { border-left: 3px solid #dc2626; }
+
+.ctx-metric-card__icon {
+  font-size: 0.95rem;
+  margin-bottom: 0.15rem;
+}
+.ctx-metric-card.is-ok   .ctx-metric-card__icon { color: var(--pli-green, #34a853); }
+.ctx-metric-card.is-warn .ctx-metric-card__icon { color: #d97706; }
+.ctx-metric-card.is-fail .ctx-metric-card__icon { color: #dc2626; }
+
+.ctx-metric-card__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--pli-navy);
+  line-height: 1.35;
+}
+
+.ctx-metric-card__detail {
+  font-size: 0.78rem;
+  color: var(--pli-muted);
+  line-height: 1.4;
+}
+
+/* ── Parecer destacado ── */
+.ctx-parecer {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  min-height: 64px;
+}
+
+.ctx-parecer.is-ok   { background: rgba(52, 168, 83, 0.1);  border: 1px solid rgba(52,168,83,0.25); }
+.ctx-parecer.is-warn { background: rgba(217,119,6, 0.09);   border: 1px solid rgba(217,119,6,0.25); }
+.ctx-parecer.is-fail { background: rgba(220,38,38, 0.07);   border: 1px solid rgba(220,38,38,0.2);  }
+
+.ctx-parecer__icon {
+  font-size: 1.35rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+.ctx-parecer.is-ok   .ctx-parecer__icon { color: #166534; }
+.ctx-parecer.is-warn .ctx-parecer__icon { color: #92400e; }
+.ctx-parecer.is-fail .ctx-parecer__icon { color: #991b1b; }
+
+.ctx-parecer__msg {
+  margin: 0;
+  font-size: 0.975rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.ctx-parecer.is-ok   .ctx-parecer__msg { color: #166534; }
+.ctx-parecer.is-warn .ctx-parecer__msg { color: #92400e; }
+.ctx-parecer.is-fail .ctx-parecer__msg { color: #991b1b; }
+
+@media (max-width: 720px) {
+  .ctx-metric-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .ctx-metric-grid { grid-template-columns: 1fr; }
+}
+
+.ahp-contexto-checklist {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -3219,4 +4303,295 @@ a.ahp-progress-step:hover {
   .ahp-conf-item {
     grid-template-columns: 1fr;
   }
+}
+
+/* ─── Título centrado do card de escala ─────────────────────── */
+.saaty-escala-titulo {
+  margin: 0 0 1rem;
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--pli-deep);
+  letter-spacing: 0.01em;
+}
+
+/* ─── Subcards internos do example-box ──────────────────────── */
+.saaty-ex-subcard {
+  margin: 0.75rem 0;
+  border-radius: 8px;
+  border: 1.5px solid #c9d6e2;
+  background: #fff;
+  overflow: hidden;
+}
+
+.saaty-ex-subcard--contexto {
+  border-left: 4px solid var(--pli-blue);
+  padding: 0.85rem 1rem;
+}
+
+.saaty-ex-subcard--respostas {
+  padding: 0.75rem 0.85rem;
+  background: #f8fafc;
+}
+
+/* ─── Bloco de contexto: escopo + critérios ─────────────────── */
+.saaty-ex-contexto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed #c9d6e2;
+}
+
+.saaty-ex-contexto-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.saaty-ex-contexto-label {
+  font-weight: 700;
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pli-muted);
+  flex-shrink: 0;
+}
+
+.saaty-ex-escopo-frase {
+  font-style: italic;
+  color: var(--pli-deep);
+  font-weight: 500;
+}
+
+/* ─── Respostas: compactas e responsivas ─────────────────────── */
+.saaty-ex-subcard--respostas .saaty-ans-magnitude {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+.saaty-ex-subcard--respostas .saaty-ans-text {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.saaty-ex-subcard--respostas .saaty-ans-direcao {
+  font-size: 0.72rem;
+  margin-bottom: 0.25rem;
+}
+
+.saaty-ex-subcard--respostas .saaty-ans-measures {
+  margin-top: 0.3rem;
+  gap: 0.3rem;
+}
+
+.saaty-ex-subcard--respostas .saaty-ans-m {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.35rem;
+}
+
+.saaty-ex-subcard--respostas .saaty-ans-row {
+  padding: 0.4rem 0.5rem;
+  gap: 0.45rem;
+}
+
+.saaty-ex-subcard--respostas .saaty-ans-badge {
+  width: 2.1rem;
+  height: 2.1rem;
+  font-size: 0.88rem;
+  line-height: 2.1rem;
+  flex-shrink: 0;
+}
+
+.saaty-ex-subcard--respostas .saaty-ans-pair {
+  gap: 0.35rem;
+}
+
+.saaty-ex-subcard--respostas .saaty-ans-col-head {
+  font-size: 0.65rem;
+}
+
+/* ─── Narrativa do subcard contexto ─────────────────────────── */
+.saaty-ex-narrativa {
+  font-size: 0.87rem;
+  line-height: 1.65;
+  color: var(--pli-deep);
+  margin: 0 0 0.65rem;
+}
+
+.saaty-ex-narrativa--intro-q {
+  font-style: italic;
+  color: var(--pli-muted);
+  font-size: 0.82rem;
+  margin-bottom: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #c9d6e2;
+}
+
+/* ─── Título do subcard respostas ────────────────────────────── */
+.saaty-ex-respostas-titulo {
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pli-muted);
+  margin-bottom: 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* ─── Sub-rótulo no badge de igualdade ───────────────────────── */
+.saaty-ans-direcao-sub {
+  font-weight: 400;
+  font-size: 0.78em;
+  color: var(--pli-muted);
+}
+
+/* ─── Narrativa do subcard contexto ─────────────────────────── */
+.saaty-ex-narrativa {
+  font-size: 0.87rem;
+  line-height: 1.65;
+  color: var(--pli-deep);
+  margin: 0 0 0.65rem;
+}
+
+.saaty-ex-narrativa--intro-q {
+  font-style: italic;
+  color: var(--pli-muted);
+  font-size: 0.82rem;
+  margin-bottom: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #c9d6e2;
+}
+
+/* ─── Título do subcard respostas ────────────────────────────── */
+
+/* --- Titulo centralizado dos subcards de exemplo ---------------------- */
+.saaty-ex-subcard-titulo {
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--pli-deep);
+  letter-spacing: 0.02em;
+  padding: 0.6rem 1rem 0.75rem;
+  margin: 0 -1rem 0.85rem;
+  border-bottom: 1.5px solid #c9d6e2;
+  background: rgba(30, 80, 140, 0.04);
+}
+
+.saaty-ex-subcard--respostas .saaty-ex-subcard-titulo {
+  margin: -0.75rem -0.85rem 0.75rem;
+  padding: 0.6rem 0.85rem 0.65rem;
+}
+
+/* --- Badge alinhado ao topo ------------------------------------------- */
+.saaty-ex-subcard--respostas .saaty-ans-row {
+  align-items: flex-start;
+}
+
+.saaty-ex-subcard--respostas .saaty-ans-badge {
+  margin-top: 0.1rem;
+}
+
+/* --- Subsecao colapsavel ----------------------------------------------- */
+.ahp-subsection-title--collapsible {
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ahp-subsection-title--collapsible:hover {
+  background: rgba(30, 80, 140, 0.05);
+  border-radius: 6px;
+}
+
+.ahp-collapse-chevron {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--pli-muted);
+  transition: transform 0.2s ease;
+}
+
+/* --- Espacamento entre subcards: margem explicita (belt-and-suspenders) */
+/* garante espaco mesmo se o gap do flex nao for suficiente              */
+.ahp-step-section .ahp-section-body > .ahp-subcard + .ahp-subcard,
+.ahp-step-section .ahp-section-body > .info-card + .info-card,
+.ahp-step-section .ahp-section-body > .ahp-subcard + .info-card,
+.ahp-step-section .ahp-section-body > .info-card + .ahp-subcard {
+  margin-top: 1.25rem;
+}
+
+/* --- Denominação (Step 1) ----------------------------------------- */
+.ahp-denominacao-preview {
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface-alt, #f8f9fa);
+  border: 1px solid var(--color-border, #dee2e6);
+  border-radius: 6px;
+}
+.ahp-denominacao-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.ahp-denominacao-files li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--color-text-muted, #6c757d);
+}
+.ahp-denominacao-files code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.82rem;
+  color: var(--color-primary, #0d6efd);
+  word-break: break-all;
+}
+
+/* --- Denominação (Step 1) ----------------------------------------- */
+.ahp-denominacao-preview {
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface-alt, #f8f9fa);
+  border: 1px solid var(--color-border, #dee2e6);
+  border-radius: 6px;
+}
+.ahp-denominacao-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.ahp-denominacao-files li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--color-text-muted, #6c757d);
+}
+.ahp-denominacao-files code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.82rem;
+  color: var(--color-primary, #0d6efd);
+  word-break: break-all;
 }

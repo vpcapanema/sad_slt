@@ -30,6 +30,7 @@ class ConfigCreateSchema(BaseModel):
     # Snapshot do conjunto confirmado de objetos: [{id, codigo, nome, tipo_demanda}].
     universo_objetos: list[dict[str, Any]] | None = None
     configuracao_completa: dict[str, Any] | None = None
+    denominacao: str | None = Field(None, max_length=100)
 
 
 class ConfigUpdateSchema(BaseModel):
@@ -51,6 +52,9 @@ class ConfigUpdateSchema(BaseModel):
     arquivo_tipo: str | None = None
     arquivo_hash: str | None = None
     configuracao_completa: dict[str, Any] | None = None
+    alertas_conceituais: list[Any] | None = None
+    pacote_fase: str | None = None
+    denominacao: str | None = None
 
 
 class ConfigResponseSchema(BaseModel):
@@ -83,6 +87,12 @@ class ConfigResponseSchema(BaseModel):
     arquivo_tipo: str | None = None
     arquivo_hash: str | None = None
     configuracao_completa: dict[str, Any] | None = None
+    alertas_conceituais: list[Any] = []
+    pacote_fase: str = "fase_1"
+    denominacao: str | None = None
+    arquivo_config_fase1: dict[str, Any] | None = None
+    arquivo_config_fase2: dict[str, Any] | None = None
+    arquivo_config_homologado: dict[str, Any] | None = None
     criadoEm: str
     atualizadoEm: str
     homologadoEm: str | None = None

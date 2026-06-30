@@ -11,6 +11,7 @@
   const nomeInput = document.getElementById("config-nome");
   const descInput = document.getElementById("config-descricao");
   const objInput = document.getElementById("config-objetivo");
+  const denominacaoInput = document.getElementById("config-denominacao");
   // Comboboxes (select + campo "Outro") criados na inicialização.
   let areaCombo, temaCombo, fenomenoCombo;
   // Comboboxes da construção do objetivo.
@@ -414,6 +415,7 @@
     universoObjetos: [], // snapshot confirmado: [{id, codigo, nome, tipo_demanda}]
     universoSig: "", // assinatura do conjunto confirmado (auto-invalidação)
     excluidos: [], // ids desmarcados manualmente no resumo (ajuste fino)
+    sessionUser: null, // usuário autenticado (mesmo da barra de sessão)
     dimensoes: DIMENSOES_PADRAO.slice(), // dimensões marcadas (descrição)
     incluirDim: "", // "sim" | "nao" — incluir dimensões dos critérios?
     dimConfirmado: false, // usuário confirmou a escolha das dimensões
@@ -709,6 +711,7 @@
       fenomeno: polirCampo(fenomenoCombo ? fenomenoCombo.get() : "") || null,
       descricao: polirParagrafo(descInput.value) || null,
       objetivo: polirParagrafo(objInput ? objInput.value : "") || null,
+      denominacao: denominacaoInput ? (denominacaoInput.value.trim() || null) : null,
       configuracao_completa: {
         incluir_dimensoes: state.incluirDim || null,
         dimensoes: state.dimensoes.slice(),
@@ -757,6 +760,38 @@
     } catch (_e) {
       return String(val);
     }
+  }
+
+  function formatAutorSessao(user) {
+    if (!user) return null;
+    const nome = polirCampo(user.nome || "");
+    const username = polirCampo(user.username || "");
+    const email = polirCampo(user.email || "");
+    const id = polirCampo(user.id || "");
+
+    const partes = [];
+    if (nome) partes.push(nome);
+    if (username) partes.push("@" + username);
+    else if (email) partes.push(email);
+    if (id) partes.push("UUID: " + id);
+
+    return partes.length ? partes.join(" · ") : null;
+  }
+
+  async function carregarUsuarioSessao() {
+    try {
+      if (window.SLTAhpAuth && typeof window.SLTAhpAuth.whenReady === "function") {
+        state.sessionUser = (await window.SLTAhpAuth.whenReady()) || null;
+        return;
+      }
+      if (window.SLTAdminAuth && typeof window.SLTAdminAuth.fetchMe === "function") {
+        state.sessionUser = (await window.SLTAdminAuth.fetchMe()) || null;
+        return;
+      }
+    } catch (_e) {
+      // Mantém fallback pendente quando não houver sessão válida.
+    }
+    state.sessionUser = null;
   }
 
   function renderConfRow(campo, alias, valor, opts) {
@@ -812,7 +847,10 @@
 
     html += renderConferenciaGrupo(
       "1 — Destino e objeto da análise",
-      renderConfRow("tipo", "Destino da análise", formatTipoAnalise(tipo)) +
+      renderConfRow("denominacao", "Denominação", formatConfScalar(payload.denominacao), {
+          pendenteTexto: "(defina a denominação da configuração)",
+        }) +
+        renderConfRow("tipo", "Destino da análise", formatTipoAnalise(tipo)) +
         (tipo === "portfolio"
           ? renderConfRow(
               "tipo_demanda",
@@ -834,9 +872,17 @@
 
     html += renderConferenciaGrupo(
       "3 — Objetivo",
-      renderConfRow("objetivo", "Objetivo confirmado", formatConfScalar(payload.objetivo), {
-        pendenteTexto: "(confirme o objetivo nas sugestões)",
-      })
+      renderConfRow(
+        "acao",
+        "Verbo de ação",
+        formatConfScalar(polirCampo(acaoCombo ? acaoCombo.get() : "")),
+        {
+          pendenteTexto: "(selecione ou digite o verbo da ação)",
+        }
+      ) +
+        renderConfRow("objetivo", "Objetivo confirmado", formatConfScalar(payload.objetivo), {
+          pendenteTexto: "(confirme o objetivo nas sugestões)",
+        })
     );
 
     const incluirDim =
@@ -903,7 +949,9 @@
       renderConfRow("codigo", "Código da configuração", "(gerado automaticamente ao salvar)") +
         renderConfRow("status", "Status inicial", "rascunho") +
         renderConfRow("metodo_entrada", "Método de entrada", "manual") +
-        renderConfRow("criado_por", "Autor (sessão ativa)", "(usuário logado — UUID da sessão)")
+        renderConfRow("criado_por", "Autor (sessão ativa)", formatAutorSessao(state.sessionUser), {
+          pendenteTexto: "(sessão ativa não identificada)",
+        })
     );
 
     host.innerHTML = html || '<p class="ahp-conf-empty">Preencha o formulário para visualizar o artefato.</p>';
@@ -1846,6 +1894,7 @@
     } catch (e) {
       /* ignore */
     }
+    await carregarUsuarioSessao();
     areaCombo = makeCombo("config-area", "config-area-custom", SUGESTOES_AREA);
     temaCombo = makeCombo("config-tema", "config-tema-custom", SUGESTOES_TEMA);
     fenomenoCombo = makeCombo("config-fenomeno", "config-fenomeno-custom", SUGESTOES_FENOMENO);

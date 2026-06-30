@@ -57,6 +57,7 @@
 
   function optionLabel(cfg) {
     var partes = [cfg.codigo];
+    if (cfg.denominacao) partes.push("[" + cfg.denominacao + "]");
     if (cfg.nome) partes.push(cfg.nome);
     var demanda = cfg.tipo_demanda_nome || cfg.tipo_demanda;
     var sufixo = demanda ? cfg.tipo + " · " + demanda : cfg.tipo;
@@ -94,6 +95,7 @@
     var pf = pacote();
     var linhas = [
       ["Pacote", pf ? pf.rotulo(pf.resolverPacoteFase(cfg)) : cfg.pacote_fase || "—"],
+      ["Denominação", cfg.denominacao || "—"],
       ["Escopo", cfg.nome || cfg.escopo],
       ["Objetivo", cfg.objetivo],
       ["Descrição", cfg.descricao],
@@ -224,9 +226,10 @@
   function toggleConfigSource() {
     var saved = el("cfg-saved-content");
     var file = el("cfg-file-content");
-    var isFile = (doc.querySelector('input[name="cfg-source"]:checked') || {}).value === "file";
-    if (saved) saved.classList.toggle("method-content--hidden", isFile);
-    if (file) file.classList.toggle("method-content--hidden", !isFile);
+    var checked = doc.querySelector('input[name="cfg-source"]:checked');
+    var val = checked ? checked.value : null;
+    if (saved) saved.classList.toggle("method-content--hidden", val !== "saved");
+    if (file) file.classList.toggle("method-content--hidden", val !== "file");
   }
 
   function lerArquivoJson(file) {

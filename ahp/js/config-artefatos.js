@@ -1,11 +1,15 @@
 /**
  * Ponte entre as etapas da Calculadora AHP e a Configuração no banco, e
- * geração/importação dos três artefatos do módulo de configuração:
+ * geração/importação dos artefatos do módulo de configuração.
  *
- *   1. Objetos  — conjunto-alvo da hierarquização (+ escopo/objetivo/descrição).
- *   2. Matriz   — matriz de premissas&critérios + matriz de comparação pareada
- *                 + métricas de consistência (Saaty).
- *   3. Pesos    — artefato de handoff para o Módulo 2 (pesos + métricas + objetos).
+ * A partir da migração 035, cada configuração armazena os artefatos prontos
+ * nas colunas do banco:
+ *   • arquivo_config_fase1      — salvo ao criar (escopo + universo)
+ *   • arquivo_config_fase2      — salvo ao persistir a matriz (Etapa 5)
+ *   • arquivo_config_homologado — salvo ao homologar (Etapa 6)
+ *
+ * As funções de exportar/download preferem essas colunas e só constroem o
+ * artefato localmente como fallback para configs criadas antes da migração.
  *
  * O elo entre os artefatos é o `config_codigo`. A fonte da verdade é a linha da
  * configuração no banco (lida via SLTConfigApi); o localStorage permanece apenas
@@ -155,6 +159,12 @@
   };
 
   function nomeArquivo(tipo, config) {
+    var den = config && config.denominacao;
+    if (den) {
+      var sufixo = tipo === "objetos" ? "fase1" : tipo === "matriz" ? "fase2" : "homologado";
+      return den + "_" + sufixo + ".json";
+    }
+    // Fallback para configs sem denominação (pré-migração 036).
     var cod = (config && config.codigo) || "config";
     return "ahp_" + tipo + "_" + cod + ".json";
   }
@@ -173,7 +183,15 @@
     global.URL.revokeObjectURL(url);
   }
 
-  // Exporta um artefato (busca a config fresca do banco antes de montar).
+  // Mapeia tipo de artefato legado → coluna do banco com o artefato persistido.
+  var _COLUNA_ARTEFATO = {
+    objetos: "arquivo_config_fase1",
+    matriz:  "arquivo_config_fase2",
+    pesos:   "arquivo_config_homologado",
+  };
+
+  // Exporta um artefato: usa a coluna persistida no banco quando disponível;
+  // constrói localmente como fallback para configs antigas (pré-migração 035).
   function exportar(tipo) {
     var build = BUILDERS[tipo];
     if (!build) return Promise.reject(new Error("Artefato desconhecido: " + tipo));
@@ -189,7 +207,10 @@
           "A matriz só pode ser exportada com métricas dentro do padrão de Saaty (RC < 0,10)."
         );
       }
-      baixar(build(config), nomeArquivo(tipo, config));
+      // Prefere o artefato pré-gerado salvo no banco; constrói só se ausente.
+      var coluna = _COLUNA_ARTEFATO[tipo];
+      var artefato = (coluna && config[coluna]) ? config[coluna] : build(config);
+      baixar(artefato, nomeArquivo(tipo, config));
       return config;
     });
   }

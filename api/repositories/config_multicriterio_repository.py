@@ -55,6 +55,12 @@ _COMMON_COLUMNS = [
     "arquivo_tipo",
     "arquivo_hash",
     "configuracao_completa",
+    "alertas_conceituais",
+    "pacote_fase",
+    "denominacao",
+    "arquivo_config_fase1",
+    "arquivo_config_fase2",
+    "arquivo_config_homologado",
     "homologado_em",
     "homologado_por",
     "criado_por",
@@ -67,8 +73,12 @@ _JSON_FIELDS = {
     "matriz_comparacao",
     "pesos",
     "configuracao_completa",
+    "alertas_conceituais",
     "subconjunto",
     "universo_objetos",
+    "arquivo_config_fase1",
+    "arquivo_config_fase2",
+    "arquivo_config_homologado",
 }
 
 

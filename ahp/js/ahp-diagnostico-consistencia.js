@@ -100,7 +100,7 @@
             results.CR.toFixed(4) +
             ") ficou em ou acima de 0,10 (10%). " +
             (opts.inconsistentHint ||
-              "Revise os julgamentos antes de homologar a configuração.")))) +
+              "Revise os julgamentos antes de homologar a configuração."))) +
       "</p>";
     html += "</div>";
     return html;

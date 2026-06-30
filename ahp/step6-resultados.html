@@ -62,77 +62,162 @@
                     <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i><span>Carregue o <strong>contexto de análise</strong> produzido ao final da Fase 2: objetos da Fase 1, cadastro conceitual, matriz de comparação pareada salva na Etapa 5, métricas validáveis e alertas de coerência. Em seguida a etapa <strong>valida a matriz</strong>, <strong>calcula os pesos</strong> e emite o <strong>parecer</strong>.</span></p>
             </section>
 
-            <section class="card ahp-step-section">
-                <div class="ahp-section-label"><i class="fas fa-compass app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Contexto da Etapa</span></div>
+            <section class="card ahp-step-section ahp-step-section--contexto">
+              <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">6.1</span><span>Contexto da Etapa</span></div>
                 <div class="ahp-section-body">
                     <section class="ahp-section info-card"><div class="ahp-info-card-header"><i class="fas fa-check-circle"></i><h2>Resultados da Análise AHP</h2></div><div class="info-card-content"><p>A Fase 3 consome o pacote completo gerado na Fase 2. Após carregar o contexto abaixo, confira a <strong>consistência da matriz pareada</strong>, os <strong>pesos calculados</strong> e o <strong>parecer</strong> (incluindo alertas de validação lógica registrados na configuração).</p><div class="ahp-info-highlights"><div class="ahp-info-item"><i class="fas fa-check-double"></i><div><strong>Validação da matriz</strong><p>Motor AHP (RC, IC, λ<sub>max</sub>) sobre a matriz salva na Etapa 5.</p></div></div><div class="ahp-info-item"><i class="fas fa-percent"></i><div><strong>Pesos dos critérios</strong><p>Calculados a partir da matriz pareada validada.</p></div></div><div class="ahp-info-item"><i class="fas fa-clipboard-check"></i><div><strong>Parecer</strong><p>Consolida alertas de coerência conceitual confirmados na Fase 2.</p></div></div></div></div></section>
                 </div>
             </section>
 
             <section class="card ahp-step-section">
-                <div class="ahp-section-label"><i class="fas fa-folder-open app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Carregar contexto de análise</span></div>
+              <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">6.2</span><span>Carregar contexto de análise</span></div>
                 <div class="ahp-section-body">
-                    <section class="ahp-section ahp-config-loader ahp-contexto-fase2">
+                    <section class="ahp-section ahp-subcard ahp-config-loader ahp-contexto-fase2">
+                        <div class="ahp-subsection-title ahp-subsection-title--roman">
+                            <span class="ahp-subsection-num ahp-subsection-num--roman">I</span>
+                            <span>Origem do contexto</span>
+                        </div>
                         <p class="ahp-page-desc">Selecione a configuração salva ou importe o artefato JSON exportado ao final da Fase 2. O sistema conferirá se o pacote inclui objetos, cadastro conceitual, matriz pareada (Etapa 5), métricas e alertas de coerência.</p>
-                        <div class="ahp-method-choice">
-                            <div class="ahp-method-choice-header">
-                                <input type="radio" id="cfg-method-saved" name="cfg-source" value="saved" checked onchange="toggleConfigSource()">
-                                <label for="cfg-method-saved"><i class="fas fa-database"></i> <strong>Selecionar configuração salva (Fase 2 concluída)</strong></label>
-                            </div>
-                            <div id="cfg-saved-content" class="method-content">
-                                <div class="c-form-group">
-                                    <label for="cfg-saved-select" class="c-form-label"><i class="fas fa-list"></i> Configurações salvas</label>
-                                    <select id="cfg-saved-select" class="c-form-control" data-pacote-fase-esperado="fase_2" title="Selecione a configuração com pacote fase_2">
-                                        <option value="">Selecione a configuração…</option>
-                                    </select>
-                                    <small class="form-help" id="cfg-saved-help"><i class="fas fa-info-circle"></i> Apenas configurações com matriz pareada salva na Etapa 5 estão prontas para esta etapa.</small>
+                        <div class="ahp-method-choice-row">
+                            <div class="ahp-method-choice">
+                                <div class="ahp-method-choice-header">
+                                    <input type="radio" id="cfg-method-saved" name="cfg-source" value="saved" autocomplete="off" onchange="toggleConfigSource()">
+                                    <label for="cfg-method-saved"><i class="fas fa-database"></i> <strong>Selecionar configuração</strong></label>
+                                </div>
+                                <div id="cfg-saved-content" class="method-content method-content--hidden">
+                                    <div class="c-form-group">
+                                        <p class="form-desc">Selecione uma configuração da lista abaixo. Somente configurações com pacote completo da Fase 2 (matriz pareada salva na Etapa 5) estarão disponíveis.</p>
+                                        <select id="cfg-saved-select" class="c-form-control" data-pacote-fase-esperado="fase_2" title="Selecione a configuração com pacote fase_2">
+                                            <option value="">Selecione a configuração…</option>
+                                        </select>
+                                        <small class="form-help" id="cfg-saved-help"><i class="fas fa-info-circle"></i> Apenas configurações com matriz pareada salva na Etapa 5 estão prontas para esta etapa.</small>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="ahp-method-choice">
-                            <div class="ahp-method-choice-header">
-                                <input type="radio" id="cfg-method-file" name="cfg-source" value="file" onchange="toggleConfigSource()">
-                                <label for="cfg-method-file"><i class="fas fa-file-arrow-up"></i> <strong>Importar artefato da Fase 2</strong></label>
-                            </div>
-                            <div id="cfg-file-content" class="method-content method-content--hidden">
-                                <p>Envie o JSON de <strong>matriz</strong> ou <strong>pesos</strong> exportado na Fase 2 (artefato vinculado por <code>config_codigo</code>).</p>
-                                <div class="upload-area">
-                                    <label for="cfg-file-input" class="visually-hidden">Selecionar artefato JSON da Fase 2</label>
-                                    <input type="file" id="cfg-file-input" accept=".json,application/json" class="hidden-file-input" title="Artefato JSON da Fase 2" onchange="handleConfigFile(event)">
-                                    <button type="button" onclick="document.getElementById('cfg-file-input').click()" class="ahp-upload-select-btn"><i class="fas fa-folder-open"></i> Selecionar Arquivo</button>
-                                    <div id="cfg-file-info" class="file-info"></div>
+                            <div class="ahp-method-choice">
+                                <div class="ahp-method-choice-header">
+                                    <input type="radio" id="cfg-method-file" name="cfg-source" value="file" autocomplete="off" onchange="toggleConfigSource()">
+                                    <label for="cfg-method-file"><i class="fas fa-file-arrow-up"></i> <strong>Importar arquivo de configuração</strong></label>
+                                </div>
+                                <div id="cfg-file-content" class="method-content method-content--hidden">
+                                    <div class="c-form-group">
+                                        <p class="form-desc">Envie o arquivo JSON de <strong>matriz</strong> ou <strong>pesos</strong> exportado ao final da Fase 2 (artefato vinculado por <code>config_codigo</code>).</p>
+                                        <div class="upload-area">
+                                            <label for="cfg-file-input" class="visually-hidden">Selecionar artefato JSON</label>
+                                            <input type="file" id="cfg-file-input" accept=".json,application/json" class="hidden-file-input" title="Artefato JSON" onchange="handleConfigFile(event)">
+                                            <button type="button" onclick="document.getElementById('cfg-file-input').click()" class="ahp-upload-select-btn"><i class="fas fa-folder-open"></i> Selecionar Arquivo</button>
+                                        </div>
+                                        <small class="form-help" id="cfg-file-help"><i class="fas fa-info-circle"></i> <span id="cfg-file-info"></span>Selecione um arquivo <code>.json</code> exportado pelo módulo AHP.</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         <div id="cfg-loaded-summary" class="ahp-recommendation is-hidden"></div>
+                    </section>
+                    <section class="ahp-section ahp-subcard">
+                        <div class="ahp-subsection-title ahp-subsection-title--roman">
+                            <span class="ahp-subsection-num ahp-subsection-num--roman">II</span>
+                            <span id="ctx-checklist-title">Conferência do pacote da Fase 2</span>
+                        </div>
                         <div id="ctx-fase2-checklist" class="ahp-contexto-checklist-host" aria-live="polite"></div>
                     </section>
                 </div>
             </section>
 
             <section class="card ahp-step-section">
-                <div class="ahp-section-label"><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Saída da Análise</span></div>
+                    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">6.3</span><span>Saída da Análise - PESOS E RELATÓRIOS</span></div>
                 <div class="ahp-section-body">
-                    <section class="ahp-section"><h2 class="ahp-step-title"><span class="ahp-step-number">6</span>Geração de pesos e exportação</h2><div id="resultsContent"></div><div id="config-artefatos"></div><div class="ahp-form-actions"><a href="step5-comparacao.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><a href="step7-alternativas.html" class="btn btn-primary" onclick="if(window.SLTAhpNav){event.preventDefault();window.SLTAhpNav.irPara('step7-alternativas.html');}">Priorizar alternativas<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a><a href="step1-configuracao.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a></div></section>
-                </div>
-            </section>
+                <section class="ahp-section ahp-subcard">
+                    <div class="ahp-subsection-title ahp-subsection-title--roman">
+                        <span class="ahp-subsection-num ahp-subsection-num--roman">I</span>
+                        <span>Resultado da conferência da matriz de comparação pareada</span>
+                    </div>
+                    <div id="results-conferencia" aria-live="polite"></div>
+                </section>
+                <section class="ahp-section ahp-subcard">
+                    <div class="ahp-subsection-title ahp-subsection-title--roman">
+                        <span class="ahp-subsection-num ahp-subsection-num--roman">II</span>
+                        <span>Pesos e importância relativa final dos critérios</span>
+                    </div>
+                    <div id="results-pesos" aria-live="polite"></div>
+                </section>
+                <section class="ahp-section ahp-subcard">
+                    <div class="ahp-subsection-title ahp-subsection-title--roman">
+                        <span class="ahp-subsection-num ahp-subsection-num--roman">III</span>
+                        <span>Parecer — Coerência conceitual</span>
+                    </div>
+                    <div id="results-parecer" aria-live="polite"></div>
+                </section></div></section><section class="card ahp-step-section"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">6.4</span><span>Exportar Resultados</span></div><div class="ahp-section-body">
+                <section class="ahp-section ahp-subcard">
+                    <div class="ahp-subsection-title ahp-subsection-title--roman">
+                        <span class="ahp-subsection-num ahp-subsection-num--roman">I</span>
+                        <span>Exportar resultados</span>
+                    </div>
+                    <div id="resultsExportContent" aria-live="polite"></div>
+                </section>
+                <section class="ahp-section ahp-subcard">
+                    <div class="ahp-subsection-title ahp-subsection-title--roman">
+                        <span class="ahp-subsection-num ahp-subsection-num--roman">II</span>
+                        <span>Artefatos da configuração</span>
+                    </div>
+                    <div id="config-artefatos" aria-live="polite"></div>
+                </section></div></section><section class="card ahp-step-section" id="step6-nav-section"><div class="ahp-section-body"><div class="ahp-form-actions ahp-final-actions-row"><a href="step5-comparacao.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><a href="step1-configuracao.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a><button type="button" id="step6-save-final-btn" class="btn btn-success"><i class="fas fa-floppy-disk c-btn__icon"></i>Salvar configuração final</button><a href="step7-alternativas.html" class="btn btn-primary" onclick="if(window.SLTAhpNav){event.preventDefault();window.SLTAhpNav.irPara('step7-alternativas.html');}">Continuar<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a></div><div id="step6-nav-feedback" class="ahp-matriz-edit-feedback" role="status" aria-live="polite"></div></div></section>
     </main>
     <script src="js/ahp-formato-data.js"></script>
     <script src="js/config-loader.js"></script>
     <script src="js/step6-contexto-loader.js"></script>
     <script src="js/script.js"></script><script>
 document.addEventListener('DOMContentLoaded',function(){
+  // garante que os radios sempre iniciam desmarcados (ignora cache do browser)
+  document.querySelectorAll('input[name="cfg-source"]').forEach(function(r){ r.checked = false; });
+  if(typeof toggleConfigSource === 'function') toggleConfigSource();
   var sel=document.getElementById('cfg-saved-select');
+  var saveFinalBtn=document.getElementById('step6-save-final-btn');
   if(sel){
     sel.addEventListener('change',function(){
       setTimeout(initEtapa6,80);
     });
+  }
+  if(saveFinalBtn){
+    saveFinalBtn.addEventListener('click',salvarConfiguracaoFinalStep6);
   }
   initEtapa6();
 });
 
 function getConfigAlertas(){return window.__sltConfigAlertas||[];}
 function setConfigAlertas(alertas){window.__sltConfigAlertas=Array.isArray(alertas)?alertas:[];}
+
+function setStep6NavFeedback(message,kind){
+  var fb=document.getElementById('step6-nav-feedback');
+  if(!fb)return;
+  fb.textContent=message||'';
+  fb.className='ahp-matriz-edit-feedback'+(kind?' is-'+kind:'');
+}
+
+function salvarConfiguracaoFinalStep6(){
+  var btn=document.getElementById('step6-save-final-btn');
+  if(!btn)return;
+  if(!window.SLTConfigBridge||typeof window.SLTConfigBridge.homologar!=='function'){
+    setStep6NavFeedback('Configuração atual não encontrada para salvar.', 'error');
+    return;
+  }
+  var original=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML='<i class="fas fa-spinner fa-spin c-btn__icon"></i>Salvando...';
+  setStep6NavFeedback('Salvando configuração final...', 'info');
+  window.SLTConfigBridge.homologar()
+    .then(function(cfg){
+      setStep6NavFeedback('Configuração final salva com sucesso.', 'success');
+      if(typeof renderArtefatos==='function') renderArtefatos(cfg);
+    })
+    .catch(function(err){
+      setStep6NavFeedback(err&&err.message?err.message:String(err), 'error');
+    })
+    .finally(function(){
+      btn.disabled=false;
+      btn.innerHTML=original;
+    });
+}
 
 function renderContextoFase2(cfg){
   if(window.SLTAhpContextoUI&&cfg)window.SLTAhpContextoUI.apply(cfg);
@@ -144,17 +229,17 @@ function renderContextoFase2(cfg){
   }
   if(summary)window.SLTStep6Contexto.renderResumoConfig(summary,cfg);
   var verificacao=window.SLTStep6Contexto.verificarPacoteFase2(cfg);
-  window.SLTStep6Contexto.renderChecklist(checklist,verificacao);
+  var cfgSource=(document.querySelector('input[name="cfg-source"]:checked')||{}).value||'saved';
+  window.SLTStep6Contexto.renderChecklist(checklist,verificacao,{source:cfgSource});
   return verificacao;
 }
 
 function showSelecioneConfigState(){
   if(window.SLTAhpContextoUI)window.SLTAhpContextoUI.reset();
-  var host=document.getElementById('resultsContent');
-  var art=document.getElementById('config-artefatos');
+  var host=document.getElementById('results-conferencia');
   var checklist=document.getElementById('ctx-fase2-checklist');
   if(checklist)checklist.innerHTML='';
-  if(art)art.innerHTML='';
+  clearResultsBlocks();
   if(host){
     host.className='ahp-recommendation';
     host.innerHTML='<div class="ahp-recommendation__head"><i class="fas fa-circle-info"></i><strong>Carregue o contexto de análise.</strong></div><p>Na seção <strong>Carregar contexto de análise</strong>, selecione a configuração com o pacote completo da Fase 2 (cadastro conceitual, matriz pareada da Etapa 5 e alertas de coerência).</p>';
@@ -162,16 +247,16 @@ function showSelecioneConfigState(){
 }
 
 function showLoadingState(msg){
-  var host=document.getElementById('resultsContent');
+  var host=document.getElementById('results-conferencia');
+  clearResultsBlocks();
   if(!host)return;
   host.className='ahp-recommendation';
   host.innerHTML='<div class="ahp-recommendation__head"><i class="fas fa-spinner fa-spin"></i><strong>'+(msg||'Processando configuração…')+'</strong></div><p>Carregando matriz, validando consistência e calculando pesos.</p>';
 }
 
 function showMatrizNaoSalvaState(config){
-  var host=document.getElementById('resultsContent');
-  var art=document.getElementById('config-artefatos');
-  if(art)art.innerHTML='';
+  var host=document.getElementById('results-conferencia');
+  clearResultsBlocks();
   renderContextoFase2(config);
   var codigo=config&&config.codigo?' ('+config.codigo+')':'';
   if(host){
@@ -182,9 +267,8 @@ function showMatrizNaoSalvaState(config){
 
 function showPacoteIncompletoState(config, verificacao){
   renderContextoFase2(config);
-  var host=document.getElementById('resultsContent');
-  var art=document.getElementById('config-artefatos');
-  if(art)art.innerHTML='';
+  var host=document.getElementById('results-conferencia');
+  clearResultsBlocks();
   if(host){
     host.className='ahp-recommendation';
     host.innerHTML='<div class="ahp-recommendation__head"><i class="fas fa-ban"></i><strong>Não é possível calcular os pesos.</strong></div><p>A configuração não contém o pacote mínimo da Fase 2. Revise os itens em vermelho na conferência acima e complete as etapas pendentes.</p>';
@@ -234,7 +318,8 @@ function carregarEProcessarConfig(){
     })
     .catch(function(err){
       console.warn('Falha ao processar configuração na Etapa 6.',err);
-      var host=document.getElementById('resultsContent');
+      var host=document.getElementById('results-conferencia');
+      clearResultsBlocks();
       if(host){
         host.className='ahp-recommendation';
         host.innerHTML='<div class="ahp-recommendation__head"><i class="fas fa-circle-xmark"></i><strong>Não foi possível processar a configuração.</strong></div><p>'+(err&&err.message?err.message:String(err))+'</p>';
@@ -280,21 +365,21 @@ function renderArtefatos(config){
   const consistente=config.consistente===true;
   const homologada=config.status==='homologada';
   let html='';
-  html+='<div class="info-card info-card--spaced ahp-etapa6-block"><div class="ahp-info-card-header"><i class="fas fa-share-nodes"></i><h3>6.5 Artefatos da configuração</h3></div><div class="info-card-content">';
+
   html+='<p style="margin-bottom:1rem;">Estes artefatos ligam-se pela <strong>configuração ('+(config.codigo||'')+')</strong> e alimentam o módulo de hierarquização. O artefato de <strong>pesos</strong> é o handoff e exige homologação.</p>';
   if(!consistente){
     html+='<p class="ahp-info-note" style="margin-bottom:1rem;"><i class="fas fa-triangle-exclamation"></i> A análise não está consistente (RC &ge; 0,10). Revise a <a href="step5-comparacao.html">Etapa 5</a> para liberar a matriz e os pesos.</p>';
   }
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem;margin-bottom:1rem;">';
-  html+='<button id="art-objetos" class="btn btn-secondary"><i class="fas fa-list-check"></i> Exportar objetos</button>';
-  html+='<button id="art-matriz" class="btn btn-secondary"'+(consistente?'':' disabled')+'><i class="fas fa-table-cells"></i> Exportar matriz</button>';
-  html+='<button id="art-pesos" class="btn btn-secondary"'+((consistente&&homologada)?'':' disabled')+'><i class="fas fa-scale-balanced"></i> Exportar pesos (handoff)</button>';
+  html+='<button id="art-objetos" class="btn btn-primary"><i class="fas fa-list-check"></i> Exportar objetos</button>';
+  html+='<button id="art-matriz" class="btn btn-primary"'+(consistente?'':' disabled')+'><i class="fas fa-table-cells"></i> Exportar matriz</button>';
+  html+='<button id="art-pesos" class="btn btn-primary"'+((consistente&&homologada)?'':' disabled')+'><i class="fas fa-scale-balanced"></i> Exportar pesos (handoff)</button>';
   html+='</div>';
-  html+='<div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:center;">';
+  html+='<div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:center;justify-content:center;margin-top:0.5rem;">';
   html+='<button id="art-homologar" class="btn btn-primary"'+((consistente&&!homologada)?'':' disabled')+'><i class="fas fa-stamp"></i> '+(homologada?'Homologada':'Homologar')+'</button>';
   html+='<label class="btn btn-secondary" style="margin:0;cursor:pointer;"><i class="fas fa-file-import"></i> Importar matriz<input type="file" id="art-import" accept="application/json,.json" style="display:none;"></label>';
   html+='<span id="art-feedback" role="status" aria-live="polite" style="font-size:0.875rem;"></span>';
-  html+='</div></div></div>';
+  html+='</div>';
   wrap.innerHTML=html;
 
   const fb=document.getElementById('art-feedback');
@@ -354,10 +439,15 @@ function findTopInconsistencies(criteria,matrix,weights,limit){
   return list.slice(0,limit||3);
 }
 
+function clearResultsBlocks(){
+  ['results-pesos','results-parecer','resultsExportContent'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerHTML='';});
+}
+
 function displayResults(criteria,results,matrix,alertas,config){
-  var host=document.getElementById('resultsContent');
-  if(!host)return;
-  host.className='ahp-results-output';
+  var confHost=document.getElementById('results-conferencia');
+  var pesosHost=document.getElementById('results-pesos');
+  var parecerHost=document.getElementById('results-parecer');
+  if(!confHost)return;
 
   matrix=matrix||JSON.parse(localStorage.getItem('ahp_pairwiseMatrix')||'[]');
   config=config||window.__sltCurrentConfig||{};
@@ -379,11 +469,26 @@ function displayResults(criteria,results,matrix,alertas,config){
   var n=criteria.length;
   var isConsistent=results.CR<0.10;
 
+  /* Matriz conferida (movida para 6.1) */
+  var matrizTabela='';
+  matrizTabela+='<p style="margin-bottom:1rem;">Matriz de comparação pareada conferida e validada nesta etapa.</p>';
+  matrizTabela+='<div class="ahp-table-scroll"><table class="ahp-matrix-table"><thead><tr><th style="background:var(--pli-deep);color:#fff;"></th>';
+  criteria.forEach(function(c){matrizTabela+='<th style="background:var(--pli-deep);color:#fff;">'+c+'</th>';});
+  matrizTabela+='</tr></thead><tbody>';
+  criteria.forEach(function(c,i){
+    matrizTabela+='<tr><td style="text-align:left;background:var(--pli-deep);color:#fff;font-weight:700;">'+c+'</td>';
+    matrix[i].forEach(function(v,j){
+      var cell=i===j?'1':fmtSaaty(v);
+      var bg=i===j?'background:#116593;color:#fff;font-weight:700;':(i===j-1||j===i-1)?'':'';
+      matrizTabela+='<td style="'+bg+'">'+cell+'</td>';
+    });
+    matrizTabela+='</tr>';
+  });
+  matrizTabela+='</tbody></table></div>';
+
   /* 6.1 Resultado da conferência da matriz */
   var sec61='';
-  sec61+='<div class="info-card info-card--spaced ahp-etapa6-block">';
-  sec61+='<div class="ahp-info-card-header"><i class="fas fa-check-double"></i><h3>6.1 Resultado da conferência da matriz de comparação pareada</h3></div>';
-  sec61+='<div class="info-card-content">';
+  sec61+=matrizTabela;
   sec61+='<div id="diagnostico-matriz-panel"></div>';
   sec61+='<div class="ahp-metricas-complemento">';
   sec61+='<h4 style="margin:1.5rem 0 1rem;color:var(--pli-deep);text-align:left;"><i class="fas fa-book-open"></i> Complemento — Interpretação das métricas</h4>';
@@ -407,13 +512,10 @@ function displayResults(criteria,results,matrix,alertas,config){
   sec61+='<li><strong>Índice de Consistência (IC):</strong> igual a 0 &rarr; perfeitamente consistente. Quanto maior o valor, mais inconsistente.</li>';
   sec61+='<li><strong>Razão de Consistência (RC):</strong> menor que 0,10 &rarr; <strong style="color:#1e7e34;">consistente</strong>; maior ou igual a 0,10 &rarr; <strong style="color:#c82333;">inconsistente</strong>.</li>';
   sec61+='</ul></div>';
-  sec61+='</div></div></div>';
+  sec61+='</div>';
 
   /* 6.2 Pesos dos Critérios */
   var weightsHtml='';
-  weightsHtml+='<div class="info-card info-card--spaced ahp-etapa6-block">';
-  weightsHtml+='<div class="ahp-info-card-header"><i class="fas fa-chart-bar"></i><h3>6.2 Pesos dos Critérios</h3></div>';
-  weightsHtml+='<div class="info-card-content">';
   if(!isConsistent){
     weightsHtml+='<p class="ahp-info-note" style="margin-bottom:1rem;text-align:left;"><i class="fas fa-triangle-exclamation"></i> A matriz está inconsistente (RC &ge; 0,10). Os pesos abaixo foram calculados, mas recomenda-se revisar a <a href="step5-comparacao.html">Etapa 5</a> antes de homologar.</p>';
   }
@@ -433,33 +535,10 @@ function displayResults(criteria,results,matrix,alertas,config){
     weightsHtml+='<td><div style="display:flex;align-items:center;gap:8px;min-width:170px;"><div style="flex:1;background:#eef1f4;border-radius:6px;height:22px;overflow:hidden;border:1px solid #e0e4e9;"><div style="height:100%;width:'+barWidth+'%;background:linear-gradient(90deg,var(--pli-blue),var(--pli-green));border-radius:6px;"></div></div><span style="font-size:0.8rem;font-weight:700;color:var(--pli-deep);min-width:48px;text-align:right;">'+percent+'%</span></div></td>';
     weightsHtml+='</tr>';
   });
-  weightsHtml+='</tbody></table></div></div></div>';
-
-  /* 6.3 Matriz de Comparação Pareada */
-  var matrizHtml='';
-  matrizHtml+='<div class="info-card info-card--spaced ahp-etapa6-block">';
-  matrizHtml+='<div class="ahp-info-card-header"><i class="fas fa-table-cells"></i><h3>6.3 Matriz de Comparação Pareada</h3></div>';
-  matrizHtml+='<div class="info-card-content">';
-  matrizHtml+='<p style="margin-bottom:1rem;">Matriz salva na Etapa 5 e utilizada para calcular os pesos desta etapa.</p>';
-  matrizHtml+='<div class="ahp-table-scroll"><table class="ahp-matrix-table"><thead><tr><th style="background:var(--pli-deep);color:#fff;"></th>';
-  criteria.forEach(function(c){matrizHtml+='<th style="background:var(--pli-deep);color:#fff;">'+c+'</th>';});
-  matrizHtml+='</tr></thead><tbody>';
-  criteria.forEach(function(c,i){
-    matrizHtml+='<tr><td style="text-align:left;background:var(--pli-deep);color:#fff;font-weight:700;">'+c+'</td>';
-    matrix[i].forEach(function(v,j){
-      var cell=i===j?'1':fmtSaaty(v);
-      var bg=i===j?'background:#116593;color:#fff;font-weight:700;':(i===j-1||j===i-1)?'':'';
-      matrizHtml+='<td style="'+bg+'">'+cell+'</td>';
-    });
-    matrizHtml+='</tr>';
-  });
-  matrizHtml+='</tbody></table></div></div></div>';
+  weightsHtml+='</tbody></table></div>';
 
   /* 6.4 Exportar Resultados */
   var exp='';
-  exp+='<div class="info-card info-card--spaced ahp-etapa6-block">';
-  exp+='<div class="ahp-info-card-header"><i class="fas fa-download"></i><h3>6.4 Exportar Resultados</h3></div>';
-  exp+='<div class="info-card-content">';
   exp+='<p style="margin-bottom: 1.5rem;">Exporte os resultados da análise AHP em diferentes formatos para uso em relatórios, apresentações ou outras ferramentas.</p>';
   exp+='<div class="ahp-export-grid">';
   exp+='<button onclick="exportToCSV()" class="btn btn-primary" style="width: 100%;"><i class="fas fa-file-csv"></i> Exportar CSV</button>';
@@ -467,9 +546,13 @@ function displayResults(criteria,results,matrix,alertas,config){
   exp+='<button onclick="exportToPDF()" class="btn btn-primary" style="width: 100%;"><i class="fas fa-file-pdf"></i> Exportar PDF</button>';
   exp+='<button onclick="exportToExcel()" class="btn btn-primary" style="width: 100%;"><i class="fas fa-file-excel"></i> Exportar Excel</button>';
   exp+='<button onclick="exportAll(this)" class="btn btn-primary" style="width: 100%;"><i class="fas fa-file-zipper"></i> Exportar tudo (.zip)</button>';
-  exp+='</div></div></div>';
+  exp+='</div>';
 
-  host.innerHTML=sec61+weightsHtml+'<div id="parecer-alertas-panel"></div>'+matrizHtml+exp;
+  if(confHost){confHost.className='ahp-results-output';confHost.innerHTML=sec61;}
+  if(pesosHost){pesosHost.className='ahp-results-output';pesosHost.innerHTML=weightsHtml;}
+  if(parecerHost){parecerHost.className='ahp-results-output';parecerHost.innerHTML='<div id="parecer-alertas-panel"></div>';}
+  var exportHost=document.getElementById('resultsExportContent');
+  if(exportHost)exportHost.innerHTML=exp;
   if(window.SLTAhpDiagnostico){
     window.SLTAhpDiagnostico.renderDiagnostico(
       document.getElementById('diagnostico-matriz-panel'),
@@ -782,3 +865,6 @@ function downloadFile(content,filename,contentType){const blob=new Blob([content
   <script src="../assets/js/navbar.js"></script>
 </body>
 </html>
+
+
+

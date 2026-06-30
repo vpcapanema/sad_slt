@@ -147,43 +147,52 @@
     };
   }
 
-  function renderChecklist(container, verificacao) {
+  function renderChecklist(container, verificacao, opts) {
     if (!container) return;
     verificacao = verificacao || { checks: [] };
+    opts = opts || {};
     var checks = verificacao.checks || [];
+    var source = opts.source || "saved";
+    var titulo = source === "file"
+      ? "Validação do arquivo importado"
+      : "Validação da configuração selecionada";
 
-    var html = '<div class="info-card info-card--spaced ahp-contexto-checklist">';
-    html +=
-      '<div class="ahp-info-card-header"><i class="fas fa-clipboard-list"></i><h3>Conferência do pacote da Fase 2</h3></div>';
-    html += '<div class="info-card-content">';
-    html +=
-      '<p style="margin:0 0 1rem;text-align:left;">A configuração selecionada deve reunir a saída da <strong>Fase 1</strong> (objetos), o cadastro da <strong>Fase 2</strong> (critérios/premissas), a <strong>matriz pareada</strong> gravada na Etapa 5 e o registro de <strong>alertas de coerência</strong>.</p>';
-    html += '<ul class="ahp-contexto-checklist__list">';
+    var titleEl = document.getElementById("ctx-checklist-title");
+    if (titleEl) titleEl.textContent = titulo;
 
+    var html = '<div class="ctx-checklist-wrapper">';
+    html += '<div class="ctx-metric-grid">';
     checks.forEach(function (c) {
       var icon = c.ok ? "fa-circle-check" : c.warnOnly || c.info ? "fa-triangle-exclamation" : "fa-circle-xmark";
-      var mod = c.ok ? "is-ok" : c.warnOnly || c.info ? "is-warn" : "is-fail";
-      html += '<li class="ahp-contexto-checklist__item ' + mod + '">';
-      html += '<i class="fas ' + icon + '" aria-hidden="true"></i>';
-      html += "<div><strong>" + escapeHtml(c.label) + "</strong>";
-      html += '<span class="ahp-contexto-checklist__detail">' + escapeHtml(c.detail) + "</span></div>";
-      html += "</li>";
+      var mod  = c.ok ? "is-ok"           : c.warnOnly || c.info ? "is-warn"               : "is-fail";
+      html += '<div class="ctx-metric-card ' + mod + '">';
+      html += '<i class="fas ' + icon + ' ctx-metric-card__icon" aria-hidden="true"></i>';
+      html += '<strong class="ctx-metric-card__label">' + escapeHtml(c.label) + '</strong>';
+      html += '<span class="ctx-metric-card__detail">' + escapeHtml(c.detail) + '</span>';
+      html += '</div>';
     });
+    html += '</div>';
 
-    html += "</ul>";
-
+    var parecerMod, parecerIcon, parecerMsg;
     if (!verificacao.canProcess) {
-      html +=
-        '<p class="ahp-contexto-checklist__blocker"><i class="fas fa-ban"></i> Complete a Fase 2 (critérios, comparação na Etapa 5 e salvamento) antes de calcular os pesos aqui.</p>';
+      parecerMod  = "is-fail";
+      parecerIcon = "fa-ban";
+      parecerMsg  = "Complete a Fase 2 (critérios, comparação na Etapa 5 e salvamento) antes de calcular os pesos aqui.";
     } else if (!verificacao.ok) {
-      html +=
-        '<p class="ahp-contexto-checklist__warn"><i class="fas fa-triangle-exclamation"></i> O pacote está incompleto ou a matriz pareada não está consistente (RC ≥ 0,10). Você pode visualizar o diagnóstico, mas homologação exige RC &lt; 0,10.</p>';
+      parecerMod  = "is-warn";
+      parecerIcon = "fa-triangle-exclamation";
+      parecerMsg  = "O pacote está incompleto ou a matriz pareada não está consistente (RC ≥ 0,10). Você pode visualizar o diagnóstico, mas a homologação exige RC &lt; 0,10.";
     } else {
-      html +=
-        '<p class="ahp-contexto-checklist__ok"><i class="fas fa-circle-check"></i> Pacote da Fase 2 conferido. Pronto para validar, calcular pesos e emitir parecer.</p>';
+      parecerMod  = "is-ok";
+      parecerIcon = "fa-circle-check";
+      parecerMsg  = "Pacote da Fase 2 conferido. Pronto para validar, calcular pesos e emitir parecer.";
     }
+    html += '<div class="ctx-parecer ' + parecerMod + '">';
+    html += '<i class="fas ' + parecerIcon + ' ctx-parecer__icon" aria-hidden="true"></i>';
+    html += '<p class="ctx-parecer__msg">' + parecerMsg + '</p>';
+    html += '</div>';
 
-    html += "</div></div>";
+    html += '</div>';
     container.innerHTML = html;
   }
 

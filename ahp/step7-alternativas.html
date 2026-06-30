@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Etapa 6: Priorização das Alternativas — AHP — SLT</title>
+  <title>Etapa 7: Priorização das Alternativas — AHP — SLT</title>
   <link rel="stylesheet" href="../assets/css/app.css">
   <link rel="stylesheet" href="../assets/css/ahp-module.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -50,22 +50,33 @@
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
         <span class="ahp-breadcrumb-current">Etapa 7: Alternativas</span>
       </nav>
-      <h1 class="ahp-page-title"><i class="fas fa-ranking-star app-template-title-icon" aria-hidden="true"></i>Etapa 6: Priorização das Alternativas</h1>
+      <h1 class="ahp-page-title"><i class="fas fa-ranking-star app-template-title-icon" aria-hidden="true"></i>Etapa 7: Priorização das Alternativas</h1>
       <p class="ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i><span>Nesta etapa final você aplica os pesos calculados para priorizar as alternativas — ou os projetos do portfólio — comparando-as em cada critério para obter o ranking ponderado. Modo atual: <strong id="a6-tipo-label">—</strong>. O score de cada alternativa é a soma, sobre todos os critérios, do peso do critério multiplicado pela prioridade local da alternativa naquele critério: score = Σ (peso do critério × prioridade local). O resultado conclui o método AHP e entrega a ordenação final que apoia a tomada de decisão.</span></p>
     </section>
 
     <section class="card ahp-step-section">
-      <div class="ahp-section-label"><i class="fas fa-percent app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>Pesos dos Critérios (Etapas 1–4)</span></div>
+      <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">7.1</span><span>Pesos dos Critérios (Etapas 1–4)</span></div>
       <div class="ahp-section-body">
-        <div class="info-card info-card--spaced"><div class="info-card-content"><div id="a6-criterios"></div></div></div>
+        <div class="info-card info-card--spaced ahp-subcard">
+          <div class="ahp-subsection-title ahp-subsection-title--roman">
+            <span class="ahp-subsection-num ahp-subsection-num--roman">I</span>
+            <span>Pesos carregados</span>
+          </div>
+          <div class="info-card-content"><div id="a6-criterios"></div></div>
+        </div>
       </div>
     </section>
 
     <section class="card ahp-step-section">
-      <div class="ahp-section-label"><i class="fas fa-list-check app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>6.1 Alternativas a comparar (<span id="a6-alt-count">0</span>)</span></div>
+      <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">7.2</span><span>Alternativas a comparar (<span id="a6-alt-count">0</span>)</span></div>
       <div class="ahp-section-body">
-        <div class="info-card info-card--spaced"><div class="info-card-content">
-          <div style="margin-bottom:1rem;">
+        <div class="info-card info-card--spaced ahp-subcard">
+          <div class="ahp-subsection-title ahp-subsection-title--roman">
+            <span class="ahp-subsection-num ahp-subsection-num--roman">II</span>
+            <span>Definição de alternativas</span>
+          </div>
+          <div class="info-card-content">
+          <div class="ahp-block-gap-md">
             <label for="a6-titulo"><strong>Título da análise</strong></label>
             <input type="text" id="a6-titulo" placeholder="Ex.: Priorização de projetos da Frente 01">
           </div>
@@ -73,40 +84,57 @@
           <div class="ahp-form-actions">
             <button type="button" class="btn btn-primary" id="a6-judge-btn" disabled>Definir julgamentos <i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></button>
           </div>
-        </div></div>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="card ahp-step-section">
-      <div class="ahp-section-label"><i class="fas fa-scale-balanced app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>6.2 Julgamento das Alternativas por Critério</span></div>
+      <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">7.3</span><span>Julgamento das Alternativas por Critério</span></div>
       <div class="ahp-section-body">
-        <div class="info-card info-card--spaced"><div class="info-card-content">
+        <div class="info-card info-card--spaced ahp-subcard">
+          <div class="ahp-subsection-title ahp-subsection-title--roman">
+            <span class="ahp-subsection-num ahp-subsection-num--roman">III</span>
+            <span>Julgamentos por critério</span>
+          </div>
+          <div class="info-card-content">
           <div id="a6-julgamento"><p class="field-help">Defina as alternativas acima e clique em “Definir julgamentos”.</p></div>
           <div class="ahp-form-actions">
             <button type="button" class="btn btn-secondary" id="a6-calc-btn" disabled><i class="fas fa-calculator"></i> Pré-visualizar ranking</button>
           </div>
-        </div></div>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="card ahp-step-section hidden" id="a6-ranking-card">
-      <div class="ahp-section-label"><i class="fas fa-trophy app-template-inline-icon app-template-inline-icon--section" aria-hidden="true"></i><span>6.3 Ranking Final</span></div>
+      <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">7.4</span><span>Ranking Final</span></div>
       <div class="ahp-section-body">
-        <div class="info-card info-card--spaced"><div class="info-card-content">
+        <div class="info-card info-card--spaced ahp-subcard">
+          <div class="ahp-subsection-title ahp-subsection-title--roman">
+            <span class="ahp-subsection-num ahp-subsection-num--roman">IV</span>
+            <span>Consolidação do ranking</span>
+          </div>
+          <div class="info-card-content">
           <div id="a6-ranking"></div>
           <p id="a6-saved-info" class="field-help hidden">Análise persistida: <strong id="a6-codigo-label"></strong> <span id="a6-homolog-status" class="a6-homolog-badge hidden"></span></p>
           <div class="ahp-form-actions">
             <button type="button" class="btn btn-primary" id="a6-save-btn" disabled><i class="fas fa-floppy-disk"></i> Salvar e calcular no servidor</button>
             <button type="button" class="btn btn-secondary" id="a6-homolog-btn" disabled><i class="fas fa-stamp"></i> Homologar (gestor)</button>
           </div>
-        </div></div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <div class="ahp-form-actions">
-      <a href="step6-resultados.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar aos pesos</a>
-      <a href="step1-configuracao.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a>
-    </div>
+    <section class="card ahp-step-section" id="step7-nav-section">
+      <div class="ahp-section-body">
+        <div class="ahp-form-actions">
+          <a href="step6-resultados.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar aos pesos</a>
+          <a href="step1-configuracao.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a>
+        </div>
+      </div>
+    </section>
   </main>
 
   <div id="a6-toast" class="a6-toast"></div>

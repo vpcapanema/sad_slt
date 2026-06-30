@@ -1,12 +1,35 @@
 {
+  "workbench.iconTheme": "vscode-icons",
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+  "python.terminal.useEnvFile": true,
   "python.analysis.extraPaths": ["${workspaceFolder}"],
+  "python.analysis.exclude": ["scripts/**"],
   "python.terminal.activateEnvironment": true,
   "python.analysis.diagnosticMode": "workspace",
-  "python.analysis.exclude": ["scripts"],
   "python.linting.pylintEnabled": false,
   "python.linting.pylintPath": "${workspaceFolder}/.venv/Scripts/pylint.exe",
   "pylint.args": [],
+  "djlint.showInstallError": false,
   "cursorpyright.analysis.diagnosticMode": "workspace",
-  "cursorpyright.analysis.extraPaths": ["${workspaceFolder}"]
+  "cursorpyright.analysis.extraPaths": ["${workspaceFolder}"],
+  "cursorpyright.analysis.exclude": ["scripts/**"],
+  "files.associations": {
+    "*.session.sql": "sql"
+  },
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true
+  },
+  "[css]": {
+    "editor.defaultFormatter": "vscode.css-language-features"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "vscode.html-language-features"
+  },
+  "[sql]": {
+    "editor.quickSuggestions": { "other": false, "comments": false, "strings": false }
+  },
+  "sqltools.useNodeRuntime": false,
+  "sqltools.disableReleaseNotifications": true,
+  "sqltools.languageServer.enabled": false
 }
