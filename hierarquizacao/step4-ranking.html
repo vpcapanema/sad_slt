@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Etapa 4 — Ranking — SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="../assets/js/admin-auth.js"></script>
+  <style>
+    .rank-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--color-border,#eee); }
+    .rank-row:last-child { border-bottom:none; }
+    .rank-pos { font-size:1.4em; font-weight:700; width:36px; text-align:center; color:var(--color-primary,#1a6aab); flex-shrink:0; }
+    .rank-pos--1 { color:#c9a800; }
+    .rank-pos--2 { color:#8a8a8a; }
+    .rank-pos--3 { color:#a0522d; }
+    .rank-nome { flex:1; min-width:0; }
+    .rank-nome strong { display:block; }
+    .rank-nome small { color:var(--color-text-secondary,#666); font-size:0.82em; }
+    .rank-score { text-align:right; min-width:60px; }
+    .rank-score strong { font-size:1.1em; color:var(--color-primary,#1a6aab); }
+    .rank-bar-wrap { width:150px; height:10px; background:var(--color-border,#eee); border-radius:5px; overflow:hidden; flex-shrink:0; }
+    .rank-bar { height:100%; background:var(--color-primary,#1a6aab); border-radius:5px; }
+    .rank-bar--1 { background:#c9a800; }
+    .rank-bar--2 { background:#8a8a8a; }
+    .rank-bar--3 { background:#a0522d; }
+  </style>
+</head>
+<body class="ahp-module-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Apoio à Tomada de Decisão
+        <small>Hierarquização e Ranqueamento de Objetos</small>
+      </div>
+      <nav class="app-nav" aria-label="Navegação principal"></nav>
+    </div>
+  </header>
+
+  <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+
+  <main class="app-main ahp-main">
+
+    <nav class="ahp-phase-nav card" aria-label="Fases do módulo">
+      <a href="step1-config.html" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e objetos</span></a>
+      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Avaliação dos objetos</span></a>
+      <a href="#" class="ahp-phase active"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Ranking e homologação</span></a>
+    </nav>
+
+    <div class="ahp-progress card">
+      <div class="ahp-progress-bar">
+        <a href="step1-config.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">✓</div><span>Config. multicritério</span></a>
+        <a href="#" class="ahp-progress-step completed" id="link-step2"><div class="ahp-progress-circle">✓</div><span>Objetos</span></a>
+        <a href="#" class="ahp-progress-step completed" id="link-step3"><div class="ahp-progress-circle">✓</div><span>Avaliação</span></a>
+        <span class="ahp-progress-step active"><div class="ahp-progress-circle">4</div><span>Ranking</span></span>
+        <span class="ahp-progress-step" id="step5-wrap"><div class="ahp-progress-circle">5</div><span>Homologação</span></span>
+      </div>
+    </div>
+
+    <section class="card ahp-step-intro">
+      <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+        <a href="../index.html">Início</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <a href="home.html">Hierarquização</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <span class="ahp-breadcrumb-current">Etapa 4: Ranking</span>
+      </nav>
+      <h1 class="ahp-page-title">
+        <i class="fas fa-ranking-star" aria-hidden="true"></i>
+        Etapa 4: Ranking e resultados
+      </h1>
+    </section>
+
+    <div id="rank-loading" class="card">
+      <p class="ahp-help-text"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando…</p>
+    </div>
+
+    <div id="rank-error" class="ahp-info-note card ahp-info-note--error hidden">
+      <i class="fas fa-triangle-exclamation app-template-inline-icon app-template-inline-icon--error" aria-hidden="true"></i>
+      <span id="rank-error-msg"></span>
+    </div>
+
+    <!-- Sumário da configuração -->
+    <section class="card ahp-step-section hidden" id="rank-section">
+      <div class="ahp-section-label">
+        <span class="ahp-section-index-icon" aria-hidden="true">4.1</span>
+        <span>Parâmetros da rodada</span>
+      </div>
+      <div class="ahp-section-body">
+        <div class="ahp-subcard" id="rank-meta"></div>
+      </div>
+    </section>
+
+    <!-- Ranking -->
+    <section class="card ahp-step-section hidden" id="rank-result-section">
+      <div class="ahp-section-label">
+        <span class="ahp-section-index-icon" aria-hidden="true">4.2</span>
+        <span>Ranking dos objetos</span>
+      </div>
+      <div class="ahp-section-body">
+        <div class="ahp-subcard" id="rank-list"></div>
+      </div>
+    </section>
+
+    <!-- Pesos por critério -->
+    <section class="card ahp-step-section hidden" id="rank-pesos-section">
+      <div class="ahp-section-label">
+        <span class="ahp-section-index-icon" aria-hidden="true">4.3</span>
+        <span>Contribuição por critério</span>
+      </div>
+      <div class="ahp-section-body">
+        <div class="ahp-subcard">
+          <div id="rank-pesos-table" class="hier-scroll-x"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ações -->
+    <div class="card hier-actions-bar hidden" id="rank-actions">
+      <a href="#" class="btn btn--outline" id="btn-voltar">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Reavaliação
+      </a>
+      <a href="#" class="btn btn--primary" id="btn-homologar">
+        Prosseguir para homologação <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </a>
+    </div>
+
+  </main>
+
+  <script src="js/hier-api.js"></script>
+  <script src="js/step4-ranking.js"></script>
+</body>
+</html>

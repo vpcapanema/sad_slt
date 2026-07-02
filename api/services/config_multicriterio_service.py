@@ -54,6 +54,7 @@ _UPDATE_FIELDS = frozenset(
         "alertas_conceituais",
         "pacote_fase",
         "denominacao",
+        "arquivo_config_homologado",
     }
 )
 

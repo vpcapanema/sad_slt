@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hierarquização e Ranqueamento — SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="../assets/js/admin-auth.js"></script>
+</head>
+<body class="ahp-module-page">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-brand">
+        Apoio à Tomada de Decisão
+        <small>Hierarquização e Ranqueamento de Objetos</small>
+      </div>
+      <nav class="app-nav" aria-label="Navegação principal"></nav>
+    </div>
+  </header>
+
+  <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+
+  <main class="app-main ahp-main">
+
+    <section class="card">
+      <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+        <a href="../index.html">Início</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <span class="ahp-breadcrumb-current">Hierarquização e Ranqueamento</span>
+      </nav>
+      <h1 class="ahp-page-title">
+        <i class="fas fa-ranking-star" aria-hidden="true"></i>
+        Hierarquização e Ranqueamento de Objetos
+      </h1>
+      <p class="ahp-info-note card">
+        <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
+        <span>
+          Este módulo consome uma <strong>configuração multicritério homologada</strong> (pesos de
+          critérios calculados pelo AHP) e aplica esses pesos às pontuações dos objetos em cada
+          critério, produzindo um <strong>ranking auditável e rastreável</strong> do portfólio de
+          demandas. Nenhuma nova comparação pareada é realizada aqui — os pesos já estão definidos.
+        </span>
+      </p>
+    </section>
+
+    <section class="card ahp-step-section">
+      <div class="ahp-section-label">
+        <i class="fas fa-list-check" aria-hidden="true"></i>
+        <span>Rodadas de hierarquização</span>
+      </div>
+      <div class="ahp-section-body">
+        <div class="ahp-subcard">
+          <div class="hier-subcard-header">
+            <p class="ahp-help-text">Rodadas existentes nesta instância.</p>
+            <a href="step1-config.html" class="btn btn--primary" id="btn-nova">
+              <i class="fas fa-plus" aria-hidden="true"></i> Nova hierarquização
+            </a>
+          </div>
+
+          <div id="hier-loading" class="ahp-info-note card hidden">
+            <i class="fas fa-spinner fa-spin app-template-inline-icon" aria-hidden="true"></i>
+            <span>Carregando…</span>
+          </div>
+          <div id="hier-empty" class="ahp-info-note card hidden">
+            <i class="fas fa-inbox app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
+            <span>Nenhuma hierarquização encontrada. Clique em <strong>Nova hierarquização</strong> para começar.</span>
+          </div>
+          <div id="hier-error" class="ahp-info-note card ahp-info-note--error hidden">
+            <i class="fas fa-triangle-exclamation app-template-inline-icon app-template-inline-icon--error" aria-hidden="true"></i>
+            <span id="hier-error-msg"></span>
+          </div>
+
+          <div id="hier-table-wrap" class="hidden hier-scroll-x">
+            <table class="ahp-table hier-full-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Nome</th>
+                  <th>Grupo</th>
+                  <th>Status</th>
+                  <th>Criado em</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="hier-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="js/hier-api.js"></script>
+  <script>
+    const STATUS_LABEL = {
+      rascunho: "Rascunho",
+      em_julgamento: "Em avaliação",
+      calculada: "Calculada",
+      homologada: "Homologada",
+      arquivada: "Arquivada",
+    };
+    const STATUS_CLASS = {
+      rascunho: "badge--neutral",
+      em_julgamento: "badge--info",
+      calculada: "badge--warning",
+      homologada: "badge--success",
+      arquivada: "badge--muted",
+    };
+
+    function stepUrl(hier) {
+      if (hier.status === "rascunho") return `step2-objetos.html?codigo=${hier.codigo}`;
+      if (hier.status === "em_julgamento") return `step3-avaliacao.html?codigo=${hier.codigo}`;
+      if (hier.status === "calculada") return `step4-ranking.html?codigo=${hier.codigo}`;
+      if (hier.status === "homologada") return `step4-ranking.html?codigo=${hier.codigo}`;
+      return `step1-config.html`;
+    }
+
+    async function carregarLista() {
+      document.getElementById("hier-loading").classList.remove("hidden");
+      try {
+        const lista = await HierApi.listar();
+        document.getElementById("hier-loading").classList.add("hidden");
+        if (!lista || lista.length === 0) {
+          document.getElementById("hier-empty").classList.remove("hidden");
+          return;
+        }
+        document.getElementById("hier-table-wrap").classList.remove("hidden");
+        const tbody = document.getElementById("hier-tbody");
+        tbody.innerHTML = "";
+        lista.sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+        lista.forEach(h => {
+          const tr = document.createElement("tr");
+          const data = h.criadoEm ? new Date(h.criadoEm).toLocaleDateString("pt-BR") : "—";
+          tr.innerHTML = `
+            <td><code>${h.codigo}</code></td>
+            <td>${h.nome}</td>
+            <td>${h.grupo_id || "—"}</td>
+            <td><span class="badge ${STATUS_CLASS[h.status] || ""}">${STATUS_LABEL[h.status] || h.status}</span></td>
+            <td>${data}</td>
+            <td><a href="${stepUrl(h)}" class="btn btn--sm btn--outline">Abrir</a></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        document.getElementById("hier-loading").classList.add("hidden");
+        document.getElementById("hier-error").classList.remove("hidden");
+        document.getElementById("hier-error-msg").textContent = err.message;
+      }
+    }
+
+    carregarLista();
+  </script>
+</body>
+</html>

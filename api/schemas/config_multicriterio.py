@@ -55,6 +55,7 @@ class ConfigUpdateSchema(BaseModel):
     alertas_conceituais: list[Any] | None = None
     pacote_fase: str | None = None
     denominacao: str | None = None
+    arquivo_config_homologado: dict[str, Any] | None = None
 
 
 class ConfigResponseSchema(BaseModel):

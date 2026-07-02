@@ -20,6 +20,8 @@
     <script src="js/ahp-contexto-ui.js"></script>
     <script src="js/ahp-diagnostico-consistencia.js"></script>
     <script src="js/ahp-pacote-fase.js"></script>
+    <script src="js/colaborativa-api.js"></script>
+    <script src="js/ahp-parecer.js"></script>
 </head>
 <body class="ahp-module-page">
   <header class="app-header">
@@ -144,7 +146,7 @@
                 <section class="ahp-section ahp-subcard">
                     <div class="ahp-subsection-title ahp-subsection-title--roman">
                         <span class="ahp-subsection-num ahp-subsection-num--roman">III</span>
-                        <span>Parecer — Coerência conceitual</span>
+                        <span>Parecer Técnico-Científico</span>
                     </div>
                     <div id="results-parecer" aria-live="polite"></div>
                 </section></div></section><section class="card ahp-step-section"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">6.4</span><span>Exportar Resultados</span></div><div class="ahp-section-body">
@@ -550,7 +552,7 @@ function displayResults(criteria,results,matrix,alertas,config){
 
   if(confHost){confHost.className='ahp-results-output';confHost.innerHTML=sec61;}
   if(pesosHost){pesosHost.className='ahp-results-output';pesosHost.innerHTML=weightsHtml;}
-  if(parecerHost){parecerHost.className='ahp-results-output';parecerHost.innerHTML='<div id="parecer-alertas-panel"></div>';}
+  if(parecerHost){parecerHost.className='ahp-results-output';}
   var exportHost=document.getElementById('resultsExportContent');
   if(exportHost)exportHost.innerHTML=exp;
   if(window.SLTAhpDiagnostico){
@@ -564,7 +566,9 @@ function displayResults(criteria,results,matrix,alertas,config){
         inconsistentHint:'A matriz salva nesta configuração está inconsistente. Revise os julgamentos na Etapa 5 antes de homologar.',
       }
     );
-    window.SLTAhpDiagnostico.renderParecerAlertas(document.getElementById('parecer-alertas-panel'),getConfigAlertas());
+  }
+  if(parecerHost&&window.SLTAhpParecer){
+    window.SLTAhpParecer.render(parecerHost,config,criteria,matrix,results);
   }
 }
 

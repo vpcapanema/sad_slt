@@ -163,15 +163,35 @@ def calcular_hierarquizacao(codigo: str) -> HierarquizacaoResponseSchema:
 
     for entry in julg:
         crit = entry.get("criterio")
-        matrix = entry.get("matrix")
-        if not matrix:
+        if not crit:
             continue
-        local = ahp_engine.analyze_matrix(matrix)
-        por_criterio[crit] = local["weights"]
-        consistencia_local[crit] = {"CR": local["CR"], "lambdaMax": local["lambdaMax"]}
         w = weight_by_crit.get(crit, 0.0)
-        for a in range(min(n_itens, len(local["weights"]))):
-            scores[a] += w * local["weights"][a]
+
+        raw_scores = entry.get("scores")
+        matrix = entry.get("matrix")
+
+        if raw_scores is not None:
+            # Formato de pontuação direta: {"0": valor, "1": valor, ...}
+            values = [float(raw_scores.get(str(i), 0)) for i in range(n_itens)]
+            min_v = min(values) if values else 0.0
+            max_v = max(values) if values else 0.0
+            if max_v > min_v:
+                normalized = [(v - min_v) / (max_v - min_v) for v in values]
+            elif max_v > 0:
+                normalized = [1.0 / n_itens] * n_itens
+            else:
+                normalized = [0.0] * n_itens
+            por_criterio[crit] = normalized
+            consistencia_local[crit] = {"CR": None, "tipo": "pontuacao_direta"}
+            for a in range(n_itens):
+                scores[a] += w * normalized[a]
+        elif matrix:
+            # Formato legado: matriz pareada AHP
+            local = ahp_engine.analyze_matrix(matrix)
+            por_criterio[crit] = local["weights"]
+            consistencia_local[crit] = {"CR": local["CR"], "lambdaMax": local["lambdaMax"]}
+            for a in range(min(n_itens, len(local["weights"]))):
+                scores[a] += w * local["weights"][a]
 
     pesos_projetos = {
         "itens": item_names,
