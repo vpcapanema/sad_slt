@@ -475,6 +475,87 @@ consolidacao por `Identity`, permitindo emitir relatorio com:
 - area ou extensao afetada;
 - observacao metodologica.
 
+## Variáveis do Modulo
+
+### Variáveis de Entrada
+- `informar_tipo_entrada`
+- `informar_caminho_arquivo`
+- `informar_crs_origem`
+- `definir_filtro_espacial`
+- `definir_filtro_atributivo`
+
+### Variáveis de Cadastro da Fonte
+- `informar_nome_fonte`
+- `informar_tipo_fonte`
+- `informar_orgao_responsavel`
+- `informar_data_referencia_dado`
+- `classificar_tipo_tratamento`
+- `informar_criterio_associado`
+- `informar_base_legal_ou_tecnica`
+- `informar_severidade_padrao`
+- `informar_observacao_metodologica`
+
+### Variáveis de Validação
+- `validar_sobreposicoes`
+- `validar_lacunas`
+- `validar_intersecoes_invalidas`
+- `validar_gaps`
+- `validar_dangles`
+- `validar_crs`
+- `validar_tipo_geometrico`
+- `validar_campos_obrigatorios`
+- `definir_tolerancia_topologica`
+- `definir_percentual_critico_erros`
+
+### Variáveis de Correção
+- `corrigir_geometrias_invalidas`
+- `corrigir_orientacao_aneis`
+- `corrigir_fechamento_aneis`
+- `corrigir_repeticao_pontos`
+- `corrigir_auto_intersecoes`
+- `corrigir_geometrias_degeneradas`
+- `corrigir_vertices_colineares`
+- `definir_tolerancia_correcao`
+- `manter_geometria_original_falha`
+
+### Variáveis de Normalização
+- `recortar_area_estudo`
+- `corrigir_geometrias_invalidas`
+- `remover_geometrias_vazias`
+- `explodir_multipartes`
+- `padronizar_nomes_campos`
+
+### Variáveis de Geração de Riscos Derivados
+- `selecionar_camada_base`
+- `definir_distancia_buffer`
+- `definir_unidade_buffer`
+- `selecionar_tipo_buffer`
+- `dissolver_geometrias`
+- `recortar_area_estudo`
+- `informar_fundamento_legal_tecnico`
+
+### Parâmetros de Consolidação
+- `selecionar_tipo_overlay`
+- `resolver_conflitos_campos`
+
+### Parâmetros de Exportação
+- `definir_nome_arquivo_restricao`
+- `definir_nome_arquivo_risco`
+- `selecionar_formato_saida`
+- `definir_crs_saida`
+- `selecionar_opcao_salvamento`
+
+### Parâmetros de Metadados
+- `definir_nome_versao`
+- `informar_responsavel_tecnico`
+- `informar_observacoes_homologacao`
+
+### Parâmetros de Ordem de Processamento
+- `definir_ordem_camadas_restricao`
+- `definir_ordem_camadas_risco`
+
+---
+
 ## Regras de auditoria
 
 Toda execucao do modulo deve gerar trilha de auditoria:
