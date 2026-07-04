@@ -475,6 +475,66 @@ consolidacao por `Identity`, permitindo emitir relatorio com:
 - area ou extensao afetada;
 - observacao metodologica.
 
+## Funções do Fluxo
+
+O sistema deve ser maleável, permitindo que o usuário:
+- Crie novas funções combinando operações disponíveis (construtor de funções)
+- Crie novos fluxos combinando funções (construtor de fluxo)
+
+### Funções Padrão da Fase 1
+
+#### FUN-01: Cadastrar Fonte
+- Entrada: metadados da fonte
+- Operações: nenhum (apenas cadastro de variáveis)
+- Saída: `fonte_id` e metadados registrados
+
+#### FUN-02: Importar Camada
+- Entrada: `informar_tipo_entrada`, `informar_caminho_arquivo`, `informar_crs_origem`, `definir_filtro_espacial`, `definir_filtro_atributivo`
+- Operações: OP-01 (Carregar Camada)
+- Saída: camada importada
+
+#### FUN-03: Validar e Reparar Camada
+- Entrada: camada importada
+- Operações: OP-02 (Validar Camada) + OP-02-CORR (Reparar Geometrias)
+- Saída: camada validada e corrigida
+
+#### FUN-04: Normalizar Camada
+- Entrada: camada validada
+- Operações: OP-03 (Normalizar Camada)
+- Saída: camada normalizada (CRS oficial, campos padronizados)
+
+#### FUN-05: Classificar Fonte
+- Entrada: metadados da fonte
+- Operações: nenhum (classificação manual)
+- Saída: `tipo_tratamento` definido (restricao/risco/insumo_para_risco_derivado)
+
+#### FUN-06: Gerar Risco Derivado (opcional)
+- Entrada: camada base, `definir_distancia_buffer`, `definir_unidade_buffer`, `selecionar_tipo_buffer`, `dissolver_geometrias`, `recortar_area_estudo`, `informar_fundamento_legal_tecnico`
+- Operações: OP-04 (Criar Buffer)
+- Saída: camada de risco derivado
+
+#### FUN-07: Consolidar Restrições
+- Entrada: todas as camadas de restrição
+- Operações: OP-05 (Sobrepor Camadas - Identity)
+- Saída: camada consolidada de restrição
+
+#### FUN-08: Consolidar Riscos
+- Entrada: todas as camadas de risco
+- Operações: OP-05 (Sobrepor Camadas - Identity)
+- Saída: camada consolidada de risco
+
+#### FUN-09: Exportar Camadas
+- Entrada: camadas consolidadas, `definir_nome_arquivo_restricao`, `definir_nome_arquivo_risco`, `selecionar_formato_saida`, `definir_crs_saida`, `selecionar_opcao_salvamento`
+- Operações: OP-25 (Exportar Camada Vetorial)
+- Saída: arquivos exportados
+
+#### FUN-10: Gerar Metadados de Versão
+- Entrada: `definir_nome_versao`, `informar_responsavel_tecnico`, `informar_observacoes_homologacao`
+- Operações: nenhum (geração de metadados)
+- Saída: pacote versionado
+
+---
+
 ## Variáveis do Modulo
 
 ### Variáveis de Entrada
@@ -534,23 +594,23 @@ consolidacao por `Identity`, permitindo emitir relatorio com:
 - `recortar_area_estudo`
 - `informar_fundamento_legal_tecnico`
 
-### Parâmetros de Consolidação
+### Variáveis de Consolidação
 - `selecionar_tipo_overlay`
 - `resolver_conflitos_campos`
 
-### Parâmetros de Exportação
+### Variáveis de Exportação
 - `definir_nome_arquivo_restricao`
 - `definir_nome_arquivo_risco`
 - `selecionar_formato_saida`
 - `definir_crs_saida`
 - `selecionar_opcao_salvamento`
 
-### Parâmetros de Metadados
+### Variáveis de Metadados
 - `definir_nome_versao`
 - `informar_responsavel_tecnico`
 - `informar_observacoes_homologacao`
 
-### Parâmetros de Ordem de Processamento
+### Variáveis de Ordem de Processamento
 - `definir_ordem_camadas_restricao`
 - `definir_ordem_camadas_risco`
 

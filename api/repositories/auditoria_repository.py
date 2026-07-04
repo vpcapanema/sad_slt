@@ -1,7 +1,6 @@
 """Persistência — auditoria.log_sistema."""
 from __future__ import annotations
 
-import json
 from typing import Any
 from uuid import UUID
 
@@ -30,15 +29,15 @@ def registrar(
 ) -> None:
     sql = """
         INSERT INTO auditoria.log_sistema (
-            nivel, categoria, operacao, schema_nome, tabela, registro_id,
-            usuario_id, usuario_nome, mensagem,
+            nivel, categoria, operacao, schema_nome, tabela,
+            registro_id, usuario_id, usuario_nome, mensagem,
             dados_anteriores, dados_novos, contexto,
             ip_address, user_agent, origem
         ) VALUES (
-            %(nivel)s, %(categoria)s, %(operacao)s, %(schema_nome)s, %(tabela)s, %(registro_id)s,
-            %(usuario_id)s, %(usuario_nome)s, %(mensagem)s,
-            %(dados_anteriores)s, %(dados_novos)s, %(contexto)s,
-            %(ip_address)s, %(user_agent)s, %(origem)s
+            %(nivel)s, %(categoria)s, %(operacao)s, %(schema_nome)s,
+            %(tabela)s, %(registro_id)s, %(usuario_id)s, %(usuario_nome)s,
+            %(mensagem)s, %(dados_anteriores)s, %(dados_novos)s,
+            %(contexto)s, %(ip_address)s, %(user_agent)s, %(origem)s
         )
     """
 

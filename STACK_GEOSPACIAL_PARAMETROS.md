@@ -1,4 +1,4 @@
-# Stack Geoespacial e Parâmetros de Operações
+# Stack Geoespacial e Variáveis de Operações
 
 ## Conceitos e Definições do Sistema
 
@@ -151,14 +151,14 @@ npm install maplibre-gl
 
 ---
 
-## Operações de Geoprocessamento e Parâmetros
+## Operações de Geoprocessamento e Variáveis
 
 ### Operações sobre Geo-objetos (Vetoriais)
 
 #### **OP-01: Carregar Camada**
 **Mapeamento Python**: GeoPandas/Fiona (`read_file`, `open`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `informar_tipo_entrada` | engine | Tipo de entrada: local/WFS |
 | `informar_caminho_arquivo` | filename | Caminho do arquivo ou URL |
@@ -171,7 +171,7 @@ npm install maplibre-gl
 #### **OP-02: Validar Camada**
 **Mapeamento Python**: Shapely (`is_valid`, `explain_validity`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `validar_sobreposicoes` | overlay | Detectar sobreposições indevidas |
 | `validar_lacunas` | gap analysis | Detectar lacunas entre polígonos |
@@ -189,7 +189,7 @@ npm install maplibre-gl
 #### **OP-02-CORR: Reparar Geometrias (Topologia)**
 **Mapeamento Python**: Shapely (`make_valid`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `corrigir_geometrias_invalidas` | make_valid | Corrigir geometrias inválidas |
 | `corrigir_orientacao_aneis` | orientation | Corrigir orientação de polígonos |
@@ -206,7 +206,7 @@ npm install maplibre-gl
 #### **OP-03: Normalizar Camada (Rescalonamento)**
 **Mapeamento Python**: GeoPandas (`to_crs`, `clip`, `explode`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `definir_crs_destino` | to_crs | CRS oficial de destino (fixo) |
 | `recortar_area_estudo` | clip | Recortar para área de estudo |
@@ -222,7 +222,7 @@ npm install maplibre-gl
 #### **OP-04: Criar Buffer**
 **Mapeamento Python**: GeoPandas (`buffer`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `definir_distancia_buffer` | distance | Distância do buffer |
 | `definir_unidade_buffer` | distance | Unidade: metros/graus |
@@ -235,7 +235,7 @@ npm install maplibre-gl
 #### **OP-05: Sobrepor Camadas**
 **Mapeamento Python**: GeoPandas (`overlay`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `selecionar_tipo_overlay` | how | Tipo: identity/intersection/union/difference |
 | `resolver_conflitos_campos` | make_valid | Resolver conflitos de campos |
@@ -246,7 +246,7 @@ npm install maplibre-gl
 #### **OP-06: Dissolver**
 **Mapeamento Python**: GeoPandas (`dissolve`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `definir_campo_agrupamento` | by | Campo(s) para agrupamento |
 | `manter_atributos` | aggfunc | Função de agregação |
@@ -257,7 +257,7 @@ npm install maplibre-gl
 #### **OP-07: Selecionar por Localização**
 **Mapeamento Python**: GeoPandas (`sjoin`, spatial predicates)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `selecionar_tipo_selecao` | predicate | Tipo: intersects/contains/within/touches |
 | `inverter_selecao` | ~mask | Inverter seleção |
@@ -269,7 +269,7 @@ npm install maplibre-gl
 #### **OP-08: Converter para Raster**
 **Mapeamento Python**: Rasterio (`rasterize`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `definir_resolucao_raster` | out_shape | Resolução do raster |
 | `definir_crs_destino` | transform | CRS de destino (fixo) |
@@ -285,7 +285,7 @@ npm install maplibre-gl
 #### **OP-10: Calcular Distância**
 **Mapeamento Python**: GDAL (`gdal_proximity`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `definir_resolucao_distancia` | resolution | Resolução da distância |
 | `definir_distancia_maxima` | max_distance | Distância máxima (opcional) |
@@ -296,7 +296,7 @@ npm install maplibre-gl
 #### **OP-11: Calcular Distância Ponderada**
 **Mapeamento Python**: Custom (ponderação por atributo)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `selecionar_atributo_peso` | campo | Campo com peso |
 | `definir_resolucao_distancia` | resolution | Resolução da distância |
@@ -307,7 +307,7 @@ npm install maplibre-gl
 #### **OP-12: Calcular Densidade**
 **Mapeamento Python**: SciPy (`gaussian_kde`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `selecionar_tipo_kernel` | kernel type | Tipo: gaussiano/epanechnikov/quadratic |
 | `definir_largura_kernel` | bandwidth | Largura do kernel |
@@ -319,7 +319,7 @@ npm install maplibre-gl
 #### **OP-13: Calcular Custo Acumulado**
 **Mapeamento Python**: NetworkX (`dijkstra_path_length`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `informar_raster_custo` | graph weights | Raster de custo (fricção) |
 | `informar_pontos_origem` | source nodes | GeoDataFrame de pontos de origem |
@@ -330,7 +330,7 @@ npm install maplibre-gl
 #### **OP-14: Interpolar Valores**
 **Mapeamento Python**: SciPy (`griddata`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `selecionar_metodo_interpolacao` | method | Método: idw/kriging/spline |
 | `definir_resolucao_interpolacao` | xi (grid) | Resolução do grid |
@@ -342,7 +342,7 @@ npm install maplibre-gl
 #### **OP-15: Agregar por Território**
 **Mapeamento Python**: GeoPandas/Pandas (`groupby.agg`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `selecionar_campo_unidade` | groupby | Campo de unidade territorial |
 | `selecionar_funcao_agregacao` | aggfunc | Função: soma/media/mediana/max/min |
@@ -354,7 +354,7 @@ npm install maplibre-gl
 #### **OP-16: Criar Camada Booleana**
 **Mapeamento Python**: Rasterio (`rasterize`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `definir_resolucao_raster` | out_shape | Resolução do raster |
 | `definir_valor_presenca` | 1 (fixo) | Valor para presença |
@@ -365,7 +365,7 @@ npm install maplibre-gl
 #### **OP-17: Combinar Rasters**
 **Mapeamento Python**: NumPy (soma ponderada)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `selecionar_metodo_combinacao` | operation | Método: soma/media_ponderada/multiplicacao |
 | `definir_pesos_criterios` | weights array | Array de pesos |
@@ -376,7 +376,7 @@ npm install maplibre-gl
 #### **OP-20: Normalizar Raster**
 **Mapeamento Python**: Scikit-learn (`MinMaxScaler`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `definir_escala_normalizacao` | feature_range | Escala: 0-1 (fixo) |
 | `selecionar_metodo_normalizacao` | method | Método: linear/winsorização/quebras_naturais |
@@ -388,7 +388,7 @@ npm install maplibre-gl
 #### **OP-21: Recortar Raster**
 **Mapeamento Python**: Rasterio (`mask`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `manter_extensao_original` | crop=False | Manter extensão original |
 | `recortar_bbox` | crop=True | Recortar para bbox |
@@ -399,7 +399,7 @@ npm install maplibre-gl
 #### **OP-22: Calcular Estatísticas por Zona**
 **Mapeamento Python**: Rasterio/Xarray (`zonal_stats`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `selecionar_estatisticas` | stats list | Estatísticas: min/max/media/mediana/soma/desvio/percentis |
 | `definir_percentis` | percentiles array | Array de percentis |
@@ -411,7 +411,7 @@ npm install maplibre-gl
 #### **OP-23: Amostrar Raster em Pontos**
 **Mapeamento Python**: Rasterio (`sample`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `selecionar_metodo_amostragem` | interpolation | Método: valor_ponto/interpolado |
 | `tratar_valores_nodata` | fill_value | Tratamento de NoData |
@@ -421,7 +421,7 @@ npm install maplibre-gl
 #### **OP-24: Extrair Valores em Polígono**
 **Mapeamento Python**: Rasterio/Zonal (`zonal_stats`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `selecionar_metodo_extracao` | stat type | Método: media/mediana/max/min/soma |
 | `selecionar_geometria_utilizada` | geometry | Geometria: ponto_central/centroide/poligono_completo |
@@ -433,7 +433,7 @@ npm install maplibre-gl
 #### **OP-25: Exportar Camada Vetorial**
 **Mapeamento Python**: GeoPandas/Fiona (`to_file`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `definir_nome_arquivo` | path | Nome do arquivo |
 | `selecionar_formato_saida` | driver | Formato: shapefile/geopackage/geojson |
@@ -445,7 +445,7 @@ npm install maplibre-gl
 #### **OP-26: Exportar Raster**
 **Mapeamento Python**: Rasterio (`write`)
 
-| Parâmetro Amigável | Mapeamento Python | Descrição |
+| Variável Amigável | Mapeamento Python | Descrição |
 |-------------------|-------------------|-----------|
 | `definir_nome_arquivo` | path | Nome do arquivo |
 | `selecionar_formato_saida` | driver | Formato: geotiff |

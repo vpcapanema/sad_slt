@@ -306,6 +306,150 @@ se completude_projeto < limite_minimo:
 
 O limite minimo deve ser configuravel, por exemplo 60%.
 
+## Variáveis do Modulo
+
+### Variáveis de Cadastro de Atributo/Critério
+- `atributo_id`
+- `nome_coluna`
+- `rotulo`
+- `tipo_dado` (numerico, ordinal, booleano, categorico, data)
+- `criterio_fase3`
+- `direcao` (maior_melhor, menor_melhor)
+- `regra_normalizacao`
+- `valores_validos`
+- `valor_padrao`
+- `obrigatorio`
+- `peso_inicial`
+- `peso_minimo`
+- `peso_maximo`
+- `observacao_metodologica`
+
+### Variáveis de Importação de Tabela
+- `informar_tipo_entrada` (CSV, XLSX, XLS, parquet, banco)
+- `informar_caminho_arquivo`
+- `identificar_delimitador` (para CSV)
+- `identificar_planilha` (para XLSX)
+- `definir_codificacao`
+
+### Variáveis de Validação
+- `validar_identificador_unico`
+- `validar_projetos_duplicados`
+- `validar_colunas_obrigatorias`
+- `validar_tipos_dados`
+- `validar_faixa_valores`
+- `validar_vocabulario_categorico`
+- `validar_campos_booleanos`
+- `validar_datas`
+- `definir_percentual_critico_ausentes`
+
+### Variáveis de Normalização Numérica
+- `selecionar_direcao` (maior_melhor, menor_melhor)
+- `definir_valor_minimo`
+- `definir_valor_maximo`
+
+### Variáveis de Normalização Booleana
+- `selecionar_direcao` (positivo, negativo)
+- `definir_valor_sim`
+- `definir_valor_nao`
+
+### Variáveis de Normalização Ordinal
+- `definir_mapeamento_valores` (ex: ideia=0.20, estudo=0.40, etc.)
+
+### Variáveis de Normalização Categorica
+- `definir_tabela_conversao` (ex: nao_identificada=0.00, em_prospeccao=0.40, etc.)
+
+### Variáveis de Configuração de Pesos
+- `selecionar_modo_pesos` (livres, normalizados)
+- `definir_peso_por_atributo`
+- `validar_soma_pesos`
+
+### Variáveis de Tratamento de Ausentes
+- `selecionar_regra_ausentes` (bloquear, excluir, imputar_neutro, imputar_pior, imputar_medio)
+- `definir_valor_imputado`
+
+### Variáveis de Cálculo de Score
+- `selecionar_formula_score` (soma_ponderada, normalizada)
+- `definir_limite_completude_minima`
+
+### Variáveis de Exportação
+- `definir_nome_arquivo_resultados`
+- `selecionar_formato_saida` (CSV, XLSX, parquet)
+- `selecionar_opcao_salvamento`
+
+### Variáveis de Metadados
+- `definir_nome_versao`
+- `informar_responsavel_tecnico`
+- `informar_observacoes_homologacao`
+
+---
+
+## Funções do Fluxo
+
+O sistema deve ser maleável, permitindo que o usuário:
+- Crie novas funções combinando operações disponíveis (construtor de funções)
+- Crie novos fluxos combinando funções (construtor de fluxo)
+
+### Funções Padrão da Fase 3
+
+#### FUN-01: Cadastrar Atributo/Critério
+- Entrada: metadados do atributo
+- Operações: nenhum (apenas cadastro)
+- Saída: `atributo_id` e metadados registrados
+
+#### FUN-02: Importar e Validar Tabela
+- Entrada: `informar_tipo_entrada`, `informar_caminho_arquivo`, `identificar_delimitador`, `identificar_planilha`, `definir_codificacao`
+- Operações: importação + validação de conteúdo
+- Saída: tabela validada
+
+#### FUN-03: Normalizar Atributos
+- Entrada: tabela validada, regras de normalização por tipo de dado
+- Operações: normalização conforme tipo (numérico, booleano, ordinal, categorico)
+- Saída: tabela com atributos normalizados (0-1)
+
+#### FUN-04: Configurar Pesos
+- Entrada: atributos normalizados, `selecionar_modo_pesos`, `definir_peso_por_atributo`, `validar_soma_pesos`
+- Operações: cálculo de pesos (livres ou normalizados)
+- Saída: pesos configurados
+
+#### FUN-05: Tratar Atributos Ausentes
+- Entrada: tabela normalizada, `selecionar_regra_ausentes`, `definir_valor_imputado`
+- Operações: tratamento de valores ausentes
+- Saída: tabela com ausentes tratados
+
+#### FUN-06: Calcular Score Fase 3
+- Entrada: tabela tratada, pesos configurados, `selecionar_formula_score`, `definir_limite_completude_minima`
+- Operações: cálculo de score ponderado por projeto
+- Saída: score Fase 3 por projeto, ranking Fase 3
+
+#### FUN-07: Exportar Resultados
+- Entrada: scores calculados, `definir_nome_arquivo_resultados`, `selecionar_formato_saida`, `selecionar_opcao_salvamento`
+- Operações: exportação de tabela
+- Saída: arquivo exportado
+
+#### FUN-08: Gerar Metadados de Versão
+- Entrada: `definir_nome_versao`, `informar_responsavel_tecnico`, `informar_observacoes_homologacao`
+- Operações: nenhum (geração de metadados)
+- Saída: pacote versionado
+
+---
+
+## Fluxo da Fase 3
+
+```text
+cadastrar atributo/criterio
+    -> importar e validar tabela
+    -> normalizar atributos
+    -> configurar pesos
+    -> tratar atributos ausentes
+    -> calcular score fase 3
+    -> exportar resultados
+    -> gerar metadados de versao
+    -> homologacao
+    -> publicacao na biblioteca
+```
+
+---
+
 ## Riscos herdados da Fase 1
 
 Quando a Fase 1 identificar riscos, esses riscos podem entrar na Fase 3 como

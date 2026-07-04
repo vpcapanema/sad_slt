@@ -276,6 +276,159 @@ Resultado esperado:
 1 = maior favorabilidade territorial
 ```
 
+## Variáveis do Modulo
+
+### Variáveis de Cadastro de Critério
+- `criterio_id`
+- `criterio_nome`
+- `dimensao`
+- `fonte_id`
+- `tipo_dado_entrada`
+- `operador_espacial`
+- `relacao`
+- `peso_ahp`
+- `unidade_original`
+- `regra_normalizacao`
+- `resolucao_saida`
+- `crs_saida`
+- `extensao_processamento`
+- `observacao_metodologica`
+
+### Variáveis de Importação de Camada
+- `informar_tipo_entrada`
+- `informar_caminho_arquivo`
+- `informar_crs_origem`
+- `definir_filtro_espacial`
+- `definir_filtro_atributivo`
+
+### Variáveis de Validação
+- `validar_sobreposicoes`
+- `validar_lacunas`
+- `validar_intersecoes_invalidas`
+- `validar_gaps`
+- `validar_dangles`
+- `validar_crs`
+- `validar_tipo_geometrico`
+- `validar_campos_obrigatorios`
+- `definir_tolerancia_topologica`
+- `definir_percentual_critico_erros`
+
+### Variáveis de Compatibilização
+- `recortar_area_estudo`
+- `corrigir_geometrias_invalidas`
+- `remover_geometrias_vazias`
+- `padronizar_nomes_campos`
+- `reprojetar_crs_destino`
+
+### Variáveis de Operador Espacial
+- `selecionar_operador_espacial` (distancia_euclidiana, densidade_kernel, interpolacao, etc.)
+- `definir_parametros_operador` (ex: banda, raio, etc.)
+- `definir_resolucao_raster`
+- `definir_crs_saida`
+
+### Variáveis de Reescalonamento
+- `selecionar_regra_normalizacao` (linear, winsorizacao, quebras_naturais, fuzzy, etc.)
+- `definir_percentil_inferior` (para winsorização)
+- `definir_percentil_superior` (para winsorização)
+- `definir_limite_minimo` (para limite saturado)
+- `definir_limite_maximo` (para limite saturado)
+
+### Variáveis de Inversão
+- `selecionar_regra_inversao` (1 - valor_normalizado)
+- `definir_fator_inversao` (opcional)
+
+### Variáveis de Álgebra de Mapas
+- `selecionar_operador_algebra` (media_simples, media_ponderada, fuzzy_membership, fuzzy_or, fuzzy_and, fuzzy_gamma)
+- `definir_regra_nodata` (bloquear, neutro, minimo, interpolacao)
+- `definir_valor_neutro`
+- `definir_gamma` (para fuzzy gamma)
+
+### Variáveis de Exportação
+- `definir_nome_arquivo_favorabilidade`
+- `selecionar_formato_saida` (tiff, geotiff, etc.)
+- `definir_crs_saida`
+- `selecionar_opcao_salvamento`
+
+### Variáveis de Metadados
+- `definir_nome_versao`
+- `informar_responsavel_tecnico`
+- `informar_observacoes_homologacao`
+
+---
+
+## Funções do Fluxo
+
+O sistema deve ser maleável, permitindo que o usuário:
+- Crie novas funções combinando operações disponíveis (construtor de funções)
+- Crie novos fluxos combinando funções (construtor de fluxo)
+
+### Funções Padrão da Fase 2
+
+#### FUN-01: Cadastrar Critério
+- Entrada: metadados do critério
+- Operações: nenhum (apenas cadastro)
+- Saída: `criterio_id` e metadados registrados
+
+#### FUN-02: Importar e Validar Camada de Critério
+- Entrada: `informar_tipo_entrada`, `informar_caminho_arquivo`, `informar_crs_origem`, `definir_filtro_espacial`, `definir_filtro_atributivo`
+- Operações: OP-01 (Carregar Camada) + OP-02 (Validar Camada)
+- Saída: camada validada
+
+#### FUN-03: Compatibilizar Camada
+- Entrada: camada validada
+- Operações: OP-03 (Normalizar Camada)
+- Saída: camada compatibilizada (CRS oficial, recortada)
+
+#### FUN-04: Gerar Raster Bruto por Critério
+- Entrada: camada compatibilizada, `selecionar_operador_espacial`, `definir_parametros_operador`, `definir_resolucao_raster`, `definir_crs_saida`
+- Operações: variável conforme operador (OP-08, OP-09, OP-10, OP-11, OP-12, OP-13, OP-14, OP-15, OP-16, OP-17, OP-18)
+- Saída: raster bruto
+
+#### FUN-05: Normalizar Raster (0-1)
+- Entrada: raster bruto, `selecionar_regra_normalizacao`, parâmetros específicos da regra
+- Operações: OP-23 (Normalizar Raster)
+- Saída: raster normalizado (0-1)
+
+#### FUN-06: Inverter Critério Negativo
+- Entrada: raster normalizado, `selecionar_regra_inversao`, `definir_fator_inversao`
+- Operações: OP-26 (Subtrair) ou cálculo aritmético
+- Saída: raster invertido
+
+#### FUN-07: Combinar Rasters (Álgebra de Mapas)
+- Entrada: rasters normalizados, `selecionar_operador_algebra` (media_simples, media_ponderada, fuzzy_membership, fuzzy_or, fuzzy_and, fuzzy_gamma), `definir_regra_nodata`, `definir_valor_neutro`, `definir_gamma`
+- Operações: OP-27 (Somar Rasters) + OP-28 (Multiplicar Raster por Escalar) + operadores fuzzy
+- Saída: raster final de favorabilidade
+
+#### FUN-08: Exportar Raster Final
+- Entrada: raster final, `definir_nome_arquivo_favorabilidade`, `selecionar_formato_saida`, `definir_crs_saida`, `selecionar_opcao_salvamento`
+- Operações: OP-26 (Exportar Raster)
+- Saída: arquivo exportado
+
+#### FUN-09: Gerar Metadados de Versão
+- Entrada: `definir_nome_versao`, `informar_responsavel_tecnico`, `informar_observacoes_homologacao`
+- Operações: nenhum (geração de metadados)
+- Saída: pacote versionado
+
+---
+
+## Fluxo da Fase 2
+
+```text
+cadastrar criterio
+    -> importar e validar camada
+    -> compatibilizar camada
+    -> gerar raster bruto por criterio
+    -> normalizar raster (0-1)
+    -> inverter criterio negativo (se aplicavel)
+    -> combinar rasters (algebra de mapas)
+    -> exportar raster final
+    -> gerar metadados de versao
+    -> homologacao
+    -> publicacao na biblioteca
+```
+
+---
+
 ## Tratamento de NoData
 
 O modulo deve possuir regra explicita para valores NoData.

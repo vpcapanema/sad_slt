@@ -9,6 +9,7 @@ from api.routers.configuracoes import router as configuracoes_router
 from api.routers.demandas import router as demandas_router
 from api.routers.dominios import router as dominios_router
 from api.routers.geo import router as geo_router
+from api.routers.geoespacial import router as geoespacial_router
 from api.routers.geometria import router as geometria_router
 from api.routers.health import router as health_router
 from api.routers.hierarquizacoes import router as hierarquizacoes_router
@@ -25,6 +26,7 @@ api_router.include_router(auth_router)
 api_router.include_router(sigma_router)
 api_router.include_router(geometria_router)
 api_router.include_router(geo_router)
+api_router.include_router(geoespacial_router)
 api_router.include_router(dominios_router)
 api_router.include_router(demandas_router)
 api_router.include_router(painel_router)

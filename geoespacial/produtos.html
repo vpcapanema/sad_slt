@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Produtos — Módulo Geoespacial</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/geoespacial.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+</head>
+<body class="geoespacial-page">
+  <div class="geoespacial-map-layout">
+    <header class="geoespacial-header">
+      <a href="index.html" class="geoespacial-header-brand">
+        <img src="../assets/img/slt-icon.svg" alt="" width="32" height="32">
+        <div>
+          <h1 class="geoespacial-header-title">Produtos</h1>
+          <p class="geoespacial-header-subtitle">Camadas de saída finais homologadas</p>
+        </div>
+      </a>
+      <nav class="geoespacial-header-nav">
+        <button type="button" class="geoespacial-operation-btn" id="btn-atualizar">Atualizar</button>
+      </nav>
+    </header>
+
+    <aside class="geoespacial-sidebar-left">
+      <div class="geoespacial-layers-panel">
+        <h2 class="geoespacial-layers-title">Camadas Finais</h2>
+        <div id="geoespacial-layers-list" class="geoespacial-operations-list">
+          <p class="hint">Nenhuma camada final disponível.</p>
+        </div>
+      </div>
+    </aside>
+
+    <div class="geoespacial-map-container">
+      <div id="map-geoespacial" class="geoespacial-map"></div>
+    </div>
+
+    <aside class="geoespacial-sidebar-right">
+      <div class="geoespacial-operations-panel">
+        <h2 class="geoespacial-operations-title">Detalhes</h2>
+        <div id="geoespacial-details-content">
+          <p class="hint">Selecione uma camada para ver detalhes.</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="../assets/js/geoespacial-map.js"></script>
+  <script src="geoespacial-produtos.js"></script>
+</body>
+</html>

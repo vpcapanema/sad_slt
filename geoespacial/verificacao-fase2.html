@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fase 2 — Favorabilidade Territorial — Módulo Geoespacial</title>
+  <link rel="stylesheet" href="/assets/css/geoespacial.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+</head>
+<body class="geoespacial-page">
+  <div class="geoespacial-map-layout">
+    <header class="geoespacial-header">
+      <a href="/geoespacial" class="geoespacial-header-brand">
+        <span>🗺️</span>
+        <span>Geoespacial</span>
+      </a>
+      <h1 class="geoespacial-header-title">Fase 2 — Favorabilidade Territorial</h1>
+    </header>
+
+    <div class="geoespacial-ribbon">
+      <button class="geoespacial-ribbon-tab active" data-tab="algoritmos">🔧 Algoritmos</button>
+      <button class="geoespacial-ribbon-tab" data-tab="funcoes">📋 Funções</button>
+      <div class="geoespacial-ribbon-divider"></div>
+      <div class="geoespacial-ribbon-content">
+        <div class="geoespacial-ribbon-group">
+          <button class="geoespacial-ribbon-btn" id="btn-toolbox-algoritmos">
+            <span class="geoespacial-ribbon-btn-icon">🧰</span>
+            <span class="geoespacial-ribbon-btn-label">Toolbox</span>
+          </button>
+        </div>
+        <div class="geoespacial-ribbon-group">
+          <button class="geoespacial-ribbon-btn" id="btn-toolbox-funcoes">
+            <span class="geoespacial-ribbon-btn-icon">📋</span>
+            <span class="geoespacial-ribbon-btn-label">Funções</span>
+          </button>
+        </div>
+        <div class="geoespacial-ribbon-group">
+          <button class="geoespacial-ribbon-btn" id="btn-camadas">
+            <span class="geoespacial-ribbon-btn-icon">📊</span>
+            <span class="geoespacial-ribbon-btn-label">Camadas</span>
+          </button>
+        </div>
+        <div class="geoespacial-ribbon-group">
+          <button class="geoespacial-ribbon-btn" id="btn-executar">
+            <span class="geoespacial-ribbon-btn-icon">▶️</span>
+            <span class="geoespacial-ribbon-btn-label">Executar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="geoespacial-sidebar-left">
+      <div id="toolbox-container"></div>
+      <div class="geoespacial-layers-panel">
+        <h2 class="geoespacial-layers-title">Camadas</h2>
+        <div id="geoespacial-layers-list" class="geoespacial-operations-list">
+          <p class="hint">Nenhuma camada carregada.</p>
+        </div>
+      </div>
+    </aside>
+
+    <div class="geoespacial-map-container">
+      <div id="map-geoespacial" class="geoespacial-map"></div>
+    </div>
+
+    <aside class="geoespacial-sidebar-right">
+      <div class="geoespacial-operations-panel">
+        <h2 class="geoespacial-operations-title">Operação Selecionada</h2>
+        <div id="geoespacial-operations-list">
+          <p class="hint">Selecione um algoritmo na toolbox.</p>
+        </div>
+      </div>
+
+      <div id="geoespacial-variables-panel" class="geoespacial-variables-panel hidden">
+        <h3 class="geoespacial-variables-title">Parâmetros</h3>
+        <div id="geoespacial-variables-container"></div>
+      </div>
+
+      <div id="geoespacial-progress-panel" class="geoespacial-progress-panel hidden">
+        <h3 class="geoespacial-progress-title">Progresso</h3>
+        <div class="geoespacial-progress-bar">
+          <div id="geoespacial-progress-fill" class="geoespacial-progress-fill" style="width: 0%"></div>
+        </div>
+        <p id="geoespacial-progress-text" class="geoespacial-progress-text">0%</p>
+        <div id="geoespacial-logs" class="geoespacial-logs"></div>
+      </div>
+    </aside>
+
+    <div class="geoespacial-statusbar">
+      <span>Coordenadas: -23.5505, -46.6333</span>
+      <span>CRS: EPSG:4674</span>
+      <span>Zoom: 10</span>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="/assets/js/geoespacial-map.js"></script>
+  <script src="/assets/js/geoespacial-toolbox.js"></script>
+  <script src="/geoespacial/geoespacial-verificacao-fase2.js"></script>
+</body>
+</html>
