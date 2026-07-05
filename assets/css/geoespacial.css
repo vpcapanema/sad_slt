@@ -566,3 +566,70 @@
   font-size: 0.75rem;
   font-style: italic;
 }
+
+/* Modal Toolbox */
+.geoespacial-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.geoespacial-modal-content {
+  background: #252526;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  width: 400px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.geoespacial-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid #3e3e42;
+  background: #2d2d30;
+}
+
+.geoespacial-modal-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.geoespacial-modal-close {
+  background: none;
+  border: none;
+  color: #b0b0b0;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.geoespacial-modal-close:hover {
+  color: #ffffff;
+  background: #3e3e42;
+  border-radius: 2px;
+}
+
+.geoespacial-modal-body {
+  padding: 1rem;
+  overflow-y: auto;
+  flex: 1;
+}

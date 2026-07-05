@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fase 3 — Atributos de Projeto e Ajuste</title>
   <link rel="stylesheet" href="/assets/css/geoespacial.css">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" crossorigin="">
 </head>
 <body class="geoespacial-page">
   <div class="geoespacial-map-layout">
@@ -50,9 +51,8 @@
       </div>
     </div>
 
-    <!-- Sidebar Left: Toolbox e Atributos -->
+    <!-- Sidebar Left: Atributos (exclusivo) -->
     <aside class="geoespacial-sidebar-left">
-      <div id="toolbox-container"></div>
       <div class="geoespacial-layers-panel">
         <h2 class="geoespacial-layers-title">Atributos Ativos</h2>
         <div id="geoespacial-atributos-list">
@@ -66,6 +66,19 @@
         </div>
       </div>
     </aside>
+
+    <!-- Modal Toolbox -->
+    <div id="toolbox-modal" class="geoespacial-modal hidden">
+      <div class="geoespacial-modal-content">
+        <div class="geoespacial-modal-header">
+          <h2 class="geoespacial-modal-title">Toolbox</h2>
+          <button class="geoespacial-modal-close" id="btn-close-toolbox">×</button>
+        </div>
+        <div class="geoespacial-modal-body">
+          <div id="toolbox-container"></div>
+        </div>
+      </div>
+    </div>
 
     <!-- Map Container (substituído por tabela de projetos) -->
     <div class="geoespacial-map-container">
@@ -113,7 +126,7 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js" crossorigin=""></script>
   <script src="/assets/js/geoespacial-map.js"></script>
   <script src="/assets/js/geoespacial-toolbox.js"></script>
   <script src="/geoespacial/geoespacial-verificacao-fase3.js"></script>

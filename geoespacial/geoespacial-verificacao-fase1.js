@@ -9,17 +9,21 @@
       nome: "Carregar Camada",
       descricao: "Carregar camada vetorial de arquivo ou WFS",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "informar_tipo_entrada", label: "Tipo de Entrada", tipo: "select", opcoes: ["local", "WFS"] },
         { id: "informar_caminho_arquivo", label: "Caminho do Arquivo/URL", tipo: "text" },
         { id: "informar_crs_origem", label: "CRS de Origem", tipo: "text" },
         { id: "definir_filtro_espacial", label: "Filtro Espacial (Bbox)", tipo: "text" },
         { id: "definir_filtro_atributivo", label: "Filtro Atributivo", tipo: "text" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "camada_carregada" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-02": {
       nome: "Validar Camada",
       descricao: "Validar topologia e geometria da camada",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "validar_sobreposicoes", label: "Validar Sobreposições", tipo: "checkbox" },
         { id: "validar_lacunas", label: "Validar Lacunas", tipo: "checkbox" },
         { id: "validar_intersecoes_invalidas", label: "Validar Interseções Inválidas", tipo: "checkbox" },
@@ -30,12 +34,15 @@
         { id: "validar_campos_obrigatorios", label: "Validar Campos Obrigatórios", tipo: "checkbox" },
         { id: "definir_tolerancia_topologica", label: "Tolerância Topológica", tipo: "number" },
         { id: "definir_percentual_critico_erros", label: "Percentual Crítico de Erros", tipo: "number" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "camada_validada" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-02-CORR": {
       nome: "Reparar Geometrias",
       descricao: "Reparar geometrias inválidas e topologia",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "corrigir_geometrias_invalidas", label: "Corrigir Geometrias Inválidas", tipo: "checkbox" },
         { id: "corrigir_orientacao_aneis", label: "Corrigir Orientação de Anéis", tipo: "checkbox" },
         { id: "corrigir_fechamento_aneis", label: "Corrigir Fechamento de Anéis", tipo: "checkbox" },
@@ -45,12 +52,15 @@
         { id: "corrigir_vertices_colineares", label: "Corrigir Vértices Colineares", tipo: "checkbox" },
         { id: "definir_tolerancia_correcao", label: "Tolerância de Correção", tipo: "number" },
         { id: "manter_geometria_original_falha", label: "Manter Original se Falhar", tipo: "checkbox" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "camada_reparada" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-03": {
       nome: "Normalizar Camada",
       descricao: "Normalizar CRS, recortar e padronizar",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "definir_crs_destino", label: "CRS de Destino", tipo: "text", valor: "EPSG:4674" },
         { id: "recortar_area_estudo", label: "Recortar Área de Estudo", tipo: "checkbox" },
         { id: "definir_area_estudo", label: "Área de Estudo (Bbox)", tipo: "text" },
@@ -59,153 +69,201 @@
         { id: "explodir_multipartes", label: "Explodir Multipartes", tipo: "checkbox" },
         { id: "padronizar_nomes_campos", label: "Padronizar Nomes de Campos", tipo: "checkbox" },
         { id: "definir_regra_nomenclatura", label: "Regra de Nomenclatura", tipo: "text", valor: "<fonte_id>__<nome_campo>" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "camada_normalizada" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-04": {
       nome: "Criar Buffer",
       descricao: "Criar buffer espacial ao redor de geometrias",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "definir_distancia_buffer", label: "Distância do Buffer", tipo: "number" },
         { id: "definir_unidade_buffer", label: "Unidade", tipo: "select", opcoes: ["metros", "graus"] },
         { id: "selecionar_tipo_buffer", label: "Tipo de Buffer", tipo: "select", opcoes: ["cheio", "externo"] },
         { id: "dissolver_geometrias", label: "Dissolver Geometrias", tipo: "checkbox" },
         { id: "recortar_area_estudo", label: "Recortar Área de Estudo", tipo: "checkbox" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "buffer" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-05": {
       nome: "Sobrepor Camadas",
       descricao: "Sobrepor camadas com operação de overlay",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "selecionar_tipo_overlay", label: "Tipo de Overlay", tipo: "select", opcoes: ["identity", "intersection", "union", "difference"] },
         { id: "resolver_conflitos_campos", label: "Resolver Conflitos de Campos", tipo: "checkbox" },
         { id: "definir_regra_nomenclatura_conflito", label: "Regra de Nomenclatura", tipo: "text", valor: "<fonte_id>__<nome_campo>" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "overlay" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-06": {
       nome: "Dissolver",
       descricao: "Dissolver geometrias baseado em atributos",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "definir_campo_agrupamento", label: "Campo de Agrupamento", tipo: "text" },
         { id: "manter_atributos", label: "Função de Agregação", tipo: "select", opcoes: ["soma", "media", "mediana", "max", "min"] },
         { id: "manter_geometria_multi", label: "Manter Geometria Multi", tipo: "checkbox" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "dissolved" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-07": {
       nome: "Selecionar por Localização",
       descricao: "Selecionar feições por localização espacial",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "selecionar_tipo_selecao", label: "Tipo de Seleção", tipo: "select", opcoes: ["intersects", "contains", "within", "touches"] },
         { id: "inverter_selecao", label: "Inverter Seleção", tipo: "checkbox" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "selecao" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-08": {
       nome: "Converter para Raster",
       descricao: "Converter camada vetorial para raster",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "definir_resolucao_raster", label: "Resolução do Raster", tipo: "number" },
         { id: "definir_crs_destino", label: "CRS de Destino", tipo: "text" },
         { id: "selecionar_metodo_rasterizacao", label: "Método de Rasterização", tipo: "select", opcoes: ["ponto_central", "area_ponderada", "maioria"] },
         { id: "selecionar_atributo_rasterizacao", label: "Atributo para Rasterizar", tipo: "text" },
         { id: "definir_valor_preenchimento", label: "Valor de Preenchimento", tipo: "number" },
         { id: "processar_todas_celulas_tocadas", label: "Processar Todas as Células Tocadas", tipo: "checkbox" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "raster" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-10": {
       nome: "Calcular Distância",
       descricao: "Calcular distância euclidiana raster",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "definir_resolucao_distancia", label: "Resolução da Distância", tipo: "number" },
         { id: "definir_distancia_maxima", label: "Distância Máxima", tipo: "number" },
         { id: "definir_unidade_distancia", label: "Unidade de Distância", tipo: "select", opcoes: ["metros", "graus"] },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "distancia" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-11": {
       nome: "Calcular Distância Ponderada",
       descricao: "Calcular distância ponderada por atributo",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "selecionar_atributo_peso", label: "Atributo de Peso", tipo: "text" },
         { id: "definir_resolucao_distancia", label: "Resolução da Distância", tipo: "number" },
         { id: "normalizar_resultado", label: "Normalizar Resultado", tipo: "checkbox" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "distancia_ponderada" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-12": {
       nome: "Calcular Densidade",
       descricao: "Calcular densidade de kernel",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "selecionar_tipo_kernel", label: "Tipo de Kernel", tipo: "select", opcoes: ["gaussiano", "epanechnikov", "quadratic"] },
         { id: "definir_largura_kernel", label: "Largura do Kernel", tipo: "number" },
         { id: "definir_resolucao_kernel", label: "Resolução do Grid", tipo: "number" },
         { id: "normalizar_resultado", label: "Normalizar Resultado", tipo: "checkbox" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "densidade" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-13": {
       nome: "Calcular Custo Acumulado",
       descricao: "Calcular custo acumulado em rede",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "informar_raster_custo", label: "Raster de Custo", tipo: "text" },
         { id: "informar_pontos_origem", label: "Pontos de Origem", tipo: "text" },
         { id: "definir_custo_maximo", label: "Custo Máximo", tipo: "number" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "custo_acumulado" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-14": {
       nome: "Interpolar Valores",
       descricao: "Interpolar valores de pontos para grid",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "selecionar_metodo_interpolacao", label: "Método de Interpolação", tipo: "select", opcoes: ["idw", "kriging", "spline"] },
         { id: "definir_resolucao_interpolacao", label: "Resolução do Grid", tipo: "number" },
         { id: "definir_potencia_interpolacao", label: "Potência (IDW)", tipo: "number" },
         { id: "definir_raio_busca", label: "Raio de Busca", tipo: "number" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "interpolado" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-15": {
       nome: "Agregar por Território",
       descricao: "Agregar valores por unidade territorial",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "selecionar_campo_unidade", label: "Campo de Unidade", tipo: "text" },
         { id: "selecionar_funcao_agregacao", label: "Função de Agregação", tipo: "select", opcoes: ["soma", "media", "mediana", "max", "min"] },
         { id: "selecionar_atributo_agregacao", label: "Atributo a Agregar", tipo: "text" },
         { id: "definir_resolucao_saida", label: "Resolução de Saída", tipo: "number" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "agregado" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-26": {
       nome: "Somar Rasters",
       descricao: "Somar dois ou mais rasters",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "selecionar_rasters", label: "Rasters a Somar", tipo: "text" },
         { id: "definir_valor_nodata", label: "Valor NoData", tipo: "number" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "soma" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-27": {
       nome: "Subtrair Rasters",
       descricao: "Subtrair rasters",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "selecionar_raster_a", label: "Raster A", tipo: "text" },
         { id: "selecionar_raster_b", label: "Raster B", tipo: "text" },
         { id: "definir_valor_nodata", label: "Valor NoData", tipo: "number" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "subtracao" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-28": {
       nome: "Multiplicar Rasters",
       descricao: "Multiplicar raster por escalar",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "selecionar_raster", label: "Raster", tipo: "text" },
         { id: "definir_escalar", label: "Escalar", tipo: "number" },
         { id: "definir_valor_nodata", label: "Valor NoData", tipo: "number" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "multiplicacao" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-23": {
       nome: "Normalizar Raster",
       descricao: "Normalizar raster para escala 0-1",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "selecionar_metodo_normalizacao", label: "Método", tipo: "select", opcoes: ["linear", "minmax", "zscore"] },
         { id: "definir_valor_minimo", label: "Valor Mínimo", tipo: "number" },
         { id: "definir_valor_maximo", label: "Valor Máximo", tipo: "number" },
+        { id: "saida_nome", label: "Nome da Saída", tipo: "text", valor: "normalizado" },
+        { id: "saida_opcao", label: "Opção de Salvamento", tipo: "select", opcoes: ["memoria", "persistir_sistema"], especial: "saida" },
       ],
     },
     "OP-25": {
       nome: "Exportar Camada",
       descricao: "Exportar camada vetorial",
       variaveis: [
+        { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "definir_nome_arquivo", label: "Nome do Arquivo", tipo: "text" },
         { id: "selecionar_formato_saida", label: "Formato", tipo: "select", opcoes: ["GeoPackage", "GeoJSON", "Shapefile"] },
         { id: "definir_crs_saida", label: "CRS de Saída", tipo: "text" },
@@ -235,14 +293,12 @@
 
     document.getElementById("btn-toolbox-algoritmos")?.addEventListener("click", () => {
       if (typeof GeoToolbox !== "undefined") {
-        GeoToolbox.show("algoritmos");
-        GeoToolbox.hide("funcoes");
+        GeoToolbox.openModal("algoritmos");
       }
     });
     document.getElementById("btn-toolbox-funcoes")?.addEventListener("click", () => {
       if (typeof GeoToolbox !== "undefined") {
-        GeoToolbox.show("funcoes");
-        GeoToolbox.hide("algoritmos");
+        GeoToolbox.openModal("funcoes");
       }
     });
     document.getElementById("btn-executar")?.addEventListener("click", executeOperation);
@@ -349,6 +405,16 @@
   function renderVariableInput(variable) {
     const valorPadrao = variable.valor ? ` value="${variable.valor}"` : "";
 
+    // Parâmetro especial: lista de camadas
+    if (variable.especial === "camadas") {
+      const camadas = getCamadasDisponiveis();
+      return `
+        <select id="var-${variable.id}" class="geoespacial-variable-select" multiple>
+          ${camadas.map((c) => `<option value="${c.id}">${c.nome}</option>`).join("")}
+        </select>
+      `;
+    }
+
     switch (variable.tipo) {
       case "select":
         return `
@@ -363,6 +429,17 @@
       default:
         return `<input type="text" id="var-${variable.id}" class="geoespacial-variable-input"${valorPadrao}>`;
     }
+  }
+
+  function getCamadasDisponiveis() {
+    const container = document.getElementById("geoespacial-layers-list");
+    const camadas = [];
+    container.querySelectorAll(".geoespacial-layer-item").forEach((item) => {
+      const id = item.dataset.id;
+      const nome = item.querySelector(".geoespacial-layer-name").textContent;
+      camadas.push({ id, nome });
+    });
+    return camadas;
   }
 
   async function executeOperation() {
@@ -381,7 +458,7 @@
 
     try {
       // Coletar valores das variáveis
-      const params: Record<string, any> = {};
+      const params = {};
       if (opConfig.variaveis) {
         opConfig.variaveis.forEach((v) => {
           const input = document.getElementById(`var-${v.id}`);
@@ -398,7 +475,7 @@
       }
 
       // Mapear operações para endpoints
-      const endpointMap: Record<string, string> = {
+      const endpointMap = {
         "OP-01": "/operacoes/carregar-camada",
         "OP-02": "/operacoes/validar-camada",
         "OP-02-CORR": "/operacoes/reparar-geometrias",

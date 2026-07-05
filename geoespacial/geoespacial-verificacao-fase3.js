@@ -103,14 +103,12 @@
 
     document.getElementById("btn-toolbox-algoritmos")?.addEventListener("click", () => {
       if (typeof GeoToolbox !== "undefined") {
-        GeoToolbox.show("algoritmos");
-        GeoToolbox.hide("funcoes");
+        GeoToolbox.openModal("algoritmos");
       }
     });
     document.getElementById("btn-toolbox-funcoes")?.addEventListener("click", () => {
       if (typeof GeoToolbox !== "undefined") {
-        GeoToolbox.show("funcoes");
-        GeoToolbox.hide("algoritmos");
+        GeoToolbox.openModal("funcoes");
       }
     });
     document.getElementById("btn-executar")?.addEventListener("click", executeOperation);
@@ -266,7 +264,7 @@
 
     try {
       // Coletar valores das variáveis
-      const params: Record<string, any> = {};
+      const params = {};
       if (opConfig.variaveis) {
         opConfig.variaveis.forEach((v) => {
           const input = document.getElementById(`var-${v.id}`);
@@ -316,7 +314,7 @@
     }
   }
 
-  async function cadastrarAtributo(params: Record<string, any>) {
+  async function cadastrarAtributo(params) {
     const response = await fetch(`${API_BASE}/atributos-fase3`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -327,7 +325,7 @@
     return resultado;
   }
 
-  async function criarRodada(params: Record<string, any>) {
+  async function criarRodada(params) {
     const response = await fetch(`${API_BASE}/rodadas-fase3`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -338,7 +336,7 @@
     return resultado;
   }
 
-  async function homologarRodada(params: Record<string, any>) {
+  async function homologarRodada(params) {
     const { rodada_id, responsavel } = params;
     const response = await fetch(`${API_BASE}/rodadas-fase3/${rodada_id}/homologar`, {
       method: "POST",
@@ -350,7 +348,7 @@
     return resultado;
   }
 
-  function addLog(message: string, type = "info") {
+  function addLog(message, type = "info") {
     const logsContainer = document.getElementById("geoespacial-logs");
     const logEntry = document.createElement("div");
     logEntry.className = `geoespacial-log-entry ${type}`;
@@ -359,7 +357,7 @@
     logsContainer.scrollTop = logsContainer.scrollHeight;
   }
 
-  function sleep(ms: number) {
+  function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 

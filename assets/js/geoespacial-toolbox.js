@@ -87,6 +87,11 @@
 
       this.renderToolbox(container, "algoritmos", this.algoritmos, onAlgoritmoSelect);
       this.renderToolbox(container, "funcoes", this.funcoes, onFuncaoSelect);
+
+      // Configurar botão de fechar modal
+      document.getElementById("btn-close-toolbox")?.addEventListener("click", () => {
+        this.closeModal();
+      });
     },
 
     renderToolbox: function (container, type, dados, onSelect) {
@@ -94,12 +99,21 @@
       toolboxPanel.className = "geoespacial-toolbox-panel";
       toolboxPanel.id = `toolbox-${type}`;
 
-      const header = document.createElement("div");
-      header.className = "geoespacial-toolbox-header";
-      header.innerHTML = `
-        <span class="geoespacial-toolbox-title">${type === "algoritmos" ? "Toolbox de Algoritmos" : "Toolbox de Funções"}</span>
-        <button class="geoespacial-toolbox-close" onclick="GeoToolbox.toggle('${type}')">✕</button>
+      // Abas para alternar entre algoritmos e funções
+      const tabs = document.createElement("div");
+      tabs.className = "geoespacial-toolbox-tabs";
+      tabs.innerHTML = `
+        <button class="geoespacial-toolbox-tab ${type === "algoritmos" ? "active" : ""}" data-type="algoritmos">Algoritmos</button>
+        <button class="geoespacial-toolbox-tab ${type === "funcoes" ? "active" : ""}" data-type="funcoes">Funções</button>
       `;
+
+      tabs.querySelectorAll(".geoespacial-toolbox-tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabs.querySelectorAll(".geoespacial-toolbox-tab").forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          this.switchTab(tab.dataset.type);
+        });
+      });
 
       const content = document.createElement("div");
       content.className = "geoespacial-toolbox-content";
@@ -130,6 +144,7 @@
             // Remove active class from all items
             itens.querySelectorAll(".geoespacial-toolbox-item").forEach((i) => i.classList.remove("active"));
             itemBtn.classList.add("active");
+            this.closeModal();
           });
           itens.appendChild(itemBtn);
         });
@@ -138,29 +153,36 @@
         content.appendChild(grupo);
       }
 
-      toolboxPanel.appendChild(header);
+      toolboxPanel.appendChild(tabs);
       toolboxPanel.appendChild(content);
       container.appendChild(toolboxPanel);
     },
 
-    toggle: function (type) {
-      const content = document.getElementById(`toolbox-${type}-content`);
-      if (content) {
-        content.classList.toggle("hidden");
+    switchTab: function (type) {
+      const algoritmosPanel = document.getElementById("toolbox-algoritmos");
+      const funcoesPanel = document.getElementById("toolbox-funcoes");
+      
+      if (type === "algoritmos") {
+        algoritmosPanel?.classList.remove("hidden");
+        funcoesPanel?.classList.add("hidden");
+      } else {
+        algoritmosPanel?.classList.add("hidden");
+        funcoesPanel?.classList.remove("hidden");
       }
     },
 
-    show: function (type) {
-      const panel = document.getElementById(`toolbox-${type}`);
-      if (panel) {
-        panel.classList.remove("hidden");
+    openModal: function (type = "algoritmos") {
+      const modal = document.getElementById("toolbox-modal");
+      if (modal) {
+        modal.classList.remove("hidden");
+        this.switchTab(type);
       }
     },
 
-    hide: function (type) {
-      const panel = document.getElementById(`toolbox-${type}`);
-      if (panel) {
-        panel.classList.add("hidden");
+    closeModal: function () {
+      const modal = document.getElementById("toolbox-modal");
+      if (modal) {
+        modal.classList.add("hidden");
       }
     },
   };

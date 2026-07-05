@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fase 1 — Restrição e Risco — Módulo Geoespacial</title>
   <link rel="stylesheet" href="/assets/css/geoespacial.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" crossorigin="">
 </head>
 <body class="geoespacial-page">
   <div class="geoespacial-map-layout">
@@ -50,7 +50,6 @@
     </div>
 
     <aside class="geoespacial-sidebar-left">
-      <div id="toolbox-container"></div>
       <div class="geoespacial-layers-panel">
         <h2 class="geoespacial-layers-title">Camadas</h2>
         <div id="geoespacial-layers-list" class="geoespacial-operations-list">
@@ -58,6 +57,19 @@
         </div>
       </div>
     </aside>
+
+    <!-- Modal Toolbox -->
+    <div id="toolbox-modal" class="geoespacial-modal hidden">
+      <div class="geoespacial-modal-content">
+        <div class="geoespacial-modal-header">
+          <h2 class="geoespacial-modal-title">Toolbox</h2>
+          <button class="geoespacial-modal-close" id="btn-close-toolbox">×</button>
+        </div>
+        <div class="geoespacial-modal-body">
+          <div id="toolbox-container"></div>
+        </div>
+      </div>
+    </div>
 
     <div class="geoespacial-map-container">
       <div id="map-geoespacial" class="geoespacial-map"></div>
@@ -93,7 +105,7 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js" crossorigin=""></script>
   <script src="/assets/js/geoespacial-map.js"></script>
   <script src="/assets/js/geoespacial-toolbox.js"></script>
   <script src="/geoespacial/geoespacial-verificacao-fase1.js"></script>

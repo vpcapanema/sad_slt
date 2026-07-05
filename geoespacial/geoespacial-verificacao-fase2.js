@@ -94,14 +94,12 @@
 
     document.getElementById("btn-toolbox-algoritmos")?.addEventListener("click", () => {
       if (typeof GeoToolbox !== "undefined") {
-        GeoToolbox.show("algoritmos");
-        GeoToolbox.hide("funcoes");
+        GeoToolbox.openModal("algoritmos");
       }
     });
     document.getElementById("btn-toolbox-funcoes")?.addEventListener("click", () => {
       if (typeof GeoToolbox !== "undefined") {
-        GeoToolbox.show("funcoes");
-        GeoToolbox.hide("algoritmos");
+        GeoToolbox.openModal("funcoes");
       }
     });
     document.getElementById("btn-executar")?.addEventListener("click", executeOperation);
@@ -227,7 +225,7 @@
 
     try {
       // Coletar valores das variáveis
-      const params: Record<string, any> = {};
+      const params = {};
       if (opConfig.variaveis) {
         opConfig.variaveis.forEach((v) => {
           const input = document.getElementById(`var-${v.id}`);
@@ -244,7 +242,7 @@
       }
 
       // Mapear operações para endpoints
-      const endpointMap: Record<string, string> = {
+      const endpointMap = {
         cadastrar_criterio: "/criterios-fase2",
         normalizar_raster: "/operacoes/normalizar-raster",
         combinar_rasters: "/operacoes/combinar-rasters",
