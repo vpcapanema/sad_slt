@@ -1,6 +1,8 @@
 """Rotas HTTP — Módulo Geoespacial."""
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException
 
 from api.repositories.geoespacial_repository import geoespacial_repository
@@ -22,8 +24,101 @@ from api.schemas.geoespacial import (
     RodadaFase3Schema,
 )
 from api.services.geoespacial_service import geoespacial_service
+from api.services.geoprocessamento_engine import CATALOG, geoprocessamento_engine
 
 router = APIRouter(prefix="/geoespacial", tags=["geoespacial"])
+
+
+@router.get("/algoritmos")
+async def listar_algoritmos() -> list[dict]:
+    return [{"id": key, "nome": value, "endpoint": f"/api/geoespacial/algoritmos/{key}/executar"} for key, value in CATALOG.items()]
+
+
+@router.post("/algoritmos/{algoritmo_id}/executar")
+async def executar_algoritmo(algoritmo_id: str, parametros: dict) -> dict:
+    try:
+        resultado = await geoprocessamento_engine.execute(algoritmo_id.upper(), parametros)
+        nome_saida = parametros.get("saida")
+        if nome_saida:
+            if resultado.get("camada_id"):
+                exportado = await geoespacial_service.salvar_camada(
+                    resultado["camada_id"],
+                    parametros.get("destino") or "data/geoespacial",
+                    Path(nome_saida).name,
+                    parametros.get("crs", "auto"),
+                    parametros.get("formato", "auto"),
+                )
+            elif resultado.get("raster_id"):
+                exportado = await geoespacial_service.salvar_camada(
+                    resultado["raster_id"],
+                    parametros.get("destino") or "data/geoespacial",
+                    Path(nome_saida).name,
+                    parametros.get("crs", "auto"),
+                    parametros.get("formato", "auto"),
+                )
+            else:
+                exportado = None
+            resultado["saida"] = exportado
+        return resultado
+    except (ValueError, KeyError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/operacoes/salvar-camada")
+async def salvar_camada(parametros: dict) -> dict:
+    """Salva uma camada usando somente entrada, destino e saída."""
+    try:
+        return await geoespacial_service.salvar_camada(
+            parametros["entrada"], parametros["destino"], parametros["saida"],
+            parametros.get("crs", "auto"), parametros.get("formato", "auto"),
+        )
+    except (ValueError, KeyError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/funcoes")
+async def salvar_funcao(funcao: dict) -> dict:
+    funcao_id = funcao.get("id") or f"funcao_{len(geoprocessamento_engine.functions)+1}"
+    funcao["id"] = funcao_id; geoprocessamento_engine.functions[funcao_id] = funcao; return funcao
+
+
+@router.put("/funcoes/{funcao_id}")
+async def editar_funcao(funcao_id: str, funcao: dict) -> dict:
+    funcao["id"] = funcao_id; geoprocessamento_engine.functions[funcao_id] = funcao; return funcao
+
+
+@router.post("/funcoes/{funcao_id}/executar")
+async def executar_funcao(funcao_id: str, entradas: dict) -> dict:
+    funcao = geoprocessamento_engine.functions.get(funcao_id)
+    if not funcao: raise HTTPException(status_code=404, detail="Função não encontrada")
+    return await geoprocessamento_engine.run_steps(funcao.get("passos", []), entradas)
+
+
+@router.post("/fluxos")
+async def salvar_fluxo(fluxo: dict) -> dict:
+    fluxo_id = fluxo.get("id") or f"fluxo_{len(geoprocessamento_engine.flows)+1}"
+    fluxo["id"] = fluxo_id; geoprocessamento_engine.flows[fluxo_id] = fluxo; return fluxo
+
+
+@router.put("/fluxos/{fluxo_id}")
+async def editar_fluxo(fluxo_id: str, fluxo: dict) -> dict:
+    fluxo["id"] = fluxo_id; geoprocessamento_engine.flows[fluxo_id] = fluxo; return fluxo
+
+
+@router.post("/fluxos/{fluxo_id}/executar")
+async def executar_fluxo(fluxo_id: str, entradas: dict) -> dict:
+    fluxo = geoprocessamento_engine.flows.get(fluxo_id)
+    if not fluxo: raise HTTPException(status_code=404, detail="Fluxo não encontrado")
+    context=dict(entradas); results=[]
+    for item in fluxo.get("itens", []):
+        if item.get("funcao_id"):
+            fn=geoprocessamento_engine.functions.get(item["funcao_id"])
+            if not fn: raise HTTPException(status_code=422, detail=f"Função {item['funcao_id']} não encontrada")
+            result=await geoprocessamento_engine.run_steps(fn.get("passos",[]),context)
+        else:
+            result=await geoprocessamento_engine.run_steps([item],context)
+        results.append(result); context.update(result.get("contexto",{}))
+    return {"status":"concluido","resultados":results,"contexto":context}
 
 
 # ==================== CAMADAS ====================

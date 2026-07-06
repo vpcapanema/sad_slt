@@ -8,6 +8,7 @@ from typing import Any
 import geopandas as gpd
 import numpy as np
 import rasterio
+from rasterio.warp import Resampling, calculate_default_transform, reproject
 from shapely.geometry import mapping, shape
 
 
@@ -30,9 +31,8 @@ class GeoespacialService:
         try:
             if tipo_entrada == "local":
                 gdf = gpd.read_file(caminho_arquivo)
-            elif tipo_entrada == "WFS":
-                # TODO: Implementar WFS
-                raise NotImplementedError("WFS não implementado ainda")
+            elif tipo_entrada.upper() == "WFS":
+                gdf = gpd.read_file(caminho_arquivo)
             else:
                 raise ValueError(f"Tipo de entrada inválido: {tipo_entrada}")
 
@@ -302,18 +302,29 @@ class GeoespacialService:
 
         raster = self._rasters[raster_id].copy()
 
-        # Remover NoData
-        raster = raster[~np.isnan(raster)]
+        valid = np.isfinite(raster)
+        values = raster[valid]
+        if values.size == 0:
+            raise ValueError("Raster não possui células válidas")
 
         if metodo_normalizacao == "linear":
-            min_val = valor_minimo if valor_minimo is not None else raster.min()
-            max_val = valor_maximo if valor_maximo is not None else raster.max()
+            min_val = valor_minimo if valor_minimo is not None else values.min()
+            max_val = valor_maximo if valor_maximo is not None else values.max()
             if max_val > min_val:
                 raster_norm = (raster - min_val) / (max_val - min_val)
             else:
                 raster_norm = np.zeros_like(raster)
+        elif metodo_normalizacao == "winsorizacao":
+            min_val, max_val = np.nanpercentile(values, [2, 98])
+            clipped = np.clip(raster, min_val, max_val)
+            raster_norm = (clipped - min_val) / (max_val - min_val) if max_val > min_val else np.zeros_like(raster)
+        elif metodo_normalizacao == "quebras_naturais":
+            min_val, max_val = values.min(), values.max()
+            cuts = np.unique(np.nanquantile(values, np.linspace(0, 1, 6)))
+            raster_norm = np.digitize(raster, cuts[1:-1]).astype(float) / max(1, len(cuts) - 2)
+            raster_norm[~valid] = np.nan
         else:
-            raise NotImplementedError(f"Método {metodo_normalizacao} não implementado")
+            raise ValueError(f"Método de normalização inválido: {metodo_normalizacao}")
 
         novo_raster_id = f"raster_{len(self._rasters) + 1}"
         self._rasters[novo_raster_id] = raster_norm
@@ -354,6 +365,8 @@ class GeoespacialService:
                 resultado += r * p
         elif operador == "soma":
             resultado = np.sum(rasters, axis=0)
+        elif operador == "multiplicacao":
+            resultado = np.prod(rasters, axis=0)
         else:
             raise NotImplementedError(f"Operador {operador} não implementado")
 
@@ -560,7 +573,14 @@ class GeoespacialService:
         if opcao_salvamento == "persistir_sistema":
             caminho_completo = f"data/geoespacial/{nome_arquivo}"
             Path(caminho_completo).parent.mkdir(parents=True, exist_ok=True)
-            # TODO: Implementar exportação com rasterio
+            profile = getattr(self, "_raster_profiles", {}).get(raster_id)
+            if not profile:
+                raise ValueError("Raster sem metadados espaciais para exportação")
+            with rasterio.open(caminho_completo, "w", driver="GTiff", count=1,
+                               height=raster.shape[0], width=raster.shape[1], dtype="float32",
+                               crs=profile["crs"], transform=profile["transform"],
+                               nodata=np.nan, compress="deflate" if comprimir_arquivo else None) as dst:
+                dst.write(raster.astype("float32"), 1)
             return {"caminho": caminho_completo, "formato": formato_saida}
         else:
             # Retornar array como JSON
@@ -569,6 +589,66 @@ class GeoespacialService:
                 "shape": raster.shape,
                 "formato": "array",
             }
+
+    async def salvar_camada(
+        self,
+        entrada: str,
+        destino: str,
+        saida: str,
+        crs: str = "auto",
+        formato: str = "auto",
+    ) -> dict[str, Any]:
+        """Persiste camada ou raster, inferindo o formato pela extensão da saída."""
+        pasta = Path(destino).expanduser().resolve()
+        pasta.mkdir(parents=True, exist_ok=True)
+        caminho = pasta / Path(saida).name
+        extensao = caminho.suffix.lower()
+
+        if entrada in self._camadas:
+            drivers = {"gpkg": "GPKG", "geojson": "GeoJSON", "json": "GeoJSON", "shapefile": "ESRI Shapefile", "shp": "ESRI Shapefile"}
+            formato_final = extensao.lstrip(".") if formato == "auto" else formato.lower()
+            driver = drivers.get(formato_final)
+            if not driver:
+                raise ValueError("Formato vetorial deve ser gpkg, geojson, json, shapefile ou shp")
+            camada = self._camadas[entrada]
+            crs_final = str(camada.crs) if crs == "auto" else crs
+            if crs != "auto":
+                camada = camada.to_crs(crs)
+            camada.to_file(caminho, driver=driver)
+            tipo = "vetor"
+        elif entrada in self._rasters:
+            formato_final = extensao.lstrip(".") if formato == "auto" else formato.lower()
+            if formato_final not in {"tif", "tiff", "geotiff"}:
+                raise ValueError("Formato raster deve ser tif, tiff ou geotiff")
+            profile = getattr(self, "_raster_profiles", {}).get(entrada)
+            if not profile:
+                raise ValueError("Raster sem metadados espaciais para salvamento")
+            raster = self._rasters[entrada]
+            transform = profile["transform"]
+            crs_origem = profile["crs"]
+            crs_final = str(crs_origem) if crs == "auto" else crs
+            if crs != "auto" and str(crs_origem) != crs:
+                bounds = rasterio.transform.array_bounds(raster.shape[0], raster.shape[1], transform)
+                novo_transform, largura, altura = calculate_default_transform(
+                    crs_origem, crs, raster.shape[1], raster.shape[0], *bounds
+                )
+                reprojetado = np.empty((altura, largura), dtype="float32")
+                reproject(raster, reprojetado, src_transform=transform, src_crs=crs_origem,
+                          dst_transform=novo_transform, dst_crs=crs,
+                          resampling=Resampling.nearest, dst_nodata=np.nan)
+                raster, transform = reprojetado, novo_transform
+            with rasterio.open(caminho, "w", driver="GTiff", count=1,
+                               height=raster.shape[0], width=raster.shape[1], dtype="float32",
+                               crs=crs_final, transform=transform,
+                               nodata=np.nan, compress="deflate") as dst:
+                dst.write(raster.astype("float32"), 1)
+            tipo = "raster"
+        else:
+            raise ValueError(f"Camada de entrada {entrada} não encontrada")
+
+        return {"operacao": "salvar_camada", "entrada": entrada, "destino": str(pasta),
+                "saida": caminho.name, "caminho": str(caminho), "tipo": tipo,
+                "crs": crs_final, "formato": formato_final}
 
 
 geoespacial_service = GeoespacialService()

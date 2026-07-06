@@ -454,9 +454,26 @@ npm install maplibre-gl
 
 ---
 
+#### **OP-27: Salvar Camada**
+**Mapeamento Python**: serviço geoespacial de persistência
+
+| Variável Amigável | Mapeamento Python | Descrição |
+|-------------------|-------------------|-----------|
+| `selecionar_camada_entrada` | entrada | Camada vetorial ou raster produzida por outro algoritmo |
+| `definir_destino` | destino | Path do diretório onde o arquivo será salvo |
+| `informar_saida` | saida | Nome do arquivo de saída, incluindo a extensão |
+| `definir_crs` | crs | CRS da saída; `auto` preserva o CRS da camada de entrada |
+| `selecionar_formato` | formato | Formato da saída; `auto` infere pela camada e extensão informada |
+
+O endpoint individual é `POST /api/geoespacial/operacoes/salvar-camada`. Algoritmos,
+funções e fluxos devem delegar a persistência a este operador, mantendo o cálculo e o
+salvamento como responsabilidades separadas.
+
+---
+
 ## Resumo
 
-- **Total de operações**: 23 operações essenciais
+- **Total de operações**: 25 operações catalogadas, incluindo reparação e persistência
 - **Total de parâmetros**: ~120 parâmetros organizados
 - **Stack Python**: GDAL, GeoPandas, NumPy, SciPy, Scikit-learn, NetworkX, Xarray-spatial, Rioxarray, Rasterio, Fiona, Shapely
 - **Frontend**: MapLibre GL

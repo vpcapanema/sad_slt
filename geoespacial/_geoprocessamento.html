@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Geoprocessamento | SLT</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="/assets/css/geoprocessamento.css">
+</head>
+<body>
+  <main class="gp-app">
+    <header class="gp-titlebar">
+      <a href="/geoespacial/" class="gp-brand" title="Voltar ao módulo geoespacial">
+        <img src="/assets/img/slt-icon.svg" alt="">
+        <strong>SLT</strong>
+      </a>
+      <span class="gp-document">Geoprocessamento</span>
+      <span id="gp-save-state" class="gp-save-state">Ambiente local</span>
+    </header>
+
+    <section class="gp-ribbon" aria-label="Faixa de ferramentas">
+      <nav class="gp-ribbon-tabs" aria-label="Guias">
+        <button class="active" data-ribbon="mapa">Mapa</button>
+        <button data-ribbon="analise">Análise</button>
+        <button data-ribbon="modelo">Modelo</button>
+        <button data-ribbon="dados">Dados</button>
+        <div class="gp-view-menu">
+          <button id="gp-view-menu-button" type="button" aria-haspopup="true" aria-expanded="false">Exibir <i data-lucide="chevron-down"></i></button>
+          <div id="gp-view-menu" class="gp-view-menu-popup" hidden>
+            <div class="gp-view-menu-label">Sidebar esquerda</div>
+            <label><input type="checkbox" data-panel-toggle="left:contents" checked> Conteúdo</label>
+            <label><input type="checkbox" data-panel-toggle="left:catalog" checked> Catálogo</label>
+            <div class="gp-view-menu-label">Sidebar direita</div>
+            <label><input type="checkbox" data-panel-toggle="right:tools" checked> Toolbox / Propriedades</label>
+            <label><input type="checkbox" data-panel-toggle="right:functions" checked> Funções</label>
+            <label><input type="checkbox" data-panel-toggle="right:flows" checked> Fluxos</label>
+            <label><input type="checkbox" data-panel-toggle="right:history" checked> Histórico</label>
+          </div>
+        </div>
+      </nav>
+      <div class="gp-ribbon-tools" id="gp-ribbon-tools"></div>
+    </section>
+
+    <div class="gp-left-rail">
+    <div class="gp-dock-tabs gp-left-dock-tabs">
+      <div class="gp-dock-tablist" role="tablist" aria-label="Painéis da sidebar esquerda">
+      <button id="gp-tab-contents" class="active" role="tab" aria-selected="true" aria-controls="gp-panel-contents" data-left-pane="contents"><span>Conteúdo</span><i data-left-close="contents" data-lucide="x"></i></button>
+      <button id="gp-tab-catalog" role="tab" aria-selected="false" aria-controls="gp-panel-catalog" data-left-pane="catalog"><span>Catálogo</span><i data-left-close="catalog" data-lucide="x"></i></button>
+      </div>
+      <button class="gp-dock-open" data-open-left title="Reabrir painel"><i data-lucide="plus"></i></button>
+      <button class="gp-dock-collapse" data-collapse="left" title="Recolher sidebar"><i data-lucide="panel-left-close"></i></button>
+    </div>
+    <aside id="gp-panel-catalog" class="gp-pane gp-project-catalog" role="tabpanel" aria-labelledby="gp-tab-catalog" data-left-panel="catalog" hidden>
+      <div class="gp-pane-title"><strong>Catálogo</strong><button class="icon-btn" data-collapse="left" title="Recolher painéis"><i data-lucide="panel-left-close"></i></button></div>
+      <div class="gp-search"><i data-lucide="search"></i><input id="gp-catalog-search" placeholder="Pesquisar no projeto"></div>
+      <div class="gp-pane-tabs" role="toolbar" aria-label="Origem dos recursos do catálogo">
+        <button class="active" title="Projeto"><i data-lucide="folder-kanban"></i></button>
+        <button title="Portal"><i data-lucide="cloud"></i></button>
+        <button title="Favoritos"><i data-lucide="star"></i></button>
+      </div>
+      <div id="gp-catalog-tree" class="gp-tree gp-catalog-tree">
+        <div class="tree-row"><i data-lucide="chevron-down"></i><i data-lucide="folder-kanban"></i><strong>Projeto</strong></div>
+        <div class="tree-row tree-indent"><i data-lucide="map"></i><span>Mapas</span></div>
+        <div class="tree-row tree-indent"><i data-lucide="tool-case"></i><span>Toolboxes</span></div>
+        <div class="tree-row tree-indent"><i data-lucide="database"></i><span>Bancos de dados</span></div>
+        <div class="tree-row tree-indent"><i data-lucide="folder"></i><span>Pastas</span></div>
+        <div class="tree-row tree-indent"><i data-lucide="plug"></i><span>Conexões</span></div>
+      </div>
+    </aside>
+
+    <aside id="gp-panel-contents" class="gp-pane gp-contents active" role="tabpanel" aria-labelledby="gp-tab-contents" data-left-panel="contents">
+      <div class="gp-pane-title"><strong>Conteúdo</strong></div>
+      <div class="gp-search"><i data-lucide="search"></i><input id="gp-layer-search" placeholder="Pesquisar camadas"></div>
+      <div class="gp-pane-tabs" role="toolbar" aria-label="Organização das camadas">
+        <button class="active" data-left-tab="drawing" title="Ordem de desenho"><i data-lucide="layers-3"></i></button>
+        <button data-left-tab="source" title="Por fonte"><i data-lucide="database"></i></button>
+      </div>
+      <div class="gp-section-title">Ordem de desenho</div>
+      <div id="gp-layer-list" class="gp-tree"></div>
+    </aside>
+    </div>
+
+    <button class="gp-restore gp-restore-left" data-restore="left" title="Expandir Conteúdo"><i data-lucide="panel-left-open"></i><span>Conteúdo</span></button>
+
+    <section class="gp-map-view">
+      <div class="gp-view-tabs"><button class="active"><i data-lucide="map"></i> Mapa</button></div>
+      <div id="gp-map"></div>
+      <div class="gp-map-tools">
+        <button class="icon-btn" id="gp-home" title="Extensão inicial"><i data-lucide="house"></i></button>
+        <button class="icon-btn" id="gp-fit" title="Ajustar às camadas"><i data-lucide="maximize"></i></button>
+      </div>
+      <div id="gp-drop-zone" class="gp-drop-zone"><i data-lucide="file-up"></i><strong>Solte arquivos geoespaciais aqui</strong><span>GeoJSON, JSON, KML, GeoTIFF ou pacote ZIP</span></div>
+    </section>
+
+    <aside class="gp-pane gp-catalog" aria-label="Painel de propriedades">
+      <div class="gp-pane-title"><strong id="gp-right-title">Propriedades</strong><button class="icon-btn" data-collapse="right" title="Recolher painel"><i data-lucide="panel-right-close"></i></button></div>
+      <div class="gp-right-tabs">
+        <button class="active" data-right-tab="tools"><span>Propriedades</span><i data-tab-close="tools" data-lucide="x"></i></button>
+        <button data-right-tab="functions"><span>Funções</span><i data-tab-close="functions" data-lucide="x"></i></button>
+        <button data-right-tab="flows"><span>Fluxos</span><i data-tab-close="flows" data-lucide="x"></i></button>
+        <button data-right-tab="history"><span>Histórico</span><i data-tab-close="history" data-lucide="x"></i></button>
+      </div>
+      <section id="gp-tools-view" class="gp-right-view active">
+        <div class="gp-search"><i data-lucide="search"></i><input id="gp-tool-search" placeholder="Localizar ferramenta"></div>
+        <div id="gp-toolbox" class="gp-toolbox"></div>
+      </section>
+      <section id="gp-editor-view" class="gp-right-view"></section>
+    </aside>
+
+    <button class="gp-restore gp-restore-right" data-restore="right" title="Expandir Propriedades"><i data-lucide="panel-right-open"></i><span>Propriedades</span></button>
+
+    <footer class="gp-statusbar">
+      <span id="gp-scale">1:4.000.000</span>
+      <span id="gp-coordinates">–</span>
+      <span>EPSG:4674</span>
+      <span id="gp-selection">0 selecionadas</span>
+      <button class="icon-btn" id="gp-log-toggle" title="Exibir mensagens"><i data-lucide="terminal"></i></button>
+    </footer>
+    <section id="gp-log" class="gp-log" aria-live="polite"></section>
+  </main>
+
+  <input id="gp-file-input" type="file" accept=".geojson,.json,.kml,.tif,.tiff,.zip,.gpkg,.shp" multiple hidden>
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="/geoespacial/geoprocessamento.js"></script>
+  <script src="/geoespacial/geoprocessamento-docks.js"></script>
+  <script src="/geoespacial/geoprocessamento-actions.js"></script>
+  <script src="/geoespacial/geoprocessamento-toolbox.js"></script>
+  <script src="/geoespacial/geoprocessamento-ribbon.js"></script>
+</body>
+</html>
