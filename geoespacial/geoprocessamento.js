@@ -366,7 +366,7 @@
       state.attributeTableCache??={};state.attributeTableCache[layerId]=body;state.activeAttributeLayerId=layerId;renderAttributeTable(layerId);
     }catch(error){$("#gp-editor-view").innerHTML=`<div class="empty">${escapeHtml(error.message)}</div>`}
   }
-  function syncAttributeSelection(){const layerId=state.activeAttributeLayerId;if(layerId&&state.attributeTableCache?.[layerId]&&$('[data-right-tab="attributes"]'))renderAttributeTable(layerId)}
+  function syncAttributeSelection(){const layerId=state.activeAttributeLayerId;if(layerId&&state.attributeTableCache?.[layerId]&&$('[data-right-tab="attributes"].active'))renderAttributeTable(layerId)}
   async function removeCatalogLayer(layerId){
     if(!layerId)return;
     const response=await fetch(`${API}/camadas/${layerId}`,{method:"DELETE"});

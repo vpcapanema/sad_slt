@@ -60,6 +60,7 @@
   }
   function clearSelection() { removeSelectionLayers(); state().selectedGeoJSON = { type: "FeatureCollection", features: [] }; $("#gp-selection").textContent = "0 selecionadas"; window.gpApp.syncAttributeSelection?.(); }
   function fitSelection() { const data = state().selectedGeoJSON; if (!data?.features?.length) return notify("Não há feições selecionadas."); fitGeoJSON(data); }
+  function setActiveMapTool(action) { $$('[data-action="explore"],[data-action="select"]').forEach(button => button.classList.toggle("active-tool", button.dataset.action === action)); }
 
   function stopMapHandlers() {
     const map = state().map;
@@ -74,6 +75,7 @@
   }
   function explore() {
     const map = state().map; stopMapHandlers(); map.dragPan.enable(); map.getCanvas().style.cursor = EXPLORE_CURSOR;
+    setActiveMapTool("explore");
     state().exploreHandler = event => {
       const box = [[event.point.x - 4, event.point.y - 4], [event.point.x + 4, event.point.y + 4]], allowed = new Set(state().layers.map(layer => layer.id));
       const feature = map.queryRenderedFeatures(box).find(item => allowed.has(item.source));
@@ -84,6 +86,7 @@
   }
   function selectOnMap() {
     const map = state().map; stopMapHandlers(); map.dragPan.disable(); map.getCanvas().style.cursor = "crosshair";
+    setActiveMapTool("select");
     state().selectionHandler = event => {
       const box = [[event.point.x - 4, event.point.y - 4], [event.point.x + 4, event.point.y + 4]];
       const allowed = new Set(state().layers.map(layer => layer.id)); const seen = new Set();
