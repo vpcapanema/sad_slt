@@ -9,7 +9,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from api.routers import api_router
@@ -35,6 +35,20 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+
+
+@app.get("/geoespacial/gerador-risco-restricao", include_in_schema=False)
+async def pagina_gerador_risco_restricao() -> FileResponse:
+    """Página canônica do módulo gerador de risco e restrição."""
+    return FileResponse(ROOT / "geoespacial" / "gerador-risco-restricao.html")
+
+
+@app.get("/geoespacial/gerador-favorabilidade", include_in_schema=False)
+async def pagina_gerador_favorabilidade() -> FileResponse:
+    """Página canônica do módulo gerador da superfície de favorabilidade."""
+    return FileResponse(ROOT / "geoespacial" / "gerador-favorabilidade.html")
+
+
 app.mount("/", StaticFiles(directory=str(ROOT), html=True), name="static")
 
 

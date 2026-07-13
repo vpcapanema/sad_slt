@@ -28,6 +28,8 @@ services:
       - ./database/002_schema_cadastro_auditoria.sql:/docker-entrypoint-initdb.d/02_schema.sql:ro
       - ./database/003_schema_ahp_objetos.sql:/docker-entrypoint-initdb.d/03_schema_ahp.sql:ro
       - ./database/004_schema_ahp_analises.sql:/docker-entrypoint-initdb.d/04_schema_ahp_analises.sql:ro
+      - ./database/011_schema_geo.sql:/docker-entrypoint-initdb.d/11_schema_geo.sql:ro
+      - ./database/037_schema_geoprocessamento.sql:/docker-entrypoint-initdb.d/37_schema_geoprocessamento.sql:ro
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U slt_user -d slt_db"]

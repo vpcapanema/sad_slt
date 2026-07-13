@@ -79,7 +79,9 @@ Write-Host "  Container: $Container  Host: ${HostAddr}:$Port  Banco: $DbName" -F
 $migrations = @(
     "002_schema_cadastro_auditoria.sql",
     "003_schema_ahp_objetos.sql",
-    "004_schema_ahp_analises.sql"
+    "004_schema_ahp_analises.sql",
+    "011_schema_geo.sql",
+    "037_schema_geoprocessamento.sql"
 )
 
 foreach ($name in $migrations) {

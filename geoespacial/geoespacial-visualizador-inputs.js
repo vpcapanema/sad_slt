@@ -1,78 +1,70 @@
 /* Visualizador de Inputs — Módulo Geoespacial */
 (function () {
-  const API_BASE = "/api/geoespacial";
-  let mapInitialized = false;
+  "use strict";
+  const API = "/api/geoespacial";
+  let camadas = [];
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 
-  function init() {
-    if (!mapInitialized) {
-      GeoespacialMap.init("map-geoespacial");
-      mapInitialized = true;
-    }
-
-    setupEventListeners();
-    loadCamadas();
+  async function mapReady() {
+    const map = GeoespacialMap.map;
+    if (map?.isStyleLoaded()) return;
+    await new Promise((resolve) => map.once("load", resolve));
   }
-
-  function setupEventListeners() {
-    document.getElementById("btn-abrir-camadas").addEventListener("click", handleAbrirCamadas);
-    document.getElementById("btn-importar-camadas").addEventListener("click", handleImportarCamadas);
+  function detail(camada) {
+    document.querySelectorAll(".geoespacial-layer-item").forEach((item) => item.classList.toggle("active", item.dataset.id === camada.id));
+    document.getElementById("geoespacial-operations-list").innerHTML = `<div class="geoespacial-detail-grid">
+      <div class="geoespacial-detail-row"><span>Nome</span><strong>${escapeHtml(camada.nome)}</strong></div>
+      <div class="geoespacial-detail-row"><span>Tipo</span><strong>${escapeHtml(camada.tipo)}</strong></div>
+      <div class="geoespacial-detail-row"><span>CRS</span><strong>${escapeHtml(camada.crs || "Não informado")}</strong></div>
+      <div class="geoespacial-detail-row"><span>Origem</span><strong>${escapeHtml(camada.origem || "Sessão")}</strong></div>
+      <div class="geoespacial-detail-row"><span>Importação</span><strong>${escapeHtml(camada.data_importacao || "—")}</strong></div>
+    </div>`;
   }
-
-  async function loadCamadas() {
-    try {
-      const response = await fetch(`${API_BASE}/camadas`);
-      const camadas = await response.json();
-      renderCamadas(camadas);
-    } catch (error) {
-      console.error("Erro ao carregar camadas:", error);
-    }
-  }
-
-  function renderCamadas(camadas) {
-    const container = document.getElementById("geoespacial-layers-list");
-
-    if (camadas.length === 0) {
-      container.innerHTML = '<p class="hint">Nenhuma camada carregada.</p>';
+  async function toggle(camada, visible) {
+    if (!visible) return GeoespacialMap.toggleLayer(camada.id, false);
+    detail(camada);
+    if (GeoespacialMap.layers.has(camada.id)) return GeoespacialMap.toggleLayer(camada.id, true);
+    if (String(camada.tipo).toLowerCase().includes("raster")) {
+      document.getElementById("geoespacial-operations-list").insertAdjacentHTML("beforeend", '<p class="hint">O preview raster está disponível na bancada de geoprocessamento.</p>');
       return;
     }
-
-    container.innerHTML = camadas
-      .map(
-        (camada) => `
-        <div class="geoespacial-layer-item" data-id="${camada.id}">
-          <input type="checkbox" class="geoespacial-layer-checkbox" id="layer-${camada.id}">
-          <label for="layer-${camada.id}" class="geoespacial-layer-name">${camada.nome}</label>
-        </div>
-      `
-      )
-      .join("");
-
-    container.querySelectorAll(".geoespacial-layer-checkbox").forEach((checkbox) => {
-      checkbox.addEventListener("change", (e) => {
-        const layerId = e.target.closest(".geoespacial-layer-item").dataset.id;
-        toggleCamada(layerId, e.target.checked);
-      });
+    const response = await fetch(`${API}/camadas/${encodeURIComponent(camada.id)}/geojson`);
+    if (!response.ok) throw new Error(`Não foi possível carregar a geometria (${response.status})`);
+    await mapReady();
+    GeoespacialMap.addLayer(camada.id, await response.json());
+    GeoespacialMap.fitBounds(camada.id);
+  }
+  function render() {
+    const container = document.getElementById("geoespacial-layers-list");
+    document.getElementById("viewer-layer-count").textContent = `${camadas.length} ${camadas.length === 1 ? "item" : "itens"}`;
+    if (!camadas.length) return container.innerHTML = '<p class="hint">Nenhuma camada carregada. Use “Importar camadas” ou adicione dados na bancada de geoprocessamento.</p>';
+    container.innerHTML = camadas.map((camada) => `<div class="geoespacial-layer-item" data-id="${escapeHtml(camada.id)}"><input type="checkbox" class="geoespacial-layer-checkbox" id="layer-${escapeHtml(camada.id)}"><label for="layer-${escapeHtml(camada.id)}" class="geoespacial-layer-name">${escapeHtml(camada.nome)}</label></div>`).join("");
+    container.querySelectorAll(".geoespacial-layer-item").forEach((item) => {
+      const camada = camadas.find((value) => value.id === item.dataset.id);
+      item.addEventListener("click", (event) => { if (!event.target.matches("input")) detail(camada); });
+      item.querySelector("input").addEventListener("change", async (event) => { try { await toggle(camada, event.target.checked); } catch (error) { event.target.checked = false; document.getElementById("geoespacial-operations-list").innerHTML = `<p class="hint">${escapeHtml(error.message)}</p>`; } });
     });
   }
-
-  async function toggleCamada(layerId, visible) {
-    // TODO: Implementar carregamento de GeoJSON da camada
-    console.log("Toggle camada:", layerId, visible);
+  async function load() {
+    const response = await fetch(`${API}/camadas`);
+    if (!response.ok) throw new Error("Catálogo de camadas indisponível");
+    camadas = await response.json(); render();
   }
-
-  function handleAbrirCamadas() {
-    // TODO: Implementar modal para abrir camadas existentes
-    console.log("Abrir camadas");
+  async function upload(files) {
+    for (const file of files) {
+      const data = new FormData(); data.append("arquivo", file);
+      const response = await fetch(`${API}/camadas/upload`, { method: "POST", body: data });
+      if (!response.ok) throw new Error((await response.json()).detail || `Falha no upload de ${file.name}`);
+    }
+    await load();
   }
-
-  function handleImportarCamadas() {
-    // TODO: Implementar modal para importar camadas
-    console.log("Importar camadas");
+  async function init() {
+    GeoespacialMap.init("map-geoespacial", { center: [-48.5, -22.4], zoom: 6.2 });
+    const input = document.getElementById("viewer-file-input");
+    document.getElementById("btn-abrir-camadas").addEventListener("click", load);
+    document.getElementById("btn-importar-camadas").addEventListener("click", () => input.click());
+    input.addEventListener("change", async () => { try { await upload(input.files); } catch (error) { document.getElementById("geoespacial-operations-list").innerHTML = `<p class="hint">${escapeHtml(error.message)}</p>`; } finally { input.value = ""; } });
+    await load();
   }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+  document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", init) : init();
 })();

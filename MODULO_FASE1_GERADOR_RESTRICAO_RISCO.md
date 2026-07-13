@@ -651,3 +651,12 @@ documentos devem detalhar:
 - modulo de recepcao, validacao e normalizacao de atributos de projeto da Fase 3;
 - modelo de dados para biblioteca de camadas;
 - contrato de API para execucao da Fase 1.
+
+## Implementação da página geradora
+
+A página `geoespacial/gerador-risco-restricao.html` implementa o cadastro do produto,
+a configuração sequencial de funções/algoritmos, a incorporação da bancada de
+geoprocessamento e o acompanhamento dos eventos de processamento. Produtos e receitas
+são persistidos nas tabelas `geoprocessamento.produto`,
+`geoprocessamento.produto_fase1`, `geoprocessamento.configuracao_fluxo` e
+`geoprocessamento.configuracao_fluxo_item`.

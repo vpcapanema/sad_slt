@@ -19,6 +19,10 @@ from api.schemas.geoespacial import (
     FuncaoSchema,
     PacoteFase1Schema,
     PacoteFase2Schema,
+    ProdutoGeradorInputSchema,
+    ProdutoGeradorSchema,
+    FluxoProdutoInputSchema,
+    FluxoProdutoSchema,
     ProcessamentoResultSchema,
     ProcessamentoSchema,
     RodadaFase3Schema,
@@ -320,6 +324,45 @@ async def atualizar_fonte(camada_id: str) -> dict:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+# ==================== PRODUTOS DOS MÓDULOS GERADORES ====================
+
+@router.get("/produtos-geradores", response_model=list[ProdutoGeradorSchema])
+async def listar_produtos_geradores(modulo: str | None = None) -> list[ProdutoGeradorSchema]:
+    produtos = await geoespacial_repository.listar_produtos_geradores(modulo)
+    return [ProdutoGeradorSchema(**produto) for produto in produtos]
+
+
+@router.post("/produtos-geradores", response_model=ProdutoGeradorSchema, status_code=201)
+async def criar_produto_gerador(body: ProdutoGeradorInputSchema) -> ProdutoGeradorSchema:
+    try:
+        produto = await geoespacial_repository.criar_produto_gerador(body.model_dump())
+        return ProdutoGeradorSchema(**produto)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/produtos-geradores/{produto_id}", response_model=ProdutoGeradorSchema)
+async def obter_produto_gerador(produto_id: str) -> ProdutoGeradorSchema:
+    produto = await geoespacial_repository.obter_produto_gerador(produto_id)
+    if not produto:
+        raise HTTPException(status_code=404, detail="Produto gerador não encontrado")
+    return ProdutoGeradorSchema(**produto)
+
+
+@router.get("/produtos-geradores/{produto_id}/fluxos", response_model=list[FluxoProdutoSchema])
+async def listar_fluxos_produto(produto_id: str) -> list[FluxoProdutoSchema]:
+    fluxos = await geoespacial_repository.listar_fluxos_produto(produto_id)
+    return [FluxoProdutoSchema(**fluxo) for fluxo in fluxos]
+
+
+@router.post("/produtos-geradores/{produto_id}/fluxos", response_model=FluxoProdutoSchema, status_code=201)
+async def criar_fluxo_produto(produto_id: str, body: FluxoProdutoInputSchema) -> FluxoProdutoSchema:
+    if not await geoespacial_repository.obter_produto_gerador(produto_id):
+        raise HTTPException(status_code=404, detail="Produto gerador não encontrado")
+    fluxo = await geoespacial_repository.criar_fluxo_produto(produto_id, body.model_dump())
+    return FluxoProdutoSchema(**fluxo)
 
 
 # ==================== FONTES (FASE 1) ====================

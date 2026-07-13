@@ -3,8 +3,48 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, Field
+
+
+class ProdutoGeradorInputSchema(BaseModel):
+    modulo: str
+    codigo: str
+    nome: str
+    descricao: str | None = None
+    versao: str = "v1"
+    responsavel_tecnico: str | None = None
+    crs_saida: str
+    area_estudo_id: UUID | None = None
+    formato_saida: str | None = None
+    data_referencia: str | None = None
+    observacao_metodologica: str | None = None
+    metadados: dict[str, Any] = Field(default_factory=dict)
+    configuracao: dict[str, Any] = Field(default_factory=dict)
+
+
+class ProdutoGeradorSchema(ProdutoGeradorInputSchema):
+    id: UUID
+    status: str
+    criado_em: datetime
+    atualizado_em: datetime
+
+
+class FluxoProdutoInputSchema(BaseModel):
+    nome: str
+    descricao: str | None = None
+    itens: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class FluxoProdutoSchema(FluxoProdutoInputSchema):
+    id: UUID
+    produto_id: UUID
+    versao: int
+    ativo: bool
+    validado: bool
+    criado_em: datetime
+    atualizado_em: datetime
 
 
 # ==================== FASE 1: Restrição e Risco ====================

@@ -12,8 +12,12 @@
 
       const defaultOptions = {
         center: [-46.6333, -23.5505],
-        zoom: 10,
-        style: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        zoom: 6.2,
+        style: {
+          version: 8,
+          sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256 } },
+          layers: [{ id: "osm-layer", type: "raster", source: "osm" }],
+        },
       };
 
       this.map = new maplibregl.Map({
@@ -22,21 +26,7 @@
         ...options,
       });
 
-      this.map.on("load", () => {
-        this.map.addSource("osm", {
-          type: "raster",
-          tiles: ["https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"],
-          tileSize: 256,
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        });
-        this.map.addLayer({
-          id: "osm-layer",
-          type: "raster",
-          source: "osm",
-          minzoom: 0,
-          maxzoom: 19,
-        });
-      });
+      this.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
 
       return this.map;
     },
@@ -47,17 +37,8 @@
         return null;
       }
 
-      const defaultOptions = {
-        type: "fill",
-        paint: {
-          "fill-color": "#116593",
-          "fill-opacity": 0.3,
-          "fill-outline-color": "#116593",
-        },
-      };
-
       const sourceId = `source-${layerId}`;
-      const layerIdFull = `layer-${layerId}`;
+      const mapLayerIds = [`layer-${layerId}-fill`, `layer-${layerId}-line`, `layer-${layerId}-point`];
 
       if (!this.map.getSource(sourceId)) {
         this.map.addSource(sourceId, {
@@ -66,25 +47,20 @@
         });
       }
 
-      this.map.addLayer({
-        id: layerIdFull,
-        source: sourceId,
-        ...defaultOptions,
-        ...options,
-      });
+      this.map.addLayer({ id: mapLayerIds[0], type: "fill", source: sourceId, filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": options.color || "#1683c4", "fill-opacity": .34, "fill-outline-color": "#075b89" } });
+      this.map.addLayer({ id: mapLayerIds[1], type: "line", source: sourceId, filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": options.color || "#075b89", "line-width": 2 } });
+      this.map.addLayer({ id: mapLayerIds[2], type: "circle", source: sourceId, filter: ["==", ["geometry-type"], "Point"], paint: { "circle-color": options.color || "#d97819", "circle-radius": 5, "circle-stroke-color": "#fff", "circle-stroke-width": 1 } });
 
-      this.layers.set(layerId, { sourceId, layerIdFull, data: geojsonData });
+      this.layers.set(layerId, { sourceId, mapLayerIds, data: geojsonData });
       this.layerIds.push(layerId);
 
-      return layerIdFull;
+      return mapLayerIds;
     },
 
     removeLayer: function (layerId) {
       const layerInfo = this.layers.get(layerId);
       if (layerInfo && this.map) {
-        if (this.map.getLayer(layerInfo.layerIdFull)) {
-          this.map.removeLayer(layerInfo.layerIdFull);
-        }
+        layerInfo.mapLayerIds.forEach((id) => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
         if (this.map.getSource(layerInfo.sourceId)) {
           this.map.removeSource(layerInfo.sourceId);
         }
@@ -96,7 +72,7 @@
     toggleLayer: function (layerId, visible) {
       const layerInfo = this.layers.get(layerId);
       if (layerInfo && this.map) {
-        this.map.setLayoutProperty(layerInfo.layerIdFull, "visibility", visible ? "visible" : "none");
+        layerInfo.mapLayerIds.forEach((id) => { if (this.map.getLayer(id)) this.map.setLayoutProperty(id, "visibility", visible ? "visible" : "none"); });
       }
     },
 

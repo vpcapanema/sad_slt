@@ -257,5 +257,18 @@ função estão em `tests/test_geoprocessamento.py` e podem ser executados com:
 .\.venv\Scripts\python.exe -m unittest tests.test_geoprocessamento -v
 ```
 
-As páginas dos módulos geradores e dos módulos consumidores não fazem parte desta
-etapa de implementação.
+## Páginas hospedeiras dos módulos geradores
+
+As páginas `geoespacial/gerador-risco-restricao.html` e
+`geoespacial/gerador-favorabilidade.html` incorporam esta bancada e compartilham
+quatro contêineres funcionais:
+
+1. cadastro persistente da saída;
+2. configuração da receita com funções e algoritmos;
+3. bancada de geoprocessamento;
+4. detalhes, mensagens e interação sobre o processamento.
+
+O cadastro e a receita são persistidos no schema PostgreSQL/PostGIS
+`geoprocessamento`, criado pela migration `037_schema_geoprocessamento.sql`. A página
+hospedeira escuta os eventos DOM da bancada no documento incorporado e os apresenta
+no contêiner de detalhes sem transferir regras metodológicas ao componente genérico.

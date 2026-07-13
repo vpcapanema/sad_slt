@@ -1,10 +1,10 @@
-# Registra a conexao SLT no SQLTools do Cursor (settings globais do usuario).
+# Registra a conexao SLT no SQLTools do VS Code/Cursor (settings globais do usuario).
 # Uso: .\scripts\sync-sqltools.ps1
 
 $ErrorActionPreference = "Stop"
 
 $Connection = @{
-    name              = "SLT (slt_postgres · local 5434)"
+    name              = "Postgres - SLT Local (slt_db)"
     driver            = "PostgreSQL"
     previewLimit      = 50
     server            = "127.0.0.1"
@@ -18,16 +18,19 @@ $Connection = @{
     pgOptions         = @{ ssl = $false }
 }
 
-$SettingsPath = Join-Path $env:APPDATA "Cursor\User\settings.json"
-if (-not (Test-Path $SettingsPath)) {
-    Write-Error "Nao encontrado: $SettingsPath"
-}
+$SettingsCandidates = @(
+    (Join-Path $env:APPDATA "Code\User\settings.json"),
+    (Join-Path $env:APPDATA "Cursor\User\settings.json")
+)
+$SettingsPath = $SettingsCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $SettingsPath) { Write-Error "settings.json do VS Code/Cursor nao encontrado" }
+$env:SLT_SQLTOOLS_SETTINGS = $SettingsPath
 
 $py = @'
 import json, os, re, sys
 from pathlib import Path
 
-settings_path = Path(os.environ["APPDATA"]) / "Cursor" / "User" / "settings.json"
+settings_path = Path(os.environ["SLT_SQLTOOLS_SETTINGS"])
 raw = settings_path.read_text(encoding="utf-8")
 
 try:
@@ -38,7 +41,7 @@ except ImportError:
     data = json.loads(cleaned)
 
 conn = {
-    "name": "SLT (slt_postgres · local 5434)",
+    "name": "Postgres - SLT Local (slt_db)",
     "driver": "PostgreSQL",
     "previewLimit": 50,
     "server": "127.0.0.1",
