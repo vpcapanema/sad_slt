@@ -12,12 +12,16 @@ argon2-cffi>=23.1.0
 bcrypt>=4.1.0
 # Dependências geoespaciais
 geopandas>=0.14.0
-gdal>=3.7.0
+# No Windows, Rasterio/Fiona ja distribuem as bibliotecas nativas do GDAL.
+# O pacote Python `gdal` nao oferece wheel compativel e exigiria compilador C++.
+gdal>=3.7.0; platform_system != "Windows"
 numpy>=1.24.0
 scipy>=1.11.0
 scikit-learn>=1.3.0
+pykrige>=1.7.0
 networkx>=3.1.0
 rasterio>=1.3.0
+pillow>=10.0.0
 rioxarray>=0.15.0
 xarray-spatial>=0.3.0
 fiona>=1.9.0

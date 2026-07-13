@@ -1,5 +1,8 @@
 .env
 .dev-server.log
+.dev-server*.log
+.api-geoespacial-test.out
+.gp-test.*
 __pycache__/
 *.pyc
 .venv/

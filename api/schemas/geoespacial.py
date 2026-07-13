@@ -191,17 +191,17 @@ class CamadaInputSchema(BaseModel):
 class FuncaoSchema(BaseModel):
     id: str
     nome: str
-    descricao: str
-    operacoes: list[str]
-    variaveis: list[str]
+    descricao: str = ""
+    passos: list[dict[str, Any]] = Field(default_factory=list)
+    parametros_expostos: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class FluxoSchema(BaseModel):
     id: str
     nome: str
-    descricao: str
-    funcoes: list[str]
-    ordem_execucao: list[str]
+    descricao: str = ""
+    itens: list[dict[str, Any]] = Field(default_factory=list)
+    parametros_expostos: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ProcessamentoSchema(BaseModel):

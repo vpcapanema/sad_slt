@@ -13,15 +13,19 @@
 
       const groupTitle = event.target.closest(".tool-group-title");
       if (groupTitle) {
+        const group = groupTitle.closest(".tool-group");
+        const collapsed = group.classList.toggle("collapsed");
         groupTitle.setAttribute(
           "aria-expanded",
-          String(!groupTitle.closest(".tool-group").classList.contains("collapsed")),
+          String(!collapsed),
         );
       }
 
       const row = event.target.closest(".tool-row");
       if (row) {
         setTimeout(() => {
+          if (row.dataset.op === "OP-01") window.gpApp.configureLoadOperation?.();
+          window.gpCommands?.applyEnvironments($("#gp-op-form"));
           const heading = $("#gp-editor-view .editor-head h2");
           if (heading) heading.textContent = row.title;
         }, 0);

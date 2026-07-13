@@ -81,6 +81,15 @@ SLT_DATABASE_URL=postgresql://slt_user:slt_pass@127.0.0.1:5434/slt_db
 | AHP | `ahp/` |
 | Painel | `painel/` |
 
+### Componente de geoprocessamento
+
+O componente compartilhado em `geoespacial/_geoprocessamento.html` concentra os
+algoritmos usados pelos futuros módulos geradores de superfícies de risco/restrição e
+favorabilidade. Cada algoritmo possui endpoint individual; algoritmos podem ser
+combinados em funções e funções/algoritmos podem ser combinados em fluxos persistidos.
+
+Arquitetura e contratos: `COMPONENTE_GEOPROCESSAMENTO.md`.
+
 Demandas: persistidas em `cadastro.cadastro_demanda` via `POST /api/demandas` (painel: `GET /api/demandas`).
 
 ### API de demandas

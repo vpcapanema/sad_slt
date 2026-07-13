@@ -1,7 +1,8 @@
 """Registro e orquestrador dos algoritmos geoespaciais da stack."""
 from __future__ import annotations
 
-import heapq
+import json
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -9,7 +10,11 @@ import rasterio
 from rasterio.features import geometry_mask, rasterize
 from rasterio.transform import from_origin
 from scipy.interpolate import griddata
-from scipy.ndimage import distance_transform_edt, gaussian_filter
+from scipy.ndimage import distance_transform_edt
+from scipy.sparse import coo_matrix
+from scipy.sparse.csgraph import dijkstra
+from sklearn.neighbors import KernelDensity
+from pykrige.ok import OrdinaryKriging
 
 from api.services.geoespacial_service import geoespacial_service as geo
 
@@ -26,12 +31,62 @@ CATALOG = {
     "OP-27": "Salvar Camada",
 }
 
+OPERATION_ENDPOINTS = {
+    "OP-01": "carregar-camada", "OP-02": "validar-camada", "OP-02-CORR": "reparar-geometrias",
+    "OP-03": "normalizar-camada", "OP-04": "criar-buffer", "OP-05": "sobrepor-camadas",
+    "OP-06": "dissolver", "OP-07": "selecionar-por-localizacao", "OP-08": "converter-para-raster",
+    "OP-10": "calcular-distancia", "OP-11": "calcular-distancia-ponderada", "OP-12": "calcular-densidade",
+    "OP-13": "calcular-custo-acumulado", "OP-14": "interpolar-valores", "OP-15": "agregar-por-territorio",
+    "OP-16": "criar-camada-booleana", "OP-17": "combinar-rasters", "OP-20": "normalizar-raster",
+    "OP-21": "recortar-raster", "OP-22": "estatisticas-por-zona", "OP-23": "amostrar-raster-pontos",
+    "OP-24": "extrair-valores-poligono", "OP-25": "exportar-camada", "OP-26": "exportar-raster",
+    "OP-27": "salvar-camada",
+}
+
+REQUIRED_PARAMETERS = {
+    "OP-01": {"tipo_entrada", "caminho_arquivo"}, "OP-02": {"camada_id"},
+    "OP-02-CORR": {"camada_id"}, "OP-03": {"camada_id"},
+    "OP-04": {"camada_id", "distancia_buffer"}, "OP-05": {"camada_id_1", "camada_id_2"},
+    "OP-06": {"camada_id"}, "OP-07": {"camada_id", "camada_ref_id"},
+    "OP-08": {"camada_id"}, "OP-10": {"camada_id"},
+    "OP-11": {"camada_id", "atributo_peso"}, "OP-12": {"camada_id"},
+    "OP-13": {"raster_id"}, "OP-14": {"camada_id"},
+    "OP-15": {"camada_id", "campo_unidade"}, "OP-16": {"camada_id"},
+    "OP-17": {"raster_ids"}, "OP-20": {"raster_id"},
+    "OP-21": {"raster_id", "camada_mascara_id"},
+    "OP-22": {"raster_id", "camada_zona_id"},
+    "OP-23": {"raster_id", "camada_pontos_id"},
+    "OP-24": {"raster_id", "camada_poligono_id"},
+    "OP-25": {"camada_id", "nome_arquivo"}, "OP-26": {"raster_id", "nome_arquivo"},
+    "OP-27": {"entrada", "destino", "saida"},
+}
+
 
 class GeoprocessamentoEngine:
     def __init__(self) -> None:
         self.profiles: dict[str, dict[str, Any]] = {}
         self.functions: dict[str, dict[str, Any]] = {}
         self.flows: dict[str, dict[str, Any]] = {}
+        self._definitions_path = Path("data/geoespacial/definicoes.json")
+        self._load_definitions()
+
+    def _load_definitions(self) -> None:
+        if not self._definitions_path.exists():
+            return
+        try:
+            payload = json.loads(self._definitions_path.read_text(encoding="utf-8"))
+            self.functions = {item["id"]: item for item in payload.get("funcoes", [])}
+            self.flows = {item["id"]: item for item in payload.get("fluxos", [])}
+        except (OSError, ValueError, KeyError):
+            self.functions = {}
+            self.flows = {}
+
+    def save_definitions(self) -> None:
+        self._definitions_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {"funcoes": list(self.functions.values()), "fluxos": list(self.flows.values())}
+        self._definitions_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     def _layer(self, layer_id: str):
         if layer_id not in geo._camadas:
@@ -44,12 +99,8 @@ class GeoprocessamentoEngine:
         return geo._rasters[raster_id]
 
     def _new_raster(self, data: np.ndarray, profile: dict[str, Any]) -> str:
-        rid = f"raster_{len(geo._rasters) + 1}"
-        geo._rasters[rid] = np.asarray(data, dtype="float32")
+        rid = geo.registrar_raster(data, profile, f"Resultado raster {len(geo._rasters) + 1}")
         self.profiles[rid] = profile
-        if not hasattr(geo, "_raster_profiles"):
-            geo._raster_profiles = {}
-        geo._raster_profiles[rid] = profile
         return rid
 
     def _grid(self, gdf, resolution: float):
@@ -112,14 +163,34 @@ class GeoprocessamentoEngine:
         rid = self._new_raster(data, self.profiles[base["raster_id"]]); return {"raster_id": rid, "shape": list(data.shape), "resolucao": resolution}
 
     async def weighted_distance(self, p):
-        result = await self.distance(p); gdf = self._layer(p["camada_id"]); field = p["atributo_peso"]
-        weight = float(gdf[field].astype(float).mean()); geo._rasters[result["raster_id"]] *= weight; result["peso_medio"] = weight; return result
+        field = p["atributo_peso"]
+        q = dict(p); q["resolucao_raster"] = p.get("resolucao_distancia", 50)
+        q["atributo_rasterizacao"] = field; q["valor_preenchimento"] = 0
+        base = await self.rasterize(q); weights = self._raster(base["raster_id"])
+        presence = np.isfinite(weights) & (weights != 0)
+        if not presence.any(): raise ValueError("O atributo de peso não gerou células válidas")
+        distance, indices = distance_transform_edt(~presence, return_indices=True)
+        distance *= float(q["resolucao_raster"])
+        nearest_weight = np.abs(weights[tuple(indices)])
+        data = distance / np.maximum(nearest_weight, np.finfo("float32").eps)
+        if p.get("distancia_maxima") is not None: data = np.minimum(data, float(p["distancia_maxima"]))
+        rid = self._new_raster(data, self.profiles[base["raster_id"]])
+        return {"raster_id": rid, "shape": list(data.shape), "atributo_peso": field}
 
     async def density(self, p):
-        q = dict(p); q["resolucao_raster"] = p.get("resolucao_kernel", 50); base = await self.rasterize(q); resolution = float(q["resolucao_raster"])
-        data = gaussian_filter(self._raster(base["raster_id"]), max(float(p.get("largura_kernel", 1000)) / resolution, .5))
-        if p.get("normalizar_resultado", True) and data.max() > data.min(): data = (data-data.min())/(data.max()-data.min())
-        rid=self._new_raster(data,self.profiles[base["raster_id"]]); return {"raster_id":rid,"shape":list(data.shape)}
+        gdf = self._layer(p["camada_id"])
+        resolution = float(p.get("resolucao_kernel", 50)); transform, width, height = self._grid(gdf, resolution)
+        samples = np.array([(geom.centroid.x, geom.centroid.y) for geom in gdf.geometry if geom and not geom.is_empty])
+        if not len(samples): raise ValueError("Camada não possui geometrias válidas para densidade")
+        kernel = {"quadratic": "epanechnikov"}.get(p.get("tipo_kernel", "gaussiano"), p.get("tipo_kernel", "gaussiano"))
+        kernel = {"gaussiano": "gaussian"}.get(kernel, kernel)
+        model = KernelDensity(kernel=kernel, bandwidth=float(p.get("largura_kernel", 1000))).fit(samples)
+        xs=transform.c+(np.arange(width)+.5)*transform.a; ys=transform.f+(np.arange(height)+.5)*transform.e
+        xx,yy=np.meshgrid(xs,ys); points=np.column_stack([xx.ravel(),yy.ravel()]); scores=[]
+        for inicio in range(0, len(points), 100_000): scores.append(model.score_samples(points[inicio:inicio+100_000]))
+        data=np.exp(np.concatenate(scores)).reshape(height,width)
+        if p.get("normalizar_resultado", True) and data.max() > data.min(): data=(data-data.min())/(data.max()-data.min())
+        rid=self._new_raster(data,{"crs":gdf.crs,"transform":transform}); return {"raster_id":rid,"shape":list(data.shape),"kernel":kernel}
 
     async def interpolate(self, p):
         gdf=self._layer(p["camada_id"]); field=p.get("atributo_valor"); numeric=list(gdf.select_dtypes(include=np.number).columns); field=field or (numeric[0] if numeric else None)
@@ -130,19 +201,24 @@ class GeoprocessamentoEngine:
             data=np.zeros_like(xx); weights=np.zeros_like(xx); power=float(p.get("potencia_interpolacao",2))
             for (x,y),value in zip(points,values): d=np.hypot(xx-x,yy-y); wt=1/np.maximum(d,res/100)**power; data+=wt*value; weights+=wt
             data=data/weights
-        else: data=griddata(points,values,(xx,yy),method="cubic" if method in {"spline","kriging"} else method,fill_value=np.nan)
+        elif method == "kriging":
+            model = OrdinaryKriging(points[:, 0], points[:, 1], values, variogram_model="linear", verbose=False, enable_plotting=False)
+            data, _ = model.execute("grid", xs, ys[::-1]); data = np.asarray(data)[::-1]
+        else: data=griddata(points,values,(xx,yy),method="cubic" if method=="spline" else method,fill_value=np.nan)
         rid=self._new_raster(data,{"crs":gdf.crs,"transform":transform}); return {"raster_id":rid,"shape":list(data.shape),"atributo":field}
 
     async def accumulated_cost(self,p):
-        cost=self._raster(p["raster_id"]); rows,cols=cost.shape; sr=int(p.get("origem_linha",0)); sc=int(p.get("origem_coluna",0)); dist=np.full(cost.shape,np.inf); dist[sr,sc]=0; queue=[(0.,sr,sc)]
-        while queue:
-            value,r,c=heapq.heappop(queue)
-            if value!=dist[r,c]: continue
-            for dr,dc in ((1,0),(-1,0),(0,1),(0,-1)):
-                nr,nc=r+dr,c+dc
-                if 0<=nr<rows and 0<=nc<cols and np.isfinite(cost[nr,nc]):
-                    nv=value+(cost[r,c]+cost[nr,nc])/2
-                    if nv<dist[nr,nc]: dist[nr,nc]=nv; heapq.heappush(queue,(nv,nr,nc))
+        cost=self._raster(p["raster_id"]); rows,cols=cost.shape
+        if cost.size > 1_000_000: raise ValueError("Custo acumulado limitado a 1 milhão de células por execução")
+        sr=int(p.get("origem_linha",0)); sc=int(p.get("origem_coluna",0))
+        if not (0 <= sr < rows and 0 <= sc < cols): raise ValueError("Célula de origem fora do raster")
+        indices=np.arange(cost.size).reshape(rows,cols); origins=[]; targets=[]; weights=[]
+        for a,b in ((indices[:,:-1],indices[:,1:]),(indices[:-1,:],indices[1:,:])):
+            ca=cost.ravel()[a.ravel()]; cb=cost.ravel()[b.ravel()]; valid=np.isfinite(ca)&np.isfinite(cb)
+            av=a.ravel()[valid]; bv=b.ravel()[valid]; w=(ca[valid]+cb[valid])/2
+            origins.extend([av,bv]); targets.extend([bv,av]); weights.extend([w,w])
+        graph=coo_matrix((np.concatenate(weights),(np.concatenate(origins),np.concatenate(targets))),shape=(cost.size,cost.size)).tocsr()
+        dist=dijkstra(graph,directed=False,indices=sr*cols+sc).reshape(rows,cols)
         rid=self._new_raster(dist,self.profiles[p["raster_id"]]); return {"raster_id":rid,"shape":list(dist.shape)}
 
     async def boolean(self,p):
@@ -166,7 +242,26 @@ class GeoprocessamentoEngine:
     async def extract_polygon(self,p):
         result=await self.zonal({"raster_id":p["raster_id"],"camada_zona_id":p["camada_poligono_id"]}); stat=p.get("estatistica","media"); return {"estatistica":stat,"valores":[x.get(stat) for x in result["estatisticas"]]}
 
+    def validate_steps(self, steps: list[dict[str, Any]]) -> list[str]:
+        erros: list[str] = []
+        if not steps:
+            erros.append("A definição deve possuir ao menos um algoritmo")
+        for indice, step in enumerate(steps, 1):
+            algoritmo_id = str(step.get("algoritmo_id", "")).upper()
+            if algoritmo_id not in CATALOG:
+                erros.append(f"Passo {indice}: algoritmo {algoritmo_id or 'não informado'} inválido")
+            if not isinstance(step.get("parametros", {}), dict):
+                erros.append(f"Passo {indice}: parâmetros devem ser um objeto")
+                continue
+            ausentes = REQUIRED_PARAMETERS.get(algoritmo_id, set()) - set(step.get("parametros", {}))
+            if ausentes:
+                erros.append(f"Passo {indice}: parâmetros obrigatórios ausentes: {', '.join(sorted(ausentes))}")
+        return erros
+
     async def run_steps(self, steps: list[dict[str, Any]], inputs: dict[str, Any]) -> dict[str, Any]:
+        erros = self.validate_steps(steps)
+        if erros:
+            raise ValueError("; ".join(erros))
         context=dict(inputs); results=[]
         for step in steps:
             params={k:(context.get(v[1:]) if isinstance(v,str) and v.startswith("$") else v) for k,v in step.get("parametros",{}).items()}
