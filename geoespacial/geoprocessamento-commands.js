@@ -5,6 +5,7 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const state = () => window.gpApp.state;
   const EXPLORE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="#17212b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 12.586 19 19"/><path d="M3.117 3.117 10.5 21l2.7-7.8L21 10.5Z"/></svg>')}") 3 3, default`;
+  const SELECT_CURSOR = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="white" stroke="#17212b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4.1 12 6"/><path d="m5.1 8-2.9-.8"/><path d="m6 12-1.9 2"/><path d="M7.2 2.2 8 5.1"/><path d="m9 9 7.5 3-3 1.5-1.5 3Z"/></svg>')}") 9 9, crosshair`;
 
   function icons() { window.lucide?.createIcons({ attrs: { "stroke-width": 1.7 } }); }
   function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char])); }
@@ -53,8 +54,8 @@
     removeSelectionLayers(); state().selectedGeoJSON = data;
     const map = state().map; map.addSource("gp-selection", { type: "geojson", data });
     map.addLayer({ id: "gp-selection-fill", type: "fill", source: "gp-selection", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#00b7ff", "fill-opacity": .25, "fill-outline-color": "#00a1df" } });
-    map.addLayer({ id: "gp-selection-line", type: "line", source: "gp-selection", paint: { "line-color": "#00b7ff", "line-width": 4 } });
-    map.addLayer({ id: "gp-selection-point", type: "circle", source: "gp-selection", paint: { "circle-color": "#00b7ff", "circle-radius": 7, "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
+    map.addLayer({ id: "gp-selection-line", type: "line", source: "gp-selection", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#00b7ff", "line-width": 4 } });
+    map.addLayer({ id: "gp-selection-point", type: "circle", source: "gp-selection", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-color": "#00b7ff", "circle-radius": 7, "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
     $("#gp-selection").textContent = `${data.features.length} selecionada${data.features.length === 1 ? "" : "s"}`;
     window.gpApp.syncAttributeSelection?.();
   }
@@ -85,7 +86,7 @@
     map.on("click", state().exploreHandler); notify("Explorar ativo: clique em uma feição para consultar seus atributos.");
   }
   function selectOnMap() {
-    const map = state().map; stopMapHandlers(); map.dragPan.disable(); map.getCanvas().style.cursor = "crosshair";
+    const map = state().map; stopMapHandlers(); map.dragPan.disable(); map.getCanvas().style.cursor = SELECT_CURSOR;
     setActiveMapTool("select");
     state().selectionHandler = event => {
       const box = [[event.point.x - 4, event.point.y - 4], [event.point.x + 4, event.point.y + 4]];

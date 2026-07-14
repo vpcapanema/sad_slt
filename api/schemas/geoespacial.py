@@ -228,6 +228,16 @@ class CamadaInputSchema(BaseModel):
     metadados: dict[str, Any] = Field(default_factory=dict)
 
 
+class HomologarCamadaSchema(BaseModel):
+    modulo_consumidor: str
+    nome_publicacao: str
+    versao: str = "v1"
+    finalidade: str | None = None
+    homologado_por: str | None = None
+    produto_id: UUID | None = None
+    metadados: dict[str, Any] = Field(default_factory=dict)
+
+
 class FuncaoSchema(BaseModel):
     id: str
     nome: str

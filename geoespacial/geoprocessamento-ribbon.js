@@ -23,6 +23,99 @@
     return $("[data-layer].active")?.dataset.layer || window.gpApp.state.activeLayerId || null;
   }
 
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[char]));
+
+  async function request(url, options = {}) {
+    const response = await fetch(url, { headers: { Accept: "application/json", ...(options.headers || {}) }, ...options });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.detail || `Falha na solicitação (${response.status})`);
+    return body;
+  }
+
+  function openPanel(title, html) {
+    const app = $(".gp-app"), tab = $('[data-right-tab="tools"]');
+    app.classList.remove("right-collapsed");
+    tab.hidden = false;
+    tab.click();
+    $("#gp-right-title").textContent = title;
+    $("#gp-tools-view").classList.remove("active");
+    $("#gp-editor-view").classList.add("active");
+    $("#gp-editor-view").innerHTML = html;
+    window.lucide?.createIcons({ attrs: { "stroke-width": 1.7 } });
+  }
+
+  async function openSystemDirectory() {
+    openPanel("Carregar do sistema", '<div class="empty">Consultando as tabelas de camadas…</div>');
+    try {
+      const directory = await request("/api/geoespacial/camadas-diretorio");
+      const sections = [
+        ["importadas", "Camadas importadas"],
+        ["processadas", "Resultados processados"],
+        ["homologadas", "Biblioteca homologada (somente leitura)"],
+      ];
+      const content = sections.map(([key, label]) => {
+        const rows = directory[key] || [];
+        return `<section class="tool-group"><div class="tool-group-title"><i data-lucide="folder"></i>${label}</div>${rows.length ? rows.map((layer) => `<button type="button" class="tool-row" data-load-system="${escapeHtml(layer.id)}"><span class="tool-name">${escapeHtml(layer.nome_publicacao || layer.nome)}</span><span>${escapeHtml(layer.formato || layer.tipo)}</span></button>`).join("") : '<div class="empty compact">Nenhuma camada.</div>'}</section>`;
+      }).join("");
+      openPanel("Carregar do sistema", `<div class="editor-head"><button class="icon-btn" data-directory-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>Diretório de camadas</h2></div><div class="editor-body"><p class="field-help">Estas camadas já estão no banco. Escolha a tabela lógica e a camada que deseja abrir.</p>${content}</div>`);
+      $("[data-directory-back]").onclick = () => window.gpApp.showTools();
+      $("#gp-editor-view").addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-load-system]");
+        if (!button) return;
+        button.disabled = true;
+        const progress = window.gpApp.createTaskProgress($("#gp-editor-view"));
+        try {
+          const id = button.dataset.loadSystem;
+          let job = await request(`/api/geoespacial/camadas/${encodeURIComponent(id)}/carregar-job`, { method: "POST" });
+          job = await window.gpApp.waitForJob(job, progress);
+          const resource = job.resultado;
+          const index = window.gpApp.state.layers.findIndex((layer) => layer.id === id);
+          if (index >= 0) window.gpApp.state.layers[index] = resource;
+          else window.gpApp.state.layers.push(resource);
+          progress.note("Camada incorporada ao estado visual da sessão");
+          await window.gpApp.addCatalogLayerToMap(id, true);
+          window.gpApp.renderLayers();
+          progress.note("Representação espacial desenhada no mapa");
+          progress.complete();
+          message("Camada carregada do banco.");
+        } catch (error) {
+          progress.fail(`Falha: ${error.message}`);
+          message(error.message);
+        } finally { button.disabled = false; }
+      });
+    } catch (error) {
+      openPanel("Carregar do sistema", `<div class="empty">${escapeHtml(error.message)}</div>`);
+    }
+  }
+
+  function openHomologation() {
+    const id = activeLayerId();
+    const layer = window.gpApp.state.layers.find((item) => item.id === id);
+    if (!layer) return message("Selecione a camada que será homologada.");
+    openPanel("Homologar camada", `<div class="editor-head"><button class="icon-btn" data-homologation-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>Publicar na biblioteca</h2></div><form id="gp-homologation-form"><div class="editor-body"><p class="field-help">A publicação torna a camada e seu conteúdo imutáveis. As fases 1 e 2 poderão apenas consultá-la.</p><div class="field"><label>Camada</label><input value="${escapeHtml(layer.nome)}" readonly></div><div class="field"><label>Nome de publicação</label><input name="nome_publicacao" value="${escapeHtml(layer.nome)}" required></div><div class="field"><label>Módulo consumidor</label><select name="modulo_consumidor"><option value="ambos">Fases 1 e 2</option><option value="fase1">Fase 1</option><option value="fase2">Fase 2</option></select></div><div class="field"><label>Versão</label><input name="versao" value="v1" required></div><div class="field"><label>Finalidade</label><input name="finalidade"></div><div class="field"><label>Homologado por</label><input name="homologado_por"></div></div><div class="editor-actions"><button class="btn primary">Homologar definitivamente</button></div></form>`);
+    $("[data-homologation-back]").onclick = () => window.gpApp.showTools();
+    $("#gp-homologation-form").onsubmit = async (event) => {
+      event.preventDefault();
+      const submit = event.submitter; submit.disabled = true;
+      const payload = Object.fromEntries(new FormData(event.target));
+      payload.metadados = {};
+      const progress = window.gpApp.createTaskProgress(event.target);
+      try {
+        let job = await request(`/api/geoespacial/camadas/${encodeURIComponent(id)}/homologar-job`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+        });
+        job = await window.gpApp.waitForJob(job, progress);
+        const publication = job.resultado;
+        progress.note(`Snapshot homologado confirmado: ${publication.id}`);
+        progress.complete();
+        message("Camada publicada na biblioteca homologada.");
+        setTimeout(() => openSystemDirectory(), 900);
+      } catch (error) { progress.fail(`Falha: ${error.message}`); message(error.message); submit.disabled = false; }
+    };
+  }
+
   function openOperation(id, values = {}) {
     openToolbox();
     window.gpApp.selectOp(id);
@@ -52,15 +145,16 @@
     $("#gp-ribbon-tools").addEventListener("click", (event) => {
       const action = event.target.closest("[data-action]")?.dataset.action;
       if (!action) return;
-      if (action === "add") openOperation("OP-01", { tipo_entrada: "Local" });
+      if (action === "import-file") openOperation("OP-01", { tipo_entrada: "Local" });
       if (action === "tools") openToolbox();
       if (action === "run") {
         if ($("#gp-op-form")) $("#gp-op-form").requestSubmit();
         else { openToolbox(); message("Selecione um algoritmo para executar."); }
       }
-      if (action === "wfs") {
+      if (action === "import-wfs") {
         openOperation("OP-01", { tipo_entrada: "WFS" });
       }
+      if (action === "load-system") openSystemDirectory();
       if (action === "basemap") {
         window.gpApp.showBasemapPanel();
       }
@@ -78,7 +172,12 @@
       if (action === "remove" && !$("[data-layer].active")) {
         message("Selecione uma camada antes de remover.");
       }
-      if (action === "remove" && activeLayerId()) window.gpApp.removeCatalogLayer(activeLayerId()).catch(error => message(error.message));
+      if (action === "remove" && activeLayerId()) {
+        window.gpApp.removeLayerFromMap(activeLayerId());
+        message("Camada removida do mapa; permanece salva no sistema.");
+      }
+      if (action === "delete-layer" && !activeLayerId()) message("Selecione a camada que deseja excluir do sistema.");
+      if (action === "delete-layer" && activeLayerId()) window.gpApp.deleteLayerFromSystem(activeLayerId()).catch(error => message(error.message));
       if (action === "properties" && activeLayerId()) {
         window.gpApp.showProperties(window.gpApp.state.layers.find(layer => layer.id === activeLayerId()));
       }
@@ -109,6 +208,7 @@
       if (action === "select-attribute") window.gpCommands.selectByAttribute();
       if (action === "filter-layer") window.gpCommands.filterLayer();
       if (action === "refresh-source") window.gpCommands.refreshSource();
+      if (action === "homologate-layer") openHomologation();
       if (action === "export") {
         const layer = window.gpApp.state.layers.find(item => item.id === activeLayerId());
         if (layer) openOperation(layer.tipo.toLowerCase().includes("raster") ? "OP-26" : "OP-25", {

@@ -6,8 +6,8 @@
 
   const OPERACOES = {
     "OP-01": {
-      nome: "Carregar Camada",
-      descricao: "Carregar camada vetorial de arquivo ou WFS",
+      nome: "Importar Camada",
+      descricao: "Importar camada vetorial de arquivo ou WFS",
       variaveis: [
         { id: "entrada_camadas", label: "Camadas de Entrada", tipo: "select", opcoes: [], especial: "camadas" },
         { id: "informar_tipo_entrada", label: "Tipo de Entrada", tipo: "select", opcoes: ["local", "WFS"] },
@@ -320,8 +320,10 @@
 
   async function loadCamadas() {
     try {
-      const response = await fetch(`${API_BASE}/camadas`);
-      const camadas = await response.json();
+      const response = await fetch(`${API_BASE}/biblioteca-camadas?modulo=fase1`);
+      const camadas = (await response.json()).map((camada) => ({
+        ...camada, nome: camada.nome_publicacao || camada.nome,
+      }));
       renderCamadas(camadas);
     } catch (error) {
       console.error("Erro ao carregar camadas:", error);
@@ -332,7 +334,7 @@
     const container = document.getElementById("geoespacial-layers-list");
 
     if (camadas.length === 0) {
-      container.innerHTML = '<p class="hint">Nenhuma camada carregada.</p>';
+      container.innerHTML = '<p class="hint">Nenhum insumo homologado para a Fase 1.</p>';
       return;
     }
 
@@ -476,7 +478,7 @@
 
       // Mapear operações para endpoints
       const endpointMap = {
-        "OP-01": "/operacoes/carregar-camada",
+        "OP-01": "/operacoes/importar-camada",
         "OP-02": "/operacoes/validar-camada",
         "OP-02-CORR": "/operacoes/reparar-geometrias",
         "OP-03": "/operacoes/normalizar-camada",

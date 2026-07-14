@@ -4,7 +4,7 @@ from pathlib import Path
 
 import openpyxl
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(".")
 XLSX = ROOT / "data" / "Catalogo_Hierarquico_SLT.xlsx"
 OUT = ROOT / "data" / "catalogo-slt.json"
 

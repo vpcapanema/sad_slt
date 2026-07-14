@@ -156,7 +156,7 @@ function Test-PythonEnv([string]$ProjectRoot) {
         $ver = & $venvPython --version 2>&1
         Write-Ok "Python: $ver"
 
-        & $venvPython -c "import fastapi, uvicorn, httpx" 2>$null
+        & $venvPython -c "import fastapi, uvicorn, httpx; from osgeo import gdal; assert gdal.GetDriverCount() > 0" 2>$null
         if ($LASTEXITCODE -ne 0) {
             Write-Info "Instalando dependencias (requirements.txt)..."
             & $venvPython -m pip install -r requirements.txt -q

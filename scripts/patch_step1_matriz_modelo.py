@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(".")
 STEP1 = ROOT / "ahp" / "step1-criterios.html"
 
 OLD_BTNS = (

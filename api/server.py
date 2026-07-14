@@ -5,16 +5,13 @@ SIGMA: somente LEITURA. Demandas: banco PostgreSQL SLT (demandas.projeto).
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from api.path_policy import PROJECT_ROOT, project_path
 from api.routers import api_router
-
-ROOT = Path(__file__).resolve().parent.parent
 
 app = FastAPI(title="SLT — Apoio à Tomada de Decisão", version="1.1.0")
 
@@ -40,16 +37,16 @@ app.include_router(api_router)
 @app.get("/geoespacial/gerador-risco-restricao", include_in_schema=False)
 async def pagina_gerador_risco_restricao() -> FileResponse:
     """Página canônica do módulo gerador de risco e restrição."""
-    return FileResponse(ROOT / "geoespacial" / "gerador-risco-restricao.html")
+    return FileResponse(project_path("geoespacial/gerador-risco-restricao.html"))
 
 
 @app.get("/geoespacial/gerador-favorabilidade", include_in_schema=False)
 async def pagina_gerador_favorabilidade() -> FileResponse:
     """Página canônica do módulo gerador da superfície de favorabilidade."""
-    return FileResponse(ROOT / "geoespacial" / "gerador-favorabilidade.html")
+    return FileResponse(project_path("geoespacial/gerador-favorabilidade.html"))
 
 
-app.mount("/", StaticFiles(directory=str(ROOT), html=True), name="static")
+app.mount("/", StaticFiles(directory=str(PROJECT_ROOT), html=True), name="static")
 
 
 if __name__ == "__main__":

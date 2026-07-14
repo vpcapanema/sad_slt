@@ -23,7 +23,16 @@
     container.innerHTML = camadas.map((camada) => `<div class="geoespacial-layer-item" data-id="${escapeHtml(camada.id)}"><input type="checkbox" class="geoespacial-layer-checkbox" id="layer-${escapeHtml(camada.id)}"><label for="layer-${escapeHtml(camada.id)}" class="geoespacial-layer-name">${escapeHtml(camada.nome)}</label></div>`).join("");
     container.querySelectorAll(".geoespacial-layer-item").forEach((item) => { const camada = camadas.find((value) => value.id === item.dataset.id); item.addEventListener("click", (event) => { if (!event.target.matches("input")) detail(camada); }); item.querySelector("input").addEventListener("change", async (event) => { try { await toggle(camada, event.target.checked); } catch (error) { event.target.checked = false; } }); });
   }
-  async function load() { const response = await fetch(`${API}/camadas`); const catalogo = response.ok ? await response.json() : []; camadas = catalogo.filter((camada) => camada.origem === "final" || camada.metadados?.status === "homologado"); render(); }
+  async function load() {
+    const response = await fetch(`${API}/biblioteca-camadas`);
+    const biblioteca = response.ok ? await response.json() : [];
+    camadas = biblioteca.map((camada) => ({
+      ...camada,
+      nome: camada.nome_publicacao || camada.nome,
+      origem: `Biblioteca homologada · ${camada.versao}`,
+    }));
+    render();
+  }
   async function init() { GeoespacialMap.init("map-geoespacial", { center: [-48.5, -22.4], zoom: 6.2 }); document.getElementById("btn-atualizar").addEventListener("click", load); await load(); }
   document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", init) : init();
 })();

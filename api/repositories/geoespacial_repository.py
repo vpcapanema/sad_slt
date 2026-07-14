@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
+from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
@@ -47,12 +48,14 @@ class GeoespacialRepository:
         metadados = data.get("metadados", {})
         data["metadados"] = Jsonb(metadados)
         columns = list(data)
-        placeholders = ", ".join([f"%({column})s" for column in columns])
+        query = sql.SQL(
+            "INSERT INTO geoprocessamento.produto ({}) VALUES ({}) RETURNING id"
+        ).format(
+            sql.SQL(", ").join(map(sql.Identifier, columns)),
+            sql.SQL(", ").join(sql.Placeholder(column) for column in columns),
+        )
         with get_connection() as conn:
-            row = conn.execute(
-                f"INSERT INTO geoprocessamento.produto ({', '.join(columns)}) VALUES ({placeholders}) RETURNING id",
-                data,
-            ).fetchone()
+            row = conn.execute(query, data).fetchone()
             if not row:
                 raise RuntimeError("Cadastro do produto não retornou identificador")
             produto_id = row["id"]

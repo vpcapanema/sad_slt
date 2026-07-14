@@ -4,18 +4,21 @@
 from __future__ import annotations
 
 import re
+import os
 import sys
 from pathlib import Path
 
-_SCRIPTS = Path(__file__).resolve().parent
+_SCRIPTS = Path("scripts")
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
 from patch_step1_matriz_modelo import patch_step1
 from patch_step3_matriz_view import patch_step3
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = Path(r"d:\REPOSITORIOS\ahp_tool_2_0")
+ROOT = Path(".")
+SRC = Path(os.getenv("AHP_SOURCE_DIR", "../ahp_tool_2_0"))
+if SRC.is_absolute():
+    raise ValueError("AHP_SOURCE_DIR deve usar um caminho relativo")
 DST = ROOT / "ahp"
 IMG_BASE = "https://vpc-geoser-ahp-tool-calculator.onrender.com/img_folder/"
 

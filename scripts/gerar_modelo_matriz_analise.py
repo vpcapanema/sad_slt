@@ -20,7 +20,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.worksheet import Worksheet
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(".")
 OUT = ROOT / "data" / "Modelo_Matriz_Criterios_Premissas_Analise.xlsx"
 OUT_CSV = ROOT / "data" / "Modelo_Matriz_Criterios_Premissas_Analise.csv"
 

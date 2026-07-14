@@ -2,15 +2,19 @@
 from __future__ import annotations
 
 from pathlib import Path
+from hashlib import sha256
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
 
+from api.path_policy import project_path
+from api.repositories import camada_geoespacial_repository
 from api.repositories.geoespacial_repository import geoespacial_repository
 from api.schemas.geoespacial import (
     AtributoFase3InputSchema,
     AtributoFase3Schema,
     CamadaInputSchema,
     CamadaSchema,
+    HomologarCamadaSchema,
     CriterioFase2InputSchema,
     CriterioFase2Schema,
     FluxoSchema,
@@ -29,6 +33,7 @@ from api.schemas.geoespacial import (
 )
 from api.services.geoespacial_service import geoespacial_service
 from api.services.geoprocessamento_engine import CATALOG, OPERATION_ENDPOINTS, geoprocessamento_engine
+from api.services.geoprocessamento_jobs import geoprocessamento_jobs
 
 router = APIRouter(prefix="/geoespacial", tags=["geoespacial"])
 
@@ -73,6 +78,23 @@ async def executar_algoritmo(algoritmo_id: str, parametros: dict) -> dict:
         return resultado
     except (ValueError, KeyError, TypeError, RuntimeError, NotImplementedError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/operacoes-jobs/{algoritmo_id}", status_code=status.HTTP_202_ACCEPTED)
+async def iniciar_operacao_com_progresso(algoritmo_id: str, parametros: dict) -> dict:
+    """Inicia operação e retorna seu contador real de microtarefas."""
+    try:
+        return geoprocessamento_jobs.create(algoritmo_id, parametros)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/operacoes-jobs/status/{job_id}")
+async def consultar_progresso_operacao(job_id: str) -> dict:
+    job = geoprocessamento_jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Execução não encontrada")
+    return job
 
 
 @router.post("/operacoes/salvar-camada")
@@ -221,15 +243,17 @@ async def listar_camadas() -> list[CamadaSchema]:
 
 @router.post("/camadas", response_model=CamadaSchema)
 async def criar_camada(camada: CamadaInputSchema) -> CamadaSchema:
-    """Registra uma camada a partir de arquivo acessível pelo servidor ou WFS."""
+    """Importa uma camada de arquivo externo ou WFS."""
     origem = camada.url_origem or camada.caminho_arquivo
     if not origem:
         raise HTTPException(status_code=422, detail="Informe caminho_arquivo ou url_origem")
     try:
-        resultado = await geoespacial_service.carregar_camada(
+        resultado = await geoespacial_service.importar_camada(
             "WFS" if camada.url_origem else "local", origem, camada.crs
         )
         recurso = await geoespacial_service.obter_recurso(resultado["camada_id"])
+        if recurso is None:
+            raise RuntimeError("Camada carregada não foi encontrada no catálogo")
         return CamadaSchema(**recurso)
     except RuntimeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -247,26 +271,111 @@ async def obter_camada(camada_id: str) -> CamadaSchema:
 @router.delete("/camadas/{camada_id}")
 async def deletar_camada(camada_id: str) -> dict[str, str]:
     """Deleta uma camada do sistema."""
-    deletado = await geoespacial_service.excluir_recurso(camada_id)
+    try:
+        deletado = await geoespacial_service.excluir_recurso(camada_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=409, detail="Camadas homologadas não podem ser excluídas"
+        ) from exc
     if not deletado:
         raise HTTPException(status_code=404, detail="Camada não encontrada")
     return {"message": "Camada deletada com sucesso"}
 
 
-@router.post("/camadas/upload")
-async def upload_camada(arquivo: UploadFile = File(...)) -> dict:
-    """Recebe arquivo geoespacial e o registra no catálogo do componente."""
+@router.post("/camadas/importar")
+@router.post("/camadas/upload", deprecated=True, include_in_schema=False)
+async def importar_arquivo_camada(arquivo: UploadFile = File(...)) -> dict:
+    """Importa um arquivo geoespacial externo para o banco."""
     nome = Path(arquivo.filename or "camada").name
-    pasta = Path("data/geoespacial/uploads")
+    conteudo = await arquivo.read()
+    hash_arquivo = sha256(conteudo).hexdigest()
+    existente = camada_geoespacial_repository.obter_importada_por_hash(hash_arquivo)
+    if existente:
+        id_key = "raster_id" if existente["tipo"] == "raster" else "camada_id"
+        return {
+            id_key: existente["recurso_sessao_id"],
+            "nome": existente["nome"],
+            "tipo": existente["tipo"],
+            "crs": existente.get("crs"),
+            "reutilizada": True,
+        }
+    pasta = project_path("data/geoespacial/uploads")
     pasta.mkdir(parents=True, exist_ok=True)
     caminho = pasta / nome
-    caminho.write_bytes(await arquivo.read())
+    caminho.write_bytes(conteudo)
+    caminho_relativo = f"data/geoespacial/uploads/{nome}"
     try:
         if caminho.suffix.lower() in {".tif", ".tiff"}:
-            return await geoespacial_service.carregar_raster(str(caminho))
-        return await geoespacial_service.carregar_camada("local", str(caminho))
+            return await geoespacial_service.importar_raster(caminho_relativo, hash_arquivo)
+        return await geoespacial_service.importar_camada(
+            "local", caminho_relativo, hash_arquivo=hash_arquivo
+        )
     except RuntimeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/camadas/importar-job", status_code=status.HTTP_202_ACCEPTED)
+async def iniciar_importacao_com_logs(arquivo: UploadFile = File(...)) -> dict:
+    """Recebe o upload e inicia importação auditável em nanotarefas."""
+    conteudo = await arquivo.read()
+    return geoprocessamento_jobs.create_import(arquivo.filename or "camada", conteudo)
+
+
+@router.get("/camadas-diretorio")
+async def listar_diretorio_camadas() -> dict[str, list[dict]]:
+    """Diretório interno para carregar camadas já importadas/processadas."""
+    return camada_geoespacial_repository.listar_diretorio()
+
+
+@router.post("/camadas/{camada_id}/carregar")
+async def carregar_camada_do_sistema(camada_id: str) -> dict:
+    """Carrega uma camada existente do banco para a bancada/cache."""
+    try:
+        return await geoespacial_service.carregar_recurso(camada_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/camadas/{camada_id}/carregar-job", status_code=status.HTTP_202_ACCEPTED)
+async def iniciar_carregamento_com_logs(camada_id: str) -> dict:
+    """Carrega uma camada por job e registra cada nanotarefa concluída."""
+    return geoprocessamento_jobs.create_load(camada_id)
+
+
+@router.post("/camadas/{camada_id}/homologar", status_code=201)
+async def homologar_camada(camada_id: str, body: HomologarCamadaSchema) -> dict:
+    """Publica uma camada na biblioteca imutável."""
+    if body.modulo_consumidor not in {"fase1", "fase2", "ambos"}:
+        raise HTTPException(status_code=422, detail="Módulo consumidor inválido")
+    try:
+        return camada_geoespacial_repository.homologar(
+            camada_id,
+            modulo_consumidor=body.modulo_consumidor,
+            nome_publicacao=body.nome_publicacao,
+            versao=body.versao,
+            finalidade=body.finalidade,
+            homologado_por=body.homologado_por,
+            produto_id=str(body.produto_id) if body.produto_id else None,
+            metadados=body.metadados,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/camadas/{camada_id}/homologar-job", status_code=status.HTTP_202_ACCEPTED)
+async def iniciar_homologacao_com_logs(camada_id: str, body: HomologarCamadaSchema) -> dict:
+    """Homologa por job com log granular de persistência e verificação."""
+    return geoprocessamento_jobs.create_homologation(
+        camada_id, body.model_dump(mode="json")
+    )
+
+
+@router.get("/biblioteca-camadas")
+async def listar_biblioteca_camadas(modulo: str | None = None) -> list[dict]:
+    """Biblioteca somente leitura de insumos homologados."""
+    if modulo and modulo not in {"fase1", "fase2"}:
+        raise HTTPException(status_code=422, detail="Módulo consumidor inválido")
+    return camada_geoespacial_repository.listar_biblioteca(modulo)
 
 
 @router.get("/camadas/{camada_id}/geojson")
@@ -547,16 +656,17 @@ async def homologar_rodada_fase3(rodada_id: str, responsavel: str) -> RodadaFase
 
 # ==================== OPERAÇÕES GEOSPACIAIS ====================
 
-@router.post("/operacoes/carregar-camada")
-async def carregar_camada(
+@router.post("/operacoes/importar-camada")
+@router.post("/operacoes/carregar-camada", deprecated=True, include_in_schema=False)
+async def importar_camada(
     tipo_entrada: str,
     caminho_arquivo: str,
     crs_origem: str | None = None,
     filtro_espacial: str | None = None,
     filtro_atributivo: str | None = None,
 ) -> dict:
-    """Carrega camada vetorial."""
-    resultado = await geoespacial_service.carregar_camada(
+    """Importa camada vetorial de uma origem externa."""
+    resultado = await geoespacial_service.importar_camada(
         tipo_entrada, caminho_arquivo, crs_origem, filtro_espacial, filtro_atributivo
     )
     return resultado

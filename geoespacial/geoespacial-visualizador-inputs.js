@@ -37,7 +37,7 @@
   function render() {
     const container = document.getElementById("geoespacial-layers-list");
     document.getElementById("viewer-layer-count").textContent = `${camadas.length} ${camadas.length === 1 ? "item" : "itens"}`;
-    if (!camadas.length) return container.innerHTML = '<p class="hint">Nenhuma camada carregada. Use “Importar camadas” ou adicione dados na bancada de geoprocessamento.</p>';
+    if (!camadas.length) return container.innerHTML = '<p class="hint">Nenhuma camada importada. Use “Importar camadas” para registrar uma origem externa no sistema.</p>';
     container.innerHTML = camadas.map((camada) => `<div class="geoespacial-layer-item" data-id="${escapeHtml(camada.id)}"><input type="checkbox" class="geoespacial-layer-checkbox" id="layer-${escapeHtml(camada.id)}"><label for="layer-${escapeHtml(camada.id)}" class="geoespacial-layer-name">${escapeHtml(camada.nome)}</label></div>`).join("");
     container.querySelectorAll(".geoespacial-layer-item").forEach((item) => {
       const camada = camadas.find((value) => value.id === item.dataset.id);
@@ -46,14 +46,14 @@
     });
   }
   async function load() {
-    const response = await fetch(`${API}/camadas`);
+    const response = await fetch(`${API}/camadas-diretorio`);
     if (!response.ok) throw new Error("Catálogo de camadas indisponível");
-    camadas = await response.json(); render();
+    camadas = (await response.json()).importadas || []; render();
   }
   async function upload(files) {
     for (const file of files) {
       const data = new FormData(); data.append("arquivo", file);
-      const response = await fetch(`${API}/camadas/upload`, { method: "POST", body: data });
+      const response = await fetch(`${API}/camadas/importar`, { method: "POST", body: data });
       if (!response.ok) throw new Error((await response.json()).detail || `Falha no upload de ${file.name}`);
     }
     await load();

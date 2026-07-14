@@ -7,6 +7,10 @@
 | **SIGMA** (`cadastro.instituicao`, `cadastro.pessoa`, `usuarios.usuario`) | Leitura + login | Nunca pelo SLT |
 | **Banco SLT** (container `slt_postgres` + PostGIS, porta **5434**) | Demandas, AHP, auditoria | Sim |
 
+Camadas geoespaciais são persistidas obrigatoriamente no PostgreSQL: vetores
+como feições PostGIS em `geoprocessamento.camada_feicao` e rasters como GeoTIFF
+binário em `geoprocessamento.camada_raster`. A memória da API é apenas cache.
+
 Cadastro de nova instituição: http://56.125.163.194/cadastro/instituicao
 
 ## Executar (desenvolvimento)
@@ -20,9 +24,12 @@ sistema_apoio_a_tomada_de_decisao_web.code-workspace
 Recomendado — um comando faz tudo (libera porta, sobe API, verifica conexões, abre o navegador):
 
 ```powershell
-cd D:\REPOSITORIOS\sistema_apoio_a_tomada_de_decisao_web
 .\scripts\start-dev.ps1
 ```
+
+Execute os comandos a partir da raiz do repositório. Caminhos configuráveis e
+parâmetros de arquivos devem ser relativos a essa raiz; caminhos absolutos e
+travessia por `..` são recusados pela API.
 
 Manual:
 
@@ -89,6 +96,21 @@ favorabilidade. Cada algoritmo possui endpoint individual; algoritmos podem ser
 combinados em funções e funções/algoritmos podem ser combinados em fluxos persistidos.
 
 Arquitetura e contratos: `COMPONENTE_GEOPROCESSAMENTO.md`.
+
+#### Ciclo de vida das camadas
+
+- **Importar camada**: lê uma origem externa (arquivo ou WFS) e grava catálogo e
+  conteúdo geoespacial no PostgreSQL/PostGIS.
+- **Carregar camada**: abre na bancada uma camada que já está nas tabelas físicas
+  `camada_importada`, `camada_processada` ou `camada_homologada`.
+- **Homologar camada**: publica a camada na tabela
+  `geoprocessamento.camada_homologada`, copiando seu conteúdo para
+  `camada_homologada_feicao` ou `camada_homologada_raster`. Esse snapshot é
+  independente da origem, imutável e disponível somente para leitura.
+
+As fases 1 e 2 consultam exclusivamente `GET /api/geoespacial/biblioteca-camadas`
+com o respectivo filtro `modulo=fase1` ou `modulo=fase2`. Camadas apenas importadas
+ou processadas não são oferecidas como insumos oficiais antes da homologação.
 
 Demandas: persistidas em `cadastro.cadastro_demanda` via `POST /api/demandas` (painel: `GET /api/demandas`).
 

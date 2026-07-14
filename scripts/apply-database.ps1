@@ -81,7 +81,11 @@ $migrations = @(
     "003_schema_ahp_objetos.sql",
     "004_schema_ahp_analises.sql",
     "011_schema_geo.sql",
-    "037_schema_geoprocessamento.sql"
+    "037_schema_geoprocessamento.sql",
+    "038_persistencia_conteudo_geoespacial.sql",
+    "039_biblioteca_camadas_homologadas.sql",
+    "040_separacao_fisica_camadas.sql",
+    "041_idempotencia_importacao.sql"
 )
 
 foreach ($name in $migrations) {

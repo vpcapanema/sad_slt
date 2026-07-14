@@ -7,14 +7,20 @@ import re
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+from uuid import uuid4
 
 import geopandas as gpd
 import numpy as np
 import rasterio
 from PIL import Image
+from rasterio.io import MemoryFile
+from rasterio.transform import array_bounds
 from rasterio.warp import Resampling, calculate_default_transform, reproject, transform_bounds
 from shapely.geometry import mapping, shape
+
+from api.path_policy import project_path, project_relative, relative_file_name
+from api.repositories import camada_geoespacial_repository
 
 
 class GeoespacialService:
@@ -52,14 +58,34 @@ class GeoespacialService:
         gdf: gpd.GeoDataFrame,
         nome: str,
         origem: str = "processamento",
+        progress: Callable[[str], None] | None = None,
         **extras: Any,
     ) -> str:
-        camada_id = f"camada_{len(self._camadas) + 1}"
-        self._camadas[camada_id] = gdf
+        camada_id = f"camada_{uuid4().hex}"
         self._registrar_metadados(
             camada_id, nome, "vetorial", str(gdf.crs) if gdf.crs else None, origem,
             feicoes=len(gdf), colunas=list(gdf.columns), **extras,
         )
+        if progress:
+            progress("Metadados vetoriais preparados")
+        try:
+            database_id = camada_geoespacial_repository.salvar_vetor(
+                recurso_id=camada_id,
+                nome=nome,
+                origem=origem,
+                gdf=gdf,
+                metadados=self._metadados[camada_id],
+                hash_arquivo=extras.get("hash_arquivo"),
+            )
+            if progress:
+                progress("Catálogo e feições vetoriais persistidos no PostGIS")
+        except Exception:
+            self._metadados.pop(camada_id, None)
+            raise
+        self._metadados[camada_id]["metadados"]["database_id"] = database_id
+        self._camadas[camada_id] = gdf
+        if progress:
+            progress("Camada vetorial registrada no cache de trabalho")
         return camada_id
 
     def registrar_raster(
@@ -68,22 +94,117 @@ class GeoespacialService:
         profile: dict[str, Any],
         nome: str,
         origem: str = "processamento",
+        progress: Callable[[str], None] | None = None,
         **extras: Any,
     ) -> str:
-        raster_id = f"raster_{len(self._rasters) + 1}"
-        self._rasters[raster_id] = np.asarray(raster, dtype="float32")
-        self._raster_profiles[raster_id] = profile
+        raster_id = f"raster_{uuid4().hex}"
+        raster_data = np.asarray(raster, dtype="float32")
+        if progress:
+            progress("Matriz raster normalizada para persistência")
         crs = profile.get("crs")
+        transform = profile.get("transform")
+        if not crs or transform is None:
+            raise ValueError("Raster precisa de CRS e transformação para persistência obrigatória")
         self._registrar_metadados(
             raster_id, nome, "raster", str(crs) if crs else None, origem,
             shape=list(raster.shape), **extras,
         )
+        if progress:
+            progress("Metadados raster preparados")
+        nodata = profile.get("nodata", np.nan)
+        with MemoryFile() as memory:
+            with memory.open(
+                driver="GTiff", height=raster_data.shape[0], width=raster_data.shape[1],
+                count=1, dtype="float32", crs=crs, transform=transform, nodata=nodata,
+            ) as dataset:
+                dataset.write(raster_data, 1)
+            geotiff = memory.read()
+        if progress:
+            progress("GeoTIFF interno serializado")
+        serializable_profile = {
+            "crs": str(crs),
+            "transform": list(transform),
+            "nodata": None if nodata is None or np.isnan(nodata) else float(nodata),
+        }
+        try:
+            database_id = camada_geoespacial_repository.salvar_raster(
+                recurso_id=raster_id, nome=nome, origem=origem, crs=str(crs),
+                dados_geotiff=geotiff, largura=raster_data.shape[1],
+                altura=raster_data.shape[0], dtype="float32",
+                nodata=None if nodata is None or np.isnan(nodata) else float(nodata),
+                perfil=serializable_profile, metadados=self._metadados[raster_id],
+                hash_arquivo=extras.get("hash_arquivo"),
+            )
+            if progress:
+                progress("Catálogo e conteúdo raster persistidos no PostGIS")
+        except Exception:
+            self._metadados.pop(raster_id, None)
+            raise
+        self._metadados[raster_id]["metadados"]["database_id"] = database_id
+        self._rasters[raster_id] = raster_data
+        self._raster_profiles[raster_id] = profile
+        if progress:
+            progress("Raster registrado no cache de trabalho")
         return raster_id
+
+    def _catalogar_persistidas(self) -> None:
+        for row in camada_geoespacial_repository.listar():
+            recurso_id = row.get("recurso_sessao_id")
+            tem_conteudo = row.get("tem_vetor") or row.get("tem_raster")
+            if not recurso_id or not tem_conteudo:
+                continue
+            stored = row.get("metadados") or {}
+            extras = stored.get("metadados") or stored
+            self._metadados[recurso_id] = {
+                "id": recurso_id,
+                "nome": row["nome"],
+                "tipo": "vetorial" if row["tipo"] == "vetor" else "raster",
+                "crs": row.get("crs"),
+                "origem": stored.get("origem", extras.get("origem", "banco")),
+                "data_importacao": row["criado_em"].isoformat(),
+                "caminho_arquivo": stored.get("caminho_arquivo"),
+                "url_origem": stored.get("url_origem"),
+                "metadados": {**extras, "database_id": str(row["id"]), "persistida": True},
+            }
+
+    def obter_camada_dados(self, camada_id: str) -> gpd.GeoDataFrame:
+        cached = self._camadas.get(camada_id)
+        if cached is not None:
+            return cached
+        loaded = camada_geoespacial_repository.carregar_vetor(camada_id)
+        if loaded is None:
+            raise ValueError(f"Camada {camada_id} não encontrada")
+        gdf, _ = loaded
+        self._camadas[camada_id] = gdf
+        self._catalogar_persistidas()
+        return gdf
+
+    def obter_raster_dados(self, raster_id: str) -> np.ndarray:
+        cached = self._rasters.get(raster_id)
+        if cached is not None:
+            return cached
+        loaded = camada_geoespacial_repository.carregar_raster(raster_id)
+        if loaded is None:
+            raise ValueError(f"Raster {raster_id} não encontrado")
+        geotiff, _ = loaded
+        with MemoryFile(geotiff) as memory:
+            with memory.open() as dataset:
+                data = dataset.read(1).astype("float32")
+                profile = {
+                    "crs": dataset.crs,
+                    "transform": dataset.transform,
+                    "nodata": dataset.nodata,
+                }
+        self._rasters[raster_id] = data
+        self._raster_profiles[raster_id] = profile
+        self._catalogar_persistidas()
+        return data
 
     async def listar_recursos(self) -> list[dict[str, Any]]:
         """Lista o catálogo efetivamente usado pelo motor de processamento."""
+        self._catalogar_persistidas()
         recursos: list[dict[str, Any]] = []
-        for recurso_id in [*self._camadas, *self._rasters]:
+        for recurso_id in self._metadados:
             meta = self._metadados.get(recurso_id)
             if meta:
                 recursos.append(meta)
@@ -108,25 +229,48 @@ class GeoespacialService:
         await self.listar_recursos()
         return self._metadados.get(recurso_id)
 
+    async def carregar_recurso(
+        self, recurso_id: str, progress: Callable[[str], None] | None = None
+    ) -> dict[str, Any]:
+        """Carrega no cache uma camada que já pertence ao catálogo interno."""
+        self._catalogar_persistidas()
+        if progress:
+            progress("Catálogo físico consultado")
+        metadata = self._metadados.get(recurso_id)
+        if metadata is None:
+            raise ValueError(f"Camada {recurso_id} não encontrada no sistema")
+        if progress:
+            progress("Metadados da camada localizados")
+        if metadata["tipo"] == "raster":
+            self.obter_raster_dados(recurso_id)
+            if progress:
+                progress("Bloco GeoTIFF lido do banco")
+        else:
+            self.obter_camada_dados(recurso_id)
+            if progress:
+                progress("Feições e geometrias lidas do banco")
+        if progress:
+            progress("Conteúdo registrado no cache da sessão")
+        return {**metadata, "carregada": True}
+
     async def excluir_recurso(self, recurso_id: str) -> bool:
-        removido = self._camadas.pop(recurso_id, None) is not None
+        if camada_geoespacial_repository.esta_homologada(recurso_id):
+            raise ValueError("Camada homologada é somente leitura")
+        removido = camada_geoespacial_repository.excluir(recurso_id)
+        removido = self._camadas.pop(recurso_id, None) is not None or removido
         removido = self._rasters.pop(recurso_id, None) is not None or removido
         self._raster_profiles.pop(recurso_id, None)
         self._metadados.pop(recurso_id, None)
         return removido
 
     async def camada_geojson(self, camada_id: str) -> dict[str, Any]:
-        if camada_id not in self._camadas:
-            raise ValueError(f"Camada {camada_id} não encontrada")
-        gdf = self._camadas[camada_id]
+        gdf = self.obter_camada_dados(camada_id).copy()
         if gdf.crs and not gdf.crs.equals("EPSG:4326"):
             gdf = gdf.to_crs("EPSG:4326")
         return json.loads(gdf.to_json())
 
     async def atributos_camada(self, camada_id: str, limite: int = 100, offset: int = 0) -> dict[str, Any]:
-        if camada_id not in self._camadas:
-            raise ValueError(f"Camada {camada_id} não encontrada")
-        gdf = self._camadas[camada_id]
+        gdf = self.obter_camada_dados(camada_id).copy()
         dados = gdf.drop(columns=[gdf.geometry.name], errors="ignore").iloc[offset:offset + limite]
         dados = dados.where(dados.notna(), None)
         return {
@@ -140,9 +284,9 @@ class GeoespacialService:
 
     async def calcular_campo(self, camada_id: str, campo: str, expressao: str) -> dict[str, Any]:
         """Cria ou atualiza um campo usando uma expressão vetorizada."""
-        gdf = self._camadas.get(camada_id)
-        if gdf is None:
-            raise ValueError(f"Camada não encontrada: {camada_id}")
+        if camada_geoespacial_repository.esta_homologada(camada_id):
+            raise ValueError("Camada homologada é somente leitura")
+        gdf = self.obter_camada_dados(camada_id).copy()
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", campo):
             raise ValueError("Nome de campo inválido")
         if not expressao.strip():
@@ -152,14 +296,17 @@ class GeoespacialService:
         except Exception as exc:
             raise ValueError(f"Expressão inválida: {exc}") from exc
         gdf[campo] = resultado
-        self._metadados[camada_id]["metadados"]["colunas"] = list(gdf.columns)
+        metadata = self._metadados[camada_id]
+        metadata["metadados"]["colunas"] = list(gdf.columns)
+        camada_geoespacial_repository.substituir_vetor(
+            camada_id, gdf, metadata
+        )
+        self._camadas[camada_id] = gdf
         return {"camada_id": camada_id, "campo": campo, "feicoes_atualizadas": len(gdf)}
 
     async def consultar_por_atributo(self, camada_id: str, expressao: str) -> dict[str, Any]:
         """Retorna as feições que atendem a uma expressão atributiva."""
-        gdf = self._camadas.get(camada_id)
-        if gdf is None:
-            raise ValueError(f"Camada não encontrada: {camada_id}")
+        gdf = self.obter_camada_dados(camada_id).copy()
         try:
             selecionadas = gdf.query(expressao, engine="python")
         except Exception as exc:
@@ -170,9 +317,12 @@ class GeoespacialService:
 
     async def atualizar_fonte(self, camada_id: str) -> dict[str, Any]:
         """Relê a fonte externa preservando o identificador da camada."""
+        if camada_geoespacial_repository.esta_homologada(camada_id):
+            raise ValueError("Camada homologada é somente leitura")
         meta = self._metadados.get(camada_id)
-        if camada_id not in self._camadas or meta is None:
+        if meta is None:
             raise ValueError(f"Camada não encontrada: {camada_id}")
+        self.obter_camada_dados(camada_id)
         origem = meta.get("caminho_arquivo") or meta.get("url_origem")
         if not origem:
             raise ValueError("A camada não possui uma fonte externa atualizável")
@@ -180,15 +330,15 @@ class GeoespacialService:
             atualizado = gpd.read_file(origem)
         except Exception as exc:
             raise RuntimeError(f"Falha ao atualizar a fonte: {exc}") from exc
-        self._camadas[camada_id] = atualizado
         meta["crs"] = str(atualizado.crs) if atualizado.crs else None
         meta["data_importacao"] = datetime.now(timezone.utc).isoformat()
         meta["metadados"].update(feicoes=len(atualizado), colunas=list(atualizado.columns))
+        camada_geoespacial_repository.substituir_vetor(camada_id, atualizado, meta)
+        self._camadas[camada_id] = atualizado
         return {"camada_id": camada_id, "feicoes": len(atualizado), "crs": meta["crs"]}
 
     async def preview_raster(self, raster_id: str) -> dict[str, Any]:
-        if raster_id not in self._rasters:
-            raise ValueError(f"Raster {raster_id} não encontrado")
+        self.obter_raster_dados(raster_id)
         profile = self._raster_profiles.get(raster_id)
         if not profile or not profile.get("crs") or not profile.get("transform"):
             raise ValueError("Raster sem georreferenciamento para visualização")
@@ -204,7 +354,7 @@ class GeoespacialService:
         rgba[..., 2] = (255 * (1 - normalized)).astype("uint8")
         rgba[..., 3] = np.where(valid, 190, 0).astype("uint8")
         stream = BytesIO(); Image.fromarray(rgba, "RGBA").save(stream, format="PNG")
-        bounds = rasterio.transform.array_bounds(raster.shape[0], raster.shape[1], profile["transform"])
+        bounds = array_bounds(raster.shape[0], raster.shape[1], profile["transform"])
         west, south, east, north = transform_bounds(profile["crs"], "EPSG:4326", *bounds)
         return {
             "raster_id": raster_id,
@@ -213,26 +363,43 @@ class GeoespacialService:
             "min": float(np.nanmin(raster)), "max": float(np.nanmax(raster)),
         }
 
-    async def carregar_camada(
+    async def importar_camada(
         self,
         tipo_entrada: str,
         caminho_arquivo: str,
         crs_origem: str | None = None,
         filtro_espacial: str | None = None,
         filtro_atributivo: str | None = None,
+        hash_arquivo: str | None = None,
+        progress: Callable[[str], None] | None = None,
     ) -> dict[str, Any]:
-        """Carrega camada vetorial de arquivo ou WFS."""
+        """Importa camada vetorial de uma origem externa para o sistema."""
         try:
             tipo_normalizado = tipo_entrada.strip().lower()
+            if progress:
+                progress("Tipo de entrada vetorial validado")
             if tipo_normalizado == "local":
-                gdf = gpd.read_file(caminho_arquivo)
+                caminho_relativo = project_relative(
+                    project_path(caminho_arquivo, label="caminho do arquivo")
+                )
+                origem_arquivo = project_path(
+                    caminho_relativo, label="caminho do arquivo"
+                )
+                if progress:
+                    progress("Caminho relativo da fonte resolvido")
+                gdf = gpd.read_file(origem_arquivo)
             elif tipo_normalizado == "wfs":
+                caminho_relativo = None
                 gdf = gpd.read_file(caminho_arquivo)
             else:
                 raise ValueError(f"Tipo de entrada inválido: {tipo_entrada}")
+            if progress:
+                progress("Fonte vetorial aberta pelo driver geoespacial")
 
             if crs_origem and gdf.crs is None:
                 gdf = gdf.set_crs(crs_origem)
+            if progress:
+                progress("Sistema de referência espacial conferido")
 
             if filtro_espacial:
                 try:
@@ -242,16 +409,25 @@ class GeoespacialService:
                     gdf = gdf.cx[bbox[0]:bbox[2], bbox[1]:bbox[3]]
                 except ValueError as exc:
                     raise ValueError("Filtro espacial deve usar minx,miny,maxx,maxy") from exc
+                if progress:
+                    progress("Filtro espacial aplicado")
 
             if filtro_atributivo:
                 gdf = gdf.query(filtro_atributivo)
+                if progress:
+                    progress("Filtro atributivo aplicado")
+
+            if progress:
+                progress(f"Estrutura vetorial validada: {len(gdf)} feições")
 
             camada_id = self.registrar_camada(
                 gdf,
                 Path(caminho_arquivo).stem,
                 "WFS" if tipo_normalizado == "wfs" else "arquivo",
-                caminho_arquivo=caminho_arquivo if tipo_normalizado == "local" else None,
+                caminho_arquivo=caminho_relativo,
                 url_origem=caminho_arquivo if tipo_normalizado == "wfs" else None,
+                hash_arquivo=hash_arquivo,
+                progress=progress,
             )
 
             return {
@@ -263,17 +439,34 @@ class GeoespacialService:
                 "colunas": list(gdf.columns),
             }
         except Exception as e:
-            raise RuntimeError(f"Erro ao carregar camada: {e}") from e
+            raise RuntimeError(f"Erro ao importar camada: {e}") from e
 
-    async def carregar_raster(self, caminho_arquivo: str) -> dict[str, Any]:
-        """Carrega um raster usando Rasterio e o registra no catálogo da sessão."""
+    async def importar_raster(
+        self, caminho_arquivo: str, hash_arquivo: str | None = None,
+        progress: Callable[[str], None] | None = None,
+    ) -> dict[str, Any]:
+        """Importa um raster externo e o registra no sistema."""
         try:
-            with rasterio.open(caminho_arquivo) as src:
+            caminho_relativo = project_relative(
+                project_path(caminho_arquivo, label="caminho do raster")
+            )
+            if progress:
+                progress("Caminho relativo do raster resolvido")
+            origem_arquivo = project_path(caminho_relativo, label="caminho do raster")
+            with rasterio.open(origem_arquivo) as src:
+                if progress:
+                    progress("Dataset raster aberto pelo driver GDAL")
                 data = src.read(1).astype("float32")
+                if progress:
+                    progress("Banda raster carregada em memória")
                 profile = {"crs": src.crs, "transform": src.transform, "nodata": src.nodata}
+            if progress:
+                progress("Perfil espacial e valor NoData conferidos")
             raster_id = self.registrar_raster(
                 data, profile, Path(caminho_arquivo).stem, "arquivo",
-                caminho_arquivo=caminho_arquivo,
+                caminho_arquivo=caminho_relativo,
+                hash_arquivo=hash_arquivo,
+                progress=progress,
             )
             return {
                 "raster_id": raster_id,
@@ -284,7 +477,24 @@ class GeoespacialService:
                 "nodata": profile["nodata"],
             }
         except Exception as exc:
-            raise RuntimeError(f"Erro ao carregar raster: {exc}") from exc
+            raise RuntimeError(f"Erro ao importar raster: {exc}") from exc
+
+    async def carregar_camada(
+        self,
+        tipo_entrada: str,
+        caminho_arquivo: str,
+        crs_origem: str | None = None,
+        filtro_espacial: str | None = None,
+        filtro_atributivo: str | None = None,
+    ) -> dict[str, Any]:
+        """Compatibilidade: use importar_camada para origens externas."""
+        return await self.importar_camada(
+            tipo_entrada, caminho_arquivo, crs_origem, filtro_espacial, filtro_atributivo
+        )
+
+    async def carregar_raster(self, caminho_arquivo: str) -> dict[str, Any]:
+        """Compatibilidade: use importar_raster para origens externas."""
+        return await self.importar_raster(caminho_arquivo)
 
     async def validar_camada(
         self,
@@ -301,10 +511,7 @@ class GeoespacialService:
         percentual_critico_erros: float = 10.0,
     ) -> dict[str, Any]:
         """Valida topologia e geometria da camada."""
-        if camada_id not in self._camadas:
-            raise ValueError(f"Camada {camada_id} não encontrada")
-
-        gdf = self._camadas[camada_id]
+        gdf = self.obter_camada_dados(camada_id).copy()
         erros: list[str] = []
         avisos: list[str] = []
 
@@ -350,10 +557,7 @@ class GeoespacialService:
         manter_geometria_original_falha: bool = True,
     ) -> dict[str, Any]:
         """Repara geometrias inválidas e topologia."""
-        if camada_id not in self._camadas:
-            raise ValueError(f"Camada {camada_id} não encontrada")
-
-        gdf = self._camadas[camada_id]
+        gdf = self.obter_camada_dados(camada_id).copy()
         correcoes: list[str] = []
 
         if corrigir_geometrias_invalidas:
@@ -387,10 +591,7 @@ class GeoespacialService:
         regra_nomenclatura: str = "<fonte_id>__<nome_campo>",
     ) -> dict[str, Any]:
         """Normaliza CRS, recorta e padroniza campos."""
-        if camada_id not in self._camadas:
-            raise ValueError(f"Camada {camada_id} não encontrada")
-
-        gdf = self._camadas[camada_id]
+        gdf = self.obter_camada_dados(camada_id).copy()
         operacoes: list[str] = []
 
         # Reprojetar CRS
@@ -405,8 +606,8 @@ class GeoespacialService:
                 operacoes.append(f"Corrigidas {int(invalidas.sum())} geometrias")
 
         if recortar_area_estudo and area_estudo:
-            if area_estudo in self._camadas:
-                mascara = self._camadas[area_estudo]
+            if area_estudo.startswith("camada_"):
+                mascara = self.obter_camada_dados(area_estudo)
                 if gdf.crs and mascara.crs and gdf.crs != mascara.crs:
                     mascara = mascara.to_crs(gdf.crs)
                 gdf = gpd.clip(gdf, mascara)
@@ -415,7 +616,8 @@ class GeoespacialService:
                     bbox = [float(v.strip()) for v in area_estudo.split(",")]
                     if len(bbox) != 4:
                         raise ValueError
-                    gdf = gdf.clip(bbox)
+                    bbox_clip = (bbox[0], bbox[1], bbox[2], bbox[3])
+                    gdf = gdf.clip(bbox_clip)
                 except ValueError as exc:
                     raise ValueError("Área de estudo deve ser um ID de camada ou bbox minx,miny,maxx,maxy") from exc
             operacoes.append("Recortada pela área de estudo")
@@ -461,10 +663,7 @@ class GeoespacialService:
         recortar_area_estudo: bool = False,
     ) -> dict[str, Any]:
         """Cria buffer espacial ao redor de geometrias."""
-        if camada_id not in self._camadas:
-            raise ValueError(f"Camada {camada_id} não encontrada")
-
-        gdf = self._camadas[camada_id].copy()
+        gdf = self.obter_camada_dados(camada_id).copy()
         crs_original = gdf.crs
         if unidade_buffer == "metros" and gdf.crs and gdf.crs.is_geographic:
             crs_trabalho = gdf.estimate_utm_crs()
@@ -502,11 +701,8 @@ class GeoespacialService:
         regra_nomenclatura: str = "<fonte_id>__<nome_campo>",
     ) -> dict[str, Any]:
         """Sobrepõe camadas com operação de overlay."""
-        if camada_id_1 not in self._camadas or camada_id_2 not in self._camadas:
-            raise ValueError("Uma ou ambas as camadas não encontradas")
-
-        gdf1 = self._camadas[camada_id_1]
-        gdf2 = self._camadas[camada_id_2]
+        gdf1 = self.obter_camada_dados(camada_id_1)
+        gdf2 = self.obter_camada_dados(camada_id_2)
         if gdf1.crs and gdf2.crs and gdf1.crs != gdf2.crs:
             gdf2 = gdf2.to_crs(gdf1.crs)
 
@@ -536,15 +732,17 @@ class GeoespacialService:
         formato_saida: str = "GeoPackage",
         crs_saida: str | None = None,
         opcao_salvamento: str = "memoria",
+        progress: Callable[[str], None] | None = None,
     ) -> dict[str, Any]:
         """Exporta camada vetorial."""
-        if camada_id not in self._camadas:
-            raise ValueError(f"Camada {camada_id} não encontrada")
-
-        gdf = self._camadas[camada_id]
+        gdf = self.obter_camada_dados(camada_id)
+        if progress:
+            progress("Feições vetoriais carregadas para exportação")
 
         if crs_saida and gdf.crs:
             gdf = gdf.to_crs(crs_saida)
+        if progress:
+            progress("Sistema de referência da saída conferido")
 
         driver_map = {
             "GeoPackage": "GPKG",
@@ -553,15 +751,25 @@ class GeoespacialService:
         }
 
         driver = driver_map.get(formato_saida, "GPKG")
+        if progress:
+            progress(f"Driver de exportação selecionado: {driver}")
 
         if opcao_salvamento == "persistir_sistema":
-            caminho_completo = f"data/geoespacial/{nome_arquivo}"
-            Path(caminho_completo).parent.mkdir(parents=True, exist_ok=True)
+            nome_relativo = relative_file_name(nome_arquivo, label="nome do arquivo")
+            caminho_relativo = Path("data/geoespacial") / nome_relativo
+            caminho_completo = project_path(caminho_relativo)
+            caminho_completo.parent.mkdir(parents=True, exist_ok=True)
+            if progress:
+                progress("Destino relativo de exportação preparado")
             gdf.to_file(caminho_completo, driver=driver)
-            return {"caminho": caminho_completo, "formato": formato_saida}
+            if progress:
+                progress("Arquivo vetorial serializado")
+            return {"caminho": caminho_relativo.as_posix(), "formato": formato_saida}
         else:
             # Retornar GeoJSON para memória
             geojson = json.loads(gdf.to_json())
+            if progress:
+                progress("GeoJSON vetorial serializado em memória")
             return {"geojson": geojson, "formato": "GeoJSON"}
 
     async def normalizar_raster(
@@ -572,10 +780,7 @@ class GeoespacialService:
         valor_maximo: float | None = None,
     ) -> dict[str, Any]:
         """Normaliza raster para escala 0-1."""
-        if raster_id not in self._rasters:
-            raise ValueError(f"Raster {raster_id} não encontrado")
-
-        raster = self._rasters[raster_id].copy()
+        raster = self.obter_raster_dados(raster_id).copy()
 
         valid = np.isfinite(raster)
         values = raster[valid]
@@ -601,8 +806,10 @@ class GeoespacialService:
         else:
             raise ValueError(f"Método de normalização inválido: {metodo_normalizacao}")
 
-        novo_raster_id = f"raster_{len(self._rasters) + 1}"
-        self._rasters[novo_raster_id] = raster_norm
+        novo_raster_id = self.registrar_raster(
+            raster_norm, self._raster_profiles[raster_id],
+            f"Raster normalizado de {raster_id}", "OP-20",
+        )
 
         return {
             "raster_id": novo_raster_id,
@@ -620,9 +827,7 @@ class GeoespacialService:
         """Combina rasters por álgebra de mapas."""
         rasters = []
         for rid in raster_ids:
-            if rid not in self._rasters:
-                raise ValueError(f"Raster {rid} não encontrado")
-            rasters.append(self._rasters[rid])
+            rasters.append(self.obter_raster_dados(rid))
 
         if not rasters:
             raise ValueError("Nenhum raster fornecido")
@@ -651,8 +856,10 @@ class GeoespacialService:
         else:
             raise NotImplementedError(f"Operador {operador} não implementado")
 
-        novo_raster_id = f"raster_{len(self._rasters) + 1}"
-        self._rasters[novo_raster_id] = resultado
+        novo_raster_id = self.registrar_raster(
+            resultado, self._raster_profiles[raster_ids[0]],
+            "Combinação de rasters", "OP-17", operador=operador,
+        )
 
         return {
             "raster_id": novo_raster_id,
@@ -668,10 +875,7 @@ class GeoespacialService:
         manter_geometria_multi: bool = False,
     ) -> dict[str, Any]:
         """Dissolve geometrias baseado em atributos."""
-        if camada_id not in self._camadas:
-            raise ValueError(f"Camada {camada_id} não encontrada")
-
-        gdf = self._camadas[camada_id].copy()
+        gdf = self.obter_camada_dados(camada_id).copy()
 
         agregacoes = {"soma": "sum", "media": "mean", "mediana": "median", "max": "max", "min": "min"}
         aggfunc = agregacoes.get(funcao_agregacao, funcao_agregacao)
@@ -701,11 +905,8 @@ class GeoespacialService:
         inverter_selecao: bool = False,
     ) -> dict[str, Any]:
         """Seleciona feições por localização espacial."""
-        if camada_id not in self._camadas or camada_ref_id not in self._camadas:
-            raise ValueError("Uma ou ambas as camadas não encontradas")
-
-        gdf = self._camadas[camada_id].copy()
-        gdf_ref = self._camadas[camada_ref_id]
+        gdf = self.obter_camada_dados(camada_id).copy()
+        gdf_ref = self.obter_camada_dados(camada_ref_id)
         if gdf.crs and gdf_ref.crs and gdf.crs != gdf_ref.crs:
             gdf_ref = gdf_ref.to_crs(gdf.crs)
 
@@ -734,10 +935,7 @@ class GeoespacialService:
         resolucao_saida: float | None = None,
     ) -> dict[str, Any]:
         """Agrega valores por unidade territorial."""
-        if camada_id not in self._camadas:
-            raise ValueError(f"Camada {camada_id} não encontrada")
-
-        gdf = self._camadas[camada_id].copy()
+        gdf = self.obter_camada_dados(camada_id).copy()
 
         if campo_unidade not in gdf.columns:
             raise ValueError(f"Campo territorial {campo_unidade} não encontrado")
@@ -773,27 +971,37 @@ class GeoespacialService:
         formato_saida: str = "GeoTIFF",
         comprimir_arquivo: bool = False,
         opcao_salvamento: str = "memoria",
+        progress: Callable[[str], None] | None = None,
     ) -> dict[str, Any]:
         """Exporta raster."""
-        if raster_id not in self._rasters:
-            raise ValueError(f"Raster {raster_id} não encontrado")
-
-        raster = self._rasters[raster_id]
+        raster = self.obter_raster_dados(raster_id)
+        if progress:
+            progress("Matriz raster carregada para exportação")
 
         if opcao_salvamento == "persistir_sistema":
-            caminho_completo = f"data/geoespacial/{nome_arquivo}"
-            Path(caminho_completo).parent.mkdir(parents=True, exist_ok=True)
+            nome_relativo = relative_file_name(nome_arquivo, label="nome do arquivo")
+            caminho_relativo = Path("data/geoespacial") / nome_relativo
+            caminho_completo = project_path(caminho_relativo)
+            caminho_completo.parent.mkdir(parents=True, exist_ok=True)
+            if progress:
+                progress("Destino relativo de exportação preparado")
             profile = getattr(self, "_raster_profiles", {}).get(raster_id)
             if not profile:
                 raise ValueError("Raster sem metadados espaciais para exportação")
+            if progress:
+                progress("Perfil espacial raster validado")
             with rasterio.open(caminho_completo, "w", driver="GTiff", count=1,
                                height=raster.shape[0], width=raster.shape[1], dtype="float32",
                                crs=profile["crs"], transform=profile["transform"],
                                nodata=np.nan, compress="deflate" if comprimir_arquivo else None) as dst:
                 dst.write(raster.astype("float32"), 1)
-            return {"caminho": caminho_completo, "formato": formato_saida}
+            if progress:
+                progress("GeoTIFF raster serializado")
+            return {"caminho": caminho_relativo.as_posix(), "formato": formato_saida}
         else:
             # Retornar array como JSON
+            if progress:
+                progress("Matriz raster serializada em memória")
             return {
                 "raster_data": raster.tolist(),
                 "shape": raster.shape,
@@ -809,39 +1017,45 @@ class GeoespacialService:
         formato: str = "auto",
     ) -> dict[str, Any]:
         """Persiste camada ou raster, inferindo o formato pela extensão da saída."""
-        pasta = Path(destino).expanduser().resolve()
+        self._catalogar_persistidas()
+        pasta_relativa = project_relative(project_path(destino, label="destino"))
+        pasta = project_path(pasta_relativa, label="destino")
         pasta.mkdir(parents=True, exist_ok=True)
-        caminho = pasta / Path(saida).name
+        nome_saida = relative_file_name(saida, label="saída")
+        caminho = pasta / nome_saida
         extensao = caminho.suffix.lower()
 
-        if entrada in self._camadas:
+        tipo_entrada = self._metadados.get(entrada, {}).get("tipo")
+        if tipo_entrada == "vetorial" or entrada in self._camadas:
             drivers = {"gpkg": "GPKG", "geojson": "GeoJSON", "json": "GeoJSON", "shapefile": "ESRI Shapefile", "shp": "ESRI Shapefile"}
             formato_final = extensao.lstrip(".") if formato == "auto" else formato.lower()
             driver = drivers.get(formato_final)
             if not driver:
                 raise ValueError("Formato vetorial deve ser gpkg, geojson, json, shapefile ou shp")
-            camada = self._camadas[entrada]
+            camada = self.obter_camada_dados(entrada)
             crs_final = str(camada.crs) if crs == "auto" else crs
             if crs != "auto":
                 camada = camada.to_crs(crs)
             camada.to_file(caminho, driver=driver)
             tipo = "vetor"
-        elif entrada in self._rasters:
+        elif tipo_entrada == "raster" or entrada in self._rasters:
             formato_final = extensao.lstrip(".") if formato == "auto" else formato.lower()
             if formato_final not in {"tif", "tiff", "geotiff"}:
                 raise ValueError("Formato raster deve ser tif, tiff ou geotiff")
             profile = getattr(self, "_raster_profiles", {}).get(entrada)
             if not profile:
                 raise ValueError("Raster sem metadados espaciais para salvamento")
-            raster = self._rasters[entrada]
+            raster = self.obter_raster_dados(entrada)
             transform = profile["transform"]
             crs_origem = profile["crs"]
             crs_final = str(crs_origem) if crs == "auto" else crs
             if crs != "auto" and str(crs_origem) != crs:
-                bounds = rasterio.transform.array_bounds(raster.shape[0], raster.shape[1], transform)
+                bounds = array_bounds(raster.shape[0], raster.shape[1], transform)
                 novo_transform, largura, altura = calculate_default_transform(
                     crs_origem, crs, raster.shape[1], raster.shape[0], *bounds
                 )
+                if largura is None or altura is None:
+                    raise ValueError("Não foi possível calcular as dimensões do raster reprojetado")
                 reprojetado = np.empty((altura, largura), dtype="float32")
                 reproject(raster, reprojetado, src_transform=transform, src_crs=crs_origem,
                           dst_transform=novo_transform, dst_crs=crs,
@@ -856,8 +1070,8 @@ class GeoespacialService:
         else:
             raise ValueError(f"Camada de entrada {entrada} não encontrada")
 
-        return {"operacao": "salvar_camada", "entrada": entrada, "destino": str(pasta),
-                "saida": caminho.name, "caminho": str(caminho), "tipo": tipo,
+        return {"operacao": "salvar_camada", "entrada": entrada, "destino": pasta_relativa,
+                "saida": caminho.name, "caminho": project_relative(caminho), "tipo": tipo,
                 "crs": crs_final, "formato": formato_final}
 
 
