@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import geopandas as gpd
 import pandas as pd
+from psycopg import sql
 from psycopg.types.json import Jsonb
 from shapely.geometry import mapping
 from shapely.geometry.base import BaseGeometry
@@ -62,7 +63,7 @@ def _jsonb(value: Any) -> Jsonb:
 
 def _feature_rows(gdf: gpd.GeoDataFrame) -> list[tuple[int, Jsonb, str | None]]:
     spatial = gdf.to_crs("EPSG:4326") if gdf.crs else gdf.set_crs("EPSG:4326")
-    geometry_name = spatial.geometry.name
+    geometry_name = str(spatial.geometry.name)
     rows: list[tuple[int, Jsonb, str | None]] = []
     for order, (_, feature) in enumerate(spatial.iterrows()):
         properties = {column: value for column, value in feature.items() if column != geometry_name}
@@ -87,11 +88,13 @@ def _insert_features(conn: Any, table: str, database_id: str, rows: list[tuple[i
         return
     with conn.cursor() as cursor:
         cursor.executemany(
-            f"""INSERT INTO geoprocessamento.{table}
+            sql.SQL("""INSERT INTO geoprocessamento.{}
                    (camada_id,ordem,propriedades,geom)
                    VALUES (%s,%s,%s,
                      CASE WHEN %s::text IS NULL THEN NULL
-                          ELSE ST_SetSRID(ST_GeomFromGeoJSON(%s::text),4326) END)""",
+                          ELSE ST_SetSRID(ST_GeomFromGeoJSON(%s::text),4326) END)""").format(
+                sql.Identifier(table)
+            ),
             [(database_id, order, props, geom, geom) for order, props, geom in rows],
         )
 
@@ -111,18 +114,22 @@ def salvar_vetor(
     with get_connection() as conn:
         if categoria == "importadas":
             camada = conn.execute(
-                f"""INSERT INTO geoprocessamento.{catalog}
+                sql.SQL("""INSERT INTO geoprocessamento.{}
                     (recurso_sessao_id,nome,tipo,geometria_tipo,crs,formato,
                      hash_arquivo,metadados)
-                    VALUES (%s,%s,'vetor',%s,%s,'PostGIS',%s,%s) RETURNING id""",
+                    VALUES (%s,%s,'vetor',%s,%s,'PostGIS',%s,%s) RETURNING id""").format(
+                    sql.Identifier(catalog)
+                ),
                 (recurso_id, nome, geometry_type, crs, hash_arquivo, _jsonb(metadata)),
             ).fetchone()
         else:
             camada = conn.execute(
-                f"""INSERT INTO geoprocessamento.{catalog}
+                sql.SQL("""INSERT INTO geoprocessamento.{}
                     (recurso_sessao_id,nome,tipo,geometria_tipo,crs,formato,
                      operacao_origem,linhagem,metadados)
-                    VALUES (%s,%s,'vetor',%s,%s,'PostGIS',%s,%s,%s) RETURNING id""",
+                    VALUES (%s,%s,'vetor',%s,%s,'PostGIS',%s,%s,%s) RETURNING id""").format(
+                    sql.Identifier(catalog)
+                ),
                 (
                     recurso_id, nome, geometry_type, crs, origem,
                     _jsonb(metadados.get("linhagem", {})), _jsonb(metadata),
@@ -133,10 +140,12 @@ def salvar_vetor(
         database_id = str(camada["id"])
         _insert_features(conn, features, database_id, rows)
         conn.execute(
-            f"""UPDATE geoprocessamento.{catalog} c
+            sql.SQL("""UPDATE geoprocessamento.{} c
                 SET envelope=(SELECT ST_Envelope(ST_Collect(geom))
-                              FROM geoprocessamento.{features} WHERE camada_id=c.id)
-                WHERE c.id=%s""",
+                              FROM geoprocessamento.{} WHERE camada_id=c.id)
+                WHERE c.id=%s""").format(
+                sql.Identifier(catalog), sql.Identifier(features)
+            ),
             (database_id,),
         )
         conn.commit()
@@ -155,18 +164,22 @@ def salvar_raster(
     with get_connection() as conn:
         if categoria == "importadas":
             camada = conn.execute(
-                f"""INSERT INTO geoprocessamento.{catalog}
+                sql.SQL("""INSERT INTO geoprocessamento.{}
                     (recurso_sessao_id,nome,tipo,geometria_tipo,crs,formato,
                      hash_arquivo,metadados)
-                    VALUES (%s,%s,'raster','Raster',%s,'GeoTIFF',%s,%s) RETURNING id""",
+                    VALUES (%s,%s,'raster','Raster',%s,'GeoTIFF',%s,%s) RETURNING id""").format(
+                    sql.Identifier(catalog)
+                ),
                 (recurso_id, nome, crs, hash_arquivo, _jsonb(metadata)),
             ).fetchone()
         else:
             camada = conn.execute(
-                f"""INSERT INTO geoprocessamento.{catalog}
+                sql.SQL("""INSERT INTO geoprocessamento.{}
                     (recurso_sessao_id,nome,tipo,geometria_tipo,crs,formato,
                      operacao_origem,linhagem,metadados)
-                    VALUES (%s,%s,'raster','Raster',%s,'GeoTIFF',%s,%s,%s) RETURNING id""",
+                    VALUES (%s,%s,'raster','Raster',%s,'GeoTIFF',%s,%s,%s) RETURNING id""").format(
+                    sql.Identifier(catalog)
+                ),
                 (
                     recurso_id, nome, crs, origem,
                     _jsonb(metadados.get("linhagem", {})), _jsonb(metadata),
@@ -176,9 +189,9 @@ def salvar_raster(
             raise RuntimeError("Persistência raster não retornou identificador")
         database_id = str(camada["id"])
         conn.execute(
-            f"""INSERT INTO geoprocessamento.{rasters}
+            sql.SQL("""INSERT INTO geoprocessamento.{}
                 (camada_id,dados_geotiff,largura,altura,bandas,dtype,nodata,perfil)
-                VALUES (%s,%s,%s,%s,1,%s,%s,%s)""",
+                VALUES (%s,%s,%s,%s,1,%s,%s,%s)""").format(sql.Identifier(rasters)),
             (database_id, dados_geotiff, largura, altura, dtype, nodata, _jsonb(perfil)),
         )
         conn.commit()
@@ -189,7 +202,9 @@ def _find_working_layer(conn: Any, recurso_id: str) -> tuple[str, dict[str, Any]
     for categoria in ("processadas", "importadas"):
         catalog = STORAGES[categoria][0]
         row = conn.execute(
-            f"SELECT * FROM geoprocessamento.{catalog} WHERE recurso_sessao_id=%s",
+            sql.SQL("SELECT * FROM geoprocessamento.{} WHERE recurso_sessao_id=%s").format(
+                sql.Identifier(catalog)
+            ),
             (recurso_id,),
         ).fetchone()
         if row:
@@ -211,7 +226,9 @@ def _find_layer(conn: Any, recurso_id: str) -> tuple[str, dict[str, Any]] | None
     for categoria in ("homologadas", "processadas", "importadas"):
         catalog = STORAGES[categoria][0]
         row = conn.execute(
-            f"SELECT * FROM geoprocessamento.{catalog} WHERE recurso_sessao_id=%s",
+            sql.SQL("SELECT * FROM geoprocessamento.{} WHERE recurso_sessao_id=%s").format(
+                sql.Identifier(catalog)
+            ),
             (recurso_id,),
         ).fetchone()
         if row:
@@ -229,14 +246,21 @@ def substituir_vetor(recurso_id: str, gdf: gpd.GeoDataFrame, metadados: dict[str
         categoria, camada = found
         catalog, features, _ = STORAGES[categoria]
         database_id = str(camada["id"])
-        conn.execute(f"DELETE FROM geoprocessamento.{features} WHERE camada_id=%s", (database_id,))
+        conn.execute(
+            sql.SQL("DELETE FROM geoprocessamento.{} WHERE camada_id=%s").format(
+                sql.Identifier(features)
+            ),
+            (database_id,),
+        )
         _insert_features(conn, features, database_id, rows)
         conn.execute(
-            f"""UPDATE geoprocessamento.{catalog} c
+            sql.SQL("""UPDATE geoprocessamento.{} c
                 SET crs=%s,metadados=%s,atualizado_em=CURRENT_TIMESTAMP,
                     envelope=(SELECT ST_Envelope(ST_Collect(geom))
-                              FROM geoprocessamento.{features} WHERE camada_id=c.id)
-                WHERE c.id=%s""",
+                              FROM geoprocessamento.{} WHERE camada_id=c.id)
+                WHERE c.id=%s""").format(
+                sql.Identifier(catalog), sql.Identifier(features)
+            ),
             (str(gdf.crs) if gdf.crs else "EPSG:4326", _jsonb(metadados), database_id),
         )
         conn.commit()
@@ -258,12 +282,15 @@ def listar() -> list[dict[str, Any]]:
         for categoria, (catalog, _, _) in STORAGES.items():
             date_column = "homologado_em" if categoria == "homologadas" else "criado_em"
             selected = conn.execute(
-                f"""SELECT id,recurso_sessao_id,nome,tipo,crs,formato,metadados,
-                           {date_column} AS criado_em,
+                sql.SQL("""SELECT id,recurso_sessao_id,nome,tipo,crs,formato,metadados,
+                           {} AS criado_em,
                            TRUE AS persistida,(tipo='vetor') AS tem_vetor,
                            (tipo='raster') AS tem_raster,%s::text AS categoria
-                    FROM geoprocessamento.{catalog}
-                    WHERE recurso_sessao_id IS NOT NULL ORDER BY {date_column}""",
+                    FROM geoprocessamento.{}
+                    WHERE recurso_sessao_id IS NOT NULL ORDER BY {}""").format(
+                    sql.Identifier(date_column), sql.Identifier(catalog),
+                    sql.Identifier(date_column)
+                ),
                 (categoria,),
             ).fetchall()
             rows.extend(dict(row) for row in selected)
@@ -278,8 +305,10 @@ def carregar_vetor(recurso_id: str) -> tuple[gpd.GeoDataFrame, dict[str, Any]] |
         categoria, camada = found
         features = STORAGES[categoria][1]
         rows = conn.execute(
-            f"""SELECT propriedades,ST_AsGeoJSON(geom)::jsonb AS geometria
-                FROM geoprocessamento.{features} WHERE camada_id=%s ORDER BY ordem""",
+            sql.SQL("""SELECT propriedades,ST_AsGeoJSON(geom)::jsonb AS geometria
+                FROM geoprocessamento.{} WHERE camada_id=%s ORDER BY ordem""").format(
+                sql.Identifier(features)
+            ),
             (camada["id"],),
         ).fetchall()
     feature_collection = [
@@ -304,7 +333,9 @@ def carregar_raster(recurso_id: str) -> tuple[bytes, dict[str, Any]] | None:
         categoria, camada = found
         rasters = STORAGES[categoria][2]
         row = conn.execute(
-            f"SELECT * FROM geoprocessamento.{rasters} WHERE camada_id=%s",
+            sql.SQL("SELECT * FROM geoprocessamento.{} WHERE camada_id=%s").format(
+                sql.Identifier(rasters)
+            ),
             (camada["id"],),
         ).fetchone()
         if not row:
@@ -323,7 +354,9 @@ def excluir(recurso_id: str) -> bool:
         for categoria in ("processadas", "importadas"):
             catalog = STORAGES[categoria][0]
             row = conn.execute(
-                f"DELETE FROM geoprocessamento.{catalog} WHERE recurso_sessao_id=%s RETURNING id",
+                sql.SQL(
+                    "DELETE FROM geoprocessamento.{} WHERE recurso_sessao_id=%s RETURNING id"
+                ).format(sql.Identifier(catalog)),
                 (recurso_id,),
             ).fetchone()
             if row:
@@ -359,16 +392,21 @@ def homologar(
         source_rasters = STORAGES[categoria][2]
         if source["tipo"] == "vetor":
             hash_row = conn.execute(
-                f"""SELECT md5(COALESCE(string_agg(
+                sql.SQL("""SELECT md5(COALESCE(string_agg(
                         ordem::text || propriedades::text ||
                         COALESCE(encode(ST_AsEWKB(geom),'hex'),''), '' ORDER BY ordem
                     ),'')) AS hash
-                    FROM geoprocessamento.{source_features} WHERE camada_id=%s""",
+                    FROM geoprocessamento.{} WHERE camada_id=%s""").format(
+                    sql.Identifier(source_features)
+                ),
                 (source["id"],),
             ).fetchone()
         else:
             hash_row = conn.execute(
-                f"SELECT md5(dados_geotiff) AS hash FROM geoprocessamento.{source_rasters} WHERE camada_id=%s",
+                sql.SQL(
+                    "SELECT md5(dados_geotiff) AS hash "
+                    "FROM geoprocessamento.{} WHERE camada_id=%s"
+                ).format(sql.Identifier(source_rasters)),
                 (source["id"],),
             ).fetchone()
         if progress:
@@ -401,20 +439,24 @@ def homologar(
             progress("Registro imutável criado no catálogo homologado")
         if source["tipo"] == "vetor":
             conn.execute(
-                f"""INSERT INTO geoprocessamento.camada_homologada_feicao
+                sql.SQL("""INSERT INTO geoprocessamento.camada_homologada_feicao
                     (camada_id,ordem,propriedades,geom)
                     SELECT %s,ordem,propriedades,geom
-                    FROM geoprocessamento.{source_features} WHERE camada_id=%s""",
+                    FROM geoprocessamento.{} WHERE camada_id=%s""").format(
+                    sql.Identifier(source_features)
+                ),
                 (snapshot["id"], source["id"]),
             )
             if progress:
                 progress("Feições copiadas para o armazenamento homologado")
         else:
             conn.execute(
-                f"""INSERT INTO geoprocessamento.camada_homologada_raster
+                sql.SQL("""INSERT INTO geoprocessamento.camada_homologada_raster
                     (camada_id,dados_geotiff,largura,altura,bandas,dtype,nodata,perfil)
                     SELECT %s,dados_geotiff,largura,altura,bandas,dtype,nodata,perfil
-                    FROM geoprocessamento.{source_rasters} WHERE camada_id=%s""",
+                    FROM geoprocessamento.{} WHERE camada_id=%s""").format(
+                    sql.Identifier(source_rasters)
+                ),
                 (snapshot["id"], source["id"]),
             )
             if progress:
@@ -429,17 +471,20 @@ def homologar(
 
 
 def listar_biblioteca(modulo: str | None = None) -> list[dict[str, Any]]:
-    query = """SELECT id AS homologacao_id,recurso_sessao_id AS id,
+    filter_clause = (
+        sql.SQL(" WHERE modulo_consumidor IN (%s,'ambos')")
+        if modulo else sql.SQL("")
+    )
+    query = sql.SQL("""SELECT id AS homologacao_id,recurso_sessao_id AS id,
                       origem_categoria,origem_camada_id,origem_recurso_id,
                       modulo_consumidor,nome_publicacao,nome,versao,finalidade,
                       homologado_por,homologado_em,metadados AS homologacao_metadados,
                       tipo,geometria_tipo,crs,formato,metadados
-               FROM geoprocessamento.camada_homologada"""
-    params: tuple[Any, ...] = ()
-    if modulo:
-        query += " WHERE modulo_consumidor IN (%s,'ambos')"
-        params = (modulo,)
-    query += " ORDER BY nome_publicacao,versao,homologado_em DESC"
+               FROM geoprocessamento.camada_homologada{}
+               ORDER BY nome_publicacao,versao,homologado_em DESC""").format(
+        filter_clause
+    )
+    params: tuple[Any, ...] = (modulo,) if modulo else ()
     with get_connection() as conn:
         return [dict(row) for row in conn.execute(query, params).fetchall()]
 
@@ -448,14 +493,17 @@ def _directory_rows(categoria: str) -> list[dict[str, Any]]:
     catalog = STORAGES[categoria][0]
     date_column = "homologado_em" if categoria == "homologadas" else "criado_em"
     extra = (
-        ",nome_publicacao,modulo_consumidor,versao" if categoria == "homologadas"
-        else ""
+        sql.SQL(",nome_publicacao,modulo_consumidor,versao")
+        if categoria == "homologadas" else sql.SQL("")
     )
     with get_connection() as conn:
         rows = conn.execute(
-            f"""SELECT recurso_sessao_id AS id,nome,tipo,crs,formato,
-                       {date_column} AS criado_em{extra}
-                FROM geoprocessamento.{catalog} ORDER BY {date_column} DESC"""
+            sql.SQL("""SELECT recurso_sessao_id AS id,nome,tipo,crs,formato,
+                       {} AS criado_em{}
+                FROM geoprocessamento.{} ORDER BY {} DESC""").format(
+                sql.Identifier(date_column), extra, sql.Identifier(catalog),
+                sql.Identifier(date_column)
+            )
         ).fetchall()
     return [
         {**dict(row), "criado_em": row["criado_em"].isoformat()}
