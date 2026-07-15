@@ -5,6 +5,7 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
   function activateLeft(id) {
+    $(".gp-app").classList.remove("left-collapsed");
     $$('[data-left-pane]').forEach((tab) => {
       const active = tab.dataset.leftPane === id;
       tab.classList.toggle("active", active);
@@ -16,6 +17,7 @@
       panel.classList.toggle("active", active);
       panel.hidden = !active;
     });
+    requestAnimationFrame(() => window.gpApp?.state.map?.resize());
   }
 
   function restoreRightTab(id) {
@@ -24,6 +26,7 @@
     tab.hidden = false;
     $(".gp-app").classList.remove("right-collapsed");
     syncToggle("right", id, true);
+    requestAnimationFrame(() => window.gpApp?.state.map?.resize());
   }
 
   function syncToggle(side, id, visible) {
@@ -104,6 +107,13 @@
   }
 
   function bindRightDock() {
+    $(".gp-right-tabs").addEventListener("wheel", (event) => {
+      const tabs = event.currentTarget;
+      if (tabs.scrollWidth <= tabs.clientWidth) return;
+      tabs.scrollLeft += event.deltaX || event.deltaY;
+      event.preventDefault();
+    }, { passive: false });
+
     $(".gp-right-tabs").addEventListener("click", (event) => {
       const close = event.target.closest("[data-tab-close]");
       if (!close) return;
@@ -111,7 +121,9 @@
       event.stopImmediatePropagation();
       const tab = close.closest("button");
       const wasActive = tab.classList.contains("active");
-      tab.hidden = true;
+      const dynamic = tab.hasAttribute("data-dynamic-tab");
+      if (dynamic) tab.remove();
+      else tab.hidden = true;
       syncToggle("right", tab.dataset.rightTab, false);
       if (wasActive) {
         const next = $('.gp-right-tabs button:not([hidden])');
@@ -119,6 +131,11 @@
         else $(".gp-app").classList.add("right-collapsed");
       }
     }, true);
+
+    $(".gp-right-tabs").addEventListener("click", (event) => {
+      const tab = event.target.closest("[data-dynamic-tab]");
+      if (tab) window.gpApp.showAttributes(tab.dataset.layerId);
+    });
 
     $("#gp-ribbon-tools").addEventListener("click", (event) => {
       const action = event.target.closest("[data-action]")?.dataset.action;
@@ -128,10 +145,29 @@
         "new-flow": "flows",
         history: "history",
       }[action];
-      if (target) restoreRightTab(target);
+      if (target) {
+        restoreRightTab(target);
+        $(`[data-right-tab="${target}"]`).click();
+      }
     }, true);
 
-    $('[data-restore="right"]').addEventListener("click", () => restoreRightTab("tools"));
+    $('[data-restore="right"]').addEventListener("click", () => {
+      const tab = $('.gp-right-tabs [data-right-tab].active:not([hidden])') || $('[data-right-tab="properties"]');
+      restoreRightTab(tab.dataset.rightTab);
+      tab.click();
+    });
+  }
+
+  function collapse(side) {
+    $(".gp-app").classList.add(`${side}-collapsed`);
+    requestAnimationFrame(() => window.gpApp?.state.map?.resize());
+  }
+
+  function bindCollapseButtons() {
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-collapse]");
+      if (button) collapse(button.dataset.collapse);
+    });
   }
 
   function bindViewMenu() {
@@ -163,11 +199,8 @@
     activateLeft("contents");
     bindLeftDock();
     bindRightDock();
+    bindCollapseButtons();
     bindViewMenu();
-    const title = $("#gp-right-title");
-    new MutationObserver(() => {
-      const active = $('.gp-right-tabs button.active span');
-      if (active && title.textContent) active.textContent = title.textContent;
-    }).observe(title, { childList: true, characterData: true, subtree: true });
   });
+  window.gpDocks = { activateLeft, restoreRightTab, setLeftVisibility, setRightVisibility, collapse };
 })();

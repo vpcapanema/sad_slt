@@ -100,19 +100,63 @@ function Show-ServerLogTail([string]$LogPath, [int]$Lines = 25) {
     }
 }
 
+function Resolve-PythonExecutable {
+    $pythonCommands = @(Get-Command python -CommandType Application -All -ErrorAction SilentlyContinue)
+    foreach ($pythonCommand in $pythonCommands) {
+        if (-not $pythonCommand.Source -or -not (Test-Path -LiteralPath $pythonCommand.Source)) {
+            continue
+        }
+
+        & $pythonCommand.Source -c "import sys" 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            return $pythonCommand.Source
+        }
+    }
+
+    $pyLauncher = Get-Command py -CommandType Application -ErrorAction SilentlyContinue
+    if ($pyLauncher) {
+        $pythonPath = & $pyLauncher.Source -3 -c "import sys; print(sys.executable)" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $pythonPath) {
+            return ($pythonPath | Select-Object -First 1).Trim()
+        }
+    }
+
+    throw "Python nao encontrado. Instale o Python 3 e confirme que 'python' ou 'py' esta disponivel no PATH."
+}
+
 function Test-PythonEnv([string]$ProjectRoot) {
     Push-Location $ProjectRoot
     try {
+        $pythonExe = Resolve-PythonExecutable
+        Write-Info "Python do sistema: $pythonExe"
+
+        $venvDir = Join-Path $ProjectRoot ".venv"
         $venvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
-        if (-not (Test-Path $venvPython)) {
-            Write-Info "Criando ambiente virtual (.venv)..."
-            python -m venv .venv
+        $recreateVenv = -not (Test-Path $venvPython)
+
+        if (-not $recreateVenv) {
+            & $venvPython -c "import sys; print(sys.executable)" 2>$null | Out-Null
+            $recreateVenv = $LASTEXITCODE -ne 0
+        }
+
+        if ($recreateVenv) {
+            if (Test-Path $venvDir) {
+                Write-Warn "Ambiente virtual aponta para um Python inexistente; recriando .venv..."
+                Remove-Item -LiteralPath $venvDir -Recurse -Force
+            } else {
+                Write-Info "Criando ambiente virtual (.venv)..."
+            }
+
+            & $pythonExe -m venv $venvDir
+            if ($LASTEXITCODE -ne 0 -or -not (Test-Path $venvPython)) {
+                throw "Nao foi possivel criar o ambiente virtual com $pythonExe"
+            }
         }
 
         $ver = & $venvPython --version 2>&1
         Write-Ok "Python: $ver"
 
-        & $venvPython -c "import fastapi, uvicorn, httpx" 2>$null
+        & $venvPython -c "import fastapi, uvicorn, httpx; from osgeo import gdal; assert gdal.GetDriverCount() > 0" 2>$null
         if ($LASTEXITCODE -ne 0) {
             Write-Info "Instalando dependencias (requirements.txt)..."
             & $venvPython -m pip install -r requirements.txt -q

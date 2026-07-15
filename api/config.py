@@ -5,14 +5,12 @@ import os
 import secrets
 from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path
-
 from dotenv import load_dotenv
 
+from api.path_policy import project_path
 from api.sigma_dsn import build_sigma_database_url
 
-_ROOT = Path(__file__).resolve().parent.parent
-load_dotenv(_ROOT / ".env")
+load_dotenv(project_path(".env"))
 
 
 @dataclass(frozen=True)

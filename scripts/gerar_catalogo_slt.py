@@ -5,7 +5,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(".")
 OUT = ROOT / "data" / "Catalogo_Hierarquico_SLT.xlsx"
 
 HDR_FILL = PatternFill("solid", fgColor="1F3864")

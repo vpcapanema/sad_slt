@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(".")
 NAV_EMPTY = '<nav class="app-nav" aria-label="Navegação principal"></nav>'
 
 for html in ROOT.rglob("*.html"):

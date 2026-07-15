@@ -685,3 +685,18 @@ Fase 2. Os proximos documentos devem detalhar:
 - modelo de dados para biblioteca de camadas;
 - contrato de API para execucao da Fase 2;
 - relacao entre pesos AHP, cenarios e superficies homologadas.
+
+## Implementação da página geradora
+
+A página `geoespacial/gerador-favorabilidade.html` cadastra a superfície territorial,
+incluindo grade, CRS, resolução, política de NoData e método de combinação. Ela também
+oferece a configuração sequencial de funções/algoritmos, incorpora a bancada de
+geoprocessamento e acompanha seus eventos. A superfície é o produto deste módulo; o
+índice `score_fase2` por projeto continua sendo produzido posteriormente pela camada
+consumidora, mediante extração espacial sobre a geometria do projeto.
+
+Produtos e receitas são persistidos nas tabelas `geoprocessamento.produto`,
+`geoprocessamento.produto_fase2`, `geoprocessamento.configuracao_fluxo` e
+`geoprocessamento.configuracao_fluxo_item`. Critérios e seus vínculos com a superfície
+utilizam `geoprocessamento.criterio_fase2` e
+`geoprocessamento.produto_criterio_fase2`.

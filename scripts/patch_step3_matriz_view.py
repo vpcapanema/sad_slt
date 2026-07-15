@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(".")
 STEP3 = ROOT / "ahp" / "step3-metodo.html"
 
 MATRIZ_SECTION = """

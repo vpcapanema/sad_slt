@@ -1,5 +1,60 @@
-(function(){"use strict";const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-function operation(id){$(".gp-app").classList.remove("right-collapsed");const tab=$('[data-right-tab="tools"]');tab.hidden=false;window.gpApp.selectOp(id)}
-function mapMode(mode){const map=window.gpApp.state.map,canvas=map.getCanvas();canvas.style.cursor=mode==="select"?"crosshair":"grab";if(mode==="explore"){map.dragPan.enable();return}map.dragPan.disable();map.once("click",e=>{const fs=map.queryRenderedFeatures(e.point).filter(f=>!f.layer.id.startsWith("basemap-"));$("#gp-selection").textContent=`${fs.length} selecionada${fs.length===1?"":"s"}`;if(fs[0])new maplibregl.Popup().setLngLat(e.lngLat).setHTML(`<strong>${fs[0].layer.id}</strong>`).addTo(map);map.dragPan.enable();canvas.style.cursor="grab"})}
-function removeLayer(){const row=$("[data-layer].active");if(!row)return;const id=row.dataset.layer,map=window.gpApp.state.map;[`${id}-point`,`${id}-line`,id].forEach(x=>{if(map.getLayer(x))map.removeLayer(x)});if(map.getSource(id))map.removeSource(id);window.gpApp.state.layers=window.gpApp.state.layers.filter(x=>x.id!==id);window.gpApp.renderLayers();window.gpApp.showProperties(null)}
-document.addEventListener("DOMContentLoaded",()=>{$(".gp-contents .gp-pane-tabs").addEventListener("click",e=>{const t=e.target.closest("[data-left-tab]");if(!t)return;$$('[data-left-tab]').forEach(x=>x.classList.toggle("active",x===t));$(".gp-section-title").textContent=t.dataset.leftTab==="source"?"Camadas por fonte":"Ordem de desenho"});$("#gp-layer-list").addEventListener("change",e=>{if(e.target.type!=="checkbox")return;const id=e.target.closest("[data-layer]")?.dataset.layer;if(!id)return;const map=window.gpApp.state.map;[`${id}-point`,`${id}-line`,id].forEach(x=>{if(map.getLayer(x))map.setLayoutProperty(x,"visibility",e.target.checked?"visible":"none")})});$("#gp-catalog-search").addEventListener("input",e=>{$$("#gp-catalog-tree .tree-row").forEach(x=>x.hidden=!x.textContent.toLowerCase().includes(e.target.value.toLowerCase()))});$(".gp-project-catalog .gp-pane-tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;$$('.gp-project-catalog .gp-pane-tabs button').forEach(x=>x.classList.toggle("active",x===b));const title=b.title;$$('#gp-catalog-tree .tree-row').forEach(x=>x.hidden=title!=="Projeto"&&!x.textContent.includes(title))});$("#gp-toolbox").addEventListener("click",e=>{const t=e.target.closest(".tool-group-title");if(t)t.closest(".tool-group").classList.toggle("collapsed")})})})();
+(function () {
+  "use strict";
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+  function setLayerVisibility(id, visible) {
+    const map = window.gpApp.state.map;
+    [`${id}-point`, `${id}-line`, id].forEach((layer) => {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, "visibility", visible ? "visible" : "none");
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    $("#gp-layer-list").addEventListener("click", (event) => {
+      const zoom = event.target.closest("[data-zoom-layer]");
+      if (!zoom) return;
+      event.stopPropagation();
+      window.gpApp.zoomToCatalogLayer(zoom.dataset.zoomLayer);
+    });
+
+    $("#gp-catalog-tree").addEventListener("click", (event) => {
+      const group = event.target.closest("[data-catalog-group]");
+      if (!group) return;
+      const collapsed = group.classList.toggle("collapsed");
+      group.setAttribute("aria-expanded", String(!collapsed));
+      $(".catalog-group-children").hidden = collapsed;
+    });
+
+    $(".gp-contents .gp-pane-tabs").addEventListener("click", (event) => {
+      const tab = event.target.closest("[data-left-tab]");
+      if (!tab) return;
+      $$('[data-left-tab]').forEach((item) => item.classList.toggle("active", item === tab));
+      $(".gp-section-title").textContent = tab.dataset.leftTab === "source" ? "Camadas por fonte" : "Ordem de desenho";
+    });
+
+    $("#gp-layer-list").addEventListener("change", (event) => {
+      if (event.target.type !== "checkbox") return;
+      const id = event.target.closest("[data-layer]")?.dataset.layer;
+      if (id) setLayerVisibility(id, event.target.checked);
+    });
+
+    $("#gp-catalog-search").addEventListener("input", (event) => {
+      const term = event.target.value.toLocaleLowerCase("pt-BR");
+      $$("#gp-catalog-tree .tree-row").forEach((row) => {
+        row.hidden = !row.textContent.toLocaleLowerCase("pt-BR").includes(term);
+      });
+    });
+
+    $(".gp-project-catalog .gp-pane-tabs").addEventListener("click", (event) => {
+      const tab = event.target.closest("button");
+      if (!tab) return;
+      $$(".gp-project-catalog .gp-pane-tabs button").forEach((item) => item.classList.toggle("active", item === tab));
+      const title = tab.title;
+      $$("#gp-catalog-tree .tree-row").forEach((row) => {
+        row.hidden = title !== "Projeto" && !row.textContent.includes(title);
+      });
+    });
+  });
+})();

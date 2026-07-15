@@ -1070,7 +1070,7 @@ def main() -> int:
     ws4 = workbook.create_sheet("Síntese")
     populate_sheet(ws4, SYNTHESIS_HEADERS, synthesis_rows, "5B5B5B")
 
-    output_path = OUTPUT_PATH.resolve()
+    output_path = OUTPUT_PATH
     output_path.parent.mkdir(parents=True, exist_ok=True)
     saved_path = save_workbook(workbook, output_path)
 

@@ -1,68 +1,20 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Visualizador de Inputs — Módulo Geoespacial</title>
-  <link rel="stylesheet" href="../assets/css/app.css">
-  <link rel="stylesheet" href="../assets/css/geoespacial.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Visualizador de Inputs — SLT</title>
+  <link rel="stylesheet" href="../assets/css/app.css"><link rel="stylesheet" href="../assets/css/geoespacial.css"><link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
-<body class="geoespacial-page">
-  <div class="geoespacial-map-layout">
-    <header class="geoespacial-header">
-      <a href="index.html" class="geoespacial-header-brand">
-        <img src="../assets/img/slt-icon.svg" alt="" width="32" height="32">
-        <div>
-          <h1 class="geoespacial-header-title">Visualizador de Inputs</h1>
-          <p class="geoespacial-header-subtitle">Todas as camadas importadas no sistema</p>
-        </div>
-      </a>
-      <nav class="geoespacial-header-nav">
-        <button type="button" class="geoespacial-operation-btn" id="btn-abrir-camadas">Abrir Camadas</button>
-        <button type="button" class="geoespacial-operation-btn" id="btn-importar-camadas">Importar Camadas</button>
-      </nav>
-    </header>
-
-    <aside class="geoespacial-sidebar-left">
-      <div class="geoespacial-layers-panel">
-        <h2 class="geoespacial-layers-title">Camadas</h2>
-        <div id="geoespacial-layers-list" class="geoespacial-operations-list">
-          <p class="hint">Nenhuma camada carregada.</p>
-        </div>
-      </div>
-    </aside>
-
-    <div class="geoespacial-map-container">
-      <div id="map-geoespacial" class="geoespacial-map"></div>
-    </div>
-
-    <aside class="geoespacial-sidebar-right">
-      <div class="geoespacial-operations-panel">
-        <h2 class="geoespacial-operations-title">Operações</h2>
-        <div id="geoespacial-operations-list" class="geoespacial-operations-list">
-          <p class="hint">Selecione uma operação no menu superior.</p>
-        </div>
-      </div>
-
-      <div id="geoespacial-variables-panel" class="geoespacial-variables-panel hidden">
-        <h3 class="geoespacial-variables-title">Variáveis</h3>
-        <div id="geoespacial-variables-container"></div>
-      </div>
-
-      <div id="geoespacial-progress-panel" class="geoespacial-progress-panel hidden">
-        <h3 class="geoespacial-progress-title">Progresso</h3>
-        <div class="geoespacial-progress-bar">
-          <div id="geoespacial-progress-fill" class="geoespacial-progress-fill" style="width: 0%"></div>
-        </div>
-        <p id="geoespacial-progress-text" class="geoespacial-progress-text">0%</p>
-        <div id="geoespacial-logs" class="geoespacial-logs"></div>
-      </div>
-    </aside>
-  </div>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="../assets/js/geoespacial-map.js"></script>
-  <script src="geoespacial-visualizador-inputs.js"></script>
+<body class="geoespacial-viewer-page">
+  <header class="app-header"><div class="app-header-inner"><div class="app-brand">Apoio à Tomada de Decisão<small>Módulo Geoespacial</small></div><nav class="app-nav" aria-label="Navegação principal"></nav></div></header>
+  <main class="geoespacial-viewer-main">
+    <section class="card geoespacial-viewer-heading"><div><nav class="geoespacial-breadcrumb"><a href="../index.html">Início</a><span>›</span><a href="index.html">Geoespacial</a><span>›</span><span>Visualizador de Inputs</span></nav><h1><i class="fa-solid fa-folder-tree"></i> Visualizador de Inputs</h1><p>Camadas de entrada e recursos temporários disponíveis na sessão de geoprocessamento.</p></div><div class="geoespacial-viewer-actions"><button type="button" class="btn btn-secondary" id="btn-abrir-camadas"><i class="fa-solid fa-rotate"></i> Atualizar</button><button type="button" class="btn btn-primary" id="btn-importar-camadas"><i class="fa-solid fa-file-arrow-up"></i> Importar camadas</button><input id="viewer-file-input" type="file" accept=".geojson,.json,.kml,.tif,.tiff,.zip,.gpkg,.shp" multiple hidden></div></section>
+    <section class="geoespacial-viewer-workspace card">
+      <aside class="geoespacial-viewer-panel"><header><span><i class="fa-solid fa-layer-group"></i> Camadas de entrada</span><small id="viewer-layer-count">0 itens</small></header><div id="geoespacial-layers-list" class="geoespacial-viewer-list"><p class="hint">Nenhuma camada carregada.</p></div></aside>
+      <div class="geoespacial-map-container"><div id="map-geoespacial" class="geoespacial-map"></div><div class="geoespacial-map-caption"><i class="fa-solid fa-circle-info"></i> Marque uma camada para adicioná-la ao mapa.</div></div>
+      <aside class="geoespacial-viewer-panel geoespacial-viewer-panel--details"><header><span><i class="fa-solid fa-circle-info"></i> Detalhes</span></header><div id="geoespacial-operations-list" class="geoespacial-viewer-details"><p class="hint">Selecione uma camada para consultar seus metadados.</p></div><div id="geoespacial-variables-panel" class="hidden"><div id="geoespacial-variables-container"></div></div><div id="geoespacial-progress-panel" class="hidden"><div class="geoespacial-progress-bar"><div id="geoespacial-progress-fill" class="geoespacial-progress-fill"></div></div><p id="geoespacial-progress-text">0%</p><div id="geoespacial-logs"></div></div></aside>
+    </section>
+  </main>
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script><script src="../assets/js/geoespacial-map.js"></script><script src="../assets/js/app-header.js"></script><script src="../assets/js/navbar.js"></script><script src="geoespacial-visualizador-inputs.js"></script>
 </body>
 </html>

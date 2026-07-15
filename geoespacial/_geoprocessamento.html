@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Geoprocessamento | SLT</title>
+  <link rel="icon" href="/assets/img/slt-icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
   <link rel="stylesheet" href="/assets/css/geoprocessamento.css">
 </head>
@@ -31,7 +32,8 @@
             <label><input type="checkbox" data-panel-toggle="left:contents" checked> Conteúdo</label>
             <label><input type="checkbox" data-panel-toggle="left:catalog" checked> Catálogo</label>
             <div class="gp-view-menu-label">Sidebar direita</div>
-            <label><input type="checkbox" data-panel-toggle="right:tools" checked> Toolbox / Propriedades</label>
+            <label><input type="checkbox" data-panel-toggle="right:properties" checked> Propriedades</label>
+            <label><input type="checkbox" data-panel-toggle="right:tools" checked> Geoprocessamento</label>
             <label><input type="checkbox" data-panel-toggle="right:functions" checked> Funções</label>
             <label><input type="checkbox" data-panel-toggle="right:flows" checked> Fluxos</label>
             <label><input type="checkbox" data-panel-toggle="right:history" checked> Histórico</label>
@@ -59,12 +61,14 @@
         <button title="Favoritos"><i data-lucide="star"></i></button>
       </div>
       <div id="gp-catalog-tree" class="gp-tree gp-catalog-tree">
-        <div class="tree-row"><i data-lucide="chevron-down"></i><i data-lucide="folder-kanban"></i><strong>Projeto</strong></div>
-        <div class="tree-row tree-indent"><i data-lucide="map"></i><span>Mapas</span></div>
-        <div class="tree-row tree-indent"><i data-lucide="tool-case"></i><span>Toolboxes</span></div>
-        <div class="tree-row tree-indent"><i data-lucide="database"></i><span>Bancos de dados</span></div>
-        <div class="tree-row tree-indent"><i data-lucide="folder"></i><span>Pastas</span></div>
-        <div class="tree-row tree-indent"><i data-lucide="plug"></i><span>Conexões</span></div>
+        <button class="catalog-group-title" type="button" data-catalog-group aria-expanded="true"><i class="tree-chevron" data-lucide="chevron-down"></i><i data-lucide="folder-kanban"></i><strong>Projeto</strong></button>
+        <div class="catalog-group-children">
+          <div class="tree-row tree-indent"><i data-lucide="map"></i><span>Mapas</span></div>
+          <div class="tree-row tree-indent"><i data-lucide="briefcase"></i><span>Toolboxes</span></div>
+          <div class="tree-row tree-indent"><i data-lucide="database"></i><span>Bancos de dados</span></div>
+          <div class="tree-row tree-indent"><i data-lucide="folder"></i><span>Pastas</span></div>
+          <div class="tree-row tree-indent"><i data-lucide="plug"></i><span>Conexões</span></div>
+        </div>
       </div>
     </aside>
 
@@ -92,13 +96,17 @@
       <div id="gp-drop-zone" class="gp-drop-zone"><i data-lucide="file-up"></i><strong>Solte arquivos geoespaciais aqui</strong><span>GeoJSON, JSON, KML, GeoTIFF ou pacote ZIP</span></div>
     </section>
 
-    <aside class="gp-pane gp-catalog" aria-label="Painel de propriedades">
-      <div class="gp-pane-title"><strong id="gp-right-title">Propriedades</strong><button class="icon-btn" data-collapse="right" title="Recolher painel"><i data-lucide="panel-right-close"></i></button></div>
-      <div class="gp-right-tabs">
-        <button class="active" data-right-tab="tools"><span>Propriedades</span><i data-tab-close="tools" data-lucide="x"></i></button>
-        <button data-right-tab="functions"><span>Funções</span><i data-tab-close="functions" data-lucide="x"></i></button>
-        <button data-right-tab="flows"><span>Fluxos</span><i data-tab-close="flows" data-lucide="x"></i></button>
-        <button data-right-tab="history"><span>Histórico</span><i data-tab-close="history" data-lucide="x"></i></button>
+    <aside id="gp-right-pane" class="gp-pane gp-catalog" aria-label="Painel contextual">
+      <span id="gp-right-title" hidden>Propriedades</span>
+      <div class="gp-right-tabbar">
+        <div class="gp-right-tabs" role="tablist" aria-label="Painéis contextuais">
+          <button class="active" role="tab" aria-selected="true" data-right-tab="properties"><span>Propriedades</span><i data-tab-close="properties" data-lucide="x"></i></button>
+          <button role="tab" aria-selected="false" data-right-tab="tools"><span>Geoprocessamento</span><i data-tab-close="tools" data-lucide="x"></i></button>
+          <button role="tab" aria-selected="false" data-right-tab="functions"><span>Funções</span><i data-tab-close="functions" data-lucide="x"></i></button>
+          <button role="tab" aria-selected="false" data-right-tab="flows"><span>Fluxos</span><i data-tab-close="flows" data-lucide="x"></i></button>
+          <button role="tab" aria-selected="false" data-right-tab="history"><span>Histórico</span><i data-tab-close="history" data-lucide="x"></i></button>
+        </div>
+        <button class="icon-btn gp-right-collapse" data-collapse="right" title="Recolher painel" aria-label="Recolher painel"><i data-lucide="panel-right-close"></i></button>
       </div>
       <section id="gp-tools-view" class="gp-right-view active">
         <div class="gp-search"><i data-lucide="search"></i><input id="gp-tool-search" placeholder="Localizar ferramenta"></div>
@@ -126,6 +134,7 @@
   <script src="/geoespacial/geoprocessamento-docks.js"></script>
   <script src="/geoespacial/geoprocessamento-actions.js"></script>
   <script src="/geoespacial/geoprocessamento-toolbox.js"></script>
+  <script src="/geoespacial/geoprocessamento-commands.js"></script>
   <script src="/geoespacial/geoprocessamento-ribbon.js"></script>
 </body>
 </html>

@@ -594,7 +594,7 @@ def main() -> None:
     aba_dimensoes(wb)
     aba_criterios(wb)
     aba_matriz(wb)
-    base = Path(__file__).resolve().parents[1] / "data"
+    base = Path("data")
     out = base / "Matriz_Criterios_Premissas_PLI-SP.xlsx"
     try:
         wb.save(out)

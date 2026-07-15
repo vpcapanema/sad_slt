@@ -15,6 +15,7 @@
     { href: "/admin/demandas.html", label: "Tabela de demandas" },
     { href: "/ahp/home.html", label: "Configuração da Análise Multicritério" },
     { href: "/hierarquizacao/home.html", label: "Hierarquização de demandas" },
+    { href: "/geoespacial/", label: "Módulo geoespacial" },
   ];
 
   function escapeHtml(s) {

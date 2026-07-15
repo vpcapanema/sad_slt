@@ -3,8 +3,48 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, Field
+
+
+class ProdutoGeradorInputSchema(BaseModel):
+    modulo: str
+    codigo: str
+    nome: str
+    descricao: str | None = None
+    versao: str = "v1"
+    responsavel_tecnico: str | None = None
+    crs_saida: str
+    area_estudo_id: UUID | None = None
+    formato_saida: str | None = None
+    data_referencia: str | None = None
+    observacao_metodologica: str | None = None
+    metadados: dict[str, Any] = Field(default_factory=dict)
+    configuracao: dict[str, Any] = Field(default_factory=dict)
+
+
+class ProdutoGeradorSchema(ProdutoGeradorInputSchema):
+    id: UUID
+    status: str
+    criado_em: datetime
+    atualizado_em: datetime
+
+
+class FluxoProdutoInputSchema(BaseModel):
+    nome: str
+    descricao: str | None = None
+    itens: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class FluxoProdutoSchema(FluxoProdutoInputSchema):
+    id: UUID
+    produto_id: UUID
+    versao: int
+    ativo: bool
+    validado: bool
+    criado_em: datetime
+    atualizado_em: datetime
 
 
 # ==================== FASE 1: Restrição e Risco ====================
@@ -188,20 +228,30 @@ class CamadaInputSchema(BaseModel):
     metadados: dict[str, Any] = Field(default_factory=dict)
 
 
+class HomologarCamadaSchema(BaseModel):
+    modulo_consumidor: str
+    nome_publicacao: str
+    versao: str = "v1"
+    finalidade: str | None = None
+    homologado_por: str | None = None
+    produto_id: UUID | None = None
+    metadados: dict[str, Any] = Field(default_factory=dict)
+
+
 class FuncaoSchema(BaseModel):
     id: str
     nome: str
-    descricao: str
-    operacoes: list[str]
-    variaveis: list[str]
+    descricao: str = ""
+    passos: list[dict[str, Any]] = Field(default_factory=list)
+    parametros_expostos: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class FluxoSchema(BaseModel):
     id: str
     nome: str
-    descricao: str
-    funcoes: list[str]
-    ordem_execucao: list[str]
+    descricao: str = ""
+    itens: list[dict[str, Any]] = Field(default_factory=list)
+    parametros_expostos: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ProcessamentoSchema(BaseModel):

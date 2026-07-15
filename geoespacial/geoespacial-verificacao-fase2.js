@@ -121,8 +121,10 @@
 
   async function loadCamadas() {
     try {
-      const response = await fetch(`${API_BASE}/camadas`);
-      const camadas = await response.json();
+      const response = await fetch(`${API_BASE}/biblioteca-camadas?modulo=fase2`);
+      const camadas = (await response.json()).map((camada) => ({
+        ...camada, nome: camada.nome_publicacao || camada.nome,
+      }));
       renderCamadas(camadas);
     } catch (error) {
       console.error("Erro ao carregar camadas:", error);
@@ -133,7 +135,7 @@
     const container = document.getElementById("geoespacial-layers-list");
 
     if (camadas.length === 0) {
-      container.innerHTML = '<p class="hint">Nenhuma camada carregada.</p>';
+      container.innerHTML = '<p class="hint">Nenhum insumo homologado para a Fase 2.</p>';
       return;
     }
 
