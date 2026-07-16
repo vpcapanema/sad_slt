@@ -8,6 +8,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 $Port = if ($env:PORT) { [int]$env:PORT } else { 8080 }
 $HostAddr = "127.0.0.1"
 $BaseUrl = "http://${HostAddr}:$Port/"
+$AppUrl = "${BaseUrl}public/"
 $HealthUrl = "${BaseUrl}api/health"
 $ReadyUrl = "${BaseUrl}api/health/ready"
 $MaxWaitSec = 90
@@ -33,43 +34,90 @@ function Write-Info([string]$Message) {
     Write-Host "     ..  $Message" -ForegroundColor DarkGray
 }
 
+function Get-ProcessTreeIds([int]$RootProcessId) {
+    # O processo dono do socket pode ja ter encerrado, mas filhos que herdaram o
+    # socket ainda podem apontar para ele como ParentProcessId.
+    $processes = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
+    $ids = [System.Collections.Generic.List[int]]::new()
+    $pending = [System.Collections.Generic.Queue[int]]::new()
+    $pending.Enqueue($RootProcessId)
+
+    while ($pending.Count -gt 0) {
+        $parentId = $pending.Dequeue()
+        foreach ($child in $processes | Where-Object { $_.ParentProcessId -eq $parentId }) {
+            $childId = [int]$child.ProcessId
+            if (-not $ids.Contains($childId)) {
+                $ids.Add($childId)
+                $pending.Enqueue($childId)
+            }
+        }
+    }
+
+    # Filhos primeiro; assim nenhum deles fica orfao segurando o socket.
+    $result = @($ids)
+    [array]::Reverse($result)
+    return @($result) + @($RootProcessId)
+}
+
+function Stop-ProcessTree([int]$RootProcessId) {
+    $stopped = 0
+    foreach ($id in @(Get-ProcessTreeIds -RootProcessId $RootProcessId)) {
+        $process = Get-Process -Id $id -ErrorAction SilentlyContinue
+        if (-not $process) { continue }
+
+        try {
+            Stop-Process -Id $id -Force -ErrorAction Stop
+            $process.WaitForExit(3000) | Out-Null
+            $stopped++
+        } catch {
+            Write-Warn "Nao foi possivel encerrar PID ${id}: $($_.Exception.Message)"
+        }
+    }
+    return $stopped
+}
+
 function Stop-PortListeners([int]$PortToFree) {
-    $killed = @{}
+    $handled = @{}
+    $stopped = 0
     try {
-        $connections = Get-NetTCPConnection -LocalPort $PortToFree -ErrorAction SilentlyContinue
+        $connections = Get-NetTCPConnection -LocalPort $PortToFree -State Listen -ErrorAction SilentlyContinue
         foreach ($conn in $connections) {
             $procId = $conn.OwningProcess
-            if ($procId -and $procId -gt 0 -and -not $killed.ContainsKey($procId)) {
+            if ($procId -and $procId -gt 0 -and -not $handled.ContainsKey($procId)) {
                 $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
                 if ($proc) {
                     Write-Info "Encerrando PID $procId ($($proc.ProcessName)) na porta $PortToFree"
-                    Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-                    $killed[$procId] = $true
+                } else {
+                    Write-Info "Encerrando processos filhos do antigo PID $procId na porta $PortToFree"
                 }
+                $stopped += Stop-ProcessTree -RootProcessId $procId
+                $handled[$procId] = $true
             }
         }
     } catch {
         Write-Warn "Get-NetTCPConnection indisponivel; tentando netstat..."
     }
 
-    if ($killed.Count -eq 0) {
-        $lines = netstat -ano | Select-String ":$PortToFree\s"
+    if ($handled.Count -eq 0 -and (Test-PortListening -PortToCheck $PortToFree)) {
+        $lines = netstat -ano | Select-String ":$PortToFree\s+.*LISTENING"
         foreach ($line in $lines) {
             if ($line -match "\s(\d+)\s*$") {
                 $procId = [int]$Matches[1]
-                if ($procId -gt 0 -and -not $killed.ContainsKey($procId)) {
+                if ($procId -gt 0 -and -not $handled.ContainsKey($procId)) {
                     Write-Info "Encerrando PID $procId (netstat) na porta $PortToFree"
-                    taskkill /PID $procId /F 2>$null | Out-Null
-                    $killed[$procId] = $true
+                    $stopped += Stop-ProcessTree -RootProcessId $procId
+                    $handled[$procId] = $true
                 }
             }
         }
     }
 
-    if ($killed.Count -eq 0) {
+    if ($handled.Count -eq 0) {
         Write-Ok "Porta $PortToFree ja estava livre"
+    } elseif ($stopped -gt 0) {
+        Write-Ok "Processos da porta $PortToFree encerrados ($stopped processo(s))"
     } else {
-        Write-Ok "Porta $PortToFree liberada ($($killed.Count) processo(s))"
+        Write-Warn "O socket da porta $PortToFree existia, mas nenhum processo associado foi encontrado"
     }
 }
 
@@ -356,12 +404,12 @@ try {
         Write-Warn "Continuando mesmo com alertas - confira o cadastro de demandas."
     }
 
-    Open-Browser -Url $BaseUrl
+    Open-Browser -Url $AppUrl
 
     Write-Host ""
     Write-Host "========================================" -ForegroundColor White
     Write-Host "  Backend em execucao - Ctrl+C para parar" -ForegroundColor White
-    Write-Host "  $BaseUrl" -ForegroundColor DarkGray
+    Write-Host "  $AppUrl" -ForegroundColor DarkGray
     Write-Host "========================================" -ForegroundColor White
     Write-Host ""
 
@@ -374,10 +422,10 @@ catch {
 }
 finally {
     Pop-Location
-    if ($serverProc -and -not $serverProc.HasExited) {
+    if ($serverProc) {
         Write-Host ""
         Write-Step "Encerrando backend (PID $($serverProc.Id))"
-        Stop-Process -Id $serverProc.Id -Force -ErrorAction SilentlyContinue
+        Stop-ProcessTree -RootProcessId $serverProc.Id | Out-Null
         Write-Ok "Backend encerrado"
     }
 }

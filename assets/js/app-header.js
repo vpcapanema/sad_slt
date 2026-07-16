@@ -1,5 +1,5 @@
 (function (global) {
-  const TITLE = "SAD - Sistema de Apoio à Decisão";
+  const TITLE = "SICARD";
   const DEFAULT_SUBTITLE = "Subsecretaria de Logística e Transportes — Governo de São Paulo";
 
   function assetBase() {
@@ -13,11 +13,11 @@
   function iconSrc() {
     const existing = document.querySelector(".sidebar-app-icon, .app-header-icon");
     if (existing?.getAttribute("src")) return existing.getAttribute("src");
-    return `${assetBase()}assets/img/slt-icon.svg`;
+    return "/assets/img/brand/sicard-simbolo.png";
   }
 
   function homeHref() {
-    return `${assetBase()}index.html`;
+    return "/public/";
   }
 
   function escapeHtml(s) {
@@ -30,7 +30,7 @@
 
   function resolveSubtitle(existing) {
     const path = location.pathname.replace(/\\/g, "/").toLowerCase();
-    if (path.includes("/admin/painel")) {
+    if (path.includes("/restrict/painel")) {
       return "Painel administrativo de demandas";
     }
     if (path.includes("/painel")) {
@@ -46,12 +46,25 @@
     const icon = escapeHtml(iconSrc());
     return `
       <a href="${homeEsc}" class="app-header-brand" title="Página inicial">
-        <img src="${icon}" alt="" class="app-header-icon sidebar-app-icon" width="36" height="36">
+        <span class="app-header-icon-frame" aria-hidden="true">
+          <img src="${icon}" alt="" class="app-header-icon sidebar-app-icon">
+        </span>
         <div class="app-brand">
           <span class="app-brand-title">${TITLE}</span>
           <small>${sub}</small>
         </div>
       </a>`;
+  }
+
+  function frameExistingIcon(img) {
+    if (!img || img.closest(".app-header-icon-frame")) return;
+    const frame = document.createElement("span");
+    frame.className = "app-header-icon-frame";
+    frame.setAttribute("aria-hidden", "true");
+    img.before(frame);
+    frame.appendChild(img);
+    img.removeAttribute("width");
+    img.removeAttribute("height");
   }
 
   function upgradeHeaderInner(inner) {
@@ -88,6 +101,7 @@
       brand.innerHTML = `<span class="app-brand-title">${TITLE}</span><small>${escapeHtml(subtitle)}</small>`;
       const img = link.querySelector(".sidebar-app-icon");
       if (img && !img.classList.contains("app-header-icon")) img.classList.add("app-header-icon");
+      frameExistingIcon(img);
       link.dataset.sadHeader = "1";
     });
   }
@@ -96,6 +110,7 @@
     document.querySelectorAll(".app-header .app-header-inner").forEach(upgradeHeaderInner);
     document.querySelectorAll(".app-header-inner:not(.app-header *)").forEach(upgradeHeaderInner);
     upgradeSidebarBrand();
+    document.querySelectorAll(".app-header-brand > .app-header-icon").forEach(frameExistingIcon);
   }
 
   global.SLTAppHeader = { init, TITLE, resolveSubtitle };

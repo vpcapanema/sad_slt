@@ -414,6 +414,7 @@
     universoConfirmado: false, // conjunto de objetos travado pelo usuário
     universoObjetos: [], // snapshot confirmado: [{id, codigo, nome, tipo_demanda}]
     universoSig: "", // assinatura do conjunto confirmado (auto-invalidação)
+    hierarquizacaoCodigo: null,
     excluidos: [], // ids desmarcados manualmente no resumo (ajuste fino)
     sessionUser: null, // usuário autenticado (mesmo da barra de sessão)
     dimensoes: DIMENSOES_PADRAO.slice(), // dimensões marcadas (descrição)
@@ -722,6 +723,7 @@
       payload.tipo_demanda = tipoDemandaCodigo();
       payload.subconjunto = buildSubconjuntoPayload();
       payload.universo_objetos = state.universoConfirmado ? state.universoObjetos.slice() : null;
+      payload.hierarquizacao_codigo = state.hierarquizacaoCodigo;
     }
 
     return payload;
@@ -1693,6 +1695,67 @@
     await carregarDemandas();
     renderUniverso();
     atualizarPreview();
+  });
+
+  // Origem do universo: uma rodada já cadastrada ou o construtor local legado.
+  const origemGrupoRadios = document.querySelectorAll('input[name="origem-grupo"]');
+  const grupoWrap = document.getElementById("grupo-hierarquizacao-wrap");
+  const grupoSelect = document.getElementById("grupo-hierarquizacao");
+  const grupoResumo = document.getElementById("grupo-hierarquizacao-resumo");
+  const construtorGrupo = document.getElementById("construtor-grupo-ahp");
+  let hierarquizacoesDisponiveis = [];
+
+  async function carregarHierarquizacoesDisponiveis() {
+    if (!grupoSelect) return;
+    try {
+      const response = await fetch("/api/ahp/hierarquizacoes", { credentials: "same-origin" });
+      if (!response.ok) throw new Error("Falha ao carregar os grupos cadastrados.");
+      hierarquizacoesDisponiveis = await response.json();
+      grupoSelect.innerHTML = '<option value="">Selecione…</option>' + hierarquizacoesDisponiveis.map(function (h) {
+        return '<option value="' + h.codigo + '">' + h.codigo + " — " + h.nome + " (" + (h.objetos || []).length + " demandas)</option>";
+      }).join("");
+    } catch (e) {
+      grupoSelect.innerHTML = '<option value="">Não foi possível carregar os grupos</option>';
+    }
+  }
+
+  origemGrupoRadios.forEach(function (radio) {
+    radio.addEventListener("change", function () {
+      const carregar = radio.value === "carregar" && radio.checked;
+      if (grupoWrap) grupoWrap.classList.toggle("is-hidden", !carregar);
+      if (construtorGrupo) construtorGrupo.classList.toggle("is-hidden", carregar);
+      if (!carregar) state.hierarquizacaoCodigo = null;
+      if (carregar && !hierarquizacoesDisponiveis.length) carregarHierarquizacoesDisponiveis();
+    });
+  });
+
+  if (grupoSelect) grupoSelect.addEventListener("change", async function () {
+    const h = hierarquizacoesDisponiveis.find(function (item) { return item.codigo === grupoSelect.value; });
+    if (!h) return;
+    const tipo = state.tiposDemanda.find(function (t) { return t.codigo === h.tipo_demanda; });
+    if (tipo) {
+      tipoDemandaSel.value = String(tipo.id);
+      await carregarDemandas();
+    }
+    state.hierarquizacaoCodigo = h.codigo;
+    state.universoObjetos = (h.objetos || []).map(function (o) { return { id: String(o.id || o.demanda_id), codigo: o.codigo, nome: o.nome, tipo_demanda: h.tipo_demanda }; });
+    state.universoSig = state.universoObjetos.map(function (o) { return o.id; }).sort().join(",");
+    state.universoConfirmado = state.universoObjetos.length > 0;
+    const matrizGrupo = h.dados_hierarquizacao && h.dados_hierarquizacao.cabecalho_grupo
+      ? h.dados_hierarquizacao.cabecalho_grupo.matriz_premissas_criterios : null;
+    const linhasMatriz = Array.isArray(matrizGrupo) ? matrizGrupo : ((matrizGrupo && matrizGrupo.linhas) || []);
+    if (linhasMatriz.length) {
+      localStorage.setItem("slt_ahp_matriz_premissas", JSON.stringify(linhasMatriz));
+      localStorage.setItem("slt_ahp_matriz_arquivo_nome", (matrizGrupo && matrizGrupo.arquivo) || "matriz_da_hierarquizacao.json");
+      localStorage.setItem("ahp_inputMethod", "upload_matriz");
+      localStorage.setItem("ahp_criteriaCount", String(linhasMatriz.length));
+      localStorage.setItem("ahp_criteria", JSON.stringify(linhasMatriz.map(function (r) { return r.criterio || r["Critério"] || r.nome; }).filter(Boolean)));
+    }
+    if (grupoResumo) {
+      grupoResumo.innerHTML = "<strong>" + h.nome + "</strong><br>" + state.universoObjetos.length + " demanda(s) · tipo " + h.tipo_demanda + " · matriz de premissas e critérios carregada da rodada.";
+      grupoResumo.classList.remove("is-hidden");
+    }
+    renderResumo(); atualizarPreview(); saveDraft();
   });
 
   if (addGrupoBtn) {

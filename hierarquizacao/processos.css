@@ -1,0 +1,157 @@
+.ahp-module-page {
+  --process-space-1: 0.375rem;
+  --process-space-2: 0.625rem;
+  --process-space-3: 0.875rem;
+  --process-space-4: 1.25rem;
+  --process-control-height: 2.25rem;
+}
+
+/* O card-seção externo mantém suas dimensões; apenas o conteúdo é reduzido. */
+.ahp-step-section > .ahp-section-body {
+  padding: var(--process-space-4);
+}
+
+#nova-hierarquizacao {
+  display: grid;
+  gap: var(--process-space-4);
+}
+
+/* Primeiro nível contido. */
+#nova-hierarquizacao > .cadastro-card {
+  display: grid;
+  gap: var(--process-space-3);
+  margin: 0;
+  padding: var(--process-space-3);
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 0.9rem;
+}
+
+#nova-hierarquizacao > .cadastro-card > .ahp-subsection-title {
+  min-height: auto;
+  margin: 0;
+  gap: var(--process-space-2);
+}
+
+#nova-hierarquizacao > .cadastro-card > .ahp-subsection-title h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+#nova-hierarquizacao > .cadastro-card > .ahp-subsection-title > i {
+  font-size: 1rem;
+}
+
+/* Segundo nível: menor que o card que o contém. */
+#nova-hierarquizacao > .cadastro-card > .ahp-subcard {
+  display: grid;
+  gap: var(--process-space-2);
+  margin: 0;
+  padding: var(--process-space-2);
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+#nova-hierarquizacao > .cadastro-card > .ahp-subcard .ahp-subsection-title {
+  min-height: auto;
+  margin: 0;
+  gap: var(--process-space-1);
+  font-size: 0.86rem;
+}
+
+#nova-hierarquizacao > .cadastro-card > .ahp-subcard .ahp-subsection-num {
+  font-size: 0.72rem;
+}
+
+/* Escala única de espaçamento interno. */
+#nova-hierarquizacao p,
+#nova-hierarquizacao .ahp-info-note,
+#nova-hierarquizacao .ahp-universo-objeto {
+  margin: 0;
+}
+
+#nova-hierarquizacao .process-grid {
+  gap: var(--process-space-3);
+}
+
+#nova-hierarquizacao .process-field {
+  gap: var(--process-space-1);
+}
+
+#nova-hierarquizacao label > span {
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+#nova-hierarquizacao input,
+#nova-hierarquizacao select {
+  min-height: var(--process-control-height);
+  padding: 0.4rem 0.6rem;
+  font-size: 0.84rem;
+}
+
+#nova-hierarquizacao textarea {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.84rem;
+}
+
+#nova-hierarquizacao .ahp-info-note {
+  gap: var(--process-space-2);
+  padding: var(--process-space-2);
+  font-size: 0.8rem;
+}
+
+#nova-hierarquizacao .ahp-info-note > i {
+  font-size: 0.9rem;
+}
+
+#nova-hierarquizacao .ahp-help-text {
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+#nova-hierarquizacao .process-actions {
+  margin: 0;
+  gap: var(--process-space-2);
+}
+
+#nova-hierarquizacao .ahp-resumo-table {
+  font-size: 0.76rem;
+}
+
+#nova-hierarquizacao .ahp-resumo-table th {
+  padding: 0.45rem 0.55rem;
+}
+
+#nova-hierarquizacao .ahp-resumo-table tbody td {
+  height: 1.75rem;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.7rem;
+  line-height: 1.15;
+}
+
+#nova-hierarquizacao .ahp-resumo-table tbody input[type="checkbox"] {
+  width: 0.8rem;
+  height: 0.8rem;
+  margin: 0;
+}
+
+.hier-register-table {
+  font-size: 0.78rem;
+}
+
+.hier-register-table th,
+.hier-register-table td {
+  padding: 0.55rem 0.65rem;
+}
+
+@media (max-width: 700px) {
+  .ahp-step-section > .ahp-section-body {
+    padding: var(--process-space-3);
+  }
+
+  #nova-hierarquizacao > .cadastro-card {
+    padding: var(--process-space-2);
+  }
+}

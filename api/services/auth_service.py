@@ -1,21 +1,38 @@
-"""Autenticação de gestores via banco SIGMA + auditoria SLT."""
+"""Autenticação de operadores SICARD via username do SIGMA."""
 from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
 from api.config import get_settings
 from api.exceptions import AuthError, DatabaseUnavailableError
 from api.repositories import auditoria_repository, sigma_usuario_repository
-from api.services.session_service import SessionUser, create_token
+from api.services.session_service import SIGMA_PROFILES, SessionUser, create_token, profile_from_username
 from api.sigma_password import verify_password
 
 logger = logging.getLogger(__name__)
 
-GESTOR_PROFILE = "GESTOR"
+_REDIRECT_STATUSES = {301, 302, 307, 308}
+
+
+def _safe_auth_redirect(current_url: str, location: str) -> str:
+    """Resolve redirecionamento do SIGMA sem vazar credenciais a outro host."""
+    target = urljoin(current_url, location)
+    current = urlparse(current_url)
+    redirected = urlparse(target)
+    if (
+        redirected.scheme not in {"http", "https"}
+        or redirected.hostname != current.hostname
+        or (current.scheme == "https" and redirected.scheme != "https")
+    ):
+        raise DatabaseUnavailableError(
+            "SIGMA retornou um redirecionamento de autenticação inseguro."
+        )
+    return target
 
 
 def _display_name(row: dict[str, Any]) -> str:
@@ -23,6 +40,15 @@ def _display_name(row: dict[str, Any]) -> str:
     if nome:
         return str(nome).strip()
     return ""
+
+
+def _validated_username(username: str) -> tuple[str, str]:
+    normalized = (username or "").strip()
+    profile = profile_from_username(normalized)
+    if not profile:
+        allowed = ", ".join(f"_{item.lower()}" for item in sorted(SIGMA_PROFILES))
+        raise AuthError(f"Informe um username SIGMA válido, terminado em: {allowed}.")
+    return normalized, profile
 
 
 def _mask_login(login: str) -> str:
@@ -64,7 +90,7 @@ def _audit_auth(
                 "sucesso": sucesso,
                 "login": _mask_login(login),
                 "motivo": motivo,
-                "tipo_esperado": "GESTOR",
+                "tipo_identificado": profile_from_username(login),
             },
             contexto={"modulo": "admin"},
             ip_address=ip_address,
@@ -87,15 +113,29 @@ async def _authenticate_via_api(login: str, password: str) -> SessionUser | None
         raise DatabaseUnavailableError("SIGMA_API_BASE não configurado.")
 
     url = f"{base}/api/auth/login"
+    username, profile = _validated_username(login)
     payload = {
-        "identifier": login,
+        "identifier": username,
         "password": password,
-        "tipo_usuario": GESTOR_PROFILE,
+        "tipo_usuario": profile,
     }
 
     try:
         async with httpx.AsyncClient(timeout=12.0) as client:
-            res = await client.post(url, json=payload)
+            for _ in range(3):
+                res = await client.post(url, json=payload)
+                if res.status_code not in _REDIRECT_STATUSES:
+                    break
+                location = res.headers.get("location")
+                if not location:
+                    raise DatabaseUnavailableError(
+                        "SIGMA redirecionou o login sem informar o destino."
+                    )
+                url = _safe_auth_redirect(url, location)
+            else:
+                raise DatabaseUnavailableError(
+                    "SIGMA excedeu o limite de redirecionamentos no login."
+                )
     except httpx.HTTPError as exc:
         raise DatabaseUnavailableError(f"SIGMA API indisponível: {exc}") from exc
 
@@ -122,13 +162,10 @@ async def _authenticate_via_api(login: str, password: str) -> SessionUser | None
     if not isinstance(user, dict):
         return None
 
-    tipo = str(user.get("tipo_usuario", "")).strip().upper()
-    if tipo != GESTOR_PROFILE:
-        return None
-
     user_id = user.get("id")
-    username = user.get("username")
-    if not user_id or not username:
+    returned_username = str(user.get("username") or "").strip()
+    returned_profile = profile_from_username(returned_username)
+    if not user_id or not returned_username or returned_profile != profile:
         return None
 
     email = user.get("email_institucional") or user.get("email")
@@ -140,27 +177,27 @@ async def _authenticate_via_api(login: str, password: str) -> SessionUser | None
     )
     return SessionUser(
         id=str(user_id),
-        email=str(email) if email else login,
-        username=str(username),
+        email=str(email) if email else "",
+        username=returned_username,
         nome=str(nome).strip(),
-        tipo_usuario=tipo,
+        tipo_usuario=profile,
     )
 
 
-async def login_gestor(
-    login: str,
+async def login_usuario(
+    username: str,
     password: str,
     *,
     ip_address: str | None = None,
     user_agent: str | None = None,
 ) -> tuple[SessionUser, str]:
-    """Autentica um gestor preferindo a API HTTP do SIGMA.
+    """Autentica um operador pelo username SIGMA e deriva seu perfil do sufixo.
 
     Espelha a estratégia das aplicações PLI (HazardTrack/Reporta/SmartRouter):
     usa o endpoint HTTP ``/api/auth/login`` (porta 80, sempre acessível) e só
     recorre ao PostgreSQL direto (porta 5433) como fallback.
     """
-    login = (login or "").strip()
+    login = (username or "").strip()
     password = password or ""
 
     if not login or not password:
@@ -172,7 +209,9 @@ async def login_gestor(
             ip_address=ip_address,
             user_agent=user_agent,
         )
-        raise AuthError("Informe e-mail/usuário e senha.")
+        raise AuthError("Informe username e senha.")
+
+    _validated_username(login)
 
     if get_settings().sigma_api_base:
         try:
@@ -204,7 +243,7 @@ async def login_gestor(
             )
             return user, token
 
-    return authenticate_gestor(
+    return authenticate_usuario(
         login,
         password,
         ip_address=ip_address,
@@ -212,14 +251,14 @@ async def login_gestor(
     )
 
 
-def authenticate_gestor(
-    login: str,
+def authenticate_usuario(
+    username: str,
     password: str,
     *,
     ip_address: str | None = None,
     user_agent: str | None = None,
 ) -> tuple[SessionUser, str]:
-    login = (login or "").strip()
+    login = (username or "").strip()
     password = password or ""
 
     if not login or not password:
@@ -231,15 +270,17 @@ def authenticate_gestor(
             ip_address=ip_address,
             user_agent=user_agent,
         )
-        raise AuthError("Informe e-mail/usuário e senha.")
+        raise AuthError("Informe username e senha.")
 
-    row = sigma_usuario_repository.find_gestor_by_login(login)
+    login, profile = _validated_username(login)
+
+    row = sigma_usuario_repository.find_active_by_username(login)
     if not row:
         _audit_auth(
-            mensagem="Falha de login admin — gestor não encontrado no SIGMA",
+            mensagem="Falha de login restrito — usuário não encontrado no SIGMA",
             sucesso=False,
             login=login,
-            motivo="gestor_nao_encontrado",
+            motivo="usuario_nao_encontrado",
             ip_address=ip_address,
             user_agent=user_agent,
         )
@@ -275,10 +316,10 @@ def authenticate_gestor(
 
     user = SessionUser(
         id=str(row["id"]),
-        email=str(row.get("email_institucional") or login),
+        email=str(row.get("email_institucional") or ""),
         username=str(row.get("username") or login),
         nome=_display_name(row),
-        tipo_usuario=str(row.get("tipo_usuario") or "GESTOR").upper(),
+        tipo_usuario=profile,
     )
 
     token = create_token(user)
@@ -294,7 +335,7 @@ def authenticate_gestor(
     return user, token
 
 
-def logout_gestor(
+def logout_usuario(
     user: SessionUser,
     *,
     ip_address: str | None = None,

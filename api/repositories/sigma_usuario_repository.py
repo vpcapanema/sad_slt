@@ -1,11 +1,11 @@
-"""Leitura de gestores em usuarios.usuario (SIGMA — somente SELECT)."""
+"""Leitura de usuários ativos em usuarios.usuario (SIGMA — somente SELECT)."""
 from __future__ import annotations
 
 from typing import Any
 
 from api.db.sigma_connection import get_sigma_connection
 
-_SELECT_GESTOR = """
+_SELECT_USUARIO = """
     SELECT
         u.id,
         u.username,
@@ -18,20 +18,16 @@ _SELECT_GESTOR = """
         p.nome_completo AS nome_pessoa
     FROM usuarios.usuario u
     LEFT JOIN cadastro.pessoa p ON p.id = u.pessoa_id
-    WHERE (
-        LOWER(u.username) = LOWER(%(login)s)
-        OR LOWER(u.email_institucional) = LOWER(%(login)s)
-    )
-      AND UPPER(u.tipo_usuario) = 'GESTOR'
+    WHERE LOWER(u.username) = LOWER(%(username)s)
       AND u.ativo = TRUE
     LIMIT 1
 """
 
 
-def find_gestor_by_login(login: str) -> dict[str, Any] | None:
-    login = (login or "").strip()
-    if not login:
+def find_active_by_username(username: str) -> dict[str, Any] | None:
+    username = (username or "").strip()
+    if not username:
         return None
 
     with get_sigma_connection() as conn:
-        return conn.execute(_SELECT_GESTOR, {"login": login}).fetchone()
+        return conn.execute(_SELECT_USUARIO, {"username": username}).fetchone()

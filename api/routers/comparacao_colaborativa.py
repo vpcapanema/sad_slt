@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
-from api.deps.auth import get_optional_session
+from api.deps.auth import require_analyst, require_authenticated
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
 from api.schemas.comparacao_colaborativa import (
     AmbienteColaborativoCreateSchema,
@@ -26,7 +26,7 @@ def _base_url(request: Request) -> str:
 async def criar_ambiente(
     body: AmbienteColaborativoCreateSchema,
     request: Request,
-    _user: SessionUser | None = Depends(get_optional_session),
+    _user: SessionUser = Depends(require_analyst),
 ) -> AmbienteColaborativoResponseSchema:
     """Cria ambiente colaborativo com convites e prazo."""
     try:
@@ -42,7 +42,7 @@ async def obter_ambiente_config(
     tipo: str,
     codigo: str,
     request: Request,
-    _user: SessionUser | None = Depends(get_optional_session),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> AmbienteColaborativoResponseSchema:
     """Obtém o ambiente colaborativo mais recente de uma configuração."""
     try:
@@ -87,7 +87,7 @@ async def enviar_resposta(
 @router.get("/ambientes/{ambiente_id}/respostas", response_model=list[RespostaColaborativaResponseSchema])
 async def listar_respostas(
     ambiente_id: str,
-    _user: SessionUser | None = Depends(get_optional_session),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> list[RespostaColaborativaResponseSchema]:
     """Lista respostas recebidas (gestor da análise)."""
     try:

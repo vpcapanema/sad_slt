@@ -64,8 +64,8 @@ a {
 }
 
 .app-header-inner {
-  width: 100%;
-  max-width: min(100%, 1280px);
+  width: 90%;
+  max-width: none;
   margin: 0 auto;
   display: flex;
   flex-direction: row;
@@ -88,9 +88,29 @@ a {
   width: auto;
 }
 
+.app-header-icon-frame {
+  position: relative;
+  align-self: stretch;
+  width: 3.7rem;
+  min-height: 2.55rem;
+  flex: 0 0 3.7rem;
+  overflow: hidden;
+}
+
+body:not(.layout-with-sidebar) .app-header .app-header-brand {
+  flex: 0 0 min(27rem, 38vw);
+}
+
 .app-header-icon {
-  flex-shrink: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
   display: block;
+  width: 220%;
+  height: 220%;
+  max-width: none;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
 }
 
 .app-brand {
@@ -158,8 +178,68 @@ a {
   background: rgba(255, 255, 255, 0.15);
 }
 
+.app-nav .app-nav-action {
+  margin-left: 0.25rem;
+  padding: 0.42rem 0.85rem;
+  border-color: var(--pli-green);
+  color: var(--pli-deep);
+  background: var(--pli-green);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+  font-size: 0.8125rem;
+  font-weight: 750;
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.app-nav .app-nav-action:hover,
+.app-nav .app-nav-action.active {
+  border-color: var(--pli-green-dark);
+  color: var(--pli-white);
+  background: var(--pli-green-dark);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+  transform: translateY(-1px);
+}
+
+.app-nav .app-nav-action:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.75);
+  outline-offset: 2px;
+}
+
+.app-nav-group {
+  position: relative;
+}
+
+.app-nav-caret {
+  margin-left: 0.35rem;
+  font-size: 0.65rem;
+}
+
+.app-nav-submenu {
+  position: absolute;
+  z-index: 1200;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  display: none;
+  min-width: 13rem;
+  padding: 0.35rem;
+  border-radius: 8px;
+  background: var(--pli-deep);
+  box-shadow: var(--pli-shadow);
+}
+
+.app-nav-submenu a {
+  display: block;
+  border: 0;
+  border-radius: 5px;
+}
+
+.app-nav-group:hover .app-nav-submenu,
+.app-nav-group:focus-within .app-nav-submenu {
+  display: block;
+}
+
 .app-main {
-  max-width: 1100px;
+  width: 90%;
+  max-width: none;
   margin: 0 auto;
   padding: 1.5rem;
 }
@@ -619,8 +699,13 @@ textarea {
 }
 
 .hub-card {
-  display: block;
+  display: flex;
+  min-height: 13rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   text-decoration: none;
+  text-align: center;
   color: inherit;
   background: var(--pli-white);
   border-radius: var(--pli-radius);
@@ -645,12 +730,20 @@ textarea {
   margin: 0 0 0.5rem;
   font-size: var(--font-subsection);
   color: var(--pli-deep);
+  text-align: center;
 }
 
 .hub-card p {
   margin: 0;
   font-size: var(--font-intro);
   color: var(--pli-muted);
+  text-align: center;
+}
+
+.hub-card-icon {
+  margin-bottom: 0.8rem;
+  color: var(--pli-blue);
+  font-size: 1.8rem;
 }
 
 .badge {
@@ -2730,8 +2823,34 @@ body.admin-data-page .admin-card--revisao-status {
 }
 
 .admin-session-bar {
-  background: #f6f8fa;
-  border-bottom: 1px solid var(--pli-border);
+  background: transparent;
+  border: 0;
+}
+
+body.layout-with-sidebar .app-main,
+body.painel-page .app-main {
+  width: auto;
+}
+
+@media (max-width: 900px) {
+  .app-header-inner {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  body:not(.layout-with-sidebar) .app-header .app-header-brand {
+    flex: 1 1 100%;
+  }
+
+  .app-nav {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .app-nav .app-nav-action {
+    margin-left: auto;
+  }
 }
 
 .admin-session-bar.hidden {
@@ -2739,43 +2858,45 @@ body.admin-data-page .admin-card--revisao-status {
 }
 
 .admin-session-bar-inner {
-  max-width: 1100px;
+  width: 100%;
+  max-width: min(100%, 1280px);
   margin: 0 auto;
-  padding: 0.3rem 1.5rem;
-  min-height: 2rem;
+  padding: 0;
+  min-height: 1.35rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .admin-session-info {
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 0.45rem;
+  gap: 0.3rem;
   margin: 0;
   min-width: 0;
-  font-size: 0.8125rem;
-  line-height: 1.2;
-  color: var(--pli-muted);
+  font-size: 0.68rem;
+  line-height: 1;
+  color: var(--pli-green);
 }
 
 .admin-session-name {
   font-family: "Montserrat", sans-serif;
   font-weight: 600;
-  color: var(--pli-deep);
+  color: var(--pli-green);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .admin-session-sep {
-  color: #b8c4ce;
+  color: rgba(255, 255, 255, 0.45);
   flex-shrink: 0;
 }
 
 .admin-session-username {
+  color: var(--pli-green);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -2788,17 +2909,41 @@ body.admin-data-page .admin-card--revisao-status {
 .admin-session-type {
   white-space: nowrap;
   flex-shrink: 0;
-  font-size: 0.72rem;
+  font-size: 0.65rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: var(--pli-navy);
+  color: var(--pli-green);
 }
 
 .admin-session-logout {
   flex-shrink: 0;
-  padding: 0.25rem 0.65rem;
-  font-size: 0.75rem;
-  min-height: 1.65rem;
+  min-height: 1.25rem;
+  margin: 0;
+  padding: 0.08rem 0.55rem;
+  border: 1px solid #fff;
+  border-radius: 5px;
+  color: var(--pli-green);
+  background: transparent;
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+.app-header--restricted {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.15rem;
+  padding-top: 0.7rem;
+  padding-bottom: 0.2rem;
+}
+
+.app-header--restricted .admin-session-bar {
+  width: 100%;
+  flex: 0 0 auto;
+}
+
+.app-header--restricted .admin-session-bar-inner {
+  padding-inline: 1.5rem;
 }
 
 @media (max-width: 640px) {

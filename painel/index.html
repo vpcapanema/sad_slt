@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <base href="/public/painel/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel — SLT</title>
@@ -12,9 +13,9 @@
   <div class="layout-with-sidebar-grid">
     <header class="layout-sidebar-header">
       <div class="layout-sidebar-header-inner">
-        <a href="../index.html" class="layout-sidebar-home-link" title="Página inicial">
+        <a href="/public/" class="layout-sidebar-home-link" title="Página inicial">
           <img
-            src="../assets/img/slt-icon.svg"
+            src="/assets/img/brand/sicard-simbolo.png"
             alt=""
             class="sidebar-app-icon"
             width="36"
@@ -52,7 +53,7 @@
             </button>
             <div id="layers-container" class="layer-group-body layers-container demandas-tree" role="list" aria-label="Demandas"></div>
             <p id="lista-vazia" class="layers-empty hint hidden">
-              Nenhuma demanda registrada. <a href="../cadastro/">Cadastre a primeira demanda</a>.
+              Nenhuma demanda registrada. <a href="/public/cadastro/nova-demanda/">Cadastre a primeira demanda</a>.
             </p>
           </div>
         </div>

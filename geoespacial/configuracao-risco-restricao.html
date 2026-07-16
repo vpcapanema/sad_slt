@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Biblioteca Canônica de Risco e Restrição — SICARD</title>
+    <link rel="stylesheet" href="../assets/css/app.css" />
+    <link rel="stylesheet" href="../assets/css/gerador-insumos.css" />
+  </head>
+  <body class="gerador-page biblioteca-risco-page">
+    <header class="app-header">
+      <div class="app-header-inner">
+        <div class="app-brand"></div>
+        <nav class="app-nav"></nav>
+      </div>
+    </header>
+    <main class="gerador-main">
+      <section class="gerador-section gerador-intro">
+        <div class="gerador-section__body">
+          <div class="gerador-breadcrumb">
+            <a href="../index.html">Início</a> ›
+            <a href="index.html">Geoespacial</a> › Biblioteca canônica
+          </div>
+          <h1 class="gerador-title">
+            Biblioteca Canônica de Risco e Restrição
+          </h1>
+          <p class="gerador-subtitle">
+            Referencial técnico e valores sugeridos para construir as camadas
+            consolidadas da Fase 1.
+          </p>
+        </div>
+      </section>
+      <section class="gerador-section">
+        <header class="gerador-section__header">
+          <span class="gerador-section__number">1</span>
+          <div class="gerador-section__heading">
+            <h2>Risco e restrição</h2>
+            <p>
+              Conceitos adotados para empreendimentos de logística e
+              transportes.
+            </p>
+          </div>
+        </header>
+        <div class="gerador-section__body">
+          <div class="fase1-theory-text">
+            <p>
+              Os conceitos de risco e restrição são empregados de forma
+              complementar no planejamento estratégico da infraestrutura de
+              transportes. O risco é utilizado para graduar condições incertas,
+              enquanto a restrição é utilizada para excluir alternativas
+              incompatíveis com condições impeditivas.
+            </p>
+            <p>
+              Em projetos de infraestrutura de transportes, o risco é associado
+              às incertezas capazes de alterar prazo, custo, demanda, desempenho
+              ou viabilidade, especialmente quando são considerados processos
+              longos e interfaces institucionais complexas (<a
+                href="https://doi.org/10.1016/j.retrec.2015.04.007"
+                target="_blank"
+                rel="noopener"
+                >Miller e Szimba, 2015</a
+              >). Sob uma perspectiva ambiental e territorial, o risco também é
+              compreendido como resultado da interação entre uma ocorrência
+              potencialmente danosa, os elementos expostos e a predisposição
+              desses elementos a sofrer efeitos adversos (<a
+                href="https://www.ipcc.ch/report/ar6/wg1/chapter/chapter-1/"
+                target="_blank"
+                rel="noopener"
+                >IPCC, 2021</a
+              >). Quando essa formulação é aplicada às redes de transporte, são
+              combinadas a probabilidade e a intensidade da ameaça, a exposição
+              dos ativos e a sensibilidade da infraestrutura às condições
+              incidentes (<a
+                href="https://doi.org/10.1038/s41467-019-10442-3"
+                target="_blank"
+                rel="noopener"
+                >Koks et al., 2019</a
+              >).
+            </p>
+            <p>
+              A restrição, em contraste, é definida na avaliação multicritério
+              espacial como o critério pelo qual determinadas áreas são
+              retiradas do conjunto de alternativas admissíveis antes da
+              ponderação dos fatores graduais (<a
+                href="https://onlinelibrary.wiley.com/doi/10.1111/gean.70004"
+                target="_blank"
+                rel="noopener"
+                >Zhao et al., 2025</a
+              >). Sua representação é realizada por regra booleana não
+              compensatória: uma vez confirmada a condição impeditiva,
+              resultados favoráveis obtidos nos demais critérios não podem
+              anulá-la (<a
+                href="https://doi.org/10.1016/j.jag.2006.01.003"
+                target="_blank"
+                rel="noopener"
+                >Malczewski, 2006</a
+              >). No planejamento de corredores rodoviários, essa regra é
+              materializada pela retirada das áreas incompatíveis da superfície
+              de decisão antes da comparação dos traçados, permanecendo os
+              demais fatores representados como custos ou resistências graduais
+              (<a
+                href="https://doi.org/10.1016/S1361-9209(99)00002-4"
+                target="_blank"
+                rel="noopener"
+                >Li et al., 1999</a
+              >).
+            </p>
+            <p>
+              Com base nessas formulações, condições incertas são avaliadas
+              separadamente dos impedimentos formais. Alternativas incompatíveis
+              podem ser eliminadas antes da alocação de recursos, e os riscos
+              remanescentes podem ser comparados durante a formação da carteira.
+            </p>
+          </div>
+          <div class="fase1-concept-grid">
+            <article class="fase1-concept fase1-concept--risk">
+              <div>
+                <h3>Risco</h3>
+                <p>
+                  Efeito potencial de uma condição incerta sobre os objetivos do
+                  empreendimento, determinado pela ocorrência territorial, pela
+                  exposição e pela sensibilidade dos elementos afetados. Sua
+                  intensidade é graduada para representar possíveis alterações
+                  de prazo, custo, desempenho, viabilidade ou sustentabilidade.
+                </p>
+              </div>
+            </article>
+            <article class="fase1-concept fase1-concept--restriction">
+              <div>
+                <h3>Restrição</h3>
+                <p>
+                  Condição territorial impeditiva, confirmada por regra
+                  aplicável e sobreposição espacial. Sua aplicação é binária e
+                  não compensatória: a alternativa incompatível é excluída antes
+                  da ponderação dos critérios de risco.
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+      <section class="gerador-section">
+        <header class="gerador-section__header">
+          <span class="gerador-section__number">2</span>
+          <div class="gerador-section__heading">
+            <h2>Índice de risco calculado</h2>
+            <p>Modelo comum e comparável para todos os critérios de risco.</p>
+          </div>
+        </header>
+        <div class="gerador-section__body">
+          <div class="fase1-theory-text">
+            <p>
+              O Índice de Risco Calculado — IRc — é definido como uma medida
+              sintética da pressão exercida por uma ocorrência territorial sobre
+              a implantação do empreendimento. Por meio do índice, critérios de
+              diferentes naturezas são convertidos para uma escala comum. A
+              comparação entre alternativas é, assim, realizada antes do
+              licenciamento e do detalhamento executivo.
+            </p>
+            <p>
+              O índice é utilizado para indicar condições associadas à
+              sensibilidade territorial, à duração do licenciamento, ao esforço
+              técnico e à incerteza da decisão. Não é produzida, por esse
+              procedimento, declaração de inviabilidade jurídica ou ambiental.
+              Também não são substituídos os estudos exigidos nas etapas
+              posteriores.
+            </p>
+            <p>
+              Para cada critério, são atribuídas métricas absolutas aos quatro
+              componentes. Em seguida, cada métrica é normalizada no intervalo
+              de 0 a 1. Os valores normalizados são combinados com os
+              respectivos pesos para a obtenção do índice composto. Durante a
+              execução da Fase 1, esse índice é ativado pela interseção
+              espacial. A variável de interseção assume valor 1 quando a
+              sobreposição é confirmada e valor 0 quando não é identificada. O
+              emprego da combinação ponderada é fundamentado na avaliação
+              multicritério espacial, desde que as funções de normalização e os
+              pesos sejam explicitados e submetidos à análise de sensibilidade
+              (<a
+                href="https://doi.org/10.1111/1467-9671.00035"
+                target="_blank"
+                rel="noopener"
+                >Malczewski, 2000</a
+              >).
+            </p>
+          </div>
+          <div
+            class="fase1-equation-flow"
+            aria-label="Sequência de cálculo do índice de risco"
+          >
+            <article>
+              <span>1. Índice composto</span>
+              <code>I = Σ(wj × xj) ÷ Σ(wj)</code>
+              <p>
+                <code>xj</code> representa o componente normalizado e
+                <code>wj</code> representa o peso correspondente.
+              </p>
+            </article>
+            <span class="fase1-equation-flow__arrow" aria-hidden="true">→</span>
+            <article>
+              <span>2. Ativação espacial</span>
+              <code>IRc = IE × I × 100</code>
+              <p>
+                <code>IE = 1</code> quando a interseção é confirmada e
+                <code>IE = 0</code> quando não há interseção.
+              </p>
+            </article>
+          </div>
+          <div class="fase1-component-list">
+            <article>
+              <h3>Sensibilidade do meio afetado (SMA)</h3>
+              <p>
+                A sensibilidade do meio afetado expressa o grau em que o
+                território pode sofrer efeitos relevantes diante da implantação
+                de uma infraestrutura de transporte. Em sua estimativa, são
+                consideradas a fragilidade ambiental, a presença de comunidades
+                e bens protegidos, os regimes territoriais especiais e as
+                condições físicas locais.
+              </p>
+              <p>
+                O critério é enquadrado entre 1 e 4, desde sensibilidade baixa
+                até muito alta, e normalizado por
+                <code>SMA<sub>i</sub><sup>*</sup> = SMA<sub>i</sub> / 4</code>.
+                Valores próximos de 0,25 indicam menor suscetibilidade à
+                intervenção, enquanto valores próximos de 1,00 revelam meios
+                altamente sensíveis, cuja interferência tende a produzir
+                consequências mais significativas no índice de risco.
+              </p>
+            </article>
+            <article>
+              <h3>Complexidade do licenciamento (CL)</h3>
+              <p>
+                A complexidade do licenciamento representa o esforço
+                institucional necessário para que o empreendimento obtenha as
+                licenças, autorizações e manifestações aplicáveis. Sua avaliação
+                considera a quantidade de órgãos envolvidos, os estudos
+                requeridos, a necessidade de consultas específicas e os prazos
+                normativos ou observados disponíveis.
+              </p>
+              <p>
+                Essas evidências orientam o enquadramento entre 1 e 4,
+                normalizado por
+                <code>CL<sub>i</sub><sup>*</sup> = CL<sub>i</sub> / 4</code>. Um
+                valor baixo caracteriza um percurso decisório relativamente
+                simples e previsível; um valor elevado indica maior carga
+                processual, coordenação institucional e possibilidade de
+                prolongamento do prazo de implantação, com contribuição mais
+                intensa para o risco calculado.
+              </p>
+            </article>
+            <article>
+              <h3>Complexidade técnica e mitigatória (CTM)</h3>
+              <p>
+                A complexidade técnica e mitigatória traduz o esforço adicional
+                necessário para tornar a intervenção tecnicamente viável e
+                reduzir seus efeitos adversos. São consideradas, entre outras
+                exigências, alterações de traçado, estudos especializados,
+                soluções especiais de engenharia, compensações, resgates,
+                reassentamentos e medidas de recuperação. A intensidade e a
+                diversidade dessas providências fundamentam a atribuição do
+                nível.
+              </p>
+              <p>
+                O valor entre 1 e 4 é normalizado por
+                <code>CTM<sub>i</sub><sup>*</sup> = CTM<sub>i</sub> / 4</code>.
+                Resultados próximos do limite inferior correspondem a adequações
+                usuais e controláveis; resultados próximos do limite superior
+                indicam intervenções tecnicamente exigentes, com maior propensão
+                a elevar custos, prazos e risco residual.
+              </p>
+            </article>
+            <article>
+              <h3>Incerteza decisória (ID)</h3>
+              <p>
+                A incerteza decisória expressa o grau de previsibilidade das
+                decisões necessárias à continuidade do empreendimento. Em sua
+                avaliação, são observadas a dependência de manifestações
+                externas, a possibilidade de exigências complementares, a
+                variabilidade dos prazos e a existência de alternativas cuja
+                aceitação dependa de análise técnica específica.
+              </p>
+              <p>
+                O conjunto dessas condições é classificado entre 1 e 4 e
+                normalizado por
+                <code>ID<sub>i</sub><sup>*</sup> = ID<sub>i</sub> / 4</code>.
+                Valores baixos indicam decisões apoiadas em regras estáveis e
+                resultados previsíveis; valores elevados revelam maior
+                dependência de avaliações futuras e, portanto, menor segurança
+                quanto ao prazo, ao custo ou à própria viabilidade da solução. A
+                ausência de informação, isoladamente, não é tratada como prova
+                de incerteza elevada.
+              </p>
+            </article>
+          </div>
+          <p class="fase1-calculation-note">
+            Os quatro componentes são exigidos. Na ausência de métrica
+            fundamentada, o índice não é calculado. O resultado é expresso entre
+            0 e 100, e as métricas absolutas, as normalizações, os pesos e as
+            fontes são preservados na memória de cálculo.
+          </p>
+        </div>
+      </section>
+      <section class="gerador-section">
+        <header class="gerador-section__header">
+          <span class="gerador-section__number">3</span>
+          <div class="gerador-section__heading">
+            <h2>Verificação de restrição</h2>
+            <p>
+              Regra booleana não compensatória, aplicada fora da tabela do
+              índice de risco.
+            </p>
+          </div>
+        </header>
+        <div class="gerador-section__body">
+          <div class="fase1-component-list fase1-component-list--three">
+            <article>
+              <h3>Ato vigente (AV)</h3>
+              <p>
+                1 quando a vedação, embargo ou interdição estiver vigente; 0
+                quando comprovadamente inativa.
+              </p>
+            </article>
+            <article>
+              <h3>Interseção validada (IE)</h3>
+              <p>
+                1 quando o objeto intersectar a geometria oficial validada; 0
+                quando não intersectar.
+              </p>
+            </article>
+            <article>
+              <h3>Aplicabilidade (AP)</h3>
+              <p>
+                1 quando o ato alcançar a atividade e o território analisados; 0
+                quando comprovadamente inaplicável.
+              </p>
+            </article>
+          </div>
+          <div class="fase1-index-definition">
+            <article>
+              <h3>Regra de decisão</h3>
+              <code>Restrição = AV × IE × AP</code>
+            </article>
+            <article>
+              <h3>Resultado</h3>
+              <code
+                >1 = Restrição confirmada · 0 = Sem restrição confirmada</code
+              >
+              <p>
+                Restrição confirmada barra o objeto e não é diluída pelo índice
+                de risco.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+      <section class="gerador-section">
+        <header class="gerador-section__header">
+          <span class="gerador-section__number">4</span>
+          <div class="gerador-section__heading">
+            <h2>Camadas e critérios canônicos</h2>
+            <p>
+              Classificação, métricas específicas dos componentes e resultado
+              canônico.
+            </p>
+          </div>
+          <span id="biblioteca-versao" class="fase1-version"></span>
+        </header>
+        <div class="gerador-section__body">
+          <div class="fase1-library-toolbar">
+            <div class="gerador-field">
+              <label>Buscar</label
+              ><input
+                id="criterio-busca"
+                type="search"
+                placeholder="Camada ou critério"
+              />
+            </div>
+            <div class="gerador-field">
+              <label>Classificação</label
+              ><select id="criterio-tipo">
+                <option value="">Todas</option>
+                <option value="Risco">Risco</option>
+                <option value="Restrição">Restrição</option>
+              </select>
+            </div>
+          </div>
+          <div class="fase1-canonical-table-wrap">
+            <table class="fase1-canonical-table">
+              <thead>
+                <tr>
+                  <th>Classificação</th>
+                  <th>Camada</th>
+                  <th>Critério</th>
+                  <th>Sensibilidade do meio afetado</th>
+                  <th>Complexidade do licenciamento</th>
+                  <th>Complexidade técnica e mitigatória</th>
+                  <th>Incerteza decisória</th>
+                  <th>Índice de risco calculado</th>
+                  <th>Referências</th>
+                </tr>
+              </thead>
+              <tbody id="criterios-tabela">
+                <tr>
+                  <td colspan="9">Carregando…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="ahp-help-text">
+            Critérios de risco exigem os quatro componentes. Critérios de
+            restrição permanecem na mesma tabela, mas são decididos pela
+            verificação booleana e não recebem índice numérico.
+          </p>
+        </div>
+      </section>
+      <section class="gerador-section">
+        <header class="gerador-section__header">
+          <span class="gerador-section__number">5</span>
+          <div class="gerador-section__heading">
+            <h2>Classificação do risco</h2>
+            <p>
+              O fatiamento converte o IRc nas três classes canônicas de risco.
+              Restrição provém da camada de restrição.
+            </p>
+          </div>
+        </header>
+        <div class="gerador-section__body">
+          <div class="fase1-classification-section">
+            <h3>Classes canônicas do índice de risco</h3>
+            <p>
+              O valor contínuo do IRc é reclassificado em uma das três classes.
+            </p>
+            <div class="fase1-canonical-classes">
+              <span data-level="1"><b>Risco baixo</b></span
+              ><span data-level="2"><b>Risco médio</b></span
+              ><span data-level="3"><b>Risco alto</b></span
+              ><span class="fase1-canonical-class--restriction" data-level="4"
+                ><b>Restrição</b><small>Regra booleana</small></span
+              >
+            </div>
+            <p class="fase1-canonical-origin-note">
+              As quatro classes pertencem à classificação canônica. Risco baixo,
+              médio e alto são obtidos pelo fatiamento do IRc; Restrição é
+              atribuída pela regra booleana de sobreposição e aplicabilidade.
+            </p>
+          </div>
+          <div class="fase1-methods-section">
+            <h3>Métodos alternativos de fatiamento</h3>
+            <p>
+              Um único método é selecionado para estabelecer os limites entre
+              risco baixo, médio e alto. Os métodos abaixo são alternativas e
+              não correspondem individualmente às classes apresentadas acima.
+            </p>
+            <div class="fase1-method-list">
+              <article>
+                <h3>Intervalos iguais</h3>
+                <p>Divide a escala de 0 a 100 em três amplitudes iguais.</p>
+              </article>
+              <article>
+                <h3>Quantis</h3>
+                <p>
+                  Usa a distribuição de uma população de referência registrada.
+                </p>
+              </article>
+              <article>
+                <h3>Quebras naturais</h3>
+                <p>Usa Jenks e registra amostra e cortes resultantes.</p>
+              </article>
+              <article>
+                <h3>Cortes técnicos</h3>
+                <p>Exige justificativa e responsável técnico.</p>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="gerador-section">
+        <header class="gerador-section__header">
+          <span class="gerador-section__number">6</span>
+          <div class="gerador-section__heading">
+            <h2>Configuração operacional</h2>
+            <p>Pesos e cortes aplicados na construção da camada de risco.</p>
+          </div>
+        </header>
+        <div class="gerador-section__body">
+          <article class="fase1-config-card">
+            <h3>Identificação da configuração</h3>
+            <div class="fase1-config-identification">
+              <div class="gerador-field">
+                <label>Nome</label
+                ><input id="nome-configuracao" value="Configuração canônica" />
+              </div>
+              <div class="gerador-field">
+                <label>Código</label
+                ><input id="codigo-configuracao" value="FAT-F1-CANONICA" />
+              </div>
+              <div class="gerador-field">
+                <label>Versão</label
+                ><input id="versao-metodologia" value="2026.07.16" />
+              </div>
+              <div class="gerador-field">
+                <label>Método</label
+                ><select id="metodologia-fatiamento">
+                  <option value="intervalos_iguais">Intervalos iguais</option>
+                  <option value="quantis">Quantis</option>
+                  <option value="jenks">Jenks</option>
+                  <option value="especialista">Cortes técnicos</option>
+                </select>
+              </div>
+            </div>
+          </article>
+          <div class="fase1-config-layout">
+            <article class="fase1-config-card">
+              <h3>Limiares de classificação</h3>
+              <div class="fase1-threshold-fields">
+                <div class="gerador-field">
+                  <label>Início do risco médio</label
+                  ><input id="limiar-baixo" type="number" value="33.33" />
+                </div>
+                <div class="gerador-field">
+                  <label>Início do risco alto</label
+                  ><input id="limiar-medio" type="number" value="66.67" />
+                </div>
+              </div>
+              <div id="faixas-preview"></div>
+              <p id="limiares-validacao" class="gerador-feedback"></p>
+            </article>
+            <article class="fase1-config-weights">
+              <h3>Pesos dos componentes do risco</h3>
+              <div class="fase1-config-weight-grid">
+                <label
+                  >Sensibilidade do meio afetado<input
+                    data-peso="sensibilidade_meio"
+                    type="number"
+                    min="0"
+                    step=".01"
+                    value="1" /></label
+                ><label
+                  >Complexidade do licenciamento<input
+                    data-peso="complexidade_licenciamento"
+                    type="number"
+                    min="0"
+                    step=".01"
+                    value="1" /></label
+                ><label
+                  >Complexidade técnica e mitigatória<input
+                    data-peso="complexidade_tecnica"
+                    type="number"
+                    min="0"
+                    step=".01"
+                    value="1" /></label
+                ><label
+                  >Incerteza decisória<input
+                    data-peso="incerteza_decisoria"
+                    type="number"
+                    min="0"
+                    step=".01"
+                    value="1"
+                /></label>
+              </div>
+            </article>
+          </div>
+          <input id="quantidade-classes-risco" type="hidden" value="3" /><input
+            id="limiar-alto"
+            type="hidden"
+            value="100"
+          />
+          <div class="gerador-actions">
+            <button class="btn btn-secondary" id="restaurar-limiares">
+              Restaurar</button
+            ><button class="btn btn-primary" id="validar-metodologia">
+              Salvar configuração
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="../assets/js/app-header.js"></script>
+    <script src="../assets/js/navbar.js"></script>
+    <script src="biblioteca-risco-restricao.js"></script>
+  </body>
+</html>

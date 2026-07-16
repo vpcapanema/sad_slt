@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.deps.auth import require_gestor
+from api.deps.auth import require_analyst, require_authenticated, require_gestor, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.objeto_ahp import AprovarDemandaSchema
 from api.schemas.plano import PlanoCreateSchema, PlanoResponseSchema, PlanoUpdateSchema
@@ -28,16 +28,34 @@ async def criar_plano(body: PlanoCreateSchema) -> PlanoResponseSchema:
 async def listar_planos() -> list[PlanoResponseSchema]:
     """Lista os planos cadastrados."""
     try:
-        return plano_service.listar_planos()
+        return [item for item in plano_service.listar_planos() if item.status == "hierarq_ranqueada"]
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/internas", response_model=list[PlanoResponseSchema])
+async def listar_planos_internos(
+    _user: SessionUser = Depends(require_authenticated),
+) -> list[PlanoResponseSchema]:
+    return plano_service.listar_planos()
+
+
+@router.get("/internas/{codigo}", response_model=PlanoResponseSchema)
+async def obter_plano_interno(
+    codigo: str,
+    _user: SessionUser = Depends(require_authenticated),
+) -> PlanoResponseSchema:
+    return plano_service.obter_plano(codigo)
 
 
 @router.get("/{codigo}", response_model=PlanoResponseSchema)
 async def obter_plano(codigo: str) -> PlanoResponseSchema:
     """Obtém os detalhes de um plano pelo código."""
     try:
-        return plano_service.obter_plano(codigo)
+        item = plano_service.obter_plano(codigo)
+        if item.status != "hierarq_ranqueada":
+            raise DemandaNotFoundError(codigo)
+        return item
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
@@ -48,7 +66,7 @@ async def obter_plano(codigo: str) -> PlanoResponseSchema:
 async def aprovar_plano(
     codigo: str,
     body: AprovarDemandaSchema | None = None,
-    user: SessionUser = Depends(require_gestor),
+    user: SessionUser = Depends(require_analyst),
 ) -> PlanoResponseSchema:
     """Promove o plano ao universo AHP (transição de status in-place)."""
     motivo = body.motivo if body else None
@@ -67,7 +85,7 @@ async def aprovar_plano(
 async def atualizar_plano(
     codigo: str,
     body: PlanoUpdateSchema,
-    _user: SessionUser = Depends(require_gestor),
+    _user: SessionUser = Depends(require_operator),
 ) -> PlanoResponseSchema:
     """Atualiza um plano existente."""
     try:

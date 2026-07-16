@@ -4,8 +4,9 @@ from __future__ import annotations
 from pathlib import Path
 from hashlib import sha256
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
+from api.deps.auth import require_geospatial_access
 from api.path_policy import project_path
 from api.repositories import camada_geoespacial_repository
 from api.repositories.geoespacial_repository import geoespacial_repository
@@ -35,7 +36,11 @@ from api.services.geoespacial_service import geoespacial_service
 from api.services.geoprocessamento_engine import CATALOG, OPERATION_ENDPOINTS, geoprocessamento_engine
 from api.services.geoprocessamento_jobs import geoprocessamento_jobs
 
-router = APIRouter(prefix="/geoespacial", tags=["geoespacial"])
+router = APIRouter(
+    prefix="/geoespacial",
+    tags=["geoespacial"],
+    dependencies=[Depends(require_geospatial_access)],
+)
 
 
 @router.get("/algoritmos")

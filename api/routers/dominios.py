@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 
 from api.constants import STATUS_ROTULOS_POR_TIPO
-from api.deps.auth import require_gestor
+from api.deps.auth import require_authenticated
 from api.exceptions import DatabaseUnavailableError
 from api.repositories import dominio_repository
 from api.schemas.dominio import MatrizTransicaoStatusSchema, StatusDominioSchema, TipoDemandaSchema
@@ -30,7 +30,7 @@ def _map_status(rows: list[dict]) -> list[StatusDominioSchema]:
 
 @router.get("/status-demanda", response_model=list[StatusDominioSchema])
 async def listar_status_demanda(
-    _user: SessionUser = Depends(require_gestor),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> list[StatusDominioSchema]:
     """Lista domínio de status do ciclo de vida (cadastro/análise → hierarquização → execução)."""
     try:
@@ -41,7 +41,7 @@ async def listar_status_demanda(
 
 @router.get("/transicoes-status-demanda", response_model=MatrizTransicaoStatusSchema)
 async def listar_transicoes_status_demanda(
-    _user: SessionUser = Depends(require_gestor),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> MatrizTransicaoStatusSchema:
     """Matriz origem → destinos permitidos no PATCH (dom_status_demanda_transicao)."""
     try:
@@ -52,7 +52,7 @@ async def listar_transicoes_status_demanda(
 
 @router.get("/status-objeto-ahp", response_model=list[StatusDominioSchema])
 async def listar_status_objeto_ahp(
-    _user: SessionUser = Depends(require_gestor),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> list[StatusDominioSchema]:
     """Status da fase de hierarquização (fase hierarquizacao)."""
     try:
@@ -63,7 +63,7 @@ async def listar_status_objeto_ahp(
 
 @router.get("/tipo-demanda", response_model=list[TipoDemandaSchema])
 async def listar_tipo_demanda(
-    _user: SessionUser = Depends(require_gestor),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> list[TipoDemandaSchema]:
     """Domínio plano / programa / projeto."""
     try:

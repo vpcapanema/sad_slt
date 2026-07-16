@@ -644,7 +644,7 @@
       const link = $("#cls-link-planos");
       if (link && $("#cls-diretoria").value) {
         link.href =
-          "catalogo-planos.html?diretoria=" + encodeURIComponent($("#cls-diretoria").value);
+          "catalogo-planos/?diretoria=" + encodeURIComponent($("#cls-diretoria").value);
       }
       updateClassificacaoUI();
     });
@@ -942,10 +942,10 @@
 
   function buildPlanoCatalogLinks(planoId, diretoriaId) {
     const dirLink = diretoriaId
-      ? `<a class="link-catalogo" href="catalogo-diretorias.html#${encodeURIComponent(diretoriaId)}" target="_blank" rel="noopener">Critérios da diretoria ↗</a>`
+      ? `<a class="link-catalogo" href="catalogo-diretorias/#${encodeURIComponent(diretoriaId)}" target="_blank" rel="noopener">Critérios da diretoria ↗</a>`
       : "";
     const planoLink = planoId
-      ? `<a class="link-catalogo" href="catalogo-planos.html?diretoria=${encodeURIComponent(diretoriaId || "")}#${encodeURIComponent(planoId)}" target="_blank" rel="noopener">Detalhes do plano ↗</a>`
+      ? `<a class="link-catalogo" href="catalogo-planos/?diretoria=${encodeURIComponent(diretoriaId || "")}#${encodeURIComponent(planoId)}" target="_blank" rel="noopener">Detalhes do plano ↗</a>`
       : "";
     const parts = [dirLink, planoLink].filter(Boolean);
     return parts.length
@@ -966,7 +966,7 @@
     const linkPlanos = $("#pg-link-planos");
 
     if (linkPlanos && planoApi?.diretoria_id) {
-      linkPlanos.href = "catalogo-planos.html?diretoria=" + encodeURIComponent(planoApi.diretoria_id);
+      linkPlanos.href = "catalogo-planos/?diretoria=" + encodeURIComponent(planoApi.diretoria_id);
     }
 
     if (!planoCodigo || !planoApi) {
@@ -1738,7 +1738,7 @@
       try {
         await SLTDemandasApi.createPlano(payload);
         showToast("Plano cadastrado com sucesso.");
-        setTimeout(() => (window.location.href = "../painel/"), 1500);
+        setTimeout(() => (window.location.href = "/public/painel/"), 1500);
       } catch (err) {
         showToast(err.message || "Erro ao cadastrar plano.");
       } finally {
@@ -1808,7 +1808,7 @@
       try {
         await SLTDemandasApi.createPrograma(payload);
         showToast("Programa cadastrado com sucesso.");
-        setTimeout(() => (window.location.href = "../painel/"), 1500);
+        setTimeout(() => (window.location.href = "/public/painel/"), 1500);
       } catch (err) {
         showToast(err.message || "Erro ao cadastrar programa.");
       } finally {
@@ -1878,7 +1878,7 @@
         await SLTDemandasApi.createDemanda(demanda);
         showToast("Demanda registrada com sucesso.");
         setTimeout(() => {
-          window.location.href = "../painel/";
+          window.location.href = "/public/painel/";
         }, 1500);
       } catch (err) {
         console.error(err);

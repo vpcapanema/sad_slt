@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from api.deps.auth import require_gestor
+from api.deps.auth import require_analyst, require_authenticated
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.objeto_ahp import ObjetoAhpResponseSchema, ObjetoAhpUpdateSchema
 from api.services import objeto_ahp_service
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/ahp/objetos", tags=["ahp"])
 async def listar_objetos(
     status: str | None = Query(None, description="Filtrar por status (ex.: elegivel_ahp)"),
     grupo: str | None = Query(None, description="Filtrar por grupo_comparacao"),
-    _user: SessionUser = Depends(require_gestor),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> list[ObjetoAhpResponseSchema]:
     try:
         return objeto_ahp_service.listar_objetos(status=status, grupo=grupo)
@@ -27,7 +27,7 @@ async def listar_objetos(
 @router.get("/{codigo}", response_model=ObjetoAhpResponseSchema)
 async def obter_objeto(
     codigo: str,
-    _user: SessionUser = Depends(require_gestor),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> ObjetoAhpResponseSchema:
     try:
         return objeto_ahp_service.obter_objeto(codigo)
@@ -41,7 +41,7 @@ async def obter_objeto(
 async def atualizar_objeto(
     codigo: str,
     body: ObjetoAhpUpdateSchema,
-    _user: SessionUser = Depends(require_gestor),
+    _user: SessionUser = Depends(require_analyst),
 ) -> ObjetoAhpResponseSchema:
     try:
         return objeto_ahp_service.atualizar_objeto(codigo, body)

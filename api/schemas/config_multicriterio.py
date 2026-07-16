@@ -31,6 +31,7 @@ class ConfigCreateSchema(BaseModel):
     universo_objetos: list[dict[str, Any]] | None = None
     configuracao_completa: dict[str, Any] | None = None
     denominacao: str | None = Field(None, max_length=100)
+    hierarquizacao_codigo: str | None = Field(None, max_length=64)
 
 
 class ConfigUpdateSchema(BaseModel):

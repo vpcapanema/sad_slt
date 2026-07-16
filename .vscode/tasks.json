@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "SLT: Iniciar ambiente de desenvolvimento",
+      "label": "SICARD: Iniciar ambiente de desenvolvimento",
       "type": "process",
       "command": "pwsh",
       "args": [
@@ -21,7 +21,7 @@
         "panel": "dedicated",
         "clear": true
       },
-      "detail": "Sobe a API SLT na porta 8080, verifica conexoes (SIGMA) e abre o navegador"
+      "detail": "Sobe a API SICARD na porta 8080, verifica conexoes e abre /public/ no navegador"
     },
     {
       "label": "SLT: Subir banco PostgreSQL (Docker)",

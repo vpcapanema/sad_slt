@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.deps.auth import require_gestor
+from api.deps.auth import require_analyst, require_authenticated, require_gestor, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.demanda import DemandaCreateSchema, DemandaResponseSchema, DemandaUpdateSchema
 from api.schemas.objeto_ahp import AprovarDemandaSchema, ObjetoAhpResponseSchema
@@ -26,18 +26,36 @@ async def criar_demanda(body: DemandaCreateSchema) -> DemandaResponseSchema:
 
 @router.get("", response_model=list[DemandaResponseSchema])
 async def listar_demandas() -> list[DemandaResponseSchema]:
-    """Lista as demandas cadastradas."""
+    """Lista somente demandas cuja publicação foi autorizada pelo status."""
     try:
-        return demanda_service.listar_demandas()
+        return [item for item in demanda_service.listar_demandas() if item.status == "hierarq_ranqueada"]
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/internas", response_model=list[DemandaResponseSchema])
+async def listar_demandas_internas(
+    _user: SessionUser = Depends(require_authenticated),
+) -> list[DemandaResponseSchema]:
+    return demanda_service.listar_demandas()
+
+
+@router.get("/internas/{codigo}", response_model=DemandaResponseSchema)
+async def obter_demanda_interna(
+    codigo: str,
+    _user: SessionUser = Depends(require_authenticated),
+) -> DemandaResponseSchema:
+    return demanda_service.obter_demanda(codigo)
 
 
 @router.get("/{codigo}", response_model=DemandaResponseSchema)
 async def obter_demanda(codigo: str) -> DemandaResponseSchema:
     """Obtém os detalhes de uma demanda pelo código."""
     try:
-        return demanda_service.obter_demanda(codigo)
+        item = demanda_service.obter_demanda(codigo)
+        if item.status != "hierarq_ranqueada":
+            raise DemandaNotFoundError(codigo)
+        return item
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
@@ -48,7 +66,7 @@ async def obter_demanda(codigo: str) -> DemandaResponseSchema:
 async def aprovar_demanda(
     codigo: str,
     body: AprovarDemandaSchema | None = None,
-    user: SessionUser = Depends(require_gestor),
+    user: SessionUser = Depends(require_analyst),
 ) -> ObjetoAhpResponseSchema:
     """Aprova demanda e insere objeto em ahp.objeto_ahp (única fonte do módulo AHP)."""
     motivo = body.motivo if body else None
@@ -71,7 +89,7 @@ async def aprovar_demanda(
 async def atualizar_demanda(
     codigo: str,
     body: DemandaUpdateSchema,
-    _user: SessionUser = Depends(require_gestor),
+    _user: SessionUser = Depends(require_operator),
 ) -> DemandaResponseSchema:
     """Atualiza uma demanda existente."""
     try:

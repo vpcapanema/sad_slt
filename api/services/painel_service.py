@@ -75,6 +75,18 @@ def _row_to_item(row: dict[str, Any]) -> PainelDemandaSchema:
     )
 
 
-def listar_demandas_painel() -> list[PainelDemandaSchema]:
-    """Retorna todas as demandas com geometria pronta para o mapa."""
-    return [_row_to_item(row) for row in painel_repository.list_all()]
+def listar_demandas_painel(*, public_only: bool = False) -> list[PainelDemandaSchema]:
+    """Retorna todas as demandas, sanitizando dados pessoais no painel público."""
+    rows = painel_repository.list_all()
+    if public_only:
+        rows = [
+            {
+                **row,
+                "sigma_pessoa_id": None,
+                "representante_nome": None,
+                "representante_email": None,
+                "representante_telefone": None,
+            }
+            for row in rows
+        ]
+    return [_row_to_item(row) for row in rows]

@@ -1,9 +1,9 @@
-"""Rotas HTTP — autenticação admin (SIGMA read + auditoria SLT)."""
+"""Rotas HTTP — autenticação da área restrita pelo SIGMA."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
-from api.deps.auth import get_optional_session, get_request_meta, require_gestor
+from api.deps.auth import get_optional_session, get_request_meta, require_authenticated
 from api.exceptions import AuthError, DatabaseUnavailableError
 from api.schemas.auth import LoginRequestSchema, LoginResponseSchema, SessionUserSchema
 from api.services import auth_service
@@ -47,8 +47,8 @@ async def login(
 ):
     meta = get_request_meta(request)
     try:
-        user, token = await auth_service.login_gestor(
-            body.login,
+        user, token = await auth_service.login_usuario(
+            body.username,
             body.senha,
             ip_address=meta["ip_address"],
             user_agent=meta["user_agent"],
@@ -70,8 +70,16 @@ async def login(
 
 
 @router.get("/me", response_model=SessionUserSchema)
-async def me(user: SessionUser = Depends(require_gestor)):
+async def me(user: SessionUser = Depends(require_authenticated)):
     return _user_schema(user)
+
+
+@router.get("/session")
+async def session(user: SessionUser | None = Depends(get_optional_session)):
+    """Consulta pública de sessão, sem transformar ausência de cookie em erro 401."""
+    if not user:
+        return {"authenticated": False, "user": None}
+    return {"authenticated": True, "user": _user_schema(user)}
 
 
 @router.post("/logout")
@@ -82,7 +90,7 @@ async def logout(
 ):
     meta = get_request_meta(request)
     if user:
-        auth_service.logout_gestor(
+        auth_service.logout_usuario(
             user,
             ip_address=meta["ip_address"],
             user_agent=meta["user_agent"],

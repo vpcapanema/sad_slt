@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <base href="/restrict/hierarquizacao/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Apresentação das três fases metodológicas da hierarquização de projetos do SLT.">
   <title>As Três Fases da Hierarquização — SLT</title>
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <script src="/assets/js/admin-auth.js"></script>
   <style>
     :root {
       --ink: #17212b;
@@ -215,6 +218,8 @@
   </style>
 </head>
 <body>
+  <header class="app-header"><div class="app-header-inner"><div class="app-brand">SICARD<small>Hierarquização de Demandas</small></div><nav class="app-nav" aria-label="Navegação principal"></nav></div></header>
+  <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
   <a class="skip-link" href="#slide-1">Ir para a apresentação</a>
   <header class="topbar">
     <div class="brand">
@@ -222,7 +227,7 @@
       <div><strong>Hierarquização de projetos</strong><span>Elegibilidade, favorabilidade e ajuste</span></div>
     </div>
     <div class="top-actions">
-      <a href="home.html" title="Voltar ao módulo">← Módulo</a>
+      <a href="processos/" title="Voltar ao módulo">← Módulo</a>
       <button class="control" id="prev-slide" type="button" aria-label="Slide anterior">←</button>
       <span class="slide-counter" id="slide-counter" aria-live="polite">01 / 20</span>
       <button class="control" id="next-slide" type="button" aria-label="Próximo slide">→</button>
@@ -805,5 +810,8 @@
       update(0);
     })();
   </script>
+  <script src="/assets/js/app-header.js"></script>
+  <script src="/assets/js/navbar.js"></script>
+  <script>SLTAdminAuth.requireAuth();</script>
 </body>
 </html>

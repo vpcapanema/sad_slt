@@ -21,15 +21,15 @@
   }
 
   async function listDemandas() {
-    return request("/api/demandas");
+    return request("/api/demandas/internas");
   }
 
   async function listPainelDemandas() {
-    return request("/api/painel/demandas");
+    return request("/api/painel/demandas/internas");
   }
 
   async function getDemanda(codigo) {
-    return request(`/api/demandas/${encodeURIComponent(codigo)}`);
+    return request(`/api/demandas/internas/${encodeURIComponent(codigo)}`);
   }
 
   async function updateDemanda(codigo, payload) {
@@ -41,7 +41,9 @@
   }
 
   async function deleteDemanda(codigo) {
-    return request(`/api/demandas/${encodeURIComponent(codigo)}`, { method: "DELETE" });
+    return request(`/api/demandas/${encodeURIComponent(codigo)}`, {
+      method: "DELETE",
+    });
   }
 
   async function aprovarDemanda(codigo, payload) {
@@ -53,11 +55,11 @@
   }
 
   async function listPlanos() {
-    return request("/api/planos");
+    return request("/api/planos/internas");
   }
 
   async function getPlano(codigo) {
-    return request(`/api/planos/${encodeURIComponent(codigo)}`);
+    return request(`/api/planos/internas/${encodeURIComponent(codigo)}`);
   }
 
   async function updatePlano(codigo, payload) {
@@ -69,7 +71,9 @@
   }
 
   async function deletePlano(codigo) {
-    return request(`/api/planos/${encodeURIComponent(codigo)}`, { method: "DELETE" });
+    return request(`/api/planos/${encodeURIComponent(codigo)}`, {
+      method: "DELETE",
+    });
   }
 
   async function aprovarPlano(codigo, payload) {
@@ -81,11 +85,11 @@
   }
 
   async function listProgramas() {
-    return request("/api/programas");
+    return request("/api/programas/internas");
   }
 
   async function getPrograma(codigo) {
-    return request(`/api/programas/${encodeURIComponent(codigo)}`);
+    return request(`/api/programas/internas/${encodeURIComponent(codigo)}`);
   }
 
   async function updatePrograma(codigo, payload) {
@@ -97,7 +101,9 @@
   }
 
   async function deletePrograma(codigo) {
-    return request(`/api/programas/${encodeURIComponent(codigo)}`, { method: "DELETE" });
+    return request(`/api/programas/${encodeURIComponent(codigo)}`, {
+      method: "DELETE",
+    });
   }
 
   async function aprovarPrograma(codigo, payload) {
@@ -158,16 +164,16 @@
     return request("/api/dominios/status-objeto-ahp");
   }
 
-  async function login(login, senha) {
+  async function login(username, senha) {
     return request("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ login, senha }),
+      body: JSON.stringify({ username, senha }),
     });
   }
 
   async function fetchSession() {
-    return request("/api/auth/me");
+    return request("/api/auth/session");
   }
 
   async function logout() {

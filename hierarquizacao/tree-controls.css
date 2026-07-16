@@ -1,0 +1,5 @@
+.tree-node--phase{position:relative;cursor:pointer}
+.tree-toggle{position:absolute;top:.55rem;right:.55rem;display:grid;width:1.75rem;height:1.75rem;place-items:center;padding:0;border:1px solid #cad5dc;border-radius:50%;color:var(--pli-blue);background:#f8fbfc;cursor:pointer;z-index:2}
+.tree-toggle:hover{border-color:var(--pli-blue);background:#eef6fa}
+.tree-toggle i{transition:transform .2s ease}
+.tree-branch--phase:not([open]) .tree-toggle i{transform:rotate(180deg)}

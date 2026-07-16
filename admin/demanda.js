@@ -1,9 +1,24 @@
 (function () {
-  const { escapeHtml, formatDate, formatCnpj, statusBadgeHtml, instituicaoLabel, planoLabel,
-    classificacaoLabel, representanteLabel, fillSelect,
-    diretoriaLabel, labelById, PLANO_PLI, PLANO_PEF } = SLTAdminLabels;
+  const {
+    escapeHtml,
+    formatDate,
+    formatCnpj,
+    statusBadgeHtml,
+    instituicaoLabel,
+    planoLabel,
+    classificacaoLabel,
+    representanteLabel,
+    fillSelect,
+    diretoriaLabel,
+    labelById,
+    PLANO_PLI,
+    PLANO_PEF,
+  } = SLTAdminLabels;
 
-  const STATUS_PRE_APROVACAO = new Set(["analise_em_avaliacao", "analise_aprovada"]);
+  const STATUS_PRE_APROVACAO = new Set([
+    "analise_em_avaliacao",
+    "analise_aprovada",
+  ]);
 
   const TIPOS = [
     { id: "plano", label: "Plano" },
@@ -71,9 +86,9 @@
         <textarea id="fld-motivo-aprov" class="admin-field-motivo" rows="3" placeholder="Usado ao clicar em Aprovar"></textarea>
       </div>
       <div class="admin-dashboard-actions span-2">
-        <a href="demandas.html" class="btn btn-secondary">Voltar à lista</a>
-        ${withApprove ? '<button type="button" class="btn btn-primary" id="btn-aprovar">Aprovar → aguardando hierarquização</button>' : ""}
-        <button type="button" class="btn btn-primary" id="btn-salvar">Salvar alterações</button>
+        <a href="demandas/" class="btn btn-secondary">Voltar à lista</a>
+        ${withApprove && SLTAdminAuth.can("analyze") ? '<button type="button" class="btn btn-primary" id="btn-aprovar">Aprovar → aguardando hierarquização</button>' : ""}
+        ${SLTAdminAuth.can("operate") ? '<button type="button" class="btn btn-primary" id="btn-salvar">Salvar alterações</button>' : ""}
       </div>`;
   }
 
@@ -110,12 +125,22 @@
     if (planoId === PLANO_PLI) {
       const sel = $("#fld-frente");
       if (!sel) return;
-      fillSelect(sel, SLTCatalog.frentesPorPlano(planoId), "id", (f) => f.nome_oficial);
+      fillSelect(
+        sel,
+        SLTCatalog.frentesPorPlano(planoId),
+        "id",
+        (f) => f.nome_oficial,
+      );
       sel.value = d.classificacao?.frente_id || "";
     } else if (planoId === PLANO_PEF) {
       const selEixo = $("#fld-eixo");
       if (!selEixo) return;
-      fillSelect(selEixo, SLTCatalog.eixosPorPlano(planoId), "id", (e) => e.nome_oficial);
+      fillSelect(
+        selEixo,
+        SLTCatalog.eixosPorPlano(planoId),
+        "id",
+        (e) => e.nome_oficial,
+      );
       selEixo.value = d.classificacao?.eixo_id || "";
       refreshTicSelect(d);
     }
@@ -138,7 +163,9 @@
     const planoId = $("#fld-plano")?.value || d.plano_id;
     container.innerHTML = buildClassificacaoFields(planoId);
     populateClassificacaoSelects(d);
-    $("#fld-eixo")?.addEventListener("change", () => refreshTicSelect({ classificacao: {} }));
+    $("#fld-eixo")?.addEventListener("change", () =>
+      refreshTicSelect({ classificacao: {} }),
+    );
   }
 
   function catalogLabel(list, id) {
@@ -147,7 +174,9 @@
 
   function analysisMapColumnHtml(d) {
     const coords = SLTAdminAnalysisMap.coordsFromRecord(d);
-    const coordText = coords ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}` : "—";
+    const coordText = coords
+      ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`
+      : "—";
     return `
       <div class="admin-info-map">
         <div id="admin-preview-map-wrap"></div>
@@ -168,7 +197,9 @@
 
     SLTAdminApi.listPainelDemandas()
       .then((items) => {
-        const hit = (items || []).find((item) => item.tipo === demandTipo && item.id === d.id);
+        const hit = (items || []).find(
+          (item) => item.tipo === demandTipo && item.id === d.id,
+        );
         if (!hit) {
           render(record);
           return;
@@ -188,7 +219,9 @@
     const { buildProjectInfoFields } = SLTAdminAnalysisInfo;
     const cat = SLTCatalog.catalog;
     const coords = SLTAdminAnalysisMap.coordsFromRecord(d);
-    const coordText = coords ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}` : "—";
+    const coordText = coords
+      ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`
+      : "—";
     const rep = d.representante || {};
 
     const fieldsHtml = buildProjectInfoFields({
@@ -201,10 +234,16 @@
       cnpj: escapeHtml(formatCnpj(d.instituicao_cnpj)),
       diretoria: escapeHtml(diretoriaLabel(d.diretoria_id)),
       plano: escapeHtml(planoLabel(d.plano_id)),
-      classificacao: escapeHtml(classificacaoLabel(d.classificacao, d.plano_id)),
+      classificacao: escapeHtml(
+        classificacaoLabel(d.classificacao, d.plano_id),
+      ),
       modal: escapeHtml(catalogLabel(cat?.modais, d.complementos?.modal_id)),
-      tipologia: escapeHtml(catalogLabel(cat?.tipologias, d.complementos?.tipologia_id)),
-      carteira: escapeHtml(catalogLabel(cat?.carteiras, d.complementos?.carteira_id)),
+      tipologia: escapeHtml(
+        catalogLabel(cat?.tipologias, d.complementos?.tipologia_id),
+      ),
+      carteira: escapeHtml(
+        catalogLabel(cat?.carteiras, d.complementos?.carteira_id),
+      ),
       latitude: coords ? escapeHtml(coords.lat.toFixed(6)) : "—",
       longitude: coords ? escapeHtml(coords.lng.toFixed(6)) : "—",
       representanteLegal: {
@@ -335,15 +374,40 @@
   }
 
   function bindProjeto(d) {
-    fillSelect($("#fld-diretoria"), SLTCatalog.ativos(SLTCatalog.catalog.diretorias), "id", (x) => x.nome_oficial);
+    fillSelect(
+      $("#fld-diretoria"),
+      SLTCatalog.ativos(SLTCatalog.catalog.diretorias),
+      "id",
+      (x) => x.nome_oficial,
+    );
     $("#fld-diretoria").value = d.diretoria_id;
 
-    fillSelect($("#fld-plano"), SLTCatalog.planosPorDiretoria($("#fld-diretoria").value), "id", (p) => `${p.sigla} — ${p.nome_oficial}`);
+    fillSelect(
+      $("#fld-plano"),
+      SLTCatalog.planosPorDiretoria($("#fld-diretoria").value),
+      "id",
+      (p) => `${p.sigla} — ${p.nome_oficial}`,
+    );
     $("#fld-plano").value = d.plano_id;
 
-    fillSelect($("#fld-modal"), SLTCatalog.ativos(SLTCatalog.catalog.modais), "id", (m) => m.nome);
-    fillSelect($("#fld-tipologia"), SLTCatalog.ativos(SLTCatalog.catalog.tipologias), "id", (t) => t.nome);
-    fillSelect($("#fld-carteira"), SLTCatalog.carteirasPorPlano($("#fld-plano").value), "id", (c) => c.nome);
+    fillSelect(
+      $("#fld-modal"),
+      SLTCatalog.ativos(SLTCatalog.catalog.modais),
+      "id",
+      (m) => m.nome,
+    );
+    fillSelect(
+      $("#fld-tipologia"),
+      SLTCatalog.ativos(SLTCatalog.catalog.tipologias),
+      "id",
+      (t) => t.nome,
+    );
+    fillSelect(
+      $("#fld-carteira"),
+      SLTCatalog.carteirasPorPlano($("#fld-plano").value),
+      "id",
+      (c) => c.nome,
+    );
 
     $("#fld-modal").value = d.complementos?.modal_id || "";
     $("#fld-tipologia").value = d.complementos?.tipologia_id || "";
@@ -352,16 +416,37 @@
     populateClassificacaoSelects(d);
 
     $("#fld-diretoria").addEventListener("change", () => {
-      fillSelect($("#fld-plano"), SLTCatalog.planosPorDiretoria($("#fld-diretoria").value), "id", (p) => `${p.sigla} — ${p.nome_oficial}`);
-      fillSelect($("#fld-carteira"), SLTCatalog.carteirasPorPlano($("#fld-plano").value), "id", (c) => c.nome);
+      fillSelect(
+        $("#fld-plano"),
+        SLTCatalog.planosPorDiretoria($("#fld-diretoria").value),
+        "id",
+        (p) => `${p.sigla} — ${p.nome_oficial}`,
+      );
+      fillSelect(
+        $("#fld-carteira"),
+        SLTCatalog.carteirasPorPlano($("#fld-plano").value),
+        "id",
+        (c) => c.nome,
+      );
     });
 
     $("#fld-plano").addEventListener("change", () => {
-      refreshClassificacaoFields({ ...d, classificacao: {}, plano_id: $("#fld-plano").value });
-      fillSelect($("#fld-carteira"), SLTCatalog.carteirasPorPlano($("#fld-plano").value), "id", (c) => c.nome);
+      refreshClassificacaoFields({
+        ...d,
+        classificacao: {},
+        plano_id: $("#fld-plano").value,
+      });
+      fillSelect(
+        $("#fld-carteira"),
+        SLTCatalog.carteirasPorPlano($("#fld-plano").value),
+        "id",
+        (c) => c.nome,
+      );
     });
 
-    $("#fld-eixo")?.addEventListener("change", () => refreshTicSelect({ classificacao: {} }));
+    $("#fld-eixo")?.addEventListener("change", () =>
+      refreshTicSelect({ classificacao: {} }),
+    );
 
     mountAnalysisMap(d, "projeto");
   }
@@ -380,8 +465,10 @@
     }
     const complementos = {};
     if ($("#fld-modal").value) complementos.modal_id = $("#fld-modal").value;
-    if ($("#fld-tipologia").value) complementos.tipologia_id = $("#fld-tipologia").value;
-    if ($("#fld-carteira").value) complementos.carteira_id = $("#fld-carteira").value;
+    if ($("#fld-tipologia").value)
+      complementos.tipologia_id = $("#fld-tipologia").value;
+    if ($("#fld-carteira").value)
+      complementos.carteira_id = $("#fld-carteira").value;
 
     return {
       nome: $("#fld-nome").value.trim(),
@@ -471,7 +558,12 @@
   }
 
   function bindPlano(d) {
-    fillSelect($("#fld-diretoria"), SLTCatalog.ativos(SLTCatalog.catalog.diretorias), "id", (x) => x.nome_oficial);
+    fillSelect(
+      $("#fld-diretoria"),
+      SLTCatalog.ativos(SLTCatalog.catalog.diretorias),
+      "id",
+      (x) => x.nome_oficial,
+    );
     $("#fld-diretoria").value = d.diretoria_id || "";
     mountAnalysisMap(d, "plano");
   }
@@ -483,7 +575,9 @@
       diretoria_id: $("#fld-diretoria").value || null,
       objetivo_estrategico: $("#fld-objetivo").value.trim() || null,
       responsavel: $("#fld-responsavel").value.trim() || null,
-      valor_global: $("#fld-valor").value ? parseFloat($("#fld-valor").value) : null,
+      valor_global: $("#fld-valor").value
+        ? parseFloat($("#fld-valor").value)
+        : null,
       vigencia_inicio: $("#fld-vig-ini").value || null,
       vigencia_fim: $("#fld-vig-fim").value || null,
     };
@@ -571,7 +665,9 @@
       publico_alvo: $("#fld-publico").value.trim() || null,
       justificativa: $("#fld-justificativa").value.trim() || null,
       orgao_responsavel: $("#fld-orgao").value.trim() || null,
-      valor_global: $("#fld-valor").value ? parseFloat($("#fld-valor").value) : null,
+      valor_global: $("#fld-valor").value
+        ? parseFloat($("#fld-valor").value)
+        : null,
     };
   }
 
@@ -579,9 +675,21 @@
   // Dispatch por tipo
   // ===========================================================================
   const API = {
-    projeto: { get: (id) => SLTAdminApi.getDemanda(id), update: (id, p) => SLTAdminApi.updateDemanda(id, p), aprovar: (id, p) => SLTAdminApi.aprovarDemanda(id, p) },
-    plano: { get: (id) => SLTAdminApi.getPlano(id), update: (id, p) => SLTAdminApi.updatePlano(id, p), aprovar: (id, p) => SLTAdminApi.aprovarPlano(id, p) },
-    programa: { get: (id) => SLTAdminApi.getPrograma(id), update: (id, p) => SLTAdminApi.updatePrograma(id, p), aprovar: (id, p) => SLTAdminApi.aprovarPrograma(id, p) },
+    projeto: {
+      get: (id) => SLTAdminApi.getDemanda(id),
+      update: (id, p) => SLTAdminApi.updateDemanda(id, p),
+      aprovar: (id, p) => SLTAdminApi.aprovarDemanda(id, p),
+    },
+    plano: {
+      get: (id) => SLTAdminApi.getPlano(id),
+      update: (id, p) => SLTAdminApi.updatePlano(id, p),
+      aprovar: (id, p) => SLTAdminApi.aprovarPlano(id, p),
+    },
+    programa: {
+      get: (id) => SLTAdminApi.getPrograma(id),
+      update: (id, p) => SLTAdminApi.updatePrograma(id, p),
+      aprovar: (id, p) => SLTAdminApi.aprovarPrograma(id, p),
+    },
   };
 
   function pageHtml(d) {
@@ -609,7 +717,11 @@
   // ===========================================================================
   function renderSidebar() {
     SLTAdminDashboard.renderGroupedRecordsSidebar({
-      groups: TIPOS.map((t) => ({ id: t.id, label: t.label, records: lists[t.id] })),
+      groups: TIPOS.map((t) => ({
+        id: t.id,
+        label: t.label,
+        records: lists[t.id],
+      })),
       selectedId,
       getRecordId: (r) => r.id,
       getRecordLabel: (r) => r.nome || r.id,
@@ -650,11 +762,17 @@
     renderSidebar();
     $("#dashboard-content").innerHTML = '<p class="hint">Carregando…</p>';
     if (updateUrl) {
-      history.replaceState(null, "", `demanda.html?tipo=${encodeURIComponent(tipo)}&id=${encodeURIComponent(id)}`);
+      history.replaceState(
+        null,
+        "",
+        `demanda/?tipo=${encodeURIComponent(tipo)}&id=${encodeURIComponent(id)}`,
+      );
     }
     const d = await API[tipo].get(id);
     renderPage(d);
-    const active = document.querySelector(`.layer-group--record[data-record-id="${CSS.escape(id)}"]`);
+    const active = document.querySelector(
+      `.layer-group--record[data-record-id="${CSS.escape(id)}"]`,
+    );
     active?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
@@ -681,7 +799,10 @@
   }
 
   async function approveRecord() {
-    if (!confirm("Aprovar esta demanda e promovê-la a aguardando hierarquização?")) return;
+    if (
+      !confirm("Aprovar esta demanda e promovê-la a aguardando hierarquização?")
+    )
+      return;
     try {
       const motivo = $("#fld-motivo-aprov")?.value.trim() || null;
       const updated = await API[tipo].aprovar(record.id, { motivo });
@@ -695,7 +816,8 @@
 
   function firstAvailable() {
     for (const t of TIPOS) {
-      if ((lists[t.id] || []).length) return { tipo: t.id, id: lists[t.id][0].id };
+      if ((lists[t.id] || []).length)
+        return { tipo: t.id, id: lists[t.id][0].id };
     }
     return null;
   }
@@ -713,7 +835,7 @@
       return;
     }
     $("#dashboard-content").innerHTML =
-      '<p class="hint">Nenhuma demanda registrada. <a href="demandas.html">Voltar à lista</a>.</p>';
+      '<p class="hint">Nenhuma demanda registrada. <a href="demandas/">Voltar à lista</a>.</p>';
     renderSidebar();
   }
 
@@ -732,7 +854,8 @@
       location.replace(SLTAdminAuth.loginUrl());
       return;
     }
-    $("#dashboard-content").innerHTML = `<p class="hint">Erro: ${escapeHtml(err.message)}</p>`;
+    $("#dashboard-content").innerHTML =
+      `<p class="hint">Erro: ${escapeHtml(err.message)}</p>`;
     SLTAdminUi.showToast(err.message, true);
   });
 })();

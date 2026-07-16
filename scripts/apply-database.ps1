@@ -42,6 +42,25 @@ function Test-ContainerRunning([string]$Name) {
     return [bool]$running
 }
 
+function Test-CoreSchemaReady {
+    $query = "SELECT CASE WHEN to_regclass('demandas.projeto') IS NULL THEN 'f' ELSE 't' END;"
+    if (Test-ContainerRunning $Container) {
+        $result = docker exec $Container psql -U $DbUser -d $DbName -At -c $query 2>$null
+        return $LASTEXITCODE -eq 0 -and ($result | Select-Object -Last 1) -eq "t"
+    }
+    if (Get-Command psql -ErrorAction SilentlyContinue) {
+        $prev = $env:PGPASSWORD
+        $env:PGPASSWORD = $DbPass
+        try {
+            $result = & psql -h $HostAddr -p $Port -U $DbUser -d $DbName -At -c $query 2>$null
+            return $LASTEXITCODE -eq 0 -and ($result | Select-Object -Last 1) -eq "t"
+        } finally {
+            if ($null -ne $prev) { $env:PGPASSWORD = $prev } else { Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue }
+        }
+    }
+    return $false
+}
+
 function Invoke-DockerPsqlFile {
     param(
         [string]$ContainerName,
@@ -80,13 +99,50 @@ $migrations = @(
     "002_schema_cadastro_auditoria.sql",
     "003_schema_ahp_objetos.sql",
     "004_schema_ahp_analises.sql",
+    "005_schema_multicriterio.sql",
+    "006_drop_old_analises.sql",
+    "007_schema_demandas_aprovadas.sql",
+    "008_move_dom_status_objeto.sql",
+    "009_schema_hierarquizacao_demandas.sql",
+    "010_rename_demandas_aprovadas.sql",
     "011_schema_geo.sql",
+    "012_schema_hierarquia_demandas.sql",
+    "013_indicadores_projeto.sql",
+    "014_cadastro_hierarquia.sql",
+    "015_colapso_demandas.sql",
+    "016_tipo_demanda_ahp.sql",
+    "017_seed_planos_estrategicos.sql",
+    "018_representante_plano_programa.sql",
+    "019_vinculo_institucional_opcional.sql",
+    "020_formulario_cadastro_completo.sql",
+    "021_seed_outros_hierarquia.sql",
+    "022_criado_por_representante_not_null.sql",
+    "023_dom_status_demanda_transicao.sql",
+    "024_status_camadas_transicao.sql",
+    "025_outros_abrangencia_estado.sql",
+    "026_config_portfolio_grupo_tipo.sql",
+    "027_config_tema_objetivo.sql",
+    "028_config_area_fenomeno.sql",
+    "029_config_subconjunto.sql",
+    "030_status_fases.sql",
+    "031_config_universo_objetos.sql",
+    "032_config_alertas_conceituais.sql",
+    "033_config_pacote_fase.sql",
+    "034_comparacao_colaborativa.sql",
+    "035_config_arquivos_fase.sql",
+    "036_config_denominacao.sql",
     "037_schema_geoprocessamento.sql",
     "038_persistencia_conteudo_geoespacial.sql",
     "039_biblioteca_camadas_homologadas.sql",
     "040_separacao_fisica_camadas.sql",
-    "041_idempotencia_importacao.sql"
+    "041_idempotencia_importacao.sql",
+    "042_fluxo_fases_hierarquizacao.sql"
 )
+
+if (Test-CoreSchemaReady) {
+    Write-Ok "Nucleo demandas ja esta atualizado; migrations legadas 002-036 serao ignoradas"
+    $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 37 }
+}
 
 foreach ($name in $migrations) {
     $path = Join-Path $DbDir $name
@@ -116,6 +172,14 @@ try {
         Write-Host "     Execute primeiro: .\scripts\start-db.ps1" -ForegroundColor Yellow
         exit 1
     }
+
+    $GeoLoader = Join-Path $Root "scripts\load_geo_catalog.py"
+    $VenvPython = Join-Path $Root ".venv\Scripts\python.exe"
+    $PythonExe = if (Test-Path $VenvPython) { $VenvPython } else { "python" }
+    Write-Step "Carregando catalogo territorial em geo.unidade_espacial"
+    & $PythonExe $GeoLoader
+    if ($LASTEXITCODE -ne 0) { throw "Falha ao carregar catalogo geografico" }
+    Write-Ok "Catalogo territorial e vinculos espaciais atualizados"
 
     Write-Host ""
     Write-Host "========================================" -ForegroundColor White

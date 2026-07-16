@@ -99,6 +99,20 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
 }
 
+.app-header-icon-frame > .sidebar-app-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 220%;
+  height: 220%;
+  max-width: none;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+}
+
 .layout-sidebar,
 .layout-sidebar-body,
 .layout-with-sidebar .admin-dashboard-sidebar,

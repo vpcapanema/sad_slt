@@ -1,0 +1,429 @@
+"""Regras de negócio — Hierarquização de Projetos (portfólio).
+
+Consome os pesos de critérios de uma ``config_multicriterio_portfolio`` e os
+julgamentos pareados dos projetos para produzir o ranking final. O cálculo é a
+fonte da verdade no servidor.
+"""
+
+from __future__ import annotations
+
+import secrets
+import uuid
+from datetime import datetime, timezone
+from typing import Any
+
+from api.constants import TIPO_DEMANDA_COD_TO_ID, TIPO_DEMANDA_ID_TO_COD
+from api.exceptions import (
+    ConfigMulticriterioNotFoundError,
+    DemandaValidationError,
+    HierarquizacaoNotFoundError,
+)
+from api.repositories import config_multicriterio_repository as config_repo
+from api.repositories import hierarquizacao_repository as repo
+from api.schemas.hierarquizacao import (
+    HierarquizacaoCreateSchema,
+    HierarquizacaoFase1UpdateSchema,
+    HierarquizacaoFase1ExecutarSchema,
+    HierarquizacaoResponseSchema,
+    HierarquizacaoUpdateSchema,
+)
+from api.services import ahp_engine
+
+_STATUS_VALIDOS = frozenset({"rascunho", "em_julgamento", "calculada", "homologada", "arquivada"})
+
+_UPDATE_FIELDS = frozenset({"nome", "descricao", "status", "objetos", "julgamento_projetos", "dados_hierarquizacao"})
+
+
+def _fase_1_vazia() -> dict[str, Any]:
+    return {
+        "restricao": {
+            "encontrada": None, "valor": None, "resultado": None, "intersecoes": []
+        },
+        "risco": {
+            "avaliado": None, "encontrado": None, "valor": None,
+            "resultado": None, "intersecoes": []
+        },
+    }
+
+
+def _criterios_por_fase(matriz: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Extrai modelos de critérios quando a matriz declara a fase de cada linha."""
+    rows = matriz.get("linhas", []) if isinstance(matriz, dict) else (matriz or [])
+    fase_2: dict[str, Any] = {}
+    fase_3: dict[str, Any] = {}
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+        fase = str(row.get("fase") or row.get("Fase") or row.get("etapa") or row.get("Etapa") or "").lower().replace(" ", "_")
+        nome = row.get("criterio") or row.get("critério") or row.get("Critério") or row.get("nome") or row.get("Nome")
+        if not nome:
+            continue
+        key = str(row.get("codigo") or row.get("Código") or nome).strip()
+        model = {"criterio": str(nome), "valor": None, "resultado": None, "premissas": row}
+        if fase in {"2", "fase_2", "fase2"}:
+            fase_2[key] = model
+        elif fase in {"3", "fase_3", "fase3"}:
+            fase_3[key] = model
+    return fase_2, fase_3
+
+
+def _build_dados_hierarquizacao(*, codigo: str, payload: HierarquizacaoCreateSchema) -> dict[str, Any]:
+    objetos = payload.objetos or []
+    fase_2, fase_3 = _criterios_por_fase(payload.matriz_premissas_criterios)
+    rows = payload.matriz_premissas_criterios.get("linhas", []) if isinstance(payload.matriz_premissas_criterios, dict) else (payload.matriz_premissas_criterios or [])
+    criterios_informados = [r for r in rows if isinstance(r, dict) and (r.get("criterio") or r.get("critério") or r.get("Critério") or r.get("nome") or r.get("Nome"))]
+    if not criterios_informados:
+        raise DemandaValidationError("A matriz deve conter ao menos um critério.", field="matriz_premissas_criterios")
+    if len(fase_2) + len(fase_3) != len(criterios_informados):
+        raise DemandaValidationError(
+            "Cada critério da matriz deve indicar Fase 2 ou Fase 3.",
+            field="matriz_premissas_criterios.fase",
+        )
+    detalhados = []
+    for obj in objetos:
+        detalhados.append({
+            "cabecalho_objeto": {
+                "demanda_id": str(obj.get("id") or obj.get("demanda_id") or ""),
+                "codigo": obj.get("codigo"), "nome": obj.get("nome"),
+                "latitude": obj.get("latitude"), "longitude": obj.get("longitude"),
+                "atributos": {k: v for k, v in obj.items() if k not in {"id", "demanda_id", "codigo", "nome", "latitude", "longitude"}},
+            },
+            "hierarquizacao": {
+                "fase_1": _fase_1_vazia(),
+                "fase_2": {"criterios": fase_2.copy()},
+                "fase_3": {"criterios": fase_3.copy()},
+            },
+        })
+    return {
+        "versao": 1,
+        "cabecalho_grupo": {
+            "codigo": codigo, "nome": payload.nome.strip(),
+            "descricao": payload.descricao, "tipo_demanda": payload.tipo_demanda,
+            "quantidade_objetos": len(objetos),
+            "matriz_premissas_criterios": payload.matriz_premissas_criterios,
+            "fases": {"fase_1": {"camada_restricao": None, "camada_risco": None, "salvo_em": None}},
+            "criado_em": datetime.now(timezone.utc).isoformat(),
+        },
+        "objetos": detalhados,
+    }
+
+
+def _iso(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return str(value)
+
+
+def _uuid_or_none(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        return str(uuid.UUID(value))
+    except (ValueError, TypeError):
+        return None
+
+
+def _gerar_codigo() -> str:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    return f"HIER-{stamp}-{secrets.token_hex(2).upper()}"
+
+
+def _row_to_response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
+    tid = row.get("tipo_demanda_id")
+    return HierarquizacaoResponseSchema(
+        id=str(row["id"]),
+        codigo=row["codigo"],
+        config_id=str(row["config_id"]) if row.get("config_id") else None,
+        config_codigo=row.get("config_codigo"),
+        nome=row["nome"],
+        descricao=row.get("descricao"),
+        tipo_demanda=TIPO_DEMANDA_ID_TO_COD.get(tid) if tid is not None else None,
+        grupo_id=row.get("grupo_id"),
+        status=row["status"],
+        objetos=row.get("objetos") or [],
+        julgamento_projetos=row.get("julgamento_projetos"),
+        pesos_projetos=row.get("pesos_projetos"),
+        ranking=row.get("ranking"),
+        dados_hierarquizacao=row.get("dados_hierarquizacao") or {},
+        criadoEm=_iso(row.get("criado_em")) or "",
+        atualizadoEm=_iso(row.get("atualizado_em")) or "",
+        homologadoEm=_iso(row.get("homologado_em")),
+    )
+
+
+def criar_hierarquizacao(
+    payload: HierarquizacaoCreateSchema, *, criado_por: str | None = None
+) -> HierarquizacaoResponseSchema:
+    """Cria uma hierarquização (rascunho) vinculada a uma configuração de portfólio."""
+    config = None
+    if payload.config_codigo:
+        config = config_repo.get_by_codigo("portfolio", payload.config_codigo)
+        if not config:
+            raise ConfigMulticriterioNotFoundError(payload.config_codigo)
+    tipo_id = config.get("tipo_demanda_id") if config else TIPO_DEMANDA_COD_TO_ID.get(payload.tipo_demanda or "")
+    if tipo_id is None:
+        raise DemandaValidationError("Informe um tipo de demanda válido.", field="tipo_demanda")
+    if not payload.objetos:
+        raise DemandaValidationError("Selecione ao menos uma demanda para a rodada.", field="objetos")
+    codigo = _gerar_codigo()
+
+    data: dict[str, Any] = {
+        "codigo": codigo,
+        "nome": payload.nome.strip(),
+        "descricao": payload.descricao,
+        "tipo_demanda_id": tipo_id,
+        "grupo_id": payload.grupo_id,
+        "status": "rascunho",
+        "objetos": payload.objetos,
+        "dados_hierarquizacao": _build_dados_hierarquizacao(codigo=codigo, payload=payload),
+    }
+    if config:
+        data["config_id"] = config["id"]
+    criado_uuid = _uuid_or_none(criado_por)
+    if criado_uuid:
+        data["criado_por"] = criado_uuid
+    return _row_to_response(repo.insert(data))
+
+
+def listar_hierarquizacoes(
+    *, status: str | None = None, grupo: str | None = None
+) -> list[HierarquizacaoResponseSchema]:
+    """Lista hierarquizações, opcionalmente filtrando por status e grupo."""
+    return [_row_to_response(r) for r in repo.list_all(status=status, grupo=grupo)]
+
+
+def obter_hierarquizacao(codigo: str) -> HierarquizacaoResponseSchema:
+    """Retorna uma hierarquização pelo código."""
+    return _row_to_response(_carregar(codigo))
+
+
+def atualizar_hierarquizacao(
+    codigo: str, payload: HierarquizacaoUpdateSchema
+) -> HierarquizacaoResponseSchema:
+    """Atualiza campos editáveis de uma hierarquização."""
+    _carregar(codigo)
+    data = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if k in _UPDATE_FIELDS}
+    if "status" in data and data["status"] not in _STATUS_VALIDOS:
+        raise DemandaValidationError(f"Status inválido: {data['status']}.", field="status")
+    if not data:
+        return obter_hierarquizacao(codigo)
+    updated = repo.update(codigo, data)
+    if not updated:
+        raise HierarquizacaoNotFoundError(codigo)
+    return _row_to_response(updated)
+
+
+def salvar_fase_1(codigo: str, payload: HierarquizacaoFase1UpdateSchema) -> HierarquizacaoResponseSchema:
+    row = _carregar(codigo)
+    dados = dict(row.get("dados_hierarquizacao") or {})
+    cabecalho = dict(dados.get("cabecalho_grupo") or {})
+    fases = dict(cabecalho.get("fases") or {})
+    fase_meta = dict(fases.get("fase_1") or {})
+    fase_meta.update({
+        "camada_restricao": payload.camada_restricao,
+        "camada_risco": payload.camada_risco,
+        "salvo_em": datetime.now(timezone.utc).isoformat(),
+    })
+    fases["fase_1"] = fase_meta
+    cabecalho["fases"] = fases
+    dados["cabecalho_grupo"] = cabecalho
+
+    enviados = {str(x.get("demanda_id")): x for x in payload.resultados_objetos if x.get("demanda_id")}
+    objetos = list(dados.get("objetos") or [])
+    for obj in objetos:
+        oid = str((obj.get("cabecalho_objeto") or {}).get("demanda_id") or "")
+        if oid not in enviados:
+            continue
+        fase_1 = enviados[oid].get("fase_1") or {}
+        for tipo in ("restricao", "risco"):
+            bloco = fase_1.get(tipo) or {}
+            intersecoes = bloco.get("intersecoes") or []
+            obrigatorios = {"camada_origem", "feature_id", "nome", "esfera", "atributos"}
+            if tipo == "risco":
+                obrigatorios.add("nivel")
+            for idx, item in enumerate(intersecoes):
+                faltantes = obrigatorios - set(item)
+                if faltantes:
+                    raise DemandaValidationError(
+                        f"Interseção de {tipo} {idx + 1} sem campos: {', '.join(sorted(faltantes))}.",
+                        field=f"fase_1.{tipo}.intersecoes",
+                    )
+        obj.setdefault("hierarquizacao", {})["fase_1"] = fase_1
+    dados["objetos"] = objetos
+    updated = repo.update(codigo, {"dados_hierarquizacao": dados})
+    if not updated:
+        raise HierarquizacaoNotFoundError(codigo)
+    return _row_to_response(updated)
+
+
+def _intersecao_detalhada(row: dict[str, Any], *, risco: bool) -> dict[str, Any]:
+    attrs = dict(row.get("propriedades") or {})
+    item = {
+        "camada_origem": attrs.get("camada_origem") or row.get("camada_origem") or "",
+        "feature_id": str(attrs.get("feature_id") or attrs.get("id") or row.get("ordem") or ""),
+        "nome": attrs.get("nome") or attrs.get("name") or attrs.get("denominacao") or "",
+        "esfera": attrs.get("esfera") or attrs.get("jurisdicao") or attrs.get("âmbito") or "",
+        "atributos": attrs,
+    }
+    if risco:
+        item["nivel"] = attrs.get("nivel") or attrs.get("nivel_risco") or attrs.get("classe_risco") or ""
+    return item
+
+
+def executar_fase_1(codigo: str, payload: HierarquizacaoFase1ExecutarSchema) -> HierarquizacaoResponseSchema:
+    row = _carregar(codigo)
+    camada_restricao = repo.camada_homologada(payload.camada_restricao_id)
+    camada_risco = repo.camada_homologada(payload.camada_risco_id)
+    if not camada_restricao or not camada_risco:
+        raise DemandaValidationError("Selecione duas camadas homologadas válidas.", field="fase_1.camadas")
+    dados = dict(row.get("dados_hierarquizacao") or {})
+    resultados = []
+    for obj in dados.get("objetos") or []:
+        cab = obj.get("cabecalho_objeto") or {}
+        lat, lon = cab.get("latitude"), cab.get("longitude")
+        if lat is None or lon is None:
+            raise DemandaValidationError(
+                f"A demanda {cab.get('codigo') or cab.get('demanda_id')} não possui coordenadas.",
+                field="objetos.coordenadas",
+            )
+        restricoes = repo.intersecoes_camada(payload.camada_restricao_id, longitude=float(lon), latitude=float(lat))
+        itens_restricao = [_intersecao_detalhada(x, risco=False) for x in restricoes]
+        if itens_restricao:
+            fase_1 = {
+                "restricao": {"encontrada": True, "valor": 1, "resultado": "Com restrição", "intersecoes": itens_restricao},
+                "risco": {"avaliado": False, "encontrado": None, "valor": None, "resultado": "Não avaliado devido à existência de restrição", "intersecoes": []},
+            }
+        else:
+            riscos = repo.intersecoes_camada(payload.camada_risco_id, longitude=float(lon), latitude=float(lat))
+            itens_risco = [_intersecao_detalhada(x, risco=True) for x in riscos]
+            fase_1 = {
+                "restricao": {"encontrada": False, "valor": 0, "resultado": "Sem restrição", "intersecoes": []},
+                "risco": {"avaliado": True, "encontrado": bool(itens_risco), "valor": 1 if itens_risco else 0, "resultado": "Com risco" if itens_risco else "Sem risco", "intersecoes": itens_risco},
+            }
+        resultados.append({"demanda_id": cab.get("demanda_id"), "fase_1": fase_1})
+    return salvar_fase_1(codigo, HierarquizacaoFase1UpdateSchema(
+        camada_restricao=camada_restricao,
+        camada_risco=camada_risco,
+        resultados_objetos=resultados,
+    ))
+
+
+def calcular_hierarquizacao(codigo: str) -> HierarquizacaoResponseSchema:
+    """Combina pesos de critérios (config) com julgamentos dos projetos → ranking."""
+    row = _carregar(codigo)
+
+    config = config_repo.get_by_id("portfolio", row["config_id"])
+    if not config:
+        raise ConfigMulticriterioNotFoundError(str(row["config_id"]))
+    pesos_cfg = config.get("pesos") or {}
+    criteria = pesos_cfg.get("criteria") or []
+    weights = pesos_cfg.get("weights") or []
+    if not criteria or not weights:
+        raise DemandaValidationError(
+            "A configuração multicritério precisa estar calculada (pesos de critérios) "
+            "antes de hierarquizar.",
+            field="config_id",
+        )
+    weight_by_crit = dict(zip(criteria, weights))
+
+    objetos = row.get("objetos") or []
+    julg = row.get("julgamento_projetos") or []
+    if not objetos or not julg:
+        raise DemandaValidationError(
+            "Inclua os projetos e o julgamento pareado por critério antes de calcular.",
+            field="julgamento_projetos",
+        )
+
+    item_names = [o.get("nome", f"Projeto {i + 1}") for i, o in enumerate(objetos)]
+    n_itens = len(objetos)
+    por_criterio: dict[str, Any] = {}
+    consistencia_local: dict[str, Any] = {}
+    scores = [0.0] * n_itens
+
+    for entry in julg:
+        crit = entry.get("criterio")
+        if not crit:
+            continue
+        w = weight_by_crit.get(crit, 0.0)
+
+        raw_scores = entry.get("scores")
+        matrix = entry.get("matrix")
+
+        if raw_scores is not None:
+            # Formato de pontuação direta: {"0": valor, "1": valor, ...}
+            values = [float(raw_scores.get(str(i), 0)) for i in range(n_itens)]
+            min_v = min(values) if values else 0.0
+            max_v = max(values) if values else 0.0
+            if max_v > min_v:
+                normalized = [(v - min_v) / (max_v - min_v) for v in values]
+            elif max_v > 0:
+                normalized = [1.0 / n_itens] * n_itens
+            else:
+                normalized = [0.0] * n_itens
+            por_criterio[crit] = normalized
+            consistencia_local[crit] = {"CR": None, "tipo": "pontuacao_direta"}
+            for a in range(n_itens):
+                scores[a] += w * normalized[a]
+        elif matrix:
+            # Formato legado: matriz pareada AHP
+            local = ahp_engine.analyze_matrix(matrix)
+            por_criterio[crit] = local["weights"]
+            consistencia_local[crit] = {"CR": local["CR"], "lambdaMax": local["lambdaMax"]}
+            for a in range(min(n_itens, len(local["weights"]))):
+                scores[a] += w * local["weights"][a]
+
+    pesos_projetos = {
+        "itens": item_names,
+        "por_criterio": por_criterio,
+        "consistencia": consistencia_local,
+        "scores": scores,
+    }
+    ordem = sorted(range(n_itens), key=lambda a: scores[a], reverse=True)
+    ranking: list[dict[str, Any]] = []
+    for posicao, idx in enumerate(ordem, start=1):
+        entrada: dict[str, Any] = {
+            "posicao": posicao,
+            "indice": idx,
+            "nome": item_names[idx],
+            "score": scores[idx],
+        }
+        obj = objetos[idx]
+        if obj.get("codigo"):
+            entrada["codigo"] = obj["codigo"]
+        if obj.get("objeto_ahp_id"):
+            entrada["objeto_ahp_id"] = obj["objeto_ahp_id"]
+        ranking.append(entrada)
+
+    updated = repo.update(
+        codigo,
+        {"pesos_projetos": pesos_projetos, "ranking": ranking, "status": "calculada"},
+    )
+    if not updated:
+        raise HierarquizacaoNotFoundError(codigo)
+    return _row_to_response(updated)
+
+
+def homologar_hierarquizacao(
+    codigo: str, *, homologado_por: str | None = None
+) -> HierarquizacaoResponseSchema:
+    """Homologa uma hierarquização já calculada (com ranking)."""
+    row = _carregar(codigo)
+    if not row.get("ranking"):
+        raise DemandaValidationError("Calcule a hierarquização antes de homologar.", field="status")
+    data: dict[str, Any] = {"status": "homologada", "homologado_em": datetime.now(timezone.utc)}
+    homologado_uuid = _uuid_or_none(homologado_por)
+    if homologado_uuid:
+        data["homologado_por"] = homologado_uuid
+    updated = repo.update(codigo, data)
+    if not updated:
+        raise HierarquizacaoNotFoundError(codigo)
+    return _row_to_response(updated)
+
+
+def _carregar(codigo: str) -> dict[str, Any]:
+    row = repo.get_by_codigo(codigo)
+    if not row:
+        raise HierarquizacaoNotFoundError(codigo)
+    return row

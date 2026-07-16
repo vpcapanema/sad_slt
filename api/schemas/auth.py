@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class LoginRequestSchema(BaseModel):
-    login: str = Field(..., min_length=3, max_length=255, description="E-mail ou username SIGMA")
+    username: str = Field(..., min_length=3, max_length=100, description="Username SIGMA")
     senha: str = Field(..., min_length=1, max_length=200)
 
 

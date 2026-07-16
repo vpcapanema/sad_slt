@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from api.path_policy import PROJECT_ROOT, project_path
@@ -34,10 +34,200 @@ app.add_middleware(
 app.include_router(api_router)
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> FileResponse:
+    return FileResponse(
+        project_path("assets/img/brand/sicard-simbolo.png"),
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+@app.get("/assets/js/navbar.js", include_in_schema=False)
+async def navbar_javascript() -> FileResponse:
+    """Evita que uma versão obsoleta mantenha chamadas ao endpoint protegido."""
+    return FileResponse(
+        project_path("assets/js/navbar.js"),
+        media_type="text/javascript",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.get("/assets/js/admin-api.js", include_in_schema=False)
+async def admin_api_javascript() -> FileResponse:
+    return FileResponse(
+        project_path("assets/js/admin-api.js"),
+        media_type="text/javascript",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.get("/restrict/login.js", include_in_schema=False)
+async def admin_login_javascript() -> FileResponse:
+    return FileResponse(
+        project_path("admin/login.js"),
+        media_type="text/javascript",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+PUBLIC_CADASTRO_PAGES = {
+    "nova-demanda": "nova-demanda.html",
+    "catalogo-diretorias": "catalogo-diretorias.html",
+    "catalogo-planos": "catalogo-planos.html",
+    "catalogo-frentes-pli": "catalogo-frentes-pli.html",
+    "catalogo-eixos-pef": "catalogo-eixos-pef.html",
+}
+
+RESTRICTED_PAGES = {
+    "painel": "painel.html",
+    "demandas": "demandas.html",
+    "demanda": "demanda.html",
+    "revisao-status": "revisao-status.html",
+}
+
+
+@app.get("/public/", include_in_schema=False)
+async def pagina_inicial_publica() -> FileResponse:
+    return FileResponse(project_path("index.html"))
+
+
+@app.get("/public/cadastro/", include_in_schema=False)
+async def pagina_indice_cadastro() -> FileResponse:
+    return FileResponse(project_path("cadastro/index.html"))
+
+
+@app.get("/public/cadastro/{pagina}/", include_in_schema=False)
+async def pagina_publica_cadastro(pagina: str) -> FileResponse:
+    arquivo = PUBLIC_CADASTRO_PAGES.get(pagina)
+    if not arquivo:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Página pública não encontrada")
+    return FileResponse(project_path(f"cadastro/{arquivo}"))
+
+
+@app.get("/public/painel/", include_in_schema=False)
+async def pagina_painel_publico() -> FileResponse:
+    return FileResponse(project_path("painel/index.html"))
+
+
+@app.get("/public/documentacao/", include_in_schema=False)
+async def pagina_documentacao_publica() -> FileResponse:
+    return FileResponse(project_path("documentacao/index.html"))
+
+
+@app.get("/public/transparencia/", include_in_schema=False)
+async def pagina_transparencia_publica() -> FileResponse:
+    return FileResponse(project_path("transparencia/index.html"))
+
+
+@app.get("/public/login/", include_in_schema=False)
+async def pagina_login_publico() -> FileResponse:
+    return FileResponse(project_path("admin/login.html"))
+
+
+@app.get("/restrict/", include_in_schema=False)
+async def pagina_inicial_restrita() -> FileResponse:
+    return FileResponse(project_path("admin/index.html"))
+
+
+@app.get("/restrict/hierarquizacao/", include_in_schema=False)
+async def pagina_indice_hierarquizacao_restrita() -> FileResponse:
+    return FileResponse(project_path("hierarquizacao/index.html"))
+
+
+@app.get("/restrict/hierarquizacao/processos/", include_in_schema=False)
+async def pagina_processos_hierarquizacao() -> FileResponse:
+    return FileResponse(project_path("hierarquizacao/home.html"))
+
+
+@app.get("/restrict/hierarquizacao/metodologia/", include_in_schema=False)
+async def pagina_metodologia_hierarquizacao() -> FileResponse:
+    return FileResponse(project_path("hierarquizacao/apresentacao-processo-hierarquizacao.html"))
+
+
+@app.get("/restrict/hierarquizacao/fase-1/", include_in_schema=False)
+async def pagina_fase_1_hierarquizacao() -> FileResponse:
+    return FileResponse(project_path("hierarquizacao/fase1-elegibilidade.html"))
+
+
+@app.get("/restrict/hierarquizacao/fase-2/", include_in_schema=False)
+async def pagina_fase_2_hierarquizacao() -> FileResponse:
+    return FileResponse(project_path("hierarquizacao/fase2-favorabilidade.html"))
+
+
+@app.get("/restrict/hierarquizacao/fase-3/", include_in_schema=False)
+async def pagina_fase_3_hierarquizacao() -> FileResponse:
+    return FileResponse(project_path("hierarquizacao/fase3-ajuste-fino.html"))
+
+
+@app.get("/restrict/ahp/", include_in_schema=False)
+async def pagina_indice_ahp_restrita() -> FileResponse:
+    return FileResponse(project_path("ahp/home.html"))
+
+
+AHP_CLEAN_PAGES = {"configuracao": "step1-configuracao.html", "criterios": "step2-criterios.html", "metodo": "step4-metodo.html", "comparacao": "step5-comparacao.html", "resultados": "step6-resultados.html"}
+
+
+@app.get("/restrict/ahp/{pagina}/", include_in_schema=False)
+async def pagina_ahp_limpa(pagina: str) -> FileResponse:
+    arquivo = AHP_CLEAN_PAGES.get(pagina)
+    if not arquivo:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Página AHP não encontrada")
+    return FileResponse(project_path(f"ahp/{arquivo}"))
+
+
+@app.get("/restrict/{pagina}/", include_in_schema=False)
+async def pagina_restrita(pagina: str) -> FileResponse:
+    arquivo = RESTRICTED_PAGES.get(pagina)
+    if not arquivo:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Página restrita não encontrada")
+    return FileResponse(project_path(f"admin/{arquivo}"))
+
+
+LEGACY_PAGE_REDIRECTS = {
+    "/": "/public/",
+    "/index.html": "/public/",
+    "/cadastro/": "/public/cadastro/",
+    "/cadastro/nova-demanda.html": "/public/cadastro/nova-demanda/",
+    "/cadastro/catalogo-diretorias.html": "/public/cadastro/catalogo-diretorias/",
+    "/cadastro/catalogo-planos.html": "/public/cadastro/catalogo-planos/",
+    "/cadastro/catalogo-frentes-pli.html": "/public/cadastro/catalogo-frentes-pli/",
+    "/cadastro/catalogo-eixos-pef.html": "/public/cadastro/catalogo-eixos-pef/",
+    "/painel/": "/public/painel/",
+    "/documentacao/": "/public/documentacao/",
+    "/admin/login.html": "/public/login/",
+    "/admin/": "/restrict/",
+    "/admin/index.html": "/restrict/",
+    "/admin/painel.html": "/restrict/painel/",
+    "/admin/demandas.html": "/restrict/demandas/",
+    "/admin/demanda.html": "/restrict/demanda/",
+    "/admin/revisao-status.html": "/restrict/revisao-status/",
+}
+
+
+@app.middleware("http")
+async def redirect_legacy_page_routes(request: Request, call_next):
+    destination = LEGACY_PAGE_REDIRECTS.get(request.url.path)
+    if destination:
+        query = request.url.query
+        url = f"{destination}?{query}" if query else destination
+        return RedirectResponse(url=url, status_code=308)
+    return await call_next(request)
+
+
 @app.get("/geoespacial/gerador-risco-restricao", include_in_schema=False)
 async def pagina_gerador_risco_restricao() -> FileResponse:
     """Página canônica do módulo gerador de risco e restrição."""
     return FileResponse(project_path("geoespacial/gerador-risco-restricao.html"))
+
+
+@app.get("/geoespacial/configuracao-risco-restricao", include_in_schema=False)
+async def pagina_configuracao_risco_restricao() -> FileResponse:
+    """Biblioteca canônica e configuração metodológica da Fase 1."""
+    return FileResponse(project_path("geoespacial/configuracao-risco-restricao.html"))
 
 
 @app.get("/geoespacial/gerador-favorabilidade", include_in_schema=False)
@@ -46,6 +236,35 @@ async def pagina_gerador_favorabilidade() -> FileResponse:
     return FileResponse(project_path("geoespacial/gerador-favorabilidade.html"))
 
 
+@app.get("/geoespacial/visualizador-inputs", include_in_schema=False)
+async def pagina_visualizador_inputs() -> FileResponse:
+    return FileResponse(project_path("geoespacial/visualizador-inputs.html"))
+
+
+@app.get("/geoespacial/bancada", include_in_schema=False)
+async def pagina_bancada_geoprocessamento() -> FileResponse:
+    return FileResponse(project_path("geoespacial/_geoprocessamento.html"))
+
+
+@app.get("/geoespacial/produtos", include_in_schema=False)
+async def pagina_produtos_geoespaciais() -> FileResponse:
+    return FileResponse(project_path("geoespacial/produtos.html"))
+
+
+@app.get("/geoespacial/configurador-ajuste", include_in_schema=False)
+async def pagina_configurador_ajuste() -> FileResponse:
+    return FileResponse(project_path("geoespacial/verificacao-fase3.html"))
+
+
+app.mount("/public/assets", StaticFiles(directory=str(project_path("assets"))), name="public-assets")
+app.mount("/public/cadastro", StaticFiles(directory=str(project_path("cadastro")), html=True), name="public-cadastro-assets")
+app.mount("/public/painel", StaticFiles(directory=str(project_path("painel")), html=True), name="public-painel-assets")
+app.mount("/public/documentacao", StaticFiles(directory=str(project_path("documentacao")), html=True), name="public-documentacao-assets")
+app.mount("/public/transparencia", StaticFiles(directory=str(project_path("transparencia")), html=True), name="public-transparencia-assets")
+app.mount("/restrict/assets", StaticFiles(directory=str(project_path("assets"))), name="restricted-assets-shared")
+app.mount("/restrict/hierarquizacao", StaticFiles(directory=str(project_path("hierarquizacao")), html=True), name="restricted-hierarquizacao-assets")
+app.mount("/restrict/ahp", StaticFiles(directory=str(project_path("ahp")), html=True), name="restricted-ahp-assets")
+app.mount("/restrict", StaticFiles(directory=str(project_path("admin")), html=True), name="restricted-assets")
 app.mount("/", StaticFiles(directory=str(PROJECT_ROOT), html=True), name="static")
 
 

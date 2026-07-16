@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from api.deps.auth import require_gestor
+from api.deps.auth import require_authenticated
 from api.exceptions import DatabaseUnavailableError, DemandaValidationError
 from api.schemas.universo import CampoUniversoSchema, UniversoItemSchema
 from api.services import universo_service
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/ahp/universo", tags=["ahp-universo"])
 @router.get("/{tipo}/campos", response_model=list[CampoUniversoSchema])
 async def listar_campos(
     tipo: str,
-    _user: SessionUser = Depends(require_gestor),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> list[CampoUniversoSchema]:
     try:
         return universo_service.listar_campos(tipo)
@@ -33,7 +33,7 @@ async def listar_campos(
 async def listar_universo(
     tipo: str,
     status: str | None = Query(None),
-    _user: SessionUser = Depends(require_gestor),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> list[UniversoItemSchema]:
     try:
         return universo_service.listar_universo(tipo, status=status)

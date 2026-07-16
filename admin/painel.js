@@ -194,7 +194,7 @@
         <dl>
           <dt>Código do objeto</dt><dd><code>${escapeHtml(o.codigo)}</code></dd>
           <dt>Status</dt><dd>${statusBadgeFor("objeto", o)}</dd>
-          <dt>Demanda de origem</dt><dd><a href="demanda.html?tipo=projeto&id=${encodeURIComponent(o.demanda_codigo)}">${escapeHtml(o.demanda_codigo)}</a></dd>
+          <dt>Demanda de origem</dt><dd><a href="demanda/?tipo=projeto&id=${encodeURIComponent(o.demanda_codigo)}">${escapeHtml(o.demanda_codigo)}</a></dd>
           <dt>Instituição</dt><dd>${escapeHtml(o.instituicao_nome || "—")}</dd>
           <dt>CNPJ</dt><dd>${escapeHtml(o.instituicao_cnpj || "—")}</dd>
           <dt>Grupo comparável</dt><dd>${escapeHtml(grupoComparacaoLabel(o.grupo_comparacao, o.plano_id))}</dd>

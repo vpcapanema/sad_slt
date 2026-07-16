@@ -1,0 +1,222 @@
+{
+  "versao": "2026.07.16",
+  "nota": "Parametrização canônica ordinal em quatro níveis. Os escores são valores de referência da biblioteca, rastreáveis aos fundamentos técnicos e normativos de cada critério; não representam medições de campo do empreendimento.",
+  "normalizacao": {
+    "sensibilidade_meio": {
+      "metodo": "escala ordinal canônica de 1 (baixa) a 4 (muito alta)",
+      "intervalo_entrada": [1, 4],
+      "intervalo_saida": [0.25, 1]
+    },
+    "complexidade_licenciamento": {
+      "metodo": "escala ordinal canônica de 1 (baixa) a 4 (muito alta), considerando competência, manifestações e estudos",
+      "intervalo_entrada": [1, 4],
+      "intervalo_saida": [0.25, 1]
+    },
+    "complexidade_tecnica": {
+      "metodo": "escala ordinal canônica de 1 (baixa) a 4 (muito alta), considerando mitigação, engenharia e alternativa locacional",
+      "intervalo_entrada": [1, 4],
+      "intervalo_saida": [0.25, 1]
+    },
+    "incerteza_decisoria": {
+      "metodo": "escala ordinal canônica de 1 (baixa) a 4 (muito alta), considerando dependências e discricionariedade técnica",
+      "intervalo_entrada": [1, 4],
+      "intervalo_saida": [0.25, 1]
+    },
+    "intersecao_espacial": {
+      "metodo": "binário",
+      "minimo": 0,
+      "maximo": 1,
+      "fonte": "Resultado do teste espacial e dos atributos da feição"
+    }
+  },
+  "referencias": {
+    "conama237": {
+      "titulo": "Resolução CONAMA nº 237/1997",
+      "url": "https://conama.mma.gov.br/?option=com_sisconama&task=arquivo.download&id=237"
+    },
+    "manual_transportes": {
+      "titulo": "Manual de Licenciamento Ambiental Federal de Rodovias e Ferrovias",
+      "url": "https://www.gov.br/transportes/pt-br/assuntos/sustentabilidade/licenciamento-ambiental"
+    },
+    "portaria60": {
+      "titulo": "Portaria Interministerial nº 60/2015",
+      "url": "https://portal.iphan.gov.br/uploads/ckfinder/arquivos/portaria_interministerial_60_2015.pdf"
+    },
+    "icmbio": {
+      "titulo": "ICMBio — Manifestações para licenciamento",
+      "url": "https://www.gov.br/icmbio/pt-br/acesso-a-informacao/acoes-e-programas/carta-de-servicos/categorias-dos-servicos/orgaos-licenciadores"
+    },
+    "funai": {
+      "titulo": "FUNAI — Licenciamento ambiental",
+      "url": "https://www.gov.br/funai/pt-br/atuacao/meio-ambiente/licenciamento-ambiental/apresentacao"
+    },
+    "dnit": {
+      "titulo": "DNIT — Licença Ambiental",
+      "url": "https://www.gov.br/dnit/pt-br/meio-ambiente/acoes-e-atividades/licenca-ambiental"
+    },
+    "snuc": {
+      "titulo": "Lei nº 9.985/2000 — SNUC",
+      "url": "https://www.planalto.gov.br/ccivil_03/leis/l9985.htm"
+    },
+    "cavidades": {
+      "titulo": "Decreto nº 10.935/2022",
+      "url": "https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2022/decreto/d10935.htm"
+    },
+    "florestal": {
+      "titulo": "Lei nº 12.651/2012",
+      "url": "https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2012/lei/l12651.htm"
+    },
+    "arqueologia": {
+      "titulo": "Lei nº 3.924/1961",
+      "url": "https://www.planalto.gov.br/ccivil_03/leis/1950-1969/l3924.htm"
+    }
+  },
+  "criterios": {
+    "uc_pi_estadual": {
+      "escores_componentes": [4, 4, 3, 3],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["snuc", "dnit"]
+    },
+    "uc_pi_federal": {
+      "escores_componentes": [4, 4, 3, 3],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["snuc", "icmbio"]
+    },
+    "uc_us_estadual": {
+      "escores_componentes": [3, 3, 2, 2],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["snuc"]
+    },
+    "uc_us_federal": {
+      "escores_componentes": [3, 4, 2, 3],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["snuc", "icmbio"]
+    },
+    "za_uc_estadual": {
+      "escores_componentes": [2, 2, 1, 2],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["snuc"]
+    },
+    "za_uc_federal": {
+      "escores_componentes": [2, 3, 1, 2],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["icmbio"]
+    },
+    "vegetacao_protegida": {
+      "escores_componentes": [4, 4, 4, 3],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["florestal", "dnit"]
+    },
+    "aprm": {
+      "escores_componentes": [3, 3, 3, 3],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["dnit"]
+    },
+    "ecossistema_costeiro": {
+      "escores_componentes": [4, 4, 4, 3],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["florestal", "dnit"]
+    },
+    "cavidade_demais": {
+      "escores_componentes": [3, 3, 4, 3],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["cavidades"]
+    },
+    "cavidade_maxima": {
+      "escores_componentes": [4, 4, 4, 4],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["cavidades"]
+    },
+    "terra_indigena": {
+      "escores_componentes": [4, 4, 3, 4],
+      "prazo_dias": 90,
+      "prazo_dias_demais_estudos": 30,
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["portaria60", "funai"]
+    },
+    "territorio_quilombola": {
+      "escores_componentes": [4, 4, 3, 4],
+      "prazo_dias": 90,
+      "prazo_dias_demais_estudos": 30,
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["portaria60", "manual_transportes"]
+    },
+    "area_contaminada": {
+      "escores_componentes": [4, 3, 4, 3],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["dnit"]
+    },
+    "inundacao": {
+      "escores_componentes": [3, 1, 4, 3],
+      "orgaos_adicionais": 0,
+      "restricao_direta": false,
+      "referencias": ["manual_transportes"]
+    },
+    "movimento_massa": {
+      "escores_componentes": [3, 1, 4, 3],
+      "orgaos_adicionais": 0,
+      "restricao_direta": false,
+      "referencias": ["manual_transportes"]
+    },
+    "bem_tombado": {
+      "escores_componentes": [4, 4, 3, 4],
+      "prazo_dias": 90,
+      "prazo_dias_demais_estudos": 30,
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["portaria60"]
+    },
+    "sitio_arqueologico": {
+      "escores_componentes": [4, 4, 3, 4],
+      "prazo_dias": 90,
+      "prazo_dias_demais_estudos": 30,
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["portaria60", "arqueologia"]
+    },
+    "assentamento": {
+      "escores_componentes": [3, 3, 3, 4],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["manual_transportes"]
+    },
+    "servidao": {
+      "escores_componentes": [2, 2, 3, 2],
+      "orgaos_adicionais": 1,
+      "restricao_direta": false,
+      "referencias": ["manual_transportes"]
+    },
+    "embargo_ibama": {
+      "prazo_dias": null,
+      "orgaos_adicionais": 1,
+      "restricao_direta": true,
+      "referencias": ["manual_transportes"]
+    },
+    "embargo_estadual": {
+      "prazo_dias": null,
+      "orgaos_adicionais": 1,
+      "restricao_direta": true,
+      "referencias": ["manual_transportes"]
+    },
+    "interdicao_cetesb": {
+      "prazo_dias": null,
+      "orgaos_adicionais": 1,
+      "restricao_direta": true,
+      "referencias": ["manual_transportes"]
+    }
+  }
+}

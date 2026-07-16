@@ -1,5 +1,5 @@
 (function (global) {
-  const CADASTRO_INSTITUICAO_URL = "http://56.125.163.194/cadastro/instituicao";
+  const CADASTRO_INSTITUICAO_URL = "https://56.125.163.194/cadastro/instituicao";
 
   async function apiGet(path) {
     const res = await fetch(path);

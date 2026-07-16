@@ -266,6 +266,12 @@ def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) 
     if payload.denominacao is not None:
         data["denominacao"] = payload.denominacao.strip()
     inserted = repo.insert(payload.tipo, data, status_transicao=status_transicao)
+    if payload.tipo == "portfolio" and payload.hierarquizacao_codigo:
+        from api.repositories import hierarquizacao_repository as hier_repo
+        hier = hier_repo.get_by_codigo(payload.hierarquizacao_codigo)
+        if not hier:
+            raise DemandaValidationError("Hierarquização informada não existe.", field="hierarquizacao_codigo")
+        hier_repo.update(payload.hierarquizacao_codigo, {"config_id": inserted["id"]})
     # Gera e persiste o artefato da Fase 1 imediatamente após a criação.
     arquivo_fase1 = _build_arquivo_fase1(inserted)
     repo.update(payload.tipo, inserted["codigo"], {"arquivo_config_fase1": arquivo_fase1})

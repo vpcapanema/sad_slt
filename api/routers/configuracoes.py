@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from api.deps.auth import get_optional_session, require_gestor
+from api.deps.auth import require_analyst, require_authenticated, require_gestor
 from api.exceptions import (
     ConfigMulticriterioNotFoundError,
     DatabaseUnavailableError,
@@ -27,10 +27,10 @@ router = APIRouter(prefix="/ahp/configuracoes", tags=["ahp-configuracoes"])
 @router.post("", response_model=ConfigResponseSchema, status_code=201)
 async def criar_config(
     body: ConfigCreateSchema,
-    user: SessionUser | None = Depends(get_optional_session),
+    user: SessionUser = Depends(require_analyst),
 ) -> ConfigResponseSchema:
     try:
-        return service.criar_config(body, criado_por=user.id if user else None)
+        return service.criar_config(body, criado_por=user.id)
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
@@ -42,7 +42,7 @@ async def listar_configs(
     tipo: str = Query(..., description="avulsa | portfolio"),
     status: str | None = Query(None),
     tipo_demanda: str | None = Query(None, description="plano | programa | projeto"),
-    _user: SessionUser | None = Depends(get_optional_session),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> list[ConfigResponseSchema]:
     try:
         return service.listar_configs(tipo, status=status, tipo_demanda=tipo_demanda)
@@ -56,7 +56,7 @@ async def listar_configs(
 async def obter_config(
     tipo: str,
     codigo: str,
-    _user: SessionUser | None = Depends(get_optional_session),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> ConfigResponseSchema:
     try:
         return service.obter_config(tipo, codigo)
@@ -73,7 +73,7 @@ async def atualizar_config(
     tipo: str,
     codigo: str,
     body: ConfigUpdateSchema,
-    _user: SessionUser | None = Depends(get_optional_session),
+    _user: SessionUser = Depends(require_analyst),
 ) -> ConfigResponseSchema:
     try:
         return service.atualizar_config(tipo, codigo, body)
@@ -89,7 +89,7 @@ async def atualizar_config(
 async def calcular_config(
     tipo: str,
     codigo: str,
-    _user: SessionUser | None = Depends(get_optional_session),
+    _user: SessionUser = Depends(require_analyst),
 ) -> ConfigResponseSchema:
     try:
         return service.calcular_config(tipo, codigo)

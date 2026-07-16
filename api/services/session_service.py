@@ -1,4 +1,4 @@
-"""Sessão assinada (cookie HttpOnly) para gestores SLT."""
+"""Sessão assinada (cookie HttpOnly) para operadores SICARD."""
 from __future__ import annotations
 
 import base64
@@ -13,6 +13,7 @@ from api.config import get_settings
 
 _COOKIE_NAME = "slt_session"
 _TTL_SECONDS = 60 * 60 * 8  # 8 horas
+SIGMA_PROFILES = frozenset({"VISUALIZADOR", "OPERADOR", "ANALISTA", "GESTOR", "ADMIN"})
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,15 @@ class SessionUser:
     username: str
     nome: str
     tipo_usuario: str
+
+
+def profile_from_username(username: str) -> str | None:
+    """Deriva o perfil exclusivamente do sufixo após o último sublinhado."""
+    normalized = (username or "").strip()
+    if not normalized or "@" in normalized or "_" not in normalized:
+        return None
+    profile = normalized.rsplit("_", 1)[1].upper()
+    return profile if profile in SIGMA_PROFILES else None
 
 
 def cookie_name() -> str:
@@ -80,12 +90,17 @@ def parse_token(token: str | None) -> SessionUser | None:
     if not sub:
         return None
 
+    username = str(payload.get("username") or "").strip()
+    profile = profile_from_username(username)
+    if not profile:
+        return None
+
     return SessionUser(
         id=str(sub),
         email=str(payload.get("email") or ""),
-        username=str(payload.get("username") or payload.get("email") or "").split("@")[0],
-        nome=str(payload.get("nome") or payload.get("email") or "Gestor"),
-        tipo_usuario=str(payload.get("tipo") or ""),
+        username=username,
+        nome=str(payload.get("nome") or username),
+        tipo_usuario=profile,
     )
 
 

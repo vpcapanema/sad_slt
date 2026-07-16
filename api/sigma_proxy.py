@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-SIGMA_BASE = os.getenv("SIGMA_API_BASE", "http://56.125.163.194").rstrip("/")
+SIGMA_BASE = os.getenv("SIGMA_API_BASE", "https://56.125.163.194").rstrip("/")
 TIMEOUT = float(os.getenv("SIGMA_HTTP_TIMEOUT", "30"))
 
 
@@ -14,7 +14,7 @@ async def fetch_instituicoes() -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     page = 1
     limit = 200
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+    async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True) as client:
         while True:
             res = await client.get(
                 f"{SIGMA_BASE}/api/cadastros/instituicoes/publica/listar",
@@ -73,7 +73,7 @@ async def fetch_pessoas_sigma() -> list[dict[str, Any]]:
     token = os.getenv("SIGMA_API_TOKEN", "").strip()
     headers = {"Authorization": f"Bearer {token}"} if token else None
 
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+    async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True) as client:
         for path in paths:
             parsed = await _fetch_pessoas_path(client, path, headers)
             if parsed:
@@ -88,7 +88,7 @@ async def fetch_pessoas_sigma() -> list[dict[str, Any]]:
 
 
 async def login_usuario(payload: dict[str, Any]) -> dict[str, Any]:
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+    async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True) as client:
         res = await client.post(f"{SIGMA_BASE}/api/auth/login", json=payload)
         if res.status_code >= 400:
             try:

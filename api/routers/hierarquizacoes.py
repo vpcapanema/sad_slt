@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from api.deps.auth import get_optional_session, require_gestor
+from api.deps.auth import require_authenticated, require_gestor, require_operator
 from api.exceptions import (
     ConfigMulticriterioNotFoundError,
     DatabaseUnavailableError,
@@ -15,7 +15,13 @@ from api.exceptions import (
     HierarquizacaoNotFoundError,
 )
 from api.schemas.hierarquizacao import (
+    ConfiguracaoFatiamentoFase1Schema,
     HierarquizacaoCreateSchema,
+    HierarquizacaoFase1UpdateSchema,
+    HierarquizacaoFase1ExecutarSchema,
+    HierarquizacaoFase2ExecutarSchema,
+    HierarquizacaoFase3ExecutarSchema,
+    HierarquizacaoSinteseSchema,
     HierarquizacaoResponseSchema,
     HierarquizacaoUpdateSchema,
 )
@@ -25,13 +31,86 @@ from api.services.session_service import SessionUser
 router = APIRouter(prefix="/ahp/hierarquizacoes", tags=["ahp-hierarquizacoes"])
 
 
+@router.get("/fatiamentos/fase1", response_model=list[dict])
+async def listar_fatiamentos_fase1(_user: SessionUser = Depends(require_authenticated)) -> list[dict]:
+    return service.listar_fatiamentos_fase1()
+
+
+@router.post("/fatiamentos/fase1", response_model=dict)
+async def salvar_fatiamento_fase1(body: ConfiguracaoFatiamentoFase1Schema, _user: SessionUser = Depends(require_operator)) -> dict:
+    return service.salvar_fatiamento_fase1(body)
+
+
+@router.get("/pacotes/{modulo}", response_model=list[dict])
+async def listar_pacotes_fase(modulo: str, _user: SessionUser = Depends(require_authenticated)) -> list[dict]:
+    if modulo not in {"fase1", "fase2"}:
+        raise HTTPException(status_code=422, detail="Módulo inválido")
+    return service.listar_pacotes_fase(modulo)
+
+
+@router.post("/{codigo}/fases/2/executar", response_model=HierarquizacaoResponseSchema)
+async def executar_fase_2(codigo: str, body: HierarquizacaoFase2ExecutarSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+    try: return service.executar_fase_2(codigo, body)
+    except HierarquizacaoNotFoundError as exc: raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc: raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc: raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/{codigo}/fases/3/executar", response_model=HierarquizacaoResponseSchema)
+async def executar_fase_3(codigo: str, body: HierarquizacaoFase3ExecutarSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+    try: return service.executar_fase_3(codigo, body)
+    except HierarquizacaoNotFoundError as exc: raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc: raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc: raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/{codigo}/sintetizar", response_model=HierarquizacaoResponseSchema)
+async def sintetizar(codigo: str, body: HierarquizacaoSinteseSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+    try: return service.sintetizar(codigo, body)
+    except HierarquizacaoNotFoundError as exc: raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc: raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc: raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/{codigo}/fases/1/executar", response_model=HierarquizacaoResponseSchema)
+async def executar_fase_1(
+    codigo: str,
+    body: HierarquizacaoFase1ExecutarSchema,
+    _user: SessionUser = Depends(require_operator),
+) -> HierarquizacaoResponseSchema:
+    try:
+        return service.executar_fase_1(codigo, body)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (DemandaValidationError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.patch("/{codigo}/fases/1", response_model=HierarquizacaoResponseSchema)
+async def salvar_fase_1(
+    codigo: str,
+    body: HierarquizacaoFase1UpdateSchema,
+    _user: SessionUser = Depends(require_operator),
+) -> HierarquizacaoResponseSchema:
+    try:
+        return service.salvar_fase_1(codigo, body)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.post("", response_model=HierarquizacaoResponseSchema, status_code=201)
 async def criar_hierarquizacao(
     body: HierarquizacaoCreateSchema,
-    user: SessionUser | None = Depends(get_optional_session),
+    user: SessionUser = Depends(require_operator),
 ) -> HierarquizacaoResponseSchema:
     try:
-        return service.criar_hierarquizacao(body, criado_por=user.id if user else None)
+        return service.criar_hierarquizacao(body, criado_por=user.id)
     except ConfigMulticriterioNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:
@@ -44,7 +123,7 @@ async def criar_hierarquizacao(
 async def listar_hierarquizacoes(
     status: str | None = Query(None),
     grupo: str | None = Query(None),
-    _user: SessionUser | None = Depends(get_optional_session),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> list[HierarquizacaoResponseSchema]:
     try:
         return service.listar_hierarquizacoes(status=status, grupo=grupo)
@@ -55,7 +134,7 @@ async def listar_hierarquizacoes(
 @router.get("/{codigo}", response_model=HierarquizacaoResponseSchema)
 async def obter_hierarquizacao(
     codigo: str,
-    _user: SessionUser | None = Depends(get_optional_session),
+    _user: SessionUser = Depends(require_authenticated),
 ) -> HierarquizacaoResponseSchema:
     try:
         return service.obter_hierarquizacao(codigo)
@@ -69,7 +148,7 @@ async def obter_hierarquizacao(
 async def atualizar_hierarquizacao(
     codigo: str,
     body: HierarquizacaoUpdateSchema,
-    _user: SessionUser | None = Depends(get_optional_session),
+    _user: SessionUser = Depends(require_operator),
 ) -> HierarquizacaoResponseSchema:
     try:
         return service.atualizar_hierarquizacao(codigo, body)
@@ -84,7 +163,7 @@ async def atualizar_hierarquizacao(
 @router.post("/{codigo}/calcular", response_model=HierarquizacaoResponseSchema)
 async def calcular_hierarquizacao(
     codigo: str,
-    _user: SessionUser | None = Depends(get_optional_session),
+    _user: SessionUser = Depends(require_operator),
 ) -> HierarquizacaoResponseSchema:
     try:
         return service.calcular_hierarquizacao(codigo)

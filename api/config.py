@@ -30,7 +30,7 @@ def get_settings() -> Settings:
         session_secret = secrets.token_hex(32)
     return Settings(
         slt_database_url=os.getenv("SLT_DATABASE_URL", default_dsn).strip(),
-        sigma_api_base=os.getenv("SIGMA_API_BASE", "http://56.125.163.194").rstrip("/"),
+        sigma_api_base=os.getenv("SIGMA_API_BASE", "https://56.125.163.194").rstrip("/"),
         sigma_database_url=build_sigma_database_url(),
         session_secret=session_secret,
         port=int(os.getenv("PORT", "8080")),

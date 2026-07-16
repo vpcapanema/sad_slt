@@ -14,6 +14,7 @@
   ];
 
   var COLUMNS = [
+    { key: "fase", label: "Fase da hierarquização" },
     { key: "dimensao", label: "Dimensão" },
     { key: "criterio", label: "Critério" },
     { key: "premissa", label: "Premissa" },
@@ -46,6 +47,9 @@
   };
 
   var HEADER_MAP = {
+    fase: "fase",
+    etapa: "fase",
+    "fase da hierarquizacao": "fase",
     dimensao: "dimensao",
     dimensão: "dimensao",
     criterio: "criterio",
@@ -395,7 +399,7 @@
   // Editor — edição do conteúdo da matriz (valores das células + add/remover
   // linhas), mantendo as 7 colunas fixas.
   // -------------------------------------------------------------------------
-  var EDITABLE_COLUMNS = ["dimensao", "criterio", "premissa", "relacao", "metricas", "fonte"];
+  var EDITABLE_COLUMNS = ["fase", "dimensao", "criterio", "premissa", "relacao", "metricas", "fonte"];
 
   // Dropdown de vocabulário controlado. Se o valor atual (ex.: vindo de upload)
   // não constar na lista, é preservado como uma opção extra selecionada.
@@ -417,6 +421,7 @@
   }
 
   function cellEditor(key, value) {
+    if (key === "fase") return buildSelect("fase", value, ["Fase 2", "Fase 3"]);
     if (key === "dimensao") return buildSelect("dimensao", value, DIMENSOES);
     if (key === "relacao") return buildSelect("relacao", value, RELACOES);
     if (key === "mandatorio") return buildSelect("mandatorio", value, MANDATORIOS);
@@ -495,6 +500,7 @@
         return "Linha " + n + ": a premissa é obrigatória para «" + r.criterio + "».";
       }
       if (requireFull) {
+        if (!r.fase) return "Linha " + n + ": selecione a fase de «" + r.criterio + "».";
         if (!r.dimensao) return "Linha " + n + ": selecione a dimensão de «" + r.criterio + "».";
         if (!r.relacao) return "Linha " + n + ": selecione a relação de «" + r.criterio + "».";
         if (!r.mandatorio) return "Linha " + n + ": informe se «" + r.criterio + "» é mandatório.";
@@ -508,7 +514,7 @@
   }
 
   function emptyRow() {
-    return { dimensao: "", criterio: "", premissa: "", relacao: "", metricas: "", fonte: "", mandatorio: "" };
+    return { fase: "", dimensao: "", criterio: "", premissa: "", relacao: "", metricas: "", fonte: "", mandatorio: "" };
   }
 
   function renderMatrizPremissasEditor(container, options) {

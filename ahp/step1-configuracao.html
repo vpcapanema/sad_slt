@@ -305,8 +305,17 @@
         </p>
 
         <div class="ahp-subcard">
+          <div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">I</span><span>Origem do grupo de demandas</span></div>
+          <div class="ahp-tipo-grid ahp-tipo-grid--compact">
+            <label class="ahp-tipo-card ahp-tipo-card--compact"><input type="radio" name="origem-grupo" value="carregar"><div class="ahp-tipo-card__icon"><i class="fas fa-folder-open"></i></div><h3>Carregar grupo de demandas</h3></label>
+            <label class="ahp-tipo-card ahp-tipo-card--compact"><input type="radio" name="origem-grupo" value="criar"><div class="ahp-tipo-card__icon"><i class="fas fa-plus"></i></div><h3>Criar novo grupo de demandas</h3></label>
+          </div>
+          <div id="grupo-hierarquizacao-wrap" class="ahp-mini-card is-hidden"><label class="c-form-label" for="grupo-hierarquizacao">Grupo cadastrado na gestão de hierarquizações</label><select id="grupo-hierarquizacao" class="c-form-control"><option value="">Carregando…</option></select><div id="grupo-hierarquizacao-resumo" class="ahp-info-note is-hidden"></div></div>
+        </div>
+
+        <div class="ahp-subcard" id="construtor-grupo-ahp">
           <div class="ahp-subsection-title ahp-subsection-title--roman">
-            <span class="ahp-subsection-num ahp-subsection-num--roman">I</span>
+            <span class="ahp-subsection-num ahp-subsection-num--roman">II</span>
             <span>Filtros do universo</span>
           </div>
           <p class="ahp-page-desc ahp-help-text">
@@ -322,7 +331,7 @@
 
         <div class="ahp-subcard">
           <div class="ahp-subsection-title ahp-subsection-title--roman">
-            <span class="ahp-subsection-num ahp-subsection-num--roman">II</span>
+            <span class="ahp-subsection-num ahp-subsection-num--roman">III</span>
             <span>Resumo</span>
           </div>
           <div id="portfolio-preview" class="ahp-universo-preview" role="status" aria-live="polite">

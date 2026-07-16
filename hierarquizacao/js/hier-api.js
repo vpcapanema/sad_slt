@@ -68,5 +68,24 @@
       const qs = params ? "?" + new URLSearchParams(params).toString() : "";
       return request(`${BASE_O}${qs}`);
     },
+    salvarFase1(codigo, payload) {
+      return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/1`, jsonOpts("PATCH", payload));
+    },
+    executarFase1(codigo, payload) {
+      return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/1/executar`, jsonOpts("POST", payload));
+    },
+    listarPacotes(modulo) { return request(`${BASE_H}/pacotes/${encodeURIComponent(modulo)}`); },
+    listarFatiamentosFase1() { return request(`${BASE_H}/fatiamentos/fase1`); },
+    salvarFatiamentoFase1(payload) { return request(`${BASE_H}/fatiamentos/fase1`, jsonOpts("POST", payload)); },
+    executarFase2(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/2/executar`, jsonOpts("POST", payload)); },
+    executarFase3(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/3/executar`, jsonOpts("POST", payload)); },
+    sintetizar(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/sintetizar`, jsonOpts("POST", payload)); },
+    listarUniverso(tipo, status) {
+      const qs = new URLSearchParams(status ? { status } : {}).toString();
+      return request(`/api/ahp/universo/${encodeURIComponent(tipo)}${qs ? "?" + qs : ""}`);
+    },
+    listarCamposUniverso(tipo) {
+      return request(`/api/ahp/universo/${encodeURIComponent(tipo)}/campos`);
+    },
   };
 })(window);

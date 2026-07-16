@@ -41,6 +41,12 @@ body.layout-with-sidebar {
   min-width: 0;
 }
 
+.layout-with-sidebar .layout-main-header.app-header--restricted {
+  align-items: stretch;
+  padding-top: 0.6rem;
+  padding-bottom: 0.15rem;
+}
+
 .layout-with-sidebar-grid > .layout-sidebar {
   grid-column: 1;
   grid-row: 2;

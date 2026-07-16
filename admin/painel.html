@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <base href="/restrict/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Painel de demandas — Admin SLT</title>
@@ -12,9 +13,9 @@
   <div class="layout-with-sidebar-grid">
     <header class="layout-sidebar-header">
       <div class="layout-sidebar-header-inner">
-        <a href="../index.html" class="layout-sidebar-home-link" title="Página inicial">
+        <a href="/public/" class="layout-sidebar-home-link" title="Página inicial">
           <img
-            src="../assets/img/slt-icon.svg"
+            src="/assets/img/brand/sicard-simbolo.png"
             alt=""
             class="sidebar-app-icon"
             width="36"
@@ -38,9 +39,9 @@
       <div class="layout-sidebar-body">
         <div class="nav-section painel-layers-section">
           <nav class="sidebar-restricted-nav" aria-label="Área restrita">
-            <a href="index.html">Admin</a>
-            <a href="painel.html" class="is-active" aria-current="page">Painel de demandas</a>
-            <a href="demandas.html">Tabela de demandas</a>
+            <a href="/restrict/">Área restrita</a>
+            <a href="painel/" class="is-active" aria-current="page">Painel de demandas</a>
+            <a href="demandas/">Tabela de demandas</a>
           </nav>
           <div id="painel-layers-root" class="layer-group layer-group--root">
             <div id="painel-layer-filter" class="painel-layer-filter" aria-label="Filtro de camadas">

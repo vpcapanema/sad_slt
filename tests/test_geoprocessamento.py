@@ -17,6 +17,7 @@ from api.repositories import camada_geoespacial_repository
 from api.server import app
 from api.services.geoespacial_service import geoespacial_service
 from api.services.geoprocessamento_engine import geoprocessamento_engine
+from api.services.session_service import SessionUser, cookie_name, create_token
 
 
 class GeoprocessamentoApiTest(unittest.TestCase):
@@ -58,6 +59,16 @@ class GeoprocessamentoApiTest(unittest.TestCase):
             encoding="utf-8",
         )
         self.client = TestClient(app)
+        token = create_token(
+            SessionUser(
+                id="00000000-0000-0000-0000-000000000010",
+                email="gestor@example.org",
+                username="teste_gestor",
+                nome="Gestor de teste",
+                tipo_usuario="GESTOR",
+            )
+        )
+        self.client.cookies.set(cookie_name(), token)
 
     def tearDown(self) -> None:
         for item in camada_geoespacial_repository.listar():
