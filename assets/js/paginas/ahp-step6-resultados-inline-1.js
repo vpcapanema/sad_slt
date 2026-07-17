@@ -92,7 +92,7 @@ function showMatrizNaoSalvaState(config){
   var codigo=config&&config.codigo?' ('+config.codigo+')':'';
   if(host){
     host.className='ahp-recommendation';
-    host.innerHTML='<div class="ahp-recommendation__head"><i class="fas fa-circle-info"></i><strong>Pacote incompleto'+codigo+'.</strong></div><p>Faltam itens obrigatórios da Fase 2. Conclua o cadastro de critérios, salve a matriz pareada na <a href="step5-comparacao.html">Etapa 5</a> (RC &lt; 0,10) e retorne aqui.</p>';
+    host.innerHTML='<div class="ahp-recommendation__head"><i class="fas fa-circle-info"></i><strong>Pacote incompleto'+codigo+'.</strong></div><p>Faltam itens obrigatórios da Fase 2. Conclua o cadastro de critérios, salve a matriz pareada na <a href="/restrict/ahp/comparacao/">Etapa 5</a> (RC &lt; 0,10) e retorne aqui.</p>';
   }
 }
 
@@ -199,7 +199,7 @@ function renderArtefatos(config){
 
   html+='<p style="margin-bottom:1rem;">Estes artefatos ligam-se pela <strong>configuração ('+(config.codigo||'')+')</strong> e alimentam o módulo de hierarquização. O artefato de <strong>pesos</strong> é o handoff e exige homologação.</p>';
   if(!consistente){
-    html+='<p class="ahp-info-note" style="margin-bottom:1rem;"><i class="fas fa-triangle-exclamation"></i> A análise não está consistente (RC &ge; 0,10). Revise a <a href="step5-comparacao.html">Etapa 5</a> para liberar a matriz e os pesos.</p>';
+    html+='<p class="ahp-info-note" style="margin-bottom:1rem;"><i class="fas fa-triangle-exclamation"></i> A análise não está consistente (RC &ge; 0,10). Revise a <a href="/restrict/ahp/comparacao/">Etapa 5</a> para liberar a matriz e os pesos.</p>';
   }
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem;margin-bottom:1rem;">';
   html+='<button id="art-objetos" class="btn btn-primary"><i class="fas fa-list-check"></i> Exportar objetos</button>';
@@ -348,7 +348,7 @@ function displayResults(criteria,results,matrix,alertas,config){
   /* 6.2 Pesos dos Critérios */
   var weightsHtml='';
   if(!isConsistent){
-    weightsHtml+='<p class="ahp-info-note" style="margin-bottom:1rem;text-align:left;"><i class="fas fa-triangle-exclamation"></i> A matriz está inconsistente (RC &ge; 0,10). Os pesos abaixo foram calculados, mas recomenda-se revisar a <a href="step5-comparacao.html">Etapa 5</a> antes de homologar.</p>';
+    weightsHtml+='<p class="ahp-info-note" style="margin-bottom:1rem;text-align:left;"><i class="fas fa-triangle-exclamation"></i> A matriz está inconsistente (RC &ge; 0,10). Os pesos abaixo foram calculados, mas recomenda-se revisar a <a href="/restrict/ahp/comparacao/">Etapa 5</a> antes de homologar.</p>';
   }
   weightsHtml+='<p style="margin-bottom: 1.5rem;">Os pesos representam a importância relativa de cada critério na decisão, obtidos a partir da matriz de comparação pareada validada acima.</p>';
   weightsHtml+='<div class="ahp-table-scroll"><table class="ahp-matrix-table"><thead><tr>';

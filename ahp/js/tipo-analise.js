@@ -1938,9 +1938,9 @@
       );
       saveDraft();
       if (window.SLTAhpNav && window.SLTAhpNav.irPara) {
-        window.SLTAhpNav.irPara("step2-criterios.html");
+        window.SLTAhpNav.irPara("/restrict/ahp/criterios/");
       } else {
-        window.location.href = "step2-criterios.html";
+        window.location.href = "/restrict/ahp/criterios/";
       }
     } catch (err) {
       alert("Não foi possível criar a configuração: " + (err && err.message ? err.message : err));

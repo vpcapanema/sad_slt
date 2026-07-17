@@ -17,6 +17,7 @@ TEXT_SUFFIXES = {
 }
 IGNORED_PARTS = {".git", ".venv", "node_modules", "__pycache__"}
 INTENTIONAL_FIXTURES = {Path("tests/test_path_policy.py")}
+VENDORED_ROOTS = (Path("assets/vendor"),)
 
 
 class NoAbsolutePathsTest(unittest.TestCase):
@@ -27,6 +28,8 @@ class NoAbsolutePathsTest(unittest.TestCase):
                 continue
             relative = Path(*file_path.parts[1:]) if file_path.parts[:1] == (".",) else file_path
             if relative in INTENTIONAL_FIXTURES:
+                continue
+            if any(relative.is_relative_to(root) for root in VENDORED_ROOTS):
                 continue
             if file_path.suffix.lower() not in TEXT_SUFFIXES and file_path.name != ".env.example":
                 continue

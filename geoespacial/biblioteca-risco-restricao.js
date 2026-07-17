@@ -263,10 +263,10 @@
   }
   async function init() {
     const [b, m] = await Promise.all([
-      fetch("../data/geoespacial/biblioteca_criterios_risco_restricao.json", {
+      fetch("/data/geoespacial/biblioteca_criterios_risco_restricao.json", {
         cache: "no-store",
       }),
-      fetch("../data/geoespacial/metricas_criterios_risco_restricao.json", {
+      fetch("/data/geoespacial/metricas_criterios_risco_restricao.json", {
         cache: "no-store",
       }),
     ]);

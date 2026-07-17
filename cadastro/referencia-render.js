@@ -2,15 +2,14 @@
   let referencia = null;
   let classificacao = null;
 
-  async function loadReferencia(basePath) {
-    const base = basePath || "../";
+  async function loadReferencia(_basePath) {
     if (!referencia) {
-      const res = await fetch(base + "data/referencia-institucional.json");
+      const res = await fetch("/data/referencia-institucional.json");
       if (!res.ok) throw new Error("Não foi possível carregar a referência institucional.");
       referencia = await res.json();
     }
     if (!classificacao) {
-      const res2 = await fetch(base + "data/referencia-classificacao.json");
+      const res2 = await fetch("/data/referencia-classificacao.json");
       if (!res2.ok) throw new Error("Não foi possível carregar a referência de classificação.");
       classificacao = await res2.json();
     }
@@ -30,7 +29,7 @@
   }
 
   function cadastroUrl(params) {
-    return "?" + new URLSearchParams(params).toString();
+    return "/public/cadastro/nova-demanda/?" + new URLSearchParams(params).toString();
   }
 
   function listHtml(items, cls) {
@@ -128,7 +127,7 @@
         filtro
           ? `<p class="catalog-filter-note">Filtrado para diretoria <strong>${esc(
               ref.diretorias.find((d) => d.id === filtro)?.nome_oficial || filtro
-            )}</strong>. <a href="catalogo-planos/">Ver todos os planos</a></p>`
+            )}</strong>. <a href="/public/cadastro/catalogo-planos/">Ver todos os planos</a></p>`
           : ""
       }`
     );
@@ -149,7 +148,7 @@
           "ref-guide-no ref-block-first"
         )}
         <div class="btn-row">
-          <a class="btn btn-primary" href="catalogo-planos/">Ver todos os planos</a>
+          <a class="btn btn-primary" href="/public/cadastro/catalogo-planos/">Ver todos os planos</a>
         </div>`
       );
       container.innerHTML = html;
@@ -174,7 +173,7 @@
         }),
         `<p class="ref-lead">${esc(p.sintese)}</p>
         <dl class="catalog-meta ref-meta">
-          <dt>Diretoria</dt><dd><a href="catalogo-diretorias/#${esc(p.diretoria_id)}">${esc(dir?.nome_oficial || p.diretoria_id)}</a></dd>
+          <dt>Diretoria</dt><dd><a href="/public/cadastro/catalogo-diretorias/#${esc(p.diretoria_id)}">${esc(dir?.nome_oficial || p.diretoria_id)}</a></dd>
           <dt>Coordenação</dt><dd>${esc(p.coordenacao)}</dd>
           <dt>Classificação seguinte</dt><dd>${esc(p.classificacao_pos_cadastro)}</dd>
         </dl>
@@ -200,7 +199,7 @@
           `${p.frentes ? "Frentes de atuação" : "Eixos ferroviários"} (${subItems.length})`,
           "fa-tags",
           `<div class="field-help-row">
-            <a class="link-catalogo" href="${p.frentes ? "catalogo-frentes-pli.html" : "catalogo-eixos-pef.html"}" target="_blank" rel="noopener">Consulte ${p.frentes ? "as frentes PLI" : "os eixos PEF e TIC"} ↗</a>
+            <a class="link-catalogo" href="${p.frentes ? "/public/cadastro/catalogo-frentes-pli/" : "/public/cadastro/catalogo-eixos-pef/"}" target="_blank" rel="noopener">Consulte ${p.frentes ? "as frentes PLI" : "os eixos PEF e TIC"} ↗</a>
           </div>
           <div class="ref-subgrid">
             ${subItems
@@ -264,7 +263,7 @@
         ${entityBlocks(f)}
         <div class="btn-row">
           <a class="btn btn-primary" href="${cadastroUrl({ plano: "PLANO-PLI", diretoria: "DIR-PLAN", frente: f.id, step: "3" })}">Usar ${esc(f.id)} no cadastro</a>
-          <a class="btn btn-secondary" href="catalogo-planos/#PLANO-PLI">Ver plano PLI-SP</a>
+          <a class="btn btn-secondary" href="/public/cadastro/catalogo-planos/#PLANO-PLI">Ver plano PLI-SP</a>
         </div>`
       );
     });

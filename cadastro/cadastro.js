@@ -28,6 +28,7 @@
   let programaMaxRevealed = 1;
   let parentConstraintLoadId = 0;
   let programaRegionalidades = null;
+  let currentTipoDemandante = "institucional";
 
   const TERRITORIO_TIPO_NOME = {
     municipio: "Município",
@@ -942,10 +943,10 @@
 
   function buildPlanoCatalogLinks(planoId, diretoriaId) {
     const dirLink = diretoriaId
-      ? `<a class="link-catalogo" href="catalogo-diretorias/#${encodeURIComponent(diretoriaId)}" target="_blank" rel="noopener">Critérios da diretoria ↗</a>`
+      ? `<a class="link-catalogo" href="/public/cadastro/catalogo-diretorias/#${encodeURIComponent(diretoriaId)}" target="_blank" rel="noopener">Critérios da diretoria ↗</a>`
       : "";
     const planoLink = planoId
-      ? `<a class="link-catalogo" href="catalogo-planos/?diretoria=${encodeURIComponent(diretoriaId || "")}#${encodeURIComponent(planoId)}" target="_blank" rel="noopener">Detalhes do plano ↗</a>`
+      ? `<a class="link-catalogo" href="/public/cadastro/catalogo-planos/?diretoria=${encodeURIComponent(diretoriaId || "")}#${encodeURIComponent(planoId)}" target="_blank" rel="noopener">Detalhes do plano ↗</a>`
       : "";
     const parts = [dirLink, planoLink].filter(Boolean);
     return parts.length
@@ -966,7 +967,7 @@
     const linkPlanos = $("#pg-link-planos");
 
     if (linkPlanos && planoApi?.diretoria_id) {
-      linkPlanos.href = "catalogo-planos/?diretoria=" + encodeURIComponent(planoApi.diretoria_id);
+      linkPlanos.href = "/public/cadastro/catalogo-planos/?diretoria=" + encodeURIComponent(planoApi.diretoria_id);
     }
 
     if (!planoCodigo || !planoApi) {
@@ -1563,6 +1564,7 @@
     const geom = getGeometria();
     const coords = getCoordenadas();
     return {
+      tipo_demandante: currentTipoDemandante,
       status: "analise_rascunho",
       criadoEm: new Date().toISOString(),
       ...buildInstituicaoPayload("#instituicao", "#cnpj"),
@@ -1600,6 +1602,7 @@
   }
 
   function selectTipo(tipo) {
+    if (currentTipoDemandante === "privada" && tipo !== "projeto") return;
     $$(".tipo-card").forEach((c) => {
       const on = c.dataset.tipo === tipo;
       c.classList.toggle("is-active", on);
@@ -1620,6 +1623,26 @@
       pgAbr?.clearParentReference?.();
       SLTSpatialConstraint.clear();
     }
+  }
+
+  function selectTipoDemandante(tipoDemandante) {
+    const tipo = tipoDemandante === "privada" ? "privada" : "institucional";
+    currentTipoDemandante = tipo;
+    $$(".demandante-card").forEach((card) => {
+      const selected = card.dataset.demandante === tipo;
+      card.classList.toggle("is-active", selected);
+      card.setAttribute("aria-selected", String(selected));
+    });
+
+    const demandaPrivada = tipo === "privada";
+    $$(".tipo-card").forEach((card) => {
+      const incompativel = demandaPrivada && card.dataset.tipo !== "projeto";
+      card.classList.toggle("is-incompativel", incompativel);
+      card.setAttribute("aria-disabled", String(incompativel));
+    });
+    $("#restricao-demanda-privada")?.classList.toggle("hidden", !demandaPrivada);
+
+    if (demandaPrivada) selectTipo("projeto");
   }
 
   function updateProgramasSelect() {
@@ -1688,6 +1711,12 @@
     });
   }
 
+  function initTipoDemandanteSelector() {
+    $$(".demandante-card").forEach((card) => {
+      card.addEventListener("click", () => selectTipoDemandante(card.dataset.demandante));
+    });
+  }
+
   function initPlanoForm() {
     const cat = SLTCatalog.catalog;
     fillSelect($("#pl-diretoria"), SLTCatalog.ativos(cat.diretorias), "id", (d) => d.nome_oficial, "Selecione…");
@@ -1721,6 +1750,7 @@
       const rep = buildRepresentantePayload("#pl-representante", "#pl-rep_email", "#pl-rep_telefone");
       const inst = buildInstituicaoPayload("#pl-instituicao", "#pl-cnpj");
       const payload = {
+        tipo_demandante: "institucional",
         diretoria_id: $("#pl-diretoria").value,
         nome: $("#pl-nome").value.trim(),
         descricao: $("#pl-descricao").value.trim(),
@@ -1789,6 +1819,7 @@
       const inst = buildInstituicaoPayload("#pg-instituicao", "#pg-cnpj");
       const unidades = pgAbr.getSelectedIds();
       const payload = {
+        tipo_demandante: "institucional",
         plano_codigo: isPgVinculoAtivo() ? $("#pg-plano").value : null,
         vinculo_institucional: isPgVinculoAtivo(),
         nome: $("#pg-nome").value.trim(),
@@ -1822,7 +1853,7 @@
     await loadSigmaCadastros();
 
     await SLTCatalog.loadCatalog("../");
-    const refRes = await fetch("../data/referencia-classificacao.json");
+    const refRes = await fetch("/data/referencia-classificacao.json");
     if (refRes.ok) classificacaoRef = await refRes.json();
     const cat = SLTCatalog.catalog;
 
@@ -1892,6 +1923,7 @@
     SLTGeometria.setOnAnalysisChange(() => {
       if (currentProjetoStep >= 4) renderReview();
     });
+    initTipoDemandanteSelector();
     initTipoSelector();
     initFieldFilledSync();
     await loadPlanosCache();
@@ -1902,8 +1934,12 @@
     syncProgramaPanelsVisibility();
     syncProjetoPanelsVisibility();
 
-    const tipoParam = new URLSearchParams(window.location.search).get("tipo");
-    if (tipoParam) selectTipo(tipoParam);
+    const params = new URLSearchParams(window.location.search);
+    const demandanteParam = params.get("demandante");
+    selectTipoDemandante(demandanteParam === "privada" ? "privada" : "institucional");
+    const tipoParam = params.get("tipo");
+    if (currentTipoDemandante === "privada") selectTipo("projeto");
+    else if (tipoParam) selectTipo(tipoParam);
     else selectTipo("plano");
   }
 

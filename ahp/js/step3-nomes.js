@@ -52,9 +52,9 @@
 
   function navigateToStep4() {
     if (global.SLTAhpNav && global.SLTAhpNav.irPara) {
-      global.SLTAhpNav.irPara("step4-metodo.html");
+      global.SLTAhpNav.irPara("/restrict/ahp/metodo/");
     } else {
-      global.location.href = "step4-metodo.html";
+      global.location.href = "/restrict/ahp/metodo/";
     }
   }
 
@@ -189,7 +189,7 @@
         note.innerHTML =
           '<div class="ahp-recommendation__head"><i class="fas fa-circle-info"></i>' +
           "<strong>Nenhum critério definido ainda.</strong></div>" +
-          '<p>Defina a quantidade de critérios na <a href="step2-criterios.html">Etapa 2: Critérios</a> para preencher os nomes aqui.</p>';
+          '<p>Defina a quantidade de critérios na <a href="/restrict/ahp/criterios/">Etapa 2: Critérios</a> para preencher os nomes aqui.</p>';
       }
       return;
     }

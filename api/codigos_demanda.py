@@ -11,25 +11,54 @@ from api.exceptions import DemandaValidationError
 PREFIX_PLANO = "PLA"
 PREFIX_PROGRAMA = "PRO"
 PREFIX_PROJETO = "PRJ"
+TIPO_DEMANDANTE_INSTITUCIONAL = "institucional"
+TIPO_DEMANDANTE_PRIVADA = "privada"
 
-CODIGO_DEMANDA_RE = re.compile(r"^(PLA|PRO|PRJ)-[0-9A-F]{8}$")
+# Aceita os códigos novos e, para leitura dos registros existentes, o formato
+# legado sem o qualificador do demandante.
+CODIGO_DEMANDA_RE = re.compile(
+    r"^(?:(?:I-)?(?:PLA|PRO|PRJ)|P-PRJ)-[0-9A-F]{8}$"
+)
 
 
-def gerar_codigo(prefix: str) -> str:
-    """Retorna código no formato PREFIX-XXXXXXXX (8 hex maiúsculos)."""
-    return f"{prefix}-{uuid.uuid4().hex[:8].upper()}"
+def gerar_codigo(prefix: str, tipo_demandante: str = TIPO_DEMANDANTE_INSTITUCIONAL) -> str:
+    """Retorna código qualificado pelo demandante e com 8 hex maiúsculos."""
+    if tipo_demandante == TIPO_DEMANDANTE_PRIVADA:
+        if prefix != PREFIX_PROJETO:
+            raise DemandaValidationError(
+                "Demandas privadas somente podem ser cadastradas como projeto.",
+                field="tipo_demandante",
+            )
+        qualificador = "P"
+    elif tipo_demandante == TIPO_DEMANDANTE_INSTITUCIONAL:
+        qualificador = "I"
+    else:
+        raise DemandaValidationError(
+            f"Tipo de demandante inválido: {tipo_demandante}.",
+            field="tipo_demandante",
+        )
+    return f"{qualificador}-{prefix}-{uuid.uuid4().hex[:8].upper()}"
 
 
 def gerar_codigo_plano() -> str:
-    return gerar_codigo(PREFIX_PLANO)
+    return gerar_codigo(PREFIX_PLANO, TIPO_DEMANDANTE_INSTITUCIONAL)
 
 
 def gerar_codigo_programa() -> str:
-    return gerar_codigo(PREFIX_PROGRAMA)
+    return gerar_codigo(PREFIX_PROGRAMA, TIPO_DEMANDANTE_INSTITUCIONAL)
 
 
-def gerar_codigo_projeto() -> str:
-    return gerar_codigo(PREFIX_PROJETO)
+def gerar_codigo_projeto(
+    tipo_demandante: str = TIPO_DEMANDANTE_INSTITUCIONAL,
+) -> str:
+    return gerar_codigo(PREFIX_PROJETO, tipo_demandante)
+
+
+def tipo_demandante_do_codigo(codigo: str | None) -> str:
+    """Infere a classificação; códigos legados são tratados como institucionais."""
+    if codigo and codigo.strip().startswith("P-PRJ-"):
+        return TIPO_DEMANDANTE_PRIVADA
+    return TIPO_DEMANDANTE_INSTITUCIONAL
 
 
 def codigo_demanda_valido(codigo: str | None) -> bool:

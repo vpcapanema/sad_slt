@@ -8,8 +8,8 @@
 {% block base_url %}<base href="/public/">{% endblock %}
 
 {% block estilos_pagina %}
-  <link rel="stylesheet" href="cadastro/index.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/public/cadastro/index.css">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
 {% block conteudo %}
@@ -28,7 +28,7 @@
         </div>
       </div>
       <div class="module-card-grid">
-        <a class="card-1-cadastro-de-demandas module-card module-card-primary" href="cadastro/">
+        <a class="card-1-cadastro-de-demandas module-card module-card-primary" href="/public/cadastro/">
           <i class="fa-regular fa-square-plus module-card-icon" aria-hidden="true"></i>
           <h3><span class="module-card-title-number">1</span><span>Cadastro de Demandas</span></h3>
           <p>Registre demandas, acompanhe a análise e consulte os catálogos relacionados.</p>
@@ -42,7 +42,7 @@
           <span class="access-badge access-restricted"><i class="fa-solid fa-lock" aria-hidden="true"></i> Restrito</span>
         </a>
 
-        <a class="card-3-transparencia-e-acompanhamento module-card" href="transparencia/">
+        <a class="card-3-transparencia-e-acompanhamento module-card" href="/public/transparencia/">
           <i class="fa-solid fa-chart-line module-card-icon" aria-hidden="true"></i>
           <h3><span class="module-card-title-number">3</span><span>Transparência e Acompanhamento</span></h3>
           <p>Acompanhe demandas disponibilizadas, resultados e informações de execução.</p>
@@ -59,10 +59,10 @@
         </div>
       </div>
       <div class="module-link-list">
-        <a href="documentacao/"><span>Documentação completa do SICARD</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        <a href="/public/documentacao/"><span>Documentação completa do SICARD</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
         <a href="https://56.125.163.194/cadastro/sigma" target="_blank" rel="noopener"><span>Cadastro de pessoa e usuário no SIGMA-PLI</span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
         <a href="https://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener"><span>Cadastro de instituição no SIGMA-PLI</span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
-        <a href="login/"><span>Entrar na área restrita</span><i class="fa-solid fa-arrow-right-to-bracket" aria-hidden="true"></i></a>
+        <a href="/public/login/"><span>Entrar na área restrita</span><i class="fa-solid fa-arrow-right-to-bracket" aria-hidden="true"></i></a>
       </div>
     </section>
   </main>

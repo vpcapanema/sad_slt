@@ -7,10 +7,12 @@ TIPO_DEMANDA_ID_TO_COD: dict[int, str] = {v: k for k, v in TIPO_DEMANDA_COD_TO_I
 
 TIPOS_DEMANDA = tuple(TIPO_DEMANDA_COD_TO_ID)
 
-# Prefixos de código legível gerados automaticamente (demandas.plano / programa / projeto)
-CODIGO_PREFIX_PLANO = "PLA"
-CODIGO_PREFIX_PROGRAMA = "PRO"
-CODIGO_PREFIX_PROJETO = "PRJ"
+# Prefixos de código legível gerados automaticamente. Plano e programa são
+# necessariamente institucionais; projeto também pode ser demanda privada.
+CODIGO_PREFIX_PLANO = "I-PLA"
+CODIGO_PREFIX_PROGRAMA = "I-PRO"
+CODIGO_PREFIX_PROJETO_INSTITUCIONAL = "I-PRJ"
+CODIGO_PREFIX_PROJETO_PRIVADA = "P-PRJ"
 
 # Registros sentinela do banco — pais fictícios quando não há vínculo institucional
 CODIGO_PLANO_OUTROS = "PLANO-OUTROS"

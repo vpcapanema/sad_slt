@@ -54,7 +54,7 @@
     const matrix = JSON.parse(localStorage.getItem("ahp_pairwiseMatrix") || "[]");
     if (!state.criteria.length || !matrix.length) {
       alert("Dados das etapas anteriores incompletos. Redirecionando...");
-      window.location.href = "step2-criterios.html";
+      window.location.href = "/restrict/ahp/criterios/";
       return;
     }
     const r = global.SLTAhp.analyzeMatrix(matrix);
@@ -159,7 +159,7 @@
     } catch (err) {
       if (err.status === 401) {
         listHost.innerHTML =
-          '<p class="a6-warn">É necessário estar autenticado como gestor para carregar projetos do portfólio. Faça login em <a href="../admin/">Admin</a> e volte.</p>';
+          '<p class="a6-warn">É necessário estar autenticado como gestor para carregar projetos do portfólio. Faça login em <a href="/public/login/">Admin</a> e volte.</p>';
       } else {
         listHost.innerHTML = `<p class="a6-warn">${esc(err.message)}</p>`;
       }

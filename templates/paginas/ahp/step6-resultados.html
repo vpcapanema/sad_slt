@@ -9,32 +9,32 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="conteudo-principal app-main ahp-main">
             <nav class="card-fases-do-modulo ahp-phase-nav card" aria-label="Fases do módulo">
-              <a href="step1-configuracao.html" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e obtenção dos objetos</span></a>
-              <a href="step2-criterios.html" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Critérios e matriz de comparação</span></a>
-              <a href="step6-resultados.html" class="ahp-phase active"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Resultados e pesos</span></a>
+              <a href="/restrict/ahp/configuracao/" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e obtenção dos objetos</span></a>
+              <a href="/restrict/ahp/criterios/" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Critérios e matriz de comparação</span></a>
+              <a href="/restrict/ahp/resultados/" class="ahp-phase active"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Resultados e pesos</span></a>
             </nav>
-            <div class="card-ahp-progress ahp-progress card"><div class="ahp-progress-bar"><a href="step1-configuracao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="step2-criterios.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="step3-nomes.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="step4-metodo.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="step5-comparacao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">5</div><span>Comparação pareada</span></a><a href="step6-resultados.html" class="ahp-progress-step active"><div class="ahp-progress-circle">6</div><span>Geração de pesos</span></a></div></div>
+            <div class="card-ahp-progress ahp-progress card"><div class="ahp-progress-bar"><a href="/restrict/ahp/configuracao/" class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="/restrict/ahp/criterios/" class="ahp-progress-step completed"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="/restrict/ahp/nomes/" class="ahp-progress-step completed"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="/restrict/ahp/metodo/" class="ahp-progress-step completed"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="/restrict/ahp/comparacao/" class="ahp-progress-step completed"><div class="ahp-progress-circle">5</div><span>Comparação pareada</span></a><a href="/restrict/ahp/resultados/" class="ahp-progress-step active"><div class="ahp-progress-circle">6</div><span>Geração de pesos</span></a></div></div>
 
             <section class="card-etapa-6-geracao-de-pesos secao-etapa-6-geracao-de-pesos card ahp-step-intro">
                 <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
-                        <a href="index.html">Início</a>
+                        <a href="/restrict/ahp/analise/">Início</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <a href="step1-configuracao.html">Etapa 1: Configuração</a>
+                        <a href="/restrict/ahp/configuracao/">Etapa 1: Configuração</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <a href="step2-criterios.html">Etapa 2: Critérios</a>
+                        <a href="/restrict/ahp/criterios/">Etapa 2: Critérios</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <a href="step3-nomes.html">Etapa 3: Nomes</a>
+                        <a href="/restrict/ahp/nomes/">Etapa 3: Nomes</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <a href="step4-metodo.html">Etapa 4: Método</a>
+                        <a href="/restrict/ahp/metodo/">Etapa 4: Método</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <a href="step5-comparacao.html">Etapa 5: Comparação pareada</a>
+                        <a href="/restrict/ahp/comparacao/">Etapa 5: Comparação pareada</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
                         <span class="ahp-breadcrumb-current">Etapa 6: Geração de pesos</span>
                     </nav>
@@ -141,30 +141,30 @@
                         <span>Artefatos da configuração</span>
                     </div>
                     <div id="config-artefatos" aria-live="polite"></div>
-                </section></div></section><section class="card-step6-nav-section secao-step6-nav-section card ahp-step-section" id="step6-nav-section"><div class="ahp-section-body"><div class="ahp-form-actions ahp-final-actions-row"><a href="step5-comparacao.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><a href="step1-configuracao.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a><button type="button" id="step6-save-final-btn" class="btn btn-success"><i class="fas fa-floppy-disk c-btn__icon"></i>Salvar configuração final</button><a href="step7-alternativas.html" class="btn btn-primary" data-evento-inline="ahp-step6-resultados-conteudo-5">Continuar<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a></div><div id="step6-nav-feedback" class="ahp-matriz-edit-feedback" role="status" aria-live="polite"></div></div></section>
+                </section></div></section><section class="card-step6-nav-section secao-step6-nav-section card ahp-step-section" id="step6-nav-section"><div class="ahp-section-body"><div class="ahp-form-actions ahp-final-actions-row"><a href="/restrict/ahp/comparacao/" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><a href="/restrict/ahp/configuracao/" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a><button type="button" id="step6-save-final-btn" class="btn btn-success"><i class="fas fa-floppy-disk c-btn__icon"></i>Salvar configuração final</button><a href="/restrict/ahp/alternativas/" class="btn btn-primary" data-evento-inline="ahp-step6-resultados-conteudo-5">Continuar<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a></div><div id="step6-nav-feedback" class="ahp-matriz-edit-feedback" role="status" aria-live="polite"></div></div></section>
     </main>
 {% endblock %}
 
 {% block scripts_pagina %}
-  <script src="js/ahp-page-reset.js"></script>
+  <script src="/restrict/ahp/js/ahp-page-reset.js"></script>
   <script src="/assets/js/admin-auth.js"></script>
-  <script src="js/ahp-auth.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="js/ahp-core.js"></script>
-  <script src="js/config-api.js"></script>
-  <script src="js/config-artefatos.js"></script>
-  <script src="js/ahp-contexto-ui.js"></script>
-  <script src="js/ahp-diagnostico-consistencia.js"></script>
-  <script src="js/ahp-pacote-fase.js"></script>
-  <script src="js/colaborativa-api.js"></script>
-  <script src="js/ahp-parecer.js"></script>
-  <script src="js/ahp-formato-data.js"></script>
-  <script src="js/config-loader.js"></script>
-  <script src="js/step6-contexto-loader.js"></script>
-  <script src="js/script.js"></script>
+  <script src="/restrict/ahp/js/ahp-auth.js"></script>
+  <script src="/assets/vendor/jspdf/jspdf.umd.min.js"></script>
+  <script src="/assets/vendor/jspdf/jspdf.plugin.autotable.min.js"></script>
+  <script src="/assets/vendor/xlsx-js-style/xlsx.bundle.js"></script>
+  <script src="/assets/vendor/jszip/jszip.min.js"></script>
+  <script src="/restrict/ahp/js/ahp-core.js"></script>
+  <script src="/restrict/ahp/js/config-api.js"></script>
+  <script src="/restrict/ahp/js/config-artefatos.js"></script>
+  <script src="/restrict/ahp/js/ahp-contexto-ui.js"></script>
+  <script src="/restrict/ahp/js/ahp-diagnostico-consistencia.js"></script>
+  <script src="/restrict/ahp/js/ahp-pacote-fase.js"></script>
+  <script src="/restrict/ahp/js/colaborativa-api.js"></script>
+  <script src="/restrict/ahp/js/ahp-parecer.js"></script>
+  <script src="/restrict/ahp/js/ahp-formato-data.js"></script>
+  <script src="/restrict/ahp/js/config-loader.js"></script>
+  <script src="/restrict/ahp/js/step6-contexto-loader.js"></script>
+  <script src="/restrict/ahp/js/script.js"></script>
   <script src="/assets/js/paginas/ahp-step6-resultados-inline-1.js"></script>
   <script src="/assets/js/field-filled.js"></script>
   <script src="/assets/js/paginas/ahp-step6-resultados-conteudo-eventos.js"></script>

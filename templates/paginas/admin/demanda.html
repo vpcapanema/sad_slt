@@ -11,15 +11,15 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/admin-demanda-page.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
 {% endblock %}
 
 {% block barra_lateral %}
 <div class="nav-section painel-layers-section admin-section-nav">
           <nav class="sidebar-restricted-nav" aria-label="Área restrita">
             <a href="/restrict/">Área restrita</a>
-            <a href="painel/">Painel de demandas</a>
-            <a href="demandas/" class="is-active" aria-current="page">Tabela de demandas</a>
+            <a href="/restrict/painel/">Painel de demandas</a>
+            <a href="/restrict/demandas/" class="is-active" aria-current="page">Tabela de demandas</a>
           </nav>
           <div id="records-root" class="layer-group layer-group--root">
             <button
@@ -47,7 +47,7 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
   <script src="/assets/js/admin-api.js"></script>
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/js/sigma-read.js"></script>
@@ -59,5 +59,5 @@
   <script src="/assets/js/admin-dashboard.js"></script>
   <script src="/assets/js/admin-analysis-info.js"></script>
   <script src="/assets/js/admin-analysis-map.js"></script>
-  <script src="demanda.js"></script>
+  <script src="/restrict/demanda.js"></script>
 {% endblock %}

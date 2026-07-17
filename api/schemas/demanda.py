@@ -1,7 +1,7 @@
 """Schemas Pydantic — contrato HTTP de demandas."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -24,8 +24,9 @@ class DemandaCreateSchema(BaseModel):
     id: str | None = Field(
         None,
         max_length=64,
-        description="Ignorado na criação — o servidor gera PRJ-XXXXXXXX",
+        description="Ignorado na criação — o servidor gera I-PRJ-XXXXXXXX ou P-PRJ-XXXXXXXX",
     )
+    tipo_demandante: Literal["institucional", "privada"] = "institucional"
     status: str = "analise_rascunho"
     criadoEm: str | None = None
     instituicao_id: str
@@ -53,6 +54,7 @@ class DemandaResponseSchema(BaseModel):
     """Resposta no formato consumido pelo painel e cadastro."""
 
     id: str
+    tipo_demandante: Literal["institucional", "privada"] = "institucional"
     status: str
     criadoEm: str
     instituicao_id: str

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from api.exceptions import DatabaseUnavailableError
 from api.server import app
+from api.services import demanda_service
+from api.services.session_service import SessionUser, cookie_name, create_token
 
 
 def test_all_router_modules_are_exposed_by_openapi() -> None:
@@ -54,3 +57,24 @@ def test_legacy_page_redirect_preserves_query_string() -> None:
     assert response.headers["location"] == (
         "/restrict/geoespacial/bancada/?modulo=fase1&embutido=1"
     )
+
+
+def test_unhandled_database_error_is_returned_as_service_unavailable(monkeypatch) -> None:
+    def unavailable():
+        raise DatabaseUnavailableError("Banco temporariamente indisponível.")
+
+    monkeypatch.setattr(demanda_service, "listar_demandas", unavailable)
+    client = TestClient(app)
+    user = SessionUser(
+        id="11111111-1111-1111-1111-111111111111",
+        email="auditoria@local",
+        username="auditoria_GESTOR",
+        nome="Auditoria",
+        tipo_usuario="GESTOR",
+    )
+    client.cookies.set(cookie_name(), create_token(user))
+
+    response = client.get("/api/demandas/internas")
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Banco temporariamente indisponível."}

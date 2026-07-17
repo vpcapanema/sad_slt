@@ -83,7 +83,7 @@
         objetos: objSelecionados,
       });
       localStorage.setItem("hier_codigo", hierCodigo);
-      window.location.href = `step3-avaliacao.html?codigo=${hierCodigo}`;
+      window.location.href = `/restrict/hierarquizacao/processos/avaliacao/?codigo=${hierCodigo}`;
     } catch (err) {
       document.getElementById("submit-error").classList.remove("hidden");
       document.getElementById("submit-error-msg").textContent = err.message;
@@ -94,7 +94,7 @@
 
   async function init() {
     if (!hierCodigo) {
-      window.location.href = "step1-config.html";
+      window.location.href = "/restrict/hierarquizacao/processos/nova/";
       return;
     }
 

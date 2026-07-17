@@ -177,7 +177,7 @@
       // Dispara cálculo
       await HierApi.calcular(hierCodigo);
       localStorage.removeItem(storageKey());
-      window.location.href = `step4-ranking.html?codigo=${hierCodigo}`;
+      window.location.href = `/restrict/hierarquizacao/processos/ranking/?codigo=${hierCodigo}`;
     } catch (err) {
       document.getElementById("submit-error").classList.remove("hidden");
       document.getElementById("submit-error-msg").textContent = err.message;
@@ -188,14 +188,14 @@
 
   // --- Init ---
   async function init() {
-    if (!hierCodigo) { window.location.href = "step1-config.html"; return; }
+    if (!hierCodigo) { window.location.href = "/restrict/hierarquizacao/processos/nova/"; return; }
 
     carregarLocal();
 
     document.getElementById("btn-salvar").addEventListener("click", salvarRascunho);
     document.getElementById("btn-calcular").addEventListener("click", calcularRanking);
-    document.getElementById("btn-voltar").href = `step2-objetos.html?codigo=${hierCodigo}`;
-    document.getElementById("link-step2").href = `step2-objetos.html?codigo=${hierCodigo}`;
+    document.getElementById("btn-voltar").href = `/restrict/hierarquizacao/processos/objetos/?codigo=${hierCodigo}`;
+    document.getElementById("link-step2").href = `/restrict/hierarquizacao/processos/objetos/?codigo=${hierCodigo}`;
 
     try {
       hierData = await HierApi.obter(hierCodigo);

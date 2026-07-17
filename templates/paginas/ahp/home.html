@@ -9,7 +9,7 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
 {% block conteudo %}
@@ -17,7 +17,7 @@
 <main class="conteudo-principal app-main ahp-main">
     <section class="card-configuracao-da-analise-multicriterio secao-configuracao-da-analise-multicriterio card">
       <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
-        <a href="../index.html">Início</a>
+        <a href="/restrict/">Início</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
         <span class="ahp-breadcrumb-current">Configuração da Análise Multicritério</span>
       </nav>
@@ -133,7 +133,7 @@
         </span>
       </p>
       <div class="ahp-welcome-actions">
-        <a href="index.html" class="btn btn-primary">
+        <a href="/restrict/ahp/analise/" class="btn btn-primary">
           <i class="fas fa-play" aria-hidden="true"></i>
           Explorar a calculadora
         </a>
@@ -143,8 +143,8 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-  <script src="js/ahp-page-reset.js"></script>
+  <script src="/restrict/ahp/js/ahp-page-reset.js"></script>
   <script src="/assets/js/admin-auth.js"></script>
-  <script src="js/ahp-auth.js"></script>
+  <script src="/restrict/ahp/js/ahp-auth.js"></script>
   <script src="/assets/js/field-filled.js"></script>
 {% endblock %}

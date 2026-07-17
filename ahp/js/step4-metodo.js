@@ -138,9 +138,9 @@
     localStorage.setItem("ahp_chosenMethod", method === "matrix" ? "matrix" : "form");
 
     if (global.SLTAhpNav && global.SLTAhpNav.irPara) {
-      global.SLTAhpNav.irPara("step5-comparacao.html");
+      global.SLTAhpNav.irPara("/restrict/ahp/comparacao/");
     } else {
-      global.location.href = "step5-comparacao.html";
+      global.location.href = "/restrict/ahp/comparacao/";
     }
   }
 
@@ -451,7 +451,7 @@
       links +
       "</ul>" +
       '<p class="form-help">Após receber respostas consistentes, avance para a Etapa 5 para consolidar os valores finais.</p>' +
-      '<div class="ahp-form-actions"><a href="step5-comparacao.html" class="btn btn-primary">Ir para consolidação (Etapa 5)<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a></div>' +
+      '<div class="ahp-form-actions"><a href="/restrict/ahp/comparacao/" class="btn btn-primary">Ir para consolidação (Etapa 5)<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a></div>' +
       "</div>";
     try {
       localStorage.setItem(AMBIENTE_KEY, JSON.stringify({ id: amb.id, token: amb.token }));

@@ -9,24 +9,24 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="conteudo-principal app-main ahp-main">
             <nav class="card-fases-do-modulo ahp-phase-nav card" aria-label="Fases do módulo">
-              <a href="step1-configuracao.html" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e obtenção dos objetos</span></a>
-              <a href="step2-criterios.html" class="ahp-phase active"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Critérios e matriz de comparação</span></a>
-              <a href="step6-resultados.html" class="ahp-phase"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Resultados e pesos</span></a>
+              <a href="/restrict/ahp/configuracao/" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e obtenção dos objetos</span></a>
+              <a href="/restrict/ahp/criterios/" class="ahp-phase active"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Critérios e matriz de comparação</span></a>
+              <a href="/restrict/ahp/resultados/" class="ahp-phase"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Resultados e pesos</span></a>
             </nav>
-            <div class="card-ahp-progress ahp-progress card"><div class="ahp-progress-bar"><a href="step1-configuracao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="step2-criterios.html" class="ahp-progress-step active"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="step3-nomes.html" class="ahp-progress-step"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="step4-metodo.html" class="ahp-progress-step"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="step5-comparacao.html" class="ahp-progress-step"><div class="ahp-progress-circle">5</div><span>Comparação pareada</span></a><a href="step6-resultados.html" class="ahp-progress-step"><div class="ahp-progress-circle">6</div><span>Geração de pesos</span></a></div></div>
+            <div class="card-ahp-progress ahp-progress card"><div class="ahp-progress-bar"><a href="/restrict/ahp/configuracao/" class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="/restrict/ahp/criterios/" class="ahp-progress-step active"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="/restrict/ahp/nomes/" class="ahp-progress-step"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="/restrict/ahp/metodo/" class="ahp-progress-step"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="/restrict/ahp/comparacao/" class="ahp-progress-step"><div class="ahp-progress-circle">5</div><span>Comparação pareada</span></a><a href="/restrict/ahp/resultados/" class="ahp-progress-step"><div class="ahp-progress-circle">6</div><span>Geração de pesos</span></a></div></div>
 
             <section class="card-etapa-2-selecao-de-criterios secao-etapa-2-selecao-de-criterios card ahp-step-intro">
                 <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
-                        <a href="index.html">Início</a>
+                        <a href="/restrict/ahp/analise/">Início</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-                        <a href="step1-configuracao.html">Etapa 1: Configuração</a>
+                        <a href="/restrict/ahp/configuracao/">Etapa 1: Configuração</a>
                         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
                         <span class="ahp-breadcrumb-current">Etapa 2: Critérios</span>
                     </nav>
@@ -132,8 +132,8 @@
                                                 <div class="step-content">
                                                     <p>Escolha o formato de arquivo que preferir:</p>
                                                     <div class="ahp-template-buttons">
-                                                        <a href="../data/Modelo_Matriz_Criterios_Premissas_Analise.xlsx" download="Modelo_Matriz_Criterios_Premissas_Analise.xlsx" class="ahp-template-download-btn"><i class="fas fa-file-excel"></i> Baixar Modelo XLSX</a>
-                                                        <a href="../data/Modelo_Matriz_Criterios_Premissas_Analise.csv" download="Modelo_Matriz_Criterios_Premissas_Analise.csv" class="ahp-template-download-btn"><i class="fas fa-file-csv"></i> Baixar Modelo CSV</a>
+                                                        <a href="/data/arquivados/Modelo_Matriz_Criterios_Premissas_Analise.xlsx" download="Modelo_Matriz_Criterios_Premissas_Analise.xlsx" class="ahp-template-download-btn"><i class="fas fa-file-excel"></i> Baixar Modelo XLSX</a>
+                                                        <a href="/data/arquivados/Modelo_Matriz_Criterios_Premissas_Analise.csv" download="Modelo_Matriz_Criterios_Premissas_Analise.csv" class="ahp-template-download-btn"><i class="fas fa-file-csv"></i> Baixar Modelo CSV</a>
                                                     </div>
                                                 </div>
                                             </div>
@@ -162,29 +162,29 @@
                                 </div>
                             </div>
                         </div>
-                    </section></div></section><section class="card-step2-nav-section secao-step2-nav-section card ahp-step-section" id="step2-nav-section"><div class="ahp-section-body"><div class="ahp-form-actions"><a href="step1-configuracao.html" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a><button id="continue-btn" class="btn btn-primary" data-evento-inline="ahp-step2-criterios-conteudo-9">Continuar<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></button></div></div></section>
+                    </section></div></section><section class="card-step2-nav-section secao-step2-nav-section card ahp-step-section" id="step2-nav-section"><div class="ahp-section-body"><div class="ahp-form-actions"><a href="/restrict/ahp/configuracao/" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a><button id="continue-btn" class="btn btn-primary" data-evento-inline="ahp-step2-criterios-conteudo-9">Continuar<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></button></div></div></section>
     </main>
 {% endblock %}
 
 {% block scripts_pagina %}
-  <script src="js/ahp-page-reset.js"></script>
+  <script src="/restrict/ahp/js/ahp-page-reset.js"></script>
   <script src="/assets/js/admin-auth.js"></script>
-  <script src="js/ahp-auth.js"></script>
-  <script src="js/ahp-texto-pt.js"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-  <script src="js/script.js"></script>
-  <script src="js/config-api.js"></script>
-  <script src="js/config-artefatos.js"></script>
-  <script src="js/ahp-contexto-ui.js"></script>
-  <script src="js/ahp-pacote-fase.js"></script>
-  <script src="js/ahp-formato-data.js"></script>
-  <script src="js/config-loader.js"></script>
+  <script src="/restrict/ahp/js/ahp-auth.js"></script>
+  <script src="/restrict/ahp/js/ahp-texto-pt.js"></script>
+  <script src="/assets/vendor/xlsx/xlsx-0.20.1.min.js"></script>
+  <script src="/restrict/ahp/js/script.js"></script>
+  <script src="/restrict/ahp/js/config-api.js"></script>
+  <script src="/restrict/ahp/js/config-artefatos.js"></script>
+  <script src="/restrict/ahp/js/ahp-contexto-ui.js"></script>
+  <script src="/restrict/ahp/js/ahp-pacote-fase.js"></script>
+  <script src="/restrict/ahp/js/ahp-formato-data.js"></script>
+  <script src="/restrict/ahp/js/config-loader.js"></script>
   <script src="/assets/js/paginas/ahp-step2-criterios-inline-1.js"></script>
-  <script src="js/matriz-premissas.js"></script>
-  <script src="js/ahp-alertas.js"></script>
-  <script src="js/ahp-coerencia.js"></script>
-  <script src="js/ahp-coerencia-ui.js"></script>
-  <script src="js/step1-upload-matriz.js"></script>
+  <script src="/restrict/ahp/js/matriz-premissas.js"></script>
+  <script src="/restrict/ahp/js/ahp-alertas.js"></script>
+  <script src="/restrict/ahp/js/ahp-coerencia.js"></script>
+  <script src="/restrict/ahp/js/ahp-coerencia-ui.js"></script>
+  <script src="/restrict/ahp/js/step1-upload-matriz.js"></script>
   <script src="/assets/js/field-filled.js"></script>
   <script src="/assets/js/paginas/ahp-step2-criterios-conteudo-eventos.js"></script>
 {% endblock %}

@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   document.querySelectorAll("[data-evento-inline=\"ahp-step6-resultados-conteudo-5\"]").forEach(function (elemento) {
     elemento.addEventListener("click", function (event) {
-      if(window.SLTAhpNav){event.preventDefault();window.SLTAhpNav.irPara('step7-alternativas.html');}
+      if(window.SLTAhpNav){event.preventDefault();window.SLTAhpNav.irPara('/restrict/ahp/alternativas/');}
     });
   });
 });

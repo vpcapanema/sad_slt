@@ -171,9 +171,9 @@
       );
       setTimeout(function () {
         if (global.SLTAhpNav && global.SLTAhpNav.irPara) {
-          global.SLTAhpNav.irPara("step3-nomes.html");
+          global.SLTAhpNav.irPara("/restrict/ahp/nomes/");
         } else {
-          global.location.href = "step3-nomes.html";
+          global.location.href = "/restrict/ahp/nomes/";
         }
       }, 600);
     });
@@ -242,9 +242,9 @@
     localStorage.setItem("ahp_inputMethod", "manual");
     localStorage.setItem("ahp_criteriaCount", String(criteriaCount));
     if (global.SLTAhpNav && global.SLTAhpNav.irPara) {
-      global.SLTAhpNav.irPara("step3-nomes.html");
+      global.SLTAhpNav.irPara("/restrict/ahp/nomes/");
     } else {
-      global.location.href = "step3-nomes.html";
+      global.location.href = "/restrict/ahp/nomes/";
     }
   }
 

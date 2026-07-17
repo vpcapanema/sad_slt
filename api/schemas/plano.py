@@ -1,6 +1,8 @@
 """Schemas Pydantic — contrato HTTP de planos (nível 1)."""
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from api.schemas.demanda import RepresentanteSchema, RepresentanteUpdateSchema
@@ -22,8 +24,9 @@ class PlanoCreateSchema(BaseModel):
     codigo: str | None = Field(
         None,
         max_length=64,
-        description="Ignorado na criação — o servidor gera PLA-XXXXXXXX",
+        description="Ignorado na criação — o servidor gera I-PLA-XXXXXXXX",
     )
+    tipo_demandante: Literal["institucional"] = "institucional"
     diretoria_id: str
     nome: str = Field(..., min_length=1, max_length=200)
     descricao: str = Field(..., min_length=1)
@@ -46,6 +49,7 @@ class PlanoResponseSchema(BaseModel):
     """Resposta no formato consumido pela área administrativa."""
 
     id: str
+    tipo_demandante: Literal["institucional"] = "institucional"
     status: str
     criadoEm: str
     diretoria_id: str

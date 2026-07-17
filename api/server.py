@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from api.exceptions import DatabaseUnavailableError
 from api.path_policy import project_path
 from api.routers import api_router
 
@@ -29,6 +30,14 @@ def render_page(request: Request, template_name: str) -> Response:
 async def handle_processing_error(_request: Request, exc: Exception) -> JSONResponse:
     """Converte erros de contrato/processamento em resposta legível para o componente."""
     return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+@app.exception_handler(DatabaseUnavailableError)
+async def handle_database_unavailable(
+    _request: Request, exc: DatabaseUnavailableError
+) -> JSONResponse:
+    """Garante resposta 503 uniforme, inclusive em rotas internas."""
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 app.add_middleware(
     CORSMiddleware,
@@ -326,6 +335,14 @@ GEOSPATIAL_PAGES = {
     "configurador-ajuste": "verificacao-fase3.html",
 }
 
+HIERARQUIZACAO_DOCUMENTS = {
+    "ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md",
+    "MODELO_HIERARQUIZACAO_ESPACIAL.md",
+    "MODULO_FASE1_GERADOR_RESTRICAO_RISCO.md",
+    "MODULO_FASE2_GERADOR_FAVORABILIDADE_TERRITORIAL.md",
+    "MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md",
+}
+
 
 @app.get("/restrict/geoespacial/", include_in_schema=False)
 async def pagina_indice_geoespacial(request: Request) -> Response:
@@ -343,7 +360,18 @@ async def pagina_geoespacial(request: Request, pagina: str) -> Response:
     return render_page(request, f"paginas/geoespacial/{arquivo}")
 
 
+@app.get("/documentos/hierarquizacao/{documento}", include_in_schema=False)
+async def documento_hierarquizacao(documento: str) -> FileResponse:
+    """Expõe apenas as especificações metodológicas explicitamente autorizadas."""
+    if documento not in HIERARQUIZACAO_DOCUMENTS:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Documento não encontrado")
+    return FileResponse(project_path(documento), media_type="text/markdown; charset=utf-8")
+
+
 app.mount("/assets", StaticFiles(directory=str(project_path("assets"))), name="assets")
+app.mount("/data", StaticFiles(directory=str(project_path("data"))), name="data")
 app.mount("/public/assets", StaticFiles(directory=str(project_path("assets"))), name="public-assets")
 app.mount("/public/cadastro", StaticFiles(directory=str(project_path("cadastro"))), name="public-cadastro-assets")
 app.mount("/public/painel", StaticFiles(directory=str(project_path("painel"))), name="public-painel-assets")

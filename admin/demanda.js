@@ -86,7 +86,7 @@
         <textarea id="fld-motivo-aprov" class="admin-field-motivo" rows="3" placeholder="Usado ao clicar em Aprovar"></textarea>
       </div>
       <div class="admin-dashboard-actions span-2">
-        <a href="demandas/" class="btn btn-secondary">Voltar à lista</a>
+        <a href="/restrict/demandas/" class="btn btn-secondary">Voltar à lista</a>
         ${withApprove && SLTAdminAuth.can("analyze") ? '<button type="button" class="btn btn-primary" id="btn-aprovar">Aprovar → aguardando hierarquização</button>' : ""}
         ${SLTAdminAuth.can("operate") ? '<button type="button" class="btn btn-primary" id="btn-salvar">Salvar alterações</button>' : ""}
       </div>`;
@@ -835,7 +835,7 @@
       return;
     }
     $("#dashboard-content").innerHTML =
-      '<p class="hint">Nenhuma demanda registrada. <a href="demandas/">Voltar à lista</a>.</p>';
+      '<p class="hint">Nenhuma demanda registrada. <a href="/restrict/demandas/">Voltar à lista</a>.</p>';
     renderSidebar();
   }
 

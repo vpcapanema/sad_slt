@@ -103,7 +103,7 @@
       });
       localStorage.setItem("hier_codigo", hier.codigo);
       localStorage.setItem("hier_config_codigo", selectedConfig.codigo);
-      window.location.href = `step2-objetos.html?codigo=${hier.codigo}`;
+      window.location.href = `/restrict/hierarquizacao/processos/objetos/?codigo=${hier.codigo}`;
     } catch (err) {
       document.getElementById("submit-error").classList.remove("hidden");
       document.getElementById("submit-error-msg").textContent = err.message;

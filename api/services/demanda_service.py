@@ -8,7 +8,11 @@ from typing import Any
 
 from psycopg import errors
 
-from api.codigos_demanda import gerar_codigo_projeto, gerar_codigo_unico
+from api.codigos_demanda import (
+    gerar_codigo_projeto,
+    gerar_codigo_unico,
+    tipo_demandante_do_codigo,
+)
 from api.constants import STATUS_INICIAL_DEMANDA
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import demanda_repository, dominio_repository
@@ -54,6 +58,7 @@ def _row_to_response(row: dict[str, Any]) -> DemandaResponseSchema:
 
     return DemandaResponseSchema(
         id=row["codigo"],
+        tipo_demandante=tipo_demandante_do_codigo(row["codigo"]),
         status=row["status"],
         criadoEm=criado_em,
         instituicao_id=str(row["sigma_instituicao_id"]),
@@ -157,7 +162,10 @@ def _build_persist_row(payload: DemandaCreateSchema, codigo: str) -> dict[str, A
 
 
 def criar_demanda(payload: DemandaCreateSchema) -> DemandaResponseSchema:
-    codigo = gerar_codigo_unico(gerar_codigo_projeto, demanda_repository.get_by_codigo)
+    codigo = gerar_codigo_unico(
+        lambda: gerar_codigo_projeto(payload.tipo_demandante),
+        demanda_repository.get_by_codigo,
+    )
     try:
         row = demanda_repository.insert(_build_persist_row(payload, codigo))
     except errors.UniqueViolation as exc:

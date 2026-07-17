@@ -8,7 +8,7 @@
                 if (host) {
                     const note = document.createElement('div');
                     note.className = 'ahp-recommendation';
-                    note.innerHTML = '<div class="ahp-recommendation__head"><i class="fas fa-circle-info"></i><strong>Comparação indisponível.</strong></div><p>Defina os critérios na <a href="step2-criterios.html">Etapa 2</a> e escolha o método na <a href="step4-metodo.html">Etapa 4</a> para realizar as comparações.</p>';
+                    note.innerHTML = '<div class="ahp-recommendation__head"><i class="fas fa-circle-info"></i><strong>Comparação indisponível.</strong></div><p>Defina os critérios na <a href="/restrict/ahp/criterios/">Etapa 2</a> e escolha o método na <a href="/restrict/ahp/metodo/">Etapa 4</a> para realizar as comparações.</p>';
                     host.appendChild(note);
                 }
                 return;

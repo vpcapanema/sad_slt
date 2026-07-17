@@ -8,9 +8,10 @@
 {% block base_url %}<base href="/public/cadastro/">{% endblock %}
 
 {% block estilos_pagina %}
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" crossorigin="">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/assets/vendor/leaflet-draw/leaflet.draw.css" crossorigin="">
+  <link rel="stylesheet" href="/assets/css/paginas/cadastro-nova-demanda.css">
   <link rel="stylesheet" href="/assets/css/paginas/cadastro-nova-demanda-conteudo-atributos.css">
 {% endblock %}
 
@@ -19,19 +20,38 @@
     <section class="card-nova-demanda secao-nova-demanda card">
       <h2>Nova demanda</h2>
       <p class="step-intro">
-        Selecione o tipo de demanda e preencha o formulário correspondente ao nível escolhido.
+        Primeiro classifique a demanda quanto ao demandante. Depois escolha sua categoria.
       </p>
-      <div class="tipo-demanda-selector" id="tipo-selector" role="tablist" aria-label="Tipo de demanda">
-        <button type="button" class="tipo-card is-active" data-tipo="plano" role="tab" aria-selected="true">
-          <strong>Plano</strong><span>Nível 1 — diretriz estratégica da diretoria</span>
-        </button>
-        <button type="button" class="tipo-card" data-tipo="programa" role="tab" aria-selected="false">
-          <strong>Programa</strong><span>Nível 2 — vinculado a um plano</span>
-        </button>
-        <button type="button" class="tipo-card" data-tipo="projeto" role="tab" aria-selected="false">
-          <strong>Projeto</strong><span>Nível 3 — vinculado a um programa</span>
-        </button>
-      </div>
+      <section class="secao-classificacao-demandante classificacao-demanda-etapa" aria-labelledby="titulo-tipo-demandante">
+        <h3 id="titulo-tipo-demandante"><span class="classificacao-etapa-numero">1</span> Quanto ao demandante</h3>
+        <div class="tipo-demandante-selector" id="demandante-selector" role="tablist" aria-label="Classificação quanto ao demandante">
+          <button type="button" class="card-demanda-institucional demandante-card is-active" data-demandante="institucional" role="tab" aria-selected="true">
+            <strong>Demanda institucional</strong>
+            <span>Solicitada por uma instituição pública. Pode ser Plano, Programa ou Projeto.</span>
+          </button>
+          <button type="button" class="card-demanda-privada demandante-card" data-demandante="privada" role="tab" aria-selected="false">
+            <strong>Demanda privada</strong>
+            <span>Solicitada por pessoa física ou jurídica. Será cadastrada como Projeto.</span>
+          </button>
+        </div>
+      </section>
+      <section class="secao-categoria-demanda classificacao-demanda-etapa" aria-labelledby="titulo-categoria-demanda">
+        <h3 id="titulo-categoria-demanda"><span class="classificacao-etapa-numero">2</span> Categoria da demanda</h3>
+        <div class="tipo-demanda-selector" id="tipo-selector" role="tablist" aria-label="Categoria da demanda">
+          <button type="button" class="card-categoria-plano tipo-card is-active" data-tipo="plano" role="tab" aria-selected="true">
+            <strong>Plano</strong><span>Nível 1 — diretriz estratégica da diretoria</span>
+          </button>
+          <button type="button" class="card-categoria-programa tipo-card" data-tipo="programa" role="tab" aria-selected="false">
+            <strong>Programa</strong><span>Nível 2 — vinculado a um plano</span>
+          </button>
+          <button type="button" class="card-categoria-projeto tipo-card" data-tipo="projeto" role="tab" aria-selected="false">
+            <strong>Projeto</strong><span>Nível 3 — vinculado a um programa</span>
+          </button>
+        </div>
+        <p id="restricao-demanda-privada" class="aviso-demanda-privada hidden" role="status">
+          Demandas privadas são classificadas exclusivamente como Projeto.
+        </p>
+      </section>
       <div id="cadastro-load-hint" class="field-help" aria-live="polite"></div>
     </section>
 
@@ -116,7 +136,7 @@
                 <option value="">Carregando planos…</option>
               </select>
               <div class="field-help-row">
-                <a class="link-catalogo" href="catalogo-planos/" target="_blank" rel="noopener">
+                <a class="link-catalogo" href="/public/cadastro/catalogo-planos/" target="_blank" rel="noopener">
                   Consulte os planos PLI-SP 2050 e PEF-SP 2050 ↗
                 </a>
               </div>
@@ -190,7 +210,7 @@
                 <label for="cls-diretoria">Diretoria <span class="req">*</span></label>
                 <select id="cls-diretoria"></select>
                 <div class="field-help-row">
-                  <a class="link-catalogo" href="catalogo-diretorias/" target="_blank" rel="noopener">
+                  <a class="link-catalogo" href="/public/cadastro/catalogo-diretorias/" target="_blank" rel="noopener">
                     Consulte os critérios para escolher a diretoria ↗
                   </a>
                 </div>
@@ -199,7 +219,7 @@
                 <label for="cls-plano">Plano <span class="req">*</span></label>
                 <select id="cls-plano"></select>
                 <div class="field-help-row">
-                  <a class="link-catalogo" id="cls-link-planos" href="catalogo-planos/" target="_blank" rel="noopener">
+                  <a class="link-catalogo" id="cls-link-planos" href="/public/cadastro/catalogo-planos/" target="_blank" rel="noopener">
                     Consulte os planos PLI-SP 2050 e PEF-SP 2050 ↗
                   </a>
                 </div>
@@ -213,7 +233,7 @@
               <label for="frente">Frente de atuação (PLI-SP) <span class="req">*</span></label>
               <select id="frente" name="frente"></select>
               <div class="field-help-row">
-                <a class="link-catalogo" href="catalogo-frentes-pli/" target="_blank" rel="noopener">Consulte os critérios para escolher a frente PLI ↗</a>
+                <a class="link-catalogo" href="/public/cadastro/catalogo-frentes-pli/" target="_blank" rel="noopener">Consulte os critérios para escolher a frente PLI ↗</a>
               </div>
               <div id="hint-frente" class="context-hint hidden" aria-live="polite"></div>
             </div>
@@ -221,7 +241,7 @@
               <label for="eixo">Eixo ferroviário (PEF-SP) <span class="req">*</span></label>
               <select id="eixo" name="eixo"></select>
               <div class="field-help-row">
-                <a class="link-catalogo" href="catalogo-eixos-pef/" target="_blank" rel="noopener">Consulte os critérios para escolher o eixo PEF ↗</a>
+                <a class="link-catalogo" href="/public/cadastro/catalogo-eixos-pef/" target="_blank" rel="noopener">Consulte os critérios para escolher o eixo PEF ↗</a>
               </div>
               <div id="hint-eixo" class="context-hint hidden" aria-live="polite"></div>
               <div id="bloco-tic" class="estilo-bloco-tic hidden">
@@ -359,7 +379,7 @@
               <label for="pl-diretoria">Diretoria <span class="req">*</span></label>
               <select id="pl-diretoria" required></select>
               <div class="field-help-row">
-                <a class="link-catalogo" href="catalogo-diretorias/" target="_blank" rel="noopener">
+                <a class="link-catalogo" href="/public/cadastro/catalogo-diretorias/" target="_blank" rel="noopener">
                   Consulte os critérios para escolher a diretoria ↗
                 </a>
               </div>
@@ -488,7 +508,7 @@
                 <option value="">Carregando planos…</option>
               </select>
               <div class="field-help-row">
-                <a class="link-catalogo" id="pg-link-planos" href="catalogo-planos/" target="_blank" rel="noopener">
+                <a class="link-catalogo" id="pg-link-planos" href="/public/cadastro/catalogo-planos/" target="_blank" rel="noopener">
                   Consulte os planos PLI-SP 2050 e PEF-SP 2050 ↗
                 </a>
               </div>
@@ -679,14 +699,14 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js" crossorigin=""></script>
+  <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
+  <script src="/assets/vendor/leaflet-draw/leaflet.draw.js" crossorigin=""></script>
   <script src="/assets/js/sigma-read.js"></script>
   <script src="/assets/js/storage.js"></script>
   <script src="/assets/js/demandas-api.js"></script>
   <script src="/assets/js/catalog.js"></script>
-  <script src="spatial-constraint.js"></script>
-  <script src="geometria.js"></script>
-  <script src="abrangencia.js"></script>
-  <script src="cadastro.js"></script>
+  <script src="/public/cadastro/spatial-constraint.js"></script>
+  <script src="/public/cadastro/geometria.js"></script>
+  <script src="/public/cadastro/abrangencia.js"></script>
+  <script src="/public/cadastro/cadastro.js"></script>
 {% endblock %}

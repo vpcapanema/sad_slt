@@ -487,7 +487,7 @@ function exportXLSX() {
 }
 
 // -----------------------------------------------------------
-// Step 5: Gera matriz direta específica para step5-comparacao.html
+// Step 5: Gera matriz direta específica para /restrict/ahp/comparacao/
 // -----------------------------------------------------------
 function generateDirectMatrixStep4() {
   const n = criteria.length;
@@ -653,7 +653,7 @@ function applyColorScheme(selectElement, reciprocalCell, val) {
 }
 
 // -----------------------------------------------------------
-// Step 5: Gera formulário pareado específico para step5-comparacao.html
+// Step 5: Gera formulário pareado específico para /restrict/ahp/comparacao/
 // -----------------------------------------------------------
 // Graduações da escala de Saaty (centrada em 1), conforme a imagem de referência
 const SAATY_STEPS = [
@@ -945,7 +945,7 @@ function setStep5ContinueEnabled(enabled) {
 
 function setupStep5FinalActions() {
   const navActions = document.querySelector("#step5-nav-section .ahp-form-actions");
-  const backBtn = navActions ? navActions.querySelector('a[href="step4-metodo.html"]') : null;
+  const backBtn = navActions ? navActions.querySelector('a[href="/restrict/ahp/metodo/"]') : null;
   const continueBtn = document.getElementById("step5-go-resultados");
   const validateBtn = document.getElementById("btn-validar-matriz");
   const saveBtn = document.getElementById("btn-salvar-config-fase2");

@@ -9,7 +9,7 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
 {% block conteudo %}
@@ -18,14 +18,14 @@
   <main class="conteudo-principal app-main ahp-main">
 
     <nav class="card-fases-do-modulo ahp-phase-nav card" aria-label="Fases do módulo">
-      <a href="step1-config.html" class="ahp-phase active"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e objetos</span></a>
+      <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-phase active"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e objetos</span></a>
       <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Avaliação dos objetos</span></a>
       <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Ranking e homologação</span></a>
     </nav>
 
     <div class="card-ahp-progress ahp-progress card">
       <div class="ahp-progress-bar">
-        <a href="step1-config.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">✓</div><span>Config. multicritério</span></a>
+        <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-progress-step completed"><div class="ahp-progress-circle">✓</div><span>Config. multicritério</span></a>
         <span class="ahp-progress-step active"><div class="ahp-progress-circle">2</div><span>Objetos</span></span>
         <span class="ahp-progress-step"><div class="ahp-progress-circle">3</div><span>Avaliação</span></span>
         <span class="ahp-progress-step"><div class="ahp-progress-circle">4</div><span>Ranking</span></span>
@@ -35,9 +35,9 @@
 
     <section class="card-etapa-2-universo-de-objetos secao-etapa-2-universo-de-objetos card ahp-step-intro">
       <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
-        <a href="../index.html">Início</a>
+        <a href="/restrict/hierarquizacao/">Início</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-        <a href="home.html">Hierarquização</a>
+        <a href="/restrict/hierarquizacao/processos/">Hierarquização</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
         <span class="ahp-breadcrumb-current">Etapa 2: Universo de objetos</span>
       </nav>
@@ -116,7 +116,7 @@
 
     <!-- Ações -->
     <div class="card-hier-actions-bar card hier-actions-bar">
-      <a href="step1-config.html" class="btn btn--outline">
+      <a href="/restrict/hierarquizacao/processos/nova/" class="btn btn--outline">
         <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar
       </a>
       <button type="button" class="btn btn--primary" id="btn-proximo" disabled>
@@ -134,7 +134,7 @@
 
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
-  <script src="js/hier-api.js"></script>
-  <script src="js/step2-objetos.js"></script>
+  <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
+  <script src="/restrict/hierarquizacao/js/step2-objetos.js"></script>
   <script src="/assets/js/paginas/hierarquizacao-step2-objetos-inline-1.js"></script>
 {% endblock %}

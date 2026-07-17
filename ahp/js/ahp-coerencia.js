@@ -4,7 +4,7 @@
 (function (global) {
   "use strict";
 
-  var CATALOG_URL = "../data/matriz-criterios-premissas.json";
+  var CATALOG_URL = "/data/matriz-criterios-premissas.json";
   var catalogPromise = null;
   var contextPromise = null;
 

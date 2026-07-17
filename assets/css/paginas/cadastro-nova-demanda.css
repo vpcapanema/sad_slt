@@ -1,0 +1,83 @@
+.classificacao-demanda-etapa {
+  margin-top: 1.25rem;
+}
+
+.classificacao-demanda-etapa h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.7rem;
+  color: var(--pli-deep);
+  font-size: var(--font-subsection);
+}
+
+.classificacao-etapa-numero {
+  display: inline-grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--pli-white);
+  background: var(--pli-blue);
+  font-size: var(--font-control);
+}
+
+.tipo-demandante-selector {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.demandante-card {
+  display: flex;
+  min-height: 6rem;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 2px solid var(--pli-border);
+  border-radius: var(--pli-radius);
+  color: var(--pli-text);
+  background: var(--pli-white);
+  text-align: left;
+  cursor: pointer;
+}
+
+.demandante-card strong {
+  color: var(--pli-deep);
+  font-size: var(--font-subsection);
+}
+
+.demandante-card span {
+  color: var(--pli-muted);
+  font-size: var(--font-control);
+}
+
+.demandante-card:hover {
+  border-color: #9fb0c8;
+}
+
+.demandante-card.is-active {
+  border-color: var(--pli-blue);
+  background: #eef7fc;
+  box-shadow: 0 0 0 2px rgba(17, 101, 147, 0.12);
+}
+
+.tipo-card.is-incompativel {
+  display: none;
+}
+
+.aviso-demanda-privada {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.8rem;
+  border-left: 4px solid var(--pli-blue);
+  border-radius: 4px;
+  color: var(--pli-deep);
+  background: #eef7fc;
+  font-size: var(--font-control);
+}
+
+@media (max-width: 720px) {
+  .tipo-demandante-selector {
+    grid-template-columns: 1fr;
+  }
+}

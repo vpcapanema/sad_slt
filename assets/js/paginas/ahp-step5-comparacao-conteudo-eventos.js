@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   document.querySelectorAll("[data-evento-inline=\"ahp-step5-comparacao-conteudo-4\"]").forEach(function (elemento) {
     elemento.addEventListener("click", function (event) {
-      window.location.href='step6-resultados.html'
+      window.location.href='/restrict/ahp/resultados/'
     });
   });
 });

@@ -5,19 +5,19 @@
   const hierCodigo = urlParams.get("codigo") || localStorage.getItem("hier_codigo");
 
   async function init() {
-    if (!hierCodigo) { window.location.href = "step1-config.html"; return; }
+    if (!hierCodigo) { window.location.href = "/restrict/hierarquizacao/processos/nova/"; return; }
 
-    document.getElementById("link-step2").href = `step2-objetos.html?codigo=${hierCodigo}`;
-    document.getElementById("link-step3").href = `step3-avaliacao.html?codigo=${hierCodigo}`;
-    document.getElementById("link-step4").href = `step4-ranking.html?codigo=${hierCodigo}`;
-    document.getElementById("btn-voltar").href = `step4-ranking.html?codigo=${hierCodigo}`;
+    document.getElementById("link-step2").href = `/restrict/hierarquizacao/processos/objetos/?codigo=${hierCodigo}`;
+    document.getElementById("link-step3").href = `/restrict/hierarquizacao/processos/avaliacao/?codigo=${hierCodigo}`;
+    document.getElementById("link-step4").href = `/restrict/hierarquizacao/processos/ranking/?codigo=${hierCodigo}`;
+    document.getElementById("btn-voltar").href = `/restrict/hierarquizacao/processos/ranking/?codigo=${hierCodigo}`;
 
     try {
       const hier = await HierApi.obter(hierCodigo);
       document.getElementById("hom-loading").classList.add("hidden");
 
       if (!hier.ranking || !hier.ranking.length) {
-        window.location.href = `step3-avaliacao.html?codigo=${hierCodigo}`;
+        window.location.href = `/restrict/hierarquizacao/processos/avaliacao/?codigo=${hierCodigo}`;
         return;
       }
 

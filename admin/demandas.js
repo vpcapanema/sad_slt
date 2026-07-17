@@ -515,7 +515,7 @@
       tr.addEventListener("click", (ev) => {
         if (editMode) return;
         if (ev.target.closest("input, select, button, a, label")) return;
-        location.href = `demanda/?tipo=${encodeURIComponent(tipo)}&id=${encodeURIComponent(tr.dataset.codigo)}`;
+        location.href = `/restrict/demanda/?tipo=${encodeURIComponent(tipo)}&id=${encodeURIComponent(tr.dataset.codigo)}`;
       });
     });
 

@@ -8,9 +8,9 @@
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
 
 {% block estilos_pagina %}
-  <link rel="stylesheet" href="tree.css">
-  <link rel="stylesheet" href="tree-controls.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/restrict/hierarquizacao/tree.css">
+  <link rel="stylesheet" href="/restrict/hierarquizacao/tree-controls.css">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
 {% block conteudo %}
@@ -19,11 +19,11 @@
   <main class="conteudo-principal app-main ranking-tree-main">
     <section class="secao-hierarquizacao-e-ranking ranking-tree-heading">
       <div><p class="ranking-tree-eyebrow">Bloco 2</p><h1>Hierarquização e Ranking</h1><p>Explore o resultado e os processos, ferramentas e insumos que o produziram.</p></div>
-      <a class="btn btn-secondary" href="metodologia/"><i class="fa-solid fa-book-open"></i> Metodologia</a>
+      <a class="btn btn-secondary" href="/restrict/hierarquizacao/metodologia/"><i class="fa-solid fa-book-open"></i> Metodologia</a>
     </section>
 
     <section class="secao-index ranking-tree" aria-label="Árvore do processo de hierarquização e ranking">
-      <a class="tree-node tree-node--root" href="processos/">
+      <a class="tree-node tree-node--root" href="/restrict/hierarquizacao/processos/">
         <i class="fa-solid fa-ranking-star"></i><strong>Hierarquização e Ranking</strong><span>Ranking final, resultados e homologação</span>
       </a>
 
@@ -62,7 +62,7 @@
       <div class="tree-support-row">
         <a class="tree-node tree-node--support" href="/restrict/geoespacial/bancada/"><i class="fa-solid fa-screwdriver-wrench"></i><strong>Bancada de geoprocessamento</strong></a>
         <a class="tree-node tree-node--support" href="/restrict/geoespacial/produtos/"><i class="fa-solid fa-layer-group"></i><strong>Produtos homologados</strong></a>
-        <a class="tree-node tree-node--support" href="processos/"><i class="fa-solid fa-list-check"></i><strong>Gestão de rodadas</strong><span>Configuração, objetos, avaliação e homologação</span></a>
+        <a class="tree-node tree-node--support" href="/restrict/hierarquizacao/processos/"><i class="fa-solid fa-list-check"></i><strong>Gestão de rodadas</strong><span>Configuração, objetos, avaliação e homologação</span></a>
       </div>
     </section>
   </main>
@@ -70,6 +70,6 @@
 
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
-  <script src="tree.js"></script>
+  <script src="/restrict/hierarquizacao/tree.js"></script>
   <script src="/assets/js/paginas/hierarquizacao-index-inline-1.js"></script>
 {% endblock %}
