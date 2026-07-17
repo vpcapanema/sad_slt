@@ -167,6 +167,13 @@ async def pagina_indice_ahp_restrita() -> FileResponse:
 
 
 AHP_CLEAN_PAGES = {"configuracao": "step1-configuracao.html", "criterios": "step2-criterios.html", "metodo": "step4-metodo.html", "comparacao": "step5-comparacao.html", "resultados": "step6-resultados.html"}
+AHP_CLEAN_PAGES.update(
+    {
+        "analise": "index.html",
+        "nomes": "step3-nomes.html",
+        "alternativas": "step7-alternativas.html",
+    }
+)
 
 
 @app.get("/restrict/ahp/{pagina}/", include_in_schema=False)
@@ -178,8 +185,36 @@ async def pagina_ahp_limpa(pagina: str) -> FileResponse:
     return FileResponse(project_path(f"ahp/{arquivo}"))
 
 
+@app.get("/public/ahp/colaborativa/", include_in_schema=False)
+async def pagina_ahp_colaborativa_publica() -> FileResponse:
+    """Formulário público acessado pelo token de um convite AHP."""
+    return FileResponse(project_path("ahp/colaborativa.html"))
+
+
+HIERARQUIZACAO_PROCESS_PAGES = {
+    "nova": "step1-config.html",
+    "objetos": "step2-objetos.html",
+    "avaliacao": "step3-avaliacao.html",
+    "ranking": "step4-ranking.html",
+    "homologacao": "step5-homologar.html",
+}
+
+
+@app.get("/restrict/hierarquizacao/processos/{pagina}/", include_in_schema=False)
+async def pagina_processo_hierarquizacao(pagina: str) -> FileResponse:
+    arquivo = HIERARQUIZACAO_PROCESS_PAGES.get(pagina)
+    if not arquivo:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Etapa de hierarquização não encontrada")
+    return FileResponse(project_path(f"hierarquizacao/{arquivo}"))
+
+
 @app.get("/restrict/{pagina}/", include_in_schema=False)
 async def pagina_restrita(pagina: str) -> FileResponse:
+    # Esta rota genérica é declarada antes do catálogo geoespacial; trate o
+    # índice explicitamente para preservar /restrict/geoespacial/ como canônica.
+    if pagina == "geoespacial":
+        return FileResponse(project_path("geoespacial/index.html"))
     arquivo = RESTRICTED_PAGES.get(pagina)
     if not arquivo:
         from fastapi import HTTPException
@@ -205,6 +240,37 @@ LEGACY_PAGE_REDIRECTS = {
     "/admin/demandas.html": "/restrict/demandas/",
     "/admin/demanda.html": "/restrict/demanda/",
     "/admin/revisao-status.html": "/restrict/revisao-status/",
+    "/ahp/colaborativa.html": "/public/ahp/colaborativa/",
+    "/restrict/ahp/index.html": "/restrict/ahp/analise/",
+    "/restrict/ahp/step1-configuracao.html": "/restrict/ahp/configuracao/",
+    "/restrict/ahp/step2-criterios.html": "/restrict/ahp/criterios/",
+    "/restrict/ahp/step3-nomes.html": "/restrict/ahp/nomes/",
+    "/restrict/ahp/step4-metodo.html": "/restrict/ahp/metodo/",
+    "/restrict/ahp/step5-comparacao.html": "/restrict/ahp/comparacao/",
+    "/restrict/ahp/step6-resultados.html": "/restrict/ahp/resultados/",
+    "/restrict/ahp/step7-alternativas.html": "/restrict/ahp/alternativas/",
+    "/restrict/hierarquizacao/step1-config.html": "/restrict/hierarquizacao/processos/nova/",
+    "/restrict/hierarquizacao/step2-objetos.html": "/restrict/hierarquizacao/processos/objetos/",
+    "/restrict/hierarquizacao/step3-avaliacao.html": "/restrict/hierarquizacao/processos/avaliacao/",
+    "/restrict/hierarquizacao/step4-ranking.html": "/restrict/hierarquizacao/processos/ranking/",
+    "/restrict/hierarquizacao/step5-homologar.html": "/restrict/hierarquizacao/processos/homologacao/",
+    "/geoespacial": "/restrict/geoespacial/",
+    "/geoespacial/": "/restrict/geoespacial/",
+    "/geoespacial/index.html": "/restrict/geoespacial/",
+    "/geoespacial/gerador-risco-restricao": "/restrict/geoespacial/gerador-risco-restricao/",
+    "/geoespacial/gerador-risco-restricao.html": "/restrict/geoespacial/gerador-risco-restricao/",
+    "/geoespacial/configuracao-risco-restricao": "/restrict/geoespacial/configuracao-risco-restricao/",
+    "/geoespacial/configuracao-risco-restricao.html": "/restrict/geoespacial/configuracao-risco-restricao/",
+    "/geoespacial/gerador-favorabilidade": "/restrict/geoespacial/gerador-favorabilidade/",
+    "/geoespacial/gerador-favorabilidade.html": "/restrict/geoespacial/gerador-favorabilidade/",
+    "/geoespacial/visualizador-inputs": "/restrict/geoespacial/visualizador-inputs/",
+    "/geoespacial/visualizador-inputs.html": "/restrict/geoespacial/visualizador-inputs/",
+    "/geoespacial/_geoprocessamento.html": "/restrict/geoespacial/bancada/",
+    "/geoespacial/bancada": "/restrict/geoespacial/bancada/",
+    "/geoespacial/produtos": "/restrict/geoespacial/produtos/",
+    "/geoespacial/produtos.html": "/restrict/geoespacial/produtos/",
+    "/geoespacial/configurador-ajuste": "/restrict/geoespacial/configurador-ajuste/",
+    "/geoespacial/verificacao-fase3.html": "/restrict/geoespacial/configurador-ajuste/",
 }
 
 
@@ -218,42 +284,29 @@ async def redirect_legacy_page_routes(request: Request, call_next):
     return await call_next(request)
 
 
-@app.get("/geoespacial/gerador-risco-restricao", include_in_schema=False)
-async def pagina_gerador_risco_restricao() -> FileResponse:
-    """Página canônica do módulo gerador de risco e restrição."""
-    return FileResponse(project_path("geoespacial/gerador-risco-restricao.html"))
+GEOSPATIAL_PAGES = {
+    "gerador-risco-restricao": "gerador-risco-restricao.html",
+    "configuracao-risco-restricao": "configuracao-risco-restricao.html",
+    "gerador-favorabilidade": "gerador-favorabilidade.html",
+    "visualizador-inputs": "visualizador-inputs.html",
+    "bancada": "_geoprocessamento.html",
+    "produtos": "produtos.html",
+    "configurador-ajuste": "verificacao-fase3.html",
+}
 
 
-@app.get("/geoespacial/configuracao-risco-restricao", include_in_schema=False)
-async def pagina_configuracao_risco_restricao() -> FileResponse:
-    """Biblioteca canônica e configuração metodológica da Fase 1."""
-    return FileResponse(project_path("geoespacial/configuracao-risco-restricao.html"))
+@app.get("/restrict/geoespacial/", include_in_schema=False)
+async def pagina_indice_geoespacial() -> FileResponse:
+    return FileResponse(project_path("geoespacial/index.html"))
 
 
-@app.get("/geoespacial/gerador-favorabilidade", include_in_schema=False)
-async def pagina_gerador_favorabilidade() -> FileResponse:
-    """Página canônica do módulo gerador da superfície de favorabilidade."""
-    return FileResponse(project_path("geoespacial/gerador-favorabilidade.html"))
-
-
-@app.get("/geoespacial/visualizador-inputs", include_in_schema=False)
-async def pagina_visualizador_inputs() -> FileResponse:
-    return FileResponse(project_path("geoespacial/visualizador-inputs.html"))
-
-
-@app.get("/geoespacial/bancada", include_in_schema=False)
-async def pagina_bancada_geoprocessamento() -> FileResponse:
-    return FileResponse(project_path("geoespacial/_geoprocessamento.html"))
-
-
-@app.get("/geoespacial/produtos", include_in_schema=False)
-async def pagina_produtos_geoespaciais() -> FileResponse:
-    return FileResponse(project_path("geoespacial/produtos.html"))
-
-
-@app.get("/geoespacial/configurador-ajuste", include_in_schema=False)
-async def pagina_configurador_ajuste() -> FileResponse:
-    return FileResponse(project_path("geoespacial/verificacao-fase3.html"))
+@app.get("/restrict/geoespacial/{pagina}/", include_in_schema=False)
+async def pagina_geoespacial(pagina: str) -> FileResponse:
+    arquivo = GEOSPATIAL_PAGES.get(pagina)
+    if not arquivo:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Página geoespacial não encontrada")
+    return FileResponse(project_path(f"geoespacial/{arquivo}"))
 
 
 app.mount("/public/assets", StaticFiles(directory=str(project_path("assets"))), name="public-assets")
@@ -264,6 +317,7 @@ app.mount("/public/transparencia", StaticFiles(directory=str(project_path("trans
 app.mount("/restrict/assets", StaticFiles(directory=str(project_path("assets"))), name="restricted-assets-shared")
 app.mount("/restrict/hierarquizacao", StaticFiles(directory=str(project_path("hierarquizacao")), html=True), name="restricted-hierarquizacao-assets")
 app.mount("/restrict/ahp", StaticFiles(directory=str(project_path("ahp")), html=True), name="restricted-ahp-assets")
+app.mount("/restrict/geoespacial", StaticFiles(directory=str(project_path("geoespacial")), html=True), name="restricted-geospatial-assets")
 app.mount("/restrict", StaticFiles(directory=str(project_path("admin")), html=True), name="restricted-assets")
 app.mount("/", StaticFiles(directory=str(PROJECT_ROOT), html=True), name="static")
 

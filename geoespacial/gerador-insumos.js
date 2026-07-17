@@ -8,7 +8,7 @@
   const phase1FlowConfiguration = modulo === "fase1" ? `
     <div class="fase1-methodology-link">
       <div><strong>Biblioteca e índices de risco e restrição</strong><p>Consulte os fundamentos, os 23 critérios canônicos e configure os limiares usados por este fluxo.</p><span id="metodologia-status" class="fase1-version">Configuração não validada</span></div>
-      <a class="btn btn-secondary" href="/geoespacial/configuracao-risco-restricao">Abrir configuração metodológica</a>
+      <a class="btn btn-secondary" href="/restrict/geoespacial/configuracao-risco-restricao/">Abrir configuração metodológica</a>
     </div>
     <div class="gerador-grid fase1-output-contract">
       <div class="gerador-field"><label for="crs">CRS de saída *</label><select id="crs" required><option value="EPSG:31983">SIRGAS 2000 / UTM 23S — EPSG:31983</option><option value="EPSG:31982">SIRGAS 2000 / UTM 22S — EPSG:31982</option><option value="EPSG:31984">SIRGAS 2000 / UTM 24S — EPSG:31984</option></select></div>

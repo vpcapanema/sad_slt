@@ -57,8 +57,8 @@ def _criterio_nomes(config: dict[str, Any]) -> list[str]:
 
 def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "") -> AmbienteColaborativoResponseSchema:
     token = row["token"]
-    url = f"{base_url.rstrip('/')}/ahp/colaborativa.html?token={token}" if base_url else (
-        f"/ahp/colaborativa.html?token={token}"
+    url = f"{base_url.rstrip('/')}/public/ahp/colaborativa/?token={token}" if base_url else (
+        f"/public/ahp/colaborativa/?token={token}"
     )
     return AmbienteColaborativoResponseSchema(
         id=str(row["id"]),

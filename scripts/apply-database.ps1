@@ -136,7 +136,8 @@ $migrations = @(
     "039_biblioteca_camadas_homologadas.sql",
     "040_separacao_fisica_camadas.sql",
     "041_idempotencia_importacao.sql",
-    "042_fluxo_fases_hierarquizacao.sql"
+    "042_fluxo_fases_hierarquizacao.sql",
+    "043_fase1_fatiamento_relatorio.sql"
 )
 
 if (Test-CoreSchemaReady) {

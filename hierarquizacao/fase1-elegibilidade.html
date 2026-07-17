@@ -14,14 +14,14 @@
 </div></section>
 
 <section class="card ahp-step-section"><div class="ahp-section-label"><span>3. Ajustes avançados</span></div><div class="ahp-section-body">
-  <div class="fase1-config-head"><label>Configuração de fatiamento <select id="fatiamento-fase1"><option value="">Carregando…</option></select></label><a class="fase1-library-link" href="/geoespacial/configuracao-risco-restricao" title="Abrir biblioteca canônica"><i class="fas fa-book-open"></i><span>Biblioteca canônica</span></a></div>
+  <div class="fase1-config-head"><label>Configuração de fatiamento <select id="fatiamento-fase1"><option value="">Carregando…</option></select></label><a class="fase1-library-link" href="/restrict/geoespacial/configuracao-risco-restricao/" title="Abrir biblioteca canônica"><i class="fas fa-book-open"></i><span>Biblioteca canônica</span></a></div>
   <div id="fatiamento-resumo" class="fase1-summary hidden"></div>
   <article class="fase1-weights-subcard"><h3><i class="fas fa-scale-balanced"></i> Pesos</h3><p>Pesos aplicados aos componentes do índice de risco pela configuração selecionada.</p><div id="fatiamento-pesos" class="fase1-weight-grid"></div></article>
 </div></section>
 
 <section class="card ahp-step-section"><div class="ahp-section-label"><span>4. Geoprocessamento — SLT</span></div><div class="ahp-section-body">
   <div class="fase1-operational"><h3>Camadas operacionais</h3><div class="fase1-grid-2"><div><h4>Camada de demandas</h4><div id="gp-demandas"><p class="ahp-help-text">Selecione uma hierarquização.</p></div></div><div><h4>Camadas de Restrição e Risco</h4><div id="gp-risco-restricao"><p class="ahp-help-text">Selecione o par homologado.</p></div></div></div></div>
-  <iframe id="gp-frame" class="fase1-gp-frame" title="Componente de geoprocessamento SLT" src="/geoespacial/_geoprocessamento.html?modulo=fase1&embutido=1"></iframe>
+  <iframe id="gp-frame" class="fase1-gp-frame" title="Componente de geoprocessamento SLT" src="/restrict/geoespacial/bancada/?modulo=fase1&amp;embutido=1"></iframe>
   <div class="fase1-execute"><label>Modelo <select id="modelo-fase1"><option value="fluxo_fase1_elegibilidade">Fase 1 — Elegibilidade territorial</option></select></label><button id="executar-fase1" class="btn btn--primary" type="button"><i class="fas fa-play"></i> Executar fluxo</button></div>
   <div id="fase1-erro" class="ahp-info-note ahp-info-note--error hidden"></div><div id="fase1-relatorio" class="fase1-summary hidden"></div>
 </div></section>

@@ -1,5 +1,9 @@
 # Reorganização da Plataforma
 
+> Documento de decisões de produto e organização. Para o inventário do que está
+> efetivamente implementado no código atual, consulte
+> [`documentacao/STATUS_IMPLEMENTACAO.md`](documentacao/STATUS_IMPLEMENTACAO.md).
+
 Este documento registra as decisões já validadas para reorganizar os módulos,
 acessos, sessões e páginas da aplicação.
 

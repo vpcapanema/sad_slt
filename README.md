@@ -1,179 +1,220 @@
-# Sistema de Apoio à Tomada de Decisão — Aplicação Web (SLT)
+# SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas
 
-## Arquitetura de dados
+Aplicação web de apoio à decisão para cadastrar, analisar, hierarquizar e
+acompanhar planos, programas e projetos. O sistema combina análise multicritério
+AHP, processamento geoespacial e trilha de auditoria.
 
-| Origem | Uso | Gravação |
-|--------|-----|----------|
-| **SIGMA** (`cadastro.instituicao`, `cadastro.pessoa`, `usuarios.usuario`) | Leitura + login | Nunca pelo SLT |
-| **Banco SLT** (container `slt_postgres` + PostGIS, porta **5434**) | Demandas, AHP, auditoria | Sim |
+O inventário detalhado do que está implementado está em
+[`documentacao/STATUS_IMPLEMENTACAO.md`](documentacao/STATUS_IMPLEMENTACAO.md).
 
-Camadas geoespaciais são persistidas obrigatoriamente no PostgreSQL: vetores
-como feições PostGIS em `geoprocessamento.camada_feicao` e rasters como GeoTIFF
-binário em `geoprocessamento.camada_raster`. A memória da API é apenas cache.
+## Arquitetura
 
-Cadastro de nova instituição: http://56.125.163.194/cadastro/instituicao
+| Componente | Tecnologia | Responsabilidade |
+|---|---|---|
+| Backend | FastAPI / Python 3.11+ | API, autenticação, regras e páginas estáticas |
+| Frontend | HTML, CSS e JavaScript | Formulários, painéis, AHP e bancadas espaciais |
+| Banco SLT | PostgreSQL 17 + PostGIS 3.5 | Fonte definitiva dos dados do SICARD |
+| SIGMA-PLI | API e PostgreSQL externos | Login, pessoas e instituições, somente leitura |
 
-## Executar (desenvolvimento)
+O backend é organizado em:
 
-Abra o workspace da aplicação no Cursor/VS Code:
+| Camada | Pasta |
+|---|---|
+| Rotas HTTP | `api/routers/` |
+| Contratos | `api/schemas/` |
+| Regras de negócio | `api/services/` |
+| SQL e persistência | `api/repositories/` |
+| Conexões | `api/db/` |
 
-```text
-sistema_apoio_a_tomada_de_decisao_web.code-workspace
-```
+## Executar em desenvolvimento
 
-Recomendado — um comando faz tudo (libera porta, sobe API, verifica conexões, abre o navegador):
-
-```powershell
-.\scripts\start-dev.ps1
-```
-
-Execute os comandos a partir da raiz do repositório. Caminhos configuráveis e
-parâmetros de arquivos devem ser relativos a essa raiz; caminhos absolutos e
-travessia por `..` são recusados pela API.
-
-Manual:
-
-```powershell
-pip install -r requirements.txt
-python -m api.server
-```
-
-Acesse: http://127.0.0.1:8080/
-
-Verificação de saúde: `GET /api/health/ready` (API local, APIs externas, banco SLT se configurado via `SLT_DATABASE_URL`).
-
-## Banco de dados SLT
-
-**Container dedicado** — separado do SIGMA-PLI (`sigma_pli_db`, porta 5433).
-
-| Item | Valor |
-|------|-------|
-| Container | `slt_postgres` |
-| Imagem | `postgis/postgis:17-3.5` |
-| Porta externa | **5434** |
-| Banco | `slt_db` |
-| Usuário (dev) | `slt_user` / `slt_pass` |
-
-| Esquema | Tabela | Uso |
-|---------|--------|-----|
-| `cadastro` | `cadastro_demanda` | Demandas do formulário (SIGMA + geometria PostGIS + status) |
-| `cadastro` | `dom_status_demanda` | Domínio de status do fluxo |
-| `auditoria` | `log_sistema` | Logs e trilha de auditoria |
-
-Subir o banco:
+Na raiz do repositório:
 
 ```powershell
 .\scripts\start-db.ps1
-# ou: docker compose up -d
-```
-
-O schema é aplicado automaticamente na **primeira** inicialização do volume. Para reaplicar:
-
-```powershell
 .\scripts\apply-database.ps1
+.\scripts\start-dev.ps1
 ```
 
-Connection string da aplicação:
+`start-db.ps1` inicia o container. `apply-database.ps1` aplica a sequência
+completa de migrations e atualiza o catálogo territorial; ele deve ser executado
+ao preparar um volume novo e depois de receber novas migrations.
 
-```
-SLT_DATABASE_URL=postgresql://slt_user:slt_pass@127.0.0.1:5434/slt_db
-```
-
-## Módulos
-
-| Módulo | Caminho |
-|--------|---------|
-| Hub | `index.html` |
-| Cadastro de demandas | `cadastro/` |
-| AHP | `ahp/` |
-| Painel | `painel/` |
-
-### Componente de geoprocessamento
-
-O componente compartilhado em `geoespacial/_geoprocessamento.html` concentra os
-algoritmos usados pelos futuros módulos geradores de superfícies de risco/restrição e
-favorabilidade. Cada algoritmo possui endpoint individual; algoritmos podem ser
-combinados em funções e funções/algoritmos podem ser combinados em fluxos persistidos.
-
-Arquitetura e contratos: `COMPONENTE_GEOPROCESSAMENTO.md`.
-
-#### Ciclo de vida das camadas
-
-- **Importar camada**: lê uma origem externa (arquivo ou WFS) e grava catálogo e
-  conteúdo geoespacial no PostgreSQL/PostGIS.
-- **Carregar camada**: abre na bancada uma camada que já está nas tabelas físicas
-  `camada_importada`, `camada_processada` ou `camada_homologada`.
-- **Homologar camada**: publica a camada na tabela
-  `geoprocessamento.camada_homologada`, copiando seu conteúdo para
-  `camada_homologada_feicao` ou `camada_homologada_raster`. Esse snapshot é
-  independente da origem, imutável e disponível somente para leitura.
-
-As fases 1 e 2 consultam exclusivamente `GET /api/geoespacial/biblioteca-camadas`
-com o respectivo filtro `modulo=fase1` ou `modulo=fase2`. Camadas apenas importadas
-ou processadas não são oferecidas como insumos oficiais antes da homologação.
-
-Demandas: persistidas em `cadastro.cadastro_demanda` via `POST /api/demandas` (painel: `GET /api/demandas`).
-
-### API de demandas
-
-| Método | Rota | Uso |
-|--------|------|-----|
-| `POST` | `/api/demandas` | Registra demanda do formulário |
-| `GET` | `/api/demandas` | Lista demandas (painel) |
-| `GET` | `/api/demandas/{codigo}` | Detalhe por código `DEM-...` |
-| `PATCH` | `/api/demandas/{codigo}` | Atualiza demanda (gestor) |
-| `POST` | `/api/demandas/{codigo}/aprovar` | Aprova e cria objeto AHP (gestor) |
-
-### API de objetos e análises AHP
-
-| Método | Rota | Auth | Uso |
-|--------|------|------|-----|
-| `GET` | `/api/ahp/objetos` | Gestor | Lista objetos AHP (filtros `status`, `grupo`) |
-| `GET` | `/api/ahp/objetos/{codigo}` | Gestor | Detalhe do objeto |
-| `PATCH` | `/api/ahp/objetos/{codigo}` | Gestor | Atualiza status/grupo |
-| `POST` | `/api/ahp/analises` | Sessão opc. | Cria análise (`tipo`: `avulsa`\|`portfolio`) |
-| `GET` | `/api/ahp/analises?tipo=` | Sessão opc. | Lista análises |
-| `GET` | `/api/ahp/analises/{tipo}/{codigo}` | Sessão opc. | Detalhe |
-| `PATCH` | `/api/ahp/analises/{tipo}/{codigo}` | Sessão opc. | Salva etapas (critérios, alternativas, julgamentos) |
-| `POST` | `/api/ahp/analises/{tipo}/{codigo}/calcular` | Sessão opc. | Calcula pesos + ranking (servidor) |
-| `POST` | `/api/ahp/analises/{tipo}/{codigo}/homologar` | Gestor | Homologa o ranking |
-
-Persistência: `ahp.analise_avulsa` (alternativas manuais) e `ahp.analise_portfolio` (projetos de `ahp.objeto_ahp`, por `grupo_comparacao`).
-
-### Fluxo AHP (frontend `ahp/`)
-
-1. `tipo-analise` → escolhe avulsa/portfólio.
-2. `step1`–`step4` → critérios e comparação pareada (escala de Saaty).
-3. `step5` → pesos dos critérios + consistência (λmax, CI, CR).
-4. `step6` → alternativas (manuais ou objetos AHP), julgamento par-a-par por critério, **ranking final** e persistência via API.
-
-O motor de cálculo é único: `ahp/js/ahp-core.js` (frontend) e `api/services/analise_service.py` (servidor, fonte da verdade no `calcular`).
-
-### Backend (camadas)
-
-| Camada | Pasta |
-|--------|-------|
-| Rotas | `api/routers/` |
-| Regras de negócio | `api/services/` |
-| SQL / PostGIS | `api/repositories/` |
-| Contratos HTTP | `api/schemas/` |
-| Conexão DB | `api/db/` |
-
-## Catálogo SLT
-
-Fonte: `data/Catalogo_Hierarquico_SLT.xlsx`
+Execução manual da API:
 
 ```powershell
-python scripts/gerar_catalogo_slt.py   # opcional: regenerar o xlsx
-python scripts/export_catalogo.py      # gera data/catalogo-slt.json
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m api.server
 ```
 
-## Dados de referência (`data/`)
+Endereços locais:
+
+- aplicação: <http://127.0.0.1:8080/public/>;
+- documentação OpenAPI: <http://127.0.0.1:8080/docs>;
+- saúde básica: <http://127.0.0.1:8080/api/health>;
+- prontidão das integrações: <http://127.0.0.1:8080/api/health/ready>.
+
+## Configuração
+
+Copie `.env.example` para `.env` e configure principalmente:
+
+```dotenv
+PORT=8080
+SLT_DATABASE_URL=postgresql://slt_user:slt_pass@127.0.0.1:5434/slt_db
+SLT_SESSION_SECRET=
+SIGMA_API_BASE=https://56.125.163.194
+SIGMA_POSTGRES_PASSWORD=
+```
+
+O banco local usa:
+
+| Item | Valor de desenvolvimento |
+|---|---|
+| Container | `slt_postgres` |
+| Porta | `5434` |
+| Banco | `slt_db` |
+| Usuário | `slt_user` |
+| Senha | `slt_pass` |
+
+## Padrão de rotas
+
+- APIs usam o prefixo `/api`.
+- Páginas públicas usam `/public/`.
+- Páginas operacionais usam `/restrict/`.
+- URLs canônicas de páginas terminam em `/` e não contêm `.html`.
+- Rotas antigas conhecidas redirecionam com status `308`, preservando a query.
+- Arquivos estáticos são montados sob os mesmos blocos, mas não constituem URLs
+  canônicas de navegação.
+
+Rotas públicas principais:
+
+| Rota | Uso |
+|---|---|
+| `/public/` | Entrada geral |
+| `/public/cadastro/` | Cadastro de demandas |
+| `/public/painel/` | Acompanhamento publicado |
+| `/public/transparencia/` | Transparência e resultados |
+| `/public/documentacao/` | Documentação funcional |
+| `/public/login/` | Entrada da área restrita |
+| `/public/ahp/colaborativa/` | Resposta a convite AHP por token |
+
+Rotas restritas principais:
+
+| Rota | Uso |
+|---|---|
+| `/restrict/` | Entrada interna |
+| `/restrict/painel/` | Painel administrativo |
+| `/restrict/demandas/` | Análise das demandas |
+| `/restrict/hierarquizacao/` | Árvore metodológica |
+| `/restrict/hierarquizacao/processos/` | Gestão das rodadas |
+| `/restrict/ahp/` | Configuração multicritério |
+| `/restrict/geoespacial/` | Ferramentas e produtos espaciais |
+
+## Módulos implementados
+
+### Demandas
+
+Plano, programa e projeto são persistidos no esquema único `demandas`. A mesma
+linha avança do cadastro à execução. Estão disponíveis criação, consulta,
+atualização, exclusão, análise e aprovação. A matriz de transições é mantida no
+banco e consultada pelo backend.
+
+Famílias: `/api/demandas`, `/api/planos`, `/api/programas`, `/api/dominios` e
+`/api/painel`.
+
+### AHP
+
+O módulo permite configurações avulsas e de portfólio, definição de universo,
+critérios e premissas, comparação pareada, cálculo de pesos e consistência e
+homologação. A comparação colaborativa cria convites com prazo e token público,
+recebe as matrizes individuais e registra suas métricas.
+
+Famílias: `/api/ahp/objetos`, `/api/ahp/universo`,
+`/api/ahp/configuracoes` e `/api/ahp/comparacao-colaborativa`.
+
+### Hierarquização
+
+As rodadas persistem o universo e os resultados em um documento autocontido.
+O fluxo metodológico possui:
+
+1. elegibilidade territorial por risco e restrição;
+2. favorabilidade territorial;
+3. ajuste fino por atributos dos projetos;
+4. síntese, ranking e homologação.
+
+Família: `/api/ahp/hierarquizacoes`.
+
+### Geoprocessamento
+
+Inclui importação e catálogo de camadas, visualização vetorial e raster,
+operações individuais, jobs, funções, fluxos e homologação. O armazenamento
+físico separa camadas importadas, processadas e homologadas. Apenas snapshots
+homologados formam a biblioteca oficial consumida pelas fases.
+
+Família: `/api/geoespacial`.
+
+Os endpoints genéricos `/api/geoespacial/processar` e
+`/api/geoespacial/processamento/{id}` ainda são demonstrativos. Os endpoints de
+algoritmos, operações e jobs executam o fluxo efetivo usado pelas telas.
+
+## Modelo de dados vigente
+
+| Esquema | Responsabilidade |
+|---|---|
+| `demandas` | Planos, programas, projetos, indicadores, tipos e status |
+| `ahp` | Objetos, configurações e comparação colaborativa |
+| `hierarquizacao_demandas` | Rodadas, fases e rankings |
+| `geo` | Regionalizações e unidades espaciais |
+| `geoprocessamento` | Catálogo, feições, rasters, execuções e homologações |
+| `auditoria` | Trilha de operações |
+
+Referências a `cadastro.cadastro_demanda` e `demandas_aprovadas` pertencem ao
+modelo histórico das migrations. A migration `015_colapso_demandas.sql`
+consolidou o modelo atual no esquema `demandas`.
+
+## Autorização
+
+Os perfis são derivados do usuário SIGMA:
+
+- `VISUALIZADOR`: consulta autorizada;
+- `OPERADOR`: operações de cadastro e processamento;
+- `ANALISTA`: análise e aprovação;
+- `GESTOR`: análise, homologação e supervisão;
+- `ADMIN`: administração técnica, sem herdar automaticamente decisões de
+  analista ou gestor.
+
+As permissões efetivas são aplicadas no backend por dependências de rota.
+
+## Dados de referência
 
 | Arquivo | Uso |
-|---------|-----|
-| `catalogo-slt.json` | Diretorias, planos, frentes, eixos (cadastro) |
-| `referencia-classificacao.json` | Textos de apoio PLI/PEF |
-| `referencia-institucional.json` | Textos institucionais |
-| `matriz-criterios-premissas.json` | Dimensões, critérios e premissas (AHP) |
-| `Matriz_Criterios_Premissas_PLI-SP.xlsx` | Matriz completa em Excel |
+|---|---|
+| `data/catalogo-slt.json` | Diretorias, planos, frentes e eixos |
+| `data/referencia-classificacao.json` | Apoio à classificação PLI/PEF |
+| `data/referencia-institucional.json` | Conteúdo institucional |
+| `data/matriz-criterios-premissas.json` | Critérios e premissas AHP |
+
+Scripts de manutenção:
+
+```powershell
+python scripts/gerar_catalogo_slt.py
+python scripts/export_catalogo.py
+python scripts/load_geo_catalog.py
+```
+
+## Testes
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+A suíte cobre autenticação e perfis, painéis, política de caminhos, parte do
+motor geoespacial e o registro das famílias de rotas e páginas canônicas.
+
+## Regra de cores de status
+
+A fonte única é `assets/js/status-colors.js`. Não duplique cores de status em
+HTML, CSS ou JavaScript de módulo. Novos status exigem atualização do domínio no
+banco, de `STATUS_DEMANDA`, de `LEGEND_ORDER` e, quando aplicável, dos rótulos
+tipados do backend.
