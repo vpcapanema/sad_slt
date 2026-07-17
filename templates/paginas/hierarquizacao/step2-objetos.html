@@ -1,9 +1,9 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Hierarquização e Ranqueamento de Objetos" %}
+{% set subtitulo = "Hierarquização e ranking de demandas" %}
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 
-{% block titulo %}Etapa 2 — Universo de Objetos — SLT{% endblock %}
+{% block titulo %}Etapa 2 — Universo da hierarquização — SLT{% endblock %}
 {% block classes_body %}ahp-module-page{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
 
@@ -18,15 +18,15 @@
   <main class="conteudo-principal app-main ahp-main">
 
     <nav class="card-fases-do-modulo ahp-phase-nav card" aria-label="Fases do módulo">
-      <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-phase active"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e objetos</span></a>
-      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Avaliação dos objetos</span></a>
-      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Ranking e homologação</span></a>
+      <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-phase active"><span class="ahp-phase-num">Etapas 1–2</span><span class="ahp-phase-name">Análise e universo</span></a>
+      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Etapa 3</span><span class="ahp-phase-name">Avaliação das demandas</span></a>
+      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Etapas 4–5</span><span class="ahp-phase-name">Ranking e homologação</span></a>
     </nav>
 
     <div class="card-ahp-progress ahp-progress card">
       <div class="ahp-progress-bar">
-        <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-progress-step completed"><div class="ahp-progress-circle">✓</div><span>Config. multicritério</span></a>
-        <span class="ahp-progress-step active"><div class="ahp-progress-circle">2</div><span>Objetos</span></span>
+        <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-progress-step completed"><div class="ahp-progress-circle">✓</div><span>Análise multicritério</span></a>
+        <span class="ahp-progress-step active"><div class="ahp-progress-circle">2</div><span>Universo</span></span>
         <span class="ahp-progress-step"><div class="ahp-progress-circle">3</div><span>Avaliação</span></span>
         <span class="ahp-progress-step"><div class="ahp-progress-circle">4</div><span>Ranking</span></span>
         <span class="ahp-progress-step"><div class="ahp-progress-circle">5</div><span>Homologação</span></span>
@@ -39,18 +39,18 @@
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
         <a href="/restrict/hierarquizacao/processos/">Hierarquização</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-        <span class="ahp-breadcrumb-current">Etapa 2: Universo de objetos</span>
+        <span class="ahp-breadcrumb-current">Etapa 2: Universo da hierarquização</span>
       </nav>
       <h1 class="ahp-page-title">
         <i class="fas fa-layer-group" aria-hidden="true"></i>
-        Etapa 2: Universo de objetos
+        Etapa 2: Universo da hierarquização
       </h1>
       <p class="card-ahp-info-note ahp-info-note card">
         <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
         <span>
-          Selecione os objetos (demandas aprovadas) que participarão desta rodada de
+          Selecione os planos, programas ou projetos aprovados que participarão desta rodada de
           hierarquização. A lista é filtrada pelo grupo comparável associado à configuração
-          escolhida. Todos os objetos selecionados serão avaliados em cada critério na etapa
+          escolhida. Todas as demandas selecionadas serão avaliadas em cada critério na etapa
           seguinte.
         </span>
       </p>
@@ -73,7 +73,7 @@
     <section class="card-obj-contador secao-obj-contador card ahp-step-section">
       <div class="ahp-section-label">
         <span class="ahp-section-index-icon" aria-hidden="true">2.2</span>
-        <span>Objetos disponíveis</span>
+        <span>Demandas disponíveis</span>
       </div>
       <div class="ahp-section-body">
         <div class="ahp-subcard">
@@ -85,11 +85,11 @@
 
           <div id="obj-loading" class="card-obj-loading ahp-info-note card">
             <i class="fas fa-spinner fa-spin app-template-inline-icon" aria-hidden="true"></i>
-            <span>Carregando objetos…</span>
+            <span>Carregando demandas…</span>
           </div>
           <div id="obj-empty" class="card-obj-empty ahp-info-note card hidden">
             <i class="fas fa-inbox app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
-            <span>Nenhum objeto elegível encontrado para este grupo comparável.</span>
+            <span>Nenhuma demanda elegível foi encontrada para este grupo comparável.</span>
           </div>
           <div id="obj-error" class="card-obj-error ahp-info-note card ahp-info-note--error hidden">
             <i class="fas fa-triangle-exclamation app-template-inline-icon app-template-inline-icon--error" aria-hidden="true"></i>
@@ -120,7 +120,7 @@
         <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar
       </a>
       <button type="button" class="btn btn--primary" id="btn-proximo" disabled>
-        Confirmar objetos <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        Confirmar universo <i class="fas fa-arrow-right" aria-hidden="true"></i>
       </button>
     </div>
 

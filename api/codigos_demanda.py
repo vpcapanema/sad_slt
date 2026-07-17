@@ -4,15 +4,17 @@ from __future__ import annotations
 import re
 import uuid
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Final, Literal, TypeAlias
 
 from api.exceptions import DemandaValidationError
 
 PREFIX_PLANO = "PLA"
 PREFIX_PROGRAMA = "PRO"
 PREFIX_PROJETO = "PRJ"
-TIPO_DEMANDANTE_INSTITUCIONAL = "institucional"
-TIPO_DEMANDANTE_PRIVADA = "privada"
+
+TipoDemandante: TypeAlias = Literal["institucional", "privada"]
+TIPO_DEMANDANTE_INSTITUCIONAL: Final[TipoDemandante] = "institucional"
+TIPO_DEMANDANTE_PRIVADA: Final[TipoDemandante] = "privada"
 
 # Aceita os códigos novos e, para leitura dos registros existentes, o formato
 # legado sem o qualificador do demandante.
@@ -54,7 +56,7 @@ def gerar_codigo_projeto(
     return gerar_codigo(PREFIX_PROJETO, tipo_demandante)
 
 
-def tipo_demandante_do_codigo(codigo: str | None) -> str:
+def tipo_demandante_do_codigo(codigo: str | None) -> TipoDemandante:
     """Infere a classificação; códigos legados são tratados como institucionais."""
     if codigo and codigo.strip().startswith("P-PRJ-"):
         return TIPO_DEMANDANTE_PRIVADA

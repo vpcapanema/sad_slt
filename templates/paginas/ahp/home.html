@@ -1,9 +1,9 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Configuração da Análise Multicritério" %}
+{% set subtitulo = "Análise multicritério" %}
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 
-{% block titulo %}Configuração da Análise Multicritério — SLT{% endblock %}
+{% block titulo %}Análise multicritério — SLT{% endblock %}
 {% block classes_body %}ahp-module-page{% endblock %}
 {% block base_url %}<base href="/restrict/ahp/">{% endblock %}
 
@@ -19,22 +19,20 @@
       <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
         <a href="/restrict/">Início</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-        <span class="ahp-breadcrumb-current">Configuração da Análise Multicritério</span>
+        <span class="ahp-breadcrumb-current">Análise multicritério</span>
       </nav>
       <h1 class="ahp-page-title">
         <i class="fas fa-scale-balanced" aria-hidden="true"></i>
-        Configuração da Análise Multicritério
+        Análise multicritério
       </h1>
       <p class="card-ahp-info-note ahp-info-note card">
         <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
         <span>
-          Este é o ponto de partida do módulo de análise multicritério (AHP) do Sistema de Apoio à
-          Decisão (SAD), onde você define, de forma transparente e auditável, <strong>como</strong> as
-          demandas serão comparadas. Ao longo das etapas você estabelece os critérios de decisão,
-          escolhe o método de comparação e realiza as comparações pareadas (escala de Saaty) para
-          calcular o peso de cada critério. Atenção: aqui <strong>não há hierarquização de
-          demandas</strong> — este módulo produz apenas os pesos consistentes dos critérios, que são
-          consumidos em seguida pelo módulo de Hierarquização de demandas.
+          A análise multicritério define a régua que o Módulo de Apoio à Decisão (MAD) usa para
+          comparar planos, programas ou projetos. A equipe estabelece critérios, registra os
+          julgamentos de importância e calcula os pesos pelo método AHP. O resultado não é o
+          ranking: é uma análise multicritério homologada, aplicada posteriormente ao universo da
+          hierarquização.
         </span>
       </p>
     </section>
@@ -47,11 +45,10 @@
       <p class="card-ahp-info-note ahp-info-note card">
         <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
         <span>
-          Decisões públicas raramente dependem de um único fator. Custo, impacto social, risco,
-          aderência estratégica e maturidade técnica costumam puxar para lados diferentes. A
-          <strong>análise multicritério</strong> é o conjunto de métodos que torna explícito esse
-          trade-off: em vez de decidir "no olho", você declara quais critérios importam e o quanto
-          cada um pesa, de modo que a priorização final seja justificável e reproduzível.
+          Decisões públicas consideram fatores como custo, impacto social, risco, aderência
+          estratégica e maturidade técnica. A <strong>análise multicritério</strong> explicita esses
+          fatores e sua importância relativa, para que a priorização posterior seja justificável,
+          reproduzível e auditável.
         </span>
       </p>
     </section>
@@ -64,12 +61,10 @@
       <p class="card-ahp-info-note ahp-info-note card">
         <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
         <span>
-          Adotamos o <strong>AHP</strong>, de Thomas L. Saaty, como ferramenta deste módulo. Em vez de
-          atribuir pesos diretamente (o que é difícil e tendencioso), o AHP trabalha com
-          <strong>comparações pareadas</strong>: você compara os critérios dois a dois usando a escala
-          de importância de Saaty. A partir dessa matriz, o sistema calcula os pesos relativos e,
-          crucialmente, mede a <strong>razão de consistência (RC)</strong> — um indicador que aponta se
-          os julgamentos foram coerentes entre si (RC &lt; 0,10).
+          O MAD aplica o <strong>AHP</strong>, de Thomas L. Saaty. A equipe compara os critérios dois a
+          dois pela escala de importância de Saaty. Com essa matriz, o sistema calcula os pesos
+          relativos e a <strong>razão de consistência (RC)</strong>, que indica se os julgamentos são
+          coerentes entre si (RC &lt; 0,10).
         </span>
       </p>
     </section>
@@ -77,16 +72,14 @@
     <section class="card-o-que-se-faz-aqui secao-o-que-se-faz-aqui card">
       <div class="ahp-section-label">
         <i class="fas fa-sitemap" aria-hidden="true"></i>
-        <span>Onde esta etapa entra no SAD</span>
+        <span>Onde a análise multicritério entra no MAD</span>
       </div>
       <p class="card-ahp-info-note ahp-info-note card">
         <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
         <span>
-          O SAD é composto por dois módulos encadeados. Este — a <strong>Configuração da Análise
-          Multicritério</strong> — é o antecessor; o módulo sucessor é a
-          <strong>Hierarquização de demandas</strong>, onde de fato os planos, programas ou projetos
-          são ranqueados. A hierarquização depende veementemente desta etapa: sem critérios definidos e
-          pesos consistentes e homologados aqui, não há régua com que comparar as demandas lá.
+          A <strong>análise multicritério</strong> produz critérios e pesos consistentes. Depois da
+          homologação, a hierarquização aplica essa régua ao universo definido e calcula a ordem de
+          prioridade dos planos, programas ou projetos aptos.
         </span>
       </p>
       <div class="ahp-summary-grid">
@@ -94,26 +87,24 @@
           <div class="ahp-summary-card__icon"><i class="fas fa-list-check" aria-hidden="true"></i></div>
           <h2><i class="fas fa-list-check" aria-hidden="true"></i> O que se faz aqui</h2>
           <p>
-            Estabelece-se o núcleo lógico e teórico da análise multicritério: ao definir as
-            <strong>premissas</strong> e, em seguida, os <strong>critérios</strong> que as
-            satisfazem, monta-se o arcabouço teórico-conceitual do fluxo que leva à hierarquização
-            das demandas.
+            A equipe define premissas e critérios, registra as comparações pareadas, calcula os
+            pesos e verifica a consistência dos julgamentos.
           </p>
         </article>
         <article class="card-onde-entra-no-fluxo ahp-summary-card">
           <div class="ahp-summary-card__icon"><i class="fas fa-arrow-right-arrow-left" aria-hidden="true"></i></div>
           <h2><i class="fas fa-arrow-right-arrow-left" aria-hidden="true"></i> Onde entra no fluxo</h2>
           <p>
-            É o primeiro elo da decisão: a saída (critérios + pesos consistentes) alimenta
-            diretamente a rodada de hierarquização das demandas elegíveis.
+            A análise homologada fornece os critérios e pesos que serão aplicados ao universo da
+            hierarquização.
           </p>
         </article>
         <article class="card-por-que-importa ahp-summary-card">
           <div class="ahp-summary-card__icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></div>
           <h2><i class="fas fa-shield-halved" aria-hidden="true"></i> Por que importa</h2>
           <p>
-            Garante que a priorização seja transparente, consistente e auditável — e não fruto de
-            preferências pontuais e não documentadas.
+            Documenta a lógica da decisão e torna a priorização transparente, consistente,
+            reproduzível e auditável.
           </p>
         </article>
       </div>
@@ -127,9 +118,8 @@
       <p class="card-ahp-info-note ahp-info-note card">
         <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
         <span>
-          Implementamos esta etapa no SAD como uma <strong>calculadora interativa</strong> que conduz
-          você, passo a passo, da definição dos critérios até os pesos finais com verificação de
-          consistência. Comece agora.
+          A calculadora orienta o preenchimento desde a definição dos critérios até a geração dos
+          pesos e a verificação de consistência.
         </span>
       </p>
       <div class="ahp-welcome-actions">

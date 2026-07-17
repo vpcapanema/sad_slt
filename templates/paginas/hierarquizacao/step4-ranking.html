@@ -1,5 +1,5 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Hierarquização e Ranqueamento de Objetos" %}
+{% set subtitulo = "Hierarquização e ranking de demandas" %}
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 
@@ -19,15 +19,15 @@
   <main class="conteudo-principal app-main ahp-main">
 
     <nav class="card-fases-do-modulo ahp-phase-nav card" aria-label="Fases do módulo">
-      <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e objetos</span></a>
-      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Avaliação dos objetos</span></a>
-      <a href="#" class="ahp-phase active"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Ranking e homologação</span></a>
+      <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-phase"><span class="ahp-phase-num">Etapas 1–2</span><span class="ahp-phase-name">Análise e universo</span></a>
+      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Etapa 3</span><span class="ahp-phase-name">Avaliação das demandas</span></a>
+      <a href="#" class="ahp-phase active"><span class="ahp-phase-num">Etapas 4–5</span><span class="ahp-phase-name">Ranking e homologação</span></a>
     </nav>
 
     <div class="card-ahp-progress ahp-progress card">
       <div class="ahp-progress-bar">
-        <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-progress-step completed"><div class="ahp-progress-circle">✓</div><span>Config. multicritério</span></a>
-        <a href="#" class="ahp-progress-step completed" id="link-step2"><div class="ahp-progress-circle">✓</div><span>Objetos</span></a>
+        <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-progress-step completed"><div class="ahp-progress-circle">✓</div><span>Análise multicritério</span></a>
+        <a href="#" class="ahp-progress-step completed" id="link-step2"><div class="ahp-progress-circle">✓</div><span>Universo</span></a>
         <a href="#" class="ahp-progress-step completed" id="link-step3"><div class="ahp-progress-circle">✓</div><span>Avaliação</span></a>
         <span class="ahp-progress-step active"><div class="ahp-progress-circle">4</div><span>Ranking</span></span>
         <span class="ahp-progress-step" id="step5-wrap"><div class="ahp-progress-circle">5</div><span>Homologação</span></span>
@@ -72,7 +72,7 @@
     <section class="card-rank-result-section secao-rank-result-section card ahp-step-section hidden" id="rank-result-section">
       <div class="ahp-section-label">
         <span class="ahp-section-index-icon" aria-hidden="true">4.2</span>
-        <span>Ranking dos objetos</span>
+        <span>Ranking das demandas</span>
       </div>
       <div class="ahp-section-body">
         <div class="ahp-subcard" id="rank-list"></div>

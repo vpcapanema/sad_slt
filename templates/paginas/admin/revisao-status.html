@@ -22,24 +22,24 @@
       </div>
       <div class="admin-card-body">
         <p class="step-intro">
-          Modelo de status em <strong>3 fases</strong> de <code>demandas.dom_status_demanda</code>
-          (coluna <code>fase</code>). Na <strong>Fase 1</strong> tudo é «Demanda …»; após aprovação deixa de
-          ser demanda e, nas <strong>Fases 2 e 3</strong>, o rótulo passa a ser <em>Plano</em>,
-          <em>Programa</em> ou <em>Projeto</em> conforme o tipo. Não há status «transversais»: suspensão e
-          retirada têm código próprio em cada fase.
+          O ciclo de uma demanda é organizado em <strong>três fases administrativas</strong>. Na primeira,
+          o registro permanece em análise no MOCAD. Após a aprovação e a declaração de aptidão à
+          hierarquização, o MAD passa a tratá-lo conforme sua categoria: <em>plano</em>, <em>programa</em>
+          ou <em>projeto</em>. Suspensão, retirada e cancelamento são registrados na fase em que ocorrem,
+          preservando o histórico da decisão.
         </p>
 
         <div class="status-camada-legend">
           <div class="status-camada-chip status-camada-chip--1">
-            <strong>Fase 1 — Cadastro e análise</strong>
+            <strong>Etapa 1 — Cadastro e análise</strong>
             <span>Em rascunho, em análise, aprovada, reprovada, suspensa ou cancelada</span>
           </div>
           <div class="status-camada-chip status-camada-chip--2">
-            <strong>Fase 2 — Hierarquização</strong>
+            <strong>Etapa 2 — Hierarquização</strong>
             <span>Apta → em hierarquização → concluída → ranqueada (publicada)</span>
           </div>
           <div class="status-camada-chip status-camada-chip--pos">
-            <strong>Fase 3 — Pós-ranqueamento</strong>
+            <strong>Etapa 3 — Pós-ranking</strong>
             <span>Em execução, finalizada, suspensa ou cancelada</span>
           </div>
         </div>
@@ -49,7 +49,7 @@
         <div id="revisao-camadas"></div>
 
         <div class="card-status-revisao-notas status-revisao-notas card admin-card-nested">
-          <h3 class="status-revisao-notas-title">Pontos a decidir</h3>
+          <h3 class="status-revisao-notas-title">Questões pendentes de validação institucional</h3>
           <ul class="status-revisao-list" id="revisao-notas"></ul>
         </div>
 

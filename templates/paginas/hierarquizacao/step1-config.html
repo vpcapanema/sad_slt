@@ -1,9 +1,9 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Hierarquização e Ranqueamento de Objetos" %}
+{% set subtitulo = "Hierarquização e ranking de demandas" %}
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 
-{% block titulo %}Etapa 1 — Configuração Multicritério — SLT{% endblock %}
+{% block titulo %}Etapa 1 — Análise multicritério — SLT{% endblock %}
 {% block classes_body %}ahp-module-page{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
 
@@ -18,15 +18,15 @@
   <main class="conteudo-principal app-main ahp-main">
 
     <nav class="card-fases-do-modulo ahp-phase-nav card" aria-label="Fases do módulo">
-      <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-phase active"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e objetos</span></a>
-      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Avaliação dos objetos</span></a>
-      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Ranking e homologação</span></a>
+      <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-phase active"><span class="ahp-phase-num">Etapas 1–2</span><span class="ahp-phase-name">Análise e universo</span></a>
+      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Etapa 3</span><span class="ahp-phase-name">Avaliação das demandas</span></a>
+      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Etapas 4–5</span><span class="ahp-phase-name">Ranking e homologação</span></a>
     </nav>
 
     <div class="card-ahp-progress ahp-progress card">
       <div class="ahp-progress-bar">
-        <span class="ahp-progress-step active"><div class="ahp-progress-circle">1</div><span>Config. multicritério</span></span>
-        <span class="ahp-progress-step"><div class="ahp-progress-circle">2</div><span>Objetos</span></span>
+        <span class="ahp-progress-step active"><div class="ahp-progress-circle">1</div><span>Análise multicritério</span></span>
+        <span class="ahp-progress-step"><div class="ahp-progress-circle">2</div><span>Universo</span></span>
         <span class="ahp-progress-step"><div class="ahp-progress-circle">3</div><span>Avaliação</span></span>
         <span class="ahp-progress-step"><div class="ahp-progress-circle">4</div><span>Ranking</span></span>
         <span class="ahp-progress-step"><div class="ahp-progress-circle">5</div><span>Homologação</span></span>
@@ -39,18 +39,18 @@
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
         <a href="/restrict/hierarquizacao/processos/">Hierarquização</a>
         <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
-        <span class="ahp-breadcrumb-current">Etapa 1: Configuração multicritério</span>
+        <span class="ahp-breadcrumb-current">Etapa 1: Análise multicritério</span>
       </nav>
       <h1 class="ahp-page-title">
         <i class="fas fa-sliders" aria-hidden="true"></i>
-        Etapa 1: Seleção da configuração multicritério
+        Etapa 1: Seleção da análise multicritério
       </h1>
       <p class="card-ahp-info-note ahp-info-note card">
         <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
         <span>
-          Selecione uma configuração multicritério de <strong>portfólio homologada</strong>. Os
-          critérios e pesos definidos nela serão aplicados diretamente ao ranqueamento dos objetos —
-          nenhuma nova comparação pareada é necessária.
+          Selecione uma análise multicritério de <strong>portfólio homologada</strong>. O MAD aplica
+          seus critérios e pesos ao universo da hierarquização; não é necessário refazer as
+          comparações pareadas.
         </span>
       </p>
     </section>
@@ -83,7 +83,7 @@
     <section class="card-cfg-loading secao-cfg-loading card ahp-step-section">
       <div class="ahp-section-label">
         <span class="ahp-section-index-icon" aria-hidden="true">1.2</span>
-        <span>Configuração multicritério</span>
+        <span>Análise multicritério</span>
       </div>
       <div class="ahp-section-body">
         <div class="ahp-subcard">

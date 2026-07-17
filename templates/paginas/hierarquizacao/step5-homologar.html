@@ -1,5 +1,5 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Hierarquização e Ranqueamento de Objetos" %}
+{% set subtitulo = "Hierarquização e ranking de demandas" %}
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 
@@ -18,15 +18,15 @@
   <main class="conteudo-principal app-main ahp-main">
 
     <nav class="card-fases-do-modulo ahp-phase-nav card" aria-label="Fases do módulo">
-      <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e objetos</span></a>
-      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Avaliação dos objetos</span></a>
-      <a href="#" class="ahp-phase active"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Ranking e homologação</span></a>
+      <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-phase"><span class="ahp-phase-num">Etapas 1–2</span><span class="ahp-phase-name">Análise e universo</span></a>
+      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Etapa 3</span><span class="ahp-phase-name">Avaliação das demandas</span></a>
+      <a href="#" class="ahp-phase active"><span class="ahp-phase-num">Etapas 4–5</span><span class="ahp-phase-name">Ranking e homologação</span></a>
     </nav>
 
     <div class="card-ahp-progress ahp-progress card">
       <div class="ahp-progress-bar">
-        <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-progress-step completed"><div class="ahp-progress-circle">✓</div><span>Config. multicritério</span></a>
-        <a href="#" class="ahp-progress-step completed" id="link-step2"><div class="ahp-progress-circle">✓</div><span>Objetos</span></a>
+        <a href="/restrict/hierarquizacao/processos/nova/" class="ahp-progress-step completed"><div class="ahp-progress-circle">✓</div><span>Análise multicritério</span></a>
+        <a href="#" class="ahp-progress-step completed" id="link-step2"><div class="ahp-progress-circle">✓</div><span>Universo</span></a>
         <a href="#" class="ahp-progress-step completed" id="link-step3"><div class="ahp-progress-circle">✓</div><span>Avaliação</span></a>
         <a href="#" class="ahp-progress-step completed" id="link-step4"><div class="ahp-progress-circle">✓</div><span>Ranking</span></a>
         <span class="ahp-progress-step active"><div class="ahp-progress-circle">5</div><span>Homologação</span></span>
@@ -48,8 +48,9 @@
       <p class="card-ahp-info-note ahp-info-note card">
         <i class="fas fa-triangle-exclamation app-template-inline-icon app-template-inline-icon--warning" aria-hidden="true"></i>
         <span>
-          A homologação é uma ação <strong>irreversível</strong>. Após homologar, o ranking fica
-          registrado de forma permanente e auditável. Revise o sumário abaixo antes de confirmar.
+          A homologação confirma institucionalmente o resultado e é <strong>irreversível</strong>.
+          O ranking fica registrado de forma permanente e auditável, mas sua publicação exige uma
+          ação própria na camada de transparência. Revise o sumário antes de confirmar.
         </span>
       </p>
     </section>
@@ -66,7 +67,7 @@
     <div id="hom-sucesso" class="card-hom-sucesso ahp-info-note card hier-sucesso-box hidden">
       <i class="fas fa-circle-check app-template-inline-icon hier-sucesso__icon" aria-hidden="true"></i>
       <span class="hier-sucesso__text">
-        <strong>Hierarquização homologada com sucesso!</strong> O ranking está registrado e publicado.
+        <strong>Hierarquização homologada com sucesso!</strong> O ranking está registrado e disponível para publicação autorizada.
       </span>
     </div>
 

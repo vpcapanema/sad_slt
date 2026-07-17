@@ -25,15 +25,14 @@
           <i class="fas fa-list-check"></i> Gestão das hierarquizações
         </h1>
         <p>
-          Cadastre o universo da rodada e consulte integralmente os registros
-          persistidos.
+          Defina o universo de cada rodada e acompanhe as hierarquizações registradas no MAD.
         </p>
       </section>
 
       <section class="card-informacoes-cadastrais secao-informacoes-cadastrais card ahp-step-section">
         <div class="ahp-section-label">
           <i class="fas fa-folder-plus"></i
-          ><span>Cadastrar Hierarquização</span>
+          ><span>Cadastrar hierarquização</span>
         </div>
         <div class="ahp-section-body">
           <form id="nova-hierarquizacao">
@@ -64,19 +63,19 @@
             <article class="card-universo-da-hierarquizacao ahp-subcard cadastro-card">
               <div class="ahp-subsection-title">
                 <i class="fas fa-folder-tree"></i>
-                <h2>Universo da Hierarquização</h2>
+                <h2>Universo da hierarquização</h2>
               </div>
               <p class="ahp-info-note">
                 <i class="fas fa-circle-info"></i
                 ><span
-                  >O objeto escolhido delimita este universo: demandas de tipos
-                  diferentes nunca são misturadas na mesma hierarquização.
+                  >O tipo de demanda delimita o universo: planos, programas e projetos
+                  não são misturados na mesma hierarquização.
                   Utilize os filtros para formar o conjunto e confirme marcando
                   as demandas que participarão da rodada.</span
                 >
               </p>
               <p class="ahp-universo-objeto">
-                Tipo de demanda/objeto selecionado:
+                Tipo de demanda selecionado:
                 <strong id="universo-objeto-valor">—</strong>
               </p>
               <div class="ahp-subcard">
@@ -144,11 +143,7 @@
                 <h2>Matriz de premissas e critérios</h2>
               </div>
               <p class="ahp-help-text">
-                A matriz é armazenada em
-                <code
-                  >dados_hierarquizacao → cabecalho_grupo →
-                  matriz_premissas_criterios</code
-                >.
+                Anexe a matriz que documenta as premissas e os critérios aplicáveis à rodada.
               </p>
               <label class="process-field"
                 ><span>Arquivo JSON, CSV ou XLSX *</span
@@ -179,9 +174,8 @@
         </div>
         <div class="ahp-section-body">
           <p class="ahp-help-text">
-            A tabela abaixo representa todos os campos de
-            <code>hierarquizacao_demandas.hierarquizacao_portfolio</code>.
-            Clique em um conteúdo JSON para visualizá-lo formatado.
+            Consulte as rodadas cadastradas e abra os conteúdos estruturados para examinar os
+            dados completos de cada registro.
           </p>
           <div id="hier-loading">Carregando…</div>
           <div

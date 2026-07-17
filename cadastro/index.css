@@ -18,6 +18,19 @@
   line-height: 1.05;
 }
 
+.module-hero .sigla-sicard {
+  width: fit-content;
+  margin: 0 0 1rem;
+  padding: .35rem .7rem;
+  border: 1px solid rgba(255, 255, 255, .42);
+  border-radius: .35rem;
+  color: #fff;
+  background: rgba(255, 255, 255, .1);
+  font-size: 1rem;
+  font-weight: 850;
+  letter-spacing: .16em;
+}
+
 .module-hero p:last-child {
   max-width: 50rem;
   margin: 0;
