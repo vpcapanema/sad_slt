@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  {% block base_url %}{% endblock %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{% block descricao %}Painel cartográfico do SICARD.{% endblock %}">
+  <title>{% block titulo %}Painel — SICARD{% endblock %}</title>
+  <link rel="icon" href="/assets/img/brand/sicard-simbolo.png" type="image/png">
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="/assets/css/template-painel-mapa.css">
+  {% block estilos_pagina %}{% endblock %}
+</head>
+<body class="pagina-painel-mapa layout-with-sidebar {% block classes_body %}{% endblock %}" data-navegacao="painel_{{ navegacao }}"{% if requer_autenticacao %} data-requer-autenticacao="true"{% endif %}>
+  <div class="estrutura-painel-mapa layout-with-sidebar-grid">
+    {% include "componentes/navbar_painel_" ~ navegacao ~ ".html" %}
+
+    <aside class="barra-lateral-painel layout-sidebar {% block classes_barra_lateral %}{% endblock %}" aria-label="{% block rotulo_barra_lateral %}Controles do painel{% endblock %}">
+      <div class="conteudo-barra-lateral layout-sidebar-body">
+        {% block barra_lateral %}{% endblock %}
+      </div>
+      {% with footer_painel = true %}{% include "componentes/footer.html" %}{% endwith %}
+    </aside>
+
+    <div class="area-principal-painel layout-main">
+      {% block antes_painel %}{% endblock %}
+      {% block painel %}{% endblock %}
+    </div>
+  </div>
+
+  {% block scripts_pagina %}{% endblock %}
+  <script src="/assets/js/template-base.js"></script>
+</body>
+</html>

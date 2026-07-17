@@ -1,0 +1,208 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Área restrita" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Área restrita — SICARD{% endblock %}
+{% block classes_body %}{% endblock %}
+{% block base_url %}<base href="/restrict/" />{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="index.css?v=20260715c" />
+  <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+{% endblock %}
+
+{% block conteudo %}
+<div
+      id="admin-session-bar"
+      class="admin-session-bar hidden"
+      aria-label="Usuário conectado"
+    ></div>
+
+    <main class="conteudo-principal app-main restrict-index">
+      <section
+        class="secao-modulos-do-sicard restrict-index-heading"
+        aria-labelledby="restrict-index-title"
+      >
+        <p class="restrict-index-eyebrow">Índice da área restrita</p>
+        <h1 id="restrict-index-title">Módulos do SICARD</h1>
+        <p>
+          Acesse as ferramentas internas organizadas pelos três blocos da
+          plataforma.
+        </p>
+      </section>
+
+      <section class="secao-painel-estatistico themed-stats" aria-labelledby="stats-title">
+        <div class="themed-stats-heading">
+          <p class="restrict-index-eyebrow">Visão geral</p>
+          <h2 id="stats-title">Painel estatístico</h2>
+        </div>
+        <div class="themed-stats-grid">
+          <article class="card-gestao-de-demandas stats-theme">
+            <h3>
+              <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
+              Gestão de demandas
+            </h3>
+            <div class="stats-theme-values">
+              <div>
+                <strong id="stat-demandas">—</strong
+                ><span>Demandas cadastradas</span>
+              </div>
+              <div>
+                <strong id="stat-analise">—</strong><span>Em análise</span>
+              </div>
+            </div>
+          </article>
+          <article class="card-hierarquizacao-e-ranking stats-theme">
+            <h3>
+              <i class="fa-solid fa-ranking-star" aria-hidden="true"></i>
+              Hierarquização e Ranking
+            </h3>
+            <div class="stats-theme-values">
+              <div>
+                <strong id="stat-aptas">—</strong
+                ><span>Aptas à hierarquização</span>
+              </div>
+              <div>
+                <strong id="stat-hierarquizacao">—</strong
+                ><span>Em hierarquização</span>
+              </div>
+            </div>
+          </article>
+          <article class="card-resultados-e-transparencia stats-theme">
+            <h3>
+              <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+              Resultados e Transparência
+            </h3>
+            <div class="stats-theme-values">
+              <div>
+                <strong id="stat-finalizadas">—</strong
+                ><span>Hierarquizações concluídas</span>
+              </div>
+              <div>
+                <strong id="stat-publicadas">—</strong
+                ><span>Resultados publicados</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <div class="restrict-module-list">
+        <details class="restrict-module" open>
+          <summary>
+            <span class="restrict-module-icon"
+              ><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i
+            ></span>
+            <span class="restrict-module-title">Gestão de demandas</span>
+            <i
+              class="fa-solid fa-chevron-down restrict-module-chevron"
+              aria-hidden="true"
+            ></i>
+          </summary>
+          <div class="restrict-module-links">
+            <a href="painel/">
+              <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+              <span
+                ><strong>Painel de demandas</strong
+                ><small
+                  >Visualize e acompanhe as demandas no painel.</small
+                ></span
+              >
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </a>
+            <a href="demandas/">
+              <i class="fa-solid fa-table-list" aria-hidden="true"></i>
+              <span
+                ><strong>Tabela de demandas</strong
+                ><small
+                  >Consulte e gerencie os registros cadastrados.</small
+                ></span
+              >
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </a>
+          </div>
+        </details>
+
+        <details class="restrict-module" open>
+          <summary>
+            <span class="restrict-module-icon"
+              ><i class="fa-solid fa-ranking-star" aria-hidden="true"></i
+            ></span>
+            <span class="restrict-module-title">Hierarquização e Ranking</span>
+            <i
+              class="fa-solid fa-chevron-down restrict-module-chevron"
+              aria-hidden="true"
+            ></i>
+          </summary>
+          <div class="restrict-module-links">
+            <a href="hierarquizacao/">
+              <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+              <span
+                ><strong>Hierarquização e Ranking</strong
+                ><small>Acesse a árvore completa do processo.</small></span
+              >
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </a>
+            <a href="hierarquizacao/processos/">
+              <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+              <span
+                ><strong>Processos de hierarquização</strong
+                ><small>Cadastre e acompanhe as hierarquizações.</small></span
+              >
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </a>
+            <a href="/restrict/geoespacial/produtos/">
+              <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+              <span
+                ><strong>Produtos geoespaciais</strong
+                ><small
+                  >Consulte os insumos e produtos territoriais.</small
+                ></span
+              >
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </a>
+          </div>
+        </details>
+
+        <details class="restrict-module" open>
+          <summary>
+            <span class="restrict-module-icon"
+              ><i class="fa-solid fa-chart-line" aria-hidden="true"></i
+            ></span>
+            <span class="restrict-module-title"
+              >Resultados e Transparência</span
+            >
+            <i
+              class="fa-solid fa-chevron-down restrict-module-chevron"
+              aria-hidden="true"
+            ></i>
+          </summary>
+          <div class="restrict-module-links">
+            <a href="/public/transparencia/">
+              <i class="fa-solid fa-eye" aria-hidden="true"></i>
+              <span
+                ><strong>Transparência e acompanhamento</strong
+                ><small
+                  >Acesse os resultados disponibilizados ao público.</small
+                ></span
+              >
+              <i
+                class="fa-solid fa-arrow-up-right-from-square"
+                aria-hidden="true"
+              ></i>
+            </a>
+          </div>
+        </details>
+      </div>
+    </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-api.js"></script>
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/paginas/admin-index-inline-1.js"></script>
+{% endblock %}

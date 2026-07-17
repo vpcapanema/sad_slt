@@ -1,0 +1,189 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Hierarquização AHP" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Etapa 4: Escolha do Método — AHP — SLT{% endblock %}
+{% block classes_body %}ahp-module-page{% endblock %}
+{% block base_url %}<base href="/restrict/ahp/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+<main class="conteudo-principal app-main ahp-main">
+            <nav class="card-fases-do-modulo ahp-phase-nav card" aria-label="Fases do módulo">
+              <a href="step1-configuracao.html" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e obtenção dos objetos</span></a>
+              <a href="step2-criterios.html" class="ahp-phase active"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Critérios e matriz de comparação</span></a>
+              <a href="step6-resultados.html" class="ahp-phase"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Resultados e pesos</span></a>
+            </nav>
+            <div class="card-ahp-progress ahp-progress card"><div class="ahp-progress-bar"><a href="step1-configuracao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="step2-criterios.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="step3-nomes.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="step4-metodo.html" class="ahp-progress-step active"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="step5-comparacao.html" class="ahp-progress-step"><div class="ahp-progress-circle">5</div><span>Comparação pareada</span></a><a href="step6-resultados.html" class="ahp-progress-step"><div class="ahp-progress-circle">6</div><span>Geração de pesos</span></a></div></div>
+
+            <section class="card-etapa-4-escolha-do-metodo secao-etapa-4-escolha-do-metodo card ahp-step-intro">
+                <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+                        <a href="index.html">Início</a>
+                        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+                        <a href="step3-nomes.html">Etapa 3: Nomes</a>
+                        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+                        <span class="ahp-breadcrumb-current">Etapa 4: Método</span>
+                    </nav>
+                    <h1 class="ahp-page-title"><i class="fas fa-sliders app-template-title-icon" aria-hidden="true"></i>Etapa 4: Escolha do Método</h1>
+                    <p class="card-ahp-info-note ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i><span>Defina <strong>quem</strong> preencherá a matriz pareada (individual ou colaborativo) e, em seguida, a <strong>estratégia</strong> de entrada dos dados (matriz direta ou formulário assistido).</span></p>
+            </section>
+
+            <section class="card-sobre-esta-etapa-escolha-do-metodo secao-sobre-esta-etapa-escolha-do-metodo card ahp-step-section ahp-step-section--contexto">
+                <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">4.1</span><span>Contexto da Etapa</span></div>
+                <div class="ahp-section-body">
+                    <section class="secao-informacoes ahp-section info-card"><div class="ahp-info-card-header"><i class="fas fa-info-circle"></i><h2>Sobre esta Etapa: Escolha do Método de Comparação</h2></div><div class="info-card-content"><p>Escolha <strong>quem preencherá</strong> a matriz pareada e, em seguida, a <strong>estratégia</strong> de entrada dos dados. Individual e colaborativo produzem a mesma matriz final na Etapa 5 — muda quem informa os julgamentos e como o fluxo é organizado.</p><div class="ahp-info-highlights"><div class="ahp-info-item"><i class="fas fa-user"></i><div><strong>Preenchimento individual</strong><p>Uma única pessoa preenche a matriz na Etapa 5, escolhendo matriz direta ou formulário assistido.</p></div></div><div class="ahp-info-item"><i class="fas fa-people-group"></i><div><strong>Preenchimento colaborativo</strong><p>Participantes convidados preenchem via link público; você consolida as respostas consistentes (RC &lt; 0,10) na Etapa 5.</p></div></div><div class="ahp-info-item"><i class="fas fa-table"></i><div><strong>Matriz direta</strong><p>Estratégia para preenchimento individual: todos os valores de uma vez — indicada para quem domina o AHP.</p></div></div><div class="ahp-info-item"><i class="fas fa-list-check"></i><div><strong>Formulário assistido</strong><p>Comparação par a par guiada; obrigatório no modo colaborativo e recomendado para iniciantes.</p></div></div><div class="ahp-info-item"><i class="fas fa-balance-scale"></i><div><strong>Escala de Saaty</strong><p>Valores de 1 a 9 indicam a importância relativa entre critérios; envio colaborativo exige RC &lt; 0,10.</p></div></div></div></div></section>
+                </div>
+            </section>
+
+            <section class="card-preenchimento-individual secao-preenchimento-individual card ahp-step-section" id="fill-mode-section">
+                <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">4.2</span><span>Método de preenchimento da matriz de comparação pareada</span></div>
+                <div class="ahp-section-body">
+                    <div class="ahp-subcard">
+                        <div class="ahp-subsection-title ahp-subsection-title--roman">
+                            <span class="ahp-subsection-num ahp-subsection-num--roman">I</span>
+                            <span><i class="fas fa-user-gear" aria-hidden="true"></i> Selecione o método de preenchimento</span>
+                        </div>
+                        <p class="step-intro">Escolha <strong>Preenchimento individual</strong> se a matriz de comparação pareada for preenchida por um único especialista/usuário. Escolha <strong>Preenchimento colaborativo</strong> quando a matriz for preenchida por mais de um especialista/usuário. Neste caso, informe os colaboradores em <strong>Configuração do preenchimento</strong> e finalize o envio no <strong>Ambiente colaborativo</strong>.</p>
+                        <div class="ahp-method-grid ahp-method-grid--2">
+                            <label class="ahp-method-card ahp-method-card--radio">
+                                <input type="radio" name="fill-mode" value="individual" data-evento-inline="ahp-step4-metodo-conteudo-1">
+                                <div class="method-option-header"><div class="ahp-method-icon"><i class="fas fa-user"></i></div><h3>Preenchimento individual</h3></div>
+                                <p>Uma única pessoa preenche a matriz pareada na Etapa 5.</p>
+                            </label>
+                            <label class="ahp-method-card ahp-method-card--radio">
+                                <input type="radio" name="fill-mode" value="collaborative" data-evento-inline="ahp-step4-metodo-conteudo-2">
+                                <div class="method-option-header"><div class="ahp-method-icon"><i class="fas fa-people-group"></i></div><h3>Preenchimento colaborativo</h3></div>
+                                <p>Grupo de participantes preenche o mesmo conjunto de critérios via links individuais.</p>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="ahp-subcard" id="estrategia-section">
+                        <div class="ahp-subsection-title ahp-subsection-title--roman">
+                            <span class="ahp-subsection-num ahp-subsection-num--roman">II</span>
+                            <span><i class="fas fa-sliders" aria-hidden="true"></i> Escolha a estratégia de preenchimento</span>
+                        </div>
+                        <div class="ahp-method-grid">
+                            <div class="ahp-method-card" data-strategy="matrix" data-evento-inline="ahp-step4-metodo-conteudo-3">
+                                <div class="method-option-header"><div class="ahp-method-icon"><i class="fas fa-th"></i></div><h3>Matriz Direta</h3></div>
+                                <div class="method-option-body"><p>Preencha todos os valores da matriz de comparação de uma vez.</p></div>
+                            </div>
+                            <div class="ahp-method-card" data-strategy="form" data-evento-inline="ahp-step4-metodo-conteudo-4">
+                                <div class="method-option-header"><div class="ahp-method-icon"><i class="fas fa-clipboard-list"></i></div><h3>Formulário Assistido</h3></div>
+                                <div class="method-option-body"><p>Compare critérios par a par, uma comparação por vez.</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card-collab-section secao-collab-section card ahp-step-section is-hidden" id="collab-section">
+                <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">4.3</span><span>Ambiente colaborativo</span></div>
+                <div class="ahp-section-body">
+                    <section class="secao-collab-config-section ahp-section ahp-subcard" id="collab-config-section">
+                        <div class="ahp-subsection-title ahp-subsection-title--roman">
+                            <span class="ahp-subsection-num ahp-subsection-num--roman">I</span>
+                            <span>Configuração do preenchimento</span>
+                        </div>
+                        <div class="ahp-section-body">
+                            <p class="step-intro">Informe o e-mail de cada participante e a data limite para o envio das informações para o SAD.</p>
+
+                            <div class="info-card">
+                                <div class="ahp-collab-grid2">
+                                    <div class="c-form-group">
+                                        <label for="collab-email-input" class="c-form-label"><i class="fas fa-envelope"></i> E-mail do colaborador</label>
+                                        <small class="form-help"><i class="fas fa-info-circle"></i> Aceita um ou vários e-mails por vez (separe por vírgula, ponto e vírgula ou quebra de linha).</small>
+                                        <input type="text" id="collab-email-input" class="c-form-control" placeholder="nome@dominio.com; outro@dominio.com" autocomplete="email">
+                                    </div>
+                                    <div class="c-form-group">
+                                        <label for="collab-deadline" class="c-form-label"><i class="fas fa-calendar"></i> Disponível até</label>
+                                        <small class="form-help"><i class="fas fa-info-circle"></i> Define a data limite para que os colaboradores enviem suas respostas.</small>
+                                        <div class="ahp-collab-deadline-inline">
+                                            <input type="datetime-local" id="collab-deadline" class="c-form-control" data-evento-inline="ahp-step4-metodo-conteudo-5">
+                                            <button type="button" class="ahp-collab-add-btn" id="collab-add-email-btn" aria-label="Adicionar colaborador" title="Adicionar colaborador">
+                                                <i class="fas fa-plus" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="info-card">
+                                <div class="c-form-group">
+                                    <label class="c-form-label"><i class="fas fa-list"></i> Lista de colaboradores</label>
+                                    <div class="ahp-collab-table-wrap">
+                                        <table class="ahp-collab-table" id="collab-email-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="ahp-collab-chk-col"><input type="checkbox" id="collab-select-all" title="Selecionar todos" aria-label="Selecionar todos"></th>
+                                                    <th>Colaboradores</th>
+                                                    <th>Email</th>
+                                                    <th>Data limite</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="collab-email-list"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="ahp-form-actions">
+                                    <button type="button" class="btn btn-danger" id="collab-delete-btn" disabled data-evento-inline="ahp-step4-metodo-conteudo-6"><i class="fas fa-trash c-btn__icon"></i>Excluir selecionados</button>
+                                    <button type="button" class="btn btn-primary" id="collab-confirm-btn"><i class="fas fa-check c-btn__icon"></i>Confirmar colaboradores</button>
+                                </div>
+                                <p id="collab-config-feedback" class="ahp-matriz-edit-feedback" role="status" aria-live="polite"></p>
+
+                                <section id="collab-email-draft-card" class="secao-collab-email-draft-card ahp-recommendation is-hidden">
+                                    <div class="ahp-recommendation__head"><i class="fas fa-paper-plane"></i><strong>Mensagem padrão para envio aos colaboradores</strong></div>
+                                    <p>Use o texto abaixo para convidar os colaboradores a preencher o formulário colaborativo.</p>
+                                    <div class="c-form-group">
+                                        <label for="collab-email-template" class="c-form-label"><i class="fas fa-envelope-open-text"></i> Mensagem sugerida</label>
+                                        <textarea id="collab-email-template" class="c-form-control" rows="8" readonly></textarea>
+                                    </div>
+                                    <div class="ahp-form-actions">
+                                        <button type="button" class="btn btn-secondary" id="collab-open-mail-btn"><i class="fas fa-envelope c-btn__icon"></i>Abrir aplicativo de e-mail</button>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="secao-collab-status-section ahp-section ahp-subcard" id="collab-status-section">
+                        <div class="ahp-subsection-title ahp-subsection-title--roman">
+                            <span class="ahp-subsection-num ahp-subsection-num--roman">II</span>
+                            <span>Status do ambiente colaborativo</span>
+                        </div>
+                        <div class="ahp-section-body">
+                            <div id="collab-status-content"></div>
+                        </div>
+                    </section>
+                </div>
+            </section>
+
+            <section class="card-step4-nav-section secao-step4-nav-section card ahp-step-section" id="step4-nav-section">
+                <div class="ahp-section-body">
+                    <div class="ahp-form-actions">
+                        <a href="step3-nomes.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a>
+                        <button type="button" class="btn btn-primary" id="step4-continue-btn">Continuar<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></button>
+                    </div>
+                </div>
+            </section>
+    </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="js/ahp-page-reset.js"></script>
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="js/ahp-auth.js"></script>
+  <script src="js/ahp-texto-pt.js"></script>
+  <script src="js/config-api.js"></script>
+  <script src="js/config-artefatos.js"></script>
+  <script src="js/ahp-contexto-ui.js"></script>
+  <script src="js/colaborativa-api.js"></script>
+  <script src="js/step4-metodo.js"></script>
+  <script src="/assets/js/field-filled.js"></script>
+  <script src="/assets/js/paginas/ahp-step4-metodo-conteudo-eventos.js"></script>
+{% endblock %}

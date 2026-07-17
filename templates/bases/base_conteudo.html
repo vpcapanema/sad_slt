@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  {% block base_url %}{% endblock %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{% block descricao %}SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas.{% endblock %}">
+  <title>{% block titulo %}SICARD{% endblock %}</title>
+  <link rel="icon" href="/assets/img/brand/sicard-simbolo.png" type="image/png">
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="/assets/css/template-conteudo.css">
+  {% block estilos_pagina %}{% endblock %}
+</head>
+<body class="pagina-conteudo {% block classes_body %}{% endblock %}" data-navegacao="{{ navegacao }}"{% if requer_autenticacao %} data-requer-autenticacao="true"{% endif %}>
+  {% include "componentes/navbar_" ~ navegacao ~ ".html" %}
+
+  {% block antes_conteudo %}{% endblock %}
+  {% block conteudo %}{% endblock %}
+
+  {% include "componentes/footer.html" %}
+
+  {% block scripts_pagina %}{% endblock %}
+  <script src="/assets/js/template-base.js"></script>
+</body>
+</html>

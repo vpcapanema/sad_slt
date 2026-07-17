@@ -1,0 +1,61 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Documentação do sistema" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+
+{% block titulo %}Documentação — SICARD{% endblock %}
+{% block classes_body %}module-index-page{% endblock %}
+{% block base_url %}<base href="/public/documentacao/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="../cadastro/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<main class="conteudo-principal app-main module-index">
+    <section class="secao-sicard module-hero">
+      <p class="module-eyebrow">Documentação funcional</p>
+      <h1>SICARD</h1>
+      <p>Sistema Inteligente de Cadastro e Ranking de Demandas.</p>
+    </section>
+
+    <section class="secao-blocos-da-plataforma module-info-section">
+      <p class="module-eyebrow">Organização</p>
+      <h2>Blocos da plataforma</h2>
+      <div class="module-link-list">
+        <a href="/public/cadastro/"><span>1. Cadastro de Demandas</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        <a href="/restrict/hierarquizacao/"><span>2. Hierarquização de Demandas</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        <a href="/public/transparencia/"><span>3. Transparência e Acompanhamento</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+      </div>
+    </section>
+
+    <section class="secao-desburocratizacao-com-seguranca-e-transparencia module-info-section">
+      <p class="module-eyebrow">Diretriz central</p>
+      <h2>Desburocratização com segurança e transparência</h2>
+      <p>O SICARD solicita somente os dados necessários, reaproveita informações existentes e mantém segurança, autorização e rastreabilidade no backend.</p>
+      <p>Autor, data, alterações e decisões são registrados automaticamente. O status e o próximo passo devem ser claros, e somente o gestor decide quando e se uma informação será publicada.</p>
+    </section>
+
+    <section class="secao-operadores module-info-section">
+      <p class="module-eyebrow">Acessos</p>
+      <h2>Operadores</h2>
+      <div class="module-link-list">
+        <span class="restricted-card"><i class="fa-regular fa-eye" aria-hidden="true"></i><span><strong>Visualizador</strong><small>Consulta informações autorizadas.</small></span></span>
+        <span class="restricted-card"><i class="fa-regular fa-keyboard" aria-hidden="true"></i><span><strong>Operador</strong><small>Cadastra, complementa e corrige dados.</small></span></span>
+        <span class="restricted-card"><i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i><span><strong>Analista</strong><small>Avalia, aprova e disponibiliza para hierarquização.</small></span></span>
+        <span class="restricted-card"><i class="fa-solid fa-user-tie" aria-hidden="true"></i><span><strong>Gestor</strong><small>Supervisiona, homologa e decide a publicação.</small></span></span>
+        <span class="restricted-card"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span><strong>Administrador</strong><small>Administra usuários, permissões e configurações.</small></span></span>
+      </div>
+    </section>
+
+    <section class="secao-sigma-pli module-info-section">
+      <p class="module-eyebrow">Cadastros auxiliares</p>
+      <h2>SIGMA-PLI</h2>
+      <div class="module-link-list">
+        <a href="https://56.125.163.194/cadastro/sigma" target="_blank" rel="noopener"><span>Cadastro unificado de pessoa e usuário</span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+        <a href="https://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener"><span>Cadastro de instituição</span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+      </div>
+    </section>
+  </main>
+{% endblock %}

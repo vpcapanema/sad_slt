@@ -1,0 +1,63 @@
+{% extends "bases/base_painel_mapa.html" %}
+{% set subtitulo = "Análise de demanda" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Demanda — Admin SLT{% endblock %}
+{% block classes_body %}admin-data-page admin-dashboard-page  page-admin-demanda{% endblock %}
+{% block classes_barra_lateral %}admin-dashboard-sidebar{% endblock %}
+{% block rotulo_barra_lateral %}Demandas{% endblock %}
+{% block base_url %}<base href="/restrict/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/admin-demanda-page.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+
+{% block barra_lateral %}
+<div class="nav-section painel-layers-section admin-section-nav">
+          <nav class="sidebar-restricted-nav" aria-label="Área restrita">
+            <a href="/restrict/">Área restrita</a>
+            <a href="painel/">Painel de demandas</a>
+            <a href="demandas/" class="is-active" aria-current="page">Tabela de demandas</a>
+          </nav>
+          <div id="records-root" class="layer-group layer-group--root">
+            <button
+              type="button"
+              class="layer-group-header layer-group-header--section"
+              id="toggle-records-root"
+              aria-expanded="true"
+              aria-controls="records-list"
+            >
+              <span class="layer-group-toggle" aria-hidden="true">▼</span>
+              <span class="layer-group-name">Demandas</span>
+              <span id="records-count" class="layer-group-active-count"></span>
+            </button>
+            <div id="records-list" class="layer-group-body layers-container admin-records-list demandas-tree"></div>
+          </div>
+        </div>
+{% endblock %}
+
+{% block painel %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+
+      <main class="conteudo-principal admin-dashboard-content layout-main-scroll" id="dashboard-content">
+        <p class="hint">Carregando demanda…</p>
+      </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="/assets/js/admin-api.js"></script>
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/sigma-read.js"></script>
+  <script src="/assets/js/catalog.js"></script>
+  <script src="/assets/js/status-colors.js"></script>
+  <script src="/assets/js/admin-labels.js"></script>
+  <script src="/assets/js/admin-ui.js"></script>
+  <script src="/assets/js/grouped-sidebar.js"></script>
+  <script src="/assets/js/admin-dashboard.js"></script>
+  <script src="/assets/js/admin-analysis-info.js"></script>
+  <script src="/assets/js/admin-analysis-map.js"></script>
+  <script src="demanda.js"></script>
+{% endblock %}

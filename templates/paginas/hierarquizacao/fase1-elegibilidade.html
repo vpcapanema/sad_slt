@@ -1,0 +1,51 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Fase 1 — Elegibilidade Territorial{% endblock %}
+{% block classes_body %}ahp-module-page{% endblock %}
+{% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="/assets/css/fase1-execucao.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden"></div><main class="conteudo-principal app-main ahp-main fase1-page">
+<section class="card-fase-1-elegibilidade-territorial secao-fase-1-elegibilidade-territorial card"><h1 class="ahp-page-title"><i class="fas fa-shield-halved"></i> Fase 1: Elegibilidade Territorial</h1><p>Interseção sequencial do universo de demandas com as camadas homologadas de restrição e risco.</p></section>
+
+<section class="card-fase-hierarquizacao secao-fase-hierarquizacao card ahp-step-section"><div class="ahp-section-label"><span>1. Carregar hierarquização</span></div><div class="ahp-section-body">
+  <label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option>Carregando…</option></select></label>
+  <div id="fase-resumo" class="fase1-summary hidden"></div>
+</div></section>
+
+<section class="card-camada-restricao secao-camada-restricao card ahp-step-section"><div class="ahp-section-label"><span>2. Carregar camadas de restrição e risco</span></div><div class="ahp-section-body fase1-grid-2">
+  <label>2.1. Camada de restrição homologada <select id="camada-restricao"><option value="">Carregando…</option></select></label>
+  <label>2.2. Camada de risco homologada associada <select id="camada-risco" disabled><option value="">Selecione primeiro a camada de restrição</option></select></label>
+  <p class="ahp-help-text fase1-span">As duas camadas são arquivos independentes e pertencem ao mesmo identificador de conjunto.</p>
+</div></section>
+
+<section class="card-pesos secao-pesos card ahp-step-section"><div class="ahp-section-label"><span>3. Ajustes avançados</span></div><div class="ahp-section-body">
+  <div class="fase1-config-head"><label>Configuração de fatiamento <select id="fatiamento-fase1"><option value="">Carregando…</option></select></label><a class="fase1-library-link" href="/restrict/geoespacial/configuracao-risco-restricao/" title="Abrir biblioteca canônica"><i class="fas fa-book-open"></i><span>Biblioteca canônica</span></a></div>
+  <div id="fatiamento-resumo" class="fase1-summary hidden"></div>
+  <article class="card-pesos fase1-weights-subcard"><h3><i class="fas fa-scale-balanced"></i> Pesos</h3><p>Pesos aplicados aos componentes do índice de risco pela configuração selecionada.</p><div id="fatiamento-pesos" class="fase1-weight-grid"></div></article>
+</div></section>
+
+<section class="card-camadas-operacionais secao-camadas-operacionais card ahp-step-section"><div class="ahp-section-label"><span>4. Geoprocessamento — SLT</span></div><div class="ahp-section-body">
+  <div class="fase1-operational"><h3>Camadas operacionais</h3><div class="fase1-grid-2"><div><h4>Camada de demandas</h4><div id="gp-demandas"><p class="ahp-help-text">Selecione uma hierarquização.</p></div></div><div><h4>Camadas de Restrição e Risco</h4><div id="gp-risco-restricao"><p class="ahp-help-text">Selecione o par homologado.</p></div></div></div></div>
+  <iframe id="gp-frame" class="fase1-gp-frame" title="Componente de geoprocessamento SLT" src="/restrict/geoespacial/bancada/?modulo=fase1&amp;embutido=1"></iframe>
+  <div class="fase1-execute"><label>Modelo <select id="modelo-fase1"><option value="fluxo_fase1_elegibilidade">Fase 1 — Elegibilidade territorial</option></select></label><button id="executar-fase1" class="btn btn--primary" type="button"><i class="fas fa-play"></i> Executar fluxo</button></div>
+  <div id="fase1-erro" class="ahp-info-note ahp-info-note--error hidden"></div><div id="fase1-relatorio" class="fase1-summary hidden"></div>
+</div></section>
+</main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="js/hier-api.js"></script>
+  <script src="js/fases.js"></script>
+  <script src="/assets/js/paginas/hierarquizacao-fase1-elegibilidade-inline-1.js"></script>
+{% endblock %}

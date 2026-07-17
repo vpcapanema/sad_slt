@@ -1,0 +1,19 @@
+<header class="cabecalho-principal app-header">
+  <div class="conteudo-cabecalho app-header-inner">
+    <a href="/public/" class="marca-sicard app-header-brand" title="Página inicial">
+      <span class="moldura-simbolo app-header-icon-frame" aria-hidden="true">
+        <img src="/assets/img/brand/sicard-simbolo.png" alt="" class="simbolo-sicard app-header-icon">
+      </span>
+      <span class="identificacao-sistema app-brand">
+        <span class="nome-sistema app-brand-title">SICARD</span>
+        <small>{{ subtitulo | default("Sistema Inteligente de Cadastro e Ranking de Demandas") }}</small>
+      </span>
+    </a>
+    <nav class="navbar-publica app-nav" aria-label="Navegação pública principal">
+      <a href="/public/cadastro/">Cadastro de Demandas</a>
+      <a href="/public/transparencia/">Transparência e Acompanhamento</a>
+      <a href="/public/documentacao/">Documentação</a>
+      <a href="/public/login/" class="acao-area-restrita app-nav-action" data-link-area-restrita>Área restrita</a>
+    </nav>
+  </div>
+</header>

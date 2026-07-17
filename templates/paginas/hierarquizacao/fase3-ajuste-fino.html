@@ -1,0 +1,23 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Fase 3 — Ajuste fino{% endblock %}
+{% block classes_body %}ahp-module-page{% endblock %}
+{% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden"></div><main class="conteudo-principal app-main ahp-main"><section class="card-fase-3-ajuste-fino-de-prioridade secao-fase-3-ajuste-fino-de-prioridade card"><h1>Fase 3: Ajuste fino de prioridade</h1></section><section class="card-fase-hierarquizacao secao-fase-hierarquizacao card"><label>Hierarquização <select id="fase-hierarquizacao"><option>Carregando…</option></select></label><div id="fase-resumo" class="ahp-info-note hidden"></div></section><section class="card-criterios-de-ajuste secao-criterios-de-ajuste card"><h2>Critérios de ajuste</h2><p>Os critérios vêm da matriz de premissas e critérios da rodada.</p><div id="fase3-criterios"></div><label>Completude mínima <input id="fase3-completude" type="number" min="0" max="1" step="0.05" value="0.60"></label><div id="fase3-resultados"></div><div id="fase3-erro" class="ahp-info-note ahp-info-note--error hidden"></div><button id="executar-fase3" class="btn btn--primary">Executar Fase 3</button><button id="sintetizar" class="btn btn--outline">Gerar síntese</button></section></main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="js/hier-api.js"></script>
+  <script src="js/fase3.js"></script>
+  <script src="/assets/js/paginas/hierarquizacao-fase3-ajuste-fino-inline-1.js"></script>
+{% endblock %}

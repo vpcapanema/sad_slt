@@ -33,7 +33,7 @@
     </section>
     <section class="gerador-section gerador-section--gp" id="bancada-geoprocessamento">
       <header class="gerador-section__header"><span class="gerador-section__number">${sectionNumbers.gp}</span><div class="gerador-section__heading"><h2>Geoprocessamento</h2><p>Execute algoritmos, construa funções e produza os recursos espaciais.</p></div></header>
-      <div class="gerador-section__body"><iframe id="gp-frame" class="gerador-gp-frame" title="Componente de geoprocessamento" src="_geoprocessamento.html?modulo=${modulo}&embutido=1"></iframe></div>
+      <div class="gerador-section__body"><iframe id="gp-frame" class="gerador-gp-frame" title="Componente de geoprocessamento" src="/restrict/geoespacial/bancada/?modulo=${modulo}&embutido=1"></iframe></div>
     </section>
     <section class="gerador-section" id="detalhes-processamento">
       <header class="gerador-section__header"><span class="gerador-section__number">${sectionNumbers.detalhes}</span><div class="gerador-section__heading"><h2>Detalhes e interação do processamento</h2><p>Acompanhe eventos, resultados, alertas e decisões da execução.</p></div></header>

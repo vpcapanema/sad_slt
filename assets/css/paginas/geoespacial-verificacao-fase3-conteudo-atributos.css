@@ -1,0 +1,11 @@
+.estilo-geoespacial-verificacao-fase3-conteudo-1 {
+  padding: 1rem; margin: 0; color: #ffffff; border-bottom: 1px solid #4a4a4a;
+}
+
+.estilo-geoespacial-projetos-content {
+  padding: 1rem; overflow-y: auto; height: calc(100% - 50px);
+}
+
+.estilo-geoespacial-progress-fill {
+  width: 0%
+}

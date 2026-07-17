@@ -1,0 +1,140 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Hierarquização e Ranqueamento de Objetos" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Etapa 2 — Universo de Objetos — SLT{% endblock %}
+{% block classes_body %}ahp-module-page{% endblock %}
+{% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+
+  <main class="conteudo-principal app-main ahp-main">
+
+    <nav class="card-fases-do-modulo ahp-phase-nav card" aria-label="Fases do módulo">
+      <a href="step1-config.html" class="ahp-phase active"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e objetos</span></a>
+      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Avaliação dos objetos</span></a>
+      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Ranking e homologação</span></a>
+    </nav>
+
+    <div class="card-ahp-progress ahp-progress card">
+      <div class="ahp-progress-bar">
+        <a href="step1-config.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">✓</div><span>Config. multicritério</span></a>
+        <span class="ahp-progress-step active"><div class="ahp-progress-circle">2</div><span>Objetos</span></span>
+        <span class="ahp-progress-step"><div class="ahp-progress-circle">3</div><span>Avaliação</span></span>
+        <span class="ahp-progress-step"><div class="ahp-progress-circle">4</div><span>Ranking</span></span>
+        <span class="ahp-progress-step"><div class="ahp-progress-circle">5</div><span>Homologação</span></span>
+      </div>
+    </div>
+
+    <section class="card-etapa-2-universo-de-objetos secao-etapa-2-universo-de-objetos card ahp-step-intro">
+      <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+        <a href="../index.html">Início</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <a href="home.html">Hierarquização</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <span class="ahp-breadcrumb-current">Etapa 2: Universo de objetos</span>
+      </nav>
+      <h1 class="ahp-page-title">
+        <i class="fas fa-layer-group" aria-hidden="true"></i>
+        Etapa 2: Universo de objetos
+      </h1>
+      <p class="card-ahp-info-note ahp-info-note card">
+        <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
+        <span>
+          Selecione os objetos (demandas aprovadas) que participarão desta rodada de
+          hierarquização. A lista é filtrada pelo grupo comparável associado à configuração
+          escolhida. Todos os objetos selecionados serão avaliados em cada critério na etapa
+          seguinte.
+        </span>
+      </p>
+    </section>
+
+    <!-- Contexto da rodada -->
+    <section class="card-ctx-card secao-ctx-card card ahp-step-section">
+      <div class="ahp-section-label">
+        <span class="ahp-section-index-icon" aria-hidden="true">2.1</span>
+        <span>Contexto da rodada</span>
+      </div>
+      <div class="ahp-section-body">
+        <div class="ahp-subcard" id="ctx-card">
+          <p class="ahp-help-text">Carregando…</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lista de objetos -->
+    <section class="card-obj-contador secao-obj-contador card ahp-step-section">
+      <div class="ahp-section-label">
+        <span class="ahp-section-index-icon" aria-hidden="true">2.2</span>
+        <span>Objetos disponíveis</span>
+      </div>
+      <div class="ahp-section-body">
+        <div class="ahp-subcard">
+          <div class="hier-toolbar">
+            <span id="obj-contador" class="ahp-help-text"></span>
+            <button type="button" class="btn btn--sm btn--outline" id="btn-sel-todos">Selecionar todos</button>
+            <button type="button" class="btn btn--sm btn--outline" id="btn-des-todos">Limpar seleção</button>
+          </div>
+
+          <div id="obj-loading" class="card-obj-loading ahp-info-note card">
+            <i class="fas fa-spinner fa-spin app-template-inline-icon" aria-hidden="true"></i>
+            <span>Carregando objetos…</span>
+          </div>
+          <div id="obj-empty" class="card-obj-empty ahp-info-note card hidden">
+            <i class="fas fa-inbox app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
+            <span>Nenhum objeto elegível encontrado para este grupo comparável.</span>
+          </div>
+          <div id="obj-error" class="card-obj-error ahp-info-note card ahp-info-note--error hidden">
+            <i class="fas fa-triangle-exclamation app-template-inline-icon app-template-inline-icon--error" aria-hidden="true"></i>
+            <span id="obj-error-msg"></span>
+          </div>
+
+          <div id="obj-table-wrap" class="hidden hier-scroll-x">
+            <table class="ahp-table hier-full-table">
+              <thead>
+                <tr>
+                  <th class="hier-th-checkbox"><input type="checkbox" id="chk-all" title="Selecionar todos"></th>
+                  <th>Código</th>
+                  <th>Nome</th>
+                  <th>Diretoria</th>
+                  <th>Status AHP</th>
+                </tr>
+              </thead>
+              <tbody id="obj-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ações -->
+    <div class="card-hier-actions-bar card hier-actions-bar">
+      <a href="step1-config.html" class="btn btn--outline">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar
+      </a>
+      <button type="button" class="btn btn--primary" id="btn-proximo" disabled>
+        Confirmar objetos <i class="fas fa-arrow-right" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div id="submit-error" class="card-submit-error ahp-info-note card ahp-info-note--error hidden hier-mt-8">
+      <i class="fas fa-triangle-exclamation app-template-inline-icon app-template-inline-icon--error" aria-hidden="true"></i>
+      <span id="submit-error-msg"></span>
+    </div>
+
+  </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="js/hier-api.js"></script>
+  <script src="js/step2-objetos.js"></script>
+  <script src="/assets/js/paginas/hierarquizacao-step2-objetos-inline-1.js"></script>
+{% endblock %}

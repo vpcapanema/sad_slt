@@ -1,0 +1,563 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Hierarquização de Demandas" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}As Três Fases da Hierarquização — SLT{% endblock %}
+{% block classes_body %}{% endblock %}
+{% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-apresentacao-processo-hierarquizacao-inline-1.css">
+  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-apresentacao-processo-hierarquizacao-conteudo-atributos.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+  <a class="skip-link" href="#slide-1">Ir para a apresentação</a>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">SLT</span>
+      <div><strong>Hierarquização de projetos</strong><span>Elegibilidade, favorabilidade e ajuste</span></div>
+    </div>
+    <div class="top-actions">
+      <a href="processos/" title="Voltar ao módulo">← Módulo</a>
+      <button class="control" id="prev-slide" type="button" aria-label="Slide anterior">←</button>
+      <span class="slide-counter" id="slide-counter" aria-live="polite">01 / 20</span>
+      <button class="control" id="next-slide" type="button" aria-label="Próximo slide">→</button>
+    </div>
+  </header>
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+  <nav class="dots" id="dots" aria-label="Navegação entre slides"></nav>
+
+  <main class="conteudo-principal deck" id="presentation">
+    <section class="secao-as-tres-fases-da-hierarquizacao slide cover" id="slide-1" data-number="01 · VISÃO GERAL" aria-labelledby="title-1">
+      <div class="slide-inner">
+        <span class="eyebrow">Sistema de apoio à tomada de decisão</span>
+        <h1 id="title-1">As três fases da <span class="accent">hierarquização</span></h1>
+        <p class="lead">Elegibilidade territorial, mérito técnico-territorial e ajuste do projeto: três leituras independentes e complementares para formar uma decisão tecnicamente defensável.</p>
+        <div class="cover-meta">
+          <span class="pill">Fase 1 · Risco e restrição</span>
+          <span class="pill">Fase 2 · Favorabilidade territorial</span>
+          <span class="pill">Fase 3 · Ajustes finos</span>
+          <span class="pill">20 lâminas</span>
+          <span class="pill">Atualizado em julho de 2026</span>
+        </div>
+      </div>
+      <p class="kbd-hint">Use <kbd>←</kbd> <kbd>→</kbd>, <kbd>PgUp</kbd> ou <kbd>PgDn</kbd></p>
+    </section>
+
+    <section class="secao-a-hierarquizacao-separa-o-que-nao slide" id="slide-2" data-number="02 · A DECISÃO" aria-labelledby="title-2">
+      <div class="slide-inner">
+        <span class="eyebrow">Três perguntas, três respostas</span>
+        <h2 id="title-2">A hierarquização separa o que <span class="accent">não pode ser compensado</span> do que pode ser ponderado.</h2>
+        <p class="big-statement">Primeiro se verifica se o projeto pode seguir. Depois se mede seu mérito territorial. Por fim, ajusta-se a prioridade conforme as condições reais do projeto.</p>
+        <div class="grid-3">
+          <article class="fase-vermelha card-pode-seguir card phase-card"><span class="num">01</span><h3>Pode seguir?</h3><p>Filtros de restrição e risco classificam a elegibilidade territorial.</p></article>
+          <article class="fase-azul card-onde-ha-mais-merito card phase-card"><span class="num">02</span><h3>Onde há mais mérito?</h3><p>A favorabilidade mede necessidades e vantagens técnico-territoriais.</p></article>
+          <article class="fase-verde card-quao-viavel-e card phase-card"><span class="num">03</span><h3>Quão viável é?</h3><p>Ajustes finos incorporam maturidade, execução, governança e riscos.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="secao-modulos-produtores-preparam-evidencias-a-espinha slide" id="slide-3" data-number="03 · ARQUITETURA" aria-labelledby="title-3">
+      <div class="slide-inner">
+        <span class="eyebrow">Arquitetura de ponta a ponta</span>
+        <h2 id="title-3">Módulos produtores preparam evidências; a espinha dorsal decide.</h2>
+        <div class="flow" aria-label="Fluxo dos módulos até a decisão">
+          <div class="flow-step"><b>Bibliotecas homologadas</b><small>restrição, risco e favorabilidade</small></div>
+          <div class="flow-step"><b>Dados de projetos</b><small>geometria, rede e atributos</small></div>
+          <div class="flow-step"><b>Espinha dorsal</b><small>Fases 1, 2 e 3 independentes</small></div>
+          <div class="flow-step"><b>Síntese</b><small>filtro + scores ponderados</small></div>
+          <div class="flow-step"><b>Ranking homologado</b><small>resultado versionado e auditável</small></div>
+        </div>
+        <div class="grid-3">
+          <article class="fase-vermelha card-elegibilidade-territorial card phase-card"><span class="tag">Fase 1</span><h3>Elegibilidade territorial</h3><p>Restrições segregam; riscos geram ressalvas e podem alimentar a Fase 3. Não produz ranking.</p></article>
+          <article class="fase-azul card-merito-tecnico-territorial card phase-card"><span class="tag">Fase 2</span><h3>Mérito técnico-territorial</h3><p>Extrai da superfície homologada um score espacial normalizado para cada projeto.</p></article>
+          <article class="fase-verde card-ajuste-do-projeto card phase-card"><span class="tag">Fase 3</span><h3>Ajuste do projeto</h3><p>Pondera maturidade, viabilidade, governança, riscos e outros atributos intrínsecos.</p></article>
+        </div>
+        <p class="note">As fases podem ser executadas isoladamente ou combinadas; resultados individuais nunca devem ser apagados pela síntese.</p>
+      </div>
+    </section>
+
+    <section class="secao-a-divisao-existe-porque-ha-tres slide" id="slide-3a" data-number="04 · POR QUE TRÊS ETAPAS" aria-labelledby="title-3a">
+      <div class="slide-inner">
+        <span class="eyebrow">Justificativa metodológica</span>
+        <h2 id="title-3a">A divisão existe porque há três perguntas decisórias que não podem ser confundidas.</h2>
+        <div class="grid-3">
+          <article class="fase-vermelha card-o-projeto-pode-seguir card phase-card">
+            <span class="tag">1 · Filtros de risco e restrição</span>
+            <h3>O projeto pode seguir?</h3>
+            <p>Trata impedimentos, conflitos e ressalvas territoriais. A resposta é prioritariamente categórica: restringir, admitir com ressalva ou admitir.</p>
+          </article>
+          <article class="fase-azul card-onde-o-projeto-produz-mais-merito card phase-card">
+            <span class="tag">2 · Favorabilidade territorial</span>
+            <h3>Onde o projeto produz mais mérito?</h3>
+            <p>Mede continuamente as vantagens e necessidades do território e da rede. A resposta é um score comparável entre 0 e 1.</p>
+          </article>
+          <article class="fase-verde card-quao-executavel-e-oportuno-ele-e card phase-card">
+            <span class="tag">3 · Ajustes finos</span>
+            <h3>Quão executável e oportuno ele é?</h3>
+            <p>Considera maturidade, custo, prazo, governança e riscos próprios do projeto. Ajusta o mérito sem substituir a leitura territorial.</p>
+          </article>
+        </div>
+        <div class="grid-3">
+          <div class="callout"><strong>Sem a etapa 1:</strong> uma nota alta poderia compensar matematicamente um impedimento legal ou técnico.</div>
+          <div class="callout"><strong>Sem a etapa 2:</strong> prontidão administrativa poderia ser confundida com benefício territorial.</div>
+          <div class="callout"><strong>Sem a etapa 3:</strong> projetos territorialmente bons, mas inexequíveis, ficariam artificialmente empatados.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="secao-o-destino-do-criterio-e-definido slide" id="slide-3b" data-number="05 · REGRA DE ALOCAÇÃO" aria-labelledby="title-3b">
+      <div class="slide-inner">
+        <span class="eyebrow">Como cada critério encontra sua etapa</span>
+        <h2 id="title-3b">O destino do critério é definido por sua semântica, não pelo formato do arquivo.</h2>
+        <table>
+          <thead><tr><th>Pergunta de classificação</th><th>Se a resposta for “sim”</th><th>Etapa</th><th>Tratamento</th></tr></thead>
+          <tbody>
+            <tr><td><strong>A ocorrência pode impedir ou segregar o projeto?</strong></td><td>É uma condição territorial excludente.</td><td>Filtros</td><td>Restrição; funciona como gate, não como nota compensável.</td></tr>
+            <tr><td><strong>A ocorrência exige atenção, mas não impede?</strong></td><td>É exposição territorial relevante.</td><td>Filtros</td><td>Risco; gera ressalva e pode virar penalidade nos ajustes finos.</td></tr>
+            <tr><td><strong>O valor existe no território ou na rede antes do projeto?</strong></td><td>Pode ser medido por localização, corredor ou área de influência.</td><td>Favorabilidade</td><td>Superfície/indicador normalizado e extraído para o projeto.</td></tr>
+            <tr><td><strong>O valor só existe porque o projeto foi definido?</strong></td><td>Depende de escopo, orçamento, prazo, licenciamento ou governança.</td><td>Ajustes finos</td><td>Atributo normalizado e ponderado no nível do projeto.</td></tr>
+            <tr><td><strong>O fator mistura território, rede e projeto?</strong></td><td>É híbrido e deve ser decomposto.</td><td>Mais de uma</td><td>Cada componente entra uma única vez, com rastreabilidade.</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>Regra antidupla contagem:</strong> o mesmo efeito não pode aparecer como risco, favorabilidade e ajuste apenas com nomes diferentes. Se um fator for decomposto, cada parcela precisa ter variável, fonte e papel próprios.</div>
+      </div>
+    </section>
+
+    <section class="secao-os-criterios-de-partida-geram-produtos slide" id="slide-3c" data-number="06 · DO CATÁLOGO AOS PRODUTOS" aria-labelledby="title-3c">
+      <div class="slide-inner">
+        <span class="eyebrow">Conjunto inicial de critérios</span>
+        <h2 id="title-3c">Os critérios de partida geram produtos diferentes porque medem fenômenos diferentes.</h2>
+        <table>
+          <thead><tr><th>Família no catálogo inicial</th><th>Exemplos</th><th>Produto gerado</th><th>Por que vai para essa etapa</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Impedimentos e conflitos espaciais</strong></td><td>área protegida, terra indígena, conflito socioambiental, área sensível</td><td>camadas consolidadas de restrição e risco</td><td>A incidência espacial precede a pontuação e pode alterar a elegibilidade.</td></tr>
+            <tr><td><strong>Condições locacionais em grade</strong></td><td>massa econômica, desigualdade regional, vulnerabilidade</td><td>rasters normalizados de favorabilidade</td><td>Variam continuamente no espaço e podem ser agregadas pela geometria do projeto.</td></tr>
+            <tr><td><strong>Desempenho e conectividade de rede</strong></td><td>VDM, saturação, acidentes, tempo, acessibilidade, integração intermodal</td><td>indicadores de segmento/corredor incorporados à favorabilidade</td><td>Dependem da topologia e do fluxo da rede, não de simples presença territorial.</td></tr>
+            <tr><td><strong>Atributos intrínsecos</strong></td><td>CAPEX, maturidade, prazo, fonte de recurso, pendências, apoio institucional</td><td>tabela normalizada de ajustes finos</td><td>Não existem como superfície; pertencem ao projeto e à capacidade de execução.</td></tr>
+            <tr><td><strong>Fatores híbridos</strong></td><td>população beneficiada, competitividade, emissão evitada, conexão regional</td><td>indicador derivado no nível do projeto</td><td>Exigem combinar localização, rede e escopo antes da ponderação.</td></tr>
+          </tbody>
+        </table>
+        <p class="note">As nove dimensões do catálogo — técnica, financeira, econômica, social, segurança, ambiental, territorial, institucional e risco — organizam o tema. Elas não determinam sozinhas a etapa; quem determina é a natureza da variável derivada.</p>
+      </div>
+    </section>
+
+    <section class="secao-congelar-o-universo-evita-que-o slide" id="slide-4" data-number="04 · UNIVERSO" aria-labelledby="title-4" hidden>
+      <div class="slide-inner">
+        <span class="eyebrow">Passo zero</span>
+        <h2 id="title-4">Congelar o universo evita que o alvo mude durante a análise.</h2>
+        <div class="grid-2">
+          <article class="card-contrato-minimo-por-projeto card">
+            <h3>Contrato mínimo por projeto</h3>
+            <ul>
+              <li>identificador único e nome;</li>
+              <li>tipo de demanda e recorte comparável;</li>
+              <li>geometria ou localização suficiente;</li>
+              <li>fases escolhidas para a rodada;</li>
+              <li>atributos, caso a Fase 3 seja aplicada.</li>
+            </ul>
+          </article>
+          <article class="card-regra-operacional-existente card">
+            <h3>Regra operacional existente</h3>
+            <p>A configuração de portfólio exige um <strong>snapshot confirmado</strong> de objetos. Ao ser criada, a mesma transação move os objetos de <code>apta</code> para <code>em_hierarquizacao</code>.</p>
+            <p>O recorte é persistido em JSON, permitindo filtros diferentes sem cristalizar uma coluna para cada hipótese.</p>
+          </article>
+        </div>
+        <div class="callout"><strong>Princípio:</strong> comparar projetos com naturezas ou estágios incompatíveis pode gerar uma ordem matematicamente correta e decisoriamente inválida.</div>
+      </div>
+    </section>
+
+    <section class="secao-os-55-fatores-nao-pertencem-ao slide" id="slide-5" data-number="07 · CRITÉRIOS" aria-labelledby="title-5">
+      <div class="slide-inner">
+        <span class="eyebrow">Modelo dos fatores</span>
+        <h2 id="title-5">Os 55 fatores não pertencem ao mesmo tipo de modelagem.</h2>
+        <table>
+          <thead><tr><th>Classe</th><th>Onde é calculada</th><th>Exemplos</th><th>Papel</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Grade</strong></td><td>Superfície contínua</td><td>massa econômica, prioridade social</td><td>favorabilidade locacional</td></tr>
+            <tr><td><strong>Rede</strong></td><td>Segmentos, nós, corredores e OD</td><td>VDM, saturação, acidentes, acessibilidade</td><td>desempenho/conectividade</td></tr>
+            <tr><td><strong>Projeto</strong></td><td>Atributo intrínseco</td><td>CAPEX, maturidade, prazo, pendências</td><td>viabilidade e execução</td></tr>
+            <tr><td><strong>Híbrido</strong></td><td>Localização + rede + escopo</td><td>população beneficiada, conflito ambiental</td><td>efeito contextual do projeto</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>Implicação:</strong> uma única grade estadual não substitui análise de rede nem atributos de projeto. A agregação final acontece no nível do projeto.</div>
+      </div>
+    </section>
+
+    <section class="secao-o-ahp-transforma-julgamentos-entre-criterios slide" id="slide-6" data-number="06 · AHP" aria-labelledby="title-6" hidden>
+      <div class="slide-inner">
+        <span class="eyebrow">Configuração multicritério</span>
+        <h2 id="title-6">O AHP transforma julgamentos entre critérios em pesos explícitos.</h2>
+        <div class="grid-3">
+          <article class="card-definir-criterios card"><span class="num">A</span><h3>Definir critérios</h3><p>Dimensão, critério, premissa, relação, métrica, fonte e obrigatoriedade.</p></article>
+          <article class="card-comparar-pares card"><span class="num">B</span><h3>Comparar pares</h3><p>Construir uma matriz quadrada e recíproca com a importância relativa dos critérios.</p></article>
+          <article class="card-derivar-pesos card"><span class="num">C</span><h3>Derivar pesos</h3><p>Calcular a média geométrica de cada linha e normalizar o vetor para soma igual a 1.</p></article>
+        </div>
+        <div class="formula">gᵢ = (∏ aᵢⱼ)<sup>1/n</sup> &nbsp;&nbsp; → &nbsp;&nbsp; <em>wᵢ = gᵢ / Σg</em></div>
+        <p class="note">No backend, o motor AHP é a fonte da verdade. Os artefatos de configuração preservam matriz, critérios, pesos e métricas para reprodução futura.</p>
+      </div>
+    </section>
+
+    <section class="secao-peso-calculado-nao-significa-julgamento-coerente slide" id="slide-7" data-number="07 · CONSISTÊNCIA" aria-labelledby="title-7" hidden>
+      <div class="slide-inner">
+        <span class="eyebrow">Controle de coerência</span>
+        <h2 id="title-7">Peso calculado não significa julgamento coerente.</h2>
+        <div class="grid-2">
+          <article class="card-metricas-armazenadas card">
+            <h3>Métricas armazenadas</h3>
+            <div class="formula">IC = (λmax − n) / (n − 1)</div>
+            <div class="formula">RC = IC / IA</div>
+            <p>O IA depende da ordem da matriz. O sistema possui índices de Saaty para matrizes de 1 a 10 critérios.</p>
+          </article>
+          <article class="card-gate-de-homologacao card">
+            <h3>Gate de homologação</h3>
+            <p class="estilo-hierarquizacao-apresentacao-processo-hierarquizacao-conteudo-10 big-statement">RC &lt; 0,10</p>
+            <p>A configuração só pode ser homologada quando estiver calculada e consistente. A regra existe no serviço e como restrição do banco.</p>
+            <span class="pill">calculada ≠ homologada</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="secao-fase-1-transformar-fontes-diversas-em slide" id="slide-8" data-number="08 · FASE 1" aria-labelledby="title-8">
+      <div class="slide-inner">
+        <span class="eyebrow">Preparação da triagem territorial</span>
+        <h2 id="title-8">Fase 1: transformar fontes diversas em restrições e riscos confiáveis.</h2>
+        <div class="flow">
+          <div class="flow-step"><b>Importar</b><small>fontes oficiais ou homologadas</small></div>
+          <div class="flow-step"><b>Validar</b><small>geometria, CRS, conteúdo</small></div>
+          <div class="flow-step"><b>Normalizar</b><small>campos e topologia</small></div>
+          <div class="flow-step"><b>Classificar</b><small>restrição, risco ou derivação</small></div>
+          <div class="flow-step"><b>Consolidar</b><small>Identity/overlay equivalente</small></div>
+          <div class="flow-step"><b>Homologar</b><small>publicar na biblioteca</small></div>
+        </div>
+        <div class="grid-2">
+          <article class="card-por-que-identity card"><h3>Por que Identity?</h3><p>Particiona sobreposições e preserva os atributos de origem, permitindo explicar qual fonte, fundamento, severidade e área afetaram cada projeto.</p></article>
+          <article class="card-conflitos-de-campos card"><h3>Conflitos de campos</h3><p>Atributos iguais recebem prefixo da fonte, como <code>funai_ti__nome</code>, sem sobrescrever campos de controle.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="secao-restricao-e-risco-ocupam-o-territorio slide" id="slide-8a" data-number="09 · O QUE É RISCO" aria-labelledby="title-8a">
+      <div class="slide-inner">
+        <span class="eyebrow">Fase 1 · Conceitos</span>
+        <h2 id="title-8a">Restrição e risco ocupam o território, mas produzem decisões diferentes.</h2>
+        <div class="grid-2">
+          <article class="fase-vermelha card-condicao-potencialmente-impeditiva card phase-card">
+            <span class="tag">Restrição</span>
+            <h3>Condição potencialmente impeditiva</h3>
+            <p>É uma ocorrência com fundamento legal, regulatório ou técnico capaz de impedir, segregar ou exigir tratamento excepcional para a implantação.</p>
+            <p><strong>Exemplos:</strong> terra indígena e unidade de conservação de proteção integral, quando a regra homologada as classificar como incompatíveis com o projeto analisado.</p>
+            <p><strong>Efeito:</strong> o projeto fica <code>restrito</code>; uma nota alta em outra dimensão não compensa o impedimento.</p>
+          </article>
+          <article class="fase-dourada card-exposicao-a-evento-ou-conflito-adverso card phase-card">
+            <span class="tag">Risco</span>
+            <h3>Exposição a evento ou conflito adverso</h3>
+            <p>É uma condição que não proíbe automaticamente o projeto, mas pode aumentar custo, prazo, impacto, incerteza ou necessidade de mitigação.</p>
+            <p><strong>Exemplos:</strong> suscetibilidade a inundação, área contaminada, zona de amortecimento, instabilidade geotécnica e interferência com infraestrutura existente.</p>
+            <p><strong>Efeito:</strong> o projeto fica <code>apto_com_ressalva</code>; o risco é descrito e pode ser quantificado na Fase 3.</p>
+          </article>
+        </div>
+        <div class="callout"><strong>A camada não decide sozinha:</strong> tipo de projeto, base legal, severidade, estágio da ocorrência, distância e regra da rodada determinam se o dado será restrição, risco ou apenas insumo para derivar risco.</div>
+      </div>
+    </section>
+
+    <section class="secao-cada-filtro-precisa-de-uma-fonte slide" id="slide-8b" data-number="10 · CRITÉRIOS E FONTES DA FASE 1" aria-labelledby="title-8b">
+      <div class="slide-inner">
+        <span class="eyebrow">Fase 1 · Onde obter os dados</span>
+        <h2 id="title-8b">Cada filtro precisa de uma fonte oficial, uma regra e uma data de referência.</h2>
+        <table>
+          <thead><tr><th>Critério/camada</th><th>Uso provável</th><th>Fonte institucional candidata</th><th>Tratamento</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Unidades de conservação</strong></td><td>restrição ou risco por categoria/zona</td><td>DataGEO/SEMIL e CNUC/ICMBio</td><td>filtrar categoria; aplicar zona ou buffer homologado</td></tr>
+            <tr><td><strong>Terras indígenas</strong></td><td>restrição conforme situação jurídica e regra</td><td>dados geoespaciais e GeoServer da Funai</td><td>preservar fase administrativa, portaria e atualização</td></tr>
+            <tr><td><strong>Áreas contaminadas</strong></td><td>risco ambiental e de custo</td><td>CETESB, disponibilizada também no DataGEO</td><td>considerar classificação/situação e distância de influência</td></tr>
+            <tr><td><strong>Inundação e processos geológicos</strong></td><td>risco climático/geotécnico</td><td>SP Águas/ANA, Defesa Civil, IPT e bases estaduais homologadas</td><td>severidade, recorrência, suscetibilidade e área afetada</td></tr>
+            <tr><td><strong>Zoneamento e áreas sensíveis</strong></td><td>restrição, risco ou alerta</td><td>DataGEO, ZEE-SP e planos municipais oficiais</td><td>interpretar norma vigente para a tipologia do projeto</td></tr>
+            <tr><td><strong>Servidões e infraestrutura existente</strong></td><td>risco de interferência</td><td>concessionárias, operadores e cadastros patrimoniais</td><td>faixa de domínio/segurança e conflito geométrico</td></tr>
+          </tbody>
+        </table>
+        <p class="note">“Fonte candidata” significa origem a ser validada pelo responsável técnico. Autoria, licença, escala, completude, vigência e data de atualização precisam constar nos metadados antes da homologação.</p>
+      </div>
+    </section>
+
+    <section class="secao-a-prioridade-e-categorica-restricao-prevalece slide" id="slide-9" data-number="11 · DECISÃO FASE 1" aria-labelledby="title-9">
+      <div class="slide-inner">
+        <span class="eyebrow">Regra de elegibilidade</span>
+        <h2 id="title-9">A prioridade é categórica: restrição prevalece sobre risco.</h2>
+        <div class="decision">
+          <article class="card-intersecta-restricao result"><span class="status red">Restrito</span><h3>Intersecta restrição</h3><p>Sai do ranking ordinário ou aparece em bloco separado. Inclusão forçada exige exceção registrada.</p></article>
+          <span class="arrow">›</span>
+          <article class="card-sem-restricao-com-risco result"><span class="status gold">Apto com ressalva</span><h3>Sem restrição, com risco</h3><p>Permanece no ranking; ocorrências podem virar critérios penalizadores na Fase 3.</p></article>
+          <span class="arrow">›</span>
+          <article class="card-sem-intersecoes result"><span class="status green">Apto</span><h3>Sem interseções</h3><p>Segue para as fases selecionadas sem ressalva territorial preliminar.</p></article>
+        </div>
+        <div class="formula">restrição? → restrito &nbsp; | &nbsp; senão, risco? → apto_com_ressalva &nbsp; | &nbsp; senão → apto</div>
+      </div>
+    </section>
+
+    <section class="secao-fase-2-converter-criterios-espaciais-em slide" id="slide-10" data-number="12 · FASE 2" aria-labelledby="title-10">
+      <div class="slide-inner">
+        <span class="eyebrow">Mérito técnico-territorial</span>
+        <h2 id="title-10">Fase 2: converter critérios espaciais em uma escala comum.</h2>
+        <div class="grid-4">
+          <article class="card-operador card"><span class="num">01</span><h3>Operador</h3><p>Distância, kernel, custo, interpolação, rasterização, rede ou operador homologado.</p></article>
+          <article class="card-raster-bruto card"><span class="num">02</span><h3>Raster bruto</h3><p>Preserva a unidade original: metros, minutos, densidade, toneladas ou índice.</p></article>
+          <article class="card-normalizacao card"><span class="num">03</span><h3>Normalização</h3><p>Reescala para 0–1; relações negativas são invertidas após a transformação.</p></article>
+          <article class="card-algebra card"><span class="num">04</span><h3>Álgebra</h3><p>Combina superfícies pelos pesos AHP e gera a favorabilidade final.</p></article>
+        </div>
+        <div class="formula">nᵢ = (xᵢ − mín) / (máx − mín) &nbsp;&nbsp; | &nbsp;&nbsp; negativo: <em>fᵢ = 1 − nᵢ</em></div>
+        <p class="note">NoData obrigatório bloqueia a homologação; critérios opcionais exigem regra explícita de preenchimento ou reponderação.</p>
+      </div>
+    </section>
+
+    <section class="secao-superficie-territorial-e-indicador-de-rede slide" id="slide-10a" data-number="13 · SUPERFÍCIE E REDE" aria-labelledby="title-10a">
+      <div class="slide-inner">
+        <span class="eyebrow">Fase 2 · Duas representações</span>
+        <h2 id="title-10a">Superfície territorial e indicador de rede não são a mesma coisa.</h2>
+        <div class="grid-2">
+          <article class="fase-ciano card-um-valor-para-cada-celula-do card phase-card">
+            <span class="tag">Superfície de favorabilidade</span>
+            <h3>Um valor para cada célula do território</h3>
+            <p>É uma grade raster contínua. Cada célula recebe valor entre 0 e 1 que representa quão favorável é aquela localização segundo critérios normalizados e ponderados.</p>
+            <p><strong>Exemplo:</strong> uma célula próxima a polos logísticos, em região socialmente prioritária e com alta massa econômica pode receber 0,82; outra, distante e pouco atendida pelos critérios escolhidos, 0,31.</p>
+            <p>Não precisa nascer de imagem de satélite: pode resultar de distâncias, densidades, dados municipais, interpolação e álgebra de mapas.</p>
+          </article>
+          <article class="fase-azul card-um-valor-para-segmento-no-corredor card phase-card">
+            <span class="tag">Indicador de rede</span>
+            <h3>Um valor para segmento, nó, corredor ou OD</h3>
+            <p>É calculado respeitando conexões e percursos reais da infraestrutura. Mede fluxo, saturação, tempo, segurança ou acessibilidade.</p>
+            <p><strong>Exemplo:</strong> um trecho pode ter VDM alto, relação volume/capacidade crítica e 12 acidentes graves por 100 milhões de veículos-km; outro trecho conectado ao mesmo município pode ter desempenho oposto.</p>
+            <p>O indicador pode ser agregado ao corredor do projeto ou convertido em superfície somente depois do cálculo topológico.</p>
+          </article>
+        </div>
+        <div class="callout"><strong>Exemplo decisivo:</strong> a distância em linha reta até um porto é superfície; o tempo mínimo de viagem pela malha até esse porto é rede. Os dois números respondem a perguntas diferentes.</div>
+      </div>
+    </section>
+
+    <section class="secao-criterio-fonte-e-operador-formam-uma slide" id="slide-10b" data-number="14 · CRITÉRIOS E FONTES DA FASE 2" aria-labelledby="title-10b">
+      <div class="slide-inner">
+        <span class="eyebrow">Fase 2 · Dados e operadores</span>
+        <h2 id="title-10b">Critério, fonte e operador formam uma única especificação técnica.</h2>
+        <table>
+          <thead><tr><th>Critério</th><th>Representação</th><th>Fonte institucional candidata</th><th>Variável derivada</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Demanda e saturação</strong></td><td>rede</td><td>DER-SP, ARTESP, DNIT, concessionárias e estudos de tráfego</td><td>VDM, V/C ou nível de serviço por segmento/corredor</td></tr>
+            <tr><td><strong>Segurança viária</strong></td><td>rede/superfície derivada</td><td>DER-SP e Infosiga/Dados Abertos SP</td><td>acidentes graves por exposição e concentração de pontos críticos</td></tr>
+            <tr><td><strong>Acessibilidade logística</strong></td><td>rede</td><td>malhas oficiais e cadastros de portos, aeroportos e terminais</td><td>tempo/custo mínimo até polos e ganho de conectividade</td></tr>
+            <tr><td><strong>Prioridade social</strong></td><td>superfície</td><td>IBGE e Fundação Seade</td><td>índice territorial pelo inverso de renda, IDH ou atendimento</td></tr>
+            <tr><td><strong>Massa econômica</strong></td><td>superfície</td><td>IBGE, Seade e bases setoriais homologadas</td><td>empregos, produção ou PIB agregados à célula/área de influência</td></tr>
+            <tr><td><strong>Integração intermodal</strong></td><td>rede/híbrido</td><td>operadores e órgãos gestores de cada modo</td><td>número/qualidade de conexões e redução do custo generalizado</td></tr>
+          </tbody>
+        </table>
+        <p class="note">A lista é orientadora. A rodada deve registrar cobertura, ano-base, unidade, resolução, direção do critério, método de normalização e compatibilidade entre fontes.</p>
+      </div>
+    </section>
+
+    <section class="secao-primeiro-se-produz-a-superficie-depois slide" id="slide-11" data-number="15 · SCORE ESPACIAL" aria-labelledby="title-11">
+      <div class="slide-inner">
+        <span class="eyebrow">Álgebra e extração</span>
+        <h2 id="title-11">Primeiro se produz a superfície; depois se mede cada projeto.</h2>
+        <div class="formula">favorabilidade(célula) = Σ [rasterᵢ(célula) × pesoᵢ] &nbsp; com &nbsp; Σpesoᵢ = 1</div>
+        <div class="formula">score_fase2(projeto) = extrair(favorabilidade, geometria_projeto)</div>
+        <div class="grid-3">
+          <article class="card-ponto card"><h3>Ponto</h3><p>Valor da célula que contém a localização representativa do projeto.</p></article>
+          <article class="card-linha-ou-corredor card"><h3>Linha ou corredor</h3><p>Média ponderada por extensão, estatística por trecho ou buffer tecnicamente definido.</p></article>
+          <article class="card-poligono card"><h3>Polígono</h3><p>Média, mediana, mínimo, máximo ou percentil zonal, com método registrado.</p></article>
+        </div>
+        <div class="callout"><strong>Auditabilidade:</strong> guardar a geometria usada e o método de extração é tão importante quanto guardar o score.</div>
+      </div>
+    </section>
+
+    <section class="secao-fase-3-normalizar-o-que-pertence slide" id="slide-12" data-number="16 · FASE 3" aria-labelledby="title-12">
+      <div class="slide-inner">
+        <span class="eyebrow">Ajuste por atributos</span>
+        <h2 id="title-12">Fase 3: normalizar o que pertence ao projeto, não ao território.</h2>
+        <table>
+          <thead><tr><th>Tipo</th><th>Transformação</th><th>Exemplo</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Numérico maior é melhor</strong></td><td>(x − mín) / (máx − mín)</td><td>benefício/custo</td></tr>
+            <tr><td><strong>Numérico menor é melhor</strong></td><td>1 − normalizado</td><td>prazo, risco, custo</td></tr>
+            <tr><td><strong>Booleano</strong></td><td>0 ou 1 conforme direção</td><td>fonte assegurada</td></tr>
+            <tr><td><strong>Ordinal</strong></td><td>escala homologada</td><td>ideia 0,2 → executivo 1,0</td></tr>
+            <tr><td><strong>Categórico</strong></td><td>tabela de conversão</td><td>situação fundiária</td></tr>
+          </tbody>
+        </table>
+        <div class="formula">score_fase3 = Σ(valor_normalizado × peso) / Σ(pesos_aplicáveis)</div>
+        <p class="note">Riscos detectados na Fase 1 podem entrar aqui como critérios de direção <strong>menor é melhor</strong>.</p>
+      </div>
+    </section>
+
+    <section class="secao-os-dados-vem-do-projeto-da slide" id="slide-12a" data-number="17 · CRITÉRIOS E FONTES DA FASE 3" aria-labelledby="title-12a">
+      <div class="slide-inner">
+        <span class="eyebrow">Fase 3 · Ajustes finos</span>
+        <h2 id="title-12a">Os dados vêm do projeto, da carteira e da governança de execução.</h2>
+        <table>
+          <thead><tr><th>Critério</th><th>Onde encontrar</th><th>Conversão possível</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Maturidade técnica</strong></td><td>cadastro do projeto, estudos e projetos básico/executivo</td><td>escala ordinal: ideia → estudo → básico → executivo</td></tr>
+            <tr><td><strong>Prazo e custo</strong></td><td>cronograma, orçamento, CAPEX/OPEX e estudos de viabilidade</td><td>normalização menor é melhor ou por meta homologada</td></tr>
+            <tr><td><strong>Fonte de recurso</strong></td><td>PPA, orçamento, convênio, concessão ou instrumento financeiro</td><td>não identificada → prospectada → identificada → assegurada</td></tr>
+            <tr><td><strong>Licenciamento e situação fundiária</strong></td><td>processos administrativos, licenças, anuências e cadastro patrimonial</td><td>status ordinal e penalidade por pendências críticas</td></tr>
+            <tr><td><strong>Governança e dependências</strong></td><td>acordos, responsáveis, predecessores e obras associadas</td><td>índice de prontidão/complexidade institucional</td></tr>
+            <tr><td><strong>Riscos herdados</strong></td><td>interseções e relatórios produzidos na Fase 1</td><td>severidade × exposição × capacidade de mitigação</td></tr>
+          </tbody>
+        </table>
+        <div class="flow">
+          <div class="flow-step"><b>Receber tabela</b><small>uma linha por projeto</small></div>
+          <div class="flow-step"><b>Validar</b><small>tipo, faixa, duplicidade e ausência</small></div>
+          <div class="flow-step"><b>Normalizar</b><small>numérico, booleano, ordinal ou categoria</small></div>
+          <div class="flow-step"><b>Ponderar</b><small>pesos normalizados</small></div>
+          <div class="flow-step"><b>Diagnosticar</b><small>score, completude e contribuição</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="secao-ausencia-de-dado-nao-pode-virar slide" id="slide-13" data-number="18 · COMPLETUDE" aria-labelledby="title-13">
+      <div class="slide-inner">
+        <span class="eyebrow">Qualidade dos atributos</span>
+        <h2 id="title-13">Ausência de dado não pode virar nota silenciosamente.</h2>
+        <div class="grid-3">
+          <article class="card-obrigatorio-ausente card"><h3>Obrigatório ausente</h3><p>Bloqueia a Fase 3 para o projeto até correção ou decisão metodológica explícita.</p></article>
+          <article class="card-opcional-ausente card"><h3>Opcional ausente</h3><p>Pode ser ignorado com renormalização local dos pesos, desde que isso apareça no relatório.</p></article>
+          <article class="card-abaixo-do-limite card"><h3>Abaixo do limite</h3><p>O score da Fase 3 fica indisponível; o projeto conserva os resultados das fases válidas.</p></article>
+        </div>
+        <div class="formula">completude_projeto = atributos_válidos / atributos_esperados</div>
+        <div class="callout"><strong>Referência metodológica:</strong> limite configurável, com 60% apresentado nos documentos como exemplo — não como constante universal.</div>
+      </div>
+    </section>
+
+    <section class="secao-filtro-merito-e-ajuste-tem-naturezas slide" id="slide-14" data-number="19 · SÍNTESE" aria-labelledby="title-14">
+      <div class="slide-inner">
+        <span class="eyebrow">Composição final</span>
+        <h2 id="title-14">Filtro, mérito e ajuste têm naturezas diferentes.</h2>
+        <div class="stack">
+          <div class="stack-row"><b>Fase 1</b><div class="stack-bar"><span class="estilo-hierarquizacao-apresentacao-processo-hierarquizacao-conteudo-15">gate de elegibilidade — sem peso numérico obrigatório</span></div></div>
+          <div class="stack-row"><b>Fases 2 + 3</b><div class="stack-bar"><span class="estilo-hierarquizacao-apresentacao-processo-hierarquizacao-conteudo-16"></span><span class="estilo-hierarquizacao-apresentacao-processo-hierarquizacao-conteudo-17">mérito territorial</span><span class="estilo-hierarquizacao-apresentacao-processo-hierarquizacao-conteudo-18">ajuste</span></div></div>
+        </div>
+        <div class="formula">score_final = <em>peso_fase2 × score_fase2</em> + peso_fase3 × score_fase3</div>
+        <div class="formula">peso_fase2 + peso_fase3 = 1</div>
+        <div class="grid-2">
+          <article class="card-alternativa card"><h3>Alternativa</h3><p><code>score_final = score_fase2 + ajuste_fase3</code>, com teto e piso para impedir que fatores secundários desfaçam o ranking técnico.</p></article>
+          <article class="card-explicacao-obrigatoria card"><h3>Explicação obrigatória</h3><p>Exibir ranking de cada fase, ranking final e contribuição responsável por cada mudança de posição.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="secao-hoje-a-interface-operacional-percorre-cinco slide" id="slide-15" data-number="15 · FLUXO ATUAL" aria-labelledby="title-15" hidden>
+      <div class="slide-inner">
+        <span class="eyebrow">Assistente implementado</span>
+        <h2 id="title-15">Hoje, a interface operacional percorre cinco etapas.</h2>
+        <div class="timeline">
+          <article class="card-configuracao"><h3>Configuração</h3><p>Seleciona uma configuração AHP de portfólio homologada e cria a rodada.</p></article>
+          <article class="card-objetos"><h3>Objetos</h3><p>Seleciona demandas elegíveis dentro do grupo comparável e congela a lista.</p></article>
+          <article class="card-avaliacao"><h3>Avaliação</h3><p>Atribui de 0 a 10 para cada objeto em cada critério.</p></article>
+          <article class="card-ranking"><h3>Ranking</h3><p>Normaliza pontuações, pondera critérios e ordena scores.</p></article>
+          <article class="card-homologacao"><h3>Homologação</h3><p>Gestor confirma e publica o resultado calculado.</p></article>
+        </div>
+        <p class="note">Na navegação, as cinco etapas são agrupadas em três macrofases operacionais: configuração/objetos, avaliação e ranking/homologação. Elas não devem ser confundidas com as Fases metodológicas 1, 2 e 3 espaciais.</p>
+      </div>
+    </section>
+
+    <section class="secao-como-o-backend-calcula-o-ranking slide" id="slide-16" data-number="16 · CÁLCULO ATUAL" aria-labelledby="title-16" hidden>
+      <div class="slide-inner">
+        <span class="eyebrow">Fonte da verdade no servidor</span>
+        <h2 id="title-16">Como o backend calcula o ranking disponível hoje.</h2>
+        <div class="flow">
+          <div class="flow-step"><b>Pesos AHP</b><small>configuração homologada/calculada</small></div>
+          <div class="flow-step"><b>Notas 0–10</b><small>por projeto e critério</small></div>
+          <div class="flow-step"><b>Min–máx local</b><small>transforma cada critério em 0–1</small></div>
+          <div class="flow-step"><b>Soma ponderada</b><small>peso do critério × valor normalizado</small></div>
+          <div class="flow-step"><b>Ordem decrescente</b><small>posição 1 = maior score</small></div>
+        </div>
+        <div class="formula">nᵢⱼ = (notaᵢⱼ − mínⱼ) / (máxⱼ − mínⱼ)</div>
+        <div class="formula">scoreᵢ = Σⱼ (pesoⱼ × nᵢⱼ)</div>
+        <div class="callout"><strong>Caso constante:</strong> quando todas as notas positivas de um critério são iguais, o serviço distribui <code>1 / número_de_projetos</code>; quando todas são zero, a contribuição é zero.</div>
+      </div>
+    </section>
+
+    <section class="secao-da-nota-bruta-ao-score-final slide" id="slide-17" data-number="17 · EXEMPLO" aria-labelledby="title-17" hidden>
+      <div class="slide-inner">
+        <span class="eyebrow">Exemplo didático</span>
+        <h2 id="title-17">Da nota bruta ao score final da rodada atual.</h2>
+        <table>
+          <thead><tr><th>Critério</th><th>Peso</th><th>Projeto A</th><th>Projeto B</th><th>Projeto C</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Benefício territorial</strong></td><td>0,50</td><td>9 → 1,00</td><td>6 → 0,40</td><td>4 → 0,00</td></tr>
+            <tr><td><strong>Maturidade</strong></td><td>0,30</td><td>5 → 0,00</td><td>8 → 1,00</td><td>6 → 0,33</td></tr>
+            <tr><td><strong>Segurança</strong></td><td>0,20</td><td>7 → 0,50</td><td>9 → 1,00</td><td>5 → 0,00</td></tr>
+            <tr><td><strong>Score ponderado</strong></td><td>1,00</td><td><strong>0,60</strong></td><td><strong>0,70</strong></td><td><strong>0,10</strong></td></tr>
+            <tr><td><strong>Posição</strong></td><td>—</td><td>2º</td><td>1º</td><td>3º</td></tr>
+          </tbody>
+        </table>
+        <p class="note">Valores após a seta são normalizados dentro do conjunto da rodada. O exemplo arredonda 1/3 para 0,33.</p>
+      </div>
+    </section>
+
+    <section class="secao-configuracao-e-resultado-vivem-em-contextos slide" id="slide-18" data-number="18 · DADOS E GOVERNANÇA" aria-labelledby="title-18" hidden>
+      <div class="slide-inner">
+        <span class="eyebrow">Persistência e rastreabilidade</span>
+        <h2 id="title-18">Configuração e resultado vivem em contextos separados.</h2>
+        <table class="comparison">
+          <thead><tr><th>Responsabilidade</th><th>Persistência principal</th><th>Conteúdo</th></tr></thead>
+          <tbody>
+            <tr><td>Configuração AHP</td><td><code>ahp.config_multicriterio_portfolio</code></td><td>universo, critérios, matriz, pesos, λmax, IC, IA, RC, artefatos e homologação</td></tr>
+            <tr><td>Hierarquização</td><td><code>hierarquizacao_demandas.hierarquizacao_portfolio</code></td><td>objetos, julgamentos, pesos locais, contribuições, ranking e homologação</td></tr>
+            <tr><td>Auditoria</td><td><code>auditoria.log_sistema</code></td><td>INSERT, UPDATE e DELETE com estado anterior, novo estado e origem</td></tr>
+          </tbody>
+        </table>
+        <div class="state-machine" aria-label="Estados da hierarquização">
+          <span>rascunho</span><i>→</i><span>em_julgamento</span><i>→</i><span>calculada</span><i>→</i><span>homologada</span><i>→</i><span>arquivada</span>
+        </div>
+        <p class="note">A homologação da hierarquização exige perfil de gestor e só ocorre se já houver ranking calculado.</p>
+      </div>
+    </section>
+
+    <section class="secao-o-que-esta-implementado-e-o slide" id="slide-19" data-number="19 · FRONTEIRA" aria-labelledby="title-19" hidden>
+      <div class="slide-inner">
+        <span class="eyebrow">Leitura honesta do sistema</span>
+        <h2 id="title-19">O que está implementado e o que pertence à integração metodológica.</h2>
+        <div class="legend"><span class="implemented">Implementado</span><span class="bridge">Parcial / ponte disponível</span><span class="target">Arquitetura metodológica</span></div>
+        <table>
+          <thead><tr><th>Capacidade</th><th>Situação</th><th>Leitura correta</th></tr></thead>
+          <tbody>
+            <tr><td>Configuração AHP, consistência e homologação</td><td><span class="implemented">Implementado</span></td><td>serviços, API e tabelas são fonte da verdade</td></tr>
+            <tr><td>Seleção de objetos, notas, cálculo e ranking</td><td><span class="implemented">Implementado</span></td><td>assistente de cinco etapas em produção local</td></tr>
+            <tr><td>Bibliotecas de camadas homologadas</td><td><span class="bridge">Ponte disponível</span></td><td>estrutura geoespacial evoluiu, mas o ranking atual ainda recebe notas diretas</td></tr>
+            <tr><td>Execução automática Fase 1 → Fase 2 → Fase 3</td><td><span class="target">Arquitetura metodológica</span></td><td>definida detalhadamente nos contratos; não está orquestrada pelo cálculo atual</td></tr>
+            <tr><td>Síntese ponderada entre score_fase2 e score_fase3</td><td><span class="target">Arquitetura metodológica</span></td><td>fórmula e regras estão especificadas; não são o algoritmo da tela atual</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="secao-cada-fase-responde-a-uma-pergunta slide cover" id="slide-20" data-number="20 · CONCLUSÃO" aria-labelledby="title-20">
+      <div class="slide-inner">
+        <span class="eyebrow">Síntese das três fases</span>
+        <h2 id="title-20" class="estilo-title-20">Cada fase responde a uma pergunta diferente — e preserva sua própria <span class="accent">evidência</span>.</h2>
+        <div class="grid-3">
+          <article class="fase-vermelha card-elegibilidade-territorial card phase-card"><span class="tag">Fase 1</span><h3>Elegibilidade territorial</h3><p>Restrições segregam; riscos geram ressalvas. Não produz ranking.</p></article>
+          <article class="fase-azul card-merito-tecnico-territorial card phase-card"><span class="tag">Fase 2</span><h3>Mérito técnico-territorial</h3><p>Extrai da superfície homologada um score espacial normalizado.</p></article>
+          <article class="fase-verde card-ajuste-do-projeto card phase-card"><span class="tag">Fase 3</span><h3>Ajuste do projeto</h3><p>Pondera maturidade, viabilidade, governança, riscos e atributos intrínsecos.</p></article>
+        </div>
+        <div class="sources" aria-label="Fontes internas consultadas">
+          <a href="../ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md">Espinha dorsal do sistema</a>
+          <a href="../MODELO_HIERARQUIZACAO_ESPACIAL.md">Modelo de hierarquização espacial</a>
+          <a href="../MODULO_FASE1_GERADOR_RESTRICAO_RISCO.md">Especificação da Fase 1</a>
+          <a href="../MODULO_FASE2_GERADOR_FAVORABILIDADE_TERRITORIAL.md">Especificação da Fase 2</a>
+          <a href="../MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md">Especificação da Fase 3</a>
+          <a href="home.html">Abrir módulo de hierarquização</a>
+        </div>
+      </div>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/paginas/hierarquizacao-apresentacao-processo-hierarquizacao-inline-1.js"></script>
+  <script src="/assets/js/paginas/hierarquizacao-apresentacao-processo-hierarquizacao-inline-2.js"></script>
+{% endblock %}

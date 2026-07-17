@@ -1,0 +1,115 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Hierarquização e Ranqueamento de Objetos" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Etapa 5 — Homologação — SLT{% endblock %}
+{% block classes_body %}ahp-module-page{% endblock %}
+{% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+
+  <main class="conteudo-principal app-main ahp-main">
+
+    <nav class="card-fases-do-modulo ahp-phase-nav card" aria-label="Fases do módulo">
+      <a href="step1-config.html" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e objetos</span></a>
+      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Avaliação dos objetos</span></a>
+      <a href="#" class="ahp-phase active"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Ranking e homologação</span></a>
+    </nav>
+
+    <div class="card-ahp-progress ahp-progress card">
+      <div class="ahp-progress-bar">
+        <a href="step1-config.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">✓</div><span>Config. multicritério</span></a>
+        <a href="#" class="ahp-progress-step completed" id="link-step2"><div class="ahp-progress-circle">✓</div><span>Objetos</span></a>
+        <a href="#" class="ahp-progress-step completed" id="link-step3"><div class="ahp-progress-circle">✓</div><span>Avaliação</span></a>
+        <a href="#" class="ahp-progress-step completed" id="link-step4"><div class="ahp-progress-circle">✓</div><span>Ranking</span></a>
+        <span class="ahp-progress-step active"><div class="ahp-progress-circle">5</div><span>Homologação</span></span>
+      </div>
+    </div>
+
+    <section class="card-etapa-5-homologacao-do-ranking secao-etapa-5-homologacao-do-ranking card ahp-step-intro">
+      <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+        <a href="../index.html">Início</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <a href="home.html">Hierarquização</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <span class="ahp-breadcrumb-current">Etapa 5: Homologação</span>
+      </nav>
+      <h1 class="ahp-page-title">
+        <i class="fas fa-stamp" aria-hidden="true"></i>
+        Etapa 5: Homologação do ranking
+      </h1>
+      <p class="card-ahp-info-note ahp-info-note card">
+        <i class="fas fa-triangle-exclamation app-template-inline-icon app-template-inline-icon--warning" aria-hidden="true"></i>
+        <span>
+          A homologação é uma ação <strong>irreversível</strong>. Após homologar, o ranking fica
+          registrado de forma permanente e auditável. Revise o sumário abaixo antes de confirmar.
+        </span>
+      </p>
+    </section>
+
+    <div id="hom-loading" class="card-hom-loading card">
+      <p class="ahp-help-text"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando…</p>
+    </div>
+
+    <div id="hom-error" class="card-hom-error ahp-info-note card ahp-info-note--error hidden">
+      <i class="fas fa-triangle-exclamation app-template-inline-icon app-template-inline-icon--error" aria-hidden="true"></i>
+      <span id="hom-error-msg"></span>
+    </div>
+
+    <div id="hom-sucesso" class="card-hom-sucesso ahp-info-note card hier-sucesso-box hidden">
+      <i class="fas fa-circle-check app-template-inline-icon hier-sucesso__icon" aria-hidden="true"></i>
+      <span class="hier-sucesso__text">
+        <strong>Hierarquização homologada com sucesso!</strong> O ranking está registrado e publicado.
+      </span>
+    </div>
+
+    <!-- Sumário -->
+    <section class="card-hom-section secao-hom-section card ahp-step-section hidden" id="hom-section">
+      <div class="ahp-section-label">
+        <span class="ahp-section-index-icon" aria-hidden="true">5.1</span>
+        <span>Sumário da rodada</span>
+      </div>
+      <div class="ahp-section-body">
+        <div class="ahp-subcard" id="hom-meta"></div>
+
+        <div class="ahp-subcard">
+          <div class="ahp-subsection-title ahp-subsection-title--roman">
+            <span class="ahp-subsection-num ahp-subsection-num--roman">I</span>
+            <span>Top 10 do ranking</span>
+          </div>
+          <div id="hom-top10" class="hier-scroll-x"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ações -->
+    <div class="card-hom-actions card hier-actions-bar hidden" id="hom-actions">
+      <a href="#" class="btn btn--outline" id="btn-voltar">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Ver ranking completo
+      </a>
+      <button type="button" class="btn btn--primary" id="btn-homologar">
+        <i class="fas fa-stamp" aria-hidden="true"></i> Confirmar homologação
+      </button>
+    </div>
+
+    <div id="submit-error" class="card-submit-error ahp-info-note card ahp-info-note--error hidden hier-mt-8">
+      <i class="fas fa-triangle-exclamation app-template-inline-icon app-template-inline-icon--error" aria-hidden="true"></i>
+      <span id="submit-error-msg"></span>
+    </div>
+
+  </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="js/hier-api.js"></script>
+  <script src="js/step5-homologar.js"></script>
+  <script src="/assets/js/paginas/hierarquizacao-step5-homologar-inline-1.js"></script>
+{% endblock %}

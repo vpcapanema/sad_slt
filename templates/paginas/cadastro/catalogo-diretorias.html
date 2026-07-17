@@ -1,0 +1,23 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Guia para o passo 1 do cadastro" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+
+{% block titulo %}Como escolher a diretoria{% endblock %}
+{% block classes_body %}ref-page{% endblock %}
+{% block base_url %}<base href="/public/cadastro/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<main class="conteudo-principal app-main ref-main">
+    <div id="conteudo"></div>
+  </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="referencia-render.js"></script>
+  <script src="/assets/js/paginas/cadastro-catalogo-diretorias-inline-1.js"></script>
+{% endblock %}

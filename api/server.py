@@ -7,13 +7,20 @@ from __future__ import annotations
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
-from api.path_policy import PROJECT_ROOT, project_path
+from api.path_policy import project_path
 from api.routers import api_router
 
 app = FastAPI(title="SLT — Apoio à Tomada de Decisão", version="1.1.0")
+templates = Jinja2Templates(directory=str(project_path("templates")))
+
+
+def render_page(request: Request, template_name: str) -> Response:
+    """Renderiza uma página pelo contrato comum de templates da aplicação."""
+    return templates.TemplateResponse(request=request, name=template_name)
 
 
 @app.exception_handler(ValueError)
@@ -88,82 +95,82 @@ RESTRICTED_PAGES = {
 
 
 @app.get("/public/", include_in_schema=False)
-async def pagina_inicial_publica() -> FileResponse:
-    return FileResponse(project_path("index.html"))
+async def pagina_inicial_publica(request: Request) -> Response:
+    return render_page(request, "paginas/index.html")
 
 
 @app.get("/public/cadastro/", include_in_schema=False)
-async def pagina_indice_cadastro() -> FileResponse:
-    return FileResponse(project_path("cadastro/index.html"))
+async def pagina_indice_cadastro(request: Request) -> Response:
+    return render_page(request, "paginas/cadastro/index.html")
 
 
 @app.get("/public/cadastro/{pagina}/", include_in_schema=False)
-async def pagina_publica_cadastro(pagina: str) -> FileResponse:
+async def pagina_publica_cadastro(request: Request, pagina: str) -> Response:
     arquivo = PUBLIC_CADASTRO_PAGES.get(pagina)
     if not arquivo:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Página pública não encontrada")
-    return FileResponse(project_path(f"cadastro/{arquivo}"))
+    return render_page(request, f"paginas/cadastro/{arquivo}")
 
 
 @app.get("/public/painel/", include_in_schema=False)
-async def pagina_painel_publico() -> FileResponse:
-    return FileResponse(project_path("painel/index.html"))
+async def pagina_painel_publico(request: Request) -> Response:
+    return render_page(request, "paginas/painel/index.html")
 
 
 @app.get("/public/documentacao/", include_in_schema=False)
-async def pagina_documentacao_publica() -> FileResponse:
-    return FileResponse(project_path("documentacao/index.html"))
+async def pagina_documentacao_publica(request: Request) -> Response:
+    return render_page(request, "paginas/documentacao/index.html")
 
 
 @app.get("/public/transparencia/", include_in_schema=False)
-async def pagina_transparencia_publica() -> FileResponse:
-    return FileResponse(project_path("transparencia/index.html"))
+async def pagina_transparencia_publica(request: Request) -> Response:
+    return render_page(request, "paginas/transparencia/index.html")
 
 
 @app.get("/public/login/", include_in_schema=False)
-async def pagina_login_publico() -> FileResponse:
-    return FileResponse(project_path("admin/login.html"))
+async def pagina_login_publico(request: Request) -> Response:
+    return render_page(request, "paginas/admin/login.html")
 
 
 @app.get("/restrict/", include_in_schema=False)
-async def pagina_inicial_restrita() -> FileResponse:
-    return FileResponse(project_path("admin/index.html"))
+async def pagina_inicial_restrita(request: Request) -> Response:
+    return render_page(request, "paginas/admin/index.html")
 
 
 @app.get("/restrict/hierarquizacao/", include_in_schema=False)
-async def pagina_indice_hierarquizacao_restrita() -> FileResponse:
-    return FileResponse(project_path("hierarquizacao/index.html"))
+async def pagina_indice_hierarquizacao_restrita(request: Request) -> Response:
+    return render_page(request, "paginas/hierarquizacao/index.html")
 
 
 @app.get("/restrict/hierarquizacao/processos/", include_in_schema=False)
-async def pagina_processos_hierarquizacao() -> FileResponse:
-    return FileResponse(project_path("hierarquizacao/home.html"))
+async def pagina_processos_hierarquizacao(request: Request) -> Response:
+    return render_page(request, "paginas/hierarquizacao/home.html")
 
 
 @app.get("/restrict/hierarquizacao/metodologia/", include_in_schema=False)
-async def pagina_metodologia_hierarquizacao() -> FileResponse:
-    return FileResponse(project_path("hierarquizacao/apresentacao-processo-hierarquizacao.html"))
+async def pagina_metodologia_hierarquizacao(request: Request) -> Response:
+    return render_page(request, "paginas/hierarquizacao/apresentacao-processo-hierarquizacao.html")
 
 
 @app.get("/restrict/hierarquizacao/fase-1/", include_in_schema=False)
-async def pagina_fase_1_hierarquizacao() -> FileResponse:
-    return FileResponse(project_path("hierarquizacao/fase1-elegibilidade.html"))
+async def pagina_fase_1_hierarquizacao(request: Request) -> Response:
+    return render_page(request, "paginas/hierarquizacao/fase1-elegibilidade.html")
 
 
 @app.get("/restrict/hierarquizacao/fase-2/", include_in_schema=False)
-async def pagina_fase_2_hierarquizacao() -> FileResponse:
-    return FileResponse(project_path("hierarquizacao/fase2-favorabilidade.html"))
+async def pagina_fase_2_hierarquizacao(request: Request) -> Response:
+    return render_page(request, "paginas/hierarquizacao/fase2-favorabilidade.html")
 
 
 @app.get("/restrict/hierarquizacao/fase-3/", include_in_schema=False)
-async def pagina_fase_3_hierarquizacao() -> FileResponse:
-    return FileResponse(project_path("hierarquizacao/fase3-ajuste-fino.html"))
+async def pagina_fase_3_hierarquizacao(request: Request) -> Response:
+    return render_page(request, "paginas/hierarquizacao/fase3-ajuste-fino.html")
 
 
 @app.get("/restrict/ahp/", include_in_schema=False)
-async def pagina_indice_ahp_restrita() -> FileResponse:
-    return FileResponse(project_path("ahp/home.html"))
+async def pagina_indice_ahp_restrita(request: Request) -> Response:
+    return render_page(request, "paginas/ahp/home.html")
 
 
 AHP_CLEAN_PAGES = {"configuracao": "step1-configuracao.html", "criterios": "step2-criterios.html", "metodo": "step4-metodo.html", "comparacao": "step5-comparacao.html", "resultados": "step6-resultados.html"}
@@ -177,18 +184,18 @@ AHP_CLEAN_PAGES.update(
 
 
 @app.get("/restrict/ahp/{pagina}/", include_in_schema=False)
-async def pagina_ahp_limpa(pagina: str) -> FileResponse:
+async def pagina_ahp_limpa(request: Request, pagina: str) -> Response:
     arquivo = AHP_CLEAN_PAGES.get(pagina)
     if not arquivo:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Página AHP não encontrada")
-    return FileResponse(project_path(f"ahp/{arquivo}"))
+    return render_page(request, f"paginas/ahp/{arquivo}")
 
 
 @app.get("/public/ahp/colaborativa/", include_in_schema=False)
-async def pagina_ahp_colaborativa_publica() -> FileResponse:
+async def pagina_ahp_colaborativa_publica(request: Request) -> Response:
     """Formulário público acessado pelo token de um convite AHP."""
-    return FileResponse(project_path("ahp/colaborativa.html"))
+    return render_page(request, "paginas/ahp/colaborativa.html")
 
 
 HIERARQUIZACAO_PROCESS_PAGES = {
@@ -201,38 +208,43 @@ HIERARQUIZACAO_PROCESS_PAGES = {
 
 
 @app.get("/restrict/hierarquizacao/processos/{pagina}/", include_in_schema=False)
-async def pagina_processo_hierarquizacao(pagina: str) -> FileResponse:
+async def pagina_processo_hierarquizacao(request: Request, pagina: str) -> Response:
     arquivo = HIERARQUIZACAO_PROCESS_PAGES.get(pagina)
     if not arquivo:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Etapa de hierarquização não encontrada")
-    return FileResponse(project_path(f"hierarquizacao/{arquivo}"))
+    return render_page(request, f"paginas/hierarquizacao/{arquivo}")
 
 
 @app.get("/restrict/{pagina}/", include_in_schema=False)
-async def pagina_restrita(pagina: str) -> FileResponse:
+async def pagina_restrita(request: Request, pagina: str) -> Response:
     # Esta rota genérica é declarada antes do catálogo geoespacial; trate o
     # índice explicitamente para preservar /restrict/geoespacial/ como canônica.
     if pagina == "geoespacial":
-        return FileResponse(project_path("geoespacial/index.html"))
+        return render_page(request, "paginas/geoespacial/index.html")
     arquivo = RESTRICTED_PAGES.get(pagina)
     if not arquivo:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Página restrita não encontrada")
-    return FileResponse(project_path(f"admin/{arquivo}"))
+    return render_page(request, f"paginas/admin/{arquivo}")
 
 
 LEGACY_PAGE_REDIRECTS = {
     "/": "/public/",
     "/index.html": "/public/",
+    "/public/index.html": "/public/",
     "/cadastro/": "/public/cadastro/",
+    "/public/cadastro/index.html": "/public/cadastro/",
     "/cadastro/nova-demanda.html": "/public/cadastro/nova-demanda/",
     "/cadastro/catalogo-diretorias.html": "/public/cadastro/catalogo-diretorias/",
     "/cadastro/catalogo-planos.html": "/public/cadastro/catalogo-planos/",
     "/cadastro/catalogo-frentes-pli.html": "/public/cadastro/catalogo-frentes-pli/",
     "/cadastro/catalogo-eixos-pef.html": "/public/cadastro/catalogo-eixos-pef/",
     "/painel/": "/public/painel/",
+    "/public/painel/index.html": "/public/painel/",
     "/documentacao/": "/public/documentacao/",
+    "/public/documentacao/index.html": "/public/documentacao/",
+    "/public/transparencia/index.html": "/public/transparencia/",
     "/admin/login.html": "/public/login/",
     "/admin/": "/restrict/",
     "/admin/index.html": "/restrict/",
@@ -240,7 +252,13 @@ LEGACY_PAGE_REDIRECTS = {
     "/admin/demandas.html": "/restrict/demandas/",
     "/admin/demanda.html": "/restrict/demanda/",
     "/admin/revisao-status.html": "/restrict/revisao-status/",
+    "/restrict/index.html": "/restrict/",
+    "/restrict/painel.html": "/restrict/painel/",
+    "/restrict/demandas.html": "/restrict/demandas/",
+    "/restrict/demanda.html": "/restrict/demanda/",
+    "/restrict/revisao-status.html": "/restrict/revisao-status/",
     "/ahp/colaborativa.html": "/public/ahp/colaborativa/",
+    "/public/ahp/colaborativa.html": "/public/ahp/colaborativa/",
     "/restrict/ahp/index.html": "/restrict/ahp/analise/",
     "/restrict/ahp/step1-configuracao.html": "/restrict/ahp/configuracao/",
     "/restrict/ahp/step2-criterios.html": "/restrict/ahp/criterios/",
@@ -254,6 +272,12 @@ LEGACY_PAGE_REDIRECTS = {
     "/restrict/hierarquizacao/step3-avaliacao.html": "/restrict/hierarquizacao/processos/avaliacao/",
     "/restrict/hierarquizacao/step4-ranking.html": "/restrict/hierarquizacao/processos/ranking/",
     "/restrict/hierarquizacao/step5-homologar.html": "/restrict/hierarquizacao/processos/homologacao/",
+    "/restrict/hierarquizacao/index.html": "/restrict/hierarquizacao/",
+    "/restrict/hierarquizacao/home.html": "/restrict/hierarquizacao/processos/",
+    "/restrict/hierarquizacao/apresentacao-processo-hierarquizacao.html": "/restrict/hierarquizacao/metodologia/",
+    "/restrict/hierarquizacao/fase1-elegibilidade.html": "/restrict/hierarquizacao/fase-1/",
+    "/restrict/hierarquizacao/fase2-favorabilidade.html": "/restrict/hierarquizacao/fase-2/",
+    "/restrict/hierarquizacao/fase3-ajuste-fino.html": "/restrict/hierarquizacao/fase-3/",
     "/geoespacial": "/restrict/geoespacial/",
     "/geoespacial/": "/restrict/geoespacial/",
     "/geoespacial/index.html": "/restrict/geoespacial/",
@@ -271,6 +295,14 @@ LEGACY_PAGE_REDIRECTS = {
     "/geoespacial/produtos.html": "/restrict/geoespacial/produtos/",
     "/geoespacial/configurador-ajuste": "/restrict/geoespacial/configurador-ajuste/",
     "/geoespacial/verificacao-fase3.html": "/restrict/geoespacial/configurador-ajuste/",
+    "/restrict/geoespacial/index.html": "/restrict/geoespacial/",
+    "/restrict/geoespacial/gerador-risco-restricao.html": "/restrict/geoespacial/gerador-risco-restricao/",
+    "/restrict/geoespacial/configuracao-risco-restricao.html": "/restrict/geoespacial/configuracao-risco-restricao/",
+    "/restrict/geoespacial/gerador-favorabilidade.html": "/restrict/geoespacial/gerador-favorabilidade/",
+    "/restrict/geoespacial/visualizador-inputs.html": "/restrict/geoespacial/visualizador-inputs/",
+    "/restrict/geoespacial/_geoprocessamento.html": "/restrict/geoespacial/bancada/",
+    "/restrict/geoespacial/produtos.html": "/restrict/geoespacial/produtos/",
+    "/restrict/geoespacial/verificacao-fase3.html": "/restrict/geoespacial/configurador-ajuste/",
 }
 
 
@@ -296,34 +328,35 @@ GEOSPATIAL_PAGES = {
 
 
 @app.get("/restrict/geoespacial/", include_in_schema=False)
-async def pagina_indice_geoespacial() -> FileResponse:
-    return FileResponse(project_path("geoespacial/index.html"))
+async def pagina_indice_geoespacial(request: Request) -> Response:
+    return render_page(request, "paginas/geoespacial/index.html")
 
 
 @app.get("/restrict/geoespacial/{pagina}/", include_in_schema=False)
-async def pagina_geoespacial(pagina: str) -> FileResponse:
+async def pagina_geoespacial(request: Request, pagina: str) -> Response:
     arquivo = GEOSPATIAL_PAGES.get(pagina)
     if not arquivo:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Página geoespacial não encontrada")
-    return FileResponse(project_path(f"geoespacial/{arquivo}"))
+    if arquivo == "_geoprocessamento.html":
+        return render_page(request, "componentes/_geoprocessamento.html")
+    return render_page(request, f"paginas/geoespacial/{arquivo}")
 
 
+app.mount("/assets", StaticFiles(directory=str(project_path("assets"))), name="assets")
 app.mount("/public/assets", StaticFiles(directory=str(project_path("assets"))), name="public-assets")
-app.mount("/public/cadastro", StaticFiles(directory=str(project_path("cadastro")), html=True), name="public-cadastro-assets")
-app.mount("/public/painel", StaticFiles(directory=str(project_path("painel")), html=True), name="public-painel-assets")
-app.mount("/public/documentacao", StaticFiles(directory=str(project_path("documentacao")), html=True), name="public-documentacao-assets")
-app.mount("/public/transparencia", StaticFiles(directory=str(project_path("transparencia")), html=True), name="public-transparencia-assets")
+app.mount("/public/cadastro", StaticFiles(directory=str(project_path("cadastro"))), name="public-cadastro-assets")
+app.mount("/public/painel", StaticFiles(directory=str(project_path("painel"))), name="public-painel-assets")
+app.mount("/public/documentacao", StaticFiles(directory=str(project_path("documentacao"))), name="public-documentacao-assets")
+app.mount("/public/transparencia", StaticFiles(directory=str(project_path("transparencia"))), name="public-transparencia-assets")
 app.mount("/restrict/assets", StaticFiles(directory=str(project_path("assets"))), name="restricted-assets-shared")
-app.mount("/restrict/hierarquizacao", StaticFiles(directory=str(project_path("hierarquizacao")), html=True), name="restricted-hierarquizacao-assets")
-app.mount("/restrict/ahp", StaticFiles(directory=str(project_path("ahp")), html=True), name="restricted-ahp-assets")
-app.mount("/restrict/geoespacial", StaticFiles(directory=str(project_path("geoespacial")), html=True), name="restricted-geospatial-assets")
-app.mount("/restrict", StaticFiles(directory=str(project_path("admin")), html=True), name="restricted-assets")
-app.mount("/", StaticFiles(directory=str(PROJECT_ROOT), html=True), name="static")
+app.mount("/restrict/hierarquizacao", StaticFiles(directory=str(project_path("hierarquizacao"))), name="restricted-hierarquizacao-assets")
+app.mount("/restrict/ahp", StaticFiles(directory=str(project_path("ahp"))), name="restricted-ahp-assets")
+app.mount("/restrict/geoespacial", StaticFiles(directory=str(project_path("geoespacial"))), name="restricted-geospatial-assets")
+app.mount("/restrict", StaticFiles(directory=str(project_path("admin"))), name="restricted-assets")
 
 
 if __name__ == "__main__":
-    import os
     import uvicorn
 
     from api.config import get_settings

@@ -1,0 +1,16 @@
+.rank-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--color-border,#eee); }
+    .rank-row:last-child { border-bottom:none; }
+    .rank-pos { font-size:1.4em; font-weight:700; width:36px; text-align:center; color:var(--color-primary,#1a6aab); flex-shrink:0; }
+    .rank-pos--1 { color:#c9a800; }
+    .rank-pos--2 { color:#8a8a8a; }
+    .rank-pos--3 { color:#a0522d; }
+    .rank-nome { flex:1; min-width:0; }
+    .rank-nome strong { display:block; }
+    .rank-nome small { color:var(--color-text-secondary,#666); font-size:0.82em; }
+    .rank-score { text-align:right; min-width:60px; }
+    .rank-score strong { font-size:1.1em; color:var(--color-primary,#1a6aab); }
+    .rank-bar-wrap { width:150px; height:10px; background:var(--color-border,#eee); border-radius:5px; overflow:hidden; flex-shrink:0; }
+    .rank-bar { height:100%; background:var(--color-primary,#1a6aab); border-radius:5px; }
+    .rank-bar--1 { background:#c9a800; }
+    .rank-bar--2 { background:#8a8a8a; }
+    .rank-bar--3 { background:#a0522d; }

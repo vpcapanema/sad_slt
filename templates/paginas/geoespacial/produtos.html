@@ -1,0 +1,31 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Módulo Geoespacial" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Visualizador de Camadas Finais — SLT{% endblock %}
+{% block classes_body %}geoespacial-viewer-page{% endblock %}
+{% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/geoespacial.css">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<main class="conteudo-principal geoespacial-viewer-main">
+    <section class="card-visualizador-de-camadas-finais secao-visualizador-de-camadas-finais card geoespacial-viewer-heading"><div><nav class="geoespacial-breadcrumb"><a href="../index.html">Início</a><span>›</span><a href="index.html">Geoespacial</a><span>›</span><span>Camadas finais</span></nav><h1><i class="fa-solid fa-map-location-dot"></i> Visualizador de Camadas Finais</h1><p>Biblioteca de superfícies e camadas homologadas para consumo pelas fases de análise.</p></div><div class="geoespacial-viewer-actions"><button type="button" class="btn btn-secondary" id="btn-atualizar"><i class="fa-solid fa-rotate"></i> Atualizar biblioteca</button></div></section>
+    <section class="card-viewer-layer-count secao-viewer-layer-count geoespacial-viewer-workspace card">
+      <aside class="geoespacial-viewer-panel"><header><span><i class="fa-solid fa-certificate"></i> Camadas homologadas</span><small id="viewer-layer-count">0 itens</small></header><div id="geoespacial-layers-list" class="geoespacial-viewer-list"><p class="hint">Nenhuma camada final disponível.</p></div></aside>
+      <div class="geoespacial-map-container"><div id="map-geoespacial" class="geoespacial-map"></div><div class="geoespacial-map-caption"><i class="fa-solid fa-circle-info"></i> Selecione uma camada homologada para visualização.</div></div>
+      <aside class="geoespacial-viewer-panel geoespacial-viewer-panel--details"><header><span><i class="fa-solid fa-file-lines"></i> Detalhes do produto</span></header><div id="geoespacial-details-content" class="geoespacial-viewer-details"><p class="hint">Selecione uma camada para consultar versão, fonte e metadados.</p></div></aside>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <script src="/assets/js/geoespacial-map.js"></script>
+  <script src="geoespacial-produtos.js"></script>
+{% endblock %}

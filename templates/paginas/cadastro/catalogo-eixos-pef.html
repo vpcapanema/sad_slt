@@ -1,0 +1,32 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Guia para classificar no plano ferroviário" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+
+{% block titulo %}Eixos PEF-SP 2050{% endblock %}
+{% block classes_body %}ref-page{% endblock %}
+{% block base_url %}<base href="/public/cadastro/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<main class="conteudo-principal app-main ref-main">
+    <section class="card-catalogo-eixos-pef secao-catalogo-eixos-pef card ref-alert ref-card">
+      <div class="pli-section-label">
+        <i class="fas fa-circle-info" aria-hidden="true"></i>
+        <span class="pli-section-title">Como escolher o eixo</span>
+      </div>
+      <div class="ref-card-body">
+        <p class="step-intro">Leia a descrição de cada eixo e, se necessário, indique o corredor TIC correspondente.</p>
+      </div>
+    </section>
+    <div id="conteudo"></div>
+  </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="referencia-render.js"></script>
+  <script src="/assets/js/paginas/cadastro-catalogo-eixos-pef-inline-1.js"></script>
+{% endblock %}

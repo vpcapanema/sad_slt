@@ -1,0 +1,34 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "PLI-SP 2050 e PEF-SP 2050" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+
+{% block titulo %}Planos PLI-SP e PEF-SP{% endblock %}
+{% block classes_body %}ref-page{% endblock %}
+{% block base_url %}<base href="/public/cadastro/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<main class="conteudo-principal app-main ref-main">
+    <section class="card-catalogo-planos secao-catalogo-planos card ref-alert ref-card">
+      <div class="pli-section-label">
+        <i class="fas fa-circle-info" aria-hidden="true"></i>
+        <span class="pli-section-title">Como escolher o plano</span>
+      </div>
+      <div class="ref-card-body">
+        <p class="step-intro">
+          Consulte objetivos e critérios de cada plano e escolha aquele no qual a demanda se encaixa.
+        </p>
+      </div>
+    </section>
+    <div id="conteudo"></div>
+  </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="referencia-render.js"></script>
+  <script src="/assets/js/paginas/cadastro-catalogo-planos-inline-1.js"></script>
+{% endblock %}

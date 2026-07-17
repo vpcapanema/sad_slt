@@ -1,0 +1,112 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Hierarquização e Ranqueamento de Objetos" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Etapa 3 — Avaliação por Critério — SLT{% endblock %}
+{% block classes_body %}ahp-module-page{% endblock %}
+{% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-step3-avaliacao-inline-1.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+
+  <main class="conteudo-principal app-main ahp-main">
+
+    <nav class="card-fases-do-modulo ahp-phase-nav card" aria-label="Fases do módulo">
+      <a href="step1-config.html" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e objetos</span></a>
+      <a href="#" class="ahp-phase active"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Avaliação dos objetos</span></a>
+      <a href="#" class="ahp-phase"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Ranking e homologação</span></a>
+    </nav>
+
+    <div class="card-ahp-progress ahp-progress card">
+      <div class="ahp-progress-bar">
+        <a href="step1-config.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">✓</div><span>Config. multicritério</span></a>
+        <a href="#" class="ahp-progress-step completed" id="link-step2"><div class="ahp-progress-circle">✓</div><span>Objetos</span></a>
+        <span class="ahp-progress-step active"><div class="ahp-progress-circle">3</div><span>Avaliação</span></span>
+        <span class="ahp-progress-step"><div class="ahp-progress-circle">4</div><span>Ranking</span></span>
+        <span class="ahp-progress-step"><div class="ahp-progress-circle">5</div><span>Homologação</span></span>
+      </div>
+    </div>
+
+    <section class="card-etapa-3-avaliacao-dos-objetos-por secao-etapa-3-avaliacao-dos-objetos-por card ahp-step-intro">
+      <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+        <a href="../index.html">Início</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <a href="home.html">Hierarquização</a>
+        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+        <span class="ahp-breadcrumb-current">Etapa 3: Avaliação por critério</span>
+      </nav>
+      <h1 class="ahp-page-title">
+        <i class="fas fa-table-cells" aria-hidden="true"></i>
+        Etapa 3: Avaliação dos objetos por critério
+      </h1>
+      <p class="card-ahp-info-note ahp-info-note card">
+        <i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i>
+        <span>
+          Para cada critério, atribua uma <strong>pontuação de 0 a 10</strong> a cada objeto.
+          A pontuação representa o desempenho do objeto naquele critério — valores maiores indicam
+          melhor desempenho. O sistema normalizará as pontuações (0–1) e calculará o ranking
+          ponderado pelos pesos definidos na configuração multicritério.
+        </span>
+      </p>
+    </section>
+
+    <div id="aval-loading" class="card-aval-loading card">
+      <p class="ahp-help-text"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando…</p>
+    </div>
+
+    <div id="aval-error" class="card-aval-error ahp-info-note card ahp-info-note--error hidden">
+      <i class="fas fa-triangle-exclamation app-template-inline-icon app-template-inline-icon--error" aria-hidden="true"></i>
+      <span id="aval-error-msg"></span>
+    </div>
+
+    <!-- Painel de avaliação (gerado dinamicamente) -->
+    <section class="card-aval-section secao-aval-section card ahp-step-section hidden" id="aval-section">
+      <div class="ahp-section-label">
+        <span class="ahp-section-index-icon" aria-hidden="true">3.1</span>
+        <span>Pontuação por critério</span>
+        <span class="aval-progress-badge" id="aval-progresso-badge">0 / 0 critérios preenchidos</span>
+      </div>
+      <div class="ahp-section-body">
+        <div class="ahp-subcard">
+          <div class="aval-tab-nav" id="aval-tabs"></div>
+          <div id="aval-panels"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ações -->
+    <div class="card-aval-actions card hier-actions-bar hidden" id="aval-actions">
+      <a href="#" class="btn btn--outline" id="btn-voltar">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar
+      </a>
+      <div class="hier-btn-group">
+        <button type="button" class="btn btn--outline" id="btn-salvar">
+          <i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar rascunho
+        </button>
+        <button type="button" class="btn btn--primary" id="btn-calcular" disabled>
+          Calcular ranking <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+
+    <div id="submit-error" class="card-submit-error ahp-info-note card ahp-info-note--error hidden hier-mt-8">
+      <i class="fas fa-triangle-exclamation app-template-inline-icon app-template-inline-icon--error" aria-hidden="true"></i>
+      <span id="submit-error-msg"></span>
+    </div>
+
+  </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="js/hier-api.js"></script>
+  <script src="js/step3-avaliacao.js"></script>
+  <script src="/assets/js/paginas/hierarquizacao-step3-avaliacao-inline-1.js"></script>
+{% endblock %}

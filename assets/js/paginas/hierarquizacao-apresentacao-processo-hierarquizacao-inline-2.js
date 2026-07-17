@@ -1,0 +1,1 @@
+SLTAdminAuth.requireAuth();

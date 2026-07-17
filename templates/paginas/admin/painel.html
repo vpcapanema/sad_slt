@@ -1,0 +1,66 @@
+{% extends "bases/base_painel_mapa.html" %}
+{% set subtitulo = "Painel administrativo de demandas" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Painel de demandas — Admin SLT{% endblock %}
+{% block classes_body %}painel-dashboard-page admin-data-page  page-admin-painel{% endblock %}
+{% block classes_barra_lateral %}painel-dashboard-sidebar{% endblock %}
+{% block rotulo_barra_lateral %}Demandas{% endblock %}
+{% block base_url %}<base href="/restrict/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/admin-painel-page.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+
+{% block barra_lateral %}
+<div class="nav-section painel-layers-section">
+          <nav class="sidebar-restricted-nav" aria-label="Área restrita">
+            <a href="/restrict/">Área restrita</a>
+            <a href="painel/" class="is-active" aria-current="page">Painel de demandas</a>
+            <a href="demandas/">Tabela de demandas</a>
+          </nav>
+          <div id="painel-layers-root" class="layer-group layer-group--root">
+            <div id="painel-layer-filter" class="painel-layer-filter" aria-label="Filtro de camadas">
+              <span class="painel-layer-filter-icon" aria-hidden="true"></span>
+              <select class="painel-layer-filter-field" aria-label="Campo do filtro"></select>
+              <select class="painel-layer-filter-value" aria-label="Valor do filtro"></select>
+              <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--apply" aria-label="Aplicar filtro"><span aria-hidden="true">✓</span></button>
+              <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--clear" aria-label="Limpar filtro"><span aria-hidden="true">✕</span></button>
+            </div>
+            <button type="button" class="layer-group-header layer-group-header--section" id="toggle-demandas-section" aria-expanded="true" aria-controls="layers-container">
+              <span class="layer-group-toggle" aria-hidden="true">▼</span>
+              <span class="layer-group-name">Demandas</span>
+              <span id="projetos-count" class="layer-group-active-count"></span>
+            </button>
+            <div id="layers-container" class="layer-group-body layers-container demandas-tree" role="list" aria-label="Demandas"></div>
+            <p id="lista-vazia-projetos" class="layers-empty hint hidden">Nenhuma demanda registrada.</p>
+          </div>
+        </div>
+{% endblock %}
+
+{% block painel %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+
+      <main class="conteudo-principal painel-dashboard-map" aria-label="Mapa de demandas">
+        <div id="map-painel"></div>
+        <div id="status-legend" class="status-color-legend-host status-color-legend-host--map" data-legend-start="expanded" aria-label="Legenda de cores por status"></div>
+      </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="/assets/js/status-colors.js"></script>
+  <script src="/assets/js/painel-map-controls.js"></script>
+  <script src="/assets/js/painel-layer-filter.js"></script>
+  <script src="/assets/js/painel-layer-labels.js"></script>
+  <script src="/assets/js/admin-api.js"></script>
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/sigma-read.js"></script>
+  <script src="/assets/js/catalog.js"></script>
+  <script src="/assets/js/admin-labels.js"></script>
+  <script src="/assets/js/admin-ui.js"></script>
+  <script src="/assets/js/grouped-sidebar.js"></script>
+  <script src="painel.js"></script>
+{% endblock %}

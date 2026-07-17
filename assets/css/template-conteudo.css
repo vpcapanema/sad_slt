@@ -1,0 +1,24 @@
+.pagina-conteudo {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.pagina-conteudo > .conteudo-principal,
+.pagina-conteudo > main {
+  flex: 1 0 auto;
+}
+
+.rodape-institucional {
+  margin-top: auto;
+  padding: 1rem 5%;
+  color: rgba(255, 255, 255, 0.82);
+  background: var(--pli-deep);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.rodape-institucional strong,
+.rodape-institucional span {
+  display: block;
+}

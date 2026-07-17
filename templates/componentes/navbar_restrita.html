@@ -1,0 +1,26 @@
+<header class="cabecalho-principal app-header">
+  <div class="conteudo-cabecalho app-header-inner">
+    <a href="/restrict/" class="marca-sicard app-header-brand" title="Página inicial da área restrita">
+      <span class="moldura-simbolo app-header-icon-frame" aria-hidden="true">
+        <img src="/assets/img/brand/sicard-simbolo.png" alt="" class="simbolo-sicard app-header-icon">
+      </span>
+      <span class="identificacao-sistema app-brand">
+        <span class="nome-sistema app-brand-title">SICARD</span>
+        <small>{{ subtitulo | default("Área restrita") }}</small>
+      </span>
+    </a>
+    <nav class="navbar-restrita app-nav" aria-label="Navegação restrita principal">
+      <a href="/restrict/">Início</a>
+      <div class="grupo-navegacao app-nav-group">
+        <a href="/restrict/painel/">Cadastro de Demandas<span class="indicador-submenu app-nav-caret" aria-hidden="true">▾</span></a>
+        <div class="submenu-navegacao app-nav-submenu">
+          <a href="/restrict/painel/">Painel administrativo</a>
+          <a href="/restrict/demandas/">Análise de demandas</a>
+        </div>
+      </div>
+      <a href="/restrict/hierarquizacao/">Hierarquização e Ranking</a>
+      <a href="/public/transparencia/">Transparência</a>
+      <a href="/public/documentacao/">Documentação</a>
+    </nav>
+  </div>
+</header>

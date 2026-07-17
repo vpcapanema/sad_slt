@@ -1,0 +1,171 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Hierarquização AHP" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Etapa 6: Geração de pesos — AHP — SLT{% endblock %}
+{% block classes_body %}ahp-module-page{% endblock %}
+{% block base_url %}<base href="/restrict/ahp/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+<main class="conteudo-principal app-main ahp-main">
+            <nav class="card-fases-do-modulo ahp-phase-nav card" aria-label="Fases do módulo">
+              <a href="step1-configuracao.html" class="ahp-phase"><span class="ahp-phase-num">Fase 1</span><span class="ahp-phase-name">Configuração e obtenção dos objetos</span></a>
+              <a href="step2-criterios.html" class="ahp-phase"><span class="ahp-phase-num">Fase 2</span><span class="ahp-phase-name">Critérios e matriz de comparação</span></a>
+              <a href="step6-resultados.html" class="ahp-phase active"><span class="ahp-phase-num">Fase 3</span><span class="ahp-phase-name">Resultados e pesos</span></a>
+            </nav>
+            <div class="card-ahp-progress ahp-progress card"><div class="ahp-progress-bar"><a href="step1-configuracao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">1</div><span>Configuração</span></a><a href="step2-criterios.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">2</div><span>Critérios</span></a><a href="step3-nomes.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">3</div><span>Nomes</span></a><a href="step4-metodo.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">4</div><span>Método</span></a><a href="step5-comparacao.html" class="ahp-progress-step completed"><div class="ahp-progress-circle">5</div><span>Comparação pareada</span></a><a href="step6-resultados.html" class="ahp-progress-step active"><div class="ahp-progress-circle">6</div><span>Geração de pesos</span></a></div></div>
+
+            <section class="card-etapa-6-geracao-de-pesos secao-etapa-6-geracao-de-pesos card ahp-step-intro">
+                <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+                        <a href="index.html">Início</a>
+                        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+                        <a href="step1-configuracao.html">Etapa 1: Configuração</a>
+                        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+                        <a href="step2-criterios.html">Etapa 2: Critérios</a>
+                        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+                        <a href="step3-nomes.html">Etapa 3: Nomes</a>
+                        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+                        <a href="step4-metodo.html">Etapa 4: Método</a>
+                        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+                        <a href="step5-comparacao.html">Etapa 5: Comparação pareada</a>
+                        <span class="ahp-breadcrumb-sep" aria-hidden="true">›</span>
+                        <span class="ahp-breadcrumb-current">Etapa 6: Geração de pesos</span>
+                    </nav>
+                    <h1 class="ahp-page-title"><i class="fas fa-chart-column app-template-title-icon" aria-hidden="true"></i>Etapa 6: Geração de pesos</h1>
+                    <p class="card-ahp-info-note ahp-info-note card"><i class="fas fa-info-circle app-template-inline-icon app-template-inline-icon--info" aria-hidden="true"></i><span>Carregue o <strong>contexto de análise</strong> produzido ao final da Fase 2: objetos da Fase 1, cadastro conceitual, matriz de comparação pareada salva na Etapa 5, métricas validáveis e alertas de coerência. Em seguida a etapa <strong>valida a matriz</strong>, <strong>calcula os pesos</strong> e emite o <strong>parecer</strong>.</span></p>
+            </section>
+
+            <section class="card-resultados-da-analise-ahp secao-resultados-da-analise-ahp card ahp-step-section ahp-step-section--contexto">
+              <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">6.1</span><span>Contexto da Etapa</span></div>
+                <div class="ahp-section-body">
+                    <section class="secao-informacoes ahp-section info-card"><div class="ahp-info-card-header"><i class="fas fa-check-circle"></i><h2>Resultados da Análise AHP</h2></div><div class="info-card-content"><p>A Fase 3 consome o pacote completo gerado na Fase 2. Após carregar o contexto abaixo, confira a <strong>consistência da matriz pareada</strong>, os <strong>pesos calculados</strong> e o <strong>parecer</strong> (incluindo alertas de validação lógica registrados na configuração).</p><div class="ahp-info-highlights"><div class="ahp-info-item"><i class="fas fa-check-double"></i><div><strong>Validação da matriz</strong><p>Motor AHP (RC, IC, λ<sub>max</sub>) sobre a matriz salva na Etapa 5.</p></div></div><div class="ahp-info-item"><i class="fas fa-percent"></i><div><strong>Pesos dos critérios</strong><p>Calculados a partir da matriz pareada validada.</p></div></div><div class="ahp-info-item"><i class="fas fa-clipboard-check"></i><div><strong>Parecer</strong><p>Consolida alertas de coerência conceitual confirmados na Fase 2.</p></div></div></div></div></section>
+                </div>
+            </section>
+
+            <section class="card-cfg-method-saved secao-cfg-method-saved card ahp-step-section">
+              <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">6.2</span><span>Carregar contexto de análise</span></div>
+                <div class="ahp-section-body">
+                    <section class="secao-subetapa-analise ahp-section ahp-subcard ahp-config-loader ahp-contexto-fase2">
+                        <div class="ahp-subsection-title ahp-subsection-title--roman">
+                            <span class="ahp-subsection-num ahp-subsection-num--roman">I</span>
+                            <span>Origem do contexto</span>
+                        </div>
+                        <p class="ahp-page-desc">Selecione a configuração salva ou importe o artefato JSON exportado ao final da Fase 2. O sistema conferirá se o pacote inclui objetos, cadastro conceitual, matriz pareada (Etapa 5), métricas e alertas de coerência.</p>
+                        <div class="ahp-method-choice-row">
+                            <div class="ahp-method-choice">
+                                <div class="ahp-method-choice-header">
+                                    <input type="radio" id="cfg-method-saved" name="cfg-source" value="saved" autocomplete="off" data-evento-inline="ahp-step6-resultados-conteudo-1">
+                                    <label for="cfg-method-saved"><i class="fas fa-database"></i> <strong>Selecionar configuração</strong></label>
+                                </div>
+                                <div id="cfg-saved-content" class="method-content method-content--hidden">
+                                    <div class="c-form-group">
+                                        <p class="form-desc">Selecione uma configuração da lista abaixo. Somente configurações com pacote completo da Fase 2 (matriz pareada salva na Etapa 5) estarão disponíveis.</p>
+                                        <select id="cfg-saved-select" class="c-form-control" data-pacote-fase-esperado="fase_2" title="Selecione a configuração com pacote fase_2">
+                                            <option value="">Selecione a configuração…</option>
+                                        </select>
+                                        <small class="form-help" id="cfg-saved-help"><i class="fas fa-info-circle"></i> Apenas configurações com matriz pareada salva na Etapa 5 estão prontas para esta etapa.</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ahp-method-choice">
+                                <div class="ahp-method-choice-header">
+                                    <input type="radio" id="cfg-method-file" name="cfg-source" value="file" autocomplete="off" data-evento-inline="ahp-step6-resultados-conteudo-2">
+                                    <label for="cfg-method-file"><i class="fas fa-file-arrow-up"></i> <strong>Importar arquivo de configuração</strong></label>
+                                </div>
+                                <div id="cfg-file-content" class="method-content method-content--hidden">
+                                    <div class="c-form-group">
+                                        <p class="form-desc">Envie o arquivo JSON de <strong>matriz</strong> ou <strong>pesos</strong> exportado ao final da Fase 2 (artefato vinculado por <code>config_codigo</code>).</p>
+                                        <div class="upload-area">
+                                            <label for="cfg-file-input" class="visually-hidden">Selecionar artefato JSON</label>
+                                            <input type="file" id="cfg-file-input" accept=".json,application/json" class="hidden-file-input" title="Artefato JSON" data-evento-inline="ahp-step6-resultados-conteudo-3">
+                                            <button type="button" class="ahp-upload-select-btn" data-evento-inline="ahp-step6-resultados-conteudo-4"><i class="fas fa-folder-open"></i> Selecionar Arquivo</button>
+                                        </div>
+                                        <small class="form-help" id="cfg-file-help"><i class="fas fa-info-circle"></i> <span id="cfg-file-info"></span>Selecione um arquivo <code>.json</code> exportado pelo módulo AHP.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="cfg-loaded-summary" class="ahp-recommendation is-hidden"></div>
+                    </section>
+                    <section class="secao-ctx-checklist-title ahp-section ahp-subcard">
+                        <div class="ahp-subsection-title ahp-subsection-title--roman">
+                            <span class="ahp-subsection-num ahp-subsection-num--roman">II</span>
+                            <span id="ctx-checklist-title">Conferência do pacote da Fase 2</span>
+                        </div>
+                        <div id="ctx-fase2-checklist" class="ahp-contexto-checklist-host" aria-live="polite"></div>
+                    </section>
+                </div>
+            </section>
+
+            <section class="card-results-conferencia secao-results-conferencia card ahp-step-section">
+                    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">6.3</span><span>Saída da Análise - PESOS E RELATÓRIOS</span></div>
+                <div class="ahp-section-body">
+                <section class="secao-subetapa-analise ahp-section ahp-subcard">
+                    <div class="ahp-subsection-title ahp-subsection-title--roman">
+                        <span class="ahp-subsection-num ahp-subsection-num--roman">I</span>
+                        <span>Resultado da conferência da matriz de comparação pareada</span>
+                    </div>
+                    <div id="results-conferencia" aria-live="polite"></div>
+                </section>
+                <section class="secao-results-pesos ahp-section ahp-subcard">
+                    <div class="ahp-subsection-title ahp-subsection-title--roman">
+                        <span class="ahp-subsection-num ahp-subsection-num--roman">II</span>
+                        <span>Pesos e importância relativa final dos critérios</span>
+                    </div>
+                    <div id="results-pesos" aria-live="polite"></div>
+                </section>
+                <section class="secao-results-parecer ahp-section ahp-subcard">
+                    <div class="ahp-subsection-title ahp-subsection-title--roman">
+                        <span class="ahp-subsection-num ahp-subsection-num--roman">III</span>
+                        <span>Parecer Técnico-Científico</span>
+                    </div>
+                    <div id="results-parecer" aria-live="polite"></div>
+                </section></div></section><section class="card-resultsexportcontent secao-resultsexportcontent card ahp-step-section"><div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">6.4</span><span>Exportar Resultados</span></div><div class="ahp-section-body">
+                <section class="secao-subetapa-analise ahp-section ahp-subcard">
+                    <div class="ahp-subsection-title ahp-subsection-title--roman">
+                        <span class="ahp-subsection-num ahp-subsection-num--roman">I</span>
+                        <span>Exportar resultados</span>
+                    </div>
+                    <div id="resultsExportContent" aria-live="polite"></div>
+                </section>
+                <section class="secao-config-artefatos ahp-section ahp-subcard">
+                    <div class="ahp-subsection-title ahp-subsection-title--roman">
+                        <span class="ahp-subsection-num ahp-subsection-num--roman">II</span>
+                        <span>Artefatos da configuração</span>
+                    </div>
+                    <div id="config-artefatos" aria-live="polite"></div>
+                </section></div></section><section class="card-step6-nav-section secao-step6-nav-section card ahp-step-section" id="step6-nav-section"><div class="ahp-section-body"><div class="ahp-form-actions ahp-final-actions-row"><a href="step5-comparacao.html" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar</a><a href="step1-configuracao.html" class="btn btn-secondary"><i class="fas fa-home"></i> Nova Análise</a><button type="button" id="step6-save-final-btn" class="btn btn-success"><i class="fas fa-floppy-disk c-btn__icon"></i>Salvar configuração final</button><a href="step7-alternativas.html" class="btn btn-primary" data-evento-inline="ahp-step6-resultados-conteudo-5">Continuar<i class="fas fa-arrow-right c-btn__icon c-btn__icon--right"></i></a></div><div id="step6-nav-feedback" class="ahp-matriz-edit-feedback" role="status" aria-live="polite"></div></div></section>
+    </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="js/ahp-page-reset.js"></script>
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="js/ahp-auth.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="js/ahp-core.js"></script>
+  <script src="js/config-api.js"></script>
+  <script src="js/config-artefatos.js"></script>
+  <script src="js/ahp-contexto-ui.js"></script>
+  <script src="js/ahp-diagnostico-consistencia.js"></script>
+  <script src="js/ahp-pacote-fase.js"></script>
+  <script src="js/colaborativa-api.js"></script>
+  <script src="js/ahp-parecer.js"></script>
+  <script src="js/ahp-formato-data.js"></script>
+  <script src="js/config-loader.js"></script>
+  <script src="js/step6-contexto-loader.js"></script>
+  <script src="js/script.js"></script>
+  <script src="/assets/js/paginas/ahp-step6-resultados-inline-1.js"></script>
+  <script src="/assets/js/field-filled.js"></script>
+  <script src="/assets/js/paginas/ahp-step6-resultados-conteudo-eventos.js"></script>
+{% endblock %}
