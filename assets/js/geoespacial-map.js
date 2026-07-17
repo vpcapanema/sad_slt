@@ -1,4 +1,4 @@
-/* Componente de mapa compartilhado — Módulo Geoespacial (MapLibre GL) */
+/* Componente de mapa compartilhado — Bloco de Geoprocessamento (MapLibre GL) */
 (function () {
   window.GeoespacialMap = {
     map: null,

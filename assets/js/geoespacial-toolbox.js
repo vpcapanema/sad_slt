@@ -1,4 +1,4 @@
-/* Toolbox de Algoritmos — Módulo Geoespacial */
+/* Toolbox de Algoritmos — Bloco de Geoprocessamento */
 (function () {
   window.GeoToolbox = {
     algoritmos: {

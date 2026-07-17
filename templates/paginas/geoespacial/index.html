@@ -1,9 +1,9 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Módulo Geoespacial" %}
+{% set subtitulo = "Bloco de Geoprocessamento" %}
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 
-{% block titulo %}Módulo Geoespacial — SLT{% endblock %}
+{% block titulo %}Bloco de Geoprocessamento — SLT{% endblock %}
 {% block classes_body %}geoespacial-hub-page{% endblock %}
 {% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
 
@@ -15,10 +15,10 @@
 {% block conteudo %}
 <main class="conteudo-principal app-main geoespacial-hub-main">
     <section class="card-processamento-e-produtos-geoespaciais secao-processamento-e-produtos-geoespaciais card geoespacial-hub-intro">
-      <nav class="geoespacial-breadcrumb" aria-label="Breadcrumb"><a href="/restrict/">Início</a><span>›</span><span aria-current="page">Módulo Geoespacial</span></nav>
+      <nav class="geoespacial-breadcrumb" aria-label="Breadcrumb"><a href="/restrict/">Início</a><span>›</span><span aria-current="page">Bloco de Geoprocessamento</span></nav>
       <div class="geoespacial-hub-heading"><div><span class="geoespacial-eyebrow">Módulo de Apoio à Decisão (MAD)</span><h1>Processamento e produtos geoespaciais</h1><p>Gerencie os dados de entrada, produza e valide as superfícies metodológicas e consulte os produtos homologados que fundamentam a análise territorial.</p></div><span class="geoespacial-hub-mark" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span></div>
     </section>
-    <section class="secao-visualizador-de-inputs geoespacial-module-grid" aria-label="Funcionalidades do módulo geoespacial">
+    <section class="secao-visualizador-de-inputs geoespacial-module-grid" aria-label="Funcionalidades do bloco de geoprocessamento">
       <a href="/restrict/geoespacial/visualizador-inputs/" class="card-visualizador-de-inputs geoespacial-module-card"><span class="geoespacial-module-card__index">01</span><span class="geoespacial-module-card__icon"><i class="fa-solid fa-folder-tree"></i></span><div><span class="geoespacial-module-card__badge">Dados de entrada</span><h2>Visualizador de insumos</h2><p>Consulte, carregue e gerencie as camadas disponíveis para processamento.</p></div><i class="fa-solid fa-arrow-right geoespacial-module-card__arrow" aria-hidden="true"></i></a>
       <a href="/restrict/geoespacial/gerador-risco-restricao/" class="card-risco-e-restricao geoespacial-module-card"><span class="geoespacial-module-card__index">02</span><span class="geoespacial-module-card__icon geoespacial-module-card__icon--warning"><i class="fa-solid fa-shield-halved"></i></span><div><span class="geoespacial-module-card__badge">Gerador · Fase 1</span><h2>Risco e Restrição</h2><p>Produza e valide as camadas consolidadas usadas na triagem territorial.</p></div><i class="fa-solid fa-arrow-right geoespacial-module-card__arrow" aria-hidden="true"></i></a>
       <a href="/restrict/geoespacial/gerador-favorabilidade/" class="card-favorabilidade-territorial geoespacial-module-card"><span class="geoespacial-module-card__index">03</span><span class="geoespacial-module-card__icon geoespacial-module-card__icon--success"><i class="fa-solid fa-map"></i></span><div><span class="geoespacial-module-card__badge">Gerador · Fase 2</span><h2>Favorabilidade Territorial</h2><p>Gere a superfície contínua que alimenta o índice territorial dos projetos.</p></div><i class="fa-solid fa-arrow-right geoespacial-module-card__arrow" aria-hidden="true"></i></a>
