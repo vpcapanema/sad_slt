@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from api.deps.auth import require_geospatial_access
 from api.path_policy import project_path
 from api.repositories import camada_geoespacial_repository
+from api.repositories import modelo_geoprocessamento_repository as modelo_repo
 from api.repositories.geoespacial_repository import geoespacial_repository
 from api.schemas.geoespacial import (
     AtributoFase3InputSchema,
@@ -41,6 +42,38 @@ router = APIRouter(
     tags=["geoespacial"],
     dependencies=[Depends(require_geospatial_access)],
 )
+
+
+def _validar_definicao_funcao(funcao: dict) -> None:
+    passos = funcao.get("passos") or []
+    if len(passos) < 2:
+        raise HTTPException(
+            status_code=422,
+            detail="Uma função deve reunir pelo menos dois algoritmos.",
+        )
+    erros = geoprocessamento_engine.validate_steps(passos)
+    if erros:
+        raise HTTPException(status_code=422, detail={"erros": erros})
+
+
+def _validar_definicao_fluxo(fluxo: dict) -> None:
+    itens = fluxo.get("itens") or []
+    if not itens:
+        raise HTTPException(
+            status_code=422,
+            detail="Um fluxo deve conter ao menos um algoritmo ou função.",
+        )
+    erros: list[str] = []
+    for indice, item in enumerate(itens, 1):
+        funcao_id = item.get("funcao_id")
+        algoritmo_id = item.get("algoritmo_id")
+        if funcao_id:
+            if not modelo_repo.obter(funcao_id, "funcao"):
+                erros.append(f"Item {indice}: função {funcao_id} não encontrada")
+        elif algoritmo_id not in CATALOG:
+            erros.append(f"Item {indice}: algoritmo inválido")
+    if erros:
+        raise HTTPException(status_code=422, detail={"erros": erros})
 
 
 @router.get("/algoritmos")
@@ -116,24 +149,22 @@ async def salvar_camada(parametros: dict) -> dict:
 
 @router.post("/funcoes")
 async def salvar_funcao(funcao: dict) -> dict:
-    funcao_id = funcao.get("id") or f"funcao_{len(geoprocessamento_engine.functions)+1}"
+    _validar_definicao_funcao(funcao)
+    funcao_id = funcao.get("id") or f"funcao_{len(modelo_repo.listar('funcao'))+1}"
     funcao["id"] = funcao_id
-    geoprocessamento_engine.functions[funcao_id] = funcao
-    geoprocessamento_engine.save_definitions()
-    return funcao
+    return modelo_repo.salvar(funcao, "funcao")
 
 
 @router.put("/funcoes/{funcao_id}")
 async def editar_funcao(funcao_id: str, funcao: dict) -> dict:
+    _validar_definicao_funcao(funcao)
     funcao["id"] = funcao_id
-    geoprocessamento_engine.functions[funcao_id] = funcao
-    geoprocessamento_engine.save_definitions()
-    return funcao
+    return modelo_repo.salvar(funcao, "funcao")
 
 
 @router.get("/funcoes/{funcao_id}")
 async def obter_funcao(funcao_id: str) -> dict:
-    funcao = geoprocessamento_engine.functions.get(funcao_id)
+    funcao = modelo_repo.obter(funcao_id, "funcao")
     if not funcao:
         raise HTTPException(status_code=404, detail="Função não encontrada")
     return funcao
@@ -141,15 +172,14 @@ async def obter_funcao(funcao_id: str) -> dict:
 
 @router.delete("/funcoes/{funcao_id}")
 async def excluir_funcao(funcao_id: str) -> dict:
-    if not geoprocessamento_engine.functions.pop(funcao_id, None):
+    if not modelo_repo.excluir(funcao_id, "funcao"):
         raise HTTPException(status_code=404, detail="Função não encontrada")
-    geoprocessamento_engine.save_definitions()
     return {"message": "Função excluída"}
 
 
 @router.post("/funcoes/{funcao_id}/validar")
 async def validar_funcao(funcao_id: str) -> dict:
-    funcao = geoprocessamento_engine.functions.get(funcao_id)
+    funcao = modelo_repo.obter(funcao_id, "funcao")
     if not funcao:
         raise HTTPException(status_code=404, detail="Função não encontrada")
     erros = geoprocessamento_engine.validate_steps(funcao.get("passos", []))
@@ -158,8 +188,9 @@ async def validar_funcao(funcao_id: str) -> dict:
 
 @router.post("/funcoes/{funcao_id}/executar")
 async def executar_funcao(funcao_id: str, entradas: dict) -> dict:
-    funcao = geoprocessamento_engine.functions.get(funcao_id)
-    if not funcao: raise HTTPException(status_code=404, detail="Função não encontrada")
+    funcao = modelo_repo.obter(funcao_id, "funcao")
+    if not funcao:
+        raise HTTPException(status_code=404, detail="Função não encontrada")
     try:
         return await geoprocessamento_engine.run_steps(funcao.get("passos", []), entradas)
     except (ValueError, KeyError, TypeError, RuntimeError, NotImplementedError) as exc:
@@ -168,24 +199,22 @@ async def executar_funcao(funcao_id: str, entradas: dict) -> dict:
 
 @router.post("/fluxos")
 async def salvar_fluxo(fluxo: dict) -> dict:
-    fluxo_id = fluxo.get("id") or f"fluxo_{len(geoprocessamento_engine.flows)+1}"
+    _validar_definicao_fluxo(fluxo)
+    fluxo_id = fluxo.get("id") or f"fluxo_{len(modelo_repo.listar('fluxo'))+1}"
     fluxo["id"] = fluxo_id
-    geoprocessamento_engine.flows[fluxo_id] = fluxo
-    geoprocessamento_engine.save_definitions()
-    return fluxo
+    return modelo_repo.salvar(fluxo, "fluxo")
 
 
 @router.put("/fluxos/{fluxo_id}")
 async def editar_fluxo(fluxo_id: str, fluxo: dict) -> dict:
+    _validar_definicao_fluxo(fluxo)
     fluxo["id"] = fluxo_id
-    geoprocessamento_engine.flows[fluxo_id] = fluxo
-    geoprocessamento_engine.save_definitions()
-    return fluxo
+    return modelo_repo.salvar(fluxo, "fluxo")
 
 
 @router.get("/fluxos/{fluxo_id}")
 async def obter_fluxo(fluxo_id: str) -> dict:
-    fluxo = geoprocessamento_engine.flows.get(fluxo_id)
+    fluxo = modelo_repo.obter(fluxo_id, "fluxo")
     if not fluxo:
         raise HTTPException(status_code=404, detail="Fluxo não encontrado")
     return fluxo
@@ -193,20 +222,19 @@ async def obter_fluxo(fluxo_id: str) -> dict:
 
 @router.delete("/fluxos/{fluxo_id}")
 async def excluir_fluxo(fluxo_id: str) -> dict:
-    if not geoprocessamento_engine.flows.pop(fluxo_id, None):
+    if not modelo_repo.excluir(fluxo_id, "fluxo"):
         raise HTTPException(status_code=404, detail="Fluxo não encontrado")
-    geoprocessamento_engine.save_definitions()
     return {"message": "Fluxo excluído"}
 
 
 @router.post("/fluxos/{fluxo_id}/validar")
 async def validar_fluxo(fluxo_id: str) -> dict:
-    fluxo = geoprocessamento_engine.flows.get(fluxo_id)
+    fluxo = modelo_repo.obter(fluxo_id, "fluxo")
     if not fluxo:
         raise HTTPException(status_code=404, detail="Fluxo não encontrado")
     erros: list[str] = []
     for indice, item in enumerate(fluxo.get("itens", []), 1):
-        if item.get("funcao_id") and item["funcao_id"] not in geoprocessamento_engine.functions:
+        if item.get("funcao_id") and not modelo_repo.obter(item["funcao_id"], "funcao"):
             erros.append(f"Item {indice}: função {item['funcao_id']} não encontrada")
         elif item.get("algoritmo_id") not in CATALOG and not item.get("funcao_id"):
             erros.append(f"Item {indice}: algoritmo inválido")
@@ -215,9 +243,11 @@ async def validar_fluxo(fluxo_id: str) -> dict:
 
 @router.post("/fluxos/{fluxo_id}/executar")
 async def executar_fluxo(fluxo_id: str, entradas: dict) -> dict:
-    fluxo = geoprocessamento_engine.flows.get(fluxo_id)
-    if not fluxo: raise HTTPException(status_code=404, detail="Fluxo não encontrado")
-    context=dict(entradas); results=[]
+    fluxo = modelo_repo.obter(fluxo_id, "fluxo")
+    if not fluxo:
+        raise HTTPException(status_code=404, detail="Fluxo não encontrado")
+    context = dict(entradas)
+    results = []
     try:
         for item in fluxo.get("itens", []):
             parametros = {
@@ -226,12 +256,14 @@ async def executar_fluxo(fluxo_id: str, entradas: dict) -> dict:
             }
             contexto_item = {**context, **parametros}
             if item.get("funcao_id"):
-                fn=geoprocessamento_engine.functions.get(item["funcao_id"])
-                if not fn: raise ValueError(f"Função {item['funcao_id']} não encontrada")
+                fn=modelo_repo.obter(item["funcao_id"], "funcao")
+                if not fn:
+                    raise ValueError(f"Função {item['funcao_id']} não encontrada")
                 result=await geoprocessamento_engine.run_steps(fn.get("passos",[]),contexto_item)
             else:
                 result=await geoprocessamento_engine.run_steps([item],contexto_item)
-            results.append(result); context.update(result.get("contexto",{}))
+            results.append(result)
+            context.update(result.get("contexto", {}))
     except (ValueError, KeyError, TypeError, RuntimeError, NotImplementedError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"status":"concluido","resultados":results,"contexto":context}
@@ -651,8 +683,11 @@ async def obter_rodada_fase3(rodada_id: str) -> RodadaFase3Schema:
 
 
 @router.post("/rodadas-fase3/{rodada_id}/homologar", response_model=RodadaFase3Schema)
-async def homologar_rodada_fase3(rodada_id: str, responsavel: str) -> RodadaFase3Schema:
+async def homologar_rodada_fase3(rodada_id: str, body: dict) -> RodadaFase3Schema:
     """Homologa uma rodada da Fase 3."""
+    responsavel = str(body.get("responsavel") or "").strip()
+    if not responsavel:
+        raise HTTPException(status_code=422, detail="Informe o responsável pela homologação")
     rodada = await geoespacial_repository.homologar_rodada_fase3(rodada_id, responsavel)
     if not rodada:
         raise HTTPException(status_code=404, detail="Rodada não encontrada")
@@ -1036,16 +1071,16 @@ async def exportar_raster(
 # ==================== FUNÇÕES E FLUXOS ====================
 
 @router.get("/funcoes", response_model=list[FuncaoSchema])
-async def listar_funcoes() -> list[FuncaoSchema]:
+async def listar_funcoes(modulo: str | None = Query(None)) -> list[FuncaoSchema]:
     """Lista todas as funções disponíveis."""
-    funcoes = list(geoprocessamento_engine.functions.values())
+    funcoes = modelo_repo.listar("funcao", modulo)
     return [FuncaoSchema(**f) for f in funcoes]
 
 
 @router.get("/fluxos", response_model=list[FluxoSchema])
-async def listar_fluxos() -> list[FluxoSchema]:
+async def listar_fluxos(modulo: str | None = Query(None)) -> list[FluxoSchema]:
     """Lista todos os fluxos disponíveis."""
-    fluxos = list(geoprocessamento_engine.flows.values())
+    fluxos = modelo_repo.listar("fluxo", modulo)
     return [FluxoSchema(**f) for f in fluxos]
 
 

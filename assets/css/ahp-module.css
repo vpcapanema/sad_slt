@@ -391,6 +391,63 @@ html.ahp-auth-pending body {
   }
 }
 
+.hier-phase-navigation {
+  display: grid;
+  gap: 0.1rem;
+  margin-bottom: 0.4rem;
+}
+
+.hier-link-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border-bottom: 1px solid var(--pli-border);
+}
+
+.hier-link-bar a {
+  padding: 0.25rem 0.75rem;
+  color: var(--pli-deep);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.hier-link-bar a:hover,
+.hier-link-bar a.active {
+  color: var(--pli-green);
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
+}
+
+.hier-link-bar--tools a {
+  color: var(--pli-muted);
+  font-size: 0.76rem;
+}
+
+.geoespacial-phase-navigation {
+  padding: 0.2rem clamp(0.75rem, 3vw, 2rem) 0;
+  background: #fff;
+}
+
+.geoespacial-phase-navigation .hier-phase-navigation {
+  max-width: 1280px;
+  margin-inline: auto;
+}
+
+@media (max-width: 640px) {
+  .hier-link-bar {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .hier-link-bar a {
+    padding: 0.22rem 0.4rem;
+  }
+}
+
 .ahp-progress {
   margin-bottom: 1rem;
 }

@@ -4,6 +4,7 @@
 {% set requer_autenticacao = true %}
 
 {% block titulo %}Fase 1 — Elegibilidade Territorial{% endblock %}
+{% set fase_ativa = 1 %}
 {% block classes_body %}ahp-module-page{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
 
@@ -15,10 +16,12 @@
 
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div><main class="conteudo-principal app-main ahp-main fase1-page">
+{% include "componentes/navegacao_fases_hierarquizacao.html" %}
 <section class="card-fase-1-elegibilidade-territorial secao-fase-1-elegibilidade-territorial card"><h1 class="ahp-page-title"><i class="fas fa-shield-halved"></i> Fase 1: Elegibilidade Territorial</h1><p>Interseção sequencial do universo de demandas com as camadas homologadas de restrição e risco.</p></section>
 
 <section class="card-fase-hierarquizacao secao-fase-hierarquizacao card ahp-step-section"><div class="ahp-section-label"><span>1. Carregar hierarquização</span></div><div class="ahp-section-body">
   <label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option>Carregando…</option></select></label>
+  <p class="ahp-help-text">Ainda não cadastrou a hierarquização? <a class="fase1-library-link" href="/restrict/hierarquizacao/processos/">Clique aqui para cadastrar uma hierarquização.</a></p>
   <div id="fase-resumo" class="fase1-summary hidden"></div>
 </div></section>
 
@@ -37,7 +40,7 @@
 <section class="card-camadas-operacionais secao-camadas-operacionais card ahp-step-section"><div class="ahp-section-label"><span>4. Geoprocessamento — SLT</span></div><div class="ahp-section-body">
   <div class="fase1-operational"><h3>Camadas operacionais</h3><div class="fase1-grid-2"><div><h4>Camada de demandas</h4><div id="gp-demandas"><p class="ahp-help-text">Selecione uma hierarquização.</p></div></div><div><h4>Camadas de Restrição e Risco</h4><div id="gp-risco-restricao"><p class="ahp-help-text">Selecione o par homologado.</p></div></div></div></div>
   <iframe id="gp-frame" class="fase1-gp-frame" title="Componente de geoprocessamento SLT" src="/restrict/geoespacial/bancada/?modulo=fase1&amp;embutido=1"></iframe>
-  <div class="fase1-execute"><label>Modelo <select id="modelo-fase1"><option value="fluxo_fase1_elegibilidade">Fase 1 — Elegibilidade territorial</option></select></label><button id="executar-fase1" class="btn btn--primary" type="button"><i class="fas fa-play"></i> Executar fluxo</button></div>
+  <div class="fase1-execute"><label>Cálculo <select id="modelo-fase1"><option value="calculo_fase1_elegibilidade">Fase 1 — Elegibilidade territorial</option></select></label><button id="executar-fase1" class="btn btn--primary" type="button"><i class="fas fa-play"></i> Executar cálculo isolado</button></div>
   <div id="fase1-erro" class="ahp-info-note ahp-info-note--error hidden"></div><div id="fase1-relatorio" class="fase1-summary hidden"></div>
 </div></section>
 </main>

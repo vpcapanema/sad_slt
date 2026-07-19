@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import secrets
 import uuid
+import math
 from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
@@ -99,7 +100,9 @@ def _valor(row: dict[str, Any], *nomes: str) -> Any:
     return next((lower[n.lower()] for n in nomes if n.lower() in lower), None)
 
 
-def _criterios(matriz: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+def _criterios(
+    matriz: Any, *, fases_a_executar: list[int] | None = None
+) -> tuple[dict[str, Any], dict[str, Any]]:
     f2: dict[str, Any] = {}
     f3: dict[str, Any] = {}
     for row in _linhas_matriz(matriz):
@@ -125,11 +128,37 @@ def _criterios(matriz: Any) -> tuple[dict[str, Any], dict[str, Any]]:
             raise DemandaValidationError(
                 f"Informe Fase 2 ou Fase 3 para o critério {nome}.", field="matriz.fase"
             )
-    if not f2 and not f3:
+    fases = set(fases_a_executar or [1, 2, 3])
+    if (2 in fases or 3 in fases) and not f2 and not f3:
         raise DemandaValidationError(
             "A matriz deve conter critérios das Fases 2 ou 3.", field="matriz"
         )
+    if 2 in fases and not f2:
+        raise DemandaValidationError(
+            "A Fase 2 foi selecionada, mas não possui critérios.", field="matriz.fase"
+        )
+    if 3 in fases and not f3:
+        raise DemandaValidationError(
+            "A Fase 3 foi selecionada, mas não possui critérios.", field="matriz.fase"
+        )
     return f2, f3
+
+
+def _fases_configuradas(dados: dict[str, Any]) -> set[int]:
+    return {
+        int(fase)
+        for fase in dados.get("cabecalho_grupo", {}).get(
+            "fases_a_executar", [1, 2, 3]
+        )
+        if str(fase).isdigit()
+    }
+
+
+def _exigir_fase(dados: dict[str, Any], fase: int) -> None:
+    if fase not in _fases_configuradas(dados):
+        raise DemandaValidationError(
+            f"A Fase {fase} não faz parte desta rodada.", field="fases_a_executar"
+        )
 
 
 def _fase1_vazia() -> dict[str, Any]:
@@ -169,7 +198,10 @@ def criar_hierarquizacao(
         tid = config.get("tipo_demanda_id")
     if tid is None:
         raise DemandaValidationError("Tipo de demanda inválido.", field="tipo_demanda")
-    f2, f3 = _criterios(payload.matriz_premissas_criterios)
+    f2, f3 = _criterios(
+        payload.matriz_premissas_criterios,
+        fases_a_executar=payload.fases_a_executar,
+    )
     codigo = _codigo()
     objetos_doc = []
     for o in payload.objetos:
@@ -235,7 +267,7 @@ def criar_hierarquizacao(
             "tipo_demanda": payload.tipo_demanda,
             "quantidade_objetos": len(objetos_doc),
             "matriz_premissas_criterios": payload.matriz_premissas_criterios,
-            "fases_a_executar": [1, 2, 3],
+            "fases_a_executar": payload.fases_a_executar,
             "pacotes": {},
             "criado_em": datetime.now(timezone.utc).isoformat(),
         },
@@ -356,6 +388,28 @@ def _numero_atributo(item: dict[str, Any], tipo: str) -> float:
     return 4.0 if tipo == "restricao" else 1.0
 
 
+def _media_ponderada_itens(
+    itens: list[dict[str, Any]], parametros: dict[str, Any], tipo: str
+) -> float:
+    pesos_config = parametros.get("pesos") or {}
+    soma = 0.0
+    soma_pesos = 0.0
+    for item in itens:
+        chave = (
+            item.get("criterio_id")
+            or item.get("criterio_nome")
+            or item.get("nome")
+            or item.get("feature_id")
+        )
+        try:
+            peso = max(0.0, float(pesos_config.get(str(chave), 1.0)))
+        except (TypeError, ValueError):
+            peso = 1.0
+        soma += _numero_atributo(item, tipo) * peso
+        soma_pesos += peso
+    return soma / soma_pesos if soma_pesos else 0.0
+
+
 def _reclassificar(valor: float, parametros: dict[str, Any], tipo: str) -> str:
     if tipo == "restricao":
         limiar = float((parametros.get("restricao") or {}).get("limiar", 1))
@@ -416,6 +470,7 @@ def executar_fase_1(
         )
     parametros = fatiamento.get("parametros") or {}
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
+    _exigir_fase(dados, 1)
     sugeridos: dict[str, dict[str, Any]] = {}
     contagem = {
         "objetos": 0,
@@ -442,7 +497,9 @@ def executar_fase_1(
         ]
         if rh:
             valores = [_numero_atributo(x, "restricao") for x in rh]
-            valor = sum(valores) / len(valores)
+            # Restrição confirmada nunca pode ser diluída pela média de outras
+            # incidências. A taxonomia da Fase 1 exige o maior valor restritivo.
+            valor = max(valores)
             arredondado = _reclassificar(valor, parametros, "restricao")
             f1 = _fase1_vazia()
             f1.update(
@@ -466,6 +523,14 @@ def executar_fase_1(
                 "resultado": "Não avaliado devido à existência de restrição",
                 "intersecoes": [],
             }
+            f1["restricoes_intersectadas"] = rh
+            f1["riscos_intersectados"] = []
+            f1["geometria_ou_area_afetada"] = {
+                "tipo": "Point",
+                "longitude": lon,
+                "latitude": lat,
+                "quantidade_intersecoes": len(rh),
+            }
             contagem["restritos"] += 1
         else:
             kh = [
@@ -474,8 +539,7 @@ def executar_fase_1(
                     ck["id"], longitude=float(lon), latitude=float(lat)
                 )
             ]
-            valores = [_numero_atributo(x, "risco") for x in kh]
-            valor = (sum(valores) / len(valores)) if valores else 0.0
+            valor = _media_ponderada_itens(kh, parametros, "risco") if kh else 0.0
             arredondado = (
                 _reclassificar(valor, parametros, "risco") if kh else "sem_risco"
             )
@@ -522,6 +586,14 @@ def executar_fase_1(
                 "indice_arredondado": arredondado,
                 "resultado": "Com risco" if kh else "Sem risco",
                 "intersecoes": kh,
+            }
+            f1["restricoes_intersectadas"] = []
+            f1["riscos_intersectados"] = kh
+            f1["geometria_ou_area_afetada"] = {
+                "tipo": "Point",
+                "longitude": lon,
+                "latitude": lat,
+                "quantidade_intersecoes": len(kh),
             }
             contagem["com_risco" if kh else "sem_ocorrencia"] += 1
         obj["hierarquizacao"]["fase_1"] = f1
@@ -574,6 +646,7 @@ def salvar_fase_1(
 ) -> HierarquizacaoResponseSchema:
     row = _carregar(codigo)
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
+    _exigir_fase(dados, 1)
     enviados = {
         str(x.get("demanda_id")): x.get("fase_1") for x in payload.resultados_objetos
     }
@@ -613,6 +686,7 @@ def executar_fase_2(
     from rasterio.warp import transform
 
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
+    _exigir_fase(dados, 2)
     scores = []
     with MemoryFile(bytes(raster["dados_geotiff"])) as mem:
         with mem.open() as ds:
@@ -631,10 +705,16 @@ def executar_fase_2(
                         "EPSG:4326", ds.crs, [float(lon)], [float(lat)]
                     )
                     xs, ys = coordenadas[0], coordenadas[1]
-                value = float(next(ds.sample([(xs[0], ys[0])]))[0])
-                score = (
-                    None if (ds.nodata is not None and value == ds.nodata) else value
-                )
+                sample = next(ds.sample([(xs[0], ys[0])], masked=True))
+                score = None if bool(sample.mask[0]) else float(sample[0])
+                if score is not None and (
+                    not math.isfinite(score) or score < 0 or score > 1
+                ):
+                    raise DemandaValidationError(
+                        f"Raster homologado retornou valor fora da faixa 0–1 para "
+                        f"{cab.get('codigo')}: {score}.",
+                        field="pacote_id",
+                    )
                 f2 = obj["hierarquizacao"]["fase_2"]
                 f2.update(
                     {
@@ -647,6 +727,9 @@ def executar_fase_2(
                             "latitude": lat,
                         },
                         "pacote_id": payload.pacote_id,
+                        "valor_por_criterio": {
+                            "favorabilidade_territorial": score
+                        },
                     }
                 )
                 if score is not None:
@@ -667,6 +750,13 @@ def executar_fase_2(
             "metadados",
         )
     }
+    dados["cabecalho_grupo"].setdefault("relatorios", {})["fase_2"] = {
+        "executada_em": datetime.now(timezone.utc).isoformat(),
+        "metodo_extracao": payload.metodo_extracao,
+        "pacote_id": payload.pacote_id,
+        "objetos_avaliados": len(dados.get("objetos", [])),
+        "objetos_com_score": len(scores),
+    }
     return _response(
         repo.update(codigo, {"dados_hierarquizacao": dados, "status": "em_julgamento"})
         or row
@@ -675,37 +765,56 @@ def executar_fase_2(
 
 def _normalizar(
     valores: list[Any], criterio: dict[str, Any]
-) -> dict[str, float | None]:
+) -> tuple[dict[str, float | None], set[int], set[int]]:
     tipo = criterio.get("tipo_dado", "numerico")
     direcao = criterio.get("direcao", "maior_melhor")
     mapping = criterio.get("mapeamento") or {}
     converted: list[float | None] = []
-    for v in valores:
+    ausentes: set[int] = set()
+    invalidos: set[int] = set()
+    bool_true = {"1", "true", "sim", "s", "yes"}
+    bool_false = {"0", "false", "nao", "não", "n", "no"}
+    for idx, v in enumerate(valores):
         try:
             if v is None or v == "":
                 x = None
+                ausentes.add(idx)
             elif tipo == "booleano":
-                x = 1.0 if str(v).lower() in {"1", "true", "sim", "s"} else 0.0
+                token = str(v).strip().lower()
+                if token in bool_true:
+                    x = 1.0
+                elif token in bool_false:
+                    x = 0.0
+                else:
+                    raise ValueError("booleano inválido")
             elif tipo in {"ordinal", "categorico"}:
                 x = float(mapping[str(v)])
             else:
                 x = float(v)
         except (ValueError, TypeError, KeyError):
             x = None
+            invalidos.add(idx)
         converted.append(x)
     validos = [x for x in converted if x is not None]
-    lo, hi = (min(validos), max(validos)) if validos else (0, 0)
+    lo = criterio.get("valor_minimo")
+    hi = criterio.get("valor_maximo")
+    lo = float(lo) if lo is not None else (min(validos) if validos else 0.0)
+    hi = float(hi) if hi is not None else (max(validos) if validos else 0.0)
     result = {}
     for idx, x in enumerate(converted):
-        n = (
-            None
-            if x is None
-            else ((x - lo) / (hi - lo) if hi > lo and tipo == "numerico" else x)
-        )
+        if x is None:
+            n = None
+        elif tipo == "numerico":
+            n = (x - lo) / (hi - lo) if hi > lo else 1.0
+        else:
+            n = x
         if n is not None and direcao in {"menor_melhor", "negativa"}:
             n = 1 - n
+        if n is not None and (not math.isfinite(n) or n < 0 or n > 1):
+            n = None
+            invalidos.add(idx)
         result[str(idx)] = n
-    return result
+    return result, ausentes, invalidos
 
 
 def executar_fase_3(
@@ -713,6 +822,7 @@ def executar_fase_3(
 ) -> HierarquizacaoResponseSchema:
     row = _carregar(codigo)
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
+    _exigir_fase(dados, 3)
     objs = dados.get("objetos", [])
     if not payload.criterios:
         raise DemandaValidationError(
@@ -760,6 +870,7 @@ def executar_fase_3(
         invalidos = []
         soma = 0.0
         pesos_validos = 0.0
+        falha_obrigatoria = False
         for j, c in enumerate(payload.criterios):
             nome = (
                 c.get("criterio")
@@ -767,23 +878,43 @@ def executar_fase_3(
                 or c.get("nome_coluna")
                 or f"Critério {j + 1}"
             )
-            n = norm_por_criterio[j][str(i)]
+            normalizados, indices_ausentes, indices_invalidos = norm_por_criterio[j]
+            n = normalizados[str(i)]
             if n is None:
-                ausentes.append(nome)
-                continue
+                falha_obrigatoria = falha_obrigatoria or c.get("obrigatorio") is True
+                if i in indices_invalidos:
+                    invalidos.append(nome)
+                else:
+                    ausentes.append(nome)
+                if payload.regra_ausentes == "imputar_neutro":
+                    n = 0.5
+                elif payload.regra_ausentes == "imputar_pior":
+                    n = 0.0
+                elif payload.regra_ausentes == "imputar_medio":
+                    existentes = [v for v in normalizados.values() if v is not None]
+                    n = sum(existentes) / len(existentes) if existentes else 0.5
+                else:
+                    continue
             contrib[nome] = n * pesos[j]
             soma += contrib[nome]
             pesos_validos += pesos[j]
         completude = (len(payload.criterios) - len(ausentes) - len(invalidos)) / len(
             payload.criterios
         )
+        bloqueado = payload.regra_ausentes == "bloquear" and bool(
+            ausentes or invalidos
+        )
+        contribuicoes_aplicadas = (
+            {nome: valor / pesos_validos for nome, valor in contrib.items()}
+            if pesos_validos
+            else {}
+        )
         score = (
-            (
-                soma / pesos_validos
-                if pesos_validos and payload.modo_pesos != "normalizados"
-                else soma
-            )
-            if completude >= payload.completude_minima
+            sum(contribuicoes_aplicadas.values())
+            if pesos_validos
+            and completude >= payload.completude_minima
+            and not falha_obrigatoria
+            and not bloqueado
             else None
         )
         f3 = obj["hierarquizacao"]["fase_3"]
@@ -804,7 +935,9 @@ def executar_fase_3(
                         pesos,
                     )
                 ),
-                "contribuicao_por_criterio": contrib,
+                "contribuicao_por_criterio": contribuicoes_aplicadas,
+                "regra_ausentes": payload.regra_ausentes,
+                "bloqueada_por_atributo_obrigatorio": falha_obrigatoria,
             }
         )
         if score is not None:
@@ -816,6 +949,13 @@ def executar_fase_3(
     dados["cabecalho_grupo"].setdefault("configuracoes", {})["fase_3"] = (
         payload.model_dump()
     )
+    dados["cabecalho_grupo"].setdefault("relatorios", {})["fase_3"] = {
+        "executada_em": datetime.now(timezone.utc).isoformat(),
+        "objetos_avaliados": len(objs),
+        "objetos_com_score": len(ranqueaveis),
+        "completude_minima": payload.completude_minima,
+        "regra_ausentes": payload.regra_ausentes,
+    }
     return _response(
         repo.update(codigo, {"dados_hierarquizacao": dados, "status": "em_julgamento"})
         or row
@@ -825,12 +965,15 @@ def executar_fase_3(
 def sintetizar(
     codigo: str, payload: HierarquizacaoSinteseSchema
 ) -> HierarquizacaoResponseSchema:
-    if abs(payload.peso_fase2 + payload.peso_fase3 - 1) > 1e-6:
+    row = _carregar(codigo)
+    dados = deepcopy(row.get("dados_hierarquizacao") or {})
+    fases = _fases_configuradas(dados)
+    if {2, 3}.issubset(fases) and abs(
+        payload.peso_fase2 + payload.peso_fase3 - 1
+    ) > 1e-6:
         raise DemandaValidationError(
             "Os pesos das Fases 2 e 3 devem somar 1.", field="pesos"
         )
-    row = _carregar(codigo)
-    dados = deepcopy(row.get("dados_hierarquizacao") or {})
     ranking = []
     for obj in dados.get("objetos", []):
         h = obj["hierarquizacao"]
@@ -847,6 +990,19 @@ def sintetizar(
             "score_final": score,
             "posicao_final": None,
             "restrito_segregado": restrito and not payload.incluir_restritos,
+            "contribuicoes": {
+                "fase_2": payload.peso_fase2 * s2 if s2 is not None and s3 is not None else s2,
+                "fase_3": payload.peso_fase3 * s3 if s2 is not None and s3 is not None else s3,
+            },
+            "motivo": (
+                "Restrição territorial segregou o objeto."
+                if restrito and not payload.incluir_restritos
+                else "Composição ponderada das Fases 2 e 3."
+                if s2 is not None and s3 is not None
+                else "Resultado da única fase quantitativa disponível."
+                if score is not None
+                else "Nenhuma fase quantitativa produziu score."
+            ),
         }
         if score is not None:
             ranking.append((obj, score))
@@ -866,6 +1022,16 @@ def sintetizar(
             }
         )
     dados["cabecalho_grupo"]["sintese"] = payload.model_dump()
+    dados["cabecalho_grupo"].setdefault("relatorios", {})["sintese"] = {
+        "executada_em": datetime.now(timezone.utc).isoformat(),
+        "fases_configuradas": sorted(fases),
+        "objetos_ranqueados": len(final),
+        "objetos_segregados": sum(
+            1
+            for obj in dados.get("objetos", [])
+            if obj["hierarquizacao"]["sintese"].get("restrito_segregado")
+        ),
+    }
     return _response(
         repo.update(
             codigo,

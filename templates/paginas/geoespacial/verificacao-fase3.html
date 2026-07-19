@@ -2,18 +2,23 @@
 {% set subtitulo = "" %}
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
+{% set fase_ativa = 3 %}
 
-{% block titulo %}Fase 3 — Atributos de Projeto e Ajuste{% endblock %}
+{% block titulo %}Ajuste Fino de Prioridades — SICARD{% endblock %}
 {% block classes_body %}geoespacial-page{% endblock %}
 {% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
 
 {% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
   <link rel="stylesheet" href="/assets/css/geoespacial.css">
   <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css" crossorigin="">
   <link rel="stylesheet" href="/assets/css/paginas/geoespacial-verificacao-fase3-conteudo-atributos.css">
 {% endblock %}
 
 {% block conteudo %}
+<div class="geoespacial-phase-navigation">
+  {% include "componentes/navegacao_fases_hierarquizacao.html" %}
+</div>
 <div class="geoespacial-map-layout">
     <!-- Header -->
     <header class="geoespacial-header">
@@ -21,7 +26,7 @@
         <span>🗺️</span>
         <span>Geoespacial</span>
       </a>
-      <h1 class="geoespacial-header-title">Fase 3 — Atributos de Projeto e Ajuste</h1>
+      <h1 class="geoespacial-header-title">Ajuste Fino de Prioridades</h1>
     </header>
 
     <!-- Ribbon Toolbar (ArcGIS Pro style) -->

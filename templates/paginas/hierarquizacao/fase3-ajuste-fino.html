@@ -4,15 +4,38 @@
 {% set requer_autenticacao = true %}
 
 {% block titulo %}Fase 3 — Ajuste fino{% endblock %}
+{% set fase_ativa = 3 %}
 {% block classes_body %}ahp-module-page{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
 {% block conteudo %}
-<div id="admin-session-bar" class="admin-session-bar hidden"></div><main class="conteudo-principal app-main ahp-main"><section class="card-fase-3-ajuste-fino-de-prioridade secao-fase-3-ajuste-fino-de-prioridade card"><h1>Fase 3: Ajuste fino de prioridade</h1></section><section class="card-fase-hierarquizacao secao-fase-hierarquizacao card"><label>Hierarquização <select id="fase-hierarquizacao"><option>Carregando…</option></select></label><div id="fase-resumo" class="ahp-info-note hidden"></div></section><section class="card-criterios-de-ajuste secao-criterios-de-ajuste card"><h2>Critérios de ajuste</h2><p>Os critérios vêm da matriz de premissas e critérios da rodada.</p><div id="fase3-criterios"></div><label>Completude mínima <input id="fase3-completude" type="number" min="0" max="1" step="0.05" value="0.60"></label><div id="fase3-resultados"></div><div id="fase3-erro" class="ahp-info-note ahp-info-note--error hidden"></div><button id="executar-fase3" class="btn btn--primary">Executar Fase 3</button><button id="sintetizar" class="btn btn--outline">Gerar síntese</button></section></main>
+<div id="admin-session-bar" class="admin-session-bar hidden"></div>
+<main class="conteudo-principal app-main ahp-main fase-execucao-page">
+  {% include "componentes/navegacao_fases_hierarquizacao.html" %}
+  <section class="card-fase-3-ajuste-fino-de-prioridade secao-fase-3-ajuste-fino-de-prioridade card">
+    <h1 class="ahp-page-title"><i class="fas fa-sliders"></i> Fase 3: Ajuste Fino de Prioridades</h1>
+    <p>Normalize e pondere atributos próprios dos projetos e riscos herdados da Fase 1.</p>
+  </section>
+  <section class="card ahp-step-section"><div class="ahp-section-label"><span>1. Selecionar a rodada</span></div><div class="ahp-section-body"><label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option>Carregando…</option></select></label><div id="fase-resumo" class="fase-summary hidden"></div></div></section>
+  <section class="card ahp-step-section"><div class="ahp-section-label"><span>2. Conferir os critérios de ajuste</span></div><div class="ahp-section-body"><p>Critérios provenientes da matriz da rodada e riscos herdados da Fase 1.</p><div id="fase3-criterios" class="fase3-criteria-grid"></div><div class="fase-actions"><a class="fase-link" href="/restrict/geoespacial/configurador-ajuste/">Abrir Ajuste Fino de Prioridades</a></div></div></section>
+  <section class="card ahp-step-section"><div class="ahp-section-label"><span>3. Definir regras de cálculo</span></div><div class="ahp-section-body"><div class="fase-grid-3">
+      <label>Modo dos pesos
+        <select id="fase3-modo-pesos"><option value="normalizados">Normalizados</option><option value="livres">Livres</option></select>
+      </label>
+      <label>Tratamento de ausentes
+        <select id="fase3-ausentes"><option value="renormalizar">Ignorar e renormalizar</option><option value="bloquear">Bloquear projeto</option><option value="imputar_neutro">Imputar neutro</option><option value="imputar_pior">Imputar pior valor</option><option value="imputar_medio">Imputar média</option></select>
+      </label>
+      <label>Completude mínima <input id="fase3-completude" type="number" min="0" max="1" step="0.05" value="0.60"></label>
+    </div><p class="ahp-help-text">Critérios obrigatórios ausentes ou inválidos bloqueiam o score, independentemente da política escolhida.</p><div class="fase-actions"><button id="executar-fase3" class="btn btn--primary" type="button"><i class="fas fa-play"></i> Executar Fase 3</button></div></div></section>
+  <section class="card ahp-step-section"><div class="ahp-section-label"><span>4. Conferir o ranking da fase</span></div><div class="ahp-section-body"><div id="fase3-indicadores" class="fase-summary-grid"></div><div id="fase3-resultados" class="fase-table-wrap"></div><div id="fase3-auditoria" class="fase-audit hidden"></div><div id="fase3-erro" class="ahp-info-note ahp-info-note--error hidden"></div></div></section>
+  <section class="card ahp-step-section"><div class="ahp-section-label"><span>5. Gerar a síntese final</span></div><div class="ahp-section-body"><div class="fase-grid-2"><label>Peso da Fase 2 <input id="peso-fase2" type="number" min="0" max="1" step="0.05" value="0.70"></label><label>Peso da Fase 3 <input id="peso-fase3" type="number" min="0" max="1" step="0.05" value="0.30"></label></div><p class="ahp-help-text">Quando as duas fases participam da rodada, os pesos devem somar 1.</p><div class="fase-actions"><button id="sintetizar" class="btn btn--primary" type="button"><i class="fas fa-ranking-star"></i> Gerar síntese e ranking final</button></div></div></section>
+</main>
 {% endblock %}
 
 {% block scripts_pagina %}

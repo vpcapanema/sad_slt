@@ -295,8 +295,9 @@ A árvore inclui os módulos produtores e seus insumos:
   gestão de rodadas e metodologia como recursos integrados.
 
 Os ramos podem ser recolhidos para reduzir a densidade visual. As fases
-metodológicas ainda não possuem execução automática integrada de ponta a ponta;
-essa diferença deve permanecer visível até a implementação do fluxo completo.
+metodológicas possuem execução integrada e independente por rodada. O resultado
+preserva as saídas de cada fase, segrega restrições territoriais e registra as
+contribuições da síntese final.
 
 ## Questões pendentes
 

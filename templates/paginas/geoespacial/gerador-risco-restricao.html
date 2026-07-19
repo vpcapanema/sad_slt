@@ -2,18 +2,21 @@
 {% set subtitulo = "Gerador de insumos da Fase 1" %}
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
+{% set fase_ativa = 1 %}
 
-{% block titulo %}Gerador de Risco e Restrição — SICARD{% endblock %}
+{% block titulo %}Gerador de Restrições e Riscos — SICARD{% endblock %}
 {% block classes_body %}gerador-page{% endblock %}
 {% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
 
 {% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
   <link rel="stylesheet" href="/assets/css/gerador-insumos.css">
 {% endblock %}
 
 {% block conteudo %}
 <main class="conteudo-principal gerador-main">
-    <section class="secao-superficies-de-risco-e-restricao gerador-section gerador-intro"><div class="gerador-section__body"><div class="gerador-breadcrumb"><a href="/restrict/">Início</a> › <a href="/restrict/geoespacial/">Geoespacial</a> › Gerador de risco e restrição</div><h1 class="gerador-title">Superfícies de risco e restrição</h1><p class="gerador-subtitle">Cadastre a saída, configure a metodologia do fluxo e construa as superfícies territoriais da Fase 1.</p></div></section>
+    {% include "componentes/navegacao_fases_hierarquizacao.html" %}
+    <section class="secao-superficies-de-risco-e-restricao gerador-section gerador-intro"><div class="gerador-section__body"><div class="gerador-breadcrumb"><a href="/restrict/">Início</a> › <a href="/restrict/geoespacial/">Geoespacial</a> › Gerador de Restrições e Riscos</div><h1 class="gerador-title">Gerador de Restrições e Riscos</h1><p class="gerador-subtitle">Cadastre a saída, configure a metodologia do fluxo e construa as superfícies territoriais da Fase 1.</p></div></section>
     <section class="secao-cadastro-da-saida gerador-section" id="cadastro-saida"><header class="gerador-section__header"><span class="gerador-section__number">1</span><div class="gerador-section__heading"><h2>Cadastro da saída</h2><p>Identificação e contrato persistente do pacote de risco e restrição.</p></div></header><div class="gerador-section__body">
       <form id="produto-form" class="gerador-grid">
         <div class="gerador-field"><label for="codigo">Código *</label><input id="codigo" required placeholder="fase1_restricao_risco_sp"></div>

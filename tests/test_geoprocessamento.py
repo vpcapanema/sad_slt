@@ -380,15 +380,21 @@ class GeoprocessamentoApiTest(unittest.TestCase):
             "id": "funcao_teste",
             "nome": "Validar camada",
             "descricao": "Teste",
-            "passos": [{"algoritmo_id": "OP-02", "parametros": {"camada_id": "$entrada"}}],
+            "passos": [
+                {"algoritmo_id": "OP-02", "parametros": {"camada_id": "$entrada"}},
+                {"algoritmo_id": "OP-02", "parametros": {"camada_id": "$entrada"}},
+            ],
             "parametros_expostos": [],
         }
-        self.assertEqual(self.client.post("/api/geoespacial/funcoes", json=definicao).status_code, 200)
-        validacao = self.client.post("/api/geoespacial/funcoes/funcao_teste/validar")
-        self.assertTrue(validacao.json()["valido"])
-        execucao = self.client.post("/api/geoespacial/funcoes/funcao_teste/executar", json={"entrada": camada_id})
-        self.assertEqual(execucao.status_code, 200, execucao.text)
-        self.assertEqual(execucao.json()["status"], "concluido")
+        try:
+            self.assertEqual(self.client.post("/api/geoespacial/funcoes", json=definicao).status_code, 200)
+            validacao = self.client.post("/api/geoespacial/funcoes/funcao_teste/validar")
+            self.assertTrue(validacao.json()["valido"])
+            execucao = self.client.post("/api/geoespacial/funcoes/funcao_teste/executar", json={"entrada": camada_id})
+            self.assertEqual(execucao.status_code, 200, execucao.text)
+            self.assertEqual(execucao.json()["status"], "concluido")
+        finally:
+            self.client.delete("/api/geoespacial/funcoes/funcao_teste")
 
     def test_comandos_de_tabela_e_atualizacao_da_fonte(self) -> None:
         camada_id = self.carregar()

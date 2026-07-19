@@ -1,6 +1,6 @@
 # Status atual da implementação
 
-Atualizado em 16 de julho de 2026. Este documento descreve o código executável
+Atualizado em 19 de julho de 2026. Este documento descreve o código executável
 do SICARD. Os documentos de especificação dos módulos continuam válidos como
 referência metodológica, mas podem conter propostas ainda não integradas.
 
@@ -57,10 +57,21 @@ JSONB autocontido com cabeçalho, objetos e resultados das fases.
 - Fase 2: extração de favorabilidade a partir de pacote homologado.
 - Fase 3: ajuste fino por atributos e completude mínima.
 - Síntese: combinação dos resultados e geração do ranking.
-- Homologação: fechamento da rodada e atualização do ciclo dos objetos.
+- Homologação: fechamento e registro da rodada; o ciclo cadastral das demandas
+  permanece sob o serviço próprio de transições de situação.
 
 Há também o fluxo clássico de portfólio em cinco telas: configuração, objetos,
 avaliação, ranking e homologação.
+
+As fases da rodada são selecionáveis e independentes. A Fase 1 preserva as
+interseções e usa o máximo dos valores restritivos e a média ponderada dos riscos.
+A Fase 2 rejeita valores não finitos ou fora da escala homologada de 0 a 1. A
+Fase 3 distingue ausência de valor e valor inválido, aplica obrigatoriedade,
+completude mínima, imputação ou renormalização local e incorpora riscos sugeridos
+pela Fase 1. A síntese registra as contribuições e a justificativa por objeto.
+
+O dicionário de atributos e as rodadas auxiliares da Fase 3 são persistidos em
+PostgreSQL; não dependem mais da memória do processo.
 
 ### Geoprocessamento
 
@@ -139,6 +150,9 @@ esquema único `demandas`.
 - A integração ponta a ponta das três fases existe nos serviços e telas, mas
   ainda há dois fluxos de interface: o fluxo metodológico em três fases e o
   fluxo clássico de portfólio em cinco etapas.
+- A extração territorial da Fase 2 está operacional para projetos pontuais. Os
+  métodos zonais previstos na metodologia dependem de geometrias lineares ou
+  poligonais consolidadas no contrato das demandas.
 - Alguns documentos de especificação descrevem o desenho-alvo e não devem ser
   interpretados como comprovação de endpoint pronto.
 - A cobertura automatizada concentra-se em autenticação, painel, política de

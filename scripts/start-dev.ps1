@@ -1,10 +1,32 @@
 # SLT - sobe o backend local, verifica saude e abre o navegador.
 # Uso: .\scripts\start-dev.ps1
+# Validacao: .\scripts\start-dev.ps1 -CheckOnly -NoBrowser
 # Encerre com Ctrl+C (o servidor para junto).
+
+param(
+    [switch]$NoBrowser,
+    [switch]$CheckOnly
+)
 
 $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent $PSScriptRoot
+$envFile = Join-Path $Root ".env"
+if (Test-Path $envFile) {
+    foreach ($line in Get-Content -LiteralPath $envFile -Encoding UTF8) {
+        if ($line -notmatch '^\s*#' -and $line -match '^\s*([^=]+)=(.*)$') {
+            $name = $Matches[1].Trim()
+            $value = $Matches[2].Trim().Trim('"').Trim("'")
+            if (-not (Test-Path "Env:$name")) { Set-Item "Env:$name" $value }
+        }
+    }
+}
+if ($env:SLT_USE_SIGMA_POSTGRES -eq "true") {
+    $sltUser = [Uri]::EscapeDataString($env:SIGMA_POSTGRES_USER)
+    $sltPassword = [Uri]::EscapeDataString($env:SIGMA_POSTGRES_PASSWORD)
+    $sltSslMode = [Uri]::EscapeDataString($env:SIGMA_POSTGRES_SSLMODE)
+    $env:SLT_DATABASE_URL = "postgresql://${sltUser}:${sltPassword}@$($env:SIGMA_POSTGRES_HOST):$($env:SIGMA_POSTGRES_PORT)/slt_db?sslmode=${sltSslMode}"
+}
 $Port = if ($env:PORT) { [int]$env:PORT } else { 8080 }
 $HostAddr = "127.0.0.1"
 $BaseUrl = "http://${HostAddr}:$Port/"
@@ -247,46 +269,167 @@ function Test-DockerDaemon {
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
         return $false
     }
+
+    # `docker info` pode ficar bloqueado indefinidamente enquanto o Docker
+    # Desktop esta iniciando. Execute-o com limite para o start-dev continuar
+    # dando feedback em vez de parecer congelado nesta etapa.
     try {
-        docker info 2>$null | Out-Null
-        return $LASTEXITCODE -eq 0
+        $docker = (Get-Command docker -ErrorAction Stop).Source
+        $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+        $startInfo.FileName = $docker
+        $startInfo.Arguments = 'info --format "{{.ServerVersion}}"'
+        $startInfo.UseShellExecute = $false
+        $startInfo.CreateNoWindow = $true
+        $startInfo.RedirectStandardOutput = $true
+        $startInfo.RedirectStandardError = $true
+        $process = [System.Diagnostics.Process]::Start($startInfo)
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        if (-not $process.WaitForExit(5000)) {
+            $process.Kill($true)
+            return $false
+        }
+        $stdout.GetAwaiter().GetResult() | Out-Null
+        $stderr.GetAwaiter().GetResult() | Out-Null
+        return $process.ExitCode -eq 0
     } catch {
         return $false
     }
 }
 
-function Start-SltDatabase {
-    Write-Step "Verificando banco SLT (slt_postgres :5434)"
+function Start-DockerDesktop {
+    $desktop = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
+    if (-not (Test-Path $desktop)) { return $false }
 
-    if (-not (Test-DockerDaemon)) {
-        Write-Warn "Docker indisponivel - suba o Docker Desktop e rode .\scripts\start-db.ps1"
+    if (-not (Get-Process "Docker Desktop" -ErrorAction SilentlyContinue)) {
+        Write-Info "Docker Desktop nao esta ativo; iniciando..."
+        Start-Process -FilePath $desktop -WindowStyle Hidden | Out-Null
+    } else {
+        Write-Info "Aguardando o mecanismo do Docker Desktop..."
+    }
+
+    $deadline = (Get-Date).AddSeconds(90)
+    $attempt = 0
+    while ((Get-Date) -lt $deadline) {
+        $attempt++
+        if (Test-DockerDaemon) {
+            Write-Ok "Mecanismo do Docker Desktop disponivel"
+            return $true
+        }
+        # Cada teste pode consumir ate 5s. Mostre atividade em todas as
+        # tentativas para a tarefa do VS Code nao parecer travada.
+        $remaining = [Math]::Max(0, [int][Math]::Ceiling(($deadline - (Get-Date)).TotalSeconds))
+        Write-Info "Docker ainda iniciando (tentativa $attempt; ate ${remaining}s restantes)"
+        Start-Sleep -Seconds 3
+    }
+    return $false
+}
+
+function Start-SltDatabase {
+    if ($env:SLT_USE_SIGMA_POSTGRES -eq "true") {
+        Write-Step "Verificando banco SLT na VM ($($env:SIGMA_POSTGRES_HOST):$($env:SIGMA_POSTGRES_PORT))"
+        $python = Join-Path $Root ".venv\Scripts\python.exe"
+        & $python -c "import os, psycopg; c=psycopg.connect(os.environ['SLT_DATABASE_URL'], connect_timeout=10); assert c.execute('SELECT 1').fetchone()[0] == 1; c.close()" 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Ok "slt_db remoto acessivel"
+            return $true
+        }
+        Write-Warn "Nao foi possivel consultar o slt_db remoto"
+        return $false
+    }
+
+    Write-Step "Verificando banco SLT local (slt_postgres :5434)"
+
+    if (-not (Test-DockerDaemon) -and -not (Start-DockerDesktop)) {
+        Write-Warn "Docker indisponivel apos 90s - abra o Docker Desktop e rode .\scripts\start-db.ps1"
         Write-Warn "Login admin funciona sem auditoria; cadastro e painel exigem o banco SLT."
         return $false
     }
 
     Push-Location $Root
     try {
-        docker compose up -d slt_postgres 2>&1 | Out-Null
+        Write-Info "Iniciando/verificando o container..."
+        $composeOutput = @(docker compose up -d slt_postgres 2>&1)
         if ($LASTEXITCODE -ne 0) {
             Write-Warn "Nao foi possivel subir slt_postgres via docker compose"
+            foreach ($line in $composeOutput) { Write-Warn "$line" }
             return $false
         }
 
         $deadline = (Get-Date).AddSeconds(60)
+        $attempt = 0
+        Write-Info "Inicializando PostgreSQL e validando uma consulta SQL..."
         while ((Get-Date) -lt $deadline) {
-            $status = docker inspect -f "{{.State.Health.Status}}" slt_postgres 2>$null
-            if ($status -eq "healthy") {
+            $attempt++
+            # O healthcheck do Docker pode permanecer em "starting" ou até
+            # "unhealthy" por alguns ciclos depois de o PostgreSQL já aceitar
+            # conexões. Valide o serviço diretamente, sem depender desse atraso.
+            $ready = docker exec slt_postgres pg_isready -q -U slt_user -d slt_db 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $probe = docker exec slt_postgres psql -U slt_user -d slt_db -Atqc "SELECT 1" 2>$null
+            } else {
+                $probe = $null
+            }
+            if ($LASTEXITCODE -eq 0 -and ($probe | Select-Object -Last 1) -eq "1") {
                 Write-Ok "slt_postgres saudavel em 127.0.0.1:5434"
                 return $true
             }
-            Start-Sleep -Seconds 2
+            if ($attempt % 10 -eq 0) {
+                Write-Info "PostgreSQL ainda inicializando ($attempt s de 60 s)"
+            }
+            Start-Sleep -Seconds 1
         }
 
-        Write-Warn "slt_postgres nao ficou healthy a tempo - confira: docker compose logs slt_postgres"
+        Write-Warn "PostgreSQL nao aceitou uma consulta SQL dentro de 60s"
+        docker compose logs --tail 20 slt_postgres 2>&1 | ForEach-Object { Write-Warn "$_" }
         return $false
     } finally {
         Pop-Location
     }
+}
+
+function Test-SltSchemaCurrent {
+    $query = @"
+SELECT CASE WHEN
+    to_regclass('geoprocessamento.configuracao_fatiamento_fase1') IS NOT NULL
+    AND to_regclass('geoprocessamento.rodada_fase3') IS NOT NULL
+    AND to_regclass('geoprocessamento.modelo_geoprocessamento') IS NOT NULL
+    AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'hierarquizacao_demandas'
+          AND table_name = 'hierarquizacao_portfolio'
+          AND column_name IN ('dados_hierarquizacao', 'relatorio_fase1')
+        GROUP BY table_schema, table_name
+        HAVING count(*) = 2
+    )
+THEN 't' ELSE 'f' END;
+"@
+    if ($env:SLT_USE_SIGMA_POSTGRES -eq "true") {
+        $env:SLT_SCHEMA_QUERY = $query
+        $python = Join-Path $Root ".venv\Scripts\python.exe"
+        & $python -c "import os, psycopg; c=psycopg.connect(os.environ['SLT_DATABASE_URL']); r=c.execute(os.environ['SLT_SCHEMA_QUERY']).fetchone()[0]; c.close(); raise SystemExit(0 if str(r).lower() in ('t','true','1') else 1)" 2>$null
+        Remove-Item Env:SLT_SCHEMA_QUERY -ErrorAction SilentlyContinue
+        return $LASTEXITCODE -eq 0
+    }
+    $result = docker exec slt_postgres psql -U slt_user -d slt_db -At -c $query 2>$null
+    return $LASTEXITCODE -eq 0 -and ($result | Select-Object -Last 1) -eq "t"
+}
+
+function Update-SltSchema {
+    Write-Step "Verificando migrations do banco SLT"
+    if (Test-SltSchemaCurrent) {
+        Write-Ok "Schema do banco atualizado"
+        return $true
+    }
+
+    Write-Info "Schema incompleto; aplicando migrations pendentes..."
+    & (Join-Path $PSScriptRoot "apply-database.ps1")
+    if ($LASTEXITCODE -ne 0 -or -not (Test-SltSchemaCurrent)) {
+        Write-Err "Nao foi possivel atualizar o schema do banco SLT."
+        return $false
+    }
+    Write-Ok "Migrations aplicadas"
+    return $true
 }
 
 function Show-ReadyReport([string]$Url) {
@@ -347,12 +490,21 @@ Write-Ok "Porta $Port disponivel para bind"
 Write-Step "Verificando ambiente Python"
 Test-PythonEnv -ProjectRoot $Root
 
-Start-SltDatabase | Out-Null
+$databaseReady = Start-SltDatabase
+if (-not $databaseReady) {
+    Write-Err "O banco SLT e obrigatorio para iniciar o ambiente de desenvolvimento."
+    exit 1
+}
+if (-not (Update-SltSchema)) {
+    exit 1
+}
 
 Write-Step "Iniciando backend (porta $Port)"
 Push-Location $Root
 
-if (-not $env:SLT_DATABASE_URL) {
+if ($env:SLT_USE_SIGMA_POSTGRES -eq "true") {
+    Write-Info "SLT_DATABASE_URL remoto (VM :$($env:SIGMA_POSTGRES_PORT)/slt_db)"
+} elseif (-not $env:SLT_DATABASE_URL) {
     $env:SLT_DATABASE_URL = "postgresql://slt_user:slt_pass@127.0.0.1:5434/slt_db"
     Write-Info "SLT_DATABASE_URL padrao (slt_postgres local :5434)"
 }
@@ -371,17 +523,24 @@ if (-not $env:SIGMA_DATABASE_URL -and -not $env:SIGMA_POSTGRES_PASSWORD) {
 
 $serverProc = $null
 $serverLog = Join-Path $Root ".dev-server.log"
-    $serverCmd = ".\.venv\Scripts\python.exe -m api.server >> `"$serverLog`" 2>&1"
+$serverErrorLog = Join-Path $Root ".dev-server.err.log"
+$serverPython = Join-Path $Root ".venv\Scripts\python.exe"
 try {
-    if (Test-Path $serverLog) {
-        Remove-Item $serverLog -Force -ErrorAction SilentlyContinue
+    foreach ($logPath in @($serverLog, $serverErrorLog)) {
+        if (Test-Path $logPath) {
+            Remove-Item $logPath -Force -ErrorAction SilentlyContinue
+        }
     }
 
-    $serverProc = Start-Process -FilePath "cmd.exe" `
-        -ArgumentList "/c", $serverCmd `
+    # Inicie o Python diretamente. Usar `cmd /c` fazia o processo intermediario
+    # terminar e liberava o Wait-Process, encerrando a tarefa logo apos abrir o navegador.
+    $serverProc = Start-Process -FilePath $serverPython `
+        -ArgumentList "-m", "api.server" `
         -WorkingDirectory $Root `
         -PassThru `
-        -NoNewWindow
+        -NoNewWindow `
+        -RedirectStandardOutput $serverLog `
+        -RedirectStandardError $serverErrorLog
 
     Write-Ok "Processo iniciado (PID $($serverProc.Id))"
     Start-Sleep -Milliseconds 600
@@ -389,6 +548,7 @@ try {
     if ($serverProc.HasExited) {
         Write-Err "O servidor nao permaneceu em execucao."
         Show-ServerLogTail -LogPath $serverLog
+        Show-ServerLogTail -LogPath $serverErrorLog
         exit 1
     }
 
@@ -396,6 +556,7 @@ try {
     if (-not (Wait-ServerReady -Url $HealthUrl -TimeoutSec $MaxWaitSec -ServerProc $serverProc -LogPath $serverLog)) {
         Write-Err "O servidor nao respondeu a tempo."
         Show-ServerLogTail -LogPath $serverLog
+        Show-ServerLogTail -LogPath $serverErrorLog
         exit 1
     }
 
@@ -404,20 +565,29 @@ try {
         Write-Warn "Continuando mesmo com alertas - confira o cadastro de demandas."
     }
 
-    Open-Browser -Url $AppUrl
+    if (-not $NoBrowser -and -not $CheckOnly) {
+        Open-Browser -Url $AppUrl
+    }
 
     Write-Host ""
     Write-Host "========================================" -ForegroundColor White
-    Write-Host "  Backend em execucao - Ctrl+C para parar" -ForegroundColor White
+    if ($CheckOnly) {
+        Write-Host "  Ambiente validado com sucesso" -ForegroundColor White
+    } else {
+        Write-Host "  Backend em execucao - Ctrl+C para parar" -ForegroundColor White
+    }
     Write-Host "  $AppUrl" -ForegroundColor DarkGray
     Write-Host "========================================" -ForegroundColor White
     Write-Host ""
 
-    Wait-Process -Id $serverProc.Id
+    if (-not $CheckOnly) {
+        Wait-Process -Id $serverProc.Id
+    }
 }
 catch {
     Write-Err "Falha ao iniciar o backend: $($_.Exception.Message)"
     Show-ServerLogTail -LogPath $serverLog
+    Show-ServerLogTail -LogPath $serverErrorLog
     exit 1
 }
 finally {

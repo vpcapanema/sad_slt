@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from psycopg import sql
 from psycopg.types.json import Jsonb
@@ -261,19 +261,37 @@ class GeoespacialRepository:
     # ==================== ATRIBUTOS (FASE 3) ====================
 
     async def listar_atributos_fase3(self) -> list[dict[str, Any]]:
-        """Lista todos os atributos da Fase 3."""
-        return list(self._atributos_fase3.values())
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT atributo_id, definicao FROM geoprocessamento.atributo_fase3 "
+                "ORDER BY rotulo"
+            ).fetchall()
+        return [{**(row["definicao"] or {}), "atributo_id": row["atributo_id"]} for row in rows]
 
     async def criar_atributo_fase3(self, atributo: dict[str, Any]) -> dict[str, Any]:
-        """Cria um novo atributo da Fase 3."""
-        atributo_id = atributo.get("atributo_id") or f"atributo_{len(self._atributos_fase3) + 1}"
-        atributo["atributo_id"] = atributo_id
-        self._atributos_fase3[atributo_id] = atributo
-        return atributo
+        atributo_id = atributo.get("atributo_id") or f"atributo_{uuid4().hex[:12]}"
+        definicao = {**atributo, "atributo_id": atributo_id}
+        with get_connection() as conn:
+            row = conn.execute(
+                """INSERT INTO geoprocessamento.atributo_fase3
+                   (atributo_id,nome_coluna,rotulo,definicao) VALUES (%s,%s,%s,%s)
+                   ON CONFLICT (nome_coluna) DO UPDATE SET rotulo=EXCLUDED.rotulo,
+                     definicao=EXCLUDED.definicao,atualizado_em=CURRENT_TIMESTAMP
+                   RETURNING atributo_id""",
+                (atributo_id, atributo["nome_coluna"], atributo["rotulo"], Jsonb(definicao)),
+            ).fetchone()
+            conn.commit()
+        definicao["atributo_id"] = row["atributo_id"]
+        return definicao
 
     async def obter_atributo_fase3(self, atributo_id: str) -> dict[str, Any] | None:
-        """Obtém um atributo por ID."""
-        return self._atributos_fase3.get(atributo_id)
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT atributo_id,definicao FROM geoprocessamento.atributo_fase3 "
+                "WHERE atributo_id=%s",
+                (atributo_id,),
+            ).fetchone()
+        return {**(row["definicao"] or {}), "atributo_id": row["atributo_id"]} if row else None
 
     # ==================== PACOTES (FASE 1) ====================
 
@@ -307,60 +325,224 @@ class GeoespacialRepository:
     # ==================== PACOTES (FASE 2) ====================
 
     async def listar_pacotes_fase2(self) -> list[dict[str, Any]]:
-        """Lista todos os pacotes da Fase 2."""
-        return list(self._pacotes_fase2.values())
+        """Lista pacotes da Fase 2 persistidos no PostGIS."""
+        with get_connection() as conn:
+            rows = conn.execute(
+                """SELECT p.*, f2.resolucao, f2.unidade_resolucao,
+                          f2.raster_final_id,
+                          (SELECT max(h.homologado_em)
+                             FROM geoprocessamento.homologacao h
+                            WHERE h.produto_id=p.id AND h.decisao='homologado') AS data_homologacao
+                     FROM geoprocessamento.produto p
+                     JOIN geoprocessamento.produto_fase2 f2 ON f2.produto_id=p.id
+                    WHERE p.modulo='fase2'
+                    ORDER BY p.atualizado_em DESC"""
+            ).fetchall()
+            return [self._pacote_fase2_db(conn, dict(row)) for row in rows]
 
     async def criar_pacote_fase2(self, pacote: dict[str, Any]) -> dict[str, Any]:
-        """Cria um novo pacote da Fase 2."""
-        pacote_id = pacote.get("pacote_id") or f"fase2_pacote_{len(self._pacotes_fase2) + 1}"
-        pacote["pacote_id"] = pacote_id
-        pacote["data_criacao"] = datetime.now()
-        pacote["status"] = "rascunho"
-        self._pacotes_fase2[pacote_id] = pacote
-        return pacote
+        """Cria pacote e vínculos de critérios da Fase 2 no banco."""
+        pacote_id = pacote.get("pacote_id") or f"fase2_pacote_{uuid4().hex[:12]}"
+        metadados = {
+            "rasters_intermediarios": pacote.get("rasters_intermediarios") or [],
+            "pesos_ahp_id": pacote.get("pesos_ahp_id"),
+            "relatorio_processamento": pacote.get("relatorio_processamento") or {},
+            "relatorio_validacao": pacote.get("relatorio_validacao") or {},
+            "regras_transformacao": pacote.get("regras_transformacao") or [],
+        }
+        raster_id = pacote.get("raster_final_id")
+        try:
+            raster_id = UUID(str(raster_id)) if raster_id else None
+        except ValueError:
+            raster_id = None
+        with get_connection() as conn:
+            row = conn.execute(
+                """INSERT INTO geoprocessamento.produto
+                   (codigo,modulo,nome,descricao,versao,status,responsavel_tecnico,
+                    crs_saida,observacao_metodologica,metadados)
+                   VALUES (%s,'fase2',%s,%s,%s,'rascunho',%s,%s,%s,%s)
+                   RETURNING *""",
+                (pacote_id, pacote.get("nome") or pacote_id, pacote.get("observacoes"),
+                 pacote.get("versao") or "v1", pacote.get("responsavel_tecnico"),
+                 pacote.get("crs") or "EPSG:31983", pacote.get("observacoes"), Jsonb(metadados)),
+            ).fetchone()
+            if not row:
+                raise RuntimeError("Cadastro do pacote não retornou registro")
+            produto_id = row["id"]
+            conn.execute(
+                """INSERT INTO geoprocessamento.produto_fase2
+                   (produto_id,resolucao,unidade_resolucao,regra_nodata,
+                    metodo_combinacao,raster_final_id,configuracao)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                (produto_id, pacote.get("resolucao") or 50, pacote.get("unidade_resolucao") or "m",
+                 pacote.get("regra_nodata") or "bloquear", pacote.get("metodo_combinacao") or "media_ponderada",
+                 raster_id, Jsonb({"origem": "api_pacotes_fase2"})),
+            )
+            for ordem, criterio in enumerate(pacote.get("criterios") or [], start=1):
+                criterio_id = criterio.get("criterio_id")
+                criterio_row = conn.execute(
+                    "SELECT id FROM geoprocessamento.criterio_fase2 WHERE id::text=%s OR codigo=%s",
+                    (criterio_id, criterio_id),
+                ).fetchone()
+                if criterio_row:
+                    conn.execute(
+                        """INSERT INTO geoprocessamento.produto_criterio_fase2
+                           (produto_id,criterio_id,peso_ahp,ordem)
+                           VALUES (%s,%s,%s,%s) ON CONFLICT (produto_id,criterio_id)
+                           DO UPDATE SET peso_ahp=EXCLUDED.peso_ahp,ordem=EXCLUDED.ordem""",
+                        (produto_id, criterio_row["id"], criterio.get("peso_ahp") or 0, ordem),
+                    )
+            conn.commit()
+        return await self.obter_pacote_fase2(str(produto_id)) or {}
 
     async def obter_pacote_fase2(self, pacote_id: str) -> dict[str, Any] | None:
-        """Obtém um pacote por ID."""
-        return self._pacotes_fase2.get(pacote_id)
+        """Obtém pacote persistido por UUID ou código."""
+        with get_connection() as conn:
+            row = conn.execute(
+                """SELECT p.*, f2.resolucao, f2.unidade_resolucao,
+                          f2.raster_final_id,
+                          (SELECT max(h.homologado_em)
+                             FROM geoprocessamento.homologacao h
+                            WHERE h.produto_id=p.id AND h.decisao='homologado') AS data_homologacao
+                     FROM geoprocessamento.produto p
+                     JOIN geoprocessamento.produto_fase2 f2 ON f2.produto_id=p.id
+                    WHERE p.modulo='fase2' AND (p.id::text=%s OR p.codigo=%s)""",
+                (pacote_id, pacote_id),
+            ).fetchone()
+            return self._pacote_fase2_db(conn, dict(row)) if row else None
 
     async def homologar_pacote_fase2(self, pacote_id: str, responsavel: str) -> dict[str, Any] | None:
-        """Homologa um pacote da Fase 2."""
-        pacote = self._pacotes_fase2.get(pacote_id)
-        if pacote:
-            pacote["status"] = "homologado"
-            pacote["data_homologacao"] = datetime.now()
-            pacote["responsavel_tecnico"] = responsavel
-            return pacote
-        return None
+        """Homologa o produto da Fase 2 e registra a decisão."""
+        with get_connection() as conn:
+            row = conn.execute(
+                """UPDATE geoprocessamento.produto
+                      SET status='homologado',responsavel_tecnico=%s,
+                          atualizado_em=CURRENT_TIMESTAMP
+                    WHERE modulo='fase2' AND (id::text=%s OR codigo=%s)
+                    RETURNING id,versao""",
+                (responsavel, pacote_id, pacote_id),
+            ).fetchone()
+            if not row:
+                return None
+            conn.execute(
+                """INSERT INTO geoprocessamento.homologacao
+                   (produto_id,versao,decisao,checklist,observacoes)
+                   VALUES (%s,%s,'homologado','{}'::jsonb,%s)
+                   ON CONFLICT (produto_id,versao) DO UPDATE
+                   SET decisao='homologado',observacoes=EXCLUDED.observacoes,
+                       homologado_em=CURRENT_TIMESTAMP""",
+                (row["id"], row["versao"], f"Homologado por {responsavel}"),
+            )
+            conn.commit()
+        return await self.obter_pacote_fase2(str(row["id"]))
+
+    def _pacote_fase2_db(self, conn: Any, row: dict[str, Any]) -> dict[str, Any]:
+        criterios_rows = conn.execute(
+            """SELECT c.*, pc.peso_ahp, pc.fonte_id
+                 FROM geoprocessamento.produto_criterio_fase2 pc
+                 JOIN geoprocessamento.criterio_fase2 c ON c.id=pc.criterio_id
+                WHERE pc.produto_id=%s ORDER BY pc.ordem,c.nome""",
+            (row["id"],),
+        ).fetchall()
+        criterios = []
+        for item in criterios_rows:
+            criterio = self._criterio_db_para_schema(dict(item))
+            criterio["peso_ahp"] = float(item["peso_ahp"])
+            criterio["fonte_id"] = str(item["fonte_id"]) if item.get("fonte_id") else criterio.get("fonte_id")
+            criterios.append(criterio)
+        meta = row.get("metadados") or {}
+        return {
+            "pacote_id": str(row["id"]), "versao": row["versao"],
+            "data_criacao": row["criado_em"], "data_homologacao": row.get("data_homologacao"),
+            "responsavel_tecnico": row.get("responsavel_tecnico"), "status": row["status"],
+            "crs": row["crs_saida"], "resolucao": float(row["resolucao"]) if row.get("resolucao") else None,
+            "unidade_resolucao": row.get("unidade_resolucao") or "m",
+            "raster_final_id": str(row["raster_final_id"]) if row.get("raster_final_id") else None,
+            "criterios": criterios, "rasters_intermediarios": meta.get("rasters_intermediarios") or [],
+            "pesos_ahp_id": meta.get("pesos_ahp_id"),
+            "relatorio_processamento": meta.get("relatorio_processamento") or {},
+            "relatorio_validacao": meta.get("relatorio_validacao") or {},
+            "regras_transformacao": meta.get("regras_transformacao") or [],
+            "observacoes": row.get("observacao_metodologica") or row.get("descricao"),
+        }
 
     # ==================== RODADAS (FASE 3) ====================
 
     async def listar_rodadas_fase3(self) -> list[dict[str, Any]]:
-        """Lista todas as rodadas da Fase 3."""
-        return list(self._rodadas_fase3.values())
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM geoprocessamento.rodada_fase3 ORDER BY data_importacao DESC"
+            ).fetchall()
+        return [self._rodada_fase3_db(dict(row)) for row in rows]
 
     async def criar_rodada_fase3(self, rodada: dict[str, Any]) -> dict[str, Any]:
-        """Cria uma nova rodada da Fase 3."""
-        rodada_id = rodada.get("rodada_id") or f"fase3_rodada_{len(self._rodadas_fase3) + 1}"
-        rodada["rodada_id"] = rodada_id
-        rodada["data_importacao"] = datetime.now()
-        rodada["status"] = "rascunho"
-        self._rodadas_fase3[rodada_id] = rodada
-        return rodada
+        rodada_id = rodada.get("rodada_id") or f"fase3_rodada_{uuid4().hex[:12]}"
+        dados = {
+            "atributos_ativos": rodada.get("atributos_ativos") or [],
+            "pesos_ativos": rodada.get("pesos_ativos") or {},
+            "numero_projetos": int(rodada.get("numero_projetos") or 0),
+            "projetos_sem_score": rodada.get("projetos_sem_score") or [],
+            "ranking_resultante": rodada.get("ranking_resultante") or [],
+            "diagnostico_completude": rodada.get("diagnostico_completude") or {},
+            "diagnostico_inconsistencias": rodada.get("diagnostico_inconsistencias") or [],
+            "observacoes": rodada.get("observacoes"),
+        }
+        with get_connection() as conn:
+            row = conn.execute(
+                """INSERT INTO geoprocessamento.rodada_fase3
+                   (rodada_id,versao,arquivo_origem,responsavel,dados)
+                   VALUES (%s,%s,%s,%s,%s) RETURNING *""",
+                (
+                    rodada_id,
+                    rodada.get("versao") or "v1",
+                    rodada.get("arquivo_origem") or rodada.get("nome_rodada") or "dados internos",
+                    rodada.get("responsavel"),
+                    Jsonb(dados),
+                ),
+            ).fetchone()
+            conn.commit()
+        return self._rodada_fase3_db(dict(row))
 
     async def obter_rodada_fase3(self, rodada_id: str) -> dict[str, Any] | None:
-        """Obtém uma rodada por ID."""
-        return self._rodadas_fase3.get(rodada_id)
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM geoprocessamento.rodada_fase3 WHERE rodada_id=%s",
+                (rodada_id,),
+            ).fetchone()
+        return self._rodada_fase3_db(dict(row)) if row else None
 
     async def homologar_rodada_fase3(self, rodada_id: str, responsavel: str) -> dict[str, Any] | None:
-        """Homologa uma rodada da Fase 3."""
-        rodada = self._rodadas_fase3.get(rodada_id)
-        if rodada:
-            rodada["status"] = "homologado"
-            rodada["data_homologacao"] = datetime.now()
-            rodada["responsavel"] = responsavel
-            return rodada
-        return None
+        with get_connection() as conn:
+            row = conn.execute(
+                """UPDATE geoprocessamento.rodada_fase3
+                   SET status='homologado',data_homologacao=CURRENT_TIMESTAMP,
+                       responsavel=%s,atualizado_em=CURRENT_TIMESTAMP
+                   WHERE rodada_id=%s RETURNING *""",
+                (responsavel, rodada_id),
+            ).fetchone()
+            conn.commit()
+        return self._rodada_fase3_db(dict(row)) if row else None
+
+    @staticmethod
+    def _rodada_fase3_db(row: dict[str, Any]) -> dict[str, Any]:
+        dados = row.get("dados") or {}
+        return {
+            "rodada_id": row["rodada_id"],
+            "versao": row["versao"],
+            "arquivo_origem": row["arquivo_origem"],
+            "data_importacao": row["data_importacao"],
+            "data_homologacao": row.get("data_homologacao"),
+            "responsavel": row.get("responsavel"),
+            "status": row["status"],
+            "atributos_ativos": dados.get("atributos_ativos") or [],
+            "pesos_ativos": dados.get("pesos_ativos") or {},
+            "numero_projetos": dados.get("numero_projetos") or 0,
+            "projetos_sem_score": dados.get("projetos_sem_score") or [],
+            "ranking_resultante": dados.get("ranking_resultante") or [],
+            "diagnostico_completude": dados.get("diagnostico_completude") or {},
+            "diagnostico_inconsistencias": dados.get("diagnostico_inconsistencias") or [],
+            "observacoes": dados.get("observacoes"),
+        }
 
     # ==================== FUNÇÕES E FLUXOS ====================
 

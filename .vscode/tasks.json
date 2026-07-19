@@ -21,10 +21,10 @@
         "panel": "dedicated",
         "clear": true
       },
-      "detail": "Sobe a API SICARD na porta 8080, verifica conexoes e abre /public/ no navegador"
+      "detail": "Sobe a API SICARD na porta 8080 usando 56.125.163.194:5433/slt_db"
     },
     {
-      "label": "SLT: Subir banco PostgreSQL (Docker)",
+      "label": "SLT: Subir banco local de contingência",
       "type": "process",
       "command": "pwsh",
       "args": [
@@ -43,7 +43,7 @@
         "panel": "dedicated",
         "clear": true
       },
-      "detail": "Container slt_postgres (PostGIS) na porta 5434 — separado do SIGMA-PLI"
+      "detail": "Somente contingência/rollback: container local na porta 5434"
     },
     {
       "label": "SLT: Aplicar schema PostgreSQL",
@@ -65,7 +65,7 @@
         "panel": "dedicated",
         "clear": true
       },
-      "detail": "Reaplica cadastro_demanda + auditoria.log_sistema no container slt_postgres"
+      "detail": "Aplica migrations no slt_db configurado (VM por padrão)"
     }
   ]
 }

@@ -526,9 +526,9 @@
           <tbody>
             <tr><td>Configuração AHP, consistência e homologação</td><td><span class="implemented">Implementado</span></td><td>serviços, API e tabelas são fonte da verdade</td></tr>
             <tr><td>Seleção de objetos, notas, cálculo e ranking</td><td><span class="implemented">Implementado</span></td><td>assistente de cinco etapas em produção local</td></tr>
-            <tr><td>Bibliotecas de camadas homologadas</td><td><span class="bridge">Ponte disponível</span></td><td>estrutura geoespacial evoluiu, mas o ranking atual ainda recebe notas diretas</td></tr>
-            <tr><td>Execução automática Fase 1 → Fase 2 → Fase 3</td><td><span class="target">Arquitetura metodológica</span></td><td>definida detalhadamente nos contratos; não está orquestrada pelo cálculo atual</td></tr>
-            <tr><td>Síntese ponderada entre score_fase2 e score_fase3</td><td><span class="target">Arquitetura metodológica</span></td><td>fórmula e regras estão especificadas; não são o algoritmo da tela atual</td></tr>
+            <tr><td>Bibliotecas de camadas homologadas</td><td><span class="done">Implementado</span></td><td>as Fases 1 e 2 consomem somente snapshots homologados e versionados</td></tr>
+            <tr><td>Execução Fase 1 → Fase 2 → Fase 3</td><td><span class="done">Implementado</span></td><td>as fases são independentes e podem ser selecionadas por rodada</td></tr>
+            <tr><td>Síntese ponderada entre score_fase2 e score_fase3</td><td><span class="done">Implementado</span></td><td>o motor segrega restritos e registra pesos, contribuições e justificativas</td></tr>
           </tbody>
         </table>
       </div>

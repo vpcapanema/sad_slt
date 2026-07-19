@@ -38,6 +38,22 @@
   color: rgba(255, 255, 255, .9);
 }
 
+.sicard-resumo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1rem, 3vw, 2rem);
+}
+
+.module-hero .sicard-resumo p {
+  max-width: none;
+  margin: 0;
+  color: rgba(255, 255, 255, .9);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.module-hero .sicard-resumo strong { color: #fff; }
+
 .module-eyebrow {
   margin: 0 0 .35rem;
   color: #246578;
@@ -309,6 +325,8 @@
 .restricted-card small { color: #66737c; font-weight: 500; }
 
 @media (max-width: 850px) {
+  .sicard-resumo { grid-template-columns: 1fr; }
+
   .module-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .restricted-grid { grid-template-columns: 1fr; }
 }

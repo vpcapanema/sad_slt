@@ -31,14 +31,18 @@ O backend é organizado em:
 Na raiz do repositório:
 
 ```powershell
-.\scripts\start-db.ps1
-.\scripts\apply-database.ps1
 .\scripts\start-dev.ps1
 ```
 
-`start-db.ps1` inicia o container. `apply-database.ps1` aplica a sequência
-completa de migrations e atualiza o catálogo territorial; ele deve ser executado
-ao preparar um volume novo e depois de receber novas migrations.
+`start-dev.ps1` valida o `slt_db` em `56.125.163.194:5433`, confere as migrations,
+inicia a API e valida as integrações. O Docker local não é iniciado. O comando
+`apply-database.ps1` permanece disponível para manutenção do schema remoto.
+
+Para validar todo o ambiente e encerrá-lo sem abrir o navegador:
+
+```powershell
+.\scripts\start-dev.ps1 -CheckOnly -NoBrowser
+```
 
 Execução manual da API:
 
@@ -61,21 +65,23 @@ Copie `.env.example` para `.env` e configure principalmente:
 
 ```dotenv
 PORT=8080
-SLT_DATABASE_URL=postgresql://slt_user:slt_pass@127.0.0.1:5434/slt_db
+SLT_USE_SIGMA_POSTGRES=true
 SLT_SESSION_SECRET=
 SIGMA_API_BASE=https://56.125.163.194
 SIGMA_POSTGRES_PASSWORD=
 ```
 
-O banco local usa:
+O banco principal do SICARD está no mesmo PostgreSQL gerenciado do SIGMA:
 
-| Item | Valor de desenvolvimento |
+| Item | Valor |
 |---|---|
-| Container | `slt_postgres` |
-| Porta | `5434` |
+| Servidor | `56.125.163.194` |
+| Porta | `5433` |
 | Banco | `slt_db` |
-| Usuário | `slt_user` |
-| Senha | `slt_pass` |
+| Gerenciador | container `sigma_pli_db` |
+
+O `docker-compose.yml` local permanece apenas como contingência/rollback e não
+é iniciado pelo `start-dev.ps1` quando `SLT_USE_SIGMA_POSTGRES=true`.
 
 ## Padrão de rotas
 

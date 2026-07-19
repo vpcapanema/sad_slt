@@ -162,6 +162,7 @@
     .implemented { color: #225c48; background: #dfeee7; }
     .target { color: #7b5414; background: #f7e9c8; }
     .bridge { color: #17566c; background: #dceef2; }
+    .done { color: #17603a; background: #dff3e8; }
     .state-machine { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
     .state-machine span { padding: .55rem .75rem; color: var(--navy); background: white; border: 1px solid var(--line); border-radius: 10px; font-size: .82rem; font-weight: 750; }
     .state-machine i { color: var(--orange); font-style: normal; font-weight: 900; }

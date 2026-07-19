@@ -137,6 +137,19 @@
               </div>
             </article>
 
+            <article class="card-fases-da-rodada ahp-subcard cadastro-card">
+              <div class="ahp-subsection-title">
+                <i class="fas fa-diagram-project"></i>
+                <h2>Fases da rodada</h2>
+              </div>
+              <p class="ahp-help-text">As fases são independentes. Marque somente as avaliações que esta rodada executará.</p>
+              <div class="process-grid" id="hier-fases">
+                <label class="process-field"><span><input type="checkbox" value="1" checked> Fase 1 — Elegibilidade territorial</span></label>
+                <label class="process-field"><span><input type="checkbox" value="2" checked> Fase 2 — Favorabilidade territorial</span></label>
+                <label class="process-field"><span><input type="checkbox" value="3" checked> Fase 3 — Ajuste por atributos</span></label>
+              </div>
+            </article>
+
             <article class="card-matriz-de-premissas-e-criterios ahp-subcard cadastro-card">
               <div class="ahp-subsection-title">
                 <i class="fas fa-file-excel"></i>
@@ -146,12 +159,11 @@
                 Anexe a matriz que documenta as premissas e os critérios aplicáveis à rodada.
               </p>
               <label class="process-field"
-                ><span>Arquivo JSON, CSV ou XLSX *</span
+                ><span>Arquivo JSON, CSV ou XLSX (obrigatório nas Fases 2 e 3)</span
                 ><input
                   id="hier-matriz"
                   type="file"
                   accept=".json,.csv,.xlsx"
-                  required
               /></label>
               <div id="matriz-resumo" class="ahp-info-note hidden"></div>
             </article>

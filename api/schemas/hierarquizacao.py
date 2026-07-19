@@ -6,9 +6,9 @@ aprovados (``demandas_aprovadas.projetos``).
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class HierarquizacaoCreateSchema(BaseModel):
@@ -21,6 +21,15 @@ class HierarquizacaoCreateSchema(BaseModel):
     )
     objetos: list[dict[str, Any]] | None = None
     matriz_premissas_criterios: dict[str, Any] | list[Any] | None = None
+    fases_a_executar: list[int] = Field(default_factory=lambda: [1, 2, 3])
+
+    @field_validator("fases_a_executar")
+    @classmethod
+    def validar_fases(cls, value: list[int]) -> list[int]:
+        fases = sorted(set(value))
+        if not fases or any(fase not in {1, 2, 3} for fase in fases):
+            raise ValueError("Informe uma ou mais fases entre 1, 2 e 3.")
+        return fases
 
 
 class HierarquizacaoUpdateSchema(BaseModel):
@@ -55,14 +64,16 @@ class ConfiguracaoFatiamentoFase1Schema(BaseModel):
 
 class HierarquizacaoFase2ExecutarSchema(BaseModel):
     pacote_id: str
-    metodo_extracao: str = "ponto"
+    metodo_extracao: Literal["ponto"] = "ponto"
 
 
 class HierarquizacaoFase3ExecutarSchema(BaseModel):
     criterios: list[dict[str, Any]]
-    modo_pesos: str = "normalizados"
+    modo_pesos: Literal["normalizados", "livres"] = "normalizados"
     completude_minima: float = Field(0.6, ge=0, le=1)
-    regra_ausentes: str = "renormalizar"
+    regra_ausentes: Literal[
+        "renormalizar", "bloquear", "imputar_neutro", "imputar_pior", "imputar_medio"
+    ] = "renormalizar"
 
 
 class HierarquizacaoSinteseSchema(BaseModel):

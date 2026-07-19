@@ -1,0 +1,12 @@
+<div class="hier-phase-navigation">
+  <nav class="hier-link-bar" aria-label="Fases da hierarquização">
+    <a href="/restrict/hierarquizacao/fase-1/"{% if fase_ativa == 1 %} class="active" aria-current="page"{% endif %}>Fase 1</a>
+    <a href="/restrict/hierarquizacao/fase-2/"{% if fase_ativa == 2 %} class="active" aria-current="page"{% endif %}>Fase 2</a>
+    <a href="/restrict/hierarquizacao/fase-3/"{% if fase_ativa == 3 %} class="active" aria-current="page"{% endif %}>Fase 3</a>
+  </nav>
+  <nav class="hier-link-bar hier-link-bar--tools" aria-label="Ferramentas operacionais das fases">
+    <a href="/restrict/geoespacial/gerador-risco-restricao/"{% if fase_ativa == 1 %} class="active"{% endif %}>Gerador de Restrições e Riscos</a>
+    <a href="/restrict/geoespacial/gerador-favorabilidade/"{% if fase_ativa == 2 %} class="active"{% endif %}>Gerador de Favorabilidade Territorial</a>
+    <a href="/restrict/geoespacial/configurador-ajuste/"{% if fase_ativa == 3 %} class="active"{% endif %}>Ajuste Fino de Prioridades</a>
+  </nav>
+</div>

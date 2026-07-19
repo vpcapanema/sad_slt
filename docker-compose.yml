@@ -25,15 +25,6 @@ services:
 
     volumes:
       - slt_pgdata:/var/lib/postgresql/data
-      - ./database/002_schema_cadastro_auditoria.sql:/docker-entrypoint-initdb.d/02_schema.sql:ro
-      - ./database/003_schema_ahp_objetos.sql:/docker-entrypoint-initdb.d/03_schema_ahp.sql:ro
-      - ./database/004_schema_ahp_analises.sql:/docker-entrypoint-initdb.d/04_schema_ahp_analises.sql:ro
-      - ./database/011_schema_geo.sql:/docker-entrypoint-initdb.d/11_schema_geo.sql:ro
-      - ./database/037_schema_geoprocessamento.sql:/docker-entrypoint-initdb.d/37_schema_geoprocessamento.sql:ro
-      - ./database/038_persistencia_conteudo_geoespacial.sql:/docker-entrypoint-initdb.d/38_persistencia_conteudo_geoespacial.sql:ro
-      - ./database/039_biblioteca_camadas_homologadas.sql:/docker-entrypoint-initdb.d/39_biblioteca_camadas_homologadas.sql:ro
-      - ./database/040_separacao_fisica_camadas.sql:/docker-entrypoint-initdb.d/40_separacao_fisica_camadas.sql:ro
-      - ./database/041_idempotencia_importacao.sql:/docker-entrypoint-initdb.d/41_idempotencia_importacao.sql:ro
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U slt_user -d slt_db"]

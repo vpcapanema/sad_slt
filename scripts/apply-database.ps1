@@ -44,6 +44,13 @@ function Test-ContainerRunning([string]$Name) {
 
 function Test-CoreSchemaReady {
     $query = "SELECT CASE WHEN to_regclass('demandas.projeto') IS NULL THEN 'f' ELSE 't' END;"
+    if ($env:SLT_USE_SIGMA_POSTGRES -eq "true" -and $env:SLT_DATABASE_URL) {
+        $env:SLT_MIGRATION_QUERY = $query
+        $python = Join-Path $Root ".venv\Scripts\python.exe"
+        & $python -c "import os, psycopg; c=psycopg.connect(os.environ['SLT_DATABASE_URL']); r=c.execute(os.environ['SLT_MIGRATION_QUERY']).fetchone()[0]; c.close(); raise SystemExit(0 if str(r).lower() in ('t','true','1') else 1)" 2>$null
+        Remove-Item Env:SLT_MIGRATION_QUERY -ErrorAction SilentlyContinue
+        return $LASTEXITCODE -eq 0
+    }
     if (Test-ContainerRunning $Container) {
         $result = docker exec $Container psql -U $DbUser -d $DbName -At -c $query 2>$null
         return $LASTEXITCODE -eq 0 -and ($result | Select-Object -Last 1) -eq "t"
@@ -137,12 +144,23 @@ $migrations = @(
     "040_separacao_fisica_camadas.sql",
     "041_idempotencia_importacao.sql",
     "042_fluxo_fases_hierarquizacao.sql",
-    "043_fase1_fatiamento_relatorio.sql"
+    "043_fase1_fatiamento_relatorio.sql",
+    "044_fase3_persistencia.sql",
+    "045_modelos_geoprocessamento.sql"
 )
 
 if (Test-CoreSchemaReady) {
     Write-Ok "Nucleo demandas ja esta atualizado; migrations legadas 002-036 serao ignoradas"
     $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 37 }
+}
+
+function Invoke-PsycopgFile {
+    param([string]$FilePath)
+    $env:SLT_MIGRATION_FILE = $FilePath
+    $python = Join-Path $Root ".venv\Scripts\python.exe"
+    & $python -c "import os, pathlib, psycopg; sql=pathlib.Path(os.environ['SLT_MIGRATION_FILE']).read_text(encoding='utf-8-sig'); c=psycopg.connect(os.environ['SLT_DATABASE_URL']); c.execute(sql); c.commit(); c.close()"
+    Remove-Item Env:SLT_MIGRATION_FILE -ErrorAction SilentlyContinue
+    if ($LASTEXITCODE -ne 0) { throw "psycopg falhou ($FilePath)" }
 }
 
 foreach ($name in $migrations) {
@@ -154,7 +172,14 @@ foreach ($name in $migrations) {
 }
 
 try {
-    if (Test-ContainerRunning $Container) {
+    if ($env:SLT_USE_SIGMA_POSTGRES -eq "true" -and $env:SLT_DATABASE_URL) {
+        Write-Step "PostgreSQL remoto — aplicando migrations via psycopg"
+        foreach ($name in $migrations) {
+            $path = Join-Path $DbDir $name
+            Invoke-PsycopgFile -FilePath $path
+            Write-Ok $name
+        }
+    } elseif (Test-ContainerRunning $Container) {
         Write-Step "Container $Container — aplicando migrations via docker exec"
         foreach ($name in $migrations) {
             $path = Join-Path $DbDir $name
@@ -185,7 +210,11 @@ try {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor White
     Write-Host "  Schema SLT aplicado com sucesso" -ForegroundColor Green
-    Write-Host "  SLT_DATABASE_URL=postgresql://${DbUser}:***@${HostAddr}:${Port}/${DbName}" -ForegroundColor DarkGray
+    if ($env:SLT_USE_SIGMA_POSTGRES -eq "true") {
+        Write-Host "  Banco remoto: $($env:SIGMA_POSTGRES_HOST):$($env:SIGMA_POSTGRES_PORT)/slt_db" -ForegroundColor DarkGray
+    } else {
+        Write-Host "  SLT_DATABASE_URL=postgresql://${DbUser}:***@${HostAddr}:${Port}/${DbName}" -ForegroundColor DarkGray
+    }
     Write-Host "========================================" -ForegroundColor White
     Write-Host ""
 } catch {

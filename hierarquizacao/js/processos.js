@@ -266,8 +266,11 @@
   };
   $("nova-hierarquizacao").onsubmit = async (e) => {
     e.preventDefault();
+    const fases = [...document.querySelectorAll("#hier-fases input:checked")].map((x) => Number(x.value));
+    if (!fases.length) return erro("Selecione ao menos uma fase da rodada.");
     if (!selecionados.size) return erro("Selecione ao menos uma demanda apta.");
-    if (!matriz) return erro("Carregue a matriz de premissas e critérios.");
+    if (fases.some((fase) => fase === 2 || fase === 3) && !matriz)
+      return erro("Carregue a matriz de premissas e critérios para as Fases 2 e 3.");
     try {
       await HierApi.criar({
         nome: $("hier-nome").value.trim(),
@@ -275,6 +278,7 @@
         tipo_demanda: $("hier-tipo").value,
         objetos: universo.filter((o) => selecionados.has(o.id)),
         matriz_premissas_criterios: matriz,
+        fases_a_executar: fases,
       });
       location.reload();
     } catch (err) {
