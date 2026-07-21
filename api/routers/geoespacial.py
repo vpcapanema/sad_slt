@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from hashlib import sha256
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 
 from api.deps.auth import require_geospatial_access
 from api.path_policy import project_path
@@ -34,6 +33,10 @@ from api.schemas.geoespacial import (
     RodadaFase3Schema,
 )
 from api.services.geoespacial_service import geoespacial_service
+from api.services.importar_camadas_service import (
+    importar_camadas as executar_importacao_camadas,
+    inspecionar_camadas,
+)
 from api.services.geoprocessamento_engine import CATALOG, OPERATION_ENDPOINTS, geoprocessamento_engine
 from api.services.geoprocessamento_jobs import geoprocessamento_jobs
 
@@ -319,35 +322,37 @@ async def deletar_camada(camada_id: str) -> dict[str, str]:
     return {"message": "Camada deletada com sucesso"}
 
 
-@router.post("/camadas/importar")
+@router.post("/importar_camadas")
+@router.post("/camadas/importar", deprecated=True, include_in_schema=False)
 @router.post("/camadas/upload", deprecated=True, include_in_schema=False)
-async def importar_arquivo_camada(arquivo: UploadFile = File(...)) -> dict:
-    """Importa um arquivo geoespacial externo para o banco."""
+async def importar_arquivo_camada(
+    arquivo: UploadFile = File(...),
+    reprojetar_crs: str | None = Form(None),
+    recortar_camada_id: str | None = Form(None),
+) -> dict:
+    """Valida, classifica, transforma e importa camadas com rollback compensatório."""
     nome = Path(arquivo.filename or "camada").name
     conteudo = await arquivo.read()
-    hash_arquivo = sha256(conteudo).hexdigest()
-    existente = camada_geoespacial_repository.obter_importada_por_hash(hash_arquivo)
-    if existente:
-        id_key = "raster_id" if existente["tipo"] == "raster" else "camada_id"
-        return {
-            id_key: existente["recurso_sessao_id"],
-            "nome": existente["nome"],
-            "tipo": existente["tipo"],
-            "crs": existente.get("crs"),
-            "reutilizada": True,
-        }
-    pasta = project_path("data/geoespacial/uploads")
-    pasta.mkdir(parents=True, exist_ok=True)
-    caminho = pasta / nome
-    caminho.write_bytes(conteudo)
-    caminho_relativo = f"data/geoespacial/uploads/{nome}"
     try:
-        if caminho.suffix.lower() in {".tif", ".tiff"}:
-            return await geoespacial_service.importar_raster(caminho_relativo, hash_arquivo)
-        return await geoespacial_service.importar_camada(
-            "local", caminho_relativo, hash_arquivo=hash_arquivo
+        return await executar_importacao_camadas(
+            nome,
+            conteudo,
+            target_crs=(reprojetar_crs or "").strip() or None,
+            clip_layer_id=(recortar_camada_id or "").strip() or None,
         )
-    except RuntimeError as exc:
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/importar_camadas/inspecionar")
+async def inspecionar_arquivo_camada(arquivo: UploadFile = File(...)) -> dict:
+    """Lê e valida o upload em staging para preencher as opções da interface."""
+    try:
+        return inspecionar_camadas(
+            Path(arquivo.filename or "camada").name,
+            await arquivo.read(),
+        )
+    except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
@@ -360,8 +365,69 @@ async def iniciar_importacao_com_logs(arquivo: UploadFile = File(...)) -> dict:
 
 @router.get("/camadas-diretorio")
 async def listar_diretorio_camadas() -> dict[str, list[dict]]:
-    """Diretório interno para carregar camadas já importadas/processadas."""
-    return camada_geoespacial_repository.listar_diretorio()
+    """Arquivos operacionais do datastorage e arquivos da biblioteca canônica."""
+    directory = camada_geoespacial_repository.listar_diretorio()
+    imported_rows = directory.get("importadas", [])
+
+    def original_path(row: dict) -> str:
+        metadata = row.get("metadados") or {}
+        extras = metadata.get("metadados") or metadata
+        return str(extras.get("arquivo_original") or metadata.get("arquivo_original") or "").replace("\\", "/")
+
+    by_path = {original_path(row): row for row in imported_rows if original_path(row)}
+    accepted = {
+        ".shp", ".geojson", ".json", ".kml", ".gml", ".fgb", ".gpkg",
+        ".sqlite", ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2",
+        ".zip", ".rar", ".7z", ".tar", ".tgz", ".gz",
+    }
+
+    operational: list[dict] = []
+    storage_root = project_path("data/geoespacial/uploads/datastorage")
+    for category in ("vetor", "raster", "geodatabase"):
+        folder = storage_root / category
+        if not folder.exists():
+            continue
+        for path in sorted(item for item in folder.iterdir() if item.is_file() and item.suffix.lower() in accepted):
+            relative = path.relative_to(project_path(".")).as_posix()
+            row = by_path.get(relative)
+            operational.append({
+                **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or path.stem,
+                "categoria_arquivo": category, "registrada": bool(row), "origem_diretorio": "datastorage",
+            })
+
+    canonical: list[dict] = []
+    canonical_root = project_path("data/geoespacial/biblioteca_canonica")
+    if canonical_root.exists():
+        for path in sorted(item for item in canonical_root.rglob("*") if item.is_file() and item.suffix.lower() in accepted):
+            relative = path.relative_to(project_path(".")).as_posix()
+            row = by_path.get(relative)
+            canonical.append({
+                **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or path.stem,
+                "categoria_arquivo": "biblioteca_canonica", "registrada": bool(row),
+                "origem_diretorio": "biblioteca_canonica",
+            })
+    return {"operacionais": operational, "biblioteca_canonica": canonical}
+
+
+@router.post("/camadas-arquivo/carregar")
+async def carregar_arquivo_do_sistema(arquivo: str = Form(...)) -> dict:
+    """Registra pelo importador novo um arquivo permitido do datastorage/canônica."""
+    normalized = arquivo.replace("\\", "/").strip()
+    allowed_prefixes = (
+        "data/geoespacial/uploads/datastorage/vetor/",
+        "data/geoespacial/uploads/datastorage/raster/",
+        "data/geoespacial/uploads/datastorage/geodatabase/",
+        "data/geoespacial/biblioteca_canonica/",
+    )
+    if not normalized.startswith(allowed_prefixes):
+        raise HTTPException(status_code=403, detail="Arquivo fora dos diretórios geoespaciais autorizados")
+    path = project_path(normalized, label="arquivo geoespacial")
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Arquivo geoespacial não encontrado")
+    try:
+        return await executar_importacao_camadas(path.name, path.read_bytes())
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/camadas/{camada_id}/carregar")

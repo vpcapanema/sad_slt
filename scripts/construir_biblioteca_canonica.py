@@ -24,9 +24,9 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "data" / "geoespacial" / "biblioteca_canonica"
-RAW = OUT / "fontes_oficiais"
-SHP = OUT / "shapefiles"
+OUT = ROOT / "data" / "geoespacial" / "local"
+RAW = OUT / "_fontes_oficiais"
+SHP = OUT
 GPKG = OUT / "biblioteca_canonica_fase1.gpkg"
 ZIP = OUT / "biblioteca_canonica_shapefiles.zip"
 REPORT = OUT / "relatorio_validacao.json"
@@ -48,7 +48,11 @@ ARCGIS = "https://pamgia.ibama.gov.br/server/rest/services"
 DATAGEO = "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows"
 SOURCES = {
     "ucs_mma": Source("ucs_mma", "Unidades de Conservação — CNUC/MMA", "MMA/IBAMA PAMGIA", f"{ARCGIS}/BasesSincronizadas/lim_unidades_conserva%C3%A7%C3%A3o_mma_a/FeatureServer/0", "arcgis"),
-    "vegetacao_sp": Source("vegetacao_sp", "Inventário Florestal 2020", "IPA/SEMIL — DataGEO", DATAGEO, "wfs", "datageo:InventarioFlorestal2020"),
+    "vegetacao_sp": Source(
+        "vegetacao_sp", "Inventário Florestal 2020", "IPA/SEMIL — DataGEO",
+        f"{DATAGEO}?service=WFS&version=1.0.0&request=GetFeature&typeName=datageo:InventarioFlorestal2020&outputFormat=SHAPE-ZIP&srsName=EPSG:4674",
+        "zip",
+    ),
     "aprm_sp": Source("aprm_sp", "APRM — subáreas e zoneamentos", "SEMIL — DataGEO", DATAGEO, "wfs_multi", "datageo:APRMATC_SUBAREAS_2015_POL,datageo:APRMAJ_ZONEAMENTO_10_SMA_2015_POL,datageo:APRMB_SMA2010,datageo:APRMG_SMA2007"),
     "cavidades": Source("cavidades", "Cavidades naturais", "CECAV/ICMBio — DataGEO", DATAGEO, "wfs", "datageo:CavidadesCecav"),
     "terras_indigenas": Source("terras_indigenas", "Terras Indígenas", "FUNAI/IBAMA PAMGIA", f"{ARCGIS}/BasesSincronizadas/lim_terra_indigena_funai_a/FeatureServer/0", "arcgis"),
@@ -113,6 +117,7 @@ def download_arcgis(source: Source) -> dict:
     features: list[dict] = []
     offset = 0
     while True:
+        print(f"  lote ArcGIS offset={offset}", flush=True)
         data = fetch_json(
             f"{source.url}/query",
             {
@@ -137,8 +142,9 @@ def download_arcgis(source: Source) -> dict:
 def download_wfs_layer(source: Source, layer: str) -> dict:
     features: list[dict] = []
     offset = 0
-    count = 5000
+    count = 1000
     while True:
+        print(f"  lote WFS {layer} startIndex={offset}", flush=True)
         data = fetch_json(
             source.url,
             {
@@ -150,6 +156,7 @@ def download_wfs_layer(source: Source, layer: str) -> dict:
         )
         batch = data.get("features", [])
         features.extend(batch)
+        print(f"    recebido={len(batch)} acumulado={len(features)}", flush=True)
         if len(batch) < count:
             break
         offset += len(batch)
@@ -157,11 +164,32 @@ def download_wfs_layer(source: Source, layer: str) -> dict:
 
 
 def download_source(source: Source) -> Path:
-    path = RAW / f"{source.key}.geojson"
+    suffix = ".zip" if source.kind == "zip" else ".geojson"
+    path = RAW / f"{source.key}{suffix}"
+    if path.exists() and path.stat().st_size > 0:
+        try:
+            gpd.read_file(path, rows=1)
+            print(f"  cache local reaproveitado: {path.name}", flush=True)
+            return path
+        except Exception:
+            path.unlink()
     if source.kind == "arcgis":
         data = download_arcgis(source)
     elif source.kind == "wfs":
         data = download_wfs_layer(source, source.layer or "")
+    elif source.kind == "zip":
+        partial = path.with_suffix(path.suffix + ".part")
+        if partial.exists():
+            partial.unlink()
+        request = urllib.request.Request(source.url, headers={"User-Agent": "SICARD-SLT/1.0"})
+        with urllib.request.urlopen(request, timeout=1800) as response, partial.open("wb") as target:
+            shutil.copyfileobj(response, target, length=1024 * 1024)
+        with zipfile.ZipFile(partial) as archive:
+            bad = archive.testzip()
+            if bad:
+                raise RuntimeError(f"Zip baixado com entrada corrompida: {bad}")
+        partial.replace(path)
+        return path
     else:
         merged: list[dict] = []
         for layer in (source.layer or "").split(","):
@@ -217,9 +245,30 @@ def search_rows(frame: gpd.GeoDataFrame, terms: list[str]) -> gpd.GeoDataFrame:
 
 def empty_shapefile(folder: Path, name: str) -> None:
     folder.mkdir(parents=True, exist_ok=True)
-    schema = {"geometry": "Unknown", "properties": {"criterio": "str:80", "status": "str:20"}}
+    schema = {"geometry": "Point", "properties": {"criterio": "str:80", "status": "str:20"}}
     with fiona.open(folder / f"{name}.shp", "w", driver="ESRI Shapefile", crs=CRS, schema=schema):
         pass
+
+
+def safe_shapefile_columns(frame: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    keep = ["criterio", "status"]
+    extras = [c for c in frame.columns if c not in {"geometry", *keep}][:8]
+    copy = frame[[*keep, *extras, "geometry"]].copy()
+    used: set[str] = {"geometry"}
+    renamed: dict[str, str] = {}
+    for column in copy.columns:
+        if column == "geometry":
+            continue
+        base = normalize(column).replace(" ", "_")[:10] or "campo"
+        candidate = base
+        suffix = 1
+        while candidate in used:
+            tail = str(suffix)
+            candidate = f"{base[:10 - len(tail)]}{tail}"
+            suffix += 1
+        used.add(candidate)
+        renamed[column] = candidate
+    return copy.rename(columns=renamed)
 
 
 def write_shapefile(frame: gpd.GeoDataFrame, name: str) -> None:
@@ -230,14 +279,13 @@ def write_shapefile(frame: gpd.GeoDataFrame, name: str) -> None:
     if frame.empty:
         empty_shapefile(folder, name)
         return
-    copy = frame.copy()
-    copy.columns = ["geometry" if c == "geometry" else c[:10] for c in copy.columns]
+    copy = safe_shapefile_columns(frame)
     copy.to_file(folder / f"{name}.shp", driver="ESRI Shapefile", encoding="UTF-8")
 
 
 def write_gpkg_layer(frame: gpd.GeoDataFrame, name: str) -> None:
     if frame.empty:
-        schema = {"geometry": "Unknown", "properties": {"criterio": "str", "status": "str"}}
+        schema = {"geometry": "Point", "properties": {"criterio": "str", "status": "str"}}
         with fiona.open(GPKG, "w", driver="GPKG", layer=name, crs=CRS, schema=schema):
             pass
     else:
@@ -294,9 +342,11 @@ def main() -> None:
         print(f"  {criterion}: {status} ({len(frame)} feições)", flush=True)
 
     with zipfile.ZipFile(ZIP, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-        for path in sorted(SHP.rglob("*")):
-            if path.is_file():
-                archive.write(path, path.relative_to(SHP))
+        for criterion, _, _ in CRITERIA:
+            paths = sorted((SHP / criterion).rglob("*"))
+            for path in paths:
+                if path.is_file():
+                    archive.write(path, path.relative_to(SHP))
     report["artefatos"] = {
         "geopackage": {"arquivo": str(GPKG.relative_to(ROOT)).replace("\\", "/"), "sha256": checksum(GPKG)},
         "shapefiles_zip": {"arquivo": str(ZIP.relative_to(ROOT)).replace("\\", "/"), "sha256": checksum(ZIP)},

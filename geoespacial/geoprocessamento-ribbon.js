@@ -51,26 +51,24 @@
     try {
       const directory = await request("/api/geoespacial/camadas-diretorio");
       const sections = [
-        ["importadas", "Camadas importadas"],
-        ["processadas", "Resultados processados"],
-        ["homologadas", "Biblioteca homologada (somente leitura)"],
+        ["operacionais", "Camadas importadas do datastorage"],
+        ["biblioteca_canonica", "Biblioteca canônica"],
       ];
       const content = sections.map(([key, label]) => {
         const rows = directory[key] || [];
-        return `<section class="tool-group"><div class="tool-group-title"><i data-lucide="folder"></i>${label}</div>${rows.length ? rows.map((layer) => `<button type="button" class="tool-row" data-load-system="${escapeHtml(layer.id)}"><span class="tool-name">${escapeHtml(layer.nome_publicacao || layer.nome)}</span><span>${escapeHtml(layer.formato || layer.tipo)}</span></button>`).join("") : '<div class="empty compact">Nenhuma camada.</div>'}</section>`;
+        return `<section class="tool-group"><div class="tool-group-title"><i data-lucide="folder"></i>${label}</div>${rows.length ? rows.map((layer) => `<button type="button" class="tool-row" ${layer.id?`data-load-system="${escapeHtml(layer.id)}"`:`data-load-file="${escapeHtml(layer.arquivo)}"`}><span class="tool-name">${escapeHtml(layer.nome_publicacao || layer.nome)}</span><span>${escapeHtml(layer.formato || layer.tipo || layer.categoria_arquivo)}</span></button>`).join("") : '<div class="empty compact">Nenhuma camada.</div>'}</section>`;
       }).join("");
       openPanel("Carregar do sistema", `<div class="editor-head"><button class="icon-btn" data-directory-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>Diretório de camadas</h2></div><div class="editor-body"><p class="field-help">Estas camadas já estão no banco. Escolha a tabela lógica e a camada que deseja abrir.</p>${content}</div>`);
       $("[data-directory-back]").onclick = () => window.gpApp.showTools();
       $("#gp-editor-view").addEventListener("click", async (event) => {
-        const button = event.target.closest("[data-load-system]");
+        const button = event.target.closest("[data-load-system],[data-load-file]");
         if (!button) return;
         button.disabled = true;
         const progress = window.gpApp.createTaskProgress($("#gp-editor-view"));
         try {
-          const id = button.dataset.loadSystem;
-          let job = await request(`/api/geoespacial/camadas/${encodeURIComponent(id)}/carregar-job`, { method: "POST" });
-          job = await window.gpApp.waitForJob(job, progress);
-          const resource = job.resultado;
+          let id = button.dataset.loadSystem,resource;
+          if(id){let job=await request(`/api/geoespacial/camadas/${encodeURIComponent(id)}/carregar-job`,{method:"POST"});job=await window.gpApp.waitForJob(job,progress);resource=job.resultado}
+          else{const form=new FormData();form.append("arquivo",button.dataset.loadFile);const result=await request("/api/geoespacial/camadas-arquivo/carregar",{method:"POST",body:form,headers:{}});resource=result.recursos?.[0];id=resource?.id;if(!id)throw new Error("O arquivo não gerou uma camada carregável")}
           const index = window.gpApp.state.layers.findIndex((layer) => layer.id === id);
           if (index >= 0) window.gpApp.state.layers[index] = resource;
           else window.gpApp.state.layers.push(resource);

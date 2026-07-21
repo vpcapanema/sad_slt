@@ -124,7 +124,7 @@ class GeoprocessamentoApiTest(unittest.TestCase):
     def test_upload_repetido_reutiliza_a_mesma_importacao(self) -> None:
         payload = self.sample.read_bytes()
         filename = "teste_idempotencia.geojson"
-        upload_path = Path("data/geoespacial/uploads") / filename
+        upload_path = Path("data/geoespacial/uploads/datastorage/vetor") / filename
         try:
             primeira = self.client.post(
                 "/api/geoespacial/camadas/importar",
@@ -242,7 +242,7 @@ class GeoprocessamentoApiTest(unittest.TestCase):
 
     def test_importacao_e_carregamento_expoem_logs_reais_de_nanotarefas(self) -> None:
         filename = "teste_nanotarefas.geojson"
-        upload_path = Path("data/geoespacial/uploads") / filename
+        upload_path = Path("data/geoespacial/uploads/datastorage/vetor") / filename
         homologated_id = None
         try:
             started = self.client.post(

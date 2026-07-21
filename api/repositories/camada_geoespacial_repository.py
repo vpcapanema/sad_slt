@@ -498,8 +498,8 @@ def _directory_rows(categoria: str) -> list[dict[str, Any]]:
     )
     with get_connection() as conn:
         rows = conn.execute(
-            sql.SQL("""SELECT recurso_sessao_id AS id,nome,tipo,crs,formato,
-                       {} AS criado_em{}
+            sql.SQL("""SELECT recurso_sessao_id AS id,nome,tipo,geometria_tipo,crs,formato,
+                       metadados,{} AS criado_em{}
                 FROM geoprocessamento.{} ORDER BY {} DESC""").format(
                 sql.Identifier(date_column), extra, sql.Identifier(catalog),
                 sql.Identifier(date_column)

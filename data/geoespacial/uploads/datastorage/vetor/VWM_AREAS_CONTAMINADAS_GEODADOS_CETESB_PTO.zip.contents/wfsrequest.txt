@@ -1,0 +1,1 @@
+https://datageo.ambiente.sp.gov.br/geoserver/datageo/VWM_AREAS_CONTAMINADAS_GEODADOS_CETESB_PTO/wfs?version=1.0.0&request=GetFeature&outputFormat=SHAPE-ZIP&typeName=VWM_AREAS_CONTAMINADAS_GEODADOS_CETESB_PTO

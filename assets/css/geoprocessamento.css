@@ -33,3 +33,21 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 /* Linguagem visual única para qualquer ferramenta aberta no painel lateral direito. */
 #gp-right-pane .editor-head{min-height:48px;padding:10px 12px;background:#fff}#gp-right-pane .editor-head>div{flex:1}#gp-right-pane .editor-head h2{margin:0;min-width:0;text-align:center;color:#8b3f27;font:400 15px "Segoe UI",Arial,sans-serif;line-height:1.25}#gp-right-pane .editor-head p{text-align:center;color:var(--muted);font:400 11px "Segoe UI",Arial,sans-serif}#gp-right-pane .editor-body{padding:12px}#gp-right-pane .field{gap:5px;margin-bottom:11px}#gp-right-pane .field label{color:#343a40;font:400 12px "Segoe UI",Arial,sans-serif}#gp-right-pane .field input,#gp-right-pane .field select,#gp-right-pane .field textarea,#gp-right-pane .builder-step textarea{width:100%;min-width:0;border:1px solid var(--line-dark);border-radius:0;background:#fff;color:var(--ink);font:400 13px "Segoe UI",Arial,sans-serif}#gp-right-pane .field input,#gp-right-pane .field select{height:30px;padding:5px 7px}#gp-right-pane .field textarea,#gp-right-pane .builder-step textarea{min-height:64px;padding:6px 7px;resize:vertical}#gp-right-pane .field input[readonly]{background:#f3f4f5;color:#596168}#gp-right-pane .field input:focus,#gp-right-pane .field select:focus,#gp-right-pane .field textarea:focus,#gp-right-pane .builder-step textarea:focus{border-color:var(--accent);outline:1px solid var(--accent);outline-offset:-1px}#gp-right-pane .field-check{color:#343a40;font-weight:400}#gp-right-pane .field-check input{accent-color:var(--accent)}#gp-right-pane .editor-actions{gap:6px;padding:10px 12px;background:#fff}#gp-right-pane .editor-actions .btn{min-width:92px;height:30px;font-weight:400}#gp-right-pane .form-section-title{margin:16px -12px 10px;padding:8px 12px;color:#343a40;font-weight:400}#gp-right-pane .field-help{font:400 11px/1.4 "Segoe UI",Arial,sans-serif}#gp-right-pane .local-file-picker input[type="text"]{height:30px;padding:5px 7px}#gp-right-pane .browse-btn{height:30px}
 .property-symbology{margin-top:14px;border:1px solid var(--line);background:#fafafa}.property-symbology h3{margin:0;padding:8px 10px;border-bottom:1px solid var(--line);color:#8b3f27;font-size:12px;font-weight:400}.layer-color-control{display:grid;gap:7px;padding:10px}.layer-color-control>label{color:#343a40;font-size:12px}.layer-color-control>div{display:grid;grid-template-columns:46px 1fr;align-items:center;gap:9px}.layer-color-control input[type="color"]{width:46px;height:31px;padding:2px;border:1px solid var(--line-dark);background:#fff;cursor:pointer}.layer-color-control output{font:12px Consolas,monospace;color:var(--muted)}.layer-color-control p{margin:0;color:var(--muted);font-size:11px;line-height:1.4}
+
+/* Checkboxes compactos dos parâmetros exibidos no painel lateral direito. */
+#gp-right-pane .field-check{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-height:20px;
+  line-height:1.25;
+}
+#gp-right-pane .field-check input[type="checkbox"]{
+  flex:0 0 15px;
+  width:15px!important;
+  height:15px!important;
+  min-width:15px;
+  margin:0;
+  padding:0;
+  accent-color:var(--accent);
+}

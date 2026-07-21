@@ -142,12 +142,14 @@
       if(!field)return;
       field.dataset.loadSource="";
       if(type.value.toLocaleLowerCase("pt-BR")==="local"){
-        field.innerHTML=`<label class="required-label" for="gp-local-file-name">Arquivo local</label><div class="local-file-picker"><input id="gp-local-upload" type="file" accept=".geojson,.json,.kml,.tif,.tiff,.zip,.gpkg,.shp" multiple hidden><input id="gp-local-file-name" type="text" placeholder="Selecione um ou mais arquivos" readonly aria-describedby="gp-local-help"><button class="browse-btn" type="button" data-select-local title="Procurar arquivos" aria-label="Procurar arquivos"><i data-lucide="folder-open"></i></button></div><p id="gp-local-help" class="field-help">Formatos aceitos: GeoJSON, KML, GeoTIFF, GeoPackage, Shapefile ou pacote ZIP.</p>`;
+        field.innerHTML=`<label class="required-label" for="gp-local-file-name">Arquivo local</label><div class="local-file-picker"><input id="gp-local-upload" type="file" accept=".geojson,.json,.kml,.gml,.fgb,.tif,.tiff,.img,.asc,.vrt,.jp2,.zip,.rar,.7z,.tar,.tgz,.gz,.gpkg,.sqlite,.shp" hidden><input id="gp-local-file-name" type="text" placeholder="Selecione um arquivo geoespacial" readonly aria-describedby="gp-local-help"><button class="browse-btn" type="button" data-select-local title="Procurar arquivo" aria-label="Procurar arquivo"><i data-lucide="folder-open"></i></button></div><p id="gp-local-help" class="field-help">O conteúdo será descompactado, identificado e validado antes da importação.</p><div class="field"><label>CRS atual</label><input id="gp-import-current-crs" placeholder="Detectado após selecionar o arquivo" readonly></div><label class="field-check"><input id="gp-import-reproject" type="checkbox">Reprojetar CRS</label><div class="field"><label>CRS de destino</label><select id="gp-import-target-crs" disabled><option value="EPSG:4674">EPSG:4674 — SIRGAS 2000 (recomendado)</option><option value="EPSG:4326">EPSG:4326 — WGS 84</option><option value="EPSG:31983">EPSG:31983 — SIRGAS 2000 / UTM 23S</option></select></div><label class="field-check"><input id="gp-import-clip" type="checkbox">Recortar pela camada</label><div class="field"><label>Camada de máscara</label><select id="gp-import-clip-layer" disabled><option value="">Selecione…</option>${state.layers.filter(layer=>!String(layer.tipo).toLowerCase().includes("raster")).map(layer=>`<option value="${escapeHtml(layer.id)}">${escapeHtml(layer.nome)}</option>`).join("")}</select></div><p id="gp-import-inspection" class="field-help">Aguardando arquivo.</p>`;
         const input=$("#gp-local-upload"),name=$("#gp-local-file-name");
         $("[data-select-local]").onclick=()=>input.click();
-        input.onchange=()=>{const names=[...input.files].map(file=>file.name);name.value=names.join("; ");submit.disabled=!names.length};
+        $("#gp-import-reproject").onchange=event=>$("#gp-import-target-crs").disabled=!event.target.checked;
+        $("#gp-import-clip").onchange=event=>$("#gp-import-clip-layer").disabled=!event.target.checked;
+        input.onchange=async()=>{const file=input.files[0];name.value=file?.name||"";submit.disabled=true;if(!file)return;const status=$("#gp-import-inspection");status.textContent="Lendo e validando…";try{const data=new FormData();data.append("arquivo",file);const response=await fetch(`${API}/importar_camadas/inspecionar`,{method:"POST",body:data}),body=await response.json();if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);$("#gp-import-current-crs").value=body.crs_atual||"CRS não informado";status.textContent=`${body.categoria} · ${body.camadas.length} camada(s) válida(s)`;submit.disabled=false}catch(error){status.textContent=error.message}};
         submit.textContent="Importar";submit.title="Importar os arquivos para o banco e adicioná-los ao mapa";submit.disabled=true;
-        form.onsubmit=async event=>{event.preventDefault();if(!input.files.length)return;submit.disabled=true;submit.textContent="Importando…";const progress=createExecutionProgress(form);await filesAdded(input.files,progress);submit.textContent="Importar";submit.disabled=false};
+        form.onsubmit=async event=>{event.preventDefault();if(!input.files.length)return;if($("#gp-import-clip").checked&&!$("#gp-import-clip-layer").value){$("#gp-import-inspection").textContent="Selecione a camada de máscara.";return}submit.disabled=true;submit.textContent="Importando…";const progress=createExecutionProgress(form),options={reprojetar_crs:$("#gp-import-reproject").checked?$("#gp-import-target-crs").value:"",recortar_camada_id:$("#gp-import-clip").checked?$("#gp-import-clip-layer").value:""};await filesAdded(input.files,progress,options);submit.textContent="Importar";submit.disabled=false};
       }else{
         field.innerHTML=`<label class="required-label" for="gp-wfs-url">URL do serviço ou camada WFS</label><input id="gp-wfs-url" name="caminho_arquivo" type="url" placeholder="https://servidor.exemplo/wfs" required><p class="field-help">Informe a URL do serviço WFS ou uma requisição de camada compatível.</p>`;
         submit.textContent="Importar";submit.title="Importar a camada externa do serviço WFS";submit.disabled=false;
@@ -337,7 +339,7 @@
     if(fit){const bounds=new maplibregl.LngLatBounds();data.features?.forEach(f=>walkCoords(f.geometry?.coordinates,c=>bounds.extend(c)));if(!bounds.isEmpty())state.map.fitBounds(bounds,{padding:40})}
     return true;
   }
-  async function filesAdded(files,taskProgress=null){
+  async function filesAdded(files,taskProgress=null,options={}){
     const selected=[...files];
     if(!selected.length)return;
     if(!taskProgress){activateToolsTab();showEditor();taskProgress=createExecutionProgress($("#gp-editor-view"))}
@@ -345,11 +347,11 @@
     for(const file of selected){
       let createdId=null;
       try{
-        const form=new FormData();form.append("arquivo",file);
-        const response=await fetch(`${API}/camadas/importar-job`,{method:"POST",body:form});let job=await response.json();
-        if(!response.ok)throw new Error(job.detail||`HTTP ${response.status}`);
-        job=await waitForJob(job,taskProgress);const body=job.resultado||{};
-        createdId=body.camada_id||body.raster_id;
+        const form=new FormData();form.append("arquivo",file);if(options.reprojetar_crs)form.append("reprojetar_crs",options.reprojetar_crs);if(options.recortar_camada_id)form.append("recortar_camada_id",options.recortar_camada_id);
+        taskProgress.note(`${file.name}: enviando ao algoritmo importar_camadas`);
+        const response=await fetch(`${API}/importar_camadas`,{method:"POST",body:form});const body=await response.json();
+        if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
+        createdId=body.camada_id||body.raster_id||body.recursos?.[0]?.id;
         taskProgress.note(`${file.name}: atualizando representação da interface`);
         const visible=await refreshLayers(true,createdId?[createdId]:[],createdId,label=>taskProgress.note(`${file.name}: ${label.toLocaleLowerCase("pt-BR")}`));
         if(!createdId||!visible.has(createdId))throw new Error("O recurso foi recebido, mas sua representação espacial não pôde ser criada");
@@ -357,7 +359,7 @@
         emit("recurso-importado",body);
       }catch(e){
         failures++;
-        if(createdId){await fetch(`${API}/camadas/${createdId}`,{method:"DELETE"}).catch(()=>{});removeMapResource(createdId);state.layers=state.layers.filter(layer=>layer.id!==createdId);renderLayers()}
+        if(createdId){removeMapResource(createdId);state.layers=state.layers.filter(layer=>layer.id!==createdId);renderLayers()}
         log(`${file.name}: ${e.message}`,"error");$("#gp-log").classList.add("open")
       }
     }

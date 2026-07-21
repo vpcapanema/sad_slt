@@ -11,7 +11,6 @@ from threading import Lock
 from typing import Any, Callable
 from uuid import uuid4
 
-from api.path_policy import project_path
 from api.repositories import camada_geoespacial_repository
 from api.services.geoespacial_service import geoespacial_service as geo
 from api.services.geoprocessamento_engine import (
@@ -19,6 +18,7 @@ from api.services.geoprocessamento_engine import (
     REQUIRED_PARAMETERS,
     geoprocessamento_engine,
 )
+from api.services.geospatial_upload_storage import store_upload
 
 
 INPUT_KEYS = {
@@ -80,6 +80,7 @@ class GeoprocessamentoJobs:
         with self._lock:
             job = self._jobs[job_id]
             job["status"] = "concluido"
+            job["concluidas"] = job["total"]
             job["percentual"] = 100
             job["resultado"] = result
 
@@ -185,8 +186,7 @@ class GeoprocessamentoJobs:
         name = Path(filename or "camada").name
         digest = sha256(content).hexdigest()
         existing = camada_geoespacial_repository.obter_importada_por_hash(digest)
-        is_raster = Path(name).suffix.lower() in {".tif", ".tiff"}
-        service_tasks = 9 if is_raster else 8
+        service_tasks = 0
         tasks = [
             "Upload recebido", "Nome de arquivo validado", "Conteúdo binário medido",
             "Hash SHA-256 calculado", "Catálogo de importações consultado",
@@ -203,12 +203,12 @@ class GeoprocessamentoJobs:
         self._advance(job_id, "Conteúdo binário medido", {"bytes": len(content)})
         self._advance(job_id, "Hash SHA-256 calculado", {"sha256": digest})
         self._advance(job_id, "Catálogo de importações consultado")
-        self._executor.submit(self._run_import, job_id, name, content, digest, existing, is_raster)
+        self._executor.submit(self._run_import, job_id, name, content, digest, existing)
         return self.get(job_id) or {}
 
     def _run_import(
         self, job_id: str, name: str, content: bytes, digest: str,
-        existing: dict[str, Any] | None, is_raster: bool,
+        existing: dict[str, Any] | None,
     ) -> None:
         try:
             if existing:
@@ -219,19 +219,21 @@ class GeoprocessamentoJobs:
                 self._advance(job_id, "Resposta da importação idempotente preparada")
                 self._complete(job_id, result)
                 return
-            folder = project_path("data/geoespacial/uploads")
-            folder.mkdir(parents=True, exist_ok=True)
-            self._advance(job_id, "Diretório relativo de upload preparado")
-            path = folder / name
-            path.write_bytes(content)
-            self._advance(job_id, "Arquivo recebido persistido no diretório relativo")
-            relative = f"data/geoespacial/uploads/{name}"
-            self._advance(job_id, f"Formato identificado: {'raster' if is_raster else 'vetorial'}")
-            callback: Callable[[str], None] = lambda label: self._advance(job_id, label)
-            if is_raster:
+            stored = store_upload(name, content)
+            self._advance(job_id, f"Diretório datastorage/{stored.category} preparado")
+            self._advance(job_id, "Arquivo original preservado no armazenamento categorizado")
+            relative = stored.relative_import_path
+            self._advance(job_id, f"Formato identificado: {stored.category}")
+            callback: Callable[[str], None] = lambda label: self._append_dynamic(job_id, label)
+            if stored.category == "raster":
                 result = asyncio.run(geo.importar_raster(relative, digest, progress=callback))
             else:
                 result = asyncio.run(geo.importar_camada("local", relative, hash_arquivo=digest, progress=callback))
+            result.update({
+                "categoria_armazenamento": stored.category,
+                "arquivo_original": stored.relative_original_path,
+                "arquivo_compactado": stored.archive,
+            })
             resource_id = result.get("camada_id") or result.get("raster_id")
             self._advance(job_id, "Identificador do recurso importado obtido", {"id": resource_id})
             if not any(item.get("recurso_sessao_id") == resource_id for item in camada_geoespacial_repository.listar()):

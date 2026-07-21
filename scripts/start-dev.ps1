@@ -297,6 +297,22 @@ function Test-DockerDaemon {
     }
 }
 
+function Test-RemoteTcpPort([string]$RemoteHost, [int]$RemotePort, [int]$TimeoutMs = 5000) {
+    $client = [System.Net.Sockets.TcpClient]::new()
+    try {
+        $attempt = $client.BeginConnect($RemoteHost, $RemotePort, $null, $null)
+        if (-not $attempt.AsyncWaitHandle.WaitOne($TimeoutMs)) {
+            return $false
+        }
+        $client.EndConnect($attempt)
+        return $client.Connected
+    } catch {
+        return $false
+    } finally {
+        $client.Dispose()
+    }
+}
+
 function Start-DockerDesktop {
     $desktop = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
     if (-not (Test-Path $desktop)) { return $false }
@@ -328,13 +344,25 @@ function Start-DockerDesktop {
 function Start-SltDatabase {
     if ($env:SLT_USE_SIGMA_POSTGRES -eq "true") {
         Write-Step "Verificando banco SLT na VM ($($env:SIGMA_POSTGRES_HOST):$($env:SIGMA_POSTGRES_PORT))"
+        if (-not (Test-RemoteTcpPort -RemoteHost $env:SIGMA_POSTGRES_HOST -RemotePort ([int]$env:SIGMA_POSTGRES_PORT))) {
+            $publicIp = $null
+            try {
+                $publicIp = (Invoke-RestMethod -Uri "https://api.ipify.org?format=json" -TimeoutSec 5).ip
+            } catch {}
+            Write-Warn "A VM responde em HTTP/HTTPS, mas a porta PostgreSQL $($env:SIGMA_POSTGRES_PORT) esta bloqueada ou o servico esta parado."
+            if ($publicIp) {
+                Write-Warn "IP publico desta maquina: $publicIp (liberar no firewall/whitelist da VM)."
+            }
+            return $false
+        }
         $python = Join-Path $Root ".venv\Scripts\python.exe"
-        & $python -c "import os, psycopg; c=psycopg.connect(os.environ['SLT_DATABASE_URL'], connect_timeout=10); assert c.execute('SELECT 1').fetchone()[0] == 1; c.close()" 2>$null
+        $connectionError = & $python -c "import os, psycopg; c=psycopg.connect(os.environ['SLT_DATABASE_URL'], connect_timeout=10); assert c.execute('SELECT 1').fetchone()[0] == 1; c.close()" 2>&1
         if ($LASTEXITCODE -eq 0) {
             Write-Ok "slt_db remoto acessivel"
             return $true
         }
-        Write-Warn "Nao foi possivel consultar o slt_db remoto"
+        Write-Warn "A porta esta acessivel, mas o PostgreSQL rejeitou a conexao ou a consulta."
+        $connectionError | Select-Object -Last 3 | ForEach-Object { Write-Warn "$_" }
         return $false
     }
 

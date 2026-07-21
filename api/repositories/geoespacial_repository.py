@@ -281,6 +281,8 @@ class GeoespacialRepository:
                 (atributo_id, atributo["nome_coluna"], atributo["rotulo"], Jsonb(definicao)),
             ).fetchone()
             conn.commit()
+        if row is None:
+            raise RuntimeError("O banco não retornou o atributo da Fase 3 criado")
         definicao["atributo_id"] = row["atributo_id"]
         return definicao
 
@@ -501,6 +503,8 @@ class GeoespacialRepository:
                 ),
             ).fetchone()
             conn.commit()
+        if row is None:
+            raise RuntimeError("O banco não retornou a rodada da Fase 3 criada")
         return self._rodada_fase3_db(dict(row))
 
     async def obter_rodada_fase3(self, rodada_id: str) -> dict[str, Any] | None:

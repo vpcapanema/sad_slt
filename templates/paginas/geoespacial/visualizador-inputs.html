@@ -3,7 +3,7 @@
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 
-{% block titulo %}Visualizador de Inputs — SLT{% endblock %}
+{% block titulo %}Visualizador de Insumos Geoespaciais — SLT{% endblock %}
 {% block classes_body %}geoespacial-viewer-page{% endblock %}
 {% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
 
@@ -15,12 +15,25 @@
 
 {% block conteudo %}
 <main class="conteudo-principal geoespacial-viewer-main">
-    <section class="card-visualizador-de-inputs secao-visualizador-de-inputs card geoespacial-viewer-heading"><div><nav class="geoespacial-breadcrumb"><a href="/restrict/">Início</a><span>›</span><a href="/restrict/geoespacial/">Geoespacial</a><span>›</span><span>Insumos geoespaciais</span></nav><h1><i class="fa-solid fa-folder-tree"></i> Insumos geoespaciais</h1><p>Consulte as camadas de entrada, verifique seus metadados e gerencie os recursos temporários da sessão de geoprocessamento.</p></div><div class="geoespacial-viewer-actions"><button type="button" class="btn btn-secondary" id="btn-abrir-camadas"><i class="fa-solid fa-rotate"></i> Atualizar</button><button type="button" class="btn btn-primary" id="btn-importar-camadas"><i class="fa-solid fa-file-arrow-up"></i> Importar camadas</button><input id="viewer-file-input" type="file" accept=".geojson,.json,.kml,.tif,.tiff,.zip,.gpkg,.shp" multiple hidden></div></section>
+    <section class="card-visualizador-de-inputs secao-visualizador-de-inputs card geoespacial-viewer-heading"><div><nav class="geoespacial-breadcrumb"><a href="/restrict/">Início</a><span>›</span><a href="/restrict/geoespacial/">Geoespacial</a><span>›</span><span>Insumos geoespaciais</span></nav><h1><i class="fa-solid fa-folder-tree"></i> Insumos geoespaciais</h1><p>Consulte as camadas de entrada, verifique seus metadados e gerencie os recursos temporários da sessão de geoprocessamento.</p></div><div class="geoespacial-viewer-actions"><button type="button" class="btn btn-secondary" id="btn-abrir-camadas"><i class="fa-solid fa-rotate"></i> Atualizar</button><button type="button" class="btn btn-primary" id="btn-importar-camadas"><i class="fa-solid fa-file-arrow-up"></i> Importar camadas</button></div></section>
     <section class="card-viewer-layer-count secao-viewer-layer-count geoespacial-viewer-workspace card">
-      <aside class="geoespacial-viewer-panel"><header><span><i class="fa-solid fa-layer-group"></i> Camadas de entrada</span><small id="viewer-layer-count">0 itens</small></header><div id="geoespacial-layers-list" class="geoespacial-viewer-list"><p class="hint">Nenhuma camada carregada.</p></div></aside>
+      <aside class="geoespacial-viewer-panel"><header><span><i class="fa-solid fa-layer-group"></i> Camadas operacionais</span><small id="viewer-layer-count">0 itens</small></header><div class="geoespacial-drawing-order-title">Ordem de desenho</div><div id="geoespacial-layers-list" class="geoespacial-viewer-list"><p class="hint">Nenhuma camada carregada.</p></div></aside>
       <div class="geoespacial-map-container"><div id="map-geoespacial" class="geoespacial-map"></div><div class="geoespacial-map-caption"><i class="fa-solid fa-circle-info"></i> Marque uma camada para adicioná-la ao mapa.</div></div>
       <aside class="geoespacial-viewer-panel geoespacial-viewer-panel--details"><header><span><i class="fa-solid fa-circle-info"></i> Detalhes</span></header><div id="geoespacial-operations-list" class="geoespacial-viewer-details"><p class="hint">Selecione uma camada para consultar seus metadados.</p></div><div id="geoespacial-variables-panel" class="hidden"><div id="geoespacial-variables-container"></div></div><div id="geoespacial-progress-panel" class="hidden"><div class="geoespacial-progress-bar"><div id="geoespacial-progress-fill" class="geoespacial-progress-fill"></div></div><p id="geoespacial-progress-text">0%</p><div id="geoespacial-logs"></div></div></aside>
     </section>
+    <dialog id="dialog-importar-camadas" class="geoespacial-import-dialog">
+      <form id="form-importar-camadas" class="geoespacial-import-form">
+        <header><div><h2>Importar camadas</h2><p>O arquivo será validado antes de entrar no datastorage e no banco.</p></div><button type="button" class="btn-icon" id="btn-fechar-importacao" aria-label="Fechar">×</button></header>
+        <label class="geoespacial-import-field"><span>Arquivo</span><input id="viewer-file-input" name="arquivo" type="file" accept=".shp,.geojson,.json,.kml,.gml,.fgb,.gpkg,.sqlite,.tif,.tiff,.img,.asc,.vrt,.jp2,.zip,.rar,.7z,.tar,.tgz,.gz" required></label>
+        <div id="import-inspection-status" class="hint">Selecione um arquivo para identificar tipo, CRS e conteúdo.</div>
+        <label class="geoespacial-import-field"><span>CRS atual da camada</span><input id="import-current-crs" type="text" placeholder="Detectado após selecionar o arquivo" readonly></label>
+        <label class="geoespacial-import-check"><input id="import-reproject-enabled" type="checkbox"><span>Reprojetar CRS</span></label>
+        <label class="geoespacial-import-field"><span>CRS de destino</span><select id="import-target-crs" disabled><option value="EPSG:4674">EPSG:4674 — SIRGAS 2000 (recomendado pelo sistema)</option><option value="EPSG:4326">EPSG:4326 — WGS 84</option><option value="EPSG:31983">EPSG:31983 — SIRGAS 2000 / UTM 23S</option></select></label>
+        <label class="geoespacial-import-check"><input id="import-clip-enabled" type="checkbox"><span>Recortar pela camada</span></label>
+        <label class="geoespacial-import-field"><span>Camada de máscara</span><select id="import-clip-layer" disabled><option value="">Selecione uma camada vetorial</option></select></label>
+        <footer><button type="button" class="btn btn-secondary" id="btn-cancelar-importacao">Cancelar</button><button type="submit" class="btn btn-primary" id="btn-confirmar-importacao" disabled>Validar e importar</button></footer>
+      </form>
+    </dialog>
   </main>
 {% endblock %}
 
