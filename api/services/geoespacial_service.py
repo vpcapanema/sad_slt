@@ -264,10 +264,10 @@ class GeoespacialService:
         return removido
 
     async def camada_geojson(self, camada_id: str) -> dict[str, Any]:
-        gdf = self.obter_camada_dados(camada_id).copy()
-        if gdf.crs and not gdf.crs.equals("EPSG:4326"):
-            gdf = gdf.to_crs("EPSG:4326")
-        return json.loads(gdf.to_json())
+        geojson = camada_geoespacial_repository.carregar_vetor_geojson(camada_id)
+        if geojson is None:
+            raise ValueError(f"Camada vetorial {camada_id} não encontrada")
+        return geojson
 
     async def atributos_camada(self, camada_id: str, limite: int = 100, offset: int = 0) -> dict[str, Any]:
         gdf = self.obter_camada_dados(camada_id).copy()

@@ -130,7 +130,7 @@
   function configureLoadOperation(){
     const form=$("#gp-op-form"),type=form?.elements.tipo_entrada;
     if(!form||!type)return;
-    const op=OPS.flatMap(group=>group[1]).find(item=>item[0]==="OP-01"),submit=form.querySelector('.editor-actions .primary');
+    const op=OPS.flatMap(group=>group[1]).find(item=>item[0]==="OP-01"),submit=form.querySelector('.editor-actions .primary');let inspectionToken="";
     const originalAdd=form.querySelector('[data-add-function]'),head=$("#gp-editor-view .editor-head");
     form.classList.add("gp-load-form");head.classList.add("tool-parameter-head");originalAdd.hidden=true;
     if(!head.querySelector('[data-add-load-function]')){
@@ -147,9 +147,9 @@
         $("[data-select-local]").onclick=()=>input.click();
         $("#gp-import-reproject").onchange=event=>$("#gp-import-target-crs").disabled=!event.target.checked;
         $("#gp-import-clip").onchange=event=>$("#gp-import-clip-layer").disabled=!event.target.checked;
-        input.onchange=async()=>{const file=input.files[0];name.value=file?.name||"";submit.disabled=true;if(!file)return;const status=$("#gp-import-inspection");status.textContent="Lendo e validando…";try{const data=new FormData();data.append("arquivo",file);const response=await fetch(`${API}/importar_camadas/inspecionar`,{method:"POST",body:data}),body=await response.json();if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);$("#gp-import-current-crs").value=body.crs_atual||"CRS não informado";status.textContent=`${body.categoria} · ${body.camadas.length} camada(s) válida(s)`;submit.disabled=false}catch(error){status.textContent=error.message}};
+        input.onchange=async()=>{const file=input.files[0];inspectionToken="";name.value=file?.name||"";submit.disabled=true;if(!file)return;const status=$("#gp-import-inspection");status.textContent="Lendo e validando…";try{const data=new FormData();data.append("arquivo",file);const response=await fetch(`${API}/importar_camadas/inspecionar`,{method:"POST",body:data}),body=await response.json();if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);inspectionToken=body.token_importacao||"";$("#gp-import-current-crs").value=body.crs_atual||"CRS não informado";const invalidas=body.camadas.reduce((total,camada)=>total+Number(camada.geometrias_invalidas||0),0);status.textContent=`${body.categoria} · ${body.camadas.length} camada(s) importável(is)${invalidas?` · ${invalidas} geometria(s) inválida(s) serão destacadas`:" · geometrias válidas"}`;submit.disabled=false}catch(error){status.textContent=error.message}};
         submit.textContent="Importar";submit.title="Importar os arquivos para o banco e adicioná-los ao mapa";submit.disabled=true;
-        form.onsubmit=async event=>{event.preventDefault();if(!input.files.length)return;if($("#gp-import-clip").checked&&!$("#gp-import-clip-layer").value){$("#gp-import-inspection").textContent="Selecione a camada de máscara.";return}submit.disabled=true;submit.textContent="Importando…";const progress=createExecutionProgress(form),options={reprojetar_crs:$("#gp-import-reproject").checked?$("#gp-import-target-crs").value:"",recortar_camada_id:$("#gp-import-clip").checked?$("#gp-import-clip-layer").value:""};await filesAdded(input.files,progress,options);submit.textContent="Importar";submit.disabled=false};
+        form.onsubmit=async event=>{event.preventDefault();if(!input.files.length)return;if($("#gp-import-clip").checked&&!$("#gp-import-clip-layer").value){$("#gp-import-inspection").textContent="Selecione a camada de máscara.";return}submit.disabled=true;submit.textContent="Importando…";const progress=createExecutionProgress(form),options={reprojetar_crs:$("#gp-import-reproject").checked?$("#gp-import-target-crs").value:"",recortar_camada_id:$("#gp-import-clip").checked?$("#gp-import-clip-layer").value:"",token_importacao:inspectionToken};await filesAdded(input.files,progress,options);inspectionToken="";submit.textContent="Importar";submit.disabled=false};
       }else{
         field.innerHTML=`<label class="required-label" for="gp-wfs-url">URL do serviço ou camada WFS</label><input id="gp-wfs-url" name="caminho_arquivo" type="url" placeholder="https://servidor.exemplo/wfs" required><p class="field-help">Informe a URL do serviço WFS ou uma requisição de camada compatível.</p>`;
         submit.textContent="Importar";submit.title="Importar a camada externa do serviço WFS";submit.disabled=false;
@@ -333,9 +333,10 @@
     state.geometryTypes[id]=[...new Set((data.features||[]).map(feature=>feature.geometry?.type).filter(Boolean))];
     const color=layerColor(id,state.geometryTypes[id]);
     state.map.addSource(id,{type:"geojson",data});
-    state.map.addLayer({id,type:"fill",source:id,paint:{"fill-color":color,"fill-opacity":.32,"fill-outline-color":color},filter:["==",["geometry-type"],"Polygon"]});
-    state.map.addLayer({id:id+"-line",type:"line",source:id,paint:{"line-color":color,"line-width":2},filter:["==",["geometry-type"],"LineString"]});
-    state.map.addLayer({id:id+"-point",type:"circle",source:id,paint:{"circle-color":color,"circle-radius":5,"circle-stroke-color":"#fff","circle-stroke-width":1},filter:["==",["geometry-type"],"Point"]});
+    const invalid=["==",["get","slt_geometria_valida"],false],byValidity=["case",invalid,"#dc2626",color];
+    state.map.addLayer({id,type:"fill",source:id,paint:{"fill-color":byValidity,"fill-opacity":["case",invalid,.68,.32],"fill-outline-color":byValidity},filter:["==",["geometry-type"],"Polygon"]});
+    state.map.addLayer({id:id+"-line",type:"line",source:id,paint:{"line-color":byValidity,"line-width":["case",invalid,4,2]},filter:["==",["geometry-type"],"LineString"]});
+    state.map.addLayer({id:id+"-point",type:"circle",source:id,paint:{"circle-color":byValidity,"circle-radius":["case",invalid,8,5],"circle-stroke-color":"#fff","circle-stroke-width":1},filter:["==",["geometry-type"],"Point"]});
     if(fit){const bounds=new maplibregl.LngLatBounds();data.features?.forEach(f=>walkCoords(f.geometry?.coordinates,c=>bounds.extend(c)));if(!bounds.isEmpty())state.map.fitBounds(bounds,{padding:40})}
     return true;
   }
@@ -347,7 +348,7 @@
     for(const file of selected){
       let createdId=null;
       try{
-        const form=new FormData();form.append("arquivo",file);if(options.reprojetar_crs)form.append("reprojetar_crs",options.reprojetar_crs);if(options.recortar_camada_id)form.append("recortar_camada_id",options.recortar_camada_id);
+        const form=new FormData();if(options.token_importacao)form.append("token_importacao",options.token_importacao);else form.append("arquivo",file);if(options.reprojetar_crs)form.append("reprojetar_crs",options.reprojetar_crs);if(options.recortar_camada_id)form.append("recortar_camada_id",options.recortar_camada_id);
         taskProgress.note(`${file.name}: enviando ao algoritmo importar_camadas`);
         const response=await fetch(`${API}/importar_camadas`,{method:"POST",body:form});const body=await response.json();
         if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);

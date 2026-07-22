@@ -7,3 +7,4 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+data/geoespacial/local/vegetacao_sp/InventarioFlorestal2020.zip

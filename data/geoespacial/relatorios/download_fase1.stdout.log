@@ -1,0 +1,27 @@
+[ucs_mma] MMA/IBAMA — Unidades de Conservação — CNUC/MMA
+  OK — 1 arquivo(s) bruto(s)
+[vegetacao_sp] IPA/SEMIL — DataGEO — Inventário Florestal 2020
+  OK — 1 arquivo(s) bruto(s)
+[aprm_sp] SEMIL — DataGEO — APRM — subáreas e zoneamentos
+  ERRO — File is not a zip file
+[cavidades] CECAV/ICMBio — DataGEO — Cavidades naturais
+  OK — 1 arquivo(s) bruto(s)
+[terras_indigenas] FUNAI/IBAMA — Terras Indígenas
+  ERRO — Solicitação de exportação falhou: Requested operation is not supported by this service.
+[quilombos] INCRA/IBAMA — Territórios Quilombolas
+  ERRO — Solicitação de exportação falhou: Requested operation is not supported by this service.
+[contaminadas] CETESB/SEMIL — DataGEO — Áreas Contaminadas e Reabilitadas
+  OK — 1 arquivo(s) bruto(s)
+[inundacao] Instituto Geológico/SEMIL — DataGEO — Áreas de risco de inundação
+  OK — 1 arquivo(s) bruto(s)
+[movimento_massa] Instituto Geológico/SEMIL — DataGEO — Áreas de risco de escorregamento
+  ERRO — File is not a zip file
+[bens_tombados] IPHAN/IBAMA — Bens materiais protegidos
+  ERRO — Solicitação de exportação falhou: Requested operation is not supported by this service.
+[sitios_arqueologicos] IPHAN/IBAMA — Sítios arqueológicos
+  ERRO — Solicitação de exportação falhou: Requested operation is not supported by this service.
+[assentamentos] INCRA/IBAMA — Assentamentos
+  ERRO — Solicitação de exportação falhou: Requested operation is not supported by this service.
+[embargos_ibama] IBAMA — Embargos ambientais federais
+  ERRO — Solicitação de exportação falhou: Unable to complete operation.
+Relatório: D:\REPOSITORIOS\sistema_apoio_a_tomada_de_decisao_web\data\geoespacial\relatorios\inventario_fontes_brutas_fase1.json

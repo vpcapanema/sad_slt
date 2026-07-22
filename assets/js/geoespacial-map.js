@@ -4,6 +4,22 @@
     map: null,
     layers: new Map(),
     layerIds: [],
+    symbolStyles: new Map(),
+    symbolSequence: 0,
+
+    getLayerStyle: function (layerId) {
+      if (this.symbolStyles.has(layerId)) return this.symbolStyles.get(layerId);
+      const colors = ["#e76f51", "#2a9d8f", "#3a86ff", "#9b5de5", "#f4a261", "#00a6a6", "#ef476f", "#577590", "#6a994e", "#ff7f11", "#4361ee", "#8f2d56"];
+      const index = this.symbolSequence++;
+      const style = {
+        color: colors[index % colors.length],
+        fillOpacity: .25 + (index % 4) * .09,
+        lineWidth: 1.7 + (index % 5) * .55,
+        pointRadius: 4.5 + (index % 6) * .75,
+      };
+      this.symbolStyles.set(layerId, style);
+      return style;
+    },
 
     init: function (elementId, options = {}) {
       if (this.map) {
@@ -15,6 +31,7 @@
         zoom: 6.2,
         style: {
           version: 8,
+          glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
           sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256 } },
           layers: [{ id: "osm-layer", type: "raster", source: "osm" }],
         },
@@ -39,6 +56,7 @@
 
       const sourceId = `source-${layerId}`;
       const mapLayerIds = [`layer-${layerId}-fill`, `layer-${layerId}-line`, `layer-${layerId}-point`];
+      const labelLayerId = `layer-${layerId}-label`;
 
       if (!this.map.getSource(sourceId)) {
         this.map.addSource(sourceId, {
@@ -47,11 +65,16 @@
         });
       }
 
-      this.map.addLayer({ id: mapLayerIds[0], type: "fill", source: sourceId, filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": options.color || "#1683c4", "fill-opacity": .34, "fill-outline-color": "#075b89" } });
-      this.map.addLayer({ id: mapLayerIds[1], type: "line", source: sourceId, filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": options.color || "#075b89", "line-width": 2 } });
-      this.map.addLayer({ id: mapLayerIds[2], type: "circle", source: sourceId, filter: ["==", ["geometry-type"], "Point"], paint: { "circle-color": options.color || "#d97819", "circle-radius": 5, "circle-stroke-color": "#fff", "circle-stroke-width": 1 } });
+      const alertColor = "#dc2626";
+      const uniqueStyle = options.uniqueStyle ? this.getLayerStyle(layerId) : null;
+      const style = { color: options.color || uniqueStyle?.color || "#1683c4", fillOpacity: uniqueStyle?.fillOpacity || .34, lineWidth: uniqueStyle?.lineWidth || 2, pointRadius: uniqueStyle?.pointRadius || 5 };
+      const colorByValidity = (normal) => ["case", ["==", ["get", "slt_geometria_valida"], false], alertColor, normal];
+      this.map.addLayer({ id: mapLayerIds[0], type: "fill", source: sourceId, filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": colorByValidity(style.color), "fill-opacity": ["case", ["==", ["get", "slt_geometria_valida"], false], .68, style.fillOpacity], "fill-outline-color": colorByValidity(style.color) } });
+      this.map.addLayer({ id: mapLayerIds[1], type: "line", source: sourceId, filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": colorByValidity(style.color), "line-width": ["case", ["==", ["get", "slt_geometria_valida"], false], style.lineWidth + 2, style.lineWidth] } });
+      this.map.addLayer({ id: mapLayerIds[2], type: "circle", source: sourceId, filter: ["==", ["geometry-type"], "Point"], paint: { "circle-color": colorByValidity(style.color), "circle-radius": ["case", ["==", ["get", "slt_geometria_valida"], false], style.pointRadius + 3, style.pointRadius], "circle-stroke-color": "#fff", "circle-stroke-width": 1 } });
+      this.map.addLayer({ id: labelLayerId, type: "symbol", source: sourceId, layout: { visibility: options.labelsVisible ? "visible" : "none", "text-field": options.label || layerId, "text-font": ["Noto Sans Regular"], "text-size": 12, "text-anchor": "center", "text-allow-overlap": false }, paint: { "text-color": "#173f2b", "text-halo-color": "#fff", "text-halo-width": 2 } });
 
-      this.layers.set(layerId, { sourceId, mapLayerIds, data: geojsonData });
+      this.layers.set(layerId, { sourceId, mapLayerIds, labelLayerId, style, labelsVisible: Boolean(options.labelsVisible), visible: true, data: geojsonData });
       this.layerIds.push(layerId);
 
       return mapLayerIds;
@@ -60,6 +83,7 @@
     removeLayer: function (layerId) {
       const layerInfo = this.layers.get(layerId);
       if (layerInfo && this.map) {
+        if (this.map.getLayer(layerInfo.labelLayerId)) this.map.removeLayer(layerInfo.labelLayerId);
         layerInfo.mapLayerIds.forEach((id) => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
         if (this.map.getSource(layerInfo.sourceId)) {
           this.map.removeSource(layerInfo.sourceId);
@@ -73,7 +97,16 @@
       const layerInfo = this.layers.get(layerId);
       if (layerInfo && this.map) {
         layerInfo.mapLayerIds.forEach((id) => { if (this.map.getLayer(id)) this.map.setLayoutProperty(id, "visibility", visible ? "visible" : "none"); });
+        layerInfo.visible = visible;
+        if (this.map.getLayer(layerInfo.labelLayerId)) this.map.setLayoutProperty(layerInfo.labelLayerId, "visibility", visible && layerInfo.labelsVisible ? "visible" : "none");
       }
+    },
+
+    toggleLabels: function (layerId, visible) {
+      const layerInfo = this.layers.get(layerId);
+      if (!layerInfo || !this.map) return;
+      layerInfo.labelsVisible = visible;
+      if (this.map.getLayer(layerInfo.labelLayerId)) this.map.setLayoutProperty(layerInfo.labelLayerId, "visibility", visible && layerInfo.visible ? "visible" : "none");
     },
 
     clearLayers: function () {

@@ -19,6 +19,7 @@ from api.services.geoprocessamento_engine import (
     geoprocessamento_engine,
 )
 from api.services.geospatial_upload_storage import store_upload
+from api.services.importar_camadas_service import importar_camadas
 
 
 INPUT_KEYS = {
@@ -205,6 +206,34 @@ class GeoprocessamentoJobs:
         self._advance(job_id, "Catálogo de importações consultado")
         self._executor.submit(self._run_import, job_id, name, content, digest, existing)
         return self.get(job_id) or {}
+
+    def create_validated_import(
+        self, filename: str | None, content: bytes | None, *, target_crs: str | None = None,
+        clip_layer_id: str | None = None, inspection_token: str | None = None,
+    ) -> dict[str, Any]:
+        tasks = ["Solicitação de importação registrada", "Pipeline transacional iniciado", "Processo finalizado"]
+        job_id = self._new("importacao_validada", tasks)
+        self._advance(job_id, "Solicitação de importação registrada", {"arquivo": filename or "inspeção prévia"})
+        self._executor.submit(
+            self._run_validated_import, job_id, filename, content, target_crs,
+            clip_layer_id, inspection_token,
+        )
+        return self.get(job_id) or {}
+
+    def _run_validated_import(
+        self, job_id: str, filename: str | None, content: bytes | None,
+        target_crs: str | None, clip_layer_id: str | None, inspection_token: str | None,
+    ) -> None:
+        try:
+            self._advance(job_id, "Pipeline transacional de importação iniciado")
+            callback: Callable[[str], None] = lambda label: self._append_dynamic(job_id, label)
+            result = asyncio.run(importar_camadas(
+                filename, content, target_crs=target_crs, clip_layer_id=clip_layer_id,
+                inspection_token=inspection_token, progress=callback,
+            ))
+            self._complete(job_id, result)
+        except Exception as exc:
+            self._fail(job_id, exc)
 
     def _run_import(
         self, job_id: str, name: str, content: bytes, digest: str,

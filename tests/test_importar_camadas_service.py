@@ -40,8 +40,22 @@ def test_polygon_area_hectares_and_perimeter_are_calculated() -> None:
     assert result.iloc[0]["perimetro_m"] == pytest.approx(4000.0)
 
 
-def test_invalid_geometry_aborts_validation() -> None:
+def test_invalid_geometry_is_importable_and_annotated() -> None:
     bowtie = Polygon([(0, 0), (1, 1), (1, 0), (0, 1), (0, 0)])
     frame = gpd.GeoDataFrame({"geometry": [bowtie]}, crs="EPSG:4326")
-    with pytest.raises(ValueError, match="inválidas=1"):
-        validate_vector(frame, target_crs=None, clip_frame=None)
+    result, metadata = validate_vector(frame, target_crs=None, clip_frame=None)
+    assert result.iloc[0]["slt_geometria_valida"] == False
+    assert "Auto-interseção" in result.iloc[0]["slt_diagnostico_geometria"]
+    assert metadata["geometrias_validas"] is False
+    assert metadata["geometrias_invalidas"] == 1
+
+
+def test_invalid_geometry_reports_topological_reason_and_feature() -> None:
+    bowtie = Polygon([(0, 0), (1, 1), (1, 0), (0, 1), (0, 0)])
+    frame = gpd.GeoDataFrame({"id": ["area-7"], "geometry": [bowtie]}, crs="EPSG:4326")
+
+    result, metadata = validate_vector(frame, target_crs=None, clip_frame=None)
+    diagnostic = metadata["diagnostico_geometrias"]
+    assert any("Auto-interseção" in reason for reason in diagnostic["problemas"])
+    assert any("id=area-7" in refs for refs in diagnostic["problemas"].values())
+    assert "Auto-interseção" in result.iloc[0]["slt_diagnostico_geometria"]

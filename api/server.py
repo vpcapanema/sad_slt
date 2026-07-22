@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -190,6 +191,7 @@ AHP_CLEAN_PAGES.update(
         "alternativas": "step7-alternativas.html",
     }
 )
+app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 
 
 @app.get("/restrict/ahp/{pagina}/", include_in_schema=False)

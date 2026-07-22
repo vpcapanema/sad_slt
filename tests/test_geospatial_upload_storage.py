@@ -38,6 +38,14 @@ def test_zip_shapefile_goes_to_vector(isolated_storage: Path) -> None:
     assert result.original_path.read_bytes() == content
 
 
+def test_storage_filename_is_normalized_without_rewriting_zip(isolated_storage: Path) -> None:
+    content = _zip({"Área de Risco.shp": b"shp", "Área de Risco.dbf": b"dbf"})
+    result = storage.store_upload("ÁreasDe Risco - 2026.ZIP", content)
+    assert result.original_path.name == "areas_de_risco_2026.zip"
+    assert result.original_path.read_bytes() == content
+    assert result.import_path.name == "area_de_risco.shp"
+
+
 def test_zip_geotiff_goes_to_raster(isolated_storage: Path) -> None:
     result = storage.store_upload("declividade.zip", _zip({"declividade.tif": b"tiff"}))
     assert result.category == "raster"

@@ -1,0 +1,186 @@
+{
+  "gerado_em": "2026-07-22T03:38:52.417429+00:00",
+  "diretorio_fontes_brutas": "D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\data\\geoespacial\\local",
+  "processamento_aplicado": "nenhum",
+  "fontes": {
+    "ucs_mma": {
+      "status": "baixada",
+      "titulo": "Unidades de Conservação — CNUC/MMA",
+      "orgao": "MMA/IBAMA",
+      "url_oficial": "https://pamgia.ibama.gov.br/server/rest/services/BasesSincronizadas/lim_unidades_conserva%C3%A7%C3%A3o_mma_a/FeatureServer/0",
+      "arquivos": [
+        {
+          "caminho": "ucs_mma\\ucs_mma.zip",
+          "bytes": 21849445,
+          "sha256": "ade029786653b1f80b4205ea2a69a39182b376e0cd727b18f07b0d1aea7ce2f2"
+        }
+      ]
+    },
+    "vegetacao_sp": {
+      "status": "baixada",
+      "titulo": "Inventário Florestal 2020",
+      "orgao": "IPA/SEMIL — DataGEO",
+      "url_oficial": "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows",
+      "arquivos": [
+        {
+          "caminho": "vegetacao_sp\\InventarioFlorestal2020.zip",
+          "bytes": 838562991,
+          "sha256": "758aecbac4b66ea0baf5ef67b1240d2425453203412ae1541aa09352ecd17219"
+        }
+      ]
+    },
+    "aprm_sp": {
+      "status": "baixada",
+      "titulo": "APRM — subáreas e zoneamentos",
+      "orgao": "SEMIL — DataGEO",
+      "url_oficial": "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows",
+      "arquivos": [
+        {
+          "caminho": "aprm_sp\\APRMATC_SUBAREAS_2015_POL.zip",
+          "bytes": 318865,
+          "sha256": "2ca4f4b2df733c069f52cbe1c38e8470e85d1e2e3f3e321a5ed3e7a46c93e7d5"
+        },
+        {
+          "caminho": "aprm_sp\\APRMAJ_ZONEAMENTO_10_SMA_2015_POL.zip",
+          "bytes": 860083,
+          "sha256": "c96442b8c82566d29dc787537d362b9ccae994c01c570ef68494274ac1dffe9e"
+        },
+        {
+          "caminho": "aprm_sp\\APRMB_SMA2010.zip",
+          "bytes": 5727600,
+          "sha256": "3f640e33835fbdba517f1d691e6b11745414e19f6a63c9a7f5e02285dd4c0551"
+        },
+        {
+          "caminho": "aprm_sp\\APRMG_SMA2007.zip",
+          "bytes": 331458,
+          "sha256": "27abc3ee8460f73f96cf66a02152d609bbd3c03ff3d34a7e6e20b217bda789f5"
+        }
+      ]
+    },
+    "cavidades": {
+      "status": "baixada",
+      "titulo": "Cavidades naturais",
+      "orgao": "CECAV/ICMBio — DataGEO",
+      "url_oficial": "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows",
+      "arquivos": [
+        {
+          "caminho": "cavidades\\CavidadesCecav.zip",
+          "bytes": 40146,
+          "sha256": "3a2206b2aebebf57018f511b186a5272e59a781f9c0e32b6870e55093f601857"
+        }
+      ]
+    },
+    "terras_indigenas": {
+      "status": "baixada",
+      "titulo": "Terras Indígenas",
+      "orgao": "FUNAI",
+      "url_oficial": "https://geoserver.funai.gov.br/geoserver/Funai/ows",
+      "arquivos": [
+        {
+          "caminho": "terras_indigenas\\tis_poligonais.zip",
+          "bytes": 442583,
+          "sha256": "f86808d691e281ed102d85e74b33ebe185424dcb2c685df5bfefcf0282979911"
+        }
+      ]
+    },
+    "quilombos": {
+      "status": "baixada",
+      "titulo": "Territórios Quilombolas",
+      "orgao": "INCRA",
+      "url_oficial": "https://certificacao.incra.gov.br/csv_shp/zip/%C3%81reas%20de%20Quilombolas.zip",
+      "arquivos": [
+        {
+          "caminho": "quilombos\\quilombos.zip",
+          "bytes": 3014656,
+          "sha256": "27b93e58fe8f487e990549c06f131f6881d14b935637ea652292a9b7c2417ca2"
+        }
+      ]
+    },
+    "contaminadas": {
+      "status": "baixada",
+      "titulo": "Áreas Contaminadas e Reabilitadas",
+      "orgao": "CETESB/SEMIL — DataGEO",
+      "url_oficial": "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows",
+      "arquivos": [
+        {
+          "caminho": "contaminadas\\VWM_AREAS_CONTAMINADAS_GEODADOS_CETESB_PTO.zip",
+          "bytes": 963064,
+          "sha256": "23f4ccb1ce6f1c084e1c5cf6d7240c6a9993c50b84a3a5e15bc3ec36a0d41a57"
+        }
+      ]
+    },
+    "inundacao": {
+      "status": "baixada",
+      "titulo": "Áreas de risco de inundação",
+      "orgao": "Instituto Geológico/SEMIL — DataGEO",
+      "url_oficial": "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows",
+      "arquivos": [
+        {
+          "caminho": "inundacao\\VWM_AREA_RISCO_INUNDACAO_IG_2014_POL.zip",
+          "bytes": 344761,
+          "sha256": "ae3e822a2501e2210a0b9337d6aac94accb5e6cb492fad8565350c3d7891eb1e"
+        }
+      ]
+    },
+    "movimento_massa": {
+      "status": "baixada",
+      "titulo": "Áreas de risco de escorregamento",
+      "orgao": "Instituto Geológico/SEMIL — DataGEO",
+      "url_oficial": "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows",
+      "arquivos": [
+        {
+          "caminho": "movimento_massa\\VWM_AREA_RISCO_ESCORREGAMENTO_IG_2014_POL.zip",
+          "bytes": 398932,
+          "sha256": "4864844653158e828b38943b740dca3d47ac1725a330aea56a9212777bdf87c0"
+        }
+      ]
+    },
+    "sitios_arqueologicos": {
+      "status": "baixada",
+      "titulo": "Sítios arqueológicos",
+      "orgao": "IPHAN/SEMIL — DataGEO",
+      "url_oficial": "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows",
+      "arquivos": [
+        {
+          "caminho": "sitios_arqueologicos\\SitiosArqueologicos.zip",
+          "bytes": 3890,
+          "sha256": "fabd87ee9d3e2ae1a3685a37cb43178f8601f0e130084a0b7bd985159788faf9"
+        }
+      ]
+    },
+    "assentamentos": {
+      "status": "baixada",
+      "titulo": "Assentamentos",
+      "orgao": "INCRA",
+      "url_oficial": "https://certificacao.incra.gov.br/csv_shp/zip/Assentamento%20Brasil.zip",
+      "arquivos": [
+        {
+          "caminho": "assentamentos\\assentamentos.zip",
+          "bytes": 49948213,
+          "sha256": "2f415912df680d1c302a984ea311fd8b289844a3905efe2f25f8655b3ad6562b"
+        }
+      ]
+    },
+    "embargos_ibama": {
+      "status": "baixada",
+      "titulo": "Embargos ambientais federais",
+      "orgao": "IBAMA — PAMGIA/SISCOM",
+      "url_oficial": "https://pamgia.ibama.gov.br/server/rest/services/01_Publicacoes_Bases/embargos_siscom_brasil/FeatureServer/2",
+      "arquivos": [
+        {
+          "caminho": "embargos_ibama\\embargos_ibama.zip",
+          "bytes": 1236,
+          "sha256": "83e7bdb497b152ca878e757ef8c378374c0ad99a9374bbfb3be9349e81f07891"
+        }
+      ]
+    }
+  },
+  "criterios_sem_publicacao_geoespacial_aberta_confirmada": [
+    "zona de amortecimento de UC estadual",
+    "zona de amortecimento de UC federal",
+    "faixa de domínio ou servidão de infraestrutura",
+    "embargo ambiental estadual ativo",
+    "interdição ativa da CETESB",
+    "bens materiais tombados do IPHAN (serviço público apenas para consulta; sem exportação Shapefile)"
+  ]
+}

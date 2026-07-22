@@ -325,6 +325,30 @@ def carregar_vetor(recurso_id: str) -> tuple[gpd.GeoDataFrame, dict[str, Any]] |
     return gdf, camada
 
 
+def carregar_vetor_geojson(recurso_id: str) -> dict[str, Any] | None:
+    """Monta o GeoJSON integral diretamente no PostGIS, sem alterar geometrias."""
+    with get_connection() as conn:
+        found = _find_layer(conn, recurso_id)
+        if not found or found[1]["tipo"] != "vetor":
+            return None
+        categoria, camada = found
+        features = STORAGES[categoria][1]
+        row = conn.execute(
+            sql.SQL("""SELECT jsonb_build_object(
+                    'type','FeatureCollection',
+                    'features',COALESCE(jsonb_agg(jsonb_build_object(
+                        'type','Feature',
+                        'properties',propriedades,
+                        'geometry',ST_AsGeoJSON(geom,15)::jsonb
+                    ) ORDER BY ordem) FILTER (WHERE geom IS NOT NULL),'[]'::jsonb)
+                ) AS geojson FROM geoprocessamento.{} WHERE camada_id=%s""").format(
+                sql.Identifier(features)
+            ),
+            (camada["id"],),
+        ).fetchone()
+    return dict(row["geojson"]) if row and row["geojson"] else {"type": "FeatureCollection", "features": []}
+
+
 def carregar_raster(recurso_id: str) -> tuple[bytes, dict[str, Any]] | None:
     with get_connection() as conn:
         found = _find_layer(conn, recurso_id)

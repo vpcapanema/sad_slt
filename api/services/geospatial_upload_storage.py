@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import shutil
 import tarfile
+import unicodedata
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -63,7 +65,34 @@ def _safe_name(name: str) -> str:
     safe = Path(name or "camada").name.strip().replace("\x00", "")
     if not safe or safe in {".", ".."}:
         raise ValueError("Nome de arquivo inválido")
-    return safe
+    lower = safe.lower()
+    compound_extension = next(
+        (extension for extension in (".tar.gz", ".tar.bz2", ".tar.xz") if lower.endswith(extension)),
+        None,
+    )
+    extension = compound_extension or Path(safe).suffix.lower()
+    stem = safe[:-len(extension)] if extension else safe
+    stem = re.sub(r"(?<=[a-zà-öø-ÿ0-9])(?=[A-ZÀ-ÖØ-Þ])", " ", stem)
+    stem = re.sub(r"(?<=[A-ZÀ-ÖØ-Þ])(?=[A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ])", " ", stem)
+    stem = unicodedata.normalize("NFKD", stem)
+    stem = "".join(character for character in stem if not unicodedata.combining(character))
+    stem = re.sub(r"[^A-Za-z0-9]+", "_", stem).strip("_").lower() or "camada"
+    return f"{stem}{extension}"
+
+
+def _normalize_extracted_tree(root: Path, category: str) -> None:
+    """Normaliza cópias extraídas, sem tocar no conteúdo original do pacote."""
+    if category == "geodatabase":
+        return
+    paths = sorted(root.rglob("*"), key=lambda path: len(path.parts), reverse=True)
+    for path in paths:
+        normalized = _safe_name(path.name)
+        destination = path.with_name(normalized)
+        if destination == path:
+            continue
+        if destination.exists():
+            raise ValueError(f"A normalização gera nomes duplicados no pacote: {normalized}")
+        path.rename(destination)
 
 
 def _archive_kind(path: Path) -> str | None:
@@ -225,6 +254,7 @@ def prepare_upload(filename: str, content: bytes) -> PreparedUpload:
             if extracted.exists():
                 shutil.rmtree(extracted)
             _extract(probe, extracted, archive_kind)
+            _normalize_extracted_tree(extracted, category)
             import_path = _primary_dataset(extracted, category)
         else:
             import_path = probe
@@ -251,7 +281,7 @@ def commit_prepared(prepared: PreparedUpload) -> StoredUpload:
     folder = project_path(f"data/geoespacial/uploads/datastorage/{prepared.category}")
     folder.mkdir(parents=True, exist_ok=True)
     destination = folder / prepared.name
-    if destination.exists() and hashlib.sha256(destination.read_bytes()).hexdigest() != prepared.sha256:
+    if destination.exists() and _file_sha256(destination) != prepared.sha256:
         destination = folder / f"{destination.stem}_{prepared.sha256[:12]}{destination.suffix}"
     created_original = not destination.exists()
     if created_original:
@@ -275,6 +305,14 @@ def commit_prepared(prepared: PreparedUpload) -> StoredUpload:
         prepared.category, destination, import_path, prepared.archive,
         prepared.members, prepared.sha256, created_original, created_extracted,
     )
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def remove_stored(stored: StoredUpload) -> None:

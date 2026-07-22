@@ -326,19 +326,21 @@ async def deletar_camada(camada_id: str) -> dict[str, str]:
 @router.post("/camadas/importar", deprecated=True, include_in_schema=False)
 @router.post("/camadas/upload", deprecated=True, include_in_schema=False)
 async def importar_arquivo_camada(
-    arquivo: UploadFile = File(...),
+    arquivo: UploadFile | None = File(None),
+    token_importacao: str | None = Form(None),
     reprojetar_crs: str | None = Form(None),
     recortar_camada_id: str | None = Form(None),
 ) -> dict:
     """Valida, classifica, transforma e importa camadas com rollback compensatório."""
-    nome = Path(arquivo.filename or "camada").name
-    conteudo = await arquivo.read()
+    nome = Path(arquivo.filename or "camada").name if arquivo else None
+    conteudo = await arquivo.read() if arquivo else None
     try:
         return await executar_importacao_camadas(
             nome,
             conteudo,
             target_crs=(reprojetar_crs or "").strip() or None,
             clip_layer_id=(recortar_camada_id or "").strip() or None,
+            inspection_token=(token_importacao or "").strip() or None,
         )
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -354,6 +356,26 @@ async def inspecionar_arquivo_camada(arquivo: UploadFile = File(...)) -> dict:
         )
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/importar_camadas/job", status_code=status.HTTP_202_ACCEPTED)
+async def iniciar_importacao_validada_com_progresso(
+    arquivo: UploadFile | None = File(None),
+    token_importacao: str | None = Form(None),
+    reprojetar_crs: str | None = Form(None),
+    recortar_camada_id: str | None = Form(None),
+) -> dict:
+    """Executa o importador transacional novo expondo microtarefas reais."""
+    nome = Path(arquivo.filename or "camada").name if arquivo else None
+    conteudo = await arquivo.read() if arquivo else None
+    if not token_importacao and not arquivo:
+        raise HTTPException(status_code=422, detail="Informe um arquivo ou token de inspeção")
+    return geoprocessamento_jobs.create_validated_import(
+        nome, conteudo,
+        target_crs=(reprojetar_crs or "").strip() or None,
+        clip_layer_id=(recortar_camada_id or "").strip() or None,
+        inspection_token=(token_importacao or "").strip() or None,
+    )
 
 
 @router.post("/camadas/importar-job", status_code=status.HTTP_202_ACCEPTED)
