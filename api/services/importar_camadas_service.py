@@ -128,11 +128,21 @@ def _translate_validity_reason(reason: str) -> str:
     return reason
 
 
+def _is_topologically_invalid(geometry: BaseGeometry | None) -> bool:
+    """Complexidade geométrica não é erro; somente a topologia é avaliada.
+
+    Multipartes e polígonos com anéis internos são estruturas OGC válidas. O
+    predicado ``is_valid`` verifica cada estrutura sem penalizar esses tipos.
+    Geometrias nulas e vazias são diagnosticadas separadamente.
+    """
+    return bool(geometry is not None and not geometry.is_empty and not geometry.is_valid)
+
+
 def _geometry_diagnostic(frame: gpd.GeoDataFrame, *, context: str = "arquivo de entrada") -> dict[str, Any]:
     geometry = frame.geometry
     null_mask = geometry.isna().to_numpy()
     empty_mask = ((~geometry.isna()) & geometry.is_empty).to_numpy()
-    invalid_mask = ((~geometry.isna()) & (~geometry.is_empty) & (~geometry.is_valid)).to_numpy()
+    invalid_mask = geometry.map(_is_topologically_invalid).to_numpy(dtype=bool)
     problems: dict[str, list[str]] = {}
 
     for position in np.flatnonzero(null_mask):
@@ -185,7 +195,7 @@ def _annotate_geometry_validation(frame: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         elif geometry.is_empty:
             valid.append(False)
             reasons.append("Geometria vazia")
-        elif not geometry.is_valid:
+        elif _is_topologically_invalid(geometry):
             valid.append(False)
             reasons.append(_translate_validity_reason(explain_validity(geometry)))
         else:

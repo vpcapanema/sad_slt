@@ -1,8 +1,10 @@
 """Rotas HTTP — Módulo Geoespacial."""
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
 from typing import Any
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 
@@ -56,7 +58,81 @@ router = APIRouter(
 )
 
 
+def _conteudo_arquivo_geoespacial(path: Path) -> tuple[str, bytes]:
+    """Lê um arquivo interno preservando o conjunto que compõe um Shapefile."""
+    if path.suffix.lower() != ".shp":
+        return path.name, path.read_bytes()
+
+    extensoes = {".shp", ".shx", ".dbf", ".prj", ".cpg", ".qpj", ".sbn", ".sbx"}
+    componentes = sorted(
+        (
+            item
+            for item in path.parent.iterdir()
+            if item.is_file()
+            and item.stem.casefold() == path.stem.casefold()
+            and item.suffix.lower() in extensoes
+        ),
+        key=lambda item: item.name.casefold(),
+    )
+    presentes = {item.suffix.lower() for item in componentes}
+    ausentes = {".shp", ".shx", ".dbf"} - presentes
+    if ausentes:
+        lista = ", ".join(sorted(ausentes))
+        raise ValueError(f"Shapefile incompleto: componente(s) ausente(s): {lista}")
+
+    pacote = BytesIO()
+    with ZipFile(pacote, mode="w", compression=ZIP_DEFLATED) as arquivo_zip:
+        for componente in componentes:
+            arquivo_zip.writestr(componente.name, componente.read_bytes())
+    return f"{path.stem}.zip", pacote.getvalue()
+
+
+def _validar_diagrama(definicao: dict) -> None:
+    """Garante um percurso executável entre cada entrada, processo e saída."""
+    diagrama = definicao.get("diagrama")
+    if not diagrama:  # Definições sequenciais antigas continuam compatíveis.
+        return
+    nos = diagrama.get("nos") or []
+    conexoes = diagrama.get("conexoes") or []
+    ids = {no.get("id") for no in nos if no.get("id")}
+    entradas = {no["id"] for no in nos if no.get("kind") == "input" and no.get("id")}
+    saidas = {no["id"] for no in nos if no.get("kind") == "output" and no.get("id")}
+    processos = {
+        no["id"] for no in nos
+        if no.get("kind") in {"algorithm", "function", "iterator"} and no.get("id")
+    }
+    if not entradas or not saidas:
+        raise HTTPException(status_code=422, detail="O diagrama deve possuir entrada e saída")
+    adjacencias = {no_id: [] for no_id in ids}
+    reversas = {no_id: [] for no_id in ids}
+    for conexao in conexoes:
+        origem, destino = conexao.get("from"), conexao.get("to")
+        if origem in ids and destino in ids:
+            adjacencias[origem].append(destino)
+            reversas[destino].append(origem)
+
+    def alcancaveis(iniciais: set[str], grafo: dict[str, list[str]]) -> set[str]:
+        visitados, fila = set(iniciais), list(iniciais)
+        while fila:
+            for proximo in grafo.get(fila.pop(0), []):
+                if proximo not in visitados:
+                    visitados.add(proximo)
+                    fila.append(proximo)
+        return visitados
+
+    apos_entrada = alcancaveis(entradas, adjacencias)
+    antes_saida = alcancaveis(saidas, reversas)
+    if processos - (apos_entrada & antes_saida):
+        raise HTTPException(
+            status_code=422,
+            detail="Todos os algoritmos e funções devem estar conectados entre uma entrada e uma saída",
+        )
+    if any(not reversas[saida] for saida in saidas):
+        raise HTTPException(status_code=422, detail="Toda saída deve receber um resultado")
+
+
 def _validar_definicao_funcao(funcao: dict) -> None:
+    _validar_diagrama(funcao)
     passos = funcao.get("passos") or []
     if len(passos) < 2:
         raise HTTPException(
@@ -69,6 +145,7 @@ def _validar_definicao_funcao(funcao: dict) -> None:
 
 
 def _validar_definicao_fluxo(fluxo: dict) -> None:
+    _validar_diagrama(fluxo)
     itens = fluxo.get("itens") or []
     if not itens:
         raise HTTPException(
@@ -77,6 +154,8 @@ def _validar_definicao_fluxo(fluxo: dict) -> None:
         )
     erros: list[str] = []
     for indice, item in enumerate(itens, 1):
+        if item.get("iterador"):
+            continue
         funcao_id = item.get("funcao_id")
         algoritmo_id = item.get("algoritmo_id")
         if funcao_id:
@@ -193,7 +272,17 @@ async def executar_funcao(funcao_id: str, entradas: dict) -> dict:
     if not funcao:
         raise HTTPException(status_code=404, detail="Função não encontrada")
     try:
-        return await geoprocessamento_engine.run_steps(funcao.get("passos", []), entradas)
+        defaults = {
+            item["chave"]: item.get("valor") for item in funcao.get("variaveis", [])
+            if item.get("chave") and item.get("valor") not in (None, "")
+        }
+        defaults.update({
+            item["chave"]: item.get("valor") for item in funcao.get("parametros_expostos", [])
+            if item.get("chave") and item.get("valor") not in (None, "")
+        })
+        return await geoprocessamento_engine.run_steps(
+            funcao.get("passos", []), {**defaults, **entradas}
+        )
     except (ValueError, KeyError, TypeError, RuntimeError, NotImplementedError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -235,10 +324,20 @@ async def validar_fluxo(fluxo_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Fluxo não encontrado")
     erros: list[str] = []
     for indice, item in enumerate(fluxo.get("itens", []), 1):
+        if item.get("iterador"):
+            continue
         if item.get("funcao_id") and not modelo_repo.obter(item["funcao_id"], "funcao"):
-            erros.append(f"Item {indice}: função {item['funcao_id']} não encontrada")
+            erros.append(
+                f"Etapa {indice}: a função utilizada não foi encontrada. Esperado: "
+                "uma função existente em Funções customizadas. Como corrigir: remova "
+                "este elemento e selecione novamente a função desejada."
+            )
         elif item.get("algoritmo_id") not in CATALOG and not item.get("funcao_id"):
-            erros.append(f"Item {indice}: algoritmo inválido")
+            erros.append(
+                f"Etapa {indice}: o algoritmo utilizado não está disponível na "
+                "toolbox atual. Esperado: um algoritmo existente. Como corrigir: "
+                "remova este elemento e adicione novamente o algoritmo desejado."
+            )
     return {"valido": not erros, "erros": erros}
 
 
@@ -247,27 +346,20 @@ async def executar_fluxo(fluxo_id: str, entradas: dict) -> dict:
     fluxo = modelo_repo.obter(fluxo_id, "fluxo")
     if not fluxo:
         raise HTTPException(status_code=404, detail="Fluxo não encontrado")
-    context = dict(entradas)
-    results = []
     try:
-        for item in fluxo.get("itens", []):
-            parametros = {
-                chave: context.get(valor[1:]) if isinstance(valor, str) and valor.startswith("$") else valor
-                for chave, valor in item.get("parametros", {}).items()
-            }
-            contexto_item = {**context, **parametros}
-            if item.get("funcao_id"):
-                fn=modelo_repo.obter(item["funcao_id"], "funcao")
-                if not fn:
-                    raise ValueError(f"Função {item['funcao_id']} não encontrada")
-                result=await geoprocessamento_engine.run_steps(fn.get("passos",[]),contexto_item)
-            else:
-                result=await geoprocessamento_engine.run_steps([item],contexto_item)
-            results.append(result)
-            context.update(result.get("contexto", {}))
+        defaults = {
+            item["chave"]: item.get("valor") for item in fluxo.get("variaveis", [])
+            if item.get("chave") and item.get("valor") not in (None, "")
+        }
+        defaults.update({
+            item["chave"]: item.get("valor") for item in fluxo.get("parametros_expostos", [])
+            if item.get("chave") and item.get("valor") not in (None, "")
+        })
+        return await geoprocessamento_engine.run_steps(
+            fluxo.get("itens", []), {**defaults, **entradas}
+        )
     except (ValueError, KeyError, TypeError, RuntimeError, NotImplementedError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return {"status":"concluido","resultados":results,"contexto":context}
 
 
 # ==================== CAMADAS ====================
@@ -385,7 +477,7 @@ async def iniciar_importacao_com_logs(arquivo: UploadFile = File(...)) -> dict:
 
 @router.get("/camadas-diretorio")
 async def listar_diretorio_camadas() -> dict[str, Any]:
-    """Arquivos operacionais do datastorage e arquivos da biblioteca canônica."""
+    """Arquivos do datastorage, biblioteca canônica e saídas processadas."""
     database_available = True
     try:
         directory = camada_geoespacial_repository.listar_diretorio()
@@ -431,9 +523,29 @@ async def listar_diretorio_camadas() -> dict[str, Any]:
                 "categoria_arquivo": "biblioteca_canonica", "registrada": bool(row),
                 "origem_diretorio": "biblioteca_canonica",
             })
+
+    outputs: list[dict] = []
+    outputs_root = project_path("data/geoespacial/outputs")
+    if outputs_root.exists():
+        for path in sorted(
+            item for item in outputs_root.rglob("*")
+            if item.is_file() and item.suffix.lower() in accepted
+        ):
+            relative = path.relative_to(project_path(".")).as_posix()
+            row = by_path.get(relative)
+            outputs.append({
+                **(row or {}),
+                "arquivo": relative,
+                "nome": (row or {}).get("nome") or path.stem,
+                "formato": path.suffix.removeprefix(".").upper(),
+                "categoria_arquivo": "saida_processada",
+                "registrada": bool(row),
+                "origem_diretorio": "outputs",
+            })
     return {
         "operacionais": operational,
         "biblioteca_canonica": canonical,
+        "saidas_processadas": outputs,
         "importadas": imported_rows,
         "processadas": directory.get("processadas", []),
         "homologadas": directory.get("homologadas", []),
@@ -443,13 +555,14 @@ async def listar_diretorio_camadas() -> dict[str, Any]:
 
 @router.post("/camadas-arquivo/carregar")
 async def carregar_arquivo_do_sistema(arquivo: str = Form(...)) -> dict:
-    """Registra pelo importador novo um arquivo permitido do datastorage/canônica."""
+    """Registra arquivo permitido do datastorage, biblioteca ou outputs."""
     normalized = arquivo.replace("\\", "/").strip()
     allowed_prefixes = (
         "data/geoespacial/uploads/datastorage/vetor/",
         "data/geoespacial/uploads/datastorage/raster/",
         "data/geoespacial/uploads/datastorage/geodatabase/",
         "data/geoespacial/biblioteca_canonica/",
+        "data/geoespacial/outputs/",
     )
     if not normalized.startswith(allowed_prefixes):
         raise HTTPException(status_code=403, detail="Arquivo fora dos diretórios geoespaciais autorizados")
@@ -457,7 +570,8 @@ async def carregar_arquivo_do_sistema(arquivo: str = Form(...)) -> dict:
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Arquivo geoespacial não encontrado")
     try:
-        return await executar_importacao_camadas(path.name, path.read_bytes())
+        nome_upload, conteudo = _conteudo_arquivo_geoespacial(path)
+        return await executar_importacao_camadas(nome_upload, conteudo)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

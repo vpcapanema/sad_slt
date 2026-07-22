@@ -88,8 +88,9 @@
     <button class="gp-restore gp-restore-left" data-restore="left" title="Expandir Conteúdo"><i data-lucide="panel-left-open"></i><span>Conteúdo</span></button>
 
     <section class="painel-mapa-geoprocessamento gp-map-view">
-      <div class="gp-view-tabs"><button class="active"><i data-lucide="map"></i> Mapa</button></div>
+      <div class="gp-view-tabs" id="gp-document-tabs"><button class="active" data-document-tab="mapa"><i data-lucide="map"></i> Mapa</button></div>
       <div id="gp-map"></div>
+      <div id="gp-modeler-host" class="gp-modeler-host" hidden></div>
       <div class="gp-map-tools">
         <button class="icon-btn" id="gp-home" title="Extensão inicial"><i data-lucide="house"></i></button>
         <button class="icon-btn" id="gp-fit" title="Ajustar às camadas"><i data-lucide="maximize"></i></button>
@@ -132,6 +133,7 @@
   <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
   <script src="/assets/vendor/lucide/lucide.min.js"></script>
   <script src="/restrict/geoespacial/geoprocessamento.js"></script>
+  <script src="/restrict/geoespacial/geoprocessamento-modeler.js"></script>
   <script src="/restrict/geoespacial/geoprocessamento-docks.js"></script>
   <script src="/restrict/geoespacial/geoprocessamento-actions.js"></script>
   <script src="/restrict/geoespacial/geoprocessamento-toolbox.js"></script>

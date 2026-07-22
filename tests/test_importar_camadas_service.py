@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import geopandas as gpd
 import pytest
-from shapely.geometry import LineString, Point, Polygon
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 
 from api.services.importar_camadas_service import validate_vector
 
@@ -38,6 +38,36 @@ def test_polygon_area_hectares_and_perimeter_are_calculated() -> None:
     assert result.iloc[0]["area_km2"] == pytest.approx(1.0)
     assert result.iloc[0]["area_ha"] == pytest.approx(100.0)
     assert result.iloc[0]["perimetro_m"] == pytest.approx(4000.0)
+
+
+def test_multipolygon_is_valid_complex_geometry() -> None:
+    geometry = MultiPolygon([
+        Polygon([(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)]),
+        Polygon([(20, 20), (30, 20), (30, 30), (20, 30), (20, 20)]),
+    ])
+    frame = gpd.GeoDataFrame({"geometry": [geometry]}, crs="EPSG:31983")
+
+    result, metadata = validate_vector(frame, target_crs=None, clip_frame=None)
+
+    assert result.iloc[0]["slt_geometria_valida"] == True
+    assert result.iloc[0]["slt_diagnostico_geometria"] is None
+    assert metadata["geometrias_invalidas"] == 0
+    assert metadata["familia_geometrica"] == "poligono"
+
+
+def test_polygon_with_hole_is_valid_complex_geometry() -> None:
+    geometry = Polygon(
+        [(0, 0), (20, 0), (20, 20), (0, 20), (0, 0)],
+        holes=[[(5, 5), (5, 15), (15, 15), (15, 5), (5, 5)]],
+    )
+    frame = gpd.GeoDataFrame({"geometry": [geometry]}, crs="EPSG:31983")
+
+    result, metadata = validate_vector(frame, target_crs=None, clip_frame=None)
+
+    assert result.iloc[0]["slt_geometria_valida"] == True
+    assert result.iloc[0]["slt_diagnostico_geometria"] is None
+    assert metadata["geometrias_invalidas"] == 0
+    assert result.iloc[0]["area_km2"] == pytest.approx(0.0003)
 
 
 def test_invalid_geometry_is_importable_and_annotated() -> None:

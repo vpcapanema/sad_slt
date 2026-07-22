@@ -53,6 +53,7 @@
       const sections = [
         ["operacionais", "Camadas importadas do datastorage"],
         ["biblioteca_canonica", "Biblioteca canônica"],
+        ["saidas_processadas", "Saídas de geoprocessamento"],
       ];
       const content = sections.map(([key, label]) => {
         const rows = directory[key] || [];
@@ -68,7 +69,7 @@
         try {
           let id = button.dataset.loadSystem,resource;
           if(id){
-            resource=(directory.operacionais||[]).find(layer=>layer.id===id)||(directory.biblioteca_canonica||[]).find(layer=>layer.id===id);
+            resource=(directory.operacionais||[]).find(layer=>layer.id===id)||(directory.biblioteca_canonica||[]).find(layer=>layer.id===id)||(directory.saidas_processadas||[]).find(layer=>layer.id===id);
             if(!resource)throw new Error("Camada não encontrada no diretório do sistema");
             progress.note("Referência da camada existente vinculada ao Painel de Conteúdo");
           }

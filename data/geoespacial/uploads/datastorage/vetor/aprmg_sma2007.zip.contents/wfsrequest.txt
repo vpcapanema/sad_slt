@@ -1,0 +1,1 @@
+https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=datageo%3AAPRMG_SMA2007&outputFormat=SHAPE-ZIP&bbox=-53.2%2C-25.5%2C-44.0%2C-19.7%2CEPSG%3A4674

@@ -242,16 +242,26 @@ class FuncaoSchema(BaseModel):
     id: str
     nome: str
     descricao: str = ""
+    categoria: str = "Funções customizadas"
+    toolbox: str = "SIRCADI Toolbox"
     passos: list[dict[str, Any]] = Field(default_factory=list)
     parametros_expostos: list[dict[str, Any]] = Field(default_factory=list)
+    variaveis: list[dict[str, Any]] = Field(default_factory=list)
+    saidas: list[dict[str, Any]] = Field(default_factory=list)
+    diagrama: dict[str, Any] = Field(default_factory=dict)
 
 
 class FluxoSchema(BaseModel):
     id: str
     nome: str
     descricao: str = ""
+    categoria: str = "Fluxos customizados"
+    toolbox: str = "SIRCADI Toolbox"
     itens: list[dict[str, Any]] = Field(default_factory=list)
     parametros_expostos: list[dict[str, Any]] = Field(default_factory=list)
+    variaveis: list[dict[str, Any]] = Field(default_factory=list)
+    saidas: list[dict[str, Any]] = Field(default_factory=list)
+    diagrama: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProcessamentoSchema(BaseModel):

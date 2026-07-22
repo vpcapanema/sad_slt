@@ -523,7 +523,13 @@ class GeoespacialService:
 
         # Validar geometrias inválidas
         if validar_intersecoes_invalidas:
-            invalid_geoms = ~gdf.geometry.is_valid
+            # Multipartes e polígonos com furos são válidos. Este predicado
+            # acusa exclusivamente defeitos topológicos reais da geometria.
+            invalid_geoms = (
+                (~gdf.geometry.isna())
+                & (~gdf.geometry.is_empty)
+                & (~gdf.geometry.is_valid)
+            )
             if invalid_geoms.any():
                 count = invalid_geoms.sum()
                 percentual = (count / len(gdf)) * 100
