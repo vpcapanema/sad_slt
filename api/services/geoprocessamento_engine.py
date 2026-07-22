@@ -4,13 +4,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, Callable, cast
+from uuid import uuid4
 
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 from rasterio.features import geometry_mask, rasterize
 from rasterio.transform import Affine, from_origin, rowcol
 from scipy.interpolate import griddata
 from scipy.ndimage import distance_transform_edt
+from scipy.ndimage import gaussian_filter, maximum_filter, minimum_filter, uniform_filter
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import dijkstra
 from sklearn.neighbors import KernelDensity
@@ -29,7 +32,73 @@ CATALOG = {
     "OP-21": "Recortar Raster", "OP-22": "Estatísticas por Zona", "OP-23": "Amostrar Raster em Pontos",
     "OP-24": "Extrair Valores em Polígono", "OP-25": "Exportar Camada", "OP-26": "Exportar Raster",
     "OP-27": "Salvar Camada",
+    "OP-28": "Calcular Centroides", "OP-29": "Criar Fecho Convexo",
+    "OP-30": "Criar Envelopes", "OP-31": "Simplificar Geometrias",
+    "OP-32": "Explodir Multipartes", "OP-33": "Recortar Camada Vetorial",
+    "OP-34": "Junção Espacial", "OP-35": "Mesclar Camadas",
+    "OP-36": "Reprojetar Camada", "OP-37": "Calcular Área",
+    "OP-38": "Calcular Comprimento", "OP-39": "Reclassificar Raster",
+    "OP-40": "Aplicar Limiar Raster", "OP-41": "Inverter Raster",
+    "OP-42": "Filtro Focal Raster", "OP-43": "Suavização Gaussiana",
 }
+
+TOOL_FAMILIES = {
+    "OP-01": "Entrada e preparação", "OP-02": "Entrada e preparação",
+    "OP-02-CORR": "Entrada e preparação", "OP-03": "Entrada e preparação",
+    "OP-04": "Análise vetorial", "OP-05": "Análise vetorial",
+    "OP-06": "Análise vetorial", "OP-07": "Análise vetorial",
+    "OP-08": "Transformação", "OP-10": "Análise raster",
+    "OP-11": "Análise raster", "OP-12": "Análise raster",
+    "OP-13": "Análise raster", "OP-14": "Análise raster",
+    "OP-15": "Análise raster", "OP-16": "Análise raster",
+    "OP-17": "Análise raster", "OP-20": "Análise raster",
+    "OP-21": "Análise raster", "OP-22": "Análise raster",
+    "OP-23": "Operações mistas", "OP-24": "Operações mistas",
+    "OP-25": "Exportação", "OP-26": "Exportação", "OP-27": "Exportação",
+    "OP-28": "Geometria vetorial", "OP-29": "Geometria vetorial",
+    "OP-30": "Geometria vetorial", "OP-31": "Geometria vetorial",
+    "OP-32": "Geometria vetorial", "OP-33": "Sobreposição vetorial",
+    "OP-34": "Relacionamento espacial", "OP-35": "Gerenciamento vetorial",
+    "OP-36": "Sistemas de coordenadas", "OP-37": "Medições vetoriais",
+    "OP-38": "Medições vetoriais", "OP-39": "Álgebra raster",
+    "OP-40": "Álgebra raster", "OP-41": "Álgebra raster",
+    "OP-42": "Filtros raster", "OP-43": "Filtros raster",
+}
+
+# As chaves continuam específicas para os executores. A interface apresenta
+# todas estas referências como "Camada", selecionada no Painel de Conteúdo.
+TOOL_INPUTS = {
+    "OP-01": [], "OP-02": ["camada_id"], "OP-02-CORR": ["camada_id"],
+    "OP-03": ["camada_id"], "OP-04": ["camada_id"],
+    "OP-05": ["camada_id_1", "camada_id_2"], "OP-06": ["camada_id"],
+    "OP-07": ["camada_id", "camada_ref_id"], "OP-08": ["camada_id"],
+    "OP-10": ["camada_id"], "OP-11": ["camada_id"],
+    "OP-12": ["camada_id"], "OP-13": ["raster_id"],
+    "OP-14": ["camada_id"], "OP-15": ["camada_id"],
+    "OP-16": ["camada_id"], "OP-17": ["raster_ids"],
+    "OP-20": ["raster_id"], "OP-21": ["raster_id", "camada_mascara_id"],
+    "OP-22": ["raster_id", "camada_zona_id"],
+    "OP-23": ["raster_id", "camada_pontos_id"],
+    "OP-24": ["raster_id", "camada_poligono_id"],
+    "OP-25": ["camada_id"], "OP-26": ["raster_id"], "OP-27": ["entrada"],
+    "OP-28": ["camada_id"], "OP-29": ["camada_id"],
+    "OP-30": ["camada_id"], "OP-31": ["camada_id"],
+    "OP-32": ["camada_id"], "OP-33": ["camada_id", "camada_mascara_id"],
+    "OP-34": ["camada_id", "camada_ref_id"], "OP-35": ["camada_ids"],
+    "OP-36": ["camada_id"], "OP-37": ["camada_id"],
+    "OP-38": ["camada_id"], "OP-39": ["raster_id"],
+    "OP-40": ["raster_id"], "OP-41": ["raster_id"],
+    "OP-42": ["raster_id"], "OP-43": ["raster_id"],
+}
+
+STANDARD_OUTPUT_FIELDS = [
+    {"id": "nome_saida", "nome": "Nome da saída", "tipo": "texto", "obrigatorio": True},
+    {"id": "crs_saida", "nome": "CRS", "tipo": "crs", "obrigatorio": True,
+     "padrao": "entrada", "opcoes": ["entrada", "EPSG:4674", "EPSG:4326", "EPSG:3857",
+                                      "EPSG:31982", "EPSG:31983", "EPSG:31984", "EPSG:5880"]},
+    {"id": "destino", "nome": "Destino", "tipo": "destino", "obrigatorio": True},
+    {"id": "formato_saida", "nome": "Formato", "tipo": "formato", "obrigatorio": True},
+]
 
 OPERATION_ENDPOINTS = {
     "OP-01": "importar-camada", "OP-02": "validar-camada", "OP-02-CORR": "reparar-geometrias",
@@ -41,6 +110,14 @@ OPERATION_ENDPOINTS = {
     "OP-21": "recortar-raster", "OP-22": "estatisticas-por-zona", "OP-23": "amostrar-raster-pontos",
     "OP-24": "extrair-valores-poligono", "OP-25": "exportar-camada", "OP-26": "exportar-raster",
     "OP-27": "salvar-camada",
+    "OP-28": "calcular-centroides", "OP-29": "criar-fecho-convexo",
+    "OP-30": "criar-envelopes", "OP-31": "simplificar-geometrias",
+    "OP-32": "explodir-multipartes", "OP-33": "recortar-camada-vetorial",
+    "OP-34": "juncao-espacial", "OP-35": "mesclar-camadas",
+    "OP-36": "reprojetar-camada", "OP-37": "calcular-area",
+    "OP-38": "calcular-comprimento", "OP-39": "reclassificar-raster",
+    "OP-40": "aplicar-limiar-raster", "OP-41": "inverter-raster",
+    "OP-42": "filtro-focal-raster", "OP-43": "suavizacao-gaussiana",
 }
 
 REQUIRED_PARAMETERS = {
@@ -57,8 +134,17 @@ REQUIRED_PARAMETERS = {
     "OP-22": {"raster_id", "camada_zona_id"},
     "OP-23": {"raster_id", "camada_pontos_id"},
     "OP-24": {"raster_id", "camada_poligono_id"},
-    "OP-25": {"camada_id", "nome_arquivo"}, "OP-26": {"raster_id", "nome_arquivo"},
-    "OP-27": {"entrada", "destino", "saida"},
+    "OP-25": {"camada_id", "nome_saida", "crs_saida", "destino", "formato_saida"},
+    "OP-26": {"raster_id", "nome_saida", "crs_saida", "destino", "formato_saida"},
+    "OP-27": {"entrada", "nome_saida", "crs_saida", "destino", "formato_saida"},
+    "OP-28": {"camada_id"}, "OP-29": {"camada_id"},
+    "OP-30": {"camada_id"}, "OP-31": {"camada_id", "tolerancia"},
+    "OP-32": {"camada_id"}, "OP-33": {"camada_id", "camada_mascara_id"},
+    "OP-34": {"camada_id", "camada_ref_id"}, "OP-35": {"camada_ids"},
+    "OP-36": {"camada_id", "crs_destino"}, "OP-37": {"camada_id"},
+    "OP-38": {"camada_id"}, "OP-39": {"raster_id", "classes"},
+    "OP-40": {"raster_id", "limiar"}, "OP-41": {"raster_id"},
+    "OP-42": {"raster_id"}, "OP-43": {"raster_id"},
 }
 
 
@@ -116,6 +202,7 @@ class GeoprocessamentoEngine:
         self, op_id: str, p: dict[str, Any],
         progress: Callable[[str], None] | None = None,
     ) -> dict[str, Any]:
+        p = self._apply_selection_scope(op_id, p)
         dispatch = {
             "OP-01": lambda: geo.importar_camada(p["tipo_entrada"], p["caminho_arquivo"], p.get("crs_origem"), p.get("filtro_espacial"), p.get("filtro_atributivo"), progress=progress),
             "OP-02": lambda: geo.validar_camada(p["camada_id"], **{k: v for k, v in p.items() if k != "camada_id"}),
@@ -128,14 +215,22 @@ class GeoprocessamentoEngine:
             "OP-15": lambda: geo.agregar_por_territorio(p["camada_id"], p["campo_unidade"], p.get("funcao_agregacao", "soma"), p.get("atributo_agregacao"), p.get("resolucao_saida")),
             "OP-17": lambda: geo.combinar_rasters(p["raster_ids"], p.get("pesos"), p.get("operador", "media_ponderada")),
             "OP-20": lambda: geo.normalizar_raster(p["raster_id"], p.get("metodo_normalizacao", "linear"), p.get("valor_minimo"), p.get("valor_maximo")),
-            "OP-25": lambda: geo.exportar_camada(p["camada_id"], p["nome_arquivo"], p.get("formato_saida", "GeoPackage"), p.get("crs_saida"), p.get("opcao_salvamento", "memoria"), progress=progress),
-            "OP-26": lambda: geo.exportar_raster(p["raster_id"], p["nome_arquivo"], p.get("formato_saida", "GeoTIFF"), p.get("comprimir_arquivo", False), p.get("opcao_salvamento", "memoria"), progress=progress),
-            "OP-27": lambda: geo.salvar_camada(p["entrada"], p["destino"], p["saida"], p.get("crs", "auto"), p.get("formato", "auto")),
+            "OP-25": lambda: self.export_vector(p, progress),
+            "OP-26": lambda: self.export_raster(p, progress),
+            "OP-27": lambda: self.save_layer(p),
         }
         custom = {"OP-08": self.rasterize, "OP-10": self.distance, "OP-11": self.weighted_distance,
                   "OP-12": self.density, "OP-13": self.accumulated_cost, "OP-14": self.interpolate,
                   "OP-16": self.boolean, "OP-21": self.clip, "OP-22": self.zonal,
-                  "OP-23": self.sample, "OP-24": self.extract_polygon}
+                  "OP-23": self.sample, "OP-24": self.extract_polygon,
+                  "OP-28": self.centroids, "OP-29": self.convex_hulls,
+                  "OP-30": self.envelopes, "OP-31": self.simplify,
+                  "OP-32": self.explode, "OP-33": self.vector_clip,
+                  "OP-34": self.spatial_join, "OP-35": self.merge_layers,
+                  "OP-36": self.reproject_layer, "OP-37": self.calculate_area,
+                  "OP-38": self.calculate_length, "OP-39": self.reclassify_raster,
+                  "OP-40": self.threshold_raster, "OP-41": self.invert_raster,
+                  "OP-42": self.focal_filter, "OP-43": self.gaussian_smoothing}
         if op_id in dispatch:
             result = await dispatch[op_id]()
             if op_id in {"OP-02-CORR", "OP-03"}:
@@ -153,6 +248,44 @@ class GeoprocessamentoEngine:
         if op_id in custom:
             return await custom[op_id](p)
         raise ValueError(f"Algoritmo {op_id} não catalogado")
+
+    def _apply_selection_scope(self, op_id: str, params: dict[str, Any]) -> dict[str, Any]:
+        """Troca somente a entrada vetorial principal por um subconjunto em memória."""
+        if params.get("processar_sobre") != "selecionadas":
+            return params
+        selected_keys = {str(value) for value in params.get("chaves_selecionadas", []) if value is not None}
+        if not selected_keys:
+            raise ValueError("Não há feições selecionadas para processar")
+        input_key = next(
+            (key for key in TOOL_INPUTS.get(op_id, []) if key.startswith("camada_id") and key != "camada_ids"),
+            None,
+        )
+        if not input_key or not params.get(input_key):
+            raise ValueError("O algoritmo não possui uma camada vetorial principal selecionável")
+        source = self._layer(str(params[input_key]))
+        identity_column = next(
+            (column for column in ("OBJECTID", "ObjectID", "objectid", "FID", "fid", "id") if column in source.columns),
+            None,
+        )
+        if identity_column:
+            mask = source[identity_column].astype(str).isin(selected_keys)
+        else:
+            selected_attributes = params.get("atributos_selecionados") or []
+            attribute_columns = [column for column in source.columns if column != source.geometry.name]
+            mask = source.apply(lambda row: any(
+                all(str(row[key]) == str(attributes[key]) for key in attributes if key in attribute_columns)
+                for attributes in selected_attributes if attributes
+            ), axis=1)
+        subset = source.loc[mask].copy()
+        if subset.empty:
+            raise ValueError("As feições selecionadas não foram localizadas na camada original")
+        temporary_id = f"selecao_{uuid4().hex}"
+        geo._camadas[temporary_id] = subset
+        scoped = dict(params)
+        scoped[input_key] = temporary_id
+        scoped["camada_origem_id"] = params[input_key]
+        scoped["total_selecionadas"] = len(subset)
+        return scoped
 
     async def rasterize(self, p: dict[str, Any]) -> dict[str, Any]:
         gdf = self._layer(p["camada_id"]).copy(); resolution = float(p.get("resolucao_raster", 50))
@@ -257,6 +390,156 @@ class GeoprocessamentoEngine:
 
     async def extract_polygon(self, p: dict[str, Any]) -> dict[str, Any]:
         result=await self.zonal({"raster_id":p["raster_id"],"camada_zona_id":p["camada_poligono_id"]}); stat=p.get("estatistica","media"); return {"estatistica":stat,"valores":[x.get(stat) for x in result["estatisticas"]]}
+
+    async def save_layer(self, p: dict[str, Any]) -> dict[str, Any]:
+        if p["destino"] == "memoria":
+            metadata = await geo.obter_recurso(p["entrada"])
+            if not metadata:
+                raise ValueError(f"Camada de entrada {p['entrada']} não encontrada")
+            key = "raster_id" if metadata["tipo"] == "raster" else "camada_id"
+            return {key: p["entrada"], "destino": "memoria", "formato_saida": "JSON"}
+        filename, storage_format = self._canonical_output_file(p)
+        crs = "auto" if p["crs_saida"] == "entrada" else p["crs_saida"]
+        return await geo.salvar_camada(p["entrada"], "data/geoespacial/outputs", filename, crs, storage_format)
+
+    def _canonical_output_file(self, p: dict[str, Any]) -> tuple[str, str]:
+        formats = {"geopackage": (".gpkg", "gpkg"), "geojson": (".geojson", "geojson"),
+                   "shapefile": (".shp", "shapefile"), "geotiff": (".tif", "geotiff")}
+        key = str(p["formato_saida"]).lower()
+        if key not in formats:
+            raise ValueError("Formato de saída incompatível com storage")
+        extension, storage_format = formats[key]
+        name = Path(str(p["nome_saida"])).stem + extension
+        return name, storage_format
+
+    async def export_vector(self, p: dict[str, Any], progress: Callable[[str], None] | None) -> dict[str, Any]:
+        if p["destino"] == "memoria":
+            return await geo.exportar_camada(p["camada_id"], p["nome_saida"], "GeoJSON", None, "memoria", progress=progress)
+        filename, storage_format = self._canonical_output_file(p)
+        crs = "auto" if p["crs_saida"] == "entrada" else p["crs_saida"]
+        return await geo.salvar_camada(p["camada_id"], "data/geoespacial/outputs", filename, crs, storage_format)
+
+    async def export_raster(self, p: dict[str, Any], progress: Callable[[str], None] | None) -> dict[str, Any]:
+        if p["destino"] == "memoria":
+            return await geo.exportar_raster(p["raster_id"], p["nome_saida"], "JSON", False, "memoria", progress=progress)
+        filename, storage_format = self._canonical_output_file(p)
+        crs = "auto" if p["crs_saida"] == "entrada" else p["crs_saida"]
+        return await geo.salvar_camada(p["raster_id"], "data/geoespacial/outputs", filename, crs, storage_format)
+
+    def _new_layer(self, frame: gpd.GeoDataFrame, name: str, operation: str) -> dict[str, Any]:
+        if frame.empty:
+            raise ValueError("A operação não produziu feições")
+        layer_id = geo.registrar_camada(frame, name, operation)
+        return {"camada_id": layer_id, "feicoes": len(frame), "crs": str(frame.crs or "")}
+
+    async def centroids(self, p: dict[str, Any]) -> dict[str, Any]:
+        frame = self._layer(p["camada_id"]).copy()
+        frame.geometry = frame.geometry.centroid
+        return self._new_layer(frame, p.get("nome_saida", "Centroides"), "OP-28")
+
+    async def convex_hulls(self, p: dict[str, Any]) -> dict[str, Any]:
+        frame = self._layer(p["camada_id"]).copy()
+        frame.geometry = frame.geometry.convex_hull
+        return self._new_layer(frame, p.get("nome_saida", "Fechos convexos"), "OP-29")
+
+    async def envelopes(self, p: dict[str, Any]) -> dict[str, Any]:
+        frame = self._layer(p["camada_id"]).copy()
+        frame.geometry = frame.geometry.envelope
+        return self._new_layer(frame, p.get("nome_saida", "Envelopes"), "OP-30")
+
+    async def simplify(self, p: dict[str, Any]) -> dict[str, Any]:
+        frame = self._layer(p["camada_id"]).copy()
+        frame.geometry = frame.geometry.simplify(
+            float(p["tolerancia"]), preserve_topology=bool(p.get("preservar_topologia", True))
+        )
+        return self._new_layer(frame, p.get("nome_saida", "Geometrias simplificadas"), "OP-31")
+
+    async def explode(self, p: dict[str, Any]) -> dict[str, Any]:
+        frame = self._layer(p["camada_id"]).explode(index_parts=False, ignore_index=True)
+        return self._new_layer(frame, p.get("nome_saida", "Feições simples"), "OP-32")
+
+    async def vector_clip(self, p: dict[str, Any]) -> dict[str, Any]:
+        frame = self._layer(p["camada_id"])
+        mask = self._layer(p["camada_mascara_id"]).to_crs(frame.crs)
+        result = gpd.clip(frame, mask, keep_geom_type=bool(p.get("manter_tipo_geometria", True)))
+        return self._new_layer(result, p.get("nome_saida", "Recorte vetorial"), "OP-33")
+
+    async def spatial_join(self, p: dict[str, Any]) -> dict[str, Any]:
+        left = self._layer(p["camada_id"])
+        right = self._layer(p["camada_ref_id"]).to_crs(left.crs)
+        result = gpd.sjoin(
+            left, right, how=str(p.get("tipo_juncao", "inner")),
+            predicate=str(p.get("predicado", "intersects")), lsuffix="entrada", rsuffix="referencia",
+        )
+        return self._new_layer(result, p.get("nome_saida", "Junção espacial"), "OP-34")
+
+    async def merge_layers(self, p: dict[str, Any]) -> dict[str, Any]:
+        ids = list(p["camada_ids"])
+        if len(ids) < 2:
+            raise ValueError("Selecione ao menos duas camadas")
+        frames = [self._layer(item) for item in ids]
+        crs = frames[0].crs
+        aligned = [frame.to_crs(crs) if frame.crs != crs else frame for frame in frames]
+        result = gpd.GeoDataFrame(pd.concat(aligned, ignore_index=True), crs=crs)
+        return self._new_layer(result, p.get("nome_saida", "Camadas mescladas"), "OP-35")
+
+    async def reproject_layer(self, p: dict[str, Any]) -> dict[str, Any]:
+        result = self._layer(p["camada_id"]).to_crs(str(p["crs_destino"]))
+        return self._new_layer(result, p.get("nome_saida", "Camada reprojetada"), "OP-36")
+
+    async def calculate_area(self, p: dict[str, Any]) -> dict[str, Any]:
+        frame = self._layer(p["camada_id"]).copy()
+        frame[str(p.get("campo_saida", "area"))] = frame.geometry.area
+        return self._new_layer(frame, p.get("nome_saida", "Área calculada"), "OP-37")
+
+    async def calculate_length(self, p: dict[str, Any]) -> dict[str, Any]:
+        frame = self._layer(p["camada_id"]).copy()
+        frame[str(p.get("campo_saida", "comprimento"))] = frame.geometry.length
+        return self._new_layer(frame, p.get("nome_saida", "Comprimento calculado"), "OP-38")
+
+    async def reclassify_raster(self, p: dict[str, Any]) -> dict[str, Any]:
+        source = self._raster(p["raster_id"])
+        result = np.full(source.shape, np.nan, dtype="float32")
+        classes = p["classes"]
+        if isinstance(classes, str):
+            classes = json.loads(classes)
+        for item in classes:
+            minimum, maximum, value = float(item["min"]), float(item["max"]), float(item["valor"])
+            result[(source >= minimum) & (source < maximum)] = value
+        rid = self._new_raster(result, self.profiles[p["raster_id"]])
+        return {"raster_id": rid, "shape": list(result.shape)}
+
+    async def threshold_raster(self, p: dict[str, Any]) -> dict[str, Any]:
+        source = self._raster(p["raster_id"])
+        result = np.where(source >= float(p["limiar"]), float(p.get("valor_acima", 1)), float(p.get("valor_abaixo", 0))).astype("float32")
+        rid = self._new_raster(result, self.profiles[p["raster_id"]])
+        return {"raster_id": rid, "shape": list(result.shape)}
+
+    async def invert_raster(self, p: dict[str, Any]) -> dict[str, Any]:
+        source = self._raster(p["raster_id"])
+        finite = source[np.isfinite(source)]
+        if not finite.size:
+            raise ValueError("Raster não possui células válidas")
+        result = finite.min() + finite.max() - source
+        rid = self._new_raster(result, self.profiles[p["raster_id"]])
+        return {"raster_id": rid, "shape": list(result.shape)}
+
+    async def focal_filter(self, p: dict[str, Any]) -> dict[str, Any]:
+        source = self._raster(p["raster_id"])
+        size = max(1, int(p.get("tamanho_janela", 3)))
+        method = str(p.get("estatistica", "media"))
+        filters = {"media": uniform_filter, "minimo": minimum_filter, "maximo": maximum_filter}
+        if method not in filters:
+            raise ValueError("Estatística focal deve ser media, minimo ou maximo")
+        result = filters[method](source.astype("float32"), size=size)
+        rid = self._new_raster(result, self.profiles[p["raster_id"]])
+        return {"raster_id": rid, "shape": list(result.shape), "estatistica": method}
+
+    async def gaussian_smoothing(self, p: dict[str, Any]) -> dict[str, Any]:
+        source = self._raster(p["raster_id"])
+        result = gaussian_filter(source.astype("float32"), sigma=float(p.get("sigma", 1)))
+        rid = self._new_raster(result, self.profiles[p["raster_id"]])
+        return {"raster_id": rid, "shape": list(result.shape)}
 
     def validate_steps(self, steps: list[dict[str, Any]]) -> list[str]:
         erros: list[str] = []

@@ -11,7 +11,7 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/geoespacial.css">
-  <link rel="stylesheet" href="/assets/css/geoespacial-painel-mapa.css?v=20260722-6">
+  <link rel="stylesheet" href="/assets/css/geoespacial-painel-mapa.css?v=20260722-9">
   <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
@@ -57,6 +57,7 @@
       <div class="geo-context-tabs" role="tablist">
         <button type="button" class="active" data-context-tab="legend" role="tab" aria-selected="true"><i class="fa-solid fa-list"></i> Legenda</button>
         <button type="button" data-context-tab="details" role="tab" aria-selected="false" hidden><i class="fa-solid fa-file-lines"></i> Detalhes</button>
+        <button type="button" data-context-tab="properties" role="tab" aria-selected="false" hidden><i class="fa-solid fa-palette"></i> Propriedades</button>
       </div>
       <section class="secao-legenda geo-context-content active" data-context-content="legend" role="tabpanel">
         <div id="geoespacial-legend" class="geo-map-legend"><p class="hint">Ative uma camada para visualizar sua legenda.</p></div>
@@ -64,12 +65,13 @@
       <section class="secao-detalhes-produto geo-context-content" data-context-content="details" role="tabpanel" hidden>
         <div id="geoespacial-details-content" class="geoespacial-viewer-details"><p class="hint">Selecione uma camada para consultar versão, fonte e metadados.</p></div>
       </section>
+      <section class="geo-context-content" data-context-content="properties" role="tabpanel" hidden><div id="geoespacial-properties-content"></div></section>
     </aside>
   </main>
 {% endblock %}
 
 {% block scripts_pagina %}
   <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
-  <script src="/assets/js/geoespacial-map.js?v=20260722-6"></script>
-  <script src="/restrict/geoespacial/geoespacial-produtos.js?v=20260722-8"></script>
+  <script src="/assets/js/geoespacial-map.js?v=20260722-10"></script>
+  <script src="/restrict/geoespacial/geoespacial-produtos.js?v=20260722-12"></script>
 {% endblock %}

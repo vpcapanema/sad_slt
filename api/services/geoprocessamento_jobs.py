@@ -29,11 +29,16 @@ INPUT_KEYS = {
 }
 NO_PERSISTED_OUTPUT = {"OP-02", "OP-22", "OP-23", "OP-24", "OP-25", "OP-26", "OP-27"}
 
+OUTPUT_FORMATS = {
+    "geopackage": ("gpkg", ".gpkg"), "geojson": ("geojson", ".geojson"),
+    "shapefile": ("shapefile", ".shp"), "geotiff": ("geotiff", ".tif"),
+}
+
 
 def _input_references(params: dict[str, Any]) -> list[str]:
     references: list[str] = []
     for key, value in params.items():
-        if key == "raster_ids" and isinstance(value, list):
+        if key in {"raster_ids", "camada_ids"} and isinstance(value, list):
             references.extend(str(item) for item in value if item)
         elif key in INPUT_KEYS and isinstance(value, str) and value:
             references.append(value)
@@ -156,6 +161,31 @@ class GeoprocessamentoJobs:
                 raise TypeError("O algoritmo não retornou um objeto de resultado")
             self._advance(job_id, "Objeto de retorno interpretado")
             resource_id = result.get("camada_id") or result.get("raster_id")
+            destination_value = normalized.get("destino")
+            destination = str(destination_value).lower() if destination_value else "catalogo"
+            if destination not in {"memoria", "storage", "catalogo"}:
+                raise ValueError("Destino deve ser memoria ou storage")
+            result["destino"] = destination
+            if resource_id and destination == "storage":
+                requested_format = str(normalized.get("formato_saida", "")).lower()
+                if requested_format not in OUTPUT_FORMATS:
+                    raise ValueError("Formato de saída incompatível com storage")
+                storage_format, extension = OUTPUT_FORMATS[requested_format]
+                output_name = Path(str(normalized.get("nome_saida") or CATALOG[op_id])).stem + extension
+                output_crs = str(normalized.get("crs_saida") or "entrada")
+                result["arquivo_saida"] = asyncio.run(geo.salvar_camada(
+                    resource_id, "data/geoespacial/outputs", output_name,
+                    "auto" if output_crs == "entrada" else output_crs, storage_format,
+                ))
+                self._append_dynamic(job_id, "Resultado gravado no storage")
+            elif resource_id and destination == "memoria":
+                result["formato_saida"] = "JSON"
+                if resource_id not in inputs:
+                    camada_geoespacial_repository.excluir(resource_id)
+                    if resource_id in geo._metadados:
+                        geo._metadados[resource_id]["destino"] = "memoria"
+                    result["persistencia"] = "memoria_sessao"
+                    self._append_dynamic(job_id, "Resultado mantido somente na memória da sessão")
             if op_id not in NO_PERSISTED_OUTPUT:
                 if not resource_id:
                     raise RuntimeError("A operação não retornou identificador de saída")

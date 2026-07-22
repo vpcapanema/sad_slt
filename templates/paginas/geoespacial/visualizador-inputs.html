@@ -11,7 +11,7 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/geoespacial.css">
-  <link rel="stylesheet" href="/assets/css/geoespacial-painel-mapa.css?v=20260722-6">
+  <link rel="stylesheet" href="/assets/css/geoespacial-painel-mapa.css?v=20260722-9">
   <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
@@ -63,6 +63,7 @@
       <div class="geo-context-tabs" role="tablist">
         <button type="button" class="active" data-context-tab="legend" role="tab" aria-selected="true"><i class="fa-solid fa-list"></i> Legenda</button>
         <button type="button" data-context-tab="details" role="tab" aria-selected="false" hidden><i class="fa-solid fa-circle-info"></i> Detalhes</button>
+        <button type="button" data-context-tab="properties" role="tab" aria-selected="false" hidden><i class="fa-solid fa-palette"></i> Propriedades</button>
       </div>
       <section class="secao-legenda geo-context-content active" data-context-content="legend" role="tabpanel">
         <div id="geoespacial-legend" class="geo-map-legend"><p class="hint">Ative uma camada para visualizar sua legenda.</p></div>
@@ -70,6 +71,7 @@
       <section class="secao-detalhes-camada geo-context-content" data-context-content="details" role="tabpanel" hidden>
         <div id="geoespacial-operations-list" class="geoespacial-viewer-details"><p class="hint">Selecione uma camada para consultar seus metadados.</p></div>
       </section>
+      <section class="geo-context-content" data-context-content="properties" role="tabpanel" hidden><div id="geoespacial-properties-content"></div></section>
     </aside>
   </main>
 
@@ -80,7 +82,7 @@
       <div id="import-inspection-status" class="hint">Selecione um arquivo para identificar tipo, CRS e conteúdo.</div>
       <label class="geoespacial-import-field"><span>CRS atual da camada</span><input id="import-current-crs" type="text" placeholder="Detectado após selecionar o arquivo" readonly></label>
       <label class="geoespacial-import-check"><input id="import-reproject-enabled" type="checkbox"><span>Reprojetar CRS</span></label>
-      <label class="geoespacial-import-field"><span>CRS de destino</span><select id="import-target-crs" disabled><option value="EPSG:4674">EPSG:4674 — SIRGAS 2000 (recomendado)</option><option value="EPSG:4326">EPSG:4326 — WGS 84</option><option value="EPSG:31983">EPSG:31983 — SIRGAS 2000 / UTM 23S</option></select></label>
+      <label class="geoespacial-import-field"><span>CRS de destino</span><select id="import-target-crs" disabled><option value="EPSG:4674">EPSG:4674 (SIRGAS 2000) — recomendado</option><option value="EPSG:4326">EPSG:4326 — WGS 84</option><option value="EPSG:31983">EPSG:31983 — SIRGAS 2000 / UTM 23S</option></select></label>
       <label class="geoespacial-import-check"><input id="import-clip-enabled" type="checkbox"><span>Recortar pela camada</span></label>
       <label class="geoespacial-import-field"><span>Camada de máscara</span><select id="import-clip-layer" disabled><option value="">Selecione uma camada vetorial</option></select></label>
       <footer><button type="button" class="btn btn-secondary" id="btn-cancelar-importacao">Cancelar</button><button type="submit" class="btn btn-primary" id="btn-confirmar-importacao" disabled>Validar e importar</button></footer>
@@ -100,6 +102,6 @@
 
 {% block scripts_pagina %}
   <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
-  <script src="/assets/js/geoespacial-map.js?v=20260722-6"></script>
-  <script src="/restrict/geoespacial/geoespacial-visualizador-inputs.js?v=20260722-9"></script>
+  <script src="/assets/js/geoespacial-map.js?v=20260722-10"></script>
+  <script src="/restrict/geoespacial/geoespacial-visualizador-inputs.js?v=20260722-13"></script>
 {% endblock %}

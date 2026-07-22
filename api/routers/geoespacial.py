@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 
 from api.deps.auth import require_geospatial_access
+from api.exceptions import DatabaseUnavailableError
 from api.path_policy import project_path
 from api.repositories import camada_geoespacial_repository
 from api.repositories import modelo_geoprocessamento_repository as modelo_repo
@@ -37,7 +39,14 @@ from api.services.importar_camadas_service import (
     importar_camadas as executar_importacao_camadas,
     inspecionar_camadas,
 )
-from api.services.geoprocessamento_engine import CATALOG, OPERATION_ENDPOINTS, geoprocessamento_engine
+from api.services.geoprocessamento_engine import (
+    CATALOG,
+    OPERATION_ENDPOINTS,
+    STANDARD_OUTPUT_FIELDS,
+    TOOL_FAMILIES,
+    TOOL_INPUTS,
+    geoprocessamento_engine,
+)
 from api.services.geoprocessamento_jobs import geoprocessamento_jobs
 
 router = APIRouter(
@@ -85,6 +94,17 @@ async def listar_algoritmos() -> list[dict]:
         {
             "id": key,
             "nome": value,
+            "familia": TOOL_FAMILIES[key],
+            "entradas": [
+                {
+                    "id": input_id,
+                    "nome": "Camada",
+                    "origem": "painel_conteudo",
+                    "tipo": "multiplas_camadas" if input_id == "raster_ids" else "camada",
+                }
+                for input_id in TOOL_INPUTS[key]
+            ],
+            "saida": STANDARD_OUTPUT_FIELDS,
             "endpoint": f"/api/geoespacial/operacoes/{OPERATION_ENDPOINTS[key]}",
         }
         for key, value in CATALOG.items()
@@ -94,29 +114,7 @@ async def listar_algoritmos() -> list[dict]:
 @router.post("/algoritmos/{algoritmo_id}/executar")
 async def executar_algoritmo(algoritmo_id: str, parametros: dict) -> dict:
     try:
-        resultado = await geoprocessamento_engine.execute(algoritmo_id.upper(), parametros)
-        nome_saida = parametros.get("saida")
-        if nome_saida:
-            if resultado.get("camada_id"):
-                exportado = await geoespacial_service.salvar_camada(
-                    resultado["camada_id"],
-                    parametros.get("destino") or "data/geoespacial",
-                    Path(nome_saida).name,
-                    parametros.get("crs", "auto"),
-                    parametros.get("formato", "auto"),
-                )
-            elif resultado.get("raster_id"):
-                exportado = await geoespacial_service.salvar_camada(
-                    resultado["raster_id"],
-                    parametros.get("destino") or "data/geoespacial",
-                    Path(nome_saida).name,
-                    parametros.get("crs", "auto"),
-                    parametros.get("formato", "auto"),
-                )
-            else:
-                exportado = None
-            resultado["saida"] = exportado
-        return resultado
+        return await geoprocessamento_engine.execute(algoritmo_id.upper(), parametros)
     except (ValueError, KeyError, TypeError, RuntimeError, NotImplementedError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -386,9 +384,14 @@ async def iniciar_importacao_com_logs(arquivo: UploadFile = File(...)) -> dict:
 
 
 @router.get("/camadas-diretorio")
-async def listar_diretorio_camadas() -> dict[str, list[dict]]:
+async def listar_diretorio_camadas() -> dict[str, Any]:
     """Arquivos operacionais do datastorage e arquivos da biblioteca canônica."""
-    directory = camada_geoespacial_repository.listar_diretorio()
+    database_available = True
+    try:
+        directory = camada_geoespacial_repository.listar_diretorio()
+    except DatabaseUnavailableError:
+        directory = {"importadas": [], "processadas": [], "homologadas": []}
+        database_available = False
     imported_rows = directory.get("importadas", [])
 
     def original_path(row: dict) -> str:
@@ -428,7 +431,14 @@ async def listar_diretorio_camadas() -> dict[str, list[dict]]:
                 "categoria_arquivo": "biblioteca_canonica", "registrada": bool(row),
                 "origem_diretorio": "biblioteca_canonica",
             })
-    return {"operacionais": operational, "biblioteca_canonica": canonical}
+    return {
+        "operacionais": operational,
+        "biblioteca_canonica": canonical,
+        "importadas": imported_rows,
+        "processadas": directory.get("processadas", []),
+        "homologadas": directory.get("homologadas", []),
+        "banco_disponivel": database_available,
+    }
 
 
 @router.post("/camadas-arquivo/carregar")
@@ -509,6 +519,27 @@ async def obter_camada_geojson(camada_id: str) -> dict:
         return await geoespacial_service.camada_geojson(camada_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/camadas/{camada_id}/bounds")
+def obter_limites_camada(camada_id: str) -> dict:
+    bounds = camada_geoespacial_repository.obter_vetor_bounds(camada_id)
+    if bounds is None:
+        raise HTTPException(status_code=404, detail="Extensão vetorial não encontrada")
+    return {"camada_id": camada_id, "bounds": bounds}
+
+
+@router.get("/camadas/{camada_id}/tiles/{z}/{x}/{y}.pbf")
+def obter_tile_vetorial(camada_id: str, z: int, x: int, y: int) -> Response:
+    if z < 0 or z > 22 or x < 0 or y < 0 or x >= 2 ** z or y >= 2 ** z:
+        raise HTTPException(status_code=422, detail="Coordenada de tile inválida")
+    tile = camada_geoespacial_repository.carregar_vetor_mvt(camada_id, z, x, y)
+    if tile is None:
+        raise HTTPException(status_code=404, detail="Camada vetorial não encontrada")
+    return Response(
+        content=tile, media_type="application/vnd.mapbox-vector-tile",
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
 
 
 @router.get("/camadas/{camada_id}/atributos")
@@ -921,16 +952,16 @@ async def sobrepor_camadas(
 @router.post("/operacoes/exportar-camada")
 async def exportar_camada(
     camada_id: str,
-    nome_arquivo: str,
+    nome_saida: str,
     formato_saida: str = "GeoPackage",
-    crs_saida: str | None = None,
-    opcao_salvamento: str = "memoria",
+    crs_saida: str = "entrada",
+    destino: str = "memoria",
 ) -> dict:
     """Exporta camada."""
-    resultado = await geoespacial_service.exportar_camada(
-        camada_id, nome_arquivo, formato_saida, crs_saida, opcao_salvamento
-    )
-    return resultado
+    return await geoprocessamento_engine.execute("OP-25", {
+        "camada_id": camada_id, "nome_saida": nome_saida,
+        "formato_saida": formato_saida, "crs_saida": crs_saida, "destino": destino,
+    })
 
 
 @router.post("/operacoes/normalizar-raster")
@@ -1144,16 +1175,18 @@ async def agregar_por_territorio(
 @router.post("/operacoes/exportar-raster")
 async def exportar_raster(
     raster_id: str,
-    nome_arquivo: str,
+    nome_saida: str,
     formato_saida: str = "GeoTIFF",
+    crs_saida: str = "entrada",
     comprimir_arquivo: bool = False,
-    opcao_salvamento: str = "memoria",
+    destino: str = "memoria",
 ) -> dict:
     """Exporta raster."""
-    resultado = await geoespacial_service.exportar_raster(
-        raster_id, nome_arquivo, formato_saida, comprimir_arquivo, opcao_salvamento
-    )
-    return resultado
+    return await geoprocessamento_engine.execute("OP-26", {
+        "raster_id": raster_id, "nome_saida": nome_saida,
+        "formato_saida": formato_saida, "crs_saida": crs_saida,
+        "comprimir_arquivo": comprimir_arquivo, "destino": destino,
+    })
 
 
 # ==================== FUNÇÕES E FLUXOS ====================

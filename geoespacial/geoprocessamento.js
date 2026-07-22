@@ -1,12 +1,19 @@
 (function(){
   "use strict";
   const API="/api/geoespacial";
+  const CRS_DESCRIPTIONS={"EPSG:4674":"SIRGAS 2000","EPSG:4326":"WGS 84","EPSG:3857":"WGS 84 / Pseudo-Mercator","EPSG:31982":"SIRGAS 2000 / UTM zona 22S","EPSG:31983":"SIRGAS 2000 / UTM zona 23S","EPSG:31984":"SIRGAS 2000 / UTM zona 24S","EPSG:5880":"SIRGAS 2000 / Brazil Polyconic"};
+  const CRS_VALUES=Object.keys(CRS_DESCRIPTIONS);
+  const crsLabel=value=>CRS_DESCRIPTIONS[value]?`${value} (${CRS_DESCRIPTIONS[value]})`:value;
   const OPS=[
     ["Entrada e preparação",[["OP-01","Importar camada","importar-camada",1],["OP-02","Validar camada","validar-camada",1],["OP-02-CORR","Reparar geometrias","reparar-geometrias",1],["OP-03","Normalizar camada","normalizar-camada",1]]],
     ["Análise vetorial",[["OP-04","Criar buffer","criar-buffer",1],["OP-05","Sobrepor camadas","sobrepor-camadas",1],["OP-06","Dissolver","dissolver",1],["OP-07","Selecionar por localização","selecionar-por-localizacao",1]]],
     ["Transformação",[["OP-08","Converter para raster","converter-para-raster",2]]],
     ["Análise raster",[["OP-10","Calcular distância","calcular-distancia",2],["OP-11","Distância ponderada",null,0],["OP-12","Calcular densidade","calcular-densidade",2],["OP-13","Custo acumulado",null,0],["OP-14","Interpolar valores","interpolar-valores",2],["OP-15","Agregar por território","agregar-por-territorio",1],["OP-16","Criar camada booleana",null,0],["OP-17","Combinar rasters","combinar-rasters",1],["OP-20","Normalizar raster","normalizar-raster",1],["OP-21","Recortar raster",null,0],["OP-22","Estatísticas por zona",null,0]]],
     ["Operações mistas",[["OP-23","Amostrar raster em pontos",null,0],["OP-24","Extrair valores em polígono",null,0]]],
+    ["Geometria vetorial",[["OP-28","Calcular centroides",null,1],["OP-29","Criar fecho convexo",null,1],["OP-30","Criar envelopes",null,1],["OP-31","Simplificar geometrias",null,1],["OP-32","Explodir multipartes",null,1]]],
+    ["Sobreposição e relacionamento",[["OP-33","Recortar camada vetorial",null,1],["OP-34","Junção espacial",null,1],["OP-35","Mesclar camadas",null,1]]],
+    ["Medições e coordenadas",[["OP-36","Reprojetar camada",null,1],["OP-37","Calcular área",null,1],["OP-38","Calcular comprimento",null,1]]],
+    ["Álgebra e filtros raster",[["OP-39","Reclassificar raster",null,1],["OP-40","Aplicar limiar raster",null,1],["OP-41","Inverter raster",null,1],["OP-42","Filtro focal raster",null,1],["OP-43","Suavização gaussiana",null,1]]],
     ["Exportação",[["OP-25","Exportar camada vetorial","exportar-camada",1],["OP-26","Exportar raster","exportar-raster",2],["OP-27","Salvar camada","salvar-camada",1]]]
   ];
   const OP_ENDPOINTS={
@@ -18,34 +25,77 @@
     "OP-16":"criar-camada-booleana","OP-17":"combinar-rasters","OP-20":"normalizar-raster",
     "OP-21":"recortar-raster","OP-22":"estatisticas-por-zona","OP-23":"amostrar-raster-pontos",
     "OP-24":"extrair-valores-poligono","OP-25":"exportar-camada","OP-26":"exportar-raster",
-    "OP-27":"salvar-camada"
+    "OP-27":"salvar-camada","OP-28":"calcular-centroides","OP-29":"criar-fecho-convexo",
+    "OP-30":"criar-envelopes","OP-31":"simplificar-geometrias","OP-32":"explodir-multipartes",
+    "OP-33":"recortar-camada-vetorial","OP-34":"juncao-espacial","OP-35":"mesclar-camadas",
+    "OP-36":"reprojetar-camada","OP-37":"calcular-area","OP-38":"calcular-comprimento",
+    "OP-39":"reclassificar-raster","OP-40":"aplicar-limiar-raster","OP-41":"inverter-raster",
+    "OP-42":"filtro-focal-raster","OP-43":"suavizacao-gaussiana"
+  };
+  const TOOLBOX_SCOPES={
+    geral:{nome:"SIRCADI Toolbox",ids:null},
+    vetor_raster:{nome:"Geospatial Toolbox",ids:new Set(["OP-01","OP-02","OP-02-CORR","OP-03","OP-04","OP-05","OP-06","OP-07","OP-08","OP-15","OP-16","OP-21","OP-22","OP-23","OP-24","OP-25","OP-26","OP-27","OP-28","OP-29","OP-30","OP-31","OP-32","OP-33","OP-34","OP-35","OP-36"])},
+    cientifica:{nome:"Numerical Analysis Toolbox",ids:new Set(["OP-10","OP-11","OP-12","OP-13","OP-17","OP-20","OP-37","OP-38","OP-39","OP-40","OP-41","OP-42","OP-43"])},
+    interpolacao:{nome:"Surface Modeling Toolbox",ids:new Set(["OP-10","OP-11","OP-12","OP-14","OP-16","OP-20","OP-39","OP-40","OP-43"])}
+  };
+  const TOOL_LIBRARY={
+    "OP-01":"GDAL","OP-02":"GeoPandas","OP-02-CORR":"Shapely","OP-03":"PyProj","OP-04":"Shapely","OP-05":"GeoPandas","OP-06":"GeoPandas","OP-07":"GeoPandas",
+    "OP-08":"Rasterio","OP-10":"SciPy","OP-11":"SciPy","OP-12":"Scikit-learn","OP-13":"SciPy","OP-14":"PyKrige","OP-15":"GeoPandas","OP-16":"Rasterio","OP-17":"NumPy","OP-20":"NumPy","OP-21":"Rasterio","OP-22":"Rasterio","OP-23":"Rasterio","OP-24":"Rasterio",
+    "OP-25":"Fiona","OP-26":"GDAL","OP-27":"GDAL","OP-28":"Shapely","OP-29":"Shapely","OP-30":"Shapely","OP-31":"Shapely","OP-32":"GeoPandas","OP-33":"GeoPandas","OP-34":"GeoPandas","OP-35":"Pandas","OP-36":"PyProj","OP-37":"Shapely","OP-38":"Shapely",
+    "OP-39":"NumPy","OP-40":"NumPy","OP-41":"NumPy","OP-42":"SciPy","OP-43":"SciPy"
   };
   OPS.forEach(([,operations])=>operations.forEach(op=>{op[2]=OP_ENDPOINTS[op[0]]||null;op[3]=op[2]?1:0}));
   const FIELDS={
     "OP-01":[["tipo_entrada","Tipo de entrada","select",["Local","WFS"]],["caminho_arquivo","Caminho ou URL","text"]],
     "OP-02":[["camada_id","Camada","layer"],["validar_intersecoes_invalidas","Validar geometrias","check",true],["validar_crs","Validar CRS","check",true]],
     "OP-02-CORR":[["camada_id","Camada","layer"],["corrigir_geometrias_invalidas","Corrigir geometrias inválidas","check",true],["corrigir_auto_intersecoes","Corrigir auto-interseções","check",true]],
-    "OP-03":[["camada_id","Camada","layer"],["crs_destino","CRS de destino","text","EPSG:4674"],["remover_geometrias_vazias","Remover vazias","check",true],["explodir_multipartes","Explodir multipartes","check",false]],
+    "OP-03":[["camada_id","Camada","layer"],["crs_destino","CRS de destino","select",CRS_VALUES],["remover_geometrias_vazias","Remover vazias","check",true],["explodir_multipartes","Explodir multipartes","check",false]],
     "OP-04":[["camada_id","Camada","layer"],["distancia_buffer","Distância","number",100],["unidade_buffer","Unidade","select",["metros","graus"]],["tipo_buffer","Tipo","select",["cheio","externo"]],["dissolver_geometrias","Dissolver","check",false]],
     "OP-05":[["camada_id_1","Camada de entrada","layer"],["camada_id_2","Camada de identidade","layer"],["tipo_overlay","Operação","select",["identity","intersection","union","difference"]],["resolver_conflitos_campos","Preservar e resolver atributos","check",true]],
     "OP-06":[["camada_id","Camada","layer"],["campo_agrupamento","Campo de agrupamento","text"],["funcao_agregacao","Agregação","select",["soma","media","mediana","max","min"]]],
     "OP-07":[["camada_id","Camada alvo","layer"],["camada_ref_id","Camada de referência","layer"],["tipo_selecao","Predicado","select",["intersects","contains","within","touches"]],["inverter_selecao","Inverter seleção","check",false]],
-    "OP-08":[["camada_id","Camada","layer"],["resolucao_raster","Resolução","number",50],["crs_destino","CRS","text","EPSG:31983"],["atributo_rasterizacao","Atributo","text"],["valor_preenchimento","Valor de fundo","number",0]],
+    "OP-08":[["camada_id","Camada","layer"],["resolucao_raster","Resolução","number",50],["crs_destino","CRS","select",CRS_VALUES],["atributo_rasterizacao","Atributo","text"],["valor_preenchimento","Valor de fundo","number",0]],
     "OP-10":[["camada_id","Camada","layer"],["resolucao_distancia","Resolução","number",50],["distancia_maxima","Distância máxima","number"],["unidade_distancia","Unidade","select",["metros","graus"]]],
     "OP-12":[["camada_id","Camada de pontos","layer"],["tipo_kernel","Kernel","select",["gaussiano","epanechnikov","quadratic"]],["largura_kernel","Largura de banda","number",1000],["resolucao_kernel","Resolução","number",50]],
     "OP-14":[["camada_id","Camada de pontos","layer"],["atributo_valor","Atributo numérico","text"],["metodo_interpolacao","Método","select",["idw","kriging","spline"]],["resolucao_interpolacao","Resolução","number",50],["potencia_interpolacao","Potência IDW","number",2]],
     "OP-15":[["camada_id","Camada","layer"],["campo_unidade","Campo territorial","text"],["funcao_agregacao","Agregação","select",["soma","media","mediana","max","min"]],["atributo_agregacao","Atributo","text"]],
     "OP-17":[["raster_ids","IDs dos rasters (separados por vírgula)","text"],["pesos","Pesos (separados por vírgula)","text"],["operador","Operador","select",["soma","media_ponderada","multiplicacao"]]],
     "OP-20":[["raster_id","ID do raster","text"],["metodo_normalizacao","Método","select",["linear","winsorizacao","quebras_naturais"]],["valor_minimo","Mínimo","number"],["valor_maximo","Máximo","number"]],
-    "OP-25":[["camada_id","Camada","layer"],["nome_arquivo","Nome do arquivo","text","saida.gpkg"],["formato_saida","Formato","select",["GeoPackage","GeoJSON","Shapefile"]],["opcao_salvamento","Destino","select",["memoria","persistir_sistema"]]],
-    "OP-26":[["raster_id","ID do raster","text"],["nome_arquivo","Nome do arquivo","text","saida.tif"],["formato_saida","Formato","select",["GeoTIFF"]],["comprimir_arquivo","Comprimir","check",true]]
+    "OP-25":[["camada_id","Camada","layer"]],
+    "OP-26":[["raster_id","Camada","layer"],["comprimir_arquivo","Comprimir","check",true]]
   };
   const BASEMAPS=[{id:"osm",name:"OpenStreetMap",tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"]},{id:"carto-light",name:"Carto Claro",tiles:["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"]},{id:"carto-dark",name:"Carto Escuro",tiles:["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"]},{id:"esri-satellite",name:"Imagem de Satélite",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"]}];
   Object.assign(FIELDS,{"OP-11":[["camada_id","Camada","layer"],["atributo_peso","Atributo de peso","text"],["resolucao_distancia","Resolução","number",50]],"OP-13":[["raster_id","ID do raster de custo","text"],["origem_linha","Linha de origem","number",0],["origem_coluna","Coluna de origem","number",0]],"OP-16":[["camada_id","Camada","layer"],["resolucao_raster","Resolução","number",50]],"OP-21":[["raster_id","ID do raster","text"],["camada_mascara_id","Camada de máscara","layer"]],"OP-22":[["raster_id","ID do raster","text"],["camada_zona_id","Camada de zonas","layer"]],"OP-23":[["raster_id","ID do raster","text"],["camada_pontos_id","Camada de pontos","layer"]],"OP-24":[["raster_id","ID do raster","text"],["camada_poligono_id","Camada de polígonos","layer"],["estatistica","Estatística","select",["media","soma","min","max"]]]});
-  FIELDS["OP-27"]=[["entrada","Camada de entrada","text"],["destino","Destino","text","data/geoespacial"],["saida","Saída","text","camada_saida.gpkg"],["crs","CRS","text","auto"],["formato","Formato","select",["auto","gpkg","geojson","shapefile","geotiff"]]];
-  const NO_OUTPUT=new Set(["OP-01","OP-02","OP-22","OP-23","OP-24","OP-25","OP-26","OP-27"]),RASTER_OUTPUT=new Set(["OP-08","OP-10","OP-11","OP-12","OP-13","OP-14","OP-16","OP-17","OP-20","OP-21"]);
-  OPS.flatMap(x=>x[1]).forEach(op=>{if(NO_OUTPUT.has(op[0]))return;const raster=RASTER_OUTPUT.has(op[0]),base=op[1].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");FIELDS[op[0]].push(["destino","Destino","text","data/geoespacial"],["saida","Saída","text",`${base}_saida.${raster?"tif":"gpkg"}`])});
-  const state={map:null,layers:[],basemap:"osm",selected:null,activeLayerId:null,activeExecution:null,functions:[],flows:[],history:load("gp-history",[]),layerGroups:load("gp-layer-groups",{operational:false,basemap:false}),layerColors:load("gp-layer-colors",{}),geometryTypes:{},catalogHydrated:false,catalogSyncPending:false};
+  Object.assign(FIELDS,{
+    "OP-28":[["camada_id","Camada","layer"]],"OP-29":[["camada_id","Camada","layer"]],"OP-30":[["camada_id","Camada","layer"]],
+    "OP-31":[["camada_id","Camada","layer"],["tolerancia","Tolerância","number",10],["preservar_topologia","Preservar topologia","check",true]],
+    "OP-32":[["camada_id","Camada","layer"]],
+    "OP-33":[["camada_id","Camada","layer"],["camada_mascara_id","Camada","layer"],["manter_tipo_geometria","Manter tipo geométrico","check",true]],
+    "OP-34":[["camada_id","Camada","layer"],["camada_ref_id","Camada","layer"],["predicado","Predicado","select",["intersects","within","contains","touches","crosses","overlaps"]],["tipo_juncao","Tipo de junção","select",["inner","left","right"]]],
+    "OP-35":[["camada_ids","Camada","layers"]],
+    "OP-36":[["camada_id","Camada","layer"],["crs_destino","CRS de destino","select",CRS_VALUES]],
+    "OP-37":[["camada_id","Camada","layer"],["campo_saida","Campo da área","text","area"]],
+    "OP-38":[["camada_id","Camada","layer"],["campo_saida","Campo do comprimento","text","comprimento"]],
+    "OP-39":[["raster_id","Camada","layer"],["classes","Classes (JSON)","text",'[{"min":0,"max":10,"valor":1}]']],
+    "OP-40":[["raster_id","Camada","layer"],["limiar","Limiar","number",0],["valor_abaixo","Valor abaixo","number",0],["valor_acima","Valor acima","number",1]],
+    "OP-41":[["raster_id","Camada","layer"]],
+    "OP-42":[["raster_id","Camada","layer"],["tamanho_janela","Tamanho da janela","number",3],["estatistica","Estatística","select",["media","minimo","maximo"]]],
+    "OP-43":[["raster_id","Camada","layer"],["sigma","Sigma","number",1]]
+  });
+  FIELDS["OP-27"]=[["entrada","Camada","layer"]];
+  const RASTER_OUTPUT=new Set(["OP-08","OP-10","OP-11","OP-12","OP-13","OP-14","OP-16","OP-17","OP-20","OP-21","OP-22","OP-23","OP-24","OP-26","OP-39","OP-40","OP-41","OP-42","OP-43"]);
+  const CONTENT_INPUTS=new Set(["camada_id","camada_id_1","camada_id_2","camada_ref_id","camada_ids","raster_id","raster_ids","camada_mascara_id","camada_zona_id","camada_pontos_id","camada_poligono_id","entrada"]);
+  OPS.flatMap(group=>group[1]).forEach(op=>{
+    const raster=RASTER_OUTPUT.has(op[0]),base=op[1].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
+    FIELDS[op[0]]=(FIELDS[op[0]]||[]).map(field=>CONTENT_INPUTS.has(field[0])?[field[0],"Camada",["raster_ids","camada_ids"].includes(field[0])?"layers":"layer",field[3]]:field);
+    FIELDS[op[0]].push(
+      ["nome_saida","Nome da saída","text",`${base}_saida`],
+      ["crs_saida","CRS","select",["entrada","EPSG:4674","EPSG:4326","EPSG:3857","EPSG:31982","EPSG:31983","EPSG:31984","EPSG:5880"]],
+      ["destino","Destino","select",["memoria","storage"]],
+      ["formato_saida","Formato","select",raster?["JSON","GeoTIFF"]:["GeoJSON","GeoPackage","Shapefile"]]
+    );
+  });
+  const state={map:null,layers:[],basemap:"osm",selected:null,activeLayerId:null,activeExecution:null,toolboxScope:"geral",functions:[],flows:[],history:load("gp-history",[]),layerGroups:load("gp-layer-groups",{operational:false,basemap:false}),layerColors:load("gp-layer-colors",{}),geometryTypes:{},catalogHydrated:false,catalogSyncPending:false};
   const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
   function load(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}}
   function save(k,v){localStorage.setItem(k,JSON.stringify(v));$("#gp-save-state").textContent="Alterações salvas"}
@@ -65,11 +115,12 @@
   function ribbon(tab="mapa"){
     const sets={
       mapa:[["Dados",[["folder-open","Importar arquivo","import-file",true],["cloud-download","Importar WFS","import-wfs"],["database","Carregar do sistema","load-system"],["map","Basemap","basemap"]]],["Navegação",[["mouse-pointer-2","Explorar","explore"],["maximize","Zoom nas camadas","fit"],["scan","Zoom na seleção","fit-selection"]]],["Seleção",[["mouse-pointer-click","Selecionar","select"],["list-x","Limpar seleção","clear"]]],["Camada",[["table-properties","Tabela de atributos","attributes"],["trash-2","Remover camada","remove"],["x","Excluir camada","delete-layer"]]]],
-      analise:[["Geoprocessamento",[["briefcase","Toolbox","tools",true],["play","Executar","run"],["square","Cancelar","cancel"],["history","Histórico","history"]]],["Configuração",[["sliders-horizontal","Ambientes","environments"],["shield-check","Validar entrada","validate"]]],["Resultados",[["save","Salvar resultado","save-result"],["layers","Adicionar resultado ao mapa","add-result"]]]],
+      analise:[["Geoprocessamento",[["briefcase","SIRCADI Toolbox","tools",true],["briefcase","Geospatial Toolbox","tools-vector-raster",true],["briefcase","Numerical Analysis Toolbox","tools-science",true],["briefcase","Surface Modeling Toolbox","tools-interpolation",true]]],["Execução",[["play","Executar","run"],["square","Cancelar","cancel"],["history","Histórico","history"]]],["Configuração",[["sliders-horizontal","Ambientes","environments"],["shield-check","Validar entrada","validate"]]],["Resultados",[["save","Salvar resultado","save-result"],["layers","Adicionar resultado ao mapa","add-result"]]]],
       modelo:[["Funções",[["blocks","Nova função","new-function",true],["pencil","Editar função","edit-function"],["badge-check","Validar função","validate-function"],["play","Executar função","run-function"]]],["Fluxos",[["workflow","Novo fluxo","new-flow",true],["pencil","Editar fluxo","edit-flow"],["badge-check","Validar fluxo","validate-flow"],["play","Executar fluxo","run-flow"]]],["Definições",[["copy","Duplicar","duplicate"],["file-input","Importar definição","import-definition"],["file-output","Exportar definição","export-definition"]]]],
       dados:[["Inspecionar",[["info","Propriedades","properties"],["table-properties","Tabela de atributos","attributes"]]],["Consulta",[["calculator","Calcular campo","calculate-field"],["list-filter","Selecionar por atributo","select-attribute"],["filter","Filtrar camada","filter-layer"]]],["Preparar",[["globe-2","Reprojetar","reproject"],["wrench","Reparar geometria","repair"]]],["Publicar",[["badge-check","Homologar camada","homologate-layer",true],["download","Exportar dados","export"],["refresh-cw","Atualizar fonte","refresh-source"],["trash-2","Remover camada","remove"],["x","Excluir camada","delete-layer"]]]]
     };
-    $("#gp-ribbon-tools").innerHTML=sets[tab].map(([g,items])=>`<div class="ribbon-group" data-label="${g}">${items.map(([i,n,a,t])=>`<button class="ribbon-action ${t?"toolbox":""}" data-action="${a}" title="${n}"><i data-lucide="${i}"></i><span>${n}</span></button>`).join("")}</div>`).join("");icons();
+    const marks={tools:"•","tools-vector-raster":"◇","tools-science":"Σ","tools-interpolation":"∿"};
+    $("#gp-ribbon-tools").innerHTML=sets[tab].map(([g,items])=>`<div class="ribbon-group" data-label="${g}">${items.map(([i,n,a,t])=>`<button class="ribbon-action ${t?"toolbox":""}" data-action="${a}" title="${n}">${marks[a]?`<span class="toolbox-ribbon-icon"><i data-lucide="briefcase"></i><b aria-hidden="true">${marks[a]}</b></span>`:`<i data-lucide="${i}"></i>`}<span>${n}</span></button>`).join("")}</div>`).join("");icons();
   }
   function initMap(){const sources={},layers=[];BASEMAPS.forEach((b,i)=>{sources[b.id]={type:"raster",tiles:b.tiles,tileSize:256,attribution:"© provedores do mapa"};layers.push({id:`basemap-${b.id}`,type:"raster",source:b.id,layout:{visibility:i?"none":"visible"}})});state.map=new maplibregl.Map({container:"gp-map",center:[-48.5,-22.4],zoom:6.2,style:{version:8,sources,layers}});state.map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-right");state.map.on("mousemove",e=>$("#gp-coordinates").textContent=`${e.lngLat.lng.toFixed(5)}, ${e.lngLat.lat.toFixed(5)}`);state.map.on("zoom",()=>$("#gp-scale").textContent=`Zoom ${state.map.getZoom().toFixed(1)}`)}
   function removeMapResource(id){
@@ -106,6 +157,7 @@
       const [funcoes,fluxos]=await Promise.all([fetch(`${API}/funcoes`),fetch(`${API}/fluxos`)]);
       if(funcoes.ok)state.functions=await funcoes.json();
       if(fluxos.ok)state.flows=await fluxos.json();
+      if(state.toolboxScope!=="geral")renderToolbox($("#gp-tool-search")?.value||"");
     }catch(e){log(`Definições indisponíveis: ${e.message}`,"error")}
   }
   function layerSymbol(layer){
@@ -125,7 +177,37 @@
   }
   function setBasemap(id){state.basemap=id;BASEMAPS.forEach(b=>{const layer=`basemap-${b.id}`;if(state.map.getLayer(layer))state.map.setLayoutProperty(layer,"visibility",b.id===id?"visible":"none")})}
   function renderToolbox(filter=""){const f=filter.toLowerCase();$("#gp-toolbox").innerHTML=OPS.map(([g,ops])=>{const rows=ops.filter(o=>(o[0]+o[1]).toLowerCase().includes(f));return rows.length?`<div class="tool-group"><button class="tool-group-title"><i data-lucide="briefcase"></i>${g}</button>${rows.map(o=>`<button class="tool-row" data-op="${o[0]}"><span class="tool-name">${o[1]}</span><span class="availability ${o[3]===2?"partial":""}" title="${o[3]===1?"Disponível":o[3]===2?"Backend em implementação":"Catalogado; motor pendente"}"></span></button>`).join("")}</div>`:""}).join("");icons()}
-  function selectOp(id){state.selected=id;$$('[data-right-tab]').forEach(b=>b.classList.toggle("active",b.dataset.rightTab==="tools"));showEditor();const op=OPS.flatMap(x=>x[1]).find(x=>x[0]===id);const fields=FIELDS[id]||[];$("#gp-right-title").textContent=op[1];$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>${op[1]}</h2></div><form id="gp-op-form" data-op="${op[0]}"><div class="editor-body">${fields.length?fields.map(fieldHtml).join(""):`<div class="empty">O algoritmo está catalogado na stack, mas seu contrato de execução ainda não foi implementado no backend.</div>`}</div><div class="editor-actions"><button type="button" class="btn" data-add-function>Adicionar à função</button><button class="btn primary" ${!op[2]?"disabled":""}>Executar</button></div></form>`;icons();const form=$("#gp-op-form");window.gpCommands?.applyEnvironments(form);form.onsubmit=e=>{e.preventDefault();executeOp(op,e.target)};$("[data-back]").onclick=()=>showTools();$("[data-add-function]").onclick=()=>newFunction(id)}
+  function selectOp(id){state.selected=id;$$('[data-right-tab]').forEach(b=>b.classList.toggle("active",b.dataset.rightTab==="tools"));showEditor();const op=OPS.flatMap(x=>x[1]).find(x=>x[0]===id);const fields=FIELDS[id]||[];$("#gp-right-title").textContent=op[1];$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>${op[1]}</h2></div><form id="gp-op-form" data-op="${op[0]}"><div class="editor-body">${fields.length?fields.map(fieldHtml).join(""):`<div class="empty">O algoritmo está catalogado na stack, mas seu contrato de execução ainda não foi implementado no backend.</div>`}</div><div class="editor-actions"><button type="button" class="btn" data-add-function>Adicionar à função</button><button class="btn primary" ${!op[2]?"disabled":""}>Executar</button></div></form>`;icons();const form=$("#gp-op-form");configureOutputFields(form,RASTER_OUTPUT.has(id));configureSelectionScope(form);window.gpCommands?.applyEnvironments(form);form.onsubmit=e=>{e.preventDefault();executeOp(op,e.target)};$("[data-back]").onclick=()=>showTools();$("[data-add-function]").onclick=()=>newFunction(id)}
+  function configureSelectionScope(form){
+    form?.querySelector("[data-selection-scope]")?.remove();
+    if(!form)return;
+    const layerInput=[...form.elements].find(element=>CONTENT_INPUTS.has(element.name)&&element.name.startsWith("camada_id")&&!element.multiple);
+    if(!layerInput)return;
+    const refresh=()=>{
+      form.querySelector("[data-selection-scope]")?.remove();
+      const count=(state.selectedGeoJSON?.features||[]).filter(feature=>feature.properties?.__gp_layer_id===layerInput.value).length;
+      if(!count)return;
+      layerInput.closest(".field")?.insertAdjacentHTML("afterend",`<fieldset class="selection-scope" data-selection-scope><legend>Processar sobre</legend><label><input type="radio" name="processar_sobre" value="todas" checked> Todas as feições</label><label><input type="radio" name="processar_sobre" value="selecionadas"> Apenas selecionadas (${count})</label></fieldset>`);
+    };
+    layerInput.addEventListener("change",refresh);refresh();
+  }
+  function configureOutputFields(form,raster){
+    const destination=form.elements.destino,format=form.elements.formato_saida;
+    if(!destination||!format)return;
+    const crs=form.elements.crs_saida,layerInput=[...form.elements].find(element=>CONTENT_INPUTS.has(element.name)&&!element.multiple);
+    const refreshCrs=()=>{
+      if(!crs)return;
+      const layer=state.layers.find(item=>item.id===layerInput?.value),sourceCrs=layer?.crs||"CRS não informado",current=crs.value||"entrada";
+      crs.options[0].value="entrada";crs.options[0].textContent=`Da camada de entrada — ${crsLabel(sourceCrs)}`;
+      crs.value=[...crs.options].some(option=>option.value===current)?current:"entrada";
+    };
+    const refresh=()=>{
+      const formats=destination.value==="memoria"?["JSON"]:(raster?["GeoTIFF"]:["GeoPackage","GeoJSON","Shapefile"]);
+      format.innerHTML=formats.map(value=>`<option value="${value}">${value}</option>`).join("");
+      format.disabled=destination.value==="memoria";
+    };
+    destination.onchange=refresh;layerInput?.addEventListener("change",refreshCrs);refreshCrs();refresh();
+  }
   function fieldHtml(f){const [id,label,type,val]=f;if(type==="check")return `<label class="field-check"><input name="${id}" type="checkbox" ${val?"checked":""}>${label}</label>`;let input;if(type==="select")input=`<select name="${id}">${val.map(x=>`<option>${x}</option>`).join("")}</select>`;else if(type==="layer")input=`<select name="${id}" required><option value="">Selecione…</option>${state.layers.map(x=>`<option value="${x.id}">${escapeHtml(x.nome)}</option>`).join("")}</select>`;else input=`<input name="${id}" type="${type}" value="${val??""}" ${["number","text"].includes(type)?"":""}>`;return `<div class="field"><label>${label}</label>${input}</div>`}
   function configureLoadOperation(){
     const form=$("#gp-op-form"),type=form?.elements.tipo_entrada;
@@ -142,12 +224,14 @@
       if(!field)return;
       field.dataset.loadSource="";
       if(type.value.toLocaleLowerCase("pt-BR")==="local"){
-        field.innerHTML=`<label class="required-label" for="gp-local-file-name">Arquivo local</label><div class="local-file-picker"><input id="gp-local-upload" type="file" accept=".geojson,.json,.kml,.gml,.fgb,.tif,.tiff,.img,.asc,.vrt,.jp2,.zip,.rar,.7z,.tar,.tgz,.gz,.gpkg,.sqlite,.shp" hidden><input id="gp-local-file-name" type="text" placeholder="Selecione um arquivo geoespacial" readonly aria-describedby="gp-local-help"><button class="browse-btn" type="button" data-select-local title="Procurar arquivo" aria-label="Procurar arquivo"><i data-lucide="folder-open"></i></button></div><p id="gp-local-help" class="field-help">O conteúdo será descompactado, identificado e validado antes da importação.</p><div class="field"><label>CRS atual</label><input id="gp-import-current-crs" placeholder="Detectado após selecionar o arquivo" readonly></div><label class="field-check"><input id="gp-import-reproject" type="checkbox">Reprojetar CRS</label><div class="field"><label>CRS de destino</label><select id="gp-import-target-crs" disabled><option value="EPSG:4674">EPSG:4674 — SIRGAS 2000 (recomendado)</option><option value="EPSG:4326">EPSG:4326 — WGS 84</option><option value="EPSG:31983">EPSG:31983 — SIRGAS 2000 / UTM 23S</option></select></div><label class="field-check"><input id="gp-import-clip" type="checkbox">Recortar pela camada</label><div class="field"><label>Camada de máscara</label><select id="gp-import-clip-layer" disabled><option value="">Selecione…</option>${state.layers.filter(layer=>!String(layer.tipo).toLowerCase().includes("raster")).map(layer=>`<option value="${escapeHtml(layer.id)}">${escapeHtml(layer.nome)}</option>`).join("")}</select></div><p id="gp-import-inspection" class="field-help">Aguardando arquivo.</p>`;
+        field.innerHTML=`<label class="required-label" for="gp-local-file-name">Arquivo local</label><div class="local-file-picker"><input id="gp-local-upload" type="file" accept=".geojson,.json,.kml,.gml,.fgb,.tif,.tiff,.img,.asc,.vrt,.jp2,.zip,.rar,.7z,.tar,.tgz,.gz,.gpkg,.sqlite,.shp" hidden><input id="gp-local-file-name" type="text" placeholder="Selecione um arquivo geoespacial" readonly aria-describedby="gp-local-help"><button class="browse-btn" type="button" data-select-local title="Procurar arquivo" aria-label="Procurar arquivo"><i data-lucide="folder-open"></i></button></div><p id="gp-local-help" class="field-help">O conteúdo será descompactado, identificado e validado antes da importação.</p><div class="field"><label>CRS atual</label><input id="gp-import-current-crs" placeholder="Detectado após selecionar o arquivo" readonly></div><label class="field-check"><input id="gp-import-reproject" type="checkbox">Reprojetar CRS</label><div class="field"><label>CRS de destino</label><select id="gp-import-target-crs" disabled><option value="EPSG:4674">EPSG:4674 (SIRGAS 2000) — recomendado</option><option value="EPSG:4326">EPSG:4326 (WGS 84)</option><option value="EPSG:31983">EPSG:31983 (SIRGAS 2000 / UTM zona 23S)</option></select></div><label class="field-check"><input id="gp-import-clip" type="checkbox">Recortar pela camada</label><div class="field"><label>Camada de máscara</label><select id="gp-import-clip-layer" disabled><option value="">Selecione…</option>${state.layers.filter(layer=>!String(layer.tipo).toLowerCase().includes("raster")).map(layer=>`<option value="${escapeHtml(layer.id)}">${escapeHtml(layer.nome)}</option>`).join("")}</select></div><p id="gp-import-inspection" class="field-help">Aguardando arquivo.</p>`;
         const input=$("#gp-local-upload"),name=$("#gp-local-file-name");
+        $("#gp-import-target-crs").options[0].textContent="EPSG:4674 (SIRGAS 2000) — recomendado";
+        [...$("#gp-import-target-crs").options].forEach((option,index)=>option.textContent=`${crsLabel(option.value)}${index===0?" — recomendado":""}`);
         $("[data-select-local]").onclick=()=>input.click();
         $("#gp-import-reproject").onchange=event=>$("#gp-import-target-crs").disabled=!event.target.checked;
         $("#gp-import-clip").onchange=event=>$("#gp-import-clip-layer").disabled=!event.target.checked;
-        input.onchange=async()=>{const file=input.files[0];inspectionToken="";name.value=file?.name||"";submit.disabled=true;if(!file)return;const status=$("#gp-import-inspection");status.textContent="Lendo e validando…";try{const data=new FormData();data.append("arquivo",file);const response=await fetch(`${API}/importar_camadas/inspecionar`,{method:"POST",body:data}),body=await response.json();if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);inspectionToken=body.token_importacao||"";$("#gp-import-current-crs").value=body.crs_atual||"CRS não informado";const invalidas=body.camadas.reduce((total,camada)=>total+Number(camada.geometrias_invalidas||0),0);status.textContent=`${body.categoria} · ${body.camadas.length} camada(s) importável(is)${invalidas?` · ${invalidas} geometria(s) inválida(s) serão destacadas`:" · geometrias válidas"}`;submit.disabled=false}catch(error){status.textContent=error.message}};
+        input.onchange=async()=>{const file=input.files[0];inspectionToken="";name.value=file?.name||"";submit.disabled=true;if(!file)return;const status=$("#gp-import-inspection");status.textContent="Lendo e validando…";try{const data=new FormData();data.append("arquivo",file);const response=await fetch(`${API}/importar_camadas/inspecionar`,{method:"POST",body:data}),body=await response.json();if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);inspectionToken=body.token_importacao||"";$("#gp-import-current-crs").value=body.crs_atual?crsLabel(body.crs_atual):"CRS não informado";const invalidas=body.camadas.reduce((total,camada)=>total+Number(camada.geometrias_invalidas||0),0);status.textContent=`${body.categoria} · ${body.camadas.length} camada(s) importável(is)${invalidas?` · ${invalidas} geometria(s) inválida(s) serão destacadas`:" · geometrias válidas"}`;submit.disabled=false}catch(error){status.textContent=error.message}};
         submit.textContent="Importar";submit.title="Importar os arquivos para o banco e adicioná-los ao mapa";submit.disabled=true;
         form.onsubmit=async event=>{event.preventDefault();if(!input.files.length)return;if($("#gp-import-clip").checked&&!$("#gp-import-clip-layer").value){$("#gp-import-inspection").textContent="Selecione a camada de máscara.";return}submit.disabled=true;submit.textContent="Importando…";const progress=createExecutionProgress(form),options={reprojetar_crs:$("#gp-import-reproject").checked?$("#gp-import-target-crs").value:"",recortar_camada_id:$("#gp-import-clip").checked?$("#gp-import-clip-layer").value:"",token_importacao:inspectionToken};await filesAdded(input.files,progress,options);inspectionToken="";submit.textContent="Importar";submit.disabled=false};
       }else{
@@ -163,9 +247,12 @@
     if(!op[2])return;
     const fd=new FormData(form),params=new URLSearchParams(),payload={};
     for(const [k,v] of fd){
-      if(["destino","saida"].includes(k)&&op[0]!=="OP-27")continue;
       let value=form.elements[k]?.type==="number"&&v!==""?Number(v):v;
-      if(["raster_ids","pesos"].includes(k)){
+      if(["raster_ids","camada_ids"].includes(k)){
+        if(payload[k])continue;
+        payload[k]=fd.getAll(k).map(String).filter(Boolean);
+        payload[k].forEach(item=>params.append(k,item));
+      }else if(k==="pesos"){
         const values=String(v).split(",").map(x=>k==="pesos"?Number(x.trim()):x.trim()).filter(x=>x!=="");
         values.forEach(item=>params.append(k,String(item)));
         payload[k]=values;
@@ -177,6 +264,12 @@
     FIELDS[op[0]]?.filter(f=>f[2]==="check").forEach(f=>{
       const value=form.elements[f[0]].checked;params.set(f[0],String(value));payload[f[0]]=value;
     });
+    if(payload.processar_sobre==="selecionadas"){
+      const layerInput=[...form.elements].find(element=>CONTENT_INPUTS.has(element.name)&&element.name.startsWith("camada_id")&&!element.multiple),layerId=layerInput?.value;
+      const selected=(state.selectedGeoJSON?.features||[]).filter(feature=>feature.properties?.__gp_layer_id===layerId);
+      payload.chaves_selecionadas=[...new Set(selected.map(feature=>feature.properties?.__gp_selection_key).filter(value=>value!=null).map(String))];
+      payload.atributos_selecionados=selected.map(feature=>cleanSelectionProperties(feature.properties));
+    }
     log(`Executando ${op[1]}…`);
     const knownResources=new Set(state.layers.map(layer=>layer.id)),startedAt=Date.now();
     const controller=new AbortController(),submit=form.querySelector('.editor-actions .primary'),submitLabel=submit?.textContent;
@@ -308,8 +401,9 @@
       const response=await fetch(`${API}/camadas/${id}/preview`);if(!response.ok)return;
       const preview=await response.json();preview.coordinates.forEach(coord=>bounds.extend(coord));
     }else{
-      const response=await fetch(`${API}/camadas/${id}/geojson`);if(!response.ok)return;
-      const data=await response.json();data.features?.forEach(feature=>walkCoords(feature.geometry?.coordinates,coord=>bounds.extend(coord)));
+      const response=await fetch(`${API}/camadas/${id}/bounds`);if(!response.ok)return;
+      const data=await response.json(),extent=data.bounds;
+      if(Array.isArray(extent)&&extent.length===4){bounds.extend([extent[0],extent[1]]);bounds.extend([extent[2],extent[3]])}
     }
     if(!bounds.isEmpty())state.map.fitBounds(bounds,{padding:40,maxZoom:15});
   }
@@ -326,18 +420,26 @@
       if(fit){const bounds=new maplibregl.LngLatBounds();preview.coordinates.forEach(coord=>bounds.extend(coord));state.map.fitBounds(bounds,{padding:40})}
       return true;
     }
-    const response=await fetch(`${API}/camadas/${id}/geojson`);
-    if(!response.ok)throw new Error(`Geometria indisponível (HTTP ${response.status})`);
-    const data=await response.json();
-    if(!Array.isArray(data.features))throw new Error("GeoJSON sem coleção de feições");
-    state.geometryTypes[id]=[...new Set((data.features||[]).map(feature=>feature.geometry?.type).filter(Boolean))];
+    if(resource.destino==="memoria"){
+      const response=await fetch(`${API}/camadas/${id}/geojson`);
+      if(!response.ok)throw new Error(`Geometria em memória indisponível (HTTP ${response.status})`);
+      const data=await response.json();state.geometryTypes[id]=[...new Set((data.features||[]).map(feature=>feature.geometry?.type).filter(Boolean))];
+      const color=layerColor(id,state.geometryTypes[id]),invalid=["==",["get","slt_geometria_valida"],false],byValidity=["case",invalid,"#dc2626",color];
+      state.map.addSource(id,{type:"geojson",data});
+      state.map.addLayer({id,type:"fill",source:id,paint:{"fill-color":byValidity,"fill-opacity":["case",invalid,.68,.32],"fill-outline-color":byValidity},filter:["==",["geometry-type"],"Polygon"]});
+      state.map.addLayer({id:id+"-line",type:"line",source:id,paint:{"line-color":byValidity,"line-width":["case",invalid,4,2]},filter:["==",["geometry-type"],"LineString"]});
+      state.map.addLayer({id:id+"-point",type:"circle",source:id,paint:{"circle-color":byValidity,"circle-radius":["case",invalid,8,5],"circle-stroke-color":"#fff","circle-stroke-width":1},filter:["==",["geometry-type"],"Point"]});
+      if(fit){const bounds=new maplibregl.LngLatBounds();data.features?.forEach(feature=>walkCoords(feature.geometry?.coordinates,coord=>bounds.extend(coord)));if(!bounds.isEmpty())state.map.fitBounds(bounds,{padding:40,maxZoom:15})}
+      return true;
+    }
+    state.geometryTypes[id]=resource.geometria_tipo?[resource.geometria_tipo]:[];
     const color=layerColor(id,state.geometryTypes[id]);
-    state.map.addSource(id,{type:"geojson",data});
+    state.map.addSource(id,{type:"vector",tiles:[`${location.origin}${API}/camadas/${encodeURIComponent(id)}/tiles/{z}/{x}/{y}.pbf`],minzoom:0,maxzoom:22});
     const invalid=["==",["get","slt_geometria_valida"],false],byValidity=["case",invalid,"#dc2626",color];
-    state.map.addLayer({id,type:"fill",source:id,paint:{"fill-color":byValidity,"fill-opacity":["case",invalid,.68,.32],"fill-outline-color":byValidity},filter:["==",["geometry-type"],"Polygon"]});
-    state.map.addLayer({id:id+"-line",type:"line",source:id,paint:{"line-color":byValidity,"line-width":["case",invalid,4,2]},filter:["==",["geometry-type"],"LineString"]});
-    state.map.addLayer({id:id+"-point",type:"circle",source:id,paint:{"circle-color":byValidity,"circle-radius":["case",invalid,8,5],"circle-stroke-color":"#fff","circle-stroke-width":1},filter:["==",["geometry-type"],"Point"]});
-    if(fit){const bounds=new maplibregl.LngLatBounds();data.features?.forEach(f=>walkCoords(f.geometry?.coordinates,c=>bounds.extend(c)));if(!bounds.isEmpty())state.map.fitBounds(bounds,{padding:40})}
+    state.map.addLayer({id,type:"fill",source:id,"source-layer":"camada",paint:{"fill-color":byValidity,"fill-opacity":["case",invalid,.68,.32],"fill-outline-color":byValidity},filter:["==",["geometry-type"],"Polygon"]});
+    state.map.addLayer({id:id+"-line",type:"line",source:id,"source-layer":"camada",paint:{"line-color":byValidity,"line-width":["case",invalid,4,2]},filter:["==",["geometry-type"],"LineString"]});
+    state.map.addLayer({id:id+"-point",type:"circle",source:id,"source-layer":"camada",paint:{"circle-color":byValidity,"circle-radius":["case",invalid,8,5],"circle-stroke-color":"#fff","circle-stroke-width":1},filter:["==",["geometry-type"],"Point"]});
+    if(fit)await zoomToCatalogLayer(id);
     return true;
   }
   async function filesAdded(files,taskProgress=null,options={}){
@@ -373,7 +475,7 @@
     if(!layer){$("#gp-editor-view").innerHTML='<div class="empty">Selecione um recurso no Catálogo ou uma camada no painel Conteúdo para consultar suas propriedades.</div>';return}
     const isRaster=layer.tipo?.toLowerCase().includes("raster"),isMapVector=!isRaster&&state.layers.some(item=>item.id===layer.id),color=layerColor(layer.id);
     const symbology=isMapVector?`<section class="property-symbology"><h3>Simbologia</h3><div class="layer-color-control"><label for="gp-layer-color">Cor do símbolo e do vetor</label><div><input id="gp-layer-color" type="color" value="${color}" aria-label="Cor da camada"><output for="gp-layer-color">${color.toUpperCase()}</output></div><p>A alteração é aplicada imediatamente a pontos, linhas e polígonos.</p></div></section>`:"";
-    $("#gp-editor-view").innerHTML=`<div class="editor-head"><i data-lucide="${isRaster?"grid-3x3":"shapes"}"></i><h2>${escapeHtml(layer.nome)}</h2></div><div class="editor-body"><dl class="property-list"><dt>Identificador</dt><dd>${escapeHtml(layer.id)}</dd><dt>Tipo</dt><dd>${escapeHtml(layer.tipo||"Camada")}</dd><dt>CRS</dt><dd>${escapeHtml(layer.crs||"Não informado")}</dd><dt>Origem</dt><dd>${escapeHtml(layer.origem||"Sessão")}</dd><dt>Importação</dt><dd>${escapeHtml(layer.data_importacao||"Sessão atual")}</dd></dl>${symbology}</div>`;
+    $("#gp-editor-view").innerHTML=`<div class="editor-head"><i data-lucide="${isRaster?"grid-3x3":"shapes"}"></i><h2>${escapeHtml(layer.nome)}</h2></div><div class="editor-body"><dl class="property-list"><dt>Identificador</dt><dd>${escapeHtml(layer.id)}</dd><dt>Tipo</dt><dd>${escapeHtml(layer.tipo||"Camada")}</dd><dt>CRS</dt><dd>${escapeHtml(layer.crs?crsLabel(layer.crs):"Não informado")}</dd><dt>Origem</dt><dd>${escapeHtml(layer.origem||"Sessão")}</dd><dt>Importação</dt><dd>${escapeHtml(layer.data_importacao||"Sessão atual")}</dd></dl>${symbology}</div>`;
     const picker=$("#gp-layer-color");if(picker)picker.oninput=event=>{const next=event.target.value;applyLayerColor(layer.id,next,false);picker.nextElementSibling.value=next.toUpperCase()};icons()
   }
   function ensureAttributesTab(layerId){
@@ -427,8 +529,26 @@
   }
   document.addEventListener("DOMContentLoaded",()=>{initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.name==="basemap"){setBasemap(e.target.value);showBasemapPanel()}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest("[data-layer-group] > .layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.","ok");emit("pronto",{api:API})});
   const TOOL_SUBGROUPS={"OP-01":"Importação e conexão","OP-02":"Qualidade e preparação","OP-02-CORR":"Qualidade e preparação","OP-03":"Qualidade e preparação","OP-04":"Geometria e proximidade","OP-05":"Sobreposição espacial","OP-06":"Agregação vetorial","OP-07":"Consulta e seleção","OP-08":"Conversão de dados","OP-10":"Distância e custo","OP-11":"Distância e custo","OP-12":"Densidade e distribuição","OP-13":"Distância e custo","OP-14":"Interpolação e superfície","OP-15":"Agregação territorial","OP-16":"Criação de superfície","OP-17":"Álgebra de mapas","OP-20":"Normalização raster","OP-21":"Recorte e máscara","OP-22":"Estatística zonal","OP-23":"Amostragem raster","OP-24":"Extração zonal","OP-25":"Dados vetoriais","OP-26":"Dados raster"};
-  renderToolbox=function(filter=""){const term=filter.toLocaleLowerCase("pt-BR"),collator=new Intl.Collator("pt-BR",{sensitivity:"base"}),groups=[...OPS].sort((a,b)=>collator.compare(a[0],b[0]));$("#gp-toolbox").innerHTML=groups.map(([group,operations])=>{const filtered=operations.filter(op=>op[1].toLocaleLowerCase("pt-BR").includes(term)).sort((a,b)=>collator.compare(a[1],b[1]));if(!filtered.length)return"";const subgroups=Object.groupBy?Object.groupBy(filtered,op=>TOOL_SUBGROUPS[op[0]]||"Outros"):filtered.reduce((acc,op)=>((acc[TOOL_SUBGROUPS[op[0]]||"Outros"]??=[]).push(op),acc),{});return`<div class="tool-group"><button class="tool-group-title" aria-expanded="true"><i data-lucide="chevron-down"></i><i data-lucide="briefcase"></i><span>${group}</span></button><div class="tool-group-children">${Object.entries(subgroups).sort(([a],[b])=>collator.compare(a,b)).map(([sub,items])=>`<div class="tool-subgroup"><button class="tool-subgroup-title" aria-expanded="true"><i data-lucide="chevron-down"></i><span>${sub}</span></button><div class="tool-subgroup-children">${items.map(op=>`<button class="tool-row" data-op="${op[0]}" title="${op[1]}"><i data-lucide="settings-2"></i><span class="tool-name">${op[1]}</span><span class="availability" title="Disponível"></span></button>`).join("")}</div></div>`).join("")}</div></div>`}).join("");icons()};
-  fieldHtml=function(f){const[id,label,type,val]=f,prefix=id==="saida"?'<div class="form-section-title"><i data-lucide="save"></i><span>Saída</span></div>':"";if(type==="check")return`${prefix}<label class="field-check"><input name="${id}" type="checkbox" ${val?"checked":""}>${label}</label>`;let input;if(type==="select")input=`<select name="${id}">${val.map(x=>`<option value="${x}">${x}</option>`).join("")}</select>`;else if(type==="layer")input=`<select name="${id}" required><option value="">Selecione…</option>${state.layers.map(x=>`<option value="${x.id}">${escapeHtml(x.nome)}</option>`).join("")}</select>`;else input=`<input name="${id}" type="${type}" value="${escapeHtml(val??"")}">`;return`${prefix}<div class="field"><label>${label}</label>${input}</div>`};
+  Object.assign(TOOL_SUBGROUPS,{"OP-28":"Derivação geométrica","OP-29":"Derivação geométrica","OP-30":"Derivação geométrica","OP-31":"Generalização","OP-32":"Conversão geométrica","OP-33":"Recorte","OP-34":"Junção espacial","OP-35":"Mesclagem","OP-36":"Reprojeção","OP-37":"Medições","OP-38":"Medições","OP-39":"Reclassificação","OP-40":"Classificação binária","OP-41":"Transformação de valores","OP-42":"Estatística focal","OP-43":"Suavização"});
+  renderToolbox=function(filter=""){
+    const term=filter.toLocaleLowerCase("pt-BR"),collator=new Intl.Collator("pt-BR",{sensitivity:"base"}),scope=TOOLBOX_SCOPES[state.toolboxScope]||TOOLBOX_SCOPES.geral;
+    if(state.toolboxScope==="geral"){
+      const groups={};
+      OPS.forEach(([group,operations])=>operations.filter(op=>op[1].toLocaleLowerCase("pt-BR").includes(term)).forEach(op=>(groups[group]??=[]).push({nome:op[1],tipo:"algoritmo",valor:op})));
+      (state.functions||[]).filter(fn=>fn.nome.toLocaleLowerCase("pt-BR").includes(term)).forEach(fn=>{const first=fn.passos?.[0]?.algoritmo_id,group=OPS.find(([,operations])=>operations.some(op=>op[0]===first))?.[0]||"Funções SIRCADI";(groups[group]??=[]).push({nome:fn.nome,tipo:"funcao",valor:fn})});
+      $("#gp-toolbox").innerHTML=Object.entries(groups).sort(([a],[b])=>collator.compare(a,b)).map(([group,items])=>`<div class="tool-group"><button class="tool-group-title" aria-expanded="true"><i data-lucide="chevron-down"></i><i data-lucide="briefcase"></i><span>${group}</span></button><div class="tool-group-children">${items.sort((a,b)=>collator.compare(a.nome,b.nome)).map(item=>item.tipo==="algoritmo"?toolRow(item.valor):`<button class="tool-row" data-toolbox-function="${escapeHtml(item.valor.id)}" title="Função: ${escapeHtml(item.nome)}"><i data-lucide="blocks"></i><span class="tool-name">${escapeHtml(item.nome)}</span><span class="availability" title="Função composta"></span></button>`).join("")}</div></div>`).join("");icons();return;
+    }
+    const algorithms=OPS.flatMap(group=>group[1]).filter(op=>scope.ids?.has(op[0])&&op[1].toLocaleLowerCase("pt-BR").includes(term));
+    const functions=(state.functions||[]).filter(fn=>{const ids=(fn.passos||[]).map(step=>step.algoritmo_id);return ids.length&&ids.every(id=>scope.ids?.has(id))&&fn.nome.toLocaleLowerCase("pt-BR").includes(term)});
+    const libraries={};
+    algorithms.forEach(op=>{const library=TOOL_LIBRARY[op[0]]||"Núcleo do sistema";(libraries[library]??=[]).push({nome:op[1],tipo:"algoritmo",valor:op})});
+    functions.forEach(fn=>{const library=TOOL_LIBRARY[fn.passos?.[0]?.algoritmo_id]||"Núcleo do sistema";(libraries[library]??=[]).push({nome:fn.nome,tipo:"funcao",valor:fn})});
+    $("#gp-toolbox").innerHTML=Object.entries(libraries).sort(([a],[b])=>collator.compare(a,b)).map(([library,items])=>`<div class="tool-group"><button class="tool-group-title" aria-expanded="true"><i data-lucide="chevron-down"></i><i data-lucide="library"></i><span>${library}</span></button><div class="tool-group-children">${items.sort((a,b)=>collator.compare(a.nome,b.nome)).map(item=>item.tipo==="algoritmo"?toolRow(item.valor):`<button class="tool-row" data-toolbox-function="${escapeHtml(item.valor.id)}" title="Função: ${escapeHtml(item.nome)}"><i data-lucide="blocks"></i><span class="tool-name">${escapeHtml(item.nome)}</span><span class="availability" title="Função composta"></span></button>`).join("")}</div></div>`).join("");icons();
+  };
+  function toolRow(op){return`<button class="tool-row" data-op="${op[0]}" title="${escapeHtml(op[1])}"><i data-lucide="settings-2"></i><span class="tool-name">${escapeHtml(op[1])}</span><span class="availability" title="Disponível"></span></button>`}
+  function openToolboxScope(scope="geral"){state.toolboxScope=TOOLBOX_SCOPES[scope]?scope:"geral";activateToolsTab();showTools();$("#gp-right-title").textContent=TOOLBOX_SCOPES[state.toolboxScope].nome;renderToolbox($("#gp-tool-search").value)}
+  fieldHtml=function(f){const[id,label,type,val]=f,prefix=id==="nome_saida"?'<div class="form-section-title"><i data-lucide="save"></i><span>Saída</span></div>':"";if(type==="check")return`${prefix}<label class="field-check"><input name="${id}" type="checkbox" ${val?"checked":""}>${label}</label>`;let input,help="";if(type==="select")input=`<select name="${id}" required>${val.map(x=>`<option value="${x}">${crsLabel(x)}</option>`).join("")}</select>`;else if(type==="layer"||type==="layers"){input=`<select name="${id}" required ${type==="layers"?'multiple size="5"':""}><option value="">Selecione no Painel de Conteúdo…</option>${state.layers.map(x=>`<option value="${x.id}">${escapeHtml(x.nome)}</option>`).join("")}</select>`;help='<p class="field-help">Origem: Painel de Conteúdo.</p>'}else input=`<input name="${id}" type="${type}" value="${escapeHtml(val??"")}" required>`;return`${prefix}<div class="field"><label>${label}</label>${input}${help}</div>`};
   TOOL_SUBGROUPS["OP-27"]="Persistência";
-  window.gpApp={state,selectOp,configureLoadOperation,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,showTools,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,showLibrary,showHistory,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer};
+  document.addEventListener("click",event=>{const row=event.target.closest?.("[data-toolbox-function]");if(!row)return;const fn=state.functions.find(item=>item.id===row.dataset.toolboxFunction);if(fn)showDefinitionRun("functions",fn)});
+  window.gpApp={state,selectOp,configureLoadOperation,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer};
 })();

@@ -349,6 +349,53 @@ def carregar_vetor_geojson(recurso_id: str) -> dict[str, Any] | None:
     return dict(row["geojson"]) if row and row["geojson"] else {"type": "FeatureCollection", "features": []}
 
 
+def obter_vetor_bounds(recurso_id: str) -> list[float] | None:
+    """Retorna a extensão integral da camada em EPSG:4326."""
+    with get_connection() as conn:
+        found = _find_layer(conn, recurso_id)
+        if not found or found[1]["tipo"] != "vetor":
+            return None
+        categoria, camada = found
+        features = STORAGES[categoria][1]
+        row = conn.execute(
+            sql.SQL("""SELECT ST_XMin(extent) AS xmin,ST_YMin(extent) AS ymin,
+                              ST_XMax(extent) AS xmax,ST_YMax(extent) AS ymax
+                       FROM (SELECT ST_Extent(geom) AS extent
+                             FROM geoprocessamento.{} WHERE camada_id=%s) q""").format(
+                sql.Identifier(features)
+            ),
+            (camada["id"],),
+        ).fetchone()
+    if not row or row["xmin"] is None:
+        return None
+    return [float(row["xmin"]), float(row["ymin"]), float(row["xmax"]), float(row["ymax"])]
+
+
+def carregar_vetor_mvt(recurso_id: str, z: int, x: int, y: int) -> bytes | None:
+    """Gera somente a parcela MVT visível; a geometria persistida não é modificada."""
+    with get_connection() as conn:
+        found = _find_layer(conn, recurso_id)
+        if not found or found[1]["tipo"] != "vetor":
+            return None
+        categoria, camada = found
+        features = STORAGES[categoria][1]
+        row = conn.execute(
+            sql.SQL("""WITH tile_bounds AS (
+                    SELECT ST_TileEnvelope(%s,%s,%s) AS geom,
+                           ST_Transform(ST_TileEnvelope(%s,%s,%s, margin => 0.015625),4326) AS query_geom
+                ), tile_rows AS (
+                    SELECT propriedades,
+                           ST_AsMVTGeom(ST_Transform(f.geom,3857),b.geom,4096,64,true) AS geom
+                    FROM geoprocessamento.{} f CROSS JOIN tile_bounds b
+                    WHERE f.camada_id=%s AND f.geom && b.query_geom
+                ) SELECT ST_AsMVT(tile_rows,'camada',4096,'geom') AS tile FROM tile_rows""").format(
+                sql.Identifier(features)
+            ),
+            (z, x, y, z, x, y, camada["id"]),
+        ).fetchone()
+    return bytes(row["tile"] or b"") if row else b""
+
+
 def carregar_raster(recurso_id: str) -> tuple[bytes, dict[str, Any]] | None:
     with get_connection() as conn:
         found = _find_layer(conn, recurso_id)

@@ -17,6 +17,7 @@
   let basemapRecolhido = localStorage.getItem("geoespacial-viewer-basemap-collapsed") === "true";
   let rotulosAtivos = localStorage.getItem("geoespacial-viewer-labels") === "true";
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+  const formatCrs = (value) => String(value || "CRS não informado").replace(/EPSG:4674(?!\s*\()/g, "EPSG:4674 (SIRGAS 2000)");
   function formatDate(value) {
     if (!value) return "—";
     const date = new Date(value);
@@ -39,6 +40,7 @@
       panel.classList.toggle("active", active);
       panel.hidden = !active;
     });
+    if (name === "properties") setTimeout(() => [["lineWidth", "Espessura da linha (px)"], ["pointRadius", "Tamanho do ponto (px)"]].forEach(([field, label]) => { const input=document.querySelector(`#geoespacial-properties-content [name="${field}"]`),text=[...(input?.closest("label")?.childNodes||[])].find(node=>node.nodeType===Node.TEXT_NODE);if(text)text.nodeValue=label; }), 0);
   }
   function showDetails() {
     const tab = document.querySelector('[data-context-tab="details"]');
@@ -55,11 +57,19 @@
   function layerSymbol(camada) {
     const [, type] = legendColor(camada);
     const style = GeoespacialMap.getLayerStyle(camada.id || camada.nome);
-    return `<span class="geo-layer-tree-symbol geo-layer-tree-symbol--${type}" style="--symbol-color:${style.color};--symbol-opacity:${Math.round(style.fillOpacity*100)}%;--symbol-width:${style.lineWidth}px;--symbol-radius:${style.pointRadius}px" aria-label="Símbolo da camada"></span>`;
+    return `<span class="geo-layer-tree-symbol geo-layer-tree-symbol--${type}" style="--symbol-color:${style.color};--symbol-fill:${style.fillColor||style.color};--symbol-opacity:${Math.round(style.fillOpacity*100)}%;--symbol-width:${style.lineWidth}px;--symbol-radius:${style.pointRadius}px" aria-label="Editar símbolo da camada" title="Editar propriedades"></span>`;
+  }
+  function displayName(camada) { return GeoespacialMap.getLayerProperties(camada.id || camada.nome).alias || camada.nome; }
+  function openProperties(camada, row) {
+    const tab=document.querySelector('[data-context-tab="properties"]');tab.hidden=false;activateContextTab("properties");
+    const style=GeoespacialMap.getLayerStyle(camada.id||camada.nome),saved=GeoespacialMap.getLayerProperties(camada.id||camada.nome);
+    document.getElementById("geoespacial-properties-content").innerHTML=`<form class="geo-properties-form"><label>Alias da camada<input name="alias" value="${escapeHtml(saved.alias||camada.nome)}" required></label><div class="geo-properties-grid"><label>Cor do contorno/linha<input name="color" type="color" value="${style.color}"></label><label>Cor do preenchimento<input name="fillColor" type="color" value="${style.fillColor||style.color}"></label><label>Espessura da linha<input name="lineWidth" type="number" min="0.5" max="12" step="0.5" value="${style.lineWidth}"></label><label>Tamanho do ponto<input name="pointRadius" type="number" min="2" max="24" step="0.5" value="${style.pointRadius}"></label><label>Tipo de linha<select name="lineStyle"><option value="solid">Contínua</option><option value="dashed">Tracejada</option><option value="dotted">Pontilhada</option></select></label><label>Preenchimento<select name="fillMode"><option value="translucent">Translúcido</option><option value="solid">Sólido</option><option value="outline">Somente contorno</option></select></label></div><label>Opacidade do preenchimento<input name="fillOpacity" type="range" min="0" max="1" step="0.05" value="${style.fillOpacity}"></label><div class="geo-properties-feedback"></div><footer><button class="btn btn-primary" type="submit">Salvar propriedades</button></footer></form>`;
+    const form=document.querySelector("#geoespacial-properties-content form");form.insertAdjacentHTML("afterbegin",`<label>Nome técnico<input value="${escapeHtml(camada.nome)}" readonly></label><label>Tipo / CRS<input value="${escapeHtml(`${camada.geometria_tipo||camada.tipo||"Vetorial"} · ${camada.crs||"CRS não informado"}`)}" readonly></label>`);form.elements.lineStyle.value=style.lineStyle||"solid";form.elements.fillMode.value=style.fillMode||"translucent";
+    form.addEventListener("submit",event=>{event.preventDefault();const data=new FormData(form),props={alias:String(data.get("alias")).trim(),color:String(data.get("color")),fillColor:String(data.get("fillColor")),lineWidth:Number(data.get("lineWidth")),pointRadius:Number(data.get("pointRadius")),lineStyle:String(data.get("lineStyle")),fillMode:String(data.get("fillMode")),fillOpacity:Number(data.get("fillOpacity"))};GeoespacialMap.saveLayerProperties(camada.id||camada.nome,props);row.querySelector(".layer-group-name").textContent=props.alias;row.querySelector(".geo-layer-tree-symbol").outerHTML=layerSymbol(camada);row.querySelector(".geo-layer-tree-symbol").addEventListener("click",click=>{click.stopPropagation();openProperties(camada,row)});renderLegend();form.querySelector(".geo-properties-feedback").textContent="Propriedades salvas e aplicadas.";});
   }
   function renderLegend() {
     const visible = camadas.filter((camada) => camadasVisiveis.has(camada.id));
-    const rows = visible.map((camada) => { const [, type] = legendColor(camada), style = GeoespacialMap.getLayerStyle(camada.id || camada.nome); return `<div class="geo-legend-item"><span class="geo-legend-symbol geo-legend-symbol--${type}" style="--legend-color:${style.color};--legend-opacity:${Math.round(style.fillOpacity*100)}%;--legend-width:${style.lineWidth}px;--legend-radius:${style.pointRadius}px"></span><span>${escapeHtml(camada.nome)}</span></div>`; }).join("");
+    const rows = visible.map((camada) => { const [, type] = legendColor(camada), style = GeoespacialMap.getLayerStyle(camada.id || camada.nome); return `<div class="geo-legend-item"><span class="geo-legend-symbol geo-legend-symbol--${type}" style="--legend-color:${style.fillColor||style.color};--legend-opacity:${Math.round(style.fillOpacity*100)}%;--legend-width:${style.lineWidth}px;--legend-radius:${style.pointRadius}px"></span><span>${escapeHtml(displayName(camada))}</span></div>`; }).join("");
     document.getElementById("geoespacial-legend").innerHTML = `${rows || '<p class="hint">Ative uma camada para visualizar sua legenda.</p>'}<div class="geo-legend-invalid-note"><span class="geo-legend-symbol" style="--legend-color:#dc2626"></span><span>Geometria inválida</span></div>`;
   }
 
@@ -73,7 +83,7 @@
     document.getElementById("geoespacial-operations-list").innerHTML = `<div class="geoespacial-detail-grid">
       <div class="geoespacial-detail-row"><span>Nome</span><strong>${escapeHtml(camada.nome)}</strong></div>
       <div class="geoespacial-detail-row"><span>Tipo</span><strong>${escapeHtml(camada.geometria_tipo || camada.tipo || camada.categoria_arquivo)}</strong></div>
-      <div class="geoespacial-detail-row"><span>CRS</span><strong>${escapeHtml(camada.crs || "Não informado")}</strong></div>
+      <div class="geoespacial-detail-row"><span>CRS</span><strong>${escapeHtml(formatCrs(camada.crs))}</strong></div>
       <div class="geoespacial-detail-row"><span>Origem</span><strong>${escapeHtml(camada.arquivo || camada.origem || "Datastorage")}</strong></div>
       <div class="geoespacial-detail-row"><span>Geração da base</span><strong>${escapeHtml(formatDate(generationDate(camada)))}</strong></div>
       <div class="geoespacial-detail-row"><span>Importação</span><strong>${escapeHtml(formatDate(camada.data_importacao || camada.criado_em))}</strong></div>
@@ -101,10 +111,11 @@
       document.getElementById("geoespacial-operations-list").insertAdjacentHTML("beforeend", '<p class="hint">O preview raster está disponível na bancada de geoprocessamento.</p>');
       return;
     }
-    const response = await fetch(`${API}/camadas/${encodeURIComponent(camada.id)}/geojson`);
-    if (!response.ok) throw new Error(`Não foi possível carregar a geometria (${response.status})`);
     await mapReady();
-    GeoespacialMap.addLayer(camada.id, await response.json(), { uniqueStyle: true, label: camada.nome, labelsVisible: rotulosAtivos });
+    GeoespacialMap.addVectorTileLayer(camada.id, `${API}/camadas/${encodeURIComponent(camada.id)}/tiles/{z}/{x}/{y}.pbf`, { uniqueStyle: true, label: displayName(camada), labelsVisible: rotulosAtivos });
+    const boundsResponse = await fetch(`${API}/camadas/${encodeURIComponent(camada.id)}/bounds`);
+    if (!boundsResponse.ok) throw new Error(`Não foi possível obter a extensão da camada (${boundsResponse.status})`);
+    GeoespacialMap.layers.get(camada.id).bounds = (await boundsResponse.json()).bounds;
     GeoespacialMap.fitBounds(camada.id);
   }
   function selecionarBasemap(id) {
@@ -137,7 +148,7 @@
     };
     const operacionais = groups.flatMap(([key]) => camadas.filter((layer) => category(layer) === key));
     const operationalRows = operacionais.length
-      ? operacionais.map((camada) => { const uid = camada.id || `file-${camadas.indexOf(camada)}`; return `<div class="layer-group layer-group--record geo-layer-record" data-id="${escapeHtml(uid)}"><div class="layer-group-header-row"><label class="layer-visibility-toggle" for="layer-${escapeHtml(uid)}"><input type="checkbox" class="layer-visibility-input" id="layer-${escapeHtml(uid)}" ${camada.registrada ? "" : "disabled"}></label><button type="button" class="layer-group-header layer-group-header--record" aria-expanded="false"><span class="layer-group-toggle" aria-hidden="true">›</span><span class="geo-layer-copy"><span class="layer-group-name">${escapeHtml(camada.nome)}</span>${layerSymbol(camada)}</span></button></div></div>`; }).join("")
+      ? operacionais.map((camada) => { const uid = camada.id || `file-${camadas.indexOf(camada)}`; return `<div class="layer-group layer-group--record geo-layer-record" data-id="${escapeHtml(uid)}"><div class="layer-group-header-row"><label class="layer-visibility-toggle" for="layer-${escapeHtml(uid)}"><input type="checkbox" class="layer-visibility-input" id="layer-${escapeHtml(uid)}" ${camada.registrada ? "" : "disabled"}></label><button type="button" class="layer-group-header layer-group-header--record" aria-expanded="false"><span class="layer-group-toggle" aria-hidden="true">›</span><span class="geo-layer-copy"><span class="layer-group-name">${escapeHtml(displayName(camada))}</span>${layerSymbol(camada)}</span></button></div></div>`; }).join("")
       : '<p class="layers-empty layers-empty--nested">Nenhuma camada operacional.</p>';
     const basemapRows = BASEMAPS.map((item) => `<div class="layer-group layer-group--record geo-layer-record geo-basemap-record" data-basemap-id="${item.id}"><div class="layer-group-header-row"><label class="layer-visibility-toggle"><input class="layer-visibility-input" type="radio" name="viewer-basemap" value="${item.id}" ${basemapAtual === item.id ? "checked" : ""}></label><button type="button" class="layer-group-header layer-group-header--record"><span class="layer-group-toggle" aria-hidden="true">•</span><span class="layer-group-name">${escapeHtml(item.name)}</span></button></div></div>`).join("");
     container.innerHTML = operationalRows;
@@ -147,6 +158,7 @@
       const camada = camadas.find((value, index) => (value.id || `file-${index}`) === item.dataset.id);
       const button = item.querySelector("button");
       button.addEventListener("click", () => { const expanded = item.classList.toggle("expanded"); button.setAttribute("aria-expanded", String(expanded)); detail(camada); });
+      item.querySelector(".geo-layer-tree-symbol").addEventListener("click", (event) => { event.stopPropagation(); openProperties(camada,item); });
       item.querySelector("input").addEventListener("change", async (event) => { try { await toggle(camada, event.target.checked); } catch (error) { event.target.checked = false; document.getElementById("geoespacial-operations-list").innerHTML = `<p class="hint">${escapeHtml(error.message)}</p>`; } });
     });
     basemapContainer.querySelectorAll(".geo-basemap-record").forEach((row) => { const item=BASEMAPS.find((value)=>value.id===row.dataset.basemapId);row.querySelector("button").addEventListener("click",()=>detailBasemap(item));row.querySelector("input").addEventListener("change",()=>selecionarBasemap(item.id)); });
@@ -156,6 +168,7 @@
     if (!response.ok) throw new Error("Catálogo de camadas indisponível");
     diretorio = await response.json();
     camadas = diretorio.operacionais || [];
+    if (diretorio.banco_disponivel === false) document.getElementById("geoespacial-operations-list").innerHTML = '<p class="hint">Arquivos locais exibidos. O catálogo do banco está temporariamente indisponível; tente atualizar em instantes.</p>';
     preencherCamadasRecorte();
     render();
   }
@@ -177,7 +190,7 @@
     if (!response.ok) throw new Error(body.detail || "Arquivo geoespacial inválido");
     arquivoInspecionado = file;
     tokenImportacao = body.token_importacao;
-    document.getElementById("import-current-crs").value = body.crs_atual || "CRS não informado";
+    document.getElementById("import-current-crs").value = formatCrs(body.crs_atual);
     const invalidas = body.camadas.reduce((total, camada) => total + Number(camada.geometrias_invalidas || 0), 0);
     status.textContent = `${body.categoria} · ${body.camadas.length} camada(s) importável(is)${invalidas ? ` · ${invalidas} geometria(s) inválida(s) serão destacadas` : " · geometrias válidas"}${body.arquivo_compactado ? " · pacote compactado" : ""}`;
     confirm.disabled = false;
@@ -227,7 +240,7 @@
       sources[item.id] = { type: "raster", tiles: item.tiles, tileSize: 256, attribution: "© provedores do mapa" };
       layers.push({ id: `viewer-basemap-${item.id}`, type: "raster", source: item.id, layout: { visibility: item.id === basemapAtual ? "visible" : "none" } });
     });
-    GeoespacialMap.init("map-geoespacial", { center: [-48.5, -22.4], zoom: 6.2, style: { version: 8, glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf", sources, layers } });
+    GeoespacialMap.init("map-geoespacial", { center: [-48.5, -22.4], zoom: 6.2, nativeTools: true, style: { version: 8, glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf", sources, layers } });
     document.querySelectorAll("[data-context-tab]").forEach((button) => button.addEventListener("click", () => activateContextTab(button.dataset.contextTab)));
     activateContextTab("legend");
     renderLegend();

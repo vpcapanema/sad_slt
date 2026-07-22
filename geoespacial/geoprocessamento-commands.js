@@ -58,8 +58,9 @@
     map.addLayer({ id: "gp-selection-point", type: "circle", source: "gp-selection", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-color": "#00b7ff", "circle-radius": 7, "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
     $("#gp-selection").textContent = `${data.features.length} selecionada${data.features.length === 1 ? "" : "s"}`;
     window.gpApp.syncAttributeSelection?.();
+    window.gpApp.configureSelectionScope?.();
   }
-  function clearSelection() { removeSelectionLayers(); state().selectedGeoJSON = { type: "FeatureCollection", features: [] }; $("#gp-selection").textContent = "0 selecionadas"; window.gpApp.syncAttributeSelection?.(); }
+  function clearSelection() { removeSelectionLayers(); state().selectedGeoJSON = { type: "FeatureCollection", features: [] }; $("#gp-selection").textContent = "0 selecionadas"; window.gpApp.syncAttributeSelection?.(); window.gpApp.configureSelectionScope?.(); }
   function fitSelection() { const data = state().selectedGeoJSON; if (!data?.features?.length) return notify("Não há feições selecionadas."); fitGeoJSON(data); }
   function setActiveMapTool(action) { $$('[data-action="explore"],[data-action="select"]').forEach(button => button.classList.toggle("active-tool", button.dataset.action === action)); }
 
@@ -100,7 +101,8 @@
 
   function showEnvironments() {
     const env = JSON.parse(localStorage.getItem("gp-environments") || "{}");
-    openPanel("Ambientes de geoprocessamento", `<form id="gp-environments-form"><div class="editor-body"><div class="field"><label>CRS de saída padrão</label><input name="crs" value="${escapeHtml(env.crs || "")}" placeholder="Ex.: EPSG:31983"></div><div class="field"><label>Resolução raster padrão</label><input name="resolution" type="number" min="0" step="any" value="${escapeHtml(env.resolution || "")}" placeholder="Ex.: 50"></div><label class="field-check"><input name="overwrite" type="checkbox" ${env.overwrite ? "checked" : ""}> Sobrescrever saídas existentes</label><p class="field-help">Somente configurações reconhecidas pelo algoritmo aberto são aplicadas.</p></div><div class="editor-actions"><button class="btn primary">Salvar ambientes</button></div></form>`);
+    openPanel("Ambientes de geoprocessamento", `<form id="gp-environments-form"><div class="editor-body"><div class="field"><label>CRS de saída padrão</label><input name="crs" value="${escapeHtml(env.crs || "")}" placeholder="Ex.: EPSG:31983 (SIRGAS 2000 / UTM zona 23S)"></div><div class="field"><label>Resolução raster padrão</label><input name="resolution" type="number" min="0" step="any" value="${escapeHtml(env.resolution || "")}" placeholder="Ex.: 50"></div><label class="field-check"><input name="overwrite" type="checkbox" ${env.overwrite ? "checked" : ""}> Sobrescrever saídas existentes</label><p class="field-help">Somente configurações reconhecidas pelo algoritmo aberto são aplicadas.</p></div><div class="editor-actions"><button class="btn primary">Salvar ambientes</button></div></form>`);
+    $("#gp-environments-form").elements.crs.placeholder = "Ex.: EPSG:31983 (SIRGAS 2000 / UTM zona 23S)";
     $("#gp-environments-form").onsubmit = event => { event.preventDefault(); const form = event.target; localStorage.setItem("gp-environments", JSON.stringify({ crs: form.crs.value.trim(), resolution: form.resolution.value, overwrite: form.overwrite.checked })); notify("Ambientes salvos."); };
   }
   function applyEnvironments(form) {

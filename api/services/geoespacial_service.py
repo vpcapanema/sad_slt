@@ -7,7 +7,7 @@ import re
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 from uuid import uuid4
 
 import geopandas as gpd
@@ -265,6 +265,8 @@ class GeoespacialService:
 
     async def camada_geojson(self, camada_id: str) -> dict[str, Any]:
         geojson = camada_geoespacial_repository.carregar_vetor_geojson(camada_id)
+        if geojson is None and camada_id in self._camadas:
+            return cast(dict[str, Any], self._camadas[camada_id].__geo_interface__)
         if geojson is None:
             raise ValueError(f"Camada vetorial {camada_id} não encontrada")
         return geojson

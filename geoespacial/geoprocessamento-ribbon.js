@@ -9,13 +9,13 @@
     message.timer = setTimeout(() => status.textContent = "Ambiente local", 3500);
   }
 
-  function openToolbox() {
+  function openToolbox(scope = "geral") {
     const app = $(".gp-app");
     const tab = $('[data-right-tab="tools"]');
     app.classList.remove("right-collapsed");
     tab.hidden = false;
     tab.click();
-    window.gpApp.renderToolbox($("#gp-tool-search").value);
+    window.gpApp.openToolboxScope?.(scope);
     $("#gp-tool-search").focus();
   }
 
@@ -67,7 +67,11 @@
         const progress = window.gpApp.createTaskProgress($("#gp-editor-view"));
         try {
           let id = button.dataset.loadSystem,resource;
-          if(id){let job=await request(`/api/geoespacial/camadas/${encodeURIComponent(id)}/carregar-job`,{method:"POST"});job=await window.gpApp.waitForJob(job,progress);resource=job.resultado}
+          if(id){
+            resource=(directory.operacionais||[]).find(layer=>layer.id===id)||(directory.biblioteca_canonica||[]).find(layer=>layer.id===id);
+            if(!resource)throw new Error("Camada não encontrada no diretório do sistema");
+            progress.note("Referência da camada existente vinculada ao Painel de Conteúdo");
+          }
           else{const form=new FormData();form.append("arquivo",button.dataset.loadFile);const result=await request("/api/geoespacial/camadas-arquivo/carregar",{method:"POST",body:form,headers:{}});resource=result.recursos?.[0];id=resource?.id;if(!id)throw new Error("O arquivo não gerou uma camada carregável")}
           const index = window.gpApp.state.layers.findIndex((layer) => layer.id === id);
           if (index >= 0) window.gpApp.state.layers[index] = resource;
@@ -77,7 +81,7 @@
           window.gpApp.renderLayers();
           progress.note("Representação espacial desenhada no mapa");
           progress.complete();
-          message("Camada carregada do banco.");
+          message("Camada vinculada instantaneamente ao Painel de Conteúdo.");
         } catch (error) {
           progress.fail(`Falha: ${error.message}`);
           message(error.message);
@@ -120,10 +124,14 @@
     setTimeout(() => {
       const form = $("#gp-op-form");
       Object.entries(values).forEach(([name, value]) => {
-        if (form?.elements[name]) form.elements[name].value = value;
+        if (form?.elements[name]) {
+          form.elements[name].value = value;
+          form.elements[name].dispatchEvent(new Event("change", { bubbles: true }));
+        }
       });
       window.gpApp.configureLoadOperation?.();
       window.gpCommands?.applyEnvironments(form);
+      window.gpApp.configureSelectionScope?.();
     }, 0);
   }
 
@@ -144,7 +152,10 @@
       const action = event.target.closest("[data-action]")?.dataset.action;
       if (!action) return;
       if (action === "import-file") openOperation("OP-01", { tipo_entrada: "Local" });
-      if (action === "tools") openToolbox();
+      if (action === "tools") openToolbox("geral");
+      if (action === "tools-vector-raster") openToolbox("vetor_raster");
+      if (action === "tools-science") openToolbox("cientifica");
+      if (action === "tools-interpolation") openToolbox("interpolacao");
       if (action === "run") {
         if ($("#gp-op-form")) $("#gp-op-form").requestSubmit();
         else { openToolbox(); message("Selecione um algoritmo para executar."); }
