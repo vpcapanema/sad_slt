@@ -20,6 +20,7 @@
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
     <main class="conteudo-principal app-main ahp-main">
+      {% include "componentes/navegacao_fases_hierarquizacao.html" %}
       <section class="card-gestao-das-hierarquizacoes secao-gestao-das-hierarquizacoes card">
         <h1 class="ahp-page-title">
           <i class="fas fa-list-check"></i> Gestão das hierarquizações
@@ -27,157 +28,6 @@
         <p>
           Defina o universo de cada rodada e acompanhe as hierarquizações registradas no MAD.
         </p>
-      </section>
-
-      <section class="card-informacoes-cadastrais secao-informacoes-cadastrais card ahp-step-section">
-        <div class="ahp-section-label">
-          <i class="fas fa-folder-plus"></i
-          ><span>Cadastrar hierarquização</span>
-        </div>
-        <div class="ahp-section-body">
-          <form id="nova-hierarquizacao">
-            <article class="card-informacoes-cadastrais ahp-subcard cadastro-card">
-              <div class="ahp-subsection-title">
-                <i class="fas fa-address-card"></i>
-                <h2>Informações cadastrais</h2>
-              </div>
-              <div class="process-grid">
-                <label class="process-field"
-                  ><span>Nome *</span
-                  ><input id="hier-nome" maxlength="200" required /></label
-                ><label class="process-field"
-                  ><span>Tipo de demanda *</span
-                  ><select id="hier-tipo" required>
-                    <option value="">Selecione…</option>
-                    <option value="plano">Plano</option>
-                    <option value="programa">Programa</option>
-                    <option value="projeto" selected>Projeto</option>
-                  </select></label
-                ><label class="process-field process-field--wide"
-                  ><span>Descrição</span
-                  ><textarea id="hier-descricao" rows="3"></textarea>
-                </label>
-              </div>
-            </article>
-
-            <article class="card-universo-da-hierarquizacao ahp-subcard cadastro-card">
-              <div class="ahp-subsection-title">
-                <i class="fas fa-folder-tree"></i>
-                <h2>Universo da hierarquização</h2>
-              </div>
-              <p class="ahp-info-note">
-                <i class="fas fa-circle-info"></i
-                ><span
-                  >O tipo de demanda delimita o universo: planos, programas e projetos
-                  não são misturados na mesma hierarquização.
-                  Utilize os filtros para formar o conjunto e confirme marcando
-                  as demandas que participarão da rodada.</span
-                >
-              </p>
-              <p class="ahp-universo-objeto">
-                Tipo de demanda selecionado:
-                <strong id="universo-objeto-valor">—</strong>
-              </p>
-              <div class="ahp-subcard">
-                <div class="ahp-subsection-title ahp-subsection-title--roman">
-                  <span class="ahp-subsection-num ahp-subsection-num--roman"
-                    >I</span
-                  ><span>Filtros do universo</span>
-                </div>
-                <p class="ahp-help-text">
-                  Pesquise livremente ou filtre pelos atributos disponíveis para
-                  o tipo escolhido.
-                </p>
-                <div class="process-grid">
-                  <label class="process-field"
-                    ><span>Pesquisar</span
-                    ><input
-                      id="demanda-busca"
-                      placeholder="Código, nome ou descrição" /></label
-                  ><label class="process-field"
-                    ><span>Atributo</span
-                    ><select id="demanda-campo">
-                      <option value="">Todos os atributos</option>
-                    </select></label
-                  ><label class="process-field"
-                    ><span>Valor do atributo</span><input id="demanda-valor"
-                  /></label>
-                </div>
-              </div>
-              <div class="ahp-subcard">
-                <div class="ahp-subsection-title ahp-subsection-title--roman">
-                  <span class="ahp-subsection-num ahp-subsection-num--roman"
-                    >II</span
-                  ><span>Resumo</span>
-                </div>
-                <p id="demanda-contagem" class="ahp-universo-preview">
-                  Selecione o tipo de demanda.
-                </p>
-                <div class="hier-scroll-x">
-                  <table class="ahp-resumo-table">
-                    <thead>
-                      <tr>
-                        <th>
-                          <input
-                            type="checkbox"
-                            id="demanda-todos"
-                            aria-label="Selecionar visíveis"
-                          />
-                        </th>
-                        <th>Código</th>
-                        <th>Nome</th>
-                        <th>Grupo comparável</th>
-                        <th>Instituição</th>
-                        <th>Localização</th>
-                      </tr>
-                    </thead>
-                    <tbody id="demanda-tbody"></tbody>
-                  </table>
-                </div>
-              </div>
-            </article>
-
-            <article class="card-fases-da-rodada ahp-subcard cadastro-card">
-              <div class="ahp-subsection-title">
-                <i class="fas fa-diagram-project"></i>
-                <h2>Fases da rodada</h2>
-              </div>
-              <p class="ahp-help-text">As fases são independentes. Marque somente as avaliações que esta rodada executará.</p>
-              <div class="process-grid" id="hier-fases">
-                <label class="process-field"><span><input type="checkbox" value="1" checked> Fase 1 — Elegibilidade territorial</span></label>
-                <label class="process-field"><span><input type="checkbox" value="2" checked> Fase 2 — Favorabilidade territorial</span></label>
-                <label class="process-field"><span><input type="checkbox" value="3" checked> Fase 3 — Ajuste por atributos</span></label>
-              </div>
-            </article>
-
-            <article class="card-matriz-de-premissas-e-criterios ahp-subcard cadastro-card">
-              <div class="ahp-subsection-title">
-                <i class="fas fa-file-excel"></i>
-                <h2>Matriz de premissas e critérios</h2>
-              </div>
-              <p class="ahp-help-text">
-                Anexe a matriz que documenta as premissas e os critérios aplicáveis à rodada.
-              </p>
-              <label class="process-field"
-                ><span>Arquivo JSON, CSV ou XLSX (obrigatório nas Fases 2 e 3)</span
-                ><input
-                  id="hier-matriz"
-                  type="file"
-                  accept=".json,.csv,.xlsx"
-              /></label>
-              <div id="matriz-resumo" class="ahp-info-note hidden"></div>
-            </article>
-            <div
-              id="form-error"
-              class="ahp-info-note ahp-info-note--error hidden"
-            ></div>
-            <div class="process-actions">
-              <button class="btn btn--primary" type="submit">
-                <i class="fas fa-floppy-disk"></i> Cadastrar hierarquização
-              </button>
-            </div>
-          </form>
-        </div>
       </section>
 
       <section class="card-hier-loading secao-hier-loading card ahp-step-section">
@@ -233,6 +83,167 @@
           </div>
         </div>
       </section>
+
+      <section class="card-informacoes-cadastrais secao-informacoes-cadastrais card ahp-step-section">
+        <div class="ahp-section-label">
+          <i class="fas fa-folder-plus"></i
+          ><span>Cadastrar hierarquização</span>
+        </div>
+        <div class="ahp-section-body">
+          <form id="nova-hierarquizacao">
+            <article class="card-informacoes-cadastrais ahp-subcard cadastro-card">
+              <div class="ahp-subsection-title">
+                <i class="fas fa-address-card"></i>
+                <h2>Informações cadastrais</h2>
+              </div>
+              <div class="process-grid">
+                <label class="process-field"
+                  ><span>Nome *</span
+                  ><input id="hier-nome" maxlength="200" required /></label
+                ><label class="process-field process-field--wide"
+                  ><span>Descrição</span
+                  ><textarea id="hier-descricao" rows="3"></textarea>
+                </label>
+              </div>
+            </article>
+
+            <article class="card-universo-da-hierarquizacao ahp-subcard cadastro-card">
+              <div class="ahp-subsection-title">
+                <i class="fas fa-folder-tree"></i>
+                <h2>Universo da hierarquização</h2>
+              </div>
+              <p class="ahp-info-note">
+                <i class="fas fa-circle-info"></i
+                ><span
+                  >O tipo de demanda delimita o universo: planos, programas e projetos
+                  não são misturados na mesma hierarquização.
+                  Utilize os filtros para formar o conjunto e confirme marcando
+                  as demandas que participarão da rodada.</span
+                >
+              </p>
+              <label class="process-field ahp-universo-objeto"
+                ><span>Tipo de demanda *</span
+                ><select id="hier-tipo" required>
+                  <option value="">Selecione…</option>
+                  <option value="plano">Plano</option>
+                  <option value="programa">Programa</option>
+                  <option value="projeto" selected>Projeto</option>
+                </select></label
+              >
+              <strong id="universo-objeto-valor" class="hidden" aria-hidden="true">—</strong>
+              <div
+                class="admin-tabs hier-demand-tabs"
+                id="hier-tipo-tabs"
+                role="tablist"
+                aria-label="Tipo de demanda"
+              >
+                <button type="button" class="admin-tab" data-tipo="plano" role="tab" aria-selected="false">Planos</button>
+                <button type="button" class="admin-tab" data-tipo="programa" role="tab" aria-selected="false">Programas</button>
+                <button type="button" class="admin-tab is-active" data-tipo="projeto" role="tab" aria-selected="true">Projetos</button>
+              </div>
+              <div class="ahp-subcard">
+                <div class="ahp-subsection-title ahp-subsection-title--roman">
+                  <span class="ahp-subsection-num ahp-subsection-num--roman"
+                    >I</span
+                  ><span>Filtros do universo</span>
+                </div>
+                <p class="ahp-help-text">
+                  Pesquise livremente ou filtre pelos atributos disponíveis para
+                  o tipo escolhido.
+                </p>
+                <div class="process-grid">
+                  <label class="process-field"
+                    ><span>Pesquisar</span
+                    ><input
+                      id="demanda-busca"
+                      placeholder="Código, nome ou descrição" /></label
+                  ><label class="process-field"
+                    ><span>Atributo</span
+                    ><select id="demanda-campo">
+                      <option value="">Todos os atributos</option>
+                    </select></label
+                  ><label class="process-field"
+                    ><span>Valor do atributo</span><input id="demanda-valor"
+                  /></label>
+                </div>
+              </div>
+              <div class="ahp-subcard">
+                <div class="ahp-subsection-title ahp-subsection-title--roman">
+                  <span class="ahp-subsection-num ahp-subsection-num--roman"
+                    >II</span
+                  ><span>Resumo</span>
+                </div>
+                <p id="demanda-contagem" class="ahp-universo-preview">
+                  Selecione o tipo de demanda.
+                </p>
+                <div class="hier-scroll-x">
+                  <table class="ahp-resumo-table">
+                    <thead>
+                      <tr>
+                        <th>
+                          <input
+                            type="checkbox"
+                            id="demanda-todos"
+                            aria-label="Selecionar visíveis"
+                          />
+                        </th>
+                        <th>Código</th>
+                        <th>Nome</th>
+                        <th>Grupo comparável</th>
+                        <th>Instituição</th>
+                        <th>Localização</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="demanda-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </article>
+
+            <article class="card-fases-da-rodada ahp-subcard cadastro-card">
+              <div class="ahp-subsection-title">
+                <i class="fas fa-diagram-project"></i>
+                <h2>Fases da rodada</h2>
+              </div>
+              <p class="ahp-help-text">As fases são independentes. Marque somente as avaliações que esta rodada executará.</p>
+              <div class="process-grid" id="hier-fases">
+                <label class="process-field"><span><input type="checkbox" value="1" checked> Fase 1 — Elegibilidade territorial</span></label>
+                <label class="process-field"><span><input type="checkbox" value="2" checked> Fase 2 — Favorabilidade territorial</span></label>
+                <label class="process-field"><span><input type="checkbox" value="3" checked> Fase 3 — Ajuste por atributos</span></label>
+              </div>
+            </article>
+
+            <article class="card-matriz-de-premissas-e-criterios ahp-subcard cadastro-card">
+              <div class="ahp-subsection-title">
+                <i class="fas fa-file-excel"></i>
+                <h2>Matriz de premissas e critérios</h2>
+              </div>
+              <p class="ahp-help-text">
+                Anexe a matriz que documenta as premissas e os critérios aplicáveis à rodada.
+              </p>
+              <label class="process-field"
+                ><span>Arquivo JSON, CSV ou XLSX (obrigatório nas Fases 2 e 3)</span
+                ><input
+                  id="hier-matriz"
+                  type="file"
+                  accept=".json,.csv,.xlsx"
+              /></label>
+              <div id="matriz-resumo" class="ahp-info-note hidden"></div>
+            </article>
+            <div
+              id="form-error"
+              class="ahp-info-note ahp-info-note--error hidden"
+            ></div>
+            <div class="process-actions">
+              <button class="btn btn--primary" type="submit">
+                <i class="fas fa-floppy-disk"></i> Cadastrar hierarquização
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
     </main>
     <div
       id="json-modal"

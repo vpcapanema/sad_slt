@@ -8,7 +8,7 @@
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
 
 {% block estilos_pagina %}
-  <link rel="stylesheet" href="/restrict/hierarquizacao/tree.css">
+  <link rel="stylesheet" href="/restrict/hierarquizacao/tree.css?v=20260723-10">
   <link rel="stylesheet" href="/restrict/hierarquizacao/tree-controls.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
@@ -17,52 +17,70 @@
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 
   <main class="conteudo-principal app-main ranking-tree-main">
+    {% include "componentes/navegacao_fases_hierarquizacao.html" %}
     <section class="secao-hierarquizacao-e-ranking ranking-tree-heading">
       <div><p class="ranking-tree-eyebrow">Módulo de Apoio à Decisão (MAD)</p><h1>Hierarquização e ranking</h1><p>Consulte as rodadas, os resultados e as evidências usadas para estabelecer a ordem de prioridade.</p></div>
       <a class="btn btn-secondary" href="/restrict/hierarquizacao/metodologia/"><i class="fa-solid fa-book-open"></i> Metodologia</a>
     </section>
 
-    <section class="secao-index ranking-tree" aria-label="Árvore do processo de hierarquização e ranking">
-      <a class="tree-node tree-node--root" href="/restrict/hierarquizacao/processos/">
+    <section class="secao-index ranking-tree" aria-label="Fluxo do processo de hierarquização e ranking">
+      <div class="tree-toolbar">
+        <div class="tree-flow-legend"><i class="fa-solid fa-up-down-left-right" aria-hidden="true"></i><span>Arraste as caixas para reorganizar. As setas acompanham o movimento.</span></div>
+        <div class="tree-support-actions" aria-label="Ferramentas de apoio">
+          <a href="/restrict/geoespacial/bancada/"><i class="fa-solid fa-screwdriver-wrench"></i><span>Bancada de geoprocessamento</span><small>Apoio</small></a>
+          <a href="/restrict/geoespacial/produtos/"><i class="fa-solid fa-layer-group"></i><span>Biblioteca de produtos homologados</span><small>Consulta</small></a>
+          <button id="tree-reset-layout" type="button"><i class="fa-solid fa-rotate-left"></i><span>Restaurar organização</span></button>
+        </div>
+      </div>
+      <svg class="tree-links" aria-hidden="true">
+        <defs>
+          <marker id="tree-arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L8,4 L0,8 Z"></path>
+          </marker>
+        </defs>
+        <g class="tree-links-paths"></g>
+      </svg>
+
+      <a id="node-ranking" class="tree-node tree-node--root" href="/restrict/hierarquizacao/processos/">
         <i class="fa-solid fa-ranking-star"></i><strong>Hierarquização e Ranking</strong><span>Ranking final, resultados e homologação</span>
       </a>
 
-      <div class="tree-connector tree-connector--triple" aria-hidden="true"></div>
-
-      <div class="tree-level tree-level--three">
-        <details class="tree-branch tree-branch--phase" data-href="fase-1/" open><summary><span class="tree-node tree-node--phase"><button class="tree-toggle" type="button" aria-label="Recolher Fase 1" aria-expanded="true"><i class="fa-solid fa-chevron-up"></i></button><i class="fa-solid fa-filter"></i><strong>Fase 1</strong><span>Filtros e elegibilidade territorial</span><small>Metodológica</small></span></summary>
-          <div class="tree-children">
-            <a class="tree-node" href="/restrict/geoespacial/gerador-risco-restricao/"><i class="fa-solid fa-shield-halved"></i><strong>Gerador de risco e restrição</strong><span>Produção das superfícies da Fase 1</span></a>
-            <a class="tree-node tree-node--support" href="/restrict/geoespacial/visualizador-insumos-geoespaciais/"><i class="fa-solid fa-folder-tree"></i><strong>Insumos geoespaciais</strong><span>Camadas operacionais</span></a>
-          </div>
-        </details>
-
-        <details class="tree-branch tree-branch--phase" data-href="fase-2/" open><summary><span class="tree-node tree-node--phase"><button class="tree-toggle" type="button" aria-label="Recolher Fase 2" aria-expanded="true"><i class="fa-solid fa-chevron-up"></i></button><i class="fa-solid fa-map"></i><strong>Fase 2</strong><span>Favorabilidade territorial</span><small>Metodológica</small></span></summary>
-          <div class="tree-children">
-            <a class="tree-node" href="/restrict/geoespacial/gerador-favorabilidade/"><i class="fa-solid fa-map-location-dot"></i><strong>Gerador de favorabilidade</strong><span>Superfície ponderada da Fase 2</span></a>
-            <details class="tree-branch tree-branch--nested" open><summary><span class="tree-node"><i class="fa-solid fa-scale-balanced"></i><strong>Análise multicritério</strong><span>Critérios e pesos consistentes e homologados</span></span></summary>
-              <div class="tree-children">
-                <a class="tree-node tree-node--compact" href="/restrict/ahp/resultados/"><strong>Geração e conferência dos pesos</strong></a>
-                <a class="tree-node tree-node--compact" href="/restrict/ahp/comparacao/"><strong>Comparação pareada</strong><span>Individual ou colaborativa</span></a>
-                <a class="tree-node tree-node--compact" href="/restrict/ahp/metodo/"><strong>Escolha do método</strong></a>
-                <a class="tree-node tree-node--compact" href="/restrict/ahp/criterios/"><strong>Critérios e premissas</strong></a>
-                <a class="tree-node tree-node--compact" href="/restrict/ahp/configuracao/"><strong>Universo da análise</strong></a>
-              </div>
-            </details>
-          </div>
-        </details>
-
-        <details class="tree-branch tree-branch--phase" data-href="fase-3/" open><summary><span class="tree-node tree-node--phase"><button class="tree-toggle" type="button" aria-label="Recolher Fase 3" aria-expanded="true"><i class="fa-solid fa-chevron-up"></i></button><i class="fa-solid fa-sliders"></i><strong>Fase 3</strong><span>Ajuste fino dos projetos</span><small>Metodológica</small></span></summary>
-          <div class="tree-children">
-            <a class="tree-node" href="/restrict/hierarquizacao/fase-3/"><i class="fa-solid fa-wand-magic-sparkles"></i><strong>Configurador de ajuste fino</strong><span>Atributos dos projetos e riscos herdados</span></a>
-          </div>
-        </details>
+      <div class="tree-flow-row tree-flow-row--stage3">
+        <div id="node-objetos-fase2" class="tree-artifact"><i class="fa-solid fa-box-archive"></i><strong>Objetos após a Fase 2</strong><span>Projetos elegíveis com mérito territorial</span></div>
+        <a id="node-fase3" class="tree-node tree-node--phase" href="fase-3/"><i class="fa-solid fa-sliders"></i><strong>Fase 3</strong><span>Ajuste e consolidação final</span></a>
+        <a id="node-ajuste" class="tree-node tree-node--config" href="/restrict/hierarquizacao/fase-3/"><i class="fa-solid fa-wand-magic-sparkles"></i><strong>Configuração do ajuste fino</strong><span>Pesos, atributos e riscos herdados</span></a>
       </div>
 
-      <div class="tree-support-row">
-        <a class="tree-node tree-node--support" href="/restrict/geoespacial/bancada/"><i class="fa-solid fa-screwdriver-wrench"></i><strong>Bancada de geoprocessamento</strong></a>
-        <a class="tree-node tree-node--support" href="/restrict/geoespacial/produtos/"><i class="fa-solid fa-layer-group"></i><strong>Produtos homologados</strong></a>
-        <a class="tree-node tree-node--support" href="/restrict/hierarquizacao/processos/"><i class="fa-solid fa-list-check"></i><strong>Gestão de rodadas</strong><span>Análise, universo, avaliação e homologação</span></a>
+      <div class="tree-flow-row tree-flow-row--stage2">
+        <a id="node-camada-fase2" class="tree-artifact tree-artifact--link" href="/restrict/geoespacial/produtos/"><i class="fa-solid fa-map"></i><strong>Camada homologada</strong><span>Favorabilidade territorial</span></a>
+        <a id="node-fase2" class="tree-node tree-node--phase" href="fase-2/"><i class="fa-solid fa-map-location-dot"></i><strong>Fase 2</strong><span>Aplica mérito técnico-territorial</span></a>
+        <div id="node-objetos-fase1" class="tree-artifact"><i class="fa-solid fa-box-open"></i><strong>Objetos após a Fase 1</strong><span>Conjunto territorialmente elegível</span></div>
+      </div>
+
+      <div class="tree-flow-row tree-flow-row--stage1">
+        <a id="node-camada-fase1" class="tree-artifact tree-artifact--link" href="/restrict/geoespacial/produtos/"><i class="fa-solid fa-shield-halved"></i><strong>Camada homologada</strong><span>Risco e restrição</span></a>
+        <a id="node-fase1" class="tree-node tree-node--phase" href="fase-1/"><i class="fa-solid fa-filter"></i><strong>Fase 1</strong><span>Aplica elegibilidade territorial</span></a>
+        <div id="node-objetos-iniciais" class="tree-artifact"><i class="fa-solid fa-boxes-stacked"></i><strong>Objetos sob análise</strong><span>Conjunto cadastrado na rodada</span></div>
+      </div>
+
+      <div class="tree-generator-row" aria-label="Geradores de camadas homologadas">
+        <a id="node-gerador-risco" class="tree-node tree-node--generator" href="/restrict/geoespacial/gerador-risco-restricao/"><i class="fa-solid fa-shield-halved"></i><strong>Gerador de risco e restrição</strong><span>Produz a camada homologada da Fase 1</span></a>
+        <a id="node-gerador-favorabilidade" class="tree-node tree-node--generator" href="/restrict/geoespacial/gerador-favorabilidade/"><i class="fa-solid fa-map-location-dot"></i><strong>Gerador de favorabilidade</strong><span>Combina insumos geoespaciais e saída do AHP</span></a>
+      </div>
+
+      <div class="tree-source-grid" aria-label="Entradas iniciais do processo">
+        <a id="node-insumos" class="tree-node tree-node--source" href="/restrict/geoespacial/visualizador-insumos-geoespaciais/"><i class="fa-solid fa-folder-tree"></i><strong>Insumos geoespaciais</strong><span>Alimentam os dois geradores de camadas</span></a>
+        <a id="node-rodadas" class="tree-node tree-node--round" href="/restrict/hierarquizacao/processos/"><i class="fa-solid fa-list-check"></i><strong>Cadastro de rodadas</strong><span>Define o conjunto inicial de objetos sob análise</span></a>
+        <article id="node-ahp" class="tree-node tree-node--ahp">
+          <i class="fa-solid fa-scale-balanced"></i><strong>Análise multicritério (AHP)</strong><span>Produz critérios e pesos homologados</span>
+          <nav aria-label="Etapas da análise multicritério">
+            <a href="/restrict/ahp/configuracao/">Universo</a>
+            <a href="/restrict/ahp/criterios/">Critérios</a>
+            <a href="/restrict/ahp/metodo/">Método</a>
+            <a href="/restrict/ahp/comparacao/">Comparação</a>
+            <a href="/restrict/ahp/resultados/">Pesos</a>
+          </nav>
+        </article>
       </div>
     </section>
   </main>
@@ -70,6 +88,6 @@
 
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
-  <script src="/restrict/hierarquizacao/tree.js"></script>
+  <script src="/restrict/hierarquizacao/tree.js?v=20260723-11"></script>
   <script src="/assets/js/paginas/hierarquizacao-index-inline-1.js"></script>
 {% endblock %}

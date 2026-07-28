@@ -184,6 +184,86 @@ def _fase1_vazia() -> dict[str, Any]:
     }
 
 
+def _coordenada_objeto(valor: Any, *, campo: str, indice: int) -> float:
+    try:
+        numero = float(valor)
+    except (TypeError, ValueError) as exc:
+        raise DemandaValidationError(
+            f"Objeto {indice + 1}: campo {campo} inválido.",
+            field=f"objetos[{indice}].{campo}",
+        ) from exc
+    if campo == "latitude" and not (-90 <= numero <= 90):
+        raise DemandaValidationError(
+            f"Objeto {indice + 1}: latitude fora da faixa permitida.",
+            field=f"objetos[{indice}].latitude",
+        )
+    if campo == "longitude" and not (-180 <= numero <= 180):
+        raise DemandaValidationError(
+            f"Objeto {indice + 1}: longitude fora da faixa permitida.",
+            field=f"objetos[{indice}].longitude",
+        )
+    return numero
+
+
+def _normalizar_objeto_contrato(
+    objeto: dict[str, Any], *, indice: int, tipo_demanda: str | None, grupo_id: str | None
+) -> dict[str, Any]:
+    demanda_id = str(objeto.get("id") or objeto.get("demanda_id") or "").strip()
+    codigo = str(objeto.get("codigo") or "").strip()
+    nome = str(objeto.get("nome") or "").strip()
+    if not demanda_id:
+        raise DemandaValidationError(
+            f"Objeto {indice + 1}: informe id/demanda_id.",
+            field=f"objetos[{indice}].id",
+        )
+    if not codigo:
+        raise DemandaValidationError(
+            f"Objeto {indice + 1}: informe o código.",
+            field=f"objetos[{indice}].codigo",
+        )
+    if not nome:
+        raise DemandaValidationError(
+            f"Objeto {indice + 1}: informe o nome.",
+            field=f"objetos[{indice}].nome",
+        )
+
+    latitude = _coordenada_objeto(
+        objeto.get("latitude"), campo="latitude", indice=indice
+    )
+    longitude = _coordenada_objeto(
+        objeto.get("longitude"), campo="longitude", indice=indice
+    )
+
+    contrato = {
+        "demanda_id": demanda_id,
+        "codigo": codigo,
+        "nome": nome,
+        "status": objeto.get("status"),
+        "tipo_demanda": objeto.get("tipo_demanda") or tipo_demanda,
+        "grupo_id": objeto.get("grupo_id") or grupo_id,
+        "latitude": latitude,
+        "longitude": longitude,
+    }
+    atributos = {
+        k: v
+        for k, v in objeto.items()
+        if k
+        not in {
+            "id",
+            "demanda_id",
+            "codigo",
+            "nome",
+            "status",
+            "tipo_demanda",
+            "grupo_id",
+            "latitude",
+            "longitude",
+        }
+    }
+    contrato["atributos"] = atributos
+    return contrato
+
+
 def criar_hierarquizacao(
     payload: HierarquizacaoCreateSchema, *, criado_por: str | None = None
 ) -> HierarquizacaoResponseSchema:
@@ -204,30 +284,16 @@ def criar_hierarquizacao(
     )
     codigo = _codigo()
     objetos_doc = []
-    for o in payload.objetos:
-        oid = str(o.get("id") or o.get("demanda_id") or "")
+    for idx, o in enumerate(payload.objetos):
+        cabecalho = _normalizar_objeto_contrato(
+            o,
+            indice=idx,
+            tipo_demanda=payload.tipo_demanda,
+            grupo_id=payload.grupo_id,
+        )
         objetos_doc.append(
             {
-                "cabecalho_objeto": {
-                    "demanda_id": oid,
-                    "codigo": o.get("codigo"),
-                    "nome": o.get("nome"),
-                    "latitude": o.get("latitude"),
-                    "longitude": o.get("longitude"),
-                    "atributos": {
-                        k: v
-                        for k, v in o.items()
-                        if k
-                        not in {
-                            "id",
-                            "demanda_id",
-                            "codigo",
-                            "nome",
-                            "latitude",
-                            "longitude",
-                        }
-                    },
-                },
+                "cabecalho_objeto": cabecalho,
                 "hierarquizacao": {
                     "fase_1": _fase1_vazia(),
                     "fase_2": {

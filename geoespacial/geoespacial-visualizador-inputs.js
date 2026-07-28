@@ -188,6 +188,9 @@
     const response = await fetch(`${API}/importar_camadas/inspecionar`, { method: "POST", body: data });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.detail || "Arquivo geoespacial inválido");
+    if (body.importavel === false) {
+      throw new Error(body.erro_validacao || "Arquivo sem feições para importação");
+    }
     arquivoInspecionado = file;
     tokenImportacao = body.token_importacao;
     document.getElementById("import-current-crs").value = formatCrs(body.crs_atual);

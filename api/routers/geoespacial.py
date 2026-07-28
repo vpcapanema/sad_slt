@@ -444,6 +444,21 @@ async def inspecionar_arquivo_camada(arquivo: UploadFile = File(...)) -> dict:
             Path(arquivo.filename or "camada").name,
             await arquivo.read(),
         )
+    except ValueError as exc:
+        detail = str(exc)
+        lower = detail.lower()
+        if "sem feições" in lower or "sem feicoes" in lower:
+            return {
+                "importavel": False,
+                "erro_validacao": detail,
+                "categoria": None,
+                "arquivo_compactado": None,
+                "crs_atual": None,
+                "crs_recomendado": "EPSG:4674",
+                "camadas": [],
+                "token_importacao": None,
+            }
+        raise HTTPException(status_code=422, detail=detail) from exc
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

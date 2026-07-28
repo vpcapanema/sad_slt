@@ -4,11 +4,11 @@
 {% set requer_autenticacao = false %}
 
 {% block titulo %}Documentação — SICARD{% endblock %}
-{% block classes_body %}module-index-page{% endblock %}
+{% block classes_body %}module-index-page documentation-home{% endblock %}
 {% block base_url %}<base href="/public/documentacao/">{% endblock %}
 
 {% block estilos_pagina %}
-  <link rel="stylesheet" href="/public/cadastro/index.css">
+  <link rel="stylesheet" href="/public/cadastro/index.css?v=20260723-7">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
@@ -21,37 +21,91 @@
     </section>
 
     <section class="secao-blocos-da-plataforma module-info-section">
-      <p class="module-eyebrow">Organização</p>
-      <h2>Blocos da plataforma</h2>
-      <div class="module-link-list">
-        <a href="/public/cadastro/"><span>1. MOCAD — Cadastro e análise de demandas</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
-        <a href="/restrict/hierarquizacao/"><span>2. MAD — Apoio à decisão</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
-        <a href="/public/transparencia/"><span>3. Transparência e Acompanhamento</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+      <div class="module-section-heading">
+        <div>
+          <p class="module-eyebrow">Organização</p>
+          <h2>Blocos da plataforma</h2>
+        </div>
+      </div>
+      <div class="documentation-card-row documentation-card-row--blocks">
+        <a class="documentation-subcard" href="/public/cadastro/">
+          <span class="documentation-subcard-icon"><i class="fa-regular fa-square-plus" aria-hidden="true"></i></span>
+          <strong>MOCAD</strong>
+          <span>Cadastro e análise de demandas</span>
+          <small>Registre planos, programas e projetos.</small>
+          <span class="documentation-subcard-action">Acessar módulo <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+        </a>
+        <a class="documentation-subcard" href="/restrict/hierarquizacao/">
+          <span class="documentation-subcard-icon"><i class="fa-solid fa-ranking-star" aria-hidden="true"></i></span>
+          <strong>MAD</strong>
+          <span>Apoio à decisão</span>
+          <small>Analise critérios e estabeleça prioridades.</small>
+          <span class="documentation-subcard-action">Acessar módulo <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+        </a>
+        <a class="documentation-subcard" href="/public/transparencia/">
+          <span class="documentation-subcard-icon"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></span>
+          <strong>Transparência</strong>
+          <span>Acompanhamento público</span>
+          <small>Consulte demandas e informações disponibilizadas.</small>
+          <span class="documentation-subcard-action">Abrir consulta <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+        </a>
       </div>
     </section>
 
     <section class="secao-desburocratizacao-com-seguranca-e-transparencia module-info-section">
-      <p class="module-eyebrow">Diretriz central</p>
-      <h2>Informação necessária, decisão rastreável</h2>
+      <div class="module-section-heading">
+        <div>
+          <p class="module-eyebrow">Diretriz central</p>
+          <h2>Informação necessária, decisão rastreável</h2>
+        </div>
+      </div>
       <p>O SICARD integra o Módulo de Cadastro e Análise de Demandas (MOCAD), o Módulo de Apoio à Decisão (MAD) e a camada de transparência e acompanhamento.</p>
       <p>O sistema reúne as informações de cada demanda, reaproveita referências existentes e mantém o histórico das análises e dos resultados ao longo de todo o processo.</p>
     </section>
 
     <section class="secao-operadores module-info-section">
-      <p class="module-eyebrow">Acessos</p>
-      <h2>Operadores</h2>
-      <div class="module-link-list">
-        <span class="restricted-card"><i class="fa-regular fa-eye" aria-hidden="true"></i><span><strong>Visualizador</strong><small>Consulta informações do sistema.</small></span></span>
-        <span class="restricted-card"><i class="fa-regular fa-keyboard" aria-hidden="true"></i><span><strong>Operador</strong><small>Cadastra, complementa e corrige dados.</small></span></span>
-        <span class="restricted-card"><i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i><span><strong>Analista</strong><small>Avalia, aprova e disponibiliza para hierarquização.</small></span></span>
-        <span class="restricted-card"><i class="fa-solid fa-user-tie" aria-hidden="true"></i><span><strong>Gestor</strong><small>Supervisiona o fluxo e valida seus resultados.</small></span></span>
-        <span class="restricted-card"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span><strong>Administrador</strong><small>Administra usuários, permissões e configurações.</small></span></span>
+      <div class="module-section-heading">
+        <div>
+          <p class="module-eyebrow">Acessos</p>
+          <h2>Tipos de usuários</h2>
+        </div>
+      </div>
+      <div class="documentation-card-row documentation-card-row--users">
+        <article class="documentation-subcard">
+          <span class="documentation-subcard-icon"><i class="fa-regular fa-eye" aria-hidden="true"></i></span>
+          <strong>Visualizador</strong>
+          <span>Consulta informações do sistema.</span>
+        </article>
+        <article class="documentation-subcard">
+          <span class="documentation-subcard-icon"><i class="fa-regular fa-keyboard" aria-hidden="true"></i></span>
+          <strong>Operador</strong>
+          <span>Cadastra, complementa e corrige dados.</span>
+        </article>
+        <article class="documentation-subcard">
+          <span class="documentation-subcard-icon"><i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i></span>
+          <strong>Analista</strong>
+          <span>Avalia, aprova e disponibiliza demandas.</span>
+        </article>
+        <article class="documentation-subcard">
+          <span class="documentation-subcard-icon"><i class="fa-solid fa-user-tie" aria-hidden="true"></i></span>
+          <strong>Gestor</strong>
+          <span>Supervisiona o fluxo e valida resultados.</span>
+        </article>
+        <article class="documentation-subcard">
+          <span class="documentation-subcard-icon"><i class="fa-solid fa-user-gear" aria-hidden="true"></i></span>
+          <strong>Administrador</strong>
+          <span>Administra usuários, permissões e configurações.</span>
+        </article>
       </div>
     </section>
 
     <section class="secao-sigma-pli module-info-section">
-      <p class="module-eyebrow">Cadastros auxiliares</p>
-      <h2>SIGMA-PLI</h2>
+      <div class="module-section-heading">
+        <div>
+          <p class="module-eyebrow">Cadastros auxiliares</p>
+          <h2>SIGMA-PLI</h2>
+        </div>
+      </div>
       <div class="module-link-list">
         <a href="https://56.125.163.194/cadastro/sigma" target="_blank" rel="noopener"><span>Cadastro unificado de pessoa e usuário</span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
         <a href="https://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener"><span>Cadastro de instituição</span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>

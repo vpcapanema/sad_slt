@@ -15,7 +15,9 @@
       );
   let universo = [],
     selecionados = new Set(),
-    matriz = null;
+    matriz = null,
+    universoRequestId = 0;
+  const STATUS_ELEGIVEIS = new Set(["aprovada", "hierarq_apta"]);
   const JSON_COLS = [
     "objetos",
     "julgamento_projetos",
@@ -157,42 +159,82 @@
             .includes(v)),
     );
   }
+  function elegivel(o) {
+    return STATUS_ELEGIVEIS.has(o.status);
+  }
+  function sincronizarAbas(tipo) {
+    document.querySelectorAll("#hier-tipo-tabs [data-tipo]").forEach((aba) => {
+      const ativa = aba.dataset.tipo === tipo;
+      aba.classList.toggle("is-active", ativa);
+      aba.setAttribute("aria-selected", String(ativa));
+      aba.tabIndex = ativa ? 0 : -1;
+    });
+  }
+  function atualizarSelecionarVisiveis(rows) {
+    const checkbox = $("demanda-todos");
+    const elegiveisVisiveis = rows.filter(elegivel);
+    const selecionadasVisiveis = elegiveisVisiveis.filter((o) =>
+      selecionados.has(o.id),
+    ).length;
+    checkbox.disabled = elegiveisVisiveis.length === 0;
+    checkbox.checked =
+      elegiveisVisiveis.length > 0 &&
+      selecionadasVisiveis === elegiveisVisiveis.length;
+    checkbox.indeterminate =
+      selecionadasVisiveis > 0 &&
+      selecionadasVisiveis < elegiveisVisiveis.length;
+  }
   function renderDemandas() {
     const rows = filtrados();
+    const elegiveisVisiveis = rows.filter(elegivel);
     $("demanda-tbody").innerHTML = rows.length
       ? rows
           .map(
-            (o) =>
-              `<tr><td><input type="checkbox" data-id="${esc(o.id)}" ${selecionados.has(o.id) ? "checked" : ""}></td><td><code>${esc(o.codigo)}</code></td><td>${esc(o.nome)}</td><td>${esc(o.grupo_id || "—")}</td><td>${esc(o.instituicao_nome || o.orgao_responsavel || "—")}</td><td>${esc(localizacao(o))}</td></tr>`,
+            (o) => {
+              const podeSelecionar = elegivel(o);
+              const explicacaoId = `demanda-status-${String(o.id).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+              const indisponivel = podeSelecionar
+                ? ""
+                : ` disabled aria-describedby="${explicacaoId}" title="Status não permite inclusão na hierarquização"`;
+              const explicacao = podeSelecionar
+                ? ""
+                : `<span id="${explicacaoId}" class="sr-only">Status ${esc(o.status)} não permite inclusão na hierarquização.</span>`;
+              return `<tr class="${podeSelecionar ? "" : "hier-demanda-indisponivel"}" data-status="${esc(o.status)}"><td><input type="checkbox" data-id="${esc(o.id)}" aria-label="Selecionar ${esc(o.codigo)}"${selecionados.has(o.id) && podeSelecionar ? " checked" : ""}${indisponivel}>${explicacao}</td><td><code>${esc(o.codigo)}</code></td><td>${esc(o.nome)}</td><td>${esc(o.grupo_id || "—")}</td><td>${esc(o.instituicao_nome || o.orgao_responsavel || "—")}</td><td>${esc(localizacao(o))}</td><td><code class="hier-demanda-status">${esc(o.status)}</code></td></tr>`;
+            },
           )
           .join("")
-      : '<tr><td colspan="6" class="process-empty-row">Nenhuma demanda apta encontrada para o tipo selecionado.</td></tr>';
+      : '<tr><td colspan="7" class="process-empty-row">Nenhuma demanda encontrada para o tipo e os filtros selecionados.</td></tr>';
     $("demanda-contagem").textContent =
-      `${rows.length} visível(is) · ${selecionados.size} selecionada(s) de ${universo.length} apta(s)`;
+      `${rows.length} visível(is) · ${elegiveisVisiveis.length} elegível(is) visível(is) · ${selecionados.size} selecionada(s) de ${universo.length} registro(s)`;
+    atualizarSelecionarVisiveis(rows);
     $("demanda-tbody")
-      .querySelectorAll("input[data-id]")
+      .querySelectorAll("input[data-id]:not(:disabled)")
       .forEach(
         (x) =>
           (x.onchange = () => {
-            x.checked
-              ? selecionados.add(x.dataset.id)
-              : selecionados.delete(x.dataset.id);
+            const demanda = universo.find((o) => o.id === x.dataset.id);
+            if (x.checked && demanda && elegivel(demanda))
+              selecionados.add(x.dataset.id);
+            else selecionados.delete(x.dataset.id);
             renderDemandas();
           }),
       );
   }
   async function carregarUniverso() {
     const tipo = $("hier-tipo").value;
+    const requestId = ++universoRequestId;
     $("universo-objeto-valor").textContent = tipo || "—";
+    sincronizarAbas(tipo);
     universo = [];
     selecionados.clear();
     renderDemandas();
     if (!tipo) return;
     try {
       const [itens, campos] = await Promise.all([
-        HierApi.listarUniverso(tipo, "hierarq_apta"),
+        HierApi.listarUniverso(tipo, "todas"),
         HierApi.listarCamposUniverso(tipo),
       ]);
+      if (requestId !== universoRequestId) return;
       universo = itens;
       $("demanda-campo").innerHTML =
         '<option value="">Todos os atributos</option>' +
@@ -203,6 +245,7 @@
           .join("");
       renderDemandas();
     } catch (e) {
+      if (requestId !== universoRequestId) return;
       erro(e.message);
     }
   }
@@ -240,12 +283,42 @@
     throw new Error("Formato não suportado.");
   }
   $("hier-tipo").onchange = carregarUniverso;
+  const abasTipo = [
+    ...document.querySelectorAll("#hier-tipo-tabs [data-tipo]"),
+  ];
+  function ativarAbaTipo(aba) {
+    if (!aba) return;
+    if ($("hier-tipo").value !== aba.dataset.tipo) {
+      $("hier-tipo").value = aba.dataset.tipo;
+      carregarUniverso();
+    }
+    aba.focus();
+  }
+  abasTipo.forEach((aba, indice) => {
+    aba.onclick = () => {
+      if ($("hier-tipo").value === aba.dataset.tipo) return;
+      $("hier-tipo").value = aba.dataset.tipo;
+      carregarUniverso();
+    };
+    aba.onkeydown = (evento) => {
+      let destino = null;
+      if (evento.key === "ArrowRight")
+        destino = abasTipo[(indice + 1) % abasTipo.length];
+      else if (evento.key === "ArrowLeft")
+        destino = abasTipo[(indice - 1 + abasTipo.length) % abasTipo.length];
+      else if (evento.key === "Home") destino = abasTipo[0];
+      else if (evento.key === "End") destino = abasTipo.at(-1);
+      if (!destino) return;
+      evento.preventDefault();
+      ativarAbaTipo(destino);
+    };
+  });
   ["demanda-busca", "demanda-valor"].forEach(
     (id) => ($(id).oninput = renderDemandas),
   );
   $("demanda-campo").onchange = renderDemandas;
   $("demanda-todos").onchange = (e) => {
-    filtrados().forEach((o) =>
+    filtrados().filter(elegivel).forEach((o) =>
       e.target.checked ? selecionados.add(o.id) : selecionados.delete(o.id),
     );
     renderDemandas();
@@ -276,7 +349,9 @@
         nome: $("hier-nome").value.trim(),
         descricao: $("hier-descricao").value.trim() || null,
         tipo_demanda: $("hier-tipo").value,
-        objetos: universo.filter((o) => selecionados.has(o.id)),
+        objetos: universo.filter(
+          (o) => elegivel(o) && selecionados.has(o.id),
+        ),
         matriz_premissas_criterios: matriz,
         fases_a_executar: fases,
       });

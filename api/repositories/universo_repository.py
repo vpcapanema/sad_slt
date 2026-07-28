@@ -142,7 +142,9 @@ def list_elegiveis(tipo: str, *, status: str | None = None) -> list[dict[str, An
         WHERE 1=1
     """
     params: list[Any] = []
-    if status:
+    if status == "todas":
+        pass  # sem filtro de status: universo completo (Demandas cadastradas)
+    elif status:
         query += " AND status = %s"
         params.append(status)
     else:

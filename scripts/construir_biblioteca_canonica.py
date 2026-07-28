@@ -46,6 +46,7 @@ class Source:
 
 ARCGIS = "https://pamgia.ibama.gov.br/server/rest/services"
 DATAGEO = "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows"
+SISCOM_WFS = "http://siscom.ibama.gov.br:80/geoserver/publica/ows"
 SOURCES = {
     "ucs_mma": Source("ucs_mma", "Unidades de Conservação — CNUC/MMA", "MMA/IBAMA PAMGIA", f"{ARCGIS}/BasesSincronizadas/lim_unidades_conserva%C3%A7%C3%A3o_mma_a/FeatureServer/0", "arcgis"),
     "vegetacao_sp": Source(
@@ -63,7 +64,7 @@ SOURCES = {
     "bens_tombados": Source("bens_tombados", "Bens materiais protegidos", "IPHAN/IBAMA PAMGIA", f"{ARCGIS}/BasesSincronizadas/lim_bens_materiais_iphan_a/FeatureServer/0", "arcgis"),
     "sitios_arqueologicos": Source("sitios_arqueologicos", "Sítios arqueológicos", "IPHAN/IBAMA PAMGIA", f"{ARCGIS}/BasesSincronizadas/lim_sitios_arqueologicos_iphan_a/FeatureServer/0", "arcgis"),
     "assentamentos": Source("assentamentos", "Assentamentos", "INCRA/IBAMA PAMGIA", f"{ARCGIS}/BasesSincronizadas/lim_assentamentos_incra_a/FeatureServer/0", "arcgis"),
-    "embargos_ibama": Source("embargos_ibama", "Embargos ambientais federais", "IBAMA PAMGIA", f"{ARCGIS}/01_Publicacoes_Bases/embargos_siscom_brasil/FeatureServer/0", "arcgis"),
+    "embargos_ibama": Source("embargos_ibama", "Embargos ambientais federais", "IBAMA SISCOM", SISCOM_WFS, "wfs", "publica:vw_brasil_adm_embargo_a"),
 }
 
 

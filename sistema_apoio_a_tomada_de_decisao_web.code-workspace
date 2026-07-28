@@ -8,7 +8,8 @@
   "settings": {
     "python.terminal.useEnvFile": true,
     "python.analysis.extraPaths": ["${workspaceFolder}"],
-    "sqltools.useNodeRuntime": false,
+    "sqltools.useNodeRuntime": true,
+    "sqltools.languageServer.enabled": true,
     "djlint.showInstallError": false,
     "files.associations": {
       "*.session.sql": "sql",

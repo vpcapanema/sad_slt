@@ -506,6 +506,63 @@ class GeoprocessamentoApiTest(unittest.TestCase):
         self.assertIn("somente leitura", calculo.json()["detail"])
         self.assertEqual(exclusao.status_code, 409, exclusao.text)
 
+    def test_excluir_camada_remove_catalogo_e_conteudo_fisico(self) -> None:
+        camada_id = self.carregar()
+        raster_id = self.client.post(
+            "/api/geoespacial/operacoes/converter-para-raster",
+            params={"camada_id": camada_id, "resolucao_raster": 500, "crs_destino": "EPSG:31983"},
+        ).json()["raster_id"]
+
+        with get_connection() as conn:
+            vetor_row = conn.execute(
+                """SELECT id FROM geoprocessamento.camada_importada
+                   WHERE recurso_sessao_id=%s""",
+                (camada_id,),
+            ).fetchone()
+            raster_row = conn.execute(
+                """SELECT id FROM geoprocessamento.camada_processada
+                   WHERE recurso_sessao_id=%s""",
+                (raster_id,),
+            ).fetchone()
+        self.assertIsNotNone(vetor_row)
+        self.assertIsNotNone(raster_row)
+        vetor_db_id = str(vetor_row["id"])
+        raster_db_id = str(raster_row["id"])
+
+        exclusao_vetor = self.client.delete(f"/api/geoespacial/camadas/{camada_id}")
+        self.assertEqual(exclusao_vetor.status_code, 200, exclusao_vetor.text)
+
+        with get_connection() as conn:
+            vetor_catalogo = conn.execute(
+                """SELECT 1 FROM geoprocessamento.camada_importada
+                   WHERE recurso_sessao_id=%s""",
+                (camada_id,),
+            ).fetchone()
+            vetor_conteudo = conn.execute(
+                """SELECT 1 FROM geoprocessamento.camada_importada_feicao
+                   WHERE camada_id=%s""",
+                (vetor_db_id,),
+            ).fetchone()
+        self.assertIsNone(vetor_catalogo)
+        self.assertIsNone(vetor_conteudo)
+
+        exclusao_raster = self.client.delete(f"/api/geoespacial/camadas/{raster_id}")
+        self.assertEqual(exclusao_raster.status_code, 200, exclusao_raster.text)
+
+        with get_connection() as conn:
+            raster_catalogo = conn.execute(
+                """SELECT 1 FROM geoprocessamento.camada_processada
+                   WHERE recurso_sessao_id=%s""",
+                (raster_id,),
+            ).fetchone()
+            raster_conteudo = conn.execute(
+                """SELECT 1 FROM geoprocessamento.camada_processada_raster
+                   WHERE camada_id=%s""",
+                (raster_db_id,),
+            ).fetchone()
+        self.assertIsNone(raster_catalogo)
+        self.assertIsNone(raster_conteudo)
+
     def test_rasterizacao_combinacao_e_preview(self) -> None:
         camada_id = self.carregar()
         params = {"camada_id": camada_id, "resolucao_raster": 500, "crs_destino": "EPSG:31983"}

@@ -4,6 +4,7 @@
   const CRS_DESCRIPTIONS={"EPSG:4674":"SIRGAS 2000","EPSG:4326":"WGS 84","EPSG:3857":"WGS 84 / Pseudo-Mercator","EPSG:31982":"SIRGAS 2000 / UTM zona 22S","EPSG:31983":"SIRGAS 2000 / UTM zona 23S","EPSG:31984":"SIRGAS 2000 / UTM zona 24S","EPSG:5880":"SIRGAS 2000 / Brazil Polyconic"};
   const CRS_VALUES=Object.keys(CRS_DESCRIPTIONS);
   const crsLabel=value=>CRS_DESCRIPTIONS[value]?`${value} (${CRS_DESCRIPTIONS[value]})`:value;
+  const OUTPUT_SUFFIX_BY_OPERATION={"OP-01":"camada_importada"};
   const OPS=[
     ["Entrada e preparação",[["OP-01","Importar camada","importar-camada",1],["OP-02","Validar camada","validar-camada",1],["OP-02-CORR","Reparar geometrias","reparar-geometrias",1],["OP-03","Normalizar camada","normalizar-camada",1]]],
     ["Análise vetorial",[["OP-04","Criar buffer","criar-buffer",1],["OP-05","Sobrepor camadas","sobrepor-camadas",1],["OP-06","Dissolver","dissolver",1],["OP-07","Selecionar por localização","selecionar-por-localizacao",1]]],
@@ -135,6 +136,59 @@
   function emit(name,detail={}){$(".gp-app")?.dispatchEvent(new CustomEvent(`slt:geoprocessamento:${name}`,{detail,bubbles:true}))}
   function log(msg,type=""){const el=$("#gp-log"),time=new Date().toLocaleTimeString();el.insertAdjacentHTML("beforeend",`<div class="log-${type}">[${time}] ${escapeHtml(msg)}</div>`);el.scrollTop=el.scrollHeight}
   function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+  function slugifyName(value){return String(value??"").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\.[a-z0-9]+$/i,"").replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"")||"camada"}
+  function algorithmOutputSuffix(op){return OUTPUT_SUFFIX_BY_OPERATION[op[0]]||slugifyName(op[1])}
+  function sourceNameFromForm(form,op){
+    const opId=op[0];
+    if(opId==="OP-01"){
+      const localName=$("#gp-local-file-name")?.value?.trim();
+      if(localName)return slugifyName(localName);
+      const uploadFile=$("#gp-local-upload")?.files?.[0]?.name;
+      if(uploadFile)return slugifyName(uploadFile);
+      const caminho=(form.elements.caminho_arquivo?.value||"").trim();
+      if(caminho){
+        const cleaned=caminho.split("?")[0].split("#")[0];
+        const last=cleaned.split("/").filter(Boolean).pop()||cleaned;
+        return slugifyName(last);
+      }
+    }
+    const layerInput=[...form.elements].find(element=>CONTENT_INPUTS.has(element.name)&&!element.multiple);
+    const selectedId=layerInput?.value;
+    if(!selectedId)return "";
+    const layer=state.layers.find(item=>item.id===selectedId);
+    return slugifyName(layer?.nome||selectedId);
+  }
+  function suggestOutputName(form,op){
+    const outputName=form?.elements?.nome_saida;
+    if(!outputName)return;
+    const source=sourceNameFromForm(form,op);
+    const suffix=algorithmOutputSuffix(op);
+    const suggestion=source?`${source}_${suffix}`:suffix;
+    const last=outputName.dataset.lastSuggested||"";
+    const touched=outputName.dataset.userEdited==="true";
+    if(!touched||!outputName.value.trim()||outputName.value===last){
+      outputName.value=suggestion;
+      outputName.dataset.lastSuggested=suggestion;
+    }
+    outputName.placeholder=suggestion;
+  }
+  function bindOutputNameAuto(form,op){
+    const outputName=form?.elements?.nome_saida;
+    if(!outputName)return;
+    outputName.dataset.userEdited="false";
+    outputName.dataset.lastSuggested=outputName.value||"";
+    outputName.addEventListener("input",()=>{
+      outputName.dataset.userEdited=outputName.value.trim()?"true":"false";
+    });
+    suggestOutputName(form,op);
+  }
+  function updateComponentPlaceholder(){
+    const placeholder=$("#gp-component-placeholder");
+    if(!placeholder)return;
+    const hasLayers=state.layers.length>0;
+    const hasTool=Boolean(state.selected);
+    placeholder.hidden=hasLayers||hasTool;
+  }
   function layerColor(id,types=state.geometryTypes[id]||[]){return state.layerColors[id]||(types.some(type=>type.includes("Point"))?"#d97819":"#1683c4")}
   function applyLayerColor(id,color,report=true){
     if(!/^#[0-9a-f]{6}$/i.test(color))return false;
@@ -206,10 +260,11 @@
     const operational=items.map(layer=>{const onMap=Boolean(state.map?.getSource(layer.id));return `<div class="tree-row tree-indent ${state.activeLayerId===layer.id?"active":""}" data-layer="${layer.id}" tabindex="0"><input type="checkbox" ${onMap?"checked":""} aria-label="Exibir ${escapeHtml(layer.nome)}">${layerSymbol(layer)}<span class="layer-name" title="${escapeHtml(layer.nome)}">${escapeHtml(layer.nome)}</span><button class="icon-btn layer-zoom" type="button" data-zoom-layer="${layer.id}" title="Zoom para a camada"><i data-lucide="maximize"></i></button></div>`}).join("");
     const group=(id,label,icon,content,empty)=>`<section class="layer-group ${state.layerGroups[id]?"collapsed":""}" data-layer-group="${id}"><button class="tree-row layer-group-title" type="button" aria-expanded="${!state.layerGroups[id]}"><i data-lucide="chevron-down" class="tree-chevron"></i><i data-lucide="${icon}"></i><strong>${label}</strong></button><div class="layer-group-children">${content||`<div class="empty compact">${empty}</div>`}</div></section>`;
     $("#gp-layer-list").innerHTML=group("operational","Camadas operacionais","layers-3",operational,"Nenhuma camada carregada.")+group("basemap","Basemap","map",base,"Nenhum mapa-base encontrado.");icons();
+    updateComponentPlaceholder();
   }
   function setBasemap(id){state.basemap=id;BASEMAPS.forEach(b=>{const layer=`basemap-${b.id}`;if(state.map.getLayer(layer))state.map.setLayoutProperty(layer,"visibility",b.id===id?"visible":"none")})}
   function renderToolbox(filter=""){const f=filter.toLowerCase();$("#gp-toolbox").innerHTML=OPS.map(([g,ops])=>{const rows=ops.filter(o=>(o[0]+o[1]).toLowerCase().includes(f));return rows.length?`<div class="tool-group"><button class="tool-group-title"><i data-lucide="briefcase"></i>${g}</button>${rows.map(o=>`<button class="tool-row" data-op="${o[0]}"><span class="tool-name">${o[1]}</span><span class="availability ${o[3]===2?"partial":""}" title="${o[3]===1?"Disponível":o[3]===2?"Backend em implementação":"Catalogado; motor pendente"}"></span></button>`).join("")}</div>`:""}).join("");icons()}
-  function selectOp(id){state.selected=id;$$('[data-right-tab]').forEach(b=>b.classList.toggle("active",b.dataset.rightTab==="tools"));showEditor();const op=OPS.flatMap(x=>x[1]).find(x=>x[0]===id);const fields=FIELDS[id]||[];$("#gp-right-title").textContent=op[1];$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>${op[1]}</h2></div><form id="gp-op-form" data-op="${op[0]}"><div class="editor-body">${fields.length?fields.map(fieldHtml).join(""):`<div class="empty">O algoritmo está catalogado na stack, mas seu contrato de execução ainda não foi implementado no backend.</div>`}</div><div class="editor-actions"><button type="button" class="btn" data-add-function>Adicionar à função</button><button class="btn primary" ${!op[2]?"disabled":""}>Executar</button></div></form>`;icons();const form=$("#gp-op-form");configureOutputFields(form,RASTER_OUTPUT.has(id));configureSelectionScope(form);window.gpCommands?.applyEnvironments(form);form.onsubmit=e=>{e.preventDefault();executeOp(op,e.target)};$("[data-back]").onclick=()=>showTools();$("[data-add-function]").onclick=()=>window.gpApp.newFunction(id)}
+  function selectOp(id){state.selected=id;$$('[data-right-tab]').forEach(b=>b.classList.toggle("active",b.dataset.rightTab==="tools"));showEditor();const op=OPS.flatMap(x=>x[1]).find(x=>x[0]===id);const fields=FIELDS[id]||[];$("#gp-right-title").textContent=op[1];$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>${op[1]}</h2></div><form id="gp-op-form" data-op="${op[0]}"><div class="editor-body">${fields.length?fields.map(fieldHtml).join(""):`<div class="empty">O algoritmo está catalogado na stack, mas seu contrato de execução ainda não foi implementado no backend.</div>`}</div><div class="editor-actions"><button type="button" class="btn" data-add-function>Adicionar à função</button><button class="btn primary" ${!op[2]?"disabled":""}>Executar</button></div></form>`;icons();const form=$("#gp-op-form");configureOutputFields(form,RASTER_OUTPUT.has(id),op);configureSelectionScope(form);bindOutputNameAuto(form,op);window.gpCommands?.applyEnvironments(form);form.onsubmit=e=>{e.preventDefault();executeOp(op,e.target)};$("[data-back]").onclick=()=>showTools();$("[data-add-function]").onclick=()=>window.gpApp.newFunction(id);updateComponentPlaceholder()}
   function configureSelectionScope(form){
     form?.querySelector("[data-selection-scope]")?.remove();
     if(!form)return;
@@ -223,7 +278,7 @@
     };
     layerInput.addEventListener("change",refresh);refresh();
   }
-  function configureOutputFields(form,raster){
+  function configureOutputFields(form,raster,op){
     const destination=form.elements.destino,format=form.elements.formato_saida;
     if(!destination||!format)return;
     const crs=form.elements.crs_saida,layerInput=[...form.elements].find(element=>CONTENT_INPUTS.has(element.name)&&!element.multiple);
@@ -232,6 +287,7 @@
       const layer=state.layers.find(item=>item.id===layerInput?.value),sourceCrs=layer?.crs||"CRS não informado",current=crs.value||"entrada";
       crs.options[0].value="entrada";crs.options[0].textContent=`Da camada de entrada — ${crsLabel(sourceCrs)}`;
       crs.value=[...crs.options].some(option=>option.value===current)?current:"entrada";
+      if(op)suggestOutputName(form,op);
     };
     const refresh=()=>{
       const formats=destination.value==="memoria"?["JSON"]:(raster?["GeoTIFF"]:["GeoPackage","GeoJSON","Shapefile"]);
@@ -256,19 +312,22 @@
       if(!field)return;
       field.dataset.loadSource="";
       if(type.value.toLocaleLowerCase("pt-BR")==="local"){
-        field.innerHTML=`<label class="required-label" for="gp-local-file-name">Arquivo local</label><div class="local-file-picker"><input id="gp-local-upload" type="file" accept=".geojson,.json,.kml,.gml,.fgb,.tif,.tiff,.img,.asc,.vrt,.jp2,.zip,.rar,.7z,.tar,.tgz,.gz,.gpkg,.sqlite,.shp" hidden><input id="gp-local-file-name" type="text" placeholder="Selecione um arquivo geoespacial" readonly aria-describedby="gp-local-help"><button class="browse-btn" type="button" data-select-local title="Procurar arquivo" aria-label="Procurar arquivo"><i data-lucide="folder-open"></i></button></div><p id="gp-local-help" class="field-help">O conteúdo será descompactado, identificado e validado antes da importação.</p><div class="field"><label>CRS atual</label><input id="gp-import-current-crs" placeholder="Detectado após selecionar o arquivo" readonly></div><label class="field-check"><input id="gp-import-reproject" type="checkbox">Reprojetar CRS</label><div class="field"><label>CRS de destino</label><select id="gp-import-target-crs" disabled><option value="EPSG:4674">EPSG:4674 (SIRGAS 2000) — recomendado</option><option value="EPSG:4326">EPSG:4326 (WGS 84)</option><option value="EPSG:31983">EPSG:31983 (SIRGAS 2000 / UTM zona 23S)</option></select></div><label class="field-check"><input id="gp-import-clip" type="checkbox">Recortar pela camada</label><div class="field"><label>Camada de máscara</label><select id="gp-import-clip-layer" disabled><option value="">Selecione…</option>${state.layers.filter(layer=>!String(layer.tipo).toLowerCase().includes("raster")).map(layer=>`<option value="${escapeHtml(layer.id)}">${escapeHtml(layer.nome)}</option>`).join("")}</select></div><p id="gp-import-inspection" class="field-help">Aguardando arquivo.</p>`;
+        field.innerHTML=`<label class="required-label" for="gp-local-file-name">Arquivo local</label><div class="local-file-picker"><input id="gp-local-upload" type="file" accept=".geojson,.json,.kml,.gml,.fgb,.tif,.tiff,.img,.asc,.vrt,.jp2,.zip,.rar,.7z,.tar,.tgz,.gz,.gpkg,.sqlite,.shp" hidden><input id="gp-local-file-name" class="readonly-active" type="text" placeholder="Selecione um arquivo geoespacial" readonly aria-describedby="gp-local-help"><button class="browse-btn" type="button" data-select-local title="Procurar arquivo" aria-label="Procurar arquivo"><i data-lucide="folder-open"></i></button></div><p id="gp-local-help" class="field-help">O conteúdo será descompactado, identificado e validado antes da importação.</p><div class="field"><label>CRS atual</label><input id="gp-import-current-crs" class="readonly-active" placeholder="Detectado após selecionar o arquivo" readonly></div><label class="field-check"><input id="gp-import-reproject" type="checkbox">Reprojetar CRS</label><div class="field"><label>CRS de destino</label><select id="gp-import-target-crs" disabled><option value="EPSG:4674">EPSG:4674 (SIRGAS 2000) — recomendado</option><option value="EPSG:4326">EPSG:4326 (WGS 84)</option><option value="EPSG:31983">EPSG:31983 (SIRGAS 2000 / UTM zona 23S)</option></select></div><label class="field-check"><input id="gp-import-clip" type="checkbox">Recortar pela camada</label><div class="field"><label>Camada de máscara</label><select id="gp-import-clip-layer" disabled><option value="">Selecione…</option>${state.layers.filter(layer=>!String(layer.tipo).toLowerCase().includes("raster")).map(layer=>`<option value="${escapeHtml(layer.id)}">${escapeHtml(layer.nome)}</option>`).join("")}</select></div><p id="gp-import-inspection" class="field-help">Aguardando arquivo.</p>`;
         const input=$("#gp-local-upload"),name=$("#gp-local-file-name");
         $("#gp-import-target-crs").options[0].textContent="EPSG:4674 (SIRGAS 2000) — recomendado";
         [...$("#gp-import-target-crs").options].forEach((option,index)=>option.textContent=`${crsLabel(option.value)}${index===0?" — recomendado":""}`);
         $("[data-select-local]").onclick=()=>input.click();
         $("#gp-import-reproject").onchange=event=>$("#gp-import-target-crs").disabled=!event.target.checked;
         $("#gp-import-clip").onchange=event=>$("#gp-import-clip-layer").disabled=!event.target.checked;
-        input.onchange=async()=>{const file=input.files[0];inspectionToken="";name.value=file?.name||"";submit.disabled=true;if(!file)return;const status=$("#gp-import-inspection");status.textContent="Lendo e validando…";try{const data=new FormData();data.append("arquivo",file);const response=await fetch(`${API}/importar_camadas/inspecionar`,{method:"POST",body:data}),body=await response.json();if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);inspectionToken=body.token_importacao||"";$("#gp-import-current-crs").value=body.crs_atual?crsLabel(body.crs_atual):"CRS não informado";const invalidas=body.camadas.reduce((total,camada)=>total+Number(camada.geometrias_invalidas||0),0);status.textContent=`${body.categoria} · ${body.camadas.length} camada(s) importável(is)${invalidas?` · ${invalidas} geometria(s) inválida(s) serão destacadas`:" · geometrias válidas"}`;submit.disabled=false}catch(error){status.textContent=error.message}};
+        input.onchange=async()=>{const file=input.files[0];inspectionToken="";name.value=file?.name||"";submit.disabled=true;suggestOutputName(form,op);const currentCrs=$("#gp-import-current-crs");if(currentCrs)currentCrs.value="";if(!file)return;const status=$("#gp-import-inspection");status.textContent="Lendo, extraindo e validando…";try{const data=new FormData();data.append("arquivo",file);const response=await fetch(`${API}/importar_camadas/inspecionar`,{method:"POST",body:data,credentials:"include"}),body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);if(body.importavel===false)throw new Error(body.erro_validacao||"Arquivo sem feições para importação");inspectionToken=body.token_importacao||"";const detectedCrs=body.crs_atual||body.camadas?.[0]?.crs_original||body.camadas?.[0]?.crs_final||"";$("#gp-import-current-crs").value=detectedCrs?crsLabel(detectedCrs):"CRS não informado";const invalidas=body.camadas.reduce((total,camada)=>total+Number(camada.geometrias_invalidas||0),0);status.textContent=`${body.categoria} · ${body.camadas.length} camada(s) importável(is)${invalidas?` · ${invalidas} geometria(s) inválida(s) serão destacadas`:" · geometrias válidas"}`;submit.disabled=false}catch(error){const message=String(error?.message||"Falha na inspeção automática");const lower=message.toLocaleLowerCase("pt-BR");const validationError=lower.includes("sem fei")||lower.includes("inválido")||lower.includes("invalido")||lower.includes("pacote geoespacial misto");const authError=lower.includes("sessão inválida")||lower.includes("sessao invalida")||lower.includes("não autorizado")||lower.includes("nao autorizado")||lower.includes("http 401");status.textContent=authError?"Sessão expirada. Faça login novamente para inspecionar e importar.":message;$("#gp-import-current-crs").value="CRS não detectado";submit.disabled=validationError}};
         submit.textContent="Importar";submit.title="Importar os arquivos para o banco e adicioná-los ao mapa";submit.disabled=true;
-        form.onsubmit=async event=>{event.preventDefault();if(!input.files.length)return;if($("#gp-import-clip").checked&&!$("#gp-import-clip-layer").value){$("#gp-import-inspection").textContent="Selecione a camada de máscara.";return}submit.disabled=true;submit.textContent="Importando…";const progress=createExecutionProgress(form),options={reprojetar_crs:$("#gp-import-reproject").checked?$("#gp-import-target-crs").value:"",recortar_camada_id:$("#gp-import-clip").checked?$("#gp-import-clip-layer").value:"",token_importacao:inspectionToken};await filesAdded(input.files,progress,options);inspectionToken="";submit.textContent="Importar";submit.disabled=false};
+        suggestOutputName(form,op);
+        form.onsubmit=async event=>{event.preventDefault();if(!input.files.length){$("#gp-import-inspection").textContent="Selecione um arquivo local para importar.";return}if($("#gp-import-clip").checked&&!$("#gp-import-clip-layer").value){$("#gp-import-inspection").textContent="Selecione a camada de máscara.";return}submit.disabled=true;submit.textContent="Importando…";const progress=createExecutionProgress(form),file=input.files[0],status=$("#gp-import-inspection");try{const data=new FormData();if(inspectionToken)data.append("token_importacao",inspectionToken);else data.append("arquivo",file);if($("#gp-import-reproject").checked)data.append("reprojetar_crs",$("#gp-import-target-crs").value);if($("#gp-import-clip").checked)data.append("recortar_camada_id",$("#gp-import-clip-layer").value);progress.note(`${file.name}: iniciando importação`);const started=await fetch(`${API}/importar_camadas/job`,{method:"POST",body:data,credentials:"include"});let job=await started.json().catch(()=>({}));if(!started.ok)throw new Error(job.detail||`HTTP ${started.status}`);job=await waitForJob(job,progress);const result=job.resultado||{};const createdId=result.camada_id||result.raster_id||result.recursos?.[0]?.id;progress.note("Sincronizando catálogo de camadas");const visible=await refreshLayers(true,createdId?[createdId]:[],createdId);if(createdId&&!visible.has(createdId))throw new Error("O recurso foi importado, mas não pôde ser representado no mapa");status.textContent=`Importação concluída: ${result.quantidade||1} camada(s).`;progress.complete();log(`${file.name} importado com sucesso.`,"ok");inspectionToken="";input.value="";name.value="";$("#gp-import-current-crs").value=""}catch(error){status.textContent=error.message;progress.fail(`Falha: ${error.message}`);log(`${file.name}: ${error.message}`,"error");$("#gp-log").classList.add("open")}finally{submit.textContent="Importar";submit.disabled=false}};
       }else{
         field.innerHTML=`<label class="required-label" for="gp-wfs-url">URL do serviço ou camada WFS</label><input id="gp-wfs-url" name="caminho_arquivo" type="url" placeholder="https://servidor.exemplo/wfs" required><p class="field-help">Informe a URL do serviço WFS ou uma requisição de camada compatível.</p>`;
         submit.textContent="Importar";submit.title="Importar a camada externa do serviço WFS";submit.disabled=false;
+        form.elements.caminho_arquivo?.addEventListener("input",()=>suggestOutputName(form,op));
+        suggestOutputName(form,op);
         form.onsubmit=event=>{event.preventDefault();executeOp(op,form)};
       }
       icons();

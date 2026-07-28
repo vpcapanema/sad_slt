@@ -20,6 +20,29 @@
         gap: 0.75rem;
         margin-top: 1rem;
       }
+      .hier-demand-tabs {
+        margin-top: 1rem;
+      }
+      .hier-demand-tabs .admin-tab:focus-visible {
+        outline: 3px solid var(--pli-blue, #075f8f);
+        outline-offset: 2px;
+      }
+      .ahp-resumo-table .hier-demanda-indisponivel {
+        color: #66727a;
+        background: #f2f4f5;
+      }
+      .ahp-resumo-table .hier-demanda-indisponivel:hover {
+        background: #e9edef;
+      }
+      .ahp-resumo-table .hier-demanda-indisponivel td {
+        opacity: 0.78;
+      }
+      .ahp-resumo-table input[type="checkbox"]:disabled {
+        cursor: not-allowed;
+      }
+      .hier-demanda-status {
+        white-space: nowrap;
+      }
       .hier-table-shell {
         overflow: auto;
         max-height: 36rem;

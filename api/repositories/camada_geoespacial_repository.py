@@ -422,6 +422,7 @@ def excluir(recurso_id: str) -> bool:
             (recurso_id,),
         ).fetchone():
             raise ValueError("Camada homologada é somente leitura")
+        removido = False
         for categoria in ("processadas", "importadas"):
             catalog = STORAGES[categoria][0]
             row = conn.execute(
@@ -431,9 +432,23 @@ def excluir(recurso_id: str) -> bool:
                 (recurso_id,),
             ).fetchone()
             if row:
-                conn.commit()
-                return True
-        return False
+                removido = True
+
+        # Compatibilidade com registros legados eventualmente remanescentes.
+        legado = conn.execute(
+            "SELECT to_regclass('geoprocessamento.camada') AS tabela"
+        ).fetchone()
+        if legado and legado["tabela"] is not None:
+            legado_row = conn.execute(
+                "DELETE FROM geoprocessamento.camada WHERE recurso_sessao_id=%s RETURNING id",
+                (recurso_id,),
+            ).fetchone()
+            if legado_row:
+                removido = True
+
+        if removido:
+            conn.commit()
+        return removido
 
 
 def esta_homologada(recurso_id: str) -> bool:

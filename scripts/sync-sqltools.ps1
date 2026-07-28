@@ -1,4 +1,4 @@
-# Registra a conexao do banco SLT da VM no SQLTools do VS Code/Cursor.
+# Sincroniza as conexoes SQLTools do projeto no VS Code/Cursor.
 # As credenciais sao lidas do .env do projeto.
 # Uso: .\scripts\sync-sqltools.ps1
 
@@ -27,24 +27,15 @@ $SettingsCandidates = @(
     (Join-Path $env:APPDATA "Code\User\settings.json"),
     (Join-Path $env:APPDATA "Cursor\User\settings.json")
 )
-$SettingsPath = $SettingsCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-if (-not $SettingsPath) { Write-Error "settings.json do VS Code/Cursor nao encontrado" }
-$env:SLT_SQLTOOLS_SETTINGS = $SettingsPath
+$SettingsPaths = $SettingsCandidates | Where-Object { Test-Path $_ }
+if (-not $SettingsPaths) { Write-Error "settings.json do VS Code/Cursor nao encontrado" }
+$env:SLT_SQLTOOLS_SETTINGS = ($SettingsPaths -join [IO.Path]::PathSeparator)
 
 $py = @'
 import json, os, re
 from pathlib import Path
-from urllib.parse import quote
 
-settings_path = Path(os.environ["SLT_SQLTOOLS_SETTINGS"])
-raw = settings_path.read_text(encoding="utf-8")
-
-try:
-    import json5
-    data = json5.loads(raw)
-except ImportError:
-    cleaned = re.sub(r",(\s*[}\]])", r"\1", raw)
-    data = json.loads(cleaned)
+settings_paths = [Path(p) for p in os.environ["SLT_SQLTOOLS_SETTINGS"].split(os.pathsep) if p]
 
 host = os.environ["SIGMA_POSTGRES_HOST"]
 port = int(os.environ["SIGMA_POSTGRES_PORT"])
@@ -53,34 +44,122 @@ password = os.environ["SIGMA_POSTGRES_PASSWORD"]
 sslmode = os.environ.get("SIGMA_POSTGRES_SSLMODE", "disable")
 ssl_enabled = sslmode.lower() not in {"disable", "false", "0"}
 
-conn = {
-    "name": "Postgres - SLT VM (slt_db)",
-    "driver": "PostgreSQL",
-    "previewLimit": 50,
-    "server": host,
-    "port": port,
-    "database": "slt_db",
-    "username": user,
-    "password": password,
-    "connectString": (
-        f"postgresql://{quote(user, safe='')}:{quote(password, safe='')}@"
-        f"{host}:{port}/slt_db?sslmode={quote(sslmode, safe='')}"
+
+def pg_conn(name, server, port, database, username, password, *, ssl=False, connection_timeout=None, pg_ssl=None, ssl_object=None):
+    conn = {
+        "name": name,
+        "driver": "PostgreSQL",
+        "previewLimit": 50,
+        "server": server,
+        "port": port,
+        "database": database,
+        "username": username,
+        "password": password,
+        "askForPassword": False,
+    }
+    if ssl_object is not None:
+        conn["ssl"] = ssl_object
+    else:
+        conn["ssl"] = ssl
+    if connection_timeout is not None:
+        conn["connectionTimeout"] = connection_timeout
+    if pg_ssl is not None:
+        conn["pgOptions"] = {"ssl": pg_ssl}
+    return conn
+
+
+connections = [
+    pg_conn(
+        "AWS RDS - SIGMA PLI",
+        "sigma-pli-postgresql-db.cwlmgwc4igdh.us-east-1.rds.amazonaws.com",
+        5432,
+        "sigma_pli",
+        "sigma_admin",
+        password,
+        ssl_object={"rejectUnauthorized": False},
     ),
-    "askForPassword": False,
-    "connectionTimeout": 30,
-    "pgOptions": {"ssl": ssl_enabled},
-}
+    pg_conn(
+        "AWS VM - PLI STATS",
+        host,
+        5432,
+        "pli_stats",
+        "pli_admin",
+        password,
+    ),
+    pg_conn(
+        "AWS VM - SIGMA PLI (tunel 15433)",
+        "127.0.0.1",
+        15433,
+        "sigma_pli_qr53",
+        "sigma_user",
+        password,
+    ),
+    pg_conn(
+        "AWS VM - PLI REPORTA",
+        host,
+        5433,
+        "pli_reporta",
+        "pli_user",
+        password,
+    ),
+    pg_conn(
+        "Postgres - SLT VM (slt_db)",
+        host,
+        port,
+        "slt_db",
+        user,
+        password,
+        connection_timeout=30,
+        pg_ssl=ssl_enabled,
+    ),
+    pg_conn(
+        "Postgres - SLT Local (slt_db)",
+        "127.0.0.1",
+        5434,
+        "slt_db",
+        "slt_user",
+        os.environ.get("SLT_PGPASSWORD", "slt_pass"),
+        connection_timeout=30,
+        pg_ssl=False,
+    ),
+    pg_conn(
+        "AWS VM - PLI SMARTROUTER",
+        host,
+        5433,
+        "pli_smartrouter",
+        "pli_user",
+        password,
+    ),
+    pg_conn(
+        "AWS VM - POSTGRES ADMIN",
+        host,
+        5433,
+        "postgres",
+        "postgres",
+        password,
+    ),
+]
 
-old_names = {"Postgres - SLT Local (slt_db)", "Postgres - SLT VM (slt_db)"}
-connections = data.get("sqltools.connections") or []
-connections = [c for c in connections if c.get("name") not in old_names]
-connections.append(conn)
-data["sqltools.connections"] = connections
-data["sqltools.useNodeRuntime"] = True
+desired_names = {c["name"] for c in connections}
 
-text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
-settings_path.write_text(text, encoding="utf-8")
-print(f"SQLTools atualizado: {settings_path}")
+for settings_path in settings_paths:
+    raw = settings_path.read_text(encoding="utf-8")
+
+    try:
+        import json5
+        data = json5.loads(raw)
+    except ImportError:
+        cleaned = re.sub(r",(\s*[}\]])", r"\1", raw)
+        data = json.loads(cleaned)
+
+    existing = data.get("sqltools.connections") or []
+    existing = [c for c in existing if c.get("name") not in desired_names]
+    data["sqltools.connections"] = existing + connections
+    data["sqltools.useNodeRuntime"] = True
+
+    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    settings_path.write_text(text, encoding="utf-8")
+    print(f"SQLTools atualizado: {settings_path}")
 '@
 
 $tmp = Join-Path $env:TEMP "sync_sqltools_slt.py"

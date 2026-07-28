@@ -17,7 +17,7 @@
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div><main class="conteudo-principal app-main ahp-main fase1-page">
 {% include "componentes/navegacao_fases_hierarquizacao.html" %}
-<section class="card-fase-1-elegibilidade-territorial secao-fase-1-elegibilidade-territorial card"><h1 class="ahp-page-title"><i class="fas fa-shield-halved"></i> Fase 1: Elegibilidade Territorial</h1><p>Interseção sequencial do universo de demandas com as camadas homologadas de restrição e risco.</p></section>
+<section class="card-fase-1-elegibilidade-territorial secao-fase-1-elegibilidade-territorial card"><h1 class="ahp-page-title"><i class="fas fa-shield-halved"></i> Fase 1: Elegibilidade Territorial</h1><p>Fluxo canônico do Bloco 2: Processos → Fase 1 → Fase 2 → Fase 3.</p><p>Interseção sequencial do universo de demandas com as camadas homologadas de restrição e risco.</p></section>
 
 <section class="card-fase-hierarquizacao secao-fase-hierarquizacao card ahp-step-section"><div class="ahp-section-label"><span>1. Carregar hierarquização</span></div><div class="ahp-section-body">
   <label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option>Carregando…</option></select></label>
@@ -34,20 +34,22 @@
 <section class="card-pesos secao-pesos card ahp-step-section"><div class="ahp-section-label"><span>3. Ajustes avançados</span></div><div class="ahp-section-body">
   <div class="fase1-config-head"><label>Configuração de fatiamento <select id="fatiamento-fase1"><option value="">Carregando…</option></select></label><a class="fase1-library-link" href="/restrict/geoespacial/configuracao-risco-restricao/" title="Abrir biblioteca canônica"><i class="fas fa-book-open"></i><span>Biblioteca canônica</span></a></div>
   <div id="fatiamento-resumo" class="fase1-summary hidden"></div>
-  <article class="card-pesos fase1-weights-subcard"><h3><i class="fas fa-scale-balanced"></i> Pesos</h3><p>Pesos aplicados aos componentes do índice de risco pela configuração selecionada.</p><div id="fatiamento-pesos" class="fase1-weight-grid"></div></article>
+  <article class="card-pesos fase1-weights-subcard"><h3><i class="fas fa-sliders"></i> Regras de classificação</h3><p>Ajuste limiar de restrição, faixas de risco e pesos. Salve para registrar a configuração usada na execução.</p><div class="fase1-rule-grid"><label>Limiar de restrição<input id="fatiamento-limiar" type="number" min="0" step="0.01"></label></div><div id="fatiamento-classes" class="fase1-class-grid"></div><h4>Pesos por critério</h4><div id="fatiamento-pesos" class="fase1-weight-grid"></div><div class="fase1-actions"><button id="salvar-ajustes-fatiamento" class="btn" type="button"><i class="fas fa-floppy-disk"></i> Salvar ajustes como nova configuração</button></div></article>
 </div></section>
 
 <section class="card-camadas-operacionais secao-camadas-operacionais card ahp-step-section"><div class="ahp-section-label"><span>4. Geoprocessamento — SLT</span></div><div class="ahp-section-body">
   <div class="fase1-operational"><h3>Camadas operacionais</h3><div class="fase1-grid-2"><div><h4>Camada de demandas</h4><div id="gp-demandas"><p class="ahp-help-text">Selecione uma hierarquização.</p></div></div><div><h4>Camadas de Restrição e Risco</h4><div id="gp-risco-restricao"><p class="ahp-help-text">Selecione o par homologado.</p></div></div></div></div>
   <iframe id="gp-frame" class="fase1-gp-frame" title="Componente de geoprocessamento SLT" src="/restrict/geoespacial/bancada/?modulo=fase1&amp;embutido=1"></iframe>
   <div class="fase1-execute"><label>Cálculo <select id="modelo-fase1"><option value="calculo_fase1_elegibilidade">Fase 1 — Elegibilidade territorial</option></select></label><button id="executar-fase1" class="btn btn--primary" type="button"><i class="fas fa-play"></i> Executar cálculo isolado</button></div>
-  <div id="fase1-erro" class="ahp-info-note ahp-info-note--error hidden"></div><div id="fase1-relatorio" class="fase1-summary hidden"></div>
+  <div id="fase1-erro" class="ahp-info-note ahp-info-note--error hidden"></div><div id="fase1-relatorio" class="fase1-report hidden"></div><div class="fase1-actions"><button id="baixar-relatorio-fase1" class="btn hidden" type="button"><i class="fas fa-file-pdf"></i> Exportar relatório (PDF)</button></div>
 </div></section>
 </main>
 {% endblock %}
 
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/vendor/jspdf/jspdf.umd.min.js"></script>
+  <script src="/assets/vendor/jspdf/jspdf.plugin.autotable.min.js"></script>
   <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
   <script src="/restrict/hierarquizacao/js/fases.js"></script>
   <script src="/assets/js/paginas/hierarquizacao-fase1-elegibilidade-inline-1.js"></script>

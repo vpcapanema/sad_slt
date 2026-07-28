@@ -18,6 +18,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import fiona
+import geopandas as gpd
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DESTINO = ROOT / "data" / "geoespacial" / "local"
@@ -27,6 +30,7 @@ USER_AGENT = "SICARD-SLT/1.0 (download de fontes geoespaciais oficiais)"
 
 ARCGIS = "https://pamgia.ibama.gov.br/server/rest/services"
 DATAGEO = "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows"
+SISCOM_WFS = "http://siscom.ibama.gov.br:80/geoserver/publica/ows"
 
 
 @dataclass(frozen=True)
@@ -57,7 +61,7 @@ FONTES = (
     Fonte("movimento_massa", "Áreas de risco de escorregamento", "Instituto Geológico/SEMIL — DataGEO", "wfs", DATAGEO, ("datageo:VWM_AREA_RISCO_ESCORREGAMENTO_IG_2014_POL",)),
     Fonte("sitios_arqueologicos", "Sítios arqueológicos", "IPHAN/SEMIL — DataGEO", "wfs", DATAGEO, ("datageo:SitiosArqueologicos",)),
     Fonte("assentamentos", "Assentamentos", "INCRA", "direto", "https://certificacao.incra.gov.br/csv_shp/zip/Assentamento%20Brasil.zip"),
-    Fonte("embargos_ibama", "Embargos ambientais federais", "IBAMA — PAMGIA/SISCOM", "arcgis", f"{ARCGIS}/01_Publicacoes_Bases/embargos_siscom_brasil/FeatureServer/2"),
+    Fonte("embargos_ibama", "Embargos ambientais federais", "IBAMA — SISCOM", "wfs", SISCOM_WFS, ("publica:vw_brasil_adm_embargo_a",)),
 )
 
 CRITERIOS_SEM_FONTE_ABERTA = (
@@ -110,9 +114,31 @@ def validar_bruto(arquivo: Path) -> None:
             corrompido = pacote.testzip()
             if corrompido:
                 raise RuntimeError(f"ZIP corrompido na entrada {corrompido}")
+        try:
+            layers = list(fiona.listlayers(arquivo))
+        except Exception:
+            layers = []
+        if layers:
+            total_feicoes = 0
+            for layer in layers:
+                with fiona.open(arquivo, layer=layer) as colecao:
+                    total_feicoes += len(colecao)
+            if total_feicoes <= 0:
+                raise RuntimeError("ZIP vetorial sem feições legíveis")
+        else:
+            try:
+                frame = gpd.read_file(arquivo)
+            except Exception:
+                frame = None
+            if frame is not None and len(frame) <= 0:
+                raise RuntimeError("ZIP vetorial sem feições legíveis")
     elif arquivo.suffix.lower() in {".json", ".geojson"}:
         with arquivo.open("rb") as stream:
-            json.load(stream)
+            conteudo = json.load(stream)
+        if isinstance(conteudo, dict) and conteudo.get("type") == "FeatureCollection":
+            feicoes = conteudo.get("features") or []
+            if not feicoes:
+                raise RuntimeError("GeoJSON vetorial sem feições legíveis")
 
 
 def baixar_zip(url: str, destino: Path, *, force: bool) -> Path:
@@ -128,6 +154,81 @@ def baixar_zip(url: str, destino: Path, *, force: bool) -> Path:
 
 def url_com_parametros(url: str, parametros: dict[str, Any]) -> str:
     return f"{url}{'&' if '?' in url else '?'}{urllib.parse.urlencode(parametros)}"
+
+
+def obter_json(
+    url: str,
+    parametros: dict[str, Any],
+    *,
+    tentativas: int = 4,
+) -> dict[str, Any]:
+    ultimo_erro: Exception | None = None
+    alvo = url_com_parametros(url, parametros)
+    for tentativa in range(1, tentativas + 1):
+        try:
+            request = urllib.request.Request(
+                alvo,
+                headers={"User-Agent": USER_AGENT},
+            )
+            with urllib.request.urlopen(request, timeout=1800) as response:
+                resultado = json.loads(response.read())
+            if "error" in resultado:
+                raise RuntimeError(
+                    resultado["error"].get("message", str(resultado["error"]))
+                )
+            return resultado
+        except Exception as erro:
+            ultimo_erro = erro
+            if tentativa < tentativas:
+                time.sleep(2 ** (tentativa - 1))
+    raise RuntimeError(f"Solicitação ArcGIS falhou: {ultimo_erro}")
+
+
+def baixar_arcgis_geojson(fonte: Fonte, destino: Path) -> Path:
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    feicoes: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        lote = obter_json(
+            f"{fonte.url}/query",
+            {
+                "f": "geojson",
+                "where": "1=1",
+                "outFields": "*",
+                "geometry": ",".join(map(str, SP_BBOX)),
+                "geometryType": "esriGeometryEnvelope",
+                "inSR": 4674,
+                "spatialRel": "esriSpatialRelIntersects",
+                "outSR": 4674,
+                "geometryPrecision": 6,
+                "maxAllowableOffset": 0.00001,
+                "resultOffset": offset,
+                "resultRecordCount": 2000,
+            },
+        )
+        batch = lote.get("features", [])
+        feicoes.extend(batch)
+        excedeu = bool(
+            lote.get("properties", {}).get("exceededTransferLimit")
+        )
+        if not excedeu and len(batch) < 2000:
+            break
+        if not batch:
+            break
+        offset += len(batch)
+    if not feicoes:
+        raise RuntimeError(
+            "Consulta ArcGIS retornou zero feições para o recorte informado"
+        )
+    destino.write_text(
+        json.dumps(
+            {"type": "FeatureCollection", "features": feicoes},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    validar_bruto(destino)
+    return destino
 
 
 def postar_formulario_json(url: str, parametros: dict[str, Any], *, tentativas: int = 4) -> dict[str, Any]:
@@ -180,18 +281,25 @@ def baixar_arcgis(fonte: Fonte, *, force: bool) -> list[Path]:
 
     servico = fonte.url.rsplit("/", 1)[0]
     camada = fonte.url.rsplit("/", 1)[1]
-    resposta = postar_formulario_json(f"{servico}/createReplica", {
-        "f": "json", "replicaName": f"sicard_{fonte.id}_{int(time.time())}",
-        "layers": camada, "geometry": ",".join(map(str, SP_BBOX)),
-        "geometryType": "esriGeometryEnvelope", "inSR": "4674",
-        "transportType": "esriTransportTypeUrl", "returnAttachments": "false",
-        "async": "false", "syncModel": "none", "dataFormat": "shapefile",
-    })
-    download_url = resposta.get("URL") or resposta.get("url")
-    if not download_url:
-        raise RuntimeError("O serviço ArcGIS não retornou o pacote Shapefile exportado")
-    arquivo = baixar_zip(str(download_url), destino, force=True)
-    return [arquivo]
+    try:
+        resposta = postar_formulario_json(f"{servico}/createReplica", {
+            "f": "json", "replicaName": f"sicard_{fonte.id}_{int(time.time())}",
+            "layers": camada, "geometry": ",".join(map(str, SP_BBOX)),
+            "geometryType": "esriGeometryEnvelope", "inSR": "4674",
+            "transportType": "esriTransportTypeUrl", "returnAttachments": "false",
+            "async": "false", "syncModel": "none", "dataFormat": "shapefile",
+        })
+        download_url = resposta.get("URL") or resposta.get("url")
+        if not download_url:
+            raise RuntimeError(
+                "O serviço ArcGIS não retornou o pacote Shapefile exportado"
+            )
+        arquivo = baixar_zip(str(download_url), destino, force=True)
+        return [arquivo]
+    except Exception:
+        destino_geojson = pasta / f"{fonte.id}.geojson"
+        arquivo = baixar_arcgis_geojson(fonte, destino_geojson)
+        return [arquivo]
 
 
 def main() -> int:

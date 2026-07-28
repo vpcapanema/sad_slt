@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Proposta de classes e fluxo - Hierarquizacao e Ranking</title>
+  <script src="https://unpkg.com/elkjs@0.9.3/lib/elk.bundled.js"></script>
+  <style>
+    :root {
+      --ink: #14384e;
+      --muted: #5a7383;
+      --line: #5b7d8e;
+      --optional: #c39a3f;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #f6f9fb 0%, #eaf1f5 100%);
+      color: var(--ink);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.4;
+    }
+
+    .wrap { width: min(1400px, 96vw); margin: 28px auto 56px; }
+
+    h1 { margin: 0 0 8px; font-size: clamp(1.4rem, 1.1rem + 1vw, 2rem); }
+    .intro { margin: 0 0 18px; color: var(--muted); max-width: 1040px; }
+
+    .grid { display: grid; grid-template-columns: 320px 1fr; gap: 22px; align-items: start; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+
+    .panel {
+      border: 1px solid #c7d5dd; border-radius: 16px; background: #fff;
+      box-shadow: 0 14px 30px rgba(11, 50, 74, 0.08); overflow: hidden;
+    }
+    .panel > header {
+      padding: 13px 16px; border-bottom: 1px solid #dbe6ec;
+      background: linear-gradient(90deg, #f7fbff 0%, #eff6fb 100%);
+    }
+    .panel h2 { margin: 0; font-size: 1.02rem; }
+    .panel p.hint { margin: 5px 0 0; color: var(--muted); font-size: 0.86rem; }
+
+    .legend-list { list-style: none; margin: 0; padding: 8px 12px 14px; }
+    .legend-item { display: grid; grid-template-columns: 84px 1fr; gap: 10px; align-items: center; padding: 8px 4px; border-bottom: 1px dashed #e2ebf0; }
+    .legend-item:last-child { border-bottom: 0; }
+    .legend-item .swatch { display: flex; justify-content: center; }
+    .legend-item .name { font-weight: 800; font-size: 12.5px; color: #1c465f; }
+    .legend-item .desc { font-size: 11px; color: #5f7d8d; margin-top: 1px; }
+    .legend-optional { display: flex; align-items: center; gap: 8px; padding: 10px 12px 4px; font-size: 11.5px; color: #7a5f22; }
+    .legend-optional svg { flex: 0 0 auto; }
+
+    .diagram-host { width: 100%; overflow-x: auto; padding: 12px; background: linear-gradient(180deg, #f8fcff 0%, #eef4f8 100%); }
+    svg.diagram { display: block; margin: 0 auto; }
+    .loading { padding: 24px; color: var(--muted); font-style: italic; }
+
+    /* ---- Conexoes ---- */
+    .link { fill: none; stroke: var(--line); stroke-width: 2.1; marker-end: url(#arrowhead); }
+    .link--optional { stroke: var(--optional); stroke-width: 2; stroke-dasharray: 7 5; marker-end: url(#arrowhead-opt); }
+
+    /* ---- Formas por classe ---- */
+    .node .shape { stroke-width: 1.6; }
+    .node.input .shape { fill: #15577c; stroke: #0d3e5b; }
+    .node.datastore .shape { fill: #e9f2f8; stroke: #6f93a8; }
+    .node.datastore .shape-rim { fill: #f4f9fc; stroke: #6f93a8; stroke-width: 1.4; }
+    .node.param .shape { fill: #eef5f9; stroke: #8fb0c1; }
+    .node.substep .shape { fill: #eef5f9; stroke: #6f93a8; }
+    .node.substep .shape-detail { stroke: #6f93a8; stroke-width: 1.3; fill: none; }
+    .node.tool .shape { fill: #fff7e8; stroke: #d3ab57; stroke-width: 1.8; stroke-dasharray: 7 4; }
+    .node.phase .shape { fill: #ffffff; stroke: #2fae86; stroke-width: 2.6; }
+    .node.artifact .shape { fill: #f6fafc; stroke: #9aaeb9; stroke-dasharray: 6 4; }
+    .node.artifact .shape-detail { stroke: #9aaeb9; fill: #eaf1f5; stroke-width: 1.2; }
+    .node.result .shape { fill: #0f3a54; stroke: #0a2c41; }
+
+    /* ---- Textos ---- */
+    .n-kicker { font-size: 9px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; fill: #5f7d8d; text-anchor: middle; }
+    .n-title { font-size: 13.5px; font-weight: 800; fill: #173a50; text-anchor: middle; }
+    .n-sub { font-size: 10.5px; fill: #5b7887; text-anchor: middle; }
+
+    .node.input .n-kicker { fill: #bcdcf0; }
+    .node.input .n-title, .node.input .n-sub { fill: #eef7ff; }
+    .node.result .n-kicker { fill: #9fc6dc; }
+    .node.result .n-title, .node.result .n-sub { fill: #eef7ff; }
+    .node.tool .n-kicker { fill: #a9822f; }
+    .node.phase .n-title { fill: #16805d; }
+
+    .footer { margin-top: 18px; color: #567284; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Proposta de classes e novo fluxo - Hierarquizacao e Ranking</h1>
+    <p class="intro">
+      Cada papel do fluxo recebe uma forma geometrica, tamanho e estilo proprios (mantendo o sistema de cores).
+      Os geradores de risco/restricao e de favorabilidade aparecem como <strong>ferramentas de apoio opcionais</strong>
+      (contorno tracejado + setas tracejadas): entram no fluxo apenas quando a camada precisa ser produzida.
+      Se a hierarquizacao usar uma camada ja homologada, o gerador e ignorado. Layout automatico (ELK), sem sobreposicoes.
+    </p>
+
+    <div class="grid">
+      <aside class="panel">
+        <header>
+          <h2>Classes propostas</h2>
+          <p class="hint">Forma + tamanho + estilo = papel no fluxo.</p>
+        </header>
+        <ul class="legend-list" id="legend"></ul>
+        <div class="legend-optional">
+          <svg width="46" height="14" viewBox="0 0 46 14"><line x1="2" y1="7" x2="44" y2="7" stroke="#c39a3f" stroke-width="2" stroke-dasharray="7 5"/></svg>
+          <span>Conexao tracejada = caminho opcional (so quando a camada e gerada na hora).</span>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <header>
+          <h2>Novo fluxo</h2>
+          <p class="hint">Fluxo principal solido subindo ate o resultado; apoio opcional na lateral.</p>
+        </header>
+        <div class="diagram-host"><div id="diagram-main" class="loading">Calculando layout...</div></div>
+      </section>
+    </div>
+
+    <p class="footer">Arquivo independente para avaliacao visual. Nenhuma alteracao foi aplicada na pagina oficial.</p>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const SVG_NS = "http://www.w3.org/2000/svg";
+
+      // title, subtitle, kind
+      const labels = {
+        "node-ranking": ["Hierarquizacao e Ranking", "Resultado final priorizado", "result"],
+        "node-fase3": ["Fase 3", "Ajuste e consolidacao", "phase"],
+        "node-ajuste": ["Configuracao do ajuste fino", "Pesos, atributos e risco", "param"],
+        "node-objetos-fase2": ["Objetos apos Fase 2", "Elegiveis com merito", "artifact"],
+        "node-fase2": ["Fase 2", "Favorabilidade territorial", "phase"],
+        "node-camada-fase2": ["Camada homologada Fase 2", "Pre-existente ou gerada", "artifact"],
+        "node-objetos-fase1": ["Objetos apos Fase 1", "Conjunto elegivel", "artifact"],
+        "node-fase1": ["Fase 1", "Elegibilidade territorial", "phase"],
+        "node-camada-fase1": ["Camada homologada Fase 1", "Pre-existente ou gerada", "artifact"],
+        "node-objetos-iniciais": ["Objetos sob analise", "Base da rodada", "input"],
+        "node-gerador-risco": ["Gerador risco/restricao", "Apoio - entra se necessario", "tool"],
+        "node-gerador-favorabilidade": ["Gerador favorabilidade", "Apoio - entra se necessario", "tool"],
+        "node-insumos": ["Insumos geoespaciais", "Repositorio comum", "datastore"],
+        "node-rodadas": ["Cadastro de rodadas", "Define universo inicial", "param"],
+        "node-ahp": ["Analise multicriterio (AHP)", "Criterios e pesos", "substep"]
+      };
+
+      const kindMeta = {
+        input:     { label: "Entrada principal",           desc: "Fluxo de objetos que atravessa todo o processo." },
+        datastore: { label: "Repositorio de dados",        desc: "Fonte geoespacial comum consultada pelas etapas." },
+        param:     { label: "Parametro / configuracao",    desc: "Entrada de configuracao definida pelo usuario." },
+        substep:   { label: "Subetapa analitica",          desc: "Etapa interna que alimenta uma ferramenta." },
+        tool:      { label: "Ferramenta de apoio (opcional)", desc: "Gera camada; so entra quando necessario." },
+        phase:     { label: "Fase operacional",            desc: "Etapa central do fluxo principal." },
+        artifact:  { label: "Artefato / camada",           desc: "Produto intermediario consumido adiante." },
+        result:    { label: "Resultado final",             desc: "Saida priorizada do processo." }
+      };
+
+      // source, target, optional
+      const edges = [
+        ["node-insumos", "node-gerador-risco", true],
+        ["node-gerador-risco", "node-camada-fase1", true],
+        ["node-rodadas", "node-objetos-iniciais", false],
+        ["node-camada-fase1", "node-fase1", false],
+        ["node-objetos-iniciais", "node-fase1", false],
+        ["node-fase1", "node-objetos-fase1", false],
+        ["node-insumos", "node-gerador-favorabilidade", true],
+        ["node-ahp", "node-gerador-favorabilidade", true],
+        ["node-gerador-favorabilidade", "node-camada-fase2", true],
+        ["node-camada-fase2", "node-fase2", false],
+        ["node-objetos-fase1", "node-fase2", false],
+        ["node-fase2", "node-objetos-fase2", false],
+        ["node-objetos-fase2", "node-fase3", false],
+        ["node-ajuste", "node-fase3", false],
+        ["node-fase3", "node-ranking", false]
+      ];
+
+      const SIZES = {
+        input:     { w: 232, h: 88 },
+        datastore: { w: 212, h: 94 },
+        param:     { w: 216, h: 82 },
+        substep:   { w: 208, h: 82 },
+        tool:      { w: 218, h: 88 },
+        phase:     { w: 228, h: 94 },
+        artifact:  { w: 208, h: 80 },
+        result:    { w: 300, h: 100 }
+      };
+
+      function kindOf(id) { return labels[id][2]; }
+      function nodeSize(id) { return SIZES[kindOf(id)] || { w: 210, h: 82 }; }
+
+      function el(name, attrs) {
+        const node = document.createElementNS(SVG_NS, name);
+        for (const k in attrs) node.setAttribute(k, attrs[k]);
+        return node;
+      }
+
+      function hexPoints(w, h, c) {
+        return [ [c,0], [w-c,0], [w,h/2], [w-c,h], [c,h], [0,h/2] ]
+          .map(function (p) { return p[0] + "," + p[1]; }).join(" ");
+      }
+      function octaPoints(w, h, c) {
+        return [ [c,0], [w-c,0], [w,c], [w,h-c], [w-c,h], [c,h], [0,h-c], [0,c] ]
+          .map(function (p) { return p[0] + "," + p[1]; }).join(" ");
+      }
+      function paraPoints(w, h, s) {
+        return [ [s,0], [w,0], [w-s,h], [0,h] ]
+          .map(function (p) { return p[0] + "," + p[1]; }).join(" ");
+      }
+
+      function drawShape(kind, w, h) {
+        const out = [];
+        if (kind === "input") {
+          out.push(el("polygon", { class: "shape", points: hexPoints(w, h, 22) }));
+        } else if (kind === "tool") {
+          out.push(el("polygon", { class: "shape", points: octaPoints(w, h, 16) }));
+        } else if (kind === "param") {
+          out.push(el("polygon", { class: "shape", points: paraPoints(w, h, 18) }));
+        } else if (kind === "datastore") {
+          const ry = 11;
+          out.push(el("path", { class: "shape", d: "M 0 " + ry + " L 0 " + (h - ry) +
+            " A " + (w / 2) + " " + ry + " 0 0 0 " + w + " " + (h - ry) +
+            " L " + w + " " + ry + " A " + (w / 2) + " " + ry + " 0 0 1 0 " + ry + " Z" }));
+          out.push(el("ellipse", { class: "shape-rim", cx: w / 2, cy: ry, rx: w / 2, ry: ry }));
+        } else if (kind === "substep") {
+          out.push(el("rect", { class: "shape", x: 0, y: 0, rx: 8, ry: 8, width: w, height: h }));
+          out.push(el("line", { class: "shape-detail", x1: 13, y1: 0, x2: 13, y2: h }));
+          out.push(el("line", { class: "shape-detail", x1: w - 13, y1: 0, x2: w - 13, y2: h }));
+        } else if (kind === "artifact") {
+          const f = 16;
+          out.push(el("path", { class: "shape", d: "M 0 0 L " + (w - f) + " 0 L " + w + " " + f + " L " + w + " " + h + " L 0 " + h + " Z" }));
+          out.push(el("path", { class: "shape-detail", d: "M " + (w - f) + " 0 L " + (w - f) + " " + f + " L " + w + " " + f + " Z" }));
+        } else if (kind === "phase") {
+          out.push(el("rect", { class: "shape", x: 0, y: 0, rx: 13, ry: 13, width: w, height: h }));
+        } else if (kind === "result") {
+          out.push(el("rect", { class: "shape", x: 0, y: 0, rx: h / 2, ry: h / 2, width: w, height: h }));
+        } else {
+          out.push(el("rect", { class: "shape", x: 0, y: 0, rx: 10, ry: 10, width: w, height: h }));
+        }
+        return out;
+      }
+
+      function drawCard(g, kind, w, h, kicker, title, subtitle) {
+        drawShape(kind, w, h).forEach(function (s) { g.appendChild(s); });
+        const cy = kind === "datastore" ? h / 2 + 5 : h / 2;
+        const k = el("text", { class: "n-kicker", x: w / 2, y: cy - 20 });
+        k.textContent = kicker;
+        g.appendChild(k);
+        const t = el("text", { class: "n-title", x: w / 2, y: cy });
+        t.textContent = title;
+        g.appendChild(t);
+        const s = el("text", { class: "n-sub", x: w / 2, y: cy + 17 });
+        s.textContent = subtitle;
+        g.appendChild(s);
+      }
+
+      function buildLegend() {
+        const ul = document.getElementById("legend");
+        Object.keys(kindMeta).forEach(function (kind) {
+          const sz = SIZES[kind];
+          const scale = 74 / sz.w;
+          const w = 74, h = Math.round(sz.h * scale);
+          const li = document.createElement("li");
+          li.className = "legend-item";
+
+          const sw = document.createElement("div");
+          sw.className = "swatch";
+          const svg = el("svg", { width: w, height: h, viewBox: "0 0 " + w + " " + h, class: "node " + kind });
+          drawShape(kind, w, h).forEach(function (s) { svg.appendChild(s); });
+          sw.appendChild(svg);
+
+          const info = document.createElement("div");
+          const name = document.createElement("div");
+          name.className = "name";
+          name.textContent = kindMeta[kind].label;
+          const desc = document.createElement("div");
+          desc.className = "desc";
+          desc.textContent = kindMeta[kind].desc;
+          info.appendChild(name);
+          info.appendChild(desc);
+
+          li.appendChild(sw);
+          li.appendChild(info);
+          ul.appendChild(li);
+        });
+      }
+
+      function renderInto(hostId, laid, optionalMap) {
+        const host = document.getElementById(hostId);
+        host.classList.remove("loading");
+        host.textContent = "";
+
+        const width = laid.width || 1000;
+        const height = laid.height || 800;
+
+        const svg = el("svg", { class: "diagram", width: Math.max(width, 320), height: height, viewBox: "0 0 " + width + " " + height });
+
+        const defs = el("defs", {});
+        [["arrowhead", "#3f6273"], ["arrowhead-opt", "#c39a3f"]].forEach(function (m) {
+          const marker = el("marker", { id: m[0], markerWidth: "9", markerHeight: "9", refX: "7", refY: "4", orient: "auto", markerUnits: "strokeWidth" });
+          marker.appendChild(el("path", { d: "M0,0 L8,4 L0,8 Z", fill: m[1] }));
+          defs.appendChild(marker);
+        });
+        svg.appendChild(defs);
+
+        (laid.edges || []).forEach(function (edge) {
+          const optional = optionalMap[edge.id];
+          (edge.sections || []).forEach(function (sec) {
+            const pts = [sec.startPoint].concat(sec.bendPoints || []).concat([sec.endPoint]);
+            const d = pts.map(function (p, i) { return (i === 0 ? "M " : "L ") + p.x + " " + p.y; }).join(" ");
+            svg.appendChild(el("path", { class: optional ? "link link--optional" : "link", d: d }));
+          });
+        });
+
+        (laid.children || []).forEach(function (child) {
+          const meta = labels[child.id];
+          const kind = meta[2];
+          const g = el("g", { class: "node " + kind, transform: "translate(" + child.x + "," + child.y + ")" });
+          drawCard(g, kind, child.width, child.height, kindMeta[kind].label, meta[0], meta[1]);
+          svg.appendChild(g);
+        });
+
+        host.appendChild(svg);
+      }
+
+      function fail(hostId, message) {
+        const host = document.getElementById(hostId);
+        host.classList.remove("loading");
+        host.textContent = message;
+      }
+
+      buildLegend();
+
+      if (typeof ELK === "undefined") {
+        fail("diagram-main", "Nao foi possivel carregar o motor de layout (ELK). Verifique a conexao com a internet.");
+        return;
+      }
+
+      const elk = new ELK();
+      const optionalMap = {};
+
+      const graph = {
+        id: "root",
+        layoutOptions: {
+          "elk.algorithm": "layered",
+          "elk.direction": "UP",
+          "elk.edgeRouting": "ORTHOGONAL",
+          "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+          "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
+          "elk.layered.nodePlacement.favorStraightEdges": "true",
+          "elk.spacing.nodeNode": "48",
+          "elk.layered.spacing.nodeNodeBetweenLayers": "76",
+          "elk.spacing.edgeNode": "22",
+          "elk.spacing.edgeEdge": "16"
+        },
+        children: Object.keys(labels).map(function (id) {
+          const s = nodeSize(id);
+          return { id: id, width: s.w, height: s.h };
+        }),
+        edges: edges.map(function (e, i) {
+          const id = "e" + i;
+          optionalMap[id] = e[2];
+          return { id: id, sources: [e[0]], targets: [e[1]] };
+        })
+      };
+
+      elk.layout(graph)
+        .then(function (laid) { renderInto("diagram-main", laid, optionalMap); })
+        .catch(function (err) { fail("diagram-main", "Erro no layout: " + err.message); });
+    })();
+  </script>
+</body>
+</html>

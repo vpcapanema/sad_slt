@@ -1,5 +1,11 @@
 {
   "workbench.iconTheme": "vscode-icons",
+  "terminal.integrated.profiles.windows": {
+    "Windows PowerShell": {
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "Windows PowerShell",
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
   "python.terminal.useEnvFile": true,
   "python.analysis.extraPaths": ["${workspaceFolder}"],
@@ -39,9 +45,9 @@
   "[sql]": {
     "editor.quickSuggestions": { "other": false, "comments": false, "strings": false }
   },
-  "sqltools.useNodeRuntime": false,
+  "sqltools.useNodeRuntime": true,
   "sqltools.disableReleaseNotifications": true,
-  "sqltools.languageServer.enabled": false,
+  "sqltools.languageServer.enabled": true,
   "python.testing.pytestArgs": [
     "geoespacial"
   ],

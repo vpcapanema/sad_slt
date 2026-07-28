@@ -1,71 +1,140 @@
 {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "SICARD: Iniciar ambiente de desenvolvimento",
-      "type": "process",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/start-dev.ps1"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "detail": "Sobe a API SICARD na porta 8080 usando 56.125.163.194:5433/slt_db"
-    },
-    {
-      "label": "SLT: Subir banco local de contingência",
-      "type": "process",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/start-db.ps1"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "detail": "Somente contingência/rollback: container local na porta 5434"
-    },
-    {
-      "label": "SLT: Aplicar schema PostgreSQL",
-      "type": "process",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/apply-database.ps1"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "detail": "Aplica migrations no slt_db configurado (VM por padrão)"
-    }
-  ]
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "SICARD: Iniciar ambiente de desenvolvimento",
+			"type": "process",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/scripts/start-dev.ps1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true
+			},
+			"detail": "Sobe a API SICARD na porta 8080 usando 56.125.163.194:5433/slt_db"
+		},
+		{
+			"label": "SLT: Subir banco local de contingência",
+			"type": "process",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/scripts/start-db.ps1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true
+			},
+			"detail": "Somente contingência/rollback: container local na porta 5434"
+		},
+		{
+			"label": "SLT: Aplicar schema PostgreSQL",
+			"type": "process",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}/scripts/apply-database.ps1"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true
+			},
+			"detail": "Aplica migrations no slt_db configurado (VM por padrão)"
+		},
+		{
+			"label": "SLT: Importar e recortar camadas Fase1",
+			"type": "shell",
+			"command": "d:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe",
+			"args": [
+				"-u",
+				"d:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\importar_recortar_fase1.py"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "SLT: Importar e recortar camadas Fase1",
+			"type": "shell",
+			"command": "d:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe",
+			"args": [
+				"-u",
+				"d:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\importar_recortar_fase1.py"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "SLT: Sanity task output",
+			"type": "shell",
+			"command": "d:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe",
+			"args": [
+				"-c",
+				"print('task_output_ok')"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "SLT: Importar/recortar Fase1 com log em arquivo",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'd:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' -u 'd:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\importar_recortar_fase1.py' *> 'd:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\data\\geoespacial\\relatorios\\importacao_recorte_sp_fase1.run.log'"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "SLT: Conferir fontes brutas Fase1 em arquivo",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'd:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' -u 'd:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\check_fontes_brutas_fase1.py' *> 'd:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\data\\geoespacial\\relatorios\\check_fontes_brutas_fase1.run.log'"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "SLT: Reexecutar importação Fase1 assíncrona",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'd:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' -u 'd:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\importar_recortar_fase1.py' *> 'd:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\data\\geoespacial\\relatorios\\importacao_recorte_sp_fase1.run.log'"
+			],
+			"isBackground": false
+		}
+	]
 }

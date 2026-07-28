@@ -32,7 +32,7 @@ dependencies = [
 include = ["api"]
 exclude = ["scripts/**", "**/__pycache__", "**/.venv"]
 extraPaths = ["."]
-pythonVersion = "3.11"
+pythonVersion = "3.12"
 typeCheckingMode = "basic"
 
 [tool.flake8]
