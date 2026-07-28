@@ -133,23 +133,32 @@ def list_elegiveis(tipo: str, *, status: str | None = None) -> list[dict[str, An
     """
     cfg = _cfg(tipo)
     cols = sorted(colunas_validas(tipo) | {"id", "codigo", "nome", "status"})
-    select_cols = ", ".join(cols)
     table = f'{cfg["schema"]}.{cfg["table"]}'
 
+    alias_join = ""
+    alias_select = ""
+    if tipo == "programa":
+        alias_join = " LEFT JOIN demandas.plano pai ON pai.id = base.plano_id"
+        alias_select = ", CONCAT_WS(' — ', pai.codigo, pai.nome) AS plano_id_alias"
+    elif tipo == "projeto":
+        alias_join = " LEFT JOIN demandas.programa pai ON pai.id = base.programa_id"
+        alias_select = ", CONCAT_WS(' — ', pai.codigo, pai.nome) AS programa_id_alias"
+
+    qualified_cols = ", ".join(f"base.{col}" for col in cols)
     query = f"""
-        SELECT {select_cols}, {cfg["grupo"]}::text AS grupo_id
-        FROM {table}
+        SELECT {qualified_cols}, base.{cfg["grupo"]}::text AS grupo_id{alias_select}
+        FROM {table} base{alias_join}
         WHERE 1=1
     """
     params: list[Any] = []
     if status == "todas":
         pass  # sem filtro de status: universo completo (Demandas cadastradas)
     elif status:
-        query += " AND status = %s"
+        query += " AND base.status = %s"
         params.append(status)
     else:
-        query += " AND status = ANY(%s)"
+        query += " AND base.status = ANY(%s)"
         params.append(list(AHP_STATUSES))
-    query += " ORDER BY codigo"
+    query += " ORDER BY base.codigo"
     with get_connection() as conn:
         return list(conn.execute(query, params).fetchall())  # pyright: ignore[reportArgumentType]

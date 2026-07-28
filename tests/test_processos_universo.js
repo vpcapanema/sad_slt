@@ -49,12 +49,20 @@ class Element {
 
 class TbodyElement extends Element {
   querySelectorAll(selector) {
-    if (selector !== "input[data-id]:not(:disabled)") return [];
-    return [...this.innerHTML.matchAll(/<input type="checkbox" data-id="([^"]+)"[^>]*>/g)]
+    const attr =
+      selector === "input[data-id]:not(:disabled)"
+        ? "data-id"
+        : selector === "input[data-resumo-id]:not(:disabled)"
+          ? "data-resumo-id"
+          : null;
+    if (!attr) return [];
+    const pattern = new RegExp(`<input type="checkbox" ${attr}="([^"]+)"[^>]*>`, "g");
+    return [...this.innerHTML.matchAll(pattern)]
       .filter((match) => !match[0].includes(" disabled"))
       .map((match) => {
         const element = new Element();
-        element.dataset.id = match[1];
+        if (attr === "data-id") element.dataset.id = match[1];
+        else element.dataset.resumoId = match[1];
         element.checked = match[0].includes(" checked");
         return element;
       });
@@ -66,8 +74,23 @@ const ids = [
   "demanda-campo",
   "demanda-valor",
   "demanda-tbody",
+  "demanda-head",
   "demanda-contagem",
-  "demanda-todos",
+  "demanda-confirmar",
+  "demanda-limpar",
+  "demanda-atualizar",
+  "demanda-cancelar",
+  "demanda-pagina-anterior",
+  "demanda-pagina-proxima",
+  "demanda-pagina-info",
+  "demanda-resumo-contagem",
+  "demanda-resumo-tbody",
+  "demanda-resumo-todos",
+  "demanda-resumo-excluir",
+  "demanda-resumo-confirmar",
+  "demanda-resumo-editar",
+  "demanda-resumo-cancelar",
+  "demanda-resumo-atualizar",
   "hier-tipo",
   "universo-objeto-valor",
   "hier-loading",
@@ -85,7 +108,12 @@ const ids = [
   "json-modal-body",
 ];
 const elements = Object.fromEntries(
-  ids.map((id) => [id, id === "demanda-tbody" ? new TbodyElement(id) : new Element(id)]),
+  ids.map((id) => [
+    id,
+    ["demanda-tbody", "demanda-resumo-tbody"].includes(id)
+      ? new TbodyElement(id)
+      : new Element(id),
+  ]),
 );
 elements["hier-tipo"].value = "projeto";
 elements["hier-nome"].value = "Rodada de teste";
@@ -100,12 +128,19 @@ const requests = [];
 let createdPayload = null;
 const fixtures = {
   projeto: [
-    { id: "p1", codigo: "P-1", nome: "Aprovado", status: "aprovada" },
-    { id: "p2", codigo: "P-2", nome: "Apto", status: "hierarq_apta" },
-    { id: "p3", codigo: "P-3", nome: "Rascunho", status: "rascunho" },
+    { id: "p1", codigo: "P-1", nome: "Aprovado", status: "analise_aprovada", diretoria_id: "DIR-1" },
+    { id: "p2", codigo: "P-2", nome: "Apto", status: "hierarq_apta", diretoria_id: "DIR-2" },
+    { id: "p3", codigo: "P-3", nome: "Código antigo", status: "aprovada", diretoria_id: "DIR-1" },
+    ...Array.from({ length: 14 }, (_, i) => ({
+      id: `px${i + 1}`,
+      codigo: `PX-${i + 1}`,
+      nome: `Projeto extra ${i + 1}`,
+      status: "analise_aprovada",
+      diretoria_id: "DIR-1",
+    })),
   ],
   plano: [
-    { id: "pl1", codigo: "PL-1", nome: "Plano", status: "aprovada" },
+    { id: "pl1", codigo: "PL-1", nome: "Plano", status: "analise_aprovada" },
   ],
   programa: [
     { id: "pg1", codigo: "PG-1", nome: "Programa", status: "hierarq_apta" },
@@ -113,7 +148,16 @@ const fixtures = {
 };
 
 const document = {
-  getElementById: (id) => elements[id],
+  getElementById: (id) => {
+    if (
+      id === "demanda-todos" &&
+      !elements[id] &&
+      elements["demanda-head"].innerHTML.includes('id="demanda-todos"')
+    ) {
+      elements[id] = new Element(id);
+    }
+    return elements[id] || null;
+  },
   querySelectorAll: (selector) => {
     if (selector === "#hier-tipo-tabs [data-tipo]") return tabs;
     if (selector === "#hier-fases input:checked") return phases;
@@ -135,7 +179,10 @@ const context = {
       return fixtures[tipo];
     },
     async listarCamposUniverso() {
-      return [];
+      return [
+        { campo: "status", rotulo: "Situação (status)", tipo: "texto" },
+        { campo: "diretoria_id", rotulo: "Diretoria responsável", tipo: "texto" },
+      ];
     },
     async criar(payload) {
       createdPayload = payload;
@@ -143,6 +190,30 @@ const context = {
   },
 };
 context.window = context;
+context.SLTAdminLabels = {
+  async init() {
+    return new Promise(() => {});
+  },
+  statusDemandaLabel(codigo) {
+    return {
+      analise_aprovada: "Aprovada",
+      aprovada: "Código antigo de aprovação",
+      hierarq_apta: "Apta à hierarquização",
+      rascunho: "Em rascunho",
+    }[codigo] || codigo;
+  },
+  statusBadgeHtml(codigo) {
+    return `<span class="badge-status">${this.statusDemandaLabel(codigo)}</span>`;
+  },
+  diretoriaLabel(id) {
+    return { "DIR-1": "Diretoria de Planejamento", "DIR-2": "Diretoria de Obras" }[id] || id;
+  },
+};
+context.SLTAdminApi = {
+  async listDemandasByTipo() {
+    throw new Error("Detalhes administrativos indisponíveis no teste");
+  },
+};
 vm.createContext(context);
 vm.runInContext(
   fs.readFileSync("hierarquizacao/js/processos.js", "utf8"),
@@ -156,21 +227,72 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   await flush();
   await flush();
 
+  assert.equal(elements["hier-loading"].classList.contains("hidden"), true);
   assert.deepEqual(requests[0], { tipo: "projeto", status: "todas" });
-  assert.match(elements["demanda-tbody"].innerHTML, /data-status="aprovada"/);
+  assert.match(elements["demanda-head"].innerHTML, /Projeto/);
+  assert.match(elements["demanda-head"].innerHTML, /Plano estratégico/);
+  assert.match(elements["demanda-head"].innerHTML, /Classificação/);
+  assert.match(elements["demanda-head"].innerHTML, /Complementos/);
+  assert.match(elements["demanda-head"].innerHTML, /Geometria/);
+  assert.match(elements["demanda-tbody"].innerHTML, /data-status="analise_aprovada"/);
+  assert.match(elements["demanda-tbody"].innerHTML, />Aprovada<\/span>/);
+  assert.match(elements["demanda-tbody"].innerHTML, /Diretoria de Planejamento/);
   assert.match(elements["demanda-tbody"].innerHTML, /data-status="hierarq_apta"/);
   assert.match(
     elements["demanda-tbody"].innerHTML,
-    /class="hier-demanda-indisponivel" data-status="rascunho"/,
+    /class="hier-demanda-indisponivel" data-status="aprovada"/,
   );
   assert.match(
     elements["demanda-tbody"].innerHTML,
     /data-id="p3"[^>]* disabled[^>]*aria-describedby=/,
   );
+  assert.equal(
+    [...elements["demanda-tbody"].innerHTML.matchAll(/<tr class=/g)].length,
+    15,
+  );
+  assert.equal(elements["demanda-pagina-info"].textContent, "Página 1 de 2");
+
+  elements["demanda-campo"].value = "diretoria_id";
+  elements["demanda-campo"].onchange();
+  assert.match(elements["demanda-valor"].innerHTML, /Diretoria de Planejamento/);
+  assert.match(elements["demanda-valor"].innerHTML, /Diretoria de Obras/);
+  elements["demanda-valor"].value = "DIR-2";
+  elements["demanda-valor"].oninput();
+  assert.match(elements["demanda-contagem"].textContent, /^1 resultado/);
+  elements["demanda-campo"].value = "";
+  elements["demanda-campo"].onchange();
 
   elements["demanda-todos"].onchange({ target: { checked: true } });
   assert.equal(elements["demanda-todos"].checked, true);
-  assert.match(elements["demanda-contagem"].textContent, /2 selecionada/);
+  assert.match(elements["demanda-contagem"].textContent, /14 selecionada/);
+  elements["demanda-limpar"].onclick();
+  assert.match(elements["demanda-contagem"].textContent, /0 selecionada/);
+
+  elements["demanda-todos"].onchange({ target: { checked: true } });
+  elements["demanda-confirmar"].onclick();
+  assert.match(elements["demanda-resumo-tbody"].innerHTML, /P-1/);
+  assert.match(elements["demanda-resumo-tbody"].innerHTML, /P-2/);
+  assert.doesNotMatch(elements["demanda-resumo-tbody"].innerHTML, /P-3/);
+  assert.match(elements["demanda-resumo-contagem"].textContent, /14 demanda/);
+  elements["demanda-resumo-todos"].onchange({ target: { checked: true } });
+  assert.equal(elements["demanda-resumo-excluir"].disabled, false);
+  elements["demanda-resumo-excluir"].onclick();
+  assert.match(elements["demanda-resumo-contagem"].textContent, /Nenhuma/);
+
+  elements["demanda-todos"].onchange({ target: { checked: true } });
+  elements["demanda-confirmar"].onclick();
+  elements["demanda-resumo-confirmar"].onclick();
+  assert.match(elements["demanda-resumo-contagem"].textContent, /grupo fechado/);
+  assert.equal(elements["demanda-todos"].disabled, true);
+  assert.equal(elements["demanda-resumo-editar"].disabled, false);
+  elements["demanda-resumo-editar"].onclick();
+  assert.match(elements["demanda-resumo-contagem"].textContent, /grupo aberto/);
+
+  const requestCountBeforeUpdate = requests.length;
+  await elements["demanda-atualizar"].onclick();
+  await flush();
+  assert.equal(requests.length, requestCountBeforeUpdate + 1);
+  assert.match(elements["demanda-resumo-contagem"].textContent, /14 demanda/);
 
   tabs.find((tab) => tab.dataset.tipo === "plano").onclick();
   await flush();
@@ -201,11 +323,19 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   await elements["hier-tipo"].onchange();
   await flush();
   elements["demanda-todos"].onchange({ target: { checked: true } });
+  elements["demanda-confirmar"].onclick();
+  elements["demanda-resumo-confirmar"].onclick();
   await elements["nova-hierarquizacao"].onsubmit({ preventDefault() {} });
   assert.deepEqual(
     createdPayload.objetos.map((item) => item.id),
-    ["p1", "p2"],
+    ["p1", "p2", ...Array.from({ length: 12 }, (_, i) => `px${i + 1}`)],
   );
+
+  elements["demanda-cancelar"].onclick();
+  await flush();
+  await flush();
+  assert.equal(elements["hier-tipo"].value, "projeto");
+  assert.match(elements["demanda-resumo-contagem"].textContent, /Nenhuma/);
 
   console.log("processos.js universo: OK");
 })().catch((error) => {

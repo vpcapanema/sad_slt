@@ -277,9 +277,37 @@ def discard_prepared(prepared: PreparedUpload) -> None:
 
 
 def commit_prepared(prepared: PreparedUpload) -> StoredUpload:
-    """Move um upload previamente validado do staging para o destino definitivo."""
+    """Move um upload previamente validado do staging para o destino definitivo.
+
+    Para pacotes compactados, apenas a extração normalizada é persistida em
+    ``<categoria>/<nome>.contents/``; o binário compactado é descartado após a
+    extração para não duplicar o mesmo conteúdo no datastorage.
+    """
     folder = project_path(f"data/geoespacial/uploads/datastorage/{prepared.category}")
     folder.mkdir(parents=True, exist_ok=True)
+
+    if prepared.archive and prepared.extracted_path is not None:
+        extracted_destination = folder / f"{prepared.name}.contents"
+        if extracted_destination.exists():
+            # Colisão de nome sem colisão de hash (o dedup por sha256 ocorre a
+            # montante). Preserva a versão anterior anexando o hash curto.
+            stem = Path(prepared.name).stem
+            suffix = Path(prepared.name).suffix
+            extracted_destination = folder / (
+                f"{stem}_{prepared.sha256[:12]}{suffix}.contents"
+            )
+        prepared.extracted_path.replace(extracted_destination)
+        # O binário compactado do staging vai embora — a extração é o dado físico.
+        prepared.original_path.unlink(missing_ok=True)
+        relative_import = prepared.import_path.relative_to(prepared.extracted_path)
+        import_path = extracted_destination / relative_import
+        return StoredUpload(
+            prepared.category, extracted_destination, import_path, True,
+            prepared.members, prepared.sha256,
+            created_original=False, created_extracted=True,
+        )
+
+    # Arquivo solto (não-compactado): mantém a lógica original.
     destination = folder / prepared.name
     if destination.exists() and _file_sha256(destination) != prepared.sha256:
         destination = folder / f"{destination.stem}_{prepared.sha256[:12]}{destination.suffix}"
@@ -288,22 +316,10 @@ def commit_prepared(prepared: PreparedUpload) -> StoredUpload:
         prepared.original_path.replace(destination)
     else:
         prepared.original_path.unlink(missing_ok=True)
-
-    import_path = destination
-    if prepared.extracted_path:
-        extracted_destination = folder / f"{destination.name}.contents"
-        created_extracted = not extracted_destination.exists()
-        if created_extracted:
-            prepared.extracted_path.replace(extracted_destination)
-        else:
-            shutil.rmtree(prepared.extracted_path)
-        relative = prepared.import_path.relative_to(prepared.extracted_path)
-        import_path = extracted_destination / relative
-    else:
-        created_extracted = False
     return StoredUpload(
-        prepared.category, destination, import_path, prepared.archive,
-        prepared.members, prepared.sha256, created_original, created_extracted,
+        prepared.category, destination, destination, False,
+        prepared.members, prepared.sha256,
+        created_original=created_original, created_extracted=False,
     )
 
 
@@ -317,11 +333,13 @@ def _file_sha256(path: Path) -> str:
 
 def remove_stored(stored: StoredUpload) -> None:
     """Compensação de filesystem usada quando a transação de importação falha."""
+    if stored.archive:
+        # Para pacotes, `original_path` aponta para a pasta extraída (.contents/).
+        if stored.created_extracted and stored.original_path.exists():
+            shutil.rmtree(stored.original_path)
+        return
     if stored.created_original:
         stored.original_path.unlink(missing_ok=True)
-    extracted = stored.original_path.parent / f"{stored.original_path.name}.contents"
-    if stored.created_extracted and extracted.exists():
-        shutil.rmtree(extracted)
 
 
 def store_upload(filename: str, content: bytes) -> StoredUpload:

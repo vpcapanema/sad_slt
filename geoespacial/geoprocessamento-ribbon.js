@@ -48,32 +48,99 @@
 
   async function openSystemDirectory() {
     openPanel("Carregar do sistema", '<div class="empty">Consultando as tabelas de camadas…</div>');
+    const sections = [
+      ["operacionais", "Camadas do storage"],
+      ["biblioteca_canonica", "Biblioteca canônica"],
+      ["saidas_processadas", "Saídas de geoprocessamento"],
+    ];
+    let directory = {};
+
+    const renderGroup = (key, label, rows) => `<section class="tool-group collapsed" data-directory-group="${key}">`
+      + `<div class="tool-group-title" data-directory-toggle="${key}" role="button" tabindex="0" aria-expanded="false">`
+      + `<i data-lucide="chevron-right" class="tree-chevron"></i>`
+      + `<i data-lucide="folder"></i>`
+      + `<span>${label}</span>`
+      + `<span class="tool-group-count">${rows.length}</span>`
+      + `<button type="button" class="icon-btn" data-directory-refresh="${key}" title="Atualizar camadas"><i data-lucide="refresh-cw"></i></button>`
+      + `</div>`
+      + `<div class="tool-group-children">${rows.length ? rows.map((layer) => `<button type="button" class="tool-row" ${layer.id?`data-load-system="${escapeHtml(layer.id)}"`:`data-load-file="${escapeHtml(layer.arquivo)}"`}><span class="tool-name">${escapeHtml(layer.nome_publicacao || layer.nome)}</span><span>${escapeHtml(layer.formato || layer.tipo || layer.categoria_arquivo)}</span></button>`).join("") : '<div class="empty compact">Nenhuma camada.</div>'}</div>`
+      + `</section>`;
+
+    const renderAll = () => sections.map(([key, label]) => renderGroup(key, label, directory[key] || [])).join("");
+
+    const refetch = async () => {
+      directory = await request("/api/geoespacial/camadas-diretorio");
+    };
+
+    const rerenderGroup = (key) => {
+      const section = $(`[data-directory-group="${key}"]`);
+      if (!section) return;
+      const label = sections.find(([k]) => k === key)?.[1] || key;
+      const wasCollapsed = section.classList.contains("collapsed");
+      section.outerHTML = renderGroup(key, label, directory[key] || []);
+      const fresh = $(`[data-directory-group="${key}"]`);
+      // Após refresh, mantemos o estado aberto (o usuário acabou de solicitar).
+      if (!wasCollapsed) fresh?.classList.remove("collapsed");
+      const toggle = fresh?.querySelector('[data-directory-toggle]');
+      if (toggle) toggle.setAttribute("aria-expanded", String(!fresh.classList.contains("collapsed")));
+      window.lucide?.createIcons({ attrs: { "stroke-width": 1.7 } });
+    };
+
     try {
-      const directory = await request("/api/geoespacial/camadas-diretorio");
-      const sections = [
-        ["operacionais", "Camadas importadas do datastorage"],
-        ["biblioteca_canonica", "Biblioteca canônica"],
-        ["saidas_processadas", "Saídas de geoprocessamento"],
-      ];
-      const content = sections.map(([key, label]) => {
-        const rows = directory[key] || [];
-        return `<section class="tool-group"><div class="tool-group-title"><i data-lucide="folder"></i>${label}</div>${rows.length ? rows.map((layer) => `<button type="button" class="tool-row" ${layer.id?`data-load-system="${escapeHtml(layer.id)}"`:`data-load-file="${escapeHtml(layer.arquivo)}"`}><span class="tool-name">${escapeHtml(layer.nome_publicacao || layer.nome)}</span><span>${escapeHtml(layer.formato || layer.tipo || layer.categoria_arquivo)}</span></button>`).join("") : '<div class="empty compact">Nenhuma camada.</div>'}</section>`;
-      }).join("");
-      openPanel("Carregar do sistema", `<div class="editor-head"><button class="icon-btn" data-directory-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>Diretório de camadas</h2></div><div class="editor-body"><p class="field-help">Estas camadas já estão no banco. Escolha a tabela lógica e a camada que deseja abrir.</p>${content}</div>`);
+      await refetch();
+      openPanel("Carregar do sistema", `<div class="editor-head"><button class="icon-btn" data-directory-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>Diretório de camadas</h2></div><div class="editor-body"><p class="field-help">Cada grupo mostra o que existe fisicamente no storage e, quando aplicável, seu registro no PostGIS. Use o botão de atualizar para revalidar em tempo real.</p>${renderAll()}</div>`);
       $("[data-directory-back]").onclick = () => window.gpApp.showTools();
+
       $("#gp-editor-view").addEventListener("click", async (event) => {
+        // Botão de atualizar de cada grupo (não deve propagar para o toggle).
+        const refresh = event.target.closest("[data-directory-refresh]");
+        if (refresh) {
+          event.stopPropagation();
+          refresh.disabled = true;
+          const icon = refresh.querySelector("i");
+          icon?.classList.add("spinning");
+          try {
+            await refetch();
+            rerenderGroup(refresh.dataset.directoryRefresh);
+            message("Grupo atualizado.");
+          } catch (error) {
+            message(`Falha ao atualizar: ${error.message}`);
+          } finally {
+            refresh.disabled = false;
+            icon?.classList.remove("spinning");
+          }
+          return;
+        }
+
+        // Cabeçalho colapsável do grupo.
+        const toggle = event.target.closest("[data-directory-toggle]");
+        if (toggle) {
+          const section = toggle.closest("[data-directory-group]");
+          const collapsed = section.classList.toggle("collapsed");
+          toggle.setAttribute("aria-expanded", String(!collapsed));
+          return;
+        }
+
         const button = event.target.closest("[data-load-system],[data-load-file]");
         if (!button) return;
         button.disabled = true;
         const progress = window.gpApp.createTaskProgress($("#gp-editor-view"));
         try {
-          let id = button.dataset.loadSystem,resource;
-          if(id){
-            resource=(directory.operacionais||[]).find(layer=>layer.id===id)||(directory.biblioteca_canonica||[]).find(layer=>layer.id===id)||(directory.saidas_processadas||[]).find(layer=>layer.id===id);
-            if(!resource)throw new Error("Camada não encontrada no diretório do sistema");
+          let id = button.dataset.loadSystem, resource;
+          if (id) {
+            resource = (directory.operacionais || []).find((layer) => layer.id === id)
+              || (directory.biblioteca_canonica || []).find((layer) => layer.id === id)
+              || (directory.saidas_processadas || []).find((layer) => layer.id === id);
+            if (!resource) throw new Error("Camada não encontrada no diretório do sistema");
             progress.note("Referência da camada existente vinculada ao Painel de Conteúdo");
+          } else {
+            const form = new FormData();
+            form.append("arquivo", button.dataset.loadFile);
+            const result = await request("/api/geoespacial/camadas-arquivo/carregar", { method: "POST", body: form, headers: {} });
+            resource = result.recursos?.[0];
+            id = resource?.id;
+            if (!id) throw new Error("O arquivo não gerou uma camada carregável");
           }
-          else{const form=new FormData();form.append("arquivo",button.dataset.loadFile);const result=await request("/api/geoespacial/camadas-arquivo/carregar",{method:"POST",body:form,headers:{}});resource=result.recursos?.[0];id=resource?.id;if(!id)throw new Error("O arquivo não gerou uma camada carregável")}
           const index = window.gpApp.state.layers.findIndex((layer) => layer.id === id);
           if (index >= 0) window.gpApp.state.layers[index] = resource;
           else window.gpApp.state.layers.push(resource);
@@ -87,6 +154,16 @@
           progress.fail(`Falha: ${error.message}`);
           message(error.message);
         } finally { button.disabled = false; }
+      });
+
+      // Ativar teclado (Enter/Espaço) no cabeçalho colapsável.
+      $("#gp-editor-view").addEventListener("keydown", (event) => {
+        const toggle = event.target.closest("[data-directory-toggle]");
+        if (!toggle) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          toggle.click();
+        }
       });
     } catch (error) {
       openPanel("Carregar do sistema", `<div class="empty">${escapeHtml(error.message)}</div>`);

@@ -14,7 +14,7 @@
       rel="stylesheet"
       href="/assets/vendor/fontawesome/css/all.min.css"
     />
-  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-home-inline-1.css">
+  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-home-inline-1.css?v=20260727h">
 {% endblock %}
 
 {% block conteudo %}
@@ -121,82 +121,152 @@
                   as demandas que participarão da rodada.</span
                 >
               </p>
-              <label class="process-field ahp-universo-objeto"
-                ><span>Tipo de demanda *</span
-                ><select id="hier-tipo" required>
-                  <option value="">Selecione…</option>
-                  <option value="plano">Plano</option>
-                  <option value="programa">Programa</option>
-                  <option value="projeto" selected>Projeto</option>
-                </select></label
-              >
-              <strong id="universo-objeto-valor" class="hidden" aria-hidden="true">—</strong>
-              <div
-                class="admin-tabs hier-demand-tabs"
-                id="hier-tipo-tabs"
-                role="tablist"
-                aria-label="Tipo de demanda"
-              >
-                <button type="button" class="admin-tab" data-tipo="plano" role="tab" aria-selected="false">Planos</button>
-                <button type="button" class="admin-tab" data-tipo="programa" role="tab" aria-selected="false">Programas</button>
-                <button type="button" class="admin-tab is-active" data-tipo="projeto" role="tab" aria-selected="true">Projetos</button>
-              </div>
               <div class="ahp-subcard">
                 <div class="ahp-subsection-title ahp-subsection-title--roman">
                   <span class="ahp-subsection-num ahp-subsection-num--roman"
                     >I</span
-                  ><span>Filtros do universo</span>
+                  ><span>Tipo de demanda</span>
                 </div>
                 <p class="ahp-help-text">
-                  Pesquise livremente ou filtre pelos atributos disponíveis para
-                  o tipo escolhido.
+                  Escolha uma única categoria para compor esta hierarquização.
                 </p>
-                <div class="process-grid">
-                  <label class="process-field"
-                    ><span>Pesquisar</span
-                    ><input
-                      id="demanda-busca"
-                      placeholder="Código, nome ou descrição" /></label
-                  ><label class="process-field"
-                    ><span>Atributo</span
-                    ><select id="demanda-campo">
-                      <option value="">Todos os atributos</option>
-                    </select></label
-                  ><label class="process-field"
-                    ><span>Valor do atributo</span><input id="demanda-valor"
-                  /></label>
+                <div class="admin-toolbar hier-tipo-toolbar">
+                  <div class="form-field ahp-universo-objeto">
+                    <label for="hier-tipo">Tipo de demanda *</label
+                    ><select id="hier-tipo" required>
+                      <option value="">Selecione…</option>
+                      <option value="plano">Plano</option>
+                      <option value="programa">Programa</option>
+                      <option value="projeto" selected>Projeto</option>
+                    </select>
+                  </div>
                 </div>
+                <strong id="universo-objeto-valor" class="hidden" aria-hidden="true">—</strong>
               </div>
               <div class="ahp-subcard">
                 <div class="ahp-subsection-title ahp-subsection-title--roman">
                   <span class="ahp-subsection-num ahp-subsection-num--roman"
                     >II</span
-                  ><span>Resumo</span>
+                  ><span>Tabela de demandas do universo</span>
+                </div>
+                <div
+                  class="admin-tabs hier-demand-tabs"
+                  id="hier-tipo-tabs"
+                  role="tablist"
+                  aria-label="Tipo de demanda"
+                >
+                  <button type="button" class="admin-tab" data-tipo="plano" role="tab" aria-selected="false">Planos</button>
+                  <button type="button" class="admin-tab" data-tipo="programa" role="tab" aria-selected="false">Programas</button>
+                  <button type="button" class="admin-tab is-active" data-tipo="projeto" role="tab" aria-selected="true">Projetos</button>
+                </div>
+                <p class="ahp-help-text">
+                  Pesquise livremente ou filtre pelos atributos disponíveis para
+                  o tipo escolhido.
+                </p>
+                <div class="admin-toolbar hier-universo-filtros">
+                  <div class="form-field admin-toolbar-search">
+                    <label for="demanda-busca">Pesquisar</label>
+                    <input
+                      id="demanda-busca"
+                      placeholder="Código, nome ou descrição"
+                      autocomplete="off" />
+                  </div>
+                  <div class="form-field">
+                    <label for="demanda-campo">Atributo</label>
+                    <select id="demanda-campo">
+                      <option value="">Todos os atributos</option>
+                    </select>
+                  </div>
+                  <div class="form-field">
+                    <label for="demanda-valor">Valor do atributo</label>
+                    <select id="demanda-valor" disabled>
+                      <option value="">Selecione primeiro um atributo</option>
+                    </select>
+                  </div>
                 </div>
                 <p id="demanda-contagem" class="ahp-universo-preview">
                   Selecione o tipo de demanda.
                 </p>
-                <div class="hier-scroll-x">
-                  <table class="ahp-resumo-table">
+                <div class="admin-table-wrap">
+                  <table class="admin-table hier-universo-table">
+                    <thead>
+                      <tr id="demanda-head"></tr>
+                    </thead>
+                    <tbody id="demanda-tbody"></tbody>
+                  </table>
+                </div>
+                <div class="hier-demand-pagination" aria-label="Paginação da tabela de demandas">
+                  <button type="button" class="btn btn-secondary btn-sm" id="demanda-pagina-anterior"><i class="fas fa-chevron-left" aria-hidden="true"></i> Anterior</button>
+                  <span id="demanda-pagina-info" aria-live="polite">Página 1 de 1</span>
+                  <button type="button" class="btn btn-secondary btn-sm" id="demanda-pagina-proxima">Próxima <i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="admin-bulk-actions hier-demand-actions" aria-label="Ações da seleção">
+                  <button type="button" class="admin-icon-btn admin-icon-btn-primary" id="demanda-confirmar" title="Confirmar seleção">
+                    <i class="fas fa-check" aria-hidden="true"></i>
+                    <span class="sr-only">Confirmar seleção</span>
+                  </button>
+                  <button type="button" class="admin-icon-btn" id="demanda-limpar" title="Limpar seleção">
+                    <i class="fas fa-eraser" aria-hidden="true"></i>
+                    <span class="sr-only">Limpar seleção</span>
+                  </button>
+                  <button type="button" class="admin-icon-btn" id="demanda-atualizar" title="Atualizar tabela">
+                    <i class="fas fa-rotate" aria-hidden="true"></i>
+                    <span class="sr-only">Atualizar tabela</span>
+                  </button>
+                  <button type="button" class="admin-icon-btn" id="demanda-cancelar" title="Cancelar seleção e voltar ao início">
+                    <i class="fas fa-xmark" aria-hidden="true"></i>
+                    <span class="sr-only">Cancelar</span>
+                  </button>
+                </div>
+              </div>
+              <div class="ahp-subcard">
+                <div class="ahp-subsection-title ahp-subsection-title--roman">
+                  <span class="ahp-subsection-num ahp-subsection-num--roman"
+                    >III</span
+                  ><span>Tabela de resumo</span>
+                </div>
+                <p id="demanda-resumo-contagem" class="ahp-universo-preview">
+                  Nenhuma demanda confirmada.
+                </p>
+                <div class="admin-table-wrap">
+                  <table class="admin-table hier-resumo-table">
                     <thead>
                       <tr>
-                        <th>
-                          <input
-                            type="checkbox"
-                            id="demanda-todos"
-                            aria-label="Selecionar visíveis"
-                          />
+                        <th class="col-select">
+                          <input type="checkbox" id="demanda-resumo-todos" aria-label="Selecionar todos os registros do grupo">
                         </th>
                         <th>Código</th>
                         <th>Nome</th>
                         <th>Grupo comparável</th>
-                        <th>Instituição</th>
-                        <th>Localização</th>
                         <th>Status</th>
                       </tr>
                     </thead>
-                    <tbody id="demanda-tbody"></tbody>
+                    <tbody id="demanda-resumo-tbody">
+                      <tr><td colspan="5" class="process-empty-row">Confirme uma seleção para formar o grupo.</td></tr>
+                    </tbody>
                   </table>
+                </div>
+                <div class="admin-bulk-actions hier-resumo-actions" aria-label="Ações do grupo">
+                  <button type="button" class="admin-icon-btn" id="demanda-resumo-excluir" title="Excluir selecionados do grupo" disabled>
+                    <i class="fas fa-trash" aria-hidden="true"></i>
+                    <span class="sr-only">Excluir</span>
+                  </button>
+                  <button type="button" class="admin-icon-btn admin-icon-btn-primary" id="demanda-resumo-confirmar" title="Confirmar e fechar grupo" disabled>
+                    <i class="fas fa-lock" aria-hidden="true"></i>
+                    <span class="sr-only">Confirmar grupo</span>
+                  </button>
+                  <button type="button" class="admin-icon-btn" id="demanda-resumo-editar" title="Editar grupo" disabled>
+                    <i class="fas fa-pen" aria-hidden="true"></i>
+                    <span class="sr-only">Editar grupo</span>
+                  </button>
+                  <button type="button" class="admin-icon-btn" id="demanda-resumo-cancelar" title="Cancelar e voltar ao estágio inicial">
+                    <i class="fas fa-xmark" aria-hidden="true"></i>
+                    <span class="sr-only">Cancelar</span>
+                  </button>
+                  <button type="button" class="admin-icon-btn" id="demanda-resumo-atualizar" title="Atualizar registros">
+                    <i class="fas fa-rotate" aria-hidden="true"></i>
+                    <span class="sr-only">Atualizar</span>
+                  </button>
                 </div>
               </div>
             </article>
@@ -208,9 +278,9 @@
               </div>
               <p class="ahp-help-text">As fases são independentes. Marque somente as avaliações que esta rodada executará.</p>
               <div class="process-grid" id="hier-fases">
-                <label class="process-field"><span><input type="checkbox" value="1" checked> Fase 1 — Elegibilidade territorial</span></label>
-                <label class="process-field"><span><input type="checkbox" value="2" checked> Fase 2 — Favorabilidade territorial</span></label>
-                <label class="process-field"><span><input type="checkbox" value="3" checked> Fase 3 — Ajuste por atributos</span></label>
+                <label class="process-field hier-fase-option"><input type="checkbox" value="1" checked><span>Fase 1 — Elegibilidade territorial</span></label>
+                <label class="process-field hier-fase-option"><input type="checkbox" value="2" checked><span>Fase 2 — Favorabilidade territorial</span></label>
+                <label class="process-field hier-fase-option"><input type="checkbox" value="3" checked><span>Fase 3 — Ajuste por atributos</span></label>
               </div>
             </article>
 
@@ -221,6 +291,17 @@
               </div>
               <p class="ahp-help-text">
                 Anexe a matriz que documenta as premissas e os critérios aplicáveis à rodada.
+                Utilize o modelo padronizado abaixo para garantir que o sistema consiga interpretar
+                dimensões, critérios, premissas, métricas e o índice de risco.
+              </p>
+              <p class="ahp-help-text">
+                <a
+                  href="/data/modelos/Modelo_Matriz_Criterios_Premissas_SLT.xlsx"
+                  download="Modelo_Matriz_Criterios_Premissas_SLT.xlsx"
+                  class="ahp-template-download-btn"
+                >
+                  <i class="fas fa-file-excel"></i> Baixar modelo XLSX
+                </a>
               </p>
               <label class="process-field"
                 ><span>Arquivo JSON, CSV ou XLSX (obrigatório nas Fases 2 e 3)</span
@@ -270,8 +351,13 @@
 
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/admin-api.js"></script>
+  <script src="/assets/js/sigma-read.js"></script>
+  <script src="/assets/js/catalog.js"></script>
+  <script src="/assets/js/status-colors.js"></script>
+  <script src="/assets/js/admin-labels.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-  <script src="/restrict/hierarquizacao/js/processos.js?v=20260715b"></script>
+  <script src="/restrict/hierarquizacao/js/processos.js?v=20260727h"></script>
   <script src="/assets/js/paginas/hierarquizacao-home-inline-1.js"></script>
 {% endblock %}

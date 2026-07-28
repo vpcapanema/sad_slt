@@ -201,6 +201,9 @@
     bindRightDock();
     bindCollapseButtons();
     bindViewMenu();
+    // Painel direito inicia recolhido por padrão a cada carregamento da página.
+    $(".gp-app").classList.add("right-collapsed");
+    requestAnimationFrame(() => window.gpApp?.state.map?.resize());
   });
   window.gpDocks = { activateLeft, restoreRightTab, setLeftVisibility, setRightVisibility, collapse };
 })();

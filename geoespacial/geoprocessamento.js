@@ -96,7 +96,7 @@
       ["formato_saida","Formato","select",raster?["JSON","GeoTIFF"]:["GeoJSON","GeoPackage","Shapefile"]]
     );
   });
-  const state={map:null,layers:[],basemap:"osm",selected:null,activeLayerId:null,activeExecution:null,toolboxScope:"geral",functions:[],flows:[],history:load("gp-history",[]),layerGroups:load("gp-layer-groups",{operational:false,basemap:false}),layerColors:load("gp-layer-colors",{}),geometryTypes:{},catalogHydrated:false,catalogSyncPending:false};
+  const state={map:null,layers:[],basemap:"osm",selected:null,activeLayerId:null,activeExecution:null,toolboxScope:"geral",functions:[],flows:[],history:load("gp-history",[]),layerGroups:load("gp-layer-groups",{operational:false,basemap:false}),layerColors:load("gp-layer-colors",{}),geometryTypes:{},catalogHydrated:false,catalogSyncPending:false,leftTab:"drawing"};
   const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
   let generatedFieldId=0;
   function associateFormFields(root=document){
@@ -257,9 +257,19 @@
   function renderLayers(){
     const query=$("#gp-layer-search").value.toLocaleLowerCase("pt-BR"),items=state.layers.filter(layer=>layer.nome.toLocaleLowerCase("pt-BR").includes(query));
     const base=BASEMAPS.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(query)).map(item=>`<label class="tree-row tree-indent"><input type="radio" name="basemap" value="${item.id}" ${state.basemap===item.id?"checked":""}><i data-lucide="map"></i><span class="layer-name">${item.name}</span></label>`).join("");
-    const operational=items.map(layer=>{const onMap=Boolean(state.map?.getSource(layer.id));return `<div class="tree-row tree-indent ${state.activeLayerId===layer.id?"active":""}" data-layer="${layer.id}" tabindex="0"><input type="checkbox" ${onMap?"checked":""} aria-label="Exibir ${escapeHtml(layer.nome)}">${layerSymbol(layer)}<span class="layer-name" title="${escapeHtml(layer.nome)}">${escapeHtml(layer.nome)}</span><button class="icon-btn layer-zoom" type="button" data-zoom-layer="${layer.id}" title="Zoom para a camada"><i data-lucide="maximize"></i></button></div>`}).join("");
+    const bySource=state.leftTab==="source";
+    const sourcePath=(layer)=>{
+      const meta=layer.metadados||{};
+      return meta.arquivo_original||layer.caminho_arquivo||meta.caminho_arquivo||layer.url_origem||meta.url_origem||layer.nome;
+    };
+    const operational=items.map(layer=>{
+      const onMap=Boolean(state.map?.getSource(layer.id));
+      const display=bySource?sourcePath(layer):layer.nome;
+      return `<div class="tree-row tree-indent ${state.activeLayerId===layer.id?"active":""}" data-layer="${layer.id}" tabindex="0"><input type="checkbox" ${onMap?"checked":""} aria-label="Exibir ${escapeHtml(layer.nome)}">${layerSymbol(layer)}<span class="layer-name" title="${escapeHtml(display)}">${escapeHtml(display)}</span><button class="icon-btn layer-zoom" type="button" data-zoom-layer="${layer.id}" title="Zoom para a camada"><i data-lucide="maximize"></i></button></div>`;
+    }).join("");
     const group=(id,label,icon,content,empty)=>`<section class="layer-group ${state.layerGroups[id]?"collapsed":""}" data-layer-group="${id}"><button class="tree-row layer-group-title" type="button" aria-expanded="${!state.layerGroups[id]}"><i data-lucide="chevron-down" class="tree-chevron"></i><i data-lucide="${icon}"></i><strong>${label}</strong></button><div class="layer-group-children">${content||`<div class="empty compact">${empty}</div>`}</div></section>`;
-    $("#gp-layer-list").innerHTML=group("operational","Camadas operacionais","layers-3",operational,"Nenhuma camada carregada.")+group("basemap","Basemap","map",base,"Nenhum mapa-base encontrado.");icons();
+    const operationalLabel=bySource?"Camadas por fonte":"Camadas operacionais";
+    $("#gp-layer-list").innerHTML=group("operational",operationalLabel,"layers-3",operational,"Nenhuma camada carregada.")+group("basemap","Basemap","map",base,"Nenhum mapa-base encontrado.");icons();
     updateComponentPlaceholder();
   }
   function setBasemap(id){state.basemap=id;BASEMAPS.forEach(b=>{const layer=`basemap-${b.id}`;if(state.map.getLayer(layer))state.map.setLayoutProperty(layer,"visibility",b.id===id?"visible":"none")})}

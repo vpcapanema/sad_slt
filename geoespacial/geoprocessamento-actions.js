@@ -31,7 +31,10 @@
       const tab = event.target.closest("[data-left-tab]");
       if (!tab) return;
       $$('[data-left-tab]').forEach((item) => item.classList.toggle("active", item === tab));
-      $(".gp-section-title").textContent = tab.dataset.leftTab === "source" ? "Camadas por fonte" : "Ordem de desenho";
+      const mode = tab.dataset.leftTab === "source" ? "source" : "drawing";
+      window.gpApp.state.leftTab = mode;
+      $(".gp-section-title").textContent = mode === "source" ? "Camadas por fonte" : "Ordem de desenho";
+      window.gpApp.renderLayers?.();
     });
 
     $("#gp-layer-list").addEventListener("change", (event) => {

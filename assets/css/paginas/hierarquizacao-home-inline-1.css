@@ -23,21 +23,105 @@
       .hier-demand-tabs {
         margin-top: 1rem;
       }
+      .hier-universo-filtros {
+        align-items: end;
+      }
+      .hier-demand-pagination {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+      }
+      .hier-demand-pagination {
+        justify-content: center;
+      }
+      .hier-demand-pagination span {
+        min-width: 7rem;
+        text-align: center;
+        font-weight: 600;
+      }
       .hier-demand-tabs .admin-tab:focus-visible {
         outline: 3px solid var(--pli-blue, #075f8f);
         outline-offset: 2px;
       }
-      .ahp-resumo-table .hier-demanda-indisponivel {
+      .hier-universo-table,
+      .hier-resumo-table {
+        width: max-content;
+        min-width: 100%;
+      }
+      .hier-universo-table th,
+      .hier-universo-table td,
+      .hier-resumo-table th,
+      .hier-resumo-table td {
+        white-space: nowrap;
+        vertical-align: middle;
+      }
+      #nova-hierarquizacao .hier-universo-table th,
+      #nova-hierarquizacao .hier-resumo-table th {
+        padding: 0.5rem 0.6rem;
+        font-size: 0.72rem;
+        line-height: 1.1;
+      }
+      #nova-hierarquizacao .hier-universo-table td,
+      #nova-hierarquizacao .hier-resumo-table td {
+        height: 1.7rem;
+        padding: 0.18rem 0.55rem;
+        font-size: 0.74rem;
+        line-height: 1.1;
+      }
+      #nova-hierarquizacao .hier-universo-table input[type="checkbox"],
+      #nova-hierarquizacao .hier-resumo-table input[type="checkbox"] {
+        width: 0.9rem;
+        height: 0.9rem;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+        vertical-align: middle;
+      }
+      .hier-demand-actions .admin-icon-btn:hover:not(:disabled),
+      .hier-resumo-actions .admin-icon-btn:hover:not(:disabled) {
+        border-color: var(--pli-blue);
+        color: var(--pli-deep);
+        background: #eef5f9;
+        box-shadow: 0 2px 6px rgba(17, 101, 147, 0.16);
+      }
+      #nova-hierarquizacao .hier-fase-option {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        min-height: 2.25rem;
+        margin: 0;
+        cursor: pointer;
+      }
+      #nova-hierarquizacao .hier-fase-option input[type="checkbox"] {
+        flex: 0 0 auto;
+        width: 1rem;
+        height: 1rem;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+      }
+      #nova-hierarquizacao .hier-fase-option > span {
+        line-height: 1.25;
+      }
+      .hier-universo-table .hier-demanda-indisponivel {
         color: #66727a;
         background: #f2f4f5;
       }
-      .ahp-resumo-table .hier-demanda-indisponivel:hover {
+      .hier-universo-table .hier-demanda-indisponivel:hover {
         background: #e9edef;
       }
-      .ahp-resumo-table .hier-demanda-indisponivel td {
+      .hier-universo-table .hier-demanda-indisponivel td {
         opacity: 0.78;
       }
-      .ahp-resumo-table input[type="checkbox"]:disabled {
+      .hier-universo-table .hier-demanda-confirmada {
+        background: #eef8f1;
+      }
+      .hier-universo-table .hier-demanda-confirmada td {
+        color: #356244;
+      }
+      .hier-universo-table input[type="checkbox"]:disabled {
         cursor: not-allowed;
       }
       .hier-demanda-status {

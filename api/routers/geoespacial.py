@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+from shutil import rmtree
 from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -399,17 +400,52 @@ async def obter_camada(camada_id: str) -> CamadaSchema:
 
 
 @router.delete("/camadas/{camada_id}")
-async def deletar_camada(camada_id: str) -> dict[str, str]:
-    """Deleta uma camada do sistema."""
+async def deletar_camada(camada_id: str) -> dict[str, Any]:
+    """Remove a camada do PostGIS e apaga o arquivo original do datastorage."""
+    recurso = await geoespacial_service.obter_recurso(camada_id)
+    arquivo_original: str | None = None
+    if recurso:
+        extras = (recurso.get("metadados") or {})
+        # `metadados` já é o dicionário achatado devolvido pelo serviço.
+        arquivo_original = (
+            extras.get("arquivo_original")
+            or (extras.get("metadados") or {}).get("arquivo_original")
+        )
     try:
         deletado = await geoespacial_service.excluir_recurso(camada_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=409, detail="Camadas homologadas não podem ser excluídas"
         ) from exc
     if not deletado:
         raise HTTPException(status_code=404, detail="Camada não encontrada")
-    return {"message": "Camada deletada com sucesso"}
+
+    arquivo_removido = False
+    if arquivo_original:
+        relativo = str(arquivo_original).replace("\\", "/").lstrip("/")
+        raiz_permitida = project_path("data/geoespacial/uploads/datastorage").resolve()
+        try:
+            alvo = project_path(relativo).resolve()
+            # Segurança: só permite apagar dentro do datastorage do projeto.
+            if alvo.is_relative_to(raiz_permitida):
+                if alvo.is_file():
+                    alvo.unlink()
+                    arquivo_removido = True
+                elif alvo.is_dir():
+                    # Pacotes compactados são armazenados como pasta <nome>.contents/
+                    # com o conteúdo extraído normalizado; remover recursivamente.
+                    rmtree(alvo)
+                    arquivo_removido = True
+        except (OSError, ValueError):
+            arquivo_removido = False
+
+    return {
+        "message": "Camada deletada com sucesso",
+        "arquivo_original": arquivo_original,
+        "arquivo_removido": arquivo_removido,
+    }
 
 
 @router.post("/importar_camadas")
@@ -519,13 +555,32 @@ async def listar_diretorio_camadas() -> dict[str, Any]:
         folder = storage_root / category
         if not folder.exists():
             continue
-        for path in sorted(item for item in folder.iterdir() if item.is_file() and item.suffix.lower() in accepted):
-            relative = path.relative_to(project_path(".")).as_posix()
-            row = by_path.get(relative)
-            operational.append({
-                **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or path.stem,
-                "categoria_arquivo": category, "registrada": bool(row), "origem_diretorio": "datastorage",
-            })
+        entries = sorted(folder.iterdir(), key=lambda item: item.name.lower())
+        for item in entries:
+            if item.is_file() and item.suffix.lower() in accepted:
+                relative = item.relative_to(project_path(".")).as_posix()
+                row = by_path.get(relative)
+                extensao = item.suffix.removeprefix(".").upper()
+                operational.append({
+                    **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or item.stem,
+                    "categoria_arquivo": category, "registrada": bool(row), "origem_diretorio": "datastorage",
+                    # Rótulo: extensão do arquivo físico no storage.
+                    "formato": extensao,
+                })
+            elif item.is_dir() and item.name.lower().endswith(".contents"):
+                # Pasta produzida pela extração de um pacote compactado. Representa
+                # UM item de storage (o pacote original foi descartado após extração).
+                relative = item.relative_to(project_path(".")).as_posix()
+                row = by_path.get(relative)
+                base = item.name[: -len(".contents")]
+                nome_base = Path(base).stem
+                extensao = Path(base).suffix.removeprefix(".").upper() or "PACOTE"
+                operational.append({
+                    **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or nome_base,
+                    "categoria_arquivo": category, "registrada": bool(row), "origem_diretorio": "datastorage",
+                    "formato": extensao,
+                    "extraido": True,
+                })
 
     canonical: list[dict] = []
     canonical_root = project_path("data/geoespacial/biblioteca_canonica")

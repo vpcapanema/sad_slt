@@ -14,10 +14,16 @@
           })[c],
       );
   let universo = [],
+    camposUniverso = [],
     selecionados = new Set(),
+    confirmados = new Set(),
+    selecionadosResumo = new Set(),
+    grupoFechado = false,
+    paginaDemandas = 1,
     matriz = null,
     universoRequestId = 0;
-  const STATUS_ELEGIVEIS = new Set(["aprovada", "hierarq_apta"]);
+  const ITENS_POR_PAGINA = 15;
+  const STATUS_ELEGIVEIS = new Set(["analise_aprovada", "hierarq_apta"]);
   const JSON_COLS = [
     "objetos",
     "julgamento_projetos",
@@ -143,7 +149,7 @@
   function filtrados() {
     const q = $("demanda-busca").value.trim().toLowerCase(),
       campo = $("demanda-campo").value,
-      v = $("demanda-valor").value.trim().toLowerCase();
+      v = $("demanda-valor").value;
     return universo.filter(
       (o) =>
         (!q ||
@@ -152,15 +158,148 @@
               .toLowerCase()
               .includes(q),
           )) &&
-        (!campo ||
-          !v ||
-          String(o[campo] ?? "")
-            .toLowerCase()
-            .includes(v)),
+        (!campo || !v || String(o[campo] ?? "") === v),
     );
   }
   function elegivel(o) {
     return STATUS_ELEGIVEIS.has(o.status);
+  }
+  function paginaFiltrada() {
+    const rows = filtrados();
+    const totalPaginas = Math.max(1, Math.ceil(rows.length / ITENS_POR_PAGINA));
+    paginaDemandas = Math.min(Math.max(1, paginaDemandas), totalPaginas);
+    const inicio = (paginaDemandas - 1) * ITENS_POR_PAGINA;
+    return { rows, pagina: rows.slice(inicio, inicio + ITENS_POR_PAGINA), totalPaginas, inicio };
+  }
+  function formatarData(value) {
+    if (!value) return "—";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? String(value)
+      : date.toLocaleString("pt-BR");
+  }
+  function rotuloValor(campo, value, row) {
+    if (value === null || value === undefined || value === "") return "—";
+    const labels = window.SLTAdminLabels;
+    const tipo = $("hier-tipo").value;
+    if (campo === "status")
+      return labels?.statusDemandaLabel?.(value, tipo) || String(value);
+    if (campo === "diretoria_id")
+      return labels?.diretoriaLabel?.(value) || String(value);
+    if (campo === "plano_id")
+      return row?.plano_id_alias || labels?.planoLabel?.(value) || String(value);
+    if (campo === "programa_id")
+      return row?.programa_id_alias || String(value);
+    if (campo === "grupo_id")
+      return (
+        row?.programa_id_alias ||
+        row?.plano_id_alias ||
+        labels?.diretoriaLabel?.(value) ||
+        String(value)
+      );
+    const meta = camposUniverso.find((item) => item.campo === campo);
+    if (meta?.tipo === "data") return formatarData(value);
+    if (typeof value === "boolean") return value ? "Sim" : "Não";
+    if (campo === "valor_global")
+      return labels?.formatMoney?.(value) || String(value);
+    return String(value);
+  }
+  function valorHtml(campo, row) {
+    if (campo === "status" && window.SLTAdminLabels?.statusBadgeHtml)
+      return window.SLTAdminLabels.statusBadgeHtml(
+        row.status,
+        $("hier-tipo").value,
+      );
+    return esc(rotuloValor(campo, row[campo], row));
+  }
+  function colunasTabela() {
+    const labels = window.SLTAdminLabels || {};
+    const tipo = $("hier-tipo").value;
+    const texto = (value) => esc(value || "—");
+    const status = (row) =>
+      labels.statusBadgeHtml?.(row.status, tipo) ||
+      texto(rotuloValor("status", row.status, row));
+    const instituicao = (row) =>
+      texto(labels.instituicaoLabel?.(row) || row.instituicao_nome);
+    const representante = (row) =>
+      texto(labels.representanteLabel?.(row) || row.representante_nome);
+    const cadastro = (row) =>
+      texto(labels.formatDate?.(row.criadoEm || row.criado_em) || formatarData(row.criadoEm || row.criado_em));
+    if (tipo === "plano")
+      return [
+        { label: "Código", value: (row) => `<code>${esc(row.codigo)}</code>` },
+        { label: "Plano", value: (row) => texto(row.nome) },
+        { label: "Diretoria", value: (row) => texto(labels.diretoriaLabel?.(row.diretoria_id)) },
+        { label: "Instituição", value: instituicao },
+        { label: "Representante", value: representante },
+        { label: "Objetivo estratégico", value: (row) => texto(labels.truncate?.(row.objetivo_estrategico, 80) || row.objetivo_estrategico) },
+        { label: "Vigência", value: (row) => texto(labels.formatVigencia?.(row.vigencia_inicio, row.vigencia_fim)) },
+        { label: "Valor global", value: (row) => texto(labels.formatMoney?.(row.valor_global)) },
+        { label: "Abrangência", value: (row) => texto(labels.abrangenciaLabel?.(row.unidades_espaciais)) },
+        { label: "Status", value: status },
+        { label: "Cadastro", value: cadastro },
+      ];
+    if (tipo === "programa")
+      return [
+        { label: "Código", value: (row) => `<code>${esc(row.codigo)}</code>` },
+        { label: "Programa", value: (row) => texto(row.nome) },
+        { label: "Plano vinculado", value: (row) => texto(labels.planoCadastradoLabel?.(row) || row.plano_id_alias) },
+        { label: "Vínculo institucional", value: (row) => texto(labels.vinculoInstitucionalLabel?.(row.vinculo_institucional)) },
+        { label: "Diretoria", value: (row) => texto(labels.diretoriaLabel?.(row.diretoria_id)) },
+        { label: "Instituição", value: instituicao },
+        { label: "Representante", value: representante },
+        { label: "Órgão responsável", value: (row) => texto(row.orgao_responsavel) },
+        { label: "Objetivo", value: (row) => texto(labels.truncate?.(row.objetivo, 80) || row.objetivo) },
+        { label: "Valor global", value: (row) => texto(labels.formatMoney?.(row.valor_global)) },
+        { label: "Abrangência", value: (row) => texto(labels.abrangenciaLabel?.(row.unidades_espaciais)) },
+        { label: "Status", value: status },
+        { label: "Cadastro", value: cadastro },
+      ];
+    return [
+      { label: "Código", value: (row) => `<code>${esc(row.codigo)}</code>` },
+      { label: "Projeto", value: (row) => texto(row.nome) },
+      { label: "Diretoria", value: (row) => texto(labels.diretoriaLabel?.(row.diretoria_id)) },
+      { label: "Plano estratégico", value: (row) => texto(labels.planoLabel?.(row.plano_id)) },
+      { label: "Vínculo institucional", value: (row) => texto(labels.vinculoInstitucionalLabel?.(row.vinculo_institucional, row.vinculo_tipo)) },
+      { label: "Programa vinculado", value: (row) => texto(labels.programaCadastradoLabel?.(row) || row.programa_id_alias) },
+      { label: "Instituição", value: instituicao },
+      { label: "Representante", value: representante },
+      { label: "Classificação", value: (row) => texto(labels.classificacaoLabel?.(row.classificacao, row.plano_id)) },
+      { label: "Complementos", value: (row) => texto(labels.complementosLabel?.(row.complementos)) },
+      { label: "Geometria", value: (row) => texto(labels.geometriaResumo?.(row.geometria) || row.geometria_tipo) },
+      { label: "Status", value: status },
+      { label: "Cadastro", value: cadastro },
+    ];
+  }
+  function atualizarValoresAtributo() {
+    const campo = $("demanda-campo").value;
+    const select = $("demanda-valor");
+    if (!campo) {
+      select.innerHTML =
+        '<option value="">Selecione primeiro um atributo</option>';
+      select.value = "";
+      select.disabled = true;
+      return;
+    }
+    const valores = new Map();
+    universo.forEach((row) => {
+      const raw = row[campo];
+      if (raw === null || raw === undefined || raw === "") return;
+      valores.set(String(raw), rotuloValor(campo, raw, row));
+    });
+    const ordenados = [...valores.entries()].sort((a, b) =>
+      a[1].localeCompare(b[1], "pt-BR", { numeric: true }),
+    );
+    select.disabled = false;
+    select.innerHTML =
+      '<option value="">Todos os valores</option>' +
+      ordenados
+        .map(
+          ([value, label]) =>
+            `<option value="${esc(value)}">${esc(label)}</option>`,
+        )
+        .join("");
+    select.value = "";
   }
   function sincronizarAbas(tipo) {
     document.querySelectorAll("#hier-tipo-tabs [data-tipo]").forEach((aba) => {
@@ -176,7 +315,7 @@
     const selecionadasVisiveis = elegiveisVisiveis.filter((o) =>
       selecionados.has(o.id),
     ).length;
-    checkbox.disabled = elegiveisVisiveis.length === 0;
+    checkbox.disabled = grupoFechado || elegiveisVisiveis.length === 0;
     checkbox.checked =
       elegiveisVisiveis.length > 0 &&
       selecionadasVisiveis === elegiveisVisiveis.length;
@@ -185,28 +324,55 @@
       selecionadasVisiveis < elegiveisVisiveis.length;
   }
   function renderDemandas() {
-    const rows = filtrados();
-    const elegiveisVisiveis = rows.filter(elegivel);
-    $("demanda-tbody").innerHTML = rows.length
-      ? rows
+    const { rows, pagina, totalPaginas, inicio } = paginaFiltrada();
+    const colunas = colunasTabela();
+    const elegiveisVisiveis = pagina.filter(
+      (o) => elegivel(o) && !confirmados.has(o.id),
+    );
+    $("demanda-head").innerHTML =
+      '<th class="col-select" scope="col"><input type="checkbox" id="demanda-todos" aria-label="Selecionar registros visíveis"></th>' +
+      colunas
+        .map((coluna) => `<th scope="col">${esc(coluna.label)}</th>`)
+        .join("");
+    $("demanda-tbody").innerHTML = pagina.length
+      ? pagina
           .map(
             (o) => {
-              const podeSelecionar = elegivel(o);
+              const podeSelecionar = elegivel(o) && !grupoFechado;
+              const confirmado = confirmados.has(o.id);
               const explicacaoId = `demanda-status-${String(o.id).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
-              const indisponivel = podeSelecionar
+              const indisponivel = podeSelecionar && !confirmado
                 ? ""
-                : ` disabled aria-describedby="${explicacaoId}" title="Status não permite inclusão na hierarquização"`;
-              const explicacao = podeSelecionar
+                : ` disabled aria-describedby="${explicacaoId}" title="${grupoFechado ? "O grupo está fechado para edição" : confirmado ? "Registro já confirmado no grupo" : "Status não permite inclusão na hierarquização"}"`;
+              const explicacao = podeSelecionar && !confirmado
                 ? ""
-                : `<span id="${explicacaoId}" class="sr-only">Status ${esc(o.status)} não permite inclusão na hierarquização.</span>`;
-              return `<tr class="${podeSelecionar ? "" : "hier-demanda-indisponivel"}" data-status="${esc(o.status)}"><td><input type="checkbox" data-id="${esc(o.id)}" aria-label="Selecionar ${esc(o.codigo)}"${selecionados.has(o.id) && podeSelecionar ? " checked" : ""}${indisponivel}>${explicacao}</td><td><code>${esc(o.codigo)}</code></td><td>${esc(o.nome)}</td><td>${esc(o.grupo_id || "—")}</td><td>${esc(o.instituicao_nome || o.orgao_responsavel || "—")}</td><td>${esc(localizacao(o))}</td><td><code class="hier-demanda-status">${esc(o.status)}</code></td></tr>`;
+                : `<span id="${explicacaoId}" class="sr-only">${grupoFechado ? "O grupo está fechado para edição." : confirmado ? "Registro já confirmado no grupo." : `Status ${esc(o.status)} não permite inclusão na hierarquização.`}</span>`;
+              const classe = confirmado
+                ? "hier-demanda-confirmada"
+                : podeSelecionar
+                  ? ""
+                  : "hier-demanda-indisponivel";
+              return `<tr class="${classe}" data-status="${esc(o.status)}"><td class="col-select"><input type="checkbox" data-id="${esc(o.id)}" aria-label="Selecionar ${esc(o.codigo)}"${selecionados.has(o.id) && podeSelecionar && !confirmado ? " checked" : ""}${indisponivel}>${explicacao}</td>${colunas.map((coluna) => `<td>${coluna.value(o)}</td>`).join("")}</tr>`;
             },
           )
           .join("")
-      : '<tr><td colspan="7" class="process-empty-row">Nenhuma demanda encontrada para o tipo e os filtros selecionados.</td></tr>';
+      : `<tr><td colspan="${colunas.length + 1}" class="process-empty-row">Nenhuma demanda encontrada para o tipo e os filtros selecionados.</td></tr>`;
     $("demanda-contagem").textContent =
-      `${rows.length} visível(is) · ${elegiveisVisiveis.length} elegível(is) visível(is) · ${selecionados.size} selecionada(s) de ${universo.length} registro(s)`;
-    atualizarSelecionarVisiveis(rows);
+      `${rows.length} resultado(s) · exibindo ${pagina.length ? inicio + 1 : 0}–${inicio + pagina.length} · ${elegiveisVisiveis.length} elegível(is) nesta página · ${selecionados.size} selecionada(s) · ${confirmados.size} confirmada(s)`;
+    $("demanda-pagina-info").textContent = `Página ${paginaDemandas} de ${totalPaginas}`;
+    $("demanda-pagina-anterior").disabled = paginaDemandas <= 1;
+    $("demanda-pagina-proxima").disabled = paginaDemandas >= totalPaginas;
+    atualizarSelecionarVisiveis(pagina.filter((o) => !confirmados.has(o.id)));
+    $("demanda-todos").onchange = (e) => {
+      paginaFiltrada().pagina
+        .filter((o) => elegivel(o) && !confirmados.has(o.id))
+        .forEach((o) =>
+          e.target.checked
+            ? selecionados.add(o.id)
+            : selecionados.delete(o.id),
+        );
+      renderDemandas();
+    };
     $("demanda-tbody")
       .querySelectorAll("input[data-id]:not(:disabled)")
       .forEach(
@@ -219,23 +385,108 @@
             renderDemandas();
           }),
       );
+    $("demanda-confirmar").disabled = selecionados.size === 0 || grupoFechado;
+    $("demanda-limpar").disabled = selecionados.size === 0 || grupoFechado;
   }
-  async function carregarUniverso() {
+  function renderResumo() {
+    const rows = universo.filter(
+      (o) => elegivel(o) && confirmados.has(o.id),
+    );
+    const idsNoGrupo = new Set(rows.map((o) => o.id));
+    selecionadosResumo = new Set(
+      [...selecionadosResumo].filter((id) => idsNoGrupo.has(id)),
+    );
+    $("demanda-resumo-contagem").textContent = rows.length
+      ? `${rows.length} demanda(s) no grupo · ${grupoFechado ? "grupo fechado para envio" : "grupo aberto para edição"}.`
+      : "Nenhuma demanda confirmada.";
+    $("demanda-resumo-tbody").innerHTML = rows.length
+      ? rows
+          .map(
+            (o) =>
+              `<tr data-status="${esc(o.status)}"><td class="col-select"><input type="checkbox" data-resumo-id="${esc(o.id)}" aria-label="Selecionar ${esc(o.codigo)} no grupo"${selecionadosResumo.has(o.id) ? " checked" : ""}${grupoFechado ? " disabled" : ""}></td><td><code>${esc(o.codigo)}</code></td><td>${esc(o.nome)}</td><td>${esc(rotuloValor("grupo_id", o.grupo_id, o))}</td><td>${valorHtml("status", o)}</td></tr>`,
+          )
+          .join("")
+      : '<tr><td colspan="5" class="process-empty-row">Confirme uma seleção para formar o grupo.</td></tr>';
+    const todos = $("demanda-resumo-todos");
+    todos.disabled = grupoFechado || rows.length === 0;
+    todos.checked =
+      rows.length > 0 && rows.every((o) => selecionadosResumo.has(o.id));
+    todos.indeterminate =
+      selecionadosResumo.size > 0 && selecionadosResumo.size < rows.length;
+    todos.onchange = (e) => {
+      rows.forEach((o) =>
+        e.target.checked
+          ? selecionadosResumo.add(o.id)
+          : selecionadosResumo.delete(o.id),
+      );
+      renderResumo();
+    };
+    $("demanda-resumo-tbody")
+      .querySelectorAll("input[data-resumo-id]:not(:disabled)")
+      .forEach(
+        (checkbox) =>
+          (checkbox.onchange = () => {
+            checkbox.checked
+              ? selecionadosResumo.add(checkbox.dataset.resumoId)
+              : selecionadosResumo.delete(checkbox.dataset.resumoId);
+            renderResumo();
+          }),
+      );
+    $("demanda-resumo-excluir").disabled =
+      grupoFechado || selecionadosResumo.size === 0;
+    $("demanda-resumo-confirmar").disabled =
+      grupoFechado || rows.length === 0;
+    $("demanda-resumo-editar").disabled = !grupoFechado;
+  }
+  async function carregarUniverso({ preservarSelecao = false } = {}) {
     const tipo = $("hier-tipo").value;
     const requestId = ++universoRequestId;
     $("universo-objeto-valor").textContent = tipo || "—";
     sincronizarAbas(tipo);
     universo = [];
-    selecionados.clear();
+    camposUniverso = [];
+    paginaDemandas = 1;
+    if (!preservarSelecao) {
+      selecionados.clear();
+      confirmados.clear();
+      selecionadosResumo.clear();
+      grupoFechado = false;
+    }
     renderDemandas();
+    renderResumo();
     if (!tipo) return;
     try {
-      const [itens, campos] = await Promise.all([
+      const [itens, campos, detalhes] = await Promise.all([
         HierApi.listarUniverso(tipo, "todas"),
         HierApi.listarCamposUniverso(tipo),
+        window.SLTAdminApi
+          ?.listDemandasByTipo?.(tipo)
+          .catch((e) => {
+            console.warn(
+              "Detalhes administrativos indisponíveis; exibindo o universo básico.",
+              e,
+            );
+            return [];
+          }) || Promise.resolve([]),
       ]);
       if (requestId !== universoRequestId) return;
-      universo = itens;
+      const detalhesPorCodigo = new Map(
+        detalhes.map((item) => [String(item.id || item.codigo), item]),
+      );
+      universo = itens.map((item) => ({
+        ...(detalhesPorCodigo.get(String(item.codigo)) || {}),
+        ...item,
+      }));
+      camposUniverso = campos;
+      const idsValidos = new Set(
+        universo.filter(elegivel).map((o) => o.id),
+      );
+      selecionados = new Set(
+        [...selecionados].filter((id) => idsValidos.has(id) && !confirmados.has(id)),
+      );
+      confirmados = new Set(
+        [...confirmados].filter((id) => idsValidos.has(id)),
+      );
       $("demanda-campo").innerHTML =
         '<option value="">Todos os atributos</option>' +
         campos
@@ -243,7 +494,9 @@
             (c) => `<option value="${esc(c.campo)}">${esc(c.rotulo)}</option>`,
           )
           .join("");
+      atualizarValoresAtributo();
       renderDemandas();
+      renderResumo();
     } catch (e) {
       if (requestId !== universoRequestId) return;
       erro(e.message);
@@ -272,12 +525,26 @@
       };
     }
     if (ext === "xlsx" && window.XLSX) {
-      const wb = XLSX.read(await file.arrayBuffer(), { type: "array" }),
-        ws = wb.Sheets[wb.SheetNames[0]];
+      const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+      // Aba principal do modelo padronizado; se ausente, usa a primeira aba com dados.
+      const PRINCIPAL = "Matriz Crit Premissas v2";
+      const abaPrincipal = wb.SheetNames.includes(PRINCIPAL)
+        ? PRINCIPAL
+        : wb.SheetNames.find((n) => n.toLowerCase() !== "instruções") ||
+          wb.SheetNames[0];
+      const linhas = XLSX.utils.sheet_to_json(wb.Sheets[abaPrincipal], {
+        defval: "",
+      });
+      // Coleta as demais abas do modelo (dimensões, critérios, índice) como contexto auxiliar.
+      const abas = {};
+      for (const nome of wb.SheetNames) {
+        abas[nome] = XLSX.utils.sheet_to_json(wb.Sheets[nome], { defval: "" });
+      }
       return {
         arquivo: file.name,
-        aba: wb.SheetNames[0],
-        linhas: XLSX.utils.sheet_to_json(ws, { defval: "" }),
+        aba: abaPrincipal,
+        linhas,
+        abas,
       };
     }
     throw new Error("Formato não suportado.");
@@ -314,15 +581,78 @@
     };
   });
   ["demanda-busca", "demanda-valor"].forEach(
-    (id) => ($(id).oninput = renderDemandas),
+    (id) =>
+      ($(id).oninput = () => {
+        paginaDemandas = 1;
+        renderDemandas();
+      }),
   );
-  $("demanda-campo").onchange = renderDemandas;
-  $("demanda-todos").onchange = (e) => {
-    filtrados().filter(elegivel).forEach((o) =>
-      e.target.checked ? selecionados.add(o.id) : selecionados.delete(o.id),
-    );
+  $("demanda-campo").onchange = () => {
+    paginaDemandas = 1;
+    atualizarValoresAtributo();
     renderDemandas();
   };
+  $("demanda-pagina-anterior").onclick = () => {
+    paginaDemandas -= 1;
+    renderDemandas();
+  };
+  $("demanda-pagina-proxima").onclick = () => {
+    paginaDemandas += 1;
+    renderDemandas();
+  };
+  $("demanda-confirmar").onclick = () => {
+    const validos = [...selecionados].filter((id) => {
+      const demanda = universo.find((o) => o.id === id);
+      return demanda && elegivel(demanda);
+    });
+    if (!validos.length) return erro("Selecione ao menos uma demanda apta.");
+    validos.forEach((id) => confirmados.add(id));
+    selecionados.clear();
+    grupoFechado = false;
+    renderDemandas();
+    renderResumo();
+  };
+  $("demanda-limpar").onclick = () => {
+    selecionados.clear();
+    renderDemandas();
+  };
+  $("demanda-atualizar").onclick = () =>
+    carregarUniverso({ preservarSelecao: true });
+  function cancelarGrupo() {
+    selecionados.clear();
+    confirmados.clear();
+    selecionadosResumo.clear();
+    grupoFechado = false;
+    $("demanda-busca").value = "";
+    $("demanda-campo").value = "";
+    atualizarValoresAtributo();
+    $("hier-tipo").value = "projeto";
+    carregarUniverso();
+  }
+  $("demanda-cancelar").onclick = cancelarGrupo;
+  $("demanda-resumo-excluir").onclick = () => {
+    if (grupoFechado) return;
+    selecionadosResumo.forEach((id) => confirmados.delete(id));
+    selecionadosResumo.clear();
+    renderDemandas();
+    renderResumo();
+  };
+  $("demanda-resumo-confirmar").onclick = () => {
+    if (!confirmados.size) return erro("Adicione demandas ao grupo antes de confirmá-lo.");
+    grupoFechado = true;
+    selecionados.clear();
+    selecionadosResumo.clear();
+    renderDemandas();
+    renderResumo();
+  };
+  $("demanda-resumo-editar").onclick = () => {
+    grupoFechado = false;
+    renderDemandas();
+    renderResumo();
+  };
+  $("demanda-resumo-cancelar").onclick = cancelarGrupo;
+  $("demanda-resumo-atualizar").onclick = () =>
+    carregarUniverso({ preservarSelecao: true });
   $("hier-matriz").onchange = async (e) => {
     try {
       matriz = await lerMatriz(e.target.files[0]);
@@ -341,7 +671,10 @@
     e.preventDefault();
     const fases = [...document.querySelectorAll("#hier-fases input:checked")].map((x) => Number(x.value));
     if (!fases.length) return erro("Selecione ao menos uma fase da rodada.");
-    if (!selecionados.size) return erro("Selecione ao menos uma demanda apta.");
+    if (!confirmados.size)
+      return erro("Adicione ao menos uma demanda apta ao grupo.");
+    if (!grupoFechado)
+      return erro("Confirme o grupo antes de enviar a hierarquização.");
     if (fases.some((fase) => fase === 2 || fase === 3) && !matriz)
       return erro("Carregue a matriz de premissas e critérios para as Fases 2 e 3.");
     try {
@@ -350,7 +683,7 @@
         descricao: $("hier-descricao").value.trim() || null,
         tipo_demanda: $("hier-tipo").value,
         objetos: universo.filter(
-          (o) => elegivel(o) && selecionados.has(o.id),
+          (o) => elegivel(o) && confirmados.has(o.id),
         ),
         matriz_premissas_criterios: matriz,
         fases_a_executar: fases,
@@ -367,6 +700,16 @@
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") $("json-modal").classList.add("hidden");
   });
-  carregarLista();
-  carregarUniverso();
+  async function iniciar() {
+    carregarLista();
+    carregarUniverso();
+    try {
+      await window.SLTAdminLabels?.init?.("/restrict/");
+      renderDemandas();
+      renderResumo();
+    } catch (e) {
+      console.warn("Não foi possível carregar todos os aliases administrativos.", e);
+    }
+  }
+  iniciar();
 })();

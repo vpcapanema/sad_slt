@@ -323,6 +323,19 @@
   align-self: center;
 }
 
+.platform-home .module-card-step-number {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(135deg, var(--pli-green), var(--pli-blue));
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
 .module-card h3 { width: 100%; margin: 0 0 .55rem; text-align: center; }
 .module-card p { width: 100%; margin: 0 0 1.3rem; color: #586671; text-align: center; }
 

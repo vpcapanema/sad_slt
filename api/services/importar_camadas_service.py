@@ -507,7 +507,9 @@ async def importar_camadas(
         resources: list[dict[str, Any]] = []
         if raster_result:
             data, profile, metadata = raster_result
-            raster_name = _friendly_layer_alias(stored.original_path.name)
+            # Usa o nome do dataset primário (dentro de .contents/ para pacotes)
+            # para gerar um alias legível — evita rótulos como "Nome Zip Contents".
+            raster_name = _friendly_layer_alias(stored.import_path.name)
             resource_id = geoespacial_service.registrar_raster(
                 data, profile, raster_name, "arquivo",
                 hash_arquivo=effective_hashes[0], validacao=metadata, **common,

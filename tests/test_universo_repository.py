@@ -55,7 +55,7 @@ class UniversoRepositoryTest(unittest.TestCase):
 
     def test_status_todas_retorna_elegiveis_e_inelegiveis_sem_filtro(self) -> None:
         rows = [
-            {"id": "1", "codigo": "P-1", "nome": "Elegível", "status": "aprovada"},
+            {"id": "1", "codigo": "P-1", "nome": "Elegível", "status": "analise_aprovada"},
             {"id": "2", "codigo": "P-2", "nome": "Inapta", "status": "rascunho"},
         ]
 
@@ -68,17 +68,19 @@ class UniversoRepositoryTest(unittest.TestCase):
         self.assertEqual(params, [])
 
     def test_status_explicito_permanece_parametrizado(self) -> None:
-        connection, _result = self._call("programa", "aprovada", [])
+        connection, _result = self._call("programa", "analise_aprovada", [])
 
         query, params = connection.calls[0]
-        self.assertIn("AND status = %s", query)
-        self.assertEqual(params, ["aprovada"])
+        self.assertIn("AND base.status = %s", query)
+        self.assertIn("LEFT JOIN demandas.plano pai", query)
+        self.assertIn("AS plano_id_alias", query)
+        self.assertEqual(params, ["analise_aprovada"])
 
     def test_sem_status_mantem_filtro_padrao_do_universo(self) -> None:
         connection, _result = self._call("plano", None, [])
 
         query, params = connection.calls[0]
-        self.assertIn("AND status = ANY(%s)", query)
+        self.assertIn("AND base.status = ANY(%s)", query)
         self.assertEqual(params, [list(universo_repository.AHP_STATUSES)])
 
 
