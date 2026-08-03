@@ -55,6 +55,14 @@
     ];
     let directory = {};
 
+    // Camadas do storage (uploads) só entram na lista quando também têm registro no PostGIS.
+    // Biblioteca canônica e saídas de geoprocessamento aparecem apenas com o arquivo em disco.
+    const isRegistered = (layer) => Boolean(layer?.registrada && (layer.id || layer.camada_id));
+    const visibleRows = (key) => {
+      const rows = directory[key] || [];
+      return key === "operacionais" ? rows.filter(isRegistered) : rows;
+    };
+
     const renderGroup = (key, label, rows) => `<section class="tool-group collapsed" data-directory-group="${key}">`
       + `<div class="tool-group-title" data-directory-toggle="${key}" role="button" tabindex="0" aria-expanded="false">`
       + `<i data-lucide="chevron-right" class="tree-chevron"></i>`
@@ -66,7 +74,7 @@
       + `<div class="tool-group-children">${rows.length ? rows.map((layer) => `<button type="button" class="tool-row" ${layer.id?`data-load-system="${escapeHtml(layer.id)}"`:`data-load-file="${escapeHtml(layer.arquivo)}"`}><span class="tool-name">${escapeHtml(layer.nome_publicacao || layer.nome)}</span><span>${escapeHtml(layer.formato || layer.tipo || layer.categoria_arquivo)}</span></button>`).join("") : '<div class="empty compact">Nenhuma camada.</div>'}</div>`
       + `</section>`;
 
-    const renderAll = () => sections.map(([key, label]) => renderGroup(key, label, directory[key] || [])).join("");
+    const renderAll = () => sections.map(([key, label]) => renderGroup(key, label, visibleRows(key))).join("");
 
     const refetch = async () => {
       directory = await request("/api/geoespacial/camadas-diretorio");
@@ -77,7 +85,7 @@
       if (!section) return;
       const label = sections.find(([k]) => k === key)?.[1] || key;
       const wasCollapsed = section.classList.contains("collapsed");
-      section.outerHTML = renderGroup(key, label, directory[key] || []);
+      section.outerHTML = renderGroup(key, label, visibleRows(key));
       const fresh = $(`[data-directory-group="${key}"]`);
       // Após refresh, mantemos o estado aberto (o usuário acabou de solicitar).
       if (!wasCollapsed) fresh?.classList.remove("collapsed");
@@ -88,7 +96,7 @@
 
     try {
       await refetch();
-      openPanel("Carregar do sistema", `<div class="editor-head"><button class="icon-btn" data-directory-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>Diretório de camadas</h2></div><div class="editor-body"><p class="field-help">Cada grupo mostra o que existe fisicamente no storage e, quando aplicável, seu registro no PostGIS. Use o botão de atualizar para revalidar em tempo real.</p>${renderAll()}</div>`);
+      openPanel("Carregar do sistema", `<div class="editor-head"><button class="icon-btn" data-directory-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>Diretório de camadas</h2></div><div class="editor-body"><p class="field-help">Camadas do storage aparecem apenas quando também há registro correspondente no PostGIS. Biblioteca canônica e saídas de geoprocessamento listam o que existe fisicamente em disco. Use o botão de atualizar para revalidar em tempo real.</p>${renderAll()}</div>`);
       $("[data-directory-back]").onclick = () => window.gpApp.showTools();
 
       $("#gp-editor-view").addEventListener("click", async (event) => {

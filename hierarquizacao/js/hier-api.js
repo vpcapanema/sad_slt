@@ -74,6 +74,9 @@
     executarFase1(codigo, payload) {
       return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/1/executar`, jsonOpts("POST", payload));
     },
+    mapaSobreposicaoFase1(codigo) {
+      return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/1/mapa-sobreposicao`);
+    },
     listarPacotes(modulo) { return request(`${BASE_H}/pacotes/${encodeURIComponent(modulo)}`); },
     listarFatiamentosFase1() { return request(`${BASE_H}/fatiamentos/fase1`); },
     salvarFatiamentoFase1(payload) { return request(`${BASE_H}/fatiamentos/fase1`, jsonOpts("POST", payload)); },

@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import json
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 from psycopg import sql
 from psycopg.types.json import Jsonb
@@ -40,9 +44,27 @@ _SELECT_BASE = """
 _JSON_FIELDS = {"objetos", "julgamento_projetos", "pesos_projetos", "ranking", "dados_hierarquizacao", "relatorio_fase1"}
 
 
+def _json_default(obj: Any) -> Any:
+    if isinstance(obj, UUID):
+        return str(obj)
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, (set, frozenset)):
+        return list(obj)
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
+    raise TypeError(f"Objeto não serializável em JSON: {type(obj).__name__}")
+
+
+def _dumps(value: Any) -> str:
+    return json.dumps(value, default=_json_default, ensure_ascii=False)
+
+
 def _prepare(key: str, value: Any) -> Any:
     if key in _JSON_FIELDS:
-        return Jsonb(value) if value is not None else None
+        return Jsonb(value, dumps=_dumps) if value is not None else None
     return value
 
 
@@ -123,7 +145,8 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
 def intersecoes_camada(camada_id: str, *, longitude: float, latitude: float) -> list[dict[str, Any]]:
     query = """
         SELECT h.id::text AS camada_id, h.nome_publicacao AS camada_origem,
-               h.versao, h.finalidade, f.ordem, f.propriedades
+               h.versao, h.finalidade, f.ordem, f.propriedades,
+               ST_AsGeoJSON(ST_Transform(f.geom, 4326))::jsonb AS geometria
         FROM geoprocessamento.camada_homologada h
         JOIN geoprocessamento.camada_homologada_feicao f ON f.camada_id = h.id
         WHERE h.id = %s::uuid
@@ -184,14 +207,17 @@ def obter_fatiamento_fase1(config_id: str) -> dict[str, Any] | None:
 
 def salvar_fatiamento_fase1(data: dict[str, Any]) -> dict[str, Any]:
     with get_connection() as conn:
-        row = conn.execute("""INSERT INTO geoprocessamento.configuracao_fatiamento_fase1
-            (codigo,nome,descricao,parametros) VALUES (%s,%s,%s,%s)
-            ON CONFLICT (codigo) DO UPDATE SET nome=EXCLUDED.nome,descricao=EXCLUDED.descricao,
-              parametros=EXCLUDED.parametros,atualizado_em=CURRENT_TIMESTAMP
-            RETURNING id::text AS id,codigo,nome,descricao,padrao,parametros""",
-            (data["codigo"], data["nome"], data.get("descricao"), Jsonb(data["parametros"]))).fetchone()
+        row = conn.execute(
+            """INSERT INTO geoprocessamento.configuracao_fatiamento_fase1
+                (codigo,nome,descricao,parametros) VALUES (%s,%s,%s,%s)
+                ON CONFLICT (codigo) DO UPDATE SET nome=EXCLUDED.nome,descricao=EXCLUDED.descricao,
+                  parametros=EXCLUDED.parametros,atualizado_em=CURRENT_TIMESTAMP
+                RETURNING id::text AS id,codigo,nome,descricao,padrao,parametros""",
+            (data["codigo"], data["nome"], data.get("descricao"), Jsonb(data["parametros"])),
+        ).fetchone()
         conn.commit()
-        if not row: raise RuntimeError("A configuração de fatiamento não foi persistida.")
+        if not row:
+            raise RuntimeError("A configuração de fatiamento não foi persistida.")
         return row
 
 

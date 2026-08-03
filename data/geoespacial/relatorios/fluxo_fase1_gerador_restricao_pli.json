@@ -1,0 +1,130 @@
+{
+  "id": "fluxo_fase1_gerador_restricao_pli",
+  "nome": "Fase 1 — Gerador de camada de RESTRIÇÃO consolidada (PLI-SP)",
+  "descricao": "Consolida camadas classificadas como RESTRIÇÃO por Identity iterativa (OP-05). Cada camada é validada (OP-02), reparada (OP-02-CORR), normalizada (OP-03), recortada pela área de estudo (OP-33) e classificada por feição (OP-CLASS) contra geoprocessamento.regra_classificacao_fase1. As etapas pós-iterador (reprojeção EPSG:4674 e exportação GeoPackage) rodam uma única vez ao final.",
+  "categoria": "Fluxos customizados",
+  "toolbox": "SIRCADI Toolbox",
+  "modulo": "fase1",
+  "parametros_expostos": [
+    {
+      "nome": "Camadas a consolidar",
+      "chave": "camadas_ids",
+      "tipo_entrada": "vector_layers"
+    },
+    {
+      "nome": "Máscara área de estudo",
+      "chave": "mascara_area_estudo_id",
+      "tipo_entrada": "vector_layers"
+    },
+    {
+      "nome": "Acumulador (seed)",
+      "chave": "acumulador_id",
+      "tipo_entrada": "vector_layers"
+    },
+    {
+      "nome": "Critério padrão (id)",
+      "chave": "criterio_id_padrao",
+      "tipo_entrada": "values"
+    },
+    {
+      "nome": "Fonte padrão (id)",
+      "chave": "fonte_id_padrao",
+      "tipo_entrada": "values"
+    }
+  ],
+  "itens": [
+    {
+      "iterador": "vector_layers",
+      "parametros": {
+        "fonte": "$camadas_ids",
+        "variavel": "camada_atual"
+      }
+    },
+    {
+      "algoritmo_id": "OP-02",
+      "parametros": {
+        "camada_id": "$camada_atual"
+      },
+      "mapear_saidas": {
+        "camada_id": "camada_validada"
+      }
+    },
+    {
+      "algoritmo_id": "OP-02-CORR",
+      "parametros": {
+        "camada_id": "$camada_validada"
+      },
+      "mapear_saidas": {
+        "camada_id": "camada_reparada"
+      }
+    },
+    {
+      "algoritmo_id": "OP-03",
+      "parametros": {
+        "camada_id": "$camada_reparada"
+      },
+      "mapear_saidas": {
+        "camada_id": "camada_normalizada"
+      }
+    },
+    {
+      "algoritmo_id": "OP-33",
+      "parametros": {
+        "camada_id": "$camada_normalizada",
+        "camada_mascara_id": "$mascara_area_estudo_id",
+        "manter_tipo_geometria": true,
+        "nome_saida": "Camada recortada por área de estudo"
+      },
+      "mapear_saidas": {
+        "camada_id": "camada_recortada"
+      }
+    },
+    {
+      "algoritmo_id": "OP-CLASS",
+      "parametros": {
+        "camada_id": "$camada_recortada",
+        "criterio_id": "$criterio_id_padrao",
+        "fonte_id": "$fonte_id_padrao"
+      },
+      "mapear_saidas": {
+        "camada_id": "camada_classificada"
+      }
+    },
+    {
+      "algoritmo_id": "OP-05",
+      "parametros": {
+        "camada_id_1": "$acumulador_id",
+        "camada_id_2": "$camada_classificada",
+        "tipo_overlay": "identity",
+        "resolver_conflitos_campos": true,
+        "regra_nomenclatura": "<fonte_id>__<nome_campo>"
+      },
+      "mapear_saidas": {
+        "camada_id": "acumulador_id"
+      }
+    },
+    {
+      "algoritmo_id": "OP-36",
+      "parametros": {
+        "camada_id": "$acumulador_id",
+        "crs_destino": "EPSG:4674",
+        "nome_saida": "Restrição consolidado (EPSG:4674)"
+      },
+      "mapear_saidas": {
+        "camada_id": "final_id"
+      },
+      "pos_iterador": true
+    },
+    {
+      "algoritmo_id": "OP-25",
+      "parametros": {
+        "camada_id": "$final_id",
+        "nome_saida": "fase1_restricao_consolidada_sp_v1.gpkg",
+        "crs_saida": "EPSG:4674",
+        "destino": "storage",
+        "formato_saida": "geopackage"
+      },
+      "pos_iterador": true
+    }
+  ]
+}

@@ -102,7 +102,7 @@
       { length: Math.max(0, 3 - n) },
       () =>
         '<tr class="empty-row">' +
-        Array.from({ length: 18 }, () => "<td></td>").join("") +
+        Array.from({ length: 17 }, () => "<td></td>").join("") +
         "</tr>",
     ).join("");
   }
@@ -118,7 +118,7 @@
         lista
           .map(
             (h) =>
-              `<tr><td><code>${esc(h.id)}</code></td><td><code>${esc(h.codigo)}</code></td><td>${esc(h.config_id || "—")}</td><td>${esc(h.nome)}</td><td>${esc(h.descricao || "—")}</td><td>${esc(h.status)}</td><td>${jsonButton(h, "objetos", "Visualizar demandas")}</td><td>${jsonButton(h, "julgamento_projetos", "Visualizar julgamentos")}</td><td>${jsonButton(h, "pesos_projetos", "Visualizar pesos")}</td><td>${jsonButton(h, "ranking", "Visualizar classificação")}</td><td>${esc(h.homologadoEm || "—")}</td><td>${esc(h.homologadoPor || "—")}</td><td>${esc(h.criadoPor || "—")}</td><td>${esc(h.criadoEm || "—")}</td><td>${esc(h.atualizadoEm || "—")}</td><td>${esc(h.tipo_demanda || h.tipo_demanda_id || "—")}</td><td>${esc(h.grupo_id || "—")}</td><td>${jsonButton(h, "dados_hierarquizacao", "Visualizar arquivo completo")}</td></tr>`,
+              `<tr><td><code>${esc(h.codigo)}</code></td><td>${esc(h.config_id || "—")}</td><td>${esc(h.nome)}</td><td>${esc(h.descricao || "—")}</td><td>${esc(h.status)}</td><td>${jsonButton(h, "objetos", "Visualizar demandas")}</td><td>${jsonButton(h, "julgamento_projetos", "Visualizar julgamentos")}</td><td>${jsonButton(h, "pesos_projetos", "Visualizar pesos")}</td><td>${jsonButton(h, "ranking", "Visualizar classificação")}</td><td>${esc(h.homologadoEm || "—")}</td><td>${esc(h.homologadoPor || "—")}</td><td>${esc(h.criadoPor || "—")}</td><td>${esc(h.criadoEm || "—")}</td><td>${esc(h.atualizadoEm || "—")}</td><td>${esc(h.tipo_demanda || h.tipo_demanda_id || "—")}</td><td>${esc(h.grupo_id || "—")}</td><td>${jsonButton(h, "dados_hierarquizacao", "Visualizar arquivo completo")}</td></tr>`,
           )
           .join("") + vazias(lista.length);
       $("hier-tbody")
@@ -503,8 +503,31 @@
     }
   }
   function erro(msg) {
-    $("form-error").textContent = msg;
-    $("form-error").classList.remove("hidden");
+    const container = $("form-error");
+    const texto = String(msg || "Erro na requisição.");
+    const linhas = texto.split(/\r?\n/);
+    const titulo = linhas.shift() || "Não foi possível cadastrar a hierarquização";
+    const partes = [`<div class="ahp-error-title"><i class="fas fa-triangle-exclamation"></i> ${escapeHtml(titulo)}</div>`];
+    let listaAberta = false;
+    for (const linha of linhas) {
+      const t = linha.trim();
+      if (!t) { if (listaAberta) { partes.push("</ul>"); listaAberta = false; } continue; }
+      const bullet = t.match(/^([•\-\*]|\d+\))\s+(.*)$/);
+      if (bullet) {
+        if (!listaAberta) { partes.push('<ul class="ahp-error-list">'); listaAberta = true; }
+        partes.push(`<li>${escapeHtml(bullet[2])}</li>`);
+      } else {
+        if (listaAberta) { partes.push("</ul>"); listaAberta = false; }
+        partes.push(`<p class="ahp-error-line">${escapeHtml(t)}</p>`);
+      }
+    }
+    if (listaAberta) partes.push("</ul>");
+    container.innerHTML = partes.join("");
+    container.classList.remove("hidden");
+    container.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
   async function lerMatriz(file) {
     const ext = file.name.split(".").pop().toLowerCase();

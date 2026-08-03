@@ -612,6 +612,35 @@ class GeoprocessamentoApiTest(unittest.TestCase):
         finally:
             self.client.delete("/api/geoespacial/funcoes/funcao_teste")
 
+    def test_diagrama_desconectado_nao_e_aceito(self) -> None:
+        definicao = {
+            "id": "funcao_diagrama_desconectado",
+            "nome": "Diagrama desconectado",
+            "passos": [{"algoritmo_id": "OP-02", "parametros": {"camada_id": "$entrada"}}],
+            "diagrama": {
+                "versao": 3,
+                "nos": [
+                    {"id": "entrada", "kind": "input"},
+                    {"id": "processo", "kind": "algorithm"},
+                    {"id": "saida", "kind": "output"},
+                ],
+                "conexoes": [],
+            },
+        }
+        response = self.client.post("/api/geoespacial/funcoes", json=definicao)
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("conectados", response.json()["detail"])
+
+    def test_funcao_aninhada_inexistente_nao_e_aceita(self) -> None:
+        definicao = {
+            "id": "funcao_aninhada_inexistente",
+            "nome": "Função aninhada inválida",
+            "passos": [{"funcao_id": "funcao_ausente", "parametros": {}}],
+        }
+        response = self.client.post("/api/geoespacial/funcoes", json=definicao)
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("não encontrada", str(response.json()["detail"]))
+
     def test_comandos_de_tabela_e_atualizacao_da_fonte(self) -> None:
         camada_id = self.carregar()
 

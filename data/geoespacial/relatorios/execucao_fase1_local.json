@@ -1,0 +1,91 @@
+[
+  {
+    "fonte": "ucs_mma",
+    "status": "ok",
+    "feicoes": 311,
+    "por_tipo": {
+      "risco": 275,
+      "restricao": 36
+    }
+  },
+  {
+    "fonte": "terras_indigenas",
+    "status": "ok",
+    "feicoes": 30,
+    "por_tipo": {
+      "risco": 30
+    }
+  },
+  {
+    "fonte": "quilombos",
+    "status": "ok",
+    "feicoes": 26,
+    "por_tipo": {
+      "risco": 26
+    }
+  },
+  {
+    "fonte": "cavidades",
+    "status": "ok",
+    "feicoes": 692,
+    "por_tipo": {
+      "restricao": 692
+    }
+  },
+  {
+    "fonte": "contaminadas",
+    "status": "ok",
+    "feicoes": 7241,
+    "por_tipo": {
+      "risco": 7241
+    }
+  },
+  {
+    "fonte": "embargos_ibama",
+    "status": "vazio_apos_recorte"
+  },
+  {
+    "fonte": "sitios_arqueologicos",
+    "status": "ok",
+    "feicoes": 15,
+    "por_tipo": {
+      "risco": 15
+    }
+  },
+  {
+    "fonte": "inundacao",
+    "status": "ok",
+    "feicoes": 776,
+    "por_tipo": {
+      "risco": 776
+    }
+  },
+  {
+    "fonte": "movimento_massa",
+    "status": "ok",
+    "feicoes": 920,
+    "por_tipo": {
+      "risco": 920
+    }
+  },
+  {
+    "fonte": "assentamentos",
+    "status": "ok",
+    "feicoes": 209,
+    "por_tipo": {
+      "risco": 209
+    }
+  },
+  {
+    "fonte": "aprm_sp",
+    "status": "ok",
+    "feicoes": 1330,
+    "por_tipo": {
+      "risco": 1330
+    }
+  },
+  {
+    "fonte": "vegetacao_sp",
+    "status": "skip"
+  }
+]

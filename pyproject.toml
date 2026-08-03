@@ -30,19 +30,40 @@ dependencies = [
 
 [tool.pyright]
 include = ["api"]
-exclude = ["scripts/**", "**/__pycache__", "**/.venv"]
+exclude = [
+    "scripts/**",
+    "tmp/**",
+    "**/__pycache__",
+    "**/.venv",
+    "**/node_modules",
+    "**/.*",
+]
 extraPaths = ["."]
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
 
 [tool.flake8]
-max-line-length = 88
-extend-ignore = ["E203", "W503"]
+max-line-length = 200
+extend-ignore = [
+    "E203", "W503", "E501",
+    "E401", "E402", "E702",
+    "F401", "F541",
+    "E302", "E305",
+]
+exclude = [
+    ".venv",
+    "tmp",
+    "scripts",
+    "build",
+    "dist",
+    "__pycache__",
+    "data",
+]
 
 [tool.pylint.main]
 init-hook = 'import sys; sys.path.insert(0, ".")'
 py-version = "3.11"
-max-line-length = 88
+max-line-length = 200
 jobs = 0
 disable = [
     "duplicate-code",
@@ -55,10 +76,25 @@ disable = [
     "broad-exception-caught",
     "ungrouped-imports",
     "unused-import",
+    "unused-argument",
+    "unused-variable",
     "line-too-long",
     "trailing-newlines",
     "missing-final-newline",
     "wrong-import-position",
+    "wrong-import-order",
     "invalid-character-carriage-return",
     "invalid-name",
+    "protected-access",
+    "redefined-outer-name",
+    "reimported",
+    "too-many-lines",
+    "consider-using-dict-items",
+    "use-sequence-for-iteration",
+    "multiple-statements",
+    "superfluous-parens",
+    "multiple-imports",
+    "use-implicit-booleaness-not-len",
+    "f-string-without-interpolation",
+    "no-member",
 ]

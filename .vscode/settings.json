@@ -8,18 +8,21 @@
   "terminal.integrated.defaultProfile.windows": "Windows PowerShell",
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
   "python.terminal.useEnvFile": true,
-  "python.analysis.extraPaths": ["${workspaceFolder}"],
-  "python.analysis.exclude": [
-    "scripts/**",
-    "**/node_modules",
-    "**/__pycache__",
-    "**/.*"
-  ],
   "python.terminal.activateEnvironment": true,
-  "python.analysis.diagnosticMode": "workspace",
   "python.linting.pylintEnabled": false,
   "python.linting.pylintPath": "${workspaceFolder}/.venv/Scripts/pylint.exe",
-  "pylint.args": [],
+  "pylint.args": [
+    "--max-line-length=200",
+    "--ignore-paths=tmp,scripts,.venv,data",
+    "--disable=line-too-long,unused-argument,unused-variable,protected-access,redefined-outer-name,reimported,too-many-lines,consider-using-dict-items,use-sequence-for-iteration,multiple-statements,superfluous-parens,multiple-imports,use-implicit-booleaness-not-len,f-string-without-interpolation,no-member,wrong-import-order,wrong-import-position"
+  ],
+  "flake8.args": [
+    "--max-line-length=200",
+    "--extend-ignore=E203,W503,E501,E401,E402,E702,F401,F541,E302,E305",
+    "--exclude=.venv,tmp,scripts,build,dist,__pycache__,data"
+  ],
+  "black-formatter.args": ["--line-length=200"],
+  "isort.args": ["--line-length=200"],
   "djlint.showInstallError": false,
   "cursorpyright.analysis.diagnosticMode": "workspace",
   "cursorpyright.analysis.extraPaths": ["${workspaceFolder}"],

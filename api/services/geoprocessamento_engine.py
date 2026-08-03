@@ -70,6 +70,7 @@ CATALOG = {
     "OP-41": "Inverter Raster",
     "OP-42": "Filtro Focal Raster",
     "OP-43": "Suavização Gaussiana",
+    "OP-CLASS": "Classificar por Feição (Fase 1)",
 }
 
 TOOL_FAMILIES = {
@@ -114,6 +115,7 @@ TOOL_FAMILIES = {
     "OP-41": "Álgebra raster",
     "OP-42": "Filtros raster",
     "OP-43": "Filtros raster",
+    "OP-CLASS": "Classificação Fase 1",
 }
 
 # As chaves continuam específicas para os executores. A interface apresenta
@@ -160,6 +162,7 @@ TOOL_INPUTS = {
     "OP-41": ["raster_id"],
     "OP-42": ["raster_id"],
     "OP-43": ["raster_id"],
+    "OP-CLASS": ["camada_id"],
 }
 
 STANDARD_OUTPUT_FIELDS = [
@@ -227,6 +230,7 @@ OPERATION_ENDPOINTS = {
     "OP-41": "inverter-raster",
     "OP-42": "filtro-focal-raster",
     "OP-43": "suavizacao-gaussiana",
+    "OP-CLASS": "classificar-por-feicao-fase1",
 }
 
 REQUIRED_PARAMETERS = {
@@ -271,6 +275,7 @@ REQUIRED_PARAMETERS = {
     "OP-41": {"raster_id"},
     "OP-42": {"raster_id"},
     "OP-43": {"raster_id"},
+    "OP-CLASS": {"camada_id", "criterio_id"},
 }
 
 
@@ -400,6 +405,11 @@ class GeoprocessamentoEngine:
             "OP-25": lambda: self.export_vector(p, progress),
             "OP-26": lambda: self.export_raster(p, progress),
             "OP-27": lambda: self.save_layer(p),
+            "OP-CLASS": lambda: geo.classificar_por_feicao_fase1(
+                p["camada_id"],
+                p["criterio_id"],
+                p.get("fonte_id"),
+            ),
         }
         custom = {
             "OP-08": self.rasterize,
@@ -1116,13 +1126,25 @@ class GeoprocessamentoEngine:
                 elif not isinstance(source, list):
                     source = [source]
                 variable = str(params.get("variavel", "item"))
+                # Passos seguintes: rodam DENTRO do loop até o primeiro marcado como pos_iterador.
+                # Passos com pos_iterador=True rodam UMA vez após o loop.
+                remaining = steps[index + 1 :]
+                split = next(
+                    (i for i, s in enumerate(remaining) if s.get("pos_iterador")),
+                    len(remaining),
+                )
+                inner_steps, after_steps = remaining[:split], remaining[split:]
                 iterations = []
                 for value in source:
                     iteration = await self.run_steps(
-                        steps[index + 1 :], {**context, variable: value}
+                        inner_steps, {**context, variable: value}
                     )
                     iterations.append(iteration)
                     context.update(iteration.get("contexto", {}))
+                if after_steps:
+                    tail = await self.run_steps(after_steps, context)
+                    context.update(tail.get("contexto", {}))
+                    results.extend(tail.get("resultados", []))
                 return {
                     "status": "concluido",
                     "iteracoes": iterations,

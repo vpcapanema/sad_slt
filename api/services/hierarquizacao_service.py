@@ -8,6 +8,7 @@ as fases quantitativas. Os produtores geoespaciais permanecem independentes.
 from __future__ import annotations
 
 import secrets
+import unicodedata
 import uuid
 import math
 from copy import deepcopy
@@ -20,6 +21,7 @@ from api.exceptions import (
     DemandaValidationError,
     HierarquizacaoNotFoundError,
 )
+from api.repositories import camada_geoespacial_repository as camada_repo
 from api.repositories import config_multicriterio_repository as config_repo
 from api.repositories import hierarquizacao_repository as repo
 from api.schemas.hierarquizacao import (
@@ -105,14 +107,90 @@ def _criterios(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     f2: dict[str, Any] = {}
     f3: dict[str, Any] = {}
-    for row in _linhas_matriz(matriz):
+    fase_por_alias = {
+        "1": 1, "fase1": 1, "fase_1": 1,
+        "elegibilidade": 1, "elegibilidade_territorial": 1,
+        "2": 2, "fase2": 2, "fase_2": 2,
+        "favorabilidade": 2, "favorabilidade_territorial": 2,
+        "3": 3, "fase3": 3, "fase_3": 3,
+        "priorizacao": 3, "priorizacao_final": 3,
+        "ajuste": 3, "ajuste_de_prioridade": 3, "ajuste_de_prioridades": 3,
+        "ajuste_fino": 3, "ajuste_fino_de_prioridade": 3,
+    }
+    prefixos_fase = (
+        ("elegibilidade", 1),
+        ("favorabilidade", 2),
+        ("priorizacao", 3),
+        ("ajuste", 3),
+    )
+
+    def _classificar_fase(valor_normalizado: str) -> int | None:
+        if not valor_normalizado:
+            return None
+        if valor_normalizado in fase_por_alias:
+            return fase_por_alias[valor_normalizado]
+        for prefixo, numero in prefixos_fase:
+            if valor_normalizado.startswith(prefixo):
+                return numero
+        return None
+    arquivo = (
+        matriz.get("arquivo")
+        if isinstance(matriz, dict)
+        else None
+    ) or "planilha carregada"
+    aba = matriz.get("aba") if isinstance(matriz, dict) else None
+    localizacao = f"arquivo “{arquivo}”" + (
+        f", aba “{aba}”" if aba else ""
+    )
+    for indice, row in enumerate(_linhas_matriz(matriz), start=2):
         nome = _valor(row, "criterio", "critério", "nome")
-        fase = (
-            str(_valor(row, "fase", "etapa", "fase da hierarquização") or "")
-            .lower()
-            .replace(" ", "_")
+        etapa_raw = (
+            str(
+                _valor(
+                    row,
+                    "etapa",
+                    "etapa da hierarquização",
+                    "etapa_hierarquizacao",
+                )
+                or ""
+            ).strip()
         )
+        etapa_sem_acento = unicodedata.normalize("NFKD", etapa_raw).encode(
+            "ascii", "ignore"
+        ).decode("ascii")
+        etapa_norm = (
+            etapa_sem_acento.lower()
+            .replace(" ", "_")
+            .replace("-", "_")
+        )
+        fase = _classificar_fase(etapa_norm)
         if not nome:
+            continue
+        if fase is None:
+            valor_exibido = etapa_raw or "(vazio)"
+            raise DemandaValidationError(
+                (
+                    "Não consegui identificar a fase de um critério na matriz de"
+                    " premissas e critérios que você enviou.\n"
+                    f"• Arquivo: {localizacao}\n"
+                    f"• Linha {indice} da planilha\n"
+                    f"• Critério: “{nome}”\n"
+                    f"• Coluna Etapa lida: “{valor_exibido}”\n\n"
+                    "Como corrigir:\n"
+                    "1) Abra a planilha e localize a linha indicada.\n"
+                    "2) Na coluna Etapa, escolha um dos três valores aceitos:\n"
+                    "   • Elegibilidade territorial — critérios da Fase 1"
+                    " (avaliados pelo motor geoespacial).\n"
+                    "   • Favorabilidade territorial e da rede — critérios da Fase 2.\n"
+                    "   • Priorização — critérios da Fase 3.\n"
+                    "3) Salve o arquivo e reenvie a matriz.\n\n"
+                    "Dica: você pode baixar novamente o modelo oficial em"
+                    " “Baixar modelo” — a coluna Etapa já vem com validação por"
+                    " lista suspensa contendo somente esses três valores."
+                ),
+                field="matriz.fase",
+            )
+        if fase == 1:
             continue
         modelo = {
             "criterio": str(nome),
@@ -120,26 +198,50 @@ def _criterios(
             "resultado": None,
             "premissas": row,
         }
-        if fase in {"2", "fase2", "fase_2"}:
+        if fase == 2:
             f2[str(nome)] = modelo
-        elif fase in {"3", "fase3", "fase_3"}:
-            f3[str(nome)] = modelo
         else:
-            raise DemandaValidationError(
-                f"Informe Fase 2 ou Fase 3 para o critério {nome}.", field="matriz.fase"
-            )
+            f3[str(nome)] = modelo
     fases = set(fases_a_executar or [1, 2, 3])
     if (2 in fases or 3 in fases) and not f2 and not f3:
         raise DemandaValidationError(
-            "A matriz deve conter critérios das Fases 2 ou 3.", field="matriz"
+            (
+                "A matriz enviada não possui nenhum critério das Fases 2 ou 3.\n"
+                f"• Arquivo: {localizacao}\n\n"
+                "Como corrigir:\n"
+                "1) Abra a matriz e verifique a coluna Etapa.\n"
+                "2) Marque como “Favorabilidade territorial e da rede” (Fase 2) e/ou "
+                "“Priorização” (Fase 3) os critérios que devem entrar"
+                " no cálculo AHP.\n"
+                "3) Salve e reenvie a matriz."
+            ),
+            field="matriz",
         )
     if 2 in fases and not f2:
         raise DemandaValidationError(
-            "A Fase 2 foi selecionada, mas não possui critérios.", field="matriz.fase"
+            (
+                "Você selecionou a Fase 2, mas a matriz não tem nenhum critério"
+                " marcado como “Favorabilidade territorial e da rede”.\n"
+                f"• Arquivo: {localizacao}\n\n"
+                "Como corrigir:\n"
+                "• Na planilha, marque na coluna Etapa o valor "
+                "“Favorabilidade territorial e da rede” para os critérios de Fase 2,"
+                " ou desmarque a Fase 2 no cadastro desta rodada."
+            ),
+            field="matriz.fase",
         )
     if 3 in fases and not f3:
         raise DemandaValidationError(
-            "A Fase 3 foi selecionada, mas não possui critérios.", field="matriz.fase"
+            (
+                "Você selecionou a Fase 3, mas a matriz não tem nenhum critério"
+                " marcado como “Priorização”.\n"
+                f"• Arquivo: {localizacao}\n\n"
+                "Como corrigir:\n"
+                "• Na planilha, marque na coluna Etapa o valor "
+                "“Priorização” para os critérios de Fase 3, ou"
+                " desmarque a Fase 3 no cadastro desta rodada."
+            ),
+            field="matriz.fase",
         )
     return f2, f3
 
@@ -184,7 +286,9 @@ def _fase1_vazia() -> dict[str, Any]:
     }
 
 
-def _coordenada_objeto(valor: Any, *, campo: str, indice: int) -> float:
+def _coordenada_objeto(valor: Any, *, campo: str, indice: int) -> float | None:
+    if valor is None or (isinstance(valor, str) and not valor.strip()):
+        return None
     try:
         numero = float(valor)
     except (TypeError, ValueError) as exc:
@@ -192,6 +296,8 @@ def _coordenada_objeto(valor: Any, *, campo: str, indice: int) -> float:
             f"Objeto {indice + 1}: campo {campo} inválido.",
             field=f"objetos[{indice}].{campo}",
         ) from exc
+    if math.isnan(numero) or math.isinf(numero):
+        return None
     if campo == "latitude" and not (-90 <= numero <= 90):
         raise DemandaValidationError(
             f"Objeto {indice + 1}: latitude fora da faixa permitida.",
@@ -428,12 +534,72 @@ def _detalhar_hit(hit: dict[str, Any], *, risco: bool) -> dict[str, Any]:
         "severidade": a.get("severidade"),
         "base_legal_ou_tecnica": a.get("base_legal_ou_tecnica"),
         "atributos": a,
+        "geometria": hit.get("geometria"),
     }
     if risco:
         item["nivel"] = (
             a.get("nivel") or a.get("severidade") or a.get("classe_risco") or ""
         )
     return item
+
+
+def mapa_sobreposicao_fase1(codigo: str) -> dict[str, Any]:
+    row = repo.get_by_codigo(codigo)
+    if not row:
+        raise HierarquizacaoNotFoundError(codigo)
+    dados = row.get("dados_hierarquizacao") or {}
+    rel = row.get("relatorio_fase1") or {}
+    cr_id = ((rel.get("camadas") or {}).get("restricao") or {}).get("id")
+    ck_id = ((rel.get("camadas") or {}).get("risco") or {}).get("id")
+    itens: list[dict[str, Any]] = []
+    for obj in dados.get("objetos", []) or []:
+        cab = obj.get("cabecalho_objeto") or {}
+        f1 = (obj.get("hierarquizacao") or {}).get("fase_1") or {}
+        status = f1.get("status_fase1")
+        if status not in ("restrito", "apto_com_ressalva"):
+            continue
+        geo = f1.get("geometria_ou_area_afetada") or {}
+        lat = geo.get("latitude") or cab.get("latitude")
+        lon = geo.get("longitude") or cab.get("longitude")
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except (TypeError, ValueError):
+            continue
+        feicoes: list[dict[str, Any]] = []
+        if cr_id and status == "restrito":
+            for h in repo.intersecoes_camada(cr_id, longitude=lon, latitude=lat):
+                d = _detalhar_hit(h, risco=False)
+                if d.get("geometria"):
+                    feicoes.append({
+                        "nome": d.get("nome") or d.get("criterio_nome") or d.get("camada_origem") or "",
+                        "tipo": "restricao",
+                        "geometria": d.get("geometria"),
+                        "esfera": d.get("esfera"),
+                        "criterio_id": d.get("criterio_id"),
+                        "atributos": d.get("atributos") or {},
+                    })
+        if ck_id and status == "apto_com_ressalva":
+            for h in repo.intersecoes_camada(ck_id, longitude=lon, latitude=lat):
+                d = _detalhar_hit(h, risco=True)
+                if d.get("geometria"):
+                    feicoes.append({
+                        "nome": d.get("nome") or d.get("criterio_nome") or d.get("camada_origem") or "",
+                        "tipo": "risco",
+                        "geometria": d.get("geometria"),
+                        "esfera": d.get("esfera"),
+                        "criterio_id": d.get("criterio_id"),
+                        "atributos": d.get("atributos") or {},
+                    })
+        itens.append({
+            "codigo": cab.get("codigo") or cab.get("demanda_id") or "",
+            "nome": cab.get("nome") or "",
+            "status": status,
+            "latitude": lat,
+            "longitude": lon,
+            "feicoes": feicoes,
+        })
+    return {"itens": itens}
 
 
 def _numero_atributo(item: dict[str, Any], tipo: str) -> float:
@@ -496,19 +662,37 @@ def executar_fase_1(
 ) -> HierarquizacaoResponseSchema:
     inicio = datetime.now(timezone.utc)
     row = _carregar(codigo)
-    pacote = repo.obter_pacote_homologado(payload.par_id, "fase1")
-    if not pacote:
-        raise DemandaValidationError(
-            "Conjunto homologado da Fase 1 não encontrado.", field="par_id"
-        )
-    camadas = pacote.get("camadas") or []
-    cr = next((c for c in camadas if c.get("id") == payload.camada_restricao_id), None)
-    ck = next((c for c in camadas if c.get("id") == payload.camada_risco_id), None)
-    if not cr or not ck:
-        raise DemandaValidationError(
-            "As duas camadas devem pertencer ao mesmo conjunto homologado.",
-            field="par_id",
-        )
+    if payload.par_id:
+        pacote = repo.obter_pacote_homologado(payload.par_id, "fase1")
+        if not pacote:
+            raise DemandaValidationError(
+                "Conjunto homologado da Fase 1 não encontrado.", field="par_id"
+            )
+        camadas = pacote.get("camadas") or []
+        cr = next((c for c in camadas if c.get("id") == payload.camada_restricao_id), None)
+        ck = next((c for c in camadas if c.get("id") == payload.camada_risco_id), None)
+        if not cr or not ck:
+            raise DemandaValidationError(
+                "As duas camadas devem pertencer ao mesmo conjunto homologado.",
+                field="par_id",
+            )
+    else:
+        biblioteca = camada_repo.listar_biblioteca("fase1")
+        cr = next((c for c in biblioteca if c.get("id") == payload.camada_restricao_id), None)
+        ck = next((c for c in biblioteca if c.get("id") == payload.camada_risco_id), None)
+        if not cr:
+            raise DemandaValidationError(
+                "Camada de restrição não encontrada na biblioteca canônica.",
+                field="camada_restricao_id",
+            )
+        if not ck:
+            raise DemandaValidationError(
+                "Camada de risco não encontrada na biblioteca canônica.",
+                field="camada_risco_id",
+            )
+        # Downstream espera cr["id"]/ck["id"] como UUID de camada_homologada; listar_biblioteca retorna recurso_sessao_id.
+        cr = {**cr, "id": str(cr.get("homologacao_id"))}
+        ck = {**ck, "id": str(ck.get("homologacao_id"))}
     if (
         "restri"
         not in (
@@ -665,7 +849,7 @@ def executar_fase_1(
         obj["hierarquizacao"]["fase_1"] = f1
     dados["cabecalho_grupo"].setdefault("pacotes", {})["fase_1"] = {
         **{
-            k: pacote.get(k)
+            k: (pacote.get(k) if payload.par_id else None)
             for k in (
                 "pacote_id",
                 "codigo",

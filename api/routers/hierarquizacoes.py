@@ -50,26 +50,38 @@ async def listar_pacotes_fase(modulo: str, _user: SessionUser = Depends(require_
 
 @router.post("/{codigo}/fases/2/executar", response_model=HierarquizacaoResponseSchema)
 async def executar_fase_2(codigo: str, body: HierarquizacaoFase2ExecutarSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
-    try: return service.executar_fase_2(codigo, body)
-    except HierarquizacaoNotFoundError as exc: raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except DemandaValidationError as exc: raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except DatabaseUnavailableError as exc: raise HTTPException(status_code=503, detail=str(exc)) from exc
+    try:
+        return service.executar_fase_2(codigo, body)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post("/{codigo}/fases/3/executar", response_model=HierarquizacaoResponseSchema)
 async def executar_fase_3(codigo: str, body: HierarquizacaoFase3ExecutarSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
-    try: return service.executar_fase_3(codigo, body)
-    except HierarquizacaoNotFoundError as exc: raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except DemandaValidationError as exc: raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except DatabaseUnavailableError as exc: raise HTTPException(status_code=503, detail=str(exc)) from exc
+    try:
+        return service.executar_fase_3(codigo, body)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post("/{codigo}/sintetizar", response_model=HierarquizacaoResponseSchema)
 async def sintetizar(codigo: str, body: HierarquizacaoSinteseSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
-    try: return service.sintetizar(codigo, body)
-    except HierarquizacaoNotFoundError as exc: raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except DemandaValidationError as exc: raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except DatabaseUnavailableError as exc: raise HTTPException(status_code=503, detail=str(exc)) from exc
+    try:
+        return service.sintetizar(codigo, body)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post("/{codigo}/fases/1/executar", response_model=HierarquizacaoResponseSchema)
@@ -84,6 +96,19 @@ async def executar_fase_1(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except (DemandaValidationError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/{codigo}/fases/1/mapa-sobreposicao", response_model=dict)
+async def mapa_sobreposicao_fase_1(
+    codigo: str,
+    _user: SessionUser = Depends(require_authenticated),
+) -> dict:
+    try:
+        return service.mapa_sobreposicao_fase1(codigo)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

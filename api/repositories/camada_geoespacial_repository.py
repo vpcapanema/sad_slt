@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import math
+import re
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -13,6 +15,8 @@ import pandas as pd
 from psycopg import sql
 from psycopg.types.json import Jsonb
 from shapely.geometry import mapping
+
+from api.path_policy import project_path
 from shapely.geometry.base import BaseGeometry
 
 from api.db.connection import get_connection
@@ -233,6 +237,16 @@ def _find_layer(conn: Any, recurso_id: str) -> tuple[str, dict[str, Any]] | None
         ).fetchone()
         if row:
             return categoria, dict(row)
+    # Fallback: aceita camada_homologada.id (UUID) como identificador.
+    try:
+        row = conn.execute(
+            "SELECT * FROM geoprocessamento.camada_homologada WHERE id=%s::uuid",
+            (recurso_id,),
+        ).fetchone()
+    except Exception:
+        row = None
+    if row:
+        return "homologadas", dict(row)
     return None
 
 
@@ -451,12 +465,83 @@ def excluir(recurso_id: str) -> bool:
         return removido
 
 
+_CANONICAL_ROOT = "data/geoespacial/biblioteca_canonica"
+
+
+def _slugify(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^A-Za-z0-9]+", "_", normalized).strip("_").lower()
+    return slug or "camada"
+
+
+def _exportar_para_biblioteca_canonica(
+    homologada_recurso_id: str,
+    *,
+    modulo_consumidor: str,
+    nome_publicacao: str,
+    versao: str,
+    tipo: str,
+    progress: Callable[[str], None] | None,
+) -> str | None:
+    """Materializa a camada homologada em arquivo dentro de data/geoespacial/biblioteca_canonica."""
+    subdir = project_path(f"{_CANONICAL_ROOT}/{_slugify(modulo_consumidor)}")
+    subdir.mkdir(parents=True, exist_ok=True)
+    base = f"{_slugify(nome_publicacao)}_{_slugify(versao)}"
+    if tipo == "vetor":
+        destino = subdir / f"{base}.gpkg"
+        loaded = carregar_vetor(homologada_recurso_id)
+        if not loaded:
+            return None
+        gdf, _ = loaded
+        if gdf.empty:
+            return None
+        gdf.to_file(destino, driver="GPKG", layer=_slugify(nome_publicacao))
+    else:
+        destino = subdir / f"{base}.tif"
+        with get_connection() as conn:
+            row = conn.execute(
+                """SELECT r.dados_geotiff
+                   FROM geoprocessamento.camada_homologada c
+                   JOIN geoprocessamento.camada_homologada_raster r ON r.camada_id=c.id
+                   WHERE c.recurso_sessao_id=%s""",
+                (homologada_recurso_id,),
+            ).fetchone()
+        if not row or not row["dados_geotiff"]:
+            return None
+        destino.write_bytes(bytes(row["dados_geotiff"]))
+    relativo = destino.relative_to(project_path(".")).as_posix()
+    if progress:
+        progress(f"Arquivo exportado para biblioteca canônica: {relativo}")
+    return relativo
+
+
 def esta_homologada(recurso_id: str) -> bool:
     with get_connection() as conn:
         return conn.execute(
             "SELECT 1 FROM geoprocessamento.camada_homologada WHERE recurso_sessao_id=%s",
             (recurso_id,),
         ).fetchone() is not None
+
+
+def resolver_recurso_id(identificador: str) -> str | None:
+    """Aceita `recurso_sessao_id` ou `camada_homologada.id` (UUID) e devolve o `recurso_sessao_id`."""
+    if not identificador:
+        return None
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT recurso_sessao_id FROM geoprocessamento.camada_homologada WHERE recurso_sessao_id=%s",
+            (identificador,),
+        ).fetchone()
+        if row:
+            return row["recurso_sessao_id"]
+        try:
+            row = conn.execute(
+                "SELECT recurso_sessao_id FROM geoprocessamento.camada_homologada WHERE id=%s::uuid",
+                (identificador,),
+            ).fetchone()
+        except Exception:
+            return None
+        return row["recurso_sessao_id"] if row else None
 
 
 def homologar(
@@ -553,6 +638,21 @@ def homologar(
         result = dict(snapshot)
         result["homologacao_id"] = str(result["id"])
         result["id"] = homologada_recurso_id
+        try:
+            arquivo_relativo = _exportar_para_biblioteca_canonica(
+                homologada_recurso_id,
+                modulo_consumidor=modulo_consumidor,
+                nome_publicacao=nome_publicacao,
+                versao=versao,
+                tipo=source["tipo"],
+                progress=progress,
+            )
+        except Exception as exc:  # exportação para disco não deve invalidar o snapshot
+            if progress:
+                progress(f"Falha ao exportar para biblioteca canônica: {exc}")
+            arquivo_relativo = None
+        if arquivo_relativo:
+            result["arquivo_biblioteca_canonica"] = arquivo_relativo
         return result
 
 

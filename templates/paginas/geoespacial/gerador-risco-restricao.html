@@ -14,20 +14,20 @@
 {% endblock %}
 
 {% block conteudo %}
-<main class="conteudo-principal gerador-main">
+<main class="conteudo-principal gerador-main" data-gerador-modulo="fase1">
     {% include "componentes/navegacao_fases_hierarquizacao.html" %}
-    <section class="secao-superficies-de-risco-e-restricao gerador-section gerador-intro"><div class="gerador-section__body"><div class="gerador-breadcrumb"><a href="/restrict/">Início</a> › <a href="/restrict/geoespacial/">Geoespacial</a> › Gerador de Restrições e Riscos</div><h1 class="gerador-title">Gerador de Restrições e Riscos</h1><p class="gerador-subtitle">Cadastre a saída, configure a metodologia do fluxo e construa as superfícies territoriais da Fase 1.</p></div></section>
-    <section class="secao-cadastro-da-saida gerador-section" id="cadastro-saida"><header class="gerador-section__header"><span class="gerador-section__number">1</span><div class="gerador-section__heading"><h2>Cadastro da saída</h2><p>Identificação e contrato persistente do pacote de risco e restrição.</p></div></header><div class="gerador-section__body">
+    <section class="secao-superficies-de-risco-e-restricao gerador-section gerador-intro"><div class="gerador-section__body"><div class="gerador-breadcrumb"><a href="/restrict/">Início</a> › <a href="/restrict/geoespacial/">Geoespacial</a> › Gerador de Restrições e Riscos</div><h1 class="gerador-title">Gerador de Restrições e Riscos</h1><p class="gerador-subtitle">Cadastre a camada de saída e execute o fluxo diretamente no componente de geoprocessamento.</p></div></section>
+    <section class="secao-cadastro-da-saida gerador-section" id="cadastro-saida"><header class="gerador-section__header"><span class="gerador-section__number">1</span><div class="gerador-section__heading"><h2>Cadastro da camada output de risco/restrição</h2><p>Identificação e contrato persistente da camada de risco ou restrição.</p></div></header><div class="gerador-section__body">
       <form id="produto-form" class="gerador-grid">
-        <div class="gerador-field"><label for="codigo">Código *</label><input id="codigo" required placeholder="fase1_restricao_risco_sp"></div>
-        <div class="gerador-field gerador-field--span2"><label for="nome">Nome *</label><input id="nome" required placeholder="Superfícies consolidadas de SP"></div>
+        <input type="hidden" id="codigo">
+        <div class="gerador-field"><label for="tipo-saida">Tipo de camada de saída *</label><select id="tipo-saida" required><option value="">Selecione…</option><option value="restricao">Restrição</option><option value="risco">Risco</option></select></div>
+        <div class="gerador-field"><label for="nome">Nome *</label><input id="nome" required placeholder="Superfícies consolidadas de SP"></div>
         <div class="gerador-field"><label for="versao">Versão *</label><select id="versao" required><option value="v1">v1 — versão inicial</option><option value="v2">v2</option><option value="v3">v3</option><option value="v4">v4</option><option value="v5">v5</option></select></div>
-        <div class="gerador-field"><label for="responsavel">Responsável técnico</label><input id="responsavel"></div>
         <div class="gerador-field"><label for="data-referencia">Data de referência</label><input id="data-referencia" type="date"></div>
-        <div class="gerador-field gerador-field--full"><label for="descricao">Descrição</label><textarea id="descricao"></textarea></div>
-        <div class="gerador-field gerador-field--full"><label for="observacao">Observação metodológica</label><textarea id="observacao"></textarea></div>
+        <div class="gerador-field gerador-field--span2"><label for="descricao">Descrição</label><textarea id="descricao"></textarea></div>
+        <div class="gerador-field gerador-field--span2"><label for="observacao">Observação metodológica</label><textarea id="observacao"></textarea></div>
       </form>
-      <div class="gerador-actions"><span id="produto-feedback" class="gerador-feedback"></span><button class="btn btn-primary" id="salvar-produto" type="button">Salvar cadastro da saída</button></div>
+      <div class="gerador-actions"><span id="produto-feedback" class="gerador-feedback"></span><button class="btn btn-primary" id="salvar-produto" type="button">Salvar cadastro da camada</button></div>
     </div></section>
     <div data-shared-containers></div>
   </main>

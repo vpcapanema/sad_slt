@@ -13,6 +13,31 @@ from pathlib import Path, PurePosixPath
 PROJECT_ROOT = Path(__file__).parent.parent
 _WINDOWS_ABSOLUTE = re.compile(r"^[A-Za-z]:[/\\]")
 
+# Destino único, canônico, para toda saída geoprocessada.
+GEO_OUTPUTS_DIR = "data/geoespacial/outputs"
+
+# Categorias reconhecidas dentro do destino único; cada uma vira uma subpasta.
+GEO_OUTPUT_CATEGORIES: tuple[str, ...] = ("vetor", "raster", "geodatabase")
+
+# Extensão canônica -> categoria. Fonte da verdade para roteamento e validação.
+_EXTENSION_TO_CATEGORY: dict[str, str] = {
+    # vetor
+    ".gpkg": "vetor",
+    ".geojson": "vetor",
+    ".json": "vetor",
+    ".shp": "vetor",
+    ".kml": "vetor",
+    ".fgb": "vetor",
+    # raster
+    ".tif": "raster",
+    ".tiff": "raster",
+    ".geotiff": "raster",
+    ".img": "raster",
+    # geodatabase (containers)
+    ".gdb": "geodatabase",
+    ".gpkg.gdb": "geodatabase",
+}
+
 
 def relative_path(value: str | PathLike[str], *, label: str = "caminho") -> Path:
     """Valida e normaliza um caminho relativo, sem permitir fuga da raiz."""
@@ -50,3 +75,74 @@ def project_relative(value: Path) -> str:
     except ValueError as exc:
         raise ValueError("Caminho fora da raiz do projeto") from exc
     return relative.as_posix()
+
+
+def geo_outputs_dir() -> Path:
+    """Diretório absoluto onde toda saída geoprocessada deve ser gravada."""
+    caminho = PROJECT_ROOT / GEO_OUTPUTS_DIR
+    caminho.mkdir(parents=True, exist_ok=True)
+    for categoria in GEO_OUTPUT_CATEGORIES:
+        (caminho / categoria).mkdir(parents=True, exist_ok=True)
+    return caminho
+
+
+def categoria_por_extensao(nome_arquivo: str) -> str:
+    """Retorna a categoria canônica (`vetor`/`raster`/`geodatabase`) para a extensão."""
+    nome = str(nome_arquivo).strip().lower()
+    if not nome:
+        raise ValueError("Nome de arquivo vazio para classificação")
+    # Casa primeiro sufixo composto (ex.: .gpkg.gdb) para não colidir com .gpkg.
+    for extensao, categoria in _EXTENSION_TO_CATEGORY.items():
+        if extensao.count(".") > 1 and nome.endswith(extensao):
+            return categoria
+    ext = Path(nome).suffix
+    categoria = _EXTENSION_TO_CATEGORY.get(ext)
+    if categoria is None:
+        aceitas = ", ".join(sorted(_EXTENSION_TO_CATEGORY))
+        raise ValueError(
+            f"Extensão '{ext or '(sem extensão)'}' não reconhecida; "
+            f"formatos aceitos: {aceitas}"
+        )
+    return categoria
+
+
+def validar_categoria_compativel(nome_arquivo: str, categoria_dado: str) -> str:
+    """Aborta se a extensão do arquivo não corresponder à categoria do dado.
+
+    ``categoria_dado`` é ``'vetor'``, ``'raster'`` ou ``'geodatabase'`` — sempre
+    determinada a partir da natureza do recurso em memória, não do que o cliente
+    solicitou. Retorna a categoria (sempre igual à derivada da extensão) para
+    uso subsequente no roteamento.
+    """
+    categoria_arquivo = categoria_por_extensao(nome_arquivo)
+    if categoria_dado not in GEO_OUTPUT_CATEGORIES:
+        raise ValueError(
+            f"Categoria de dado '{categoria_dado}' inválida; "
+            f"esperado: {', '.join(GEO_OUTPUT_CATEGORIES)}"
+        )
+    if categoria_arquivo != categoria_dado:
+        raise ValueError(
+            f"Formato de saída '{Path(nome_arquivo).suffix}' pertence à "
+            f"categoria '{categoria_arquivo}', mas o dado é '{categoria_dado}'. "
+            "Corrija a extensão do arquivo ou a categoria antes de salvar."
+        )
+    return categoria_arquivo
+
+
+def geo_output_path(
+    nome_arquivo: str,
+    *,
+    categoria: str | None = None,
+    label: str = "arquivo",
+) -> Path:
+    """Resolve o caminho de saída dentro da subpasta correta do destino único.
+
+    Se ``categoria`` for informada, valida contra a extensão (raise em conflito).
+    Se omitida, a subpasta é inferida da extensão.
+    """
+    nome = relative_file_name(nome_arquivo, label=label)
+    if categoria is None:
+        categoria_final = categoria_por_extensao(nome)
+    else:
+        categoria_final = validar_categoria_compativel(nome, categoria)
+    return geo_outputs_dir() / categoria_final / nome

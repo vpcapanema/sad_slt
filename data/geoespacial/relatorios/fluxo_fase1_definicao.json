@@ -1,0 +1,555 @@
+{
+  "id": "fluxo_fase1_gerador_risco_restricao_pli",
+  "nome": "Fase 1 — Gerador de camadas de elegibilidade (risco e restrição) PLI-SP",
+  "descricao": "Consolida as camadas de restrição (níveis 4) e risco (níveis 1-3) da matriz PLI-SP a partir das fontes já carregadas no painel de conteúdo. Aplica precedência restrição > risco removendo do risco as áreas que já são restritivas. Publica GeoPackage em EPSG:4674.",
+  "categoria": "Fluxos customizados",
+  "toolbox": "SIRCADI Toolbox",
+  "modulo": "fase1",
+  "itens": [
+    {
+      "algoritmo_id": "OP-35",
+      "parametros": {
+        "camada_ids": "$camadas_restricao",
+        "nome_saida": "Restrição consolidada (bruta)"
+      },
+      "mapear_saidas": {
+        "camada_id": "restricao_bruta"
+      }
+    },
+    {
+      "algoritmo_id": "OP-33",
+      "parametros": {
+        "camada_id": "$restricao_bruta",
+        "camada_mascara_id": "$mascara_sp",
+        "manter_tipo_geometria": true,
+        "nome_saida": "Restrição recortada por SP"
+      },
+      "mapear_saidas": {
+        "camada_id": "restricao_recortada"
+      }
+    },
+    {
+      "algoritmo_id": "OP-36",
+      "parametros": {
+        "camada_id": "$restricao_recortada",
+        "crs_destino": "EPSG:4674",
+        "nome_saida": "Restrição consolidada"
+      },
+      "mapear_saidas": {
+        "camada_id": "restricao_final"
+      }
+    },
+    {
+      "algoritmo_id": "OP-27",
+      "parametros": {
+        "entrada": "$restricao_final",
+        "nome_saida": "restricao_consolidada_sp_v1",
+        "crs_saida": "EPSG:4674",
+        "destino": "storage",
+        "formato_saida": "geopackage"
+      }
+    },
+    {
+      "algoritmo_id": "OP-35",
+      "parametros": {
+        "camada_ids": "$camadas_risco",
+        "nome_saida": "Risco consolidado (bruto)"
+      },
+      "mapear_saidas": {
+        "camada_id": "risco_bruto"
+      }
+    },
+    {
+      "algoritmo_id": "OP-33",
+      "parametros": {
+        "camada_id": "$risco_bruto",
+        "camada_mascara_id": "$mascara_sp",
+        "manter_tipo_geometria": true,
+        "nome_saida": "Risco recortado por SP"
+      },
+      "mapear_saidas": {
+        "camada_id": "risco_recortado"
+      }
+    },
+    {
+      "algoritmo_id": "OP-07",
+      "parametros": {
+        "camada_id": "$risco_recortado",
+        "camada_ref_id": "$restricao_final",
+        "tipo_selecao": "intersects",
+        "inverter_selecao": true
+      },
+      "mapear_saidas": {
+        "camada_id": "risco_sem_restricao"
+      }
+    },
+    {
+      "algoritmo_id": "OP-36",
+      "parametros": {
+        "camada_id": "$risco_sem_restricao",
+        "crs_destino": "EPSG:4674",
+        "nome_saida": "Risco consolidado"
+      },
+      "mapear_saidas": {
+        "camada_id": "risco_final"
+      }
+    },
+    {
+      "algoritmo_id": "OP-27",
+      "parametros": {
+        "entrada": "$risco_final",
+        "nome_saida": "risco_consolidado_sp_v1",
+        "crs_saida": "EPSG:4674",
+        "destino": "storage",
+        "formato_saida": "geopackage"
+      }
+    }
+  ],
+  "parametros_expostos": [
+    {
+      "nome": "Camadas de restrição (lista)",
+      "chave": "camadas_restricao",
+      "tipo_entrada": "vector_layers",
+      "valor": ""
+    },
+    {
+      "nome": "Camadas de risco (lista)",
+      "chave": "camadas_risco",
+      "tipo_entrada": "vector_layers",
+      "valor": ""
+    },
+    {
+      "nome": "Máscara SP",
+      "chave": "mascara_sp",
+      "tipo_entrada": "vector_layer",
+      "valor": ""
+    }
+  ],
+  "variaveis": [
+    {
+      "nome": "restricao_bruta",
+      "chave": "restricao_bruta",
+      "tipo": "dados",
+      "valor": ""
+    },
+    {
+      "nome": "restricao_recortada",
+      "chave": "restricao_recortada",
+      "tipo": "dados",
+      "valor": ""
+    },
+    {
+      "nome": "restricao_final",
+      "chave": "restricao_final",
+      "tipo": "dados",
+      "valor": ""
+    },
+    {
+      "nome": "risco_bruto",
+      "chave": "risco_bruto",
+      "tipo": "dados",
+      "valor": ""
+    },
+    {
+      "nome": "risco_recortado",
+      "chave": "risco_recortado",
+      "tipo": "dados",
+      "valor": ""
+    },
+    {
+      "nome": "risco_sem_restricao",
+      "chave": "risco_sem_restricao",
+      "tipo": "dados",
+      "valor": ""
+    },
+    {
+      "nome": "risco_final",
+      "chave": "risco_final",
+      "tipo": "dados",
+      "valor": ""
+    }
+  ],
+  "saidas": [
+    {
+      "nome": "restricao_consolidada_sp_v1",
+      "chave": "camada_id",
+      "crs_saida": "EPSG:4674",
+      "destino": "storage",
+      "formato_saida": "geopackage"
+    },
+    {
+      "nome": "risco_consolidado_sp_v1",
+      "chave": "camada_id",
+      "crs_saida": "EPSG:4674",
+      "destino": "storage",
+      "formato_saida": "geopackage"
+    }
+  ],
+  "diagrama": {
+    "versao": 3,
+    "nos": [
+      {
+        "id": "in_restricao",
+        "kind": "input",
+        "ref": "camadas_restricao",
+        "label": "Camadas de restrição (lista)",
+        "params": {
+          "valor": ""
+        },
+        "x": 40,
+        "y": 60
+      },
+      {
+        "id": "in_risco",
+        "kind": "input",
+        "ref": "camadas_risco",
+        "label": "Camadas de risco (lista)",
+        "params": {
+          "valor": ""
+        },
+        "x": 40,
+        "y": 260
+      },
+      {
+        "id": "in_mascara",
+        "kind": "input",
+        "ref": "mascara_sp",
+        "label": "Máscara SP",
+        "params": {
+          "valor": ""
+        },
+        "x": 40,
+        "y": 460
+      },
+      {
+        "id": "var_restricao_bruta",
+        "kind": "variable",
+        "ref": "restricao_bruta",
+        "label": "restricao_bruta",
+        "params": {
+          "tipo": "dados",
+          "valor": ""
+        },
+        "x": 240,
+        "y": 60
+      },
+      {
+        "id": "var_restricao_recortada",
+        "kind": "variable",
+        "ref": "restricao_recortada",
+        "label": "restricao_recortada",
+        "params": {
+          "tipo": "dados",
+          "valor": ""
+        },
+        "x": 460,
+        "y": 60
+      },
+      {
+        "id": "var_restricao_final",
+        "kind": "variable",
+        "ref": "restricao_final",
+        "label": "restricao_final",
+        "params": {
+          "tipo": "dados",
+          "valor": ""
+        },
+        "x": 680,
+        "y": 60
+      },
+      {
+        "id": "var_risco_bruto",
+        "kind": "variable",
+        "ref": "risco_bruto",
+        "label": "risco_bruto",
+        "params": {
+          "tipo": "dados",
+          "valor": ""
+        },
+        "x": 240,
+        "y": 260
+      },
+      {
+        "id": "var_risco_recortado",
+        "kind": "variable",
+        "ref": "risco_recortado",
+        "label": "risco_recortado",
+        "params": {
+          "tipo": "dados",
+          "valor": ""
+        },
+        "x": 460,
+        "y": 260
+      },
+      {
+        "id": "var_risco_sem_restricao",
+        "kind": "variable",
+        "ref": "risco_sem_restricao",
+        "label": "risco_sem_restricao",
+        "params": {
+          "tipo": "dados",
+          "valor": ""
+        },
+        "x": 680,
+        "y": 260
+      },
+      {
+        "id": "var_risco_final",
+        "kind": "variable",
+        "ref": "risco_final",
+        "label": "risco_final",
+        "params": {
+          "tipo": "dados",
+          "valor": ""
+        },
+        "x": 900,
+        "y": 260
+      },
+      {
+        "id": "alg_merge_restricao",
+        "kind": "algorithm",
+        "ref": "OP-35",
+        "label": "Mesclar camadas de restrição",
+        "params": {
+          "nome_saida": "Restrição consolidada (bruta)"
+        },
+        "x": 140,
+        "y": 140
+      },
+      {
+        "id": "alg_clip_restricao",
+        "kind": "algorithm",
+        "ref": "OP-33",
+        "label": "Recortar restrição por SP",
+        "params": {
+          "nome_saida": "Restrição recortada por SP",
+          "manter_tipo_geometria": true
+        },
+        "x": 360,
+        "y": 140
+      },
+      {
+        "id": "alg_reproj_restricao",
+        "kind": "algorithm",
+        "ref": "OP-36",
+        "label": "Reprojetar restrição para EPSG:4674",
+        "params": {
+          "crs_destino": "EPSG:4674",
+          "nome_saida": "Restrição consolidada"
+        },
+        "x": 580,
+        "y": 140
+      },
+      {
+        "id": "alg_save_restricao",
+        "kind": "algorithm",
+        "ref": "OP-27",
+        "label": "Salvar restrição consolidada",
+        "params": {
+          "nome_saida": "restricao_consolidada_sp_v1",
+          "crs_saida": "EPSG:4674",
+          "destino": "storage",
+          "formato_saida": "geopackage"
+        },
+        "x": 800,
+        "y": 140
+      },
+      {
+        "id": "alg_merge_risco",
+        "kind": "algorithm",
+        "ref": "OP-35",
+        "label": "Mesclar camadas de risco",
+        "params": {
+          "nome_saida": "Risco consolidado (bruto)"
+        },
+        "x": 140,
+        "y": 340
+      },
+      {
+        "id": "alg_clip_risco",
+        "kind": "algorithm",
+        "ref": "OP-33",
+        "label": "Recortar risco por SP",
+        "params": {
+          "nome_saida": "Risco recortado por SP",
+          "manter_tipo_geometria": true
+        },
+        "x": 360,
+        "y": 340
+      },
+      {
+        "id": "alg_diff_risco",
+        "kind": "algorithm",
+        "ref": "OP-07",
+        "label": "Subtrair polígonos de restrição do risco",
+        "params": {
+          "tipo_selecao": "intersects",
+          "inverter_selecao": true
+        },
+        "x": 580,
+        "y": 340
+      },
+      {
+        "id": "alg_reproj_risco",
+        "kind": "algorithm",
+        "ref": "OP-36",
+        "label": "Reprojetar risco para EPSG:4674",
+        "params": {
+          "crs_destino": "EPSG:4674",
+          "nome_saida": "Risco consolidado"
+        },
+        "x": 800,
+        "y": 340
+      },
+      {
+        "id": "alg_save_risco",
+        "kind": "algorithm",
+        "ref": "OP-27",
+        "label": "Salvar risco consolidado",
+        "params": {
+          "nome_saida": "risco_consolidado_sp_v1",
+          "crs_saida": "EPSG:4674",
+          "destino": "storage",
+          "formato_saida": "geopackage"
+        },
+        "x": 1020,
+        "y": 340
+      },
+      {
+        "id": "out_restricao",
+        "kind": "output",
+        "ref": "saida_restricao",
+        "label": "Camada de restrição (GeoPackage)",
+        "params": {
+          "nome_saida": "restricao_consolidada_sp_v1",
+          "crs_saida": "EPSG:4674",
+          "destino": "storage",
+          "formato_saida": "geopackage"
+        },
+        "x": 1020,
+        "y": 140
+      },
+      {
+        "id": "out_risco",
+        "kind": "output",
+        "ref": "saida_risco",
+        "label": "Camada de risco (GeoPackage)",
+        "params": {
+          "nome_saida": "risco_consolidado_sp_v1",
+          "crs_saida": "EPSG:4674",
+          "destino": "storage",
+          "formato_saida": "geopackage"
+        },
+        "x": 1240,
+        "y": 340
+      }
+    ],
+    "conexoes": [
+      {
+        "from": "in_restricao",
+        "to": "alg_merge_restricao",
+        "parameter": "camada_ids"
+      },
+      {
+        "from": "alg_merge_restricao",
+        "to": "var_restricao_bruta",
+        "parameter": null
+      },
+      {
+        "from": "var_restricao_bruta",
+        "to": "alg_clip_restricao",
+        "parameter": "camada_id"
+      },
+      {
+        "from": "in_mascara",
+        "to": "alg_clip_restricao",
+        "parameter": "camada_mascara_id"
+      },
+      {
+        "from": "alg_clip_restricao",
+        "to": "var_restricao_recortada",
+        "parameter": null
+      },
+      {
+        "from": "var_restricao_recortada",
+        "to": "alg_reproj_restricao",
+        "parameter": "camada_id"
+      },
+      {
+        "from": "alg_reproj_restricao",
+        "to": "var_restricao_final",
+        "parameter": null
+      },
+      {
+        "from": "var_restricao_final",
+        "to": "alg_save_restricao",
+        "parameter": "entrada"
+      },
+      {
+        "from": "alg_save_restricao",
+        "to": "out_restricao",
+        "parameter": null
+      },
+      {
+        "from": "in_risco",
+        "to": "alg_merge_risco",
+        "parameter": "camada_ids"
+      },
+      {
+        "from": "alg_merge_risco",
+        "to": "var_risco_bruto",
+        "parameter": null
+      },
+      {
+        "from": "var_risco_bruto",
+        "to": "alg_clip_risco",
+        "parameter": "camada_id"
+      },
+      {
+        "from": "in_mascara",
+        "to": "alg_clip_risco",
+        "parameter": "camada_mascara_id"
+      },
+      {
+        "from": "alg_clip_risco",
+        "to": "var_risco_recortado",
+        "parameter": null
+      },
+      {
+        "from": "var_risco_recortado",
+        "to": "alg_diff_risco",
+        "parameter": "camada_id"
+      },
+      {
+        "from": "var_restricao_final",
+        "to": "alg_diff_risco",
+        "parameter": "camada_ref_id"
+      },
+      {
+        "from": "alg_diff_risco",
+        "to": "var_risco_sem_restricao",
+        "parameter": null
+      },
+      {
+        "from": "var_risco_sem_restricao",
+        "to": "alg_reproj_risco",
+        "parameter": "camada_id"
+      },
+      {
+        "from": "alg_reproj_risco",
+        "to": "var_risco_final",
+        "parameter": null
+      },
+      {
+        "from": "var_risco_final",
+        "to": "alg_save_risco",
+        "parameter": "entrada"
+      },
+      {
+        "from": "alg_save_risco",
+        "to": "out_risco",
+        "parameter": null
+      }
+    ]
+  }
+}

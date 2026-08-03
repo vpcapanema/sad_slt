@@ -65,7 +65,7 @@
     "OP-25":[["camada_id","Camada","layer"]],
     "OP-26":[["raster_id","Camada","layer"],["comprimir_arquivo","Comprimir","check",true]]
   };
-  const BASEMAPS=[{id:"osm",name:"OpenStreetMap",tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"]},{id:"carto-light",name:"Carto Claro",tiles:["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"]},{id:"carto-dark",name:"Carto Escuro",tiles:["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"]},{id:"esri-satellite",name:"Imagem de Satélite",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"]}];
+  const BASEMAPS=[{id:"esri-gray",name:"Cinza Neutro (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"]},{id:"esri-dark-gray",name:"Cinza Escuro (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"]},{id:"carto-positron",name:"Carto Positron (sem rótulos)",tiles:["https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"]},{id:"carto-voyager",name:"Carto Voyager",tiles:["https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"]},{id:"carto-light",name:"Carto Claro",tiles:["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"]},{id:"carto-dark",name:"Carto Escuro",tiles:["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"]},{id:"osm",name:"OpenStreetMap",tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"]},{id:"esri-street",name:"Ruas (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"]},{id:"esri-topo",name:"Topográfico (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"]},{id:"opentopomap",name:"OpenTopoMap",tiles:["https://a.tile.opentopomap.org/{z}/{x}/{y}.png"]},{id:"esri-natgeo",name:"National Geographic (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}"]},{id:"esri-satellite",name:"Imagem de Satélite (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"]}];
   Object.assign(FIELDS,{"OP-11":[["camada_id","Camada","layer"],["atributo_peso","Atributo de peso","text"],["resolucao_distancia","Resolução","number",50]],"OP-13":[["raster_id","ID do raster de custo","text"],["origem_linha","Linha de origem","number",0],["origem_coluna","Coluna de origem","number",0]],"OP-16":[["camada_id","Camada","layer"],["resolucao_raster","Resolução","number",50]],"OP-21":[["raster_id","ID do raster","text"],["camada_mascara_id","Camada de máscara","layer"]],"OP-22":[["raster_id","ID do raster","text"],["camada_zona_id","Camada de zonas","layer"]],"OP-23":[["raster_id","ID do raster","text"],["camada_pontos_id","Camada de pontos","layer"]],"OP-24":[["raster_id","ID do raster","text"],["camada_poligono_id","Camada de polígonos","layer"],["estatistica","Estatística","select",["media","soma","min","max"]]]});
   Object.assign(FIELDS,{
     "OP-28":[["camada_id","Camada","layer"]],"OP-29":[["camada_id","Camada","layer"]],"OP-30":[["camada_id","Camada","layer"]],
@@ -96,7 +96,7 @@
       ["formato_saida","Formato","select",raster?["JSON","GeoTIFF"]:["GeoJSON","GeoPackage","Shapefile"]]
     );
   });
-  const state={map:null,layers:[],basemap:"osm",selected:null,activeLayerId:null,activeExecution:null,toolboxScope:"geral",functions:[],flows:[],history:load("gp-history",[]),layerGroups:load("gp-layer-groups",{operational:false,basemap:false}),layerColors:load("gp-layer-colors",{}),geometryTypes:{},catalogHydrated:false,catalogSyncPending:false,leftTab:"drawing"};
+  const state={map:null,layers:[],basemaps:new Set(["esri-gray"]),selected:null,activeLayerId:null,activeExecution:null,toolboxScope:"geral",functions:[],flows:[],history:load("gp-history",[]),layerGroups:load("gp-layer-groups",{operational:false,basemap:false}),layerColors:load("gp-layer-colors",{}),geometryTypes:{},catalogHydrated:false,catalogSyncPending:false,leftTab:"drawing"};
   const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
   let generatedFieldId=0;
   function associateFormFields(root=document){
@@ -199,16 +199,17 @@
     renderLayers();if(report)log(`Cor da camada alterada para ${color}.`,"ok");return true;
   }
   function ribbon(tab="mapa"){
+    const modelEditor=tab==="modelo"&&window.gpModeler?.hasActiveEditor?.() ? [["Editor",[["save","Salvar","model-save"],["badge-check","Validar","model-validate"],["play","Executar","model-run"],["log-in","Entrada","model-input"],["circle-dot","Variável","model-variable","menu:variable"],["repeat-2","Iterador","model-iterator","menu:iterator"],["settings-2","Algoritmo","model-algorithm","menu:algorithm"],["blocks","Função","model-function","menu:function"],["log-out","Saída","model-output"],["git-commit-horizontal","Conectar","model-connect"],["copy","Duplicar","model-duplicate"],["trash-2","Excluir","model-delete"],["layout-grid","Organizar","model-layout"],["maximize","Ajustar","model-fit"]]]] : [];
     const sets={
       mapa:[["Dados",[["folder-open","Importar arquivo","import-file",true],["cloud-download","Importar WFS","import-wfs"],["database","Carregar do sistema","load-system"],["map","Basemap","basemap"]]],["Navegação",[["mouse-pointer-2","Explorar","explore"],["maximize","Zoom nas camadas","fit"],["scan","Zoom na seleção","fit-selection"]]],["Seleção",[["mouse-pointer-click","Selecionar","select"],["list-x","Limpar seleção","clear"]]],["Camada",[["table-properties","Tabela de atributos","attributes"],["trash-2","Remover camada","remove"],["x","Excluir camada","delete-layer"]]]],
       analise:[["Geoprocessamento",[["briefcase","SIRCADI Toolbox","tools",true],["briefcase","Geospatial Toolbox","tools-vector-raster",true],["briefcase","Numerical Analysis Toolbox","tools-science",true],["briefcase","Surface Modeling Toolbox","tools-interpolation",true]]],["Execução",[["play","Executar","run"],["square","Cancelar","cancel"],["history","Histórico","history"]]],["Configuração",[["sliders-horizontal","Ambientes","environments"],["shield-check","Validar entrada","validate"]]],["Resultados",[["save","Salvar resultado","save-result"],["layers","Adicionar resultado ao mapa","add-result"]]]],
-      modelo:[["Funções",[["blocks","Nova função","new-function",true],["pencil","Editar função","edit-function"],["badge-check","Validar função","validate-function"],["play","Executar função","run-function"]]],["Fluxos",[["workflow","Novo fluxo","new-flow",true],["pencil","Editar fluxo","edit-flow"],["badge-check","Validar fluxo","validate-flow"],["play","Executar fluxo","run-flow"]]],["Definições",[["copy","Duplicar","duplicate"],["file-input","Importar definição","import-definition"],["file-output","Exportar definição","export-definition"]]]],
+      modelo:[...modelEditor,["Funções",[["blocks","Nova função","new-function",true],["pencil","Editar função","edit-function"],["badge-check","Validar função","validate-function"],["play","Executar função","run-function"]]],["Fluxos",[["workflow","Novo fluxo","new-flow",true],["pencil","Editar fluxo","edit-flow"],["badge-check","Validar fluxo","validate-flow"],["play","Executar fluxo","run-flow"]]],["Definições",[["copy","Duplicar","duplicate"],["file-input","Importar definição","import-definition"],["file-output","Exportar definição","export-definition"]]]],
       dados:[["Inspecionar",[["info","Propriedades","properties"],["table-properties","Tabela de atributos","attributes"]]],["Consulta",[["calculator","Calcular campo","calculate-field"],["list-filter","Selecionar por atributo","select-attribute"],["filter","Filtrar camada","filter-layer"]]],["Preparar",[["globe-2","Reprojetar","reproject"],["wrench","Reparar geometria","repair"]]],["Publicar",[["badge-check","Homologar camada","homologate-layer",true],["download","Exportar dados","export"],["refresh-cw","Atualizar fonte","refresh-source"],["trash-2","Remover camada","remove"],["x","Excluir camada","delete-layer"]]]]
     };
     const marks={tools:"•","tools-vector-raster":"◇","tools-science":"Σ","tools-interpolation":"∿"};
-    $("#gp-ribbon-tools").innerHTML=sets[tab].map(([g,items])=>`<div class="ribbon-group" data-label="${g}">${items.map(([i,n,a,t])=>`<button class="ribbon-action ${t?"toolbox":""}" data-action="${a}" title="${n}">${marks[a]?`<span class="toolbox-ribbon-icon"><i data-lucide="briefcase"></i><b aria-hidden="true">${marks[a]}</b></span>`:`<i data-lucide="${i}"></i>`}<span>${n}</span></button>`).join("")}</div>`).join("");icons();
+    $("#gp-ribbon-tools").innerHTML=sets[tab].map(([g,items])=>`<div class="ribbon-group" data-label="${g}">${items.map(([i,n,a,t])=>{const menu=typeof t==="string"&&t.startsWith("menu:")?t.slice(5):"";const toolbox=t===true;return `<button class="ribbon-action ${toolbox?"toolbox":""}" data-action="${a}" ${a.startsWith("model-")?`data-model-command="${a}"`:""} ${menu?`data-model-menu="${menu}" aria-haspopup="true" aria-expanded="false"`:""} title="${n}">${marks[a]?`<span class="toolbox-ribbon-icon"><i data-lucide="briefcase"></i><b aria-hidden="true">${marks[a]}</b></span>`:`<i data-lucide="${i}"></i>`}<span>${n}</span></button>`}).join("")}</div>`).join("");icons();window.gpModeler?.updateRibbon?.();
   }
-  function initMap(){const sources={},layers=[];BASEMAPS.forEach((b,i)=>{sources[b.id]={type:"raster",tiles:b.tiles,tileSize:256,attribution:"© provedores do mapa"};layers.push({id:`basemap-${b.id}`,type:"raster",source:b.id,layout:{visibility:i?"none":"visible"}})});state.map=new maplibregl.Map({container:"gp-map",center:[-48.5,-22.4],zoom:6.2,style:{version:8,sources,layers}});state.map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-right");state.map.on("mousemove",e=>$("#gp-coordinates").textContent=`${e.lngLat.lng.toFixed(5)}, ${e.lngLat.lat.toFixed(5)}`);state.map.on("zoom",()=>$("#gp-scale").textContent=`Zoom ${state.map.getZoom().toFixed(1)}`)}
+  function initMap(){const sources={},layers=[];BASEMAPS.forEach((b)=>{sources[b.id]={type:"raster",tiles:b.tiles,tileSize:256,attribution:"© provedores do mapa"};layers.push({id:`basemap-${b.id}`,type:"raster",source:b.id,layout:{visibility:state.basemaps.has(b.id)?"visible":"none"}})});state.map=new maplibregl.Map({container:"gp-map",center:[-48.5,-22.4],zoom:6.2,style:{version:8,sources,layers}});state.map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-right");state.map.on("mousemove",e=>$("#gp-coordinates").textContent=`${e.lngLat.lng.toFixed(5)}, ${e.lngLat.lat.toFixed(5)}`);state.map.on("zoom",()=>$("#gp-scale").textContent=`Zoom ${state.map.getZoom().toFixed(1)}`)}
   function removeMapResource(id){
     [`${id}-point`,`${id}-line`,id].forEach(layerId=>{if(state.map?.getLayer(layerId))state.map.removeLayer(layerId)});
     if(state.map?.getSource(id))state.map.removeSource(id);
@@ -216,24 +217,31 @@
   }
   async function reconcileCatalog(resources,requestedIds=[],focusId=null,onStage=null){
     const resourceIds=new Set(resources.map(resource=>resource.id));
-    state.layers.filter(layer=>!resourceIds.has(layer.id)).forEach(layer=>removeMapResource(layer.id));
+    const inMemory=state.layers.filter(layer=>layer.destino==="memoria_local");
+    const inMemoryIds=new Set(inMemory.map(layer=>layer.id));
+    state.layers.filter(layer=>!resourceIds.has(layer.id)&&!inMemoryIds.has(layer.id)).forEach(layer=>removeMapResource(layer.id));
     const loadedIds=new Set([...state.layers.map(layer=>layer.id),...requestedIds]);
-    state.layers=resources.filter(resource=>loadedIds.has(resource.id));
+    const catalogLayers=resources.filter(resource=>loadedIds.has(resource.id));
+    state.layers=[...inMemory,...catalogLayers];
     const visible=[];
-    for(const resource of state.layers){
+    for(const resource of catalogLayers){
       try{await addCatalogLayerToMap(resource.id,resource.id===focusId);visible.push(resource)}
       catch(error){removeMapResource(resource.id);log(`${resource.nome} não foi incluída: ${error.message}`,"error")}
     }
-    state.layers=visible;state.catalogHydrated=true;renderLayers();onStage?.("Camada representada no mapa");
-    return new Set(visible.map(resource=>resource.id));
+    state.layers=[...inMemory,...visible];state.catalogHydrated=true;renderLayers();onStage?.("Camada representada no mapa");
+    return new Set([...inMemoryIds,...visible.map(resource=>resource.id)]);
   }
   async function refreshLayers(strict=false,requestedIds=[],focusId=null,onStage=null){
     try{
       const response=await fetch(`${API}/camadas`);if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const resources=await response.json();onStage?.("Catálogo atualizado");
       if(!state.map?.isStyleLoaded()){
-        if(!state.catalogSyncPending){state.catalogSyncPending=true;state.map.once("load",async()=>{state.catalogSyncPending=false;await refreshLayers()})}
-        return new Set();
+        await new Promise((resolve,reject)=>{
+          const timeout=setTimeout(()=>reject(new Error("Mapa não ficou pronto para representar a camada")),10000);
+          const pronto=()=>{clearTimeout(timeout);resolve()};
+          state.map.once("load",pronto);
+          state.map.once("style.load",pronto);
+        });
       }
       return await reconcileCatalog(resources,requestedIds,focusId,onStage);
     }catch(error){log(`Catálogo indisponível: ${error.message}`,"error");if(strict)throw error;return new Set(state.layers.map(layer=>layer.id))}
@@ -256,7 +264,7 @@
   }
   function renderLayers(){
     const query=$("#gp-layer-search").value.toLocaleLowerCase("pt-BR"),items=state.layers.filter(layer=>layer.nome.toLocaleLowerCase("pt-BR").includes(query));
-    const base=BASEMAPS.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(query)).map(item=>`<label class="tree-row tree-indent"><input type="radio" name="basemap" value="${item.id}" ${state.basemap===item.id?"checked":""}><i data-lucide="map"></i><span class="layer-name">${item.name}</span></label>`).join("");
+    const base=BASEMAPS.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(query)).map(item=>`<label class="tree-row tree-indent"><input type="checkbox" data-basemap-toggle="${item.id}" ${state.basemaps.has(item.id)?"checked":""}><i data-lucide="map"></i><span class="layer-name">${item.name}</span></label>`).join("");
     const bySource=state.leftTab==="source";
     const sourcePath=(layer)=>{
       const meta=layer.metadados||{};
@@ -272,7 +280,7 @@
     $("#gp-layer-list").innerHTML=group("operational",operationalLabel,"layers-3",operational,"Nenhuma camada carregada.")+group("basemap","Basemap","map",base,"Nenhum mapa-base encontrado.");icons();
     updateComponentPlaceholder();
   }
-  function setBasemap(id){state.basemap=id;BASEMAPS.forEach(b=>{const layer=`basemap-${b.id}`;if(state.map.getLayer(layer))state.map.setLayoutProperty(layer,"visibility",b.id===id?"visible":"none")})}
+  function setBasemap(id,visible){if(!BASEMAPS.some(b=>b.id===id))return;const show=visible===undefined?!state.basemaps.has(id):Boolean(visible);if(show)state.basemaps.add(id);else state.basemaps.delete(id);const layer=`basemap-${id}`;if(state.map?.getLayer(layer))state.map.setLayoutProperty(layer,"visibility",show?"visible":"none")}
   function renderToolbox(filter=""){const f=filter.toLowerCase();$("#gp-toolbox").innerHTML=OPS.map(([g,ops])=>{const rows=ops.filter(o=>(o[0]+o[1]).toLowerCase().includes(f));return rows.length?`<div class="tool-group"><button class="tool-group-title"><i data-lucide="briefcase"></i>${g}</button>${rows.map(o=>`<button class="tool-row" data-op="${o[0]}"><span class="tool-name">${o[1]}</span><span class="availability ${o[3]===2?"partial":""}" title="${o[3]===1?"Disponível":o[3]===2?"Backend em implementação":"Catalogado; motor pendente"}"></span></button>`).join("")}</div>`:""}).join("");icons()}
   function selectOp(id){state.selected=id;$$('[data-right-tab]').forEach(b=>b.classList.toggle("active",b.dataset.rightTab==="tools"));showEditor();const op=OPS.flatMap(x=>x[1]).find(x=>x[0]===id);const fields=FIELDS[id]||[];$("#gp-right-title").textContent=op[1];$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>${op[1]}</h2></div><form id="gp-op-form" data-op="${op[0]}"><div class="editor-body">${fields.length?fields.map(fieldHtml).join(""):`<div class="empty">O algoritmo está catalogado na stack, mas seu contrato de execução ainda não foi implementado no backend.</div>`}</div><div class="editor-actions"><button type="button" class="btn" data-add-function>Adicionar à função</button><button class="btn primary" ${!op[2]?"disabled":""}>Executar</button></div></form>`;icons();const form=$("#gp-op-form");configureOutputFields(form,RASTER_OUTPUT.has(id),op);configureSelectionScope(form);bindOutputNameAuto(form,op);window.gpCommands?.applyEnvironments(form);form.onsubmit=e=>{e.preventDefault();executeOp(op,e.target)};$("[data-back]").onclick=()=>showTools();$("[data-add-function]").onclick=()=>window.gpApp.newFunction(id);updateComponentPlaceholder()}
   function configureSelectionScope(form){
@@ -430,7 +438,7 @@
   function activateToolsTab(){activateRightTab("tools")}
   function showTools(){activateToolsTab();$("#gp-right-title").textContent="Geoprocessamento";$("#gp-tools-view").classList.add("active");$("#gp-editor-view").classList.remove("active")}
   function showEditor(){$("#gp-tools-view").classList.remove("active");$("#gp-editor-view").classList.add("active")}
-  function showBasemapPanel(){activateToolsTab();showEditor();$("#gp-right-title").textContent="Mapa-base";$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><div><h2>Mapa-base</h2><p>Escolha o mapa de referência da visualização.</p></div></div><div class="editor-body option-list">${BASEMAPS.map(item=>`<label class="option-card ${state.basemap===item.id?"selected":""}"><input type="radio" name="panel-basemap" value="${item.id}" ${state.basemap===item.id?"checked":""}><i data-lucide="map"></i><span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.id)}</small></span></label>`).join("")}</div>`;$("[data-back]").onclick=showTools;$$('input[name="panel-basemap"]').forEach(input=>input.onchange=()=>{setBasemap(input.value);showBasemapPanel();renderLayers()});icons()}
+  function showBasemapPanel(){activateToolsTab();showEditor();$("#gp-right-title").textContent="Mapa-base";$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><div><h2>Mapa-base</h2><p>Escolha um ou mais mapas de referência da visualização.</p></div></div><div class="editor-body option-list">${BASEMAPS.map(item=>`<label class="option-card ${state.basemaps.has(item.id)?"selected":""}"><input type="checkbox" data-basemap-panel-toggle="${item.id}" ${state.basemaps.has(item.id)?"checked":""}><i data-lucide="map"></i><span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.id)}</small></span></label>`).join("")}</div>`;$("[data-back]").onclick=showTools;$$('[data-basemap-panel-toggle]').forEach(input=>input.onchange=()=>{setBasemap(input.dataset.basemapPanelToggle,input.checked);showBasemapPanel();renderLayers()});icons()}
   function showInfoPanel(title,description){activateToolsTab();showEditor();$("#gp-right-title").textContent=title;$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>${escapeHtml(title)}</h2></div><div class="editor-body"><div class="notice"><i data-lucide="info"></i><p>${escapeHtml(description)}</p></div></div>`;$("[data-back]").onclick=showTools;icons()}
   function newFunction(seed){showEditor();$("#gp-right-title").textContent="Editor de função";builder("function",seed?[{ref:seed,parametros:{}}]:[])}
   function newFlow(){showEditor();$("#gp-right-title").textContent="Editor de fluxo";builder("flow",[])}
@@ -468,12 +476,52 @@
   function showDefinitionRun(kind,item){
     const isFn=kind==="functions",endpoint=isFn?"funcoes":"fluxos";
     showEditor();$("#gp-right-title").textContent=`Executar ${isFn?"função":"fluxo"}`;
-    $("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><div><h2>${escapeHtml(item.nome)}</h2><p>Informe as entradas expostas pela definição em JSON.</p></div></div><form id="gp-definition-run"><div class="editor-body"><div class="field"><label>Entradas da execução</label><textarea name="inputs" rows="10" spellcheck="false">{}</textarea></div><p class="field-help">Referências como <code>$camada_entrada</code> são resolvidas com estes valores.</p></div><div class="editor-actions"><button type="button" class="btn" data-back-bottom>Cancelar</button><button class="btn primary">Executar</button></div></form>`;
+    const params=Array.isArray(item.parametros_expostos)?item.parametros_expostos:[];
+    const isRaster=layer=>String(layer.tipo||"").toLowerCase().includes("raster");
+    const layerOptions=filter=>state.layers.filter(filter).map(layer=>`<option value="${escapeHtml(layer.id)}">${escapeHtml(layer.nome)}</option>`).join("");
+    const inferMulti=chave=>/(_ids$|_lista$|_list$|s$)/.test(chave)&&!/status$|_class$/.test(chave);
+    const paramField=param=>{
+      const chave=param.chave||param.nome,label=escapeHtml(param.nome||chave),tipo=(param.tipo_entrada||param.tipo||"text").toLowerCase(),help=param.descricao?`<p class="field-help">${escapeHtml(param.descricao)}</p>`:"",required=param.obrigatorio===false?"":"required",defaultValue=param.valor??param.padrao??"";
+      if(tipo==="vector_layers"||tipo==="vector_layer"||tipo==="camada_vetorial"){
+        const multi=tipo==="vector_layers"&&inferMulti(chave);
+        return `<div class="field"><label>${label}${required?" *":""}</label><select data-param="${escapeHtml(chave)}" data-tipo="vetor${multi?"_multi":""}" ${multi?'multiple size="6"':""} ${required}>${multi?"":'<option value="">Selecione…</option>'}${layerOptions(l=>!isRaster(l))}</select>${help||'<p class="field-help">'+(multi?"Segure Ctrl/Cmd para escolher múltiplas camadas vetoriais.":"Camada vetorial do catálogo.")+"</p>"}</div>`;
+      }
+      if(tipo==="raster_layers"||tipo==="raster_layer"||tipo==="camada_raster"){
+        const multi=tipo==="raster_layers"&&inferMulti(chave);
+        return `<div class="field"><label>${label}${required?" *":""}</label><select data-param="${escapeHtml(chave)}" data-tipo="raster${multi?"_multi":""}" ${multi?'multiple size="6"':""} ${required}>${multi?"":'<option value="">Selecione…</option>'}${layerOptions(isRaster)}</select>${help}</div>`;
+      }
+      if((tipo==="select"||tipo==="enum")&&Array.isArray(param.opcoes)){
+        return `<div class="field"><label>${label}${required?" *":""}</label><select data-param="${escapeHtml(chave)}" data-tipo="select" ${required}>${param.opcoes.map(o=>{const v=typeof o==="object"?o.valor??o.value:o,r=typeof o==="object"?o.rotulo??o.label??v:o;return `<option value="${escapeHtml(String(v))}" ${String(defaultValue)===String(v)?"selected":""}>${escapeHtml(String(r))}</option>`}).join("")}</select>${help}</div>`;
+      }
+      if(tipo==="boolean"||tipo==="bool"||tipo==="check"){
+        return `<div class="field"><label class="field-check"><input type="checkbox" data-param="${escapeHtml(chave)}" data-tipo="bool" ${defaultValue?"checked":""}>${label}</label>${help}</div>`;
+      }
+      if(tipo==="number"||tipo==="int"||tipo==="float"||tipo==="numero"){
+        return `<div class="field"><label>${label}${required?" *":""}</label><input type="number" data-param="${escapeHtml(chave)}" data-tipo="number" value="${escapeHtml(String(defaultValue))}" ${required} ${tipo==="int"?'step="1"':'step="any"'}>${help}</div>`;
+      }
+      if(tipo==="values"||tipo==="text"||tipo==="string"||tipo==="valor"){
+        return `<div class="field"><label>${label}${required?" *":""}</label><input type="text" data-param="${escapeHtml(chave)}" data-tipo="text" value="${escapeHtml(String(defaultValue))}" ${required}>${help||'<p class="field-help">Valor literal usado na execução.</p>'}</div>`;
+      }
+      return `<div class="field"><label>${label}${required?" *":""}</label><textarea data-param="${escapeHtml(chave)}" data-tipo="json" rows="3" spellcheck="false" ${required}>${escapeHtml(defaultValue?JSON.stringify(defaultValue):"")}</textarea><p class="field-help">Tipo <code>${escapeHtml(tipo)}</code> — informe valor em JSON.</p></div>`;
+    };
+    const body=params.length
+      ?params.map(paramField).join("")
+      :`<div class="empty">Este ${isFn?"função":"fluxo"} não declara entradas expostas — execute diretamente.</div>`;
+    $("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><div><h2>${escapeHtml(item.nome)}</h2><p>${escapeHtml(item.descricao||"Preencha as entradas expostas e execute o "+(isFn?"função":"fluxo")+".")}</p></div></div><form id="gp-definition-run"><div class="editor-body">${body}</div><div class="editor-actions"><button type="button" class="btn" data-back-bottom>Cancelar</button><button class="btn primary">Executar</button></div></form>`;
     const back=()=>showLibrary(kind);$("[data-back]").onclick=back;$("[data-back-bottom]").onclick=back;icons();
     $("#gp-definition-run").onsubmit=async event=>{
       event.preventDefault();
+      const inputs={};
       try{
-        const inputs=JSON.parse(event.target.inputs.value||"{}"),response=await fetch(`${API}/${endpoint}/${item.id}/executar`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(inputs)}),body=await response.json();
+        for(const el of event.target.querySelectorAll("[data-param]")){
+          const chave=el.dataset.param,tipo=el.dataset.tipo;
+          if(tipo==="bool"){inputs[chave]=el.checked;continue}
+          if(tipo==="number"){inputs[chave]=el.value===""?null:Number(el.value);continue}
+          if(tipo==="vetor_multi"||tipo==="raster_multi"){inputs[chave]=[...el.selectedOptions].map(o=>o.value).filter(Boolean);continue}
+          if(tipo==="json"){inputs[chave]=el.value.trim()?JSON.parse(el.value):null;continue}
+          inputs[chave]=el.value;
+        }
+        const response=await fetch(`${API}/${endpoint}/${item.id}/executar`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(inputs)}),body=await response.json();
         if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
         log(`${isFn?"Função":"Fluxo"} executado com sucesso.`,"ok");await refreshLayers();showLibrary(kind);
       }catch(error){log(error.message,"error");$("#gp-log").classList.add("open")}
@@ -483,7 +531,8 @@
     if(kind==="properties"){showProperties(state.layers.find(layer=>layer.id===state.activeLayerId)||null);return}
     showEditor();const isFn=kind==="functions",list=isFn?state.functions:state.flows,endpoint=isFn?"funcoes":"fluxos";
     $("#gp-right-title").textContent=isFn?"Funções":"Fluxos";
-    $("#gp-editor-view").innerHTML=`<div class="editor-head"><h2>${isFn?"Funções":"Fluxos"}</h2><button class="btn primary" data-new>${isFn?"Nova função":"Novo fluxo"}</button></div>${list.length?`<div class="editor-body builder-list">${list.map(x=>`<div class="builder-item"><i data-lucide="${isFn?"blocks":"workflow"}"></i><strong>${escapeHtml(x.nome)}</strong><span>${(isFn?x.passos:x.itens)?.length||0}</span><button class="btn" data-edit-definition="${x.id}">Editar</button><button class="btn" data-validate-definition="${x.id}">Validar</button><button class="btn primary" data-run-definition="${x.id}">Executar</button><button class="icon-btn danger" data-delete="${x.id}"><i data-lucide="trash-2"></i></button></div>`).join("")}</div>`:`<div class="empty">Nenhum item criado.</div>`}`;icons();
+    const tips=window.gpModelTips?window.gpModelTips(isFn?"function":"flow"):"";
+    $("#gp-editor-view").innerHTML=`<div class="editor-head"><h2>${isFn?"Funções":"Fluxos"}</h2><button class="btn primary" data-new>${isFn?"Nova função":"Novo fluxo"}</button></div>${tips}${list.length?`<div class="editor-body builder-list">${list.map(x=>`<div class="builder-item"><i data-lucide="${isFn?"blocks":"workflow"}"></i><strong>${escapeHtml(x.nome)}</strong><span>${(isFn?x.passos:x.itens)?.length||0}</span><button class="btn" data-edit-definition="${x.id}">Editar</button><button class="btn" data-validate-definition="${x.id}">Validar</button><button class="btn primary" data-run-definition="${x.id}">Executar</button><button class="icon-btn danger" data-delete="${x.id}"><i data-lucide="trash-2"></i></button></div>`).join("")}</div>`:`<div class="empty">Nenhum item criado.</div>`}`;icons();
     $("[data-new]").onclick=()=>isFn?window.gpApp.newFunction():window.gpApp.newFlow();
     $("#gp-editor-view").onclick=async event=>{
       const del=event.target.closest("[data-delete]"),edit=event.target.closest("[data-edit-definition]"),validate=event.target.closest("[data-validate-definition]"),run=event.target.closest("[data-run-definition]");
@@ -570,7 +619,7 @@
     if(failures)taskProgress.fail(`${failures} camada${failures===1?"":"s"} não puderam ser importadas`);else taskProgress.complete();
   }
   function walkCoords(v,cb){if(!Array.isArray(v))return;if(typeof v[0]==="number")cb(v);else v.forEach(x=>walkCoords(x,cb))}
-  function bind(){ribbon();renderToolbox();refreshLayers();refreshDefinitions();$("#gp-tool-search").oninput=e=>renderToolbox(e.target.value);$("#gp-layer-search").oninput=renderLayers;$("#gp-toolbox").addEventListener("click",e=>{const b=e.target.closest("[data-op]");if(b)selectOp(b.dataset.op)});$$('[data-ribbon]').forEach(b=>b.onclick=()=>{$$('[data-ribbon]').forEach(x=>x.classList.toggle("active",x===b));ribbon(b.dataset.ribbon)});$$('[data-right-tab]').forEach(b=>b.addEventListener("click",()=>{$$('[data-right-tab]').forEach(x=>{const active=x===b;x.classList.toggle("active",active);x.setAttribute("aria-selected",String(active))});if(b.dataset.rightTab==="tools")showTools();else if(b.dataset.rightTab==="history")showHistory();else showLibrary(b.dataset.rightTab)}));$("#gp-file-input").onchange=e=>{filesAdded(e.target.files);e.target.value=""};const mapView=$(".gp-map-view");["dragenter","dragover"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.add("dragging")}));["dragleave","drop"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.remove("dragging")}));mapView.addEventListener("drop",e=>filesAdded(e.dataTransfer.files));$("#gp-home").onclick=()=>state.map.flyTo({center:[-48.5,-22.4],zoom:6.2});$("#gp-fit").onclick=()=>state.map.fitBounds([[-53.2,-25.5],[-44,-19.5]],{padding:20});$("#gp-log-toggle").onclick=()=>$("#gp-log").classList.toggle("open")}
+  function bind(){ribbon();renderToolbox();refreshLayers();refreshDefinitions();$("#gp-tool-search").oninput=e=>renderToolbox(e.target.value);$("#gp-layer-search").oninput=renderLayers;$("#gp-toolbox").addEventListener("click",e=>{const b=e.target.closest("[data-op]");if(b)selectOp(b.dataset.op)});$$('[data-ribbon]').forEach(b=>b.onclick=()=>{$$('[data-ribbon]').forEach(x=>x.classList.toggle("active",x===b));ribbon(b.dataset.ribbon)});$$('[data-right-tab]').forEach(b=>b.addEventListener("click",()=>{$$('[data-right-tab]').forEach(x=>{const active=x===b;x.classList.toggle("active",active);x.setAttribute("aria-selected",String(active))});if(b.dataset.rightTab==="tools")showTools();else if(b.dataset.rightTab==="history")showHistory();else if(b.dataset.rightTab==="model-elements"||b.dataset.rightTab==="model-properties")window.gpModeler?.showPanel?.(b.dataset.rightTab==="model-elements"?"elements":"properties");else showLibrary(b.dataset.rightTab)}));$("#gp-file-input").onchange=e=>{filesAdded(e.target.files);e.target.value=""};const mapView=$(".gp-map-view");["dragenter","dragover"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.add("dragging")}));["dragleave","drop"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.remove("dragging")}));mapView.addEventListener("drop",e=>filesAdded(e.dataTransfer.files));$("#gp-home").onclick=()=>state.map.flyTo({center:[-48.5,-22.4],zoom:6.2});$("#gp-fit").onclick=()=>state.map.fitBounds([[-53.2,-25.5],[-44,-19.5]],{padding:20});$("#gp-log-toggle").onclick=()=>$("#gp-log").classList.toggle("open")}
   function showProperties(layer){
     activateRightTab("properties");showEditor();$("#gp-right-title").textContent="Propriedades";
     if(!layer){$("#gp-editor-view").innerHTML='<div class="empty">Selecione um recurso no Catálogo ou uma camada no painel Conteúdo para consultar suas propriedades.</div>';return}
@@ -628,7 +677,7 @@
     const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail||`Não foi possível excluir ${layerId}`);
     removeLayerFromMap(layerId,false);delete state.layerColors[layerId];save("gp-layer-colors",state.layerColors);log(`${layerId} excluída definitivamente do sistema.`,"ok");
   }
-  document.addEventListener("DOMContentLoaded",()=>{monitorFormAccessibility();initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.name==="basemap"){setBasemap(e.target.value);showBasemapPanel()}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest("[data-layer-group] > .layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.","ok");emit("pronto",{api:API})});
+  document.addEventListener("DOMContentLoaded",()=>{monitorFormAccessibility();initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.dataset.basemapToggle){setBasemap(e.target.dataset.basemapToggle,e.target.checked)}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest("[data-layer-group] > .layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.","ok");emit("pronto",{api:API})});
   const TOOL_SUBGROUPS={"OP-01":"Importação e conexão","OP-02":"Qualidade e preparação","OP-02-CORR":"Qualidade e preparação","OP-03":"Qualidade e preparação","OP-04":"Geometria e proximidade","OP-05":"Sobreposição espacial","OP-06":"Agregação vetorial","OP-07":"Consulta e seleção","OP-08":"Conversão de dados","OP-10":"Distância e custo","OP-11":"Distância e custo","OP-12":"Densidade e distribuição","OP-13":"Distância e custo","OP-14":"Interpolação e superfície","OP-15":"Agregação territorial","OP-16":"Criação de superfície","OP-17":"Álgebra de mapas","OP-20":"Normalização raster","OP-21":"Recorte e máscara","OP-22":"Estatística zonal","OP-23":"Amostragem raster","OP-24":"Extração zonal","OP-25":"Dados vetoriais","OP-26":"Dados raster"};
   Object.assign(TOOL_SUBGROUPS,{"OP-28":"Derivação geométrica","OP-29":"Derivação geométrica","OP-30":"Derivação geométrica","OP-31":"Generalização","OP-32":"Conversão geométrica","OP-33":"Recorte","OP-34":"Junção espacial","OP-35":"Mesclagem","OP-36":"Reprojeção","OP-37":"Medições","OP-38":"Medições","OP-39":"Reclassificação","OP-40":"Classificação binária","OP-41":"Transformação de valores","OP-42":"Estatística focal","OP-43":"Suavização"});
   renderToolbox=function(filter=""){
@@ -651,6 +700,46 @@
   function openToolboxScope(scope="geral"){state.toolboxScope=TOOLBOX_SCOPES[scope]?scope:"geral";activateToolsTab();showTools();$("#gp-right-title").textContent=TOOLBOX_SCOPES[state.toolboxScope].nome;renderToolbox($("#gp-tool-search").value)}
   fieldHtml=function(f){const[id,label,type,val]=f,prefix=id==="nome_saida"?'<div class="form-section-title"><i data-lucide="save"></i><span>Saída</span></div>':"";if(type==="check")return`${prefix}<label class="field-check"><input name="${id}" type="checkbox" ${val?"checked":""}>${label}</label>`;let input,help="";if(type==="select")input=`<select name="${id}" required>${val.map(x=>`<option value="${x}">${crsLabel(x)}</option>`).join("")}</select>`;else if(type==="layer"||type==="layers"){input=`<select name="${id}" required ${type==="layers"?'multiple size="5"':""}><option value="">Selecione no Painel de Conteúdo…</option>${state.layers.map(x=>`<option value="${x.id}">${escapeHtml(x.nome)}</option>`).join("")}</select>`;help='<p class="field-help">Origem: Painel de Conteúdo.</p>'}else input=`<input name="${id}" type="${type}" value="${escapeHtml(val??"")}" required>`;return`${prefix}<div class="field"><label>${label}</label>${input}${help}</div>`};
   TOOL_SUBGROUPS["OP-27"]="Persistência";
+  document.addEventListener("gp-modeler-state",()=>{const tab=$("[data-ribbon].active")?.dataset.ribbon||"modelo";ribbon(tab)});
   document.addEventListener("click",event=>{const fnRow=event.target.closest?.("[data-toolbox-function]"),flowRow=event.target.closest?.("[data-toolbox-flow]");if(fnRow){const fn=state.functions.find(item=>item.id===fnRow.dataset.toolboxFunction);if(fn)showDefinitionRun("functions",fn)}if(flowRow){const flow=state.flows.find(item=>item.id===flowRow.dataset.toolboxFlow);if(flow)showDefinitionRun("flows",flow)}});
-  window.gpApp={state,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer};
+  async function carregarPorIds(ids){
+    const solicitados=[...new Set((ids||[]).filter(Boolean))];
+    if(!solicitados.length)return [];
+    const recursos=await Promise.all(solicitados.map(async id=>{
+      const url=`${API}/camadas/${encodeURIComponent(id)}/carregar`;
+      let response;
+      for(let tentativa=0;tentativa<2;tentativa++){
+        try{response=await fetch(url,{method:"POST"});break}
+        catch(error){if(tentativa)throw new Error("API geoespacial indisponível");await new Promise(resolve=>setTimeout(resolve,400))}
+      }
+      if(!response?.ok){const body=await response?.json().catch(()=>null);throw new Error(body?.detail||`Falha ao carregar camada (HTTP ${response?.status||0})`)}
+      return {solicitado:id,recurso:await response.json()};
+    }));
+    const recursoIds=recursos.map(({solicitado,recurso})=>recurso.id||solicitado);
+    const visiveis=await refreshLayers(true,recursoIds,null,null);
+    if(recursoIds.some(id=>!visiveis.has(id)))throw new Error("Camada carregada, mas não representada no mapa");
+    recursos.forEach(({recurso},index)=>emit("recurso-importado",{id:recursoIds[index]}));
+    return recursos.map(({recurso})=>recurso);
+  }
+  async function carregarPorId(id){
+    return (await carregarPorIds([id]))[0];
+  }
+  function adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts={}){
+    if(!state.map){document.addEventListener("gp-modeler-state",()=>adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts),{once:true});return}
+    if(!state.map.isStyleLoaded()){state.map.once("load",()=>adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts));return}
+    removeMapResource(id);
+    const color=layerColor(id);
+    state.map.addSource(id,{type:"geojson",data:geojson});
+    state.map.addLayer({id,type:"fill",source:id,paint:{"fill-color":color,"fill-opacity":.32,"fill-outline-color":color},filter:["==",["geometry-type"],"Polygon"]});
+    state.map.addLayer({id:id+"-line",type:"line",source:id,paint:{"line-color":color,"line-width":2},filter:["==",["geometry-type"],"LineString"]});
+    state.map.addLayer({id:id+"-point",type:"circle",source:id,paint:{"circle-color":color,"circle-radius":6,"circle-stroke-color":"#fff","circle-stroke-width":1.5},filter:["==",["geometry-type"],"Point"]});
+    const bounds=new maplibregl.LngLatBounds();
+    (geojson.features||[]).forEach(f=>walkCoords(f.geometry?.coordinates,c=>bounds.extend(c)));
+    if(!bounds.isEmpty()) state.map.fitBounds(bounds,{padding:40,maxZoom:14});
+    const entry={id,nome:nome||id,tipo:opts.tipo||"vetorial (memória)",origem:opts.origem||"Hierarquização",destino:"memoria_local",crs:"EPSG:4326",geometria_tipo:opts.geometria_tipo||"Point"};
+    const idx=state.layers.findIndex(l=>l.id===id);
+    if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
+    renderLayers();
+  }
+  window.gpApp={state,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer,carregarPorId,carregarPorIds,adicionarCamadaGeoJsonEmMemoria};
 })();

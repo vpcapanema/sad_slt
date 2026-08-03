@@ -12,14 +12,18 @@ from uuid import uuid4
 
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 import rasterio
 from PIL import Image
 from rasterio.io import MemoryFile
 from rasterio.transform import array_bounds
 from rasterio.warp import Resampling, calculate_default_transform, reproject, transform_bounds
-from shapely.geometry import mapping, shape
 
-from api.path_policy import project_path, project_relative, relative_file_name
+from api.path_policy import (
+    geo_output_path,
+    project_path,
+    project_relative,
+)
 from api.repositories import camada_geoespacial_repository
 
 
@@ -238,6 +242,12 @@ class GeoespacialService:
             progress("Catálogo físico consultado")
         metadata = self._metadados.get(recurso_id)
         if metadata is None:
+            # Aceita camada_homologada.id (UUID) além do recurso_sessao_id.
+            alias = camada_geoespacial_repository.resolver_recurso_id(recurso_id)
+            if alias and alias != recurso_id:
+                recurso_id = alias
+                metadata = self._metadados.get(recurso_id)
+        if metadata is None:
             raise ValueError(f"Camada {recurso_id} não encontrada no sistema")
         if progress:
             progress("Metadados da camada localizados")
@@ -265,6 +275,11 @@ class GeoespacialService:
 
     async def camada_geojson(self, camada_id: str) -> dict[str, Any]:
         geojson = camada_geoespacial_repository.carregar_vetor_geojson(camada_id)
+        if geojson is None:
+            alias = camada_geoespacial_repository.resolver_recurso_id(camada_id)
+            if alias and alias != camada_id:
+                camada_id = alias
+                geojson = camada_geoespacial_repository.carregar_vetor_geojson(camada_id)
         if geojson is None and camada_id in self._camadas:
             return cast(dict[str, Any], self._camadas[camada_id].__geo_interface__)
         if geojson is None:
@@ -355,7 +370,8 @@ class GeoespacialService:
         rgba[..., 1] = (255 * np.sqrt(normalized)).astype("uint8")
         rgba[..., 2] = (255 * (1 - normalized)).astype("uint8")
         rgba[..., 3] = np.where(valid, 190, 0).astype("uint8")
-        stream = BytesIO(); Image.fromarray(rgba, "RGBA").save(stream, format="PNG")
+        stream = BytesIO()
+        Image.fromarray(rgba, "RGBA").save(stream, format="PNG")
         bounds = array_bounds(raster.shape[0], raster.shape[1], profile["transform"])
         west, south, east, north = transform_bounds(profile["crs"], "EPSG:4326", *bounds)
         return {
@@ -733,6 +749,78 @@ class GeoespacialService:
             "tipo_overlay": tipo_overlay,
         }
 
+    async def classificar_por_feicao_fase1(
+        self,
+        camada_id: str,
+        criterio_id: str,
+        fonte_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Aplica regras da tabela geoprocessamento.regra_classificacao_fase1
+        sobre cada feição da camada. Escreve os campos de controle:
+        criterio_id, tipo_tratamento, severidade, base_legal, fonte_id, feicao_origem_id.
+        A primeira regra ativa (menor ordem) cujo expressao avaliar True vence."""
+        from api.db.connection import get_connection
+
+        gdf = self.obter_camada_dados(camada_id).copy()
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT ordem, expressao, tipo_tratamento_resultante, severidade, base_legal "
+                    "FROM geoprocessamento.regra_classificacao_fase1 "
+                    "WHERE criterio_id = %s AND ativo = TRUE "
+                    "ORDER BY ordem ASC",
+                    (criterio_id,),
+                )
+                regras = cur.fetchall()
+        if not regras:
+            raise ValueError(
+                f"Nenhuma regra ativa encontrada para critério '{criterio_id}'. "
+                "Cadastre em geoprocessamento.regra_classificacao_fase1."
+            )
+
+        tipos = np.array(["risco"] * len(gdf), dtype=object)
+        severidades = np.full(len(gdf), 2, dtype=int)
+        bases = np.array([""] * len(gdf), dtype=object)
+        pendentes = np.ones(len(gdf), dtype=bool)
+        for regra in regras:
+            if not pendentes.any():
+                break
+            expressao = str(regra["expressao"]).strip()
+            try:
+                if expressao == "True":
+                    mask_expr = np.ones(len(gdf), dtype=bool)
+                else:
+                    idx = gdf.query(expressao).index
+                    mask_expr = gdf.index.isin(idx)
+            except Exception:
+                # expressão inválida ou coluna ausente = regra não casa nesta camada
+                continue
+            aplicar = mask_expr & pendentes
+            if not aplicar.any():
+                continue
+            tipos[aplicar] = regra["tipo_tratamento_resultante"]
+            severidades[aplicar] = int(regra["severidade"])
+            bases[aplicar] = regra["base_legal"]
+            pendentes &= ~aplicar
+
+        gdf["criterio_id"] = criterio_id
+        gdf["tipo_tratamento"] = tipos
+        gdf["severidade"] = severidades
+        gdf["base_legal"] = bases
+        gdf["fonte_id"] = fonte_id or criterio_id
+        gdf["feicao_origem_id"] = [f"{camada_id}#{i}" for i in range(len(gdf))]
+
+        nova = self.registrar_camada(
+            gdf, f"Classificada · {criterio_id}", "OP-CLASS"
+        )
+        contagem = pd.Series(tipos).value_counts().to_dict()
+        return {
+            "camada_id": nova,
+            "criterio_id": criterio_id,
+            "feicoes": len(gdf),
+            "por_tipo": {str(k): int(v) for k, v in contagem.items()},
+        }
+
     async def exportar_camada(
         self,
         camada_id: str,
@@ -763,12 +851,12 @@ class GeoespacialService:
             progress(f"Driver de exportação selecionado: {driver}")
 
         if opcao_salvamento == "persistir_sistema":
-            nome_relativo = relative_file_name(nome_arquivo, label="nome do arquivo")
-            caminho_relativo = Path("data/geoespacial") / nome_relativo
-            caminho_completo = project_path(caminho_relativo)
-            caminho_completo.parent.mkdir(parents=True, exist_ok=True)
+            caminho_completo = geo_output_path(
+                nome_arquivo, categoria="vetor", label="nome do arquivo",
+            )
+            caminho_relativo = Path(project_relative(caminho_completo))
             if progress:
-                progress("Destino relativo de exportação preparado")
+                progress("Destino único de saída preparado (vetor)")
             gdf.to_file(caminho_completo, driver=driver)
             if progress:
                 progress("Arquivo vetorial serializado")
@@ -987,12 +1075,12 @@ class GeoespacialService:
             progress("Matriz raster carregada para exportação")
 
         if opcao_salvamento == "persistir_sistema":
-            nome_relativo = relative_file_name(nome_arquivo, label="nome do arquivo")
-            caminho_relativo = Path("data/geoespacial") / nome_relativo
-            caminho_completo = project_path(caminho_relativo)
-            caminho_completo.parent.mkdir(parents=True, exist_ok=True)
+            caminho_completo = geo_output_path(
+                nome_arquivo, categoria="raster", label="nome do arquivo",
+            )
+            caminho_relativo = Path(project_relative(caminho_completo))
             if progress:
-                progress("Destino relativo de exportação preparado")
+                progress("Destino único de saída preparado (raster)")
             profile = getattr(self, "_raster_profiles", {}).get(raster_id)
             if not profile:
                 raise ValueError("Raster sem metadados espaciais para exportação")
@@ -1024,17 +1112,31 @@ class GeoespacialService:
         crs: str = "auto",
         formato: str = "auto",
     ) -> dict[str, Any]:
-        """Persiste camada ou raster, inferindo o formato pela extensão da saída."""
+        """Persiste camada ou raster, inferindo o formato pela extensão da saída.
+
+        Independente do valor recebido em ``destino``, a gravação ocorre sempre
+        na subpasta correta dentro de ``data/geoespacial/outputs`` — destino
+        único de saídas geoprocessadas (``vetor``, ``raster`` ou ``geodatabase``).
+        A categoria do dado é determinada pela natureza do recurso em memória
+        e validada contra a extensão do arquivo ANTES de qualquer I/O.
+        """
         self._catalogar_persistidas()
-        pasta_relativa = project_relative(project_path(destino, label="destino"))
-        pasta = project_path(pasta_relativa, label="destino")
-        pasta.mkdir(parents=True, exist_ok=True)
-        nome_saida = relative_file_name(saida, label="saída")
-        caminho = pasta / nome_saida
-        extensao = caminho.suffix.lower()
+        del destino
 
         tipo_entrada = self._metadados.get(entrada, {}).get("tipo")
         if tipo_entrada == "vetorial" or entrada in self._camadas:
+            categoria_dado = "vetor"
+        elif tipo_entrada == "raster" or entrada in self._rasters:
+            categoria_dado = "raster"
+        else:
+            raise ValueError(f"Camada de entrada {entrada} não encontrada")
+
+        caminho = geo_output_path(saida, categoria=categoria_dado, label="saída")
+        pasta = caminho.parent
+        pasta_relativa = project_relative(pasta)
+        extensao = caminho.suffix.lower()
+
+        if categoria_dado == "vetor":
             drivers = {"gpkg": "GPKG", "geojson": "GeoJSON", "json": "GeoJSON", "shapefile": "ESRI Shapefile", "shp": "ESRI Shapefile"}
             formato_final = extensao.lstrip(".") if formato == "auto" else formato.lower()
             driver = drivers.get(formato_final)
@@ -1046,7 +1148,7 @@ class GeoespacialService:
                 camada = camada.to_crs(crs)
             camada.to_file(caminho, driver=driver)
             tipo = "vetor"
-        elif tipo_entrada == "raster" or entrada in self._rasters:
+        else:
             formato_final = extensao.lstrip(".") if formato == "auto" else formato.lower()
             if formato_final not in {"tif", "tiff", "geotiff"}:
                 raise ValueError("Formato raster deve ser tif, tiff ou geotiff")
@@ -1075,11 +1177,10 @@ class GeoespacialService:
                                nodata=np.nan, compress="deflate") as dst:
                 dst.write(raster.astype("float32"), 1)
             tipo = "raster"
-        else:
-            raise ValueError(f"Camada de entrada {entrada} não encontrada")
 
         return {"operacao": "salvar_camada", "entrada": entrada, "destino": pasta_relativa,
                 "saida": caminho.name, "caminho": project_relative(caminho), "tipo": tipo,
+                "categoria": categoria_dado,
                 "crs": crs_final, "formato": formato_final}
 
 

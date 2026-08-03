@@ -7,7 +7,7 @@
   <title>Geoprocessamento | SLT</title>
   <link rel="icon" href="/assets/img/brand/sicard-simbolo.png" type="image/png">
   <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
-  <link rel="stylesheet" href="/assets/css/geoprocessamento.css">
+  <link rel="stylesheet" href="/assets/css/geoprocessamento.css?v=20260803-report-map">
 </head>
 <body>
   <main class="componente-geoprocessamento gp-app">
@@ -107,6 +107,7 @@
           <button role="tab" aria-selected="false" data-right-tab="functions"><span>Funções</span><i data-tab-close="functions" data-lucide="x"></i></button>
           <button role="tab" aria-selected="false" data-right-tab="flows"><span>Fluxos</span><i data-tab-close="flows" data-lucide="x"></i></button>
           <button role="tab" aria-selected="false" data-right-tab="history"><span>Histórico</span><i data-tab-close="history" data-lucide="x"></i></button>
+          <button role="tab" aria-selected="false" data-right-tab="model-properties" data-model-panel="properties" hidden><span>Propriedades do modelo</span><i data-tab-close="model-properties" data-lucide="x"></i></button>
         </div>
         <button class="icon-btn gp-right-collapse" data-collapse="right" title="Recolher painel" aria-label="Recolher painel"><i data-lucide="panel-right-close"></i></button>
       </div>
@@ -115,6 +116,7 @@
         <div id="gp-toolbox" class="gp-toolbox"></div>
       </section>
       <section id="gp-editor-view" class="gp-right-view"></section>
+      <section id="gp-model-properties-view" class="gp-right-view" data-model-view="properties"><div class="model-inspector"><div class="model-inspector-head"><strong>Propriedades do modelo</strong></div><div class="model-inspector-body"></div></div></section>
     </aside>
 
     <button class="gp-restore gp-restore-right" data-restore="right" title="Expandir Propriedades"><i data-lucide="panel-right-open"></i><span>Propriedades</span></button>
@@ -132,8 +134,8 @@
   <input id="gp-file-input" type="file" accept=".geojson,.json,.kml,.tif,.tiff,.zip,.gpkg,.shp" multiple hidden>
   <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
   <script src="/assets/vendor/lucide/lucide.min.js"></script>
-  <script src="/restrict/geoespacial/geoprocessamento.js"></script>
-  <script src="/restrict/geoespacial/geoprocessamento-modeler.js"></script>
+  <script src="/restrict/geoespacial/geoprocessamento.js?v=20260803-batch-load-2"></script>
+  <script src="/restrict/geoespacial/geoprocessamento-modeler.js?v=20260803-report-map"></script>
   <script src="/restrict/geoespacial/geoprocessamento-docks.js"></script>
   <script src="/restrict/geoespacial/geoprocessamento-actions.js"></script>
   <script src="/restrict/geoespacial/geoprocessamento-toolbox.js"></script>

@@ -1,0 +1,97 @@
+[mask] D:\REPOSITORIOS\sistema_apoio_a_tomada_de_decisao_web\data\geoespacial\outputs\vetor\uf_sp.shp
+[rules] carregando de geoprocessamento.regra_classificacao_fase1
+[rules] 41 regras em 23 criterios
+
+=== ucs_mma (criterio=uc_pi_federal, buffer=None) ===
+  bruto: 542 feicoes, crs=EPSG:4674
+  normalizado: 542
+  recortado SP: 311
+  aplicando 4 regras...
+  OP-CLASS: {'risco': 275, 'restricao': 36}
+
+=== terras_indigenas (criterio=terra_indigena, buffer=None) ===
+  bruto: 54 feicoes, crs=EPSG:4674
+  normalizado: 54
+  recortado SP: 30
+  aplicando 2 regras...
+    [warn] expressao falhou 'situacao in ['Homologada','Regularizada','Declarada']': name 'situacao' is not defined
+  OP-CLASS: {'risco': 30}
+
+=== quilombos (criterio=territorio_quilombola, buffer=None) ===
+  bruto: 439 feicoes, crs=EPSG:4674
+  normalizado: 439
+  recortado SP: 26
+  aplicando 2 regras...
+    [warn] expressao falhou 'situacao in ['Titulado','Reconhecido']': name 'situacao' is not defined
+  OP-CLASS: {'risco': 26}
+
+=== cavidades (criterio=cavidade_maxima, buffer=500) ===
+  bruto: 693 feicoes, crs=EPSG:4674
+  normalizado: 693
+  recortado SP: 692
+  buffer 500m + recorte: 692
+  aplicando 1 regras...
+  OP-CLASS: {'restricao': 692}
+
+=== contaminadas (criterio=area_contaminada, buffer=500) ===
+  bruto: 7241 feicoes, crs=EPSG:4674
+  normalizado: 7241
+  sp_only=True -> pulando recorte de mascara
+  buffer 500m + recorte: 7241
+  aplicando 2 regras...
+    [warn] expressao falhou 'classe in ['ACRe','ACRi','AI']': name 'classe' is not defined
+  OP-CLASS: {'risco': 7241}
+
+=== embargos_ibama (criterio=embargo_ibama, buffer=None) ===
+  bruto: 0 feicoes, crs=EPSG:4674
+  normalizado: 0
+  recortado SP: 0
+
+=== sitios_arqueologicos (criterio=sitio_arqueologico, buffer=250) ===
+  bruto: 15 feicoes, crs=EPSG:4674
+  normalizado: 15
+  recortado SP: 15
+  buffer 250m + recorte: 15
+  aplicando 2 regras...
+    [warn] expressao falhou 'relevancia == 'nacional'': name 'relevancia' is not defined
+  OP-CLASS: {'risco': 15}
+
+=== inundacao (criterio=inundacao, buffer=None) ===
+  bruto: 776 feicoes, crs=EPSG:4674
+  normalizado: 776
+  sp_only=True -> pulando recorte de mascara
+  aplicando 2 regras...
+    [warn] expressao falhou 'grau in ['muito_alto','alto']': name 'grau' is not defined
+  OP-CLASS: {'risco': 776}
+
+=== movimento_massa (criterio=movimento_massa, buffer=None) ===
+  bruto: 920 feicoes, crs=EPSG:4674
+  normalizado: 920
+  sp_only=True -> pulando recorte de mascara
+  aplicando 2 regras...
+    [warn] expressao falhou 'grau in ['muito_alto','alto']': name 'grau' is not defined
+  OP-CLASS: {'risco': 920}
+
+=== assentamentos (criterio=assentamento, buffer=None) ===
+  bruto: 8216 feicoes, crs=EPSG:4674
+  normalizado: 8215
+  recortado SP: 209
+  aplicando 1 regras...
+  OP-CLASS: {'risco': 209}
+
+=== aprm_sp (criterio=aprm, buffer=None) ===
+  bruto: 1330 feicoes, crs=EPSG:4674
+  normalizado: 1330
+  sp_only=True -> pulando recorte de mascara
+  aplicando 2 regras...
+    [warn] expressao falhou 'classe in ['ARP','APRM-1']': name 'classe' is not defined
+  OP-CLASS: {'risco': 1330}
+
+=== vegetacao_sp (criterio=vegetacao_protegida, buffer=None) ===
+  [skip] fonte marcada como skip (adiar para pipeline dedicado)
+  normalizacao MultiPolygon: 11550 feicoes retidas
+
+CONSOLIDADO: restricao=728  risco=10822
+[saida] D:\REPOSITORIOS\sistema_apoio_a_tomada_de_decisao_web\data\geoespacial\outputs\vetor\fase1_restricao_consolidada_sp_v1.gpkg (1.86 MB)
+[saida] D:\REPOSITORIOS\sistema_apoio_a_tomada_de_decisao_web\data\geoespacial\outputs\vetor\fase1_risco_consolidado_sp_v1.gpkg (39.77 MB)
+[resumo] em data/geoespacial/relatorios/execucao_fase1_local.json

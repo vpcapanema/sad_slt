@@ -22,7 +22,11 @@ templates = Jinja2Templates(directory=str(project_path("templates")))
 
 def render_page(request: Request, template_name: str) -> Response:
     """Renderiza uma página pelo contrato comum de templates da aplicação."""
-    return templates.TemplateResponse(request=request, name=template_name)
+    return templates.TemplateResponse(
+        request=request,
+        name=template_name,
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.exception_handler(ValueError)

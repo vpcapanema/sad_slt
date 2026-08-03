@@ -37,6 +37,8 @@ _ALLOWED_TYPES = {
     "smallint",
     "bigint",
     "uuid",
+    "double precision",
+    "real",
 }
 
 _DATE_TYPES = {

@@ -135,12 +135,16 @@ def _validar_diagrama(definicao: dict) -> None:
 def _validar_definicao_funcao(funcao: dict) -> None:
     _validar_diagrama(funcao)
     passos = funcao.get("passos") or []
-    if len(passos) < 2:
+    if len(passos) < 1:
         raise HTTPException(
             status_code=422,
-            detail="Uma função deve reunir pelo menos dois algoritmos.",
+            detail="Uma função deve conter ao menos um algoritmo ou função.",
         )
     erros = geoprocessamento_engine.validate_steps(passos)
+    for indice, passo in enumerate(passos, 1):
+        funcao_id = passo.get("funcao_id")
+        if funcao_id and not modelo_repo.obter(funcao_id, "funcao"):
+            erros.append(f"Etapa {indice}: função {funcao_id} não encontrada")
     if erros:
         raise HTTPException(status_code=422, detail={"erros": erros})
 
@@ -263,7 +267,12 @@ async def validar_funcao(funcao_id: str) -> dict:
     funcao = modelo_repo.obter(funcao_id, "funcao")
     if not funcao:
         raise HTTPException(status_code=404, detail="Função não encontrada")
-    erros = geoprocessamento_engine.validate_steps(funcao.get("passos", []))
+    try:
+        _validar_definicao_funcao(funcao)
+        erros: list[str] = []
+    except HTTPException as exc:
+        detail = exc.detail
+        erros = detail.get("erros", []) if isinstance(detail, dict) else [str(detail)]
     return {"valido": not erros, "erros": erros}
 
 
@@ -273,6 +282,7 @@ async def executar_funcao(funcao_id: str, entradas: dict) -> dict:
     if not funcao:
         raise HTTPException(status_code=404, detail="Função não encontrada")
     try:
+        _validar_definicao_funcao(funcao)
         defaults = {
             item["chave"]: item.get("valor") for item in funcao.get("variaveis", [])
             if item.get("chave") and item.get("valor") not in (None, "")
@@ -323,22 +333,12 @@ async def validar_fluxo(fluxo_id: str) -> dict:
     fluxo = modelo_repo.obter(fluxo_id, "fluxo")
     if not fluxo:
         raise HTTPException(status_code=404, detail="Fluxo não encontrado")
-    erros: list[str] = []
-    for indice, item in enumerate(fluxo.get("itens", []), 1):
-        if item.get("iterador"):
-            continue
-        if item.get("funcao_id") and not modelo_repo.obter(item["funcao_id"], "funcao"):
-            erros.append(
-                f"Etapa {indice}: a função utilizada não foi encontrada. Esperado: "
-                "uma função existente em Funções customizadas. Como corrigir: remova "
-                "este elemento e selecione novamente a função desejada."
-            )
-        elif item.get("algoritmo_id") not in CATALOG and not item.get("funcao_id"):
-            erros.append(
-                f"Etapa {indice}: o algoritmo utilizado não está disponível na "
-                "toolbox atual. Esperado: um algoritmo existente. Como corrigir: "
-                "remova este elemento e adicione novamente o algoritmo desejado."
-            )
+    try:
+        _validar_definicao_fluxo(fluxo)
+        erros: list[str] = []
+    except HTTPException as exc:
+        detail = exc.detail
+        erros = detail.get("erros", []) if isinstance(detail, dict) else [str(detail)]
     return {"valido": not erros, "erros": erros}
 
 
@@ -348,6 +348,7 @@ async def executar_fluxo(fluxo_id: str, entradas: dict) -> dict:
     if not fluxo:
         raise HTTPException(status_code=404, detail="Fluxo não encontrado")
     try:
+        _validar_definicao_fluxo(fluxo)
         defaults = {
             item["chave"]: item.get("valor") for item in fluxo.get("variaveis", [])
             if item.get("chave") and item.get("valor") not in (None, "")
@@ -548,6 +549,22 @@ async def listar_diretorio_camadas() -> dict[str, Any]:
         ".sqlite", ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2",
         ".zip", ".rar", ".7z", ".tar", ".tgz", ".gz",
     }
+    # Ordem de preferência para detectar a camada principal dentro de um pacote extraído.
+    primary_priority = [
+        ".shp", ".gpkg", ".geojson", ".json", ".kml", ".gml", ".fgb",
+        ".sqlite", ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2",
+    ]
+
+    def primary_extension(folder: Path, fallback: str) -> str:
+        """Determina a extensão da camada principal contida em uma pasta extraída."""
+        try:
+            candidates = [p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() in primary_priority]
+        except OSError:
+            candidates = []
+        if not candidates:
+            return fallback
+        candidates.sort(key=lambda p: (primary_priority.index(p.suffix.lower()), p.name.lower()))
+        return candidates[0].suffix.removeprefix(".").upper()
 
     operational: list[dict] = []
     storage_root = project_path("data/geoespacial/uploads/datastorage")
@@ -574,7 +591,10 @@ async def listar_diretorio_camadas() -> dict[str, Any]:
                 row = by_path.get(relative)
                 base = item.name[: -len(".contents")]
                 nome_base = Path(base).stem
-                extensao = Path(base).suffix.removeprefix(".").upper() or "PACOTE"
+                archive_ext = Path(base).suffix.removeprefix(".").upper() or "PACOTE"
+                # Preferimos rotular pela camada principal contida no pacote (ex.: SHP)
+                # em vez da extensão do arquivo compactado descartado (ex.: ZIP).
+                extensao = primary_extension(item, archive_ext)
                 operational.append({
                     **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or nome_base,
                     "categoria_arquivo": category, "registrada": bool(row), "origem_diretorio": "datastorage",
