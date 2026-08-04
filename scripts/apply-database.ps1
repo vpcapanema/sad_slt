@@ -47,7 +47,7 @@ function Test-CoreSchemaReady {
     if ($env:SLT_USE_SIGMA_POSTGRES -eq "true" -and $env:SLT_DATABASE_URL) {
         $env:SLT_MIGRATION_QUERY = $query
         $python = Join-Path $Root ".venv\Scripts\python.exe"
-        & $python -c "import os, psycopg; c=psycopg.connect(os.environ['SLT_DATABASE_URL']); r=c.execute(os.environ['SLT_MIGRATION_QUERY']).fetchone()[0]; c.close(); raise SystemExit(0 if str(r).lower() in ('t','true','1') else 1)" 2>$null
+        & $python -c 'import os, psycopg; c=psycopg.connect(os.environ["SLT_DATABASE_URL"]); r=c.execute(os.environ["SLT_MIGRATION_QUERY"]).fetchone()[0]; c.close(); raise SystemExit(0 if str(r).lower() in ("t","true","1") else 1)' 2>$null
         Remove-Item Env:SLT_MIGRATION_QUERY -ErrorAction SilentlyContinue
         return $LASTEXITCODE -eq 0
     }
@@ -146,7 +146,13 @@ $migrations = @(
     "042_fluxo_fases_hierarquizacao.sql",
     "043_fase1_fatiamento_relatorio.sql",
     "044_fase3_persistencia.sql",
-    "045_modelos_geoprocessamento.sql"
+    "045_modelos_geoprocessamento.sql",
+    "046_regras_classificacao_fase1.sql",
+    "047_fase1_fontes_produto.sql",
+    "048_cavidade_maxima_risco.sql",
+    "049_unificar_classificacao_cavidades.sql",
+    "050_bem_tombado_restricao.sql",
+    "051_classificacao_binaria_fase1.sql"
 )
 
 if (Test-CoreSchemaReady) {
@@ -158,7 +164,7 @@ function Invoke-PsycopgFile {
     param([string]$FilePath)
     $env:SLT_MIGRATION_FILE = $FilePath
     $python = Join-Path $Root ".venv\Scripts\python.exe"
-    & $python -c "import os, pathlib, psycopg; sql=pathlib.Path(os.environ['SLT_MIGRATION_FILE']).read_text(encoding='utf-8-sig'); c=psycopg.connect(os.environ['SLT_DATABASE_URL']); c.execute(sql); c.commit(); c.close()"
+    & $python -c 'import os, pathlib, psycopg; sql=pathlib.Path(os.environ["SLT_MIGRATION_FILE"]).read_text(encoding="utf-8-sig"); c=psycopg.connect(os.environ["SLT_DATABASE_URL"]); c.execute(sql); c.commit(); c.close()'
     Remove-Item Env:SLT_MIGRATION_FILE -ErrorAction SilentlyContinue
     if ($LASTEXITCODE -ne 0) { throw "psycopg falhou ($FilePath)" }
 }

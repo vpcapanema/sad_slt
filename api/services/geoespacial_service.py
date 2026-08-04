@@ -755,70 +755,26 @@ class GeoespacialService:
         criterio_id: str,
         fonte_id: str | None = None,
     ) -> dict[str, Any]:
-        """Aplica regras da tabela geoprocessamento.regra_classificacao_fase1
-        sobre cada feição da camada. Escreve os campos de controle:
-        criterio_id, tipo_tratamento, severidade, base_legal, fonte_id, feicao_origem_id.
-        A primeira regra ativa (menor ordem) cujo expressao avaliar True vence."""
-        from api.db.connection import get_connection
+        """Classifica feições pela configuração JSON versionada da Fase 1."""
+        from api.services.fase1_classificacao import classificar
 
-        gdf = self.obter_camada_dados(camada_id).copy()
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT ordem, expressao, tipo_tratamento_resultante, severidade, base_legal "
-                    "FROM geoprocessamento.regra_classificacao_fase1 "
-                    "WHERE criterio_id = %s AND ativo = TRUE "
-                    "ORDER BY ordem ASC",
-                    (criterio_id,),
-                )
-                regras = cur.fetchall()
-        if not regras:
-            raise ValueError(
-                f"Nenhuma regra ativa encontrada para critério '{criterio_id}'. "
-                "Cadastre em geoprocessamento.regra_classificacao_fase1."
-            )
-
-        tipos = np.array(["risco"] * len(gdf), dtype=object)
-        severidades = np.full(len(gdf), 2, dtype=int)
-        bases = np.array([""] * len(gdf), dtype=object)
-        pendentes = np.ones(len(gdf), dtype=bool)
-        for regra in regras:
-            if not pendentes.any():
-                break
-            expressao = str(regra["expressao"]).strip()
-            try:
-                if expressao == "True":
-                    mask_expr = np.ones(len(gdf), dtype=bool)
-                else:
-                    idx = gdf.query(expressao).index
-                    mask_expr = gdf.index.isin(idx)
-            except Exception:
-                # expressão inválida ou coluna ausente = regra não casa nesta camada
-                continue
-            aplicar = mask_expr & pendentes
-            if not aplicar.any():
-                continue
-            tipos[aplicar] = regra["tipo_tratamento_resultante"]
-            severidades[aplicar] = int(regra["severidade"])
-            bases[aplicar] = regra["base_legal"]
-            pendentes &= ~aplicar
-
+        gdf, versao_classificacao = classificar(
+            self.obter_camada_dados(camada_id), criterio_id
+        )
         gdf["criterio_id"] = criterio_id
-        gdf["tipo_tratamento"] = tipos
-        gdf["severidade"] = severidades
-        gdf["base_legal"] = bases
         gdf["fonte_id"] = fonte_id or criterio_id
         gdf["feicao_origem_id"] = [f"{camada_id}#{i}" for i in range(len(gdf))]
 
         nova = self.registrar_camada(
             gdf, f"Classificada · {criterio_id}", "OP-CLASS"
         )
-        contagem = pd.Series(tipos).value_counts().to_dict()
+        contagem = gdf["tipo_tratamento"].value_counts().to_dict()
         return {
             "camada_id": nova,
             "criterio_id": criterio_id,
             "feicoes": len(gdf),
             "por_tipo": {str(k): int(v) for k, v in contagem.items()},
+            "versao_classificacao": versao_classificacao,
         }
 
     async def exportar_camada(

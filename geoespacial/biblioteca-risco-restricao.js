@@ -15,29 +15,27 @@
       );
   let biblioteca, metricas;
   const CAMADAS = {
-    uc_pi_estadual: "Unidades de Conservação de Proteção Integral estaduais",
-    uc_pi_federal: "Unidades de Conservação de Proteção Integral federais",
-    uc_us_estadual: "Unidades de Conservação de Uso Sustentável estaduais",
-    uc_us_federal: "Unidades de Conservação de Uso Sustentável federais",
-    za_uc_estadual: "Zonas de amortecimento de UC estaduais",
-    za_uc_federal: "Zonas de amortecimento de UC federais",
-    vegetacao_protegida: "Vegetação nativa protegida",
-    aprm: "Áreas de proteção e recuperação de mananciais",
-    ecossistema_costeiro: "Ecossistemas costeiros sensíveis",
-    cavidade_demais: "Cavidades naturais subterrâneas",
-    cavidade_maxima: "Cavidades naturais de relevância máxima",
-    terra_indigena: "Terras Indígenas",
-    territorio_quilombola: "Territórios quilombolas",
-    area_contaminada: "Áreas contaminadas",
+    cavidades_influencia: "cavidades_influencia",
     inundacao: "Suscetibilidade a inundação",
     movimento_massa: "Suscetibilidade a movimentos de massa",
-    bem_tombado: "Bens tombados e áreas envoltórias",
-    sitio_arqueologico: "Sítios arqueológicos",
-    assentamento: "Assentamentos e regimes fundiários",
-    servidao: "Faixas de domínio e servidões",
-    embargo_ibama: "Áreas embargadas pelo IBAMA",
-    embargo_estadual: "Áreas sob embargo ambiental estadual",
-    interdicao_cetesb: "Áreas ou estabelecimentos interditados pela CETESB",
+    aprm_alto_juquery: "aprm_alto_juquery",
+    aprm_alto_tiete_cabec: "aprm_alto_tiete_cabec",
+    aprm_billings: "aprm_billings",
+    aprm_guarapiranga: "aprm_guarapiranga",
+    areas_contaminadas_cetesb: "areas_contaminadas_cetesb",
+    areas_restricao_cetesb: "areas_restricao_cetesb",
+    assentamentos_sp: "assentamentos_sp",
+    bens_tombados_condephaat: "bens_tombados_condephaat",
+    bens_tombados_iphan_sp: "bens_tombados_iphan_sp",
+    embargos_estaduais_sigam: "embargos_estaduais_sigam",
+    embargos_ibama_ativos_sp: "embargos_ibama_ativos_sp",
+    manguezais_ibama_sp: "manguezais_ibama_sp",
+    quilombos_sp: "quilombos_sp",
+    sitios_arqueologicos: "sitios_arqueologicos",
+    terras_indigenas_sp: "terras_indigenas_sp",
+    ucs_protecao_integral_sp: "ucs_protecao_integral_sp",
+    ucs_uso_sustentavel_sp: "ucs_uso_sustentavel_sp",
+    vegetacao_nativa_sp: "vegetacao_nativa_sp",
   };
   function refs(m) {
     return (
@@ -160,9 +158,6 @@
       nome: $("#nome-configuracao").value.trim(),
       codigo: $("#codigo-configuracao").value.trim(),
       versao: $("#versao-metodologia").value.trim(),
-      metodo: $("#metodologia-fatiamento").value,
-      baixo: Number($("#limiar-baixo").value),
-      alto: Number($("#limiar-medio").value),
       pesos,
     };
   }
@@ -172,25 +167,13 @@
         c.nome &&
         c.codigo &&
         c.versao &&
-        c.baixo > 0 &&
-        c.alto > c.baixo &&
-        c.alto < 100 &&
         Object.values(c.pesos).some((v) => v > 0);
-    $("#faixas-preview").innerHTML =
-      `<div data-level="1"><b>Risco baixo</b><span>0 a &lt; ${c.baixo}</span></div><div data-level="2"><b>Risco médio</b><span>${c.baixo} a &lt; ${c.alto}</span></div><div data-level="3"><b>Risco alto</b><span>${c.alto} a 100</span></div>`;
     $("#limiares-validacao").textContent = ok
       ? "Configuração coerente."
-      : "Revise identificação, cortes e pesos.";
+      : "Revise identificação e pesos.";
     $("#limiares-validacao").className =
       `gerador-feedback ${ok ? "is-success" : "is-error"}`;
     return ok;
-  }
-  function metodo() {
-    if ($("#metodologia-fatiamento").value === "intervalos_iguais") {
-      $("#limiar-baixo").value = 33.33;
-      $("#limiar-medio").value = 66.67;
-    }
-    preview();
   }
   async function salvar() {
     if (!preview()) return;
@@ -198,29 +181,16 @@
       body = {
         codigo: c.codigo,
         nome: c.nome,
-        descricao: `${c.metodo} · biblioteca ${biblioteca.versao}`,
+        descricao: `Classificação binária de risco e restrição · biblioteca ${biblioteca.versao}`,
         parametros: {
-          metodologia: c.metodo,
           pesos: c.pesos,
           normalizacao: metricas.normalizacao,
           risco: {
             classes: [
               {
-                codigo: "baixo",
-                rotulo: "Risco baixo",
+                codigo: "risco",
+                rotulo: "Risco",
                 minimo: 0,
-                maximo: c.baixo,
-              },
-              {
-                codigo: "medio",
-                rotulo: "Risco médio",
-                minimo: c.baixo,
-                maximo: c.alto,
-              },
-              {
-                codigo: "alto",
-                rotulo: "Risco alto",
-                minimo: c.alto,
                 maximo: 100,
               },
             ],
@@ -281,13 +251,10 @@
     document
       .querySelectorAll("input,[data-peso]")
       .forEach((i) => (i.oninput = preview));
-    $("#metodologia-fatiamento").onchange = metodo;
-    $("#restaurar-limiares").onclick = metodo;
     $("#validar-metodologia").onclick = salvar;
   }
-  init().catch(
-    (e) =>
-      ($("#criterios-tabela").innerHTML =
-        `<tr><td colspan="9">${esc(e.message)}</td></tr>`),
-  );
+  init().catch((e) => {
+    $("#criterios-tabela").innerHTML =
+      `<tr><td colspan="9">${esc(e.message)}</td></tr>`;
+  });
 })();

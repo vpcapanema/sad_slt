@@ -747,7 +747,7 @@ def executar_fase_1(
         ]
         if rh:
             valores = [_numero_atributo(x, "restricao") for x in rh]
-            # Restrição confirmada nunca pode ser diluída pela média de outras
+            # Restrição nunca pode ser diluída pela média de outras
             # incidências. A taxonomia da Fase 1 exige o maior valor restritivo.
             valor = max(valores)
             arredondado = _reclassificar(valor, parametros, "restricao")

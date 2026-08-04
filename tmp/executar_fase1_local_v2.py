@@ -17,7 +17,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from api.db.connection import get_connection  # noqa: E402
+from api.services.fase1_classificacao import carregar_configuracao  # noqa: E402
 
 LOCAL = ROOT / "data" / "geoespacial" / "local"
 MASK_SHP = ROOT / "data" / "geoespacial" / "outputs" / "vetor" / "uf_sp.shp"
@@ -40,13 +40,19 @@ def log(msg: str) -> None:
 
 
 SOURCES: dict[str, dict] = {
-    "ucs_mma": {"criterio_id": "uc_pi_federal", "fonte_id": "mma_cnuc_pi_federal", "buffer": None, "sp_only": False},
+    "ucs_mma": {
+        "criterio_id": "uc_pi_federal",
+        "fonte_id": "mma_cnuc_pi_federal",
+        "buffer": None,
+        "sp_only": False,
+        "zona_amortecimento": None,
+    },
     "terras_indigenas": {"criterio_id": "terra_indigena", "fonte_id": "funai_ti", "buffer": None, "sp_only": False},
     "quilombos": {"criterio_id": "territorio_quilombola", "fonte_id": "incra_quilombolas", "buffer": None, "sp_only": False},
-    "cavidades": {"criterio_id": "cavidade_maxima", "fonte_id": "cecav_cavidades", "buffer": 500, "sp_only": False},
-    "contaminadas": {"criterio_id": "area_contaminada", "fonte_id": "cetesb_areas_contaminadas", "buffer": 500, "sp_only": True},
+    "cavidades": {"criterio_id": "cavidade", "fonte_id": "cecav_cavidades", "buffer": None, "sp_only": False},
+    "contaminadas": {"criterio_id": "area_contaminada", "fonte_id": "cetesb_areas_contaminadas", "buffer": None, "sp_only": True},
     "embargos_ibama": {"criterio_id": "embargo_ibama", "fonte_id": "ibama_embargos", "buffer": None, "sp_only": False},
-    "sitios_arqueologicos": {"criterio_id": "sitio_arqueologico", "fonte_id": "iphan_sitios", "buffer": 250, "sp_only": False},
+    "sitios_arqueologicos": {"criterio_id": "sitio_arqueologico", "fonte_id": "iphan_sitios", "buffer": None, "sp_only": False},
     "inundacao": {"criterio_id": "inundacao", "fonte_id": None, "buffer": None, "sp_only": True},
     "movimento_massa": {"criterio_id": "movimento_massa", "fonte_id": None, "buffer": None, "sp_only": True},
     "assentamentos": {"criterio_id": "assentamento", "fonte_id": None, "buffer": None, "sp_only": False},
@@ -56,19 +62,21 @@ SOURCES: dict[str, dict] = {
 
 
 def load_rules() -> dict[str, list[dict]]:
-    """Carrega regras da 046, agrupadas por criterio_id, ordenadas por 'ordem'."""
-    out: dict[str, list[dict]] = {}
-    with get_connection() as c, c.cursor() as cur:
-        cur.execute("""
-            SELECT criterio_id, ordem, expressao, tipo_tratamento_resultante,
-                   severidade, base_legal
-              FROM geoprocessamento.regra_classificacao_fase1
-             WHERE ativo = TRUE
-             ORDER BY criterio_id, ordem
-        """)
-        for row in cur.fetchall():
-            out.setdefault(row["criterio_id"], []).append(dict(row))
-    return out
+    """Carrega regras versionadas da fonte JSON canônica da Fase 1."""
+    configuracao = carregar_configuracao()
+    return {
+        criterio_id: [
+            {
+                "ordem": ordem,
+                "expressao": expressao,
+                "tipo_tratamento_resultante": tipo,
+                "severidade": severidade,
+                "base_legal": base_legal,
+            }
+            for ordem, expressao, tipo, severidade, base_legal in regras
+        ]
+        for criterio_id, regras in configuracao["regras"].items()
+    }
 
 
 def load_zip_as_gdf(zip_path: Path) -> gpd.GeoDataFrame:
@@ -159,8 +167,8 @@ def classify(gdf: gpd.GeoDataFrame, rules: list[dict], fonte_id: str | None, fol
         for _, row in gdf[atributos_cols].iterrows()
     ]
 
-    # Nome amigável: pega o primeiro campo textual candidato.
-    name_candidates = ["nome", "name", "NOME", "denominacao", "NM_UC", "nome_uc",
+    # Nome amigável: usa o nome derivado quando a feição for uma zona de amortecimento.
+    name_candidates = ["nome_exibicao", "nome", "name", "NOME", "denominacao", "NM_UC", "nome_uc",
                        "nm_ti", "nm_terrai", "nome_comun", "nome_comunidade",
                        "titulo", "descricao", "cod_iphan", "codigo_iphan",
                        "id_sitio", "processo", "id_area"]
@@ -169,6 +177,13 @@ def classify(gdf: gpd.GeoDataFrame, rules: list[dict], fonte_id: str | None, fol
         gdf["nome_origem"] = gdf[nome_col].apply(_serialize)
     else:
         gdf["nome_origem"] = None
+
+    if "nome_area_origem" not in gdf.columns:
+        gdf["nome_area_origem"] = None
+    if "tipo_derivacao" not in gdf.columns:
+        gdf["tipo_derivacao"] = None
+    if "distancia_buffer_m" not in gdf.columns:
+        gdf["distancia_buffer_m"] = None
 
     gdf["atributos_origem"] = atributos_json
     gdf["feicao_origem_id"] = [f"{folder}#{i}" for i in range(n)]
@@ -237,6 +252,27 @@ def main() -> None:
                 resumo.append({"fonte": folder, "status": "vazio_apos_recorte"})
                 continue
             if cfg["buffer"]:
+                nome_col = next(
+                    (
+                        col
+                        for col in [
+                            "nome", "name", "NOME", "denominacao", "NM_UC", "nome_uc",
+                            "nm_ti", "nm_terrai", "nome_comun", "nome_comunidade",
+                            "titulo", "descricao", "cod_iphan", "codigo_iphan",
+                            "id_sitio", "processo", "id_area",
+                        ]
+                        if col in gdf.columns
+                    ),
+                    None,
+                )
+                nome_area_origem = (
+                    gdf[nome_col].fillna(folder).astype(str)
+                    if nome_col is not None else pd.Series(folder, index=gdf.index)
+                )
+                gdf["nome_area_origem"] = nome_area_origem
+                gdf["nome_exibicao"] = "Área de influência de " + nome_area_origem
+                gdf["tipo_derivacao"] = "buffer_risco"
+                gdf["distancia_buffer_m"] = cfg["buffer"]
                 gdf["geometry"] = gdf.geometry.buffer(cfg["buffer"])
                 if not cfg.get("sp_only"):
                     gdf = clip_to_mask(gdf, mask)
@@ -250,6 +286,39 @@ def main() -> None:
             por_tipo = classificada["tipo_tratamento"].value_counts().to_dict()
             log(f"  OP-CLASS: {por_tipo}")
             all_classified.append(classificada)
+
+            regra_zona = cfg.get("zona_amortecimento")
+            if regra_zona:
+                categorias_excluidas = regra_zona["excecoes"]
+                elegiveis = gdf[
+                    gdf["grupo"].astype(str).str.casefold().eq("proteção integral")
+                    & ~gdf["categoria"].astype(str).str.upper().isin(categorias_excluidas)
+                ].copy()
+                if len(elegiveis):
+                    nome_area = elegiveis["nome_uc"].fillna(folder).astype(str)
+                    zona = elegiveis.copy()
+                    zona["nome_area_origem"] = nome_area
+                    zona["nome_exibicao"] = "Zona de amortecimento da " + nome_area
+                    zona["tipo_derivacao"] = "zona_amortecimento"
+                    zona["distancia_buffer_m"] = regra_zona["distancia"]
+                    zona["geometry"] = zona.geometry.buffer(regra_zona["distancia"])
+                    zona["geometry"] = zona.geometry.difference(elegiveis.geometry)
+                    zona = clip_to_mask(zona, mask)
+                    if len(zona):
+                        criterios = regra_zona["criterios_por_esfera"]
+                        zona["criterio_zona"] = (
+                            zona["esfera"].astype(str).str.casefold().map(criterios).fillna("za_uc_federal")
+                        )
+                        for criterio_zona, grupo_zona in zona.groupby("criterio_zona"):
+                            classificada_zona = classify(
+                                grupo_zona,
+                                rules_by_crit.get(criterio_zona, []),
+                                cfg["fonte_id"],
+                                f"{folder}_zona_amortecimento",
+                            )
+                            classificada_zona["fonte_folder"] = f"{folder}_zona_amortecimento"
+                            all_classified.append(classificada_zona)
+                        log(f"  zonas de amortecimento: {len(zona)} feicoes externas de 3 km")
             resumo.append({"fonte": folder, "status": "ok", "feicoes": len(classificada), "por_tipo": por_tipo})
         except Exception as exc:  # noqa: BLE001
             log(f"  [erro] {exc}")
@@ -261,9 +330,9 @@ def main() -> None:
         return
 
     common_cols = [
-        "feicao_origem_id", "fonte_folder", "fonte_id", "nome_origem",
+        "feicao_origem_id", "fonte_folder", "fonte_id", "nome_origem", "nome_area_origem",
         "criterio_id", "tipo_tratamento", "severidade", "base_legal",
-        "atributos_origem", "geometry",
+        "tipo_derivacao", "distancia_buffer_m", "atributos_origem", "geometry",
     ]
     padded = []
     for g in all_classified:

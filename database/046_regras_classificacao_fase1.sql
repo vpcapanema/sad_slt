@@ -73,20 +73,18 @@ VALUES
  'Lei 12651/2012 art. 4 VI', 'Restinga fixadora de dunas é APP.'),
 ('ecossistema_costeiro', 999, $expr$True$expr$, 'risco', 3,
  'Res. CONAMA 303/2002', 'Demais ecossistemas costeiros sensíveis.'),
--- Cavidades naturais
-('cavidade_maxima', 10, $expr$True$expr$, 'restricao', 4,
- 'Dec. 10935/2022 art. 4', 'Cavidade grau máximo: buffer 250 m; supressão só por utilidade pública.'),
-('cavidade_demais', 999, $expr$True$expr$, 'risco', 2,
- 'Dec. 10935/2022; IN ICMBio 02/2017', 'Demais cavidades: estudo de impacto obrigatório.'),
+-- Cavidades naturais: a classificação é risco sem pré-requisito de relevância.
+('cavidade', 999, $expr$True$expr$, 'risco', 2,
+ 'Dec. 10935/2022; IN ICMBio 02/2017', 'Cavidade natural ou área oficial de influência: estudo de impacto e medidas de proteção.'),
 -- Terras Indígenas / territórios quilombolas
 ('terra_indigena', 10, $expr$situacao in ['Homologada','Regularizada','Declarada']$expr$, 'restricao', 4,
  'CF/88 art. 231; Port. Interministerial 60/2015', 'TI homologada: consulta FUNAI, buffer 8 km rodovias.'),
 ('terra_indigena', 999, $expr$True$expr$, 'risco', 3,
- 'Convenção 169 OIT', 'TI em identificação: risco alto.'),
+ 'Convenção 169 OIT', 'TI em identificação: risco.'),
 ('territorio_quilombola', 10, $expr$situacao in ['Titulado','Reconhecido']$expr$, 'restricao', 4,
  'Dec. 4887/2003; Port. Interministerial 60/2015', 'Território titulado: consulta Palmares/INCRA, buffer 8 km.'),
 ('territorio_quilombola', 999, $expr$True$expr$, 'risco', 3,
- 'Convenção 169 OIT', 'Território em reconhecimento: risco alto.'),
+ 'Convenção 169 OIT', 'Território em reconhecimento: risco.'),
 -- Área contaminada
 ('area_contaminada', 10, $expr$classe in ['ACRe','ACRi','AI']$expr$, 'restricao', 4,
  'Dec. Est. SP 59263/2013', 'AC com Risco Confirmado ou sob Investigação: uso vedado até remediação.'),
@@ -94,7 +92,7 @@ VALUES
  'CETESB — Relação de Áreas Contaminadas', 'Passivo ambiental cadastrado.'),
 -- Suscetibilidade a desastres
 ('inundacao', 10, $expr$grau in ['muito_alto','alto']$expr$, 'risco', 3,
- 'Defesa Civil; IPT; SGB/CPRM', 'Susceptibilidade alta: risco alto.'),
+ 'Defesa Civil; IPT; SGB/CPRM', 'Susceptibilidade: risco.'),
 ('inundacao', 999, $expr$True$expr$, 'risco', 2,
  'DAEE', 'Susceptibilidade moderada.'),
 ('movimento_massa', 10, $expr$grau in ['muito_alto','alto']$expr$, 'risco', 3,
@@ -102,10 +100,9 @@ VALUES
 ('movimento_massa', 999, $expr$True$expr$, 'risco', 2,
  'Defesa Civil', 'Susceptibilidade moderada.'),
 -- Patrimônio
-('bem_tombado', 10, $expr$situacao == 'Tombado' and area_envoltoria == True$expr$, 'restricao', 4,
- 'Dec-Lei 25/1937; IN IPHAN 001/2015', 'Área envoltória oficial: intervenção sujeita a anuência.'),
-('bem_tombado', 999, $expr$True$expr$, 'risco', 3,
- 'IPHAN; CONDEPHAAT', 'Bem tombado sem envoltória: buffer preliminar 300 m.'),
+('bem_tombado', 999, $expr$True$expr$, 'restricao', 4,
+ 'Dec-Lei 25/1937, arts. 10, 17 e 18; IN IPHAN 001/2015',
+ 'Bem tombado ou área envoltória oficial: restrição jurídica, com intervenção sujeita a autorização patrimonial.'),
 ('sitio_arqueologico', 10, $expr$relevancia == 'nacional'$expr$, 'restricao', 4,
  'Lei 3924/1961; Port. IPHAN 375/2018', 'Sítio de relevância nacional: preservação obrigatória.'),
 ('sitio_arqueologico', 999, $expr$True$expr$, 'risco', 3,

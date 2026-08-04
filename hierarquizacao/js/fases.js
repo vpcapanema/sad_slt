@@ -544,7 +544,7 @@
       )
       .join("; ");
 
-    box.innerHTML = `<dl>${linha("Nome", fatiamento.nome)}${linha("Código", fatiamento.codigo)}${linha("Configuração padrão", fatiamento.padrao ? "Sim" : "Não")}${linha("Limiar de restrição", parametros.restricao?.limiar)}${linha("Classes de risco", descricaoClasses || "Não definido")}</dl>`;
+    box.innerHTML = `<dl>${linha("Nome", fatiamento.nome)}${linha("Código", fatiamento.codigo)}${linha("Configuração padrão", fatiamento.padrao ? "Sim" : "Não")}${linha("Limiar de restrição", parametros.restricao?.limiar)}${linha("Categoria de risco", descricaoClasses || "Não definido")}</dl>`;
     box.classList.remove("hidden");
 
     limiar.value = parseNumero(parametros.restricao?.limiar, 1) ?? 1;
@@ -565,7 +565,7 @@
   function renderClasses(lista) {
     const alvo = $("#fatiamento-classes");
     if (!lista || !lista.length) {
-      alvo.innerHTML = '<p class="ahp-help-text">Configuração sem classes de risco definidas.</p>';
+      alvo.innerHTML = '<p class="ahp-help-text">Configuração sem categoria de risco definida.</p>';
       return;
     }
     const linhas = lista
@@ -575,7 +575,7 @@
         return `<tr><td>${titulo}</td><td><code>${esc(classe.codigo || "")}</code></td><td class="num">${esc(faixa)}</td></tr>`;
       })
       .join("");
-    alvo.innerHTML = `<table class="fase1-readonly-table"><caption>Classes de risco (${lista.length})</caption><thead><tr><th>Rótulo</th><th>Código</th><th>Faixa</th></tr></thead><tbody>${linhas}</tbody></table>`;
+    alvo.innerHTML = `<table class="fase1-readonly-table"><caption>Categoria de risco</caption><thead><tr><th>Rótulo</th><th>Código</th><th>Faixa</th></tr></thead><tbody>${linhas}</tbody></table>`;
   }
 
   function renderPesos(pesosConfig) {
@@ -1022,7 +1022,7 @@
               <h4>Regra aplicada</h4>
               <dl class="fase1-report-dl">
                 <dt>Limiar de restrição</dt><dd>${esc(((modelo.fatiamento.parametros || {}).restricao || {}).limiar ?? "—")}</dd>
-                <dt>Classes de risco</dt><dd>${esc(classesTxt)}</dd>
+                <dt>Categoria de risco</dt><dd>${esc(classesTxt)}</dd>
               </dl>
             </article>
           </div>

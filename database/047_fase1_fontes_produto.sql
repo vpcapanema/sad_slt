@@ -65,7 +65,7 @@ VALUES
  'uc_pi_estadual', 'risco', 3,
  'Lei 9985/2000; SMA-SP', NULL),
 ('cecav_cavidades', 'Cavidades naturais CECAV/ICMBio', 'CECAV/ICMBio', 'federal',
- 'cavidade_demais', 'risco', 2,
+ 'cavidade', 'risco', 2,
  'Dec. 10935/2022; IN ICMBio 02/2017',
  'https://www.gov.br/icmbio/pt-br/assuntos/centros-de-pesquisa/cecav/'),
 ('funai_ti', 'Terras Indígenas', 'FUNAI', 'federal',

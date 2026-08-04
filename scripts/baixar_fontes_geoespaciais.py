@@ -30,7 +30,7 @@ USER_AGENT = "SICARD-SLT/1.0 (download de fontes geoespaciais oficiais)"
 
 ARCGIS = "https://pamgia.ibama.gov.br/server/rest/services"
 DATAGEO = "https://datageo.ambiente.sp.gov.br/geoserver/datageo/ows"
-SISCOM_WFS = "http://siscom.ibama.gov.br:80/geoserver/publica/ows"
+IBAMA_EMBARGOS = "https://pamgia.ibama.gov.br/geoservicos/arquivos/adm_embargo_ibama_a.shp.zip"
 
 
 @dataclass(frozen=True)
@@ -41,6 +41,7 @@ class Fonte:
     tipo: str
     url: str
     camadas: tuple[str, ...] = ()
+    arquivo: str | None = None
 
 
 # Doze bases abertas atendem dezessete dos 23 critérios canônicos. Os seis
@@ -61,7 +62,7 @@ FONTES = (
     Fonte("movimento_massa", "Áreas de risco de escorregamento", "Instituto Geológico/SEMIL — DataGEO", "wfs", DATAGEO, ("datageo:VWM_AREA_RISCO_ESCORREGAMENTO_IG_2014_POL",)),
     Fonte("sitios_arqueologicos", "Sítios arqueológicos", "IPHAN/SEMIL — DataGEO", "wfs", DATAGEO, ("datageo:SitiosArqueologicos",)),
     Fonte("assentamentos", "Assentamentos", "INCRA", "direto", "https://certificacao.incra.gov.br/csv_shp/zip/Assentamento%20Brasil.zip"),
-    Fonte("embargos_ibama", "Embargos ambientais federais", "IBAMA — SISCOM", "wfs", SISCOM_WFS, ("publica:vw_brasil_adm_embargo_a",)),
+    Fonte("embargos_ibama", "Termos de Embargo", "IBAMA — PAMGIA/Dados Abertos", "direto", IBAMA_EMBARGOS, arquivo="adm_embargo_ibama_a.shp.zip"),
 )
 
 CRITERIOS_SEM_FONTE_ABERTA = (
@@ -268,7 +269,8 @@ def baixar_wfs(fonte: Fonte, *, force: bool) -> list[Path]:
 
 
 def baixar_direto(fonte: Fonte, *, force: bool) -> list[Path]:
-    arquivo = baixar_zip(fonte.url, DESTINO / fonte.id / f"{fonte.id}.zip", force=force)
+    nome = fonte.arquivo or f"{fonte.id}.zip"
+    arquivo = baixar_zip(fonte.url, DESTINO / fonte.id / nome, force=force)
     return [arquivo]
 
 

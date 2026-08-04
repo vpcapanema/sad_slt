@@ -61,25 +61,40 @@ def parse_shapefile_zip(content: bytes) -> dict[str, Any]:
         shp_names = [n for n in zf.namelist() if n.lower().endswith(".shp")]
         if not shp_names:
             raise HTTPException(400, "ZIP não contém arquivo .shp.")
-        shp_name = shp_names[0]
-        base = Path(shp_name).stem
         extract_dir = tempfile.mkdtemp()
         members = [
             n
             for n in zf.namelist()
-            if Path(n).name.lower().startswith(base.lower())
-            and Path(n).suffix.lower() in (".shp", ".shx", ".dbf", ".prj", ".cpg")
+            if Path(n).suffix.lower() in (".shp", ".shx", ".dbf", ".prj", ".cpg")
         ]
-        for m in members:
-            zf.extract(m, extract_dir)
-        shp_path = str(Path(extract_dir) / Path(shp_name).name)
-        reader = shapefile.Reader(shp_path)
+        for member in members:
+            zf.extract(member, extract_dir)
+
         geoms: list[dict[str, Any]] = []
-        for sr in reader.shapeRecords():
-            shp_record = sr.shape
-            if shp_record is None:
+        for shp_name in shp_names:
+            shp_path = str(Path(extract_dir) / shp_name)
+            records: list[Any] | None = None
+            for encoding in ("utf-8", "latin1"):
+                try:
+                    with shapefile.Reader(shp_path, encoding=encoding) as reader:
+                        records = reader.shapeRecords()
+                    break
+                except shapefile.ShapefileException:
+                    continue
+            if records is None:
                 continue
-            geoms.append(cast(dict[str, Any], shp_record.__geo_interface__))
+
+            candidate_geoms = []
+            for shape_record in records:
+                shp_record = shape_record.shape
+                if shp_record is None or shp_record.shapeType == shapefile.NULL:
+                    continue
+                candidate_geoms.append(cast(dict[str, Any], shp_record.__geo_interface__))
+
+            supported = ("Polygon", "MultiPolygon", "LineString", "MultiLineString")
+            parsed = [to_shape(geom) for geom in candidate_geoms if geom.get("type") in supported]
+            if len(parsed) > len(geoms):
+                geoms = candidate_geoms
     supported = ("Polygon", "MultiPolygon", "LineString", "MultiLineString")
     parsed = [to_shape(g) for g in geoms if g.get("type") in supported]
     if not parsed:

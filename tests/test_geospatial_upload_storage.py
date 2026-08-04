@@ -74,7 +74,7 @@ def test_file_geodatabase_goes_to_geodatabase(isolated_storage: Path) -> None:
 
 
 def test_geopackage_goes_to_geodatabase_without_modification(isolated_storage: Path) -> None:
-    content = b"SQLite format 3\x00original"
+    content = b"GeoPackage fixture content"
     result = storage.store_upload("camadas.gpkg", content)
     assert result.category == "geodatabase"
     assert result.original_path.read_bytes() == content

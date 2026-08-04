@@ -18,9 +18,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_gp_fatiamento_fase1_padrao
 INSERT INTO geoprocessamento.configuracao_fatiamento_fase1
     (codigo,nome,descricao,padrao,parametros)
 VALUES (
-    'FAT-F1-PADRAO', 'Fatiamento padrão da Fase 1',
-    'Uma classe impeditiva de restrição e três classes de risco.', TRUE,
-    '{"restricao":{"limiar":1,"classes":[{"codigo":"restricao","rotulo":"Restrição","minimo":1}]},"risco":{"classes":[{"codigo":"baixo","rotulo":"Risco baixo","minimo":0,"maximo":1.5},{"codigo":"medio","rotulo":"Risco médio","minimo":1.5,"maximo":2.5},{"codigo":"alto","rotulo":"Risco alto","minimo":2.5,"maximo":null}]}}'::jsonb
+    'F1-RISCO-RESTRICAO-PADRAO', 'Classificação padrão da Fase 1',
+    'Duas categorias: risco e restrição.', TRUE,
+    '{"restricao":{"limiar":1,"regra":"ato_vigente * intersecao_validada * aplicabilidade"},"risco":{"classes":[{"codigo":"risco","rotulo":"Risco","minimo":0,"maximo":null}]}}'::jsonb
 )
 ON CONFLICT (codigo) DO NOTHING;
 

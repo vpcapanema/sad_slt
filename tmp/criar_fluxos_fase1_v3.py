@@ -4,9 +4,9 @@
      restrição, com OP-CLASS por feição, OP-05 Identity iterativa, e etapas
      pós-iterador (reprojeção + exportação) rodando UMA vez ao final.
 
-  B) fluxo_fase1_gerador_risco_pli      — consolida camadas classificadas como
-     risco, com OP-CLASS, OP-04 buffer externo derivado, OP-05 Identity iterativa
-     e exportação pós-iterador.
+  B) fluxo_fase1_gerador_risco_pli      — consolida camadas de risco já
+      materializadas pelo catálogo canônico, com OP-CLASS, OP-05 Identity
+      iterativa e exportação pós-iterador.
 
 Parâmetros esperados no runtime:
   camadas_ids            : lista de ids de camadas do painel (uma por critério)
@@ -17,7 +17,6 @@ Parâmetros esperados no runtime:
                            observação abaixo.
   mascara_area_estudo_id : id da camada máscara (Estado de SP)
   acumulador_id          : id de uma camada seed (a própria máscara serve)
-  distancia_buffer_ext   : distância do buffer externo (m) — usado no fluxo de risco
 
 Observação: como o engine aceita uma única variável iterada por vez, associamos
 o critério à camada através do próprio painel: o operador que classifica precisa
@@ -89,24 +88,12 @@ def passos_dentro_iterador_risco() -> list[dict]:
         item("OP-02-CORR", {"camada_id": "$camada_validada"}, {"camada_id": "camada_reparada"}),
         item("OP-03", {"camada_id": "$camada_reparada"}, {"camada_id": "camada_normalizada"}),
         item(
-            "OP-04",
-            {
-                "camada_id": "$camada_normalizada",
-                "distancia_buffer": "$distancia_buffer_ext",
-                "unidade_buffer": "metros",
-                "tipo_buffer": "externo",
-                "dissolver_geometrias": False,
-                "recortar_area_estudo": False,
-            },
-            {"camada_id": "camada_bufferizada"},
-        ),
-        item(
             "OP-33",
             {
-                "camada_id": "$camada_bufferizada",
+                "camada_id": "$camada_normalizada",
                 "camada_mascara_id": "$mascara_area_estudo_id",
                 "manter_tipo_geometria": True,
-                "nome_saida": "Buffer externo recortado",
+                "nome_saida": "Camada de risco recortada",
             },
             {"camada_id": "camada_recortada"},
         ),
@@ -180,14 +167,14 @@ FLUXOS = [
     },
     {
         "id": "fluxo_fase1_gerador_risco_pli",
-        "nome": "Fase 1 — Gerador de camada de RISCO consolidada com derivados (PLI-SP)",
+        "nome": "Fase 1 — Consolidador de camada de RISCO (PLI-SP)",
         "descricao": (
-            "Consolida camadas classificadas como RISCO (incluindo derivados por buffer "
-            "externo OP-04) via Identity iterativa (OP-05). Cada camada passa por "
-            "validação, reparo, normalização, buffer externo (largura conforme "
-            "buffers_zona_amortecimento_fase1.json), recorte pela área de estudo, "
-            "classificação por feição (OP-CLASS) e Identity acumulativa. Exportação "
-            "GeoPackage em EPSG:4674 uma vez ao final."
+            "Consolida camadas classificadas como RISCO, previamente materializadas "
+            "conforme buffers_zona_amortecimento_fase1.json, via Identity iterativa "
+            "(OP-05). Cada camada passa por validação, reparo, normalização, recorte "
+            "pela área de estudo, classificação por feição (OP-CLASS) e Identity "
+            "acumulativa. O fluxo não aplica distância genérica. Exportação GeoPackage "
+            "em EPSG:4674 uma vez ao final."
         ),
         "categoria": "Fluxos customizados",
         "toolbox": "SIRCADI Toolbox",
@@ -198,7 +185,6 @@ FLUXOS = [
             {"nome": "Acumulador (seed)", "chave": "acumulador_id", "tipo_entrada": "vector_layers"},
             {"nome": "Critério padrão (id)", "chave": "criterio_id_padrao", "tipo_entrada": "values"},
             {"nome": "Fonte padrão (id)", "chave": "fonte_id_padrao", "tipo_entrada": "values"},
-            {"nome": "Distância buffer externo (m)", "chave": "distancia_buffer_ext", "tipo_entrada": "values", "valor": 3000},
         ],
         "itens": [
             {"iterador": "vector_layers", "parametros": {"fonte": "$camadas_ids", "variavel": "camada_atual"}},

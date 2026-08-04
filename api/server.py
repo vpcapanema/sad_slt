@@ -374,7 +374,10 @@ async def documento_hierarquizacao(documento: str) -> FileResponse:
         from fastapi import HTTPException
 
         raise HTTPException(status_code=404, detail="Documento não encontrado")
-    return FileResponse(project_path(documento), media_type="text/markdown; charset=utf-8")
+    return FileResponse(
+        project_path(f"documentacao/hierarquizacao/{documento}"),
+        media_type="text/markdown; charset=utf-8",
+    )
 
 
 app.mount("/assets", StaticFiles(directory=str(project_path("assets"))), name="assets")

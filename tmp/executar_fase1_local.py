@@ -46,7 +46,7 @@ SOURCES: dict[str, dict] = {
     "ucs_mma": {"criterio_id": "uc_pi_federal", "fonte_id": "mma_cnuc_pi_federal", "buffer": None},
     "terras_indigenas": {"criterio_id": "terra_indigena", "fonte_id": "funai_ti", "buffer": None},
     "quilombos": {"criterio_id": "territorio_quilombola", "fonte_id": "incra_quilombolas", "buffer": None},
-    "cavidades": {"criterio_id": "cavidade_maxima", "fonte_id": "cecav_cavidades", "buffer": 500},
+    "cavidades": {"criterio_id": "cavidade", "fonte_id": "cecav_cavidades", "buffer": None},
     "contaminadas": {"criterio_id": "area_contaminada", "fonte_id": "cetesb_areas_contaminadas", "buffer": 500},
     "embargos_ibama": {"criterio_id": "embargo_ibama", "fonte_id": "ibama_embargos", "buffer": None},
     "sitios_arqueologicos": {"criterio_id": "sitio_arqueologico", "fonte_id": "iphan_sitios", "buffer": None},

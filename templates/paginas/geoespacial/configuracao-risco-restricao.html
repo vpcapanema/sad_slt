@@ -341,10 +341,10 @@
             <article class="card-resultado">
               <h3>Resultado</h3>
               <code
-                >1 = Restrição confirmada · 0 = Sem restrição confirmada</code
+                >1 = Restrição · 0 = Sem restrição</code
               >
               <p>
-                Restrição confirmada barra o objeto e não é diluída pelo índice
+                Restrição barra o objeto e não é diluída pelo índice
                 de risco.
               </p>
             </article>
@@ -415,60 +415,31 @@
         <header class="gerador-section__header">
           <span class="gerador-section__number">5</span>
           <div class="gerador-section__heading">
-            <h2>Classificação do risco</h2>
+            <h2>Classificação canônica</h2>
             <p>
-              O fatiamento converte o IRc nas três classes canônicas de risco.
-              Restrição provém da camada de restrição.
+              A Fase 1 trabalha exclusivamente com as categorias Risco e
+              Restrição.
             </p>
           </div>
         </header>
         <div class="gerador-section__body">
           <div class="fase1-classification-section">
-            <h3>Classes canônicas do índice de risco</h3>
+            <h3>Categorias da Fase 1</h3>
             <p>
-              O valor contínuo do IRc é reclassificado em uma das três classes.
+              O IRc permanece como evidência técnica de risco e não gera
+              subclasses.
             </p>
             <div class="fase1-canonical-classes">
-              <span data-level="1"><b>Risco baixo</b></span
-              ><span data-level="2"><b>Risco médio</b></span
-              ><span data-level="3"><b>Risco alto</b></span
+              <span data-level="1"><b>Risco</b><small>Índice calculado</small></span
               ><span class="fase1-canonical-class--restriction" data-level="4"
                 ><b>Restrição</b><small>Regra booleana</small></span
               >
             </div>
             <p class="fase1-canonical-origin-note">
-              As quatro classes pertencem à classificação canônica. Risco baixo,
-              médio e alto são obtidos pelo fatiamento do IRc; Restrição é
-              atribuída pela regra booleana de sobreposição e aplicabilidade.
+              Risco identifica incidência que demanda análise ou mitigação.
+              Restrição é atribuída somente pela regra booleana de ato vigente,
+              interseção validada e aplicabilidade.
             </p>
-          </div>
-          <div class="fase1-methods-section">
-            <h3>Métodos alternativos de fatiamento</h3>
-            <p>
-              Um único método é selecionado para estabelecer os limites entre
-              risco baixo, médio e alto. Os métodos abaixo são alternativas e
-              não correspondem individualmente às classes apresentadas acima.
-            </p>
-            <div class="fase1-method-list">
-              <article class="card-intervalos-iguais">
-                <h3>Intervalos iguais</h3>
-                <p>Divide a escala de 0 a 100 em três amplitudes iguais.</p>
-              </article>
-              <article class="card-quantis">
-                <h3>Quantis</h3>
-                <p>
-                  Usa a distribuição de uma população de referência registrada.
-                </p>
-              </article>
-              <article class="card-quebras-naturais">
-                <h3>Quebras naturais</h3>
-                <p>Usa Jenks e registra amostra e cortes resultantes.</p>
-              </article>
-              <article class="card-cortes-tecnicos">
-                <h3>Cortes técnicos</h3>
-                <p>Exige justificativa e responsável técnico.</p>
-              </article>
-            </div>
           </div>
         </div>
       </section>
@@ -477,7 +448,7 @@
           <span class="gerador-section__number">6</span>
           <div class="gerador-section__heading">
             <h2>Configuração operacional</h2>
-            <p>Pesos e cortes aplicados na construção da camada de risco.</p>
+            <p>Pesos aplicados ao índice técnico de evidência de risco.</p>
           </div>
         </header>
         <div class="gerador-section__body">
@@ -490,39 +461,14 @@
               </div>
               <div class="gerador-field">
                 <label>Código</label
-                ><input id="codigo-configuracao" value="FAT-F1-CANONICA" />
+                ><input id="codigo-configuracao" value="F1-RISCO-RESTRICAO-CANONICA" />
               </div>
               <div class="gerador-field">
                 <label>Versão</label
-                ><input id="versao-metodologia" value="2026.07.16" />
-              </div>
-              <div class="gerador-field">
-                <label>Método</label
-                ><select id="metodologia-fatiamento">
-                  <option value="intervalos_iguais">Intervalos iguais</option>
-                  <option value="quantis">Quantis</option>
-                  <option value="jenks">Jenks</option>
-                  <option value="especialista">Cortes técnicos</option>
-                </select>
-              </div>
+                ><input id="versao-metodologia" value="2026.08.03" />
             </div>
           </article>
           <div class="fase1-config-layout">
-            <article class="card-limiares-de-classificacao fase1-config-card">
-              <h3>Limiares de classificação</h3>
-              <div class="fase1-threshold-fields">
-                <div class="gerador-field">
-                  <label>Início do risco médio</label
-                  ><input id="limiar-baixo" type="number" value="33.33" />
-                </div>
-                <div class="gerador-field">
-                  <label>Início do risco alto</label
-                  ><input id="limiar-medio" type="number" value="66.67" />
-                </div>
-              </div>
-              <div id="faixas-preview"></div>
-              <p id="limiares-validacao" class="gerador-feedback"></p>
-            </article>
             <article class="card-pesos-dos-componentes-do-risco fase1-config-weights">
               <h3>Pesos dos componentes do risco</h3>
               <div class="fase1-config-weight-grid">
@@ -558,15 +504,9 @@
               </div>
             </article>
           </div>
-          <input id="quantidade-classes-risco" type="hidden" value="3" /><input
-            id="limiar-alto"
-            type="hidden"
-            value="100"
-          />
+          <p id="limiares-validacao" class="gerador-feedback"></p>
           <div class="gerador-actions">
-            <button class="btn btn-secondary" id="restaurar-limiares">
-              Restaurar</button
-            ><button class="btn btn-primary" id="validar-metodologia">
+            <button class="btn btn-primary" id="validar-metodologia">
               Salvar configuração
             </button>
           </div>
@@ -576,5 +516,5 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-  <script src="/restrict/geoespacial/biblioteca-risco-restricao.js"></script>
+  <script src="/restrict/geoespacial/biblioteca-risco-restricao.js?v=20260803-matriz-completa"></script>
 {% endblock %}

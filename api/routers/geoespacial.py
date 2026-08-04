@@ -546,13 +546,13 @@ async def listar_diretorio_camadas() -> dict[str, Any]:
     by_path = {original_path(row): row for row in imported_rows if original_path(row)}
     accepted = {
         ".shp", ".geojson", ".json", ".kml", ".gml", ".fgb", ".gpkg",
-        ".sqlite", ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2",
+        ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2",
         ".zip", ".rar", ".7z", ".tar", ".tgz", ".gz",
     }
     # Ordem de preferência para detectar a camada principal dentro de um pacote extraído.
     primary_priority = [
         ".shp", ".gpkg", ".geojson", ".json", ".kml", ".gml", ".fgb",
-        ".sqlite", ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2",
+        ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2",
     ]
 
     def primary_extension(folder: Path, fallback: str) -> str:

@@ -21,7 +21,7 @@ VECTOR_EXTENSIONS = {
 RASTER_EXTENSIONS = {
     ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2", ".grd", ".nc",
 }
-GEODATABASE_EXTENSIONS = {".gpkg", ".sqlite", ".geodatabase"}
+GEODATABASE_EXTENSIONS = {".gpkg", ".geodatabase"}
 ARCHIVE_EXTENSIONS = {".zip", ".rar", ".7z", ".tar", ".tgz", ".gz", ".bz2", ".xz"}
 IGNORED_EXTENSIONS = {
     ".dbf", ".shx", ".prj", ".cpg", ".qix", ".sbn", ".sbx", ".xml",
