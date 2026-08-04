@@ -1,22 +1,3 @@
-{
-  "gerado_em": "2026-07-27T12:11:48.652231+00:00",
-  "diretorio_fontes_brutas": "D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\data\\geoespacial\\local",
-  "processamento_aplicado": "nenhum",
-  "fontes": {
-    "embargos_ibama": {
-      "status": "erro",
-      "titulo": "Embargos ambientais federais",
-      "orgao": "IBAMA — SISCOM",
-      "url_oficial": "http://siscom.ibama.gov.br:80/geoserver/publica/ows",
-      "erro": "Download falhou após 4 tentativas: HTTP Error 403: Forbidden"
-    }
-  },
-  "criterios_sem_publicacao_geoespacial_aberta_confirmada": [
-    "zona de amortecimento de UC estadual",
-    "zona de amortecimento de UC federal",
-    "faixa de domínio ou servidão de infraestrutura",
-    "embargo ambiental estadual ativo",
-    "interdição ativa da CETESB",
-    "bens materiais tombados do IPHAN (serviço público apenas para consulta; sem exportação Shapefile)"
-  ]
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:505d7d3979287e4118da4da8443679728ffa57e95effe2e517fc7c40a7f2ae15
+size 3965
