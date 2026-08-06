@@ -7,4 +7,11 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/
 data/geoespacial/local/vegetacao_sp/InventarioFlorestal2020.zip
+
+# Rascunhos e artefatos gerados (não versionar)
+tmp/
+data/geoespacial/uploads/
+data/geoespacial/outputs/
+data/geoespacial/relatorios/*.log
