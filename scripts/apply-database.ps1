@@ -189,7 +189,9 @@ $migrations = @(
     "052_ambientes_geoprocessamento_usuario.sql",
     "053_catalogo_geoespacial_portal.sql",
     "054_seed_servicos_publicos_portal.sql",
-    "055_seed_mapbiomas_portal.sql"
+    "055_seed_mapbiomas_portal.sql",
+    "056_geom_aceita_z.sql",
+    "057_classe_modelagem_atributo_objeto.sql"
 )
 
 if ($OnlyMigration) {
