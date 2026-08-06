@@ -2,14 +2,19 @@
 from __future__ import annotations
 
 from io import BytesIO
+import logging
 from pathlib import Path
 from shutil import rmtree
 from typing import Any
+from urllib.parse import urlencode
 from zipfile import ZIP_DEFLATED, ZipFile
 
+import geopandas as gpd
+import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
+from shapely.geometry import LineString, Point, Polygon
 
-from api.deps.auth import require_geospatial_access
+from api.deps.auth import require_geospatial_access, require_operator
 from api.exceptions import DatabaseUnavailableError
 from api.path_policy import project_path
 from api.repositories import camada_geoespacial_repository
@@ -21,6 +26,9 @@ from api.schemas.geoespacial import (
     CamadaInputSchema,
     CamadaSchema,
     HomologarCamadaSchema,
+    AmbienteGeoprocessamentoSchema,
+    PortalFavoritoInputSchema,
+    PortalServicoInputSchema,
     CriterioFase2InputSchema,
     CriterioFase2Schema,
     FluxoSchema,
@@ -33,8 +41,6 @@ from api.schemas.geoespacial import (
     ProdutoGeradorSchema,
     FluxoProdutoInputSchema,
     FluxoProdutoSchema,
-    ProcessamentoResultSchema,
-    ProcessamentoSchema,
     RodadaFase3Schema,
 )
 from api.services.geoespacial_service import geoespacial_service
@@ -51,6 +57,9 @@ from api.services.geoprocessamento_engine import (
     geoprocessamento_engine,
 )
 from api.services.geoprocessamento_jobs import geoprocessamento_jobs
+from api.services.session_service import SessionUser
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/geoespacial",
@@ -193,6 +202,272 @@ async def listar_algoritmos() -> list[dict]:
         }
         for key, value in CATALOG.items()
     ]
+
+
+@router.get("/ambientes", response_model=AmbienteGeoprocessamentoSchema)
+async def obter_ambientes_geoprocessamento(
+    user: SessionUser = Depends(require_geospatial_access),
+) -> dict[str, Any]:
+    """Retorna os padrões de execução persistidos para o usuário autenticado."""
+    return await geoespacial_repository.obter_ambiente_usuario(user.id)
+
+
+@router.put("/ambientes", response_model=AmbienteGeoprocessamentoSchema)
+async def salvar_ambientes_geoprocessamento(
+    ambiente: AmbienteGeoprocessamentoSchema,
+    user: SessionUser = Depends(require_geospatial_access),
+) -> dict[str, Any]:
+    """Atualiza os padrões de execução do usuário autenticado."""
+    return await geoespacial_repository.salvar_ambiente_usuario(
+        user.id, ambiente.model_dump(),
+    )
+
+
+@router.get("/catalogo/projeto")
+async def obter_catalogo_projeto() -> dict[str, list[dict[str, Any]]]:
+    """Lista os recursos reais que compõem o projeto geoespacial."""
+    grupos_toolbox: dict[str, list[dict[str, str]]] = {}
+    for operacao_id, familia in TOOL_FAMILIES.items():
+        grupos_toolbox.setdefault(familia, []).append({
+            "id": operacao_id,
+            "nome": CATALOG[operacao_id],
+        })
+    folders = [
+        {"nome": path.name, "caminho": str(path.relative_to(project_path("."))).replace("\\", "/")}
+        for path in (project_path("data/geoespacial"), project_path("geoespacial"))
+        if path.exists()
+    ]
+    return {
+        "mapas": [{"nome": "Mapa da bancada", "tipo": "mapa"}],
+        "toolboxes": [{
+            "nome": "SIRCADI Toolbox",
+            "tipo": "toolbox",
+            "grupos": [
+                {"nome": familia, "ferramentas": ferramentas}
+                for familia, ferramentas in grupos_toolbox.items()
+            ],
+        }],
+        "bancos_de_dados": [{"nome": "PostgreSQL/PostGIS SLT", "tipo": "postgresql"}],
+        "pastas": folders,
+        "conexoes": await geoespacial_repository.listar_servicos_portal(),
+    }
+
+
+@router.get("/catalogo/portal/servicos")
+async def listar_servicos_portal() -> list[dict[str, Any]]:
+    """Serviços WMS/WFS aprovados para consumo na bancada."""
+    return await geoespacial_repository.listar_servicos_portal()
+
+
+@router.post("/catalogo/portal/servicos", status_code=status.HTTP_201_CREATED)
+async def criar_servico_portal(
+    servico: PortalServicoInputSchema,
+    _: SessionUser = Depends(require_operator),
+) -> dict[str, Any]:
+    return await geoespacial_repository.criar_servico_portal(servico.model_dump())
+
+
+async def _servico_portal(servico_id: str, *tipos: str) -> dict[str, Any]:
+    servico = await geoespacial_repository.obter_servico_portal(servico_id)
+    if not servico:
+        raise HTTPException(status_code=404, detail="Serviço do Portal não encontrado")
+    if tipos and servico["tipo"] not in tipos:
+        raise HTTPException(status_code=422, detail="Serviço incompatível com esta operação")
+    return servico
+
+
+def _bbox_portal(valor: Any) -> list[float]:
+    try:
+        bbox = [float(item) for item in valor]
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="Extensão inválida") from exc
+    if len(bbox) != 4 or bbox[0] >= bbox[2] or bbox[1] >= bbox[3]:
+        raise HTTPException(status_code=422, detail="Extensão inválida")
+    return bbox
+
+
+def _asset_stac_raster(asset: dict[str, Any]) -> bool:
+    """Aceita somente GeoTIFF/COG que o importador rasterio consegue abrir."""
+    href = str(asset.get("href") or "")
+    media_type = str(asset.get("type") or "").split(";", 1)[0].lower()
+    return href.startswith(("https://", "http://")) and (
+        media_type in {"image/tiff", "image/geotiff", "application/geotiff", "application/x-geotiff"}
+        or href.split("?", 1)[0].lower().endswith((".tif", ".tiff"))
+    )
+
+
+@router.get("/catalogo/portal/{servico_id}/colecoes")
+async def listar_colecoes_stac(servico_id: str) -> list[dict[str, str]]:
+    """Lista coleções de um STAC configurado, sem expor URLs arbitrárias ao cliente."""
+    servico = await _servico_portal(servico_id, "STAC")
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.get(f"{servico['url'].rstrip('/')}/collections")
+            response.raise_for_status()
+        colecoes = []
+        for item in response.json().get("collections", []):
+            if not item.get("id"):
+                continue
+            intervalos = item.get("extent", {}).get("temporal", {}).get("interval", [])
+            inicio, fim = (intervalos[0] if intervalos else [None, None])
+            colecoes.append({
+                "id": str(item["id"]),
+                "titulo": str(item.get("title") or item["id"]),
+                "inicio": str(inicio or ""),
+                "fim": str(fim or ""),
+            })
+        return colecoes
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Não foi possível consultar as coleções STAC") from exc
+
+
+@router.post("/catalogo/portal/stac/buscar")
+async def buscar_itens_stac(parametros: dict[str, Any]) -> list[dict[str, Any]]:
+    """Pesquisa cenas STAC na extensão e período escolhidos pelo usuário."""
+    servico = await _servico_portal(str(parametros.get("servico_id", "")), "STAC")
+    collection = str(parametros.get("colecao", "")).strip()
+    if not collection:
+        raise HTTPException(status_code=422, detail="Selecione uma coleção")
+    payload: dict[str, Any] = {"collections": [collection], "limit": min(max(int(parametros.get("limite", 20)), 1), 50)}
+    if parametros.get("bbox"):
+        payload["bbox"] = _bbox_portal(parametros["bbox"])
+    if parametros.get("periodo"):
+        payload["datetime"] = str(parametros["periodo"])
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            response = await client.post(f"{servico['url'].rstrip('/')}/search", json=payload)
+            response.raise_for_status()
+        items = response.json().get("features", [])
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="A busca STAC não pôde ser concluída") from exc
+    resultado = []
+    for item in items:
+        assets = [
+            {"chave": chave, "titulo": asset.get("title") or chave, "url": asset.get("href"), "tipo": asset.get("type")}
+            for chave, asset in (item.get("assets") or {}).items()
+            if _asset_stac_raster(asset)
+        ]
+        if assets:
+            resultado.append({"id": item.get("id"), "titulo": item.get("properties", {}).get("title") or item.get("id"), "data": item.get("properties", {}).get("datetime"), "assets": assets})
+    return resultado
+
+
+@router.post("/catalogo/portal/stac/importar")
+async def importar_asset_stac(parametros: dict[str, Any]) -> dict[str, Any]:
+    """Importa um COG escolhido pelo usuário para o catálogo e mapa da bancada."""
+    await _servico_portal(str(parametros.get("servico_id", "")), "STAC")
+    url = str(parametros.get("url", ""))
+    if not _asset_stac_raster({"href": url, "type": parametros.get("tipo")}):
+        raise HTTPException(status_code=422, detail="Selecione um asset GeoTIFF/COG do resultado da pesquisa")
+    try:
+        return await geoespacial_service.importar_raster_url(
+            url, str(parametros.get("titulo") or "Asset STAC"),
+            _bbox_portal(parametros["bbox"]) if parametros.get("bbox") else None,
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/catalogo/portal/{servico_id}/mapbiomas/colecoes")
+async def listar_colecoes_mapbiomas(servico_id: str) -> list[dict[str, Any]]:
+    """Expõe as séries anuais públicas do MapBiomas com suas fontes oficiais."""
+    servico = await _servico_portal(servico_id, "MAPBIOMAS")
+    return [
+        {
+            "id": "cobertura-10-1-30m",
+            "titulo": "Cobertura e uso da terra - Coleção 10.1 (30 m)",
+            "inicio": 1985,
+            "fim": 2024,
+            "url": servico["url"],
+            "descricao": "Série anual nacional revisada pelo MapBiomas.",
+        },
+        {
+            "id": "cobertura-3-10m",
+            "titulo": "Cobertura e uso da terra - Coleção 3 beta (10 m)",
+            "inicio": 2017,
+            "fim": 2024,
+            "url": "https://brasil.mapbiomas.org/mapbiomas-cobertura-10m/",
+            "descricao": "Série anual de maior resolução, baseada em Sentinel-2.",
+        },
+    ]
+
+
+@router.post("/catalogo/portal/osm/importar")
+async def importar_osm_portal(parametros: dict[str, Any]) -> dict[str, Any]:
+    """Consulta feições OSM na extensão do mapa e registra uma camada vetorial."""
+    servico = await _servico_portal(str(parametros.get("servico_id", "")), "OGCAPI")
+    bbox = _bbox_portal(parametros.get("bbox"))
+    tema = str(parametros.get("tema", "vias"))
+    filtros = {"vias": 'way["highway"]', "hidrografia": 'way["waterway"]', "edificios": 'way["building"]'}
+    if tema not in filtros:
+        raise HTTPException(status_code=422, detail="Tema OSM inválido")
+    oeste, sul, leste, norte = bbox
+    consulta = f"[out:json][timeout:60];{filtros[tema]}({sul},{oeste},{norte},{leste});out tags geom;"
+    endpoints = [servico["url"], "https://overpass.kumi.systems/api/interpreter"]
+    elementos: list[dict[str, Any]] | None = None
+    try:
+        async with httpx.AsyncClient(timeout=75) as client:
+            for endpoint in dict.fromkeys(endpoints):
+                try:
+                    response = await client.post(
+                        endpoint,
+                        content=urlencode({"data": consulta}),
+                        headers={
+                            "Accept": "application/json",
+                            "Content-Type": "application/x-www-form-urlencoded",
+                            "User-Agent": "SICARD-Geoprocessamento/1.0",
+                        },
+                    )
+                    response.raise_for_status()
+                    elementos = response.json().get("elements", [])
+                    break
+                except httpx.HTTPError:
+                    continue
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="A consulta OpenStreetMap não pôde ser concluída") from exc
+    if elementos is None:
+        raise HTTPException(status_code=502, detail="A consulta OpenStreetMap não pôde ser concluída")
+    feicoes: list[dict[str, Any]] = []
+    for elemento in elementos:
+        coordenadas = [(ponto["lon"], ponto["lat"]) for ponto in elemento.get("geometry", [])]
+        if len(coordenadas) < 2:
+            continue
+        geometria = Polygon(coordenadas) if coordenadas[0] == coordenadas[-1] and len(coordenadas) >= 4 else LineString(coordenadas)
+        feicoes.append({"osm_id": elemento.get("id"), **(elemento.get("tags") or {}), "geometry": geometria})
+    if not feicoes:
+        raise HTTPException(status_code=422, detail="Nenhuma feição encontrada para a extensão e tema selecionados")
+    camada = gpd.GeoDataFrame(feicoes, geometry="geometry", crs="EPSG:4326")
+    nome = f"OpenStreetMap · {tema}"
+    camada_id = geoespacial_service.registrar_camada(camada, nome, "OpenStreetMap", url_origem=servico["url"])
+    return {"camada_id": camada_id, "nome": nome, "tipo": "vetorial", "feicoes": len(camada), "crs": "EPSG:4326"}
+
+
+@router.get("/catalogo/favoritos")
+async def listar_favoritos_catalogo(
+    user: SessionUser = Depends(require_geospatial_access),
+) -> list[dict[str, Any]]:
+    return await geoespacial_repository.listar_favoritos_portal(user.id)
+
+
+@router.post("/catalogo/favoritos", status_code=status.HTTP_201_CREATED)
+async def salvar_favorito_catalogo(
+    favorito: PortalFavoritoInputSchema,
+    user: SessionUser = Depends(require_geospatial_access),
+) -> dict[str, Any]:
+    return await geoespacial_repository.salvar_favorito_portal(
+        user.id, favorito.model_dump(mode="json"),
+    )
+
+
+@router.delete("/catalogo/favoritos/{servico_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def excluir_favorito_catalogo(
+    servico_id: str,
+    camada: str = Query(default=""),
+    user: SessionUser = Depends(require_geospatial_access),
+) -> Response:
+    if not await geoespacial_repository.excluir_favorito_portal(user.id, servico_id, camada):
+        raise HTTPException(status_code=404, detail="Favorito não encontrado")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/algoritmos/{algoritmo_id}/executar")
@@ -457,6 +732,7 @@ async def importar_arquivo_camada(
     token_importacao: str | None = Form(None),
     reprojetar_crs: str | None = Form(None),
     recortar_camada_id: str | None = Form(None),
+    grupo: str | None = Form(None),
 ) -> dict:
     """Valida, classifica, transforma e importa camadas com rollback compensatório."""
     nome = Path(arquivo.filename or "camada").name if arquivo else None
@@ -468,6 +744,7 @@ async def importar_arquivo_camada(
             target_crs=(reprojetar_crs or "").strip() or None,
             clip_layer_id=(recortar_camada_id or "").strip() or None,
             inspection_token=(token_importacao or "").strip() or None,
+            grupo=(grupo or "").strip() or None,
         )
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -497,7 +774,11 @@ async def inspecionar_arquivo_camada(arquivo: UploadFile = File(...)) -> dict:
             }
         raise HTTPException(status_code=422, detail=detail) from exc
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        logger.exception("Falha inesperada ao inspecionar upload geoespacial")
+        raise HTTPException(
+            status_code=500,
+            detail="Não foi possível inspecionar o arquivo. Consulte o log do servidor.",
+        ) from exc
 
 
 @router.post("/importar_camadas/job", status_code=status.HTTP_202_ACCEPTED)
@@ -568,39 +849,57 @@ async def listar_diretorio_camadas() -> dict[str, Any]:
 
     operational: list[dict] = []
     storage_root = project_path("data/geoespacial/uploads/datastorage")
+
+    def append_storage_item(item: Path, category: str, grupo: str | None) -> None:
+        """Adiciona um arquivo solto ou pasta ``.contents`` à lista operacional."""
+        if item.is_file() and item.suffix.lower() in accepted:
+            relative = item.relative_to(project_path(".")).as_posix()
+            row = by_path.get(relative)
+            extensao = item.suffix.removeprefix(".").upper()
+            operational.append({
+                **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or item.stem,
+                "categoria_arquivo": category, "registrada": bool(row), "origem_diretorio": "datastorage",
+                # Rótulo: extensão do arquivo físico no storage.
+                "formato": extensao,
+                "grupo": grupo,
+            })
+        elif item.is_dir() and item.name.lower().endswith(".contents"):
+            # Pasta produzida pela extração de um pacote compactado. Representa
+            # UM item de storage (o pacote original foi descartado após extração).
+            relative = item.relative_to(project_path(".")).as_posix()
+            row = by_path.get(relative)
+            base = item.name[: -len(".contents")]
+            nome_base = Path(base).stem
+            archive_ext = Path(base).suffix.removeprefix(".").upper() or "PACOTE"
+            # Preferimos rotular pela camada principal contida no pacote (ex.: SHP)
+            # em vez da extensão do arquivo compactado descartado (ex.: ZIP).
+            extensao = primary_extension(item, archive_ext)
+            operational.append({
+                **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or nome_base,
+                "categoria_arquivo": category, "registrada": bool(row), "origem_diretorio": "datastorage",
+                "formato": extensao,
+                "extraido": True,
+                "grupo": grupo,
+            })
+
     for category in ("vetor", "raster", "geodatabase"):
         folder = storage_root / category
         if not folder.exists():
             continue
         entries = sorted(folder.iterdir(), key=lambda item: item.name.lower())
         for item in entries:
-            if item.is_file() and item.suffix.lower() in accepted:
-                relative = item.relative_to(project_path(".")).as_posix()
-                row = by_path.get(relative)
-                extensao = item.suffix.removeprefix(".").upper()
-                operational.append({
-                    **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or item.stem,
-                    "categoria_arquivo": category, "registrada": bool(row), "origem_diretorio": "datastorage",
-                    # Rótulo: extensão do arquivo físico no storage.
-                    "formato": extensao,
-                })
-            elif item.is_dir() and item.name.lower().endswith(".contents"):
-                # Pasta produzida pela extração de um pacote compactado. Representa
-                # UM item de storage (o pacote original foi descartado após extração).
-                relative = item.relative_to(project_path(".")).as_posix()
-                row = by_path.get(relative)
-                base = item.name[: -len(".contents")]
-                nome_base = Path(base).stem
-                archive_ext = Path(base).suffix.removeprefix(".").upper() or "PACOTE"
-                # Preferimos rotular pela camada principal contida no pacote (ex.: SHP)
-                # em vez da extensão do arquivo compactado descartado (ex.: ZIP).
-                extensao = primary_extension(item, archive_ext)
-                operational.append({
-                    **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or nome_base,
-                    "categoria_arquivo": category, "registrada": bool(row), "origem_diretorio": "datastorage",
-                    "formato": extensao,
-                    "extraido": True,
-                })
+            # Subpasta de grupo (ex.: RISCO, RESTRIÇÃO): não é arquivo solto nem
+            # pacote extraído (.contents). Descemos um nível para listar seus itens.
+            if (
+                item.is_dir()
+                and not item.name.lower().endswith(".contents")
+                and not item.name.startswith(".")
+            ):
+                grupo = item.name
+                for grouped in sorted(item.iterdir(), key=lambda sub: sub.name.lower()):
+                    append_storage_item(grouped, category, grupo)
+                continue
+            append_storage_item(item, category, None)
 
     canonical: list[dict] = []
     canonical_root = project_path("data/geoespacial/biblioteca_canonica")
@@ -643,18 +942,45 @@ async def listar_diretorio_camadas() -> dict[str, Any]:
     }
 
 
+@router.get("/camadas-arquivo/navegar")
+async def navegar_diretorio_geoespacial(caminho: str = "") -> dict:
+    """Navega por data/geoespacial e subpastas, listando pastas e arquivos carregáveis."""
+    aceitos = {
+        ".shp", ".geojson", ".json", ".kml", ".gml", ".fgb", ".gpkg",
+        ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2",
+        ".zip", ".rar", ".7z", ".tar", ".tgz", ".gz",
+    }
+    raiz = project_path("data/geoespacial").resolve()
+    relativo = (caminho or "").replace("\\", "/").strip("/")
+    if ".." in relativo.split("/"):
+        raise HTTPException(status_code=403, detail="Caminho inválido")
+    alvo = (raiz / relativo).resolve() if relativo else raiz
+    if alvo != raiz and raiz not in alvo.parents:
+        raise HTTPException(status_code=403, detail="Caminho fora de data/geoespacial")
+    if not alvo.is_dir():
+        raise HTTPException(status_code=404, detail="Diretório não encontrado")
+    pastas: list[dict] = []
+    arquivos: list[dict] = []
+    for item in sorted(alvo.iterdir(), key=lambda p: p.name.lower()):
+        if item.name.startswith("."):
+            continue
+        if item.is_dir():
+            pastas.append({"nome": item.name, "caminho": item.relative_to(raiz).as_posix()})
+        elif item.is_file() and item.suffix.lower() in aceitos:
+            arquivos.append({
+                "nome": item.name,
+                "arquivo": item.relative_to(project_path(".")).as_posix(),
+                "formato": item.suffix.removeprefix(".").upper(),
+            })
+    pai = "/".join(relativo.split("/")[:-1]) if relativo else None
+    return {"caminho": relativo, "pai": pai, "pastas": pastas, "arquivos": arquivos}
+
+
 @router.post("/camadas-arquivo/carregar")
 async def carregar_arquivo_do_sistema(arquivo: str = Form(...)) -> dict:
-    """Registra arquivo permitido do datastorage, biblioteca ou outputs."""
+    """Registra arquivo permitido de qualquer subpasta de data/geoespacial."""
     normalized = arquivo.replace("\\", "/").strip()
-    allowed_prefixes = (
-        "data/geoespacial/uploads/datastorage/vetor/",
-        "data/geoespacial/uploads/datastorage/raster/",
-        "data/geoespacial/uploads/datastorage/geodatabase/",
-        "data/geoespacial/biblioteca_canonica/",
-        "data/geoespacial/outputs/",
-    )
-    if not normalized.startswith(allowed_prefixes):
+    if not normalized.startswith("data/geoespacial/") or ".." in normalized.split("/"):
         raise HTTPException(status_code=403, detail="Arquivo fora dos diretórios geoespaciais autorizados")
     path = project_path(normalized, label="arquivo geoespacial")
     if not path.is_file():
@@ -715,6 +1041,12 @@ async def listar_biblioteca_camadas(modulo: str | None = None) -> list[dict]:
     if modulo and modulo not in {"fase1", "fase2"}:
         raise HTTPException(status_code=422, detail="Módulo consumidor inválido")
     return camada_geoespacial_repository.listar_biblioteca(modulo)
+
+
+@router.get("/biblioteca-canonica/arquivos")
+async def listar_arquivos_biblioteca_canonica(modulo: str | None = None) -> list[dict]:
+    """Lista recursivamente todos os arquivos de camada em biblioteca_canonica."""
+    return camada_geoespacial_repository.listar_biblioteca_canonica_arquivos(modulo)
 
 
 @router.get("/camadas/{camada_id}/geojson")
@@ -1407,29 +1739,3 @@ async def listar_fluxos(modulo: str | None = Query(None)) -> list[FluxoSchema]:
     """Lista todos os fluxos disponíveis."""
     fluxos = modelo_repo.listar("fluxo", modulo)
     return [FluxoSchema(**f) for f in fluxos]
-
-
-@router.post("/processar", response_model=ProcessamentoResultSchema)
-async def processar_fluxo(processamento: ProcessamentoSchema) -> ProcessamentoResultSchema:
-    """Inicia o processamento de um fluxo geoespacial."""
-    # TODO: Implementar processamento assíncrono completo
-    return ProcessamentoResultSchema(
-        status="em_andamento",
-        progresso=0.0,
-        logs=["Processamento iniciado"],
-        camadas_saida=[],
-        erros=[],
-    )
-
-
-@router.get("/processamento/{processamento_id}", response_model=ProcessamentoResultSchema)
-async def obter_status_processamento(processamento_id: str) -> ProcessamentoResultSchema:
-    """Obtém o status de um processamento em andamento."""
-    # TODO: Implementar tracking de processamento
-    return ProcessamentoResultSchema(
-        status="concluido",
-        progresso=100.0,
-        logs=["Processamento concluído"],
-        camadas_saida=[],
-        erros=[],
-    )

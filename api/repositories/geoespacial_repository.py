@@ -130,6 +130,92 @@ class GeoespacialRepository:
                 ).fetchall()]
             return fluxos
 
+    # ==================== AMBIENTES DO USUÁRIO ====================
+
+    async def obter_ambiente_usuario(self, usuario_id: str) -> dict[str, Any]:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT configuracao FROM geoprocessamento.ambiente_usuario WHERE usuario_id=%s",
+                (usuario_id,),
+            ).fetchone()
+        return dict(row["configuracao"] or {}) if row else {}
+
+    async def salvar_ambiente_usuario(
+        self, usuario_id: str, configuracao: dict[str, Any]
+    ) -> dict[str, Any]:
+        with get_connection() as conn:
+            row = conn.execute(
+                """INSERT INTO geoprocessamento.ambiente_usuario (usuario_id, configuracao)
+                   VALUES (%s, %s)
+                   ON CONFLICT (usuario_id) DO UPDATE
+                     SET configuracao=EXCLUDED.configuracao, atualizado_em=CURRENT_TIMESTAMP
+                   RETURNING configuracao""",
+                (usuario_id, Jsonb(configuracao)),
+            ).fetchone()
+            conn.commit()
+        return dict(row["configuracao"] or {}) if row else {}
+
+    # ==================== CATÁLOGO DO PORTAL ====================
+
+    async def listar_servicos_portal(self) -> list[dict[str, Any]]:
+        with get_connection() as conn:
+            rows = conn.execute(
+                "SELECT id, nome, tipo, url, descricao, metadados FROM geoprocessamento.portal_servico WHERE ativo ORDER BY nome"
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    async def obter_servico_portal(self, servico_id: str) -> dict[str, Any] | None:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT id, nome, tipo, url, descricao, metadados FROM geoprocessamento.portal_servico WHERE id=%s AND ativo",
+                (servico_id,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    async def criar_servico_portal(self, servico: dict[str, Any]) -> dict[str, Any]:
+        with get_connection() as conn:
+            row = conn.execute(
+                """INSERT INTO geoprocessamento.portal_servico (nome, tipo, url, descricao, metadados)
+                   VALUES (%s, %s, %s, %s, %s) RETURNING id, nome, tipo, url, descricao, metadados""",
+                (servico["nome"], servico["tipo"], servico["url"], servico.get("descricao"), Jsonb(servico.get("metadados", {}))),
+            ).fetchone()
+            conn.commit()
+        return dict(row)
+
+    async def listar_favoritos_portal(self, usuario_id: str) -> list[dict[str, Any]]:
+        with get_connection() as conn:
+            rows = conn.execute(
+                """SELECT f.servico_id::text AS servico_id, f.camada, COALESCE(f.titulo, s.nome) AS titulo,
+                          s.nome AS servico_nome, s.tipo, s.url, f.metadados
+                     FROM geoprocessamento.portal_favorito_usuario f
+                     JOIN geoprocessamento.portal_servico s ON s.id=f.servico_id
+                    WHERE f.usuario_id=%s ORDER BY f.criado_em DESC""",
+                (usuario_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    async def salvar_favorito_portal(self, usuario_id: str, favorito: dict[str, Any]) -> dict[str, Any]:
+        with get_connection() as conn:
+            row = conn.execute(
+                """INSERT INTO geoprocessamento.portal_favorito_usuario (usuario_id, servico_id, camada, titulo, metadados)
+                   VALUES (%s, %s, %s, %s, %s)
+                   ON CONFLICT (usuario_id, servico_id, camada) DO UPDATE
+                     SET titulo=EXCLUDED.titulo, metadados=EXCLUDED.metadados
+                   RETURNING servico_id::text AS servico_id, camada, titulo, metadados""",
+                (usuario_id, favorito["servico_id"], favorito.get("camada", ""), favorito.get("titulo"), Jsonb(favorito.get("metadados", {}))),
+            ).fetchone()
+            conn.commit()
+        return dict(row)
+
+    async def excluir_favorito_portal(self, usuario_id: str, servico_id: str, camada: str) -> bool:
+        with get_connection() as conn:
+            result = conn.execute(
+                "DELETE FROM geoprocessamento.portal_favorito_usuario WHERE usuario_id=%s AND servico_id=%s AND camada=%s",
+                (usuario_id, servico_id, camada),
+            )
+            conn.commit()
+        return result.rowcount > 0
+
     # ==================== CAMADAS ====================
 
     async def listar_camadas(self) -> list[dict[str, Any]]:

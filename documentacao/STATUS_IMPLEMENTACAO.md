@@ -89,9 +89,8 @@ As fases metodológicas consomem a biblioteca de camadas homologadas. Vetores s�
 armazenados como feições PostGIS; rasters são armazenados como GeoTIFF binário.
 A memória do processo é cache, não fonte definitiva.
 
-Os endpoints genéricos `/processar` e `/processamento/{id}` ainda devolvem um
-estado simulado. Para processamento real, o frontend usa os endpoints de
-algoritmos, operações e jobs.
+Para processamento real, o frontend usa os endpoints de algoritmos, operações
+e jobs.
 
 ### Painéis e transparência
 

@@ -7,15 +7,28 @@
 
 BEGIN;
 
-ALTER TABLE demandas_aprovadas.dom_status_objeto
-    RENAME TO dom_status_demandas_aprovadas;
+DO $$ BEGIN
+    IF to_regclass('demandas_aprovadas.dom_status_objeto') IS NOT NULL
+       AND to_regclass('demandas_aprovadas.dom_status_demandas_aprovadas') IS NULL THEN
+        ALTER TABLE demandas_aprovadas.dom_status_objeto
+            RENAME TO dom_status_demandas_aprovadas;
+    END IF;
 
-ALTER TABLE demandas_aprovadas.objeto_ahp
-    RENAME TO demandas_aprovadas;
+    IF to_regclass('demandas_aprovadas.objeto_ahp') IS NOT NULL
+       AND to_regclass('demandas_aprovadas.demandas_aprovadas') IS NULL
+       AND to_regclass('demandas_aprovadas.projetos') IS NULL THEN
+        ALTER TABLE demandas_aprovadas.objeto_ahp
+            RENAME TO demandas_aprovadas;
+    END IF;
 
-COMMENT ON TABLE demandas_aprovadas.demandas_aprovadas IS
-    'Demandas aprovadas pelo administrador; universo elegível à hierarquização';
-COMMENT ON TABLE demandas_aprovadas.dom_status_demandas_aprovadas IS
-    'Domínio de status das demandas aprovadas no fluxo de hierarquização';
+    IF to_regclass('demandas_aprovadas.demandas_aprovadas') IS NOT NULL THEN
+        COMMENT ON TABLE demandas_aprovadas.demandas_aprovadas IS
+            'Demandas aprovadas pelo administrador; universo elegível à hierarquização';
+    END IF;
+    IF to_regclass('demandas_aprovadas.dom_status_demandas_aprovadas') IS NOT NULL THEN
+        COMMENT ON TABLE demandas_aprovadas.dom_status_demandas_aprovadas IS
+            'Domínio de status das demandas aprovadas no fluxo de hierarquização';
+    END IF;
+END $$;
 
 COMMIT;

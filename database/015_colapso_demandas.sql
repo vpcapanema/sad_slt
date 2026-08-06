@@ -121,6 +121,15 @@ DROP SCHEMA IF EXISTS demandas_aprovadas CASCADE;
 -- ===========================================================================
 -- 7) Renomeia o schema cadastro -> demandas (só contém tabelas de demanda)
 -- ===========================================================================
-ALTER SCHEMA cadastro RENAME TO demandas;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'demandas') THEN
+        ALTER SCHEMA cadastro RENAME TO demandas;
+    ELSIF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'cadastro') THEN
+        -- Em reaplicações, as migrations antigas recriam o schema legado.
+        -- O schema demandas já é a versão definitiva e deve ser preservado.
+        DROP SCHEMA cadastro CASCADE;
+    END IF;
+END $$;
 
 COMMIT;

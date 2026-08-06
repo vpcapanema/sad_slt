@@ -7,7 +7,7 @@
   <title>Geoprocessamento | SLT</title>
   <link rel="icon" href="/assets/img/brand/sicard-simbolo.png" type="image/png">
   <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
-  <link rel="stylesheet" href="/assets/css/geoprocessamento.css?v=20260803-report-map">
+  <link rel="stylesheet" href="/assets/css/geoprocessamento.css?v=20260805-dir-browser">
 </head>
 <body>
   <main class="componente-geoprocessamento gp-app">
@@ -57,20 +57,11 @@
       <div class="gp-pane-title"><strong>Catálogo</strong><button class="icon-btn" data-collapse="left" title="Recolher painéis"><i data-lucide="panel-left-close"></i></button></div>
       <div class="gp-search"><i data-lucide="search"></i><input id="gp-catalog-search" placeholder="Pesquisar no projeto"></div>
       <div class="gp-pane-tabs" role="toolbar" aria-label="Origem dos recursos do catálogo">
-        <button class="active" title="Projeto"><i data-lucide="folder-kanban"></i></button>
-        <button title="Portal"><i data-lucide="cloud"></i></button>
-        <button title="Favoritos"><i data-lucide="star"></i></button>
+        <button class="active" data-catalog-tab="projeto" title="Projeto"><i data-lucide="folder-kanban"></i></button>
+        <button data-catalog-tab="portal" title="Portal"><i data-lucide="cloud"></i></button>
+        <button data-catalog-tab="favoritos" title="Favoritos"><i data-lucide="star"></i></button>
       </div>
-      <div id="gp-catalog-tree" class="gp-tree gp-catalog-tree">
-        <button class="catalog-group-title" type="button" data-catalog-group aria-expanded="true"><i class="tree-chevron" data-lucide="chevron-down"></i><i data-lucide="folder-kanban"></i><strong>Projeto</strong></button>
-        <div class="catalog-group-children">
-          <div class="tree-row tree-indent"><i data-lucide="map"></i><span>Mapas</span></div>
-          <div class="tree-row tree-indent"><i data-lucide="briefcase"></i><span>Toolboxes</span></div>
-          <div class="tree-row tree-indent"><i data-lucide="database"></i><span>Bancos de dados</span></div>
-          <div class="tree-row tree-indent"><i data-lucide="folder"></i><span>Pastas</span></div>
-          <div class="tree-row tree-indent"><i data-lucide="plug"></i><span>Conexões</span></div>
-        </div>
-      </div>
+      <div id="gp-catalog-tree" class="gp-tree gp-catalog-tree" aria-live="polite"></div>
     </aside>
 
     <aside id="gp-panel-contents" class="gp-pane gp-contents active" role="tabpanel" aria-labelledby="gp-tab-contents" data-left-panel="contents">
@@ -131,15 +122,16 @@
     <section id="gp-log" class="gp-log" aria-live="polite"></section>
   </main>
 
-  <input id="gp-file-input" type="file" accept=".geojson,.json,.kml,.tif,.tiff,.zip,.gpkg,.shp" multiple hidden>
+  <input id="gp-file-input" type="file" accept=".geojson,.json,.kml,.tif,.tiff,.zip,.gpkg" multiple hidden>
   <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
   <script src="/assets/vendor/lucide/lucide.min.js"></script>
-  <script src="/restrict/geoespacial/geoprocessamento.js?v=20260803-batch-load-2"></script>
+  <script src="/restrict/geoespacial/geoprocessamento.js?v=20260805-identity-tool"></script>
   <script src="/restrict/geoespacial/geoprocessamento-modeler.js?v=20260803-report-map"></script>
   <script src="/restrict/geoespacial/geoprocessamento-docks.js"></script>
-  <script src="/restrict/geoespacial/geoprocessamento-actions.js"></script>
+  <script src="/restrict/geoespacial/geoprocessamento-actions.js?v=20260805-portal-mapbiomas"></script>
+  <script src="/restrict/geoespacial/geoprocessamento-portal.js?v=20260805-portal-mapbiomas"></script>
   <script src="/restrict/geoespacial/geoprocessamento-toolbox.js"></script>
   <script src="/restrict/geoespacial/geoprocessamento-commands.js"></script>
-  <script src="/restrict/geoespacial/geoprocessamento-ribbon.js"></script>
+  <script src="/restrict/geoespacial/geoprocessamento-ribbon.js?v=20260805-dir-browser"></script>
 </body>
 </html>

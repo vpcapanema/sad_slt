@@ -21,7 +21,21 @@
 
   async function request(url, options = {}) {
     const response = await fetch(url, { headers: { Accept: "application/json", ...(options.headers || {}) }, ...options });
-    const body = await response.json(); if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`); return body;
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
+    return body;
+  }
+
+  async function loadEnvironments() {
+    const cached = JSON.parse(localStorage.getItem("gp-environments") || "{}");
+    try {
+      const saved = await request(`${API}/ambientes`);
+      const environments = { ...cached, ...saved };
+      localStorage.setItem("gp-environments", JSON.stringify(environments));
+      return environments;
+    } catch (error) {
+      return cached;
+    }
   }
 
   function walkCoordinates(value, callback) { if (!Array.isArray(value)) return; if (typeof value[0] === "number") callback(value); else value.forEach(item => walkCoordinates(item, callback)); }
@@ -101,9 +115,15 @@
 
   function showEnvironments() {
     const env = JSON.parse(localStorage.getItem("gp-environments") || "{}");
-    openPanel("Ambientes de geoprocessamento", `<form id="gp-environments-form"><div class="editor-body"><div class="field"><label>CRS de saída padrão</label><input name="crs" value="${escapeHtml(env.crs || "")}" placeholder="Ex.: EPSG:31983 (SIRGAS 2000 / UTM zona 23S)"></div><div class="field"><label>Resolução raster padrão</label><input name="resolution" type="number" min="0" step="any" value="${escapeHtml(env.resolution || "")}" placeholder="Ex.: 50"></div><label class="field-check"><input name="overwrite" type="checkbox" ${env.overwrite ? "checked" : ""}> Sobrescrever saídas existentes</label><p class="field-help">Somente configurações reconhecidas pelo algoritmo aberto são aplicadas.</p></div><div class="editor-actions"><button class="btn primary">Salvar ambientes</button></div></form>`);
+    openPanel("Ambientes de geoprocessamento", `<form id="gp-environments-form"><div class="editor-body"><div class="field"><label>CRS de saída padrão</label><input name="crs" value="${escapeHtml(env.crs || "")}" placeholder="Ex.: EPSG:31983 (SIRGAS 2000 / UTM zona 23S)"></div><div class="field"><label>Resolução raster padrão</label><input name="resolution" type="number" min="0" step="any" value="${escapeHtml(env.resolution || "")}" placeholder="Ex.: 50"></div><label class="field-check"><input name="overwrite" type="checkbox" ${env.overwrite ? "checked" : ""}> Sobrescrever saídas existentes</label><p class="field-help">Os padrões são salvos para o seu usuário e aplicados às ferramentas compatíveis.</p></div><div class="editor-actions"><button class="btn primary">Salvar ambientes</button></div></form>`);
     $("#gp-environments-form").elements.crs.placeholder = "Ex.: EPSG:31983 (SIRGAS 2000 / UTM zona 23S)";
-    $("#gp-environments-form").onsubmit = event => { event.preventDefault(); const form = event.target; localStorage.setItem("gp-environments", JSON.stringify({ crs: form.crs.value.trim(), resolution: form.resolution.value, overwrite: form.overwrite.checked })); notify("Ambientes salvos."); };
+    const form = $("#gp-environments-form");
+    loadEnvironments().then(loaded => {
+      form.crs.value = loaded.crs || "";
+      form.resolution.value = loaded.resolution || "";
+      form.overwrite.checked = Boolean(loaded.overwrite);
+    });
+    form.onsubmit = async event => { event.preventDefault(); try { const payload = { crs: form.crs.value.trim() || null, resolution: form.resolution.value ? Number(form.resolution.value) : null, overwrite: form.overwrite.checked }; const saved = await request(`${API}/ambientes`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); localStorage.setItem("gp-environments", JSON.stringify(saved)); notify("Ambientes salvos."); } catch (error) { notify(error.message); } };
   }
   function applyEnvironments(form) {
     if (!form) return; const env = JSON.parse(localStorage.getItem("gp-environments") || "{}");
@@ -146,5 +166,5 @@
     $("#gp-definition-command").onsubmit = async event => { event.preventDefault(); try { const [kind, ...parts] = event.target.definition.value.split(":"), id = parts.join(":"), entry = pool.find(value => value.kind === kind && value.item.id === id); if (!entry) throw new Error("Selecione uma definição"); const copy = structuredClone(entry.item); if (action === "duplicate") { copy.id = `${kind === "functions" ? "funcao" : "fluxo"}_${Date.now()}`; copy.nome = `${copy.nome} (cópia)`; const saved = await request(`${API}/${kind === "functions" ? "funcoes" : "fluxos"}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(copy) }); state()[kind].push(saved); window.gpApp.showLibrary(kind); notify("Definição duplicada."); } else { const blob = new Blob([JSON.stringify({ tipo: kind, definicao: copy }, null, 2)], { type: "application/json" }), url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = `${copy.id}.json`; link.click(); URL.revokeObjectURL(url); notify("Definição exportada."); } } catch (error) { notify(error.message); } };
   }
 
-  window.gpCommands = { activeLayer, notify, openPanel, fitAllLayers, fitSelection, selectOnMap, explore, clearSelection, showEnvironments, applyEnvironments, calculateField, selectByAttribute: () => queryPanel("select"), filterLayer: () => queryPanel("filter"), refreshSource, duplicateDefinition: () => definitionCommand("duplicate"), importDefinition: () => definitionCommand("import"), exportDefinition: () => definitionCommand("export") };
+  window.gpCommands = { activeLayer, notify, openPanel, fitAllLayers, fitSelection, selectOnMap, explore, clearSelection, loadEnvironments, showEnvironments, applyEnvironments, calculateField, selectByAttribute: () => queryPanel("select"), filterLayer: () => queryPanel("filter"), refreshSource, duplicateDefinition: () => definitionCommand("duplicate"), importDefinition: () => definitionCommand("import"), exportDefinition: () => definitionCommand("export") };
 })();

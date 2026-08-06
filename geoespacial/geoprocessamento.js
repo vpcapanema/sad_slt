@@ -7,7 +7,7 @@
   const OUTPUT_SUFFIX_BY_OPERATION={"OP-01":"camada_importada"};
   const OPS=[
     ["Entrada e preparação",[["OP-01","Importar camada","importar-camada",1],["OP-02","Validar camada","validar-camada",1],["OP-02-CORR","Reparar geometrias","reparar-geometrias",1],["OP-03","Normalizar camada","normalizar-camada",1]]],
-    ["Análise vetorial",[["OP-04","Criar buffer","criar-buffer",1],["OP-05","Sobrepor camadas","sobrepor-camadas",1],["OP-06","Dissolver","dissolver",1],["OP-07","Selecionar por localização","selecionar-por-localizacao",1]]],
+    ["Análise vetorial",[["OP-04","Criar buffer","criar-buffer",1],["OP-05","Sobrepor camadas","sobrepor-camadas",1],["OP-05-IDENT","Identity","sobrepor-camadas",1],["OP-06","Dissolver","dissolver",1],["OP-07","Selecionar por localização","selecionar-por-localizacao",1]]],
     ["Transformação",[["OP-08","Converter para raster","converter-para-raster",2]]],
     ["Análise raster",[["OP-10","Calcular distância","calcular-distancia",2],["OP-11","Distância ponderada",null,0],["OP-12","Calcular densidade","calcular-densidade",2],["OP-13","Custo acumulado",null,0],["OP-14","Interpolar valores","interpolar-valores",2],["OP-15","Agregar por território","agregar-por-territorio",1],["OP-16","Criar camada booleana",null,0],["OP-17","Combinar rasters","combinar-rasters",1],["OP-20","Normalizar raster","normalizar-raster",1],["OP-21","Recortar raster",null,0],["OP-22","Estatísticas por zona",null,0]]],
     ["Operações mistas",[["OP-23","Amostrar raster em pontos",null,0],["OP-24","Extrair valores em polígono",null,0]]],
@@ -20,6 +20,7 @@
   const OP_ENDPOINTS={
     "OP-01":"importar-camada","OP-02":"validar-camada","OP-02-CORR":"reparar-geometrias",
     "OP-03":"normalizar-camada","OP-04":"criar-buffer","OP-05":"sobrepor-camadas",
+    "OP-05-IDENT":"sobrepor-camadas",
     "OP-06":"dissolver","OP-07":"selecionar-por-localizacao","OP-08":"converter-para-raster",
     "OP-10":"calcular-distancia","OP-11":"calcular-distancia-ponderada","OP-12":"calcular-densidade",
     "OP-13":"calcular-custo-acumulado","OP-14":"interpolar-valores","OP-15":"agregar-por-territorio",
@@ -35,12 +36,12 @@
   };
   const TOOLBOX_SCOPES={
     geral:{nome:"SIRCADI Toolbox",ids:null},
-    vetor_raster:{nome:"Geospatial Toolbox",ids:new Set(["OP-01","OP-02","OP-02-CORR","OP-03","OP-04","OP-05","OP-06","OP-07","OP-08","OP-15","OP-16","OP-21","OP-22","OP-23","OP-24","OP-25","OP-26","OP-27","OP-28","OP-29","OP-30","OP-31","OP-32","OP-33","OP-34","OP-35","OP-36"])},
+    vetor_raster:{nome:"Geospatial Toolbox",ids:new Set(["OP-01","OP-02","OP-02-CORR","OP-03","OP-04","OP-05","OP-05-IDENT","OP-06","OP-07","OP-08","OP-15","OP-16","OP-21","OP-22","OP-23","OP-24","OP-25","OP-26","OP-27","OP-28","OP-29","OP-30","OP-31","OP-32","OP-33","OP-34","OP-35","OP-36"])},
     cientifica:{nome:"Numerical Analysis Toolbox",ids:new Set(["OP-10","OP-11","OP-12","OP-13","OP-17","OP-20","OP-37","OP-38","OP-39","OP-40","OP-41","OP-42","OP-43"])},
     interpolacao:{nome:"Surface Modeling Toolbox",ids:new Set(["OP-10","OP-11","OP-12","OP-14","OP-16","OP-20","OP-39","OP-40","OP-43"])}
   };
   const TOOL_LIBRARY={
-    "OP-01":"GDAL","OP-02":"GeoPandas","OP-02-CORR":"Shapely","OP-03":"PyProj","OP-04":"Shapely","OP-05":"GeoPandas","OP-06":"GeoPandas","OP-07":"GeoPandas",
+    "OP-01":"GDAL","OP-02":"GeoPandas","OP-02-CORR":"Shapely","OP-03":"PyProj","OP-04":"Shapely","OP-05":"GeoPandas","OP-05-IDENT":"GeoPandas","OP-06":"GeoPandas","OP-07":"GeoPandas",
     "OP-08":"Rasterio","OP-10":"SciPy","OP-11":"SciPy","OP-12":"Scikit-learn","OP-13":"SciPy","OP-14":"PyKrige","OP-15":"GeoPandas","OP-16":"Rasterio","OP-17":"NumPy","OP-20":"NumPy","OP-21":"Rasterio","OP-22":"Rasterio","OP-23":"Rasterio","OP-24":"Rasterio",
     "OP-25":"Fiona","OP-26":"GDAL","OP-27":"GDAL","OP-28":"Shapely","OP-29":"Shapely","OP-30":"Shapely","OP-31":"Shapely","OP-32":"GeoPandas","OP-33":"GeoPandas","OP-34":"GeoPandas","OP-35":"Pandas","OP-36":"PyProj","OP-37":"Shapely","OP-38":"Shapely",
     "OP-39":"NumPy","OP-40":"NumPy","OP-41":"NumPy","OP-42":"SciPy","OP-43":"SciPy"
@@ -53,6 +54,7 @@
     "OP-03":[["camada_id","Camada","layer"],["crs_destino","CRS de destino","select",CRS_VALUES],["remover_geometrias_vazias","Remover vazias","check",true],["explodir_multipartes","Explodir multipartes","check",false]],
     "OP-04":[["camada_id","Camada","layer"],["distancia_buffer","Distância","number",100],["unidade_buffer","Unidade","select",["metros","graus"]],["tipo_buffer","Tipo","select",["cheio","externo"]],["dissolver_geometrias","Dissolver","check",false]],
     "OP-05":[["camada_id_1","Camada de entrada","layer"],["camada_id_2","Camada de identidade","layer"],["tipo_overlay","Operação","select",["identity","intersection","union","difference"]],["resolver_conflitos_campos","Preservar e resolver atributos","check",true]],
+    "OP-05-IDENT":[["camada_id_1","Camada de entrada","layer"],["camada_id_2","Camada de identidade","layer"],["resolver_conflitos_campos","Preservar e resolver atributos","check",true]],
     "OP-06":[["camada_id","Camada","layer"],["campo_agrupamento","Campo de agrupamento","text"],["funcao_agregacao","Agregação","select",["soma","media","mediana","max","min"]]],
     "OP-07":[["camada_id","Camada alvo","layer"],["camada_ref_id","Camada de referência","layer"],["tipo_selecao","Predicado","select",["intersects","contains","within","touches"]],["inverter_selecao","Inverter seleção","check",false]],
     "OP-08":[["camada_id","Camada","layer"],["resolucao_raster","Resolução","number",50],["crs_destino","CRS","select",CRS_VALUES],["atributo_rasterizacao","Atributo","text"],["valor_preenchimento","Valor de fundo","number",0]],
@@ -96,7 +98,7 @@
       ["formato_saida","Formato","select",raster?["JSON","GeoTIFF"]:["GeoJSON","GeoPackage","Shapefile"]]
     );
   });
-  const state={map:null,layers:[],basemaps:new Set(["esri-gray"]),selected:null,activeLayerId:null,activeExecution:null,toolboxScope:"geral",functions:[],flows:[],history:load("gp-history",[]),layerGroups:load("gp-layer-groups",{operational:false,basemap:false}),layerColors:load("gp-layer-colors",{}),geometryTypes:{},catalogHydrated:false,catalogSyncPending:false,leftTab:"drawing"};
+  const state={map:null,layers:[],basemaps:new Set(["esri-gray"]),selected:null,activeLayerId:null,activeExecution:null,toolboxScope:"geral",functions:[],flows:[],history:load("gp-history",[]),layerGroups:load("gp-layer-groups",{operational:false,basemap:false}),layerColors:load("gp-layer-colors",{}),layerStyles:load("gp-layer-styles",{}),geometryTypes:{},catalogHydrated:false,catalogSyncPending:false,leftTab:"drawing"};
   const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
   let generatedFieldId=0;
   function associateFormFields(root=document){
@@ -198,6 +200,23 @@
     if(state.map?.getLayer(`${id}-point`))state.map.setPaintProperty(`${id}-point`,"circle-color",color);
     renderLayers();if(report)log(`Cor da camada alterada para ${color}.`,"ok");return true;
   }
+  function applyLayerStyle(id,style,report=true,persist=true){
+    const current=state.layerStyles[id]||{},next={...current,...style};state.layerStyles[id]=next;if(persist)save("gp-layer-styles",state.layerStyles);
+    applyStyleToMap(id,next);
+    if(report)log("Simbologia da camada atualizada.","ok");return next;
+  }
+  function applyStyleToMap(id,next){
+    const fill=next.fillColor||layerColor(id),border=next.borderColor||fill,fillOpacity=Number.isFinite(next.fillOpacity)?next.fillOpacity:.32,borderOpacity=Number.isFinite(next.borderOpacity)?next.borderOpacity:1,lineWidth=Number.isFinite(next.lineWidth)?next.lineWidth:2,pointRadius=Number.isFinite(next.pointRadius)?next.pointRadius:5;
+    if(state.map?.getLayer(id)){state.map.setPaintProperty(id,"fill-color",fill);state.map.setPaintProperty(id,"fill-outline-color",border);state.map.setPaintProperty(id,"fill-opacity",next.fillTexture==="outline"?0:fillOpacity)}
+    if(state.map?.getLayer(`${id}-line`)){state.map.setPaintProperty(`${id}-line`,"line-color",border);state.map.setPaintProperty(`${id}-line`,"line-opacity",borderOpacity);state.map.setPaintProperty(`${id}-line`,"line-width",lineWidth);state.map.setPaintProperty(`${id}-line`,"line-dasharray",next.lineTexture==="dashed"?[3,2]:next.lineTexture==="dotted"?[1,2]:[1,0]);state.map.setLayoutProperty(`${id}-line`,"line-cap",next.lineCap||"butt");state.map.setLayoutProperty(`${id}-line`,"line-join",next.lineJoin||"miter")}
+    if(state.map?.getLayer(`${id}-point`)){state.map.setPaintProperty(`${id}-point`,"circle-color",fill);state.map.setPaintProperty(`${id}-point`,"circle-radius",pointRadius);state.map.setPaintProperty(`${id}-point`,"circle-opacity",fillOpacity);state.map.setPaintProperty(`${id}-point`,"circle-stroke-color",border);state.map.setPaintProperty(`${id}-point`,"circle-stroke-opacity",borderOpacity);state.map.setPaintProperty(`${id}-point`,"circle-stroke-width",lineWidth)}
+  }
+  function replaceLayerStyle(id,style,persist=true){
+    state.layerStyles[id]=JSON.parse(JSON.stringify(style||{}));if(persist)save("gp-layer-styles",state.layerStyles);
+    applyStyleToMap(id,state.layerStyles[id]);
+  }
+  function currentEditStyle(layerId){return(state.symDraft&&state.symDraft.layerId===layerId)?state.symDraft.draft:(state.layerStyles[layerId]||{})}
+  function stageStyle(layerId,patch){if(state.symDraft&&state.symDraft.layerId===layerId)Object.assign(state.symDraft.draft,patch)}
   function ribbon(tab="mapa"){
     const modelEditor=tab==="modelo"&&window.gpModeler?.hasActiveEditor?.() ? [["Editor",[["save","Salvar","model-save"],["badge-check","Validar","model-validate"],["play","Executar","model-run"],["log-in","Entrada","model-input"],["circle-dot","Variável","model-variable","menu:variable"],["repeat-2","Iterador","model-iterator","menu:iterator"],["settings-2","Algoritmo","model-algorithm","menu:algorithm"],["blocks","Função","model-function","menu:function"],["log-out","Saída","model-output"],["git-commit-horizontal","Conectar","model-connect"],["copy","Duplicar","model-duplicate"],["trash-2","Excluir","model-delete"],["layout-grid","Organizar","model-layout"],["maximize","Ajustar","model-fit"]]]] : [];
     const sets={
@@ -256,7 +275,7 @@
   }
   function layerSymbol(layer){
     if(layer.tipo?.toLowerCase().includes("raster"))return '<span class="layer-symbol raster" title="Raster"></span>';
-    const types=state.geometryTypes[layer.id]||[],type=types[0]||"geometry",color=layerColor(layer.id,types),style=` style="--layer-color:${color}"`;
+    const types=state.geometryTypes[layer.id]||[],type=types[0]||"geometry",symbolStyle=state.layerStyles[layer.id]||{},color=symbolStyle.fillColor||symbolStyle.borderColor||layerColor(layer.id,types),style=` style="--layer-color:${color}"`;
     if(type.includes("Point"))return `<span class="layer-symbol point"${style} title="Pontos"></span>`;
     if(type.includes("Line"))return `<span class="layer-symbol line"${style} title="Linhas"></span>`;
     if(type.includes("Polygon"))return `<span class="layer-symbol polygon"${style} title="Polígonos"></span>`;
@@ -330,14 +349,14 @@
       if(!field)return;
       field.dataset.loadSource="";
       if(type.value.toLocaleLowerCase("pt-BR")==="local"){
-        field.innerHTML=`<label class="required-label" for="gp-local-file-name">Arquivo local</label><div class="local-file-picker"><input id="gp-local-upload" type="file" accept=".geojson,.json,.kml,.gml,.fgb,.tif,.tiff,.img,.asc,.vrt,.jp2,.zip,.rar,.7z,.tar,.tgz,.gz,.gpkg,.shp" hidden><input id="gp-local-file-name" class="readonly-active" type="text" placeholder="Selecione um arquivo geoespacial" readonly aria-describedby="gp-local-help"><button class="browse-btn" type="button" data-select-local title="Procurar arquivo" aria-label="Procurar arquivo"><i data-lucide="folder-open"></i></button></div><p id="gp-local-help" class="field-help">O conteúdo será descompactado, identificado e validado antes da importação.</p><div class="field"><label>CRS atual</label><input id="gp-import-current-crs" class="readonly-active" placeholder="Detectado após selecionar o arquivo" readonly></div><label class="field-check"><input id="gp-import-reproject" type="checkbox">Reprojetar CRS</label><div class="field"><label>CRS de destino</label><select id="gp-import-target-crs" disabled><option value="EPSG:4674">EPSG:4674 (SIRGAS 2000) — recomendado</option><option value="EPSG:4326">EPSG:4326 (WGS 84)</option><option value="EPSG:31983">EPSG:31983 (SIRGAS 2000 / UTM zona 23S)</option></select></div><label class="field-check"><input id="gp-import-clip" type="checkbox">Recortar pela camada</label><div class="field"><label>Camada de máscara</label><select id="gp-import-clip-layer" disabled><option value="">Selecione…</option>${state.layers.filter(layer=>!String(layer.tipo).toLowerCase().includes("raster")).map(layer=>`<option value="${escapeHtml(layer.id)}">${escapeHtml(layer.nome)}</option>`).join("")}</select></div><p id="gp-import-inspection" class="field-help">Aguardando arquivo.</p>`;
+        field.innerHTML=`<label class="required-label" for="gp-local-file-name">Arquivo local</label><div class="local-file-picker"><input id="gp-local-upload" type="file" accept=".geojson,.json,.kml,.gml,.fgb,.tif,.tiff,.img,.asc,.vrt,.jp2,.zip,.rar,.7z,.tar,.tgz,.gz,.gpkg" hidden><input id="gp-local-file-name" class="readonly-active" type="text" placeholder="Selecione um arquivo geoespacial" readonly aria-describedby="gp-local-help"><button class="browse-btn" type="button" data-select-local title="Procurar arquivo" aria-label="Procurar arquivo"><i data-lucide="folder-open"></i></button></div><p id="gp-local-help" class="field-help">Para Shapefile, envie um arquivo ZIP com os componentes .shp, .shx e .dbf. O conteúdo será descompactado, identificado e validado antes da importação.</p><div class="field"><label>CRS atual</label><input id="gp-import-current-crs" class="readonly-active" placeholder="Detectado após selecionar o arquivo" readonly></div><label class="field-check"><input id="gp-import-reproject" type="checkbox">Reprojetar CRS</label><div class="field"><label>CRS de destino</label><select id="gp-import-target-crs" disabled><option value="EPSG:4674">EPSG:4674 (SIRGAS 2000) — recomendado</option><option value="EPSG:4326">EPSG:4326 (WGS 84)</option><option value="EPSG:31983">EPSG:31983 (SIRGAS 2000 / UTM zona 23S)</option></select></div><label class="field-check"><input id="gp-import-clip" type="checkbox">Recortar pela camada</label><div class="field"><label>Camada de máscara</label><select id="gp-import-clip-layer" disabled><option value="">Selecione…</option>${state.layers.filter(layer=>!String(layer.tipo).toLowerCase().includes("raster")).map(layer=>`<option value="${escapeHtml(layer.id)}">${escapeHtml(layer.nome)}</option>`).join("")}</select></div><p id="gp-import-inspection" class="field-help">Aguardando arquivo.</p>`;
         const input=$("#gp-local-upload"),name=$("#gp-local-file-name");
         $("#gp-import-target-crs").options[0].textContent="EPSG:4674 (SIRGAS 2000) — recomendado";
         [...$("#gp-import-target-crs").options].forEach((option,index)=>option.textContent=`${crsLabel(option.value)}${index===0?" — recomendado":""}`);
         $("[data-select-local]").onclick=()=>input.click();
         $("#gp-import-reproject").onchange=event=>$("#gp-import-target-crs").disabled=!event.target.checked;
         $("#gp-import-clip").onchange=event=>$("#gp-import-clip-layer").disabled=!event.target.checked;
-        input.onchange=async()=>{const file=input.files[0];inspectionToken="";name.value=file?.name||"";submit.disabled=true;suggestOutputName(form,op);const currentCrs=$("#gp-import-current-crs");if(currentCrs)currentCrs.value="";if(!file)return;const status=$("#gp-import-inspection");status.textContent="Lendo, extraindo e validando…";try{const data=new FormData();data.append("arquivo",file);const response=await fetch(`${API}/importar_camadas/inspecionar`,{method:"POST",body:data,credentials:"include"}),body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);if(body.importavel===false)throw new Error(body.erro_validacao||"Arquivo sem feições para importação");inspectionToken=body.token_importacao||"";const detectedCrs=body.crs_atual||body.camadas?.[0]?.crs_original||body.camadas?.[0]?.crs_final||"";$("#gp-import-current-crs").value=detectedCrs?crsLabel(detectedCrs):"CRS não informado";const invalidas=body.camadas.reduce((total,camada)=>total+Number(camada.geometrias_invalidas||0),0);status.textContent=`${body.categoria} · ${body.camadas.length} camada(s) importável(is)${invalidas?` · ${invalidas} geometria(s) inválida(s) serão destacadas`:" · geometrias válidas"}`;submit.disabled=false}catch(error){const message=String(error?.message||"Falha na inspeção automática");const lower=message.toLocaleLowerCase("pt-BR");const validationError=lower.includes("sem fei")||lower.includes("inválido")||lower.includes("invalido")||lower.includes("pacote geoespacial misto");const authError=lower.includes("sessão inválida")||lower.includes("sessao invalida")||lower.includes("não autorizado")||lower.includes("nao autorizado")||lower.includes("http 401");status.textContent=authError?"Sessão expirada. Faça login novamente para inspecionar e importar.":message;$("#gp-import-current-crs").value="CRS não detectado";submit.disabled=validationError}};
+        input.onchange=async()=>{const file=input.files[0];inspectionToken="";name.value=file?.name||"";submit.disabled=true;suggestOutputName(form,op);const currentCrs=$("#gp-import-current-crs");if(currentCrs)currentCrs.value="";if(!file)return;const status=$("#gp-import-inspection");currentCrs.value="Identificando CRS…";status.textContent="Lendo, extraindo e validando…";try{const data=new FormData();data.append("arquivo",file);const response=await fetch(`${API}/importar_camadas/inspecionar`,{method:"POST",body:data,credentials:"include"}),body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);if(body.importavel===false)throw new Error(body.erro_validacao||"Arquivo sem feições para importação");inspectionToken=body.token_importacao||"";const detectedCrs=body.crs_identificado||body.crs_atual||body.camadas?.[0]?.crs_original||body.camadas?.[0]?.crs_final||"";const crsLabelled=detectedCrs?crsLabel(detectedCrs):"CRS não informado";currentCrs.value=crsLabelled;const invalidas=body.camadas.reduce((total,camada)=>total+Number(camada.geometrias_invalidas||0),0);status.textContent=`${body.categoria} · ${body.camadas.length} camada(s) importável(is) · CRS identificado: ${crsLabelled}${invalidas?` · ${invalidas} geometria(s) inválida(s) serão destacadas`:" · geometrias válidas"}`;submit.disabled=false}catch(error){const message=String(error?.message||"Falha na inspeção automática");const lower=message.toLocaleLowerCase("pt-BR");const validationError=lower.includes("sem fei")||lower.includes("inválido")||lower.includes("invalido")||lower.includes("pacote geoespacial misto");const authError=lower.includes("sessão inválida")||lower.includes("sessao invalida")||lower.includes("não autorizado")||lower.includes("nao autorizado")||lower.includes("http 401");status.textContent=authError?"Sessão expirada. Faça login novamente para inspecionar e importar.":message;currentCrs.value="CRS não detectado";submit.disabled=validationError}};
         submit.textContent="Importar";submit.title="Importar os arquivos para o banco e adicioná-los ao mapa";submit.disabled=true;
         suggestOutputName(form,op);
         form.onsubmit=async event=>{event.preventDefault();if(!input.files.length){$("#gp-import-inspection").textContent="Selecione um arquivo local para importar.";return}if($("#gp-import-clip").checked&&!$("#gp-import-clip-layer").value){$("#gp-import-inspection").textContent="Selecione a camada de máscara.";return}submit.disabled=true;submit.textContent="Importando…";const progress=createExecutionProgress(form),file=input.files[0],status=$("#gp-import-inspection");try{const data=new FormData();if(inspectionToken)data.append("token_importacao",inspectionToken);else data.append("arquivo",file);if($("#gp-import-reproject").checked)data.append("reprojetar_crs",$("#gp-import-target-crs").value);if($("#gp-import-clip").checked)data.append("recortar_camada_id",$("#gp-import-clip-layer").value);progress.note(`${file.name}: iniciando importação`);const started=await fetch(`${API}/importar_camadas/job`,{method:"POST",body:data,credentials:"include"});let job=await started.json().catch(()=>({}));if(!started.ok)throw new Error(job.detail||`HTTP ${started.status}`);job=await waitForJob(job,progress);const result=job.resultado||{};const createdId=result.camada_id||result.raster_id||result.recursos?.[0]?.id;progress.note("Sincronizando catálogo de camadas");const visible=await refreshLayers(true,createdId?[createdId]:[],createdId);if(createdId&&!visible.has(createdId))throw new Error("O recurso foi importado, mas não pôde ser representado no mapa");status.textContent=`Importação concluída: ${result.quantidade||1} camada(s).`;progress.complete();log(`${file.name} importado com sucesso.`,"ok");inspectionToken="";input.value="";name.value="";$("#gp-import-current-crs").value=""}catch(error){status.textContent=error.message;progress.fail(`Falha: ${error.message}`);log(`${file.name}: ${error.message}`,"error");$("#gp-log").classList.add("open")}finally{submit.textContent="Importar";submit.disabled=false}};
@@ -592,6 +611,26 @@
     if(fit)await zoomToCatalogLayer(id);
     return true;
   }
+  async function consumePortalService(service){
+    if(service.tipo==="WFS"){
+      activateToolsTab();selectOp("OP-01");
+      setTimeout(()=>{const type=$("[name=tipo_entrada]"),url=$("#gp-wfs-url");if(type){type.value="WFS";type.dispatchEvent(new Event("change"))}if(url)url.value=service.url},0);
+      log(`${service.nome||service.titulo}: serviço WFS preparado para importação.`,"ok");
+      return;
+    }
+    if(service.tipo==="STAC"||service.tipo==="OGCAPI"){
+      window.open(service.url,"_blank","noopener");
+      log(`${service.nome||service.titulo}: catálogo público aberto em nova guia.`,"ok");
+      return;
+    }
+    if(!["WMS","WMTS","XYZ"].includes(service.tipo))throw new Error("Tipo de serviço não suportado");
+    const id=`portal-wms-${service.id||service.servico_id}`;
+    if(!state.map.getSource(id)){
+      state.map.addSource(id,{type:"raster",tiles:[service.url],tileSize:256});
+      state.map.addLayer({id,type:"raster",source:id,paint:{"raster-opacity":.78}});
+    }
+    log(`${service.nome||service.titulo}: camada WMS adicionada ao mapa.`,"ok");
+  }
   async function filesAdded(files,taskProgress=null,options={}){
     const selected=[...files];
     if(!selected.length)return;
@@ -600,10 +639,21 @@
     for(const file of selected){
       let createdId=null;
       try{
-        const form=new FormData();if(options.token_importacao)form.append("token_importacao",options.token_importacao);else form.append("arquivo",file);if(options.reprojetar_crs)form.append("reprojetar_crs",options.reprojetar_crs);if(options.recortar_camada_id)form.append("recortar_camada_id",options.recortar_camada_id);
-        taskProgress.note(`${file.name}: enviando ao algoritmo importar_camadas`);
-        const response=await fetch(`${API}/importar_camadas`,{method:"POST",body:form});const body=await response.json();
-        if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
+        let token=options.token_importacao;
+        if(!token){
+          const inspection=new FormData();inspection.append("arquivo",file);
+          taskProgress.note(`${file.name}: inspecionando conteúdo geoespacial`);
+          const inspected=await fetch(`${API}/importar_camadas/inspecionar`,{method:"POST",body:inspection,credentials:"include"});
+          const inspectionBody=await inspected.json().catch(()=>({}));
+          if(!inspected.ok)throw new Error(inspectionBody.detail||`HTTP ${inspected.status}`);
+          if(inspectionBody.importavel===false)throw new Error(inspectionBody.erro_validacao||"Arquivo sem feições para importação");
+          token=inspectionBody.token_importacao;
+        }
+        const form=new FormData();if(token)form.append("token_importacao",token);else form.append("arquivo",file);if(options.reprojetar_crs)form.append("reprojetar_crs",options.reprojetar_crs);if(options.recortar_camada_id)form.append("recortar_camada_id",options.recortar_camada_id);
+        taskProgress.note(`${file.name}: iniciando importação validada`);
+        const response=await fetch(`${API}/importar_camadas/job`,{method:"POST",body:form,credentials:"include"});let job=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(job.detail||`HTTP ${response.status}`);
+        job=await waitForJob(job,taskProgress);const body=job.resultado||{};
         createdId=body.camada_id||body.raster_id||body.recursos?.[0]?.id;
         taskProgress.note(`${file.name}: atualizando representação da interface`);
         const visible=await refreshLayers(true,createdId?[createdId]:[],createdId,label=>taskProgress.note(`${file.name}: ${label.toLocaleLowerCase("pt-BR")}`));
@@ -619,14 +669,114 @@
     if(failures)taskProgress.fail(`${failures} camada${failures===1?"":"s"} não puderam ser importadas`);else taskProgress.complete();
   }
   function walkCoords(v,cb){if(!Array.isArray(v))return;if(typeof v[0]==="number")cb(v);else v.forEach(x=>walkCoords(x,cb))}
-  function bind(){ribbon();renderToolbox();refreshLayers();refreshDefinitions();$("#gp-tool-search").oninput=e=>renderToolbox(e.target.value);$("#gp-layer-search").oninput=renderLayers;$("#gp-toolbox").addEventListener("click",e=>{const b=e.target.closest("[data-op]");if(b)selectOp(b.dataset.op)});$$('[data-ribbon]').forEach(b=>b.onclick=()=>{$$('[data-ribbon]').forEach(x=>x.classList.toggle("active",x===b));ribbon(b.dataset.ribbon)});$$('[data-right-tab]').forEach(b=>b.addEventListener("click",()=>{$$('[data-right-tab]').forEach(x=>{const active=x===b;x.classList.toggle("active",active);x.setAttribute("aria-selected",String(active))});if(b.dataset.rightTab==="tools")showTools();else if(b.dataset.rightTab==="history")showHistory();else if(b.dataset.rightTab==="model-elements"||b.dataset.rightTab==="model-properties")window.gpModeler?.showPanel?.(b.dataset.rightTab==="model-elements"?"elements":"properties");else showLibrary(b.dataset.rightTab)}));$("#gp-file-input").onchange=e=>{filesAdded(e.target.files);e.target.value=""};const mapView=$(".gp-map-view");["dragenter","dragover"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.add("dragging")}));["dragleave","drop"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.remove("dragging")}));mapView.addEventListener("drop",e=>filesAdded(e.dataTransfer.files));$("#gp-home").onclick=()=>state.map.flyTo({center:[-48.5,-22.4],zoom:6.2});$("#gp-fit").onclick=()=>state.map.fitBounds([[-53.2,-25.5],[-44,-19.5]],{padding:20});$("#gp-log-toggle").onclick=()=>$("#gp-log").classList.toggle("open")}
+  function bind(){ribbon();renderToolbox();refreshLayers();refreshDefinitions();window.gpCommands?.loadEnvironments?.();$("#gp-tool-search").oninput=e=>renderToolbox(e.target.value);$("#gp-layer-search").oninput=renderLayers;$("#gp-toolbox").addEventListener("click",e=>{const b=e.target.closest("[data-op]");if(b)selectOp(b.dataset.op)});$$('[data-ribbon]').forEach(b=>b.onclick=()=>{$$('[data-ribbon]').forEach(x=>x.classList.toggle("active",x===b));ribbon(b.dataset.ribbon)});$$('[data-right-tab]').forEach(b=>b.addEventListener("click",()=>{$$('[data-right-tab]').forEach(x=>{const active=x===b;x.classList.toggle("active",active);x.setAttribute("aria-selected",String(active))});if(b.dataset.rightTab==="tools")showTools();else if(b.dataset.rightTab==="history")showHistory();else if(b.dataset.rightTab==="model-elements"||b.dataset.rightTab==="model-properties")window.gpModeler?.showPanel?.(b.dataset.rightTab==="model-elements"?"elements":"properties");else showLibrary(b.dataset.rightTab)}));$("#gp-file-input").onchange=e=>{filesAdded(e.target.files);e.target.value=""};const mapView=$(".gp-map-view");["dragenter","dragover"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.add("dragging")}));["dragleave","drop"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.remove("dragging")}));mapView.addEventListener("drop",e=>filesAdded(e.dataTransfer.files));$("#gp-home").onclick=()=>state.map.flyTo({center:[-48.5,-22.4],zoom:6.2});$("#gp-fit").onclick=()=>state.map.fitBounds([[-53.2,-25.5],[-44,-19.5]],{padding:20});$("#gp-log-toggle").onclick=()=>$("#gp-log").classList.toggle("open")}
+  function symbolPreview(kind,value,color){
+    const c=color||"#334155";
+    if(kind==="line"){const dash=value==="dashed"?' stroke-dasharray="7 4"':value==="dotted"?' stroke-dasharray="1 4.5" stroke-linecap="round"':'',w=value==="dotted"?3:2.5;return `<svg class="sym-preview" viewBox="0 0 46 14" aria-hidden="true"><line x1="3" y1="7" x2="43" y2="7" stroke="${c}" stroke-width="${w}"${dash}/></svg>`}
+    if(kind==="cap"){return `<svg class="sym-preview" viewBox="0 0 46 14" aria-hidden="true"><line x1="13" y1="7" x2="33" y2="7" stroke="${c}" stroke-width="9" stroke-linecap="${value}"/></svg>`}
+    if(kind==="join"){return `<svg class="sym-preview" viewBox="0 0 46 14" aria-hidden="true"><polyline points="7,12 23,3 39,12" fill="none" stroke="${c}" stroke-width="6" stroke-linejoin="${value}" stroke-linecap="butt"/></svg>`}
+    if(kind==="filledge"){const dash=value==="dashed"?' stroke-dasharray="5 3"':value==="dotted"?' stroke-dasharray="1 3" stroke-linecap="round"':'',w=value==="dotted"?2.4:2;return `<svg class="sym-preview" viewBox="0 0 46 14" aria-hidden="true"><rect x="3.5" y="2.5" width="39" height="9" fill="${c}" fill-opacity="0.9" stroke="${c}" stroke-width="${w}"${dash}/></svg>`}
+    if(value==="translucent")return `<svg class="sym-preview" viewBox="0 0 46 14" aria-hidden="true"><rect x="3" y="2" width="40" height="10" fill="${c}" fill-opacity="0.35" stroke="${c}" stroke-width="1.5"/></svg>`;
+    if(value==="outline")return `<svg class="sym-preview" viewBox="0 0 46 14" aria-hidden="true"><rect x="4" y="2.5" width="38" height="9" fill="none" stroke="${c}" stroke-width="2"/></svg>`;
+    return `<svg class="sym-preview" viewBox="0 0 46 14" aria-hidden="true"><rect x="3" y="2" width="40" height="10" fill="${c}"/></svg>`;
+  }
+  function symbolSelect(styleKey,kind,current,color,options){
+    const cur=options.find(o=>o.value===current)||options[0];
+    const items=options.map(o=>`<li role="option" data-option="${o.value}" aria-selected="${o.value===cur.value}">${symbolPreview(kind,o.value,color)}<span>${o.label}</span></li>`).join("");
+    return `<div class="symbol-select" data-style="${styleKey}" data-kind="${kind}" data-value="${cur.value}"><button type="button" class="symbol-select-trigger" aria-haspopup="listbox" aria-expanded="false"><span class="symbol-select-preview">${symbolPreview(kind,cur.value,color)}</span><span class="symbol-select-text">${cur.label}</span><i data-lucide="chevron-down" class="symbol-select-caret"></i></button><ul class="symbol-select-list" role="listbox" hidden>${items}</ul></div>`;
+  }
+  function symbologyFields(layerId){
+    const types=state.geometryTypes[layerId]||[],isPoint=types.some(type=>type.includes("Point")),isLine=types.some(type=>type.includes("Line"))&&!types.some(type=>type.includes("Polygon"));
+    const isPolygon=!isPoint&&!isLine;
+    const color=layerColor(layerId,types),style=currentEditStyle(layerId);
+    const borderColor=style.borderColor||color,fillColor=style.fillColor||color;
+    const dashOptions=[{value:"solid",label:isLine?"Contínua":"Sólida"},{value:"dashed",label:"Tracejada"},{value:"dotted",label:"Pontilhada"}];
+    const capOptions=[{value:"butt",label:"Reta"},{value:"round",label:"Redonda"},{value:"square",label:"Quadrada"}];
+    const joinOptions=[{value:"miter",label:"Ponta"},{value:"round",label:"Arredondada"},{value:"bevel",label:"Chanfrada"}];
+    const fillOptions=[{value:"solid",label:"Sólido"},{value:"translucent",label:"Translúcido"},{value:"outline",label:"Sem preenchimento"}];
+    const dashSelect=symbolSelect("lineTexture","line",style.lineTexture||"solid",borderColor,dashOptions);
+    const capSelect=symbolSelect("lineCap","cap",style.lineCap||"butt",borderColor,capOptions);
+    const joinSelect=symbolSelect("lineJoin","join",style.lineJoin||"miter",borderColor,joinOptions);
+    const fillSelect=symbolSelect("fillTexture","fill",style.fillTexture||"solid",fillColor,fillOptions);
+    const borderColorField=`<span class="color-field color-field-border"><span class="color-field-preview">${borderSwatch(borderColor,style.lineWidth??2)}</span><input data-style="borderColor" type="color" value="${borderColor}"></span>`;
+    const field=(label,control)=>`<label>${label}${control}</label>`;
+    const symField=(label,control)=>`<div class="sym-field"><span class="sym-field-label">${label}</span>${control}</div>`;
+    const grp=(title,items)=>`<section class="sym-group"><h4 class="sym-group-title">${title}</h4><div class="geo-properties-grid">${items.join("")}</div></section>`;
+    const num=(key,val,min,max,step=.5)=>`<input data-style="${key}" type="number" min="${min}" max="${max}" step="${step}" value="${val}">`;
+    const range=(key,val)=>`<input data-style="${key}" type="range" min="0" max="1" step="0.05" value="${val}">`;
+    const colorInput=key=>`<input data-style="${key}" type="color" value="${key==="fillColor"?fillColor:borderColor}">`;
+    const groups=[];
+    if(isPolygon){
+      groups.push(grp("Aparência",[field("Cor de preenchimento",colorInput("fillColor")),field("Cor do contorno",borderColorField),field("Largura do contorno",num("lineWidth",style.lineWidth??2,0,12))]));
+      groups.push(grp("Preenchimento",[symField("Estilo de preenchimento",fillSelect),field("Transparência do preenchimento",range("fillOpacity",style.fillOpacity??.32))]));
+      groups.push(grp("Contorno",[symField("Estilo de linha",dashSelect),symField("Extremidade",capSelect),symField("Junção",joinSelect),field("Transparência do contorno",range("borderOpacity",style.borderOpacity??1))]));
+    }else if(isLine){
+      groups.push(grp("Aparência",[field("Cor",borderColorField),field("Largura",num("lineWidth",style.lineWidth??2,0,12))]));
+      groups.push(grp("Traço",[symField("Estilo de linha",dashSelect),symField("Extremidade",capSelect),symField("Junção",joinSelect),field("Transparência",range("borderOpacity",style.borderOpacity??1))]));
+    }else{
+      groups.push(grp("Aparência",[field("Cor de preenchimento",colorInput("fillColor")),field("Cor do contorno",colorInput("borderColor")),field("Tamanho",num("pointRadius",style.pointRadius??5,2,24)),field("Largura do contorno",num("lineWidth",style.lineWidth??1,0,8))]));
+      groups.push(grp("Efeitos",[field("Transparência do preenchimento",range("fillOpacity",style.fillOpacity??.32)),field("Transparência do contorno",range("borderOpacity",style.borderOpacity??1))]));
+    }
+    return `<div class="sym-groups">${groups.join("")}</div>`;
+  }
+  function borderSwatch(color,lineWidth){
+    const sw=Math.max(1,Math.min(Number(lineWidth)||2,8));
+    return `<svg class="sym-preview" viewBox="0 0 60 22" preserveAspectRatio="none" aria-hidden="true"><rect x="1" y="1" width="58" height="20" fill="none" stroke="${color||"#334155"}" stroke-width="${sw}" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+  function refreshBorderField(scope,layerId){
+    const preview=$(".color-field-border .color-field-preview",scope);if(!preview)return;
+    const style=currentEditStyle(layerId),color=style.borderColor||layerColor(layerId);
+    preview.innerHTML=borderSwatch(color,style.lineWidth??2);
+  }
+  function recolorSymbols(scope,layerId){
+    const style=currentEditStyle(layerId),types=state.geometryTypes[layerId]||[],base=layerColor(layerId,types),fillColor=style.fillColor||base,borderColor=style.borderColor||fillColor;
+    $$(".symbol-select",scope).forEach(root=>{const kind=root.dataset.kind,c=kind==="fill"?fillColor:borderColor;
+      root.querySelectorAll("[data-option] .sym-preview").forEach(sp=>{sp.outerHTML=symbolPreview(kind,sp.closest("[data-option]").dataset.option,c)});
+      const tp=root.querySelector(".symbol-select-preview");if(tp)tp.innerHTML=symbolPreview(kind,root.dataset.value,c)});
+  }
+  function wireSymbolSelect(root,layerId){
+    const key=root.dataset.style,trigger=root.querySelector(".symbol-select-trigger"),list=root.querySelector(".symbol-select-list");
+    trigger.onclick=e=>{e.stopPropagation();const willOpen=list.hidden;$$(".symbol-select.open").forEach(o=>{if(o!==root){o.classList.remove("open");o.querySelector(".symbol-select-list").hidden=true;o.querySelector(".symbol-select-trigger").setAttribute("aria-expanded","false")}});list.hidden=!willOpen;trigger.setAttribute("aria-expanded",String(willOpen));root.classList.toggle("open",willOpen)};
+    list.querySelectorAll("[data-option]").forEach(opt=>{opt.onclick=()=>{const value=opt.dataset.option;root.dataset.value=value;root.querySelector(".symbol-select-preview").innerHTML=opt.querySelector(".sym-preview").outerHTML;root.querySelector(".symbol-select-text").textContent=opt.querySelector("span").textContent;list.querySelectorAll("[data-option]").forEach(o=>o.setAttribute("aria-selected",String(o===opt)));list.hidden=true;trigger.setAttribute("aria-expanded","false");root.classList.remove("open");stageStyle(layerId,{[key]:value});markSymbologyDirty()}});
+  }
+  function wireSymbology(scope,layerId){
+    $$(".symbol-select[data-style]",scope).forEach(root=>wireSymbolSelect(root,layerId));
+    $$("input[data-style]",scope).forEach(control=>{control.oninput=()=>{const value=["lineWidth","pointRadius","fillOpacity","borderOpacity"].includes(control.dataset.style)?Number(control.value):control.value;stageStyle(layerId,{[control.dataset.style]:value});markSymbologyDirty();if(control.dataset.style==="borderColor"||control.dataset.style==="fillColor")recolorSymbols(scope,layerId);if(control.dataset.style==="borderColor"||control.dataset.style==="lineWidth")refreshBorderField(scope,layerId)}});
+  }
+  function markSymbologyDirty(){if(state.symDraft)state.symDraft.dirty=true;const bar=$(".symbology-actions");if(bar)bar.classList.add("dirty")}
+  function closeSymbologyMenu(){const menu=$("#gp-symbology-menu");if(menu)menu.remove()}
+  function openSymbologyMenu(layerId,anchor){
+    closeSymbologyMenu();
+    const layer=state.layers.find(item=>item.id===layerId);if(!layer)return;
+    const isRaster=layer.tipo?.toLowerCase().includes("raster");if(isRaster)return;
+    state.activeLayerId=layerId;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x.dataset.layer===layerId));
+    const menu=document.createElement("div");menu.className="symbology-menu";menu.id="gp-symbology-menu";
+    menu.innerHTML=`<header class="symbology-menu-head"><i data-lucide="shapes"></i><strong title="${escapeHtml(layer.nome)}">${escapeHtml(layer.nome)}</strong><button type="button" class="symbology-menu-close icon-btn" aria-label="Fechar"><i data-lucide="x"></i></button></header>${symbologyFields(layerId)}<p class="symbology-menu-hint">Alterações aplicadas imediatamente ao mapa.</p>`;
+    document.body.appendChild(menu);
+    const rect=anchor.getBoundingClientRect(),width=menu.offsetWidth||260,height=menu.offsetHeight||0;
+    let left=rect.left,top=rect.bottom+6;
+    if(left+width>window.innerWidth-8)left=Math.max(8,window.innerWidth-width-8);
+    if(top+height>window.innerHeight-8)top=Math.max(8,rect.top-height-6);
+    menu.style.left=`${left}px`;menu.style.top=`${top}px`;
+    wireSymbology(menu,layerId);icons();
+    menu.querySelector(".symbology-menu-close").addEventListener("click",closeSymbologyMenu);
+  }
   function showProperties(layer){
     activateRightTab("properties");showEditor();$("#gp-right-title").textContent="Propriedades";
+    state.symDraft=null;
     if(!layer){$("#gp-editor-view").innerHTML='<div class="empty">Selecione um recurso no Catálogo ou uma camada no painel Conteúdo para consultar suas propriedades.</div>';return}
-    const isRaster=layer.tipo?.toLowerCase().includes("raster"),isMapVector=!isRaster&&state.layers.some(item=>item.id===layer.id),color=layerColor(layer.id);
-    const symbology=isMapVector?`<section class="property-symbology"><h3>Simbologia</h3><div class="layer-color-control"><label for="gp-layer-color">Cor do símbolo e do vetor</label><div><input id="gp-layer-color" type="color" value="${color}" aria-label="Cor da camada"><output for="gp-layer-color">${color.toUpperCase()}</output></div><p>A alteração é aplicada imediatamente a pontos, linhas e polígonos.</p></div></section>`:"";
-    $("#gp-editor-view").innerHTML=`<div class="editor-head"><i data-lucide="${isRaster?"grid-3x3":"shapes"}"></i><h2>${escapeHtml(layer.nome)}</h2></div><div class="editor-body"><dl class="property-list"><dt>Identificador</dt><dd>${escapeHtml(layer.id)}</dd><dt>Tipo</dt><dd>${escapeHtml(layer.tipo||"Camada")}</dd><dt>CRS</dt><dd>${escapeHtml(layer.crs?crsLabel(layer.crs):"Não informado")}</dd><dt>Origem</dt><dd>${escapeHtml(layer.origem||"Sessão")}</dd><dt>Importação</dt><dd>${escapeHtml(layer.data_importacao||"Sessão atual")}</dd></dl>${symbology}</div>`;
-    const picker=$("#gp-layer-color");if(picker)picker.oninput=event=>{const next=event.target.value;applyLayerColor(layer.id,next,false);picker.nextElementSibling.value=next.toUpperCase()};icons()
+    const isRaster=layer.tipo?.toLowerCase().includes("raster"),isMapVector=!isRaster&&state.layers.some(item=>item.id===layer.id);
+    if(isMapVector){const saved=state.layerStyles[layer.id]||{};state.symDraft={layerId:layer.id,base:JSON.parse(JSON.stringify(saved)),draft:JSON.parse(JSON.stringify(saved)),dirty:false}}
+    const symbology=isMapVector?`<section class="property-symbology"><h3>Simbologia</h3>${symbologyFields(layer.id)}</section>`:"";
+    const actions=isMapVector?`<div class="editor-actions symbology-actions"><button type="button" class="btn ghost" data-sym-cancel>Cancelar</button><button type="button" class="btn" data-sym-apply>Aplicar</button><button type="button" class="btn primary" data-sym-save>Salvar</button></div>`:"";
+    $("#gp-editor-view").innerHTML=`<div class="editor-head"><i data-lucide="${isRaster?"grid-3x3":"shapes"}"></i><h2>${escapeHtml(layer.nome)}</h2></div><div class="editor-body"><dl class="property-list"><dt>Identificador</dt><dd>${escapeHtml(layer.id)}</dd><dt>Tipo</dt><dd>${escapeHtml(layer.tipo||"Camada")}</dd><dt>CRS</dt><dd>${escapeHtml(layer.crs?crsLabel(layer.crs):"Não informado")}</dd><dt>Origem</dt><dd>${escapeHtml(layer.origem||"Sessão")}</dd><dt>Importação</dt><dd>${escapeHtml(layer.data_importacao||"Sessão atual")}</dd></dl>${symbology}</div>${actions}`;
+    wireSymbology($("#gp-editor-view"),layer.id);wireSymbologyActions(layer.id);icons()
+  }
+  function wireSymbologyActions(layerId){
+    const cancel=$("[data-sym-cancel]"),apply=$("[data-sym-apply]"),saveBtn=$("[data-sym-save]");
+    if(apply)apply.onclick=()=>{const draft=state.symDraft?.draft;if(!draft)return;replaceLayerStyle(layerId,draft,false);renderLayers();log("Simbologia aplicada ao mapa.","ok")};
+    if(saveBtn)saveBtn.onclick=()=>{const draft=state.symDraft?.draft;if(!draft)return;replaceLayerStyle(layerId,draft,true);if(state.symDraft)state.symDraft.base=JSON.parse(JSON.stringify(draft));state.symDraft.dirty=false;$(".symbology-actions")?.classList.remove("dirty");renderLayers();log("Simbologia salva no sistema.","ok")};
+    if(cancel)cancel.onclick=()=>{const base=state.symDraft?.base;if(!base)return;replaceLayerStyle(layerId,base,true);if(state.symDraft){state.symDraft.draft=JSON.parse(JSON.stringify(base));state.symDraft.dirty=false}renderLayers();showProperties(state.layers.find(x=>x.id===layerId)||null);log("Alterações de simbologia descartadas.","ok")};
   }
   function ensureAttributesTab(layerId){
     const tabId="attributes";
@@ -677,8 +827,8 @@
     const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail||`Não foi possível excluir ${layerId}`);
     removeLayerFromMap(layerId,false);delete state.layerColors[layerId];save("gp-layer-colors",state.layerColors);log(`${layerId} excluída definitivamente do sistema.`,"ok");
   }
-  document.addEventListener("DOMContentLoaded",()=>{monitorFormAccessibility();initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.dataset.basemapToggle){setBasemap(e.target.dataset.basemapToggle,e.target.checked)}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest("[data-layer-group] > .layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.","ok");emit("pronto",{api:API})});
-  const TOOL_SUBGROUPS={"OP-01":"Importação e conexão","OP-02":"Qualidade e preparação","OP-02-CORR":"Qualidade e preparação","OP-03":"Qualidade e preparação","OP-04":"Geometria e proximidade","OP-05":"Sobreposição espacial","OP-06":"Agregação vetorial","OP-07":"Consulta e seleção","OP-08":"Conversão de dados","OP-10":"Distância e custo","OP-11":"Distância e custo","OP-12":"Densidade e distribuição","OP-13":"Distância e custo","OP-14":"Interpolação e superfície","OP-15":"Agregação territorial","OP-16":"Criação de superfície","OP-17":"Álgebra de mapas","OP-20":"Normalização raster","OP-21":"Recorte e máscara","OP-22":"Estatística zonal","OP-23":"Amostragem raster","OP-24":"Extração zonal","OP-25":"Dados vetoriais","OP-26":"Dados raster"};
+  document.addEventListener("DOMContentLoaded",()=>{monitorFormAccessibility();initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.dataset.basemapToggle){setBasemap(e.target.dataset.basemapToggle,e.target.checked)}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest("[data-layer-group] > .layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const symbol=e.target.closest(".layer-symbol");if(symbol){const symbolRow=symbol.closest("[data-layer]");if(symbolRow){e.stopPropagation();state.activeLayerId=symbolRow.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===symbolRow));showProperties(state.layers.find(x=>x.id===symbolRow.dataset.layer));return}}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});document.addEventListener("click",e=>{const menu=$("#gp-symbology-menu");if(menu&&!menu.contains(e.target)&&!e.target.closest(".layer-symbol"))closeSymbologyMenu();if(!e.target.closest(".symbol-select"))$$(".symbol-select.open").forEach(o=>{o.classList.remove("open");const l=o.querySelector(".symbol-select-list");if(l)l.hidden=true;const t=o.querySelector(".symbol-select-trigger");if(t)t.setAttribute("aria-expanded","false")})});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSymbologyMenu()});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.","ok");emit("pronto",{api:API})});
+  const TOOL_SUBGROUPS={"OP-01":"Importação e conexão","OP-02":"Qualidade e preparação","OP-02-CORR":"Qualidade e preparação","OP-03":"Qualidade e preparação","OP-04":"Geometria e proximidade","OP-05":"Sobreposição espacial","OP-05-IDENT":"Sobreposição espacial","OP-06":"Agregação vetorial","OP-07":"Consulta e seleção","OP-08":"Conversão de dados","OP-10":"Distância e custo","OP-11":"Distância e custo","OP-12":"Densidade e distribuição","OP-13":"Distância e custo","OP-14":"Interpolação e superfície","OP-15":"Agregação territorial","OP-16":"Criação de superfície","OP-17":"Álgebra de mapas","OP-20":"Normalização raster","OP-21":"Recorte e máscara","OP-22":"Estatística zonal","OP-23":"Amostragem raster","OP-24":"Extração zonal","OP-25":"Dados vetoriais","OP-26":"Dados raster"};
   Object.assign(TOOL_SUBGROUPS,{"OP-28":"Derivação geométrica","OP-29":"Derivação geométrica","OP-30":"Derivação geométrica","OP-31":"Generalização","OP-32":"Conversão geométrica","OP-33":"Recorte","OP-34":"Junção espacial","OP-35":"Mesclagem","OP-36":"Reprojeção","OP-37":"Medições","OP-38":"Medições","OP-39":"Reclassificação","OP-40":"Classificação binária","OP-41":"Transformação de valores","OP-42":"Estatística focal","OP-43":"Suavização"});
   renderToolbox=function(filter=""){
     const term=filter.toLocaleLowerCase("pt-BR"),collator=new Intl.Collator("pt-BR",{sensitivity:"base"}),scope=TOOLBOX_SCOPES[state.toolboxScope]||TOOLBOX_SCOPES.geral;
@@ -741,5 +891,5 @@
     if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
     renderLayers();
   }
-  window.gpApp={state,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer,carregarPorId,carregarPorIds,adicionarCamadaGeoJsonEmMemoria};
+  window.gpApp={state,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,consumePortalService,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,log,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer,carregarPorId,carregarPorIds,adicionarCamadaGeoJsonEmMemoria};
 })();

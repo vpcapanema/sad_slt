@@ -12,7 +12,21 @@ CREATE SCHEMA IF NOT EXISTS hierarquizacao_demandas;
 COMMENT ON SCHEMA hierarquizacao_demandas IS
     'Camada de hierarquização (priorização) de demandas/projetos a partir de configurações homologadas';
 
-ALTER TABLE ahp.hierarquizacao_portfolio SET SCHEMA hierarquizacao_demandas;
+DO $$
+BEGIN
+    IF to_regclass('hierarquizacao_demandas.hierarquizacao_portfolio') IS NULL THEN
+        ALTER TABLE ahp.hierarquizacao_portfolio
+            SET SCHEMA hierarquizacao_demandas;
+    ELSIF to_regclass('ahp.hierarquizacao_portfolio') IS NOT NULL THEN
+        -- Em uma reaplicação, a migration 005 recria esta tabela legada vazia.
+        -- A tabela definitiva já está no schema de destino; não a sobrescreva.
+        IF EXISTS (SELECT 1 FROM ahp.hierarquizacao_portfolio LIMIT 1) THEN
+            RAISE EXCEPTION
+                'Tabela legada ahp.hierarquizacao_portfolio contém dados; migração manual necessária';
+        END IF;
+        DROP TABLE ahp.hierarquizacao_portfolio;
+    END IF;
+END $$;
 
 GRANT USAGE ON SCHEMA hierarquizacao_demandas TO slt_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA hierarquizacao_demandas TO slt_user;

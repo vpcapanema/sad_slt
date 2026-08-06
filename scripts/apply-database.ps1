@@ -3,6 +3,7 @@
 # Uso:
 #   .\scripts\start-db.ps1          # sobe container (schema na 1a vez)
 #   .\scripts\apply-database.ps1    # reaplica schema se necessario
+#   .\scripts\apply-database.ps1 -OnlyMigration 052_ambientes_geoprocessamento_usuario.sql
 #
 # Variaveis (opcionais):
 #   SLT_PG_CONTAINER    default slt_postgres
@@ -12,10 +13,24 @@
 #   SLT_PGPASSWORD      default slt_pass (dev)
 #   SLT_DB_NAME         default slt_db
 
+param(
+    [string[]]$OnlyMigration
+)
+
 $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent $PSScriptRoot
 $DbDir = Join-Path $Root "database"
+$envFile = Join-Path $Root ".env"
+if (Test-Path $envFile) {
+    foreach ($line in Get-Content -LiteralPath $envFile -Encoding UTF8) {
+        if ($line -notmatch '^\s*#' -and $line -match '^\s*([^=]+)=(.*)$') {
+            $name = $Matches[1].Trim()
+            $value = $Matches[2].Trim().Trim('"').Trim("'")
+            if (-not (Test-Path "Env:$name")) { Set-Item "Env:$name" $value }
+        }
+    }
+}
 
 $Container = if ($env:SLT_PG_CONTAINER) { $env:SLT_PG_CONTAINER } else { "slt_postgres" }
 $HostAddr = if ($env:SLT_PGHOST) { $env:SLT_PGHOST } else { "127.0.0.1" }
@@ -23,6 +38,13 @@ $Port = if ($env:SLT_PGPORT) { $env:SLT_PGPORT } else { "5434" }
 $DbUser = if ($env:SLT_PGUSER) { $env:SLT_PGUSER } else { "slt_user" }
 $DbPass = if ($env:SLT_PGPASSWORD) { $env:SLT_PGPASSWORD } else { "slt_pass" }
 $DbName = if ($env:SLT_DB_NAME) { $env:SLT_DB_NAME } else { "slt_db" }
+
+if ($env:SLT_USE_SIGMA_POSTGRES -eq "true") {
+    $sltUser = [Uri]::EscapeDataString($env:SIGMA_POSTGRES_USER)
+    $sltPassword = [Uri]::EscapeDataString($env:SIGMA_POSTGRES_PASSWORD)
+    $sltSslMode = [Uri]::EscapeDataString($env:SIGMA_POSTGRES_SSLMODE)
+    $env:SLT_DATABASE_URL = "postgresql://${sltUser}:${sltPassword}@$($env:SIGMA_POSTGRES_HOST):$($env:SIGMA_POSTGRES_PORT)/slt_db?sslmode=${sltSslMode}"
+}
 
 function Write-Step([string]$Message) {
     Write-Host ""
@@ -42,25 +64,36 @@ function Test-ContainerRunning([string]$Name) {
     return [bool]$running
 }
 
-function Test-CoreSchemaReady {
-    $query = "SELECT CASE WHEN to_regclass('demandas.projeto') IS NULL THEN 'f' ELSE 't' END;"
+function Test-SchemaReady([string]$Query) {
+    $query = $Query
     if ($env:SLT_USE_SIGMA_POSTGRES -eq "true" -and $env:SLT_DATABASE_URL) {
         $env:SLT_MIGRATION_QUERY = $query
         $python = Join-Path $Root ".venv\Scripts\python.exe"
-        & $python -c 'import os, psycopg; c=psycopg.connect(os.environ["SLT_DATABASE_URL"]); r=c.execute(os.environ["SLT_MIGRATION_QUERY"]).fetchone()[0]; c.close(); raise SystemExit(0 if str(r).lower() in ("t","true","1") else 1)' 2>$null
-        Remove-Item Env:SLT_MIGRATION_QUERY -ErrorAction SilentlyContinue
-        return $LASTEXITCODE -eq 0
+        $previousErrorActionPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = "Continue"
+            $output = @(& $python -c 'import os, psycopg; c=psycopg.connect(os.environ[''SLT_DATABASE_URL'']); r=c.execute(os.environ[''SLT_MIGRATION_QUERY'']).fetchone()[0]; c.close(); print(''t'' if str(r).lower() in (''t'',''true'',''1'') else ''f'')' 2>&1)
+            $exitCode = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+            Remove-Item Env:SLT_MIGRATION_QUERY -ErrorAction SilentlyContinue
+        }
+        if ($exitCode -ne 0) {
+            $detail = ($output | Select-Object -Last 1 | Out-String).Trim()
+            throw "Falha ao conectar ao PostgreSQL remoto: $detail"
+        }
+        return (($output | Select-Object -Last 1).ToString().Trim() -eq "t")
     }
     if (Test-ContainerRunning $Container) {
         $result = docker exec $Container psql -U $DbUser -d $DbName -At -c $query 2>$null
-        return $LASTEXITCODE -eq 0 -and ($result | Select-Object -Last 1) -eq "t"
+        return ($LASTEXITCODE -eq 0 -and ($result | Select-Object -Last 1) -eq "t")
     }
     if (Get-Command psql -ErrorAction SilentlyContinue) {
         $prev = $env:PGPASSWORD
         $env:PGPASSWORD = $DbPass
         try {
             $result = & psql -h $HostAddr -p $Port -U $DbUser -d $DbName -At -c $query 2>$null
-            return $LASTEXITCODE -eq 0 -and ($result | Select-Object -Last 1) -eq "t"
+            return ($LASTEXITCODE -eq 0 -and ($result | Select-Object -Last 1) -eq "t")
         } finally {
             if ($null -ne $prev) { $env:PGPASSWORD = $prev } else { Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue }
         }
@@ -98,7 +131,7 @@ function Invoke-PsqlFile {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor White
-Write-Host "  SLT — Aplicar schema PostgreSQL" -ForegroundColor White
+Write-Host "  SLT - Aplicar schema PostgreSQL" -ForegroundColor White
 Write-Host "========================================" -ForegroundColor White
 Write-Host "  Container: $Container  Host: ${HostAddr}:$Port  Banco: $DbName" -ForegroundColor DarkGray
 
@@ -152,19 +185,39 @@ $migrations = @(
     "048_cavidade_maxima_risco.sql",
     "049_unificar_classificacao_cavidades.sql",
     "050_bem_tombado_restricao.sql",
-    "051_classificacao_binaria_fase1.sql"
+    "051_classificacao_binaria_fase1.sql",
+    "052_ambientes_geoprocessamento_usuario.sql",
+    "053_catalogo_geoespacial_portal.sql",
+    "054_seed_servicos_publicos_portal.sql",
+    "055_seed_mapbiomas_portal.sql"
 )
 
-if (Test-CoreSchemaReady) {
-    Write-Ok "Nucleo demandas ja esta atualizado; migrations legadas 002-036 serao ignoradas"
-    $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 37 }
+if ($OnlyMigration) {
+    $unknownMigrations = $OnlyMigration | Where-Object { $_ -notin $migrations }
+    if ($unknownMigrations) {
+        throw "Migration desconhecida: $($unknownMigrations -join ', ')"
+    }
+    $migrations = $migrations | Where-Object { $_ -in $OnlyMigration }
+}
+
+if (-not $OnlyMigration) {
+    $latestSchemaQuery = "SELECT CASE WHEN EXISTS (SELECT 1 FROM geoprocessamento.portal_servico WHERE url='https://brasil.mapbiomas.org/colecoes-mapbiomas/') THEN 't' ELSE 'f' END;"
+    $coreSchemaQuery = "SELECT CASE WHEN to_regclass('demandas.projeto') IS NOT NULL OR to_regclass('ahp.config_multicriterio_portfolio') IS NOT NULL THEN 't' ELSE 'f' END;"
+
+    if (Test-SchemaReady $latestSchemaQuery) {
+        Write-Ok "Schema ja esta na migration 055; nenhuma migration sera reaplicada"
+        $migrations = @()
+    } elseif (Test-SchemaReady $coreSchemaQuery) {
+        Write-Ok "Schema legado ja esta atualizado; migrations 002-036 serao ignoradas"
+        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 37 }
+    }
 }
 
 function Invoke-PsycopgFile {
     param([string]$FilePath)
     $env:SLT_MIGRATION_FILE = $FilePath
     $python = Join-Path $Root ".venv\Scripts\python.exe"
-    & $python -c 'import os, pathlib, psycopg; sql=pathlib.Path(os.environ["SLT_MIGRATION_FILE"]).read_text(encoding="utf-8-sig"); c=psycopg.connect(os.environ["SLT_DATABASE_URL"]); c.execute(sql); c.commit(); c.close()'
+    & $python -c 'import os, pathlib, psycopg; sql=pathlib.Path(os.environ[''SLT_MIGRATION_FILE'']).read_text(encoding=''utf-8-sig''); c=psycopg.connect(os.environ[''SLT_DATABASE_URL'']); c.execute(sql); c.commit(); c.close()'
     Remove-Item Env:SLT_MIGRATION_FILE -ErrorAction SilentlyContinue
     if ($LASTEXITCODE -ne 0) { throw "psycopg falhou ($FilePath)" }
 }
@@ -179,14 +232,14 @@ foreach ($name in $migrations) {
 
 try {
     if ($env:SLT_USE_SIGMA_POSTGRES -eq "true" -and $env:SLT_DATABASE_URL) {
-        Write-Step "PostgreSQL remoto — aplicando migrations via psycopg"
+        Write-Step "PostgreSQL remoto - aplicando migrations via psycopg"
         foreach ($name in $migrations) {
             $path = Join-Path $DbDir $name
             Invoke-PsycopgFile -FilePath $path
             Write-Ok $name
         }
     } elseif (Test-ContainerRunning $Container) {
-        Write-Step "Container $Container — aplicando migrations via docker exec"
+        Write-Step "Container $Container - aplicando migrations via docker exec"
         foreach ($name in $migrations) {
             $path = Join-Path $DbDir $name
             Invoke-DockerPsqlFile -ContainerName $Container -Database $DbName -FilePath $path -User $DbUser

@@ -1131,7 +1131,7 @@
   async function init() {
     try {
       const bibliotecaPromise = fetch(
-        "/api/geoespacial/biblioteca-camadas?modulo=fase1",
+        "/api/geoespacial/biblioteca-canonica/arquivos?modulo=fase1",
         { credentials: "same-origin" }
       )
         .then((r) => (r.ok ? r.json() : []))

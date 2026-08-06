@@ -238,6 +238,27 @@ class HomologarCamadaSchema(BaseModel):
     metadados: dict[str, Any] = Field(default_factory=dict)
 
 
+class AmbienteGeoprocessamentoSchema(BaseModel):
+    crs: str | None = None
+    resolution: float | None = Field(default=None, gt=0)
+    overwrite: bool = False
+
+
+class PortalServicoInputSchema(BaseModel):
+    nome: str = Field(min_length=1, max_length=200)
+    tipo: str = Field(pattern="^(WMS|WFS|WMTS|XYZ|STAC|OGCAPI|MAPBIOMAS)$")
+    url: str = Field(min_length=1, max_length=2000)
+    descricao: str | None = None
+    metadados: dict[str, Any] = Field(default_factory=dict)
+
+
+class PortalFavoritoInputSchema(BaseModel):
+    servico_id: UUID
+    camada: str = Field(default="", max_length=300)
+    titulo: str | None = Field(default=None, max_length=300)
+    metadados: dict[str, Any] = Field(default_factory=dict)
+
+
 class FuncaoSchema(BaseModel):
     id: str
     nome: str
@@ -250,7 +271,6 @@ class FuncaoSchema(BaseModel):
     saidas: list[dict[str, Any]] = Field(default_factory=list)
     diagrama: dict[str, Any] = Field(default_factory=dict)
 
-
 class FluxoSchema(BaseModel):
     id: str
     nome: str
@@ -262,18 +282,3 @@ class FluxoSchema(BaseModel):
     variaveis: list[dict[str, Any]] = Field(default_factory=list)
     saidas: list[dict[str, Any]] = Field(default_factory=list)
     diagrama: dict[str, Any] = Field(default_factory=dict)
-
-
-class ProcessamentoSchema(BaseModel):
-    fluxo_id: str
-    camadas_entrada: list[str]
-    variaveis: dict[str, Any]
-    callback_url: str | None = None
-
-
-class ProcessamentoResultSchema(BaseModel):
-    status: str
-    progresso: float
-    logs: list[str]
-    camadas_saida: list[str] = Field(default_factory=list)
-    erros: list[str] = Field(default_factory=list)

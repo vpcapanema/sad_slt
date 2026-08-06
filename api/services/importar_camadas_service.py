@@ -413,6 +413,7 @@ async def importar_camadas(
     target_crs: str | None = None,
     clip_layer_id: str | None = None,
     inspection_token: str | None = None,
+    grupo: str | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     prepared: PreparedUpload | None = None
@@ -494,7 +495,7 @@ async def importar_camadas(
             if progress: progress("Camadas existentes recuperadas sem nova gravação")
             return response
 
-        stored = commit_prepared(prepared)
+        stored = commit_prepared(prepared, grupo)
         if progress: progress(f"Arquivo original preservado no datastorage/{stored.category}")
         prepared = None
         common = {
@@ -580,10 +581,12 @@ def inspecionar_camadas(filename: str, content: bytes) -> dict[str, Any]:
                 vector_results.append((layer_name, validated, metadata))
                 layers.append({"nome": layer_name, **metadata})
         token = _store_inspection_ticket(filename, prepared, vector_results, raster_result)
+        identified_crs = layers[0].get("crs_original") if layers else None
         response = {
             "categoria": prepared.category,
             "arquivo_compactado": prepared.archive,
-            "crs_atual": layers[0].get("crs_original") if layers else None,
+            "crs_atual": identified_crs,
+            "crs_identificado": identified_crs,
             "crs_recomendado": SYSTEM_CRS,
             "camadas": layers,
             "token_importacao": token,

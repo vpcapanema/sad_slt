@@ -145,13 +145,31 @@ CREATE TABLE IF NOT EXISTS ahp.config_multicriterio_portfolio (
 
 COMMENT ON TABLE ahp.config_multicriterio_portfolio IS
     'Configuração da Análise Multicritério (portfólio): critérios/pesos para um grupo comparável de projetos';
-COMMENT ON COLUMN ahp.config_multicriterio_portfolio.grupo_comparacao IS
-    'Universo comparável (mesmo plano + frente/eixo)';
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'ahp'
+          AND table_name = 'config_multicriterio_portfolio'
+          AND column_name = 'grupo_comparacao'
+    ) THEN
+        COMMENT ON COLUMN ahp.config_multicriterio_portfolio.grupo_comparacao IS
+            'Universo comparável (mesmo plano + frente/eixo)';
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_config_mc_portfolio_status
     ON ahp.config_multicriterio_portfolio (status);
-CREATE INDEX IF NOT EXISTS idx_config_mc_portfolio_grupo
-    ON ahp.config_multicriterio_portfolio (grupo_comparacao);
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'ahp'
+          AND table_name = 'config_multicriterio_portfolio'
+          AND column_name = 'grupo_comparacao'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_config_mc_portfolio_grupo
+            ON ahp.config_multicriterio_portfolio (grupo_comparacao);
+    END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_config_mc_portfolio_criado_em
     ON ahp.config_multicriterio_portfolio (criado_em DESC);
 CREATE INDEX IF NOT EXISTS idx_config_mc_portfolio_criterios_gin
@@ -207,8 +225,17 @@ CREATE INDEX IF NOT EXISTS idx_hier_portfolio_config
     ON ahp.hierarquizacao_portfolio (config_id);
 CREATE INDEX IF NOT EXISTS idx_hier_portfolio_status
     ON ahp.hierarquizacao_portfolio (status);
-CREATE INDEX IF NOT EXISTS idx_hier_portfolio_grupo
-    ON ahp.hierarquizacao_portfolio (grupo_comparacao);
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'ahp'
+          AND table_name = 'hierarquizacao_portfolio'
+          AND column_name = 'grupo_comparacao'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_hier_portfolio_grupo
+            ON ahp.hierarquizacao_portfolio (grupo_comparacao);
+    END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_hier_portfolio_objetos_gin
     ON ahp.hierarquizacao_portfolio USING GIN (objetos);
 CREATE INDEX IF NOT EXISTS idx_hier_portfolio_ranking_gin

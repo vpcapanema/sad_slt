@@ -700,3 +700,67 @@ def _directory_rows(categoria: str) -> list[dict[str, Any]]:
 def listar_diretorio() -> dict[str, list[dict[str, Any]]]:
     """Expõe diretamente os três armazenamentos físicos, sem classificação por metadados."""
     return {categoria: _directory_rows(categoria) for categoria in STORAGES}
+
+
+_CANONICAL_ACCEPTED = {
+    ".shp", ".geojson", ".json", ".kml", ".gml", ".fgb", ".gpkg",
+    ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2",
+}
+
+
+def listar_biblioteca_canonica_arquivos(modulo: str | None = None) -> list[dict[str, Any]]:
+    """Lista TODOS os arquivos de camada em data/geoespacial/biblioteca_canonica (recursivo).
+
+    Casa cada arquivo com seu registro homologado (quando existir) para carregar o
+    identificador utilizável pela bancada/cálculo; arquivos órfãos ainda são listados.
+    """
+    raiz = project_path(_CANONICAL_ROOT)
+    base = project_path(".")
+    por_caminho: dict[str, dict[str, Any]] = {}
+    try:
+        for row in listar_biblioteca(None):
+            ext = ".tif" if row.get("tipo") == "raster" else ".gpkg"
+            rel = (
+                f"{_CANONICAL_ROOT}/{_slugify(row.get('modulo_consumidor'))}/"
+                f"{_slugify(row.get('nome_publicacao'))}_{_slugify(row.get('versao'))}{ext}"
+            )
+            por_caminho[rel] = row
+    except Exception:
+        por_caminho = {}
+
+    itens: list[dict[str, Any]] = []
+    if not raiz.exists():
+        return itens
+    arquivos = sorted(
+        (p for p in raiz.rglob("*") if p.is_file() and p.suffix.lower() in _CANONICAL_ACCEPTED),
+        key=lambda p: p.as_posix().lower(),
+    )
+    for path in arquivos:
+        relativo = path.relative_to(base).as_posix()
+        subdir = path.parent.relative_to(raiz).as_posix()
+        row = por_caminho.get(relativo)
+        contexto = (
+            f"{path.stem.lower()} {subdir.lower()} "
+            f"{str((row or {}).get('finalidade') or '').lower()}"
+        )
+        if "restri" in contexto:
+            finalidade = "restricao"
+        elif "risco" in contexto:
+            finalidade = "risco"
+        else:
+            finalidade = None
+        if modulo and row and str(row.get("modulo_consumidor")) not in {modulo, "ambos"}:
+            continue
+        itens.append({
+            "id": (row or {}).get("id"),
+            "homologacao_id": (row or {}).get("homologacao_id"),
+            "arquivo": relativo,
+            "nome": (row or {}).get("nome_publicacao") or (row or {}).get("nome") or path.stem,
+            "nome_publicacao": (row or {}).get("nome_publicacao") or path.stem,
+            "subdiretorio": subdir,
+            "versao": (row or {}).get("versao") or "",
+            "formato": path.suffix.removeprefix(".").upper(),
+            "finalidade": finalidade,
+            "registrada": bool(row),
+        })
+    return itens

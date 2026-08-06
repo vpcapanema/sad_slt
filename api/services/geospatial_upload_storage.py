@@ -276,14 +276,34 @@ def discard_prepared(prepared: PreparedUpload) -> None:
         shutil.rmtree(prepared.extracted_path)
 
 
-def commit_prepared(prepared: PreparedUpload) -> StoredUpload:
+def _safe_group(grupo: str | None) -> str | None:
+    """Valida um nome de subpasta de agrupamento sem quebrar acentuação legível.
+
+    Preserva o nome informado (ex.: ``RESTRIÇÃO``) apenas bloqueando separadores
+    de caminho e travessia de diretório, evitando escrita fora do datastorage.
+    """
+    if grupo is None:
+        return None
+    texto = grupo.strip()
+    if not texto:
+        return None
+    if texto in {".", ".."} or "/" in texto or "\\" in texto or "\x00" in texto:
+        raise ValueError(f"Nome de grupo inválido: {grupo!r}")
+    return texto
+
+
+def commit_prepared(prepared: PreparedUpload, grupo: str | None = None) -> StoredUpload:
     """Move um upload previamente validado do staging para o destino definitivo.
 
     Para pacotes compactados, apenas a extração normalizada é persistida em
     ``<categoria>/<nome>.contents/``; o binário compactado é descartado após a
-    extração para não duplicar o mesmo conteúdo no datastorage.
+    extração para não duplicar o mesmo conteúdo no datastorage. Quando ``grupo``
+    é informado, os arquivos são publicados em ``<categoria>/<grupo>/`` para
+    organizar o datastorage em subpastas temáticas (ex.: RISCO, RESTRIÇÃO).
     """
-    folder = project_path(f"data/geoespacial/uploads/datastorage/{prepared.category}")
+    grupo_seguro = _safe_group(grupo)
+    base = project_path(f"data/geoespacial/uploads/datastorage/{prepared.category}")
+    folder = base / grupo_seguro if grupo_seguro else base
     folder.mkdir(parents=True, exist_ok=True)
 
     if prepared.archive and prepared.extracted_path is not None:

@@ -18,6 +18,8 @@ from PIL import Image
 from rasterio.io import MemoryFile
 from rasterio.transform import array_bounds
 from rasterio.warp import Resampling, calculate_default_transform, reproject, transform_bounds
+from rasterio.windows import Window, from_bounds
+from affine import Affine
 
 from api.path_policy import (
     geo_output_path,
@@ -497,6 +499,44 @@ class GeoespacialService:
         except Exception as exc:
             raise RuntimeError(f"Erro ao importar raster: {exc}") from exc
 
+    async def importar_raster_url(
+        self, url: str, nome: str, bbox: list[float] | None = None,
+    ) -> dict[str, Any]:
+        """Lê um COG remoto, limitado à extensão solicitada, e o registra no catálogo."""
+        try:
+            with rasterio.open(url) as source:
+                if not source.crs:
+                    raise ValueError("O asset remoto não informa CRS")
+                window = Window(0, 0, source.width, source.height)
+                if bbox:
+                    source_bounds = transform_bounds("EPSG:4326", source.crs, *bbox, densify_pts=21)
+                    requested = from_bounds(*source_bounds, transform=source.transform)
+                    window = requested.intersection(Window(0, 0, source.width, source.height)).round_offsets().round_lengths()
+                    if window.width <= 0 or window.height <= 0:
+                        raise ValueError("A extensão do mapa não intersecta o asset selecionado")
+                scale = min(1, 2048 / max(window.width, window.height))
+                width, height = max(1, round(window.width * scale)), max(1, round(window.height * scale))
+                raster = source.read(
+                    1,
+                    window=window,
+                    out_shape=(height, width),
+                    resampling=Resampling.bilinear,
+                ).astype("float32")
+                transform = source.window_transform(window) * Affine.scale(window.width / width, window.height / height)
+                profile = {"crs": source.crs, "transform": transform, "nodata": source.nodata}
+            raster_id = self.registrar_raster(
+                raster, profile, nome, "STAC", url_origem=url,
+            )
+            return {
+                "raster_id": raster_id,
+                "nome": nome,
+                "tipo": "raster",
+                "crs": str(profile["crs"]),
+                "shape": [height, width],
+            }
+        except Exception as exc:
+            raise RuntimeError(f"Erro ao importar raster remoto: {exc}") from exc
+
     async def carregar_camada(
         self,
         tipo_entrada: str,
@@ -724,14 +764,21 @@ class GeoespacialService:
         resolver_conflitos_campos: bool = True,
         regra_nomenclatura: str = "<fonte_id>__<nome_campo>",
     ) -> dict[str, Any]:
-        """Sobrepõe camadas com operação de overlay."""
+        """Sobrepõe camadas com operação de overlay (equivalente ArcGIS: Identity/Intersect/Union/Erase)."""
+        operacoes_validas = {"identity", "intersection", "union", "difference", "symmetric_difference"}
+        if tipo_overlay not in operacoes_validas:
+            raise ValueError(
+                f"Tipo de overlay inválido: {tipo_overlay!r}. Use um de {sorted(operacoes_validas)}."
+            )
+
         gdf1 = self.obter_camada_dados(camada_id_1)
         gdf2 = self.obter_camada_dados(camada_id_2)
         if gdf1.crs and gdf2.crs and gdf1.crs != gdf2.crs:
             gdf2 = gdf2.to_crs(gdf1.crs)
 
-        # Executar overlay
-        resultado = gpd.overlay(gdf1, gdf2, how=tipo_overlay)
+        # keep_geom_type=True garante que a saída mantenha o tipo geométrico da entrada,
+        # como no ArcGIS (evita fragmentos de linha/ponto e GeometryCollection).
+        resultado = gpd.overlay(gdf1, gdf2, how=tipo_overlay, keep_geom_type=True)
 
         # Resolver conflitos de campos
         if resolver_conflitos_campos:

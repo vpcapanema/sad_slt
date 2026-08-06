@@ -16,7 +16,20 @@ CREATE SCHEMA IF NOT EXISTS demandas_aprovadas;
 COMMENT ON SCHEMA demandas_aprovadas IS
     'Camada isolada das demandas aprovadas (objetos elegíveis à hierarquização)';
 
-ALTER TABLE ahp.objeto_ahp SET SCHEMA demandas_aprovadas;
+DO $$
+BEGIN
+    IF to_regclass('demandas_aprovadas.objeto_ahp') IS NULL
+       AND to_regclass('demandas_aprovadas.projetos') IS NULL THEN
+        ALTER TABLE ahp.objeto_ahp SET SCHEMA demandas_aprovadas;
+    ELSIF to_regclass('ahp.objeto_ahp') IS NOT NULL THEN
+        -- Em uma reaplicação, a migration 003 recria esta tabela legada vazia.
+        IF EXISTS (SELECT 1 FROM ahp.objeto_ahp LIMIT 1) THEN
+            RAISE EXCEPTION
+                'Tabela legada ahp.objeto_ahp contém dados; migração manual necessária';
+        END IF;
+        DROP TABLE ahp.objeto_ahp;
+    END IF;
+END $$;
 
 GRANT USAGE ON SCHEMA demandas_aprovadas TO slt_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA demandas_aprovadas TO slt_user;

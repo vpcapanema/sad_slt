@@ -158,11 +158,8 @@ operações individuais, jobs, funções, fluxos e homologação. O armazenament
 físico separa camadas importadas, processadas e homologadas. Apenas snapshots
 homologados formam a biblioteca oficial consumida pelas fases.
 
-Família: `/api/geoespacial`.
-
-Os endpoints genéricos `/api/geoespacial/processar` e
-`/api/geoespacial/processamento/{id}` ainda são demonstrativos. Os endpoints de
-algoritmos, operações e jobs executam o fluxo efetivo usado pelas telas.
+Família: `/api/geoespacial`. Os endpoints de algoritmos, operações e jobs
+executam o fluxo efetivo usado pelas telas.
 
 ## Modelo de dados vigente
 
