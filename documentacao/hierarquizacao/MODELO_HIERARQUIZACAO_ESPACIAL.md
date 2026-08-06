@@ -6,7 +6,7 @@ Este documento reclassifica os 55 fatores da aba Matriz de Criterios e Premissas
 
 - grade: fator que pode ser representado como superficie continua em uma malha celular cobrindo todo o estado;
 - rede: fator que precisa ser calculado sobre segmentos, nos, corredores ou pares origem-destino;
-- projeto: fator que existe como atributo intrinseco do projeto e nao deve ser rasterizado;
+- atributo_objeto: fator que existe como atributo intrinseco do projeto e nao deve ser rasterizado;
 - hibrido: fator que depende de combinacao entre localizacao, rede e atributos do projeto.
 
 Tambem define a variavel derivada recomendada a partir da premissa de cada fator. Nesta leitura, o campo Criterio da planilha e tratado como fator avaliativo, e a premissa e tratada como a regra que orienta a extracao da variavel.
@@ -20,19 +20,19 @@ Tambem define a variavel derivada recomendada a partir da premissa de cada fator
 | Congestionamento real (tempo lento) | rede | razao entre tempo observado e tempo de fluxo livre por segmento, corredor ou OD |
 | Estado de conservacao do pavimento | rede | indice de degradacao do pavimento por segmento, derivado de IRI, PCI e idade |
 | Deficiencia geometrica (rampas, alcas e raios) | rede | indice de restricao geometrica por segmento, combinando rampa, curvatura, raio e velocidade operacional |
-| Prontidao / maturidade do projeto | projeto | escore ordinal de maturidade, de ideia ate projeto executivo |
+| Prontidao / maturidade do projeto | atributo_objeto | escore ordinal de maturidade, de ideia ate projeto executivo |
 | Trafego sazonal (fins de semana e feriados) | rede | razao de sobrecarga sazonal por segmento ou corredor |
 
 ## Financeiro
 
 | Fator avaliativo | Classe | Variavel derivada recomendada |
 | --- | --- | --- |
-| Capex (custo de investimento) | projeto | custo total de investimento e custo por unidade de beneficio entregue |
-| Opex (operacao e manutencao) | projeto | custo anual equivalente de operacao e manutencao ao longo do ciclo de vida |
-| Relacao beneficio/custo | projeto | escore de retorno economico-financeiro derivado de B/C, VPL e TIR |
-| Potencial de financiamento privado / concessao | projeto | percentual de alavancagem privada ou indice de atratividade para PPP/concessao |
+| Capex (custo de investimento) | atributo_objeto | custo total de investimento e custo por unidade de beneficio entregue |
+| Opex (operacao e manutencao) | atributo_objeto | custo anual equivalente de operacao e manutencao ao longo do ciclo de vida |
+| Relacao beneficio/custo | atributo_objeto | escore de retorno economico-financeiro derivado de B/C, VPL e TIR |
+| Potencial de financiamento privado / concessao | atributo_objeto | percentual de alavancagem privada ou indice de atratividade para PPP/concessao |
 | Custos logisticos diferenciados (porto/corredor) | hibrido | penalidade de custo logistico por corredor e mercadoria atendida pelo projeto |
-| Beneficio social na priorizacao | projeto | VPL social ou B/C social consolidado do projeto |
+| Beneficio social na priorizacao | atributo_objeto | VPL social ou B/C social consolidado do projeto |
 
 ## Economica
 
@@ -76,7 +76,7 @@ Tambem define a variavel derivada recomendada a partir da premissa de cada fator
 | Eficiencia energetica | hibrido | reducao da intensidade energetica por tonelada.km ou passageiro.km atribuivel ao projeto |
 | Otimizacao da matriz modal | hibrido | percentual de migracao efetiva do rodoviario para modos mais eficientes |
 | Impacto sobre areas sensiveis ou protegidas | hibrido | indice de conflito ambiental espacial, medido por sobreposicao, proximidade e area afetada |
-| Complexidade do licenciamento ambiental | projeto | escore de carga licenciatoria, combinando tipologia, prazo e numero de condicionantes esperadas |
+| Complexidade do licenciamento ambiental | atributo_objeto | escore de carga licenciatoria, combinando tipologia, prazo e numero de condicionantes esperadas |
 
 ## Territorial
 
@@ -93,22 +93,22 @@ Tambem define a variavel derivada recomendada a partir da premissa de cada fator
 
 | Fator avaliativo | Classe | Variavel derivada recomendada |
 | --- | --- | --- |
-| Nivel de complexidade | projeto | escore tecnico-institucional de complexidade de implantacao |
-| Prazo para implantacao | projeto | meses ate entrada em operacao ou janela estimada de entrega |
-| Pendencias juridicas e jurisdicionais | projeto | indice de impedimento juridico, combinando numero, gravidade e fase das pendencias |
-| Alinhamento aos planos (PPA, PEF, PAN, PNLT) | projeto | escore de aderencia estrategica aos planos e carteiras vigentes |
-| Consenso e apoio institucional dos atores | projeto | escore de alinhamento entre atores publicos, reguladores, operadores e municipios |
-| Demanda social e contribuicoes recebidas | projeto | escore de legitimidade participativa baseado em mencoes, contribuicoes e apoio social |
+| Nivel de complexidade | atributo_objeto | escore tecnico-institucional de complexidade de implantacao |
+| Prazo para implantacao | atributo_objeto | meses ate entrada em operacao ou janela estimada de entrega |
+| Pendencias juridicas e jurisdicionais | atributo_objeto | indice de impedimento juridico, combinando numero, gravidade e fase das pendencias |
+| Alinhamento aos planos (PPA, PEF, PAN, PNLT) | atributo_objeto | escore de aderencia estrategica aos planos e carteiras vigentes |
+| Consenso e apoio institucional dos atores | atributo_objeto | escore de alinhamento entre atores publicos, reguladores, operadores e municipios |
+| Demanda social e contribuicoes recebidas | atributo_objeto | escore de legitimidade participativa baseado em mencoes, contribuicoes e apoio social |
 
 ## Risco
 
 | Fator avaliativo | Classe | Variavel derivada recomendada |
 | --- | --- | --- |
 | Resiliencia climatica (Blue Spot) | hibrido | indice de resiliencia da rede, medido por pontos criticos mitigados e reducao da exposicao a eventos extremos |
-| Risco de demanda (incerteza de projecao) | projeto | coeficiente de variacao entre cenarios de demanda e sensibilidade da viabilidade |
-| Risco de execucao (atrasos e sobrecustos) | projeto | escore de risco de entrega por referencia historica de prazo e custo |
-| Risco de desapropriacao e interferencias | projeto | indice de carga fundiaria e de interferencias com utilidades e infraestruturas existentes |
-| Dependencia de pre-requisitos (interdependencia) | projeto | indice de dependencia de predecessores, licences e obras associadas |
+| Risco de demanda (incerteza de projecao) | atributo_objeto | coeficiente de variacao entre cenarios de demanda e sensibilidade da viabilidade |
+| Risco de execucao (atrasos e sobrecustos) | atributo_objeto | escore de risco de entrega por referencia historica de prazo e custo |
+| Risco de desapropriacao e interferencias | atributo_objeto | indice de carga fundiaria e de interferencias com utilidades e infraestruturas existentes |
+| Dependencia de pre-requisitos (interdependencia) | atributo_objeto | indice de dependencia de predecessores, licences e obras associadas |
 | Risco socioambiental (comunidades tradicionais) | hibrido | indice de conflito socioambiental por presenca, proximidade e sensibilidade de comunidades tradicionais |
 
 ## Leitura sintetica
