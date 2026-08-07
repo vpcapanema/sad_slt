@@ -142,6 +142,16 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
     return get_by_codigo(codigo)
 
 
+def delete_by_codigo(codigo: str) -> bool:
+    """Remove uma hierarquização pelo código legível."""
+    query = sql.SQL("DELETE FROM {table} WHERE codigo = %s RETURNING id").format(table=_TABLE)
+    with get_connection() as conn:
+        cur = conn.execute(query, (codigo,))
+        deleted = cur.fetchone()
+        conn.commit()
+    return deleted is not None
+
+
 def intersecoes_camada(camada_id: str, *, longitude: float, latitude: float) -> list[dict[str, Any]]:
     query = """
         SELECT h.id::text AS camada_id, h.nome_publicacao AS camada_origem,

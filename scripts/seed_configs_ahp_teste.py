@@ -4,7 +4,7 @@
 Uso (na raiz do repositório):
     python scripts/seed_configs_ahp_teste.py
 
-Requisitos: SLT_DATABASE_URL, projetos SEED com status hierarq_apta (031_seed).
+Requisitos: SLT_DATABASE_URL, projetos SEED com status analise_aprovada (031_seed).
 """
 
 from __future__ import annotations
@@ -104,7 +104,7 @@ def _fetch_projetos(limit: int) -> list[dict]:
             """
             SELECT id::text, codigo, nome
             FROM demandas.projeto
-            WHERE status = 'hierarq_apta'
+            WHERE status = 'analise_aprovada'
               AND codigo LIKE %s
             ORDER BY codigo
             LIMIT %s
@@ -151,7 +151,7 @@ def main() -> None:
 
     projetos = _fetch_projetos(8)
     if len(projetos) < 5:
-        print("ERRO: são necessários ao menos 5 projetos SEED com status hierarq_apta.\nExecute database/031_seed_planos_programas_projetos.sql e atualize status.")
+        print("ERRO: são necessários ao menos 5 projetos SEED com status analise_aprovada.\nExecute database/031_seed_planos_programas_projetos.sql e atualize status.")
         sys.exit(1)
 
     # --- Fase 1 (Etapa 1): duas configs distintas ---

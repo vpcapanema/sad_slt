@@ -263,8 +263,25 @@
 
       <!-- Passo 4 — complementos -->
       <section class="card-1-complementos-opcionais secao-1-complementos-opcionais card step-panel cadastro-section hidden" data-step="4">
+        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Vigência e recursos</span></h2>
+        <p class="step-intro">Informe o período de vigência e o valor global estimado, se souber.</p>
+        <div class="form-grid">
+          <div>
+            <label for="prj-vig-ini">Vigência início</label>
+            <input type="date" id="prj-vig-ini">
+          </div>
+          <div>
+            <label for="prj-vig-fim">Vigência fim</label>
+            <input type="date" id="prj-vig-fim">
+          </div>
+          <div class="full">
+            <label for="prj-valor">Valor global (R$)</label>
+            <input type="number" step="any" id="prj-valor" min="0">
+          </div>
+        </div>
+
         <div class="collapsible-hdr" id="toggle-complementos">
-          <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Complementos (opcionais)</span></h2>
+          <h3>Complementos (opcionais)</h3>
           <span aria-hidden="true">▼</span>
         </div>
         <p class="step-intro">Informe dados complementares, se desejar.</p>

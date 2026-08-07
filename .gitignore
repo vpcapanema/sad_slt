@@ -15,3 +15,7 @@ tmp/
 data/geoespacial/uploads/
 data/geoespacial/outputs/
 data/geoespacial/relatorios/*.log
+
+# Segredos/cache Fase2 (nao versionar)
+tmp/tomtom_key.txt
+tmp/tomtom_flow_cache.csv

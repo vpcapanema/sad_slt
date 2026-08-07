@@ -18,6 +18,7 @@
 
   function render(hierarquizacao) {
     if (!hierarquizacao) return;
+    window.AtributosObjetos?.render(hierarquizacao);
     const docs = hierarquizacao.dados_hierarquizacao?.objetos || [];
     const metric = (label, value) => `<div class="fase-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
     $("fase-resumo").innerHTML = `<div class="fase-summary-grid">${metric("Rodada", `${hierarquizacao.codigo} — ${hierarquizacao.nome}`)}${metric("Tipo", hierarquizacao.tipo_demanda || "—")}${metric("Demandas", docs.length)}${metric("Situação", hierarquizacao.status)}</div>`;
@@ -44,7 +45,7 @@
     const completos = docs.filter((objeto) => (objeto.hierarquizacao?.fase_3?.grau_completude_fase3 ?? 0) >= Number($("fase3-completude").value));
     $("fase3-indicadores").innerHTML = metric("Demandas da rodada", docs.length) + metric("Com score válido", pontuados.length) + metric("Completude atendida", completos.length) + metric("Bloqueadas/pendentes", docs.length - pontuados.length);
     const rows = docs.map((objeto) => {
-      const fase = objeto.hierarquizacao.fase_3;
+      const fase = objeto.hierarquizacao?.fase_3 || {};
       const ausencias = [...(fase.atributos_ausentes || []), ...(fase.atributos_invalidos || [])];
       const valid = Number.isFinite(fase.score_fase3);
       return `<tr><td><strong>${esc(objeto.cabecalho_objeto.codigo)}</strong><br><small>${esc(objeto.cabecalho_objeto.nome || "")}</small></td><td>${valid ? Number(fase.score_fase3).toFixed(4) : "—"}</td><td>${esc(fase.ranking_fase3 ?? "—")}</td><td>${fase.grau_completude_fase3 == null ? "—" : `${(Number(fase.grau_completude_fase3) * 100).toFixed(0)}%`}</td><td>${ausencias.length ? esc(ausencias.join(", ")) : "—"}</td><td><span class="fase-status ${valid ? "fase-status--ok" : "fase-status--warn"}">${valid ? "Calculado" : "Pendente"}</span></td></tr>`;
@@ -81,6 +82,14 @@
         const hierarquizacao = atual();
         if (!hierarquizacao) return erro("Selecione a hierarquização.");
         try {
+          // persiste os atributos preenchidos no componente antes de calcular
+          if (window.AtributosObjetos) {
+            const salvo = await HierApi.salvarAtributosFase3(
+              hierarquizacao.codigo,
+              window.AtributosObjetos.coletar(hierarquizacao),
+            );
+            hierarquizacoes = hierarquizacoes.map((item) => item.codigo === salvo.codigo ? salvo : item);
+          }
           const updated = await HierApi.executarFase3(hierarquizacao.codigo, {
             criterios: payloadCriterios(),
             modo_pesos: $("fase3-modo-pesos").value,

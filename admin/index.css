@@ -7,7 +7,7 @@
 .restrict-index {
   display: grid;
   gap: 1.25rem;
-  width: min(1180px, 92%);
+  width: 90%;
   margin-inline: auto;
 }
 

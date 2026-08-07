@@ -56,11 +56,6 @@ def validar_transicao_status(*, de: str, para: str) -> None:
 
     permitidos = destinos_permitidos(origem)
     if destino not in permitidos:
-        if destino == "hierarq_apta" and origem in {"analise_em_avaliacao", "analise_aprovada"}:
-            raise DemandaValidationError(
-                "Use POST /aprovar para promover a demanda a «apta à hierarquização».",
-                field="status",
-            )
         raise DemandaValidationError(
             f"Transição de status inválida: «{origem}» → «{destino}».",
             field="status",

@@ -323,6 +323,16 @@ class GeoespacialService:
         self._camadas[camada_id] = gdf
         return {"camada_id": camada_id, "campo": campo, "feicoes_atualizadas": len(gdf)}
 
+    @staticmethod
+    def _gdf_para_geojson(gdf: gpd.GeoDataFrame) -> dict[str, Any]:
+        """Serializa um GeoDataFrame em GeoJSON pela via nativa do GDAL (pyogrio),
+        que trata datas, nulos e demais tipos sem conversão manual."""
+        if gdf.crs is not None and not gdf.crs.equals("EPSG:4326"):
+            gdf = gdf.to_crs("EPSG:4326")
+        buffer = BytesIO()
+        gdf.to_file(buffer, driver="GeoJSON")
+        return json.loads(buffer.getvalue().decode("utf-8"))
+
     async def consultar_por_atributo(self, camada_id: str, expressao: str) -> dict[str, Any]:
         """Retorna as feições que atendem a uma expressão atributiva."""
         gdf = self.obter_camada_dados(camada_id).copy()
@@ -330,9 +340,7 @@ class GeoespacialService:
             selecionadas = gdf.query(expressao, engine="python")
         except Exception as exc:
             raise ValueError(f"Consulta inválida: {exc}") from exc
-        if selecionadas.crs and not selecionadas.crs.equals("EPSG:4326"):
-            selecionadas = selecionadas.to_crs("EPSG:4326")
-        return {"camada_id": camada_id, "total": len(selecionadas), "geojson": json.loads(selecionadas.to_json())}
+        return {"camada_id": camada_id, "total": len(selecionadas), "geojson": self._gdf_para_geojson(selecionadas)}
 
     async def atualizar_fonte(self, camada_id: str) -> dict[str, Any]:
         """Relê a fonte externa preservando o identificador da camada."""
@@ -865,8 +873,8 @@ class GeoespacialService:
                 progress("Arquivo vetorial serializado")
             return {"caminho": caminho_relativo.as_posix(), "formato": formato_saida}
         else:
-            # Retornar GeoJSON para memória
-            geojson = json.loads(gdf.to_json())
+            # Retornar GeoJSON para memória (serialização nativa do GDAL)
+            geojson = self._gdf_para_geojson(gdf)
             if progress:
                 progress("GeoJSON vetorial serializado em memória")
             return {"geojson": geojson, "formato": "GeoJSON"}

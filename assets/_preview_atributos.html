@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pré-visualização — Atributos dos Objetos de Demanda</title>
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
+  <link rel="stylesheet" href="/restrict/hierarquizacao/processos.css">
+  <style>
+    /* Estilos auxiliares do complemento — seguem a tabela "Hierarquizações realizadas"
+       (classe .admin-table): cabeçalho azul-marinho var(--pli-deep) #003b5a, texto branco
+       Montserrat maiúsculo, divisória th+th branca translúcida, borda #d8e0e5. */
+    body { background:var(--pli-bg); margin:0; padding:1.5rem; font-family:"Roboto",Arial,sans-serif; color:var(--pli-text); }
+    .fase-execucao-page { margin:0 auto; }
+
+    /* Seletor de hierarquização (topo do complemento) */
+    .atributos-seletor { display:flex; align-items:flex-end; gap:.75rem; flex-wrap:wrap; margin:.25rem 0 .9rem; }
+    .atributos-seletor label { display:flex; flex-direction:column; gap:.25rem; font-size:.74rem; font-weight:700;
+      text-transform:uppercase; letter-spacing:.04em; color:var(--pli-deep); min-width:340px;
+      font-family:"Montserrat",Verdana,sans-serif; }
+    .atributos-seletor select { padding:.45rem .55rem; border:1px solid var(--pli-border); border-radius:.4rem;
+      font-size:.85rem; color:var(--pli-text); background:#fff; }
+    .atributos-seletor .seletor-status { font-size:.72rem; color:var(--pli-muted); padding-bottom:.35rem; }
+
+    .atributos-legenda { display:flex; gap:.5rem; margin:.4rem 0 .6rem; }
+    /* o atributo hidden precisa vencer o display:inline-block das pílulas */
+    .fase-status[hidden] { display:none; }
+
+    /* Shell e tabela idênticos à "Hierarquizações realizadas" */
+    .atributos-table-shell { overflow:auto; max-height:36rem; border:1px solid #d8e0e5; border-radius:10px; }
+    .admin-table--atributos thead { position:sticky; top:0; z-index:2; }
+
+    /* Cabeçalho de coluna sobre fundo azul-marinho: texto branco */
+    .admin-table--atributos th.col-atributo { white-space:normal; min-width:170px; vertical-align:top; }
+    .col-atributo-grupo { display:block; font-size:.58rem; font-weight:700; letter-spacing:.06em;
+      text-transform:uppercase; color:rgba(255,255,255,.55); margin-bottom:.15rem;
+      font-family:"Montserrat",Verdana,sans-serif; }
+    .col-atributo-alias { display:block; font-weight:700; color:#fff; white-space:normal; text-transform:none;
+      font-family:"Montserrat",Verdana,sans-serif; letter-spacing:0; }
+    .col-atributo-unidade { display:block; font-weight:600; color:rgba(255,255,255,.72); font-size:.68rem;
+      text-transform:none; letter-spacing:0; }
+    .col-atributo-relacao { color:var(--pli-green); font-weight:700; margin-left:.2rem; }
+    .col-atributo-mandatorio { margin-top:.3rem; text-transform:none; letter-spacing:0; }
+
+    /* Colunas ESTÁTICAS (etapa cadastral): tom distinto + faixa verde no topo */
+    .admin-table--atributos th.col-estatica { background:var(--pli-navy); box-shadow:inset 0 3px 0 var(--pli-green); }
+    .admin-table--atributos th.col-estatica .col-atributo-grupo { color:var(--pli-green); }
+    .admin-table--atributos td.col-estatica-valor { white-space:nowrap; color:var(--pli-text);
+      background:#f4f8f5; font-variant-numeric:tabular-nums; }
+    .admin-table--atributos td.col-estatica-valor.is-vazio { color:var(--pli-muted); font-style:italic; }
+
+    /* Célula de identidade do objeto + inputs sobre fundo branco */
+    .admin-table--atributos td.col-objeto { min-width:170px; white-space:normal; }
+    .objeto-tipo { margin-top:.25rem; }
+    .admin-table--atributos td.col-atributo-valor { white-space:normal; }
+    .atributo-input { width:100%; padding:.3rem .4rem; border:1px solid var(--pli-border); border-radius:.35rem;
+      font-size:.8rem; color:var(--pli-text); background:#fff; }
+  </style>
+</head>
+<body>
+<main class="conteudo-principal fase-execucao-page" style="max-width:1100px">
+
+  <!-- ============ COMPONENTE (cópia de _tabela_atributos_objetos.html) ============ -->
+  <section class="card ahp-step-section componente-atributos-objetos" id="atributos-objetos-demanda" data-atributos-objetos>
+    <div class="ahp-section-label"><span>Atributos dos objetos de demanda</span></div>
+    <div class="ahp-section-body">
+      <p class="ahp-help-text">
+        As colunas são geradas a partir dos critérios de <strong>Etapa 3 (Priorização)</strong>
+        da matriz desta hierarquização. Informe o valor de cada atributo para cada objeto de
+        demanda, respeitando a unidade indicada no cabeçalho.
+      </p>
+
+      <div class="atributos-seletor">
+        <label>Hierarquização (registro do portfólio)
+          <select id="sel-hier" data-atributos-hierarquizacao>
+            <option value="">Carregando…</option>
+          </select>
+        </label>
+        <span class="seletor-status" data-atributos-status></span>
+      </div>
+
+      <div class="atributos-legenda" aria-hidden="true">
+        <span class="fase-status fase-status--warn">Obrigatório</span>
+        <span class="fase-status fase-status--ok">Preenchido</span>
+        <span class="fase-status">Pendente</span>
+      </div>
+      <div class="atributos-table-shell">
+        <table class="admin-table admin-table--atributos">
+          <thead data-atributos-thead>
+            <tr><th scope="col" class="col-objeto">Objeto de demanda</th></tr>
+          </thead>
+          <tbody data-atributos-tbody></tbody>
+        </table>
+      </div>
+      <div class="fase-empty" data-atributos-sem-colunas hidden>Nenhum critério de Etapa 3 (Priorização) encontrado.</div>
+      <div class="fase-empty" data-atributos-sem-linhas hidden>Selecione uma hierarquização com objetos de demanda para preencher os atributos.</div>
+      <div class="ahp-info-note ahp-info-note--error" data-atributos-erro hidden></div>
+    </div>
+
+    <template id="tpl-atributo-coluna">
+      <th scope="col" class="col-atributo" data-col-id="" data-tipo="" data-unidade="" data-relacao="" data-mandatorio="">
+        <span class="col-atributo-grupo" aria-hidden="true"></span>
+        <span class="col-atributo-alias" title=""></span>
+        <span class="col-atributo-unidade"></span>
+        <span class="col-atributo-relacao" aria-hidden="true"></span>
+        <span class="fase-status fase-status--warn col-atributo-mandatorio" hidden>Obrigatório</span>
+      </th>
+    </template>
+    <template id="tpl-atributo-linha">
+      <tr data-objeto-id="">
+        <td class="col-objeto"><strong class="objeto-codigo"></strong><br><small class="objeto-nome"></small><span class="objeto-tipo fase-status" hidden></span></td>
+      </tr>
+    </template>
+    <template id="tpl-atributo-celula">
+      <td class="col-atributo-valor" data-col-id="">
+        <input class="atributo-input atributo-input--numerico" type="number" inputmode="decimal" step="any" hidden>
+        <select class="atributo-input atributo-input--booleano" hidden><option value="">—</option><option value="1">Sim</option><option value="0">Não</option></select>
+        <select class="atributo-input atributo-input--categorico" hidden><option value="">—</option></select>
+        <input class="atributo-input atributo-input--texto" type="text" hidden>
+      </td>
+    </template>
+  </section>
+  <!-- ============ FIM DO COMPONENTE ============ -->
+
+</main>
+
+<script>
+// ================================================================
+// Complemento "Atributos dos objetos de demanda" — preview funcional.
+// O seletor lê os registros reais de hierarquizacao_portfolio e, ao
+// escolher um, busca as COLUNAS derivadas da matriz daquele registro
+// (Etapa 3 / Priorização) e reconstrói a tabela.
+// ================================================================
+const $ = (s) => document.querySelector(s);
+const API_LISTA   = "/api/ahp/hierarquizacoes";
+const API_COLUNAS = (codigo) => `/api/ahp/atributos-objetos/hierarquizacoes/${encodeURIComponent(codigo)}/colunas`;
+
+const selHier   = $("[data-atributos-hierarquizacao]");
+const statusEl  = $("[data-atributos-status]");
+const theadRow  = $("[data-atributos-thead] tr");
+const tbody     = $("[data-atributos-tbody]");
+const semCol    = $("[data-atributos-sem-colunas]");
+const semLin    = $("[data-atributos-sem-linhas]");
+const erroEl    = $("[data-atributos-erro]");
+const tplCol = $("#tpl-atributo-coluna");
+const tplLin = $("#tpl-atributo-linha");
+const tplCel = $("#tpl-atributo-celula");
+
+let registros = [];
+
+// ---- Colunas ESTÁTICAS (etapa cadastral: seção "4. Vigência e recursos") ----
+// Fixas: não dependem da matriz. Valores vêm do cadastro (somente leitura).
+const fmtMoeda = (v) => v == null ? null : "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtData  = (v) => { if (!v) return null; const d = String(v).slice(0, 10).split("-"); return d.length === 3 ? `${d[2]}/${d[1]}/${d[0]}` : String(v); };
+function prazoMeses(ini, fim) {
+  if (!ini || !fim) return null;
+  const a = new Date(ini), b = new Date(fim);
+  if (isNaN(a) || isNaN(b)) return null;
+  return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+}
+const ESTATICAS = [
+  { id:"vigencia_inicio", grupo:"estatica", alias:"Vigência início", unidade:"data", relacao_simbolo:"",
+    valor:(a)=> fmtData(a.vigencia_inicio) },
+  { id:"vigencia_fim", grupo:"estatica", alias:"Vigência fim", unidade:"data", relacao_simbolo:"",
+    valor:(a)=> fmtData(a.vigencia_fim) },
+  { id:"prazo_meses", grupo:"estatica", alias:"Prazo de vigência", unidade:"meses", relacao_simbolo:"↓",
+    valor:(a)=> { const m = prazoMeses(a.vigencia_inicio, a.vigencia_fim); return m == null ? null : String(m); } },
+  { id:"valor_global", grupo:"estatica", alias:"Valor global", unidade:"R$", relacao_simbolo:"",
+    valor:(a)=> fmtMoeda(a.valor_global ?? a.complementos?.valor_estimado) },
+];
+
+async function getJSON(url) {
+  const res = await fetch(url, { credentials: "same-origin" });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error((body && (body.detail || body.message)) || `HTTP ${res.status}`);
+  return body;
+}
+
+function limparTabela() {
+  [...theadRow.querySelectorAll("th.col-atributo")].forEach((th) => th.remove());
+  tbody.innerHTML = "";
+  semCol.hidden = true;
+  semLin.hidden = true;
+}
+
+function montarColunas(colunas) {
+  for (const col of colunas) {
+    const estatica = col.grupo === "estatica";
+    const th = tplCol.content.firstElementChild.cloneNode(true);
+    th.classList.add(estatica ? "col-estatica" : "col-dinamica");
+    th.dataset.colId = col.id;
+    th.dataset.tipo = col.tipo || "texto";
+    th.dataset.unidade = col.unidade || "";
+    th.dataset.relacao = col.relacao || "";
+    th.dataset.mandatorio = col.mandatorio ? "1" : "";
+    th.querySelector(".col-atributo-grupo").textContent = estatica ? "Cadastro" : "Matriz · Etapa 3";
+    const alias = th.querySelector(".col-atributo-alias");
+    alias.textContent = col.alias || col.variavel || "Atributo";
+    alias.title = col.variavel || col.criterio || col.alias || "";
+    th.querySelector(".col-atributo-unidade").textContent = col.unidade ? `(${col.unidade})` : "";
+    th.querySelector(".col-atributo-relacao").textContent = col.relacao_simbolo || "";
+    th.querySelector(".col-atributo-mandatorio").hidden = !col.mandatorio;
+    theadRow.appendChild(th);
+  }
+}
+
+function montarLinhas(objetos, colunas) {
+  for (const obj of objetos) {
+    const cab = obj.cabecalho_objeto || obj;
+    const tr = tplLin.content.firstElementChild.cloneNode(true);
+    tr.dataset.objetoId = cab.codigo || "";
+    tr.querySelector(".objeto-codigo").textContent = cab.codigo || "—";
+    tr.querySelector(".objeto-nome").textContent = cab.nome || "";
+    const t = tr.querySelector(".objeto-tipo");
+    if (cab.tipo_demanda) { t.textContent = cab.tipo_demanda; t.hidden = false; }
+    const atributos = cab.atributos || {};
+    for (const col of colunas) {
+      if (col.grupo === "estatica") {
+        const td = document.createElement("td");
+        td.className = "col-estatica-valor";
+        td.dataset.colId = col.id;
+        const v = col.valor(atributos);
+        if (v == null || v === "") { td.textContent = "—"; td.classList.add("is-vazio"); }
+        else td.textContent = v;
+        tr.appendChild(td);
+        continue;
+      }
+      const td = tplCel.content.firstElementChild.cloneNode(true);
+      td.dataset.colId = col.id;
+      let input = td.querySelector(`.atributo-input--${col.tipo}`);
+      if (!input) input = td.querySelector(".atributo-input--texto");
+      input.hidden = false;
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+}
+
+async function selecionar(codigo) {
+  limparTabela();
+  erroEl.hidden = true;
+  if (!codigo) { statusEl.textContent = ""; return; }
+  statusEl.textContent = "Lendo a matriz de critérios e premissas…";
+  try {
+    let colunas, objetos;
+    if (codigo === "__v3__") {
+      const matriz = await getJSON("/data/matriz-criterios-premissas-v3.json");
+      const res = await fetch("/api/ahp/atributos-objetos/colunas/preview", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matriz }),
+      });
+      colunas = (await res.json()).colunas;
+      // reusa objetos de uma hierarquização real para as linhas
+      const base = registros.find((r) => (r.dados_hierarquizacao?.objetos || []).length) || {};
+      objetos = base?.dados_hierarquizacao?.objetos || [];
+    } else {
+      colunas = (await getJSON(API_COLUNAS(codigo))).colunas;
+      const registro = registros.find((r) => r.codigo === codigo);
+      objetos = registro?.dados_hierarquizacao?.objetos || [];
+    }
+    const todas = [...ESTATICAS, ...colunas];
+    montarColunas(todas);
+    if (!colunas.length) semCol.hidden = false;
+    if (!objetos.length) semLin.hidden = false; else montarLinhas(objetos, todas);
+    statusEl.textContent = `${ESTATICAS.length} estática(s) + ${colunas.length} dinâmica(s) · ${objetos.length} objeto(s) de demanda.`;
+  } catch (err) {
+    erroEl.textContent = `Falha ao carregar: ${err.message}`;
+    erroEl.hidden = false;
+    statusEl.textContent = "";
+  }
+}
+
+async function init() {
+  try {
+    registros = await getJSON(API_LISTA);
+    const opts = registros
+      .map((r) => `<option value="${r.codigo}">${r.codigo} — ${r.nome ?? ""}</option>`)
+      .join("");
+    selHier.innerHTML = `<option value="">Selecione um registro…</option><option value="__v3__">★ Modelo v3 (novo) — colunas limpas</option>${opts}`;
+    selHier.onchange = () => selecionar(selHier.value);
+    statusEl.textContent = `${registros.length} registro(s) disponível(is).`;
+  } catch (err) {
+    selHier.innerHTML = `<option value="">Indisponível</option>`;
+    erroEl.textContent = `Não foi possível listar as hierarquizações: ${err.message}. Faça login no sistema e recarregue.`;
+    erroEl.hidden = false;
+  }
+}
+init();
+</script>
+</body>
+</html>

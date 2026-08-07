@@ -48,13 +48,6 @@
       halo: "rgba(69, 90, 100, 0.35)",
     },
     // Fase 2 — hierarquização e ranqueamento
-    hierarq_apta: {
-      nome: "Apta à hierarquização",
-      bg: "#e3f2fd",
-      text: "#1565c0",
-      row: "#bbdefb",
-      halo: "rgba(21, 101, 192, 0.4)",
-    },
     hierarq_em_andamento: {
       nome: "Em hierarquização",
       bg: "#fff3e0",
@@ -139,7 +132,6 @@
       id: "hierarquizacao",
       title: "Fase 2 — Hierarquização e ranqueamento",
       codes: [
-        "hierarq_apta",
         "hierarq_em_andamento",
         "hierarq_finalizada",
         "hierarq_ranqueada",
@@ -161,7 +153,7 @@
 
   const STATUS_OBJETO = Object.fromEntries(
     [
-      "hierarq_apta",
+      "analise_aprovada",
       "hierarq_em_andamento",
       "hierarq_finalizada",
       "hierarq_ranqueada",
@@ -563,7 +555,7 @@
     registerLegendPattern("plano", "_sym", SYM_SAMPLE);
     registerLegendPattern("programa", "_sym", SYM_SAMPLE);
     const pinFase1 = pinSwatchHtml("analise_em_avaliacao");
-    const pinFase2 = pinSwatchHtml("hierarq_apta");
+    const pinFase2 = pinSwatchHtml("hierarq_em_andamento");
     const pinFase3 = pinSwatchHtml("exec_em_execucao");
     return `<div class="status-legend-symbology" data-legend="symbology">
       <p class="status-color-legend-layer-title">Simbologia no mapa</p>

@@ -15,7 +15,7 @@ from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO
 from api.db.connection import get_connection
 
 # Status da fase de hierarquização que compõem o universo do AHP.
-AHP_STATUSES = ("hierarq_apta", "hierarq_em_andamento", "hierarq_finalizada")
+AHP_STATUSES = ("analise_aprovada", "hierarq_em_andamento", "hierarq_finalizada")
 
 _SELECT_BASE = """
     SELECT
@@ -92,7 +92,7 @@ def aprovar(
         SET status = %(pos_aprovacao)s,
             aprovado_em = CURRENT_TIMESTAMP,
             aprovado_por = %(aprovado_por)s,
-            motivo_aprovacao = %(motivo)s
+            motivo_aprovacao = COALESCE(%(motivo)s, '')
         WHERE codigo = %(codigo)s AND status = ANY(%(pre)s)
         RETURNING id
     """

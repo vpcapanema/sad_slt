@@ -28,7 +28,8 @@ interna, atualização, exclusão, análise, aprovação e transições de statu
 
 O domínio de status possui três fases: `cadastro_analise`, `hierarquizacao` e
 `execucao`. A matriz de transições fica no banco e a aprovação usa uma ação
-dedicada, que promove a demanda para `hierarq_apta`.
+dedicada, que promove a demanda para `analise_aprovada` — status que passa a
+compor o universo comparável da hierarquização.
 
 ### Configuração AHP e comparação colaborativa
 

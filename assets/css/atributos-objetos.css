@@ -1,0 +1,107 @@
+/* Componente "Atributos dos objetos de demanda" (Fase 3).
+   Segue a identidade da tabela "Hierarquizações realizadas" (.admin-table):
+   cabeçalho azul-marinho var(--pli-deep), texto branco Montserrat, borda #d8e0e5. */
+
+/* Fase 3: reduz ~30% a fonte de todos os elementos no interior das seções (card),
+   preservando a hierarquia relativa (escala o conteúdo do corpo da seção). */
+.fase-execucao-page .ahp-step-section > .ahp-section-body { zoom: 0.7; }
+
+.componente-atributos-objetos { margin-top: 1rem; }
+
+.componente-atributos-objetos .atributos-legenda {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.4rem 0 0.6rem;
+}
+
+/* o atributo hidden precisa vencer o display:inline-block das pílulas .fase-status */
+.componente-atributos-objetos .fase-status[hidden] { display: none; }
+
+/* Shell e tabela idênticos à "Hierarquizações realizadas" */
+.atributos-table-shell {
+  overflow: auto;
+  max-height: 52rem;
+  border: 1px solid #d8e0e5;
+  border-radius: 10px;
+}
+.admin-table--atributos thead { position: sticky; top: 0; z-index: 2; }
+
+/* Cabeçalho de coluna sobre fundo azul-marinho: texto branco */
+.admin-table--atributos th.col-atributo { white-space: normal; min-width: 170px; vertical-align: top; }
+.col-atributo-grupo {
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 0.15rem;
+  font-family: "Montserrat", Verdana, sans-serif;
+}
+.col-atributo-alias {
+  display: block;
+  font-weight: 700;
+  color: #fff;
+  white-space: normal;
+  text-transform: none;
+  font-family: "Montserrat", Verdana, sans-serif;
+  letter-spacing: 0;
+}
+.col-atributo-unidade {
+  display: block;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.68rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.col-atributo-relacao { color: var(--pli-green); font-weight: 700; margin-left: 0.2rem; }
+.col-atributo-mandatorio { margin-top: 0.3rem; text-transform: none; letter-spacing: 0; }
+
+/* Colunas ESTÁTICAS (etapa cadastral): tom distinto + faixa verde no topo */
+.admin-table--atributos th.col-estatica { background: var(--pli-navy); box-shadow: inset 0 3px 0 var(--pli-green); }
+.admin-table--atributos th.col-estatica .col-atributo-grupo { color: var(--pli-green); }
+.admin-table--atributos td.col-estatica-valor {
+  white-space: nowrap;
+  color: var(--pli-text);
+  background: #f4f8f5;
+  font-variant-numeric: tabular-nums;
+}
+.admin-table--atributos td.col-estatica-valor.is-vazio { color: var(--pli-muted); font-style: italic; }
+
+/* Célula de identidade do objeto + inputs sobre fundo branco */
+.admin-table--atributos td.col-objeto { min-width: 170px; white-space: normal; }
+.objeto-tipo { margin-top: 0.25rem; }
+.admin-table--atributos td.col-atributo-valor { white-space: normal; }
+.atributo-input {
+  width: 100%;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--pli-border);
+  border-radius: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--pli-text);
+  background: #fff;
+}
+
+/* Preenchimento híbrido: origem do valor da célula */
+.atributo-input--sistema { background: #eef4ef; color: #345243; cursor: default; }  /* cadastral (read-only) */
+.atributo-input--sugerido { background: #fff8e6; }                                   /* herdado da Fase 1 (sugestão) */
+.admin-table--atributos td.col-atributo-valor.is-preenchido { box-shadow: inset 3px 0 0 var(--pli-green); }
+.admin-table--atributos td.col-atributo-valor.is-pendente.is-obrigatorio { box-shadow: inset 3px 0 0 #e0a100; }
+
+/* Botão-ícone no cabeçalho da seção (ex.: abrir Ajuste Fino) */
+.ahp-section-label .ahp-section-action {
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.ahp-section-label .ahp-section-action:hover { background: rgba(255, 255, 255, 0.28); }
+.ahp-section-label .ahp-section-action i { color: #fff; }

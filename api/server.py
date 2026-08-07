@@ -380,18 +380,27 @@ async def documento_hierarquizacao(documento: str) -> FileResponse:
     )
 
 
-app.mount("/assets", StaticFiles(directory=str(project_path("assets"))), name="assets")
-app.mount("/data", StaticFiles(directory=str(project_path("data"))), name="data")
-app.mount("/public/assets", StaticFiles(directory=str(project_path("assets"))), name="public-assets")
-app.mount("/public/cadastro", StaticFiles(directory=str(project_path("cadastro"))), name="public-cadastro-assets")
-app.mount("/public/painel", StaticFiles(directory=str(project_path("painel"))), name="public-painel-assets")
-app.mount("/public/documentacao", StaticFiles(directory=str(project_path("documentacao"))), name="public-documentacao-assets")
-app.mount("/public/transparencia", StaticFiles(directory=str(project_path("transparencia"))), name="public-transparencia-assets")
-app.mount("/restrict/assets", StaticFiles(directory=str(project_path("assets"))), name="restricted-assets-shared")
-app.mount("/restrict/hierarquizacao", StaticFiles(directory=str(project_path("hierarquizacao"))), name="restricted-hierarquizacao-assets")
-app.mount("/restrict/ahp", StaticFiles(directory=str(project_path("ahp"))), name="restricted-ahp-assets")
-app.mount("/restrict/geoespacial", StaticFiles(directory=str(project_path("geoespacial"))), name="restricted-geospatial-assets")
-app.mount("/restrict", StaticFiles(directory=str(project_path("admin"))), name="restricted-assets")
+class RevalidateStaticFiles(StaticFiles):
+    """StaticFiles que força revalidação (no-cache) — evita servir JS/CSS defasado."""
+
+    async def get_response(self, path: str, scope):  # type: ignore[override]
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+app.mount("/assets", RevalidateStaticFiles(directory=str(project_path("assets"))), name="assets")
+app.mount("/data", RevalidateStaticFiles(directory=str(project_path("data"))), name="data")
+app.mount("/public/assets", RevalidateStaticFiles(directory=str(project_path("assets"))), name="public-assets")
+app.mount("/public/cadastro", RevalidateStaticFiles(directory=str(project_path("cadastro"))), name="public-cadastro-assets")
+app.mount("/public/painel", RevalidateStaticFiles(directory=str(project_path("painel"))), name="public-painel-assets")
+app.mount("/public/documentacao", RevalidateStaticFiles(directory=str(project_path("documentacao"))), name="public-documentacao-assets")
+app.mount("/public/transparencia", RevalidateStaticFiles(directory=str(project_path("transparencia"))), name="public-transparencia-assets")
+app.mount("/restrict/assets", RevalidateStaticFiles(directory=str(project_path("assets"))), name="restricted-assets-shared")
+app.mount("/restrict/hierarquizacao", RevalidateStaticFiles(directory=str(project_path("hierarquizacao"))), name="restricted-hierarquizacao-assets")
+app.mount("/restrict/ahp", RevalidateStaticFiles(directory=str(project_path("ahp"))), name="restricted-ahp-assets")
+app.mount("/restrict/geoespacial", RevalidateStaticFiles(directory=str(project_path("geoespacial"))), name="restricted-geospatial-assets")
+app.mount("/restrict", RevalidateStaticFiles(directory=str(project_path("admin"))), name="restricted-assets")
 
 
 if __name__ == "__main__":

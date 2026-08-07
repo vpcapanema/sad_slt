@@ -42,7 +42,10 @@ _SELECT_BASE = """
             ELSE ST_AsGeoJSON(d.geometria)::jsonb
         END AS geometria_geojson,
         d.classificacao,
-        d.complementos
+        d.complementos,
+        d.vigencia_inicio,
+        d.vigencia_fim,
+        d.valor_global
     FROM demandas.projeto d
     LEFT JOIN demandas.programa pg ON pg.id = d.programa_id
 """
@@ -73,6 +76,9 @@ _INSERT_SQL = """
         geometria,
         classificacao,
         complementos,
+        vigencia_inicio,
+        vigencia_fim,
+        valor_global,
         criado_por,
         atualizado_por
     ) VALUES (
@@ -100,6 +106,9 @@ _INSERT_SQL = """
         ST_SetSRID(ST_GeomFromGeoJSON(%(geometria_geojson)s::text), 4326),
         %(classificacao)s,
         %(complementos)s,
+        %(vigencia_inicio)s,
+        %(vigencia_fim)s,
+        %(valor_global)s,
         %(criado_por)s,
         %(atualizado_por)s
     )
@@ -180,6 +189,9 @@ _UPDATE_ALLOWED = {
     "longitude": "longitude",
     "classificacao": "classificacao",
     "complementos": "complementos",
+    "vigencia_inicio": "vigencia_inicio",
+    "vigencia_fim": "vigencia_fim",
+    "valor_global": "valor_global",
 }
 
 

@@ -21,14 +21,17 @@ from api.exceptions import (
     DemandaValidationError,
     HierarquizacaoNotFoundError,
 )
+from api.matriz_colunas import extrair_colunas
 from api.repositories import camada_geoespacial_repository as camada_repo
 from api.repositories import config_multicriterio_repository as config_repo
 from api.repositories import hierarquizacao_repository as repo
+from api.repositories import sigma_usuario_repository
 from api.schemas.hierarquizacao import (
     HierarquizacaoCreateSchema,
     HierarquizacaoFase1ExecutarSchema,
     HierarquizacaoFase1UpdateSchema,
     HierarquizacaoFase2ExecutarSchema,
+    HierarquizacaoFase3AtributosSchema,
     HierarquizacaoFase3ExecutarSchema,
     HierarquizacaoResponseSchema,
     HierarquizacaoSinteseSchema,
@@ -53,6 +56,20 @@ def _uuid(v: str | None) -> str | None:
         return None
 
 
+_nomes_cache: dict[str, str] = {}
+
+
+def _nomes_usuarios(ids: list[str | None]) -> dict[str, str]:
+    """Resolve UUIDs de usuário para nomes (via SIGMA), com cache em memória."""
+    pendentes = [i for i in {x for x in ids if x} if i not in _nomes_cache]
+    if pendentes:
+        try:
+            _nomes_cache.update(sigma_usuario_repository.nomes_por_ids(pendentes))
+        except Exception:
+            pass
+    return {i: _nomes_cache[i] for i in ids if i and i in _nomes_cache}
+
+
 def _codigo() -> str:
     return f"HIER-{datetime.now(timezone.utc):%Y%m%d-%H%M%S}-{secrets.token_hex(2).upper()}"
 
@@ -60,6 +77,9 @@ def _codigo() -> str:
 def _response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
     tid = row.get("tipo_demanda_id")
     tipo_demanda = TIPO_DEMANDA_ID_TO_COD.get(tid) if isinstance(tid, int) else None
+    homologado_por = str(row["homologado_por"]) if row.get("homologado_por") else None
+    criado_por = str(row["criado_por"]) if row.get("criado_por") else None
+    nomes = _nomes_usuarios([homologado_por, criado_por])
     return HierarquizacaoResponseSchema(
         id=str(row["id"]),
         codigo=row["codigo"],
@@ -80,8 +100,10 @@ def _response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
         criadoEm=_iso(row.get("criado_em")) or "",
         atualizadoEm=_iso(row.get("atualizado_em")) or "",
         homologadoEm=_iso(row.get("homologado_em")),
-        homologadoPor=str(row["homologado_por"]) if row.get("homologado_por") else None,
-        criadoPor=str(row["criado_por"]) if row.get("criado_por") else None,
+        homologadoPor=homologado_por,
+        criadoPor=criado_por,
+        homologadoPorNome=nomes.get(homologado_por) if homologado_por else None,
+        criadoPorNome=nomes.get(criado_por) if criado_por else None,
     )
 
 
@@ -370,6 +392,47 @@ def _normalizar_objeto_contrato(
     return contrato
 
 
+def _prazo_meses(ini: Any, fim: Any) -> int | None:
+    try:
+        a = datetime.fromisoformat(str(ini)[:10])
+        b = datetime.fromisoformat(str(fim)[:10])
+    except (TypeError, ValueError):
+        return None
+    return (b.year - a.year) * 12 + (b.month - a.month)
+
+
+# Preenchimento híbrido dos atributos de Fase 3 (CONJUNTO MUTÁVEL — edite aqui).
+#   "cadastro" -> valor intrínseco do cadastro (Vigência e recursos)
+#   demais colunas -> "gestor" (preenchido depois no componente)
+def _prefill_fase3(col_id: str, cadastro: dict[str, Any]) -> tuple[Any, str]:
+    if col_id == "capex_custo_de_investimento":
+        v = cadastro.get("valor_global")
+        if v is None:
+            v = (cadastro.get("complementos") or {}).get("valor_estimado")
+        return (v, "cadastro") if v is not None else (None, "cadastro")
+    if col_id == "prazo_de_implantacao":
+        return (_prazo_meses(cadastro.get("vigencia_inicio"), cadastro.get("vigencia_fim")), "cadastro")
+    return (None, "gestor")
+
+
+def _atributos_fase3(colunas: list[dict[str, Any]], cadastro: dict[str, Any]) -> dict[str, Any]:
+    """Slots de valor por atributo de Etapa 3, chaveados pelo id da coluna."""
+    slots: dict[str, Any] = {}
+    for col in colunas:
+        valor, origem = _prefill_fase3(col["id"], cadastro)
+        slots[col["id"]] = {
+            "valor": valor,
+            "origem": origem,
+            "criterio": col.get("criterio"),
+            "alias": col.get("alias"),
+            "unidade": col.get("unidade"),
+            "tipo": col.get("tipo"),
+            "relacao": col.get("relacao"),
+            "mandatorio": col.get("mandatorio"),
+        }
+    return slots
+
+
 def criar_hierarquizacao(
     payload: HierarquizacaoCreateSchema, *, criado_por: str | None = None
 ) -> HierarquizacaoResponseSchema:
@@ -388,6 +451,7 @@ def criar_hierarquizacao(
         payload.matriz_premissas_criterios,
         fases_a_executar=payload.fases_a_executar,
     )
+    colunas_f3 = extrair_colunas(payload.matriz_premissas_criterios)
     codigo = _codigo()
     objetos_doc = []
     for idx, o in enumerate(payload.objetos):
@@ -396,6 +460,9 @@ def criar_hierarquizacao(
             indice=idx,
             tipo_demanda=payload.tipo_demanda,
             grupo_id=payload.grupo_id,
+        )
+        cabecalho["atributos_fase3"] = _atributos_fase3(
+            colunas_f3, cabecalho.get("atributos") or {}
         )
         objetos_doc.append(
             {
@@ -471,6 +538,20 @@ def listar_hierarquizacoes(
 
 def obter_hierarquizacao(codigo: str) -> HierarquizacaoResponseSchema:
     return _response(_carregar(codigo))
+
+
+def excluir_hierarquizacao(codigo: str) -> None:
+    """Remove definitivamente uma hierarquização do portfólio."""
+    if not repo.get_by_codigo(codigo):
+        raise HierarquizacaoNotFoundError(codigo)
+    if not repo.delete_by_codigo(codigo):
+        raise HierarquizacaoNotFoundError(codigo)
+
+
+def matriz_da_hierarquizacao(codigo: str) -> Any:
+    """Matriz de critérios e premissas armazenada na hierarquização."""
+    dados = _carregar(codigo).get("dados_hierarquizacao") or {}
+    return (dados.get("cabecalho_grupo") or {}).get("matriz_premissas_criterios")
 
 
 def atualizar_hierarquizacao(
@@ -1067,6 +1148,21 @@ def _normalizar(
     return result, ausentes, invalidos
 
 
+def _valor_atributo_objeto(obj: dict[str, Any], chave: Any) -> Any:
+    """Valor do atributo de Fase 3 do objeto: prioriza os slots ``atributos_fase3``."""
+    cab = obj.get("cabecalho_objeto") or {}
+    af3 = cab.get("atributos_fase3") or {}
+    slot = af3.get(chave)
+    if not isinstance(slot, dict):
+        slot = next(
+            (s for s in af3.values() if isinstance(s, dict) and s.get("criterio") == chave),
+            None,
+        )
+    if isinstance(slot, dict) and slot.get("valor") is not None:
+        return slot.get("valor")
+    return (cab.get("atributos") or {}).get(chave)
+
+
 def executar_fase_3(
     codigo: str, payload: HierarquizacaoFase3ExecutarSchema
 ) -> HierarquizacaoResponseSchema:
@@ -1109,9 +1205,7 @@ def executar_fase_3(
                 for o in objs
             ]
         else:
-            vals = [
-                (o["cabecalho_objeto"].get("atributos") or {}).get(chave) for o in objs
-            ]
+            vals = [_valor_atributo_objeto(o, chave) for o in objs]
         norm_por_criterio.append(_normalizar(vals, c))
     ranqueaveis = []
     for i, obj in enumerate(objs):
@@ -1210,6 +1304,27 @@ def executar_fase_3(
         repo.update(codigo, {"dados_hierarquizacao": dados, "status": "em_julgamento"})
         or row
     )
+
+
+def salvar_atributos_fase3(
+    codigo: str, payload: HierarquizacaoFase3AtributosSchema
+) -> HierarquizacaoResponseSchema:
+    """Persiste os valores editados dos slots ``atributos_fase3`` por objeto."""
+    row = _carregar(codigo)
+    dados = deepcopy(row.get("dados_hierarquizacao") or {})
+    por_codigo = payload.valores or {}
+    for obj in dados.get("objetos", []):
+        cab = obj.get("cabecalho_objeto") or {}
+        atualizacoes = por_codigo.get(cab.get("codigo"))
+        if not atualizacoes:
+            continue
+        slots = cab.setdefault("atributos_fase3", {})
+        for col_id, valor in atualizacoes.items():
+            slot = slots.get(col_id)
+            if not isinstance(slot, dict):
+                slot = slots[col_id] = {"origem": "gestor"}
+            slot["valor"] = valor
+    return _response(repo.update(codigo, {"dados_hierarquizacao": dados}) or row)
 
 
 def sintetizar(

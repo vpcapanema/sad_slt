@@ -34,7 +34,7 @@
           codigo: "analise_aprovada",
           nomeProposto: "Aprovada",
           descricaoProposta:
-            "Parecer positivo — apta a virar objeto. Handoff via Aprovar para apta à hierarquização.",
+            "Parecer positivo — handoff via Aprovar. Compõe o universo comparável da hierarquização.",
         },
         {
           codigo: "analise_reprovada",
@@ -60,25 +60,14 @@
         "Demanda aprovada vira objeto e segue para hierarquização da favorabilidade. Rótulos variam por tipo (plano/programa/projeto).",
       css: "status-camada-chip--2",
       fluxoResumo: [
-        "Apta à hierarquização",
         "Em hierarquização",
         "Hierarquização concluída",
         "Ranqueada (publicada)",
       ],
       status: [
         {
-          codigo: "hierarq_apta",
-          ordemProposta: 1,
-          nomesPorTipo: {
-            plano: "Plano apto à hierarquização",
-            programa: "Programa apto à hierarquização",
-            projeto: "Projeto apto à hierarquização",
-          },
-          descricaoProposta: "Apto a compor o universo comparável (handoff da Aprovada).",
-        },
-        {
           codigo: "hierarq_em_andamento",
-          ordemProposta: 2,
+          ordemProposta: 1,
           nomesPorTipo: {
             plano: "Plano em hierarquização",
             programa: "Programa em hierarquização",
@@ -88,7 +77,7 @@
         },
         {
           codigo: "hierarq_finalizada",
-          ordemProposta: 3,
+          ordemProposta: 2,
           nomesPorTipo: {
             plano: "Plano hierarquizado (não publicado)",
             programa: "Programa hierarquizado (não publicado)",
@@ -98,7 +87,7 @@
         },
         {
           codigo: "hierarq_ranqueada",
-          ordemProposta: 4,
+          ordemProposta: 3,
           nomesPorTipo: {
             plano: "Plano ranqueado",
             programa: "Programa ranqueado",
@@ -179,7 +168,7 @@
   const NOTAS = [
     "Três fases: <strong>cadastro_analise</strong> · <strong>hierarquizacao</strong> · <strong>execucao</strong> (coluna <code>fase</code>).",
     "Não há status «transversais»: suspensão/retirada têm código próprio em cada fase (<code>analise_suspensa</code>, <code>hierarq_suspensa</code>, <code>hierarq_retirada</code>, <code>exec_suspensa</code>).",
-    "Aprovação dedicada: <code>analise_aprovada</code> / <code>analise_em_avaliacao</code> → <code>hierarq_apta</code> via POST /aprovar.",
+    "Aprovação dedicada: <code>analise_em_avaliacao</code> → <code>analise_aprovada</code> via POST /aprovar.",
     "Distinção da Fase 2: <code>hierarq_finalizada</code> = salva no banco (privada); <code>hierarq_ranqueada</code> = publicada no ranking público.",
     "Fase 1: prefixo <strong>Demanda</strong>. Fases 2 e 3: rótulos por tipo <strong>Plano / Programa / Projeto</strong>.",
     "Modelo aplicado pela migração SQL <code>030_status_fases.sql</code> em <code>dom_status_demanda</code>.",

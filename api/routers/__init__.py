@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from api.routers.auth import router as auth_router
+from api.routers.atributos_objetos import router as atributos_objetos_router
 from api.routers.comparacao_colaborativa import router as comparacao_colaborativa_router
 from api.routers.configuracoes import router as configuracoes_router
 from api.routers.demandas import router as demandas_router
@@ -37,4 +38,5 @@ api_router.include_router(objetos_ahp_router)
 api_router.include_router(configuracoes_router)
 api_router.include_router(comparacao_colaborativa_router)
 api_router.include_router(hierarquizacoes_router)
+api_router.include_router(atributos_objetos_router)
 api_router.include_router(universo_router)

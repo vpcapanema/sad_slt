@@ -65,8 +65,16 @@ init-hook = 'import sys; sys.path.insert(0, ".")'
 py-version = "3.11"
 max-line-length = 200
 jobs = 0
+ignore-paths = [
+    ".*/typeshed-fallback/.*",
+    ".*/site-packages/.*",
+    ".*[/\\\\]\\.venv[/\\\\].*",
+    ".*[/\\\\]tmp[/\\\\].*",
+    ".*[/\\\\]scripts[/\\\\].*",
+]
 disable = [
     "duplicate-code",
+    "global-statement",
     "missing-function-docstring",
     "missing-module-docstring",
     "missing-class-docstring",

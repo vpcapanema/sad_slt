@@ -129,7 +129,7 @@ let createdPayload = null;
 const fixtures = {
   projeto: [
     { id: "p1", codigo: "P-1", nome: "Aprovado", status: "analise_aprovada", diretoria_id: "DIR-1" },
-    { id: "p2", codigo: "P-2", nome: "Apto", status: "hierarq_apta", diretoria_id: "DIR-2" },
+    { id: "p2", codigo: "P-2", nome: "Apto", status: "analise_aprovada", diretoria_id: "DIR-2" },
     { id: "p3", codigo: "P-3", nome: "Código antigo", status: "aprovada", diretoria_id: "DIR-1" },
     ...Array.from({ length: 14 }, (_, i) => ({
       id: `px${i + 1}`,
@@ -143,7 +143,7 @@ const fixtures = {
     { id: "pl1", codigo: "PL-1", nome: "Plano", status: "analise_aprovada" },
   ],
   programa: [
-    { id: "pg1", codigo: "PG-1", nome: "Programa", status: "hierarq_apta" },
+    { id: "pg1", codigo: "PG-1", nome: "Programa", status: "analise_aprovada" },
   ],
 };
 
@@ -163,6 +163,7 @@ const document = {
     if (selector === "#hier-fases input:checked") return phases;
     return [];
   },
+  querySelector: () => null,
   addEventListener() {},
 };
 
@@ -237,7 +238,6 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
   assert.match(elements["demanda-tbody"].innerHTML, /data-status="analise_aprovada"/);
   assert.match(elements["demanda-tbody"].innerHTML, />Aprovada<\/span>/);
   assert.match(elements["demanda-tbody"].innerHTML, /Diretoria de Planejamento/);
-  assert.match(elements["demanda-tbody"].innerHTML, /data-status="hierarq_apta"/);
   assert.match(
     elements["demanda-tbody"].innerHTML,
     /class="hier-demanda-indisponivel" data-status="aprovada"/,

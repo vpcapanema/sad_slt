@@ -2,7 +2,7 @@
 
 Mapeia ``hierarquizacao_demandas.hierarquizacao_portfolio``: consome uma
 configuração multicritério de portfólio (``config_id``) e rankeia os projetos
-aprovados (``demandas_aprovadas.projetos``).
+aprovados (``demandas.projeto``).
 """
 from __future__ import annotations
 
@@ -76,6 +76,11 @@ class HierarquizacaoFase3ExecutarSchema(BaseModel):
     ] = "renormalizar"
 
 
+class HierarquizacaoFase3AtributosSchema(BaseModel):
+    # { codigo_do_objeto: { col_id: valor } }
+    valores: dict[str, dict[str, Any]] = Field(default_factory=dict)
+
+
 class HierarquizacaoSinteseSchema(BaseModel):
     peso_fase2: float = Field(0.7, ge=0, le=1)
     peso_fase3: float = Field(0.3, ge=0, le=1)
@@ -104,3 +109,5 @@ class HierarquizacaoResponseSchema(BaseModel):
     homologadoEm: str | None = None
     homologadoPor: str | None = None
     criadoPor: str | None = None
+    homologadoPorNome: str | None = None
+    criadoPorNome: str | None = None

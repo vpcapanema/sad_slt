@@ -4699,3 +4699,22 @@ a.ahp-progress-step:hover {
 .ahp-parecer-collab-item .ahp-table-scroll { padding: 0.5rem 0.75rem 0.75rem; }
 .ahp-parecer-agregacao { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 0.75rem 0; margin-bottom: 1rem; font-size: 0.9rem; }
 .ahp-parecer-acoes { display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; padding: 1.25rem; background: #f8fafc; border: 1px solid #dee2e6; border-top: none; border-radius: 0 0 8px 8px; }
+
+/* Compatibilização visual do Bloco 2 (Processos/Fase 1/2/3): texto descritivo
+   e de ajuda das seções em tamanho compacto uniforme (padrão de Processos). */
+.fase-execucao-page .ahp-section-body .ahp-help-text,
+.fase-execucao-page .ahp-section-body > p,
+.fase1-page .ahp-section-body .ahp-help-text,
+.fase1-page .ahp-section-body > p {
+  font-size: 0.78rem;
+}
+
+/* Fase 1 — títulos do bloco operacional estavam sem estilo (grandes demais). */
+.fase1-page .ahp-section-body .fase1-operational h3 {
+  font-size: 0.85rem;
+  margin: 0 0 0.5rem;
+}
+.fase1-page .ahp-section-body .fase1-operational h4 {
+  font-size: 0.78rem;
+  margin: 0 0 0.35rem;
+}

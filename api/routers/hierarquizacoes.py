@@ -6,6 +6,7 @@ exige gestor autenticado.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 
 from api.deps.auth import require_authenticated, require_gestor, require_operator
 from api.exceptions import (
@@ -20,6 +21,7 @@ from api.schemas.hierarquizacao import (
     HierarquizacaoFase1UpdateSchema,
     HierarquizacaoFase1ExecutarSchema,
     HierarquizacaoFase2ExecutarSchema,
+    HierarquizacaoFase3AtributosSchema,
     HierarquizacaoFase3ExecutarSchema,
     HierarquizacaoSinteseSchema,
     HierarquizacaoResponseSchema,
@@ -64,6 +66,18 @@ async def executar_fase_2(codigo: str, body: HierarquizacaoFase2ExecutarSchema, 
 async def executar_fase_3(codigo: str, body: HierarquizacaoFase3ExecutarSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
     try:
         return service.executar_fase_3(codigo, body)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.patch("/{codigo}/fases/3/atributos", response_model=HierarquizacaoResponseSchema)
+async def salvar_atributos_fase_3(codigo: str, body: HierarquizacaoFase3AtributosSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+    try:
+        return service.salvar_atributos_fase3(codigo, body)
     except HierarquizacaoNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:
@@ -183,6 +197,34 @@ async def atualizar_hierarquizacao(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.delete("/{codigo}", status_code=204)
+async def excluir_hierarquizacao(
+    codigo: str,
+    _user: SessionUser = Depends(require_gestor),
+) -> None:
+    try:
+        service.excluir_hierarquizacao(codigo)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/{codigo}/matriz")
+async def baixar_matriz(
+    codigo: str,
+    _user: SessionUser = Depends(require_authenticated),
+) -> JSONResponse:
+    try:
+        matriz = service.matriz_da_hierarquizacao(codigo)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return JSONResponse(
+        content=matriz,
+        headers={"Content-Disposition": f'attachment; filename="matriz-{codigo}.json"'},
+    )
 
 
 @router.post("/{codigo}/calcular", response_model=HierarquizacaoResponseSchema)

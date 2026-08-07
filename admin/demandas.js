@@ -652,7 +652,14 @@
       SLTAdminUi.showToast("Nenhum registro válido para excluir.", true);
       return;
     }
-    if (!window.confirm(deleteConfirmMessage())) return;
+    const ok = await SLTAdminUi.showConfirm({
+      title: "Excluir registro(s)",
+      message: deleteConfirmMessage(),
+      confirmLabel: "Excluir",
+      cancelLabel: "Cancelar",
+      danger: true,
+    });
+    if (!ok) return;
     $("#btn-bulk-delete").disabled = true;
     try {
       for (const codigo of codigos) {

@@ -17,7 +17,6 @@
 
   const STATUS_PRE_APROVACAO = new Set([
     "analise_em_avaliacao",
-    "analise_aprovada",
   ]);
 
   const TIPOS = [
@@ -54,6 +53,37 @@
     return (root || document).querySelector(sel);
   }
 
+  function formatCentsBR(cents) {
+    const padded = String(cents).padStart(3, "0");
+    const inteiro = padded.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return `${inteiro},${padded.slice(-2)}`;
+  }
+
+  /** Número (reais) -> string mascarada "1.234,56" para o input. */
+  function currencyInputValue(value) {
+    if (value == null || value === "") return "";
+    const cents = Math.round(Number(value) * 100);
+    return Number.isFinite(cents) ? formatCentsBR(cents) : "";
+  }
+
+  /** String mascarada -> número em reais (ou null). */
+  function parseCurrencyBR(text) {
+    const digits = String(text ?? "").replace(/\D/g, "");
+    return digits ? Number(digits) / 100 : null;
+  }
+
+  /** Máscara de moeda (BRL): dígitos digitados são interpretados como centavos. */
+  function attachCurrencyMask(input) {
+    if (!input || input.dataset.currencyMask) return;
+    input.dataset.currencyMask = "1";
+    const apply = () => {
+      const digits = input.value.replace(/\D/g, "");
+      input.value = digits ? formatCentsBR(Number(digits)) : "";
+    };
+    input.addEventListener("input", apply);
+    apply();
+  }
+
   function paramsFromUrl() {
     const sp = new URLSearchParams(location.search);
     return { tipo: sp.get("tipo"), id: sp.get("id") };
@@ -87,7 +117,7 @@
       </div>
       <div class="admin-dashboard-actions span-2">
         <a href="/restrict/demandas/" class="btn btn-secondary">Voltar à lista</a>
-        ${withApprove && SLTAdminAuth.can("analyze") ? '<button type="button" class="btn btn-primary" id="btn-aprovar">Aprovar → aguardando hierarquização</button>' : ""}
+        ${withApprove && SLTAdminAuth.can("analyze") ? '<button type="button" class="btn btn-primary" id="btn-aprovar">Aprovar demanda</button>' : ""}
         ${SLTAdminAuth.can("operate") ? '<button type="button" class="btn btn-primary" id="btn-salvar">Salvar alterações</button>' : ""}
       </div>`;
   }
@@ -526,7 +556,7 @@
             </div>
             <div class="form-field">
               <label for="fld-valor">Valor global (R$)</label>
-              <input type="number" step="any" id="fld-valor" value="${d.valor_global ?? ""}">
+              <input type="text" inputmode="numeric" id="fld-valor" class="admin-currency-input" value="${currencyInputValue(d.valor_global)}" placeholder="0,00">
             </div>
             <div class="form-field">
               <label for="fld-vig-ini">Vigência início</label>
@@ -575,9 +605,7 @@
       diretoria_id: $("#fld-diretoria").value || null,
       objetivo_estrategico: $("#fld-objetivo").value.trim() || null,
       responsavel: $("#fld-responsavel").value.trim() || null,
-      valor_global: $("#fld-valor").value
-        ? parseFloat($("#fld-valor").value)
-        : null,
+      valor_global: parseCurrencyBR($("#fld-valor").value),
       vigencia_inicio: $("#fld-vig-ini").value || null,
       vigencia_fim: $("#fld-vig-fim").value || null,
     };
@@ -630,7 +658,7 @@
             </div>
             <div class="form-field">
               <label for="fld-valor">Valor global (R$)</label>
-              <input type="number" step="any" id="fld-valor" value="${d.valor_global ?? ""}">
+              <input type="text" inputmode="numeric" id="fld-valor" class="admin-currency-input" value="${currencyInputValue(d.valor_global)}" placeholder="0,00">
             </div>
             <div class="form-field span-2">
               <span class="field-help">Cadastrado em ${escapeHtml(formatDate(d.criadoEm))}.</span>
@@ -665,9 +693,7 @@
       publico_alvo: $("#fld-publico").value.trim() || null,
       justificativa: $("#fld-justificativa").value.trim() || null,
       orgao_responsavel: $("#fld-orgao").value.trim() || null,
-      valor_global: $("#fld-valor").value
-        ? parseFloat($("#fld-valor").value)
-        : null,
+      valor_global: parseCurrencyBR($("#fld-valor").value),
     };
   }
 
@@ -702,6 +728,7 @@
     if (tipo === "projeto") bindProjeto(d);
     if (tipo === "plano") bindPlano(d);
     if (tipo === "programa") bindPrograma(d);
+    attachCurrencyMask($("#fld-valor"));
     $("#btn-salvar")?.addEventListener("click", () => saveRecord());
     $("#btn-aprovar")?.addEventListener("click", () => approveRecord());
   }
@@ -799,14 +826,18 @@
   }
 
   async function approveRecord() {
-    if (
-      !confirm("Aprovar esta demanda e promovê-la a aguardando hierarquização?")
-    )
-      return;
+    const ok = await SLTAdminUi.showConfirm({
+      title: "Aprovar demanda",
+      message:
+        "Aprovar esta demanda? Ela passará para o status «Aprovada».",
+      confirmLabel: "Aprovar",
+      cancelLabel: "Cancelar",
+    });
+    if (!ok) return;
     try {
       const motivo = $("#fld-motivo-aprov")?.value.trim() || null;
       const updated = await API[tipo].aprovar(record.id, { motivo });
-      SLTAdminUi.showToast("Aprovada — aguardando hierarquização.");
+      SLTAdminUi.showToast("Demanda aprovada.");
       await refreshLists();
       renderPage(updated);
     } catch (err) {

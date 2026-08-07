@@ -9,6 +9,7 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/ahp-module.css" />
+  <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="" />
   <link rel="stylesheet" href="/restrict/hierarquizacao/processos.css?v=20260715b" />
   <link
       rel="stylesheet"
@@ -35,10 +36,6 @@
           <i class="fas fa-table"></i><span>Hierarquizações realizadas</span>
         </div>
         <div class="ahp-section-body">
-          <p class="ahp-help-text">
-            Consulte as rodadas cadastradas e abra os conteúdos estruturados para examinar os
-            dados completos de cada registro.
-          </p>
           <div id="hier-loading">Carregando…</div>
           <div
             id="hier-error"
@@ -48,11 +45,13 @@
             <table class="admin-table hier-register-table">
               <thead>
                 <tr>
+                  <th class="col-select" scope="col"><input type="checkbox" id="hier-select-all" aria-label="Selecionar todas"></th>
                   <th>Código da hierarquização</th>
                   <th>Identificador da configuração AHP</th>
                   <th>Nome</th>
                   <th>Descrição</th>
                   <th>Situação</th>
+                  <th>Matriz de critérios e premissas</th>
                   <th>Demandas do grupo</th>
                   <th>Julgamentos dos projetos</th>
                   <th>Pesos dos projetos</th>
@@ -69,17 +68,30 @@
               </thead>
               <tbody id="hier-tbody">
                 <tr class="empty-row">
-                  <td colspan="17"></td>
+                  <td colspan="19"></td>
                 </tr>
                 <tr class="empty-row">
-                  <td colspan="17"></td>
+                  <td colspan="19"></td>
                 </tr>
                 <tr class="empty-row">
-                  <td colspan="17"></td>
+                  <td colspan="19"></td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <div class="admin-bulk-actions hier-bulk-actions" id="hier-bulk-actions" aria-label="Ações em lote sobre as hierarquizações">
+            <button type="button" class="admin-icon-btn" id="hier-bulk-edit" title="Editar selecionadas" disabled>
+              <i class="fas fa-pen" aria-hidden="true"></i><span class="sr-only">Editar</span>
+            </button>
+            <button type="button" class="admin-icon-btn" id="hier-bulk-cancel" title="Cancelar edição" disabled>
+              <i class="fas fa-xmark" aria-hidden="true"></i><span class="sr-only">Cancelar</span>
+            </button>
+            <button type="button" class="admin-icon-btn admin-icon-btn-primary" id="hier-bulk-save" title="Salvar alterações" disabled>
+              <i class="fas fa-floppy-disk" aria-hidden="true"></i><span class="sr-only">Salvar</span>
+            </button>
+            <button type="button" class="admin-icon-btn admin-icon-btn-danger" id="hier-bulk-delete" title="Excluir selecionadas" disabled>
+              <i class="fas fa-trash" aria-hidden="true"></i><span class="sr-only">Excluir</span>
+            </button>
         </div>
       </section>
 
@@ -325,27 +337,12 @@
       </section>
 
     </main>
-    <div
-      id="json-modal"
-      class="json-modal-backdrop hidden"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="json-modal-title"
-    >
-      <div class="json-modal">
-        <header class="json-modal-head">
-          <h2 id="json-modal-title">Conteúdo estruturado</h2>
-          <button
-            id="json-modal-close"
-            class="json-modal-close"
-            aria-label="Fechar"
-          >
-            <i class="fas fa-xmark"></i>
-          </button>
-        </header>
-        <div id="json-modal-body" class="json-modal-body"></div>
-      </div>
-    </div>
+    {% include "componentes/modal/_modal_demandas_do_grupo_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
+    {% include "componentes/modal/_modal_julgamentos_dos_projetos_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
+    {% include "componentes/modal/_modal_pesos_dos_projetos_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
+    {% include "componentes/modal/_modal_classificacao_resultante_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
+    {% include "componentes/modal/_modal_matriz_de_criterios_e_premissas_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
+    {% include "componentes/modal/_modal_dados_completos_da_hierarquizacao_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
 {% endblock %}
 
 {% block scripts_pagina %}
@@ -356,7 +353,8 @@
   <script src="/assets/js/status-colors.js"></script>
   <script src="/assets/js/admin-labels.js"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
+  <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
   <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-  <script src="/restrict/hierarquizacao/js/processos.js?v=20260727h"></script>
+  <script src="/restrict/hierarquizacao/js/processos.js?v=20260807e"></script>
   <script src="/assets/js/paginas/hierarquizacao-home-inline-1.js"></script>
 {% endblock %}

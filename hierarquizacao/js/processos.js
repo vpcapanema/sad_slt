@@ -22,8 +22,13 @@
     paginaDemandas = 1,
     matriz = null,
     universoRequestId = 0;
+  let listaCache = [],
+    hierEditMode = false,
+    matrizAtual = null;
+  const selecionadasHier = new Set();
+  const STATUS_HIER = ["rascunho", "em_julgamento", "calculada", "homologada", "arquivada"];
   const ITENS_POR_PAGINA = 15;
-  const STATUS_ELEGIVEIS = new Set(["analise_aprovada", "hierarq_apta"]);
+  const STATUS_ELEGIVEIS = new Set(["analise_aprovada"]);
   const JSON_COLS = [
     "objetos",
     "julgamento_projetos",
@@ -92,17 +97,33 @@
     if (typeof value === "boolean") return value ? "Sim" : "Não";
     return `<span>${esc(value)}</span>`;
   }
-  function abrirJson(titulo, value) {
-    $("json-modal-title").textContent = titulo;
-    $("json-modal-body").innerHTML = jsonHtml(value);
-    $("json-modal").classList.remove("hidden");
+  // Modais componentizados (templates/componentes/modal/): um por coluna da tabela.
+  const MODAIS_COLUNA = {
+    objetos: { modal: "modal-objetos", titulo: "Demandas do grupo" },
+    julgamento_projetos: { modal: "modal-julgamentos", titulo: "Julgamentos dos projetos" },
+    pesos_projetos: { modal: "modal-pesos", titulo: "Pesos dos projetos" },
+    ranking: { modal: "modal-ranking", titulo: "Classificação resultante" },
+    dados_hierarquizacao: { modal: "modal-completo", titulo: "Dados completos da hierarquização" },
+  };
+  function preencherModal(id, titulo, conteudo) {
+    const m = $(id);
+    if (!m) return;
+    const t = m.querySelector("[data-modal-title]");
+    const b = m.querySelector("[data-modal-body]");
+    if (t) t.textContent = titulo;
+    if (b) {
+      b.innerHTML = "";
+      if (typeof conteudo === "string") b.innerHTML = conteudo;
+      else if (conteudo instanceof Node) b.appendChild(conteudo);
+    }
+    m.classList.remove("hidden");
   }
   function vazias(n) {
     return Array.from(
       { length: Math.max(0, 3 - n) },
       () =>
         '<tr class="empty-row">' +
-        Array.from({ length: 17 }, () => "<td></td>").join("") +
+        Array.from({ length: 19 }, () => "<td></td>").join("") +
         "</tr>",
     ).join("");
   }
@@ -112,29 +133,380 @@
   }
   async function carregarLista() {
     try {
-      const lista = await HierApi.listar();
+      listaCache = await HierApi.listar();
       $("hier-loading").classList.add("hidden");
-      $("hier-tbody").innerHTML =
-        lista
-          .map(
-            (h) =>
-              `<tr><td><code>${esc(h.codigo)}</code></td><td>${esc(h.config_id || "—")}</td><td>${esc(h.nome)}</td><td>${esc(h.descricao || "—")}</td><td>${esc(h.status)}</td><td>${jsonButton(h, "objetos", "Visualizar demandas")}</td><td>${jsonButton(h, "julgamento_projetos", "Visualizar julgamentos")}</td><td>${jsonButton(h, "pesos_projetos", "Visualizar pesos")}</td><td>${jsonButton(h, "ranking", "Visualizar classificação")}</td><td>${esc(h.homologadoEm || "—")}</td><td>${esc(h.homologadoPor || "—")}</td><td>${esc(h.criadoPor || "—")}</td><td>${esc(h.criadoEm || "—")}</td><td>${esc(h.atualizadoEm || "—")}</td><td>${esc(h.tipo_demanda || h.tipo_demanda_id || "—")}</td><td>${esc(h.grupo_id || "—")}</td><td>${jsonButton(h, "dados_hierarquizacao", "Visualizar arquivo completo")}</td></tr>`,
-          )
-          .join("") + vazias(lista.length);
-      $("hier-tbody")
-        .querySelectorAll(".json-cell")
-        .forEach(
-          (b) =>
-            (b.onclick = () => {
-              const h = lista.find((x) => x.codigo === b.dataset.codigo);
-              abrirJson(alias(b.dataset.json), h[b.dataset.json]);
-            }),
-        );
+      renderTabela();
     } catch (e) {
       $("hier-loading").classList.add("hidden");
       $("hier-error").textContent = e.message;
       $("hier-error").classList.remove("hidden");
     }
+  }
+  function matrizDaHier(h) {
+    return h?.dados_hierarquizacao?.cabecalho_grupo?.matriz_premissas_criterios;
+  }
+  function matrizCell(h) {
+    const m = matrizDaHier(h);
+    const tem = m && (Array.isArray(m) ? m.length : Object.keys(m).length);
+    if (!tem) return "<span>Não enviada</span>";
+    return `<button class="matriz-link" data-codigo="${esc(h.codigo)}" title="Ver e baixar a matriz"><i class="fas fa-file-lines"></i> Ver matriz</button>`;
+  }
+  // Formata valores de data da tabela: "03/08/2026 às 14:40".
+  // Meio-dia (12:00) → "ao meio-dia"; meia-noite (00:00) → "à meia-noite".
+  function fmtDataCelula(v) {
+    if (v == null || v === "") return "—";
+    const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(v);
+    if (!m) return String(v);
+    const [, y, mo, d, hh, mi] = m;
+    const dataStr = `${d}/${mo}/${y}`;
+    if (hh == null) return dataStr;
+    const H = Number(hh), M = Number(mi);
+    if (H === 12 && M === 0) return `${dataStr} ao meio-dia`;
+    if (H === 0 && M === 0) return `${dataStr} à meia-noite`;
+    return `${dataStr} às ${hh}:${mi}`;
+  }
+  // Rótulos amigáveis da situação da hierarquização (domínio dom_status_hierarquizacao).
+  const STATUS_HIER_LABEL = {
+    rascunho: "Rascunho",
+    em_julgamento: "Em julgamento",
+    calculada: "Calculada",
+    homologada: "Homologada",
+    arquivada: "Arquivada",
+  };
+  function rotuloSituacaoHier(s) {
+    if (!s) return "—";
+    return STATUS_HIER_LABEL[s] || s.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+  }
+  // Rótulos amigáveis do tipo de demanda (domínio plano | programa | projeto).
+  const TIPO_DEMANDA_LABEL = { plano: "Plano", programa: "Programa", projeto: "Projeto" };
+  function rotuloTipoDemanda(t) {
+    if (t == null || t === "") return "—";
+    return TIPO_DEMANDA_LABEL[t] || String(t).replace(/^./, (c) => c.toUpperCase());
+  }
+  function rowHtml(h, editing) {
+    const marcada = selecionadasHier.has(h.codigo);
+    const nome = editing ? `<input class="cell-edit" data-k="nome" value="${esc(h.nome)}">` : esc(h.nome);
+    const desc = editing ? `<input class="cell-edit" data-k="descricao" value="${esc(h.descricao || "")}">` : esc(h.descricao || "—");
+    const sit = editing
+      ? `<select class="cell-edit" data-k="status">${STATUS_HIER.map((s) => `<option value="${s}"${s === h.status ? " selected" : ""}>${esc(rotuloSituacaoHier(s))}</option>`).join("")}</select>`
+      : esc(rotuloSituacaoHier(h.status));
+    return `<tr data-codigo="${esc(h.codigo)}"${editing ? ' class="is-editing"' : ""}>` +
+      `<td class="col-select"><input type="checkbox" class="hier-row-select" data-codigo="${esc(h.codigo)}"${marcada ? " checked" : ""}></td>` +
+      `<td><code>${esc(h.codigo)}</code></td>` +
+      `<td>${esc(h.config_id || "—")}</td>` +
+      `<td>${nome}</td>` +
+      `<td>${desc}</td>` +
+      `<td>${sit}</td>` +
+      `<td>${matrizCell(h)}</td>` +
+      `<td>${jsonButton(h, "objetos", "Visualizar demandas")}</td>` +
+      `<td>${jsonButton(h, "julgamento_projetos", "Visualizar julgamentos")}</td>` +
+      `<td>${jsonButton(h, "pesos_projetos", "Visualizar pesos")}</td>` +
+      `<td>${jsonButton(h, "ranking", "Visualizar classificação")}</td>` +
+      `<td>${esc(fmtDataCelula(h.homologadoEm))}</td>` +
+      `<td>${esc(h.homologadoPorNome || h.homologadoPor || "—")}</td>` +
+      `<td>${esc(h.criadoPorNome || h.criadoPor || "—")}</td>` +
+      `<td>${esc(fmtDataCelula(h.criadoEm))}</td>` +
+      `<td>${esc(fmtDataCelula(h.atualizadoEm))}</td>` +
+      `<td>${esc(rotuloTipoDemanda(h.tipo_demanda || h.tipo_demanda_id))}</td>` +
+      `<td>${esc(h.grupo_id || "—")}</td>` +
+      `<td>${jsonButton(h, "dados_hierarquizacao", "Visualizar arquivo completo")}</td>` +
+      `</tr>`;
+  }
+  function renderTabela() {
+    const editando = hierEditMode ? selecionadasHier : new Set();
+    $("hier-tbody").innerHTML =
+      listaCache.map((h) => rowHtml(h, editando.has(h.codigo))).join("") + vazias(listaCache.length);
+    ligarEventosTabela();
+    atualizarBotoesLote();
+    syncSelectAll();
+  }
+  function ligarEventosTabela() {
+    const tbody = $("hier-tbody");
+    tbody.querySelectorAll(".json-cell").forEach((b) => {
+      b.onclick = () => {
+        const h = listaCache.find((x) => x.codigo === b.dataset.codigo);
+        abrirColuna(b.dataset.json, h);
+      };
+    });
+    tbody.querySelectorAll(".matriz-link").forEach((b) => {
+      b.onclick = () => abrirMatriz(b.dataset.codigo);
+    });
+    tbody.querySelectorAll(".hier-row-select").forEach((cb) => {
+      cb.onchange = () => {
+        if (cb.checked) selecionadasHier.add(cb.dataset.codigo);
+        else selecionadasHier.delete(cb.dataset.codigo);
+        atualizarBotoesLote();
+        syncSelectAll();
+      };
+    });
+  }
+  function syncSelectAll() {
+    const sa = $("hier-select-all");
+    if (sa) sa.checked = listaCache.length > 0 && listaCache.every((h) => selecionadasHier.has(h.codigo));
+  }
+  function atualizarBotoesLote() {
+    const has = selecionadasHier.size > 0;
+    const set = (id, dis) => { const el = $(id); if (el) el.disabled = dis; };
+    set("hier-bulk-edit", !has || hierEditMode);
+    set("hier-bulk-cancel", !hierEditMode);
+    set("hier-bulk-save", !hierEditMode || !has);
+    set("hier-bulk-delete", !has || hierEditMode);
+  }
+  // Visualizador de JSON em árvore LAZY: renderiza os filhos só ao expandir,
+  // mantendo o DOM leve mesmo com conteúdos grandes (ex.: dados completos).
+  // Formata datas ISO (YYYY-MM-DD[THH:MM]) para dd/mm/aaaa [HH:MM].
+  function fmtDataSeIso(v) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(v);
+    if (!m) return null;
+    const [, y, mo, d, hh, mi] = m;
+    return hh != null ? `${d}/${mo}/${y} ${hh}:${mi}` : `${d}/${mo}/${y}`;
+  }
+  // Rótulo amigável de situação (domínio dom_status_demanda, via SLTStatusColors).
+  function rotuloStatus(codigo) {
+    if (!codigo) return "—";
+    const st = window.SLTStatusColors && window.SLTStatusColors.getStatusDemanda
+      ? window.SLTStatusColors.getStatusDemanda(codigo)
+      : null;
+    return (st && st.nome) || codigo;
+  }
+  function fmtFolha(v) {
+    if (v === null || v === undefined || v === "") return "—";
+    if (typeof v === "boolean") return v ? "Sim" : "Não";
+    if (typeof v === "string") {
+      const data = fmtDataSeIso(v);
+      if (data) return data;
+    }
+    return String(v);
+  }
+  // Rótulo de item de lista: usa o nome/código do objeto quando houver.
+  function rotuloItem(v, i) {
+    if (v && typeof v === "object") {
+      const cab = v.cabecalho_objeto || v;
+      const nome = cab.nome || v.nome;
+      const cod = cab.codigo || v.codigo;
+      if (nome) return cod ? `${nome} (${cod})` : String(nome);
+      if (cod) return String(cod);
+    }
+    return `Item ${i + 1}`;
+  }
+  function jvNo(chave, valor, jaRotulado) {
+    const li = document.createElement("li");
+    li.className = "jv-item";
+    const rotulo = jaRotulado ? String(chave) : alias(String(chave));
+    if (valor && typeof valor === "object") {
+      const entries = Array.isArray(valor)
+        ? valor.map((v, i) => [rotuloItem(v, i), v, true])
+        : Object.entries(valor).map(([k, v]) => [k, v, false]);
+      const det = document.createElement("details");
+      const sum = document.createElement("summary");
+      const contagem = Array.isArray(valor) ? `[${entries.length}]` : `{${entries.length}}`;
+      sum.innerHTML = `<span class="jv-key">${esc(rotulo)}</span> <span class="jv-count">${contagem}</span>`;
+      det.appendChild(sum);
+      let carregado = false;
+      det.addEventListener("toggle", () => {
+        if (!det.open || carregado) return;
+        carregado = true;
+        const ul = document.createElement("ul");
+        ul.className = "jv-list";
+        for (const [k, v, jr] of entries) ul.appendChild(jvNo(k, v, jr));
+        det.appendChild(ul);
+      });
+      li.appendChild(det);
+    } else {
+      li.innerHTML = `<span class="jv-key">${esc(rotulo)}:</span> <span class="jv-val">${esc(fmtFolha(valor))}</span>`;
+    }
+    return li;
+  }
+  function jvViewer(valor) {
+    const ul = document.createElement("ul");
+    ul.className = "jv-list jv-root";
+    const entries = valor && typeof valor === "object"
+      ? (Array.isArray(valor) ? valor.map((v, i) => [rotuloItem(v, i), v, true]) : Object.entries(valor).map(([k, v]) => [k, v, false]))
+      : [["Valor", valor, true]];
+    if (!entries.length) ul.innerHTML = '<li class="jv-item"><span class="jv-val">Nenhum conteúdo disponível.</span></li>';
+    for (const [k, v, jr] of entries) ul.appendChild(jvNo(k, v, jr));
+    return ul;
+  }
+
+  // ---- Modal "Dados completos": ordena o cabeçalho do grupo antes dos objetos ----
+  function renderCompleto(h) {
+    const d = h.dados_hierarquizacao || {};
+    const ordem = ["versao", "cabecalho_grupo", "objetos"];
+    const chaves = [
+      ...ordem.filter((k) => k in d),
+      ...Object.keys(d).filter((k) => !ordem.includes(k)),
+    ];
+    const ul = document.createElement("ul");
+    ul.className = "jv-list jv-root";
+    for (const k of chaves) ul.appendChild(jvNo(k, d[k], false));
+    return ul;
+  }
+
+  // ---- Modal "Demandas do grupo": um objeto por bloco, campos agrupados + mapa ----
+  function campo(rotulo, valor) {
+    if (valor === null || valor === undefined || valor === "") return null;
+    const d = document.createElement("div");
+    d.className = "jv-campo";
+    d.innerHTML = `<span class="jv-key">${esc(rotulo)}:</span> <span class="jv-val">${esc(fmtFolha(valor))}</span>`;
+    return d;
+  }
+  function grupoEl(titulo) {
+    const g = document.createElement("div");
+    g.className = "demanda-grupo";
+    const t = document.createElement("h4");
+    t.className = "demanda-grupo-titulo";
+    t.textContent = titulo;
+    g.appendChild(t);
+    return g;
+  }
+  function grupoCampos(titulo, itens) {
+    const usados = itens.filter(Boolean);
+    if (!usados.length) return null;
+    const g = grupoEl(titulo);
+    const box = document.createElement("div");
+    box.className = "demanda-campos";
+    usados.forEach((el) => box.appendChild(el));
+    g.appendChild(box);
+    return g;
+  }
+  function subArvore(rotulo, valor) {
+    const ul = document.createElement("ul");
+    ul.className = "jv-list";
+    if (valor && typeof valor === "object" && Object.keys(valor).length) {
+      ul.appendChild(jvNo(rotulo, valor, false));
+    } else {
+      ul.innerHTML = `<li class="jv-item"><span class="jv-key">${esc(rotulo)}:</span> <span class="jv-val">—</span></li>`;
+    }
+    return ul;
+  }
+  function iniciarMapa(div, geometria, lat, lng) {
+    if (!window.L) { div.innerHTML = '<p class="jv-mapa-aviso">Mapa indisponível.</p>'; return; }
+    const temGeom = geometria && geometria.coordinates;
+    if (!temGeom && (lat == null || lng == null)) {
+      div.innerHTML = '<p class="jv-mapa-aviso">Geometria não disponível para esta demanda.</p>';
+      return;
+    }
+    const map = L.map(div, { attributionControl: false, scrollWheelZoom: false });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18 }).addTo(map);
+    if (temGeom) {
+      const geo = { type: geometria.tipo || geometria.type, coordinates: geometria.coordinates };
+      const layer = L.geoJSON(geo, { style: { color: "#003b5a", weight: 2, fillColor: "#3ec26e", fillOpacity: 0.2 } }).addTo(map);
+      try {
+        const b = layer.getBounds();
+        if (b && b.isValid()) map.fitBounds(b, { padding: [12, 12], maxZoom: 15 });
+        else map.setView([lat, lng], 13);
+      } catch (_) { map.setView([lat ?? -22.5, lng ?? -48.5], 13); }
+    } else {
+      L.marker([lat, lng]).addTo(map);
+      map.setView([lat, lng], 13);
+    }
+    setTimeout(() => map.invalidateSize(), 80);
+  }
+  function corpoObjeto(o) {
+    const wrap = document.createElement("div");
+    wrap.className = "demanda-corpo";
+    const grupos = [
+      grupoCampos("Identificação", [
+        campo("Código", o.codigo),
+        campo("Nome", o.nome),
+        campo("Tipo de demanda", o.tipo_demanda),
+        campo("Situação", o.status ? rotuloStatus(o.status) : null),
+        campo("Descrição", o.descricao),
+      ]),
+      grupoCampos("Proponente e vínculo institucional", [
+        campo("Tipo de demandante", o.tipo_demandante),
+        campo("Instituição", o.instituicao_nome || o.instituicao_label),
+        campo("CNPJ", o.instituicao_cnpj),
+        campo("Representante", o.representante_nome),
+        campo("E-mail do representante", o.representante_email),
+        campo("Telefone do representante", o.representante_telefone),
+        campo("Diretoria", o.diretoria_id),
+        campo("Plano", o.plano_id),
+        campo("Programa", o.programa_id_alias || o.programa_nome || o.programa_codigo),
+        campo("Possui vínculo institucional", o.vinculo_institucional == null ? null : (o.vinculo_institucional ? "Sim" : "Não")),
+        campo("Tipo de vínculo", o.vinculo_tipo),
+      ]),
+    ];
+    grupos.filter(Boolean).forEach((g) => wrap.appendChild(g));
+    // Classificação e complementos (subárvores)
+    const gCls = grupoEl("Classificação e complementos");
+    gCls.appendChild(subArvore("Classificação", o.classificacao));
+    gCls.appendChild(subArvore("Complementos", o.complementos));
+    wrap.appendChild(gCls);
+    // Localização + mapa
+    const gLoc = grupoEl("Localização");
+    const box = document.createElement("div");
+    box.className = "demanda-campos";
+    [campo("Latitude", o.latitude), campo("Longitude", o.longitude), campo("Tipo de geometria", o.geometria_tipo || o.geometria?.tipo)]
+      .filter(Boolean).forEach((el) => box.appendChild(el));
+    gLoc.appendChild(box);
+    const mapaDiv = document.createElement("div");
+    mapaDiv.className = "demanda-mapa";
+    gLoc.appendChild(mapaDiv);
+    wrap.appendChild(gLoc);
+    setTimeout(() => iniciarMapa(mapaDiv, o.geometria, o.latitude, o.longitude), 40);
+    // Datas e auditoria
+    const gDatas = grupoCampos("Datas e auditoria", [
+      campo("Criado em", o.criado_em || o.criadoEm),
+      campo("Atualizado em", o.atualizado_em),
+      campo("Aprovado em", o.aprovado_em),
+      campo("Situação atualizada em", o.status_atualizado_em),
+      campo("Motivo da aprovação", o.motivo_aprovacao),
+    ]);
+    if (gDatas) wrap.appendChild(gDatas);
+    return wrap;
+  }
+  function objetoNo(o) {
+    const li = document.createElement("li");
+    li.className = "jv-item";
+    const det = document.createElement("details");
+    const sum = document.createElement("summary");
+    const nome = o.nome || o.codigo || "Demanda";
+    const cod = o.codigo ? ` <span class="jv-count">(${esc(o.codigo)})</span>` : "";
+    sum.innerHTML = `<span class="jv-key">${esc(nome)}</span>${cod}`;
+    det.appendChild(sum);
+    let carregado = false;
+    det.addEventListener("toggle", () => {
+      if (!det.open || carregado) return;
+      carregado = true;
+      det.appendChild(corpoObjeto(o));
+    });
+    li.appendChild(det);
+    return li;
+  }
+  function renderDemandasGrupo(h) {
+    const objs = Array.isArray(h.objetos) ? h.objetos : [];
+    const ul = document.createElement("ul");
+    ul.className = "jv-list jv-root";
+    if (!objs.length) {
+      ul.innerHTML = '<li class="jv-item"><span class="jv-val">Nenhuma demanda vinculada a este grupo.</span></li>';
+      return ul;
+    }
+    objs.forEach((o) => ul.appendChild(objetoNo(o)));
+    return ul;
+  }
+  function abrirColuna(key, h) {
+    const cfg = MODAIS_COLUNA[key];
+    if (!cfg) return;
+    let conteudo;
+    if (key === "objetos") conteudo = renderDemandasGrupo(h);
+    else if (key === "dados_hierarquizacao") conteudo = renderCompleto(h);
+    else conteudo = jvViewer(h[key]);
+    preencherModal(cfg.modal, `${cfg.titulo} — ${h.codigo}`, conteudo);
+  }
+  function matrizHtml(m) {
+    const linhas = Array.isArray(m) ? m : (m && Array.isArray(m.linhas) ? m.linhas : []);
+    if (!linhas.length) return "<p>Matriz não enviada ou vazia.</p>";
+    const cols = [];
+    linhas.forEach((r) => Object.keys(r || {}).forEach((k) => { if (!cols.includes(k)) cols.push(k); }));
+    const head = cols.map((c) => `<th>${esc(c)}</th>`).join("");
+    const body = linhas.map((r) => `<tr>${cols.map((c) => `<td title="${esc(r?.[c] ?? "")}">${esc(r?.[c] ?? "")}</td>`).join("")}</tr>`).join("");
+    return `<div class="matriz-table-wrap"><table class="admin-table matriz-view-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+  }
+  function abrirMatriz(codigo) {
+    const h = listaCache.find((x) => x.codigo === codigo);
+    matrizAtual = { codigo, matriz: matrizDaHier(h) };
+    preencherModal("modal-matriz", `Matriz de critérios e premissas — ${codigo}`, matrizHtml(matrizAtual.matriz));
   }
   function localizacao(o) {
     return (
@@ -716,13 +1088,62 @@
       erro(err.message);
     }
   };
-  $("json-modal-close").onclick = () => $("json-modal").classList.add("hidden");
-  $("json-modal").onclick = (e) => {
-    if (e.target === $("json-modal")) $("json-modal").classList.add("hidden");
-  };
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") $("json-modal").classList.add("hidden");
+  document.querySelectorAll("[data-modal]").forEach((modal) => {
+    const closeBtn = modal.querySelector("[data-modal-close]");
+    if (closeBtn) closeBtn.onclick = () => modal.classList.add("hidden");
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.add("hidden"); };
   });
+  const matrizDownloadBtn = document.querySelector("#modal-matriz [data-modal-download]");
+  if (matrizDownloadBtn) {
+    matrizDownloadBtn.onclick = () => {
+      if (!matrizAtual) return;
+      const blob = new Blob([JSON.stringify(matrizAtual.matriz, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `matriz-${matrizAtual.codigo}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    document.querySelectorAll("[data-modal]").forEach((m) => m.classList.add("hidden"));
+  });
+  const bindLote = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+  bindLote("hier-bulk-edit", () => { if (!selecionadasHier.size) return; hierEditMode = true; renderTabela(); });
+  bindLote("hier-bulk-cancel", () => { hierEditMode = false; renderTabela(); });
+  bindLote("hier-bulk-save", async () => {
+    const codigos = [...selecionadasHier];
+    try {
+      for (const cod of codigos) {
+        const tr = $("hier-tbody").querySelector(`tr[data-codigo="${cod.replace(/"/g, '\\"')}"]`);
+        if (!tr) continue;
+        const payload = {};
+        tr.querySelectorAll("[data-k]").forEach((el) => { payload[el.dataset.k] = el.value; });
+        await HierApi.atualizar(cod, payload);
+      }
+      hierEditMode = false;
+      await carregarLista();
+    } catch (e) { $("hier-error").textContent = e.message; $("hier-error").classList.remove("hidden"); }
+  });
+  bindLote("hier-bulk-delete", async () => {
+    const codigos = [...selecionadasHier];
+    if (!codigos.length) return;
+    if (!window.confirm(`Excluir definitivamente ${codigos.length} hierarquização(ões)? Esta ação não pode ser desfeita.`)) return;
+    try {
+      for (const cod of codigos) await HierApi.excluir(cod);
+      selecionadasHier.clear();
+      hierEditMode = false;
+      await carregarLista();
+    } catch (e) { $("hier-error").textContent = e.message; $("hier-error").classList.remove("hidden"); }
+  });
+  if ($("hier-select-all")) {
+    $("hier-select-all").onchange = () => {
+      if ($("hier-select-all").checked) listaCache.forEach((h) => selecionadasHier.add(h.codigo));
+      else selecionadasHier.clear();
+      renderTabela();
+    };
+  }
   async function iniciar() {
     carregarLista();
     carregarUniverso();

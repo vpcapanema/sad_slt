@@ -374,6 +374,7 @@
       el.checked = false;
     });
     syncProgramaPanelsVisibility();
+    updateProgramaVinculoFlow();
   }
 
   function resetProjetoWizard() {
@@ -383,6 +384,7 @@
       el.checked = false;
     });
     syncProjetoPanelsVisibility();
+    updateProjetoVinculoFlow();
   }
 
   function getNextProgramaStep(from) {
@@ -503,6 +505,7 @@
     const val = document.querySelector('input[name="pg-vinculo"]:checked')?.value;
     if (!val) return;
     updatePgVinculoPanel();
+    updateProgramaVinculoFlow();
     renumberProgramaSections();
     renderProgramaReview();
   }
@@ -511,7 +514,30 @@
     const val = document.querySelector('input[name="pj-vinculo"]:checked')?.value;
     if (!val) return;
     updatePjVinculoPanel();
+    updateProjetoVinculoFlow();
     renumberProjetoSections();
+  }
+
+  /**
+   * Vínculo = sim revela o passo 2 (contexto institucional) automaticamente;
+   * o "Continuar" do passo 1 só aparece quando vínculo = não.
+   */
+  function updateProjetoVinculoFlow() {
+    const form = $("#form-cadastro");
+    if (!form) return;
+    const choice = document.querySelector('input[name="pj-vinculo"]:checked')?.value || null;
+    const nextBtn = form.querySelector('.step-panel[data-step="1"] .btn-next');
+    if (nextBtn) nextBtn.classList.toggle("hidden", choice !== "nao");
+    if (choice === "sim") revealProjetoStep(2);
+  }
+
+  function updateProgramaVinculoFlow() {
+    const form = $("#form-programa");
+    if (!form) return;
+    const choice = document.querySelector('input[name="pg-vinculo"]:checked')?.value || null;
+    const nextBtn = form.querySelector('.pg-step-panel[data-step="1"] .btn-next');
+    if (nextBtn) nextBtn.classList.toggle("hidden", choice !== "nao");
+    if (choice === "sim") revealProgramaStep(2);
   }
 
   function getPjVinculoTipo() {
@@ -1515,6 +1541,17 @@
       reviewRow("Carteira", escapeHtml(carteira?.nome || "—")),
     ];
 
+    const vigIni = $("#prj-vig-ini").value;
+    const vigFim = $("#prj-vig-fim").value;
+    const valorGlobal = $("#prj-valor").value;
+    const fmtDataBr = (v) => { const p = String(v).slice(0, 10).split("-"); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : v; };
+    const fmtMoedaBr = (v) => "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const vigenciaRows = [
+      reviewRow("Vigência início", escapeHtml(vigIni ? fmtDataBr(vigIni) : "—")),
+      reviewRow("Vigência fim", escapeHtml(vigFim ? fmtDataBr(vigFim) : "—")),
+      reviewRow("Valor global", escapeHtml(valorGlobal ? fmtMoedaBr(valorGlobal) : "—")),
+    ];
+
     const containment = SLTGeometria.getContainment?.();
     let extraLocalizacaoHtml = "";
     if (isPjVinculoAtivo() && containment && containment.status !== "inside") {
@@ -1550,6 +1587,7 @@
       classificacaoRows.length
         ? reviewSection("Classificação no plano", classificacaoRows.join(""))
         : "",
+      reviewSection("Vigência e recursos", vigenciaRows.join("")),
       reviewSection("Complementos", complementosRows.join("")),
       reviewSection("Localização geográfica", localizacaoBody),
     ]
@@ -1598,6 +1636,9 @@
         carteira_id: $("#carteira").value || null,
         regionalidades: SLTGeometria.getRegionalidades?.() || null,
       },
+      vigencia_inicio: $("#prj-vig-ini").value || null,
+      vigencia_fim: $("#prj-vig-fim").value || null,
+      valor_global: $("#prj-valor").value ? Number($("#prj-valor").value) : null,
     };
   }
 

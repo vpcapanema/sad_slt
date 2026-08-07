@@ -191,7 +191,10 @@ $migrations = @(
     "054_seed_servicos_publicos_portal.sql",
     "055_seed_mapbiomas_portal.sql",
     "056_geom_aceita_z.sql",
-    "057_classe_modelagem_atributo_objeto.sql"
+    "057_classe_modelagem_atributo_objeto.sql",
+    "058_projeto_vigencia_recursos.sql",
+    "059_drop_schemas_legados.sql",
+    "060_remove_hierarq_apta.sql"
 )
 
 if ($OnlyMigration) {

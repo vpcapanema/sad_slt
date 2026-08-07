@@ -11,6 +11,7 @@
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
   <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
+  <link rel="stylesheet" href="/assets/css/atributos-objetos.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
@@ -24,7 +25,7 @@
     <p>Normalize e pondere atributos próprios dos projetos e riscos herdados da Fase 1.</p>
   </section>
   <section class="card ahp-step-section"><div class="ahp-section-label"><span>1. Selecionar a rodada</span></div><div class="ahp-section-body"><label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option>Carregando…</option></select></label><div id="fase-resumo" class="fase-summary hidden"></div></div></section>
-  <section class="card ahp-step-section"><div class="ahp-section-label"><span>2. Conferir os critérios de ajuste</span></div><div class="ahp-section-body"><p>Critérios provenientes da matriz da rodada e riscos herdados da Fase 1.</p><div id="fase3-criterios" class="fase3-criteria-grid"></div><div class="fase-actions"><a class="fase-link" href="/restrict/geoespacial/configurador-ajuste/">Abrir Ajuste Fino de Prioridades</a></div></div></section>
+  <section class="card ahp-step-section"><div class="ahp-section-label"><span>2. Conferir os critérios de ajuste</span><a class="ahp-section-action" href="/restrict/geoespacial/configurador-ajuste/" title="Abrir Ajuste Fino de Prioridades" aria-label="Abrir Ajuste Fino de Prioridades"><i class="fas fa-sliders"></i></a></div><div class="ahp-section-body"><div id="fase3-criterios" class="fase3-criteria-grid" hidden style="display:none"></div>{% include "componentes/_tabela_atributos_objetos.html" %}</div></section>
   <section class="card ahp-step-section"><div class="ahp-section-label"><span>3. Definir regras de cálculo</span></div><div class="ahp-section-body"><div class="fase-grid-3">
       <label>Modo dos pesos
         <select id="fase3-modo-pesos"><option value="normalizados">Normalizados</option><option value="livres">Livres</option></select>
@@ -42,6 +43,7 @@
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
+  <script src="/restrict/hierarquizacao/js/atributos-objetos.js"></script>
   <script src="/restrict/hierarquizacao/js/fase3.js"></script>
   <script src="/assets/js/paginas/hierarquizacao-fase3-ajuste-fino-inline-1.js"></script>
 {% endblock %}

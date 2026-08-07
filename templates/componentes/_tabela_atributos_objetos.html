@@ -1,0 +1,96 @@
+{#
+  Componente: Tabela de Atributos dos Objetos de Demanda (Fase 3 — Ajuste fino)
+
+  - Estilo: opção 1 (.fase-table).
+  - Colunas DINÂMICAS: uma por critério de Etapa 3 (Priorização) da matriz de
+    critérios e premissas enviada na gestão de hierarquizações. O cabeçalho de
+    cada coluna é o ALIAS AMIGÁVEL do valor da coluna "Variável"; a coluna
+    "Unidade de medida" define o tipo de dado aceito nas células daquela coluna.
+  - Linhas DINÂMICAS: um objeto de demanda por linha. Só são povoadas nas páginas
+    da Fase 3 (feito depois). Aqui fica apenas o esqueleto + os templates de render.
+  - Fonte das colunas: endpoint de atributos-objetos (arquivo de rotas separado).
+
+  Hooks para o JS:
+    [data-atributos-objetos]  -> raiz do componente
+    [data-atributos-thead] tr -> onde as colunas são injetadas (após a 1ª <th>)
+    [data-atributos-tbody]    -> onde as linhas (objetos) são injetadas
+    <template id="tpl-atributo-coluna">  -> cabeçalho de coluna
+    <template id="tpl-atributo-linha">   -> linha (identidade do objeto)
+    <template id="tpl-atributo-celula">  -> célula de input (por tipo)
+#}
+<div class="componente-atributos-objetos" id="atributos-objetos-demanda" data-atributos-objetos>
+  <div class="atributos-legenda" aria-hidden="true">
+    <span class="fase-status fase-status--warn">Obrigatório</span>
+    <span class="fase-status fase-status--ok">Preenchido</span>
+    <span class="fase-status">Pendente</span>
+  </div>
+
+  <div class="atributos-table-shell">
+    <table class="admin-table admin-table--atributos">
+      <thead data-atributos-thead>
+        <tr>
+          <th scope="col" class="col-objeto">Objeto de demanda</th>
+          {# demais <th> (estáticas + dinâmicas) injetados dinamicamente #}
+        </tr>
+      </thead>
+      <tbody data-atributos-tbody>
+        {# linhas (objetos de demanda) injetadas dinamicamente #}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="fase-empty" data-atributos-sem-colunas hidden>
+    Nenhum critério de Etapa 3 (Priorização) encontrado na matriz desta hierarquização.
+  </div>
+  <div class="fase-empty" data-atributos-sem-linhas hidden>
+    Selecione uma hierarquização com objetos de demanda para preencher os atributos.
+  </div>
+  <div class="ahp-info-note ahp-info-note--error" data-atributos-erro hidden></div>
+
+  {# ---- Templates de renderização (consumidos pelo JS da Fase 3) ---- #}
+
+  {# Cabeçalho de coluna-atributo: alias (Variável) + unidade + selo mandatório + relação #}
+  <template id="tpl-atributo-coluna">
+    <th scope="col" class="col-atributo" data-col-id="" data-tipo="" data-unidade=""
+        data-relacao="" data-mandatorio="">
+      <span class="col-atributo-grupo" aria-hidden="true"></span>
+      <span class="col-atributo-alias" title=""></span>
+      <span class="col-atributo-unidade"></span>
+      <span class="col-atributo-relacao" aria-hidden="true"></span>
+      <span class="fase-status fase-status--warn col-atributo-mandatorio" hidden>Obrigatório</span>
+    </th>
+  </template>
+
+  {# Linha = identidade do objeto de demanda; as células de atributo são anexadas depois #}
+  <template id="tpl-atributo-linha">
+    <tr data-objeto-id="">
+      <td class="col-objeto">
+        <strong class="objeto-codigo"></strong>
+        <br><small class="objeto-nome"></small>
+        <span class="objeto-tipo fase-status" hidden></span>
+      </td>
+      {# células de atributo injetadas dinamicamente #}
+    </tr>
+  </template>
+
+  {# Célula de input — o tipo do input é definido pela Unidade de medida da coluna #}
+  <template id="tpl-atributo-celula">
+    <td class="col-atributo-valor" data-col-id="">
+      {# numérico #}
+      <input class="atributo-input atributo-input--numerico" type="number" inputmode="decimal"
+             step="any" hidden>
+      {# booleano #}
+      <select class="atributo-input atributo-input--booleano" hidden>
+        <option value="">—</option>
+        <option value="1">Sim</option>
+        <option value="0">Não</option>
+      </select>
+      {# categórico (vocabulário definido pela coluna) #}
+      <select class="atributo-input atributo-input--categorico" hidden>
+        <option value="">—</option>
+      </select>
+      {# texto (fallback) #}
+      <input class="atributo-input atributo-input--texto" type="text" hidden>
+    </td>
+  </template>
+</div>

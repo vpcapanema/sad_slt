@@ -31,3 +31,23 @@ def find_active_by_username(username: str) -> dict[str, Any] | None:
 
     with get_sigma_connection() as conn:
         return conn.execute(_SELECT_USUARIO, {"username": username}).fetchone()
+
+
+_SELECT_NOMES = """
+    SELECT
+        u.id,
+        COALESCE(p.nome_completo, u.username) AS nome_pessoa
+    FROM usuarios.usuario u
+    LEFT JOIN cadastro.pessoa p ON p.id = u.pessoa_id
+    WHERE u.id = ANY(%(ids)s)
+"""
+
+
+def nomes_por_ids(ids: list[str]) -> dict[str, str]:
+    """Mapeia UUIDs de usuário para o nome da pessoa associada (via FK pessoa)."""
+    ids = [i for i in {str(x) for x in ids if x}]
+    if not ids:
+        return {}
+    with get_sigma_connection() as conn:
+        rows = conn.execute(_SELECT_NOMES, {"ids": ids}).fetchall()
+    return {str(r["id"]): r["nome_pessoa"] for r in rows if r.get("nome_pessoa")}

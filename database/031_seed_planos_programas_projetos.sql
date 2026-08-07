@@ -55,7 +55,7 @@ DECLARE
     v_vinc_tipo text;
     proj_cod    text;
 
-    status_pool text[] := ARRAY['analise_rascunho','analise_em_avaliacao','analise_aprovada','hierarq_apta'];
+    status_pool text[] := ARRAY['analise_rascunho','analise_em_avaliacao','analise_aprovada'];
 BEGIN
     FOR p IN 1 .. array_length(plano_cod, 1) LOOP
         SELECT id, geom INTO v_ra_id, v_ra_geom

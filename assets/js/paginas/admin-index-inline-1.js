@@ -34,7 +34,7 @@ const countStatuses = (items, statuses) =>
           "stat-aptas",
           countStatuses(
             all,
-            new Set(["elegivel_ahp", "fila_hierarquizacao", "hierarq_apta"]),
+            new Set(["elegivel_ahp", "fila_hierarquizacao", "analise_aprovada"]),
           ),
         );
         setValue(

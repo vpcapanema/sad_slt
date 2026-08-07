@@ -48,6 +48,9 @@ class DemandaCreateSchema(BaseModel):
     geometria: GeometriaSchema | None = None
     classificacao: dict[str, Any] | None = None
     complementos: dict[str, Any] | None = None
+    vigencia_inicio: str | None = None
+    vigencia_fim: str | None = None
+    valor_global: float | None = None
 
 
 class DemandaResponseSchema(BaseModel):
@@ -76,6 +79,9 @@ class DemandaResponseSchema(BaseModel):
     geometria: GeometriaSchema | None = None
     classificacao: dict[str, Any] | None = None
     complementos: dict[str, Any] | None = None
+    vigencia_inicio: str | None = None
+    vigencia_fim: str | None = None
+    valor_global: float | None = None
 
 
 class RepresentanteUpdateSchema(BaseModel):
@@ -103,3 +109,6 @@ class DemandaUpdateSchema(BaseModel):
     lat: float | None = None
     lng: float | None = None
     representante: RepresentanteUpdateSchema | None = None
+    vigencia_inicio: str | None = None
+    vigencia_fim: str | None = None
+    valor_global: float | None = None

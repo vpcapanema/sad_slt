@@ -32,17 +32,17 @@ STATUS_FASE_HIERARQUIZACAO = "hierarquizacao"
 STATUS_FASE_EXECUCAO = "execucao"
 
 STATUS_INICIAL_DEMANDA = "analise_rascunho"
-STATUS_POS_APROVACAO = "hierarq_apta"
+STATUS_POS_APROVACAO = "analise_aprovada"
 # Confirmação do universo da análise (módulo de configuração) move a demanda
-# de "apta" para "em hierarquização" — todo o Bloco 2 vive neste status.
+# de "aprovada" para "em hierarquização" — todo o Bloco 2 vive neste status.
 STATUS_EM_HIERARQUIZACAO = "hierarq_em_andamento"
 
-# Origens permitidas para POST /aprovar (handoff → apta à hierarquização)
-STATUS_PRE_APROVACAO = frozenset({"analise_em_avaliacao", "analise_aprovada"})
+# Origens permitidas para POST /aprovar (handoff → aprovada)
+STATUS_PRE_APROVACAO = frozenset({"analise_em_avaliacao"})
 
-# Universo AHP comparável (apta, em hierarquização ou já hierarquizada/salva)
+# Universo AHP comparável (aprovada, em hierarquização ou já hierarquizada/salva)
 STATUS_UNIVERSO_AHP = frozenset(
-    {"hierarq_apta", "hierarq_em_andamento", "hierarq_finalizada"}
+    {"analise_aprovada", "hierarq_em_andamento", "hierarq_finalizada"}
 )
 
 # Rótulos de exibição por tipo (plano / programa / projeto) — Camada 2 e pós-hierarquizado
@@ -54,11 +54,6 @@ def _rotulos_tipo(*, plano: str, programa: str, projeto: str) -> dict[str, str]:
 
 
 STATUS_ROTULOS_POR_TIPO: dict[str, dict[str, str]] = {
-    "hierarq_apta": _rotulos_tipo(
-        plano="Plano apto à hierarquização",
-        programa="Programa apto à hierarquização",
-        projeto="Projeto apto à hierarquização",
-    ),
     "hierarq_em_andamento": _rotulos_tipo(
         plano="Plano em hierarquização",
         programa="Programa em hierarquização",

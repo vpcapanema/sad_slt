@@ -30,6 +30,14 @@ def _parse_uuid(value: str, field: str) -> str:
         raise DemandaValidationError(f"{field} inválido (UUID esperado).", field=field) from exc
 
 
+def _iso_date(value: Any) -> str | None:
+    if value is None:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
 def _geometria_to_geojson_str(geometria: dict[str, Any] | None) -> tuple[str | None, str | None]:
     if not geometria:
         return None, None
@@ -85,6 +93,9 @@ def _row_to_response(row: dict[str, Any]) -> DemandaResponseSchema:
         geometria=geometria,
         classificacao=row.get("classificacao"),
         complementos=row.get("complementos"),
+        vigencia_inicio=_iso_date(row.get("vigencia_inicio")),
+        vigencia_fim=_iso_date(row.get("vigencia_fim")),
+        valor_global=float(row["valor_global"]) if row.get("valor_global") is not None else None,
     )
 
 
@@ -156,6 +167,9 @@ def _build_persist_row(payload: DemandaCreateSchema, codigo: str) -> dict[str, A
         "geometria_geojson": geom_json,
         "classificacao": payload.classificacao,
         "complementos": payload.complementos,
+        "vigencia_inicio": (payload.vigencia_inicio or None),
+        "vigencia_fim": (payload.vigencia_fim or None),
+        "valor_global": payload.valor_global,
     }
     normalizar_projeto(row, pessoa_id=str(pessoa_id))
     return demanda_repository.prepare_insert_params(row)
