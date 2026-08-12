@@ -19,12 +19,6 @@
     <template id="tpl-atributo-celula">  -> célula de input (por tipo)
 #}
 <div class="componente-atributos-objetos" id="atributos-objetos-demanda" data-atributos-objetos>
-  <div class="atributos-legenda" aria-hidden="true">
-    <span class="fase-status fase-status--warn">Obrigatório</span>
-    <span class="fase-status fase-status--ok">Preenchido</span>
-    <span class="fase-status">Pendente</span>
-  </div>
-
   <div class="atributos-table-shell">
     <table class="admin-table admin-table--atributos">
       <thead data-atributos-thead>
@@ -39,6 +33,11 @@
     </table>
   </div>
 
+  <div class="atributos-legenda" aria-hidden="true">
+    <span><strong>1ª linha:</strong> valor normalizado (0–1)</span>
+    <span><strong>2ª linha:</strong> valor original</span>
+  </div>
+
   <div class="fase-empty" data-atributos-sem-colunas hidden>
     Nenhum critério de Etapa 3 (Priorização) encontrado na matriz desta hierarquização.
   </div>
@@ -47,17 +46,25 @@
   </div>
   <div class="ahp-info-note ahp-info-note--error" data-atributos-erro hidden></div>
 
+  <div class="atributos-pesos" data-atributos-pesos hidden>
+    <section class="atributos-pesos-grupo secao-pesos-cadastro">
+      <header><h3>Atributos do cadastro</h3><output data-soma-pesos="cadastro">1,000</output></header>
+      <div data-controles-pesos="cadastro"></div>
+    </section>
+    <section class="atributos-pesos-grupo secao-pesos-dinamicos">
+      <header><h3>Atributos dinâmicos</h3><output data-soma-pesos="dinamico">1,000</output></header>
+      <div data-controles-pesos="dinamico"></div>
+    </section>
+    <p class="ahp-help-text atributos-pesos-ajuda">Cada grupo soma 1. Ao alterar um peso, o saldo é redistribuído automaticamente entre os demais atributos do mesmo grupo. No cálculo final, os dois grupos têm participação equivalente.</p>
+  </div>
+
   {# ---- Templates de renderização (consumidos pelo JS da Fase 3) ---- #}
 
-  {# Cabeçalho de coluna-atributo: alias (Variável) + unidade + selo mandatório + relação #}
+  {# Cabeçalho de coluna-atributo: somente o nome; a cor identifica a origem. #}
   <template id="tpl-atributo-coluna">
-    <th scope="col" class="col-atributo" data-col-id="" data-tipo="" data-unidade=""
-        data-relacao="" data-mandatorio="">
-      <span class="col-atributo-grupo" aria-hidden="true"></span>
+    <th scope="col" class="col-atributo" data-col-id="">
       <span class="col-atributo-alias" title=""></span>
       <span class="col-atributo-unidade"></span>
-      <span class="col-atributo-relacao" aria-hidden="true"></span>
-      <span class="fase-status fase-status--warn col-atributo-mandatorio" hidden>Obrigatório</span>
     </th>
   </template>
 
@@ -66,8 +73,7 @@
     <tr data-objeto-id="">
       <td class="col-objeto">
         <strong class="objeto-codigo"></strong>
-        <br><small class="objeto-nome"></small>
-        <span class="objeto-tipo fase-status" hidden></span>
+        <small class="objeto-nome"></small>
       </td>
       {# células de atributo injetadas dinamicamente #}
     </tr>
@@ -76,21 +82,8 @@
   {# Célula de input — o tipo do input é definido pela Unidade de medida da coluna #}
   <template id="tpl-atributo-celula">
     <td class="col-atributo-valor" data-col-id="">
-      {# numérico #}
-      <input class="atributo-input atributo-input--numerico" type="number" inputmode="decimal"
-             step="any" hidden>
-      {# booleano #}
-      <select class="atributo-input atributo-input--booleano" hidden>
-        <option value="">—</option>
-        <option value="1">Sim</option>
-        <option value="0">Não</option>
-      </select>
-      {# categórico (vocabulário definido pela coluna) #}
-      <select class="atributo-input atributo-input--categorico" hidden>
-        <option value="">—</option>
-      </select>
-      {# texto (fallback) #}
-      <input class="atributo-input atributo-input--texto" type="text" hidden>
+      <strong class="atributo-valor-normalizado">—</strong>
+      <small class="atributo-valor-original">—</small>
     </td>
   </template>
 </div>

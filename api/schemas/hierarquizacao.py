@@ -52,7 +52,6 @@ class HierarquizacaoFase1ExecutarSchema(BaseModel):
     par_id: str | None = Field(default=None, description="produto_id compartilhado pelas camadas homologadas (opcional quando vindas da biblioteca canônica)")
     camada_restricao_id: str
     camada_risco_id: str
-    configuracao_fatiamento_id: str
 
 
 class ConfiguracaoFatiamentoFase1Schema(BaseModel):

@@ -6,28 +6,9 @@
     document.querySelector("[data-gerador-modulo]")?.dataset.geradorModulo ||
     "fase1";
   const state = { produto: null };
-  const host = document.querySelector("[data-shared-containers]");
-  const sectionNumbers = { indice: 2, gp: 3, detalhes: 4 };
-  const indiceSection =
-    modulo === "fase1"
-      ? `
-    <section class="gerador-section" id="indice-riscos-restricoes">
-      <header class="gerador-section__header"><span class="gerador-section__number">${sectionNumbers.indice}</span><div class="gerador-section__heading"><h2>Índice de riscos e restrições</h2><p>Fundamentos, critérios canônicos e limiares metodológicos usados por este fluxo.</p></div></header>
-      <div class="gerador-section__body">
-        <div class="fase1-methodology-link">
-          <div><strong>Biblioteca e índices de risco e restrição</strong><p>Consulte os fundamentos, os 23 critérios canônicos e configure os limiares usados por este fluxo.</p><span id="metodologia-status" class="fase1-version">Configuração não validada</span></div>
-          <a class="btn btn-secondary" href="/restrict/geoespacial/configuracao-risco-restricao/">Abrir configuração metodológica</a>
-        </div>
-      </div>
-    </section>`
-      : "";
-
-  host.innerHTML = `
-    ${indiceSection}
-    <section class="gerador-section gerador-section--gp" id="bancada-geoprocessamento">
-      <header class="gerador-section__header"><span class="gerador-section__number">${sectionNumbers.gp}</span><div class="gerador-section__heading"><h2>Geoprocessamento</h2><p>Configure e execute o fluxo diretamente no componente. Gera a camada de saída no tipo selecionado no cadastro.</p></div></header>
-      <div class="gerador-section__body"><iframe id="gp-frame" class="gerador-gp-frame" title="Componente de geoprocessamento" src="/restrict/geoespacial/bancada/?modulo=${modulo}&embutido=1"></iframe></div>
-    </section>
+  const sectionNumbers = { gp: 2, detalhes: 3 };
+  const detalhesHost = document.querySelector("[data-shared-detalhes]");
+  if (detalhesHost) detalhesHost.innerHTML = `
     <section class="gerador-section" id="detalhes-processamento">
       <header class="gerador-section__header"><span class="gerador-section__number">${sectionNumbers.detalhes}</span><div class="gerador-section__heading"><h2>Detalhes e interação do processamento</h2><p>Acompanhe eventos, resultados, alertas e decisões da execução.</p></div></header>
       <div class="gerador-section__body gerador-details"><div class="gerador-status-card"><div class="gerador-status-label">Camada de saída</div><div id="produto-atual" class="gerador-status-value">Não cadastrada</div><hr><div class="gerador-status-label">Estado</div><div id="estado-processamento" class="gerador-status-value">Aguardando configuração</div></div><div><div id="eventos-processamento" class="gerador-events"><div class="gerador-event">Os eventos da bancada aparecerão aqui.</div></div><div class="gerador-actions"><button class="btn btn-secondary" id="limpar-eventos" type="button">Limpar mensagens</button></div></div></div>
@@ -98,15 +79,25 @@
     event.innerHTML = `<time>${new Date().toLocaleTimeString("pt-BR")}</time><strong>${label}</strong>${detail ? ` — ${detail.nome || detail.camada_id || detail.raster_id || detail.id || "concluído"}` : ""}`;
     container.prepend(event);
   }
+  const CORES_TIPO_SAIDA = { restricao: "#dc2626", risco: "#f2c200" };
+  function corDaSaida() {
+    const tipo = value("tipo-saida") || state.produto?.configuracao?.tipo_saida;
+    return CORES_TIPO_SAIDA[tipo] || null;
+  }
+  function idDoEvento(detail) {
+    if (!detail) return null;
+    return detail.resultado?.camada_id || detail.resultado?.raster_id || detail.camada_id || detail.raster_id || detail.id || detail.recursos?.[0]?.id || null;
+  }
+  function aplicarCorSaida(id) {
+    const cor = corDaSaida();
+    if (cor && id) window.gpApp?.aplicarCorPadraoCamada?.(id, cor);
+  }
   function conectarComponente() {
-    const frame = $("#gp-frame");
-    frame.addEventListener("load", () => {
-      const doc = frame.contentDocument;
-      ["pronto", "recurso-importado", "resultado"].forEach(name => doc?.addEventListener(`slt:geoprocessamento:${name}`, event => {
-        $("#estado-processamento").textContent = name === "resultado" ? "Resultado produzido" : "Bancada ativa";
-        registrarEvento(`Geoprocessamento: ${name}`, event.detail);
-      }));
-    });
+    ["pronto", "recurso-importado", "resultado"].forEach(name => document.addEventListener(`slt:geoprocessamento:${name}`, event => {
+      $("#estado-processamento").textContent = name === "resultado" ? "Resultado produzido" : "Bancada ativa";
+      registrarEvento(`Geoprocessamento: ${name}`, event.detail);
+      if (name !== "pronto") aplicarCorSaida(idDoEvento(event.detail));
+    }));
   }
   $("#salvar-produto").addEventListener("click", salvarProduto);
   $("#limpar-eventos").addEventListener("click", () => $("#eventos-processamento").innerHTML = "");
@@ -116,13 +107,5 @@
       document.getElementById("codigo").value = codigo;
     });
   });
-  if (modulo === "fase1") {
-    const metodologia = fase1Metodologia();
-    const status = $("#metodologia-status");
-    if (status && metodologia?.validada_em) {
-      status.textContent = `Validada · versão ${metodologia.versao}`;
-      status.classList.add("is-valid");
-    }
-  }
   conectarComponente();
 })();

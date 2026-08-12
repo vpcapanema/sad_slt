@@ -3,7 +3,7 @@
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 
-{% block titulo %}Biblioteca Canônica de Risco e Restrição — SICARD{% endblock %}
+{% block titulo %}Arcabouço Teórico-Conceitual de Risco e Restrição — SICARD{% endblock %}
 {% block classes_body %}gerador-page biblioteca-risco-page{% endblock %}
 {% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
 
@@ -17,14 +17,17 @@
         <div class="gerador-section__body">
           <div class="gerador-breadcrumb">
             <a href="/restrict/">Início</a> ›
-            <a href="/restrict/geoespacial/">Geoespacial</a> › Biblioteca canônica
+            <a href="/restrict/geoespacial/">Geoespacial</a> › Arcabouço teórico-conceitual
           </div>
           <h1 class="gerador-title">
-            Biblioteca Canônica de Risco e Restrição
+            Arcabouço Teórico-Conceitual de Risco e Restrição
           </h1>
           <p class="gerador-subtitle">
-            Referencial técnico e valores sugeridos para construir as camadas
-            consolidadas da Fase 1.
+            Arcabouço teórico-conceitual no qual o sistema se alicerça para
+            firmar suposições e decisões sobre risco e restrição na triagem
+            territorial da Fase 1, reunindo os fundamentos que orientam a
+            graduação de condições incertas e a aplicação de impedimentos
+            formais.
           </p>
         </div>
       </section>
@@ -34,8 +37,8 @@
           <div class="gerador-section__heading">
             <h2>Risco e restrição</h2>
             <p>
-              Conceitos adotados para empreendimentos de logística e
-              transportes.
+              Fundamentos teóricos que sustentam a distinção entre condição
+              incerta (risco) e condição impeditiva (restrição).
             </p>
           </div>
         </header>
@@ -109,6 +112,16 @@
               podem ser eliminadas antes da alocação de recursos, e os riscos
               remanescentes podem ser comparados durante a formação da carteira.
             </p>
+            <p>
+              Para assegurar coerência conceitual e operacional, o sistema adota
+              exclusivamente duas classes: o risco, tratado como condição
+              incerta e abordado de forma gradual e condicionante por meio do
+              índice de risco calculado; e a restrição, tratada como condição
+              impeditiva e decidida por regra booleana não compensatória. Não
+              são admitidas classes intermediárias, de modo que toda a triagem
+              territorial da Fase 1 se organiza unicamente nessas duas
+              categorias.
+            </p>
           </div>
           <div class="fase1-concept-grid">
             <article class="card-risco fase1-concept fase1-concept--risk">
@@ -137,384 +150,355 @@
           </div>
         </div>
       </section>
-      <section class="secao-indice-de-risco-calculado gerador-section">
+      <section class="secao-camadas-de-restricao-e-risco gerador-section">
         <header class="gerador-section__header">
           <span class="gerador-section__number">2</span>
           <div class="gerador-section__heading">
-            <h2>Índice de risco calculado</h2>
-            <p>Modelo comum e comparável para todos os critérios de risco.</p>
+            <h2>Camadas de restrição e risco</h2>
+            <p>
+              Camadas oficiais utilizadas para gerar as superfícies espaciais de
+              restrição e de risco na triagem territorial da Fase 1.
+            </p>
           </div>
         </header>
         <div class="gerador-section__body">
           <div class="fase1-theory-text">
             <p>
-              O Índice de Risco Calculado — IRc — é definido como uma medida
-              sintética da pressão exercida por uma ocorrência territorial sobre
-              a implantação do empreendimento. Por meio do índice, critérios de
-              diferentes naturezas são convertidos para uma escala comum. A
-              comparação entre alternativas é, assim, realizada antes do
-              licenciamento e do detalhamento executivo.
+              As superfícies de restrição e de risco são construídas
+              exclusivamente a partir das camadas relacionadas a seguir, todas
+              provenientes de bases oficiais. As camadas de restrição
+              correspondem a condições impeditivas verificáveis; as camadas de
+              risco correspondem a condições incertas passíveis de graduação. A
+              tabela apresenta, para cada camada, a categoria adotada, a fonte
+              oficial e o fundamento resumido do enquadramento.
             </p>
-            <p>
-              O índice é utilizado para indicar condições associadas à
-              sensibilidade territorial, à duração do licenciamento, ao esforço
-              técnico e à incerteza da decisão. Não é produzida, por esse
-              procedimento, declaração de inviabilidade jurídica ou ambiental.
-              Também não são substituídos os estudos exigidos nas etapas
-              posteriores.
-            </p>
-            <p>
-              Para cada critério, são atribuídas métricas absolutas aos quatro
-              componentes. Em seguida, cada métrica é normalizada no intervalo
-              de 0 a 1. Os valores normalizados são combinados com os
-              respectivos pesos para a obtenção do índice composto. Durante a
-              execução da Fase 1, esse índice é ativado pela interseção
-              espacial. A variável de interseção assume valor 1 quando a
-              sobreposição é confirmada e valor 0 quando não é identificada. O
-              emprego da combinação ponderada é fundamentado na avaliação
-              multicritério espacial, desde que as funções de normalização e os
-              pesos sejam explicitados e submetidos à análise de sensibilidade
-              (<a
-                href="https://doi.org/10.1111/1467-9671.00035"
-                target="_blank"
-                rel="noopener"
-                >Malczewski, 2000</a
-              >).
-            </p>
-          </div>
-          <div
-            class="fase1-equation-flow"
-            aria-label="Sequência de cálculo do índice de risco"
-          >
-            <article class="card-configuracao-risco-restricao">
-              <span>1. Índice composto</span>
-              <code>I = Σ(wj × xj) ÷ Σ(wj)</code>
-              <p>
-                <code>xj</code> representa o componente normalizado e
-                <code>wj</code> representa o peso correspondente.
-              </p>
-            </article>
-            <span class="fase1-equation-flow__arrow" aria-hidden="true">→</span>
-            <article class="card-configuracao-risco-restricao">
-              <span>2. Ativação espacial</span>
-              <code>IRc = IE × I × 100</code>
-              <p>
-                <code>IE = 1</code> quando a interseção é confirmada e
-                <code>IE = 0</code> quando não há interseção.
-              </p>
-            </article>
-          </div>
-          <div class="fase1-component-list">
-            <article class="card-sensibilidade-do-meio-afetado-sma">
-              <h3>Sensibilidade do meio afetado (SMA)</h3>
-              <p>
-                A sensibilidade do meio afetado expressa o grau em que o
-                território pode sofrer efeitos relevantes diante da implantação
-                de uma infraestrutura de transporte. Em sua estimativa, são
-                consideradas a fragilidade ambiental, a presença de comunidades
-                e bens protegidos, os regimes territoriais especiais e as
-                condições físicas locais.
-              </p>
-              <p>
-                O critério é enquadrado entre 1 e 4, desde sensibilidade baixa
-                até muito alta, e normalizado por
-                <code>SMA<sub>i</sub><sup>*</sup> = SMA<sub>i</sub> / 4</code>.
-                Valores próximos de 0,25 indicam menor suscetibilidade à
-                intervenção, enquanto valores próximos de 1,00 revelam meios
-                altamente sensíveis, cuja interferência tende a produzir
-                consequências mais significativas no índice de risco.
-              </p>
-            </article>
-            <article class="card-complexidade-do-licenciamento-cl">
-              <h3>Complexidade do licenciamento (CL)</h3>
-              <p>
-                A complexidade do licenciamento representa o esforço
-                institucional necessário para que o empreendimento obtenha as
-                licenças, autorizações e manifestações aplicáveis. Sua avaliação
-                considera a quantidade de órgãos envolvidos, os estudos
-                requeridos, a necessidade de consultas específicas e os prazos
-                normativos ou observados disponíveis.
-              </p>
-              <p>
-                Essas evidências orientam o enquadramento entre 1 e 4,
-                normalizado por
-                <code>CL<sub>i</sub><sup>*</sup> = CL<sub>i</sub> / 4</code>. Um
-                valor baixo caracteriza um percurso decisório relativamente
-                simples e previsível; um valor elevado indica maior carga
-                processual, coordenação institucional e possibilidade de
-                prolongamento do prazo de implantação, com contribuição mais
-                intensa para o risco calculado.
-              </p>
-            </article>
-            <article class="card-complexidade-tecnica-e-mitigatoria-ctm">
-              <h3>Complexidade técnica e mitigatória (CTM)</h3>
-              <p>
-                A complexidade técnica e mitigatória traduz o esforço adicional
-                necessário para tornar a intervenção tecnicamente viável e
-                reduzir seus efeitos adversos. São consideradas, entre outras
-                exigências, alterações de traçado, estudos especializados,
-                soluções especiais de engenharia, compensações, resgates,
-                reassentamentos e medidas de recuperação. A intensidade e a
-                diversidade dessas providências fundamentam a atribuição do
-                nível.
-              </p>
-              <p>
-                O valor entre 1 e 4 é normalizado por
-                <code>CTM<sub>i</sub><sup>*</sup> = CTM<sub>i</sub> / 4</code>.
-                Resultados próximos do limite inferior correspondem a adequações
-                usuais e controláveis; resultados próximos do limite superior
-                indicam intervenções tecnicamente exigentes, com maior propensão
-                a elevar custos, prazos e risco residual.
-              </p>
-            </article>
-            <article class="card-incerteza-decisoria-id">
-              <h3>Incerteza decisória (ID)</h3>
-              <p>
-                A incerteza decisória expressa o grau de previsibilidade das
-                decisões necessárias à continuidade do empreendimento. Em sua
-                avaliação, são observadas a dependência de manifestações
-                externas, a possibilidade de exigências complementares, a
-                variabilidade dos prazos e a existência de alternativas cuja
-                aceitação dependa de análise técnica específica.
-              </p>
-              <p>
-                O conjunto dessas condições é classificado entre 1 e 4 e
-                normalizado por
-                <code>ID<sub>i</sub><sup>*</sup> = ID<sub>i</sub> / 4</code>.
-                Valores baixos indicam decisões apoiadas em regras estáveis e
-                resultados previsíveis; valores elevados revelam maior
-                dependência de avaliações futuras e, portanto, menor segurança
-                quanto ao prazo, ao custo ou à própria viabilidade da solução. A
-                ausência de informação, isoladamente, não é tratada como prova
-                de incerteza elevada.
-              </p>
-            </article>
-          </div>
-          <p class="fase1-calculation-note">
-            Os quatro componentes são exigidos. Na ausência de métrica
-            fundamentada, o índice não é calculado. O resultado é expresso entre
-            0 e 100, e as métricas absolutas, as normalizações, os pesos e as
-            fontes são preservados na memória de cálculo.
-          </p>
-        </div>
-      </section>
-      <section class="secao-verificacao-de-restricao gerador-section">
-        <header class="gerador-section__header">
-          <span class="gerador-section__number">3</span>
-          <div class="gerador-section__heading">
-            <h2>Verificação de restrição</h2>
-            <p>
-              Regra booleana não compensatória, aplicada fora da tabela do
-              índice de risco.
-            </p>
-          </div>
-        </header>
-        <div class="gerador-section__body">
-          <div class="fase1-component-list fase1-component-list--three">
-            <article class="card-ato-vigente-av">
-              <h3>Ato vigente (AV)</h3>
-              <p>
-                1 quando a vedação, embargo ou interdição estiver vigente; 0
-                quando comprovadamente inativa.
-              </p>
-            </article>
-            <article class="card-intersecao-validada-ie">
-              <h3>Interseção validada (IE)</h3>
-              <p>
-                1 quando o objeto intersectar a geometria oficial validada; 0
-                quando não intersectar.
-              </p>
-            </article>
-            <article class="card-aplicabilidade-ap">
-              <h3>Aplicabilidade (AP)</h3>
-              <p>
-                1 quando o ato alcançar a atividade e o território analisados; 0
-                quando comprovadamente inaplicável.
-              </p>
-            </article>
-          </div>
-          <div class="fase1-index-definition">
-            <article class="card-regra-de-decisao">
-              <h3>Regra de decisão</h3>
-              <code>Restrição = AV × IE × AP</code>
-            </article>
-            <article class="card-resultado">
-              <h3>Resultado</h3>
-              <code
-                >1 = Restrição · 0 = Sem restrição</code
-              >
-              <p>
-                Restrição barra o objeto e não é diluída pelo índice
-                de risco.
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
-      <section class="secao-camadas-e-criterios-canonicos gerador-section">
-        <header class="gerador-section__header">
-          <span class="gerador-section__number">4</span>
-          <div class="gerador-section__heading">
-            <h2>Camadas e critérios canônicos</h2>
-            <p>
-              Classificação, métricas específicas dos componentes e resultado
-              canônico.
-            </p>
-          </div>
-          <span id="biblioteca-versao" class="fase1-version"></span>
-        </header>
-        <div class="gerador-section__body">
-          <div class="fase1-library-toolbar">
-            <div class="gerador-field">
-              <label>Buscar</label
-              ><input
-                id="criterio-busca"
-                type="search"
-                placeholder="Camada ou critério"
-              />
-            </div>
-            <div class="gerador-field">
-              <label>Classificação</label
-              ><select id="criterio-tipo">
-                <option value="">Todas</option>
-                <option value="Risco">Risco</option>
-                <option value="Restrição">Restrição</option>
-              </select>
-            </div>
           </div>
           <div class="fase1-canonical-table-wrap">
-            <table class="fase1-canonical-table">
+            <table class="fase1-canonical-table" style="min-width: 720px">
               <thead>
                 <tr>
-                  <th>Classificação</th>
                   <th>Camada</th>
-                  <th>Critério</th>
-                  <th>Sensibilidade do meio afetado</th>
-                  <th>Complexidade do licenciamento</th>
-                  <th>Complexidade técnica e mitigatória</th>
-                  <th>Incerteza decisória</th>
-                  <th>Índice de risco calculado</th>
-                  <th>Referências</th>
+                  <th>Categoria</th>
+                  <th>Fonte</th>
+                  <th>Fundamento</th>
                 </tr>
               </thead>
-              <tbody id="criterios-tabela">
+              <tbody>
                 <tr>
-                  <td colspan="9">Carregando…</td>
+                  <td><strong>Área de restrição cadastrada pela CETESB</strong></td>
+                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
+                  <td>CETESB/SEMIL DataGeo — Áreas de restrição CETESB</td>
+                  <td>
+                    A camada identifica áreas de restrição; a vigência e o
+                    alcance dependem do termo e da atividade administrativa
+                    associados.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Área sob embargo ambiental estadual registrada no SIGAM</strong></td>
+                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
+                  <td>SEMIL; Polícia Militar Ambiental; SIGAM</td>
+                  <td>
+                    O embargo alcança somente a área e a atividade definidas no
+                    ato administrativo.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Área sob embargo ambiental federal ativo</strong></td>
+                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
+                  <td>IBAMA — Áreas embargadas</td>
+                  <td>
+                    O embargo restringe-se ao local da infração e à atividade
+                    definida pelo ato.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Manguezal oficialmente mapeado</strong></td>
+                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
+                  <td>IBAMA; Lei nº 12.651/2012, art. 4º, VII</td>
+                  <td>
+                    Manguezal é Área de Preservação Permanente em toda a sua
+                    extensão; a proteção incide na própria geometria publicada.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Território quilombola oficialmente delimitado</strong></td>
+                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
+                  <td>Fundação Cultural Palmares; INCRA</td>
+                  <td>
+                    A Fase 1 usa exclusivamente o perímetro oficial publicado,
+                    sem gerar faixas de consulta territorial.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Terra Indígena oficialmente delimitada</strong></td>
+                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
+                  <td>FUNAI; LC nº 140/2011</td>
+                  <td>
+                    A Fase 1 usa exclusivamente o perímetro oficial publicado,
+                    sem gerar faixas de consulta territorial.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Unidade de Conservação de Proteção Integral</strong></td>
+                  <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
+                  <td>SEMIL/DataGeo; SNUC</td>
+                  <td>
+                    A incidência é avaliada no perímetro oficial da unidade;
+                    zonas de amortecimento não são geradas nem classificadas por
+                    esta biblioteca.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Área oficial de influência sobre o patrimônio espeleológico</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>CECAV/ICMBio e SEMIL/DataGeo</td>
+                  <td>
+                    A camada oficial delimita indicador preliminar de área de
+                    influência; a Fase 1 usa a geometria publicada sem criar raio
+                    adicional.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Área suscetível a inundação, enxurrada ou alagamento</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>Defesa Civil; IPT; SGB/CPRM; DAEE; DataGeo</td>
+                  <td>
+                    A mancha oficial representa o cenário hidrológico publicado e
+                    pode demandar soluções de engenharia e manutenção.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Área suscetível a escorregamento, erosão ou movimento de massa</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>IPT; SGB/CPRM; Defesa Civil; DataGeo</td>
+                  <td>
+                    A carta oficial indica suscetibilidade que pode exigir
+                    soluções geotécnicas adicionais.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Área de Proteção e Recuperação dos Mananciais do Alto Juquery</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>SEMIL/DataGeo; legislação específica da APRM</td>
+                  <td>
+                    A geometria disponível representa o perímetro geral da APRM; a
+                    incidência pode condicionar o uso e o traçado, sem comprovar
+                    vedação por subárea.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Área de Proteção e Recuperação dos Mananciais do Alto Tietê Cabeceiras</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>SEMIL/DataGeo; legislação específica da APRM</td>
+                  <td>
+                    A geometria disponível representa o perímetro geral da APRM; a
+                    incidência pode condicionar o uso e o traçado, sem comprovar
+                    vedação por subárea.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Área de Proteção e Recuperação dos Mananciais da Billings</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>SEMIL/DataGeo; legislação específica da APRM</td>
+                  <td>
+                    A geometria disponível representa o perímetro geral da APRM; a
+                    incidência pode condicionar o uso e o traçado, sem comprovar
+                    vedação por subárea.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Área de Proteção e Recuperação dos Mananciais da Guarapiranga</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>SEMIL/DataGeo; legislação específica da APRM</td>
+                  <td>
+                    A geometria disponível representa o perímetro geral da APRM; a
+                    incidência pode condicionar o uso e o traçado, sem comprovar
+                    vedação por subárea.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Área contaminada cadastrada pela CETESB</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>CETESB — Relação de Áreas Contaminadas e Reabilitadas</td>
+                  <td>
+                    A incidência pode exigir investigação, gerenciamento de solo
+                    e água e medidas de proteção; a área de influência depende do
+                    processo e do modelo conceitual do sítio.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Assentamento rural no Estado de São Paulo</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>INCRA; ITESP</td>
+                  <td>
+                    A interferência pode exigir anuência, negociação fundiária,
+                    reassentamento ou ajuste do traçado.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Bem tombado ou área envoltória oficial do CONDEPHAAT</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>CONDEPHAAT; Decreto-Lei nº 25/1937</td>
+                  <td>
+                    O tombamento exige autorização do órgão competente, mas a
+                    viabilidade e as condicionantes dependem da análise da
+                    intervenção específica.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Bem tombado federal identificado pelo IPHAN</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>IPHAN; Decreto-Lei nº 25/1937</td>
+                  <td>
+                    A incidência exige análise e autorização patrimonial; sem
+                    polígono envoltório oficial não se cria raio substituto.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Sítio arqueológico oficialmente cadastrado</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>IPHAN/CNSA; Lei nº 3.924/1961</td>
+                  <td>
+                    A incidência pode exigir pesquisa, resgate, acompanhamento ou
+                    preservação no local; a área de influência é definida no
+                    processo, sem raio geral automático.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Unidade de Conservação de Uso Sustentável</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>SEMIL/DataGeo; SNUC</td>
+                  <td>
+                    A categoria e o zoneamento condicionam o uso; a incidência é
+                    avaliada no perímetro oficial da unidade, sem gerar faixas
+                    externas.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Vegetação nativa mapeada</strong></td>
+                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
+                  <td>SEMIL/DataGeo; Lei nº 12.651/2012</td>
+                  <td>
+                    A geometria oficial de vegetação não determina por si APP,
+                    estágio sucessional ou impossibilidade jurídica; esses
+                    enquadramentos exigem atributos próprios.
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <p class="ahp-help-text">
-            Critérios de risco exigem os quatro componentes. Critérios de
-            restrição permanecem na mesma tabela, mas são decididos pela
-            verificação booleana e não recebem índice numérico.
+          <p class="fase1-calculation-note">
+            Fonte: <code>data/geoespacial/biblioteca_criterios_risco_restricao.json</code>.
+            São sete camadas de restrição e catorze camadas de risco, totalizando
+            vinte e uma camadas oficiais.
           </p>
         </div>
       </section>
-      <section class="secao-classificacao-do-risco gerador-section">
+      <section class="secao-conceito-de-restricao-e-risco gerador-section">
         <header class="gerador-section__header">
-          <span class="gerador-section__number">5</span>
+          <span class="gerador-section__number">3</span>
           <div class="gerador-section__heading">
-            <h2>Classificação canônica</h2>
+            <h2>Reclassificação operacional das camadas</h2>
             <p>
-              A Fase 1 trabalha exclusivamente com as categorias Risco e
-              Restrição.
+              Definição conceitual adotada por este arcabouço e implementada no
+              sistema: os critérios das bases oficiais são reduzidos a apenas
+              duas categorias operacionais.
             </p>
           </div>
         </header>
         <div class="gerador-section__body">
+          <div class="fase1-theory-text">
+            <p>
+              A triagem começa pela interseção espacial entre a geometria da
+              demanda e as feições oficiais. Sobrepor-se a uma feição sensível
+              não implica, por si só, inviabilidade: sinaliza que o território
+              exige atenção — comparação de alternativas, estudo específico,
+              autorização ou medida de controle. O que define o tratamento de
+              cada feição não é a sua mera presença, mas o tipo de consequência
+              que ela impõe ao empreendimento.
+            </p>
+            <p>
+              Nas bases oficiais, esses geradores chegam rotulados por naturezas
+              diversas — ambiental, técnica, institucional, fundiária,
+              patrimonial, de prazo e licenciamento e jurídica. Para o uso
+              espacial da Fase 1, este arcabouço reduz essa diversidade a apenas
+              duas categorias operacionais, definidas pelo efeito de cada feição
+              sobre a obra e não pelo rótulo de origem. Trata-se de uma decisão
+              conceitual desta metodologia, que o sistema apenas implementa e
+              aplica na triagem.
+            </p>
+            <p>
+              O critério da reclassificação é o grau de complexidade que cada
+              feição impõe ao licenciamento ambiental e à liberação jurídica da
+              obra sobre ela. A feição é enquadrada como <strong>risco</strong>
+              quando sua incidência tende a aumentar prazos, custos, estudos,
+              anuências ou medidas de controle, mas o licenciamento permanece
+              administrável: passa a compor a camada de risco e é ponderada
+              de forma gradual. Havendo interseção, mas faltando atributos que
+              decidam o enquadramento, a feição permanece como risco até análise
+              competente. É enquadrada como <strong>restrição</strong> quando os
+              atributos associados à camada reúnem, de forma combinada, duas
+              dimensões — entraves jurídicos à liberação da obra e alta
+              complexidade de licenciamento ambiental. É a associação dessas
+              duas condições que tende a representar prazos de liberação muito
+              longos e obstáculos substantivos à autorização da obra sobre ela:
+              a feição passa a compor a camada de restrição e barra o objeto
+              na triagem, sem seguir para a avaliação agregada de risco.
+            </p>
+          </div>
           <div class="fase1-classification-section">
-            <h3>Categorias da Fase 1</h3>
+            <h3>Camadas classificadas como restrição</h3>
             <p>
-              O IRc permanece como evidência técnica de risco e não gera
-              subclasses.
+              Camadas cujos atributos associam, de forma combinada, entraves
+              jurídicos à liberação da obra e alta complexidade de licenciamento
+              ambiental, tratadas como impedimento na triagem territorial da
+              Fase 1.
             </p>
-            <div class="fase1-canonical-classes">
-              <span data-level="1"><b>Risco</b><small>Índice calculado</small></span
-              ><span class="fase1-canonical-class--restriction" data-level="4"
-                ><b>Restrição</b><small>Regra booleana</small></span
-              >
-            </div>
-            <p class="fase1-canonical-origin-note">
-              Risco identifica incidência que demanda análise ou mitigação.
-              Restrição é atribuída somente pela regra booleana de ato vigente,
-              interseção validada e aplicabilidade.
+            <ul>
+              <li>Área de restrição cadastrada pela CETESB</li>
+              <li>Área sob embargo ambiental estadual registrada no SIGAM</li>
+              <li>Área sob embargo ambiental federal ativo</li>
+              <li>Manguezal oficialmente mapeado</li>
+              <li>Território quilombola oficialmente delimitado</li>
+              <li>Terra Indígena oficialmente delimitada</li>
+              <li>Unidade de Conservação de Proteção Integral</li>
+            </ul>
+          </div>
+          <div class="fase1-classification-section">
+            <h3>Camadas classificadas como risco</h3>
+            <p>
+              Camadas cuja incidência representa complexidade administrável de
+              licenciamento — prazos, estudos, anuências ou medidas de controle
+              — passível de graduação.
             </p>
+            <ul>
+              <li>Área oficial de influência sobre o patrimônio espeleológico</li>
+              <li>Área suscetível a inundação, enxurrada ou alagamento</li>
+              <li>Área suscetível a escorregamento, erosão ou movimento de massa</li>
+              <li>Área de Proteção e Recuperação dos Mananciais do Alto Juquery</li>
+              <li>Área de Proteção e Recuperação dos Mananciais do Alto Tietê Cabeceiras</li>
+              <li>Área de Proteção e Recuperação dos Mananciais da Billings</li>
+              <li>Área de Proteção e Recuperação dos Mananciais da Guarapiranga</li>
+              <li>Área contaminada cadastrada pela CETESB</li>
+              <li>Assentamento rural no Estado de São Paulo</li>
+              <li>Bem tombado ou área envoltória oficial do CONDEPHAAT</li>
+              <li>Bem tombado federal identificado pelo IPHAN</li>
+              <li>Sítio arqueológico oficialmente cadastrado</li>
+              <li>Unidade de Conservação de Uso Sustentável</li>
+              <li>Vegetação nativa mapeada</li>
+            </ul>
           </div>
-        </div>
-      </section>
-      <section class="secao-configuracao-operacional gerador-section">
-        <header class="gerador-section__header">
-          <span class="gerador-section__number">6</span>
-          <div class="gerador-section__heading">
-            <h2>Configuração operacional</h2>
-            <p>Pesos aplicados ao índice técnico de evidência de risco.</p>
-          </div>
-        </header>
-        <div class="gerador-section__body">
-          <article class="card-identificacao-da-configuracao fase1-config-card">
-            <h3>Identificação da configuração</h3>
-            <div class="fase1-config-identification">
-              <div class="gerador-field">
-                <label>Nome</label
-                ><input id="nome-configuracao" value="Configuração canônica" />
-              </div>
-              <div class="gerador-field">
-                <label>Código</label
-                ><input id="codigo-configuracao" value="F1-RISCO-RESTRICAO-CANONICA" />
-              </div>
-              <div class="gerador-field">
-                <label>Versão</label
-                ><input id="versao-metodologia" value="2026.08.03" />
-            </div>
-          </article>
-          <div class="fase1-config-layout">
-            <article class="card-pesos-dos-componentes-do-risco fase1-config-weights">
-              <h3>Pesos dos componentes do risco</h3>
-              <div class="fase1-config-weight-grid">
-                <label
-                  >Sensibilidade do meio afetado<input
-                    data-peso="sensibilidade_meio"
-                    type="number"
-                    min="0"
-                    step=".01"
-                    value="1" /></label
-                ><label
-                  >Complexidade do licenciamento<input
-                    data-peso="complexidade_licenciamento"
-                    type="number"
-                    min="0"
-                    step=".01"
-                    value="1" /></label
-                ><label
-                  >Complexidade técnica e mitigatória<input
-                    data-peso="complexidade_tecnica"
-                    type="number"
-                    min="0"
-                    step=".01"
-                    value="1" /></label
-                ><label
-                  >Incerteza decisória<input
-                    data-peso="incerteza_decisoria"
-                    type="number"
-                    min="0"
-                    step=".01"
-                    value="1"
-                /></label>
-              </div>
-            </article>
-          </div>
-          <p id="limiares-validacao" class="gerador-feedback"></p>
-          <div class="gerador-actions">
-            <button class="btn btn-primary" id="validar-metodologia">
-              Salvar configuração
-            </button>
-          </div>
+          <p class="fase1-calculation-note">
+            A classificação é uma triagem para hierarquização e não substitui a
+            Licença Prévia, a análise da CETESB, autorizações setoriais ou
+            manifestações dos órgãos competentes. A restrição nunca é inferida
+            pela simples ausência de informação na camada.
+          </p>
         </div>
       </section>
     </main>
 {% endblock %}
 
 {% block scripts_pagina %}
-  <script src="/restrict/geoespacial/biblioteca-risco-restricao.js?v=20260803-matriz-completa"></script>
 {% endblock %}

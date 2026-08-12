@@ -33,6 +33,24 @@ def find_active_by_username(username: str) -> dict[str, Any] | None:
         return conn.execute(_SELECT_USUARIO, {"username": username}).fetchone()
 
 
+def find_active_by_id(usuario_id: str) -> dict[str, Any] | None:
+    sql = """
+        SELECT
+            u.id,
+            u.pessoa_id,
+            u.username,
+            u.tipo_usuario,
+            u.ativo,
+            p.nome_completo AS nome_pessoa
+        FROM usuarios.usuario u
+        LEFT JOIN cadastro.pessoa p ON p.id = u.pessoa_id
+        WHERE u.id = %(id)s AND u.ativo = TRUE
+        LIMIT 1
+    """
+    with get_sigma_connection() as conn:
+        return conn.execute(sql, {"id": usuario_id}).fetchone()
+
+
 _SELECT_NOMES = """
     SELECT
         u.id,

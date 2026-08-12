@@ -105,6 +105,7 @@ RESTRICTED_PAGES = {
     "demandas": "demandas.html",
     "demanda": "demanda.html",
     "revisao-status": "revisao-status.html",
+    "complementacao": "complementacao.html",
 }
 
 
@@ -150,6 +151,11 @@ async def pagina_login_publico(request: Request) -> Response:
 @app.get("/restrict/", include_in_schema=False)
 async def pagina_inicial_restrita(request: Request) -> Response:
     return render_page(request, "paginas/admin/index.html")
+
+
+@app.get("/restrict/admin/", include_in_schema=False)
+async def pagina_area_administrador(request: Request) -> Response:
+    return render_page(request, "paginas/admin/area-administrador.html")
 
 
 @app.get("/restrict/hierarquizacao/", include_in_schema=False)

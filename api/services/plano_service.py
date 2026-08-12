@@ -66,6 +66,7 @@ def _row_to_response(row: dict[str, Any]) -> PlanoResponseSchema:
         vigencia_fim=_iso(row.get("vigencia_fim")),
         valor_global=float(valor) if valor is not None else None,
         unidades_espaciais=list(row.get("unidades_espaciais") or []),
+        atributos_cadastrais=dict(row.get("atributos_cadastrais") or {}),
     )
 
 
@@ -107,6 +108,7 @@ def criar_plano(payload: PlanoCreateSchema) -> PlanoResponseSchema:
         "vigencia_inicio": payload.vigencia_inicio or None,
         "vigencia_fim": payload.vigencia_fim or None,
         "valor_global": payload.valor_global,
+        "atributos_cadastrais": payload.atributos_cadastrais,
         "status": "analise_rascunho",
     }
     normalizar_plano(row, pessoa_id=pessoa_id)

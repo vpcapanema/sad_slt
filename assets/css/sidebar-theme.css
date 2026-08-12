@@ -13,9 +13,9 @@
   --sb-surface-hover: rgba(255, 255, 255, 0.12);
   --sb-tabs-bg: rgba(255, 255, 255, 0.05);
   /* Escala compacta — faixa superior e sidebar (proporcional ao app-header padrão) */
-  --sb-topbar-padding-y: 1rem;
+  --sb-topbar-padding-y: 1.2rem;
   --sb-topbar-padding-x: 1rem;
-  --sb-navbar-padding-y: 1rem;
+  --sb-navbar-padding-y: 1.2rem;
   --sb-navbar-padding-x: 1.5rem;
   --sb-icon-size: 36px;
   --sb-icon-radius: 9px;

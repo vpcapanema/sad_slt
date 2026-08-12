@@ -1090,6 +1090,31 @@ async def obter_atributos_camada(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@router.get("/camadas/{camada_id}/simbologia/campos")
+async def simbologia_campos(camada_id: str) -> dict:
+    """Campos da camada com metadados para simbologia por atributo."""
+    try:
+        return await geoespacial_service.simbologia_campos(camada_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/camadas/{camada_id}/simbologia/classificacao")
+async def simbologia_classificacao(
+    camada_id: str,
+    campo: str,
+    metodo: str = "intervalos_iguais",
+    classes: int = Query(5, ge=2, le=12),
+) -> dict:
+    """Classifica um campo (valores únicos ou quebras numéricas) para simbologia."""
+    try:
+        return await geoespacial_service.simbologia_classificacao(
+            camada_id, campo, metodo, classes
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @router.get("/camadas/{raster_id}/preview")
 async def obter_preview_raster(raster_id: str) -> dict:
     try:

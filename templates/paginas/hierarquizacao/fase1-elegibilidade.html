@@ -12,56 +12,41 @@
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
   <link rel="stylesheet" href="/assets/css/fase1-execucao.css?v=20260805-gp-frame-2x">
   <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/assets/css/feedback.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div><main class="conteudo-principal app-main ahp-main fase1-page">
 {% include "componentes/navegacao_fases_hierarquizacao.html" %}
-<section class="card-fase-1-elegibilidade-territorial secao-fase-1-elegibilidade-territorial card"><h1 class="ahp-page-title"><i class="fas fa-shield-halved"></i> Fase 1: Elegibilidade Territorial</h1><p>Fluxo canônico do Bloco 2: Processos → Fase 1 → Fase 2 → Fase 3.</p><p>Interseção sequencial do universo de demandas com as camadas homologadas de restrição e risco.</p></section>
+<section class="card-fase-1-elegibilidade-territorial secao-fase-1-elegibilidade-territorial card fase-titulo-card"><h1 class="ahp-page-title"><i class="fas fa-shield-halved"></i> Fase 1: Elegibilidade Territorial<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info"></i><span class="fase-info-pop">A elegibilidade territorial verifica se cada demanda do grupo pode ser implantada no local pretendido, confrontando sua posição com as áreas de restrição, que impedem a ocupação, e as de risco, que a condicionam. O cálculo cruza geometricamente cada demanda com as camadas homologadas de restrição e risco e, segundo a sobreposição e os limiares definidos, classifica-a como apta, apta com ressalva ou restrita. Para operar, selecione a hierarquização cadastrada, escolha o par de camadas homologadas de restrição e risco, execute o cálculo e acompanhe a classificação no card de resultados.</span></span></h1><p class="fase-descricao">Verifica a elegibilidade territorial de cada demanda cruzando sua localização com as áreas homologadas de restrição e risco. <a class="fase-descricao-add" href="/restrict/geoespacial/configuracao-risco-restricao/" title="Abrir Biblioteca Canônica de Risco e Restrição" aria-label="Abrir Biblioteca Canônica de Risco e Restrição"><i class="fas fa-plus"></i></a></p></section>
 
-<section class="card-fase-hierarquizacao secao-fase-hierarquizacao card ahp-step-section"><div class="ahp-section-label"><span>1. Carregar hierarquização</span></div><div class="ahp-section-body">
-  <label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option>Carregando…</option></select></label>
-  <p class="ahp-help-text">Ainda não cadastrou a hierarquização? <a class="fase1-library-link" href="/restrict/hierarquizacao/processos/">Clique aqui para cadastrar uma hierarquização.</a></p>
-  <div id="fase-resumo" class="fase1-summary hidden"></div>
-</div></section>
-
-<section class="card-camada-restricao secao-camada-restricao card ahp-step-section"><div class="ahp-section-label"><span>2. Carregar camadas de restrição e risco</span></div><div class="ahp-section-body fase1-grid-2">
-  <label>2.1. Camada de restrição homologada <select id="camada-restricao"><option value="">Carregando…</option></select></label>
-  <label>2.2. Camada de risco homologada associada <select id="camada-risco" disabled><option value="">Selecione primeiro a camada de restrição</option></select></label>
-  <p class="ahp-help-text fase1-span">As duas camadas são arquivos independentes e pertencem ao mesmo identificador de conjunto.</p>
-  <div id="camadas-log" class="fase1-log fase1-span" aria-live="polite"></div>
-</div></section>
-
-<section class="card-pesos secao-pesos card ahp-step-section"><div class="ahp-section-label"><span>3. Ajustes avançados</span></div><div class="ahp-section-body">
-  <div class="fase1-config-head">
-    <label>Configuração da Fase 1 <select id="fatiamento-fase1"><option value="">Carregando…</option></select></label>
-    <a class="fase1-library-link" href="/restrict/geoespacial/configuracao-risco-restricao/" title="Abrir biblioteca canônica"><i class="fas fa-book-open"></i><span>Biblioteca canônica</span></a>
+<section class="card-camadas-operacionais secao-camadas-operacionais card ahp-step-section"><div class="ahp-section-label"><span>Geoprocessamento — SLT</span></div><div class="ahp-section-body">
+  <div id="fase1-controles-origem" hidden>
+    <label id="ctrl-hier" class="fase1-ctrl">Hierarquização cadastrada <select id="fase-hierarquizacao"><option>Carregando…</option></select><span class="fase1-ctrl-ajuda">Ainda não cadastrou? <a class="fase1-library-link" href="/restrict/hierarquizacao/processos/">Cadastre uma hierarquização.</a></span></label>
+    <label id="ctrl-restricao" class="fase1-ctrl">Camada de restrição homologada <select id="camada-restricao"><option value="">Carregando…</option></select></label>
+    <label id="ctrl-risco" class="fase1-ctrl">Camada de risco homologada associada <select id="camada-risco" disabled><option value="">Selecione primeiro a camada de restrição</option></select></label>
   </div>
-  <div id="fatiamento-resumo" class="fase1-summary hidden"></div>
-  <p class="ahp-help-text">A categoria de risco e os pesos vêm da configuração selecionada. Apenas o limiar de restrição pode ser ajustado nesta execução.</p>
-  <div class="fase1-grid-2">
-    <label>Limiar de restrição <input id="fatiamento-limiar" type="number" min="0" step="0.01"></label>
-  </div>
-  <div id="fatiamento-classes" class="fase1-class-readonly"></div>
-  <div id="fatiamento-pesos" class="fase1-weight-readonly"></div>
-  <div class="fase1-actions">
-    <button id="salvar-ajustes-fatiamento" class="btn" type="button"><i class="fas fa-floppy-disk"></i> Salvar ajustes como nova configuração</button>
-  </div>
+  <slt-geoprocessamento fase="fase1" titulo-saida="Camadas de restrição e risco" saida-id="gp-risco-restricao" demandas-id="gp-demandas" frame-id="gp-frame" modelo-id="modelo-fase1" executar-id="executar-fase1" modelo="calculo_fase1_elegibilidade" modelo-label="Fase 1 — Elegibilidade territorial" botao-label="Calcular risco e restrição"></slt-geoprocessamento>
+  <div id="fase1-erro" class="ahp-info-note ahp-info-note--error hidden"></div>
 </div></section>
 
-<section class="card-camadas-operacionais secao-camadas-operacionais card ahp-step-section"><div class="ahp-section-label"><span>4. Geoprocessamento — SLT</span></div><div class="ahp-section-body">
-  <div class="fase1-operational"><h3>Camadas operacionais</h3><div class="fase1-grid-2"><div><h4>Camada de demandas</h4><div id="gp-demandas"><p class="ahp-help-text">Selecione uma hierarquização.</p></div></div><div><h4>Camadas de Restrição e Risco</h4><div id="gp-risco-restricao"><p class="ahp-help-text">Selecione o par homologado.</p></div></div></div></div>
-  <iframe id="gp-frame" class="fase1-gp-frame" title="Componente de geoprocessamento SLT" src="/restrict/geoespacial/bancada/?modulo=fase1&amp;embutido=1&amp;v=20260803-batch-load-2"></iframe>
-  <div class="fase1-execute"><label>Cálculo <select id="modelo-fase1"><option value="calculo_fase1_elegibilidade">Fase 1 — Elegibilidade territorial</option></select></label><button id="executar-fase1" class="btn btn--primary" type="button"><i class="fas fa-play"></i> Executar cálculo isolado</button></div>
-  <div id="fase1-erro" class="ahp-info-note ahp-info-note--error hidden"></div><div id="fase1-relatorio" class="fase1-report hidden"></div><div class="fase1-actions"><button id="baixar-relatorio-fase1" class="btn hidden" type="button"><i class="fas fa-file-pdf"></i> Exportar relatório (PDF)</button></div>
+<section class="card-resultados secao-resultados card ahp-step-section"><div class="ahp-section-label"><span>Resultados</span></div><div class="ahp-section-body">
+  <p id="fase1-resultado-vazio" class="ahp-help-text">Execute o cálculo para ver o relatório de risco e restrição.</p>
+  <div id="fase1-relatorio" class="fase1-report hidden"></div>
+  <div class="fase1-actions"><button id="baixar-relatorio-fase1" class="btn hidden" type="button"><i class="fas fa-file-pdf"></i> Exportar relatório (PDF)</button></div>
 </div></section>
+{% include "componentes/modal/_modal_demandas_do_grupo_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
 </main>
 {% endblock %}
 
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/feedback.js"></script>
   <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
+  <script src="/assets/js/status-colors.js"></script>
+  <script src="/assets/js/objeto-detalhe.js"></script>
+  <script src="/assets/js/componentes/geoprocessamento-slt.js"></script>
   <script src="/assets/vendor/jspdf/jspdf.umd.min.js"></script>
   <script src="/assets/vendor/jspdf/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>

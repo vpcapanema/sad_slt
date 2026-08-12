@@ -71,6 +71,7 @@ def _row_to_response(row: dict[str, Any]) -> ProgramaResponseSchema:
         pessoa_id=str(row["sigma_pessoa_id"]) if row.get("sigma_pessoa_id") else None,
         representante=rep,
         unidades_espaciais=list(row.get("unidades_espaciais") or []),
+        atributos_cadastrais=dict(row.get("atributos_cadastrais") or {}),
     )
 
 
@@ -112,6 +113,7 @@ def criar_programa(payload: ProgramaCreateSchema) -> ProgramaResponseSchema:
         "orgao_responsavel": payload.orgao_responsavel,
         "justificativa": payload.justificativa,
         "valor_global": payload.valor_global,
+        "atributos_cadastrais": payload.atributos_cadastrais,
         "vinculo_institucional": bool(payload.vinculo_institucional),
         "sigma_instituicao_id": instituicao_id,
         "instituicao_nome": payload.instituicao_label,

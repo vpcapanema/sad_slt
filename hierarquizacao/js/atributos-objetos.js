@@ -1,210 +1,299 @@
-/* Componente "Atributos dos objetos de demanda" (Fase 3).
-   Popula a tabela a partir de uma hierarquização: colunas estáticas (cadastro) +
-   colunas dinâmicas (Etapa 3 da matriz, via endpoint) e uma linha por objeto. */
 (function (global) {
   "use strict";
 
-  const API_COLUNAS = (codigo) =>
-    `/api/ahp/atributos-objetos/hierarquizacoes/${encodeURIComponent(codigo)}/colunas`;
+  const API_COLUNAS = (codigo) => `/api/ahp/atributos-objetos/hierarquizacoes/${encodeURIComponent(codigo)}/colunas`;
+  const API_DOMINIOS = "/api/dominios/atributos-objeto";
+  let estado = { colunas: [], pesos: {} };
 
-  const fmtMoeda = (v) =>
-    v == null ? null : "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const fmtData = (v) => {
-    if (!v) return null;
-    const d = String(v).slice(0, 10).split("-");
-    return d.length === 3 ? `${d[2]}/${d[1]}/${d[0]}` : String(v);
+  const $ = (seletor, raiz = document) => raiz.querySelector(seletor);
+  const numero = (valor) => {
+    if (valor === null || valor === undefined || valor === "") return null;
+    const n = Number(valor);
+    return Number.isFinite(n) ? n : null;
   };
-  function prazoMeses(ini, fim) {
-    if (!ini || !fim) return null;
-    const a = new Date(ini), b = new Date(fim);
-    if (isNaN(a) || isNaN(b)) return null;
-    return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+  const tipoObjeto = (hierarquizacao) => String(
+    hierarquizacao?.dados_hierarquizacao?.objetos?.[0]?.cabecalho_objeto?.tipo_demanda
+      || hierarquizacao?.dados_hierarquizacao?.cabecalho_grupo?.tipo_demanda
+      || "objeto",
+  ).toLowerCase();
+  const tituloTipo = (tipo) => ({ plano: "plano", programa: "programa", projeto: "projeto" }[tipo] || "objeto");
+
+  async function json(url) {
+    const resposta = await fetch(url, { credentials: "same-origin" });
+    const corpo = await resposta.json().catch(() => null);
+    if (!resposta.ok) throw new Error(corpo?.detail || `HTTP ${resposta.status}`);
+    return corpo;
   }
 
-  // Colunas ESTÁTICAS (etapa cadastral: "Vigência e recursos"). Somente leitura.
-  const ESTATICAS = [
-    { id: "vigencia_inicio", grupo: "estatica", alias: "Vigência início", unidade: "data", relacao_simbolo: "", valor: (a) => fmtData(a.vigencia_inicio) },
-    { id: "vigencia_fim", grupo: "estatica", alias: "Vigência fim", unidade: "data", relacao_simbolo: "", valor: (a) => fmtData(a.vigencia_fim) },
-    { id: "prazo_meses", grupo: "estatica", alias: "Prazo de vigência", unidade: "meses", relacao_simbolo: "↓", valor: (a) => { const m = prazoMeses(a.vigencia_inicio, a.vigencia_fim); return m == null ? null : String(m); } },
-    { id: "valor_global", grupo: "estatica", alias: "Valor global", unidade: "R$", relacao_simbolo: "", valor: (a) => fmtMoeda(a.valor_global ?? a.complementos?.valor_estimado) },
-  ];
-
-  // Lê um valor numérico herdado da Fase 1 do objeto (estrutura tolerante).
-  function fase1Valor(obj, chave) {
-    const f1 = obj?.hierarquizacao?.fase_1 || {};
-    const src = f1.atributos || f1.riscos || {};
-    const v = src[chave];
-    return typeof v === "number" ? v : null;
+  function opcoesDominio(dominio, tipo) {
+    return dominio.dominio_valores || dominio.configuracao_por_tipo?.[tipo]?.opcoes || [];
   }
 
-  // ---------------------------------------------------------------------------
-  // Preenchimento híbrido por atributo (CONJUNTO MUTÁVEL — edite só este mapa).
-  //   origem "cadastro" -> valor intrínseco do cadastro (read-only)
-  //   origem "fase1"    -> herdado da Fase 1 (sugestão editável, quando houver)
-  //   ausente/"gestor"  -> preenchido manualmente pelo gestor (default)
-  // Chave = id (slug) da coluna dinâmica.
-  // ---------------------------------------------------------------------------
-  const PREENCHIMENTO = {
-    capex_custo_de_investimento: { origem: "cadastro", valor: (a) => a.valor_global ?? a.complementos?.valor_estimado ?? null },
-    prazo_de_implantacao: { origem: "cadastro", valor: (a) => prazoMeses(a.vigencia_inicio, a.vigencia_fim) },
-    risco_de_execucao: { origem: "fase1", valor: (a, o) => fase1Valor(o, "risco_execucao") },
-    risco_de_demanda: { origem: "fase1", valor: (a, o) => fase1Valor(o, "risco_demanda") },
-    desapropriacoes_e_interferencias: { origem: "fase1", valor: (a, o) => fase1Valor(o, "desapropriacao") },
-    interdependencia_pre_requisitos: { origem: "fase1", valor: (a, o) => fase1Valor(o, "interdependencia") },
-  };
-
-  function el(sel) { return document.querySelector(sel); }
-
-  async function getColunas(codigo) {
-    const res = await fetch(API_COLUNAS(codigo), { credentials: "same-origin" });
-    const body = await res.json().catch(() => null);
-    if (!res.ok) throw new Error((body && (body.detail || body.message)) || `HTTP ${res.status}`);
-    return body.colunas || [];
+  function colunasCadastro(dominios, tipo) {
+    const ponderaveis = new Set([
+      "maturidade_objeto",
+      "capex_estimado",
+      "base_estimativa_capex",
+      "prazo_referencia_meses",
+      "base_estimativa_prazo",
+    ]);
+    const nomes = {
+      maturidade_objeto: "Etapa atual de desenvolvimento",
+      capex_estimado: "Capex (custo estimado para implantação)",
+      base_estimativa_capex: "Nível de detalhamento da estimativa de custo",
+      base_estimativa_prazo: "Nível de detalhamento do cronograma",
+    };
+    const dominioPorCodigo = Object.fromEntries(dominios.map((item) => [item.codigo, item]));
+    const direcoes = {
+      maturidade_objeto: "maior_melhor",
+      capex_estimado: "menor_melhor",
+      base_estimativa_capex: "maior_melhor",
+      prazo_referencia_meses: "menor_melhor",
+      base_estimativa_prazo: "maior_melhor",
+      vinculo_institucional: "maior_melhor",
+    };
+    return dominios.filter((item) => item.tipos_objeto.includes(tipo) && ponderaveis.has(item.codigo)).map((item) => {
+      const opcoes = opcoesDominio(item, tipo);
+      const mapeamento = Object.fromEntries(opcoes.map((opcao, indice) => [opcao.codigo, opcoes.length === 1 ? 1 : indice / (opcoes.length - 1)]));
+      if (item.codigo === "vinculo_institucional") Object.assign(mapeamento, { true: 1, false: 0, sim: 1, nao: 0 });
+      return {
+        id: `cadastro:${item.codigo}`,
+        chave: item.codigo,
+        grupo: "cadastro",
+        alias: nomes[item.codigo] || item.configuracao_por_tipo?.[tipo]?.rotulo || item.nome,
+        unidade: item.unidade || (item.tipo_dado === "categoria" ? "escala ordinal" : null),
+        tipo: ["inteiro", "monetario"].includes(item.tipo_dado) ? "numerico" : "categorico",
+        tipo_dado: ["inteiro", "monetario"].includes(item.tipo_dado) ? "numerico" : "ordinal",
+        direcao: direcoes[item.codigo] || "maior_melhor",
+        relacao: direcoes[item.codigo] || "maior_melhor",
+        relacao_simbolo: direcoes[item.codigo] === "menor_melhor" ? "↓" : "↑",
+        mapeamento,
+        rotulos: Object.fromEntries(opcoes.map((opcao) => [opcao.codigo, opcao.rotulo])),
+        rotulos_procedencia: item.codigo === "capex_estimado"
+          ? Object.fromEntries(opcoesDominio(dominioPorCodigo.base_estimativa_capex || {}, tipo).map((opcao) => [opcao.codigo, opcao.rotulo]))
+          : item.codigo === "prazo_referencia_meses"
+            ? Object.fromEntries(opcoesDominio(dominioPorCodigo.base_estimativa_prazo || {}, tipo).map((opcao) => [opcao.codigo, opcao.rotulo]))
+            : {},
+        mandatorio: !item.permite_nao_informado,
+      };
+    });
   }
 
-  function limpar(root) {
-    const theadRow = root.querySelector("[data-atributos-thead] tr");
-    [...theadRow.querySelectorAll("th.col-atributo")].forEach((th) => th.remove());
-    root.querySelector("[data-atributos-tbody]").innerHTML = "";
-    root.querySelector("[data-atributos-sem-colunas]").hidden = true;
-    root.querySelector("[data-atributos-sem-linhas]").hidden = true;
-    root.querySelector("[data-atributos-erro]").hidden = true;
+  function colunasDinamicas(colunas) {
+    const atendidosPeloCadastro = new Set([
+      "escala_ideia_estudo_projeto_basico_projeto_executivo",
+      "r_custo_total_de_investimento",
+      "meses_ate_a_operacao",
+    ]);
+    const nomes = {
+      r_ano: "Custo anual de operação e manutenção",
+      b_c_vpl_tir: "Retorno econômico do investimento",
+      de_alavancagem_por_ppp_concessao: "Participação prevista de capital privado",
+      vpl_social_b_c_social: "Retorno social do investimento",
+      grau_de_compatibilidade: "Compatibilidade com o planejamento territorial",
+      escala_qualitativa_de_1_a_5: "Complexidade técnica e institucional",
+      grau_de_aderencia_aos_planos: "Compatibilidade com os planos estratégicos",
+      grau_de_consenso_atores_do_slide_58: "Apoio das instituições envolvidas",
+      numero_de_mencoes_e_contribuicoes: "Manifestações favoráveis recebidas",
+      variancia_entre_cenarios_de_demanda: "Variação da demanda entre os cenários",
+      desvio_historico_de_prazo_e_de_custo: "Histórico de atraso e aumento de custo",
+      numero_de_desapropriacoes_interferencias: "Desapropriações e interferências identificadas",
+      numero_de_projetos_predecessores: "Entregas externas necessárias antes da implantação",
+    };
+    return colunas.filter((coluna) => !atendidosPeloCadastro.has(coluna.id)).map((coluna) => ({
+      ...coluna,
+      alias: nomes[coluna.id] || coluna.criterio || coluna.alias,
+      chave: coluna.id,
+      grupo: "dinamico",
+      tipo_dado: coluna.tipo === "categorico" ? "ordinal" : coluna.tipo,
+      direcao: coluna.relacao || "maior_melhor",
+      obrigatorio: coluna.mandatorio,
+    }));
   }
 
-  function montarColunas(root, colunas) {
-    const theadRow = root.querySelector("[data-atributos-thead] tr");
-    const tpl = root.querySelector("#tpl-atributo-coluna");
-    for (const col of colunas) {
-      const estatica = col.grupo === "estatica";
-      const th = tpl.content.firstElementChild.cloneNode(true);
-      th.classList.add(estatica ? "col-estatica" : "col-dinamica");
-      th.dataset.colId = col.id;
-      th.dataset.tipo = col.tipo || "texto";
-      th.dataset.unidade = col.unidade || "";
-      th.dataset.relacao = col.relacao || "";
-      th.dataset.mandatorio = col.mandatorio ? "1" : "";
-      th.querySelector(".col-atributo-grupo").textContent = estatica ? "Cadastro" : "Matriz · Etapa 3";
-      const alias = th.querySelector(".col-atributo-alias");
-      alias.textContent = col.alias || col.variavel || "Atributo";
-      alias.title = col.variavel || col.criterio || col.alias || "";
-      th.querySelector(".col-atributo-unidade").textContent = col.unidade ? `(${col.unidade})` : "";
-      th.querySelector(".col-atributo-relacao").textContent = col.relacao_simbolo || "";
-      th.querySelector(".col-atributo-mandatorio").hidden = !col.mandatorio;
-      theadRow.appendChild(th);
-    }
+  function valorCadastro(objeto, coluna) {
+    const atributos = objeto.cabecalho_objeto?.atributos || {};
+    const cadastrais = atributos.atributos_cadastrais || {};
+    if (coluna.chave === "vinculo_institucional") return cadastrais[coluna.chave] ?? atributos[coluna.chave] ?? false;
+    return cadastrais[coluna.chave] ?? atributos[coluna.chave] ?? null;
   }
 
-  function montarLinhas(root, objetos, colunas) {
-    const tbody = root.querySelector("[data-atributos-tbody]");
-    const tplLin = root.querySelector("#tpl-atributo-linha");
-    const tplCel = root.querySelector("#tpl-atributo-celula");
-    for (const obj of objetos) {
-      const cab = obj.cabecalho_objeto || obj;
-      const tr = tplLin.content.firstElementChild.cloneNode(true);
-      tr.dataset.objetoId = cab.codigo || "";
-      tr.querySelector(".objeto-codigo").textContent = cab.codigo || "—";
-      tr.querySelector(".objeto-nome").textContent = cab.nome || "";
-      const t = tr.querySelector(".objeto-tipo");
-      if (cab.tipo_demanda) { t.textContent = cab.tipo_demanda; t.hidden = false; }
-      const atributos = cab.atributos || {};
-      for (const col of colunas) {
-        if (col.grupo === "estatica") {
-          const td = document.createElement("td");
-          td.className = "col-estatica-valor";
-          td.dataset.colId = col.id;
-          const v = col.valor(atributos);
-          if (v == null || v === "") { td.textContent = "—"; td.classList.add("is-vazio"); }
-          else td.textContent = v;
-          tr.appendChild(td);
-          continue;
-        }
-        const td = tplCel.content.firstElementChild.cloneNode(true);
-        td.dataset.colId = col.id;
-        let input = td.querySelector(`.atributo-input--${col.tipo}`);
-        if (!input) input = td.querySelector(".atributo-input--texto");
-        input.hidden = false;
+  function procedenciaCadastro(objeto, coluna) {
+    const atributos = objeto.cabecalho_objeto?.atributos || {};
+    const cadastrais = atributos.atributos_cadastrais || {};
+    const chave = coluna.chave === "capex_estimado"
+      ? "base_estimativa_capex"
+      : coluna.chave === "prazo_referencia_meses" ? "base_estimativa_prazo" : null;
+    if (!chave) return null;
+    const valor = cadastrais[chave] ?? atributos[chave];
+    return valor ? (coluna.rotulos_procedencia?.[String(valor)] || String(valor).replaceAll("_", " ")) : null;
+  }
 
-        // valor e origem: prioriza os slots criados na criação (atributos_fase3);
-        // fallback à config de preenchimento (hierarquizações antigas sem slots).
-        const af3 = cab.atributos_fase3 || {};
-        const slot = af3[col.id];
-        let valor = null;
-        let origem = "gestor";
-        if (slot && typeof slot === "object") {
-          valor = slot.valor;
-          origem = slot.origem || "gestor";
-        } else {
-          const cfg = PREENCHIMENTO[col.id] || { origem: "gestor" };
-          try { valor = cfg.valor ? cfg.valor(atributos, obj) : null; } catch (_) { valor = null; }
-          origem = cfg.origem || "gestor";
-        }
-        if (valor != null && valor !== "") {
-          input.value = String(valor);
-          if (origem === "cadastro") { input.readOnly = true; input.classList.add("atributo-input--sistema"); td.classList.add("is-sistema"); }
-          else { input.classList.add("atributo-input--sugerido"); td.classList.add("is-sugerido"); }
-          td.classList.add("is-preenchido");
-        } else {
-          td.classList.add("is-pendente");
-          if (col.mandatorio) td.classList.add("is-obrigatorio");
-        }
+  function valorDinamico(objeto, coluna) {
+    return objeto.cabecalho_objeto?.atributos_fase3?.[coluna.chave]?.valor ?? null;
+  }
 
-        // captura: grava a edição de volta no slot em memória do objeto
-        if (!input.readOnly) {
-          input.addEventListener("change", () => {
-            const store = cab.atributos_fase3 || (cab.atributos_fase3 = {});
-            const s = store[col.id] || (store[col.id] = {
-              origem: "gestor", criterio: col.criterio, unidade: col.unidade,
-              tipo: col.tipo, relacao: col.relacao, mandatorio: col.mandatorio,
-            });
-            s.valor = input.value === "" ? null : input.value;
-            const preenchido = input.value !== "";
-            td.classList.toggle("is-preenchido", preenchido);
-            td.classList.toggle("is-pendente", !preenchido);
-          });
-        }
+  function converter(valor, coluna) {
+    if (valor === null || valor === undefined || valor === "") return null;
+    if (coluna.tipo_dado === "booleano") return [true, 1, "1", "true", "sim"].includes(typeof valor === "string" ? valor.toLowerCase() : valor) ? 1 : 0;
+    if (["categorico", "ordinal"].includes(coluna.tipo_dado)) return numero(coluna.mapeamento?.[String(valor)]);
+    return numero(valor);
+  }
+
+  function normalizarObjetos(objetos, coluna) {
+    const originais = objetos.map((objeto) => coluna.grupo === "cadastro" ? valorCadastro(objeto, coluna) : valorDinamico(objeto, coluna));
+    const convertidos = originais.map((valor) => converter(valor, coluna));
+    const validos = convertidos.filter((valor) => valor !== null);
+    const minimo = validos.length ? Math.min(...validos) : 0;
+    const maximo = validos.length ? Math.max(...validos) : 0;
+    const normalizados = convertidos.map((valor) => {
+      if (valor === null) return null;
+      let n = coluna.tipo_dado === "booleano"
+        ? valor
+        : (maximo > minimo ? (valor - minimo) / (maximo - minimo) : 1);
+      if (["menor_melhor", "negativa"].includes(coluna.direcao)) n = 1 - n;
+      return Math.max(0, Math.min(1, n));
+    });
+    return { originais, normalizados };
+  }
+
+  function originalFormatado(valor, coluna) {
+    if (valor === null || valor === undefined || valor === "") return "Não informado";
+    if (coluna.rotulos?.[String(valor)]) return coluna.rotulos[String(valor)];
+    if (coluna.tipo_dado === "booleano") return converter(valor, coluna) === 1 ? "Sim" : "Não";
+    if (coluna.unidade === "R$" || coluna.chave === "capex_estimado") return Number(valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    return `${valor}${coluna.unidade ? ` ${coluna.unidade}` : ""}`;
+  }
+
+  function limpar(raiz) {
+    $("[data-atributos-tbody]", raiz).innerHTML = "";
+    $("[data-atributos-thead] tr", raiz).querySelectorAll("th.col-atributo").forEach((item) => item.remove());
+    $("[data-atributos-erro]", raiz).hidden = true;
+    $("[data-atributos-sem-colunas]", raiz).hidden = true;
+    $("[data-atributos-sem-linhas]", raiz).hidden = true;
+  }
+
+  function montarTabela(raiz, objetos, colunas) {
+    const linhaCabecalho = $("[data-atributos-thead] tr", raiz);
+    const corpo = $("[data-atributos-tbody]", raiz);
+    const tplColuna = $("#tpl-atributo-coluna", raiz);
+    const tplLinha = $("#tpl-atributo-linha", raiz);
+    const tplCelula = $("#tpl-atributo-celula", raiz);
+    const matrizes = colunas.map((coluna) => normalizarObjetos(objetos, coluna));
+    colunas.forEach((coluna) => {
+      const th = tplColuna.content.firstElementChild.cloneNode(true);
+      th.classList.add(coluna.grupo === "cadastro" ? "col-estatica" : "col-dinamica");
+      th.dataset.colId = coluna.id;
+      $(".col-atributo-alias", th).textContent = coluna.alias || coluna.criterio || coluna.id;
+      $(".col-atributo-unidade", th).textContent = coluna.unidade ? `(${coluna.unidade})` : "";
+      linhaCabecalho.appendChild(th);
+    });
+    objetos.forEach((objeto, indiceObjeto) => {
+      const cabecalho = objeto.cabecalho_objeto || {};
+      const tr = tplLinha.content.firstElementChild.cloneNode(true);
+      $(".objeto-codigo", tr).textContent = cabecalho.nome || "—";
+      $(".objeto-nome", tr).textContent = cabecalho.codigo || "";
+      colunas.forEach((coluna, indiceColuna) => {
+        const td = tplCelula.content.firstElementChild.cloneNode(true);
+        const { originais, normalizados } = matrizes[indiceColuna];
+        const normalizado = normalizados[indiceObjeto];
+        $(".atributo-valor-normalizado", td).textContent = normalizado === null ? "—" : normalizado.toFixed(4);
+        const procedencia = coluna.grupo === "cadastro" ? procedenciaCadastro(objeto, coluna) : null;
+        $(".atributo-valor-original", td).textContent = `${originalFormatado(originais[indiceObjeto], coluna)}${procedencia ? ` · referência: ${procedencia}` : ""}`;
+        td.classList.toggle("is-vazio", normalizado === null);
         tr.appendChild(td);
-      }
-      tbody.appendChild(tr);
+      });
+      corpo.appendChild(tr);
+    });
+  }
+
+  function pesosIniciais(colunas, configuracao) {
+    const anteriores = Object.fromEntries((configuracao?.criterios || []).map((item) => [item.nome_coluna || item.atributo_id, Number(item.peso)]));
+    const pesos = {};
+    for (const grupo of ["cadastro", "dinamico"]) {
+      const itens = colunas.filter((coluna) => coluna.grupo === grupo);
+      const valores = itens.map((coluna) => Number.isFinite(anteriores[coluna.id]) ? anteriores[coluna.id] : 1);
+      const soma = valores.reduce((a, b) => a + b, 0) || 1;
+      itens.forEach((coluna, indice) => { pesos[coluna.id] = valores[indice] / soma; });
     }
+    return pesos;
+  }
+
+  function redistribuir(colunaId, novoValor) {
+    const alvo = estado.colunas.find((coluna) => coluna.id === colunaId);
+    const pares = estado.colunas.filter((coluna) => coluna.grupo === alvo.grupo && coluna.id !== colunaId);
+    estado.pesos[colunaId] = novoValor;
+    if (!pares.length) { estado.pesos[colunaId] = 1; return; }
+    const restante = 1 - novoValor;
+    const somaOutros = pares.reduce((soma, coluna) => soma + estado.pesos[coluna.id], 0);
+    pares.forEach((coluna) => { estado.pesos[coluna.id] = somaOutros > 0 ? restante * estado.pesos[coluna.id] / somaOutros : restante / pares.length; });
+  }
+
+  function montarPesos(raiz) {
+    for (const grupo of ["cadastro", "dinamico"]) {
+      const host = $(`[data-controles-pesos="${grupo}"]`, raiz);
+      const itens = estado.colunas.filter((coluna) => coluna.grupo === grupo);
+      host.innerHTML = itens.map((coluna) => `<label class="atributo-peso" data-peso-id="${coluna.id}"><span>${coluna.alias || coluna.criterio}</span><input type="range" min="0" max="1" step="0.001" value="${estado.pesos[coluna.id]}"><output>${estado.pesos[coluna.id].toFixed(3)}</output></label>`).join("");
+      host.querySelectorAll("input").forEach((input) => input.addEventListener("input", () => {
+        redistribuir(input.closest("[data-peso-id]").dataset.pesoId, Number(input.value));
+        atualizarPesos(raiz, grupo);
+      }));
+      $(`[data-soma-pesos="${grupo}"]`, raiz).closest("section").hidden = !itens.length;
+      atualizarPesos(raiz, grupo);
+    }
+    $("[data-atributos-pesos]", raiz).hidden = !estado.colunas.length;
+  }
+
+  function atualizarPesos(raiz, grupo) {
+    const itens = estado.colunas.filter((coluna) => coluna.grupo === grupo);
+    itens.forEach((coluna) => {
+      const linha = $(`[data-peso-id="${CSS.escape(coluna.id)}"]`, raiz);
+      if (!linha) return;
+      $("input", linha).value = estado.pesos[coluna.id];
+      $("output", linha).textContent = estado.pesos[coluna.id].toFixed(3);
+    });
+    $(`[data-soma-pesos="${grupo}"]`, raiz).textContent = itens.reduce((soma, coluna) => soma + estado.pesos[coluna.id], 0).toFixed(3).replace(".", ",");
   }
 
   async function render(hierarquizacao) {
-    const root = el("[data-atributos-objetos]");
-    if (!root) return;
-    limpar(root);
-    if (!hierarquizacao || !hierarquizacao.codigo) return;
+    const raiz = $("[data-atributos-objetos]");
+    if (!raiz || !hierarquizacao?.codigo) return;
+    limpar(raiz);
     try {
-      const dinamicas = await getColunas(hierarquizacao.codigo);
+      const [respostaColunas, dominios] = await Promise.all([json(API_COLUNAS(hierarquizacao.codigo)), json(API_DOMINIOS)]);
       const objetos = hierarquizacao.dados_hierarquizacao?.objetos || [];
-      const todas = [...ESTATICAS, ...dinamicas];
-      montarColunas(root, todas);
-      if (!dinamicas.length) root.querySelector("[data-atributos-sem-colunas]").hidden = false;
-      if (!objetos.length) root.querySelector("[data-atributos-sem-linhas]").hidden = false;
-      else montarLinhas(root, objetos, todas);
-    } catch (err) {
-      const erroEl = root.querySelector("[data-atributos-erro]");
-      erroEl.textContent = `Não foi possível carregar os atributos: ${err.message}`;
-      erroEl.hidden = false;
+      const tipo = tipoObjeto(hierarquizacao);
+      const colunas = [...colunasCadastro(dominios, tipo), ...colunasDinamicas(respostaColunas.colunas || [])];
+      estado = {
+        colunas,
+        pesos: pesosIniciais(colunas, hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.configuracoes?.fase_3),
+      };
+      const titulo = document.getElementById("fase3-titulo-atributos");
+      if (titulo) titulo.textContent = `2. Critérios atributo de ${tituloTipo(tipo)}`;
+      montarTabela(raiz, objetos, colunas);
+      montarPesos(raiz);
+      $("[data-atributos-sem-colunas]", raiz).hidden = Boolean(colunas.length);
+      $("[data-atributos-sem-linhas]", raiz).hidden = Boolean(objetos.length);
+    } catch (erro) {
+      const aviso = $("[data-atributos-erro]", raiz);
+      aviso.textContent = `Não foi possível carregar os atributos: ${erro.message}`;
+      aviso.hidden = false;
     }
   }
 
-  // Coleta os valores atuais dos slots (em memória) no formato do endpoint de persistência.
-  function coletar(hierarquizacao) {
-    const objetos = hierarquizacao?.dados_hierarquizacao?.objetos || [];
-    const valores = {};
-    for (const obj of objetos) {
-      const cab = obj.cabecalho_objeto || {};
-      const cod = cab.codigo;
-      const af3 = cab.atributos_fase3 || {};
-      if (!cod) continue;
-      const mapa = {};
-      for (const [colId, slot] of Object.entries(af3)) {
-        if (slot && typeof slot === "object") mapa[colId] = slot.valor ?? null;
-      }
-      valores[cod] = mapa;
-    }
-    return { valores };
+  function criteriosPayload() {
+    return estado.colunas.map((coluna) => ({
+      atributo_id: coluna.id,
+      nome_coluna: coluna.id,
+      criterio: coluna.alias || coluna.criterio || coluna.id,
+      tipo_dado: coluna.tipo_dado || "numerico",
+      direcao: coluna.direcao || "maior_melhor",
+      peso: estado.pesos[coluna.id] || 0,
+      obrigatorio: Boolean(coluna.mandatorio || coluna.obrigatorio),
+      mapeamento: coluna.mapeamento || {},
+      grupo_atributo: coluna.grupo,
+    }));
   }
 
-  global.AtributosObjetos = { render, coletar };
+  global.AtributosObjetos = { render, criteriosPayload, coletar: () => ({ valores: {} }) };
 })(window);

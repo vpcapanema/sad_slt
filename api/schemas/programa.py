@@ -1,7 +1,7 @@
 """Schemas Pydantic — contrato HTTP de programas (nível 2)."""
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -34,6 +34,7 @@ class ProgramaCreateSchema(BaseModel):
     pessoa_id: str | None = None
     representante: RepresentanteSchema
     unidades_espaciais: list[str] = Field(default_factory=list)
+    atributos_cadastrais: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProgramaResponseSchema(BaseModel):
@@ -63,6 +64,7 @@ class ProgramaResponseSchema(BaseModel):
     pessoa_id: str | None = None
     representante: RepresentanteSchema | None = None
     unidades_espaciais: list[str] = Field(default_factory=list)
+    atributos_cadastrais: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProgramaUpdateSchema(BaseModel):
@@ -82,3 +84,4 @@ class ProgramaUpdateSchema(BaseModel):
     instituicao_cnpj: str | None = None
     pessoa_id: str | None = None
     representante: RepresentanteUpdateSchema | None = None
+    atributos_cadastrais: dict[str, Any] | None = None

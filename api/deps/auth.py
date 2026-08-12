@@ -66,6 +66,13 @@ def require_analyst(
     return _require_profiles(user, _ANALYZE_PROFILES, "realizar análise ou aprovação")
 
 
+def require_admin(
+    user: SessionUser = Depends(require_authenticated),
+) -> SessionUser:
+    # Área do administrador: perfis elevados (ADMIN e GESTOR).
+    return _require_profiles(user, frozenset({"ADMIN", "GESTOR"}), "acessar a área do administrador")
+
+
 def require_geospatial_access(
     request: Request,
     user: SessionUser = Depends(require_authenticated),

@@ -13,9 +13,9 @@ from api.codigos_demanda import (
     gerar_codigo_unico,
     tipo_demandante_do_codigo,
 )
-from api.constants import STATUS_INICIAL_DEMANDA
+from api.constants import CODIGO_PLANO_OUTROS, STATUS_INICIAL_DEMANDA
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
-from api.repositories import demanda_repository, dominio_repository
+from api.repositories import demanda_repository, dominio_repository, plano_repository
 from api.services.campos_demanda import normalizar_projeto
 from api.services.hierarquia_outros import resolve_programa_pai_id
 from api.services.patch_helpers import apply_instituicao, apply_representante
@@ -96,6 +96,7 @@ def _row_to_response(row: dict[str, Any]) -> DemandaResponseSchema:
         vigencia_inicio=_iso_date(row.get("vigencia_inicio")),
         vigencia_fim=_iso_date(row.get("vigencia_fim")),
         valor_global=float(row["valor_global"]) if row.get("valor_global") is not None else None,
+        atributos_cadastrais=dict(row.get("atributos_cadastrais") or {}),
     )
 
 
@@ -121,6 +122,19 @@ def _build_persist_row(payload: DemandaCreateSchema, codigo: str) -> dict[str, A
         vinculo_institucional=bool(payload.vinculo_institucional),
         vinculo_tipo=payload.vinculo_tipo,
     )
+    plano_id = (payload.plano_id or "").strip()
+    diretoria_id = (payload.diretoria_id or "").strip()
+    classificacao = payload.classificacao
+    if not payload.vinculo_institucional:
+        plano_outros = plano_repository.get_by_codigo(CODIGO_PLANO_OUTROS)
+        if not plano_outros:
+            raise DemandaValidationError(
+                "Plano técnico «Outros planos» não encontrado.",
+                field="plano_id",
+            )
+        plano_id = CODIGO_PLANO_OUTROS
+        diretoria_id = str(plano_outros["diretoria_id"])
+        classificacao = None
 
     if (
         payload.vinculo_institucional
@@ -132,9 +146,9 @@ def _build_persist_row(payload: DemandaCreateSchema, codigo: str) -> dict[str, A
             field="programa_codigo",
         )
 
-    if not payload.diretoria_id or not str(payload.diretoria_id).strip():
+    if not diretoria_id:
         raise DemandaValidationError("Diretoria é obrigatória.", field="diretoria_id")
-    if not payload.plano_id or not str(payload.plano_id).strip():
+    if not plano_id:
         raise DemandaValidationError("Plano é obrigatório.", field="plano_id")
     if payload.vinculo_tipo and payload.vinculo_tipo not in {"programa", "plano"}:
         raise DemandaValidationError("Tipo de vínculo inválido.", field="vinculo_tipo")
@@ -154,8 +168,8 @@ def _build_persist_row(payload: DemandaCreateSchema, codigo: str) -> dict[str, A
         "representante_nome": (payload.representante.nome or "").strip(),
         "representante_email": payload.representante.email,
         "representante_telefone": payload.representante.telefone,
-        "diretoria_id": payload.diretoria_id.strip(),
-        "plano_id": payload.plano_id.strip(),
+        "diretoria_id": diretoria_id,
+        "plano_id": plano_id,
         "programa_id": programa_id,
         "vinculo_institucional": bool(payload.vinculo_institucional),
         "vinculo_tipo": payload.vinculo_tipo,
@@ -165,11 +179,12 @@ def _build_persist_row(payload: DemandaCreateSchema, codigo: str) -> dict[str, A
         "longitude": payload.lng,
         "geometria_tipo": geom_tipo,
         "geometria_geojson": geom_json,
-        "classificacao": payload.classificacao,
+        "classificacao": classificacao,
         "complementos": payload.complementos,
         "vigencia_inicio": (payload.vigencia_inicio or None),
         "vigencia_fim": (payload.vigencia_fim or None),
         "valor_global": payload.valor_global,
+        "atributos_cadastrais": payload.atributos_cadastrais,
     }
     normalizar_projeto(row, pessoa_id=str(pessoa_id))
     return demanda_repository.prepare_insert_params(row)

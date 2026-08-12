@@ -33,6 +33,15 @@ async def listar_planos() -> list[PlanoResponseSchema]:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@router.get("/vinculaveis", response_model=list[PlanoResponseSchema])
+async def listar_planos_vinculaveis() -> list[PlanoResponseSchema]:
+    """Lista os planos que podem ser selecionados como pai no cadastro."""
+    try:
+        return plano_service.listar_planos()
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.get("/internas", response_model=list[PlanoResponseSchema])
 async def listar_planos_internos(
     _user: SessionUser = Depends(require_authenticated),

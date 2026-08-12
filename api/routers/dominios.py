@@ -7,11 +7,25 @@ from api.constants import STATUS_ROTULOS_POR_TIPO
 from api.deps.auth import require_authenticated
 from api.exceptions import DatabaseUnavailableError
 from api.repositories import dominio_repository
-from api.schemas.dominio import MatrizTransicaoStatusSchema, StatusDominioSchema, TipoDemandaSchema
+from api.schemas.dominio import (
+    AtributoObjetoDominioSchema,
+    MatrizTransicaoStatusSchema,
+    StatusDominioSchema,
+    TipoDemandaSchema,
+)
 from api.services.session_service import SessionUser
 from api.services import status_transicoes
 
 router = APIRouter(prefix="/dominios", tags=["dominios"])
+
+
+@router.get("/atributos-objeto", response_model=list[AtributoObjetoDominioSchema])
+async def listar_atributos_objeto() -> list[AtributoObjetoDominioSchema]:
+    """Lista publica usada pelos formularios de cadastro."""
+    try:
+        return [AtributoObjetoDominioSchema(**row) for row in dominio_repository.list_atributos_objeto()]
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 def _map_status(rows: list[dict]) -> list[StatusDominioSchema]:

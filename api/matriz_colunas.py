@@ -153,6 +153,27 @@ def _slug(texto: str, usados: set[str]) -> str:
     return slug
 
 
+def _mapeamento_categorico(valor: Any, tipo: str) -> dict[str, float]:
+    """Extrai uma escala ordinal explícita da descrição da variável."""
+    if tipo != "categorico" or not valor:
+        return {}
+    texto = str(valor).strip()
+    normalizado = _norm(texto)
+    itens: list[str] = []
+    if "escala:" in normalizado:
+        itens = [item.strip() for item in texto.split(":", 1)[1].split(",") if item.strip()]
+    else:
+        intervalo = re.search(r"\b(\d+)\s*a\s*(\d+)\b", normalizado)
+        if intervalo:
+            inicio, fim = map(int, intervalo.groups())
+            passo = 1 if fim >= inicio else -1
+            itens = [str(numero) for numero in range(inicio, fim + passo, passo)]
+    if not itens:
+        return {}
+    divisor = max(1, len(itens) - 1)
+    return {item: indice / divisor for indice, item in enumerate(itens)}
+
+
 def extrair_colunas(matriz: Any) -> list[dict[str, Any]]:
     """Colunas de Etapa 3 (Priorização) derivadas da matriz de critérios e premissas."""
     colunas: list[dict[str, Any]] = []
@@ -179,6 +200,7 @@ def extrair_colunas(matriz: Any) -> list[dict[str, Any]]:
             "unidade": str(unidade).strip() if unidade else None,
             "tipo": tipo,
             "formato": formato,
+            "mapeamento": _mapeamento_categorico(medido, tipo),
             "relacao": relacao,
             "relacao_simbolo": simbolo,
             "mandatorio": _mandatorio(_resolver(rn, "mandatorio")),

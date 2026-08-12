@@ -33,6 +33,15 @@ async def listar_programas() -> list[ProgramaResponseSchema]:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@router.get("/vinculaveis", response_model=list[ProgramaResponseSchema])
+async def listar_programas_vinculaveis() -> list[ProgramaResponseSchema]:
+    """Lista os programas que podem ser selecionados como pai no cadastro."""
+    try:
+        return programa_service.listar_programas()
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.get("/internas", response_model=list[ProgramaResponseSchema])
 async def listar_programas_internos(
     _user: SessionUser = Depends(require_authenticated),

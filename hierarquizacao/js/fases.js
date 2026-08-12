@@ -15,7 +15,6 @@
   let hierarquizacoes = [];
   let pares = [];
   let camadasHomologadas = [];
-  let fatiamentos = [];
   let relatorioAtual = null;
 
   const CRITERIO_ALIAS = {
@@ -207,6 +206,14 @@
     });
   }
 
+  const COR_PADRAO_BANCADA = { restricao: "#e11919", risco: "#f5c518" };
+  function corPadraoBancada(chave) {
+    const c = String(chave || "").toLowerCase();
+    if (c.includes("restri")) return COR_PADRAO_BANCADA.restricao;
+    if (c.includes("risco")) return COR_PADRAO_BANCADA.risco;
+    return null;
+  }
+
   async function enviarCamadaParaBancada(camadaId, chave, rotulo) {
     if (!camadaId) return false;
     const logChave = chave ? `${chave}-bancada` : "";
@@ -216,6 +223,7 @@
       for (let tentativa = 0; tentativa < 2; tentativa += 1) {
         try {
           const recurso = await gpApp.carregarPorId(camadaId);
+          gpApp.aplicarCorPadraoCamada?.(camadaId, corPadraoBancada(chave));
           if (logChave) {
             logCarregamento(
               logChave,
@@ -247,6 +255,7 @@
         const recursos = await gpApp.carregarPorIds(validas.map((camada) => camada.id));
         validas.forEach((camada, indice) => {
           const recurso = recursos[indice];
+          gpApp.aplicarCorPadraoCamada?.(camada.id, corPadraoBancada(camada.chave));
           logCarregamento(
             `${camada.chave}-bancada`,
             `${camada.rotulo === "restrição" ? "Restrição" : "Risco"} carregada na bancada: ${recurso?.nome || camada.id}.`,
@@ -300,6 +309,7 @@
             demanda_id: cab.demanda_id || cab.codigo || null,
             codigo: cab.codigo || null,
             nome: cab.nome || null,
+            status: cab.status || null,
             hierarquizacao: hier.codigo,
           },
         };
@@ -320,6 +330,7 @@
           tipo: "vetorial (memória)",
           origem: "Hierarquização Fase 1",
           geometria_tipo: "Point",
+          simbologia: "status",
         });
       } catch (e) {
         console.warn("Falha ao adicionar hierarquização na bancada", e);
@@ -342,8 +353,13 @@
 
   function erro(value) {
     const box = $("#fase1-erro");
-    box.textContent = value?.message || value;
-    box.classList.remove("hidden");
+    if (box) {
+      box.textContent = value?.message || value;
+      box.classList.remove("hidden");
+    }
+    if (window.SLTFeedback) {
+      window.SLTFeedback.error(value?.message || String(value), "Não foi possível continuar");
+    }
   }
 
   function limparErro() {
@@ -382,30 +398,72 @@
     return Number.isFinite(parsed) ? parsed : fallback;
   }
 
+  const TIPO_DEMANDA_LABEL = {
+    1: "Plano", 2: "Programa", 3: "Projeto",
+    plano: "Plano", programa: "Programa", projeto: "Projeto",
+  };
+
+  function tipoDemandaLabel(hierarquizacao, objs) {
+    const t =
+      hierarquizacao?.tipo_demanda_id ??
+      hierarquizacao?.tipo_demanda ??
+      objs?.[0]?.tipo_demanda ??
+      objs?.[0]?.cabecalho_objeto?.tipo_demanda;
+    return TIPO_DEMANDA_LABEL[t] || (t ? String(t) : "—");
+  }
+
+  function abrirModalObjeto(o) {
+    if (!o) return;
+    const modal = document.getElementById("modal-objetos");
+    if (!modal) return;
+    modal.querySelector("[data-modal-title]").textContent =
+      `${o.codigo || ""} — ${o.nome || "Objeto"}`.replace(/^ — /, "");
+    const body = modal.querySelector("[data-modal-body]");
+    body.innerHTML = "";
+    if (window.SLTObjetoDetalhe?.corpo) body.appendChild(SLTObjetoDetalhe.corpo(o));
+    modal.classList.remove("hidden");
+  }
+
   function renderHierarquizacao() {
     const hierarquizacao = atual();
-    const box = $("#fase-resumo");
     const layer = $("#gp-demandas");
 
     if (!hierarquizacao) {
-      box.classList.add("hidden");
-      layer.innerHTML = '<p class="ahp-help-text">Selecione uma hierarquização.</p>';
+      if (layer) layer.innerHTML = '<p class="ahp-help-text">Selecione uma hierarquização.</p>';
+      ocultarRelatorio();
       return;
     }
 
-    const list = objetos(hierarquizacao)
-      .slice(0, 10)
-      .map((item, index) => {
-        const cabecalho = item.cabecalho_objeto || item;
-        return `<li>${esc(cabecalho.codigo || cabecalho.demanda_id || `Objeto ${index + 1}`)} — ${esc(cabecalho.nome || "Sem denominação")}</li>`;
+    const objs =
+      hierarquizacao.objetos && hierarquizacao.objetos.length
+        ? hierarquizacao.objetos
+        : objetos(hierarquizacao).map((x) => x.cabecalho_objeto || x);
+
+    const objsTexto = objs
+      .map((o, index) => {
+        const cod = o.codigo || o.demanda_id || `Objeto ${index + 1}`;
+        return `<button type="button" class="fase1-gp-obj" data-idx="${index}">${esc(o.nome || "Sem denominação")} <span class="cod">(${esc(cod)})</span></button>`;
       })
       .join("");
 
-    box.innerHTML = `<dl>${linha("Código", hierarquizacao.codigo)}${linha("Configuração multicritério", hierarquizacao.config_codigo || hierarquizacao.config_id)}${linha("Nome", hierarquizacao.nome)}<div><dt>Objetos (primeiros 10)</dt><dd><ol>${list || "<li>Nenhum objeto</li>"}</ol></dd></div></dl>`;
-    box.classList.remove("hidden");
+    layer.innerHTML = `
+      <div class="fase1-gp-meta">
+        <div class="fase1-gp-card"><small>Nome</small><strong>${esc(hierarquizacao.nome || "—")}</strong></div>
+        <div class="fase1-gp-card"><small>Código</small><strong>${esc(hierarquizacao.codigo || "—")}</strong></div>
+        <div class="fase1-gp-card"><small>Tipo de objeto</small><strong>${esc(tipoDemandaLabel(hierarquizacao, objs))}</strong></div>
+      </div>
+      <div class="fase1-gp-objs">
+        <h5><i class="fas fa-list-ul"></i> Objetos do grupo (${objs.length})</h5>
+        <p class="fase1-gp-objs-list">${objsTexto || '<span class="ahp-help-text">Nenhum objeto.</span>'}</p>
+      </div>`;
 
-    layer.innerHTML = `<span class="fase1-layer"><i class="fas fa-location-dot"></i><span><strong>${esc(hierarquizacao.nome)}</strong><small>${objetos(hierarquizacao).length} ponto(s), espacializados por latitude/longitude</small></span></span>`;
-    renderRelatorio(hierarquizacao);
+    layer.querySelectorAll(".fase1-gp-obj").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        abrirModalObjeto(objs[Number(btn.dataset.idx)]);
+      });
+    });
+
+    ocultarRelatorio();
     enviarHierarquizacaoParaBancada(hierarquizacao);
   }
 
@@ -509,130 +567,14 @@
 
     alvo.innerHTML =
       identificador +
+      `<div class="fase1-cr-grid">` +
       (restricao?.value
-        ? `<span class="fase1-layer"><i class="fas fa-ban"></i><span><strong>Restrição: ${esc(restricao.textContent)}</strong></span></span>`
+        ? `<div class="fase1-cr-card fase1-cr-card--restricao"><small><i class="fas fa-ban"></i> Restrição</small><strong>${esc(restricao.textContent)}</strong></div>`
         : "") +
       (risco?.value
-        ? `<span class="fase1-layer"><i class="fas fa-triangle-exclamation"></i><span><strong>Risco: ${esc(risco.textContent)}</strong></span></span>`
-        : "");
-  }
-
-  function renderFatiamento() {
-    const fatiamento = fatiamentos.find(
-      (item) => item.id === $("#fatiamento-fase1").value
-    );
-    const box = $("#fatiamento-resumo");
-    const pesos = $("#fatiamento-pesos");
-    const classes = $("#fatiamento-classes");
-    const limiar = $("#fatiamento-limiar");
-
-    if (!fatiamento) {
-      box.classList.add("hidden");
-      pesos.innerHTML = "";
-      classes.innerHTML = "";
-      limiar.value = "";
-      return;
-    }
-
-    const parametros = fatiamento.parametros || {};
-    const classesRisco = parametros.risco?.classes || [];
-    const pesosConfig = parametros.pesos || {};
-    const descricaoClasses = classesRisco
-      .map(
-        (item) =>
-          `${item.rotulo || item.codigo || "Sem rótulo"}: ${item.minimo ?? "-∞"} a ${item.maximo ?? "+∞"}`
-      )
-      .join("; ");
-
-    box.innerHTML = `<dl>${linha("Nome", fatiamento.nome)}${linha("Código", fatiamento.codigo)}${linha("Configuração padrão", fatiamento.padrao ? "Sim" : "Não")}${linha("Limiar de restrição", parametros.restricao?.limiar)}${linha("Categoria de risco", descricaoClasses || "Não definido")}</dl>`;
-    box.classList.remove("hidden");
-
-    limiar.value = parseNumero(parametros.restricao?.limiar, 1) ?? 1;
-
-    renderClasses(classesRisco);
-    renderPesos(pesosConfig);
-    revalidarCampos();
-  }
-
-  function rotulizarPeso(chave) {
-    return String(chave)
-      .replace(/[_-]+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .replace(/^\w/, (c) => c.toUpperCase());
-  }
-
-  function renderClasses(lista) {
-    const alvo = $("#fatiamento-classes");
-    if (!lista || !lista.length) {
-      alvo.innerHTML = '<p class="ahp-help-text">Configuração sem categoria de risco definida.</p>';
-      return;
-    }
-    const linhas = lista
-      .map((classe, index) => {
-        const titulo = esc(classe.rotulo || classe.codigo || `Classe ${index + 1}`);
-        const faixa = `${classe.minimo ?? "−∞"} → ${classe.maximo ?? "+∞"}`;
-        return `<tr><td>${titulo}</td><td><code>${esc(classe.codigo || "")}</code></td><td class="num">${esc(faixa)}</td></tr>`;
-      })
-      .join("");
-    alvo.innerHTML = `<table class="fase1-readonly-table"><caption>Categoria de risco</caption><thead><tr><th>Rótulo</th><th>Código</th><th>Faixa</th></tr></thead><tbody>${linhas}</tbody></table>`;
-  }
-
-  function renderPesos(pesosConfig) {
-    const alvo = $("#fatiamento-pesos");
-    const chaves = Object.keys(pesosConfig || {});
-    if (!chaves.length) {
-      alvo.innerHTML = '<p class="ahp-help-text">Configuração sem pesos definidos.</p>';
-      return;
-    }
-    const linhas = chaves
-      .map((chave) => `<tr><td>${esc(rotulizarPeso(chave))}</td><td><code>${esc(chave)}</code></td><td class="num">${esc(parseNumero(pesosConfig[chave], 1))}</td></tr>`)
-      .join("");
-    alvo.innerHTML = `<table class="fase1-readonly-table"><caption>Pesos por critério</caption><thead><tr><th>Critério</th><th>Chave</th><th>Peso</th></tr></thead><tbody>${linhas}</tbody></table>`;
-  }
-
-  function parametrosAjustados() {
-    const base = fatiamentos.find((item) => item.id === $("#fatiamento-fase1").value);
-    if (!base) {
-      throw new Error("Selecione uma configuração de fatiamento.");
-    }
-
-    const parametros = JSON.parse(JSON.stringify(base.parametros || {}));
-    parametros.restricao = parametros.restricao || {};
-    parametros.risco = parametros.risco || {};
-
-    parametros.restricao.limiar = parseNumero($("#fatiamento-limiar").value, 1);
-    return parametros;
-  }
-
-  async function salvarAjustesFatiamento() {
-    const base = fatiamentos.find((item) => item.id === $("#fatiamento-fase1").value);
-    if (!base) {
-      throw new Error("Selecione a configuração de fatiamento base.");
-    }
-
-    const codigo = `fase1-ajuste-${Date.now().toString().slice(-9)}-${codigoCurto(base.codigo)}`;
-    const payload = {
-      codigo,
-      nome: `${base.nome} (ajustada)`,
-      descricao: "Configuração salva pela execução da Fase 1.",
-      parametros: parametrosAjustados(),
-    };
-
-    const salvo = await HierApi.salvarFatiamentoFase1(payload);
-
-    fatiamentos = await HierApi.listarFatiamentosFase1();
-    const select = $("#fatiamento-fase1");
-    select.innerHTML = fatiamentos
-      .map(
-        (item) =>
-          `<option value="${esc(item.id)}">${esc(item.nome)}${item.padrao ? " (padrão)" : ""}</option>`
-      )
-      .join("");
-
-    select.value = salvo.id;
-    renderFatiamento();
-    return salvo;
+        ? `<div class="fase1-cr-card fase1-cr-card--risco"><small><i class="fas fa-triangle-exclamation"></i> Risco</small><strong>${esc(risco.textContent)}</strong></div>`
+        : "") +
+      `</div>`;
   }
 
   function badgeStatus(status) {
@@ -951,15 +893,30 @@
   }
 
 
+  function ocultarRelatorio() {
+    relatorioAtual = null;
+    const box = $("#fase1-relatorio");
+    const botaoDownload = $("#baixar-relatorio-fase1");
+    const vazio = $("#fase1-resultado-vazio");
+    if (box) {
+      box.classList.add("hidden");
+      box.innerHTML = "";
+    }
+    if (botaoDownload) botaoDownload.classList.add("hidden");
+    if (vazio) vazio.classList.remove("hidden");
+  }
+
   function renderRelatorio(hierarquizacao) {
     const modelo = montarModeloRelatorio(hierarquizacao);
     relatorioAtual = modelo;
     const box = $("#fase1-relatorio");
     const botaoDownload = $("#baixar-relatorio-fase1");
+    const vazio = $("#fase1-resultado-vazio");
 
     if (!modelo || !modelo.concluidoEm) {
       box.classList.add("hidden");
       botaoDownload.classList.add("hidden");
+      if (vazio) vazio.classList.remove("hidden");
       return;
     }
 
@@ -1048,6 +1005,7 @@
       </section>
     `;
     box.classList.remove("hidden");
+    if (vazio) vazio.classList.add("hidden");
 
     renderMapaSobreposicao(modelo);
 
@@ -1067,7 +1025,7 @@
 
     if (!hierarquizacao || !camadaRestricao || !camadaRisco || (!pacote && !standalone)) {
       return erro(
-        "Selecione a hierarquização, as duas camadas e os ajustes da configuração."
+        "Selecione a hierarquização e as duas camadas homologadas."
       );
     }
 
@@ -1075,21 +1033,24 @@
       limparErro();
       $("#executar-fase1").disabled = true;
 
-      const configuracao = await salvarAjustesFatiamento();
-
       const atualizado = await HierApi.executarFase1(hierarquizacao.codigo, {
         par_id: pacote ? pacote.pacote_id : null,
         camada_restricao_id: camadaRestricao,
         camada_risco_id: camadaRisco,
-        configuracao_fatiamento_id: configuracao.id,
       });
 
       hierarquizacoes = hierarquizacoes.map((item) =>
         item.codigo === atualizado.codigo ? atualizado : item
       );
 
-      renderRelatorio(atualizado);
       renderHierarquizacao();
+      renderRelatorio(atualizado);
+      if (window.SLTFeedback) {
+        window.SLTFeedback.success(
+          "Fase 1 executada. Confira o relatório de risco e restrição abaixo.",
+          "Cálculo concluído"
+        );
+      }
     } catch (e) {
       erro(e);
     } finally {
@@ -1101,8 +1062,6 @@
     "#fase-hierarquizacao",
     "#camada-restricao",
     "#camada-risco",
-    "#fatiamento-fase1",
-    "#fatiamento-limiar",
     "#modelo-fase1",
   ];
 
@@ -1128,19 +1087,34 @@
     });
   }
 
+  function moverControlesParaCards() {
+    const mover = (hostId, ...labelIds) => {
+      const host = document.getElementById(hostId);
+      if (!host) return;
+      labelIds.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) host.appendChild(el);
+      });
+    };
+    mover("gp-demandas-ctrl", "ctrl-hier");
+    mover("gp-risco-restricao-ctrl", "ctrl-restricao", "ctrl-risco");
+    const origem = document.getElementById("fase1-controles-origem");
+    if (origem) origem.removeAttribute("hidden");
+  }
+
   async function init() {
     try {
+      moverControlesParaCards();
       const bibliotecaPromise = fetch(
         "/api/geoespacial/biblioteca-canonica/arquivos?modulo=fase1",
         { credentials: "same-origin" }
       )
         .then((r) => (r.ok ? r.json() : []))
         .catch(() => []);
-      [hierarquizacoes, pares, fatiamentos, camadasHomologadas] =
+      [hierarquizacoes, pares, camadasHomologadas] =
         await Promise.all([
           HierApi.listar(),
           HierApi.listarPacotes("fase1"),
-          HierApi.listarFatiamentosFase1(),
           bibliotecaPromise,
         ]);
 
@@ -1159,16 +1133,7 @@
 
       preencherRestricoes();
 
-      const selectFatiamento = $("#fatiamento-fase1");
-      selectFatiamento.innerHTML = fatiamentos
-        .map(
-          (item) =>
-            `<option value="${esc(item.id)}" ${item.padrao ? "selected" : ""}>${esc(item.nome)}${item.padrao ? " (padrão)" : ""}</option>`
-        )
-        .join("");
-
       renderHierarquizacao();
-      renderFatiamento();
 
       selectHier.onchange = renderHierarquizacao;
       $("#camada-restricao").onchange = associarRiscos;
@@ -1177,23 +1142,20 @@
         enviarCamadaParaBancada($("#camada-risco").value, "risco", "risco");
         revalidarCampos();
       };
-      selectFatiamento.onchange = renderFatiamento;
       configurarValidacaoVisual();
-      $("#salvar-ajustes-fatiamento").onclick = async () => {
-        try {
-          limparErro();
-          const salvo = await salvarAjustesFatiamento();
-          const resumo = $("#fatiamento-resumo");
-          resumo.classList.remove("hidden");
-          resumo.insertAdjacentHTML(
-            "beforeend",
-            `<p><strong>Configuração salva:</strong> ${esc(salvo.nome)} (${esc(salvo.codigo)})</p>`
-          );
-        } catch (e) {
-          erro(e);
-        }
-      };
       $("#executar-fase1").onclick = executar;
+
+      const modalObjetos = document.getElementById("modal-objetos");
+      if (modalObjetos) {
+        const fecharModal = () => modalObjetos.classList.add("hidden");
+        modalObjetos.querySelector("[data-modal-close]")?.addEventListener("click", fecharModal);
+        modalObjetos.addEventListener("click", (e) => {
+          if (e.target === modalObjetos) fecharModal();
+        });
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && !modalObjetos.classList.contains("hidden")) fecharModal();
+        });
+      }
 
       associarRiscos();
       revalidarCampos();

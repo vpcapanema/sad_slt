@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.5                                                                                                                                                                      |
-| **Data de emissão**        | 06/08/2026                                                                                                                                                               |
+| **Versão**                 | 1.7                                                                                                                                                                      |
+| **Data de emissão**        | 10/08/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -38,6 +38,8 @@
 | 1.3     | 06/08/2026 | `[preencher]` | Inclusão da Seção 9 ("Fundamentação científica da construção do critério"), detalhando as propriedades científicas que conferem credibilidade aos resultados e os componentes do registro de cada critério, da premissa ao ranking; renumeração das seções subsequentes.                                                                                                                                                                              |
 | 1.4     | 06/08/2026 | `[preencher]` | Reposicionamento da fundamentação teórica para a Seção 4 (antes do detalhamento metodológico), em linguagem conceitual; deslocamento das definições de componentes do critério para a Seção 10 (metodológica); reformulação do sumário executivo e demais trechos para expressar o protocolo epistemológico como núcleo do sistema, desvinculando-o de uma matriz única de critérios; renumeração das seções.                                 |
 | 1.5     | 06/08/2026 | `[preencher]` | Expansão da Seção 4.1 com um parágrafo dedicado a cada elo da cadeia de fundamentação (premissa, critério, variável, relação com o escopo, dado, métrica e ranking) e respectivo embasamento na literatura de apoio à decisão multicritério, teoria da mensuração e epistemologia (Keeney, Roy, Belton & Stewart, Keeney & Raiffa, Munda, Bouyssou et al., Krantz et al., Saaty e Popper); inclusão das referências correspondentes na Seção 15. |
+| 1.6     | 10/08/2026 | `[preencher]` | Registro da operacionalização do reescalonamento vetorial da Fase 2: normalização min–max, densidades de segurança por quilômetro, proporções territoriais, inversão dos atributos de relação negativa, preservação de NoData e limitação da composição final à disponibilidade de pesos AHP homologados. |
+| 1.7     | 10/08/2026 | `[preencher]` | Vinculação dos produtos reescalonados aos critérios explícitos da matriz v3, consolidação prévia dos indicadores pertencentes ao mesmo critério e geração de superfícies não ponderadas de grade e rede por média simples dos critérios calculáveis. |
 
 ---
 
@@ -395,6 +397,27 @@ customizado homologado.
 winsorização, quebras naturais, curva fuzzy, limite saturado e normalização por meta.
 
 **Inversão de critérios negativos:** `valor_favorabilidade = 1 − valor_normalizado`.
+
+**Operacionalização vetorial dos insumos vigentes.** Enquanto as superfícies raster
+finais e os pesos AHP não estão homologados, os valores disponíveis são preservados nas
+unidades espaciais de origem — setor censitário para a grade e subtrecho para a rede —
+e reescalonados pelo método linear min–max. Na rede, as contagens de segurança são
+convertidas em densidades por quilômetro; extensões urbanas, em proporções do subtrecho;
+e distâncias de acessibilidade, após reescalonadas, são invertidas. Cada campo de
+critério é vinculado nominalmente à etapa "Favorabilidade territorial e da rede" da
+matriz v3. Indicadores alternativos do mesmo critério são consolidados antes da síntese,
+de modo que a quantidade de colunas de origem não altere seu peso. Na grade, a massa
+econômica é representada pelo PIB setorial e a vulnerabilidade pelo PIB per capita
+invertido; os demais indicadores permanecem auxiliares. Os valores ausentes permanecem
+como NoData.
+
+Para análise do cenário sem pesos AHP, são produzidas duas superfícies vetoriais
+identificadas como **média simples**. A superfície de grade combina seus dois critérios;
+a superfície de rede combina os 14 critérios calculáveis, mantendo pavimento e
+sobrecarga sazonal como lacunas. Em cada unidade espacial, a média é calculada sobre os
+critérios válidos e o denominador é registrado em `n_criterios`. Esses produtos são
+cenários não ponderados e não constituem superfícies homologadas; a composição oficial
+permanece dependente dos pesos AHP e da regra de NoData homologados.
 
 **Álgebra de mapas (média ponderada):**
 

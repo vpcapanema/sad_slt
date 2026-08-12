@@ -195,10 +195,22 @@
   function applyLayerColor(id,color,report=true){
     if(!/^#[0-9a-f]{6}$/i.test(color))return false;
     state.layerColors[id]=color.toLowerCase();save("gp-layer-colors",state.layerColors);
-    if(state.map?.getLayer(id))state.map.setPaintProperty(id,"fill-color",color),state.map.setPaintProperty(id,"fill-outline-color",color);
-    if(state.map?.getLayer(`${id}-line`))state.map.setPaintProperty(`${id}-line`,"line-color",color);
-    if(state.map?.getLayer(`${id}-point`))state.map.setPaintProperty(`${id}-point`,"circle-color",color);
+    applyStyleToMap(id,state.layerStyles[id]||{});
     renderLayers();if(report)log(`Cor da camada alterada para ${color}.`,"ok");return true;
+  }
+  function aplicarCorPadraoCamada(id,color){
+    if(!color||!/^#[0-9a-f]{6}$/i.test(color))return false;
+    if(state.layerColors[id])return false; // respeita cor já definida pelo usuário
+    return applyLayerColor(id,color,false);
+  }
+  function corPorNomeCamada(nome){
+    const n=String(nome||"").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    if(n.includes("restri"))return "#dc2626";
+    if(n.includes("risco"))return "#f2c200";
+    return null;
+  }
+  function aplicarCorPorNome(layer){
+    if(!layer)return;const cor=corPorNomeCamada(layer.nome);if(cor)aplicarCorPadraoCamada(layer.id,cor);
   }
   function applyLayerStyle(id,style,report=true,persist=true){
     const current=state.layerStyles[id]||{},next={...current,...style};state.layerStyles[id]=next;if(persist)save("gp-layer-styles",state.layerStyles);
@@ -207,16 +219,126 @@
   }
   function applyStyleToMap(id,next){
     const fill=next.fillColor||layerColor(id),border=next.borderColor||fill,fillOpacity=Number.isFinite(next.fillOpacity)?next.fillOpacity:.32,borderOpacity=Number.isFinite(next.borderOpacity)?next.borderOpacity:1,lineWidth=Number.isFinite(next.lineWidth)?next.lineWidth:2,pointRadius=Number.isFinite(next.pointRadius)?next.pointRadius:5;
-    if(state.map?.getLayer(id)){state.map.setPaintProperty(id,"fill-color",fill);state.map.setPaintProperty(id,"fill-outline-color",border);state.map.setPaintProperty(id,"fill-opacity",next.fillTexture==="outline"?0:fillOpacity)}
-    if(state.map?.getLayer(`${id}-line`)){state.map.setPaintProperty(`${id}-line`,"line-color",border);state.map.setPaintProperty(`${id}-line`,"line-opacity",borderOpacity);state.map.setPaintProperty(`${id}-line`,"line-width",lineWidth);state.map.setPaintProperty(`${id}-line`,"line-dasharray",next.lineTexture==="dashed"?[3,2]:next.lineTexture==="dotted"?[1,2]:[1,0]);state.map.setLayoutProperty(`${id}-line`,"line-cap",next.lineCap||"butt");state.map.setLayoutProperty(`${id}-line`,"line-join",next.lineJoin||"miter")}
-    if(state.map?.getLayer(`${id}-point`)){state.map.setPaintProperty(`${id}-point`,"circle-color",fill);state.map.setPaintProperty(`${id}-point`,"circle-radius",pointRadius);state.map.setPaintProperty(`${id}-point`,"circle-opacity",fillOpacity);state.map.setPaintProperty(`${id}-point`,"circle-stroke-color",border);state.map.setPaintProperty(`${id}-point`,"circle-stroke-opacity",borderOpacity);state.map.setPaintProperty(`${id}-point`,"circle-stroke-width",lineWidth)}
+    const fillExpr=rendererColorExpression(next,"fill"),lineExpr=rendererColorExpression(next,"line");
+    if(state.map?.getLayer(id)){state.map.setPaintProperty(id,"fill-color",fillExpr||fill);state.map.setPaintProperty(id,"fill-outline-color",fillExpr||border);state.map.setPaintProperty(id,"fill-opacity",next.fillTexture==="outline"?0:fillOpacity)}
+    if(state.map?.getLayer(`${id}-line`)){state.map.setPaintProperty(`${id}-line`,"line-color",lineExpr||border);state.map.setPaintProperty(`${id}-line`,"line-opacity",borderOpacity);state.map.setPaintProperty(`${id}-line`,"line-width",lineWidth);state.map.setPaintProperty(`${id}-line`,"line-dasharray",next.lineTexture==="dashed"?[3,2]:next.lineTexture==="dotted"?[1,2]:[1,0]);state.map.setLayoutProperty(`${id}-line`,"line-cap",next.lineCap||"butt");state.map.setLayoutProperty(`${id}-line`,"line-join",next.lineJoin||"miter")}
+    if(state.map?.getLayer(`${id}-point`)){
+      const shape=next.pointShape||"circle",borderW=Number.isFinite(next.lineWidth)?next.lineWidth:1;
+      state.map.setLayoutProperty(`${id}-point`,"icon-image",pointIconImage(id,next,shape,border,borderW));
+      state.map.setLayoutProperty(`${id}-point`,"icon-size",pointRadius/MARKER_BASE);
+      state.map.setLayoutProperty(`${id}-point`,"icon-allow-overlap",true);
+      state.map.setPaintProperty(`${id}-point`,"icon-opacity",fillOpacity);
+    }
   }
   function replaceLayerStyle(id,style,persist=true){
     state.layerStyles[id]=JSON.parse(JSON.stringify(style||{}));if(persist)save("gp-layer-styles",state.layerStyles);
     applyStyleToMap(id,state.layerStyles[id]);
   }
+  function applySavedStyle(id){const saved=state.layerStyles[id];if(saved&&Object.keys(saved).length)applyStyleToMap(id,saved)}
   function currentEditStyle(layerId){return(state.symDraft&&state.symDraft.layerId===layerId)?state.symDraft.draft:(state.layerStyles[layerId]||{})}
   function stageStyle(layerId,patch){if(state.symDraft&&state.symDraft.layerId===layerId)Object.assign(state.symDraft.draft,patch)}
+  const COLOR_RAMPS=[
+    {id:"viridis",nome:"Viridis",tipo:"sequencial",cores:["#440154","#3b528b","#21918c","#5ec962","#fde725"]},
+    {id:"azul",nome:"Azuis",tipo:"sequencial",cores:["#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c"]},
+    {id:"verde",nome:"Verdes",tipo:"sequencial",cores:["#edf8e9","#bae4b3","#74c476","#31a354","#006d2c"]},
+    {id:"laranja",nome:"Laranjas",tipo:"sequencial",cores:["#feedde","#fdbe85","#fd8d3c","#e6550d","#a63603"]},
+    {id:"quente",nome:"Amarelo→Vermelho",tipo:"sequencial",cores:["#ffffb2","#fecc5c","#fd8d3c","#f03b20","#bd0026"]},
+    {id:"divergente_rdylgn",nome:"Vermelho→Verde",tipo:"divergente",cores:["#d73027","#fc8d59","#fee08b","#91cf60","#1a9850"]},
+    {id:"divergente_rdbu",nome:"Vermelho→Azul",tipo:"divergente",cores:["#b2182b","#ef8a62","#f7f7f7","#67a9cf","#2166ac"]},
+    {id:"qualitativa",nome:"Categórica (vívida)",tipo:"qualitativo",cores:["#4e79a7","#f28e2b","#e15759","#76b7b2","#59a14f","#edc948","#b07aa1","#ff9da7","#9c755f","#bab0ac"]}
+  ];
+  function hexParaRgb(hex){const h=String(hex||"#000000").replace("#","");const v=h.length===3?h.split("").map(c=>c+c).join(""):h;return[parseInt(v.slice(0,2),16),parseInt(v.slice(2,4),16),parseInt(v.slice(4,6),16)]}
+  function rgbParaHex(rgb){return"#"+rgb.map(c=>Math.max(0,Math.min(255,Math.round(c))).toString(16).padStart(2,"0")).join("")}
+  function rampaCor(cores,t){if(cores.length===1)return cores[0];const pos=Math.max(0,Math.min(1,t))*(cores.length-1),i=Math.floor(pos),f=pos-i;if(i>=cores.length-1)return cores[cores.length-1];const a=hexParaRgb(cores[i]),b=hexParaRgb(cores[i+1]);return rgbParaHex(a.map((c,k)=>c+(b[k]-c)*f))}
+  function coresDaRampa(rampaId,n){const rampa=COLOR_RAMPS.find(r=>r.id===rampaId)||COLOR_RAMPS[0];if(rampa.tipo==="qualitativo")return n<=rampa.cores.length?rampa.cores.slice(0,n):Array.from({length:n},(_,i)=>rampaCor(rampa.cores,i/(n-1)));if(n<=1)return[rampa.cores[0]];return Array.from({length:n},(_,i)=>rampaCor(rampa.cores,i/(n-1)))}
+  function rampaGradiente(rampa){if(rampa.tipo==="qualitativo"){const n=rampa.cores.length;const stops=rampa.cores.map((c,i)=>`${c} ${(i/n*100).toFixed(1)}%,${c} ${((i+1)/n*100).toFixed(1)}%`).join(",");return`linear-gradient(90deg,${stops})`}return`linear-gradient(90deg,${rampa.cores.join(",")})`}
+  function rampSwatch(rampa){return`<span class="ramp-swatch" style="background:${rampaGradiente(rampa)}"></span>`}
+  function rampSelect(current,fallback){
+    const cur=COLOR_RAMPS.find(r=>r.id===(current||fallback))||COLOR_RAMPS[0];
+    const items=COLOR_RAMPS.map(r=>`<li role="option" data-option="${r.id}" aria-selected="${r.id===cur.id}">${rampSwatch(r)}<span>${r.nome}</span></li>`).join("");
+    return`<div class="ramp-select symbol-select" data-sym-rampa data-value="${cur.id}"><button type="button" class="symbol-select-trigger" aria-haspopup="listbox" aria-expanded="false"><span class="symbol-select-preview">${rampSwatch(cur)}</span><span class="symbol-select-text">${cur.nome}</span><i data-lucide="chevron-down" class="symbol-select-caret"></i></button><ul class="symbol-select-list" role="listbox" hidden>${items}</ul></div>`;
+  }
+  function campoOptionLabel(field,showCount){return`<strong class="campo-nome">${escapeHtml(field.nome)}</strong>${showCount&&!field.numerico?`<span class="campo-count">${fmtNum(field.n_distintos)} valores</span>`:""}`}
+  function campoSelect(fields,current,showCount){
+    const cur=fields.find(f=>f.nome===current)||null;
+    const items=fields.map(f=>`<li role="option" data-option="${escapeHtml(f.nome)}" aria-selected="${f.nome===current}">${campoOptionLabel(f,showCount)}</li>`).join("")||'<li class="campo-empty">Sem campos disponíveis</li>';
+    const trigger=cur?campoOptionLabel(cur,showCount):'<span class="campo-placeholder">Selecione o campo…</span>';
+    return`<div class="campo-select symbol-select" data-sym-campo data-value="${cur?escapeHtml(cur.nome):""}"><button type="button" class="symbol-select-trigger" aria-haspopup="listbox" aria-expanded="false"><span class="symbol-select-preview campo-preview">${trigger}</span><i data-lucide="chevron-down" class="symbol-select-caret"></i></button><ul class="symbol-select-list" role="listbox" hidden>${items}</ul></div>`;
+  }
+  function rendererColorExpression(next,role){
+    const r=next.renderer;if(!r||r.tipo==="unico"||!r.campo)return null;
+    if(r.tipo==="categorizado"){
+      const cats=(r.categorias||[]).filter(c=>c.valor!=null&&c.valor!=="");
+      if(!cats.length)return null;
+      const expr=["match",["to-string",["get",r.campo]]];
+      cats.forEach(c=>expr.push(String(c.valor),c.cor||"#888888"));
+      expr.push(r.corOutros||"#cccccc");
+      return expr;
+    }
+    if(r.tipo==="graduado"){
+      const fatias=(r.fatias||[]).filter(f=>f&&f.cor);
+      if(!fatias.length)return null;
+      const val=["to-number",["get",r.campo]];
+      if(r.modo==="continuo"){
+        const min=Number(r.min),max=Number(r.max);if(!Number.isFinite(min)||!Number.isFinite(max)||max<=min)return null;
+        const stops=[min,fatias[0].cor];
+        (r.quebras||[]).forEach((q,i)=>{if(q>min&&q<max)stops.push(q,fatias[Math.min(i+1,fatias.length-1)].cor)});
+        stops.push(max,fatias[fatias.length-1].cor);
+        return["interpolate",["linear"],val,...stops];
+      }
+      const expr=["step",val,fatias[0].cor];
+      for(let i=1;i<fatias.length;i++)expr.push(Number(fatias[i].de),fatias[i].cor);
+      return expr;
+    }
+    return null;
+  }
+  const POINT_SHAPES=[["circle","Círculo"],["square","Quadrado"],["triangle","Triângulo"],["diamond","Losango"],["star","Estrela"],["cross","Cruz"]];
+  const MARKER_BASE=18;
+  function shapePath(ctx,shape,cx,cy,r){
+    ctx.beginPath();
+    if(shape==="square"){ctx.rect(cx-r,cy-r,2*r,2*r)}
+    else if(shape==="triangle"){ctx.moveTo(cx,cy-r);ctx.lineTo(cx+r*0.92,cy+r*0.75);ctx.lineTo(cx-r*0.92,cy+r*0.75);ctx.closePath()}
+    else if(shape==="diamond"){ctx.moveTo(cx,cy-r);ctx.lineTo(cx+r,cy);ctx.lineTo(cx,cy+r);ctx.lineTo(cx-r,cy);ctx.closePath()}
+    else if(shape==="cross"){const a=r*0.38;ctx.moveTo(cx-a,cy-r);ctx.lineTo(cx+a,cy-r);ctx.lineTo(cx+a,cy-a);ctx.lineTo(cx+r,cy-a);ctx.lineTo(cx+r,cy+a);ctx.lineTo(cx+a,cy+a);ctx.lineTo(cx+a,cy+r);ctx.lineTo(cx-a,cy+r);ctx.lineTo(cx-a,cy+a);ctx.lineTo(cx-r,cy+a);ctx.lineTo(cx-r,cy-a);ctx.lineTo(cx-a,cy-a);ctx.closePath()}
+    else if(shape==="star"){for(let i=0;i<10;i++){const ang=-Math.PI/2+i*Math.PI/5,rr=i%2?r*0.45:r;const x=cx+Math.cos(ang)*rr,y=cy+Math.sin(ang)*rr;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.closePath()}
+    else{ctx.arc(cx,cy,r,0,2*Math.PI)}
+  }
+  function markerImageName(o){return`slt-mk-${o.shape}-${o.fill.replace("#","")}-${o.border.replace("#","")}-${Math.round((o.borderW||0)*10)}`}
+  function ensureMarkerImage(map,o){
+    const name=markerImageName(o);if(!map||map.hasImage(name))return name;
+    const pixelRatio=Math.max(2,Math.ceil((window.devicePixelRatio||1)*2)),pad=6,size=MARKER_BASE*2+pad*2;
+    const canvas=document.createElement("canvas");canvas.width=size*pixelRatio;canvas.height=size*pixelRatio;
+    const ctx=canvas.getContext("2d");ctx.scale(pixelRatio,pixelRatio);
+    shapePath(ctx,o.shape,size/2,size/2,MARKER_BASE);
+    ctx.fillStyle=o.fill;ctx.fill();
+    if((o.borderW||0)>0){ctx.lineWidth=o.borderW;ctx.strokeStyle=o.border;ctx.lineJoin="round";ctx.stroke()}
+    map.addImage(name,ctx.getImageData(0,0,canvas.width,canvas.height),{pixelRatio});return name;
+  }
+  function initPointLayer(id,color,vectorTile=false){
+    const layer={id:id+"-point",type:"symbol",source:id,layout:{"icon-allow-overlap":true,"icon-ignore-placement":true},filter:["==",["geometry-type"],"Point"]};
+    if(vectorTile)layer["source-layer"]="camada";
+    state.map.addLayer(layer);
+    const nome=ensureMarkerImage(state.map,{shape:"circle",fill:color,border:"#ffffff",borderW:1});
+    state.map.setLayoutProperty(id+"-point","icon-image",nome);
+    state.map.setLayoutProperty(id+"-point","icon-size",5/MARKER_BASE);
+  }
+  function pointIconImage(id,next,shape,border,borderW){
+    const fill=next.fillColor||layerColor(id),r=next.renderer;
+    if(r&&r.tipo==="categorizado"&&r.campo&&(r.categorias||[]).length){
+      const expr=["match",["to-string",["get",r.campo]]];
+      r.categorias.forEach(c=>expr.push(String(c.valor),["image",ensureMarkerImage(state.map,{shape,fill:c.cor||"#888",border,borderW})]));
+      expr.push(["image",ensureMarkerImage(state.map,{shape,fill:r.corOutros||"#cccccc",border,borderW})]);
+      return expr;
+    }
+    if(r&&r.tipo==="graduado"&&r.campo&&(r.fatias||[]).length){
+      const val=["to-number",["get",r.campo]];
+      const expr=["step",val,["image",ensureMarkerImage(state.map,{shape,fill:r.fatias[0].cor,border,borderW})]];
+      for(let i=1;i<r.fatias.length;i++)expr.push(Number(r.fatias[i].de),["image",ensureMarkerImage(state.map,{shape,fill:r.fatias[i].cor,border,borderW})]);
+      return expr;
+    }
+    return ensureMarkerImage(state.map,{shape,fill,border,borderW});
+  }
+
   function ribbon(tab="mapa"){
     const modelEditor=tab==="modelo"&&window.gpModeler?.hasActiveEditor?.() ? [["Editor",[["save","Salvar","model-save"],["badge-check","Validar","model-validate"],["play","Executar","model-run"],["log-in","Entrada","model-input"],["circle-dot","Variável","model-variable","menu:variable"],["repeat-2","Iterador","model-iterator","menu:iterator"],["settings-2","Algoritmo","model-algorithm","menu:algorithm"],["blocks","Função","model-function","menu:function"],["log-out","Saída","model-output"],["git-commit-horizontal","Conectar","model-connect"],["copy","Duplicar","model-duplicate"],["trash-2","Excluir","model-delete"],["layout-grid","Organizar","model-layout"],["maximize","Ajustar","model-fit"]]]] : [];
     const sets={
@@ -276,10 +398,25 @@
   function layerSymbol(layer){
     if(layer.tipo?.toLowerCase().includes("raster"))return '<span class="layer-symbol raster" title="Raster"></span>';
     const types=state.geometryTypes[layer.id]||[],type=types[0]||"geometry",symbolStyle=state.layerStyles[layer.id]||{},color=symbolStyle.fillColor||symbolStyle.borderColor||layerColor(layer.id,types),style=` style="--layer-color:${color}"`;
-    if(type.includes("Point"))return `<span class="layer-symbol point"${style} title="Pontos"></span>`;
+    if(type.includes("Point")){const shape=symbolStyle.pointShape||"circle";if(shape!=="circle")return `<span class="layer-symbol layer-symbol-shape" title="Pontos">${symbolPreview("shape",shape,color)}</span>`;return `<span class="layer-symbol point"${style} title="Pontos"></span>`}
     if(type.includes("Line"))return `<span class="layer-symbol line"${style} title="Linhas"></span>`;
     if(type.includes("Polygon"))return `<span class="layer-symbol polygon"${style} title="Polígonos"></span>`;
     return `<span class="layer-symbol geometry"${style} title="Geometria vetorial"></span>`;
+  }
+  function layerLegend(layer){
+    const renderer=state.layerStyles[layer.id]?.renderer;
+    if(renderer?.tipo==="categorizado"&&(renderer.categorias||[]).length){
+      const cats=renderer.categorias.slice(0,8),extra=renderer.categorias.length-cats.length;
+      const items=cats.map(c=>`<div class="layer-legend-item"><span class="legend-swatch" style="background:${c.cor}"></span><span class="legend-label">${escapeHtml(c.rotulo??c.valor)}</span></div>`).join("");
+      const more=extra>0?`<div class="layer-legend-item legend-more">+${extra} categoria(s)</div>`:"";
+      const outros=renderer.corOutros?`<div class="layer-legend-item"><span class="legend-swatch" style="background:${renderer.corOutros}"></span><span class="legend-label">Demais valores</span></div>`:"";
+      return `<div class="layer-legend" title="Editar simbologia">${items}${more}${outros}</div>`;
+    }
+    if(renderer?.tipo==="graduado"&&(renderer.fatias||[]).length){
+      const items=renderer.fatias.map(f=>`<div class="layer-legend-item"><span class="legend-swatch" style="background:${f.cor}"></span><span class="legend-label">${escapeHtml(f.rotulo)}</span></div>`).join("");
+      return `<div class="layer-legend" title="Editar simbologia">${items}</div>`;
+    }
+    return `<div class="layer-legend layer-legend--single" title="Editar simbologia">${layerSymbol(layer)}</div>`;
   }
   function renderLayers(){
     const query=$("#gp-layer-search").value.toLocaleLowerCase("pt-BR"),items=state.layers.filter(layer=>layer.nome.toLocaleLowerCase("pt-BR").includes(query));
@@ -292,7 +429,7 @@
     const operational=items.map(layer=>{
       const onMap=Boolean(state.map?.getSource(layer.id));
       const display=bySource?sourcePath(layer):layer.nome;
-      return `<div class="tree-row tree-indent ${state.activeLayerId===layer.id?"active":""}" data-layer="${layer.id}" tabindex="0"><input type="checkbox" ${onMap?"checked":""} aria-label="Exibir ${escapeHtml(layer.nome)}">${layerSymbol(layer)}<span class="layer-name" title="${escapeHtml(display)}">${escapeHtml(display)}</span><button class="icon-btn layer-zoom" type="button" data-zoom-layer="${layer.id}" title="Zoom para a camada"><i data-lucide="maximize"></i></button></div>`;
+      return `<div class="tree-row tree-indent tree-layer ${state.activeLayerId===layer.id?"active":""}" data-layer="${layer.id}" tabindex="0"><input type="checkbox" ${onMap?"checked":""} aria-label="Exibir ${escapeHtml(layer.nome)}"><div class="layer-entry"><div class="layer-entry-head"><span class="layer-name" title="${escapeHtml(display)}">${escapeHtml(display)}</span><button class="icon-btn layer-zoom" type="button" data-zoom-layer="${layer.id}" title="Zoom para a camada"><i data-lucide="maximize"></i></button></div>${layerLegend(layer)}</div></div>`;
     }).join("");
     const group=(id,label,icon,content,empty)=>`<section class="layer-group ${state.layerGroups[id]?"collapsed":""}" data-layer-group="${id}"><button class="tree-row layer-group-title" type="button" aria-expanded="${!state.layerGroups[id]}"><i data-lucide="chevron-down" class="tree-chevron"></i><i data-lucide="${icon}"></i><strong>${label}</strong></button><div class="layer-group-children">${content||`<div class="empty compact">${empty}</div>`}</div></section>`;
     const operationalLabel=bySource?"Camadas por fonte":"Camadas operacionais";
@@ -593,21 +730,24 @@
       const response=await fetch(`${API}/camadas/${id}/geojson`);
       if(!response.ok)throw new Error(`Geometria em memória indisponível (HTTP ${response.status})`);
       const data=await response.json();state.geometryTypes[id]=[...new Set((data.features||[]).map(feature=>feature.geometry?.type).filter(Boolean))];
-      const color=layerColor(id,state.geometryTypes[id]),invalid=["==",["get","slt_geometria_valida"],false],byValidity=["case",invalid,"#dc2626",color];
+      const color=layerColor(id,state.geometryTypes[id]);
       state.map.addSource(id,{type:"geojson",data});
-      state.map.addLayer({id,type:"fill",source:id,paint:{"fill-color":byValidity,"fill-opacity":["case",invalid,.68,.32],"fill-outline-color":byValidity},filter:["==",["geometry-type"],"Polygon"]});
-      state.map.addLayer({id:id+"-line",type:"line",source:id,paint:{"line-color":byValidity,"line-width":["case",invalid,4,2]},filter:["==",["geometry-type"],"LineString"]});
-      state.map.addLayer({id:id+"-point",type:"circle",source:id,paint:{"circle-color":byValidity,"circle-radius":["case",invalid,8,5],"circle-stroke-color":"#fff","circle-stroke-width":1},filter:["==",["geometry-type"],"Point"]});
+      state.map.addLayer({id,type:"fill",source:id,paint:{"fill-color":color,"fill-opacity":.32,"fill-outline-color":color},filter:["==",["geometry-type"],"Polygon"]});
+      state.map.addLayer({id:id+"-line",type:"line",source:id,paint:{"line-color":color,"line-width":2},filter:["==",["geometry-type"],"LineString"]});
+      initPointLayer(id,color);
+      applySavedStyle(id);
+      aplicarCorPorNome(resource);
       if(fit){const bounds=new maplibregl.LngLatBounds();data.features?.forEach(feature=>walkCoords(feature.geometry?.coordinates,coord=>bounds.extend(coord)));if(!bounds.isEmpty())state.map.fitBounds(bounds,{padding:40,maxZoom:15})}
       return true;
     }
     state.geometryTypes[id]=resource.geometria_tipo?[resource.geometria_tipo]:[];
     const color=layerColor(id,state.geometryTypes[id]);
     state.map.addSource(id,{type:"vector",tiles:[`${location.origin}${API}/camadas/${encodeURIComponent(id)}/tiles/{z}/{x}/{y}.pbf`],minzoom:0,maxzoom:22});
-    const invalid=["==",["get","slt_geometria_valida"],false],byValidity=["case",invalid,"#dc2626",color];
-    state.map.addLayer({id,type:"fill",source:id,"source-layer":"camada",paint:{"fill-color":byValidity,"fill-opacity":["case",invalid,.68,.32],"fill-outline-color":byValidity},filter:["==",["geometry-type"],"Polygon"]});
-    state.map.addLayer({id:id+"-line",type:"line",source:id,"source-layer":"camada",paint:{"line-color":byValidity,"line-width":["case",invalid,4,2]},filter:["==",["geometry-type"],"LineString"]});
-    state.map.addLayer({id:id+"-point",type:"circle",source:id,"source-layer":"camada",paint:{"circle-color":byValidity,"circle-radius":["case",invalid,8,5],"circle-stroke-color":"#fff","circle-stroke-width":1},filter:["==",["geometry-type"],"Point"]});
+    state.map.addLayer({id,type:"fill",source:id,"source-layer":"camada",paint:{"fill-color":color,"fill-opacity":.32,"fill-outline-color":color},filter:["==",["geometry-type"],"Polygon"]});
+    state.map.addLayer({id:id+"-line",type:"line",source:id,"source-layer":"camada",paint:{"line-color":color,"line-width":2},filter:["==",["geometry-type"],"LineString"]});
+    initPointLayer(id,color,true);
+    applySavedStyle(id);
+    aplicarCorPorNome(resource);
     if(fit)await zoomToCatalogLayer(id);
     return true;
   }
@@ -672,6 +812,7 @@
   function bind(){ribbon();renderToolbox();refreshLayers();refreshDefinitions();window.gpCommands?.loadEnvironments?.();$("#gp-tool-search").oninput=e=>renderToolbox(e.target.value);$("#gp-layer-search").oninput=renderLayers;$("#gp-toolbox").addEventListener("click",e=>{const b=e.target.closest("[data-op]");if(b)selectOp(b.dataset.op)});$$('[data-ribbon]').forEach(b=>b.onclick=()=>{$$('[data-ribbon]').forEach(x=>x.classList.toggle("active",x===b));ribbon(b.dataset.ribbon)});$$('[data-right-tab]').forEach(b=>b.addEventListener("click",()=>{$$('[data-right-tab]').forEach(x=>{const active=x===b;x.classList.toggle("active",active);x.setAttribute("aria-selected",String(active))});if(b.dataset.rightTab==="tools")showTools();else if(b.dataset.rightTab==="history")showHistory();else if(b.dataset.rightTab==="model-elements"||b.dataset.rightTab==="model-properties")window.gpModeler?.showPanel?.(b.dataset.rightTab==="model-elements"?"elements":"properties");else showLibrary(b.dataset.rightTab)}));$("#gp-file-input").onchange=e=>{filesAdded(e.target.files);e.target.value=""};const mapView=$(".gp-map-view");["dragenter","dragover"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.add("dragging")}));["dragleave","drop"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.remove("dragging")}));mapView.addEventListener("drop",e=>filesAdded(e.dataTransfer.files));$("#gp-home").onclick=()=>state.map.flyTo({center:[-48.5,-22.4],zoom:6.2});$("#gp-fit").onclick=()=>state.map.fitBounds([[-53.2,-25.5],[-44,-19.5]],{padding:20});$("#gp-log-toggle").onclick=()=>$("#gp-log").classList.toggle("open")}
   function symbolPreview(kind,value,color){
     const c=color||"#334155";
+    if(kind==="shape"){const paths={circle:'<circle cx="23" cy="7" r="5.5"/>',square:'<rect x="17.5" y="1.5" width="11" height="11"/>',triangle:'<polygon points="23,1 29,12 17,12"/>',diamond:'<polygon points="23,1 29,7 23,13 17,7"/>',star:'<polygon points="23,1 24.6,5.6 29.4,5.6 25.4,8.5 27,13 23,10.2 19,13 20.6,8.5 16.6,5.6 21.4,5.6"/>',cross:'<polygon points="20.5,1 25.5,1 25.5,4.5 29,4.5 29,9.5 25.5,9.5 25.5,13 20.5,13 20.5,9.5 17,9.5 17,4.5 20.5,4.5"/>'};return `<svg class="sym-preview" viewBox="0 0 46 14" aria-hidden="true"><g fill="${c}" stroke="#334155" stroke-width="1">${paths[value]||paths.circle}</g></svg>`}
     if(kind==="line"){const dash=value==="dashed"?' stroke-dasharray="7 4"':value==="dotted"?' stroke-dasharray="1 4.5" stroke-linecap="round"':'',w=value==="dotted"?3:2.5;return `<svg class="sym-preview" viewBox="0 0 46 14" aria-hidden="true"><line x1="3" y1="7" x2="43" y2="7" stroke="${c}" stroke-width="${w}"${dash}/></svg>`}
     if(kind==="cap"){return `<svg class="sym-preview" viewBox="0 0 46 14" aria-hidden="true"><line x1="13" y1="7" x2="33" y2="7" stroke="${c}" stroke-width="9" stroke-linecap="${value}"/></svg>`}
     if(kind==="join"){return `<svg class="sym-preview" viewBox="0 0 46 14" aria-hidden="true"><polyline points="7,12 23,3 39,12" fill="none" stroke="${c}" stroke-width="6" stroke-linejoin="${value}" stroke-linecap="butt"/></svg>`}
@@ -714,7 +855,8 @@
       groups.push(grp("Aparência",[field("Cor",borderColorField),field("Largura",num("lineWidth",style.lineWidth??2,0,12))]));
       groups.push(grp("Traço",[symField("Estilo de linha",dashSelect),symField("Extremidade",capSelect),symField("Junção",joinSelect),field("Transparência",range("borderOpacity",style.borderOpacity??1))]));
     }else{
-      groups.push(grp("Aparência",[field("Cor de preenchimento",colorInput("fillColor")),field("Cor do contorno",colorInput("borderColor")),field("Tamanho",num("pointRadius",style.pointRadius??5,2,24)),field("Largura do contorno",num("lineWidth",style.lineWidth??1,0,8))]));
+      const shapeSelect=symbolSelect("pointShape","shape",style.pointShape||"circle",fillColor,POINT_SHAPES.map(([value,label])=>({value,label})));
+      groups.push(grp("Aparência",[symField("Símbolo",shapeSelect),field("Cor de preenchimento",colorInput("fillColor")),field("Cor do contorno",colorInput("borderColor")),field("Tamanho",num("pointRadius",style.pointRadius??5,2,24)),field("Largura do contorno",num("lineWidth",style.lineWidth??1,0,8))]));
       groups.push(grp("Efeitos",[field("Transparência do preenchimento",range("fillOpacity",style.fillOpacity??.32)),field("Transparência do contorno",range("borderOpacity",style.borderOpacity??1))]));
     }
     return `<div class="sym-groups">${groups.join("")}</div>`;
@@ -730,7 +872,7 @@
   }
   function recolorSymbols(scope,layerId){
     const style=currentEditStyle(layerId),types=state.geometryTypes[layerId]||[],base=layerColor(layerId,types),fillColor=style.fillColor||base,borderColor=style.borderColor||fillColor;
-    $$(".symbol-select",scope).forEach(root=>{const kind=root.dataset.kind,c=kind==="fill"?fillColor:borderColor;
+    $$(".symbol-select",scope).forEach(root=>{const kind=root.dataset.kind,c=kind==="fill"||kind==="shape"?fillColor:borderColor;
       root.querySelectorAll("[data-option] .sym-preview").forEach(sp=>{sp.outerHTML=symbolPreview(kind,sp.closest("[data-option]").dataset.option,c)});
       const tp=root.querySelector(".symbol-select-preview");if(tp)tp.innerHTML=symbolPreview(kind,root.dataset.value,c)});
   }
@@ -777,6 +919,165 @@
     if(apply)apply.onclick=()=>{const draft=state.symDraft?.draft;if(!draft)return;replaceLayerStyle(layerId,draft,false);renderLayers();log("Simbologia aplicada ao mapa.","ok")};
     if(saveBtn)saveBtn.onclick=()=>{const draft=state.symDraft?.draft;if(!draft)return;replaceLayerStyle(layerId,draft,true);if(state.symDraft)state.symDraft.base=JSON.parse(JSON.stringify(draft));state.symDraft.dirty=false;$(".symbology-actions")?.classList.remove("dirty");renderLayers();log("Simbologia salva no sistema.","ok")};
     if(cancel)cancel.onclick=()=>{const base=state.symDraft?.base;if(!base)return;replaceLayerStyle(layerId,base,true);if(state.symDraft){state.symDraft.draft=JSON.parse(JSON.stringify(base));state.symDraft.dirty=false}renderLayers();showProperties(state.layers.find(x=>x.id===layerId)||null);log("Alterações de simbologia descartadas.","ok")};
+  }
+  function fmtNum(v){const n=Number(v);if(!Number.isFinite(n))return String(v);return n.toLocaleString("pt-BR",{maximumFractionDigits:2})}
+  async function fetchSymFields(layerId){
+    state.symbologyFieldsCache??={};
+    if(state.symbologyFieldsCache[layerId])return state.symbologyFieldsCache[layerId];
+    const response=await fetch(`${API}/camadas/${encodeURIComponent(layerId)}/simbologia/campos`);
+    const body=await response.json();if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
+    state.symbologyFieldsCache[layerId]=body.campos||[];return state.symbologyFieldsCache[layerId];
+  }
+  async function fetchSymClassificacao(layerId,campo,metodo,classes){
+    const query=new URLSearchParams({campo,metodo,classes:String(classes)});
+    const response=await fetch(`${API}/camadas/${encodeURIComponent(layerId)}/simbologia/classificacao?${query}`);
+    const body=await response.json();if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);return body;
+  }
+  function buildCategorias(resultado,rampaId){
+    const cats=resultado.categorias||[],cores=coresDaRampa(rampaId,cats.length||1);
+    return cats.map((c,i)=>({valor:c.valor,cor:cores[i],rotulo:String(c.valor),contagem:c.contagem}));
+  }
+  function buildFatias(min,max,quebras,cores){
+    const bounds=[min,...quebras,max];
+    return cores.map((cor,i)=>({cor,de:bounds[i],ate:bounds[i+1],rotulo:`${fmtNum(bounds[i])} – ${fmtNum(bounds[i+1])}`}));
+  }
+  function recomputeFatias(r){
+    const cores=(r.fatias||[]).map(f=>f.cor);
+    r.fatias=buildFatias(r.min,r.max,r.quebras||[],cores.length?cores:coresDaRampa(r.rampa,(r.quebras||[]).length+1));
+  }
+  function previewSymbology(layerId){replaceLayerStyle(layerId,state.symDraft.draft,false);renderLayers();markSymbologyDirty()}
+  function ensureSymbologyTab(layerId){
+    let tab=$('[data-right-tab="symbology"]');
+    if(!tab){
+      tab=document.createElement("button");tab.type="button";tab.role="tab";tab.dataset.rightTab="symbology";tab.dataset.dynamicTab="symbology";tab.setAttribute("aria-selected","false");tab.title="Simbologia";
+      tab.innerHTML='<i data-tab-icon data-lucide="shapes"></i><span>Simbologia</span><i data-tab-close="symbology" data-lucide="x"></i>';
+      $(".gp-right-tabs").append(tab);icons();
+    }
+    tab.dataset.layerId=layerId;activateRightTab("symbology");tab.scrollIntoView({block:"nearest",inline:"nearest"});return tab;
+  }
+  async function openSymbology(layerId){
+    layerId=layerId||state.activeLayerId;const layer=state.layers.find(item=>item.id===layerId);
+    if(!layer){log("Selecione uma camada para editar a simbologia.","error");return}
+    if(layer.tipo?.toLowerCase().includes("raster")){showProperties(layer);return}
+    state.activeLayerId=layerId;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x.dataset.layer===layerId));
+    const saved=state.layerStyles[layerId]||{};
+    state.symDraft={layerId,base:JSON.parse(JSON.stringify(saved)),draft:JSON.parse(JSON.stringify(saved)),dirty:false};
+    ensureSymbologyTab(layerId);showEditor();$("#gp-right-title").textContent="Simbologia";
+    $("#gp-editor-view").innerHTML='<div class="empty">Carregando campos da camada…</div>';
+    try{await fetchSymFields(layerId)}catch(error){log(`Campos indisponíveis: ${error.message}`,"error")}
+    renderSymbologyPanel(layerId);
+  }
+  function renderSymbologyPanel(layerId){
+    const layer=state.layers.find(item=>item.id===layerId);if(!layer)return;
+    const draft=state.symDraft.draft,renderer=draft.renderer||{tipo:"unico"},tipo=renderer.tipo||"unico";
+    const tipos=[["unico","Símbolo único","shapes"],["categorizado","Categorizado","list"],["graduado","Graduado","bar-chart-3"]];
+    const seg=`<div class="sym-typebar" role="tablist" aria-label="Tipo de simbologia">${tipos.map(([value,rotulo,icon])=>`<button type="button" role="tab" data-sym-type="${value}" class="${value===tipo?"active":""}" aria-selected="${value===tipo}"><i data-lucide="${icon}"></i><span>${rotulo}</span></button>`).join("")}</div>`;
+    const body=tipo==="categorizado"?renderCategorizedBody(layerId):tipo==="graduado"?renderGraduatedBody(layerId):`<div class="sym-body">${symbologyFields(layerId)}</div>`;
+    const actions=`<div class="editor-actions symbology-actions"><button type="button" class="btn ghost" data-sym-cancel>Cancelar</button><button type="button" class="btn" data-sym-apply>Aplicar</button><button type="button" class="btn primary" data-sym-save>Salvar</button></div>`;
+    $("#gp-editor-view").innerHTML=`<div class="editor-head"><i data-lucide="shapes"></i><h2 title="${escapeHtml(layer.nome)}">${escapeHtml(layer.nome)}</h2></div><div class="editor-body sym-editor">${seg}${body}</div>${actions}`;
+    if(tipo==="unico"){
+      wireSymbology($("#gp-editor-view"),layerId);
+      const live=()=>previewSymbology(layerId);
+      $$("#gp-editor-view [data-style]").forEach(el=>{const prev=el.oninput;el.oninput=event=>{prev&&prev.call(el,event);live()}});
+      $$("#gp-editor-view .symbol-select [data-option]").forEach(opt=>{const prev=opt.onclick;opt.onclick=event=>{prev&&prev.call(opt,event);live()}});
+    }
+    wireSymbologyPanel(layerId);wireSymbologyPanelActions(layerId);icons();
+  }
+  function rampaOptions(current,fallback){return COLOR_RAMPS.map(rampa=>`<option value="${rampa.id}" ${rampa.id===(current||fallback)?"selected":""}>${rampa.nome}</option>`).join("")}
+  function renderCategorizedBody(layerId){
+    const fields=state.symbologyFieldsCache?.[layerId]||[],renderer=state.symDraft.draft.renderer||{};
+    const cats=renderer.tipo==="categorizado"?(renderer.categorias||[]):[];
+    const list=cats.map((c,i)=>`<div class="sym-class-row" data-sym-index="${i}"><input type="color" data-sym-cor value="${c.cor}" title="Cor"><input type="text" class="sym-class-label" data-sym-rotulo value="${escapeHtml(c.rotulo??c.valor)}"><span class="sym-class-count">${c.contagem!=null?fmtNum(c.contagem):""}</span><button type="button" class="icon-btn" data-sym-remove title="Remover categoria"><i data-lucide="x"></i></button></div>`).join("");
+    return `<div class="sym-body sym-attr"><section class="sym-group"><div class="sym-attr-controls"><div class="sym-field-block"><span>Campo</span>${campoSelect(fields,renderer.campo,true)}</div><div class="sym-field-block"><span>Paleta</span>${rampSelect(renderer.rampa,"qualitativa")}</div><button type="button" class="btn" data-sym-classify><i data-lucide="wand-2"></i>Classificar</button></div></section><section class="sym-group"><h4 class="sym-group-title">Categorias</h4><div class="sym-classes" data-sym-classes>${list||'<p class="sym-hint">Escolha um campo e clique em Classificar para gerar as categorias.</p>'}</div>${cats.length?`<label class="sym-field-block sym-outros"><span>Cor dos demais valores</span><input type="color" data-sym-outros value="${renderer.corOutros||"#cccccc"}"></label>`:""}</section></div>`;
+  }
+  function renderGraduatedBody(layerId){
+    const fields=(state.symbologyFieldsCache?.[layerId]||[]).filter(field=>field.numerico),renderer=state.symDraft.draft.renderer||{};
+    const metodos=[["intervalos_iguais","Intervalos iguais"],["quantis","Quantis"],["desvio_padrao","Desvio padrão"],["quebras_naturais","Quebras naturais (Jenks)"],["manual","Manual"]];
+    const metodoOpts=metodos.map(([value,rotulo])=>`<option value="${value}" ${value===(renderer.metodo||"intervalos_iguais")?"selected":""}>${rotulo}</option>`).join("");
+    const modo=renderer.modo||"discreto",classes=renderer.classes||5;
+    const fatias=renderer.tipo==="graduado"?(renderer.fatias||[]):[],quebras=renderer.quebras||[];
+    const last=fatias.length-1;
+    const list=fatias.map((f,i)=>`<div class="sym-class-row" data-sym-index="${i}"><input type="color" data-sym-cor value="${f.cor}" title="Cor"><div class="sym-class-range"><span>${fmtNum(f.de)}</span><span class="sym-range-sep">–</span>${i<last?`<input type="number" step="any" data-sym-break value="${f.ate}" title="Limite superior">`:`<span>${fmtNum(f.ate)}</span>`}</div><input type="text" class="sym-class-label" data-sym-rotulo value="${escapeHtml(f.rotulo)}"></div>`).join("");
+    return `<div class="sym-body sym-attr"><section class="sym-group"><div class="sym-attr-controls"><div class="sym-field-block"><span>Campo numérico</span>${campoSelect(fields,renderer.campo,false)}</div><div class="sym-field-block"><span>Paleta</span>${rampSelect(renderer.rampa,"viridis")}</div></div><div class="sym-attr-controls"><label class="sym-field-block"><span>Método</span><select data-sym-metodo>${metodoOpts}</select></label><label class="sym-field-block"><span>Classes</span><input type="number" min="2" max="12" step="1" data-sym-classes-count value="${classes}"></label></div><div class="sym-attr-controls"><fieldset class="sym-modo"><legend>Representação</legend><label><input type="radio" name="sym-modo" value="discreto" ${modo==="discreto"?"checked":""}> Discreto</label><label><input type="radio" name="sym-modo" value="continuo" ${modo==="continuo"?"checked":""}> Contínuo</label></fieldset><button type="button" class="btn" data-sym-classify><i data-lucide="wand-2"></i>Classificar</button></div></section><section class="sym-group"><h4 class="sym-group-title">Classes${quebras.length?` · ${fatias.length}`:""}</h4><div class="sym-classes" data-sym-classes>${list||'<p class="sym-hint">Selecione um campo numérico, o método e o número de classes; então clique em Classificar.</p>'}</div></section></div>`;
+  }
+  function wireSymbologyPanel(layerId){
+    const scope=$("#gp-editor-view"),draft=state.symDraft.draft;
+    $$("[data-sym-type]",scope).forEach(button=>button.onclick=()=>{
+      const value=button.dataset.symType,atual=draft.renderer?.tipo||"unico";
+      if(value!==atual){
+        draft.renderer=value==="unico"?{tipo:"unico"}:{tipo:value,rampa:value==="graduado"?"viridis":"qualitativa"};
+        const campos=state.symbologyFieldsCache?.[layerId]||[];
+        const primeiro=value==="graduado"?campos.find(f=>f.numerico):campos[0];
+        if(primeiro&&value!=="unico"){draft.renderer.campo=primeiro.nome;classifySymbology(layerId);return}
+        previewSymbology(layerId);
+      }
+      renderSymbologyPanel(layerId);
+    });
+    const campo=$("[data-sym-campo]",scope);if(campo)wireCampoSelect(campo,layerId);
+    const rampaRoot=$("[data-sym-rampa]",scope);if(rampaRoot)wireRampSelect(rampaRoot,layerId);
+    const metodo=$("[data-sym-metodo]",scope);if(metodo)metodo.onchange=()=>{const r=draft.renderer||(draft.renderer={});r.metodo=metodo.value;if(r.campo)classifySymbology(layerId)};
+    const classesCount=$("[data-sym-classes-count]",scope);if(classesCount)classesCount.onchange=()=>{const r=draft.renderer||(draft.renderer={});r.classes=Math.max(2,Math.min(12,Number(classesCount.value)||5));if(r.campo&&r.metodo!=="manual")classifySymbology(layerId)};
+    $$('input[name="sym-modo"]',scope).forEach(radio=>radio.onchange=()=>{const r=draft.renderer;if(!r)return;r.modo=radio.value;if(r.fatias?.length){previewSymbology(layerId)}});
+    const classify=$("[data-sym-classify]",scope);if(classify)classify.onclick=()=>classifySymbology(layerId);
+    $$("[data-sym-cor]",scope).forEach(input=>input.oninput=()=>{const row=input.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;const arr=r.tipo==="categorizado"?r.categorias:r.fatias;if(arr&&arr[i]){arr[i].cor=input.value;previewSymbology(layerId)}});
+    $$("[data-sym-rotulo]",scope).forEach(input=>input.oninput=()=>{const row=input.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;const arr=r.tipo==="categorizado"?r.categorias:r.fatias;if(arr&&arr[i]){arr[i].rotulo=input.value;renderLayers();markSymbologyDirty()}});
+    $$("[data-sym-remove]",scope).forEach(button=>button.onclick=()=>{const row=button.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;if(r?.categorias){r.categorias.splice(i,1);previewSymbology(layerId);renderSymbologyPanel(layerId)}});
+    $$("[data-sym-break]",scope).forEach(input=>input.onchange=()=>{const row=input.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;if(!r?.quebras)return;const valor=Number(input.value);if(!Number.isFinite(valor))return;r.quebras[i]=valor;r.quebras=[...r.quebras].sort((a,b)=>a-b);r.metodo="manual";recomputeFatias(r);previewSymbology(layerId);renderSymbologyPanel(layerId)});
+    const outros=$("[data-sym-outros]",scope);if(outros)outros.oninput=()=>{const r=draft.renderer;if(r){r.corOutros=outros.value;previewSymbology(layerId)}};
+  }
+  function wireCampoSelect(root,layerId){
+    const trigger=root.querySelector(".symbol-select-trigger"),list=root.querySelector(".symbol-select-list");
+    trigger.onclick=event=>{event.stopPropagation();const willOpen=list.hidden;$$(".symbol-select.open").forEach(other=>{if(other!==root){other.classList.remove("open");other.querySelector(".symbol-select-list").hidden=true;other.querySelector(".symbol-select-trigger").setAttribute("aria-expanded","false")}});list.hidden=!willOpen;trigger.setAttribute("aria-expanded",String(willOpen));root.classList.toggle("open",willOpen)};
+    list.querySelectorAll("[data-option]").forEach(option=>option.onclick=()=>{
+      const value=option.dataset.option;root.dataset.value=value;
+      root.querySelector(".campo-preview").innerHTML=option.innerHTML;
+      list.querySelectorAll("[data-option]").forEach(other=>other.setAttribute("aria-selected",String(other===option)));
+      list.hidden=true;trigger.setAttribute("aria-expanded","false");root.classList.remove("open");
+      (state.symDraft.draft.renderer||(state.symDraft.draft.renderer={})).campo=value;
+      classifySymbology(layerId);
+    });
+  }
+  function wireRampSelect(root,layerId){
+    const trigger=root.querySelector(".symbol-select-trigger"),list=root.querySelector(".symbol-select-list");
+    trigger.onclick=event=>{event.stopPropagation();const willOpen=list.hidden;$$(".symbol-select.open").forEach(other=>{if(other!==root){other.classList.remove("open");other.querySelector(".symbol-select-list").hidden=true;other.querySelector(".symbol-select-trigger").setAttribute("aria-expanded","false")}});list.hidden=!willOpen;trigger.setAttribute("aria-expanded",String(willOpen));root.classList.toggle("open",willOpen)};
+    list.querySelectorAll("[data-option]").forEach(option=>option.onclick=()=>{
+      const value=option.dataset.option;root.dataset.value=value;
+      root.querySelector(".symbol-select-preview").innerHTML=option.querySelector(".ramp-swatch").outerHTML;
+      root.querySelector(".symbol-select-text").textContent=option.querySelector("span").textContent;
+      list.querySelectorAll("[data-option]").forEach(other=>other.setAttribute("aria-selected",String(other===option)));
+      list.hidden=true;trigger.setAttribute("aria-expanded","false");root.classList.remove("open");
+      applyRampa(layerId,value);
+    });
+  }
+  function applyRampa(layerId,value){
+    const r=state.symDraft.draft.renderer;if(!r)return;r.rampa=value;
+    const n=r.tipo==="categorizado"?(r.categorias||[]).length:(r.fatias||[]).length;
+    if(!n)return;
+    const cores=coresDaRampa(r.rampa,n);
+    if(r.tipo==="categorizado")r.categorias.forEach((c,i)=>c.cor=cores[i]);else r.fatias.forEach((f,i)=>f.cor=cores[i]);
+    previewSymbology(layerId);renderSymbologyPanel(layerId);
+  }
+  async function classifySymbology(layerId){
+    const draft=state.symDraft.draft,r=draft.renderer||{};
+    if(!r.campo){log("Selecione um campo para classificar.","error");return}
+    try{
+      if(r.tipo==="categorizado"){
+        const resultado=await fetchSymClassificacao(layerId,r.campo,"valores_unicos",5);
+        r.categorias=buildCategorias(resultado,r.rampa||"qualitativa");r.corOutros=r.corOutros||"#cccccc";
+        if(resultado.truncado)log(`Campo com ${resultado.total_distintos} valores; exibindo os 100 mais frequentes.`,"ok");
+      }else{
+        const resultado=await fetchSymClassificacao(layerId,r.campo,r.metodo||"intervalos_iguais",r.classes||5);
+        r.min=resultado.min;r.max=resultado.max;r.quebras=resultado.quebras;r.classes=resultado.classes;
+        r.fatias=buildFatias(resultado.min,resultado.max,resultado.quebras,coresDaRampa(r.rampa||"viridis",resultado.classes));
+      }
+      previewSymbology(layerId);renderSymbologyPanel(layerId);
+    }catch(error){log(`Classificação falhou: ${error.message}`,"error");$("#gp-log").classList.add("open")}
+  }
+  function wireSymbologyPanelActions(layerId){
+    const cancel=$("[data-sym-cancel]"),apply=$("[data-sym-apply]"),saveBtn=$("[data-sym-save]");
+    if(apply)apply.onclick=()=>{replaceLayerStyle(layerId,state.symDraft.draft,false);renderLayers();log("Simbologia aplicada ao mapa.","ok")};
+    if(saveBtn)saveBtn.onclick=()=>{replaceLayerStyle(layerId,state.symDraft.draft,true);state.symDraft.base=JSON.parse(JSON.stringify(state.symDraft.draft));state.symDraft.dirty=false;$(".symbology-actions")?.classList.remove("dirty");renderLayers();log("Simbologia salva no sistema.","ok")};
+    if(cancel)cancel.onclick=()=>{const base=state.symDraft.base;replaceLayerStyle(layerId,base,true);state.symDraft.draft=JSON.parse(JSON.stringify(base));state.symDraft.dirty=false;renderLayers();renderSymbologyPanel(layerId);log("Alterações de simbologia descartadas.","ok")};
   }
   function ensureAttributesTab(layerId){
     const tabId="attributes";
@@ -827,7 +1128,7 @@
     const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail||`Não foi possível excluir ${layerId}`);
     removeLayerFromMap(layerId,false);delete state.layerColors[layerId];save("gp-layer-colors",state.layerColors);log(`${layerId} excluída definitivamente do sistema.`,"ok");
   }
-  document.addEventListener("DOMContentLoaded",()=>{monitorFormAccessibility();initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.dataset.basemapToggle){setBasemap(e.target.dataset.basemapToggle,e.target.checked)}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest("[data-layer-group] > .layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const symbol=e.target.closest(".layer-symbol");if(symbol){const symbolRow=symbol.closest("[data-layer]");if(symbolRow){e.stopPropagation();state.activeLayerId=symbolRow.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===symbolRow));showProperties(state.layers.find(x=>x.id===symbolRow.dataset.layer));return}}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});document.addEventListener("click",e=>{const menu=$("#gp-symbology-menu");if(menu&&!menu.contains(e.target)&&!e.target.closest(".layer-symbol"))closeSymbologyMenu();if(!e.target.closest(".symbol-select"))$$(".symbol-select.open").forEach(o=>{o.classList.remove("open");const l=o.querySelector(".symbol-select-list");if(l)l.hidden=true;const t=o.querySelector(".symbol-select-trigger");if(t)t.setAttribute("aria-expanded","false")})});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSymbologyMenu()});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.","ok");emit("pronto",{api:API})});
+  document.addEventListener("DOMContentLoaded",()=>{monitorFormAccessibility();initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.dataset.basemapToggle){setBasemap(e.target.dataset.basemapToggle,e.target.checked)}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest("[data-layer-group] > .layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const legend=e.target.closest(".layer-legend");if(legend){const legendRow=legend.closest("[data-layer]");if(legendRow){e.stopPropagation();state.activeLayerId=legendRow.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===legendRow));openSymbology(legendRow.dataset.layer);return}}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});document.addEventListener("click",e=>{const menu=$("#gp-symbology-menu");if(menu&&!menu.contains(e.target)&&!e.target.closest(".layer-symbol"))closeSymbologyMenu();if(!e.target.closest(".symbol-select"))$$(".symbol-select.open").forEach(o=>{o.classList.remove("open");const l=o.querySelector(".symbol-select-list");if(l)l.hidden=true;const t=o.querySelector(".symbol-select-trigger");if(t)t.setAttribute("aria-expanded","false")})});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSymbologyMenu()});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.","ok");emit("pronto",{api:API})});
   const TOOL_SUBGROUPS={"OP-01":"Importação e conexão","OP-02":"Qualidade e preparação","OP-02-CORR":"Qualidade e preparação","OP-03":"Qualidade e preparação","OP-04":"Geometria e proximidade","OP-05":"Sobreposição espacial","OP-05-IDENT":"Sobreposição espacial","OP-06":"Agregação vetorial","OP-07":"Consulta e seleção","OP-08":"Conversão de dados","OP-10":"Distância e custo","OP-11":"Distância e custo","OP-12":"Densidade e distribuição","OP-13":"Distância e custo","OP-14":"Interpolação e superfície","OP-15":"Agregação territorial","OP-16":"Criação de superfície","OP-17":"Álgebra de mapas","OP-20":"Normalização raster","OP-21":"Recorte e máscara","OP-22":"Estatística zonal","OP-23":"Amostragem raster","OP-24":"Extração zonal","OP-25":"Dados vetoriais","OP-26":"Dados raster"};
   Object.assign(TOOL_SUBGROUPS,{"OP-28":"Derivação geométrica","OP-29":"Derivação geométrica","OP-30":"Derivação geométrica","OP-31":"Generalização","OP-32":"Conversão geométrica","OP-33":"Recorte","OP-34":"Junção espacial","OP-35":"Mesclagem","OP-36":"Reprojeção","OP-37":"Medições","OP-38":"Medições","OP-39":"Reclassificação","OP-40":"Classificação binária","OP-41":"Transformação de valores","OP-42":"Estatística focal","OP-43":"Suavização"});
   renderToolbox=function(filter=""){
@@ -874,6 +1175,31 @@
   async function carregarPorId(id){
     return (await carregarPorIds([id]))[0];
   }
+  function criarPinImagem(fill){
+    const pixelRatio=Math.max(2,Math.ceil(window.devicePixelRatio||1)),W=26,H=38,cv=document.createElement("canvas");
+    cv.width=W*pixelRatio;cv.height=H*pixelRatio;const ctx=cv.getContext("2d");
+    ctx.scale(pixelRatio,pixelRatio);ctx.translate(1,1);
+    const pin=new Path2D("M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z");
+    ctx.fillStyle=fill;ctx.strokeStyle="#111";ctx.lineWidth=1.5;ctx.fill(pin);ctx.stroke(pin);
+    ctx.beginPath();ctx.arc(12,12,4.5,0,2*Math.PI);ctx.fillStyle="#fff";ctx.fill();
+    return{imageData:ctx.getImageData(0,0,cv.width,cv.height),pixelRatio};
+  }
+  function garantirPinsStatus(map){
+    if(map._sltPinsReady)return;
+    const SC=window.SLTStatusColors,paleta=(SC&&SC.STATUS_DEMANDA)||{},
+      corDe=code=>SC&&SC.pinColors?SC.pinColors(code,"objeto").fill:"#116593";
+    Object.keys(paleta).forEach(code=>{const nome="slt-pin-"+code;if(map.hasImage(nome))return;const{imageData,pixelRatio}=criarPinImagem(corDe(code));map.addImage(nome,imageData,{pixelRatio});});
+    if(!map.hasImage("slt-pin-__fallback__")){const{imageData,pixelRatio}=criarPinImagem("#607d8b");map.addImage("slt-pin-__fallback__",imageData,{pixelRatio});}
+    map._sltPinsReady=true;
+  }
+  function garantirLegendaStatus(){
+    const SC=window.SLTStatusColors;if(!SC||document.getElementById("gp-status-legend"))return;
+    const host=document.querySelector(".gp-map-view")||document.body,box=document.createElement("div");
+    box.id="gp-status-legend";box.className="gp-status-legend";
+    const codes=Object.keys(SC.STATUS_OBJETO||{});
+    box.innerHTML='<div class="gp-status-legend-title">Status das demandas</div>'+codes.map(c=>{const col=SC.pinColors?SC.pinColors(c,"objeto").fill:"#116593";return `<div class="gp-status-legend-item"><span class="gp-status-legend-dot" style="background:${col}"></span><span>${escapeHtml(SC.getStatusObjeto(c).nome)}</span></div>`;}).join("");
+    host.appendChild(box);
+  }
   function adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts={}){
     if(!state.map){document.addEventListener("gp-modeler-state",()=>adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts),{once:true});return}
     if(!state.map.isStyleLoaded()){state.map.once("load",()=>adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts));return}
@@ -882,7 +1208,13 @@
     state.map.addSource(id,{type:"geojson",data:geojson});
     state.map.addLayer({id,type:"fill",source:id,paint:{"fill-color":color,"fill-opacity":.32,"fill-outline-color":color},filter:["==",["geometry-type"],"Polygon"]});
     state.map.addLayer({id:id+"-line",type:"line",source:id,paint:{"line-color":color,"line-width":2},filter:["==",["geometry-type"],"LineString"]});
-    state.map.addLayer({id:id+"-point",type:"circle",source:id,paint:{"circle-color":color,"circle-radius":6,"circle-stroke-color":"#fff","circle-stroke-width":1.5},filter:["==",["geometry-type"],"Point"]});
+    if(opts.simbologia==="status"){
+      garantirPinsStatus(state.map);
+      state.map.addLayer({id:id+"-point",type:"symbol",source:id,layout:{"icon-image":["coalesce",["image",["concat","slt-pin-",["to-string",["get","status"]]]],["image","slt-pin-__fallback__"]],"icon-anchor":"bottom","icon-allow-overlap":true,"icon-ignore-placement":true},filter:["==",["geometry-type"],"Point"]});
+      garantirLegendaStatus();
+    } else {
+      initPointLayer(id,color);
+    }
     const bounds=new maplibregl.LngLatBounds();
     (geojson.features||[]).forEach(f=>walkCoords(f.geometry?.coordinates,c=>bounds.extend(c)));
     if(!bounds.isEmpty()) state.map.fitBounds(bounds,{padding:40,maxZoom:14});
@@ -891,5 +1223,5 @@
     if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
     renderLayers();
   }
-  window.gpApp={state,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,consumePortalService,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,log,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer,carregarPorId,carregarPorIds,adicionarCamadaGeoJsonEmMemoria};
+  window.gpApp={state,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,consumePortalService,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,log,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer,carregarPorId,carregarPorIds,adicionarCamadaGeoJsonEmMemoria,aplicarCorPadraoCamada,openSymbology};
 })();

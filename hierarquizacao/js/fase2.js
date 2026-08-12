@@ -11,6 +11,67 @@
   const pacoteAtual = () => pacotes.find((item) => item.pacote_id === $("pacote-fase2").value);
   const objetos = (h) => h?.dados_hierarquizacao?.objetos || [];
 
+  const codigoCurto = (base) =>
+    String(base || "f2").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "f2";
+
+  function bancadaWindow() {
+    const frame = document.getElementById("gp-frame-fase2");
+    return frame?.contentWindow || null;
+  }
+
+  function comBancada(cb) {
+    const win = bancadaWindow();
+    if (!win) return Promise.resolve();
+    if (win.gpApp) return Promise.resolve(cb(win.gpApp));
+    return new Promise((resolve) => {
+      const frame = document.getElementById("gp-frame-fase2");
+      frame?.addEventListener("load", () => resolve(win.gpApp ? cb(win.gpApp) : undefined), { once: true });
+    });
+  }
+
+  function hierarquizacaoParaGeoJson(h) {
+    const features = objetos(h)
+      .map((item) => {
+        const cab = item.cabecalho_objeto || item;
+        const lon = Number(cab.longitude);
+        const lat = Number(cab.latitude);
+        if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+        return {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [lon, lat] },
+          properties: {
+            demanda_id: cab.demanda_id || cab.codigo || null,
+            codigo: cab.codigo || null,
+            nome: cab.nome || null,
+            status: cab.status || null,
+            hierarquizacao: h.codigo,
+          },
+        };
+      })
+      .filter(Boolean);
+    return { type: "FeatureCollection", features };
+  }
+
+  function enviarHierarquizacaoParaBancada(h) {
+    if (!h) return;
+    const geojson = hierarquizacaoParaGeoJson(h);
+    if (!geojson.features.length) return;
+    const id = `hier_${codigoCurto(h.codigo)}`;
+    const nome = `Hierarquização · ${h.nome || h.codigo}`;
+    comBancada((gpApp) => {
+      try {
+        gpApp.adicionarCamadaGeoJsonEmMemoria(id, nome, geojson, {
+          tipo: "vetorial (memória)",
+          origem: "Hierarquização Fase 2",
+          geometria_tipo: "Point",
+          simbologia: "status",
+        });
+      } catch (e) {
+        console.warn("Falha ao adicionar hierarquização na bancada", e);
+      }
+    });
+  }
+
   function metric(label, value) {
     return `<div class="fase-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
   }
@@ -18,26 +79,51 @@
   function renderPacote() {
     const pacote = pacoteAtual();
     const el = $("fase2-pacote-resumo");
+    const saida = $("gp-favorabilidade");
     if (!pacote) {
-      el.classList.add("hidden");
-      $("gp-favorabilidade").innerHTML = '<p class="ahp-help-text">Selecione o pacote homologado.</p>';
+      if (el) el.classList.add("hidden");
+      if (saida) saida.innerHTML = '<p class="ahp-help-text">Selecione o pacote homologado.</p>';
       return;
     }
     const camadas = pacote.camadas || [];
-    el.innerHTML = `<div class="fase-summary-grid">${metric("Código", pacote.codigo)}${metric("Versão", pacote.versao)}${metric("Situação", pacote.status)}${metric("Camadas", camadas.length)}</div>`;
-    el.classList.remove("hidden");
-    const raster = camadas.find((camada) => String(camada.tipo || "").toLowerCase().includes("raster")) || camadas[0];
-    $("gp-favorabilidade").innerHTML = camadas.length ? camadas.map((camada) => `<div class="fase1-layer"><i class="fas fa-layer-group"></i><div><strong>${esc(camada.nome || camada.nome_publicacao || "Superfície homologada")}</strong><small>${esc(camada.tipo || "Raster")} · ${esc(camada.versao || pacote.versao || "—")}</small></div></div>`).join("") : '<p class="ahp-help-text">O pacote não informou camadas publicadas.</p>';
+    if (el) {
+      el.innerHTML = `<div class="fase-summary-grid">${metric("Código", pacote.codigo)}${metric("Versão", pacote.versao)}${metric("Situação", pacote.status)}${metric("Camadas", camadas.length)}</div>`;
+      el.classList.remove("hidden");
+    }
+    if (saida) saida.innerHTML = camadas.length ? camadas.map((camada) => `<div class="fase1-layer"><i class="fas fa-layer-group"></i><div><strong>${esc(camada.nome || camada.nome_publicacao || "Superfície homologada")}</strong><small>${esc(camada.tipo || "Raster")} · ${esc(camada.versao || pacote.versao || "—")}</small></div></div>`).join("") : '<p class="ahp-help-text">O pacote não informou camadas publicadas.</p>';
   }
 
-  function render(h) {
+  function renderResumo(h) {
+    const layer = $("gp-demandas-fase2");
+    if (!h) {
+      if (layer) layer.innerHTML = '<p class="ahp-help-text">Selecione uma hierarquização.</p>';
+      return;
+    }
+    window.SLTResumoFase?.camadaDemandas(layer, h);
+    enviarHierarquizacaoParaBancada(h);
+  }
+
+  function ocultarResultados() {
+    const ind = $("fase2-indicadores");
+    const res = $("fase2-resultados");
+    const audit = $("fase2-auditoria");
+    const vazio = $("fase2-resultado-vazio");
+    if (ind) ind.innerHTML = "";
+    if (res) res.innerHTML = "";
+    if (audit) {
+      audit.innerHTML = "";
+      audit.classList.add("hidden");
+    }
+    if (vazio) vazio.classList.remove("hidden");
+  }
+
+  function renderResultados(h) {
     if (!h) return;
     const docs = objetos(h);
     const processados = docs.filter((o) => o.hierarquizacao?.fase_2?.executada);
     const pontuados = docs.filter((o) => Number.isFinite(o.hierarquizacao?.fase_2?.score_fase2));
-    $("fase-resumo").innerHTML = `<div class="fase-summary-grid">${metric("Rodada", `${h.codigo} — ${h.nome}`)}${metric("Tipo", h.tipo_demanda || "—")}${metric("Demandas", docs.length)}${metric("Situação", h.status)}</div>`;
-    $("fase-resumo").classList.remove("hidden");
-    $("gp-demandas-fase2").innerHTML = docs.length ? `<div class="fase1-layer"><i class="fas fa-location-dot"></i><div><strong>${docs.length} demanda(s) da rodada</strong><small>${esc(h.codigo)} · pontos usados na extração do raster</small></div></div>` : '<p class="ahp-help-text">A rodada não possui demandas.</p>';
+    const vazio = $("fase2-resultado-vazio");
+    if (vazio) vazio.classList.add("hidden");
     $("fase2-indicadores").innerHTML = metric("Demandas da rodada", docs.length) + metric("Processadas", processados.length) + metric("Com score válido", pontuados.length) + metric("Sem cobertura/NoData", docs.length - pontuados.length);
     const rows = docs.map((o) => {
       const c = o.cabecalho_objeto || {};
@@ -53,17 +139,37 @@
   }
 
   function erro(error) {
-    $("fase2-erro").textContent = error.message || error;
-    $("fase2-erro").classList.remove("hidden");
+    const box = $("fase2-erro");
+    if (box) {
+      box.textContent = error.message || error;
+      box.classList.remove("hidden");
+    }
+    if (window.SLTFeedback) window.SLTFeedback.error(error?.message || String(error), "Não foi possível continuar");
+  }
+
+  function moverControlesParaCards() {
+    const mover = (hostId, ...labelIds) => {
+      const host = document.getElementById(hostId);
+      if (!host) return;
+      labelIds.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) host.appendChild(el);
+      });
+    };
+    mover("gp-demandas-fase2-ctrl", "ctrl-hier");
+    mover("gp-favorabilidade-ctrl", "ctrl-pacote", "ctrl-metodo");
+    const origem = document.getElementById("fase2-controles-origem");
+    if (origem) origem.removeAttribute("hidden");
   }
 
   async function init() {
     try {
+      moverControlesParaCards();
       hierarquizacoes = await HierApi.listar();
       const elegiveis = hierarquizacoes.filter((item) => (item.dados_hierarquizacao?.cabecalho_grupo?.fases_a_executar || [1, 2, 3]).includes(2));
       $("fase-hierarquizacao").innerHTML = '<option value="">Selecione…</option>' + elegiveis.map((h) => `<option value="${esc(h.codigo)}">${esc(h.codigo)} — ${esc(h.nome)}</option>`).join("");
-      if (queryCode) { $("fase-hierarquizacao").value = queryCode; render(atual()); }
-      $("fase-hierarquizacao").onchange = () => render(atual());
+      if (queryCode) { $("fase-hierarquizacao").value = queryCode; renderResumo(atual()); ocultarResultados(); }
+      $("fase-hierarquizacao").onchange = () => { renderResumo(atual()); ocultarResultados(); };
       pacotes = await HierApi.listarPacotes("fase2");
       $("pacote-fase2").innerHTML = '<option value="">Selecione…</option>' + pacotes.map((p) => `<option value="${esc(p.pacote_id)}">${esc(p.codigo)} — ${esc(p.nome)} · ${esc(p.versao)}</option>`).join("");
       $("pacote-fase2").onchange = renderPacote;
@@ -74,7 +180,9 @@
           $("fase2-erro").classList.add("hidden");
           const updated = await HierApi.executarFase2(h.codigo, { pacote_id: pacote, metodo_extracao: $("metodo-fase2").value });
           hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
-          render(updated);
+          renderResumo(updated);
+          renderResultados(updated);
+          if (window.SLTFeedback) window.SLTFeedback.success("Fase 2 executada. Confira os indicadores e o ranking abaixo.", "Extração concluída");
         } catch (error) { erro(error); }
       };
     } catch (error) { erro(error); }

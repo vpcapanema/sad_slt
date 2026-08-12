@@ -301,6 +301,137 @@ class GeoespacialService:
             "limite": limite,
         }
 
+    def _colunas_atributos(self, gdf: gpd.GeoDataFrame) -> list[str]:
+        geometria = gdf.geometry.name if gdf.geometry is not None else None
+        return [c for c in gdf.columns if c != geometria]
+
+    async def simbologia_campos(self, camada_id: str) -> dict[str, Any]:
+        """Lista os campos da camada com metadados úteis à simbologia por atributo."""
+        gdf = self.obter_camada_dados(camada_id)
+        campos: list[dict[str, Any]] = []
+        for coluna in self._colunas_atributos(gdf):
+            serie = gdf[coluna]
+            numerico = bool(pd.api.types.is_numeric_dtype(serie)) and not bool(
+                pd.api.types.is_bool_dtype(serie)
+            )
+            info: dict[str, Any] = {
+                "nome": coluna,
+                "tipo": str(serie.dtype),
+                "numerico": numerico,
+                "n_distintos": int(serie.nunique(dropna=True)),
+            }
+            if numerico:
+                validos = pd.to_numeric(serie, errors="coerce").dropna()
+                if not validos.empty:
+                    info["min"] = float(validos.min())
+                    info["max"] = float(validos.max())
+            campos.append(info)
+        return {"camada_id": camada_id, "campos": campos}
+
+    async def simbologia_classificacao(
+        self,
+        camada_id: str,
+        campo: str,
+        metodo: str = "intervalos_iguais",
+        classes: int = 5,
+    ) -> dict[str, Any]:
+        """Classifica um campo para simbologia categorizada ou graduada."""
+        gdf = self.obter_camada_dados(camada_id)
+        if campo not in self._colunas_atributos(gdf):
+            raise ValueError(f"Campo '{campo}' inexistente na camada")
+        serie = gdf[campo]
+
+        if metodo == "valores_unicos":
+            limite = 100
+            contagem = serie.dropna().astype(str).value_counts()
+            categorias = [
+                {"valor": valor, "contagem": int(qtd)}
+                for valor, qtd in contagem.head(limite).items()
+            ]
+            return {
+                "camada_id": camada_id,
+                "campo": campo,
+                "metodo": metodo,
+                "numerico": False,
+                "categorias": categorias,
+                "truncado": bool(contagem.size > limite),
+                "total_distintos": int(contagem.size),
+            }
+
+        valores = pd.to_numeric(serie, errors="coerce").dropna().to_numpy(dtype="float64")
+        if valores.size == 0:
+            raise ValueError(f"Campo '{campo}' não possui valores numéricos")
+        classes = max(2, min(int(classes), 12))
+        minimo = float(np.min(valores))
+        maximo = float(np.max(valores))
+        quebras = self._quebras_por_metodo(valores, metodo, classes, minimo, maximo)
+        return {
+            "camada_id": camada_id,
+            "campo": campo,
+            "metodo": metodo,
+            "numerico": True,
+            "classes": len(quebras) + 1,
+            "min": minimo,
+            "max": maximo,
+            "quebras": quebras,
+        }
+
+    def _quebras_por_metodo(
+        self,
+        valores: np.ndarray,
+        metodo: str,
+        classes: int,
+        minimo: float,
+        maximo: float,
+    ) -> list[float]:
+        """Retorna as quebras internas (comprimento classes-1) do método escolhido."""
+        if maximo <= minimo:
+            return []
+        if metodo == "quantis":
+            fracoes = np.linspace(0, 1, classes + 1)[1:-1]
+            internas = np.quantile(valores, fracoes)
+        elif metodo == "desvio_padrao":
+            media = float(np.mean(valores))
+            desvio = float(np.std(valores)) or (maximo - minimo) / classes
+            passos = np.arange(1, classes) - (classes - 1) / 2
+            internas = media + passos * desvio
+            internas = internas[(internas > minimo) & (internas < maximo)]
+        elif metodo == "quebras_naturais":
+            internas = np.array(self._jenks_kmeans(valores, classes))
+        else:  # intervalos_iguais
+            internas = np.linspace(minimo, maximo, classes + 1)[1:-1]
+        internas = np.unique(np.round(internas.astype("float64"), 6))
+        internas = internas[(internas > minimo) & (internas < maximo)]
+        return [float(v) for v in internas]
+
+    def _jenks_kmeans(self, valores: np.ndarray, classes: int) -> list[float]:
+        """Aproxima quebras naturais (Jenks) por k-means 1D com amostragem."""
+        amostra = valores
+        if amostra.size > 20000:
+            gerador = np.random.default_rng(42)
+            amostra = gerador.choice(amostra, size=20000, replace=False)
+        amostra = np.sort(amostra)
+        unicos = np.unique(amostra)
+        if unicos.size <= classes:
+            return [float(v) for v in unicos[1:]]
+        centroides = np.quantile(amostra, np.linspace(0, 1, classes + 1)[1:-1:1])
+        centroides = np.unique(np.concatenate(([amostra[0]], centroides, [amostra[-1]])))
+        centroides = np.quantile(amostra, np.linspace(0, 1, classes))
+        for _ in range(50):
+            fronteiras = (centroides[:-1] + centroides[1:]) / 2
+            grupos = np.digitize(amostra, fronteiras)
+            novos = np.array(
+                [
+                    amostra[grupos == i].mean() if np.any(grupos == i) else centroides[i]
+                    for i in range(classes)
+                ]
+            )
+            if np.allclose(novos, centroides):
+                break
+            centroides = novos
+        fronteiras = (centroides[:-1] + centroides[1:]) / 2
+        return [float(v) for v in fronteiras]
+
     async def calcular_campo(self, camada_id: str, campo: str, expressao: str) -> dict[str, Any]:
         """Cria ou atualiza um campo usando uma expressão vetorizada."""
         if camada_geoespacial_repository.esta_homologada(camada_id):

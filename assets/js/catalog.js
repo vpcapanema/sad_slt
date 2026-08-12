@@ -15,27 +15,27 @@
   }
 
   function planosPorDiretoria(diretoriaId) {
-    return ativos(catalog.planos).filter((p) => p.diretoria_id === diretoriaId);
+    return ativos(catalog?.planos).filter((p) => p.diretoria_id === diretoriaId);
   }
 
   function frentesPorPlano(planoId) {
-    return ativos(catalog.frentes_pli).filter((f) => f.plano_id === planoId);
+    return ativos(catalog?.frentes_pli).filter((f) => f.plano_id === planoId);
   }
 
   function eixosPorPlano(planoId) {
-    return ativos(catalog.eixos_pef).filter((e) => e.plano_id === planoId);
+    return ativos(catalog?.eixos_pef).filter((e) => e.plano_id === planoId);
   }
 
   function ticsPorEixo(eixoId) {
-    return ativos(catalog.corredores_tic).filter((t) => t.eixo_pef_id === eixoId);
+    return ativos(catalog?.corredores_tic).filter((t) => t.eixo_pef_id === eixoId);
   }
 
   function carteirasPorPlano(planoId) {
-    return ativos(catalog.carteiras).filter((c) => c.plano_id === planoId);
+    return ativos(catalog?.carteiras).filter((c) => c.plano_id === planoId);
   }
 
   function getPlano(id) {
-    return ativos(catalog.planos).find((p) => p.id === id);
+    return ativos(catalog?.planos).find((p) => p.id === id);
   }
 
   function getItem(list, id, key) {

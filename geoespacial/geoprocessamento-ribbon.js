@@ -157,9 +157,16 @@
         const publication = job.resultado;
         progress.note(`Snapshot homologado confirmado: ${publication.id}`);
         progress.complete();
-        message("Camada publicada na biblioteca homologada.");
+        window.gpApp.log(`Camada homologada e sincronizada — banco + ${publication.arquivo_biblioteca_canonica}`, "ok");
+        message("Camada publicada (banco e biblioteca canônica).");
         setTimeout(() => openSystemDirectory(), 900);
-      } catch (error) { progress.fail(`Falha: ${error.message}`); message(error.message); submit.disabled = false; }
+      } catch (error) {
+        progress.fail(`Falha: ${error.message}`);
+        window.gpApp.log(`Homologação não concluída: ${error.message}`, "error");
+        document.querySelector("#gp-log")?.classList.add("open");
+        message(error.message);
+        submit.disabled = false;
+      }
     };
   }
 

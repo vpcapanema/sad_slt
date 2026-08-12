@@ -40,6 +40,20 @@ def list_tipo_demanda() -> list[dict]:
         return list(conn.execute(sql).fetchall())
 
 
+def list_atributos_objeto() -> list[dict]:
+    """Atributos estaveis coletados no cadastro dos objetos."""
+    sql = """
+        SELECT codigo, nome, descricao, tipo_dado, unidade, origem_valor,
+               tipos_objeto, dominio_valores, configuracao_por_tipo,
+               regras_validacao, exige_evidencia, permite_nao_informado, versao
+        FROM demandas.dom_atributo_objeto
+        WHERE ativo = TRUE
+        ORDER BY nome
+    """
+    with get_connection() as conn:
+        return list(conn.execute(sql).fetchall())
+
+
 def list_transicoes_status_demanda(*, patch_only: bool = False) -> list[dict]:
     """Arestas da matriz de transição entre status (dom_status_demanda_transicao)."""
     sql = """

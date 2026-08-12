@@ -1,7 +1,7 @@
 """Schemas Pydantic — contrato HTTP de planos (nível 1)."""
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -43,6 +43,7 @@ class PlanoCreateSchema(BaseModel):
     vigencia_fim: str | None = None
     valor_global: float | None = None
     unidades_espaciais: list[str] = Field(default_factory=list)
+    atributos_cadastrais: dict[str, Any] = Field(default_factory=dict)
 
 
 class PlanoResponseSchema(BaseModel):
@@ -68,6 +69,7 @@ class PlanoResponseSchema(BaseModel):
     vigencia_fim: str | None = None
     valor_global: float | None = None
     unidades_espaciais: list[str] = Field(default_factory=list)
+    atributos_cadastrais: dict[str, Any] = Field(default_factory=dict)
 
 
 class PlanoUpdateSchema(BaseModel):
@@ -87,3 +89,4 @@ class PlanoUpdateSchema(BaseModel):
     instituicao_cnpj: str | None = None
     pessoa_id: str | None = None
     representante: RepresentanteUpdateSchema | None = None
+    atributos_cadastrais: dict[str, Any] | None = None

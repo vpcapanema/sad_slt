@@ -178,6 +178,19 @@
   display: block;
   background: #24282d;
 }
+/* Componente de geoprocessamento injetado inline: neutraliza o CSS global do componente e limita a altura */
+body.gerador-page,
+html:has(body.gerador-page) {
+  height: auto !important;
+  overflow: auto !important;
+}
+.gerador-section--gp-embed .gerador-section__body {
+  padding: 0;
+}
+.gerador-section--gp-embed .gp-app {
+  height: 820px;
+  min-height: 820px;
+}
 .gerador-section--gp .gerador-section__body {
   padding: 0;
 }
@@ -1059,10 +1072,10 @@
   --biblioteca-space-stack: 7px;
   --biblioteca-font-section-title: 1.05rem;
   --biblioteca-font-section-text: 0.82rem;
-  --biblioteca-font-card-title: 0.84rem;
-  --biblioteca-font-card-text: 0.74rem;
+  --biblioteca-font-card-title: 0.9rem;
+  --biblioteca-font-card-text: 0.78rem;
   --biblioteca-font-control: 0.72rem;
-  --biblioteca-font-meta: 0.66rem;
+  --biblioteca-font-meta: 0.68rem;
 }
 
 .biblioteca-risco-page .gerador-section__header {
@@ -1076,9 +1089,18 @@
   line-height: 1.2;
 }
 
+.biblioteca-risco-page .gerador-title {
+  font-size: 1.5rem;
+}
+
+.biblioteca-risco-page .gerador-subtitle {
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
 .biblioteca-risco-page .gerador-section__heading p {
   margin-top: 3px;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   line-height: 1.35;
 }
 
@@ -1213,8 +1235,20 @@
   :is(.fase1-classification-section, .fase1-methods-section)
   > p {
   margin: 0 0 10px;
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   line-height: 1.45;
+}
+
+.biblioteca-risco-page
+  :is(.fase1-classification-section, .fase1-methods-section)
+  ul {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.biblioteca-risco-page .fase1-calculation-note {
+  font-size: 0.76rem;
 }
 
 .biblioteca-risco-page .fase1-canonical-classes {

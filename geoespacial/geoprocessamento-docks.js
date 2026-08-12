@@ -134,7 +134,9 @@
 
     $(".gp-right-tabs").addEventListener("click", (event) => {
       const tab = event.target.closest("[data-dynamic-tab]");
-      if (tab) window.gpApp.showAttributes(tab.dataset.layerId);
+      if (!tab) return;
+      if (tab.dataset.dynamicTab === "symbology") window.gpApp.openSymbology(tab.dataset.layerId);
+      else window.gpApp.showAttributes(tab.dataset.layerId);
     });
 
     $("#gp-ribbon-tools").addEventListener("click", (event) => {

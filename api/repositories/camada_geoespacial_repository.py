@@ -474,45 +474,66 @@ def _slugify(value: str) -> str:
     return slug or "camada"
 
 
+def _snapshot_gdf(conn: Any, snapshot_id: Any, crs: Any) -> gpd.GeoDataFrame:
+    """Monta o GeoDataFrame do snapshot homologado lendo feições na transação atual."""
+    rows = conn.execute(
+        sql.SQL(
+            "SELECT propriedades, ST_AsGeoJSON(geom)::jsonb AS geometria"
+            " FROM geoprocessamento.camada_homologada_feicao WHERE camada_id=%s ORDER BY ordem"
+        ),
+        (snapshot_id,),
+    ).fetchall()
+    features = [
+        {"type": "Feature", "properties": row["propriedades"], "geometry": row["geometria"]}
+        for row in rows
+    ]
+    gdf = (
+        gpd.GeoDataFrame.from_features(features, crs="EPSG:4326")
+        if features else gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
+    )
+    if crs and str(crs).upper() != "EPSG:4326" and not gdf.empty:
+        gdf = gdf.to_crs(crs)
+    return gdf
+
+
 def _exportar_para_biblioteca_canonica(
-    homologada_recurso_id: str,
     *,
     modulo_consumidor: str,
     nome_publicacao: str,
     versao: str,
     tipo: str,
-    progress: Callable[[str], None] | None,
-) -> str | None:
+    gdf: gpd.GeoDataFrame | None = None,
+    raster_bytes: Any = None,
+    progress: Callable[[str], None] | None = None,
+) -> tuple[str | None, Path | None]:
     """Materializa a camada homologada em arquivo dentro de data/geoespacial/biblioteca_canonica."""
     subdir = project_path(f"{_CANONICAL_ROOT}/{_slugify(modulo_consumidor)}")
     subdir.mkdir(parents=True, exist_ok=True)
     base = f"{_slugify(nome_publicacao)}_{_slugify(versao)}"
     if tipo == "vetor":
+        if gdf is None or gdf.empty:
+            return None, None
         destino = subdir / f"{base}.gpkg"
-        loaded = carregar_vetor(homologada_recurso_id)
-        if not loaded:
-            return None
-        gdf, _ = loaded
-        if gdf.empty:
-            return None
-        gdf.to_file(destino, driver="GPKG", layer=_slugify(nome_publicacao))
+        destino.unlink(missing_ok=True)  # evita append de camada em GPKG preexistente
+        try:
+            gdf.to_file(destino, driver="GPKG", layer=_slugify(nome_publicacao))
+        except Exception:
+            destino.unlink(missing_ok=True)  # não deixa arquivo parcial
+            raise
     else:
+        if not raster_bytes:
+            return None, None
         destino = subdir / f"{base}.tif"
-        with get_connection() as conn:
-            row = conn.execute(
-                """SELECT r.dados_geotiff
-                   FROM geoprocessamento.camada_homologada c
-                   JOIN geoprocessamento.camada_homologada_raster r ON r.camada_id=c.id
-                   WHERE c.recurso_sessao_id=%s""",
-                (homologada_recurso_id,),
-            ).fetchone()
-        if not row or not row["dados_geotiff"]:
-            return None
-        destino.write_bytes(bytes(row["dados_geotiff"]))
+        destino.unlink(missing_ok=True)
+        try:
+            destino.write_bytes(bytes(raster_bytes))
+        except Exception:
+            destino.unlink(missing_ok=True)
+            raise
     relativo = destino.relative_to(project_path(".")).as_posix()
     if progress:
         progress(f"Arquivo exportado para biblioteca canônica: {relativo}")
-    return relativo
+    return relativo, destino
 
 
 def esta_homologada(recurso_id: str) -> bool:
@@ -632,27 +653,44 @@ def homologar(
             )
             if progress:
                 progress("Bloco raster copiado para o armazenamento homologado")
-        conn.commit()
-        if progress:
-            progress("Transação de homologação confirmada no banco")
         result = dict(snapshot)
         result["homologacao_id"] = str(result["id"])
         result["id"] = homologada_recurso_id
-        try:
-            arquivo_relativo = _exportar_para_biblioteca_canonica(
-                homologada_recurso_id,
-                modulo_consumidor=modulo_consumidor,
-                nome_publicacao=nome_publicacao,
-                versao=versao,
-                tipo=source["tipo"],
-                progress=progress,
+        # Atomicidade: a camada só se torna canônica se o arquivo em disco também
+        # for gravado. Exporta lendo o snapshot na própria transação (antes do commit);
+        # se falhar, a exceção provoca rollback e nenhum registro persiste.
+        if source["tipo"] == "vetor":
+            export_gdf = _snapshot_gdf(conn, snapshot["id"], source.get("crs"))
+            export_raster = None
+        else:
+            export_gdf = None
+            raster_row = conn.execute(
+                sql.SQL(
+                    "SELECT dados_geotiff FROM geoprocessamento.camada_homologada_raster"
+                    " WHERE camada_id=%s"
+                ),
+                (snapshot["id"],),
+            ).fetchone()
+            export_raster = raster_row["dados_geotiff"] if raster_row else None
+        arquivo_relativo, destino = _exportar_para_biblioteca_canonica(
+            modulo_consumidor=modulo_consumidor, nome_publicacao=nome_publicacao,
+            versao=versao, tipo=source["tipo"], gdf=export_gdf,
+            raster_bytes=export_raster, progress=progress,
+        )
+        if not arquivo_relativo:
+            raise RuntimeError(
+                "Homologação abortada: a cópia na biblioteca canônica não pôde ser"
+                " gerada (camada sem conteúdo)."
             )
-        except Exception as exc:  # exportação para disco não deve invalidar o snapshot
-            if progress:
-                progress(f"Falha ao exportar para biblioteca canônica: {exc}")
-            arquivo_relativo = None
-        if arquivo_relativo:
-            result["arquivo_biblioteca_canonica"] = arquivo_relativo
+        try:
+            conn.commit()
+        except Exception:
+            if destino is not None:
+                destino.unlink(missing_ok=True)  # remove arquivo órfão sem registro
+            raise
+        if progress:
+            progress("Transação de homologação confirmada no banco")
+        result["arquivo_biblioteca_canonica"] = arquivo_relativo
         return result
 
 

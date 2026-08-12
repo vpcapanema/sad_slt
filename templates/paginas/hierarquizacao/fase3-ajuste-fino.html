@@ -11,7 +11,10 @@
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
   <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
+  <link rel="stylesheet" href="/assets/css/fase1-execucao.css">
   <link rel="stylesheet" href="/assets/css/atributos-objetos.css">
+  <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/assets/css/feedback.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
@@ -19,17 +22,13 @@
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
 <main class="conteudo-principal app-main ahp-main fase-execucao-page">
   {% include "componentes/navegacao_fases_hierarquizacao.html" %}
-  <section class="card-fase-3-ajuste-fino-de-prioridade secao-fase-3-ajuste-fino-de-prioridade card">
-    <h1 class="ahp-page-title"><i class="fas fa-sliders"></i> Fase 3: Ajuste Fino de Prioridades</h1>
-    <p>Fluxo canônico do Bloco 2: Processos → Fase 1 → Fase 2 → Fase 3.</p>
-    <p>Normalize e pondere atributos próprios dos projetos e riscos herdados da Fase 1.</p>
+  <section class="card-fase-3-ajuste-fino-de-prioridade secao-fase-3-ajuste-fino-de-prioridade card fase-titulo-card">
+    <h1 class="ahp-page-title"><i class="fas fa-sliders"></i> Fase 3: Ajuste Fino de Prioridades<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info"></i><span class="fase-info-pop">O ajuste fino refina a prioridade de cada projeto ao combinar seus atributos próprios com o risco herdado da Fase 1, produzindo o score de ajuste e a síntese final da rodada. Os critérios são normalizados e ponderados por pesos, as ausências são tratadas conforme a política escolhida e a completude mínima exigida, e a síntese final combina os scores da Fase 2 e da Fase 3 segundo os pesos definidos. Para operar, selecione a rodada, confira os critérios e atributos dos objetos, defina as regras de cálculo e execute a fase, gerando ao final a síntese e o ranking.</span></span></h1><p class="fase-descricao">Refina a prioridade de cada projeto combinando seus atributos próprios com o risco herdado da Fase 1.</p>
   </section>
   <section class="card ahp-step-section"><div class="ahp-section-label"><span>1. Selecionar a rodada</span></div><div class="ahp-section-body"><label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option>Carregando…</option></select></label><div id="fase-resumo" class="fase-summary hidden"></div></div></section>
-  <section class="card ahp-step-section"><div class="ahp-section-label"><span>2. Conferir os critérios de ajuste</span><a class="ahp-section-action" href="/restrict/geoespacial/configurador-ajuste/" title="Abrir Ajuste Fino de Prioridades" aria-label="Abrir Ajuste Fino de Prioridades"><i class="fas fa-sliders"></i></a></div><div class="ahp-section-body"><div id="fase3-criterios" class="fase3-criteria-grid" hidden style="display:none"></div>{% include "componentes/_tabela_atributos_objetos.html" %}</div></section>
-  <section class="card ahp-step-section"><div class="ahp-section-label"><span>3. Definir regras de cálculo</span></div><div class="ahp-section-body"><div class="fase-grid-3">
-      <label>Modo dos pesos
-        <select id="fase3-modo-pesos"><option value="normalizados">Normalizados</option><option value="livres">Livres</option></select>
-      </label>
+  <section class="card ahp-step-section"><div class="ahp-section-label"><span id="fase3-titulo-atributos">2. Critérios atributo de objeto</span></div><div class="ahp-section-body">{% include "componentes/_tabela_atributos_objetos.html" %}</div></section>
+  <section class="card ahp-step-section"><div class="ahp-section-label"><span>3. Definir regras de cálculo</span></div><div class="ahp-section-body"><div class="fase-grid-2">
+      <input id="fase3-modo-pesos" type="hidden" value="normalizados">
       <label>Tratamento de ausentes
         <select id="fase3-ausentes"><option value="renormalizar">Ignorar e renormalizar</option><option value="bloquear">Bloquear projeto</option><option value="imputar_neutro">Imputar neutro</option><option value="imputar_pior">Imputar pior valor</option><option value="imputar_medio">Imputar média</option></select>
       </label>
@@ -37,11 +36,17 @@
     </div><p class="ahp-help-text">Critérios obrigatórios ausentes ou inválidos bloqueiam o score, independentemente da política escolhida.</p><div class="fase-actions"><button id="executar-fase3" class="btn btn--primary" type="button"><i class="fas fa-play"></i> Executar Fase 3</button></div></div></section>
   <section class="card ahp-step-section"><div class="ahp-section-label"><span>4. Conferir o ranking da fase</span></div><div class="ahp-section-body"><div id="fase3-indicadores" class="fase-summary-grid"></div><div id="fase3-resultados" class="fase-table-wrap"></div><div id="fase3-auditoria" class="fase-audit hidden"></div><div id="fase3-erro" class="ahp-info-note ahp-info-note--error hidden"></div></div></section>
   <section class="card ahp-step-section"><div class="ahp-section-label"><span>5. Gerar a síntese final</span></div><div class="ahp-section-body"><div class="fase-grid-2"><label>Peso da Fase 2 <input id="peso-fase2" type="number" min="0" max="1" step="0.05" value="0.70"></label><label>Peso da Fase 3 <input id="peso-fase3" type="number" min="0" max="1" step="0.05" value="0.30"></label></div><p class="ahp-help-text">Quando as duas fases participam da rodada, os pesos devem somar 1.</p><div class="fase-actions"><button id="sintetizar" class="btn btn--primary" type="button"><i class="fas fa-ranking-star"></i> Gerar síntese e ranking final</button></div></div></section>
+  {% include "componentes/modal/_modal_demandas_do_grupo_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
 </main>
 {% endblock %}
 
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/feedback.js"></script>
+  <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
+  <script src="/assets/js/status-colors.js"></script>
+  <script src="/assets/js/objeto-detalhe.js"></script>
+  <script src="/assets/js/resumo-fase.js"></script>
   <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
   <script src="/restrict/hierarquizacao/js/atributos-objetos.js"></script>
   <script src="/restrict/hierarquizacao/js/fase3.js"></script>

@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from psycopg import sql
+from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
 from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO
@@ -23,6 +24,7 @@ _SELECT_BASE = """
         pg.orgao_responsavel,
         pg.justificativa,
         pg.valor_global,
+        pg.atributos_cadastrais,
         pg.vinculo_institucional,
         pg.sigma_instituicao_id,
         pg.instituicao_nome,
@@ -53,7 +55,7 @@ _INSERT_SQL = """
     INSERT INTO demandas.programa (
         codigo, plano_id, nome, descricao,
         objetivo, publico_alvo, orgao_responsavel, justificativa,
-        valor_global, vinculo_institucional,
+        valor_global, atributos_cadastrais, vinculo_institucional,
         sigma_instituicao_id, instituicao_nome, instituicao_razao_social,
         instituicao_nome_fantasia, instituicao_cnpj,
         sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
@@ -61,7 +63,7 @@ _INSERT_SQL = """
     ) VALUES (
         %(codigo)s, %(plano_id)s, %(nome)s, %(descricao)s,
         %(objetivo)s, %(publico_alvo)s, %(orgao_responsavel)s, %(justificativa)s,
-        %(valor_global)s, %(vinculo_institucional)s,
+        %(valor_global)s, %(atributos_cadastrais)s, %(vinculo_institucional)s,
         %(sigma_instituicao_id)s, %(instituicao_nome)s, %(instituicao_razao_social)s,
         %(instituicao_nome_fantasia)s, %(instituicao_cnpj)s,
         %(sigma_pessoa_id)s, %(representante_nome)s, %(representante_email)s, %(representante_telefone)s,
@@ -79,6 +81,7 @@ _INSERT_UE_SQL = """
 
 def insert(row: dict[str, Any], unidades: list[str] | None = None) -> dict[str, Any]:
     """Insere um programa e seus vínculos de abrangência espacial."""
+    row = {**row, "atributos_cadastrais": Jsonb(row.get("atributos_cadastrais") or {})}
     with get_connection() as conn:
         cur = conn.execute(_INSERT_SQL, row)
         inserted = cur.fetchone()
@@ -104,6 +107,7 @@ _UPDATE_ALLOWED = {
     "orgao_responsavel": "orgao_responsavel",
     "justificativa": "justificativa",
     "valor_global": "valor_global",
+    "atributos_cadastrais": "atributos_cadastrais",
     "sigma_instituicao_id": "sigma_instituicao_id",
     "instituicao_nome": "instituicao_nome",
     "instituicao_cnpj": "instituicao_cnpj",
@@ -169,7 +173,7 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
     ]
     if not assignments:
         return get_by_codigo(codigo)
-    params = {key: data[key] for key in data if key in _UPDATE_ALLOWED}
+    params = {key: (Jsonb(data[key]) if key == "atributos_cadastrais" else data[key]) for key in data if key in _UPDATE_ALLOWED}
     params["codigo"] = codigo
     query = sql.SQL("UPDATE demandas.programa SET {} WHERE codigo = {}").format(
         sql.SQL(", ").join(assignments),

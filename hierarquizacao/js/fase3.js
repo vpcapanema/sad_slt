@@ -8,39 +8,12 @@
   let hierarquizacoes = [];
   const atual = () => hierarquizacoes.find((item) => item.codigo === $("fase-hierarquizacao").value);
 
-  function criterios(hierarquizacao) {
-    const primeiro = hierarquizacao?.dados_hierarquizacao?.objetos?.[0];
-    const matriz = Object.values(primeiro?.hierarquizacao?.fase_3?.criterios || {});
-    const sugeridos = hierarquizacao?.dados_hierarquizacao?.cabecalho_grupo?.criterios_fase3_sugeridos || [];
-    const todos = [...matriz, ...sugeridos];
-    return [...new Map(todos.map((item) => [item.atributo_id || item.nome_coluna || item.criterio, item])).values()];
-  }
-
-  function render(hierarquizacao) {
+  async function render(hierarquizacao) {
     if (!hierarquizacao) return;
-    window.AtributosObjetos?.render(hierarquizacao);
+    await window.AtributosObjetos?.render(hierarquizacao);
     const docs = hierarquizacao.dados_hierarquizacao?.objetos || [];
     const metric = (label, value) => `<div class="fase-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
-    $("fase-resumo").innerHTML = `<div class="fase-summary-grid">${metric("Rodada", `${hierarquizacao.codigo} — ${hierarquizacao.nome}`)}${metric("Tipo", hierarquizacao.tipo_demanda || "—")}${metric("Demandas", docs.length)}${metric("Situação", hierarquizacao.status)}</div>`;
-    $("fase-resumo").classList.remove("hidden");
-    $("fase3-criterios").innerHTML = criterios(hierarquizacao).map((criterio) => {
-      const nome = criterio.criterio || criterio.rotulo || criterio.nome_coluna;
-      const origem = criterio.origem === "fase1_risco" ? "Risco herdado da Fase 1" : "Matriz da rodada";
-      return `<article class="card fase3-criterio">
-        <strong>${esc(nome)}</strong><small>${esc(origem)}</small>
-        <label>Coluna <input data-k="nome_coluna" value="${esc(criterio.nome_coluna || nome)}"></label>
-        <label>Tipo <select data-k="tipo_dado"><option value="numerico">Numérico</option><option value="booleano">Booleano</option><option value="ordinal">Ordinal</option><option value="categorico">Categórico</option></select></label>
-        <label>Direção <select data-k="direcao"><option value="maior_melhor">Maior é melhor</option><option value="menor_melhor">Menor é melhor</option></select></label>
-        <label>Peso <input data-k="peso" type="number" min="0" max="1" step="0.05" value="${esc(criterio.peso ?? criterio.peso_inicial ?? 1)}"></label>
-        <label><input data-k="obrigatorio" type="checkbox" ${criterio.obrigatorio ? "checked" : ""}> Obrigatório</label>
-        <input type="hidden" data-k="criterio" value="${esc(nome)}">
-      </article>`;
-    }).join("");
-    [...document.querySelectorAll(".fase3-criterio")].forEach((card, index) => {
-      const criterio = criterios(hierarquizacao)[index];
-      card.querySelector('[data-k="tipo_dado"]').value = criterio.tipo_dado || "numerico";
-      card.querySelector('[data-k="direcao"]').value = criterio.direcao || "maior_melhor";
-    });
+    window.SLTResumoFase?.secao1($("fase-resumo"), hierarquizacao);
     const pontuados = docs.filter((objeto) => Number.isFinite(objeto.hierarquizacao?.fase_3?.score_fase3));
     const completos = docs.filter((objeto) => (objeto.hierarquizacao?.fase_3?.grau_completude_fase3 ?? 0) >= Number($("fase3-completude").value));
     $("fase3-indicadores").innerHTML = metric("Demandas da rodada", docs.length) + metric("Com score válido", pontuados.length) + metric("Completude atendida", completos.length) + metric("Bloqueadas/pendentes", docs.length - pontuados.length);
@@ -56,15 +29,6 @@
     if (report) { audit.innerHTML = `<strong>Auditoria da execução</strong><pre>${esc(JSON.stringify(report, null, 2))}</pre>`; audit.classList.remove("hidden"); } else audit.classList.add("hidden");
   }
 
-  function payloadCriterios() {
-    return [...document.querySelectorAll(".fase3-criterio")].map((card) => Object.fromEntries(
-      [...card.querySelectorAll("[data-k]")].map((input) => [
-        input.dataset.k,
-        input.type === "checkbox" ? input.checked : input.dataset.k === "peso" ? Number(input.value) : input.value,
-      ]),
-    ));
-  }
-
   function erro(error) {
     $("fase3-erro").textContent = error.message || error;
     $("fase3-erro").classList.remove("hidden");
@@ -76,28 +40,20 @@
       $("fase-hierarquizacao").innerHTML = '<option value="">Selecione…</option>' + hierarquizacoes
         .filter((item) => (item.dados_hierarquizacao?.cabecalho_grupo?.fases_a_executar || [1, 2, 3]).includes(3))
         .map((item) => `<option value="${esc(item.codigo)}">${esc(item.codigo)} — ${esc(item.nome)}</option>`).join("");
-      if (queryCode) { $("fase-hierarquizacao").value = queryCode; render(atual()); }
-      $("fase-hierarquizacao").onchange = () => render(atual());
+      if (queryCode) { $("fase-hierarquizacao").value = queryCode; await render(atual()); }
+      $("fase-hierarquizacao").onchange = () => { render(atual()).catch(erro); };
       $("executar-fase3").onclick = async () => {
         const hierarquizacao = atual();
         if (!hierarquizacao) return erro("Selecione a hierarquização.");
         try {
-          // persiste os atributos preenchidos no componente antes de calcular
-          if (window.AtributosObjetos) {
-            const salvo = await HierApi.salvarAtributosFase3(
-              hierarquizacao.codigo,
-              window.AtributosObjetos.coletar(hierarquizacao),
-            );
-            hierarquizacoes = hierarquizacoes.map((item) => item.codigo === salvo.codigo ? salvo : item);
-          }
           const updated = await HierApi.executarFase3(hierarquizacao.codigo, {
-            criterios: payloadCriterios(),
+            criterios: window.AtributosObjetos?.criteriosPayload() || [],
             modo_pesos: $("fase3-modo-pesos").value,
             completude_minima: Number($("fase3-completude").value),
             regra_ausentes: $("fase3-ausentes").value,
           });
           hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
-          render(updated);
+          await render(updated);
         } catch (error) { erro(error); }
       };
       $("sintetizar").onclick = async () => {
@@ -106,7 +62,7 @@
         try {
           const updated = await HierApi.sintetizar(hierarquizacao.codigo, { peso_fase2: Number($("peso-fase2").value), peso_fase3: Number($("peso-fase3").value), incluir_restritos: false });
           hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
-          render(updated);
+          await render(updated);
         } catch (error) { erro(error); }
       };
     } catch (error) { erro(error); }

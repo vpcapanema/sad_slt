@@ -125,13 +125,17 @@
     );
   }
   function render() {
-    const term = $("#criterio-busca").value.toLowerCase(),
-      tipo = $("#criterio-tipo").value;
+    const buscaEl = $("#criterio-busca"),
+      tipoEl = $("#criterio-tipo"),
+      tabelaEl = $("#criterios-tabela");
+    if (!buscaEl || !tipoEl || !tabelaEl) return;
+    const term = buscaEl.value.toLowerCase(),
+      tipo = tipoEl.value;
     const xs = biblioteca.criterios.filter((c) => {
       const m = metricas.criterios[c.id] || {};
       return corresponde(c, m, term, tipo);
     });
-    $("#criterios-tabela").innerHTML =
+    tabelaEl.innerHTML =
       xs
         .map((c) => {
           const m = metricas.criterios[c.id] || {},
@@ -242,19 +246,21 @@
     ]);
     biblioteca = await b.json();
     metricas = await m.json();
-    $("#biblioteca-versao").textContent =
-      `Versão ${biblioteca.versao} · métricas ${metricas.versao}`;
-    render();
+    const versaoEl = $("#biblioteca-versao");
+    if (versaoEl)
+      versaoEl.textContent = `Versão ${biblioteca.versao} · métricas ${metricas.versao}`;
+    if ($("#criterios-tabela")) render();
     preview();
-    $("#criterio-busca").oninput = render;
-    $("#criterio-tipo").onchange = render;
+    if ($("#criterio-busca")) $("#criterio-busca").oninput = render;
+    if ($("#criterio-tipo")) $("#criterio-tipo").onchange = render;
     document
       .querySelectorAll("input,[data-peso]")
       .forEach((i) => (i.oninput = preview));
     $("#validar-metodologia").onclick = salvar;
   }
   init().catch((e) => {
-    $("#criterios-tabela").innerHTML =
-      `<tr><td colspan="9">${esc(e.message)}</td></tr>`;
+    const tabela = $("#criterios-tabela");
+    if (tabela)
+      tabela.innerHTML = `<tr><td colspan="9">${esc(e.message)}</td></tr>`;
   });
 })();

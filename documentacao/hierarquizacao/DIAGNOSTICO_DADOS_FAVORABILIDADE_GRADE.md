@@ -8,8 +8,8 @@
 - **Etapa:** Fase 2 — Favorabilidade territorial e da rede
 - **Camada em foco:** Favorabilidade da **grade** (a camada de **rede** é tratada em documento próprio)
 - **Unidade de análise:** **setor censitário** (Censo 2022), escolhido para máxima variabilidade espacial
-- **Matriz de referência:** `documentacao/matrizes/Matriz_Criterios_Premissas_PLI-SP.xlsx`, aba `Matriz Crit Premissas v2`
-- **Última atualização:** 2026-08-07
+- **Matriz de referência:** `documentacao/matrizes/Matriz_Criterios_Premissas_PLI-SP_v3.xlsx`, aba `Matriz Crit Premissas v3`
+- **Última atualização:** 2026-08-10
 
 ---
 
@@ -117,8 +117,41 @@ Aplicável às duas camadas (rede e grade). Sem nomes de grupos de etapas.
    unidade de análise, combinando as variáveis reescalonadas e ajustadas por um
    operador de média ponderada, cujos pesos derivam da análise multicritério (AHP).
 
+### 7.1 Produto reescalonado
+
+- **Arquivo:** `data/geoespacial/outputs/favorabilidade_grade_normalizada.gpkg`
+  (layer `favorabilidade_grade_normalizada`).
+- **Método:** reescalonamento linear min–max por atributo, segundo
+  `n = (x - mínimo) / (máximo - mínimo)`, calculado sobre os valores válidos da
+  camada; valores ausentes são preservados.
+- **Ajuste de relação:** componentes de prioridade por vulnerabilidade recebem
+  orientação negativa (`1 - n`) quando valor bruto maior representa menor prioridade,
+  como no PIB per capita. As proporções de adequação de água, esgoto e coleta de
+  resíduos permanecem como indicadores auxiliares e não recebem peso autônomo no
+  índice, pois não constituem critérios adicionais na matriz v3.
+- **Rastreabilidade:** os atributos brutos são preservados, os reescalonados recebem
+  sufixo `_n`, os componentes orientados recebem prefixo `f_` e cada critério recebe
+  um campo `crit_*`; as regras aplicadas constam na tabela interna
+  `metadados_normalizacao`.
+
+### 7.2 Superfície por média simples dos critérios
+
+- **Arquivo:** `data/geoespacial/outputs/favorabilidade_grade_media_simples.gpkg`
+  (layer `favorabilidade_grade_media_simples`).
+- **Critérios:** `crit_g01_massa_economica`, representado pelo PIB setorial
+  reescalonado, e `crit_g02_vulnerabilidade`, composto pela média simples do PIB per
+  capita municipal reescalonado e invertido, inadequação setorial de água, esgoto e
+  coleta de resíduos e adensamento domiciliar setorial. Assim, o contexto econômico
+  municipal é preservado, mas o G02 passa a apresentar variação intramunicipal.
+- **Operação:** média aritmética simples dos dois critérios, gravada em
+  `fav_media_simples`; `n_criterios` registra o denominador efetivamente utilizado.
+- **Natureza:** cenário não ponderado solicitado para análise. Não substitui a média
+  ponderada por pesos AHP nem constitui superfície homologada.
+
 ## 8. Histórico de atualização
 
 | Data | Alteração |
 |------|-----------|
 | 2026-08-07 | Criação do diagnóstico da grade; base de setores censitários (103.620); critério 2 (vulnerabilidade) com demografia, alfabetização e saneamento; critério 1 (massa econômica) por desagregação do PIB; PIB per capita incorporado; roteiro metodológico registrado. |
+| 2026-08-10 | Geração do produto vetorial reescalonado `favorabilidade_grade_normalizada.gpkg`, com normalização min–max, orientação dos componentes de vulnerabilidade, preservação de NoData e metadados internos de auditoria. |
+| 2026-08-10 | Vinculação explícita dos campos `crit_*` aos dois critérios de grade da matriz v3 e geração da superfície `favorabilidade_grade_media_simples.gpkg`, sem atribuir peso próprio aos indicadores auxiliares. |

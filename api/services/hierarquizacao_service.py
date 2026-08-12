@@ -793,11 +793,11 @@ def executar_fase_1(
         raise DemandaValidationError(
             "A camada indicada não é uma camada de risco.", field="camada_risco_id"
         )
-    fatiamento = repo.obter_fatiamento_fase1(payload.configuracao_fatiamento_id)
+    fatiamento = repo.obter_fatiamento_padrao_fase1()
     if not fatiamento:
         raise DemandaValidationError(
-            "Configuração de fatiamento não encontrada.",
-            field="configuracao_fatiamento_id",
+            "Classificação padrão da Fase 1 não encontrada.",
+            field="fatiamento",
         )
     parametros = fatiamento.get("parametros") or {}
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
@@ -1135,7 +1135,7 @@ def _normalizar(
     for idx, x in enumerate(converted):
         if x is None:
             n = None
-        elif tipo == "numerico":
+        elif tipo in {"numerico", "ordinal", "categorico"}:
             n = (x - lo) / (hi - lo) if hi > lo else 1.0
         else:
             n = x
@@ -1151,6 +1151,13 @@ def _normalizar(
 def _valor_atributo_objeto(obj: dict[str, Any], chave: Any) -> Any:
     """Valor do atributo de Fase 3 do objeto: prioriza os slots ``atributos_fase3``."""
     cab = obj.get("cabecalho_objeto") or {}
+    if str(chave).startswith("cadastro:"):
+        atributo = str(chave).split(":", 1)[1]
+        cadastro = cab.get("atributos") or {}
+        canonicos = cadastro.get("atributos_cadastrais") or {}
+        if atributo == "vinculo_institucional":
+            return canonicos.get(atributo, cadastro.get(atributo, False))
+        return canonicos.get(atributo, cadastro.get(atributo))
     af3 = cab.get("atributos_fase3") or {}
     slot = af3.get(chave)
     if not isinstance(slot, dict):

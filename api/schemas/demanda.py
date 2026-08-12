@@ -51,6 +51,7 @@ class DemandaCreateSchema(BaseModel):
     vigencia_inicio: str | None = None
     vigencia_fim: str | None = None
     valor_global: float | None = None
+    atributos_cadastrais: dict[str, Any] = Field(default_factory=dict)
 
 
 class DemandaResponseSchema(BaseModel):
@@ -82,6 +83,7 @@ class DemandaResponseSchema(BaseModel):
     vigencia_inicio: str | None = None
     vigencia_fim: str | None = None
     valor_global: float | None = None
+    atributos_cadastrais: dict[str, Any] = Field(default_factory=dict)
 
 
 class RepresentanteUpdateSchema(BaseModel):
@@ -112,3 +114,4 @@ class DemandaUpdateSchema(BaseModel):
     vigencia_inicio: str | None = None
     vigencia_fim: str | None = None
     valor_global: float | None = None
+    atributos_cadastrais: dict[str, Any] | None = None

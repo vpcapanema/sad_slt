@@ -194,7 +194,11 @@ $migrations = @(
     "057_classe_modelagem_atributo_objeto.sql",
     "058_projeto_vigencia_recursos.sql",
     "059_drop_schemas_legados.sql",
-    "060_remove_hierarq_apta.sql"
+    "060_remove_hierarq_apta.sql",
+    "061_dominio_atributos_objeto.sql",
+    "062_remove_dependencias_atributo_cadastral.sql",
+    "063_padroniza_nomes_atributos_objeto.sql",
+    "064_unidade_atributos_ordinais.sql"
 )
 
 if ($OnlyMigration) {

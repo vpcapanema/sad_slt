@@ -7,8 +7,8 @@
 
 - **Etapa:** Fase 2 — Favorabilidade territorial e da rede
 - **Camada em foco:** Favorabilidade da **rede** (a camada de **grade** será tratada à parte)
-- **Matriz de referência:** `documentacao/matrizes/Matriz_Criterios_Premissas_PLI-SP.xlsx`, aba `Matriz Crit Premissas v2`
-- **Última atualização:** 2026-08-06
+- **Matriz de referência:** `documentacao/matrizes/Matriz_Criterios_Premissas_PLI-SP_v3.xlsx`, aba `Matriz Crit Premissas v3`
+- **Última atualização:** 2026-08-10
 
 ---
 
@@ -565,6 +565,43 @@ Sequência oficial, sem nomes de grupos de etapas (aplicável a rede e grade):
 5. **Obtenção do índice de favorabilidade da rede** — álgebra de campos por subtrecho,
    média ponderada das variáveis reescalonadas/ajustadas, pesos vindos do AHP.
 
+### 6.2 Produto reescalonado
+
+- **Arquivo:** `data/geoespacial/outputs/favorabilidade_rede_normalizada.gpkg`
+  (layer `favorabilidade_rede_normalizada`).
+- **Método:** reescalonamento linear min–max por atributo, segundo
+  `n = (x - mínimo) / (máximo - mínimo)`, calculado sobre os valores válidos da
+  camada; valores ausentes são preservados.
+- **Segurança viária:** as contagens dos critérios 11, 12 e 13 são convertidas em
+  densidades por quilômetro de subtrecho antes do reescalonamento, conforme a unidade
+  definida para esses critérios.
+- **Acessibilidade:** os atributos de distância dos critérios 7, 8, 9, 10 e 16 são
+  reescalonados e invertidos (`1 - n`), de modo que menor distância resulte em maior
+  favorabilidade. A velocidade observada do critério 3 e a velocidade livre usada como
+  proxy do critério 5 seguem a mesma orientação negativa.
+- **Conflito territorial:** as extensões urbanas são convertidas em proporções da
+  extensão do subtrecho; flags booleanas já compreendidas em `[0,1]` são preservadas.
+- **Rastreabilidade:** os atributos brutos são preservados, os reescalonados recebem
+  sufixo `_n`, os componentes orientados recebem prefixo `f_` e cada critério
+  calculável recebe um único campo `crit_*`; as regras aplicadas constam na tabela
+  interna `metadados_normalizacao`. Quando um critério possui mais de um indicador,
+  estes são consolidados antes da composição, impedindo que o critério receba peso
+  maior apenas por possuir mais colunas.
+- **Limite:** os critérios 4 (pavimento) e 6 (sobrecarga sazonal) permanecem sem dado.
+
+### 6.3 Superfície por média simples dos critérios
+
+- **Arquivo:** `data/geoespacial/outputs/favorabilidade_rede_media_simples.gpkg`
+  (layer `favorabilidade_rede_media_simples`).
+- **Composição:** média aritmética simples dos 14 campos `crit_*` calculáveis da matriz
+  v3. Os indicadores de VDM, saturação, lentidão, geometria, acessibilidade, segurança
+  e conflito territorial são primeiro consolidados dentro do respectivo critério.
+- **NoData:** a média usa os critérios válidos por subtrecho e registra o denominador
+  em `n_criterios`; a cobertura observada varia de 11 a 14 critérios. Os critérios 4 e
+  6 não entram no denominador por inexistência do atributo bruto.
+- **Natureza:** cenário não ponderado solicitado para análise. Não substitui a média
+  ponderada por pesos AHP nem constitui superfície homologada.
+
 ## 7. Histórico de atualização
 
 | Data | Alteração |
@@ -580,3 +617,5 @@ Sequência oficial, sem nomes de grupos de etapas (aplicável a rede e grade):
 | 2026-08-06 | Bloco B (critérios 7, 8, 9, 10, 16) gerado por proximidade ao destino mais próximo (seções 4.11 e 4.12), com bases de ferrovias, portos ANTAQ, hidrovia Tietê e aeroportos ANAC; colunas `c7_polo_m`, `c8_hidrov_m`, `c9_ferrov_m`, `c10_porto_m`, `c10_aero_m`, `c16_interm_m`. |
 | 2026-08-06 | Critério 3 (lentidão) coletado via TomTom Traffic Flow (seção 4.13); colunas `c3_cur`, `c3_free`, `c3_ratio`, `c3_delay_s`; cobertura 62,8% (rural sem dado). |
 | 2026-08-06 | Confirmada a indisponibilidade pública dos dados de pavimento (crit. 4) e sazonalidade (crit. 6) após raspagem de DER-SP, ARTESP e portal de dados abertos SP; ambos marcados como "A solicitar" ao DER/ARTESP. |
+| 2026-08-10 | Geração do produto vetorial reescalonado `favorabilidade_rede_normalizada.gpkg`, com normalização min–max, densidades de segurança por quilômetro, inversão dos atributos de distância, preservação de NoData e metadados internos de auditoria. |
+| 2026-08-10 | Vinculação explícita dos campos `crit_*` aos critérios de rede da matriz v3 e geração da superfície `favorabilidade_rede_media_simples.gpkg` com 14 critérios calculáveis, mantendo pavimento e sazonalidade como lacunas. |

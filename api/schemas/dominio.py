@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel
+from typing import Any
 
 
 class StatusDominioSchema(BaseModel):
@@ -19,6 +20,22 @@ class TipoDemandaSchema(BaseModel):
     nome: str
     descricao: str | None = None
     ordem: int
+
+
+class AtributoObjetoDominioSchema(BaseModel):
+    codigo: str
+    nome: str
+    descricao: str
+    tipo_dado: str
+    unidade: str | None = None
+    origem_valor: str
+    tipos_objeto: list[str]
+    dominio_valores: list[dict[str, Any]] | None = None
+    configuracao_por_tipo: dict[str, Any]
+    regras_validacao: dict[str, Any]
+    exige_evidencia: bool
+    permite_nao_informado: bool
+    versao: int
 
 
 class StatusTransicaoSchema(BaseModel):

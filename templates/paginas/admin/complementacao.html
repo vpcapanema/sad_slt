@@ -1,0 +1,32 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Complementação de cadastro" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+{% block titulo %}Complementação de cadastro — SICARD{% endblock %}
+{% block classes_body %}complementacao-page{% endblock %}
+{% block estilos_pagina %}<link rel="stylesheet" href="/assets/css/complementacao.css">{% endblock %}
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+<main class="conteudo-principal app-main">
+  <section class="secao-complementacao-introducao card">
+    <h2>Complementação de cadastro</h2>
+    <p class="step-intro">Informe os atributos adicionais requeridos pela matriz de critérios e premissas vigente. Os campos variam conforme a hierarquização e o objeto selecionado.</p>
+  </section>
+  <section class="secao-complementacao-objeto card">
+    <h2>1. Selecionar objeto</h2>
+    <label for="complementacao-objeto">Demanda complementável</label>
+    <select id="complementacao-objeto"><option value="">Carregando objetos…</option></select>
+    <p id="complementacao-resumo" class="field-help" aria-live="polite"></p>
+  </section>
+  <form id="complementacao-form" class="card hidden">
+    <h2>2. Atributos adicionais</h2>
+    <div id="complementacao-campos" class="complementacao-grid"></div>
+    <div class="btn-row"><button type="submit" class="btn btn-primary">Salvar complementação</button></div>
+  </form>
+  <p id="complementacao-status" class="complementacao-status" aria-live="polite"></p>
+</main>
+{% endblock %}
+{% block scripts_pagina %}
+<script src="/assets/js/admin-auth.js"></script>
+<script src="/assets/js/complementacao.js"></script>
+{% endblock %}

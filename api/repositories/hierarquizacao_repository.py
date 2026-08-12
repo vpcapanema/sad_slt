@@ -215,6 +215,14 @@ def obter_fatiamento_fase1(config_id: str) -> dict[str, Any] | None:
             FROM geoprocessamento.configuracao_fatiamento_fase1 WHERE id=%s::uuid AND ativo""", (config_id,)).fetchone()
 
 
+def obter_fatiamento_padrao_fase1() -> dict[str, Any] | None:
+    """Classificação padrão da Fase 1 (risco + restrição binária) aplicada em toda execução."""
+    with get_connection() as conn:
+        return conn.execute("""SELECT id::text AS id,codigo,nome,descricao,padrao,parametros
+            FROM geoprocessamento.configuracao_fatiamento_fase1
+            WHERE ativo ORDER BY padrao DESC, nome LIMIT 1""").fetchone()
+
+
 def salvar_fatiamento_fase1(data: dict[str, Any]) -> dict[str, Any]:
     with get_connection() as conn:
         row = conn.execute(

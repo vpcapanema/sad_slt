@@ -43,8 +43,8 @@ body.layout-with-sidebar {
 
 .layout-with-sidebar .layout-main-header.app-header--restricted {
   align-items: stretch;
-  padding-top: 0.6rem;
-  padding-bottom: 0.15rem;
+  padding-top: 0.9rem;
+  padding-bottom: 0.45rem;
 }
 
 .layout-with-sidebar-grid > .layout-sidebar {

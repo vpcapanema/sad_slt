@@ -1,0 +1,42 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Administração de dados" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Área do Administrador — SICARD{% endblock %}
+{% block classes_body %}admin-area-page{% endblock %}
+{% block base_url %}<base href="/restrict/admin/" />{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/area-administrador.css?v=20260810e">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<main class="conteudo-principal admin-area">
+  <div class="admin-area-shell">
+    <aside class="admin-sidebar" aria-label="Esquemas e tabelas do banco">
+      <div class="admin-sidebar-head">
+        <h1>Área do Administrador</h1>
+        <p>Tabelas do banco organizadas por esquema</p>
+      </div>
+      <nav id="admin-menu" class="admin-menu" aria-live="polite">
+        <p class="admin-menu-loading">Carregando esquemas…</p>
+      </nav>
+    </aside>
+    <section class="secao-administracao admin-content" aria-live="polite">
+      <header class="admin-content-head">
+        <h2 id="admin-table-title">Selecione uma tabela</h2>
+        <p id="admin-table-sub" class="admin-content-sub"></p>
+      </header>
+      <div id="admin-table-host" class="admin-table-host">
+        <p class="admin-placeholder">Escolha um esquema no menu à esquerda e clique em uma tabela para visualizar e editar seus registros.</p>
+      </div>
+    </section>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/area-administrador.js?v=20260810e"></script>
+{% endblock %}

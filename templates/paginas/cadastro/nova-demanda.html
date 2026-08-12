@@ -95,11 +95,11 @@
 
       <!-- Passo 2 — contexto institucional (somente se marcou vínculo) -->
       <section class="card-1-contexto-institucional-estrategico secao-1-contexto-institucional-estrategico card step-panel cadastro-section hidden" data-step="2" id="pj-vinculo-inst-step">
-        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Contexto institucional estratégico</span></h2>
+        <h2><span class="cadastro-sec-num">2</span>. <span data-section-title>Contexto institucional estratégico</span></h2>
         <p class="step-intro">Selecione o programa ou o plano cadastrado que enquadra este projeto e confira o contexto herdado.</p>
 
         <div class="form-subsection">
-          <h3><span class="cadastro-subsec-num">1.1</span> <span data-subsection-title>Tipo de vínculo</span></h3>
+          <h3><span class="cadastro-subsec-num">2.1</span> <span data-subsection-title>Tipo de vínculo</span></h3>
           <p class="step-intro">Indique se o projeto se vincula a um programa cadastrado ou diretamente a um plano (ex.: PLI-SP sem programa intermediário).</p>
           <div class="cadastro-vinculo-tipo" role="radiogroup" aria-label="Tipo de vínculo institucional">
             <label>
@@ -114,7 +114,7 @@
         </div>
 
         <div class="form-subsection" id="pj-bloco-programa">
-          <h3><span class="cadastro-subsec-num">1.2</span> <span data-subsection-title>Vínculo ao programa</span></h3>
+          <h3><span class="cadastro-subsec-num">2.2</span> <span data-subsection-title>Vínculo ao programa</span></h3>
           <p class="step-intro">Selecione o programa cadastrado que enquadra este projeto no contexto estratégico maior.</p>
           <div class="form-grid">
             <div class="full">
@@ -127,7 +127,7 @@
         </div>
 
         <div class="form-subsection hidden" id="pj-bloco-plano">
-          <h3><span class="cadastro-subsec-num">1.2</span> <span data-subsection-title>Vínculo ao plano</span></h3>
+          <h3><span class="cadastro-subsec-num">2.2</span> <span data-subsection-title>Vínculo ao plano</span></h3>
           <p class="step-intro">Selecione o plano cadastrado ao qual este projeto se vincula diretamente.</p>
           <div class="form-grid">
             <div class="full">
@@ -145,7 +145,7 @@
         </div>
 
         <div class="form-subsection">
-          <h3><span class="cadastro-subsec-num">1.3</span> <span data-subsection-title>Contexto estratégico herdado</span></h3>
+          <h3><span class="cadastro-subsec-num">2.3</span> <span data-subsection-title>Contexto estratégico herdado</span></h3>
           <p class="step-intro">Confira abaixo o enquadramento institucional definido pela seleção acima (somente leitura).</p>
           <div id="pj-contexto-estrategico" class="cadastro-inherited-block hidden" aria-live="polite"></div>
           <p id="pj-contexto-vazio" class="field-help">Selecione um programa ou plano acima para visualizar diretoria e demais dados herdados.</p>
@@ -158,12 +158,12 @@
       </section>
 
       <!-- Passo 3 — proponente e classificação -->
-      <section class="card-1-proponente-e-classificacao secao-1-proponente-e-classificacao card step-panel cadastro-section hidden" data-step="3">
-        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Proponente e classificação</span></h2>
-        <p class="step-intro">Informe a instituição interessada, o representante legal e a classificação desta demanda no plano.</p>
+      <section class="card-1-proponente-e-classificacao secao-1-proponente-e-classificacao card step-panel cadastro-section" data-step="3">
+        <h2><span class="cadastro-sec-num">3</span>. <span id="pj-proponente-section-title" data-section-title>Proponente e classificação</span></h2>
+        <p id="pj-proponente-section-intro" class="step-intro">Informe a instituição interessada, o representante legal e a classificação desta demanda no plano.</p>
 
         <div class="form-subsection">
-          <h3><span class="cadastro-subsec-num">1.1</span> <span data-subsection-title>Instituição e representante</span></h3>
+          <h3><span class="cadastro-subsec-num">3.1</span> <span data-subsection-title>Instituição e representante</span></h3>
           <div class="proponente-fields">
             <div class="proponente-grupo proponente-grupo--instituicao">
               <label for="instituicao">Instituição interessada <span class="req">*</span></label>
@@ -198,8 +198,8 @@
           </div>
         </div>
 
-        <div class="form-subsection">
-          <h3><span class="cadastro-subsec-num">1.2</span> <span data-subsection-title>Classificação no plano</span></h3>
+        <div id="pj-classificacao-subsection" class="form-subsection">
+          <h3><span class="cadastro-subsec-num">3.2</span> <span data-subsection-title>Classificação no plano</span></h3>
           <p class="step-intro">Selecione a frente ou o eixo que melhor classifica esta demanda, conforme o plano de referência.</p>
 
           <div id="pj-enquadramento-catalogo" class="pj-classificacao-bloco">
@@ -262,9 +262,11 @@
       </section>
 
       <!-- Passo 4 — complementos -->
-      <section class="card-1-complementos-opcionais secao-1-complementos-opcionais card step-panel cadastro-section hidden" data-step="4">
-        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Vigência e recursos</span></h2>
+      <section class="card-1-complementos-opcionais secao-1-complementos-opcionais card step-panel cadastro-section" data-step="4">
+        <h2><span class="cadastro-sec-num">4</span>. <span data-section-title>Vigência e recursos</span></h2>
         <p class="step-intro">Informe o período de vigência e o valor global estimado, se souber.</p>
+        <div class="form-subsection">
+          <h3><span class="cadastro-subsec-num">4.1</span> Período e valor global</h3>
         <div class="form-grid">
           <div>
             <label for="prj-vig-ini">Vigência início</label>
@@ -279,9 +281,22 @@
             <input type="number" step="any" id="prj-valor" min="0">
           </div>
         </div>
+        </div>
+
+        <div class="form-subsection">
+          <h3><span class="cadastro-subsec-num">4.2</span> Desenvolvimento, custo e prazo</h3>
+          <p class="step-intro">Informe a etapa atual de desenvolvimento, o Capex, o prazo e o nível de detalhamento das respectivas estimativas.</p>
+          <div class="form-grid">
+            <div class="form-field-block"><label for="prj-maturidade">Etapa atual de desenvolvimento (escala ordinal)</label><select id="prj-maturidade" data-atributo="maturidade_objeto" data-tipo-objeto="projeto"><option value="">— Não informado —</option></select></div>
+            <div class="form-field-block"><label for="prj-capex">Capex (custo estimado para implantação) (R$)</label><input type="number" step="0.01" min="0" id="prj-capex"></div>
+            <div class="form-field-block"><label for="prj-base-capex">Nível de detalhamento da estimativa de custo (escala ordinal)</label><select id="prj-base-capex" data-atributo="base_estimativa_capex" data-tipo-objeto="projeto"><option value="">— Não informado —</option></select></div>
+            <div class="form-field-block"><label for="prj-prazo">Prazo estimado até a entrada em operação (meses)</label><input type="number" step="1" min="0" id="prj-prazo"></div>
+            <div class="form-field-block"><label for="prj-base-prazo">Nível de detalhamento do cronograma (escala ordinal)</label><select id="prj-base-prazo" data-atributo="base_estimativa_prazo" data-tipo-objeto="projeto"><option value="">— Não informado —</option></select></div>
+          </div>
+        </div>
 
         <div class="collapsible-hdr" id="toggle-complementos">
-          <h3>Complementos (opcionais)</h3>
+          <h3><span class="cadastro-subsec-num">4.3</span> Complementos (opcionais)</h3>
           <span aria-hidden="true">▼</span>
         </div>
         <p class="step-intro">Informe dados complementares, se desejar.</p>
@@ -308,8 +323,8 @@
       </section>
 
       <!-- Passo 5 — localização e revisão -->
-      <section class="card-1-localizacao-geografica secao-1-localizacao-geografica card step-panel cadastro-section hidden" data-step="5">
-        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Localização geográfica</span></h2>
+      <section class="card-1-localizacao-geografica secao-1-localizacao-geografica card step-panel cadastro-section" data-step="5">
+        <h2><span class="cadastro-sec-num">5</span>. <span data-section-title>Localização geográfica</span></h2>
         <p class="step-intro">Indique a localização por ponto ou perímetro e confira a latitude e a longitude informadas.</p>
         <div class="form-grid">
           <div class="full map-toolbar">
@@ -352,7 +367,7 @@
         </div>
 
         <div class="form-subsection">
-          <h3><span class="cadastro-subsec-num">1.1</span> <span data-subsection-title>Revisão</span></h3>
+          <h3><span class="cadastro-subsec-num">5.1</span> <span data-subsection-title>Revisão</span></h3>
           <p class="step-intro">Confira todos os dados informados nas seções anteriores e clique em Enviar demanda para concluir o cadastro.</p>
           <div id="review" class="review-panel" aria-live="polite"></div>
         </div>
@@ -389,7 +404,7 @@
         <p class="step-intro">Defina o enquadramento institucional que programas e projetos vinculados irão herdar.</p>
 
         <div class="form-subsection">
-          <h3>2.1 Diretoria</h3>
+          <h3><span class="cadastro-subsec-num">2.1</span> Diretoria</h3>
           <p class="step-intro">Selecione a diretoria da SLT responsável por este plano — ela estabelece o âmbito institucional e a linha estratégica herdada pelos níveis abaixo.</p>
           <div class="form-grid">
             <div class="full">
@@ -445,6 +460,8 @@
       <section class="card-4-vigencia-e-recursos secao-4-vigencia-e-recursos card">
         <h2>4. Vigência e recursos</h2>
         <p class="step-intro">Informe o período de vigência e o valor global estimado, se souber.</p>
+        <div class="form-subsection">
+          <h3><span class="cadastro-subsec-num">4.1</span> Período e valor global</h3>
         <div class="form-grid">
           <div>
             <label for="pl-vig-ini">Vigência início</label>
@@ -457,6 +474,16 @@
           <div class="full">
             <label for="pl-valor">Valor global (R$)</label>
             <input type="number" step="any" id="pl-valor" min="0">
+          </div>
+        </div>
+        </div>
+        <div class="form-subsection">
+          <h3><span class="cadastro-subsec-num">4.2</span> Desenvolvimento e prazo</h3>
+          <p class="step-intro">Informe a etapa atual de desenvolvimento, o prazo e o nível de detalhamento do cronograma do plano.</p>
+          <div class="form-grid">
+            <div class="form-field-block"><label for="pl-maturidade">Etapa atual de desenvolvimento (escala ordinal)</label><select id="pl-maturidade" data-atributo="maturidade_objeto" data-tipo-objeto="plano"><option value="">— Não informado —</option></select></div>
+            <div class="form-field-block"><label for="pl-prazo">Prazo estimado até a aprovação ou início da vigência (meses)</label><input type="number" step="1" min="0" id="pl-prazo"></div>
+            <div class="form-field-block"><label for="pl-base-prazo">Nível de detalhamento do cronograma (escala ordinal)</label><select id="pl-base-prazo" data-atributo="base_estimativa_prazo" data-tipo-objeto="plano"><option value="">— Não informado —</option></select></div>
           </div>
         </div>
       </section>
@@ -513,11 +540,11 @@
       </section>
 
       <section class="card-1-contexto-institucional-estrategico secao-1-contexto-institucional-estrategico card step-panel pg-step-panel cadastro-section cadastro-section--vinculo hidden" data-step="2" id="pg-vinculo-inst-step">
-        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Contexto institucional estratégico</span></h2>
+        <h2><span class="cadastro-sec-num">2</span>. <span data-section-title>Contexto institucional estratégico</span></h2>
         <p class="step-intro">Selecione o plano cadastrado que servirá de referência estratégica para este programa.</p>
 
         <div class="form-subsection">
-          <h3><span class="cadastro-subsec-num">1.1</span> <span data-subsection-title>Vínculo ao plano</span></h3>
+          <h3><span class="cadastro-subsec-num">2.1</span> <span data-subsection-title>Vínculo ao plano</span></h3>
           <div class="form-grid">
             <div class="full">
               <label for="pg-plano">Plano <span class="req pg-req-vinculo">*</span></label>
@@ -534,7 +561,7 @@
         </div>
 
         <div class="form-subsection">
-          <h3><span class="cadastro-subsec-num">1.2</span> <span data-subsection-title>Contexto estratégico herdado</span></h3>
+          <h3><span class="cadastro-subsec-num">2.2</span> <span data-subsection-title>Contexto estratégico herdado</span></h3>
           <p class="step-intro">Confira abaixo o enquadramento institucional definido pelo plano (somente leitura).</p>
           <div id="pg-contexto-estrategico" class="cadastro-inherited-block hidden" aria-live="polite"></div>
           <p id="pg-contexto-vazio" class="field-help">Selecione um plano acima para visualizar a diretoria e demais dados herdados.</p>
@@ -546,8 +573,8 @@
         </div>
       </section>
 
-      <section class="card-1-proponente-do-cadastro secao-1-proponente-do-cadastro card step-panel pg-step-panel cadastro-section hidden" data-step="3">
-        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Proponente do cadastro</span></h2>
+      <section class="card-1-proponente-do-cadastro secao-1-proponente-do-cadastro card step-panel pg-step-panel cadastro-section" data-step="3">
+        <h2><span class="cadastro-sec-num">3</span>. <span data-section-title>Proponente do cadastro</span></h2>
         <p class="step-intro">Informe a instituição interessada e o representante legal responsáveis por este cadastro.</p>
         <div class="proponente-fields">
           <div class="proponente-grupo proponente-grupo--instituicao">
@@ -587,13 +614,35 @@
         </div>
       </section>
 
-      <section class="card-1-area-de-abrangencia secao-1-area-de-abrangencia card step-panel pg-step-panel cadastro-section hidden" data-step="4">
-        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Área de abrangência</span> <span class="req">*</span></h2>
+      <section class="card-1-area-de-abrangencia secao-1-area-de-abrangencia card step-panel pg-step-panel cadastro-section" data-step="4">
+        <h2><span class="cadastro-sec-num">4</span>. <span data-section-title>Área de abrangência</span> <span class="req">*</span></h2>
         <p class="step-intro">Defina a granularidade territorial e confira o preview da área no mapa.</p>
         <div id="pg-abrangencia"></div>
-        <div class="form-subsection">
-          <h3><span class="cadastro-subsec-num">1.1</span> <span data-subsection-title>Revisão</span></h3>
-          <p class="step-intro">Confira os dados informados nas seções anteriores. Os valores são atualizados automaticamente conforme você preenche o formulário.</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
+          <button type="button" class="btn btn-primary btn-next">Continuar</button>
+        </div>
+      </section>
+
+      <section class="card-1-atributos-programa secao-1-atributos-programa card step-panel pg-step-panel cadastro-section" data-step="5">
+        <h2><span class="cadastro-sec-num">5</span>. <span data-section-title>Atributos de programa</span></h2>
+        <p class="step-intro">Informe a etapa atual de desenvolvimento, o Capex, o prazo e o nível de detalhamento das respectivas estimativas.</p>
+          <div class="form-grid">
+            <div class="form-field-block"><label for="pg-maturidade">Etapa atual de desenvolvimento (escala ordinal)</label><select id="pg-maturidade" data-atributo="maturidade_objeto" data-tipo-objeto="programa"><option value="">— Não informado —</option></select></div>
+            <div class="form-field-block"><label for="pg-capex">Capex (custo estimado para implantação) (R$)</label><input type="number" step="0.01" min="0" id="pg-capex"></div>
+            <div class="form-field-block"><label for="pg-base-capex">Nível de detalhamento da estimativa de custo (escala ordinal)</label><select id="pg-base-capex" data-atributo="base_estimativa_capex" data-tipo-objeto="programa"><option value="">— Não informado —</option></select></div>
+            <div class="form-field-block"><label for="pg-prazo">Prazo estimado para implantação do programa (meses)</label><input type="number" step="1" min="0" id="pg-prazo"></div>
+            <div class="form-field-block"><label for="pg-base-prazo">Nível de detalhamento do cronograma (escala ordinal)</label><select id="pg-base-prazo" data-atributo="base_estimativa_prazo" data-tipo-objeto="programa"><option value="">— Não informado —</option></select></div>
+          </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
+          <button type="button" class="btn btn-primary btn-next">Continuar</button>
+        </div>
+      </section>
+
+      <section class="card-1-revisao secao-1-revisao card step-panel pg-step-panel cadastro-section" data-step="6">
+        <h2><span class="cadastro-sec-num">6</span>. <span data-section-title>Revisão</span></h2>
+        <p class="step-intro">Confira os dados informados nas seções anteriores. Os valores são atualizados automaticamente conforme você preenche o formulário.</p>
           <div id="pg-review" class="review-panel" aria-live="polite">
             <section class="secao-revisao review-section">
               <div class="review-section-label">
@@ -676,15 +725,14 @@
               </div>
             </section>
           </div>
-        </div>
         <div class="btn-row">
           <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
           <button type="submit" class="btn btn-primary">Cadastrar programa</button>
         </div>
       </section>
 
-      <section class="card-1-execucao-e-recursos secao-1-execucao-e-recursos card step-panel pg-step-panel cadastro-section cadastro-section--suspended hidden" data-step="5" hidden inert>
-        <h2><span class="cadastro-sec-num">1</span>. <span data-section-title>Execução e recursos</span></h2>
+      <section class="card-1-execucao-e-recursos secao-1-execucao-e-recursos card step-panel pg-step-panel cadastro-section cadastro-section--suspended hidden" data-step="7" hidden inert>
+        <h2><span class="cadastro-sec-num">7</span>. <span data-section-title>Execução e recursos</span></h2>
         <p class="step-intro">Descreva o público-alvo, a justificativa e os dados de execução deste programa, se souber.</p>
         <div class="form-grid">
           <div class="full">

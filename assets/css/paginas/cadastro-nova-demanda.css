@@ -1,3 +1,160 @@
+.cadastro-page {
+  /* Escala descendente: seção > subseção > texto > campo > ajuda. */
+  --font-section: 1rem;
+  --font-subsection: 0.9rem;
+  --font-intro: 0.85rem;
+  --font-label: 0.8125rem;
+  --font-select: 0.8125rem;
+  --font-intro-sub: 0.8rem;
+  --font-control: 0.8rem;
+  --font-help: 0.75rem;
+}
+
+.cadastro-page .cadastro-section-label,
+.cadastro-page .card > h2 {
+  font-size: var(--font-section);
+}
+
+.cadastro-page .cadastro-section-label i,
+.cadastro-page .cadastro-section-label .collapsible-toggle {
+  font-size: inherit;
+}
+
+.cadastro-page .form-subsection > h3,
+.cadastro-page .classificacao-demanda-etapa > h3,
+.cadastro-page .collapsible-hdr > h3,
+.cadastro-page .cadastro-vinculo-pergunta--embedded > h3 {
+  font-size: var(--font-subsection);
+}
+
+.cadastro-page .step-intro,
+.cadastro-page .cadastro-vinculo-pergunta-enunciado,
+.cadastro-page .cadastro-vinculo-resposta label,
+.cadastro-page .cadastro-link-toggle {
+  font-size: var(--font-intro);
+}
+
+.cadastro-page label,
+.cadastro-page .pj-classificacao-subtitulo,
+.cadastro-page .review-label,
+.cadastro-page .review-value,
+.cadastro-page .cadastro-inherited-block,
+.cadastro-page .context-hint,
+.cadastro-page .btn {
+  font-size: var(--font-control);
+}
+
+.cadastro-page input,
+.cadastro-page textarea,
+.cadastro-page select,
+.cadastro-page select.field-filled,
+.cadastro-page input.field-filled,
+.cadastro-page textarea.field-filled {
+  font-size: var(--font-control);
+}
+
+.cadastro-page .field-help,
+.cadastro-page .field-help a,
+.cadastro-page .link-catalogo,
+.cadastro-page .tipo-card span,
+.cadastro-page .demandante-card span,
+.cadastro-page .cadastro-inherited-block dt {
+  font-size: var(--font-help);
+}
+
+.cadastro-page .review-panel .review-section-label {
+  font-size: var(--font-help);
+}
+
+.cadastro-page .review-panel .review-section-label i {
+  font-size: inherit;
+}
+
+/* Formulários de plano, programa e projeto: dois cards por linha. */
+.cadastro-page .tipo-form:not(.hidden) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.cadastro-page .tipo-form > .card {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.cadastro-page .tipo-form > .cadastro-card > .cadastro-section-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.cadastro-page .tipo-form > .cadastro-card > .cadastro-section-body > .btn-row:last-child,
+.cadastro-page .tipo-form > .card > .btn-row:last-child {
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+/* Plano, seção 4: cada subseção distribui seus três campos em uma linha. */
+.cadastro-page #form-plano > .card-4-vigencia-e-recursos .form-subsection > .form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cadastro-page #form-plano > .card-4-vigencia-e-recursos .form-subsection > .form-grid > .full {
+  grid-column: auto;
+}
+
+/* Programa e projeto seguem o fluxo aberto do plano: sem navegação por etapas. */
+.cadastro-page #form-cadastro .btn-prev,
+.cadastro-page #form-cadastro .btn-next,
+.cadastro-page #form-programa .btn-prev,
+.cadastro-page #form-programa .btn-next {
+  display: none;
+}
+
+.cadastro-page #form-cadastro .btn-row:not(:has(button[type="submit"])),
+.cadastro-page #form-programa .btn-row:not(:has(button[type="submit"])) {
+  display: none;
+}
+
+/* Seções finais ímpares ocupam a largura inteira. */
+.cadastro-page #form-cadastro > .step-panel[data-step="5"],
+.cadastro-page #form-plano > .card-5-area-de-abrangencia,
+.cadastro-page .tipo-form > .btn-row {
+  grid-column: 1 / -1;
+}
+
+/* Sem a seção condicional 2, a seção 1 não fica pareada com a 3. */
+.cadastro-page #form-cadastro:has(> .step-panel[data-step="2"].hidden) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cadastro-page #form-cadastro:has(> .step-panel[data-step="2"].hidden)
+  > .step-panel[data-step="1"],
+.cadastro-page #form-programa:has(> .step-panel[data-step="2"].hidden)
+  > .step-panel[data-step="1"] {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 760px) {
+  .cadastro-page .tipo-form:not(.hidden),
+  .cadastro-page #form-cadastro:has(> .step-panel[data-step="2"].hidden) {
+    grid-template-columns: 1fr;
+  }
+
+  .cadastro-page .tipo-form > .card {
+    height: auto;
+    grid-column: 1;
+  }
+
+  .cadastro-page #form-plano > .card-4-vigencia-e-recursos .form-subsection > .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .classificacao-demanda-etapa {
   margin-top: 1.25rem;
 }
@@ -64,6 +221,15 @@
 
 .tipo-card.is-incompativel {
   display: none;
+}
+
+.cadastro-page .cadastro-subsec-num {
+  display: inline-block;
+  min-width: 2.25rem;
+  margin-right: 0.35rem;
+  color: var(--pli-blue);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .aviso-demanda-privada {

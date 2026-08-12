@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
   <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
   <link rel="stylesheet" href="/assets/css/fase1-execucao.css">
+  <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/assets/css/feedback.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
@@ -19,19 +21,27 @@
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
 <main class="conteudo-principal app-main ahp-main fase-execucao-page">
   {% include "componentes/navegacao_fases_hierarquizacao.html" %}
-  <section class="card-fase-2-favorabilidade-territorial card"><h1 class="ahp-page-title"><i class="fas fa-map-location-dot"></i> Fase 2: Favorabilidade Territorial</h1><p>Fluxo canônico do Bloco 2: Processos → Fase 1 → Fase 2 → Fase 3.</p><p>Extraia da superfície homologada o índice territorial de cada demanda e gere o ranking auditável da fase.</p></section>
-  <section class="card ahp-step-section"><div class="ahp-section-label"><span>1. Selecionar a rodada</span></div><div class="ahp-section-body"><label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option>Carregando…</option></select></label><div id="fase-resumo" class="fase-summary hidden"></div></div></section>
-  <section class="card ahp-step-section"><div class="ahp-section-label"><span>2. Configurar a extração territorial</span></div><div class="ahp-section-body fase-grid-2"><label>Pacote de favorabilidade homologado <select id="pacote-fase2"><option>Carregando…</option></select></label><label>Método de extração <select id="metodo-fase2"><option value="ponto">Valor do raster no ponto da demanda</option></select></label><div id="fase2-pacote-resumo" class="fase-summary fase-span hidden"></div><p class="ahp-help-text fase-span">Valores válidos devem estar entre 0 e 1. Ausência de cobertura ou NoData não é convertida em zero.</p></div></section>
-  <section class="card-camadas-operacionais secao-camadas-operacionais card ahp-step-section"><div class="ahp-section-label"><span>3. Geoprocessamento — SLT</span></div><div class="ahp-section-body">
-    <slt-geoprocessamento fase="fase2" titulo-saida="Superfície de favorabilidade territorial" saida-id="gp-favorabilidade" demandas-id="gp-demandas-fase2" frame-id="gp-frame-fase2" modelo-id="modelo-fase2" executar-id="executar-fase2" modelo="fluxo_fase2_favorabilidade" modelo-label="Fase 2 — Extração de favorabilidade territorial"></slt-geoprocessamento>
+  <section class="card-fase-2-favorabilidade-territorial card fase-titulo-card"><h1 class="ahp-page-title"><i class="fas fa-map-location-dot"></i> Fase 2: Favorabilidade Territorial<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info"></i><span class="fase-info-pop">A favorabilidade territorial mede o quanto o território onde cada demanda se encontra é propício à sua implantação, tomando como base uma superfície contínua homologada cujos valores variam de zero a um. O cálculo extrai o valor dessa superfície no ponto de cada demanda, sem transformar em zero as ausências de cobertura ou os dados NoData, e, com os índices válidos, ordena as demandas em um ranking auditável. Para operar, selecione a rodada, escolha o pacote de favorabilidade e o método de extração, execute a extração e acompanhe os indicadores e o ranking no card de resultados.</span></span></h1><p class="fase-descricao">Mede a favorabilidade territorial de cada demanda a partir de uma superfície contínua homologada, com índice de zero a um.</p></section>
+  <section class="card-camadas-operacionais secao-camadas-operacionais card ahp-step-section"><div class="ahp-section-label"><span>Geoprocessamento — SLT</span></div><div class="ahp-section-body">
+    <div id="fase2-controles-origem" hidden>
+      <label id="ctrl-hier" class="fase1-ctrl">Hierarquização cadastrada <select id="fase-hierarquizacao"><option>Carregando…</option></select></label>
+      <label id="ctrl-pacote" class="fase1-ctrl">Pacote de favorabilidade homologado <select id="pacote-fase2"><option>Carregando…</option></select></label>
+      <label id="ctrl-metodo" class="fase1-ctrl">Método de extração <select id="metodo-fase2"><option value="ponto">Valor do raster no ponto da demanda</option></select><span class="fase1-ctrl-ajuda">Valores válidos entre 0 e 1. Ausência de cobertura ou NoData não é convertida em zero.</span></label>
+    </div>
+    <slt-geoprocessamento fase="fase2" titulo-saida="Superfície de favorabilidade territorial" saida-id="gp-favorabilidade" demandas-id="gp-demandas-fase2" frame-id="gp-frame-fase2" modelo-id="modelo-fase2" executar-id="executar-fase2" modelo="fluxo_fase2_favorabilidade" modelo-label="Fase 2 — Extração de favorabilidade territorial" botao-label="Calcular favorabilidade territorial"></slt-geoprocessamento>
     <div id="fase2-erro" class="ahp-info-note ahp-info-note--error hidden"></div>
   </div></section>
-  <section class="card ahp-step-section"><div class="ahp-section-label"><span>4. Conferir resultados</span></div><div class="ahp-section-body"><div id="fase2-indicadores" class="fase-summary-grid"></div><div id="fase2-resultados" class="fase-table-wrap"></div><div id="fase2-auditoria" class="fase-audit hidden"></div><div class="fase-actions"><a class="fase-link" href="/restrict/geoespacial/gerador-favorabilidade/">Abrir Gerador de Favorabilidade Territorial</a></div></div></section>
+  <section class="card ahp-step-section"><div class="ahp-section-label"><span>Resultados</span></div><div class="ahp-section-body"><p id="fase2-resultado-vazio" class="ahp-help-text">Execute o cálculo para ver os indicadores e o ranking.</p><div id="fase2-indicadores" class="fase-summary-grid"></div><div id="fase2-resultados" class="fase-table-wrap"></div><div id="fase2-auditoria" class="fase-audit hidden"></div><div class="fase-actions"><a class="fase-link" href="/restrict/geoespacial/gerador-favorabilidade/">Abrir Gerador de Favorabilidade Territorial</a></div></div></section>
 </main>
 {% endblock %}
 
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/feedback.js"></script>
+  <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
+  <script src="/assets/js/status-colors.js"></script>
+  <script src="/assets/js/objeto-detalhe.js"></script>
+  <script src="/assets/js/resumo-fase.js"></script>
   <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
   <script src="/assets/js/componentes/geoprocessamento-slt.js"></script>
   <script src="/restrict/hierarquizacao/js/fase2.js"></script>

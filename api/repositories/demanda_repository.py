@@ -46,6 +46,7 @@ _SELECT_BASE = """
         d.vigencia_inicio,
         d.vigencia_fim,
         d.valor_global
+        ,d.atributos_cadastrais
     FROM demandas.projeto d
     LEFT JOIN demandas.programa pg ON pg.id = d.programa_id
 """
@@ -79,6 +80,7 @@ _INSERT_SQL = """
         vigencia_inicio,
         vigencia_fim,
         valor_global,
+        atributos_cadastrais,
         criado_por,
         atualizado_por
     ) VALUES (
@@ -109,6 +111,7 @@ _INSERT_SQL = """
         %(vigencia_inicio)s,
         %(vigencia_fim)s,
         %(valor_global)s,
+        %(atributos_cadastrais)s,
         %(criado_por)s,
         %(atualizado_por)s
     )
@@ -159,7 +162,7 @@ def get_by_uuid(demanda_id: Any) -> dict[str, Any] | None:
 def prepare_insert_params(data: dict[str, Any]) -> dict[str, Any]:
     """Normaliza dict de persistência para parâmetros psycopg."""
     params = dict(data)
-    for key in ("classificacao", "complementos"):
+    for key in ("classificacao", "complementos", "atributos_cadastrais"):
         val = params.get(key)
         params[key] = Jsonb(val) if val is not None else None
     geo = params.get("geometria_geojson")
@@ -192,6 +195,7 @@ _UPDATE_ALLOWED = {
     "vigencia_inicio": "vigencia_inicio",
     "vigencia_fim": "vigencia_fim",
     "valor_global": "valor_global",
+    "atributos_cadastrais": "atributos_cadastrais",
 }
 
 
@@ -206,7 +210,7 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
         if key not in data:
             continue
         val = data[key]
-        if key in ("classificacao", "complementos"):
+        if key in ("classificacao", "complementos", "atributos_cadastrais"):
             val = Jsonb(val) if val is not None else None
         sets.append(f"{column} = %({key})s")
         params[key] = val

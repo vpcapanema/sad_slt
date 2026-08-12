@@ -1,0 +1,29 @@
+/* Sistema de feedback por modal — SLTFeedback (notificações + acompanhamento de processo). */
+#slt-feedback-root{position:relative;z-index:4000}
+.slt-fb-backdrop{position:fixed;inset:0;background:rgba(12,26,38,.5);display:flex;align-items:center;justify-content:center;z-index:4000;padding:1rem}
+.slt-fb-modal{background:#fff;border-radius:.6rem;width:min(520px,96vw);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.25);border-top:4px solid #116593}
+.slt-fb-modal--success{border-top-color:#1f9d55}
+.slt-fb-modal--error{border-top-color:#c0392b}
+.slt-fb-modal--warning{border-top-color:#d4a017}
+.slt-fb-modal--info,.slt-fb-modal--progress{border-top-color:#116593}
+.slt-fb-head{display:flex;align-items:center;gap:.55rem;padding:.7rem .85rem;border-bottom:1px solid #e6ecf1}
+.slt-fb-icon{font-size:1.1rem;line-height:1}
+.slt-fb-modal--success .slt-fb-icon{color:#1f9d55}
+.slt-fb-modal--error .slt-fb-icon{color:#c0392b}
+.slt-fb-modal--warning .slt-fb-icon{color:#d4a017}
+.slt-fb-modal--info .slt-fb-icon,.slt-fb-modal--progress .slt-fb-icon{color:#116593}
+.slt-fb-title{margin:0;flex:1;font-size:.95rem;color:#12303f;font-weight:700}
+.slt-fb-close{border:0;background:none;cursor:pointer;color:#7c8b95;font-size:1rem;padding:.2rem;line-height:1}
+.slt-fb-close:hover{color:#12303f}
+.slt-fb-body{padding:.8rem .85rem;overflow:auto}
+.slt-fb-message{margin:0 0 .5rem;color:#28404e;font-size:.85rem;line-height:1.4}
+.slt-fb-message:last-child{margin-bottom:0}
+.slt-fb-steps{list-style:none;margin:0;padding:0;display:grid;gap:.35rem}
+.slt-fb-step{display:flex;align-items:flex-start;gap:.5rem;font-size:.8rem;color:#33505f;line-height:1.35}
+.slt-fb-step i{margin-top:.15rem;width:1rem;text-align:center}
+.slt-fb-step--success i{color:#1f9d55}
+.slt-fb-step--error i{color:#c0392b}
+.slt-fb-step--warning i{color:#d4a017}
+.slt-fb-step--info i,.slt-fb-step--progress i{color:#116593}
+.slt-fb-foot{display:flex;justify-content:flex-end;gap:.5rem;padding:.65rem .85rem;border-top:1px solid #e6ecf1}
+.slt-fb-foot[hidden]{display:none}

@@ -53,7 +53,7 @@ def test_no_legacy_html_remains_outside_template_directory() -> None:
 def test_all_page_templates_compile_and_render() -> None:
     request = SimpleNamespace(url=SimpleNamespace(path="/teste/"))
     page_templates = sorted(PAGES_ROOT.rglob("*.html"))
-    assert len(page_templates) == 44
+    assert len(page_templates) == 46
 
     for path in page_templates:
         name = path.relative_to(TEMPLATES_ROOT).as_posix()

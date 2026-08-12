@@ -10,8 +10,16 @@
 
 .componente-atributos-objetos .atributos-legenda {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin: 0.4rem 0 0.6rem;
+}
+.componente-atributos-objetos .atributos-legenda span {
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: #eef3f0;
+  color: #496156;
+  font-size: 0.7rem;
 }
 
 /* o atributo hidden precisa vencer o display:inline-block das pílulas .fase-status */
@@ -25,6 +33,9 @@
   border-radius: 10px;
 }
 .admin-table--atributos thead { position: sticky; top: 0; z-index: 2; }
+.admin-table--atributos { border-collapse: collapse; }
+.admin-table--atributos th,
+.admin-table--atributos td { border: 1px solid #929ca3; }
 
 /* Cabeçalho de coluna sobre fundo azul-marinho: texto branco */
 .admin-table--atributos th.col-atributo { white-space: normal; min-width: 170px; vertical-align: top; }
@@ -59,8 +70,8 @@
 .col-atributo-mandatorio { margin-top: 0.3rem; text-transform: none; letter-spacing: 0; }
 
 /* Colunas ESTÁTICAS (etapa cadastral): tom distinto + faixa verde no topo */
-.admin-table--atributos th.col-estatica { background: var(--pli-navy); box-shadow: inset 0 3px 0 var(--pli-green); }
-.admin-table--atributos th.col-estatica .col-atributo-grupo { color: var(--pli-green); }
+.admin-table--atributos th.col-estatica { background: #2f789f; box-shadow: none; }
+.admin-table--atributos th.col-dinamica { background: #003b5a; }
 .admin-table--atributos td.col-estatica-valor {
   white-space: nowrap;
   color: var(--pli-text);
@@ -71,8 +82,25 @@
 
 /* Célula de identidade do objeto + inputs sobre fundo branco */
 .admin-table--atributos td.col-objeto { min-width: 170px; white-space: normal; }
+.admin-table--atributos .objeto-codigo { display: block; color: var(--pli-deep); font-weight: 700; line-height: 1.3; }
+.admin-table--atributos .objeto-nome { display: block; margin-top: 0.18rem; color: #87958e; font-size: 0.68rem; font-weight: 500; }
 .objeto-tipo { margin-top: 0.25rem; }
 .admin-table--atributos td.col-atributo-valor { white-space: normal; }
+.atributo-valor-normalizado {
+  display: block;
+  color: var(--pli-deep);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.atributo-valor-original {
+  display: block;
+  margin-top: 0.2rem;
+  color: #87958e;
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+.admin-table--atributos td.col-atributo-valor.is-vazio .atributo-valor-normalizado,
+.admin-table--atributos td.col-atributo-valor.is-vazio .atributo-valor-original { color: #a1aaa5; }
 .atributo-input {
   width: 100%;
   padding: 0.3rem 0.4rem;
@@ -105,3 +133,51 @@
 }
 .ahp-section-label .ahp-section-action:hover { background: rgba(255, 255, 255, 0.28); }
 .ahp-section-label .ahp-section-action i { color: #fff; }
+
+.atributos-pesos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.atributos-pesos-grupo {
+  padding: 0.9rem;
+  border: 1px solid #d8e0e5;
+  border-radius: 0.6rem;
+  background: #f8faf9;
+}
+.atributos-pesos-grupo[hidden] { display: none; }
+.atributos-pesos-grupo > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.atributos-pesos-grupo h3 { margin: 0; color: var(--pli-deep); font-size: 0.9rem; }
+.atributos-pesos-ajuda { grid-column: 1 / -1; margin: 0; }
+.atributos-pesos-grupo header output {
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: var(--pli-deep);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.atributo-peso {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) minmax(10rem, 2fr) 3.25rem;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.4rem 0;
+  font-size: 0.72rem;
+}
+.atributo-peso input { width: 100%; accent-color: var(--pli-green-dark); }
+.atributo-peso output { color: var(--pli-deep); font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 900px) {
+  .atributos-pesos { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .atributo-peso { grid-template-columns: 1fr 3rem; }
+  .atributo-peso input { grid-column: 1 / -1; grid-row: 2; }
+}

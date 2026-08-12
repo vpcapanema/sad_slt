@@ -13,19 +13,29 @@
       const executarId = this.getAttribute("executar-id") || "executar-geoprocessamento";
       const modelo = this.getAttribute("modelo") || `fluxo_${fase}`;
       const modeloLabel = this.getAttribute("modelo-label") || fase;
+      const botaoLabel = this.getAttribute("botao-label") || "Executar cálculo isolado";
 
       this.innerHTML = `
         <div class="fase1-operational">
-          <h3>Camadas operacionais</h3>
-          <div class="fase1-grid-2">
-            <div><h4>Camada de demandas</h4><div id="${demandasId}"><p class="ahp-help-text">Selecione uma hierarquização.</p></div></div>
-            <div><h4>${tituloSaida}</h4><div id="${saidaId}"><p class="ahp-help-text">Selecione o insumo homologado.</p></div></div>
+          <div class="fase1-op-card">
+            <h4><i class="fas fa-location-dot"></i> Camada de demandas</h4>
+            <div class="fase1-op-card-body">
+              <div class="fase1-op-controls" id="${demandasId}-ctrl"></div>
+              <div class="fase1-op-preview" id="${demandasId}"><p class="ahp-help-text">Selecione uma hierarquização.</p></div>
+            </div>
+          </div>
+          <div class="fase1-op-card">
+            <h4><i class="fas fa-layer-group"></i> ${tituloSaida}</h4>
+            <div class="fase1-op-card-body">
+              <div class="fase1-op-controls" id="${saidaId}-ctrl"></div>
+              <div class="fase1-op-preview" id="${saidaId}"><p class="ahp-help-text">Selecione o insumo homologado.</p></div>
+            </div>
           </div>
         </div>
         <iframe id="${frameId}" class="fase1-gp-frame" title="Componente de geoprocessamento SLT — ${fase}" src="/restrict/geoespacial/bancada/?modulo=${fase}&amp;embutido=1"></iframe>
         <div class="fase1-execute">
           <label>Cálculo <select id="${modeloId}"><option value="${modelo}">${modeloLabel}</option></select></label>
-          <button id="${executarId}" class="btn btn--primary" type="button"><i class="fas fa-play"></i> Executar cálculo isolado</button>
+          <button id="${executarId}" class="btn btn--primary" type="button"><i class="fas fa-play"></i> ${botaoLabel}</button>
         </div>`;
       this.dataset.ready = "true";
     }

@@ -51,8 +51,16 @@
     return request("/api/planos");
   }
 
+  async function listPlanosVinculaveis() {
+    return request("/api/planos/vinculaveis");
+  }
+
   async function listProgramas() {
     return request("/api/programas");
+  }
+
+  async function listProgramasVinculaveis() {
+    return request("/api/programas/vinculaveis");
   }
 
   async function listGeoTipos() {
@@ -108,7 +116,9 @@
     createPlano,
     createPrograma,
     listPlanos,
+    listPlanosVinculaveis,
     listProgramas,
+    listProgramasVinculaveis,
     listGeoTipos,
     listGeoUnidades,
     geoUnidadesGeojson,

@@ -3,7 +3,7 @@
   const PLANO_PLI = "PLANO-PLI";
   const PLANO_PEF = "PLANO-PEF";
 
-  const PROGRAMA_STEP_EXECUCAO_SUSPENDED = 5; // Oculta até revisão do cliente; reativar e renumerar seções depois.
+  const PROGRAMA_STEP_EXECUCAO_SUSPENDED = 7; // Oculta até revisão do cliente; reativar e renumerar seções depois.
 
   let classificacaoRef = null;
   let instituicoes = [];
@@ -71,6 +71,42 @@
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
 
+  function optionValuesFor(attribute, objectType) {
+    const specific = attribute.configuracao_por_tipo?.[objectType]?.opcoes;
+    return Array.isArray(specific) ? specific : attribute.dominio_valores || [];
+  }
+
+  async function loadAtributosObjetoDomain() {
+    const response = await fetch("/api/dominios/atributos-objeto");
+    if (!response.ok) throw new Error("Não foi possível carregar os atributos cadastrais.");
+    const attributes = await response.json();
+    $$('select[data-atributo][data-tipo-objeto]').forEach((select) => {
+      const attribute = attributes.find((item) => item.codigo === select.dataset.atributo);
+      if (!attribute || !attribute.tipos_objeto.includes(select.dataset.tipoObjeto)) return;
+      const emptyOption = select.multiple ? "" : '<option value="">— Não informado —</option>';
+      select.innerHTML = emptyOption + optionValuesFor(attribute, select.dataset.tipoObjeto)
+        .map((item) => `<option value="${item.codigo}">${item.rotulo}</option>`)
+        .join("");
+    });
+  }
+
+  function cadastralAttributes(prefix, supportsCapex) {
+    const result = {};
+    const maturity = $(`#${prefix}-maturidade`)?.value;
+    const deadline = $(`#${prefix}-prazo`)?.value;
+    const deadlineBasis = $(`#${prefix}-base-prazo`)?.value;
+    if (maturity) result.maturidade_objeto = maturity;
+    if (deadline !== "" && deadline != null) result.prazo_referencia_meses = Number(deadline);
+    if (deadlineBasis) result.base_estimativa_prazo = deadlineBasis;
+    if (supportsCapex) {
+      const capex = $(`#${prefix}-capex`)?.value;
+      const capexBasis = $(`#${prefix}-base-capex`)?.value;
+      if (capex !== "" && capex != null) result.capex_estimado = Number(capex);
+      if (capexBasis) result.base_estimativa_capex = capexBasis;
+    }
+    return result;
+  }
+
   function cadastroSectionIcon(titleText) {
     const t = (titleText || "").toLowerCase();
     if (t.includes("nova demanda")) return "fa-layer-group";
@@ -119,7 +155,10 @@
     document.querySelectorAll(".cadastro-page .card").forEach((card) => {
       if (card.dataset.sectionCardReady) return;
 
-      const collapsibleHdr = card.querySelector(":scope > .collapsible-hdr");
+      const collapsibleCandidate = card.querySelector(":scope > .collapsible-hdr");
+      const collapsibleHdr = collapsibleCandidate?.querySelector(":scope > h2")
+        ? collapsibleCandidate
+        : null;
       const h2 = collapsibleHdr?.querySelector("h2") || card.querySelector(":scope > h2");
       if (!h2) return;
 
@@ -222,24 +261,41 @@
     syncFieldFilledState(el);
   }
 
-  function renumberCadastroSections(formEl, vinculoActive) {
+  function setSubsectionNumber(subsection, sectionNumber, subsectionNumber) {
+    const heading = subsection.querySelector(":scope > h3");
+    if (!heading) return;
+    let number = heading.querySelector(":scope > .cadastro-subsec-num");
+    if (!number) {
+      heading.firstChild?.nodeType === Node.TEXT_NODE &&
+        (heading.firstChild.textContent = heading.firstChild.textContent.replace(/^\s*\d+\.\d+\s*/, ""));
+      number = document.createElement("span");
+      number.className = "cadastro-subsec-num";
+      heading.prepend(document.createTextNode(" "));
+      heading.prepend(number);
+    }
+    number.textContent = `${sectionNumber}.${subsectionNumber}`;
+  }
+
+  function renumberCadastroSections(formEl) {
     if (!formEl) return;
-    let n = 1;
+    let visibleSectionNumber = 0;
     formEl.querySelectorAll(".cadastro-section").forEach((sec) => {
-      if (sec.classList.contains("cadastro-section--vinculo") && !vinculoActive) return;
       if (sec.classList.contains("cadastro-section--suspended")) return;
+      if (sec.classList.contains("hidden") || sec.hidden) return;
+      visibleSectionNumber += 1;
       const numEl = findCadastroSectionNumEl(sec);
-      if (numEl) numEl.textContent = String(n);
-      sec.querySelectorAll(".form-subsection").forEach((sub, idx) => {
-        const sn = sub.querySelector(".cadastro-subsec-num");
-        if (sn) sn.textContent = `${n}.${idx + 1}`;
+      if (numEl) numEl.textContent = String(visibleSectionNumber);
+      let visibleSubsectionNumber = 0;
+      sec.querySelectorAll(".form-subsection").forEach((sub) => {
+        if (sub.classList.contains("hidden") || sub.hidden) return;
+        visibleSubsectionNumber += 1;
+        setSubsectionNumber(sub, visibleSectionNumber, visibleSubsectionNumber);
       });
-      n += 1;
     });
   }
 
   function renumberProgramaSections() {
-    renumberCadastroSections($("#form-programa"), isPgVinculoAtivo());
+    renumberCadastroSections($("#form-programa"));
     const step4 = $("#form-programa")?.querySelector('.pg-step-panel[data-step="4"]');
     const secNum = step4?.querySelector(".cadastro-sec-num")?.textContent;
     if (secNum && pgAbr?.setSubsectionNumbers) pgAbr.setSubsectionNumbers(Number(secNum));
@@ -248,23 +304,35 @@
   function renumberProjetoSections() {
     const form = $("#form-cadastro");
     if (!form) return;
-    let n = 1;
+    let visibleSectionNumber = 0;
     [1, 2, 3, 4, 5].forEach((stepNum) => {
       const panel = form.querySelector(`.step-panel[data-step="${stepNum}"]`);
       if (!panel?.classList.contains("cadastro-section")) return;
-      if (stepNum === 2 && !isPjVinculoAtivo()) return;
+      if (panel.classList.contains("hidden") || panel.hidden) return;
+      visibleSectionNumber += 1;
       const numEl = findCadastroSectionNumEl(panel);
-      if (numEl) numEl.textContent = String(n);
+      if (numEl) numEl.textContent = String(visibleSectionNumber);
       let subIdx = 0;
       panel.querySelectorAll(":scope > .form-subsection").forEach((sub) => {
+        if (sub.classList.contains("hidden") || sub.hidden) return;
         subIdx += 1;
-        const sn = sub.querySelector(".cadastro-subsec-num");
-        if (sn) sn.textContent = `${n}.${subIdx}`;
+        setSubsectionNumber(sub, visibleSectionNumber, subIdx);
       });
-      n += 1;
+      const collapsibleNumber = panel.querySelector(
+        ":scope > .collapsible-hdr .cadastro-subsec-num",
+      );
+      if (collapsibleNumber) collapsibleNumber.textContent = `${visibleSectionNumber}.${subIdx + 1}`;
     });
     const enq = $("#pj-enquadramento-catalogo");
     if (enq) enq.classList.toggle("hidden", isPjVinculoAtivo());
+  }
+
+  function renumberPlanoSubsections() {
+    $("#form-plano")?.querySelectorAll(":scope > .card").forEach((section, sectionIndex) => {
+      section.querySelectorAll(".form-subsection").forEach((subsection, subsectionIndex) => {
+        setSubsectionNumber(subsection, sectionIndex + 1, subsectionIndex + 1);
+      });
+    });
   }
 
   function getNextProjetoStep(from) {
@@ -307,7 +375,7 @@
         return;
       }
       if (s === 2) {
-        syncWizardPanelA11y(p, vinculo && programaMaxRevealed >= 2);
+        syncWizardPanelA11y(p, vinculo);
         return;
       }
       if (s === PROGRAMA_STEP_EXECUCAO_SUSPENDED) {
@@ -315,9 +383,10 @@
         p.hidden = true;
         return;
       }
-      syncWizardPanelA11y(p, programaMaxRevealed >= s);
+      syncWizardPanelA11y(p, true);
     });
     renumberProgramaSections();
+    renumberPlanoSubsections();
   }
 
   function syncProjetoPanelsVisibility() {
@@ -331,10 +400,10 @@
         return;
       }
       if (s === 2) {
-        syncWizardPanelA11y(p, vinculo && projetoMaxRevealed >= 2);
+        syncWizardPanelA11y(p, vinculo);
         return;
       }
-      syncWizardPanelA11y(p, projetoMaxRevealed >= s);
+      syncWizardPanelA11y(p, true);
     });
     renumberProjetoSections();
   }
@@ -346,9 +415,9 @@
     if (n === 4 && pgAbr) {
       setTimeout(() => {
         pgAbr.invalidateSize();
-        renderProgramaReview();
       }, 120);
     }
+    if (n === 6) renderProgramaReview();
     scrollToProgramaStep(n);
   }
 
@@ -552,7 +621,7 @@
       const prog = getSelectedPrograma();
       return prog?.plano_codigo || null;
     }
-    return $("#cls-plano")?.value || null;
+    return CODIGO_PLANO_OUTROS;
   }
 
   function getProjetoDiretoriaId() {
@@ -564,7 +633,7 @@
       const prog = getSelectedPrograma();
       return prog?.diretoria_id || null;
     }
-    return $("#cls-diretoria")?.value || null;
+    return planosCache.find((p) => p.id === CODIGO_PLANO_OUTROS)?.diretoria_id || "DIR-PLAN";
   }
 
   function updatePgVinculoPanel() {
@@ -716,23 +785,13 @@
         showToast("Selecione o representante legal.");
         return false;
       }
-      if (!isPjVinculoAtivo()) {
-        if (!$("#cls-diretoria").value) {
-          showToast("Selecione a diretoria de enquadramento.");
-          return false;
-        }
-        if (!$("#cls-plano").value) {
-          showToast("Selecione o plano de enquadramento.");
-          return false;
-        }
-      }
       const planoId = getProjetoPlanoId();
       const plano = SLTCatalog.getPlano(planoId);
-      if (plano?.id === PLANO_PLI && !$("#frente").value) {
+      if (isPjVinculoAtivo() && plano?.id === PLANO_PLI && !$("#frente").value) {
         showToast("Selecione a frente de atuação.");
         return false;
       }
-      if (plano?.id === PLANO_PEF && !$("#eixo").value) {
+      if (isPjVinculoAtivo() && plano?.id === PLANO_PEF && !$("#eixo").value) {
         showToast("Selecione o eixo ferroviário.");
         return false;
       }
@@ -893,16 +952,26 @@
     const pef = $("#classificacao-pef");
     const hint = $("#classificacao-hint");
     const enquadramento = $("#pj-enquadramento-catalogo");
+    const vinculoAtivo = isPjVinculoAtivo();
+    const subsection = $("#pj-classificacao-subsection");
+    const sectionTitle = $("#pj-proponente-section-title");
+    const sectionIntro = $("#pj-proponente-section-intro");
 
-    if (enquadramento) enquadramento.classList.toggle("hidden", isPjVinculoAtivo());
+    subsection?.classList.toggle("hidden", !vinculoAtivo);
+    if (sectionTitle) sectionTitle.textContent = vinculoAtivo ? "Proponente e classificação" : "Proponente do cadastro";
+    if (sectionIntro) {
+      sectionIntro.textContent = vinculoAtivo
+        ? "Informe a instituição interessada, o representante legal e a classificação herdada do vínculo."
+        : "Informe a instituição interessada e o representante legal responsáveis pelo cadastro.";
+    }
+    if (enquadramento) enquadramento.classList.add("hidden");
     renumberProjetoSections();
 
     pli.classList.add("hidden");
     pef.classList.add("hidden");
     hint.classList.add("hidden");
 
-    if (!plano) {
-      hint.classList.remove("hidden");
+    if (!vinculoAtivo || !plano) {
       return;
     }
 
@@ -1624,8 +1693,9 @@
       nome: $("#nome").value.trim(),
       descricao: $("#descricao").value.trim(),
       geometria: geom ? { tipo: geom.tipo, coordinates: geom.coordinates } : null,
-      classificacao:
-        plano?.id === PLANO_PLI
+      classificacao: !isPjVinculoAtivo()
+        ? null
+        : plano?.id === PLANO_PLI
           ? { tipo: "frente_pli", frente_id: $("#frente").value }
           : plano?.id === PLANO_PEF
             ? { tipo: "eixo_pef", eixo_id: $("#eixo").value, corredor_tic_id: $("#corredor_tic").value || null }
@@ -1639,6 +1709,7 @@
       vigencia_inicio: $("#prj-vig-ini").value || null,
       vigencia_fim: $("#prj-vig-fim").value || null,
       valor_global: $("#prj-valor").value ? Number($("#prj-valor").value) : null,
+      atributos_cadastrais: cadastralAttributes("prj", true),
     };
   }
 
@@ -1707,7 +1778,7 @@
 
   async function loadPlanosCache() {
     try {
-      planosCache = await SLTDemandasApi.listPlanos();
+      planosCache = await SLTDemandasApi.listPlanosVinculaveis();
     } catch (err) {
       planosCache = [];
     }
@@ -1719,7 +1790,7 @@
         planosVinculo,
         "id",
         (p) => p.nome,
-        planosVinculo.length ? "Selecione…" : "Nenhum plano cadastrado"
+        planosVinculo.length ? "Selecione um plano cadastrado…" : "Nenhum plano cadastrado"
       );
     }
     const pjSel = $("#pj-plano-vinculo");
@@ -1729,7 +1800,7 @@
         planosVinculo,
         "id",
         (p) => p.nome,
-        planosVinculo.length ? "Selecione…" : "Nenhum plano cadastrado"
+        planosVinculo.length ? "Selecione um plano cadastrado…" : "Nenhum plano cadastrado"
       );
     }
     updatePgVinculoPanel();
@@ -1738,7 +1809,7 @@
 
   async function loadProgramasCache() {
     try {
-      programasCache = await SLTDemandasApi.listProgramas();
+      programasCache = await SLTDemandasApi.listProgramasVinculaveis();
     } catch (err) {
       programasCache = [];
     }
@@ -1802,6 +1873,7 @@
         vigencia_inicio: $("#pl-vig-ini").value || null,
         vigencia_fim: $("#pl-vig-fim").value || null,
         valor_global: $("#pl-valor").value ? Number($("#pl-valor").value) : null,
+        atributos_cadastrais: cadastralAttributes("pl", false),
         unidades_espaciais: unidades,
       };
       const btn = e.submitter;
@@ -1870,6 +1942,7 @@
         justificativa: $("#pg-justificativa").value.trim() || null,
         orgao_responsavel: $("#pg-orgao").value.trim() || null,
         valor_global: $("#pg-valor").value ? Number($("#pg-valor").value) : null,
+        atributos_cadastrais: cadastralAttributes("pg", true),
         ...inst,
         pessoa_id: rep.pessoa_id,
         representante: rep.representante,
@@ -1967,11 +2040,13 @@
     initTipoDemandanteSelector();
     initTipoSelector();
     initFieldFilledSync();
+    await loadAtributosObjetoDomain();
     await loadPlanosCache();
     renumberProgramaSections();
+    renumberPlanoSubsections();
     initPlanoForm();
     initProgramaForm();
-    loadProgramasCache();
+    await loadProgramasCache();
     syncProgramaPanelsVisibility();
     syncProjetoPanelsVisibility();
 

@@ -13,6 +13,8 @@ argon2-cffi>=23.1.0
 bcrypt>=4.1.0
 # Dependências geoespaciais
 geopandas>=0.14.0
+matplotlib>=3.8.0
+contextily>=1.6.0
 # Bindings Python do GDAL. No Windows/CPython 3.12 usamos wheel binário porque
 # o pacote oficial do PyPI publica apenas o fonte e exigiria MSVC + SDK GDAL.
 gdal>=3.7.0; sys_platform != "win32"

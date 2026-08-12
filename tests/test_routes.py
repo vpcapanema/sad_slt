@@ -13,6 +13,7 @@ def test_all_router_modules_are_exposed_by_openapi() -> None:
 
     expected_prefixes = {
         "/api/auth/",
+        "/api/complementacao/",
         "/api/demandas",
         "/api/dominios/",
         "/api/geo/",
@@ -41,6 +42,7 @@ def test_canonical_pages_are_available() -> None:
         "/restrict/hierarquizacao/processos/nova/",
         "/restrict/geoespacial/",
         "/restrict/geoespacial/bancada/",
+        "/restrict/complementacao/",
     )
 
     for path in canonical_pages:
