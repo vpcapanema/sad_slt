@@ -33,12 +33,27 @@
   border-radius: 10px;
 }
 .admin-table--atributos thead { position: sticky; top: 0; z-index: 2; }
-.admin-table--atributos { border-collapse: collapse; }
+.admin-table--atributos {
+  width: max-content;
+  min-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
 .admin-table--atributos th,
-.admin-table--atributos td { border: 1px solid #929ca3; }
+.admin-table--atributos td {
+  border: 1px solid #929ca3;
+  text-align: center;
+  vertical-align: middle;
+}
 
 /* Cabeçalho de coluna sobre fundo azul-marinho: texto branco */
-.admin-table--atributos th.col-atributo { white-space: normal; min-width: 170px; vertical-align: top; }
+.admin-table--atributos th.col-atributo {
+  width: 240px;
+  min-width: 240px;
+  height: 5.2rem;
+  padding: 0.65rem 0.8rem;
+  white-space: normal;
+}
 .col-atributo-grupo {
   display: block;
   font-size: 0.58rem;
@@ -51,18 +66,40 @@
 }
 .col-atributo-alias {
   display: block;
+  min-height: 2.35em;
+  overflow: hidden;
   font-weight: 700;
   color: #fff;
   white-space: normal;
+  line-height: 1.15;
+  text-align: center;
+  text-align-last: center;
+  hyphens: auto;
   text-transform: none;
   font-family: "Montserrat", Verdana, sans-serif;
   letter-spacing: 0;
 }
+.col-atributo-linha {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  line-height: 1.15;
+  text-align: center;
+  word-spacing: normal;
+}
 .col-atributo-unidade {
   display: block;
+  min-height: 1.25em;
+  margin-top: 0.18rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.72);
   font-size: 0.68rem;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-transform: none;
   letter-spacing: 0;
 }
@@ -81,11 +118,24 @@
 .admin-table--atributos td.col-estatica-valor.is-vazio { color: var(--pli-muted); font-style: italic; }
 
 /* Célula de identidade do objeto + inputs sobre fundo branco */
-.admin-table--atributos td.col-objeto { min-width: 170px; white-space: normal; }
+.admin-table--atributos th.col-objeto,
+.admin-table--atributos td.col-objeto {
+  width: 240px;
+  min-width: 240px;
+  white-space: normal;
+  text-align: center;
+  vertical-align: middle;
+}
 .admin-table--atributos .objeto-codigo { display: block; color: var(--pli-deep); font-weight: 700; line-height: 1.3; }
 .admin-table--atributos .objeto-nome { display: block; margin-top: 0.18rem; color: #87958e; font-size: 0.68rem; font-weight: 500; }
 .objeto-tipo { margin-top: 0.25rem; }
-.admin-table--atributos td.col-atributo-valor { white-space: normal; }
+.admin-table--atributos td.col-atributo-valor {
+  width: 240px;
+  min-width: 240px;
+  white-space: normal;
+  text-align: center;
+  vertical-align: middle;
+}
 .atributo-valor-normalizado {
   display: block;
   color: var(--pli-deep);
@@ -149,35 +199,111 @@
 .atributos-pesos-grupo[hidden] { display: none; }
 .atributos-pesos-grupo > header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
-.atributos-pesos-grupo h3 { margin: 0; color: var(--pli-deep); font-size: 0.9rem; }
+.atributos-pesos-grupo h3 { width: 100%; margin: 0; color: var(--pli-deep); font-size: 0.9rem; text-align: left; }
 .atributos-pesos-ajuda { grid-column: 1 / -1; margin: 0; }
 .atributos-pesos-grupo header output {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.2rem 0.45rem;
   border-radius: 999px;
   background: var(--pli-deep);
   color: #fff;
   font-size: 0.68rem;
   font-weight: 700;
+  text-align: center;
+}
+.atributos-pesos-grupo [data-controles-pesos] {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+.atributos-pesos-grupo.secao-pesos-dinamicos [data-controles-pesos] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .atributo-peso {
   display: grid;
-  grid-template-columns: minmax(9rem, 1fr) minmax(10rem, 2fr) 3.25rem;
+  grid-template-columns: minmax(0, 1fr) 5.5rem;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.4rem 0;
+  gap: 0.45rem 0.65rem;
+  width: 100%;
+  padding: 0.25rem 0;
   font-size: 0.72rem;
 }
+.atributo-peso > span { text-align: center; line-height: 1.25; }
+.atributo-peso-barra { grid-column: 1 / -1; width: 100%; margin: 0; }
 .atributo-peso input { width: 100%; accent-color: var(--pli-green-dark); }
+.atributo-peso-numero {
+  width: 5.5rem;
+  min-width: 5.5rem;
+  box-sizing: border-box;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid #aeb9bf;
+  border-radius: 0.35rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.atributos-pesos-acoes { grid-column: 1 / -1; }
+.fase3-calculo-geral { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #c8d0d5; }
+.fase3-calculo-geral h3 { margin: 0 0 0.8rem; color: var(--pli-deep); font-size: 0.95rem; }
+.fase3-operadores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid #d8e0e5;
+  border-radius: 0.6rem;
+}
+.fase3-operadores legend { padding: 0 0.35rem; color: var(--pli-deep); font-weight: 700; }
+.fase3-operadores label { display: inline-flex; align-items: center; gap: 0.4rem; }
+.fase3-pesos-sintese {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
+.fase3-pesos-sintese[hidden] { display: none; }
+.fase3-sintese-table td:first-child strong,
+.fase3-sintese-table td:first-child small { display: block; }
+.fase3-sintese-table td:first-child small { margin-top: 0.18rem; color: #87958e; }
 .atributo-peso output { color: var(--pli-deep); font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 900px) {
   .atributos-pesos { grid-template-columns: 1fr; }
+  .atributos-pesos-grupo.secao-pesos-dinamicos [data-controles-pesos],
+  .fase3-pesos-sintese { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
-  .atributo-peso { grid-template-columns: 1fr 3rem; }
-  .atributo-peso input { grid-column: 1 / -1; grid-row: 2; }
+  .atributos-pesos-grupo.secao-pesos-dinamicos [data-controles-pesos],
+  .fase3-pesos-sintese { grid-template-columns: 1fr; }
 }
+
+.fase3-ausentes-wrap { margin-bottom: 1rem; }
+.fase3-ausentes-wrap > h3 {
+  margin: 0 0 0.65rem;
+  color: var(--pli-deep);
+  font-size: 0.9rem;
+}
+.fase3-ausentes-table { width: 100%; table-layout: fixed; }
+.fase3-ausentes-table th:first-child,
+.fase3-ausentes-table td:first-child { width: 30%; }
+.fase3-ausentes-table td:first-child strong,
+.fase3-ausentes-table td:first-child small { display: block; }
+.fase3-ausentes-table td:first-child small {
+  margin-top: 0.18rem;
+  color: #87958e;
+}
+.fase3-ausentes-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.fase3-ausentes-lista li { flex: 1 1 18rem; }

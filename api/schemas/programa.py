@@ -44,6 +44,8 @@ class ProgramaResponseSchema(BaseModel):
     tipo_demandante: Literal["institucional"] = "institucional"
     status: str
     criadoEm: str
+    reprovadoEm: str | None = None
+    motivo_reprovacao: str | None = None
     plano_id: str | None = None
     plano_codigo: str | None = None
     plano_nome: str | None = None
@@ -56,6 +58,7 @@ class ProgramaResponseSchema(BaseModel):
     justificativa: str | None = None
     valor_global: float | None = None
     vinculo_institucional: bool = False
+    vinculo_objeto_id: str | None = None
     instituicao_id: str | None = None
     instituicao_label: str | None = None
     instituicao_cnpj: str | None = None

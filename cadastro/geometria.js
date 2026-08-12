@@ -506,6 +506,16 @@
     drawnItems = new L.FeatureGroup().addTo(map);
     markerLayer = new L.FeatureGroup().addTo(map);
 
+    const mapElement = document.getElementById("map");
+    if (global.ResizeObserver && mapElement) {
+      const resizeObserver = new ResizeObserver(() => {
+        if (!map || mapElement.offsetWidth === 0 || mapElement.offsetHeight === 0) return;
+        requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+      });
+      resizeObserver.observe(mapElement);
+    }
+    setTimeout(() => map.invalidateSize({ pan: false }), 0);
+
     map.on(L.Draw.Event.CREATED, (e) => {
       if (!(e.layer instanceof L.Marker)) return;
       const ll = e.layer.getLatLng();

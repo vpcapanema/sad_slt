@@ -62,7 +62,9 @@ class ConfiguracaoFatiamentoFase1Schema(BaseModel):
 
 
 class HierarquizacaoFase2ExecutarSchema(BaseModel):
-    pacote_id: str
+    camada_grade_id: str | None = None
+    camada_rede_id: str | None = None
+    pacote_id: str | None = None  # contrato legado
     metodo_extracao: Literal["ponto"] = "ponto"
 
 
@@ -80,7 +82,15 @@ class HierarquizacaoFase3AtributosSchema(BaseModel):
     valores: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
+class HierarquizacaoFase3PesosSchema(BaseModel):
+    criterios: list[dict[str, Any]]
+
+
 class HierarquizacaoSinteseSchema(BaseModel):
+    operador: Literal["media_simples", "media_ponderada"] = "media_simples"
+    peso_rede: float = Field(1 / 3, ge=0, le=1)
+    peso_grade: float = Field(1 / 3, ge=0, le=1)
+    peso_prioridade: float = Field(1 / 3, ge=0, le=1)
     peso_fase2: float = Field(0.7, ge=0, le=1)
     peso_fase3: float = Field(0.3, ge=0, le=1)
     incluir_restritos: bool = False

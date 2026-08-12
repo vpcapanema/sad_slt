@@ -93,6 +93,10 @@
     return STATUS_PRE_APROVACAO.has(status);
   }
 
+  function canReject(status) {
+    return STATUS_PRE_APROVACAO.has(status);
+  }
+
   function tipoLabelAtual() {
     return TIPOS.find((t) => t.id === tipo)?.label || tipo;
   }
@@ -109,15 +113,34 @@
       </header>`;
   }
 
-  function actionsHtml(d, { withApprove }) {
-    return `
+  function actionsHtml(d, { withApprove, withReject }) {
+    const canAnalyze = SLTAdminAuth.can("analyze");
+    const decisionFields = canAnalyze && (withApprove || withReject)
+      ? `
       <div class="form-field span-2">
-        <label for="fld-motivo-aprov">Motivo (Aprovação — Opcional)</label>
-        <textarea id="fld-motivo-aprov" class="admin-field-motivo" rows="3" placeholder="Usado ao clicar em Aprovar"></textarea>
+        <label for="fld-motivo-aprov">Motivo da aprovação <span class="field-help">(opcional)</span></label>
+        <textarea id="fld-motivo-aprov" class="admin-field-motivo" rows="3" maxlength="2000" placeholder="Motivo opcional para aprovação"></textarea>
       </div>
+      <div class="form-field span-2">
+        <label for="fld-justificativa-reprov">Justificativa da reprovação</label>
+        <textarea id="fld-justificativa-reprov" class="admin-field-motivo" rows="3" maxlength="2000" required aria-required="true" placeholder="Informe por que a demanda deve ser reprovada"></textarea>
+      </div>`
+      : "";
+    const rejectionRecord = d.motivo_reprovacao
+      ? `
+      <div class="form-field span-2">
+        <label for="fld-motivo-reprov-registrado">Justificativa da reprovação registrada</label>
+        <textarea id="fld-motivo-reprov-registrado" class="admin-field-readonly" rows="3" readonly aria-readonly="true">${escapeHtml(d.motivo_reprovacao)}</textarea>
+        ${d.reprovadoEm ? `<span class="field-help">Decisão registrada em ${escapeHtml(formatDate(d.reprovadoEm))}.</span>` : ""}
+      </div>`
+      : "";
+    return `
+      ${decisionFields}
+      ${rejectionRecord}
       <div class="admin-dashboard-actions span-2">
         <a href="/restrict/demandas/" class="btn btn-secondary">Voltar à lista</a>
-        ${withApprove && SLTAdminAuth.can("analyze") ? '<button type="button" class="btn btn-primary" id="btn-aprovar">Aprovar demanda</button>' : ""}
+        ${withReject && canAnalyze ? '<button type="button" class="btn btn-danger" id="btn-reprovar">Reprovar demanda</button>' : ""}
+        ${withApprove && canAnalyze ? '<button type="button" class="btn btn-primary" id="btn-aprovar">Aprovar demanda</button>' : ""}
         ${SLTAdminAuth.can("operate") ? '<button type="button" class="btn btn-primary" id="btn-salvar">Salvar alterações</button>' : ""}
       </div>`;
   }
@@ -394,7 +417,7 @@
               <section id="sec-acoes" class="admin-analise-subcard admin-dashboard-section">
                 <h3>Ações</h3>
                 <div class="admin-form-grid">
-                  ${actionsHtml(d, { withApprove: canApprove(d.status) })}
+                  ${actionsHtml(d, { withApprove: canApprove(d.status), withReject: canReject(d.status) })}
                 </div>
               </section>
           </div>
@@ -580,7 +603,7 @@
         <section id="sec-acoes" class="card admin-dashboard-section">
           <h3>Ações</h3>
           <div class="admin-form-grid">
-            ${actionsHtml(d, { withApprove: canApprove(d.status) })}
+            ${actionsHtml(d, { withApprove: canApprove(d.status), withReject: canReject(d.status) })}
           </div>
         </section>
         </div>
@@ -674,7 +697,7 @@
         <section id="sec-acoes" class="card admin-dashboard-section">
           <h3>Ações</h3>
           <div class="admin-form-grid">
-            ${actionsHtml(d, { withApprove: canApprove(d.status) })}
+            ${actionsHtml(d, { withApprove: canApprove(d.status), withReject: canReject(d.status) })}
           </div>
         </section>
         </div>
@@ -705,16 +728,19 @@
       get: (id) => SLTAdminApi.getDemanda(id),
       update: (id, p) => SLTAdminApi.updateDemanda(id, p),
       aprovar: (id, p) => SLTAdminApi.aprovarDemanda(id, p),
+      reprovar: (id, p) => SLTAdminApi.reprovarDemanda(id, p),
     },
     plano: {
       get: (id) => SLTAdminApi.getPlano(id),
       update: (id, p) => SLTAdminApi.updatePlano(id, p),
       aprovar: (id, p) => SLTAdminApi.aprovarPlano(id, p),
+      reprovar: (id, p) => SLTAdminApi.reprovarPlano(id, p),
     },
     programa: {
       get: (id) => SLTAdminApi.getPrograma(id),
       update: (id, p) => SLTAdminApi.updatePrograma(id, p),
       aprovar: (id, p) => SLTAdminApi.aprovarPrograma(id, p),
+      reprovar: (id, p) => SLTAdminApi.reprovarPrograma(id, p),
     },
   };
 
@@ -731,6 +757,10 @@
     attachCurrencyMask($("#fld-valor"));
     $("#btn-salvar")?.addEventListener("click", () => saveRecord());
     $("#btn-aprovar")?.addEventListener("click", () => approveRecord());
+    $("#btn-reprovar")?.addEventListener("click", () => rejectRecord());
+    $("#fld-justificativa-reprov")?.addEventListener("input", (event) => {
+      event.target.setCustomValidity("");
+    });
   }
 
   function collectPayload() {
@@ -838,6 +868,32 @@
       const motivo = $("#fld-motivo-aprov")?.value.trim() || null;
       const updated = await API[tipo].aprovar(record.id, { motivo });
       SLTAdminUi.showToast("Demanda aprovada.");
+      await refreshLists();
+      renderPage(updated);
+    } catch (err) {
+      SLTAdminUi.showToast(err.message, true);
+    }
+  }
+
+  async function rejectRecord() {
+    const field = $("#fld-justificativa-reprov");
+    const justificativa = field?.value.trim() || "";
+    if (!justificativa) {
+      field?.setCustomValidity("Informe a justificativa da reprovação.");
+      field?.reportValidity();
+      return;
+    }
+    const ok = await SLTAdminUi.showConfirm({
+      title: "Reprovar demanda",
+      message: "Reprovar esta demanda? Ela passará para o status «Reprovada na análise».",
+      confirmLabel: "Reprovar",
+      cancelLabel: "Cancelar",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      const updated = await API[tipo].reprovar(record.id, { justificativa });
+      SLTAdminUi.showToast("Demanda reprovada.");
       await refreshLists();
       renderPage(updated);
     } catch (err) {

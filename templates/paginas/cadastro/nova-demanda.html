@@ -264,34 +264,32 @@
       <!-- Passo 4 — complementos -->
       <section class="card-1-complementos-opcionais secao-1-complementos-opcionais card step-panel cadastro-section" data-step="4">
         <h2><span class="cadastro-sec-num">4</span>. <span data-section-title>Vigência e recursos</span></h2>
-        <p class="step-intro">Informe o período de vigência e o valor global estimado, se souber.</p>
+        <p class="step-intro">Informe o período institucional previsto para a execução do projeto. As datas não representam necessariamente o início e o término das obras.</p>
         <div class="form-subsection">
-          <h3><span class="cadastro-subsec-num">4.1</span> Período e valor global</h3>
+          <h3><span class="cadastro-subsec-num">4.1</span> Período de vigência do projeto</h3>
         <div class="form-grid">
           <div>
-            <label for="prj-vig-ini">Vigência início</label>
+            <label for="prj-vig-ini">Início da vigência do projeto</label>
             <input type="date" id="prj-vig-ini">
+            <p class="field-help">Data em que o projeto passa formalmente a existir ou a ser executado, conforme ato de aprovação, instrumento de planejamento, convênio ou contrato. Não use a data da ideia inicial.</p>
           </div>
           <div>
-            <label for="prj-vig-fim">Vigência fim</label>
+            <label for="prj-vig-fim">Fim da vigência do projeto</label>
             <input type="date" id="prj-vig-fim">
-          </div>
-          <div class="full">
-            <label for="prj-valor">Valor global (R$)</label>
-            <input type="number" step="any" id="prj-valor" min="0">
+            <p class="field-help">Data prevista para o encerramento formal do projeto ou do instrumento que rege sua execução. Pode ser posterior à entrada em operação.</p>
           </div>
         </div>
         </div>
 
         <div class="form-subsection">
           <h3><span class="cadastro-subsec-num">4.2</span> Desenvolvimento, custo e prazo</h3>
-          <p class="step-intro">Informe a etapa atual de desenvolvimento, o Capex, o prazo e o nível de detalhamento das respectivas estimativas.</p>
+          <p class="step-intro">Informe a situação atual e as estimativas disponíveis. Os documentos de referência qualificam a precisão dos valores e permitem comparações metodologicamente consistentes.</p>
           <div class="form-grid">
-            <div class="form-field-block"><label for="prj-maturidade">Etapa atual de desenvolvimento (escala ordinal)</label><select id="prj-maturidade" data-atributo="maturidade_objeto" data-tipo-objeto="projeto"><option value="">— Não informado —</option></select></div>
-            <div class="form-field-block"><label for="prj-capex">Capex (custo estimado para implantação) (R$)</label><input type="number" step="0.01" min="0" id="prj-capex"></div>
-            <div class="form-field-block"><label for="prj-base-capex">Nível de detalhamento da estimativa de custo (escala ordinal)</label><select id="prj-base-capex" data-atributo="base_estimativa_capex" data-tipo-objeto="projeto"><option value="">— Não informado —</option></select></div>
-            <div class="form-field-block"><label for="prj-prazo">Prazo estimado até a entrada em operação (meses)</label><input type="number" step="1" min="0" id="prj-prazo"></div>
-            <div class="form-field-block"><label for="prj-base-prazo">Nível de detalhamento do cronograma (escala ordinal)</label><select id="prj-base-prazo" data-atributo="base_estimativa_prazo" data-tipo-objeto="projeto"><option value="">— Não informado —</option></select></div>
+            <div class="form-field-block"><label for="prj-maturidade">Grau de maturidade do projeto</label><select id="prj-maturidade" data-atributo="maturidade_objeto" data-tipo-objeto="projeto"><option value="">— Não informado —</option></select><p class="field-help">Selecione o nível mais avançado efetivamente alcançado pelo projeto, considerando somente os estudos e documentos já concluídos.</p></div>
+            <div class="form-field-block"><label for="prj-capex">Capex — custo estimado para implantação (R$)</label><input type="text" inputmode="decimal" id="prj-capex" placeholder="R$ 0,00" autocomplete="off"><p class="field-help">Valor total estimado dos investimentos necessários para implantar o projeto e colocá-lo em operação. Não inclua custos anuais de operação e manutenção.</p></div>
+            <div class="form-field-block"><label for="prj-base-capex">Grau de definição do custo de implantação</label><select id="prj-base-capex" data-atributo="base_estimativa_capex" data-tipo-objeto="projeto"><option value="">— Não informado —</option></select><p class="field-help">Selecione a base técnica mais avançada já utilizada para calcular o Capex. Quanto mais desenvolvido estiver o projeto, maior será a precisão esperada da estimativa.</p></div>
+            <div class="form-field-block"><label for="prj-prazo">Prazo estimado até a entrada em operação (meses)</label><input type="number" step="1" min="0" id="prj-prazo"><p class="field-help">Quantidade de meses entre o início previsto da implantação e o momento em que o objeto estará disponível para uso ou operação.</p></div>
+            <div class="form-field-block"><label for="prj-base-prazo">Grau de definição do prazo de implantação</label><select id="prj-base-prazo" data-atributo="base_estimativa_prazo" data-tipo-objeto="projeto"><option value="">— Não informado —</option></select><p class="field-help">Selecione a base de planejamento mais avançada já utilizada para calcular o prazo até a entrada em operação.</p></div>
           </div>
         </div>
 
@@ -305,14 +303,17 @@
             <div>
               <label for="modal">Modal</label>
               <select id="modal" name="modal"><option value="">— Opcional —</option></select>
+              <p class="field-help">Modo de transporte predominante ao qual o projeto se destina ou que será diretamente afetado.</p>
             </div>
             <div>
               <label for="tipologia">Tipologia de intervenção</label>
               <select id="tipologia" name="tipologia"><option value="">— Opcional —</option></select>
+              <p class="field-help">Natureza principal da intervenção proposta, como implantação, ampliação, modernização ou recuperação.</p>
             </div>
             <div class="full">
               <label for="carteira">Carteira de projetos</label>
               <select id="carteira" name="carteira"><option value="">— Opcional —</option></select>
+              <p class="field-help">Conjunto institucional de projetos ao qual esta demanda já pertence. Deixe em branco quando ainda não houver enquadramento formal.</p>
             </div>
           </div>
         </div>
@@ -459,9 +460,9 @@
 
       <section class="card-4-vigencia-e-recursos secao-4-vigencia-e-recursos card">
         <h2>4. Vigência e recursos</h2>
-        <p class="step-intro">Informe o período de vigência e o valor global estimado, se souber.</p>
+        <p class="step-intro">Informe o período de vigência e o total de recursos financeiros previstos para executar o plano, se essa estimativa estiver disponível.</p>
         <div class="form-subsection">
-          <h3><span class="cadastro-subsec-num">4.1</span> Período e valor global</h3>
+          <h3><span class="cadastro-subsec-num">4.1</span> Vigência e recursos previstos</h3>
         <div class="form-grid">
           <div>
             <label for="pl-vig-ini">Vigência início</label>
@@ -472,18 +473,19 @@
             <input type="date" id="pl-vig-fim">
           </div>
           <div class="full">
-            <label for="pl-valor">Valor global (R$)</label>
-            <input type="number" step="any" id="pl-valor" min="0">
+            <label for="pl-valor">Valor total previsto para execução do plano (R$)</label>
+            <input type="text" inputmode="decimal" id="pl-valor" placeholder="R$ 0,00" autocomplete="off">
+            <p class="field-help">Soma estimada dos recursos necessários para executar as ações, os programas e os projetos previstos durante todo o horizonte de vigência. Não corresponde ao custo de elaboração do documento do plano.</p>
           </div>
         </div>
         </div>
         <div class="form-subsection">
           <h3><span class="cadastro-subsec-num">4.2</span> Desenvolvimento e prazo</h3>
-          <p class="step-intro">Informe a etapa atual de desenvolvimento, o prazo e o nível de detalhamento do cronograma do plano.</p>
+          <p class="step-intro">Informe o grau de maturidade do plano, o horizonte temporal estimado e o grau de definição dessa estimativa.</p>
           <div class="form-grid">
-            <div class="form-field-block"><label for="pl-maturidade">Etapa atual de desenvolvimento (escala ordinal)</label><select id="pl-maturidade" data-atributo="maturidade_objeto" data-tipo-objeto="plano"><option value="">— Não informado —</option></select></div>
+            <div class="form-field-block"><label for="pl-maturidade">Grau de maturidade do plano</label><select id="pl-maturidade" data-atributo="maturidade_objeto" data-tipo-objeto="plano"><option value="">— Não informado —</option></select><p class="field-help">Selecione o nível mais avançado efetivamente alcançado no processo de elaboração, aprovação e vigência do plano.</p></div>
             <div class="form-field-block"><label for="pl-prazo">Prazo estimado até a aprovação ou início da vigência (meses)</label><input type="number" step="1" min="0" id="pl-prazo"></div>
-            <div class="form-field-block"><label for="pl-base-prazo">Nível de detalhamento do cronograma (escala ordinal)</label><select id="pl-base-prazo" data-atributo="base_estimativa_prazo" data-tipo-objeto="plano"><option value="">— Não informado —</option></select></div>
+            <div class="form-field-block"><label for="pl-base-prazo">Grau de definição do horizonte temporal</label><select id="pl-base-prazo" data-atributo="base_estimativa_prazo" data-tipo-objeto="plano"><option value="">— Não informado —</option></select><p class="field-help">Selecione a base de planejamento mais avançada utilizada para definir o prazo até a aprovação ou o início da vigência.</p></div>
           </div>
         </div>
       </section>
@@ -626,13 +628,13 @@
 
       <section class="card-1-atributos-programa secao-1-atributos-programa card step-panel pg-step-panel cadastro-section" data-step="5">
         <h2><span class="cadastro-sec-num">5</span>. <span data-section-title>Atributos de programa</span></h2>
-        <p class="step-intro">Informe a etapa atual de desenvolvimento, o Capex, o prazo e o nível de detalhamento das respectivas estimativas.</p>
+        <p class="step-intro">Informe o grau de maturidade do programa, o custo e o prazo estimados e o grau de definição dessas estimativas.</p>
           <div class="form-grid">
-            <div class="form-field-block"><label for="pg-maturidade">Etapa atual de desenvolvimento (escala ordinal)</label><select id="pg-maturidade" data-atributo="maturidade_objeto" data-tipo-objeto="programa"><option value="">— Não informado —</option></select></div>
-            <div class="form-field-block"><label for="pg-capex">Capex (custo estimado para implantação) (R$)</label><input type="number" step="0.01" min="0" id="pg-capex"></div>
-            <div class="form-field-block"><label for="pg-base-capex">Nível de detalhamento da estimativa de custo (escala ordinal)</label><select id="pg-base-capex" data-atributo="base_estimativa_capex" data-tipo-objeto="programa"><option value="">— Não informado —</option></select></div>
+            <div class="form-field-block"><label for="pg-maturidade">Grau de maturidade do programa</label><select id="pg-maturidade" data-atributo="maturidade_objeto" data-tipo-objeto="programa"><option value="">— Não informado —</option></select><p class="field-help">Selecione o nível mais avançado efetivamente alcançado na estruturação, pactuação, aprovação ou implantação do programa.</p></div>
+            <div class="form-field-block"><label for="pg-capex">Capex — custo estimado para implantação (R$)</label><input type="text" inputmode="decimal" id="pg-capex" placeholder="R$ 0,00" autocomplete="off"><p class="field-help">Valor total estimado dos investimentos necessários para implantar o programa. Não inclua custos anuais de operação e manutenção.</p></div>
+            <div class="form-field-block"><label for="pg-base-capex">Grau de definição do custo de implantação</label><select id="pg-base-capex" data-atributo="base_estimativa_capex" data-tipo-objeto="programa"><option value="">— Não informado —</option></select><p class="field-help">Selecione a base técnica mais avançada utilizada para calcular o Capex do programa.</p></div>
             <div class="form-field-block"><label for="pg-prazo">Prazo estimado para implantação do programa (meses)</label><input type="number" step="1" min="0" id="pg-prazo"></div>
-            <div class="form-field-block"><label for="pg-base-prazo">Nível de detalhamento do cronograma (escala ordinal)</label><select id="pg-base-prazo" data-atributo="base_estimativa_prazo" data-tipo-objeto="programa"><option value="">— Não informado —</option></select></div>
+            <div class="form-field-block"><label for="pg-base-prazo">Grau de definição do prazo de implantação</label><select id="pg-base-prazo" data-atributo="base_estimativa_prazo" data-tipo-objeto="programa"><option value="">— Não informado —</option></select><p class="field-help">Selecione a base de planejamento mais avançada utilizada para calcular o prazo de implantação do programa.</p></div>
           </div>
         <div class="btn-row">
           <button type="button" class="btn btn-secondary btn-prev">Voltar</button>
@@ -746,10 +748,6 @@
           <div>
             <label for="pg-orgao">Órgão responsável</label>
             <input type="text" id="pg-orgao" maxlength="200" placeholder="Ex.: SEMIL / CPTM">
-          </div>
-          <div>
-            <label for="pg-valor">Valor global (R$)</label>
-            <input type="number" step="any" id="pg-valor" min="0">
           </div>
         </div>
         <div class="btn-row">

@@ -23,8 +23,10 @@
     PLANO_PEF,
   } = SLTAdminLabels;
 
+  const PAGE_SIZE = 15;
   let tipo = "projeto";
   let rows = [];
+  let currentPage = 1;
   let editMode = false;
   const selected = new Set();
   const cache = { projeto: null, programa: null, plano: null };
@@ -159,15 +161,27 @@
   function filteredRows() {
     const status = $("#filtro-status").value;
     const q = ($("#filtro-busca").value || "").trim().toLowerCase();
-    return rows.filter((d) => {
-      if (status && d.status !== status) return false;
-      if (!q) return true;
-      return searchHaystack(d).includes(q);
-    });
+    return rows
+      .filter((d) => {
+        if (status && d.status !== status) return false;
+        if (!q) return true;
+        return searchHaystack(d).includes(q);
+      })
+      .sort((a, b) => {
+        const dataA = Date.parse(a.criadoEm || "") || 0;
+        const dataB = Date.parse(b.criadoEm || "") || 0;
+        return dataB - dataA;
+      });
+  }
+
+  function paginatedRows(data) {
+    const filtered = data || filteredRows();
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
   }
 
   function visibleCodigos() {
-    return filteredRows().map((d) => d.id);
+    return paginatedRows().map((d) => d.id);
   }
 
   function updateBulkButtons() {
@@ -372,14 +386,14 @@
   function renderHead() {
     const head = $("#tabela-head");
     if (!head) return;
-    const allChecked =
-      filteredRows().length > 0 && filteredRows().every((d) => selected.has(d.id) || isSentinel(d));
+    const visible = paginatedRows();
+    const allChecked = visible.length > 0 && visible.every((d) => selected.has(d.id) || isSentinel(d));
     head.innerHTML =
       `<th class="col-select" scope="col"><input type="checkbox" id="select-all" aria-label="Selecionar todos"${allChecked ? " checked" : ""}></th>` +
       COLUMNS[tipo].map((c) => `<th scope="col">${escapeHtml(c.label)}</th>`).join("");
     $("#select-all")?.addEventListener("change", (ev) => {
       const on = ev.target.checked;
-      filteredRows().forEach((d) => {
+      paginatedRows().forEach((d) => {
         if (isSentinel(d)) return;
         if (on) selected.add(d.id);
         else selected.delete(d.id);
@@ -457,10 +471,14 @@
 
   function renderTable() {
     const cols = COLUMNS[tipo];
-    const data = filteredRows();
+    const filtered = filteredRows();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    currentPage = Math.min(currentPage, totalPages);
+    const data = paginatedRows(filtered);
     const tbody = $("#tabela-demandas");
     const vazia = $("#lista-vazia");
     renderHead();
+    renderPagination(filtered.length, totalPages);
     if (!data.length) {
       tbody.innerHTML = "";
       vazia.classList.remove("hidden");
@@ -520,6 +538,15 @@
     });
 
     updateBulkButtons();
+  }
+
+  function renderPagination(total, totalPages) {
+    const pagination = $("#demandas-pagination");
+    if (!pagination) return;
+    pagination.classList.toggle("hidden", total === 0);
+    $("#pagination-info").textContent = `Página ${currentPage} de ${totalPages} · ${total} registro${total === 1 ? "" : "s"}`;
+    $("#pagination-prev").disabled = currentPage <= 1;
+    $("#pagination-next").disabled = currentPage >= totalPages;
   }
 
   function val(tr, field) {
@@ -692,6 +719,7 @@
 
   async function loadTipo(novoTipo, forceReload) {
     tipo = novoTipo;
+    if (!forceReload) currentPage = 1;
     if (!forceReload) resetSelection();
     document.querySelectorAll("#tipo-tabs .admin-tab").forEach((btn) => {
       const active = btn.dataset.tipo === tipo;
@@ -738,8 +766,26 @@
         loadTipo(btn.dataset.tipo).catch((err) => SLTAdminUi.showToast(err.message, true));
       });
     });
-    $("#filtro-status").addEventListener("change", renderTable);
-    $("#filtro-busca").addEventListener("input", renderTable);
+    $("#filtro-status").addEventListener("change", () => {
+      currentPage = 1;
+      resetSelection();
+      renderTable();
+    });
+    $("#filtro-busca").addEventListener("input", () => {
+      currentPage = 1;
+      resetSelection();
+      renderTable();
+    });
+    $("#pagination-prev").addEventListener("click", () => {
+      currentPage = Math.max(1, currentPage - 1);
+      resetSelection();
+      renderTable();
+    });
+    $("#pagination-next").addEventListener("click", () => {
+      currentPage += 1;
+      resetSelection();
+      renderTable();
+    });
     $("#btn-bulk-edit").addEventListener("click", enterEditMode);
     $("#btn-bulk-cancel").addEventListener("click", cancelEditMode);
     $("#btn-bulk-save").addEventListener("click", () => {

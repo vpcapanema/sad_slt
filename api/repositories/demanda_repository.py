@@ -8,6 +8,7 @@ from psycopg import errors
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
+from api.constants import STATUS_PRE_REPROVACAO, STATUS_REPROVACAO
 from api.db.connection import get_connection
 
 _SELECT_BASE = """
@@ -15,6 +16,8 @@ _SELECT_BASE = """
         d.id,
         d.codigo,
         d.status,
+        d.reprovado_em,
+        d.motivo_reprovacao,
         d.criado_em,
         d.sigma_instituicao_id,
         d.instituicao_nome,
@@ -32,6 +35,7 @@ _SELECT_BASE = """
         pg.nome   AS programa_nome,
         d.vinculo_institucional,
         d.vinculo_tipo,
+        d.vinculo_objeto_id,
         d.nome,
         d.descricao,
         d.latitude,
@@ -157,6 +161,32 @@ def get_by_uuid(demanda_id: Any) -> dict[str, Any] | None:
     query = _SELECT_BASE + " WHERE d.id = %s"
     with get_connection() as conn:
         return conn.execute(query, (demanda_id,)).fetchone()
+
+
+_REPROVAR_SQL = """
+    UPDATE demandas.projeto
+       SET status = %(status_reprovado)s,
+           reprovado_em = CURRENT_TIMESTAMP,
+           reprovado_por = %(reprovado_por)s,
+           motivo_reprovacao = %(justificativa)s
+     WHERE codigo = %(codigo)s
+       AND status = ANY(%(pre)s)
+     RETURNING id
+"""
+
+
+def reprovar(codigo: str, *, reprovado_por: str | None, justificativa: str) -> dict[str, Any] | None:
+    params = {
+        "codigo": codigo,
+        "reprovado_por": reprovado_por,
+        "justificativa": justificativa,
+        "pre": list(STATUS_PRE_REPROVACAO),
+        "status_reprovado": STATUS_REPROVACAO,
+    }
+    with get_connection() as conn:
+        row = conn.execute(_REPROVAR_SQL, params).fetchone()
+        conn.commit()
+    return get_by_codigo(codigo) if row else None
 
 
 def prepare_insert_params(data: dict[str, Any]) -> dict[str, Any]:

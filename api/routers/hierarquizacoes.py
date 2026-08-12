@@ -22,6 +22,7 @@ from api.schemas.hierarquizacao import (
     HierarquizacaoFase1ExecutarSchema,
     HierarquizacaoFase2ExecutarSchema,
     HierarquizacaoFase3AtributosSchema,
+    HierarquizacaoFase3PesosSchema,
     HierarquizacaoFase3ExecutarSchema,
     HierarquizacaoSinteseSchema,
     HierarquizacaoResponseSchema,
@@ -78,6 +79,18 @@ async def executar_fase_3(codigo: str, body: HierarquizacaoFase3ExecutarSchema, 
 async def salvar_atributos_fase_3(codigo: str, body: HierarquizacaoFase3AtributosSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
     try:
         return service.salvar_atributos_fase3(codigo, body)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.patch("/{codigo}/fases/3/pesos", response_model=HierarquizacaoResponseSchema)
+async def salvar_pesos_fase_3(codigo: str, body: HierarquizacaoFase3PesosSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+    try:
+        return service.salvar_pesos_fase3(codigo, body)
     except HierarquizacaoNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:

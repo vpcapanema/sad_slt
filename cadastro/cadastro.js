@@ -71,6 +71,26 @@
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
 
+  function parseMoedaBr(value) {
+    const digits = String(value ?? "").replace(/\D/g, "");
+    return digits ? Number(digits) / 100 : null;
+  }
+
+  function formatMoedaBr(value) {
+    const numero = typeof value === "number" ? value : parseMoedaBr(value);
+    return numero == null ? "" : numero.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  function initCurrencyInput(selector) {
+    const input = $(selector);
+    if (!input) return;
+    input.addEventListener("input", () => {
+      const numero = parseMoedaBr(input.value);
+      input.value = numero == null ? "" : formatMoedaBr(numero);
+      input.dispatchEvent(new Event("cadastro:currency", { bubbles: true }));
+    });
+  }
+
   function optionValuesFor(attribute, objectType) {
     const specific = attribute.configuracao_por_tipo?.[objectType]?.opcoes;
     return Array.isArray(specific) ? specific : attribute.dominio_valores || [];
@@ -99,9 +119,10 @@
     if (deadline !== "" && deadline != null) result.prazo_referencia_meses = Number(deadline);
     if (deadlineBasis) result.base_estimativa_prazo = deadlineBasis;
     if (supportsCapex) {
-      const capex = $(`#${prefix}-capex`)?.value;
+      const capexRaw = $(`#${prefix}-capex`)?.value;
+      const capex = ["prj", "pg"].includes(prefix) ? parseMoedaBr(capexRaw) : (capexRaw === "" || capexRaw == null ? null : Number(capexRaw));
       const capexBasis = $(`#${prefix}-base-capex`)?.value;
-      if (capex !== "" && capex != null) result.capex_estimado = Number(capex);
+      if (capex != null) result.capex_estimado = capex;
       if (capexBasis) result.base_estimativa_capex = capexBasis;
     }
     return result;
@@ -1612,13 +1633,13 @@
 
     const vigIni = $("#prj-vig-ini").value;
     const vigFim = $("#prj-vig-fim").value;
-    const valorGlobal = $("#prj-valor").value;
+    const valorGlobal = parseMoedaBr($("#prj-capex").value);
     const fmtDataBr = (v) => { const p = String(v).slice(0, 10).split("-"); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : v; };
     const fmtMoedaBr = (v) => "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const vigenciaRows = [
       reviewRow("Vigência início", escapeHtml(vigIni ? fmtDataBr(vigIni) : "—")),
       reviewRow("Vigência fim", escapeHtml(vigFim ? fmtDataBr(vigFim) : "—")),
-      reviewRow("Valor global", escapeHtml(valorGlobal ? fmtMoedaBr(valorGlobal) : "—")),
+      reviewRow("Capex — custo estimado para implantação", escapeHtml(valorGlobal != null ? fmtMoedaBr(valorGlobal) : "—")),
     ];
 
     const containment = SLTGeometria.getContainment?.();
@@ -1672,7 +1693,7 @@
     const coords = getCoordenadas();
     return {
       tipo_demandante: currentTipoDemandante,
-      status: "analise_rascunho",
+      status: "analise_em_avaliacao",
       criadoEm: new Date().toISOString(),
       ...buildInstituicaoPayload("#instituicao", "#cnpj"),
       pessoa_id: pessoaId || null,
@@ -1708,7 +1729,7 @@
       },
       vigencia_inicio: $("#prj-vig-ini").value || null,
       vigencia_fim: $("#prj-vig-fim").value || null,
-      valor_global: $("#prj-valor").value ? Number($("#prj-valor").value) : null,
+      valor_global: parseMoedaBr($("#prj-capex").value),
       atributos_cadastrais: cadastralAttributes("prj", true),
     };
   }
@@ -1872,7 +1893,7 @@
         representante: rep.representante,
         vigencia_inicio: $("#pl-vig-ini").value || null,
         vigencia_fim: $("#pl-vig-fim").value || null,
-        valor_global: $("#pl-valor").value ? Number($("#pl-valor").value) : null,
+        valor_global: parseMoedaBr($("#pl-valor").value),
         atributos_cadastrais: cadastralAttributes("pl", false),
         unidades_espaciais: unidades,
       };
@@ -1941,7 +1962,7 @@
         publico_alvo: $("#pg-publico").value.trim() || null,
         justificativa: $("#pg-justificativa").value.trim() || null,
         orgao_responsavel: $("#pg-orgao").value.trim() || null,
-        valor_global: $("#pg-valor").value ? Number($("#pg-valor").value) : null,
+        valor_global: parseMoedaBr($("#pg-capex").value),
         atributos_cadastrais: cadastralAttributes("pg", true),
         ...inst,
         pessoa_id: rep.pessoa_id,
@@ -1964,6 +1985,9 @@
 
   async function init() {
     initCadastroSectionCards();
+    initCurrencyInput("#prj-capex");
+    initCurrencyInput("#pg-capex");
+    initCurrencyInput("#pl-valor");
     await loadSigmaCadastros();
 
     await SLTCatalog.loadCatalog("../");

@@ -421,6 +421,10 @@ def _atributos_fase3(colunas: list[dict[str, Any]], cadastro: dict[str, Any]) ->
     for col in colunas:
         valor, origem = _prefill_fase3(col["id"], cadastro)
         slots[col["id"]] = {
+            "valor_bruto": valor,
+            "valor_rescalonado": None,
+            "peso": None,
+            # Compatibilidade de leitura durante a transição do contrato.
             "valor": valor,
             "origem": origem,
             "criterio": col.get("criterio"),
@@ -996,6 +1000,78 @@ def executar_fase_2(
             "Esta versão aceita extração pontual.", field="metodo_extracao"
         )
     row = _carregar(codigo)
+    if payload.camada_grade_id or payload.camada_rede_id:
+        if not payload.camada_grade_id or not payload.camada_rede_id:
+            raise DemandaValidationError("Selecione as camadas homologadas de grade e de rede.", field="camadas")
+        if payload.camada_grade_id == payload.camada_rede_id:
+            raise DemandaValidationError("As camadas de grade e de rede devem ser diferentes.", field="camadas")
+        rasters = {
+            "grade": repo.raster_homologado(payload.camada_grade_id),
+            "rede": repo.raster_homologado(payload.camada_rede_id),
+        }
+        if not all(rasters.values()):
+            raise DemandaValidationError("Uma das camadas selecionadas não é um raster homologado.", field="camadas")
+        from rasterio.io import MemoryFile
+        from rasterio.warp import transform
+
+        dados = deepcopy(row.get("dados_hierarquizacao") or {})
+        _exigir_fase(dados, 2)
+        objetos = dados.get("objetos", [])
+        for dimensao, raster in rasters.items():
+            with MemoryFile(bytes(raster["dados_geotiff"])) as mem:
+                with mem.open() as ds:
+                    for obj in objetos:
+                        cab = obj["cabecalho_objeto"]
+                        lat, lon = cab.get("latitude"), cab.get("longitude")
+                        if lat is None or lon is None:
+                            raise DemandaValidationError(f"Demanda {cab.get('codigo')} sem coordenadas.", field="objetos.coordenadas")
+                        if not ds.crs or str(ds.crs) == "EPSG:4326":
+                            x, y = float(lon), float(lat)
+                        else:
+                            xs, ys = transform("EPSG:4326", ds.crs, [float(lon)], [float(lat)])
+                            x, y = xs[0], ys[0]
+                        sample = next(ds.sample([(x, y)], masked=True))
+                        valor = None if bool(sample.mask[0]) else float(sample[0])
+                        if valor is not None and (not math.isfinite(valor) or valor < 0 or valor > 1):
+                            raise DemandaValidationError(
+                                f"Raster de {dimensao} retornou valor fora da faixa 0–1 para {cab.get('codigo')}: {valor}.",
+                                field=f"camada_{dimensao}_id",
+                            )
+                        f2 = obj["hierarquizacao"]["fase_2"]
+                        f2["executada"] = True
+                        f2["metodo_extracao"] = "ponto"
+                        f2[f"indice_favorabilidade_{dimensao}"] = valor
+                        f2.setdefault("valor_por_dimensao", {})[dimensao] = valor
+                        f2.setdefault("camadas_homologadas", {})[dimensao] = {
+                            "id": raster["id"], "nome": raster.get("nome"), "versao": raster.get("versao")
+                        }
+                        f2["geometria_usada_na_extracao"] = {
+                            "tipo": "Point", "longitude": lon, "latitude": lat
+                        }
+        for obj in objetos:
+            f2 = obj["hierarquizacao"]["fase_2"]
+            grade = f2.get("indice_favorabilidade_grade")
+            rede = f2.get("indice_favorabilidade_rede")
+            f2["score_fase2"] = (grade + rede) / 2 if grade is not None and rede is not None else None
+        dados["cabecalho_grupo"].setdefault("camadas", {})["fase_2"] = {
+            dimensao: {"id": raster["id"], "nome": raster.get("nome"), "versao": raster.get("versao")}
+            for dimensao, raster in rasters.items()
+        }
+        dados["cabecalho_grupo"].setdefault("relatorios", {})["fase_2"] = {
+            "executada_em": datetime.now(timezone.utc).isoformat(),
+            "metodo_extracao": "ponto",
+            "camada_grade_id": payload.camada_grade_id,
+            "camada_rede_id": payload.camada_rede_id,
+            "objetos_avaliados": len(objetos),
+            "objetos_com_ambos_indices": sum(
+                1 for obj in objetos
+                if obj["hierarquizacao"]["fase_2"].get("score_fase2") is not None
+            ),
+        }
+        return _response(repo.update(codigo, {"dados_hierarquizacao": dados, "status": "em_julgamento"}) or row)
+
+    if not payload.pacote_id:
+        raise DemandaValidationError("Selecione as camadas homologadas de grade e de rede.", field="camadas")
     pacote = repo.obter_pacote_homologado(payload.pacote_id, "fase2")
     if not pacote:
         raise DemandaValidationError(
@@ -1165,8 +1241,10 @@ def _valor_atributo_objeto(obj: dict[str, Any], chave: Any) -> Any:
             (s for s in af3.values() if isinstance(s, dict) and s.get("criterio") == chave),
             None,
         )
-    if isinstance(slot, dict) and slot.get("valor") is not None:
-        return slot.get("valor")
+    if isinstance(slot, dict):
+        valor_bruto = slot.get("valor_bruto", slot.get("valor"))
+        if valor_bruto is not None:
+            return valor_bruto
     return (cab.get("atributos") or {}).get(chave)
 
 
@@ -1177,11 +1255,16 @@ def executar_fase_3(
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
     _exigir_fase(dados, 3)
     objs = dados.get("objetos", [])
-    if not payload.criterios:
+    criterios_salvos = (
+        dados.get("cabecalho_grupo", {}).get("configuracoes", {}).get("fase_3", {}).get("criterios")
+        or []
+    )
+    criterios = criterios_salvos or payload.criterios
+    if not criterios:
         raise DemandaValidationError(
             "Informe ao menos um critério da Fase 3.", field="criterios"
         )
-    pesos = [max(0.0, float(c.get("peso", 0))) for c in payload.criterios]
+    pesos = [max(0.0, float(c.get("peso", 0))) for c in criterios]
     total = sum(pesos)
     if total <= 0:
         raise DemandaValidationError(
@@ -1190,7 +1273,7 @@ def executar_fase_3(
     if payload.modo_pesos == "normalizados":
         pesos = [p / total for p in pesos]
     norm_por_criterio = []
-    for c in payload.criterios:
+    for c in criterios:
         chave = c.get("nome_coluna") or c.get("atributo_id") or c.get("criterio")
         if str(chave).startswith("risco:"):
             alvo = str(chave)[6:]
@@ -1222,7 +1305,7 @@ def executar_fase_3(
         soma = 0.0
         pesos_validos = 0.0
         falha_obrigatoria = False
-        for j, c in enumerate(payload.criterios):
+        for j, c in enumerate(criterios):
             nome = (
                 c.get("criterio")
                 or c.get("rotulo")
@@ -1231,6 +1314,14 @@ def executar_fase_3(
             )
             normalizados, indices_ausentes, indices_invalidos = norm_por_criterio[j]
             n = normalizados[str(i)]
+            chave = c.get("nome_coluna") or c.get("atributo_id") or c.get("criterio")
+            slots_objeto = (obj.get("cabecalho_objeto") or {}).setdefault("atributos_fase3", {})
+            slot_atributo = slots_objeto.get(chave)
+            if not isinstance(slot_atributo, dict):
+                slot_atributo = slots_objeto[chave] = {
+                    "valor_bruto": _valor_atributo_objeto(obj, chave),
+                    "origem": "cadastro" if str(chave).startswith("cadastro:") else "complementacao",
+                }
             if n is None:
                 falha_obrigatoria = falha_obrigatoria or c.get("obrigatorio") is True
                 if i in indices_invalidos:
@@ -1245,12 +1336,18 @@ def executar_fase_3(
                     existentes = [v for v in normalizados.values() if v is not None]
                     n = sum(existentes) / len(existentes) if existentes else 0.5
                 else:
+                    if isinstance(slot_atributo, dict):
+                        slot_atributo["valor_rescalonado"] = None
+                        slot_atributo["peso"] = pesos[j]
                     continue
+            if isinstance(slot_atributo, dict):
+                slot_atributo["valor_rescalonado"] = n
+                slot_atributo["peso"] = pesos[j]
             contrib[nome] = n * pesos[j]
             soma += contrib[nome]
             pesos_validos += pesos[j]
-        completude = (len(payload.criterios) - len(ausentes) - len(invalidos)) / len(
-            payload.criterios
+        completude = (len(criterios) - len(ausentes) - len(invalidos)) / len(
+            criterios
         )
         bloqueado = payload.regra_ausentes == "bloquear" and bool(
             ausentes or invalidos
@@ -1281,7 +1378,7 @@ def executar_fase_3(
                     zip(
                         [
                             c.get("criterio") or c.get("nome_coluna")
-                            for c in payload.criterios
+                            for c in criterios
                         ],
                         pesos,
                     )
@@ -1297,9 +1394,9 @@ def executar_fase_3(
         sorted(ranqueaveis, key=lambda x: x[1], reverse=True), 1
     ):
         obj["hierarquizacao"]["fase_3"]["ranking_fase3"] = pos
-    dados["cabecalho_grupo"].setdefault("configuracoes", {})["fase_3"] = (
-        payload.model_dump()
-    )
+    configuracao = payload.model_dump()
+    configuracao["criterios"] = criterios
+    dados["cabecalho_grupo"].setdefault("configuracoes", {})["fase_3"] = configuracao
     dados["cabecalho_grupo"].setdefault("relatorios", {})["fase_3"] = {
         "executada_em": datetime.now(timezone.utc).isoformat(),
         "objetos_avaliados": len(objs),
@@ -1329,9 +1426,53 @@ def salvar_atributos_fase3(
         for col_id, valor in atualizacoes.items():
             slot = slots.get(col_id)
             if not isinstance(slot, dict):
-                slot = slots[col_id] = {"origem": "gestor"}
+                slot = slots[col_id] = {
+                    "origem": "complementacao",
+                    "valor_rescalonado": None,
+                    "peso": None,
+                }
+            slot["valor_bruto"] = valor
             slot["valor"] = valor
+            slot["valor_rescalonado"] = None
+            slot["peso"] = None
     return _response(repo.update(codigo, {"dados_hierarquizacao": dados}) or row)
+
+
+def salvar_pesos_fase3(codigo: str, payload: Any) -> HierarquizacaoResponseSchema:
+    """Persiste o peso dos atributos dinâmicos em todos os objetos da rodada."""
+    row = _carregar(codigo)
+    dados = deepcopy(row.get("dados_hierarquizacao") or {})
+    criterios = payload.criterios or []
+    if not criterios:
+        raise DemandaValidationError("Informe os pesos dos atributos.", field="criterios")
+    pesos = {
+        str(c.get("nome_coluna") or c.get("atributo_id")): float(c.get("peso", 0))
+        for c in criterios
+    }
+    for obj in dados.get("objetos", []):
+        slots = (obj.get("cabecalho_objeto") or {}).setdefault("atributos_fase3", {})
+        for chave, peso in pesos.items():
+            slot = slots.setdefault(chave, {
+                "valor_bruto": _valor_atributo_objeto(obj, chave),
+                "valor_rescalonado": None,
+                "origem": "cadastro" if chave.startswith("cadastro:") else "complementacao",
+            })
+            slot["peso"] = peso
+    config = dados["cabecalho_grupo"].setdefault("configuracoes", {}).setdefault("fase_3", {})
+    config["criterios"] = criterios
+    return _response(repo.update(codigo, {"dados_hierarquizacao": dados}) or row)
+
+
+def _indices_objeto(obj: dict[str, Any]) -> tuple[Any, Any, Any]:
+    h = obj.get("hierarquizacao") or {}
+    f2 = h.get("fase_2") or {}
+    dimensoes = f2.get("valor_por_dimensao") or {}
+    rede = f2.get("indice_favorabilidade_rede", dimensoes.get("rede"))
+    grade = f2.get("indice_favorabilidade_grade", dimensoes.get("grade"))
+    if rede is None and grade is None:
+        grade = f2.get("score_fase2")
+    prioridade = (h.get("fase_3") or {}).get("score_fase3")
+    return rede, grade, prioridade
 
 
 def sintetizar(
@@ -1339,38 +1480,47 @@ def sintetizar(
 ) -> HierarquizacaoResponseSchema:
     row = _carregar(codigo)
     dados = deepcopy(row.get("dados_hierarquizacao") or {})
-    fases = _fases_configuradas(dados)
-    if {2, 3}.issubset(fases) and abs(
-        payload.peso_fase2 + payload.peso_fase3 - 1
-    ) > 1e-6:
-        raise DemandaValidationError(
-            "Os pesos das Fases 2 e 3 devem somar 1.", field="pesos"
-        )
+    campos_enviados = payload.model_fields_set
+    modo_legado = "operador" not in campos_enviados and bool({"peso_fase2", "peso_fase3"} & campos_enviados)
+    pesos = [payload.peso_rede, payload.peso_grade, payload.peso_prioridade]
+    if payload.operador == "media_ponderada" and abs(sum(pesos) - 1) > 1e-6:
+        raise DemandaValidationError("Os pesos dos três índices devem somar 1.", field="pesos")
     ranking = []
     for obj in dados.get("objetos", []):
         h = obj["hierarquizacao"]
         restrito = h["fase_1"].get("status_fase1") == "restrito"
-        s2, s3 = h["fase_2"].get("score_fase2"), h["fase_3"].get("score_fase3")
+        rede, grade, prioridade = _indices_objeto(obj)
         if restrito and not payload.incluir_restritos:
             score = None
-        elif s2 is not None and s3 is not None:
-            score = payload.peso_fase2 * s2 + payload.peso_fase3 * s3
+        elif modo_legado:
+            score = (
+                payload.peso_fase2 * grade + payload.peso_fase3 * prioridade
+                if grade is not None and prioridade is not None
+                else grade if grade is not None else prioridade
+            )
         else:
-            score = s2 if s2 is not None else s3
+            valores = (rede, grade, prioridade)
+            if any(valor is None for valor in valores):
+                score = None
+            elif payload.operador == "media_simples":
+                score = sum(float(valor) for valor in valores) / 3
+            else:
+                score = sum(float(valor) * pesos[indice] for indice, valor in enumerate(valores))
         h["sintese"] = {
             "executada": True,
             "score_final": score,
             "posicao_final": None,
             "restrito_segregado": restrito and not payload.incluir_restritos,
             "contribuicoes": {
-                "fase_2": payload.peso_fase2 * s2 if s2 is not None and s3 is not None else s2,
-                "fase_3": payload.peso_fase3 * s3 if s2 is not None and s3 is not None else s3,
+                "favorabilidade_rede": rede,
+                "favorabilidade_grade": grade,
+                "prioridade": prioridade,
             },
             "motivo": (
                 "Restrição territorial segregou o objeto."
                 if restrito and not payload.incluir_restritos
                 else "Composição ponderada das Fases 2 e 3."
-                if s2 is not None and s3 is not None
+                if payload.operador == "media_ponderada" and score is not None
                 else "Resultado da única fase quantitativa disponível."
                 if score is not None
                 else "Nenhuma fase quantitativa produziu score."
@@ -1396,7 +1546,7 @@ def sintetizar(
     dados["cabecalho_grupo"]["sintese"] = payload.model_dump()
     dados["cabecalho_grupo"].setdefault("relatorios", {})["sintese"] = {
         "executada_em": datetime.now(timezone.utc).isoformat(),
-        "fases_configuradas": sorted(fases),
+        "operador": payload.operador,
         "objetos_ranqueados": len(final),
         "objetos_segregados": sum(
             1

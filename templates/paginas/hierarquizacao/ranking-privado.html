@@ -1,0 +1,66 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Ranking de demandas — SICARD{% endblock %}
+{% set fase_ativa = "ranking" %}
+{% block classes_body %}ahp-module-page ranking-privado-page{% endblock %}
+{% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/restrict/hierarquizacao/processos.css">
+  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-home-inline-1.css">
+  <link rel="stylesheet" href="/assets/css/ranking-privado.css">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden"></div>
+<main class="conteudo-principal app-main ahp-main">
+  {% include "componentes/navegacao_fases_hierarquizacao.html" %}
+  <section class="card-ranking-demandas secao-ranking-demandas card">
+    <h1 class="ahp-page-title"><i class="fas fa-ranking-star"></i> Ranking de demandas</h1>
+    <p>Selecione uma hierarquização finalizada para consultar sua classificação e distribuição territorial.</p>
+  </section>
+
+  <section class="card-hierarquizacoes-finalizadas secao-hierarquizacoes-finalizadas card ahp-step-section">
+    <div class="ahp-section-label"><i class="fas fa-table"></i><span>Hierarquizações realizadas</span></div>
+    <div class="ahp-section-body">
+      <div id="ranking-hier-loading">Carregando…</div>
+      <div id="ranking-hier-error" class="hidden ahp-info-note ahp-info-note--error"></div>
+      <div class="hier-table-shell">
+        <table class="admin-table hier-register-table ranking-hier-table">
+          <thead><tr>
+            <th>Código da hierarquização</th><th>Identificador da configuração AHP</th><th>Nome</th><th>Descrição</th><th>Situação</th><th>Matriz de critérios e premissas</th><th>Demandas do grupo</th><th>Julgamentos dos projetos</th><th>Pesos dos projetos</th><th>Classificação resultante</th><th>Data da homologação</th><th>Responsável pela homologação</th><th>Responsável pelo cadastro</th><th>Data de cadastro</th><th>Última atualização</th><th>Tipo de demanda</th><th>Grupo comparável</th><th>Dados completos da hierarquização</th>
+          </tr></thead>
+          <tbody id="ranking-hier-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="ranking-objetos-section" class="card-ranking-objetos secao-ranking-objetos card ahp-step-section hidden">
+    <div class="ahp-section-label"><i class="fas fa-list-ol"></i><span id="ranking-objetos-titulo">Ranking de objetos aptos à implementação</span></div>
+    <div class="ahp-section-body"><div id="ranking-objetos-tabela" class="fase-table-wrap"></div></div>
+  </section>
+
+  <section id="ranking-mapa-section" class="card-ranking-mapa secao-ranking-mapa card ahp-step-section hidden">
+    <div class="ahp-section-label"><i class="fas fa-map-location-dot"></i><span id="ranking-mapa-titulo">Mapa do ranking de objetos aptos à implementação</span></div>
+    <div class="ahp-section-body ranking-map-layout">
+      <aside class="ranking-map-sidebar" aria-label="Objetos classificados"><ol id="ranking-map-list"></ol></aside>
+      <div id="ranking-map" class="ranking-map" aria-label="Mapa dos objetos classificados"></div>
+    </div>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
+  <script src="/assets/js/painel-map-controls.js"></script>
+  <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
+  <script src="/restrict/hierarquizacao/js/ranking-privado.js"></script>
+{% endblock %}

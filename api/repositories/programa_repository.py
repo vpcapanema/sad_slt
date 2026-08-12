@@ -7,7 +7,7 @@ from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
-from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO
+from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO, STATUS_PRE_REPROVACAO, STATUS_REPROVACAO
 
 _SELECT_BASE = """
     SELECT
@@ -26,6 +26,7 @@ _SELECT_BASE = """
         pg.valor_global,
         pg.atributos_cadastrais,
         pg.vinculo_institucional,
+        pg.vinculo_objeto_id,
         pg.sigma_instituicao_id,
         pg.instituicao_nome,
         pg.instituicao_razao_social,
@@ -36,6 +37,8 @@ _SELECT_BASE = """
         pg.representante_email,
         pg.representante_telefone,
         pg.status,
+        pg.reprovado_em,
+        pg.motivo_reprovacao,
         pg.criado_em,
         pg.atualizado_em,
         COALESCE(
@@ -162,6 +165,32 @@ def aprovar(codigo: str, *, aprovado_por: str | None, motivo: str | None) -> dic
     if not row:
         return None
     return get_by_codigo(codigo)
+
+
+_REPROVAR_SQL = """
+    UPDATE demandas.programa
+       SET status = %(status_reprovado)s,
+           reprovado_em = CURRENT_TIMESTAMP,
+           reprovado_por = %(reprovado_por)s,
+           motivo_reprovacao = %(justificativa)s
+     WHERE codigo = %(codigo)s
+       AND status = ANY(%(pre)s)
+     RETURNING id
+"""
+
+
+def reprovar(codigo: str, *, reprovado_por: str | None, justificativa: str) -> dict[str, Any] | None:
+    params = {
+        "codigo": codigo,
+        "reprovado_por": reprovado_por,
+        "justificativa": justificativa,
+        "pre": list(STATUS_PRE_REPROVACAO),
+        "status_reprovado": STATUS_REPROVACAO,
+    }
+    with get_connection() as conn:
+        row = conn.execute(_REPROVAR_SQL, params).fetchone()
+        conn.commit()
+    return get_by_codigo(codigo) if row else None
 
 
 def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:

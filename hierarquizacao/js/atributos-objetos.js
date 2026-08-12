@@ -38,10 +38,10 @@
       "base_estimativa_prazo",
     ]);
     const nomes = {
-      maturidade_objeto: "Etapa atual de desenvolvimento",
+      maturidade_objeto: `Grau de maturidade do ${tituloTipo(tipo)}`,
       capex_estimado: "Capex (custo estimado para implantação)",
-      base_estimativa_capex: "Nível de detalhamento da estimativa de custo",
-      base_estimativa_prazo: "Nível de detalhamento do cronograma",
+      base_estimativa_capex: "Grau de definição do custo de implantação",
+      base_estimativa_prazo: tipo === "plano" ? "Grau de definição do horizonte temporal" : "Grau de definição do prazo de implantação",
     };
     const dominioPorCodigo = Object.fromEntries(dominios.map((item) => [item.codigo, item]));
     const direcoes = {
@@ -130,7 +130,8 @@
   }
 
   function valorDinamico(objeto, coluna) {
-    return objeto.cabecalho_objeto?.atributos_fase3?.[coluna.chave]?.valor ?? null;
+    const slot = objeto.cabecalho_objeto?.atributos_fase3?.[coluna.chave];
+    return slot?.valor_bruto ?? slot?.valor ?? null;
   }
 
   function converter(valor, coluna) {
@@ -173,6 +174,49 @@
     $("[data-atributos-sem-linhas]", raiz).hidden = true;
   }
 
+  function linhasEquilibradas(titulo) {
+    const palavras = String(titulo || "").trim().split(/\s+/).filter(Boolean);
+    if (palavras.length < 3 || titulo.length <= 25) return [palavras.join(" ")];
+
+    const naoPodemEncerrar = new Set([
+      "a", "o", "as", "os", "um", "uma", "uns", "umas",
+      "de", "da", "do", "das", "dos", "e", "ou", "em",
+      "no", "na", "nos", "nas", "ao", "aos", "à", "às",
+      "com", "sem", "por", "para", "sob", "entre", "que",
+    ]);
+    const evitarNoInicio = new Set([
+      "e", "ou", "que", "da", "do", "das", "dos", "no", "na", "nos", "nas",
+    ]);
+    const normalizar = (palavra) => palavra.toLocaleLowerCase("pt-BR").replace(/^[\s([{"']+|[\s)\]},;:.!?"']+$/g, "");
+    let melhor = null;
+
+    for (let corte = 1; corte < palavras.length; corte += 1) {
+      const linha1 = palavras.slice(0, corte).join(" ");
+      const linha2 = palavras.slice(corte).join(" ");
+      const fim1 = normalizar(palavras[corte - 1]);
+      const inicio2 = normalizar(palavras[corte]);
+      let penalidade = Math.abs(linha1.length - linha2.length);
+      if (naoPodemEncerrar.has(fim1)) penalidade += 1000;
+      if (evitarNoInicio.has(inicio2)) penalidade += 80;
+      if (linha1.length < titulo.length * 0.3 || linha2.length < titulo.length * 0.3) penalidade += 250;
+      const abre1 = (linha1.match(/\(/g) || []).length;
+      const fecha1 = (linha1.match(/\)/g) || []).length;
+      if (abre1 !== fecha1) penalidade += 15;
+      if (!melhor || penalidade < melhor.penalidade) melhor = { linha1, linha2, penalidade };
+    }
+    return melhor ? [melhor.linha1, melhor.linha2] : [palavras.join(" ")];
+  }
+
+  function preencherTituloCabecalho(elemento, titulo) {
+    elemento.title = titulo;
+    elemento.replaceChildren(...linhasEquilibradas(titulo).map((linha) => {
+      const span = document.createElement("span");
+      span.className = "col-atributo-linha";
+      span.textContent = linha;
+      return span;
+    }));
+  }
+
   function montarTabela(raiz, objetos, colunas) {
     const linhaCabecalho = $("[data-atributos-thead] tr", raiz);
     const corpo = $("[data-atributos-tbody]", raiz);
@@ -184,7 +228,10 @@
       const th = tplColuna.content.firstElementChild.cloneNode(true);
       th.classList.add(coluna.grupo === "cadastro" ? "col-estatica" : "col-dinamica");
       th.dataset.colId = coluna.id;
-      $(".col-atributo-alias", th).textContent = coluna.alias || coluna.criterio || coluna.id;
+      preencherTituloCabecalho(
+        $(".col-atributo-alias", th),
+        coluna.alias || coluna.criterio || coluna.id,
+      );
       $(".col-atributo-unidade", th).textContent = coluna.unidade ? `(${coluna.unidade})` : "";
       linhaCabecalho.appendChild(th);
     });
@@ -222,6 +269,7 @@
   function redistribuir(colunaId, novoValor) {
     const alvo = estado.colunas.find((coluna) => coluna.id === colunaId);
     const pares = estado.colunas.filter((coluna) => coluna.grupo === alvo.grupo && coluna.id !== colunaId);
+    novoValor = Number.isFinite(novoValor) ? Math.max(0, Math.min(1, novoValor)) : 0;
     estado.pesos[colunaId] = novoValor;
     if (!pares.length) { estado.pesos[colunaId] = 1; return; }
     const restante = 1 - novoValor;
@@ -233,8 +281,8 @@
     for (const grupo of ["cadastro", "dinamico"]) {
       const host = $(`[data-controles-pesos="${grupo}"]`, raiz);
       const itens = estado.colunas.filter((coluna) => coluna.grupo === grupo);
-      host.innerHTML = itens.map((coluna) => `<label class="atributo-peso" data-peso-id="${coluna.id}"><span>${coluna.alias || coluna.criterio}</span><input type="range" min="0" max="1" step="0.001" value="${estado.pesos[coluna.id]}"><output>${estado.pesos[coluna.id].toFixed(3)}</output></label>`).join("");
-      host.querySelectorAll("input").forEach((input) => input.addEventListener("input", () => {
+      host.innerHTML = itens.map((coluna) => `<label class="atributo-peso" data-peso-id="${coluna.id}"><span>${coluna.alias || coluna.criterio}</span><input class="atributo-peso-numero" type="number" min="0" max="1" step="0.001" inputmode="decimal" value="${estado.pesos[coluna.id].toFixed(3)}" aria-label="Peso de ${coluna.alias || coluna.criterio}"><input class="atributo-peso-barra" type="range" min="0" max="1" step="0.001" value="${estado.pesos[coluna.id]}"></label>`).join("");
+      host.querySelectorAll(".atributo-peso-barra, .atributo-peso-numero").forEach((input) => input.addEventListener("input", () => {
         redistribuir(input.closest("[data-peso-id]").dataset.pesoId, Number(input.value));
         atualizarPesos(raiz, grupo);
       }));
@@ -249,8 +297,8 @@
     itens.forEach((coluna) => {
       const linha = $(`[data-peso-id="${CSS.escape(coluna.id)}"]`, raiz);
       if (!linha) return;
-      $("input", linha).value = estado.pesos[coluna.id];
-      $("output", linha).textContent = estado.pesos[coluna.id].toFixed(3);
+      $(".atributo-peso-barra", linha).value = estado.pesos[coluna.id];
+      $(".atributo-peso-numero", linha).value = estado.pesos[coluna.id].toFixed(3);
     });
     $(`[data-soma-pesos="${grupo}"]`, raiz).textContent = itens.reduce((soma, coluna) => soma + estado.pesos[coluna.id], 0).toFixed(3).replace(".", ",");
   }
@@ -295,5 +343,23 @@
     }));
   }
 
-  global.AtributosObjetos = { render, criteriosPayload, coletar: () => ({ valores: {} }) };
+  function atributosAusentes(hierarquizacao) {
+    const objetos = hierarquizacao?.dados_hierarquizacao?.objetos || [];
+    return objetos.map((objeto) => {
+      const cabecalho = objeto.cabecalho_objeto || {};
+      const atributos = estado.colunas.filter((coluna) => {
+        const valor = coluna.grupo === "cadastro"
+          ? valorCadastro(objeto, coluna)
+          : valorDinamico(objeto, coluna);
+        return valor === null || valor === undefined || valor === "";
+      }).map((coluna) => coluna.alias || coluna.criterio || coluna.id);
+      return {
+        codigo: cabecalho.codigo || "",
+        nome: cabecalho.nome || "—",
+        atributos,
+      };
+    });
+  }
+
+  global.AtributosObjetos = { render, criteriosPayload, atributosAusentes, coletar: () => ({ valores: {} }) };
 })(window);

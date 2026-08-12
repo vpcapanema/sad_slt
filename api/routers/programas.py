@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from api.deps.auth import require_analyst, require_authenticated, require_gestor, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
-from api.schemas.objeto_ahp import AprovarDemandaSchema
+from api.schemas.objeto_ahp import AprovarDemandaSchema, ReprovarDemandaSchema
 from api.schemas.programa import ProgramaCreateSchema, ProgramaResponseSchema, ProgramaUpdateSchema
 from api.services import programa_service
 from api.services.session_service import SessionUser
@@ -82,6 +82,27 @@ async def aprovar_programa(
     aprovado_por = (body.aprovado_por if body else None) or user.id
     try:
         return programa_service.aprovar_programa(codigo, motivo=motivo, aprovado_por=aprovado_por)
+    except DemandaNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/{codigo}/reprovar", response_model=ProgramaResponseSchema)
+async def reprovar_programa(
+    codigo: str,
+    body: ReprovarDemandaSchema,
+    user: SessionUser = Depends(require_analyst),
+) -> ProgramaResponseSchema:
+    """Reprova um programa em análise mediante justificativa obrigatória."""
+    try:
+        return programa_service.reprovar_programa(
+            codigo,
+            justificativa=body.justificativa,
+            reprovado_por=body.reprovado_por or user.id,
+        )
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:

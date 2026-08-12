@@ -39,7 +39,8 @@
       const cadastral = slot.origem === "cadastro";
       const bloqueado = cadastral || !item.pode_editar;
       const origem = cadastral ? "Obtido do cadastro" : (item.pode_editar ? "Complementação" : "Somente leitura");
-      return `<div class="complementacao-campo${bloqueado ? " is-readonly" : ""}"><label for="attr-${coluna.id}">${esc(coluna.alias || coluna.criterio)}${coluna.mandatorio ? ' <span class="req">*</span>' : ""}</label><div class="complementacao-meta">${esc(coluna.unidade || "Sem unidade")} ${esc(coluna.relacao_simbolo || "")} · ${origem}</div>${input(coluna, slot.valor, bloqueado)}${coluna.premissa ? `<p class="complementacao-premissa">${esc(coluna.premissa)}</p>` : ""}</div>`;
+      const valorBruto = slot.valor_bruto ?? slot.valor;
+      return `<div class="complementacao-campo${bloqueado ? " is-readonly" : ""}"><label for="attr-${coluna.id}">${esc(coluna.alias || coluna.criterio)}${coluna.mandatorio ? ' <span class="req">*</span>' : ""}</label><div class="complementacao-meta">${esc(coluna.unidade || "Sem unidade")} ${esc(coluna.relacao_simbolo || "")} · ${origem}</div>${input(coluna, valorBruto, bloqueado)}${coluna.premissa ? `<p class="complementacao-premissa">${esc(coluna.premissa)}</p>` : ""}</div>`;
     }).join("");
     form.classList.remove("hidden");
     salvar.disabled = !item.pode_editar;
@@ -49,7 +50,8 @@
     status.textContent = item.pode_editar ? "" : "Você pode consultar esta demanda, mas somente o responsável pode complementá-la.";
     for (const coluna of item.colunas) {
       const elemento = document.querySelector(`#attr-${CSS.escape(coluna.id)}`);
-      const valor = item.valores[coluna.id]?.valor;
+      const slot = item.valores[coluna.id] || {};
+      const valor = slot.valor_bruto ?? slot.valor;
       if (elemento && coluna.tipo === "booleano" && valor != null) elemento.value = String(valor).toLowerCase();
     }
   }

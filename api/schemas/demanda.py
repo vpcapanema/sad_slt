@@ -27,7 +27,7 @@ class DemandaCreateSchema(BaseModel):
         description="Ignorado na criação — o servidor gera I-PRJ-XXXXXXXX ou P-PRJ-XXXXXXXX",
     )
     tipo_demandante: Literal["institucional", "privada"] = "institucional"
-    status: str = "analise_rascunho"
+    status: str = "analise_em_avaliacao"
     criadoEm: str | None = None
     instituicao_id: str
     instituicao_label: str | None = None
@@ -61,6 +61,8 @@ class DemandaResponseSchema(BaseModel):
     tipo_demandante: Literal["institucional", "privada"] = "institucional"
     status: str
     criadoEm: str
+    reprovadoEm: str | None = None
+    motivo_reprovacao: str | None = None
     instituicao_id: str
     instituicao_label: str | None = None
     instituicao_cnpj: str | None = None
@@ -75,6 +77,7 @@ class DemandaResponseSchema(BaseModel):
     programa_nome: str | None = None
     vinculo_institucional: bool = False
     vinculo_tipo: str | None = None
+    vinculo_objeto_id: str | None = None
     nome: str
     descricao: str | None = None
     geometria: GeometriaSchema | None = None

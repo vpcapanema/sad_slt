@@ -26,6 +26,7 @@
     const uid = `abr-${++seq}`;
     const selected = new Map(); // id -> { nome, tipo }
     let map = null;
+    let mapResizeObserver = null;
     let layer = null;
     let parentLayer = null;
     let contentBounds = null;
@@ -168,6 +169,15 @@
         attribution: "&copy; OpenStreetMap",
         maxZoom: 19,
       }).addTo(map);
+
+      const mapElement = $("map");
+      if (global.ResizeObserver && mapElement) {
+        mapResizeObserver = new ResizeObserver(() => {
+          if (!map || mapElement.offsetWidth === 0 || mapElement.offsetHeight === 0) return;
+          requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+        });
+        mapResizeObserver.observe(mapElement);
+      }
 
       const HomeControl = L.Control.extend({
         options: { position: "topleft" },

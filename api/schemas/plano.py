@@ -53,6 +53,8 @@ class PlanoResponseSchema(BaseModel):
     tipo_demandante: Literal["institucional"] = "institucional"
     status: str
     criadoEm: str
+    reprovadoEm: str | None = None
+    motivo_reprovacao: str | None = None
     diretoria_id: str
     nome: str
     descricao: str | None = None

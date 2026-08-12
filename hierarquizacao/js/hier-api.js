@@ -86,6 +86,7 @@
     executarFase2(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/2/executar`, jsonOpts("POST", payload)); },
     executarFase3(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/3/executar`, jsonOpts("POST", payload)); },
     salvarAtributosFase3(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/3/atributos`, jsonOpts("PATCH", payload)); },
+    salvarPesosFase3(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/fases/3/pesos`, jsonOpts("PATCH", payload)); },
     sintetizar(codigo, payload) { return request(`${BASE_H}/${encodeURIComponent(codigo)}/sintetizar`, jsonOpts("POST", payload)); },
     listarUniverso(tipo, status) {
       const qs = new URLSearchParams(status ? { status } : {}).toString();

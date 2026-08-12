@@ -25,10 +25,11 @@
   <section class="card-camadas-operacionais secao-camadas-operacionais card ahp-step-section"><div class="ahp-section-label"><span>Geoprocessamento — SLT</span></div><div class="ahp-section-body">
     <div id="fase2-controles-origem" hidden>
       <label id="ctrl-hier" class="fase1-ctrl">Hierarquização cadastrada <select id="fase-hierarquizacao"><option>Carregando…</option></select></label>
-      <label id="ctrl-pacote" class="fase1-ctrl">Pacote de favorabilidade homologado <select id="pacote-fase2"><option>Carregando…</option></select></label>
-      <label id="ctrl-metodo" class="fase1-ctrl">Método de extração <select id="metodo-fase2"><option value="ponto">Valor do raster no ponto da demanda</option></select><span class="fase1-ctrl-ajuda">Valores válidos entre 0 e 1. Ausência de cobertura ou NoData não é convertida em zero.</span></label>
+      <label id="ctrl-camada-grade" class="fase1-ctrl">Camada homologada do índice de favorabilidade territorial de grade <select id="camada-grade-fase2"><option>Carregando…</option></select></label>
+      <label id="ctrl-camada-rede" class="fase1-ctrl">Camada homologada do índice de favorabilidade territorial da rede <select id="camada-rede-fase2"><option>Carregando…</option></select></label>
+      <input id="metodo-fase2" type="hidden" value="ponto">
     </div>
-    <slt-geoprocessamento fase="fase2" titulo-saida="Superfície de favorabilidade territorial" saida-id="gp-favorabilidade" demandas-id="gp-demandas-fase2" frame-id="gp-frame-fase2" modelo-id="modelo-fase2" executar-id="executar-fase2" modelo="fluxo_fase2_favorabilidade" modelo-label="Fase 2 — Extração de favorabilidade territorial" botao-label="Calcular favorabilidade territorial"></slt-geoprocessamento>
+    <slt-geoprocessamento fase="fase2" titulo-saida="Superfícies de favorabilidade territorial" saida-id="gp-favorabilidade" demandas-id="gp-demandas-fase2" frame-id="gp-frame-fase2" modelo-id="modelo-fase2" executar-id="executar-fase2" modelo="fluxo_fase2_favorabilidade" modelo-label="Fase 2 — Extração de favorabilidade territorial" botao-label="Calcular favorabilidade territorial"></slt-geoprocessamento>
     <div id="fase2-erro" class="ahp-info-note ahp-info-note--error hidden"></div>
   </div></section>
   <section class="card ahp-step-section"><div class="ahp-section-label"><span>Resultados</span></div><div class="ahp-section-body"><p id="fase2-resultado-vazio" class="ahp-help-text">Execute o cálculo para ver os indicadores e o ranking.</p><div id="fase2-indicadores" class="fase-summary-grid"></div><div id="fase2-resultados" class="fase-table-wrap"></div><div id="fase2-auditoria" class="fase-audit hidden"></div><div class="fase-actions"><a class="fase-link" href="/restrict/geoespacial/gerador-favorabilidade/">Abrir Gerador de Favorabilidade Territorial</a></div></div></section>

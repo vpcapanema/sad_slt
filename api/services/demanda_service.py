@@ -13,12 +13,13 @@ from api.codigos_demanda import (
     gerar_codigo_unico,
     tipo_demandante_do_codigo,
 )
-from api.constants import CODIGO_PLANO_OUTROS, STATUS_INICIAL_DEMANDA
+from api.constants import CODIGO_PLANO_OUTROS, STATUS_INICIAL_DEMANDA, STATUS_PRE_REPROVACAO
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import demanda_repository, dominio_repository, plano_repository
 from api.services.campos_demanda import normalizar_projeto
 from api.services.hierarquia_outros import resolve_programa_pai_id
 from api.services.patch_helpers import apply_instituicao, apply_representante
+from api.services.reprovacao import validar_reprovacao
 from api.schemas.demanda import DemandaCreateSchema, DemandaResponseSchema, DemandaUpdateSchema, GeometriaSchema, RepresentanteSchema
 _ALLOWED_GEOM = frozenset({"Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon"})
 
@@ -69,6 +70,8 @@ def _row_to_response(row: dict[str, Any]) -> DemandaResponseSchema:
         tipo_demandante=tipo_demandante_do_codigo(row["codigo"]),
         status=row["status"],
         criadoEm=criado_em,
+        reprovadoEm=_iso_date(row.get("reprovado_em")),
+        motivo_reprovacao=row.get("motivo_reprovacao"),
         instituicao_id=str(row["sigma_instituicao_id"]),
         instituicao_label=row.get("instituicao_nome"),
         instituicao_cnpj=row.get("instituicao_cnpj"),
@@ -88,6 +91,7 @@ def _row_to_response(row: dict[str, Any]) -> DemandaResponseSchema:
         programa_nome=row.get("programa_nome"),
         vinculo_institucional=bool(row.get("vinculo_institucional")),
         vinculo_tipo=row.get("vinculo_tipo"),
+        vinculo_objeto_id=str(row["vinculo_objeto_id"]) if row.get("vinculo_objeto_id") else None,
         nome=row["nome"],
         descricao=row.get("descricao"),
         geometria=geometria,
@@ -211,6 +215,32 @@ def obter_demanda(codigo: str) -> DemandaResponseSchema:
     if not row:
         raise DemandaNotFoundError(codigo)
     return _row_to_response(row)
+
+
+def reprovar_demanda(
+    codigo: str,
+    *,
+    justificativa: str,
+    reprovado_por: str | None = None,
+) -> DemandaResponseSchema:
+    row = demanda_repository.get_by_codigo(codigo)
+    if not row:
+        raise DemandaNotFoundError(codigo)
+    if row["status"] not in STATUS_PRE_REPROVACAO:
+        raise DemandaValidationError(
+            f"Demanda em status '{row['status']}' não pode ser reprovada.", field="status"
+        )
+    motivo, usuario_id = validar_reprovacao(justificativa, reprovado_por)
+    updated = demanda_repository.reprovar(
+        codigo,
+        reprovado_por=usuario_id,
+        justificativa=motivo,
+    )
+    if not updated:
+        raise DemandaValidationError(
+            f"Demanda {codigo} não pôde ser reprovada (status alterado).", field="status"
+        )
+    return _row_to_response(updated)
 
 
 def _status_demanda_validos() -> set[str]:

@@ -188,6 +188,11 @@ async def pagina_fase_3_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/fase3-ajuste-fino.html")
 
 
+@app.get("/restrict/hierarquizacao/ranking/", include_in_schema=False)
+async def pagina_ranking_privado_hierarquizacao(request: Request) -> Response:
+    return render_page(request, "paginas/hierarquizacao/ranking-privado.html")
+
+
 @app.get("/restrict/ahp/", include_in_schema=False)
 async def pagina_indice_ahp_restrita(request: Request) -> Response:
     return render_page(request, "paginas/ahp/home.html")

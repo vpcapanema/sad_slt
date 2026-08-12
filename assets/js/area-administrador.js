@@ -142,36 +142,56 @@
   }
 
   // ---------- Menu de esquemas ----------
+  function renderGrupoMenu({ titulo, chave, tabelas, title, aberto = false }) {
+    const lista = el("ul", { class: "admin-tables" });
+    tabelas.forEach((t) => {
+      const vazia = t.registros === 0;
+      const link = el("button", {
+        class: `admin-table-link${vazia ? " vazia" : ""}`, type: "button",
+        "data-esquema": t.esquema, "data-tabela": t.nome,
+        title: `${t.esquema}.${t.nome}${t.registros === null ? "" : ` · ${t.registros} registro(s)`}`,
+        onclick: () => selecionarTabela(t.esquema, t.nome, t.dominio, link),
+      },
+        el("i", { class: t.dominio ? "fa-solid fa-list" : "fa-solid fa-table", "aria-hidden": "true" }),
+        el("span", {}, aliasTabela(t.nome)),
+        t.dominio ? el("span", { class: "dominio-badge" }, aliasEsquema(t.esquema)) : "",
+        el("span", { class: "admin-table-count" }, t.registros === null ? "—" : String(t.registros)));
+      lista.append(el("li", {}, link));
+    });
+    const bloco = el("div", { class: `admin-schema${aberto ? " open" : ""}`, "data-esquema": chave });
+    const toggle = el("button", {
+      class: "admin-schema-toggle", type: "button", title: title || titulo,
+      onclick: () => bloco.classList.toggle("open"),
+    },
+      el("i", { class: "fa-solid fa-chevron-right chevron", "aria-hidden": "true" }),
+      el("span", {}, titulo),
+      el("span", { class: "admin-schema-count" }, String(tabelas.length)));
+    bloco.append(toggle, lista);
+    refs.menu.append(bloco);
+  }
+
   async function carregarMenu() {
     try {
       const { esquemas } = await jsonFetch(`${API}/esquemas`);
       refs.menu.innerHTML = "";
-      esquemas.forEach((grupo) => {
-        const lista = el("ul", { class: "admin-tables" });
-        grupo.tabelas.forEach((t) => {
-          const vazia = t.registros === 0;
-          const link = el("button", {
-            class: `admin-table-link${vazia ? " vazia" : ""}`, type: "button",
-            "data-esquema": grupo.esquema, "data-tabela": t.nome,
-            title: `${t.nome}${t.registros === null ? "" : ` · ${t.registros} registro(s)`}`,
-            onclick: () => selecionarTabela(grupo.esquema, t.nome, t.dominio, link),
-          },
-            el("i", { class: t.dominio ? "fa-solid fa-list" : "fa-solid fa-table", "aria-hidden": "true" }),
-            el("span", {}, aliasTabela(t.nome)),
-            t.dominio ? el("span", { class: "dominio-badge" }, "domínio") : "",
-            el("span", { class: "admin-table-count" }, t.registros === null ? "—" : String(t.registros)));
-          lista.append(el("li", {}, link));
+      const dominios = esquemas.flatMap((grupo) =>
+        grupo.tabelas.filter((t) => t.dominio).map((t) => ({ ...t, esquema: grupo.esquema }))
+      ).sort((a, b) => aliasTabela(a.nome).localeCompare(aliasTabela(b.nome), "pt-BR"));
+      if (dominios.length) {
+        renderGrupoMenu({
+          titulo: "Tabelas de domínio", chave: "__dominios__", tabelas: dominios,
+          title: "Tabelas de domínio de todos os esquemas", aberto: true,
         });
-        const bloco = el("div", { class: "admin-schema", "data-esquema": grupo.esquema });
-        const toggle = el("button", {
-          class: "admin-schema-toggle", type: "button", title: grupo.esquema,
-          onclick: () => bloco.classList.toggle("open"),
-        },
-          el("i", { class: "fa-solid fa-chevron-right chevron", "aria-hidden": "true" }),
-          el("span", {}, aliasEsquema(grupo.esquema)),
-          el("span", { class: "admin-schema-count" }, String(grupo.tabelas.length)));
-        bloco.append(toggle, lista);
-        refs.menu.append(bloco);
+      }
+      esquemas.forEach((grupo) => {
+        const tabelas = grupo.tabelas
+          .filter((t) => !t.dominio)
+          .map((t) => ({ ...t, esquema: grupo.esquema }));
+        if (!tabelas.length) return;
+        renderGrupoMenu({
+          titulo: aliasEsquema(grupo.esquema), chave: grupo.esquema,
+          tabelas, title: grupo.esquema,
+        });
       });
     } catch (error) {
       refs.menu.innerHTML = `<p class="admin-menu-loading">${escapeHtml(error.message)}</p>`;

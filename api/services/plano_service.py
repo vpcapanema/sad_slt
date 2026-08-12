@@ -7,13 +7,14 @@ from typing import Any
 
 from api.codigos_demanda import gerar_codigo_plano, gerar_codigo_unico
 from api.constants import CODIGOS_SENTINELA_HIERARQUIA
-from api.constants import STATUS_PRE_APROVACAO
+from api.constants import STATUS_INICIAL_DEMANDA, STATUS_PRE_APROVACAO, STATUS_PRE_REPROVACAO
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import dominio_repository, plano_repository, programa_repository
 from api.schemas.demanda import RepresentanteSchema
 from api.schemas.plano import PlanoCreateSchema, PlanoResponseSchema, PlanoUpdateSchema
 from api.services.campos_demanda import normalizar_plano
 from api.services.patch_helpers import apply_instituicao, apply_representante
+from api.services.reprovacao import validar_reprovacao
 from api.services.status_transicoes import validar_transicao_status
 
 
@@ -50,6 +51,8 @@ def _row_to_response(row: dict[str, Any]) -> PlanoResponseSchema:
         id=row["codigo"],
         status=row["status"],
         criadoEm=_iso(row.get("criado_em")) or "",
+        reprovadoEm=_iso(row.get("reprovado_em")),
+        motivo_reprovacao=row.get("motivo_reprovacao"),
         diretoria_id=row["diretoria_id"],
         nome=row["nome"],
         descricao=row.get("descricao"),
@@ -109,7 +112,7 @@ def criar_plano(payload: PlanoCreateSchema) -> PlanoResponseSchema:
         "vigencia_fim": payload.vigencia_fim or None,
         "valor_global": payload.valor_global,
         "atributos_cadastrais": payload.atributos_cadastrais,
-        "status": "analise_rascunho",
+        "status": STATUS_INICIAL_DEMANDA,
     }
     normalizar_plano(row, pessoa_id=pessoa_id)
     inserted = plano_repository.insert(row, payload.unidades_espaciais)
@@ -141,6 +144,32 @@ def aprovar_plano(codigo: str, *, motivo: str | None = None,
     if not updated:
         raise DemandaValidationError(
             f"Plano {codigo} não pôde ser aprovado (status alterado).", field="status"
+        )
+    return _row_to_response(updated)
+
+
+def reprovar_plano(
+    codigo: str,
+    *,
+    justificativa: str,
+    reprovado_por: str | None = None,
+) -> PlanoResponseSchema:
+    row = plano_repository.get_by_codigo(codigo)
+    if not row:
+        raise DemandaNotFoundError(codigo)
+    if row["status"] not in STATUS_PRE_REPROVACAO:
+        raise DemandaValidationError(
+            f"Plano em status '{row['status']}' não pode ser reprovado.", field="status"
+        )
+    motivo, usuario_id = validar_reprovacao(justificativa, reprovado_por)
+    updated = plano_repository.reprovar(
+        codigo,
+        reprovado_por=usuario_id,
+        justificativa=motivo,
+    )
+    if not updated:
+        raise DemandaValidationError(
+            f"Plano {codigo} não pôde ser reprovado (status alterado).", field="status"
         )
     return _row_to_response(updated)
 

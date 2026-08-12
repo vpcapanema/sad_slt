@@ -54,6 +54,14 @@
     });
   }
 
+  async function reprovarDemanda(codigo, payload) {
+    return request(`/api/demandas/${encodeURIComponent(codigo)}/reprovar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
   async function listPlanos() {
     return request("/api/planos/internas");
   }
@@ -84,6 +92,14 @@
     });
   }
 
+  async function reprovarPlano(codigo, payload) {
+    return request(`/api/planos/${encodeURIComponent(codigo)}/reprovar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
   async function listProgramas() {
     return request("/api/programas/internas");
   }
@@ -111,6 +127,14 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload || {}),
+    });
+  }
+
+  async function reprovarPrograma(codigo, payload) {
+    return request(`/api/programas/${encodeURIComponent(codigo)}/reprovar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
   }
 
@@ -187,16 +211,19 @@
     updateDemanda,
     deleteDemanda,
     aprovarDemanda,
+    reprovarDemanda,
     listPlanos,
     getPlano,
     updatePlano,
     deletePlano,
     aprovarPlano,
+    reprovarPlano,
     listProgramas,
     getPrograma,
     updatePrograma,
     deletePrograma,
     aprovarPrograma,
+    reprovarPrograma,
     listDemandasByTipo,
     updateDemandaByTipo,
     deleteDemandaByTipo,

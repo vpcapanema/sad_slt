@@ -54,6 +54,12 @@ def validar_transicao_status(*, de: str, para: str) -> None:
             field="status",
         )
 
+    if destino == "analise_reprovada":
+        raise DemandaValidationError(
+            "Use a ação Reprovar e informe a justificativa obrigatória.",
+            field="status",
+        )
+
     permitidos = destinos_permitidos(origem)
     if destino not in permitidos:
         raise DemandaValidationError(

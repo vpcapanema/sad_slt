@@ -198,7 +198,14 @@ $migrations = @(
     "061_dominio_atributos_objeto.sql",
     "062_remove_dependencias_atributo_cadastral.sql",
     "063_padroniza_nomes_atributos_objeto.sql",
-    "064_unidade_atributos_ordinais.sql"
+    "064_unidade_atributos_ordinais.sql",
+    "065_estrutura_valores_atributos_fase3.sql",
+    "066_clareza_bases_estimativas.sql",
+    "067_escalas_ordinais_projeto.sql",
+    "068_escalas_ordinais_plano_programa.sql",
+    "069_envio_cadastro_em_avaliacao.sql",
+    "070_vinculo_objeto.sql",
+    "071_reprovacao_demanda.sql"
 )
 
 if ($OnlyMigration) {
@@ -210,11 +217,11 @@ if ($OnlyMigration) {
 }
 
 if (-not $OnlyMigration) {
-    $latestSchemaQuery = "SELECT CASE WHEN EXISTS (SELECT 1 FROM geoprocessamento.portal_servico WHERE url='https://brasil.mapbiomas.org/colecoes-mapbiomas/') THEN 't' ELSE 'f' END;"
+    $latestSchemaQuery = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='projeto' AND column_name='motivo_reprovacao') THEN 't' ELSE 'f' END;"
     $coreSchemaQuery = "SELECT CASE WHEN to_regclass('demandas.projeto') IS NOT NULL OR to_regclass('ahp.config_multicriterio_portfolio') IS NOT NULL THEN 't' ELSE 'f' END;"
 
     if (Test-SchemaReady $latestSchemaQuery) {
-        Write-Ok "Schema ja esta na migration 055; nenhuma migration sera reaplicada"
+        Write-Ok "Schema ja esta na migration 071; nenhuma migration sera reaplicada"
         $migrations = @()
     } elseif (Test-SchemaReady $coreSchemaQuery) {
         Write-Ok "Schema legado ja esta atualizado; migrations 002-036 serao ignoradas"

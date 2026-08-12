@@ -1500,6 +1500,34 @@ body.admin-data-page .admin-toolbar-back {
   border-radius: var(--pli-radius);
 }
 
+.admin-pagination {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.75rem;
+  color: var(--pli-muted);
+  font-size: 0.8125rem;
+}
+
+.admin-pagination button {
+  display: inline-grid;
+  width: 2.125rem;
+  height: 2.125rem;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--pli-border);
+  border-radius: 6px;
+  color: var(--pli-deep);
+  background: var(--pli-white);
+  cursor: pointer;
+}
+
+.admin-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;

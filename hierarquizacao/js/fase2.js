@@ -6,9 +6,8 @@
   })[char]);
   const queryCode = new URLSearchParams(location.search).get("codigo");
   let hierarquizacoes = [];
-  let pacotes = [];
+  let camadas = [];
   const atual = () => hierarquizacoes.find((item) => item.codigo === $("fase-hierarquizacao").value);
-  const pacoteAtual = () => pacotes.find((item) => item.pacote_id === $("pacote-fase2").value);
   const objetos = (h) => h?.dados_hierarquizacao?.objetos || [];
 
   const codigoCurto = (base) =>
@@ -76,21 +75,15 @@
     return `<div class="fase-metric"><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`;
   }
 
-  function renderPacote() {
-    const pacote = pacoteAtual();
-    const el = $("fase2-pacote-resumo");
+  function renderCamadas() {
     const saida = $("gp-favorabilidade");
-    if (!pacote) {
-      if (el) el.classList.add("hidden");
-      if (saida) saida.innerHTML = '<p class="ahp-help-text">Selecione o pacote homologado.</p>';
+    const selecionadas = [$("camada-grade-fase2").value, $("camada-rede-fase2").value]
+      .map((id) => camadas.find((camada) => camada.homologacao_id === id)).filter(Boolean);
+    if (!selecionadas.length) {
+      if (saida) saida.innerHTML = '<p class="ahp-help-text">Selecione as superfícies homologadas de grade e de rede.</p>';
       return;
     }
-    const camadas = pacote.camadas || [];
-    if (el) {
-      el.innerHTML = `<div class="fase-summary-grid">${metric("Código", pacote.codigo)}${metric("Versão", pacote.versao)}${metric("Situação", pacote.status)}${metric("Camadas", camadas.length)}</div>`;
-      el.classList.remove("hidden");
-    }
-    if (saida) saida.innerHTML = camadas.length ? camadas.map((camada) => `<div class="fase1-layer"><i class="fas fa-layer-group"></i><div><strong>${esc(camada.nome || camada.nome_publicacao || "Superfície homologada")}</strong><small>${esc(camada.tipo || "Raster")} · ${esc(camada.versao || pacote.versao || "—")}</small></div></div>`).join("") : '<p class="ahp-help-text">O pacote não informou camadas publicadas.</p>';
+    if (saida) saida.innerHTML = selecionadas.map((camada) => `<div class="fase1-layer"><i class="fas fa-layer-group"></i><div><strong>${esc(camada.nome_publicacao || camada.nome || "Superfície homologada")}</strong><small>Raster · ${esc(camada.versao || "—")} · ${esc(camada.arquivo)}</small></div></div>`).join("");
   }
 
   function renderResumo(h) {
@@ -121,18 +114,19 @@
     if (!h) return;
     const docs = objetos(h);
     const processados = docs.filter((o) => o.hierarquizacao?.fase_2?.executada);
-    const pontuados = docs.filter((o) => Number.isFinite(o.hierarquizacao?.fase_2?.score_fase2));
+    const pontuados = docs.filter((o) => Number.isFinite(o.hierarquizacao?.fase_2?.indice_favorabilidade_grade) && Number.isFinite(o.hierarquizacao?.fase_2?.indice_favorabilidade_rede));
     const vazio = $("fase2-resultado-vazio");
     if (vazio) vazio.classList.add("hidden");
     $("fase2-indicadores").innerHTML = metric("Demandas da rodada", docs.length) + metric("Processadas", processados.length) + metric("Com score válido", pontuados.length) + metric("Sem cobertura/NoData", docs.length - pontuados.length);
     const rows = docs.map((o) => {
       const c = o.cabecalho_objeto || {};
       const f = o.hierarquizacao?.fase_2 || {};
-      const value = f.score_fase2;
-      const status = Number.isFinite(value) ? '<span class="fase-status fase-status--ok">Calculado</span>' : '<span class="fase-status fase-status--warn">Pendente</span>';
-      return `<tr><td><strong>${esc(c.codigo)}</strong><br><small>${esc(c.nome || "")}</small></td><td>${esc(f.metodo_extracao || "—")}</td><td>${Number.isFinite(value) ? Number(value).toFixed(4) : "—"}</td><td>${esc(f.ranking_fase2 ?? "—")}</td><td>${status}</td></tr>`;
+      const grade = f.indice_favorabilidade_grade;
+      const rede = f.indice_favorabilidade_rede;
+      const status = Number.isFinite(grade) && Number.isFinite(rede) ? '<span class="fase-status fase-status--ok">Calculado</span>' : '<span class="fase-status fase-status--warn">Pendente</span>';
+      return `<tr><td><strong>${esc(c.codigo)}</strong><br><small>${esc(c.nome || "")}</small></td><td>${Number.isFinite(grade) ? Number(grade).toFixed(4) : "—"}</td><td>${Number.isFinite(rede) ? Number(rede).toFixed(4) : "—"}</td><td>${status}</td></tr>`;
     }).join("");
-    $("fase2-resultados").innerHTML = docs.length ? `<table class="fase-table"><thead><tr><th>Demanda</th><th>Método</th><th>Favorabilidade</th><th>Posição</th><th>Situação</th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="fase-empty">A rodada não possui demandas.</div>';
+    $("fase2-resultados").innerHTML = docs.length ? `<table class="fase-table"><thead><tr><th>Demanda</th><th>Índice de grade</th><th>Índice de rede</th><th>Situação</th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="fase-empty">A rodada não possui demandas.</div>';
     const report = h.dados_hierarquizacao?.cabecalho_grupo?.relatorios?.fase_2;
     const audit = $("fase2-auditoria");
     if (report) { audit.innerHTML = `<strong>Auditoria da execução</strong><pre>${esc(JSON.stringify(report, null, 2))}</pre>`; audit.classList.remove("hidden"); } else audit.classList.add("hidden");
@@ -157,7 +151,7 @@
       });
     };
     mover("gp-demandas-fase2-ctrl", "ctrl-hier");
-    mover("gp-favorabilidade-ctrl", "ctrl-pacote", "ctrl-metodo");
+    mover("gp-favorabilidade-ctrl", "ctrl-camada-grade", "ctrl-camada-rede");
     const origem = document.getElementById("fase2-controles-origem");
     if (origem) origem.removeAttribute("hidden");
   }
@@ -170,15 +164,21 @@
       $("fase-hierarquizacao").innerHTML = '<option value="">Selecione…</option>' + elegiveis.map((h) => `<option value="${esc(h.codigo)}">${esc(h.codigo)} — ${esc(h.nome)}</option>`).join("");
       if (queryCode) { $("fase-hierarquizacao").value = queryCode; renderResumo(atual()); ocultarResultados(); }
       $("fase-hierarquizacao").onchange = () => { renderResumo(atual()); ocultarResultados(); };
-      pacotes = await HierApi.listarPacotes("fase2");
-      $("pacote-fase2").innerHTML = '<option value="">Selecione…</option>' + pacotes.map((p) => `<option value="${esc(p.pacote_id)}">${esc(p.codigo)} — ${esc(p.nome)} · ${esc(p.versao)}</option>`).join("");
-      $("pacote-fase2").onchange = renderPacote;
+      const respostaCamadas = await fetch("/api/geoespacial/biblioteca-canonica/arquivos?modulo=ambos", { credentials: "same-origin" });
+      if (!respostaCamadas.ok) throw new Error("Não foi possível consultar a biblioteca canônica de camadas.");
+      camadas = (await respostaCamadas.json()).filter((camada) => camada.registrada && camada.homologacao_id && /\.(tif|tiff)$/i.test(camada.arquivo || ""));
+      const opcoes = '<option value="">Selecione…</option>' + camadas.map((camada) => `<option value="${esc(camada.homologacao_id)}">${esc(camada.nome_publicacao || camada.nome)} · ${esc(camada.versao || "—")}</option>`).join("");
+      $("camada-grade-fase2").innerHTML = opcoes;
+      $("camada-rede-fase2").innerHTML = opcoes;
+      $("camada-grade-fase2").onchange = renderCamadas;
+      $("camada-rede-fase2").onchange = renderCamadas;
       $("executar-fase2").onclick = async () => {
-        const h = atual(); const pacote = $("pacote-fase2").value;
-        if (!h || !pacote) return erro("Selecione a hierarquização e o pacote homologado.");
+        const h = atual(); const grade = $("camada-grade-fase2").value; const rede = $("camada-rede-fase2").value;
+        if (!h || !grade || !rede) return erro("Selecione a hierarquização e as duas superfícies homologadas.");
+        if (grade === rede) return erro("Selecione camadas diferentes para grade e rede.");
         try {
           $("fase2-erro").classList.add("hidden");
-          const updated = await HierApi.executarFase2(h.codigo, { pacote_id: pacote, metodo_extracao: $("metodo-fase2").value });
+          const updated = await HierApi.executarFase2(h.codigo, { camada_grade_id: grade, camada_rede_id: rede, metodo_extracao: "ponto" });
           hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
           renderResumo(updated);
           renderResultados(updated);

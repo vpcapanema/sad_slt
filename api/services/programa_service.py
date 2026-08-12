@@ -7,12 +7,13 @@ from typing import Any
 
 from api.codigos_demanda import gerar_codigo_programa, gerar_codigo_unico
 from api.constants import CODIGO_PROGRAMA_OUTROS, CODIGOS_SENTINELA_HIERARQUIA
-from api.constants import STATUS_PRE_APROVACAO
+from api.constants import STATUS_INICIAL_DEMANDA, STATUS_PRE_APROVACAO, STATUS_PRE_REPROVACAO
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import demanda_repository, dominio_repository, programa_repository
 from api.services.campos_demanda import normalizar_programa
 from api.services.hierarquia_outros import resolve_plano_pai_id
 from api.services.patch_helpers import apply_instituicao, apply_representante
+from api.services.reprovacao import validar_reprovacao
 from api.services.status_transicoes import validar_transicao_status
 from api.schemas.demanda import RepresentanteSchema
 from api.schemas.programa import ProgramaCreateSchema, ProgramaResponseSchema, ProgramaUpdateSchema
@@ -51,6 +52,8 @@ def _row_to_response(row: dict[str, Any]) -> ProgramaResponseSchema:
         id=row["codigo"],
         status=row["status"],
         criadoEm=_iso(row.get("criado_em")) or "",
+        reprovadoEm=_iso(row.get("reprovado_em")),
+        motivo_reprovacao=row.get("motivo_reprovacao"),
         plano_id=str(row["plano_id"]) if row.get("plano_id") else None,
         plano_codigo=row.get("plano_codigo"),
         plano_nome=row.get("plano_nome"),
@@ -63,6 +66,7 @@ def _row_to_response(row: dict[str, Any]) -> ProgramaResponseSchema:
         justificativa=row.get("justificativa"),
         valor_global=float(valor) if valor is not None else None,
         vinculo_institucional=bool(row.get("vinculo_institucional")),
+        vinculo_objeto_id=str(row["vinculo_objeto_id"]) if row.get("vinculo_objeto_id") else None,
         instituicao_id=str(row["sigma_instituicao_id"]) if row.get("sigma_instituicao_id") else None,
         instituicao_label=row.get("instituicao_nome"),
         instituicao_cnpj=row.get("instituicao_cnpj"),
@@ -124,7 +128,7 @@ def criar_programa(payload: ProgramaCreateSchema) -> ProgramaResponseSchema:
         "representante_nome": (payload.representante.nome or "").strip(),
         "representante_email": payload.representante.email,
         "representante_telefone": payload.representante.telefone,
-        "status": "analise_rascunho",
+        "status": STATUS_INICIAL_DEMANDA,
     }
     normalizar_programa(row, pessoa_id=pessoa_id)
     inserted = programa_repository.insert(row, payload.unidades_espaciais)
@@ -156,6 +160,32 @@ def aprovar_programa(codigo: str, *, motivo: str | None = None,
     if not updated:
         raise DemandaValidationError(
             f"Programa {codigo} não pôde ser aprovado (status alterado).", field="status"
+        )
+    return _row_to_response(updated)
+
+
+def reprovar_programa(
+    codigo: str,
+    *,
+    justificativa: str,
+    reprovado_por: str | None = None,
+) -> ProgramaResponseSchema:
+    row = programa_repository.get_by_codigo(codigo)
+    if not row:
+        raise DemandaNotFoundError(codigo)
+    if row["status"] not in STATUS_PRE_REPROVACAO:
+        raise DemandaValidationError(
+            f"Programa em status '{row['status']}' não pode ser reprovado.", field="status"
+        )
+    motivo, usuario_id = validar_reprovacao(justificativa, reprovado_por)
+    updated = programa_repository.reprovar(
+        codigo,
+        reprovado_por=usuario_id,
+        justificativa=motivo,
+    )
+    if not updated:
+        raise DemandaValidationError(
+            f"Programa {codigo} não pôde ser reprovado (status alterado).", field="status"
         )
     return _row_to_response(updated)
 

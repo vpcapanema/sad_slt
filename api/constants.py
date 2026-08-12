@@ -31,14 +31,16 @@ STATUS_FASE_CADASTRO_ANALISE = "cadastro_analise"
 STATUS_FASE_HIERARQUIZACAO = "hierarquizacao"
 STATUS_FASE_EXECUCAO = "execucao"
 
-STATUS_INICIAL_DEMANDA = "analise_rascunho"
+STATUS_INICIAL_DEMANDA = "analise_em_avaliacao"
 STATUS_POS_APROVACAO = "analise_aprovada"
+STATUS_REPROVACAO = "analise_reprovada"
 # Confirmação do universo da análise (módulo de configuração) move a demanda
 # de "aprovada" para "em hierarquização" — todo o Bloco 2 vive neste status.
 STATUS_EM_HIERARQUIZACAO = "hierarq_em_andamento"
 
 # Origens permitidas para POST /aprovar (handoff → aprovada)
 STATUS_PRE_APROVACAO = frozenset({"analise_em_avaliacao"})
+STATUS_PRE_REPROVACAO = frozenset({"analise_em_avaliacao"})
 
 # Universo AHP comparável (aprovada, em hierarquização ou já hierarquizada/salva)
 STATUS_UNIVERSO_AHP = frozenset(

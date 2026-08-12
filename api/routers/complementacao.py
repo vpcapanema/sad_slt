@@ -39,7 +39,10 @@ def _item(row: dict[str, Any], obj: dict[str, Any], *, pode_editar: bool) -> dic
     cab = obj.get("cabecalho_objeto") or {}
     colunas = extrair_colunas(_matriz(row))
     slots = cab.get("atributos_fase3") or {}
-    preenchidos = sum(1 for col in colunas if (slots.get(col["id"]) or {}).get("valor") not in (None, ""))
+    preenchidos = sum(
+        1 for col in colunas
+        if (slots.get(col["id"]) or {}).get("valor_bruto", (slots.get(col["id"]) or {}).get("valor")) not in (None, "")
+    )
     return {
         "hierarquizacao_codigo": row["codigo"],
         "hierarquizacao_nome": row.get("nome"),
@@ -102,10 +105,21 @@ async def salvar_complementacao(hierarquizacao_codigo: str, objeto_codigo: str,
         for codigo, valor in valores.items():
             if codigo not in colunas:
                 raise HTTPException(422, f"Atributo nao pertence a matriz vigente: {codigo}")
-            slot = slots.setdefault(codigo, {"origem": "complementacao"})
+            slot = slots.setdefault(codigo, {
+                "origem": "complementacao",
+                "valor_bruto": None,
+                "valor_rescalonado": None,
+                "peso": None,
+            })
             if slot.get("origem") == "cadastro":
                 continue
-            slot.update({"valor": valor, "origem": "complementacao", "preenchido_por": user.id})
+            slot.update({
+                "valor_bruto": valor,
+                "valor": valor,
+                "valor_rescalonado": None,
+                "origem": "complementacao",
+                "preenchido_por": user.id,
+            })
         hierarquizacao_repository.update(hierarquizacao_codigo, {"dados_hierarquizacao": dados})
         return _item(
             {**row, "dados_hierarquizacao": dados},

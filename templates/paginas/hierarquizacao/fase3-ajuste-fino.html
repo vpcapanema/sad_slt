@@ -27,15 +27,30 @@
   </section>
   <section class="card ahp-step-section"><div class="ahp-section-label"><span>1. Selecionar a rodada</span></div><div class="ahp-section-body"><label>Hierarquização cadastrada <select id="fase-hierarquizacao"><option>Carregando…</option></select></label><div id="fase-resumo" class="fase-summary hidden"></div></div></section>
   <section class="card ahp-step-section"><div class="ahp-section-label"><span id="fase3-titulo-atributos">2. Critérios atributo de objeto</span></div><div class="ahp-section-body">{% include "componentes/_tabela_atributos_objetos.html" %}</div></section>
-  <section class="card ahp-step-section"><div class="ahp-section-label"><span>3. Definir regras de cálculo</span></div><div class="ahp-section-body"><div class="fase-grid-2">
+  <section class="card ahp-step-section"><div class="ahp-section-label"><span>3. Regras para atributos vazios</span></div><div class="ahp-section-body">
+    <div id="fase3-atributos-ausentes" class="fase3-ausentes-wrap" aria-live="polite"></div>
+    <div class="fase-grid-2">
       <input id="fase3-modo-pesos" type="hidden" value="normalizados">
-      <label>Tratamento de ausentes
+      <label>Tratamento de atributos com valores vazios
         <select id="fase3-ausentes"><option value="renormalizar">Ignorar e renormalizar</option><option value="bloquear">Bloquear projeto</option><option value="imputar_neutro">Imputar neutro</option><option value="imputar_pior">Imputar pior valor</option><option value="imputar_medio">Imputar média</option></select>
       </label>
-      <label>Completude mínima <input id="fase3-completude" type="number" min="0" max="1" step="0.05" value="0.60"></label>
-    </div><p class="ahp-help-text">Critérios obrigatórios ausentes ou inválidos bloqueiam o score, independentemente da política escolhida.</p><div class="fase-actions"><button id="executar-fase3" class="btn btn--primary" type="button"><i class="fas fa-play"></i> Executar Fase 3</button></div></div></section>
+      <label>Completude mínima (% de atributos preenchidos para que o objeto seja considerado no cálculo) <input id="fase3-completude" type="number" min="0" max="100" step="5" value="60"></label>
+    </div><p class="ahp-help-text">Critérios obrigatórios ausentes ou inválidos bloqueiam o índice, independentemente da política escolhida.</p><div class="fase-actions"><button id="executar-fase3" class="btn btn--primary" type="button"><i class="fas fa-calculator"></i> Calcular índice de priorização</button></div></div></section>
   <section class="card ahp-step-section"><div class="ahp-section-label"><span>4. Conferir o ranking da fase</span></div><div class="ahp-section-body"><div id="fase3-indicadores" class="fase-summary-grid"></div><div id="fase3-resultados" class="fase-table-wrap"></div><div id="fase3-auditoria" class="fase-audit hidden"></div><div id="fase3-erro" class="ahp-info-note ahp-info-note--error hidden"></div></div></section>
-  <section class="card ahp-step-section"><div class="ahp-section-label"><span>5. Gerar a síntese final</span></div><div class="ahp-section-body"><div class="fase-grid-2"><label>Peso da Fase 2 <input id="peso-fase2" type="number" min="0" max="1" step="0.05" value="0.70"></label><label>Peso da Fase 3 <input id="peso-fase3" type="number" min="0" max="1" step="0.05" value="0.30"></label></div><p class="ahp-help-text">Quando as duas fases participam da rodada, os pesos devem somar 1.</p><div class="fase-actions"><button id="sintetizar" class="btn btn--primary" type="button"><i class="fas fa-ranking-star"></i> Gerar síntese e ranking final</button></div></div></section>
+  <section class="card ahp-step-section"><div class="ahp-section-label"><span>5. Gerar a síntese final</span></div><div class="ahp-section-body">
+    <div id="fase3-tabela-sintese" class="fase-table-wrap"></div>
+    <section class="fase3-calculo-geral secao-calculo-indice-geral">
+      <h3>5.1 Calcular o índice geral e o ranking</h3>
+      <fieldset class="fase3-operadores"><legend>Operador</legend><label><input type="radio" name="operador-sintese" value="media_simples" checked> Média simples</label><label><input type="radio" name="operador-sintese" value="media_ponderada"> Média ponderada</label></fieldset>
+      <div id="pesos-sintese" class="fase3-pesos-sintese" hidden>
+        <label class="atributo-peso peso-sintese" data-sintese-peso="rede"><span>Índice de favorabilidade de rede</span><input class="atributo-peso-numero peso-sintese-numero" id="peso-rede" type="number" min="0" max="1" step="0.001" value="0.333"><input class="atributo-peso-barra peso-sintese-barra" type="range" min="0" max="1" step="0.001" value="0.333"></label>
+        <label class="atributo-peso peso-sintese" data-sintese-peso="grade"><span>Índice de favorabilidade de grade</span><input class="atributo-peso-numero peso-sintese-numero" id="peso-grade" type="number" min="0" max="1" step="0.001" value="0.333"><input class="atributo-peso-barra peso-sintese-barra" type="range" min="0" max="1" step="0.001" value="0.333"></label>
+        <label class="atributo-peso peso-sintese" data-sintese-peso="prioridade"><span>Índice de prioridade</span><input class="atributo-peso-numero peso-sintese-numero" id="peso-prioridade" type="number" min="0" max="1" step="0.001" value="0.334"><input class="atributo-peso-barra peso-sintese-barra" type="range" min="0" max="1" step="0.001" value="0.334"></label>
+      </div>
+      <p class="ahp-help-text">Na média ponderada, os três pesos devem somar 1.</p>
+      <div class="fase-actions"><button id="sintetizar" class="btn btn--primary" type="button"><i class="fas fa-ranking-star"></i> Calcular índice geral de hierarquização</button></div>
+    </section>
+  </div></section>
   {% include "componentes/modal/_modal_demandas_do_grupo_hierarquizacoes_realizadas_gestao_das_hierarquizacoes.html" %}
 </main>
 {% endblock %}

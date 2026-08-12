@@ -40,6 +40,11 @@ class AprovarDemandaSchema(BaseModel):
     aprovado_por: str | None = Field(None, description="UUID do usuário administrador (SIGMA)")
 
 
+class ReprovarDemandaSchema(BaseModel):
+    justificativa: str = Field(..., min_length=1, max_length=2000)
+    reprovado_por: str | None = Field(None, description="UUID do usuário administrador (SIGMA)")
+
+
 class ObjetoAhpUpdateSchema(BaseModel):
     status: str | None = None
     nome: str | None = Field(None, min_length=1, max_length=200)
