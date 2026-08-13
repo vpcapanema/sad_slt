@@ -1318,6 +1318,13 @@
   }
 
   function amostraFiltrada() {
+    // Hierarquização carregada: a tabela resumo mostra EXATAMENTE as demandas
+    // dessa rodada (snapshot congelado em state.universoObjetos), sem aplicar
+    // os filtros de grupo (que só valem para o construtor manual de universo).
+    if (state.hierarquizacaoCodigo) {
+      const porId = new Map(state.demandas.map((d) => [String(d.id), d]));
+      return state.universoObjetos.map((o) => porId.get(String(o.id)) || { id: o.id, codigo: o.codigo, nome: o.nome, status: null });
+    }
     const ativos = gruposAtivos();
     if (ativos.length === 0) return state.demandas.slice();
     return state.demandas.filter((d) => ativos.some((g) => matchGrupo(d, g)));
@@ -1691,6 +1698,7 @@
     state.universoConfirmado = false;
     state.universoObjetos = [];
     state.universoSig = "";
+    state.hierarquizacaoCodigo = null;
     onEscopoChange();
     await carregarDemandas();
     renderUniverso();
@@ -1703,19 +1711,26 @@
   const grupoSelect = document.getElementById("grupo-hierarquizacao");
   const grupoResumo = document.getElementById("grupo-hierarquizacao-resumo");
   const construtorGrupo = document.getElementById("construtor-grupo-ahp");
+  // Seletor de hierarquização na subseção I (Destino e objeto da análise), que
+  // pré-preenche Denominação e Objeto da análise a partir da rodada escolhida.
+  const hierDestinoSelect = document.getElementById("config-hierarquizacao");
   let hierarquizacoesDisponiveis = [];
 
   async function carregarHierarquizacoesDisponiveis() {
-    if (!grupoSelect) return;
+    if (!grupoSelect && !hierDestinoSelect) return;
     try {
       const response = await fetch("/api/ahp/hierarquizacoes", { credentials: "same-origin" });
       if (!response.ok) throw new Error("Falha ao carregar os grupos cadastrados.");
       hierarquizacoesDisponiveis = await response.json();
-      grupoSelect.innerHTML = '<option value="">Selecione…</option>' + hierarquizacoesDisponiveis.map(function (h) {
+      const optionsHtml = '<option value="">Selecione…</option>' + hierarquizacoesDisponiveis.map(function (h) {
         return '<option value="' + h.codigo + '">' + h.codigo + " — " + h.nome + " (" + (h.objetos || []).length + " demandas)</option>";
       }).join("");
+      if (grupoSelect) grupoSelect.innerHTML = optionsHtml;
+      if (hierDestinoSelect) hierDestinoSelect.innerHTML = optionsHtml;
     } catch (e) {
-      grupoSelect.innerHTML = '<option value="">Não foi possível carregar os grupos</option>';
+      const erroHtml = '<option value="">Não foi possível carregar os grupos</option>';
+      if (grupoSelect) grupoSelect.innerHTML = erroHtml;
+      if (hierDestinoSelect) hierDestinoSelect.innerHTML = erroHtml;
     }
   }
 
@@ -1729,9 +1744,12 @@
     });
   });
 
-  if (grupoSelect) grupoSelect.addEventListener("change", async function () {
-    const h = hierarquizacoesDisponiveis.find(function (item) { return item.codigo === grupoSelect.value; });
-    if (!h) return;
+  // Aplica a hierarquização escolhida (por qualquer um dos dois seletores):
+  // preenche tipo de demanda, universo de objetos, matriz de critérios e,
+  // opcionalmente, a Denominação da configuração.
+  async function aplicarHierarquizacao(codigo, opts) {
+    const h = hierarquizacoesDisponiveis.find(function (item) { return item.codigo === codigo; });
+    if (!h) return null;
     const tipo = state.tiposDemanda.find(function (t) { return t.codigo === h.tipo_demanda; });
     if (tipo) {
       tipoDemandaSel.value = String(tipo.id);
@@ -1743,20 +1761,57 @@
     state.universoConfirmado = state.universoObjetos.length > 0;
     const matrizGrupo = h.dados_hierarquizacao && h.dados_hierarquizacao.cabecalho_grupo
       ? h.dados_hierarquizacao.cabecalho_grupo.matriz_premissas_criterios : null;
-    const linhasMatriz = Array.isArray(matrizGrupo) ? matrizGrupo : ((matrizGrupo && matrizGrupo.linhas) || []);
+    const linhasMatrizBruta = Array.isArray(matrizGrupo) ? matrizGrupo : ((matrizGrupo && matrizGrupo.linhas) || []);
+    // A matriz vem com os cabeçalhos completos (Dimensão, Critério, Etapa, Fase, ...);
+    // normaliza para as colunas canônicas usadas na tabela da Etapa 3.
+    const linhasMatriz = window.SltMatrizPremissas && window.SltMatrizPremissas.normalizarLinhasMatrizCompleta
+      ? window.SltMatrizPremissas.normalizarLinhasMatrizCompleta(linhasMatrizBruta)
+      : linhasMatrizBruta;
     if (linhasMatriz.length) {
       localStorage.setItem("slt_ahp_matriz_premissas", JSON.stringify(linhasMatriz));
       localStorage.setItem("slt_ahp_matriz_arquivo_nome", (matrizGrupo && matrizGrupo.arquivo) || "matriz_da_hierarquizacao.json");
       localStorage.setItem("ahp_inputMethod", "upload_matriz");
+      localStorage.setItem("ahp_inputMethodOrigem", "hierarquizacao");
+      localStorage.setItem("ahp_hierarquizacaoOrigem", JSON.stringify({ codigo: h.codigo, nome: h.nome }));
       localStorage.setItem("ahp_criteriaCount", String(linhasMatriz.length));
       localStorage.setItem("ahp_criteria", JSON.stringify(linhasMatriz.map(function (r) { return r.criterio || r["Critério"] || r.nome; }).filter(Boolean)));
     }
+    if (grupoSelect && grupoSelect.value !== h.codigo) grupoSelect.value = h.codigo;
     if (grupoResumo) {
       grupoResumo.innerHTML = "<strong>" + h.nome + "</strong><br>" + state.universoObjetos.length + " demanda(s) · tipo " + h.tipo_demanda + " · matriz de premissas e critérios carregada da rodada.";
       grupoResumo.classList.remove("is-hidden");
     }
+    if ((!opts || opts.preencherDenominacao !== false) && denominacaoInput && !denominacaoInput.value.trim()) {
+      denominacaoInput.value = h.nome || h.codigo;
+      denominacaoInput.dispatchEvent(new Event("input", { bubbles: true }));
+      if (window.SLTFieldFilled) window.SLTFieldFilled.sync(denominacaoInput);
+    }
     renderResumo(); atualizarPreview(); saveDraft();
+    return h;
+  }
+
+  if (grupoSelect) grupoSelect.addEventListener("change", function () {
+    aplicarHierarquizacao(grupoSelect.value);
   });
+
+  if (hierDestinoSelect) {
+    hierDestinoSelect.addEventListener("change", async function () {
+      const codigo = hierDestinoSelect.value;
+      if (!codigo) return;
+      if (!hierarquizacoesDisponiveis.length) await carregarHierarquizacoesDisponiveis();
+      const destinoPortfolio = form.querySelector('input[name="tipo_analise"][value="portfolio"]');
+      if (destinoPortfolio && !destinoPortfolio.checked) {
+        destinoPortfolio.checked = true;
+        destinoPortfolio.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      const carregarRadio = document.querySelector('input[name="origem-grupo"][value="carregar"]');
+      if (carregarRadio && !carregarRadio.checked) {
+        carregarRadio.checked = true;
+        carregarRadio.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      await aplicarHierarquizacao(codigo);
+    });
+  }
 
   if (addGrupoBtn) {
     addGrupoBtn.addEventListener("click", function () {
@@ -1997,7 +2052,7 @@
       },
     });
 
-    await Promise.all([carregarDominios(), carregarFontesPortfolio()]);
+    await Promise.all([carregarDominios(), carregarFontesPortfolio(), carregarHierarquizacoesDisponiveis()]);
     sugEscopo.regenerar();
     sugObjetivo.regenerar();
     sugDescricao.regenerar();

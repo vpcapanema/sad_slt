@@ -403,7 +403,7 @@
 
   // Dropdown de vocabulário controlado. Se o valor atual (ex.: vindo de upload)
   // não constar na lista, é preservado como uma opção extra selecionada.
-  function buildSelect(key, value, list) {
+  function buildSelect(key, value, list, rowId) {
     var v = String(value == null ? "" : value).trim();
     var opts = '<option value="">—</option>';
     var found = false;
@@ -415,22 +415,24 @@
     if (v && !found) {
       opts += '<option value="' + escapeHtml(value) + '" selected>' + escapeHtml(value) + "</option>";
     }
+    var fieldId = rowId + "-" + key;
     return (
-      '<select class="c-form-control ahp-matriz-edit-input" data-key="' + key + '">' + opts + "</select>"
+      '<select id="' + fieldId + '" name="' + fieldId + '" class="c-form-control ahp-matriz-edit-input" data-key="' + key + '">' + opts + "</select>"
     );
   }
 
-  function cellEditor(key, value) {
-    if (key === "fase") return buildSelect("fase", value, ["Fase 2", "Fase 3"]);
-    if (key === "dimensao") return buildSelect("dimensao", value, DIMENSOES);
-    if (key === "relacao") return buildSelect("relacao", value, RELACOES);
-    if (key === "mandatorio") return buildSelect("mandatorio", value, MANDATORIOS);
+  function cellEditor(key, value, rowId) {
+    if (key === "fase") return buildSelect("fase", value, ["Fase 2", "Fase 3"], rowId);
+    if (key === "dimensao") return buildSelect("dimensao", value, DIMENSOES, rowId);
+    if (key === "relacao") return buildSelect("relacao", value, RELACOES, rowId);
+    if (key === "mandatorio") return buildSelect("mandatorio", value, MANDATORIOS, rowId);
 
     var type = "text";
     var maxlen = key === "premissa" ? 600 : key === "criterio" ? 160 : 240;
     var ph = PLACEHOLDERS[key] || "";
+    var fieldId = rowId + "-" + key;
     return (
-      '<input type="' + type + '" class="c-form-control ahp-matriz-edit-input" data-key="' + key +
+      '<input type="' + type + '" id="' + fieldId + '" name="' + fieldId + '" class="c-form-control ahp-matriz-edit-input" data-key="' + key +
       '" maxlength="' + maxlen + '" placeholder="' + escapeHtml(ph) + '" value="' + escapeHtml(value) + '">'
     );
   }
@@ -455,10 +457,14 @@
     });
   }
 
+  // Contador para gerar ids/names únicos nas linhas da tabela (adicionadas/removidas dinamicamente).
+  var editorRowSeq = 0;
+
   function editorRowHtml(row) {
-    var html = '<tr class="ahp-matriz-edit-row">';
+    var rowId = "matriz-row-" + (++editorRowSeq);
+    var html = '<tr class="ahp-matriz-edit-row" data-row-id="' + rowId + '">';
     COLUMNS.forEach(function (col) {
-      html += '<td data-col="' + col.key + '">' + cellEditor(col.key, row[col.key]) + "</td>";
+      html += '<td data-col="' + col.key + '">' + cellEditor(col.key, row[col.key], rowId) + "</td>";
     });
     html +=
       '<td class="ahp-matriz-edit-actions">' +
@@ -651,6 +657,47 @@
     }
   }
 
+  // Aliases (em ordem de prioridade) dos cabeçalhos completos da matriz de
+  // critérios e premissas (ex.: Matriz_Criterios_Premissas_PLI-SP_v3.xlsx e a
+  // matriz gravada em hierarquizações) para as colunas canônicas da tabela da UI.
+  var FULL_ROW_FIELD_ALIASES = {
+    dimensao: ["dimensao", "dimensão"],
+    criterio: ["criterio", "critério"],
+    premissa: ["premissa"],
+    fase: ["fase"],
+    relacao: ["relacao", "relação"],
+    metricas: ["metrica (o que e medido)", "métrica (o que é medido)", "dado", "metricas", "métricas"],
+    fonte: ["fonte"],
+    mandatorio: ["mandatorio", "mandatório"],
+  };
+
+  /** Busca, na linha da matriz de critérios e premissas enviada, os campos
+   * correspondentes às colunas da tabela da UI e preenche-os com os valores
+   * encontrados (por cabeçalho, tolerando acentuação e variações de nome). */
+  function normalizarRowCompleta(row) {
+    var out = emptyRow();
+    if (!row || typeof row !== "object") return out;
+    var porHeaderNorm = {};
+    Object.keys(row).forEach(function (k) {
+      porHeaderNorm[normHeader(k)] = row[k];
+    });
+    Object.keys(FULL_ROW_FIELD_ALIASES).forEach(function (destino) {
+      var aliases = FULL_ROW_FIELD_ALIASES[destino];
+      for (var i = 0; i < aliases.length; i++) {
+        var v = porHeaderNorm[normHeader(aliases[i])];
+        if (v != null && String(v).trim()) {
+          out[destino] = String(v).trim();
+          break;
+        }
+      }
+    });
+    return out;
+  }
+
+  function normalizarLinhasMatrizCompleta(rows) {
+    return (Array.isArray(rows) ? rows : []).map(normalizarRowCompleta);
+  }
+
   global.SltMatrizPremissas = {
     COLUMNS: COLUMNS,
     EDITABLE_COLUMNS: EDITABLE_COLUMNS,
@@ -668,5 +715,6 @@
     renderMatrizPremissasPanel: renderMatrizPremissasPanel,
     renderMatrizPremissasEditor: renderMatrizPremissasEditor,
     syncCriterioFromNames: syncCriterioFromNames,
+    normalizarLinhasMatrizCompleta: normalizarLinhasMatrizCompleta,
   };
 })(window);

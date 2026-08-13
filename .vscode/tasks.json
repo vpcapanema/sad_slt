@@ -135,6 +135,198 @@
 				"& 'd:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' -u 'd:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\importar_recortar_fase1.py' *> 'd:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\data\\geoespacial\\relatorios\\importacao_recorte_sp_fase1.run.log'"
 			],
 			"isBackground": false
+		},
+		{
+			"label": "Fix matriz freeze panes",
+			"type": "shell",
+			"command": "d:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe",
+			"args": [
+				"d:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\fix_matriz_freeze.py"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Inspecionar colunas da matriz",
+			"type": "shell",
+			"command": "d:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe",
+			"args": [
+				"d:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\inspect_matriz_columns.py"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "SLT: Ajustar matriz Fase/Etapa/Classificação",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\ajustar_matriz_fases_classificacao_v2.py'"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "SLT: Atualizar matriz de critérios",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\ajustar_matriz_fases_classificacao_final.py'"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "SLT: Formatar matriz Excel",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\formatar_matriz_excel.py'"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "SLT: Remover Congelamento Planilha",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\fix_freeze_panes_hard.py'"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "SLT: Remover ALL Congelamentos",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\fix_freeze_panes_hard_v2.py'"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "SLT: Check Fase 3",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\check_fase3.py'"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "SLT: Check Fase 3 JSON",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\check_fase3_json.py'"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "SLT: Classificar Fase 3",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\classificar_fase3.py'"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "SLT: Remover Criterios Planilha",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\remover_criterios_estaticos_excel.py'"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "SLT: Aplicar Migration 072",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\aplicar_072.py'"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "SLT: Force Apply DB",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\aplicar_072_v2.py'"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "SLT: Force Apply Local DB",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"& 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\.venv\\Scripts\\python.exe' 'D:\\REPOSITORIOS\\sistema_apoio_a_tomada_de_decisao_web\\tmp\\aplicar_072_local.py'"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

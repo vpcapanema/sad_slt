@@ -10,7 +10,7 @@ from api.constants import CODIGO_PROGRAMA_OUTROS, CODIGOS_SENTINELA_HIERARQUIA
 from api.constants import STATUS_INICIAL_DEMANDA, STATUS_PRE_APROVACAO, STATUS_PRE_REPROVACAO
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import demanda_repository, dominio_repository, programa_repository
-from api.services.campos_demanda import normalizar_programa
+from api.services.campos_demanda import extrair_atributos_nativos, mesclar_atributos_nativos, normalizar_programa
 from api.services.hierarquia_outros import resolve_plano_pai_id
 from api.services.patch_helpers import apply_instituicao, apply_representante
 from api.services.reprovacao import validar_reprovacao
@@ -75,7 +75,7 @@ def _row_to_response(row: dict[str, Any]) -> ProgramaResponseSchema:
         pessoa_id=str(row["sigma_pessoa_id"]) if row.get("sigma_pessoa_id") else None,
         representante=rep,
         unidades_espaciais=list(row.get("unidades_espaciais") or []),
-        atributos_cadastrais=dict(row.get("atributos_cadastrais") or {}),
+        atributos_cadastrais=mesclar_atributos_nativos(row),
     )
 
 
@@ -221,6 +221,7 @@ def atualizar_programa(codigo: str, payload: ProgramaUpdateSchema) -> ProgramaRe
     apply_representante(data, data)
     for key in ("instituicao_id", "instituicao_label", "pessoa_id", "representante"):
         data.pop(key, None)
+    extrair_atributos_nativos(data)
 
     row = programa_repository.update(codigo, data)
     if not row:

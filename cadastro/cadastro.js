@@ -104,8 +104,9 @@
       const attribute = attributes.find((item) => item.codigo === select.dataset.atributo);
       if (!attribute || !attribute.tipos_objeto.includes(select.dataset.tipoObjeto)) return;
       const emptyOption = select.multiple ? "" : '<option value="">— Não informado —</option>';
+      // O valor nativo gravado em demandas.plano/programa/projeto é o rótulo completo ("Nível N — ..."), não o código curto.
       select.innerHTML = emptyOption + optionValuesFor(attribute, select.dataset.tipoObjeto)
-        .map((item) => `<option value="${item.codigo}">${item.rotulo}</option>`)
+        .map((item) => `<option value="${item.rotulo}">${item.rotulo}</option>`)
         .join("");
     });
   }

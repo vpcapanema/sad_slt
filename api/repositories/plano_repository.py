@@ -31,6 +31,9 @@ _SELECT_BASE = """
         p.vigencia_fim,
         p.valor_global,
         p.atributos_cadastrais,
+        p.maturidade,
+        p.prazo_referencia_meses,
+        p.base_estimativa_prazo,
         p.status,
         p.reprovado_em,
         p.motivo_reprovacao,
@@ -56,7 +59,8 @@ _INSERT_SQL = """
         instituicao_nome_fantasia, instituicao_cnpj,
         sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
         vigencia_inicio, vigencia_fim,
-        valor_global, atributos_cadastrais, status, criado_por, atualizado_por
+        valor_global, atributos_cadastrais, maturidade, prazo_referencia_meses, base_estimativa_prazo,
+        status, criado_por, atualizado_por
     ) VALUES (
         %(codigo)s, %(diretoria_id)s, %(nome)s, %(descricao)s,
         %(objetivo_estrategico)s, %(responsavel)s,
@@ -64,7 +68,8 @@ _INSERT_SQL = """
         %(instituicao_nome_fantasia)s, %(instituicao_cnpj)s,
         %(sigma_pessoa_id)s, %(representante_nome)s, %(representante_email)s, %(representante_telefone)s,
         %(vigencia_inicio)s, %(vigencia_fim)s,
-        %(valor_global)s, %(atributos_cadastrais)s, %(status)s, %(criado_por)s, %(atualizado_por)s
+        %(valor_global)s, %(atributos_cadastrais)s, %(maturidade)s, %(prazo_referencia_meses)s, %(base_estimativa_prazo)s,
+        %(status)s, %(criado_por)s, %(atualizado_por)s
     )
     RETURNING id
 """
@@ -78,7 +83,13 @@ _INSERT_UE_SQL = """
 
 def insert(row: dict[str, Any], unidades: list[str] | None = None) -> dict[str, Any]:
     """Insere um plano e seus vínculos de abrangência espacial."""
-    row = {**row, "atributos_cadastrais": Jsonb(row.get("atributos_cadastrais") or {})}
+    row = {
+        "maturidade": None,
+        "prazo_referencia_meses": None,
+        "base_estimativa_prazo": None,
+        **row,
+        "atributos_cadastrais": Jsonb(row.get("atributos_cadastrais") or {}),
+    }
     with get_connection() as conn:
         cur = conn.execute(_INSERT_SQL, row)
         inserted = cur.fetchone()
@@ -105,6 +116,9 @@ _UPDATE_ALLOWED = {
     "vigencia_fim": "vigencia_fim",
     "valor_global": "valor_global",
     "atributos_cadastrais": "atributos_cadastrais",
+    "maturidade": "maturidade",
+    "prazo_referencia_meses": "prazo_referencia_meses",
+    "base_estimativa_prazo": "base_estimativa_prazo",
     "sigma_instituicao_id": "sigma_instituicao_id",
     "instituicao_nome": "instituicao_nome",
     "instituicao_cnpj": "instituicao_cnpj",

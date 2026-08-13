@@ -51,6 +51,11 @@ _SELECT_BASE = """
         d.vigencia_fim,
         d.valor_global
         ,d.atributos_cadastrais
+        ,d.maturidade
+        ,d.capex_estimado
+        ,d.base_estimativa_capex
+        ,d.prazo_referencia_meses
+        ,d.base_estimativa_prazo
     FROM demandas.projeto d
     LEFT JOIN demandas.programa pg ON pg.id = d.programa_id
 """
@@ -85,6 +90,11 @@ _INSERT_SQL = """
         vigencia_fim,
         valor_global,
         atributos_cadastrais,
+        maturidade,
+        capex_estimado,
+        base_estimativa_capex,
+        prazo_referencia_meses,
+        base_estimativa_prazo,
         criado_por,
         atualizado_por
     ) VALUES (
@@ -116,6 +126,11 @@ _INSERT_SQL = """
         %(vigencia_fim)s,
         %(valor_global)s,
         %(atributos_cadastrais)s,
+        %(maturidade)s,
+        %(capex_estimado)s,
+        %(base_estimativa_capex)s,
+        %(prazo_referencia_meses)s,
+        %(base_estimativa_prazo)s,
         %(criado_por)s,
         %(atualizado_por)s
     )
@@ -125,6 +140,14 @@ _INSERT_SQL = """
 
 def insert(row: dict[str, Any]) -> dict[str, Any]:
     """Insere uma demanda e retorna a linha persistida."""
+    row = {
+        "maturidade": None,
+        "capex_estimado": None,
+        "base_estimativa_capex": None,
+        "prazo_referencia_meses": None,
+        "base_estimativa_prazo": None,
+        **row,
+    }
     with get_connection() as conn:
         try:
             cur = conn.execute(_INSERT_SQL, row)
@@ -226,6 +249,11 @@ _UPDATE_ALLOWED = {
     "vigencia_fim": "vigencia_fim",
     "valor_global": "valor_global",
     "atributos_cadastrais": "atributos_cadastrais",
+    "maturidade": "maturidade",
+    "capex_estimado": "capex_estimado",
+    "base_estimativa_capex": "base_estimativa_capex",
+    "prazo_referencia_meses": "prazo_referencia_meses",
+    "base_estimativa_prazo": "base_estimativa_prazo",
 }
 
 

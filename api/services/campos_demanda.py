@@ -25,6 +25,42 @@ def aplicar_auditoria_representante(row: dict[str, Any], pessoa_id: str) -> dict
     return row
 
 
+# Atributos cadastrais estáveis (migration 072) hoje vivem em colunas nativas de
+# demandas.plano/programa/projeto, não mais nas chaves correspondentes do JSONB
+# atributos_cadastrais. O mapeamento preserva o contrato HTTP (que continua
+# aceitando/retornando essas chaves dentro de atributos_cadastrais).
+_ATRIBUTO_NATIVO_MAP = {
+    "maturidade_objeto": "maturidade",
+    "capex_estimado": "capex_estimado",
+    "base_estimativa_capex": "base_estimativa_capex",
+    "prazo_referencia_meses": "prazo_referencia_meses",
+    "base_estimativa_prazo": "base_estimativa_prazo",
+}
+
+
+def extrair_atributos_nativos(row: dict[str, Any]) -> dict[str, Any]:
+    """Move os atributos cadastrais estáveis do JSONB para as colunas nativas (escrita)."""
+    if "atributos_cadastrais" not in row:
+        return row
+    cadastrais = dict(row.get("atributos_cadastrais") or {})
+    for chave_json, coluna in _ATRIBUTO_NATIVO_MAP.items():
+        if chave_json in cadastrais:
+            row[coluna] = cadastrais.pop(chave_json)
+    row["atributos_cadastrais"] = cadastrais
+    return row
+
+
+def mesclar_atributos_nativos(row: dict[str, Any]) -> dict[str, Any]:
+    """Recompõe atributos_cadastrais incluindo os valores das colunas nativas (leitura)."""
+    cadastrais = dict(row.get("atributos_cadastrais") or {})
+    for chave_json, coluna in _ATRIBUTO_NATIVO_MAP.items():
+        valor = row.get(coluna)
+        if valor is None:
+            continue
+        cadastrais[chave_json] = float(valor) if coluna == "capex_estimado" else valor
+    return cadastrais
+
+
 def normalizar_plano(row: dict[str, Any], *, pessoa_id: str) -> dict[str, Any]:
     aplicar_auditoria_representante(row, pessoa_id)
     row["objetivo_estrategico"] = _txt(row.get("objetivo_estrategico"))
@@ -39,6 +75,7 @@ def normalizar_plano(row: dict[str, Any], *, pessoa_id: str) -> dict[str, Any]:
     if row.get("valor_global") is None:
         row["valor_global"] = 0
     row.setdefault("motivo_aprovacao", "")
+    extrair_atributos_nativos(row)
     return row
 
 
@@ -58,6 +95,7 @@ def normalizar_programa(row: dict[str, Any], *, pessoa_id: str) -> dict[str, Any
     if row.get("valor_global") is None:
         row["valor_global"] = 0
     row.setdefault("motivo_aprovacao", "")
+    extrair_atributos_nativos(row)
     return row
 
 
@@ -80,6 +118,7 @@ def normalizar_projeto(row: dict[str, Any], *, pessoa_id: str) -> dict[str, Any]
         row["classificacao"] = {}
     if row.get("complementos") is None:
         row["complementos"] = {}
+    extrair_atributos_nativos(row)
     return row
 
 

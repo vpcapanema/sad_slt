@@ -37,9 +37,10 @@
       "prazo_referencia_meses",
       "base_estimativa_prazo",
     ]);
+    // Rótulos vêm de demandas.dom_atributo_objeto (nome/configuracao_por_tipo.rotulo); usados apenas se a tabela não os definir.
     const nomes = {
       maturidade_objeto: `Grau de maturidade do ${tituloTipo(tipo)}`,
-      capex_estimado: "Capex (custo estimado para implantação)",
+      capex_estimado: "Capex — custo estimado para implantação (R$)",
       base_estimativa_capex: "Grau de definição do custo de implantação",
       base_estimativa_prazo: tipo === "plano" ? "Grau de definição do horizonte temporal" : "Grau de definição do prazo de implantação",
     };
@@ -54,13 +55,14 @@
     };
     return dominios.filter((item) => item.tipos_objeto.includes(tipo) && ponderaveis.has(item.codigo)).map((item) => {
       const opcoes = opcoesDominio(item, tipo);
-      const mapeamento = Object.fromEntries(opcoes.map((opcao, indice) => [opcao.codigo, opcoes.length === 1 ? 1 : indice / (opcoes.length - 1)]));
+      // O valor nativo armazenado é o rótulo completo ("Nível N — ..."), não o código curto do domínio.
+      const mapeamento = Object.fromEntries(opcoes.map((opcao, indice) => [opcao.rotulo, opcoes.length === 1 ? 1 : indice / (opcoes.length - 1)]));
       if (item.codigo === "vinculo_institucional") Object.assign(mapeamento, { true: 1, false: 0, sim: 1, nao: 0 });
       return {
         id: `cadastro:${item.codigo}`,
         chave: item.codigo,
         grupo: "cadastro",
-        alias: nomes[item.codigo] || item.configuracao_por_tipo?.[tipo]?.rotulo || item.nome,
+        alias: item.configuracao_por_tipo?.[tipo]?.rotulo || item.nome || nomes[item.codigo],
         unidade: item.unidade || (item.tipo_dado === "categoria" ? "escala ordinal" : null),
         tipo: ["inteiro", "monetario"].includes(item.tipo_dado) ? "numerico" : "categorico",
         tipo_dado: ["inteiro", "monetario"].includes(item.tipo_dado) ? "numerico" : "ordinal",
@@ -68,11 +70,11 @@
         relacao: direcoes[item.codigo] || "maior_melhor",
         relacao_simbolo: direcoes[item.codigo] === "menor_melhor" ? "↓" : "↑",
         mapeamento,
-        rotulos: Object.fromEntries(opcoes.map((opcao) => [opcao.codigo, opcao.rotulo])),
+        rotulos: Object.fromEntries(opcoes.map((opcao) => [opcao.rotulo, opcao.rotulo])),
         rotulos_procedencia: item.codigo === "capex_estimado"
-          ? Object.fromEntries(opcoesDominio(dominioPorCodigo.base_estimativa_capex || {}, tipo).map((opcao) => [opcao.codigo, opcao.rotulo]))
+          ? Object.fromEntries(opcoesDominio(dominioPorCodigo.base_estimativa_capex || {}, tipo).map((opcao) => [opcao.rotulo, opcao.rotulo]))
           : item.codigo === "prazo_referencia_meses"
-            ? Object.fromEntries(opcoesDominio(dominioPorCodigo.base_estimativa_prazo || {}, tipo).map((opcao) => [opcao.codigo, opcao.rotulo]))
+            ? Object.fromEntries(opcoesDominio(dominioPorCodigo.base_estimativa_prazo || {}, tipo).map((opcao) => [opcao.rotulo, opcao.rotulo]))
             : {},
         mandatorio: !item.permite_nao_informado,
       };

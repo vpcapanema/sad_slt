@@ -120,6 +120,19 @@
 
                             <div class="ahp-method-choice">
                                 <div class="ahp-method-choice-header">
+                                    <input type="radio" id="method-hierarquizacao" name="input-method" value="hierarquizacao" autocomplete="off" disabled data-evento-inline="ahp-step2-criterios-conteudo-10">
+                                    <label for="method-hierarquizacao"><i class="fas fa-folder-tree"></i> <strong>Carregar da hierarquização</strong></label>
+                                </div>
+                                <div id="hierarquizacao-method-content" class="method-content method-content--hidden">
+                                    <div class="c-form-group">
+                                        <p class="form-desc">Reaproveita a matriz de critérios e premissas já cadastrada no registro de hierarquização vinculado à configuração carregada na Seção 2.2.</p>
+                                        <p class="form-desc ahp-help-text"><i class="fas fa-circle-info"></i> Carregue uma configuração em «Selecionar configuração» (Seção 2.2) para localizar a hierarquização vinculada.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ahp-method-choice">
+                                <div class="ahp-method-choice-header">
                                     <input type="radio" id="method-upload" name="input-method" value="upload" autocomplete="off" data-evento-inline="ahp-step2-criterios-conteudo-6">
                                     <label for="method-upload"><i class="fas fa-upload"></i> <strong>Upload de arquivo local</strong></label>
                                 </div>
@@ -185,6 +198,7 @@
   <script src="/restrict/ahp/js/ahp-coerencia.js"></script>
   <script src="/restrict/ahp/js/ahp-coerencia-ui.js"></script>
   <script src="/restrict/ahp/js/step1-upload-matriz.js"></script>
+  <script src="/restrict/ahp/js/step2-hierarquizacao-matriz.js"></script>
   <script src="/assets/js/field-filled.js"></script>
   <script src="/assets/js/paginas/ahp-step2-criterios-conteudo-eventos.js"></script>
 {% endblock %}

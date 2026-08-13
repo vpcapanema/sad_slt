@@ -12,7 +12,7 @@ from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import dominio_repository, plano_repository, programa_repository
 from api.schemas.demanda import RepresentanteSchema
 from api.schemas.plano import PlanoCreateSchema, PlanoResponseSchema, PlanoUpdateSchema
-from api.services.campos_demanda import normalizar_plano
+from api.services.campos_demanda import extrair_atributos_nativos, mesclar_atributos_nativos, normalizar_plano
 from api.services.patch_helpers import apply_instituicao, apply_representante
 from api.services.reprovacao import validar_reprovacao
 from api.services.status_transicoes import validar_transicao_status
@@ -69,7 +69,7 @@ def _row_to_response(row: dict[str, Any]) -> PlanoResponseSchema:
         vigencia_fim=_iso(row.get("vigencia_fim")),
         valor_global=float(valor) if valor is not None else None,
         unidades_espaciais=list(row.get("unidades_espaciais") or []),
-        atributos_cadastrais=dict(row.get("atributos_cadastrais") or {}),
+        atributos_cadastrais=mesclar_atributos_nativos(row),
     )
 
 
@@ -194,6 +194,7 @@ def atualizar_plano(codigo: str, payload: PlanoUpdateSchema) -> PlanoResponseSch
     apply_representante(data, data)
     for key in ("instituicao_id", "instituicao_label", "pessoa_id", "representante"):
         data.pop(key, None)
+    extrair_atributos_nativos(data)
 
     row = plano_repository.update(codigo, data)
     if not row:

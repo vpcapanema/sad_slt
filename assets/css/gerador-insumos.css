@@ -870,6 +870,31 @@ html:has(body.gerador-page) {
   margin-top: 0.25rem;
   color: #607268;
 }
+.gerador-tabela-scroll {
+  overflow: auto;
+  max-height: 320px;
+  border: 1px solid #dce4df;
+  border-radius: 8px;
+}
+.gerador-tabela-matriz {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+.gerador-tabela-matriz th,
+.gerador-tabela-matriz td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #dce4df;
+  text-align: left;
+  vertical-align: top;
+}
+.gerador-tabela-matriz th {
+  position: sticky;
+  top: 0;
+  background: #163c2d;
+  color: #fff;
+  text-transform: capitalize;
+}
 .fase1-score {
   text-align: center;
   font-weight: 700;

@@ -44,4 +44,9 @@ document.addEventListener("DOMContentLoaded", function () {
       processCriteriaCount()
     });
   });
+  document.querySelectorAll("[data-evento-inline=\"ahp-step2-criterios-conteudo-10\"]").forEach(function (elemento) {
+    elemento.addEventListener("change", function (event) {
+      toggleInputMethod()
+    });
+  });
 });

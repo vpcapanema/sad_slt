@@ -1,6 +1,20 @@
 // Step 4 specific initialization
         document.addEventListener('DOMContentLoaded', function() {
-            const savedCriteria = localStorage.getItem('ahp_criteria');
+            // Fonte canônica: a coluna Critério da matriz de critérios e premissas
+            // carregada/upada nas etapas anteriores (Seleção de Critérios, Nomes),
+            // não apenas o cache "ahp_criteria" (que pode ficar desatualizado).
+            var inputMethod = localStorage.getItem('ahp_inputMethod') || 'manual';
+            var matrizCriterios = null;
+            if (inputMethod === 'upload_matriz' && window.SltMatrizPremissas) {
+                var linhasMatriz = window.SltMatrizPremissas.loadMatrizPremissas();
+                if (linhasMatriz && linhasMatriz.length) {
+                    matrizCriterios = linhasMatriz
+                        .map(function (r) { return (r && (r.criterio || r['Critério'] || r.nome)) || ''; })
+                        .filter(Boolean);
+                }
+            }
+
+            const savedCriteria = matrizCriterios ? JSON.stringify(matrizCriterios) : localStorage.getItem('ahp_criteria');
             const savedMethod = localStorage.getItem('ahp_chosenMethod');
 
             if (!savedCriteria) {
@@ -15,6 +29,11 @@
             }
 
             criteria = JSON.parse(savedCriteria);
+            if (matrizCriterios) {
+                // Mantém o cache sincronizado com a matriz (fonte canônica).
+                localStorage.setItem('ahp_criteria', savedCriteria);
+                localStorage.setItem('ahp_criteriaCount', String(matrizCriterios.length));
+            }
             const method = savedMethod;
 
             const methodCardTitle = document.getElementById('methodCardTitle');

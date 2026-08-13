@@ -16,7 +16,7 @@ from api.codigos_demanda import (
 from api.constants import CODIGO_PLANO_OUTROS, STATUS_INICIAL_DEMANDA, STATUS_PRE_REPROVACAO
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import demanda_repository, dominio_repository, plano_repository
-from api.services.campos_demanda import normalizar_projeto
+from api.services.campos_demanda import extrair_atributos_nativos, mesclar_atributos_nativos, normalizar_projeto
 from api.services.hierarquia_outros import resolve_programa_pai_id
 from api.services.patch_helpers import apply_instituicao, apply_representante
 from api.services.reprovacao import validar_reprovacao
@@ -100,7 +100,7 @@ def _row_to_response(row: dict[str, Any]) -> DemandaResponseSchema:
         vigencia_inicio=_iso_date(row.get("vigencia_inicio")),
         vigencia_fim=_iso_date(row.get("vigencia_fim")),
         valor_global=float(row["valor_global"]) if row.get("valor_global") is not None else None,
-        atributos_cadastrais=dict(row.get("atributos_cadastrais") or {}),
+        atributos_cadastrais=mesclar_atributos_nativos(row),
     )
 
 
@@ -285,6 +285,7 @@ def atualizar_demanda(codigo: str, payload: DemandaUpdateSchema) -> DemandaRespo
 
     for key in ("instituicao_id", "instituicao_label", "pessoa_id", "representante"):
         data.pop(key, None)
+    extrair_atributos_nativos(data)
 
     lat = data.get("latitude")
     lng = data.get("longitude")

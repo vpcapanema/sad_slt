@@ -180,8 +180,18 @@
     finish();
   }
 
+  /** Extrai os nomes da coluna Critério diretamente da matriz carregada (fonte canônica). */
+  function criteriosDaMatriz() {
+    if (!global.SltMatrizPremissas) return null;
+    var rows = global.SltMatrizPremissas.loadMatrizPremissas();
+    if (!rows || !rows.length) return null;
+    return rows.map(function (r) { return (r && (r.criterio || r["Critério"] || r.nome)) || ""; });
+  }
+
   function bootCriteriaInputs() {
-    var count = global.localStorage.getItem("ahp_criteriaCount");
+    var isUpload = (global.localStorage.getItem("ahp_inputMethod") || "manual") === "upload_matriz";
+    var matrizCriterios = isUpload ? criteriosDaMatriz() : null;
+    var count = matrizCriterios ? matrizCriterios.length : parseInt(global.localStorage.getItem("ahp_criteriaCount"), 10);
     if (!count || count < 1) {
       var note = global.document.getElementById("reviewNote");
       if (note) {
@@ -197,8 +207,17 @@
     var container = global.document.getElementById("criteriaInputs");
     if (!container) return;
 
-    var savedCriteria = JSON.parse(global.localStorage.getItem("ahp_criteria") || "[]");
-    var isUpload = (global.localStorage.getItem("ahp_inputMethod") || "manual") === "upload_matriz";
+    var savedCriteria = matrizCriterios || JSON.parse(global.localStorage.getItem("ahp_criteria") || "[]");
+    if (matrizCriterios) {
+      // Mantém ahp_criteria/ahp_criteriaCount sincronizados com a matriz (fonte canônica).
+      global.localStorage.setItem("ahp_criteria", JSON.stringify(matrizCriterios));
+      global.localStorage.setItem("ahp_criteriaCount", String(matrizCriterios.length));
+    }
+    var origem = global.localStorage.getItem("ahp_inputMethodOrigem") || (isUpload ? "upload" : "manual");
+    var hierOrigem = null;
+    if (origem === "hierarquizacao") {
+      try { hierOrigem = JSON.parse(global.localStorage.getItem("ahp_hierarquizacaoOrigem") || "null"); } catch (_e) { hierOrigem = null; }
+    }
 
     if (isUpload) {
       var set = function (id, txt) {
@@ -208,7 +227,9 @@
       set("pageTitleText", "Etapa 3: Conferir Critérios");
       set(
         "pageDesc",
-        "Os critérios foram importados da matriz enviada. Revise os nomes e complete a Tabela de Premissas e Critérios abaixo."
+        origem === "hierarquizacao"
+          ? "Os critérios foram importados da matriz da hierarquização" + (hierOrigem ? " «" + hierOrigem.codigo + " — " + hierOrigem.nome + "»" : "") + ". Revise os nomes e complete a Tabela de Premissas e Critérios abaixo."
+          : "Os critérios foram importados da matriz enviada. Revise os nomes e complete a Tabela de Premissas e Critérios abaixo."
       );
       set("cadastroLabel", "Conferência dos Nomes");
       set("stepTitleText", "Confira os nomes dos critérios");
@@ -217,7 +238,7 @@
         noteUpload.className = "ahp-recommendation";
         noteUpload.innerHTML =
           '<div class="ahp-recommendation__head"><i class="fas fa-clipboard-check"></i>' +
-          "<strong>Critérios importados.</strong></div>" +
+          "<strong>Critérios importados" + (origem === "hierarquizacao" ? " da hierarquização" : "") + ".</strong></div>" +
           "<p>Ajuste os nomes e complete premissas, dimensões e demais campos na tabela abaixo antes de continuar.</p>";
       }
     }
@@ -266,6 +287,7 @@
 
   global.saveCriteriaNames = saveCriteriaNames;
   global.continueStep3 = continueStep3;
+  global.SLTStep3Nomes = { boot: bootCriteriaInputs };
 
   global.document.addEventListener("DOMContentLoaded", bootCriteriaInputs);
 })(window);

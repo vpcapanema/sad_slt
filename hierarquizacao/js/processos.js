@@ -921,12 +921,24 @@
     }
     if (ext === "xlsx" && window.XLSX) {
       const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
-      // Aba principal do modelo padronizado; se ausente, usa a primeira aba com dados.
-      const PRINCIPAL = "Matriz Crit Premissas v2";
-      const abaPrincipal = wb.SheetNames.includes(PRINCIPAL)
-        ? PRINCIPAL
-        : wb.SheetNames.find((n) => n.toLowerCase() !== "instruções") ||
-          wb.SheetNames[0];
+      // Abas auxiliares do modelo oficial (SLT/PLI-SP) que nunca contêm a matriz.
+      const ABAS_AUXILIARES = new Set(["instruções", "instrucoes", "_listas", "etapas", "dimensões de critérios", "dimensoes de criterios", "critérios", "criterios"]);
+      const normalizar = (s) => String(s || "").trim().toLowerCase();
+      const temColunasDaMatriz = (nome) => {
+        const primeiraLinha = XLSX.utils.sheet_to_json(wb.Sheets[nome], { header: 1, defval: "" })[0] || [];
+        const cabecalho = primeiraLinha.map(normalizar);
+        return cabecalho.some((c) => c.includes("crit")) && cabecalho.some((c) => c.includes("etapa"));
+      };
+      // 1) Nome de aba conhecido (versões atuais e anteriores do modelo).
+      let abaPrincipal = ["Matriz Crit Premissas v3", "Matriz Crit Premissas v2"].find((n) => wb.SheetNames.includes(n));
+      // 2) Qualquer aba, não auxiliar, cujo cabeçalho tenha as colunas Critério e Etapa.
+      if (!abaPrincipal) {
+        abaPrincipal = wb.SheetNames.find((n) => !ABAS_AUXILIARES.has(normalizar(n)) && temColunasDaMatriz(n));
+      }
+      // 3) Primeira aba que não seja reconhecidamente auxiliar.
+      if (!abaPrincipal) {
+        abaPrincipal = wb.SheetNames.find((n) => !ABAS_AUXILIARES.has(normalizar(n))) || wb.SheetNames[0];
+      }
       const linhas = XLSX.utils.sheet_to_json(wb.Sheets[abaPrincipal], {
         defval: "",
       });

@@ -64,13 +64,16 @@
   function toggleInputMethod() {
     var manualRadio = document.getElementById("method-manual");
     var uploadRadio = document.getElementById("method-upload");
+    var hierRadio = document.getElementById("method-hierarquizacao");
     var manualContent = document.getElementById("manual-method-content");
     var uploadContent = document.getElementById("upload-method-content");
+    var hierContent = document.getElementById("hierarquizacao-method-content");
     var continueBtn = document.getElementById("continue-btn");
 
     if (manualRadio.checked) {
       manualContent.classList.remove("method-content--hidden");
       uploadContent.classList.add("method-content--hidden");
+      if (hierContent) hierContent.classList.add("method-content--hidden");
       continueBtn.textContent = "Continuar";
       continueBtn.innerHTML =
         'Continuar<i class="fas fa-arrow-right icon-right" aria-hidden="true"></i>';
@@ -78,10 +81,21 @@
     } else if (uploadRadio.checked) {
       manualContent.classList.add("method-content--hidden");
       uploadContent.classList.remove("method-content--hidden");
+      if (hierContent) hierContent.classList.add("method-content--hidden");
       continueBtn.textContent = "Processar Tabela";
       continueBtn.innerHTML =
         '<i class="fas fa-check" aria-hidden="true"></i> Processar Tabela';
       continueBtn.onclick = processUploadedMatrix;
+    } else if (hierRadio && hierRadio.checked) {
+      manualContent.classList.add("method-content--hidden");
+      uploadContent.classList.add("method-content--hidden");
+      if (hierContent) hierContent.classList.remove("method-content--hidden");
+      continueBtn.textContent = "Usar matriz da hierarquização";
+      continueBtn.innerHTML =
+        '<i class="fas fa-check" aria-hidden="true"></i> Usar matriz da hierarquização';
+      continueBtn.onclick = function () {
+        if (global.SLTHierarquizacaoMatriz) global.SLTHierarquizacaoMatriz.processar();
+      };
     }
   }
 
@@ -157,6 +171,7 @@
   function finalizeUploadedMatrix(criteria) {
     SltMatrizPremissas.saveMatrizPremissas(uploadedPremissasData, uploadedFileName);
     localStorage.setItem("ahp_inputMethod", "upload_matriz");
+    localStorage.setItem("ahp_inputMethodOrigem", "upload");
     localStorage.setItem("ahp_criteriaCount", String(criteria.length));
     localStorage.setItem("ahp_criteria", JSON.stringify(criteria));
     localStorage.removeItem("ahp_uploadedMatrix");
@@ -240,6 +255,7 @@
     localStorage.removeItem("ahp_uploadedMatrix");
     localStorage.removeItem("ahp_pairwiseMatrix");
     localStorage.setItem("ahp_inputMethod", "manual");
+    localStorage.setItem("ahp_inputMethodOrigem", "manual");
     localStorage.setItem("ahp_criteriaCount", String(criteriaCount));
     if (global.SLTAhpNav && global.SLTAhpNav.irPara) {
       global.SLTAhpNav.irPara("/restrict/ahp/nomes/");

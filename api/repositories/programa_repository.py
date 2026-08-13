@@ -25,6 +25,11 @@ _SELECT_BASE = """
         pg.justificativa,
         pg.valor_global,
         pg.atributos_cadastrais,
+        pg.maturidade,
+        pg.capex_estimado,
+        pg.base_estimativa_capex,
+        pg.prazo_referencia_meses,
+        pg.base_estimativa_prazo,
         pg.vinculo_institucional,
         pg.vinculo_objeto_id,
         pg.sigma_instituicao_id,
@@ -58,7 +63,8 @@ _INSERT_SQL = """
     INSERT INTO demandas.programa (
         codigo, plano_id, nome, descricao,
         objetivo, publico_alvo, orgao_responsavel, justificativa,
-        valor_global, atributos_cadastrais, vinculo_institucional,
+        valor_global, atributos_cadastrais, maturidade, capex_estimado, base_estimativa_capex,
+        prazo_referencia_meses, base_estimativa_prazo, vinculo_institucional,
         sigma_instituicao_id, instituicao_nome, instituicao_razao_social,
         instituicao_nome_fantasia, instituicao_cnpj,
         sigma_pessoa_id, representante_nome, representante_email, representante_telefone,
@@ -66,7 +72,8 @@ _INSERT_SQL = """
     ) VALUES (
         %(codigo)s, %(plano_id)s, %(nome)s, %(descricao)s,
         %(objetivo)s, %(publico_alvo)s, %(orgao_responsavel)s, %(justificativa)s,
-        %(valor_global)s, %(atributos_cadastrais)s, %(vinculo_institucional)s,
+        %(valor_global)s, %(atributos_cadastrais)s, %(maturidade)s, %(capex_estimado)s, %(base_estimativa_capex)s,
+        %(prazo_referencia_meses)s, %(base_estimativa_prazo)s, %(vinculo_institucional)s,
         %(sigma_instituicao_id)s, %(instituicao_nome)s, %(instituicao_razao_social)s,
         %(instituicao_nome_fantasia)s, %(instituicao_cnpj)s,
         %(sigma_pessoa_id)s, %(representante_nome)s, %(representante_email)s, %(representante_telefone)s,
@@ -84,7 +91,15 @@ _INSERT_UE_SQL = """
 
 def insert(row: dict[str, Any], unidades: list[str] | None = None) -> dict[str, Any]:
     """Insere um programa e seus vínculos de abrangência espacial."""
-    row = {**row, "atributos_cadastrais": Jsonb(row.get("atributos_cadastrais") or {})}
+    row = {
+        "maturidade": None,
+        "capex_estimado": None,
+        "base_estimativa_capex": None,
+        "prazo_referencia_meses": None,
+        "base_estimativa_prazo": None,
+        **row,
+        "atributos_cadastrais": Jsonb(row.get("atributos_cadastrais") or {}),
+    }
     with get_connection() as conn:
         cur = conn.execute(_INSERT_SQL, row)
         inserted = cur.fetchone()
@@ -111,6 +126,11 @@ _UPDATE_ALLOWED = {
     "justificativa": "justificativa",
     "valor_global": "valor_global",
     "atributos_cadastrais": "atributos_cadastrais",
+    "maturidade": "maturidade",
+    "capex_estimado": "capex_estimado",
+    "base_estimativa_capex": "base_estimativa_capex",
+    "prazo_referencia_meses": "prazo_referencia_meses",
+    "base_estimativa_prazo": "base_estimativa_prazo",
     "sigma_instituicao_id": "sigma_instituicao_id",
     "instituicao_nome": "instituicao_nome",
     "instituicao_cnpj": "instituicao_cnpj",

@@ -202,6 +202,7 @@
     }
     setConfigAtual(cfg.tipo, cfg.codigo);
     if (global.SLTFieldFilled) global.SLTFieldFilled.sync(sel);
+    if (global.SLTHierarquizacaoMatriz) global.SLTHierarquizacaoMatriz.atualizar();
     function exibir(cfgExibir) {
       if (isContextoFase2Page()) {
         if (typeof global.initEtapa6 === "function") global.initEtapa6();
