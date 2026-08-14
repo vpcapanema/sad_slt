@@ -85,13 +85,18 @@ Banner "Verificacao final (saude do container)"
 $healthOk = $false
 for ($i = 1; $i -le 15; $i++) {
     try {
-        $resp = Invoke-RestMethod -Uri "$AppUrl/api/health" -TimeoutSec 10
-        Write-Host "  OK — respondeu na tentativa $i." -ForegroundColor Green
-        $healthOk = $true
-        break
+        $curlExe = if (Test-Path "C:\Windows\System32\curl.exe") { "C:\Windows\System32\curl.exe" } else { "curl" }
+        $out = & $curlExe -k -fsS "$AppUrl/api/health" 2>$null
+        if ($out -and $out -match '"status"\s*:\s*"ok"') {
+            Write-Host "  OK — respondeu na tentativa $i: $out" -ForegroundColor Green
+            $healthOk = $true
+            break
+        }
+        Write-Host "  Aguardando... ($i/15)"
+        Start-Sleep -Seconds 3
     } catch {
         Write-Host "  Aguardando... ($i/15)"
-        Start-Sleep -Seconds 5
+        Start-Sleep -Seconds 3
     }
 }
 if (-not $healthOk) {
