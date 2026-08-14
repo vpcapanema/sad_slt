@@ -393,7 +393,7 @@
     }
   }
 
-  function mensagemPadraoConvite(urlPublica, validadeTexto, config) {
+  function linhasMensagemConvite(urlPublica, validadeTexto, config) {
     var textoValidade = validadeTexto && validadeTexto !== "—" ? " até " + validadeTexto : "";
     var nomeAnalise = (config && config.nome) || "";
     var objetivo = (config && config.objetivo) || "";
@@ -425,7 +425,27 @@
     linhas.push("");
     linhas.push("Atenciosamente,");
     linhas.push("Equipe SICARD/SLT");
-    return linhas.join("\n");
+    return linhas;
+  }
+
+  function mensagemPadraoConvite(urlPublica, validadeTexto, config) {
+    return linhasMensagemConvite(urlPublica, validadeTexto, config).join("\n");
+  }
+
+  // Versão em HTML da mesma mensagem, com o link como âncora real (<a>).
+  // Usada para copiar a mensagem com o link "vivo" para a área de
+  // transferência — ao colar num editor de e-mail rico (Gmail, Outlook, Apple
+  // Mail), o link permanece clicável, o que o mailto: (só texto) não permite.
+  function mensagemPadraoConviteHtml(urlPublica, validadeTexto, config) {
+    var linhas = linhasMensagemConvite(urlPublica, validadeTexto, config);
+    return linhas
+      .map(function (linha) {
+        if (urlPublica && linha === urlPublica) {
+          return '<a href="' + escapeHtml(urlPublica) + '">' + escapeHtml(urlPublica) + "</a>";
+        }
+        return escapeHtml(linha) || "&nbsp;";
+      })
+      .join("<br>");
   }
 
   function renderEmailDraft(amb) {
@@ -438,6 +458,7 @@
     function preencherMensagem(config) {
       var mensagem = mensagemPadraoConvite(urlAbsoluta, validadeTexto, config);
       messageBox.dataset.message = mensagem;
+      messageBox.dataset.messageHtml = mensagemPadraoConviteHtml(urlAbsoluta, validadeTexto, config);
       messageBox.textContent = "";
 
       if (!urlAbsoluta || mensagem.indexOf(urlAbsoluta) === -1) {
@@ -496,15 +517,92 @@
       return item.email;
     });
     var template = el("collab-email-template");
-    var body = template ? template.dataset.message || template.textContent : "";
+    var bodyTexto = template ? template.dataset.message || template.textContent : "";
+    var bodyHtml = template ? template.dataset.messageHtml : "";
     var subject = "Convite para preenchimento colaborativo AHP (SAD/SLT)";
-    global.location.href =
-      "mailto:" +
-      recipients.join(",") +
-      "?subject=" +
-      encodeURIComponent(subject) +
-      "&body=" +
-      encodeURIComponent(body);
+    var mailtoBase =
+      "mailto:" + recipients.join(",") + "?subject=" + encodeURIComponent(subject);
+
+    // mailto: só aceita corpo em texto simples — um link colocado ali chega
+    // sempre como texto puro, nunca como hiperlink. Por isso copiamos a
+    // mensagem em HTML (com o link como âncora real) para a área de
+    // transferência: colada (Ctrl+V) num editor de e-mail rico (Gmail,
+    // Outlook, Apple Mail), o link permanece clicável.
+    copiarMensagemRica(bodyHtml, bodyTexto).then(function (resultado) {
+      if (resultado === "html") {
+        global.location.href = mailtoBase;
+        setCollabFeedback(
+          "Aplicativo de e-mail aberto com a mensagem copiada (link incluído). Cole com Ctrl+V no corpo do e-mail — o link permanece clicável.",
+          "ok"
+        );
+      } else {
+        global.location.href = mailtoBase + "&body=" + encodeURIComponent(bodyTexto);
+        if (resultado === "texto") {
+          setCollabFeedback(
+            "Aplicativo de e-mail aberto. Este navegador não copia links clicáveis — se preferir, use o botão \"Copiar link\" e cole-o manualmente no corpo da mensagem.",
+            "ok"
+          );
+        }
+      }
+    });
+  }
+
+  // Copia a mensagem como HTML (link clicável) quando o navegador suporta
+  // escrever múltiplos tipos na área de transferência; cai para texto simples
+  // caso contrário. Retorna "html", "texto" ou "falhou".
+  function copiarMensagemRica(html, texto) {
+    var clipboard = global.navigator.clipboard;
+    if (html && clipboard && typeof global.ClipboardItem === "function" && clipboard.write) {
+      var item = new global.ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([texto || ""], { type: "text/plain" }),
+      });
+      return clipboard.write([item]).then(
+        function () { return "html"; },
+        function () { return copiarParaAreaDeTransferencia(texto).then(function (ok) { return ok ? "texto" : "falhou"; }); }
+      );
+    }
+    return copiarParaAreaDeTransferencia(texto).then(function (ok) {
+      return ok ? "texto" : "falhou";
+    });
+  }
+
+  function copiarParaAreaDeTransferencia(texto) {
+    if (!texto) return Promise.resolve(false);
+    if (global.navigator.clipboard && global.navigator.clipboard.writeText) {
+      return global.navigator.clipboard.writeText(texto).then(
+        function () { return true; },
+        function () { return false; }
+      );
+    }
+    try {
+      var temp = document.createElement("textarea");
+      temp.value = texto;
+      temp.style.position = "fixed";
+      temp.style.opacity = "0";
+      document.body.appendChild(temp);
+      temp.select();
+      var ok = document.execCommand("copy");
+      document.body.removeChild(temp);
+      return Promise.resolve(ok);
+    } catch (_e) {
+      return Promise.resolve(false);
+    }
+  }
+
+  function copiarLinkFormulario() {
+    var link = el("collab-email-form-link");
+    var url = link && link.getAttribute("href") !== "#" ? link.getAttribute("href") : "";
+    if (!url) {
+      setCollabFeedback("Nenhum link de formulário disponível para copiar.", "error");
+      return;
+    }
+    copiarParaAreaDeTransferencia(url).then(function (ok) {
+      setCollabFeedback(
+        ok ? "Link copiado para a área de transferência." : "Não foi possível copiar automaticamente — selecione e copie o link manualmente.",
+        ok ? "ok" : "error"
+      );
+    });
   }
 
   function setCollabFeedback(msg, kind) {
@@ -654,6 +752,7 @@
     var addEmailBtn = el("collab-add-email-btn");
     var confirmBtn = el("collab-confirm-btn");
     var openMailBtn = el("collab-open-mail-btn");
+    var copyLinkBtn = el("collab-copy-link-btn");
     var continueBtn = el("step4-continue-btn");
 
     if (addEmailBtn) {
@@ -664,6 +763,9 @@
     }
     if (openMailBtn) {
       openMailBtn.addEventListener("click", abrirAplicativoEmailColaborativo);
+    }
+    if (copyLinkBtn) {
+      copyLinkBtn.addEventListener("click", copiarLinkFormulario);
     }
     if (continueBtn) {
       continueBtn.addEventListener("click", continueStep4);

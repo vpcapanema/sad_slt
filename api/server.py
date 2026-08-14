@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from api.exceptions import DatabaseUnavailableError
+from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.path_policy import project_path
 from api.routers import api_router
 
@@ -51,6 +52,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Precisa ficar mais à dentro que o GZip (adicionado depois = mais externo),
+# para reescrever o corpo antes da compressão.
+app.add_middleware(SubpathRewriteMiddleware)
 
 app.include_router(api_router)
 
@@ -337,8 +341,11 @@ LEGACY_PAGE_REDIRECTS = {
 async def redirect_legacy_page_routes(request: Request, call_next):
     destination = LEGACY_PAGE_REDIRECTS.get(request.url.path)
     if destination:
+        prefix = request.headers.get("x-forwarded-prefix", "").rstrip("/")
         query = request.url.query
-        url = f"{destination}?{query}" if query else destination
+        url = f"{prefix}{destination}"
+        if query:
+            url = f"{url}?{query}"
         return RedirectResponse(url=url, status_code=308)
     return await call_next(request)
 

@@ -127,6 +127,9 @@ class HierarquizacaoResponseSchema(BaseModel):
     ranking: list[dict[str, Any]] | None = None
     dados_hierarquizacao: dict[str, Any] = {}
     relatorio_fase1: dict[str, Any] = {}
+    relatorio_fase2: dict[str, Any] = {}
+    relatorio_fase3: dict[str, Any] = {}
+    relatorio_consolidado: dict[str, Any] = {}
     criadoEm: str
     atualizadoEm: str
     homologadoEm: str | None = None

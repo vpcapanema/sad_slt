@@ -514,6 +514,15 @@ textarea {
   color: var(--pli-navy);
 }
 
+.btn-link {
+  background: transparent;
+  color: var(--pli-blue);
+  text-decoration: underline;
+  padding: 0.1rem 0.3rem;
+  vertical-align: baseline;
+}
+.btn-link:hover { filter: none; color: var(--pli-navy); }
+
 .btn:hover {
   filter: brightness(1.05);
 }

@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hierarquização e espacialização de critérios — PLI-SP</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css" id="theme">
+<link rel="stylesheet" href="./assets/deck.css">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ===================== CAPA ===================== -->
+<section>
+  <h1>Hierarquização e ranqueamento de projetos do PLI-SP</h1>
+  <h3 class="subtitulo">Construção conceitual dos critérios e espacialização metodológica</h3>
+  <p class="ficha">Sistema de Apoio à Tomada de Decisão — SICARD<br>Nota técnica de metodologia · 2026</p>
+</section>
+
+<!-- ===================== BLOCO 0 — ABERTURA ===================== -->
+<section>
+  <section>
+    <h2>Objetivo desta apresentação</h2>
+    <ul>
+      <li>Explicar como funciona o processo de hierarquização de projetos do PLI-SP</li>
+      <li>Apresentar a construção conceitual dos critérios de avaliação</li>
+      <li>Detalhar, critério a critério, como cada um foi espacializado (dado → operador → equação → mapa)</li>
+    </ul>
+  </section>
+  <section>
+    <h2>O que é o SICARD</h2>
+    <p>Sistema de Apoio à Tomada de Decisão do Plano Logístico e de Investimentos do
+    Estado de São Paulo (PLI-SP).</p>
+    <p>Permite avaliar, de forma automatizada, configurável e auditável, um grande
+    número de projetos propostos — sem depender de análise manual projeto a projeto.</p>
+  </section>
+</section>
+
+<!-- ===================== BLOCO 1 — ESPINHA DORSAL ===================== -->
+<section>
+  <section>
+    <h2>A espinha dorsal do sistema</h2>
+    <p>Três fases metodológicas independentes, mas combináveis:</p>
+    <div class="fases-grid">
+      <div class="fase-card fase1"><h3>Fase 1</h3><p>Elegibilidade territorial<br><small>restrição e risco</small></p></div>
+      <div class="fase-card fase2"><h3>Fase 2</h3><p>Mérito técnico-territorial<br><small>favorabilidade</small></p></div>
+      <div class="fase-card fase3"><h3>Fase 3</h3><p>Ajuste por atributos<br><small>do projeto</small></p></div>
+    </div>
+    <p class="nota">O usuário pode executar qualquer combinação: só a Fase 1, só a
+    Fase 2, todas juntas, etc.</p>
+  </section>
+  <section>
+    <h2>Fase 1 — regra de decisão</h2>
+    <pre><code>se o projeto intersecta camada de restrição:
+    status_fase1 = restrito   → sai do ranking ordinário
+
+senão se o projeto intersecta camada de risco:
+    status_fase1 = apto_com_ressalva  → segue no ranking, risco registrado
+
+senão:
+    status_fase1 = apto  → segue sem ressalva</code></pre>
+  </section>
+  <section>
+    <h2>Como as fases se combinam</h2>
+    <ul>
+      <li>Fase 1 atua como <strong>filtro</strong>, não como peso numérico</li>
+      <li>Fase 2 e Fase 3 se combinam por ponderação:</li>
+    </ul>
+    <pre><code>score_final = peso_fase2 × score_fase2 + peso_fase3 × score_fase3
+peso_fase2 + peso_fase3 = 1</code></pre>
+    <p class="nota">Riscos identificados na Fase 1 podem ser reavaliados quantitativamente na Fase 3.</p>
+  </section>
+  <section>
+    <h2>Auditoria e transparência</h2>
+    <p>Para cada projeto, o sistema deve responder:</p>
+    <ul>
+      <li>Por que foi classificado como apto, apto com ressalva ou restrito</li>
+      <li>Quais camadas o projeto intersectou</li>
+      <li>Qual valor espacial foi extraído na Fase 2</li>
+      <li>Quais atributos foram usados/ausentes na Fase 3</li>
+      <li>Quanto cada fase contribuiu para a nota final</li>
+    </ul>
+  </section>
+</section>
+
+<!-- ===================== BLOCO 2 — MODELO DE HIERARQUIZAÇÃO ESPACIAL ===================== -->
+<section>
+  <section>
+    <h2>Construção conceitual dos critérios</h2>
+    <p>Nem todo critério pode virar um mapa. Cada fator da matriz foi classificado em
+    <strong>quatro naturezas de modelagem</strong>:</p>
+  </section>
+  <section>
+    <h2>As quatro classes de fator</h2>
+    <table class="tabela-classes">
+      <tr><th>Classe</th><th>Definição</th><th>Exemplo</th></tr>
+      <tr><td class="tag grade">Grade</td><td>Superfície contínua em malha territorial</td><td>Massa econômica, vulnerabilidade</td></tr>
+      <tr><td class="tag rede">Rede</td><td>Calculado sobre segmentos/nós da malha rodoviária</td><td>VDM, saturação, acidentes</td></tr>
+      <tr><td class="tag atributo">Atributo do objeto</td><td>Pertence ao projeto, não é rasterizado</td><td>Maturidade, Capex, prazo</td></tr>
+      <tr><td class="tag hibrido">Híbrido</td><td>Combina localização + rede + escopo do projeto</td><td>Competitividade logística</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Por que essa separação importa</h2>
+    <ul>
+      <li><strong>Grade</strong> — representa fenômenos territoriais contínuos (ex.: renda, densidade)</li>
+      <li><strong>Rede</strong> — representa fenômenos que só existem sobre a malha (ex.: fluxo de tráfego)</li>
+      <li><strong>Atributo do objeto</strong> — não deve ser forçado a virar um mapa; pertence à Fase 3</li>
+    </ul>
+    <p class="nota">O ranqueamento final não é baseado em uma única grade estadual — é a
+    combinação de grade + rede + atributos do projeto.</p>
+  </section>
+</section>
+
+<!-- ===================== BLOCO 3 — FASE 1 ===================== -->
+<section>
+  <section>
+    <h2>Fase 1 — Elegibilidade territorial</h2>
+    <p>Não ranqueia projetos. Classifica a elegibilidade territorial preliminar.</p>
+    <ul>
+      <li><strong>Restrição</strong> → função excludente ou segregadora</li>
+      <li><strong>Risco</strong> → não exclui, gera ressalva</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Fluxo do módulo gerador (Fase 1)</h2>
+    <pre><code>fontes vetoriais → importação → validação bruta → normalização
+  → correção geométrica/topológica → classificação restrição/risco
+  → consolidação por Identity → validação final
+  → homologação → publicação na biblioteca de camadas</code></pre>
+  </section>
+  <section>
+    <h2>O operador Identity</h2>
+    <p>Sobreposição iterativa que <strong>preserva os atributos de origem</strong> de
+    cada camada. Cada trecho resultante mantém a rastreabilidade até a fonte que o
+    originou — essencial para a auditoria.</p>
+  </section>
+</section>
+
+<!-- BLOCO 3.1 — RESTRIÇÕES -->
+<section>
+  <section>
+    <h2>Restrições — impedimento jurídico</h2>
+    <p>8 critérios com camada própria. Regra lógica comum:</p>
+    <pre><code>se interseção(demanda, camada_restrição) = 1:
+    status_fase1 = restrito</code></pre>
+  </section>
+
+  <section class="criterio">
+    <h3>Sobreposição com UC de Proteção Integral estadual</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag ambiental">Ambiental</span><span class="tag restricao">Restrição</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> polígonos oficiais das UC de Proteção Integral
+        estaduais de SP (DataGeo/IDEA-SP e Fundação Florestal).</p>
+        <p><strong>Operador:</strong> Identity (união temática preservando atributos) +
+        interseção binária com a geometria da demanda.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+        <p><strong>Fonte legal:</strong> Lei Federal nº 9.985/2000; Decreto Estadual nº 60.302/2014.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/19_restricao_ucs_protecao_integral_estadual_sp.png" alt="UC Proteção Integral estadual">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Sobreposição com UC de Proteção Integral federal</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag ambiental">Ambiental</span><span class="tag restricao">Restrição</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> polígonos oficiais das UC de Proteção Integral
+        federais incidentes em SP (ICMBio/CNUC).</p>
+        <p><strong>Operador:</strong> Identity + interseção binária.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+        <p><strong>Fonte legal:</strong> Lei Federal nº 9.985/2000.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/20_restricao_ucs_protecao_integral_federal_sp.png" alt="UC Proteção Integral federal">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Sobreposição com manguezal, restinga ou ecossistema costeiro sensível</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag ambiental">Ambiental</span><span class="tag restricao">Restrição</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> polígonos oficiais de manguezais, restingas e
+        áreas úmidas costeiras (IBAMA).</p>
+        <p><strong>Operador:</strong> Identity + interseção binária.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+        <p><strong>Fonte legal:</strong> Lei Federal nº 11.428/2006 e Lei Federal nº 12.651/2012.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/15_restricao_manguezais_ibama_sp.png" alt="Manguezais">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Sobreposição com Terra Indígena</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag social">Social</span><span class="tag restricao">Restrição</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> polígonos oficiais de Terras Indígenas (FUNAI).</p>
+        <p><strong>Operador:</strong> Identity + interseção binária.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+        <p><strong>Fonte legal:</strong> Constituição Federal de 1988; Convenção nº 169 da OIT.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/18_restricao_terras_indigenas_sp.png" alt="Terras Indígenas">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Sobreposição com território quilombola</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag social">Social</span><span class="tag restricao">Restrição</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> polígonos oficiais de territórios quilombolas
+        (INCRA e Fundação Cultural Palmares).</p>
+        <p><strong>Operador:</strong> Identity + interseção binária.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+        <p><strong>Fonte legal:</strong> ADCT, art. 68; Convenção nº 169 da OIT.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/16_restricao_quilombos_sp.png" alt="Quilombos">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Embargo ambiental federal ativo</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag juridico">Jurídico-institucional</span><span class="tag restricao">Restrição</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> geometrias e registros ativos da base oficial
+        de áreas embargadas (IBAMA).</p>
+        <p><strong>Operador:</strong> filtro de atos ativos e geometrias válidas + Identity + interseção.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, embargo_ativo)</code></p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/14_restricao_embargos_ibama_ativos_sp.png" alt="Embargos IBAMA">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Embargo ambiental estadual ativo</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag juridico">Jurídico-institucional</span><span class="tag restricao">Restrição</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> atos e geometrias oficiais de embargos ativos
+        (SEMIL/Polícia Militar Ambiental/SIGAM).</p>
+        <p><strong>Operador:</strong> filtro de atos ativos e geometrias válidas + Identity + interseção.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, embargo_ativo)</code></p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/13_restricao_embargos_estaduais_sigam.png" alt="Embargos estaduais SIGAM">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Área de restrição cadastrada pela CETESB</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag juridico">Jurídico-institucional</span><span class="tag restricao">Restrição</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> polígonos oficiais das áreas de restrição
+        cadastradas pela CETESB (CETESB/SEMIL DataGeo).</p>
+        <p><strong>Operador:</strong> filtro de atos ativos e geometrias válidas + Identity + interseção.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/09_restricao_areas_restricao_cetesb.png" alt="Restrição CETESB">
+    </div>
+  </section>
+</section>
+
+<!-- BLOCO 3.2 — RISCOS -->
+<section>
+  <section>
+    <h2>Riscos — condicionante material</h2>
+    <p>10 critérios com camada própria. Regra lógica comum:</p>
+    <pre><code>se interseção(demanda, restrição) = 0 e interseção(demanda, risco) = 1:
+    status_fase1 = apto_com_ressalva
+    registrar risco em criterios_fase3_sugeridos</code></pre>
+  </section>
+
+  <section class="criterio">
+    <h3>UC de Uso Sustentável estadual</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag ambiental">Ambiental</span><span class="tag risco">Risco</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> polígonos oficiais das UC de Uso Sustentável
+        estaduais (DataGeo/IDEA-SP).</p>
+        <p><strong>Operador:</strong> Identity + interseção binária.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/21_risco_ucs_uso_sustentavel_estadual_sp.png" alt="UC Uso Sustentável estadual">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>UC de Uso Sustentável federal</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag ambiental">Ambiental</span><span class="tag risco">Risco</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> polígonos oficiais das UC de Uso Sustentável
+        federais (ICMBio/CNUC).</p>
+        <p><strong>Operador:</strong> Identity + interseção binária.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/22_risco_ucs_uso_sustentavel_federal_sp.png" alt="UC Uso Sustentável federal">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Área de Proteção e Recuperação de Mananciais (APRM)</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag ambiental">Ambiental</span><span class="tag risco">Risco</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> zoneamentos/subáreas das 4 APRMs paulistas —
+        Alto Juquery, Alto Tietê Cabeceiras, Billings, Guarapiranga (SEMIL/DataGeo).</p>
+        <p><strong>Operador:</strong> Identity + interseção binária, por subárea.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, subárea_aprm)</code></p>
+        <p><strong>Fonte legal:</strong> Lei Estadual nº 9.866/1997 e leis específicas.</p>
+      </div>
+      <div class="mini-grid">
+        <img src="../../data/geoespacial/relatorios/mapas_fase1/04_risco_aprm_alto_juquery.png" alt="APRM Alto Juquery">
+        <img src="../../data/geoespacial/relatorios/mapas_fase1/05_risco_aprm_alto_tiete_cabec.png" alt="APRM Alto Tietê Cabeceiras">
+        <img src="../../data/geoespacial/relatorios/mapas_fase1/06_risco_aprm_billings.png" alt="APRM Billings">
+        <img src="../../data/geoespacial/relatorios/mapas_fase1/07_risco_aprm_guarapiranga.png" alt="APRM Guarapiranga">
+      </div>
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Cavidade natural subterrânea / área de influência</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag ambiental">Ambiental</span><span class="tag risco">Risco</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> pontos oficiais de cavidades e respectiva área
+        de influência (CECAV/ICMBio).</p>
+        <p><strong>Operador:</strong> área de influência oficial + Identity temático + interseção.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, área_influência)</code></p>
+        <p><strong>Fonte legal:</strong> Decreto Federal nº 99.556/1990 e nº 10.935/2022.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/01_risco_cavidades_influencia.png" alt="Cavidades">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Área contaminada / passivo ambiental cadastrado</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag ambiental">Ambiental</span><span class="tag risco">Risco</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> Relação de Áreas Contaminadas e Reabilitadas (CETESB).</p>
+        <p><strong>Operador:</strong> interseção + buffer técnico quando aplicável.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/08_risco_areas_contaminadas_cetesb.png" alt="Áreas contaminadas CETESB">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Área suscetível a inundação, enxurrada ou alagamento</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag risco-dim">Risco</span><span class="tag risco">Risco</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> manchas de inundação e cartas de suscetibilidade
+        (Defesa Civil, IPT, CPRM/SGB, DAEE).</p>
+        <p><strong>Operador:</strong> Identity + interseção binária.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/02_risco_inundacao.png" alt="Inundação">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Área suscetível a escorregamento, erosão ou movimento de massa</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag risco-dim">Risco</span><span class="tag risco">Risco</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> cartas geotécnicas de suscetibilidade
+        (IPT, CPRM/SGB, Defesa Civil).</p>
+        <p><strong>Operador:</strong> Identity + interseção binária.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/03_risco_movimento_massa.png" alt="Movimento de massa">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Bem tombado / área envoltória de proteção</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag territorial">Territorial</span><span class="tag risco">Risco</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> bens tombados e áreas envoltórias
+        (CONDEPHAAT e IPHAN).</p>
+        <p><strong>Operador:</strong> Identity + interseção binária.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+      </div>
+      <div class="mini-grid">
+        <img src="../../data/geoespacial/relatorios/mapas_fase1/11_risco_bens_tombados_condephaat.png" alt="Bens tombados CONDEPHAAT">
+        <img src="../../data/geoespacial/relatorios/mapas_fase1/12_risco_bens_tombados_iphan_sp.png" alt="Bens tombados IPHAN">
+      </div>
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Sítio arqueológico cadastrado / área de interesse arqueológico</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag territorial">Territorial</span><span class="tag risco">Risco</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> sítios arqueológicos cadastrados (IPHAN/CNSA).</p>
+        <p><strong>Operador:</strong> interseção + faixa de cautela tecnicamente justificada.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+        <p><strong>Fonte legal:</strong> Lei Federal nº 3.924/1961.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/17_risco_sitios_arqueologicos.png" alt="Sítios arqueológicos">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>Assentamento rural / regime fundiário especial</h3>
+    <div class="tags"><span class="tag fase1">Fase 1</span><span class="tag fundiario">Fundiário-patrimonial</span><span class="tag risco">Risco</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> assentamentos rurais e áreas sob regime
+        fundiário especial (INCRA e ITESP).</p>
+        <p><strong>Operador:</strong> Identity + interseção binária.</p>
+        <p><strong>Equação:</strong> <code>0/1 = interseção(demanda, camada)</code></p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase1/10_risco_assentamentos_sp.png" alt="Assentamentos rurais">
+    </div>
+  </section>
+
+  <section>
+    <h2>Mapas consolidados da Fase 1</h2>
+    <p>Camada única de risco e camada única de restrição, obtidas por Identity
+    iterativo sobre os 18 critérios, preservando o atributo de origem de cada incidência.</p>
+    <div class="mini-grid">
+      <figure>
+        <img src="../../data/geoespacial/relatorios/mapas_fase1/23_risco_consolidada_fase1.png" alt="Risco consolidado">
+        <figcaption>Risco consolidado — 14.524 feições</figcaption>
+      </figure>
+      <figure>
+        <img src="../../data/geoespacial/relatorios/mapas_fase1/24_restricao_consolidada_fase1.png" alt="Restrição consolidada">
+        <figcaption>Restrição consolidada — 3.674 feições</figcaption>
+      </figure>
+    </div>
+  </section>
+</section>
+
+<!-- ===================== BLOCO 4 — FASE 2 ===================== -->
+<section>
+  <section>
+    <h2>Fase 2 — Favorabilidade territorial</h2>
+    <p>Núcleo do ranking tecnico-territorial. Superfície contínua 0–1, combinando
+    <strong>grade</strong> (malha territorial) e <strong>rede</strong> (malha
+    rodoviária) por álgebra de mapas.</p>
+  </section>
+  <section>
+    <h2>Fluxo do módulo gerador (Fase 2)</h2>
+    <pre><code>camadas de entrada → validação e compatibilização
+  → operador espacial por critério → raster contínuo por critério
+  → reescalonamento 0–1 → inversão de critérios de relação negativa
+  → pesos AHP → média ponderada → raster final de favorabilidade
+  → homologação → publicação na biblioteca</code></pre>
+  </section>
+  <section>
+    <h2>Reescalonamento e inversão</h2>
+    <pre><code>valor_normalizado = (valor - mínimo) / (máximo - mínimo)
+
+// quando a relação do critério é negativa:
+favorabilidade = 1 - valor_normalizado</code></pre>
+    <p class="nota">Toda regra diferente da transformação linear simples é registrada
+    no relatório metodológico.</p>
+  </section>
+</section>
+
+<!-- BLOCO 4.1 — GRADE -->
+<section>
+  <section>
+    <h2>Grade — favorabilidade socioeconômica territorial</h2>
+    <p>Unidade de análise: <strong>103.620 setores censitários</strong> do Estado de São Paulo.</p>
+  </section>
+
+  <section class="criterio">
+    <h3>G01 — Localização em áreas de alta massa econômica</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Grade</span><span class="tag economica">Econômica</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> PIB Municipal 2023 (IBGE), desagregado por
+        setor censitário pela proporção populacional.</p>
+        <p><strong>Operador:</strong> agregação por setor censitário + normalização min-máx.</p>
+        <p><strong>Equação:</strong></p>
+        <pre><code>g_pib_setor = PIB_mun × (pop_setor / pop_mun)
+crit_g01 = (g_pib_setor - min) / (max - min)</code></pre>
+        <p><strong>Relação:</strong> ↑ positiva — maior massa econômica, maior favorabilidade.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/001_grade_g01_crit_g01_massa_economica_reescalonado.png" alt="G01 massa econômica">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>G02 — Localização em áreas de maior vulnerabilidade territorial <span class="badge">mandatório</span></h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Grade</span><span class="tag social">Social</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> 5 componentes do Censo IBGE 2022 por setor
+        censitário — PIB per capita (invertido), déficit de água, esgoto e coleta de
+        resíduos, e adensamento domiciliar.</p>
+        <p><strong>Operador:</strong> agregação por setor + média simples dos 5 componentes normalizados.</p>
+        <p><strong>Equação:</strong></p>
+        <pre><code>crit_g02 = média(pib_pc_inv, agua_def, esg_def, lixo_def, adens_norm)</code></pre>
+        <p><strong>Relação:</strong> ↑ positiva — maior vulnerabilidade, maior favorabilidade de investimento.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/002_grade_g02_crit_g02_vulnerabilidade_reescalonado.png" alt="G02 vulnerabilidade">
+    </div>
+  </section>
+</section>
+
+<!-- BLOCO 4.2 — REDE -->
+<section>
+  <section>
+    <h2>Rede — favorabilidade da malha rodoviária</h2>
+    <p>Unidade de análise: <strong>4.782 subtrechos</strong> da malha estadual DER-SP.
+    14 critérios normalizados, agrupados por dimensão.</p>
+  </section>
+
+  <section class="criterio">
+    <h3>R01 — Proximidade com segmentos rodoviários de VDM alto</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag tecnica">Técnica</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> Volume Diário Médio por subtrecho (DER-SP).</p>
+        <p><strong>Operador:</strong> cálculo por subtrecho + normalização min-máx.</p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/003_rede_r01_crit_r01_vdm_reescalonado.png" alt="R01 VDM">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R02 — Proximidade com segmentos de saturação elevada</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag tecnica">Técnica</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> relação V/C de pico e nível de serviço (DER-SP).</p>
+        <p><strong>Operador:</strong> cálculo por subtrecho + normalização min-máx.</p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/004_rede_r02_crit_r02_saturacao_reescalonado.png" alt="R02 saturação">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R03 — Proximidade com segmentos de lentidão recorrente</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag tecnica">Técnica</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> velocidade observada × fluxo livre (TomTom Traffic Flow API).</p>
+        <p><strong>Equação:</strong> <code>c3_delay_s = tempo_atual − tempo_fluxo_livre</code></p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/005_rede_r03_crit_r03_lentidao_reescalonado.png" alt="R03 lentidão">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R05 — Proximidade com segmentos de geometria deficiente</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag tecnica">Técnica</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> classe de relevo e velocidade livre de referência (DER-SP).</p>
+        <p><strong>Operador:</strong> cálculo por subtrecho + normalização min-máx.</p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/006_rede_r05_crit_r05_geometria_reescalonado.png" alt="R05 geometria">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R07 — Maior acessibilidade temporal a destinos relevantes</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag economica">Econômica</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> distância ao porto/aeroporto mais próximo (ANTAQ/ANAC).</p>
+        <p><strong>Operador:</strong> distância euclidiana + inversão <code>(1-n)</code>.</p>
+        <p><strong>Relação:</strong> ↑ positiva (maior proximidade → maior favorabilidade).</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/007_rede_r07_crit_r07_acess_temporal_reescalonado.png" alt="R07 acessibilidade temporal">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R08 — Maior acessibilidade a eixos hidroviários</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag economica">Econômica</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> distância ao terminal hidroviário mais próximo (Hidrovia Tietê-Paraná/SEMIL).</p>
+        <p><strong>Operador:</strong> distância euclidiana + inversão.</p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/008_rede_r08_crit_r08_hidrovia_reescalonado.png" alt="R08 hidrovia">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R09 — Maior acessibilidade à malha ferroviária</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag economica">Econômica</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> distância à ferrovia ativa mais próxima (Malha Ferroviária Federal).</p>
+        <p><strong>Operador:</strong> distância euclidiana + inversão.</p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/009_rede_r09_crit_r09_ferrovia_reescalonado.png" alt="R09 ferrovia">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R10 — Maior acessibilidade a polos logísticos estratégicos</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag social">Social</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> distâncias ao porto e ao aeroporto público mais próximos (ANTAQ/ANAC).</p>
+        <p><strong>Operador:</strong> distância euclidiana + inversão (média de 2 componentes).</p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/010_rede_r10_crit_r10_polos_reescalonado.png" alt="R10 polos">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R11 — Proximidade com segmentos de alta gravidade de acidentes</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag seguranca">Segurança</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> óbitos e feridos graves por subtrecho (InfoSiga SP, 2022–2026).</p>
+        <p><strong>Operador:</strong> densidade por km + normalização min-máx.</p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/011_rede_r11_crit_r11_gravidade_reescalonado.png" alt="R11 gravidade">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R12 — Proximidade com acidentes envolvendo usuários vulneráveis</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag seguranca">Segurança</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> pedestres, ciclistas e motociclistas envolvidos em sinistros (InfoSiga SP).</p>
+        <p><strong>Operador:</strong> densidade por km + normalização min-máx.</p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/012_rede_r12_crit_r12_vulneraveis_reescalonado.png" alt="R12 vulneráveis">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R13 — Concentração de pontos críticos de acidentes (black spots)</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag seguranca">Segurança</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> sinistros graves/fatais por subtrecho (InfoSiga SP).</p>
+        <p><strong>Operador:</strong> densidade por km + normalização min-máx.</p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/013_rede_r13_crit_r13_pontos_criticos_reescalonado.png" alt="R13 pontos críticos">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R14 — Proximidade com segmentos de alto conflito urbano-regional</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag territorial">Territorial</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> fração do subtrecho em área urbanizada (IBGE 2019).</p>
+        <p><strong>Operador:</strong> interseção linha × polígono + normalização.</p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/014_rede_r14_crit_r14_conflito_urbano_reescalonado.png" alt="R14 conflito urbano">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R15 — Proximidade com segmentos de alta interferência urbano-portuária</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag territorial">Territorial</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> fração urbana do subtrecho em município portuário (IBGE + ANTAQ).</p>
+        <p><strong>Operador:</strong> interseção linha × polígono + normalização.</p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/015_rede_r15_crit_r15_interferencia_portuaria_reescalonado.png" alt="R15 interferência portuária">
+    </div>
+  </section>
+
+  <section class="criterio">
+    <h3>R16 — Maior acessibilidade a nós intermodais estratégicos</h3>
+    <div class="tags"><span class="tag fase2">Fase 2 · Rede</span><span class="tag territorial">Territorial</span></div>
+    <div class="criterio-body">
+      <div class="criterio-texto">
+        <p><strong>Dado inicial:</strong> distância ao nó intermodal mais próximo — porto,
+        aeroporto, ferrovia ou hidrovia (ANTAQ, ANAC, Malha Ferroviária Federal, Hidrovia Tietê-Paraná).</p>
+        <p><strong>Operador:</strong> distância euclidiana + inversão (mínimo de 4 componentes).</p>
+        <p><strong>Relação:</strong> ↑ positiva.</p>
+      </div>
+      <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/016_rede_r16_crit_r16_intermodal_reescalonado.png" alt="R16 intermodal">
+    </div>
+  </section>
+
+  <section>
+    <h2>Nota de completude metodológica</h2>
+    <p>Dois critérios previstos na matriz técnica <strong>não foram espacializados</strong>
+    por indisponibilidade de dado bruto consolidado:</p>
+    <ul>
+      <li>R04 — Pavimento degradado (IRI/PCI não disponível em bruto)</li>
+      <li>R06 — Sobrecarga sazonal (razão VDM sazonal/médio não capturada)</li>
+    </ul>
+    <p class="nota">Pendência registrada em <code>DIAGNOSTICO_DADOS_FAVORABILIDADE_REDE.md</code>.</p>
+  </section>
+
+  <section>
+    <h2>Consolidação da favorabilidade</h2>
+    <p>Média simples ponderada de grade e rede — caminho aberto para evolução com
+    pesos AHP por critério.</p>
+    <div class="mini-grid">
+      <figure>
+        <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/017_grade_favorabilidade_media_simples.png" alt="Favorabilidade grade">
+        <figcaption>Favorabilidade — grade (média simples)</figcaption>
+      </figure>
+      <figure>
+        <img src="../../data/geoespacial/relatorios/mapas_fase2_normalizados/018_rede_favorabilidade_media_simples.png" alt="Favorabilidade rede">
+        <figcaption>Favorabilidade — rede (média simples)</figcaption>
+      </figure>
+    </div>
+  </section>
+</section>
+
+<!-- ===================== BLOCO 5 — FASE 3 ===================== -->
+<section>
+  <section>
+    <h2>Fase 3 — Ajuste por atributos do projeto</h2>
+    <p>Opcional e conceitual — <strong>não é espacializada</strong>. Atributos
+    pertencem ao projeto, não ao território.</p>
+    <pre><code>score_fase3 = Σ(atributo_normalizado_i × peso_i) / Σ(pesos_ativos)</code></pre>
+  </section>
+  <section>
+    <h2>Atributos estáticos</h2>
+    <p>Informados uma única vez no cadastro:</p>
+    <ul>
+      <li>Maturidade/prontidão do projeto</li>
+      <li>Capex — custo de investimento</li>
+      <li>Prazo até a entrada em operação <span class="badge">mandatório</span></li>
+      <li>Complexidade técnica/institucional <span class="badge">mandatório</span></li>
+    </ul>
+  </section>
+  <section>
+    <h2>Atributos dinâmicos</h2>
+    <p>Preenchidos na complementação de cadastro:</p>
+    <ul class="lista-compacta">
+      <li>Opex</li><li>Benefício/custo (B/C, VPL, TIR)</li>
+      <li>Potencial de PPP/concessão</li><li>Benefício social líquido</li>
+      <li>Aderência a planos diretores</li><li>Aderência a planos vigentes (PPA/PEF/PAN/PNLT)</li>
+      <li>Consenso institucional</li><li>Legitimidade social</li>
+      <li>Incerteza de demanda</li><li>Risco de execução</li>
+      <li>Desapropriações/interferências</li><li>Dependência de predecessoras</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Regra de completude</h2>
+    <p>A Fase 3 só compõe o resultado final se atingir o grau de completude mínimo
+    configurado — evita que atributos ausentes distorçam o ranking.</p>
+  </section>
+</section>
+
+<!-- ===================== BLOCO 6 — SÍNTESE E GOVERNANÇA ===================== -->
+<section>
+  <section>
+    <h2>Síntese multicritério final</h2>
+    <pre><code>se status_fase1 = restrito:
+    projeto sai do ranking ordinário
+
+score_final = peso_fase2 × score_fase2 + peso_fase3 × score_fase3</code></pre>
+  </section>
+  <section>
+    <h2>Governança — auditoria e homologação</h2>
+    <ul>
+      <li>Cada pacote de Fase 1/Fase 2 é <strong>versionado</strong> e <strong>homologado</strong>
+      antes da publicação na biblioteca de camadas</li>
+      <li>Todo ranking é explicável: camadas intersectadas, valores extraídos, pesos aplicados</li>
+      <li>Exceções metodológicas (ex.: forçar inclusão de projeto restrito) ficam registradas</li>
+    </ul>
+  </section>
+</section>
+
+<!-- ===================== BLOCO 7 — ENCERRAMENTO ===================== -->
+<section>
+  <section>
+    <h2>Considerações finais</h2>
+    <ul>
+      <li>Fase 1 e Fase 2 (grade + 14 de rede) já espacializadas e homologadas</li>
+      <li>Pendências conhecidas: pavimento (R04), sazonalidade (R06), pesos AHP finais da Fase 2</li>
+      <li>Fase 3 depende de completude de cadastro dos projetos</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Próximos passos</h2>
+    <ul>
+      <li>Definir e homologar pesos AHP por critério da Fase 2</li>
+      <li>Avaliar viabilidade de dados para R04 e R06</li>
+      <li>Ampliar completude de atributos da Fase 3 na carteira de projetos</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Anexo — glossário</h2>
+    <ul>
+      <li><strong>Identity</strong> — overlay que preserva atributos de origem em cada trecho resultante</li>
+      <li><strong>Favorabilidade</strong> — índice territorial 0–1 de mérito técnico-territorial</li>
+      <li><strong>Reescalonamento</strong> — normalização linear min-máx para escala 0–1</li>
+      <li><strong>AHP</strong> — Analytic Hierarchy Process, método de ponderação multicritério</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Anexo — matriz de 50 critérios</h2>
+    <table class="tabela-resumo">
+      <tr><th>Fase</th><th>Classificação</th><th>Quantidade</th></tr>
+      <tr><td>Fase 1</td><td>Restrição</td><td>8</td></tr>
+      <tr><td>Fase 1</td><td>Risco</td><td>10</td></tr>
+      <tr><td>Fase 2</td><td>Grade</td><td>2</td></tr>
+      <tr><td>Fase 2</td><td>Rede</td><td>14</td></tr>
+      <tr><td>Fase 3</td><td>Estático/Dinâmico</td><td>16</td></tr>
+      <tr class="total"><td colspan="2">Total</td><td>50</td></tr>
+    </table>
+    <p class="nota">Fonte: <code>data/matriz-criterios-premissas-v3.json</code></p>
+  </section>
+  <section>
+    <h2>Anexo — fontes institucionais</h2>
+    <p class="lista-fontes">DataGeo/IDEA-SP · Fundação Florestal · ICMBio/CNUC · FUNAI ·
+    INCRA · Fundação Cultural Palmares · IBAMA · CETESB · SEMIL/SIGAM · CONDEPHAAT ·
+    IPHAN/CNSA · CECAV · Defesa Civil · IPT · CPRM/SGB · DAEE · IBGE · DER-SP ·
+    TomTom Traffic Flow API · InfoSiga SP · ANTAQ · ANAC</p>
+  </section>
+  <section>
+    <h1>Obrigado</h1>
+    <p class="ficha">SICARD — Sistema de Apoio à Tomada de Decisão · PLI-SP</p>
+  </section>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    controls: true,
+    progress: true,
+    center: false,
+    slideNumber: true,
+    transition: 'slide',
+    width: 1200,
+    height: 800,
+    margin: 0.08
+  });
+</script>
+</body>
+</html>

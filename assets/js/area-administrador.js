@@ -37,16 +37,45 @@
     tipo_usuario: "Perfil do usuário", email: "E-mail", senha_hash: "Hash da senha",
     data_referencia: "Data de referência", data_homologacao: "Data de homologação",
     configuracao: "Configuração", parametros: "Parâmetros", resultado: "Resultado",
-    fase: "Fase", grupo: "Grupo", peso: "Peso", nota: "Nota", ranking: "Classificação",
+    fase: "Fase", grupo: "Grupo", peso: "Peso", nota: "Nota", ranking: "Classificação resultante",
     latitude: "Latitude", longitude: "Longitude", municipio: "Município",
     uf: "Unidade federativa", data: "Data", inicio: "Início", fim: "Fim", url: "URL",
     ativo_em: "Ativo em", excluido: "Excluído", excluido_em: "Excluído em",
+    // Alinhados com os cabeçalhos de "Hierarquizações realizadas" (/restrict/hierarquizacao/)
+    config_id: "Identificador da configuração AHP",
+    objetos: "Demandas do grupo",
+    julgamento_projetos: "Julgamentos dos projetos",
+    pesos_projetos: "Pesos dos projetos",
+    grupo_id: "Grupo comparável",
+    dados_hierarquizacao: "Dados completos da hierarquização",
+    relatorio_fase1: "Relatório da Fase 1",
+    relatorio_fase2: "Relatório da Fase 2",
+    relatorio_fase3: "Relatório da Fase 3",
+    relatorio_consolidado: "Relatório consolidado",
+  };
+
+  // Aliases que só valem dentro de uma tabela específica (mesmo nome de coluna
+  // tem sentidos diferentes em outras tabelas, ex.: "status", "codigo", "criado_em").
+  const ALIAS_POR_TABELA = {
+    hierarquizacao_portfolio: {
+      codigo: "Código da hierarquização",
+      status: "Situação",
+      arquivo_excel_matriz_criterios_premissas: "Matriz de critérios e premissas",
+      homologado_em: "Data da homologação",
+      homologado_por: "Responsável pela homologação",
+      criado_por: "Responsável pelo cadastro",
+      criado_em: "Data de cadastro",
+      atualizado_em: "Última atualização",
+      tipo_demanda_id: "Tipo de demanda",
+    },
   };
   function humanize(nome) {
     const t = String(nome).replace(/_/g, " ").trim();
     return t.charAt(0).toUpperCase() + t.slice(1);
   }
-  function aliasAmigavel(nome) {
+  function aliasAmigavel(nome, tabela) {
+    const doTabela = tabela && ALIAS_POR_TABELA[tabela];
+    if (doTabela && doTabela[nome]) return doTabela[nome];
     if (ALIAS[nome]) return ALIAS[nome];
     if (nome.endsWith("_id")) { const b = nome.slice(0, -3); return (ALIAS[b] || humanize(b)) + " (ID)"; }
     if (nome.endsWith("_em")) { const b = nome.slice(0, -3); return humanize(b) + " em"; }
@@ -123,6 +152,7 @@
     selecao: new Map(), editando: null,
     ordenar: null, direcao: "asc",
     filtro: { coluna: null, tipo: "valor", valor: null, inverter: false }, valoresCache: {},
+    usuariosNomes: {},
   };
 
   const refs = {
@@ -227,6 +257,7 @@
       Object.assign(state, {
         colunas: data.colunas, chavePrimaria: data.chave_primaria,
         linhas: data.linhas, total: data.total, paginas: data.paginas, dominio: data.dominio,
+        usuariosNomes: data.usuarios_nomes || {},
       });
       refs.sub.textContent = `${state.esquema}.${state.tabela} · ${data.total} registro(s) · chave primária: ${data.chave_primaria.join(", ") || "—"}`;
       renderTabela();
@@ -258,7 +289,7 @@
     const f = state.filtro;
     const colSelect = el("select", { class: "admin-filter-col", "aria-label": "Coluna do filtro" },
       el("option", { value: "" }, "— Coluna —"),
-      ...filtraveis.map((c) => el("option", { value: c.nome, ...(c.nome === f.coluna ? { selected: "selected" } : {}) }, aliasAmigavel(c.nome))));
+      ...filtraveis.map((c) => el("option", { value: c.nome, ...(c.nome === f.coluna ? { selected: "selected" } : {}) }, aliasAmigavel(c.nome, state.tabela))));
     colSelect.onchange = () => aoSelecionarColuna(colSelect.value);
 
     const cache = f.coluna ? state.valoresCache[f.coluna] : null;
@@ -320,8 +351,41 @@
   }
   const chaveId = (chave) => JSON.stringify(chave);
 
+  const UDT_DATA = new Set(["date"]);
+  const UDT_HORA = new Set(["time", "timetz"]);
+  const UDT_DATA_HORA = new Set(["timestamp", "timestamptz"]);
+
+  function pad2(n) { return String(n).padStart(2, "0"); }
+
+  function formatarDataHora(valor, coluna) {
+    const udt = String(coluna.udt || "").toLowerCase();
+    if (UDT_HORA.has(udt)) {
+      const m = String(valor).match(/^(\d{2}):(\d{2}):(\d{2})/);
+      if (!m) return null;
+      return { linhas: [`${m[1]}:${m[2]}:${m[3]}`] };
+    }
+    const d = new Date(valor);
+    if (Number.isNaN(d.getTime())) return null;
+    const data = `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+    if (UDT_DATA.has(udt)) return { linhas: [data] };
+    if (UDT_DATA_HORA.has(udt)) {
+      const hora = `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+      return { linhas: [data, hora] };
+    }
+    return null;
+  }
+
   function celulaValor(valor, coluna) {
     if (valor === null || valor === undefined) return { texto: "—", classe: "cell-null" };
+    const udt = String(coluna.udt || "").toLowerCase();
+    if (coluna.usuario && typeof valor === "string") {
+      const nome = state.usuariosNomes[valor];
+      return { classe: "cell-usuario", duasLinhas: [nome || "—", valor] };
+    }
+    if (UDT_DATA.has(udt) || UDT_HORA.has(udt) || UDT_DATA_HORA.has(udt)) {
+      const formatado = formatarDataHora(valor, coluna);
+      if (formatado) return { classe: "cell-datahora", duasLinhas: formatado.linhas };
+    }
     if (typeof valor === "boolean") return { texto: valor ? "Sim" : "Não", classe: "" };
     if (typeof valor === "object") { const s = JSON.stringify(valor); return { texto: s, classe: "", json: true }; }
     return { texto: String(valor), classe: "" };
@@ -344,7 +408,7 @@
       const ativo = state.ordenar === c.nome;
       const seta = ativo ? (state.direcao === "asc" ? " ▲" : " ▼") : "";
       const th = el("th", { class: c.ordenavel ? "sortable" : "" },
-        el("span", { class: "admin-col-alias" }, aliasAmigavel(c.nome) + seta),
+        el("span", { class: "admin-col-alias" }, aliasAmigavel(c.nome, state.tabela) + seta),
         el("span", { class: "admin-col-original" }, c.nome));
       if (c.ordenavel) th.addEventListener("click", () => ordenarPor(c.nome));
       headTr.append(th);
@@ -377,8 +441,15 @@
         } else {
           const info = celulaValor(val, c);
           const td = el("td", { class: info.classe });
-          if (info.json) td.append(el("span", { class: "admin-cell-json", title: info.texto }, info.texto));
-          else td.textContent = info.texto;
+          if (info.duasLinhas) {
+            td.append(
+              el("span", { class: "admin-cell-linha1" }, info.duasLinhas[0]),
+              info.duasLinhas[1] != null ? el("span", { class: "admin-cell-linha2" }, info.duasLinhas[1]) : "");
+          } else if (info.json) {
+            td.append(el("span", { class: "admin-cell-json", title: info.texto }, info.texto));
+          } else {
+            td.textContent = info.texto;
+          }
           tr.append(td);
         }
       });
@@ -508,7 +579,7 @@
         campo = el("input", { type: "text", "data-col": c.nome, placeholder: c.default ? `padrão: ${c.default}` : "" });
       }
       corpo.append(el("div", { class: "admin-field" },
-        el("label", {}, aliasAmigavel(c.nome), el("small", {}, `${c.nome} · ${c.tipo}${c.nulo ? "" : " · obrigatório"}`)),
+        el("label", {}, aliasAmigavel(c.nome, state.tabela), el("small", {}, `${c.nome} · ${c.tipo}${c.nulo ? "" : " · obrigatório"}`)),
         campo));
     });
     const backdrop = el("div", { class: "admin-modal-backdrop" });

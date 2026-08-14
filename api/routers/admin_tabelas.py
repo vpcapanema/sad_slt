@@ -19,6 +19,7 @@ from psycopg.types.json import Jsonb
 from api.db.connection import get_connection
 from api.deps.auth import require_admin
 from api.path_policy import project_path
+from api.repositories import sigma_usuario_repository
 from api.services.session_service import SessionUser
 
 router = APIRouter(prefix="/admin", tags=["admin-tabelas"])
@@ -100,6 +101,13 @@ def _coluna_editavel(coluna: dict[str, Any]) -> bool:
     udt = str(coluna["udt_name"]).lower()
     data_type = str(coluna["data_type"]).lower()
     return udt not in _TIPOS_GEOMETRIA and data_type not in _TIPOS_BINARIOS and udt != "bytea"
+
+
+def _coluna_usuario(coluna: dict[str, Any]) -> bool:
+    """UUID que referencia um usuário (ex.: criado_por, homologado_por, aprovado_por)."""
+    udt = str(coluna["udt_name"]).lower()
+    nome = str(coluna["column_name"]).lower()
+    return udt == "uuid" and nome.endswith("_por")
 
 
 def _coagir_valor(valor: Any, coluna: dict[str, Any]) -> Any:
@@ -315,6 +323,7 @@ async def obter_tabela(
             ).fetchall()
 
             chave_set = set(chave)
+            colunas_usuario = {c["column_name"] for c in colunas if _coluna_usuario(c)}
             colunas_saida = [
                 {
                     "nome": c["column_name"],
@@ -326,16 +335,29 @@ async def obter_tabela(
                     "editavel": _coluna_editavel(c),
                     "ordenavel": _coluna_editavel(c),
                     "filtravel": _coluna_editavel(c),
+                    "usuario": c["column_name"] in colunas_usuario,
                 }
                 for c in colunas
             ]
+            linhas_dict = [dict(r) for r in linhas]
+            usuarios_nomes: dict[str, str] = {}
+            if colunas_usuario:
+                ids = {
+                    str(linha[col]) for linha in linhas_dict for col in colunas_usuario if linha.get(col)
+                }
+                if ids:
+                    try:
+                        usuarios_nomes = sigma_usuario_repository.nomes_por_ids(list(ids))
+                    except Exception:
+                        usuarios_nomes = {}
             payload = {
                 "esquema": esquema,
                 "tabela": tabela,
                 "dominio": tabela.startswith("dom_"),
                 "chave_primaria": chave,
                 "colunas": colunas_saida,
-                "linhas": [dict(r) for r in linhas],
+                "linhas": linhas_dict,
+                "usuarios_nomes": usuarios_nomes,
                 "total": total,
                 "pagina": pagina,
                 "por_pagina": por_pagina,

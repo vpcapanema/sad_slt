@@ -1,0 +1,71 @@
+:root {
+  --cor-fase1: #C94B40;
+  --cor-fase2: #245A8D;
+  --cor-fase3: #2E7D32;
+  --cor-texto: #1c2733;
+}
+
+.reveal { color: var(--cor-texto); font-family: "Segoe UI", Arial, sans-serif; }
+.reveal h1, .reveal h2, .reveal h3 { color: var(--cor-texto); text-transform: none; }
+.reveal .subtitulo { color: #4a5a68; font-weight: 400; }
+.reveal .ficha { font-size: 0.6em; color: #6b7a87; margin-top: 2em; }
+.reveal .nota { font-size: 0.7em; color: #6b7a87; font-style: italic; }
+.reveal pre code { font-size: 0.55em; line-height: 1.35; }
+.reveal ul.lista-compacta { columns: 2; font-size: 0.75em; }
+.reveal p.lista-fontes { font-size: 0.55em; line-height: 1.8; color: #4a5a68; }
+
+/* Cards das 3 fases */
+.fases-grid { display: flex; gap: 1.2em; justify-content: center; margin: 1em 0; }
+.fase-card { flex: 1; padding: 1em; border-radius: 10px; color: #fff; }
+.fase-card h3 { color: #fff; margin: 0 0 0.3em; }
+.fase-card p { margin: 0; font-size: 0.6em; }
+.fase-card.fase1 { background: var(--cor-fase1); }
+.fase-card.fase2 { background: var(--cor-fase2); }
+.fase-card.fase3 { background: var(--cor-fase3); }
+
+/* Tabela de classes de modelagem */
+.tabela-classes, .tabela-resumo { width: 100%; font-size: 0.6em; border-collapse: collapse; }
+.tabela-classes td, .tabela-classes th, .tabela-resumo td, .tabela-resumo th {
+  border: 1px solid #d7dde2; padding: 0.5em 0.7em; text-align: left;
+}
+.tabela-resumo tr.total { font-weight: 700; background: #f2f5f7; }
+
+/* Slide de critério: layout texto + mapa */
+.reveal section.criterio h3 { font-size: 0.85em; margin-bottom: 0.2em; }
+.criterio-body { display: flex; gap: 1.2em; align-items: flex-start; text-align: left; }
+.criterio-texto { flex: 1.1; font-size: 0.55em; line-height: 1.4; }
+.criterio-texto p { margin: 0.35em 0; }
+.criterio-body img { flex: 1; max-height: 420px; width: auto; border: 1px solid #d7dde2; border-radius: 4px; }
+
+.mini-grid { display: flex; flex-wrap: wrap; gap: 0.6em; justify-content: center; }
+.mini-grid img { max-height: 260px; border: 1px solid #d7dde2; border-radius: 4px; }
+.mini-grid figure { margin: 0; font-size: 0.5em; text-align: center; }
+
+/* Tags de classificação */
+.tags { margin-bottom: 0.6em; }
+.tag {
+  display: inline-block; font-size: 0.42em; font-weight: 600; padding: 0.25em 0.7em;
+  border-radius: 999px; margin-right: 0.4em; color: #fff; background: #6b7a87;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.tag.fase1, .tag.restricao { background: var(--cor-fase1); }
+.tag.fase2, .tag.risco { background: #E3A018; }
+.tag.fase3 { background: var(--cor-fase3); }
+.tag.grade { background: #245A8D; }
+.tag.rede { background: #6C5AA7; }
+.tag.atributo { background: #2E7D32; }
+.tag.hibrido { background: #A44A8B; }
+.tag.ambiental { background: #3C8D5A; }
+.tag.social { background: #4B78C2; }
+.tag.economica { background: #7A5195; }
+.tag.tecnica { background: #33658A; }
+.tag.seguranca { background: #C94B40; }
+.tag.territorial { background: #8C5383; }
+.tag.juridico { background: #6D4C9A; }
+.tag.fundiario { background: #8E5C42; }
+.tag.risco-dim { background: #E3A018; }
+
+.badge {
+  font-size: 0.45em; background: #C94B40; color: #fff; padding: 0.15em 0.6em;
+  border-radius: 4px; vertical-align: middle; margin-left: 0.4em;
+}

@@ -146,10 +146,16 @@
                                     <p class="form-help is-hidden" id="collab-email-link-row">
                                         <i class="fas fa-link"></i> Link do formulário:
                                         <a id="collab-email-form-link" href="#" target="_blank" rel="noopener"></a>
+                                        <button type="button" class="btn btn-link btn-sm" id="collab-copy-link-btn"><i class="fas fa-copy"></i> Copiar link</button>
                                     </p>
                                     <div class="ahp-form-actions">
                                         <button type="button" class="btn btn-secondary" id="collab-open-mail-btn"><i class="fas fa-envelope c-btn__icon"></i>Abrir aplicativo de e-mail</button>
                                     </div>
+                                    <p class="form-help">
+                                        <i class="fas fa-circle-info"></i> Ao clicar em <strong>Abrir aplicativo de e-mail</strong>, a mensagem inteira é copiada
+                                        com o link já pronto para uso — cole com <strong>Ctrl+V</strong> no corpo do e-mail para que o link
+                                        permaneça clicável (funciona em editores de e-mail ricos, como Gmail, Outlook e Apple Mail).
+                                    </p>
                                 </section>
                             </div>
                         </div>
@@ -185,10 +191,11 @@
   <script src="/restrict/ahp/js/ahp-texto-pt.js"></script>
   <script src="/restrict/ahp/js/config-api.js"></script>
   <script src="/restrict/ahp/js/step-config-selector.js"></script>
+  <script src="/restrict/ahp/js/ahp-config-formfill.js"></script>
   <script src="/restrict/ahp/js/config-artefatos.js"></script>
   <script src="/restrict/ahp/js/ahp-contexto-ui.js"></script>
   <script src="/restrict/ahp/js/colaborativa-api.js"></script>
-  <script src="/restrict/ahp/js/step4-metodo.js?v=20260814-1"></script>
+  <script src="/restrict/ahp/js/step4-metodo.js?v=20260814-3"></script>
   <script src="/assets/js/field-filled.js"></script>
   <script src="/assets/js/paginas/ahp-step4-metodo-conteudo-eventos.js"></script>
 {% endblock %}

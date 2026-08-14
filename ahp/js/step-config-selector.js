@@ -90,6 +90,45 @@
       '<span>Matriz: ' + criterios.length + ' critério(s)</span>';
   }
 
+  function renderAvisos(avisos) {
+    var status = document.getElementById("ahp-step-config-status");
+    if (!status) return;
+    var lista = (avisos || []).filter(Boolean);
+    var existente = status.querySelector(".ahp-step-config-status__avisos");
+    if (existente) existente.remove();
+    if (!lista.length) return;
+    var box = document.createElement("div");
+    box.className = "ahp-step-config-status__avisos";
+    box.innerHTML = lista
+      .map(function (msg) {
+        return (
+          '<div class="ahp-step-config-status__aviso">' +
+          '<i class="fas fa-triangle-exclamation" aria-hidden="true"></i>' +
+          "<span>" + escapeHtml(msg) + "</span></div>"
+        );
+      })
+      .join("");
+    status.appendChild(box);
+  }
+
+  // Delega o preenchimento dos campos reais do formulário de cada etapa para
+  // um hook opcional definido pela própria página (ahp-config-formfill.js).
+  // Sempre revalida visualmente (field-filled) e mostra os avisos retornados.
+  function aplicarNaPagina(cfg) {
+    var hook = global.SLTAhpConfigFormFill && global.SLTAhpConfigFormFill.aplicar;
+    var resultado = hook ? hook(cfg) : null;
+    Promise.resolve(resultado)
+      .then(function (avisos) {
+        renderAvisos(avisos);
+      })
+      .catch(function () {
+        /* falhas no preenchimento não devem quebrar o carregamento da config */
+      })
+      .then(function () {
+        if (global.SLTFieldFilled) global.SLTFieldFilled.syncAll(document);
+      });
+  }
+
   async function iniciar() {
     criarComponente();
     var select = document.getElementById("ahp-step-config-select");
@@ -115,6 +154,7 @@
           var completa = await obterConfig(select.value);
           renderResumo(completa);
           global.dispatchEvent(new CustomEvent("slt:ahp-config-loaded", { detail: completa }));
+          aplicarNaPagina(completa);
         } catch (error) {
           status.textContent = error && error.message ? error.message : "Falha ao carregar configuração.";
         }
@@ -130,6 +170,7 @@
       global.dispatchEvent(
         new CustomEvent("slt:ahp-config-loaded", { detail: completa })
       );
+      aplicarNaPagina(completa);
     } catch (error) {
       select.innerHTML = '<option value="">Não foi possível carregar</option>';
       status.textContent = error && error.message ? error.message : "Falha ao consultar configurações.";

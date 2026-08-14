@@ -2061,4 +2061,122 @@
     renderConferenciaArtefato();
     if (window.SLTFieldFilled) window.SLTFieldFilled.syncAll(document);
   })();
+
+  // ---- Preenchimento a partir de uma configuração salva (card do seletor) ----
+  // Chamado por ahp/js/ahp-config-formfill.js quando o usuário escolhe um
+  // registro de ahp.config_multicriterio_portfolio/avulsa nesta etapa.
+  function aplicarConfigStep1(cfg) {
+    const avisos = [];
+    if (!cfg) return avisos;
+    if (!sugEscopo || !sugObjetivo || !sugDescricao || !acaoCombo) {
+      avisos.push("A página ainda está carregando; selecione a configuração novamente em alguns instantes.");
+      return avisos;
+    }
+
+    const tipo = cfg.tipo === "avulsa" ? "avulsa" : "portfolio";
+    const radioTipo = form.querySelector('input[name="tipo_analise"][value="' + tipo + '"]');
+    if (radioTipo && !radioTipo.checked) {
+      radioTipo.checked = true;
+      syncCards();
+      togglePortfolio();
+    }
+
+    if (denominacaoInput && cfg.denominacao) {
+      denominacaoInput.value = cfg.denominacao;
+      denominacaoInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    if (areaCombo) areaCombo.set(cfg.area_conhecimento || "");
+    if (temaCombo) temaCombo.set(cfg.tema || "");
+    if (fenomenoCombo) fenomenoCombo.set(cfg.fenomeno || "");
+    if (tipo === "avulsa" && objetoCombo) objetoCombo.set(cfg.objeto || "");
+    onEscopoChange();
+
+    if (cfg.nome && state.sug.escopo) {
+      state.sug.escopo.textos[0] = cfg.nome;
+      state.sug.escopo.editados[0] = true;
+      state.sug.escopo.sel = 0;
+      state.sug.escopo.confirmado = cfg.nome;
+      if (nomeInput) nomeInput.value = cfg.nome;
+    } else {
+      avisos.push("Esta configuração ainda não tem um escopo (título) definido.");
+    }
+
+    if (acaoCombo && cfg.objetivo) {
+      const primeiraPalavra = String(cfg.objetivo).trim().split(/\s+/)[0] || "";
+      const verbo = SUGESTOES_ACAO.find((v) => v.toLowerCase() === primeiraPalavra.toLowerCase());
+      if (verbo) acaoCombo.set(verbo);
+      else avisos.push("Não foi possível identificar automaticamente o verbo de ação — selecione um para revisar o objetivo.");
+    }
+    refreshGates();
+    sugEscopo.render();
+    onObjetivoChange();
+
+    if (cfg.objetivo && state.sug.objetivo) {
+      state.sug.objetivo.textos[0] = cfg.objetivo;
+      state.sug.objetivo.editados[0] = true;
+      state.sug.objetivo.sel = 0;
+      state.sug.objetivo.confirmado = cfg.objetivo;
+      if (objInput) objInput.value = cfg.objetivo;
+    } else {
+      avisos.push("Esta configuração ainda não tem um objetivo definido.");
+    }
+
+    // Sem granularidade salva sobre dimensões: assume "Não" para não bloquear
+    // a descrição — o usuário pode revisar manualmente se desejar.
+    if (!state.incluirDim) {
+      state.incluirDim = "nao";
+      state.dimConfirmado = true;
+      const radioNao = form.querySelector('input[name="incluir-dimensoes"][value="nao"]');
+      if (radioNao) radioNao.checked = true;
+    }
+    refreshGates();
+    sugObjetivo.render();
+
+    if (cfg.descricao && state.sug.descricao) {
+      state.sug.descricao.textos[0] = cfg.descricao;
+      state.sug.descricao.editados[0] = true;
+      state.sug.descricao.sel = 0;
+      state.sug.descricao.confirmado = cfg.descricao;
+      if (descInput) descInput.value = cfg.descricao;
+    } else {
+      avisos.push("Esta configuração ainda não tem uma descrição definida.");
+    }
+    refreshGates();
+    sugDescricao.render();
+
+    (async function aplicarUniverso() {
+      if (tipo === "portfolio" && cfg.tipo_demanda) {
+        const encontrado = state.tiposDemanda.find((t) => t.codigo === cfg.tipo_demanda);
+        if (encontrado) {
+          tipoDemandaSel.value = String(encontrado.id);
+          await carregarDemandas();
+        } else {
+          avisos.push("Tipo de demanda «" + cfg.tipo_demanda + "» não encontrado nas opções desta etapa.");
+        }
+      }
+      if (Array.isArray(cfg.universo_objetos) && cfg.universo_objetos.length) {
+        state.universoObjetos = cfg.universo_objetos.map((o) => ({
+          id: String(o.id || o.demanda_id),
+          codigo: o.codigo,
+          nome: o.nome,
+          tipo_demanda: o.tipo_demanda || cfg.tipo_demanda,
+        }));
+        state.universoSig = state.universoObjetos.map((o) => o.id).sort().join(",");
+        state.universoConfirmado = true;
+      } else {
+        avisos.push("O universo de objetos desta configuração ainda está vazio.");
+      }
+      renderUniverso();
+      renderResumo();
+      atualizarPreview();
+      renderConferenciaArtefato();
+      saveDraft();
+      if (window.SLTFieldFilled) window.SLTFieldFilled.syncAll(document);
+    })();
+
+    return avisos;
+  }
+
+  window.SLTAhpConfigFormFill_configuracao = aplicarConfigStep1;
 })();

@@ -206,16 +206,7 @@ $migrations = @(
     "069_envio_cadastro_em_avaliacao.sql",
     "070_vinculo_objeto.sql",
     "071_reprovacao_demanda.sql",
-    "072_campos_cadastrais_nativos.sql",
-    "073_alinhar_rotulos_formulario_cadastro.sql",
-    "074_backfill_atributos_cadastrais_seed_teste.sql",
-    "075_niveis_prefixo_valores_nativos.sql",
-    "076_consolidacao_colaborativa.sql",
-    "077_integridade_fluxo_colaborativo_ahp.sql",
-    "078_arquivo_excel_matriz_criterios_premissas.sql",
-    "079_excel_original_hierarquizacao.sql",
-    "080_integridade_referencias_colaborativas.sql"
-    ,"081_fk_config_hierarquizacao_origem.sql"
+    "072_campos_cadastrais_nativos.sql"
 )
 
 if ($OnlyMigration) {
@@ -227,33 +218,13 @@ if ($OnlyMigration) {
 }
 
 if (-not $OnlyMigration) {
-    $latestSchemaQuery = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='ahp' AND table_name='config_multicriterio_avulsa' AND column_name='modo_preenchimento') THEN 't' ELSE 'f' END;"
-    $priorSchemaQuery076 = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='ahp' AND table_name='comparacao_colaborativa_ambiente' AND column_name='matriz_consolidada') THEN 't' ELSE 'f' END;"
-    $priorSchemaQuery075 = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.check_constraints WHERE constraint_schema='demandas' AND constraint_name='ck_projeto_maturidade') THEN 't' ELSE 'f' END;"
-    $priorSchemaQuery074 = "SELECT CASE WHEN EXISTS (SELECT 1 FROM demandas.dom_atributo_objeto WHERE codigo='capex_estimado' AND nome='Capex — custo estimado para implantação (R$)') AND NOT EXISTS (SELECT 1 FROM demandas.projeto WHERE codigo LIKE 'I-PRJ-TESTE-%' AND maturidade IS NULL) THEN 't' ELSE 'f' END;"
-    $priorSchemaQuery073 = "SELECT CASE WHEN EXISTS (SELECT 1 FROM demandas.dom_atributo_objeto WHERE codigo='capex_estimado' AND nome='Capex — custo estimado para implantação (R$)') THEN 't' ELSE 'f' END;"
-    $priorSchemaQuery072 = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='projeto' AND column_name='maturidade') THEN 't' ELSE 'f' END;"
+    $latestSchemaQuery = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='projeto' AND column_name='maturidade') THEN 't' ELSE 'f' END;"
     $priorSchemaQuery = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='projeto' AND column_name='motivo_reprovacao') THEN 't' ELSE 'f' END;"
     $coreSchemaQuery = "SELECT CASE WHEN to_regclass('demandas.projeto') IS NOT NULL OR to_regclass('ahp.config_multicriterio_portfolio') IS NOT NULL THEN 't' ELSE 'f' END;"
 
     if (Test-SchemaReady $latestSchemaQuery) {
-        Write-Ok "Schema ja esta na migration 077; nenhuma migration sera reaplicada"
+        Write-Ok "Schema ja esta na migration 072; nenhuma migration sera reaplicada"
         $migrations = @()
-    } elseif (Test-SchemaReady $priorSchemaQuery076) {
-        Write-Ok "Schema ja esta na migration 076; aplicando somente migrations pendentes (>= 077)"
-        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 77 }
-    } elseif (Test-SchemaReady $priorSchemaQuery075) {
-        Write-Ok "Schema ja esta na migration 075; aplicando somente migrations pendentes (>= 076)"
-        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 76 }
-    } elseif (Test-SchemaReady $priorSchemaQuery074) {
-        Write-Ok "Schema ja esta na migration 074; aplicando somente migrations pendentes (>= 075)"
-        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 75 }
-    } elseif (Test-SchemaReady $priorSchemaQuery073) {
-        Write-Ok "Schema ja esta na migration 073; aplicando somente migrations pendentes (>= 074)"
-        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 74 }
-    } elseif (Test-SchemaReady $priorSchemaQuery072) {
-        Write-Ok "Schema ja esta na migration 072; aplicando somente migrations pendentes (>= 073)"
-        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 73 }
     } elseif (Test-SchemaReady $priorSchemaQuery) {
         Write-Ok "Schema ja esta na migration 071; aplicando somente migrations pendentes (>= 072)"
         $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 72 }

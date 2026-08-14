@@ -9,31 +9,21 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
-  <link rel="stylesheet" href="/restrict/hierarquizacao/platform-map.css?v=20260813-1">
+  <link rel="stylesheet" href="/restrict/hierarquizacao/platform-map.css?v=20260814-1">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
 {% macro link_card(href, icon, title, text, tone='blue', tag='Abrir') %}
-  <a class="platform-card platform-card--{{ tone }}" href="{{ href }}">
-    <span class="platform-card__icon"><i class="{{ icon }}"></i></span>
-    <span class="platform-card__body"><small>{{ tag }}</small><strong>{{ title }}</strong><span>{{ text }}</span></span>
-    <i class="fa-solid fa-arrow-up-right-from-square platform-card__arrow" aria-hidden="true"></i>
+  <a class="platform-tile platform-tile--{{ tone }}" href="{{ href }}" title="{{ title }}">
+    <span class="platform-tile__icon"><i class="{{ icon }}"></i></span>
+    <span class="platform-tile__label">{{ title }}</span>
   </a>
 {% endmacro %}
 
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="conteudo-principal app-main platform-map-main">
-  <header class="platform-map-hero">
-    <div class="platform-map-hero__eyebrow"><i class="fa-solid fa-compass"></i> Módulo de Apoio à Decisão</div>
-    <h1>Mapa da plataforma</h1>
-    <p>Encontre cada etapa, biblioteca e ferramenta operacional em um só lugar. Os cartões estão agrupados por proximidade temática e ordem de uso.</p>
-    <div class="platform-map-hero__actions">
-      <a class="btn btn-primary" href="/restrict/hierarquizacao/processos/"><i class="fa-solid fa-play"></i> Abrir hierarquizações</a>
-      <a class="btn btn-secondary" href="/restrict/hierarquizacao/metodologia/"><i class="fa-solid fa-book-open"></i> Consultar metodologia</a>
-    </div>
-  </header>
-
+  <div class="platform-groups-grid">
   <section class="platform-group secao-platform-processo platform-group--primary" aria-labelledby="group-processo">
     <div class="platform-group__heading"><span class="platform-group__number">01</span><div><h2 id="group-processo">Planejar e acompanhar uma rodada</h2><p>Do cadastro dos objetos ao ranking homologado.</p></div></div>
     <div class="platform-grid">
@@ -43,6 +33,11 @@
       {{ link_card('/restrict/hierarquizacao/fase-1/', 'fa-solid fa-filter', 'Fase 1 · Elegibilidade', 'Cruze demandas com risco e restrição territorial.', 'amber', 'Executar fase') }}
       {{ link_card('/restrict/hierarquizacao/fase-2/', 'fa-solid fa-map-location-dot', 'Fase 2 · Favorabilidade', 'Aplique o mérito técnico-territorial e consulte indicadores.', 'green', 'Executar fase') }}
       {{ link_card('/restrict/hierarquizacao/fase-3/', 'fa-solid fa-sliders', 'Fase 3 · Ajuste fino', 'Preencha atributos, trate riscos e ajuste os scores.', 'violet', 'Executar fase') }}
+      {{ link_card('/restrict/hierarquizacao/processos/objetos/', 'fa-solid fa-shapes', 'Objetos da rodada', 'Reveja e ajuste o universo de objetos da hierarquização.', 'blue', 'Etapa 2') }}
+      {{ link_card('/restrict/hierarquizacao/processos/avaliacao/', 'fa-solid fa-clipboard-check', 'Avaliação por critério', 'Registre a avaliação de cada objeto por critério.', 'blue', 'Etapa 3') }}
+      {{ link_card('/restrict/hierarquizacao/processos/ranking/', 'fa-solid fa-arrow-down-1-9', 'Ranking da rodada', 'Calcule e revise o ranking da hierarquização em andamento.', 'navy', 'Etapa 4') }}
+      {{ link_card('/restrict/hierarquizacao/processos/homologacao/', 'fa-solid fa-stamp', 'Homologação', 'Homologue o resultado final da rodada.', 'navy', 'Etapa 5') }}
+      {{ link_card('/restrict/hierarquizacao/ranking/', 'fa-solid fa-trophy', 'Ranking privado', 'Consulte o ranking consolidado de demandas já hierarquizadas.', 'navy', 'Resultados') }}
     </div>
   </section>
 
@@ -50,6 +45,7 @@
     <div class="platform-group__heading"><span class="platform-group__number">02</span><div><h2 id="group-ahp">Análise multicritério (AHP)</h2><p>Defina critérios, compare prioridades e gere pesos para a decisão.</p></div></div>
     <div class="platform-grid">
       {{ link_card('/restrict/ahp/', 'fa-solid fa-scale-balanced', 'Central AHP', 'Visão geral das análises multicritério e configurações disponíveis.', 'teal', 'Módulo') }}
+      {{ link_card('/restrict/ahp/analise/', 'fa-solid fa-diagram-project', 'Calculadora AHP', 'Escolha o tipo de análise e inicie o fluxo guiado da calculadora.', 'teal', 'Começar') }}
       {{ link_card('/restrict/ahp/configuracao/', 'fa-solid fa-crosshairs', 'Configuração', 'Defina escopo, objetivo e origem da matriz de critérios e premissas.', 'teal', 'Etapa 1') }}
       {{ link_card('/restrict/ahp/criterios/', 'fa-solid fa-table-list', 'Critérios', 'Carregue e revise os critérios dinâmicos da análise.', 'teal', 'Etapa 2') }}
       {{ link_card('/restrict/ahp/nomes/', 'fa-solid fa-pen-to-square', 'Nomes', 'Ajuste os nomes apresentados aos participantes.', 'teal', 'Etapa 3') }}
@@ -79,13 +75,17 @@
     <div class="platform-group__heading"><span class="platform-group__number">04</span><div><h2 id="group-support">Apoio, dados e governança</h2><p>Áreas complementares para alimentar, revisar e administrar a decisão.</p></div></div>
     <div class="platform-grid">
       {{ link_card('/restrict/', 'fa-solid fa-house', 'Início da área restrita', 'Retorne ao painel principal da aplicação.', 'navy', 'Navegação') }}
+      {{ link_card('/restrict/admin/', 'fa-solid fa-database', 'Área do Administrador', 'Gerencie tabelas de domínio e tabelas operacionais do banco.', 'navy', 'Administração') }}
       {{ link_card('/restrict/demandas/', 'fa-solid fa-inbox', 'Demandas', 'Consulte o universo de demandas e seus estados.', 'blue', 'Dados') }}
+      {{ link_card('/restrict/demanda/', 'fa-solid fa-file-lines', 'Detalhe da demanda', 'Consulte os dados completos de uma demanda específica.', 'blue', 'Dados') }}
+      {{ link_card('/restrict/revisao-status/', 'fa-solid fa-arrows-rotate', 'Revisão de status', 'Revise e corrija transições de status das demandas.', 'blue', 'Governança') }}
       {{ link_card('/restrict/complementacao/', 'fa-solid fa-pen-to-square', 'Complementação', 'Revise e complete informações das demandas selecionadas.', 'blue', 'Dados') }}
       {{ link_card('/restrict/painel/', 'fa-solid fa-chart-line', 'Painel de acompanhamento', 'Acompanhe indicadores, pendências e movimentações da plataforma.', 'blue', 'Gestão') }}
       {{ link_card('/restrict/geoespacial/configurador-ajuste/', 'fa-solid fa-circle-check', 'Verificação da Fase 3', 'Revise produtos e parâmetros antes da execução.', 'violet', 'Qualidade') }}
       {{ link_card('/restrict/hierarquizacao/metodologia/', 'fa-solid fa-circle-info', 'Apresentação do processo', 'Leia a visão conceitual das fases e decisões.', 'navy', 'Orientação') }}
     </div>
   </section>
+  </div>
 </main>
 {% endblock %}
 

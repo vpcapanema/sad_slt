@@ -33,6 +33,9 @@ _SELECT_BASE = """
         h.ranking,
         h.dados_hierarquizacao,
         h.relatorio_fase1,
+        h.relatorio_fase2,
+        h.relatorio_fase3,
+        h.relatorio_consolidado,
         h.homologado_em,
         h.homologado_por,
         h.criado_por,
@@ -42,7 +45,10 @@ _SELECT_BASE = """
     LEFT JOIN ahp.config_multicriterio_portfolio c ON c.id = h.config_id
 """
 
-_JSON_FIELDS = {"objetos", "julgamento_projetos", "pesos_projetos", "ranking", "dados_hierarquizacao", "relatorio_fase1"}
+_JSON_FIELDS = {
+    "objetos", "julgamento_projetos", "pesos_projetos", "ranking", "dados_hierarquizacao",
+    "relatorio_fase1", "relatorio_fase2", "relatorio_fase3", "relatorio_consolidado",
+}
 
 
 def _json_default(obj: Any) -> Any:

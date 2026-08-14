@@ -105,6 +105,9 @@ def _response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
         ranking=row.get("ranking"),
         dados_hierarquizacao=row.get("dados_hierarquizacao") or {},
         relatorio_fase1=row.get("relatorio_fase1") or {},
+        relatorio_fase2=row.get("relatorio_fase2") or {},
+        relatorio_fase3=row.get("relatorio_fase3") or {},
+        relatorio_consolidado=row.get("relatorio_consolidado") or {},
         criadoEm=_iso(row.get("criado_em")) or "",
         atualizadoEm=_iso(row.get("atualizado_em")) or "",
         homologadoEm=_iso(row.get("homologado_em")),
@@ -1138,7 +1141,7 @@ def executar_fase_2(
                 if obj["hierarquizacao"]["fase_2"].get("score_fase2") is not None
             ),
         }
-        return _response(repo.update(codigo, {"dados_hierarquizacao": dados, "status": "em_julgamento"}) or row)
+        return _response(repo.update(codigo, {"dados_hierarquizacao": dados, "relatorio_fase2": dados["cabecalho_grupo"]["relatorios"]["fase_2"], "status": "em_julgamento"}) or row)
 
     if not payload.pacote_id:
         raise DemandaValidationError("Selecione as camadas homologadas de grade e de rede.", field="camadas")
@@ -1235,7 +1238,7 @@ def executar_fase_2(
         "objetos_com_score": len(scores),
     }
     return _response(
-        repo.update(codigo, {"dados_hierarquizacao": dados, "status": "em_julgamento"})
+        repo.update(codigo, {"dados_hierarquizacao": dados, "relatorio_fase2": dados["cabecalho_grupo"]["relatorios"]["fase_2"], "status": "em_julgamento"})
         or row
     )
 
@@ -1515,7 +1518,7 @@ def executar_fase_3(
         "regra_ausentes": payload.regra_ausentes,
     }
     return _response(
-        repo.update(codigo, {"dados_hierarquizacao": dados, "status": "em_julgamento"})
+        repo.update(codigo, {"dados_hierarquizacao": dados, "relatorio_fase3": dados["cabecalho_grupo"]["relatorios"]["fase_3"], "status": "em_julgamento"})
         or row
     )
 
@@ -1706,7 +1709,12 @@ def sintetizar(
     return _response(
         repo.update(
             codigo,
-            {"dados_hierarquizacao": dados, "ranking": final, "status": "calculada"},
+            {
+                "dados_hierarquizacao": dados,
+                "ranking": final,
+                "relatorio_consolidado": dados["cabecalho_grupo"]["relatorios"]["sintese"],
+                "status": "calculada",
+            },
         )
         or row
     )
