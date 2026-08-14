@@ -1,7 +1,7 @@
 # SICARD — stack de produção para a VM AWS (mesma VM do SIGMA, sa-east-1)
 # Sobe: docker compose -f docker-compose.vm.yml up -d
-# Banco: conecta direto em 56.125.163.194:5433 (container sigma_pli_db, já existente),
-# via variáveis SIGMA_POSTGRES_* do .env — não precisa de rede Docker dedicada.
+# Banco: conecta internamente ao container sigma_pli_db pela rede compartilhada
+# sigma-backend-network, sem sair pelo IP público da própria VM.
 
 services:
   app:
@@ -15,8 +15,13 @@ services:
       - .env
     environment:
       PORT: "8080"
+      SIGMA_POSTGRES_HOST: "sigma_pli_db"
+      SIGMA_POSTGRES_PORT: "5432"
     ports:
       - "127.0.0.1:8070:8080"
+    networks:
+      - default
+      - sigma-backend
     mem_limit: 1024m
     mem_reservation: 256m
     healthcheck:
@@ -30,3 +35,8 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
+
+networks:
+  sigma-backend:
+    external: true
+    name: sigma-backend-network
