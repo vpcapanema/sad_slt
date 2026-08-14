@@ -217,7 +217,7 @@ ETAPA_1_ITEM_CONFIG = [
         "code": "1.2.2.1",
         "subetapa": "Risco",
         "dimensao": "Demanda",
-        "criterio": "Menor incerteza quanto à demanda futura do projeto",
+        "criterio": "Menor incerteza quanto à projeção de demanda futura",
     },
     {
         "kind": "section",
@@ -248,7 +248,7 @@ ETAPA_1_ITEM_CONFIG = [
         "subetapa": "Risco",
         "dimensao": "Execução",
         "criterio": (
-            "Menor dependência de projetos predecessores ou de entregas "
+            "Menor dependência de demandas predecessoras ou de entregas "
             "externas"
         ),
     },
@@ -640,7 +640,7 @@ ETAPA_3_ITEM_CONFIG = [
         "code": "3.2.3",
         "dimensao": "Viabilidade",
         "criterio": (
-            "Maior consenso institucional para viabilização do projeto"
+            "Maior consenso institucional para viabilização da demanda"
         ),
     },
     {

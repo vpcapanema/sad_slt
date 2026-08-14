@@ -37,6 +37,71 @@ async def criar_ambiente(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+# Rotas com sufixo fixo registradas antes de "/ambientes/{tipo}/{codigo}"
+# para não serem capturadas pela rota genérica de dois segmentos.
+@router.get(
+    "/ambientes/configuracao/{tipo}/{codigo}",
+    response_model=list[AmbienteColaborativoResponseSchema],
+)
+async def listar_ambientes_config(
+    tipo: str,
+    codigo: str,
+    request: Request,
+    _user: SessionUser = Depends(require_authenticated),
+) -> list[AmbienteColaborativoResponseSchema]:
+    """Lista todas as rodadas colaborativas de uma configuração AHP."""
+    try:
+        return service.listar_ambientes_config(tipo, codigo, base_url=_base_url(request))
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/ambientes/{ambiente_id}/respostas", response_model=list[RespostaColaborativaResponseSchema])
+async def listar_respostas(
+    ambiente_id: str,
+    _user: SessionUser = Depends(require_authenticated),
+) -> list[RespostaColaborativaResponseSchema]:
+    """Lista respostas recebidas (gestor da análise)."""
+    try:
+        return service.listar_respostas(ambiente_id)
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/ambientes/{ambiente_id}", response_model=AmbienteColaborativoResponseSchema)
+async def obter_ambiente_id(
+    ambiente_id: str,
+    request: Request,
+    _user: SessionUser = Depends(require_authenticated),
+) -> AmbienteColaborativoResponseSchema:
+    """Obtém todas as informações persistidas do ambiente colaborativo."""
+    try:
+        return service.obter_ambiente_id(ambiente_id, base_url=_base_url(request))
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/ambientes/{ambiente_id}/consolidar", response_model=AmbienteColaborativoResponseSchema)
+async def consolidar_ambiente(
+    ambiente_id: str,
+    request: Request,
+    _user: SessionUser = Depends(require_analyst),
+) -> AmbienteColaborativoResponseSchema:
+    """Consolida as respostas consistentes por média geométrica (AIJ)."""
+    try:
+        return service.consolidar_ambiente(ambiente_id, base_url=_base_url(request))
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.get("/ambientes/{tipo}/{codigo}", response_model=AmbienteColaborativoResponseSchema)
 async def obter_ambiente_config(
     tipo: str,
@@ -78,20 +143,6 @@ async def enviar_resposta(
     """Envia resposta colaborativa (RC < 0,10 obrigatório)."""
     try:
         return service.registrar_resposta(token, body)
-    except DemandaValidationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except DatabaseUnavailableError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-
-@router.get("/ambientes/{ambiente_id}/respostas", response_model=list[RespostaColaborativaResponseSchema])
-async def listar_respostas(
-    ambiente_id: str,
-    _user: SessionUser = Depends(require_authenticated),
-) -> list[RespostaColaborativaResponseSchema]:
-    """Lista respostas recebidas (gestor da análise)."""
-    try:
-        return service.listar_respostas(ambiente_id)
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:

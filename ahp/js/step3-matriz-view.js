@@ -1,5 +1,5 @@
 /**
- * Etapa 3 — Tabela de Premissas e Critérios (abaixo do cadastro de nomes).
+ * Etapa 3 Ã¢â‚¬â€ Tabela de Premissas e CritÃƒÂ©rios (abaixo do cadastro de nomes).
  */
 (function (global) {
   "use strict";
@@ -58,7 +58,7 @@
     return done.then(function () {
       if (mudou) {
         global.alert(
-          "Os critérios foram alterados. A comparação pareada foi reiniciada — refaça as Etapas 4 e 5."
+          "Os critÃƒÂ©rios foram alterados. A comparaÃƒÂ§ÃƒÂ£o pareada foi reiniciada Ã¢â‚¬â€ refaÃƒÂ§a as Etapas 4 e 5."
         );
       }
       return criteriaSignature(rows);
@@ -84,9 +84,9 @@
             res,
             {
               etapa: "Etapa 3",
-              titulo: "Divergências na matriz de premissas",
+              titulo: "DivergÃƒÂªncias na matriz de premissas",
               intro:
-                "Alguns critérios ou premissas divergem do catálogo PLI-SP ou das dimensões da configuração. Revise ou prossiga mesmo assim.",
+                "Alguns critÃƒÂ©rios ou premissas divergem do catÃƒÂ¡logo PLI-SP ou das dimensÃƒÂµes da configuraÃƒÂ§ÃƒÂ£o. Revise ou prossiga mesmo assim.",
             },
             runSave
           );
@@ -186,14 +186,25 @@
   }
 
   function renderEditor(panel, rows, fileName, cfg) {
+    var literalColumns = rows && rows.__columns;
     rows = seedFromManualCriteria(rows);
+    if (literalColumns && !rows.__columns) {
+      Object.defineProperty(rows, "__columns", {
+        value: literalColumns,
+        enumerable: false,
+        configurable: true,
+        writable: true,
+      });
+    }
     var baseline = criteriaSignature(rows);
     global.__step3MatrizBaseline = baseline;
     global.__step3MatrizSave = makeSaveHandler(cfg, fileName, baseline);
-    SltMatrizPremissas.renderMatrizPremissasEditor(panel, {
+    /* A seÃƒÂ§ÃƒÂ£o 3.3 ÃƒÂ© uma visualizaÃƒÂ§ÃƒÂ£o integral da matriz ativa: o componente
+       gera cabeÃƒÂ§alho, colunas e valores diretamente do registro selecionado. */
+    SltMatrizPremissas.renderMatrizPremissasPanel(panel, {
       rows: rows,
+      columns: literalColumns,
       fileName: fileName,
-      onSave: global.__step3MatrizSave,
     });
   }
 
@@ -204,8 +215,23 @@
     syncNamesFromInputs();
   }
 
+  function obterHostMatriz() {
+    var section = document.getElementById("matriz-premissas-section");
+    var body = section && section.querySelector(".ahp-section-body");
+    if (!body) return null;
+    var host = body.querySelector("[data-ahp-matriz-host]");
+    if (!host) {
+      host = document.createElement("div");
+      host.setAttribute("data-ahp-matriz-host", "true");
+      host.className = "ahp-matriz-panel-root";
+      host.setAttribute("aria-live", "polite");
+      body.appendChild(host);
+    }
+    return host;
+  }
+
   function syncNamesFromInputs() {
-    var panel = document.getElementById("matriz-premissas-panel");
+    var panel = obterHostMatriz();
     if (!panel || !global.SltMatrizPremissas) return;
     var names = getCriteriaNamesFromPageOrStorage();
     SltMatrizPremissas.syncCriterioFromNames(panel, names);
@@ -225,7 +251,7 @@
   };
 
   document.addEventListener("DOMContentLoaded", function () {
-    var panel = document.getElementById("matriz-premissas-panel");
+    var panel = obterHostMatriz();
     if (!panel || !global.SltMatrizPremissas) return;
 
     var cfg = getConfigAtual();
@@ -239,6 +265,7 @@
           var fileName = (config && config.arquivo_nome) || localFile;
           if (!rows.length) rows = localRows;
           boot(panel, rows, fileName, cfg);
+          if (cfg.tipo === "portfolio") carregarExcelOriginal(panel, cfg, config);
         })
         .catch(function () {
           boot(panel, localRows, localFile, cfg);
@@ -248,4 +275,39 @@
 
     boot(panel, localRows, localFile, cfg);
   });
+
+  global.addEventListener("slt:ahp-config-loaded", function (event) {
+    var panel = obterHostMatriz();
+    var cfg = event.detail || {};
+    if (!panel || !cfg.codigo || !global.SLTConfigApi) return;
+    var contexto = { tipo: cfg.tipo || "portfolio", codigo: cfg.codigo };
+    var rows = (cfg.criterios || []).slice();
+    boot(panel, rows, cfg.arquivo_nome || "", contexto);
+    if (contexto.tipo === "portfolio") carregarExcelOriginal(panel, contexto, cfg);
+  });
+
+  function carregarExcelOriginal(panel, cfg, config) {
+    if (!global.SltMatrizPremissas || !global.SltMatrizPremissas.parseXlsxArrayBuffer) return;
+    fetch("/api/ahp/configuracoes/" + encodeURIComponent(cfg.tipo) + "/" + encodeURIComponent(cfg.codigo) + "/matriz-excel", { credentials: "include", cache: "no-store" })
+      .then(function (res) { if (res.status === 204) return null; if (!res.ok) throw new Error("Arquivo Excel original indisponÃƒÂ­vel."); return res.arrayBuffer(); })
+      .then(function (buffer) {
+        if (!buffer) return;
+        var rows = global.SltMatrizPremissas.parseXlsxArrayBuffer(buffer);
+        if (!rows || !rows.length) throw new Error("A matriz Excel nÃƒÂ£o possui linhas vÃƒÂ¡lidas.");
+        var configRows = (config && config.criterios) || [];
+        rows.forEach(function (row) {
+          if (row.fase) return;
+          var ref = configRows.filter(function (item) {
+            return item && item.criterio && item.criterio === row.criterio;
+          })[0];
+          if (ref && ref.fase) row.fase = ref.fase;
+        });
+        var nome = (config && config.arquivo_nome) || "matriz-criterios-premissas.xlsx";
+        boot(panel, rows, nome, cfg);
+      })
+      .catch(function (error) {
+        // AusÃƒÂªncia do binÃƒÂ¡rio nÃƒÂ£o impede a renderizaÃƒÂ§ÃƒÂ£o da matriz salva.
+        if (global.console && global.console.warn) global.console.warn("Matriz Excel original indisponÃƒÂ­vel; usando os dados da configuraÃƒÂ§ÃƒÂ£o.", error);
+      });
+  }
 })(window);

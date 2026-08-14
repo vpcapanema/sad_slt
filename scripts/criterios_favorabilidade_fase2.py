@@ -10,7 +10,7 @@ from openpyxl import load_workbook
 ROOT = Path(__file__).resolve().parents[1]
 MATRIX_PATH = ROOT / "documentacao" / "matrizes" / "Matriz_Criterios_Premissas_PLI-SP_v3.xlsx"
 MATRIX_SHEET = "Matriz Crit Premissas v3"
-MATRIX_STAGE = "Favorabilidade territorial e da rede"
+MATRIX_STAGE = "Favorabilidade territorial em grade e da rede"
 
 
 @dataclass(frozen=True)
@@ -138,6 +138,7 @@ def validate_catalog_against_matrix() -> None:
         criterion.matrix_name
         for criteria in CRITERIA_BY_GROUP.values()
         for criterion in criteria
+        if criterion.available
     }
     missing = catalog_criteria - matrix_criteria
     if missing:

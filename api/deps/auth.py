@@ -6,7 +6,8 @@ from fastapi import Cookie, Depends, HTTPException, Request
 from api.services.session_service import SessionUser, cookie_name, is_gestor, parse_token
 
 _OPERATE_PROFILES = frozenset({"OPERADOR", "ANALISTA", "GESTOR", "ADMIN"})
-_ANALYZE_PROFILES = frozenset({"ANALISTA", "GESTOR"})
+# ADMIN é perfil elevado: herda as capacidades de análise.
+_ANALYZE_PROFILES = frozenset({"ANALISTA", "GESTOR", "ADMIN"})
 
 
 def _client_ip(request: Request) -> str | None:

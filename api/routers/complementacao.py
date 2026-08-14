@@ -32,7 +32,8 @@ def _pode_editar(
 
 def _matriz(row: dict[str, Any]) -> Any:
     dados = row.get("dados_hierarquizacao") or {}
-    return (dados.get("cabecalho_grupo") or {}).get("matriz_premissas_criterios")
+    matriz = (dados.get("cabecalho_grupo") or {}).get("matriz_premissas_criterios")
+    return matriz if extrair_colunas(matriz) else row.get("config_criterios") or matriz
 
 
 def _item(row: dict[str, Any], obj: dict[str, Any], *, pode_editar: bool) -> dict[str, Any]:

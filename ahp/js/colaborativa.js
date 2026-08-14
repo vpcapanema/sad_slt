@@ -78,6 +78,29 @@
     );
   }
 
+  function updateProgressHint(cr) {
+    var hint = el("collab-reciprocal-hint");
+    if (!hint) return;
+    var total = document.querySelectorAll(".saaty-pair").length;
+    var touched = document.querySelectorAll(".saaty-pair--touched").length;
+    hint.innerHTML =
+      '<i class="fas fa-circle-check" aria-hidden="true"></i> ' +
+      "Pares revisados: <strong>" + touched + "/" + total + "</strong>. " +
+      "Cada ajuste preenche automaticamente o valor oposto da comparaÃ§Ã£o. " +
+      (cr < 0.1 ? "A consistÃªncia estÃ¡ adequada para envio." : "Acompanhe o RC acima antes de enviar.");
+    hint.className = "ahp-collab-reciprocal-hint " + (cr < 0.1 ? "is-ok" : "is-warn");
+  }
+
+  var originalUpdateCollabMetrics = updateCollabMetrics;
+  updateCollabMetrics = function () {
+    originalUpdateCollabMetrics();
+    if (typeof buildLiveMatrix !== "function" || typeof SLTAhp === "undefined") return;
+    var matrix = buildLiveMatrix();
+    if (!matrix) return;
+    var res = SLTAhp.analyzeMatrix(matrix);
+    updateProgressHint(res.CR);
+  };
+
   global.updateLiveMetrics = updateCollabMetrics;
 
   function liberarFormulario() {
@@ -98,11 +121,22 @@
           return;
         }
         meta = m;
-        global.criteria = m.criterios || [];
+        if (typeof global.setAhpCriteria === "function") {
+          global.setAhpCriteria(m.criterios || []);
+        } else {
+          global.criteria = m.criterios || [];
+        }
         feedback("Formulário liberado.", "success");
         el("collab-form-section").classList.remove("is-hidden");
         stats.inicio_ms = Date.now();
         if (typeof generatePairwiseFormStep4 === "function") generatePairwiseFormStep4();
+        var content = el("comparisonContent");
+        if (content && !el("collab-reciprocal-hint")) {
+          content.insertAdjacentHTML(
+            "beforebegin",
+            '<div id="collab-reciprocal-hint" class="ahp-collab-reciprocal-hint" role="status" aria-live="polite"></div>'
+          );
+        }
         patchSaatyTracking();
         updateCollabMetrics();
       })

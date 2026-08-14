@@ -45,7 +45,7 @@
             <section class="card-3-digite-os-nomes-dos-criterios secao-3-digite-os-nomes-dos-criterios card ahp-step-section">
               <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">3.2</span><span id="cadastroLabel">Cadastro dos Nomes</span></div>
                 <div class="ahp-section-body">
-                    <section class="secao-subetapa-analise ahp-section ahp-subcard"><h2 class="ahp-step-title"><span class="ahp-step-number">3</span><span id="stepTitleText">Digite os nomes dos critérios</span></h2><div class="c-form-group" id="nomes-config-loader"><label for="nomes-config-select" class="c-form-label"><i class="fas fa-database" aria-hidden="true"></i> Selecionar configuração</label><select id="nomes-config-select" class="c-form-control"><option value="">Selecione a configuração…</option></select><small class="form-help" id="nomes-config-help"><i class="fas fa-info-circle"></i> A configuração selecionada carrega a matriz de critérios e premissas da hierarquização vinculada a ela.</small></div><div id="reviewNote"></div><div id="criteriaInputs" class="ahp-criteria-inputs"></div><p id="saveNamesFeedback" class="ahp-save-names-feedback" role="status" aria-live="polite"></p><div class="ahp-form-actions"><button type="button" class="btn btn-primary" id="saveNamesBtn" data-evento-inline="ahp-step3-nomes-conteudo-1"><i class="fas fa-floppy-disk c-btn__icon"></i><span>Salvar nome</span></button></div></section>
+                    <section class="secao-subetapa-analise ahp-section ahp-subcard"><h2 class="ahp-step-title"><span class="ahp-step-number">3</span><span id="stepTitleText">Digite os nomes dos critérios</span></h2><div id="nomes-config-origin" class="ahp-criteria-origin" role="status" aria-live="polite"><i class="fas fa-database" aria-hidden="true"></i><span>Carregando a origem dos critérios›</span></div><div id="reviewNote"></div><div id="criteriaInputs" class="ahp-criteria-inputs"></div><p id="saveNamesFeedback" class="ahp-save-names-feedback" role="status" aria-live="polite"></p><div class="ahp-form-actions"><button type="button" class="btn btn-primary" id="saveNamesBtn" data-evento-inline="ahp-step3-nomes-conteudo-1"><i class="fas fa-floppy-disk c-btn__icon"></i><span>Salvar nome</span></button></div></section>
                 </div>
             </section>
 
@@ -63,7 +63,6 @@
                     dimensão, premissa, relação e mandatório. Ao final, salve as alterações para garantir que
                     o MAD as inclua na análise multicritério.
                     </p>
-                    <div id="matriz-premissas-panel" class="ahp-matriz-panel-root" aria-live="polite"></div>
                 </section>
                 </div>
             </section>
@@ -87,15 +86,16 @@
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/restrict/ahp/js/ahp-auth.js"></script>
   <script src="/restrict/ahp/js/config-api.js"></script>
+  <script src="/restrict/ahp/js/step-config-selector.js?v=20260813-3"></script>
   <script src="/restrict/ahp/js/config-artefatos.js"></script>
   <script src="/restrict/ahp/js/ahp-contexto-ui.js"></script>
-  <script src="/restrict/ahp/js/matriz-premissas.js"></script>
+  <script src="/restrict/ahp/js/matriz-premissas.js?v=20260813-11"></script>
+  <script src="/assets/vendor/xlsx/xlsx-0.20.1.min.js?v=20260813-3"></script>
   <script src="/restrict/ahp/js/ahp-alertas.js"></script>
   <script src="/restrict/ahp/js/ahp-coerencia.js"></script>
   <script src="/restrict/ahp/js/ahp-coerencia-ui.js"></script>
-  <script src="/restrict/ahp/js/step3-matriz-view.js"></script>
-  <script src="/restrict/ahp/js/step3-nomes.js"></script>
-  <script src="/restrict/ahp/js/step3-config-hierarquizacao.js"></script>
+  <script src="/restrict/ahp/js/step3-matriz-view.js?v=20260813-10"></script>
+  <script src="/restrict/ahp/js/step3-nomes.js?v=20260813-4"></script>
   <script src="/restrict/ahp/js/script.js"></script>
   <script src="/assets/js/field-filled.js"></script>
   <script src="/assets/js/paginas/ahp-step3-nomes-conteudo-eventos.js"></script>

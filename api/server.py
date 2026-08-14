@@ -198,7 +198,7 @@ async def pagina_indice_ahp_restrita(request: Request) -> Response:
     return render_page(request, "paginas/ahp/home.html")
 
 
-AHP_CLEAN_PAGES = {"configuracao": "step1-configuracao.html", "criterios": "step2-criterios.html", "metodo": "step4-metodo.html", "comparacao": "step5-comparacao.html", "resultados": "step6-resultados.html"}
+AHP_CLEAN_PAGES = {"configuracao": "step1-configuracao.html", "criterios": "step2-criterios.html", "metodo": "step4-metodo.html", "comparacao": "step5-comparacao.html", "respostas-colaborativas": "respostas-colaborativas.html", "resultados": "step6-resultados.html"}
 AHP_CLEAN_PAGES.update(
     {
         "analise": "index.html",

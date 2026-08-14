@@ -22,6 +22,7 @@ from api.schemas.hierarquizacao import (
     HierarquizacaoFase1ExecutarSchema,
     HierarquizacaoFase2ExecutarSchema,
     HierarquizacaoFase3AtributosSchema,
+    HierarquizacaoFase3RiscosSchema,
     HierarquizacaoFase3PesosSchema,
     HierarquizacaoFase3ExecutarSchema,
     HierarquizacaoSinteseSchema,
@@ -91,6 +92,22 @@ async def salvar_atributos_fase_3(codigo: str, body: HierarquizacaoFase3Atributo
 async def salvar_pesos_fase_3(codigo: str, body: HierarquizacaoFase3PesosSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
     try:
         return service.salvar_pesos_fase3(codigo, body)
+    except HierarquizacaoNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.patch("/{codigo}/fases/3/riscos", response_model=HierarquizacaoResponseSchema)
+async def salvar_tratamentos_riscos_fase_3(
+    codigo: str,
+    body: HierarquizacaoFase3RiscosSchema,
+    _user: SessionUser = Depends(require_gestor),
+) -> HierarquizacaoResponseSchema:
+    try:
+        return service.salvar_tratamentos_riscos_fase3(codigo, body)
     except HierarquizacaoNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:
@@ -179,6 +196,21 @@ async def listar_hierarquizacoes(
 ) -> list[HierarquizacaoResponseSchema]:
     try:
         return service.listar_hierarquizacoes(status=status, grupo=grupo)
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/portfolio", response_model=list[HierarquizacaoResponseSchema])
+async def listar_hierarquizacoes_portfolio(
+    _user: SessionUser = Depends(require_authenticated),
+) -> list[HierarquizacaoResponseSchema]:
+    """Lista exclusivamente ``hierarquizacao_demandas.hierarquizacao_portfolio``.
+
+    Esta rota é a fonte do seletor “Carregar de uma hierarquização cadastrada”
+    na configuração AHP de portfólio.
+    """
+    try:
+        return service.listar_hierarquizacoes()
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

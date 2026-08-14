@@ -19,7 +19,8 @@ router = APIRouter(prefix="/ahp/atributos-objetos", tags=["ahp-atributos-objetos
 def _matriz_da_hierarquizacao(row: dict[str, Any]) -> Any:
     dados = row.get("dados_hierarquizacao") or {}
     cabecalho = dados.get("cabecalho_grupo") or {}
-    return cabecalho.get("matriz_premissas_criterios")
+    matriz = cabecalho.get("matriz_premissas_criterios")
+    return matriz if extrair_colunas(matriz) else row.get("config_criterios") or matriz
 
 
 @router.get("/hierarquizacoes/{codigo}/colunas")

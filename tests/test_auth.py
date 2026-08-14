@@ -177,9 +177,9 @@ def test_operator_permission_matrix() -> None:
 
 
 def test_analyst_permission_matrix() -> None:
-    for profile in ("ANALISTA", "GESTOR"):
+    for profile in ("ANALISTA", "GESTOR", "ADMIN"):
         assert require_analyst(_user(profile)).tipo_usuario == profile
-    for profile in ("VISUALIZADOR", "OPERADOR", "ADMIN"):
+    for profile in ("VISUALIZADOR", "OPERADOR"):
         try:
             require_analyst(_user(profile))
         except HTTPException as exc:

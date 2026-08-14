@@ -356,5 +356,21 @@
     if (sel) sel.addEventListener("change", onSelectChange);
     preencherConfigsSalvas();
     toggleConfigSource();
+    global.addEventListener("slt:ahp-config-loaded", function (event) {
+      var cfg = event.detail || {};
+      if (!sel || !cfg.tipo || !cfg.codigo) return;
+      var chave = cfg.tipo + "::" + cfg.codigo;
+      var aplicar = function () {
+        if (!configsPorChave[chave]) return false;
+        sel.value = chave;
+        onSelectChange();
+        return true;
+      };
+      if (aplicar()) return;
+      var tentativas = 0;
+      var timer = global.setInterval(function () {
+        if (aplicar() || ++tentativas > 20) global.clearInterval(timer);
+      }, 100);
+    });
   });
 })(window);

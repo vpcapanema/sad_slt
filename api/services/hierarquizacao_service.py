@@ -7,6 +7,9 @@ as fases quantitativas. Os produtores geoespaciais permanecem independentes.
 
 from __future__ import annotations
 
+import base64
+import binascii
+
 import secrets
 import unicodedata
 import uuid
@@ -15,7 +18,12 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
 
-from api.constants import TIPO_DEMANDA_COD_TO_ID, TIPO_DEMANDA_ID_TO_COD
+from api.constants import (
+    TIPO_DEMANDA_COD_TO_ID,
+    TIPO_DEMANDA_ID_TO_COD,
+    STATUS_EM_HIERARQUIZACAO,
+    STATUS_POS_APROVACAO,
+)
 from api.exceptions import (
     ConfigMulticriterioNotFoundError,
     DemandaValidationError,
@@ -203,7 +211,7 @@ def _criterios(
                     "2) Na coluna Etapa, escolha um dos três valores aceitos:\n"
                     "   • Elegibilidade territorial — critérios da Fase 1"
                     " (avaliados pelo motor geoespacial).\n"
-                    "   • Favorabilidade territorial e da rede — critérios da Fase 2.\n"
+                    "   • Favorabilidade territorial em grade e da rede — critérios da Fase 2.\n"
                     "   • Priorização — critérios da Fase 3.\n"
                     "3) Salve o arquivo e reenvie a matriz.\n\n"
                     "Dica: você pode baixar novamente o modelo oficial em"
@@ -232,7 +240,7 @@ def _criterios(
                 f"• Arquivo: {localizacao}\n\n"
                 "Como corrigir:\n"
                 "1) Abra a matriz e verifique a coluna Etapa.\n"
-                "2) Marque como “Favorabilidade territorial e da rede” (Fase 2) e/ou "
+                "2) Marque como “Favorabilidade territorial em grade e da rede” (Fase 2) e/ou "
                 "“Priorização” (Fase 3) os critérios que devem entrar"
                 " no cálculo AHP.\n"
                 "3) Salve e reenvie a matriz."
@@ -243,11 +251,11 @@ def _criterios(
         raise DemandaValidationError(
             (
                 "Você selecionou a Fase 2, mas a matriz não tem nenhum critério"
-                " marcado como “Favorabilidade territorial e da rede”.\n"
+                " marcado como “Favorabilidade territorial em grade e da rede”.\n"
                 f"• Arquivo: {localizacao}\n\n"
                 "Como corrigir:\n"
                 "• Na planilha, marque na coluna Etapa o valor "
-                "“Favorabilidade territorial e da rede” para os critérios de Fase 2,"
+                "“Favorabilidade territorial em grade e da rede” para os critérios de Fase 2,"
                 " ou desmarque a Fase 2 no cadastro desta rodada."
             ),
             field="matriz.fase",
@@ -526,12 +534,40 @@ def criar_hierarquizacao(
         "objetos": payload.objetos,
         "dados_hierarquizacao": dados,
     }
+    if payload.arquivo_excel_matriz_base64:
+        try:
+            arquivo_excel = base64.b64decode(
+                payload.arquivo_excel_matriz_base64, validate=True
+            )
+        except (binascii.Error, ValueError) as exc:
+            raise DemandaValidationError(
+                "O arquivo Excel da matriz possui codificação inválida.",
+                field="arquivo_excel_matriz_base64",
+            ) from exc
+        if len(arquivo_excel) > 20 * 1024 * 1024:
+            raise DemandaValidationError(
+                "O arquivo Excel da matriz deve ter no máximo 20 MB.",
+                field="arquivo_excel_matriz_base64",
+            )
+        data["arquivo_excel_matriz_criterios_premissas"] = arquivo_excel
     if config:
         data["config_id"] = config["id"]
     uid = _uuid(criado_por)
     if uid:
         data["criado_por"] = uid
-    return _response(repo.insert(data))
+    tabela = {"plano": "plano", "programa": "programa", "projeto": "projeto"}.get(payload.tipo_demanda or "")
+    ids_universo = [o.get("id") for o in payload.objetos if o.get("id")]
+    transicao = None
+    if tabela and ids_universo:
+        transicao = {"tabela": ("demandas", tabela), "ids": ids_universo,
+                     "de": STATUS_POS_APROVACAO, "para": STATUS_EM_HIERARQUIZACAO}
+    try:
+        inserted = repo.insert(data, status_transicao=transicao)
+    except TypeError as exc:
+        if "status_transicao" not in str(exc):
+            raise
+        inserted = repo.insert(data)
+    return _response(inserted)
 
 
 def listar_hierarquizacoes(
@@ -544,11 +580,45 @@ def obter_hierarquizacao(codigo: str) -> HierarquizacaoResponseSchema:
     return _response(_carregar(codigo))
 
 
+def _transicao_liberacao_universo(row: dict[str, Any]) -> dict[str, Any] | None:
+    """Transição inversa da confirmação do universo: devolve as demandas da
+    hierarquização excluída de "em hierarquização" para "aprovada".
+
+    Como a trava só ocorre a partir de ``analise_aprovada``, cada demanda
+    pertence a no máximo um universo ativo — a reversão é segura.
+    """
+    tipo = TIPO_DEMANDA_ID_TO_COD.get(row.get("tipo_demanda_id"))
+    ids: set[str] = set()
+    for o in row.get("objetos") or []:
+        demanda_id = str(o.get("id") or o.get("demanda_id") or "").strip()
+        if demanda_id:
+            ids.add(demanda_id)
+    if row.get("config_id"):
+        config = config_repo.get_by_id("portfolio", row["config_id"])
+        if config:
+            if not tipo:
+                tipo = TIPO_DEMANDA_ID_TO_COD.get(config.get("tipo_demanda_id"))
+            for o in config.get("universo_objetos") or []:
+                demanda_id = str(o.get("id") or o.get("demanda_id") or "").strip()
+                if demanda_id:
+                    ids.add(demanda_id)
+    if not tipo or not ids:
+        return None
+    return {
+        "tabela": ("demandas", tipo),
+        "ids": sorted(ids),
+        "de": STATUS_EM_HIERARQUIZACAO,
+        "para": STATUS_POS_APROVACAO,
+    }
+
+
 def excluir_hierarquizacao(codigo: str) -> None:
-    """Remove definitivamente uma hierarquização do portfólio."""
-    if not repo.get_by_codigo(codigo):
+    """Remove a hierarquização e libera suas demandas para nova análise."""
+    row = repo.get_by_codigo(codigo)
+    if not row:
         raise HierarquizacaoNotFoundError(codigo)
-    if not repo.delete_by_codigo(codigo):
+    transicao = _transicao_liberacao_universo(row)
+    if not repo.delete_by_codigo(codigo, liberar_demandas=transicao):
         raise HierarquizacaoNotFoundError(codigo)
 
 
@@ -1248,6 +1318,35 @@ def _valor_atributo_objeto(obj: dict[str, Any], chave: Any) -> Any:
     return (cab.get("atributos") or {}).get(chave)
 
 
+def _decisao_risco_fase3(obj: dict[str, Any]) -> tuple[str, float]:
+    """Consolida as decisões e retorna o fator multiplicador do score."""
+    fase1 = (obj.get("hierarquizacao") or {}).get("fase_1") or {}
+    riscos = fase1.get("riscos_intersectados") or (fase1.get("risco") or {}).get("intersecoes") or []
+    if not riscos:
+        return "sem_risco", 1.0
+    tratamentos = fase1.get("tratamentos_riscos_fase3") or {}
+    decisao_unica = tratamentos.get("risco")
+    if decisao_unica == "barrar":
+        return "barrar", 0.0
+    if decisao_unica == "ignorar":
+        return "ignorar", 1.0
+    decisoes = {
+        tratamentos.get(_chave_risco_fase1(risco), "aplicar_penalizacao")
+        for risco in riscos
+        if isinstance(risco, dict)
+    }
+    if "barrar" in decisoes:
+        return "barrar", 0.0
+    if decisoes and decisoes <= {"ignorar"}:
+        return "ignorar", 1.0
+    indice = (fase1.get("risco") or {}).get("indice_calculado", 0)
+    try:
+        indice = max(0.0, min(1.0, float(indice)))
+    except (TypeError, ValueError):
+        indice = 0.0
+    return "aplicar_penalizacao", 1.0 - indice
+
+
 def executar_fase_3(
     codigo: str, payload: HierarquizacaoFase3ExecutarSchema
 ) -> HierarquizacaoResponseSchema:
@@ -1357,7 +1456,7 @@ def executar_fase_3(
             if pesos_validos
             else {}
         )
-        score = (
+        score_base = (
             sum(contribuicoes_aplicadas.values())
             if pesos_validos
             and completude >= payload.completude_minima
@@ -1365,11 +1464,22 @@ def executar_fase_3(
             and not bloqueado
             else None
         )
+        decisao_risco, fator_risco = _decisao_risco_fase3(obj)
+        bloqueada_por_risco = decisao_risco == "barrar"
+        score = (
+            score_base * fator_risco
+            if score_base is not None and not bloqueada_por_risco
+            else None
+        )
         f3 = obj["hierarquizacao"]["fase_3"]
         f3.update(
             {
                 "executada": True,
                 "score_fase3": score,
+                "score_fase3_antes_risco": score_base,
+                "decisao_risco_fase1": decisao_risco,
+                "fator_penalizacao_risco": fator_risco,
+                "bloqueada_por_risco": bloqueada_por_risco,
                 "atributos_utilizados": list(contrib),
                 "atributos_ausentes": ausentes,
                 "atributos_invalidos": invalidos,
@@ -1463,6 +1573,39 @@ def salvar_pesos_fase3(codigo: str, payload: Any) -> HierarquizacaoResponseSchem
     return _response(repo.update(codigo, {"dados_hierarquizacao": dados}) or row)
 
 
+def _chave_risco_fase1(risco: dict[str, Any]) -> str:
+    return str(
+        risco.get("criterio_id")
+        or risco.get("feature_id")
+        or risco.get("nome")
+        or risco.get("criterio_nome")
+        or ""
+    )
+
+
+def salvar_tratamentos_riscos_fase3(codigo: str, payload: Any) -> HierarquizacaoResponseSchema:
+    """Persiste a decisão gerencial para cada risco sobreposto na Fase 1."""
+    row = _carregar(codigo)
+    dados = deepcopy(row.get("dados_hierarquizacao") or {})
+    por_objeto = payload.tratamentos or {}
+    for obj in dados.get("objetos", []):
+        cab = obj.get("cabecalho_objeto") or {}
+        enviados = por_objeto.get(str(cab.get("codigo")))
+        if enviados is None:
+            continue
+        fase1 = (obj.get("hierarquizacao") or {}).setdefault("fase_1", {})
+        riscos = fase1.get("riscos_intersectados") or (fase1.get("risco") or {}).get("intersecoes") or []
+        chaves_validas = {"risco"} if riscos else set()
+        invalidas = set(enviados) - chaves_validas
+        if invalidas:
+            raise DemandaValidationError(
+                "Um tratamento informado não corresponde aos riscos sobrepostos do objeto.",
+                field="tratamentos",
+            )
+        fase1["tratamentos_riscos_fase3"] = {"risco": enviados["risco"]}
+    return _response(repo.update(codigo, {"dados_hierarquizacao": dados}) or row)
+
+
 def _indices_objeto(obj: dict[str, Any]) -> tuple[Any, Any, Any]:
     h = obj.get("hierarquizacao") or {}
     f2 = h.get("fase_2") or {}
@@ -1489,8 +1632,11 @@ def sintetizar(
     for obj in dados.get("objetos", []):
         h = obj["hierarquizacao"]
         restrito = h["fase_1"].get("status_fase1") == "restrito"
+        barrado_risco = (h.get("fase_3") or {}).get("bloqueada_por_risco") is True
         rede, grade, prioridade = _indices_objeto(obj)
-        if restrito and not payload.incluir_restritos:
+        if barrado_risco:
+            score = None
+        elif restrito and not payload.incluir_restritos:
             score = None
         elif modo_legado:
             score = (
@@ -1511,13 +1657,16 @@ def sintetizar(
             "score_final": score,
             "posicao_final": None,
             "restrito_segregado": restrito and not payload.incluir_restritos,
+            "barrado_por_risco": barrado_risco,
             "contribuicoes": {
                 "favorabilidade_rede": rede,
                 "favorabilidade_grade": grade,
                 "prioridade": prioridade,
             },
             "motivo": (
-                "Restrição territorial segregou o objeto."
+                "Risco sobreposto barrou a demanda por decisão do gestor."
+                if barrado_risco
+                else "Restrição territorial segregou o objeto."
                 if restrito and not payload.incluir_restritos
                 else "Composição ponderada das Fases 2 e 3."
                 if payload.operador == "media_ponderada" and score is not None

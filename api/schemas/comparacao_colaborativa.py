@@ -20,10 +20,26 @@ class AmbienteColaborativoCreateSchema(BaseModel):
     valido_ate: datetime
 
 
+class ConsolidacaoColaborativaSchema(BaseModel):
+    matriz_consolidada: list[list[float]]
+    pesos_consolidados: list[float]
+    lambda_max: float
+    indice_consistencia: float
+    indice_aleatorio: float
+    razao_consistencia: float
+    consistente: bool
+    respostas_consolidadas: int
+    consolidadoEm: str
+
+
 class AmbienteColaborativoResponseSchema(BaseModel):
     id: str
     config_tipo: TipoConfig
     config_codigo: str
+    config_avulsa_id: str | None = None
+    config_portfolio_id: str | None = None
+    criterios: list[dict[str, Any]] = []
+    n_criterios: int = 0
     token: str
     convites: list[dict[str, Any]]
     valido_ate: str
@@ -32,6 +48,7 @@ class AmbienteColaborativoResponseSchema(BaseModel):
     criadoEm: str
     atualizadoEm: str
     total_respostas: int = 0
+    consolidacao: ConsolidacaoColaborativaSchema | None = None
 
 
 class AmbientePublicoSchema(BaseModel):

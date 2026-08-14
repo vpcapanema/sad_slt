@@ -28,7 +28,9 @@
   const selecionadasHier = new Set();
   const STATUS_HIER = ["rascunho", "em_julgamento", "calculada", "homologada", "arquivada"];
   const ITENS_POR_PAGINA = 15;
-  const STATUS_ELEGIVEIS = new Set(["analise_aprovada"]);
+  // Demandas já vinculadas a outra hierarquização continuam disponíveis para
+  // novas rodadas; o painel sinaliza o vínculo pelo status/badge da linha.
+  const STATUS_ELEGIVEIS = new Set(["analise_aprovada", "hierarq_em_andamento"]);
   const JSON_COLS = [
     "objetos",
     "julgamento_projetos",
@@ -901,6 +903,18 @@
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
+  let matrizArquivoExcelBase64 = null;
+
+  async function arquivoParaBase64(file) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binario = "";
+    const bloco = 0x8000;
+    for (let i = 0; i < bytes.length; i += bloco) {
+      binario += String.fromCharCode(...bytes.subarray(i, i + bloco));
+    }
+    return btoa(binario);
+  }
+
   async function lerMatriz(file) {
     const ext = file.name.split(".").pop().toLowerCase();
     if (ext === "json") return JSON.parse(await file.text());
@@ -1062,7 +1076,11 @@
     carregarUniverso({ preservarSelecao: true });
   $("hier-matriz").onchange = async (e) => {
     try {
-      matriz = await lerMatriz(e.target.files[0]);
+      const arquivo = e.target.files[0];
+      matriz = await lerMatriz(arquivo);
+      matrizArquivoExcelBase64 = /\.xlsx$/i.test(arquivo.name)
+        ? await arquivoParaBase64(arquivo)
+        : null;
       const n = Array.isArray(matriz)
         ? matriz.length
         : (matriz.linhas || []).length;
@@ -1071,6 +1089,7 @@
       $("matriz-resumo").classList.remove("hidden");
     } catch (err) {
       matriz = null;
+      matrizArquivoExcelBase64 = null;
       erro(err.message);
     }
   };
@@ -1093,6 +1112,7 @@
           (o) => elegivel(o) && confirmados.has(o.id),
         ),
         matriz_premissas_criterios: matriz,
+        arquivo_excel_matriz_base64: matrizArquivoExcelBase64,
         fases_a_executar: fases,
       });
       location.reload();

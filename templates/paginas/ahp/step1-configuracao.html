@@ -4,11 +4,11 @@
 {% set requer_autenticacao = true %}
 
 {% block titulo %}Tipo de análise — AHP — SLT{% endblock %}
-{% block classes_body %}ahp-module-page{% endblock %}
+{% block classes_body %}ahp-module-page ahp-step1-config-page{% endblock %}
 {% block base_url %}<base href="/restrict/ahp/">{% endblock %}
 
 {% block estilos_pagina %}
-  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="/assets/css/ahp-module.css?v=20260813-2">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 
@@ -383,6 +383,8 @@
   <script src="/restrict/ahp/js/ahp-texto-pt.js"></script>
   <script src="/assets/js/catalog.js"></script>
   <script src="/restrict/ahp/js/config-api.js"></script>
+  <script src="/restrict/ahp/js/config-loader.js"></script>
+  <script src="/restrict/ahp/js/step-config-selector.js"></script>
   <script src="/restrict/ahp/js/matriz-premissas.js"></script>
   <script src="/restrict/ahp/js/tipo-analise.js"></script>
   <script src="/assets/js/field-filled.js"></script>

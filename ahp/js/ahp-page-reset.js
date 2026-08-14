@@ -10,7 +10,6 @@
 
   var HANDOFF_KEY = "slt_ahp_handoff";
   var STORAGE_KEYS = [
-    "slt_ahp_config_atual",
     "slt_ahp_tipo",
     "slt_ahp_config_draft",
     "slt_ahp_alertas_pendentes",

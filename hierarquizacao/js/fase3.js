@@ -6,6 +6,7 @@
   })[char]);
   const queryCode = new URLSearchParams(location.search).get("codigo");
   let hierarquizacoes = [];
+  let atualizandoAoRetomar = false;
   const atual = () => hierarquizacoes.find((item) => item.codigo === $("fase-hierarquizacao").value);
   const operadorSintese = () => document.querySelector('input[name="operador-sintese"]:checked')?.value || "media_simples";
 
@@ -107,6 +108,23 @@
     if (report) { audit.innerHTML = `<strong>Auditoria da execução</strong><pre>${esc(JSON.stringify(report, null, 2))}</pre>`; audit.classList.remove("hidden"); } else audit.classList.add("hidden");
   }
 
+  async function atualizarDadosAoRetomar() {
+    const selecionada = atual();
+    if (!selecionada || atualizandoAoRetomar || document.hidden) return;
+    atualizandoAoRetomar = true;
+    try {
+      const atualizada = await HierApi.obter(selecionada.codigo);
+      hierarquizacoes = hierarquizacoes.map((item) =>
+        item.codigo === atualizada.codigo ? atualizada : item
+      );
+      await render(atualizada);
+    } catch (_erro) {
+      /* Mantém os dados já exibidos; a próxima retomada tenta novamente. */
+    } finally {
+      atualizandoAoRetomar = false;
+    }
+  }
+
   function erro(error) {
     $("fase3-erro").textContent = error.message || error;
     $("fase3-erro").classList.remove("hidden");
@@ -120,6 +138,8 @@
         .map((item) => `<option value="${esc(item.codigo)}">${esc(item.codigo)} — ${esc(item.nome)}</option>`).join("");
       if (queryCode) { $("fase-hierarquizacao").value = queryCode; await render(atual()); }
       $("fase-hierarquizacao").onchange = () => { render(atual()).catch(erro); };
+      globalThis.addEventListener("focus", atualizarDadosAoRetomar);
+      document.addEventListener("visibilitychange", atualizarDadosAoRetomar);
       $("executar-fase3").onclick = async () => {
         const hierarquizacao = atual();
         if (!hierarquizacao) return erro("Selecione a hierarquização.");
@@ -142,6 +162,18 @@
           hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
           await render(updated);
           window.SLTFeedback?.success("Pesos dos atributos salvos.", "Configuração salva");
+        } catch (error) { erro(error); }
+      };
+      const salvarRiscos = $("salvar-tratamentos-riscos-fase3");
+      if (salvarRiscos) salvarRiscos.onclick = async () => {
+        const hierarquizacao = atual();
+        if (!hierarquizacao) return erro("Selecione a hierarquização.");
+        try {
+          const payload = window.AtributosObjetos?.tratamentosRiscosPayload() || { tratamentos: {} };
+          const updated = await HierApi.salvarRiscosFase3(hierarquizacao.codigo, payload);
+          hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
+          await render(updated);
+          window.SLTFeedback?.success("Tratamento dos riscos salvo.", "Decisão gerencial registrada");
         } catch (error) { erro(error); }
       };
       document.querySelectorAll('input[name="operador-sintese"]').forEach((input) => input.addEventListener("change", () => {

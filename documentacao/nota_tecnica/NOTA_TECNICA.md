@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.7                                                                                                                                                                      |
-| **Data de emissão**        | 10/08/2026                                                                                                                                                               |
+| **Versão**                 | 1.9                                                                                                                                                                      |
+| **Data de emissão**        | 14/08/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -40,6 +40,8 @@
 | 1.5     | 06/08/2026 | `[preencher]` | Expansão da Seção 4.1 com um parágrafo dedicado a cada elo da cadeia de fundamentação (premissa, critério, variável, relação com o escopo, dado, métrica e ranking) e respectivo embasamento na literatura de apoio à decisão multicritério, teoria da mensuração e epistemologia (Keeney, Roy, Belton & Stewart, Keeney & Raiffa, Munda, Bouyssou et al., Krantz et al., Saaty e Popper); inclusão das referências correspondentes na Seção 15. |
 | 1.6     | 10/08/2026 | `[preencher]` | Registro da operacionalização do reescalonamento vetorial da Fase 2: normalização min–max, densidades de segurança por quilômetro, proporções territoriais, inversão dos atributos de relação negativa, preservação de NoData e limitação da composição final à disponibilidade de pesos AHP homologados. |
 | 1.7     | 10/08/2026 | `[preencher]` | Vinculação dos produtos reescalonados aos critérios explícitos da matriz v3, consolidação prévia dos indicadores pertencentes ao mesmo critério e geração de superfícies não ponderadas de grade e rede por média simples dos critérios calculáveis. |
+| 1.8     | 13/08/2026 | `[preencher]` | Revisão metodológica da matriz v3 (50 critérios em 11 dimensões): adoção do modelo de enquadramento em duas classes (risco e restrição, sem gradações); unificação dos critérios de cavidade natural subterrânea; alinhamento de métricas, unidades, operadores e fontes de dado às variáveis implementadas; padronização da coluna Relação. Separação das camadas de Unidades de Conservação por esfera (estadual e federal) e exclusão da vegetação nativa do rol de critérios da Fase 1. Atualização da camada de sítios arqueológicos com a base integral do IPHAN. Ampliação da cobertura do critério de lentidão recorrente por imputação hierárquica e normalização por percentil dos atributos de tráfego. |
+| 1.9     | 14/08/2026 | `[preencher]` | Formalização do preenchimento colaborativo da matriz de comparação pareada do AHP: coleta de julgamentos individuais de especialistas convidados, com exigência de razão de consistência inferior a 0,10 por resposta, e consolidação do julgamento do grupo por média geométrica elemento a elemento das matrizes individuais (agregação de julgamentos individuais — AIJ), com registro da matriz consolidada, dos pesos resultantes e dos indicadores de consistência. |
 
 ---
 
@@ -86,7 +88,7 @@ Os pesos dos critérios são definidos pelo **Método de Análise Hierárquica (
 aplicados sobre critérios organizados segundo um **protocolo epistemológico** — a
 estrutura de fundamentação, invariante, que disciplina como cada critério é concebido,
 medido e auditado. Esse protocolo, e não uma lista fixa de critérios, é o núcleo do
-sistema: o conjunto de 9 dimensões e 55 critérios aqui adotado é a instância aplicada à
+sistema: o conjunto de 11 dimensões e 50 critérios aqui adotado é a instância aplicada à
 logística e aos transportes, substituível conforme o domínio, sem perda de consistência
 lógica, rastreabilidade e auditabilidade. Todo o processo é transparente: para cada
 objeto de demanda é possível explicar por que ele recebeu determinada posição no ranking.
@@ -403,8 +405,15 @@ finais e os pesos AHP não estão homologados, os valores disponíveis são pres
 unidades espaciais de origem — setor censitário para a grade e subtrecho para a rede —
 e reescalonados pelo método linear min–max. Na rede, as contagens de segurança são
 convertidas em densidades por quilômetro; extensões urbanas, em proporções do subtrecho;
-e distâncias de acessibilidade, após reescalonadas, são invertidas. Cada campo de
-critério é vinculado nominalmente à etapa "Favorabilidade territorial e da rede" da
+e distâncias de acessibilidade, após reescalonadas, são invertidas. Os atributos de
+tráfego observado (atraso, razão de tempos e velocidade corrente) recebem tratamento
+próprio: os segmentos sem retorno da fonte de tráfego são preenchidos por imputação
+hierárquica — mediana da taxa por quilômetro na mesma rodovia, em seguida no mesmo
+tipo de rodovia e, por fim, mediana global — com marcação explícita das feições
+imputadas; e o reescalonamento desses atributos é feito por percentil (posto ordenado),
+robusto à distribuição de cauda pesada dos tempos de atraso. Cada campo de
+critério é vinculado nominalmente à etapa "Favorabilidade territorial em grade e da
+rede" da
 matriz v3. Indicadores alternativos do mesmo critério são consolidados antes da síntese,
 de modo que a quantidade de colunas de origem não altere seu peso. Na grade, a massa
 econômica é representada pelo PIB setorial e a vulnerabilidade pelo PIB per capita
@@ -514,12 +523,30 @@ e **rastreabilidade**.
 - critério sem raster válido bloqueia a homologação ou recalcula pesos por regra
   explícita.
 
+### Preenchimento colaborativo e consolidação de julgamentos
+
+A matriz de comparação pareada pode ser preenchida de forma **individual** ou
+**colaborativa**. No modo colaborativo, o responsável pela análise abre um ambiente de
+preenchimento com prazo definido e lista nominal de especialistas convidados,
+identificados por endereço eletrônico. Cada convidado registra sua própria matriz de
+comparação, e o sistema somente aceita respostas cuja **razão de consistência (RC)**
+seja inferior a 0,10, garantindo a consistência lógica de cada julgamento individual.
+
+Os julgamentos individuais são consolidados pelo método de **agregação de julgamentos
+individuais (AIJ)**: cada elemento da matriz consolidada é a **média geométrica** dos
+elementos correspondentes das matrizes individuais aceitas. A média geométrica é o
+único operador de agregação que preserva a propriedade recíproca da matriz pareada
+(Aczél; Saaty, 1983), assegurando que a matriz do grupo permaneça uma matriz AHP
+válida. Sobre a matriz consolidada calculam-se os pesos e os indicadores de
+consistência (λ_max, IC, IA e RC), registrados com a matriz, o número de respostas
+agregadas e a data da consolidação, para fins de auditoria e rastreabilidade.
+
 ---
 
 ## 10. Matriz de critérios e premissas
 
 A matriz de critérios e premissas é a **instância** do protocolo descrito na Seção 4,
-aplicada ao domínio de logística e transportes: organiza **9 dimensões** e **55
+aplicada ao domínio de logística e transportes: organiza **11 dimensões** e **50
 critérios**, cada um construído segundo a mesma cadeia de fundamentação. As dimensões e
 os critérios a seguir constituem o conteúdo temático desta aplicação; a estrutura que os
 sustenta é invariante e transferível a outros domínios do conhecimento.
@@ -551,128 +578,117 @@ fundamentação apresentada na Seção 4:
 - **Fonte** — autoridade ou referência que autentica a premissa e o dado.
 - **Observações** — registram limitações, decisões de método, ressalvas e exceções.
 
-Cada critério declara ainda sua **classe** (grade, rede, `atributo_objeto` ou híbrido) e
-sua **relação** (↑ positiva / ↓ negativa), conforme sintetizado nas tabelas por dimensão.
+Cada critério declara ainda sua **fase** (Fase 1 — triagem; Fase 2 — favorabilidade;
+Fase 3 — atributos), sua **classificação** (restrição ou risco, na Fase 1; grade ou
+rede, na Fase 2; estático ou dinâmico, na Fase 3) e sua **relação** (↑ positiva /
+↓ negativa), conforme sintetizado nas tabelas por dimensão.
 
-### 10.1 Técnica (7 critérios)
+### 10.1 Ambiental (8 critérios)
 
-*Referências: HCM (TRB, 2016); HDM-4; AASHTO Green Book; UK DfT WebTAG.*
+| # | Critério | Fase | Classificação | Relação | Mandatório |
+| - | -------- | ---- | ------------- | ------- | ---------- |
+| 1 | Sobreposição com Unidade de Conservação de Proteção Integral estadual | Fase 1 | Restrição | ↓ Negativa | **Sim** |
+| 2 | Sobreposição com Unidade de Conservação de Proteção Integral federal | Fase 1 | Restrição | ↓ Negativa | **Sim** |
+| 3 | Sobreposição com Unidade de Conservação de Uso Sustentável estadual | Fase 1 | Risco | ↓ Negativa | **Sim** |
+| 4 | Sobreposição com Unidade de Conservação de Uso Sustentável federal | Fase 1 | Risco | ↓ Negativa | **Sim** |
+| 5 | Sobreposição com Área de Proteção e Recuperação de Mananciais | Fase 1 | Risco | ↓ Negativa | **Sim** |
+| 6 | Sobreposição com manguezal, restinga ou ecossistema costeiro sensível | Fase 1 | Restrição | ↓ Negativa | **Sim** |
+| 7 | Sobreposição com cavidade natural subterrânea ou respectiva área de influência | Fase 1 | Risco | ↓ Negativa | **Sim** |
+| 8 | Sobreposição com área contaminada ou com passivo ambiental cadastrado | Fase 1 | Risco | ↓ Negativa | Não |
 
-| # | Critério                                        | Classe             | Relação |
-| - | ------------------------------------------------ | ------------------ | --------- |
-| 1 | VDM — Volume Diário Médio                     | Rede               | ↑        |
-| 2 | Nível de Serviço (NS) / Saturação            | Rede               | ↓        |
-| 3 | Congestionamento real ("tempo lento")            | Rede               | ↓        |
-| 4 | Estado de conservação do pavimento             | Rede               | ↓        |
-| 5 | Deficiência geométrica (rampas, alças, raios) | Rede               | ↓        |
-| 6 | Prontidão / maturidade do objeto de demanda     | Atributo do objeto | ↑        |
-| 7 | Tráfego sazonal (fins de semana e feriados)     | Rede               | ↓        |
+### 10.2 Social (4 critérios)
 
-### 10.2 Financeira (6 critérios)
+| # | Critério | Fase | Classificação | Relação | Mandatório |
+| - | -------- | ---- | ------------- | ------- | ---------- |
+| 1 | Sobreposição com Terra Indígena | Fase 1 | Restrição | ↓ Negativa | **Sim** |
+| 2 | Sobreposição com território quilombola | Fase 1 | Restrição | ↓ Negativa | **Sim** |
+| 3 | Localização em áreas de maior vulnerabilidade territorial | Fase 2 | Grade | ↑ Positiva | **Sim** |
+| 4 | Maior acessibilidade funcional a polos logísticos estratégicos | Fase 2 | Rede | ↑ Positiva | Não |
 
-*Referências: US DOT BCA; HM Treasury Green Book (2022); HEATCO; World Bank PPP Guide v3.*
+### 10.3 Risco (6 critérios)
 
-| # | Critério                                         | Classe             | Relação |
-| - | ------------------------------------------------- | ------------------ | --------- |
-| 1 | Capex (custo de investimento)                     | Atributo do objeto | ↓        |
-| 2 | Opex (operação e manutenção)                  | Atributo do objeto | ↓        |
-| 3 | Relação Benefício/Custo                        | Atributo do objeto | ↑        |
-| 4 | Potencial de financiamento privado / concessão   | Atributo do objeto | ↑        |
-| 5 | Custos logísticos diferenciados (porto/corredor) | Híbrido           | ↓        |
-| 6 | Benefício social na priorização                | Atributo do objeto | ↑        |
+| # | Critério | Fase | Classificação | Relação | Mandatório |
+| - | -------- | ---- | ------------- | ------- | ---------- |
+| 1 | Sobreposição com área suscetível a inundação, enxurrada ou alagamento | Fase 1 | Risco | ↓ Negativa | Não |
+| 2 | Sobreposição com área suscetível a escorregamento, erosão ou movimento de massa | Fase 1 | Risco | ↓ Negativa | Não |
+| 3 | Menor incerteza quanto à projeção de demanda futura | Fase 3 | Dinâmico | ↓ Negativa | Não |
+| 4 | Menor risco de atraso e sobrecusto na implantação | Fase 3 | Dinâmico | ↓ Negativa | Não |
+| 5 | Menor carga de desapropriações e interferências físicas | Fase 3 | Dinâmico | ↓ Negativa | Não |
+| 6 | Menor dependência de demandas predecessoras ou de entregas externas | Fase 3 | Dinâmico | ↓ Negativa | Não |
 
-### 10.3 Econômica (8 critérios)
+### 10.4 Territorial (6 critérios)
 
-*Referências: UK DfT WebTAG (wider economic impacts); HEATCO; Macharis & Bernardini (2015).*
+| # | Critério | Fase | Classificação | Relação | Mandatório |
+| - | -------- | ---- | ------------- | ------- | ---------- |
+| 1 | Sobreposição com bem tombado ou área envoltória de proteção | Fase 1 | Risco | ↓ Negativa | **Sim** |
+| 2 | Sobreposição com sítio arqueológico cadastrado ou área de interesse arqueológico | Fase 1 | Risco | ↓ Negativa | **Sim** |
+| 3 | Proximidade com segmentos de alto conflito urbano-regional | Fase 2 | Rede | ↑ Positiva | Não |
+| 4 | Proximidade com segmentos de alta interferência urbano-portuária | Fase 2 | Rede | ↑ Positiva | Não |
+| 5 | Maior acessibilidade funcional a nós intermodais estratégicos | Fase 2 | Rede | ↑ Positiva | Não |
+| 6 | Maior compatibilidade territorial e urbanística com o planejamento local | Fase 3 | Dinâmico | ↑ Positiva | Não |
 
-| # | Critério                                                      | Classe   | Relação |
-| - | -------------------------------------------------------------- | -------- | --------- |
-| 1 | Empregos e produção envolvidos                               | Grade    | ↑        |
-| 2 | Competitividade da produção paulista                         | Híbrido | ↑        |
-| 3 | Redução de tempos de viagem                                  | Rede     | ↓        |
-| 4 | Indução de produção e emprego regional                     | Híbrido | ↑        |
-| 5 | Atendimento a cargas sem alternativa eficiente                 | Híbrido | ↑        |
-| 6 | Suporte a cadeias estratégicas (Pré-Sal, agro, sucroenergia) | Híbrido | ↑        |
-| 7 | Participação da hidrovia na matriz de transporte             | Rede     | ↑        |
-| 8 | Desenvolvimento ferroviário estadual                          | Rede     | ↑        |
+### 10.5 Fundiário-patrimonial (1 critério)
 
-### 10.4 Social (6 critérios)
+| # | Critério | Fase | Classificação | Relação | Mandatório |
+| - | -------- | ---- | ------------- | ------- | ---------- |
+| 1 | Sobreposição com assentamento rural ou área sob regime fundiário especial | Fase 1 | Risco | ↓ Negativa | Não |
 
-*Referências: Geurs & van Wee (2004); UK DfT WebTAG (Social & Distributional Impacts).*
+### 10.6 Jurídico-institucional (3 critérios)
 
-| # | Critério                                           | Classe   | Relação | Mandatório   |
-| - | --------------------------------------------------- | -------- | --------- | ------------- |
-| 1 | Redução de desigualdades regionais                | Grade    | ↑        | **Sim** |
-| 2 | População beneficiada                             | Híbrido | ↑        | Não          |
-| 3 | Equidade no acesso ao transporte                    | Híbrido | ↑        | Não          |
-| 4 | Acesso a serviços essenciais (saúde e educação) | Híbrido | ↑        | Não          |
-| 5 | Acessibilidade a polos (portos e aeroportos)        | Rede     | ↑        | Não          |
-| 6 | Atendimento a comunidades isoladas                  | Híbrido | ↑        | Não          |
+| # | Critério | Fase | Classificação | Relação | Mandatório |
+| - | -------- | ---- | ------------- | ------- | ---------- |
+| 1 | Sobreposição com área sob embargo ambiental federal ativo | Fase 1 | Restrição | ↓ Negativa | **Sim** |
+| 2 | Sobreposição com área sob embargo ambiental estadual ativo | Fase 1 | Restrição | ↓ Negativa | **Sim** |
+| 3 | Sobreposição com área de restrição cadastrada pela CETESB | Fase 1 | Restrição | ↓ Negativa | **Sim** |
 
-### 10.5 Segurança (4 critérios)
+### 10.7 Técnica (5 critérios)
 
-*Referências: iRAP Star Ratings; UK DfT WebTAG (accidents); PNATRANS.*
+| # | Critério | Fase | Classificação | Relação | Mandatório |
+| - | -------- | ---- | ------------- | ------- | ---------- |
+| 1 | Proximidade com segmentos rodoviários de VDM alto | Fase 2 | Rede | ↑ Positiva | Não |
+| 2 | Proximidade com segmentos de saturação elevada | Fase 2 | Rede | ↑ Positiva | Não |
+| 3 | Proximidade com segmentos de lentidão recorrente | Fase 2 | Rede | ↑ Positiva | Não |
+| 4 | Proximidade com segmentos de geometria deficiente | Fase 2 | Rede | ↑ Positiva | Não |
+| 5 | Maior prontidão para implantação | Fase 3 | Estático | ↑ Positiva | Não |
 
-| # | Critério                                          | Classe   | Relação |
-| - | -------------------------------------------------- | -------- | --------- |
-| 1 | Acidentes com vítimas (gravidade)                 | Rede     | ↓        |
-| 2 | Acidentes com usuários vulneráveis               | Rede     | ↓        |
-| 3 | Transporte de cargas perigosas                     | Híbrido | ↓        |
-| 4 | Concentração de pontos críticos ("black spots") | Rede     | ↓        |
+### 10.8 Financeiro (5 critérios)
 
-### 10.6 Ambiental (6 critérios)
+| # | Critério | Fase | Classificação | Relação | Mandatório |
+| - | -------- | ---- | ------------- | ------- | ---------- |
+| 1 | Menor custo de investimento por benefício esperado | Fase 3 | Estático | ↓ Negativa | Não |
+| 2 | Menor custo operacional ao longo da vida útil | Fase 3 | Dinâmico | ↓ Negativa | Não |
+| 3 | Maior retorno econômico por unidade investida | Fase 3 | Dinâmico | ↑ Positiva | Não |
+| 4 | Maior atratividade para financiamento privado | Fase 3 | Dinâmico | ↑ Positiva | Não |
+| 5 | Maior benefício social líquido do empreendimento | Fase 3 | Dinâmico | ↑ Positiva | Não |
 
-*Referências: Lei 13.798/2009 (PEMC); GHG Protocol; IPCC; Lei 6.938/1981; Decreto 4.297/2002; CONAMA 237/1997.*
+### 10.9 Econômica (4 critérios)
 
-| # | Critério                                     | Classe             | Relação | Mandatório   |
-| - | --------------------------------------------- | ------------------ | --------- | ------------- |
-| 1 | Redução de emissões de GEE                 | Híbrido           | ↓        | **Sim** |
-| 2 | Redução de poluentes locais                 | Híbrido           | ↓        | Não          |
-| 3 | Eficiência energética                       | Híbrido           | ↑        | Não          |
-| 4 | Otimização da matriz modal                  | Híbrido           | ↑        | Não          |
-| 5 | Impacto sobre áreas sensíveis ou protegidas | Híbrido           | ↓        | **Sim** |
-| 6 | Complexidade do licenciamento ambiental       | Atributo do objeto | ↓        | Não          |
+| # | Critério | Fase | Classificação | Relação | Mandatório |
+| - | -------- | ---- | ------------- | ------- | ---------- |
+| 1 | Localização em áreas de alta massa econômica | Fase 2 | Grade | ↑ Positiva | Não |
+| 2 | Maior acessibilidade temporal aos destinos relevantes | Fase 2 | Rede | ↑ Positiva | Não |
+| 3 | Maior acessibilidade funcional a eixos hidroviários eficientes | Fase 2 | Rede | ↑ Positiva | Não |
+| 4 | Maior acessibilidade funcional à malha ferroviária estratégica | Fase 2 | Rede | ↑ Positiva | Não |
 
-### 10.7 Territorial (6 critérios)
+### 10.10 Segurança (3 critérios)
 
-*Referências: Lei 10.257/2001 (Estatuto da Cidade); HCM (TRB); ITE Trip Generation; Macharis & Bernardini (2015).*
+| # | Critério | Fase | Classificação | Relação | Mandatório |
+| - | -------- | ---- | ------------- | ------- | ---------- |
+| 1 | Proximidade com segmentos de alta gravidade de acidentes | Fase 2 | Rede | ↑ Positiva | Não |
+| 2 | Proximidade com segmentos de alta incidência de acidentes com usuários vulneráveis | Fase 2 | Rede | ↑ Positiva | Não |
+| 3 | Proximidade com concentração elevada de pontos críticos de acidentes | Fase 2 | Rede | ↑ Positiva | Não |
 
-| # | Critério                                      | Classe   | Relação |
-| - | ---------------------------------------------- | -------- | --------- |
-| 1 | Conflito com o tráfego urbano e conurbações | Rede     | ↓        |
-| 2 | Conflito com o tráfego urbano portuário      | Rede     | ↓        |
-| 3 | Integração intermodal                        | Rede     | ↑        |
-| 4 | Conexão inter-regional e vazios logísticos   | Híbrido | ↑        |
-| 5 | Aderência aos planos diretores municipais     | Híbrido | ↑        |
-| 6 | Polos atratores e geradores de tráfego        | Híbrido | ↑        |
+### 10.11 Institucional (5 critérios)
 
-### 10.8 Institucional (6 critérios)
+| # | Critério | Fase | Classificação | Relação | Mandatório |
+| - | -------- | ---- | ------------- | ------- | ---------- |
+| 1 | Menor prazo até a entrada em operação | Fase 3 | Estático | ↓ Negativa | **Sim** |
+| 2 | Menor complexidade técnica e institucional do empreendimento | Fase 3 | Dinâmico | ↓ Negativa | **Sim** |
+| 3 | Maior aderência estratégica aos planos vigentes | Fase 3 | Dinâmico | ↑ Positiva | Não |
+| 4 | Maior consenso institucional para viabilização da demanda | Fase 3 | Dinâmico | ↑ Positiva | Não |
+| 5 | Maior legitimidade social e participativa do empreendimento | Fase 3 | Dinâmico | ↑ Positiva | Não |
 
-*Referências: Macharis & Bernardini (2015) — MAMCA; HM Treasury Green Book (stage-gate); Lei 14.133/2021.*
-
-| # | Critério                                  | Classe             | Relação | Mandatório   |
-| - | ------------------------------------------ | ------------------ | --------- | ------------- |
-| 1 | Nível de complexidade                     | Atributo do objeto | ↓        | **Sim** |
-| 2 | Prazo para implantação                   | Atributo do objeto | ↓        | **Sim** |
-| 3 | Pendências jurídicas e jurisdicionais    | Atributo do objeto | ↓        | **Sim** |
-| 4 | Alinhamento a planos (PPA, PEF, PAN, PNLT) | Atributo do objeto | ↑        | Não          |
-| 5 | Consenso e apoio institucional dos atores  | Atributo do objeto | ↑        | Não          |
-| 6 | Demanda social e contribuições recebidas | Atributo do objeto | ↑        | Não          |
-
-### 10.9 Risco (6 critérios)
-
-*Referências: Flyvbjerg (2009); HM Treasury Green Book (optimism bias); World Bank ESF (2017); Convenção 169 OIT; Decreto-Lei 3.365/1941.*
-
-| # | Critério                                           | Classe             | Relação |
-| - | --------------------------------------------------- | ------------------ | --------- |
-| 1 | Resiliência climática (Blue Spot)                 | Híbrido           | ↑        |
-| 2 | Risco de demanda (incerteza de projeção)          | Atributo do objeto | ↓        |
-| 3 | Risco de execução (atrasos e sobrecustos)         | Atributo do objeto | ↓        |
-| 4 | Risco de desapropriação e interferências         | Atributo do objeto | ↓        |
-| 5 | Dependência de pré-requisitos (interdependência) | Atributo do objeto | ↓        |
-| 6 | Risco socioambiental (comunidades tradicionais)     | Híbrido           | ↓        |
-
-### 10.10 Estratégia híbrida de operacionalização
+### 10.12 Estratégia híbrida de operacionalização
 
 O ranqueamento final **não** se baseia em uma única grade estadual. O desenho
 tecnicamente coerente é:
@@ -775,6 +791,8 @@ versões desta nota técnica, conforme o *Histórico de Revisões*.
 ## 15. Referências
 
 - AASHTO. *A Policy on Geometric Design of Highways and Streets (Green Book)*.
+- ACZÉL, J.; SAATY, T. L. Procedures for synthesizing ratio judgements. *Journal of
+  Mathematical Psychology*, v. 27, n. 1, p. 93–102, 1983.
 - BELTON, V.; STEWART, T. J. *Multiple Criteria Decision Analysis: An Integrated
   Approach*. Boston: Kluwer Academic Publishers, 2002.
 - BOUYSSOU, D.; MARCHANT, T.; PIRLOT, M.; TSOUKIÀS, A.; VINCKE, P. *Evaluation and

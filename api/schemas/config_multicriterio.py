@@ -46,6 +46,7 @@ class ConfigUpdateSchema(BaseModel):
     universo_objetos: list[dict[str, Any]] | None = None
     metodo_entrada: str | None = None
     metodo_comparacao: str | None = None
+    modo_preenchimento: Literal["individual", "colaborativo"] | None = None
     n_criterios: int | None = Field(None, ge=0)
     criterios: list[dict[str, Any]] | None = None
     matriz_comparacao: list[Any] | None = None
@@ -76,6 +77,7 @@ class ConfigResponseSchema(BaseModel):
     status: str
     metodo_entrada: str
     metodo_comparacao: str | None = None
+    modo_preenchimento: Literal["individual", "colaborativo"] | None = None
     n_criterios: int = 0
     criterios: list[dict[str, Any]] = []
     matriz_comparacao: list[Any] = []

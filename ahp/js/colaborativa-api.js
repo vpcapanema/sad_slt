@@ -32,6 +32,9 @@
     obterAmbienteConfig: function (tipo, codigo) {
       return request("/ambientes/" + encodeURIComponent(tipo) + "/" + encodeURIComponent(codigo));
     },
+    listarAmbientesConfig: function (tipo, codigo) {
+      return request("/ambientes/configuracao/" + encodeURIComponent(tipo) + "/" + encodeURIComponent(codigo));
+    },
     obterPublico: function (token, email) {
       var qs = email ? "?email=" + encodeURIComponent(email) : "";
       return request("/publico/" + encodeURIComponent(token) + qs);
@@ -45,6 +48,14 @@
     },
     listarRespostas: function (ambienteId) {
       return request("/ambientes/" + encodeURIComponent(ambienteId) + "/respostas");
+    },
+    obterAmbiente: function (ambienteId) {
+      return request("/ambientes/" + encodeURIComponent(ambienteId));
+    },
+    consolidarAmbiente: function (ambienteId) {
+      return request("/ambientes/" + encodeURIComponent(ambienteId) + "/consolidar", {
+        method: "POST",
+      });
     },
   };
 })(window);

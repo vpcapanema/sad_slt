@@ -7,6 +7,33 @@ let pairwiseValues = {};
 let exportData = {};
 let chosenMethod = "direct"; // "direct" ou "form"
 
+function normalizeCriteriaNames(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map(function (item, idx) {
+      if (typeof item === "string") return item.trim();
+      if (item && typeof item === "object") {
+        var name = item.criterio || item.nome || item.name || item.titulo || item.label;
+        if (typeof name === "string") return name.trim();
+      }
+      return "Critério " + (idx + 1);
+    })
+    .filter(function (name) { return Boolean(name && String(name).trim()); });
+}
+
+// Permite que páginas externas (ex.: preenchimento colaborativo) injetem os critérios,
+// pois `let criteria` não é acessível via window.criteria.
+function setAhpCriteria(list) {
+  criteria = normalizeCriteriaNames(list);
+  if (!criteria.length) {
+    try {
+      criteria = normalizeCriteriaNames(JSON.parse(localStorage.getItem("ahp_criteria") || "[]"));
+    } catch (_e) {
+      criteria = [];
+    }
+  }
+}
+
 // -----------------------------------------------------------
 // 1: Processa a quantidade de critérios selecionada
 // -----------------------------------------------------------
@@ -520,7 +547,35 @@ function generateDirectMatrixStep4() {
   html += '<p style="margin: 0; color: #856404; font-size: 0.9rem; text-align: justify;"><i class="fas fa-info-circle"></i> <strong>Nota:</strong> Todas as células podem ser preenchidas. Ao selecionar um valor em qualquer célula, a célula oposta (simétrica) será automaticamente preenchida com o valor recíproco. Exemplo: se você selecionar 3 na célula [A,B], a célula [B,A] será automaticamente ajustada para 1/3.</p>';
   html += '</div>';
   container.innerHTML = html;
+  prefillDirectMatrixFromStorage();
   if (typeof updateLiveMetrics === "function") updateLiveMetrics();
+}
+
+// -----------------------------------------------------------
+// Step 5: pré-carrega a matriz salva nos selects da matriz direta
+// -----------------------------------------------------------
+function prefillDirectMatrixFromStorage() {
+  const matrix = loadStoredPairwiseMatrix();
+  if (!matrix) return;
+  for (let i = 0; i < matrix.length - 1; i++) {
+    for (let j = i + 1; j < matrix.length; j++) {
+      const v = Number(matrix[i][j]);
+      if (!isFinite(v) || v <= 0) continue;
+      const select = document.getElementById("pair_" + i + "_" + j);
+      if (!select || select.tagName !== "SELECT") continue;
+      let best = 0;
+      let bestDiff = Infinity;
+      for (let k = 0; k < select.options.length; k++) {
+        const d = Math.abs(Math.log(parseFloat(select.options[k].value)) - Math.log(v));
+        if (d < bestDiff) {
+          bestDiff = d;
+          best = k;
+        }
+      }
+      select.selectedIndex = best;
+      if (typeof updateReciprocalStep4 === "function") updateReciprocalStep4(i, j);
+    }
+  }
 }
 
 // -----------------------------------------------------------
@@ -678,21 +733,78 @@ function escAhp(s) {
 }
 
 function generatePairwiseFormStep4() {
-  const n = criteria.length;
+  const names = normalizeCriteriaNames(criteria);
   const container = document.getElementById("comparisonContent");
+  if (!container) return;
+  if (!names.length) {
+    container.innerHTML = '<p class="ahp-recommendation">Nenhum critério foi carregado a partir da matriz de critérios e premissas.</p>';
+    return;
+  }
+  const n = names.length;
   let html = '<div class="saaty-form">';
   for (let i = 0; i < n - 1; i++) {
     for (let j = i + 1; j < n; j++) {
-      html += buildSaatyPair(i, j);
+      html += buildSaatyPair(i, j, names);
     }
   }
   html += "</div>";
   container.innerHTML = html;
+  prefillPairwiseInputsFromStorage();
   initSaatySliders();
+  if (typeof updateLiveMetrics === "function") updateLiveMetrics();
 }
 
-function buildSaatyPair(i, j) {
+// -----------------------------------------------------------
+// Step 5: pré-carrega a matriz salva (ex.: resposta colaborativa consolidada)
+// -----------------------------------------------------------
+function nearestSaatyIdx(v) {
+  let best = SAATY_CENTER;
+  let bestDiff = Infinity;
+  for (let k = 0; k < SAATY_STEPS.length; k++) {
+    const d = Math.abs(Math.log(SAATY_STEPS[k].v) - Math.log(v));
+    if (d < bestDiff) {
+      bestDiff = d;
+      best = k;
+    }
+  }
+  return best;
+}
+
+function loadStoredPairwiseMatrix() {
+  // A página pública colaborativa nunca herda matriz de outro usuário do navegador.
+  if (document.body.classList.contains("ahp-colaborativa-page")) return null;
+  const raw = localStorage.getItem("ahp_pairwiseMatrix");
+  if (!raw) return null;
+  let matrix;
+  try {
+    matrix = JSON.parse(raw);
+  } catch (_e) {
+    return null;
+  }
+  const n = criteria.length;
+  if (!Array.isArray(matrix) || matrix.length !== n) return null;
+  if (matrix.some((linha) => !Array.isArray(linha) || linha.length !== n)) return null;
+  return matrix;
+}
+
+function prefillPairwiseInputsFromStorage() {
+  const matrix = loadStoredPairwiseMatrix();
+  if (!matrix) return;
+  for (let i = 0; i < matrix.length - 1; i++) {
+    for (let j = i + 1; j < matrix.length; j++) {
+      const v = Number(matrix[i][j]);
+      if (!isFinite(v) || v <= 0) continue;
+      const input = document.getElementById("pair_" + i + "_" + j);
+      if (input) input.value = v;
+    }
+  }
+}
+
+function buildSaatyPair(i, j, sourceCriteria) {
+  const names = normalizeCriteriaNames(sourceCriteria && sourceCriteria.length ? sourceCriteria : criteria);
   const pid = i + "_" + j;
+  const leftName = names[i] || ("Critério " + (i + 1));
+  const rightName = names[j] || ("Critério " + (j + 1));
   let ticks = "";
   SAATY_STEPS.forEach((s, idx) => {
     const pct = (idx / (SAATY_STEPS.length - 1)) * 100;
@@ -708,7 +820,7 @@ function buildSaatyPair(i, j) {
     '<div class="saaty-widget">' +
     '<div class="saaty-scale" data-pid="' + pid +
     '" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="8" aria-valuenow="4" aria-label="Comparação entre ' +
-    escAhp(criteria[i]) + " e " + escAhp(criteria[j]) + '">' +
+    escAhp(leftName) + " e " + escAhp(rightName) + '">' +
     '<div class="saaty-arrow"></div>' +
     '<div class="saaty-rail">' + ticks + '<div class="saaty-handle"></div></div>' +
     "</div>" +
@@ -717,12 +829,17 @@ function buildSaatyPair(i, j) {
     "</div>" +
     '<div class="saaty-criteria">' +
     '<span class="saaty-crit saaty-crit--left"><span class="saaty-crit__tag">1</span><span class="saaty-crit__name">' +
-    escAhp(criteria[i]) + "</span></span>" +
+    escAhp(leftName) + "</span></span>" +
     '<span class="saaty-vs">vs</span>' +
     '<span class="saaty-crit saaty-crit--right"><span class="saaty-crit__tag">2</span><span class="saaty-crit__name">' +
-    escAhp(criteria[j]) + "</span></span>" +
+    escAhp(rightName) + "</span></span>" +
     "</div>" +
     '<div class="saaty-readout" id="readout_' + pid + '"></div>' +
+    '<div class="saaty-reciprocal" id="reciprocal_' + pid + '" aria-live="polite">' +
+    '<span class="saaty-reciprocal__label"><i class="fas fa-rotate" aria-hidden="true"></i> Valor oposto aplicado automaticamente</span>' +
+    '<span class="saaty-reciprocal__value">1</span>' +
+    '<span class="saaty-reciprocal__text">' + escAhp(rightName) + " em relação a " + escAhp(leftName) + " = 1</span>" +
+    "</div>" +
     '<input type="hidden" id="pair_' + pid + '" value="1">' +
     "</div>"
   );
@@ -764,6 +881,7 @@ function wireSaaty(pair) {
     scale.setAttribute("aria-valuenow", idx);
     input.value = SAATY_STEPS[idx].v;
     updateSaatyReadout(pair, idx);
+    updateSaatyReciprocal(pair, idx);
     if (typeof updateLiveMetrics === "function") updateLiveMetrics();
   }
 
@@ -779,6 +897,7 @@ function wireSaaty(pair) {
   }
   function down(e) {
     dragging = true;
+    pair.classList.add("saaty-pair--touched");
     scale.classList.add("saaty-scale--active");
     apply(idxFromX(pointerX(e)));
     e.preventDefault();
@@ -802,21 +921,43 @@ function wireSaaty(pair) {
 
   scale.addEventListener("keydown", (e) => {
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+      pair.classList.add("saaty-pair--touched");
       apply(idx - 1);
       e.preventDefault();
     } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+      pair.classList.add("saaty-pair--touched");
       apply(idx + 1);
       e.preventDefault();
     } else if (e.key === "Home") {
+      pair.classList.add("saaty-pair--touched");
       apply(0);
       e.preventDefault();
     } else if (e.key === "End") {
+      pair.classList.add("saaty-pair--touched");
       apply(lastIdx);
       e.preventDefault();
     }
   });
 
-  apply(SAATY_CENTER);
+  // Valor pré-carregado (ex.: matriz consolidada): posiciona o cursor no degrau
+  // mais próximo sem sobrescrever o valor exato do input.
+  const initV = parseFloat(input.value);
+  if (isFinite(initV) && initV > 0 && Math.abs(initV - 1) > 1e-9) {
+    idx = nearestSaatyIdx(initV);
+    handle.style.left = (idx / lastIdx) * 100 + "%";
+    scale.setAttribute("aria-valuenow", idx);
+    updateSaatyReadout(pair, idx);
+    updateSaatyReciprocal(pair, idx);
+  } else {
+    apply(SAATY_CENTER);
+  }
+}
+
+function formatSaatyValue(value) {
+  if (Math.abs(value - 1) < 1e-9) return "1";
+  if (value > 1) return String(Math.round(value));
+  const inv = Math.round(1 / value);
+  return "1/" + inv;
 }
 
 function updateSaatyReadout(pair, idx) {
@@ -838,6 +979,28 @@ function updateSaatyReadout(pair, idx) {
   }
   el.textContent = txt;
   el.className = "saaty-readout saaty-readout--" + mod;
+  pair.classList.toggle("saaty-pair--filled", idx !== SAATY_CENTER);
+  pair.classList.toggle("saaty-pair--equal", idx === SAATY_CENTER);
+}
+
+function updateSaatyReciprocal(pair, idx) {
+  const box = pair.querySelector(".saaty-reciprocal");
+  if (!box) return;
+  const i = Number(pair.dataset.i);
+  const j = Number(pair.dataset.j);
+  const value = Number(SAATY_STEPS[idx].v);
+  const reciprocal = value > 0 ? 1 / value : 1;
+  const valueEl = box.querySelector(".saaty-reciprocal__value");
+  const textEl = box.querySelector(".saaty-reciprocal__text");
+  if (valueEl) valueEl.textContent = formatSaatyValue(reciprocal);
+  if (textEl) {
+    textEl.textContent =
+      criteria[j] + " em relaÃ§Ã£o a " + criteria[i] + " = " + formatSaatyValue(reciprocal);
+  }
+  box.classList.remove("is-updated", "is-positive", "is-negative", "is-equal");
+  box.classList.add(idx > SAATY_CENTER ? "is-negative" : idx < SAATY_CENTER ? "is-positive" : "is-equal");
+  void box.offsetWidth;
+  box.classList.add("is-updated");
 }
 
 // -----------------------------------------------------------

@@ -137,11 +137,24 @@
 
     localStorage.setItem("ahp_chosenMethod", method === "matrix" ? "matrix" : "form");
 
-    if (global.SLTAhpNav && global.SLTAhpNav.irPara) {
-      global.SLTAhpNav.irPara("/restrict/ahp/comparacao/");
-    } else {
-      global.location.href = "/restrict/ahp/comparacao/";
+    function navigate() {
+      if (global.SLTAhpNav && global.SLTAhpNav.irPara) {
+        global.SLTAhpNav.irPara("/restrict/ahp/comparacao/");
+      } else {
+        global.location.href = "/restrict/ahp/comparacao/";
+      }
     }
+    var cfg = getConfigAtual();
+    if (!cfg || !global.SLTConfigApi) {
+      global.alert("Não foi possível identificar a configuração para salvar o método de preenchimento.");
+      return;
+    }
+    global.SLTConfigApi.atualizar(cfg.tipo, cfg.codigo, {
+      modo_preenchimento: mode === "collaborative" ? "colaborativo" : "individual",
+      metodo_comparacao: method === "matrix" ? "matriz" : "formulario",
+    }).then(navigate).catch(function (err) {
+      global.alert("Não foi possível salvar o método de preenchimento: " + (err.message || err));
+    });
   }
 
   function normalizeEmail(email) {
@@ -367,28 +380,110 @@
     input.focus();
   }
 
-  function mensagemPadraoConvite(urlPublica, validadeTexto) {
-    var textoValidade = validadeTexto ? " até " + validadeTexto : "";
-    return [
-      "Olá, colaborador(a)!",
-      "",
-      "Você foi convidado(a) a preencher a matriz de comparação pareada da análise AHP no SAD.",
-      "Acesse o formulário colaborativo pelo link abaixo" + textoValidade + ":",
-      urlPublica || "(link indisponível)",
-      "",
-      "Atenção: para enviar a resposta, a consistência (RC) deve ser menor que 0,10.",
-      "",
-      "Atenciosamente,",
-      "Equipe SAD/SLT",
-    ].join("\n");
+  function resolverUrlPublica(raw) {
+    // Normaliza para URL absoluta e valida o token — só assim o link é clicável no e-mail.
+    if (!raw) return "";
+    try {
+      var u = new URL(String(raw), global.location.origin);
+      if (u.protocol !== "http:" && u.protocol !== "https:") return "";
+      if (!u.searchParams.get("token")) return "";
+      return u.href;
+    } catch (_e) {
+      return "";
+    }
+  }
+
+  function mensagemPadraoConvite(urlPublica, validadeTexto, config) {
+    var textoValidade = validadeTexto && validadeTexto !== "—" ? " até " + validadeTexto : "";
+    var nomeAnalise = (config && config.nome) || "";
+    var objetivo = (config && config.objetivo) || "";
+    var criterios = (config && Array.isArray(config.criterios) ? config.criterios : [])
+      .map(function (c) {
+        return c && (c.criterio || c.nome);
+      })
+      .filter(Boolean);
+
+    var linhas = ["Olá, colaborador(a)!", ""];
+    linhas.push(
+      "Você foi convidado(a) a preencher a matriz de comparação pareada" +
+        (nomeAnalise ? " da análise \"" + nomeAnalise + "\"" : " de uma análise AHP") +
+        " no SICARD."
+    );
+    if (objetivo) linhas.push("Objetivo da análise: " + objetivo);
+    if (criterios.length) {
+      linhas.push("");
+      linhas.push("Critérios a comparar (" + criterios.length + "):");
+      criterios.forEach(function (nome, idx) {
+        linhas.push(idx + 1 + ". " + nome);
+      });
+    }
+    linhas.push("");
+    linhas.push("Acesse o formulário colaborativo pelo link abaixo" + textoValidade + ":");
+    linhas.push(urlPublica || "(link indisponível — confirme os colaboradores para gerá-lo)");
+    linhas.push("");
+    linhas.push("Atenção: para enviar a resposta, a consistência (RC) deve ser menor que 0,10.");
+    linhas.push("");
+    linhas.push("Atenciosamente,");
+    linhas.push("Equipe SICARD/SLT");
+    return linhas.join("\n");
   }
 
   function renderEmailDraft(amb) {
     var card = el("collab-email-draft-card");
-    var textarea = el("collab-email-template");
-    if (!card || !textarea || !amb) return;
-    textarea.value = mensagemPadraoConvite(amb.url_publica, amb.valido_ate);
+    var messageBox = el("collab-email-template");
+    if (!card || !messageBox || !amb) return;
+    var validadeTexto = formatDeadlineLabel(amb.valido_ate);
+    var urlAbsoluta = resolverUrlPublica(amb.url_publica);
+
+    function preencherMensagem(config) {
+      var mensagem = mensagemPadraoConvite(urlAbsoluta, validadeTexto, config);
+      messageBox.dataset.message = mensagem;
+      messageBox.textContent = "";
+
+      if (!urlAbsoluta || mensagem.indexOf(urlAbsoluta) === -1) {
+        messageBox.textContent = mensagem;
+        return;
+      }
+
+      var partes = mensagem.split(urlAbsoluta);
+      messageBox.appendChild(document.createTextNode(partes.shift()));
+      var linkMensagem = document.createElement("a");
+      linkMensagem.href = urlAbsoluta;
+      linkMensagem.target = "_blank";
+      linkMensagem.rel = "noopener";
+      linkMensagem.textContent = urlAbsoluta;
+      messageBox.appendChild(linkMensagem);
+      messageBox.appendChild(document.createTextNode(partes.join(urlAbsoluta)));
+    }
+
+    preencherMensagem(null);
+    var linkRow = el("collab-email-link-row");
+    var link = el("collab-email-form-link");
+    if (linkRow && link) {
+      if (urlAbsoluta) {
+        link.href = urlAbsoluta;
+        link.textContent = urlAbsoluta;
+        linkRow.classList.remove("is-hidden");
+      } else {
+        linkRow.classList.add("is-hidden");
+      }
+    }
     card.classList.remove("is-hidden");
+
+    var bridge = global.SLTConfigBridge;
+    if (bridge && typeof bridge.obterConfig === "function") {
+      bridge
+        .obterConfig()
+        .then(function (config) {
+          if (!config) return;
+          // Ignora se o ambiente exibido já mudou enquanto a config carregava
+          if (el("collab-email-template") !== messageBox) return;
+          preencherMensagem(config);
+        })
+        .catch(function () {
+          /* mantém a mensagem genérica já preenchida */
+        });
+    }
   }
 
   function abrirAplicativoEmailColaborativo() {
@@ -401,7 +496,7 @@
       return item.email;
     });
     var template = el("collab-email-template");
-    var body = template ? template.value : "";
+    var body = template ? template.dataset.message || template.textContent : "";
     var subject = "Convite para preenchimento colaborativo AHP (SAD/SLT)";
     global.location.href =
       "mailto:" +
@@ -422,9 +517,10 @@
   function renderAmbienteStatus(amb) {
     var box = el("collab-status-content");
     if (!box || !amb) return;
+    var urlBase = resolverUrlPublica(amb.url_publica) || amb.url_publica;
     var links = (amb.convites || [])
       .map(function (c) {
-        var url = amb.url_publica + "&email=" + encodeURIComponent(c.email);
+        var url = urlBase + "&email=" + encodeURIComponent(c.email);
         return (
           "<li><strong>" +
           escapeHtml(c.email) +
@@ -445,7 +541,7 @@
       escapeHtml(amb.valido_ate) +
       "</p>" +
       "<p><strong>Link base:</strong> <code>" +
-      escapeHtml(amb.url_publica) +
+      escapeHtml(urlBase) +
       "</code></p>" +
       "<ul class=\"info-list\">" +
       links +
@@ -479,8 +575,18 @@
       if (box) box.innerHTML = "<p>Selecione uma configuração na Etapa 2 para configurar o ambiente colaborativo.</p>";
       return;
     }
-    global.SLTColaborativaApi.obterAmbienteConfig(cfg.tipo, cfg.codigo)
-      .then(renderAmbienteStatus)
+    global.SLTColaborativaApi.listarAmbientesConfig(cfg.tipo, cfg.codigo)
+      .then(function (ambientes) {
+        var ativos = (Array.isArray(ambientes) ? ambientes : []).filter(function (amb) {
+          return amb && amb.status !== "encerrada";
+        });
+        var amb = ativos[0] || (Array.isArray(ambientes) ? ambientes[0] : null);
+        if (amb) {
+          renderAmbienteStatus(amb);
+        } else if (box) {
+          box.innerHTML = "<p>Nenhum ambiente colaborativo configurado ainda.</p>";
+        }
+      })
       .catch(function () {
         if (box) box.innerHTML = "<p>Nenhum ambiente colaborativo configurado ainda.</p>";
       });

@@ -307,3 +307,20 @@
   padding-left: 1.1rem;
 }
 .fase3-ausentes-lista li { flex: 1 1 18rem; }
+.admin-table--atributos .col-risco {
+  background: #fff7ed;
+  border-left: 2px solid #ea580c;
+}
+
+.risco-tratamento-select {
+  display: block;
+  width: 100%;
+  min-width: 11rem;
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+}
+
+.atributos-riscos-acoes {
+  align-items: center;
+  margin-top: 1rem;
+}

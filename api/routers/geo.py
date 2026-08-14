@@ -1,11 +1,13 @@
 """Rotas HTTP — catálogo geo (unidades espaciais de atuação)."""
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
 from api.exceptions import DatabaseUnavailableError
+from api.path_policy import project_path
 from api.repositories import geo_repository
 from api.schemas.geo_analyze import (
     ContainmentAnalyzeSchema,
@@ -16,6 +18,61 @@ from api.schemas.geo_analyze import (
 )
 
 router = APIRouter(prefix="/geo", tags=["geo"])
+
+
+def _simplificar_linha(points: list[list[float]], tolerance: float = 0.002) -> list[list[float]]:
+    """Simplifica um anel geográfico para uso cartográfico em tela."""
+    if len(points) < 3:
+        return points
+
+    inicio, fim = points[0], points[-1]
+    dx, dy = fim[0] - inicio[0], fim[1] - inicio[1]
+    norma = (dx * dx + dy * dy) ** 0.5
+    maior_distancia, indice = 0.0, 0
+    for posicao, ponto in enumerate(points[1:-1], start=1):
+        if norma:
+            distancia = abs(dy * ponto[0] - dx * ponto[1] + fim[0] * inicio[1] - fim[1] * inicio[0]) / norma
+        else:
+            distancia = ((ponto[0] - inicio[0]) ** 2 + (ponto[1] - inicio[1]) ** 2) ** 0.5
+        if distancia > maior_distancia:
+            maior_distancia, indice = distancia, posicao
+    if maior_distancia <= tolerance:
+        return [inicio, fim]
+    return _simplificar_linha(points[: indice + 1], tolerance)[:-1] + _simplificar_linha(points[indice:], tolerance)
+
+
+@lru_cache(maxsize=1)
+def _contorno_estado_sao_paulo() -> dict[str, Any]:
+    """Converte o limite oficial local em uma geometria leve para mapas de resultado."""
+    try:
+        import shapefile
+    except ImportError as exc:  # pragma: no cover - dependência já usada no parser geoespacial
+        raise RuntimeError("Leitor de shapefile indisponível.") from exc
+
+    arquivo = project_path("data/geoespacial/local/limites_administrativos/uf_sp/uf_sp.shp")
+    with shapefile.Reader(str(arquivo)) as reader:
+        shape = reader.shape(0)
+        pontos = [[float(x), float(y)] for x, y in shape.points]
+        limites = list(shape.parts) + [len(pontos)]
+    aneis = []
+    for inicio, fim in zip(limites, limites[1:]):
+        anel = pontos[inicio:fim]
+        if anel and anel[0] != anel[-1]:
+            anel.append(anel[0])
+        simplificado = _simplificar_linha(anel)
+        if len(simplificado) >= 4:
+            aneis.append(simplificado)
+    return {
+        "type": "Feature",
+        "properties": {"nome": "Estado de São Paulo", "fonte": "IBGE"},
+        "geometry": {"type": "MultiPolygon", "coordinates": [[anel] for anel in aneis]},
+    }
+
+
+@router.get("/limites/estado-sao-paulo")
+async def limite_estado_sao_paulo() -> dict[str, Any]:
+    """Retorna o contorno oficial simplificado do Estado de São Paulo."""
+    return _contorno_estado_sao_paulo()
 
 
 def _containment_message(result: dict[str, Any], *, child: str, ref_kind: str) -> str:

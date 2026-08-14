@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import base64
 from datetime import datetime, timezone
 
 import pytest
 
 from api.schemas.hierarquizacao import (
     HierarquizacaoCreateSchema,
+    HierarquizacaoFase3RiscosSchema,
     HierarquizacaoFase3ExecutarSchema,
     HierarquizacaoSinteseSchema,
 )
@@ -101,6 +103,28 @@ def test_rodada_pode_executar_somente_fase_1(monkeypatch: pytest.MonkeyPatch) ->
     assert captured["status"] == "rascunho"
 
 
+def test_criacao_preserva_excel_original_da_matriz(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = {}
+    conteudo = b"PK\x03\x04xlsx-original"
+
+    def insert(data: dict) -> dict:
+        captured.update(data)
+        return _db_row(data["dados_hierarquizacao"])
+
+    monkeypatch.setattr(service.repo, "insert", insert)
+    service.criar_hierarquizacao(
+        HierarquizacaoCreateSchema(
+            nome="Rodada com matriz",
+            tipo_demanda="projeto",
+            objetos=[{"id": "1", "codigo": "P-1", "nome": "Projeto"}],
+            fases_a_executar=[1],
+            arquivo_excel_matriz_base64=base64.b64encode(conteudo).decode("ascii"),
+        )
+    )
+
+    assert captured["arquivo_excel_matriz_criterios_premissas"] == conteudo
+
+
 def test_fase_3_renormaliza_pesos_quando_atributo_opcional_ausente(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -151,11 +175,57 @@ def test_fase_3_bloqueia_booleano_invalido_obrigatorio(
     assert fase["bloqueada_por_atributo_obrigatorio"] is True
 
 
+def test_gestor_define_tratamento_para_risco_sobreposto(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dados = _dados([1, 3], [{}])
+    objeto = dados["objetos"][0]
+    objeto["cabecalho_objeto"]["codigo"] = "P-1"
+    objeto["hierarquizacao"]["fase_1"]["riscos_intersectados"] = [
+        {"criterio_id": "risco-inundacao", "nome": "Área inundável"}
+    ]
+    row = _db_row(dados)
+    _mock_persistencia(monkeypatch, row)
+
+    result = service.salvar_tratamentos_riscos_fase3(
+        "HIER-TESTE",
+        HierarquizacaoFase3RiscosSchema(
+            tratamentos={"P-1": {"risco": "aplicar_penalizacao"}}
+        ),
+    )
+
+    fase1 = result.dados_hierarquizacao["objetos"][0]["hierarquizacao"]["fase_1"]
+    assert fase1["tratamentos_riscos_fase3"] == {
+        "risco": "aplicar_penalizacao"
+    }
+
+
+def test_risco_reduz_score_ou_barra_conforme_decisao_do_gestor() -> None:
+    obj = {
+        "hierarquizacao": {
+            "fase_1": {
+                "risco": {"indice_calculado": 0.25},
+                "riscos_intersectados": [{"criterio_id": "risco-1"}],
+                "tratamentos_riscos_fase3": {
+                    "risco": "aplicar_penalizacao"
+                },
+            }
+        }
+    }
+    assert service._decisao_risco_fase3(obj) == ("aplicar_penalizacao", 0.75)
+
+    obj["hierarquizacao"]["fase_1"]["tratamentos_riscos_fase3"]["risco"] = "ignorar"
+    assert service._decisao_risco_fase3(obj) == ("ignorar", 1.0)
+
+    obj["hierarquizacao"]["fase_1"]["tratamentos_riscos_fase3"]["risco"] = "barrar"
+    assert service._decisao_risco_fase3(obj) == ("barrar", 0.0)
+
 def test_sintese_segrega_restrito_e_explica_contribuicoes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     dados = _dados([1, 2, 3], [{}, {}])
-    primeiro, segundo = dados["objetos"]
+    primeiro = dados["objetos"][0]
+    segundo = dados["objetos"][1]
     primeiro["hierarquizacao"]["fase_1"]["status_fase1"] = "restrito"
     primeiro["hierarquizacao"]["fase_2"]["score_fase2"] = 0.9
     primeiro["hierarquizacao"]["fase_3"]["score_fase3"] = 0.9
@@ -172,4 +242,63 @@ def test_sintese_segrega_restrito_e_explica_contribuicoes(
 
     assert objetos[0]["hierarquizacao"]["sintese"]["score_final"] is None
     assert objetos[1]["hierarquizacao"]["sintese"]["score_final"] == pytest.approx(0.74)
-    assert result.ranking[0]["codigo"] == "P-2"
+    ranking = list(result.ranking or [])
+    assert ranking
+    assert ranking[0]["codigo"] == "P-2"
+
+
+def test_excluir_hierarquizacao_libera_demandas_do_universo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    row = _db_row(_dados([1], [{}]))
+    row["objetos"] = [
+        {"id": "aaa-1", "codigo": "P-1", "nome": "Projeto 1"},
+        {"demanda_id": "bbb-2", "codigo": "P-2", "nome": "Projeto 2"},
+    ]
+    row["config_id"] = "cfg-uuid"
+    monkeypatch.setattr(service.repo, "get_by_codigo", lambda _c: deepcopy(row))
+    monkeypatch.setattr(
+        service.config_repo,
+        "get_by_id",
+        lambda tipo, _id: {
+            "tipo_demanda_id": 3,
+            "universo_objetos": [{"id": "aaa-1"}, {"id": "ccc-3"}],
+        },
+    )
+    capturado: dict = {}
+
+    def delete(codigo: str, *, liberar_demandas=None) -> bool:
+        capturado["codigo"] = codigo
+        capturado["transicao"] = liberar_demandas
+        return True
+
+    monkeypatch.setattr(service.repo, "delete_by_codigo", delete)
+
+    service.excluir_hierarquizacao("HIER-TESTE")
+
+    transicao = capturado["transicao"]
+    assert capturado["codigo"] == "HIER-TESTE"
+    assert transicao["tabela"] == ("demandas", "projeto")
+    assert transicao["ids"] == ["aaa-1", "bbb-2", "ccc-3"]
+    assert transicao["de"] == "hierarq_em_andamento"
+    assert transicao["para"] == "analise_aprovada"
+
+
+def test_excluir_hierarquizacao_sem_universo_nao_gera_transicao(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    row = _db_row(_dados([1], [{}]))
+    row["objetos"] = []
+    row["config_id"] = None
+    monkeypatch.setattr(service.repo, "get_by_codigo", lambda _c: deepcopy(row))
+    capturado: dict = {"transicao": "nao-chamado"}
+
+    def delete(codigo: str, *, liberar_demandas=None) -> bool:
+        capturado["transicao"] = liberar_demandas
+        return True
+
+    monkeypatch.setattr(service.repo, "delete_by_codigo", delete)
+
+    service.excluir_hierarquizacao("HIER-TESTE")
+
+    assert capturado["transicao"] is None

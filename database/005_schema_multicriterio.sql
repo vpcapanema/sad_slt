@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS ahp.config_multicriterio_avulsa (
     arquivo_tipo            VARCHAR(20),
     arquivo_hash            VARCHAR(64),
     arquivo_conteudo        BYTEA,
+    arquivo_excel_matriz_criterios_premissas BYTEA,
 
     -- Snapshot completo da configuração
     configuracao_completa   JSONB,
@@ -157,6 +158,9 @@ DO $$ BEGIN
     END IF;
 END $$;
 
+COMMENT ON COLUMN ahp.config_multicriterio_portfolio.arquivo_excel_matriz_criterios_premissas IS
+    'Conteúdo binário do arquivo Excel original da matriz de critérios e premissas.';
+
 CREATE INDEX IF NOT EXISTS idx_config_mc_portfolio_status
     ON ahp.config_multicriterio_portfolio (status);
 DO $$ BEGIN
@@ -210,6 +214,7 @@ CREATE TABLE IF NOT EXISTS ahp.hierarquizacao_portfolio (
     julgamento_projetos     JSONB,
     pesos_projetos          JSONB,
     ranking                 JSONB,
+    arquivo_excel_matriz_criterios_premissas BYTEA,
 
     homologado_em           TIMESTAMPTZ,
     homologado_por          UUID,
@@ -291,8 +296,12 @@ BEGIN
     END IF;
 
     -- Evita gravar o binário do arquivo na auditoria
-    IF v_anterior IS NOT NULL THEN v_anterior := v_anterior - 'arquivo_conteudo'; END IF;
-    IF v_novo IS NOT NULL THEN v_novo := v_novo - 'arquivo_conteudo'; END IF;
+    IF v_anterior IS NOT NULL THEN
+        v_anterior := v_anterior - 'arquivo_conteudo' - 'arquivo_excel_matriz_criterios_premissas';
+    END IF;
+    IF v_novo IS NOT NULL THEN
+        v_novo := v_novo - 'arquivo_conteudo' - 'arquivo_excel_matriz_criterios_premissas';
+    END IF;
 
     INSERT INTO auditoria.log_sistema (
         nivel, categoria, operacao, schema_nome, tabela, registro_id,

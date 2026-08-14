@@ -42,6 +42,7 @@ _COMMON_COLUMNS = [
     "status",
     "metodo_entrada",
     "metodo_comparacao",
+    "modo_preenchimento",
     "n_criterios",
     "criterios",
     "matriz_comparacao",
@@ -102,6 +103,32 @@ def _columns(tipo: str) -> list[str]:
 
 def _select_columns(tipo: str) -> sql.Composed:
     return sql.SQL(", ").join(sql.Identifier(c) for c in _columns(tipo))
+
+
+def get_excel_matriz(tipo: str, codigo: str) -> tuple[bytes, str] | None:
+    """Retorna o arquivo Excel original da matriz, sem incluí-lo no JSON da configuração."""
+    query = sql.SQL("SELECT arquivo_excel_matriz_criterios_premissas, arquivo_nome FROM {table} WHERE codigo = %s").format(table=_table(tipo))
+    with get_connection() as conn:
+        row = conn.execute(query, (codigo,)).fetchone()
+    if row and row["arquivo_excel_matriz_criterios_premissas"]:
+        return bytes(row["arquivo_excel_matriz_criterios_premissas"]), str(row["arquivo_nome"] or "matriz.xlsx")
+    # Compatibilidade com configurações criadas antes da cópia do binário:
+    # a hierarquização de origem mantém o mesmo arquivo e referencia a config.
+    if tipo == "portfolio":
+        fallback = """
+            SELECT h.arquivo_excel_matriz_criterios_premissas
+            FROM hierarquizacao_demandas.hierarquizacao_portfolio h
+            JOIN ahp.config_multicriterio_portfolio c ON c.id = h.config_id
+            WHERE c.codigo = %s
+              AND h.arquivo_excel_matriz_criterios_premissas IS NOT NULL
+            ORDER BY h.atualizado_em DESC NULLS LAST
+            LIMIT 1
+        """
+        with get_connection() as conn:
+            original = conn.execute(fallback, (codigo,)).fetchone()
+        if original and original.get("arquivo_excel_matriz_criterios_premissas"):
+            return bytes(original["arquivo_excel_matriz_criterios_premissas"]), str((row or {}).get("arquivo_nome") or "matriz.xlsx")
+    return None
 
 
 def _normalize(tipo: str, row: dict[str, Any] | None) -> dict[str, Any] | None:

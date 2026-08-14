@@ -699,11 +699,6 @@
     if (!window.jspdf || !window.jspdf.jsPDF) {
       return erro("Biblioteca jsPDF não carregada para exportação PDF.");
     }
-    if (typeof window.html2canvas !== "function") {
-      return erro("Biblioteca html2canvas não carregada para exportação PDF.");
-    }
-    const box = document.getElementById("fase1-relatorio");
-    if (!box) return;
 
     const botao = document.getElementById("baixar-relatorio-fase1");
     const rotuloOriginal = botao ? botao.innerHTML : "";
@@ -713,39 +708,149 @@
     }
 
     try {
-      if (mapaFase1) {
-        mapaFase1.invalidateSize();
-        await new Promise((r) => setTimeout(r, 250));
-      }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const largura = doc.internal.pageSize.getWidth();
+      const altura = doc.internal.pageSize.getHeight();
+      const margem = 12;
+      const larguraUtil = largura - margem * 2;
+      const dataGeracao = new Date().toLocaleString("pt-BR");
+      const texto = (valor, fallback = "—") => {
+        const normalizado = String(valor ?? "").replace(/\s+/g, " ").trim();
+        return normalizado || fallback;
+      };
+      const adicionarCabecalho = () => {
+        const larguraPagina = doc.internal.pageSize.getWidth();
+        doc.setFillColor(28, 61, 89);
+        doc.rect(0, 0, larguraPagina, 23, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text("Relatório da Fase 1 — Elegibilidade Territorial", margem, 12);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.text(`Rodada ${texto(modelo.codigo)}`, margem, 18);
+        doc.setTextColor(25, 25, 25);
+      };
+      const adicionarRodape = (pagina, total) => {
+        const larguraPagina = doc.internal.pageSize.getWidth();
+        const alturaPagina = doc.internal.pageSize.getHeight();
+        doc.setDrawColor(215, 222, 228);
+        doc.line(margem, alturaPagina - 11, larguraPagina - margem, alturaPagina - 11);
+        doc.setFontSize(7.5);
+        doc.setTextColor(85, 95, 105);
+        doc.text(`Gerado em ${dataGeracao}`, margem, alturaPagina - 6);
+        doc.text(`Página ${pagina} de ${total}`, larguraPagina - margem, alturaPagina - 6, { align: "right" });
+        doc.setTextColor(25, 25, 25);
+      };
+      const novaPagina = () => {
+        doc.addPage();
+        adicionarCabecalho();
+        return 31;
+      };
 
-      const canvas = await window.html2canvas(box, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        windowWidth: box.scrollWidth,
+      adicionarCabecalho();
+      let y = 31;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(texto(modelo.nome, "Hierarquização sem nome"), margem, y);
+      y += 5;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      const concluido = `Conclusão: ${texto(modelo.concluidoEm)}   |   Objetos avaliados: ${texto(modelo.resumo?.objetos, "0")}`;
+      doc.text(concluido, margem, y);
+      y += 8;
+
+      const kpis = [
+        ["Restritos", texto(modelo.resumo?.restritos, "0"), [192, 57, 43]],
+        ["Aptos com ressalva", texto(modelo.resumo?.comRisco, "0"), [212, 160, 23]],
+        ["Aptos sem ocorrência", texto(modelo.resumo?.semOcorrencia, "0"), [22, 125, 76]],
+      ];
+      const larguraKpi = (larguraUtil - 6) / 3;
+      kpis.forEach(([rotulo, valor, cor], indice) => {
+        const x = margem + indice * (larguraKpi + 3);
+        doc.setFillColor(247, 249, 250);
+        doc.setDrawColor(...cor);
+        doc.roundedRect(x, y, larguraKpi, 19, 1.5, 1.5, "FD");
+        doc.setFontSize(7.5);
+        doc.setTextColor(75, 85, 95);
+        doc.text(rotulo, x + 3, y + 6);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(15);
+        doc.setTextColor(...cor);
+        doc.text(valor, x + 3, y + 15);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(25, 25, 25);
+      });
+      y += 27;
+
+      doc.autoTable({
+        startY: y,
+        margin: { left: margem, right: margem },
+        theme: "grid",
+        head: [["Parâmetro", "Valor"]],
+        body: [
+          ["Camada de restrição", texto(modelo.camadas?.restricao?.nome)],
+          ["Camada de risco", texto(modelo.camadas?.risco?.nome)],
+          ["Limiar de restrição", texto(modelo.fatiamento?.parametros?.restricao?.limiar)],
+          ["Classes de risco", (modelo.fatiamento?.parametros?.risco?.classes || []).map((classe) => `${texto(classe.rotulo || classe.codigo)}: ${classe.minimo ?? "sem limite inferior"} a ${classe.maximo ?? "sem limite superior"}`).join("; ") || "Não informado"],
+        ],
+        styles: { fontSize: 8, cellPadding: 2.2, overflow: "linebreak" },
+        headStyles: { fillColor: [28, 61, 89], textColor: 255 },
+        columnStyles: { 0: { cellWidth: 42, fontStyle: "bold" }, 1: { cellWidth: larguraUtil - 42 } },
       });
 
-      const { jsPDF } = window.jspdf;
-      const imgW = 190;
-      const pageH = 277;
-      const imgH = (canvas.height * imgW) / canvas.width;
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+      y = doc.lastAutoTable.finalY + 8;
+      if (y > altura - 55) y = novaPagina();
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.text("Tabela síntese da elegibilidade", margem, y);
+      y += 4;
+      const linhasPdf = (modelo.linhas || []).flatMap((linha) => {
+        const sobreposicoes = [
+          ...(linha.featuresRestricao || []).map((feature) => ({ tipo: "restrição", nome: feature.nome })),
+          ...(linha.featuresRisco || []).map((feature) => ({ tipo: "risco", nome: feature.nome })),
+        ];
+        const base = [
+          texto(linha.nome),
+          texto(badgeStatus(linha.status).label),
+          texto(linha.restricaoResultado),
+          texto(linha.riscoResultado),
+        ];
+        return sobreposicoes.length
+          ? sobreposicoes.map((item) => [...base, `${item.tipo}: ${texto(item.nome)}`])
+          : [[...base, "Sem sobreposição"]];
+      });
+      doc.autoTable({
+        startY: y,
+        margin: { left: margem, right: margem, bottom: 16 },
+        theme: "grid",
+        head: [["Demanda", "Status", "Restrição", "Risco", "Sobreposição identificada"]],
+        body: linhasPdf.length ? linhasPdf : [["Sem objetos avaliados.", "", "", "", ""]],
+        styles: { fontSize: 7, cellPadding: 1.8, overflow: "linebreak", valign: "top" },
+        headStyles: { fillColor: [28, 61, 89], textColor: 255, fontSize: 7.2 },
+        columnStyles: { 0: { cellWidth: 35 }, 1: { cellWidth: 24 }, 2: { cellWidth: 27 }, 3: { cellWidth: 27 }, 4: { cellWidth: 65 } },
+        didParseCell: (dados) => {
+          if (dados.section !== "body" || dados.column.index !== 1) return;
+          const status = String(dados.cell.raw || "").toLowerCase();
+          if (status.includes("restrito")) dados.cell.styles.fillColor = [253, 226, 225];
+          else if (status.includes("ressalva")) dados.cell.styles.fillColor = [255, 243, 205];
+          else if (status.includes("apto")) dados.cell.styles.fillColor = [223, 246, 232];
+        },
+      });
 
-      if (imgH <= pageH) {
-        doc.addImage(dataUrl, "JPEG", 10, 10, imgW, imgH);
-      } else {
-        let heightLeft = imgH;
-        let position = 10;
-        doc.addImage(dataUrl, "JPEG", 10, position, imgW, imgH);
-        heightLeft -= pageH;
-        while (heightLeft > 0) {
-          position = 10 - (imgH - heightLeft);
-          doc.addPage();
-          doc.addImage(dataUrl, "JPEG", 10, position, imgW, imgH);
-          heightLeft -= pageH;
-        }
+      const mapaInserido = await adicionarMapaAoPdf(doc, modelo, {
+        margem,
+        adicionarCabecalho,
+      });
+      if (!mapaInserido) {
+        console.warn("Mapa-síntese não pôde ser incorporado ao PDF.");
+      }
+
+      const totalPaginas = doc.getNumberOfPages();
+      for (let pagina = 1; pagina <= totalPaginas; pagina += 1) {
+        doc.setPage(pagina);
+        adicionarRodape(pagina, totalPaginas);
       }
 
       doc.save(`fase1-relatorio-${modelo.codigo || "rodada"}.pdf`);
@@ -761,6 +866,181 @@
   }
 
   let mapaFase1 = null;
+  let mapaFase1Pronto = Promise.resolve();
+  let contornoSaoPauloPromise = null;
+
+  function obterContornoSaoPaulo() {
+    if (!contornoSaoPauloPromise) {
+      contornoSaoPauloPromise = fetch("/api/geo/limites/estado-sao-paulo", {
+        credentials: "same-origin",
+      }).then((resposta) => {
+        if (!resposta.ok) throw new Error("Não foi possível carregar o limite de São Paulo.");
+        return resposta.json();
+      });
+    }
+    return contornoSaoPauloPromise;
+  }
+
+  function adicionarMolduraCartografica(mapa, titulo) {
+    const host = mapa.getContainer();
+    const adicionar = (classe, html, rotulo) => {
+      const elemento = document.createElement("div");
+      elemento.className = `fase1-map-layout ${classe}`;
+      elemento.setAttribute("aria-label", rotulo);
+      elemento.innerHTML = html;
+      host.appendChild(elemento);
+      return elemento;
+    };
+    adicionar("fase1-map-layout--title", `<strong>${esc(titulo)}</strong>`, titulo);
+    adicionar("fase1-map-layout--north", '<span class="fase1-map-north-arrow"></span><strong>N</strong>', "Rosa dos ventos: norte");
+    const escala = adicionar("fase1-map-layout--scale", '<span class="fase1-map-scale-line"></span><span class="fase1-map-scale-label"></span>', "Escala gráfica");
+    const linha = escala.querySelector(".fase1-map-scale-line");
+    const rotulo = escala.querySelector(".fase1-map-scale-label");
+    const atualizarEscala = () => {
+      const tamanho = mapa.getSize();
+      if (!tamanho.x || !tamanho.y) return;
+      const origem = mapa.containerPointToLatLng([0, tamanho.y / 2]);
+      const referencia = mapa.containerPointToLatLng([100, tamanho.y / 2]);
+      const metrosPor100Px = origem.distanceTo(referencia);
+      if (!Number.isFinite(metrosPor100Px) || metrosPor100Px <= 0) return;
+      const potencia = 10 ** Math.floor(Math.log10(metrosPor100Px));
+      const base = metrosPor100Px / potencia;
+      const distancia = (base >= 5 ? 5 : base >= 2 ? 2 : 1) * potencia;
+      const larguraPx = Math.max(30, Math.min(120, (distancia / metrosPor100Px) * 100));
+      linha.style.width = `${larguraPx}px`;
+      rotulo.textContent = distancia >= 1000 ? `${(distancia / 1000).toLocaleString("pt-BR")} km` : `${Math.round(distancia)} m`;
+    };
+    mapa.on("zoomend moveend resize", atualizarEscala);
+    if (mapa._loaded) atualizarEscala();
+    else mapa.whenReady(atualizarEscala);
+  }
+
+  function linhasDaGeometria(coordenadas) {
+    if (!Array.isArray(coordenadas) || !coordenadas.length) return [];
+    if (typeof coordenadas[0]?.[0] === "number") return [coordenadas];
+    return coordenadas.flatMap(linhasDaGeometria);
+  }
+
+  function criarImagemCartograficaPdf(modelo, contorno) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1600;
+    canvas.height = 980;
+    const ctx = canvas.getContext("2d");
+    const linhasContorno = linhasDaGeometria(contorno?.geometry?.coordinates || []);
+    const geometrias = [];
+    (modelo.linhas || []).filter((linha) => linha.status === "restrito" || linha.status === "apto_com_ressalva").forEach((linha) => {
+      (linha.featuresRestricao || []).forEach((feature) => geometrias.push({ geometria: feature.geometria, cor: "#c0392b", tipo: "Restrição" }));
+      (linha.featuresRisco || []).forEach((feature) => geometrias.push({ geometria: feature.geometria, cor: "#d4a017", tipo: "Risco" }));
+    });
+    const pontos = [];
+    linhasContorno.forEach((linha) => linha.forEach((ponto) => pontos.push(ponto)));
+    geometrias.forEach((item) => linhasDaGeometria(item.geometria?.coordinates || []).forEach((linha) => linha.forEach((ponto) => pontos.push(ponto))));
+    (modelo.linhas || []).forEach((linha) => {
+      if (Number.isFinite(linha.longitude) && Number.isFinite(linha.latitude)) pontos.push([linha.longitude, linha.latitude]);
+    });
+    if (!pontos.length) return null;
+    const pontosEnquadramento = linhasContorno.flatMap((linha) => linha);
+    let minX = Math.min(...pontosEnquadramento.map((ponto) => ponto[0]));
+    let maxX = Math.max(...pontosEnquadramento.map((ponto) => ponto[0]));
+    let minY = Math.min(...pontosEnquadramento.map((ponto) => ponto[1]));
+    let maxY = Math.max(...pontosEnquadramento.map((ponto) => ponto[1]));
+    const margemGeo = 0.04;
+    const larguraGeo = maxX - minX || 1;
+    const alturaGeo = maxY - minY || 1;
+    minX -= larguraGeo * margemGeo; maxX += larguraGeo * margemGeo;
+    minY -= alturaGeo * margemGeo; maxY += alturaGeo * margemGeo;
+    const quadro = { x: 70, y: 92, largura: 1460, altura: 785 };
+    const projetar = (ponto) => [
+      quadro.x + ((ponto[0] - minX) / (maxX - minX)) * quadro.largura,
+      quadro.y + ((maxY - ponto[1]) / (maxY - minY)) * quadro.altura,
+    ];
+    const desenharLinhas = (linhas, cor, largura, preenchimento = null) => {
+      ctx.strokeStyle = cor;
+      ctx.lineWidth = largura;
+      linhas.forEach((linha) => {
+        if (linha.length < 2) return;
+        ctx.beginPath();
+        linha.forEach((ponto, indice) => {
+          const [x, y] = projetar(ponto);
+          if (indice) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+        });
+        if (preenchimento) { ctx.fillStyle = preenchimento; ctx.fill(); }
+        ctx.stroke();
+      });
+    };
+    ctx.fillStyle = "#f5f8fa";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#eaf0f3";
+    ctx.fillRect(quadro.x, quadro.y, quadro.largura, quadro.altura);
+    for (let grade = 1; grade < 6; grade += 1) {
+      ctx.strokeStyle = "rgba(28,61,89,.12)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(quadro.x + (quadro.largura * grade) / 6, quadro.y); ctx.lineTo(quadro.x + (quadro.largura * grade) / 6, quadro.y + quadro.altura); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(quadro.x, quadro.y + (quadro.altura * grade) / 6); ctx.lineTo(quadro.x + quadro.largura, quadro.y + (quadro.altura * grade) / 6); ctx.stroke();
+    }
+    desenharLinhas(linhasContorno, "#173f5a", 4, "rgba(255,255,255,.18)");
+    geometrias.forEach((item) => desenharLinhas(linhasDaGeometria(item.geometria?.coordinates || []), item.cor, 4, item.tipo === "Restrição" ? "rgba(192,57,43,.18)" : "rgba(212,160,23,.18)"));
+    const capital = [-46.6333, -23.5505];
+    const [capitalX, capitalY] = projetar(capital);
+    ctx.beginPath(); ctx.moveTo(capitalX, capitalY - 11); ctx.lineTo(capitalX + 11, capitalY); ctx.lineTo(capitalX, capitalY + 11); ctx.lineTo(capitalX - 11, capitalY); ctx.closePath(); ctx.fillStyle = "#6c3fa0"; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = "#fff"; ctx.stroke();
+    ctx.font = "bold 20px Arial"; ctx.textAlign = "left"; ctx.fillStyle = "#6c3fa0";
+    ctx.fillText("São Paulo — Capital", capitalX + 14, capitalY - 12);
+    (modelo.linhas || []).filter((linha) => linha.status === "restrito" || linha.status === "apto_com_ressalva").forEach((linha) => {
+      if (!Number.isFinite(linha.longitude) || !Number.isFinite(linha.latitude)) return;
+      const [x, y] = projetar([linha.longitude, linha.latitude]);
+      const cor = linha.status === "restrito" ? "#c0392b" : "#d4a017";
+      ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fillStyle = cor; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
+    });
+    ctx.fillStyle = "#173f5a";
+    ctx.font = "bold 30px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("Mapa-síntese — Elegibilidade territorial", canvas.width / 2, 50);
+    ctx.textAlign = "center";
+    ctx.font = "bold 26px Arial";
+    ctx.fillText("N", 1450, 55);
+    ctx.beginPath(); ctx.moveTo(1450, 65); ctx.lineTo(1435, 100); ctx.lineTo(1450, 91); ctx.lineTo(1465, 100); ctx.closePath(); ctx.fill();
+    const latitudeMedia = (minY + maxY) / 2;
+    const kmPorPx = ((maxX - minX) * 111.32 * Math.cos((latitudeMedia * Math.PI) / 180)) / quadro.largura;
+    const meta = kmPorPx * 180;
+    const potencia = 10 ** Math.floor(Math.log10(Math.max(meta, 0.1)));
+    const escalaKm = (meta / potencia >= 5 ? 5 : meta / potencia >= 2 ? 2 : 1) * potencia;
+    const escalaPx = escalaKm / kmPorPx;
+    const escalaX = (canvas.width - escalaPx) / 2;
+    const escalaY = 925;
+    ctx.strokeStyle = "#102f45"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(escalaX, escalaY); ctx.lineTo(escalaX + escalaPx, escalaY); ctx.stroke();
+    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(escalaX, escalaY - 8); ctx.lineTo(escalaX, escalaY + 8); ctx.moveTo(escalaX + escalaPx, escalaY - 8); ctx.lineTo(escalaX + escalaPx, escalaY + 8); ctx.stroke();
+    ctx.font = "bold 22px Arial"; ctx.textAlign = "center"; ctx.fillStyle = "#102f45"; ctx.fillText(`${escalaKm.toLocaleString("pt-BR")} km`, canvas.width / 2, 960);
+    ctx.textAlign = "left"; ctx.font = "20px Arial";
+    [["#c0392b", "Restrição"], ["#d4a017", "Risco"], ["#6c3fa0", "Capital"]].forEach(([cor, rotulo], indice) => {
+      const x = 85 + indice * 220;
+      ctx.fillStyle = cor; ctx.fillRect(x, 895, 18, 18); ctx.fillStyle = "#1d2f3a"; ctx.fillText(rotulo, x + 27, 911);
+    });
+    return canvas;
+  }
+
+  async function adicionarMapaAoPdf(doc, modelo, opcoes) {
+    const mapa = document.getElementById("fase1-relatorio-mapa");
+    if (!mapa || mapa.classList.contains("hidden")) return false;
+    try {
+      if (mapaFase1) mapaFase1.invalidateSize();
+      const contorno = await obterContornoSaoPaulo();
+      const canvas = criarImagemCartograficaPdf(modelo, contorno);
+      if (!canvas || !canvas.width || !canvas.height) return false;
+      doc.addPage("a4", "landscape");
+      opcoes.adicionarCabecalho();
+      const larguraUtil = doc.internal.pageSize.getWidth() - opcoes.margem * 2;
+      const y = 31;
+      const alturaImagem = Math.min(170, (canvas.height * larguraUtil) / canvas.width);
+      doc.addImage(canvas.toDataURL("image/png"), "PNG", opcoes.margem, y, larguraUtil, alturaImagem);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.text(`Rodada ${modelo.codigo || "—"} · Limite do Estado de São Paulo (IBGE)`, opcoes.margem, y + alturaImagem + 10);
+      return true;
+    } catch (erroMapa) {
+      console.warn("Falha ao gerar a imagem cartográfica do PDF", erroMapa);
+      return false;
+    }
+  }
 
   // Gera cor HSL determinística por índice, com boa separação visual.
   function corPorIndice(i, total) {
@@ -797,6 +1077,7 @@
         mapaFase1.remove();
         mapaFase1 = null;
       }
+      container.querySelectorAll(".fase1-map-layout").forEach((elemento) => elemento.remove());
 
       const featIndex = new Map();
       itens.forEach((p) => {
@@ -817,7 +1098,43 @@
         maxZoom: 19,
         subdomains: "abcd",
         attribution: "© OpenStreetMap · © CARTO",
+        crossOrigin: true,
       }).addTo(mapaFase1);
+      const mapaAtual = mapaFase1;
+      const painelContorno = mapaFase1.createPane("fase1-contorno-sp");
+      painelContorno.style.zIndex = "350";
+      mapaFase1Pronto = obterContornoSaoPaulo()
+        .then((contorno) => {
+          if (mapaFase1 !== mapaAtual) return;
+          const limiteSp = window.L.geoJSON(contorno, {
+            pane: "fase1-contorno-sp",
+            interactive: false,
+            style: { color: "#173f5a", weight: 2, opacity: 0.9, fill: false },
+          }).addTo(mapaAtual);
+          const capital = window.L.marker([-23.5505, -46.6333], {
+            icon: window.L.divIcon({
+              className: "fase1-map-capital-marker",
+              html: '<span aria-hidden="true"></span>',
+              iconSize: [18, 18],
+              iconAnchor: [9, 9],
+            }),
+            interactive: false,
+          }).addTo(mapaAtual);
+          capital.bindTooltip("São Paulo — Capital", {
+            permanent: true,
+            direction: "right",
+            offset: [9, 0],
+            className: "fase1-report-map-label fase1-report-map-label--capital",
+          });
+          mapaAtual.fitBounds(limiteSp.getBounds(), {
+            paddingTopLeft: [76, 100],
+            paddingBottomRight: [76, 68],
+            maxZoom: 7.35,
+            animate: false,
+          });
+        })
+        .catch((erroContorno) => console.warn("Contorno de São Paulo indisponível", erroContorno));
+      adicionarMolduraCartografica(mapaFase1, "Mapa-síntese — Elegibilidade territorial");
 
       const grupo = window.L.featureGroup();
       itens.forEach((p) => {
@@ -838,9 +1155,9 @@
         });
         const marker = window.L.circleMarker([p.latitude, p.longitude], {
           radius: 7,
-          color: "#1a1a1a",
-          weight: 1.2,
-          fillColor: "#1c3d59",
+          color: "#ffffff",
+          weight: 1.8,
+          fillColor: p.status === "restrito" ? "#c0392b" : "#d4a017",
           fillOpacity: 0.95,
         });
         marker.bindTooltip(esc(p.nome), {
@@ -853,12 +1170,9 @@
       });
       grupo.addTo(mapaFase1);
 
-      const bounds = grupo.getBounds();
-      if (bounds.isValid()) {
-        mapaFase1.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
-      } else {
-        mapaFase1.setView([itens[0].latitude, itens[0].longitude], 10);
-      }
+      // O enquadramento final é aplicado quando o limite oficial de São Paulo chega.
+      // Enquanto isso, uma visão provisória impede que o Leaflet fique sem centro/zoom.
+      mapaFase1.setView([-22.5, -48.5], 6.4, { animate: false });
       setTimeout(() => mapaFase1 && mapaFase1.invalidateSize(), 60);
     };
 

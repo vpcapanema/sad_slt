@@ -21,6 +21,9 @@ class HierarquizacaoCreateSchema(BaseModel):
     )
     objetos: list[dict[str, Any]] | None = None
     matriz_premissas_criterios: dict[str, Any] | list[Any] | None = None
+    arquivo_excel_matriz_base64: str | None = Field(
+        None, description="Arquivo XLSX original da matriz, codificado em base64"
+    )
     fases_a_executar: list[int] = Field(default_factory=lambda: [1, 2, 3])
 
     @field_validator("fases_a_executar")
@@ -84,6 +87,17 @@ class HierarquizacaoFase3AtributosSchema(BaseModel):
 
 class HierarquizacaoFase3PesosSchema(BaseModel):
     criterios: list[dict[str, Any]]
+
+
+class HierarquizacaoFase3RiscosSchema(BaseModel):
+    # {codigo_objeto: {"risco": decisao}}
+    tratamentos: dict[
+        str,
+        dict[
+            str,
+            Literal["aplicar_penalizacao", "ignorar", "barrar"],
+        ],
+    ] = Field(default_factory=dict)
 
 
 class HierarquizacaoSinteseSchema(BaseModel):

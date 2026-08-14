@@ -73,9 +73,8 @@
   }
 
   function collectMatrizRows() {
-    var panel = global.document.getElementById("matriz-premissas-panel");
-    if (!panel || !global.SltMatrizPremissas) return [];
-    return global.SltMatrizPremissas.collectEditorRows(panel);
+    if (!global.SltMatrizPremissas) return [];
+    return global.SltMatrizPremissas.loadMatrizPremissas();
   }
 
   function showSaveNamesFeedback(message, isError) {
@@ -188,9 +187,47 @@
     return rows.map(function (r) { return (r && (r.criterio || r["Critério"] || r.nome)) || ""; });
   }
 
-  function bootCriteriaInputs() {
+  function renderCriteriaInputs(criteria, sourceLabel) {
+    var container = global.document.getElementById("criteriaInputs");
+    if (!container || !criteria || !criteria.length) return false;
+    container.replaceChildren();
+    var origin = global.document.getElementById("nomes-config-origin");
+    if (origin) origin.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i><span>Critérios carregados de <strong>' + sourceLabel + '</strong>. Esta origem fica congelada nesta etapa.</span>';
+    global.localStorage.setItem("ahp_criteria", JSON.stringify(criteria));
+    global.localStorage.setItem("ahp_criteriaCount", String(criteria.length));
+    criteria.forEach(function (name, index) {
+      var formGroup = global.document.createElement("div");
+      formGroup.className = "c-form-group";
+      var label = global.document.createElement("label");
+      label.className = "c-form-label";
+      label.setAttribute("for", "criteria" + (index + 1));
+      label.innerHTML = '<i class="fas fa-tag"></i> Critério ' + (index + 1);
+      var input = global.document.createElement("input");
+      input.type = "text";
+      input.id = "criteria" + (index + 1);
+      input.name = input.id;
+      input.className = "c-form-control";
+      input.placeholder = "Digite o nome do critério " + (index + 1);
+      input.value = name || "";
+      input.required = true;
+      input.addEventListener("input", function () { if (global.SLTStep3Matriz) global.SLTStep3Matriz.syncNamesFromInputs(); });
+      input.addEventListener("blur", function () { if (global.SLTStep3Matriz) global.SLTStep3Matriz.syncNamesFromInputs(); });
+      var helpText = global.document.createElement("small");
+      helpText.className = "form-help";
+      helpText.innerHTML = '<i class="fas fa-link"></i> Sincronizado com a coluna Critério da tabela';
+      formGroup.append(label, input, helpText);
+      container.appendChild(formGroup);
+    });
+    if (global.SLTStep3Matriz && global.SLTStep3Matriz.onCriteriaInputsReady) global.SLTStep3Matriz.onCriteriaInputsReady();
+    return true;
+  }
+
+  function bootCriteriaInputs(criteriaFromConfig) {
     var isUpload = (global.localStorage.getItem("ahp_inputMethod") || "manual") === "upload_matriz";
-    var matrizCriterios = isUpload ? criteriosDaMatriz() : null;
+    var matrizCriterios = criteriosDaMatriz();
+    var configCriterios = Array.isArray(criteriaFromConfig) ? criteriaFromConfig : null;
+    var prioridade = matrizCriterios && matrizCriterios.length ? matrizCriterios : (configCriterios && configCriterios.length ? configCriterios : null);
+    matrizCriterios = prioridade;
     var count = matrizCriterios ? matrizCriterios.length : parseInt(global.localStorage.getItem("ahp_criteriaCount"), 10);
     if (!count || count < 1) {
       var note = global.document.getElementById("reviewNote");
@@ -206,6 +243,7 @@
 
     var container = global.document.getElementById("criteriaInputs");
     if (!container) return;
+    container.replaceChildren();
 
     var savedCriteria = matrizCriterios || JSON.parse(global.localStorage.getItem("ahp_criteria") || "[]");
     if (matrizCriterios) {
@@ -214,6 +252,8 @@
       global.localStorage.setItem("ahp_criteriaCount", String(matrizCriterios.length));
     }
     var origem = global.localStorage.getItem("ahp_inputMethodOrigem") || (isUpload ? "upload" : "manual");
+    var originBox = global.document.getElementById("nomes-config-origin");
+    if (originBox) originBox.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i><span>Critérios carregados de <strong>' + (matrizCriterios && matrizCriterios.length ? "informações desta etapa" : "configuração selecionada") + '</strong>. Esta origem fica congelada nesta etapa.</span>';
     var hierOrigem = null;
     if (origem === "hierarquizacao") {
       try { hierOrigem = JSON.parse(global.localStorage.getItem("ahp_hierarquizacaoOrigem") || "null"); } catch (_e) { hierOrigem = null; }
@@ -289,5 +329,22 @@
   global.continueStep3 = continueStep3;
   global.SLTStep3Nomes = { boot: bootCriteriaInputs };
 
-  global.document.addEventListener("DOMContentLoaded", bootCriteriaInputs);
+  global.document.addEventListener("DOMContentLoaded", function () {
+    bootCriteriaInputs();
+    global.addEventListener("slt:ahp-config-loaded", function (event) {
+      var cfg = event.detail || {};
+      var criterios = (cfg.criterios || []).map(function (item) {
+        if (typeof item === "string") return item.trim();
+        return String(item.criterio || item.nome || item.alias || "").trim();
+      }).filter(Boolean);
+      if (!criterios.length) return;
+      var origem = cfg.codigo ? "configuração " + cfg.codigo : "configuração ativa";
+      renderCriteriaInputs(criterios, origem);
+      var note = global.document.getElementById("reviewNote");
+      if (note) {
+        note.className = "ahp-recommendation";
+        note.innerHTML = '<div class="ahp-recommendation__head"><i class="fas fa-wand-magic-sparkles"></i><strong>Nomes gerados automaticamente.</strong></div><p>Os ' + criterios.length + ' critérios foram carregados da configuração ativa. Você pode revisar os nomes antes de salvar.</p>';
+      }
+    });
+  });
 })(window);

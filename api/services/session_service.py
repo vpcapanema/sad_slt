@@ -107,4 +107,4 @@ def parse_token(token: str | None) -> SessionUser | None:
 def is_gestor(user: SessionUser | None) -> bool:
     if not user:
         return False
-    return user.tipo_usuario.strip().upper() == "GESTOR"
+    return user.tipo_usuario.strip().upper() in {"GESTOR", "ADMIN"}

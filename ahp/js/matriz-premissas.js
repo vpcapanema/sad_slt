@@ -6,7 +6,10 @@
 
   var STORAGE_ROWS = "slt_ahp_matriz_premissas";
   var STORAGE_FILE = "slt_ahp_matriz_arquivo_nome";
+  var STORAGE_COLUMNS = "slt_ahp_matriz_colunas";
   var SHEET_NAMES = [
+    "Matriz Crit Premissas v3",
+    "Matriz Crit Premissas v2",
     "Tabela de Premissas e Criterios",
     "Tabela de Premissas e Critérios",
     "Matriz de Criterios e Premissas",
@@ -64,11 +67,19 @@
     mandatório: "mandatorio",
   };
 
+  function repararMojibake(value) {
+    var text = String(value == null ? "" : value);
+    if (!/[ÃÂâ]/.test(text)) return text;
+    try { return decodeURIComponent(escape(text)); } catch (_err) { return text; }
+  }
+
   function normHeader(value) {
-    return String(value || "")
+    return repararMojibake(value)
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
+      .replace(/[_\-–—:;]+/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
   }
 
@@ -104,21 +115,43 @@
     return result;
   }
 
-  function mapHeaderIndexes(headers) {
+  function mapHeaderIndexes(headers, required) {
     var indexes = {};
     headers.forEach(function (header, idx) {
-      var key = HEADER_MAP[normHeader(header)];
+      var normalized = normHeader(header);
+      var key = HEADER_MAP[normalized];
+      // Planilhas legadas usam variações como "Fase da hierarquização",
+      // "Fase de hierarquia" ou simplesmente "FASE".
+      if (!key && (/^fase($|\s)/.test(normalized) || normalized.indexOf("fase da hierarquizacao") >= 0)) key = "fase";
+      if (!key && normalized.indexOf("criter") >= 0) key = "criterio";
+      if (!key && normalized.indexOf("premiss") >= 0) key = "premissa";
+      if (key === "fase" && normalized === "fase") {
+        indexes[key] = idx;
+        return;
+      }
       if (key && indexes[key] === undefined) {
         indexes[key] = idx;
       }
     });
-    if (indexes.criterio === undefined) {
+    if (required !== false && indexes.criterio === undefined) {
       throw new Error("Coluna «Critério» não encontrada no cabeçalho.");
     }
-    if (indexes.premissa === undefined) {
+    if (required !== false && indexes.premissa === undefined) {
       throw new Error("Coluna «Premissa» não encontrada no cabeçalho.");
     }
     return indexes;
+  }
+
+  function localizarCabecalhoMatriz(matrix) {
+    // A aba pode conter título, versão e instruções antes da tabela.
+    var limite = Math.min(matrix.length, 80);
+    for (var i = 0; i < limite; i++) {
+      var indexes = mapHeaderIndexes(Array.isArray(matrix[i]) ? matrix[i] : [], false);
+      if (indexes.criterio !== undefined && indexes.premissa !== undefined) {
+        return { index: i, indexes: indexes, headers: Array.isArray(matrix[i]) ? matrix[i] : [] };
+      }
+    }
+    throw new Error("Não foi localizada uma linha de cabeçalho com as colunas de critério e premissa.");
   }
 
   function rowFromValues(values, indexes, lineNo) {
@@ -140,7 +173,8 @@
       throw new Error("Linha " + lineNo + ": premissa obrigatória para «" + criterio + "».");
     }
 
-    return {
+    var row = {
+      fase: cell("fase"),
       dimensao: cell("dimensao"),
       criterio: criterio,
       premissa: premissa,
@@ -149,6 +183,50 @@
       fonte: cell("fonte"),
       mandatorio: cell("mandatorio"),
     };
+    Object.keys(indexes).forEach(function (key) {
+      if (row[key] === undefined) row[key] = cell(key);
+    });
+    return row;
+  }
+
+  function makeLiteralColumns(headers) {
+    var seen = {};
+    return (headers || []).map(function (header, index) {
+      var label = String(header == null ? "" : header).trim();
+      if (!label) label = "Coluna " + (index + 1);
+      var key = label;
+      if (seen[key] !== undefined) {
+        seen[key] += 1;
+        key = key + " " + seen[key];
+      } else {
+        seen[key] = 1;
+      }
+      return { key: key, label: label, index: index };
+    });
+  }
+
+  function defineCanonicalValue(row, key, value) {
+    if (!key || row[key] !== undefined) return;
+    Object.defineProperty(row, key, {
+      value: value == null ? "" : String(value).trim(),
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
+  }
+
+  function literalRowFromValues(values, columns, indexes, lineNo) {
+    var literal = {};
+    columns.forEach(function (col) {
+      literal[col.key] = values[col.index] == null ? "" : String(values[col.index]).trim();
+    });
+
+    var canonical = rowFromValues(values, indexes, lineNo);
+    if (!canonical) return null;
+    Object.keys(canonical).forEach(function (key) {
+      defineCanonicalValue(literal, key, canonical[key]);
+    });
+    return normalizarRow(literal);
   }
 
   function normalizarRow(row) {
@@ -162,23 +240,28 @@
     if (!matrix || !matrix.length) {
       throw new Error("Planilha vazia.");
     }
-    var headers = matrix[0].map(function (v) {
-      return String(v || "").trim();
-    });
-    var indexes = mapHeaderIndexes(headers);
+    var cabecalho = localizarCabecalhoMatriz(matrix);
+    var indexes = cabecalho.indexes;
+    var literalColumns = makeLiteralColumns(cabecalho.headers);
     var rows = [];
 
-    for (var i = 1; i < matrix.length; i++) {
+    for (var i = cabecalho.index + 1; i < matrix.length; i++) {
       var values = matrix[i].map(function (v) {
         return v == null ? "" : String(v).trim();
       });
-      var row = rowFromValues(values, indexes, i + 1);
-      if (row) rows.push(normalizarRow(row));
+      var row = literalRowFromValues(values, literalColumns, indexes, i + 1);
+      if (row) rows.push(row);
     }
 
     if (!rows.length) {
       throw new Error("Nenhuma linha válida encontrada na matriz.");
     }
+    Object.defineProperty(rows, "__columns", {
+      value: literalColumns,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
     return rows;
   }
 
@@ -205,7 +288,7 @@
     var names = workbook.SheetNames || [];
     for (var j = 0; j < names.length; j++) {
       var name = names[j];
-      if (/matriz/i.test(name) && /criter/i.test(name)) {
+      if (/matriz/i.test(name) && /crit/i.test(name)) {
         return workbook.Sheets[name];
       }
     }
@@ -234,7 +317,18 @@
       var raw = global.localStorage.getItem(STORAGE_ROWS);
       if (!raw) return [];
       var parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      var columnsRaw = global.localStorage.getItem(STORAGE_COLUMNS);
+      var columns = columnsRaw ? JSON.parse(columnsRaw) : null;
+      if (Array.isArray(columns) && columns.length) {
+        Object.defineProperty(parsed, "__columns", {
+          value: columns,
+          enumerable: false,
+          configurable: true,
+          writable: true,
+        });
+      }
+      return parsed;
     } catch (_err) {
       return [];
     }
@@ -245,10 +339,14 @@
   }
 
   function saveMatrizPremissas(rows, fileName) {
+    var columns = rows && rows.__columns;
     if (global.SLTAhpTextoPt && global.SLTAhpTextoPt.normalizarLinhasMatriz) {
       rows = global.SLTAhpTextoPt.normalizarLinhasMatriz(rows);
     }
     global.localStorage.setItem(STORAGE_ROWS, JSON.stringify(rows));
+    if (columns && columns.length) {
+      global.localStorage.setItem(STORAGE_COLUMNS, JSON.stringify(columns));
+    }
     if (fileName) {
       global.localStorage.setItem(STORAGE_FILE, fileName);
     }
@@ -257,6 +355,7 @@
   function clearMatrizPremissas() {
     global.localStorage.removeItem(STORAGE_ROWS);
     global.localStorage.removeItem(STORAGE_FILE);
+    global.localStorage.removeItem(STORAGE_COLUMNS);
   }
 
   function summarize(rows) {
@@ -310,6 +409,7 @@
     }
 
     var summary = summarize(rows);
+    var columns = dynamicColumns(rows);
     var dims = [];
     rows.forEach(function (row) {
       if (row.dimensao && dims.indexOf(row.dimensao) === -1) {
@@ -353,11 +453,11 @@
 
     html +=
       "</select></div>" +
-      '<div class="ahp-matriz-table-wrap">' +
+      '<div class="ahp-excel-table-wrap">' +
       '<table class="ahp-matriz-table" aria-label="Tabela de premissas e critérios">' +
       "<thead><tr>";
 
-    COLUMNS.forEach(function (col) {
+    columns.forEach(function (col) {
       html += "<th scope=\"col\">" + col.label + "</th>";
     });
 
@@ -377,7 +477,11 @@
       html += '<td class="ahp-matriz-metricas">' + escapeHtml(row.metricas || "—") + "</td>";
       html += '<td class="ahp-matriz-fonte">' + escapeHtml(row.fonte || "—") + "</td>";
       html += "<td>" + renderMandatorio(row.mandatorio) + "</td>";
-      html += "</tr>";
+      /* Render all columns from the selected matrix, including custom ones. */
+      html = html.slice(0, html.lastIndexOf('<td class="ahp-matriz-dim">')) + columns.map(function (col) {
+        var value = row[col.key];
+        return "<td>" + escapeHtml(value == null || value === "" ? "—" : value) + "</td>";
+      }).join("") + "</tr>";
     });
 
     html += "</tbody></table></div></div>";
@@ -519,6 +623,42 @@
     return null;
   }
 
+  function dynamicColumns(rows) {
+    var keys = [];
+    var canonical = COLUMNS.map(function (c) { return c.key; });
+    (rows || []).forEach(function (row) { Object.keys(row || {}).forEach(function (key) {
+      if (canonical.indexOf(key) >= 0) return;
+      if (keys.indexOf(key) < 0) keys.push(key);
+    }); });
+    if (!keys.length) {
+      keys = COLUMNS.map(function (c) { return c.key; }).filter(function (key) {
+        return key === "fase" || (rows || []).some(function (row) { return row && row[key] !== undefined; });
+      });
+    }
+    return keys.map(function (key) {
+      var known = COLUMNS.filter(function (c) { return c.key === key; })[0];
+      return { key: key, label: known ? known.label : key.replace(/[_-]+/g, " ") };
+    });
+  }
+
+  /* Renderização nova da seção 3.3: cabeçalho e células vêm exclusivamente
+     das linhas da configuração ativa, sem tabela estática pré-existente. */
+  function renderMatrizPremissasPanelV2(container, options) {
+    if (!container) return;
+    var rows = (options && options.rows) || loadMatrizPremissas();
+    var columns = (options && options.columns) || rows.__columns || dynamicColumns(rows);
+    if (!rows.length) { container.innerHTML = '<div class="ahp-matriz-empty"><h3>Nenhuma matriz carregada</h3></div>'; return; }
+    var head = columns.map(function (c) { return '<th scope="col">' + escapeHtml(c.label) + '</th>'; }).join('');
+    var body = rows.map(function (row, index) {
+      var cells = columns.map(function (c) {
+        var value = row[c.key];
+        return '<td data-column="' + escapeHtml(c.key) + '">' + escapeHtml(value == null || value === '' ? '—' : value) + '</td>';
+      }).join('');
+      return '<tr data-row-idx="' + index + '">' + cells + '</tr>';
+    }).join('');
+    container.innerHTML = '<div class="ahp-planilha-literal-wrap"><table class="ahp-matriz-table ahp-planilha-literal-table" aria-label="Tabela de Premissas e Critérios"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
+
   function emptyRow() {
     return { fase: "", dimensao: "", criterio: "", premissa: "", relacao: "", metricas: "", fonte: "", mandatorio: "" };
   }
@@ -554,7 +694,7 @@
       '<span class="ahp-matriz-meta__title">Critérios</span></div>' +
       '<div class="ahp-matriz-meta__value" data-role="count">' + rows.length + "</div></div>" +
       "</div>" +
-      '<div class="ahp-matriz-table-wrap">' +
+      '<div class="ahp-excel-table-wrap">' +
       '<table class="ahp-matriz-table ahp-matriz-table--edit" aria-label="Editar tabela de premissas e critérios">' +
       "<thead><tr>" + headHtml + "</tr></thead>" +
       '<tbody data-role="rows">' + bodyHtml + "</tbody>" +
@@ -664,7 +804,7 @@
     dimensao: ["dimensao", "dimensão"],
     criterio: ["criterio", "critério"],
     premissa: ["premissa"],
-    fase: ["fase"],
+    fase: ["fase", "etapa", "fase da hierarquizacao", "fase da hierarquia"],
     relacao: ["relacao", "relação"],
     metricas: ["metrica (o que e medido)", "métrica (o que é medido)", "dado", "metricas", "métricas"],
     fonte: ["fonte"],
@@ -699,10 +839,12 @@
   }
 
   global.SltMatrizPremissas = {
+    parseXlsxArrayBuffer: parseXlsxArrayBuffer,
     COLUMNS: COLUMNS,
     EDITABLE_COLUMNS: EDITABLE_COLUMNS,
     STORAGE_ROWS: STORAGE_ROWS,
     STORAGE_FILE: STORAGE_FILE,
+    STORAGE_COLUMNS: STORAGE_COLUMNS,
     parseCsvContent: parseCsvContent,
     parseXlsxArrayBuffer: parseXlsxArrayBuffer,
     loadMatrizPremissas: loadMatrizPremissas,
@@ -712,7 +854,7 @@
     summarize: summarize,
     validateRows: validateRows,
     collectEditorRows: collectEditorRows,
-    renderMatrizPremissasPanel: renderMatrizPremissasPanel,
+    renderMatrizPremissasPanel: renderMatrizPremissasPanelV2,
     renderMatrizPremissasEditor: renderMatrizPremissasEditor,
     syncCriterioFromNames: syncCriterioFromNames,
     normalizarLinhasMatrizCompleta: normalizarLinhasMatrizCompleta,

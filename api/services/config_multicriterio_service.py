@@ -44,6 +44,7 @@ _UPDATE_FIELDS = frozenset(
         "universo_objetos",
         "metodo_entrada",
         "metodo_comparacao",
+        "modo_preenchimento",
         "n_criterios",
         "criterios",
         "matriz_comparacao",
@@ -98,6 +99,7 @@ def _build_arquivo_fase2(row: dict[str, Any]) -> dict[str, Any]:
         "nome_arquivo": (row.get("denominacao") or row.get("codigo", "config")) + "_fase2.json",
         "metodo_entrada": row.get("metodo_entrada"),
         "metodo_comparacao": row.get("metodo_comparacao"),
+        "modo_preenchimento": row.get("modo_preenchimento"),
         "n_criterios": int(row.get("n_criterios") or 0),
         "criterios": row.get("criterios") or [],
         "matriz_comparacao": row.get("matriz_comparacao") or [],
@@ -186,6 +188,7 @@ def _row_to_response(row: dict[str, Any]) -> ConfigResponseSchema:
         status=row["status"],
         metodo_entrada=row.get("metodo_entrada") or "manual",
         metodo_comparacao=row.get("metodo_comparacao"),
+        modo_preenchimento=row.get("modo_preenchimento"),
         n_criterios=int(row.get("n_criterios") or 0),
         criterios=row.get("criterios") or [],
         matriz_comparacao=row.get("matriz_comparacao") or [],
@@ -217,6 +220,16 @@ def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) 
             "tipo_demanda é obrigatório para configuração de portfólio.",
             field="tipo_demanda",
         )
+    hier = None
+    if payload.tipo == "portfolio" and payload.hierarquizacao_codigo:
+        from api.repositories import hierarquizacao_repository as hier_repo
+
+        hier = hier_repo.get_by_codigo(payload.hierarquizacao_codigo)
+        if not hier:
+            raise DemandaValidationError(
+                "Hierarquização informada não existe.", field="hierarquizacao_codigo"
+            )
+
     data: dict[str, Any] = {
         "codigo": _gerar_codigo(payload.tipo),
         "nome": payload.nome.strip(),
@@ -253,24 +266,47 @@ def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) 
                 field="universo_objetos",
             )
         data["universo_objetos"] = objetos
+        if hier is not None:
+            # Relação estrutural com o registro de origem; o binário é uma
+            # cópia independente, enquanto esta FK identifica sua procedência.
+            data["hierarquizacao_id"] = hier["id"]
+            dados_hier = hier.get("dados_hierarquizacao") or {}
+            matriz_origem = (dados_hier.get("cabecalho_grupo") or {}).get(
+                "matriz_premissas_criterios"
+            )
+            criterios_origem = (
+                matriz_origem.get("linhas", [])
+                if isinstance(matriz_origem, dict)
+                else matriz_origem or []
+            )
+            criterios_origem = [
+                item for item in criterios_origem if isinstance(item, dict)
+            ]
+            if criterios_origem:
+                data["criterios"] = criterios_origem
+                data["n_criterios"] = len(criterios_origem)
+                data["metodo_entrada"] = "upload_tabela"
+            if isinstance(matriz_origem, dict) and matriz_origem.get("arquivo"):
+                arquivo_nome = str(matriz_origem["arquivo"])
+                data["arquivo_nome"] = arquivo_nome
+                extensao = arquivo_nome.rsplit(".", 1)[-1].lower()
+                if extensao in {"xlsx", "csv"}:
+                    data["arquivo_tipo"] = extensao
+            arquivo_excel = hier_repo.get_excel_matriz_by_codigo(
+                payload.hierarquizacao_codigo
+            )
+            if arquivo_excel is not None:
+                data["arquivo_excel_matriz_criterios_premissas"] = arquivo_excel
         # Mesma transação do insert: apta → em hierarquização.
-        ids = [o.get("id") for o in objetos if o.get("id")]
-        status_transicao = {
-            "tabela": ("demandas", payload.tipo_demanda),
-            "ids": ids,
-            "de": STATUS_POS_APROVACAO,
-            "para": STATUS_EM_HIERARQUIZACAO,
-        }
+        # A configuração AHP não altera o status das demandas. A ocupação do
+        # universo é responsabilidade do cadastro da hierarquização.
+        status_transicao = None
     if payload.configuracao_completa is not None:
         data["configuracao_completa"] = payload.configuracao_completa
     if payload.denominacao is not None:
         data["denominacao"] = payload.denominacao.strip()
     inserted = repo.insert(payload.tipo, data, status_transicao=status_transicao)
-    if payload.tipo == "portfolio" and payload.hierarquizacao_codigo:
-        from api.repositories import hierarquizacao_repository as hier_repo
-        hier = hier_repo.get_by_codigo(payload.hierarquizacao_codigo)
-        if not hier:
-            raise DemandaValidationError("Hierarquização informada não existe.", field="hierarquizacao_codigo")
+    if hier is not None:
         hier_repo.update(payload.hierarquizacao_codigo, {"config_id": inserted["id"]})
     # Gera e persiste o artefato da Fase 1 imediatamente após a criação.
     arquivo_fase1 = _build_arquivo_fase1(inserted)
@@ -304,12 +340,44 @@ def obter_config(tipo: str, codigo: str) -> ConfigResponseSchema:
 
 
 def atualizar_config(tipo: str, codigo: str, payload: ConfigUpdateSchema) -> ConfigResponseSchema:
-    _carregar(tipo, codigo)
+    atual = _carregar(tipo, codigo)
     data = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if k in _UPDATE_FIELDS}
     if "status" in data and data["status"] not in _STATUS_VALIDOS:
         raise DemandaValidationError(f"Status inválido: {data['status']}.", field="status")
     if not data:
         return obter_config(tipo, codigo)
+    criterios = data.get("criterios", atual.get("criterios") or [])
+    matriz = data.get("matriz_comparacao", atual.get("matriz_comparacao") or [])
+    n_criterios = data.get("n_criterios", len(criterios))
+    if criterios and n_criterios != len(criterios):
+        raise DemandaValidationError(
+            "n_criterios deve corresponder à quantidade de critérios persistidos.",
+            field="n_criterios",
+        )
+    if matriz and (
+        len(matriz) != n_criterios
+        or any(not isinstance(linha, list) or len(linha) != n_criterios for linha in matriz)
+    ):
+        raise DemandaValidationError(
+            "A matriz deve ter dimensão n_criterios × n_criterios.",
+            field="matriz_comparacao",
+        )
+    if "criterios" in data or "matriz_comparacao" in data:
+        # Resultados derivados nunca podem sobreviver à alteração de sua fonte.
+        data.update(
+            {
+                "pesos": None,
+                "lambda_max": None,
+                "indice_consistencia": None,
+                "indice_aleatorio": None,
+                "razao_consistencia": None,
+                "consistente": None,
+                "status": "rascunho",
+                "homologado_em": None,
+                "homologado_por": None,
+                "arquivo_config_homologado": None,
+            }
+        )
     updated = repo.update(tipo, codigo, data)
     if not updated:
         raise ConfigMulticriterioNotFoundError(codigo)
@@ -338,6 +406,11 @@ def calcular_config(tipo: str, codigo: str) -> ConfigResponseSchema:
         )
 
     criterios = row.get("criterios") or []
+    if criterios and len(criterios) != n:
+        raise DemandaValidationError(
+            "A quantidade de critérios não corresponde à dimensão da matriz.",
+            field="criterios",
+        )
     nomes = _criterio_nomes(criterios) if criterios else [f"Critério {i + 1}" for i in range(n)]
 
     resultado = ahp_engine.analyze_matrix(matriz)

@@ -33,9 +33,10 @@
     quilombos_sp: "quilombos_sp",
     sitios_arqueologicos: "sitios_arqueologicos",
     terras_indigenas_sp: "terras_indigenas_sp",
-    ucs_protecao_integral_sp: "ucs_protecao_integral_sp",
-    ucs_uso_sustentavel_sp: "ucs_uso_sustentavel_sp",
-    vegetacao_nativa_sp: "vegetacao_nativa_sp",
+    ucs_protecao_integral_estadual_sp: "ucs_protecao_integral_estadual_sp",
+    ucs_protecao_integral_federal_sp: "ucs_protecao_integral_federal_sp",
+    ucs_uso_sustentavel_estadual_sp: "ucs_uso_sustentavel_estadual_sp",
+    ucs_uso_sustentavel_federal_sp: "ucs_uso_sustentavel_federal_sp",
   };
   function refs(m) {
     return (

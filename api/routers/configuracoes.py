@@ -6,6 +6,7 @@ exige gestor autenticado.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 
 from api.deps.auth import require_analyst, require_authenticated, require_gestor
 from api.exceptions import (
@@ -19,6 +20,7 @@ from api.schemas.config_multicriterio import (
     ConfigUpdateSchema,
 )
 from api.services import config_multicriterio_service as service
+from api.repositories import config_multicriterio_repository as repository
 from api.services.session_service import SessionUser
 
 router = APIRouter(prefix="/ahp/configuracoes", tags=["ahp-configuracoes"])
@@ -65,6 +67,28 @@ async def obter_config(
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/{tipo}/{codigo}/matriz-excel", response_class=Response)
+async def baixar_matriz_excel(
+    tipo: str,
+    codigo: str,
+    _user: SessionUser = Depends(require_authenticated),
+) -> Response:
+    try:
+        arquivo = repository.get_excel_matriz(tipo, codigo)
+        if not arquivo:
+            return Response(status_code=204)
+        conteudo, nome = arquivo
+        return Response(
+            content=conteudo,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'inline; filename="{nome}"'},
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 

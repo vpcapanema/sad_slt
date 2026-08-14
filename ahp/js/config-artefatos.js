@@ -60,6 +60,10 @@
     var payload = {
       matriz_comparacao: matriz,
       metodo_comparacao: metodo,
+      modo_preenchimento:
+        global.localStorage.getItem("ahp_fillMode") === "collaborative"
+          ? "colaborativo"
+          : "individual",
       n_criterios: matriz.length,
       alertas_conceituais: alertas,
       pacote_fase: "fase_2",

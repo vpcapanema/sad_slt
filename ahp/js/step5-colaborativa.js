@@ -61,7 +61,10 @@
       "<th>Participante</th><th>E-mail</th><th>Instituição</th><th>RC</th><th>Ação</th></tr></thead><tbody>" +
       rows +
       "</tbody></table></div>" +
-      '<p class="form-help">Selecione uma resposta como base ou ajuste manualmente na matriz abaixo.</p>';
+      '<div class="ahp-form-actions"><button type="button" class="btn btn-primary" id="collab-consolidar-btn">' +
+      '<i class="fas fa-layer-group c-btn__icon"></i>Consolidar respostas (média geométrica)</button></div>' +
+      '<p id="collab-consolidar-feedback" class="ahp-matriz-edit-feedback" role="status"></p>' +
+      '<p class="form-help">Consolide todas as respostas pela média geométrica (AIJ) ou selecione uma resposta individual como base para o preenchimento final abaixo.</p>';
 
     host.querySelectorAll("button[data-resp-id]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -74,6 +77,48 @@
         }
       });
     });
+
+    var consolidarBtn = el("collab-consolidar-btn");
+    if (consolidarBtn) {
+      consolidarBtn.addEventListener("click", consolidarRespostas);
+    }
+  }
+
+  function consolidarFeedback(msg, kind) {
+    var box = el("collab-consolidar-feedback");
+    if (!box) return;
+    box.textContent = msg || "";
+    box.className = "ahp-matriz-edit-feedback" + (kind ? " is-" + kind : "");
+  }
+
+  function consolidarRespostas() {
+    var amb = getAmbiente();
+    if (!amb || !amb.id || !global.SLTColaborativaApi) return;
+    consolidarFeedback("Consolidando respostas…", "info");
+    global.SLTColaborativaApi.consolidarAmbiente(amb.id)
+      .then(function (resultado) {
+        var cons = resultado.consolidacao;
+        if (!cons || !cons.matriz_consolidada || !cons.matriz_consolidada.length) {
+          consolidarFeedback("A consolidação não retornou uma matriz válida.", "error");
+          return;
+        }
+        var msg =
+          "Consolidação concluída (" +
+          cons.respostas_consolidadas +
+          " resposta(s), RC = " +
+          Number(cons.razao_consistencia).toFixed(4) +
+          ").";
+        if (
+          confirm(msg + "\n\nCarregar a matriz consolidada na comparação abaixo?")
+        ) {
+          applyMatrixToStep5(cons.matriz_consolidada);
+        } else {
+          consolidarFeedback(msg, cons.consistente ? "success" : "error");
+        }
+      })
+      .catch(function (err) {
+        consolidarFeedback(err.message || String(err), "error");
+      });
   }
 
   function initCollabConsolidacao() {

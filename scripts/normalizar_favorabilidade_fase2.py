@@ -145,10 +145,86 @@ def prepare_grade(frame: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, list[dict]
     return result, metadata
 
 
+def impute_traffic(frame: gpd.GeoDataFrame, metadata: list[dict]) -> None:
+    """Amplia a cobertura dos atributos de tráfego (TomTom) por imputação hierárquica.
+
+    Segmentos sem retorno da API (trechos rurais) recebem o valor mediano do
+    grupo mais específico disponível: mesma rodovia -> mesmo tipo de rodovia ->
+    mediana global. O atraso absoluto (c3_delay_s) é imputado pela taxa de
+    atraso por km, reconstruída pela extensão do segmento. A coluna
+    c3_imputado marca as feições preenchidas.
+    """
+    ext_km = pd.to_numeric(frame["ext_m"], errors="coerce").div(1000.0)
+
+    def hierarchical_median(values: pd.Series) -> pd.Series:
+        filled = values.copy()
+        for keys in (["Rodovia"], ["TipoRodovi"]):
+            group_median = values.groupby([frame[k] for k in keys]).transform("median")
+            filled = filled.fillna(group_median)
+        return filled.fillna(values.median())
+
+    delay = pd.to_numeric(frame["c3_delay_s"], errors="coerce")
+    missing = delay.isna()
+    frame["c3_imputado"] = missing.astype(int)
+
+    delay_rate = delay.div(ext_km.where(ext_km > 0))
+    imputed_rate = hierarchical_median(delay_rate)
+    frame.loc[missing, "c3_delay_s"] = (imputed_rate * ext_km).loc[missing]
+    register(
+        metadata, "c3_delay_s", "c3_delay_s",
+        "imputacao_taxa_por_km=mediana(rodovia)->mediana(tipo)->mediana_global",
+        "cobertura",
+        {"validos": int((~missing).sum()), "ausentes": int(missing.sum())},
+    )
+
+    for attribute in ("c3_cur", "c3_free", "c3_ratio"):
+        values = pd.to_numeric(frame[attribute], errors="coerce")
+        gaps = values.isna()
+        frame.loc[gaps, attribute] = hierarchical_median(values).loc[gaps]
+        register(
+            metadata, attribute, attribute,
+            "imputacao=mediana(rodovia)->mediana(tipo)->mediana_global",
+            "cobertura",
+            {"validos": int((~gaps).sum()), "ausentes": int(gaps.sum())},
+        )
+
+
+def rank_normalize(series: pd.Series) -> tuple[pd.Series, dict]:
+    """Normaliza por percentil (rank), robusta a caudas pesadas."""
+    numeric = pd.to_numeric(series, errors="coerce").astype("float64")
+    valid = numeric[np.isfinite(numeric)]
+    if valid.empty:
+        return pd.Series(np.nan, index=series.index, dtype="float64"), {
+            "minimo": None, "maximo": None, "validos": 0, "ausentes": len(series),
+        }
+    normalized = numeric.rank(method="min")
+    count = float(valid.size)
+    if count > 1:
+        normalized = (normalized - 1.0) / (count - 1.0)
+    else:
+        normalized = normalized.where(normalized.isna(), 1.0)
+    return normalized.clip(0.0, 1.0), {
+        "minimo": float(valid.min()),
+        "maximo": float(valid.max()),
+        "validos": int(valid.size),
+        "ausentes": int(numeric.isna().sum()),
+    }
+
+
 def prepare_network(frame: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, list[dict]]:
     result = frame.copy()
     metadata: list[dict] = []
+    impute_traffic(result, metadata)
     normalize_raw_attributes(result, NETWORK_ATTRIBUTES, metadata)
+
+    for attribute in ("c3_delay_s", "c3_ratio", "c3_cur"):
+        output = f"{attribute}_n"
+        result[output], stats = rank_normalize(result[attribute])
+        register(
+            metadata, attribute, output,
+            "rank_percentil=(rank_min(x)-1)/(n-1) (substitui minmax; distribuicao de cauda pesada)",
+            "reescalonamento", stats,
+        )
 
     extent_km = pd.to_numeric(result["ext_m"], errors="coerce").div(1000.0)
     density_sources = {

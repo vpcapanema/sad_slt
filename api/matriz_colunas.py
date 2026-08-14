@@ -108,6 +108,8 @@ def _e_etapa3(valor: Any) -> bool:
     v = _norm(valor).replace(" ", "").replace("-", "_")
     if "prioriza" in v:
         return True
+    if "ajuste" in v and ("atributo" in v or "objeto" in v):
+        return True
     return v in {"3", "fase3", "fase_3", "etapa3", "etapa_3", "ajuste", "ajuste_fino", "priorizacao_final"}
 
 

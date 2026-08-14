@@ -141,8 +141,12 @@
                                     <p>Use o texto abaixo para convidar os colaboradores a preencher o formulário colaborativo.</p>
                                     <div class="c-form-group">
                                         <label for="collab-email-template" class="c-form-label"><i class="fas fa-envelope-open-text"></i> Mensagem sugerida</label>
-                                        <textarea id="collab-email-template" class="c-form-control" rows="8" readonly></textarea>
+                                        <div id="collab-email-template" class="c-form-control collab-email-template" role="textbox" aria-readonly="true" tabindex="0"></div>
                                     </div>
+                                    <p class="form-help is-hidden" id="collab-email-link-row">
+                                        <i class="fas fa-link"></i> Link do formulário:
+                                        <a id="collab-email-form-link" href="#" target="_blank" rel="noopener"></a>
+                                    </p>
                                     <div class="ahp-form-actions">
                                         <button type="button" class="btn btn-secondary" id="collab-open-mail-btn"><i class="fas fa-envelope c-btn__icon"></i>Abrir aplicativo de e-mail</button>
                                     </div>
@@ -180,10 +184,11 @@
   <script src="/restrict/ahp/js/ahp-auth.js"></script>
   <script src="/restrict/ahp/js/ahp-texto-pt.js"></script>
   <script src="/restrict/ahp/js/config-api.js"></script>
+  <script src="/restrict/ahp/js/step-config-selector.js"></script>
   <script src="/restrict/ahp/js/config-artefatos.js"></script>
   <script src="/restrict/ahp/js/ahp-contexto-ui.js"></script>
   <script src="/restrict/ahp/js/colaborativa-api.js"></script>
-  <script src="/restrict/ahp/js/step4-metodo.js"></script>
+  <script src="/restrict/ahp/js/step4-metodo.js?v=20260814-1"></script>
   <script src="/assets/js/field-filled.js"></script>
   <script src="/assets/js/paginas/ahp-step4-metodo-conteudo-eventos.js"></script>
 {% endblock %}

@@ -1,0 +1,77 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Hierarquização AHP" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Gestão de respostas colaborativas — AHP — SLT{% endblock %}
+{% block classes_body %}ahp-module-page ahp-collab-analytics-page{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/ahp-collab-analytics.css">
+  <link rel="stylesheet" href="/assets/css/ahp-collab-explorer.css">
+  <link rel="stylesheet" href="/assets/css/ahp-collab-rounds.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+<main class="conteudo-principal app-main ahp-main">
+  <section class="card ahp-step-intro secao-cabecalho-gestao-respostas">
+    <nav class="ahp-breadcrumb" aria-label="Breadcrumb">
+      <a href="/restrict/ahp/analise/">Início</a><span class="ahp-breadcrumb-sep">›</span>
+      <a href="/restrict/ahp/comparacao/">Etapa 5: Comparação pareada</a><span class="ahp-breadcrumb-sep">›</span>
+      <span class="ahp-breadcrumb-current">Gestão de respostas</span>
+    </nav>
+    <h1 class="ahp-page-title"><i class="fas fa-chart-line app-template-title-icon" aria-hidden="true"></i>Gestão de respostas colaborativas</h1>
+    <p class="card-ahp-info-note ahp-info-note card"><i class="fas fa-circle-info" aria-hidden="true"></i><span>Acompanhe o ambiente, audite as respostas da matriz pareada e identifique convergências ou divergências entre os participantes.</span></p>
+  </section>
+
+  <section class="card ahp-step-section secao-dados-colaborativos">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon">1</span><span>Dados das tabelas colaborativas</span></div>
+    <div class="ahp-section-body">
+      <div class="collab-tabs" role="tablist" aria-label="Tabelas AHP">
+        <button class="collab-tab is-active" role="tab" aria-selected="true" aria-controls="tab-ambiente" id="tab-btn-ambiente">Rodadas AHP <span id="badge-ambientes">0</span></button>
+        <button class="collab-tab" role="tab" aria-selected="false" aria-controls="tab-respostas" id="tab-btn-respostas">Respostas da rodada <span id="badge-respostas">0</span></button>
+      </div>
+      <div class="collab-explorer-tools">
+        <label for="records-search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i><span class="sr-only">Buscar registros</span></label>
+        <input id="records-search" class="form-control" type="search" placeholder="Buscar participante, e-mail, instituição ou código…">
+        <span id="records-count" class="collab-results-count" aria-live="polite"></span>
+      </div>
+      <div class="collab-tab-panel" role="tabpanel" id="tab-ambiente" aria-labelledby="tab-btn-ambiente"><div id="ambiente-table"></div></div>
+      <div class="collab-tab-panel is-hidden" role="tabpanel" id="tab-respostas" aria-labelledby="tab-btn-respostas"><div id="respostas-table"></div></div>
+    </div>
+  </section>
+
+  <section class="card ahp-step-section secao-visao-geral-respostas">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon">2</span><span>Visão geral das respostas</span><span class="collab-round-context" id="overview-round-context"></span></div>
+    <div class="ahp-section-body"><div class="collab-kpis" id="collab-kpis"></div><div class="collab-analytics-grid"><article class="collab-chart-card"><h2>Participação dos convidados</h2><div id="participacao-chart"></div></article><article class="collab-chart-card"><h2>Razão de consistência (RC)</h2><div id="consistencia-chart"></div></article></div></div>
+  </section>
+
+  <section class="card ahp-step-section secao-analise-por-criterio">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon">3</span><span>Análise por critério</span><span class="collab-round-context" id="criteria-round-context"></span></div>
+    <div class="ahp-section-body"><p class="step-intro">Prioridade média estimada a partir das matrizes individuais; a faixa mostra a dispersão entre participantes.</p><div id="criterios-chart"></div></div>
+  </section>
+
+  <section class="card ahp-step-section secao-concordancia-julgamentos">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon">4</span><span>Concordância entre julgamentos</span></div>
+    <div class="ahp-section-body"><p class="step-intro">Os pares com maior dispersão merecem revisão antes da consolidação.</p><div class="collab-pair-tools"><label for="pair-criterion-filter">Filtrar por critério</label><select id="pair-criterion-filter" class="form-control"><option value="">Todos os critérios</option></select><label for="pair-sort">Ordenar por</label><select id="pair-sort" class="form-control"><option value="dispersion">Maior divergência</option><option value="criterion">Nome do critério</option></select></div><div id="pares-table"></div></div>
+  </section>
+
+  <div class="ahp-form-actions collab-back"><a href="/restrict/ahp/comparacao/" class="btn btn-secondary"><i class="fas fa-arrow-left c-btn__icon"></i>Voltar à Etapa 5</a></div>
+</main>
+<div class="collab-detail-overlay is-hidden" id="collab-detail-overlay">
+  <aside class="collab-detail-panel" role="dialog" aria-modal="true" aria-labelledby="collab-detail-title">
+    <div class="collab-detail-head"><h2 id="collab-detail-title">Detalhes do registro</h2><button type="button" id="collab-detail-close" aria-label="Fechar detalhes"><i class="fas fa-xmark"></i></button></div>
+    <div id="collab-detail-content"></div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="/restrict/ahp/js/ahp-auth.js"></script>
+  <script src="/restrict/ahp/js/colaborativa-api.js"></script>
+  <script src="/assets/js/paginas/ahp-respostas-colaborativas.js"></script>
+{% endblock %}

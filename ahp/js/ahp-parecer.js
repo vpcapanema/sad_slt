@@ -277,7 +277,7 @@
     matrix = matrix || [];
     results = results || {};
 
-    var isCollab = config.metodo_comparacao === 'formulario';
+    var isCollab = config.modo_preenchimento === 'colaborativo';
 
     var html = '<div class="ahp-parecer-wrapper">';
     html += '<div class="ahp-parecer-header">';
@@ -317,8 +317,10 @@
     if (isCollab && config.tipo && config.codigo) {
       var collabSec = document.getElementById('ahp-parecer-collab-section');
       if (window.SLTColaborativaApi) {
-        window.SLTColaborativaApi.obterAmbienteConfig(config.tipo, config.codigo)
-          .then(function (ambiente) {
+        window.SLTColaborativaApi.listarAmbientesConfig(config.tipo, config.codigo)
+          .then(function (ambientes) {
+            var lista = Array.isArray(ambientes) ? ambientes : [];
+            var ambiente = lista.filter(function (amb) { return amb && amb.status !== "encerrada"; })[0] || lista[0];
             if (!ambiente || !ambiente.id) throw new Error('Ambiente colaborativo não encontrado.');
             return window.SLTColaborativaApi.listarRespostas(ambiente.id);
           })
@@ -407,7 +409,7 @@
   SLTAhpParecer.buildData = function (config, criteria, matrix, results, respostas, metricaAgregacao) {
     var data = {
       gerado_em: new Date().toISOString(),
-      modo_preenchimento: config.metodo_comparacao === 'formulario' ? 'colaborativo' : 'individual',
+      modo_preenchimento: config.modo_preenchimento || 'individual',
       info_cadastrais: {
         denominacao: config.denominacao,
         codigo: config.codigo,

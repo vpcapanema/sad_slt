@@ -1719,7 +1719,8 @@
   async function carregarHierarquizacoesDisponiveis() {
     if (!grupoSelect && !hierDestinoSelect) return;
     try {
-      const response = await fetch("/api/ahp/hierarquizacoes", { credentials: "same-origin" });
+      // Fonte canônica do seletor: hierarquizacao_demandas.hierarquizacao_portfolio.
+      const response = await fetch("/api/ahp/hierarquizacoes/portfolio", { credentials: "same-origin" });
       if (!response.ok) throw new Error("Falha ao carregar os grupos cadastrados.");
       hierarquizacoesDisponiveis = await response.json();
       const optionsHtml = '<option value="">Selecione…</option>' + hierarquizacoesDisponiveis.map(function (h) {

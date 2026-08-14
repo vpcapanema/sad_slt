@@ -21,6 +21,7 @@ _SELECT_BASE = """
         h.codigo,
         h.config_id,
         c.codigo AS config_codigo,
+        c.criterios AS config_criterios,
         h.nome,
         h.descricao,
         h.tipo_demanda_id,
@@ -68,7 +69,7 @@ def _prepare(key: str, value: Any) -> Any:
     return value
 
 
-def insert(data: dict[str, Any]) -> dict[str, Any]:
+def insert(data: dict[str, Any], *, status_transicao: dict[str, Any] | None = None) -> dict[str, Any]:
     columns = list(data.keys())
     query = sql.SQL("INSERT INTO {table} ({cols}) VALUES ({vals}) RETURNING id").format(
         table=_TABLE,
@@ -80,6 +81,12 @@ def insert(data: dict[str, Any]) -> dict[str, Any]:
         inserted = conn.execute(query, params).fetchone()
         if not inserted:
             raise RuntimeError("Insert de hierarquização não retornou id.")
+        if status_transicao:
+            ids = [i for i in status_transicao.get("ids", []) if i]
+            if ids:
+                schema, table = status_transicao["tabela"]
+                q = sql.SQL("UPDATE {tbl} SET status=%s WHERE id=ANY(%s::uuid[]) AND status=%s").format(tbl=sql.Identifier(schema, table))
+                conn.execute(q, (status_transicao["para"], ids, status_transicao["de"]))
         conn.commit()
     found = get_by_id(inserted["id"])
     if not found:
@@ -97,6 +104,21 @@ def get_by_codigo(codigo: str) -> dict[str, Any] | None:
     query = _SELECT_BASE + " WHERE h.codigo = %s"
     with get_connection() as conn:
         return conn.execute(query, (codigo,)).fetchone()
+
+
+def get_excel_matriz_by_codigo(codigo: str) -> bytes | None:
+    """Retorna somente o XLSX original, sem expor o binário nas respostas da API."""
+    query = """
+        SELECT arquivo_excel_matriz_criterios_premissas
+        FROM hierarquizacao_demandas.hierarquizacao_portfolio
+        WHERE codigo = %s
+    """
+    with get_connection() as conn:
+        row = conn.execute(query, (codigo,)).fetchone()
+    if not row:
+        return None
+    value = row.get("arquivo_excel_matriz_criterios_premissas")
+    return bytes(value) if value is not None else None
 
 
 def list_all(
@@ -142,12 +164,48 @@ def update(codigo: str, data: dict[str, Any]) -> dict[str, Any] | None:
     return get_by_codigo(codigo)
 
 
-def delete_by_codigo(codigo: str) -> bool:
-    """Remove uma hierarquização pelo código legível."""
+def _liberar_demandas_universo(conn: Any, transicao: dict[str, Any]) -> None:
+    """Reverte o status das demandas do universo na MESMA transação do delete.
+
+    ``transicao`` = {"tabela": (schema, table), "ids": [...], "de": str, "para": str}.
+    Só altera quem está exatamente no status de origem (idempotente e seguro).
+    """
+    ids = [i for i in (transicao.get("ids") or []) if i]
+    if not ids:
+        return
+    schema, table = transicao["tabela"]
+    tbl = sql.Identifier(schema, table)
+    # Uma demanda pode pertencer a várias rodadas. Só liberamos quando não
+    # restar nenhuma outra hierarquização contendo o ID no snapshot JSONB.
+    liberaveis = []
+    for demanda_id in ids:
+        restante = conn.execute(
+            sql.SQL("SELECT 1 FROM {tbl} WHERE jsonb_path_exists(COALESCE(objetos, '[]'::jsonb), %s::jsonpath) LIMIT 1").format(tbl=tbl),
+            (f'$[*] ? (@.id == "{demanda_id}")',),
+        ).fetchone()
+        if not restante:
+            liberaveis.append(demanda_id)
+    if liberaveis:
+        conn.execute(
+            sql.SQL("UPDATE {tbl} SET status = %s WHERE id = ANY(%s::uuid[]) AND status = %s").format(tbl=tbl),
+            (transicao["para"], liberaveis, transicao["de"]),
+        )
+
+
+def delete_by_codigo(
+    codigo: str, *, liberar_demandas: dict[str, Any] | None = None
+) -> bool:
+    """Remove uma hierarquização pelo código legível.
+
+    Quando ``liberar_demandas`` é informado, as demandas do universo voltam ao
+    status de origem na mesma transação — ficando disponíveis para nova análise.
+    """
     query = sql.SQL("DELETE FROM {table} WHERE codigo = %s RETURNING id").format(table=_TABLE)
     with get_connection() as conn:
         cur = conn.execute(query, (codigo,))
         deleted = cur.fetchone()
+        if deleted and liberar_demandas:
+            _liberar_demandas_universo(conn, liberar_demandas)
         conn.commit()
     return deleted is not None
 
