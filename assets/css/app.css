@@ -1568,6 +1568,42 @@ body.admin-data-page .admin-toolbar-back {
   border-left: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+th.slt-sortable-column {
+  cursor: pointer;
+  padding-right: 1.7rem;
+  position: relative;
+  user-select: none;
+}
+
+th.slt-sortable-column::after {
+  content: "↕";
+  font-size: 0.72em;
+  opacity: 0.55;
+  position: absolute;
+  right: 0.55rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+th.slt-sortable-column[aria-sort="ascending"]::after {
+  content: "▲";
+  opacity: 1;
+}
+
+th.slt-sortable-column[aria-sort="descending"]::after {
+  content: "▼";
+  opacity: 1;
+}
+
+th.slt-sortable-column:hover {
+  filter: brightness(1.08);
+}
+
+th.slt-sortable-column:focus-visible {
+  outline: 2px solid var(--pli-green);
+  outline-offset: -3px;
+}
+
 .admin-table tbody tr:hover {
   background: #f9fbfd;
   cursor: pointer;
