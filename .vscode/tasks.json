@@ -519,13 +519,6 @@
 			"group": "none"
 		},
 		{
-			"label": "Deploy: Create .env on VM",
-			"type": "shell",
-			"command": "$envContent = @'\nPORT=8080\n\nSIGMA_API_BASE=https://56.125.163.194\nSIGMA_HTTP_TIMEOUT=30\n\nSIGMA_POSTGRES_HOST=56.125.163.194\nSIGMA_POSTGRES_PORT=5433\nSIGMA_POSTGRES_DATABASE=sigma_pli_qr53\nSIGMA_POSTGRES_USER=sigma_user\nSIGMA_POSTGRES_PASSWORD=Malditas131533***\nSIGMA_POSTGRES_SSLMODE=disable\n\nSLT_SESSION_SECRET=buM2_yNQcD_BjJ_dNSFDcjBnmuIqwMCPOnDrwu-km6Ryj8cTO5E4Zc04v_SYOEhW\n\nSLT_USE_SIGMA_POSTGRES=true\n'@\n$remoteScript = \"cat > /opt/sicard/.env << 'ENVEOF'\" + \"`n\" + $envContent + \"`nENVEOF`nchmod 600 /opt/sicard/.env; wc -l /opt/sicard/.env\"\n$remoteScript | Out-File -FilePath tmp\\push_env.sh -Encoding ascii -NoNewline\n& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch -m tmp\\push_env.sh",
-			"isBackground": false,
-			"group": "none"
-		},
-		{
 			"label": "Deploy: Push env script v2",
 			"type": "shell",
 			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch -m tmp\\push_env.sh",

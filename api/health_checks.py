@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx
 
+from api.config import get_settings
 from api.sigma_proxy import SIGMA_BASE, fetch_instituicoes, fetch_pessoas_sigma
 
 TIMEOUT = float(os.getenv("SIGMA_HTTP_TIMEOUT", "15"))
@@ -32,8 +33,8 @@ async def check_sigma_pessoas() -> dict[str, Any]:
 
 
 async def check_slt_database() -> dict[str, Any]:
-    """Banco exclusivo SLT — ainda não configurado nesta fase."""
-    dsn = os.getenv("SLT_DATABASE_URL", "").strip()
+    """Verifica o DSN efetivo, incluindo SLT_USE_SIGMA_POSTGRES."""
+    dsn = get_settings().slt_database_url
     if not dsn:
         return {
             "ok": True,
@@ -71,7 +72,7 @@ async def run_ready_checks() -> dict[str, Any]:
     pessoas = await check_sigma_pessoas()
     db = await check_slt_database()
 
-    blocking = not inst["ok"]
+    blocking = not inst["ok"] or not db["ok"]
     return {
         "ok": not blocking,
         "sigma_base": SIGMA_BASE,

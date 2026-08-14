@@ -15,6 +15,7 @@ services:
       - .env
     environment:
       PORT: "8080"
+      SIGMA_API_BASE: "http://sigma_pli_backend_prod:8000"
       SIGMA_POSTGRES_HOST: "sigma_pli_db"
       SIGMA_POSTGRES_PORT: "5432"
     ports:
