@@ -1,4 +1,4 @@
-# SICARD — deploy local -> GitHub -> VM (fluxo unico e obrigatorio).
+# SICARD - deploy local -> GitHub -> VM (fluxo unico e obrigatorio).
 #
 # Uso:
 #   .\scripts\deploy-vm.ps1
@@ -31,9 +31,9 @@ if (-not (Test-Path $Plink)) { Write-Error "PuTTY plink.exe nao encontrado em $P
 if (-not (Test-Path $Key)) { Write-Error "Chave PuTTY nao encontrada: $Key"; exit 2 }
 
 # ---------------------------------------------------------------------------
-# Etapa 1/3 — Commit local
+# Etapa 1/3 - Commit local
 # ---------------------------------------------------------------------------
-Banner "Etapa 1/3 — Commit local"
+Banner "Etapa 1/3 - Commit local"
 $branch = (& $GitExe rev-parse --abbrev-ref HEAD).Trim()
 Write-Host "  Branch: $branch"
 
@@ -46,15 +46,15 @@ if ($statusPorcelain) {
     & $GitExe commit -m $Mensagem | Out-Host
     Write-Host "  Commit criado: $Mensagem" -ForegroundColor Green
 } else {
-    Write-Host "  Nada para commitar — arvore de trabalho limpa." -ForegroundColor Yellow
+    Write-Host "  Nada para commitar - arvore de trabalho limpa." -ForegroundColor Yellow
 }
 $localSha = (& $GitExe rev-parse --short HEAD).Trim()
 Write-Host "  HEAD local: $localSha"
 
 # ---------------------------------------------------------------------------
-# Etapa 2/3 — Push para o GitHub
+# Etapa 2/3 - Push para o GitHub
 # ---------------------------------------------------------------------------
-Banner "Etapa 2/3 — Push para o GitHub"
+Banner "Etapa 2/3 - Push para o GitHub"
 & $GitExe fetch origin $branch *> $null
 $ahead = 0
 try { $ahead = [int](& $GitExe rev-list --count "origin/$branch..HEAD" 2>$null) } catch { $ahead = 1 }
@@ -63,13 +63,13 @@ if ($ahead -gt 0) {
     if ($LASTEXITCODE -ne 0) { Write-Error "git push falhou. A VM nao sera atualizada."; exit 1 }
     Write-Host "  Push concluido ($($ahead) commits)." -ForegroundColor Green
 } else {
-    Write-Host "  Nenhum commit pendente de push — GitHub ja esta em $localSha." -ForegroundColor Yellow
+    Write-Host "  Nenhum commit pendente de push - GitHub ja esta em $localSha." -ForegroundColor Yellow
 }
 
 # ---------------------------------------------------------------------------
-# Etapa 3/3 — Atualizacao/deploy na VM (container) + healthcheck + navegador
+# Etapa 3/3 - Atualizacao/deploy na VM (container) + healthcheck + navegador
 # ---------------------------------------------------------------------------
-Banner "Etapa 3/3 — Atualizacao e deploy na VM"
+Banner "Etapa 3/3 - Atualizacao e deploy na VM"
 Write-Host "  Host: $Vm"
 Write-Host "  A VM executa: git fetch + reset --hard origin/$branch, rebuild (ARM64 nativo),"
 Write-Host "  restart do container sicard_app e healthcheck interno + publico."
@@ -89,7 +89,7 @@ for ($i = 1; $i -le 15; $i++) {
     try {
         $out = & $CurlExe -k -fsS "$AppUrl/api/health" 2>$null
         if ($out -and ($out -match '"status"\s*:\s*"ok"')) {
-            Write-Host "  OK — respondeu na tentativa $($i): $out" -ForegroundColor Green
+            Write-Host "  OK - respondeu na tentativa $($i): $out" -ForegroundColor Green
             $healthOk = $true
             break
         }
