@@ -398,6 +398,139 @@
 			"command": "Remove-Item '~$Matriz_Criterios_Premissas_PLI-SP_usuario-SICARD.xlsx' -Force -ErrorAction SilentlyContinue; git add -A; git status --short | Select-Object -First 10",
 			"isBackground": false,
 			"group": "none"
+		},
+		{
+			"label": "Deploy: Amend commit cleanup",
+			"type": "shell",
+			"command": "git commit --amend --no-edit",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Push to GitHub",
+			"type": "shell",
+			"command": "git push origin agent/consolidar-sicard-hierarquizacao",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Bootstrap VM (clone)",
+			"type": "shell",
+			"command": "$remote = \"bash -s -- agent/consolidar-sicard-hierarquizacao < /dev/stdin\"; & 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch -m .deploy\\bootstrap_vm.sh 'bash -s -- agent/consolidar-sicard-hierarquizacao'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Bootstrap VM clone 2",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch -m .deploy\\bootstrap_vm.sh",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Checkout feature branch on VM",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'cd /opt/sicard && git fetch origin agent/consolidar-sicard-hierarquizacao && git checkout -B agent/consolidar-sicard-hierarquizacao origin/agent/consolidar-sicard-hierarquizacao && git status && ls -la'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Verify branch on VM",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'cd /opt/sicard; git branch --show-current; ls Dockerfile docker-compose.vm.yml .deploy/update_vm.sh'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Check git log on VM",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'cd /opt/sicard; git log --oneline -3; git branch -a'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Force checkout feature branch",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'cd /opt/sicard && git checkout -B agent/consolidar-sicard-hierarquizacao origin/agent/consolidar-sicard-hierarquizacao 2>&1; echo EXIT:$?; git branch --show-current'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Remove lock and checkout",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'rm -f /opt/sicard/.git/index.lock; cd /opt/sicard && git checkout -B agent/consolidar-sicard-hierarquizacao origin/agent/consolidar-sicard-hierarquizacao; git branch --show-current; ls Dockerfile docker-compose.vm.yml .deploy/update_vm.sh'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Force checkout v2",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'cd /opt/sicard && git checkout --force -B agent/consolidar-sicard-hierarquizacao origin/agent/consolidar-sicard-hierarquizacao && git clean -fd && git branch --show-current && ls Dockerfile docker-compose.vm.yml .deploy/update_vm.sh'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Verify branch v3",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'cd /opt/sicard && git branch --show-current && git log -1 --oneline && ls Dockerfile'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Isolated checkout attempt",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'cd /opt/sicard; git checkout --force -B agent/consolidar-sicard-hierarquizacao origin/agent/consolidar-sicard-hierarquizacao 2>&1'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Check git processes",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'ps aux | grep git; ls -la /opt/sicard/.git/index.lock 2>&1'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Kill stuck git and clear lock",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'pkill -9 -f \"git checkout\"; pkill -9 -f git-lfs; sleep 1; rm -f /opt/sicard/.git/index.lock; echo done'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Kill stuck PIDs",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'kill -9 1796747 1796754 1796775 1796776 1799951 1799952 1799953 1799954 2>/dev/null; sleep 1; rm -f /opt/sicard/.git/index.lock; ps aux | grep -c git; echo done'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Checkout skip LFS smudge",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'cd /opt/sicard; export GIT_LFS_SKIP_SMUDGE=1; timeout 90 git checkout --force -B agent/consolidar-sicard-hierarquizacao origin/agent/consolidar-sicard-hierarquizacao; echo EXIT:$?; git branch --show-current'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Verify files and docker",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch 'cd /opt/sicard; ls Dockerfile docker-compose.vm.yml .deploy/update_vm.sh api/middleware/subpath_rewrite.py; ls -la .env 2>&1; docker --version'",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Create .env on VM",
+			"type": "shell",
+			"command": "$envContent = @'\nPORT=8080\n\nSIGMA_API_BASE=https://56.125.163.194\nSIGMA_HTTP_TIMEOUT=30\n\nSIGMA_POSTGRES_HOST=56.125.163.194\nSIGMA_POSTGRES_PORT=5433\nSIGMA_POSTGRES_DATABASE=sigma_pli_qr53\nSIGMA_POSTGRES_USER=sigma_user\nSIGMA_POSTGRES_PASSWORD=Malditas131533***\nSIGMA_POSTGRES_SSLMODE=disable\n\nSLT_SESSION_SECRET=buM2_yNQcD_BjJ_dNSFDcjBnmuIqwMCPOnDrwu-km6Ryj8cTO5E4Zc04v_SYOEhW\n\nSLT_USE_SIGMA_POSTGRES=true\n'@\n$remoteScript = \"cat > /opt/sicard/.env << 'ENVEOF'\" + \"`n\" + $envContent + \"`nENVEOF`nchmod 600 /opt/sicard/.env; wc -l /opt/sicard/.env\"\n$remoteScript | Out-File -FilePath tmp\\push_env.sh -Encoding ascii -NoNewline\n& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch -m tmp\\push_env.sh",
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Deploy: Push env script v2",
+			"type": "shell",
+			"command": "& 'C:\\Program Files\\PuTTY\\plink.exe' -ssh ubuntu@56.125.163.194 -i 'SRV-SISTEMA-30001480.ppk' -hostkey 'SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0' -batch -m tmp\\push_env.sh",
+			"isBackground": false,
+			"group": "none"
 		}
 	]
 }

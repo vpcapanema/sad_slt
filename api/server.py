@@ -407,18 +407,24 @@ class RevalidateStaticFiles(StaticFiles):
         return response
 
 
-app.mount("/assets", RevalidateStaticFiles(directory=str(project_path("assets"))), name="assets")
-app.mount("/data", RevalidateStaticFiles(directory=str(project_path("data"))), name="data")
-app.mount("/public/assets", RevalidateStaticFiles(directory=str(project_path("assets"))), name="public-assets")
-app.mount("/public/cadastro", RevalidateStaticFiles(directory=str(project_path("cadastro"))), name="public-cadastro-assets")
-app.mount("/public/painel", RevalidateStaticFiles(directory=str(project_path("painel"))), name="public-painel-assets")
-app.mount("/public/documentacao", RevalidateStaticFiles(directory=str(project_path("documentacao"))), name="public-documentacao-assets")
-app.mount("/public/transparencia", RevalidateStaticFiles(directory=str(project_path("transparencia"))), name="public-transparencia-assets")
-app.mount("/restrict/assets", RevalidateStaticFiles(directory=str(project_path("assets"))), name="restricted-assets-shared")
-app.mount("/restrict/hierarquizacao", RevalidateStaticFiles(directory=str(project_path("hierarquizacao"))), name="restricted-hierarquizacao-assets")
-app.mount("/restrict/ahp", RevalidateStaticFiles(directory=str(project_path("ahp"))), name="restricted-ahp-assets")
-app.mount("/restrict/geoespacial", RevalidateStaticFiles(directory=str(project_path("geoespacial"))), name="restricted-geospatial-assets")
-app.mount("/restrict", RevalidateStaticFiles(directory=str(project_path("admin"))), name="restricted-assets")
+def _mount_static(path: str, directory_name: str, name: str) -> None:
+    target_dir = project_path(directory_name)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    app.mount(path, RevalidateStaticFiles(directory=str(target_dir)), name=name)
+
+
+_mount_static("/assets", "assets", "assets")
+_mount_static("/data", "data", "data")
+_mount_static("/public/assets", "assets", "public-assets")
+_mount_static("/public/cadastro", "cadastro", "public-cadastro-assets")
+_mount_static("/public/painel", "painel", "public-painel-assets")
+_mount_static("/public/documentacao", "documentacao", "public-documentacao-assets")
+_mount_static("/public/transparencia", "transparencia", "public-transparencia-assets")
+_mount_static("/restrict/assets", "assets", "restricted-assets-shared")
+_mount_static("/restrict/hierarquizacao", "hierarquizacao", "restricted-hierarquizacao-assets")
+_mount_static("/restrict/ahp", "ahp", "restricted-ahp-assets")
+_mount_static("/restrict/geoespacial", "geoespacial", "restricted-geospatial-assets")
+_mount_static("/restrict", "admin", "restricted-assets")
 
 
 if __name__ == "__main__":
