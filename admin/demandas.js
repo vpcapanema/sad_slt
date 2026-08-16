@@ -43,6 +43,7 @@
 
   const COLUMNS = {
     projeto: [
+      { label: "Status", value: statusCell, editable: "status" },
       { label: "Código", value: (d) => `<code>${escapeHtml(d.id)}</code>` },
       { label: "Projeto", value: (d) => escapeHtml(d.nome) },
       { label: "Diretoria", value: (d) => escapeHtml(diretoriaLabel(d.diretoria_id)), editable: "diretoria" },
@@ -69,10 +70,10 @@
         editable: "complementos",
       },
       { label: "Geometria", value: (d) => escapeHtml(geometriaResumo(d.geometria)) },
-      { label: "Status", value: statusCell, editable: "status" },
       { label: "Cadastro", value: (d) => escapeHtml(formatDate(d.criadoEm)) },
     ],
     programa: [
+      { label: "Status", value: statusCell, editable: "status" },
       { label: "Código", value: (d) => `<code>${escapeHtml(d.id)}</code>` },
       { label: "Programa", value: (d) => escapeHtml(d.nome) },
       {
@@ -91,10 +92,10 @@
       { label: "Objetivo", value: (d) => escapeHtml(truncate(d.objetivo, 80)) },
       { label: "Valor global", value: (d) => escapeHtml(formatMoney(d.valor_global)) },
       { label: "Abrangência", value: (d) => escapeHtml(abrangenciaLabel(d.unidades_espaciais)) },
-      { label: "Status", value: statusCell, editable: "status" },
       { label: "Cadastro", value: (d) => escapeHtml(formatDate(d.criadoEm)) },
     ],
     plano: [
+      { label: "Status", value: statusCell, editable: "status" },
       { label: "Código", value: (d) => `<code>${escapeHtml(d.id)}</code>` },
       { label: "Plano", value: (d) => escapeHtml(d.nome) },
       { label: "Diretoria", value: (d) => escapeHtml(diretoriaLabel(d.diretoria_id)), editable: "diretoria" },
@@ -104,7 +105,6 @@
       { label: "Vigência", value: (d) => escapeHtml(formatVigencia(d.vigencia_inicio, d.vigencia_fim)) },
       { label: "Valor global", value: (d) => escapeHtml(formatMoney(d.valor_global)) },
       { label: "Abrangência", value: (d) => escapeHtml(abrangenciaLabel(d.unidades_espaciais)) },
-      { label: "Status", value: statusCell, editable: "status" },
       { label: "Cadastro", value: (d) => escapeHtml(formatDate(d.criadoEm)) },
     ],
   };

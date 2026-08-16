@@ -124,9 +124,9 @@
       const grade = f.indice_favorabilidade_grade;
       const rede = f.indice_favorabilidade_rede;
       const status = Number.isFinite(grade) && Number.isFinite(rede) ? '<span class="fase-status fase-status--ok">Calculado</span>' : '<span class="fase-status fase-status--warn">Pendente</span>';
-      return `<tr><td><strong>${esc(c.codigo)}</strong><br><small>${esc(c.nome || "")}</small></td><td>${Number.isFinite(grade) ? Number(grade).toFixed(4) : "—"}</td><td>${Number.isFinite(rede) ? Number(rede).toFixed(4) : "—"}</td><td>${status}</td></tr>`;
+      return `<tr><td>${status}</td><td><strong>${esc(c.codigo)}</strong><br><small>${esc(c.nome || "")}</small></td><td>${Number.isFinite(grade) ? Number(grade).toFixed(4) : "—"}</td><td>${Number.isFinite(rede) ? Number(rede).toFixed(4) : "—"}</td></tr>`;
     }).join("");
-    $("fase2-resultados").innerHTML = docs.length ? `<table class="fase-table"><thead><tr><th>Demanda</th><th>Índice de grade</th><th>Índice de rede</th><th>Situação</th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="fase-empty">A rodada não possui demandas.</div>';
+    $("fase2-resultados").innerHTML = docs.length ? `<table class="fase-table"><thead><tr><th>Situação</th><th>Demanda</th><th>Índice de grade</th><th>Índice de rede</th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="fase-empty">A rodada não possui demandas.</div>';
     const report = h.dados_hierarquizacao?.cabecalho_grupo?.relatorios?.fase_2;
     const audit = $("fase2-auditoria");
     if (report) { audit.innerHTML = `<strong>Auditoria da execução</strong><pre>${esc(JSON.stringify(report, null, 2))}</pre>`; audit.classList.remove("hidden"); } else audit.classList.add("hidden");

@@ -37,11 +37,11 @@
       return;
     }
     body.innerHTML = hierarquizacoes.map((item) => `<tr data-row-codigo="${esc(item.codigo)}">
+      <td><span class="ranking-finalizado">${esc(situacao(item))}</span></td>
       <td>${botao(item.codigo, item, "ranking-link-codigo")}</td>
       <td>${botao(item.config_codigo || item.config_id, item, "ranking-link-config")}</td>
       <td>${botao(item.nome, item, "ranking-link-nome")}</td>
       <td>${esc(item.descricao || "—")}</td>
-      <td><span class="ranking-finalizado">${esc(situacao(item))}</span></td>
       <td>${item.dados_hierarquizacao?.cabecalho_grupo?.matriz_premissas_criterios ? "Disponível" : "—"}</td>
       <td>${item.dados_hierarquizacao?.objetos?.length || 0} demanda(s)</td>
       <td>${item.julgamento_projetos?.length || "—"}</td>

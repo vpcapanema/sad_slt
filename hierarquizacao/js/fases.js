@@ -1259,7 +1259,7 @@
         return registros.map((sobreposicao) => {
           const restricao = sobreposicao?.tipo === "restricao" ? esc(sobreposicao.feature.nome) : "Sem sobreposição";
           const risco = sobreposicao?.tipo === "risco" ? esc(sobreposicao.feature.nome) : "Sem sobreposição";
-          return `<tr${rowCls}><td>${esc(linha.nome)}</td><td><span class="${badge.css}">${esc(badge.label)}</span></td><td>${esc(linha.restricaoResultado)}</td><td>${esc(linha.riscoResultado)}</td><td>${restricao}</td><td>${risco}</td></tr>`;
+          return `<tr${rowCls}><td><span class="${badge.css}">${esc(badge.label)}</span></td><td>${esc(linha.nome)}</td><td>${esc(linha.restricaoResultado)}</td><td>${esc(linha.riscoResultado)}</td><td>${restricao}</td><td>${risco}</td></tr>`;
         });
       })
       .join("");
@@ -1303,7 +1303,7 @@
         <header class="fase1-report-section-head"><h4>Tabela síntese da elegibilidade</h4></header>
         <div class="fase1-report-section-body">
           <table class="fase1-report-table">
-            <thead><tr><th>Nome</th><th>Status Fase 1</th><th>Restrição</th><th>Risco</th><th>Feições de restrição</th><th>Feições de risco</th></tr></thead>
+            <thead><tr><th>Status Fase 1</th><th>Nome</th><th>Restrição</th><th>Risco</th><th>Feições de restrição</th><th>Feições de risco</th></tr></thead>
             <tbody>${linhas || "<tr><td colspan='6'>Sem objetos avaliados.</td></tr>"}</tbody>
           </table>
         </div>

@@ -194,11 +194,11 @@
       : esc(rotuloSituacaoHier(h.status));
     return `<tr data-codigo="${esc(h.codigo)}"${editing ? ' class="is-editing"' : ""}>` +
       `<td class="col-select"><input type="checkbox" class="hier-row-select" data-codigo="${esc(h.codigo)}"${marcada ? " checked" : ""}></td>` +
+      `<td>${sit}</td>` +
       `<td><code>${esc(h.codigo)}</code></td>` +
       `<td>${esc(h.config_id || "—")}</td>` +
       `<td>${nome}</td>` +
       `<td>${desc}</td>` +
-      `<td>${sit}</td>` +
       `<td>${matrizCell(h)}</td>` +
       `<td>${jsonButton(h, "objetos", "Visualizar demandas")}</td>` +
       `<td>${jsonButton(h, "julgamento_projetos", "Visualizar julgamentos")}</td>` +
@@ -601,6 +601,7 @@
       texto(labels.formatDate?.(row.criadoEm || row.criado_em) || formatarData(row.criadoEm || row.criado_em));
     if (tipo === "plano")
       return [
+        { label: "Status", value: status },
         { label: "Código", value: (row) => `<code>${esc(row.codigo)}</code>` },
         { label: "Plano", value: (row) => texto(row.nome) },
         { label: "Diretoria", value: (row) => texto(labels.diretoriaLabel?.(row.diretoria_id)) },
@@ -610,11 +611,11 @@
         { label: "Vigência", value: (row) => texto(labels.formatVigencia?.(row.vigencia_inicio, row.vigencia_fim)) },
         { label: "Valor global", value: (row) => texto(labels.formatMoney?.(row.valor_global)) },
         { label: "Abrangência", value: (row) => texto(labels.abrangenciaLabel?.(row.unidades_espaciais)) },
-        { label: "Status", value: status },
         { label: "Cadastro", value: cadastro },
       ];
     if (tipo === "programa")
       return [
+        { label: "Status", value: status },
         { label: "Código", value: (row) => `<code>${esc(row.codigo)}</code>` },
         { label: "Programa", value: (row) => texto(row.nome) },
         { label: "Plano vinculado", value: (row) => texto(labels.planoCadastradoLabel?.(row) || row.plano_id_alias) },
@@ -626,10 +627,10 @@
         { label: "Objetivo", value: (row) => texto(labels.truncate?.(row.objetivo, 80) || row.objetivo) },
         { label: "Valor global", value: (row) => texto(labels.formatMoney?.(row.valor_global)) },
         { label: "Abrangência", value: (row) => texto(labels.abrangenciaLabel?.(row.unidades_espaciais)) },
-        { label: "Status", value: status },
         { label: "Cadastro", value: cadastro },
       ];
     return [
+      { label: "Status", value: status },
       { label: "Código", value: (row) => `<code>${esc(row.codigo)}</code>` },
       { label: "Projeto", value: (row) => texto(row.nome) },
       { label: "Diretoria", value: (row) => texto(labels.diretoriaLabel?.(row.diretoria_id)) },
@@ -641,7 +642,6 @@
       { label: "Classificação", value: (row) => texto(labels.classificacaoLabel?.(row.classificacao, row.plano_id)) },
       { label: "Complementos", value: (row) => texto(labels.complementosLabel?.(row.complementos)) },
       { label: "Geometria", value: (row) => texto(labels.geometriaResumo?.(row.geometria) || row.geometria_tipo) },
-      { label: "Status", value: status },
       { label: "Cadastro", value: cadastro },
     ];
   }
@@ -777,7 +777,7 @@
       ? rows
           .map(
             (o) =>
-              `<tr data-status="${esc(o.status)}"><td class="col-select"><input type="checkbox" data-resumo-id="${esc(o.id)}" aria-label="Selecionar ${esc(o.codigo)} no grupo"${selecionadosResumo.has(o.id) ? " checked" : ""}${grupoFechado ? " disabled" : ""}></td><td><code>${esc(o.codigo)}</code></td><td>${esc(o.nome)}</td><td>${esc(rotuloValor("grupo_id", o.grupo_id, o))}</td><td>${valorHtml("status", o)}</td></tr>`,
+              `<tr data-status="${esc(o.status)}"><td class="col-select"><input type="checkbox" data-resumo-id="${esc(o.id)}" aria-label="Selecionar ${esc(o.codigo)} no grupo"${selecionadosResumo.has(o.id) ? " checked" : ""}${grupoFechado ? " disabled" : ""}></td><td>${valorHtml("status", o)}</td><td><code>${esc(o.codigo)}</code></td><td>${esc(o.nome)}</td><td>${esc(rotuloValor("grupo_id", o.grupo_id, o))}</td></tr>`,
           )
           .join("")
       : '<tr><td colspan="5" class="process-empty-row">Confirme uma seleção para formar o grupo.</td></tr>';

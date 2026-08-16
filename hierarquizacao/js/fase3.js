@@ -100,9 +100,9 @@
       const fase = objeto.hierarquizacao?.fase_3 || {};
       const ausencias = [...(fase.atributos_ausentes || []), ...(fase.atributos_invalidos || [])];
       const valid = Number.isFinite(fase.score_fase3);
-      return `<tr><td><strong>${esc(objeto.cabecalho_objeto.codigo)}</strong><br><small>${esc(objeto.cabecalho_objeto.nome || "")}</small></td><td>${valid ? Number(fase.score_fase3).toFixed(4) : "—"}</td><td>${esc(fase.ranking_fase3 ?? "—")}</td><td>${fase.grau_completude_fase3 == null ? "—" : `${(Number(fase.grau_completude_fase3) * 100).toFixed(0)}%`}</td><td>${ausencias.length ? esc(ausencias.join(", ")) : "—"}</td><td><span class="fase-status ${valid ? "fase-status--ok" : "fase-status--warn"}">${valid ? "Calculado" : "Pendente"}</span></td></tr>`;
+      return `<tr><td><span class="fase-status ${valid ? "fase-status--ok" : "fase-status--warn"}">${valid ? "Calculado" : "Pendente"}</span></td><td><strong>${esc(objeto.cabecalho_objeto.codigo)}</strong><br><small>${esc(objeto.cabecalho_objeto.nome || "")}</small></td><td>${valid ? Number(fase.score_fase3).toFixed(4) : "—"}</td><td>${esc(fase.ranking_fase3 ?? "—")}</td><td>${fase.grau_completude_fase3 == null ? "—" : `${(Number(fase.grau_completude_fase3) * 100).toFixed(0)}%`}</td><td>${ausencias.length ? esc(ausencias.join(", ")) : "—"}</td></tr>`;
     }).join("");
-    $("fase3-resultados").innerHTML = docs.length ? `<table class="fase-table"><thead><tr><th>Demanda</th><th>Score</th><th>Posição</th><th>Completude</th><th>Pendências</th><th>Situação</th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="fase-empty">A rodada não possui demandas.</div>';
+    $("fase3-resultados").innerHTML = docs.length ? `<table class="fase-table"><thead><tr><th>Situação</th><th>Demanda</th><th>Score</th><th>Posição</th><th>Completude</th><th>Pendências</th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="fase-empty">A rodada não possui demandas.</div>';
     const report = hierarquizacao.dados_hierarquizacao?.cabecalho_grupo?.relatorios?.fase_3;
     const audit = $("fase3-auditoria");
     if (report) { audit.innerHTML = `<strong>Auditoria da execução</strong><pre>${esc(JSON.stringify(report, null, 2))}</pre>`; audit.classList.remove("hidden"); } else audit.classList.add("hidden");

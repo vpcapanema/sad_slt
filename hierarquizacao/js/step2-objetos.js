@@ -30,10 +30,10 @@
       tr.dataset.idx = idx;
       tr.innerHTML = `
         <td><input type="checkbox" class="chk-obj" data-idx="${idx}" ${selecionados.has(idx) ? "checked" : ""}></td>
+        <td><span class="badge">${obj.status || "—"}</span></td>
         <td><code>${obj.codigo || "—"}</code></td>
         <td>${obj.nome || "—"}</td>
         <td>${obj.diretoria_id || "—"}</td>
-        <td><span class="badge">${obj.status || "—"}</span></td>
       `;
       tbody.appendChild(tr);
     });
