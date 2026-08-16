@@ -71,14 +71,23 @@
   }
 
   function isEmpty(value) {
-    return !value || value === "-" || value === "—" || value.toLowerCase() === "null";
+    const normalized = String(value || "").trim().toLowerCase();
+    return !normalized ||
+      normalized === "-" ||
+      normalized === "—" ||
+      normalized === "null" ||
+      normalized === "n/a" ||
+      normalized === "não informado";
   }
-
   function parseNumber(value) {
-    let normalized = value
-      .replace(/\u00a0/g, " ")
-      .replace(/[^\d.,+\-()%]/g, "")
-      .replace(/%$/, "");
+    const raw = String(value || "").replace(/\u00a0/g, " ").trim();
+    const withoutKnownAffixes = raw
+      .replace(/^r\$\s*/i, "")
+      .replace(/\s*%$/, "")
+      .trim();
+    if (!withoutKnownAffixes || /[a-zÀ-ÿ]/i.test(withoutKnownAffixes)) return null;
+
+    let normalized = withoutKnownAffixes.replace(/[^\d.,+\-()]/g, "");
     if (!normalized || !/\d/.test(normalized)) return null;
     const negative = /^\(.*\)$/.test(normalized);
     normalized = normalized.replace(/[()]/g, "");
@@ -90,26 +99,37 @@
     const number = Number(normalized);
     return Number.isFinite(number) ? (negative ? -number : number) : null;
   }
-
   function parseDate(value) {
-    const brazilian = value.match(
-      /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+ao\s+meio-dia$/, " 12:00")
+      .replace(/\s+(?:à|a)\s+meia-noite$/, " 00:00")
+      .replace(/\s+(?:às|as)\s+/, " ")
+      .replace(/\s+/g, " ");
+
+    const brazilian = normalized.match(
+      /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,t]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
     );
     if (brazilian) {
-      return Date.UTC(
-        Number(brazilian[3]),
-        Number(brazilian[2]) - 1,
-        Number(brazilian[1]),
-        Number(brazilian[4] || 0),
-        Number(brazilian[5] || 0),
-        Number(brazilian[6] || 0)
-      );
+      const day = Number(brazilian[1]);
+      const month = Number(brazilian[2]);
+      const year = Number(brazilian[3]);
+      const hour = Number(brazilian[4] || 0);
+      const minute = Number(brazilian[5] || 0);
+      const second = Number(brazilian[6] || 0);
+      if (
+        month < 1 || month > 12 ||
+        day < 1 || day > new Date(Date.UTC(year, month, 0)).getUTCDate() ||
+        hour > 23 || minute > 59 || second > 59
+      ) return null;
+      return Date.UTC(year, month - 1, day, hour, minute, second);
     }
-    if (!/^\d{4}-\d{2}-\d{2}(?:[T ]|$)/.test(value)) return null;
-    const timestamp = Date.parse(value);
+
+    if (!/^\d{4}-\d{2}-\d{2}(?:[t ]|$)/.test(normalized)) return null;
+    const timestamp = Date.parse(normalized);
     return Number.isNaN(timestamp) ? null : timestamp;
   }
-
   function detectType(values) {
     const populated = values.filter((value) => !isEmpty(value));
     if (!populated.length) return "text";
@@ -164,7 +184,7 @@
     Array.from(table.tBodies).forEach((tbody) => {
       const rows = sortableRows(tbody, columnIndex, headers.length);
       const values = rows.map((row) => cellText(cellAt(row, columnIndex)));
-      const type = detectType(values);
+      const type = headers[columnIndex]?.dataset.sortType || detectType(values);
       rows
         .map((row, index) => ({ row, index, value: cellText(cellAt(row, columnIndex)) }))
         .sort((left, right) => {
@@ -191,6 +211,46 @@
     });
   }
 
+  function normalizedHeaderText(header) {
+    return (header?.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLocaleLowerCase("pt-BR")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function defaultCreationColumn(headers) {
+    const labels = [
+      "data de cadastro",
+      "data de criacao",
+      "criada em",
+      "criado em",
+      "cadastro",
+      "enviada em",
+    ];
+    for (const label of labels) {
+      const index = headers.findIndex((header) => normalizedHeaderText(header) === label);
+      if (index >= 0) return index;
+    }
+    return -1;
+  }
+
+  function applyDefaultSort(table, headers) {
+    if (table.dataset.defaultSort === "off") return;
+    const configuredIndex = Number.parseInt(table.dataset.defaultSortColumn || "", 10);
+    const columnIndex = Number.isInteger(configuredIndex)
+      ? configuredIndex
+      : defaultCreationColumn(headers);
+    if (columnIndex < 0 || columnIndex >= headers.length) return;
+
+    const header = headers[columnIndex];
+    if (!header.classList.contains("slt-sortable-column")) return;
+    header.dataset.sortType = header.dataset.sortType || "date";
+    headers.forEach((item) => item.setAttribute("aria-sort", "none"));
+    header.setAttribute("aria-sort", "descending");
+    sortTable(table, columnIndex, "descending");
+  }
   function activateHeader(table, header, index, headers) {
     if (header.dataset.sort === "off" || header.querySelector(interactiveSelector)) return;
     if (!columnHasSortableValues(table, index)) return;
@@ -226,6 +286,7 @@
     table.dataset.tableSortReady = "true";
     rememberOriginalRows(table);
     headers.forEach((header, index) => activateHeader(table, header, index, headers));
+    applyDefaultSort(table, headers);
     return true;
   }
 
@@ -246,7 +307,7 @@
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  global.SLTTableSort = { enhanceTable, enhanceWithin, sortTable };
+  global.SLTTableSort = { enhanceTable, enhanceWithin, sortTable, parseDate, parseNumber, detectType, defaultCreationColumn };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
 })(window);
