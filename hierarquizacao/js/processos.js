@@ -684,7 +684,7 @@
     });
   }
   function atualizarSelecionarVisiveis(rows) {
-    const checkbox = $("demanda-todos");
+    const checkbox = document.querySelector('[data-universo-table]:not([hidden]) .demanda-todos');
     const elegiveisVisiveis = rows.filter(elegivel);
     const selecionadasVisiveis = elegiveisVisiveis.filter((o) =>
       selecionados.has(o.id),
@@ -703,12 +703,17 @@
     const elegiveisVisiveis = pagina.filter(
       (o) => elegivel(o) && !confirmados.has(o.id),
     );
-    $("demanda-head").innerHTML =
-      '<th class="col-select" scope="col"><input type="checkbox" id="demanda-todos" aria-label="Selecionar registros visíveis"></th>' +
-      colunas
-        .map((coluna) => `<th scope="col">${esc(coluna.label)}</th>`)
-        .join("");
-    $("demanda-tbody").innerHTML = pagina.length
+    document.querySelectorAll("[data-universo-table]").forEach((table) => {
+      table.hidden = table.dataset.universoTable !== $("hier-tipo").value;
+    });
+    const activeTable = document.querySelector(
+      '[data-universo-table="' + $("hier-tipo").value + '"]',
+    );
+    const tbody = activeTable?.querySelector(
+      '[data-universo-body="' + $("hier-tipo").value + '"]',
+    );
+    const selectAll = activeTable?.querySelector(".demanda-todos");
+    tbody.innerHTML = pagina.length
       ? pagina
           .map(
             (o) => {
@@ -737,7 +742,7 @@
     $("demanda-pagina-anterior").disabled = paginaDemandas <= 1;
     $("demanda-pagina-proxima").disabled = paginaDemandas >= totalPaginas;
     atualizarSelecionarVisiveis(pagina.filter((o) => !confirmados.has(o.id)));
-    $("demanda-todos").onchange = (e) => {
+    selectAll.onchange = (e) => {
       paginaFiltrada().pagina
         .filter((o) => elegivel(o) && !confirmados.has(o.id))
         .forEach((o) =>
@@ -747,7 +752,7 @@
         );
       renderDemandas();
     };
-    $("demanda-tbody")
+    tbody
       .querySelectorAll("input[data-id]:not(:disabled)")
       .forEach(
         (x) =>

@@ -1,7 +1,8 @@
 (function (global) {
   "use strict";
 
-  const initialized = new WeakSet();
+  const initializedHeaders = new WeakMap();
+  const sortStates = new WeakMap();
   const originalPositions = new WeakMap();
   const collator = new Intl.Collator("pt-BR", {
     numeric: true,
@@ -236,6 +237,22 @@
     return -1;
   }
 
+  function applySortState(table, headers) {
+    const state = sortStates.get(table);
+    if (!state) return false;
+    const columnIndex = headers.findIndex(
+      (header) => normalizedHeaderText(header) === state.column
+    );
+    if (columnIndex < 0) return false;
+
+    const header = headers[columnIndex];
+    if (!header.classList.contains("slt-sortable-column")) return false;
+    headers.forEach((item) => item.setAttribute("aria-sort", "none"));
+    header.setAttribute("aria-sort", state.direction);
+    if (state.direction !== "none") sortTable(table, columnIndex, state.direction);
+    return true;
+  }
+
   function applyDefaultSort(table, headers) {
     if (table.dataset.defaultSort === "off") return;
     const configuredIndex = Number.parseInt(table.dataset.defaultSortColumn || "", 10);
@@ -249,6 +266,10 @@
     header.dataset.sortType = header.dataset.sortType || "date";
     headers.forEach((item) => item.setAttribute("aria-sort", "none"));
     header.setAttribute("aria-sort", "descending");
+    sortStates.set(table, {
+      column: normalizedHeaderText(header),
+      direction: "descending",
+    });
     sortTable(table, columnIndex, "descending");
   }
   function activateHeader(table, header, index, headers) {
@@ -266,6 +287,10 @@
         if (item !== header) item.setAttribute("aria-sort", "none");
       });
       header.setAttribute("aria-sort", direction);
+      sortStates.set(table, {
+        column: normalizedHeaderText(header),
+        direction,
+      });
       sortTable(table, index, direction);
     };
     header.addEventListener("click", (event) => {
@@ -280,16 +305,22 @@
   }
 
   function enhanceTable(table) {
-    if (initialized.has(table) || !canEnhance(table)) return false;
+    if (!canEnhance(table)) return false;
     const headers = headerCells(table);
-    initialized.add(table);
+    const previousHeaders = initializedHeaders.get(table);
+    if (
+      previousHeaders &&
+      previousHeaders.length === headers.length &&
+      previousHeaders.every((header, index) => header === headers[index])
+    ) return false;
+
+    initializedHeaders.set(table, headers);
     table.dataset.tableSortReady = "true";
     rememberOriginalRows(table);
     headers.forEach((header, index) => activateHeader(table, header, index, headers));
-    applyDefaultSort(table, headers);
+    if (!applySortState(table, headers)) applyDefaultSort(table, headers);
     return true;
   }
-
   function enhanceWithin(root) {
     if (root instanceof Element) enhanceTable(root.closest("table"));
     if (root.querySelectorAll) root.querySelectorAll("table").forEach(enhanceTable);

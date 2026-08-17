@@ -1214,7 +1214,10 @@
     const vazio = $("#fase1-resultado-vazio");
     if (box) {
       box.classList.add("hidden");
-      box.innerHTML = "";
+      const conteudo = $("fase1-relatorio-conteudo");
+      const tbody = $("fase1-relatorio-tbody");
+      if (conteudo) conteudo.innerHTML = "";
+      if (tbody) tbody.innerHTML = "";
     }
     if (botaoDownload) botaoDownload.classList.add("hidden");
     if (vazio) vazio.classList.remove("hidden");
@@ -1264,7 +1267,7 @@
       })
       .join("");
 
-    box.innerHTML = `
+    $("fase1-relatorio-conteudo").innerHTML = `
       <div class="fase1-report-header">
         <div>
           <h3>Relatório da Fase 1</h3>
@@ -1298,26 +1301,9 @@
             </article>
           </div>
         </div>
-      </section>
-      <section class="fase1-report-section">
-        <header class="fase1-report-section-head"><h4>Tabela síntese da elegibilidade</h4></header>
-        <div class="fase1-report-section-body">
-          <table class="fase1-report-table">
-            <thead><tr><th>Status Fase 1</th><th>Nome</th><th>Restrição</th><th>Risco</th><th>Feições de restrição</th><th>Feições de risco</th></tr></thead>
-            <tbody>${linhas || "<tr><td colspan='6'>Sem objetos avaliados.</td></tr>"}</tbody>
-          </table>
-        </div>
-      </section>
-      <section class="fase1-report-section">
-        <header class="fase1-report-section-head">
-          <h4>Mapa-síntese da análise de elegibilidade</h4>
-        </header>
-        <div class="fase1-report-section-body">
-          <div id="fase1-relatorio-mapa" class="fase1-report-map"></div>
-          <p id="fase1-relatorio-mapa-vazio" class="fase1-report-map-empty hidden">Nenhuma sobreposição para plotar.</p>
-        </div>
-      </section>
-    `;
+      </section>`;
+    $("fase1-relatorio-tbody").innerHTML =
+      linhas || '<tr><td colspan="6">Sem objetos avaliados.</td></tr>';
     box.classList.remove("hidden");
     if (vazio) vazio.classList.add("hidden");
 

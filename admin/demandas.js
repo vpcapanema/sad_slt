@@ -383,26 +383,31 @@
     return col.value(d);
   }
 
+  function activeTable() {
+    return document.querySelector('[data-demandas-table="' + tipo + '"]');
+  }
+
   function renderHead() {
-    const head = $("#tabela-head");
-    if (!head) return;
+    document.querySelectorAll("[data-demandas-table]").forEach((table) => {
+      table.hidden = table.dataset.demandasTable !== tipo;
+    });
+    const checkbox = activeTable()?.querySelector(".select-all");
+    if (!checkbox) return;
     const visible = paginatedRows();
-    const allChecked = visible.length > 0 && visible.every((d) => selected.has(d.id) || isSentinel(d));
-    head.innerHTML =
-      `<th class="col-select" scope="col"><input type="checkbox" id="select-all" aria-label="Selecionar todos"${allChecked ? " checked" : ""}></th>` +
-      COLUMNS[tipo].map((c) => `<th scope="col">${escapeHtml(c.label)}</th>`).join("");
-    $("#select-all")?.addEventListener("change", (ev) => {
+    checkbox.checked =
+      visible.length > 0 &&
+      visible.every((d) => selected.has(d.id) || isSentinel(d));
+    checkbox.onchange = (ev) => {
       const on = ev.target.checked;
-      paginatedRows().forEach((d) => {
+      visible.forEach((d) => {
         if (isSentinel(d)) return;
         if (on) selected.add(d.id);
         else selected.delete(d.id);
       });
       if (!selected.size) editMode = false;
       renderTable();
-    });
+    };
   }
-
   function bindRowEditors(tr, d) {
     const dirSel = tr.querySelector('[data-edit-field="diretoria_id"]');
     if (dirSel) {
@@ -475,7 +480,7 @@
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     currentPage = Math.min(currentPage, totalPages);
     const data = paginatedRows(filtered);
-    const tbody = $("#tabela-demandas");
+    const tbody = activeTable()?.querySelector('[data-demandas-body="' + tipo + '"]');
     const vazia = $("#lista-vazia");
     renderHead();
     renderPagination(filtered.length, totalPages);

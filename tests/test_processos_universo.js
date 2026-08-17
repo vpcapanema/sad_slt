@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
+const templateSource = fs.readFileSync("templates/paginas/hierarquizacao/home.html", "utf8");
 
 class ClassList {
   constructor() {
@@ -115,6 +116,16 @@ const elements = Object.fromEntries(
       : new Element(id),
   ]),
 );
+elements["demanda-todos"] = new Element("demanda-todos");
+const universeTables = ["plano", "programa", "projeto"].map((tipo) => ({
+  dataset: { universoTable: tipo },
+  hidden: tipo !== "projeto",
+  querySelector(selector) {
+    if (selector === `.demanda-todos`) return elements["demanda-todos"];
+    if (selector === `[data-universo-body="${tipo}"]`) return elements["demanda-tbody"];
+    return null;
+  },
+}));
 elements["hier-tipo"].value = "projeto";
 elements["hier-nome"].value = "Rodada de teste";
 
@@ -148,22 +159,18 @@ const fixtures = {
 };
 
 const document = {
-  getElementById: (id) => {
-    if (
-      id === "demanda-todos" &&
-      !elements[id] &&
-      elements["demanda-head"].innerHTML.includes('id="demanda-todos"')
-    ) {
-      elements[id] = new Element(id);
-    }
-    return elements[id] || null;
-  },
+  getElementById: (id) => elements[id] || null,
   querySelectorAll: (selector) => {
     if (selector === "#hier-tipo-tabs [data-tipo]") return tabs;
     if (selector === "#hier-fases input:checked") return phases;
+    if (selector === "[data-universo-table]") return universeTables;
     return [];
   },
-  querySelector: () => null,
+  querySelector: (selector) => {
+    if (selector === '[data-universo-table]:not([hidden]) .demanda-todos') return elements["demanda-todos"];
+    const match = selector.match(/^\[data-universo-table="([^"]+)"\]$/);
+    return match ? universeTables.find((table) => table.dataset.universoTable === match[1]) : null;
+  },
   addEventListener() {},
 };
 
@@ -230,11 +237,11 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 
   assert.equal(elements["hier-loading"].classList.contains("hidden"), true);
   assert.deepEqual(requests[0], { tipo: "projeto", status: "todas" });
-  assert.match(elements["demanda-head"].innerHTML, /Projeto/);
-  assert.match(elements["demanda-head"].innerHTML, /Plano estratégico/);
-  assert.match(elements["demanda-head"].innerHTML, /Classificação/);
-  assert.match(elements["demanda-head"].innerHTML, /Complementos/);
-  assert.match(elements["demanda-head"].innerHTML, /Geometria/);
+  assert.match(templateSource, /data-universo-table="projeto"/);
+  assert.match(templateSource, /Plano estratégico/);
+  assert.match(templateSource, /Classificação/);
+  assert.match(templateSource, /Complementos/);
+  assert.match(templateSource, /Geometria/);
   assert.match(elements["demanda-tbody"].innerHTML, /data-status="analise_aprovada"/);
   assert.match(elements["demanda-tbody"].innerHTML, />Aprovada<\/span>/);
   assert.match(elements["demanda-tbody"].innerHTML, /Diretoria de Planejamento/);

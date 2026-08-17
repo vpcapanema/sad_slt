@@ -1546,7 +1546,7 @@ body.admin-data-page .admin-toolbar-back {
 .admin-table th,
 .admin-table td {
   padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--pli-border);
+  border: 1px solid var(--pli-border);
   text-align: left;
   vertical-align: top;
 }
@@ -1560,7 +1560,7 @@ body.admin-data-page .admin-toolbar-back {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
-  border-bottom: none;
+  border-bottom: 1px solid var(--pli-border);
   padding: 0.75rem 0.75rem;
 }
 
@@ -1610,7 +1610,7 @@ th.slt-sortable-column:focus-visible {
 }
 
 .admin-table tbody tr:last-child td {
-  border-bottom: none;
+  border-bottom: 1px solid var(--pli-border);
 }
 
 .admin-table .col-select {
