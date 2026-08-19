@@ -61,6 +61,7 @@ def test_indice_expoe_as_tres_entradas_da_analise_multicriterio() -> None:
     trecho_ami = html.split('id="group-ami"', 1)[1].split('id="group-ahp-restrict"', 1)[0]
     trecho_mad = html.split('id="group-mad"', 1)[1].split('id="group-resultados"', 1)[0]
     assert "/restrict/hierarquizacao/processos/" in trecho_ami
+    assert trecho_ami.index("/restrict/hierarquizacao/processos/") < trecho_ami.index("?modo=julgamentos")
     assert "/restrict/hierarquizacao/processos/" not in trecho_mad
 
 
