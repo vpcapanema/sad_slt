@@ -58,6 +58,10 @@ def test_indice_expoe_as_tres_entradas_da_analise_multicriterio() -> None:
     assert "/restrict/analise-multicriterio/?modo=julgamentos" in html
     assert "/restrict/analise-multicriterio/?modo=espaco" in html
     assert "/restrict/analise-multicriterio/?modo=formulario" in html
+    trecho_ami = html.split('id="group-ami"', 1)[1].split('id="group-ahp-restrict"', 1)[0]
+    trecho_mad = html.split('id="group-mad"', 1)[1].split('id="group-resultados"', 1)[0]
+    assert "/restrict/hierarquizacao/processos/" in trecho_ami
+    assert "/restrict/hierarquizacao/processos/" not in trecho_mad
 
 
 def test_legacy_page_redirect_preserves_query_string() -> None:
