@@ -3,11 +3,11 @@
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 {% block titulo %}Espaço de trabalho do julgamento — SICARD{% endblock %}
-{% block classes_body %}ami-page{% endblock %}
-{% block estilos_pagina %}<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css"><link rel="stylesheet" href="/assets/css/analise-multicriterio.css">{% endblock %}
+{% block classes_body %}ahp-module-page ami-page{% endblock %}
+{% block estilos_pagina %}<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css"><link rel="stylesheet" href="/assets/css/ahp-module.css"><link rel="stylesheet" href="/assets/css/ahp-collab-analytics.css"><link rel="stylesheet" href="/assets/css/ahp-collab-explorer.css"><link rel="stylesheet" href="/assets/css/ahp-collab-rounds.css"><link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui1">{% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
-<main class="conteudo-principal app-main ami-main" data-julgamento-id="{{ julgamento_id }}" id="ami-workspace">
+<main class="conteudo-principal app-main ahp-main ami-main" data-julgamento-id="{{ julgamento_id }}" id="ami-workspace">
   <section class="secao-cabecalho-julgamento ami-hero"><div><a href="/restrict/analise-multicriterio/" class="ami-back">← Julgamentos</a><p class="ami-eyebrow">Espaço de trabalho</p><h1 id="ami-title">Carregando julgamento…</h1><p id="ami-subtitle"></p></div><span class="ami-status" id="ami-status"></span></section>
   {% set tabela_colaborativa_id = "ami-workspace-database" %}{% include "componentes/_tabela_colaborativa.html" %}
   <nav class="ami-tabs" role="tablist"><button class="is-active" data-tab="config">Configuração</button><button data-tab="participants">Participantes</button><button data-tab="responses">Respostas</button><button data-tab="consolidation">Consolidação</button></nav>

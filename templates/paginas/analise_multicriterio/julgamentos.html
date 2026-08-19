@@ -3,15 +3,19 @@
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 {% block titulo %}Julgamentos interativos — SICARD{% endblock %}
-{% block classes_body %}ami-page{% endblock %}
+{% block classes_body %}ahp-module-page ami-page{% endblock %}
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
-  <link rel="stylesheet" href="/assets/css/analise-multicriterio.css">
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="/assets/css/ahp-collab-analytics.css">
+  <link rel="stylesheet" href="/assets/css/ahp-collab-explorer.css">
+  <link rel="stylesheet" href="/assets/css/ahp-collab-rounds.css">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui1">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
-<main class="conteudo-principal app-main ami-main">
-  <section class="secao-cabecalho-julgamentos ami-hero">
+<main class="conteudo-principal app-main ahp-main ami-main">
+  <section class="secao-cabecalho-julgamentos card ahp-step-intro ami-hero">
     <div><p class="ami-eyebrow">Análise Multicritério Interativa</p><h1 id="ami-page-title">Julgamentos</h1><p id="ami-page-intro">Crie e acompanhe os julgamentos interativos.</p></div>
     <button class="btn btn-primary" id="ami-new"><i class="fa-solid fa-plus"></i> Novo julgamento</button>
   </section>
