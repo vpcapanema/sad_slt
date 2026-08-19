@@ -15,10 +15,8 @@
     <div><p class="ami-eyebrow">Análise Multicritério Interativa</p><h1 id="ami-page-title">Julgamentos</h1><p id="ami-page-intro">Crie e acompanhe os julgamentos interativos.</p></div>
     <button class="btn btn-primary" id="ami-new"><i class="fa-solid fa-plus"></i> Novo julgamento</button>
   </section>
-  <section class="secao-lista-julgamentos ami-panel">
-    <div class="ami-toolbar"><label for="ami-search">Buscar</label><input id="ami-search" class="form-control" type="search" placeholder="Código, hierarquização ou status"><span id="ami-count"></span></div>
-    <div class="ami-table-wrap"><table class="ami-table"><thead><tr><th>Hierarquização</th><th>Status</th><th>Participantes</th><th>Respostas</th><th>Prazo</th><th>Consistência</th><th>Ação</th></tr></thead><tbody id="ami-judgments"></tbody></table></div>
-  </section>
+  <div class="ami-toolbar ami-panel"><label for="ami-search">Buscar</label><input id="ami-search" class="form-control" type="search" placeholder="Código, hierarquização ou status"><span id="ami-count"></span></div>
+  {% set tabela_colaborativa_id = "ami-judgments" %}{% include "componentes/_tabela_colaborativa.html" %}
 </main>
 <div class="ami-modal is-hidden" id="ami-create-modal" role="dialog" aria-modal="true" aria-labelledby="ami-create-title">
   <form class="ami-modal-card" id="ami-create-form"><div class="ami-modal-head"><h2 id="ami-create-title">Novo julgamento</h2><button type="button" id="ami-create-close" aria-label="Fechar">×</button></div>
@@ -33,5 +31,6 @@
 {% endblock %}
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-tabela.js"></script>
   <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js"></script>
 {% endblock %}

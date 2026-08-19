@@ -3,6 +3,8 @@
   var julgamentos = [];
   var hierarquizacoes = [];
   var modo = new URLSearchParams(location.search).get("modo") || "julgamentos";
+  var prefixMatch = location.pathname.match(/^(.*?)\/restrict\//);
+  var appPrefix = prefixMatch ? prefixMatch[1] : "";
   var $ = function (id) { return document.getElementById(id); };
   var escapeHtml = function (value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML; };
   function api(url, options) {
@@ -24,17 +26,11 @@
       return [j.hierarquizacao_codigo, h && h.nome, statusLabel(j.status)].join(" ").toLowerCase().includes(query);
     });
     $("ami-count").textContent = rows.length + (rows.length === 1 ? " julgamento" : " julgamentos");
-    $("ami-judgments").innerHTML = rows.length ? rows.map(function (j) {
-      var h = hierarquizacoes.find(function (item) { return item.id === j.hierarquizacao_id; });
-      var total = (j.convites || []).length;
-      var rc = j.consolidacao ? Number(j.consolidacao.razao_consistencia).toFixed(3) : "—";
-      var destino = modo === "formulario" ? "/public/analise-multicriterio/" + encodeURIComponent(j.token) + "/" : "/restrict/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/";
-      var rotulo = modo === "formulario" ? "Abrir formulário" : modo === "espaco" ? "Abrir espaço" : "Abrir";
-      return "<tr><td><strong>" + escapeHtml(h && h.nome || j.hierarquizacao_codigo) + "</strong><small>" + escapeHtml(j.hierarquizacao_codigo) + "</small></td>" +
-        '<td><span class="ami-status ami-status--' + escapeHtml(j.status) + '">' + escapeHtml(statusLabel(j.status)) + "</span></td>" +
-        "<td>" + total + "</td><td>" + j.total_respostas + " / " + total + "</td><td>" + new Date(j.valido_ate).toLocaleString("pt-BR") + "</td><td>" + rc + "</td>" +
-        '<td><a class="btn btn-sm btn-primary" href="' + destino + '">' + rotulo + '</a></td></tr>';
-    }).join("") : '<tr><td colspan="7" class="ami-empty">Nenhum julgamento encontrado.</td></tr>';
+    window.renderTabelaColaborativa("ami-judgments", rows, function (j) {
+      return modo === "formulario"
+        ? { href: appPrefix + "/public/analise-multicriterio/" + encodeURIComponent(j.token) + "/", label: "Abrir formulário" }
+        : { href: appPrefix + "/restrict/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/", label: modo === "espaco" ? "Abrir espaço" : "Abrir" };
+    });
   }
   function openModal() { $("ami-create-modal").classList.remove("is-hidden"); $("ami-hierarchy").focus(); }
   function closeModal() { $("ami-create-modal").classList.add("is-hidden"); $("ami-create-feedback").textContent = ""; }
@@ -49,7 +45,7 @@
       $("ami-page-intro").textContent = "Selecione um julgamento para abrir o formulário público de participação.";
       $("ami-new").classList.add("is-hidden");
     }
-    Promise.all([api("/api/hierarquizacoes"), api("/api/ahp/comparacao-colaborativa/ambientes")]).then(function (values) {
+    Promise.all([api(appPrefix + "/api/hierarquizacoes"), api(appPrefix + "/api/ahp/comparacao-colaborativa/ambientes")]).then(function (values) {
       hierarquizacoes = values[0]; julgamentos = values[1];
       $("ami-hierarchy").insertAdjacentHTML("beforeend", hierarquizacoes.map(function (h) { return '<option value="' + h.id + '">' + escapeHtml(h.codigo + " — " + h.nome) + "</option>"; }).join(""));
       render();
@@ -61,8 +57,8 @@
       event.preventDefault(); var convites = emails($("ami-emails").value); var feedback = $("ami-create-feedback");
       if (!convites.length) { feedback.textContent = "Informe ao menos um e-mail."; return; }
       feedback.textContent = "Abrindo julgamento…";
-      api("/api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: $("ami-hierarchy").value, convites: convites.map(function (email) { return { email: email }; }), valido_ate: new Date($("ami-deadline").value).toISOString() }) }).then(function (j) {
-        location.href = "/restrict/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/";
+      api(appPrefix + "/api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: $("ami-hierarchy").value, convites: convites.map(function (email) { return { email: email }; }), valido_ate: new Date($("ami-deadline").value).toISOString() }) }).then(function (j) {
+        location.href = appPrefix + "/restrict/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/";
       }).catch(function (err) { feedback.textContent = err.message; });
     });
   });

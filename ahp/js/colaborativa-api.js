@@ -4,7 +4,9 @@
 (function (global) {
   "use strict";
 
-  var BASE = "/api/ahp/comparacao-colaborativa";
+  var prefixMatch = global.location.pathname.match(/^(.*?)\/(?:restrict|public)\//);
+  var APP_PREFIX = prefixMatch ? prefixMatch[1] : "";
+  var BASE = APP_PREFIX + "/api/ahp/comparacao-colaborativa";
 
   function request(path, options) {
     return fetch(BASE + path, { credentials: "same-origin", ...(options || {}) }).then(function (res) {
@@ -22,6 +24,9 @@
   }
 
   global.SLTColaborativaApi = {
+    listarAmbientes: function () {
+      return request("/ambientes");
+    },
     criarAmbiente: function (payload) {
       return request("/ambientes", {
         method: "POST",

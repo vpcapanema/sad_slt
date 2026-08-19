@@ -9,6 +9,7 @@
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="conteudo-principal app-main ami-main" data-julgamento-id="{{ julgamento_id }}" id="ami-workspace">
   <section class="secao-cabecalho-julgamento ami-hero"><div><a href="/restrict/analise-multicriterio/" class="ami-back">← Julgamentos</a><p class="ami-eyebrow">Espaço de trabalho</p><h1 id="ami-title">Carregando julgamento…</h1><p id="ami-subtitle"></p></div><span class="ami-status" id="ami-status"></span></section>
+  {% set tabela_colaborativa_id = "ami-workspace-database" %}{% include "componentes/_tabela_colaborativa.html" %}
   <nav class="ami-tabs" role="tablist"><button class="is-active" data-tab="config">Configuração</button><button data-tab="participants">Participantes</button><button data-tab="responses">Respostas</button><button data-tab="consolidation">Consolidação</button></nav>
   <section class="secao-configuracao-julgamento ami-panel ami-tab" id="tab-config"><h2>Configuração</h2><div class="ami-detail-grid" id="ami-config-details"></div><h3>Critérios do julgamento</h3><div class="ami-chips" id="ami-criteria"></div></section>
   <section class="secao-participantes-julgamento ami-panel ami-tab is-hidden" id="tab-participants"><h2>Participantes e prazo</h2><form id="ami-edit-form"><label>E-mails convidados<textarea id="ami-edit-emails" class="form-control" rows="6"></textarea></label><label>Prazo<input id="ami-edit-deadline" type="datetime-local" class="form-control"></label><p class="ami-feedback" id="ami-edit-feedback"></p><div class="ami-actions"><button class="btn btn-primary" type="submit">Salvar alterações</button><button class="btn btn-secondary" type="button" id="ami-copy-link">Copiar link público</button></div></form></section>
@@ -16,4 +17,4 @@
   <section class="secao-consolidacao-julgamento ami-panel ami-tab is-hidden" id="tab-consolidation"><h2>Consolidação do julgamento</h2><p>A matriz do grupo é agregada por média geométrica das respostas consistentes.</p><div id="ami-consolidation"></div><p class="ami-feedback" id="ami-consolidation-feedback"></p><button class="btn btn-success" id="ami-consolidate"><i class="fa-solid fa-calculator"></i> Consolidar respostas</button></section>
 </main>
 {% endblock %}
-{% block scripts_pagina %}<script src="/assets/js/admin-auth.js"></script><script src="/assets/js/paginas/analise-multicriterio-julgamento.js"></script>{% endblock %}
+{% block scripts_pagina %}<script src="/assets/js/admin-auth.js"></script><script src="/assets/js/paginas/analise-multicriterio-tabela.js"></script><script src="/assets/js/paginas/analise-multicriterio-julgamento.js"></script>{% endblock %}
