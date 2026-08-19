@@ -51,7 +51,7 @@
 
 {% block painel %}
   <main class="conteudo-principal geo-map-workspace" aria-label="Mapa dos produtos geoespaciais homologados">
-    <div id="map-geoespacial" class="geoespacial-map"></div>
+    <div id="map-geoespacial" class="geoespacial-map"><div class="painel-map-loading" role="status" aria-live="polite"><span class="painel-loading-spinner" aria-hidden="true"></span><span>Preparando mapa e camadas…</span></div></div>
     <div class="geoespacial-map-caption"><i class="fa-solid fa-circle-info"></i> Marque uma camada homologada para visualização.</div>
     <aside class="geo-context-panel" aria-label="Legenda e detalhes do produto">
       <div class="geo-context-tabs" role="tablist">

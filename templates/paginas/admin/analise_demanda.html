@@ -3,7 +3,7 @@
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 
-{% block titulo %}Demanda — Admin SLT{% endblock %}
+{% block titulo %}Análise de demanda — Admin SLT{% endblock %}
 {% block classes_body %}admin-data-page admin-dashboard-page  page-admin-demanda{% endblock %}
 {% block classes_barra_lateral %}admin-dashboard-sidebar{% endblock %}
 {% block rotulo_barra_lateral %}Demandas{% endblock %}
@@ -21,7 +21,13 @@
             <a href="/restrict/painel/">Painel de demandas</a>
             <a href="/restrict/demandas/" class="is-active" aria-current="page">Tabela de demandas</a>
           </nav>
-          <div id="records-root" class="layer-group layer-group--root">
+          <div id="painel-layer-filter" class="painel-layer-filter" aria-label="Filtro de demandas">
+            <span class="painel-layer-filter-icon" aria-hidden="true"></span>
+            <select class="painel-layer-filter-field" aria-label="Campo do filtro"><option value="">Selecione um campo</option></select>
+            <select class="painel-layer-filter-value" aria-label="Valor do filtro"><option value="">Selecione um valor</option></select>
+            <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--apply" aria-label="Aplicar filtro"><span aria-hidden="true">✓</span></button>
+            <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--clear" aria-label="Limpar filtro"><span aria-hidden="true">✕</span></button>
+          </div>          <div id="records-root" class="layer-group layer-group--root">
             <button
               type="button"
               class="layer-group-header layer-group-header--section"
@@ -33,7 +39,7 @@
               <span class="layer-group-name">Demandas</span>
               <span id="records-count" class="layer-group-active-count"></span>
             </button>
-            <div id="records-list" class="layer-group-body layers-container admin-records-list demandas-tree"></div>
+            <div id="records-list" class="layer-group-body layers-container admin-records-list demandas-tree">{% include "componentes/_painel_sidebar_loading.html" %}</div>
           </div>
         </div>
 {% endblock %}
@@ -42,7 +48,7 @@
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 
       <main class="conteudo-principal admin-dashboard-content layout-main-scroll" id="dashboard-content">
-        <p class="hint">Carregando demanda…</p>
+        <p class="hint">Nenhuma demanda selecionada. Selecione uma demanda na barra lateral para iniciar a análise.</p>
       </main>
 {% endblock %}
 
@@ -55,6 +61,7 @@
   <script src="/assets/js/status-colors.js"></script>
   <script src="/assets/js/admin-labels.js"></script>
   <script src="/assets/js/admin-ui.js"></script>
+  <script src="/assets/js/painel-layer-filter.js"></script>
   <script src="/assets/js/grouped-sidebar.js"></script>
   <script src="/assets/js/admin-dashboard.js"></script>
   <script src="/assets/js/admin-analysis-info.js"></script>

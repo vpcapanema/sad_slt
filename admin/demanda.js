@@ -47,6 +47,7 @@
   let tipo = "projeto";
   let record = null;
   let selectedId = null;
+  let layerFilterApi = null;
   const lists = { projeto: [], programa: [], plano: [] };
 
   function $(sel, root) {
@@ -772,12 +773,39 @@
   // ===========================================================================
   // Sidebar (agrupada por tipo) + seleção
   // ===========================================================================
+  function filterItem(r) {
+    return { ...r, tipo: r.__tipo || tipo };
+  }
+
+  function allFilterItems() {
+    return TIPOS.flatMap((t) => (lists[t.id] || []).map(filterItem));
+  }
+
+  function filteredRecords(tipoId) {
+    const activeFilter = layerFilterApi?.getFilter?.();
+    return (lists[tipoId] || []).filter((r) =>
+      SLTPainelLayerFilter.matches(filterItem(r), activeFilter),
+    );
+  }
+
+  function initLayerFilter() {
+    layerFilterApi = SLTPainelLayerFilter.init({
+      container: "#painel-layer-filter",
+      getAllItems: allFilterItems,
+      statusLabel: (code) =>
+        SLTStatusColors.STATUS_OBJETO[code]
+          ? SLTStatusColors.getStatusObjeto(code).nome
+          : SLTStatusColors.getStatusDemanda(code).nome,
+      onFilterChange: renderSidebar,
+    });
+  }
+
   function renderSidebar() {
     SLTAdminDashboard.renderGroupedRecordsSidebar({
       groups: TIPOS.map((t) => ({
         id: t.id,
         label: t.label,
-        records: lists[t.id],
+        records: filteredRecords(t.id),
       })),
       selectedId,
       getRecordId: (r) => r.id,
@@ -822,7 +850,7 @@
       history.replaceState(
         null,
         "",
-        `demanda/?tipo=${encodeURIComponent(tipo)}&id=${encodeURIComponent(id)}`,
+        `/restrict/demanda/?tipo=${encodeURIComponent(tipo)}&id=${encodeURIComponent(id)}`,
       );
     }
     const d = await API[tipo].get(id);
@@ -901,13 +929,6 @@
     }
   }
 
-  function firstAvailable() {
-    for (const t of TIPOS) {
-      if ((lists[t.id] || []).length)
-        return { tipo: t.id, id: lists[t.id][0].id };
-    }
-    return null;
-  }
 
   async function boot() {
     const { tipo: urlTipo, id } = paramsFromUrl();
@@ -916,13 +937,10 @@
       await selectRecord(t, id, { updateUrl: false });
       return;
     }
-    const first = firstAvailable();
-    if (first) {
-      await selectRecord(first.tipo, first.id);
-      return;
-    }
+    record = null;
+    selectedId = null;
     $("#dashboard-content").innerHTML =
-      '<p class="hint">Nenhuma demanda registrada. <a href="/restrict/demandas/">Voltar à lista</a>.</p>';
+      '<p class="hint">Nenhuma demanda selecionada. Selecione uma demanda na barra lateral para iniciar a análise.</p>';
     renderSidebar();
   }
 
@@ -930,6 +948,7 @@
     const user = await SLTAdminAuth.requireAuth();
     if (!user) return;
     await SLTAdminLabels.init("../");
+    initLayerFilter();
     SLTAdminDashboard.initRecordsRootCollapse({});
     await refreshLists();
     await boot();

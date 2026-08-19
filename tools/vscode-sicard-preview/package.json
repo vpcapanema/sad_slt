@@ -1,0 +1,63 @@
+{
+    "name":  "sicard-template-preview",
+    "displayName":  "SICARD Template Preview",
+    "description":  "Abre templates Jinja do SICARD renderizados pelo servidor local.",
+    "version":  "0.1.2",
+    "publisher":  "vpcapanema",
+    "engines":  {
+                    "vscode":  "^1.85.0"
+                },
+    "categories":  [
+                       "Other"
+                   ],
+    "activationEvents":  [
+                             "onCommand:sicardPreview.openCurrentTemplate"
+                         ],
+    "main":  "./extension.js",
+    "contributes":  {
+                        "commands":  [
+                                         {
+                                             "command":  "sicardPreview.openCurrentTemplate",
+                                             "title":  "SICARD: iniciar e abrir pÃƒÂ¡gina atual",
+                                             "icon":  "$(open-preview)"
+                                         }
+                                     ],
+                        "menus":  {
+                                      "editor/context":  [
+                                                             {
+                                                                 "command":  "sicardPreview.openCurrentTemplate",
+                                                                 "when":  "resourceExtname == .html",
+                                                                 "group":  "1_modification@1"
+                                                             }
+                                                         ],
+                                      "explorer/context":  [
+                                                               {
+                                                                   "command":  "sicardPreview.openCurrentTemplate",
+                                                                   "when":  "resourceExtname == .html",
+                                                                   "group":  "navigation@1"
+                                                               }
+                                                           ]
+                                  },
+                        "configuration":  {
+                                              "title":  "SICARD Template Preview",
+                                              "properties":  {
+                                                                 "sicardPreview.baseUrl":  {
+                                                                                               "type":  "string",
+                                                                                               "default":  "http://127.0.0.1:8080",
+                                                                                               "description":  "EndereÃƒÂ§o do servidor local do SICARD."
+                                                                                           },
+                                                                 "sicardPreview.startTask":  {
+                                                                                                 "type":  "string",
+                                                                                                 "default":  "SICARD: Iniciar ambiente de desenvolvimento",
+                                                                                                 "description":  "Tarefa do workspace usada para iniciar o servidor."
+                                                                                             },
+                                                                 "sicardPreview.startTimeoutSeconds":  {
+                                                                                                           "type":  "number",
+                                                                                                           "default":  120,
+                                                                                                           "minimum":  10,
+                                                                                                           "description":  "Tempo mÃƒÂ¡ximo para aguardar o healthcheck local."
+                                                                                                       }
+                                                             }
+                                          }
+                    }
+}

@@ -79,6 +79,10 @@
         ...mapOptions,
       });
 
+      this.map.once("load", () => {
+        document.querySelector(`#${elementId} .painel-map-loading`)?.remove();
+      });
+
       this.map.addControl(new maplibregl.NavigationControl({ showCompass: nativeTools }), "bottom-right");
       if (nativeTools) {
         this.map.addControl(new maplibregl.FullscreenControl(), "top-right");

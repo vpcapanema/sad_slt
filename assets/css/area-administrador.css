@@ -519,3 +519,9 @@
   .admin-sidebar { border-right: 0; border-bottom: 1px solid var(--admin-border); }
   .admin-modal-body { grid-template-columns: 1fr; }
 }
+
+.admin-schema.is-targeted > .admin-schema-toggle {
+  color: #fff;
+  background: rgba(54, 162, 105, 0.2);
+  box-shadow: inset 3px 0 0 var(--pli-green, #36a269);
+}

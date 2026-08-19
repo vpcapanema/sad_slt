@@ -3246,3 +3246,77 @@ body.admin-data-page .app-header--restricted .admin-session-bar-inner {
   font-size: 1rem;
   line-height: 1;
 }
+
+/* Estrutura inicial dos painéis cartográficos (renderizada no HTML). */
+#map-painel,
+#map-geoespacial {
+  position: relative;
+}
+
+.painel-map-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 450;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 12rem;
+  color: var(--pli-navy, #003b5a);
+  background: linear-gradient(135deg, #eef5f2 0%, #e4eeea 100%);
+  font-size: 0.78rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.painel-loading-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(0, 59, 90, 0.2);
+  border-top-color: var(--pli-green, #36a269);
+  border-radius: 50%;
+  animation: painel-loading-spin 0.8s linear infinite;
+}
+
+.painel-sidebar-loading .layer-group-header {
+  cursor: default;
+}
+
+.painel-loading-check {
+  flex: 0 0 0.9rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-inline: 0.2rem;
+  border: 1px solid rgba(0, 59, 90, 0.25);
+  border-radius: 0.2rem;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.painel-sidebar-loading .layers-empty {
+  position: relative;
+  overflow: hidden;
+}
+
+.painel-sidebar-loading .layers-empty::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+  animation: painel-loading-shimmer 1.35s ease-in-out infinite;
+}
+
+@keyframes painel-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes painel-loading-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .painel-loading-spinner,
+  .painel-sidebar-loading .layers-empty::after {
+    animation: none;
+  }
+}

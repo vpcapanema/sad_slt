@@ -107,7 +107,7 @@ PUBLIC_CADASTRO_PAGES = {
 RESTRICTED_PAGES = {
     "painel": "painel.html",
     "demandas": "demandas.html",
-    "demanda": "demanda.html",
+    "demanda": "analise_demanda.html",
     "revisao-status": "revisao-status.html",
     "complementacao": "complementacao.html",
 }

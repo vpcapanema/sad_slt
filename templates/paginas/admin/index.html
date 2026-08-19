@@ -8,13 +8,21 @@
 {% block base_url %}<base href="/restrict/" />{% endblock %}
 
 {% block estilos_pagina %}
-  <link rel="stylesheet" href="/restrict/index.css?v=20260807a" />
+  <link rel="stylesheet" href="/restrict/hierarquizacao/platform-map.css?v=20260814-1">
+  <link rel="stylesheet" href="/restrict/index.css?v=20260817g" />
   <link
       rel="stylesheet"
       href="/assets/vendor/fontawesome/css/all.min.css"
     />
 {% endblock %}
 
+
+{% macro link_card(href, icon, title, tone='blue') %}
+  <a class="platform-tile platform-tile--{{ tone }}" href="{{ href }}" title="{{ title }}">
+    <span class="platform-tile__icon"><i class="{{ icon }}" aria-hidden="true"></i></span>
+    <span class="platform-tile__label">{{ title }}</span>
+  </a>
+{% endmacro %}
 {% block conteudo %}
 <div
       id="admin-session-bar"
@@ -91,152 +99,67 @@
         </div>
       </section>
 
-      <div class="restrict-module-list">
-        <details class="restrict-module" open>
-          <summary>
-            <span class="restrict-module-icon"
-              ><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i
-            ></span>
-            <span class="restrict-module-title">MOCAD — Cadastro e análise</span>
-            <i
-              class="fa-solid fa-chevron-down restrict-module-chevron"
-              aria-hidden="true"
-            ></i>
-          </summary>
-          <div class="restrict-module-links">
-            <a href="/restrict/painel/">
-              <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
-              <span
-                ><strong>Painel de demandas</strong
-                ><small
-                  >Visualize e acompanhe as demandas no painel.</small
-                ></span
-              >
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-            </a>
-            <a href="/restrict/demandas/">
-              <i class="fa-solid fa-table-list" aria-hidden="true"></i>
-              <span
-                ><strong>Tabela de demandas</strong
-                ><small
-                  >Consulte e gerencie os registros cadastrados.</small
-                ></span
-              >
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-            </a>
-            <a href="/restrict/complementacao/">
-              <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
-              <span><strong>Complementação de cadastro</strong><small>Preencha atributos adicionais solicitados pela matriz vigente.</small></span>
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-            </a>
+      <div class="platform-groups-grid restrict-platform-groups">
+        <div class="restrict-platform-row restrict-platform-row--operacao">
+        <section class="platform-group secao-platform-mocad" aria-labelledby="group-mocad">
+          <div class="platform-group__heading"><div><h2 id="group-mocad">MOCAD</h2><p class="platform-group__subtitle">Módulo de cadastro e análise</p><p>Cadastre, acompanhe e analise as demandas.</p></div></div>
+          <div class="platform-grid">
+            {{ link_card('/restrict/painel/', 'fa-solid fa-map-location-dot', 'Painel de demandas', 'blue') }}
+            {{ link_card('/restrict/demandas/', 'fa-solid fa-table-list', 'Tabela de demandas', 'blue') }}
+            {{ link_card('/restrict/demanda/', 'fa-solid fa-magnifying-glass-chart', 'Análise de demandas', 'blue') }}
+            {{ link_card('/restrict/complementacao/', 'fa-solid fa-pen-to-square', 'Complementação de cadastro', 'blue') }}
           </div>
-        </details>
+        </section>
 
-        <details class="restrict-module" open>
-          <summary>
-            <span class="restrict-module-icon"
-              ><i class="fa-solid fa-ranking-star" aria-hidden="true"></i
-            ></span>
-            <span class="restrict-module-title">MAD — Apoio à decisão</span>
-            <i
-              class="fa-solid fa-chevron-down restrict-module-chevron"
-              aria-hidden="true"
-            ></i>
-          </summary>
-          <div class="restrict-module-links">
-            <a href="/restrict/hierarquizacao/">
-              <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
-              <span
-                ><strong>Hierarquização e Ranking</strong
-                ><small>Acesse a árvore completa do processo.</small></span
-              >
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-            </a>
-            <a href="/restrict/hierarquizacao/processos/">
-              <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-              <span
-                ><strong>Processos de hierarquização</strong
-                ><small>Cadastre e acompanhe as hierarquizações.</small></span
-              >
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-            </a>
-            <a href="/restrict/geoespacial/produtos/">
-              <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
-              <span
-                ><strong>Produtos geoespaciais</strong
-                ><small
-                  >Consulte os insumos e produtos territoriais.</small
-                ></span
-              >
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-            </a>
+        <section class="platform-group secao-platform-mad" aria-labelledby="group-mad">
+          <div class="platform-group__heading"><div><h2 id="group-mad">MAD</h2><p class="platform-group__subtitle">Módulo de apoio à decisão</p><p>Estruture processos, critérios e produtos territoriais.</p></div></div>
+          <div class="platform-grid">
+            {{ link_card('/restrict/hierarquizacao/', 'fa-solid fa-diagram-project', 'Hierarquização e Ranking', 'green') }}
+            {{ link_card('/restrict/hierarquizacao/processos/', 'fa-solid fa-list-check', 'Processos de hierarquização', 'green') }}
+            {{ link_card('/restrict/geoespacial/produtos/', 'fa-solid fa-layer-group', 'Produtos geoespaciais', 'green') }}
           </div>
-        </details>
+        </section>
 
-        <details class="restrict-module" open>
-          <summary>
-            <span class="restrict-module-icon"
-              ><i class="fa-solid fa-chart-line" aria-hidden="true"></i
-            ></span>
-            <span class="restrict-module-title"
-              >Resultados e Transparência</span
-            >
-            <i
-              class="fa-solid fa-chevron-down restrict-module-chevron"
-              aria-hidden="true"
-            ></i>
-          </summary>
-          <div class="restrict-module-links">
-            <a href="/restrict/hierarquizacao/ranking/">
-              <i class="fa-solid fa-ranking-star" aria-hidden="true"></i>
-              <span
-                ><strong>Resultados e ranking de demandas</strong
-                ><small
-                  >Consulte as hierarquizações finalizadas, os rankings e os mapas dos objetos classificados.</small
-                ></span
-              >
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-            </a>
-            <a href="/public/transparencia/">
-              <i class="fa-solid fa-eye" aria-hidden="true"></i>
-              <span
-                ><strong>Transparência e acompanhamento</strong
-                ><small
-                  >Acesse os resultados disponibilizados ao público.</small
-                ></span
-              >
-              <i
-                class="fa-solid fa-arrow-up-right-from-square"
-                aria-hidden="true"
-              ></i>
-            </a>
+        </div>
+        <div class="restrict-platform-row restrict-platform-row--governanca">
+        <section class="platform-group secao-platform-resultados" aria-labelledby="group-resultados">
+          <div class="platform-group__heading"><div><h2 id="group-resultados">RESULTADOS</h2><p class="platform-group__subtitle">Resultados e transparência</p><p>Consulte rankings e informações disponibilizadas ao público.</p></div></div>
+          <div class="platform-grid">
+            {{ link_card('/restrict/hierarquizacao/ranking/', 'fa-solid fa-ranking-star', 'Resultados e ranking de demandas', 'violet') }}
+            {{ link_card('/public/transparencia/', 'fa-solid fa-eye', 'Transparência e acompanhamento', 'violet') }}
           </div>
-        </details>
+        </section>
 
-        <details class="restrict-module" data-permission="administer" hidden>
-          <summary>
-            <span class="restrict-module-icon"
-              ><i class="fa-solid fa-database" aria-hidden="true"></i
-            ></span>
-            <span class="restrict-module-title">Administração do sistema</span>
-            <i
-              class="fa-solid fa-chevron-down restrict-module-chevron"
-              aria-hidden="true"
-            ></i>
-          </summary>
-          <div class="restrict-module-links">
-            <a href="/restrict/admin/">
-              <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
-              <span
-                ><strong>Área do Administrador</strong
-                ><small
-                  >Gerencie diretamente as tabelas do banco de dados.</small
-                ></span
-              >
-              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-            </a>
+        <section class="platform-group secao-platform-administracao" data-permission="administer" hidden aria-labelledby="group-administracao">
+          <div class="platform-group__heading"><div><h2 id="group-administracao">ADMIN</h2><p class="platform-group__subtitle">Tabelas do banco de dados</p><p>Acesse diretamente cada grupo da administração do sistema.</p></div></div>
+          <div class="platform-grid">
+            {{ link_card('/restrict/admin/?menu=__dominios__', 'fa-solid fa-list', 'Tabelas de domínio', 'navy') }}
+            {{ link_card('/restrict/admin/?menu=ahp', 'fa-solid fa-scale-balanced', 'AHP', 'navy') }}
+            {{ link_card('/restrict/admin/?menu=auditoria', 'fa-solid fa-shield-halved', 'Auditoria', 'navy') }}
+            {{ link_card('/restrict/admin/?menu=demandas', 'fa-solid fa-inbox', 'Demandas', 'navy') }}
+            {{ link_card('/restrict/admin/?menu=geo', 'fa-solid fa-earth-americas', 'Geografia', 'navy') }}
+            {{ link_card('/restrict/admin/?menu=geoprocessamento', 'fa-solid fa-layer-group', 'Geoprocessamento', 'navy') }}
+            {{ link_card('/restrict/admin/?menu=hierarquizacao_demandas', 'fa-solid fa-ranking-star', 'Hierarquização de Demandas', 'navy') }}
           </div>
-        </details>
+        </section>
+      </div>
+        <div class="restrict-platform-row restrict-platform-row--ahp">
+          <section class="platform-group secao-platform-ahp-restrict" aria-labelledby="group-ahp-restrict">
+            <div class="platform-group__heading"><div><h2 id="group-ahp-restrict">AHP</h2><p class="platform-group__subtitle">Análise multicritério</p><p>Defina critérios, compare prioridades e gere pesos para apoiar a decisão.</p></div></div>
+            <div class="platform-grid">
+              {{ link_card('/restrict/ahp/', 'fa-solid fa-scale-balanced', 'Central AHP', 'teal') }}
+              {{ link_card('/restrict/ahp/analise/', 'fa-solid fa-diagram-project', 'Calculadora AHP', 'teal') }}
+              {{ link_card('/restrict/ahp/configuracao/', 'fa-solid fa-crosshairs', 'Configuração', 'teal') }}
+              {{ link_card('/restrict/ahp/criterios/', 'fa-solid fa-table-list', 'Critérios', 'teal') }}
+              {{ link_card('/restrict/ahp/nomes/', 'fa-solid fa-pen-to-square', 'Nomes', 'teal') }}
+              {{ link_card('/restrict/ahp/metodo/', 'fa-solid fa-route', 'Método', 'teal') }}
+              {{ link_card('/restrict/ahp/comparacao/', 'fa-solid fa-scale-unbalanced-flip', 'Comparação pareada', 'teal') }}
+              {{ link_card('/restrict/ahp/respostas-colaborativas/', 'fa-solid fa-users', 'Respostas colaborativas', 'teal') }}
+              {{ link_card('/restrict/ahp/resultados/', 'fa-solid fa-chart-column', 'Pesos e resultados', 'teal') }}
+              {{ link_card('/restrict/ahp/alternativas/', 'fa-solid fa-diagram-project', 'Alternativas', 'teal') }}
+            </div>
+          </section>
+        </div>
       </div>
     </main>
 {% endblock %}

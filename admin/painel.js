@@ -669,6 +669,9 @@
   function initMap() {
     map = SLTPainelMapControls.initPainelMap("map-painel");
     map._sltInitialViewReady = false;
+    requestAnimationFrame(() => {
+      document.querySelector("#map-painel .painel-map-loading")?.remove();
+    });
     map.on("move zoom", () => {
       if (openEntry && anchorMode === "map" && mapAnchorLatLng) {
         anchorRef = mapAnchorLatLng;
@@ -703,6 +706,16 @@
   }
 
   async function init() {
+    // Estrutura visual primeiro: não bloqueie o mapa e a legenda nas consultas.
+    initLayerFilter();
+    initMap();
+    initLayersSectionCollapse();
+    SLTStatusColors.renderLegend("#status-legend", {
+      layout: "painel",
+      labelFn: (codigo) => SLTStatusColors.getStatusDemanda(codigo).nome,
+    });
+    bindLegendLayoutRefresh();
+
     const user = await SLTAdminAuth.requireAuth();
     if (!user) return;
     await SLTAdminLabels.init("../");
@@ -714,16 +727,9 @@
 
     buildEntries();
     initRecordOrder();
-    initLayerFilter();
-    initMap();
-    initLayersSectionCollapse();
-    SLTStatusColors.renderLegend("#status-legend", {
-      layout: "painel",
-      labelFn: (codigo) => SLTStatusColors.getStatusDemanda(codigo).nome,
-    });
-    bindLegendLayoutRefresh();
     renderEntriesList();
     buildMapLayers();
+    document.querySelector("#map-painel .painel-map-loading")?.remove();
   }
 
   init().catch((err) => {

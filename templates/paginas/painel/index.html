@@ -19,8 +19,8 @@
           <div id="painel-layers-root" class="layer-group layer-group--root">
             <div id="painel-layer-filter" class="painel-layer-filter" aria-label="Filtro de camadas">
               <span class="painel-layer-filter-icon" aria-hidden="true"></span>
-              <select class="painel-layer-filter-field" aria-label="Campo do filtro"></select>
-              <select class="painel-layer-filter-value" aria-label="Valor do filtro"></select>
+              <select class="painel-layer-filter-field" aria-label="Campo do filtro"><option value="">Selecione um campo</option></select>
+              <select class="painel-layer-filter-value" aria-label="Valor do filtro"><option value="">Selecione um valor</option></select>
               <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--apply" aria-label="Aplicar filtro"><span aria-hidden="true">✓</span></button>
               <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--clear" aria-label="Limpar filtro"><span aria-hidden="true">✕</span></button>
             </div>
@@ -29,7 +29,7 @@
               <span class="layer-group-name">Demandas</span>
               <span id="demandas-count" class="layer-group-active-count"></span>
             </button>
-            <div id="layers-container" class="layer-group-body layers-container demandas-tree" role="list" aria-label="Demandas"></div>
+            <div id="layers-container" class="layer-group-body layers-container demandas-tree" role="list" aria-label="Demandas">{% include "componentes/_painel_sidebar_loading.html" %}</div>
             <p id="lista-vazia" class="layers-empty hint hidden">
               Nenhuma demanda está disponível para consulta pública neste momento.
             </p>
@@ -39,8 +39,11 @@
 
 {% block painel %}
 <main class="conteudo-principal painel-dashboard-map" aria-label="Mapa das demandas">
-        <div id="map-painel"></div>
-        <div id="status-legend" class="status-color-legend-host status-color-legend-host--map" data-legend-start="expanded" aria-label="Legenda de cores por status"></div>
+        <div id="map-painel"><div class="painel-map-loading" role="status" aria-live="polite"><span class="painel-loading-spinner" aria-hidden="true"></span><span>Preparando mapa e camadas…</span></div></div>
+        <div id="status-legend" class="status-color-legend-host status-color-legend-host--map" data-legend-start="expanded" aria-label="Legenda de cores por status"><button type="button" class="status-legend-map-toggle" aria-expanded="false" aria-controls="status-legend-panel" disabled>
+  <span class="status-legend-map-toggle-start"><span class="status-legend-map-icon" aria-hidden="true">◆</span><span class="status-color-legend-title">Legenda de status</span></span>
+</button>
+<div id="status-legend-panel" class="status-legend-map-panel"><p class="status-legend-intro">Carregando legenda…</p></div></div>
       </main>
 {% endblock %}
 

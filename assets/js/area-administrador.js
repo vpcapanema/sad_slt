@@ -200,6 +200,30 @@
     refs.menu.append(bloco);
   }
 
+  function abrirDestinoDaUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const menu = params.get("menu");
+    const esquema = params.get("esquema");
+    const tabela = params.get("tabela");
+    const alvo = menu || esquema;
+    if (!alvo) return;
+
+    const grupo = [...refs.menu.querySelectorAll(".admin-schema")]
+      .find((item) => item.dataset.esquema === alvo);
+    if (!grupo) return;
+
+    grupo.classList.add("open", "is-targeted");
+    grupo.querySelector(".admin-schema-toggle")?.setAttribute("aria-expanded", "true");
+
+    if (esquema && tabela) {
+      const link = [...grupo.querySelectorAll(".admin-table-link")].find(
+        (item) => item.dataset.esquema === esquema && item.dataset.tabela === tabela,
+      );
+      link?.click();
+    }
+
+    requestAnimationFrame(() => grupo.scrollIntoView({ block: "nearest" }));
+  }
   async function carregarMenu() {
     try {
       const { esquemas } = await jsonFetch(`${API}/esquemas`);
@@ -223,6 +247,7 @@
           tabelas, title: grupo.esquema,
         });
       });
+      abrirDestinoDaUrl();
     } catch (error) {
       refs.menu.innerHTML = `<p class="admin-menu-loading">${escapeHtml(error.message)}</p>`;
     }
@@ -236,6 +261,9 @@
     state.ordenar = null; state.direcao = "asc";
     state.filtro = { coluna: null, tipo: "valor", valor: null, inverter: false };
     state.valoresCache = {};
+    const destino = new URL(window.location.href);
+    destino.search = new URLSearchParams({ menu: esquema, esquema, tabela }).toString();
+    history.replaceState(null, "", destino);
     carregarTabela();
   }
 

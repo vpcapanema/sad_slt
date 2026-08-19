@@ -546,6 +546,9 @@
   function initMap() {
     map = SLTPainelMapControls.initPainelMap("map-painel");
     map._sltInitialViewReady = false;
+    requestAnimationFrame(() => {
+      document.querySelector("#map-painel .painel-map-loading")?.remove();
+    });
 
     map.on("move zoom", () => {
       if (openItem && anchorMode === "map" && mapAnchorLatLng) {
@@ -582,14 +585,7 @@
   }
 
   async function init() {
-    try {
-      items = await SLTDemandasApi.listPainelDemandas();
-    } catch (err) {
-      console.error(err);
-      items = (SLTStorage.loadDemandas() || []).map((d) => ({ ...d, tipo: "projeto" }));
-    }
-
-    initRecordOrder();
+    // Estrutura visual primeiro: mapa, legenda e filtros não dependem da API.
     initLayerFilter();
     initLayersSectionCollapse();
     initMap();
@@ -598,8 +594,18 @@
       labelFn: (codigo) => SLTStatusColors.getStatusDemanda(codigo).nome,
     });
     bindLegendLayoutRefresh();
+
+    try {
+      items = await SLTDemandasApi.listPainelDemandas();
+    } catch (err) {
+      console.error(err);
+      items = (SLTStorage.loadDemandas() || []).map((d) => ({ ...d, tipo: "projeto" }));
+    }
+
+    initRecordOrder();
     renderSidebar();
     buildMapLayers();
+    document.querySelector("#map-painel .painel-map-loading")?.remove();
   }
 
   init().catch(console.error);
