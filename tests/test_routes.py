@@ -86,6 +86,10 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert html.index('id="ami-deadline"') < html.index('id="ami-hierarchy"')
     assert 'id="ami-create-section"' in html
     assert "4.3" in html and "Ambiente colaborativo" in html
+    assert html.count("ami-config-field") == 3
+    for field_id in ("ami-deadline", "ami-hierarchy", "ami-emails"):
+        field = html.split(f'for="{field_id}"', 1)[1].split("</div>", 1)[0]
+        assert field.index("form-help") < field.index(f'id="{field_id}"')
 
 
 def test_legacy_page_redirect_preserves_query_string() -> None:
