@@ -45,7 +45,7 @@
       $("ami-page-intro").textContent = "Selecione um julgamento para abrir o formulário público de participação.";
       $("ami-new").classList.add("is-hidden");
     }
-    Promise.all([api(appPrefix + "/" + "api/hierarquizacoes"), api(appPrefix + "/" + "api/ahp/comparacao-colaborativa/ambientes")]).then(function (values) {
+    Promise.all([api(appPrefix + "/" + "api/ahp/hierarquizacoes"), api(appPrefix + "/" + "api/ahp/comparacao-colaborativa/ambientes")]).then(function (values) {
       hierarquizacoes = values[0]; julgamentos = values[1];
       $("ami-hierarchy").insertAdjacentHTML("beforeend", hierarquizacoes.map(function (h) { return '<option value="' + h.id + '">' + escapeHtml(h.codigo + " — " + h.nome) + "</option>"; }).join(""));
       render();
