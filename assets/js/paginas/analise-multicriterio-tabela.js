@@ -15,8 +15,8 @@
       var c = j.consolidacao, invited = (j.convites || []).length, received = Number(j.total_respostas || 0), selected = options.selectedId === j.id;
       var actions = options.actionsFor ? options.actionsFor(j) : [];
       if (!Array.isArray(actions)) actions = actions ? [actions] : [];
-      return '<tr class="collab-round-row ' + (selected ? "is-selected" : "") + '" aria-selected="' + selected + '"><td class="ami-select-column"><input type="radio" name="' + esc(tbodyId) + '-selection" data-select-id="' + esc(j.id) + '" ' + (selected ? "checked" : "") + ' aria-label="Selecionar julgamento ' + esc(j.hierarquizacao_codigo) + '"></td>' +
-        '<td><span class="collab-status ' + (j.status === "ativa" ? "" : "is-muted") + '">' + esc({ ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[j.status] || j.status) + '</span></td>' +
+      return '<tr class="collab-round-row ' + (selected ? "is-selected" : "") + '" aria-selected="' + selected + '"><td class="col-select"><input type="radio" name="' + esc(tbodyId) + '-selection" data-select-id="' + esc(j.id) + '" ' + (selected ? "checked" : "") + ' aria-label="Selecionar julgamento ' + esc(j.hierarquizacao_codigo) + '"></td>' +
+        '<td>' + esc({ ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[j.status] || j.status) + '</td>' +
         '<td title="' + esc((j.hierarquizacao_nome || j.hierarquizacao_codigo) + " · " + j.hierarquizacao_codigo) + '">' + esc(j.hierarquizacao_nome || j.hierarquizacao_codigo) + ' · ' + esc(j.hierarquizacao_codigo) + '</td>' +
         '<td>' + received + ' de ' + invited + ' (' + (invited ? num(received / invited * 100) : "0") + '%)</td><td>' + date(j.valido_ate) + '</td>' +
         '<td><button class="ami-cell-link" data-modal-kind="criteria" data-record-id="' + esc(j.id) + '">' + esc(j.n_criterios) + ' critérios</button></td>' +

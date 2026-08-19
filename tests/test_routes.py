@@ -64,6 +64,20 @@ def test_indice_expoe_as_tres_entradas_da_analise_multicriterio() -> None:
     assert "/restrict/hierarquizacao/processos/" not in trecho_mad
 
 
+def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None:
+    html = TestClient(app).get("/restrict/analise-multicriterio/").text
+    julgamentos_js = (
+        __import__("pathlib").Path("assets/js/paginas/analise-multicriterio-julgamentos.js")
+        .read_text(encoding="utf-8")
+    )
+
+    assert 'class="admin-table hier-register-table ami-table--database"' in html
+    assert 'class="col-select"' in html
+    assert '"api/ahp/hierarquizacoes"' in julgamentos_js
+    assert 'dataset.source = hierarquizacoesSourceUrl' in julgamentos_js
+    assert "/restrict/hierarquizacao/processos/" in html
+
+
 def test_legacy_page_redirect_preserves_query_string() -> None:
     response = TestClient(app).get(
         "/geoespacial/bancada?modulo=fase1&embutido=1",

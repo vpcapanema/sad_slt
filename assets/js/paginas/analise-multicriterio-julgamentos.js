@@ -6,6 +6,7 @@
   var prefixMatch = location.pathname.match(/^(.*?)\/restrict\//);
   var appPrefix = prefixMatch ? prefixMatch[1] : "";
   function appUrl(area, path) { return appPrefix + "/" + area + path; }
+  var hierarquizacoesSourceUrl = appPrefix + "/" + "api/ahp/hierarquizacoes";
   var $ = function (id) { return document.getElementById(id); };
   var escapeHtml = function (value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML; };
   function api(url, options) {
@@ -49,9 +50,10 @@
       $("ami-page-intro").textContent = "Selecione um julgamento para abrir o formulário público de participação.";
       $("ami-new").classList.add("is-hidden");
     }
-    Promise.all([api(appPrefix + "/" + "api/ahp/hierarquizacoes"), api(appPrefix + "/" + "api/ahp/comparacao-colaborativa/ambientes")]).then(function (values) {
+    Promise.all([api(hierarquizacoesSourceUrl), api(appPrefix + "/" + "api/ahp/comparacao-colaborativa/ambientes")]).then(function (values) {
       hierarquizacoes = values[0]; julgamentos = values[1];
-      $("ami-hierarchy").insertAdjacentHTML("beforeend", hierarquizacoes.map(function (h) { return '<option value="' + h.id + '">' + escapeHtml(h.codigo + " — " + h.nome) + "</option>"; }).join(""));
+      $("ami-hierarchy").dataset.source = hierarquizacoesSourceUrl;
+      $("ami-hierarchy").insertAdjacentHTML("beforeend", hierarquizacoes.map(function (h) { return '<option value="' + h.id + '">' + escapeHtml(h.codigo + " — " + h.nome + " (" + (h.status || "sem situação") + ")") + "</option>"; }).join(""));
       render();
     }).catch(function (err) { $("ami-judgments").innerHTML = '<tr><td colspan="7" class="ami-empty">' + escapeHtml(err.message) + "</td></tr>"; });
     $("ami-search").addEventListener("input", render); $("ami-new").addEventListener("click", openModal);

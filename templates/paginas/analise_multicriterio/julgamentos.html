@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="/assets/css/ahp-collab-explorer.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-rounds.css">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui1">
-  <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20260819-table2">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20260819-table3">
   <link rel="stylesheet" href="/assets/css/analise-multicriterio-modal.css?v=20260819-actions1">
 {% endblock %}
 {% block conteudo %}
@@ -26,8 +26,9 @@
 </main>
 <div class="ami-modal is-hidden" id="ami-create-modal" role="dialog" aria-modal="true" aria-labelledby="ami-create-title">
   <form class="ami-modal-card" id="ami-create-form"><div class="ami-modal-head"><h2 id="ami-create-title">Novo julgamento</h2><button type="button" id="ami-create-close" aria-label="Fechar">×</button></div>
-    <label>Hierarquização<select id="ami-hierarchy" class="form-control" required><option value="">Selecione…</option></select></label>
+    <label>Hierarquização<select id="ami-hierarchy" class="form-control" required aria-describedby="ami-hierarchy-source ami-hierarchy-summary"><option value="">Selecione…</option></select></label>
     <div id="ami-hierarchy-summary" class="ami-summary"></div>
+    <p class="ami-field-source" id="ami-hierarchy-source"><i class="fa-solid fa-database" aria-hidden="true"></i> Mesmos registros de <a href="/restrict/hierarquizacao/processos/">Hierarquizações realizadas</a>.</p>
     <label>Especialistas convidados<textarea id="ami-emails" class="form-control" rows="5" placeholder="Um e-mail por linha" required></textarea></label>
     <label>Prazo para respostas<input id="ami-deadline" class="form-control" type="datetime-local" required></label>
     <p class="ami-feedback" id="ami-create-feedback" role="status"></p>
@@ -37,6 +38,6 @@
 {% endblock %}
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20260819-actions1"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20260819-routes1"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20260819-table3"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20260819-source2"></script>
 {% endblock %}

@@ -1,1 +1,96 @@
-.ami-page .collab-data-table thead th{background:linear-gradient(135deg,var(--pli-deep),var(--pli-blue));color:#fff;border-color:rgba(255,255,255,.18);vertical-align:middle}.ami-page .collab-data-table td{white-space:normal;min-width:8rem}.ami-page .collab-data-table td:nth-child(3){min-width:16rem}.ami-page .collab-data-table td:nth-child(7),.ami-page .collab-data-table td:nth-child(8),.ami-page .collab-data-table td:nth-child(9){min-width:13rem}.ami-select-column{width:5.5rem!important;min-width:5.5rem!important;text-align:center!important}.ami-select-column input{width:1rem;height:1rem;accent-color:var(--pli-blue);cursor:pointer}.collab-data-table td strong,.collab-data-table td small{display:block}.collab-data-table td small{margin:.2rem 0;color:var(--pli-muted)}.ami-technical summary,.collab-data-table details summary{color:var(--pli-blue);font-weight:700;cursor:pointer}.ami-technical dl{display:grid;grid-template-columns:minmax(11rem,1fr) 2fr;gap:.35rem .7rem;min-width:28rem}.ami-technical dt{color:var(--pli-muted);font-size:.74rem;font-weight:700}.ami-technical dd{margin:0;overflow-wrap:anywhere}.ami-row-actions{display:flex;flex-direction:column;gap:.4rem;min-width:8rem}.ami-row-actions .btn{justify-content:center}.ami-page .collab-round-row.is-selected{background:#eaf4fb!important;box-shadow:inset 4px 0 var(--pli-blue)}
+.ami-table-shell {
+  overflow: auto;
+  max-height: 36rem;
+  border: 1px solid #d8e0e5;
+  border-radius: 10px;
+}
+
+.ami-table--database {
+  min-width: 1650px;
+  font-size: .74rem;
+}
+
+.ami-table--database thead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.ami-table--database th,
+.ami-table--database td {
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.1;
+}
+
+.ami-table--database th {
+  padding: .5rem .6rem;
+  background: var(--pli-deep);
+  color: #fff;
+  font-size: .72rem;
+}
+
+.ami-table--database td {
+  height: 1.7rem;
+  max-width: 220px;
+  padding: .18rem .55rem;
+  overflow: hidden;
+  color: inherit;
+  font-size: .74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ami-table--database .col-select {
+  width: 2.75rem;
+  min-width: 2.75rem;
+  max-width: 2.75rem;
+}
+
+.ami-table--database .col-select input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--pli-blue);
+  cursor: pointer;
+}
+
+.ami-table--database tbody tr.is-selected td {
+  background: #eef4fa;
+}
+
+.ami-table--database tbody tr.is-selected td:first-child {
+  box-shadow: inset 3px 0 0 var(--pli-blue), 2px 0 6px rgba(0, 59, 90, .08);
+}
+
+.ami-cell-link {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pli-blue);
+  font: inherit;
+  text-decoration: underline;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ami-row-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: .4rem;
+  min-width: 5rem;
+}
+
+.ami-field-source {
+  margin: -.35rem 0 .75rem;
+  color: var(--pli-muted);
+  font-size: .78rem;
+}
+
+.ami-field-source a {
+  color: var(--pli-blue);
+  font-weight: 700;
+}
