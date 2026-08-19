@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, Field
-
-TipoConfig = Literal["avulsa", "portfolio"]
 
 
 class ConviteColaborativoSchema(BaseModel):
@@ -14,8 +13,7 @@ class ConviteColaborativoSchema(BaseModel):
 
 
 class AmbienteColaborativoCreateSchema(BaseModel):
-    tipo: TipoConfig
-    codigo: str = Field(..., min_length=1, max_length=64)
+    hierarquizacao_id: UUID
     convites: list[ConviteColaborativoSchema] = Field(..., min_length=1)
     valido_ate: datetime
 
@@ -34,10 +32,8 @@ class ConsolidacaoColaborativaSchema(BaseModel):
 
 class AmbienteColaborativoResponseSchema(BaseModel):
     id: str
-    config_tipo: TipoConfig
-    config_codigo: str
-    config_avulsa_id: str | None = None
-    config_portfolio_id: str | None = None
+    hierarquizacao_id: str
+    hierarquizacao_codigo: str
     criterios: list[dict[str, Any]] = []
     n_criterios: int = 0
     token: str

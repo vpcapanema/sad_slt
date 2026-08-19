@@ -13,6 +13,7 @@ from api.services import comparacao_colaborativa_service as service
 from api.services.session_service import SessionUser, cookie_name, create_token
 
 AMBIENTE_ID = "22222222-2222-2222-2222-222222222222"
+HIERARQUIZACAO_ID = "44444444-4444-4444-4444-444444444444"
 
 
 def _client_autenticado(perfil: str = "ANALISTA") -> TestClient:
@@ -31,8 +32,8 @@ def _client_autenticado(perfil: str = "ANALISTA") -> TestClient:
 def _ambiente_row(**extra) -> dict:
     row = {
         "id": AMBIENTE_ID,
-        "config_tipo": "avulsa",
-        "config_codigo": "CFG-001",
+        "hierarquizacao_id": HIERARQUIZACAO_ID,
+        "hierarquizacao_codigo": "HIER-001",
         "token": "tok-abc",
         "convites": [{"email": "a@x.gov.br"}],
         "valido_ate": datetime(2030, 1, 1, tzinfo=timezone.utc),
@@ -116,9 +117,9 @@ def test_resposta_usa_snapshot_de_criterios_e_ambiente_correto(monkeypatch) -> N
     monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _token: _ambiente_row())
     monkeypatch.setattr(repo, "resposta_existe", lambda _ambiente, _email: False)
     monkeypatch.setattr(
-        service.config_repo,
-        "get_by_codigo",
-        lambda *_args: {"criterios": [{"criterio": "A"}, {"criterio": "B"}, {"criterio": "C"}]},
+        service.hierarq_repo,
+        "get_by_id",
+        lambda *_args: {"dados_hierarquizacao": {"criterios": [{"criterio": "A"}, {"criterio": "B"}, {"criterio": "C"}]}},
     )
 
     def fake_insert(data: dict) -> dict:
@@ -185,9 +186,9 @@ def test_consolidar_ambiente_grava_media_geometrica_e_status(monkeypatch) -> Non
     ]
     gravado: dict = {}
 
-    def fake_atualizar(ambiente_id: str, data: dict, config_data: dict | None = None) -> dict:
+    def fake_atualizar(ambiente_id: str, data: dict, hierarquizacao_data: dict | None = None) -> dict:
         gravado.update(data)
-        gravado["config_data"] = config_data
+        gravado["hierarquizacao_data"] = hierarquizacao_data
         return _ambiente_row(
             status=data["status"],
             matriz_consolidada=data["matriz_consolidada"],
@@ -205,10 +206,13 @@ def test_consolidar_ambiente_grava_media_geometrica_e_status(monkeypatch) -> Non
     monkeypatch.setattr(repo, "list_respostas", lambda _id: respostas)
     monkeypatch.setattr(repo, "atualizar_consolidacao", fake_atualizar)
     monkeypatch.setattr(
-        service.config_repo,
-        "get_by_codigo",
-        lambda _tipo, _codigo: {
-            "criterios": [{"criterio": "Custo"}, {"criterio": "Prazo"}],
+        service.hierarq_repo,
+        "get_by_id",
+        lambda _id: {
+            "codigo": "HIER-001",
+            "dados_hierarquizacao": {
+                "criterios": [{"criterio": "Custo"}, {"criterio": "Prazo"}]
+            },
         },
     )
 
@@ -219,8 +223,8 @@ def test_consolidar_ambiente_grava_media_geometrica_e_status(monkeypatch) -> Non
     # médias geométricas de 3 e 1/3 → 1 (matriz neutra)
     assert gravado["matriz_consolidada"][0][1] == pytest.approx(1.0)
     assert gravado["consistente"] is True
-    assert gravado["config_data"]["modo_preenchimento"] == "colaborativo"
-    assert gravado["config_data"]["matriz_comparacao"][0][1] == pytest.approx(1.0)
+    assert gravado["hierarquizacao_data"]["comparacao_colaborativa"]["modo_preenchimento"] == "colaborativo"
+    assert gravado["hierarquizacao_data"]["comparacao_colaborativa"]["matriz_comparacao"][0][1] == pytest.approx(1.0)
     assert resultado.status == "consolidada"
     assert resultado.consolidacao is not None
     assert resultado.consolidacao.respostas_consolidadas == 2
@@ -253,18 +257,18 @@ def test_rota_respostas_resolve_para_listar_respostas(monkeypatch) -> None:
 def test_rota_lista_todas_as_rodadas_da_configuracao(monkeypatch) -> None:
     chamado: dict = {}
 
-    def fake_listar(tipo: str, codigo: str, *, base_url: str = ""):
-        chamado.update(tipo=tipo, codigo=codigo)
+    def fake_listar(hierarquizacao_id, *, base_url: str = ""):
+        chamado["hierarquizacao_id"] = str(hierarquizacao_id)
         return []
 
-    monkeypatch.setattr(service, "listar_ambientes_config", fake_listar)
+    monkeypatch.setattr(service, "listar_ambientes_hierarquizacao", fake_listar)
     client = _client_autenticado("GESTOR")
     resp = client.get(
-        "/api/ahp/comparacao-colaborativa/ambientes/configuracao/avulsa/CFG-001"
+        "/api/ahp/comparacao-colaborativa/hierarquizacoes/44444444-4444-4444-4444-444444444444/ambientes"
     )
 
     assert resp.status_code == 200
-    assert chamado == {"tipo": "avulsa", "codigo": "CFG-001"}
+    assert chamado == {"hierarquizacao_id": HIERARQUIZACAO_ID}
     assert resp.json() == []
 
 
@@ -331,10 +335,10 @@ class _FakeRepo:
                 return dict(row)
         return None
 
-    def get_ambiente_by_config(self, tipo: str, codigo: str):
+    def get_ambiente_by_hierarquizacao(self, hierarquizacao_id):
         candidatos = [
             r for r in self.ambientes.values()
-            if r["config_tipo"] == tipo and r["config_codigo"] == codigo
+            if r["hierarquizacao_id"] == str(hierarquizacao_id)
         ]
         if not candidatos:
             return None
@@ -350,16 +354,16 @@ class _FakeRepo:
         row["total_respostas"] = len(self.list_respostas(ambiente_id))
         return row
 
-    def list_ambientes_by_config(self, tipo: str, codigo: str):
+    def list_ambientes_by_hierarquizacao(self, hierarquizacao_id):
         return [
             self.get_ambiente_by_id(r["id"])
             for r in sorted(self.ambientes.values(), key=lambda item: item["criado_em"], reverse=True)
-            if r["config_tipo"] == tipo and r["config_codigo"] == codigo
+            if r["hierarquizacao_id"] == str(hierarquizacao_id)
         ]
 
-    def encerrar_ambientes_anteriores(self, tipo: str, codigo: str) -> None:
+    def encerrar_ambientes_anteriores(self, hierarquizacao_id) -> None:
         for row in self.ambientes.values():
-            if row["config_tipo"] == tipo and row["config_codigo"] == codigo:
+            if row["hierarquizacao_id"] == str(hierarquizacao_id):
                 row["status"] = "encerrada"
 
     def insert_resposta(self, data: dict) -> dict:
@@ -377,12 +381,12 @@ class _FakeRepo:
             for r in self.respostas
         )
 
-    def atualizar_consolidacao(self, ambiente_id: str, data: dict, config_data: dict | None = None):
+    def atualizar_consolidacao(self, ambiente_id: str, data: dict, hierarquizacao_data: dict | None = None):
         row = self.ambientes.get(ambiente_id)
         if not row:
             return None
         row.update(data)
-        row["config_data_persistida"] = config_data
+        row["hierarquizacao_data_persistida"] = hierarquizacao_data
         row["atualizado_em"] = datetime.now(timezone.utc)
         return dict(row)
 
@@ -392,9 +396,9 @@ def _instalar_fake_repo(monkeypatch) -> _FakeRepo:
     for nome in (
         "insert_ambiente",
         "get_ambiente_by_token",
-        "get_ambiente_by_config",
+        "get_ambiente_by_hierarquizacao",
         "get_ambiente_by_id",
-        "list_ambientes_by_config",
+        "list_ambientes_by_hierarquizacao",
         "encerrar_ambientes_anteriores",
         "insert_resposta",
         "list_respostas",
@@ -403,12 +407,15 @@ def _instalar_fake_repo(monkeypatch) -> _FakeRepo:
     ):
         monkeypatch.setattr(repo, nome, getattr(fake, nome))
     monkeypatch.setattr(
-        service.config_repo,
-        "get_by_codigo",
-        lambda _tipo, _codigo: {
+        service.hierarq_repo,
+        "get_by_id",
+        lambda _id: {
             "nome": "Configuração de teste",
             "objetivo": "Hierarquizar demandas",
-            "criterios": [{"criterio": "Custo"}, {"criterio": "Prazo"}],
+            "codigo": "HIER-001",
+            "dados_hierarquizacao": {
+                "criterios": [{"criterio": "Custo"}, {"criterio": "Prazo"}]
+            },
         },
     )
     return fake
@@ -422,8 +429,7 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     resp = gestor.post(
         "/api/ahp/comparacao-colaborativa/ambientes",
         json={
-            "tipo": "avulsa",
-            "codigo": "CFG-001",
+            "hierarquizacao_id": HIERARQUIZACAO_ID,
             "convites": [{"email": "a@x.gov.br"}, {"email": "b@x.gov.br"}],
             "valido_ate": "2030-12-31T23:59:59+00:00",
         },
@@ -498,4 +504,4 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     assert cons["pesos_consolidados"] == pytest.approx([0.5, 0.5])
     assert cons["consistente"] is True
     assert fake.ambientes[ambiente_id]["status"] == "consolidada"
-    assert fake.ambientes[ambiente_id]["config_data_persistida"]["modo_preenchimento"] == "colaborativo"
+    assert fake.ambientes[ambiente_id]["hierarquizacao_data_persistida"]["comparacao_colaborativa"]["modo_preenchimento"] == "colaborativo"

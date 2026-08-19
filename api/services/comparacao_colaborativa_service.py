@@ -5,10 +5,11 @@ import math
 import secrets
 from datetime import datetime, timezone
 from typing import Any
+from uuid import UUID
 
 from api.exceptions import DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as repo
-from api.repositories import config_multicriterio_repository as config_repo
+from api.repositories import hierarquizacao_repository as hierarq_repo
 from api.schemas.comparacao_colaborativa import (
     AmbienteColaborativoCreateSchema,
     AmbienteColaborativoResponseSchema,
@@ -39,17 +40,24 @@ def _emails_convites(convites: list[dict[str, Any]]) -> list[str]:
     return [str(c.get("email", "")).strip().lower() for c in convites if c.get("email")]
 
 
-def _carregar_config(tipo: str, codigo: str) -> dict[str, Any]:
-    row = config_repo.get_by_codigo(tipo, codigo)
+def _carregar_hierarquizacao(hierarq_id: UUID) -> dict[str, Any]:
+    """Carrega a hierarquização e sua matriz de premissas e critérios."""
+    row = hierarq_repo.get_by_id(hierarq_id)
     if not row:
         raise DemandaValidationError(
-            f"Configuração {codigo} não encontrada.", field="codigo"
+            f"Hierarquização {hierarq_id} não encontrada.", field="hierarquizacao_id"
         )
     return row
 
 
-def _criterio_nomes(config: dict[str, Any]) -> list[str]:
-    criterios = config.get("criterios") or []
+def _criterios_from_hierarquizacao(hierarq: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extrai a lista de critérios da matriz de premissas e critérios da hierarquização."""
+    matriz_premissas = hierarq.get("dados_hierarquizacao") or {}
+    criterios = matriz_premissas.get("criterios") or []
+    return criterios
+
+
+def _criterio_nomes(criterios: list[dict[str, Any]]) -> list[str]:
     nomes: list[str] = []
     for idx, c in enumerate(criterios):
         nome = c.get("criterio") or c.get("nome") or f"Critério {idx + 1}"
@@ -81,10 +89,8 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "") -> Ambient
     )
     return AmbienteColaborativoResponseSchema(
         id=str(row["id"]),
-        config_tipo=row["config_tipo"],
-        config_codigo=row["config_codigo"],
-        config_avulsa_id=str(row["config_avulsa_id"]) if row.get("config_avulsa_id") else None,
-        config_portfolio_id=str(row["config_portfolio_id"]) if row.get("config_portfolio_id") else None,
+        hierarquizacao_id=str(row["hierarquizacao_id"]),
+        hierarquizacao_codigo=row.get("hierarquizacao_codigo", ""),
         criterios=row.get("criterios") or [],
         n_criterios=int(row.get("n_criterios") or 0),
         token=token,
@@ -120,17 +126,13 @@ def _resposta_to_response(row: dict[str, Any]) -> RespostaColaborativaResponseSc
 def criar_ambiente(
     payload: AmbienteColaborativoCreateSchema, *, base_url: str = ""
 ) -> AmbienteColaborativoResponseSchema:
-    """Cria ambiente colaborativo para a configuração informada."""
-    config = _carregar_config(payload.tipo, payload.codigo)
-    if payload.tipo not in {"avulsa", "portfolio"}:
-        raise DemandaValidationError("Tipo de configuração inválido.", field="tipo")
-    # O ambiente deve apontar explicitamente para uma das duas tabelas de
-    # configuração; esses IDs são persistidos junto do código para impedir
-    # que uma rodada fique órfã ou seja resolvida na tabela errada.
-    criterios = _criterio_nomes(config)
+    """Cria ambiente colaborativo para a hierarquização informada."""
+    hierarq = _carregar_hierarquizacao(payload.hierarquizacao_id)
+    criterios = _criterios_from_hierarquizacao(hierarq)
+
     if len(criterios) < 2:
         raise DemandaValidationError(
-            "Cadastre ao menos dois critérios na Etapa 3 antes de abrir o ambiente colaborativo.",
+            "A hierarquização deve possuir ao menos dois critérios para abrir um ambiente colaborativo.",
             field="criterios",
         )
 
@@ -149,16 +151,16 @@ def criar_ambiente(
             "Há e-mails duplicados na lista de convites.", field="convites"
         )
 
-    repo.encerrar_ambientes_anteriores(payload.tipo, payload.codigo)
+    repo.encerrar_ambientes_anteriores(payload.hierarquizacao_id)
     token = secrets.token_urlsafe(32)
+    nomes_criterios = _criterio_nomes(criterios)
+
     row = repo.insert_ambiente(
         {
-            "config_tipo": payload.tipo,
-            "config_codigo": payload.codigo,
-            "config_avulsa_id": str(config["id"]) if payload.tipo == "avulsa" and config.get("id") else None,
-            "config_portfolio_id": str(config["id"]) if payload.tipo == "portfolio" and config.get("id") else None,
-            "criterios": config.get("criterios") or [],
-            "n_criterios": len(criterios),
+            "hierarquizacao_id": str(payload.hierarquizacao_id),
+            "hierarquizacao_codigo": hierarq.get("codigo", ""),
+            "criterios": criterios,
+            "n_criterios": len(nomes_criterios),
             "token": token,
             "convites": convites,
             "valido_ate": valido_ate,
@@ -168,9 +170,9 @@ def criar_ambiente(
     return _ambiente_to_response(row, base_url=base_url)
 
 
-def obter_ambiente_config(tipo: str, codigo: str, *, base_url: str = "") -> AmbienteColaborativoResponseSchema | None:
-    """Retorna o ambiente colaborativo mais recente da configuração."""
-    row = repo.get_ambiente_by_config(tipo, codigo)
+def obter_ambiente_hierarquizacao(hierarq_id: UUID, *, base_url: str = "") -> AmbienteColaborativoResponseSchema | None:
+    """Retorna o ambiente colaborativo mais recente da hierarquização."""
+    row = repo.get_ambiente_by_hierarquizacao(hierarq_id)
     if not row:
         return None
     return _ambiente_to_response(row, base_url=base_url)
@@ -184,14 +186,14 @@ def obter_ambiente_id(ambiente_id: str, *, base_url: str = "") -> AmbienteColabo
     return _ambiente_to_response(row, base_url=base_url)
 
 
-def listar_ambientes_config(
-    tipo: str, codigo: str, *, base_url: str = ""
+def listar_ambientes_hierarquizacao(
+    hierarq_id: UUID, *, base_url: str = ""
 ) -> list[AmbienteColaborativoResponseSchema]:
-    """Lista o histórico completo de rodadas colaborativas da configuração."""
-    _carregar_config(tipo, codigo)
+    """Lista o histórico completo de rodadas colaborativas da hierarquização."""
+    _carregar_hierarquizacao(hierarq_id)
     return [
         _ambiente_to_response(row, base_url=base_url)
-        for row in repo.list_ambientes_by_config(tipo, codigo)
+        for row in repo.list_ambientes_by_hierarquizacao(hierarq_id)
     ]
 
 
@@ -203,11 +205,12 @@ def obter_ambiente_publico(token: str, email: str | None = None) -> AmbientePubl
 
     criterios_snapshot = row.get("criterios") or []
     if criterios_snapshot:
-        criterios = _criterio_nomes({"criterios": criterios_snapshot})
-        config = _carregar_config(row["config_tipo"], row["config_codigo"])
+        criterios = _criterio_nomes(criterios_snapshot)
     else:
-        config = _carregar_config(row["config_tipo"], row["config_codigo"])
-        criterios = _criterio_nomes(config)
+        hierarq = _carregar_hierarquizacao(row["hierarquizacao_id"])
+        criterios_lista = _criterios_from_hierarquizacao(hierarq)
+        criterios = _criterio_nomes(criterios_lista)
+
     valido_ate = row.get("valido_ate")
     if isinstance(valido_ate, datetime) and valido_ate.tzinfo is None:
         valido_ate = valido_ate.replace(tzinfo=timezone.utc)
@@ -218,10 +221,20 @@ def obter_ambiente_publico(token: str, email: str | None = None) -> AmbientePubl
 
     emails_ok = _emails_convites(row.get("convites") or [])
     email_norm = (email or "").strip().lower()
+
+    # Tenta carregar a hierarquização para preencher escopo e objetivo
+    try:
+        hierarq = _carregar_hierarquizacao(row["hierarquizacao_id"])
+        escopo = hierarq.get("nome") or hierarq.get("codigo")
+        objetivo = hierarq.get("objetivo")
+    except DemandaValidationError:
+        escopo = None
+        objetivo = None
+
     return AmbientePublicoSchema(
         token=token,
-        escopo=config.get("nome"),
-        objetivo=config.get("objetivo"),
+        escopo=escopo,
+        objetivo=objetivo,
         criterios=criterios,
         valido_ate=_iso(valido_ate) or "",
         status=status,
@@ -293,10 +306,12 @@ def registrar_resposta(token: str, payload: RespostaColaborativaCreateSchema) ->
 
     criterios_snapshot = row.get("criterios") or []
     if criterios_snapshot:
-        nomes = _criterio_nomes({"criterios": criterios_snapshot})
+        nomes = _criterio_nomes(criterios_snapshot)
     else:
-        config = _carregar_config(row["config_tipo"], row["config_codigo"])
-        nomes = _criterio_nomes(config)
+        hierarq = _carregar_hierarquizacao(row["hierarquizacao_id"])
+        criterios_lista = _criterios_from_hierarquizacao(hierarq)
+        nomes = _criterio_nomes(criterios_lista)
+
     matriz = payload.matriz_comparacao
     n = len(nomes)
     _validar_matriz_pareada(matriz, n)
@@ -389,26 +404,33 @@ def consolidar_ambiente(
     consolidada = media_geometrica_matrizes(matrizes)
     resultado = ahp_engine.analyze_matrix(consolidada)
     rc = float(resultado["CR"])
-    config = _carregar_config(amb["config_tipo"], amb["config_codigo"])
-    criterios = config.get("criterios") or amb.get("criterios") or []
-    nomes = _criterio_nomes({"criterios": criterios})
+
+    # Extrai a hierarquização e seus critérios
+    hierarq = _carregar_hierarquizacao(amb["hierarquizacao_id"])
+    criterios = _criterios_from_hierarquizacao(hierarq)
+    nomes = _criterio_nomes(criterios)
     pesos = {"criteria": nomes, "weights": resultado["weights"]}
+
     agora = datetime.now(timezone.utc)
-    artefato_fase2 = dict(config.get("arquivo_config_fase2") or {})
-    artefato_fase2.update(
-        {
-            "versao": 1,
-            "fase": "fase_2",
-            "codigo": amb["config_codigo"],
-            "tipo": amb["config_tipo"],
-            "metodo_comparacao": "formulario",
-            "modo_preenchimento": "colaborativo",
-            "n_criterios": len(criterios),
-            "criterios": criterios,
-            "matriz_comparacao": consolidada,
-            "gerado_em": agora.isoformat(),
-        }
-    )
+
+    colaborativa = {
+        "versao": 1,
+        "hierarquizacao_id": str(amb["hierarquizacao_id"]),
+        "hierarquizacao_codigo": amb.get("hierarquizacao_codigo", ""),
+        "metodo_comparacao": "formulario",
+        "modo_preenchimento": "colaborativo",
+        "n_criterios": len(criterios),
+        "criterios": criterios,
+        "matriz_comparacao": consolidada,
+        "pesos": pesos,
+        "lambda_max": resultado["lambdaMax"],
+        "indice_consistencia": resultado["CI"],
+        "indice_aleatorio": resultado["RI"],
+        "razao_consistencia": rc,
+        "consistente": rc < 0.10,
+        "respostas_consolidadas": len(respostas),
+        "consolidado_em": agora.isoformat(),
+    }
 
     atualizado = repo.atualizar_consolidacao(
         ambiente_id,
@@ -424,21 +446,7 @@ def consolidar_ambiente(
             "consolidado_em": agora,
             "status": "consolidada",
         },
-        {
-            "matriz_comparacao": consolidada,
-            "pesos": pesos,
-            "lambda_max": resultado["lambdaMax"],
-            "indice_consistencia": resultado["CI"],
-            "indice_aleatorio": resultado["RI"],
-            "razao_consistencia": rc,
-            "consistente": rc < 0.10,
-            "metodo_comparacao": "formulario",
-            "modo_preenchimento": "colaborativo",
-            "n_criterios": len(criterios),
-            "pacote_fase": "fase_2",
-            "status": "calculada",
-            "arquivo_config_fase2": artefato_fase2,
-        },
+        {"comparacao_colaborativa": colaborativa},
     )
     if not atualizado:
         raise DemandaValidationError("Falha ao gravar a consolidação.", field="ambiente_id")

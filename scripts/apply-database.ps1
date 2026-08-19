@@ -206,7 +206,18 @@ $migrations = @(
     "069_envio_cadastro_em_avaliacao.sql",
     "070_vinculo_objeto.sql",
     "071_reprovacao_demanda.sql",
-    "072_campos_cadastrais_nativos.sql"
+    "072_campos_cadastrais_nativos.sql",
+    "073_alinhar_rotulos_formulario_cadastro.sql",
+    "074_backfill_atributos_cadastrais_seed_teste.sql",
+    "075_niveis_prefixo_valores_nativos.sql",
+    "076_consolidacao_colaborativa.sql",
+    "077_integridade_fluxo_colaborativo_ahp.sql",
+    "078_arquivo_excel_matriz_criterios_premissas.sql",
+    "079_excel_original_hierarquizacao.sql",
+    "080_integridade_referencias_colaborativas.sql",
+    "081_fk_config_hierarquizacao_origem.sql",
+    "082_relatorios_fase2_fase3_consolidado.sql",
+    "083_migrar_comparacao_colaborativa_hierarquizacao.sql"
 )
 
 if ($OnlyMigration) {

@@ -1,6 +1,8 @@
 """Rotas HTTP — preenchimento colaborativo da matriz pareada AHP."""
 from __future__ import annotations
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from api.deps.auth import require_analyst, require_authenticated
@@ -40,18 +42,17 @@ async def criar_ambiente(
 # Rotas com sufixo fixo registradas antes de "/ambientes/{tipo}/{codigo}"
 # para não serem capturadas pela rota genérica de dois segmentos.
 @router.get(
-    "/ambientes/configuracao/{tipo}/{codigo}",
+    "/hierarquizacoes/{hierarquizacao_id}/ambientes",
     response_model=list[AmbienteColaborativoResponseSchema],
 )
-async def listar_ambientes_config(
-    tipo: str,
-    codigo: str,
+async def listar_ambientes_hierarquizacao(
+    hierarquizacao_id: UUID,
     request: Request,
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[AmbienteColaborativoResponseSchema]:
     """Lista todas as rodadas colaborativas de uma configuração AHP."""
     try:
-        return service.listar_ambientes_config(tipo, codigo, base_url=_base_url(request))
+        return service.listar_ambientes_hierarquizacao(hierarquizacao_id, base_url=_base_url(request))
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
@@ -102,16 +103,15 @@ async def consolidar_ambiente(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
-@router.get("/ambientes/{tipo}/{codigo}", response_model=AmbienteColaborativoResponseSchema)
-async def obter_ambiente_config(
-    tipo: str,
-    codigo: str,
+@router.get("/hierarquizacoes/{hierarquizacao_id}/ambiente", response_model=AmbienteColaborativoResponseSchema)
+async def obter_ambiente_hierarquizacao(
+    hierarquizacao_id: UUID,
     request: Request,
     _user: SessionUser = Depends(require_authenticated),
 ) -> AmbienteColaborativoResponseSchema:
     """Obtém o ambiente colaborativo mais recente de uma configuração."""
     try:
-        amb = service.obter_ambiente_config(tipo, codigo, base_url=_base_url(request))
+        amb = service.obter_ambiente_hierarquizacao(hierarquizacao_id, base_url=_base_url(request))
         if not amb:
             raise HTTPException(status_code=404, detail="Ambiente colaborativo não encontrado.")
         return amb
