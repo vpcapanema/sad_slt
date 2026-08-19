@@ -57,7 +57,7 @@
   padding: .5rem .6rem;
   background: var(--pli-deep);
   color: #fff;
-  font-size: .72rem;
+  font-size: .68rem;
 }
 
 .ami-table--database td {
@@ -66,7 +66,7 @@
   padding: .18rem .55rem;
   overflow: hidden;
   color: inherit;
-  font-size: .74rem;
+  font-size: .64rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -127,4 +127,16 @@
 
 .ami-pagination {
   margin: .75rem 0 0;
+}
+
+.ami-page .ami-table--database,
+.ami-page .ami-table--database th,
+.ami-page .ami-table--database td,
+.ami-page .ami-table--database button,
+.ami-page .ami-pagination {
+  font-size: var(--ami-font-child, .70rem);
+}
+
+.ami-page .ami-table-heading {
+  margin-bottom: var(--ami-space-sm, .75rem);
 }

@@ -92,6 +92,9 @@ function Stop-ProcessTree([int]$RootProcessId) {
             $process.WaitForExit(3000) | Out-Null
             $stopped++
         } catch {
+            if (-not (Get-Process -Id $id -ErrorAction SilentlyContinue)) {
+                continue
+            }
             Write-Warn "Nao foi possivel encerrar PID ${id}: $($_.Exception.Message)"
         }
     }
@@ -295,6 +298,34 @@ function Test-DockerDaemon {
     } catch {
         return $false
     }
+}
+
+function Start-BackendProcess(
+    [string]$PythonExecutable,
+    [string]$ProjectRoot,
+    [string]$StandardOutputPath,
+    [string]$StandardErrorPath
+) {
+    # O Start-Process do Windows PowerShell 5.1 pode falhar ao mesclar as
+    # variaveis Path/PATH dos escopos Machine e User. ProcessStartInfo herda o
+    # ambiente corrente ja normalizado e evita a colisao de chaves no Windows.
+    $quote = { param([string]$Value) "'" + $Value.Replace("'", "''") + "'" }
+    $command = "Set-Location -LiteralPath $(& $quote $ProjectRoot); & $(& $quote $PythonExecutable) -m api.server 1> $(& $quote $StandardOutputPath) 2> $(& $quote $StandardErrorPath); exit `$LASTEXITCODE"
+    $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = Join-Path $PSHOME "powershell.exe"
+    $startInfo.Arguments = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $encodedCommand"
+    $startInfo.WorkingDirectory = $ProjectRoot
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+
+    $process = [System.Diagnostics.Process]::new()
+    $process.StartInfo = $startInfo
+    if (-not $process.Start()) {
+        throw "O processo Python nao foi iniciado."
+    }
+
+    return $process
 }
 
 function Test-RemoteTcpPort([string]$RemoteHost, [int]$RemotePort, [int]$TimeoutMs = 5000) {
@@ -560,15 +591,11 @@ try {
         }
     }
 
-    # Inicie o Python diretamente. Usar `cmd /c` fazia o processo intermediario
-    # terminar e liberava o Wait-Process, encerrando a tarefa logo apos abrir o navegador.
-    $serverProc = Start-Process -FilePath $serverPython `
-        -ArgumentList "-m", "api.server" `
-        -WorkingDirectory $Root `
-        -PassThru `
-        -NoNewWindow `
-        -RedirectStandardOutput $serverLog `
-        -RedirectStandardError $serverErrorLog
+    $serverProc = Start-BackendProcess `
+        -PythonExecutable $serverPython `
+        -ProjectRoot $Root `
+        -StandardOutputPath $serverLog `
+        -StandardErrorPath $serverErrorLog
 
     Write-Ok "Processo iniciado (PID $($serverProc.Id))"
     Start-Sleep -Milliseconds 600
@@ -624,6 +651,8 @@ finally {
         Write-Host ""
         Write-Step "Encerrando backend (PID $($serverProc.Id))"
         Stop-ProcessTree -RootProcessId $serverProc.Id | Out-Null
+        try { $serverProc.WaitForExit(3000) | Out-Null } catch {}
+        $serverProc.Dispose()
         Write-Ok "Backend encerrado"
     }
 }

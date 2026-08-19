@@ -10,9 +10,9 @@
   <link rel="stylesheet" href="/assets/css/ahp-collab-analytics.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-explorer.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-rounds.css">
-  <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-ui3">
-  <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20260819-table4">
-  <link rel="stylesheet" href="/assets/css/analise-multicriterio-modal.css?v=20260819-actions1">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-pairwise6">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20260819-table6">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio-modal.css?v=20260819-modal3">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
@@ -21,7 +21,11 @@
     <div><p class="ami-eyebrow">Análise Multicritério Interativa</p><h1 id="ami-page-title">Julgamentos</h1><p id="ami-page-intro">Crie e acompanhe os julgamentos interativos.</p></div>
   </section>
   <div class="ami-toolbar ami-panel"><label for="ami-search">Buscar</label><input id="ami-search" class="form-control" type="search" placeholder="Código, hierarquização ou status"><span id="ami-count"></span><button class="btn btn-primary is-hidden" id="ami-new" type="button"><i class="fa-solid fa-plus"></i> Novo julgamento</button></div>
-  {% set tabela_colaborativa_id = "ami-judgments" %}{% include "componentes/_tabela_colaborativa.html" %}
+  {% set tabela_colaborativa_id = "ami-judgments" %}{% set tabela_colaborativa_comparacao = true %}{% include "componentes/_tabela_colaborativa.html" %}
+  <section class="card-ami-pairwise secao-ami-pairwise card ahp-step-section is-hidden" id="ami-pairwise-panel">
+    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">5.3</span><span>Preenchimento da Matriz de Comparação Pareada</span></div>
+    <div class="ahp-section-body"><div id="ami-saaty-scale-host"></div><div class="ahp-subcard info-card info-card--spaced"><div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">II</span><span id="ami-pairwise-title">Comparação pareada</span></div><div class="info-card-content"><p class="step-intro" id="ami-pairwise-context"></p><div id="ami-pairwise-content"></div></div></div></div>
+  </section>
   <section class="card-collab-section secao-collab-section card ahp-step-section is-hidden" id="ami-create-section">
     <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">4.3</span><span>Ambiente colaborativo</span></div>
     <div class="ahp-section-body">
@@ -40,6 +44,16 @@
         </section>
       </form>
       <section class="secao-collab-status-section ahp-section ahp-subcard"><div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">II</span><span>Status do ambiente colaborativo</span></div><div class="ahp-section-body"><div id="ami-create-status" class="ami-empty">O status será exibido após a confirmação dos colaboradores.</div></div></section>
+      <section id="ami-email-draft-card" class="secao-collab-email-draft-card ahp-section ahp-subcard is-hidden">
+        <div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">III</span><span>Sugestão de mensagem de e-mail</span></div>
+        <div class="ahp-section-body">
+          <p class="step-intro">Use a mensagem completa abaixo para convidar os colaboradores a preencher o formulário.</p>
+          <div class="c-form-group"><label for="ami-email-template" class="c-form-label"><i class="fas fa-envelope-open-text"></i> Mensagem sugerida</label><div id="ami-email-template" class="c-form-control collab-email-template" role="textbox" aria-readonly="true" tabindex="0"></div></div>
+          <p class="form-help" id="ami-email-link-row"><i class="fas fa-link"></i> Link persistente do formulário: <a id="ami-email-form-link" href="#" target="_blank" rel="noopener"></a></p>
+          <div class="ahp-form-actions"><button type="button" class="btn btn-secondary" id="ami-copy-email-link"><i class="fas fa-copy c-btn__icon"></i>Copiar link</button><button type="button" class="btn btn-secondary" id="ami-open-mail"><i class="fas fa-envelope c-btn__icon"></i>Abrir aplicativo de e-mail</button></div>
+          <p class="form-help"><i class="fas fa-circle-info"></i> A mensagem inclui o link persistente e os critérios armazenados no julgamento confirmado.</p>
+        </div>
+      </section>
     </div>
   </section>
 </main>
@@ -47,5 +61,5 @@
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20260819-table4"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20260819-config1"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20260819-pairwise5"></script>
 {% endblock %}

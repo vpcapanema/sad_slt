@@ -82,6 +82,31 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "<th>Ações</th>" not in html
     assert 'id="ami-judgments-workspace-action"' in html
     assert 'id="ami-judgments-public-action"' in html
+    assert 'id="ami-judgments-matrix-action"' in html
+    assert 'id="ami-judgments-form-action"' in html
+    assert 'id="ami-pairwise-panel"' in html
+    assert "Matriz de comparação pareada" in html
+    assert "Formulário de comparação pareada" in html
+    assert 'judgment.criterios || []' in julgamentos_js
+    assert 'querySelector("#saaty-scale-subcard")' in julgamentos_js
+    assert 'data-pair-row' in julgamentos_js and 'data-pair-column' in julgamentos_js
+    assert 'class="saaty-form ami-saaty-form"' in julgamentos_js
+    assert 'class="saaty-scale"' in julgamentos_js
+    assert 'class="saaty-reciprocal"' in julgamentos_js
+    assert 'class="saaty-controller-title"' in julgamentos_js
+    assert 'handle.style.backgroundColor = colors[index]' in julgamentos_js
+    assert 'readout.className = "saaty-readout saaty-readout--"' in julgamentos_js
+    assert 'class="saaty-auto-status"' in julgamentos_js
+    assert "scheduleVisualValidation" in julgamentos_js
+    assert "is-auto-validated" in julgamentos_js
+    assert "}, 1800);" in julgamentos_js
+    assert "wireSaatyFormPair" in julgamentos_js
+    assert 'class="ami-pairwise-form-row"' not in julgamentos_js
+    assert 'id="ami-email-draft-card"' in html
+    assert "Sugestão de mensagem de e-mail" in html
+    assert 'id="ami-email-form-link"' in html
+    assert "judgment.url_publica" in julgamentos_js
+    assert "renderEmailDraft(j);" in julgamentos_js
     assert 'id="ami-judgments-pagination"' in html
     assert html.index('id="ami-deadline"') < html.index('id="ami-hierarchy"')
     assert 'id="ami-create-section"' in html
