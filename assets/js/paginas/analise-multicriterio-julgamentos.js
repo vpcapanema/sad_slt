@@ -5,6 +5,7 @@
   var modo = new URLSearchParams(location.search).get("modo") || "julgamentos";
   var prefixMatch = location.pathname.match(/^(.*?)\/restrict\//);
   var appPrefix = prefixMatch ? prefixMatch[1] : "";
+  function appUrl(area, path) { return appPrefix + "/" + area + path; }
   var $ = function (id) { return document.getElementById(id); };
   var escapeHtml = function (value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML; };
   function api(url, options) {
@@ -27,12 +28,12 @@
     });
     $("ami-count").textContent = rows.length + (rows.length === 1 ? " julgamento" : " julgamentos");
     window.renderTabelaColaborativa("ami-judgments", rows, { actionsFor: function (j) {
-      var workspace = { href: appPrefix + "/restrict/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/", label: "Abrir espaço", className: "btn-primary" };
-      var form = { href: appPrefix + "/public/analise-multicriterio/" + encodeURIComponent(j.token) + "/", label: "Formulário" };
+      var workspace = { href: appUrl("restrict", "/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/"), label: "Abrir espaço do julgamento", icon: "fa-people-group", className: "is-primary" };
+      var form = { href: appUrl("public", "/analise-multicriterio/" + encodeURIComponent(j.token) + "/"), label: "Abrir formulário público", icon: "fa-clipboard-question" };
       return modo === "formulario" ? [form, workspace] : [workspace, form];
     }, onSelect: function (selectedId) {
       var selected = rows.find(function (j) { return j.id === selectedId; }); if (!selected) return;
-      location.href = modo === "formulario" ? appPrefix + "/public/analise-multicriterio/" + encodeURIComponent(selected.token) + "/" : appPrefix + "/restrict/analise-multicriterio/julgamentos/" + encodeURIComponent(selected.id) + "/";
+      location.href = modo === "formulario" ? appUrl("public", "/analise-multicriterio/" + encodeURIComponent(selected.token) + "/") : appUrl("restrict", "/analise-multicriterio/julgamentos/" + encodeURIComponent(selected.id) + "/");
     }});
   }
   function openModal() { $("ami-create-modal").classList.remove("is-hidden"); $("ami-hierarchy").focus(); }
@@ -61,7 +62,7 @@
       if (!convites.length) { feedback.textContent = "Informe ao menos um e-mail."; return; }
       feedback.textContent = "Abrindo julgamento…";
       api(appPrefix + "/" + "api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: $("ami-hierarchy").value, convites: convites.map(function (email) { return { email: email }; }), valido_ate: new Date($("ami-deadline").value).toISOString() }) }).then(function (j) {
-        location.href = appPrefix + "/restrict/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/";
+        location.href = appUrl("restrict", "/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/");
       }).catch(function (err) { feedback.textContent = err.message; });
     });
   });
