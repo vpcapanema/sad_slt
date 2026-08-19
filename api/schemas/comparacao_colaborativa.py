@@ -39,6 +39,7 @@ class AmbienteColaborativoResponseSchema(BaseModel):
     id: str
     hierarquizacao_id: str
     hierarquizacao_codigo: str
+    hierarquizacao_nome: str | None = None
     criterios: list[dict[str, Any]] = Field(default_factory=list)
     n_criterios: int = 0
     token: str

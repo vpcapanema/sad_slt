@@ -26,11 +26,14 @@
       return [j.hierarquizacao_codigo, h && h.nome, statusLabel(j.status)].join(" ").toLowerCase().includes(query);
     });
     $("ami-count").textContent = rows.length + (rows.length === 1 ? " julgamento" : " julgamentos");
-    window.renderTabelaColaborativa("ami-judgments", rows, function (j) {
-      return modo === "formulario"
-        ? { href: appPrefix + "/public/analise-multicriterio/" + encodeURIComponent(j.token) + "/", label: "Abrir formulário" }
-        : { href: appPrefix + "/restrict/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/", label: modo === "espaco" ? "Abrir espaço" : "Abrir" };
-    });
+    window.renderTabelaColaborativa("ami-judgments", rows, { actionsFor: function (j) {
+      var workspace = { href: appPrefix + "/restrict/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/", label: "Abrir espaço", className: "btn-primary" };
+      var form = { href: appPrefix + "/public/analise-multicriterio/" + encodeURIComponent(j.token) + "/", label: "Formulário" };
+      return modo === "formulario" ? [form, workspace] : [workspace, form];
+    }, onSelect: function (selectedId) {
+      var selected = rows.find(function (j) { return j.id === selectedId; }); if (!selected) return;
+      location.href = modo === "formulario" ? appPrefix + "/public/analise-multicriterio/" + encodeURIComponent(selected.token) + "/" : appPrefix + "/restrict/analise-multicriterio/julgamentos/" + encodeURIComponent(selected.id) + "/";
+    }});
   }
   function openModal() { $("ami-create-modal").classList.remove("is-hidden"); $("ami-hierarchy").focus(); }
   function closeModal() { $("ami-create-modal").classList.add("is-hidden"); $("ami-create-feedback").textContent = ""; }

@@ -92,6 +92,7 @@ def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "") -> Ambient
         id=str(row["id"]),
         hierarquizacao_id=str(row["hierarquizacao_id"]),
         hierarquizacao_codigo=row.get("hierarquizacao_codigo", ""),
+        hierarquizacao_nome=row.get("hierarquizacao_nome"),
         criterios=row.get("criterios") or [],
         n_criterios=int(row.get("n_criterios") or 0),
         token=token,
