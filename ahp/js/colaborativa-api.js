@@ -6,7 +6,7 @@
 
   var prefixMatch = global.location.pathname.match(/^(.*?)\/(?:restrict|public)\//);
   var APP_PREFIX = prefixMatch ? prefixMatch[1] : "";
-  var BASE = APP_PREFIX + "/api/ahp/comparacao-colaborativa";
+  var BASE = APP_PREFIX + "/" + "api/ahp/comparacao-colaborativa";
 
   function request(path, options) {
     return fetch(BASE + path, { credentials: "same-origin", ...(options || {}) }).then(function (res) {

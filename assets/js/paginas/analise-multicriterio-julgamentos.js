@@ -45,7 +45,7 @@
       $("ami-page-intro").textContent = "Selecione um julgamento para abrir o formulário público de participação.";
       $("ami-new").classList.add("is-hidden");
     }
-    Promise.all([api(appPrefix + "/api/hierarquizacoes"), api(appPrefix + "/api/ahp/comparacao-colaborativa/ambientes")]).then(function (values) {
+    Promise.all([api(appPrefix + "/" + "api/hierarquizacoes"), api(appPrefix + "/" + "api/ahp/comparacao-colaborativa/ambientes")]).then(function (values) {
       hierarquizacoes = values[0]; julgamentos = values[1];
       $("ami-hierarchy").insertAdjacentHTML("beforeend", hierarquizacoes.map(function (h) { return '<option value="' + h.id + '">' + escapeHtml(h.codigo + " — " + h.nome) + "</option>"; }).join(""));
       render();
@@ -57,7 +57,7 @@
       event.preventDefault(); var convites = emails($("ami-emails").value); var feedback = $("ami-create-feedback");
       if (!convites.length) { feedback.textContent = "Informe ao menos um e-mail."; return; }
       feedback.textContent = "Abrindo julgamento…";
-      api(appPrefix + "/api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: $("ami-hierarchy").value, convites: convites.map(function (email) { return { email: email }; }), valido_ate: new Date($("ami-deadline").value).toISOString() }) }).then(function (j) {
+      api(appPrefix + "/" + "api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: $("ami-hierarchy").value, convites: convites.map(function (email) { return { email: email }; }), valido_ate: new Date($("ami-deadline").value).toISOString() }) }).then(function (j) {
         location.href = appPrefix + "/restrict/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/";
       }).catch(function (err) { feedback.textContent = err.message; });
     });
