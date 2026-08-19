@@ -441,9 +441,12 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.secao-platform-mad .platform-grid,
+.secao-platform-mad .platform-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .secao-platform-resultados .platform-grid {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .secao-platform-ami .platform-grid {
@@ -506,9 +509,17 @@
     grid-column: 1 / -1;
   }
 
+  .secao-platform-mad .platform-grid,
+  .secao-platform-resultados .platform-grid,
   .secao-platform-administracao .platform-grid,
   .secao-platform-ahp-restrict .platform-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .secao-platform-mad .platform-tile:last-child {
+    grid-column: 1 / -1;
+    width: calc(50% - 4px);
+    justify-self: center;
   }
 
   .secao-platform-administracao .platform-tile:nth-child(n) {
