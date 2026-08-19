@@ -2,6 +2,7 @@
   "use strict";
   var julgamentos = [];
   var hierarquizacoes = [];
+  var modo = new URLSearchParams(location.search).get("modo") || "julgamentos";
   var $ = function (id) { return document.getElementById(id); };
   var escapeHtml = function (value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML; };
   function api(url, options) {
@@ -27,16 +28,27 @@
       var h = hierarquizacoes.find(function (item) { return item.id === j.hierarquizacao_id; });
       var total = (j.convites || []).length;
       var rc = j.consolidacao ? Number(j.consolidacao.razao_consistencia).toFixed(3) : "—";
+      var destino = modo === "formulario" ? "/public/analise-multicriterio/" + encodeURIComponent(j.token) + "/" : "/restrict/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/";
+      var rotulo = modo === "formulario" ? "Abrir formulário" : modo === "espaco" ? "Abrir espaço" : "Abrir";
       return "<tr><td><strong>" + escapeHtml(h && h.nome || j.hierarquizacao_codigo) + "</strong><small>" + escapeHtml(j.hierarquizacao_codigo) + "</small></td>" +
         '<td><span class="ami-status ami-status--' + escapeHtml(j.status) + '">' + escapeHtml(statusLabel(j.status)) + "</span></td>" +
         "<td>" + total + "</td><td>" + j.total_respostas + " / " + total + "</td><td>" + new Date(j.valido_ate).toLocaleString("pt-BR") + "</td><td>" + rc + "</td>" +
-        '<td><a class="btn btn-sm btn-primary" href="/restrict/analise-multicriterio/julgamentos/' + encodeURIComponent(j.id) + '/">Abrir</a></td></tr>';
+        '<td><a class="btn btn-sm btn-primary" href="' + destino + '">' + rotulo + '</a></td></tr>';
     }).join("") : '<tr><td colspan="7" class="ami-empty">Nenhum julgamento encontrado.</td></tr>';
   }
   function openModal() { $("ami-create-modal").classList.remove("is-hidden"); $("ami-hierarchy").focus(); }
   function closeModal() { $("ami-create-modal").classList.add("is-hidden"); $("ami-create-feedback").textContent = ""; }
   function emails(value) { return Array.from(new Set(value.split(/[\n,;]+/).map(function (v) { return v.trim().toLowerCase(); }).filter(Boolean))); }
   document.addEventListener("DOMContentLoaded", function () {
+    if (modo === "espaco") {
+      $("ami-page-title").textContent = "Espaço do julgamento";
+      $("ami-page-intro").textContent = "Selecione um julgamento para configurar participantes, acompanhar respostas e consolidar os resultados.";
+      $("ami-new").classList.add("is-hidden");
+    } else if (modo === "formulario") {
+      $("ami-page-title").textContent = "Formulário dos especialistas";
+      $("ami-page-intro").textContent = "Selecione um julgamento para abrir o formulário público de participação.";
+      $("ami-new").classList.add("is-hidden");
+    }
     Promise.all([api("/api/hierarquizacoes"), api("/api/ahp/comparacao-colaborativa/ambientes")]).then(function (values) {
       hierarquizacoes = values[0]; julgamentos = values[1];
       $("ami-hierarchy").insertAdjacentHTML("beforeend", hierarquizacoes.map(function (h) { return '<option value="' + h.id + '">' + escapeHtml(h.codigo + " — " + h.nome) + "</option>"; }).join(""));

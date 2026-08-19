@@ -52,6 +52,14 @@ def test_canonical_pages_are_available() -> None:
         assert client.get(path).status_code == 200, path
 
 
+def test_indice_expoe_as_tres_entradas_da_analise_multicriterio() -> None:
+    html = TestClient(app).get("/restrict/").text
+
+    assert "/restrict/analise-multicriterio/?modo=julgamentos" in html
+    assert "/restrict/analise-multicriterio/?modo=espaco" in html
+    assert "/restrict/analise-multicriterio/?modo=formulario" in html
+
+
 def test_legacy_page_redirect_preserves_query_string() -> None:
     response = TestClient(app).get(
         "/geoespacial/bancada?modulo=fase1&embutido=1",
