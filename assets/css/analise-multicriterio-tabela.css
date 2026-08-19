@@ -5,6 +5,36 @@
   border-radius: 10px;
 }
 
+.ami-table-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ami-table-actions {
+  display: flex;
+  gap: .45rem;
+  margin-left: auto;
+}
+
+.ami-table-actions .admin-icon-btn {
+  width: 2.15rem;
+  height: 2.15rem;
+  color: var(--pli-deep);
+  background: #fff;
+}
+
+.ami-table-actions .admin-icon-btn-primary {
+  color: #fff;
+  background: var(--pli-blue);
+}
+
+.ami-table-actions .is-disabled {
+  opacity: .45;
+  pointer-events: none;
+}
+
 .ami-table--database {
   min-width: 1650px;
   font-size: .74rem;
@@ -93,4 +123,8 @@
 .ami-field-source a {
   color: var(--pli-blue);
   font-weight: 700;
+}
+
+.ami-pagination {
+  margin: .75rem 0 0;
 }

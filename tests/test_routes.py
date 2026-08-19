@@ -61,7 +61,8 @@ def test_indice_expoe_as_tres_entradas_da_analise_multicriterio() -> None:
     trecho_ami = html.split('id="group-ami"', 1)[1].split('id="group-ahp-restrict"', 1)[0]
     trecho_mad = html.split('id="group-mad"', 1)[1].split('id="group-resultados"', 1)[0]
     assert "/restrict/hierarquizacao/processos/" in trecho_ami
-    assert trecho_ami.index("/restrict/hierarquizacao/processos/") < trecho_ami.index("?modo=julgamentos")
+    assert trecho_ami.index("/restrict/hierarquizacao/processos/") < trecho_ami.index("?modo=espaco") < trecho_ami.index("?modo=julgamentos")
+    assert "Julgamento - Configurações" in trecho_ami
     assert "/restrict/hierarquizacao/processos/" not in trecho_mad
 
 
@@ -77,6 +78,14 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert '"api/ahp/hierarquizacoes"' in julgamentos_js
     assert 'dataset.source = hierarquizacoesSourceUrl' in julgamentos_js
     assert "/restrict/hierarquizacao/processos/" in html
+    assert "var PAGE_SIZE = 15" in julgamentos_js
+    assert "<th>Ações</th>" not in html
+    assert 'id="ami-judgments-workspace-action"' in html
+    assert 'id="ami-judgments-public-action"' in html
+    assert 'id="ami-judgments-pagination"' in html
+    assert html.index('id="ami-deadline"') < html.index('id="ami-hierarchy"')
+    assert 'id="ami-create-section"' in html
+    assert "4.3" in html and "Ambiente colaborativo" in html
 
 
 def test_legacy_page_redirect_preserves_query_string() -> None:

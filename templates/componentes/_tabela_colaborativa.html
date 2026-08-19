@@ -1,13 +1,13 @@
 <section class="secao-dados-tabelas-colaborativas card ahp-step-section ami-panel">
-  <div class="ahp-section-label"><i class="fas fa-table" aria-hidden="true"></i><span>Dados das tabelas colaborativas</span></div>
+  <div class="ahp-section-label ami-table-heading"><span><i class="fas fa-table" aria-hidden="true"></i> Dados das tabelas colaborativas</span><div class="ami-table-actions" aria-label="Ações do julgamento selecionado"><a class="admin-icon-btn admin-icon-btn-primary is-disabled" id="{{ tabela_colaborativa_id }}-workspace-action" href="#" title="Abrir espaço do julgamento" aria-label="Abrir espaço do julgamento" aria-disabled="true"><i class="fa-solid fa-people-group" aria-hidden="true"></i></a><a class="admin-icon-btn is-disabled" id="{{ tabela_colaborativa_id }}-public-action" href="#" title="Abrir formulário público" aria-label="Abrir formulário público" aria-disabled="true"><i class="fa-solid fa-clipboard-question" aria-hidden="true"></i></a></div></div>
   <div class="ahp-section-body"><div class="hier-table-shell ami-table-shell"><table class="admin-table hier-register-table ami-table--database">
     <thead><tr>
       <th class="col-select" scope="col"><span class="sr-only">Selecionar</span></th><th>Situação</th><th>Hierarquização</th><th>Participação</th>
       <th>Prazo para respostas</th><th>Critérios</th><th>Consistência do grupo</th><th>Consolidação</th>
-      <th>Auditoria</th><th>Detalhes técnicos</th><th>Ações</th>
+      <th>Auditoria</th><th>Detalhes técnicos</th>
     </tr></thead>
     <tbody id="{{ tabela_colaborativa_id }}"></tbody>
-  </table></div></div>
+  </table></div><nav class="admin-pagination ami-pagination" id="{{ tabela_colaborativa_id }}-pagination" aria-label="Paginação dos julgamentos"><button type="button" data-page-prev aria-label="Página anterior"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button><span data-page-label>Página 1 de 1</span><button type="button" data-page-next aria-label="Próxima página"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button></nav></div>
 </section>
 <div class="ami-data-modal is-hidden" id="{{ tabela_colaborativa_id }}-modal" role="dialog" aria-modal="true" aria-labelledby="{{ tabela_colaborativa_id }}-modal-title">
   <div class="ami-data-modal__card">
