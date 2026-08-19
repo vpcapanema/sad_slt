@@ -402,6 +402,7 @@
 .secao-platform-resultados { grid-column: span 2; }
 .secao-platform-administracao { grid-column: span 4; }
 .secao-platform-ahp-restrict { grid-column: span 5; }
+.secao-platform-ami { grid-column: 1 / -1; }
 
 .restrict-platform-groups:has(.secao-platform-administracao[hidden]) .secao-platform-ahp-restrict {
   grid-column: 1 / -1;
@@ -440,12 +441,13 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.secao-platform-mad .platform-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.secao-platform-mad .platform-grid,
+.secao-platform-resultados .platform-grid {
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.secao-platform-resultados .platform-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.secao-platform-ami .platform-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 /* 4 itens na primeira linha e 3 itens distribuídos por toda a segunda. */
