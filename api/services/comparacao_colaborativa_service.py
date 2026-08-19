@@ -13,6 +13,7 @@ from api.repositories import hierarquizacao_repository as hierarq_repo
 from api.schemas.comparacao_colaborativa import (
     AmbienteColaborativoCreateSchema,
     AmbienteColaborativoResponseSchema,
+    AmbienteColaborativoUpdateSchema,
     AmbientePublicoSchema,
     ConsolidacaoColaborativaSchema,
     IdentificacaoColaboradorSchema,
@@ -186,10 +187,49 @@ def obter_ambiente_id(ambiente_id: str, *, base_url: str = "") -> AmbienteColabo
     return _ambiente_to_response(row, base_url=base_url)
 
 
+def listar_ambientes(*, base_url: str = "") -> list[AmbienteColaborativoResponseSchema]:
+    """Lista todos os julgamentos interativos persistidos."""
+    return [_ambiente_to_response(row, base_url=base_url) for row in repo.list_ambientes()]
+
+
+def atualizar_ambiente(
+    ambiente_id: str,
+    payload: AmbienteColaborativoUpdateSchema,
+    *,
+    base_url: str = "",
+) -> AmbienteColaborativoResponseSchema:
+    atual = repo.get_ambiente_by_id(ambiente_id)
+    if not atual:
+        raise DemandaValidationError("Julgamento não encontrado.", field="julgamento_id")
+    if atual.get("status") != "ativa":
+        raise DemandaValidationError(
+            "Somente julgamentos abertos podem ser editados.", field="status"
+        )
+    data: dict[str, Any] = {}
+    if payload.convites is not None:
+        convites = [{"email": str(item.email).strip().lower()} for item in payload.convites]
+        emails = [item["email"] for item in convites]
+        if len(set(emails)) != len(emails):
+            raise DemandaValidationError("Há e-mails duplicados.", field="convites")
+        data["convites"] = convites
+    if payload.valido_ate is not None:
+        limite = payload.valido_ate
+        if limite.tzinfo is None:
+            limite = limite.replace(tzinfo=timezone.utc)
+        if limite <= datetime.now(timezone.utc):
+            raise DemandaValidationError("O prazo deve ser futuro.", field="valido_ate")
+        data["valido_ate"] = limite
+    atualizado = repo.update_ambiente(ambiente_id, data)
+    if not atualizado:
+        raise DemandaValidationError("Julgamento não encontrado.", field="julgamento_id")
+    atualizado["total_respostas"] = len(repo.list_respostas(ambiente_id))
+    return _ambiente_to_response(atualizado, base_url=base_url)
+
+
 def listar_ambientes_hierarquizacao(
     hierarq_id: UUID, *, base_url: str = ""
 ) -> list[AmbienteColaborativoResponseSchema]:
-    """Lista o histórico completo de rodadas colaborativas da hierarquização."""
+    """Lista o histórico completo de julgamentos colaborativos da hierarquização."""
     _carregar_hierarquizacao(hierarq_id)
     return [
         _ambiente_to_response(row, base_url=base_url)

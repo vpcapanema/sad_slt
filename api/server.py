@@ -21,11 +21,12 @@ app = FastAPI(title="SLT — Apoio à Tomada de Decisão", version="1.1.0")
 templates = Jinja2Templates(directory=str(project_path("templates")))
 
 
-def render_page(request: Request, template_name: str) -> Response:
+def render_page(request: Request, template_name: str, **context: object) -> Response:
     """Renderiza uma página pelo contrato comum de templates da aplicação."""
     return templates.TemplateResponse(
         request=request,
         name=template_name,
+        context=context,
         headers={"Cache-Control": "no-store"},
     )
 
@@ -226,6 +227,30 @@ async def pagina_ahp_limpa(request: Request, pagina: str) -> Response:
 async def pagina_ahp_colaborativa_publica(request: Request) -> Response:
     """Formulário público acessado pelo token de um convite AHP."""
     return render_page(request, "paginas/ahp/colaborativa.html")
+
+
+@app.get("/restrict/analise-multicriterio/", include_in_schema=False)
+async def pagina_julgamentos_multicriterio(request: Request) -> Response:
+    return render_page(request, "paginas/analise_multicriterio/julgamentos.html")
+
+
+@app.get(
+    "/restrict/analise-multicriterio/julgamentos/{julgamento_id}/",
+    include_in_schema=False,
+)
+async def pagina_julgamento_multicriterio(
+    request: Request, julgamento_id: str
+) -> Response:
+    return render_page(
+        request,
+        "paginas/analise_multicriterio/julgamento.html",
+        julgamento_id=julgamento_id,
+    )
+
+
+@app.get("/public/analise-multicriterio/{token}/", include_in_schema=False)
+async def pagina_formulario_multicriterio(request: Request, token: str) -> Response:
+    return render_page(request, "paginas/analise_multicriterio/formulario.html", token=token)
 
 
 HIERARQUIZACAO_PROCESS_PAGES = {

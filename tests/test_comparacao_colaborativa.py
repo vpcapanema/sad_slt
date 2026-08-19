@@ -361,6 +361,17 @@ class _FakeRepo:
             if r["hierarquizacao_id"] == str(hierarquizacao_id)
         ]
 
+    def list_ambientes(self):
+        return [self.get_ambiente_by_id(row["id"]) for row in self.ambientes.values()]
+
+    def update_ambiente(self, ambiente_id: str, data: dict):
+        row = self.ambientes.get(ambiente_id)
+        if not row:
+            return None
+        row.update(data)
+        row["atualizado_em"] = datetime.now(timezone.utc)
+        return self.get_ambiente_by_id(ambiente_id)
+
     def encerrar_ambientes_anteriores(self, hierarquizacao_id) -> None:
         for row in self.ambientes.values():
             if row["hierarquizacao_id"] == str(hierarquizacao_id):
@@ -399,6 +410,8 @@ def _instalar_fake_repo(monkeypatch) -> _FakeRepo:
         "get_ambiente_by_hierarquizacao",
         "get_ambiente_by_id",
         "list_ambientes_by_hierarquizacao",
+        "list_ambientes",
+        "update_ambiente",
         "encerrar_ambientes_anteriores",
         "insert_resposta",
         "list_respostas",
@@ -439,6 +452,20 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     token = ambiente["token"]
     assert ambiente["status"] == "ativa"
     assert f"?token={token}" in ambiente["url_publica"]
+
+    # O módulo lista e permite ajustar participantes e prazo do julgamento aberto.
+    resp = gestor.get("/api/ahp/comparacao-colaborativa/ambientes")
+    assert resp.status_code == 200
+    assert [item["id"] for item in resp.json()] == [ambiente["id"]]
+    resp = gestor.patch(
+        f"/api/ahp/comparacao-colaborativa/ambientes/{ambiente['id']}",
+        json={
+            "convites": [{"email": "a@x.gov.br"}, {"email": "b@x.gov.br"}],
+            "valido_ate": "2031-01-31T23:59:59+00:00",
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["valido_ate"].startswith("2031-01-31")
 
     # 2. Participante acessa o link público e valida o e-mail.
     publico = TestClient(app)

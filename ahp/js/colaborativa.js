@@ -181,7 +181,8 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    token = qp("token") || "";
+    var tokenPath = global.location.pathname.match(/\/public\/analise-multicriterio\/([^/]+)\/?$/);
+    token = qp("token") || (tokenPath ? decodeURIComponent(tokenPath[1]) : "");
     var preEmail = qp("email") || "";
     if (preEmail && el("colab-email")) el("colab-email").value = preEmail;
     if (!token) {

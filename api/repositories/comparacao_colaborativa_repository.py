@@ -85,6 +85,45 @@ def get_ambiente_by_id(ambiente_id: str) -> dict[str, Any] | None:
     )
 
 
+def list_ambientes() -> list[dict[str, Any]]:
+    query = """
+        SELECT a.*,
+               h.nome AS hierarquizacao_nome,
+               (SELECT COUNT(*)::int
+                  FROM ahp.comparacao_colaborativa_resposta r
+                 WHERE r.ambiente_id = a.id) AS total_respostas
+          FROM ahp.comparacao_colaborativa_ambiente a
+          JOIN hierarquizacao_demandas.hierarquizacao_portfolio h
+            ON h.id = a.hierarquizacao_id
+         ORDER BY a.criado_em DESC
+    """
+    with get_connection() as conn:
+        rows = conn.execute(query).fetchall()
+    return [dict(row) for row in rows]
+
+
+def update_ambiente(ambiente_id: str, data: dict[str, Any]) -> dict[str, Any] | None:
+    if not data:
+        return get_ambiente_by_id(ambiente_id)
+    assignments = sql.SQL(", ").join(
+        sql.SQL("{} = {}").format(sql.Identifier(key), sql.Placeholder(key))
+        for key in data
+    )
+    query = sql.SQL(
+        "UPDATE ahp.comparacao_colaborativa_ambiente "
+        "SET {sets}, atualizado_em = now() WHERE id = %(ambiente_id)s RETURNING *"
+    ).format(sets=assignments)
+    params = {
+        key: Jsonb(value) if key == "convites" else value
+        for key, value in data.items()
+    }
+    params["ambiente_id"] = ambiente_id
+    with get_connection() as conn:
+        row = conn.execute(query, params).fetchone()
+        conn.commit()
+    return dict(row) if row else None
+
+
 def list_ambientes_by_hierarquizacao(hierarquizacao_id: Any) -> list[dict[str, Any]]:
     query = """
         SELECT a.*,

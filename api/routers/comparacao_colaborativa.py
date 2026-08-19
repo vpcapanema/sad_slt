@@ -10,6 +10,7 @@ from api.exceptions import DatabaseUnavailableError, DemandaValidationError
 from api.schemas.comparacao_colaborativa import (
     AmbienteColaborativoCreateSchema,
     AmbienteColaborativoResponseSchema,
+    AmbienteColaborativoUpdateSchema,
     AmbientePublicoSchema,
     RespostaColaborativaCreateSchema,
     RespostaColaborativaResponseSchema,
@@ -22,6 +23,17 @@ router = APIRouter(prefix="/ahp/comparacao-colaborativa", tags=["ahp-comparacao-
 
 def _base_url(request: Request) -> str:
     return str(request.base_url).rstrip("/")
+
+
+@router.get("/ambientes", response_model=list[AmbienteColaborativoResponseSchema])
+async def listar_ambientes(
+    request: Request,
+    _user: SessionUser = Depends(require_authenticated),
+) -> list[AmbienteColaborativoResponseSchema]:
+    try:
+        return service.listar_ambientes(base_url=_base_url(request))
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post("/ambientes", response_model=AmbienteColaborativoResponseSchema, status_code=201)
@@ -39,6 +51,21 @@ async def criar_ambiente(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@router.patch("/ambientes/{ambiente_id}", response_model=AmbienteColaborativoResponseSchema)
+async def atualizar_ambiente(
+    ambiente_id: str,
+    body: AmbienteColaborativoUpdateSchema,
+    request: Request,
+    _user: SessionUser = Depends(require_analyst),
+) -> AmbienteColaborativoResponseSchema:
+    try:
+        return service.atualizar_ambiente(ambiente_id, body, base_url=_base_url(request))
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 # Rotas com sufixo fixo registradas antes de "/ambientes/{tipo}/{codigo}"
 # para não serem capturadas pela rota genérica de dois segmentos.
 @router.get(
@@ -50,7 +77,7 @@ async def listar_ambientes_hierarquizacao(
     request: Request,
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[AmbienteColaborativoResponseSchema]:
-    """Lista todas as rodadas colaborativas de uma configuração AHP."""
+    """Lista todos os julgamentos colaborativos de uma hierarquização."""
     try:
         return service.listar_ambientes_hierarquizacao(hierarquizacao_id, base_url=_base_url(request))
     except DemandaValidationError as exc:

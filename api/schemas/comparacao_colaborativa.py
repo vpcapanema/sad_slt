@@ -18,6 +18,11 @@ class AmbienteColaborativoCreateSchema(BaseModel):
     valido_ate: datetime
 
 
+class AmbienteColaborativoUpdateSchema(BaseModel):
+    convites: list[ConviteColaborativoSchema] | None = Field(None, min_length=1)
+    valido_ate: datetime | None = None
+
+
 class ConsolidacaoColaborativaSchema(BaseModel):
     matriz_consolidada: list[list[float]]
     pesos_consolidados: list[float]
@@ -34,7 +39,7 @@ class AmbienteColaborativoResponseSchema(BaseModel):
     id: str
     hierarquizacao_id: str
     hierarquizacao_codigo: str
-    criterios: list[dict[str, Any]] = []
+    criterios: list[dict[str, Any]] = Field(default_factory=list)
     n_criterios: int = 0
     token: str
     convites: list[dict[str, Any]]
@@ -81,5 +86,5 @@ class RespostaColaborativaResponseSchema(BaseModel):
     indice_aleatorio: float | None = None
     razao_consistencia: float | None = None
     consistente: bool
-    estatisticas: dict[str, Any] = {}
+    estatisticas: dict[str, Any] = Field(default_factory=dict)
     enviadoEm: str
