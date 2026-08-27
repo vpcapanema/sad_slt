@@ -1,0 +1,13 @@
+{% from "componentes/navbar_modulo/_barra.html" import barra with context %}
+{{ barra("Páginas do AHP", [
+  {"href": "/restrict/ahp/", "texto": "Central AHP"},
+  {"href": "/restrict/ahp/analise/", "texto": "Calculadora AHP"},
+  {"href": "/restrict/ahp/configuracao/", "texto": "Configuração"},
+  {"href": "/restrict/ahp/criterios/", "texto": "Critérios"},
+  {"href": "/restrict/ahp/nomes/", "texto": "Nomes"},
+  {"href": "/restrict/ahp/metodo/", "texto": "Método"},
+  {"href": "/restrict/ahp/comparacao/", "texto": "Comparação pareada"},
+  {"href": "/restrict/ahp/respostas-colaborativas/", "texto": "Respostas colaborativas"},
+  {"href": "/restrict/ahp/resultados/", "texto": "Pesos e resultados"},
+  {"href": "/restrict/ahp/alternativas/", "texto": "Alternativas"}
+]) }}

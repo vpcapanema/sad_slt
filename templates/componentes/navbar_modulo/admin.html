@@ -1,0 +1,10 @@
+{% from "componentes/navbar_modulo/_barra.html" import barra with context %}
+{{ barra("Páginas da administração", [
+  {"href": "/restrict/admin/?menu=__dominios__", "texto": "Tabelas de domínio"},
+  {"href": "/restrict/admin/?menu=demandas", "texto": "Demandas"},
+  {"href": "/restrict/admin/?menu=ahp", "texto": "AHP"},
+  {"href": "/restrict/admin/?menu=hierarquizacao_demandas", "texto": "Hierarquização de Demandas"},
+  {"href": "/restrict/admin/?menu=geo", "texto": "Geografia"},
+  {"href": "/restrict/admin/?menu=geoprocessamento", "texto": "Geoprocessamento"},
+  {"href": "/restrict/admin/?menu=auditoria", "texto": "Auditoria"}
+]) }}

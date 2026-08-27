@@ -1,0 +1,7 @@
+{% from "componentes/navbar_modulo/_barra.html" import barra with context %}
+{{ barra("Páginas do MOCAD", [
+  {"href": "/restrict/painel/", "texto": "Painel de demandas"},
+  {"href": "/restrict/demandas/", "texto": "Tabela de demandas"},
+  {"href": "/restrict/demanda/", "texto": "Análise de demandas"},
+  {"href": "/restrict/complementacao/", "texto": "Complementação de cadastro"}
+]) }}

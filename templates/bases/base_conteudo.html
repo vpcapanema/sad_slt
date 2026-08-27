@@ -10,10 +10,12 @@
   <link rel="stylesheet" href="/assets/css/app.css">
   <link rel="stylesheet" href="/assets/css/template-conteudo.css">
   <link rel="stylesheet" href="/assets/css/feedback.css">
+  <link rel="stylesheet" href="/assets/css/navbar-modulo.css">
   {% block estilos_pagina %}{% endblock %}
 </head>
 <body class="pagina-conteudo {% block classes_body %}{% endblock %}" data-navegacao="{{ navegacao }}"{% if requer_autenticacao %} data-requer-autenticacao="true"{% endif %}>
   {% include "componentes/navbar_" ~ navegacao ~ ".html" %}
+  {% if bloco_modulo %}{% include "componentes/navbar_modulo/" ~ bloco_modulo ~ ".html" %}{% endif %}
 
   {% block antes_conteudo %}{% endblock %}
   {% block conteudo %}{% endblock %}

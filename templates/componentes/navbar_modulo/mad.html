@@ -1,0 +1,7 @@
+{% from "componentes/navbar_modulo/_barra.html" import barra with context %}
+{{ barra("Páginas do MAD", [
+  {"href": "/restrict/hierarquizacao/processos/", "texto": "Processos de hierarquização"},
+  {"href": "/restrict/analise-multicriterio/?modo=espaco", "texto": "Central de julgamentos", "modo": "espaco"},
+  {"href": "/restrict/analise-multicriterio/?modo=julgamentos", "texto": "Central de respostas", "modo": "julgamentos"},
+  {"href": "/restrict/analise-multicriterio/?modo=formulario", "texto": "Formulário dos especialistas", "modo": "formulario"}
+]) }}

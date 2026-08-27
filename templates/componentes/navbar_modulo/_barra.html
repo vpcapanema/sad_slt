@@ -1,0 +1,43 @@
+{#
+  Macro compartilhado das navbars de bloco.
+
+  Cada bloco do /restrict/ tem seu proprio componente nesta pasta, que apenas
+  declara os seus itens e chama este macro. O link para o inicio do bloco
+  (/restrict/) fica ao centro, com as paginas do modulo distribuidas dos dois
+  lados.
+
+  itens: lista de dicionarios com
+    href  - destino do link
+    texto - rotulo exibido
+    modo  - opcional; quando presente, o item so fica ativo se o query param
+            "modo" da pagina for igual a este valor
+#}
+{% macro barra(rotulo, itens) %}
+{% set caminho = request.url.path if request is defined else "" %}
+{% set modo_atual = request.query_params.get("modo") if request is defined and request.query_params is defined else none %}
+{% set meio = (itens | length + 1) // 2 %}
+<nav class="navbar-modulo" aria-label="{{ rotulo }}">
+  <ul class="navbar-modulo__lista">
+    {% for item in itens %}
+      {% if loop.index0 == meio %}
+        <li class="navbar-modulo__item navbar-modulo__item--bloco">
+          <a class="navbar-modulo__link navbar-modulo__link--bloco" href="/restrict/">
+            <i class="fa-solid fa-house" aria-hidden="true"></i> Início do bloco
+          </a>
+        </li>
+      {% endif %}
+      {% set ativo = caminho.endswith(item.href.split("?")[0]) and (item.modo is not defined or item.modo == modo_atual) %}
+      <li class="navbar-modulo__item">
+        <a class="navbar-modulo__link{% if ativo %} is-active{% endif %}" href="{{ item.href }}"{% if ativo %} aria-current="page"{% endif %}>{{ item.texto }}</a>
+      </li>
+    {% endfor %}
+    {% if itens | length <= meio %}
+      <li class="navbar-modulo__item navbar-modulo__item--bloco">
+        <a class="navbar-modulo__link navbar-modulo__link--bloco" href="/restrict/">
+          <i class="fa-solid fa-house" aria-hidden="true"></i> Início do bloco
+        </a>
+      </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endmacro %}

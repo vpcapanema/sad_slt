@@ -1,6 +1,7 @@
 {% extends "bases/base_conteudo.html" %}
 {% set subtitulo = "Análise Multicritério Interativa" %}
 {% set navegacao = "restrita" %}
+{% set bloco_modulo = "mad" %}
 {% set requer_autenticacao = true %}
 {% set modo_pagina = request.query_params.get('modo', 'julgamentos') if request.query_params is defined else 'julgamentos' %}
 {% block titulo %}{% if modo_pagina == 'julgamentos' %}Central de respostas{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Central de julgamentos{% endif %} — SICARD{% endblock %}
