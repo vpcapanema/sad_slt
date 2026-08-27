@@ -20,10 +20,8 @@
   var environmentMode = "create";
   var analysisWorkspace = null;
   var modo = new URLSearchParams(location.search).get("modo") || "julgamentos";
-  var prefixMatch = location.pathname.match(/^(.*?)\/restrict\//);
-  var appPrefix = prefixMatch ? prefixMatch[1] : "";
-  var ambientesSourceUrl = appPrefix + "/api/ahp/comparacao-colaborativa/ambientes";
-  var hierarquizacoesSourceUrl = appPrefix + "/api/ahp/hierarquizacoes/portfolio";
+  var ambientesSourceUrl = "/api/ahp/comparacao-colaborativa/ambientes";
+  var hierarquizacoesSourceUrl = "/api/ahp/hierarquizacoes/portfolio";
   var $ = function (id) { return document.getElementById(id); };
   var environmentFilterColumns = [
     ["status", "Situação"], ["id", "ID Julgamento"], ["hierarquizacao_id", "ID Hierarquização"],
@@ -31,7 +29,7 @@
     ["valido_ate", "Prazo para respostas"], ["criadoEm", "Criado em"], ["atualizadoEm", "Atualizado em"]
   ];
 
-  function appUrl(area, path) { return appPrefix + "/" + area + path; }
+  function appUrl(area, path) { return (area === "public" ? "/public" : "/restrict") + path; }
   function escapeHtml(value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML; }
   function api(url, options) {
     return fetch(url, Object.assign({ credentials: "same-origin", headers: { "Content-Type": "application/json" } }, options || {})).then(async function (response) {
@@ -152,9 +150,9 @@
   }
   function renderAnalysisScenarios(items, homologadaId) {
     $("ami-analysis-scenarios").innerHTML = items.map(function (item) { var official = item.id === homologadaId || item.status === "homologada"; return '<article class="info-card"><h3>' + escapeHtml(item.nome) + ' <small>' + escapeHtml(item.codigo) + '</small></h3><div class="ami-kpis"><div><strong>' + item.respostas_incluidas + '</strong><span>respostas</span></div><div><strong>' + fmtNumber(item.razao_consistencia) + '</strong><span>RC</span></div><div><strong>' + (item.consistente ? "Sim" : "Não") + '</strong><span>consistente</span></div></div><div class="ahp-collab-grid2"><div><h4>Pesos finais</h4><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Critério</th><th>Peso final</th></tr></thead><tbody>' + item.pesos_consolidados.map(function (w,i) { return '<tr><td>' + escapeHtml(criterionName(analysisWorkspace.ambiente.criterios[i], i)) + '</td><td>' + fmtNumber(w) + '</td></tr>'; }).join("") + '</tbody></table></div></div><div><h4>Matriz consolidada</h4>' + analysisMatrixTable(item) + '</div></div>' + (official ? '<p class="ami-create-success"><strong>Análise homologada</strong></p>' : '<button type="button" class="btn btn-success" data-homologate-analysis="' + escapeHtml(item.id) + '" ' + (!item.consistente ? "disabled" : "") + '>Homologar cenário</button>') + '</article>'; }).join("") || '<p class="ami-empty">Nenhum cenário calculado.</p>';
-    $("ami-analysis-scenarios").querySelectorAll("[data-homologate-analysis]").forEach(function (button) { button.addEventListener("click", function () { api(appPrefix + "/api/ahp/comparacao-colaborativa/analises/" + button.dataset.homologateAnalysis + "/homologar", {method:"POST"}).then(function () { openAnalysisWorkspace(); }).catch(function (e) { $("ami-analysis-feedback").textContent=e.message; }); }); });
+    $("ami-analysis-scenarios").querySelectorAll("[data-homologate-analysis]").forEach(function (button) { button.addEventListener("click", function () { api("/api/ahp/comparacao-colaborativa/analises/" + button.dataset.homologateAnalysis + "/homologar", {method:"POST"}).then(function () { openAnalysisWorkspace(); }).catch(function (e) { $("ami-analysis-feedback").textContent=e.message; }); }); });
   }
-  function openAnalysisWorkspace() { if (!selectedId) return; $("ami-analysis-feedback").textContent = "Carregando análise…"; api(appPrefix + "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(selectedId) + "/espaco-analitico").then(function (data) { $("ami-analysis-feedback").textContent=""; renderAnalysisWorkspace(data); }).catch(function (e) { $("ami-analysis-feedback").textContent=e.message; }); }
+  function openAnalysisWorkspace() { if (!selectedId) return; $("ami-analysis-feedback").textContent = "Carregando análise…"; api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(selectedId) + "/espaco-analitico").then(function (data) { $("ami-analysis-feedback").textContent=""; renderAnalysisWorkspace(data); }).catch(function (e) { $("ami-analysis-feedback").textContent=e.message; }); }
   function setEnvironmentMode(mode) {
     environmentMode = mode;
     var creating = mode === "create", editing = mode === "edit", readonly = mode === "view";
@@ -204,7 +202,7 @@
     feedbackNode.textContent = "Salvando alterações…";
     $("ami-environment-save").disabled = true;
     var updatePayload = { hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, matriz_premissas_criterios: criteriaMatrix, convites: draftEmails.map(function (email) { return { email: email }; }), valido_ate: deadlineEndOfDay() }; if (criteriaMatrixFileBase64) { updatePayload.arquivo_matriz_base64 = criteriaMatrixFileBase64; updatePayload.arquivo_matriz_nome = criteriaMatrixFileName; }
-    api(appPrefix + "/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(judgment.id), { method: "PATCH", body: JSON.stringify(updatePayload) }).then(function (updated) {
+    api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(judgment.id), { method: "PATCH", body: JSON.stringify(updatePayload) }).then(function (updated) {
       var index = julgamentos.findIndex(function (item) { return item.id === updated.id; });
       if (index >= 0) julgamentos[index] = updated;
       selectedIds.clear(); selectedIds.add(updated.id); updateSelectedId(); render(); viewSelectedEnvironment();
@@ -373,7 +371,7 @@
   function saveInlineEdit() {
     if (!editingId) return;
     var endpoint = modo === "julgamentos" ? "/api/ahp/comparacao-colaborativa/respostas/" : "/api/ahp/comparacao-colaborativa/ambientes/";
-    api(appPrefix + endpoint + encodeURIComponent(editingId), { method: "PATCH", body: JSON.stringify(inlinePayload()) }).then(function (updated) {
+    api(endpoint + encodeURIComponent(editingId), { method: "PATCH", body: JSON.stringify(inlinePayload()) }).then(function (updated) {
       var source = modo === "julgamentos" ? respostasCentral : julgamentos, index = source.findIndex(function (item) { return item.id === editingId; });
       if (index >= 0) source[index] = Object.assign({}, source[index], updated); editingId = null; feedback("Alterações salvas no banco."); render();
     }).catch(function (error) { feedback(error.message, true); });
@@ -383,7 +381,7 @@
     var label = modo === "julgamentos" ? "esta resposta" : "este julgamento e todas as respostas vinculadas";
     if (!window.confirm("Deseja excluir definitivamente " + label + "?")) return;
     var endpoint = modo === "julgamentos" ? "/api/ahp/comparacao-colaborativa/respostas/" : "/api/ahp/comparacao-colaborativa/ambientes/";
-    api(appPrefix + endpoint + encodeURIComponent(selectedId), { method: "DELETE" }).then(function () {
+    api(endpoint + encodeURIComponent(selectedId), { method: "DELETE" }).then(function () {
       if (modo === "julgamentos") respostasCentral = respostasCentral.filter(function (item) { return item.id !== selectedId; }); else julgamentos = julgamentos.filter(function (item) { return item.id !== selectedId; });
       selectedIds.delete(selectedId); updateSelectedId(); editingId = null; feedback("Registro excluído do banco."); render();
     }).catch(function (error) { feedback(error.message, true); });
@@ -462,7 +460,7 @@
       if (matrixRows(criteriaMatrix).length < 2) { feedback.textContent = "Carregue a matriz de premissas e critérios com ao menos dois critérios."; return; }
       feedback.textContent = "Criando ambiente colaborativo…";
       var selectedHierarchy = $("ami-hierarchy").selectedOptions[0];
-      api(appPrefix + "/" + "api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, matriz_premissas_criterios: criteriaMatrix, arquivo_matriz_base64: criteriaMatrixFileBase64, arquivo_matriz_nome: criteriaMatrixFileName, convites: draftEmails.map(function (email) { return { email: email }; }), valido_ate: deadlineEndOfDay() }) }).then(function (j) {
+      api("/api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, matriz_premissas_criterios: criteriaMatrix, arquivo_matriz_base64: criteriaMatrixFileBase64, arquivo_matriz_nome: criteriaMatrixFileName, convites: draftEmails.map(function (email) { return { email: email }; }), valido_ate: deadlineEndOfDay() }) }).then(function (j) {
         julgamentos.unshift(j); currentPage = 1; selectedIds.clear(); selectedIds.add(j.id); updateSelectedId(); render();
         var links = actionLinks(j);
         $("ami-create-status").className = "ami-create-success";
@@ -473,7 +471,7 @@
     });
     $("ami-copy-email-link").addEventListener("click", function () { var judgment = julgamentos.find(function (item) { return item.id === selectedId; }), url = persistentPublicUrl(judgment); if (url && navigator.clipboard) navigator.clipboard.writeText(url); });
     $("ami-open-mail").addEventListener("click", function () { var body = $("ami-email-template").dataset.message || $("ami-email-template").textContent; location.href = "mailto:" + draftEmails.join(",") + "?subject=" + encodeURIComponent("Convite para preenchimento colaborativo AHP (SAD/SLT)") + "&body=" + encodeURIComponent(body); });
-    $("ami-analysis-calculate").addEventListener("click", function () { if (!analysisWorkspace) return; var ids=Array.from($("ami-analysis-responses").querySelectorAll("[data-analysis-response]:checked")).map(function(x){return x.dataset.analysisResponse;}); $("ami-analysis-feedback").textContent="Calculando cenário…"; api(appPrefix+"/api/ahp/comparacao-colaborativa/ambientes/"+encodeURIComponent(selectedId)+"/analises",{method:"POST",body:JSON.stringify({nome:$("ami-analysis-name").value.trim(),resposta_ids:ids,rc_maximo:Number($("ami-analysis-rc").value),excluir_inconsistentes:$("ami-analysis-exclude-inconsistent").checked})}).then(function(){return api(appPrefix+"/api/ahp/comparacao-colaborativa/ambientes/"+encodeURIComponent(selectedId)+"/espaco-analitico");}).then(function(data){$("ami-analysis-feedback").textContent="Cenário calculado e salvo.";renderAnalysisWorkspace(data);}).catch(function(e){$("ami-analysis-feedback").textContent=e.message;}); });
+    $("ami-analysis-calculate").addEventListener("click", function () { if (!analysisWorkspace) return; var ids=Array.from($("ami-analysis-responses").querySelectorAll("[data-analysis-response]:checked")).map(function(x){return x.dataset.analysisResponse;}); $("ami-analysis-feedback").textContent="Calculando cenário…"; api("/api/ahp/comparacao-colaborativa/ambientes/"+encodeURIComponent(selectedId)+"/analises",{method:"POST",body:JSON.stringify({nome:$("ami-analysis-name").value.trim(),resposta_ids:ids,rc_maximo:Number($("ami-analysis-rc").value),excluir_inconsistentes:$("ami-analysis-exclude-inconsistent").checked})}).then(function(){return api("/api/ahp/comparacao-colaborativa/ambientes/"+encodeURIComponent(selectedId)+"/espaco-analitico");}).then(function(data){$("ami-analysis-feedback").textContent="Cenário calculado e salvo.";renderAnalysisWorkspace(data);}).catch(function(e){$("ami-analysis-feedback").textContent=e.message;}); });
     renderDraftEmails();
   });
 })();

@@ -112,7 +112,12 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert "var selectedIds = new Set()" in julgamentos_js
     assert "checkbox.indeterminate" in julgamentos_js
     assert '"/api/ahp/hierarquizacoes/portfolio"' in julgamentos_js
-    assert 'ambientesSourceUrl = appPrefix + "/api/ahp/comparacao-colaborativa/ambientes"' in julgamentos_js
+    assert 'ambientesSourceUrl = "/api/ahp/comparacao-colaborativa/ambientes"' in julgamentos_js
+    # O prefixo de subpath e responsabilidade do SubpathRewriteMiddleware: o
+    # JavaScript nao pode recalcula-lo, sob pena de prefixo duplicado
+    # (/sicard/sicard/api/...) quando a aplicacao e servida sob /sicard/.
+    assert "appPrefix" not in julgamentos_js
+    assert "prefixMatch" not in julgamentos_js
     assert "api(ambientesSourceUrl).then" in julgamentos_js
     assert "environmentFilterColumns" in julgamentos_js
     assert "syncEnvironmentFilterOptions" in julgamentos_js
