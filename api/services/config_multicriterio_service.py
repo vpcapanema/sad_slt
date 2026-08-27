@@ -292,11 +292,6 @@ def criar_config(payload: ConfigCreateSchema, *, criado_por: str | None = None) 
                 extensao = arquivo_nome.rsplit(".", 1)[-1].lower()
                 if extensao in {"xlsx", "csv"}:
                     data["arquivo_tipo"] = extensao
-            arquivo_excel = hier_repo.get_excel_matriz_by_codigo(
-                payload.hierarquizacao_codigo
-            )
-            if arquivo_excel is not None:
-                data["arquivo_excel_matriz_criterios_premissas"] = arquivo_excel
         # Mesma transação do insert: apta → em hierarquização.
         # A configuração AHP não altera o status das demandas. A ocupação do
         # universo é responsabilidade do cadastro da hierarquização.

@@ -1,0 +1,41 @@
+.ami-page .ami-analysis-split {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-rows: auto;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.ami-page .ami-analysis-split > .matriz-table-wrap {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+}
+
+.ami-page .ami-analysis-split > .ami-analysis-chart {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .ami-page .ami-analysis-split {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .ami-page .ami-analysis-split > .matriz-table-wrap,
+  .ami-page .ami-analysis-split > .ami-analysis-chart {
+    grid-column: 1;
+  }
+
+  .ami-page .ami-analysis-split > .matriz-table-wrap {
+    grid-row: 1;
+  }
+
+  .ami-page .ami-analysis-split > .ami-analysis-chart {
+    grid-row: 2;
+  }
+}

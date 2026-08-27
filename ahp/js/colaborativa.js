@@ -7,6 +7,8 @@
   var token = "";
   var meta = null;
   var stats = { inicio_ms: null, pares: {} };
+  var draftActive = false;
+  var saveTimer = null;
 
   function qp(name) {
     return new URLSearchParams(global.location.search).get(name);
@@ -99,14 +101,27 @@
     if (!matrix) return;
     var res = SLTAhp.analyzeMatrix(matrix);
     updateProgressHint(res.CR);
+    if (draftActive) {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () {
+        var email = (el("colab-email").value || "").trim().toLowerCase();
+        global.SLTColaborativaApi.salvarProgresso(token, {
+          email: email, matriz_comparacao: matrix,
+          estatisticas: { revisoes_por_par: stats.pares, duracao_ms: stats.inicio_ms ? Date.now() - stats.inicio_ms : null },
+        }).then(function () { submitFeedback("Progresso salvo automaticamente.", "success"); })
+          .catch(function (err) { submitFeedback("Não foi possível salvar o progresso: " + (err.message || err), "error"); });
+      }, 600);
+    }
   };
 
   global.updateLiveMetrics = updateCollabMetrics;
 
   function liberarFormulario() {
+    var nome = (el("colab-nome").value || "").trim();
+    var inst = (el("colab-inst").value || "").trim();
     var email = (el("colab-email").value || "").trim().toLowerCase();
-    if (!email) {
-      feedback("Informe o e-mail.", "error");
+    if (!nome || !inst || !email) {
+      feedback("Informe nome, instituição e e-mail para iniciar o preenchimento.", "error");
       return;
     }
     feedback("Verificando convite…", "info");
@@ -121,14 +136,15 @@
           return;
         }
         meta = m;
-        if (typeof global.setAhpCriteria === "function") {
-          global.setAhpCriteria(m.criterios || []);
-        } else {
-          global.criteria = m.criterios || [];
-        }
-        feedback("Formulário liberado.", "success");
+        return global.SLTColaborativaApi.iniciarResposta(token, { identificacao: { nome_completo: nome, email: email, instituicao: inst } });
+      }).then(function (resposta) {
+        if (!resposta) return;
+        if (resposta.status === "enviada") { feedback("Este e-mail já enviou a resposta deste julgamento.", "error"); return; }
+        if (typeof global.setAhpCriteria === "function") global.setAhpCriteria(meta.criterios || []); else global.criteria = meta.criterios || [];
+        global.ahpCollaborativeDraftMatrix = resposta.matriz_comparacao || null;
+        feedback("Formulário liberado. O progresso será salvo automaticamente.", "success");
         el("collab-form-section").classList.remove("is-hidden");
-        stats.inicio_ms = Date.now();
+        stats.inicio_ms = Date.now(); draftActive = false;
         if (typeof generatePairwiseFormStep4 === "function") generatePairwiseFormStep4();
         var content = el("comparisonContent");
         if (content && !el("collab-reciprocal-hint")) {
@@ -138,6 +154,7 @@
           );
         }
         patchSaatyTracking();
+        draftActive = true;
         updateCollabMetrics();
       })
       .catch(function (err) {
@@ -172,6 +189,7 @@
       estatisticas: { duracao_ms: duracao_ms, revisoes_por_par: stats.pares },
     })
       .then(function () {
+        draftActive = false;
         submitFeedback("Resposta enviada com sucesso. Obrigado!", "success");
       })
       .catch(function (err) {

@@ -9,7 +9,7 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/restrict/hierarquizacao/platform-map.css?v=20260814-1">
-  <link rel="stylesheet" href="/restrict/index.css?v=20260817g" />
+  <link rel="stylesheet" href="/restrict/index.css?v=20260819-ahp-admin" />
   <link
       rel="stylesheet"
       href="/assets/vendor/fontawesome/css/all.min.css"
@@ -18,7 +18,7 @@
 
 
 {% macro link_card(href, icon, title, tone='blue') %}
-  <a class="platform-tile platform-tile--{{ tone }}" href="{{ href }}" title="{{ title }}">
+  <a class="platform-tile platform-tile--{{ tone }}" href="{{ href }}" title="{{ title }}" target="_blank" rel="noopener noreferrer">
     <span class="platform-tile__icon"><i class="{{ icon }}" aria-hidden="true"></i></span>
     <span class="platform-tile__label">{{ title }}</span>
   </a>
@@ -112,10 +112,12 @@
         </section>
 
         <section class="platform-group secao-platform-mad" aria-labelledby="group-mad">
-          <div class="platform-group__heading"><div><h2 id="group-mad">MAD</h2><p class="platform-group__subtitle">Módulo de apoio à decisão</p><p>Estruture processos, critérios e produtos territoriais.</p></div></div>
+          <div class="platform-group__heading"><div><h2 id="group-mad">MAD</h2><p class="platform-group__subtitle">Módulo de apoio à decisão, análise multicritérios interativa e hierarquização colaborativa.</p><p>Estruture processos, critérios e produtos territoriais.</p></div></div>
           <div class="platform-grid">
-            {{ link_card('/restrict/hierarquizacao/', 'fa-solid fa-diagram-project', 'Hierarquização e Ranking', 'green') }}
-            {{ link_card('/restrict/geoespacial/produtos/', 'fa-solid fa-layer-group', 'Produtos geoespaciais', 'green') }}
+            {{ link_card('/restrict/hierarquizacao/processos/', 'fa-solid fa-diagram-project', 'Processos de hierarquização', 'amber') }}
+            {{ link_card('/restrict/analise-multicriterio/?modo=espaco', 'fa-solid fa-people-group', 'Central de julgamentos', 'amber') }}
+            {{ link_card('/restrict/analise-multicriterio/?modo=julgamentos', 'fa-solid fa-list-check', 'Central de respostas', 'amber') }}
+            {{ link_card('/restrict/analise-multicriterio/?modo=formulario', 'fa-solid fa-clipboard-question', 'Formulário dos especialistas', 'amber') }}
           </div>
         </section>
 
@@ -129,27 +131,21 @@
           </div>
         </section>
 
-        <section class="platform-group secao-platform-administracao" data-permission="administer" hidden aria-labelledby="group-administracao">
-          <div class="platform-group__heading"><div><h2 id="group-administracao">ADMIN</h2><p class="platform-group__subtitle">Tabelas do banco de dados</p><p>Acesse diretamente cada grupo da administração do sistema.</p></div></div>
-          <div class="platform-grid">
-            {{ link_card('/restrict/admin/?menu=__dominios__', 'fa-solid fa-list', 'Tabelas de domínio', 'navy') }}
-            {{ link_card('/restrict/admin/?menu=ahp', 'fa-solid fa-scale-balanced', 'AHP', 'navy') }}
-            {{ link_card('/restrict/admin/?menu=auditoria', 'fa-solid fa-shield-halved', 'Auditoria', 'navy') }}
-            {{ link_card('/restrict/admin/?menu=demandas', 'fa-solid fa-inbox', 'Demandas', 'navy') }}
-            {{ link_card('/restrict/admin/?menu=geo', 'fa-solid fa-earth-americas', 'Geografia', 'navy') }}
-            {{ link_card('/restrict/admin/?menu=geoprocessamento', 'fa-solid fa-layer-group', 'Geoprocessamento', 'navy') }}
-            {{ link_card('/restrict/admin/?menu=hierarquizacao_demandas', 'fa-solid fa-ranking-star', 'Hierarquização de Demandas', 'navy') }}
-          </div>
-        </section>
       </div>
-        <div class="restrict-platform-row restrict-platform-row--ami">
-          <section class="platform-group secao-platform-ami" aria-labelledby="group-ami">
-            <div class="platform-group__heading"><div><h2 id="group-ami">Análise Multicritério Interativa</h2><p class="platform-group__subtitle">Hierarquização colaborativa</p><p>Estruture processos, acompanhe a hierarquização e consulte os rankings consolidados.</p></div></div>
+        <div class="restrict-platform-row restrict-platform-row--geoprocessamento">
+          <section class="platform-group secao-platform-geoprocessamento" aria-labelledby="group-geoprocessamento">
+            <div class="platform-group__heading"><div><h2 id="group-geoprocessamento">Geoprocessamento</h2><p class="platform-group__subtitle">Processamento e produtos territoriais</p><p>Acesse os recursos territoriais anteriormente agrupados no MAD.</p></div></div>
             <div class="platform-grid">
-              {{ link_card('/restrict/hierarquizacao/processos/', 'fa-solid fa-diagram-project', 'Processos de hierarquização', 'amber') }}
-              {{ link_card('/restrict/analise-multicriterio/?modo=espaco', 'fa-solid fa-people-group', 'Julgamento - Configurações', 'amber') }}
-              {{ link_card('/restrict/analise-multicriterio/?modo=julgamentos', 'fa-solid fa-list-check', 'Julgamentos', 'amber') }}
-              {{ link_card('/restrict/analise-multicriterio/?modo=formulario', 'fa-solid fa-clipboard-question', 'Formulário dos especialistas', 'amber') }}
+              {{ link_card('/restrict/hierarquizacao/', 'fa-solid fa-diagram-project', 'Hierarquização e Ranking', 'green') }}
+              {{ link_card('/restrict/geoespacial/produtos/', 'fa-solid fa-layer-group', 'Produtos geoespaciais', 'green') }}
+              {{ link_card('/restrict/geoespacial/', 'fa-solid fa-earth-americas', 'Central geoespacial', 'green') }}
+              {{ link_card('/restrict/geoespacial/visualizador-insumos-geoespaciais/', 'fa-solid fa-folder-tree', 'Insumos geoespaciais', 'green') }}
+              {{ link_card('/restrict/geoespacial/gerador-risco-restricao/', 'fa-solid fa-shield-halved', 'Gerador de risco e restrição', 'amber') }}
+              {{ link_card('/restrict/geoespacial/gerador-favorabilidade/', 'fa-solid fa-map', 'Gerador de favorabilidade', 'green') }}
+              {{ link_card('/restrict/geoespacial/configuracao-risco-restricao/', 'fa-solid fa-book', 'Biblioteca canônica', 'amber') }}
+              {{ link_card('/restrict/geoespacial/produtos/', 'fa-solid fa-layer-group', 'Camadas homologadas', 'green') }}
+              {{ link_card('/restrict/geoespacial/bancada/', 'fa-solid fa-screwdriver-wrench', 'Bancada geoprocessamento', 'green') }}
+              {{ link_card('/restrict/geoespacial/configurador-ajuste/', 'fa-solid fa-sliders', 'Configurador da Fase 3', 'violet') }}
             </div>
           </section>
         </div>
@@ -167,6 +163,18 @@
               {{ link_card('/restrict/ahp/respostas-colaborativas/', 'fa-solid fa-users', 'Respostas colaborativas', 'teal') }}
               {{ link_card('/restrict/ahp/resultados/', 'fa-solid fa-chart-column', 'Pesos e resultados', 'teal') }}
               {{ link_card('/restrict/ahp/alternativas/', 'fa-solid fa-diagram-project', 'Alternativas', 'teal') }}
+            </div>
+          </section>
+          <section class="platform-group secao-platform-administracao" data-permission="administer" hidden aria-labelledby="group-administracao">
+            <div class="platform-group__heading"><div><h2 id="group-administracao">ADMIN</h2><p class="platform-group__subtitle">Tabelas do banco de dados</p><p>Acesse diretamente cada grupo da administração do sistema.</p></div></div>
+            <div class="platform-grid">
+              {{ link_card('/restrict/admin/?menu=__dominios__', 'fa-solid fa-list', 'Tabelas de domínio', 'navy') }}
+              {{ link_card('/restrict/admin/?menu=ahp', 'fa-solid fa-scale-balanced', 'AHP', 'navy') }}
+              {{ link_card('/restrict/admin/?menu=auditoria', 'fa-solid fa-shield-halved', 'Auditoria', 'navy') }}
+              {{ link_card('/restrict/admin/?menu=demandas', 'fa-solid fa-inbox', 'Demandas', 'navy') }}
+              {{ link_card('/restrict/admin/?menu=geo', 'fa-solid fa-earth-americas', 'Geografia', 'navy') }}
+              {{ link_card('/restrict/admin/?menu=geoprocessamento', 'fa-solid fa-layer-group', 'Geoprocessamento', 'navy') }}
+              {{ link_card('/restrict/admin/?menu=hierarquizacao_demandas', 'fa-solid fa-ranking-star', 'Hierarquização de Demandas', 'navy') }}
             </div>
           </section>
         </div>

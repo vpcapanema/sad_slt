@@ -2,7 +2,8 @@
 {% set subtitulo = "Análise Multicritério Interativa" %}
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
-{% block titulo %}Julgamentos interativos — SICARD{% endblock %}
+{% set modo_pagina = request.query_params.get('modo', 'julgamentos') if request.query_params is defined else 'julgamentos' %}
+{% block titulo %}{% if modo_pagina == 'julgamentos' %}Central de respostas{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Central de julgamentos{% endif %} — SICARD{% endblock %}
 {% block classes_body %}ahp-module-page ami-page{% endblock %}
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
@@ -10,42 +11,55 @@
   <link rel="stylesheet" href="/assets/css/ahp-collab-analytics.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-explorer.css">
   <link rel="stylesheet" href="/assets/css/ahp-collab-rounds.css">
-  <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260819-pairwise6">
-  <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20260819-table6">
-  <link rel="stylesheet" href="/assets/css/analise-multicriterio-modal.css?v=20260819-modal3">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio.css?v=20260821-response-donuts">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio-tabela.css?v=20260821-response-analytics">
+  <link rel="stylesheet" href="/assets/css/central-respostas-layout.css?v=20260821-table-left-chart-right">
+  <link rel="stylesheet" href="/assets/css/analise-multicriterio-modal.css?v=20260819-modal5">
+  <link rel="stylesheet" href="/assets/css/mad-filter-standard.css?v=20260820-1">
+  <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="conteudo-principal app-main ahp-main ami-main">
-  <section class="secao-cabecalho-julgamentos card ahp-step-intro ami-hero">
-    <div><p class="ami-eyebrow">Análise Multicritério Interativa</p><h1 id="ami-page-title">Julgamentos</h1><p id="ami-page-intro">Crie e acompanhe os julgamentos interativos.</p></div>
+  <section class="secao-cabecalho-julgamentos card ahp-step-intro ami-hero standard-page-hero">
+    <h1 class="standard-page-hero__title" id="ami-page-title"><i id="ami-page-title-icon" class="{% if modo_pagina == 'julgamentos' %}fa-solid fa-list-check{% elif modo_pagina == 'formulario' %}fa-solid fa-clipboard-question{% else %}fa-solid fa-people-group{% endif %}" aria-hidden="true"></i><span id="ami-page-title-text">{% if modo_pagina == 'julgamentos' %}Central de respostas{% elif modo_pagina == 'formulario' %}Formulário dos especialistas{% else %}Central de julgamentos{% endif %}</span></h1>
+    <p class="ami-eyebrow standard-page-hero__eyebrow">Análise Multicritério Interativa</p>
+    <p class="standard-page-hero__description" id="ami-page-intro">{% if modo_pagina == 'julgamentos' %}Consulte as respostas enviadas pelos especialistas nos julgamentos colaborativos.{% elif modo_pagina == 'formulario' %}Selecione um julgamento e abra o formulário público destinado aos especialistas.{% else %}Configure participantes, prazo de coleta e acesso ao ambiente colaborativo.{% endif %}</p>
   </section>
-  <div class="ami-toolbar ami-panel"><label for="ami-search">Buscar</label><input id="ami-search" class="form-control" type="search" placeholder="Código, hierarquização ou status"><span id="ami-count"></span><button class="btn btn-primary is-hidden" id="ami-new" type="button"><i class="fa-solid fa-plus"></i> Novo julgamento</button></div>
-  {% set tabela_colaborativa_id = "ami-judgments" %}{% set tabela_colaborativa_comparacao = true %}{% include "componentes/_tabela_colaborativa.html" %}
+  {% set tabela_colaborativa_id = "ami-judgments" %}{% set tabela_colaborativa_respostas = modo_pagina == 'julgamentos' %}{% set tabela_colaborativa_comparacao = modo_pagina == 'espaco' %}{% include "componentes/_tabela_colaborativa.html" %}
+  {% include "componentes/analise_multicriterio/_espaco_analitico_respostas.html" %}
   <section class="card-ami-pairwise secao-ami-pairwise card ahp-step-section is-hidden" id="ami-pairwise-panel">
-    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">5.3</span><span>Preenchimento da Matriz de Comparação Pareada</span></div>
-    <div class="ahp-section-body"><div id="ami-saaty-scale-host"></div><div class="ahp-subcard info-card info-card--spaced"><div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">II</span><span id="ami-pairwise-title">Comparação pareada</span></div><div class="info-card-content"><p class="step-intro" id="ami-pairwise-context"></p><div id="ami-pairwise-content"></div></div></div></div>
+    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">2</span><span>Preenchimento da Matriz de Comparação Pareada</span></div>
+    <div class="ahp-section-body">
+      <div id="ami-saaty-scale-host"></div>
+      <div class="ahp-subcard info-card info-card--spaced" id="ami-metrics-card">
+        <div class="ahp-subsection-title"><span class="ahp-subsection-num">2.2</span><span>Indicadores instantâneos de consistência AHP</span></div>
+        <div class="info-card-content"><div class="ahp-live-metrics ami-live-metrics is-initial" id="ami-live-metrics" aria-live="polite">
+          <div class="ahp-metric-card"><div class="ahp-metric-card__label">Lambda máximo (λmax)</div><div class="ahp-metric-card__value" id="ami-metric-lambda">—</div><div class="ahp-metric-card__sub">instantâneo</div></div>
+          <div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice de consistência (IC)</div><div class="ahp-metric-card__value" id="ami-metric-ic">—</div><div class="ahp-metric-card__sub">instantâneo</div></div>
+          <div class="ahp-metric-card"><div class="ahp-metric-card__label">Índice aleatório (IA)</div><div class="ahp-metric-card__value" id="ami-metric-ia">—</div><div class="ahp-metric-card__sub">Saaty</div></div>
+          <div class="ahp-metric-card"><div class="ahp-metric-card__label">Razão de consistência (RC)</div><div class="ahp-metric-card__value" id="ami-metric-rc">—</div><div class="ahp-metric-card__sub">instantâneo</div></div>
+        </div></div>
+      </div>
+      {% include "componentes/analise_multicriterio/_matriz_comparacao_pareada.html" %}
+      {% include "componentes/analise_multicriterio/_formulario_comparacao_pareada.html" %}
+    </div>
   </section>
   <section class="card-collab-section secao-collab-section card ahp-step-section is-hidden" id="ami-create-section">
-    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">4.3</span><span>Ambiente colaborativo</span></div>
+    <div class="ahp-section-label ami-environment-heading">
+      <div class="ami-environment-heading__title"><span class="ahp-section-index-icon" aria-hidden="true">3</span><span>Ambiente colaborativo</span></div>
+      <div class="ami-environment-heading__actions is-hidden" id="ami-environment-actions" role="group" aria-label="Ações do ambiente colaborativo">
+        <button type="button" class="ami-environment-heading__button" id="ami-environment-edit"><i class="fas fa-pen" aria-hidden="true"></i><span>Editar</span></button>
+        <button type="button" class="ami-environment-heading__button is-hidden" id="ami-environment-save"><i class="fas fa-floppy-disk" aria-hidden="true"></i><span>Salvar</span></button>
+      </div>
+    </div>
     <div class="ahp-section-body">
       <form id="ami-create-form">
-        <section class="secao-collab-config-section ahp-section ahp-subcard">
-          <div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">I</span><span>Configuração do preenchimento</span></div>
-          <div class="ahp-section-body">
-            <p class="step-intro">Defina primeiro a data limite da coleta, selecione a hierarquização e informe os colaboradores.</p>
-            <div class="info-card"><div class="ahp-collab-grid2 ami-create-grid">
-              <div class="c-form-group ami-config-field"><label for="ami-deadline" class="c-form-label"><i class="fas fa-calendar"></i> Data limite da coleta</label><small class="form-help"><i class="fas fa-info-circle"></i> Define até quando os colaboradores poderão enviar suas respostas.</small><input id="ami-deadline" class="c-form-control" type="datetime-local" required></div>
-              <div class="c-form-group ami-config-field"><label for="ami-hierarchy" class="c-form-label"><i class="fas fa-diagram-project"></i> Hierarquização</label><small class="form-help" id="ami-hierarchy-source"><i class="fas fa-info-circle"></i> Selecione um registro da tabela <a href="/restrict/hierarquizacao/processos/">Hierarquizações realizadas</a>.</small><select id="ami-hierarchy" class="c-form-control" required aria-describedby="ami-hierarchy-source ami-hierarchy-summary"><option value="">Selecione…</option></select><div id="ami-hierarchy-summary" class="ami-summary"></div></div>
-              <div class="c-form-group ami-config-field ami-create-email"><label for="ami-emails" class="c-form-label"><i class="fas fa-envelope"></i> E-mail do colaborador</label><small class="form-help"><i class="fas fa-info-circle"></i> Informe um ou vários e-mails, separados por vírgula, ponto e vírgula ou quebra de linha.</small><div class="ahp-collab-deadline-inline"><textarea id="ami-emails" class="c-form-control" rows="3" placeholder="nome@dominio.com; outro@dominio.com"></textarea><button type="button" class="ahp-collab-add-btn" id="ami-add-emails" aria-label="Adicionar colaborador" title="Adicionar colaborador"><i class="fas fa-plus" aria-hidden="true"></i></button></div></div>
-            </div></div>
-            <div class="info-card"><div class="c-form-group"><label class="c-form-label"><i class="fas fa-list"></i> Lista de colaboradores</label><div class="ahp-collab-table-wrap"><table class="ahp-collab-table"><thead><tr><th class="ahp-collab-chk-col"><input type="checkbox" id="ami-select-all" title="Selecionar todos" aria-label="Selecionar todos"></th><th>Colaboradores</th><th>Email</th><th>Data limite</th></tr></thead><tbody id="ami-email-list"><tr><td colspan="4" class="ami-empty">Nenhum colaborador adicionado.</td></tr></tbody></table></div></div><div class="ahp-form-actions"><button type="button" class="btn btn-danger" id="ami-delete-emails" disabled><i class="fas fa-trash c-btn__icon"></i>Excluir selecionados</button><button class="btn btn-primary" type="submit"><i class="fas fa-check c-btn__icon"></i>Confirmar colaboradores</button><button type="button" class="btn btn-secondary" id="ami-create-cancel">Cancelar</button></div><p class="ami-feedback" id="ami-create-feedback" role="status" aria-live="polite"></p></div>
-          </div>
-        </section>
+        {% include "componentes/analise_multicriterio/_analise_multicriterio_interativa.html" %}
       </form>
-      <section class="secao-collab-status-section ahp-section ahp-subcard"><div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">II</span><span>Status do ambiente colaborativo</span></div><div class="ahp-section-body"><div id="ami-create-status" class="ami-empty">O status será exibido após a confirmação dos colaboradores.</div></div></section>
+      <section class="secao-collab-status-section ahp-section ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">3.2</span><span>Status do ambiente colaborativo</span></div><div class="ahp-section-body"><div id="ami-create-status" class="ami-empty">O status será exibido após a confirmação dos colaboradores.</div></div></section>
       <section id="ami-email-draft-card" class="secao-collab-email-draft-card ahp-section ahp-subcard is-hidden">
-        <div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">III</span><span>Sugestão de mensagem de e-mail</span></div>
+        <div class="ahp-subsection-title"><span class="ahp-subsection-num">3.3</span><span>Sugestão de mensagem de e-mail</span></div>
         <div class="ahp-section-body">
           <p class="step-intro">Use a mensagem completa abaixo para convidar os colaboradores a preencher o formulário.</p>
           <div class="c-form-group"><label for="ami-email-template" class="c-form-label"><i class="fas fa-envelope-open-text"></i> Mensagem sugerida</label><div id="ami-email-template" class="c-form-control collab-email-template" role="textbox" aria-readonly="true" tabindex="0"></div></div>
@@ -60,6 +74,7 @@
 {% endblock %}
 {% block scripts_pagina %}
   <script src="/assets/js/admin-auth.js"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20260819-table4"></script>
-  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20260819-pairwise5"></script>
+  <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-tabela.js?v=20260820-multiselect"></script>
+  <script src="/assets/js/paginas/analise-multicriterio-julgamentos.js?v=20260821-response-donuts"></script>
 {% endblock %}

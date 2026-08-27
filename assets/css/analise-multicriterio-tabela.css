@@ -13,21 +13,7 @@
 }
 
 .ami-table-actions {
-  display: flex;
-  gap: .45rem;
-  margin-left: auto;
-}
-
-.ami-table-actions .admin-icon-btn {
-  width: 2.15rem;
-  height: 2.15rem;
-  color: var(--pli-deep);
-  background: #fff;
-}
-
-.ami-table-actions .admin-icon-btn-primary {
-  color: #fff;
-  background: var(--pli-blue);
+  margin-top: .85rem;
 }
 
 .ami-table-actions .is-disabled {
@@ -35,9 +21,55 @@
   pointer-events: none;
 }
 
+.ami-table-actions .admin-icon-btn-primary.is-disabled {
+  color: var(--pli-deep);
+  background: #fff;
+  border-color: #c5d0da;
+}
+
+.ami-inline-input {
+  width: 100%;
+  min-width: 10rem;
+  height: 2rem;
+  padding: .3rem .5rem;
+  border: 1px solid var(--pli-blue);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--pli-text);
+  font: inherit;
+}
+
+.ami-inline-input:focus {
+  outline: 2px solid rgba(17, 101, 147, .18);
+  outline-offset: 1px;
+}
+
+.ami-table-feedback {
+  min-height: 1.25rem;
+  margin: .45rem 1rem 0;
+  color: #24633d;
+  font-size: .75rem;
+}
+
+.ami-table-feedback.is-error {
+  color: #922b21;
+}
+
 .ami-table--database {
-  min-width: 1650px;
+  min-width: 2700px;
   font-size: .74rem;
+}
+
+.ami-table--database .ami-cell-id {
+  width: 17rem;
+  max-width: 17rem;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.ami-table--database .ami-cell-token {
+  width: 20rem;
+  max-width: 20rem;
+  font-family: Consolas, "Courier New", monospace;
 }
 
 .ami-table--database thead {
@@ -77,7 +109,7 @@
   max-width: 2.75rem;
 }
 
-.ami-table--database .col-select input {
+.ami-table--database .col-select input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
   accent-color: var(--pli-blue);

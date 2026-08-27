@@ -88,9 +88,8 @@ def test_modo_preenchimento_e_independente_da_estrategia(monkeypatch) -> None:
     assert resposta.modo_preenchimento == "colaborativo"
 
 
-def test_config_portfolio_copia_excel_da_hierarquizacao(monkeypatch) -> None:
+def test_config_portfolio_importa_criterios_da_hierarquizacao(monkeypatch) -> None:
     captured = {}
-    conteudo = b"PK\x03\x04matriz-da-hierarquizacao"
     row = _row(
         tipo="portfolio",
         codigo="CFG-P-001",
@@ -116,7 +115,6 @@ def test_config_portfolio_copia_excel_da_hierarquizacao(monkeypatch) -> None:
             },
         },
     )
-    monkeypatch.setattr(hier_repo, "get_excel_matriz_by_codigo", lambda _codigo: conteudo)
     monkeypatch.setattr(hier_repo, "update", lambda *_args, **_kwargs: None)
 
     def insert(_tipo, data, **_kwargs):
@@ -137,7 +135,7 @@ def test_config_portfolio_copia_excel_da_hierarquizacao(monkeypatch) -> None:
         )
     )
 
-    assert captured["arquivo_excel_matriz_criterios_premissas"] == conteudo
+    assert "arquivo_excel_matriz_criterios_premissas" not in captured
     assert captured["n_criterios"] == 2
     assert captured["criterios"][0]["premissa"] == "Menor custo é preferível."
     assert captured["arquivo_nome"] == "matriz_original.xlsx"

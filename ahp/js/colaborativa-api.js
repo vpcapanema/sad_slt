@@ -51,6 +51,16 @@
         body: JSON.stringify(payload),
       });
     },
+    iniciarResposta: function (token, payload) {
+      return request("/publico/" + encodeURIComponent(token) + "/respostas/iniciar", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+      });
+    },
+    salvarProgresso: function (token, payload) {
+      return request("/publico/" + encodeURIComponent(token) + "/respostas/progresso", {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+      });
+    },
     listarRespostas: function (ambienteId) {
       return request("/ambientes/" + encodeURIComponent(ambienteId) + "/respostas");
     },

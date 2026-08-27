@@ -45,6 +45,28 @@ _SELECT_BASE = """
     LEFT JOIN ahp.config_multicriterio_portfolio c ON c.id = h.config_id
 """
 
+
+def status_hierarquizacao_ativo(codigo: str) -> bool:
+    query = """
+        SELECT 1
+          FROM hierarquizacao_demandas.dom_status_hierarquizacao
+         WHERE codigo = %s AND ativo = TRUE
+         LIMIT 1
+    """
+    with get_connection() as conn:
+        return conn.execute(query, (codigo,)).fetchone() is not None
+
+
+def get_transicao_status_hierarquizacao(origem: str, destino: str) -> dict[str, Any] | None:
+    query = """
+        SELECT status_origem, status_destino, via_homologar
+          FROM hierarquizacao_demandas.dom_status_hierarquizacao_transicao
+         WHERE status_origem = %s AND status_destino = %s
+    """
+    with get_connection() as conn:
+        row = conn.execute(query, (origem, destino)).fetchone()
+    return dict(row) if row else None
+
 _JSON_FIELDS = {
     "objetos", "julgamento_projetos", "pesos_projetos", "ranking", "dados_hierarquizacao",
     "relatorio_fase1", "relatorio_fase2", "relatorio_fase3", "relatorio_consolidado",
@@ -112,21 +134,6 @@ def get_by_codigo(codigo: str) -> dict[str, Any] | None:
         return conn.execute(query, (codigo,)).fetchone()
 
 
-def get_excel_matriz_by_codigo(codigo: str) -> bytes | None:
-    """Retorna somente o XLSX original, sem expor o binário nas respostas da API."""
-    query = """
-        SELECT arquivo_excel_matriz_criterios_premissas
-        FROM hierarquizacao_demandas.hierarquizacao_portfolio
-        WHERE codigo = %s
-    """
-    with get_connection() as conn:
-        row = conn.execute(query, (codigo,)).fetchone()
-    if not row:
-        return None
-    value = row.get("arquivo_excel_matriz_criterios_premissas")
-    return bytes(value) if value is not None else None
-
-
 def list_all(
     *,
     status: str | None = None,
@@ -186,7 +193,7 @@ def _liberar_demandas_universo(conn: Any, transicao: dict[str, Any]) -> None:
     liberaveis = []
     for demanda_id in ids:
         restante = conn.execute(
-            sql.SQL("SELECT 1 FROM {tbl} WHERE jsonb_path_exists(COALESCE(objetos, '[]'::jsonb), %s::jsonpath) LIMIT 1").format(tbl=tbl),
+            sql.SQL("SELECT 1 FROM {hier_table} WHERE jsonb_path_exists(COALESCE(objetos, '[]'::jsonb), %s::jsonpath) LIMIT 1").format(hier_table=_TABLE),
             (f'$[*] ? (@.id == "{demanda_id}")',),
         ).fetchone()
         if not restante:
@@ -208,6 +215,20 @@ def delete_by_codigo(
     """
     query = sql.SQL("DELETE FROM {table} WHERE codigo = %s RETURNING id").format(table=_TABLE)
     with get_connection() as conn:
+        # A configuração de portfólio guarda uma cópia independente dos
+        # critérios/premissas da hierarquização. Ao remover a origem, preserve
+        # essa configuração e desfaça somente o vínculo de procedência. Isso
+        # precisa ocorrer na mesma transação, antes do DELETE, por causa da FK
+        # fk_config_portfolio_hierarquizacao_origem (ON DELETE RESTRICT).
+        conn.execute(
+            sql.SQL(
+                "UPDATE ahp.config_multicriterio_portfolio c "
+                "SET hierarquizacao_id = NULL, atualizado_em = now() "
+                "FROM {table} h "
+                "WHERE h.codigo = %s AND c.hierarquizacao_id = h.id"
+            ).format(table=_TABLE),
+            (codigo,),
+        )
         cur = conn.execute(query, (codigo,))
         deleted = cur.fetchone()
         if deleted and liberar_demandas:

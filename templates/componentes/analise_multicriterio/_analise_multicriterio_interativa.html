@@ -1,0 +1,27 @@
+<section class="secao-collab-config-section ahp-section ahp-subcard" id="ami-interactive-analysis-component">
+  <div class="ahp-subsection-title"><span class="ahp-subsection-num">3.1</span><span>Análise Multicritério Interativa</span></div>
+  <div class="ahp-section-body">
+    <section class="ahp-subcard ami-component-section">
+      <div class="ahp-subsection-title"><span class="ahp-subsection-num">3.1.1</span><span>Configuração do preenchimento</span></div>
+      <div class="ahp-section-body">
+        <p class="step-intro">Selecione a hierarquização, defina a data limite da coleta e informe os colaboradores.</p>
+        <div class="info-card"><div class="ahp-collab-grid2 ami-create-grid">
+          <div class="c-form-group ami-config-field"><label for="ami-deadline" class="c-form-label"><i class="fas fa-calendar"></i> Data limite da coleta</label><small class="form-help"><i class="fas fa-info-circle"></i> Define até quando os colaboradores poderão enviar suas respostas.</small><div class="ami-config-control"><input id="ami-deadline" class="c-form-control" type="date" required></div><div class="ami-config-meta" aria-hidden="true"></div></div>
+          <div class="c-form-group ami-config-field"><label for="ami-hierarchy" class="c-form-label"><i class="fas fa-diagram-project"></i> Hierarquização</label><small class="form-help" id="ami-hierarchy-source"><i class="fas fa-info-circle"></i> Selecione um grupo de demandas pelo nome e código.</small><div class="ami-config-control"><select id="ami-hierarchy" class="c-form-control" data-source-tables="hierarquizacao_demandas.hierarquizacao_portfolio" required aria-describedby="ami-hierarchy-source ami-hierarchy-summary"><option value="">Selecione…</option></select></div><div id="ami-hierarchy-summary" class="ami-summary ami-config-meta"></div></div>
+        </div></div>
+        <div class="info-card"><div class="c-form-group ami-config-field ami-collaborator-entry"><label for="ami-emails" class="c-form-label"><i class="fas fa-envelope"></i> E-mail do colaborador</label><small class="form-help"><i class="fas fa-info-circle"></i> Informe um ou vários e-mails separados por vírgula ou ponto e vírgula.</small><div class="ami-config-control ahp-collab-deadline-inline"><input id="ami-emails" class="c-form-control" type="text" placeholder="nome@dominio.com; outro@dominio.com"><button type="button" class="ahp-collab-add-btn" id="ami-add-emails" aria-label="Adicionar colaborador" title="Adicionar colaborador"><i class="fas fa-plus" aria-hidden="true"></i></button></div><div class="ami-config-meta" aria-hidden="true"></div></div><div class="c-form-group ami-config-list"><label class="c-form-label"><i class="fas fa-list"></i> Lista de colaboradores</label><small class="form-help"><i class="fas fa-info-circle"></i> Confira os colaboradores adicionados e selecione registros quando precisar removê-los.</small><div class="ahp-collab-table-wrap"><table class="ahp-collab-table"><thead><tr><th class="ahp-collab-chk-col"><input type="checkbox" id="ami-select-all" title="Selecionar todos" aria-label="Selecionar todos"></th><th>Colaboradores</th><th>Email</th><th>Data limite</th></tr></thead><tbody id="ami-email-list"><tr><td colspan="4" class="ami-empty">Nenhum colaborador adicionado.</td></tr></tbody></table></div></div></div>
+      </div>
+    </section>
+    <section class="ahp-subcard ami-component-section card-matriz-de-premissas-e-criterios">
+      <div class="ahp-subsection-title"><span class="ahp-subsection-num">3.1.2</span><span>Matriz de premissas e critérios</span></div>
+      <div class="ahp-section-body">
+        <p class="step-intro">Anexe a matriz que define o contexto, as premissas e os critérios deste julgamento. O registro confirmado manterá uma cópia completa das linhas importadas.</p>
+        <p><a href="/public/documentacao/matrizes/Modelo_Matriz_Criterios_Premissas_SLT.xlsx" download="Modelo_Matriz_Criterios_Premissas_SLT.xlsx" class="ahp-template-download-btn"><i class="fas fa-file-excel"></i> Baixar modelo XLSX</a></p>
+        <label class="process-field" for="ami-criteria-matrix"><span>Arquivo JSON, CSV ou XLSX</span><input id="ami-criteria-matrix" type="file" accept=".json,.csv,.xlsx" required aria-describedby="ami-criteria-matrix-summary"></label>
+        <div id="ami-criteria-matrix-summary" class="ahp-info-note hidden" role="status"></div>
+      </div>
+    </section>
+    <div class="ahp-form-actions"><button type="button" class="btn btn-danger" id="ami-delete-emails" disabled><i class="fas fa-trash c-btn__icon"></i>Excluir selecionados</button><button class="btn btn-primary" type="submit"><i class="fas fa-check c-btn__icon"></i>Confirmar julgamento</button><button type="button" class="btn btn-secondary" id="ami-create-cancel">Cancelar</button></div>
+    <p class="ami-feedback" id="ami-create-feedback" role="status" aria-live="polite"></p>
+  </div>
+</section>

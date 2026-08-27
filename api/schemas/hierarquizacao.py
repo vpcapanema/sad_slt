@@ -21,16 +21,13 @@ class HierarquizacaoCreateSchema(BaseModel):
     )
     objetos: list[dict[str, Any]] | None = None
     matriz_premissas_criterios: dict[str, Any] | list[Any] | None = None
-    arquivo_excel_matriz_base64: str | None = Field(
-        None, description="Arquivo XLSX original da matriz, codificado em base64"
-    )
-    fases_a_executar: list[int] = Field(default_factory=lambda: [1, 2, 3])
+    fases_a_executar: list[int] = Field(default_factory=list)
 
     @field_validator("fases_a_executar")
     @classmethod
     def validar_fases(cls, value: list[int]) -> list[int]:
         fases = sorted(set(value))
-        if not fases or any(fase not in {1, 2, 3} for fase in fases):
+        if any(fase not in {1, 2, 3} for fase in fases):
             raise ValueError("Informe uma ou mais fases entre 1, 2 e 3.")
         return fases
 

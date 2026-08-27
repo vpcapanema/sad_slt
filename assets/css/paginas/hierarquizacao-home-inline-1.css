@@ -20,6 +20,15 @@
         gap: 0.75rem;
         margin-top: 1rem;
       }
+      .hier-page-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+      .hier-page-heading .ahp-page-title { margin:0; }
+      .hier-composite-filter { display:grid; grid-template-columns:auto minmax(12rem,18rem) auto minmax(14rem,1fr) auto; align-items:center; gap:.55rem; margin-bottom:1rem; }
+      .hier-composite-filter label { color:var(--pli-deep,#123e56); font-size:.75rem; font-weight:700; }
+      .hier-composite-filter select,.hier-composite-filter input { min-height:2.25rem; padding:.45rem .6rem; border:1px solid #cbd6dd; border-radius:.45rem; background:#fff; }
+      .hier-composite-filter span { color:#66727a; font-size:.72rem; white-space:nowrap; }
+      #hier-create-section.is-readonly { background:#f7f9fb; }
+      #hier-create-section.is-readonly input,#hier-create-section.is-readonly select,#hier-create-section.is-readonly textarea { color:#344b59; opacity:1; }
+      @media(max-width:760px){.hier-page-heading{align-items:flex-start;flex-direction:column}.hier-page-heading #hier-new{align-self:flex-end}.hier-composite-filter{grid-template-columns:1fr}.hier-composite-filter label{margin-bottom:-.35rem}}
       .hier-demand-tabs {
         margin-top: 1rem;
       }

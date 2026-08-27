@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from copy import deepcopy
-import base64
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -11,6 +11,7 @@ from api.schemas.hierarquizacao import (
     HierarquizacaoFase3RiscosSchema,
     HierarquizacaoFase3ExecutarSchema,
     HierarquizacaoSinteseSchema,
+    HierarquizacaoUpdateSchema,
 )
 from api.services import hierarquizacao_service as service
 
@@ -26,7 +27,7 @@ def _db_row(dados: dict) -> dict:
         "descricao": None,
         "tipo_demanda_id": 3,
         "grupo_id": None,
-        "status": "rascunho",
+        "status": "em_julgamento",
         "objetos": [],
         "julgamento_projetos": None,
         "pesos_projetos": None,
@@ -100,29 +101,7 @@ def test_rodada_pode_executar_somente_fase_1(monkeypatch: pytest.MonkeyPatch) ->
     )
 
     assert result.dados_hierarquizacao["cabecalho_grupo"]["fases_a_executar"] == [1]
-    assert captured["status"] == "rascunho"
-
-
-def test_criacao_preserva_excel_original_da_matriz(monkeypatch: pytest.MonkeyPatch) -> None:
-    captured = {}
-    conteudo = b"PK\x03\x04xlsx-original"
-
-    def insert(data: dict) -> dict:
-        captured.update(data)
-        return _db_row(data["dados_hierarquizacao"])
-
-    monkeypatch.setattr(service.repo, "insert", insert)
-    service.criar_hierarquizacao(
-        HierarquizacaoCreateSchema(
-            nome="Rodada com matriz",
-            tipo_demanda="projeto",
-            objetos=[{"id": "1", "codigo": "P-1", "nome": "Projeto"}],
-            fases_a_executar=[1],
-            arquivo_excel_matriz_base64=base64.b64encode(conteudo).decode("ascii"),
-        )
-    )
-
-    assert captured["arquivo_excel_matriz_criterios_premissas"] == conteudo
+    assert captured["status"] == "em_julgamento"
 
 
 def test_fase_3_renormaliza_pesos_quando_atributo_opcional_ausente(
@@ -302,3 +281,102 @@ def test_excluir_hierarquizacao_sem_universo_nao_gera_transicao(
     service.excluir_hierarquizacao("HIER-TESTE")
 
     assert capturado["transicao"] is None
+
+
+def test_repositorio_desvincula_configuracao_antes_de_excluir_hierarquizacao(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    operacoes: list[object] = []
+
+    class Cursor:
+        def fetchone(self):
+            return {"id": "hier-uuid"}
+
+    class Connection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def execute(self, query, params):
+            operacoes.append(query)
+            operacoes.append(params)
+            return Cursor()
+
+        def commit(self):
+            operacoes.append("commit")
+
+    monkeypatch.setattr(service.repo, "get_connection", lambda: Connection())
+
+    assert service.repo.delete_by_codigo("HIER-TESTE") is True
+    assert len([item for item in operacoes if item == ("HIER-TESTE",)]) == 2
+    assert operacoes[-1] == "commit"
+
+
+def test_migration_cria_dominio_matriz_e_fk_sem_status_rascunho() -> None:
+    migration = Path("database/087_dominio_status_hierarquizacao.sql").read_text(encoding="utf-8")
+
+    assert "CREATE TABLE IF NOT EXISTS hierarquizacao_demandas.dom_status_hierarquizacao (" in migration
+    assert "CREATE TABLE IF NOT EXISTS hierarquizacao_demandas.dom_status_hierarquizacao_transicao (" in migration
+    assert migration.count("REFERENCES hierarquizacao_demandas.dom_status_hierarquizacao (codigo)") == 3
+    assert "ALTER COLUMN status SET DEFAULT 'em_julgamento'" in migration
+    assert "('rascunho'," not in migration
+
+
+def test_atualizacao_valida_matriz_de_transicao_da_hierarquizacao(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    row = _db_row(_dados([1], [{}]))
+    row["status"] = "em_julgamento"
+    monkeypatch.setattr(service.repo, "get_by_codigo", lambda _codigo: deepcopy(row))
+    monkeypatch.setattr(service.repo, "status_hierarquizacao_ativo", lambda codigo: codigo == "calculada")
+    monkeypatch.setattr(
+        service.repo,
+        "get_transicao_status_hierarquizacao",
+        lambda origem, destino: {
+            "status_origem": origem,
+            "status_destino": destino,
+            "via_homologar": False,
+        },
+    )
+    monkeypatch.setattr(
+        service.repo,
+        "update",
+        lambda _codigo, data: {**row, **data},
+    )
+
+    result = service.atualizar_hierarquizacao(
+        "HIER-TESTE", HierarquizacaoUpdateSchema(status="calculada")
+    )
+
+    assert result.status == "calculada"
+
+
+def test_liberacao_consulta_objetos_na_hierarquizacao_e_atualiza_demanda() -> None:
+    consultas: list[object] = []
+
+    class Cursor:
+        def fetchone(self):
+            return None
+
+    class Connection:
+        def execute(self, query, params):
+            consultas.append(query)
+            consultas.append(params)
+            return Cursor()
+
+    service.repo._liberar_demandas_universo(
+        Connection(),
+        {
+            "tabela": ("demandas", "projeto"),
+            "ids": ["11111111-1111-1111-1111-111111111111"],
+            "de": "hierarq_em_andamento",
+            "para": "analise_aprovada",
+        },
+    )
+
+    assert "hierarquizacao_portfolio" in repr(consultas[0])
+    assert "objetos" in repr(consultas[0])
+    assert "projeto" in repr(consultas[2])
+    assert consultas[3][0] == "analise_aprovada"

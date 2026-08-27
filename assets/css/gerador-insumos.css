@@ -852,6 +852,10 @@ html:has(body.gerador-page) {
   border-collapse: collapse;
   font-size: 0.75rem;
 }
+
+.fase1-canonical-table--compact {
+  min-width: 720px;
+}
 .fase1-canonical-table th,
 .fase1-canonical-table td {
   padding: 0.55rem;

@@ -20,13 +20,18 @@
     selecionadosResumo = new Set(),
     grupoFechado = false,
     paginaDemandas = 1,
-    matriz = null,
     universoRequestId = 0;
   let listaCache = [],
     hierEditMode = false,
     matrizAtual = null;
   const selecionadasHier = new Set();
-  const STATUS_HIER = ["rascunho", "em_julgamento", "calculada", "homologada", "arquivada"];
+  const HIER_FILTER_COLUMNS = [
+    ["status", "Situação"], ["codigo", "Código da hierarquização"], ["config_id", "Identificador da configuração AHP"],
+    ["nome", "Nome"], ["descricao", "Descrição"], ["tipo_demanda", "Tipo de demanda"], ["grupo_id", "Grupo comparável"],
+    ["homologadoPorNome", "Responsável pela homologação"], ["criadoPorNome", "Responsável pelo cadastro"],
+    ["criadoEm", "Data de cadastro"], ["atualizadoEm", "Última atualização"]
+  ];
+  const STATUS_HIER = ["em_julgamento", "calculada", "homologada", "arquivada"];
   const ITENS_POR_PAGINA = 15;
   // Demandas já vinculadas a outra hierarquização continuam disponíveis para
   // novas rodadas; o painel sinaliza o vínculo pelo status/badge da linha.
@@ -137,6 +142,7 @@
     try {
       listaCache = await HierApi.listar();
       $("hier-loading").classList.add("hidden");
+      atualizarOpcoesFiltroHier();
       renderTabela();
     } catch (e) {
       $("hier-loading").classList.add("hidden");
@@ -169,7 +175,6 @@
   }
   // Rótulos amigáveis da situação da hierarquização (domínio dom_status_hierarquizacao).
   const STATUS_HIER_LABEL = {
-    rascunho: "Rascunho",
     em_julgamento: "Em julgamento",
     calculada: "Calculada",
     homologada: "Homologada",
@@ -215,12 +220,33 @@
       `</tr>`;
   }
   function renderTabela() {
+    const rows = hierarquizacoesFiltradas();
     const editando = hierEditMode ? selecionadasHier : new Set();
     $("hier-tbody").innerHTML =
-      listaCache.map((h) => rowHtml(h, editando.has(h.codigo))).join("") + vazias(listaCache.length);
+      rows.map((h) => rowHtml(h, editando.has(h.codigo))).join("") + vazias(rows.length);
+    if ($("hier-filter-count")) $("hier-filter-count").textContent = `${rows.length} de ${listaCache.length} registro(s)`;
     ligarEventosTabela();
     atualizarBotoesLote();
     syncSelectAll();
+  }
+  function valorFiltro(h, coluna) {
+    if (coluna === "status") return rotuloSituacaoHier(h.status);
+    if (coluna === "tipo_demanda") return rotuloTipoDemanda(h.tipo_demanda || h.tipo_demanda_id);
+    return h[coluna] ?? "";
+  }
+  function hierarquizacoesFiltradas() {
+    const coluna = $("hier-filter-column")?.value || "", termo = ($("hier-filter-value")?.value || "").trim().toLowerCase();
+    if (!termo) return listaCache;
+    return listaCache.filter((h) => {
+      const valores = coluna ? [valorFiltro(h, coluna)] : HIER_FILTER_COLUMNS.map(([key]) => valorFiltro(h, key));
+      return valores.some((value) => String(value).toLowerCase().includes(termo));
+    });
+  }
+  function atualizarOpcoesFiltroHier() {
+    if (!$("hier-filter-column") || !$("hier-filter-options")) return;
+    const coluna = $("hier-filter-column").value;
+    const valores = coluna ? [...new Set(listaCache.map((h) => valorFiltro(h, coluna)).filter((v) => v !== null && v !== "").map(String))].sort() : [];
+    $("hier-filter-options").innerHTML = valores.map((v) => `<option value="${esc(v)}"></option>`).join("");
   }
   function ligarEventosTabela() {
     const tbody = $("hier-tbody");
@@ -244,15 +270,38 @@
   }
   function syncSelectAll() {
     const sa = $("hier-select-all");
-    if (sa) sa.checked = listaCache.length > 0 && listaCache.every((h) => selecionadasHier.has(h.codigo));
+    const rows = hierarquizacoesFiltradas();
+    if (sa) sa.checked = rows.length > 0 && rows.every((h) => selecionadasHier.has(h.codigo));
   }
   function atualizarBotoesLote() {
     const has = selecionadasHier.size > 0;
     const set = (id, dis) => { const el = $(id); if (el) el.disabled = dis; };
     set("hier-bulk-edit", !has || hierEditMode);
+    set("hier-bulk-view", selecionadasHier.size !== 1 || hierEditMode);
     set("hier-bulk-cancel", !hierEditMode);
     set("hier-bulk-save", !hierEditMode || !has);
     set("hier-bulk-delete", !has || hierEditMode);
+  }
+  function setCadastroReadonly(readonly) {
+    $("hier-create-section").classList.toggle("is-readonly", readonly);
+    $("nova-hierarquizacao").querySelectorAll("input, select, textarea, button").forEach((control) => { control.disabled = readonly; });
+    $("nova-hierarquizacao").querySelector('.process-actions').classList.toggle("hidden", readonly);
+  }
+  function mostrarCadastroNovo() {
+    setCadastroReadonly(false); $("nova-hierarquizacao").reset();
+    selecionados.clear(); confirmados.clear(); selecionadosResumo.clear(); grupoFechado = false; renderDemandas(); renderResumo();
+    $("hier-create-section").classList.remove("hidden");
+    $("hier-create-section").scrollIntoView({ behavior: "smooth", block: "start" }); $("hier-nome").focus();
+  }
+  async function visualizarHierarquizacaoSelecionada() {
+    if (selecionadasHier.size !== 1) return;
+    const codigo = [...selecionadasHier][0], h = listaCache.find((item) => item.codigo === codigo); if (!h) return;
+    $("nova-hierarquizacao").reset(); $("hier-nome").value = h.nome || ""; $("hier-descricao").value = h.descricao || "";
+    $("hier-tipo").value = h.tipo_demanda || ({ 1: "plano", 2: "programa", 3: "projeto" }[h.tipo_demanda_id] || "");
+    await carregarUniverso();
+    confirmados = new Set((h.objetos || []).map((o) => String(o.id || o.demanda_id || "")).filter(Boolean)); grupoFechado = true;
+    renderDemandas(); renderResumo(); setCadastroReadonly(true); $("hier-create-section").classList.remove("hidden");
+    $("hier-create-section").scrollIntoView({ behavior: "smooth", block: "start" });
   }
   // Visualizador de JSON em árvore LAZY: renderiza os filhos só ao expandir,
   // mantendo o DOM leve mesmo com conteúdos grandes (ex.: dados completos).
@@ -908,73 +957,6 @@
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
-  let matrizArquivoExcelBase64 = null;
-
-  async function arquivoParaBase64(file) {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    let binario = "";
-    const bloco = 0x8000;
-    for (let i = 0; i < bytes.length; i += bloco) {
-      binario += String.fromCharCode(...bytes.subarray(i, i + bloco));
-    }
-    return btoa(binario);
-  }
-
-  async function lerMatriz(file) {
-    const ext = file.name.split(".").pop().toLowerCase();
-    if (ext === "json") return JSON.parse(await file.text());
-    if (ext === "csv") {
-      const text = await file.text(),
-        lines = text.split(/\r?\n/).filter(Boolean),
-        sep = lines[0].includes(";") ? ";" : ",";
-      const heads = lines
-        .shift()
-        .split(sep)
-        .map((x) => x.trim());
-      return {
-        arquivo: file.name,
-        linhas: lines.map((l) =>
-          Object.fromEntries(l.split(sep).map((v, i) => [heads[i], v.trim()])),
-        ),
-      };
-    }
-    if (ext === "xlsx" && window.XLSX) {
-      const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
-      // Abas auxiliares do modelo oficial (SLT/PLI-SP) que nunca contêm a matriz.
-      const ABAS_AUXILIARES = new Set(["instruções", "instrucoes", "_listas", "etapas", "dimensões de critérios", "dimensoes de criterios", "critérios", "criterios"]);
-      const normalizar = (s) => String(s || "").trim().toLowerCase();
-      const temColunasDaMatriz = (nome) => {
-        const primeiraLinha = XLSX.utils.sheet_to_json(wb.Sheets[nome], { header: 1, defval: "" })[0] || [];
-        const cabecalho = primeiraLinha.map(normalizar);
-        return cabecalho.some((c) => c.includes("crit")) && cabecalho.some((c) => c.includes("etapa"));
-      };
-      // 1) Nome de aba conhecido (versões atuais e anteriores do modelo).
-      let abaPrincipal = ["Matriz Crit Premissas v3", "Matriz Crit Premissas v2"].find((n) => wb.SheetNames.includes(n));
-      // 2) Qualquer aba, não auxiliar, cujo cabeçalho tenha as colunas Critério e Etapa.
-      if (!abaPrincipal) {
-        abaPrincipal = wb.SheetNames.find((n) => !ABAS_AUXILIARES.has(normalizar(n)) && temColunasDaMatriz(n));
-      }
-      // 3) Primeira aba que não seja reconhecidamente auxiliar.
-      if (!abaPrincipal) {
-        abaPrincipal = wb.SheetNames.find((n) => !ABAS_AUXILIARES.has(normalizar(n))) || wb.SheetNames[0];
-      }
-      const linhas = XLSX.utils.sheet_to_json(wb.Sheets[abaPrincipal], {
-        defval: "",
-      });
-      // Coleta as demais abas do modelo (dimensões, critérios, índice) como contexto auxiliar.
-      const abas = {};
-      for (const nome of wb.SheetNames) {
-        abas[nome] = XLSX.utils.sheet_to_json(wb.Sheets[nome], { defval: "" });
-      }
-      return {
-        arquivo: file.name,
-        aba: abaPrincipal,
-        linhas,
-        abas,
-      };
-    }
-    throw new Error("Formato não suportado.");
-  }
   $("hier-tipo").onchange = carregarUniverso;
   const abasTipo = [
     ...document.querySelectorAll("#hier-tipo-tabs [data-tipo]"),
@@ -1079,35 +1061,12 @@
   $("demanda-resumo-cancelar").onclick = cancelarGrupo;
   $("demanda-resumo-atualizar").onclick = () =>
     carregarUniverso({ preservarSelecao: true });
-  $("hier-matriz").onchange = async (e) => {
-    try {
-      const arquivo = e.target.files[0];
-      matriz = await lerMatriz(arquivo);
-      matrizArquivoExcelBase64 = /\.xlsx$/i.test(arquivo.name)
-        ? await arquivoParaBase64(arquivo)
-        : null;
-      const n = Array.isArray(matriz)
-        ? matriz.length
-        : (matriz.linhas || []).length;
-      $("matriz-resumo").textContent =
-        `${e.target.files[0].name} · ${n} linha(s) carregada(s)`;
-      $("matriz-resumo").classList.remove("hidden");
-    } catch (err) {
-      matriz = null;
-      matrizArquivoExcelBase64 = null;
-      erro(err.message);
-    }
-  };
   $("nova-hierarquizacao").onsubmit = async (e) => {
     e.preventDefault();
-    const fases = [...document.querySelectorAll("#hier-fases input:checked")].map((x) => Number(x.value));
-    if (!fases.length) return erro("Selecione ao menos uma fase da rodada.");
     if (!confirmados.size)
       return erro("Adicione ao menos uma demanda apta ao grupo.");
     if (!grupoFechado)
       return erro("Confirme o grupo antes de enviar a hierarquização.");
-    if (fases.some((fase) => fase === 2 || fase === 3) && !matriz)
-      return erro("Carregue a matriz de premissas e critérios para as Fases 2 e 3.");
     try {
       await HierApi.criar({
         nome: $("hier-nome").value.trim(),
@@ -1116,9 +1075,7 @@
         objetos: universo.filter(
           (o) => elegivel(o) && confirmados.has(o.id),
         ),
-        matriz_premissas_criterios: matriz,
-        arquivo_excel_matriz_base64: matrizArquivoExcelBase64,
-        fases_a_executar: fases,
+        fases_a_executar: [],
       });
       location.reload();
     } catch (err) {
@@ -1148,6 +1105,7 @@
   });
   const bindLote = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
   bindLote("hier-bulk-edit", () => { if (!selecionadasHier.size) return; hierEditMode = true; renderTabela(); });
+  bindLote("hier-bulk-view", visualizarHierarquizacaoSelecionada);
   bindLote("hier-bulk-cancel", () => { hierEditMode = false; renderTabela(); });
   bindLote("hier-bulk-save", async () => {
     const codigos = [...selecionadasHier];
@@ -1176,10 +1134,16 @@
   });
   if ($("hier-select-all")) {
     $("hier-select-all").onchange = () => {
-      if ($("hier-select-all").checked) listaCache.forEach((h) => selecionadasHier.add(h.codigo));
+      if ($("hier-select-all").checked) hierarquizacoesFiltradas().forEach((h) => selecionadasHier.add(h.codigo));
       else selecionadasHier.clear();
       renderTabela();
     };
+  }
+  if ($("hier-new")) $("hier-new").onclick = mostrarCadastroNovo;
+  if ($("hier-filter-column")) {
+    $("hier-filter-column").insertAdjacentHTML("beforeend", HIER_FILTER_COLUMNS.map(([value, label]) => `<option value="${value}">${label}</option>`).join(""));
+    $("hier-filter-column").onchange = () => { $("hier-filter-value").value = ""; atualizarOpcoesFiltroHier(); renderTabela(); };
+    $("hier-filter-value").oninput = renderTabela;
   }
   async function iniciar() {
     carregarLista();

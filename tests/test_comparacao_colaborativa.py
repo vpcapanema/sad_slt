@@ -8,12 +8,14 @@ from fastapi.testclient import TestClient
 
 from api.exceptions import DemandaValidationError
 from api.repositories import comparacao_colaborativa_repository as repo
+from api.schemas.comparacao_colaborativa import AmbienteColaborativoUpdateSchema
 from api.server import app
 from api.services import comparacao_colaborativa_service as service
 from api.services.session_service import SessionUser, cookie_name, create_token
 
 AMBIENTE_ID = "22222222-2222-2222-2222-222222222222"
 HIERARQUIZACAO_ID = "44444444-4444-4444-4444-444444444444"
+CONFIG_ID = "55555555-5555-5555-5555-555555555555"
 
 
 def _client_autenticado(perfil: str = "ANALISTA") -> TestClient:
@@ -47,6 +49,93 @@ def _ambiente_row(**extra) -> dict:
     }
     row.update(extra)
     return row
+
+
+def test_atualiza_todos_os_campos_da_configuracao_do_preenchimento(monkeypatch) -> None:
+    atual = _ambiente_row(config_tipo="portfolio", config_id=HIERARQUIZACAO_ID, total_respostas=0)
+    captured: dict = {}
+    monkeypatch.setattr(repo, "get_ambiente_by_id", lambda _id: dict(atual))
+    monkeypatch.setattr(repo, "get_active_ambiente_by_config", lambda *_args: None)
+    monkeypatch.setattr(repo, "list_respostas", lambda _id: [])
+    monkeypatch.setattr(
+        service.config_repo,
+        "get_by_id",
+        lambda *_args: {
+            "id": CONFIG_ID,
+            "codigo": "CFG-EDITADA",
+            "nome": "Configuração editada",
+            "hierarquizacao_id": HIERARQUIZACAO_ID,
+            "criterios": [{"criterio": "Custo"}, {"criterio": "Prazo"}],
+        },
+    )
+
+    def fake_update(_id: str, data: dict) -> dict:
+        captured.update(data)
+        return {**atual, **data}
+
+    monkeypatch.setattr(repo, "update_ambiente", fake_update)
+    service.atualizar_ambiente(
+        AMBIENTE_ID,
+        AmbienteColaborativoUpdateSchema(
+            config_tipo="avulsa",
+            config_id=CONFIG_ID,
+            convites=[{"email": "novo@x.gov.br"}],
+            valido_ate="2031-01-31T23:59:59+00:00",
+        ),
+    )
+
+    assert captured["config_tipo"] == "avulsa"
+    assert captured["config_id"] == CONFIG_ID
+    assert captured["config_avulsa_id"] == CONFIG_ID
+    assert captured["config_portfolio_id"] is None
+    assert captured["config_codigo"] == "CFG-EDITADA"
+    assert captured["n_criterios"] == 2
+    assert captured["convites"] == [{"email": "novo@x.gov.br"}]
+    assert captured["valido_ate"].year == 2031
+
+
+def test_atualiza_ambiente_a_partir_da_hierarquizacao_selecionada(monkeypatch) -> None:
+    atual = _ambiente_row(total_respostas=0)
+    nova_hierarquizacao_id = "66666666-6666-6666-6666-666666666666"
+    captured: dict = {}
+    monkeypatch.setattr(repo, "get_ambiente_by_id", lambda _id: dict(atual))
+    monkeypatch.setattr(repo, "get_ambiente_by_hierarquizacao", lambda _id: None)
+    monkeypatch.setattr(repo, "list_respostas", lambda _id: [])
+    monkeypatch.setattr(
+        service.hierarq_repo,
+        "get_by_id",
+        lambda _id: {
+            "id": nova_hierarquizacao_id,
+            "codigo": "HIER-NOVA",
+            "nome": "Nova hierarquização",
+            "dados_hierarquizacao": {
+                "cabecalho_grupo": {
+                    "matriz_premissas_criterios": {
+                        "linhas": [
+                            {"criterio": "Custo", "premissa": "Menor é melhor"},
+                            {"criterio": "Prazo", "premissa": "Menor é melhor"},
+                        ]
+                    }
+                }
+            },
+        },
+    )
+
+    def fake_update(_id: str, data: dict) -> dict:
+        captured.update(data)
+        return {**atual, **data}
+
+    monkeypatch.setattr(repo, "update_ambiente", fake_update)
+    resposta = service.atualizar_ambiente(
+        AMBIENTE_ID,
+        AmbienteColaborativoUpdateSchema(hierarquizacao_id=nova_hierarquizacao_id),
+    )
+
+    assert captured["hierarquizacao_id"] == nova_hierarquizacao_id
+    assert captured["hierarquizacao_codigo"] == "HIER-NOVA"
+    assert captured["config_id"] is None
+    assert captured["criterios"][0]["premissa"] == "Menor é melhor"
+    assert resposta.hierarquizacao_nome == "Nova hierarquização"
 
 
 def _resposta_row(matriz, *, consistente=True, email="a@x.gov.br") -> dict:
@@ -254,6 +343,70 @@ def test_rota_respostas_resolve_para_listar_respostas(monkeypatch) -> None:
     assert resp.json() == []
 
 
+def test_rota_central_lista_respostas_globais(monkeypatch) -> None:
+    chamado = {"executou": False}
+
+    def fake_listar():
+        chamado["executou"] = True
+        return []
+
+    monkeypatch.setattr(service, "listar_respostas_central", fake_listar)
+    resp = _client_autenticado("GESTOR").get(
+        "/api/ahp/comparacao-colaborativa/respostas"
+    )
+
+    assert resp.status_code == 200
+    assert chamado["executou"] is True
+    assert resp.json() == []
+
+
+def test_rota_lista_configuracoes_das_duas_tabelas(monkeypatch) -> None:
+    itens = [
+        {"id": "1", "tipo": "avulsa", "codigo": "AV-1", "nome": "Avulsa", "alias": "Avulsa — AV-1"},
+        {"id": "2", "tipo": "portfolio", "codigo": "PF-1", "nome": "Portfólio", "alias": "Portfólio — PF-1"},
+    ]
+    monkeypatch.setattr(service, "listar_configuracoes_origem", lambda: itens)
+    resp = _client_autenticado("GESTOR").get(
+        "/api/ahp/comparacao-colaborativa/configuracoes"
+    )
+    assert resp.status_code == 200
+    assert resp.json() == itens
+
+
+def test_rota_atualiza_resposta_inline(monkeypatch) -> None:
+    captured = {}
+    row = _resposta_row([[1.0, 2.0], [0.5, 1.0]])
+
+    def fake_update(resposta_id, payload):
+        captured.update({"id": resposta_id, **payload.model_dump(exclude_none=True)})
+        row.update(payload.model_dump(exclude_none=True))
+        return service._resposta_to_response(row)
+
+    monkeypatch.setattr(service, "atualizar_resposta", fake_update)
+    resp = _client_autenticado().patch(
+        f"/api/ahp/comparacao-colaborativa/respostas/{row['id']}",
+        json={"nome_completo": "Ana Silva", "email": "ana@x.gov.br", "instituicao": "SLT"},
+    )
+    assert resp.status_code == 200
+    assert captured["id"] == row["id"]
+    assert resp.json()["nome_completo"] == "Ana Silva"
+
+
+@pytest.mark.parametrize(
+    "recurso,identificador",
+    [("ambientes", AMBIENTE_ID), ("respostas", "33333333-3333-3333-3333-333333333333")],
+)
+def test_rotas_excluem_registro_colaborativo(monkeypatch, recurso, identificador) -> None:
+    chamado = []
+    nome = "excluir_ambiente" if recurso == "ambientes" else "excluir_resposta"
+    monkeypatch.setattr(service, nome, lambda registro_id: chamado.append(registro_id))
+    resp = _client_autenticado().delete(
+        f"/api/ahp/comparacao-colaborativa/{recurso}/{identificador}"
+    )
+    assert resp.status_code == 204
+    assert chamado == [identificador]
+
+
 def test_rota_lista_todas_as_rodadas_da_configuracao(monkeypatch) -> None:
     chamado: dict = {}
 
@@ -378,9 +531,22 @@ class _FakeRepo:
                 row["status"] = "encerrada"
 
     def insert_resposta(self, data: dict) -> dict:
+        if self.get_resposta_by_ambiente_email(data["ambiente_id"], data["email"]):
+            return {}
         row = dict(data)
         row.update({"id": self._next_id(), "enviado_em": datetime.now(timezone.utc)})
         self.respostas.append(row)
+        return dict(row)
+
+    def get_resposta_by_ambiente_email(self, ambiente_id: str, email: str):
+        return next((dict(r) for r in self.respostas if r["ambiente_id"] == ambiente_id and r["email"].lower() == email.lower()), None)
+
+    def update_resposta_progresso(self, resposta_id: str, data: dict):
+        row = next((r for r in self.respostas if r["id"] == resposta_id), None)
+        if not row:
+            return None
+        row.update(data)
+        row["atualizado_em"] = datetime.now(timezone.utc)
         return dict(row)
 
     def list_respostas(self, ambiente_id: str) -> list[dict]:
@@ -414,6 +580,8 @@ def _instalar_fake_repo(monkeypatch) -> _FakeRepo:
         "update_ambiente",
         "encerrar_ambientes_anteriores",
         "insert_resposta",
+        "get_resposta_by_ambiente_email",
+        "update_resposta_progresso",
         "list_respostas",
         "resposta_existe",
         "atualizar_consolidacao",
@@ -481,6 +649,18 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
 
     # 3. Dois participantes enviam respostas consistentes.
     for email, valor in (("a@x.gov.br", 3.0), ("b@x.gov.br", 1 / 3)):
+        inicio = publico.post(
+            f"/api/ahp/comparacao-colaborativa/publico/{token}/respostas/iniciar",
+            json={"identificacao": {"nome_completo": "Participante", "email": email, "instituicao": "SP Águas"}},
+        )
+        assert inicio.status_code == 200, inicio.text
+        assert inicio.json()["status"] == "em_preenchimento"
+        progresso = publico.patch(
+            f"/api/ahp/comparacao-colaborativa/publico/{token}/respostas/progresso",
+            json={"email": email, "matriz_comparacao": [[1.0, valor], [1.0 / valor, 1.0]]},
+        )
+        assert progresso.status_code == 200, progresso.text
+        assert progresso.json()["status"] == "em_preenchimento"
         resp = publico.post(
             f"/api/ahp/comparacao-colaborativa/publico/{token}/respostas",
             json={
@@ -494,6 +674,7 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
         )
         assert resp.status_code == 201, resp.text
         assert resp.json()["consistente"] is True
+        assert resp.json()["status"] == "enviada"
 
     # Resposta duplicada do mesmo e-mail é rejeitada.
     resp = publico.post(

@@ -7,9 +7,6 @@ as fases quantitativas. Os produtores geoespaciais permanecem independentes.
 
 from __future__ import annotations
 
-import base64
-import binascii
-
 import secrets
 import unicodedata
 import uuid
@@ -46,7 +43,7 @@ from api.schemas.hierarquizacao import (
     HierarquizacaoUpdateSchema,
 )
 
-_STATUS = {"rascunho", "em_julgamento", "calculada", "homologada", "arquivada"}
+_STATUS = {"em_julgamento", "calculada", "homologada", "arquivada"}
 
 
 def _iso(v: Any) -> str | None:
@@ -235,7 +232,7 @@ def _criterios(
             f2[str(nome)] = modelo
         else:
             f3[str(nome)] = modelo
-    fases = set(fases_a_executar or [1, 2, 3])
+    fases = set([1, 2, 3] if fases_a_executar is None else fases_a_executar)
     if (2 in fases or 3 in fases) and not f2 and not f3:
         raise DemandaValidationError(
             (
@@ -533,26 +530,10 @@ def criar_hierarquizacao(
         "descricao": payload.descricao,
         "tipo_demanda_id": tid,
         "grupo_id": payload.grupo_id,
-        "status": "rascunho",
+        "status": "em_julgamento",
         "objetos": payload.objetos,
         "dados_hierarquizacao": dados,
     }
-    if payload.arquivo_excel_matriz_base64:
-        try:
-            arquivo_excel = base64.b64decode(
-                payload.arquivo_excel_matriz_base64, validate=True
-            )
-        except (binascii.Error, ValueError) as exc:
-            raise DemandaValidationError(
-                "O arquivo Excel da matriz possui codificação inválida.",
-                field="arquivo_excel_matriz_base64",
-            ) from exc
-        if len(arquivo_excel) > 20 * 1024 * 1024:
-            raise DemandaValidationError(
-                "O arquivo Excel da matriz deve ter no máximo 20 MB.",
-                field="arquivo_excel_matriz_base64",
-            )
-        data["arquivo_excel_matriz_criterios_premissas"] = arquivo_excel
     if config:
         data["config_id"] = config["id"]
     uid = _uuid(criado_por)
@@ -652,8 +633,21 @@ def atualizar_hierarquizacao(
         if not cfg:
             raise ConfigMulticriterioNotFoundError(raw["config_codigo"])
         data["config_id"] = cfg["id"]
-    if data.get("status") and data["status"] not in _STATUS:
-        raise DemandaValidationError("Status inválido.", field="status")
+    if data.get("status"):
+        destino = data["status"]
+        if destino not in _STATUS or not repo.status_hierarquizacao_ativo(destino):
+            raise DemandaValidationError("Status inválido.", field="status")
+        transicao = repo.get_transicao_status_hierarquizacao(row["status"], destino)
+        if not transicao:
+            raise DemandaValidationError(
+                f"Transição de status inválida: «{row['status']}» → «{destino}».",
+                field="status",
+            )
+        if transicao.get("via_homologar"):
+            raise DemandaValidationError(
+                "A homologação deve ser realizada pelo fluxo específico de homologação.",
+                field="status",
+            )
     return _response(repo.update(codigo, data) or row)
 
 

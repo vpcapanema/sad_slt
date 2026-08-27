@@ -4,20 +4,22 @@
 {% set requer_autenticacao = false %}
 
 {% block titulo %}Transparência e Acompanhamento — SICARD{% endblock %}
-{% block classes_body %}module-index-page transparencia-home{% endblock %}
+{% block classes_body %}module-index-page transparencia-home public-results-theme{% endblock %}
 {% block base_url %}<base href="/public/transparencia/">{% endblock %}
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/public/cadastro/index.css?v=20260723-6">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
+  <link rel="stylesheet" href="/assets/css/public-results-theme.css?v=20260820-1">
 {% endblock %}
 
 {% block conteudo %}
 <main class="conteudo-principal app-main module-index">
-    <section class="secao-transparencia-e-acompanhamento module-hero" aria-labelledby="transparency-title">
-      <p class="module-eyebrow">Consulta pública do SICARD</p>
-      <h1 id="transparency-title">Consulte as demandas disponibilizadas</h1>
-      <p>Explore no mapa as demandas publicadas pelo SICARD, filtre os registros disponíveis e consulte sua localização e situação.</p>
+    <section class="secao-transparencia-e-acompanhamento module-hero standard-page-hero" aria-labelledby="transparency-title">
+      <h1 class="standard-page-hero__title" id="transparency-title"><i class="fa-solid fa-eye" aria-hidden="true"></i><span>Transparência e acompanhamento</span></h1>
+      <p class="module-eyebrow standard-page-hero__eyebrow">Resultados e transparência</p>
+      <p class="standard-page-hero__description">Explore no mapa as demandas publicadas pelo SICARD, filtre os registros disponíveis e consulte sua localização e situação.</p>
     </section>
 
     <section aria-labelledby="transp-services" class="secao-o-que-voce-deseja-consultar action-section">
@@ -52,7 +54,7 @@
       </div>
     </section>
 
-    <section class="module-info-section preparation-section" aria-labelledby="available-data-title">
+    <section class="secao-dados-publicos-disponiveis module-info-section preparation-section" aria-labelledby="available-data-title">
       <div class="module-section-heading">
         <div>
           <p class="module-eyebrow">No painel público</p>
@@ -77,7 +79,7 @@
       <a class="inline-section-link" href="/public/painel/">Acessar todas as demandas publicadas <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
     </section>
 
-    <section class="module-info-section" aria-labelledby="publication-flow-title">
+    <section class="secao-fluxo-de-publicacao module-info-section" aria-labelledby="publication-flow-title">
       <div class="module-section-heading">
         <div>
           <p class="module-eyebrow">Origem das informações</p>
@@ -91,7 +93,7 @@
       </ol>
     </section>
 
-    <section class="transparency-notice" aria-labelledby="transparency-notice-title">
+    <section class="secao-aviso-de-transparencia transparency-notice" aria-labelledby="transparency-notice-title">
       <span class="transparency-notice-icon"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></span>
       <span>
         <strong id="transparency-notice-title">Sobre a disponibilidade dos dados</strong>
@@ -100,7 +102,7 @@
       <a href="/public/documentacao/">Ver critérios e conceitos <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
     </section>
 
-    <section class="internal-access" aria-labelledby="transparency-register-title">
+    <section class="secao-acesso-ao-cadastro internal-access" aria-labelledby="transparency-register-title">
       <span class="internal-access-icon internal-access-icon--public"><i class="fa-regular fa-square-plus" aria-hidden="true"></i></span>
       <span class="internal-access-content">
         <span class="module-eyebrow">Cadastro de demandas</span>

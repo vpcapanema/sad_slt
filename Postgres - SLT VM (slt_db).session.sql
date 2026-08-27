@@ -1,4 +1,4 @@
-INSERT INTO comparacao_colaborativa_ambiente (
+comparacao_colaborativa_ambienteINSERT INTO comparacao_colaborativa_ambiente (
     id,
     config_tipo,
     config_codigo,

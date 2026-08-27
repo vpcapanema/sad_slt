@@ -1,0 +1,104 @@
+.public-results-theme {
+  --public-theme-deep: #0b4f4a;
+  --public-theme-mid: #146a5d;
+  --public-theme-accent: #58bd91;
+  --public-theme-soft: #e7f3ee;
+  --public-theme-surface: #f7fbf9;
+  --public-theme-border: #bfd9cf;
+}
+
+/* Painel cartográfico público: diferenciação cromática sem alterar cores de status. */
+.public-tracking-theme {
+  --sb-primary: var(--public-theme-deep);
+  --sb-secondary: #173f4c;
+  --sb-green: #7bd8aa;
+  --sb-green-brand: #66c99b;
+}
+
+.public-tracking-theme .layout-sidebar-header {
+  background: linear-gradient(135deg, #093f43 0%, var(--public-theme-mid) 100%);
+}
+
+.public-tracking-theme .layout-sidebar,
+.public-tracking-theme .layout-sidebar-body,
+.public-tracking-theme .painel-dashboard-sidebar,
+.public-tracking-theme .painel-layers-section {
+  background: var(--public-theme-deep);
+}
+
+.public-tracking-theme .layout-main {
+  background: #edf5f2;
+}
+
+.public-tracking-theme .layout-main-header.app-header {
+  border-bottom-color: var(--public-theme-border);
+  background: var(--public-theme-surface);
+}
+
+.public-tracking-theme .navbar-painel-publica a {
+  color: #244f4b;
+}
+
+.public-tracking-theme .navbar-painel-publica a:hover,
+.public-tracking-theme .navbar-painel-publica a:focus-visible {
+  color: var(--public-theme-deep);
+  background: var(--public-theme-soft);
+}
+
+.public-tracking-theme .navbar-painel-publica .acao-area-restrita {
+  border-color: #91bdb0;
+  color: #164f4a;
+  background: #eef7f3;
+}
+
+.public-tracking-theme .painel-layer-filter {
+  --filter-select-bg: #dcefe7;
+  --filter-select-deep: var(--public-theme-deep);
+  --filter-select-green: #70d5a3;
+}
+
+.public-tracking-theme .layer-row.is-selected {
+  background: rgba(123, 216, 170, .16);
+}
+
+.public-tracking-theme .status-legend-map-toggle {
+  border-color: var(--public-theme-border);
+  color: var(--public-theme-deep);
+  background: rgba(247, 251, 249, .96);
+}
+
+/* Entrada de resultados públicos: mesma família cromática do mapa. */
+.transparencia-home.public-results-theme .module-hero {
+  background: linear-gradient(125deg, #0b4b50 0%, #146a5d 62%, #2b876f 100%);
+  box-shadow: 0 18px 45px rgba(11, 79, 74, .2);
+}
+
+.transparencia-home.public-results-theme .module-hero .module-eyebrow {
+  color: #c8f1df;
+}
+
+.transparencia-home.public-results-theme .module-action-card--primary {
+  background: linear-gradient(130deg, #0c4e55 0%, #176f65 55%, #2a876f 100%);
+  box-shadow: 0 14px 30px rgba(11, 79, 74, .24);
+}
+
+.transparencia-home.public-results-theme :is(.action-section, .module-info-section) > .module-section-heading {
+  background: var(--public-theme-deep);
+}
+
+.transparencia-home.public-results-theme .module-action-icon,
+.transparencia-home.public-results-theme .preparation-icon,
+.transparencia-home.public-results-theme .internal-access-icon--public {
+  color: var(--public-theme-deep);
+  background: var(--public-theme-soft);
+}
+
+.transparencia-home.public-results-theme :is(.inline-section-link, .module-action-link, .transparency-notice > a) {
+  color: var(--public-theme-mid);
+}
+
+.transparencia-home.public-results-theme .transparency-notice,
+.transparencia-home.public-results-theme .internal-access {
+  border-color: var(--public-theme-border);
+  border-left-color: var(--public-theme-mid);
+}

@@ -1,0 +1,23 @@
+<section class="card ahp-step-section is-hidden" id="ami-analysis-workspace">
+  <div class="ahp-section-label"><span class="ahp-section-index-icon">2</span><span>Espaço analítico do julgamento</span></div>
+  <div class="ahp-section-body">
+    <div id="ami-analysis-context" class="step-intro"></div>
+    <div class="ahp-live-metrics ami-live-metrics" id="ami-analysis-participation"></div>
+
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.1</span><span>Respostas por participante</span></div>
+      <div class="ahp-section-body ami-analysis-split"><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Incluir</th><th>Situação</th><th>Respondente</th><th>Instituição</th><th>RC</th><th>Início</th><th>Envio</th></tr></thead><tbody id="ami-analysis-responses"></tbody></table></div><div class="ami-analysis-chart" id="ami-analysis-participation-chart" aria-label="Gráfico da situação das respostas"></div></div>
+    </section>
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.2</span><span>Análise por critério</span></div>
+      <div class="ahp-section-body ami-analysis-split"><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Critério</th><th>Média</th><th>Mínimo</th><th>Máximo</th><th>Dispersão</th></tr></thead><tbody id="ami-analysis-criteria"></tbody></table></div><div class="ami-analysis-chart" id="ami-analysis-criteria-chart" aria-label="Gráfico dos pesos médios por critério"></div></div>
+    </section>
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.3</span><span>Análise por par de critérios</span></div>
+      <div class="ahp-section-body ami-analysis-split"><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Par</th><th>Valores individuais</th><th>Média geométrica</th><th>Dispersão</th></tr></thead><tbody id="ami-analysis-pairs"></tbody></table></div><div class="ami-analysis-chart" id="ami-analysis-pairs-chart" aria-label="Gráfico das comparações entre pares de critérios"></div></div>
+    </section>
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.4</span><span>Configuração da consolidação</span></div>
+      <div class="ahp-section-body"><div class="ahp-collab-grid2"><div class="c-form-group"><label class="c-form-label" for="ami-analysis-name">Nome do cenário</label><input class="c-form-control" id="ami-analysis-name" value="Análise com respostas selecionadas"></div><div class="c-form-group"><label class="c-form-label" for="ami-analysis-rc">RC máximo individual</label><input class="c-form-control" id="ami-analysis-rc" type="number" min="0.001" max="1" step="0.01" value="0.10"></div></div><label><input id="ami-analysis-exclude-inconsistent" type="checkbox" checked> Excluir respostas inconsistentes</label><div class="ahp-form-actions"><button type="button" class="btn btn-primary" id="ami-analysis-calculate"><i class="fas fa-calculator"></i> Calcular e salvar cenário</button></div><p id="ami-analysis-feedback" class="ami-feedback" role="status"></p></div>
+    </section>
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.5</span><span>Cen&aacute;rios calculados e pesos finais</span></div>
+      <div class="ahp-section-body" id="ami-analysis-scenarios"><p class="ami-empty">Nenhum cen&aacute;rio calculado.</p></div>
+    </section>
+  </div>
+</section>

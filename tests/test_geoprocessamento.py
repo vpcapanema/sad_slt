@@ -507,6 +507,12 @@ class GeoprocessamentoApiTest(unittest.TestCase):
         self.assertIn("somente leitura", calculo.json()["detail"])
         self.assertEqual(exclusao.status_code, 409, exclusao.text)
 
+    def test_manutencao_admin_da_biblioteca_homologada_esta_habilitada(self) -> None:
+        migration = Path("database/085_biblioteca_homologada_editavel.sql").read_text(encoding="utf-8")
+        self.assertIn("DROP TRIGGER IF EXISTS trg_gp_homologada_snapshot_imutavel", migration)
+        self.assertEqual(migration.count("ON DELETE CASCADE"), 2)
+        self.assertIn("GRANT SELECT, INSERT, UPDATE, DELETE ON", migration)
+
     def test_excluir_camada_remove_catalogo_e_conteudo_fisico(self) -> None:
         camada_id = self.carregar()
         raster_id = self.client.post(

@@ -21,6 +21,7 @@ TIPO_CONFIG: dict[str, dict[str, Any]] = {
 # Colunas exclusivas da tabela de portfólio (nível + refino do universo).
 # ``subconjunto`` (JSONB) guarda toda a configuração do recorte do universo.
 _PORTFOLIO_COLUMNS = [
+    "hierarquizacao_id",
     "tipo_demanda_id",
     "diretoria_id",
     "plano_id",
@@ -112,22 +113,6 @@ def get_excel_matriz(tipo: str, codigo: str) -> tuple[bytes, str] | None:
         row = conn.execute(query, (codigo,)).fetchone()
     if row and row["arquivo_excel_matriz_criterios_premissas"]:
         return bytes(row["arquivo_excel_matriz_criterios_premissas"]), str(row["arquivo_nome"] or "matriz.xlsx")
-    # Compatibilidade com configurações criadas antes da cópia do binário:
-    # a hierarquização de origem mantém o mesmo arquivo e referencia a config.
-    if tipo == "portfolio":
-        fallback = """
-            SELECT h.arquivo_excel_matriz_criterios_premissas
-            FROM hierarquizacao_demandas.hierarquizacao_portfolio h
-            JOIN ahp.config_multicriterio_portfolio c ON c.id = h.config_id
-            WHERE c.codigo = %s
-              AND h.arquivo_excel_matriz_criterios_premissas IS NOT NULL
-            ORDER BY h.atualizado_em DESC NULLS LAST
-            LIMIT 1
-        """
-        with get_connection() as conn:
-            original = conn.execute(fallback, (codigo,)).fetchone()
-        if original and original.get("arquivo_excel_matriz_criterios_premissas"):
-            return bytes(original["arquivo_excel_matriz_criterios_premissas"]), str((row or {}).get("arquivo_nome") or "matriz.xlsx")
     return None
 
 

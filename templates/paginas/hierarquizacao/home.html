@@ -15,27 +15,38 @@
       rel="stylesheet"
       href="/assets/vendor/fontawesome/css/all.min.css"
     />
-  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-home-inline-1.css?v=20260727h">
+  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-home-inline-1.css?v=20260820-standard-table-filter">
+  <link rel="stylesheet" href="/assets/css/mad-filter-standard.css?v=20260820-1" />
+  <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3" />
 {% endblock %}
 
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
     <main class="conteudo-principal app-main ahp-main">
       {% include "componentes/navegacao_fases_hierarquizacao.html" %}
-      <section class="card-gestao-das-hierarquizacoes secao-gestao-das-hierarquizacoes card">
-        <h1 class="ahp-page-title">
-          <i class="fas fa-list-check"></i> Gestão das hierarquizações
+      <section class="card-gestao-das-hierarquizacoes secao-gestao-das-hierarquizacoes card standard-page-hero">
+        <h1 class="ahp-page-title standard-page-hero__title">
+          <i class="fas fa-list-check" aria-hidden="true"></i><span>Gestão das hierarquizações</span>
         </h1>
-        <p>
+        <p class="standard-page-hero__eyebrow">Análise Multicritério Interativa</p>
+        <p class="standard-page-hero__description">
           Defina o universo de cada rodada e acompanhe as hierarquizações registradas no MAD.
         </p>
       </section>
 
+      <div class="standard-section-action-row">
+        <button type="button" class="btn btn-primary" id="hier-new"><i class="fas fa-plus" aria-hidden="true"></i> Nova hierarquização</button>
+      </div>
       <section class="card-hier-loading secao-hier-loading card ahp-step-section">
         <div class="ahp-section-label">
-          <i class="fas fa-table"></i><span>Hierarquizações realizadas</span>
+          <i class="fas fa-table" aria-hidden="true"></i><span>Hierarquizações realizadas</span>
         </div>
         <div class="ahp-section-body">
+          <div class="hier-composite-filter mad-filter mad-filter--composite" role="search" aria-label="Filtrar hierarquizações realizadas">
+            <label for="hier-filter-column">Coluna</label><select id="hier-filter-column"><option value="">Todas as colunas</option></select>
+            <label for="hier-filter-value">Valor</label><input id="hier-filter-value" type="search" list="hier-filter-options" placeholder="Selecione ou digite um valor"><datalist id="hier-filter-options"></datalist>
+            <span id="hier-filter-count" aria-live="polite"></span>
+          </div>
           <div id="hier-loading">Carregando…</div>
           <div
             id="hier-error"
@@ -80,6 +91,7 @@
             </table>
           </div>
           <div class="admin-bulk-actions hier-bulk-actions" id="hier-bulk-actions" aria-label="Ações em lote sobre as hierarquizações">
+            <button type="button" class="admin-icon-btn" id="hier-bulk-view" title="Visualizar selecionada" aria-label="Visualizar selecionada" disabled><i class="fas fa-eye" aria-hidden="true"></i><span class="sr-only">Visualizar</span></button>
             <button type="button" class="admin-icon-btn" id="hier-bulk-edit" title="Editar selecionadas" disabled>
               <i class="fas fa-pen" aria-hidden="true"></i><span class="sr-only">Editar</span>
             </button>
@@ -92,10 +104,11 @@
             <button type="button" class="admin-icon-btn admin-icon-btn-danger" id="hier-bulk-delete" title="Excluir selecionadas" disabled>
               <i class="fas fa-trash" aria-hidden="true"></i><span class="sr-only">Excluir</span>
             </button>
+          </div>
         </div>
       </section>
 
-      <section class="card-informacoes-cadastrais secao-informacoes-cadastrais card ahp-step-section">
+      <section class="card-informacoes-cadastrais secao-informacoes-cadastrais card ahp-step-section hidden" id="hier-create-section">
         <div class="ahp-section-label">
           <i class="fas fa-folder-plus"></i
           ><span>Cadastrar hierarquização</span>
@@ -141,7 +154,7 @@
                 <p class="ahp-help-text">
                   Escolha uma única categoria para compor esta hierarquização.
                 </p>
-                <div class="admin-toolbar hier-tipo-toolbar">
+                <div class="admin-toolbar hier-tipo-toolbar mad-filter mad-filter--single">
                   <div class="form-field ahp-universo-objeto">
                     <label for="hier-tipo">Tipo de demanda *</label
                     ><select id="hier-tipo" required>
@@ -174,7 +187,7 @@
                   Pesquise livremente ou filtre pelos atributos disponíveis para
                   o tipo escolhido.
                 </p>
-                <div class="admin-toolbar hier-universo-filtros">
+                <div class="admin-toolbar hier-universo-filtros mad-filter mad-filter--fields">
                   <div class="form-field admin-toolbar-search">
                     <label for="demanda-busca">Pesquisar</label>
                     <input
@@ -305,47 +318,6 @@
               </div>
             </article>
 
-            <article class="card-fases-da-rodada ahp-subcard cadastro-card">
-              <div class="ahp-subsection-title">
-                <i class="fas fa-diagram-project"></i>
-                <h2>Fases da rodada</h2>
-              </div>
-              <p class="ahp-help-text">As fases são independentes. Marque somente as avaliações que esta rodada executará.</p>
-              <div class="process-grid" id="hier-fases">
-                <label class="process-field hier-fase-option"><input type="checkbox" value="1" checked><span>Fase 1 — Elegibilidade territorial</span></label>
-                <label class="process-field hier-fase-option"><input type="checkbox" value="2" checked><span>Fase 2 — Favorabilidade territorial</span></label>
-                <label class="process-field hier-fase-option"><input type="checkbox" value="3" checked><span>Fase 3 — Ajuste por atributos</span></label>
-              </div>
-            </article>
-
-            <article class="card-matriz-de-premissas-e-criterios ahp-subcard cadastro-card">
-              <div class="ahp-subsection-title">
-                <i class="fas fa-file-excel"></i>
-                <h2>Matriz de premissas e critérios</h2>
-              </div>
-              <p class="ahp-help-text">
-                Anexe a matriz que documenta as premissas e os critérios aplicáveis à rodada.
-                Utilize o modelo padronizado abaixo para garantir que o sistema consiga interpretar
-                dimensões, critérios, premissas, métricas e o índice de risco.
-              </p>
-              <p class="ahp-help-text">
-                <a
-                  href="/public/documentacao/matrizes/Modelo_Matriz_Criterios_Premissas_SLT.xlsx"
-                  download="Modelo_Matriz_Criterios_Premissas_SLT.xlsx"
-                  class="ahp-template-download-btn"
-                >
-                  <i class="fas fa-file-excel"></i> Baixar modelo XLSX
-                </a>
-              </p>
-              <label class="process-field"
-                ><span>Arquivo JSON, CSV ou XLSX (obrigatório nas Fases 2 e 3)</span
-                ><input
-                  id="hier-matriz"
-                  type="file"
-                  accept=".json,.csv,.xlsx"
-              /></label>
-              <div id="matriz-resumo" class="ahp-info-note hidden"></div>
-            </article>
             <div
               id="form-error"
               class="ahp-info-note ahp-info-note--error hidden"
@@ -375,9 +347,8 @@
   <script src="/assets/js/catalog.js"></script>
   <script src="/assets/js/status-colors.js"></script>
   <script src="/assets/js/admin-labels.js"></script>
-  <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
   <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
-  <script src="/restrict/hierarquizacao/js/processos.js?v=20260813-universo4"></script>
+  <script src="/restrict/hierarquizacao/js/processos.js?v=20260820-grupo-demandas"></script>
   <script src="/assets/js/paginas/hierarquizacao-home-inline-1.js"></script>
 {% endblock %}

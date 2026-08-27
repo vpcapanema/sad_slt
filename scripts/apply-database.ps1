@@ -217,7 +217,15 @@ $migrations = @(
     "080_integridade_referencias_colaborativas.sql",
     "081_fk_config_hierarquizacao_origem.sql",
     "082_relatorios_fase2_fase3_consolidado.sql",
-    "083_migrar_comparacao_colaborativa_hierarquizacao.sql"
+    "083_migrar_comparacao_colaborativa_hierarquizacao.sql",
+    "084_origem_config_multicriterio_colaborativa.sql",
+    "085_biblioteca_homologada_editavel.sql",
+    "086_reparar_hierarquizacao_ambiente_colaborativo.sql",
+    "087_dominio_status_hierarquizacao.sql",
+    "088_excel_original_ambiente_colaborativo.sql",
+    "089_remover_excel_original_hierarquizacao.sql",
+    "090_ciclo_vida_resposta_colaborativa.sql",
+    "091_analises_respostas_colaborativas.sql"
 )
 
 if ($OnlyMigration) {
@@ -229,13 +237,41 @@ if ($OnlyMigration) {
 }
 
 if (-not $OnlyMigration) {
-    $latestSchemaQuery = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='projeto' AND column_name='maturidade') THEN 't' ELSE 'f' END;"
+    $latestSchemaQuery = "SELECT CASE WHEN to_regclass('ahp.comparacao_colaborativa_analise') IS NOT NULL THEN 't' ELSE 'f' END;"
+    $schema090Query = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='ahp' AND table_name='comparacao_colaborativa_resposta' AND column_name='status') THEN 't' ELSE 'f' END;"
+    $schema089Query = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='ahp' AND table_name='comparacao_colaborativa_ambiente' AND column_name='arquivo_excel_matriz_criterios_premissas') AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='hierarquizacao_demandas' AND table_name='hierarquizacao_portfolio' AND column_name='arquivo_excel_matriz_criterios_premissas') THEN 't' ELSE 'f' END;"
+    $schema088Query = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='ahp' AND table_name='comparacao_colaborativa_ambiente' AND column_name='arquivo_excel_matriz_criterios_premissas') THEN 't' ELSE 'f' END;"
+    $schema087Query = "SELECT CASE WHEN to_regclass('hierarquizacao_demandas.dom_status_hierarquizacao') IS NOT NULL AND to_regclass('hierarquizacao_demandas.dom_status_hierarquizacao_transicao') IS NOT NULL THEN 't' ELSE 'f' END;"
+    $schema085Query = "SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_gp_homologada_snapshot_imutavel' AND NOT tgisinternal) AND has_table_privilege('slt_user','geoprocessamento.camada_homologada','UPDATE,DELETE') THEN 't' ELSE 'f' END;"
+    $schema084Query = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='ahp' AND table_name='comparacao_colaborativa_ambiente' AND column_name='config_avulsa_id') THEN 't' ELSE 'f' END;"
+    $collaborativeSchemaQuery = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='ahp' AND table_name='comparacao_colaborativa_ambiente' AND column_name='hierarquizacao_id') THEN 't' ELSE 'f' END;"
     $priorSchemaQuery = "SELECT CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='projeto' AND column_name='motivo_reprovacao') THEN 't' ELSE 'f' END;"
     $coreSchemaQuery = "SELECT CASE WHEN to_regclass('demandas.projeto') IS NOT NULL OR to_regclass('ahp.config_multicriterio_portfolio') IS NOT NULL THEN 't' ELSE 'f' END;"
 
     if (Test-SchemaReady $latestSchemaQuery) {
-        Write-Ok "Schema ja esta na migration 072; nenhuma migration sera reaplicada"
+        Write-Ok "Schema ja esta na migration 091; nenhuma migration sera reaplicada"
         $migrations = @()
+    } elseif (Test-SchemaReady $schema090Query) {
+        Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"
+        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 91 }
+    } elseif (Test-SchemaReady $schema089Query) {
+        Write-Ok "Schema ja esta na migration 089; aplicando somente migrations pendentes (>= 090)"
+        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 90 }
+    } elseif (Test-SchemaReady $schema088Query) {
+        Write-Ok "Schema ja esta na migration 088; aplicando somente migrations pendentes (>= 089)"
+        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 89 }
+    } elseif (Test-SchemaReady $schema087Query) {
+        Write-Ok "Schema ja esta na migration 087; aplicando somente migrations pendentes (>= 088)"
+        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 88 }
+    } elseif (Test-SchemaReady $schema085Query) {
+        Write-Ok "Schema ja esta na migration 085; aplicando somente migrations pendentes (>= 086)"
+        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 86 }
+    } elseif (Test-SchemaReady $schema084Query) {
+        Write-Ok "Schema ja esta na migration 084; aplicando somente migrations pendentes (>= 085)"
+        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 85 }
+    } elseif (Test-SchemaReady $collaborativeSchemaQuery) {
+        Write-Ok "Schema ja esta na migration 083; aplicando somente migrations pendentes (>= 084)"
+        $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 84 }
     } elseif (Test-SchemaReady $priorSchemaQuery) {
         Write-Ok "Schema ja esta na migration 071; aplicando somente migrations pendentes (>= 072)"
         $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 72 }

@@ -772,7 +772,9 @@ function nearestSaatyIdx(v) {
 
 function loadStoredPairwiseMatrix() {
   // A página pública colaborativa nunca herda matriz de outro usuário do navegador.
-  if (document.body.classList.contains("ahp-colaborativa-page")) return null;
+  if (document.body.classList.contains("ahp-colaborativa-page")) {
+    return Array.isArray(window.ahpCollaborativeDraftMatrix) ? window.ahpCollaborativeDraftMatrix : null;
+  }
   const raw = localStorage.getItem("ahp_pairwiseMatrix");
   if (!raw) return null;
   let matrix;

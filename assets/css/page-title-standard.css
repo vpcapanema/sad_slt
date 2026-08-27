@@ -1,0 +1,72 @@
+.standard-page-hero {
+  display: block;
+  width: 100%;
+  padding: 1.35rem 1.5rem;
+  text-align: center;
+}
+
+.ami-hero.standard-page-hero,
+.module-hero.standard-page-hero {
+  display: block;
+  text-align: center !important;
+}
+
+.standard-page-hero__title {
+  display: flex !important;
+  width: 100%;
+  align-items: center;
+  justify-content: center !important;
+  gap: .55rem !important;
+  margin: 0 !important;
+  text-align: center !important;
+}
+
+.standard-page-hero__title i {
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+.standard-page-hero__eyebrow {
+  width: 100%;
+  margin: .35rem auto 0 !important;
+  color: var(--pli-blue, #0b5f8a);
+  font-size: .70rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-align: center !important;
+}
+
+.standard-page-hero__description {
+  width: 100%;
+  max-width: 820px;
+  margin: .35rem auto 0 !important;
+  text-align: center !important;
+}
+
+.standard-section-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  margin: 1.25rem 0 .25rem;
+}
+
+.ami-page .ami-main > .standard-section-action-row {
+  margin-top: 1.25rem;
+}
+
+.standard-section-action-row + .ahp-step-section,
+.ami-page .ami-main > .standard-section-action-row + .ami-panel {
+  margin-top: .25rem !important;
+}
+
+@media (max-width: 700px) {
+  .standard-page-hero {
+    padding: 1.1rem;
+  }
+
+  .standard-section-action-row {
+    margin: 1rem 0 .25rem;
+  }
+}

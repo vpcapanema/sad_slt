@@ -461,6 +461,20 @@ SELECT CASE WHEN
         GROUP BY table_schema, table_name
         HAVING count(*) = 2
     )
+    AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'ahp'
+          AND table_name = 'comparacao_colaborativa_ambiente'
+          AND column_name = 'config_avulsa_id'
+    )
+    AND NOT EXISTS (
+        SELECT 1 FROM pg_trigger
+        WHERE tgname = 'trg_gp_homologada_snapshot_imutavel'
+          AND NOT tgisinternal
+    )
+    AND has_table_privilege(
+        'slt_user', 'geoprocessamento.camada_homologada', 'UPDATE,DELETE'
+    )
 THEN 't' ELSE 'f' END;
 "@
     if ($env:SLT_USE_SIGMA_POSTGRES -eq "true") {

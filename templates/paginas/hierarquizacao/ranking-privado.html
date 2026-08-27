@@ -15,15 +15,17 @@
   <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-home-inline-1.css">
   <link rel="stylesheet" href="/assets/css/ranking-privado.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
 {% endblock %}
 
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
 <main class="conteudo-principal app-main ahp-main">
   {% include "componentes/navegacao_fases_hierarquizacao.html" %}
-  <section class="card-ranking-demandas secao-ranking-demandas card">
-    <h1 class="ahp-page-title"><i class="fas fa-ranking-star"></i> Ranking de demandas</h1>
-    <p>Selecione uma hierarquização finalizada para consultar sua classificação e distribuição territorial.</p>
+  <section class="card-ranking-demandas secao-ranking-demandas card standard-page-hero">
+    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-ranking-star" aria-hidden="true"></i><span>Ranking de demandas</span></h1>
+    <p class="standard-page-hero__eyebrow">Resultados e transparência</p>
+    <p class="standard-page-hero__description">Selecione uma hierarquização finalizada para consultar sua classificação e distribuição territorial.</p>
   </section>
 
   <section class="card-hierarquizacoes-finalizadas secao-hierarquizacoes-finalizadas card ahp-step-section">

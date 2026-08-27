@@ -4,13 +4,14 @@
 {% set requer_autenticacao = false %}
 
 {% block titulo %}Painel — SLT{% endblock %}
-{% block classes_body %}painel-dashboard-page{% endblock %}
+{% block classes_body %}painel-dashboard-page public-results-theme public-tracking-theme{% endblock %}
 {% block classes_barra_lateral %}painel-dashboard-sidebar{% endblock %}
 {% block rotulo_barra_lateral %}Demandas{% endblock %}
 {% block base_url %}<base href="/public/painel/">{% endblock %}
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/painel-page.css">
+  <link rel="stylesheet" href="/assets/css/public-results-theme.css?v=20260820-1">
   <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
 {% endblock %}
 
