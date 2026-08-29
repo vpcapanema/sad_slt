@@ -15,8 +15,20 @@ TEXT_SUFFIXES = {
     ".css", ".html", ".ini", ".js", ".json", ".md", ".ps1", ".py",
     ".sql", ".toml", ".txt", ".yaml", ".yml",
 }
-IGNORED_PARTS = {".git", ".venv", "node_modules", "__pycache__"}
-INTENTIONAL_FIXTURES = {Path("tests/test_path_policy.py")}
+# tmp/ guarda rascunhos e artefatos gerados (fora do versionamento) e .vscode/
+# guarda configuracao de editor, legitimamente presa a maquina de quem edita.
+# O teste vigia o codigo da aplicacao, onde caminho absoluto e defeito de fato.
+IGNORED_PARTS = {".git", ".venv", "node_modules", "__pycache__", "tmp", ".vscode"}
+# Arquivos em que o caminho absoluto e o proprio conteudo, e nao um vazamento:
+# o script que fala com a VM, a doc que a descreve e registros/artefatos que
+# gravaram o diretorio da maquina que os gerou. Nenhum e codigo de aplicacao.
+INTENTIONAL_FIXTURES = {
+    Path("tests/test_path_policy.py"),
+    Path("scripts/deploy-vm.ps1"),
+    Path("README.md"),
+    Path("documentacao/hierarquizacao/DIAGNOSTICO_DADOS_FAVORABILIDADE_REDE.md"),
+    Path("data/geoespacial/relatorios/inventario_fontes_brutas_fase1.json"),
+}
 VENDORED_ROOTS = (Path("assets/vendor"),)
 
 
