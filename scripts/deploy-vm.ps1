@@ -4,10 +4,22 @@
 #   .\scripts\deploy-vm.ps1
 #   .\scripts\deploy-vm.ps1 -Mensagem "ajusta X"
 #
-# Etapas relatadas: 1) commit local  2) push para o GitHub  3) atualizacao/
-# deploy do container na VM (build, restart, healthcheck) e abertura da pagina.
+# Etapas relatadas: 0) guarda de branch  1) commit local  2) push para o GitHub
+# 3) atualizacao/deploy do container na VM (build, restart, healthcheck) e
+# abertura da pagina.
+#
+# GUARDA DE BRANCH
+#   O repositorio trabalha com branch unica: 'main' espelha o que esta em
+#   producao. O deploy implanta a branch em checkout, entao rodar este script
+#   fora de 'main' publicaria outra coisa em producao silenciosamente.
+#
+#   Por isso, deploy fora de 'main' exige intencao digitada:
+#     .\scripts\deploy-vm.ps1 -BranchAlternativa nome-exato-da-branch
+#   O nome precisa bater com a branch em checkout. Use apenas para hotfix
+#   consciente; o caminho normal e sempre 'main'.
 param(
-    [string]$Mensagem = ""
+    [string]$Mensagem = "",
+    [string]$BranchAlternativa = ""
 )
 
 $ErrorActionPreference = "Continue"
@@ -18,6 +30,7 @@ $Plink = "C:\Program Files\PuTTY\plink.exe"
 $Key = Join-Path $Root "SRV-SISTEMA-30001480.ppk"
 $HostKey = "SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0"
 $Vm = "ubuntu@56.125.163.194"
+$AppDirVm = "/opt/sicard"
 $AppUrl = "https://56.125.163.194/sicard"
 $GitExe = if (Test-Path "C:\Program Files\Git\cmd\git.exe") { "C:\Program Files\Git\cmd\git.exe" } else { "git" }
 $CurlExe = if (Test-Path "C:\Windows\System32\curl.exe") { "C:\Windows\System32\curl.exe" } else { "curl" }
@@ -31,14 +44,51 @@ if (-not (Test-Path $Plink)) { Write-Error "PuTTY plink.exe nao encontrado em $P
 if (-not (Test-Path $Key)) { Write-Error "Chave PuTTY nao encontrada: $Key"; exit 2 }
 
 # ---------------------------------------------------------------------------
+# Etapa 0/3 - Guarda de branch
+# ---------------------------------------------------------------------------
+Banner "Etapa 0/3 - Guarda de branch"
+$BranchPadrao = "main"
+$branch = (& $GitExe rev-parse --abbrev-ref HEAD).Trim()
+Write-Host "  Branch em checkout: $branch"
+
+if ($branch -eq "HEAD") {
+    Write-Error "HEAD destacado (detached). Faca checkout de '$BranchPadrao' antes do deploy."
+    exit 1
+}
+
+if ($branch -ne $BranchPadrao) {
+    if ($BranchAlternativa -ne $branch) {
+        Write-Host ""
+        Write-Host "  DEPLOY BLOQUEADO" -ForegroundColor Red
+        Write-Host "  A branch em checkout e '$branch', nao '$BranchPadrao'." -ForegroundColor Red
+        Write-Host "  A VM executa 'git reset --hard origin/<branch>', entao isto" -ForegroundColor Red
+        Write-Host "  publicaria '$branch' em producao no lugar do que esta no ar." -ForegroundColor Red
+        Write-Host ""
+        Write-Host "  Caminho normal:" -ForegroundColor Yellow
+        Write-Host "    git checkout $BranchPadrao" -ForegroundColor Yellow
+        Write-Host "  Se o deploy de '$branch' for mesmo intencional:" -ForegroundColor Yellow
+        Write-Host "    .\scripts\deploy-vm.ps1 -BranchAlternativa $branch" -ForegroundColor Yellow
+        exit 1
+    }
+    Write-Host "  AVISO: deploy explicito de '$branch', fora de '$BranchPadrao'." -ForegroundColor Yellow
+    Write-Host "  Producao passara a servir esta branch." -ForegroundColor Yellow
+} else {
+    Write-Host "  OK - branch padrao." -ForegroundColor Green
+}
+
+# ---------------------------------------------------------------------------
 # Etapa 1/3 - Commit local
 # ---------------------------------------------------------------------------
 Banner "Etapa 1/3 - Commit local"
-$branch = (& $GitExe rev-parse --abbrev-ref HEAD).Trim()
-Write-Host "  Branch: $branch"
 
 $statusPorcelain = & $GitExe status --porcelain
 if ($statusPorcelain) {
+    $arquivos = @($statusPorcelain)
+    Write-Host "  $($arquivos.Count) arquivo(s) serao incluidos no commit:"
+    $arquivos | Select-Object -First 20 | ForEach-Object { Write-Host "    $_" }
+    if ($arquivos.Count -gt 20) {
+        Write-Host "    ... e mais $($arquivos.Count - 20) arquivo(s)"
+    }
     & $GitExe add -A
     if (-not $Mensagem) {
         $Mensagem = "chore(deploy): atualizacao $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
@@ -56,6 +106,27 @@ Write-Host "  HEAD local: $localSha"
 # ---------------------------------------------------------------------------
 Banner "Etapa 2/3 - Push para o GitHub"
 & $GitExe fetch origin $branch *> $null
+
+# Guarda de divergencia: se o remoto tem commits que o local nao contem, o push
+# so passaria com --force, o que reescreveria o historico publicado e poderia
+# derrubar producao. Melhor abortar e resolver a mao.
+$remotoExiste = $true
+& $GitExe rev-parse --verify --quiet "refs/remotes/origin/$branch" *> $null
+if ($LASTEXITCODE -ne 0) { $remotoExiste = $false }
+
+if ($remotoExiste) {
+    $behind = 0
+    try { $behind = [int](& $GitExe rev-list --count "HEAD..origin/$branch" 2>$null) } catch { $behind = 0 }
+    if ($behind -gt 0) {
+        Write-Host ""
+        Write-Host "  DEPLOY BLOQUEADO" -ForegroundColor Red
+        Write-Host "  origin/$branch tem $behind commit(s) que o local nao contem." -ForegroundColor Red
+        Write-Host "  Publicar assim exigiria --force e reescreveria o historico." -ForegroundColor Red
+        Write-Host "  Resolva antes:  git pull --rebase origin $branch" -ForegroundColor Yellow
+        exit 1
+    }
+}
+
 $ahead = 0
 try { $ahead = [int](& $GitExe rev-list --count "origin/$branch..HEAD" 2>$null) } catch { $ahead = 1 }
 if ($ahead -gt 0) {
@@ -75,7 +146,14 @@ Write-Host "  A VM executa: git fetch + reset --hard origin/$branch, rebuild (AR
 Write-Host "  restart do container sicard_app e healthcheck interno + publico."
 Write-Host ""
 
-$remoteCmd = 'cd /opt/sicard && bash .deploy/update_vm.sh ' + $branch
+# A VM tem a mesma guarda de branch. Quando o deploy fora de 'main' ja foi
+# autorizado aqui (-BranchAlternativa), repassamos a autorizacao adiante; sem
+# isso o update_vm.sh bloquearia e a saida de emergencia nao funcionaria.
+$autorizacaoVm = ""
+if ($branch -ne $BranchPadrao) {
+    $autorizacaoVm = "SICARD_PERMITIR_BRANCH=$branch "
+}
+$remoteCmd = "cd $AppDirVm && $autorizacaoVm" + "bash .deploy/update_vm.sh $branch"
 & $Plink -ssh $Vm -i $Key -hostkey $HostKey -batch $remoteCmd
 $deployExit = $LASTEXITCODE
 if ($deployExit -ne 0) {

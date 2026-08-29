@@ -25,7 +25,25 @@ ACTUAL_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
 [[ "$ACTUAL_REMOTE" == *"$EXPECTED_REPO_FRAGMENT"* ]] || die "remote inesperado: $ACTUAL_REMOTE"
 ok "repositorio confirmado: $ACTUAL_REMOTE"
 
-BRANCH="${1:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)}"
+# Branch a publicar. O padrao e 'main', que espelha o que esta em producao.
+# Antes o default era a branch em checkout na propria VM, o que fazia o alvo do
+# deploy depender de um estado local invisivel de quem chamava o script.
+BRANCH_PADRAO="main"
+BRANCH="${1:-$BRANCH_PADRAO}"
+
+# Publicar algo que nao seja 'main' exige intencao explicita, declarada na
+# variavel de ambiente com o nome exato da branch:
+#   SICARD_PERMITIR_BRANCH=hotfix-x bash .deploy/update_vm.sh hotfix-x
+if [[ "$BRANCH" != "$BRANCH_PADRAO" ]]; then
+    if [[ "${SICARD_PERMITIR_BRANCH:-}" != "$BRANCH" ]]; then
+        die "deploy de '$BRANCH' bloqueado: producao serve '$BRANCH_PADRAO'. Para publicar mesmo assim, repita o nome em SICARD_PERMITIR_BRANCH=$BRANCH"
+    fi
+    warn "deploy explicito de '$BRANCH' (fora de $BRANCH_PADRAO); producao passara a servir esta branch"
+fi
+
+git rev-parse --verify --quiet "refs/remotes/origin/$BRANCH" >/dev/null 2>&1 \
+    || git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1 \
+    || die "branch '$BRANCH' nao existe em origin; nada foi alterado"
 
 step "Sincronizando com o GitHub (origin/$BRANCH)"
 OLD_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
