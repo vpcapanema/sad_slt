@@ -270,3 +270,17 @@
 .ami-page .ami-metric-card__value { font-size: var(--ami2-numero) }
 .ami-page #ami-analysis-workspace .ahp-metric-card__label { font-size: var(--ami2-nota) }
 .ami-page #ami-analysis-workspace .ahp-metric-card__value { font-size: 1.25rem }
+
+/* Aviso da analise homologada: dali seguem as tres fases da hierarquizacao. */
+.ami-homologada{margin-top:.9rem;padding:.85rem 1rem;border:1px solid rgba(31,138,76,.45);border-left:5px solid #1f8a4c;border-radius:10px;background:rgba(31,138,76,.08);text-align:left}
+.ami-homologada__titulo{margin:0 0 .3rem;color:#166b3a;font-size:var(--ami2-texto,.68rem)}
+.ami-homologada__titulo i{margin-right:.2rem}
+.ami-homologada__texto{margin:0 0 .6rem;color:var(--pli-deep);font-size:var(--ami2-texto,.68rem);line-height:1.45}
+.ami-homologada__fases{display:grid;gap:.4rem;margin:0;padding:0;list-style:none}
+.ami-homologada__fases a{display:flex;gap:.6rem;align-items:center;padding:.5rem .7rem;border:1px solid #d5e3da;border-radius:8px;background:#fff;color:var(--pli-deep);text-decoration:none}
+.ami-homologada__fases a:hover{border-color:#1f8a4c;background:#f3faf6}
+.ami-homologada__fases a>span:nth-child(2){display:grid;min-width:0}
+.ami-homologada__fases strong{font-size:var(--ami2-dado,.64rem)}
+.ami-homologada__fases small{color:var(--pli-muted);font-size:var(--ami2-nota,.6rem)}
+.ami-homologada__fases a>i{margin-left:auto;color:#1f8a4c}
+.ami-homologada__num{display:grid;width:1.4rem;height:1.4rem;flex:0 0 1.4rem;place-items:center;border-radius:50%;background:#1f8a4c;color:#fff;font-size:var(--ami2-nota,.6rem);font-weight:800}

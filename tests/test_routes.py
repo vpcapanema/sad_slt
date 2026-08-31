@@ -230,6 +230,10 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert 'class="ami-semaforo"' in central_html
     assert "consolidarRespostas" in julgamentos_js
     assert "mostrarResultado" in julgamentos_js
+    # Homologada a analise, o card aponta as tres fases da hierarquizacao.
+    assert "analiseHomologadaAviso" in julgamentos_js
+    for fase in ("/restrict/hierarquizacao/fase-1/", "/restrict/hierarquizacao/fase-2/", "/restrict/hierarquizacao/fase-3/"):
+        assert fase in julgamentos_js
     assert "matrizEmFoco" in julgamentos_js
     assert "analisarMatriz" in julgamentos_js
     assert 'id="ami-analysis-pairs-list"' not in central_html
