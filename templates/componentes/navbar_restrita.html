@@ -10,6 +10,7 @@
       </span>
     </a>
     <nav class="navbar-restrita app-nav" aria-label="Navegação restrita principal">
+      {% if bloco_modulo %}{% include "componentes/navbar_modulo/" ~ bloco_modulo ~ ".html" %}{% else %}
       <a href="/restrict/">Início</a>
       <div class="grupo-navegacao app-nav-group">
         <a href="/restrict/painel/">Cadastro de Demandas<span class="indicador-submenu app-nav-caret" aria-hidden="true">▾</span></a>
@@ -21,6 +22,7 @@
       <a href="/restrict/hierarquizacao/">Hierarquização e Ranking</a>
       <a href="/public/transparencia/">Transparência</a>
       <a href="/public/documentacao/">Documentação</a>
+      {% endif %}
     </nav>
   </div>
 </header>

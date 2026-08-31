@@ -15,7 +15,6 @@
 <body class="pagina-painel-mapa layout-with-sidebar {% block classes_body %}{% endblock %}" data-navegacao="painel_{{ navegacao }}"{% if requer_autenticacao %} data-requer-autenticacao="true"{% endif %}>
   <div class="estrutura-painel-mapa layout-with-sidebar-grid">
     {% include "componentes/navbar_painel_" ~ navegacao ~ ".html" %}
-    {% if bloco_modulo %}{% include "componentes/navbar_modulo/" ~ bloco_modulo ~ ".html" %}{% endif %}
 
     <aside class="barra-lateral-painel layout-sidebar {% block classes_barra_lateral %}{% endblock %}" aria-label="{% block rotulo_barra_lateral %}Controles do painel{% endblock %}">
       <div class="conteudo-barra-lateral layout-sidebar-body">

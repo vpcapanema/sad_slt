@@ -112,6 +112,7 @@ class HierarquizacaoResponseSchema(BaseModel):
     codigo: str
     config_id: str | None = None
     config_codigo: str | None = None
+    julgamento_id: str | None = None
     nome: str
     descricao: str | None = None
     tipo_demanda: str | None = None

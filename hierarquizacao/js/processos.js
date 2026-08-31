@@ -26,7 +26,7 @@
     matrizAtual = null;
   const selecionadasHier = new Set();
   const HIER_FILTER_COLUMNS = [
-    ["status", "Situação"], ["codigo", "Código da hierarquização"], ["config_id", "Identificador da configuração AHP"],
+    ["status", "Situação"], ["codigo", "Código da hierarquização"], ["julgamento_id", "ID Julgamento"],
     ["nome", "Nome"], ["descricao", "Descrição"], ["tipo_demanda", "Tipo de demanda"], ["grupo_id", "Grupo comparável"],
     ["homologadoPorNome", "Responsável pela homologação"], ["criadoPorNome", "Responsável pelo cadastro"],
     ["criadoEm", "Data de cadastro"], ["atualizadoEm", "Última atualização"]
@@ -201,7 +201,7 @@
       `<td class="col-select"><input type="checkbox" class="hier-row-select" data-codigo="${esc(h.codigo)}"${marcada ? " checked" : ""}></td>` +
       `<td>${sit}</td>` +
       `<td><code>${esc(h.codigo)}</code></td>` +
-      `<td>${esc(h.config_id || "—")}</td>` +
+      `<td>${esc(h.julgamento_id || "—")}</td>` +
       `<td>${nome}</td>` +
       `<td>${desc}</td>` +
       `<td>${matrizCell(h)}</td>` +

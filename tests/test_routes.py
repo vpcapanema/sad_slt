@@ -204,26 +204,56 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert '"Central de respostas"' in julgamentos_js
     assert "Central de respostas" in central_html
     assert "Julgamentos com respostas colaborativas" in central_html
+    assert "Enviadas" in central_html
+    assert "Recebidas" in central_html
     assert "Em preenchimento" in central_html
-    assert "Consistentes" in central_html
-    assert "Participação" in central_html
-    assert "Cenários homologados/calculados" in central_html
-    assert "Análise homologada" in central_html
+    assert "Finalizadas" in central_html
+    assert "Finalizadas com consistência" in central_html
+    assert "Cenários homologados/calculados" not in central_html
     assert 'id="ami-analysis-workspace"' in central_html
     assert 'id="ami-analysis-responses"' in central_html
     assert 'id="ami-analysis-criteria"' in central_html
     assert 'id="ami-analysis-pairs"' in central_html
-    assert 'id="ami-analysis-scenarios"' in central_html
-    assert 'id="ami-analysis-participation-chart"' in central_html
+    assert 'id="ami-analysis-consolidations"' in central_html
     assert 'id="ami-analysis-criteria-chart"' in central_html
     assert 'id="ami-analysis-pairs-chart"' in central_html
-    assert central_html.index('id="ami-analysis-responses"') < central_html.index('id="ami-analysis-participation-chart"')
+    assert 'id="ami-analysis-judges"' in central_html
+    assert 'id="ami-analysis-matrix"' in central_html
+    assert 'id="ami-analysis-metrics"' in central_html
+    # A matriz, as metricas e os pesos seguem o julgador selecionado; com todos,
+    # a medida de tendencia central e do usuario.
+    assert 'id="ami-analysis-measure"' in central_html
+    # A consolidacao acompanha o processo num modal e fecha com o semaforo.
+    assert 'id="ami-process-modal"' in central_html
+    assert 'id="ami-process-steps"' in central_html
+    assert 'id="ami-result-modal"' in central_html
+    assert 'class="ami-semaforo"' in central_html
+    assert "consolidarRespostas" in julgamentos_js
+    assert "mostrarResultado" in julgamentos_js
+    assert "matrizEmFoco" in julgamentos_js
+    assert "analisarMatriz" in julgamentos_js
+    assert 'id="ami-analysis-pairs-list"' not in central_html
+    assert 'id="ami-analysis-participation-chart"' not in central_html
+    assert 'id="ami-analysis-heatmap"' not in central_html
     assert central_html.index('id="ami-analysis-criteria"') < central_html.index('id="ami-analysis-criteria-chart"')
     assert central_html.index('id="ami-analysis-pairs"') < central_html.index('id="ami-analysis-pairs-chart"')
+    # O fio analitico vai do julgador ao peso: cada secao e insumo da seguinte,
+    # e a consolidacao (que refaz o percurso) fica depois delas.
+    for anterior, seguinte in [
+        ('id="ami-analysis-judges"', 'id="ami-analysis-pairs"'),
+        ('id="ami-analysis-pairs"', 'id="ami-analysis-matrix"'),
+        ('id="ami-analysis-matrix"', 'id="ami-analysis-metrics"'),
+        ('id="ami-analysis-metrics"', 'id="ami-analysis-criteria"'),
+        ('id="ami-analysis-criteria"', 'id="ami-analysis-responses"'),
+        ('id="ami-analysis-responses"', 'id="ami-analysis-consolidations"'),
+    ]:
+        assert central_html.index(anterior) < central_html.index(seguinte), (anterior, seguinte)
     assert "central-respostas-layout.css" in central_html
     assert "ratioLabel" in julgamentos_js
-    assert "analysisDonut" in julgamentos_js
-    assert "conic-gradient" in julgamentos_js
+    assert "analysisPairBars" in julgamentos_js
+    assert "analysisRangeBars" in julgamentos_js
+    assert "desvioIntensidade" in julgamentos_js
+    assert "renderPairsSection" in julgamentos_js
     assert 'id="ami-judgments-edit-action"' in central_html
     assert 'id="ami-judgments-save-action"' in central_html
     assert 'id="ami-judgments-cancel-action"' in central_html

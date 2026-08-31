@@ -10,6 +10,9 @@ from pydantic import BaseModel, Field
 
 class ConviteColaborativoSchema(BaseModel):
     email: str = Field(..., min_length=3, max_length=320)
+    # Nome informado no convite; sem cadastro de usuarios, e a unica origem do
+    # nome enquanto a pessoa nao envia a resposta.
+    nome: str | None = Field(None, max_length=200)
 
 
 class AmbienteColaborativoCreateSchema(BaseModel):

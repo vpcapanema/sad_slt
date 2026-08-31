@@ -751,23 +751,75 @@ def _analise_response(row: dict[str, Any]) -> AnaliseColaborativaResponseSchema:
     )
 
 
+def _modas(valores: list[float], *, casas: int = 4) -> list[float]:
+    """Valor(es) mais frequente(s). Como os indices sao razoes (3, 1/3, 1,1667),
+    a contagem usa o valor arredondado; sem repeticao alguma, a serie e amodal e
+    a lista volta vazia."""
+    contagem: dict[float, int] = {}
+    for valor in valores:
+        chave = round(float(valor), casas)
+        contagem[chave] = contagem.get(chave, 0) + 1
+    maior = max(contagem.values())
+    if maior < 2:
+        return []
+    return sorted(chave for chave, vezes in contagem.items() if vezes == maior)
+
+
+def _mediana(valores: list[float]) -> float:
+    ordenados = sorted(valores)
+    meio = len(ordenados) // 2
+    if len(ordenados) % 2:
+        return ordenados[meio]
+    return (ordenados[meio - 1] + ordenados[meio]) / 2
+
+
 def _estatisticas_respostas(respostas: list[dict[str, Any]], criterios: list[str]) -> dict[str, Any]:
+    """Estatisticas descritivas das respostas enviadas, na forma em que o espaco
+    analitico as consome: um mesmo fato (julgador x par de criterios x indice
+    atribuido) lido ora por par, ora por criterio.
+
+    Cada valor vai rotulado com o julgador que o atribuiu (``pontos``), para que
+    a interface possa identificar o discrepante; ``valores`` e mantido como lista
+    numerica pura por compatibilidade com as analises ja gravadas.
+    """
     individuais = []
     for resposta in respostas:
         resultado = ahp_engine.analyze_matrix(resposta["matriz_comparacao"])
         individuais.append({"resposta_id": str(resposta["id"]), "respondente": resposta["nome_completo"], "email": resposta["email"], "pesos": resultado["weights"], "rc": float(resultado["CR"])})
+
+    def _pontos(valores: list[float]) -> list[dict[str, Any]]:
+        return [{"resposta_id": individuais[k]["resposta_id"], "respondente": individuais[k]["respondente"], "valor": valor} for k, valor in enumerate(valores)]
+
     por_criterio = []
     for i, nome in enumerate(criterios):
         valores = [item["pesos"][i] for item in individuais]
         media = sum(valores) / len(valores)
-        por_criterio.append({"criterio": nome, "valores": valores, "media": media, "minimo": min(valores), "maximo": max(valores), "desvio": math.sqrt(sum((v-media)**2 for v in valores)/len(valores))})
+        desvio = math.sqrt(sum((v - media) ** 2 for v in valores) / len(valores))
+        por_criterio.append({
+            "criterio": nome, "valores": valores, "pontos": _pontos(valores), "n": len(valores),
+            "media": media, "mediana": _mediana(valores), "minimo": min(valores), "maximo": max(valores),
+            "desvio": desvio, "cv": (desvio / media) if media else 0.0,
+        })
     por_par = []
     for i in range(len(criterios)):
         for j in range(i + 1, len(criterios)):
             valores = [float(r["matriz_comparacao"][i][j]) for r in respostas]
             gm = math.exp(sum(math.log(v) for v in valores) / len(valores))
-            dispersao = math.sqrt(sum((math.log(v)-math.log(gm))**2 for v in valores)/len(valores))
-            por_par.append({"i": i, "j": j, "criterio_a": criterios[i], "criterio_b": criterios[j], "valores": valores, "media_geometrica": gm, "dispersao_log": dispersao})
+            dispersao = math.sqrt(sum((math.log(v) - math.log(gm)) ** 2 for v in valores) / len(valores))
+            pontos = _pontos(valores)
+            # Discrepante: maior afastamento da media geometrica em escala log,
+            # que e a escala em que a razao de Saaty e simetrica (3 e 1/3 distam
+            # o mesmo de 1).
+            discrepante = max(pontos, key=lambda ponto: abs(math.log(ponto["valor"]) - math.log(gm))) if len(pontos) > 1 else None
+            por_par.append({
+                "i": i, "j": j, "criterio_a": criterios[i], "criterio_b": criterios[j],
+                "valores": valores, "pontos": pontos, "n": len(valores),
+                "media": sum(valores) / len(valores), "modas": _modas(valores),
+                "media_geometrica": gm, "mediana": _mediana(valores),
+                "minimo": min(valores), "maximo": max(valores), "dispersao_log": dispersao,
+                "discrepante": discrepante["respondente"] if discrepante else None,
+                "discrepante_valor": discrepante["valor"] if discrepante else None,
+            })
     return {"individuais": individuais, "por_criterio": por_criterio, "por_par": por_par}
 
 

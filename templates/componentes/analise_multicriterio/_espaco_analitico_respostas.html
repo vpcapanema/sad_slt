@@ -4,20 +4,71 @@
     <div id="ami-analysis-context" class="step-intro"></div>
     <div class="ahp-live-metrics ami-live-metrics" id="ami-analysis-participation"></div>
 
-    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.1</span><span>Respostas por participante</span></div>
-      <div class="ahp-section-body ami-analysis-split"><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Incluir</th><th>Situação</th><th>Respondente</th><th>Instituição</th><th>RC</th><th>Início</th><th>Envio</th></tr></thead><tbody id="ami-analysis-responses"></tbody></table></div><div class="ami-analysis-chart" id="ami-analysis-participation-chart" aria-label="Gráfico da situação das respostas"></div></div>
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.1</span><span>Julgadores</span></div>
+      <p class="ami-subsection-hint">Todos os julgadores convidados para esta hierarquização. Quem ainda não respondeu aparece com nome e e-mail, e os demais campos em branco.</p>
+      <div class="ahp-section-body"><div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--julgadores"><thead><tr><th>Julgador</th><th>E-mail</th><th>Instituição</th><th>Situação</th><th>RC individual</th><th>Início</th><th>Envio</th></tr></thead><tbody id="ami-analysis-judges"></tbody></table></div></div>
     </section>
-    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.2</span><span>Análise por critério</span></div>
-      <div class="ahp-section-body ami-analysis-split"><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Critério</th><th>Média</th><th>Mínimo</th><th>Máximo</th><th>Dispersão</th></tr></thead><tbody id="ami-analysis-criteria"></tbody></table></div><div class="ami-analysis-chart" id="ami-analysis-criteria-chart" aria-label="Gráfico dos pesos médios por critério"></div></div>
+    <p class="ami-fio-elo"><span>Cada julgador que respondeu atribuiu, par a par, os índices de importância abaixo.</span></p>
+
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.2</span><span>Índices de importância de Saaty por par de critérios</span></div>
+      <p class="ami-subsection-hint">Índice que cada julgador atribuiu a cada par, na escala fundamental de Saaty (1/9, 1/7, 1/5, 1/3, 1, 3, 5, 7, 9) — a mesma do formulário dos especialistas. As linhas são sempre os mesmos pares; a lista suspensa troca o julgador exibido. Passar o cursor por uma linha destaca o par no gráfico, e vice-versa; com todos à vista, clicar numa barra abre aquele julgador. O fundo da célula mede o afastamento em relação à média geométrica do par.</p>
+      <div class="ami-judge-filter"><label class="c-form-label" for="ami-pairs-judge">Julgador</label><select class="c-form-control" id="ami-pairs-judge"></select><span class="ami-judge-filter__hint" id="ami-pairs-judge-hint"></span></div><div class="ahp-section-body ami-analysis-split" id="ami-analysis-pairs-body"><div class="matriz-table-wrap" id="ami-analysis-pairs"></div><div class="ami-analysis-chart" id="ami-analysis-pairs-chart" aria-label="Índices atribuídos por julgador em cada par de critérios"></div></div>
     </section>
-    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.3</span><span>Análise por par de critérios</span></div>
-      <div class="ahp-section-body ami-analysis-split"><div class="matriz-table-wrap"><table class="admin-table"><thead><tr><th>Par</th><th>Valores individuais</th><th>Média geométrica</th><th>Dispersão</th></tr></thead><tbody id="ami-analysis-pairs"></tbody></table></div><div class="ami-analysis-chart" id="ami-analysis-pairs-chart" aria-label="Gráfico das comparações entre pares de critérios"></div></div>
+    <p class="ami-fio-elo"><span>Esses índices formam a matriz de comparação pareada: a do julgador selecionado, ou a agregação de todos pela medida de tendência central escolhida.</span></p>
+
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.3</span><span>Matriz de comparação pareada</span></div>
+      <p class="ami-subsection-hint" id="ami-analysis-matrix-hint"></p>
+      <div class="ami-judge-filter is-hidden" id="ami-analysis-measure-box"><label class="c-form-label" for="ami-analysis-measure">Medida de tendência central</label><select class="c-form-control" id="ami-analysis-measure"><option value="geometrica">Média geométrica dos índices</option><option value="aritmetica">Média aritmética dos índices</option><option value="mediana">Mediana dos índices</option></select><span class="ami-judge-filter__hint">Aplicada par a par; o recíproco é preservado abaixo da diagonal.</span></div>
+      <div class="ahp-section-body" id="ami-analysis-matrix"></div>
     </section>
-    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.4</span><span>Configuração da consolidação</span></div>
-      <div class="ahp-section-body"><div class="ahp-collab-grid2"><div class="c-form-group"><label class="c-form-label" for="ami-analysis-name">Nome do cenário</label><input class="c-form-control" id="ami-analysis-name" value="Análise com respostas selecionadas"></div><div class="c-form-group"><label class="c-form-label" for="ami-analysis-rc">RC máximo individual</label><input class="c-form-control" id="ami-analysis-rc" type="number" min="0.001" max="1" step="0.01" value="0.10"></div></div><label><input id="ami-analysis-exclude-inconsistent" type="checkbox" checked> Excluir respostas inconsistentes</label><div class="ahp-form-actions"><button type="button" class="btn btn-primary" id="ami-analysis-calculate"><i class="fas fa-calculator"></i> Calcular e salvar cenário</button></div><p id="ami-analysis-feedback" class="ami-feedback" role="status"></p></div>
+    <p class="ami-fio-elo"><span>Da matriz saem as métricas que atestam a sua coerência.</span></p>
+
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.4</span><span>Métricas de consistência</span></div>
+      <p class="ami-subsection-hint" id="ami-analysis-metrics-hint"></p>
+      <div class="ahp-section-body" id="ami-analysis-metrics"></div>
     </section>
-    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.5</span><span>Cen&aacute;rios calculados e pesos finais</span></div>
-      <div class="ahp-section-body" id="ami-analysis-scenarios"><p class="ami-empty">Nenhum cen&aacute;rio calculado.</p></div>
+    <p class="ami-fio-elo"><span>Aprovada a consistência, o autovetor da matriz vira o peso de cada critério.</span></p>
+
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.5</span><span>Pesos de cada critério</span></div>
+      <p class="ami-subsection-hint" id="ami-analysis-weights-hint"></p>
+      <div class="ahp-section-body ami-analysis-split"><div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--pesos"><thead><tr><th>Critério</th><th id="ami-analysis-weight-col">Peso</th></tr></thead><tbody id="ami-analysis-criteria"></tbody></table></div><div class="ami-analysis-chart" id="ami-analysis-criteria-chart" aria-label="Peso de cada critério"></div></div>
+    </section>
+
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.6</span><span>Consolidação das respostas</span></div>
+      <p class="ami-subsection-hint">Gravar o resultado: escolha quais respostas entram e salve a análise consolidada do julgamento. Quem ainda não enviou aparece na lista, mas não pode ser incluído.</p>
+      <div class="ahp-section-body">
+        <div class="matriz-table-wrap"><table class="admin-table ami-stats-table ami-table--respostas"><thead><tr><th>Incluir</th><th>Julgador</th><th>E-mail</th><th>Situação</th><th>RC</th><th>Início</th><th>Envio</th></tr></thead><tbody id="ami-analysis-responses"></tbody></table></div>
+        <div class="ahp-collab-grid2"><div class="c-form-group"><label class="c-form-label" for="ami-analysis-name">Nome da análise</label><input class="c-form-control" id="ami-analysis-name" value="Análise com as respostas selecionadas"></div><div class="c-form-group"><label class="c-form-label" for="ami-analysis-rc">RC máximo individual</label><input class="c-form-control" id="ami-analysis-rc" type="number" min="0.001" max="1" step="0.01" value="0.10"></div></div><label><input id="ami-analysis-exclude-inconsistent" type="checkbox" checked> Excluir respostas inconsistentes</label><div class="ahp-form-actions"><button type="button" class="btn btn-primary" id="ami-analysis-calculate"><i class="fas fa-calculator"></i> Calcular e salvar análise</button></div><p id="ami-analysis-feedback" class="ami-feedback" role="status"></p>
+      </div>
+    </section>
+    <section class="ahp-subcard"><div class="ahp-subsection-title"><span class="ahp-subsection-num">2.7</span><span>An&aacute;lises consolidadas e pesos finais</span></div>
+      <div class="ahp-section-body" id="ami-analysis-consolidations"><p class="ami-empty">Nenhuma an&aacute;lise consolidada.</p></div>
     </section>
   </div>
 </section>
+
+<div class="json-modal-backdrop ami-data-modal ami-process-modal is-hidden" id="ami-process-modal" role="dialog" aria-modal="true" aria-labelledby="ami-process-modal-title" aria-live="polite">
+  <div class="json-modal ami-data-modal__card ami-process-modal__card">
+    <header class="json-modal-head ami-data-modal__head"><h2 id="ami-process-modal-title">Consolidando as respostas</h2></header>
+    <div class="json-modal-body ami-data-modal__content">
+      <p class="ami-modal-description" id="ami-process-modal-subtitle"></p>
+      <div class="ami-process-bar"><span id="ami-process-bar-fill"></span></div>
+      <ol class="ami-process-steps" id="ami-process-steps"></ol>
+    </div>
+  </div>
+</div>
+
+<div class="json-modal-backdrop ami-data-modal ami-result-modal is-hidden" id="ami-result-modal" role="dialog" aria-modal="true" aria-labelledby="ami-result-modal-title">
+  <div class="json-modal ami-data-modal__card ami-result-modal__card">
+    <header class="json-modal-head ami-data-modal__head"><h2 id="ami-result-modal-title">Resultado da consolidação</h2><button type="button" class="json-modal-close" data-result-close aria-label="Fechar"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
+    <div class="json-modal-body ami-data-modal__content">
+      <div class="ami-semaforo" id="ami-result-semaforo" role="img">
+        <span class="ami-semaforo__luz is-verde"></span><span class="ami-semaforo__luz is-amarela"></span><span class="ami-semaforo__luz is-vermelha"></span>
+      </div>
+      <p class="ami-result-title" id="ami-result-title"></p>
+      <p class="ami-result-text" id="ami-result-text"></p>
+      <dl class="ami-modal-fields" id="ami-result-fields"></dl>
+      <div class="ahp-form-actions"><button type="button" class="btn btn-primary" data-result-close>Fechar</button></div>
+    </div>
+  </div>
+</div>

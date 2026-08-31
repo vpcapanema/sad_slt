@@ -17,3 +17,256 @@
 .ami-composite-filter{display:grid;grid-template-columns:auto minmax(12rem,18rem) auto minmax(14rem,1fr) auto;align-items:center;gap:.55rem;margin-bottom:1rem}.ami-composite-filter label{color:var(--pli-deep);font-size:.7rem;font-weight:800}.ami-composite-filter select,.ami-composite-filter input{min-height:2.25rem;padding:.45rem .6rem;border:1px solid var(--pli-border);border-radius:.45rem;background:#fff;font-size:.7rem}.ami-composite-filter span{color:var(--pli-muted);font-size:.68rem;white-space:nowrap}@media(max-width:700px){.ami-composite-filter{grid-template-columns:1fr}.ami-composite-filter label{margin-bottom:-.35rem}}
 .ami-ratio{display:inline-grid;justify-items:center;gap:.12rem;min-width:3.8rem}.ami-ratio strong{color:var(--pli-deep);font-size:.72rem;font-variant-numeric:tabular-nums}.ami-ratio small{color:var(--pli-muted);font-size:.62rem}.ami-page #ami-analysis-participation{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.65rem;margin:1rem 0}.ami-page #ami-analysis-participation .ahp-metric-card{min-width:0}.ami-analysis-split{display:grid;grid-template-columns:minmax(18rem,.8fr) minmax(28rem,1.2fr);gap:1.25rem;align-items:start}.ami-analysis-chart{min-width:0;padding:.25rem 0}.ami-bar-chart{display:grid;gap:.7rem}.ami-bar-chart__row{display:grid;grid-template-columns:minmax(7rem,1fr) minmax(8rem,2fr) 4.2rem;gap:.55rem;align-items:center}.ami-bar-chart__label{overflow:hidden;color:var(--pli-deep);font-size:.68rem;font-weight:700;text-overflow:ellipsis;white-space:nowrap}.ami-bar-chart__track{height:.72rem;overflow:hidden;border-radius:999px;background:#e5ebf0}.ami-bar-chart__bar{display:block;height:100%;border-radius:inherit;background:var(--pli-blue)}.ami-bar-chart__row strong{color:var(--pli-deep);font-size:.66rem;font-variant-numeric:tabular-nums;text-align:right}@media(max-width:1100px){.ami-page #ami-analysis-participation{grid-template-columns:repeat(3,minmax(0,1fr))}.ami-analysis-split{grid-template-columns:1fr}}@media(max-width:600px){.ami-page #ami-analysis-participation{grid-template-columns:repeat(2,minmax(0,1fr))}.ami-bar-chart__row{grid-template-columns:minmax(6rem,1fr) minmax(6rem,1.4fr) 3.7rem}}
 .ami-page{--ami-chart-1:#1f77b4;--ami-chart-2:#ff7f0e;--ami-chart-3:#2ca02c;--ami-chart-4:#d62728;--ami-chart-5:#9467bd;--ami-chart-6:#17becf;--ami-chart-7:#bcbd22;--ami-chart-8:#e377c2}.ami-analysis-split{grid-template-columns:minmax(0,2fr) minmax(0,3fr)}.ami-analysis-split>.matriz-table-wrap{min-width:0;width:100%;margin:0}.ami-donut-chart{display:grid;grid-template-columns:minmax(9rem,12rem) minmax(10rem,1fr);gap:1rem;align-items:center;margin:0}.ami-donut-chart__plot{display:grid;place-items:center;width:min(100%,12rem);aspect-ratio:1;margin:auto;border-radius:50%;position:relative}.ami-donut-chart__plot:after{content:"";position:absolute;width:54%;height:54%;border-radius:50%;background:#fff}.ami-donut-chart__plot span{position:relative;z-index:1;display:grid;color:var(--pli-muted);font-size:.62rem;text-align:center}.ami-donut-chart__plot strong{color:var(--pli-deep);font-size:1.15rem}.ami-donut-chart figcaption>strong{display:block;margin-bottom:.65rem;color:var(--pli-deep);font-size:.72rem}.ami-donut-chart ul{display:grid;gap:.42rem;margin:0;padding:0;list-style:none}.ami-donut-chart li{display:grid;grid-template-columns:.7rem minmax(0,1fr) auto;gap:.4rem;align-items:center;color:var(--pli-muted);font-size:.64rem}.ami-donut-chart li>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ami-donut-chart li strong{color:var(--pli-deep);font-size:.62rem;font-variant-numeric:tabular-nums}.ami-donut-chart__swatch{width:.65rem;height:.65rem;border-radius:.18rem}@media(max-width:1100px){.ami-analysis-split{grid-template-columns:minmax(0,2fr) minmax(0,3fr)}.ami-page #ami-analysis-participation{grid-template-columns:repeat(6,minmax(0,1fr))}.ami-donut-chart{grid-template-columns:minmax(8rem,10rem) minmax(8rem,1fr)}}@media(max-width:720px){.ami-analysis-split{grid-template-columns:1fr}.ami-page #ami-analysis-participation{grid-template-columns:repeat(2,minmax(0,1fr))}.ami-donut-chart{grid-template-columns:minmax(8rem,11rem) minmax(9rem,1fr)}}
+
+/* --- Espaco analitico: leitura por par de criterios, por criterio e por julgador --- */
+.ami-subsection-hint{margin:.1rem 0 .75rem;color:var(--pli-muted);font-size:.7rem;line-height:1.45}
+/* Tabela e grafico ocupam a largura toda, um sobre o outro: com oito colunas
+   a tabela nao cabe em meia largura e a coluna de nomes colapsa. */
+.ami-analysis-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem}
+.ami-analysis-stack>.matriz-table-wrap{margin:0;overflow-x:auto}
+.ami-analysis-stack>.ami-analysis-chart{min-width:0}
+.ami-stats-table{width:100%;min-width:48rem}
+.ami-stats-table th,.ami-stats-table td{text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ami-stats-table th:first-child,.ami-stats-table .ami-stats-table__name{min-width:13rem;text-align:left;white-space:normal}
+.ami-stats-table th:last-child,.ami-stats-table td:last-child{min-width:12rem}
+.ami-stats-table .ami-stats-table__name small{color:var(--pli-muted)}
+
+/* Barras dos indices atribuidos, com realce cruzado com a tabela. */
+.ami-pair-bars{display:grid;gap:.45rem;margin:0}
+.ami-pair-bars__row{display:grid;grid-template-columns:minmax(9rem,15rem) minmax(0,1fr);gap:.6rem;align-items:center;padding:.15rem .25rem;border-radius:6px}
+.ami-pair-bars__row.is-hl{background:#eef4fa;box-shadow:inset 3px 0 0 var(--pli-blue)}
+.ami-pair-bars__label{overflow:hidden;color:var(--pli-deep);font-size:.66rem;font-weight:700;text-align:right;text-overflow:ellipsis;white-space:nowrap}
+.ami-pair-bars__plot{position:relative;display:grid;gap:.12rem;padding:.15rem 0}
+.ami-pair-bars__ref{position:absolute;top:0;bottom:0;width:1px;background:#9fb0bd}
+.ami-pair-bars__bar{position:relative;display:flex;align-items:center;justify-content:flex-end;height:.78rem;padding-right:.3rem;border-radius:0 3px 3px 0;color:#fff;font-size:.58rem;cursor:pointer;transition:filter .12s ease}
+.ami-pair-bars__bar b{font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.ami-pair-bars__bar.is-curta{justify-content:flex-start;overflow:visible}
+.ami-pair-bars__bar.is-curta b{position:absolute;left:calc(100% + .25rem);color:var(--pli-deep);text-shadow:none;white-space:nowrap}
+.ami-pair-bars__bar:hover{filter:brightness(1.12)}
+.ami-pair-bars figcaption{margin-top:.6rem;color:var(--pli-muted);font-size:.62rem;text-align:center}
+.ami-pair-bars__legend{display:flex;flex-wrap:wrap;justify-content:center;gap:.3rem .9rem;margin:0 0 .35rem;padding:0;list-style:none}
+.ami-pair-bars__legend li{display:inline-flex;gap:.3rem;align-items:center;font-size:.62rem}
+.ami-stats-table tbody tr.is-hl td{background:#eef4fa}
+
+/* Faixa min-max com a media marcada, para os pesos por criterio. */
+.ami-range-chart{display:grid;gap:.55rem;margin:0}
+.ami-range-chart__row{display:grid;grid-template-columns:minmax(9rem,17rem) minmax(0,1fr) 4rem;gap:.6rem;align-items:center}
+.ami-range-chart__label{overflow:hidden;color:var(--pli-deep);font-size:.66rem;font-weight:700;text-align:right;text-overflow:ellipsis;white-space:nowrap}
+.ami-range-chart__track{position:relative;height:.85rem;border-radius:999px;background:#eef2f6;box-shadow:inset 0 0 0 1px #e0e7ec}
+.ami-range-chart__span{position:absolute;top:0;bottom:0;border-radius:999px;background:rgba(17,101,147,.28)}
+.ami-range-chart__mean{position:absolute;top:-.12rem;bottom:-.12rem;width:2px;background:var(--pli-deep);transform:translateX(-1px)}
+.ami-range-chart__row strong{color:var(--pli-deep);font-size:.64rem;font-variant-numeric:tabular-nums;text-align:right}
+.ami-range-chart figcaption{margin-top:.35rem;color:var(--pli-muted);font-size:.62rem;text-align:center}
+
+/* Seletor de julgador do bloco de indices atribuidos. */
+.ami-judge-filter{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:0 0 .75rem}
+.ami-judge-filter .c-form-label{margin:0;font-size:.68rem}
+.ami-judge-filter select{width:auto;min-width:18rem;height:2rem;padding:.2rem .5rem;font-size:.7rem}
+.ami-judge-filter__hint{color:var(--pli-muted);font-size:.64rem}
+.ami-judge-filter__btn{display:inline-flex;gap:.35rem;align-items:center;padding:.3rem .7rem;border:1px solid #c9d5de;border-radius:999px;background:#fff;color:var(--pli-deep);font:inherit;font-size:.66rem;cursor:pointer}
+.ami-judge-filter__btn:hover{border-color:var(--pli-blue);background:#f2f7fb}
+.ami-judge-filter__btn.is-active{border-color:var(--pli-deep);background:var(--pli-deep);color:#fff}
+.ami-judge-chip{display:inline-block;width:.6rem;height:.6rem;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,.6)}
+.ami-stats-table tr.is-discrepante td,.ami-stats-table td.is-discrepante-cell{background:#fdf3e6}
+.ami-table-note{display:flex;flex-wrap:wrap;gap:.3rem 1.1rem;margin:.5rem 0 0;color:var(--pli-muted);font-size:.62rem}
+.ami-table-note span{display:inline-flex;gap:.3rem;align-items:center}
+
+/* Celulas dos indices: cor = afastamento da media geometrica do par. */
+.ami-stats-table__valor{font-variant-numeric:tabular-nums}
+.ami-stats-table__valor.is-forte{color:#fff;font-weight:700}
+.ami-table-note__escala{display:inline-flex;gap:.25rem;align-items:center}
+.ami-table-note__escala i{width:.85rem;height:.6rem;border-radius:2px;background:rgba(17,101,147,.05)}
+.ami-table-note__escala i:nth-child(2){background:rgba(17,101,147,.3)}
+.ami-table-note__escala i:nth-child(3){background:rgba(17,101,147,.55)}
+.ami-table-note__escala i:nth-child(4){background:rgba(17,101,147,.8)}
+
+/* Elo entre as secoes do fio analitico. */
+.ami-fio-elo{position:relative;margin:.15rem 0 .9rem;padding:.5rem 1rem .5rem 2.4rem;border-radius:8px;background:rgba(17,101,147,.06);color:var(--pli-deep);font-size:.7rem}
+.ami-fio-elo:before{content:"";position:absolute;left:1rem;top:50%;width:.5rem;height:.5rem;border-right:2px solid var(--pli-blue);border-bottom:2px solid var(--pli-blue);transform:translateY(-50%) rotate(45deg)}
+.ami-matrix td.is-diagonal{background:#eef4fa;font-weight:700}
+
+/* Convidado sem resposta: linha discreta, campos vazios. */
+.ami-stats-table tr.is-sem-resposta td{color:var(--pli-muted)}
+.ami-cell-vazio{background:repeating-linear-gradient(135deg,transparent,transparent 5px,rgba(0,0,0,.03) 5px,rgba(0,0,0,.03) 10px)}
+
+/* Larguras por tabela: cada uma tem o seu conjunto de colunas. */
+.ami-table--julgadores{min-width:56rem}
+.ami-table--julgadores th:nth-child(1),.ami-table--julgadores td:nth-child(1){width:15rem;min-width:15rem}
+.ami-table--julgadores th:nth-child(2),.ami-table--julgadores td:nth-child(2){width:16rem;min-width:16rem}
+.ami-table--julgadores th:nth-child(3),.ami-table--julgadores td:nth-child(3){width:11rem;min-width:11rem}
+.ami-table--julgadores th:nth-child(n+4),.ami-table--julgadores td:nth-child(n+4){width:7rem;min-width:7rem}
+
+.ami-table--respostas{min-width:56rem}
+.ami-table--respostas th:nth-child(1),.ami-table--respostas td:nth-child(1){width:5.5rem;min-width:5.5rem}
+.ami-table--respostas th:nth-child(2),.ami-table--respostas td:nth-child(2){width:15rem;min-width:15rem}
+.ami-table--respostas th:nth-child(3),.ami-table--respostas td:nth-child(3){width:16rem;min-width:16rem}
+.ami-table--respostas th:nth-child(n+4),.ami-table--respostas td:nth-child(n+4){width:7rem;min-width:7rem}
+
+/* Tabela dos indices: largura repartida entre as colunas, sem rolagem lateral
+   por causa de um julgador a mais. */
+.ami-table--indices{table-layout:fixed;width:100%;min-width:0}
+.ami-table--indices th,.ami-table--indices td{min-width:0;padding-left:.3rem;padding-right:.3rem;overflow:hidden;text-overflow:ellipsis}
+.ami-table--indices th:first-child,.ami-table--indices td:first-child{width:26%;min-width:0;white-space:normal}
+.ami-table--indices th:not(:first-child){white-space:normal;word-break:normal;overflow-wrap:normal;hyphens:none;font-size:.6rem}
+
+.ami-matrix{min-width:34rem}
+.ami-matrix th:first-child,.ami-matrix td:first-child,.ami-matrix td.ami-stats-table__name{width:14rem;min-width:14rem;text-align:left}
+.ami-matrix th:not(:first-child){white-space:normal;min-width:7rem}
+
+.ami-table--pesos{min-width:20rem}
+.ami-table--pesos th:first-child,.ami-table--pesos td:first-child{width:auto;min-width:12rem}
+.ami-table--pesos th:last-child,.ami-table--pesos td:last-child{width:7rem;min-width:7rem;text-align:center}
+
+/* Tabela e grafico lado a lado dentro dos blocos analiticos. */
+.ami-page .ami-analysis-split{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:1.1rem;align-items:start}
+.ami-page .ami-analysis-split>.matriz-table-wrap{margin:0;min-width:0;overflow-x:auto}
+.ami-page .ami-analysis-split>.ami-analysis-chart{min-width:0}
+@media(max-width:1200px){.ami-page .ami-analysis-split{grid-template-columns:minmax(0,1fr)}}
+
+/* Cards das metricas: a situacao salta aos olhos pela cor de fundo, pela faixa
+   superior e pelo selo; a explicacao vive fora deles. */
+.ami-metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.75rem}
+.ami-metric-card{position:relative;overflow:hidden;padding:.85rem .9rem .8rem;border:1.5px solid #dbe3ea;border-radius:10px;background:#fff}
+.ami-metric-card:before{content:"";position:absolute;inset:0 0 auto;height:.4rem;background:#c3ced7}
+.ami-metric-card.is-ok{border-color:#1f8a4c;background:rgba(31,138,76,.09)}
+.ami-metric-card.is-ok:before{background:#1f8a4c}
+.ami-metric-card.is-atencao{border-color:#c58f00;background:rgba(197,143,0,.11)}
+.ami-metric-card.is-atencao:before{background:#c58f00}
+.ami-metric-card.is-nok{border-color:#b3261e;background:rgba(179,38,30,.09)}
+.ami-metric-card.is-nok:before{background:#b3261e}
+.ami-metric-card.is-neutro{background:#f4f7fa}
+.ami-metric-card__top{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;justify-content:space-between;margin-top:.3rem}
+.ami-metric-card__label{color:var(--pli-deep);font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.ami-metric-card__selo{display:inline-flex;gap:.3rem;align-items:center;padding:.18rem .5rem;border-radius:999px;background:#5b6b78;color:#fff;font-size:.58rem;font-weight:700}
+.ami-metric-card.is-ok .ami-metric-card__selo{background:#1f8a4c}
+.ami-metric-card.is-atencao .ami-metric-card__selo{background:#c58f00}
+.ami-metric-card.is-nok .ami-metric-card__selo{background:#b3261e}
+.ami-metric-card__value{margin:.25rem 0 .1rem;color:var(--pli-deep);font-size:1.9rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.ami-metric-card.is-ok .ami-metric-card__value{color:#166b3a}
+.ami-metric-card.is-atencao .ami-metric-card__value{color:#8a6500}
+.ami-metric-card.is-nok .ami-metric-card__value{color:#8e1e18}
+.ami-metric-card__gauge{height:.45rem;margin:.35rem 0 .25rem;border-radius:999px;background:rgba(0,0,0,.08);overflow:hidden}
+.ami-metric-card__gauge span{display:block;height:100%;border-radius:999px;background:#1f8a4c}
+.ami-metric-card.is-nok .ami-metric-card__gauge span{background:#b3261e}
+.ami-metric-card__note{color:var(--pli-muted);font-size:.62rem}
+
+/* Explicacao das metricas, fora dos cards. */
+.ami-metric-help{margin-top:1rem;padding:.85rem 1rem;border:1px solid #e2e8ee;border-radius:10px;background:#f7f9fb;text-align:left}
+.ami-metric-help h4{margin:0 0 .55rem;color:var(--pli-deep);font-size:.72rem;text-transform:uppercase;letter-spacing:.03em}
+.ami-metric-help dl{display:grid;grid-template-columns:minmax(11rem,auto) minmax(0,1fr);gap:.3rem .9rem;margin:0}
+.ami-metric-help dt{color:var(--pli-deep);font-size:.66rem;font-weight:700;text-align:left}
+.ami-metric-help dd{margin:0;color:var(--pli-muted);font-size:.66rem;line-height:1.45;text-align:left}
+.ami-metric-help__fecho{margin:.7rem 0 0;padding:.5rem .7rem;border-radius:8px;font-size:.68rem;font-weight:600;text-align:left}
+.ami-metric-help__fecho.is-ok{background:rgba(31,138,76,.12);color:#166b3a}
+.ami-metric-help__fecho.is-nok{background:rgba(179,38,30,.1);color:#8e1e18}
+@media(max-width:820px){.ami-metric-help dl{grid-template-columns:1fr}}
+
+/* Modal de acompanhamento da consolidacao. */
+.ami-process-modal__card{width:min(560px,94vw)}
+.ami-process-bar{height:.45rem;margin:.2rem 0 .9rem;border-radius:999px;background:#e5ebf0;overflow:hidden}
+.ami-process-bar span{display:block;width:0;height:100%;border-radius:999px;background:var(--pli-blue);transition:width .25s ease}
+.ami-process-steps{display:grid;gap:.55rem;margin:0;padding:0;list-style:none;counter-reset:etapa}
+.ami-process-step{display:flex;gap:.6rem;align-items:flex-start;padding:.55rem .7rem;border:1px solid #e2e8ee;border-radius:8px;background:#fff}
+.ami-process-step i{margin-top:.15rem;color:#c3ced7}
+.ami-process-step strong{display:block;color:var(--pli-deep);font-size:.72rem}
+.ami-process-step span{display:block;color:var(--pli-muted);font-size:.66rem}
+.ami-process-step.is-andamento{border-color:var(--pli-blue);background:#f2f8fc}
+.ami-process-step.is-andamento i{color:var(--pli-blue)}
+.ami-process-step.is-ok i{color:#1f8a4c}
+.ami-process-step.is-erro{border-color:rgba(179,38,30,.5);background:rgba(179,38,30,.06)}
+.ami-process-step.is-erro i{color:#b3261e}
+
+/* Modal de veredito, em semaforo. */
+.ami-result-modal__card{width:min(560px,94vw)}
+.ami-semaforo{display:inline-flex;gap:.45rem;padding:.5rem .6rem;border-radius:999px;background:#22303c}
+.ami-semaforo__luz{width:1.1rem;height:1.1rem;border-radius:50%;background:#3d4c59}
+.ami-semaforo.is-verde .is-verde{background:#25c368;box-shadow:0 0 12px rgba(37,195,104,.8)}
+.ami-semaforo.is-amarela .is-amarela{background:#f2c230;box-shadow:0 0 12px rgba(242,194,48,.8)}
+.ami-semaforo.is-vermelha .is-vermelha{background:#e5484d;box-shadow:0 0 12px rgba(229,72,77,.8)}
+.ami-result-title{margin:.7rem 0 .2rem;color:var(--pli-deep);font-size:.95rem;font-weight:700}
+.ami-result-text{margin:0 0 .8rem;color:var(--pli-muted);font-size:.72rem;line-height:1.5}
+
+/* Secao 2: tabelas compactas, uma linha por celula sempre que couber. */
+.ami-page #ami-analysis-workspace .ami-stats-table{font-size:.63rem}
+.ami-page #ami-analysis-workspace .ami-stats-table th{font-size:.6rem;padding:.42rem .4rem;letter-spacing:0}
+.ami-page #ami-analysis-workspace .ami-stats-table td{height:auto;padding:.32rem .45rem;line-height:1.25}
+.ami-page #ami-analysis-workspace .ami-stats-table td,
+.ami-page #ami-analysis-workspace .ami-stats-table .ami-stats-table__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* o cabecalho do julgador e a sua identificacao: quebra em duas linhas em vez
+   de virar reticencias iguais para todo mundo */
+.ami-page #ami-analysis-workspace .ami-table--indices th:not(:first-child){white-space:normal;overflow:visible;font-size:.56rem;line-height:1.2}
+.ami-page #ami-analysis-workspace .ami-matrix th:not(:first-child){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Cabecalho das subsecoes: fundo solido e texto legivel. */
+.ami-page #ami-analysis-workspace .ahp-subsection-title{background:var(--pli-deep);border-bottom:0;color:#fff;font-size:.72rem}
+.ami-page #ami-analysis-workspace .ahp-subsection-title>span:last-child{color:#fff}
+.ami-page #ami-analysis-workspace .ahp-subsection-num{background:var(--pli-green);color:var(--pli-deep);font-size:.68rem}
+
+/* ==== Escala tipografica da secao 2 ====================================== */
+#ami-analysis-workspace,
+.ami-process-modal,
+.ami-result-modal {
+  /* titulo de subsecao / rotulo de card */
+  --ami2-titulo: .72rem;
+  /* texto corrido: dicas, elos, explicacoes, listas de definicao */
+  --ami2-texto: .68rem;
+  /* corpo das tabelas, campos e rotulos de grafico */
+  --ami2-dado: .64rem;
+  /* cabecalho de tabela, notas de rodape, legendas, selos */
+  --ami2-nota: .6rem;
+  /* numero grande dos cards de metrica */
+  --ami2-numero: 1.7rem;
+}
+
+/* --- titulos ------------------------------------------------------------- */
+.ami-page #ami-analysis-workspace .ahp-subsection-title,
+.ami-page .ami-process-modal .ami-data-modal__head h2,
+.ami-page .ami-result-modal .ami-data-modal__head h2 { font-size: var(--ami2-titulo) }
+.ami-page #ami-analysis-workspace .ahp-subsection-num { font-size: var(--ami2-nota) }
+.ami-page .ami-result-title,
+.ami-page .ami-metric-help h4 { font-size: var(--ami2-titulo) }
+
+/* --- texto corrido ------------------------------------------------------- */
+.ami-page #ami-analysis-workspace .ami-subsection-hint,
+.ami-page #ami-analysis-workspace .step-intro,
+.ami-page .ami-fio-elo,
+.ami-page .ami-metric-help dt,
+.ami-page .ami-metric-help dd,
+.ami-page .ami-metric-help__fecho,
+.ami-page .ami-result-text,
+.ami-page .ami-modal-description,
+.ami-page .ami-process-step strong,
+.ami-page #ami-analysis-workspace .ami-feedback,
+.ami-page #ami-analysis-workspace label { font-size: var(--ami2-texto) }
+
+/* --- dados --------------------------------------------------------------- */
+.ami-page #ami-analysis-workspace .ami-stats-table,
+.ami-page #ami-analysis-workspace .ami-stats-table td,
+.ami-page #ami-analysis-workspace .c-form-control,
+.ami-page #ami-analysis-workspace .c-form-label,
+.ami-page .ami-judge-filter select,
+.ami-page .ami-pair-bars__label,
+.ami-page .ami-pair-bars__row strong,
+.ami-page .ami-range-chart__label,
+.ami-page .ami-range-chart__row strong,
+.ami-page .ami-result-modal .ami-modal-fields dt,
+.ami-page .ami-result-modal .ami-modal-fields dd { font-size: var(--ami2-dado) }
+
+/* --- notas, cabecalhos de tabela, legendas e selos ----------------------- */
+.ami-page #ami-analysis-workspace .ami-stats-table th,
+.ami-page #ami-analysis-workspace .ami-table--indices th:not(:first-child),
+.ami-page .ami-judge-filter__hint,
+.ami-page .ami-table-note,
+.ami-page .ami-pair-bars__bar b,
+.ami-page .ami-pair-bars figcaption,
+.ami-page .ami-pair-bars__legend li,
+.ami-page .ami-range-chart figcaption,
+.ami-page .ami-metric-card__label,
+.ami-page .ami-metric-card__selo,
+.ami-page .ami-metric-card__note,
+.ami-page .ami-process-step span { font-size: var(--ami2-nota) }
+
+/* --- numeros em destaque ------------------------------------------------- */
+.ami-page .ami-metric-card__value { font-size: var(--ami2-numero) }
+.ami-page #ami-analysis-workspace .ahp-metric-card__label { font-size: var(--ami2-nota) }
+.ami-page #ami-analysis-workspace .ahp-metric-card__value { font-size: 1.25rem }

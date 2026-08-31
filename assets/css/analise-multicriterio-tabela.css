@@ -172,3 +172,48 @@
 .ami-page .ami-table-heading {
   margin-bottom: var(--ami-space-sm, .75rem);
 }
+
+/*
+  Central de respostas: dez colunas apenas, entao a tabela ocupa a largura do
+  painel em vez do min-width das 17 colunas do espaco analitico. As larguras
+  sao fixas para que as cinco metricas (mesmo denominador) fiquem alinhadas.
+*/
+.ami-table--respostas {
+  width: 100%;
+  min-width: 62rem;
+  table-layout: fixed;
+}
+
+.ami-table--respostas th {
+  padding: .5rem .4rem;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.ami-table--respostas td {
+  max-width: none;
+}
+
+.ami-table--respostas th:nth-child(1),
+.ami-table--respostas td:nth-child(1) { width: 2.75rem; }
+
+.ami-table--respostas th:nth-child(2),
+.ami-table--respostas td:nth-child(2) { width: 7rem; }
+
+.ami-table--respostas th:nth-child(3),
+.ami-table--respostas td:nth-child(3) { width: 15.5rem; }
+
+.ami-table--respostas th:nth-child(n+4):nth-child(-n+8),
+.ami-table--respostas td:nth-child(n+4):nth-child(-n+8) { width: 6.5rem; }
+
+.ami-table--respostas th:nth-child(9),
+.ami-table--respostas td:nth-child(9),
+.ami-table--respostas th:nth-child(10),
+.ami-table--respostas td:nth-child(10) { width: 8.5rem; }
+
+.ami-table--respostas .ami-cell-id {
+  width: 15.5rem;
+  max-width: 15.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

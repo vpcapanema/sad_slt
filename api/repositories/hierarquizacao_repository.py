@@ -21,6 +21,11 @@ _SELECT_BASE = """
         h.codigo,
         h.config_id,
         c.codigo AS config_codigo,
+        (SELECT a.id
+           FROM ahp.comparacao_colaborativa_ambiente a
+          WHERE a.hierarquizacao_id = h.id
+          ORDER BY (a.status = 'ativa') DESC, a.criado_em DESC
+          LIMIT 1) AS julgamento_id,
         c.criterios AS config_criterios,
         h.nome,
         h.descricao,

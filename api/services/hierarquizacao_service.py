@@ -90,6 +90,7 @@ def _response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
         codigo=row["codigo"],
         config_id=str(row["config_id"]) if row.get("config_id") else None,
         config_codigo=row.get("config_codigo"),
+        julgamento_id=str(row["julgamento_id"]) if row.get("julgamento_id") else None,
         nome=row["nome"],
         descricao=row.get("descricao"),
         tipo_demanda=tipo_demanda,

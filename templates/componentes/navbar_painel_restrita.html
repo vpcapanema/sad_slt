@@ -11,11 +11,13 @@
 <header class="cabecalho-principal-painel app-header layout-main-header">
   <div class="conteudo-cabecalho app-header-inner">
     <nav class="navbar-painel-restrita app-nav" aria-label="Navegação restrita do painel">
+      {% if bloco_modulo %}{% include "componentes/navbar_modulo/" ~ bloco_modulo ~ ".html" %}{% else %}
       <a href="/restrict/">Início</a>
       <a href="/restrict/painel/">Painel de demandas</a>
       <a href="/restrict/demandas/">Tabela de demandas</a>
       <a href="/restrict/hierarquizacao/">Hierarquização e Ranking</a>
       <a href="/public/documentacao/">Documentação</a>
+      {% endif %}
     </nav>
   </div>
 </header>
