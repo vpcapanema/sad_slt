@@ -1,0 +1,110 @@
+/* Cadastro e upload de camada homologada.
+   A página vive dentro do fluxo de fases (mesma família de fase1/fase2):
+   .card.fase-titulo-card para o cabeçalho, .card.ahp-step-section para cada
+   seção. Só o que essas folhas não cobrem fica aqui: a grade de campos do
+   formulário, o mapa de prévia e o card de metadados. Escala tipográfica
+   ambiente (0,78–0,82rem) para não destoar do resto da página. */
+
+.cadastro-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: 0.9rem;
+}
+
+.cadastro-campo--span2 { grid-column: span 2; }
+.cadastro-campo--full { grid-column: 1 / -1; }
+
+.cadastro-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--pli-deep, #003b5a);
+}
+
+.cadastro-campo input,
+.cadastro-campo select,
+.cadastro-campo textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--pli-border, #d8dee4);
+  border-radius: 0.35rem;
+  background: #fff;
+  color: var(--pli-text, #1f2937);
+  font: inherit;
+  font-weight: 400;
+  /* Nunca maior que o rótulo do campo (.72rem, herdado de .cadastro-campo). */
+  font-size: 0.72rem;
+}
+
+.cadastro-campo textarea { resize: vertical; min-height: 4.5rem; }
+
+.cadastro-campo small { font-weight: 400; }
+
+@media (max-width: 900px) {
+  .cadastro-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .cadastro-grid { grid-template-columns: 1fr; }
+  .cadastro-campo--span2 { grid-column: auto; }
+}
+
+/* A altura fixa garante que o mapa exista antes do Leaflet medir o container;
+   sem isso o mapa nasce com 0px e os tiles não carregam. */
+.mapa-previa {
+  height: 22rem;
+  margin-top: 1rem;
+  border: 1px solid var(--pli-border, #d8dee4);
+  border-radius: 0.55rem;
+  background: #eef2f7;
+}
+
+.cadastro-upload #previa-aviso { margin-top: 0.6rem; }
+
+.metadados-card {
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--pli-border, #d8dee4);
+  border-radius: 0.55rem;
+  background: #f6f8f7;
+}
+
+.metadados-card h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  color: var(--pli-deep, #003b5a);
+}
+
+.metadados-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.55rem 1.25rem;
+  margin: 0;
+}
+
+.metadados-item { min-width: 0; }
+
+.metadados-item dt {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #5a7183;
+}
+
+.metadados-item dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--pli-text, #1f2937);
+  overflow-wrap: anywhere;
+}
+
+.cadastro-feedback {
+  margin-right: auto;
+  font-size: 0.8rem;
+  color: #5a7183;
+}
+.cadastro-feedback.is-error { color: #b42318; }
+.cadastro-feedback.is-success { color: #18794e; }

@@ -278,13 +278,13 @@ def _criterios(
 
 
 def _fases_configuradas(dados: dict[str, Any]) -> set[int]:
-    return {
-        int(fase)
-        for fase in dados.get("cabecalho_grupo", {}).get(
-            "fases_a_executar", [1, 2, 3]
-        )
-        if str(fase).isdigit()
-    }
+    # Rodada sem a chave (ou com null) é anterior ao recorte por fase e roda as
+    # três. Lista vazia é declaração explícita de "nenhuma fase" e é preservada
+    # como tal — `or [1, 2, 3]` a converteria em "todas", invertendo o contrato.
+    fases = (dados.get("cabecalho_grupo") or {}).get("fases_a_executar")
+    if fases is None:
+        fases = [1, 2, 3]
+    return {int(fase) for fase in fases if str(fase).isdigit()}
 
 
 def _exigir_fase(dados: dict[str, Any], fase: int) -> None:
@@ -810,6 +810,47 @@ def _reclassificar(valor: float, parametros: dict[str, Any], tipo: str) -> str:
     return "nao_classificado"
 
 
+def _sem_acento(valor: str) -> str:
+    return (
+        unicodedata.normalize("NFKD", str(valor or ""))
+        .encode("ascii", "ignore")
+        .decode("ascii")
+        .lower()
+    )
+
+
+def _exigir_conjunto(camada: dict[str, Any], marca: str, rotulo: str, campo: str) -> None:
+    """Confere se a camada consolidada é do conjunto esperado.
+
+    Ordem das fontes: ``camada_homologada.finalidade`` e, quando vazia, o campo
+    ``conjunto`` gravado pela consolidação em cada feição. A checagem anterior
+    também varria ``metadados``, que carrega o nome da camada — bastava a palavra
+    "risco" no título para uma camada passar por camada de risco.
+    """
+    finalidade = str(camada.get("finalidade") or "").strip().lower()
+    if finalidade:
+        if marca in finalidade:
+            return
+        raise DemandaValidationError(
+            f"A camada indicada não é uma camada de {rotulo}.", field=campo
+        )
+
+    conjuntos = repo.conjuntos_camada(str(camada.get("id")))
+    if not conjuntos:
+        raise DemandaValidationError(
+            f"Não é possível confirmar que a camada é de {rotulo}: ela não declara "
+            "finalidade nem o conjunto nas feições. Homologue-a novamente pelo "
+            "gerador da Fase 1.",
+            field=campo,
+        )
+    if not any(marca in _sem_acento(valor) for valor in conjuntos):
+        raise DemandaValidationError(
+            f"A camada indicada não é uma camada de {rotulo}: as feições declaram "
+            f"conjunto {', '.join(sorted(set(conjuntos)))}.",
+            field=campo,
+        )
+
+
 def executar_fase_1(
     codigo: str, payload: HierarquizacaoFase1ExecutarSchema
 ) -> HierarquizacaoResponseSchema:
@@ -846,25 +887,8 @@ def executar_fase_1(
         # Downstream espera cr["id"]/ck["id"] como UUID de camada_homologada; listar_biblioteca retorna recurso_sessao_id.
         cr = {**cr, "id": str(cr.get("homologacao_id"))}
         ck = {**ck, "id": str(ck.get("homologacao_id"))}
-    if (
-        "restri"
-        not in (
-            str(cr.get("finalidade") or "") + str(cr.get("metadados") or {})
-        ).lower()
-    ):
-        raise DemandaValidationError(
-            "A camada indicada não é uma camada de restrição.",
-            field="camada_restricao_id",
-        )
-    if (
-        "risco"
-        not in (
-            str(ck.get("finalidade") or "") + str(ck.get("metadados") or {})
-        ).lower()
-    ):
-        raise DemandaValidationError(
-            "A camada indicada não é uma camada de risco.", field="camada_risco_id"
-        )
+    _exigir_conjunto(cr, "restri", "restrição", "camada_restricao_id")
+    _exigir_conjunto(ck, "risco", "risco", "camada_risco_id")
     fatiamento = repo.obter_fatiamento_padrao_fase1()
     if not fatiamento:
         raise DemandaValidationError(

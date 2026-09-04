@@ -9,11 +9,14 @@
   const camadasVisiveis = new Set();
   const BASEMAPS = [
     { id: "osm", name: "OpenStreetMap", provider: "OpenStreetMap Contributors", referenceDate: "Atualização contínua; referência correspondente à data de consulta", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"] },
-    { id: "carto-light", name: "Carto Claro", provider: "CARTO / OpenStreetMap", referenceDate: "Atualização contínua; referência correspondente à data de consulta", tiles: ["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"] },
-    { id: "carto-dark", name: "Carto Escuro", provider: "CARTO / OpenStreetMap", referenceDate: "Atualização contínua; referência correspondente à data de consulta", tiles: ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"] },
+    { id: "ofm-positron", name: "OpenFreeMap Claro", provider: "OpenFreeMap / OpenStreetMap", referenceDate: "Atualização contínua; referência correspondente à data de consulta", style: "https://tiles.openfreemap.org/styles/positron" },
+        { id: "ofm-dark", name: "OpenFreeMap Escuro", provider: "OpenFreeMap / OpenStreetMap", referenceDate: "Atualização contínua; referência correspondente à data de consulta", style: "https://tiles.openfreemap.org/styles/dark" },
     { id: "esri-satellite", name: "Imagem de Satélite", provider: "Esri World Imagery", referenceDate: "Mosaico multitemporal; a data varia conforme a localização e a escala", tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"] },
   ];
-  let basemapAtual = localStorage.getItem("geoespacial-viewer-basemap") || "osm";
+  // Sanitiza a preferencia salva: quem tinha "carto-*" gravado cai no padrao,
+  // senao o mapa abriria sem nenhum mapa-base visivel.
+  const _basemapSalvo = localStorage.getItem("geoespacial-viewer-basemap");
+  let basemapAtual = BASEMAPS.some((item) => item.id === _basemapSalvo) ? _basemapSalvo : "osm";
   let basemapRecolhido = localStorage.getItem("geoespacial-viewer-basemap-collapsed") === "true";
   let rotulosAtivos = localStorage.getItem("geoespacial-viewer-labels") === "true";
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
@@ -122,12 +125,17 @@
     basemapAtual = BASEMAPS.some((item) => item.id === id) ? id : "osm";
     localStorage.setItem("geoespacial-viewer-basemap", basemapAtual);
     const basemapVisible = document.getElementById("toggle-basemap-group")?.checked !== false;
-    BASEMAPS.forEach((item) => {
-      const layerId = `viewer-basemap-${item.id}`;
-      if (GeoespacialMap.map?.getLayer(layerId)) {
-        GeoespacialMap.map.setLayoutProperty(layerId, "visibility", basemapVisible && item.id === basemapAtual ? "visible" : "none");
-      }
-    });
+    // Um mapa-base vetorial ocupa varias layers; alterna-se o grupo por prefixo.
+    const mapa = GeoespacialMap.map;
+    if (mapa) {
+      BASEMAPS.forEach((item) => {
+        const alvo = basemapVisible && item.id === basemapAtual ? "visible" : "none";
+        const pref = `viewer-basemap-${item.id}`;
+        mapa.getStyle().layers.forEach((layer) => {
+          if (layer.id === pref || layer.id.startsWith(`${pref}-`)) mapa.setLayoutProperty(layer.id, "visibility", alvo);
+        });
+      });
+    }
     detailBasemap(BASEMAPS.find((item) => item.id === basemapAtual));
   }
   function render() {
@@ -170,8 +178,18 @@
     camadas = diretorio.operacionais || [];
     if (diretorio.banco_disponivel === false) document.getElementById("geoespacial-operations-list").innerHTML = '<p class="hint">Arquivos locais exibidos. O catálogo do banco está temporariamente indisponível; tente atualizar em instantes.</p>';
     preencherCamadasRecorte();
+    preencherPastasExistentes();
     render();
   }
+  // Oferece as pastas que já existem no acervo, sem impedir um nome novo: o
+  // campo é <input list>, então digitar cria a pasta no destino.
+  function preencherPastasExistentes() {
+    const destino = document.getElementById("import-pastas-existentes");
+    if (!destino) return;
+    const pastas = [...new Set(camadas.map(item => item.pasta).filter(Boolean))].sort();
+    destino.innerHTML = pastas.map(nome => `<option value="${nome}"></option>`).join("");
+  }
+
   function preencherCamadasRecorte() {
     const select = document.getElementById("import-clip-layer");
     const vetores = Object.values(diretorio).flat().filter((item) => item.registrada && (item.tipo === "vetor" || item.tipo === "vetorial"));
@@ -231,19 +249,57 @@
     else data.append("arquivo", file);
     if (document.getElementById("import-reproject-enabled").checked) data.append("reprojetar_crs", document.getElementById("import-target-crs").value);
     if (document.getElementById("import-clip-enabled").checked) data.append("recortar_camada_id", document.getElementById("import-clip-layer").value);
+    // Pasta em branco não é enviada: o backend resolve para NAO_CLASSIFICADAS.
+    const pasta = (document.getElementById("import-pasta")?.value || "").trim();
+    if (pasta) data.append("pasta", pasta);
     const response = await fetch(`${API}/importar_camadas/job`, { method: "POST", body: data });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.detail || `Falha no upload de ${file.name}`);
     return waitImportJob(body);
   }
+
+  // ---------------------------------------------------------------------------
+  // Mapas-base vetoriais (OpenFreeMap). O raster da CARTO saiu porque passou a
+  // exigir API key e esta sendo descontinuado pelo provedor.
+  //
+  // Um estilo MapLibre so admite um conjunto de glyphs/sprite, entao as sources
+  // e layers do estilo vetorial sao mescladas no estilo do mapa com sufixo/
+  // prefixo proprios. A troca de mapa-base liga e desliga o grupo inteiro.
+  // ---------------------------------------------------------------------------
+  async function carregarEstiloVetorial(item, prefixo) {
+    const estilo = await (await fetch(item.style)).json();
+    const sufixo = `__${item.id}`;
+    const sources = {};
+    Object.entries(estilo.sources || {}).forEach(([nome, src]) => {
+      sources[`${nome}${sufixo}`] = { ...src, attribution: item.provider };
+    });
+    const layers = (estilo.layers || []).map((layer, i) => {
+      const novo = { ...layer, id: `${prefixo}${item.id}-${i}` };
+      if (novo.source) novo.source = `${novo.source}${sufixo}`;
+      return novo;
+    });
+    return { sources, layers, glyphs: estilo.glyphs, sprite: estilo.sprite };
+  }
+
   async function init() {
     const sources = {};
     const layers = [];
-    BASEMAPS.forEach((item) => {
-      sources[item.id] = { type: "raster", tiles: item.tiles, tileSize: 256, attribution: "© provedores do mapa" };
-      layers.push({ id: `viewer-basemap-${item.id}`, type: "raster", source: item.id, layout: { visibility: item.id === basemapAtual ? "visible" : "none" } });
-    });
-    GeoespacialMap.init("map-geoespacial", { center: [-48.5, -22.4], zoom: 6.2, nativeTools: true, style: { version: 8, glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf", sources, layers } });
+    let glyphs = "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
+    let sprite;
+    for (const item of BASEMAPS) {
+      const visivel = item.id === basemapAtual ? "visible" : "none";
+      if (item.style) {
+        const vetorial = await carregarEstiloVetorial(item, "viewer-basemap-");
+        Object.assign(sources, vetorial.sources);
+        vetorial.layers.forEach((layer) => layers.push({ ...layer, layout: { ...(layer.layout || {}), visibility: visivel } }));
+        if (vetorial.glyphs) glyphs = vetorial.glyphs;
+        if (vetorial.sprite) sprite = vetorial.sprite;
+      } else {
+        sources[item.id] = { type: "raster", tiles: item.tiles, tileSize: 256, attribution: "© provedores do mapa" };
+        layers.push({ id: `viewer-basemap-${item.id}`, type: "raster", source: item.id, layout: { visibility: visivel } });
+      }
+    }
+    GeoespacialMap.init("map-geoespacial", { center: [-48.5, -22.4], zoom: 6.2, nativeTools: true, style: { version: 8, glyphs, ...(sprite ? { sprite } : {}), sources, layers } });
     document.querySelectorAll("[data-context-tab]").forEach((button) => button.addEventListener("click", () => activateContextTab(button.dataset.contextTab)));
     activateContextTab("legend");
     renderLegend();

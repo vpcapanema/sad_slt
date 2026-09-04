@@ -95,7 +95,7 @@ for r in range(1, inst.max_row + 1):
     inst.cell(row=r, column=2).alignment = WRAP
 
 # ---------------- Dimensões ----------------
-# 9 dimensões canônicas do SLT/PLI-SP (data/matriz-criterios-premissas.json).
+# 9 dimensões canônicas do SLT/PLI-SP (config/matriz-criterios-premissas.json).
 DIMENSOES_CANONICAS = [
     (1, "Técnica",
      "Agrupa critérios de engenharia e operação que medem a necessidade física de intervenção (demanda, saturação, congestionamento, conservação, geometria e maturidade). Ref.: Highway Capacity Manual (TRB, 2016); HDM-4 (Banco Mundial/PIARC); AASHTO A Policy on Geometric Design (Green Book); UK DfT WebTAG."),

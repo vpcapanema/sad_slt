@@ -263,6 +263,24 @@ def intersecoes_camada(camada_id: str, *, longitude: float, latitude: float) -> 
         return list(conn.execute(query, (camada_id, longitude, latitude, longitude, latitude)).fetchall())
 
 
+def conjuntos_camada(camada_id: str) -> list[str]:
+    """Valores distintos de ``conjunto`` nas feições da camada consolidada.
+
+    A consolidação por Identity grava em cada feição a que conjunto ela pertence
+    ("RESTRIÇÃO" ou "RISCO"). É a marcação autoritativa do tipo da camada, usada
+    quando ``camada_homologada.finalidade`` está vazia — hoje o caso de 25 das 29
+    camadas homologadas.
+    """
+    query = """
+        SELECT DISTINCT propriedades->>'conjunto' AS conjunto
+        FROM geoprocessamento.camada_homologada_feicao
+        WHERE camada_id = %s::uuid AND propriedades ? 'conjunto'
+    """
+    with get_connection() as conn:
+        linhas = conn.execute(query, (camada_id,)).fetchall()
+    return [linha["conjunto"] for linha in linhas if linha["conjunto"]]
+
+
 def camada_homologada(camada_id: str) -> dict[str, Any] | None:
     query = """SELECT id::text AS id, nome_publicacao AS nome, versao, finalidade, metadados
                FROM geoprocessamento.camada_homologada WHERE id=%s::uuid"""

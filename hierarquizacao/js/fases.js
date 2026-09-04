@@ -24,7 +24,6 @@
     uc_us_estadual: "Unidade de conservação estadual — uso sustentável",
     za_uc_federal: "Zona de amortecimento — UC federal",
     za_uc_estadual: "Zona de amortecimento — UC estadual",
-    vegetacao_protegida: "Vegetação nativa protegida",
     aprm: "Área de proteção e recuperação de mananciais (APRM)",
     ecossistema_costeiro: "Ecossistema costeiro sensível",
     cavidade_maxima: "Cavidade natural — grau de relevância máximo",
@@ -328,7 +327,7 @@
       try {
         gpApp.adicionarCamadaGeoJsonEmMemoria(id, nome, geojson, {
           tipo: "vetorial (memória)",
-          origem: "Hierarquização Fase 1",
+          origem: "Hierarquização Elegibilidade territorial",
           geometria_tipo: "Point",
           simbologia: "status",
         });
@@ -340,6 +339,14 @@
 
   const atual = () =>
     hierarquizacoes.find((item) => item.codigo === $("#fase-hierarquizacao").value);
+
+  /**
+   * Só oferece rodadas que declaram a Elegibilidade territorial. Executar uma rodada fora do
+   * escopo devolve 422 ("A Elegibilidade territorial não faz parte desta rodada") no servidor.
+   * Mesmo critério aplicado nas páginas das Fases 2 e 3.
+   */
+  const executaFase1 = (item) =>
+    (item.dados_hierarquizacao?.cabecalho_grupo?.fases_a_executar || [1, 2, 3]).includes(1);
 
   const parAtual = () => {
     const option = $("#camada-restricao").selectedOptions[0];
@@ -726,7 +733,7 @@
         doc.setTextColor(255, 255, 255);
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
-        doc.text("Relatório da Fase 1 — Elegibilidade Territorial", margem, 12);
+        doc.text("Relatório da Elegibilidade territorial", margem, 12);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8.5);
         doc.text(`Rodada ${texto(modelo.codigo)}`, margem, 18);
@@ -1094,12 +1101,14 @@
         scrollWheelZoom: false,
         attributionControl: true,
       });
-      window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        subdomains: "abcd",
-        attribution: "© OpenStreetMap · © CARTO",
-        crossOrigin: true,
+      // Basemap vetorial do OpenFreeMap. O raster da CARTO saiu porque passou a
+      // exigir API key e esta sendo descontinuado pelo provedor.
+      window.L.maplibreGL({
+        style: "https://tiles.openfreemap.org/styles/positron",
+        interactive: false,
+        attributionControl: false,
       }).addTo(mapaFase1);
+      mapaFase1.attributionControl?.addAttribution("© OpenStreetMap · © OpenFreeMap");
       const mapaAtual = mapaFase1;
       const painelContorno = mapaFase1.createPane("fase1-contorno-sp");
       painelContorno.style.zIndex = "350";
@@ -1270,7 +1279,7 @@
     $("fase1-relatorio-conteudo").innerHTML = `
       <div class="fase1-report-header">
         <div>
-          <h3>Relatório da Fase 1</h3>
+          <h3>Relatório da Elegibilidade territorial</h3>
           <p>Rodada ${esc(modelo.codigo)} · ${esc(modelo.nome)}</p>
         </div>
         <div><small>Concluído em ${esc(modelo.concluidoEm || "—")}</small></div>
@@ -1347,7 +1356,7 @@
       renderRelatorio(atualizado);
       if (window.SLTFeedback) {
         window.SLTFeedback.success(
-          "Fase 1 executada. Confira o relatório de risco e restrição abaixo.",
+          "Elegibilidade territorial executada. Confira o relatório de risco e restrição abaixo.",
           "Cálculo concluído"
         );
       }
@@ -1419,9 +1428,10 @@
         ]);
 
       const selectHier = $("#fase-hierarquizacao");
+      const elegiveis = hierarquizacoes.filter(executaFase1);
       selectHier.innerHTML =
         '<option value="">Selecione…</option>' +
-        hierarquizacoes
+        elegiveis
           .map(
             (item) =>
               `<option value="${esc(item.codigo)}">${esc(item.codigo)} — ${esc(item.nome)}</option>`

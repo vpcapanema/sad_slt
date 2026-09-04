@@ -1,0 +1,200 @@
+{
+ "codigo": "classificacao_fase1",
+ "versao": "2026.09.02",
+ "regras": {
+  "aprm": [
+   [
+    999,
+    "True",
+    "risco",
+    2,
+    "Lei Estadual 9866/1997"
+   ]
+  ],
+  "area_contaminada": [
+   [
+    999,
+    "True",
+    "risco",
+    2,
+    "CETESB — Relação de Áreas Contaminadas"
+   ]
+  ],
+  "assentamento": [
+   [
+    999,
+    "True",
+    "risco",
+    2,
+    "INCRA; ITESP"
+   ]
+  ],
+  "bem_tombado": [
+   [
+    999,
+    "True",
+    "risco",
+    3,
+    "Dec-Lei 25/1937, arts. 10, 17 e 18; IN IPHAN 001/2015"
+   ]
+  ],
+  "cavidade": [
+   [
+    999,
+    "True",
+    "risco",
+    2,
+    "Dec. 10935/2022; IN ICMBio 02/2017"
+   ]
+  ],
+  "ecossistema_costeiro": [
+   [
+    999,
+    "True",
+    "restricao",
+    4,
+    "Lei 12651/2012 art. 4 VII"
+   ]
+  ],
+  "embargo_estadual": [
+   [
+    999,
+    "True",
+    "restricao",
+    4,
+    "Dec. Est. SP 8468/1976; Lei Est. SP 9509/1997"
+   ]
+  ],
+  "embargo_ibama": [
+   [
+    999,
+    "True",
+    "restricao",
+    4,
+    "Lei 9605/1998 art. 72; Dec. 6514/2008"
+   ]
+  ],
+  "interdicao_cetesb": [
+   [
+    999,
+    "True",
+    "restricao",
+    4,
+    "Dec. Est. SP 8468/1976"
+   ]
+  ],
+  "inundacao": [
+   [
+    10,
+    "grau in ['muito_alto','alto']",
+    "risco",
+    3,
+    "Defesa Civil; IPT; SGB/CPRM"
+   ],
+   [
+    999,
+    "True",
+    "risco",
+    2,
+    "DAEE"
+   ]
+  ],
+  "movimento_massa": [
+   [
+    10,
+    "grau in ['muito_alto','alto']",
+    "risco",
+    3,
+    "IPT; SGB/CPRM"
+   ],
+   [
+    999,
+    "True",
+    "risco",
+    2,
+    "Defesa Civil"
+   ]
+  ],
+  "sitio_arqueologico": [
+   [
+    999,
+    "True",
+    "risco",
+    3,
+    "Lei 3924/1961"
+   ]
+  ],
+  "terra_indigena": [
+   [
+    999,
+    "True",
+    "restricao",
+    4,
+    "CF/88 art. 231; Port. Interministerial 60/2015"
+   ]
+  ],
+  "territorio_quilombola": [
+   [
+    999,
+    "True",
+    "restricao",
+    4,
+    "Dec. 4887/2003; Port. Interministerial 60/2015"
+   ]
+  ],
+  "uc_pi_estadual": [
+   [
+    999,
+    "True",
+    "restricao",
+    4,
+    "Lei 9985/2000 art. 9-10"
+   ]
+  ],
+  "uc_pi_federal": [
+   [
+    999,
+    "True",
+    "restricao",
+    4,
+    "Lei 9985/2000 art. 10"
+   ]
+  ],
+  "uc_pi_municipal": [
+   [
+    999,
+    "True",
+    "restricao",
+    4,
+    "Lei 9985/2000 art. 7 §1"
+   ]
+  ],
+  "uc_us_estadual": [
+   [
+    999,
+    "True",
+    "risco",
+    2,
+    "Lei 9985/2000; Fundação Florestal"
+   ]
+  ],
+  "uc_us_federal": [
+   [
+    999,
+    "True",
+    "risco",
+    2,
+    "Lei 9985/2000"
+   ]
+  ],
+  "uc_us_municipal": [
+   [
+    999,
+    "True",
+    "risco",
+    2,
+    "Lei 9985/2000 art. 7 §2"
+   ]
+  ]
+ }
+}

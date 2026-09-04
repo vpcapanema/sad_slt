@@ -8,8 +8,8 @@
 - **Etapa:** Fase 2 — Favorabilidade territorial e da rede
 - **Camada em foco:** Favorabilidade da **grade** (a camada de **rede** é tratada em documento próprio)
 - **Unidade de análise:** **setor censitário** (Censo 2022), escolhido para máxima variabilidade espacial
-- **Matriz de referência:** `documentacao/matrizes/Matriz_Criterios_Premissas_PLI-SP_v3.xlsx`, aba `Matriz Crit Premissas v3`
-- **Última atualização:** 2026-08-10
+- **Matriz de referência:** `documentacao/matrizes/Matriz_Criterios_Premissas_PLI-SP_v3-conceitual.xlsx`, aba `Matriz Crit Premissas v3`
+- **Última atualização:** 2026-09-01
 
 ---
 
@@ -33,6 +33,28 @@ econômica e na vulnerabilidade territorial. Assim como a rede, é uma etapa
 - **Critério 2 (vulnerabilidade):** dado = redução de desigualdades regionais; variável
   = prioridade social derivada de **IDH e PIB per capita invertidos**; métricas = IDH,
   PIB per capita regional.
+
+### 2.1 Verificação de redundância entre os dois critérios
+
+A revisão de redundância aplicada à rede foi repetida aqui. Os dois critérios da
+grade **não** são redundantes: a correlação de postos entre `crit_g01_massa_economica`
+e `crit_g02_vulnerabilidade` é **−0,506**, ou seja, eles apontam em sentidos
+opostos. Nenhum dos dois é removido.
+
+O ponto de atenção é o inverso da redundância. Como a superfície atual é uma
+**média simples**, dois critérios antagônicos de peso igual tendem a se cancelar:
+um setor rico e denso pontua alto em G01 e baixo em G02, e um setor pobre e rural
+faz o caminho contrário — os dois terminam no meio da escala. A tensão entre
+"investir onde a economia está" e "investir onde falta" é uma escolha de política
+pública, e só os pesos AHP da etapa seguinte podem resolvê-la. A média simples não
+resolve o conflito: ela o dilui.
+
+Dois limites adicionais da composição atual, registrados para revisão:
+
+- `g_pib_setor = PIB_mun × (pop_setor / pop_mun)`. Dentro de um mesmo município,
+  **G01 é população reescalonada** — não há variação econômica intramunicipal.
+- `g_pib_pc` é municipal e portanto constante em todos os setores do município, de
+  modo que a variação intramunicipal de G02 vem apenas de saneamento e adensamento.
 
 ## 3. Base espacial (unidade de análise)
 
@@ -155,3 +177,4 @@ Aplicável às duas camadas (rede e grade). Sem nomes de grupos de etapas.
 | 2026-08-07 | Criação do diagnóstico da grade; base de setores censitários (103.620); critério 2 (vulnerabilidade) com demografia, alfabetização e saneamento; critério 1 (massa econômica) por desagregação do PIB; PIB per capita incorporado; roteiro metodológico registrado. |
 | 2026-08-10 | Geração do produto vetorial reescalonado `favorabilidade_grade_normalizada.gpkg`, com normalização min–max, orientação dos componentes de vulnerabilidade, preservação de NoData e metadados internos de auditoria. |
 | 2026-08-10 | Vinculação explícita dos campos `crit_*` aos dois critérios de grade da matriz v3 e geração da superfície `favorabilidade_grade_media_simples.gpkg`, sem atribuir peso próprio aos indicadores auxiliares. |
+| 2026-09-01 | Verificação de redundância entre G01 e G02 (§2.1): Spearman −0,506, nenhum critério removido; registrados o risco de cancelamento mútuo sob média simples e os limites da desagregação do PIB. Superfícies regeradas junto com a revisão da rede; corrigido o caminho da matriz de referência. |

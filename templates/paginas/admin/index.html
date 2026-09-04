@@ -108,16 +108,33 @@
             {{ link_card('/restrict/demandas/', 'fa-solid fa-table-list', 'Tabela de demandas', 'blue') }}
             {{ link_card('/restrict/demanda/', 'fa-solid fa-magnifying-glass-chart', 'Análise de demandas', 'blue') }}
             {{ link_card('/restrict/complementacao/', 'fa-solid fa-pen-to-square', 'Complementação de cadastro', 'blue') }}
+            {{ link_card('/restrict/revisao-status/', 'fa-solid fa-arrows-rotate', 'Revisão de status', 'blue') }}
           </div>
         </section>
 
         <section class="platform-group secao-platform-mad" aria-labelledby="group-mad">
           <div class="platform-group__heading"><div><h2 id="group-mad">MAD</h2><p class="platform-group__subtitle">Módulo de apoio à decisão, análise multicritérios interativa e hierarquização colaborativa.</p><p>Estruture processos, critérios e produtos territoriais.</p></div></div>
-          <div class="platform-grid">
-            {{ link_card('/restrict/hierarquizacao/processos/', 'fa-solid fa-diagram-project', 'Processos de hierarquização', 'amber') }}
-            {{ link_card('/restrict/analise-multicriterio/?modo=espaco', 'fa-solid fa-people-group', 'Central de julgamentos', 'amber') }}
-            {{ link_card('/restrict/analise-multicriterio/?modo=julgamentos', 'fa-solid fa-list-check', 'Central de respostas', 'amber') }}
-            {{ link_card('/restrict/analise-multicriterio/?modo=formulario', 'fa-solid fa-clipboard-question', 'Formulário dos especialistas', 'amber') }}
+          <div class="platform-subgroups">
+            <div class="platform-subgroup subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos">
+              <h3 class="platform-subgroup__title">Análise Multicritério (AHP) e obtenção de pesos</h3>
+              <div class="platform-grid">
+                {{ link_card('/restrict/hierarquizacao/processos/', 'fa-solid fa-diagram-project', 'Processos de hierarquização', 'amber') }}
+                {{ link_card('/restrict/analise-multicriterio/?modo=espaco', 'fa-solid fa-people-group', 'Central de julgamentos', 'amber') }}
+                {{ link_card('/restrict/analise-multicriterio/?modo=julgamentos', 'fa-solid fa-list-check', 'Central de respostas', 'amber') }}
+                {{ link_card('/restrict/analise-multicriterio/?modo=formulario', 'fa-solid fa-clipboard-question', 'Formulário dos especialistas', 'amber') }}
+              </div>
+            </div>
+            <div class="platform-subgroup subgroup-ranqueamento">
+              <h3 class="platform-subgroup__title">Ranqueamento</h3>
+              <div class="platform-grid">
+                {{ link_card('/restrict/hierarquizacao/metodologia/', 'fa-solid fa-book-open', 'Metodologia do processo', 'green') }}
+                {{ link_card('/restrict/hierarquizacao/fase-1/', 'fa-solid fa-filter-circle-xmark', 'Elegibilidade territorial', 'green') }}
+                {{ link_card('/restrict/hierarquizacao/fase-2/', 'fa-solid fa-mountain-sun', 'Favorabilidade de grade e da rede', 'green') }}
+                {{ link_card('/restrict/hierarquizacao/fase-3/', 'fa-solid fa-sliders', 'Priorização por atributos', 'green') }}
+                {{ link_card('/restrict/hierarquizacao/cadastro-upload-elegibilidade/', 'fa-solid fa-cloud-arrow-up', 'Cadastro e upload — Elegibilidade territorial', 'green') }}
+                {{ link_card('/restrict/hierarquizacao/cadastro-upload-favorabilidade/', 'fa-solid fa-cloud-arrow-up', 'Cadastro e upload — Favorabilidade Territorial', 'green') }}
+              </div>
+            </div>
           </div>
         </section>
 
@@ -143,28 +160,14 @@
               {{ link_card('/restrict/geoespacial/gerador-risco-restricao/', 'fa-solid fa-shield-halved', 'Gerador de risco e restrição', 'amber') }}
               {{ link_card('/restrict/geoespacial/gerador-favorabilidade/', 'fa-solid fa-map', 'Gerador de favorabilidade', 'green') }}
               {{ link_card('/restrict/geoespacial/configuracao-risco-restricao/', 'fa-solid fa-book', 'Biblioteca canônica', 'amber') }}
+              {{ link_card('/restrict/geoespacial/documentacao-favorabilidade/', 'fa-solid fa-book-atlas', 'Biblioteca — Favorabilidade de grade e da rede', 'green') }}
               {{ link_card('/restrict/geoespacial/produtos/', 'fa-solid fa-layer-group', 'Camadas homologadas', 'green') }}
               {{ link_card('/restrict/geoespacial/bancada/', 'fa-solid fa-screwdriver-wrench', 'Bancada geoprocessamento', 'green') }}
-              {{ link_card('/restrict/geoespacial/configurador-ajuste/', 'fa-solid fa-sliders', 'Configurador da Fase 3', 'violet') }}
+              {{ link_card('/restrict/geoespacial/configurador-ajuste/', 'fa-solid fa-sliders', 'Configurador da Priorização por atributos', 'violet') }}
             </div>
           </section>
         </div>
         <div class="restrict-platform-row restrict-platform-row--ahp">
-          <section class="platform-group secao-platform-ahp-restrict" aria-labelledby="group-ahp-restrict">
-            <div class="platform-group__heading"><div><h2 id="group-ahp-restrict">AHP</h2><p class="platform-group__subtitle">Análise multicritério</p><p>Defina critérios, compare prioridades e gere pesos para apoiar a decisão.</p></div></div>
-            <div class="platform-grid">
-              {{ link_card('/restrict/ahp/', 'fa-solid fa-scale-balanced', 'Central AHP', 'teal') }}
-              {{ link_card('/restrict/ahp/analise/', 'fa-solid fa-diagram-project', 'Calculadora AHP', 'teal') }}
-              {{ link_card('/restrict/ahp/configuracao/', 'fa-solid fa-crosshairs', 'Configuração', 'teal') }}
-              {{ link_card('/restrict/ahp/criterios/', 'fa-solid fa-table-list', 'Critérios', 'teal') }}
-              {{ link_card('/restrict/ahp/nomes/', 'fa-solid fa-pen-to-square', 'Nomes', 'teal') }}
-              {{ link_card('/restrict/ahp/metodo/', 'fa-solid fa-route', 'Método', 'teal') }}
-              {{ link_card('/restrict/ahp/comparacao/', 'fa-solid fa-scale-unbalanced-flip', 'Comparação pareada', 'teal') }}
-              {{ link_card('/restrict/ahp/respostas-colaborativas/', 'fa-solid fa-users', 'Respostas colaborativas', 'teal') }}
-              {{ link_card('/restrict/ahp/resultados/', 'fa-solid fa-chart-column', 'Pesos e resultados', 'teal') }}
-              {{ link_card('/restrict/ahp/alternativas/', 'fa-solid fa-diagram-project', 'Alternativas', 'teal') }}
-            </div>
-          </section>
           <section class="platform-group secao-platform-administracao" data-permission="administer" hidden aria-labelledby="group-administracao">
             <div class="platform-group__heading"><div><h2 id="group-administracao">ADMIN</h2><p class="platform-group__subtitle">Tabelas do banco de dados</p><p>Acesse diretamente cada grupo da administração do sistema.</p></div></div>
             <div class="platform-grid">
@@ -175,6 +178,29 @@
               {{ link_card('/restrict/admin/?menu=geo', 'fa-solid fa-earth-americas', 'Geografia', 'navy') }}
               {{ link_card('/restrict/admin/?menu=geoprocessamento', 'fa-solid fa-layer-group', 'Geoprocessamento', 'navy') }}
               {{ link_card('/restrict/admin/?menu=hierarquizacao_demandas', 'fa-solid fa-ranking-star', 'Hierarquização de Demandas', 'navy') }}
+            </div>
+          </section>
+        </div>
+        <div class="restrict-platform-row restrict-platform-row--publico">
+          <section class="platform-group secao-platform-publico" aria-labelledby="group-publico">
+            <div class="platform-group__heading"><div><h2 id="group-publico">PÚBLICO</h2><p class="platform-group__subtitle">Portal aberto ao cidadão</p><p>Veja o sistema como o público externo o acessa.</p></div></div>
+            <div class="platform-grid">
+              {{ link_card('/public/', 'fa-solid fa-house', 'Portal público', 'blue') }}
+              {{ link_card('/public/cadastro/', 'fa-solid fa-folder-open', 'Cadastro de demandas', 'blue') }}
+              {{ link_card('/public/cadastro/nova-demanda/', 'fa-solid fa-file-circle-plus', 'Formulário de nova demanda', 'blue') }}
+              {{ link_card('/public/painel/', 'fa-solid fa-map-location-dot', 'Painel público de demandas', 'blue') }}
+              {{ link_card('/public/documentacao/', 'fa-solid fa-circle-info', 'Documentação', 'blue') }}
+              {{ link_card('/public/ahp/colaborativa/', 'fa-solid fa-clipboard-question', 'Formulário colaborativo AHP', 'blue') }}
+            </div>
+          </section>
+
+          <section class="platform-group secao-platform-catalogos" aria-labelledby="group-catalogos">
+            <div class="platform-group__heading"><div><h2 id="group-catalogos">CATÁLOGOS</h2><p class="platform-group__subtitle">Tabelas de referência do cadastro</p><p>Consulte as listas que alimentam o formulário público.</p></div></div>
+            <div class="platform-grid">
+              {{ link_card('/public/cadastro/catalogo-diretorias/', 'fa-solid fa-sitemap', 'Diretorias', 'navy') }}
+              {{ link_card('/public/cadastro/catalogo-planos/', 'fa-solid fa-clipboard-list', 'Planos', 'navy') }}
+              {{ link_card('/public/cadastro/catalogo-frentes-pli/', 'fa-solid fa-road', 'Frentes do PLI', 'navy') }}
+              {{ link_card('/public/cadastro/catalogo-eixos-pef/', 'fa-solid fa-compass', 'Eixos do PEF', 'navy') }}
             </div>
           </section>
         </div>

@@ -7,8 +7,8 @@
 
 - **Etapa:** Fase 2 — Favorabilidade territorial e da rede
 - **Camada em foco:** Favorabilidade da **rede** (a camada de **grade** será tratada à parte)
-- **Matriz de referência:** `documentacao/matrizes/Matriz_Criterios_Premissas_PLI-SP_v3.xlsx`, aba `Matriz Crit Premissas v3`
-- **Última atualização:** 2026-08-10
+- **Matriz de referência:** `documentacao/matrizes/Matriz_Criterios_Premissas_PLI-SP_v3-conceitual.xlsx`, aba `Matriz Crit Premissas v3`
+- **Última atualização:** 2026-09-01
 
 ---
 
@@ -21,10 +21,49 @@ condições da malha de transporte (demanda, saturação, segurança, acessibili
 funcional, conflito urbano). Diferentemente da Fase 1 (eliminatória), esta etapa
 é **compensatória/graduada**: não elimina áreas, apenas as pontua.
 
-## 2. Composição dos critérios (16 critérios de classificação "rede")
+## 2. Composição dos critérios (16 na matriz, 11 calculáveis)
 
 Os 16 critérios se dividem em dois blocos, conforme o operador espacial exigido
-pela matriz.
+pela matriz. Cinco não entram na superfície: dois por falta de insumo (4 e 6) e
+três por redundância (7, 13 e 16) — ver §2.1.
+
+### 2.1 Critérios removidos por redundância
+
+A superfície é uma **média** dos critérios. Critérios que medem o mesmo fator
+latente não se anulam nessa média: eles somam, e o fator passa a pesar tantas
+vezes quantos forem os critérios que o representam. Como os pesos da etapa
+seguinte vêm de um AHP — que pergunta ao especialista o peso de cada critério
+**assumindo independência entre eles** —, a redundância infla o peso efetivo sem
+aparecer na razão de consistência da matriz de Saaty. Por isso ela é resolvida
+aqui, na composição, e não na ponderação.
+
+| Removido | Redundante com | Evidência |
+|---|---|---|
+| **7** — acessibilidade temporal aos destinos relevantes | **10** — polos logísticos | `c7_polo_m` = `min(c10_porto_m, c10_aero_m)`. São as mesmas duas distâncias brutas do critério 10, agregadas por mínimo em vez de média. O critério 7 não tem insumo próprio. |
+| **13** — concentração de pontos críticos (black spots) | **11** — gravidade de acidentes | Ambos são densidade de sinistro grave por km do InfoSiga. Spearman **0,966** na camada normalizada. O 11 é mantido por separar óbito (`c11_fat_km`) de ferido grave (`c11_grav_km`). |
+| **16** — nós intermodais estratégicos | **8**, **9** e **10** | A união de 2.020 nós contém os destinos dos três. Como as 2.102 estações ferroviárias dominam a união (distância média 10.599 m, a menor de todas), o resultado mede proximidade ferroviária — Spearman **0,792** com o critério 9 — e não intermodalidade. As três acessibilidades modais específicas são preservadas em seu lugar. |
+
+**Critérios mantidos apesar de correlação alta:**
+
+- **1 × 2** (VDM × saturação), Spearman 0,841. A relação V/C tem o volume no
+  numerador, então a correlação é estrutural — mas o critério 2 acrescenta a
+  **capacidade**, que o 1 não tem: trecho de VDM alto com capacidade alta não
+  satura. Não é redundância por construção.
+- **11 × 12** (gravidade × usuários vulneráveis), Spearman 0,739. Mesma base,
+  população-alvo distinta: pedestre, ciclista e motociclista respondem a
+  intervenção diferente da segurança viária geral.
+
+**Efeito da remoção sobre a superfície:** a média cai de 0,3568 (14 critérios)
+para 0,3015 (11), porque os critérios 7 e 16 eram saturados no topo da escala
+(medianas 0,822 e 0,919). A ordenação se mantém no geral — Spearman **0,958**
+entre a superfície anterior e a atual — mas **887 dos 4.782 subtrechos (18,5%)
+mudam mais de 500 posições** e 11 dos 100 primeiros deixam o topo. A remoção
+não é cosmética.
+
+Os brutos `c7_polo_m`, `c13_sin_km` e `c16_interm_m` e seus normalizados
+permanecem na camada como evidência de origem; apenas os critérios `crit_r07_*`,
+`crit_r13_*` e `crit_r16_*` e os componentes orientados `f_c7_polo`,
+`f_c13_graves` e `f_c16_interm` deixaram de ser produzidos.
 
 ### Bloco A — Distância euclidiana ponderada por atributo (11 critérios)
 
@@ -526,14 +565,31 @@ retorno são trechos rurais sem cobertura de fluxo da TomTom. `c3_ratio` médio 
 | 6 | Sazonalidade | VDM sazonal / médio | **Solicitar ao DER-SP/ARTESP** (contagens mensais) — não publicado | A solicitar |
 | 11 | Gravidade de acidentes | óbitos/feridos por km | InfoSiga | **Bruto gerado** |
 | 12 | Vulneráveis | acidentes com pedestres/ciclistas/motociclistas | InfoSiga | **Bruto gerado** |
-| 13 | Black spots | densidade de acidentes graves | InfoSiga | **Bruto gerado** |
+| 13 | Black spots | densidade de acidentes graves | InfoSiga | Bruto gerado — **removido por redundância com o 11** (§2.1) |
 | 14 | Conflito urbano-regional | índice passagem × local | mancha urbana IBGE 2019 (+ `PerimetroU`) | **Bruto gerado** |
-| 15 | Conflito urbano-portuário | índice urbano-portuário | criterio 14 restrito a municípios portuários | **Bruto gerado** |
-| 7 | Acessibilidade temporal | rede roteável + destinos O-D | proximidade a portos/aeroportos (proxy) | **Bruto gerado (proxy)** |
+| 15 | Conflito urbano-portuário | índice urbano-portuário | `c15_port` + `c15_urb_fr` + `c15_dens_fr` em municípios portuários | **Bruto gerado** — degenerado, ver §5.1 |
+| 7 | Acessibilidade temporal | rede roteável + destinos O-D | proximidade a portos/aeroportos (proxy) | Bruto gerado (proxy) — **removido por redundância com o 10** (§2.1) |
 | 8 | Acessibilidade hidroviária | rede multimodal + terminais hidroviários | Hidrovia Tietê (48 terminais) | **Bruto gerado** |
 | 9 | Acessibilidade ferroviária | rede multimodal + malha ferroviária | Malha Ferroviária Federal | **Bruto gerado** |
 | 10 | Polos logísticos | pontos de portos e aeroportos | ANTAQ (portos) + ANAC (aeroportos) | **Bruto gerado** |
-| 16 | Nós intermodais | portos, aeroportos, terminais, pátios | união dos nós logísticos | **Bruto gerado** |
+| 16 | Nós intermodais | portos, aeroportos, terminais, pátios | união dos nós logísticos | Bruto gerado — **removido por redundância com 8, 9 e 10** (§2.1) |
+
+### 5.1 Critérios degenerados (problema distinto da redundância)
+
+Dois critérios calculáveis são quase constantes na malha. Eles **não** são
+redundantes — medem coisa própria — mas, numa média, um critério que vale zero
+em quase todo lugar não discrimina: apenas desloca a superfície inteira para
+baixo por uma constante.
+
+| Critério | Subtrechos em zero | Não-nulos | Causa |
+|---|---:|---:|---|
+| **15** — conflito urbano-portuário | 99,2% | 36 de 4.782 | O recorte por município portuário é muito restritivo; Spearman com o 14 é apenas 0,075, então não é subconjunto dele na prática. |
+| **3** — lentidão recorrente | 97,1% | 137 de 4.782 | Amostra instantânea da TomTom com `c3_ratio` médio 1,01 e cobertura de 62,8%; a maioria das rodovias flui livre no instante da coleta. |
+
+Ambos permanecem na superfície porque a decisão de removê-los é de **qualidade
+de dado**, não de composição: o critério 15 melhora com vetor real de instalações
+portuárias e o 3 melhora com múltiplas janelas de coleta ou histórico Waze.
+Enquanto isso, os dois praticamente não afetam a ordenação.
 
 ## 6. Próximos passos
 
@@ -593,12 +649,15 @@ Sequência oficial, sem nomes de grupos de etapas (aplicável a rede e grade):
 
 - **Arquivo:** `data/geoespacial/outputs/favorabilidade_rede_media_simples.gpkg`
   (layer `favorabilidade_rede_media_simples`).
-- **Composição:** média aritmética simples dos 14 campos `crit_*` calculáveis da matriz
-  v3. Os indicadores de VDM, saturação, lentidão, geometria, acessibilidade, segurança
-  e conflito territorial são primeiro consolidados dentro do respectivo critério.
+- **Composição:** média aritmética simples dos **11** campos `crit_*` calculáveis da
+  matriz v3. Os indicadores de VDM, saturação, lentidão, geometria, acessibilidade,
+  segurança e conflito territorial são primeiro consolidados dentro do respectivo
+  critério.
 - **NoData:** a média usa os critérios válidos por subtrecho e registra o denominador
-  em `n_criterios`; a cobertura observada varia de 11 a 14 critérios. Os critérios 4 e
-  6 não entram no denominador por inexistência do atributo bruto.
+  em `n_criterios`; a cobertura observada é de 9 ou 11 critérios. Os critérios 4 e 6
+  não entram no denominador por inexistência do atributo bruto; os critérios 7, 13 e
+  16 foram removidos por redundância (§2.1) e também não entram.
+- **Faixa observada:** média 0,3015, desvio 0,0605, mínimo 0,1091, máximo 0,5755.
 - **Natureza:** cenário não ponderado solicitado para análise. Não substitui a média
   ponderada por pesos AHP nem constitui superfície homologada.
 
@@ -619,3 +678,4 @@ Sequência oficial, sem nomes de grupos de etapas (aplicável a rede e grade):
 | 2026-08-06 | Confirmada a indisponibilidade pública dos dados de pavimento (crit. 4) e sazonalidade (crit. 6) após raspagem de DER-SP, ARTESP e portal de dados abertos SP; ambos marcados como "A solicitar" ao DER/ARTESP. |
 | 2026-08-10 | Geração do produto vetorial reescalonado `favorabilidade_rede_normalizada.gpkg`, com normalização min–max, densidades de segurança por quilômetro, inversão dos atributos de distância, preservação de NoData e metadados internos de auditoria. |
 | 2026-08-10 | Vinculação explícita dos campos `crit_*` aos critérios de rede da matriz v3 e geração da superfície `favorabilidade_rede_media_simples.gpkg` com 14 critérios calculáveis, mantendo pavimento e sazonalidade como lacunas. |
+| 2026-09-01 | Remoção dos critérios 7, 13 e 16 por redundância, com base na matriz de correlação de postos da camada normalizada (§2.1); componentes orientados `f_c7_polo`, `f_c13_graves` e `f_c16_interm` deixaram de ser produzidos e os brutos correspondentes foram preservados. Superfície regerada com 11 critérios: Spearman 0,958 com a ordenação anterior, 887 subtrechos (18,5%) deslocados em mais de 500 posições. Registrada em §5.1 a degeneração dos critérios 3 e 15. Corrigido o caminho da matriz de referência, renomeada para `Matriz_Criterios_Premissas_PLI-SP_v3-conceitual.xlsx`. |

@@ -1,4 +1,4 @@
-/* Verificação Fase 3 — Módulo Geoespacial */
+/* Verificação Priorização por atributos — Módulo Geoespacial */
 (function () {
   const API_BASE = "/api/geoespacial";
   let mapInitialized = false;
@@ -27,7 +27,7 @@
         { id: "nome_coluna", label: "Nome da Coluna", tipo: "text" },
         { id: "rotulo", label: "Rótulo", tipo: "text" },
         { id: "tipo_dado", label: "Tipo de Dado", tipo: "select", opcoes: ["numerico", "ordinal", "booleano", "categorico", "data"] },
-        { id: "criterio_fase3", label: "Critério Fase 3", tipo: "checkbox" },
+        { id: "criterio_fase3", label: "Critério Priorização por atributos", tipo: "checkbox" },
         { id: "direcao", label: "Direção", tipo: "select", opcoes: ["maior_melhor", "menor_melhor"] },
         { id: "regra_normalizacao", label: "Regra de Normalização", tipo: "select", opcoes: ["minmax", "zscore", "rank"] },
         { id: "obrigatorio", label: "Obrigatório", tipo: "checkbox" },
@@ -56,17 +56,17 @@
       ],
     },
     calcular_score: {
-      nome: "Calcular Score Fase 3",
+      nome: "Calcular Score Priorização por atributos",
       variaveis: [
-        { id: "herdar_riscos_fase1", label: "Herdar Riscos Fase 1", tipo: "checkbox" },
-        { id: "pacote_fase1_id", label: "Pacote Fase 1", tipo: "text" },
+        { id: "herdar_riscos_fase1", label: "Herdar Riscos Elegibilidade territorial", tipo: "checkbox" },
+        { id: "pacote_fase1_id", label: "Pacote Elegibilidade territorial", tipo: "text" },
       ],
     },
     gerar_ranking: {
       nome: "Gerar Ranking",
       variaveis: [
         { id: "ordem_ranking", label: "Ordem", tipo: "select", opcoes: ["decrescente", "crescente"] },
-        { id: "incluir_score_fase1", label: "Incluir Score Fase 1", tipo: "checkbox" },
+        { id: "incluir_score_fase1", label: "Incluir Score Elegibilidade territorial", tipo: "checkbox" },
       ],
     },
     criar_rodada: {

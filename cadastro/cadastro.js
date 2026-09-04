@@ -1992,7 +1992,7 @@
     await loadSigmaCadastros();
 
     await SLTCatalog.loadCatalog("../");
-    const refRes = await fetch("/data/referencia-classificacao.json");
+    const refRes = await fetch("/config/referencia-classificacao.json");
     if (refRes.ok) classificacaoRef = await refRes.json();
     const cat = SLTCatalog.catalog;
 

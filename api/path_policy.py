@@ -16,8 +16,9 @@ _WINDOWS_ABSOLUTE = re.compile(r"^[A-Za-z]:[/\\]")
 # Destino único, canônico, para toda saída geoprocessada.
 GEO_OUTPUTS_DIR = "data/geoespacial/outputs"
 
-# Categorias reconhecidas dentro do destino único; cada uma vira uma subpasta.
-GEO_OUTPUT_CATEGORIES: tuple[str, ...] = ("vetor", "raster", "geodatabase")
+# Categorias reconhecidas do dado. Servem para validar a extensão do arquivo
+# contra a natureza do recurso — não são níveis de diretório.
+GEO_OUTPUT_CATEGORIES: tuple[str, ...] = ("vetor", "raster")
 
 # Extensão canônica -> categoria. Fonte da verdade para roteamento e validação.
 _EXTENSION_TO_CATEGORY: dict[str, str] = {
@@ -33,9 +34,9 @@ _EXTENSION_TO_CATEGORY: dict[str, str] = {
     ".tiff": "raster",
     ".geotiff": "raster",
     ".img": "raster",
-    # geodatabase (containers)
-    ".gdb": "geodatabase",
-    ".gpkg.gdb": "geodatabase",
+    # contêineres vetoriais
+    ".gdb": "vetor",
+    ".geodatabase": "vetor",
 }
 
 
@@ -81,13 +82,11 @@ def geo_outputs_dir() -> Path:
     """Diretório absoluto onde toda saída geoprocessada deve ser gravada."""
     caminho = PROJECT_ROOT / GEO_OUTPUTS_DIR
     caminho.mkdir(parents=True, exist_ok=True)
-    for categoria in GEO_OUTPUT_CATEGORIES:
-        (caminho / categoria).mkdir(parents=True, exist_ok=True)
     return caminho
 
 
 def categoria_por_extensao(nome_arquivo: str) -> str:
-    """Retorna a categoria canônica (`vetor`/`raster`/`geodatabase`) para a extensão."""
+    """Retorna a categoria canônica (`vetor`/`raster`) para a extensão."""
     nome = str(nome_arquivo).strip().lower()
     if not nome:
         raise ValueError("Nome de arquivo vazio para classificação")
@@ -109,7 +108,7 @@ def categoria_por_extensao(nome_arquivo: str) -> str:
 def validar_categoria_compativel(nome_arquivo: str, categoria_dado: str) -> str:
     """Aborta se a extensão do arquivo não corresponder à categoria do dado.
 
-    ``categoria_dado`` é ``'vetor'``, ``'raster'`` ou ``'geodatabase'`` — sempre
+    ``categoria_dado`` é ``'vetor'`` ou ``'raster'`` — sempre
     determinada a partir da natureza do recurso em memória, não do que o cliente
     solicitou. Retorna a categoria (sempre igual à derivada da extensão) para
     uso subsequente no roteamento.
@@ -135,14 +134,19 @@ def geo_output_path(
     categoria: str | None = None,
     label: str = "arquivo",
 ) -> Path:
-    """Resolve o caminho de saída dentro da subpasta correta do destino único.
+    """Resolve o caminho de saída dentro do destino único de geoprocessos.
 
-    Se ``categoria`` for informada, valida contra a extensão (raise em conflito).
-    Se omitida, a subpasta é inferida da extensão.
+    Toda saída fica diretamente em ``data/geoespacial/outputs``, sem subpasta
+    por categoria: a categoria é atributo do dado, registrado nos metadados e no
+    relatório de execução, e não um nível de diretório.
+
+    A validação de categoria continua: quando ``categoria`` é informada, ela é
+    conferida contra a extensão e o caminho é recusado em caso de conflito —
+    é o que impede gravar um raster com extensão vetorial e vice-versa.
     """
     nome = relative_file_name(nome_arquivo, label=label)
     if categoria is None:
-        categoria_final = categoria_por_extensao(nome)
+        categoria_por_extensao(nome)
     else:
-        categoria_final = validar_categoria_compativel(nome, categoria)
-    return geo_outputs_dir() / categoria_final / nome
+        validar_categoria_compativel(nome, categoria)
+    return geo_outputs_dir() / nome

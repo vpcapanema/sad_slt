@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 import base64
 import re
+import tempfile
+import unicodedata
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
@@ -27,6 +29,141 @@ from api.path_policy import (
     project_relative,
 )
 from api.repositories import camada_geoespacial_repository
+
+
+# Operação de overlay -> método nativo de ogr.Layer. "difference" é o Erase do
+# OGR: mantém as partes da entrada que não são cobertas pela camada de método,
+# que é a mesma semântica do how="difference" do GeoPandas.
+_OVERLAY_OGR: dict[str, str] = {
+    "identity": "Identity",
+    "intersection": "Intersection",
+    "union": "Union",
+    "difference": "Erase",
+    "symmetric_difference": "SymDifference",
+}
+
+
+def _prefixo_overlay(regra_nomenclatura: str, fonte_id: str) -> str:
+    """Traduz a regra de nomenclatura declarada no fluxo em prefixo do OGR.
+
+    A regra padrão dos fluxos da Fase 1 é ``<fonte_id>__<nome_campo>``; o OGR
+    recebe apenas a parte que antecede o nome do campo.
+    """
+    regra = str(regra_nomenclatura or "<fonte_id>__<nome_campo>")
+    if "<nome_campo>" not in regra:
+        return f"{fonte_id}__"
+    return regra.split("<nome_campo>")[0].replace("<fonte_id>", fonte_id)
+
+
+_DIMENSAO_POR_TIPO = {
+    "Point": 0, "MultiPoint": 0,
+    "LineString": 1, "LinearRing": 1, "MultiLineString": 1,
+    "Polygon": 2, "MultiPolygon": 2,
+}
+
+
+def _restringir_dimensao(
+    resultado: gpd.GeoDataFrame, referencia: gpd.GeoDataFrame
+) -> gpd.GeoDataFrame:
+    """Mantém só a dimensão geométrica da camada de entrada, como o ArcGIS.
+
+    ``KEEP_LOWER_DIMENSION_GEOMETRIES=NO`` não basta: o próprio GDAL documenta
+    que a opção só age quando a camada de saída tem tipo desconhecido, e aqui a
+    saída é criada com o tipo da entrada. O resultado é que bordas e toques
+    voltam embrulhados em ``GEOMETRYCOLLECTION`` — que o GeoPackage aceita fora
+    da especificação, e que derruba o GDAL na rodada seguinte de um
+    encadeamento, sem exceção Python.
+    """
+    from shapely.geometry import GeometryCollection
+    from shapely.ops import unary_union
+
+    dimensoes = {
+        _DIMENSAO_POR_TIPO.get(tipo)
+        for tipo in referencia.geom_type.dropna().unique()
+    } - {None}
+    if not dimensoes:
+        return resultado
+    alvo = max(dimensoes)
+
+    def compatibilizar(geometria: Any) -> Any:
+        if geometria is None or geometria.is_empty:
+            return None
+        if _DIMENSAO_POR_TIPO.get(geometria.geom_type) == alvo:
+            return geometria
+        if isinstance(geometria, GeometryCollection):
+            partes = [
+                parte for parte in geometria.geoms
+                if _DIMENSAO_POR_TIPO.get(parte.geom_type) == alvo and not parte.is_empty
+            ]
+            if partes:
+                return unary_union(partes)
+        return None
+
+    ajustado = resultado.copy()
+    ajustado["geometry"] = [compatibilizar(g) for g in ajustado.geometry]
+    return ajustado[ajustado.geometry.notna()].reset_index(drop=True)
+
+
+def _overlay_ogr(
+    gdf1: gpd.GeoDataFrame,
+    gdf2: gpd.GeoDataFrame,
+    tipo_overlay: str,
+    *,
+    prefixo_1: str | None = None,
+    prefixo_2: str | None = None,
+) -> gpd.GeoDataFrame:
+    """Executa o overlay pelo motor nativo do OGR, preservando os atributos.
+
+    As camadas trafegam por GeoPackage temporário em vez de serem remontadas
+    feição a feição em Python: a serialização é feita em C pelo pyogrio, e o
+    OGR processa por feição, sem materializar o resultado inteiro em memória.
+    """
+    from osgeo import gdal, ogr
+
+    gdal.UseExceptions()
+    metodo = _OVERLAY_OGR[tipo_overlay]
+
+    # KEEP_LOWER_DIMENSION_GEOMETRIES=NO é o equivalente do keep_geom_type do
+    # GeoPandas, e não é opcional: sem ele o recorte devolve as bordas e toques
+    # como linhas e pontos dentro de GEOMETRYCOLLECTION. Além de fugir da
+    # semântica do ArcGIS, essas coleções reentram na rodada seguinte de um
+    # encadeamento e derrubam o processo dentro do GDAL, sem exceção Python.
+    opcoes = ["PROMOTE_TO_MULTI=YES", "KEEP_LOWER_DIMENSION_GEOMETRIES=NO"]
+    if prefixo_1:
+        opcoes.append(f"INPUT_PREFIX={prefixo_1}")
+    if prefixo_2:
+        opcoes.append(f"METHOD_PREFIX={prefixo_2}")
+
+    # ignore_cleanup_errors: no Windows o GDAL pode reter o handle do GeoPackage
+    # por um instante após a liberação, e falhar a limpeza de um diretório
+    # temporário não pode derrubar um geoprocesso que já produziu resultado.
+    with tempfile.TemporaryDirectory(prefix="slt_overlay_", ignore_cleanup_errors=True) as pasta:
+        base = Path(pasta)
+        caminho_1, caminho_2 = base / "entrada.gpkg", base / "metodo.gpkg"
+        caminho_saida = base / "saida.gpkg"
+        gdf1.to_file(caminho_1, layer="entrada", driver="GPKG")
+        gdf2.to_file(caminho_2, layer="metodo", driver="GPKG")
+
+        fonte_1 = ogr.Open(str(caminho_1))
+        fonte_2 = ogr.Open(str(caminho_2))
+        camada_1, camada_2 = fonte_1.GetLayer(), fonte_2.GetLayer()
+
+        destino = ogr.GetDriverByName("GPKG").CreateDataSource(str(caminho_saida))
+        saida = destino.CreateLayer(
+            "resultado", camada_1.GetSpatialRef(), camada_1.GetGeomType()
+        )
+        erro = getattr(camada_1, metodo)(camada_2, saida, options=opcoes)
+        if erro != ogr.OGRERR_NONE:
+            raise RuntimeError(f"O overlay {tipo_overlay} falhou no OGR (código {erro})")
+
+        # Toda referência a camada precisa cair junto com a fonte de dados: uma
+        # ogr.Layer viva mantém o GeoPackage aberto, e no Windows isso impede a
+        # remoção do diretório temporário.
+        del camada_1, camada_2, saida
+        destino = fonte_1 = fonte_2 = None
+        bruto = gpd.read_file(caminho_saida, layer="resultado")
+
+    return _restringir_dimensao(bruto, gdf1)
 
 
 class GeoespacialService:
@@ -174,16 +311,54 @@ class GeoespacialService:
             }
 
     def obter_camada_dados(self, camada_id: str) -> gpd.GeoDataFrame:
+        """Devolve a camada, preferindo o arquivo do acervo ao banco.
+
+        Geoprocesso consome a camada INTEIRA, e para leitura completa o arquivo
+        ganha do banco com folga: no aferimento do MapServer, GeoPackage lê em
+        0,042s contra 0,053s do PostGIS nativo, e aqui o PostGIS ainda é remoto,
+        somando rede a cada leitura. O banco reconstrói o GeoDataFrame linha a
+        linha, desserializando geometria; o arquivo entrega em bloco, em C.
+
+        O banco continua sendo a resposta certa para leitura filtrada por área
+        ou atributo, junção e acesso concorrente — e permanece como retaguarda
+        aqui, para camadas sem arquivo (saídas de geoprocesso) ou cujo arquivo
+        tenha sumido.
+        """
         cached = self._camadas.get(camada_id)
         if cached is not None:
             return cached
-        loaded = camada_geoespacial_repository.carregar_vetor(camada_id)
-        if loaded is None:
-            raise ValueError(f"Camada {camada_id} não encontrada")
-        gdf, _ = loaded
+
+        gdf = self._ler_do_acervo(camada_id)
+        if gdf is None:
+            loaded = camada_geoespacial_repository.carregar_vetor(camada_id)
+            if loaded is None:
+                raise ValueError(f"Camada {camada_id} não encontrada")
+            gdf, _ = loaded
+
         self._camadas[camada_id] = gdf
         self._catalogar_persistidas()
         return gdf
+
+    def _ler_do_acervo(self, camada_id: str) -> gpd.GeoDataFrame | None:
+        """Lê a camada do arquivo registrado, ou devolve None se não der."""
+        if not self._metadados.get(camada_id):
+            self._catalogar_persistidas()
+        metadata = self._metadados.get(camada_id) or {}
+        relativo = metadata.get("caminho_arquivo")
+        if not relativo:
+            return None
+        try:
+            caminho = project_path(str(relativo))
+        except ValueError:
+            return None
+        if not caminho.exists():
+            return None
+        try:
+            return cast(gpd.GeoDataFrame, gpd.read_file(caminho))
+        except Exception:
+            # Arquivo ilegível não pode impedir o acesso à camada: o banco
+            # responde em seguida.
+            return None
 
     def obter_raster_dados(self, raster_id: str) -> np.ndarray:
         cached = self._rasters.get(raster_id)
@@ -903,11 +1078,19 @@ class GeoespacialService:
         resolver_conflitos_campos: bool = True,
         regra_nomenclatura: str = "<fonte_id>__<nome_campo>",
     ) -> dict[str, Any]:
-        """Sobrepõe camadas com operação de overlay (equivalente ArcGIS: Identity/Intersect/Union/Erase)."""
-        operacoes_validas = {"identity", "intersection", "union", "difference", "symmetric_difference"}
-        if tipo_overlay not in operacoes_validas:
+        """Sobrepõe camadas pelo motor nativo do OGR (Identity/Intersection/Union/Erase).
+
+        Usa ``ogr.Layer.Identity`` e irmãs — a mesma família de operadores que o
+        ArcGIS espelha — em vez de ``gpd.overlay``. A diferença que importa é a
+        preservação de atributos: o OGR carrega TODOS os campos das duas camadas
+        para a saída, prefixados por camada, enquanto o caminho anterior só
+        tratava os campos homônimos e deixava o restante à mercê do chamador.
+        Foi por aí que ``criterio_id``, ``severidade`` e ``base_legal`` sumiram
+        dos produtos consolidados da Fase 1.
+        """
+        if tipo_overlay not in _OVERLAY_OGR:
             raise ValueError(
-                f"Tipo de overlay inválido: {tipo_overlay!r}. Use um de {sorted(operacoes_validas)}."
+                f"Tipo de overlay inválido: {tipo_overlay!r}. Use um de {sorted(_OVERLAY_OGR)}."
             )
 
         gdf1 = self.obter_camada_dados(camada_id_1)
@@ -915,17 +1098,20 @@ class GeoespacialService:
         if gdf1.crs and gdf2.crs and gdf1.crs != gdf2.crs:
             gdf2 = gdf2.to_crs(gdf1.crs)
 
-        # keep_geom_type=True garante que a saída mantenha o tipo geométrico da entrada,
-        # como no ArcGIS (evita fragmentos de linha/ponto e GeometryCollection).
-        resultado = gpd.overlay(gdf1, gdf2, how=tipo_overlay, keep_geom_type=True)
-
-        # Resolver conflitos de campos
+        # Só a camada que ENTRA é prefixada. Prefixar também a de base quebraria
+        # o encadeamento: num consolidador a base é a saída da volta anterior, e
+        # seus campos ganhariam um prefixo novo a cada rodada — na sétima volta
+        # cada nome carregaria sete prefixos empilhados. Prefixar um dos lados já
+        # basta para desambiguar campos homônimos.
+        prefixo_2 = None
         if resolver_conflitos_campos:
-            cols_comuns = set(gdf1.columns) & set(gdf2.columns) - {"geometry"}
-            for col in cols_comuns:
-                resultado[f"{camada_id_1}__{col}"] = resultado[col + "_1"]
-                resultado[f"{camada_id_2}__{col}"] = resultado[col + "_2"]
-                resultado = resultado.drop(columns=[col + "_1", col + "_2"])
+            prefixo_2 = _prefixo_overlay(
+                regra_nomenclatura, self._nome_para_prefixo(camada_id_2)
+            )
+
+        resultado = _overlay_ogr(
+            gdf1, gdf2, tipo_overlay, prefixo_1=None, prefixo_2=prefixo_2
+        )
 
         nova_camada_id = self.registrar_camada(resultado, f"Overlay {tipo_overlay}", "OP-05")
 
@@ -933,7 +1119,16 @@ class GeoespacialService:
             "camada_id": nova_camada_id,
             "feicoes": len(resultado),
             "tipo_overlay": tipo_overlay,
+            "motor": "ogr",
+            "atributos": [c for c in resultado.columns if c != "geometry"],
         }
+
+    def _nome_para_prefixo(self, camada_id: str) -> str:
+        """Rótulo curto da camada para prefixar seus campos na saída do overlay."""
+        nome = str(self._metadados.get(camada_id, {}).get("nome") or camada_id)
+        limpo = unicodedata.normalize("NFKD", nome).encode("ascii", "ignore").decode("ascii")
+        limpo = re.sub(r"[^A-Za-z0-9]+", "_", limpo).strip("_").lower()
+        return limpo or str(camada_id)
 
     async def classificar_por_feicao_fase1(
         self,
@@ -1257,10 +1452,10 @@ class GeoespacialService:
         """Persiste camada ou raster, inferindo o formato pela extensão da saída.
 
         Independente do valor recebido em ``destino``, a gravação ocorre sempre
-        na subpasta correta dentro de ``data/geoespacial/outputs`` — destino
-        único de saídas geoprocessadas (``vetor``, ``raster`` ou ``geodatabase``).
-        A categoria do dado é determinada pela natureza do recurso em memória
-        e validada contra a extensão do arquivo ANTES de qualquer I/O.
+        em ``data/geoespacial/outputs`` — destino único de saídas geoprocessadas.
+        A categoria do dado (``vetor`` ou ``raster``) é determinada pela natureza
+        do recurso em memória e validada contra a extensão do arquivo ANTES de
+        qualquer I/O; ela qualifica o dado, mas não cria subpasta.
         """
         self._catalogar_persistidas()
         del destino

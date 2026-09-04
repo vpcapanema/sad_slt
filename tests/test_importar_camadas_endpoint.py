@@ -8,6 +8,7 @@ from pytest import MonkeyPatch
 
 from api.repositories import camada_geoespacial_repository as repository
 from api.server import app
+from api.services import geospatial_upload_storage as storage
 from api.services.session_service import SessionUser, cookie_name, create_token
 
 
@@ -250,7 +251,7 @@ def test_inspecionar_camadas_returns_internal_error_for_unexpected_failure(
 
 def test_importar_camadas_endpoint_persists_validated_point() -> None:
     name = "teste_endpoint_novo.geojson"
-    path = Path("data/geoespacial/uploads/datastorage/vetor") / name
+    path = Path("data/geoespacial/uploads/datastorage/vetor") / storage.PASTA_PADRAO / name
     payload = json.dumps({
         "type": "FeatureCollection",
         "crs": {"type": "name", "properties": {"name": "EPSG:4326"}},
@@ -296,7 +297,7 @@ def test_importar_camadas_endpoint_persists_validated_point() -> None:
 
 def test_imported_layer_uses_normalized_storage_name_and_friendly_alias() -> None:
     original_name = "PontosPrioritários 2026.GEOJSON"
-    normalized_path = Path("data/geoespacial/uploads/datastorage/vetor/pontos_prioritarios_2026.geojson")
+    normalized_path = Path("data/geoespacial/uploads/datastorage/vetor") / storage.PASTA_PADRAO / "pontos_prioritarios_2026.geojson"
     payload = json.dumps({
         "type": "FeatureCollection",
         "crs": {"type": "name", "properties": {"name": "EPSG:4326"}},
@@ -324,7 +325,7 @@ def test_imported_layer_uses_normalized_storage_name_and_friendly_alias() -> Non
 
 def test_importar_camadas_endpoint_persists_and_marks_invalid_geometry() -> None:
     name = "teste_endpoint_geometria_invalida.geojson"
-    path = Path("data/geoespacial/uploads/datastorage/vetor") / name
+    path = Path("data/geoespacial/uploads/datastorage/vetor") / storage.PASTA_PADRAO / name
     payload = json.dumps({
         "type": "FeatureCollection",
         "crs": {"type": "name", "properties": {"name": "EPSG:4326"}},

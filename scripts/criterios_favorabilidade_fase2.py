@@ -8,13 +8,25 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
-MATRIX_PATH = ROOT / "documentacao" / "matrizes" / "Matriz_Criterios_Premissas_PLI-SP_v3.xlsx"
+MATRIX_PATH = ROOT / "documentacao" / "matrizes" / "Matriz_Criterios_Premissas_PLI-SP_v3-conceitual.xlsx"
 MATRIX_SHEET = "Matriz Crit Premissas v3"
 MATRIX_STAGE = "Favorabilidade territorial em grade e da rede"
 
 
 @dataclass(frozen=True)
 class Criterion:
+    """Critério da matriz v3.
+
+    ``available=False`` retira o critério da normalização e da superfície. Há
+    dois motivos distintos para isso, registrados em ``motivo``:
+
+    - ``sem_dado``: o insumo ainda não existe; o critério volta quando a fonte
+      for obtida (caso de pavimento e sazonalidade, pendentes no DER-SP);
+    - ``redundante``: o critério não acrescenta informação sobre outro já
+      presente e foi removido em definitivo, para não inflar o peso efetivo do
+      fator latente que ambos medem.
+    """
+
     code: str
     group: str
     matrix_name: str
@@ -22,6 +34,7 @@ class Criterion:
     components: tuple[str, ...]
     alias: str
     available: bool = True
+    motivo: str = ""
 
 
 GRADE_CRITERIA = (
@@ -56,6 +69,7 @@ NETWORK_CRITERIA = (
     Criterion(
         "R04", "rede", "Proximidade com segmentos de pavimento degradado",
         "crit_r04_pavimento", (), "Proximidade com segmentos de pavimento degradado", False,
+        "sem_dado",
     ),
     Criterion(
         "R05", "rede", "Proximidade com segmentos de geometria deficiente",
@@ -65,11 +79,16 @@ NETWORK_CRITERIA = (
     Criterion(
         "R06", "rede", "Proximidade com segmentos de forte sobrecarga sazonal",
         "crit_r06_sazonalidade", (), "Proximidade com segmentos de forte sobrecarga sazonal", False,
+        "sem_dado",
     ),
     Criterion(
+        # Removido: c7_polo_m = min(c10_porto_m, c10_aero_m). São exatamente as
+        # duas distâncias brutas do R10, apenas agregadas por mínimo em vez de
+        # média. Não há insumo próprio, então nenhuma informação é perdida ao
+        # manter somente o R10.
         "R07", "rede", "Maior acessibilidade temporal aos destinos relevantes",
         "crit_r07_acess_temporal", ("f_c7_polo",),
-        "Maior acessibilidade temporal aos destinos relevantes",
+        "Maior acessibilidade temporal aos destinos relevantes", False, "redundante",
     ),
     Criterion(
         "R08", "rede", "Maior acessibilidade funcional a eixos hidroviários eficientes",
@@ -97,9 +116,12 @@ NETWORK_CRITERIA = (
         "Proximidade com segmentos de alta incidência de acidentes com usuários vulneráveis",
     ),
     Criterion(
+        # Removido: densidade de sinistros graves por km do InfoSiga, a mesma
+        # medida do R11 sob outro rótulo — Spearman 0,966 entre os dois na
+        # camada normalizada. O R11 é mantido por separar óbito de ferido grave.
         "R13", "rede", "Proximidade com concentração elevada de pontos críticos de acidentes",
         "crit_r13_pontos_criticos", ("f_c13_graves",),
-        "Proximidade com concentração elevada de pontos críticos de acidentes",
+        "Proximidade com concentração elevada de pontos críticos de acidentes", False, "redundante",
     ),
     Criterion(
         "R14", "rede", "Proximidade com segmentos de alto conflito urbano-regional",
@@ -112,9 +134,15 @@ NETWORK_CRITERIA = (
         "Proximidade com segmentos de alta interferência urbano-portuária",
     ),
     Criterion(
+        # Removido: distância ao nó mais próximo de uma união de 2.020 pontos
+        # (portos, aeroportos, estações ferroviárias e terminais hidroviários)
+        # que contém os destinos de R08, R09 e R10. Como as estações dominam a
+        # união, o resultado mede proximidade ferroviária (Spearman 0,792 com o
+        # R09) e não intermodalidade. As três acessibilidades modais
+        # específicas são preservadas em seu lugar.
         "R16", "rede", "Maior acessibilidade funcional a nós intermodais estratégicos",
         "crit_r16_intermodal", ("f_c16_interm",),
-        "Maior acessibilidade funcional a nós intermodais estratégicos",
+        "Maior acessibilidade funcional a nós intermodais estratégicos", False, "redundante",
     ),
 )
 

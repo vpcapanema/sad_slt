@@ -1,0 +1,211 @@
+/* Biblioteca — Favorabilidade de grade e da rede.
+   Contêiner, cabeçalho e seções vêm de ahp-module.css/fase23-execucao.css/
+   fase1-execucao.css — a mesma família de fase-1/fase-2 (card.fase-titulo-card,
+   card.ahp-step-section, ahp-section-label/ahp-section-body). Aqui só ficam as
+   peças que essas folhas não têm: o sumário, os cartões de critério e a
+   galeria de mapas. Escala tipográfica ambiente (rótulo ~0,7rem, texto de
+   apoio ~0,78rem, corpo ~0,82rem) para não destoar do resto da página. */
+
+.doc-sumario {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.doc-sumario a {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--pli-border, #d8dee4);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  text-decoration: none;
+  color: var(--pli-blue, #116593);
+  background: #fff;
+}
+
+.doc-sumario a:hover { background: #eef3f7; }
+
+.doc-subtitulo {
+  margin: 1.5rem 0 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--pli-deep, #003b5a);
+}
+
+.doc-duas-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0.9rem;
+  margin-top: 0.9rem;
+}
+
+.doc-destaque {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--pli-border, #d8dee4);
+  border-left: 3px solid var(--pli-blue, #116593);
+  border-radius: 0.5rem;
+  background: #f7f9fa;
+}
+
+.doc-destaque h3 { margin: 0 0 0.4rem; font-size: 0.85rem; color: var(--pli-deep, #003b5a); }
+.doc-destaque p { font-size: 0.82rem; }
+
+.doc-numero {
+  margin: 0.6rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--pli-blue, #116593);
+}
+
+.doc-numero small {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: #5a7183;
+}
+
+/* Uma coluna por critério: a premissa é texto corrido e precisa de medida de
+   leitura confortável; espremer em duas colunas prejudicaria o argumento. */
+.doc-criterios {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr));
+  gap: 1rem;
+}
+
+.doc-criterio {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--pli-border, #d8dee4);
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.doc-criterio header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+
+.doc-criterio h4 { margin: 0; font-size: 0.85rem; flex: 1 1 14rem; color: var(--pli-deep, #003b5a); }
+
+.doc-codigo {
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: var(--pli-blue, #116593);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.doc-tag {
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: #eef3f7;
+  color: #5a7183;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.doc-premissa {
+  margin: 0 0 0.7rem;
+  padding: 0.55rem 0.75rem;
+  border-left: 3px solid #b7c7d8;
+  background: #f7f9fa;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #33475a;
+}
+
+.doc-alerta {
+  margin: 0 0 0.7rem;
+  padding: 0.45rem 0.65rem;
+  border-left: 3px solid #d97706;
+  background: #fffbeb;
+  font-size: 0.76rem;
+  color: #92400e;
+}
+
+.doc-ficha { display: grid; gap: 0.4rem; margin: 0 0 0.8rem; }
+.doc-ficha > div { display: grid; grid-template-columns: 11rem 1fr; gap: 0.5rem; }
+.doc-ficha dt { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.03em; color: #5a7183; }
+.doc-ficha dd { margin: 0; font-size: 0.8rem; color: var(--pli-text, #1f2937); overflow-wrap: anywhere; }
+
+.doc-favorabilidade code {
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  background: #eef3f7;
+  font-size: 0.78rem;
+}
+
+.doc-figura { margin: 0; }
+
+.doc-figura img,
+.doc-galeria-item img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--pli-border, #d8dee4);
+  border-radius: 0.4rem;
+  background: #f1f5f9;
+}
+
+.doc-figura figcaption,
+.doc-galeria-item figcaption {
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: #5a7183;
+  line-height: 1.4;
+}
+
+.doc-galeria {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: 1rem;
+  margin-top: 0.9rem;
+}
+
+.doc-galeria--destaque { grid-template-columns: repeat(auto-fit, minmax(25rem, 1fr)); }
+
+.doc-galeria-item { margin: 0; }
+.doc-galeria-meta { display: block; }
+
+.doc-tabela {
+  width: 100%;
+  margin-top: 0.9rem;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.doc-tabela th,
+.doc-tabela td {
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid var(--pli-border, #d8dee4);
+  text-align: left;
+  vertical-align: top;
+}
+
+.doc-tabela th {
+  background: #f7f9fa;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #5a7183;
+}
+
+.doc-formula {
+  margin: 0.9rem 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--pli-border, #d8dee4);
+  border-radius: 0.5rem;
+  background: #f7f9fa;
+  text-align: center;
+}
+
+.doc-formula code { font-size: 0.95rem; background: none; }
+.doc-formula p { margin: 0.45rem 0 0; font-size: 0.76rem; color: #5a7183; }
+
+.doc-lista { margin: 0.9rem 0 0; padding-left: 1.1rem; }
+.doc-lista li { margin-bottom: 0.5rem; font-size: 0.82rem; line-height: 1.5; }

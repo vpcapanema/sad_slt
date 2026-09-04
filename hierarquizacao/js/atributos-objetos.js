@@ -287,7 +287,7 @@
             ? (risco.nivel || risco.severidade || "Sobreposição encontrada")
             : "—";
           $(".atributo-valor-original", td).textContent = risco
-            ? (risco.descricao || "Risco da Fase 1")
+            ? (risco.descricao || "Risco da Elegibilidade territorial")
             : "Sem sobreposição";
           if (risco) {
             const select = document.createElement("select");

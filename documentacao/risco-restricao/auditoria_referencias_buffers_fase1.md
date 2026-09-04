@@ -2,7 +2,7 @@
 
 Status: em andamento  
 Início: 2026-08-03  
-Escopo: `data/geoespacial/buffers_zona_amortecimento_fase1.json`
+Escopo: `config/geoespacial/buffers_zona_amortecimento_fase1.json`
 
 ## Método
 

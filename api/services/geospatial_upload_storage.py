@@ -17,11 +17,18 @@ from api.path_policy import project_path, project_relative
 VECTOR_EXTENSIONS = {
     ".shp", ".geojson", ".json", ".kml", ".gml", ".fgb",
     ".tab", ".mif", ".parquet", ".feather",
+    # Contêineres vetoriais: um GeoPackage é formato vetorial, não uma
+    # categoria à parte. Tratá-lo como "geodatabase" fazia o mesmo arquivo
+    # ser roteado para pastas diferentes conforme a porta de entrada
+    # (ver api/path_policy.py, que sempre o classificou como vetor).
+    ".gpkg", ".geodatabase",
 }
 RASTER_EXTENSIONS = {
     ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2", ".grd", ".nc",
 }
-GEODATABASE_EXTENSIONS = {".gpkg", ".geodatabase"}
+# Contêineres que agregam camadas: preferidos como dataset principal e
+# preservados byte a byte (renomear membro interno de um .gdb o corrompe).
+CONTAINER_EXTENSIONS = {".gpkg", ".geodatabase", ".gdb"}
 ARCHIVE_EXTENSIONS = {".zip", ".rar", ".7z", ".tar", ".tgz", ".gz", ".bz2", ".xz"}
 IGNORED_EXTENSIONS = {
     ".dbf", ".shx", ".prj", ".cpg", ".qix", ".sbn", ".sbx", ".xml",
@@ -82,7 +89,7 @@ def _safe_name(name: str) -> str:
 
 def _normalize_extracted_tree(root: Path, category: str) -> None:
     """Normaliza cópias extraídas, sem tocar no conteúdo original do pacote."""
-    if category == "geodatabase":
+    if _contem_container(root):
         return
     paths = sorted(root.rglob("*"), key=lambda path: len(path.parts), reverse=True)
     for path in paths:
@@ -93,6 +100,14 @@ def _normalize_extracted_tree(root: Path, category: str) -> None:
         if destination.exists():
             raise ValueError(f"A normalização gera nomes duplicados no pacote: {normalized}")
         path.rename(destination)
+
+
+def _contem_container(root: Path) -> bool:
+    """Um .gdb/.gpkg no pacote impede renomear membros: quebraria o contêiner."""
+    return any(
+        path.suffix.lower() in CONTAINER_EXTENSIONS
+        for path in root.rglob("*")
+    )
 
 
 def _archive_kind(path: Path) -> str | None:
@@ -146,10 +161,8 @@ def _member_category(name: str) -> str | None:
     normalized = name.replace("\\", "/")
     parts = PurePosixPath(normalized).parts
     if any(part.lower().endswith(".gdb") for part in parts):
-        return "geodatabase"
+        return "vetor"
     suffix = Path(normalized).suffix.lower()
-    if suffix in GEODATABASE_EXTENSIONS:
-        return "geodatabase"
     if suffix in VECTOR_EXTENSIONS:
         return "vetor"
     if suffix in RASTER_EXTENSIONS:
@@ -164,7 +177,7 @@ def _classify(path: Path, members: Iterable[str] = ()) -> str:
         category = _member_category(path.name)
         categories = {category} if category else set()
     if not categories:
-        raise ValueError("Nenhum vetor, raster ou geodatabase reconhecido no upload")
+        raise ValueError("Nenhum dado vetorial ou raster reconhecido no upload")
     if len(categories) > 1:
         names = ", ".join(sorted(categories))
         raise ValueError(f"Pacote geoespacial misto ({names}); envie cada categoria separadamente")
@@ -218,14 +231,20 @@ def _extract(path: Path, destination: Path, kind: str) -> None:
 
 
 def _primary_dataset(root: Path, category: str) -> Path:
-    if category == "geodatabase":
+    if category == "raster":
+        candidates = sorted(path for path in root.rglob("*") if path.is_file() and path.suffix.lower() in RASTER_EXTENSIONS)
+    else:
+        # Contêiner tem precedência: um .gdb/.gpkg agrega camadas e descreve o
+        # pacote melhor do que um shapefile solto que porventura o acompanhe.
         gdb_directories = sorted(path for path in root.rglob("*") if path.is_dir() and path.suffix.lower() == ".gdb")
         if gdb_directories:
             return gdb_directories[0]
-        candidates = sorted(path for path in root.rglob("*") if path.is_file() and path.suffix.lower() in GEODATABASE_EXTENSIONS)
-    elif category == "raster":
-        candidates = sorted(path for path in root.rglob("*") if path.is_file() and path.suffix.lower() in RASTER_EXTENSIONS)
-    else:
+        containers = sorted(
+            path for path in root.rglob("*")
+            if path.is_file() and path.suffix.lower() in CONTAINER_EXTENSIONS
+        )
+        if containers:
+            return containers[0]
         candidates = sorted(path for path in root.rglob("*") if path.is_file() and path.suffix.lower() in VECTOR_EXTENSIONS)
     if not candidates:
         raise ValueError(f"Conteúdo {category} não foi localizado depois da extração")
@@ -276,34 +295,44 @@ def discard_prepared(prepared: PreparedUpload) -> None:
         shutil.rmtree(prepared.extracted_path)
 
 
-def _safe_group(grupo: str | None) -> str | None:
-    """Valida um nome de subpasta de agrupamento sem quebrar acentuação legível.
+# Pasta onde a camada é guardada quando o upload não escolhe nenhuma.
+PASTA_PADRAO = "NAO_CLASSIFICADAS"
 
-    Preserva o nome informado (ex.: ``RESTRIÇÃO``) apenas bloqueando separadores
-    de caminho e travessia de diretório, evitando escrita fora do datastorage.
+
+def pasta_segura(pasta: str | None) -> str:
+    """Devolve a pasta de destino, sempre — camada nunca fica na raiz.
+
+    Toda camada mora em ``<categoria>/<pasta>/``. Sem essa regra, o acervo
+    acumulou a MESMA camada em dois lugares — solta na raiz e dentro da pasta —,
+    doze delas idênticas byte a byte, e nada no sistema apontava a duplicação.
+    Upload sem pasta escolhida vai para ``NAO_CLASSIFICADAS``, que é visível e
+    triável, em vez de se misturar às pastas na raiz.
+
+    O nome informado é preservado com acentuação legível (ex.: ``RESTRIÇÃO``);
+    só separadores de caminho e travessia de diretório são bloqueados.
     """
-    if grupo is None:
-        return None
-    texto = grupo.strip()
+    if pasta is None:
+        return PASTA_PADRAO
+    texto = pasta.strip()
     if not texto:
-        return None
+        return PASTA_PADRAO
     if texto in {".", ".."} or "/" in texto or "\\" in texto or "\x00" in texto:
-        raise ValueError(f"Nome de grupo inválido: {grupo!r}")
+        raise ValueError(f"Nome de pasta inválido: {pasta!r}")
     return texto
 
 
-def commit_prepared(prepared: PreparedUpload, grupo: str | None = None) -> StoredUpload:
+def commit_prepared(prepared: PreparedUpload, pasta: str | None = None) -> StoredUpload:
     """Move um upload previamente validado do staging para o destino definitivo.
 
     Para pacotes compactados, apenas a extração normalizada é persistida em
     ``<categoria>/<nome>.contents/``; o binário compactado é descartado após a
-    extração para não duplicar o mesmo conteúdo no datastorage. Quando ``grupo``
-    é informado, os arquivos são publicados em ``<categoria>/<grupo>/`` para
-    organizar o datastorage em subpastas temáticas (ex.: RISCO, RESTRIÇÃO).
+    extração para não duplicar o mesmo conteúdo no datastorage. Os arquivos são
+    sempre publicados em ``<categoria>/<pasta>/``; sem pasta escolhida, vão para
+    ``NAO_CLASSIFICADAS``.
     """
-    grupo_seguro = _safe_group(grupo)
+    destino = pasta_segura(pasta)
     base = project_path(f"data/geoespacial/uploads/datastorage/{prepared.category}")
-    folder = base / grupo_seguro if grupo_seguro else base
+    folder = base / destino
     folder.mkdir(parents=True, exist_ok=True)
 
     if prepared.archive and prepared.extracted_path is not None:

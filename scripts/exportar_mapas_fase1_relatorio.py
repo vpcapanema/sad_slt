@@ -27,7 +27,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data" / "geoespacial"
 LOCAL_DIR = DATA_DIR / "local"
 OUTPUT_DIR = DATA_DIR / "relatorios" / "mapas_fase1"
-LIBRARY_PATH = DATA_DIR / "biblioteca_criterios_risco_restricao.json"
+CONFIG_DIR = ROOT / "config" / "geoespacial"
+LIBRARY_PATH = CONFIG_DIR / "biblioteca_criterios_risco_restricao.json"
 STATE_PATH = LOCAL_DIR / "limites_administrativos" / "uf_sp" / "uf_sp.shp"
 MAP_CRS = "EPSG:3857"
 

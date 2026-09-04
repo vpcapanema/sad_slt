@@ -1,6 +1,6 @@
 /**
  * Resumo compartilhado das fases de hierarquização.
- * Reproduz o "summary" da Fase 1 (seção 1 e card "Camada de demandas" da seção 3)
+ * Reproduz o "summary" da Elegibilidade territorial (seção 1 e card "Camada de demandas" da seção 3)
  * para reutilização nas Fases 2 e 3. Objetos são clicáveis e abrem o modal
  * `#modal-objetos` renderizado por SLTObjetoDetalhe.
  */

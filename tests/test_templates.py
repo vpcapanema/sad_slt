@@ -8,9 +8,7 @@ from urllib.parse import urljoin, urlparse
 from fastapi.testclient import TestClient
 
 from api.server import (
-    AHP_CLEAN_PAGES,
     GEOSPATIAL_PAGES,
-    HIERARQUIZACAO_PROCESS_PAGES,
     PUBLIC_CADASTRO_PAGES,
     RESTRICTED_PAGES,
     app,
@@ -61,7 +59,7 @@ def test_no_legacy_html_remains_outside_template_directory() -> None:
 def test_all_page_templates_compile_and_render() -> None:
     request = SimpleNamespace(url=SimpleNamespace(path="/teste/"))
     page_templates = sorted(PAGES_ROOT.rglob("*.html"))
-    assert len(page_templates) == 51
+    assert len(page_templates) == 53
 
     for path in page_templates:
         name = path.relative_to(TEMPLATES_ROOT).as_posix()
@@ -131,16 +129,12 @@ def _canonical_pages() -> list[str]:
         "/restrict/hierarquizacao/fase-1/",
         "/restrict/hierarquizacao/fase-2/",
         "/restrict/hierarquizacao/fase-3/",
-        "/restrict/ahp/",
         "/restrict/geoespacial/",
     ]
     pages.extend(f"/public/cadastro/{name}/" for name in PUBLIC_CADASTRO_PAGES)
     pages.extend(f"/restrict/{name}/" for name in RESTRICTED_PAGES)
-    pages.extend(f"/restrict/ahp/{name}/" for name in AHP_CLEAN_PAGES)
-    pages.extend(
-        f"/restrict/hierarquizacao/processos/{name}/"
-        for name in HIERARQUIZACAO_PROCESS_PAGES
-    )
+    # AHP e as etapas avulsas da rodada foram descontinuados (410); os templates
+    # seguem versionados, mas as rotas não servem mais página.
     pages.extend(f"/restrict/geoespacial/{name}/" for name in GEOSPATIAL_PAGES)
     return sorted(set(pages))
 
@@ -204,12 +198,12 @@ def test_all_internal_page_links_resolve() -> None:
 def test_frontend_reference_data_is_explicitly_available() -> None:
     client = TestClient(app)
     references = (
-        "/data/catalogo-slt.json",
-        "/data/referencia-institucional.json",
-        "/data/referencia-classificacao.json",
-        "/data/matriz-criterios-premissas.json",
-        "/data/geoespacial/biblioteca_criterios_risco_restricao.json",
-        "/data/geoespacial/metricas_criterios_risco_restricao.json",
+        "/config/catalogo-slt.json",
+        "/config/referencia-institucional.json",
+        "/config/referencia-classificacao.json",
+        "/config/matriz-criterios-premissas.json",
+        "/config/geoespacial/biblioteca_criterios_risco_restricao.json",
+        "/config/geoespacial/metricas_criterios_risco_restricao.json",
     )
     for reference in references:
         assert client.get(reference).status_code == 200, reference

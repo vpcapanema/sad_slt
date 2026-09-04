@@ -61,7 +61,7 @@
       try {
         gpApp.adicionarCamadaGeoJsonEmMemoria(id, nome, geojson, {
           tipo: "vetorial (memória)",
-          origem: "Hierarquização Fase 2",
+          origem: "Hierarquização Favorabilidade de grade e da rede",
           geometria_tipo: "Point",
           simbologia: "status",
         });
@@ -182,7 +182,7 @@
           hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
           renderResumo(updated);
           renderResultados(updated);
-          if (window.SLTFeedback) window.SLTFeedback.success("Fase 2 executada. Confira os indicadores e o ranking abaixo.", "Extração concluída");
+          if (window.SLTFeedback) window.SLTFeedback.success("Favorabilidade de grade e da rede executada. Confira os indicadores e o ranking abaixo.", "Extração concluída");
         } catch (error) { erro(error); }
       };
     } catch (error) { erro(error); }

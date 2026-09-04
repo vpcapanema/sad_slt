@@ -28,7 +28,7 @@ algoritmo -> função -> fluxo
 
 As funções e os fluxos podem ser criados, editados, validados, executados e
 excluídos pela interface. Suas definições são persistidas em
-`data/geoespacial/definicoes.json`.
+`config/geoespacial/definicoes.json`.
 
 ## Princípio de implementação dos algoritmos
 

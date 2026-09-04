@@ -1,0 +1,279 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Biblioteca — Favorabilidade de grade e da rede{% endblock %}
+{% block classes_body %}ahp-module-page{% endblock %}
+{% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
+  <link rel="stylesheet" href="/assets/css/fase1-execucao.css">
+  <link rel="stylesheet" href="/assets/css/documentacao-favorabilidade.css">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+{% set grade = grade | default({}, true) %}
+{% set rede = rede | default({}, true) %}
+{% set normalizacao = normalizacao | default({}, true) %}
+{% set matriz_total = matriz_total | default(0, true) %}
+{% set criterios_grade = criterios_grade | default([], true) %}
+{% set criterios_rede = criterios_rede | default([], true) %}
+{% set variaveis_brutas = variaveis_brutas | default([], true) %}
+{% set superficies = superficies | default([], true) %}
+{% set manifesto_brutos = manifesto_brutos | default({}, true) %}
+{% set manifesto_normalizados = manifesto_normalizados | default({}, true) %}
+<div id="admin-session-bar" class="admin-session-bar hidden"></div>
+<main class="conteudo-principal app-main ahp-main fase-execucao-page doc-favorabilidade">
+  {% include "componentes/navegacao_fases_hierarquizacao.html" %}
+
+  <section class="secao-favorabilidade-de-grade-e-da-rede card fase-titulo-card">
+    <h1 class="ahp-page-title"><i class="fa-solid fa-book-atlas"></i> Favorabilidade de grade e da rede</h1>
+    <p class="fase-descricao">
+      Como as superfícies de favorabilidade foram construídas — da premissa que justifica cada
+      critério até o índice final, com o mapa de cada critério espacializado.
+    </p>
+    <nav class="doc-sumario" aria-label="Sumário">
+      <a href="#secao-premissa">1. Premissa</a>
+      <a href="#secao-criterios">2. Critérios</a>
+      <a href="#secao-dados">3. Dados</a>
+      <a href="#secao-espacializacao">4. Espacialização</a>
+      <a href="#secao-variaveis">5. Variáveis</a>
+      <a href="#secao-normalizacao">6. Normalização</a>
+      <a href="#secao-indices">7. Índices</a>
+    </nav>
+  </section>
+
+  <section class="secao-premissa card ahp-step-section" id="secao-premissa">
+    <div class="ahp-section-label"><span>1. A premissa</span></div>
+    <div class="ahp-section-body">
+      <p>
+        A elegibilidade responde <strong>onde é possível</strong> intervir: é um
+        filtro binário, e o território ou passa ou não passa. A favorabilidade
+        responde outra pergunta — <strong>onde vale mais a pena</strong> intervir
+        entre os lugares que passaram. Por isso ela é graduada e compensatória:
+        um critério fraco pode ser contrabalançado por outro forte, o que jamais
+        aconteceria num impedimento legal.
+      </p>
+      <p>
+        A leitura se faz em duas geometrias que respondem a naturezas distintas de
+        pergunta, e por isso não se misturam num índice só:
+      </p>
+      <div class="doc-duas-colunas">
+        <article class="doc-destaque">
+          <h3><i class="fa-solid fa-border-all"></i> Grade</h3>
+          <p>
+            O <strong>território</strong> como superfície contínua, lido pelo setor
+            censitário. Mede o que existe no lugar: massa econômica e
+            vulnerabilidade da população que ali vive.
+          </p>
+          <p class="doc-numero">{{ "{:,}".format(grade.get('feicoes', 0)).replace(",", ".") }} <small>setores censitários</small></p>
+        </article>
+        <article class="doc-destaque">
+          <h3><i class="fa-solid fa-road"></i> Rede</h3>
+          <p>
+            A <strong>infraestrutura</strong> como grafo, lida pelo subtrecho
+            rodoviário. Mede o desempenho do que já está construído: tráfego,
+            saturação, segurança e conexão intermodal.
+          </p>
+          <p class="doc-numero">{{ "{:,}".format(rede.get('feicoes', 0)).replace(",", ".") }} <small>subtrechos rodoviários</small></p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="secao-criterios card ahp-step-section" id="secao-criterios">
+    <div class="ahp-section-label"><span>2. Da premissa ao critério</span></div>
+    <div class="ahp-section-body">
+      <p class="ahp-help-text">
+        Cada critério nasce de uma premissa explícita — a frase que justifica por
+        que aquele aspecto do território deveria pesar na decisão. Sem a premissa,
+        o critério vira medida sem argumento. A matriz reúne
+        {{ matriz_total }} critérios das duas fases; {{ criterios_grade|length + criterios_rede|length }}
+        pertencem à favorabilidade.
+      </p>
+
+      {% for bloco in [('Grade', criterios_grade), ('Rede', criterios_rede)] %}
+      <h3 class="doc-subtitulo">{{ bloco[0] }} — {{ bloco[1]|length }} critérios</h3>
+      <div class="doc-criterios">
+        {% for criterio in bloco[1] %}
+        <article class="doc-criterio">
+          <header>
+            <span class="doc-codigo">{{ criterio.codigo }}</span>
+            <h4>{{ criterio.criterio }}</h4>
+            {% if criterio.dimensao %}<span class="doc-tag">{{ criterio.dimensao }}</span>{% endif %}
+          </header>
+          {% if criterio.premissa %}
+          <blockquote class="doc-premissa">{{ criterio.premissa }}</blockquote>
+          {% else %}
+          <p class="doc-alerta">Sem premissa declarada na matriz.</p>
+          {% endif %}
+          <dl class="doc-ficha">
+            {% if criterio.metrica %}<div><dt>O que é medido</dt><dd>{{ criterio.metrica }}</dd></div>{% endif %}
+            {% if criterio.unidade %}<div><dt>Unidade</dt><dd>{{ criterio.unidade }}</dd></div>{% endif %}
+            {% if criterio.relacao %}<div><dt>Relação com a favorabilidade</dt><dd>{{ criterio.relacao }}</dd></div>{% endif %}
+            <div><dt>Campo calculado</dt><dd><code>{{ criterio.campo }}</code></dd></div>
+            <div><dt>Componentes</dt><dd>{% for c in criterio.componentes %}<code>{{ c }}</code>{% if not loop.last %} · {% endif %}{% endfor %}</dd></div>
+            {% if criterio.fonte %}<div><dt>Fonte</dt><dd>{{ criterio.fonte }}</dd></div>{% endif %}
+          </dl>
+          {% if criterio.mapa %}
+          <figure class="doc-figura">
+            <img src="{{ criterio.mapa.url }}" alt="Mapa do critério {{ criterio.codigo }} — {{ criterio.criterio }}" loading="lazy">
+            <figcaption>
+              {{ criterio.mapa.alias }} — {{ criterio.mapa.unidade }}.
+              {{ "{:,}".format(criterio.mapa.feicoes or 0).replace(",", ".") }} feições.
+            </figcaption>
+          </figure>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="secao-dados card ahp-step-section" id="secao-dados">
+    <div class="ahp-section-label"><span>3. Seleção dos dados</span></div>
+    <div class="ahp-section-body">
+      <p>
+        Um critério só entra na conta quando existe dado público que o meça em todo
+        o estado. Critério sem dado íntegro fica declarado e indisponível — não é
+        preenchido por estimativa, porque isso criaria diferença de favorabilidade
+        onde só há diferença de informação.
+      </p>
+      <table class="doc-tabela">
+        <thead><tr><th>Geometria</th><th>Unidade de análise</th><th>Feições</th><th>Arquivo gerado</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Grade</td><td>Setor censitário</td>
+            <td>{{ "{:,}".format(grade.get('feicoes', 0)).replace(",", ".") }}</td>
+            <td><code>{{ grade.get('arquivo', '—')|replace('\\', '/') }}</code></td>
+          </tr>
+          <tr>
+            <td>Rede</td><td>Subtrecho rodoviário</td>
+            <td>{{ "{:,}".format(rede.get('feicoes', 0)).replace(",", ".") }}</td>
+            <td><code>{{ rede.get('arquivo', '—')|replace('\\', '/') }}</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="secao-espacializacao card ahp-step-section" id="secao-espacializacao">
+    <div class="ahp-section-label"><span>4. Espacialização</span></div>
+    <div class="ahp-section-body">
+      <p class="ahp-help-text">
+        Cada variável bruta foi levada à sua unidade de análise e exportada como
+        mapa para conferência visual. São {{ variaveis_brutas|length }} variáveis.
+        {% if manifesto_brutos.observacao %}<br><em>{{ manifesto_brutos.observacao }}</em>{% endif %}
+      </p>
+      <div class="doc-galeria">
+        {% for imagem in variaveis_brutas %}
+        <figure class="doc-galeria-item">
+          <img src="{{ imagem.url }}" alt="Espacialização de {{ imagem.alias }}" loading="lazy">
+          <figcaption>
+            <strong>{{ imagem.alias }}</strong>
+            <span class="doc-galeria-meta">
+              <code>{{ imagem.atributo }}</code> · {{ imagem.grupo }} · {{ imagem.unidade }}
+            </span>
+            {% if imagem.minimo is not none and imagem.maximo is not none %}
+            <span class="doc-galeria-meta">
+              intervalo {{ imagem.minimo }} — {{ imagem.maximo }}
+            </span>
+            {% endif %}
+          </figcaption>
+        </figure>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="secao-variaveis card ahp-step-section" id="secao-variaveis">
+    <div class="ahp-section-label"><span>5. Da variável ao critério</span></div>
+    <div class="ahp-section-body">
+      <p>
+        Uma variável bruta raramente é um critério. O critério é uma
+        <strong>composição</strong>: reúne as variáveis que, juntas, expressam o
+        conceito. A vulnerabilidade territorial, por exemplo, não é uma medida
+        única — combina renda, acesso a água, esgoto, coleta e alfabetização.
+      </p>
+      <table class="doc-tabela">
+        <thead><tr><th>Código</th><th>Critério</th><th>Campo</th><th>Variáveis que o compõem</th></tr></thead>
+        <tbody>
+          {% for criterio in criterios_grade + criterios_rede %}
+          <tr>
+            <td><span class="doc-codigo">{{ criterio.codigo }}</span></td>
+            <td>{{ criterio.criterio }}</td>
+            <td><code>{{ criterio.campo }}</code></td>
+            <td>{% for c in criterio.componentes %}<code>{{ c }}</code>{% if not loop.last %} · {% endif %}{% endfor %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="secao-normalizacao card ahp-step-section" id="secao-normalizacao">
+    <div class="ahp-section-label"><span>6. Normalização</span></div>
+    <div class="ahp-section-body">
+      <p>
+        Variáveis em unidades diferentes — habitantes, veículos por dia, metros,
+        reais — não podem ser somadas. Todas são levadas a uma escala comum de
+        0 a 1 antes de qualquer combinação.
+      </p>
+      <div class="doc-formula">
+        <code>{{ normalizacao.get('formula', '—') }}</code>
+        <p>Método: <strong>{{ normalizacao.get('metodo', '—') }}</strong></p>
+      </div>
+      <ul class="doc-lista">
+        <li>
+          <strong>Relação negativa:</strong> quando o valor alto significa
+          favorabilidade baixa, o resultado é invertido por
+          <code>{{ normalizacao.get('inversao_relacao_negativa', '—') }}</code>.
+        </li>
+        <li>
+          <strong>Ausência de dado:</strong> {{ normalizacao.get('nodata', '—') }}.
+          Não é substituída por zero — zero é um valor, ausência não.
+        </li>
+        {% if manifesto_normalizados.observacao_simbologia %}
+        <li><strong>Simbologia:</strong> {{ manifesto_normalizados.observacao_simbologia }}</li>
+        {% endif %}
+      </ul>
+    </div>
+  </section>
+
+  <section class="secao-indices card ahp-step-section" id="secao-indices">
+    <div class="ahp-section-label"><span>7. Os índices finais</span></div>
+    <div class="ahp-section-body">
+      <p>
+        A agregação é <strong>{{ normalizacao.get('agregacao_final', '—') }}</strong>.
+        Média simples, e não ponderada: atribuir pesos exigiria um julgamento que
+        pertence à etapa seguinte, não à construção da superfície.
+      </p>
+      <div class="doc-galeria doc-galeria--destaque">
+        {% for imagem in superficies %}
+        <figure class="doc-galeria-item">
+          <img src="{{ imagem.url }}" alt="{{ imagem.alias }}" loading="lazy">
+          <figcaption>
+            <strong>{{ imagem.alias }}</strong>
+            <span class="doc-galeria-meta">
+              <code>{{ imagem.atributo }}</code> · {{ imagem.unidade }} ·
+              {{ "{:,}".format(imagem.feicoes or 0).replace(",", ".") }} feições
+            </span>
+          </figcaption>
+        </figure>
+        {% endfor %}
+      </div>
+      <p class="ahp-help-text">
+        Renderização: {{ manifesto_normalizados.get('formato', '—') }},
+        {{ manifesto_normalizados.get('crs_renderizacao', '—') }},
+        base cartográfica {{ manifesto_normalizados.get('basemap', '—') }}.
+      </p>
+    </div>
+  </section>
+
+</main>
+{% endblock %}

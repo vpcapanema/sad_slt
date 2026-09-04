@@ -34,7 +34,9 @@ def test_zip_shapefile_goes_to_vector(isolated_storage: Path) -> None:
     assert result.category == "vetor"
     assert result.archive is True
     # Somente a extração normalizada é preservada; o pacote .zip é descartado.
-    assert result.original_path.parent.name == "vetor"
+    # Toda camada mora numa pasta de grupo; sem grupo declarado, SEM_GRUPO.
+    assert result.original_path.parent.name == storage.PASTA_PADRAO
+    assert result.original_path.parent.parent.name == "vetor"
     assert result.original_path.name == "municipios.zip.contents"
     assert result.original_path.is_dir()
     assert not (result.original_path.parent / "municipios.zip").exists()
@@ -56,27 +58,36 @@ def test_storage_filename_is_normalized_without_rewriting_zip(isolated_storage: 
 def test_zip_geotiff_goes_to_raster(isolated_storage: Path) -> None:
     result = storage.store_upload("declividade.zip", _zip({"declividade.tif": b"tiff"}))
     assert result.category == "raster"
-    assert result.original_path.parent.name == "raster"
+    # Toda camada mora numa pasta de grupo; sem grupo declarado, SEM_GRUPO.
+    assert result.original_path.parent.name == storage.PASTA_PADRAO
+    assert result.original_path.parent.parent.name == "raster"
     assert result.original_path.name == "declividade.zip.contents"
     assert result.original_path.is_dir()
     assert not (result.original_path.parent / "declividade.zip").exists()
     assert result.import_path.name == "declividade.tif"
 
 
-def test_file_geodatabase_goes_to_geodatabase(isolated_storage: Path) -> None:
+def test_file_geodatabase_e_vetor(isolated_storage: Path) -> None:
+    """Um .gdb agrega camadas vetoriais; contêiner não é categoria à parte."""
     result = storage.store_upload("cadastro.gdb.zip", _zip({"cadastro.gdb/a00000001.gdbtable": b"data"}))
-    assert result.category == "geodatabase"
-    assert result.original_path.parent.name == "geodatabase"
+    assert result.category == "vetor"
+    # Toda camada mora numa pasta de grupo; sem grupo declarado, SEM_GRUPO.
+    assert result.original_path.parent.name == storage.PASTA_PADRAO
+    assert result.original_path.parent.parent.name == "vetor"
     assert result.original_path.name == "cadastro_gdb.zip.contents"
     assert result.original_path.is_dir()
     assert not (result.original_path.parent / "cadastro_gdb.zip").exists()
     assert result.import_path.name == "cadastro.gdb"
 
 
-def test_geopackage_goes_to_geodatabase_without_modification(isolated_storage: Path) -> None:
+def test_geopackage_e_vetor_e_nao_e_modificado(isolated_storage: Path) -> None:
+    """GeoPackage é formato vetorial — a mesma resposta que `path_policy` dá."""
     content = b"GeoPackage fixture content"
     result = storage.store_upload("camadas.gpkg", content)
-    assert result.category == "geodatabase"
+    assert result.category == "vetor"
+    # Toda camada mora numa pasta de grupo; sem grupo declarado, SEM_GRUPO.
+    assert result.original_path.parent.name == storage.PASTA_PADRAO
+    assert result.original_path.parent.parent.name == "vetor"
     assert result.original_path.read_bytes() == content
     assert result.import_path == result.original_path
 

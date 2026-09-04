@@ -28,46 +28,26 @@
     <div class="platform-group__heading"><span class="platform-group__number">01</span><div><h2 id="group-processo">Planejar e acompanhar uma rodada</h2><p>Do cadastro dos objetos ao ranking homologado.</p></div></div>
     <div class="platform-grid">
       {{ link_card('/restrict/hierarquizacao/processos/', 'fa-solid fa-list-check', 'Hierarquizações', 'Liste rodadas, acompanhe status e abra uma análise existente.', 'blue', 'Centro de controle') }}
-      {{ link_card('/restrict/hierarquizacao/processos/nova/', 'fa-solid fa-plus', 'Nova hierarquização', 'Cadastre a rodada e defina o universo inicial de demandas.', 'blue', 'Começar') }}
       {{ link_card('/restrict/hierarquizacao/processos/', 'fa-solid fa-ranking-star', 'Ranking e homologação', 'Consulte resultados, síntese e decisão final da rodada.', 'navy', 'Ver resultados') }}
-      {{ link_card('/restrict/hierarquizacao/fase-1/', 'fa-solid fa-filter', 'Fase 1 · Elegibilidade', 'Cruze demandas com risco e restrição territorial.', 'amber', 'Executar fase') }}
-      {{ link_card('/restrict/hierarquizacao/fase-2/', 'fa-solid fa-map-location-dot', 'Fase 2 · Favorabilidade', 'Aplique o mérito técnico-territorial e consulte indicadores.', 'green', 'Executar fase') }}
-      {{ link_card('/restrict/hierarquizacao/fase-3/', 'fa-solid fa-sliders', 'Fase 3 · Ajuste fino', 'Preencha atributos, trate riscos e ajuste os scores.', 'violet', 'Executar fase') }}
-      {{ link_card('/restrict/hierarquizacao/processos/objetos/', 'fa-solid fa-shapes', 'Objetos da rodada', 'Reveja e ajuste o universo de objetos da hierarquização.', 'blue', 'Etapa 2') }}
-      {{ link_card('/restrict/hierarquizacao/processos/avaliacao/', 'fa-solid fa-clipboard-check', 'Avaliação por critério', 'Registre a avaliação de cada objeto por critério.', 'blue', 'Etapa 3') }}
-      {{ link_card('/restrict/hierarquizacao/processos/ranking/', 'fa-solid fa-arrow-down-1-9', 'Ranking da rodada', 'Calcule e revise o ranking da hierarquização em andamento.', 'navy', 'Etapa 4') }}
-      {{ link_card('/restrict/hierarquizacao/processos/homologacao/', 'fa-solid fa-stamp', 'Homologação', 'Homologue o resultado final da rodada.', 'navy', 'Etapa 5') }}
+      {{ link_card('/restrict/hierarquizacao/fase-1/', 'fa-solid fa-filter', 'Elegibilidade territorial · Elegibilidade', 'Cruze demandas com risco e restrição territorial.', 'amber', 'Executar fase') }}
+      {{ link_card('/restrict/hierarquizacao/fase-2/', 'fa-solid fa-map-location-dot', 'Favorabilidade de grade e da rede · Favorabilidade', 'Aplique o mérito técnico-territorial e consulte indicadores.', 'green', 'Executar fase') }}
+      {{ link_card('/restrict/hierarquizacao/fase-3/', 'fa-solid fa-sliders', 'Priorização por atributos · Ajuste fino', 'Preencha atributos, trate riscos e ajuste os scores.', 'violet', 'Executar fase') }}
       {{ link_card('/restrict/hierarquizacao/ranking/', 'fa-solid fa-trophy', 'Ranking privado', 'Consulte o ranking consolidado de demandas já hierarquizadas.', 'navy', 'Resultados') }}
     </div>
   </section>
 
-  <section class="platform-group secao-platform-ahp" aria-labelledby="group-ahp">
-    <div class="platform-group__heading"><span class="platform-group__number">02</span><div><h2 id="group-ahp">Análise multicritério (AHP)</h2><p>Defina critérios, compare prioridades e gere pesos para a decisão.</p></div></div>
-    <div class="platform-grid">
-      {{ link_card('/restrict/ahp/', 'fa-solid fa-scale-balanced', 'Central AHP', 'Visão geral das análises multicritério e configurações disponíveis.', 'teal', 'Módulo') }}
-      {{ link_card('/restrict/ahp/analise/', 'fa-solid fa-diagram-project', 'Calculadora AHP', 'Escolha o tipo de análise e inicie o fluxo guiado da calculadora.', 'teal', 'Começar') }}
-      {{ link_card('/restrict/ahp/configuracao/', 'fa-solid fa-crosshairs', 'Configuração', 'Defina escopo, objetivo e origem da matriz de critérios e premissas.', 'teal', 'Etapa 1') }}
-      {{ link_card('/restrict/ahp/criterios/', 'fa-solid fa-table-list', 'Critérios', 'Carregue e revise os critérios dinâmicos da análise.', 'teal', 'Etapa 2') }}
-      {{ link_card('/restrict/ahp/nomes/', 'fa-solid fa-pen-to-square', 'Nomes', 'Ajuste os nomes apresentados aos participantes.', 'teal', 'Etapa 3') }}
-      {{ link_card('/restrict/ahp/metodo/', 'fa-solid fa-route', 'Método', 'Escolha o modo de comparação e prepare o formulário.', 'teal', 'Etapa 4') }}
-      {{ link_card('/restrict/ahp/comparacao/', 'fa-solid fa-scale-unbalanced-flip', 'Comparação pareada', 'Preencha a matriz e acompanhe a consistência.', 'teal', 'Etapa 5') }}
-      {{ link_card('/restrict/ahp/respostas-colaborativas/', 'fa-solid fa-users', 'Respostas colaborativas', 'Abra rodadas, acompanhe convidados e consolide respostas.', 'teal', 'Colaboração') }}
-      {{ link_card('/restrict/ahp/resultados/', 'fa-solid fa-chart-column', 'Pesos e resultados', 'Analise pesos, métricas e salve a configuração final.', 'teal', 'Etapa 6') }}
-      {{ link_card('/restrict/ahp/alternativas/', 'fa-solid fa-diagram-project', 'Alternativas', 'Aplique a configuração às alternativas e avance para a decisão.', 'teal', 'Etapa 7') }}
-    </div>
-  </section>
 
   <section class="platform-group secao-platform-geoespacial" aria-labelledby="group-geo">
     <div class="platform-group__heading"><span class="platform-group__number">03</span><div><h2 id="group-geo">Dados e processamento territorial</h2><p>Insumos, geradores, operações e produtos geoespaciais homologados.</p></div></div>
     <div class="platform-grid">
       {{ link_card('/restrict/geoespacial/', 'fa-solid fa-earth-americas', 'Central geoespacial', 'Acesse todas as ferramentas territoriais.', 'green', 'Módulo') }}
       {{ link_card('/restrict/geoespacial/visualizador-insumos-geoespaciais/', 'fa-solid fa-folder-tree', 'Insumos geoespaciais', 'Consulte e gerencie camadas disponíveis para processamento.', 'green', 'Dados de entrada') }}
-      {{ link_card('/restrict/geoespacial/gerador-risco-restricao/', 'fa-solid fa-shield-halved', 'Gerador de risco e restrição', 'Produza as camadas usadas na elegibilidade da Fase 1.', 'amber', 'Gerador · Fase 1') }}
-      {{ link_card('/restrict/geoespacial/gerador-favorabilidade/', 'fa-solid fa-map', 'Gerador de favorabilidade', 'Gere a superfície territorial consumida pela Fase 2.', 'green', 'Gerador · Fase 2') }}
+      {{ link_card('/restrict/geoespacial/gerador-risco-restricao/', 'fa-solid fa-shield-halved', 'Gerador de risco e restrição', 'Produza as camadas usadas na elegibilidade da Elegibilidade territorial.', 'amber', 'Gerador · Elegibilidade territorial') }}
+      {{ link_card('/restrict/geoespacial/gerador-favorabilidade/', 'fa-solid fa-map', 'Gerador de favorabilidade', 'Gere a superfície territorial consumida pela Favorabilidade de grade e da rede.', 'green', 'Gerador · Favorabilidade de grade e da rede') }}
       {{ link_card('/restrict/geoespacial/configuracao-risco-restricao/', 'fa-solid fa-book', 'Biblioteca canônica', 'Consulte regras e classificações de risco e restrição.', 'amber', 'Referência') }}
       {{ link_card('/restrict/geoespacial/produtos/', 'fa-solid fa-layer-group', 'Camadas homologadas', 'Consulte produtos prontos para as fases metodológicas.', 'green', 'Biblioteca') }}
       {{ link_card('/restrict/geoespacial/bancada/', 'fa-solid fa-screwdriver-wrench', 'Bancada geoprocessamento', 'Execute operações territoriais e acompanhe seus resultados.', 'green', 'Operação') }}
-      {{ link_card('/restrict/geoespacial/configurador-ajuste/', 'fa-solid fa-sliders', 'Configurador da Fase 3', 'Configure atributos e pesos do ajuste fino territorial.', 'violet', 'Configuração') }}
+      {{ link_card('/restrict/geoespacial/configurador-ajuste/', 'fa-solid fa-sliders', 'Configurador da Priorização por atributos', 'Configure atributos e pesos do ajuste fino territorial.', 'violet', 'Configuração') }}
     </div>
   </section>
 
@@ -81,7 +61,7 @@
       {{ link_card('/restrict/revisao-status/', 'fa-solid fa-arrows-rotate', 'Revisão de status', 'Revise e corrija transições de status das demandas.', 'blue', 'Governança') }}
       {{ link_card('/restrict/complementacao/', 'fa-solid fa-pen-to-square', 'Complementação', 'Revise e complete informações das demandas selecionadas.', 'blue', 'Dados') }}
       {{ link_card('/restrict/painel/', 'fa-solid fa-chart-line', 'Painel de acompanhamento', 'Acompanhe indicadores, pendências e movimentações da plataforma.', 'blue', 'Gestão') }}
-      {{ link_card('/restrict/geoespacial/configurador-ajuste/', 'fa-solid fa-circle-check', 'Verificação da Fase 3', 'Revise produtos e parâmetros antes da execução.', 'violet', 'Qualidade') }}
+      {{ link_card('/restrict/geoespacial/configurador-ajuste/', 'fa-solid fa-circle-check', 'Verificação da Priorização por atributos', 'Revise produtos e parâmetros antes da execução.', 'violet', 'Qualidade') }}
       {{ link_card('/restrict/hierarquizacao/metodologia/', 'fa-solid fa-circle-info', 'Apresentação do processo', 'Leia a visão conceitual das fases e decisões.', 'navy', 'Orientação') }}
     </div>
   </section>

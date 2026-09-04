@@ -1,0 +1,132 @@
+{% extends "bases/base_conteudo.html" %}
+{% set titulo_modulo = titulo_modulo | default("", true) %}
+{% set subtitulo = "" %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Cadastro e upload — {{ titulo_modulo }}{% endblock %}
+{% block classes_body %}ahp-module-page{% endblock %}
+{% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="/assets/css/fase23-execucao.css">
+  <link rel="stylesheet" href="/assets/css/fase1-execucao.css">
+  <link rel="stylesheet" href="/assets/css/cadastro-upload-camada.css">
+  <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden"></div>
+<main class="conteudo-principal app-main ahp-main fase-execucao-page cadastro-upload"
+      data-modulo="{{ modulo }}" data-tipo-rotulo="{{ rotulo_tipo }}">
+  {% include "componentes/navegacao_fases_hierarquizacao.html" %}
+
+  <section class="secao-cadastro-e-upload card fase-titulo-card">
+    <h1 class="ahp-page-title"><i class="fas fa-cloud-arrow-up"></i> Cadastro e upload — {{ titulo_modulo }}</h1>
+    <p class="fase-descricao">
+      {{ descricao_modulo }}
+      <a class="fase-descricao-add" href="{{ voltar_href }}" title="Voltar para {{ voltar_rotulo }}" aria-label="Voltar para {{ voltar_rotulo }}"><i class="fas fa-arrow-left"></i></a>
+    </p>
+  </section>
+
+  <section class="secao-identificacao-da-camada card ahp-step-section" id="secao-cadastro">
+    <div class="ahp-section-label"><span>1. Identificação da camada</span></div>
+    <div class="ahp-section-body">
+      <p class="ahp-help-text">
+        O que o sistema extrai do próprio arquivo — CRS, tipo de geometria,
+        formato, envelope e hash — é preenchido automaticamente na etapa
+        seguinte, e não é pedido aqui.
+      </p>
+
+      <form id="form-cadastro" class="cadastro-grid" autocomplete="off">
+        <label class="cadastro-campo cadastro-campo--span2">
+          <span>{{ rotulo_tipo }} *</span>
+          <select id="campo-tipo" name="tipo_camada" required>
+            <option value="">Selecione…</option>
+            {% for opcao in tipos_camada %}
+            <option value="{{ opcao.valor }}">{{ opcao.rotulo }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="cadastro-campo cadastro-campo--span2">
+          <span>Nome de publicação *</span>
+          <input id="campo-nome-publicacao" name="nome_publicacao" type="text" required
+                 placeholder="Como a camada será citada pelo sistema">
+        </label>
+
+        <label class="cadastro-campo">
+          <span>Versão *</span>
+          <input id="campo-versao" name="versao" type="text" value="v1" required>
+        </label>
+
+        <label class="cadastro-campo">
+          <span>Módulo que consome</span>
+          <select id="campo-modulo-consumidor" name="modulo_consumidor">
+            <option value="fase1">Elegibilidade territorial</option>
+            <option value="fase2">Favorabilidade de grade e da rede</option>
+            <option value="ambos">Ambos</option>
+          </select>
+        </label>
+
+        <label class="cadastro-campo cadastro-campo--span2">
+          <span>Responsável pela homologação</span>
+          <input id="campo-homologado-por" name="homologado_por" type="text"
+                 placeholder="Nome de quem responde tecnicamente pela camada">
+        </label>
+
+        <label class="cadastro-campo cadastro-campo--full">
+          <span>Finalidade</span>
+          <textarea id="campo-finalidade" name="finalidade" rows="3"
+                    placeholder="Para que esta camada serve na análise"></textarea>
+        </label>
+
+        <label class="cadastro-campo cadastro-campo--full">
+          <span>Produto de origem</span>
+          <input id="campo-produto-id" name="produto_id" type="text"
+                 placeholder="Identificador do produto que originou a camada, se houver">
+          <small class="ahp-help-text">Deixe em branco se a camada não vier de um produto cadastrado.</small>
+        </label>
+      </form>
+    </div>
+  </section>
+
+  <section class="secao-arquivo-da-camada card ahp-step-section" id="secao-upload">
+    <div class="ahp-section-label"><span>2. Arquivo da camada</span></div>
+    <div class="ahp-section-body">
+      <p class="ahp-help-text">O arquivo é conferido em uma área temporária antes de qualquer gravação.</p>
+
+      <label class="cadastro-campo cadastro-campo--full">
+        <span>Arquivo</span>
+        <input id="campo-arquivo" type="file"
+               accept=".shp,.geojson,.json,.kml,.gml,.fgb,.gpkg,.tif,.tiff,.img,.asc,.vrt,.jp2,.zip,.rar,.7z,.tar,.tgz,.gz">
+      </label>
+      <p id="upload-status" class="ahp-help-text">Selecione um arquivo para pré-visualizar a camada.</p>
+
+      <div id="bloco-previa" hidden>
+        <div id="mapa-previa" class="mapa-previa" role="img"
+             aria-label="Pré-visualização geográfica da camada selecionada"></div>
+        <p id="previa-aviso" class="ahp-help-text" hidden></p>
+
+        <article class="metadados-card" id="card-metadados">
+          <h3>Metadados lidos do arquivo</h3>
+          <dl id="lista-metadados" class="metadados-lista"></dl>
+        </article>
+
+        <div class="fase-actions">
+          <span id="envio-feedback" class="cadastro-feedback" role="status" aria-live="polite"></span>
+          <button type="button" class="btn btn-secondary" id="btn-cancelar">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btn-enviar">Enviar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
+  <script src="/assets/js/paginas/cadastro-upload-camada.js"></script>
+{% endblock %}

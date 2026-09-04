@@ -94,7 +94,7 @@ def main() -> None:
     agora = datetime.now(timezone.utc)
     with get_connection() as conn:
         projetos = [dict(row) for row in conn.execute(
-            """SELECT id, codigo, nome, status FROM demandas.projeto
+            """SELECT id, codigo, nome, status, latitude, longitude FROM demandas.projeto
                  WHERE codigo LIKE 'I-PRJ-TESTE-%'
                  ORDER BY codigo LIMIT 12"""
         ).fetchall()]
@@ -123,14 +123,24 @@ def main() -> None:
             hier_id = uid(f"hier-{indice + 1}")
             ambiente_id = uid(f"ambiente-{indice + 1}")
             objetos = [projetos[(indice * 3 + deslocamento) % len(projetos)] for deslocamento in range(3)]
-            objetos_json = [{"id": str(p["id"]), "codigo": p["codigo"], "nome": p["nome"], "status": p["status"]} for p in objetos]
+            # A Fase 1 intersecta o ponto do objeto com as camadas homologadas:
+            # sem latitude/longitude no cabeçalho, a execução para em
+            # "Demanda <codigo> sem coordenadas."
+            objetos_json = [
+                {
+                    "id": str(p["id"]), "codigo": p["codigo"], "nome": p["nome"], "status": p["status"],
+                    "latitude": float(p["latitude"]) if p["latitude"] is not None else None,
+                    "longitude": float(p["longitude"]) if p["longitude"] is not None else None,
+                }
+                for p in objetos
+            ]
             dados = {
                 "versao": 1,
                 "cabecalho_grupo": {
                     "codigo": codigo, "nome": nome,
                     "descricao": "Registro de exemplo para testes integrados do fluxo colaborativo.",
                     "tipo_demanda": "projeto", "quantidade_objetos": len(objetos_json),
-                    "fases_a_executar": [], "pacotes": {}, "criado_em": agora.isoformat(),
+                    "fases_a_executar": [1, 2, 3], "pacotes": {}, "criado_em": agora.isoformat(),
                 },
                 "objetos": [{"cabecalho_objeto": objeto} for objeto in objetos_json],
             }

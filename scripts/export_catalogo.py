@@ -1,4 +1,4 @@
-"""Exporta Catalogo_Hierarquico_SLT.xlsx → data/catalogo-slt.json."""
+"""Exporta Catalogo_Hierarquico_SLT.xlsx → config/catalogo-slt.json."""
 import json
 from pathlib import Path
 

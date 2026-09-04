@@ -7,11 +7,14 @@
   let rotulosAtivos = localStorage.getItem("geoespacial-products-labels") === "true";
   const BASEMAPS = [
     { id: "osm", name: "OpenStreetMap", provider: "OpenStreetMap Contributors", referenceDate: "Atualização contínua; referência correspondente à data de consulta", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"] },
-    { id: "carto-light", name: "Carto Claro", provider: "CARTO / OpenStreetMap", referenceDate: "Atualização contínua; referência correspondente à data de consulta", tiles: ["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"] },
-    { id: "carto-dark", name: "Carto Escuro", provider: "CARTO / OpenStreetMap", referenceDate: "Atualização contínua; referência correspondente à data de consulta", tiles: ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"] },
+    { id: "ofm-positron", name: "OpenFreeMap Claro", provider: "OpenFreeMap / OpenStreetMap", referenceDate: "Atualização contínua; referência correspondente à data de consulta", style: "https://tiles.openfreemap.org/styles/positron" },
+        { id: "ofm-dark", name: "OpenFreeMap Escuro", provider: "OpenFreeMap / OpenStreetMap", referenceDate: "Atualização contínua; referência correspondente à data de consulta", style: "https://tiles.openfreemap.org/styles/dark" },
     { id: "esri-satellite", name: "Imagem de Satélite", provider: "Esri World Imagery", referenceDate: "Mosaico multitemporal; a data varia conforme a localização e a escala", tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"] },
   ];
-  let basemapAtual = localStorage.getItem("geoespacial-products-basemap") || "osm";
+  // Sanitiza a preferencia salva: quem tinha "carto-*" gravado cai no padrao,
+  // senao o mapa abriria sem nenhum mapa-base visivel.
+  const _basemapSalvo = localStorage.getItem("geoespacial-products-basemap");
+  let basemapAtual = BASEMAPS.some((item) => item.id === _basemapSalvo) ? _basemapSalvo : "osm";
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   const formatCrs = (value) => String(value || "CRS não informado").replace(/EPSG:4674(?!\s*\()/g, "EPSG:4674 (SIRGAS 2000)");
   function formatDate(value) { if(!value)return "—";const date=new Date(value);return Number.isNaN(date.getTime())?String(value):new Intl.DateTimeFormat("pt-BR",{dateStyle:"short",timeStyle:"short"}).format(date); }
@@ -39,12 +42,14 @@
   }
   function detailBasemap(item) {
     document.querySelectorAll(".geo-layer-record").forEach((row) => row.classList.toggle("active", row.dataset.basemapId === item.id));
-    document.getElementById("geoespacial-details-content").innerHTML = `<div class="geoespacial-detail-grid"><div class="geoespacial-detail-row"><span>Mapa-base</span><strong>${escapeHtml(item.name)}</strong></div><div class="geoespacial-detail-row"><span>Tipo</span><strong>Camada raster de referência</strong></div><div class="geoespacial-detail-row"><span>Provedor</span><strong>${escapeHtml(item.provider)}</strong></div><div class="geoespacial-detail-row"><span>Data de referência</span><strong>${escapeHtml(item.referenceDate)}</strong></div><div class="geoespacial-detail-row"><span>Uso</span><strong>Contexto cartográfico; não participa dos cálculos.</strong></div></div>`;
+    document.getElementById("geoespacial-details-content").innerHTML = `<div class="geoespacial-detail-grid"><div class="geoespacial-detail-row"><span>Mapa-base</span><strong>${escapeHtml(item.name)}</strong></div><div class="geoespacial-detail-row"><span>Tipo</span><strong>${item.style ? "Camada vetorial de referência" : "Camada raster de referência"}</strong></div><div class="geoespacial-detail-row"><span>Provedor</span><strong>${escapeHtml(item.provider)}</strong></div><div class="geoespacial-detail-row"><span>Data de referência</span><strong>${escapeHtml(item.referenceDate)}</strong></div><div class="geoespacial-detail-row"><span>Uso</span><strong>Contexto cartográfico; não participa dos cálculos.</strong></div></div>`;
     showDetails();
   }
   function selecionarBasemap(id) {
     basemapAtual=BASEMAPS.some(item=>item.id===id)?id:"osm";localStorage.setItem("geoespacial-products-basemap",basemapAtual);const visible=document.getElementById("toggle-basemap-group")?.checked!==false;
-    BASEMAPS.forEach(item=>{const layerId=`products-basemap-${item.id}`;if(GeoespacialMap.map?.getLayer(layerId))GeoespacialMap.map.setLayoutProperty(layerId,"visibility",visible&&item.id===basemapAtual?"visible":"none")});
+    // Um mapa-base vetorial ocupa varias layers; alterna-se o grupo por prefixo.
+    const mapa=GeoespacialMap.map;
+    if(mapa)BASEMAPS.forEach(item=>{const alvo=visible&&item.id===basemapAtual?"visible":"none";const pref=`products-basemap-${item.id}`;mapa.getStyle().layers.forEach(layer=>{if(layer.id===pref||layer.id.startsWith(`${pref}-`))mapa.setLayoutProperty(layer.id,"visibility",alvo)})});
     detailBasemap(BASEMAPS.find(item=>item.id===basemapAtual));
   }
   async function toggle(camada, visible) {
@@ -74,9 +79,47 @@
     }));
     render();
   }
+
+  // ---------------------------------------------------------------------------
+  // Mapas-base vetoriais (OpenFreeMap). O raster da CARTO saiu porque passou a
+  // exigir API key e esta sendo descontinuado pelo provedor.
+  //
+  // Um estilo MapLibre so admite um conjunto de glyphs/sprite, entao as sources
+  // e layers do estilo vetorial sao mescladas no estilo do mapa com sufixo/
+  // prefixo proprios. A troca de mapa-base liga e desliga o grupo inteiro.
+  // ---------------------------------------------------------------------------
+  async function carregarEstiloVetorial(item, prefixo) {
+    const estilo = await (await fetch(item.style)).json();
+    const sufixo = `__${item.id}`;
+    const sources = {};
+    Object.entries(estilo.sources || {}).forEach(([nome, src]) => {
+      sources[`${nome}${sufixo}`] = { ...src, attribution: item.provider };
+    });
+    const layers = (estilo.layers || []).map((layer, i) => {
+      const novo = { ...layer, id: `${prefixo}${item.id}-${i}` };
+      if (novo.source) novo.source = `${novo.source}${sufixo}`;
+      return novo;
+    });
+    return { sources, layers, glyphs: estilo.glyphs, sprite: estilo.sprite };
+  }
+
   async function init() {
-    const sources={},layers=[];BASEMAPS.forEach(item=>{sources[item.id]={type:"raster",tiles:item.tiles,tileSize:256,attribution:item.provider};layers.push({id:`products-basemap-${item.id}`,type:"raster",source:item.id,layout:{visibility:item.id===basemapAtual?"visible":"none"}})});
-    GeoespacialMap.init("map-geoespacial", { center: [-48.5, -22.4], zoom: 6.2, nativeTools: true, style:{version:8,glyphs:"https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",sources,layers} });
+    const sources={},layers=[];
+    let glyphs="https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",sprite;
+    for (const item of BASEMAPS) {
+      const visivel = item.id === basemapAtual ? "visible" : "none";
+      if (item.style) {
+        const vetorial = await carregarEstiloVetorial(item, "products-basemap-");
+        Object.assign(sources, vetorial.sources);
+        vetorial.layers.forEach(layer => layers.push({ ...layer, layout: { ...(layer.layout||{}), visibility: visivel } }));
+        if (vetorial.glyphs) glyphs = vetorial.glyphs;
+        if (vetorial.sprite) sprite = vetorial.sprite;
+      } else {
+        sources[item.id]={type:"raster",tiles:item.tiles,tileSize:256,attribution:item.provider};
+        layers.push({id:`products-basemap-${item.id}`,type:"raster",source:item.id,layout:{visibility:visivel}});
+      }
+    }
+    GeoespacialMap.init("map-geoespacial", { center: [-48.5, -22.4], zoom: 6.2, nativeTools: true, style:{version:8,glyphs,...(sprite?{sprite}:{}),sources,layers} });
     document.querySelectorAll("[data-context-tab]").forEach(button=>button.addEventListener("click",()=>activateContextTab(button.dataset.contextTab)));
     ["geo-operational-group","geo-basemap-group"].forEach(id=>{const group=document.getElementById(id),header=group.querySelector(":scope > .layer-group-header-row .layer-group-header--tipo");header.addEventListener("click",()=>{const collapsed=group.classList.toggle("collapsed");header.setAttribute("aria-expanded",String(!collapsed))})});
     const labelButton=document.getElementById("toggle-operational-labels");labelButton.classList.toggle("is-active",rotulosAtivos);labelButton.setAttribute("aria-pressed",String(rotulosAtivos));labelButton.addEventListener("click",()=>{rotulosAtivos=!rotulosAtivos;labelButton.classList.toggle("is-active",rotulosAtivos);labelButton.setAttribute("aria-pressed",String(rotulosAtivos));localStorage.setItem("geoespacial-products-labels",String(rotulosAtivos));camadas.forEach(camada=>GeoespacialMap.toggleLabels(camada.id,rotulosAtivos))});

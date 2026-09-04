@@ -1,5 +1,16 @@
 Critérios ambientais de restrição e risco para espacialização da planilha
 
+> **Documento histórico — não é a regra vigente.**
+>
+> A classificação de risco e restrição da Fase 1 é definida pelo *Arcabouço
+> Teórico-Conceitual de Risco e Restrição*, em
+> `/restrict/geoespacial/configuracao-risco-restricao/`, seção 2: sete camadas de
+> restrição e treze de risco, com a categoria da CAMADA oficial. Em qualquer
+> divergência, prevalece o arcabouço.
+>
+> Este estudo o precedeu e é mantido pelo registro do raciocínio. A tabela de
+> enquadramento que ele trazia foi retirada por contradizer a regra vigente.
+
 Diagnóstico
 
 O problema central da versão anterior foi tratar critérios ambientais com rótulos abstratos demais, especialmente em Dado-fonte e Dado derivado. Para a planilha funcionar, cada critério de restrição ambiental precisa nascer de um gatilho espacial observável e juridicamente reconhecível. Em termos práticos:
@@ -289,25 +300,17 @@ Portanto, a presença de uma feição deve ser separada da sua consequência jur
 
 ### Regra revisada de classificação
 
-Nenhuma classe ampla deve ser marcada como restrição apenas porque houve interseção. A classificação final deve considerar os atributos preservados pelo `Identity`, especialmente categoria, zoneamento, estágio, relevância, ato de proteção, situação fundiária e regra aplicável.
+A tabela que ocupava esta seção classificava como *risco inicial* — escalável a
+restrição por atributo — a UC de Proteção Integral, a Terra Indígena, o
+território quilombola, o manguezal, a área de restrição da CETESB e os embargos.
+Na regra vigente essas seis são camadas de **restrição**, e a categoria não
+depende de atributo da feição: é da camada oficial.
 
-| Gatilho espacial | Classificação inicial | Quando pode se tornar restrição |
-| --- | --- | --- |
-| UC de Proteção Integral estadual ou federal | Risco | Quando a categoria, o zoneamento, o plano de manejo ou a manifestação do órgão gestor indicar incompatibilidade ou vedação à intervenção proposta. |
-| UC de Uso Sustentável estadual ou federal | Risco | Quando a zona ou norma específica da UC proibir ou tornar incompatível a infraestrutura no local atingido. |
-| Zona de amortecimento de UC | Risco | Quando houver norma específica com vedação aplicável à intervenção; a simples incidência normalmente aciona análise e manifestação, não bloqueio automático. |
-| Vegetação nativa protegida | Risco | Quando o bioma, a fitofisionomia, o estágio sucessional, a localização e a hipótese legal não admitirem supressão. A classificação depende desses atributos. |
-| APRM e zoneamento de mananciais | Risco | Quando a lei específica e a classe territorial incidente vedarem o uso ou a intervenção proposta. |
-| Manguezal, restinga ou ecossistema costeiro sensível | Risco | Quando a categoria de proteção e a hipótese concreta não admitirem intervenção. Deve-se preservar no resultado o tipo de ecossistema e seu regime jurídico. |
-| Cavidade natural subterrânea | Risco, salvo classe impeditiva | Cavidade de relevância máxima ou outra situação em que a norma vede impacto irreversível deve ser classificada como restrição. As demais classes exigem avaliação e medidas próprias. |
-| Terra Indígena | Risco socioambiental e institucional | Somente uma incompatibilidade ou impedimento reconhecido no processo competente deve produzir restrição; a incidência, por si, exige avaliação e participação institucional. |
-| Território quilombola | Risco socioambiental e institucional | Somente impedimento reconhecido no processo competente deve produzir restrição; a incidência aciona avaliação de impactos e participação institucional. |
-| Área contaminada | Risco | Torna-se restrição quando o diagnóstico demonstrar incompatibilidade com a obra ou impossibilidade de gerenciamento seguro nas condições propostas. |
-| Inundação, alagamento, erosão, escorregamento ou movimento de massa | Risco técnico-ambiental | Torna-se restrição quando estudos demonstrarem impossibilidade técnica ou risco residual inaceitável, não mitigável pelo projeto. |
-| Bem tombado ou área envoltória | Risco patrimonial | Torna-se restrição quando o ato de proteção ou a manifestação do órgão competente vedar a intervenção. |
-| Sítio arqueológico | Risco patrimonial | Torna-se restrição apenas quando a preservação no local ou decisão do órgão competente impedir a alternativa; em outros casos pode exigir prospecção, resgate e acompanhamento. |
-| Assentamento ou regime fundiário especial | Risco fundiário | Torna-se restrição quando houver impedimento dominial ou institucional que inviabilize a alternativa. |
-| Faixa de domínio ou servidão existente | Risco de interferência | Torna-se restrição quando norma de segurança, domínio ou manifestação do operador impedir compartilhamento, cruzamento ou remanejamento. |
+O arcabouço também não admite classe intermediária ("risco socioambiental",
+"risco patrimonial", "risco de interferência") nem trata zona de amortecimento,
+APP, vegetação nativa protegida e faixa de servidão como camadas da Fase 1.
+
+A classificação válida está na seção 2 do arcabouço.
 
 ### Consequência para a Fase 1 do SICARD
 
@@ -316,7 +319,7 @@ A Fase 1 deve trabalhar em duas passagens:
 1. **Detecção:** cada demanda é interseccionada simultaneamente com as camadas unificadas, registrando `0` ou `1` e preservando todos os atributos de cada feição.
 2. **Enquadramento:** uma tabela de regras interpreta os atributos da feição e produz `risco` ou `restrição`, com fundamento normativo e justificativa rastreável.
 
-Quando a base espacial não contiver os atributos necessários ao enquadramento, o resultado correto é **risco pendente de análise**, nunca restrição automática.
+Quando a base espacial não contiver os atributos necessários ao enquadramento, o resultado correto é **risco** — o arcabouço não admite classe intermediária, e a restrição nunca é inferida pela ausência de informação na camada.
 
 ### Instrumentos e referências destacados pela CETESB
 
@@ -388,14 +391,10 @@ O índice deve ser explicado por componentes rastreáveis:
 
 ### Saída recomendada
 
-| Classe | Consequência na hierarquização |
-| --- | --- |
-| Baixa | Sem restrição de priorização. |
-| Média | Risco de prazo registrado e exibido no relatório. |
-| Alta | Restrição automática de priorização, com penalização rastreável. |
-| Crítica | Inelegibilidade na rodada, salvo decisão administrativa motivada e registrada. |
-
-Os pesos e limites não devem ser inventados diretamente no código. Eles devem ser cadastrados em tabela de domínio ou configuração versionada, aprovados pela governança do processo e registrados no JSONB da rodada. O resultado deve informar os gatilhos, órgãos, autorizações, regra aplicada, versão da configuração e possibilidade de revisão motivada.
+A tabela desta seção convertia uma classe de complexidade ("Alta") em restrição
+automática de priorização. Foi retirada: no arcabouço a restrição é booleana e
+vem da camada oficial, nunca de um escore ou de uma classe agregada. Complexidade
+alta gradua risco e entra no relatório como risco.
 
 ## Embargos e interdições ambientais
 
@@ -445,13 +444,13 @@ Embargo ou interdição ativos e aplicáveis são avaliados antes dos riscos amb
 
 ## Modelo consolidado dos índices de risco e restrição
 
-Para simplificar a atuação do gestor sem eliminar a rastreabilidade, a Fase 1 passa a produzir três representações para cada objeto:
+A escala comum desta seção ia de 0 a 4 com o valor 4 rotulado "Restrição", e um
+segundo índice, de restrição, que se somava ao de risco por máximo. Foi retirada
+por contradizer a regra vigente: restrição e risco não compartilham escala.
 
-1. **Valores interseccionados:** valor individual atribuído a cada critério encontrado.
-2. **Valores calculados:** índices contínuos de risco e de restrição.
-3. **Valor arredondado:** classe única e simples utilizada pelas fases seguintes.
-
-### Escala comum
+A restrição é decidida pela categoria da camada, antes de qualquer ponderação, e
+o objeto que a intersecta não segue para a avaliação agregada. O índice gradua
+apenas o risco, sobre os objetos sem restrição:
 
 | Valor | Classe |
 | ---: | --- |
@@ -459,9 +458,6 @@ Para simplificar a atuação do gestor sem eliminar a rastreabilidade, a Fase 1 
 | 1 | Risco baixo |
 | 2 | Risco médio |
 | 3 | Risco alto |
-| 4 | Restrição |
-
-O valor zero é atribuído somente quando a interseção foi executada e não encontrou incidência. Ausência de camada, falha de processamento ou atributo insuficiente deve gerar `não avaliado`, nunca zero.
 
 ### Índice de risco calculado
 
@@ -473,45 +469,8 @@ indice_risco = soma(valor_interseccionado × peso) / soma(pesos_aplicáveis)
 
 Os pesos são configuráveis e versionados. Enquanto não houver deliberação formal sobre pesos diferenciados, todos os critérios utilizam peso neutro `1`.
 
-### Índice de restrição calculado
+### Não há índice de restrição
 
-O índice de restrição utiliza o maior valor confirmado entre os critérios restritivos:
-
-```text
-indice_restricao = máximo(valores_restritivos_confirmados)
-```
-
-Essa regra impede que um embargo ou uma interdição ativa seja diluído por vários riscos baixos. Critério condicionado somente recebe valor `4` depois da confirmação da condição que o converte em restrição.
-
-### Resultado consolidado e arredondamento
-
-```text
-valor_resultante = máximo(indice_risco, indice_restricao)
-```
-
-| Intervalo do valor resultante | Classe arredondada |
-| ---: | --- |
-| 0 | Sem risco |
-| maior que 0 e menor que 1,50 | Risco baixo |
-| de 1,50 até menor que 2,50 | Risco médio |
-| de 2,50 até menor que 3,50 | Risco alto |
-| de 3,50 até 4,00 | Restrição |
-
-Os limiares devem permanecer em configuração versionada. Alterações de faixa não podem modificar retroativamente rodadas já concluídas.
-
-### Uso pelas fases seguintes
-
-As Fases 2 e 3 recebem a classe arredondada, mas o sistema preserva e disponibiliza ao gestor:
-
-- critérios e feições interseccionados;
-- valores individuais e pesos;
-- índice de risco;
-- índice de restrição;
-- valor resultante;
-- classe arredondada;
-- dados não avaliados;
-- versão da regra utilizada.
-
-Objeto classificado como restrição pode continuar sendo processado para fins técnicos e comparativos, mas permanece inelegível para o resultado final, salvo decisão motivada, registrada e auditável do gestor.
-
-Tabela exportada para o arquivo Excel independente em data/TABELA_AREAS_PROTEGIDAS_SP.xlsx.
+A restrição não é calculada. A restrição é binária e não compensatória: a
+camada oficial define a categoria, e o arcabouço é explícito em que "a restrição
+nunca é inferida pela simples ausência de informação na camada".

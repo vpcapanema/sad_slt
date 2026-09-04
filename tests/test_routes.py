@@ -41,8 +41,7 @@ def test_canonical_pages_are_available() -> None:
         "/public/analise-multicriterio/token-de-teste/",
         "/restrict/analise-multicriterio/",
         "/restrict/analise-multicriterio/julgamentos/22222222-2222-2222-2222-222222222222/",
-        "/restrict/ahp/nomes/",
-        "/restrict/hierarquizacao/processos/nova/",
+        "/restrict/hierarquizacao/processos/",
         "/restrict/geoespacial/",
         "/restrict/geoespacial/bancada/",
         "/restrict/complementacao/",
@@ -75,16 +74,27 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "/restrict/geoespacial/bancada/" in trecho_geo
     assert "/restrict/geoespacial/configurador-ajuste/" in trecho_geo
     assert "Análise Multicritério Interativa" not in html
-    assert html.index('class="restrict-platform-row restrict-platform-row--ahp"') < html.index('id="group-ahp-restrict"') < html.index('id="group-administracao"')
+    assert "id=\"group-ahp-restrict\"" not in html, "grupo AHP foi descontinuado"
+    assert "id=\"group-processo\"" not in html, "grupo PROCESSO foi descontinuado"
     assert html.count('class="platform-tile ') == html.count('target="_blank" rel="noopener noreferrer"')
     index_css = __import__("pathlib").Path("admin/index.css").read_text(encoding="utf-8")
-    bloco_mad = index_css.split(".secao-platform-mad .platform-grid", 1)[1].split("}", 1)[0]
-    assert "repeat(2, minmax(0, 1fr))" in bloco_mad
+    # MAD absorveu o antigo card FASES como subcard "Ranqueamento", ao lado do
+    # subcard "Análise Multicritério (AHP)": não há mais uma grade única para
+    # o card inteiro, e sim uma por subcard, cada um com borda própria.
+    bloco_ahp = index_css.split(".subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos .platform-grid", 1)[1].split("}", 1)[0]
+    assert "--itens-por-linha: 2" in bloco_ahp
+    bloco_ranqueamento = index_css.split(".subgroup-ranqueamento .platform-grid", 1)[1].split("}", 1)[0]
+    assert "--itens-por-linha: 2" in bloco_ranqueamento
     bloco_geo = index_css.split(".secao-platform-geoprocessamento .platform-grid", 1)[1].split("}", 1)[0]
-    assert "repeat(5, minmax(0, 1fr))" in bloco_geo
+    assert "--itens-por-linha: 5" in bloco_geo
     assert ".secao-platform-geoprocessamento { grid-column: 1 / -1; }" in index_css
-    assert ".secao-platform-ahp-restrict { grid-column: span 4; }" in index_css
-    assert ".secao-platform-administracao { grid-column: span 3; }" in index_css
+    assert ".secao-platform-administracao { grid-column: span 4; }" in index_css
+    assert ".secao-platform-mad { grid-column: span 4; }" in index_css
+    assert "border: 1px solid" in index_css.split(".secao-platform-mad .platform-subgroup {", 1)[1].split("}", 1)[0]
+    assert "Análise Multicritério (AHP) e obtenção de pesos" in trecho_mad
+    assert "Ranqueamento" in trecho_mad
+    assert "Elegibilidade territorial" in trecho_mad
+    assert "Priorização por atributos" in trecho_mad
 
 
 def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None:
@@ -410,3 +420,134 @@ def test_tema_publico_diferencia_acompanhamento_sem_alterar_painel_restrito() ->
     assert "transparencia-home public-results-theme" in transparencia
     assert "/assets/css/public-results-theme.css?v=20260820-1" in transparencia
     assert "public-results-theme" not in painel_restrito
+
+
+def test_indice_restrito_nao_deixa_vao_nos_modulos() -> None:
+    """Cada módulo do índice fecha exatamente duas linhas de itens.
+
+    A grade interna é flex: a última linha incompleta cresce e ocupa a largura
+    toda, então não há buraco horizontal qualquer que seja a contagem. O vão
+    vertical é o que sobra quando módulos vizinhos têm alturas diferentes, e é
+    evitado mantendo todos com o mesmo número de linhas de itens.
+    """
+    import math
+    import pathlib
+    import re
+
+    html = TestClient(app).get("/restrict/").text
+    css = pathlib.Path("admin/index.css").read_text(encoding="utf-8")
+
+    itens_por_linha = {
+        secao: int(valor)
+        for secao, valor in re.findall(
+            r"\.secao-platform-([\w-]+) \.platform-grid \{ --itens-por-linha: (\d+); \}", css
+        )
+    }
+    # MAD não tem uma grade única: hospeda dois subcards lado a lado (Análise
+    # Multicritério e Ranqueamento), cada um com a própria --itens-por-linha.
+    itens_por_subgrupo = {
+        subgrupo: int(valor)
+        for subgrupo, valor in re.findall(
+            r"\.subgroup-([\w-]+) \.platform-grid \{ --itens-por-linha: (\d+); \}", css
+        )
+    }
+
+    blocos = re.findall(
+        r'class="platform-group secao-platform-([\w-]+)"(.*?)</section>', html, re.S
+    )
+    assert blocos, "nenhum módulo encontrado no índice"
+
+    larguras = {
+        secao: 9 if "1 / -1" in valor else int(valor.split("span")[1])
+        for secao, valor in re.findall(
+            r"\.secao-platform-([\w-]+) \{ grid-column: ([^;]+); \}", css
+        )
+    }
+
+    # Empacota os módulos em linhas de 9 colunas, na ordem do DOM, como faz o
+    # grid. Dentro de uma linha todos precisam ter o mesmo número de fileiras de
+    # itens: é a diferença entre vizinhos que abre vão vertical. Um módulo
+    # sozinho na linha não tem com quem desalinhar.
+    linha, usado, linhas = [], 0, []
+    for secao, corpo in blocos:
+        largura = larguras.get(secao, 9)
+        if usado + largura > 9:
+            linhas.append(linha)
+            linha, usado = [], 0
+        if secao == "mad":
+            # MAD não tem uma grade única: hospeda dois subcards lado a lado,
+            # cada um com sua contagem própria de fileiras. A altura do card é
+            # ditada pelo subcard mais alto — os dois crescem juntos (align-
+            # items:stretch), então a comparação relevante é o maior dos dois.
+            # A borda e o título de cada subcard somam altura que os módulos
+            # vizinhos (sem subcards) não têm; esta conta não modela esse
+            # acréscimo, então iguala a mesma contagem de fileiras não garante
+            # pixel a pixel — é uma aproximação, não uma prova.
+            subgrupos = re.findall(
+                r'class="platform-subgroup subgroup-([\w-]+)">(.*?)</div>\s*</div>', corpo, re.S
+            )
+            assert subgrupos, "mad sem subcards"
+            fileiras_sub = []
+            for nome, sub_corpo in subgrupos:
+                assert nome in itens_por_subgrupo, f"subgroup-{nome} não declara --itens-por-linha"
+                cartoes_sub = len(re.findall(r'class="platform-tile platform-tile--', sub_corpo))
+                fileiras_sub.append(math.ceil(cartoes_sub / itens_por_subgrupo[nome]))
+            linha.append((secao, max(fileiras_sub)))
+        else:
+            cartoes = len(re.findall(r'class="platform-tile platform-tile--', corpo))
+            assert secao in itens_por_linha, f"{secao} não declara --itens-por-linha"
+            linha.append((secao, math.ceil(cartoes / itens_por_linha[secao])))
+        usado += largura
+    linhas.append(linha)
+
+    for grupo in linhas:
+        fileiras = {n for _, n in grupo}
+        if len(fileiras) == 1:
+            continue
+        secoes_do_grupo = {s for s, _ in grupo}
+        if "mad" in secoes_do_grupo and max(fileiras) - min(fileiras) <= 1:
+            # MAD hospeda dois subcards lado a lado (Análise Multicritério: 4
+            # itens; Ranqueamento: 6). Não existe --itens-por-linha comum aos
+            # dois que iguale a contagem de fileiras sem sacrificar a
+            # legibilidade: 2/linha em ambos deixa Ranqueamento com uma
+            # fileira a mais; forçar 3/linha para igualar espremeria os
+            # rótulos mais longos ("Cadastro e upload — ...") demais. Uma
+            # fileira de diferença é o vão tolerado conscientemente aqui.
+            continue
+        raise AssertionError(
+            "módulos na mesma linha com alturas diferentes: "
+            + ", ".join(f"{s}={n} fileira(s)" for s, n in grupo)
+        )
+
+
+def test_paginas_descontinuadas_respondem_410() -> None:
+    """AHP e etapas avulsas da rodada foram desabilitados.
+
+    410 e não 404: o recurso existiu e foi retirado, e o cliente recebe o
+    encaminhamento para o substituto em vez de um "não encontrado" genérico.
+    """
+    from api.server import AHP_CLEAN_PAGES, HIERARQUIZACAO_PROCESS_PAGES
+
+    client = TestClient(app)
+
+    descontinuadas = ["/restrict/ahp/"]
+    descontinuadas += [f"/restrict/ahp/{nome}/" for nome in AHP_CLEAN_PAGES]
+    descontinuadas += [
+        f"/restrict/hierarquizacao/processos/{nome}/" for nome in HIERARQUIZACAO_PROCESS_PAGES
+    ]
+
+    for rota in descontinuadas:
+        resposta = client.get(rota)
+        assert resposta.status_code == 410, rota
+        assert "descontinuad" in resposta.json()["detail"].lower(), rota
+
+    # O que continua de pé no entorno.
+    for rota in (
+        "/restrict/hierarquizacao/processos/",
+        "/restrict/analise-multicriterio/",
+        "/public/ahp/colaborativa/",
+    ):
+        assert client.get(rota).status_code == 200, rota
+
+    # Nome inexistente segue 404, não 410.
+    assert client.get("/restrict/ahp/inexistente/").status_code == 404

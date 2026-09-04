@@ -1,5 +1,17 @@
 # Taxonomia simplificada da Fase 1 para obras estaduais
 
+> **Documento historico — nao e a regra vigente.**
+>
+> A classificacao de risco e restricao da Fase 1 e definida pelo *Arcabouco
+> Teorico-Conceitual de Risco e Restricao*, em
+> `/restrict/geoespacial/configuracao-risco-restricao/`, secao 2. Sao sete
+> camadas de restricao e treze de risco, e a categoria e da CAMADA oficial.
+> Em qualquer divergencia, prevalece o arcabouco.
+>
+> Este estudo precedeu o arcabouco e e mantido pelo registro do raciocinio.
+> Os enquadramentos por grupo e as escalas de severidade que ele continha foram
+> retirados por contradizerem a regra vigente.
+
 ## Premissa
 
 A Fase 1 deve captar apenas geradores de risco e restricao com incidencia real sobre a implantacao de obra estadual, evitando condicionantes municipais ordinarias sem poder material de travamento estrategico.
@@ -12,7 +24,7 @@ Plano diretor, zoneamento municipal comum e regras locais ordinarias de uso do s
 
 | Dimensao | O que entra | Exemplos tipicos | Natureza predominante | Entra na Fase 1 | Observacao operacional |
 | --- | --- | --- | --- | --- | --- |
-| Ambiental | Restricoes e riscos socioambientais com incidencia territorial direta sobre a obra. | UC, zona de amortecimento, TI, quilombola, vegetacao protegida, area contaminada, inundacao, erosao, escorregamento, cavidade. | Restricao e risco | Sim | Base principal da triagem espacial inicial. |
+| Ambiental | Restricoes e riscos socioambientais com incidencia territorial direta sobre a obra. | UC, TI, quilombola, area contaminada, inundacao, erosao, escorregamento, cavidade. | Restricao e risco | Sim | Base principal da triagem espacial inicial. |
 | Fundiario-patrimonial | Entraves de dominio, ocupacao, desapropriacao complexa e protecao patrimonial que possam deslocar, encarecer ou travar a implantacao. | Conflito dominial, assentamento, ocupacao consolidada critica, bem tombado, area envoltoria, sitio arqueologico. | Restricao e risco | Sim | Importa quando afeta diretamente o tracado, a implantacao ou o licenciamento. |
 | Juridico-institucional forte | Restricoes legais expressas, embargos e exigencias de anuencia setorial com potencial real de travamento. | Embargo ambiental, regime especial, anuencia obrigatoria de orgao federal ou estadual, area sob protecao especifica. | Restricao | Sim | So entram condicionantes com efeito concreto sobre a decisao estadual. |
 
@@ -43,8 +55,7 @@ Por isso, a taxonomia passa a distinguir:
 | --- | --- |
 | Sem incidencia | A geometria da demanda nao intersecta a feicao. Valor espacial `0`. |
 | Risco | Existe intersecao e a ocorrencia pode aumentar custo, prazo, complexidade, estudos, anuencias ou medidas de controle, mas nao comprova impedimento. Valor espacial `1` na camada de risco. |
-| Restricao | Alem da intersecao, um atributo juridico, territorial ou tecnico demonstra vedacao, incompatibilidade ou impossibilidade aplicavel a intervencao. Valor espacial `1` na camada de restricao. |
-| Risco pendente de analise | Houve intersecao, mas a camada nao possui atributos suficientes para decidir entre risco e restricao. Deve permanecer como risco ate analise competente. |
+| Restricao | (Ver arcabouco, secao 2: a categoria e da camada oficial.) Alem da intersecao, um atributo juridico, territorial ou tecnico demonstra vedacao, incompatibilidade ou impossibilidade aplicavel a intervencao. Valor espacial `1` na camada de restricao. |
 
 ### Regra de precedencia
 
@@ -54,23 +65,18 @@ Por isso, a taxonomia passa a distinguir:
 4. Na ausencia de restricao, consolidar e relatar todos os riscos encontrados.
 5. Nunca inferir restricao apenas pela ausencia de informacao na camada.
 
-### Enquadramento inicial dos grupos
+### Enquadramento dos grupos
 
-| Grupo | Enquadramento inicial | Atributo que pode elevar para restricao |
-| --- | --- | --- |
-| UC de Protecao Integral | Risco | Categoria, zona, plano de manejo ou manifestacao do gestor que torne a obra incompatível. |
-| UC de Uso Sustentavel | Risco | Zona ou norma especifica que vede a intervencao. |
-| Zona de amortecimento | Risco | Regra especifica de uso que vede a intervencao. |
-| APP | Risco | Nao enquadramento em hipotese legal admissivel ou descumprimento de condicao obrigatoria. |
-| Vegetacao nativa | Risco | Bioma, fitofisionomia, estagio e hipotese legal que nao admitam supressao. |
-| APRM | Risco | Classe territorial e lei especifica incompatíveis com a intervencao. |
-| Ecossistema costeiro sensivel | Risco | Categoria legal e condicao concreta que nao admitam intervencao. |
-| Cavidade natural | Risco | Relevancia maxima ou outra classe legalmente impeditiva. |
-| Terra indigena e territorio quilombola | Risco socioambiental e institucional | Impedimento reconhecido no processo e pela autoridade competente. |
-| Area contaminada | Risco | Impossibilidade de gerenciamento seguro ou incompatibilidade comprovada. |
-| Inundacao, erosao e movimentos de massa | Risco tecnico-ambiental | Risco residual inaceitavel ou impossibilidade tecnica demonstrada. |
-| Patrimonio tombado ou arqueologico | Risco patrimonial | Ato de protecao ou decisao competente que vede a intervencao. |
-| Assentamento e regime fundiario especial | Risco fundiario | Impedimento dominial ou institucional que inviabilize a alternativa. |
+O enquadramento inicial que constava aqui atribuia risco a Unidade de
+Conservacao de Protecao Integral, terra indigena, territorio quilombola,
+ecossistema costeiro e patrimonio tombado, e listava zona de amortecimento e APP
+como grupos proprios. Nada disso corresponde a regra vigente.
+
+A classificacao valida esta na secao 2 do arcabouco: sete camadas de restricao
+(restricao CETESB, embargo estadual, embargo federal, manguezal, territorio
+quilombola, terra indigena e Unidade de Conservacao de Protecao Integral) e treze
+de risco. Zona de amortecimento e APP nao sao camadas da Fase 1 — a pagina e
+explicita em que zonas de amortecimento nao sao geradas nem classificadas.
 
 ### Aplicacao correta no SICARD
 
@@ -100,29 +106,16 @@ FUNAI, ICMBio, IPHAN, Fundacao Cultural Palmares e INCRA nao devem ser registrad
 
 Referencias: [Lei Complementar nº 140/2011](https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp140.htm) e [Decreto Federal nº 8.437/2015](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/decreto/d8437.htm).
 
-## Restricao automatica de priorizacao
+## Restricao automatica de priorizacao (retirada)
 
-Alem da restricao legal, o SICARD pode produzir uma restricao administrativa de priorizacao quando o conjunto de incidencias indicar prazo, coordenacao institucional ou exigencias incompatíveis com o horizonte da carteira.
+Esta secao propunha derivar restricao de uma escala graduada — severidade 4 e
+indice a partir de 3,50 seriam convertidos em restricao — e foi retirada por
+contradizer a regra vigente.
 
-O calculo deve ocorrer depois da deteccao espacial e conter:
-
-- licenciador determinado;
-- estudo ambiental exigido ou ainda pendente de enquadramento;
-- lista de intervenientes;
-- autorizacoes especificas;
-- consultas e audiencias;
-- compensacoes previsiveis;
-- necessidade de alternativa locacional;
-- numero de incidencias acumuladas.
-
-| Classe | Tratamento |
-| --- | --- |
-| Baixa | Sem restricao de priorizacao. |
-| Media | Risco de prazo. |
-| Alta | Restricao automatica de priorizacao. |
-| Critica | Inelegivel na rodada, salvo decisao motivada. |
-
-Pesos, limites e excecoes devem vir de configuracao versionada e aprovada, nunca de valores fixos inventados no codigo. A decisao e seus fatores devem ser gravados no JSONB da hierarquizacao.
+No arcabouco, restricao e regra booleana nao compensatoria, aplicada antes da
+ponderacao: ela vem da categoria da camada oficial, nunca de um escore
+acumulado. A propria pagina fecha com "a restricao nunca e inferida pela simples
+ausencia de informacao na camada". Escores graduam risco e so risco.
 
 ## Embargos e interdicoes
 
@@ -147,7 +140,14 @@ Fonte federal: [consulta de areas embargadas do IBAMA](https://www.gov.br/ibama/
 
 ## Indices simplificados para decisao do gestor
 
-Cada objeto guarda os valores detalhados, mas segue para as fases posteriores com uma classe arredondada simples.
+A escala que constava aqui ia de 0 a 4 com o valor 4 rotulado "Restricao", e
+convertia o indice resultante em restricao a partir de 3,50. Foi retirada pelo
+mesmo motivo da secao anterior: fazia a restricao emergir de um escore.
+
+Na regra vigente as duas grandezas nao se misturam. A restricao e booleana e vem
+da camada; o indice gradua exclusivamente o risco, e o objeto que intersecta uma
+camada de restricao sequer chega a avaliacao agregada de risco. Sobre os objetos
+sem restricao, a graduacao segue util:
 
 | Valor | Classe |
 | ---: | --- |
@@ -155,22 +155,9 @@ Cada objeto guarda os valores detalhados, mas segue para as fases posteriores co
 | 1 | Risco baixo |
 | 2 | Risco medio |
 | 3 | Risco alto |
-| 4 | Restricao |
-
-O indice de risco e calculado pela media ponderada dos criterios avaliados. O indice de restricao e o maior valor restritivo confirmado, evitando que embargo ou interdicao sejam diluidos pela media.
 
 ```text
-indice_risco = soma(valor × peso) / soma(pesos aplicaveis)
-indice_restricao = maximo(valores restritivos confirmados)
-valor_resultante = maximo(indice_risco, indice_restricao)
+indice_risco = soma(valor x peso) / soma(pesos aplicaveis)
 ```
-
-| Valor resultante | Arredondamento operacional |
-| ---: | --- |
-| 0 | Sem risco |
-| maior que 0 e menor que 1,50 | Risco baixo |
-| de 1,50 ate menor que 2,50 | Risco medio |
-| de 2,50 ate menor que 3,50 | Risco alto |
-| de 3,50 ate 4,00 | Restricao |
 
 Falta de dado e falha de processamento significam `nao avaliado`, nunca zero. Pesos e limiares sao configuraveis, versionados e preservados no JSONB da rodada.

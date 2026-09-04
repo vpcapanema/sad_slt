@@ -75,7 +75,6 @@ CRITERIA = [
     ("uc_us_federal", "ucs_mma", ["federal", "uso sustentavel"]),
     ("za_uc_estadual", None, []),
     ("za_uc_federal", None, []),
-    ("vegetacao_protegida", "vegetacao_sp", []),
     ("aprm", "aprm_sp", []),
     ("ecossistema_costeiro", "vegetacao_sp", ["mangue|manguezal|restinga"]),
     ("cavidade", "cavidades", []),

@@ -86,6 +86,53 @@ Cada criterio processado pelo modulo deve possuir cadastro minimo:
 - `extensao_processamento`;
 - `observacao_metodologica`.
 
+## Independencia entre criterios
+
+Antes de gerar a superficie, o modulo deve verificar se os criterios selecionados
+sao efetivamente independentes entre si.
+
+A superficie combina os criterios por media — simples nesta versao, ponderada por
+AHP na versao homologada. Em qualquer das duas, dois criterios que medem o mesmo
+fator latente nao se compensam: eles somam. O fator passa a pesar tantas vezes
+quantos forem os criterios que o representam.
+
+Isso e especialmente grave quando os pesos vem de AHP. A comparacao pareada de
+Saaty pergunta ao especialista o peso de cada criterio assumindo que os criterios
+sao independentes. Se dois deles medem a mesma coisa, o especialista atribui peso
+a cada um separadamente e o fator recebe a soma dos dois, sem que isso apareca na
+razao de consistencia — a matriz pode ficar perfeitamente consistente e ainda
+assim ponderar errado. A verificacao de independencia precisa acontecer na
+composicao do catalogo, nao na ponderacao.
+
+### Procedimento
+
+1. **Verificacao por construcao.** Para cada par de criterios, comparar os insumos
+   brutos. Criterio derivado dos mesmos insumos de outro — ainda que por operador
+   de agregacao diferente — e redundante por construcao e deve ser removido, mesmo
+   que a correlacao observada nao seja alta.
+2. **Verificacao por correlacao.** Calcular a matriz de correlacao de postos
+   (Spearman) entre os campos de criterio da camada normalizada. Pares com
+   coeficiente elevado devem ser examinados.
+3. **Julgamento.** Correlacao alta nao e prova de redundancia. Dois criterios
+   podem correlacionar porque o territorio os associa, e ainda assim medirem
+   fenomenos que respondem a intervencoes diferentes. O criterio de remocao e
+   **ausencia de informacao propria**, nao correlacao.
+4. **Registro.** Toda remocao deve constar do catalogo de criterios com o motivo
+   (`redundante` ou `sem_dado`) e da secao de composicao do diagnostico
+   correspondente, com a evidencia que a sustentou.
+
+### Distincao entre redundancia e degeneracao
+
+Sao problemas diferentes e a resposta e diferente:
+
+- **Redundante:** o criterio repete informacao de outro. A remocao e definitiva,
+  porque reincluir o criterio voltaria a inflar o fator.
+- **Degenerado:** o criterio tem informacao propria, mas e praticamente constante
+  no territorio — quase todos os valores iguais. Ele nao discrimina e apenas
+  desloca a superficie por uma constante. A causa costuma ser qualidade ou
+  cobertura do insumo, entao o criterio permanece no catalogo e a correcao e no
+  dado, nao na composicao.
+
 ## Importacao e recepcao das camadas
 
 O modulo deve conter um motor de input/importacao capaz de receber camadas por WFS ou

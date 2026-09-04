@@ -21,12 +21,17 @@ class HierarquizacaoCreateSchema(BaseModel):
     )
     objetos: list[dict[str, Any]] | None = None
     matriz_premissas_criterios: dict[str, Any] | list[Any] | None = None
-    fases_a_executar: list[int] = Field(default_factory=list)
+    # Omitir o campo significa "a rodada percorre as três fases". O default
+    # anterior era uma lista vazia, que `_exigir_fase` lê como "nenhuma fase" e
+    # que inviabilizava executar qualquer fase da rodada recém-criada.
+    fases_a_executar: list[int] = Field(default_factory=lambda: [1, 2, 3])
 
     @field_validator("fases_a_executar")
     @classmethod
     def validar_fases(cls, value: list[int]) -> list[int]:
         fases = sorted(set(value))
+        if not fases:
+            raise ValueError("Informe ao menos uma fase entre 1, 2 e 3.")
         if any(fase not in {1, 2, 3} for fase in fases):
             raise ValueError("Informe uma ou mais fases entre 1, 2 e 3.")
         return fases

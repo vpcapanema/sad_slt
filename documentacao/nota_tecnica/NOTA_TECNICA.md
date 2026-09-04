@@ -838,4 +838,4 @@ versões desta nota técnica, conforme o *Histórico de Revisões*.
 ---
 
 *Fontes internas da metodologia: `documentacao/hierarquizacao/` (ESPINHA_DORSAL,
-MODELO_HIERARQUIZACAO_ESPACIAL, MODULO_FASE1/2/3) e `data/matriz-criterios-premissas.json`.*
+MODELO_HIERARQUIZACAO_ESPACIAL, MODULO_FASE1/2/3) e `config/matriz-criterios-premissas.json`.*

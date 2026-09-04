@@ -1,6 +1,7 @@
 """Pipeline transacional do endpoint importar_camadas."""
 from __future__ import annotations
 
+import json
 import re
 import secrets
 import threading
@@ -25,6 +26,7 @@ from shapely.geometry.base import BaseGeometry
 from api.services.geoespacial_service import geoespacial_service
 from api.repositories import camada_geoespacial_repository
 from api.services.geospatial_upload_storage import (
+    CONTAINER_EXTENSIONS,
     PreparedUpload,
     StoredUpload,
     commit_prepared,
@@ -323,10 +325,14 @@ def _vector_layers(
     category: str,
     source_name: str | None = None,
 ) -> list[tuple[str, gpd.GeoDataFrame]]:
-    if category == "geodatabase":
+    # A decisão é do arquivo, não da categoria: desde que `.gpkg` passou a ser
+    # classificado como vetor, é a natureza de contêiner que determina se há
+    # várias camadas a ler — do contrário um GeoPackage multicamada perderia
+    # todas menos a primeira.
+    if path.is_dir() or path.suffix.lower() in CONTAINER_EXTENSIONS:
         layers = list(fiona.listlayers(path))
         if not layers:
-            raise ValueError("Geodatabase sem camadas vetoriais legíveis")
+            raise ValueError("Contêiner sem camadas vetoriais legíveis")
         return [(layer, gpd.read_file(path, layer=layer)) for layer in layers]
     return [(source_name or path.stem, gpd.read_file(path))]
 
@@ -413,7 +419,7 @@ async def importar_camadas(
     target_crs: str | None = None,
     clip_layer_id: str | None = None,
     inspection_token: str | None = None,
-    grupo: str | None = None,
+    pasta: str | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     prepared: PreparedUpload | None = None
@@ -495,10 +501,16 @@ async def importar_camadas(
             if progress: progress("Camadas existentes recuperadas sem nova gravação")
             return response
 
-        stored = commit_prepared(prepared, grupo)
+        stored = commit_prepared(prepared, pasta)
         if progress: progress(f"Arquivo original preservado no datastorage/{stored.category}")
         prepared = None
         common = {
+            # `caminho_arquivo` é a chave que _registrar_metadados promove ao
+            # topo do registro; sem ela o vínculo com o datastorage se perdia e
+            # os 50 registros do catálogo ficavam sem saber de que arquivo
+            # vieram — restando só o nome, que é ambíguo, para identificá-los.
+            # Aponta para o dataset legível (o .shp/.gpkg), não para a pasta.
+            "caminho_arquivo": stored.relative_import_path,
             "arquivo_original": stored.relative_original_path,
             "arquivo_compactado": stored.archive,
             "categoria_armazenamento": stored.category,
@@ -596,3 +608,54 @@ def inspecionar_camadas(filename: str, content: bytes) -> dict[str, Any]:
     finally:
         if prepared is not None:
             discard_prepared(prepared)
+
+
+PREVIA_MAX_FEICOES = 3000
+
+
+def previa_da_inspecao(token: str) -> dict[str, Any]:
+    """GeoJSON leve da inspeção, para pré-visualizar antes de importar.
+
+    Espia o ticket sem consumi-lo: a pré-visualização não pode gastar a
+    inspeção, porque o envio subsequente ainda depende dela. Geometria vai
+    reprojetada para EPSG:4326 (o que o Leaflet espera) e simplificada, e o
+    número de feições é limitado — a prévia serve para conferir posição e
+    forma, não para inspecionar atributo por atributo.
+    """
+    _cleanup_inspection_tickets()
+    with _inspection_lock:
+        ticket = _inspection_tickets.get(token)
+    if ticket is None:
+        raise ValueError("A inspeção expirou ou já foi utilizada. Selecione o arquivo novamente.")
+
+    if not ticket.vector_results:
+        return {
+            "tipo": "raster", "camadas": [], "geojson": None,
+            "limite_atingido": False, "total_feicoes": 0,
+        }
+
+    camadas = []
+    for nome, frame, metadata in ticket.vector_results:
+        quadro = frame if frame.crs is None else frame.to_crs("EPSG:4326")
+        total = len(quadro)
+        recorte = quadro.head(PREVIA_MAX_FEICOES)
+        # Tolerância proporcional à extensão: preserva a forma e corta vértice.
+        minx, miny, maxx, maxy = recorte.total_bounds
+        extensao = max(abs(maxx - minx), abs(maxy - miny)) or 1.0
+        simplificado = recorte.copy()
+        simplificado["geometry"] = recorte.geometry.simplify(extensao / 2000)
+        camadas.append({
+            "nome": nome,
+            "total_feicoes": int(total),
+            "exibidas": int(len(recorte)),
+            "limite_atingido": bool(total > PREVIA_MAX_FEICOES),
+            "bounds": [float(v) for v in recorte.total_bounds],
+            "geojson": json.loads(simplificado.to_json()),
+            "metadados": metadata,
+        })
+    return {
+        "tipo": "vetor",
+        "camadas": camadas,
+        "total_feicoes": sum(c["total_feicoes"] for c in camadas),
+        "limite_atingido": any(c["limite_atingido"] for c in camadas),
+    }

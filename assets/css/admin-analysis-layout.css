@@ -12,8 +12,7 @@
 }
 
 /* ── Área principal compacta ── */
-.page-admin-demanda .admin-dashboard-content,
-.page-admin-objeto .admin-dashboard-content {
+.page-admin-demanda .admin-dashboard-content {
   padding: 0.65rem 0.85rem 2rem;
   display: block;
   min-width: 0;

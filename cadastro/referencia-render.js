@@ -4,12 +4,12 @@
 
   async function loadReferencia(_basePath) {
     if (!referencia) {
-      const res = await fetch("/data/referencia-institucional.json");
+      const res = await fetch("/config/referencia-institucional.json");
       if (!res.ok) throw new Error("Não foi possível carregar a referência institucional.");
       referencia = await res.json();
     }
     if (!classificacao) {
-      const res2 = await fetch("/data/referencia-classificacao.json");
+      const res2 = await fetch("/config/referencia-classificacao.json");
       if (!res2.ok) throw new Error("Não foi possível carregar a referência de classificação.");
       classificacao = await res2.json();
     }

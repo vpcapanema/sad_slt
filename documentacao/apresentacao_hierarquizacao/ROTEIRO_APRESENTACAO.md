@@ -4,7 +4,7 @@ Documento de planejamento detalhado (conteúdo por slide), preparatório para a
 implementação da apresentação em Reveal.js/Markdown. Público-alvo: cliente/gestores
 institucionais, com apêndice técnico completo por critério espacializado.
 
-Fonte de verdade para os critérios: `data/matriz-criterios-premissas-v3.json`
+Fonte de verdade para os critérios: `config/matriz-criterios-premissas-v3.json`
 (50 critérios: 18 Fase 1, 2 Fase 2-grade, 14 Fase 2-rede, 16 Fase 3).
 Fonte das saídas visuais: manifestos em `data/geoespacial/relatorios/mapas_fase1/`,
 `mapas_fase2/` e `mapas_fase2_normalizados/`.

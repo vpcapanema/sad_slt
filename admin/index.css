@@ -382,6 +382,11 @@
 .restrict-platform-groups {
   display: grid;
   grid-template-columns: repeat(9, minmax(0, 1fr));
+  /* `.platform-groups-grid` (platform-map.css) traz `1fr 1fr` do layout 2x2
+     original: linhas de altura igual. Aqui o número de linhas varia e cada uma
+     deve caber no próprio conteúdo, senão um módulo mais curto ganha vão. */
+  grid-template-rows: auto;
+  grid-auto-rows: auto;
   gap: 16px;
   width: 100%;
   align-items: stretch;
@@ -397,16 +402,36 @@
   height: 100%;
 }
 
-.secao-platform-mocad { grid-column: span 4; }
-.secao-platform-mad { grid-column: span 3; }
+/* MAD absorveu o antigo card FASES como subcard "Ranqueamento", ao lado do
+   subcard "Análise Multicritério (AHP)". Os três módulos da linha (MOCAD, MAD,
+   RESULTADOS) continuam lado a lado: 3 + 4 + 2 fecham as 9 colunas sem sobra,
+   com MAD mais largo por hospedar dois subcards.*/
+.secao-platform-mocad { grid-column: span 3; }
+.secao-platform-mad { grid-column: span 4; }
 .secao-platform-resultados { grid-column: span 2; }
-.secao-platform-administracao { grid-column: span 3; }
+.secao-platform-administracao { grid-column: span 4; }
 .secao-platform-geoprocessamento { grid-column: 1 / -1; }
-.secao-platform-ahp-restrict { grid-column: span 4; }
 .secao-platform-ami { grid-column: 1 / -1; }
 
-.restrict-platform-groups:has(.secao-platform-administracao[hidden]) .secao-platform-ahp-restrict {
-  grid-column: 1 / -1;
+/* Portal público e catálogos dividem a última linha com a administração
+   (4 + 3 + 2 das 9 colunas). */
+.secao-platform-publico { grid-column: span 3; }
+.secao-platform-catalogos { grid-column: span 2; }
+
+/* Sem permissão de administração o bloco ADMIN some; os dois restantes
+   assumem as colunas que sobrariam vazias. */
+.restrict-platform-groups:has(.secao-platform-administracao[hidden]) .secao-platform-publico {
+  grid-column: span 5;
+}
+
+.restrict-platform-groups:has(.secao-platform-administracao[hidden]) .secao-platform-catalogos {
+  grid-column: span 4;
+}
+
+/* `.platform-group` declara `display:flex`, que vence o atributo `hidden` —
+   sem isto o bloco restrito à administração aparece para qualquer perfil. */
+.restrict-platform-groups .platform-group[hidden] {
+  display: none;
 }
 
 .restrict-platform-groups .platform-group__heading {
@@ -427,67 +452,91 @@
   font-weight: 700;
 }
 
+/* Grade interna em flex, e não em grid de colunas fixas, por um motivo: numa
+   grade fixa a última linha de um módulo cuja contagem não fecha o número de
+   colunas deixa buracos (MOCAD com 5 itens em 2 colunas, ADMIN com 7 em 4). Em
+   flex, os itens da linha incompleta crescem e ocupam a largura toda.
+
+   `--itens-por-linha` é definido por módulo logo abaixo, sempre de modo que
+   todos os blocos tenham exatamente DUAS linhas de itens. Como as linhas se
+   esticam (`align-content: stretch`) e a grade cresce dentro do bloco
+   (`flex: 1`), não sobra vazio nem na horizontal nem na vertical. */
 .restrict-platform-groups .platform-grid {
+  --itens-por-linha: 3;
+  --vao: 8px;
   container-type: normal;
-  flex: none;
+  flex: 1;
   width: 100%;
-  grid-auto-rows: auto;
-  place-items: stretch;
-  align-content: start;
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: stretch;
+  /* `.platform-grid` traz `place-items: center`, que em flex impede o item de
+     esticar na altura — era o que deixava o vão em cima e embaixo dos itens
+     quando a linha do grid ficava mais alta que eles. */
+  align-items: stretch;
+  justify-items: stretch;
+  gap: var(--vao);
 }
 
-/* As colunas ocupam integralmente o interior de cada módulo. */
-.secao-platform-mocad .platform-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.secao-platform-mocad .platform-grid { --itens-por-linha: 3; }
+.secao-platform-resultados .platform-grid { --itens-por-linha: 1; }
+.secao-platform-geoprocessamento .platform-grid { --itens-por-linha: 5; }
+.secao-platform-administracao .platform-grid { --itens-por-linha: 4; }
+.secao-platform-publico .platform-grid { --itens-por-linha: 3; }
+.secao-platform-catalogos .platform-grid { --itens-por-linha: 2; }
+.secao-platform-ami .platform-grid { --itens-por-linha: 4; }
+
+/* MAD agora reúne dois subcards lado a lado em vez de uma grade só. Cada um é
+   um cartão com borda própria — o mesmo desenho de .platform-group em
+   platform-map.css (borda 1px, cantos arredondados, fundo branco) — para não
+   misturar "Análise Multicritério" com "Ranqueamento" numa massa única de
+   blocos sem contorno. */
+.secao-platform-mad .platform-subgroups {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  width: 100%;
+  align-items: stretch;
 }
 
-.secao-platform-mad .platform-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.secao-platform-mad .platform-subgroup {
+  flex: 1 1 14rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.7rem 0.8rem 0.8rem;
+  border: 1px solid #dce5ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 10px rgba(18, 48, 77, 0.05);
 }
 
-.secao-platform-resultados .platform-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.secao-platform-mad .platform-subgroup__title {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #314e68;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
-.secao-platform-geoprocessamento .platform-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.secao-platform-ami .platform-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-/* 4 itens na primeira linha e 3 itens distribuídos por toda a segunda. */
-.secao-platform-administracao .platform-grid {
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-}
-
-.secao-platform-administracao .platform-tile:nth-child(-n + 4) {
-  grid-column: span 3;
-}
-
-.secao-platform-administracao .platform-tile:nth-child(n + 5) {
-  grid-column: span 4;
-}
-
-.secao-platform-ahp-restrict .platform-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
+/* Coluna estreita (dois subcards dividem a largura de um módulo já span-4):
+   dois itens por linha em ambos, senão os rótulos ficam espremidos demais. */
+.subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos .platform-grid { --itens-por-linha: 2; }
+.subgroup-ranqueamento .platform-grid { --itens-por-linha: 2; }
 
 .restrict-platform-groups .platform-tile {
-  width: 100%;
-  height: 78px;
+  flex: 1 1 calc((100% - (var(--itens-por-linha) - 1) * var(--vao)) / var(--itens-por-linha));
+  width: auto;
+  min-width: 0;
+  height: auto;
   min-height: 78px;
   aspect-ratio: auto;
   border-color: #b8c5d1;
   background: #edf1f5;
   box-shadow: 0 2px 5px rgba(18, 48, 77, 0.07);
-}
-
-.secao-platform-resultados .platform-tile {
-  height: 164px;
-  min-height: 164px;
 }
 
 .restrict-platform-groups .platform-tile:hover,
@@ -500,15 +549,24 @@
   font-size: 0.66rem;
 }
 
+/* Abaixo de 1050px dois módulos lado a lado espremem os blocos de dez itens
+   (Geoprocessamento e AHP) e desalinham a altura entre vizinhos de tamanhos
+   diferentes. Um módulo por linha mantém a contagem por linha legível e
+   continua sem deixar vão. */
 @media (max-width: 1050px) {
   .restrict-platform-groups {
-    grid-template-columns: repeat(10, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
-  .restrict-platform-groups .platform-group {
-    grid-column: span 5;
+  .restrict-platform-groups .platform-group,
+  .restrict-platform-groups:has(.secao-platform-administracao[hidden]) .secao-platform-publico,
+  .restrict-platform-groups:has(.secao-platform-administracao[hidden]) .secao-platform-catalogos {
+    grid-column: 1 / -1;
   }
 
+  .secao-platform-resultados .platform-grid {
+    --itens-por-linha: 2;
+  }
 }
 
 @media (max-width: 700px) {
@@ -516,25 +574,9 @@
     grid-column: 1 / -1;
   }
 
-  .secao-platform-mad .platform-grid,
-  .secao-platform-resultados .platform-grid,
-  .secao-platform-administracao .platform-grid,
-  .secao-platform-ahp-restrict .platform-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .secao-platform-geoprocessamento .platform-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .secao-platform-administracao .platform-tile:nth-child(n) {
-    grid-column: auto;
-  }
-
-  .secao-platform-administracao .platform-tile:last-child,
-  .secao-platform-ahp-restrict .platform-tile:last-child {
-    grid-column: 1 / -1;
-    width: calc(50% - 4px);
-    justify-self: center;
+  /* Em coluna única todos os módulos passam a duas colunas de itens. O item
+     que sobra numa contagem ímpar cresce e ocupa a linha inteira, sem buraco. */
+  .restrict-platform-groups .platform-grid {
+    --itens-por-linha: 2;
   }
 }

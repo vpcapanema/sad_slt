@@ -81,6 +81,8 @@
       <header><div><h2>Importar camadas</h2><p>O arquivo será validado antes de entrar no datastorage e no banco.</p></div><button type="button" class="btn-icon" id="btn-fechar-importacao" aria-label="Fechar">×</button></header>
       <label class="geoespacial-import-field"><span>Arquivo</span><input id="viewer-file-input" name="arquivo" type="file" accept=".shp,.geojson,.json,.kml,.gml,.fgb,.gpkg,.tif,.tiff,.img,.asc,.vrt,.jp2,.zip,.rar,.7z,.tar,.tgz,.gz" required></label>
       <div id="import-inspection-status" class="hint">Selecione um arquivo para identificar tipo, CRS e conteúdo.</div>
+      <label class="geoespacial-import-field"><span>Pasta de destino</span><input id="import-pasta" name="pasta" type="text" list="import-pastas-existentes" placeholder="Deixe em branco para NAO_CLASSIFICADAS" autocomplete="off"><datalist id="import-pastas-existentes"></datalist></label>
+      <div class="hint">Escolha uma pasta existente ou digite um nome novo para criá-la.</div>
       <label class="geoespacial-import-field"><span>CRS atual da camada</span><input id="import-current-crs" type="text" placeholder="Detectado após selecionar o arquivo" readonly></label>
       <label class="geoespacial-import-check"><input id="import-reproject-enabled" type="checkbox"><span>Reprojetar CRS</span></label>
       <label class="geoespacial-import-field"><span>CRS de destino</span><select id="import-target-crs" disabled><option value="EPSG:4674">EPSG:4674 (SIRGAS 2000) — recomendado</option><option value="EPSG:4326">EPSG:4326 — WGS 84</option><option value="EPSG:31983">EPSG:31983 — SIRGAS 2000 / UTM 23S</option></select></label>

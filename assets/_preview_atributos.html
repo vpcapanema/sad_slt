@@ -246,7 +246,7 @@ async function selecionar(codigo) {
   try {
     let colunas, objetos;
     if (codigo === "__v3__") {
-      const matriz = await getJSON("/data/matriz-criterios-premissas-v3.json");
+      const matriz = await getJSON("/config/matriz-criterios-premissas-v3.json");
       const res = await fetch("/api/ahp/atributos-objetos/colunas/preview", {
         method: "POST", credentials: "same-origin",
         headers: { "Content-Type": "application/json" },

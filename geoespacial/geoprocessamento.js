@@ -41,7 +41,7 @@
     interpolacao:{nome:"Surface Modeling Toolbox",ids:new Set(["OP-10","OP-11","OP-12","OP-14","OP-16","OP-20","OP-39","OP-40","OP-43"])}
   };
   const TOOL_LIBRARY={
-    "OP-01":"GDAL","OP-02":"GeoPandas","OP-02-CORR":"Shapely","OP-03":"PyProj","OP-04":"Shapely","OP-05":"GeoPandas","OP-05-IDENT":"GeoPandas","OP-06":"GeoPandas","OP-07":"GeoPandas",
+    "OP-01":"GDAL","OP-02":"GeoPandas","OP-02-CORR":"Shapely","OP-03":"PyProj","OP-04":"Shapely","OP-05":"GDAL","OP-05-IDENT":"GDAL","OP-06":"GeoPandas","OP-07":"GeoPandas",
     "OP-08":"Rasterio","OP-10":"SciPy","OP-11":"SciPy","OP-12":"Scikit-learn","OP-13":"SciPy","OP-14":"PyKrige","OP-15":"GeoPandas","OP-16":"Rasterio","OP-17":"NumPy","OP-20":"NumPy","OP-21":"Rasterio","OP-22":"Rasterio","OP-23":"Rasterio","OP-24":"Rasterio",
     "OP-25":"Fiona","OP-26":"GDAL","OP-27":"GDAL","OP-28":"Shapely","OP-29":"Shapely","OP-30":"Shapely","OP-31":"Shapely","OP-32":"GeoPandas","OP-33":"GeoPandas","OP-34":"GeoPandas","OP-35":"Pandas","OP-36":"PyProj","OP-37":"Shapely","OP-38":"Shapely",
     "OP-39":"NumPy","OP-40":"NumPy","OP-41":"NumPy","OP-42":"SciPy","OP-43":"SciPy"
@@ -53,8 +53,8 @@
     "OP-02-CORR":[["camada_id","Camada","layer"],["corrigir_geometrias_invalidas","Corrigir geometrias inválidas","check",true],["corrigir_auto_intersecoes","Corrigir auto-interseções","check",true]],
     "OP-03":[["camada_id","Camada","layer"],["crs_destino","CRS de destino","select",CRS_VALUES],["remover_geometrias_vazias","Remover vazias","check",true],["explodir_multipartes","Explodir multipartes","check",false]],
     "OP-04":[["camada_id","Camada","layer"],["distancia_buffer","Distância","number",100],["unidade_buffer","Unidade","select",["metros","graus"]],["tipo_buffer","Tipo","select",["cheio","externo"]],["dissolver_geometrias","Dissolver","check",false]],
-    "OP-05":[["camada_id_1","Camada de entrada","layer"],["camada_id_2","Camada de identidade","layer"],["tipo_overlay","Operação","select",["identity","intersection","union","difference"]],["resolver_conflitos_campos","Preservar e resolver atributos","check",true]],
-    "OP-05-IDENT":[["camada_id_1","Camada de entrada","layer"],["camada_id_2","Camada de identidade","layer"],["resolver_conflitos_campos","Preservar e resolver atributos","check",true]],
+    "OP-05":[["camada_id_1","Camada de entrada","layer"],["camada_id_2","Camada de identidade","layer"],["tipo_overlay","Operação","select",["identity","intersection","union","difference","symmetric_difference"]],["resolver_conflitos_campos","Preservar e prefixar atributos","check",true],["regra_nomenclatura","Regra de nomenclatura","text","<fonte_id>__<nome_campo>"]],
+    "OP-05-IDENT":[["camada_id_1","Camada de entrada","layer"],["camada_id_2","Camada de identidade","layer"],["resolver_conflitos_campos","Preservar e prefixar atributos","check",true],["regra_nomenclatura","Regra de nomenclatura","text","<fonte_id>__<nome_campo>"]],
     "OP-06":[["camada_id","Camada","layer"],["campo_agrupamento","Campo de agrupamento","text"],["funcao_agregacao","Agregação","select",["soma","media","mediana","max","min"]]],
     "OP-07":[["camada_id","Camada alvo","layer"],["camada_ref_id","Camada de referência","layer"],["tipo_selecao","Predicado","select",["intersects","contains","within","touches"]],["inverter_selecao","Inverter seleção","check",false]],
     "OP-08":[["camada_id","Camada","layer"],["resolucao_raster","Resolução","number",50],["crs_destino","CRS","select",CRS_VALUES],["atributo_rasterizacao","Atributo","text"],["valor_preenchimento","Valor de fundo","number",0]],
@@ -67,7 +67,7 @@
     "OP-25":[["camada_id","Camada","layer"]],
     "OP-26":[["raster_id","Camada","layer"],["comprimir_arquivo","Comprimir","check",true]]
   };
-  const BASEMAPS=[{id:"esri-gray",name:"Cinza Neutro (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"]},{id:"esri-dark-gray",name:"Cinza Escuro (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"]},{id:"carto-positron",name:"Carto Positron (sem rótulos)",tiles:["https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png"]},{id:"carto-voyager",name:"Carto Voyager",tiles:["https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"]},{id:"carto-light",name:"Carto Claro",tiles:["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"]},{id:"carto-dark",name:"Carto Escuro",tiles:["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"]},{id:"osm",name:"OpenStreetMap",tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"]},{id:"esri-street",name:"Ruas (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"]},{id:"esri-topo",name:"Topográfico (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"]},{id:"opentopomap",name:"OpenTopoMap",tiles:["https://a.tile.opentopomap.org/{z}/{x}/{y}.png"]},{id:"esri-natgeo",name:"National Geographic (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}"]},{id:"esri-satellite",name:"Imagem de Satélite (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"]}];
+  const BASEMAPS=[{id:"esri-gray",name:"Cinza Neutro (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"]},{id:"esri-dark-gray",name:"Cinza Escuro (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"]},{id:"ofm-positron",name:"OpenFreeMap Claro",style:"https://tiles.openfreemap.org/styles/positron"},{id:"ofm-dark",name:"OpenFreeMap Escuro",style:"https://tiles.openfreemap.org/styles/dark"},{id:"osm",name:"OpenStreetMap",tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"]},{id:"esri-street",name:"Ruas (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"]},{id:"esri-topo",name:"Topográfico (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}"]},{id:"opentopomap",name:"OpenTopoMap",tiles:["https://a.tile.opentopomap.org/{z}/{x}/{y}.png"]},{id:"esri-natgeo",name:"National Geographic (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}"]},{id:"esri-satellite",name:"Imagem de Satélite (Esri)",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"]}];
   Object.assign(FIELDS,{"OP-11":[["camada_id","Camada","layer"],["atributo_peso","Atributo de peso","text"],["resolucao_distancia","Resolução","number",50]],"OP-13":[["raster_id","ID do raster de custo","text"],["origem_linha","Linha de origem","number",0],["origem_coluna","Coluna de origem","number",0]],"OP-16":[["camada_id","Camada","layer"],["resolucao_raster","Resolução","number",50]],"OP-21":[["raster_id","ID do raster","text"],["camada_mascara_id","Camada de máscara","layer"]],"OP-22":[["raster_id","ID do raster","text"],["camada_zona_id","Camada de zonas","layer"]],"OP-23":[["raster_id","ID do raster","text"],["camada_pontos_id","Camada de pontos","layer"]],"OP-24":[["raster_id","ID do raster","text"],["camada_poligono_id","Camada de polígonos","layer"],["estatistica","Estatística","select",["media","soma","min","max"]]]});
   Object.assign(FIELDS,{
     "OP-28":[["camada_id","Camada","layer"]],"OP-29":[["camada_id","Camada","layer"]],"OP-30":[["camada_id","Camada","layer"]],
@@ -350,7 +350,7 @@
     const marks={tools:"•","tools-vector-raster":"◇","tools-science":"Σ","tools-interpolation":"∿"};
     $("#gp-ribbon-tools").innerHTML=sets[tab].map(([g,items])=>`<div class="ribbon-group" data-label="${g}">${items.map(([i,n,a,t])=>{const menu=typeof t==="string"&&t.startsWith("menu:")?t.slice(5):"";const toolbox=t===true;return `<button class="ribbon-action ${toolbox?"toolbox":""}" data-action="${a}" ${a.startsWith("model-")?`data-model-command="${a}"`:""} ${menu?`data-model-menu="${menu}" aria-haspopup="true" aria-expanded="false"`:""} title="${n}">${marks[a]?`<span class="toolbox-ribbon-icon"><i data-lucide="briefcase"></i><b aria-hidden="true">${marks[a]}</b></span>`:`<i data-lucide="${i}"></i>`}<span>${n}</span></button>`}).join("")}</div>`).join("");icons();window.gpModeler?.updateRibbon?.();
   }
-  function initMap(){const sources={},layers=[];BASEMAPS.forEach((b)=>{sources[b.id]={type:"raster",tiles:b.tiles,tileSize:256,attribution:"© provedores do mapa"};layers.push({id:`basemap-${b.id}`,type:"raster",source:b.id,layout:{visibility:state.basemaps.has(b.id)?"visible":"none"}})});state.map=new maplibregl.Map({container:"gp-map",center:[-48.5,-22.4],zoom:6.2,style:{version:8,sources,layers}});state.map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-right");state.map.on("mousemove",e=>$("#gp-coordinates").textContent=`${e.lngLat.lng.toFixed(5)}, ${e.lngLat.lat.toFixed(5)}`);state.map.on("zoom",()=>$("#gp-scale").textContent=`Zoom ${state.map.getZoom().toFixed(1)}`)}
+  function initMap(){const sources={},layers=[];BASEMAPS.forEach((b)=>{if(b.style)return;sources[b.id]={type:"raster",tiles:b.tiles,tileSize:256,attribution:"© provedores do mapa"};layers.push({id:`basemap-${b.id}`,type:"raster",source:b.id,layout:{visibility:state.basemaps.has(b.id)?"visible":"none"}})});state.map=new maplibregl.Map({container:"gp-map",center:[-48.5,-22.4],zoom:6.2,style:{version:8,glyphs:OFM_GLYPHS,sprite:OFM_SPRITE,sources,layers}});state.map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-right");state.map.on("mousemove",e=>$("#gp-coordinates").textContent=`${e.lngLat.lng.toFixed(5)}, ${e.lngLat.lat.toFixed(5)}`);state.map.on("zoom",()=>$("#gp-scale").textContent=`Zoom ${state.map.getZoom().toFixed(1)}`)}
   function removeMapResource(id){
     [`${id}-point`,`${id}-line`,id].forEach(layerId=>{if(state.map?.getLayer(layerId))state.map.removeLayer(layerId)});
     if(state.map?.getSource(id))state.map.removeSource(id);
@@ -436,7 +436,60 @@
     $("#gp-layer-list").innerHTML=group("operational",operationalLabel,"layers-3",operational,"Nenhuma camada carregada.")+group("basemap","Basemap","map",base,"Nenhum mapa-base encontrado.");icons();
     updateComponentPlaceholder();
   }
-  function setBasemap(id,visible){if(!BASEMAPS.some(b=>b.id===id))return;const show=visible===undefined?!state.basemaps.has(id):Boolean(visible);if(show)state.basemaps.add(id);else state.basemaps.delete(id);const layer=`basemap-${id}`;if(state.map?.getLayer(layer))state.map.setLayoutProperty(layer,"visibility",show?"visible":"none")}
+  // ---------------------------------------------------------------------------
+  // Mapas-base vetoriais (OpenFreeMap). O raster da CARTO saiu porque passou a
+  // exigir API key e esta sendo descontinuado pelo provedor.
+  //
+  // Sao carregados sob demanda: na primeira vez que o usuario liga um deles o
+  // estilo e baixado e suas sources/layers entram no mapa com prefixo proprio,
+  // abaixo das camadas ja existentes. Depois e so alternar visibilidade.
+  // glyphs/sprite ficam definidos na criacao do estilo porque o MapLibre nao
+  // permite altera-los depois.
+  // ---------------------------------------------------------------------------
+  const OFM_GLYPHS = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
+  const OFM_SPRITE = "https://tiles.openfreemap.org/sprites/ofm_f384/ofm";
+  const basemapsVetoriaisCarregados = new Set();
+
+  async function carregarBasemapVetorial(item) {
+    if (basemapsVetoriaisCarregados.has(item.id)) return;
+    basemapsVetoriaisCarregados.add(item.id);
+    const estilo = await (await fetch(item.style)).json();
+    const sufixo = `__${item.id}`;
+    Object.entries(estilo.sources || {}).forEach(([nome, src]) => {
+      const alvo = `${nome}${sufixo}`;
+      if (!state.map.getSource(alvo)) state.map.addSource(alvo, { ...src, attribution: "© OpenStreetMap · © OpenFreeMap" });
+    });
+    const ancora = state.map.getStyle().layers[0]?.id;
+    (estilo.layers || []).forEach((layer, i) => {
+      const novo = { ...layer, id: `basemap-${item.id}-${i}`, layout: { ...(layer.layout || {}), visibility: "none" } };
+      if (novo.source) novo.source = `${novo.source}${sufixo}`;
+      state.map.addLayer(novo, ancora);
+    });
+  }
+
+  function alternarGrupoBasemap(id, show) {
+    const mapa = state.map;
+    if (!mapa) return;
+    const pref = `basemap-${id}`;
+    mapa.getStyle().layers.forEach((layer) => {
+      if (layer.id === pref || layer.id.startsWith(`${pref}-`)) mapa.setLayoutProperty(layer.id, "visibility", show ? "visible" : "none");
+    });
+  }
+
+  function setBasemap(id, visible) {
+    const item = BASEMAPS.find((b) => b.id === id);
+    if (!item) return;
+    const show = visible === undefined ? !state.basemaps.has(id) : Boolean(visible);
+    if (show) state.basemaps.add(id); else state.basemaps.delete(id);
+    if (!state.map) return;
+    if (item.style) {
+      carregarBasemapVetorial(item)
+        .then(() => alternarGrupoBasemap(id, state.basemaps.has(id)))
+        .catch(() => basemapsVetoriaisCarregados.delete(id));
+      return;
+    }
+    alternarGrupoBasemap(id, show);
+  }
   function renderToolbox(filter=""){const f=filter.toLowerCase();$("#gp-toolbox").innerHTML=OPS.map(([g,ops])=>{const rows=ops.filter(o=>(o[0]+o[1]).toLowerCase().includes(f));return rows.length?`<div class="tool-group"><button class="tool-group-title"><i data-lucide="briefcase"></i>${g}</button>${rows.map(o=>`<button class="tool-row" data-op="${o[0]}"><span class="tool-name">${o[1]}</span><span class="availability ${o[3]===2?"partial":""}" title="${o[3]===1?"Disponível":o[3]===2?"Backend em implementação":"Catalogado; motor pendente"}"></span></button>`).join("")}</div>`:""}).join("");icons()}
   function selectOp(id){state.selected=id;$$('[data-right-tab]').forEach(b=>b.classList.toggle("active",b.dataset.rightTab==="tools"));showEditor();const op=OPS.flatMap(x=>x[1]).find(x=>x[0]===id);const fields=FIELDS[id]||[];$("#gp-right-title").textContent=op[1];$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>${op[1]}</h2></div><form id="gp-op-form" data-op="${op[0]}"><div class="editor-body">${fields.length?fields.map(fieldHtml).join(""):`<div class="empty">O algoritmo está catalogado na stack, mas seu contrato de execução ainda não foi implementado no backend.</div>`}</div><div class="editor-actions"><button type="button" class="btn" data-add-function>Adicionar à função</button><button class="btn primary" ${!op[2]?"disabled":""}>Executar</button></div></form>`;icons();const form=$("#gp-op-form");configureOutputFields(form,RASTER_OUTPUT.has(id),op);configureSelectionScope(form);bindOutputNameAuto(form,op);window.gpCommands?.applyEnvironments(form);form.onsubmit=e=>{e.preventDefault();executeOp(op,e.target)};$("[data-back]").onclick=()=>showTools();$("[data-add-function]").onclick=()=>window.gpApp.newFunction(id);updateComponentPlaceholder()}
   function configureSelectionScope(form){

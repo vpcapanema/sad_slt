@@ -3,7 +3,7 @@
  *
  * Fecha o ciclo AHP: usa os pesos dos critérios (etapas 1–4), julga as
  * alternativas par-a-par em cada critério (Saaty) e sintetiza o ranking
- * global. Persiste a análise via /api/ahp/analises.
+ * global. Persiste a análise via SLTConfigApi (/api/ahp/configuracoes).
  */
 (function (global) {
   "use strict";
@@ -29,6 +29,21 @@
     codigo: null,
     judged: false,
   };
+
+  /** Objetos AHP elegíveis. Erro com `status`, como o do SLTConfigApi. */
+  async function listarObjetosElegiveis(params) {
+    const qs = new URLSearchParams(params || {}).toString();
+    const res = await fetch(`/api/ahp/objetos${qs ? `?${qs}` : ""}`, {
+      credentials: "same-origin",
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      const err = new Error(body?.detail || "Falha ao listar objetos AHP.");
+      err.status = res.status;
+      throw err;
+    }
+    return body;
+  }
 
   const $ = (s) => document.querySelector(s);
   const esc = (s) =>
@@ -140,7 +155,7 @@
     try {
       const params = { status: "analise_aprovada" };
       if (grupo) params.grupo = grupo;
-      const objetos = await global.SLTAnaliseApi.listarObjetos(params);
+      const objetos = await listarObjetosElegiveis(params);
       if (!objetos.length) {
         listHost.innerHTML = '<p class="field-help">Nenhum objeto AHP elegível encontrado para o filtro.</p>';
         return;
@@ -352,11 +367,11 @@
           createPayload.grupo_comparacao =
             state.alternatives[0]?.grupo_comparacao || $("#a6-grupo")?.value.trim() || "GERAL";
         }
-        const created = await global.SLTAnaliseApi.criar(createPayload);
+        const created = await global.SLTConfigApi.criar(createPayload);
         state.codigo = created.codigo;
       }
-      await global.SLTAnaliseApi.atualizar(state.tipo, state.codigo, buildPayloadJulgamentos());
-      const calc = await global.SLTAnaliseApi.calcular(state.tipo, state.codigo);
+      await global.SLTConfigApi.atualizar(state.tipo, state.codigo, buildPayloadJulgamentos());
+      const calc = await global.SLTConfigApi.calcular(state.tipo, state.codigo);
       if (calc.ranking) renderRanking(calc.ranking);
       $("#a6-homolog-btn").disabled = false;
       $("#a6-codigo-label").textContent = state.codigo;
@@ -377,7 +392,7 @@
     if (!state.codigo) return;
     try {
       $("#a6-homolog-btn").disabled = true;
-      await global.SLTAnaliseApi.homologar(state.tipo, state.codigo);
+      await global.SLTConfigApi.homologar(state.tipo, state.codigo);
       toast("Análise homologada com sucesso.");
       $("#a6-homolog-status").textContent = "HOMOLOGADA";
       $("#a6-homolog-status").classList.remove("hidden");

@@ -193,14 +193,22 @@ Cada camada deve ser classificada em uma das categorias:
 Restricao representa ocorrencia territorial com potencial excludente ou segregador.
 Risco representa ocorrencia territorial que nao exclui o projeto, mas gera ressalva.
 
+A categoria de cada camada e definida pelo *Arcabouco Teorico-Conceitual de
+Risco e Restricao*, em `/restrict/geoespacial/configuracao-risco-restricao/`,
+secao 2, que e a regra: sete camadas de restricao e treze de risco. Este modulo
+apenas aplica o que esta la.
+
 Exemplo:
 
 ```text
 Unidade de Conservacao de Protecao Integral -> restricao
-Zona de amortecimento de UC -> risco
-Area suscetivel a inundacao -> risco
-Terra Indigena -> restricao
+Terra Indigena                              -> restricao
+Area suscetivel a inundacao                 -> risco
+Unidade de Conservacao de Uso Sustentavel   -> risco
 ```
+
+Zona de amortecimento nao aparece no exemplo por nao ser camada da Fase 1: a
+secao 2 nao a lista, e a Fase 1 nao gera nem classifica faixas externas.
 
 ## Incidencias factuais
 

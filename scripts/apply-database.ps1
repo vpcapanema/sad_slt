@@ -225,7 +225,14 @@ $migrations = @(
     "088_excel_original_ambiente_colaborativo.sql",
     "089_remover_excel_original_hierarquizacao.sql",
     "090_ciclo_vida_resposta_colaborativa.sql",
-    "091_analises_respostas_colaborativas.sql"
+    "091_analises_respostas_colaborativas.sql",
+    "092_backfill_fases_a_executar.sql",
+    "093_remover_vegetacao_nativa_fase1.sql",
+    "094_alinhar_regras_fase1_ao_arcabouco.sql",
+    "095_backfill_coordenadas_objetos_hierarquizacao.sql",
+    "096_uc_municipal_fase1.sql",
+    "097_completar_biblioteca_homologada_editavel.sql",
+    "098_base_legal_areas_contaminadas.sql"
 )
 
 if ($OnlyMigration) {

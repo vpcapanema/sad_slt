@@ -54,7 +54,7 @@
     },
 
     funcoes: {
-      "Fase 1": {
+      "Elegibilidade territorial": {
         icon: "1️⃣",
         itens: [
           { id: "fase1-importar-fonte", nome: "Importar Fonte", icon: "📂" },
@@ -62,7 +62,7 @@
           { id: "fase1-homologar", nome: "Homologar", icon: "✅" },
         ],
       },
-      "Fase 2": {
+      "Favorabilidade de grade e da rede": {
         icon: "2️⃣",
         itens: [
           { id: "fase2-cadastrar-criterio", nome: "Cadastrar Critério", icon: "📝" },
@@ -70,7 +70,7 @@
           { id: "fase2-homologar", nome: "Homologar", icon: "✅" },
         ],
       },
-      "Fase 3": {
+      "Priorização por atributos": {
         icon: "3️⃣",
         itens: [
           { id: "fase3-importar-tabela", nome: "Importar Tabela", icon: "📂" },

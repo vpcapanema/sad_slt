@@ -380,3 +380,125 @@ def test_liberacao_consulta_objetos_na_hierarquizacao_e_atualiza_demanda() -> No
     assert "objetos" in repr(consultas[0])
     assert "projeto" in repr(consultas[2])
     assert consultas[3][0] == "analise_aprovada"
+
+
+@pytest.mark.parametrize(
+    ("cabecalho", "esperado"),
+    [
+        ({}, {1, 2, 3}),  # rodada anterior ao recorte por fase
+        ({"fases_a_executar": None}, {1, 2, 3}),
+        ({"fases_a_executar": []}, set()),  # "nenhuma fase" é declaração válida
+        ({"fases_a_executar": [2, 3]}, {2, 3}),
+        ({"fases_a_executar": [1, 2, 3]}, {1, 2, 3}),
+        ({"fases_a_executar": ["1", "x", 3]}, {1, 3}),
+    ],
+)
+def test_fases_configuradas_preserva_lista_vazia(cabecalho: dict, esperado: set) -> None:
+    """Lista vazia não pode ser convertida em "todas as fases" pelo default."""
+    assert service._fases_configuradas({"cabecalho_grupo": cabecalho}) == esperado
+
+
+def test_exigir_fase_recusa_rodada_sem_a_fase() -> None:
+    dados = {"cabecalho_grupo": {"fases_a_executar": [2, 3]}}
+    with pytest.raises(service.DemandaValidationError) as excinfo:
+        service._exigir_fase(dados, 1)
+    assert "Fase 1" in str(excinfo.value)
+
+    service._exigir_fase(dados, 2)  # não levanta
+
+
+def test_exigir_conjunto_usa_finalidade_quando_preenchida() -> None:
+    service._exigir_conjunto(
+        {"id": "x", "finalidade": "restricao"}, "restri", "restrição", "campo"
+    )
+    with pytest.raises(service.DemandaValidationError):
+        service._exigir_conjunto(
+            {"id": "x", "finalidade": "risco"}, "restri", "restrição", "campo"
+        )
+
+
+def test_exigir_conjunto_cai_no_campo_conjunto_das_feicoes(monkeypatch) -> None:
+    """25 das 29 camadas homologadas têm `finalidade` vazia."""
+    monkeypatch.setattr(service.repo, "conjuntos_camada", lambda _id: ["RESTRIÇÃO"])
+    service._exigir_conjunto({"id": "x", "finalidade": ""}, "restri", "restrição", "campo")
+
+    with pytest.raises(service.DemandaValidationError) as excinfo:
+        service._exigir_conjunto({"id": "x", "finalidade": ""}, "risco", "risco", "campo")
+    assert "RESTRIÇÃO" in str(excinfo.value)
+
+
+def test_exigir_conjunto_nao_aceita_camada_pelo_nome_em_metadados(monkeypatch) -> None:
+    """A checagem antiga varria `metadados`: bastava "risco" no título da camada."""
+    monkeypatch.setattr(service.repo, "conjuntos_camada", lambda _id: [])
+    camada = {"id": "x", "finalidade": "", "metadados": {"nome": "Camada de risco 2026"}}
+    with pytest.raises(service.DemandaValidationError) as excinfo:
+        service._exigir_conjunto(camada, "risco", "risco", "campo")
+    assert "não declara" in str(excinfo.value)
+
+
+def test_classificacao_fase1_registra_regra_nao_avaliavel() -> None:
+    """Feição consolidada perde os atributos de origem.
+
+    A regra específica não pode ser avaliada e precisa ser contabilizada, em vez
+    de a feição cair calada nela: a doutrina do arcabouço veda inferir restrição
+    pela ausência de informação na camada.
+    """
+    import geopandas as gpd
+    from shapely.geometry import Point
+
+    from api.services import fase1_classificacao
+
+    regras = [
+        (10, "grau in ['muito_alto','alto']", "risco", 3, "IPT"),
+        (999, "True", "risco", 2, "IPT"),
+    ]
+    sem_atributo = gpd.GeoDataFrame({"c_movimento_massa": [1], "geometry": [Point(0, 0)]})
+    original = fase1_classificacao.carregar_regras
+    fase1_classificacao.carregar_regras = lambda _c: (regras, "teste")
+    try:
+        resultado, origem = fase1_classificacao.classificar(sem_atributo, "movimento_massa")
+    finally:
+        fase1_classificacao.carregar_regras = original
+
+    assert origem == "teste"
+    assert resultado.attrs["regras_nao_avaliadas"] == ["grau in ['muito_alto','alto']"]
+    assert list(resultado["tipo_tratamento"]) == ["risco"]
+
+
+def test_classificacao_fase1_usa_a_tabela_como_fonte() -> None:
+    """Fonte única: a tabela; o JSON é contingência.
+
+    As duas precisam concordar com a página — `tests/test_arcabouco_fase1.py`
+    cobre essa consonância. Aqui só se garante a ordem de precedência.
+    """
+    from api.services import fase1_classificacao
+
+    chamado: list[str] = []
+
+    def _do_banco(criterio_id: str):
+        chamado.append(criterio_id)
+        return [(999, "True", "restricao", 4, "CF/88 art. 231")]
+
+    original = fase1_classificacao._regras_do_banco
+    fase1_classificacao._regras_do_banco = _do_banco
+    try:
+        regras, origem = fase1_classificacao.carregar_regras("terra_indigena")
+    finally:
+        fase1_classificacao._regras_do_banco = original
+
+    assert chamado == ["terra_indigena"]
+    assert origem == "geoprocessamento.regra_classificacao_fase1"
+    assert regras[0][2] == "restricao"
+
+
+def test_classificacao_fase1_cai_no_json_sem_banco() -> None:
+    from api.services import fase1_classificacao
+
+    original = fase1_classificacao._regras_do_banco
+    fase1_classificacao._regras_do_banco = lambda _c: []
+    try:
+        _regras, origem = fase1_classificacao.carregar_regras("terra_indigena")
+    finally:
+        fase1_classificacao._regras_do_banco = original
+
+    assert origem.startswith("classificacao_fase1.json@")

@@ -10,7 +10,7 @@ do sistema de hierarquização de demandas:
 - **Arquivo:** [documentacao/nota_tecnica/NOTA_TECNICA.md](documentacao/nota_tecnica/NOTA_TECNICA.md)
 - **Fontes internas da metodologia:** `documentacao/hierarquizacao/`
   (ESPINHA_DORSAL, MODELO_HIERARQUIZACAO_ESPACIAL, MODULO_FASE1/2/3) e
-  `data/matriz-criterios-premissas.json`.
+  `config/matriz-criterios-premissas.json`.
 
 **Regra obrigatória:** sempre que a metodologia de hierarquização for alterada — fases
 (triagem de restrição/risco, favorabilidade territorial, ajuste por atributos), método
@@ -27,7 +27,7 @@ Ao atualizar a nota técnica:
    bloco de identificação e adicione uma linha ao *Histórico de Revisões* descrevendo a
    alteração.
 3. **Garanta consistência** entre a nota técnica e as fontes internas
-   (`documentacao/hierarquizacao/` e `data/matriz-criterios-premissas.json`); não
+   (`documentacao/hierarquizacao/` e `config/matriz-criterios-premissas.json`); não
    introduza informação que não esteja fundamentada nessas fontes.
 4. **Não invente autoria, números normativos ou dados.** Mantenha lacunas `[preencher]`
    quando a informação depender de decisão humana.

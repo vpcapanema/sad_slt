@@ -63,7 +63,7 @@
   }
   async function salvarProduto() {
     if (modulo === "fase1" && !fase1Metodologia()?.validada_em) {
-      feedback("#produto-feedback", "Valide primeiro a metodologia e os limiares da Fase 1.", "error");
+      feedback("#produto-feedback", "Valide primeiro a metodologia e os limiares da Elegibilidade territorial.", "error");
       document.getElementById("bancada-geoprocessamento")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }

@@ -1,5 +1,5 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Gerador de insumos da Fase 2" %}
+{% set subtitulo = "Gerador de insumos da Favorabilidade de grade e da rede" %}
 {% set navegacao = "restrita" %}
 {% set bloco_modulo = "geoprocessamento" %}
 {% set requer_autenticacao = true %}
@@ -25,7 +25,7 @@
       <p id="ahp-config-vazio" class="ahp-help-text">Selecione uma hierarquização na Seção 1 para ver as configurações de AHP disponíveis.</p>
       <div id="ahp-config-atual" class="gerador-status-card" hidden><div class="gerador-status-label">Configuração associada</div><div id="ahp-config-atual-valor" class="gerador-status-value">—</div></div>
       <div id="ahp-config-selecionar" class="gerador-grid" hidden><div class="gerador-field gerador-field--span2"><label for="ahp-config-select">Configurações salvas (ahp.config_multicriterio_portfolio)</label><select id="ahp-config-select"><option value="">Nenhuma configuração encontrada</option></select></div><div class="gerador-field"><label>&nbsp;</label><button class="btn btn-secondary" id="ahp-config-vincular" type="button">Vincular configuração selecionada</button></div></div>
-      <div class="gerador-actions"><span id="ahp-config-feedback" class="gerador-feedback"></span><a class="fase-link" id="ahp-config-nova" href="/restrict/ahp/" target="_blank" rel="noopener">Gerar nova configuração de pesos (Análise multicritério)</a></div>
+      <div class="gerador-actions"><span id="ahp-config-feedback" class="gerador-feedback"></span><a class="fase-link" id="ahp-config-nova" href="/restrict/analise-multicriterio/?modo=espaco" target="_blank" rel="noopener">Abrir a análise multicritério colaborativa</a></div>
     </div></section>
     <section class="secao-geoprocessamento gerador-section gerador-section--gp gerador-section--gp-embed" id="bancada-geoprocessamento"><header class="gerador-section__header"><span class="gerador-section__number">3</span><div class="gerador-section__heading"><h2>Geoprocessamento</h2><p>Configure e execute o fluxo diretamente no componente. Gera a camada de saída no tipo selecionado no cadastro.</p></div></header><div class="gerador-section__body">{% include "componentes/_geoprocessamento.html" %}</div></section>
     <div data-shared-detalhes></div>

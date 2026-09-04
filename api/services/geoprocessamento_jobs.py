@@ -18,6 +18,7 @@ from api.services.geoprocessamento_engine import (
     REQUIRED_PARAMETERS,
     geoprocessamento_engine,
 )
+from api.services import geoprocessamento_relatorio
 from api.services.geospatial_upload_storage import store_upload
 from api.services.importar_camadas_service import importar_camadas
 
@@ -58,6 +59,8 @@ class GeoprocessamentoJobs:
             "microtarefas": tasks, "logs": [], "concluidas": 0,
             "total": len(tasks), "percentual": 0,
             "etapa_atual": tasks[0], "resultado": None, "erro": None,
+            "iniciado_em": datetime.now(timezone.utc).isoformat(),
+            "parametros": {}, "entradas": [], "relatorio": [],
         }
         with self._lock:
             self._jobs[job_id] = job
@@ -89,6 +92,8 @@ class GeoprocessamentoJobs:
             job["concluidas"] = job["total"]
             job["percentual"] = 100
             job["resultado"] = result
+            snapshot = deepcopy(job)
+        job["relatorio"] = geoprocessamento_relatorio.salvar(snapshot)
 
     def _fail(self, job_id: str, exc: Exception) -> None:
         with self._lock:
@@ -101,6 +106,8 @@ class GeoprocessamentoJobs:
                 "instante": datetime.now(timezone.utc).isoformat(),
                 "nivel": "erro", "mensagem": str(exc), "detalhes": {},
             })
+            snapshot = deepcopy(job)
+        job["relatorio"] = geoprocessamento_relatorio.salvar(snapshot)
 
     def create(self, operation_id: str, params: dict[str, Any]) -> dict[str, Any]:
         op_id = operation_id.upper()
@@ -123,7 +130,11 @@ class GeoprocessamentoJobs:
         tasks += ["Catálogo atualizado", "Resultado sincronizado", "Processo finalizado"]
         job_id = self._new("operacao", tasks)
         with self._lock:
-            self._jobs[job_id]["algoritmo_id"] = op_id
+            job = self._jobs[job_id]
+            job["algoritmo_id"] = op_id
+            job["algoritmo"] = CATALOG[op_id]
+            job["parametros"] = deepcopy(params)
+            job["entradas"] = list(inputs)
         self._advance(job_id, "Solicitação registrada")
         self._executor.submit(self._run_operation, job_id, op_id, deepcopy(params), inputs, required)
         return self.get(job_id) or {}
@@ -326,8 +337,13 @@ class GeoprocessamentoJobs:
             self._fail(job_id, exc)
 
     def create_homologation(self, resource_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        # A homologação materializa o snapshot também como arquivo na biblioteca
+        # canônica (_exportar_para_biblioteca_canonica emite o progresso), etapa
+        # que faltava nesta lista: eram 12 nanotarefas declaradas para 13
+        # efetivamente executadas.
         tasks = ["Solicitação registrada", "Módulo consumidor validado", "Nome validado", "Versão validada",
                  "Origem localizada", "Hash calculado", "Snapshot criado", "Conteúdo copiado",
+                 "Arquivo exportado para a biblioteca canônica",
                  "Transação confirmada", "Biblioteca consultada", "Publicação confirmada", "Processo finalizado"]
         job_id = self._new("homologacao", tasks)
         self._advance(job_id, "Solicitação de homologação registrada", {"id": resource_id})

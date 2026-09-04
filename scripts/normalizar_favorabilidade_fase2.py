@@ -254,16 +254,19 @@ def prepare_network(frame: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, list[dic
         "f_c5_relevo": "c5_relevo_n",
         "f_c11_fatal": "c11_fat_km_n", "f_c11_grave": "c11_grav_km_n",
         "f_c12_pedes": "c12_ped_km_n", "f_c12_bike": "c12_bike_km_n",
-        "f_c12_moto": "c12_moto_km_n", "f_c13_graves": "c13_sin_km_n",
+        "f_c12_moto": "c12_moto_km_n",
         "f_c14_urb": "c14_urb_fr", "f_c15_port": "c15_port",
         "f_c15_urb": "c15_urb_fr", "f_c15_dens": "c15_dens_fr",
     }
     negative = {
         "f_c3_veloc": "c3_cur_n", "f_c5_veloc": "c5_v0_n",
-        "f_c7_polo": "c7_polo_m_n", "f_c8_hidrov": "c8_hidrov_m_n",
+        "f_c8_hidrov": "c8_hidrov_m_n",
         "f_c9_ferrov": "c9_ferrov_m_n", "f_c10_porto": "c10_porto_m_n",
-        "f_c10_aero": "c10_aero_m_n", "f_c16_interm": "c16_interm_m_n",
+        "f_c10_aero": "c10_aero_m_n",
     }
+    # f_c7_polo, f_c13_graves e f_c16_interm não são orientados: seus critérios
+    # (R07, R13, R16) foram removidos por redundância. Os brutos c7_polo_m,
+    # c13_sin_km e c16_interm_m permanecem na camada como evidência de origem.
     for output, source in positive.items():
         result[output] = pd.to_numeric(result[source], errors="coerce").clip(0.0, 1.0)
         register(metadata, source, output, "valor_normalizado", "positiva")

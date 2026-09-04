@@ -3,7 +3,7 @@
 {% set navegacao = "restrita" %}
 {% set requer_autenticacao = true %}
 
-{% block titulo %}Fase 1 — Elegibilidade Territorial{% endblock %}
+{% block titulo %}Elegibilidade territorial{% endblock %}
 {% set fase_ativa = 1 %}
 {% block classes_body %}ahp-module-page{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/">{% endblock %}
@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
   <link rel="stylesheet" href="/assets/css/fase1-execucao.css?v=20260805-gp-frame-2x">
   <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
   <link rel="stylesheet" href="/assets/css/feedback.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
@@ -19,7 +20,7 @@
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div><main class="conteudo-principal app-main ahp-main fase1-page">
 {% include "componentes/navegacao_fases_hierarquizacao.html" %}
-<section class="card-fase-1-elegibilidade-territorial secao-fase-1-elegibilidade-territorial card fase-titulo-card"><h1 class="ahp-page-title"><i class="fas fa-shield-halved"></i> Fase 1: Elegibilidade Territorial<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info"></i><span class="fase-info-pop">A elegibilidade territorial verifica se cada demanda do grupo pode ser implantada no local pretendido, confrontando sua posição com as áreas de restrição, que impedem a ocupação, e as de risco, que a condicionam. O cálculo cruza geometricamente cada demanda com as camadas homologadas de restrição e risco e, segundo a sobreposição e os limiares definidos, classifica-a como apta, apta com ressalva ou restrita. Para operar, selecione a hierarquização cadastrada, escolha o par de camadas homologadas de restrição e risco, execute o cálculo e acompanhe a classificação no card de resultados.</span></span></h1><p class="fase-descricao">Verifica a elegibilidade territorial de cada demanda cruzando sua localização com as áreas homologadas de restrição e risco. <a class="fase-descricao-add" href="/restrict/geoespacial/configuracao-risco-restricao/" title="Abrir Biblioteca Canônica de Risco e Restrição" aria-label="Abrir Biblioteca Canônica de Risco e Restrição"><i class="fas fa-plus"></i></a></p></section>
+<section class="card-fase-1-elegibilidade-territorial secao-fase-1-elegibilidade-territorial card fase-titulo-card"><h1 class="ahp-page-title"><i class="fas fa-shield-halved"></i> Elegibilidade territorial<span class="fase-info" tabindex="0" role="button" aria-label="Sobre esta fase"><i class="fas fa-circle-info"></i><span class="fase-info-pop">A elegibilidade territorial verifica se cada demanda do grupo pode ser implantada no local pretendido, confrontando sua posição com as áreas de restrição, que impedem a ocupação, e as de risco, que a condicionam. O cálculo cruza geometricamente cada demanda com as camadas homologadas de restrição e risco e, segundo a sobreposição e os limiares definidos, classifica-a como apta, apta com ressalva ou restrita. Para operar, selecione a hierarquização cadastrada, escolha o par de camadas homologadas de restrição e risco, execute o cálculo e acompanhe a classificação no card de resultados.</span></span></h1><p class="fase-descricao">Verifica se cada demanda pode ser implantada no local pretendido, cruzando-a com as camadas homologadas de restrição e risco. Selecione a hierarquização e o par de camadas abaixo e execute o cálculo. <a class="fase-descricao-add" href="/restrict/geoespacial/configuracao-risco-restricao/" title="Abrir a biblioteca das camadas de restrição e risco" aria-label="Abrir a biblioteca das camadas de restrição e risco"><i class="fas fa-book"></i></a></p></section>
 
 <section class="card-camadas-operacionais secao-camadas-operacionais card ahp-step-section"><div class="ahp-section-label"><span>Geoprocessamento — SLT</span></div><div class="ahp-section-body">
   <div id="fase1-controles-origem" hidden>
@@ -27,7 +28,7 @@
     <label id="ctrl-restricao" class="fase1-ctrl">Camada de restrição homologada <select id="camada-restricao"><option value="">Carregando…</option></select></label>
     <label id="ctrl-risco" class="fase1-ctrl">Camada de risco homologada associada <select id="camada-risco" disabled><option value="">Selecione primeiro a camada de restrição</option></select></label>
   </div>
-  <slt-geoprocessamento fase="fase1" titulo-saida="Camadas de restrição e risco" saida-id="gp-risco-restricao" demandas-id="gp-demandas" frame-id="gp-frame" modelo-id="modelo-fase1" executar-id="executar-fase1" modelo="calculo_fase1_elegibilidade" modelo-label="Fase 1 — Elegibilidade territorial" botao-label="Calcular risco e restrição"></slt-geoprocessamento>
+  <slt-geoprocessamento fase="fase1" titulo-saida="Camadas de Elegibilidade Territorial" saida-id="gp-risco-restricao" texto-saida-vazia="Selecione par homologado ou faça o upload das camadas de Risco e Restrição;" demandas-id="gp-demandas" frame-id="gp-frame" modelo-id="modelo-fase1" executar-id="executar-fase1" modelo="calculo_fase1_elegibilidade" modelo-label="Elegibilidade territorial" botao-label="Calcular risco e restrição"></slt-geoprocessamento>
   <div id="fase1-erro" class="ahp-info-note ahp-info-note--error hidden"></div>
 </div></section>
 
@@ -39,7 +40,7 @@
       <header class="fase1-report-section-head"><h4>Tabela síntese da elegibilidade</h4></header>
       <div class="fase1-report-section-body">
         <table class="fase1-report-table">
-          <thead><tr><th>Status Fase 1</th><th>Nome</th><th>Restrição</th><th>Risco</th><th>Feições de restrição</th><th>Feições de risco</th></tr></thead>
+          <thead><tr><th>Status Elegibilidade territorial</th><th>Nome</th><th>Restrição</th><th>Risco</th><th>Feições de restrição</th><th>Feições de risco</th></tr></thead>
           <tbody id="fase1-relatorio-tbody"></tbody>
         </table>
       </div>
@@ -62,6 +63,9 @@
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/js/feedback.js"></script>
   <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
+  <!-- Basemap vetorial: MapLibre desenha a base, gl-leaflet a entrega ao Leaflet. -->
+  <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
+  <script src="/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js"></script>
   <script src="/assets/js/status-colors.js"></script>
   <script src="/assets/js/objeto-detalhe.js"></script>
   <script src="/assets/js/componentes/geoprocessamento-slt.js"></script>

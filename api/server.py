@@ -188,6 +188,71 @@ async def pagina_fase_2_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/fase2-favorabilidade.html")
 
 
+# Cadastro e upload de camada homologada. Uma página só, parametrizada: o que
+# muda entre elegibilidade e favorabilidade é o vocabulário e o tipo de camada,
+# não o fluxo — duplicar o template faria as duas divergirem com o tempo.
+TIPOS_CAMADA_FAVORABILIDADE = [
+    {"valor": "grade", "rotulo": "Índice de favorabilidade — grade"},
+    {"valor": "rede", "rotulo": "Índice de favorabilidade — rede"},
+    {"valor": "criterio_grade", "rotulo": "Critério componente — grade"},
+    {"valor": "criterio_rede", "rotulo": "Critério componente — rede"},
+]
+
+TIPOS_CAMADA_ELEGIBILIDADE = [
+    {"valor": "restricao", "rotulo": "Restrição"},
+    {"valor": "risco", "rotulo": "Risco"},
+    {"valor": "area_estudo", "rotulo": "Área de estudo"},
+]
+
+
+@app.get("/restrict/geoespacial/documentacao-favorabilidade/", include_in_schema=False)
+async def pagina_documentacao_favorabilidade(request: Request) -> Response:
+    """Biblioteca da favorabilidade: da premissa ao índice, com os mapas gerados."""
+    from api.services.documentacao_favorabilidade import montar_contexto
+
+    return render_page(
+        request, "paginas/geoespacial/documentacao-favorabilidade.html",
+        fase_ativa=2,
+        **montar_contexto(),
+    )
+
+
+@app.get("/restrict/hierarquizacao/cadastro-upload-favorabilidade/", include_in_schema=False)
+async def pagina_cadastro_upload_favorabilidade(request: Request) -> Response:
+    return render_page(
+        request, "paginas/hierarquizacao/cadastro-upload-camada.html",
+        modulo="fase2",
+        fase_ativa=2,
+        titulo_modulo="Favorabilidade Territorial",
+        descricao_modulo=(
+            "Publique camadas com índices de favorabilidade de grade e de rede. "
+            "O arquivo é conferido antes de entrar no acervo."
+        ),
+        rotulo_tipo="Tipo de camada de favorabilidade",
+        tipos_camada=TIPOS_CAMADA_FAVORABILIDADE,
+        voltar_href="/restrict/hierarquizacao/fase-2/",
+        voltar_rotulo="Favorabilidade de grade e da rede",
+    )
+
+
+@app.get("/restrict/hierarquizacao/cadastro-upload-elegibilidade/", include_in_schema=False)
+async def pagina_cadastro_upload_elegibilidade(request: Request) -> Response:
+    return render_page(
+        request, "paginas/hierarquizacao/cadastro-upload-camada.html",
+        modulo="fase1",
+        fase_ativa=1,
+        titulo_modulo="Elegibilidade territorial",
+        descricao_modulo=(
+            "Publique camadas de restrição e risco que compõem o filtro de "
+            "elegibilidade. O arquivo é conferido antes de entrar no acervo."
+        ),
+        rotulo_tipo="Tipo de camada de elegibilidade",
+        tipos_camada=TIPOS_CAMADA_ELEGIBILIDADE,
+        voltar_href="/restrict/hierarquizacao/fase-1/",
+        voltar_rotulo="Elegibilidade territorial",
+    )
+
+
 @app.get("/restrict/hierarquizacao/fase-3/", include_in_schema=False)
 async def pagina_fase_3_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/fase3-ajuste-fino.html")
@@ -196,11 +261,6 @@ async def pagina_fase_3_hierarquizacao(request: Request) -> Response:
 @app.get("/restrict/hierarquizacao/ranking/", include_in_schema=False)
 async def pagina_ranking_privado_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/ranking-privado.html")
-
-
-@app.get("/restrict/ahp/", include_in_schema=False)
-async def pagina_indice_ahp_restrita(request: Request) -> Response:
-    return render_page(request, "paginas/ahp/home.html")
 
 
 AHP_CLEAN_PAGES = {"configuracao": "step1-configuracao.html", "criterios": "step2-criterios.html", "metodo": "step4-metodo.html", "comparacao": "step5-comparacao.html", "respostas-colaborativas": "respostas-colaborativas.html", "resultados": "step6-resultados.html"}
@@ -214,13 +274,30 @@ AHP_CLEAN_PAGES.update(
 app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 
 
+DESCONTINUADO_AHP = (
+    "O módulo AHP foi descontinuado. A análise multicritério colaborativa está "
+    "em /restrict/analise-multicriterio/."
+)
+
+DESCONTINUADO_PROCESSO = (
+    "As etapas avulsas da rodada foram descontinuadas. Use "
+    "/restrict/hierarquizacao/processos/."
+)
+
+
+@app.get("/restrict/ahp/", include_in_schema=False)
 @app.get("/restrict/ahp/{pagina}/", include_in_schema=False)
-async def pagina_ahp_limpa(request: Request, pagina: str) -> Response:
-    arquivo = AHP_CLEAN_PAGES.get(pagina)
-    if not arquivo:
-        from fastapi import HTTPException
+async def pagina_ahp_descontinuada(request: Request, pagina: str = "") -> Response:
+    """As páginas do AHP foram desabilitadas; os templates seguem versionados.
+
+    Responde 410 (e não 404) para distinguir "existiu e foi retirado" de
+    "nunca existiu", e para que links antigos deem uma mensagem útil.
+    """
+    from fastapi import HTTPException
+
+    if pagina and pagina not in AHP_CLEAN_PAGES:
         raise HTTPException(status_code=404, detail="Página AHP não encontrada")
-    return render_page(request, f"paginas/ahp/{arquivo}")
+    raise HTTPException(status_code=410, detail=DESCONTINUADO_AHP)
 
 
 @app.get("/public/ahp/colaborativa/", include_in_schema=False)
@@ -263,12 +340,13 @@ HIERARQUIZACAO_PROCESS_PAGES = {
 
 
 @app.get("/restrict/hierarquizacao/processos/{pagina}/", include_in_schema=False)
-async def pagina_processo_hierarquizacao(request: Request, pagina: str) -> Response:
-    arquivo = HIERARQUIZACAO_PROCESS_PAGES.get(pagina)
-    if not arquivo:
-        from fastapi import HTTPException
+async def pagina_processo_descontinuada(request: Request, pagina: str) -> Response:
+    """Etapas avulsas da rodada desabilitadas; ver `pagina_ahp_descontinuada`."""
+    from fastapi import HTTPException
+
+    if pagina not in HIERARQUIZACAO_PROCESS_PAGES:
         raise HTTPException(status_code=404, detail="Etapa de hierarquização não encontrada")
-    return render_page(request, f"paginas/hierarquizacao/{arquivo}")
+    raise HTTPException(status_code=410, detail=DESCONTINUADO_PROCESSO)
 
 
 @app.get("/restrict/{pagina}/", include_in_schema=False)
@@ -439,6 +517,9 @@ def _mount_static(path: str, directory_name: str, name: str) -> None:
 
 
 _mount_static("/assets", "assets", "assets")
+# `config/` guarda definições versionadas do sistema; `data/` guarda o que o
+# sistema recebe e produz. A separação é a razão de existirem dois mounts.
+_mount_static("/config", "config", "config")
 _mount_static("/data", "data", "data")
 _mount_static("/public/assets", "assets", "public-assets")
 _mount_static("/public/cadastro", "cadastro", "public-cadastro-assets")

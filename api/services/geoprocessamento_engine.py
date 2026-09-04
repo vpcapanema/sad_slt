@@ -237,6 +237,22 @@ OPERATION_ENDPOINTS = {
     "OP-CLASS": "classificar-por-feicao-fase1",
 }
 
+# Saídas que cada algoritmo declara produzir. Só entram aqui os que NÃO devolvem
+# camada nova — diagnóstico e exportação —, porque é aí que um fluxo pode ligar a
+# etapa seguinte a uma saída que nunca existe. O consolidador da Fase 1 mapeava
+# `camada_id` na saída do OP-02 (validar camada, que devolve só o diagnóstico) e
+# por isso abortava na primeira etapa, sem que a validação estrutural percebesse.
+# Algoritmo ausente deste mapa não tem a saída validada.
+SAIDAS_DECLARADAS: dict[str, frozenset[str]] = {
+    "OP-02": frozenset({"valido", "erros", "avisos", "total_feicoes"}),
+    "OP-25": frozenset({"operacao", "entrada", "destino", "saida", "caminho",
+                        "tipo", "categoria", "crs", "formato"}),
+    "OP-26": frozenset({"operacao", "entrada", "destino", "saida", "caminho",
+                        "tipo", "categoria", "crs", "formato"}),
+    "OP-27": frozenset({"operacao", "entrada", "destino", "saida", "caminho",
+                        "tipo", "categoria", "crs", "formato"}),
+}
+
 REQUIRED_PARAMETERS = {
     "OP-01": {"tipo_entrada", "caminho_arquivo"},
     "OP-02": {"camada_id"},
@@ -288,7 +304,7 @@ class GeoprocessamentoEngine:
         self.profiles: dict[str, dict[str, Any]] = {}
         self.functions: dict[str, dict[str, Any]] = {}
         self.flows: dict[str, dict[str, Any]] = {}
-        self._definitions_path = Path("data/geoespacial/definicoes.json")
+        self._definitions_path = Path("config/geoespacial/definicoes.json")
         self._load_definitions()
 
     def _load_definitions(self) -> None:
@@ -1083,6 +1099,16 @@ class GeoprocessamentoEngine:
                     "uma variável anterior. Como corrigir: selecione o elemento e "
                     "preencha os campos indicados em Parâmetros."
                 )
+            for saida in step.get("mapear_saidas", {}):
+                produzidas = SAIDAS_DECLARADAS.get(algoritmo_id)
+                if produzidas is not None and saida not in produzidas:
+                    nome = CATALOG.get(algoritmo_id, algoritmo_id)
+                    erros.append(
+                        f"Etapa {indice}, “{nome}”: a saída “{saida}” não é produzida "
+                        f"por este algoritmo, que devolve {', '.join(sorted(produzidas))}. "
+                        "Como corrigir: remova esse vínculo e ligue a etapa seguinte à "
+                        "camada que entrou nesta."
+                    )
         return erros
 
     async def run_steps(
@@ -1137,6 +1163,28 @@ class GeoprocessamentoEngine:
                 elif not isinstance(source, list):
                     source = [source]
                 variable = str(params.get("variavel", "item"))
+                # `mapas` liga variáveis que MUDAM a cada volta, buscadas num
+                # dicionário indexado pelo item iterado. É o que permite a um
+                # consolidador dar a cada camada o seu próprio critério — sem
+                # isso o fluxo só oferece um valor único para a rodada inteira,
+                # e carimbaria o mesmo criterio_id em camadas de naturezas
+                # diferentes.
+                mapas: dict[str, Any] = {}
+                declarados = step.get("parametros", {}).get("mapas") or {}
+                for nome_variavel, referencia in declarados.items():
+                    if isinstance(referencia, str) and referencia.startswith("$"):
+                        referencia = context.get(referencia[1:])
+                    if isinstance(referencia, str):
+                        try:
+                            referencia = json.loads(referencia)
+                        except (TypeError, ValueError):
+                            referencia = None
+                    if not isinstance(referencia, dict):
+                        raise ValueError(
+                            f"O mapa '{nome_variavel}' do iterador precisa ser um "
+                            "objeto que associe cada camada ao seu valor."
+                        )
+                    mapas[str(nome_variavel)] = referencia
                 # Passos seguintes: rodam DENTRO do loop até o primeiro marcado como pos_iterador.
                 # Passos com pos_iterador=True rodam UMA vez após o loop.
                 remaining = steps[index + 1 :]
@@ -1147,8 +1195,17 @@ class GeoprocessamentoEngine:
                 inner_steps, after_steps = remaining[:split], remaining[split:]
                 iterations = []
                 for value in source:
+                    por_item: dict[str, Any] = {}
+                    for nome_variavel, mapa in mapas.items():
+                        if value not in mapa:
+                            raise ValueError(
+                                f"O mapa '{nome_variavel}' não declara valor para a "
+                                f"camada {value}. Como corrigir: inclua essa camada "
+                                "no mapa ou remova-a da lista a consolidar."
+                            )
+                        por_item[nome_variavel] = mapa[value]
                     iteration = await self.run_steps(
-                        inner_steps, {**context, variable: value}
+                        inner_steps, {**context, variable: value, **por_item}
                     )
                     iterations.append(iteration)
                     context.update(iteration.get("contexto", {}))

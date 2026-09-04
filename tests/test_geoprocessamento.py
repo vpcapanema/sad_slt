@@ -13,6 +13,7 @@ from shapely.geometry import Point
 
 from api.path_policy import project_relative
 from api.db.connection import get_connection
+from api.services import geospatial_upload_storage as upload_storage
 from api.repositories import camada_geoespacial_repository
 from api.server import app
 from api.services.geoespacial_service import geoespacial_service
@@ -124,7 +125,8 @@ class GeoprocessamentoApiTest(unittest.TestCase):
     def test_upload_repetido_reutiliza_a_mesma_importacao(self) -> None:
         payload = self.sample.read_bytes()
         filename = "teste_idempotencia.geojson"
-        upload_path = Path("data/geoespacial/uploads/datastorage/vetor") / filename
+        upload_path = (Path("data/geoespacial/uploads/datastorage/vetor")
+                       / upload_storage.PASTA_PADRAO / filename)
         try:
             primeira = self.client.post(
                 "/api/geoespacial/camadas/importar",
@@ -297,7 +299,9 @@ class GeoprocessamentoApiTest(unittest.TestCase):
     def test_toolboxes_especializadas_agrupam_por_biblioteca_unica(self) -> None:
         component = Path("geoespacial/geoprocessamento.js").read_text(encoding="utf-8")
         self.assertIn("const TOOL_LIBRARY", component)
-        self.assertIn('"OP-05":"GeoPandas"', component)
+        # OP-05/OP-05-IDENT passaram a rodar no motor nativo do OGR, que faz
+        # parte do GDAL — mesmo rotulo ja usado por OP-01, OP-26 e OP-27.
+        self.assertIn('"OP-05":"GDAL","OP-05-IDENT":"GDAL"', component)
         self.assertIn('"OP-08":"Rasterio"', component)
         self.assertIn('"OP-10":"SciPy"', component)
         self.assertIn('"OP-14":"PyKrige"', component)
@@ -402,7 +406,8 @@ class GeoprocessamentoApiTest(unittest.TestCase):
 
     def test_importacao_e_carregamento_expoem_logs_reais_de_nanotarefas(self) -> None:
         filename = "teste_nanotarefas.geojson"
-        upload_path = Path("data/geoespacial/uploads/datastorage/vetor") / filename
+        upload_path = (Path("data/geoespacial/uploads/datastorage/vetor")
+                       / upload_storage.PASTA_PADRAO / filename)
         homologated_id = None
         try:
             started = self.client.post(
@@ -473,26 +478,32 @@ class GeoprocessamentoApiTest(unittest.TestCase):
             ))
             homologated_id = homologated["resultado"]["id"]
         finally:
-            if homologated_id:
-                with get_connection() as conn:
-                    conn.execute("ALTER TABLE geoprocessamento.camada_homologada DISABLE TRIGGER trg_gp_homologada_snapshot_imutavel")
-                    conn.execute("ALTER TABLE geoprocessamento.camada_homologada_feicao DISABLE TRIGGER trg_gp_homologada_feicao_imutavel")
-                    conn.execute("ALTER TABLE geoprocessamento.camada_homologada_raster DISABLE TRIGGER trg_gp_homologada_raster_imutavel")
-                    conn.execute(
-                        """DELETE FROM geoprocessamento.camada_homologada_feicao
-                           WHERE camada_id IN (SELECT id FROM geoprocessamento.camada_homologada
-                                               WHERE nome_publicacao='Teste de nanotarefas')"""
-                    )
-                    conn.execute(
-                        """DELETE FROM geoprocessamento.camada_homologada_raster
-                           WHERE camada_id IN (SELECT id FROM geoprocessamento.camada_homologada
-                                               WHERE nome_publicacao='Teste de nanotarefas')"""
-                    )
-                    conn.execute("DELETE FROM geoprocessamento.camada_homologada WHERE nome_publicacao='Teste de nanotarefas'")
-                    conn.execute("ALTER TABLE geoprocessamento.camada_homologada ENABLE TRIGGER trg_gp_homologada_snapshot_imutavel")
-                    conn.execute("ALTER TABLE geoprocessamento.camada_homologada_feicao ENABLE TRIGGER trg_gp_homologada_feicao_imutavel")
-                    conn.execute("ALTER TABLE geoprocessamento.camada_homologada_raster ENABLE TRIGGER trg_gp_homologada_raster_imutavel")
-                    conn.commit()
+            # A limpeza não depende de o teste ter chegado ao fim: se uma
+            # asserção falhar no meio, a homologação já ocorreu e precisa ser
+            # desfeita do mesmo jeito. Gatilho nenhum é desabilitado aqui — a
+            # 085 autorizou a manutenção administrativa da biblioteca e a 097
+            # removeu o último bloqueio. Os ALTER TABLE que existiam neste ponto
+            # miravam gatilhos já derrubados, estouravam dentro do `finally` e
+            # abortavam a limpeza: foi assim que 28 registros e 28 arquivos de
+            # "Teste de nanotarefas" ficaram órfãos.
+            with get_connection() as conn:
+                conn.execute(
+                    """DELETE FROM geoprocessamento.camada_homologada_feicao
+                       WHERE camada_id IN (SELECT id FROM geoprocessamento.camada_homologada
+                                           WHERE nome_publicacao='Teste de nanotarefas')"""
+                )
+                conn.execute(
+                    """DELETE FROM geoprocessamento.camada_homologada_raster
+                       WHERE camada_id IN (SELECT id FROM geoprocessamento.camada_homologada
+                                           WHERE nome_publicacao='Teste de nanotarefas')"""
+                )
+                conn.execute("DELETE FROM geoprocessamento.camada_homologada WHERE nome_publicacao='Teste de nanotarefas'")
+                conn.commit()
+            # A homologação materializa o arquivo na biblioteca canônica; sem
+            # remover, cada execução da suíte deixa lixo no diretório de dados.
+            canonica = Path("data/geoespacial/biblioteca_canonica/ambos")
+            for residuo in canonica.glob("teste_de_nanotarefas_v1.gpkg*"):
+                residuo.unlink(missing_ok=True)
             upload_path.unlink(missing_ok=True)
 
     def test_camada_homologada_rejeita_mutacao(self) -> None:

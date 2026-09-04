@@ -204,10 +204,10 @@ As permissões efetivas são aplicadas no backend por dependências de rota.
 
 | Arquivo | Uso |
 |---|---|
-| `data/catalogo-slt.json` | Diretorias, planos, frentes e eixos |
-| `data/referencia-classificacao.json` | Apoio à classificação PLI/PEF |
-| `data/referencia-institucional.json` | Conteúdo institucional |
-| `data/matriz-criterios-premissas.json` | Critérios e premissas AHP |
+| `config/catalogo-slt.json` | Diretorias, planos, frentes e eixos |
+| `config/referencia-classificacao.json` | Apoio à classificação PLI/PEF |
+| `config/referencia-institucional.json` | Conteúdo institucional |
+| `config/matriz-criterios-premissas.json` | Critérios e premissas AHP |
 
 Scripts de manutenção:
 

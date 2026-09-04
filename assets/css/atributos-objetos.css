@@ -1,8 +1,8 @@
-/* Componente "Atributos dos objetos de demanda" (Fase 3).
+/* Componente "Atributos dos objetos de demanda" (Priorização por atributos).
    Segue a identidade da tabela "Hierarquizações realizadas" (.admin-table):
    cabeçalho azul-marinho var(--pli-deep), texto branco Montserrat, borda #d8e0e5. */
 
-/* Fase 3: reduz ~30% a fonte de todos os elementos no interior das seções (card),
+/* Priorização por atributos: reduz ~30% a fonte de todos os elementos no interior das seções (card),
    preservando a hierarquia relativa (escala o conteúdo do corpo da seção). */
 .fase-execucao-page .ahp-step-section > .ahp-section-body { zoom: 0.7; }
 
@@ -163,7 +163,7 @@
 
 /* Preenchimento híbrido: origem do valor da célula */
 .atributo-input--sistema { background: #eef4ef; color: #345243; cursor: default; }  /* cadastral (read-only) */
-.atributo-input--sugerido { background: #fff8e6; }                                   /* herdado da Fase 1 (sugestão) */
+.atributo-input--sugerido { background: #fff8e6; }                                   /* herdado da Elegibilidade territorial (sugestão) */
 .admin-table--atributos td.col-atributo-valor.is-preenchido { box-shadow: inset 3px 0 0 var(--pli-green); }
 .admin-table--atributos td.col-atributo-valor.is-pendente.is-obrigatorio { box-shadow: inset 3px 0 0 #e0a100; }
 

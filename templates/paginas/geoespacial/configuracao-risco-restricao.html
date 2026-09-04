@@ -26,7 +26,7 @@
           <p class="gerador-subtitle">
             Arcabouço teórico-conceitual no qual o sistema se alicerça para
             firmar suposições e decisões sobre risco e restrição na triagem
-            territorial da Fase 1, reunindo os fundamentos que orientam a
+            territorial da Elegibilidade territorial, reunindo os fundamentos que orientam a
             graduação de condições incertas e a aplicação de impedimentos
             formais.
           </p>
@@ -120,7 +120,7 @@
               índice de risco calculado; e a restrição, tratada como condição
               impeditiva e decidida por regra booleana não compensatória. Não
               são admitidas classes intermediárias, de modo que toda a triagem
-              territorial da Fase 1 se organiza unicamente nessas duas
+              territorial da Elegibilidade territorial se organiza unicamente nessas duas
               categorias.
             </p>
           </div>
@@ -158,7 +158,7 @@
             <h2>Camadas de restrição e risco</h2>
             <p>
               Camadas oficiais utilizadas para gerar as superfícies espaciais de
-              restrição e de risco na triagem territorial da Fase 1.
+              restrição e de risco na triagem territorial da Elegibilidade territorial.
             </p>
           </div>
         </header>
@@ -170,229 +170,170 @@
               provenientes de bases oficiais. As camadas de restrição
               correspondem a condições impeditivas verificáveis; as camadas de
               risco correspondem a condições incertas passíveis de graduação. A
-              tabela apresenta, para cada camada, a categoria adotada, a fonte
-              oficial e o fundamento resumido do enquadramento.
+              tabela apresenta, para cada camada, o órgão que publica o dado, a
+              categoria adotada, o fundamento resumido do enquadramento e a norma
+              ou referência técnica em que esse fundamento se apoia. As duas
+              fontes são distintas e propositalmente separadas: uma responde por
+              onde a geometria é obtida, a outra pelo que sustenta a
+              classificação.
             </p>
           </div>
           <div class="fase1-canonical-table-wrap">
             <table class="fase1-canonical-table fase1-canonical-table--compact">
               <thead>
                 <tr>
-                  <th>Camada</th>
+                  <th>Camada/fonte</th>
                   <th>Categoria</th>
-                  <th>Fonte</th>
                   <th>Fundamento</th>
+                  <th>Fonte</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><strong>Área de restrição cadastrada pela CETESB</strong></td>
+                  <td><strong>Áreas contaminadas</strong>
+                    (<a href="https://datageo.ambiente.sp.gov.br/app/?ctx=DATAGEO" target="_blank" rel="noopener">DataGEO</a>, 2026)</td>
                   <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>CETESB/SEMIL DataGeo — Áreas de restrição CETESB</td>
                   <td>
-                    A camada identifica áreas de restrição; a vigência e o
-                    alcance dependem do termo e da atividade administrativa
-                    associados.
+                    A CETESB restringe o uso de áreas contaminadas quando há riscos à
+                    saúde humana ou ao meio ambiente, mantendo tais restrições enquanto
+                    não forem comprovadas condições seguras para o uso pretendido. Em
+                    projetos de logística e infraestrutura, essa condição gera incertezas
+                    quanto à viabilidade e aos prazos de implantação, que podem depender
+                    de medidas de intervenção e de posterior manifestação da CETESB.
+                    Esses condicionantes tornam tais áreas menos favoráveis à execução e
+                    operação dos empreendimentos, justificando sua classificação como
+                    áreas de restrição.
                   </td>
+                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/2009/lei-13577-08.07.2009.html" target="_blank" rel="noopener">Proteção da qualidade do solo e gerenciamento de áreas contaminadas (Lei Estadual nº 13.577, 2009)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Área sob embargo ambiental estadual registrada no SIGAM</strong></td>
+                  <td><strong>Área sob embargo ambiental estadual registrada no SIGAM</strong><br><small><a href="https://sigam.ambiente.sp.gov.br/sigam3/" target="_blank" rel="noopener">SIGAM/SEMIL — Sistema Integrado de Gestão Ambiental</a></small></td>
                   <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>SEMIL; Polícia Militar Ambiental; SIGAM</td>
-                  <td>
-                    O embargo alcança somente a área e a atividade definidas no
-                    ato administrativo.
-                  </td>
+                  <td>Ato de fiscalização que suspende a atividade na área autuada. A obra não avança sobre o polígono antes do desembargo, decisão administrativa que corre fora do licenciamento.</td>
+                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/decreto/1976/decreto-8468-08.09.1976.html" target="_blank" rel="noopener">Regulamento da prevenção e controle da poluição do meio ambiente em São Paulo (Decreto Estadual nº 8.468, 1976)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Área sob embargo ambiental federal ativo</strong></td>
+                  <td><strong>Área sob embargo ambiental federal ativo</strong><br><small><a href="https://servicos.ibama.gov.br/ctf/publico/areasembargadas/" target="_blank" rel="noopener">IBAMA — consulta pública de áreas embargadas</a></small></td>
                   <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>IBAMA — Áreas embargadas</td>
-                  <td>
-                    O embargo restringe-se ao local da infração e à atividade
-                    definida pelo ato.
-                  </td>
+                  <td>Mesma natureza do embargo estadual, aplicado pelo IBAMA no local da infração. O impedimento é jurídico e anterior a qualquer análise ambiental do empreendimento.</td>
+                  <td><a href="https://www.planalto.gov.br/ccivil_03/leis/l9605.htm" target="_blank" rel="noopener">Sanções penais e administrativas por condutas lesivas ao meio ambiente (Lei nº 9.605, 1998)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Manguezal oficialmente mapeado</strong></td>
+                  <td><strong>Manguezal oficialmente mapeado</strong><br><small><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a></small></td>
                   <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>IBAMA; Lei nº 12.651/2012, art. 4º, VII</td>
-                  <td>
-                    Manguezal é Área de Preservação Permanente em toda a sua
-                    extensão; a proteção incide na própria geometria publicada.
-                  </td>
+                  <td>Manguezal é Área de Preservação Permanente em toda a sua extensão. A supressão só é admitida em hipóteses restritas de utilidade pública, somando vedação legal e licenciamento de alta complexidade.</td>
+                  <td><a href="https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2012/lei/l12651.htm" target="_blank" rel="noopener">Código Florestal — proteção da vegetação nativa (Lei nº 12.651, 2012)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Território quilombola oficialmente delimitado</strong></td>
+                  <td><strong>Território quilombola oficialmente delimitado</strong><br><small><a href="https://certificacao.incra.gov.br/csv_shp/export_shp.py" target="_blank" rel="noopener">INCRA — acervo fundiário, download de shapefiles</a></small></td>
                   <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>Fundação Cultural Palmares; INCRA</td>
-                  <td>
-                    A Fase 1 usa exclusivamente o perímetro oficial publicado,
-                    sem gerar faixas de consulta territorial.
-                  </td>
+                  <td>Território de comunidade tradicional com perímetro reconhecido pelo poder público. A intervenção exige consulta e anuência próprias, cujo prazo e resultado não estão sob controle do empreendedor.</td>
+                  <td><a href="https://www.planalto.gov.br/ccivil_03/decreto/2003/d4887.htm" target="_blank" rel="noopener">Identificação, delimitação e titulação de territórios quilombolas (Decreto nº 4.887, 2003)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Terra Indígena oficialmente delimitada</strong></td>
+                  <td><strong>Terra Indígena oficialmente delimitada</strong><br><small><a href="https://geoserver.funai.gov.br/" target="_blank" rel="noopener">FUNAI — geoserver de terras indígenas</a></small></td>
                   <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>FUNAI; LC nº 140/2011</td>
-                  <td>
-                    A Fase 1 usa exclusivamente o perímetro oficial publicado,
-                    sem gerar faixas de consulta territorial.
-                  </td>
+                  <td>Terra de ocupação tradicional indígena com perímetro oficialmente delimitado. A intervenção depende de manifestação da FUNAI e de autorização federal de base constitucional, não de condicionante de licença.</td>
+                  <td><a href="https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp140.htm" target="_blank" rel="noopener">Cooperação federativa no licenciamento ambiental (Lei Complementar nº 140, 2011)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Unidade de Conservação de Proteção Integral</strong></td>
+                  <td><strong>Unidade de Conservação de Proteção Integral</strong><br><small><a href="https://cnuc.mma.gov.br/" target="_blank" rel="noopener">CNUC/MMA — Cadastro Nacional de Unidades de Conservação</a></small></td>
                   <td><span class="fase1-classification fase1-classification--restriction">Restrição</span></td>
-                  <td>SEMIL/DataGeo; SNUC</td>
-                  <td>
-                    A incidência é avaliada no perímetro oficial da unidade;
-                    zonas de amortecimento não são geradas nem classificadas por
-                    esta biblioteca.
-                  </td>
+                  <td>Unidade cujo objetivo legal é preservar a natureza, admitindo apenas uso indireto dos recursos. Implantar infraestrutura contraria a finalidade da categoria e depende de instrumento excepcional. Abrange as três esferas — federal, estadual e municipal —, porque o grupo é definido pela lei do SNUC e não pelo órgão gestor.</td>
+                  <td><a href="https://www.planalto.gov.br/ccivil_03/leis/l9985.htm" target="_blank" rel="noopener">Sistema Nacional de Unidades de Conservação da Natureza (Lei nº 9.985, 2000)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Área oficial de influência sobre o patrimônio espeleológico</strong></td>
+                  <td><strong>Área oficial de influência sobre o patrimônio espeleológico</strong><br><small><a href="https://www.gov.br/icmbio/pt-br/assuntos/centros-de-pesquisa/cecav/" target="_blank" rel="noopener">CECAV/ICMBio — base de cavidades naturais</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>CECAV/ICMBio e SEMIL/DataGeo</td>
-                  <td>
-                    A camada oficial delimita indicador preliminar de área de
-                    influência; a Fase 1 usa a geometria publicada sem criar raio
-                    adicional.
-                  </td>
+                  <td>Área de influência de cavidade natural publicada pelo órgão federal. Exige estudo espeleológico e pode impor medidas de proteção ou ajuste de traçado, sem vedar a obra.</td>
+                  <td><a href="https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2022/decreto/d10935.htm" target="_blank" rel="noopener">Proteção do patrimônio espeleológico (Decreto nº 10.935, 2022)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Área suscetível a inundação, enxurrada ou alagamento</strong></td>
+                  <td><strong>Área suscetível a inundação, enxurrada ou alagamento</strong><br><small><a href="https://geosgb.sgb.gov.br/" target="_blank" rel="noopener">GeoSGB — cartas de suscetibilidade do Serviço Geológico do Brasil</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>Defesa Civil; IPT; SGB/CPRM; DAEE; DataGeo</td>
-                  <td>
-                    A mancha oficial representa o cenário hidrológico publicado e
-                    pode demandar soluções de engenharia e manutenção.
-                  </td>
+                  <td>Mancha que indica onde a água tende a se acumular ou transbordar. Não impede a obra: cobra soluções de drenagem, cotas de projeto e manutenção ao longo da vida útil.</td>
+                  <td><a href="https://geosgb.sgb.gov.br/" target="_blank" rel="noopener">Cartas de suscetibilidade a movimentos gravitacionais de massa e inundações (SGB/CPRM)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Área suscetível a escorregamento, erosão ou movimento de massa</strong></td>
+                  <td><strong>Área suscetível a escorregamento, erosão ou movimento de massa</strong><br><small><a href="https://geosgb.sgb.gov.br/" target="_blank" rel="noopener">GeoSGB — cartas de suscetibilidade do Serviço Geológico do Brasil</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>IPT; SGB/CPRM; Defesa Civil; DataGeo</td>
-                  <td>
-                    A carta oficial indica suscetibilidade que pode exigir
-                    soluções geotécnicas adicionais.
-                  </td>
+                  <td>Carta que indica onde o terreno tende a ceder ou ser carreado. Remete a soluções geotécnicas e monitoramento, com efeito sobre custo e prazo, não sobre a viabilidade.</td>
+                  <td><a href="https://geosgb.sgb.gov.br/" target="_blank" rel="noopener">Cartas de suscetibilidade a movimentos gravitacionais de massa e inundações (SGB/CPRM)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Área de Proteção e Recuperação dos Mananciais do Alto Juquery</strong></td>
+                  <td><strong>Área de Proteção e Recuperação dos Mananciais do Alto Juquery</strong><br><small><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>SEMIL/DataGeo; legislação específica da APRM</td>
-                  <td>
-                    A geometria disponível representa o perímetro geral da APRM; a
-                    incidência pode condicionar o uso e o traçado, sem comprovar
-                    vedação por subárea.
-                  </td>
+                  <td>Perímetro geral da área de proteção de manancial. A lei divide a APRM em subáreas com regras distintas, e a geometria disponível não permite saber qual delas incide — condiciona o traçado sem comprovar vedação.</td>
+                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/1997/lei-9866-28.11.1997.html" target="_blank" rel="noopener">Proteção e recuperação das bacias hidrográficas dos mananciais de interesse regional (Lei Estadual nº 9.866, 1997)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Área de Proteção e Recuperação dos Mananciais do Alto Tietê Cabeceiras</strong></td>
+                  <td><strong>Área de Proteção e Recuperação dos Mananciais do Alto Tietê Cabeceiras</strong><br><small><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>SEMIL/DataGeo; legislação específica da APRM</td>
-                  <td>
-                    A geometria disponível representa o perímetro geral da APRM; a
-                    incidência pode condicionar o uso e o traçado, sem comprovar
-                    vedação por subárea.
-                  </td>
+                  <td>Perímetro geral da área de proteção de manancial. A lei divide a APRM em subáreas com regras distintas, e a geometria disponível não permite saber qual delas incide — condiciona o traçado sem comprovar vedação.</td>
+                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/1997/lei-9866-28.11.1997.html" target="_blank" rel="noopener">Proteção e recuperação das bacias hidrográficas dos mananciais de interesse regional (Lei Estadual nº 9.866, 1997)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Área de Proteção e Recuperação dos Mananciais da Billings</strong></td>
+                  <td><strong>Área de Proteção e Recuperação dos Mananciais da Billings</strong><br><small><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>SEMIL/DataGeo; legislação específica da APRM</td>
-                  <td>
-                    A geometria disponível representa o perímetro geral da APRM; a
-                    incidência pode condicionar o uso e o traçado, sem comprovar
-                    vedação por subárea.
-                  </td>
+                  <td>Perímetro geral da área de proteção de manancial. A lei divide a APRM em subáreas com regras distintas, e a geometria disponível não permite saber qual delas incide — condiciona o traçado sem comprovar vedação.</td>
+                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/1997/lei-9866-28.11.1997.html" target="_blank" rel="noopener">Proteção e recuperação das bacias hidrográficas dos mananciais de interesse regional (Lei Estadual nº 9.866, 1997)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Área de Proteção e Recuperação dos Mananciais da Guarapiranga</strong></td>
+                  <td><strong>Área de Proteção e Recuperação dos Mananciais da Guarapiranga</strong><br><small><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>SEMIL/DataGeo; legislação específica da APRM</td>
-                  <td>
-                    A geometria disponível representa o perímetro geral da APRM; a
-                    incidência pode condicionar o uso e o traçado, sem comprovar
-                    vedação por subárea.
-                  </td>
+                  <td>Perímetro geral da área de proteção de manancial. A lei divide a APRM em subáreas com regras distintas, e a geometria disponível não permite saber qual delas incide — condiciona o traçado sem comprovar vedação.</td>
+                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/lei/1997/lei-9866-28.11.1997.html" target="_blank" rel="noopener">Proteção e recuperação das bacias hidrográficas dos mananciais de interesse regional (Lei Estadual nº 9.866, 1997)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Área contaminada cadastrada pela CETESB</strong></td>
+                  <td><strong>Área contaminada cadastrada pela CETESB</strong><br><small><a href="https://cetesb.sp.gov.br/areas-contaminadas/relacao-de-areas-contaminadas/" target="_blank" rel="noopener">CETESB — relação de áreas contaminadas e reabilitadas</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>CETESB — Relação de Áreas Contaminadas e Reabilitadas</td>
-                  <td>
-                    A incidência pode exigir investigação, gerenciamento de solo
-                    e água e medidas de proteção; a área de influência depende do
-                    processo e do modelo conceitual do sítio.
-                  </td>
+                  <td>Área com contaminação declarada no cadastro estadual. Exige investigação, gerenciamento do solo e da água subterrânea e proteção de quem trabalha no local — tudo previsto e licenciável.</td>
+                  <td><a href="https://www.al.sp.gov.br/repositorio/legislacao/decreto/2013/decreto-59263-05.06.2013.html" target="_blank" rel="noopener">Regulamento da proteção da qualidade do solo e do gerenciamento de áreas contaminadas (Decreto Estadual nº 59.263, 2013)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Assentamento rural no Estado de São Paulo</strong></td>
+                  <td><strong>Assentamento rural no Estado de São Paulo</strong><br><small><a href="https://certificacao.incra.gov.br/csv_shp/export_shp.py" target="_blank" rel="noopener">INCRA — acervo fundiário, download de shapefiles</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>INCRA; ITESP</td>
-                  <td>
-                    A interferência pode exigir anuência, negociação fundiária,
-                    reassentamento ou ajuste do traçado.
-                  </td>
+                  <td>Perímetro de assentamento de reforma agrária. A interferência abre negociação fundiária, eventual reassentamento e anuência do órgão gestor, com efeito sobre prazo e custo.</td>
+                  <td><a href="https://portal.iphan.gov.br/uploads/ckfinder/arquivos/portaria_interministerial_60_2015.pdf" target="_blank" rel="noopener">Manifestação de FUNAI, Palmares, IPHAN e Ministério da Saúde no licenciamento (Portaria Interministerial nº 60, 2015)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Bem tombado ou área envoltória oficial do CONDEPHAAT</strong></td>
+                  <td><strong>Bem tombado ou área envoltória oficial do CONDEPHAAT</strong><br><small><a href="https://datageo.ambiente.sp.gov.br/geoportal/catalog/search/search.page" target="_blank" rel="noopener">DataGEO — catálogo de metadados</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>CONDEPHAAT; Decreto-Lei nº 25/1937</td>
-                  <td>
-                    O tombamento exige autorização do órgão competente, mas a
-                    viabilidade e as condicionantes dependem da análise da
-                    intervenção específica.
-                  </td>
+                  <td>Bem protegido por tombamento estadual, com a faixa de entorno definida no próprio ato de proteção. A intervenção depende de autorização do conselho, que analisa o projeto concreto e pode deferi-la com condicionantes.</td>
+                  <td><a href="https://www.planalto.gov.br/ccivil_03/decreto-lei/del0025.htm" target="_blank" rel="noopener">Organização da proteção do patrimônio histórico e artístico nacional (Decreto-Lei nº 25, 1937)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Bem tombado federal identificado pelo IPHAN</strong></td>
+                  <td><strong>Bem tombado federal identificado pelo IPHAN</strong><br><small><a href="https://sicg.iphan.gov.br/" target="_blank" rel="noopener">IPHAN — SICG, Sistema Integrado de Conhecimento e Gestão</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>IPHAN; Decreto-Lei nº 25/1937</td>
-                  <td>
-                    A incidência exige análise e autorização patrimonial; sem
-                    polígono envoltório oficial não se cria raio substituto.
-                  </td>
+                  <td>Bem protegido por tombamento federal. Como no caso estadual, a autorização é examinada caso a caso, e a ausência de faixa de entorno publicada não é tratada como impedimento.</td>
+                  <td><a href="https://www.planalto.gov.br/ccivil_03/decreto-lei/del0025.htm" target="_blank" rel="noopener">Organização da proteção do patrimônio histórico e artístico nacional (Decreto-Lei nº 25, 1937)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Sítio arqueológico oficialmente cadastrado</strong></td>
+                  <td><strong>Sítio arqueológico oficialmente cadastrado</strong><br><small><a href="https://sicg.iphan.gov.br/" target="_blank" rel="noopener">IPHAN — SICG, Sistema Integrado de Conhecimento e Gestão</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>IPHAN/CNSA; Lei nº 3.924/1961</td>
-                  <td>
-                    A incidência pode exigir pesquisa, resgate, acompanhamento ou
-                    preservação no local; a área de influência é definida no
-                    processo, sem raio geral automático.
-                  </td>
+                  <td>Sítio registrado no inventário nacional. A obra exige pesquisa, eventual resgate do material e acompanhamento durante a execução — procedimentos previstos e de prazo estimável.</td>
+                  <td><a href="https://www.planalto.gov.br/ccivil_03/leis/1950-1969/l3924.htm" target="_blank" rel="noopener">Monumentos arqueológicos e pré-históricos (Lei nº 3.924, 1961)</a></td>
                 </tr>
                 <tr>
-                  <td><strong>Unidade de Conservação de Uso Sustentável</strong></td>
+                  <td><strong>Unidade de Conservação de Uso Sustentável</strong><br><small><a href="https://cnuc.mma.gov.br/" target="_blank" rel="noopener">CNUC/MMA — Cadastro Nacional de Unidades de Conservação</a></small></td>
                   <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>SEMIL/DataGeo; SNUC</td>
-                  <td>
-                    A categoria e o zoneamento condicionam o uso; a incidência é
-                    avaliada no perímetro oficial da unidade, sem gerar faixas
-                    externas.
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>Vegetação nativa mapeada</strong></td>
-                  <td><span class="fase1-classification fase1-classification--risk">Risco</span></td>
-                  <td>SEMIL/DataGeo; Lei nº 12.651/2012</td>
-                  <td>
-                    A geometria oficial de vegetação não determina por si APP,
-                    estágio sucessional ou impossibilidade jurídica; esses
-                    enquadramentos exigem atributos próprios.
-                  </td>
+                  <td>Unidade que admite uso direto dos recursos, conforme a categoria e o zoneamento. A intervenção é possível mediante anuência do gestor e adequação ao plano de manejo. Abrange as três esferas — federal, estadual e municipal —, porque o grupo é definido pela lei do SNUC e não pelo órgão gestor.</td>
+                  <td><a href="https://www.planalto.gov.br/ccivil_03/leis/l9985.htm" target="_blank" rel="noopener">Sistema Nacional de Unidades de Conservação da Natureza (Lei nº 9.985, 2000)</a></td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p class="fase1-calculation-note">
-            Fonte: <code>data/geoespacial/biblioteca_criterios_risco_restricao.json</code>.
-            São sete camadas de restrição e catorze camadas de risco, totalizando
-            vinte e uma camadas oficiais.
+            <strong>Como a geometria é usada:</strong> a Elegibilidade territorial lê apenas o
+            perímetro oficial publicado por cada órgão. Não são criadas faixas de
+            entorno, zonas de amortecimento ou raios de influência — o que não
+            estiver desenhado na camada oficial não é considerado. Essa regra vale
+            para todas as camadas da tabela.
+          </p>
+          <p class="fase1-canonical-note">
+            Fonte: <code>config/geoespacial/biblioteca_criterios_risco_restricao.json</code>.
+            São sete camadas de restrição e treze camadas de risco, totalizando
+            vinte camadas oficiais.
           </p>
         </div>
       </section>
@@ -423,7 +364,7 @@
               Nas bases oficiais, esses geradores chegam rotulados por naturezas
               diversas — ambiental, técnica, institucional, fundiária,
               patrimonial, de prazo e licenciamento e jurídica. Para o uso
-              espacial da Fase 1, este arcabouço reduz essa diversidade a apenas
+              espacial da Elegibilidade territorial, este arcabouço reduz essa diversidade a apenas
               duas categorias operacionais, definidas pelo efeito de cada feição
               sobre a obra e não pelo rótulo de origem. Trata-se de uma decisão
               conceitual desta metodologia, que o sistema apenas implementa e
@@ -454,10 +395,10 @@
               Camadas cujos atributos associam, de forma combinada, entraves
               jurídicos à liberação da obra e alta complexidade de licenciamento
               ambiental, tratadas como impedimento na triagem territorial da
-              Fase 1.
+              Elegibilidade territorial.
             </p>
             <ul>
-              <li>Área de restrição cadastrada pela CETESB</li>
+              <li>Áreas contaminadas</li>
               <li>Área sob embargo ambiental estadual registrada no SIGAM</li>
               <li>Área sob embargo ambiental federal ativo</li>
               <li>Manguezal oficialmente mapeado</li>
@@ -487,7 +428,6 @@
               <li>Bem tombado federal identificado pelo IPHAN</li>
               <li>Sítio arqueológico oficialmente cadastrado</li>
               <li>Unidade de Conservação de Uso Sustentável</li>
-              <li>Vegetação nativa mapeada</li>
             </ul>
           </div>
           <p class="fase1-calculation-note">

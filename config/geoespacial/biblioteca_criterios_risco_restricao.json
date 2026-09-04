@@ -1,0 +1,295 @@
+{
+  "codigo": "biblioteca_fase1_risco_restricao",
+  "versao": "2026.09.02",
+  "titulo": "Biblioteca canônica de critérios potencialmente geradores de risco e restrição",
+  "escala": {
+    "risco": "Risco",
+    "restricao": "Restrição"
+  },
+  "tipos": [
+    {
+      "id": "prazo_licenciamento",
+      "nome": "Risco de prazo e licenciamento",
+      "descricao": "Tempo adicional decorrente do estudo ambiental, manifestações, autorizações, consultas, compensações e análise da alternativa locacional.",
+      "natureza": "risco"
+    },
+    {
+      "id": "ambiental",
+      "nome": "Risco ambiental",
+      "descricao": "Sensibilidade ambiental, necessidade de mitigação, compensação, recuperação ou adequação do empreendimento.",
+      "natureza": "risco"
+    },
+    {
+      "id": "institucional",
+      "nome": "Risco institucional",
+      "descricao": "Participação de múltiplos órgãos, mudança de competência, anuências e coordenação administrativa.",
+      "natureza": "risco"
+    },
+    {
+      "id": "tecnico",
+      "nome": "Risco técnico e operacional",
+      "descricao": "Condições físicas ou geotécnicas que aumentam dificuldade construtiva, segurança, custo, manutenção ou risco residual.",
+      "natureza": "risco"
+    },
+    {
+      "id": "social_fundiario",
+      "nome": "Risco social e fundiário",
+      "descricao": "Consulta, negociação, reassentamento, regularização ou impacto sobre comunidades e territórios protegidos.",
+      "natureza": "risco"
+    },
+    {
+      "id": "patrimonial",
+      "nome": "Risco patrimonial",
+      "descricao": "Pesquisa, proteção, resgate, acompanhamento ou preservação de bens culturais, arqueológicos e espeleológicos.",
+      "natureza": "risco"
+    },
+    {
+      "id": "juridico",
+      "nome": "Restrição jurídica ou material",
+      "descricao": "Ato ativo, vedação ou incompatibilidade confirmada que impede a continuidade do objeto até revisão formal.",
+      "natureza": "restricao"
+    }
+  ],
+  "criterios": [
+    {
+      "id": "cavidades_influencia",
+      "dimensao": "Risco",
+      "nome": "Área oficial de influência sobre o patrimônio espeleológico",
+      "tipo": "Risco",
+      "componente": "Estudos, medidas de proteção e alternativa locacional",
+      "fundamento": "A camada oficial delimita indicador preliminar de área de influência; a Fase 1 usa a geometria publicada sem criar raio adicional.",
+      "elevacao": "Elevar somente por ato, estudo ou decisão de licenciamento específica.",
+      "fonte": "CECAV/ICMBio e SEMIL/DataGeo"
+    },
+    {
+      "id": "inundacao",
+      "dimensao": "Risco",
+      "nome": "Área suscetível a inundação, enxurrada ou alagamento",
+      "tipo": "Risco",
+      "componente": "Complexidade técnica, custo e operação",
+      "fundamento": "A mancha oficial representa o cenário hidrológico publicado e pode demandar soluções de engenharia e manutenção.",
+      "elevacao": "Elevar somente com risco residual inaceitável demonstrado.",
+      "fonte": "Defesa Civil; IPT; SGB/CPRM; DAEE; DataGeo"
+    },
+    {
+      "id": "movimento_massa",
+      "dimensao": "Risco",
+      "nome": "Área suscetível a escorregamento, erosão ou movimento de massa",
+      "tipo": "Risco",
+      "componente": "Complexidade técnica, custo e segurança",
+      "fundamento": "A carta oficial indica suscetibilidade que pode exigir soluções geotécnicas adicionais.",
+      "elevacao": "Elevar somente com impossibilidade técnica ou risco residual inaceitável.",
+      "fonte": "IPT; SGB/CPRM; Defesa Civil; DataGeo"
+    },
+    {
+      "id": "aprm_alto_juquery",
+      "dimensao": "Risco",
+      "nome": "Área de Proteção e Recuperação dos Mananciais do Alto Juquery",
+      "tipo": "Risco",
+      "componente": "Zoneamento e compatibilidade territorial",
+      "fundamento": "A geometria disponível representa o perímetro geral da APRM; a incidência pode condicionar o uso e o traçado, sem comprovar vedação por subárea.",
+      "elevacao": "Elevar para Restrição somente com subárea impeditiva e norma aplicável identificadas.",
+      "fonte": "SEMIL/DataGeo; legislação específica da APRM"
+    },
+    {
+      "id": "aprm_alto_tiete_cabec",
+      "dimensao": "Risco",
+      "nome": "Área de Proteção e Recuperação dos Mananciais do Alto Tietê Cabeceiras",
+      "tipo": "Risco",
+      "componente": "Zoneamento e compatibilidade territorial",
+      "fundamento": "A geometria disponível representa o perímetro geral da APRM; a incidência pode condicionar o uso e o traçado, sem comprovar vedação por subárea.",
+      "elevacao": "Elevar para Restrição somente com subárea impeditiva e norma aplicável identificadas.",
+      "fonte": "SEMIL/DataGeo; legislação específica da APRM"
+    },
+    {
+      "id": "aprm_billings",
+      "dimensao": "Risco",
+      "nome": "Área de Proteção e Recuperação dos Mananciais da Billings",
+      "tipo": "Risco",
+      "componente": "Zoneamento e compatibilidade territorial",
+      "fundamento": "A geometria disponível representa o perímetro geral da APRM; a incidência pode condicionar o uso e o traçado, sem comprovar vedação por subárea.",
+      "elevacao": "Elevar para Restrição somente com subárea impeditiva e norma aplicável identificadas.",
+      "fonte": "SEMIL/DataGeo; legislação específica da APRM"
+    },
+    {
+      "id": "aprm_guarapiranga",
+      "dimensao": "Risco",
+      "nome": "Área de Proteção e Recuperação dos Mananciais da Guarapiranga",
+      "tipo": "Risco",
+      "componente": "Zoneamento e compatibilidade territorial",
+      "fundamento": "A geometria disponível representa o perímetro geral da APRM; a incidência pode condicionar o uso e o traçado, sem comprovar vedação por subárea.",
+      "elevacao": "Elevar para Restrição somente com subárea impeditiva e norma aplicável identificadas.",
+      "fonte": "SEMIL/DataGeo; legislação específica da APRM"
+    },
+    {
+      "id": "areas_contaminadas_cetesb",
+      "dimensao": "Risco",
+      "nome": "Área contaminada cadastrada pela CETESB",
+      "tipo": "Risco",
+      "componente": "Remediação, segurança, custo e prazo",
+      "fundamento": "A incidência pode exigir investigação, gerenciamento de solo e água e medidas de proteção; a área de influência depende do processo e do modelo conceitual do sítio.",
+      "elevacao": "Elevar para Restrição somente com incompatibilidade ou impossibilidade de gerenciamento seguro confirmadas.",
+      "fonte": "CETESB — Relação de Áreas Contaminadas e Reabilitadas"
+    },
+    {
+      "id": "areas_restricao_cetesb",
+      "dimensao": "Restrição",
+      "nome": "Área de restrição cadastrada pela CETESB",
+      "tipo": "Restrição",
+      "componente": "Ato administrativo e atividade abrangida",
+      "fundamento": "A camada identifica áreas de restrição; a vigência e o alcance dependem do termo e da atividade administrativa associados.",
+      "elevacao": "Confirmar ato, vigência, alcance e aplicabilidade antes da decisão.",
+      "fonte": "CETESB/SEMIL DataGeo — Áreas de restrição CETESB"
+    },
+    {
+      "id": "assentamentos_sp",
+      "dimensao": "Risco",
+      "nome": "Assentamento rural no Estado de São Paulo",
+      "tipo": "Risco",
+      "componente": "Regularização, negociação e reassentamento",
+      "fundamento": "A interferência pode exigir anuência, negociação fundiária, reassentamento ou ajuste do traçado.",
+      "elevacao": "Elevar para Restrição somente por impedimento dominial ou institucional formal.",
+      "fonte": "INCRA; ITESP"
+    },
+    {
+      "id": "bens_tombados_condephaat",
+      "dimensao": "Risco",
+      "nome": "Bem tombado ou área envoltória oficial do CONDEPHAAT",
+      "tipo": "Risco",
+      "componente": "Autorização patrimonial e alternativa locacional",
+      "fundamento": "O tombamento exige autorização do órgão competente, mas a viabilidade e as condicionantes dependem da análise da intervenção específica.",
+      "elevacao": "Elevar para Restrição somente quando o ato ou a manifestação competente vedar a intervenção.",
+      "fonte": "CONDEPHAAT; Decreto-Lei nº 25/1937"
+    },
+    {
+      "id": "bens_tombados_iphan_sp",
+      "dimensao": "Risco",
+      "nome": "Bem tombado federal identificado pelo IPHAN",
+      "tipo": "Risco",
+      "componente": "Autorização patrimonial e alternativa locacional",
+      "fundamento": "A incidência exige análise e autorização patrimonial; sem polígono envoltório oficial não se cria raio substituto.",
+      "elevacao": "Elevar para Restrição somente quando o ato ou a manifestação competente vedar a intervenção.",
+      "fonte": "IPHAN; Decreto-Lei nº 25/1937"
+    },
+    {
+      "id": "embargos_estaduais_sigam",
+      "dimensao": "Restrição",
+      "nome": "Área sob embargo ambiental estadual registrada no SIGAM",
+      "tipo": "Restrição",
+      "componente": "Ato jurídico impeditivo",
+      "fundamento": "O embargo alcança somente a área e a atividade definidas no ato administrativo.",
+      "elevacao": "Confirmar vigência, escopo e aplicabilidade do embargo.",
+      "fonte": "SEMIL; Polícia Militar Ambiental; SIGAM"
+    },
+    {
+      "id": "embargos_ibama_ativos_sp",
+      "dimensao": "Restrição",
+      "nome": "Área sob embargo ambiental federal ativo",
+      "tipo": "Restrição",
+      "componente": "Ato jurídico impeditivo",
+      "fundamento": "O embargo restringe-se ao local da infração e à atividade definida pelo ato.",
+      "elevacao": "Confirmar vigência, escopo e aplicabilidade do embargo.",
+      "fonte": "IBAMA — Áreas embargadas"
+    },
+    {
+      "id": "manguezais_ibama_sp",
+      "dimensao": "Restrição",
+      "nome": "Manguezal oficialmente mapeado",
+      "tipo": "Restrição",
+      "componente": "Proteção ambiental",
+      "fundamento": "Manguezal é Área de Preservação Permanente em toda sua extensão; a proteção incide na própria geometria publicada.",
+      "elevacao": "Confirmar a aplicabilidade legal à intervenção específica.",
+      "fonte": "IBAMA; Lei nº 12.651/2012, art. 4º, VII"
+    },
+    {
+      "id": "quilombos_sp",
+      "dimensao": "Restrição",
+      "nome": "Território quilombola oficialmente delimitado",
+      "tipo": "Restrição",
+      "componente": "Proteção territorial e consulta",
+      "fundamento": "A Fase 1 usa exclusivamente o perímetro oficial publicado, sem gerar faixas de consulta territorial.",
+      "elevacao": "Confirmar situação fundiária e aplicabilidade ao empreendimento.",
+      "fonte": "Fundação Cultural Palmares; INCRA"
+    },
+    {
+      "id": "sitios_arqueologicos",
+      "dimensao": "Risco",
+      "nome": "Sítio arqueológico oficialmente cadastrado",
+      "tipo": "Risco",
+      "componente": "Pesquisa, resgate, acompanhamento e prazo",
+      "fundamento": "A incidência pode exigir pesquisa, resgate, acompanhamento ou preservação no local; a área de influência é definida no processo, sem raio geral automático.",
+      "elevacao": "Elevar para Restrição somente quando a preservação ou decisão do IPHAN impedir a alternativa.",
+      "fonte": "IPHAN/CNSA; Lei nº 3.924/1961"
+    },
+    {
+      "id": "terras_indigenas_sp",
+      "dimensao": "Restrição",
+      "nome": "Terra Indígena oficialmente delimitada",
+      "tipo": "Restrição",
+      "componente": "Proteção territorial e consulta",
+      "fundamento": "A Fase 1 usa exclusivamente o perímetro oficial publicado, sem gerar faixas de consulta territorial.",
+      "elevacao": "Confirmar situação, competência e aplicabilidade ao empreendimento.",
+      "fonte": "FUNAI; LC nº 140/2011"
+    },
+    {
+      "id": "ucs_protecao_integral_estadual_sp",
+      "dimensao": "Restrição",
+      "nome": "Sobreposição com Unidade de Conservação de Proteção Integral estadual",
+      "tipo": "Restrição",
+      "componente": "Proteção ambiental e regime de uso",
+      "fundamento": "UCs de Proteção Integral estaduais admitem apenas uso indireto dos recursos naturais (Lei nº 9.985/2000, art. 7º, §1º); a incidência é avaliada no perímetro oficial da unidade, filtrado por esfera Estadual e grupo Proteção Integral.",
+      "elevacao": "Confirmar categoria, zoneamento, plano de manejo e compatibilidade da intervenção.",
+      "fonte": "CNUC/MMA via IBAMA PAMGIA (lim_unidades_conservação_mma_a); SNUC"
+    },
+    {
+      "id": "ucs_protecao_integral_federal_sp",
+      "dimensao": "Restrição",
+      "nome": "Sobreposição com Unidade de Conservação de Proteção Integral federal",
+      "tipo": "Restrição",
+      "componente": "Proteção ambiental e regime de uso",
+      "fundamento": "UCs de Proteção Integral federais admitem apenas uso indireto dos recursos naturais (Lei nº 9.985/2000, art. 7º, §1º) e envolvem gestão do ICMBio; a incidência é avaliada no perímetro oficial da unidade, filtrado por esfera Federal e grupo Proteção Integral.",
+      "elevacao": "Confirmar categoria, zoneamento, plano de manejo e compatibilidade da intervenção.",
+      "fonte": "CNUC/MMA via IBAMA PAMGIA (lim_unidades_conservação_mma_a); ICMBio; SNUC"
+    },
+    {
+      "id": "ucs_protecao_integral_municipal_sp",
+      "dimensao": "Restrição",
+      "nome": "Sobreposição com Unidade de Conservação de Proteção Integral municipal",
+      "tipo": "Restrição",
+      "componente": "Proteção ambiental e regime de uso",
+      "fundamento": "UCs de Proteção Integral municipais integram o SNUC e admitem apenas uso indireto dos recursos naturais (Lei nº 9.985/2000, art. 7º, §1º); o grupo é definido pela lei federal, não pela esfera do órgão gestor. A incidência é avaliada no perímetro oficial da unidade, filtrado por esfera Municipal e grupo Proteção Integral.",
+      "elevacao": "Confirmar categoria, zoneamento, plano de manejo e compatibilidade da intervenção.",
+      "fonte": "CNUC/MMA via IBAMA PAMGIA (lim_unidades_conservação_mma_a); SNUC"
+    },
+    {
+      "id": "ucs_uso_sustentavel_estadual_sp",
+      "dimensao": "Risco",
+      "nome": "Sobreposição com Unidade de Conservação de Uso Sustentável estadual",
+      "tipo": "Risco",
+      "componente": "Complexidade ambiental e institucional",
+      "fundamento": "UCs de Uso Sustentável estaduais compatibilizam conservação e uso (Lei nº 9.985/2000, art. 7º, §2º); a categoria e o zoneamento condicionam a intervenção, avaliada no perímetro oficial da unidade, filtrado por esfera Estadual e grupo Uso Sustentável.",
+      "elevacao": "Reclassificar como restrição somente com regra específica de zoneamento ou categoria que vede a intervenção.",
+      "fonte": "CNUC/MMA via IBAMA PAMGIA (lim_unidades_conservação_mma_a); SNUC"
+    },
+    {
+      "id": "ucs_uso_sustentavel_federal_sp",
+      "dimensao": "Risco",
+      "nome": "Sobreposição com Unidade de Conservação de Uso Sustentável federal",
+      "tipo": "Risco",
+      "componente": "Complexidade ambiental e institucional",
+      "fundamento": "UCs de Uso Sustentável federais compatibilizam conservação e uso (Lei nº 9.985/2000, art. 7º, §2º) e envolvem anuência do ICMBio; a categoria e o zoneamento condicionam a intervenção, avaliada no perímetro oficial da unidade, filtrado por esfera Federal e grupo Uso Sustentável.",
+      "elevacao": "Reclassificar como restrição somente com regra específica de zoneamento ou categoria que vede a intervenção.",
+      "fonte": "CNUC/MMA via IBAMA PAMGIA (lim_unidades_conservação_mma_a); ICMBio; SNUC"
+    },
+    {
+      "id": "ucs_uso_sustentavel_municipal_sp",
+      "dimensao": "Risco",
+      "nome": "Sobreposição com Unidade de Conservação de Uso Sustentável municipal",
+      "tipo": "Risco",
+      "componente": "Complexidade ambiental e institucional",
+      "fundamento": "UCs de Uso Sustentável municipais integram o SNUC e compatibilizam conservação e uso (Lei nº 9.985/2000, art. 7º, §2º); a categoria e o zoneamento condicionam a intervenção, avaliada no perímetro oficial da unidade, filtrado por esfera Municipal e grupo Uso Sustentável.",
+      "elevacao": "Reclassificar como restrição somente com regra específica de zoneamento ou categoria que vede a intervenção.",
+      "fonte": "CNUC/MMA via IBAMA PAMGIA (lim_unidades_conservação_mma_a); SNUC"
+    }
+  ]
+}
