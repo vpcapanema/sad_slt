@@ -4,7 +4,7 @@
 {% set requer_autenticacao = true %}
 
 {% block titulo %}Área restrita — SICARD{% endblock %}
-{% block classes_body %}restrict-index-page{% endblock %}
+{% block classes_body %}restrict-index-page escala-revisada{% endblock %}
 {% block base_url %}<base href="/restrict/" />{% endblock %}
 
 {% block estilos_pagina %}
@@ -14,6 +14,7 @@
       rel="stylesheet"
       href="/assets/vendor/fontawesome/css/all.min.css"
     />
+  <link rel="stylesheet" href="/assets/css/escala-tipografica.css">
 {% endblock %}
 
 
@@ -109,6 +110,7 @@
             {{ link_card('/restrict/demanda/', 'fa-solid fa-magnifying-glass-chart', 'Análise de demandas', 'blue') }}
             {{ link_card('/restrict/complementacao/', 'fa-solid fa-pen-to-square', 'Complementação de cadastro', 'blue') }}
             {{ link_card('/restrict/revisao-status/', 'fa-solid fa-arrows-rotate', 'Revisão de status', 'blue') }}
+            {{ link_card('/restrict/sei-integracao/', 'fa-solid fa-file-import', 'Contribuições do SEI', 'blue') }}
           </div>
         </section>
 

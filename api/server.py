@@ -111,6 +111,7 @@ RESTRICTED_PAGES = {
     "demanda": "analise_demanda.html",
     "revisao-status": "revisao-status.html",
     "complementacao": "complementacao.html",
+    "sei-integracao": "sei_integracao.html",
 }
 
 

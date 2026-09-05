@@ -92,6 +92,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .layer-legend .legend-swatch{width:13px;height:13px;flex:0 0 auto;border-radius:3px;border:1px solid rgba(15,23,42,.25)}
 .layer-legend .legend-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .layer-legend .legend-more{color:var(--accent,#1683c4);font-style:italic}
+.layer-legend-field{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--muted,#64748b);opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:1px}
 /* Painel Simbologia (aba dinâmica) */
 .sym-editor{display:flex;flex-direction:column;min-height:0}
 .sym-typebar{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:2}
@@ -113,12 +114,28 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .sym-class-row{display:flex;align-items:center;gap:8px}
 .sym-class-row input[type="color"]{width:30px;height:28px;flex:0 0 auto;padding:2px;border:1px solid var(--line);border-radius:5px;background:#fff;cursor:pointer}
 .sym-class-label{flex:1;min-width:0;height:28px;padding:3px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px}
-.sym-class-range{display:flex;align-items:center;gap:5px;flex:1;min-width:0;font-size:11.5px;color:var(--text,#334155);font-variant-numeric:tabular-nums}
+/* Largura fixa para o range inteiro (e para cada uma das três células dentro
+   dele) — sem isso, "de" com dígitos diferentes por linha (0 vs 82.895,2)
+   deslocava o resto da linha, e a coluna de rótulo nunca alinhava entre si. */
+.sym-class-range{display:flex;align-items:center;gap:5px;flex:0 0 auto;width:158px;font-size:11.5px;color:var(--text,#334155);font-variant-numeric:tabular-nums}
+.sym-class-range>:nth-child(1){flex:0 0 56px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sym-class-range>:nth-child(2){flex:0 0 12px;text-align:center}
+.sym-class-range>:nth-child(3){flex:0 0 82px}
 .sym-class-range .sym-range-sep{color:var(--muted,#94a3b8)}
-.sym-class-range input[type="number"]{width:82px;height:28px;padding:3px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px}
+.sym-class-range input[type="number"]{width:82px;height:28px;padding:3px 6px;border:1px solid var(--line);border-radius:5px;font-size:12px;text-align:right}
 .sym-class-count{min-width:44px;text-align:right;font-size:10.5px;color:var(--muted,#64748b);font-variant-numeric:tabular-nums}
 .sym-class-row [data-sym-remove]{width:26px;height:26px;flex:0 0 auto}
 .sym-class-row [data-sym-remove] svg{width:14px}
+/* Cabeçalho da grade de classes: mesma estrutura de flex da linha de dados
+   (mesmas classes, mesmas larguras fixas), então as colunas caem exatamente
+   sob o cabeçalho correspondente sem precisar duplicar a lógica de layout. */
+.sym-class-header{padding-bottom:4px;margin-bottom:1px;border-bottom:1px solid var(--line);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;color:var(--muted,#64748b)}
+.sym-class-header>span{overflow:visible;white-space:normal}
+.sym-class-header em{display:block;margin-top:1px;font-style:normal;font-weight:400;text-transform:none;letter-spacing:0;font-size:9.5px;color:var(--muted,#94a3b8)}
+.sym-class-header.sym-class-row--grad .sym-class-range>:nth-child(1),
+.sym-class-header.sym-class-row--grad .sym-class-range>:nth-child(3){text-align:left}
+.sym-class-header.sym-class-row--cat>:nth-child(1){flex:0 0 30px}
+.sym-class-header.sym-class-row--cat>:nth-child(3){min-width:44px;text-align:right}
 .sym-outros{margin-top:9px;flex-direction:row;align-items:center;gap:8px}
 .sym-outros span{flex:1}
 .sym-outros input[type="color"]{width:44px}
@@ -300,3 +317,21 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .model-tips-steps code{background:#efe6c4;padding:0 3px;border-radius:2px;font:11px Consolas,monospace}
 .model-tips-hotkeys{margin:6px 10px 10px;padding:6px 8px;background:#fff;border:1px dashed #d8ca7a;border-radius:3px;color:#3f3a20;line-height:1.5}
 .model-tips-hotkeys kbd{background:#eee;border:1px solid #ccc;border-bottom-width:2px;border-radius:3px;padding:0 4px;font:11px Consolas,monospace;color:#333}
+/* Sessão de edição de atributos por camada (Fase 1 do "modo de edição" — como
+   o Toggle Editing do QGIS / Edit do ArcGIS Pro). O lápis fica ao lado do
+   botão de zoom já existente; herda a mesma exibição no hover, mas com
+   margin-left:auto nele em vez do zoom, para os dois ficarem juntos à
+   direita como um par. */
+.tree-row .layer-edit{display:none;width:24px;height:24px;margin-left:auto}
+.tree-row:hover .layer-edit,.tree-row.active .layer-edit,.tree-row .layer-edit.active{display:grid}
+.tree-row .layer-edit.active{color:#c0392b}
+.tree-row .layer-edit svg{width:13px}
+.tree-row .layer-zoom{margin-left:0}
+
+.attribute-edit-hint{display:flex;align-items:center;gap:6px;padding:5px 10px;background:#fff7e0;border-bottom:1px solid #eddc9a;font-size:11px;color:#6b5900}
+.attribute-edit-hint svg{width:13px}
+.attribute-cell-editavel{padding:0!important}
+.attribute-cell-editavel input{width:100%;box-sizing:border-box;min-width:70px;border:1px solid transparent;background:#fffceb;padding:5px 7px;font:inherit}
+.attribute-cell-editavel input:focus{outline:2px solid var(--accent);outline-offset:-2px;background:#fff}
+.attribute-edit-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.attribute-edit-count{color:var(--muted);font-size:11px;white-space:nowrap}

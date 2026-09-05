@@ -2,10 +2,6 @@
    Segue a identidade da tabela "Hierarquizações realizadas" (.admin-table):
    cabeçalho azul-marinho var(--pli-deep), texto branco Montserrat, borda #d8e0e5. */
 
-/* Priorização por atributos: reduz ~30% a fonte de todos os elementos no interior das seções (card),
-   preservando a hierarquia relativa (escala o conteúdo do corpo da seção). */
-.fase-execucao-page .ahp-step-section > .ahp-section-body { zoom: 0.7; }
-
 .componente-atributos-objetos { margin-top: 1rem; }
 
 .componente-atributos-objetos .atributos-legenda {

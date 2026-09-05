@@ -5,7 +5,7 @@
 {% set requer_autenticacao = true %}
 
 {% block titulo %}Painel de demandas — Admin SLT{% endblock %}
-{% block classes_body %}painel-dashboard-page admin-data-page  page-admin-painel{% endblock %}
+{% block classes_body %}painel-dashboard-page admin-data-page  page-admin-painel escala-revisada{% endblock %}
 {% block classes_barra_lateral %}painel-dashboard-sidebar{% endblock %}
 {% block rotulo_barra_lateral %}Demandas{% endblock %}
 {% block base_url %}<base href="/restrict/">{% endblock %}
@@ -13,6 +13,7 @@
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/admin-painel-page.css">
   <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/assets/css/escala-tipografica.css">
 {% endblock %}
 
 {% block barra_lateral %}

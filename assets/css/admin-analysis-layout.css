@@ -105,16 +105,19 @@
 }
 
 .admin-info-subcard {
-  background: var(--admin-blue-100);
+  background: #fff;
   border: 1px solid var(--admin-blue-border);
   border-radius: 8px;
-  padding: 0.55rem 0.65rem 0.6rem;
+  padding: 0 0.65rem 0.6rem;
+  overflow: hidden;
   box-shadow: none;
 }
 
+/* Só o cabeçalho recebe o azul claro; o corpo do card fica branco. */
 .admin-info-subcard-title {
-  margin: 0 0 0.5rem;
-  padding-bottom: 0.35rem;
+  margin: 0 -0.65rem 0.6rem;
+  padding: 0.4rem 0.65rem;
+  background: var(--admin-blue-100);
   border-bottom: 1px solid var(--admin-blue-border);
   font-size: 0.72rem;
   font-weight: 700;

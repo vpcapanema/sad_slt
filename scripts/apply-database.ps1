@@ -232,7 +232,11 @@ $migrations = @(
     "095_backfill_coordenadas_objetos_hierarquizacao.sql",
     "096_uc_municipal_fase1.sql",
     "097_completar_biblioteca_homologada_editavel.sql",
-    "098_base_legal_areas_contaminadas.sql"
+    "098_base_legal_areas_contaminadas.sql",
+    "100_padronizar_geometria_sirgas2000.sql",
+    "101_backfill_crs_sirgas2000.sql",
+    "102_sei_integracao_credencial.sql",
+    "103_analise_demanda.sql"
 )
 
 if ($OnlyMigration) {

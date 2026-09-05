@@ -5,7 +5,7 @@
 {% set requer_autenticacao = true %}
 
 {% block titulo %}Análise de demanda — Admin SLT{% endblock %}
-{% block classes_body %}admin-data-page admin-dashboard-page  page-admin-demanda{% endblock %}
+{% block classes_body %}admin-data-page admin-dashboard-page  page-admin-demanda escala-revisada{% endblock %}
 {% block classes_barra_lateral %}admin-dashboard-sidebar{% endblock %}
 {% block rotulo_barra_lateral %}Demandas{% endblock %}
 {% block base_url %}<base href="/restrict/">{% endblock %}
@@ -13,6 +13,7 @@
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/admin-demanda-page.css">
   <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/assets/css/escala-tipografica.css">
 {% endblock %}
 
 {% block barra_lateral %}

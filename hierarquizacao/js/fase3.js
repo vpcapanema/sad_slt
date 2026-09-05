@@ -143,38 +143,67 @@
       $("executar-fase3").onclick = async () => {
         const hierarquizacao = atual();
         if (!hierarquizacao) return erro("Selecione a hierarquização.");
-        try {
-          const updated = await HierApi.executarFase3(hierarquizacao.codigo, {
+        const resposta = await window.SLTFeedback.acao({
+          confirmacao: {
+            title: "Calcular índice de priorização (Fase 3)",
+            message: `Hierarquização ${hierarquizacao.codigo}, pesos por “${$("fase3-modo-pesos").value}”, completude mínima de ${$("fase3-completude").value}%.`,
+            detail: "O resultado atual da Fase 3 será substituído e a síntese já gerada, se houver, ficará desatualizada.",
+            confirmLabel: "Calcular Fase 3",
+          },
+          titulo: "Calculando índice de priorização",
+          mensagemInicial: `Enviando os critérios da rodada ${hierarquizacao.codigo}…`,
+          executar: () => HierApi.executarFase3(hierarquizacao.codigo, {
             criterios: window.AtributosObjetos?.criteriosPayload() || [],
             modo_pesos: $("fase3-modo-pesos").value,
             completude_minima: Number($("fase3-completude").value) / 100,
             regra_ausentes: $("fase3-ausentes").value,
-          });
-          hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
-          await render(updated);
-        } catch (error) { erro(error); }
+          }),
+          sucesso: "Índice de priorização calculado. Confira a tabela de objetos abaixo.",
+        });
+        if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
+        hierarquizacoes = hierarquizacoes.map((item) => item.codigo === resposta.resultado.codigo ? resposta.resultado : item);
+        await render(resposta.resultado);
       };
       $("salvar-pesos-fase3").onclick = async () => {
         const hierarquizacao = atual();
         if (!hierarquizacao) return erro("Selecione a hierarquização.");
-        try {
-          const updated = await HierApi.salvarPesosFase3(hierarquizacao.codigo, { criterios: window.AtributosObjetos?.criteriosPayload() || [] });
-          hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
-          await render(updated);
-          window.SLTFeedback?.success("Pesos dos atributos salvos.", "Configuração salva");
-        } catch (error) { erro(error); }
+        const resposta = await window.SLTFeedback.acao({
+          confirmacao: {
+            title: "Salvar pesos dos atributos",
+            message: `Os pesos exibidos serão gravados na hierarquização ${hierarquizacao.codigo}, substituindo os anteriores.`,
+            confirmLabel: "Salvar pesos",
+          },
+          titulo: "Salvando pesos dos atributos",
+          mensagemInicial: "Gravando os pesos no servidor…",
+          executar: () => HierApi.salvarPesosFase3(hierarquizacao.codigo, { criterios: window.AtributosObjetos?.criteriosPayload() || [] }),
+          sucesso: "Pesos dos atributos salvos.",
+        });
+        if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
+        hierarquizacoes = hierarquizacoes.map((item) => item.codigo === resposta.resultado.codigo ? resposta.resultado : item);
+        await render(resposta.resultado);
       };
       const salvarRiscos = $("salvar-tratamentos-riscos-fase3");
       if (salvarRiscos) salvarRiscos.onclick = async () => {
         const hierarquizacao = atual();
         if (!hierarquizacao) return erro("Selecione a hierarquização.");
-        try {
-          const payload = window.AtributosObjetos?.tratamentosRiscosPayload() || { tratamentos: {} };
-          const updated = await HierApi.salvarRiscosFase3(hierarquizacao.codigo, payload);
-          hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
-          await render(updated);
-          window.SLTFeedback?.success("Tratamento dos riscos salvo.", "Decisão gerencial registrada");
-        } catch (error) { erro(error); }
+        const payload = window.AtributosObjetos?.tratamentosRiscosPayload() || { tratamentos: {} };
+        const quantos = Object.keys(payload.tratamentos || {}).length;
+        const resposta = await window.SLTFeedback.acao({
+          confirmacao: {
+            title: "Registrar tratamento dos riscos",
+            message: `${quantos} tratamento(s) de risco serão registrados na hierarquização ${hierarquizacao.codigo}.`,
+            detail: "Esta é uma decisão gerencial: ela fica registrada em nome do gestor autenticado e altera o índice de priorização dos objetos afetados.",
+            confirmLabel: "Registrar decisão",
+            danger: true,
+          },
+          titulo: "Registrando tratamento dos riscos",
+          mensagemInicial: "Gravando a decisão gerencial no servidor…",
+          executar: () => HierApi.salvarRiscosFase3(hierarquizacao.codigo, payload),
+          sucesso: "Tratamento dos riscos salvo.",
+        });
+        if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
+        hierarquizacoes = hierarquizacoes.map((item) => item.codigo === resposta.resultado.codigo ? resposta.resultado : item);
+        await render(resposta.resultado);
       };
       document.querySelectorAll('input[name="operador-sintese"]').forEach((input) => input.addEventListener("change", () => {
         $("pesos-sintese").hidden = operadorSintese() !== "media_ponderada";
@@ -185,18 +214,36 @@
       $("sintetizar").onclick = async () => {
         const hierarquizacao = atual();
         if (!hierarquizacao) return erro("Selecione a hierarquização.");
-        try {
-          const updated = await HierApi.sintetizar(hierarquizacao.codigo, {
-            operador: operadorSintese(),
+        const operador = operadorSintese();
+        const resposta = await window.SLTFeedback.acao({
+          confirmacao: {
+            title: "Calcular índice geral de hierarquização",
+            message: `A síntese final da hierarquização ${hierarquizacao.codigo} será gerada com o operador “${operador}”.`,
+            detail: "A síntese anterior, se existir, é substituída. Ela combina os resultados das Fases 1, 2 e 3 como estão agora — confira se as três estão atualizadas antes de seguir.",
+            confirmLabel: "Calcular síntese",
+          },
+          titulo: "Calculando índice geral de hierarquização",
+          mensagemInicial: "Sintetizando as três fases no servidor…",
+          executar: () => HierApi.sintetizar(hierarquizacao.codigo, {
+            operador,
             peso_rede: Number($("peso-rede").value),
             peso_grade: Number($("peso-grade").value),
             peso_prioridade: Number($("peso-prioridade").value),
             incluir_restritos: false,
-          });
-          hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
-          await render(updated);
-          window.location.href = `/restrict/hierarquizacao/processos/ranking/?codigo=${encodeURIComponent(updated.codigo)}`;
-        } catch (error) { erro(error); }
+          }),
+          sucesso: "Índice geral calculado. O ranking final já está disponível.",
+          // Navegar sozinho tirava o usuário da página antes de ele ver o desfecho.
+          acoesHtml:
+            '<button type="button" class="btn btn-secondary" data-fb-close>Continuar na Fase 3</button>' +
+            '<button type="button" class="btn btn-primary" data-ir-ranking>Ver ranking</button>',
+        });
+        if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
+        const codigo = resposta.resultado.codigo;
+        document.querySelector("[data-ir-ranking]")?.addEventListener("click", () => {
+          window.location.href = `/restrict/hierarquizacao/processos/ranking/?codigo=${encodeURIComponent(codigo)}`;
+        });
+        hierarquizacoes = hierarquizacoes.map((item) => item.codigo === codigo ? resposta.resultado : item);
+        await render(resposta.resultado);
       };
     } catch (error) { erro(error); }
   }

@@ -436,7 +436,8 @@
     const layer = $("#gp-demandas");
 
     if (!hierarquizacao) {
-      if (layer) layer.innerHTML = '<p class="ahp-help-text">Selecione uma hierarquização.</p>';
+      // O rótulo do próprio seletor já pede a hierarquização; repetir aqui só enchia o card.
+      if (layer) layer.innerHTML = "";
       ocultarRelatorio();
       return;
     }
@@ -488,6 +489,20 @@
     return alvo.includes("risco") || finalidade(camada, "risco");
   }
 
+  /**
+   * Arquivo solto na biblioteca canônica, sem registro de homologação, não tem
+   * id utilizável: entrava na lista como opção vazia, que o usuário selecionava
+   * e recebia "selecione as duas camadas". Aqui ele aparece desabilitado, dizendo
+   * por que não serve.
+   */
+  function opcaoDaBiblioteca(camada, extra = "") {
+    const rotulo = `${esc(camada.nome_publicacao || camada.nome)} · ${esc(camada.versao)}`;
+    if (!camada.id) {
+      return `<option value="" disabled>${rotulo} — arquivo na biblioteca sem homologação registrada</option>`;
+    }
+    return `<option value="${esc(camada.id)}"${extra}>${rotulo} (biblioteca canônica)</option>`;
+  }
+
   function preencherRestricoes() {
     const select = $("#camada-restricao");
     const options = [];
@@ -505,12 +520,11 @@
     camadasHomologadas
       .filter(ehRestricao)
       .forEach((camada) => {
-        options.push(
-          `<option value="${esc(camada.id)}" data-standalone="1">${esc(camada.nome_publicacao || camada.nome)} · ${esc(camada.versao)} (biblioteca canônica)</option>`
-        );
+        options.push(opcaoDaBiblioteca(camada, ' data-standalone="1"'));
       });
 
-    select.innerHTML = '<option value="">Selecione…</option>' + options.join("");
+    select.innerHTML =
+      '<option value="">Selecione a camada de restrição</option>' + options.join("");
   }
 
   function associarRiscos() {
@@ -523,8 +537,7 @@
       riscoSelect.disabled = true;
       riscoSelect.innerHTML =
         '<option value="">Selecione primeiro a camada de restrição</option>';
-      $("#gp-risco-restricao").innerHTML =
-        '<p class="ahp-help-text">Selecione o par homologado.</p>';
+      $("#gp-risco-restricao").innerHTML = "";
       return;
     }
 
@@ -534,10 +547,8 @@
     riscoSelect.innerHTML =
       riscos
         .map((camada) => {
-          const label = pacote
-            ? `${esc(camada.nome)} — ${esc(camada.versao)}`
-            : `${esc(camada.nome_publicacao || camada.nome)} · ${esc(camada.versao)} (biblioteca canônica)`;
-          return `<option value="${esc(camada.id)}">${label}</option>`;
+          if (!pacote) return opcaoDaBiblioteca(camada);
+          return `<option value="${esc(camada.id)}">${esc(camada.nome)} — ${esc(camada.versao)}</option>`;
         })
         .join("") ||
       '<option value="">Camada associada não encontrada</option>';
@@ -1338,10 +1349,27 @@
       );
     }
 
-    try {
-      limparErro();
-      $("#executar-fase1").disabled = true;
+    const nomeRestricao = restricaoOption?.textContent?.trim() || camadaRestricao;
+    const nomeRisco = $("#camada-risco").selectedOptions[0]?.textContent?.trim() || camadaRisco;
+    const confirmado = await window.SLTFeedback.confirmar({
+      title: "Calcular risco e restrição (Fase 1)",
+      message:
+        `Hierarquização ${hierarquizacao.codigo}. Restrição: ${nomeRestricao}. Risco: ${nomeRisco}.`,
+      detail:
+        "O resultado atual da Fase 1 será substituído. Como as Fases 2 e 3 partem dele, " +
+        "elas podem ficar desatualizadas e precisar de novo cálculo.",
+      confirmLabel: "Calcular Fase 1",
+    });
+    if (!confirmado) return;
 
+    limparErro();
+    $("#executar-fase1").disabled = true;
+    const proc = window.SLTFeedback.processo("Calculando risco e restrição");
+    const passo = proc.passo(
+      `Enviando a rodada ${hierarquizacao.codigo} ao servidor…`,
+      "progress"
+    );
+    try {
       const atualizado = await HierApi.executarFase1(hierarquizacao.codigo, {
         par_id: pacote ? pacote.pacote_id : null,
         camada_restricao_id: camadaRestricao,
@@ -1352,16 +1380,27 @@
         item.codigo === atualizado.codigo ? atualizado : item
       );
 
+      proc.atualizar(passo, "success", "Servidor concluiu o cálculo da Fase 1.");
       renderHierarquizacao();
       renderRelatorio(atualizado);
-      if (window.SLTFeedback) {
-        window.SLTFeedback.success(
+      proc.concluir({
+        type: "success",
+        title: "Fase 1 concluída",
+        message:
           "Elegibilidade territorial executada. Confira o relatório de risco e restrição abaixo.",
-          "Cálculo concluído"
-        );
-      }
+      });
     } catch (e) {
-      erro(e);
+      proc.atualizar(passo, "error", "O servidor interrompeu o cálculo.");
+      proc.concluir({
+        type: "error",
+        title: "Fase 1 interrompida",
+        message: e?.message || String(e),
+      });
+      const box = $("#fase1-erro");
+      if (box) {
+        box.textContent = e?.message || e;
+        box.classList.remove("hidden");
+      }
     } finally {
       $("#executar-fase1").disabled = false;
     }
@@ -1385,6 +1424,8 @@
 
   function revalidarCampos() {
     CAMPOS_VALIDACAO.forEach((sel) => marcarCampo(document.querySelector(sel)));
+    // Seleção feita por código não dispara "change": o componente precisa do aviso.
+    window.SLTGeoprocessamento?.sincronizarAlternativas?.();
   }
 
   function configurarValidacaoVisual() {
@@ -1430,7 +1471,7 @@
       const selectHier = $("#fase-hierarquizacao");
       const elegiveis = hierarquizacoes.filter(executaFase1);
       selectHier.innerHTML =
-        '<option value="">Selecione…</option>' +
+        '<option value="">Selecionar uma hierarquização</option>' +
         elegiveis
           .map(
             (item) =>

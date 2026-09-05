@@ -23,8 +23,19 @@ CODIGO_DEMANDA_RE = re.compile(
 )
 
 
-def gerar_codigo(prefix: str, tipo_demandante: str = TIPO_DEMANDANTE_INSTITUCIONAL) -> str:
-    """Retorna código qualificado pelo demandante e com 8 hex maiúsculos."""
+def gerar_codigo(
+    prefix: str,
+    tipo_demandante: str = TIPO_DEMANDANTE_INSTITUCIONAL,
+    *,
+    origem: str = "",
+) -> str:
+    """Retorna código qualificado pelo demandante e com 8 hex maiúsculos.
+
+    ``origem`` insere um segmento fixo opcional entre o prefixo e o hex — usado
+    para marcar demandas criadas a partir de um fluxo externo (ex.: ``origem="SEI"``
+    produz ``I-PRJ-SEI-XXXXXXXX``). Vazio por padrão, sem qualquer efeito nos
+    códigos gerados pelos fluxos existentes.
+    """
     if tipo_demandante == TIPO_DEMANDANTE_PRIVADA:
         if prefix != PREFIX_PROJETO:
             raise DemandaValidationError(
@@ -39,21 +50,27 @@ def gerar_codigo(prefix: str, tipo_demandante: str = TIPO_DEMANDANTE_INSTITUCION
             f"Tipo de demandante inválido: {tipo_demandante}.",
             field="tipo_demandante",
         )
-    return f"{qualificador}-{prefix}-{uuid.uuid4().hex[:8].upper()}"
+    segmentos = [qualificador, prefix]
+    if origem:
+        segmentos.append(origem.strip().upper())
+    segmentos.append(uuid.uuid4().hex[:8].upper())
+    return "-".join(segmentos)
 
 
-def gerar_codigo_plano() -> str:
-    return gerar_codigo(PREFIX_PLANO, TIPO_DEMANDANTE_INSTITUCIONAL)
+def gerar_codigo_plano(*, origem: str = "") -> str:
+    return gerar_codigo(PREFIX_PLANO, TIPO_DEMANDANTE_INSTITUCIONAL, origem=origem)
 
 
-def gerar_codigo_programa() -> str:
-    return gerar_codigo(PREFIX_PROGRAMA, TIPO_DEMANDANTE_INSTITUCIONAL)
+def gerar_codigo_programa(*, origem: str = "") -> str:
+    return gerar_codigo(PREFIX_PROGRAMA, TIPO_DEMANDANTE_INSTITUCIONAL, origem=origem)
 
 
 def gerar_codigo_projeto(
     tipo_demandante: str = TIPO_DEMANDANTE_INSTITUCIONAL,
+    *,
+    origem: str = "",
 ) -> str:
-    return gerar_codigo(PREFIX_PROJETO, tipo_demandante)
+    return gerar_codigo(PREFIX_PROJETO, tipo_demandante, origem=origem)
 
 
 def tipo_demandante_do_codigo(codigo: str | None) -> TipoDemandante:

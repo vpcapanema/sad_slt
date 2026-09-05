@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import base64
+import os
 import re
 import tempfile
 import unicodedata
@@ -339,8 +340,12 @@ class GeoespacialService:
         self._catalogar_persistidas()
         return gdf
 
-    def _ler_do_acervo(self, camada_id: str) -> gpd.GeoDataFrame | None:
-        """Lê a camada do arquivo registrado, ou devolve None se não der."""
+    def _caminho_arquivo_da_camada(self, camada_id: str) -> Path | None:
+        """Resolve o caminho do arquivo do acervo de uma camada, se houver.
+
+        Único ponto que decide "esta camada tem arquivo fonte" — usado tanto
+        para ler (`_ler_do_acervo`) quanto para gravar edições de volta nele.
+        """
         if not self._metadados.get(camada_id):
             self._catalogar_persistidas()
         metadata = self._metadados.get(camada_id) or {}
@@ -351,7 +356,12 @@ class GeoespacialService:
             caminho = project_path(str(relativo))
         except ValueError:
             return None
-        if not caminho.exists():
+        return caminho if caminho.exists() else None
+
+    def _ler_do_acervo(self, camada_id: str) -> gpd.GeoDataFrame | None:
+        """Lê a camada do arquivo registrado, ou devolve None se não der."""
+        caminho = self._caminho_arquivo_da_camada(camada_id)
+        if caminho is None:
             return None
         try:
             return cast(gpd.GeoDataFrame, gpd.read_file(caminho))
@@ -451,29 +461,61 @@ class GeoespacialService:
         return removido
 
     async def camada_geojson(self, camada_id: str) -> dict[str, Any]:
-        geojson = camada_geoespacial_repository.carregar_vetor_geojson(camada_id)
-        if geojson is None:
+        """GeoJSON completo da camada, para o mapa da Bancada.
+
+        Prefere ler do arquivo do acervo (via `obter_camada_dados`) em vez de
+        remontar tudo no PostGIS remoto: para a grade de favorabilidade —
+        103.620 feições — o `jsonb_agg`/`ST_AsGeoJSON` do banco tinha que
+        computar e transportar o payload inteiro pela rede a cada camada
+        carregada na Bancada, sem cache. É a mesma otimização já aplicada ao
+        geoprocessamento, agora estendida a esta rota.
+
+        O PostGIS guarda a geometria em EPSG:4674 (SIRGAS 2000, o CRS de
+        armazenamento do sistema — ver migração 100), e o arquivo do acervo
+        também costuma estar em 4674. Mas o mapa web (Leaflet/MapLibre) espera
+        coordenadas próximas de WGS84, então a saída desta função é sempre
+        reprojetada para EPSG:4326 aqui — é a fronteira de exibição, não o
+        formato de guarda. Sem essa reprojeção a camada aparece na posição
+        errada no mapa.
+        """
+        try:
+            gdf = self.obter_camada_dados(camada_id)
+        except ValueError:
             alias = camada_geoespacial_repository.resolver_recurso_id(camada_id)
-            if alias and alias != camada_id:
-                camada_id = alias
-                geojson = camada_geoespacial_repository.carregar_vetor_geojson(camada_id)
-        if geojson is None and camada_id in self._camadas:
-            return cast(dict[str, Any], self._camadas[camada_id].__geo_interface__)
-        if geojson is None:
-            raise ValueError(f"Camada vetorial {camada_id} não encontrada")
-        return geojson
+            if not alias or alias == camada_id:
+                raise
+            camada_id = alias
+            gdf = self.obter_camada_dados(camada_id)
+
+        if gdf.crs is None:
+            gdf = gdf.set_crs("EPSG:4326")
+        elif str(gdf.crs).upper() != "EPSG:4326":
+            gdf = gdf.to_crs("EPSG:4326")
+        # `default=str` cobre colunas de data/hora: o arquivo do acervo chega
+        # com Timestamp do pandas, que o codificador padrão do `.to_json()`
+        # não serializa — o caminho antigo (PostGIS) não sofria disso porque
+        # a coluna já vinha como JSONB pronto, com a data como texto.
+        return cast(dict[str, Any], json.loads(gdf.to_json(default=str)))
 
     async def atributos_camada(self, camada_id: str, limite: int = 100, offset: int = 0) -> dict[str, Any]:
         gdf = self.obter_camada_dados(camada_id).copy()
         dados = gdf.drop(columns=[gdf.geometry.name], errors="ignore").iloc[offset:offset + limite]
         dados = dados.where(dados.notna(), None)
+        registros = dados.to_dict(orient="records")
+        # `_indice` é a posição absoluta em obter_camada_dados(camada_id) — a
+        # mesma ordem que salvar_edicoes_atributos usa para endereçar cada
+        # linha. Chave estável mesmo quando a camada não tem um campo tipo
+        # OBJECTID/FID único.
+        for posicao, registro in enumerate(registros):
+            registro["_indice"] = offset + posicao
         return {
             "camada_id": camada_id,
             "colunas": [{"nome": c, "tipo": str(dados[c].dtype)} for c in dados.columns],
-            "registros": dados.to_dict(orient="records"),
+            "registros": registros,
             "total": len(gdf),
             "offset": offset,
             "limite": limite,
+            "homologada": camada_geoespacial_repository.esta_homologada(camada_id),
         }
 
     def _colunas_atributos(self, gdf: gpd.GeoDataFrame) -> list[str]:
@@ -628,6 +670,101 @@ class GeoespacialService:
         )
         self._camadas[camada_id] = gdf
         return {"camada_id": camada_id, "campo": campo, "feicoes_atualizadas": len(gdf)}
+
+    def salvar_edicoes_atributos(
+        self, camada_id: str, edicoes: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Grava edições de atributo feitas na Bancada — na fonte real da camada.
+
+        "Fonte real" é o arquivo do acervo quando a camada tem um
+        (`caminho_arquivo`), reescrito por inteiro via `gdf.to_file` — não é
+        patch incremental, é a mesma estratégia que qualquer ferramenta GIS
+        usa por baixo dos panos, e funciona igual para .shp e .gpkg sem
+        tratamento por formato. O PostGIS é sempre atualizado também: tabela
+        de atributos, estatística de campo da simbologia e tiles MVT
+        continuam consultando o banco diretamente, e as duas cópias não podem
+        divergir uma da outra.
+
+        `edicoes`: lista de {"indice": posição absoluta em obter_camada_dados,
+        "campos": {nome_do_campo: novo_valor}}.
+        """
+        if camada_geoespacial_repository.esta_homologada(camada_id):
+            raise ValueError("Camada homologada é somente leitura")
+        if not edicoes:
+            raise ValueError("Nenhuma edição informada")
+
+        gdf = self.obter_camada_dados(camada_id).copy()
+        total = len(gdf)
+        for edicao in edicoes:
+            indice = edicao.get("indice")
+            campos = edicao.get("campos") or {}
+            if not isinstance(indice, int) or not (0 <= indice < total):
+                raise ValueError(
+                    f"Índice de linha inválido: {indice!r} (a camada tem {total} feições — "
+                    "a tabela pode estar desatualizada; recarregue e tente de novo)"
+                )
+            for campo, valor in campos.items():
+                if campo not in gdf.columns:
+                    raise ValueError(f"Campo inexistente na camada: {campo!r}")
+                if campo == gdf.geometry.name:
+                    raise ValueError("Geometria não é editável nesta versão")
+                gdf.iat[indice, gdf.columns.get_loc(campo)] = valor
+
+        gravado_em_arquivo = False
+        caminho = self._caminho_arquivo_da_camada(camada_id)
+        if caminho is not None:
+            self._reescrever_arquivo_do_acervo(caminho, gdf)
+            gravado_em_arquivo = True
+
+        metadata = self._metadados[camada_id]
+        camada_geoespacial_repository.substituir_vetor(camada_id, gdf, metadata)
+        self._camadas[camada_id] = gdf
+        return {
+            "camada_id": camada_id,
+            "linhas_editadas": len(edicoes),
+            "gravado_em_arquivo": gravado_em_arquivo,
+        }
+
+    @staticmethod
+    def _reescrever_arquivo_do_acervo(caminho: Path, gdf: gpd.GeoDataFrame) -> None:
+        """Reescreve o arquivo do acervo inteiro com o conteúdo atual do gdf.
+
+        Grava primeiro num arquivo temporário no mesmo diretório e só troca
+        pelo definitivo depois de a escrita ter sucesso — se o processo cair
+        no meio, o arquivo original permanece intacto em vez de corrompido.
+
+        Limite conhecido: um shapefile é vários arquivos-satélite (.shp/.shx/
+        .dbf/.prj/.cpg), e cada `os.replace` é atômico por arquivo, não a
+        troca do conjunto inteiro — uma queda bem no meio da troca pode deixar
+        satélites de versões diferentes. Um GeoPackage (arquivo único) não tem
+        esse risco.
+        """
+        sufixo = caminho.suffix
+        provisorio = caminho.with_name(f".tmp-{uuid4().hex}{sufixo}")
+
+        # Sem `layer=` explícito, o GeoPackage nomeia a camada a partir do
+        # nome do arquivo temporário (".tmp-<hex>"), que o GDAL rejeita por
+        # ter caracteres inválidos para nome de camada. Preserva o nome que o
+        # arquivo original já tinha, para a identidade da camada não mudar.
+        layer = None
+        if sufixo.lower() == ".gpkg":
+            import fiona
+
+            try:
+                camadas = fiona.listlayers(caminho)
+                layer = camadas[0] if camadas else None
+            except Exception:
+                layer = None
+
+        gdf.to_file(provisorio, layer=layer) if layer else gdf.to_file(provisorio)
+        if sufixo.lower() == ".shp":
+            for extensao in (".shp", ".shx", ".dbf", ".prj", ".cpg"):
+                origem = provisorio.with_suffix(extensao)
+                destino = caminho.with_suffix(extensao)
+                if origem.exists():
+                    os.replace(origem, destino)
+        else:
+            os.replace(provisorio, caminho)
 
     @staticmethod
     def _gdf_para_geojson(gdf: gpd.GeoDataFrame) -> dict[str, Any]:

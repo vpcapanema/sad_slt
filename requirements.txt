@@ -11,6 +11,9 @@ python-dotenv>=1.0.0
 openpyxl>=3.1.0
 argon2-cffi>=23.1.0
 bcrypt>=4.1.0
+beautifulsoup4>=4.12.0
+cryptography>=42.0.0
+reportlab>=4.1.0
 # Dependências geoespaciais
 geopandas>=0.14.0
 matplotlib>=3.8.0

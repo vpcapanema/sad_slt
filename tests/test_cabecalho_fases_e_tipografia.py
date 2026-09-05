@@ -33,7 +33,7 @@ def cliente():
 ])
 def test_descricao_do_cabecalho_e_curta_e_traz_o_link_embutido(cliente, rota):
     html = cliente.get(rota).text
-    bloco = re.search(r'<p class="fase-descricao">(.*?)</p>', html, re.S)
+    bloco = re.search(r'<p class="standard-page-hero__description">(.*?)</p>', html, re.S)
     assert bloco, "cabeçalho sem parágrafo de descrição curto"
     texto_visivel = re.sub(r"<[^>]+>", "", bloco.group(1)).strip()
     palavras = len(texto_visivel.split())
@@ -47,26 +47,32 @@ def test_descricao_do_cabecalho_e_curta_e_traz_o_link_embutido(cliente, rota):
 
 def test_fase1_titulo_e_texto_da_secao_de_saida():
     html = Path("templates/paginas/hierarquizacao/fase1-elegibilidade.html").read_text(encoding="utf-8")
-    assert 'titulo-saida="Camadas de Elegibilidade Territorial"' in html
-    assert (
-        'texto-saida-vazia="Selecione par homologado ou faça o upload '
-        'das camadas de Risco e Restrição;"'
-    ) in html
+    assert 'titulo-saida="Camadas de superfícies de elegibilidade territorial"' in html
+    # O caminho para o upload virou botão fixo no card; o texto de saída vazia,
+    # que carregava o link e sumia na primeira seleção, deixou de existir.
+    assert "texto-saida-vazia" not in html
 
 
 def test_fase2_mantem_titulo_e_texto_proprios_de_favorabilidade():
     html = Path("templates/paginas/hierarquizacao/fase2-favorabilidade.html").read_text(encoding="utf-8")
-    assert 'titulo-saida="Superfícies de favorabilidade territorial"' in html
-    assert "índices de favorabilidade" in html
+    assert 'titulo-saida="Camadas de superfícies de favorabilidade de grade e da rede"' in html
+    assert "texto-saida-vazia" not in html
 
 
 def test_componente_slt_usa_o_texto_parametrizado_e_o_botao_padrao():
     js = Path("assets/js/componentes/geoprocessamento-slt.js").read_text(encoding="utf-8")
-    assert "texto-saida-vazia" in js
-    assert "textoSaidaVazia" in js
-    assert 'textoSaidaVazia.replace("upload"' in js, "o link de upload precisa vir do próprio texto"
+    assert "upload-label" in js
+    assert "uploadLabel" in js
     assert "btn btn-primary" in js
     assert "btn--primary" not in js
+
+
+def test_botao_de_upload_fica_fora_do_preview_reescrito():
+    """Dentro do preview ele sumia assim que uma camada era selecionada."""
+    js = Path("assets/js/componentes/geoprocessamento-slt.js").read_text(encoding="utf-8")
+    depois_do_preview = js.split('id="${saidaId}"></div>', 1)[1]
+    assert 'class="fase1-op-ou">ou<' in depois_do_preview
+    assert "fase1-op-upload" in depois_do_preview
 
 
 @pytest.mark.parametrize("regra,rotulo_regex", [

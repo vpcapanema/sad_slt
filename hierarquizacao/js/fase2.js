@@ -76,6 +76,8 @@
   }
 
   function renderCamadas() {
+    // Seleção feita por código não dispara "change": o componente precisa do aviso.
+    window.SLTGeoprocessamento?.sincronizarAlternativas?.();
     const saida = $("gp-favorabilidade");
     const selecionadas = [$("camada-grade-fase2").value, $("camada-rede-fase2").value]
       .map((id) => camadas.find((camada) => camada.homologacao_id === id)).filter(Boolean);
@@ -87,9 +89,11 @@
   }
 
   function renderResumo(h) {
+    window.SLTGeoprocessamento?.sincronizarAlternativas?.();
     const layer = $("gp-demandas-fase2");
     if (!h) {
-      if (layer) layer.innerHTML = '<p class="ahp-help-text">Selecione uma hierarquização.</p>';
+      // O rótulo do próprio seletor já pede a hierarquização; repetir aqui só enchia o card.
+      if (layer) layer.innerHTML = "";
       return;
     }
     window.SLTResumoFase?.camadaDemandas(layer, h);
@@ -161,29 +165,53 @@
       moverControlesParaCards();
       hierarquizacoes = await HierApi.listar();
       const elegiveis = hierarquizacoes.filter((item) => (item.dados_hierarquizacao?.cabecalho_grupo?.fases_a_executar || [1, 2, 3]).includes(2));
-      $("fase-hierarquizacao").innerHTML = '<option value="">Selecione…</option>' + elegiveis.map((h) => `<option value="${esc(h.codigo)}">${esc(h.codigo)} — ${esc(h.nome)}</option>`).join("");
+      $("fase-hierarquizacao").innerHTML = '<option value="">Selecionar uma hierarquização</option>' + elegiveis.map((h) => `<option value="${esc(h.codigo)}">${esc(h.codigo)} — ${esc(h.nome)}</option>`).join("");
       if (queryCode) { $("fase-hierarquizacao").value = queryCode; renderResumo(atual()); ocultarResultados(); }
       $("fase-hierarquizacao").onchange = () => { renderResumo(atual()); ocultarResultados(); };
-      const respostaCamadas = await fetch("/api/geoespacial/biblioteca-canonica/arquivos?modulo=ambos", { credentials: "same-origin" });
+      // `modulo=fase2` já inclui as camadas publicadas como "ambos"; pedir
+      // "ambos" aqui excluía justamente as homologadas para a Fase 2.
+      const respostaCamadas = await fetch("/api/geoespacial/biblioteca-canonica/arquivos?modulo=fase2", { credentials: "same-origin" });
       if (!respostaCamadas.ok) throw new Error("Não foi possível consultar a biblioteca canônica de camadas.");
       camadas = (await respostaCamadas.json()).filter((camada) => camada.registrada && camada.homologacao_id && /\.(tif|tiff)$/i.test(camada.arquivo || ""));
-      const opcoes = '<option value="">Selecione…</option>' + camadas.map((camada) => `<option value="${esc(camada.homologacao_id)}">${esc(camada.nome_publicacao || camada.nome)} · ${esc(camada.versao || "—")}</option>`).join("");
-      $("camada-grade-fase2").innerHTML = opcoes;
-      $("camada-rede-fase2").innerHTML = opcoes;
+      const opcoes = camadas.map((camada) => `<option value="${esc(camada.homologacao_id)}">${esc(camada.nome_publicacao || camada.nome)} · ${esc(camada.versao || "—")}</option>`).join("");
+      $("camada-grade-fase2").innerHTML = '<option value="">Selecione a camada de grade</option>' + opcoes;
+      $("camada-rede-fase2").innerHTML = '<option value="">Selecione a camada de rede</option>' + opcoes;
       $("camada-grade-fase2").onchange = renderCamadas;
       $("camada-rede-fase2").onchange = renderCamadas;
       $("executar-fase2").onclick = async () => {
         const h = atual(); const grade = $("camada-grade-fase2").value; const rede = $("camada-rede-fase2").value;
         if (!h || !grade || !rede) return erro("Selecione a hierarquização e as duas superfícies homologadas.");
         if (grade === rede) return erro("Selecione camadas diferentes para grade e rede.");
+        const nomeGrade = $("camada-grade-fase2").selectedOptions[0]?.textContent?.trim() || grade;
+        const nomeRede = $("camada-rede-fase2").selectedOptions[0]?.textContent?.trim() || rede;
+        const confirmado = await window.SLTFeedback.confirmar({
+          title: "Calcular favorabilidade territorial (Fase 2)",
+          message: `Hierarquização ${h.codigo}. Grade: ${nomeGrade}. Rede: ${nomeRede}.`,
+          detail: "O resultado atual da Fase 2 será substituído, e a Fase 3 e a síntese que dependem dele podem ficar desatualizadas.",
+          confirmLabel: "Calcular Fase 2",
+        });
+        if (!confirmado) return;
+
+        $("fase2-erro").classList.add("hidden");
+        const proc = window.SLTFeedback.processo("Calculando favorabilidade territorial");
+        const passo = proc.passo(`Extraindo valores das superfícies para a rodada ${h.codigo}…`, "progress");
         try {
-          $("fase2-erro").classList.add("hidden");
           const updated = await HierApi.executarFase2(h.codigo, { camada_grade_id: grade, camada_rede_id: rede, metodo_extracao: "ponto" });
           hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
+          proc.atualizar(passo, "success", "Servidor concluiu a extração de grade e rede.");
           renderResumo(updated);
           renderResultados(updated);
-          if (window.SLTFeedback) window.SLTFeedback.success("Favorabilidade de grade e da rede executada. Confira os indicadores e o ranking abaixo.", "Extração concluída");
-        } catch (error) { erro(error); }
+          proc.concluir({
+            type: "success",
+            title: "Fase 2 concluída",
+            message: "Favorabilidade de grade e da rede executada. Confira os indicadores e o ranking abaixo.",
+          });
+        } catch (error) {
+          proc.atualizar(passo, "error", "O servidor interrompeu a extração.");
+          proc.concluir({ type: "error", title: "Fase 2 interrompida", message: error?.message || String(error) });
+          const box = $("fase2-erro");
+          if (box) { box.textContent = error?.message || error; box.classList.remove("hidden"); }
+        }
       };
     } catch (error) { erro(error); }
   }

@@ -62,6 +62,55 @@
     });
   }
 
+  function analisePath(codigo, suffix) {
+    return `/api/analise/${encodeURIComponent(codigo)}${suffix || ""}`;
+  }
+
+  async function getAnalise(codigo) {
+    return request(analisePath(codigo));
+  }
+
+  async function saveAnaliseCriterios(codigo, criterios) {
+    return request(analisePath(codigo, "/criterios"), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(criterios),
+    });
+  }
+
+  async function saveAnaliseComplemento(codigo, complemento) {
+    return request(analisePath(codigo, "/complemento"), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ complemento }),
+    });
+  }
+
+  async function decidirAnalise(codigo, decisao) {
+    return request(analisePath(codigo, "/decidir"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decisao }),
+    });
+  }
+
+  /** Baixa o parecer já persistido como Blob (a sessão vai pelo cookie). */
+  async function fetchAnaliseParecerPdf(codigo) {
+    const res = await fetch(analisePath(codigo, "/parecer.pdf"), {
+      credentials: "include",
+    });
+    if (res.status === 401) {
+      const err = new Error("Sessão expirada.");
+      err.code = "UNAUTHORIZED";
+      throw err;
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(errorMessage(body));
+    }
+    return res.blob();
+  }
+
   async function listPlanos() {
     return request("/api/planos/internas");
   }
@@ -212,6 +261,11 @@
     deleteDemanda,
     aprovarDemanda,
     reprovarDemanda,
+    getAnalise,
+    saveAnaliseCriterios,
+    saveAnaliseComplemento,
+    decidirAnalise,
+    fetchAnaliseParecerPdf,
     listPlanos,
     getPlano,
     updatePlano,

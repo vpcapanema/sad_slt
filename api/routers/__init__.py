@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from api.routers.auth import router as auth_router
 from api.routers.admin_tabelas import router as admin_tabelas_router
+from api.routers.analise_demanda import router as analise_demanda_router
 from api.routers.atributos_objetos import router as atributos_objetos_router
 from api.routers.comparacao_colaborativa import router as comparacao_colaborativa_router
 from api.routers.complementacao import router as complementacao_router
@@ -21,6 +22,7 @@ from api.routers.objetos_ahp import router as objetos_ahp_router
 from api.routers.painel import router as painel_router
 from api.routers.planos import router as planos_router
 from api.routers.programas import router as programas_router
+from api.routers.sei_integracao import router as sei_integracao_router
 from api.routers.sigma import router as sigma_router
 from api.routers.universo import router as universo_router
 
@@ -34,6 +36,7 @@ api_router.include_router(geo_router)
 api_router.include_router(geoespacial_router)
 api_router.include_router(dominios_router)
 api_router.include_router(demandas_router)
+api_router.include_router(analise_demanda_router)
 api_router.include_router(painel_router)
 api_router.include_router(planos_router)
 api_router.include_router(programas_router)
@@ -44,3 +47,4 @@ api_router.include_router(complementacao_router)
 api_router.include_router(hierarquizacoes_router)
 api_router.include_router(atributos_objetos_router)
 api_router.include_router(universo_router)
+api_router.include_router(sei_integracao_router)

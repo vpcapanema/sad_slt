@@ -1,0 +1,120 @@
+/* Escala tipográfica revisada — MOCAD e a Fase 3 da hierarquização.
+ *
+ * Os tamanhos saíram da revisão feita sobre o relatório de fontes da Fase 3
+ * (tmp/relatorio_fontes.py gera esse relatório para qualquer página). Em px
+ * porque foi assim que a medição saiu; o pt ao lado é a mesma medida
+ * (1pt = 1,333px).
+ *
+ * Vale só em quem tem a classe `escala-revisada` no body: metade destes
+ * seletores é de componente compartilhado (ajuda, botões, tabelas, cabeçalho
+ * padrão), e aplicar na raiz mexeria em páginas que ainda não passaram pela
+ * revisão. Para incluir uma página nova: a classe no body e o link para esta
+ * folha, carregado por último.
+ *
+ * Alguns seletores são específicos da Fase 3 (.fase3-*, .atributo-*); nas
+ * demais páginas eles simplesmente não casam com nada.
+ */
+
+
+/* Cabeçalho da página */
+.escala-revisada .standard-page-hero__eyebrow { font-size: 16px; }      /* 8,4 → 12pt */
+.escala-revisada .standard-page-hero__description { font-size: 12px; }  /* 12 → 9pt */
+
+/* Títulos de seção e de subseção */
+.escala-revisada .ahp-section-label span:not(.ahp-section-index-icon) { font-size: 13.3px; } /* 9,8 → 10pt */
+.escala-revisada .cadastro-subsec-num { font-size: 12.7px; }                                 /* 9,8 → 9,5pt */
+.escala-revisada .ahp-subsection-title span:not(.cadastro-subsec-num) { font-size: 12.7px; }  /* 9,8 → 9,5pt */
+
+/* Seção 1 — rodada e resumo */
+.escala-revisada .ahp-subcard.info-card > label { font-size: 12px; }   /* 11,3 → 9pt */
+.escala-revisada .fase1-meta-card small { font-size: 12px; }           /* 7,6 → 9pt */
+.escala-revisada .fase1-meta-card strong { font-size: 12px; }          /* 10,6 → 9pt */
+.escala-revisada .fase1-objs-card > h4 { font-size: 11.7px; }          /* 7,9 → 8,8pt */
+.escala-revisada .fase1-obj-link .nome { font-size: 11.7px; }          /* 9,6 → 8,8pt */
+.escala-revisada .fase1-obj-link .cod { font-size: 11.7px; }           /* 8,2 → 8,8pt */
+
+/* Seção 2 — tabela de critérios e atributos */
+.escala-revisada th.col-objeto.slt-sortable-column { font-size: 12.7px; }  /* 9,8 → 9,5pt */
+.escala-revisada .col-atributo-linha { font-size: 12.7px; }                /* 9,8 → 9,5pt */
+.escala-revisada .col-atributo-unidade { font-size: 12.7px; }              /* 8,2 → 9,5pt */
+.escala-revisada .objeto-codigo { font-size: 12px; }                       /* 10,5 → 9pt */
+.escala-revisada .atributo-valor-normalizado { font-size: 12px; }          /* 10,8 → 9pt */
+.escala-revisada .atributos-legenda span,
+.escala-revisada .atributos-legenda strong { font-size: 11.5px; }          /* 8,4 → 8,6pt */
+.escala-revisada .atributos-pesos-grupo header h3 { font-size: 13.3px; } /* 10,8 → 10pt */
+.escala-revisada .atributos-pesos-grupo header output { font-size: 10.7px; } /* 8,2 → 8pt */
+.escala-revisada .atributo-peso > span { font-size: 11.7px; }              /* 8,6 → 8,8pt */
+
+/* Seção 3 — atributos ausentes e política de tratamento */
+.escala-revisada .fase3-ausentes-wrap h3 { font-size: 12.7px; }            /* 10,8 → 9,5pt */
+.escala-revisada .fase3-ausentes-lista li { font-size: 12px; }             /* 9,8 → 9pt */
+.escala-revisada .fase-grid-2 > label { font-size: 12.7px; }               /* 11,3 → 9,5pt */
+
+/* Seção 5 — síntese */
+.escala-revisada .fase3-operadores legend { font-size: 12.7px; }           /* 12 → 9,5pt */
+.escala-revisada .fase3-operadores label { font-size: 12px; }              /* 11,3 → 9pt */
+
+/* Tabelas e elementos gerais da página */
+.escala-revisada th.slt-sortable-column,
+.escala-revisada tr > th { font-size: 12px; }                              /* 8,6 → 9pt */
+.escala-revisada tr > td { font-size: 12px; }                              /* 9,8 → 9pt */
+.escala-revisada td strong { font-size: 12px; }                            /* 9,8 → 9pt */
+.escala-revisada td small { font-size: 12px; }                             /* 8,2 → 9pt */
+.escala-revisada .fase-status--warn { font-size: 12px; }                   /* 8,4 → 9pt */
+.escala-revisada .ahp-section-body .ahp-help-text,
+.escala-revisada .ahp-section-body > p,
+.escala-revisada .ahp-help-text { font-size: 11.5px; }                     /* 9,4 → 8,6pt */
+.escala-revisada .btn--primary { font-size: 13.3px; }                      /* 10,5 → 10pt */
+
+/* Teste de escala: a página inteira a 90%. Diferente de transform:scale, zoom
+   refaz o layout — as quebras de linha e as colunas se reacomodam de verdade.
+   Linha isolada de propósito: é o experimento, some com uma linha só. */
+body.escala-revisada { zoom: 0.9; }
+
+/* ------------------------------------------------------------------ *
+ * MOCAD — mesmo conjunto de tamanhos, aplicado ao vocabulário próprio
+ * destas telas (painel, tabela de demandas, análise, complementação).
+ * A escala revisada tem sete degraus:
+ *   16px (12pt) · 13,3px (10pt) · 12,7px (9,5pt) · 12px (9pt)
+ *   11,7px (8,8pt) · 11,5px (8,6pt) · 10,7px (8pt)
+ * Cada seletor abaixo foi levado ao degrau mais próximo do papel que
+ * cumpre, e não ao mais próximo do tamanho que tinha.
+ * ------------------------------------------------------------------ */
+
+/* Títulos e textos de abertura */
+.escala-revisada .ahp-section-body h2,
+.escala-revisada .card > h2 { font-size: 16px; }        /* 18 → 12pt */
+.escala-revisada .step-intro { font-size: 12px; }       /* 14 → 9pt */
+.escala-revisada .field-help { font-size: 11.5px; }     /* 11 → 8,6pt */
+
+/* Formulários e ações */
+.escala-revisada form label,
+.escala-revisada .cadastro-campo,
+.escala-revisada .campo > label { font-size: 12.7px; }  /* 15 → 9,5pt */
+.escala-revisada .btn,
+.escala-revisada .admin-tab { font-size: 13.3px; }      /* 14–15 → 10pt */
+
+/* Tabelas de demanda */
+.escala-revisada td code,
+.escala-revisada td small { font-size: 12px; }          /* 9pt */
+.escala-revisada .badge-status { font-size: 12px; }     /* 8,8 → 9pt, igual ao da tabela */
+
+/* Painel e mapa: legendas e árvore de camadas */
+.escala-revisada .status-color-legend-label { font-size: 12px; }          /* 9pt */
+.escala-revisada .status-color-legend-layer-title,
+.escala-revisada .status-legend-symbology-text { font-size: 11.5px; }     /* 11 → 8,6pt */
+.escala-revisada .layer-group-name { font-size: 11.7px; }                 /* 10,9 → 8,8pt */
+
+/* Rótulo solto (fora de <form>) e demais textos ainda fora da escala. */
+.escala-revisada label { font-size: 12.7px; }                   /* 15 → 9,5pt */
+.escala-revisada .hint { font-size: 11.5px; }                   /* 14 → 8,6pt */
+
+/* Revisão de status: cartões de proposta e listas */
+.escala-revisada .status-proposta-kicker { font-size: 10.7px; }  /* 11 → 8pt */
+.escala-revisada .status-proposta-valor { font-size: 12.7px; }   /* 15 → 9,5pt */
+.escala-revisada .status-proposta-desc { font-size: 11.5px; }    /* 13 → 8,6pt */
+.escala-revisada .status-proposta-arrow { font-size: 13.3px; }   /* 17,6 → 10pt */
+.escala-revisada .ahp-section-body li,
+.escala-revisada .card li { font-size: 12px; }                   /* 14 → 9pt */
+.escala-revisada td code,
+.escala-revisada td strong { font-size: 12px; }                  /* 14 → 9pt */

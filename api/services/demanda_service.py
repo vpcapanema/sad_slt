@@ -194,9 +194,14 @@ def _build_persist_row(payload: DemandaCreateSchema, codigo: str) -> dict[str, A
     return demanda_repository.prepare_insert_params(row)
 
 
-def criar_demanda(payload: DemandaCreateSchema) -> DemandaResponseSchema:
+def criar_demanda(payload: DemandaCreateSchema, *, origem: str = "") -> DemandaResponseSchema:
+    """``origem`` marca o código gerado (ex.: ``origem="SEI"`` -> ``I-PRJ-SEI-XXXXXXXX``)
+
+    quando a criação vem de um fluxo externo, como a integração com o SEI-SP.
+    Vazio por padrão — não altera o comportamento do cadastro normal.
+    """
     codigo = gerar_codigo_unico(
-        lambda: gerar_codigo_projeto(payload.tipo_demandante),
+        lambda: gerar_codigo_projeto(payload.tipo_demandante, origem=origem),
         demanda_repository.get_by_codigo,
     )
     try:

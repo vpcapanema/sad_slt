@@ -5,20 +5,28 @@
 .slt-fb-modal--success{border-top-color:#1f9d55}
 .slt-fb-modal--error{border-top-color:#c0392b}
 .slt-fb-modal--warning{border-top-color:#d4a017}
-.slt-fb-modal--info,.slt-fb-modal--progress{border-top-color:#116593}
+.slt-fb-modal--info,.slt-fb-modal--progress,.slt-fb-modal--question{border-top-color:#116593}
 .slt-fb-head{display:flex;align-items:center;gap:.55rem;padding:.7rem .85rem;border-bottom:1px solid #e6ecf1}
 .slt-fb-icon{font-size:1.1rem;line-height:1}
 .slt-fb-modal--success .slt-fb-icon{color:#1f9d55}
 .slt-fb-modal--error .slt-fb-icon{color:#c0392b}
 .slt-fb-modal--warning .slt-fb-icon{color:#d4a017}
-.slt-fb-modal--info .slt-fb-icon,.slt-fb-modal--progress .slt-fb-icon{color:#116593}
+.slt-fb-modal--info .slt-fb-icon,.slt-fb-modal--progress .slt-fb-icon,.slt-fb-modal--question .slt-fb-icon{color:#116593}
 .slt-fb-title{margin:0;flex:1;font-size:.95rem;color:#12303f;font-weight:700}
 .slt-fb-close{border:0;background:none;cursor:pointer;color:#7c8b95;font-size:1rem;padding:.2rem;line-height:1}
 .slt-fb-close:hover{color:#12303f}
 .slt-fb-body{padding:.8rem .85rem;overflow:auto}
 .slt-fb-message{margin:0 0 .5rem;color:#28404e;font-size:.85rem;line-height:1.4}
 .slt-fb-message:last-child{margin-bottom:0}
-.slt-fb-steps{list-style:none;margin:0;padding:0;display:grid;gap:.35rem}
+.slt-fb-bar{height:.4rem;border-radius:.2rem;background:#e6ecf1;overflow:hidden;margin:.1rem 0 .4rem}
+.slt-fb-bar-fill{height:100%;background:#116593;transition:width .25s ease}
+.slt-fb-modal--success .slt-fb-bar-fill{background:#1f9d55}
+.slt-fb-modal--warning .slt-fb-bar-fill{background:#d4a017}
+.slt-fb-modal--error .slt-fb-bar-fill{background:#c0392b}
+.slt-fb-etapa{margin:0 0 .5rem;font-size:.78rem;color:#5b7180}
+.slt-fb-etapa:empty{display:none}
+/* Log do servidor pode ser longo: rola dentro do modal em vez de esticá-lo. */
+.slt-fb-steps{list-style:none;margin:0;padding:0;display:grid;gap:.35rem;max-height:38vh;overflow:auto}
 .slt-fb-step{display:flex;align-items:flex-start;gap:.5rem;font-size:.8rem;color:#33505f;line-height:1.35}
 .slt-fb-step i{margin-top:.15rem;width:1rem;text-align:center}
 .slt-fb-step--success i{color:#1f9d55}
@@ -27,3 +35,6 @@
 .slt-fb-step--info i,.slt-fb-step--progress i{color:#116593}
 .slt-fb-foot{display:flex;justify-content:flex-end;gap:.5rem;padding:.65rem .85rem;border-top:1px solid #e6ecf1}
 .slt-fb-foot[hidden]{display:none}
+.slt-fb-foot .btn-danger{background:#c0392b;color:#fff}
+/* Enquanto o processo roda não há como fechar: o X sai de cena junto com o OK. */
+.slt-fb-modal--progress .slt-fb-close{display:none}

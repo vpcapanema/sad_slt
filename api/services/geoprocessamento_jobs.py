@@ -251,26 +251,28 @@ class GeoprocessamentoJobs:
     def create_validated_import(
         self, filename: str | None, content: bytes | None, *, target_crs: str | None = None,
         clip_layer_id: str | None = None, inspection_token: str | None = None,
+        pasta: str | None = None,
     ) -> dict[str, Any]:
         tasks = ["Solicitação de importação registrada", "Pipeline transacional iniciado", "Processo finalizado"]
         job_id = self._new("importacao_validada", tasks)
         self._advance(job_id, "Solicitação de importação registrada", {"arquivo": filename or "inspeção prévia"})
         self._executor.submit(
             self._run_validated_import, job_id, filename, content, target_crs,
-            clip_layer_id, inspection_token,
+            clip_layer_id, inspection_token, pasta,
         )
         return self.get(job_id) or {}
 
     def _run_validated_import(
         self, job_id: str, filename: str | None, content: bytes | None,
         target_crs: str | None, clip_layer_id: str | None, inspection_token: str | None,
+        pasta: str | None = None,
     ) -> None:
         try:
             self._advance(job_id, "Pipeline transacional de importação iniciado")
             callback: Callable[[str], None] = lambda label: self._append_dynamic(job_id, label)
             result = asyncio.run(importar_camadas(
                 filename, content, target_crs=target_crs, clip_layer_id=clip_layer_id,
-                inspection_token=inspection_token, progress=callback,
+                inspection_token=inspection_token, pasta=pasta, progress=callback,
             ))
             self._complete(job_id, result)
         except Exception as exc:
@@ -342,7 +344,12 @@ class GeoprocessamentoJobs:
         # que faltava nesta lista: eram 12 nanotarefas declaradas para 13
         # efetivamente executadas.
         tasks = ["Solicitação registrada", "Módulo consumidor validado", "Nome validado", "Versão validada",
-                 "Origem localizada", "Hash calculado", "Snapshot criado", "Conteúdo copiado",
+                 "Origem localizada", "Hash calculado",
+                 # Sem produto vinculado a camada homologada não forma pacote, e a
+                 # Fase 1 não emparelha restrição com risco: a homologação resolve
+                 # isso sozinha quando o cadastro não informou um.
+                 "Produto agrupador vinculado",
+                 "Snapshot criado", "Conteúdo copiado",
                  "Arquivo exportado para a biblioteca canônica",
                  "Transação confirmada", "Biblioteca consultada", "Publicação confirmada", "Processo finalizado"]
         job_id = self._new("homologacao", tasks)

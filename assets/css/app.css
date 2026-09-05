@@ -1353,6 +1353,17 @@ textarea {
   padding-bottom: 0;
 }
 
+/* Índice de subseção: mesmo padrão da tela de cadastro de projeto,
+   disponível em qualquer página (a regra original vivia presa a .cadastro-page). */
+.cadastro-subsec-num {
+  display: inline-block;
+  min-width: 2.25rem;
+  margin-right: 0.35rem;
+  color: var(--pli-blue);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
 .form-subsection h3 {
   margin: 0 0 0.75rem;
   font-size: var(--font-subsection);

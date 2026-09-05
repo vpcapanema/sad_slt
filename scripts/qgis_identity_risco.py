@@ -317,6 +317,51 @@ def _identity(acumulador: ogr.Layer, tematica: ogr.Layer, prefixo: str, nome: st
 _identity._vivas = []  # type: ignore[attr-defined]
 
 
+def _campos_de_tratamento(camada: ogr.Layer) -> list[str]:
+    definicao = camada.GetLayerDefn()
+    return [
+        definicao.GetFieldDefn(i).GetName()
+        for i in range(definicao.GetFieldCount())
+        if definicao.GetFieldDefn(i).GetName().endswith("__tipo_tratamento")
+    ]
+
+
+def _somente_com_tema(camada: ogr.Layer, nome: str) -> ogr.Layer:
+    """Descarta a feicao de fundo — o pedaco do envelope onde nada incide.
+
+    O Identity devolve a area inteira do acumulador, entao sobra uma feicao
+    enorme sem nenhum atributo tematico. Publicada junto, ela vira incidencia
+    falsa: a Fase 1 marca "restrito"/"apto com ressalva" para qualquer feicao
+    intersectada e, sem atributo de indice, assume o valor maximo — o estado
+    inteiro sairia restrito.
+    """
+    campos = _campos_de_tratamento(camada)
+    if not campos:
+        raise SystemExit("ABORTADO: nenhuma camada tematica entrou no acumulador")
+
+    memoria = DRIVER_MEM.CreateDataSource(nome)
+    _somente_com_tema._vivas.append(memoria)  # type: ignore[attr-defined]
+    saida = memoria.CreateLayer(nome, _srs(), ogr.wkbMultiPolygon)
+    definicao = camada.GetLayerDefn()
+    for indice in range(definicao.GetFieldCount()):
+        saida.CreateField(definicao.GetFieldDefn(indice))
+
+    camada.ResetReading()
+    descartadas = 0
+    for feicao in camada:
+        if not any(feicao.GetField(campo) for campo in campos):
+            descartadas += 1
+            continue
+        nova = ogr.Feature(saida.GetLayerDefn())
+        nova.SetFrom(feicao)
+        saida.CreateFeature(nova)
+    print(f"      feicao(oes) de fundo descartada(s): {descartadas}")
+    return saida
+
+
+_somente_com_tema._vivas = []  # type: ignore[attr-defined]
+
+
 # ------------------------------------------------------------------- execução
 
 def main() -> None:
@@ -353,6 +398,8 @@ def main() -> None:
         acumulador = _identity(acumulador, classificada, prefixo, f"acum_{indice}")
         print(f"      acumulador {antes} -> {acumulador.GetFeatureCount()} feições")
 
+    acumulador = _somente_com_tema(acumulador, "publicavel")
+
     os.makedirs(os.path.dirname(SAIDA), exist_ok=True)
     if os.path.exists(SAIDA):
         DRIVER_GPKG.DeleteDataSource(SAIDA)
@@ -360,16 +407,9 @@ def main() -> None:
     destino.CopyLayer(acumulador, "risco", ["OVERWRITE=YES"])
     destino = None
 
-    marcadas = 0
-    acumulador.ResetReading()
     definicao = acumulador.GetLayerDefn()
-    campos_tratamento = [
-        definicao.GetFieldDefn(i).GetName() for i in range(definicao.GetFieldCount())
-        if definicao.GetFieldDefn(i).GetName().endswith("__tipo_tratamento")
-    ]
-    for feicao in acumulador:
-        if any(feicao.GetField(campo) for campo in campos_tratamento):
-            marcadas += 1
+    campos_tratamento = _campos_de_tratamento(acumulador)
+    marcadas = acumulador.GetFeatureCount()  # depois do descarte, toda feicao tem tema
 
     print("\n" + "=" * 68)
     print(f"gravado: {SAIDA}")

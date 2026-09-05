@@ -86,8 +86,12 @@ def _resolve_instituicao_id(payload: PlanoCreateSchema) -> str:
     return _parse_uuid(str(payload.instituicao_id), "instituicao_id")
 
 
-def criar_plano(payload: PlanoCreateSchema) -> PlanoResponseSchema:
-    codigo = gerar_codigo_unico(gerar_codigo_plano, plano_repository.get_by_codigo)
+def criar_plano(payload: PlanoCreateSchema, *, origem: str = "") -> PlanoResponseSchema:
+    """``origem="SEI"`` marca o código gerado (``I-PLA-SEI-XXXXXXXX``) quando a
+    criação vem da integração com o SEI-SP. Vazio por padrão."""
+    codigo = gerar_codigo_unico(
+        lambda: gerar_codigo_plano(origem=origem), plano_repository.get_by_codigo
+    )
     pessoa_id = _resolve_pessoa_id(payload)
     instituicao_id = _resolve_instituicao_id(payload)
     if not (payload.representante.nome or "").strip():

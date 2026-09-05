@@ -66,7 +66,9 @@ def _jsonb(value: Any) -> Jsonb:
 
 
 def _feature_rows(gdf: gpd.GeoDataFrame) -> list[tuple[int, Jsonb, str | None]]:
-    spatial = gdf.to_crs("EPSG:4326") if gdf.crs else gdf.set_crs("EPSG:4326")
+    # EPSG:4674 (SIRGAS 2000) é o CRS de armazenamento do sistema — ver
+    # migração 100_padronizar_geometria_sirgas2000.sql.
+    spatial = gdf.to_crs("EPSG:4674") if gdf.crs else gdf.set_crs("EPSG:4674")
     geometry_name = str(spatial.geometry.name)
     rows: list[tuple[int, Jsonb, str | None]] = []
     for order, (_, feature) in enumerate(spatial.iterrows()):
@@ -96,7 +98,7 @@ def _insert_features(conn: Any, table: str, database_id: str, rows: list[tuple[i
                    (camada_id,ordem,propriedades,geom)
                    VALUES (%s,%s,%s,
                      CASE WHEN %s::text IS NULL THEN NULL
-                          ELSE ST_SetSRID(ST_GeomFromGeoJSON(%s::text),4326) END)""").format(
+                          ELSE ST_SetSRID(ST_GeomFromGeoJSON(%s::text),4674) END)""").format(
                 sql.Identifier(table)
             ),
             [(database_id, order, props, geom, geom) for order, props, geom in rows],
@@ -110,7 +112,10 @@ def salvar_vetor(
     """Grava vetor na tabela física correspondente à sua etapa."""
     categoria = _categoria_origem(origem)
     catalog, features, _ = STORAGES[categoria]
-    crs = str(gdf.crs) if gdf.crs else "EPSG:4326"
+    # O geom sempre acaba gravado em EPSG:4674 (ver _feature_rows) —
+    # o metadado "crs" tem de descrever o que está de fato na coluna,
+    # não o CRS de origem do gdf recebido, que _feature_rows já reprojeta.
+    crs = "EPSG:4674"
     geometry_types = sorted(set(gdf.geometry.geom_type.dropna().astype(str)))
     geometry_type = ",".join(geometry_types) or None
     rows = _feature_rows(gdf)
@@ -275,7 +280,7 @@ def substituir_vetor(recurso_id: str, gdf: gpd.GeoDataFrame, metadados: dict[str
                 WHERE c.id=%s""").format(
                 sql.Identifier(catalog), sql.Identifier(features)
             ),
-            (str(gdf.crs) if gdf.crs else "EPSG:4326", _jsonb(metadados), database_id),
+            ("EPSG:4674", _jsonb(metadados), database_id),
         )
         conn.commit()
 
@@ -329,11 +334,14 @@ def carregar_vetor(recurso_id: str) -> tuple[gpd.GeoDataFrame, dict[str, Any]] |
         {"type": "Feature", "properties": row["propriedades"], "geometry": row["geometria"]}
         for row in rows
     ]
+    # ST_AsGeoJSON devolve as coordenadas cruas, no SRID que o geom já tem
+    # (4674 desde a migração 100) — sem CRS embutido no próprio GeoJSON, o
+    # GeoDataFrame precisa ser rotulado com o CRS real, não um valor antigo.
     gdf = (
-        gpd.GeoDataFrame.from_features(feature_collection, crs="EPSG:4326")
-        if feature_collection else gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
+        gpd.GeoDataFrame.from_features(feature_collection, crs="EPSG:4674")
+        if feature_collection else gpd.GeoDataFrame(geometry=[], crs="EPSG:4674")
     )
-    if camada.get("crs") and str(camada["crs"]).upper() != "EPSG:4326" and not gdf.empty:
+    if camada.get("crs") and str(camada["crs"]).upper() != "EPSG:4674" and not gdf.empty:
         gdf = gdf.to_crs(camada["crs"])
     camada["categoria"] = categoria
     return gdf, camada
@@ -364,7 +372,7 @@ def carregar_vetor_geojson(recurso_id: str) -> dict[str, Any] | None:
 
 
 def obter_vetor_bounds(recurso_id: str) -> list[float] | None:
-    """Retorna a extensão integral da camada em EPSG:4326."""
+    """Retorna a extensão integral da camada em EPSG:4674 (o CRS de armazenamento)."""
     with get_connection() as conn:
         found = _find_layer(conn, recurso_id)
         if not found or found[1]["tipo"] != "vetor":
@@ -396,7 +404,12 @@ def carregar_vetor_mvt(recurso_id: str, z: int, x: int, y: int) -> bytes | None:
         row = conn.execute(
             sql.SQL("""WITH tile_bounds AS (
                     SELECT ST_TileEnvelope(%s,%s,%s) AS geom,
-                           ST_Transform(ST_TileEnvelope(%s,%s,%s, margin => 0.015625),4326) AS query_geom
+                           -- Precisa bater o SRID de f.geom (4674 desde a
+                           -- migração 100) para o filtro && comparar caixas
+                           -- no mesmo referencial; com SRIDs diferentes o
+                           -- predicado compararia números sem sentido físico
+                           -- comum, perdendo feição perto da borda do tile.
+                           ST_Transform(ST_TileEnvelope(%s,%s,%s, margin => 0.015625),4674) AS query_geom
                 ), tile_rows AS (
                     SELECT propriedades,
                            ST_AsMVTGeom(ST_Transform(f.geom,3857),b.geom,4096,64,true) AS geom
@@ -488,10 +501,10 @@ def _snapshot_gdf(conn: Any, snapshot_id: Any, crs: Any) -> gpd.GeoDataFrame:
         for row in rows
     ]
     gdf = (
-        gpd.GeoDataFrame.from_features(features, crs="EPSG:4326")
-        if features else gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
+        gpd.GeoDataFrame.from_features(features, crs="EPSG:4674")
+        if features else gpd.GeoDataFrame(geometry=[], crs="EPSG:4674")
     )
-    if crs and str(crs).upper() != "EPSG:4326" and not gdf.empty:
+    if crs and str(crs).upper() != "EPSG:4674" and not gdf.empty:
         gdf = gdf.to_crs(crs)
     return gdf
 
@@ -565,6 +578,61 @@ def resolver_recurso_id(identificador: str) -> str | None:
         return row["recurso_sessao_id"] if row else None
 
 
+_PRODUTOS_AUTOMATICOS = {
+    "fase1": ("AUTO-FASE1-CAMADAS-HOMOLOGADAS", "Camadas homologadas por upload — Elegibilidade territorial"),
+    "fase2": ("AUTO-FASE2-CAMADAS-HOMOLOGADAS", "Camadas homologadas por upload — Favorabilidade de grade e da rede"),
+}
+
+
+def _produto_automatico(conn: Any, modulo_consumidor: str) -> str:
+    """Produto de registro das camadas homologadas pelas telas de upload.
+
+    Existe para a camada nunca ficar com `produto_id` nulo — não para formar par.
+    Emparelhar por produto aqui seria errado: as camadas de um par sobem uma de
+    cada vez, então o pacote passaria por um estado pela metade, e vários pares
+    no mesmo produto se misturariam (a Fase 1 filtra os riscos *dentro* do
+    pacote, e ofereceria o risco de outro par). Por isso `listar_pacotes_homologados`
+    ignora este produto pela marca `origem=upload_automatico`, e as camadas
+    enviadas por upload aparecem na Fase 1 como opções avulsas, livremente
+    combináveis em qualquer ordem de envio.
+
+    `ambos` cai no produto da Fase 1 porque `produto.modulo` só aceita fase1 ou
+    fase2 e a camada tem um único `produto_id`; na Fase 2 ela continua visível
+    pela biblioteca canônica, que não depende de produto.
+    """
+    modulo = modulo_consumidor if modulo_consumidor in _PRODUTOS_AUTOMATICOS else "fase1"
+    codigo, nome = _PRODUTOS_AUTOMATICOS[modulo]
+    existente = conn.execute(
+        "SELECT id::text AS id FROM geoprocessamento.produto WHERE codigo=%s", (codigo,)
+    ).fetchone()
+    if existente:
+        conn.execute(
+            "UPDATE geoprocessamento.produto SET status='homologado',atualizado_em=CURRENT_TIMESTAMP"
+            " WHERE id=%s::uuid AND status NOT IN ('homologado','publicado')",
+            (existente["id"],),
+        )
+        return existente["id"]
+    criado = conn.execute(
+        """INSERT INTO geoprocessamento.produto (codigo,modulo,nome,descricao,versao,status,crs_saida,metadados)
+           VALUES (%s,%s,%s,%s,'v1','homologado','EPSG:4674',%s) RETURNING id::text AS id""",
+        (codigo, modulo, nome,
+         "Criado automaticamente para agrupar as camadas enviadas pelas telas de cadastro e upload.",
+         _jsonb({"origem": "upload_automatico"})),
+    ).fetchone()
+    if modulo == "fase1":
+        conn.execute(
+            "INSERT INTO geoprocessamento.produto_fase1 (produto_id) VALUES (%s::uuid)",
+            (criado["id"],),
+        )
+    else:
+        conn.execute(
+            """INSERT INTO geoprocessamento.produto_fase2 (produto_id,resolucao,regra_nodata)
+               VALUES (%s::uuid,50,'bloquear')""",
+            (criado["id"],),
+        )
+    return criado["id"]
+
+
 def homologar(
     recurso_id: str, *, modulo_consumidor: str, nome_publicacao: str, versao: str,
     finalidade: str | None, homologado_por: str | None, produto_id: str | None,
@@ -604,6 +672,17 @@ def homologar(
         if progress:
             progress("Hash do conteúdo geoespacial calculado")
         content_hash = hash_row["hash"] if hash_row else None
+        # O relato sai sempre, com produto informado ou não: a lista de
+        # nanotarefas declarada pelo job é fixa, e um passo condicional a
+        # deixaria fora de sincronia com os logs emitidos.
+        informado = bool(produto_id)
+        if not produto_id:
+            produto_id = _produto_automatico(conn, modulo_consumidor)
+        if progress:
+            progress(
+                f"Produto {produto_id} vinculado"
+                + (" (informado no cadastro)" if informado else " automaticamente")
+            )
         metadata = {
             **(source.get("metadados") or {}), **metadados,
             "origem": "homologada", "snapshot_de": recurso_id,
@@ -777,9 +856,13 @@ def listar_biblioteca_canonica_arquivos(modulo: str | None = None) -> list[dict[
         relativo = path.relative_to(base).as_posix()
         subdir = path.parent.relative_to(raiz).as_posix()
         row = por_caminho.get(relativo)
+        # O `tipo_camada` escolhido no cadastro entra no contexto: sem ele, uma
+        # camada de restrição nomeada "Áreas protegidas" não seria reconhecida
+        # como restrição e sumiria do seletor da Fase 1.
         contexto = (
             f"{path.stem.lower()} {subdir.lower()} "
-            f"{str((row or {}).get('finalidade') or '').lower()}"
+            f"{str((row or {}).get('finalidade') or '').lower()} "
+            f"{str((row or {}).get('metadados') or '').lower()}"
         )
         if "restri" in contexto:
             finalidade = "restricao"

@@ -799,6 +799,7 @@ async def iniciar_importacao_validada_com_progresso(
     token_importacao: str | None = Form(None),
     reprojetar_crs: str | None = Form(None),
     recortar_camada_id: str | None = Form(None),
+    pasta: str | None = Form(None),
 ) -> dict:
     """Executa o importador transacional novo expondo microtarefas reais."""
     nome = Path(arquivo.filename or "camada").name if arquivo else None
@@ -810,6 +811,7 @@ async def iniciar_importacao_validada_com_progresso(
         target_crs=(reprojetar_crs or "").strip() or None,
         clip_layer_id=(recortar_camada_id or "").strip() or None,
         inspection_token=(token_importacao or "").strip() or None,
+        pasta=(pasta or "").strip() or None,
     )
 
 
@@ -1182,8 +1184,21 @@ async def iniciar_carregamento_com_logs(camada_id: str) -> dict:
     return geoprocessamento_jobs.create_load(camada_id)
 
 
+def _responsavel_pela_homologacao(body: HomologarCamadaSchema, user: SessionUser) -> str:
+    """Quem homologou é quem estava logado — a tela não pergunta mais isso.
+
+    Digitar o próprio nome num campo de texto não prova nada e ainda deixava o
+    registro divergir da sessão que de fato executou a publicação.
+    """
+    return (user.nome or user.username or user.email or "").strip() or "não identificado"
+
+
 @router.post("/camadas/{camada_id}/homologar", status_code=201)
-async def homologar_camada(camada_id: str, body: HomologarCamadaSchema) -> dict:
+async def homologar_camada(
+    camada_id: str,
+    body: HomologarCamadaSchema,
+    user: SessionUser = Depends(require_geospatial_access),
+) -> dict:
     """Publica uma camada na biblioteca imutável."""
     if body.modulo_consumidor not in {"fase1", "fase2", "ambos"}:
         raise HTTPException(status_code=422, detail="Módulo consumidor inválido")
@@ -1194,7 +1209,7 @@ async def homologar_camada(camada_id: str, body: HomologarCamadaSchema) -> dict:
             nome_publicacao=body.nome_publicacao,
             versao=body.versao,
             finalidade=body.finalidade,
-            homologado_por=body.homologado_por,
+            homologado_por=_responsavel_pela_homologacao(body, user),
             produto_id=str(body.produto_id) if body.produto_id else None,
             metadados=body.metadados,
         )
@@ -1203,11 +1218,15 @@ async def homologar_camada(camada_id: str, body: HomologarCamadaSchema) -> dict:
 
 
 @router.post("/camadas/{camada_id}/homologar-job", status_code=status.HTTP_202_ACCEPTED)
-async def iniciar_homologacao_com_logs(camada_id: str, body: HomologarCamadaSchema) -> dict:
+async def iniciar_homologacao_com_logs(
+    camada_id: str,
+    body: HomologarCamadaSchema,
+    user: SessionUser = Depends(require_geospatial_access),
+) -> dict:
     """Homologa por job com log granular de persistência e verificação."""
-    return geoprocessamento_jobs.create_homologation(
-        camada_id, body.model_dump(mode="json")
-    )
+    payload = body.model_dump(mode="json")
+    payload["homologado_por"] = _responsavel_pela_homologacao(body, user)
+    return geoprocessamento_jobs.create_homologation(camada_id, payload)
 
 
 @router.get("/biblioteca-camadas")
@@ -1321,6 +1340,19 @@ async def atualizar_fonte(camada_id: str) -> dict:
     """Relê a fonte externa da camada."""
     try:
         return await geoespacial_service.atualizar_fonte(camada_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/camadas/{camada_id}/atributos/salvar")
+async def salvar_edicoes_atributos(camada_id: str, body: dict) -> dict:
+    """Grava edições feitas na tabela de atributos da Bancada.
+
+    Escreve na fonte real da camada — o arquivo do acervo, quando ela tem um,
+    e sempre também o PostGIS — para as duas cópias não divergirem.
+    """
+    try:
+        return geoespacial_service.salvar_edicoes_atributos(camada_id, body.get("edicoes") or [])
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except RuntimeError as exc:

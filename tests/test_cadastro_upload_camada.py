@@ -48,10 +48,12 @@ def test_secao_1_traz_os_campos_que_o_sistema_nao_preenche(cliente, rota):
     """CRS, geometria, formato e hash saem do arquivo — não se pede ao usuário."""
     html = cliente.get(rota).text
     for campo in ("nome_publicacao", "versao", "modulo_consumidor",
-                  "homologado_por", "finalidade", "produto_id"):
+                  "finalidade", "produto_id"):
         assert f'name="{campo}"' in html, f"falta o campo {campo}"
     for automatico in ('name="crs"', 'name="hash_conteudo"', 'name="envelope"',
-                       'name="geometria_tipo"'):
+                       'name="geometria_tipo"',
+                       # Quem homologou é a sessão autenticada, não um nome digitado.
+                       'name="homologado_por"'):
         assert automatico not in html, f"{automatico} é preenchido pelo sistema"
 
 
@@ -76,7 +78,8 @@ def test_secao_2_tem_previa_metadados_e_as_duas_acoes(cliente, rota):
 
 def test_link_de_upload_aponta_para_a_pagina_da_fase():
     script = Path("assets/js/componentes/geoprocessamento-slt.js").read_text(encoding="utf-8")
-    assert "Selecione o insumo homologado ou faça o" in script
+    assert "Upload de camadas de elegibilidade territorial" in script
+    assert "Upload de camadas de favorabilidade de grade e da rede" in script
     assert "cadastro-upload-elegibilidade" in script
     assert "cadastro-upload-favorabilidade" in script
 
@@ -116,8 +119,10 @@ def test_pagina_segue_o_padrao_visual_da_fase(cliente, rota):
     html = cliente.get(rota).text
     assert 'ahp-module-page' in html.split("<body", 1)[1][:80]
     assert "app-main ahp-main fase-execucao-page" in html
-    assert "fase-titulo-card" in html
+    assert "standard-page-hero" in html
+    assert "standard-page-hero__title" in html
     assert "ahp-step-section" in html
+    assert "ahp-section-index-icon" in html
     assert "btn btn-primary" in html
     assert "btn btn-secondary" in html
     assert "btn--primary" not in html

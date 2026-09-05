@@ -126,6 +126,33 @@
     }
   }
 
+  /** O que o servidor leu do arquivo, em uma linha: é a prova de que o arquivo
+   *  escolhido é o que se pensa estar enviando. */
+  function resumoDaInspecao() {
+    const primeira = (inspecao?.camadas || [])[0] || {};
+    const feicoes = primeira.feicoes ?? primeira.total_feicoes;
+    const partes = [primeira.nome, Number.isFinite(feicoes) ? `${feicoes.toLocaleString("pt-BR")} feições` : null,
+                    primeira.familia_geometrica || primeira.geometria_tipo].filter(Boolean);
+    return partes.length ? partes.join(", ") : "conteúdo não identificado";
+  }
+
+  // Pastas do acervo, por tipo de camada. Antes a pasta vinha da página, então
+  // um risco enviado pela tela de elegibilidade era arquivado em RESTRIÇÃO.
+  const PASTA_POR_TIPO = {
+    restricao: "RESTRIÇÃO",
+    risco: "RISCO",
+    area_estudo: "AREA_ESTUDO",
+    grade: "FAVORABILIDADE",
+    rede: "FAVORABILIDADE",
+    criterio_grade: "FAVORABILIDADE",
+    criterio_rede: "FAVORABILIDADE",
+  };
+
+  function pastaDoTipo(tipo) {
+    return PASTA_POR_TIPO[String(tipo || "")] ||
+      (raiz.dataset.modulo === "fase1" ? "RESTRIÇÃO" : "FAVORABILIDADE");
+  }
+
   function mostrarFeedback(texto, erro) {
     feedback.textContent = texto;
     feedback.classList.toggle("is-error", Boolean(erro));
@@ -159,6 +186,7 @@
       if (dados.importavel === false) throw new Error(dados.erro_validacao || "Arquivo não importável");
 
       inspecao = dados;
+      inspecao.arquivo_escolhido = arquivo.name;
       const previa = await (await fetch(`${API}/importar_camadas/previa/${dados.token_importacao}`)).json();
 
       const primeira = (dados.camadas || [])[0] || {};
@@ -178,6 +206,10 @@
     } catch (erro) {
       voltarAoInicio();
       mostrarFeedback(erro.message, true);
+      window.SLTFeedback?.error(
+        `${erro.message} O arquivo foi recusado ainda na área temporária: nada foi gravado no acervo.`,
+        "Não foi possível ler o arquivo",
+      );
     }
   });
 
@@ -186,55 +218,132 @@
     mostrarFeedback("Processo cancelado. Nada foi gravado.", false);
   });
 
-  document.getElementById("btn-enviar").addEventListener("click", async botao => {
+  /**
+   * Acompanha um job do servidor até o desfecho, desenhando cada log real que
+   * ele emite como um passo do modal. Devolve o `resultado` do job; lança com a
+   * mensagem de erro que o próprio servidor registrou.
+   */
+  async function acompanharJob(job, proc, vistos) {
+    let atual = job;
+    while (atual.status === "pendente" || atual.status === "executando") {
+      (atual.logs || []).forEach(log => {
+        if (vistos.has(log.sequencia)) return;
+        vistos.add(log.sequencia);
+        proc.passo(log.mensagem, log.nivel === "erro" ? "error" : "success");
+      });
+      proc.progresso(atual.percentual, atual.etapa_atual);
+      await new Promise(resolve => setTimeout(resolve, 250));
+      const resposta = await fetch(`${API}/operacoes-jobs/status/${atual.id}`);
+      if (!resposta.ok) throw new Error("Perdi o contato com o processo no servidor.");
+      atual = await resposta.json();
+    }
+    (atual.logs || []).forEach(log => {
+      if (vistos.has(log.sequencia)) return;
+      vistos.add(log.sequencia);
+      proc.passo(log.mensagem, log.nivel === "erro" ? "error" : "success");
+    });
+    proc.progresso(atual.percentual, atual.etapa_atual);
+    if (atual.status === "erro") throw new Error(atual.erro || "O servidor interrompeu o processo.");
+    return atual.resultado || {};
+  }
+
+  document.getElementById("btn-enviar").addEventListener("click", async evento => {
     if (!inspecao) return;
+    // Guardado agora: `currentTarget` só vale durante o disparo do evento, e
+    // vira null assim que o handler espera na confirmação.
+    const alvo = evento.currentTarget;
     if (!formulario.reportValidity()) {
       mostrarFeedback("Preencha os campos obrigatórios da seção 1.", true);
       return;
     }
-    const alvo = botao.currentTarget;
+    const dados = new FormData(formulario);
+    const nomePublicacao = String(dados.get("nome_publicacao") || "").trim();
+    const pasta = pastaDoTipo(dados.get("tipo_camada"));
+
+    const confirmado = await window.SLTFeedback.confirmar({
+      title: "Enviar e homologar camada",
+      message: `Arquivo: ${inspecao.arquivo_escolhido} — ${resumoDaInspecao()}. `
+        + `Vai para a pasta ${pasta}, publicada como “${nomePublicacao}” versão ${dados.get("versao") || "v1"}.`,
+      detail:
+        "São dois passos: importação para o acervo e homologação — ao fim ela já fica disponível no seletor da fase. Depois de homologada, a camada vira insumo somente leitura: para corrigi-la será preciso publicar uma nova versão.",
+      confirmLabel: "Enviar e homologar",
+      danger: true,
+    });
+    if (!confirmado) return;
+
     alvo.disabled = true;
-    mostrarFeedback("Enviando…", false);
+    const proc = window.SLTFeedback.processo("Enviando camada", { barra: true });
+    let camadaId = null;
 
     try {
-      const dados = new FormData(formulario);
       const importacao = new FormData();
       importacao.append("token_importacao", inspecao.token_importacao);
-      importacao.append("pasta", raiz.dataset.modulo === "fase1" ? "RESTRIÇÃO" : "FAVORABILIDADE");
+      importacao.append("pasta", pasta);
 
-      const respImport = await fetch(`${API}/importar_camadas`, { method: "POST", body: importacao });
-      const corpoImport = await respImport.json();
-      if (!respImport.ok) throw new Error(corpoImport.detail || "Falha na importação");
+      proc.passo("Iniciando a importação no servidor…", "progress");
+      const respImport = await fetch(`${API}/importar_camadas/job`, { method: "POST", body: importacao });
+      const jobImport = await respImport.json();
+      if (!respImport.ok) throw new Error(jobImport.detail || "Falha ao iniciar a importação");
 
-      const camadaId = corpoImport.camada_id || corpoImport.raster_id ||
-        (corpoImport.recursos || [])[0]?.id;
+      const resultadoImport = await acompanharJob(jobImport, proc, new Set());
+      camadaId = resultadoImport.camada_id || resultadoImport.raster_id ||
+        (resultadoImport.recursos || [])[0]?.id;
       if (!camadaId) throw new Error("A importação não devolveu identificador de camada");
+    } catch (erro) {
+      proc.concluir({
+        type: "error",
+        title: "Importação interrompida",
+        message: `${erro.message} Nada foi gravado no acervo — corrija o apontado acima e envie novamente.`,
+      });
+      mostrarFeedback(erro.message, true);
+      alvo.disabled = false;
+      return;
+    }
 
+    try {
       const produto = String(dados.get("produto_id") || "").trim();
-      const respHomolog = await fetch(`${API}/camadas/${camadaId}/homologar`, {
+      proc.passo("Iniciando a homologação da camada importada…", "progress");
+      const respHomolog = await fetch(`${API}/camadas/${camadaId}/homologar-job`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           modulo_consumidor: dados.get("modulo_consumidor") || raiz.dataset.modulo,
-          nome_publicacao: dados.get("nome_publicacao"),
+          nome_publicacao: nomePublicacao,
           versao: dados.get("versao") || "v1",
-          finalidade: String(dados.get("finalidade") || "").trim() || null,
-          homologado_por: String(dados.get("homologado_por") || "").trim() || null,
+          // O seletor da fase reconhece a camada por este campo; deixá-lo com o
+          // texto livre (ou vazio) fazia a classificação depender do nome.
+          finalidade: String(dados.get("tipo_camada") || "").trim() || null,
           produto_id: produto || null,
-          metadados: { tipo_camada: dados.get("tipo_camada") },
+          metadados: {
+            tipo_camada: dados.get("tipo_camada"),
+            descricao: String(dados.get("finalidade") || "").trim() || null,
+            pasta_acervo: pasta,
+          },
         }),
       });
-      const corpoHomolog = await respHomolog.json();
-      if (!respHomolog.ok) throw new Error(corpoHomolog.detail || "Falha na homologação");
+      const jobHomolog = await respHomolog.json();
+      if (!respHomolog.ok) throw new Error(jobHomolog.detail || "Falha ao iniciar a homologação");
 
+      const resultado = await acompanharJob(jobHomolog, proc, new Set());
       voltarAoInicio();
       formulario.reset();
-      mostrarFeedback(
-        `Camada enviada e homologada como “${corpoHomolog.nome_publicacao || dados.get("nome_publicacao")}”.`,
-        false,
-      );
+      const fase = (dados.get("modulo_consumidor") || raiz.dataset.modulo) === "fase2" ? "Fase 2" : "Fase 1";
+      proc.concluir({
+        type: "success",
+        title: "Camada enviada e homologada",
+        message: `“${resultado.nome_publicacao || nomePublicacao}” já está disponível no seletor de camadas da ${fase}.`,
+      });
+      const publicado = resultado.nome_publicacao || nomePublicacao;
+      voltarAoInicio();
+      mostrarFeedback(`Camada enviada e homologada como “${publicado}”.`, false);
     } catch (erro) {
-      mostrarFeedback(erro.message, true);
+      proc.concluir({
+        // Desfecho parcial de verdade: a camada existe no acervo, mas não foi publicada.
+        type: "warning",
+        title: "Importada, mas não homologada",
+        message: `${erro.message} A camada ficou no acervo com o identificador ${camadaId}, ainda não publicada — é possível homologá-la depois pela Bancada, sem reenviar o arquivo.`,
+      });
+      mostrarFeedback(`Importada, mas não homologada: ${erro.message}`, true);
     } finally {
       alvo.disabled = false;
     }

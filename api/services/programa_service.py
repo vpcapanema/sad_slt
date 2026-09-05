@@ -92,7 +92,9 @@ def _resolve_instituicao_id(payload: ProgramaCreateSchema) -> str:
     return _parse_uuid(str(payload.instituicao_id), "instituicao_id")
 
 
-def criar_programa(payload: ProgramaCreateSchema) -> ProgramaResponseSchema:
+def criar_programa(payload: ProgramaCreateSchema, *, origem: str = "") -> ProgramaResponseSchema:
+    """``origem="SEI"`` marca o código gerado (``I-PRO-SEI-XXXXXXXX``) quando a
+    criação vem da integração com o SEI-SP. Vazio por padrão."""
     if payload.vinculo_institucional and not (payload.plano_codigo or "").strip():
         raise DemandaValidationError(
             "Selecione o plano cadastrado ou indique que não há vínculo institucional.",
@@ -102,7 +104,9 @@ def criar_programa(payload: ProgramaCreateSchema) -> ProgramaResponseSchema:
         plano_codigo=payload.plano_codigo,
         vinculo_institucional=bool(payload.vinculo_institucional),
     )
-    codigo = gerar_codigo_unico(gerar_codigo_programa, programa_repository.get_by_codigo)
+    codigo = gerar_codigo_unico(
+        lambda: gerar_codigo_programa(origem=origem), programa_repository.get_by_codigo
+    )
     pessoa_id = _resolve_pessoa_id(payload)
     instituicao_id = _resolve_instituicao_id(payload)
     if not (payload.representante.nome or "").strip():

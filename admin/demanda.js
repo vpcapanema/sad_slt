@@ -29,9 +29,6 @@
     projeto: [
       { id: "sec-info", label: "Informações do Projeto" },
       { id: "sec-analise", label: "Análise" },
-      { id: "sec-cadastro", label: "Cadastro" },
-      { id: "sec-institucional", label: "Institucional e Projeto" },
-      { id: "sec-representante", label: "Representante Legal" },
       { id: "sec-acoes", label: "Ações" },
     ],
     plano: [
@@ -44,10 +41,37 @@
     ],
   };
 
+  /** Desfecho da análise -> rótulo do botão e confirmação. */
+  const DECISOES = [
+    {
+      id: "aprovada",
+      label: "Aprovar demanda",
+      btnClass: "btn-primary",
+      statusLabel: "Aprovada na análise",
+      danger: false,
+    },
+    {
+      id: "ressalvas",
+      label: "Aprovar com ressalvas",
+      btnClass: "btn-secondary",
+      statusLabel: "Aprovada com ressalvas",
+      danger: false,
+      requerComplemento: true,
+    },
+    {
+      id: "reprovada",
+      label: "Reprovar demanda",
+      btnClass: "btn-danger",
+      statusLabel: "Reprovada na análise",
+      danger: true,
+    },
+  ];
+
   let tipo = "projeto";
   let record = null;
   let selectedId = null;
   let layerFilterApi = null;
+  let complementoSalvo = "";
   const lists = { projeto: [], programa: [], plano: [] };
 
   function $(sel, root) {
@@ -270,56 +294,456 @@
   }
 
   function projectInfoHtml(d) {
-    const { buildProjectInfoFields } = SLTAdminAnalysisInfo;
-    const cat = SLTCatalog.catalog;
-    const coords = SLTAdminAnalysisMap.coordsFromRecord(d);
-    const coordText = coords
-      ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`
-      : "—";
+    const { infoSubcard } = SLTAdminAnalysisInfo;
     const rep = d.representante || {};
 
-    const fieldsHtml = buildProjectInfoFields({
-      nome: escapeHtml(d.nome),
-      codigo: `<code>${escapeHtml(d.id)}</code>`,
-      descricao: escapeHtml(d.descricao || "—"),
-      dataCadastro: escapeHtml(formatDate(d.criadoEm)),
-      status: statusBadgeHtml(d.status, tipo),
-      instituicao: escapeHtml(instituicaoLabel(d)),
-      cnpj: escapeHtml(formatCnpj(d.instituicao_cnpj)),
-      diretoria: escapeHtml(diretoriaLabel(d.diretoria_id)),
-      plano: escapeHtml(planoLabel(d.plano_id)),
-      classificacao: escapeHtml(
-        classificacaoLabel(d.classificacao, d.plano_id),
-      ),
-      modal: escapeHtml(catalogLabel(cat?.modais, d.complementos?.modal_id)),
-      tipologia: escapeHtml(
-        catalogLabel(cat?.tipologias, d.complementos?.tipologia_id),
-      ),
-      carteira: escapeHtml(
-        catalogLabel(cat?.carteiras, d.complementos?.carteira_id),
-      ),
-      latitude: coords ? escapeHtml(coords.lat.toFixed(6)) : "—",
-      longitude: coords ? escapeHtml(coords.lng.toFixed(6)) : "—",
-      representanteLegal: {
-        nome: escapeHtml(rep.nome || representanteLabel(d)),
-        email: escapeHtml(rep.email || "—"),
-        telefone: escapeHtml(rep.telefone || "—"),
-      },
-      extra: [],
-    });
+    const cadastro = infoSubcard(
+      "Cadastro",
+      `
+      <div class="admin-form-grid">
+        <div class="form-field">
+          <label for="fld-nome">Nome do Projeto</label>
+          <input type="text" id="fld-nome" maxlength="200" value="${escapeHtml(d.nome)}">
+        </div>
+        <div class="form-field">
+          <label for="fld-codigo">Código</label>
+          <input type="text" id="fld-codigo" class="admin-field-readonly" value="${escapeHtml(d.id)}" readonly aria-readonly="true">
+        </div>
+        <div class="form-field span-2">
+          <label for="fld-descricao">Descrição</label>
+          <textarea id="fld-descricao" rows="3">${escapeHtml(d.descricao || "")}</textarea>
+        </div>
+        <div class="form-field">
+          <label for="fld-data-cadastro">Data de Cadastro</label>
+          <input type="text" id="fld-data-cadastro" class="admin-field-readonly admin-field-readonly--plain" value="${escapeHtml(formatDate(d.criadoEm))}" readonly aria-readonly="true">
+        </div>
+        <div class="form-field">
+          <span class="admin-info-label">Status</span>
+          <div class="admin-info-value">${statusBadgeHtml(d.status, tipo)}</div>
+        </div>
+      </div>`,
+    );
+
+    const institucional = infoSubcard(
+      "Institucional e Projeto",
+      `
+      <div class="admin-form-grid">
+        <div class="form-field">
+          <label for="fld-instituicao">Instituição interessada</label>
+          <input type="text" id="fld-instituicao" class="admin-field-readonly admin-field-readonly--plain" value="${escapeHtml(instituicaoLabel(d))}" readonly aria-readonly="true">
+        </div>
+        <div class="form-field">
+          <label for="fld-cnpj">CNPJ</label>
+          <input type="text" id="fld-cnpj" class="admin-field-readonly admin-field-readonly--plain" value="${escapeHtml(formatCnpj(d.instituicao_cnpj))}" readonly aria-readonly="true">
+        </div>
+        <div class="form-field span-2">
+          <label for="fld-diretoria">Diretoria</label>
+          <select id="fld-diretoria"></select>
+        </div>
+        <div class="form-field">
+          <label for="fld-plano">Plano</label>
+          <select id="fld-plano"></select>
+        </div>
+        <div id="classificacao-fields" class="admin-form-grid" style="display: contents;">
+          ${buildClassificacaoFields(d.plano_id)}
+        </div>
+        <div class="admin-form-grid admin-form-grid--3 span-2">
+          <div class="form-field">
+            <label for="fld-modal">Modal</label>
+            <select id="fld-modal"></select>
+          </div>
+          <div class="form-field">
+            <label for="fld-tipologia">Tipologia</label>
+            <select id="fld-tipologia"></select>
+          </div>
+          <div class="form-field">
+            <label for="fld-carteira">Carteira</label>
+            <select id="fld-carteira"></select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="fld-lat">Latitude</label>
+          <input type="number" step="any" id="fld-lat" value="${d.lat ?? ""}">
+        </div>
+        <div class="form-field">
+          <label for="fld-lng">Longitude</label>
+          <input type="number" step="any" id="fld-lng" value="${d.lng ?? ""}">
+        </div>
+      </div>`,
+    );
+
+    const representante = infoSubcard(
+      "Representante Legal",
+      `
+      <div class="admin-form-grid">
+        <div class="form-field span-2">
+          <label for="fld-rep-nome">Nome Completo</label>
+          <input type="text" id="fld-rep-nome" value="${escapeHtml(rep.nome || "")}">
+        </div>
+        <div class="form-field">
+          <label for="fld-rep-email">E-mail</label>
+          <input type="email" id="fld-rep-email" value="${escapeHtml(rep.email || "")}">
+        </div>
+        <div class="form-field">
+          <label for="fld-rep-tel">Telefone</label>
+          <input type="text" id="fld-rep-tel" value="${escapeHtml(rep.telefone || "")}">
+        </div>
+      </div>`,
+    );
 
     return `
       <section id="sec-info" class="card admin-dashboard-section">
         <h2>Informações do Projeto</h2>
         <div class="admin-dashboard-columns">
           <div class="admin-dashboard-col">
-            <div class="admin-info-fields">${fieldsHtml}</div>
+            <div class="admin-info-fields">
+              ${cadastro}
+              ${institucional}
+              ${representante}
+              ${
+                SLTAdminAuth.can("operate")
+                  ? `<div class="admin-dashboard-actions" id="info-edit-actions">
+                <button type="button" class="btn btn-secondary" id="btn-editar">Editar</button>
+                <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
+                <button type="button" class="btn btn-secondary" id="btn-cancelar-edicao" hidden>Cancelar</button>
+              </div>`
+                  : ""
+              }
+            </div>
           </div>
           <div class="admin-dashboard-col">
             ${analysisMapColumnHtml(d)}
           </div>
         </div>
       </section>`;
+  }
+
+  // ===========================================================================
+  // Análise — critérios, parecer e decisão
+  // ===========================================================================
+  function criteriosSectionHtml() {
+    return `
+      <section id="sec-criterios" class="admin-analise-subcard admin-dashboard-section">
+        <h3>Critérios de análise</h3>
+        <div class="admin-form-grid" id="criterios-grid">
+          <div class="form-field span-2">
+            <span class="field-help">Carregando critérios…</span>
+          </div>
+        </div>
+      </section>`;
+  }
+
+  function parecerSectionHtml() {
+    const canAnalyze = SLTAdminAuth.can("analyze");
+    return `
+      <section id="sec-parecer" class="admin-analise-subcard admin-dashboard-section">
+        <h3>Parecer técnico</h3>
+        <div class="admin-form-grid">
+          <div class="form-field span-2">
+            <label>Resultado da análise</label>
+            <p class="analise-resultado" id="analise-resultado">
+              <span class="analise-resultado-badge is-pendente">Pendente</span>
+              <span class="analise-resultado-placar">Responda os cinco critérios para apurar o resultado.</span>
+            </p>
+          </div>
+          <div class="form-field span-2">
+            <label for="fld-parecer">Parecer técnico <span class="field-help">(gerado automaticamente)</span></label>
+            <textarea id="fld-parecer" class="admin-field-readonly analise-parecer" rows="14" readonly aria-readonly="true"></textarea>
+          </div>
+          <div class="form-field span-2" id="wrap-complemento" hidden>
+            <label for="fld-parecer-complemento">Complementação do parecer</label>
+            <textarea id="fld-parecer-complemento" rows="4" maxlength="5000" placeholder="Texto adicional do avaliador — não substitui o parecer gerado."></textarea>
+          </div>
+          ${
+            canAnalyze
+              ? `<div class="admin-dashboard-actions span-2">
+            <button type="button" class="btn btn-secondary" id="btn-complementar">Complementar parecer</button>
+            <button type="button" class="btn btn-primary" id="btn-salvar-complemento" hidden>Salvar</button>
+            <button type="button" class="btn btn-secondary" id="btn-cancelar-complemento" hidden>Cancelar</button>
+          </div>`
+              : ""
+          }
+        </div>
+      </section>`;
+  }
+
+  function analiseActionsHtml(d, { withDecisions }) {
+    const canAnalyze = SLTAdminAuth.can("analyze");
+    const decisionButtons =
+      withDecisions && canAnalyze
+        ? DECISOES.map(
+            (dec) =>
+              `<button type="button" class="btn ${dec.btnClass}" data-decisao="${dec.id}">${escapeHtml(dec.label)}</button>`,
+          ).join("\n          ")
+        : "";
+    const rejectionRecord = d.motivo_reprovacao
+      ? `
+      <div class="form-field span-2">
+        <label for="fld-motivo-reprov-registrado">Justificativa da reprovação registrada</label>
+        <textarea id="fld-motivo-reprov-registrado" class="admin-field-readonly" rows="3" readonly aria-readonly="true">${escapeHtml(d.motivo_reprovacao)}</textarea>
+        ${d.reprovadoEm ? `<span class="field-help">Decisão registrada em ${escapeHtml(formatDate(d.reprovadoEm))}.</span>` : ""}
+      </div>`
+      : "";
+    return `
+      ${rejectionRecord}
+      <div class="form-field span-2" id="analise-parecer-baixar" hidden>
+        <span class="field-help">Um parecer em PDF já foi gerado para esta demanda.</span>
+        <div class="admin-dashboard-actions">
+          <button type="button" class="btn btn-secondary" id="btn-baixar-parecer">Baixar parecer (PDF)</button>
+        </div>
+      </div>
+      <div class="admin-dashboard-actions span-2">
+        <a href="/restrict/demandas/" class="btn btn-secondary">Voltar à lista</a>
+        ${decisionButtons}
+      </div>`;
+  }
+
+  function criterioRowHtml(criterio, editavel) {
+    const nome = `crit-${criterio.campo}`;
+    const marcado = (valor) => (criterio.resposta === valor ? " checked" : "");
+    const desabilitado = editavel ? "" : " disabled";
+    return `
+      <div class="form-field span-2 analise-criterio" data-campo="${escapeHtml(criterio.campo)}">
+        <label>${escapeHtml(criterio.rotulo)}</label>
+        <span class="field-help">${escapeHtml(criterio.pergunta)}</span>
+        <div class="analise-criterio-opcoes" role="radiogroup" aria-label="${escapeHtml(criterio.rotulo)}">
+          <label class="analise-opcao analise-opcao--sim">
+            <input type="radio" name="${nome}" value="sim"${marcado(true)}${desabilitado}>
+            <span>Sim</span>
+          </label>
+          <label class="analise-opcao analise-opcao--nao">
+            <input type="radio" name="${nome}" value="nao"${marcado(false)}${desabilitado}>
+            <span>Não</span>
+          </label>
+        </div>
+      </div>`;
+  }
+
+  function collectCriterios() {
+    const respostas = {};
+    document.querySelectorAll(".analise-criterio").forEach((row) => {
+      const campo = row.dataset.campo;
+      const marcado = row.querySelector("input[type=radio]:checked");
+      respostas[campo] = marcado ? marcado.value === "sim" : null;
+    });
+    return respostas;
+  }
+
+  /** Média simples de 5 critérios: nunca empata (3+ Sim aprova, 3+ Não reprova). */
+  function computeResultado(respostas) {
+    const valores = Object.values(respostas);
+    const sim = valores.filter((v) => v === true).length;
+    const nao = valores.filter((v) => v === false).length;
+    const total = valores.length;
+    const completo = total > 0 && sim + nao === total;
+    return {
+      sim,
+      nao,
+      total,
+      completo,
+      resultado: completo ? (sim >= Math.ceil(total / 2) ? "aprovado" : "reprovado") : null,
+    };
+  }
+
+  function renderResultado(placar) {
+    const alvo = $("#analise-resultado");
+    if (!alvo) return;
+    const rotulo = { aprovado: "Aprovado", reprovado: "Reprovado" };
+    const classe = placar.resultado ? `is-${placar.resultado}` : "is-pendente";
+    const texto = placar.resultado ? rotulo[placar.resultado] : "Pendente";
+    const detalhe = placar.completo
+      ? `${placar.sim} de ${placar.total} critérios atendidos.`
+      : `${placar.sim + placar.nao} de ${placar.total} critérios respondidos — responda todos para apurar o resultado.`;
+    alvo.innerHTML = `
+      <span class="analise-resultado-badge ${classe}">${escapeHtml(texto)}</span>
+      <span class="analise-resultado-placar">${escapeHtml(detalhe)}</span>`;
+  }
+
+  function renderAnalise(data) {
+    const editavel = SLTAdminAuth.can("analyze") && canApprove(record?.status);
+    const grid = $("#criterios-grid");
+    if (grid) {
+      grid.innerHTML = (data.criterios || [])
+        .map((c) => criterioRowHtml(c, editavel))
+        .join("");
+      if (!editavel) {
+        grid.insertAdjacentHTML(
+          "beforeend",
+          '<div class="form-field span-2"><span class="field-help">Os critérios não são mais editáveis: a demanda já saiu da avaliação.</span></div>',
+        );
+      }
+      grid.querySelectorAll("input[type=radio]").forEach((input) => {
+        input.addEventListener("change", () => onCriterioChange());
+      });
+    }
+
+    renderResultado({
+      sim: data.sim || 0,
+      nao: data.nao || 0,
+      total: data.total_criterios || (data.criterios || []).length,
+      completo: !!data.completo,
+      resultado: data.resultado || null,
+    });
+
+    const parecer = $("#fld-parecer");
+    if (parecer) {
+      parecer.value =
+        data.parecer_texto ||
+        "O parecer é gerado automaticamente assim que os critérios de análise forem respondidos.";
+    }
+    complementoSalvo = data.parecer_complemento || "";
+    const complemento = $("#fld-parecer-complemento");
+    if (complemento && complementoSalvo && !complemento.value) {
+      complemento.value = complementoSalvo;
+      $("#wrap-complemento")?.removeAttribute("hidden");
+    }
+
+    const baixar = $("#analise-parecer-baixar");
+    if (baixar) {
+      if (data.tem_parecer_pdf) baixar.removeAttribute("hidden");
+      else baixar.setAttribute("hidden", "");
+    }
+  }
+
+  async function onCriterioChange() {
+    const respostas = collectCriterios();
+    renderResultado(computeResultado(respostas));
+    try {
+      const atualizada = await SLTAdminApi.saveAnaliseCriterios(record.id, respostas);
+      const parecer = $("#fld-parecer");
+      if (parecer && atualizada.parecer_texto) parecer.value = atualizada.parecer_texto;
+    } catch (err) {
+      SLTAdminUi.showToast(err.message, true);
+    }
+  }
+
+  function abrirComplemento() {
+    $("#wrap-complemento")?.removeAttribute("hidden");
+    $("#btn-salvar-complemento")?.removeAttribute("hidden");
+    $("#btn-cancelar-complemento")?.removeAttribute("hidden");
+  }
+
+  /** Volta ao estado anterior ao clique em «Complementar parecer». */
+  function fecharComplemento() {
+    $("#btn-salvar-complemento")?.setAttribute("hidden", "");
+    $("#btn-cancelar-complemento")?.setAttribute("hidden", "");
+    const wrap = $("#wrap-complemento");
+    if (!wrap) return;
+    if (complementoSalvo) wrap.removeAttribute("hidden");
+    else wrap.setAttribute("hidden", "");
+  }
+
+  async function saveComplemento() {
+    const campo = $("#fld-parecer-complemento");
+    if (!campo) return;
+    const texto = campo.value.trim();
+    try {
+      await SLTAdminApi.saveAnaliseComplemento(record.id, texto || null);
+      complementoSalvo = texto;
+      SLTAdminUi.showToast("Complementação do parecer salva.");
+      fecharComplemento();
+    } catch (err) {
+      SLTAdminUi.showToast(err.message, true);
+    }
+  }
+
+  async function downloadParecer(codigo) {
+    const blob = await SLTAdminApi.fetchAnaliseParecerPdf(codigo);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `parecer-analise-${codigo}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
+  async function decideRecord(decisaoId) {
+    const decisao = DECISOES.find((item) => item.id === decisaoId);
+    if (!decisao) return;
+
+    const respostas = collectCriterios();
+    const placar = computeResultado(respostas);
+    if (!placar.completo) {
+      SLTAdminUi.showToast(
+        "Responda os cinco critérios de análise antes de registrar a decisão.",
+        true,
+      );
+      $("#sec-criterios")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    if (decisao.requerComplemento) {
+      const campo = $("#fld-parecer-complemento");
+      const texto = campo?.value.trim() || "";
+      if (!texto) {
+        SLTAdminUi.showToast(
+          "Para aprovar com ressalvas é obrigatório preencher a complementação do parecer.",
+          true,
+        );
+        abrirComplemento();
+        campo?.focus();
+        return;
+      }
+      try {
+        await SLTAdminApi.saveAnaliseComplemento(record.id, texto);
+      } catch (err) {
+        SLTAdminUi.showToast(err.message, true);
+        return;
+      }
+    }
+
+    const ok = await SLTAdminUi.showConfirm({
+      title: decisao.label,
+      message: `Registrar a decisão «${decisao.label}»? A demanda passará para o status «${decisao.statusLabel}» e o parecer será gerado em PDF.`,
+      confirmLabel: decisao.label,
+      cancelLabel: "Cancelar",
+      danger: decisao.danger,
+    });
+    if (!ok) return;
+
+    try {
+      await SLTAdminApi.decidirAnalise(record.id, decisao.id);
+      SLTAdminUi.showToast("Decisão registrada. Baixando o parecer em PDF…");
+      try {
+        await downloadParecer(record.id);
+      } catch (err) {
+        SLTAdminUi.showToast(`Decisão registrada, mas o download falhou: ${err.message}`, true);
+      }
+      await refreshLists();
+      renderPage(await API[tipo].get(record.id));
+    } catch (err) {
+      SLTAdminUi.showToast(err.message, true);
+    }
+  }
+
+  function bindAnalise(d) {
+    $("#btn-complementar")?.addEventListener("click", () => {
+      abrirComplemento();
+      $("#fld-parecer-complemento")?.focus();
+    });
+    $("#btn-salvar-complemento")?.addEventListener("click", () => saveComplemento());
+    $("#btn-cancelar-complemento")?.addEventListener("click", () => {
+      const campo = $("#fld-parecer-complemento");
+      if (campo) campo.value = complementoSalvo;
+      fecharComplemento();
+    });
+    $("#btn-baixar-parecer")?.addEventListener("click", () => {
+      downloadParecer(d.id).catch((err) => SLTAdminUi.showToast(err.message, true));
+    });
+    document.querySelectorAll("[data-decisao]").forEach((btn) => {
+      btn.addEventListener("click", () => decideRecord(btn.dataset.decisao));
+    });
+
+    SLTAdminApi.getAnalise(d.id)
+      .then((data) => renderAnalise(data))
+      .catch((err) => {
+        const grid = $("#criterios-grid");
+        if (grid) {
+          grid.innerHTML = `<div class="form-field span-2"><span class="field-help">Não foi possível carregar os critérios: ${escapeHtml(err.message)}</span></div>`;
+        }
+      });
   }
 
   function projetoPageHtml(d) {
@@ -332,93 +756,14 @@
         <section id="sec-analise" class="card admin-dashboard-section">
           <h2>Análise</h2>
           <div class="admin-analise-stack">
-              <section id="sec-cadastro" class="admin-analise-subcard admin-dashboard-section">
-                <h3>Cadastro</h3>
-                <div class="admin-form-grid">
-                  <div class="form-field">
-                    <label for="fld-nome">Nome do Projeto</label>
-                    <input type="text" id="fld-nome" maxlength="200" value="${escapeHtml(d.nome)}">
-                  </div>
-                  <div class="form-field">
-                    <label for="fld-codigo">Código</label>
-                    <input type="text" id="fld-codigo" class="admin-field-readonly" value="${escapeHtml(d.id)}" readonly aria-readonly="true">
-                  </div>
-                  <div class="form-field span-2">
-                    <label for="fld-descricao">Descrição</label>
-                    <textarea id="fld-descricao" rows="3">${escapeHtml(d.descricao || "")}</textarea>
-                  </div>
-                </div>
-              </section>
+              ${criteriosSectionHtml()}
 
-              <section id="sec-institucional" class="admin-analise-subcard admin-dashboard-section">
-                <h3>Institucional e Projeto</h3>
-                <div class="admin-form-grid">
-                  <div class="form-field">
-                    <label for="fld-instituicao">Instituição interessada</label>
-                    <input type="text" id="fld-instituicao" class="admin-field-readonly admin-field-readonly--plain" value="${escapeHtml(instituicaoLabel(d))}" readonly aria-readonly="true">
-                  </div>
-                  <div class="form-field">
-                    <label for="fld-cnpj">CNPJ</label>
-                    <input type="text" id="fld-cnpj" class="admin-field-readonly admin-field-readonly--plain" value="${escapeHtml(formatCnpj(d.instituicao_cnpj))}" readonly aria-readonly="true">
-                  </div>
-                  <div class="form-field span-2">
-                    <label for="fld-diretoria">Diretoria</label>
-                    <select id="fld-diretoria"></select>
-                  </div>
-                  <div class="form-field">
-                    <label for="fld-plano">Plano</label>
-                    <select id="fld-plano"></select>
-                  </div>
-                  <div id="classificacao-fields" class="admin-form-grid" style="display: contents;">
-                    ${buildClassificacaoFields(d.plano_id)}
-                  </div>
-                  <div class="admin-form-grid admin-form-grid--3 span-2">
-                    <div class="form-field">
-                      <label for="fld-modal">Modal</label>
-                      <select id="fld-modal"></select>
-                    </div>
-                    <div class="form-field">
-                      <label for="fld-tipologia">Tipologia</label>
-                      <select id="fld-tipologia"></select>
-                    </div>
-                    <div class="form-field">
-                      <label for="fld-carteira">Carteira</label>
-                      <select id="fld-carteira"></select>
-                    </div>
-                  </div>
-                  <div class="form-field">
-                    <label for="fld-lat">Latitude</label>
-                    <input type="number" step="any" id="fld-lat" value="${d.lat ?? ""}">
-                  </div>
-                  <div class="form-field">
-                    <label for="fld-lng">Longitude</label>
-                    <input type="number" step="any" id="fld-lng" value="${d.lng ?? ""}">
-                  </div>
-                </div>
-              </section>
-
-              <section id="sec-representante" class="admin-analise-subcard admin-dashboard-section">
-                <h3>Representante Legal</h3>
-                <div class="admin-form-grid">
-                  <div class="form-field span-2">
-                    <label for="fld-rep-nome">Nome Completo</label>
-                    <input type="text" id="fld-rep-nome" value="${escapeHtml(d.representante?.nome || "")}">
-                  </div>
-                  <div class="form-field">
-                    <label for="fld-rep-email">E-mail</label>
-                    <input type="email" id="fld-rep-email" value="${escapeHtml(d.representante?.email || "")}">
-                  </div>
-                  <div class="form-field">
-                    <label for="fld-rep-tel">Telefone</label>
-                    <input type="text" id="fld-rep-tel" value="${escapeHtml(d.representante?.telefone || "")}">
-                  </div>
-                </div>
-              </section>
+              ${parecerSectionHtml()}
 
               <section id="sec-acoes" class="admin-analise-subcard admin-dashboard-section">
                 <h3>Ações</h3>
                 <div class="admin-form-grid">
-                  ${actionsHtml(d, { withApprove: canApprove(d.status), withReject: canReject(d.status) })}
+                  ${analiseActionsHtml(d, { withDecisions: canApprove(d.status) })}
                 </div>
               </section>
           </div>
@@ -503,6 +848,7 @@
     );
 
     mountAnalysisMap(d, "projeto");
+    bindAnalise(d);
   }
 
   function collectProjeto() {
@@ -751,11 +1097,35 @@
     return projetoPageHtml(d);
   }
 
+  /** Alterna o card de informações entre visualização e edição. */
+  function setInfoEditMode(ligado) {
+    const sec = $("#sec-info");
+    if (!sec) return;
+    sec.querySelectorAll("input, select, textarea").forEach((campo) => {
+      if (campo.readOnly || campo.classList.contains("admin-field-readonly")) return;
+      campo.disabled = !ligado;
+    });
+    const alterna = (sel, visivel) => {
+      const el = $(sel);
+      if (!el) return;
+      if (visivel) el.removeAttribute("hidden");
+      else el.setAttribute("hidden", "");
+    };
+    alterna("#btn-editar", !ligado);
+    alterna("#btn-salvar", ligado);
+    alterna("#btn-cancelar-edicao", ligado);
+  }
+
   function bindEvents(d) {
     if (tipo === "projeto") bindProjeto(d);
     if (tipo === "plano") bindPlano(d);
     if (tipo === "programa") bindPrograma(d);
     attachCurrencyMask($("#fld-valor"));
+    if (tipo === "projeto") {
+      setInfoEditMode(false);
+      $("#btn-editar")?.addEventListener("click", () => setInfoEditMode(true));
+      $("#btn-cancelar-edicao")?.addEventListener("click", () => renderPage(record));
+    }
     $("#btn-salvar")?.addEventListener("click", () => saveRecord());
     $("#btn-aprovar")?.addEventListener("click", () => approveRecord());
     $("#btn-reprovar")?.addEventListener("click", () => rejectRecord());
@@ -800,13 +1170,50 @@
     });
   }
 
+  function gruposEmAnalise(groups) {
+    return groups
+      .filter((g) => (g.records || []).some((r) => STATUS_PRE_APROVACAO.has(r.status)))
+      .map((g) => g.id);
+  }
+
+  function primeiroRegistroEmAnalise(groups) {
+    for (const g of groups) {
+      const r = (g.records || []).find((rec) => STATUS_PRE_APROVACAO.has(rec.status));
+      if (r) return r;
+    }
+    return null;
+  }
+
+  function scrollableAncestor(el) {
+    for (let node = el.parentElement; node; node = node.parentElement) {
+      const overflowY = getComputedStyle(node).overflowY;
+      const rolavel = overflowY === "auto" || overflowY === "scroll";
+      if (rolavel && node.scrollHeight > node.clientHeight) return node;
+    }
+    return null;
+  }
+
+  function scrollSidebarParaEmAnalise(registro) {
+    if (!registro) return;
+    const el = document.querySelector(
+      `.layer-group--record[data-record-id="${CSS.escape(String(registro.id))}"]`,
+    );
+    if (!el) return;
+    const scroller = scrollableAncestor(el);
+    if (!scroller) return;
+    scroller.scrollTop +=
+      el.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+  }
+
   function renderSidebar() {
+    const groups = TIPOS.map((t) => ({
+      id: t.id,
+      label: t.label,
+      records: filteredRecords(t.id),
+    }));
     SLTAdminDashboard.renderGroupedRecordsSidebar({
-      groups: TIPOS.map((t) => ({
-        id: t.id,
-        label: t.label,
-        records: filteredRecords(t.id),
-      })),
+      groups,
+      forceExpandGroupIds: gruposEmAnalise(groups),
       selectedId,
       getRecordId: (r) => r.id,
       getRecordLabel: (r) => r.nome || r.id,
@@ -942,6 +1349,11 @@
     $("#dashboard-content").innerHTML =
       '<p class="hint">Nenhuma demanda selecionada. Selecione uma demanda na barra lateral para iniciar a análise.</p>';
     renderSidebar();
+    scrollSidebarParaEmAnalise(
+      primeiroRegistroEmAnalise(
+        TIPOS.map((t) => ({ id: t.id, records: filteredRecords(t.id) })),
+      ),
+    );
   }
 
   async function init() {

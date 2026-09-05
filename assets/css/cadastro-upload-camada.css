@@ -108,3 +108,7 @@
 }
 .cadastro-feedback.is-error { color: #b42318; }
 .cadastro-feedback.is-success { color: #18794e; }
+
+/* Índice do campo — mesmo padrão da tela de cadastro de projeto, estreitado
+   para caber no rótulo sem empurrar o texto. */
+.cadastro-campo .cadastro-subsec-num{min-width:1.7rem;margin-right:.2rem;font-size:.7rem}

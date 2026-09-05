@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(timeout 900 python -m pytest tests/test_edicao_atributos_frontend.py -q)"
+    ]
+  }
+}

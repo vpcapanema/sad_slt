@@ -650,7 +650,10 @@ def previa_da_inspecao(token: str) -> dict[str, Any]:
             "exibidas": int(len(recorte)),
             "limite_atingido": bool(total > PREVIA_MAX_FEICOES),
             "bounds": [float(v) for v in recorte.total_bounds],
-            "geojson": json.loads(simplificado.to_json()),
+            # `default=str` porque coluna de data vira Timestamp do pandas, e o
+            # codificador padrão do to_json() não sabe serializar: a prévia de
+            # qualquer camada com campo de data respondia 500.
+            "geojson": json.loads(simplificado.to_json(default=str)),
             "metadados": metadata,
         })
     return {

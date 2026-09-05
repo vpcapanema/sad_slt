@@ -4,7 +4,7 @@
 {% set bloco_modulo = "mocad" %}
 {% set requer_autenticacao = true %}
 {% block titulo %}Complementação de cadastro — SICARD{% endblock %}
-{% block classes_body %}complementacao-page{% endblock %}
+{% block classes_body %}complementacao-page escala-revisada{% endblock %}
 {% block estilos_pagina %}<link rel="stylesheet" href="/assets/css/complementacao.css">{% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
@@ -26,6 +26,7 @@
   </form>
   <p id="complementacao-status" class="complementacao-status" aria-live="polite"></p>
 </main>
+  <link rel="stylesheet" href="/assets/css/escala-tipografica.css">
 {% endblock %}
 {% block scripts_pagina %}
 <script src="/assets/js/admin-auth.js"></script>

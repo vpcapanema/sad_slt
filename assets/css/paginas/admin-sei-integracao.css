@@ -1,0 +1,9 @@
+/* Integração SEI-SP — administração. */
+
+/* O captcha vem do SEI em tamanho variável: limita a largura e reserva a
+   linha própria, sem estilo inline no template. */
+#sei-captcha-img {
+  display: block;
+  max-width: 200px;
+  margin-bottom: 0.5rem;
+}

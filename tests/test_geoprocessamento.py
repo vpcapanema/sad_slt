@@ -180,7 +180,11 @@ class GeoprocessamentoApiTest(unittest.TestCase):
         response = self.client.get("/api/geoespacial/algoritmos")
         self.assertEqual(response.status_code, 200, response.text)
         algorithms = response.json()
-        self.assertEqual(len(algorithms), 41)
+        # Contra o catálogo do motor, não contra um número escrito à mão: o
+        # que importa é a API não esconder nem inventar algoritmo.
+        from api.services.geoprocessamento_engine import CATALOG
+
+        self.assertEqual(len(algorithms), len(CATALOG))
         for algorithm in algorithms:
             self.assertTrue(algorithm["familia"])
             self.assertEqual(
@@ -363,9 +367,13 @@ class GeoprocessamentoApiTest(unittest.TestCase):
         self.assertIn("#gp-right-pane .field select", styles)
         self.assertIn('type="color"', script)
         self.assertIn("function applyLayerColor", script)
-        self.assertIn('setPaintProperty(id,"fill-color",color)', script)
-        self.assertIn('setPaintProperty(`${id}-line`,"line-color",color)', script)
-        self.assertIn('setPaintProperty(`${id}-point`,"circle-color",color)', script)
+        # A cor deixou de ir direto ao mapa: applyLayerColor guarda a escolha e
+        # delega a pintura a applyStyleToMap, que combina cor e simbologia.
+        self.assertIn("function applyStyleToMap", script)
+        self.assertIn('setPaintProperty(id,"fill-color"', script)
+        self.assertIn('setPaintProperty(`${id}-line`,"line-color"', script)
+        # Ponto é símbolo com ícone desenhado, não mais círculo pintado.
+        self.assertIn('setLayoutProperty(`${id}-point`,"icon-image"', script)
         self.assertIn('layerColors:load("gp-layer-colors",{})', script)
         self.assertIn("removeLayerFromMap(activeLayerId())", ribbon)
         self.assertIn("const SELECT_CURSOR", commands)

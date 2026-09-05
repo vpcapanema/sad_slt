@@ -300,6 +300,7 @@ def listar_pacotes_homologados(modulo: str) -> list[dict[str, Any]]:
         FROM geoprocessamento.produto p
         LEFT JOIN geoprocessamento.camada_homologada h ON h.produto_id=p.id
         WHERE p.modulo=%s AND p.status IN ('homologado','publicado')
+          AND COALESCE(p.metadados->>'origem','') <> 'upload_automatico'
         GROUP BY p.id ORDER BY p.atualizado_em DESC
     """
     with get_connection() as conn:

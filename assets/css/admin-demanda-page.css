@@ -70,3 +70,240 @@ body.page-admin-demanda {
     padding-left: 0.45rem;
   }
 }
+
+/* `.btn` é inline-flex e venceria o [hidden] do agente de usuário. */
+.page-admin-demanda #sec-parecer [hidden],
+.page-admin-demanda #sec-acoes [hidden] {
+  display: none !important;
+}
+
+/* Critérios — cartão numerado com resposta em botões segmentados */
+#criterios-grid {
+  counter-reset: criterio;
+}
+
+.analise-criterio {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem 0.65rem 2.4rem;
+  background: #fff;
+  border: 1px solid var(--admin-blue-border, #cfe0ea);
+  border-left: 3px solid var(--admin-blue-border, #cfe0ea);
+  border-radius: 8px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.analise-criterio:hover {
+  box-shadow: 0 2px 10px rgba(0, 59, 90, 0.09);
+}
+
+.analise-criterio::before {
+  counter-increment: criterio;
+  content: counter(criterio);
+  position: absolute;
+  top: 0.62rem;
+  left: 0.7rem;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--admin-blue-100, #eaf3f8);
+  color: var(--admin-label-color, #003b5a);
+  font-size: 0.66rem;
+  font-weight: 700;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.analise-criterio > label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--admin-label-color, #003b5a);
+}
+
+.analise-criterio .field-help {
+  display: block;
+  margin: 0.05rem 0 0.5rem;
+  line-height: 1.35;
+}
+
+/* Estado respondido — o cartão inteiro reage à escolha */
+.analise-criterio:has(input[value="sim"]:checked) {
+  border-left-color: var(--pli-green, #3ec26e);
+}
+
+.analise-criterio:has(input[value="sim"]:checked)::before {
+  background: var(--pli-green, #3ec26e);
+  color: #fff;
+}
+
+.analise-criterio:has(input[value="nao"]:checked) {
+  border-left-color: #d4574f;
+}
+
+.analise-criterio:has(input[value="nao"]:checked)::before {
+  background: #d4574f;
+  color: #fff;
+}
+
+.analise-criterio-opcoes {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.2rem;
+  background: var(--admin-blue-50, #f4f9fc);
+  border: 1px solid var(--admin-blue-border, #cfe0ea);
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.analise-opcao {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.4rem;
+  margin: 0;
+  padding: 0.28rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--pli-muted, #5a7184);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+/* O radio continua existindo para acessibilidade e para a lógica de leitura */
+.admin-dashboard-page .analise-opcao input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.analise-opcao:hover {
+  color: var(--admin-label-color, #003b5a);
+  background: rgba(0, 59, 90, 0.06);
+}
+
+.analise-opcao:has(input:checked) {
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 59, 90, 0.18);
+}
+
+.analise-opcao--sim:has(input:checked) {
+  background: var(--pli-green, #3ec26e);
+}
+
+.analise-opcao--nao:has(input:checked) {
+  background: #d4574f;
+}
+
+.analise-opcao:has(input:focus-visible) {
+  outline: 2px solid var(--admin-label-color, #003b5a);
+  outline-offset: 2px;
+}
+
+.analise-opcao:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Resultado apurado (calculado, nunca escolhido pelo usuário) */
+.analise-resultado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.15rem 0 0;
+}
+
+.analise-resultado-badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.analise-resultado-badge.is-aprovado {
+  background: rgba(62, 194, 110, 0.16);
+  border-color: rgba(62, 194, 110, 0.45);
+  color: var(--pli-green-dark, #2aa358);
+}
+
+.analise-resultado-badge.is-reprovado {
+  background: rgba(200, 60, 60, 0.14);
+  border-color: rgba(200, 60, 60, 0.4);
+  color: #b03434;
+}
+
+.analise-resultado-badge.is-pendente {
+  background: rgba(0, 59, 90, 0.08);
+  border-color: rgba(0, 59, 90, 0.22);
+  color: var(--pli-muted, #5a7184);
+}
+
+.analise-resultado-placar {
+  font-size: 0.75rem;
+  color: var(--pli-muted, #5a7184);
+}
+
+.admin-dashboard-page #sec-parecer .analise-parecer {
+  font-family: ui-monospace, SFMono-Regular, "Cascadia Mono", Menlo, monospace;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* Card de Ações — botões centralizados */
+.admin-dashboard-page #sec-acoes .admin-dashboard-actions {
+  justify-content: center;
+  gap: 0.5rem;
+  padding-top: 0.15rem;
+}
+
+.admin-dashboard-page #sec-acoes .admin-dashboard-actions .btn {
+  padding: 0.45rem 1.1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+.admin-dashboard-page #sec-acoes .admin-dashboard-actions .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 59, 90, 0.18);
+  filter: brightness(1.04);
+}
+
+.admin-dashboard-page #sec-acoes .admin-dashboard-actions .btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 59, 90, 0.16);
+}
+
+.admin-dashboard-page #sec-acoes .admin-dashboard-actions .btn:focus-visible {
+  outline: 2px solid var(--admin-label-color, #003b5a);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-dashboard-page #sec-acoes .admin-dashboard-actions .btn,
+  .analise-criterio,
+  .analise-opcao {
+    transition: none;
+  }
+  .admin-dashboard-page #sec-acoes .admin-dashboard-actions .btn:hover {
+    transform: none;
+  }
+}

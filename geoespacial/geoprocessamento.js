@@ -1,6 +1,12 @@
 (function(){
   "use strict";
   const API="/api/geoespacial";
+  // Arrastar um seletor de cor dispara "input" dezenas de vezes por segundo;
+  // sem isto, cada tique reconstruía o HTML inteiro do painel de camadas E
+  // reescaneava os ícones (lucide.createIcons) do zero — daí a simbologia
+  // "responder devagar". O repaint do mapa (setPaintProperty) continua
+  // imediato; só a reconstrução do painel é adiada.
+  function debounce(fn,atraso){let t;return(...args)=>{clearTimeout(t);t=setTimeout(()=>fn(...args),atraso)}}
   const CRS_DESCRIPTIONS={"EPSG:4674":"SIRGAS 2000","EPSG:4326":"WGS 84","EPSG:3857":"WGS 84 / Pseudo-Mercator","EPSG:31982":"SIRGAS 2000 / UTM zona 22S","EPSG:31983":"SIRGAS 2000 / UTM zona 23S","EPSG:31984":"SIRGAS 2000 / UTM zona 24S","EPSG:5880":"SIRGAS 2000 / Brazil Polyconic"};
   const CRS_VALUES=Object.keys(CRS_DESCRIPTIONS);
   const crsLabel=value=>CRS_DESCRIPTIONS[value]?`${value} (${CRS_DESCRIPTIONS[value]})`:value;
@@ -98,7 +104,7 @@
       ["formato_saida","Formato","select",raster?["JSON","GeoTIFF"]:["GeoJSON","GeoPackage","Shapefile"]]
     );
   });
-  const state={map:null,layers:[],basemaps:new Set(["esri-gray"]),selected:null,activeLayerId:null,activeExecution:null,toolboxScope:"geral",functions:[],flows:[],history:load("gp-history",[]),layerGroups:load("gp-layer-groups",{operational:false,basemap:false}),layerColors:load("gp-layer-colors",{}),layerStyles:load("gp-layer-styles",{}),geometryTypes:{},catalogHydrated:false,catalogSyncPending:false,leftTab:"drawing"};
+  const state={map:null,layers:[],basemaps:new Set(["esri-gray"]),selected:null,activeLayerId:null,activeExecution:null,toolboxScope:"geral",functions:[],flows:[],history:load("gp-history",[]),layerGroups:load("gp-layer-groups",{operational:false,basemap:false}),layerColors:load("gp-layer-colors",{}),layerStyles:load("gp-layer-styles",{}),geometryTypes:{},catalogHydrated:false,catalogSyncPending:false,leftTab:"drawing",editingLayers:new Set(),attributeEdits:{}};
   const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
   let generatedFieldId=0;
   function associateFormFields(root=document){
@@ -403,6 +409,11 @@
     if(type.includes("Polygon"))return `<span class="layer-symbol polygon"${style} title="Polígonos"></span>`;
     return `<span class="layer-symbol geometry"${style} title="Geometria vetorial"></span>`;
   }
+  function legendField(renderer){
+    // Entre o nome da camada e os símbolos: sem isto, graduado/categorizado
+    // mostra a paleta mas não diz de qual atributo ela vem.
+    return renderer?.campo?`<div class="layer-legend-field" title="Atributo: ${escapeHtml(renderer.campo)}">${escapeHtml(renderer.campo)}</div>`:"";
+  }
   function layerLegend(layer){
     const renderer=state.layerStyles[layer.id]?.renderer;
     if(renderer?.tipo==="categorizado"&&(renderer.categorias||[]).length){
@@ -410,11 +421,11 @@
       const items=cats.map(c=>`<div class="layer-legend-item"><span class="legend-swatch" style="background:${c.cor}"></span><span class="legend-label">${escapeHtml(c.rotulo??c.valor)}</span></div>`).join("");
       const more=extra>0?`<div class="layer-legend-item legend-more">+${extra} categoria(s)</div>`:"";
       const outros=renderer.corOutros?`<div class="layer-legend-item"><span class="legend-swatch" style="background:${renderer.corOutros}"></span><span class="legend-label">Demais valores</span></div>`:"";
-      return `<div class="layer-legend" title="Editar simbologia">${items}${more}${outros}</div>`;
+      return `<div class="layer-legend" title="Editar simbologia">${legendField(renderer)}${items}${more}${outros}</div>`;
     }
     if(renderer?.tipo==="graduado"&&(renderer.fatias||[]).length){
       const items=renderer.fatias.map(f=>`<div class="layer-legend-item"><span class="legend-swatch" style="background:${f.cor}"></span><span class="legend-label">${escapeHtml(f.rotulo)}</span></div>`).join("");
-      return `<div class="layer-legend" title="Editar simbologia">${items}</div>`;
+      return `<div class="layer-legend" title="Editar simbologia">${legendField(renderer)}${items}</div>`;
     }
     return `<div class="layer-legend layer-legend--single" title="Editar simbologia">${layerSymbol(layer)}</div>`;
   }
@@ -429,7 +440,8 @@
     const operational=items.map(layer=>{
       const onMap=Boolean(state.map?.getSource(layer.id));
       const display=bySource?sourcePath(layer):layer.nome;
-      return `<div class="tree-row tree-indent tree-layer ${state.activeLayerId===layer.id?"active":""}" data-layer="${layer.id}" tabindex="0"><input type="checkbox" ${onMap?"checked":""} aria-label="Exibir ${escapeHtml(layer.nome)}"><div class="layer-entry"><div class="layer-entry-head"><span class="layer-name" title="${escapeHtml(display)}">${escapeHtml(display)}</span><button class="icon-btn layer-zoom" type="button" data-zoom-layer="${layer.id}" title="Zoom para a camada"><i data-lucide="maximize"></i></button></div>${layerLegend(layer)}</div></div>`;
+      const editing=state.editingLayers.has(layer.id);
+      return `<div class="tree-row tree-indent tree-layer ${state.activeLayerId===layer.id?"active":""}" data-layer="${layer.id}" tabindex="0"><input type="checkbox" ${onMap?"checked":""} aria-label="Exibir ${escapeHtml(layer.nome)}"><div class="layer-entry"><div class="layer-entry-head"><span class="layer-name" title="${escapeHtml(display)}">${escapeHtml(display)}</span><button class="icon-btn layer-edit ${editing?"active":""}" type="button" data-edit-layer="${layer.id}" title="${editing?"Encerrar edição de atributos":"Editar atributos"}"><i data-lucide="pencil"></i></button><button class="icon-btn layer-zoom" type="button" data-zoom-layer="${layer.id}" title="Zoom para a camada"><i data-lucide="maximize"></i></button></div>${layerLegend(layer)}</div></div>`;
     }).join("");
     const group=(id,label,icon,content,empty)=>`<section class="layer-group ${state.layerGroups[id]?"collapsed":""}" data-layer-group="${id}"><button class="tree-row layer-group-title" type="button" aria-expanded="${!state.layerGroups[id]}"><i data-lucide="chevron-down" class="tree-chevron"></i><i data-lucide="${icon}"></i><strong>${label}</strong></button><div class="layer-group-children">${content||`<div class="empty compact">${empty}</div>`}</div></section>`;
     const operationalLabel=bySource?"Camadas por fonte":"Camadas operacionais";
@@ -998,7 +1010,8 @@
     const cores=(r.fatias||[]).map(f=>f.cor);
     r.fatias=buildFatias(r.min,r.max,r.quebras||[],cores.length?cores:coresDaRampa(r.rampa,(r.quebras||[]).length+1));
   }
-  function previewSymbology(layerId){replaceLayerStyle(layerId,state.symDraft.draft,false);renderLayers();markSymbologyDirty()}
+  const renderLayersDebounced=debounce(renderLayers,120);
+  function previewSymbology(layerId){replaceLayerStyle(layerId,state.symDraft.draft,false);renderLayersDebounced();markSymbologyDirty()}
   function ensureSymbologyTab(layerId){
     let tab=$('[data-right-tab="symbology"]');
     if(!tab){
@@ -1040,8 +1053,9 @@
   function renderCategorizedBody(layerId){
     const fields=state.symbologyFieldsCache?.[layerId]||[],renderer=state.symDraft.draft.renderer||{};
     const cats=renderer.tipo==="categorizado"?(renderer.categorias||[]):[];
-    const list=cats.map((c,i)=>`<div class="sym-class-row" data-sym-index="${i}"><input type="color" data-sym-cor value="${c.cor}" title="Cor"><input type="text" class="sym-class-label" data-sym-rotulo value="${escapeHtml(c.rotulo??c.valor)}"><span class="sym-class-count">${c.contagem!=null?fmtNum(c.contagem):""}</span><button type="button" class="icon-btn" data-sym-remove title="Remover categoria"><i data-lucide="x"></i></button></div>`).join("");
-    return `<div class="sym-body sym-attr"><section class="sym-group"><div class="sym-attr-controls"><div class="sym-field-block"><span>Campo</span>${campoSelect(fields,renderer.campo,true)}</div><div class="sym-field-block"><span>Paleta</span>${rampSelect(renderer.rampa,"qualitativa")}</div><button type="button" class="btn" data-sym-classify><i data-lucide="wand-2"></i>Classificar</button></div></section><section class="sym-group"><h4 class="sym-group-title">Categorias</h4><div class="sym-classes" data-sym-classes>${list||'<p class="sym-hint">Escolha um campo e clique em Classificar para gerar as categorias.</p>'}</div>${cats.length?`<label class="sym-field-block sym-outros"><span>Cor dos demais valores</span><input type="color" data-sym-outros value="${renderer.corOutros||"#cccccc"}"></label>`:""}</section></div>`;
+    const list=cats.map((c,i)=>`<div class="sym-class-row sym-class-row--cat" data-sym-index="${i}"><input type="color" data-sym-cor value="${c.cor}" title="Cor da categoria"><input type="text" class="sym-class-label" data-sym-rotulo value="${escapeHtml(c.rotulo??c.valor)}" title="Rótulo exibido na legenda"><span class="sym-class-count" title="Quantidade de feições com este valor">${c.contagem!=null?fmtNum(c.contagem):""}</span><button type="button" class="icon-btn" data-sym-remove title="Remover categoria"><i data-lucide="x"></i></button></div>`).join("");
+    const header=cats.length?`<div class="sym-class-row sym-class-row--cat sym-class-header" aria-hidden="true"><span>Cor</span><span>Rótulo <em>— texto da legenda; edite livremente</em></span><span>Feições</span><span></span></div>`:"";
+    return `<div class="sym-body sym-attr"><section class="sym-group"><div class="sym-attr-controls"><div class="sym-field-block"><span>Campo</span>${campoSelect(fields,renderer.campo,true)}</div><div class="sym-field-block"><span>Paleta</span>${rampSelect(renderer.rampa,"qualitativa")}</div><button type="button" class="btn" data-sym-classify><i data-lucide="wand-2"></i>Classificar</button></div></section><section class="sym-group"><h4 class="sym-group-title">Categorias</h4>${header}<div class="sym-classes" data-sym-classes>${list||'<p class="sym-hint">Escolha um campo e clique em Classificar para gerar as categorias.</p>'}</div>${cats.length?`<label class="sym-field-block sym-outros"><span>Cor dos demais valores</span><input type="color" data-sym-outros value="${renderer.corOutros||"#cccccc"}"></label>`:""}</section></div>`;
   }
   function renderGraduatedBody(layerId){
     const fields=(state.symbologyFieldsCache?.[layerId]||[]).filter(field=>field.numerico),renderer=state.symDraft.draft.renderer||{};
@@ -1050,8 +1064,9 @@
     const modo=renderer.modo||"discreto",classes=renderer.classes||5;
     const fatias=renderer.tipo==="graduado"?(renderer.fatias||[]):[],quebras=renderer.quebras||[];
     const last=fatias.length-1;
-    const list=fatias.map((f,i)=>`<div class="sym-class-row" data-sym-index="${i}"><input type="color" data-sym-cor value="${f.cor}" title="Cor"><div class="sym-class-range"><span>${fmtNum(f.de)}</span><span class="sym-range-sep">–</span>${i<last?`<input type="number" step="any" data-sym-break value="${f.ate}" title="Limite superior">`:`<span>${fmtNum(f.ate)}</span>`}</div><input type="text" class="sym-class-label" data-sym-rotulo value="${escapeHtml(f.rotulo)}"></div>`).join("");
-    return `<div class="sym-body sym-attr"><section class="sym-group"><div class="sym-attr-controls"><div class="sym-field-block"><span>Campo numérico</span>${campoSelect(fields,renderer.campo,false)}</div><div class="sym-field-block"><span>Paleta</span>${rampSelect(renderer.rampa,"viridis")}</div></div><div class="sym-attr-controls"><label class="sym-field-block"><span>Método</span><select data-sym-metodo>${metodoOpts}</select></label><label class="sym-field-block"><span>Classes</span><input type="number" min="2" max="12" step="1" data-sym-classes-count value="${classes}"></label></div><div class="sym-attr-controls"><fieldset class="sym-modo"><legend>Representação</legend><label><input type="radio" name="sym-modo" value="discreto" ${modo==="discreto"?"checked":""}> Discreto</label><label><input type="radio" name="sym-modo" value="continuo" ${modo==="continuo"?"checked":""}> Contínuo</label></fieldset><button type="button" class="btn" data-sym-classify><i data-lucide="wand-2"></i>Classificar</button></div></section><section class="sym-group"><h4 class="sym-group-title">Classes${quebras.length?` · ${fatias.length}`:""}</h4><div class="sym-classes" data-sym-classes>${list||'<p class="sym-hint">Selecione um campo numérico, o método e o número de classes; então clique em Classificar.</p>'}</div></section></div>`;
+    const list=fatias.map((f,i)=>`<div class="sym-class-row sym-class-row--grad" data-sym-index="${i}"><input type="color" data-sym-cor value="${f.cor}" title="Cor da classe"><div class="sym-class-range"><span title="Limite inferior — é o limite superior da classe anterior">${fmtNum(f.de)}</span><span class="sym-range-sep">–</span>${i<last?`<input type="number" step="any" data-sym-break value="${f.ate}" title="Limite superior — edite para ajustar o corte desta classe">`:`<span title="Limite superior: o maior valor do campo">${fmtNum(f.ate)}</span>`}</div><input type="text" class="sym-class-label" data-sym-rotulo value="${escapeHtml(f.rotulo)}" title="Rótulo exibido na legenda — texto livre, não recalcula o intervalo"></div>`).join("");
+    const header=fatias.length?`<div class="sym-class-row sym-class-row--grad sym-class-header" aria-hidden="true"><span>Cor</span><span class="sym-class-range"><span>De</span><span class="sym-range-sep">–</span><span>Até <em>(editável)</em></span></span><span>Rótulo <em>— texto da legenda; edite livremente</em></span></div>`:"";
+    return `<div class="sym-body sym-attr"><section class="sym-group"><div class="sym-attr-controls"><div class="sym-field-block"><span>Campo numérico</span>${campoSelect(fields,renderer.campo,false)}</div><div class="sym-field-block"><span>Paleta</span>${rampSelect(renderer.rampa,"viridis")}</div></div><div class="sym-attr-controls"><label class="sym-field-block"><span>Método</span><select data-sym-metodo>${metodoOpts}</select></label><label class="sym-field-block"><span>Classes</span><input type="number" min="2" max="12" step="1" data-sym-classes-count value="${classes}"></label></div><div class="sym-attr-controls"><fieldset class="sym-modo"><legend>Representação</legend><label><input type="radio" name="sym-modo" value="discreto" ${modo==="discreto"?"checked":""}> Discreto</label><label><input type="radio" name="sym-modo" value="continuo" ${modo==="continuo"?"checked":""}> Contínuo</label></fieldset><button type="button" class="btn" data-sym-classify><i data-lucide="wand-2"></i>Classificar</button></div></section><section class="sym-group"><h4 class="sym-group-title">Classes${quebras.length?` · ${fatias.length}`:""}</h4>${header}<div class="sym-classes" data-sym-classes>${list||'<p class="sym-hint">Selecione um campo numérico, o método e o número de classes; então clique em Classificar.</p>'}</div></section></div>`;
   }
   function wireSymbologyPanel(layerId){
     const scope=$("#gp-editor-view"),draft=state.symDraft.draft;
@@ -1073,7 +1088,7 @@
     $$('input[name="sym-modo"]',scope).forEach(radio=>radio.onchange=()=>{const r=draft.renderer;if(!r)return;r.modo=radio.value;if(r.fatias?.length){previewSymbology(layerId)}});
     const classify=$("[data-sym-classify]",scope);if(classify)classify.onclick=()=>classifySymbology(layerId);
     $$("[data-sym-cor]",scope).forEach(input=>input.oninput=()=>{const row=input.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;const arr=r.tipo==="categorizado"?r.categorias:r.fatias;if(arr&&arr[i]){arr[i].cor=input.value;previewSymbology(layerId)}});
-    $$("[data-sym-rotulo]",scope).forEach(input=>input.oninput=()=>{const row=input.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;const arr=r.tipo==="categorizado"?r.categorias:r.fatias;if(arr&&arr[i]){arr[i].rotulo=input.value;renderLayers();markSymbologyDirty()}});
+    $$("[data-sym-rotulo]",scope).forEach(input=>input.oninput=()=>{const row=input.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;const arr=r.tipo==="categorizado"?r.categorias:r.fatias;if(arr&&arr[i]){arr[i].rotulo=input.value;renderLayersDebounced();markSymbologyDirty()}});
     $$("[data-sym-remove]",scope).forEach(button=>button.onclick=()=>{const row=button.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;if(r?.categorias){r.categorias.splice(i,1);previewSymbology(layerId);renderSymbologyPanel(layerId)}});
     $$("[data-sym-break]",scope).forEach(input=>input.onchange=()=>{const row=input.closest("[data-sym-index]"),i=Number(row.dataset.symIndex),r=draft.renderer;if(!r?.quebras)return;const valor=Number(input.value);if(!Number.isFinite(valor))return;r.quebras[i]=valor;r.quebras=[...r.quebras].sort((a,b)=>a-b);r.metodo="manual";recomputeFatias(r);previewSymbology(layerId);renderSymbologyPanel(layerId)});
     const outros=$("[data-sym-outros]",scope);if(outros)outros.oninput=()=>{const r=draft.renderer;if(r){r.corOutros=outros.value;previewSymbology(layerId)}};
@@ -1150,13 +1165,35 @@
   function selectedRecordsForLayer(layerId){return(state.selectedGeoJSON?.features||[]).filter(feature=>feature.properties?.__gp_layer_id===layerId).map(feature=>cleanSelectionProperties(feature.properties))}
   function renderAttributeTable(layerId){
     const body=state.attributeTableCache?.[layerId];if(!body)return;
+    const editing=state.editingLayers.has(layerId);
     const selected=selectedRecordsForLayer(layerId),selectedKeys=new Set(selected.map(attributeRecordKey));
     state.attributeTableModes??={};let mode=state.attributeTableModes[layerId]||"all";if(!selected.length)mode="all";state.attributeTableModes[layerId]=mode;
     const fetched=body.registros||[],known=new Set(fetched.map(attributeRecordKey)),all=[...selected.filter(row=>!known.has(attributeRecordKey(row))),...fetched],rows=mode==="selection"?selected:all;
-    const columns=[...new Set([...(body.colunas||[]).map(column=>column.nome),...rows.flatMap(row=>Object.keys(row))])],opened=(state.attributeTableLayers||[]).filter(id=>state.layers.some(layer=>layer.id===id));
-    $("#gp-editor-view").innerHTML=`<div class="attribute-workspace"><div class="attribute-layer-tabs" role="tablist" aria-label="Camadas com tabela aberta">${opened.map(id=>{const layer=state.layers.find(item=>item.id===id);return`<button type="button" role="tab" data-attribute-layer="${escapeHtml(id)}" class="${id===layerId?"active":""}" aria-selected="${id===layerId}">${escapeHtml(layer?.nome||id)}</button>`}).join("")}</div><div class="attribute-table-area"><div class="attribute-table-wrap"><table><thead><tr>${columns.map(column=>`<th>${escapeHtml(column)}</th>`).join("")}</tr></thead><tbody>${rows.map(row=>`<tr class="${selectedKeys.has(attributeRecordKey(row))?"selected-record":""}" data-record-key="${escapeHtml(attributeRecordKey(row))}">${columns.map(column=>`<td>${escapeHtml(row[column]??"")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>${rows.length?"":'<div class="empty compact">Nenhum registro nesta visualização.</div>'}</div><footer class="attribute-footer"><div class="attribute-record-tabs" role="tablist"><button type="button" data-attribute-mode="all" class="${mode==="all"?"active":""}">Todos os registros</button><button type="button" data-attribute-mode="selection" class="${mode==="selection"?"active":""}" ${selected.length?"":"hidden"}>Seleção (${selected.length})</button></div><span>${selected.length} de ${body.total} selecionados</span></footer></div>`;
+    const columns=[...new Set([...(body.colunas||[]).map(column=>column.nome),...rows.flatMap(row=>Object.keys(row))])].filter(column=>column!=="_indice"),opened=(state.attributeTableLayers||[]).filter(id=>state.layers.some(layer=>layer.id===id));
+    const pendentes=state.attributeEdits[layerId]||{};
+    const celula=(row,column)=>{
+      // Só linhas vindas da página buscada (com _indice) são endereçáveis para
+      // edição — uma linha só de seleção, ainda não presente na página atual,
+      // fica somente leitura (mesma regra para valor complexo: dict/lista).
+      const editavel=editing&&row._indice!=null&&typeof row[column]!=="object";
+      if(!editavel)return `<td>${escapeHtml(row[column]??"")}</td>`;
+      const valor=pendentes[row._indice]?.[column]??row[column]??"";
+      const tipo=(body.colunas||[]).find(c=>c.nome===column)?.tipo||"";
+      const inputType=/int|float/.test(tipo)?"number":"text";
+      return `<td class="attribute-cell-editavel"><input type="${inputType}" ${inputType==="number"?"step=\"any\"":""} value="${escapeHtml(valor)}" data-edit-row="${row._indice}" data-edit-field="${escapeHtml(column)}"></td>`;
+    };
+    $("#gp-editor-view").innerHTML=`<div class="attribute-workspace ${editing?"attribute-workspace--editando":""}"><div class="attribute-layer-tabs" role="tablist" aria-label="Camadas com tabela aberta">${opened.map(id=>{const layer=state.layers.find(item=>item.id===id);return`<button type="button" role="tab" data-attribute-layer="${escapeHtml(id)}" class="${id===layerId?"active":""}" aria-selected="${id===layerId}">${escapeHtml(layer?.nome||id)}</button>`}).join("")}</div>${editing?'<p class="attribute-edit-hint"><i data-lucide="pencil"></i> Editando atributos — clique numa célula para alterar. As mudanças só são gravadas ao clicar em "Salvar edições".</p>':""}<div class="attribute-table-area"><div class="attribute-table-wrap"><table><thead><tr>${columns.map(column=>`<th>${escapeHtml(column)}</th>`).join("")}</tr></thead><tbody>${rows.map(row=>`<tr class="${selectedKeys.has(attributeRecordKey(row))?"selected-record":""}" data-record-key="${escapeHtml(attributeRecordKey(row))}">${columns.map(column=>celula(row,column)).join("")}</tr>`).join("")}</tbody></table></div>${rows.length?"":'<div class="empty compact">Nenhum registro nesta visualização.</div>'}</div><footer class="attribute-footer"><div class="attribute-record-tabs" role="tablist"><button type="button" data-attribute-mode="all" class="${mode==="all"?"active":""}">Todos os registros</button><button type="button" data-attribute-mode="selection" class="${mode==="selection"?"active":""}" ${selected.length?"":"hidden"}>Seleção (${selected.length})</button></div>${editing?`<div class="attribute-edit-actions"><span class="attribute-edit-count">${contarEdicoesPendentes(layerId)} edição(ões) pendente(s)</span><button type="button" class="btn ghost" data-attribute-discard ${contarEdicoesPendentes(layerId)?"":"disabled"}>Descartar edições</button><button type="button" class="btn primary" data-attribute-save ${contarEdicoesPendentes(layerId)?"":"disabled"}>Salvar edições</button></div>`:`<span>${selected.length} de ${body.total} selecionados</span>`}</footer></div>`;
+    icons();
     $$('[data-attribute-layer]').forEach(button=>button.onclick=()=>showAttributes(button.dataset.attributeLayer));
     $$('[data-attribute-mode]').forEach(button=>button.onclick=()=>{state.attributeTableModes[layerId]=button.dataset.attributeMode;renderAttributeTable(layerId)});
+    $$('[data-edit-row]').forEach(input=>input.onchange=()=>{
+      marcarEdicaoDeAtributo(layerId,Number(input.dataset.editRow),input.dataset.editField,input.value);
+      const contador=$(".attribute-edit-count"),n=contarEdicoesPendentes(layerId);
+      if(contador)contador.textContent=`${n} edição(ões) pendente(s)`;
+      $$('[data-attribute-save],[data-attribute-discard]').forEach(botao=>botao.disabled=!n);
+    });
+    const salvar=$('[data-attribute-save]');if(salvar)salvar.onclick=()=>salvarEdicoesDeAtributo(layerId);
+    const descartar=$('[data-attribute-discard]');if(descartar)descartar.onclick=()=>descartarEdicoesDeAtributo(layerId);
     if(mode==="all")$(".selected-record")?.scrollIntoView({block:"nearest"});
   }
   async function showAttributes(layerId){
@@ -1169,6 +1206,53 @@
     }catch(error){$("#gp-editor-view").innerHTML=`<div class="empty">${escapeHtml(error.message)}</div>`}
   }
   function syncAttributeSelection(){const layerId=state.activeAttributeLayerId;if(layerId&&state.attributeTableCache?.[layerId]&&$('[data-right-tab="attributes"].active'))renderAttributeTable(layerId)}
+  // Sessão de edição por camada, como o "Toggle Editing" do QGIS / "Edit" do
+  // ArcGIS Pro: liga/desliga, e ao salvar grava na fonte real da camada
+  // (arquivo do acervo quando ela tem um, e sempre também o PostGIS) — ver
+  // POST /camadas/{id}/atributos/salvar.
+  async function toggleLayerEditing(layerId){
+    if(!layerId)return;
+    if(state.editingLayers.has(layerId)){
+      delete state.attributeEdits[layerId];
+      state.editingLayers.delete(layerId);
+      renderLayers();
+      if(state.attributeTableCache?.[layerId])renderAttributeTable(layerId);
+      return;
+    }
+    await showAttributes(layerId);
+    const body=state.attributeTableCache?.[layerId];
+    if(!body)return;
+    if(body.homologada){log("Camada homologada é somente leitura — não pode ser editada.","error");return}
+    state.editingLayers.add(layerId);
+    state.attributeEdits[layerId]={};
+    renderLayers();
+    renderAttributeTable(layerId);
+  }
+  function marcarEdicaoDeAtributo(layerId,indice,campo,valor){
+    const porLayer=state.attributeEdits[layerId]??(state.attributeEdits[layerId]={});
+    (porLayer[indice]??(porLayer[indice]={}))[campo]=valor;
+  }
+  function contarEdicoesPendentes(layerId){
+    return Object.keys(state.attributeEdits[layerId]||{}).length;
+  }
+  async function salvarEdicoesDeAtributo(layerId){
+    const pendentes=state.attributeEdits[layerId]||{};
+    const edicoes=Object.entries(pendentes).map(([indice,campos])=>({indice:Number(indice),campos}));
+    if(!edicoes.length)return;
+    try{
+      const response=await fetch(`${API}/camadas/${layerId}/atributos/salvar`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({edicoes})});
+      const body=await response.json();
+      if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
+      state.attributeEdits[layerId]={};
+      log(body.gravado_em_arquivo?`${body.linhas_editadas} linha(s) gravada(s) no arquivo e no banco.`:`${body.linhas_editadas} linha(s) gravada(s) no banco (camada sem arquivo fonte).`,"ok");
+      await showAttributes(layerId);
+      renderAttributeTable(layerId);
+    }catch(error){log(`Falha ao salvar edições: ${error.message}`,"error")}
+  }
+  function descartarEdicoesDeAtributo(layerId){
+    state.attributeEdits[layerId]={};
+    renderAttributeTable(layerId);
+  }
   function removeLayerFromMap(layerId,report=true){
     if(!layerId)return;
     removeMapResource(layerId);state.layers=state.layers.filter(layer=>layer.id!==layerId);if(state.activeLayerId===layerId)state.activeLayerId=null;renderLayers();showProperties(null);if(report)log(`${layerId} removida apenas do mapa.`,"ok");
@@ -1181,7 +1265,7 @@
     const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail||`Não foi possível excluir ${layerId}`);
     removeLayerFromMap(layerId,false);delete state.layerColors[layerId];save("gp-layer-colors",state.layerColors);log(`${layerId} excluída definitivamente do sistema.`,"ok");
   }
-  document.addEventListener("DOMContentLoaded",()=>{monitorFormAccessibility();initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.dataset.basemapToggle){setBasemap(e.target.dataset.basemapToggle,e.target.checked)}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest("[data-layer-group] > .layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const legend=e.target.closest(".layer-legend");if(legend){const legendRow=legend.closest("[data-layer]");if(legendRow){e.stopPropagation();state.activeLayerId=legendRow.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===legendRow));openSymbology(legendRow.dataset.layer);return}}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});document.addEventListener("click",e=>{const menu=$("#gp-symbology-menu");if(menu&&!menu.contains(e.target)&&!e.target.closest(".layer-symbol"))closeSymbologyMenu();if(!e.target.closest(".symbol-select"))$$(".symbol-select.open").forEach(o=>{o.classList.remove("open");const l=o.querySelector(".symbol-select-list");if(l)l.hidden=true;const t=o.querySelector(".symbol-select-trigger");if(t)t.setAttribute("aria-expanded","false")})});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSymbologyMenu()});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.","ok");emit("pronto",{api:API})});
+  document.addEventListener("DOMContentLoaded",()=>{monitorFormAccessibility();initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.dataset.basemapToggle){setBasemap(e.target.dataset.basemapToggle,e.target.checked)}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest("[data-layer-group] > .layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const legend=e.target.closest(".layer-legend");if(legend){const legendRow=legend.closest("[data-layer]");if(legendRow){e.stopPropagation();state.activeLayerId=legendRow.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===legendRow));openSymbology(legendRow.dataset.layer);return}}const editBtn=e.target.closest("[data-edit-layer]");if(editBtn){e.stopPropagation();toggleLayerEditing(editBtn.dataset.editLayer);return}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});document.addEventListener("click",e=>{const menu=$("#gp-symbology-menu");if(menu&&!menu.contains(e.target)&&!e.target.closest(".layer-symbol"))closeSymbologyMenu();if(!e.target.closest(".symbol-select"))$$(".symbol-select.open").forEach(o=>{o.classList.remove("open");const l=o.querySelector(".symbol-select-list");if(l)l.hidden=true;const t=o.querySelector(".symbol-select-trigger");if(t)t.setAttribute("aria-expanded","false")})});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSymbologyMenu()});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.","ok");emit("pronto",{api:API})});
   const TOOL_SUBGROUPS={"OP-01":"Importação e conexão","OP-02":"Qualidade e preparação","OP-02-CORR":"Qualidade e preparação","OP-03":"Qualidade e preparação","OP-04":"Geometria e proximidade","OP-05":"Sobreposição espacial","OP-05-IDENT":"Sobreposição espacial","OP-06":"Agregação vetorial","OP-07":"Consulta e seleção","OP-08":"Conversão de dados","OP-10":"Distância e custo","OP-11":"Distância e custo","OP-12":"Densidade e distribuição","OP-13":"Distância e custo","OP-14":"Interpolação e superfície","OP-15":"Agregação territorial","OP-16":"Criação de superfície","OP-17":"Álgebra de mapas","OP-20":"Normalização raster","OP-21":"Recorte e máscara","OP-22":"Estatística zonal","OP-23":"Amostragem raster","OP-24":"Extração zonal","OP-25":"Dados vetoriais","OP-26":"Dados raster"};
   Object.assign(TOOL_SUBGROUPS,{"OP-28":"Derivação geométrica","OP-29":"Derivação geométrica","OP-30":"Derivação geométrica","OP-31":"Generalização","OP-32":"Conversão geométrica","OP-33":"Recorte","OP-34":"Junção espacial","OP-35":"Mesclagem","OP-36":"Reprojeção","OP-37":"Medições","OP-38":"Medições","OP-39":"Reclassificação","OP-40":"Classificação binária","OP-41":"Transformação de valores","OP-42":"Estatística focal","OP-43":"Suavização"});
   renderToolbox=function(filter=""){

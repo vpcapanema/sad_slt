@@ -1,7 +1,13 @@
 /* Monitor transversal do fluxo AHP: progresso, erros e status das ações. */
 (function (global) {
   "use strict";
-  function ativo() { return document.body.classList.contains("ahp-module-page") || document.body.classList.contains("ahp-colaborativa-page"); }
+  // Páginas com `feedback-proprio` relatam o processo real (confirmação, log do
+  // servidor e desfecho). O monitor genérico daqui, que anuncia sucesso por
+  // temporizador fixo, sobrescreveria esse modal com uma mensagem inventada.
+  function ativo() {
+    if (document.body.classList.contains("feedback-proprio")) return false;
+    return document.body.classList.contains("ahp-module-page") || document.body.classList.contains("ahp-colaborativa-page");
+  }
   function mensagem(el) { return (el && (el.getAttribute("aria-label") || el.textContent || "")).replace(/\s+/g, " ").trim(); }
   function iniciar(acao) {
     if (!global.SLTFeedback || !ativo()) return null;

@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/assets/css/fase1-execucao.css">
   <link rel="stylesheet" href="/assets/css/documentacao-favorabilidade.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/page-title-standard.css">
 {% endblock %}
 
 {% block conteudo %}
@@ -30,9 +31,9 @@
 <main class="conteudo-principal app-main ahp-main fase-execucao-page doc-favorabilidade">
   {% include "componentes/navegacao_fases_hierarquizacao.html" %}
 
-  <section class="secao-favorabilidade-de-grade-e-da-rede card fase-titulo-card">
-    <h1 class="ahp-page-title"><i class="fa-solid fa-book-atlas"></i> Favorabilidade de grade e da rede</h1>
-    <p class="fase-descricao">
+  <section class="secao-favorabilidade-de-grade-e-da-rede card ahp-step-intro standard-page-hero">
+    <h1 class="standard-page-hero__title"><i class="fa-solid fa-book-atlas"></i> Favorabilidade de grade e da rede</h1>
+    <p class="standard-page-hero__eyebrow">Documentação metodológica</p><p class="standard-page-hero__description">
       Como as superfícies de favorabilidade foram construídas — da premissa que justifica cada
       critério até o índice final, com o mapa de cada critério espacializado.
     </p>
@@ -48,7 +49,7 @@
   </section>
 
   <section class="secao-premissa card ahp-step-section" id="secao-premissa">
-    <div class="ahp-section-label"><span>1. A premissa</span></div>
+    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">1</span><span>A premissa</span></div>
     <div class="ahp-section-body">
       <p>
         A elegibilidade responde <strong>onde é possível</strong> intervir: é um
@@ -63,8 +64,8 @@
         pergunta, e por isso não se misturam num índice só:
       </p>
       <div class="doc-duas-colunas">
-        <article class="doc-destaque">
-          <h3><i class="fa-solid fa-border-all"></i> Grade</h3>
+        <article class="doc-destaque ahp-subcard">
+          <h3><span class="cadastro-subsec-num">1.1</span><i class="fa-solid fa-border-all"></i> Grade</h3>
           <p>
             O <strong>território</strong> como superfície contínua, lido pelo setor
             censitário. Mede o que existe no lugar: massa econômica e
@@ -72,8 +73,8 @@
           </p>
           <p class="doc-numero">{{ "{:,}".format(grade.get('feicoes', 0)).replace(",", ".") }} <small>setores censitários</small></p>
         </article>
-        <article class="doc-destaque">
-          <h3><i class="fa-solid fa-road"></i> Rede</h3>
+        <article class="doc-destaque ahp-subcard">
+          <h3><span class="cadastro-subsec-num">1.2</span><i class="fa-solid fa-road"></i> Rede</h3>
           <p>
             A <strong>infraestrutura</strong> como grafo, lida pelo subtrecho
             rodoviário. Mede o desempenho do que já está construído: tráfego,
@@ -86,7 +87,7 @@
   </section>
 
   <section class="secao-criterios card ahp-step-section" id="secao-criterios">
-    <div class="ahp-section-label"><span>2. Da premissa ao critério</span></div>
+    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">2</span><span>Da premissa ao critério</span></div>
     <div class="ahp-section-body">
       <p class="ahp-help-text">
         Cada critério nasce de uma premissa explícita — a frase que justifica por
@@ -97,7 +98,7 @@
       </p>
 
       {% for bloco in [('Grade', criterios_grade), ('Rede', criterios_rede)] %}
-      <h3 class="doc-subtitulo">{{ bloco[0] }} — {{ bloco[1]|length }} critérios</h3>
+      <h3 class="doc-subtitulo"><span class="cadastro-subsec-num">2.{{ loop.index }}</span>{{ bloco[0] }} — {{ bloco[1]|length }} critérios</h3>
       <div class="doc-criterios">
         {% for criterio in bloco[1] %}
         <article class="doc-criterio">
@@ -136,7 +137,7 @@
   </section>
 
   <section class="secao-dados card ahp-step-section" id="secao-dados">
-    <div class="ahp-section-label"><span>3. Seleção dos dados</span></div>
+    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">3</span><span>Seleção dos dados</span></div>
     <div class="ahp-section-body">
       <p>
         Um critério só entra na conta quando existe dado público que o meça em todo
@@ -163,7 +164,7 @@
   </section>
 
   <section class="secao-espacializacao card ahp-step-section" id="secao-espacializacao">
-    <div class="ahp-section-label"><span>4. Espacialização</span></div>
+    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">4</span><span>Espacialização</span></div>
     <div class="ahp-section-body">
       <p class="ahp-help-text">
         Cada variável bruta foi levada à sua unidade de análise e exportada como
@@ -192,7 +193,7 @@
   </section>
 
   <section class="secao-variaveis card ahp-step-section" id="secao-variaveis">
-    <div class="ahp-section-label"><span>5. Da variável ao critério</span></div>
+    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">5</span><span>Da variável ao critério</span></div>
     <div class="ahp-section-body">
       <p>
         Uma variável bruta raramente é um critério. O critério é uma
@@ -217,7 +218,7 @@
   </section>
 
   <section class="secao-normalizacao card ahp-step-section" id="secao-normalizacao">
-    <div class="ahp-section-label"><span>6. Normalização</span></div>
+    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">6</span><span>Normalização</span></div>
     <div class="ahp-section-body">
       <p>
         Variáveis em unidades diferentes — habitantes, veículos por dia, metros,
@@ -246,7 +247,7 @@
   </section>
 
   <section class="secao-indices card ahp-step-section" id="secao-indices">
-    <div class="ahp-section-label"><span>7. Os índices finais</span></div>
+    <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">7</span><span>Os índices finais</span></div>
     <div class="ahp-section-body">
       <p>
         A agregação é <strong>{{ normalizacao.get('agregacao_final', '—') }}</strong>.
@@ -276,4 +277,8 @@
   </section>
 
 </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-auth.js"></script>
 {% endblock %}

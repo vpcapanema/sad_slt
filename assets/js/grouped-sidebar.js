@@ -311,6 +311,9 @@
         if (expandState[group.id] === undefined) expandState[group.id] = true;
       });
     }
+    (options.forceExpandGroupIds || []).forEach((id) => {
+      expandState[id] = true;
+    });
 
     container.innerHTML = groups
       .map((group) => {

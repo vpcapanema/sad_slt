@@ -50,6 +50,12 @@
 .fase1-ctrl select{margin-top:.2rem;width:100%;font-size:.72rem}
 .fase1-ctrl-ajuda{display:block;margin-top:.25rem;font-size:.66rem;font-weight:400;color:#5a7183}
 .fase1-op-preview{min-height:1rem}
+/* Alternativa ao insumo já homologado: fica fora do preview, que é reescrito a cada seleção. */
+.fase1-op-ou{margin:.6rem 0 .45rem;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:#7c8b95;font-weight:700;text-align:center;position:relative}
+.fase1-op-ou::before,.fase1-op-ou::after{content:"";position:absolute;top:50%;width:calc(50% - 1.4rem);height:1px;background:#dbe4ea}
+.fase1-op-ou::before{left:0}.fase1-op-ou::after{right:0}
+.fase1-op-upload{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;width:100%;text-decoration:none;text-align:center;font-size:.74rem}
+
 .fase1-cr-card{background:#fff;border:1px solid var(--pli-border,#d8dee4);border-radius:.4rem;padding:.35rem .5rem;min-width:0;border-left:3px solid #b7c3cc}
 .fase1-cr-card small{display:flex;align-items:center;gap:.3rem;font-size:.56rem;text-transform:uppercase;letter-spacing:.05em;color:#5a7183;font-weight:700;margin-bottom:.1rem}
 .fase1-cr-card strong{display:block;font-size:.72rem;color:var(--pli-deep,#003b5a);overflow-wrap:anywhere;line-height:1.2}
@@ -116,3 +122,10 @@
 .demanda-mapa{height:220px;margin-top:.5rem;border:1px solid var(--pli-border,#d8dee4);border-radius:8px;overflow:hidden}
 .jv-mapa-aviso{margin:0;padding:.6rem;color:var(--pli-muted,#5a6570);font-size:.68rem}
 
+/* Índice de subseção dentro dos cabeçalhos próprios desta fase. */
+.fase1-op-card>h4 .ahp-subsection-num{width:20px;height:20px;font-size:.62rem}
+.fase1-report-section-head h4 .ahp-subsection-num{width:20px;height:20px;font-size:.62rem;margin-right:.4rem;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--pli-green,#006b3c);color:#fff;font-weight:800}
+/* A bancada e a execução viraram subcards: sem margem dupla dentro deles. */
+.ahp-subcard>.fase1-gp-frame{margin-bottom:0}
+.ahp-subcard>.fase1-execute{margin-top:.6rem}
+.fase1-op-alternativa[hidden]{display:none}

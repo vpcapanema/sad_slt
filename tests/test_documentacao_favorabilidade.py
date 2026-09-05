@@ -37,7 +37,12 @@ def test_pagina_responde(cliente):
 def test_cobre_a_cadeia_inteira(cliente):
     """Da premissa ao índice: nenhuma etapa pode faltar."""
     html = cliente.get(ROTA).text
-    secoes = re.findall(r'<div class="ahp-section-label"><span>([^<]+)</span></div>', html)
+    # O número saiu do texto e virou medalhão: o título é o segundo <span>.
+    secoes = re.findall(
+        r'<div class="ahp-section-label"><span class="ahp-section-index-icon"[^>]*>\d+</span>'
+        r'<span[^>]*>([^<]+)</span></div>',
+        html,
+    )
     for esperado in ("premissa", "critério", "dados", "Espacialização",
                      "variável", "Normalização", "índices"):
         assert any(esperado.lower() in s.lower() for s in secoes), (esperado, secoes)
@@ -82,7 +87,8 @@ def test_pagina_segue_o_padrao_visual_da_fase(cliente):
     (ahp-module/ahp-card) que a primeira versão desta página inventou."""
     html = cliente.get(ROTA).text
     assert "app-main ahp-main fase-execucao-page" in html
-    assert "fase-titulo-card" in html
+    assert "standard-page-hero" in html
+    assert "ahp-section-index-icon" in html
     assert '"ahp-card"' not in html
     assert 'class="ahp-module doc-favorabilidade"' not in html
     assert 'class="ahp-module-header"' not in html
@@ -91,7 +97,7 @@ def test_pagina_segue_o_padrao_visual_da_fase(cliente):
 
 def test_texto_do_cabecalho_e_curto():
     html = Path("templates/paginas/geoespacial/documentacao-favorabilidade.html").read_text(encoding="utf-8")
-    bloco = re.search(r'<p class="fase-descricao">(.*?)</p>', html, re.S)
+    bloco = re.search(r'<p class="standard-page-hero__description">(.*?)</p>', html, re.S)
     assert bloco, "cabeçalho sem parágrafo curto de descrição"
     texto = re.sub(r"<[^>]+>", "", bloco.group(1)).strip()
     assert len(texto.split()) <= 40
