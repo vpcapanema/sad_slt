@@ -9,6 +9,7 @@ tmp/
 *.pem
 node_modules/
 data/geoespacial/uploads/
-data/geoespacial/outputs/
+data/geoespacial/outputs/*
+!data/geoespacial/outputs/normalizacao_favorabilidade_fase2.json
 data/geoespacial/local/
 docker-compose*.yml

@@ -1,0 +1,1105 @@
+{
+  "metodo": "minmax",
+  "formula": "(x-min)/(max-min)",
+  "inversao_relacao_negativa": "1-n",
+  "nodata": "preservado",
+  "criterios_matriz_v3": {
+    "grade": [
+      {
+        "codigo": "G01",
+        "criterio": "Localização em áreas de alta massa econômica",
+        "campo": "crit_g01_massa_economica",
+        "componentes": [
+          "g_pib_setor_n"
+        ],
+        "disponivel": true
+      },
+      {
+        "codigo": "G02",
+        "criterio": "Localização em áreas de maior vulnerabilidade territorial",
+        "campo": "crit_g02_vulnerabilidade",
+        "componentes": [
+          "f_vul_pibpc",
+          "f_vul_agua",
+          "f_vul_esg",
+          "f_vul_lixo",
+          "f_vul_adens"
+        ],
+        "disponivel": true
+      }
+    ],
+    "rede": [
+      {
+        "codigo": "R01",
+        "criterio": "Proximidade com segmentos rodoviários de VDM alto",
+        "campo": "crit_r01_vdm",
+        "componentes": [
+          "f_c1_vdm"
+        ],
+        "disponivel": true
+      },
+      {
+        "codigo": "R02",
+        "criterio": "Proximidade com segmentos de saturação elevada",
+        "campo": "crit_r02_saturacao",
+        "componentes": [
+          "f_c2_vcmax",
+          "f_c2_los"
+        ],
+        "disponivel": true
+      },
+      {
+        "codigo": "R03",
+        "criterio": "Proximidade com segmentos de lentidão recorrente",
+        "campo": "crit_r03_lentidao",
+        "componentes": [
+          "f_c3_delay"
+        ],
+        "disponivel": true
+      },
+      {
+        "codigo": "R04",
+        "criterio": "Proximidade com segmentos de pavimento degradado",
+        "campo": "crit_r04_pavimento",
+        "componentes": [],
+        "disponivel": false
+      },
+      {
+        "codigo": "R05",
+        "criterio": "Proximidade com segmentos de geometria deficiente",
+        "campo": "crit_r05_geometria",
+        "componentes": [
+          "f_c5_relevo",
+          "f_c5_veloc"
+        ],
+        "disponivel": true
+      },
+      {
+        "codigo": "R06",
+        "criterio": "Proximidade com segmentos de forte sobrecarga sazonal",
+        "campo": "crit_r06_sazonalidade",
+        "componentes": [],
+        "disponivel": false
+      },
+      {
+        "codigo": "R07",
+        "criterio": "Maior acessibilidade temporal aos destinos relevantes",
+        "campo": "crit_r07_acess_temporal",
+        "componentes": [
+          "f_c7_polo"
+        ],
+        "disponivel": false
+      },
+      {
+        "codigo": "R08",
+        "criterio": "Maior acessibilidade funcional a eixos hidroviários eficientes",
+        "campo": "crit_r08_hidrovia",
+        "componentes": [
+          "f_c8_hidrov"
+        ],
+        "disponivel": true
+      },
+      {
+        "codigo": "R09",
+        "criterio": "Maior acessibilidade funcional à malha ferroviária estratégica",
+        "campo": "crit_r09_ferrovia",
+        "componentes": [
+          "f_c9_ferrov"
+        ],
+        "disponivel": true
+      },
+      {
+        "codigo": "R10",
+        "criterio": "Maior acessibilidade funcional a polos logísticos estratégicos",
+        "campo": "crit_r10_polos",
+        "componentes": [
+          "f_c10_porto",
+          "f_c10_aero"
+        ],
+        "disponivel": true
+      },
+      {
+        "codigo": "R11",
+        "criterio": "Proximidade com segmentos de alta gravidade de acidentes",
+        "campo": "crit_r11_gravidade",
+        "componentes": [
+          "f_c11_fatal",
+          "f_c11_grave"
+        ],
+        "disponivel": true
+      },
+      {
+        "codigo": "R12",
+        "criterio": "Proximidade com segmentos de alta incidência de acidentes com usuários vulneráveis",
+        "campo": "crit_r12_vulneraveis",
+        "componentes": [
+          "f_c12_pedes",
+          "f_c12_bike",
+          "f_c12_moto"
+        ],
+        "disponivel": true
+      },
+      {
+        "codigo": "R13",
+        "criterio": "Proximidade com concentração elevada de pontos críticos de acidentes",
+        "campo": "crit_r13_pontos_criticos",
+        "componentes": [
+          "f_c13_graves"
+        ],
+        "disponivel": false
+      },
+      {
+        "codigo": "R14",
+        "criterio": "Proximidade com segmentos de alto conflito urbano-regional",
+        "campo": "crit_r14_conflito_urbano",
+        "componentes": [
+          "f_c14_urb"
+        ],
+        "disponivel": true
+      },
+      {
+        "codigo": "R15",
+        "criterio": "Proximidade com segmentos de alta interferência urbano-portuária",
+        "campo": "crit_r15_interferencia_portuaria",
+        "componentes": [
+          "f_c15_urb"
+        ],
+        "disponivel": true
+      },
+      {
+        "codigo": "R16",
+        "criterio": "Maior acessibilidade funcional a nós intermodais estratégicos",
+        "campo": "crit_r16_intermodal",
+        "componentes": [
+          "f_c16_interm"
+        ],
+        "disponivel": false
+      }
+    ]
+  },
+  "agregacao_final": "executada separadamente por média simples dos critérios calculáveis",
+  "grade": {
+    "arquivo": "data\\geoespacial\\outputs\\favorabilidade_grade_normalizada.gpkg",
+    "feicoes": 103620,
+    "metadados": [
+      {
+        "atributo_origem": "g_pop",
+        "atributo_saida": "g_pop_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 4203.0,
+        "validos": 103620,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "g_dom_tot",
+        "atributo_saida": "g_dom_tot_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 1916.0,
+        "validos": 103620,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "g_dom_part",
+        "atributo_saida": "g_dom_part_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 1916.0,
+        "validos": 103620,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "g_dom_ocup",
+        "atributo_saida": "g_dom_ocup_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 1459.0,
+        "validos": 103620,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "g_mond",
+        "atributo_saida": "g_mond_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 11.0,
+        "validos": 103620,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "g_alfab15",
+        "atributo_saida": "g_alfab15_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 3834.0,
+        "validos": 101153,
+        "ausentes": 2467
+      },
+      {
+        "atributo_origem": "g_agua_rede",
+        "atributo_saida": "g_agua_rede_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 1459.0,
+        "validos": 101153,
+        "ausentes": 2467
+      },
+      {
+        "atributo_origem": "g_agua_tot",
+        "atributo_saida": "g_agua_tot_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 1459.0,
+        "validos": 101153,
+        "ausentes": 2467
+      },
+      {
+        "atributo_origem": "g_esg_adeq",
+        "atributo_saida": "g_esg_adeq_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 1456.0,
+        "validos": 101153,
+        "ausentes": 2467
+      },
+      {
+        "atributo_origem": "g_esg_tot",
+        "atributo_saida": "g_esg_tot_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 1459.0,
+        "validos": 101153,
+        "ausentes": 2467
+      },
+      {
+        "atributo_origem": "g_lixo_adeq",
+        "atributo_saida": "g_lixo_adeq_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 1459.0,
+        "validos": 101153,
+        "ausentes": 2467
+      },
+      {
+        "atributo_origem": "g_lixo_tot",
+        "atributo_saida": "g_lixo_tot_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 1459.0,
+        "validos": 101153,
+        "ausentes": 2467
+      },
+      {
+        "atributo_origem": "g_pib_mun",
+        "atributo_saida": "g_pib_mun_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 44001326.0,
+        "maximo": 1066825104983.0,
+        "validos": 103620,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "g_pib_setor",
+        "atributo_saida": "g_pib_setor_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 955616655.2925717,
+        "validos": 103620,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "g_pib_pc",
+        "atributo_saida": "g_pib_pc_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 13549.01,
+        "maximo": 606740.73,
+        "validos": 103620,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "g_agua_rede/g_agua_tot",
+        "atributo_saida": "g_agua_fr",
+        "operacao": "proporcao_adequada",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "g_esg_adeq/g_esg_tot",
+        "atributo_saida": "g_esg_fr",
+        "operacao": "proporcao_adequada",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "g_lixo_adeq/g_lixo_tot",
+        "atributo_saida": "g_lixo_fr",
+        "operacao": "proporcao_adequada",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "g_pib_setor_n",
+        "atributo_saida": "f_mass_pib",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "g_pop_n",
+        "atributo_saida": "f_mass_pop",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "g_pib_pc_n",
+        "atributo_saida": "f_vul_pibpc",
+        "operacao": "1-valor_normalizado",
+        "relacao": "negativa"
+      },
+      {
+        "atributo_origem": "g_agua_fr",
+        "atributo_saida": "f_vul_agua",
+        "operacao": "1-valor_normalizado",
+        "relacao": "negativa"
+      },
+      {
+        "atributo_origem": "g_esg_fr",
+        "atributo_saida": "f_vul_esg",
+        "operacao": "1-valor_normalizado",
+        "relacao": "negativa"
+      },
+      {
+        "atributo_origem": "g_lixo_fr",
+        "atributo_saida": "f_vul_lixo",
+        "operacao": "1-valor_normalizado",
+        "relacao": "negativa"
+      },
+      {
+        "atributo_origem": "g_mond_n",
+        "atributo_saida": "f_vul_adens",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "g_pib_setor_n",
+        "atributo_saida": "crit_g01_massa_economica",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 103620,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "f_vul_pibpc+f_vul_agua+f_vul_esg+f_vul_lixo+f_vul_adens",
+        "atributo_saida": "crit_g02_vulnerabilidade",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 103620,
+        "ausentes": 0
+      }
+    ]
+  },
+  "rede": {
+    "arquivo": "data\\geoespacial\\outputs\\favorabilidade_rede_normalizada.gpkg",
+    "feicoes": 4782,
+    "metadados": [
+      {
+        "atributo_origem": "c3_delay_s",
+        "atributo_saida": "c3_delay_s",
+        "operacao": "imputacao_taxa_por_km=mediana(rodovia)->mediana(tipo)->mediana_global",
+        "relacao": "cobertura",
+        "validos": 3001,
+        "ausentes": 1781
+      },
+      {
+        "atributo_origem": "c3_cur",
+        "atributo_saida": "c3_cur",
+        "operacao": "imputacao=mediana(rodovia)->mediana(tipo)->mediana_global",
+        "relacao": "cobertura",
+        "validos": 3001,
+        "ausentes": 1781
+      },
+      {
+        "atributo_origem": "c3_free",
+        "atributo_saida": "c3_free",
+        "operacao": "imputacao=mediana(rodovia)->mediana(tipo)->mediana_global",
+        "relacao": "cobertura",
+        "validos": 3001,
+        "ausentes": 1781
+      },
+      {
+        "atributo_origem": "c3_ratio",
+        "atributo_saida": "c3_ratio",
+        "operacao": "imputacao=mediana(rodovia)->mediana(tipo)->mediana_global",
+        "relacao": "cobertura",
+        "validos": 3001,
+        "ausentes": 1781
+      },
+      {
+        "atributo_origem": "c1_vdm",
+        "atributo_saida": "c1_vdm_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 146173.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c1_vdm_max",
+        "atributo_saida": "c1_vdm_max_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 152346.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c2_vc",
+        "atributo_saida": "c2_vc_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0031,
+        "maximo": 2.775,
+        "validos": 4496,
+        "ausentes": 286
+      },
+      {
+        "atributo_origem": "c2_vc_max",
+        "atributo_saida": "c2_vc_max_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0034,
+        "maximo": 2.9515,
+        "validos": 4496,
+        "ausentes": 286
+      },
+      {
+        "atributo_origem": "c2_los",
+        "atributo_saida": "c2_los_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 1.0,
+        "maximo": 6.0,
+        "validos": 4496,
+        "ausentes": 286
+      },
+      {
+        "atributo_origem": "c3_cur",
+        "atributo_saida": "c3_cur_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 16.0,
+        "maximo": 122.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c3_free",
+        "atributo_saida": "c3_free_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 19.0,
+        "maximo": 122.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c3_ratio",
+        "atributo_saida": "c3_ratio_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 1.0,
+        "maximo": 3.591,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c3_delay_s",
+        "atributo_saida": "c3_delay_s_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 708.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c5_relevo",
+        "atributo_saida": "c5_relevo_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 1.0,
+        "maximo": 3.0,
+        "validos": 4496,
+        "ausentes": 286
+      },
+      {
+        "atributo_origem": "c5_v0",
+        "atributo_saida": "c5_v0_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 30.0,
+        "maximo": 110.0,
+        "validos": 4496,
+        "ausentes": 286
+      },
+      {
+        "atributo_origem": "c7_polo_m",
+        "atributo_saida": "c7_polo_m_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 19.0,
+        "maximo": 102521.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c8_hidrov_m",
+        "atributo_saida": "c8_hidrov_m_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 29.0,
+        "maximo": 394638.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c9_ferrov_m",
+        "atributo_saida": "c9_ferrov_m_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 126072.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c10_porto_m",
+        "atributo_saida": "c10_porto_m_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 330.0,
+        "maximo": 255176.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c10_aero_m",
+        "atributo_saida": "c10_aero_m_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 19.0,
+        "maximo": 120532.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c11_fatal",
+        "atributo_saida": "c11_fatal_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 75.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c11_grave",
+        "atributo_saida": "c11_grave_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 258.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c12_pedes",
+        "atributo_saida": "c12_pedes_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 73.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c12_bike",
+        "atributo_saida": "c12_bike_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 94.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c12_moto",
+        "atributo_saida": "c12_moto_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 1025.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c13_nsin_gr",
+        "atributo_saida": "c13_nsin_gr_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 277.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c14_urb_m",
+        "atributo_saida": "c14_urb_m_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 15777.4,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c14_dens_m",
+        "atributo_saida": "c14_dens_m_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 15777.4,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c14_urb_fr",
+        "atributo_saida": "c14_urb_fr_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 1.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c15_port",
+        "atributo_saida": "c15_port_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 1.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c15_urb_m",
+        "atributo_saida": "c15_urb_m_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 7348.7,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c15_dens_m",
+        "atributo_saida": "c15_dens_m_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 6759.5,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c16_interm_m",
+        "atributo_saida": "c16_interm_m_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "reescalonamento",
+        "minimo": 4.0,
+        "maximo": 75747.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c3_delay_s",
+        "atributo_saida": "c3_delay_s_n",
+        "operacao": "rank_percentil=(rank_min(x)-1)/(n-1) (substitui minmax; distribuicao de cauda pesada)",
+        "relacao": "reescalonamento",
+        "minimo": 0.0,
+        "maximo": 708.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c3_ratio",
+        "atributo_saida": "c3_ratio_n",
+        "operacao": "rank_percentil=(rank_min(x)-1)/(n-1) (substitui minmax; distribuicao de cauda pesada)",
+        "relacao": "reescalonamento",
+        "minimo": 1.0,
+        "maximo": 3.591,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c3_cur",
+        "atributo_saida": "c3_cur_n",
+        "operacao": "rank_percentil=(rank_min(x)-1)/(n-1) (substitui minmax; distribuicao de cauda pesada)",
+        "relacao": "reescalonamento",
+        "minimo": 16.0,
+        "maximo": 122.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c11_fatal/(ext_m/1000)",
+        "atributo_saida": "c11_fat_km",
+        "operacao": "densidade_por_km",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c11_fat_km",
+        "atributo_saida": "c11_fat_km_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "positiva",
+        "minimo": 0.0,
+        "maximo": 27.3224043715847,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c11_grave/(ext_m/1000)",
+        "atributo_saida": "c11_grav_km",
+        "operacao": "densidade_por_km",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c11_grav_km",
+        "atributo_saida": "c11_grav_km_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "positiva",
+        "minimo": 0.0,
+        "maximo": 100.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c12_pedes/(ext_m/1000)",
+        "atributo_saida": "c12_ped_km",
+        "operacao": "densidade_por_km",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c12_ped_km",
+        "atributo_saida": "c12_ped_km_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "positiva",
+        "minimo": 0.0,
+        "maximo": 50.0,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c12_bike/(ext_m/1000)",
+        "atributo_saida": "c12_bike_km",
+        "operacao": "densidade_por_km",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c12_bike_km",
+        "atributo_saida": "c12_bike_km_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "positiva",
+        "minimo": 0.0,
+        "maximo": 19.51098011540537,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c12_moto/(ext_m/1000)",
+        "atributo_saida": "c12_moto_km",
+        "operacao": "densidade_por_km",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c12_moto_km",
+        "atributo_saida": "c12_moto_km_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "positiva",
+        "minimo": 0.0,
+        "maximo": 487.5,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c13_nsin_gr/(ext_m/1000)",
+        "atributo_saida": "c13_sin_km",
+        "operacao": "densidade_por_km",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c13_sin_km",
+        "atributo_saida": "c13_sin_km_n",
+        "operacao": "minmax=(x-min)/(max-min)",
+        "relacao": "positiva",
+        "minimo": 0.0,
+        "maximo": 112.5,
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "c15_urb_m/ext_m",
+        "atributo_saida": "c15_urb_fr",
+        "operacao": "proporcao",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c15_dens_m/ext_m",
+        "atributo_saida": "c15_dens_fr",
+        "operacao": "proporcao",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c1_vdm_n",
+        "atributo_saida": "f_c1_vdm",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c1_vdm_max_n",
+        "atributo_saida": "f_c1_vdmmax",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c2_vc_n",
+        "atributo_saida": "f_c2_vc",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c2_vc_max_n",
+        "atributo_saida": "f_c2_vcmax",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c2_los_n",
+        "atributo_saida": "f_c2_los",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c3_ratio_n",
+        "atributo_saida": "f_c3_ratio",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c3_delay_s_n",
+        "atributo_saida": "f_c3_delay",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c5_relevo_n",
+        "atributo_saida": "f_c5_relevo",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c11_fat_km_n",
+        "atributo_saida": "f_c11_fatal",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c11_grav_km_n",
+        "atributo_saida": "f_c11_grave",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c12_ped_km_n",
+        "atributo_saida": "f_c12_pedes",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c12_bike_km_n",
+        "atributo_saida": "f_c12_bike",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c12_moto_km_n",
+        "atributo_saida": "f_c12_moto",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c14_urb_fr",
+        "atributo_saida": "f_c14_urb",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c15_port",
+        "atributo_saida": "f_c15_port",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c15_urb_fr",
+        "atributo_saida": "f_c15_urb",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c15_dens_fr",
+        "atributo_saida": "f_c15_dens",
+        "operacao": "valor_normalizado",
+        "relacao": "positiva"
+      },
+      {
+        "atributo_origem": "c3_cur_n",
+        "atributo_saida": "f_c3_veloc",
+        "operacao": "1-valor_normalizado",
+        "relacao": "negativa"
+      },
+      {
+        "atributo_origem": "c5_v0_n",
+        "atributo_saida": "f_c5_veloc",
+        "operacao": "1-valor_normalizado",
+        "relacao": "negativa"
+      },
+      {
+        "atributo_origem": "c8_hidrov_m_n",
+        "atributo_saida": "f_c8_hidrov",
+        "operacao": "1-valor_normalizado",
+        "relacao": "negativa"
+      },
+      {
+        "atributo_origem": "c9_ferrov_m_n",
+        "atributo_saida": "f_c9_ferrov",
+        "operacao": "1-valor_normalizado",
+        "relacao": "negativa"
+      },
+      {
+        "atributo_origem": "c10_porto_m_n",
+        "atributo_saida": "f_c10_porto",
+        "operacao": "1-valor_normalizado",
+        "relacao": "negativa"
+      },
+      {
+        "atributo_origem": "c10_aero_m_n",
+        "atributo_saida": "f_c10_aero",
+        "operacao": "1-valor_normalizado",
+        "relacao": "negativa"
+      },
+      {
+        "atributo_origem": "f_c1_vdm",
+        "atributo_saida": "crit_r01_vdm",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "f_c2_vcmax+f_c2_los",
+        "atributo_saida": "crit_r02_saturacao",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 4496,
+        "ausentes": 286
+      },
+      {
+        "atributo_origem": "f_c3_delay",
+        "atributo_saida": "crit_r03_lentidao",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "f_c5_relevo+f_c5_veloc",
+        "atributo_saida": "crit_r05_geometria",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 4496,
+        "ausentes": 286
+      },
+      {
+        "atributo_origem": "f_c8_hidrov",
+        "atributo_saida": "crit_r08_hidrovia",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "f_c9_ferrov",
+        "atributo_saida": "crit_r09_ferrovia",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "f_c10_porto+f_c10_aero",
+        "atributo_saida": "crit_r10_polos",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "f_c11_fatal+f_c11_grave",
+        "atributo_saida": "crit_r11_gravidade",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "f_c12_pedes+f_c12_bike+f_c12_moto",
+        "atributo_saida": "crit_r12_vulneraveis",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "f_c14_urb",
+        "atributo_saida": "crit_r14_conflito_urbano",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 4782,
+        "ausentes": 0
+      },
+      {
+        "atributo_origem": "f_c15_urb",
+        "atributo_saida": "crit_r15_interferencia_portuaria",
+        "operacao": "media_simples_dos_indicadores_do_criterio",
+        "relacao": "favorabilidade",
+        "validos": 4782,
+        "ausentes": 0
+      }
+    ]
+  }
+}

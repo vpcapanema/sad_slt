@@ -13,7 +13,8 @@ data/geoespacial/local/vegetacao_sp/InventarioFlorestal2020.zip
 # Rascunhos e artefatos gerados (não versionar)
 tmp/
 data/geoespacial/uploads/
-data/geoespacial/outputs/
+data/geoespacial/outputs/*
+!data/geoespacial/outputs/normalizacao_favorabilidade_fase2.json
 data/geoespacial/relatorios/*.log
 
 # Segredos/cache Fase2 (nao versionar)
