@@ -1,5 +1,7 @@
 {
   "workbench.iconTheme": "vscode-icons",
+  "cSpell.language": "en,pt-BR",
+  "cSpell.words": ["autenticacao", "conteudo", "MOCAD", "navegacao", "SICARD"],
   "terminal.integrated.profiles.windows": {
     "Windows PowerShell": {
       "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"

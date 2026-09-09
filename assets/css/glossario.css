@@ -1,0 +1,81 @@
+.glossario {
+  width: min(1320px, 92%);
+  margin: 0 auto;
+  padding: 2rem 0 3rem;
+}
+.cabecalho-glossario { margin-bottom: 2rem; }
+.glossario-voltar { font-size: .875rem; }
+.glossario-sobretitulo {
+  color: var(--pli-blue);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin: 1.5rem 0 .5rem;
+}
+.cabecalho-glossario h1 {
+  color: var(--pli-deep);
+  font-size: clamp(1.6rem, 3vw, 2.3rem);
+  line-height: 1.2;
+  margin: 0 0 .75rem;
+}
+.cabecalho-glossario > p:last-child { color: var(--pli-muted); max-width: 760px; }
+.glossario-layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 2rem; align-items: start; }
+.barra-lateral-glossario {
+  position: sticky;
+  top: 1rem;
+  border: 1px solid var(--pli-border);
+  border-radius: var(--pli-radius);
+  background: white;
+  overflow: hidden;
+}
+.glossario-busca { padding: 1.15rem; border-bottom: 1px solid var(--pli-border); }
+.glossario-busca label { display: block; color: var(--pli-deep); font-weight: 700; font-size: .875rem; margin-bottom: .5rem; }
+.glossario-busca input {
+  width: 100%; min-width: 0; padding: .7rem; border: 1px solid #8798a5;
+  border-radius: 4px; font: inherit; font-size: 1rem; background: white; color: var(--pli-text);
+}
+.glossario-busca button {
+  margin-top: .65rem; padding: .4rem .65rem; border: 1px solid var(--pli-border);
+  border-radius: 4px; background: #f4f7f9; color: var(--pli-deep); cursor: pointer; font: inherit; font-size: .8rem;
+}
+#glossario-contagem { margin: .6rem 0 0; color: var(--pli-muted); font-size: .8rem; }
+.glossario-indice summary { padding: .9rem 1.15rem; color: var(--pli-deep); font-weight: 700; cursor: pointer; }
+.glossario-indice nav { max-height: calc(100vh - 280px); overflow-y: auto; padding: 0 1.15rem 1rem; }
+.glossario-indice-titulo { display: block; font-weight: 700; font-size: .85rem; padding: .5rem 0; }
+.glossario-indice ul { list-style: none; padding: 0 0 .5rem; margin: 0; }
+.glossario-indice li a { display: block; padding: .35rem .5rem; font-size: .8rem; color: var(--pli-muted); text-decoration: none; border-left: 2px solid var(--pli-border); }
+.glossario-indice li a:hover { background: #edf5fa; color: var(--pli-deep); border-color: var(--pli-blue); }
+.glossario-conteudo { min-width: 0; }
+.glossario-grupo { background: white; border: 1px solid var(--pli-border); border-radius: var(--pli-radius); margin-bottom: 1.5rem; overflow: hidden; scroll-margin-top: 1rem; }
+.glossario-grupo h2 { color: var(--pli-deep); background: #eaf1f5; font-size: 1.1rem; padding: 1.1rem 1.5rem; margin: 0; border-bottom: 1px solid var(--pli-border); }
+.glossario-grupo dl { margin: 0; }
+.glossario-entrada { padding: 1.25rem 1.5rem; scroll-margin-top: 1rem; }
+.glossario-entrada + .glossario-entrada { border-top: 1px solid #e6ebef; }
+.glossario-entrada dt { font-weight: 700; color: var(--pli-deep); font-size: 1rem; }
+.glossario-entrada dt a { text-decoration: none; color: inherit; }
+.glossario-entrada dt span { color: var(--pli-muted); font-weight: 400; }
+.glossario-entrada dd { margin: .45rem 0 0; line-height: 1.7; }
+.glossario-entrada:target { background: #eef7fc; box-shadow: inset 4px 0 var(--pli-blue); }
+.glossario :focus-visible { outline: 3px solid var(--pli-blue); outline-offset: 3px; }
+.glossario-referencias { color: var(--pli-muted); font-size: .875rem; padding: .5rem 0; }
+.glossario-referencias h2 { color: var(--pli-deep); font-size: 1.1rem; }
+.glossario-referencias li { margin-bottom: .5rem; }
+.glossario-sem-resultados { padding: 1.5rem; background: white; border: 1px solid var(--pli-border); border-radius: var(--pli-radius); }
+.glossario [hidden] { display: none !important; }
+@media (max-width: 800px) {
+  .glossario { padding-top: 1.25rem; }
+  .glossario-layout { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+  .barra-lateral-glossario { position: static; }
+  .glossario-indice nav { max-height: 220px; }
+  .glossario-entrada { padding: 1rem; }
+  .glossario-grupo h2 { padding: 1rem; }
+}
+@media print {
+  .pagina-glossario .app-header, .pagina-glossario .rodape-institucional,
+  .barra-lateral-glossario, .glossario-voltar { display: none; }
+  .glossario { width: 100%; padding: 0; }
+  .glossario-layout { display: block; }
+  .glossario-entrada { break-inside: avoid; }
+  .glossario-grupo { overflow: visible; }
+}

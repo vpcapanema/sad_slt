@@ -1,0 +1,152 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Documentação do sistema" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
+{% block titulo %}Glossário técnico-conceitual — SICARD{% endblock %}
+{% block descricao %}Termos, siglas e conceitos de cadastro, análise multicritério, hierarquização e geoprocessamento no SICARD.{% endblock %}
+{% block classes_body %}pagina-glossario{% endblock %}
+{% block estilos_pagina %}
+<link rel="stylesheet" href="/assets/css/glossario.css?v=20260909-1">
+{% endblock %}
+
+{# Fontes: README.md (módulos, dados e perfis); documentação/hierarquizacao/
+   ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md, MODELO_HIERARQUIZACAO_ESPACIAL.md,
+   MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md; api/services/ahp_engine.py,
+   config_multicriterio_service.py e documentacao_favorabilidade.py.
+   As fases são descritas como conceitos metodológicos, sem prometer execução
+   de todos os procedimentos previstos nas especificações. #}
+{% set grupos = [
+  {"id": "sistema", "titulo": "Sistema e cadastro", "termos": [
+    ("sicard", "SICARD", "Sistema Inteligente de Cadastro e Ranking de Demandas. Aplicação que reúne cadastro, análise, hierarquização e acompanhamento de planos, programas e projetos, com análise multicritério e informação geoespacial."),
+    ("slt", "SLT", "Subsecretaria de Logística e Transporte, referência institucional das demandas e dos processos de apoio à decisão tratados no SICARD."),
+    ("mocad", "MOCAD", "Módulo de Cadastro e Análise de Demandas. Organiza o registro, a complementação e a análise das informações de planos, programas e projetos."),
+    ("mad", "MAD", "Módulo de Apoio à Decisão. Reúne a análise multicritério e a hierarquização das demandas para apoiar a definição de prioridades."),
+    ("sigma-pli", "SIGMA-PLI", "Sistema externo utilizado pelo SICARD para autenticação e consulta de pessoas e instituições. Os cadastros de referência são mantidos no SIGMA-PLI; as demandas são persistidas no banco do SICARD."),
+    ("demanda", "Demanda", "Registro de uma necessidade ou proposta de intervenção, classificado como plano, programa ou projeto. Suas informações e seu histórico acompanham o avanço no fluxo de cadastro, análise e execução."),
+    ("plano", "Plano", "Instrumento de planejamento que estabelece diretrizes e objetivos para orientar intervenções. No cadastro do SICARD, é um dos tipos de demanda."),
+    ("programa", "Programa", "Conjunto articulado de ações ou projetos voltados a um objetivo comum. É um tipo de demanda distinto de plano e projeto."),
+    ("projeto", "Projeto", "Proposta de intervenção com objeto e escopo próprios. Sua localização e seus atributos podem ser utilizados na avaliação e na hierarquização."),
+    ("status", "Status da demanda", "Estado do registro no fluxo de trabalho. As transições permitidas dependem das regras do sistema e das permissões do usuário; o status não é a posição da demanda no ranking.")
+  ]},
+  {"id": "multicriterio", "titulo": "Análise multicritério", "termos": [
+    ("analise-multicriterio", "Análise multicritério", "Avaliação que considera vários critérios simultaneamente. Explicita quais aspectos importam, como são medidos e qual importância relativa recebem na decisão."),
+    ("ahp", "AHP — Analytic Hierarchy Process", "Método de análise hierárquica que usa comparações pareadas para obter prioridades relativas e avaliar a consistência dos julgamentos. No SICARD, fundamenta a atribuição de pesos na análise multicritério."),
+    ("criterio", "Critério", "Aspecto utilizado para avaliar ou comparar alternativas, como acessibilidade, segurança ou maturidade. Deve ser interpretado junto de sua premissa e da variável que o representa."),
+    ("premissa", "Premissa", "Regra ou orientação conceitual que explica como um critério deve ser interpretado. Orienta a escolha da variável e o sentido em que seu valor favorece a avaliação."),
+    ("alternativa", "Alternativa", "Elemento submetido à avaliação em uma decisão. Na hierarquização de demandas, corresponde ao objeto que será comparado e ordenado no universo selecionado."),
+    ("comparacao-pareada", "Comparação pareada", "Julgamento da importância relativa de dois elementos por vez, sob uma mesma referência de decisão. O conjunto dessas comparações forma a matriz utilizada pelo AHP."),
+    ("matriz-pareada", "Matriz de comparação pareada", "Tabela quadrada que reúne os julgamentos entre os elementos. Na estrutura recíproca do AHP, a diagonal vale 1 e a comparação inversa corresponde ao recíproco do valor informado."),
+    ("peso", "Peso", "Importância relativa atribuída a um critério. Os pesos normalizados somam 1 e orientam a composição dos resultados; não representam o desempenho de um projeto."),
+    ("vetor-prioridades", "Vetor de prioridades", "Conjunto de pesos obtido da matriz de comparação pareada. Expressa a importância relativa dos elementos avaliados na mesma matriz."),
+    ("consistencia", "Consistência dos julgamentos", "Coerência interna das comparações de uma matriz AHP. Uma matriz consistente pode ainda refletir premissas inadequadas: consistência matemática não comprova a qualidade dos dados nem a validade da decisão."),
+    ("lambda-max", "Lambda máximo (λmax)", "Valor associado à matriz e ao vetor de prioridades, utilizado no cálculo da consistência. Em uma matriz perfeitamente consistente, coincide com o número de elementos comparados."),
+    ("indice-consistencia", "Índice de consistência (IC / CI)", "Medida da diferença entre λmax e o número n de elementos da matriz, calculada por IC = (λmax − n) / (n − 1), para n maior que 1."),
+    ("indice-aleatorio", "Índice aleatório (IA / RI)", "Valor de referência associado à dimensão da matriz, utilizado para contextualizar o índice de consistência. No motor AHP do SICARD, é obtido de uma tabela por número de elementos."),
+    ("razao-consistencia", "Razão de consistência (RC / CR)", "Relação entre o índice de consistência e o índice aleatório: RC = IC / IA, quando IA é positivo. Quanto menor o valor, maior a coerência interna. O motor trata separadamente matrizes de até dois elementos."),
+    ("julgamento-colaborativo", "Julgamento colaborativo", "Ambiente que reúne contribuições de participantes para uma análise multicritério. Os convites, o prazo de resposta e as matrizes recebidas permitem acompanhar a participação e analisar os resultados.")
+  ]},
+  {"id": "tema-hierarquizacao", "titulo": "Hierarquização e resultados", "termos": [
+    ("hierarquizacao", "Hierarquização", "Processo de avaliação e ordenação de um conjunto de demandas segundo critérios, pesos e regras explícitos. Organiza a prioridade relativa dentro do universo considerado."),
+    ("rodada", "Rodada de hierarquização", "Execução identificável do processo, com seu universo, configurações, fases e resultados. Permite relacionar um ranking às condições em que foi produzido."),
+    ("universo", "Universo de avaliação", "Conjunto de objetos selecionados para uma análise. A interpretação dos pesos, escores e posições depende desse recorte e da configuração adotada."),
+    ("elegibilidade", "Elegibilidade territorial — Fase 1", "Triagem conceitual que cruza a localização dos projetos com camadas de restrição e risco. Distingue projetos aptos, aptos com ressalva e restritos; sua finalidade é qualificar a continuidade da avaliação."),
+    ("restricao", "Restrição territorial", "Condição espacial tratada como impedimento ou motivo de segregação na triagem. No modelo metodológico, a interseção com uma restrição retira o projeto do ranking ordinário, salvo decisão explícita."),
+    ("risco", "Risco territorial", "Condição espacial que gera ressalva e demanda atenção na avaliação. No modelo da Fase 1, o risco é registrado sem excluir automaticamente o projeto e pode subsidiar o ajuste da Fase 3."),
+    ("favorabilidade", "Favorabilidade territorial — Fase 2", "Avaliação das condições territoriais que favorecem a priorização, conforme critérios e premissas definidos. Utiliza indicadores de grade e/ou rede associados à localização dos projetos."),
+    ("ajuste-fino", "Ajuste por atributos do projeto — Fase 3", "Etapa metodológica opcional que considera informações próprias do projeto, como maturidade e prazo. Depende de atributos suficientes e deve evitar contar novamente aspectos já avaliados na Fase 2."),
+    ("escore", "Escore (score)", "Valor numérico que resume o desempenho de um objeto em um critério, fase ou síntese. Sua escala e interpretação dependem da regra de cálculo; não equivale à posição no ranking."),
+    ("ranking", "Ranking", "Ordenação dos objetos a partir dos resultados da avaliação. Expressa prioridade relativa no universo e na configuração utilizados, sem constituir por si só uma decisão de contratação ou execução."),
+    ("sintese", "Síntese de resultados", "Composição das saídas das fases selecionadas segundo regras e pesos explícitos. Deve preservar a possibilidade de identificar a contribuição de cada fase para o resultado final.")
+  ]},
+  {"id": "geoespacial", "titulo": "Dados e geoprocessamento", "termos": [
+    ("camada", "Camada geoespacial", "Conjunto de informações associado a posições no território. Pode representar feições vetoriais ou valores em uma grade raster e servir como insumo ou produto de processamento."),
+    ("feicao", "Feição vetorial", "Objeto geográfico representado por ponto, linha ou polígono, acompanhado de atributos. Pode representar, por exemplo, uma localização, um trecho de rede ou uma área de estudo."),
+    ("raster", "Raster", "Representação espacial em células, cada uma com um valor ou indicação de ausência de dados. É utilizada para superfícies e indicadores territoriais."),
+    ("grade", "Grade territorial", "Malha de células usada para representar e comparar condições locacionais. A leitura em grade é adequada a fatores territoriais e não substitui indicadores que dependem de conexões da rede."),
+    ("rede", "Rede de transporte", "Representação de conexões entre nós e segmentos. Permite avaliar aspectos como acessibilidade, conectividade e condições de circulação ao longo dos trechos."),
+    ("atributo-projeto", "Atributo do projeto", "Informação intrínseca à proposta, como custo, prazo ou maturidade. No modelo metodológico, permanece associada ao projeto e não precisa ser transformada em uma superfície territorial."),
+    ("fator-hibrido", "Fator híbrido", "Fator avaliativo que combina localização, características da rede e atributos do projeto. Sua interpretação depende de onde o projeto está, como se conecta e o que entrega."),
+    ("buffer", "Buffer / área de influência", "Buffer é uma faixa de proximidade gerada ao redor de uma geometria por uma distância definida. Pode apoiar a delimitação de uma área de influência, cuja extensão deve ser justificada pelo fenômeno avaliado."),
+    ("intersecao", "Interseção espacial", "Operação que identifica a parte comum entre geometrias. Na triagem territorial, permite verificar a sobreposição de projetos com áreas de restrição ou risco."),
+    ("estatistica-zonal", "Estatística zonal", "Resumo de valores de uma camada dentro de uma área delimitada, como média, mínimo ou máximo. A escolha da estatística altera a leitura do indicador atribuído ao projeto."),
+    ("normalizacao", "Normalização", "Transformação de valores para uma escala comparável antes da combinação dos critérios. Deve respeitar o sentido da premissa, distinguindo variáveis em que valores maiores ou menores favorecem a avaliação."),
+    ("sem-dados", "Ausência de dados (NoData)", "Indicação de que não há valor válido disponível em determinada célula ou registro. Não deve ser interpretada automaticamente como zero, ausência de risco ou baixa favorabilidade."),
+    ("camada-homologada", "Camada homologada", "Produto espacial validado para integrar a biblioteca oficial utilizada pelas fases. Distingue-se dos arquivos apenas importados ou processados, que ainda não possuem essa condição."),
+    ("snapshot", "Snapshot", "Registro de uma versão dos dados ou resultados em determinado contexto. Permite referenciar o conteúdo utilizado em uma análise, mesmo quando o acervo de trabalho evolui.")
+  ]},
+  {"id": "governanca", "titulo": "Validação e governança", "termos": [
+    ("homologacao", "Homologação", "Validação formal de uma configuração, produto ou resultado no fluxo correspondente. Seu significado depende do objeto homologado e das regras e permissões aplicáveis."),
+    ("auditoria", "Trilha de auditoria", "Histórico das operações registradas pelo sistema. Apoia a rastreabilidade de alterações e decisões ao longo do processo."),
+    ("perfil", "Perfil de acesso", "Papel associado ao usuário que participa da definição das permissões. O SICARD distingue visualizador, operador, analista, gestor e administrador; a autorização efetiva é verificada pelo backend."),
+    ("visualizador", "Visualizador", "Perfil destinado à consulta das informações para as quais possui autorização."),
+    ("operador", "Operador", "Perfil relacionado às operações de cadastro e processamento, conforme as permissões aplicáveis."),
+    ("analista", "Analista", "Perfil relacionado à análise e à aprovação de demandas, conforme as permissões do fluxo."),
+    ("gestor", "Gestor", "Perfil relacionado à análise, à homologação e à supervisão do processo."),
+    ("administrador", "Administrador", "Perfil de administração técnica. Não herda automaticamente as decisões reservadas aos perfis de analista ou gestor.")
+  ]}
+] %}
+
+{% block conteudo %}
+<main class="conteudo-principal glossario" id="glossario">
+  <header class="cabecalho-glossario">
+    <a class="glossario-voltar" href="/public/documentacao/">← Documentação do sistema</a>
+    <p class="glossario-sobretitulo">Referência do SICARD</p>
+    <h1>Glossário técnico-conceitual</h1>
+    <p>Termos e siglas para compreender o cadastro de demandas, os julgamentos e a construção das prioridades.</p>
+  </header>
+  <div class="glossario-layout">
+    <aside class="barra-lateral-glossario" aria-label="Consulta ao glossário">
+      <form class="glossario-busca" role="search" id="glossario-busca" hidden>
+        <label for="glossario-termo">Buscar termo ou conceito</label>
+        <input type="search" id="glossario-termo" placeholder="Ex.: AHP, risco, peso…" autocomplete="off" aria-controls="glossario-conteudo">
+        <button type="reset">Limpar busca</button>
+        <p id="glossario-contagem" role="status" aria-live="polite"></p>
+      </form>
+      <details class="glossario-indice" open>
+        <summary>Índice de termos</summary>
+        <nav aria-label="Termos por tema">
+          {% for grupo in grupos %}
+          <div class="glossario-indice-grupo" data-indice-grupo="{{ grupo.id }}">
+            <a class="glossario-indice-titulo" href="#{{ grupo.id }}">{{ grupo.titulo }}</a>
+            <ul>
+              {% for id, termo, definicao in grupo.termos %}
+              <li data-indice-termo="{{ id }}"><a href="#{{ id }}">{{ termo }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endfor %}
+        </nav>
+      </details>
+    </aside>
+    <div id="glossario-conteudo" class="glossario-conteudo">
+      <p class="glossario-sem-resultados" id="glossario-sem-resultados" hidden>Nenhum termo encontrado. Tente outra palavra ou limpe a busca.</p>
+      {% for grupo in grupos %}
+      <section class="secao-termos glossario-grupo" id="{{ grupo.id }}" aria-labelledby="titulo-{{ grupo.id }}">
+        <h2 id="titulo-{{ grupo.id }}">{{ grupo.titulo }}</h2>
+        <dl>
+          {% for id, termo, definicao in grupo.termos %}
+          <div class="glossario-entrada" id="{{ id }}" tabindex="-1">
+            <dt><a href="#{{ id }}" title="Link direto para {{ termo }}">{{ termo }}<span aria-hidden="true"> #</span></a></dt>
+            <dd>{{ definicao }}</dd>
+          </div>
+          {% endfor %}
+        </dl>
+      </section>
+      {% endfor %}
+      <section class="secao-referencias glossario-referencias">
+        <h2>Para aprofundar</h2>
+        <p>As definições sintetizam o uso dos termos no SICARD. Os documentos metodológicos detalham o modelo de avaliação e as regras previstas para cada fase.</p>
+        <ul>
+          <li><a href="/public/documentacao/hierarquizacao/ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md">Estrutura metodológica da hierarquização</a></li>
+          <li><a href="/public/documentacao/hierarquizacao/MODELO_HIERARQUIZACAO_ESPACIAL.md">Modelo de avaliação espacial: grade, rede e atributos</a></li>
+          <li><a href="/public/documentacao/hierarquizacao/MODULO_FASE3_ATRIBUTOS_PROJETO_AJUSTE.md">Atributos de projeto e ajuste — Fase 3</a></li>
+        </ul>
+        <a href="#glossario">Voltar ao início ↑</a>
+      </section>
+    </div>
+  </div>
+</main>
+{% endblock %}
+{% block scripts_pagina %}
+<script src="/assets/js/paginas/glossario.js?v=20260909-1" defer></script>
+{% endblock %}

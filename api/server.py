@@ -144,6 +144,11 @@ async def pagina_documentacao_publica(request: Request) -> Response:
     return render_page(request, "paginas/documentacao/index.html")
 
 
+@app.get("/public/documentacao/glossario/", include_in_schema=False)
+async def pagina_glossario_publico(request: Request) -> Response:
+    return render_page(request, "paginas/documentacao/glossario.html")
+
+
 @app.get("/public/transparencia/", include_in_schema=False)
 async def pagina_transparencia_publica(request: Request) -> Response:
     return render_page(request, "paginas/transparencia/index.html")
