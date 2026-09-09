@@ -19,7 +19,7 @@ TIPO_DEMANDANTE_PRIVADA: Final[TipoDemandante] = "privada"
 # Aceita os códigos novos e, para leitura dos registros existentes, o formato
 # legado sem o qualificador do demandante.
 CODIGO_DEMANDA_RE = re.compile(
-    r"^(?:(?:I-)?(?:PLA|PRO|PRJ)|P-PRJ)-[0-9A-F]{8}$"
+    r"^(?:(?:I-)?(?:PLA|PRO|PRJ)|P-PRJ)-(?:SEI-)?[0-9A-F]{8}$"
 )
 
 

@@ -1,351 +1,208 @@
-(function () {
-  "use strict";
+﻿(function () {
+  'use strict';
+  const q = (id) => document.getElementById(id);
+  const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  let tipo = 'externo', conectado = false, lembrada = false, geracao = 0;
 
-  async function request(path, options) {
-    const res = await fetch(path, { credentials: "include", ...options });
+  async function request(path, options = {}) {
+    const res = await fetch(path, { credentials: 'include', ...options });
     const body = await res.json().catch(() => null);
     if (res.status === 401) {
-      const err = new Error((body && body.detail) || "Sessão expirada.");
-      err.code = "UNAUTHORIZED";
-      throw err;
+      location.replace(SLTAdminAuth.loginUrl());
+      throw new Error('Sessão SICARD expirada.');
     }
     if (!res.ok) {
-      const detail = body && body.detail;
-      const message = typeof detail === "string" ? detail : (body && body.message) || "Erro na requisição.";
-      throw new Error(message);
+      const detail = body?.detail;
+      throw new Error(typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map(x => x.msg).join('; ') : 'Não foi possível concluir a operação.');
     }
     return body;
   }
-
-  const els = {};
-  let tipoLoginAtual = "interno";
-
-  function q(id) {
-    return document.getElementById(id);
+  const post = (path, body) => request(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  function aviso(id, texto) {
+    q(id).textContent = texto || '';
+    q(id).classList.toggle('hidden', !texto);
   }
-
-  function cacheEls() {
-    els.tabs = q("sei-login-tabs");
-    els.form = q("sei-conectar-form");
-    els.usuario = q("sei-usuario");
-    els.orgao = q("sei-orgao");
-    els.orgaoHint = q("sei-orgao-hint");
-    els.email = q("sei-email");
-    els.senha = q("sei-senha");
-    els.captchaField = q("sei-captcha-field");
-    els.captchaImg = q("sei-captcha-img");
-    els.captcha = q("sei-captcha");
-    els.lembrar = q("sei-lembrar");
-    els.btnConectar = q("sei-btn-conectar");
-    els.btnDesconectar = q("sei-btn-desconectar");
-    els.status = q("sei-status");
-    els.processosSection = q("sei-processos-section");
-    els.processosBody = q("sei-processos-body");
-    els.processosVazio = q("sei-processos-vazio");
-    els.processosAviso = q("sei-processos-aviso");
-    els.btnAtualizar = q("sei-btn-atualizar");
+  function captcha(dados) {
+    q('sei-captcha-field').classList.toggle('hidden', !dados.captcha_pendente);
+    q('sei-captcha').value = '';
+    q('sei-captcha').required = !!dados.captcha_pendente;
+    if (dados.captcha_imagem_base64) q('sei-captcha-img').src = `data:image/png;base64,${dados.captcha_imagem_base64}`;
+    else q('sei-captcha-img').removeAttribute('src');
   }
-
-  function setTipoLogin(tipo) {
-    tipoLoginAtual = tipo;
-    els.tabs.querySelectorAll("[data-tipo-login]").forEach((btn) => {
-      const ativo = btn.dataset.tipoLogin === tipo;
-      btn.classList.toggle("is-active", ativo);
-      btn.setAttribute("aria-selected", String(ativo));
+  function mostrarTipo(novo) {
+    tipo = novo;
+    q('sei-login-tabs').querySelectorAll('button').forEach(b => {
+      b.classList.toggle('is-active', b.dataset.tipoLogin === tipo);
+      b.setAttribute('aria-selected', String(b.dataset.tipoLogin === tipo));
+      b.disabled = conectado;
     });
-    document.querySelectorAll("[data-campo-login]").forEach((field) => {
-      field.classList.toggle("hidden", field.dataset.campoLogin !== tipo);
+    document.querySelectorAll('[data-campo-login]').forEach(field => {
+      const ativo = field.dataset.campoLogin === tipo;
+      field.classList.toggle('hidden', !ativo);
+      field.querySelectorAll('input,select').forEach(input => { input.disabled = !ativo || conectado; input.required = ativo && !lembrada; });
     });
-    carregarFormularioLogin();
   }
-
-  async function carregarFormularioLogin() {
+  async function carregarFormulario() {
+    const rodada = ++geracao;
+    q('sei-btn-conectar').disabled = true;
     try {
-      const dados = await request(`/api/sei/login-form?tipo_login=${encodeURIComponent(tipoLoginAtual)}`);
-      if (tipoLoginAtual === "interno") {
-        els.orgao.innerHTML = '<option value="">Selecione…</option>';
-        (dados.orgaos || []).forEach((o) => {
-          const opt = document.createElement("option");
-          opt.value = o.value;
-          opt.textContent = o.label;
-          els.orgao.appendChild(opt);
-        });
-        els.orgaoHint.textContent = (dados.orgaos || []).length
-          ? "Carregado ao vivo da página de login do SEI."
-          : "Não foi possível carregar a lista de órgãos agora; tente novamente ao conectar.";
+      const dados = await request(`/api/sei/login-form?tipo_login=${tipo}`);
+      if (rodada !== geracao) return;
+      q('sei-orgao').innerHTML = '<option value="">Selecione…</option>';
+      dados.orgaos.forEach(o => q('sei-orgao').add(new Option(o.label, o.value)));
+      captcha(dados);
+      q('sei-btn-conectar').disabled = false;
+    } catch (e) {
+      aviso('sei-conexao-aviso', e.message + ' Selecione novamente o tipo de acesso para tentar carregar o formulário.');
+    }
+  }
+  function renderStatus(s) {
+    conectado = s.conectado;
+    lembrada = s.lembrada;
+    q('sei-status').textContent = conectado ? `Status: conectado como ${s.identificacao} (${s.tipo_login})` : `Status: ${s.erro || (s.captcha_pendente ? 'aguardando código da imagem' : 'desconectado')}`;
+    q('sei-btn-desconectar').classList.toggle('hidden', !conectado);
+    q('sei-btn-esquecer').classList.toggle('hidden', !lembrada);
+    q('sei-btn-conectar').classList.toggle('hidden', conectado);
+    q('sei-senha').disabled = conectado;
+    q('sei-senha').required = !lembrada && !conectado;
+    q('sei-senha').placeholder = lembrada ? 'Deixe em branco para usar a credencial salva' : '';
+    q('sei-processos-section').hidden = !conectado;
+    aviso('sei-conexao-aviso', s.aviso);
+    mostrarTipo(s.tipo_login || tipo);
+    captcha(s);
+  }
+  async function listar() {
+    q('sei-btn-atualizar').disabled = true;
+    q('sei-processos-body').replaceChildren();
+    aviso('sei-processos-aviso', 'Consultando processos…');
+    q('sei-processos-vazio').classList.add('hidden');
+    try {
+      const r = await request('/api/sei/processos');
+      aviso('sei-processos-aviso', r.aviso);
+      q('sei-processos-vazio').classList.toggle('hidden', !!r.processos.length);
+      for (const p of r.processos) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${esc(p.numero)}</td><td>${esc(p.interessado || p.tipo || 'Não informado')}</td><td>${esc(p.data || 'Não informada')}</td><td>Projeto (revisável)</td><td><button type="button" class="btn btn-secondary btn-sm">Revisar e criar demanda</button></td>`;
+        tr.querySelector('button').onclick = async (e) => {
+          e.target.disabled = true;
+          try { await revisar(p); } catch (err) { SLTAdminUi.showToast(err.message, true); }
+          finally { e.target.disabled = false; }
+        };
+        q('sei-processos-body').append(tr);
       }
-      exibirCaptchaSeNecessario(dados.captcha_pendente, dados.captcha_imagem_base64);
-    } catch (err) {
-      // Best-effort: a lista de órgãos/captcha só ajuda a UX; se falhar, o
-      // usuário ainda pode tentar conectar e ver o erro real na resposta.
-      SLTAdminUi.showToast("Não foi possível pré-carregar a página de login do SEI: " + err.message, true);
+    } catch (e) {
+      aviso('sei-processos-aviso', e.message);
+      renderStatus(await request('/api/sei/status'));
+    } finally { q('sei-btn-atualizar').disabled = false; }
+  }
+  function selectHtml(id, label, list, labelFn, required = true) {
+    return `<div class="form-field"><label for="${id}">${label}</label><select id="${id}" name="${id}" ${required ? 'required' : ''}><option value="">Selecione…</option>${list.map(x => `<option value="${esc(x.id)}">${esc(labelFn(x))}</option>`).join('')}</select></div>`;
+  }
+  async function revisar(p) {
+    const [detalhe, instituicoes, pessoas, catalog, planos] = await Promise.all([
+      request(`/api/sei/processo?numero=${encodeURIComponent(p.numero)}`),
+      SLTSigmaRead.listInstituicoes(), SLTSigmaRead.listPessoas(), SLTCatalog.loadCatalog(), SLTAdminApi.listPlanos(),
+    ]);
+    const body = `<p class="step-intro">Confira o conteúdo do processo, escolha o tipo de demanda e complete os dados do cadastro. A sugestão inicial é Projeto; os vínculos e a localização exigem sua revisão.</p>
+      ${detalhe.aviso ? `<p class="hint">${esc(detalhe.aviso)}</p>` : ''}
+      <details><summary>Conteúdo consultado (${detalhe.documentos.length} páginas/documentos)</summary><div class="sei-documentos">${esc(detalhe.descricao || 'Sem texto extraível. Confira o documento no SEI.')}</div></details>
+      <form id="sei-revisao-form" class="form-grid sei-form">
+        <div class="form-field"><label for="rev-tipo">Tipo de demanda</label><select id="rev-tipo"><option value="projeto">Projeto</option><option value="plano">Plano</option><option value="programa">Programa</option></select></div>
+        <div class="form-field"><label for="rev-nome">Nome</label><input id="rev-nome" type="text" required maxlength="200" value="${esc(detalhe.nome)}"></div>
+        <div class="form-field sei-full"><label for="rev-descricao">Descrição</label><textarea id="rev-descricao" rows="6" required>${esc(detalhe.descricao)}</textarea></div>
+        ${selectHtml('rev-instituicao', 'Instituição', instituicoes, SLTSigmaRead.labelInstituicao)}
+        ${selectHtml('rev-pessoa', 'Representante legal', pessoas, SLTSigmaRead.labelPessoa)}
+        <div class="form-field sei-full" id="rev-vinculo-field"><label><input id="rev-vinculo" type="checkbox"> Vincular a um plano institucional</label></div>
+        ${selectHtml('rev-diretoria', 'Diretoria', SLTCatalog.ativos(catalog.diretorias), x => x.nome_oficial)}
+        ${selectHtml('rev-plano', 'Plano vinculado', planos, x => x.nome, false)}
+        <div class="form-field" data-projeto><label for="rev-lat">Latitude</label><input id="rev-lat" type="number" min="-90" max="90" step="any" required></div>
+        <div class="form-field" data-projeto><label for="rev-lng">Longitude</label><input id="rev-lng" type="number" min="-180" max="180" step="any" required></div>
+        <p class="hint sei-full" data-projeto>Informe as coordenadas reais do projeto. Valores ausentes não são substituídos por zero.</p>
+      </form><p id="sei-revisao-erro" class="hint" role="alert"></p>`;
+    const modal = SLTAdminUi.openModal(`Revisar processo ${esc(p.numero)}`, body, '<button type="button" class="btn btn-primary" id="sei-confirmar">Confirmar e criar demanda</button>');
+    const f = id => modal.querySelector('#' + id);
+    function ajustar() {
+      const t = f('rev-tipo').value, vinculo = f('rev-vinculo').checked;
+      modal.querySelectorAll('[data-projeto]').forEach(el => {
+        el.hidden = t !== 'projeto';
+        el.querySelectorAll('input').forEach(input => { input.disabled = t !== 'projeto'; });
+      });
+      f('rev-vinculo-field').hidden = t === 'plano';
+      f('rev-plano').closest('.form-field').hidden = t === 'plano' || !vinculo;
+      f('rev-plano').required = t !== 'plano' && vinculo;
+      f('rev-diretoria').closest('.form-field').hidden = t !== 'plano';
+      f('rev-diretoria').required = t === 'plano';
     }
-  }
-
-  function exibirCaptchaSeNecessario(pendente, imagemBase64) {
-    els.captchaField.classList.toggle("hidden", !pendente);
-    if (pendente && imagemBase64) {
-      els.captchaImg.src = `data:image/png;base64,${imagemBase64}`;
-    }
-  }
-
-  function renderStatus(status) {
-    let texto;
-    if (status.conectado) {
-      texto = `Conectado como <strong>${escapeHtml(status.identificacao || "")}</strong> (${status.tipo_login})`;
-    } else if (status.captcha_pendente) {
-      texto = "Aguardando código do captcha…";
-      exibirCaptchaSeNecessario(true, status.captcha_imagem_base64);
-    } else if (status.erro) {
-      texto = `Erro: ${escapeHtml(status.erro)}`;
-    } else {
-      texto = "Desconectado";
-    }
-    els.status.innerHTML = `Status: ${texto}`;
-    els.btnDesconectar.classList.toggle("hidden", !status.conectado);
-    els.processosSection.hidden = !status.conectado;
-    if (status.conectado) carregarProcessos();
-  }
-
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  async function atualizarStatus() {
-    try {
-      const status = await request("/api/sei/status");
-      renderStatus(status);
-    } catch (err) {
-      if (err.code === "UNAUTHORIZED") throw err;
-      SLTAdminUi.showToast("Falha ao consultar status SEI: " + err.message, true);
-    }
-  }
-
-  async function conectar(event) {
-    event.preventDefault();
-    els.btnConectar.disabled = true;
-    els.status.innerHTML = "Status: Conectando…";
-    try {
-      const payload = {
-        tipo_login: tipoLoginAtual,
-        senha: els.senha.value,
-        lembrar_credencial: !!els.lembrar.checked,
-        captcha: els.captchaField.classList.contains("hidden") ? null : els.captcha.value || null,
+    f('rev-tipo').onchange = ajustar;
+    f('rev-vinculo').onchange = ajustar;
+    ajustar();
+    f('sei-confirmar').onclick = async () => {
+      if (!f('sei-revisao-form').reportValidity()) return;
+      const tipoDemanda = f('rev-tipo').value;
+      const inst = instituicoes.find(x => String(x.id) === f('rev-instituicao').value);
+      const pessoa = pessoas.find(x => String(x.id) === f('rev-pessoa').value);
+      const plano = planos.find(x => String(x.id) === f('rev-plano').value);
+      const vinculo = f('rev-vinculo').checked && tipoDemanda !== 'plano';
+      const campos = {
+        nome: f('rev-nome').value.trim(), descricao: f('rev-descricao').value.trim(),
+        instituicao_id: String(inst.id), instituicao_label: SLTSigmaRead.labelInstituicao(inst),
+        pessoa_id: String(pessoa.id), representante: { pessoa_id: String(pessoa.id), nome: SLTSigmaRead.labelPessoa(pessoa) },
       };
-      if (tipoLoginAtual === "interno") {
-        payload.usuario = els.usuario.value;
-        payload.orgao = els.orgao.value || null;
-      } else {
-        payload.email = els.email.value;
-      }
-      const status = await request("/api/sei/conectar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      renderStatus(status);
-      if (status.conectado) {
-        SLTAdminUi.showToast("Conectado ao SEI-SP com sucesso.");
-      } else if (!status.captcha_pendente) {
-        SLTAdminUi.showToast(status.erro || "Não foi possível conectar.", true);
-      }
-    } catch (err) {
-      if (err.code === "UNAUTHORIZED") throw err;
-      SLTAdminUi.showToast("Falha ao conectar ao SEI-SP: " + err.message, true);
-    } finally {
-      els.btnConectar.disabled = false;
-    }
-  }
-
-  async function desconectar() {
-    try {
-      await request("/api/sei/desconectar", { method: "POST" });
-      await atualizarStatus();
-      SLTAdminUi.showToast("Desconectado do SEI-SP.");
-    } catch (err) {
-      if (err.code === "UNAUTHORIZED") throw err;
-      SLTAdminUi.showToast("Falha ao desconectar: " + err.message, true);
-    }
-  }
-
-  async function carregarProcessos() {
-    els.processosBody.innerHTML = "";
-    els.processosAviso.classList.add("hidden");
-    els.processosVazio.classList.add("hidden");
-    try {
-      const resultado = await request("/api/sei/processos");
-      if (resultado.aviso) {
-        els.processosAviso.textContent = resultado.aviso;
-        els.processosAviso.classList.remove("hidden");
-      }
-      if (!resultado.processos || !resultado.processos.length) {
-        els.processosVazio.classList.remove("hidden");
-        return;
-      }
-      resultado.processos.forEach((processo) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${escapeHtml(processo.numero)}</td>
-          <td>${escapeHtml(processo.interessado || processo.tipo || "—")}</td>
-          <td>${escapeHtml(processo.data || "—")}</td>
-          <td><span class="badge">${escapeHtml(processo.tipo_demanda_estimado || "projeto")}</span></td>
-          <td><button type="button" class="btn btn-secondary btn-sm" data-revisar>Revisar e criar demanda</button></td>`;
-        tr.querySelector("[data-revisar]").addEventListener("click", () => abrirRevisao(processo));
-        els.processosBody.appendChild(tr);
-      });
-    } catch (err) {
-      if (err.code === "UNAUTHORIZED") throw err;
-      SLTAdminUi.showToast("Falha ao listar processos SEI: " + err.message, true);
-    }
-  }
-
-  // Campos mínimos por tipo de demanda — ver api/schemas/demanda.py, plano.py e
-  // programa.py para o contrato completo. Formulário simples (sem
-  // autocomplete de instituição/representante do SIGMA) porque esta tela não
-  // reaproveita o cadastro público completo — o usuário revisa/edita antes de confirmar.
-  const CAMPOS_POR_TIPO = {
-    projeto: [
-      { name: "nome", label: "Nome do projeto", type: "text", required: true },
-      { name: "descricao", label: "Descrição", type: "textarea" },
-      { name: "instituicao_id", label: "Instituição (UUID SIGMA)", type: "text", required: true },
-      { name: "pessoa_id", label: "Representante legal (UUID pessoa SIGMA)", type: "text", required: true },
-      { name: "representante_nome", label: "Nome do representante", type: "text", required: true },
-      { name: "diretoria_id", label: "Diretoria (UUID)", type: "text", required: true },
-      { name: "plano_id", label: "Plano vinculado (código)", type: "text", required: true },
-      { name: "lat", label: "Latitude", type: "number" },
-      { name: "lng", label: "Longitude", type: "number" },
-    ],
-    plano: [
-      { name: "nome", label: "Nome do plano", type: "text", required: true },
-      { name: "descricao", label: "Descrição", type: "textarea", required: true },
-      { name: "instituicao_id", label: "Instituição (UUID SIGMA)", type: "text", required: true },
-      { name: "pessoa_id", label: "Representante legal (UUID pessoa SIGMA)", type: "text", required: true },
-      { name: "representante_nome", label: "Nome do representante", type: "text", required: true },
-      { name: "diretoria_id", label: "Diretoria (UUID)", type: "text", required: true },
-    ],
-    programa: [
-      { name: "nome", label: "Nome do programa", type: "text", required: true },
-      { name: "descricao", label: "Descrição", type: "textarea", required: true },
-      { name: "instituicao_id", label: "Instituição (UUID SIGMA)", type: "text", required: true },
-      { name: "pessoa_id", label: "Representante legal (UUID pessoa SIGMA)", type: "text", required: true },
-      { name: "representante_nome", label: "Nome do representante", type: "text", required: true },
-    ],
-  };
-
-  function campoHtml(campo, valor) {
-    const req = campo.required ? "required" : "";
-    const val = escapeHtml(valor || "");
-    if (campo.type === "textarea") {
-      return `<div class="form-field"><label for="rev-${campo.name}">${campo.label}</label>
-        <textarea id="rev-${campo.name}" name="${campo.name}" ${req}>${val}</textarea></div>`;
-    }
-    return `<div class="form-field"><label for="rev-${campo.name}">${campo.label}</label>
-      <input type="${campo.type}" id="rev-${campo.name}" name="${campo.name}" value="${val}" ${req}
-        ${campo.type === "number" ? 'step="any"' : ""}></div>`;
-  }
-
-  function abrirRevisao(processo) {
-    const tipoInicial = processo.tipo_demanda_estimado || "projeto";
-    const bodyHtml = `
-      <form id="sei-revisao-form" class="form-grid">
-        <div class="form-field">
-          <label for="rev-tipo-demanda">Tipo de demanda</label>
-          <select id="rev-tipo-demanda">
-            <option value="plano">Plano</option>
-            <option value="programa">Programa</option>
-            <option value="projeto" selected>Projeto</option>
-          </select>
-        </div>
-        <div id="rev-campos-container"></div>
-      </form>`;
-    const footerHtml = `<button type="button" class="btn btn-primary" id="sei-btn-confirmar-demanda">Confirmar e criar demanda</button>`;
-    const backdrop = SLTAdminUi.openModal(`Revisar processo ${escapeHtml(processo.numero)}`, bodyHtml, footerHtml);
-
-    const selectTipo = backdrop.querySelector("#rev-tipo-demanda");
-    const container = backdrop.querySelector("#rev-campos-container");
-
-    function renderCampos(tipo) {
-      const valoresIniciais = {
-        nome: processo.interessado || `Processo SEI ${processo.numero}`,
-        descricao: processo.tipo || "",
-      };
-      container.innerHTML = (CAMPOS_POR_TIPO[tipo] || [])
-        .map((campo) => campoHtml(campo, valoresIniciais[campo.name]))
-        .join("");
-    }
-
-    selectTipo.value = tipoInicial;
-    renderCampos(tipoInicial);
-    selectTipo.addEventListener("change", () => renderCampos(selectTipo.value));
-
-    backdrop.querySelector("#sei-btn-confirmar-demanda").addEventListener("click", async () => {
-      const tipo = selectTipo.value;
-      const definicoes = CAMPOS_POR_TIPO[tipo] || [];
-      const campos = {};
-      let valido = true;
-      definicoes.forEach((def) => {
-        const input = backdrop.querySelector(`#rev-${def.name}`);
-        const valor = input ? input.value.trim() : "";
-        if (def.required && !valor) valido = false;
-        if (def.type === "number") {
-          campos[def.name] = valor === "" ? null : Number(valor);
-        } else {
-          campos[def.name] = valor || null;
-        }
-      });
-      if (!valido) {
-        SLTAdminUi.showToast("Preencha os campos obrigatórios antes de confirmar.", true);
-        return;
-      }
-      // Monta o payload no formato esperado pelo schema do tipo escolhido
-      // (ver api/schemas/demanda.py — RepresentanteSchema aninhado).
-      const representante = { nome: campos.representante_nome, pessoa_id: campos.pessoa_id };
-      delete campos.representante_nome;
-      const payloadCampos = { ...campos, representante };
-      if (tipo === "projeto") {
-        payloadCampos.lat = campos.lat ?? 0;
-        payloadCampos.lng = campos.lng ?? 0;
-      }
+      if (tipoDemanda === 'projeto') Object.assign(campos, { lat: Number(f('rev-lat').value), lng: Number(f('rev-lng').value), diretoria_id: vinculo ? plano.diretoria_id : '', plano_id: vinculo ? plano.id : '', vinculo_institucional: vinculo, vinculo_tipo: vinculo ? 'plano' : null });
+      if (tipoDemanda === 'plano') campos.diretoria_id = f('rev-diretoria').value;
+      if (tipoDemanda === 'programa') Object.assign(campos, { vinculo_institucional: vinculo, plano_codigo: vinculo ? plano.id : null });
+      f('sei-confirmar').disabled = true;
+      f('sei-revisao-erro').textContent = '';
       try {
-        await request(`/api/sei/processos/${encodeURIComponent(processo.numero)}/criar-demanda`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tipo_demanda: tipo, campos: payloadCampos }),
-        });
+        const criada = await post(`/api/sei/processos/${encodeURIComponent(p.numero)}/criar-demanda`, { tipo_demanda: tipoDemanda, campos });
         SLTAdminUi.closeModal();
-        SLTAdminUi.showToast("Demanda criada a partir do processo SEI.");
-      } catch (err) {
-        if (err.code === "UNAUTHORIZED") throw err;
-        SLTAdminUi.showToast("Falha ao criar demanda: " + err.message, true);
+        SLTAdminUi.showToast(`Demanda ${criada.id} criada a partir do SEI.`);
+      } catch (e) {
+        f('sei-revisao-erro').textContent = e.message;
+        f('sei-confirmar').disabled = false;
       }
-    });
+    };
   }
-
   async function init() {
-    const user = await SLTAdminAuth.requireAuth();
-    if (!user) return;
-    cacheEls();
-
-    els.tabs.querySelectorAll("[data-tipo-login]").forEach((btn) => {
-      btn.addEventListener("click", () => setTipoLogin(btn.dataset.tipoLogin));
+    if (!await SLTAdminAuth.requireAuth()) return;
+    q('sei-login-tabs').querySelectorAll('button').forEach(b => b.onclick = async () => {
+      if (conectado) return;
+      lembrada = false;
+      q('sei-senha').value = '';
+      q('sei-senha').required = true;
+      mostrarTipo(b.dataset.tipoLogin);
+      await carregarFormulario();
     });
-    els.form.addEventListener("submit", conectar);
-    els.btnDesconectar.addEventListener("click", desconectar);
-    els.btnAtualizar.addEventListener("click", carregarProcessos);
-
-    setTipoLogin("interno");
-    await atualizarStatus();
-  }
-
-  init().catch((err) => {
-    if (err && err.code === "UNAUTHORIZED") {
-      location.replace(SLTAdminAuth.loginUrl());
-      return;
+    q('sei-conectar-form').onsubmit = async (e) => {
+      e.preventDefault();
+      q('sei-btn-conectar').disabled = true;
+      try {
+        const s = await post('/api/sei/conectar', { tipo_login: tipo, usuario: q('sei-usuario').value, email: q('sei-email').value, orgao: q('sei-orgao').value || null, senha: q('sei-senha').value || null, captcha: q('sei-captcha').value || null, lembrar_credencial: q('sei-lembrar').checked });
+        renderStatus(s);
+        if (s.conectado) { q('sei-senha').value = ''; await listar(); }
+      } catch (err) { aviso('sei-conexao-aviso', err.message); }
+      finally { q('sei-btn-conectar').disabled = false; }
+    };
+    const disconnect = async (forget) => {
+      try {
+        await post('/api/sei/desconectar' + (forget ? '?esquecer_credencial=true' : ''));
+        renderStatus(await request('/api/sei/status'));
+        await carregarFormulario();
+      } catch (e) { aviso('sei-conexao-aviso', e.message); }
+    };
+    q('sei-btn-desconectar').onclick = () => disconnect(false);
+    q('sei-btn-esquecer').onclick = () => disconnect(true);
+    q('sei-btn-atualizar').onclick = listar;
+    const s = await request('/api/sei/status');
+    renderStatus(s);
+    if (s.conectado) await listar();
+    else {
+      await carregarFormulario();
+      if (s.lembrada) {
+        q(tipo === 'interno' ? 'sei-usuario' : 'sei-email').value = s.identificacao || '';
+        q('sei-orgao').value = s.orgao_selecionado || '';
+      }
     }
-    SLTAdminUi.showToast((err && err.message) || "Erro ao iniciar a página.", true);
-  });
+  }
+  init().catch(e => SLTAdminUi.showToast(e.message, true));
 })();

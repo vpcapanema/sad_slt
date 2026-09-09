@@ -13,7 +13,7 @@ class SeiConectarSchema(BaseModel):
     usuario: str | None = Field(None, description="txtUsuario — obrigatório no login interno")
     orgao: str | None = Field(None, description="selOrgao — obrigatório no login interno")
     email: str | None = Field(None, description="txtEmail — obrigatório no login externo")
-    senha: str = Field(..., min_length=1)
+    senha: str | None = Field(None, min_length=1)
     captcha: str | None = Field(None, description="Texto digitado pelo usuário, quando o SEI exigir captcha")
     lembrar_credencial: bool = False
 
@@ -27,6 +27,7 @@ class SeiStatusSchema(BaseModel):
     orgao_selecionado: str | None = None
     lembrada: bool = False
     erro: str | None = None
+    aviso: str | None = None
     captcha_pendente: bool = False
     captcha_imagem_base64: str | None = None
 
