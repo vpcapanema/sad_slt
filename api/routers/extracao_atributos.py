@@ -113,9 +113,19 @@ def apagar_configuracao(chave: str, user: SessionUser = Depends(require_geospati
         raise HTTPException(422,str(exc)) from exc
 
 
+class OpcoesOverlay(BaseModel):
+    """Opções do operador de overlay do OGR, escolhidas na seção de execução."""
+    promover_multipartes: bool = True
+    manter_dimensoes_menores: bool = False
+    ignorar_falhas: bool = False
+    geometrias_preparadas: bool = True
+    pretestar_continencia: bool = False
+
+
 class Extracao(BaseModel):
     input_id: str = Field(min_length=1,max_length=100)
     operacao: Literal['intersection','identity'] = 'intersection'
+    opcoes: OpcoesOverlay = OpcoesOverlay()
     categorias: list[Categoria] = Field(min_length=1,max_length=30)
 
 

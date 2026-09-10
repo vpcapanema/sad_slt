@@ -7,7 +7,15 @@ import { criarResultados } from "./resultados.js";
 import { adaptador, json, esperar } from './api.js';
 import { confirmarExecucao, acompanharExecucao } from './processo.js';
 
-const state={catalog:[],categories:[],bases:[],staging:[],input:"",operation:"intersection",result:null,busy:false};
+const OPCOES_OVERLAY=[
+  ["promover_multipartes","Promover a multipartes","PROMOTE_TO_MULTI",true],
+  ["manter_dimensoes_menores","Manter bordas e toques","KEEP_LOWER_DIMENSION_GEOMETRIES",false],
+  ["ignorar_falhas","Ignorar feições com falha","SKIP_FAILURES",false],
+  ["geometrias_preparadas","Geometrias preparadas","USE_PREPARED_GEOMETRIES",true],
+  ["pretestar_continencia","Pré-testar continência","PRETEST_CONTAINMENT",false],
+];
+const state={catalog:[],categories:[],bases:[],staging:[],input:"",operation:"intersection",
+  opcoes:Object.fromEntries(OPCOES_OVERLAY.map(([chave,,,padrao])=>[chave,padrao])),result:null,busy:false};
 const map=criarMapa(),results=criarResultados();
 const config=criarConfiguracao(state,changed);
 function controls() {
@@ -84,8 +92,30 @@ function validateResult(value) {
   if(value.geojson?.features?.length) validateGeoJSON(value.geojson);
   return value;
 }
+// Os parametros do operador do OGR abrem abaixo do seletor e seguem no pedido.
+function renderParametros() {
+  const host=$("#ea-operation-params");if(!host)return;
+  const operador=state.operation==="identity"?"ogr.Layer.Identity":"ogr.Layer.Intersection";
+  host.replaceChildren();
+  const titulo=document.createElement("h4");titulo.className="ea-op-params-title";
+  titulo.textContent=`Parâmetros de ${operador}`;host.append(titulo);
+  const grade=document.createElement("div");grade.className="ea-op-params-grid";
+  for(const [chave,rotulo,opcao] of OPCOES_OVERLAY){
+    const campo=document.createElement("label");campo.className="ea-field";
+    const nome=document.createElement("span");nome.textContent=rotulo;
+    const dica=document.createElement("small");dica.textContent=opcao;
+    const select=document.createElement("select");
+    select.append(new Option("Sim","sim"),new Option("Não","nao"));
+    select.value=state.opcoes[chave]?"sim":"nao";
+    select.disabled=state.busy;
+    select.setAttribute("aria-label",`${rotulo} (${opcao})`);
+    select.addEventListener("change",()=>{state.opcoes[chave]=select.value==="sim";});
+    campo.append(nome,dica,select);grade.append(campo);
+  }
+  host.append(grade);
+}
 function request() {
-  return {motor:"gdal",operacao:state.operation,input:state.catalog.find(l=>l.id===state.input),categorias:state.categories.filter(c=>state.bases.some(b=>b.category===c.id)).map(c=>({id:c.id,nome:c.nome,camadas:state.bases.filter(b=>b.category===c.id).map(b=>state.catalog.find(l=>l.id===b.id))}))};
+  return {motor:"gdal",operacao:state.operation,opcoes:{...state.opcoes},input:state.catalog.find(l=>l.id===state.input),categorias:state.categories.filter(c=>state.bases.some(b=>b.category===c.id)).map(c=>({id:c.id,nome:c.nome,camadas:state.bases.filter(b=>b.category===c.id).map(b=>state.catalog.find(l=>l.id===b.id))}))};
 }
 $("#ea-run").addEventListener("click",async()=>{
   if(state.busy||!state.input||!state.bases.length) return;
@@ -133,7 +163,8 @@ window.addEventListener('extracao:integracao',async()=>{
   if(state.busy)return;busy(true);
   try{await carregarCatalogo();}catch(error){feedback(`Não foi possível carregar o catálogo: ${error.message}`);}finally{busy(false);}
 });
-window.SICARDExtracao={conectar:conectarIntegracao};
+window.SICARDExtracao={conectar:conectarIntegracao,renderParametros};
+renderParametros();
 changed();
 conectarIntegracao(adaptador);
 document.getElementById('ea-refresh').addEventListener('click',async()=>{

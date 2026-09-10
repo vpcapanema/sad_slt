@@ -5,6 +5,7 @@ import json
 from collections import defaultdict
 
 import geopandas as gpd
+import pandas as pd
 import numpy as np
 from shapely.geometry import GeometryCollection
 from shapely.ops import unary_union
@@ -73,8 +74,17 @@ def aggregate(geometries, by_input, source, dimension, denominator, occurrences)
     return summary, {'n':len(values),**stats}
 
 
-def analisar(input_frame, categories, operation='intersection', progress=lambda message: None):
+OPCOES_PADRAO = {'promover_multipartes': True, 'manter_dimensoes_menores': False,
+                 'ignorar_falhas': False, 'geometrias_preparadas': True,
+                 'pretestar_continencia': False}
+
+
+def analisar(input_frame, categories, operation='intersection', progress=lambda message: None,
+             opcoes=None):
     """categories: [{id,nome,conceito,camadas:[{id,nome,frame}]}], sem mocks."""
+    opcoes = {**OPCOES_PADRAO, **(opcoes or {})}
+    # O rotulo do seletor manda no operador do OGR: Identity chama Identity.
+    operador = 'identity' if operation == 'identity' else 'intersection'
     source, dimension = prepare(input_frame,'Entrada')
     source = source.to_crs(5880)
     if dimension == 0:
@@ -97,10 +107,16 @@ def analisar(input_frame, categories, operation='intersection', progress=lambda 
             frame = frame.to_crs(5880)
             properties = [_json_safe(dict(row.drop(frame.geometry.name))) for _,row in frame.iterrows()]
             right = gpd.GeoDataFrame({'ea_base':[str(i) for i in range(len(frame))]},geometry=frame.geometry,crs=5880)
-            intersection = _overlay_ogr(left,right,'intersection')
+            intersection = _overlay_ogr(left,right,operador,**opcoes)
             geometries, by_input, occurrences = [], defaultdict(list), []
             base_geometries.extend(frame.geometry)
             for _,feature in intersection.iterrows():
+                # Identity tambem devolve o que ficou fora desta base. Essa parte
+                # nao e ocorrencia da camada; o exterior real sai da passagem
+                # unica contra a uniao de todas as bases, mais abaixo.
+                # O OGR devolve ea_base como NaN nessas linhas, nao como vazio.
+                if pd.isna(feature['ea_base']) or feature['ea_base'] == '':
+                    continue
                 geom = feature.geometry
                 size = measure(geom,dimension)
                 if size <= 0:
@@ -136,7 +152,7 @@ def analisar(input_frame, categories, operation='intersection', progress=lambda 
     if operation == 'identity':
         # Exterior calculado uma única vez contra a união de todas as bases.
         mask = gpd.GeoDataFrame(geometry=[union(base_geometries)],crs=5880)
-        external = _overlay_ogr(left,mask,'difference')
+        external = _overlay_ogr(left,mask,'difference',**opcoes)
         for _,feature in external.iterrows():
             if measure(feature.geometry,dimension)>0:
                 output.append({'input_id':str(feature['ea_input']),'externo':True,

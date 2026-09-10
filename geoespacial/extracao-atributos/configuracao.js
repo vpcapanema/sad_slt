@@ -71,6 +71,6 @@ export function criarConfiguracao(state, changed) {
   $("#ea-base-browse").addEventListener('click',()=>browse('base'));
   $("#ea-input-browse").addEventListener('click',()=>browse('input'));
   $("#ea-input-clear").addEventListener('click',()=>{state.input='';changed();});
-  $("#ea-operation").addEventListener("change",event=>{state.operation=event.target.value;changed();});
+  $("#ea-operation").addEventListener("change",event=>{state.operation=event.target.value;window.SICARDExtracao?.renderParametros?.();changed();});
   return {render,marcarLista:lista.marcar};
 }

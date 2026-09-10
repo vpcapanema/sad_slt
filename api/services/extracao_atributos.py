@@ -61,8 +61,11 @@ def iniciar(payload, user):
                 raise ValueError('Base indisponível, repetida ou igual à entrada.')
             used.add(ident); bases.append(layers[ident])
         selected.append({**categories[group['id']],'camadas':bases})
+    from api.services.extracao_atributos_analise import OPCOES_PADRAO
+    opcoes = {chave: bool((payload.get('opcoes') or {}).get(chave, valor))
+              for chave, valor in OPCOES_PADRAO.items()}
     params = {'camada_id':input_id,'camada_ids':sorted(used),'categorias':selected,
-              'operacao':payload['operacao'],'input_nome':layers[input_id]['nome']}
+              'operacao':payload['operacao'],'opcoes':opcoes,'input_nome':layers[input_id]['nome']}
     ident = ciclo.iniciar('extracao_atributos',params,str(user.id))
     with _lock: _progress[ident] = [_etapa('Na fila de processamento')]
     try:
@@ -94,7 +97,7 @@ def _execute(ident, params):
         source = carregar_para_extracao(params['camada_id'])
         categories = [{**c,'camadas':[{**b,'frame':carregar_para_extracao(b['id'])} for b in c['camadas']]}
                       for c in params['categorias']]
-        result, frame = analisar(source,categories,params['operacao'],progress)
+        result, frame = analisar(source,categories,params['operacao'],progress,params.get('opcoes'))
         progress('Gravando geometria e relatório da análise')
         layer_id = geo.registrar_camada(frame,f"Extração de {params['input_nome']}",'OP-05',linhagem=params)
         from osgeo import gdal
