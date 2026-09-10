@@ -25,6 +25,9 @@ services:
       - "127.0.0.1:8070:8080"
     volumes:
       - ./data/geoespacial/outputs:/app/data/geoespacial/outputs
+      # As configuracoes da bancada sao gravadas em execucao: sem este volume
+      # elas viveriam so dentro do container e sumiriam a cada rebuild.
+      - ./data/geoespacial/configuracoes:/app/data/geoespacial/configuracoes
     networks:
       - default
       - sigma-backend
