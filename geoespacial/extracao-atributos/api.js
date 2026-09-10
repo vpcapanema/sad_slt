@@ -7,11 +7,14 @@ export async function json(path,options={}) {
   return data;
 }
 export const post=(path,body)=>json(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-export async function esperar(job,statusPath) {
+export async function esperar(job,statusPath,aoAtualizar) {
+  // aoAtualizar recebe o job inteiro, com o historico de etapas, para o modal.
+  const notificar=aoAtualizar||(atual=>feedback(atual.etapa||atual.etapa_atual||'Processando…'));
   while(job.status==='executando'||job.status==='pendente') {
-    feedback(job.etapa||job.etapa_atual||'Processando…');
+    notificar(job);
     await new Promise(resolve=>setTimeout(resolve,1200));job=await json(statusPath(job.id));
   }
+  notificar(job);
   if(job.status!=='concluido')throw new Error(job.erro||'O processamento não foi concluído.');
   return job.resultado;
 }
@@ -22,11 +25,11 @@ export const adaptador={
     const file=await post('/extracao-atributos/arquivo-mapa',{arquivo:layer.arquivo});
     Object.assign(layer,file);return file.geojson;
   },
-  async executar(request) {
+  async executar(request,aoAtualizar) {
     const job=await post('/extracao-atributos/execucoes',{input_id:request.input.id,operacao:request.operacao,
       categorias:request.categorias.map(c=>({id:c.id,camadas:c.camadas.map(l=>l.id)}))});
     sessionStorage.setItem('slt-extracao-ultima',job.id);
-    return esperar(job,id=>`/extracao-atributos/execucoes/${id}`);
+    return esperar(job,id=>`/extracao-atributos/execucoes/${id}`,aoAtualizar);
   },
   async exportar({resultado_id,formato}) {
     const response=await fetch(`${base}/extracao-atributos/execucoes/${encodeURIComponent(resultado_id)}/exportar/${formato}`);

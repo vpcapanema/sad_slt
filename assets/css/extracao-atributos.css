@@ -96,6 +96,41 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 #ea-config .ea-staging-symbol:first-child:hover:not(:disabled) { background:#0d4f74; }
 .ea-config-dialog { width:min(520px,92vw); border:1px solid #ccd6df; border-radius:8px; padding:1.1rem 1.2rem; }
 .ea-config-dialog h2 { margin:0 0 .8rem; font-size:1rem; color:#173a53; }
+/* Confirmação e acompanhamento da extração, com semáforo de estado. */
+.ea-processo-dialog { width:min(680px,94vw); max-height:88vh; border:1px solid #ccd6df; border-radius:8px; padding:0; color:#243447; overflow:auto; }
+.ea-processo-head { display:flex; align-items:center; gap:1rem; padding:1rem 1.25rem; background:var(--pli-deep,#003b5a); color:#fff; position:sticky; top:0; z-index:2; }
+/* .ea-tool-dialog h2 pinta o titulo de azul escuro; aqui o fundo e naval.
+   E .ea-btn e inline-flex, que vence o display:none padrao de [hidden]. */
+.ea-processo-dialog [hidden] { display:none !important; }
+.ea-processo-dialog .ea-processo-head h2 { margin:0; font-family:"Montserrat",Verdana,sans-serif; font-size:.8125rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#fff; }
+.ea-processo-situacao { margin:.35rem 0 0; font-size:.78rem; color:#ffffffcc; }
+.ea-semaforo { display:flex; flex-direction:column; gap:5px; flex-shrink:0; padding:6px; border-radius:6px; background:#00000038; }
+.ea-semaforo-luz { width:14px; height:14px; border-radius:50%; background:#ffffff26; }
+.ea-semaforo-vermelho.is-acesa { background:#e05c4b; box-shadow:0 0 8px #e05c4b; }
+.ea-semaforo-amarelo.is-acesa { background:#e8b53a; box-shadow:0 0 8px #e8b53a; }
+.ea-semaforo-verde.is-acesa { background:var(--pli-green,#3ec26e); box-shadow:0 0 8px #3ec26e; }
+.ea-processo-resumo { display:grid; grid-template-columns:auto minmax(0,1fr); gap:.35rem 1rem; margin:1.1rem 1.25rem 0; font-size:.8rem; }
+.ea-processo-resumo dt { color:var(--pli-deep,#003b5a); font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.ea-processo-resumo dd { margin:0; overflow-wrap:anywhere; }
+.ea-processo-grupos { margin:1rem 1.25rem 0; border:1px solid #dce3ea; border-radius:4px; max-height:34vh; overflow:auto; }
+.ea-processo-grupo { padding:.5rem .7rem; }
+.ea-processo-grupo + .ea-processo-grupo { border-top:1px solid #e3e9ef; }
+.ea-processo-grupo-head { display:flex; align-items:center; gap:.5rem; }
+.ea-processo-grupo-head strong { flex:1; min-width:0; font-size:.78rem; color:#22475f; }
+.ea-processo-camada { margin:.15rem 0 0 .6rem; font-size:.76rem; color:#647486; overflow-wrap:anywhere; }
+.ea-processo-nota { margin:.9rem 1.25rem 0; padding:.7rem; border-left:3px solid #6f9fbb; background:#f1f6fa; color:#526d80; font-size:.73rem; line-height:1.6; }
+.ea-processo-log { margin:1.1rem 1.25rem 0; padding:.5rem .6rem; border:1px solid #dce3ea; border-radius:4px; background:#f7f9fb; height:250px; overflow:auto; }
+.ea-processo-etapa { display:flex; gap:.6rem; margin:0 0 .3rem; font-size:.76rem; color:#3e5368; line-height:1.5; }
+.ea-processo-etapa time { flex:0 0 auto; color:#8697a5; font-variant-numeric:tabular-nums; }
+.ea-processo-etapa span { min-width:0; overflow-wrap:anywhere; }
+.ea-processo-etapa.is-sucesso { color:#1f7a4d; font-weight:600; }
+.ea-processo-etapa.is-erro { color:#8d2916; font-weight:600; }
+.ea-processo-footer { display:flex; justify-content:flex-end; gap:.5rem; margin:1.1rem 1.25rem 1.25rem; }
+@media (max-width:640px) {
+  .ea-processo-head { padding:.8rem 1rem; }
+  .ea-processo-resumo,.ea-processo-grupos,.ea-processo-nota,.ea-processo-log { margin-left:1rem; margin-right:1rem; }
+  .ea-processo-footer { margin:1rem; flex-direction:column-reverse; }
+}
 .ea-config-path { margin:0 0 .5rem; padding:.4rem .6rem; border:1px solid #dce3ea; border-radius:4px; background:#f4f7fa; color:#526d80; font-size:.73rem; overflow-wrap:anywhere; }
 .ea-config-filter { width:100%; min-height:34px; margin-bottom:.6rem; padding:.4rem .6rem; border:1px solid #bfcbd7; border-radius:4px; font:inherit; font-size:.8rem; }
 .ea-config-entry-title { display:flex; align-items:center; gap:.45rem; }

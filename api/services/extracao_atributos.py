@@ -64,7 +64,7 @@ def iniciar(payload, user):
     params = {'camada_id':input_id,'camada_ids':sorted(used),'categorias':selected,
               'operacao':payload['operacao'],'input_nome':layers[input_id]['nome']}
     ident = ciclo.iniciar('extracao_atributos',params,str(user.id))
-    with _lock: _progress[ident] = 'Na fila de processamento'
+    with _lock: _progress[ident] = [_etapa('Na fila de processamento')]
     try:
         _pool.submit(_execute,ident,params)
     except Exception:
@@ -73,10 +73,21 @@ def iniciar(payload, user):
     return {'id':ident,'status':'executando'}
 
 
+LIMITE_ETAPAS = 300
+
+
+def _etapa(mensagem):
+    return {'em': datetime.now(timezone.utc).isoformat(timespec='seconds'), 'mensagem': mensagem}
+
+
 def _execute(ident, params):
     token = ciclo.execucao_atual.set(ident)
     def progress(message):
-        with _lock: _progress[ident] = message
+        # O modal de acompanhamento lê esta lista; o corte evita crescer sem limite.
+        with _lock:
+            etapas = _progress.setdefault(ident, [])
+            etapas.append(_etapa(message))
+            del etapas[:-LIMITE_ETAPAS]
     try:
         progress('Carregando entrada e bases')
         from api.services.municipal_layer import carregar_para_extracao
@@ -111,7 +122,10 @@ def consultar(ident, user, completo=False):
     if not row or row['responsavel'] != str(user.id):
         raise LookupError('Extração não encontrada para esta sessão.')
     response = {'id':ident,'status':row['status'],'erro':row['erro']}
-    with _lock: response['etapa'] = _progress.get(ident,'Processamento em execução' if row['status']=='executando' else row['status'])
+    with _lock: etapas = list(_progress.get(ident) or [])
+    response['etapas'] = etapas
+    response['etapa'] = (etapas[-1]['mensagem'] if etapas
+                         else 'Processamento em execução' if row['status'] == 'executando' else row['status'])
     if row['status']=='concluido' and completo:
         response['resultado'] = json.loads(caminho(ident).read_text(encoding='utf-8'))
     return response

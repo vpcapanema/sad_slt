@@ -5,6 +5,7 @@ import { criarConfiguracao } from "./configuracao.js";
 import { criarResultados } from "./resultados.js";
 
 import { adaptador, json, esperar } from './api.js';
+import { confirmarExecucao, acompanharExecucao } from './processo.js';
 
 const state={catalog:[],categories:[],bases:[],staging:[],input:"",operation:"intersection",result:null,busy:false};
 const map=criarMapa(),results=criarResultados();
@@ -75,12 +76,27 @@ function request() {
 $("#ea-run").addEventListener("click",async()=>{
   if(state.busy||!state.input||!state.bases.length) return;
   try{map.assertReady();}catch(error){feedback(error.message);return;}
+  const pedido=request();
+  const confirmado=await confirmarExecucao({
+    entrada:pedido.input.nome,
+    operacao:$("#ea-operation").selectedOptions[0]?.textContent||pedido.operacao,
+    totalCamadas:pedido.categorias.reduce((soma,c)=>soma+c.camadas.length,0),
+    categorias:pedido.categorias,
+  });
+  if(!confirmado){feedback("Execução cancelada. Nada foi processado.");return;}
   busy(true);state.result=null;results.clear();syncMap();
+  const painel=acompanharExecucao();
   try {
-    const value=validateResult(await chamar("executar",request()));
-    state.result=value;results.set(value);syncMap();feedback("Extração concluída. Consulte os resultados por categoria e camada.");
-    $("#ea-results").scrollIntoView({behavior:"smooth",block:"start"});
-  } catch(error) {state.result=null;results.clear();syncMap();feedback(`Não foi possível executar: ${error.message}`);}
+    const value=validateResult(await chamar("executar",pedido,job=>painel.etapas(job.etapas)));
+    state.result=value;results.set(value);syncMap();
+    painel.concluir("Extração concluída. Os resultados estão disponíveis por categoria e camada.",
+      ()=>$("#ea-results").scrollIntoView({behavior:"smooth",block:"start"}));
+    feedback("Extração concluída. Consulte os resultados por categoria e camada.");
+  } catch(error) {
+    state.result=null;results.clear();syncMap();
+    painel.falhar(error.message);
+    feedback(`Não foi possível executar: ${error.message}`);
+  }
   finally {busy(false);}
 });
 $("#ea-export").addEventListener("click",async()=>{
