@@ -402,6 +402,11 @@ class GeoprocessamentoEngine:
                 p.get("tipo_overlay", "identity"),
                 p.get("resolver_conflitos_campos", True),
                 p.get("regra_nomenclatura", "<fonte_id>__<nome_campo>"),
+                promover_multipartes=p.get("promover_multipartes", True),
+                manter_dimensoes_menores=p.get("manter_dimensoes_menores", False),
+                ignorar_falhas=p.get("ignorar_falhas", False),
+                geometrias_preparadas=p.get("geometrias_preparadas", True),
+                pretestar_continencia=p.get("pretestar_continencia", False),
             ),
             "OP-05-IDENT": lambda: geo.sobrepor_camadas(
                 p["camada_id_1"],
@@ -409,6 +414,11 @@ class GeoprocessamentoEngine:
                 "identity",
                 p.get("resolver_conflitos_campos", True),
                 p.get("regra_nomenclatura", "<fonte_id>__<nome_campo>"),
+                promover_multipartes=p.get("promover_multipartes", True),
+                manter_dimensoes_menores=p.get("manter_dimensoes_menores", False),
+                ignorar_falhas=p.get("ignorar_falhas", False),
+                geometrias_preparadas=p.get("geometrias_preparadas", True),
+                pretestar_continencia=p.get("pretestar_continencia", False),
             ),
             "OP-06": lambda: geo.dissolver(
                 p["camada_id"],

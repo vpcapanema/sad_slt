@@ -111,6 +111,11 @@ def _overlay_ogr(
     *,
     prefixo_1: str | None = None,
     prefixo_2: str | None = None,
+    promover_multipartes: bool = True,
+    manter_dimensoes_menores: bool = False,
+    ignorar_falhas: bool = False,
+    geometrias_preparadas: bool = True,
+    pretestar_continencia: bool = False,
 ) -> gpd.GeoDataFrame:
     """Executa o overlay pelo motor nativo do OGR, preservando os atributos.
 
@@ -128,7 +133,14 @@ def _overlay_ogr(
     # como linhas e pontos dentro de GEOMETRYCOLLECTION. Além de fugir da
     # semântica do ArcGIS, essas coleções reentram na rodada seguinte de um
     # encadeamento e derrubam o processo dentro do GDAL, sem exceção Python.
-    opcoes = ["PROMOTE_TO_MULTI=YES", "KEEP_LOWER_DIMENSION_GEOMETRIES=NO"]
+    sim = lambda valor: "YES" if valor else "NO"
+    opcoes = [
+        f"PROMOTE_TO_MULTI={sim(promover_multipartes)}",
+        f"KEEP_LOWER_DIMENSION_GEOMETRIES={sim(manter_dimensoes_menores)}",
+        f"SKIP_FAILURES={sim(ignorar_falhas)}",
+        f"USE_PREPARED_GEOMETRIES={sim(geometrias_preparadas)}",
+        f"PRETEST_CONTAINMENT={sim(pretestar_continencia)}",
+    ]
     if prefixo_1:
         opcoes.append(f"INPUT_PREFIX={prefixo_1}")
     if prefixo_2:
@@ -1232,6 +1244,11 @@ class GeoespacialService:
         tipo_overlay: str = "identity",
         resolver_conflitos_campos: bool = True,
         regra_nomenclatura: str = "<fonte_id>__<nome_campo>",
+        promover_multipartes: bool = True,
+        manter_dimensoes_menores: bool = False,
+        ignorar_falhas: bool = False,
+        geometrias_preparadas: bool = True,
+        pretestar_continencia: bool = False,
     ) -> dict[str, Any]:
         """Sobrepõe camadas pelo motor nativo do OGR (Identity/Intersection/Union/Erase).
 
@@ -1265,7 +1282,12 @@ class GeoespacialService:
             )
 
         resultado = _overlay_ogr(
-            gdf1, gdf2, tipo_overlay, prefixo_1=None, prefixo_2=prefixo_2
+            gdf1, gdf2, tipo_overlay, prefixo_1=None, prefixo_2=prefixo_2,
+            promover_multipartes=promover_multipartes,
+            manter_dimensoes_menores=manter_dimensoes_menores,
+            ignorar_falhas=ignorar_falhas,
+            geometrias_preparadas=geometrias_preparadas,
+            pretestar_continencia=pretestar_continencia,
         )
 
         nova_camada_id = self.registrar_camada(resultado, f"Overlay {tipo_overlay}", "OP-05")
