@@ -1,0 +1,94 @@
+{
+  "id": 10127,
+  "nome": "Pessoas residentes de 2 anos ou mais de idade com deficiência por tipos de dificuldades funcionais",
+  "URL": "https://sidra.ibge.gov.br/tabela/10127",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Pessoas",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 12785,
+      "nome": "Pessoas de 2 anos ou mais de idade com deficiência",
+      "unidade": "Pessoas",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 11852,
+      "nome": "Pessoas de 2 anos ou mais de idade",
+      "unidade": "Pessoas",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 13403,
+      "nome": "Percentual de pessoas de 2 anos ou mais de idade com deficiência no total pessoas de 2 anos ou mais de idade",
+      "unidade": "%",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 1509,
+      "nome": "Tipos de dificuldades funcionais",
+      "sumarizacao": {
+        "status": false,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 58771,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 73771,
+          "nome": "Dificuldade permanente para enxergar, mesmo usando óculos ou lentes de contato",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 73772,
+          "nome": "Dificuldade permanente para ouvir, mesmo usando aparelhos auditivos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 73773,
+          "nome": "Dificuldade permanente para andar ou subir degraus, mesmo usando prótese ou outro aparelho de auxílio",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 73789,
+          "nome": "Dificuldade permanente para pegar pequenos objetos, como botão ou lápis, ou abrir e fechar tampas de garrafas, mesmo usando aparelho de auxílio",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 73790,
+          "nome": "Dificuldade permanente para se comunicar, realizar cuidados pessoais, trabalhar ou estudar por causa de alguma limitação nas funções mentais",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    }
+  ]
+}

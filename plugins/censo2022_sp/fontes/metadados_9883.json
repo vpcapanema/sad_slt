@@ -1,0 +1,31 @@
+{
+  "id": 9883,
+  "nome": "Número de favelas e comunidades urbanas, segundo os Municípios",
+  "URL": "https://sidra.ibge.gov.br/tabela/9883",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Território",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 9910,
+      "nome": "Número de favelas e comunidades urbanas",
+      "unidade": "Unidades",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": []
+}

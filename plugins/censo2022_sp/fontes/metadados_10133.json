@@ -1,0 +1,120 @@
+{
+  "id": 10133,
+  "nome": "Pessoas residentes de 2 anos ou mais de idade por tipo e por grau de dificuldade funcional",
+  "URL": "https://sidra.ibge.gov.br/tabela/10133",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Pessoas",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 11852,
+      "nome": "Pessoas de 2 anos ou mais de idade",
+      "unidade": "Pessoas",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 11856,
+      "nome": "Distribuição percentual das pessoas de 2 anos ou mais de idade",
+      "unidade": "%",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 1509,
+      "nome": "Tipos de dificuldades funcionais",
+      "sumarizacao": {
+        "status": false,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 73771,
+          "nome": "Dificuldade permanente para enxergar, mesmo usando óculos ou lentes de contato",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 73772,
+          "nome": "Dificuldade permanente para ouvir, mesmo usando aparelhos auditivos",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 73773,
+          "nome": "Dificuldade permanente para andar ou subir degraus, mesmo usando prótese ou outro aparelho de auxílio",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 73789,
+          "nome": "Dificuldade permanente para pegar pequenos objetos, como botão ou lápis, ou abrir e fechar tampas de garrafas, mesmo usando aparelho de auxílio",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 73790,
+          "nome": "Dificuldade permanente para se comunicar, realizar cuidados pessoais, trabalhar ou estudar por causa de alguma limitação nas funções mentais",
+          "unidade": null,
+          "nivel": 0
+        }
+      ]
+    },
+    {
+      "id": 623,
+      "nome": "Grau de dificuldade",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 56918,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 60004,
+          "nome": "Tem, não consegue de modo algum",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 56921,
+          "nome": "Tem muita dificuldade",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 56920,
+          "nome": "Tem alguma dificuldade",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 32318,
+          "nome": "Não tem dificuldade",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    }
+  ]
+}

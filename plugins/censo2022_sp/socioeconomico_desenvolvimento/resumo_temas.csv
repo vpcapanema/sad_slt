@@ -1,0 +1,15 @@
+﻿tema,ano,campos,min_municipios_com_valor,max_municipios_com_valor
+idh,2010,4,645,645
+pobreza_desigualdade,2010,15,645,645
+desenvolvimento_humano,2010,7,645,645
+economia,2021,8,645,645
+economia,2022,2,645,645
+economia,2023,2,645,645
+empresas_emprego,2024,86,2,645
+financas_publicas,2025,28,5,641
+ideb,2025,12,1,641
+05_educacao,2022,486,645,645
+06_renda,2022,430,645,645
+07_trabalho,2022,523,645,645
+08_habitacao_internet,2022,272,645,645
+04_saneamento,2022,524,645,645

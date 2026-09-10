@@ -1,0 +1,1532 @@
+[
+  {
+    "tabela": 4709,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/4709/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D",
+    "arquivo": "fontes\\dados\\4709_be937e673ab47cee.json.gz"
+  },
+  {
+    "tabela": 9514,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9514/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C287%5B100362%5D%7C286%5B113635%5D",
+    "arquivo": "fontes\\dados\\9514_975d49106e114635.json.gz"
+  },
+  {
+    "tabela": 4714,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/4714/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D",
+    "arquivo": "fontes\\dados\\4714_eaa2c7f2876a5f42.json.gz"
+  },
+  {
+    "tabela": 9514,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9514/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C287%5B100362%2C93070%2C6557%2C93071%2C93072%2C93073%2C93074%2C93075%2C93076%2C93077%2C93078%2C93079%2C93080%2C93081%2C93082%2C6558%2C6559%2C6560%2C6561%2C93084%2C6562%2C6563%2C6564%2C6565%2C6566%2C93085%2C6567%2C6568%2C6569%2C6570%2C6571%5D%7C286%5B113635%5D",
+    "arquivo": "fontes\\dados\\9514_5d82480b32be59cf.json.gz"
+  },
+  {
+    "tabela": 9514,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9514/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C287%5B93086%2C6572%2C6573%2C6574%2C6575%2C6576%2C93087%2C6577%2C6578%2C6579%2C6580%2C6581%2C93088%2C6582%2C6656%2C6657%2C6658%2C6659%2C93089%2C6583%2C6584%2C6585%2C6586%2C6587%2C93090%2C6588%2C6589%2C6590%2C6591%2C6592%2C93091%5D%7C286%5B113635%5D",
+    "arquivo": "fontes\\dados\\9514_145bd206937e590e.json.gz"
+  },
+  {
+    "tabela": 9514,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9514/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C287%5B6593%2C6594%2C6595%2C6596%2C6597%2C93092%2C6598%2C6599%2C6600%2C6601%2C6602%2C93093%2C6603%2C6604%2C6605%2C6606%2C6607%2C93094%2C6608%2C6609%2C6610%2C6611%2C6612%2C93095%2C6613%2C6614%2C6615%2C6616%2C6617%2C93096%2C6618%5D%7C286%5B113635%5D",
+    "arquivo": "fontes\\dados\\9514_55ab388bceddd145.json.gz"
+  },
+  {
+    "tabela": 9515,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9515/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D",
+    "arquivo": "fontes\\dados\\9515_94740940a480b4d9.json.gz"
+  },
+  {
+    "tabela": 9514,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9514/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C287%5B6619%2C6620%2C6621%2C6622%2C93097%2C6623%2C6624%2C6625%2C6626%2C6627%2C93098%2C6628%2C6629%2C6630%2C6631%2C6632%2C49108%2C6633%2C6634%2C6635%2C6636%2C6637%2C49109%2C6638%2C6639%2C6640%2C6641%2C6642%2C60040%2C6643%2C6644%5D%7C286%5B113635%5D",
+    "arquivo": "fontes\\dados\\9514_67b777dc504d51f9.json.gz"
+  },
+  {
+    "tabela": 9514,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9514/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C287%5B100362%5D%7C286%5B113635%2C6555%2C6556%5D",
+    "arquivo": "fontes\\dados\\9514_c8516c47d886a7a9.json.gz"
+  },
+  {
+    "tabela": 9514,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9514/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C287%5B6645%2C6646%2C6647%2C60041%2C6648%2C6649%2C6650%2C6651%2C6652%2C6653%5D%7C286%5B113635%5D",
+    "arquivo": "fontes\\dados\\9514_af23220ced72f1ff.json.gz"
+  },
+  {
+    "tabela": 9923,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9923/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1%5B6795%2C1%2C2%5D",
+    "arquivo": "fontes\\dados\\9923_3153e65814693313.json.gz"
+  },
+  {
+    "tabela": 9606,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9606/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C2%5B6794%5D%7C287%5B100362%5D",
+    "arquivo": "fontes\\dados\\9606_be99d2aeffd8219d.json.gz"
+  },
+  {
+    "tabela": 9605,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9605/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\9605_caa0fd6d5c350e87.json.gz"
+  },
+  {
+    "tabela": 9606,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9606/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=86%5B95251%5D%7C2%5B6794%2C4%2C5%5D%7C287%5B100362%5D",
+    "arquivo": "fontes\\dados\\9606_673fac4340ff07a3.json.gz"
+  },
+  {
+    "tabela": 9606,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9606/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=86%5B95251%5D%7C2%5B6794%5D%7C287%5B93086%2C6572%2C6573%2C6574%2C6575%2C6576%2C93087%2C6577%2C6578%2C6579%2C6580%2C6581%2C93088%2C6582%2C6656%2C6657%2C6658%2C6659%2C93089%2C6583%2C6584%2C6585%2C6586%2C6587%2C93090%2C6588%2C6589%2C6590%2C6591%2C6592%2C93091%5D",
+    "arquivo": "fontes\\dados\\9606_28338252fae0396a.json.gz"
+  },
+  {
+    "tabela": 9606,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9606/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=86%5B95251%5D%7C2%5B6794%5D%7C287%5B100362%2C93070%2C6557%2C93071%2C93072%2C93073%2C93074%2C93075%2C93076%2C93077%2C93078%2C93079%2C93080%2C93081%2C93082%2C6558%2C6559%2C6560%2C6561%2C93084%2C6562%2C6563%2C6564%2C6565%2C6566%2C93085%2C6567%2C6568%2C6569%2C6570%2C6571%5D",
+    "arquivo": "fontes\\dados\\9606_1ca5cab988eabce2.json.gz"
+  },
+  {
+    "tabela": 9606,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9606/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=86%5B95251%5D%7C2%5B6794%5D%7C287%5B6593%2C6594%2C6595%2C6596%2C6597%2C93092%2C6598%2C6599%2C6600%2C6601%2C6602%2C93093%2C6603%2C6604%2C6605%2C6606%2C6607%2C93094%2C6608%2C6609%2C6610%2C6611%2C6612%2C93095%2C6613%2C6614%2C6615%2C6616%2C6617%2C93096%2C6618%5D",
+    "arquivo": "fontes\\dados\\9606_51955f523e006eb1.json.gz"
+  },
+  {
+    "tabela": 9606,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9606/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=86%5B95251%5D%7C2%5B6794%5D%7C287%5B6619%2C6620%2C6621%2C6622%2C93097%2C6623%2C6624%2C6625%2C6626%2C6627%2C93098%2C6628%2C6629%2C6630%2C6631%2C6632%2C49108%2C6633%2C6634%2C6635%2C6636%2C6637%2C49109%2C6638%2C6639%2C6640%2C6641%2C6642%2C60040%2C6643%2C6644%5D",
+    "arquivo": "fontes\\dados\\9606_7d7ec1b1ba1df597.json.gz"
+  },
+  {
+    "tabela": 4712,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/4712/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D",
+    "arquivo": "fontes\\dados\\4712_ee24c5dfa71bea02.json.gz"
+  },
+  {
+    "tabela": 9756,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9756/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\9756_b3e175a512d52805.json.gz"
+  },
+  {
+    "tabela": 9606,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9606/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=86%5B95251%5D%7C2%5B6794%5D%7C287%5B6645%2C6646%2C6647%2C60041%2C6648%2C6649%2C6650%2C6651%2C6652%2C6653%5D",
+    "arquivo": "fontes\\dados\\9606_3a8fd5466bb49465.json.gz"
+  },
+  {
+    "tabela": 4711,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/4711/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=3%5B59993%2C9697%2C2504%2C59998%2C59999%2C60000%2C60001%2C60002%2C60003%2C2505%2C103995%2C10004%2C10005%5D",
+    "arquivo": "fontes\\dados\\4711_9b621174172c9185.json.gz"
+  },
+  {
+    "tabela": 6326,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6326/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=125%5B2932%2C6815%2C121264%2C3247%2C71975%2C71976%2C71977%5D",
+    "arquivo": "fontes\\dados\\6326_947df46904cf96cd.json.gz"
+  },
+  {
+    "tabela": 9866,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9866/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=3%5B59993%2C486%2C487%5D%7C125%5B2932%5D",
+    "arquivo": "fontes\\dados\\9866_92a4fd863498e6e9.json.gz"
+  },
+  {
+    "tabela": 9877,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9877/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11561%5B100679%2C100680%2C100681%5D%7C12237%5B104570%5D%7C11562%5B72593%5D",
+    "arquivo": "fontes\\dados\\9877_71c1247f53ab46e2.json.gz"
+  },
+  {
+    "tabela": 9866,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9866/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=3%5B59993%5D%7C125%5B2932%2C6815%2C121264%2C3247%2C71975%2C71976%2C71977%5D",
+    "arquivo": "fontes\\dados\\9866_5c41070b1f9e7786.json.gz"
+  },
+  {
+    "tabela": 9877,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9877/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11561%5B100679%5D%7C12237%5B104570%2C104571%2C104572%2C104573%2C104574%2C104575%2C104576%5D%7C11562%5B72593%5D",
+    "arquivo": "fontes\\dados\\9877_4b0bd433dc66adc6.json.gz"
+  },
+  {
+    "tabela": 9877,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9877/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11561%5B100679%5D%7C12237%5B104570%5D%7C11562%5B72593%2C72594%2C72595%2C72596%2C72597%2C72598%5D",
+    "arquivo": "fontes\\dados\\9877_9b956862a46e4f92.json.gz"
+  },
+  {
+    "tabela": 9880,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9880/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=125%5B2932%2C6815%2C121264%2C3247%2C71975%2C71976%2C71977%2C120653%5D%7C68%5B9902%5D%7C11561%5B100679%5D%7C12237%5B104570%5D%7C11562%5B72593%5D",
+    "arquivo": "fontes\\dados\\9880_cc68c5498cb11fd3.json.gz"
+  },
+  {
+    "tabela": 9880,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9880/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=125%5B2932%5D%7C68%5B9902%5D%7C11561%5B100679%2C100680%2C100681%5D%7C12237%5B104570%5D%7C11562%5B72593%5D",
+    "arquivo": "fontes\\dados\\9880_192a692ebadc09e3.json.gz"
+  },
+  {
+    "tabela": 9880,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9880/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=125%5B2932%5D%7C68%5B9902%2C1092%2C1093%2C1094%2C1095%2C1096%2C47267%5D%7C11561%5B100679%5D%7C12237%5B104570%5D%7C11562%5B72593%5D",
+    "arquivo": "fontes\\dados\\9880_87abea230993436f.json.gz"
+  },
+  {
+    "tabela": 9880,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9880/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=125%5B2932%5D%7C68%5B9902%5D%7C11561%5B100679%5D%7C12237%5B104570%5D%7C11562%5B72593%2C72594%2C72595%2C72596%2C72597%2C72598%5D",
+    "arquivo": "fontes\\dados\\9880_35a2476548409a36.json.gz"
+  },
+  {
+    "tabela": 9922,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9922/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1%5B6795%2C1%2C2%5D",
+    "arquivo": "fontes\\dados\\9922_c53165a7175c159a.json.gz"
+  },
+  {
+    "tabela": 9880,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9880/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=125%5B2932%5D%7C68%5B9902%5D%7C11561%5B100679%5D%7C12237%5B104570%2C104571%2C104572%2C104573%2C104574%2C104575%2C104576%5D%7C11562%5B72593%5D",
+    "arquivo": "fontes\\dados\\9880_f087757ed90fdd52.json.gz"
+  },
+  {
+    "tabela": 6804,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6804/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=301%5B72053%5D%7C1817%5B72125%2C72126%2C72127%2C72128%5D",
+    "arquivo": "fontes\\dados\\6804_9d37174cde10781f.json.gz"
+  },
+  {
+    "tabela": 6804,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6804/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=301%5B72053%2C31471%2C72054%2C72055%2C72088%2C31472%2C72089%2C72090%2C72091%5D%7C1817%5B72125%5D",
+    "arquivo": "fontes\\dados\\6804_c81dae29bbf34f4f.json.gz"
+  },
+  {
+    "tabela": 6805,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6805/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11558%5B46292%2C46290%2C72110%2C72111%2C72112%2C72113%2C92858%2C72114%2C72115%2C92861%5D",
+    "arquivo": "fontes\\dados\\6805_df924a79d700f80e.json.gz"
+  },
+  {
+    "tabela": 6803,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6803/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1821%5B72129%2C72144%2C72145%2C72146%2C72147%2C72148%2C72149%2C72150%2C72151%2C72152%2C72153%2C72154%2C72155%2C72156%2C72157%2C72158%2C72159%2C72160%5D",
+    "arquivo": "fontes\\dados\\6803_531dbf97cf53e0cd.json.gz"
+  },
+  {
+    "tabela": 6806,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6806/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=458%5B72117%2C12032%2C12033%2C12034%2C12035%2C12036%2C72118%2C72119%2C12046%5D%7C11558%5B46292%5D",
+    "arquivo": "fontes\\dados\\6806_71d8dad2eda349fc.json.gz"
+  },
+  {
+    "tabela": 6892,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6892/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=67%5B10972%2C2520%2C72120%2C72121%2C72122%2C72123%2C72124%2C1091%5D",
+    "arquivo": "fontes\\dados\\6892_f4554753642427d4.json.gz"
+  },
+  {
+    "tabela": 6806,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6806/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=458%5B72117%5D%7C11558%5B46292%2C46290%2C72110%2C72111%2C72112%2C72113%2C92858%2C72114%2C72115%2C92861%5D",
+    "arquivo": "fontes\\dados\\6806_c5c973c209f00ffd.json.gz"
+  },
+  {
+    "tabela": 6894,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6894/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1821%5B72129%5D%7C58%5B95253%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\6894_715bfcfa6016defe.json.gz"
+  },
+  {
+    "tabela": 6909,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6909/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=301%5B72053%2C31471%2C72054%2C72055%2C72088%2C31472%2C72089%2C72090%2C72091%5D%7C1817%5B72125%5D%7C58%5B95253%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\6909_17bca48bafe18080.json.gz"
+  },
+  {
+    "tabela": 6894,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6894/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1821%5B72129%5D%7C58%5B95253%2C1140%2C1141%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C1153%2C1154%2C1155%2C6802%2C6803%2C92963%2C92964%2C92965%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\6894_ac0a09bdaf5dd80d.json.gz"
+  },
+  {
+    "tabela": 6894,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6894/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1821%5B72129%2C72144%2C72145%2C72146%2C72147%2C72148%2C72149%2C72150%2C72151%2C72152%2C72153%2C72154%2C72155%2C72156%2C72157%2C72158%2C72159%2C72160%5D%7C58%5B95253%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\6894_f431edbf201f787e.json.gz"
+  },
+  {
+    "tabela": 6909,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6909/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=301%5B72053%5D%7C1817%5B72125%2C72126%2C72127%2C72128%5D%7C58%5B95253%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\6909_7fa8893c698b7726.json.gz"
+  },
+  {
+    "tabela": 6909,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6909/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=301%5B72053%5D%7C1817%5B72125%5D%7C58%5B95253%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\6909_0698c65b1ec734c4.json.gz"
+  },
+  {
+    "tabela": 7555,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/7555/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11558%5B46292%2C46290%2C72110%2C72111%2C72112%2C72113%2C92858%2C72114%2C72115%2C92861%5D%7C58%5B95253%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\7555_1a572e6c2725999c.json.gz"
+  },
+  {
+    "tabela": 7555,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/7555/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11558%5B46292%5D%7C58%5B95253%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\7555_56cc093055c9df26.json.gz"
+  },
+  {
+    "tabela": 6909,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6909/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=301%5B72053%5D%7C1817%5B72125%5D%7C58%5B95253%2C1140%2C1141%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C1153%2C1154%2C1155%2C6802%2C6803%2C92963%2C92964%2C92965%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\6909_f03dbe7c9d7bdadb.json.gz"
+  },
+  {
+    "tabela": 7555,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/7555/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11558%5B46292%5D%7C58%5B95253%2C1140%2C1141%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C1153%2C1154%2C1155%2C6802%2C6803%2C92963%2C92964%2C92965%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\7555_bad312090794f8eb.json.gz"
+  },
+  {
+    "tabela": 9397,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9397/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=458%5B72117%2C12032%2C12033%2C12034%2C12035%2C12036%2C72118%2C72119%2C12046%5D%7C11558%5B46292%5D%7C58%5B95253%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\9397_55abe43456c2d043.json.gz"
+  },
+  {
+    "tabela": 9397,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9397/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=458%5B72117%5D%7C11558%5B46292%2C46290%2C72110%2C72111%2C72112%2C72113%2C92858%2C72114%2C72115%2C92861%5D%7C58%5B95253%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\9397_965265873bc06f8d.json.gz"
+  },
+  {
+    "tabela": 9397,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9397/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=458%5B72117%5D%7C11558%5B46292%5D%7C58%5B95253%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\9397_a5ccfc2bf51ae068.json.gz"
+  },
+  {
+    "tabela": 9541,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9541/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=67%5B10972%2C2520%2C72120%2C72121%2C72122%2C72123%2C72124%2C1091%5D%7C58%5B95253%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\9541_2abc582de4d856a6.json.gz"
+  },
+  {
+    "tabela": 9541,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9541/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=67%5B10972%5D%7C58%5B95253%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\9541_9024fbdf79cc7087.json.gz"
+  },
+  {
+    "tabela": 9397,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9397/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=458%5B72117%5D%7C11558%5B46292%5D%7C58%5B95253%2C1140%2C1141%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C1153%2C1154%2C1155%2C6802%2C6803%2C92963%2C92964%2C92965%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\9397_4d9ac5af775a97dd.json.gz"
+  },
+  {
+    "tabela": 9542,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9542/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=59%5B93024%5D%7C2%5B6794%2C4%2C5%5D%7C86%5B95251%5D%7C287%5B100362%5D",
+    "arquivo": "fontes\\dados\\9542_1f4894878931d049.json.gz"
+  },
+  {
+    "tabela": 9541,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9541/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=67%5B10972%5D%7C58%5B95253%2C1140%2C1141%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C1153%2C1154%2C1155%2C6802%2C6803%2C92963%2C92964%2C92965%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\9541_442331fb906eb867.json.gz"
+  },
+  {
+    "tabela": 9542,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9542/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=59%5B93024%2C1023%2C1024%5D%7C2%5B6794%5D%7C86%5B95251%5D%7C287%5B100362%5D",
+    "arquivo": "fontes\\dados\\9542_cfe1301816e3c2cb.json.gz"
+  },
+  {
+    "tabela": 9542,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9542/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=59%5B93024%5D%7C2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C287%5B100362%5D",
+    "arquivo": "fontes\\dados\\9542_d8114ff8bc11ab6d.json.gz"
+  },
+  {
+    "tabela": 9543,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9543/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C86%5B95251%5D%7C287%5B100362%5D",
+    "arquivo": "fontes\\dados\\9543_90e03f8a25ed7919.json.gz"
+  },
+  {
+    "tabela": 9543,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9543/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C287%5B100362%5D",
+    "arquivo": "fontes\\dados\\9543_5b3065e3922fdd70.json.gz"
+  },
+  {
+    "tabela": 9542,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9542/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=59%5B93024%5D%7C2%5B6794%5D%7C86%5B95251%5D%7C287%5B6594%2C6595%2C6596%2C6597%2C9483%2C6598%2C6599%2C6600%2C6601%2C6602%2C6603%2C6604%2C6605%2C6606%2C6607%2C9484%2C6608%2C6609%2C6610%2C6611%2C6612%2C6613%2C6614%2C6615%2C6616%2C6617%2C3000%2C9486%2C113623%5D",
+    "arquivo": "fontes\\dados\\9542_53269cd0ee5e1b75.json.gz"
+  },
+  {
+    "tabela": 10056,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10056/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=58%5B95253%2C99749%2C2483%2C2484%2C2485%2C2486%2C47813%2C2487%2C2488%2C31615%2C2489%2C2490%2C2491%2C2492%2C2493%2C2494%2C2495%2C2496%2C2497%2C2792%2C2498%2C2499%2C2500%2C100052%2C2501%2C2502%2C92958%2C92959%2C92960%2C92961%2C92962%2C108866%5D%7C2%5B6794%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10056_ab2714a4867b4ceb.json.gz"
+  },
+  {
+    "tabela": 9542,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9542/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=59%5B93024%5D%7C2%5B6794%5D%7C86%5B95251%5D%7C287%5B100362%2C93086%2C6572%2C6573%2C6574%2C6575%2C6576%2C93087%2C6577%2C6578%2C6579%2C6580%2C6581%2C2999%2C6582%2C6656%2C6657%2C6658%2C6659%2C6583%2C6584%2C6585%2C6586%2C6587%2C9482%2C6588%2C6589%2C6590%2C6591%2C6592%2C6593%5D",
+    "arquivo": "fontes\\dados\\9542_edd739d5d660c3da.json.gz"
+  },
+  {
+    "tabela": 10056,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10056/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=58%5B95253%5D%7C2%5B6794%2C4%2C5%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10056_7fd3d547bf4a4e34.json.gz"
+  },
+  {
+    "tabela": 9543,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9543/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%5D%7C287%5B100362%2C93086%2C6572%2C6573%2C6574%2C6575%2C6576%2C93087%2C6577%2C6578%2C6579%2C6580%2C6581%2C2999%2C6582%2C6656%2C6657%2C6658%2C6659%2C6583%2C6584%2C6585%2C6586%2C6587%2C9482%2C6588%2C6589%2C6590%2C6591%2C6592%2C6593%2C6594%2C6595%2C6596%2C6597%2C9483%2C6598%2C6599%2C6600%2C6601%2C6602%2C6603%2C6604%2C6605%2C6606%2C6607%2C9484%2C6608%2C6609%2C6610%2C6611%2C6612%2C6613%2C6614%2C6615%2C6616%2C6617%2C3000%2C9486%2C113623%5D",
+    "arquivo": "fontes\\dados\\9543_5423284ebe4b17f4.json.gz"
+  },
+  {
+    "tabela": 10056,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10056/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=58%5B95253%5D%7C2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\10056_5d19236d50f942cc.json.gz"
+  },
+  {
+    "tabela": 10057,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10057/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11798%5B95300%2C95301%2C107454%2C7906%5D%7C58%5B95253%5D%7C2%5B6794%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10057_7733cb84fc1c5192.json.gz"
+  },
+  {
+    "tabela": 10057,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10057/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11798%5B95300%5D%7C58%5B95253%2C99749%2C2483%2C2484%2C2485%2C2486%2C47813%2C2487%2C2488%5D%7C2%5B6794%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10057_535ef690052fa735.json.gz"
+  },
+  {
+    "tabela": 10057,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10057/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11798%5B95300%5D%7C58%5B95253%5D%7C2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\10057_300de037956ee844.json.gz"
+  },
+  {
+    "tabela": 10057,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10057/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11798%5B95300%5D%7C58%5B95253%5D%7C2%5B6794%2C4%2C5%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10057_a780fa887af099a2.json.gz"
+  },
+  {
+    "tabela": 10058,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10058/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11798%5B95300%2C95301%2C107454%2C7905%2C7906%2C7907%2C7908%2C7909%2C95307%5D%7C58%5B95253%5D%7C2%5B6794%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10058_9136fd6ba4952ed2.json.gz"
+  },
+  {
+    "tabela": 10058,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10058/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11798%5B95300%5D%7C58%5B95253%5D%7C2%5B6794%2C4%2C5%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10058_33c39422264768d3.json.gz"
+  },
+  {
+    "tabela": 10058,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10058/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11798%5B95300%5D%7C58%5B95253%5D%7C2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\10058_4d629759dc0f12d3.json.gz"
+  },
+  {
+    "tabela": 10059,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10059/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11798%5B95300%5D%7C58%5B95253%5D%7C2%5B6794%2C4%2C5%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10059_4f33ef08477ea08f.json.gz"
+  },
+  {
+    "tabela": 10059,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10059/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11798%5B95300%2C7905%2C7906%2C7907%2C7908%2C7909%2C95307%2C7910%2C7911%2C7912%5D%7C58%5B95253%5D%7C2%5B6794%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10059_b23436335e58871d.json.gz"
+  },
+  {
+    "tabela": 10058,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10058/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11798%5B95300%5D%7C58%5B95253%2C31615%2C12873%2C2489%2C2490%2C2491%2C2492%2C2493%2C14433%2C2494%2C2495%2C2496%2C2497%2C2792%2C2498%2C2499%2C2500%5D%7C2%5B6794%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10058_abbb26f42a10c758.json.gz"
+  },
+  {
+    "tabela": 10059,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10059/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11798%5B95300%5D%7C58%5B95253%2C100052%2C2501%2C2502%2C92958%2C92959%2C92960%2C92961%2C92962%2C108866%5D%7C2%5B6794%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10059_1ec3beb36d023a38.json.gz"
+  },
+  {
+    "tabela": 10059,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10059/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11798%5B95300%5D%7C58%5B95253%5D%7C2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\10059_a8605a3fde7f82aa.json.gz"
+  },
+  {
+    "tabela": 10061,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10061/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1568%5B120704%5D%7C58%5B95253%5D%7C2%5B6794%2C4%2C5%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10061_dd6f12da92d03d76.json.gz"
+  },
+  {
+    "tabela": 10061,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10061/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1568%5B120704%2C9493%2C9494%2C9495%2C99713%5D%7C58%5B95253%5D%7C2%5B6794%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10061_642aefa999ef116e.json.gz"
+  },
+  {
+    "tabela": 10062,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10062/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=58%5B95253%5D%7C2%5B6794%2C4%2C5%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10062_cd8aa2c02d4d5f32.json.gz"
+  },
+  {
+    "tabela": 10061,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10061/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1568%5B120704%5D%7C58%5B95253%5D%7C2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\10061_0bc97f49885b2834.json.gz"
+  },
+  {
+    "tabela": 10280,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10280/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C11913%5B96165%5D",
+    "arquivo": "fontes\\dados\\10280_42797e164bc68339.json.gz"
+  },
+  {
+    "tabela": 10062,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10062/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=58%5B95253%5D%7C2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\10062_663396e4c17a039a.json.gz"
+  },
+  {
+    "tabela": 10061,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10061/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1568%5B120704%5D%7C58%5B95253%2C100052%2C2793%2C1144%2C108866%2C100754%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C6798%2C1153%2C1154%2C1155%2C2503%5D%7C2%5B6794%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10061_b64a6df82642c692.json.gz"
+  },
+  {
+    "tabela": 10062,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10062/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=58%5B95253%2C14433%2C2792%2C100052%2C2793%2C1144%2C108866%2C100754%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C6798%2C1153%2C1154%2C1155%2C2503%5D%7C2%5B6794%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10062_118a0a6e38ce4772.json.gz"
+  },
+  {
+    "tabela": 10289,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10289/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10289_2e501d4ab2d3b187.json.gz"
+  },
+  {
+    "tabela": 10292,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10292/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C11915%5B96177%5D",
+    "arquivo": "fontes\\dados\\10292_d26fc7faa191e570.json.gz"
+  },
+  {
+    "tabela": 10289,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10289/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\10289_c2223fe7bd76e4aa.json.gz"
+  },
+  {
+    "tabela": 10280,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10280/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C11913%5B79376%2C79377%2C45934%2C45935%2C79378%2C45936%2C45937%5D",
+    "arquivo": "fontes\\dados\\10280_ee98ce0aacc21cf2.json.gz"
+  },
+  {
+    "tabela": 10295,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10295/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C86%5B95251%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10295_066c4d24c515e4e9.json.gz"
+  },
+  {
+    "tabela": 10295,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10295/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10295_3271595d37de70c6.json.gz"
+  },
+  {
+    "tabela": 10280,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10280/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C11913%5B96165%2C31721%2C31722%2C31723%2C31724%2C79367%2C79368%2C79369%2C31727%2C79370%2C79371%2C79372%2C79373%2C79374%2C79375%5D",
+    "arquivo": "fontes\\dados\\10280_308192c232f81a9d.json.gz"
+  },
+  {
+    "tabela": 10292,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10292/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C11915%5B96177%2C99822%2C99823%2C99824%2C96179%2C96180%2C96181%2C96182%2C99825%2C99828%2C96184%2C96185%5D",
+    "arquivo": "fontes\\dados\\10292_8d9638a0d8e5f4dd.json.gz"
+  },
+  {
+    "tabela": 10296,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10296/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C86%5B95251%5D%7C386%5B9680%5D",
+    "arquivo": "fontes\\dados\\10296_4483faf9bfc83448.json.gz"
+  },
+  {
+    "tabela": 10296,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10296/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C386%5B9680%5D",
+    "arquivo": "fontes\\dados\\10296_920c04f244998f94.json.gz"
+  },
+  {
+    "tabela": 10297,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10297/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11308%5B79450%2C79451%2C79452%5D",
+    "arquivo": "fontes\\dados\\10297_5712fbaa974e7920.json.gz"
+  },
+  {
+    "tabela": 10295,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10295/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%5D%7C58%5B1150%2C1151%2C1152%2C6798%2C1153%2C1154%2C1155%2C2503%5D",
+    "arquivo": "fontes\\dados\\10295_f46c61a5183066e1.json.gz"
+  },
+  {
+    "tabela": 10295,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10295/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%5D%7C58%5B95253%2C33269%2C6744%2C118282%2C114535%2C100052%2C2793%2C1144%2C108866%2C100754%2C1145%2C1146%2C1147%2C1148%2C1149%5D",
+    "arquivo": "fontes\\dados\\10295_b014ab6f98f91de5.json.gz"
+  },
+  {
+    "tabela": 10296,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10296/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%5D%7C386%5B9680%2C9681%2C9682%2C9683%2C9684%2C9685%2C9686%2C9687%2C9688%2C9689%2C9690%2C9692%5D",
+    "arquivo": "fontes\\dados\\10296_30017e70b0e573b1.json.gz"
+  },
+  {
+    "tabela": 10299,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10299/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C629%5B32385%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10299_191ea6a689b9798f.json.gz"
+  },
+  {
+    "tabela": 6580,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6580/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=629%5B32385%2C32386%2C32387%2C32446%2C32447%5D%7C2%5B6794%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\6580_3f16753915fe66a8.json.gz"
+  },
+  {
+    "tabela": 10299,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10299/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C629%5B32385%2C32386%2C32387%2C32446%2C32447%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10299_0eab5385d6ac5ddc.json.gz"
+  },
+  {
+    "tabela": 10299,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10299/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C629%5B32385%5D%7C58%5B6798%2C1153%2C1154%2C1155%2C2503%5D",
+    "arquivo": "fontes\\dados\\10299_bae8b3a464944757.json.gz"
+  },
+  {
+    "tabela": 6580,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6580/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=629%5B32385%5D%7C2%5B6794%2C4%2C5%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\6580_de863581968d4296.json.gz"
+  },
+  {
+    "tabela": 9517,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9517/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=629%5B32385%5D%7C2%5B6794%2C4%2C5%5D%7C86%5B95251%5D%7C1568%5B120704%5D",
+    "arquivo": "fontes\\dados\\9517_7db17507efaa8529.json.gz"
+  },
+  {
+    "tabela": 9517,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9517/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=629%5B32385%2C32386%2C32387%2C32446%2C32447%5D%7C2%5B6794%5D%7C86%5B95251%5D%7C1568%5B120704%5D",
+    "arquivo": "fontes\\dados\\9517_a96cc0f471ff8991.json.gz"
+  },
+  {
+    "tabela": 9517,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9517/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=629%5B32385%5D%7C2%5B6794%5D%7C86%5B95251%5D%7C1568%5B120704%2C9493%2C9494%2C9495%2C99713%5D",
+    "arquivo": "fontes\\dados\\9517_0724e7e219d68d67.json.gz"
+  },
+  {
+    "tabela": 9517,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9517/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=629%5B32385%5D%7C2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C1568%5B120704%5D",
+    "arquivo": "fontes\\dados\\9517_7125dcf4662eedea.json.gz"
+  },
+  {
+    "tabela": 6580,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6580/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=629%5B32385%5D%7C2%5B6794%5D%7C58%5B95253%2C114535%2C100052%2C2793%2C1144%2C108866%2C100754%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C6798%5D",
+    "arquivo": "fontes\\dados\\6580_dfa3bccfa1c485a6.json.gz"
+  },
+  {
+    "tabela": 10261,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10261/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11913%5B96165%5D%7C2%5B6794%2C4%2C5%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10261_20eb917d17531d80.json.gz"
+  },
+  {
+    "tabela": 10299,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10299/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C629%5B32385%5D%7C58%5B95253%2C114535%2C100052%2C2793%2C1144%2C108866%2C100754%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%5D",
+    "arquivo": "fontes\\dados\\10299_4b8d0007bc8cd43c.json.gz"
+  },
+  {
+    "tabela": 10261,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10261/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11913%5B96165%5D%7C2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\10261_514dc6011172e228.json.gz"
+  },
+  {
+    "tabela": 10263,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10263/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C86%5B95251%5D%7C1568%5B120704%5D%7C12031%5B107057%5D",
+    "arquivo": "fontes\\dados\\10263_da824968f1628f81.json.gz"
+  },
+  {
+    "tabela": 10263,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10263/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C1568%5B120704%5D%7C12031%5B107057%5D",
+    "arquivo": "fontes\\dados\\10263_25f11f47c7cd7cf8.json.gz"
+  },
+  {
+    "tabela": 10261,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10261/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11913%5B96165%2C31721%2C31722%2C31723%2C31724%2C79367%2C79368%2C79369%2C31727%2C79370%2C79371%2C79372%2C79373%2C79374%2C79375%2C79376%2C79377%2C45934%2C45935%2C79378%2C45936%2C45937%2C31731%5D%7C2%5B6794%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10261_37f83934c40d25a8.json.gz"
+  },
+  {
+    "tabela": 10262,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10262/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11913%5B96165%5D%7C11805%5B95371%2C12640%2C12641%2C12642%2C12643%2C12644%2C95377%2C12645%2C12646%2C95379%2C12647%2C12648%2C9205%2C12649%2C12650%2C95383%2C95384%2C12651%2C12652%2C12653%2C95387%2C99809%2C99810%5D",
+    "arquivo": "fontes\\dados\\10262_fadaa256084380bc.json.gz"
+  },
+  {
+    "tabela": 10262,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10262/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=11913%5B96165%2C31721%2C31722%2C31723%2C31724%2C79367%2C79368%2C79369%2C31727%2C79370%2C79371%2C79372%2C79373%2C79374%2C79375%2C79376%2C79377%2C45934%2C45935%2C79378%2C45936%2C45937%2C31731%5D%7C11805%5B95371%5D",
+    "arquivo": "fontes\\dados\\10262_29608b9172595f56.json.gz"
+  },
+  {
+    "tabela": 10263,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10263/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%5D%7C1568%5B120704%5D%7C12031%5B107057%2C99209%2C50578%2C79380%5D",
+    "arquivo": "fontes\\dados\\10263_c14e574ccefe5261.json.gz"
+  },
+  {
+    "tabela": 10263,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10263/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%5D%7C1568%5B120704%2C9493%2C9494%2C9495%2C99713%5D%7C12031%5B107057%5D",
+    "arquivo": "fontes\\dados\\10263_2a68a0e69548ef87.json.gz"
+  },
+  {
+    "tabela": 10264,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10264/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C86%5B95251%5D%7C526%5B15349%5D%7C12064%5B100971%5D",
+    "arquivo": "fontes\\dados\\10264_274af04fc3aea972.json.gz"
+  },
+  {
+    "tabela": 10264,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10264/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%5D%7C526%5B15349%2C15350%2C15351%5D%7C12064%5B100971%5D",
+    "arquivo": "fontes\\dados\\10264_27718c86c3539785.json.gz"
+  },
+  {
+    "tabela": 10264,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10264/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C526%5B15349%5D%7C12064%5B100971%5D",
+    "arquivo": "fontes\\dados\\10264_1839251730291632.json.gz"
+  },
+  {
+    "tabela": 10264,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10264/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%5D%7C526%5B15349%5D%7C12064%5B100971%2C12630%2C12631%2C12632%2C12633%2C12634%2C12635%2C12636%2C12637%2C12638%2C12639%2C8498%5D",
+    "arquivo": "fontes\\dados\\10264_90721f61e8b9749a.json.gz"
+  },
+  {
+    "tabela": 10268,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10268/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C86%5B95251%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10268_1a6d96c5dd0e2990.json.gz"
+  },
+  {
+    "tabela": 10268,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10268/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10268_b1db0d44ca3c73af.json.gz"
+  },
+  {
+    "tabela": 10269,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10269/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C86%5B95251%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10269_02b8da544ee08a0b.json.gz"
+  },
+  {
+    "tabela": 10268,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10268/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%5D%7C58%5B1148%2C1149%2C1150%2C1151%2C1152%2C6798%5D",
+    "arquivo": "fontes\\dados\\10268_62a0bb087694a440.json.gz"
+  },
+  {
+    "tabela": 10268,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10268/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%5D%7C58%5B95253%2C118282%2C82072%2C114535%2C100052%2C2793%2C1144%2C108866%2C100754%2C1145%2C1146%2C1147%5D",
+    "arquivo": "fontes\\dados\\10268_ff9691e5e49506da.json.gz"
+  },
+  {
+    "tabela": 10269,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10269/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10269_8755ed00b6ffc1b7.json.gz"
+  },
+  {
+    "tabela": 9928,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9928/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=137%5B13233%2C73073%2C12194%2C73074%2C73075%2C73076%2C2876%2C13226%5D%7C63%5B95826%5D%7C125%5B2932%5D",
+    "arquivo": "fontes\\dados\\9928_5bd8424ecc4a00b1.json.gz"
+  },
+  {
+    "tabela": 10269,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10269/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%5D%7C58%5B1151%2C1152%2C6798%5D",
+    "arquivo": "fontes\\dados\\10269_6dfd84ebdfc8f266.json.gz"
+  },
+  {
+    "tabela": 10269,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10269/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C86%5B95251%5D%7C58%5B95253%2C118282%2C82072%2C114535%2C100052%2C2793%2C1144%2C108866%2C100754%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%5D",
+    "arquivo": "fontes\\dados\\10269_3967a724464f8852.json.gz"
+  },
+  {
+    "tabela": 9928,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9928/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=137%5B13233%5D%7C63%5B95826%2C73554%2C73126%2C4343%2C1055%2C73553%2C73127%2C73128%2C73129%2C1058%5D%7C125%5B2932%5D",
+    "arquivo": "fontes\\dados\\9928_2853fa1182a18de3.json.gz"
+  },
+  {
+    "tabela": 9928,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9928/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=137%5B13233%5D%7C63%5B95826%5D%7C125%5B2932%2C6815%2C121264%2C3247%2C71975%2C71976%2C71977%5D",
+    "arquivo": "fontes\\dados\\9928_7a24f65fd8cbb4ba.json.gz"
+  },
+  {
+    "tabela": 9929,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9929/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=63%5B95826%2C73554%2C73126%2C4343%2C1055%2C73553%2C73127%2C73128%2C73129%2C1058%5D%7C1986%5B73103%5D%7C1988%5B73108%5D",
+    "arquivo": "fontes\\dados\\9929_a4f71475ab4730b1.json.gz"
+  },
+  {
+    "tabela": 9929,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9929/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=63%5B95826%5D%7C1986%5B73103%5D%7C1988%5B73108%2C73109%2C73110%2C73111%2C73112%5D",
+    "arquivo": "fontes\\dados\\9929_498ec03d3ea03efd.json.gz"
+  },
+  {
+    "tabela": 9929,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9929/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=63%5B95826%5D%7C1986%5B73103%2C73104%2C73105%2C73106%2C73107%5D%7C1988%5B73108%5D",
+    "arquivo": "fontes\\dados\\9929_068eee1ecc189e47.json.gz"
+  },
+  {
+    "tabela": 9930,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9930/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=65%5B95810%2C1059%2C1060%2C1061%2C1062%2C1063%2C112686%2C2511%5D%7C63%5B95826%5D%7C125%5B2932%5D",
+    "arquivo": "fontes\\dados\\9930_13fee80418c1f152.json.gz"
+  },
+  {
+    "tabela": 9931,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9931/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=65%5B95810%5D%7C1973%5B73081%2C73082%2C73083%2C73084%2C73085%5D%7C74%5B95811%5D",
+    "arquivo": "fontes\\dados\\9931_ef18d0d65e6ca5f3.json.gz"
+  },
+  {
+    "tabela": 9930,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9930/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=65%5B95810%5D%7C63%5B95826%5D%7C125%5B2932%2C6815%2C121264%2C3247%2C71975%2C71976%2C71977%5D",
+    "arquivo": "fontes\\dados\\9930_64aa79c9c3769c1b.json.gz"
+  },
+  {
+    "tabela": 9931,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9931/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=65%5B95810%2C1059%2C1060%2C1061%2C1062%2C1063%2C112686%2C2511%5D%7C1973%5B73081%5D%7C74%5B95811%5D",
+    "arquivo": "fontes\\dados\\9931_e2ef59e12eaa4287.json.gz"
+  },
+  {
+    "tabela": 9930,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9930/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=65%5B95810%5D%7C63%5B95826%2C73554%2C73126%2C4343%2C1055%2C73553%2C73127%2C73128%2C73129%2C1058%5D%7C125%5B2932%5D",
+    "arquivo": "fontes\\dados\\9930_cfe6f9ea4fc1b3a3.json.gz"
+  },
+  {
+    "tabela": 9931,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9931/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=65%5B95810%5D%7C1973%5B73081%5D%7C74%5B95811%2C3361%2C3362%2C3363%2C12199%5D",
+    "arquivo": "fontes\\dados\\9931_7a1ebf57881c4485.json.gz"
+  },
+  {
+    "tabela": 9933,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9933/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1975%5B73086%2C73087%2C73088%2C73089%2C73090%5D%7C63%5B95826%5D%7C125%5B2932%5D",
+    "arquivo": "fontes\\dados\\9933_795391c0fbe1ade8.json.gz"
+  },
+  {
+    "tabela": 9935,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9935/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1977%5B73091%2C73092%2C73093%5D%7C63%5B95826%5D%7C125%5B2932%5D",
+    "arquivo": "fontes\\dados\\9935_a9ec25861d6a6a29.json.gz"
+  },
+  {
+    "tabela": 9933,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9933/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1975%5B73086%5D%7C63%5B95826%5D%7C125%5B2932%2C6815%2C121264%2C3247%2C71975%2C71976%2C71977%5D",
+    "arquivo": "fontes\\dados\\9933_97fdb9c15f82285d.json.gz"
+  },
+  {
+    "tabela": 9933,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9933/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1975%5B73086%5D%7C63%5B95826%2C73554%2C73126%2C4343%2C1055%2C73553%2C73127%2C73128%2C73129%2C1058%5D%7C125%5B2932%5D",
+    "arquivo": "fontes\\dados\\9933_7e8f01c99612ff83.json.gz"
+  },
+  {
+    "tabela": 9936,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9936/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2072%5B77584%2C77585%2C77586%5D%7C63%5B95826%5D%7C125%5B2932%5D",
+    "arquivo": "fontes\\dados\\9936_c05d28c441fbd335.json.gz"
+  },
+  {
+    "tabela": 9935,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9935/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1977%5B73091%5D%7C63%5B95826%5D%7C125%5B2932%2C6815%2C121264%2C3247%2C71975%2C71976%2C71977%5D",
+    "arquivo": "fontes\\dados\\9935_3b465c0b5a47d4e7.json.gz"
+  },
+  {
+    "tabela": 9935,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9935/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1977%5B73091%5D%7C63%5B95826%2C73554%2C73126%2C4343%2C1055%2C73553%2C73127%2C73128%2C73129%2C1058%5D%7C125%5B2932%5D",
+    "arquivo": "fontes\\dados\\9935_a622bfc3d6e64f88.json.gz"
+  },
+  {
+    "tabela": 9583,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9583/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=125%5B2932%2C6815%2C121264%2C3247%2C71975%2C71976%2C71977%5D%7C14%5B200%5D",
+    "arquivo": "fontes\\dados\\9583_b6b7a94ab0f6f744.json.gz"
+  },
+  {
+    "tabela": 9936,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9936/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2072%5B77584%5D%7C63%5B95826%5D%7C125%5B2932%2C6815%2C121264%2C3247%2C71975%2C71976%2C71977%5D",
+    "arquivo": "fontes\\dados\\9936_1570a3e14c468e22.json.gz"
+  },
+  {
+    "tabela": 9936,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9936/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2072%5B77584%5D%7C63%5B95826%2C73554%2C73126%2C4343%2C1055%2C73553%2C73127%2C73128%2C73129%2C1058%5D%7C125%5B2932%5D",
+    "arquivo": "fontes\\dados\\9936_f73814fa9d90eb3a.json.gz"
+  },
+  {
+    "tabela": 9583,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9583/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=125%5B2932%5D%7C14%5B72279%2C72280%2C72281%2C72282%5D",
+    "arquivo": "fontes\\dados\\9583_59b99b9bdcb77616.json.gz"
+  },
+  {
+    "tabela": 9584,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9584/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=3%5B59993%5D%7C14%5B72279%2C72280%2C72281%2C72282%5D",
+    "arquivo": "fontes\\dados\\9584_531949a60f3b0b95.json.gz"
+  },
+  {
+    "tabela": 9584,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9584/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=3%5B59993%2C9697%2C2504%2C59998%2C60001%2C60002%2C60003%2C2505%2C103995%2C10004%2C10005%5D%7C14%5B200%5D",
+    "arquivo": "fontes\\dados\\9584_f2801451c3e19a5d.json.gz"
+  },
+  {
+    "tabela": 9583,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9583/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=125%5B2932%5D%7C14%5B200%2C72240%2C72241%2C72242%2C72243%2C72244%2C72246%2C72247%2C72248%2C72250%2C72251%2C72252%2C72254%2C72255%2C72256%2C72258%2C72259%2C72260%2C72262%2C72263%2C72264%2C72266%2C72267%2C72268%2C72270%2C72271%2C72272%2C72274%2C72275%2C72276%2C72278%5D",
+    "arquivo": "fontes\\dados\\9583_50fae0a09d91152c.json.gz"
+  },
+  {
+    "tabela": 9586,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9586/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=14%5B72278%2C72279%2C72280%2C72281%2C72282%5D",
+    "arquivo": "fontes\\dados\\9586_283ae8f85dcc3a38.json.gz"
+  },
+  {
+    "tabela": 9584,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9584/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=3%5B59993%5D%7C14%5B200%2C72240%2C72241%2C72242%2C72243%2C72244%2C72246%2C72247%2C72248%2C72250%2C72251%2C72252%2C72254%2C72255%2C72256%2C72258%2C72259%2C72260%2C72262%2C72263%2C72264%2C72266%2C72267%2C72268%2C72270%2C72271%2C72272%2C72274%2C72275%2C72276%2C72278%5D",
+    "arquivo": "fontes\\dados\\9584_ef3fb86dfb282e64.json.gz"
+  },
+  {
+    "tabela": 9587,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9587/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C58%5B95253%5D%7C14%5B200%5D",
+    "arquivo": "fontes\\dados\\9587_7f25c33ebeb463c7.json.gz"
+  },
+  {
+    "tabela": 9586,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9586/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=14%5B200%2C72240%2C72241%2C72242%2C72243%2C72244%2C72246%2C72247%2C72248%2C72250%2C72251%2C72252%2C72254%2C72255%2C72256%5D",
+    "arquivo": "fontes\\dados\\9586_e3cfaaea6aa2274b.json.gz"
+  },
+  {
+    "tabela": 9586,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9586/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=14%5B72258%2C72259%2C72260%2C72262%2C72263%2C72264%2C72266%2C72267%2C72268%2C72270%2C72271%2C72272%2C72274%2C72275%2C72276%5D",
+    "arquivo": "fontes\\dados\\9586_a70bbbacea1eee64.json.gz"
+  },
+  {
+    "tabela": 9587,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9587/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B95253%2C1140%2C1141%2C3518%2C104870%2C99127%2C3520%2C3244%5D%7C14%5B200%5D",
+    "arquivo": "fontes\\dados\\9587_dc784d0b5f5ead86.json.gz"
+  },
+  {
+    "tabela": 10055,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10055/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D",
+    "arquivo": "fontes\\dados\\10055_7e30a6e0c2787313.json.gz"
+  },
+  {
+    "tabela": 9608,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9608/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=58%5B95253%5D%7C2%5B6794%2C4%2C5%5D",
+    "arquivo": "fontes\\dados\\9608_f839afffbb8eb83a.json.gz"
+  },
+  {
+    "tabela": 9587,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9587/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B95253%5D%7C14%5B200%2C72250%2C72251%2C72252%2C72254%2C72255%2C72256%2C72266%2C72267%2C72268%2C72274%2C72275%2C72276%5D",
+    "arquivo": "fontes\\dados\\9587_c714129f2e76b4d4.json.gz"
+  },
+  {
+    "tabela": 9718,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9718/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1714%5B60024%5D%7C2661%5B32776%2C12869%2C12870%5D",
+    "arquivo": "fontes\\dados\\9718_9a0e64036f8cea15.json.gz"
+  },
+  {
+    "tabela": 9718,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9718/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1714%5B60024%2C60025%2C60026%2C60029%5D%7C2661%5B32776%5D",
+    "arquivo": "fontes\\dados\\9718_d45cd4bd3ff7877d.json.gz"
+  },
+  {
+    "tabela": 9608,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9608/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=58%5B95253%2C1140%2C1141%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C1153%2C1154%2C1155%2C6802%2C6803%2C92963%2C92964%2C92965%5D%7C2%5B6794%5D",
+    "arquivo": "fontes\\dados\\9608_1e9eb8ec294e53a1.json.gz"
+  },
+  {
+    "tabela": 8180,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/8180/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=59%5B93024%2C1023%2C1024%5D%7C2%5B6794%5D%7C287%5B100362%5D",
+    "arquivo": "fontes\\dados\\8180_04748f73b0824c73.json.gz"
+  },
+  {
+    "tabela": 9720,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9720/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2661%5B32776%2C12869%2C12870%5D",
+    "arquivo": "fontes\\dados\\9720_5f275abc07f771b0.json.gz"
+  },
+  {
+    "tabela": 8180,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/8180/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=59%5B93024%5D%7C2%5B6794%2C4%2C5%5D%7C287%5B100362%5D",
+    "arquivo": "fontes\\dados\\8180_5124a37bab6cde52.json.gz"
+  },
+  {
+    "tabela": 8181,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/8181/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C287%5B100362%5D",
+    "arquivo": "fontes\\dados\\8181_8ebb1cb13c1af307.json.gz"
+  },
+  {
+    "tabela": 8180,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/8180/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=59%5B93024%5D%7C2%5B6794%5D%7C287%5B6594%2C6595%2C6596%2C6597%2C9483%2C6598%2C6599%2C6600%2C6601%2C6602%2C6603%2C6604%2C6605%2C6606%2C6607%2C9484%2C6608%2C6609%2C6610%2C6611%2C6612%2C6613%2C6614%2C6615%2C6616%2C6617%2C3000%2C9486%2C113623%5D",
+    "arquivo": "fontes\\dados\\8180_107a3c4beb3a8f86.json.gz"
+  },
+  {
+    "tabela": 9955,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9955/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2661%5B32776%2C12869%2C12870%5D%7C1%5B6795%5D",
+    "arquivo": "fontes\\dados\\9955_115e46970c106a84.json.gz"
+  },
+  {
+    "tabela": 8181,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/8181/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C287%5B100362%2C93086%2C6572%2C6573%2C6574%2C6575%2C6576%2C93087%2C6577%2C6578%2C6579%2C6580%2C6581%2C2999%2C6582%2C6656%2C6657%2C6658%2C6659%2C6583%2C6584%2C6585%2C6586%2C6587%2C9482%2C6588%2C6589%2C6590%2C6591%2C6592%2C6593%2C6594%2C6595%2C6596%2C6597%2C9483%2C6598%2C6599%2C6600%2C6601%2C6602%2C6603%2C6604%2C6605%2C6606%2C6607%2C9484%2C6608%2C6609%2C6610%2C6611%2C6612%2C6613%2C6614%2C6615%2C6616%2C6617%2C3000%2C9486%2C113623%5D",
+    "arquivo": "fontes\\dados\\8181_cb1c1d9bf1d1ac88.json.gz"
+  },
+  {
+    "tabela": 8180,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/8180/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=59%5B93024%5D%7C2%5B6794%5D%7C287%5B100362%2C93086%2C6572%2C6573%2C6574%2C6575%2C6576%2C93087%2C6577%2C6578%2C6579%2C6580%2C6581%2C2999%2C6582%2C6656%2C6657%2C6658%2C6659%2C6583%2C6584%2C6585%2C6586%2C6587%2C9482%2C6588%2C6589%2C6590%2C6591%2C6592%2C6593%5D",
+    "arquivo": "fontes\\dados\\8180_5bc1ee867cfa156d.json.gz"
+  },
+  {
+    "tabela": 9578,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9578/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2661%5B32776%2C60027%2C60028%5D",
+    "arquivo": "fontes\\dados\\9578_959c0615623aa417.json.gz"
+  },
+  {
+    "tabela": 10089,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10089/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C58%5B95253%5D%7C2661%5B32776%5D%7C1%5B6795%5D",
+    "arquivo": "fontes\\dados\\10089_313d7b9bcb978335.json.gz"
+  },
+  {
+    "tabela": 9724,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9724/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2661%5B32776%2C60027%2C60028%5D",
+    "arquivo": "fontes\\dados\\9724_fe8ba0190daec5d4.json.gz"
+  },
+  {
+    "tabela": 9955,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9955/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2661%5B32776%5D%7C1%5B6795%2C1%2C2%5D",
+    "arquivo": "fontes\\dados\\9955_fb1521a4ea5ffffd.json.gz"
+  },
+  {
+    "tabela": 10089,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10089/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B95253%5D%7C2661%5B32776%2C60027%2C60028%5D%7C1%5B6795%5D",
+    "arquivo": "fontes\\dados\\10089_a925a50af2cb88c5.json.gz"
+  },
+  {
+    "tabela": 10089,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10089/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B95253%5D%7C2661%5B32776%5D%7C1%5B6795%2C1%2C2%5D",
+    "arquivo": "fontes\\dados\\10089_08e144bf03a2a75a.json.gz"
+  },
+  {
+    "tabela": 10091,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10091/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C58%5B95253%5D%7C2661%5B32776%5D%7C1%5B6795%5D",
+    "arquivo": "fontes\\dados\\10091_e03cee27b9906d9a.json.gz"
+  },
+  {
+    "tabela": 10089,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10089/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B95253%2C1140%2C1141%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%5D%7C2661%5B32776%5D%7C1%5B6795%5D",
+    "arquivo": "fontes\\dados\\10089_b22155bc0e044206.json.gz"
+  },
+  {
+    "tabela": 10089,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10089/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B1151%2C1152%2C1153%2C1154%2C1155%2C6802%2C6803%2C92963%2C92964%2C92965%5D%7C2661%5B32776%5D%7C1%5B6795%5D",
+    "arquivo": "fontes\\dados\\10089_4c082942cd171d21.json.gz"
+  },
+  {
+    "tabela": 10091,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10091/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B95253%5D%7C2661%5B32776%2C60027%2C60028%5D%7C1%5B6795%5D",
+    "arquivo": "fontes\\dados\\10091_465216b718c77848.json.gz"
+  },
+  {
+    "tabela": 10091,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10091/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B95253%2C2792%2C92982%2C1144%2C11777%2C31657%2C31658%2C31659%2C6798%2C33064%5D%7C2661%5B32776%5D%7C1%5B6795%5D",
+    "arquivo": "fontes\\dados\\10091_dd5219d2ce990e4a.json.gz"
+  },
+  {
+    "tabela": 10091,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10091/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B95253%5D%7C2661%5B32776%5D%7C1%5B6795%2C1%2C2%5D",
+    "arquivo": "fontes\\dados\\10091_dfa828319ae3b4d9.json.gz"
+  },
+  {
+    "tabela": 10125,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10125/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10125_a703b2290d1d94fc.json.gz"
+  },
+  {
+    "tabela": 10097,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10097/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2661%5B32776%2C60027%2C60028%5D%7C1%5B6795%5D",
+    "arquivo": "fontes\\dados\\10097_56c7f2f8b789a969.json.gz"
+  },
+  {
+    "tabela": 10097,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10097/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2661%5B32776%5D%7C1%5B6795%2C1%2C2%5D",
+    "arquivo": "fontes\\dados\\10097_e5f4ca03d172773e.json.gz"
+  },
+  {
+    "tabela": 10125,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10125/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B1154%2C1155%2C6802%2C6803%2C92963%2C92964%2C92965%5D",
+    "arquivo": "fontes\\dados\\10125_5ccfebb8f5c61b40.json.gz"
+  },
+  {
+    "tabela": 10126,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10126/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\10126_8716cb1956b10f42.json.gz"
+  },
+  {
+    "tabela": 10128,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10128/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1506%5B58770%2C58767%2C58768%5D",
+    "arquivo": "fontes\\dados\\10128_ba7b33ce8424cc45.json.gz"
+  },
+  {
+    "tabela": 10127,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10127/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1509%5B58771%2C73771%2C73772%2C73773%2C73789%2C73790%5D",
+    "arquivo": "fontes\\dados\\10127_eb5661b89074d656.json.gz"
+  },
+  {
+    "tabela": 10130,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10130/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C839%5B46583%2C58765%2C58766%5D",
+    "arquivo": "fontes\\dados\\10130_d9a6501be11d2f90.json.gz"
+  },
+  {
+    "tabela": 10130,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10130/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C839%5B46583%5D",
+    "arquivo": "fontes\\dados\\10130_6705d2f1d4dd8093.json.gz"
+  },
+  {
+    "tabela": 10133,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10133/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1509%5B73771%2C73772%2C73773%2C73789%2C73790%5D%7C623%5B56918%5D",
+    "arquivo": "fontes\\dados\\10133_002b58e7f22a244d.json.gz"
+  },
+  {
+    "tabela": 10125,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10125/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B95253%2C73770%2C77579%2C1141%2C1142%2C104578%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C3302%2C3520%2C1152%2C1153%2C3244%5D",
+    "arquivo": "fontes\\dados\\10125_0a3d2337f53728b8.json.gz"
+  },
+  {
+    "tabela": 10145,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10145/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10145_a16be60807ab8d31.json.gz"
+  },
+  {
+    "tabela": 10145,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10145/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B92964%2C92965%5D",
+    "arquivo": "fontes\\dados\\10145_e798ed7af7643f4c.json.gz"
+  },
+  {
+    "tabela": 10153,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10153/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C1568%5B120704%5D",
+    "arquivo": "fontes\\dados\\10153_c1ae5b586f9c1d1b.json.gz"
+  },
+  {
+    "tabela": 10147,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10147/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\10147_79e970861fa0197c.json.gz"
+  },
+  {
+    "tabela": 10153,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10153/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C1568%5B120704%2C9493%2C9494%2C9495%2C99713%5D",
+    "arquivo": "fontes\\dados\\10153_c2f0f9fbb56f4e70.json.gz"
+  },
+  {
+    "tabela": 631,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/631/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B0%2C4%2C5%5D%7C183%5B0%5D",
+    "arquivo": "fontes\\dados\\631_9c8988a47403c080.json.gz"
+  },
+  {
+    "tabela": 10133,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10133/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1509%5B73771%2C73772%2C73773%2C73789%2C73790%5D%7C623%5B56918%2C60004%2C56921%2C56920%2C32318%5D",
+    "arquivo": "fontes\\dados\\10133_46db386248c1d3e9.json.gz"
+  },
+  {
+    "tabela": 10145,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10145/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B95253%2C1140%2C1141%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C1153%2C1154%2C1155%2C6802%2C6803%2C92963%5D",
+    "arquivo": "fontes\\dados\\10145_2d9558d3395ecfd2.json.gz"
+  },
+  {
+    "tabela": 631,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/631/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B0%5D%7C183%5B3280%2C3281%2C6920%2C3282%2C6921%2C6946%2C6947%2C3283%5D",
+    "arquivo": "fontes\\dados\\631_04197ea3aee0cf51.json.gz"
+  },
+  {
+    "tabela": 2145,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/2145/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=304%5B0%5D%7C2%5B0%2C4%2C5%5D%7C58%5B0%5D",
+    "arquivo": "fontes\\dados\\2145_8ee82b7ae5a0f5d4.json.gz"
+  },
+  {
+    "tabela": 2145,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/2145/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=304%5B0%2C100615%2C100616%2C100617%2C3123%2C3124%2C3125%2C79184%2C79185%2C79186%5D%7C2%5B0%5D%7C58%5B0%5D",
+    "arquivo": "fontes\\dados\\2145_57d9251af4e93af0.json.gz"
+  },
+  {
+    "tabela": 2145,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/2145/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=304%5B0%5D%7C2%5B0%5D%7C58%5B3244%2C1154%2C1155%2C2503%5D",
+    "arquivo": "fontes\\dados\\2145_6bf548fff4800b5c.json.gz"
+  },
+  {
+    "tabela": 3182,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/3182/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=305%5B0%5D%7C2%5B0%2C4%2C5%5D%7C58%5B0%5D",
+    "arquivo": "fontes\\dados\\3182_6f91884c7dae10cb.json.gz"
+  },
+  {
+    "tabela": 631,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/631/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B0%5D%7C183%5B0%2C95311%2C3256%2C3257%2C3258%2C3259%2C3260%2C3261%2C3262%2C95312%2C3263%2C3264%2C3265%2C3266%2C3267%2C3268%2C3269%2C3270%2C3271%2C95313%2C3272%2C3273%2C3284%2C3274%2C95314%2C3275%2C3276%2C3277%2C95315%2C3278%2C3279%5D",
+    "arquivo": "fontes\\dados\\631_c16cb5d5106e5eff.json.gz"
+  },
+  {
+    "tabela": 2145,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/2145/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=304%5B0%5D%7C2%5B0%5D%7C58%5B0%2C1140%2C1141%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C1153%5D",
+    "arquivo": "fontes\\dados\\2145_6cd65ec726421cab.json.gz"
+  },
+  {
+    "tabela": 3182,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/3182/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=305%5B0%2C6864%2C6865%2C6866%2C6867%2C6868%2C6869%2C6948%2C6874%5D%7C2%5B0%5D%7C58%5B0%5D",
+    "arquivo": "fontes\\dados\\3182_af0390351e2df0cd.json.gz"
+  },
+  {
+    "tabela": 10157,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10157/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=302%5B77794%5D%7C2%5B6794%2C4%2C5%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10157_02d23d8151e70ead.json.gz"
+  },
+  {
+    "tabela": 10157,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10157/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=302%5B77794%2C6831%2C6832%2C6833%5D%7C2%5B6794%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10157_894b7018c704e1eb.json.gz"
+  },
+  {
+    "tabela": 3182,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/3182/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=305%5B0%5D%7C2%5B0%5D%7C58%5B0%2C1140%2C1141%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C1153%2C1154%2C1155%2C2503%5D",
+    "arquivo": "fontes\\dados\\3182_87b9d61cc3a95a7d.json.gz"
+  },
+  {
+    "tabela": 10160,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10160/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\10160_a947a952ff65d7aa.json.gz"
+  },
+  {
+    "tabela": 10158,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10158/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=305%5B77807%2C6864%2C6865%2C6866%2C6867%2C6868%2C6869%2C6948%5D%7C3014%5B95320%5D",
+    "arquivo": "fontes\\dados\\10158_9e68a5aad4072581.json.gz"
+  },
+  {
+    "tabela": 10157,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10157/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=302%5B77794%5D%7C2%5B6794%5D%7C58%5B95253%2C1140%2C1141%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C1153%2C1154%2C1155%2C2503%5D",
+    "arquivo": "fontes\\dados\\10157_be9399c1825d9498.json.gz"
+  },
+  {
+    "tabela": 10161,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10161/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%2C4%2C5%5D%7C2084%5B77842%5D",
+    "arquivo": "fontes\\dados\\10161_7ceaecffe7b66c87.json.gz"
+  },
+  {
+    "tabela": 10160,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10160/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C58%5B95253%2C1141%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C1153%2C1154%2C1155%2C2503%5D",
+    "arquivo": "fontes\\dados\\10160_bf96d4b4be87355b.json.gz"
+  },
+  {
+    "tabela": 10158,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10158/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=305%5B77807%5D%7C3014%5B95320%2C95322%2C46323%2C46326%2C95323%2C46339%2C46325%2C95324%2C46336%2C46343%2C46329%2C46345%2C46340%2C46342%2C46324%2C46349%2C46327%2C46338%2C46330%2C95327%2C46348%2C46341%2C46347%2C46346%2C95330%2C46337%2C46333%2C95331%2C46351%2C100810%2C100811%5D",
+    "arquivo": "fontes\\dados\\10158_8fd6bc24308217ab.json.gz"
+  },
+  {
+    "tabela": 10161,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10161/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C2084%5B77842%2C78041%2C78042%2C78043%2C78044%2C78045%2C78046%2C78047%2C78048%2C78049%2C78050%2C78051%2C78052%2C78053%2C78054%2C78055%2C78056%2C78057%2C78058%2C78059%2C78060%2C78061%2C78062%2C78063%2C78064%2C78065%2C78066%2C78067%2C78068%2C78069%2C78070%5D",
+    "arquivo": "fontes\\dados\\10161_7cd72305887875d2.json.gz"
+  },
+  {
+    "tabela": 10161,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10161/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C2084%5B78071%2C78072%2C78073%2C78074%2C78075%2C78076%2C78077%2C78078%2C78079%2C78096%2C78097%2C78098%2C78099%2C78109%2C78110%2C78111%2C78112%2C78113%2C78114%2C78115%2C78116%2C78117%2C78118%2C78119%2C78120%2C78121%2C78122%2C78123%2C78124%2C78125%2C78126%5D",
+    "arquivo": "fontes\\dados\\10161_92ce574947aaafe4.json.gz"
+  },
+  {
+    "tabela": 10161,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10161/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C2084%5B78127%2C78128%2C78129%2C78130%2C78131%2C78132%2C78133%2C78134%2C78135%2C78136%2C78137%2C78138%2C78139%2C78140%2C78141%2C78142%2C78143%2C78144%2C78145%2C78146%2C78147%2C78148%2C78149%2C78150%2C78151%2C78152%2C78153%2C78154%2C78155%2C78156%2C78157%5D",
+    "arquivo": "fontes\\dados\\10161_6e554426a6e5f63d.json.gz"
+  },
+  {
+    "tabela": 10161,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10161/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C2084%5B78504%2C78505%2C78506%2C78507%2C78508%2C78509%2C78510%2C78548%2C78549%2C78550%2C78551%2C78552%2C78553%2C78554%2C78555%2C78556%2C78557%2C78558%2C78559%2C78560%2C78561%2C78562%2C78563%2C78564%2C78576%2C78577%2C78578%2C79127%2C79128%2C79129%2C79130%5D",
+    "arquivo": "fontes\\dados\\10161_0f5396751fd97500.json.gz"
+  },
+  {
+    "tabela": 10161,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10161/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C2084%5B78158%2C78159%2C78160%2C78161%2C78162%2C78163%2C78186%2C78187%2C78188%2C78339%2C78340%2C78341%2C78342%2C78354%2C78355%2C78356%2C78357%2C78358%2C78359%2C78360%2C78477%2C78478%2C78479%2C78496%2C78497%2C78498%2C78499%2C78500%2C78501%2C78502%2C78503%5D",
+    "arquivo": "fontes\\dados\\10161_9f2e3a0eba37fdf3.json.gz"
+  },
+  {
+    "tabela": 9881,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9881/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1885%5B72599%2C72600%2C72601%2C72602%5D",
+    "arquivo": "fontes\\dados\\9881_cf704befc4fb2778.json.gz"
+  },
+  {
+    "tabela": 10161,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10161/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C2084%5B79162%2C79163%2C79164%2C79165%2C79166%2C79167%2C79168%2C79169%2C79170%2C79171%5D",
+    "arquivo": "fontes\\dados\\10161_9270f52aead1f47e.json.gz"
+  },
+  {
+    "tabela": 9882,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9882/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1887%5B72603%2C72604%2C72605%2C72606%2C72607%2C72608%5D%7C11561%5B100679%5D",
+    "arquivo": "fontes\\dados\\9882_be1be7a5555ab7b5.json.gz"
+  },
+  {
+    "tabela": 10161,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10161/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2%5B6794%5D%7C2084%5B79131%2C79132%2C79133%2C79134%2C79135%2C79136%2C79137%2C79138%2C79139%2C79140%2C79141%2C79142%2C79143%2C79144%2C79145%2C79146%2C79147%2C79148%2C79149%2C79150%2C79151%2C79152%2C79153%2C79154%2C79155%2C79156%2C79157%2C79158%2C79159%2C79160%2C79161%5D",
+    "arquivo": "fontes\\dados\\10161_4720946b9c7142f3.json.gz"
+  },
+  {
+    "tabela": 9882,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9882/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1887%5B72603%5D%7C11561%5B100679%2C100680%2C100681%5D",
+    "arquivo": "fontes\\dados\\9882_33ed108dcfd75d16.json.gz"
+  },
+  {
+    "tabela": 10175,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10175/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=174%5B77727%2C3164%2C3165%2C104651%2C104652%2C104653%2C104654%2C104655%5D%7C12088%5B9963%5D",
+    "arquivo": "fontes\\dados\\10175_3e00ac4bb8591ad7.json.gz"
+  },
+  {
+    "tabela": 10175,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10175/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=174%5B77727%5D%7C12088%5B9963%2C100956%2C100957%2C100958%2C100959%2C100960%2C104583%2C104584%2C104585%2C104586%2C104587%2C104588%2C104589%2C104590%2C104643%5D",
+    "arquivo": "fontes\\dados\\10175_882654b1037b0cab.json.gz"
+  },
+  {
+    "tabela": 10176,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10176/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=12088%5B9963%2C100956%2C100957%2C100958%2C100959%2C104605%5D%7C11807%5B77728%5D%7C12252%5B77739%5D%7C512%5B77735%5D",
+    "arquivo": "fontes\\dados\\10176_5075d50529c71e07.json.gz"
+  },
+  {
+    "tabela": 10176,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10176/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=12088%5B9963%5D%7C11807%5B77728%5D%7C12252%5B77739%5D%7C512%5B77735%2C13397%2C13398%2C13399%2C13400%5D",
+    "arquivo": "fontes\\dados\\10176_dfdc12f970a5eda9.json.gz"
+  },
+  {
+    "tabela": 10176,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10176/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=12088%5B9963%5D%7C11807%5B77728%5D%7C12252%5B77739%2C104809%2C104810%2C104811%2C104812%2C104813%2C104814%5D%7C512%5B77735%5D",
+    "arquivo": "fontes\\dados\\10176_366a0af11f47310d.json.gz"
+  },
+  {
+    "tabela": 10176,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10176/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=12088%5B9963%5D%7C11807%5B77728%2C95418%2C95419%5D%7C12252%5B77739%5D%7C512%5B77735%5D",
+    "arquivo": "fontes\\dados\\10176_eef6d9e3b43d803b.json.gz"
+  },
+  {
+    "tabela": 10183,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10183/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=464%5B50292%5D%7C2%5B6794%2C4%2C5%5D%7C58%5B95253%5D%7C133%5B95278%5D",
+    "arquivo": "fontes\\dados\\10183_f8d0f351299692cc.json.gz"
+  },
+  {
+    "tabela": 10183,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10183/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=464%5B50292%2C12108%2C12109%5D%7C2%5B6794%5D%7C58%5B95253%5D%7C133%5B95278%5D",
+    "arquivo": "fontes\\dados\\10183_5ca4481efea24b2b.json.gz"
+  },
+  {
+    "tabela": 10183,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10183/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=464%5B50292%5D%7C2%5B6794%5D%7C58%5B95253%5D%7C133%5B95278%2C95263%2C95277%2C2826%2C2827%2C95274%2C95275%2C2836%2C12890%2C2837%5D",
+    "arquivo": "fontes\\dados\\10183_13a73a02426c69e2.json.gz"
+  },
+  {
+    "tabela": 10183,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10183/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=464%5B50292%5D%7C2%5B6794%5D%7C58%5B95253%2C1142%2C1143%2C1144%2C1145%2C1146%2C1147%2C1148%2C1149%2C1150%2C1151%2C1152%2C1153%2C1154%2C1155%2C2503%5D%7C133%5B95278%5D",
+    "arquivo": "fontes\\dados\\10183_95edc6159a2faf28.json.gz"
+  },
+  {
+    "tabela": 10075,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10075/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=12291%5B58895%2C105103%2C105104%2C105105%2C105106%2C105107%2C105108%5D%7C1568%5B120704%5D%7C12232%5B58896%5D",
+    "arquivo": "fontes\\dados\\10075_c2149c484e858cd4.json.gz"
+  },
+  {
+    "tabela": 10075,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10075/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=12291%5B58895%5D%7C1568%5B120704%2C9493%2C9494%2C9495%2C99713%2C11626%5D%7C12232%5B58896%5D",
+    "arquivo": "fontes\\dados\\10075_4251ba6dccd73d7c.json.gz"
+  },
+  {
+    "tabela": 10078,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10078/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=12232%5B105112%2C105113%5D%7C1568%5B120704%5D%7C12293%5B58898%5D",
+    "arquivo": "fontes\\dados\\10078_f75092afd03e7eaf.json.gz"
+  },
+  {
+    "tabela": 10075,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10075/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=12291%5B58895%5D%7C1568%5B120704%5D%7C12232%5B58896%2C58897%2C104541%2C104542%2C104543%2C104544%2C104545%2C104546%2C104547%2C104548%2C104549%2C105109%2C105110%2C105111%2C105112%2C105113%5D",
+    "arquivo": "fontes\\dados\\10075_f426d1055fbca55a.json.gz"
+  },
+  {
+    "tabela": 10078,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10078/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=12232%5B58896%2C58897%2C104541%2C104542%2C104543%2C104544%2C104545%5D%7C1568%5B120704%5D%7C12293%5B58898%5D",
+    "arquivo": "fontes\\dados\\10078_8471eee42459088f.json.gz"
+  },
+  {
+    "tabela": 10078,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10078/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=12232%5B104546%2C104547%2C104548%2C104549%2C105109%2C105110%2C105111%5D%7C1568%5B120704%5D%7C12293%5B58898%5D",
+    "arquivo": "fontes\\dados\\10078_5f5b34f7581e6f36.json.gz"
+  },
+  {
+    "tabela": 10078,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10078/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=12232%5B58896%5D%7C1568%5B120704%2C9493%2C9494%2C9495%2C99713%2C11626%5D%7C12293%5B58898%5D",
+    "arquivo": "fontes\\dados\\10078_28b7ca249c9ad49b.json.gz"
+  },
+  {
+    "tabela": 10078,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10078/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=12232%5B58896%5D%7C1568%5B120704%5D%7C12293%5B58898%2C105167%2C105168%2C105169%2C105170%2C105171%2C105172%5D",
+    "arquivo": "fontes\\dados\\10078_6f10bcb03d2a1ea0.json.gz"
+  },
+  {
+    "tabela": 9537,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9537/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=133%5B95278%2C95263%2C95277%2C2826%2C2827%2C95274%2C95275%2C2836%2C12890%2C2837%5D%7C2%5B6794%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\9537_88d8585073b454c9.json.gz"
+  },
+  {
+    "tabela": 9537,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9537/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=133%5B95278%5D%7C2%5B6794%2C4%2C5%5D%7C58%5B95253%5D",
+    "arquivo": "fontes\\dados\\9537_b231d3b0205d7408.json.gz"
+  },
+  {
+    "tabela": 10198,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10198/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=133%5B95278%5D%7C58%5B95253%5D%7C59%5B93024%2C1023%2C1024%5D",
+    "arquivo": "fontes\\dados\\10198_ed9b2b712fde7d87.json.gz"
+  },
+  {
+    "tabela": 10198,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10198/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=133%5B95278%5D%7C58%5B95253%2C1143%2C1144%2C1145%2C3299%2C3300%2C3301%2C3520%2C95252%2C2503%5D%7C59%5B93024%5D",
+    "arquivo": "fontes\\dados\\10198_57b9a90fa1aec3fd.json.gz"
+  },
+  {
+    "tabela": 10199,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10199/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1568%5B120704%2C9493%2C9494%2C9495%2C99713%5D%7C2%5B6794%5D%7C133%5B95278%5D",
+    "arquivo": "fontes\\dados\\10199_39c83afe167ed799.json.gz"
+  },
+  {
+    "tabela": 9537,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9537/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=133%5B95278%5D%7C2%5B6794%5D%7C58%5B95253%2C1142%2C1143%2C1144%2C1145%2C3299%2C3300%2C3301%2C3520%2C95252%2C2503%5D",
+    "arquivo": "fontes\\dados\\9537_be4f3393dfd0605f.json.gz"
+  },
+  {
+    "tabela": 10198,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10198/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=133%5B95278%2C95263%2C95277%2C2826%2C2827%2C95274%2C95275%2C2836%2C12890%2C2837%5D%7C58%5B95253%5D%7C59%5B93024%5D",
+    "arquivo": "fontes\\dados\\10198_bba5657655bd9db1.json.gz"
+  },
+  {
+    "tabela": 10199,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10199/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1568%5B120704%5D%7C2%5B6794%2C4%2C5%5D%7C133%5B95278%5D",
+    "arquivo": "fontes\\dados\\10199_7526e4aff1148999.json.gz"
+  },
+  {
+    "tabela": 10321,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10321/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=468%5B79174%2C12163%2C12164%2C12165%5D%7C2%5B6794%5D%7C86%5B95251%5D%7C386%5B9680%5D",
+    "arquivo": "fontes\\dados\\10321_a336e2adbe9e97f7.json.gz"
+  },
+  {
+    "tabela": 10321,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10321/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=468%5B79174%5D%7C2%5B6794%2C4%2C5%5D%7C86%5B95251%5D%7C386%5B9680%5D",
+    "arquivo": "fontes\\dados\\10321_0429010e58bb8179.json.gz"
+  },
+  {
+    "tabela": 10321,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10321/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=468%5B79174%5D%7C2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C386%5B9680%5D",
+    "arquivo": "fontes\\dados\\10321_8dd8d90003b98a82.json.gz"
+  },
+  {
+    "tabela": 10199,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10199/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1568%5B120704%5D%7C2%5B6794%5D%7C133%5B95278%2C95263%2C95277%2C2826%2C2827%2C95274%2C95275%2C2836%2C12890%2C2837%5D",
+    "arquivo": "fontes\\dados\\10199_715deebb5a0129be.json.gz"
+  },
+  {
+    "tabela": 10321,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10321/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=468%5B79174%5D%7C2%5B6794%5D%7C86%5B95251%5D%7C386%5B9680%2C9681%2C9682%2C9683%2C9684%2C9685%2C9686%2C11780%2C9692%5D",
+    "arquivo": "fontes\\dados\\10321_4fcec53be12e0a94.json.gz"
+  },
+  {
+    "tabela": 10324,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10324/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=468%5B79174%5D%7C2%5B6794%2C4%2C5%5D%7C58%5B95253%5D%7C11322%5B79175%5D",
+    "arquivo": "fontes\\dados\\10324_18d16d93277631d7.json.gz"
+  },
+  {
+    "tabela": 10324,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10324/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=468%5B79174%2C12163%2C12164%2C12165%5D%7C2%5B6794%5D%7C58%5B95253%5D%7C11322%5B79175%5D",
+    "arquivo": "fontes\\dados\\10324_d0a91f61aeef6242.json.gz"
+  },
+  {
+    "tabela": 10324,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10324/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=468%5B79174%5D%7C2%5B6794%5D%7C58%5B95253%2C41126%2C12873%2C14433%2C2792%2C100052%2C100754%2C6798%5D%7C11322%5B79175%5D",
+    "arquivo": "fontes\\dados\\10324_b468c96188215e10.json.gz"
+  },
+  {
+    "tabela": 10324,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10324/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=468%5B79174%5D%7C2%5B6794%5D%7C58%5B95253%5D%7C11322%5B79175%2C91116%2C91117%2C121400%2C12121%2C12122%2C121405%2C12123%5D",
+    "arquivo": "fontes\\dados\\10324_b6d1def5fbc1dc69.json.gz"
+  },
+  {
+    "tabela": 10329,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10329/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=469%5B79176%2C12167%2C12168%2C12169%2C12188%2C12189%2C12190%5D%7C2%5B6794%5D%7C386%5B9680%5D%7C2087%5B79177%5D",
+    "arquivo": "fontes\\dados\\10329_e4ed70d3952c6b3e.json.gz"
+  },
+  {
+    "tabela": 10329,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10329/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=469%5B79176%5D%7C2%5B6794%2C4%2C5%5D%7C386%5B9680%5D%7C2087%5B79177%5D",
+    "arquivo": "fontes\\dados\\10329_f00b69c31d1dcdc1.json.gz"
+  },
+  {
+    "tabela": 10329,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10329/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=469%5B79176%5D%7C2%5B6794%5D%7C386%5B9680%5D%7C2087%5B79177%2C79178%2C79179%5D",
+    "arquivo": "fontes\\dados\\10329_e9ff33f5be0c1b5e.json.gz"
+  },
+  {
+    "tabela": 10330,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10330/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=537%5B31609%2C19429%2C79189%2C79190%2C19431%2C19432%2C79191%2C79192%5D%7C2088%5B79488%5D%7C86%5B95251%5D%7C469%5B79176%5D",
+    "arquivo": "fontes\\dados\\10330_5f9e96f0ae624715.json.gz"
+  },
+  {
+    "tabela": 10329,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10329/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=469%5B79176%5D%7C2%5B6794%5D%7C386%5B9680%2C9681%2C9682%2C9683%2C9684%2C9685%2C9686%2C11780%2C9692%5D%7C2087%5B79177%5D",
+    "arquivo": "fontes\\dados\\10329_9cb57749eabd4eca.json.gz"
+  },
+  {
+    "tabela": 10330,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10330/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=537%5B31609%5D%7C2088%5B79488%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C469%5B79176%5D",
+    "arquivo": "fontes\\dados\\10330_ed8dfe0eb46a4f26.json.gz"
+  },
+  {
+    "tabela": 10330,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10330/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=537%5B31609%5D%7C2088%5B79488%2C79193%2C79194%2C79195%2C79196%2C79197%2C79198%2C79207%2C79208%2C79209%2C79210%2C79211%2C79212%2C79213%2C79214%5D%7C86%5B95251%5D%7C469%5B79176%5D",
+    "arquivo": "fontes\\dados\\10330_fd52aafed603c077.json.gz"
+  },
+  {
+    "tabela": 10330,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10330/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=537%5B31609%5D%7C2088%5B79488%5D%7C86%5B95251%5D%7C469%5B79176%2C12169%2C12188%2C12189%5D",
+    "arquivo": "fontes\\dados\\10330_a0c0914c9ab12e91.json.gz"
+  },
+  {
+    "tabela": 10331,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10331/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=537%5B31609%5D%7C2%5B6794%2C4%2C5%5D%7C86%5B95251%5D%7C386%5B9680%5D",
+    "arquivo": "fontes\\dados\\10331_508faba75bd62e91.json.gz"
+  },
+  {
+    "tabela": 10331,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10331/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=537%5B31609%2C19429%2C79189%2C79190%2C19431%2C19432%2C79191%2C79192%5D%7C2%5B6794%5D%7C86%5B95251%5D%7C386%5B9680%5D",
+    "arquivo": "fontes\\dados\\10331_648a0cf805673ec6.json.gz"
+  },
+  {
+    "tabela": 10331,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10331/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=537%5B31609%5D%7C2%5B6794%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D%7C386%5B9680%5D",
+    "arquivo": "fontes\\dados\\10331_a945f6b7b717c299.json.gz"
+  },
+  {
+    "tabela": 10331,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10331/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=537%5B31609%5D%7C2%5B6794%5D%7C86%5B95251%5D%7C386%5B9680%2C9681%2C9682%2C9683%2C9684%2C9685%2C9686%2C11780%2C9692%5D",
+    "arquivo": "fontes\\dados\\10331_e743e706a64149ee.json.gz"
+  },
+  {
+    "tabela": 10332,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10332/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2088%5B79488%5D%7C1568%5B120704%2C9493%2C9494%2C9495%2C99713%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10332_1d237049dddfc7a6.json.gz"
+  },
+  {
+    "tabela": 10332,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10332/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2088%5B79488%2C79193%2C79194%2C79195%2C79196%2C79197%2C79198%2C79207%2C79208%2C79209%2C79210%2C79211%2C79212%2C79213%2C79214%5D%7C1568%5B120704%5D%7C86%5B95251%5D",
+    "arquivo": "fontes\\dados\\10332_cbe0f4ac6df8c51c.json.gz"
+  },
+  {
+    "tabela": 9883,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9883/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D",
+    "arquivo": "fontes\\dados\\9883_e8faae1be64be124.json.gz"
+  },
+  {
+    "tabela": 9888,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9888/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D",
+    "arquivo": "fontes\\dados\\9888_b77291edc5c36e1f.json.gz"
+  },
+  {
+    "tabela": 10332,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/10332/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=2088%5B79488%5D%7C1568%5B120704%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%5D",
+    "arquivo": "fontes\\dados\\10332_ad023d3ebaa38e90.json.gz"
+  },
+  {
+    "tabela": 9887,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9887/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=3%5B59993%2C9697%2C2504%2C59998%2C59999%2C60000%2C60001%2C60002%2C60003%2C2505%2C103995%2C10004%2C10005%5D",
+    "arquivo": "fontes\\dados\\9887_b29f01bd365f6c4e.json.gz"
+  },
+  {
+    "tabela": 9890,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9890/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=125%5B2932%2C6815%2C121264%2C3247%2C71975%2C71976%2C71977%5D",
+    "arquivo": "fontes\\dados\\9890_2d2aead875588e9e.json.gz"
+  },
+  {
+    "tabela": 9891,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9891/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1817%5B72125%5D%7C301%5B72053%2C31471%2C72054%2C72055%2C72088%2C31472%2C72089%2C72090%2C72091%5D",
+    "arquivo": "fontes\\dados\\9891_f8159ab4077a7044.json.gz"
+  },
+  {
+    "tabela": 9891,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9891/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=1817%5B72125%2C72126%2C72127%2C72128%5D%7C301%5B72053%5D",
+    "arquivo": "fontes\\dados\\9891_c6b2594c1f0d69e8.json.gz"
+  },
+  {
+    "tabela": 9892,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9892/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=458%5B72117%2C12032%2C12033%2C12034%2C12035%2C12036%2C72118%2C72119%2C12046%5D%7C11558%5B46292%5D",
+    "arquivo": "fontes\\dados\\9892_80db8e4e9d5c763b.json.gz"
+  },
+  {
+    "tabela": 9892,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9892/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=458%5B72117%5D%7C11558%5B46292%2C46290%2C72110%2C72111%2C72112%2C72113%2C92858%2C72114%2C72115%2C92861%5D",
+    "arquivo": "fontes\\dados\\9892_6b49484cf022b655.json.gz"
+  },
+  {
+    "tabela": 9893,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9893/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=67%5B10972%2C2520%2C72120%2C72121%2C72122%2C72123%2C72124%2C1091%5D",
+    "arquivo": "fontes\\dados\\9893_f4c387b067f170d0.json.gz"
+  },
+  {
+    "tabela": 9889,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9889/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=3%5B59993%2C490%2C491%2C72411%2C489%2C492%2C72514%5D",
+    "arquivo": "fontes\\dados\\9889_59f36944822e669f.json.gz"
+  },
+  {
+    "tabela": 6740,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6740/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=297%5B72205%5D%7C86%5B95251%2C2776%2C2777%2C2778%2C2779%2C2780%2C2781%5D%7C287%5B100362%5D",
+    "arquivo": "fontes\\dados\\6740_0930f98941c3dddc.json.gz"
+  },
+  {
+    "tabela": 6740,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6740/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=297%5B72205%2C2666%2C2667%2C2668%2C2669%2C2766%2C2767%2C2768%5D%7C86%5B95251%5D%7C287%5B100362%5D",
+    "arquivo": "fontes\\dados\\6740_10e003e8e550e183.json.gz"
+  },
+  {
+    "tabela": 6584,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6584/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=322%5B72249%5D%7C321%5B72245%2C3090%2C3091%2C12102%5D%7C420%5B10917%5D",
+    "arquivo": "fontes\\dados\\6584_9ab15620a310d354.json.gz"
+  },
+  {
+    "tabela": 6584,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6584/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=322%5B72249%2C73020%2C73024%2C73021%2C73025%2C73023%2C73026%2C73022%2C9702%5D%7C321%5B72245%5D%7C420%5B10917%5D",
+    "arquivo": "fontes\\dados\\6584_f130edb3723a4596.json.gz"
+  },
+  {
+    "tabela": 9872,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/9872/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=287%5B100362%2C6557%2C93071%2C93072%2C93073%2C93074%2C93075%2C93076%2C93077%2C93078%2C93079%2C93080%2C93081%2C93082%2C6558%2C72527%2C6559%2C6560%2C6561%2C6562%5D",
+    "arquivo": "fontes\\dados\\9872_40ab0c8e4dae704d.json.gz"
+  },
+  {
+    "tabela": 6740,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6740/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=297%5B72205%5D%7C86%5B95251%5D%7C287%5B100362%2C6557%2C93071%2C93072%2C93073%2C93074%2C93075%2C93076%2C93077%2C93078%2C93079%2C93080%2C93081%2C93082%2C6558%2C6559%2C6560%2C6561%2C6562%5D",
+    "arquivo": "fontes\\dados\\6740_1c4ed15e44b7df0b.json.gz"
+  },
+  {
+    "tabela": 6584,
+    "url": "https://servicodados.ibge.gov.br/api/v3/agregados/6584/periodos/2022/variaveis/all?localidades=N6%5BN3%5B35%5D%5D&classificacao=322%5B72249%5D%7C321%5B72245%5D%7C420%5B10917%2C72571%2C10918%2C73027%2C73028%2C73029%2C73030%2C73102%2C72572%2C72573%2C72574%2C72575%2C72576%2C72577%2C72578%2C72579%2C72580%2C72581%2C72582%2C72583%2C72584%2C72585%2C72586%2C72587%2C72588%2C72589%2C72590%2C72591%2C72592%2C11625%5D",
+    "arquivo": "fontes\\dados\\6584_ad08dc214e1612dd.json.gz"
+  }
+]

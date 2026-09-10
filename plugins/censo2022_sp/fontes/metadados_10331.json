@@ -1,0 +1,236 @@
+{
+  "id": 10331,
+  "nome": "Pessoas de 10 anos ou mais de idade residentes em domicílios particulares, ocupadas na semana de referência, que, no trabalho principal, trabalhavam fora do domicílio, por tempo habitual de deslocamento do domicílio para o trabalho principal, sexo, cor ou raça e classes de rendimento nominal mensal domiciliar per capita",
+  "URL": "https://sidra.ibge.gov.br/tabela/10331",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Geral",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 13556,
+      "nome": "Pessoas de 10 anos ou mais de idade residentes em domicílios particulares, ocupadas na semana de referência, exclusive as cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), que, no trabalho principal, trabalhavam fora do domicílio",
+      "unidade": "Pessoas",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 1013556,
+      "nome": "Pessoas de 10 anos ou mais de idade residentes em domicílios particulares, ocupadas na semana de referência, exclusive as cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), que, no trabalho principal, trabalhavam fora do domicílio - percentual do total geral",
+      "unidade": "%",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 537,
+      "nome": "Tempo habitual de deslocamento do domicílio para o trabalho principal",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 31609,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 19429,
+          "nome": "Até cinco minutos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 79189,
+          "nome": "De seis minutos até quinze minutos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 79190,
+          "nome": "Mais de quinze minutos até meia hora",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 19431,
+          "nome": "Mais de meia hora até uma hora",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 19432,
+          "nome": "Mais de uma hora até duas horas",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 79191,
+          "nome": "Mais de duas horas até quatro horas",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 79192,
+          "nome": "Mais de quatro horas",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "nome": "Sexo",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 6794,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 4,
+          "nome": "Homens",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 5,
+          "nome": "Mulheres",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    },
+    {
+      "id": 86,
+      "nome": "Cor ou raça",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 95251,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 2776,
+          "nome": "Branca",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 2777,
+          "nome": "Preta",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 2778,
+          "nome": "Amarela",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 2779,
+          "nome": "Parda",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 2780,
+          "nome": "Indígena",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    },
+    {
+      "id": 386,
+      "nome": "Classes de rendimento nominal mensal domiciliar per capita",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 9680,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 9681,
+          "nome": "Até 1/4 de salário mínimo",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 9682,
+          "nome": "Mais de 1/4 a 1/2 salário mínimo",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 9683,
+          "nome": "Mais de 1/2 a 1 salário mínimo",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 9684,
+          "nome": "Mais de 1 a 2 salários mínimos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 9685,
+          "nome": "Mais de 2 a 3 salários mínimos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 9686,
+          "nome": "Mais de 3 a 5 salários mínimos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 11780,
+          "nome": "Mais de 5 salários mínimos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 9692,
+          "nome": "Sem rendimento",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    }
+  ]
+}

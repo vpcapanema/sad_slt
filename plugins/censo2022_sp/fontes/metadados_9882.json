@@ -1,0 +1,114 @@
+{
+  "id": 9882,
+  "nome": "Domicílios particulares, por presença de cônjuge da pessoa responsável e filhos da pessoa responsável ou do cônjuge, segundo o sexo da pessoa responsável pelo domicílio",
+  "URL": "https://sidra.ibge.gov.br/tabela/9882",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Geral",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 800,
+      "nome": "Domicílios particulares",
+      "unidade": "Domicílios",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 1000800,
+      "nome": "Domicílios particulares - percentual do total geral",
+      "unidade": "%",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 1887,
+      "nome": "Presença de cônjuge da pessoa responsável e filhos da pessoa responsável ou do cônjuge",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 72603,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 72604,
+          "nome": "Domicílio com responsável, cônjuge e sem filhos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72605,
+          "nome": "Domicílio com responsável e cônjuge com filho de ambos somente",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72606,
+          "nome": "Domicílio com responsável e cônjuge com pelo menos um filho somente do responsável ou somente do cônjuge",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72607,
+          "nome": "Domicílio com responsável sem cônjuge com filho(s) e/ou enteado(s)",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72608,
+          "nome": "Domicílio com outros tipos de composição",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    },
+    {
+      "id": 11561,
+      "nome": "Sexo da pessoa responsável pelo domicílio",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 100679,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 100680,
+          "nome": "Homens",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 100681,
+          "nome": "Mulheres",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    }
+  ]
+}

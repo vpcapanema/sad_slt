@@ -82,31 +82,14 @@ def test_carregar_recusa_travessia(cliente):
     assert resposta.status_code == 403
 
 
-def test_carregar_nao_reimporta_o_que_ja_esta_catalogado():
-    """Abrir um arquivo já catalogado não pode criar camada nova.
-
-    Era assim que os produtos de `outputs/` viravam cópia no acervo com nome
-    sufixado por hash — o botão jogava tudo no pipeline de importação.
-    """
-    import inspect
-
+def test_carregar_orfao_exige_conciliacao(cliente, monkeypatch, tmp_path):
     from api.routers import geoespacial
-
-    fonte = inspect.getsource(geoespacial.carregar_arquivo_do_sistema)
-    assert "_recurso_catalogado" in fonte
-    assert "reutilizada=True" in fonte
-    # Só o que vem do acervo e está órfão passa pelo pipeline de importação.
-    assert '_raiz_carregavel(normalized) != "acervo"' in fonte
-
-
-def test_produto_carregado_referencia_o_arquivo_de_origem():
-    """Produto de `outputs/` entra no catálogo sem cópia no acervo."""
-    import inspect
-
-    from api.routers import geoespacial
-
-    fonte = inspect.getsource(geoespacial.carregar_arquivo_do_sistema)
-    assert "caminho_arquivo=normalized" in fonte
+    arquivo = tmp_path / "orfao.gpkg"
+    arquivo.touch()
+    monkeypatch.setattr(geoespacial, "project_path", lambda *a, **k: arquivo)
+    monkeypatch.setattr(geoespacial, "_recurso_catalogado", lambda path: None)
+    resposta = cliente.post(ROTA_CARREGAR, data={"arquivo": "data/geoespacial/outputs/orfao.gpkg"})
+    assert resposta.status_code == 409
 
 
 def test_navegar_e_carregar_compartilham_a_mesma_regra():
@@ -121,30 +104,18 @@ def test_navegar_e_carregar_compartilham_a_mesma_regra():
     assert "_raiz_carregavel" in carregar
 
 
-def test_carregar_devolve_o_contrato_que_a_bancada_consome(cliente):
-    """geoprocessamento-ribbon.js só sabe ler result.recursos[0].id.
-
-    As rotas de "já catalogado" e "produto/homologado referenciado" devolviam
-    um envelope próprio (camada_id solto, sem `recursos`) — todo arquivo fora
-    do acervo (outputs/, biblioteca_canonica/) "carregava" no backend e nunca
-    aparecia na Bancada, porque o único consumidor deste endpoint não sabia
-    ler a resposta.
-    """
-    produto = Path("data/geoespacial/outputs")
-    if not produto.is_dir() or not any(produto.glob("*.gpkg")):
-        pytest.skip("nenhum GeoPackage em outputs/ neste ambiente")
-    arquivo = next(produto.glob("*.gpkg"))
-    caminho = str(arquivo).replace("\\", "/")
-
-    resposta = cliente.post(ROTA_CARREGAR, data={"arquivo": caminho})
-    assert resposta.status_code == 200, resposta.text
-    corpo = resposta.json()
-    assert corpo.get("recursos"), "sem 'recursos': a Bancada não acha result.recursos[0].id"
-    assert corpo["recursos"][0]["id"], "recursos[0] sem id"
-    assert corpo["recursos"][0]["tipo"] in ("vetorial", "raster")
-
-    # Recarregar o mesmo arquivo (agora já catalogado) tem de manter o contrato.
-    resposta2 = cliente.post(ROTA_CARREGAR, data={"arquivo": caminho})
-    corpo2 = resposta2.json()
-    assert corpo2["recursos"][0]["id"] == corpo["recursos"][0]["id"]
-    assert corpo2["reutilizada"] is True
+def test_carregar_devolve_o_contrato_que_a_bancada_consome(cliente, monkeypatch, tmp_path):
+    from api.routers import geoespacial
+    arquivo = tmp_path / "registrado.gpkg"
+    arquivo.touch()
+    monkeypatch.setattr(geoespacial, "project_path", lambda *a, **k: arquivo)
+    monkeypatch.setattr(geoespacial, "_recurso_catalogado", lambda path: {
+        "recurso_sessao_id": "registro-teste", "nome": "Registrado", "tipo": "vetor"})
+    async def carregar(recurso_id):
+        assert recurso_id == "registro-teste"
+    monkeypatch.setattr(geoespacial.geoespacial_service, "carregar_recurso", carregar)
+    for _ in range(2):
+        resposta = cliente.post(ROTA_CARREGAR, data={"arquivo": "data/geoespacial/outputs/registrado.gpkg"})
+        assert resposta.status_code == 200
+        assert resposta.json()["recursos"][0]["id"] == "registro-teste"
+        assert resposta.json()["reutilizada"] is True

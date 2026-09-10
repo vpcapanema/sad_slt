@@ -1,0 +1,31 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Extração de atributos por interseção" %}
+{% set navegacao = "restrita" %}
+{% set bloco_modulo = "geoprocessamento" %}
+{% set requer_autenticacao = true %}
+{% block titulo %}Extração de atributos — SICARD{% endblock %}
+{% block classes_body %}extracao-page{% endblock %}
+{% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
+{% block estilos_pagina %}
+<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/assets/css/extracao-atributos.css">
+{% endblock %}
+{% block conteudo %}
+<main class="conteudo-principal ea-main" id="extracao-app">
+  <header class="ea-intro">
+    <nav class="ea-breadcrumb" aria-label="Localização"><a href="/restrict/">Início</a> / <a href="/restrict/geoespacial/">Geoprocessamento</a> / Extração de atributos</nav>
+    <span class="ea-eyebrow">Análise territorial</span>
+    <h1>Extração de atributos</h1>
+    <p>Extraia os atributos das camadas que intersectam sua entrada e explore os resultados por categoria.</p>
+    <nav class="ea-steps" aria-label="Seções da análise"><a href="/restrict/geoespacial/extracao-atributos/#ea-config">01 · Configurar</a><a href="/restrict/geoespacial/extracao-atributos/#ea-workbench">02 · Explorar no mapa</a><a href="/restrict/geoespacial/extracao-atributos/#ea-results">03 · Analisar e exportar</a></nav>
+  </header>
+  {% include "componentes/extracao_atributos/_configuracao.html" %}
+  {% include "componentes/extracao_atributos/_bancada.html" %}
+  {% include "componentes/extracao_atributos/_resultados.html" %}
+  <p id="ea-feedback" class="ea-feedback" role="status" aria-live="polite"></p>
+</main>
+{% endblock %}
+{% block scripts_pagina %}
+<script src="/assets/js/admin-auth.js"></script>
+<script type="module" src="/restrict/geoespacial/extracao-atributos/app.js"></script>
+{% endblock %}

@@ -25,7 +25,6 @@ from rasterio.windows import Window, from_bounds
 from affine import Affine
 
 from api.path_policy import (
-    geo_output_path,
     project_path,
     project_relative,
 )
@@ -325,6 +324,7 @@ class GeoespacialService:
         aqui, para camadas sem arquivo (saídas de geoprocesso) ou cujo arquivo
         tenha sumido.
         """
+        self._verificar_resultado_disponivel(camada_id)
         cached = self._camadas.get(camada_id)
         if cached is not None:
             return cached
@@ -339,6 +339,16 @@ class GeoespacialService:
         self._camadas[camada_id] = gdf
         self._catalogar_persistidas()
         return gdf
+
+    def _verificar_resultado_disponivel(self, recurso_id: str) -> None:
+        if recurso_id not in self._metadados and (recurso_id in self._camadas or recurso_id in self._rasters):
+            return  # Seleções transitórias internas do motor não são resultados registrados.
+        if recurso_id not in self._metadados:
+            self._catalogar_persistidas()
+        metadata = self._metadados.get(recurso_id) or {}
+        if metadata.get('arquivo_resultado_id') or (metadata.get('metadados') or {}).get('arquivo_resultado_id'):
+            from api.services.ciclo_vida_arquivos import verificar_resultado
+            verificar_resultado(recurso_id)
 
     def _caminho_arquivo_da_camada(self, camada_id: str) -> Path | None:
         """Resolve o caminho do arquivo do acervo de uma camada, se houver.
@@ -364,13 +374,19 @@ class GeoespacialService:
         if caminho is None:
             return None
         try:
-            return cast(gpd.GeoDataFrame, gpd.read_file(caminho))
+            frame = cast(gpd.GeoDataFrame, gpd.read_file(caminho))
+            meta = self._metadados.get(camada_id) or {}
+            for field in meta.get('campos_json_arquivo', (meta.get('metadados') or {}).get('campos_json_arquivo', [])):
+                if field in frame:
+                    frame[field] = frame[field].map(lambda v: json.loads(v) if isinstance(v, str) else v)
+            return frame
         except Exception:
             # Arquivo ilegível não pode impedir o acesso à camada: o banco
             # responde em seguida.
             return None
 
     def obter_raster_dados(self, raster_id: str) -> np.ndarray:
+        self._verificar_resultado_disponivel(raster_id)
         cached = self._rasters.get(raster_id)
         if cached is not None:
             return cached
@@ -692,6 +708,8 @@ class GeoespacialService:
             raise ValueError("Camada homologada é somente leitura")
         if not edicoes:
             raise ValueError("Nenhuma edição informada")
+        from api.services.ciclo_vida_arquivos import exigir_editavel
+        exigir_editavel(camada_id)
 
         gdf = self.obter_camada_dados(camada_id).copy()
         total = len(gdf)
@@ -1325,16 +1343,16 @@ class GeoespacialService:
             progress(f"Driver de exportação selecionado: {driver}")
 
         if opcao_salvamento == "persistir_sistema":
-            caminho_completo = geo_output_path(
-                nome_arquivo, categoria="vetor", label="nome do arquivo",
-            )
+            from api.services.ciclo_vida_arquivos import caminho_exportacao, registrar_exportacao
+            caminho_completo = caminho_exportacao(nome_arquivo, "vetor")
             caminho_relativo = Path(project_relative(caminho_completo))
             if progress:
                 progress("Destino único de saída preparado (vetor)")
             gdf.to_file(caminho_completo, driver=driver)
             if progress:
                 progress("Arquivo vetorial serializado")
-            return {"caminho": caminho_relativo.as_posix(), "formato": formato_saida}
+            record = registrar_exportacao(caminho_completo, camada_id, "vetor")
+            return {"caminho": caminho_relativo.as_posix(), "formato": formato_saida, **record}
         else:
             # Retornar GeoJSON para memória (serialização nativa do GDAL)
             geojson = self._gdf_para_geojson(gdf)
@@ -1549,9 +1567,8 @@ class GeoespacialService:
             progress("Matriz raster carregada para exportação")
 
         if opcao_salvamento == "persistir_sistema":
-            caminho_completo = geo_output_path(
-                nome_arquivo, categoria="raster", label="nome do arquivo",
-            )
+            from api.services.ciclo_vida_arquivos import caminho_exportacao, registrar_exportacao
+            caminho_completo = caminho_exportacao(nome_arquivo, "raster")
             caminho_relativo = Path(project_relative(caminho_completo))
             if progress:
                 progress("Destino único de saída preparado (raster)")
@@ -1567,7 +1584,8 @@ class GeoespacialService:
                 dst.write(raster.astype("float32"), 1)
             if progress:
                 progress("GeoTIFF raster serializado")
-            return {"caminho": caminho_relativo.as_posix(), "formato": formato_saida}
+            record = registrar_exportacao(caminho_completo, raster_id, "raster")
+            return {"caminho": caminho_relativo.as_posix(), "formato": formato_saida, **record}
         else:
             # Retornar array como JSON
             if progress:
@@ -1605,7 +1623,8 @@ class GeoespacialService:
         else:
             raise ValueError(f"Camada de entrada {entrada} não encontrada")
 
-        caminho = geo_output_path(saida, categoria=categoria_dado, label="saída")
+        from api.services.ciclo_vida_arquivos import caminho_exportacao, registrar_exportacao
+        caminho = caminho_exportacao(saida, categoria_dado)
         pasta = caminho.parent
         pasta_relativa = project_relative(pasta)
         extensao = caminho.suffix.lower()
@@ -1652,7 +1671,8 @@ class GeoespacialService:
                 dst.write(raster.astype("float32"), 1)
             tipo = "raster"
 
-        return {"operacao": "salvar_camada", "entrada": entrada, "destino": pasta_relativa,
+        record = registrar_exportacao(caminho, entrada, tipo)
+        return {**record, "operacao": "salvar_camada", "entrada": entrada, "destino": pasta_relativa,
                 "saida": caminho.name, "caminho": project_relative(caminho), "tipo": tipo,
                 "categoria": categoria_dado,
                 "crs": crs_final, "formato": formato_final}

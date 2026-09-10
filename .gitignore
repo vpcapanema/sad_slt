@@ -29,3 +29,12 @@ tmp/tomtom_flow_cache.csv
 # Arquivos de trava do Excel/Office (nao versionar)
 ~$*.xlsx
 ~$*.docx
+
+# Dados de trabalho: vao para a VM por transferencia SSH, nao pelo Git.
+data/geoespacial/configuracoes/
+data/geoespacial/biblioteca_canonica/fase1/teste_restricao_automatica_v1.gpkg
+data/geoespacial/biblioteca_canonica/fase1/teste_risco_automatico_v1.gpkg
+
+# Acima do limite de 100 MB por arquivo do GitHub. A copia extraida do pacote
+# esta versionada ao lado; este ZIP vai para a VM por transferencia SSH.
+plugins/municipal-layer-completo-v1.0.0.zip

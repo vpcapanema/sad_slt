@@ -1,0 +1,1490 @@
+{
+  "id": "CD",
+  "nome": "Censo Demográfico",
+  "agregados": [
+    {
+      "id": "10049",
+      "nome": "Moradores indígenas em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por sexo, existência e características do entorno"
+    },
+    {
+      "id": "10050",
+      "nome": "Domicílios em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por características do entorno dos domicílios, segundo as classes de hierarquia de urbana"
+    },
+    {
+      "id": "10051",
+      "nome": "Estabelecimentos de saúde, ensino e outras finalidades, em setores selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por existência e características do entorno"
+    },
+    {
+      "id": "10052",
+      "nome": "Moradores indígenas em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por sexo, existência e características do entorno por bueiro, iluminação pública, calçada e rampa para cadeirante"
+    },
+    {
+      "id": "10053",
+      "nome": "Domicílios particulares permanentes ocupados e Moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por tipo de esgotamento sanitário, existência e características do entorno"
+    },
+    {
+      "id": "10054",
+      "nome": "Domicílios particulares permanentes ocupados e Moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por tipo de esgotamento sanitário, existência e características do entorno por bueiro, iluminação pública, calçada e rampa para cadeirante"
+    },
+    {
+      "id": "10055",
+      "nome": "Percentual de cobertura de coleta dos domicílios particulares permanentes ocupados dos setores selecionados para a Pesquisa Urbanística do Entorno dos Domicílios"
+    },
+    {
+      "id": "10056",
+      "nome": "Taxa bruta de frequência escolar, segundo os grupos de idade, o sexo e a cor ou raça"
+    },
+    {
+      "id": "10057",
+      "nome": "Pessoas de até 5 anos de idade que frequentavam escola ou creche, por nível de ensino, segundo os grupos de idade, o sexo e a cor ou raça"
+    },
+    {
+      "id": "10058",
+      "nome": "Pessoas de 6 a 17 anos de idade que frequentavam escola, por nível de ensino, segundo os grupos de idade, o sexo e a cor ou raça"
+    },
+    {
+      "id": "10059",
+      "nome": "Pessoas de 18 anos ou mais de idade que frequentavam escola, por nível de ensino, segundo os grupos de idade, o sexo e a cor ou raça"
+    },
+    {
+      "id": "10061",
+      "nome": "Pessoas de 18 anos ou mais de idade, por nível de instrução, segundo os grupos de idade, o sexo e a cor ou raça"
+    },
+    {
+      "id": "10062",
+      "nome": "Número médio de anos de estudo das pessoas com 11 anos ou mais de idade, segundo os grupos de idade, o sexo e a cor ou raça"
+    },
+    {
+      "id": "10064",
+      "nome": "Pessoas com nível superior completo, por áreas gerais, específicas e detalhadas de formação do curso graduação concluído, segundo os grupos de idade"
+    },
+    {
+      "id": "10065",
+      "nome": "Pessoas com nível superior completo, por áreas gerais, específicas e detalhadas de formação do curso graduação concluído, segundo o sexo e a cor ou raça"
+    },
+    {
+      "id": "10066",
+      "nome": "Taxa bruta de frequência escolar das pessoas indígenas, segundo os grupos de idade e o sexo"
+    },
+    {
+      "id": "10067",
+      "nome": "Pessoas indígenas de até 5 anos de idade que frequentavam escola ou creche, por nível de ensino, segundo os grupos de idade e o sexo"
+    },
+    {
+      "id": "10068",
+      "nome": "Pessoas indígenas de 6 a 17 anos de idade que frequentavam escola, por nível de ensino, segundo os grupos de idade e o sexo"
+    },
+    {
+      "id": "10069",
+      "nome": "Pessoas indígenas de 18 anos ou mais de idade que frequentavam escola, por nível de ensino, segundo os grupos de idade e o sexo"
+    },
+    {
+      "id": "10071",
+      "nome": "Pessoas indígenas de 18 anos ou mais de idade, por nível de instrução, segundo os grupos de idade e o sexo"
+    },
+    {
+      "id": "10072",
+      "nome": "Número médio de anos de estudo das pessoas indígenas com 11 anos ou mais de idade, segundo os grupos de idade e o sexo"
+    },
+    {
+      "id": "10074",
+      "nome": "Pessoas indígenas com nível superior completo, por áreas gerais, específicas e detalhadas de formação do curso graduação concluído, segundo o sexo"
+    },
+    {
+      "id": "10075",
+      "nome": "Mulheres de 12 anos ou mais de idade, que tiveram filhos nascidos vivos, por número de filhos tidos nascidos vivos, segundo o nível de instrução e os grupos de idade das mulheres"
+    },
+    {
+      "id": "10076",
+      "nome": "Mulheres de 12 anos ou mais de idade, que tiveram filhos nascidos vivos, por número de filhos tidos nascidos vivos, segundo a cor ou raça e os grupos de idade das mulheres"
+    },
+    {
+      "id": "10077",
+      "nome": "Mulheres de 12 anos ou mais de idade, que tiveram filhos nascidos vivos, por grupos de idade das mulheres, segundo o nível de instrução e a cor ou raça das mulheres"
+    },
+    {
+      "id": "10078",
+      "nome": "Mulheres de 12 anos ou mais de idade, total de filhos tidos nascidos vivos, total de filhos que estavam vivos na data de referência e filhos tidos nascidos vivos no período referência de 12 meses pelas mulheres de 12 anos ou mais de idade, por grupos de idade das mulheres, segundo o nível de instrução e a cor ou raça das mulheres"
+    },
+    {
+      "id": "10081",
+      "nome": "Mulheres indígenas de 12 anos ou mais de idade, que tiveram filhos nascidos vivos, por número de filhos tidos nascidos vivos, segundo os grupos de idade das mulheres"
+    },
+    {
+      "id": "10082",
+      "nome": "Mulheres indígenas de 12 anos ou mais de idade, que tiveram filhos nascidos vivos, por grupos de idade das mulheres, segundo o nível de instrução"
+    },
+    {
+      "id": "10083",
+      "nome": "Mulheres indígenas de 12 anos ou mais de idade, total de filhos tidos nascidos vivos, total de filhos que estavam vivos na data de referência e filhos tidos nascidos vivos no período de referência de 12 meses pelas mulheres indígenas de 12 anos ou mais de idade, por grupos de idade das mulheres, segundo o nível de instrução"
+    },
+    {
+      "id": "10085",
+      "nome": "Mulheres de 12 anos ou mais de idade, que tiveram filhos nascidos vivos, por número de filhos tidos nascidos vivos, segundo os grupos de idade das mulheres e a religião"
+    },
+    {
+      "id": "10086",
+      "nome": "Mulheres de 12 anos ou mais de idade, que tiveram filhos nascidos vivos, por número de filhos tidos nascidos vivos, segundo o nível de instrução e a religião das mulheres"
+    },
+    {
+      "id": "10087",
+      "nome": "Mulheres de 12 anos ou mais de idade, total de filhos tidos nascidos vivos, total de filhos que estavam vivos na data de referência e filhos tidos nascidos vivos no período de referência de 12 meses pelas mulheres de 12 anos ou mais de idade, por grupos de idade, segundo a religião e o nível de instrução"
+    },
+    {
+      "id": "10088",
+      "nome": "Quantidade de faces de quadra em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por existência e características do entorno, em Favelas e Comunidades Urbanas e fora de Favelas e Comunidades Urbanas - Municípios com presença de Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "10089",
+      "nome": "População residente, total e quilombola, por sexo e grupos de idade, segundo localização e situação do domicílio"
+    },
+    {
+      "id": "10091",
+      "nome": "Taxa de alfabetização da população, total e quilombola, de 15 anos ou mais de idade, por sexo, grupos de idade, localização e situação do domicílio"
+    },
+    {
+      "id": "10092",
+      "nome": "Pessoas de 15 anos ou mais de idade, total e quilombola, por alfabetização, sexo, grupos de idade, localização e situação do domicílio"
+    },
+    {
+      "id": "10095",
+      "nome": "Pessoas de até 5 anos de idade, total e quilombolas, por existência e tipo de registro de nascimento, segundo a idade, localização e situação do domicílio"
+    },
+    {
+      "id": "10097",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo, total e quilombolas, por localização e situação do domicílio"
+    },
+    {
+      "id": "10099",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, e moradores, total e quilombolas, em domicílios particulares permanentes ocupados, por principal forma de abastecimento de água, existência de canalização de água, tipo de esgotamento sanitário, destino do lixo, localização e situação do domicílio"
+    },
+    {
+      "id": "10101",
+      "nome": "Moradores, total e quilombolas, em domicílios com pelo menos um morador quilombola, e domicílios com pelo menos um morador quilombola, por espécie, localização e situação do domicílio"
+    },
+    {
+      "id": "10103",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, e moradores, total e quilombolas, em domicílios particulares permanentes ocupados, por principal forma de abastecimento de água, localização e situação do domicílio"
+    },
+    {
+      "id": "10105",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, e moradores, total e quilombolas, em domicílios particulares permanentes ocupados, por tipo de esgotamento sanitário, localização e situação do domicílio"
+    },
+    {
+      "id": "10107",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, e moradores, total e quilombolas, em domicílios particulares permanentes ocupados, por existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio, localização e situação do domicílio"
+    },
+    {
+      "id": "10109",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, e moradores, total e quilombolas, em domicílios particulares permanentes ocupados, por destino do lixo, localização e situação do domicílio"
+    },
+    {
+      "id": "10111",
+      "nome": "Média de moradores, total e quilombolas, em domicílios particulares com pelo menos um morador quilombola, por sexo, grupos de idade e pertencimento étnico quilombola da pessoa responsável pelo domicílio, segundo localização e situação do domicílio"
+    },
+    {
+      "id": "10113",
+      "nome": "Óbitos de pessoas que haviam residido com moradores dos domicílios particulares permanentes ocupados com pelo menos um morador quilombola, por mês e ano de ocorrência do falecimento, sexo e grupos de idade das pessoas ao falecerem, segundo localização e situação do domicílio"
+    },
+    {
+      "id": "10115",
+      "nome": "Domicílios particulares com pelo menos um morador quilombola, por presença de cônjuge da pessoa responsável pelo domicílio, segundo localização e situação do domicílio"
+    },
+    {
+      "id": "10117",
+      "nome": "Domicílios particulares com pelo menos um morador quilombola, por número de moradores, segundo sexo, grupos de idade e pertencimento étnico quilombola da pessoa responsável pelo domicílio, segundo localização e situação do domicílio"
+    },
+    {
+      "id": "10119",
+      "nome": "Domicílios particulares com pelo menos um morador quilombola, por presença de cônjuge da pessoa responsável e filhos da pessoa responsável ou do cônjuge, segundo o sexo e pertencimento étnico quilombola da pessoa responsável pelo domicílio e a localização e situação do domicílio"
+    },
+    {
+      "id": "10121",
+      "nome": "Moradores em domicílios particulares com pelo menos um morador quilombola, por condição no domicílio, segundo sexo, grupos de idade e pertencimento étnico quilombola da pessoa responsável pelo domicílio, segundo localização e situação do domicílio"
+    },
+    {
+      "id": "10125",
+      "nome": "Pessoas residentes de 2 anos ou mais de idade, total e pessoas com deficiência, por sexo e grupos de idade"
+    },
+    {
+      "id": "10126",
+      "nome": "Pessoas residentes de 2 anos ou mais de idade, total e pessoas com deficiência, por cor ou raça"
+    },
+    {
+      "id": "10127",
+      "nome": "Pessoas residentes de 2 anos ou mais de idade com deficiência por tipos de dificuldades funcionais"
+    },
+    {
+      "id": "10128",
+      "nome": "Pessoas residentes de 2 anos ou mais de idade com deficiência por quantidade de dificuldades funcionais"
+    },
+    {
+      "id": "10129",
+      "nome": "Pessoas residentes de 2 anos ou mais de idade, total, indígenas e pessoas com deficiência"
+    },
+    {
+      "id": "10130",
+      "nome": "Pessoas residentes de 2 anos ou mais de idade por sexo e existência de deficiência"
+    },
+    {
+      "id": "10131",
+      "nome": "Pessoas residentes de 2 anos ou mais de idade por grupo de idade e existência de deficiência"
+    },
+    {
+      "id": "10132",
+      "nome": "Pessoas residentes de 2 anos ou mais de idade por cor ou raça e existência de deficiência"
+    },
+    {
+      "id": "10133",
+      "nome": "Pessoas residentes de 2 anos ou mais de idade por tipo e por grau de dificuldade funcional"
+    },
+    {
+      "id": "10134",
+      "nome": "Pessoas residentes de 2 anos ou mais de idade, total e indígenas, por existência de deficiência"
+    },
+    {
+      "id": "10135",
+      "nome": "Taxa de analfabetismo das pessoas de 15 anos ou mais de idade por grupo de idade, cor ou raça, sexo e existência de deficiência"
+    },
+    {
+      "id": "10136",
+      "nome": "Estudantes de 6 anos ou mais de idade, por sexo, grupos de idade e existência de deficiência"
+    },
+    {
+      "id": "10137",
+      "nome": "Estudantes de 6 anos ou mais de idade, por cor ou raça, grupos de idade e existência de deficiência"
+    },
+    {
+      "id": "10138",
+      "nome": "Estudantes de 6 anos ou mais de idade, por curso que frequentavam, grupos de idade e existência de deficiência"
+    },
+    {
+      "id": "10139",
+      "nome": "Taxa de escolarização das pessoas de 6 anos ou mais de idade, por sexo, grupos de idade e existência de deficiência"
+    },
+    {
+      "id": "10140",
+      "nome": "Taxa de escolarização das pessoas de 6 anos ou mais de idade, por cor ou raça, grupos de idade e existência de deficiência"
+    },
+    {
+      "id": "10141",
+      "nome": "Pessoas de 25 anos ou mais de idade por sexo, nível de instrução e existência de deficiência"
+    },
+    {
+      "id": "10142",
+      "nome": "Pessoas de 25 anos ou mais de idade por cor ou raça, nível de instrução e existência de deficiência"
+    },
+    {
+      "id": "10143",
+      "nome": "Moradores em domicílios particulares permanentes, total e pessoas com deficiência, e domicílios particulares permanentes ocupados, total e com pelo menos um morador com deficiência, por tipos de domicílios"
+    },
+    {
+      "id": "10144",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, total e pessoas com deficiência, e domicílios particulares permanentes ocupados, total e com pelo menos um morador com deficiência, por existência de banheiro ou sanitário e números de banheiros de uso exclusivo do domicílio e acesso à rede geral de distribuição de água"
+    },
+    {
+      "id": "10145",
+      "nome": "População residente, total e diagnosticada com autismo, por sexo e grupo de idade"
+    },
+    {
+      "id": "10146",
+      "nome": "Estudantes de 6 anos ou mais de idade, total e diagnosticados com autismo, por curso que frequentavam e grupo de idade"
+    },
+    {
+      "id": "10147",
+      "nome": "População residente, total e diagnosticada com autismo, por cor ou raça"
+    },
+    {
+      "id": "10148",
+      "nome": "Estudantes de 6 anos ou mais de idade, total e diagnosticados com autismo, por sexo e grupo de idade dos estudantes"
+    },
+    {
+      "id": "10149",
+      "nome": "Estudantes de 6 anos ou mais de idade, total e diagnosticados com autismo, por cor ou raça e grupo de idade dos estudantes"
+    },
+    {
+      "id": "10150",
+      "nome": "Taxa de escolarização das pessoas de 6 anos ou mais de idade, total e pessoas diagnosticadas com autismo, por sexo e grupo de idade"
+    },
+    {
+      "id": "10151",
+      "nome": "Taxa de escolarização das pessoas de 6 anos ou mais de idade, total e pessoas diagnosticadas com autismo, por cor ou raça e grupo de idade"
+    },
+    {
+      "id": "10152",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, total e pessoas com deficiência, e domicílios particulares permanentes ocupados, total e com pelo menos um morador com deficiência, por destino do lixo"
+    },
+    {
+      "id": "10153",
+      "nome": "Pessoas de 25 anos ou mais de idade, total e diagnosticadas com autismo, por sexo e nível de instrução"
+    },
+    {
+      "id": "10154",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, total e pessoas diagnosticadas com autismo, e domicílios particulares permanentes ocupados, total e com pelo menos um morador diagnosticado com autismo, por existência de banheiro ou sanitário e números de banheiros de uso exclusivo do domicílio e acesso à rede geral de distribuição de água"
+    },
+    {
+      "id": "10157",
+      "nome": "População residente, por nacionalidade, sexo e grupos de idade"
+    },
+    {
+      "id": "10158",
+      "nome": "Pessoas que residiam há menos de 10 anos ininterruptos no município, por tempo ininterrupto de residência no município e lugar de residência anterior"
+    },
+    {
+      "id": "10159",
+      "nome": "Pessoas de 5 anos ou mais de idade que não residiam na Unidade da Federação 5 anos antes da data de referência, por lugar de residência 5 anos antes da data de referência"
+    },
+    {
+      "id": "10160",
+      "nome": "Pessoas de 5 anos ou mais de idade que não residiam no município 5 anos antes da data de referência, por sexo e grupos de idade"
+    },
+    {
+      "id": "10161",
+      "nome": "Pessoas de 5 anos ou mais de idade que não residiam no Brasil 5 anos antes da data de referência, por sexo, segundo o país de residência 5 anos antes da data de referência"
+    },
+    {
+      "id": "10164",
+      "nome": "Taxa de analfabetismo das pessoas indígenas de 15 anos ou mais de idade por grupo de idade, sexo e existência de deficiência"
+    },
+    {
+      "id": "10165",
+      "nome": "Estudantes indígenas de 6 anos ou mais de idade, por grupos de idade e existência de deficiência"
+    },
+    {
+      "id": "10166",
+      "nome": "Taxa de escolarização das pessoas indígenas de 6 anos ou mais de idade, por grupos de idade e existência de deficiência"
+    },
+    {
+      "id": "10167",
+      "nome": "Pessoas indígenas de 25 anos ou mais de idade por nível de instrução e existência de deficiência"
+    },
+    {
+      "id": "10168",
+      "nome": "Pessoas indígenas, total e diagnosticadas com autismo"
+    },
+    {
+      "id": "10169",
+      "nome": "Estudantes indígenas de 6 anos ou mais de idade, total e diagnosticados com autismo, por grupo de idade dos estudantes"
+    },
+    {
+      "id": "10170",
+      "nome": "Taxa de escolarização das pessoas indígenas de 6 anos ou mais de idade, total e pessoas diagnosticadas com autismo, por grupo de idade"
+    },
+    {
+      "id": "10171",
+      "nome": "Domicílios e moradores em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por espécie do domicílio e existência e características do entorno, em Favelas e Comunidades Urbanas e fora de Favelas e Comunidades Urbanas - Municípios com presença de Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "10172",
+      "nome": "Domicílios particulares permanentes ocupados e moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por tipo de domicílio e existência e características do entorno, em Favelas e Comunidades Urbanas e fora de Favelas e Comunidades Urbanas - Municípios com presença de Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "10175",
+      "nome": "Famílias residentes em domicílios particulares permanentes, por tipo de família e número de componentes das famílias"
+    },
+    {
+      "id": "10176",
+      "nome": "Famílias únicas e conviventes principais, residentes em domicílios particulares permanentes, por número de componentes, segundo o sexo, a cor ou raça e o nível de instrução das pessoas responsáveis pelas famílias"
+    },
+    {
+      "id": "10182",
+      "nome": "Famílias únicas e conviventes principais, com responsável e cônjuge ou companheiro(a), residentes em domicílios particulares permanentes, por número de filhos menores de 10 anos, segundo o sexo, o nível de instrução e a cor ou raça da pessoa responsável pela família"
+    },
+    {
+      "id": "10183",
+      "nome": "Pessoas de 10 anos ou mais de idade, por estado conjugal, segundo o sexo, os grupos de idade e a religião"
+    },
+    {
+      "id": "10184",
+      "nome": "Pessoas de 10 anos ou mais de idade, por estado conjugal, segundo os grupos de idade e o nível de instrução"
+    },
+    {
+      "id": "10185",
+      "nome": "Pessoas de 10 anos ou mais de idade, por estado conjugal, segundo o sexo, os grupos de idade e a cor ou raça"
+    },
+    {
+      "id": "10187",
+      "nome": "Pessoas de 10 anos ou mais de idade, que viviam em união conjugal, por natureza da união conjugal, segundo o sexo, os grupos de idade e a religião"
+    },
+    {
+      "id": "10190",
+      "nome": "Famílias únicas e conviventes principais, com pelo menos uma pessoa indígena no domicílio, residentes em domicílios particulares permanentes, por número de componentes, segundo o sexo e o nível de instrução das pessoas responsáveis pelas famílias"
+    },
+    {
+      "id": "10194",
+      "nome": "Famílias únicas e conviventes principais, com pelo menos uma pessoa indígena no domicílio, com responsável e pelo menos um cônjuge ou companheiro(a), residentes em domicílios particulares permanentes, por número de filhos menores de 10 anos, segundo o tipo de composição domiciliar, o sexo e o nível de instrução das pessoas responsáveis pela família"
+    },
+    {
+      "id": "10195",
+      "nome": "Pessoas indígenas de 10 anos ou mais de idade, por estado conjugal, segundo o sexo, e os grupos de idade"
+    },
+    {
+      "id": "10198",
+      "nome": "Pessoas de 15 anos ou mais de idade por religião, segundo os grupos de idade e alfabetização"
+    },
+    {
+      "id": "10199",
+      "nome": "Pessoas de 25 anos ou mais de idade, por nível de instrução, sexo e religião"
+    },
+    {
+      "id": "10200",
+      "nome": "Pessoas de 13 a 17 anos de idade, por frequência à escola, sexo e segundo a religião"
+    },
+    {
+      "id": "10201",
+      "nome": "Moradores com 10 anos ou mais de idade em domicílios particulares permanentes ocupados, por existência de conexão domiciliar à Internet e segundo a religião"
+    },
+    {
+      "id": "10202",
+      "nome": "Moradores com 10 anos ou mais de idade em domicílios particulares permanentes ocupados, por condição de ocupação do domicílio, cor ou raça e segundo a religião"
+    },
+    {
+      "id": "10203",
+      "nome": "Pessoas de 10 anos ou mais de idade, por tipo e grau de dificuldade funcional, sexo e segundo a religião"
+    },
+    {
+      "id": "10204",
+      "nome": "Pessoas indígenas de 10 anos ou mais de idade, por sexo, segundo a religião"
+    },
+    {
+      "id": "10205",
+      "nome": "Moradores indígenas com 10 anos ou mais de idade em domicílios particulares permanentes ocupados, por condição de ocupação do domicílio e segundo a religião"
+    },
+    {
+      "id": "10206",
+      "nome": "Moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por cor ou raça e existência e características do entorno, em Favelas e Comunidades Urbanas e fora de Favelas e Comunidades Urbanas - Municípios com presença de Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "10211",
+      "nome": "População residente, segundo localização e situação do domicílio"
+    },
+    {
+      "id": "10215",
+      "nome": "População residente em Unidades de Conservação, segundo esferas da Unidade de Conservação"
+    },
+    {
+      "id": "10216",
+      "nome": "População residente em Unidades de Conservação, segundo categorias das Unidades de Conservação"
+    },
+    {
+      "id": "10217",
+      "nome": "População residente em Unidades de Conservação, por sexo e grupos de idade, segundo grupos das Unidades de Conservação"
+    },
+    {
+      "id": "10253",
+      "nome": "Pessoas de 10 anos ou mais de idade, por situação de ocupação na semana de referência, sexo, cor ou raça e grupos de idade"
+    },
+    {
+      "id": "10261",
+      "nome": "Pessoas de 14 anos ou mais de idade ocupadas na semana de referência por posição na ocupação e categoria do emprego no trabalho principal, sexo e cor ou raça"
+    },
+    {
+      "id": "10262",
+      "nome": "Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, por posição na ocupação e categoria do emprego no trabalho principal e seção de atividade do trabalho principal"
+    },
+    {
+      "id": "10263",
+      "nome": "Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, cor ou raça, nível de instrução e número de trabalhos"
+    },
+    {
+      "id": "10264",
+      "nome": "Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, cor ou raça, condição de contribuição para instituto de previdência oficial no trabalho principal e grandes grupos de ocupação no trabalho principal"
+    },
+    {
+      "id": "10265",
+      "nome": "Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, nível de instrução e a posição na ocupação e categoria do emprego no trabalho principal"
+    },
+    {
+      "id": "10266",
+      "nome": "Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, cor ou raça, condição de contribuição para instituto de previdência oficial no trabalho principal e seção de atividade econômica do trabalho principal"
+    },
+    {
+      "id": "10268",
+      "nome": "Pessoas de 10 anos ou mais de idade, total e ocupadas na semana de referência, e nível da ocupação, na semana de referência, das pessoas de 10 anos ou mais de idade, por sexo, cor ou raça e grupo de idade"
+    },
+    {
+      "id": "10269",
+      "nome": "Pessoas de 10 anos ou mais de idade, não ocupadas na semana de referência, total e que trabalharam para alimentação dos moradores do domicílio na roça, criação de animais, pesca, extrativismo ou caça, por sexo, cor ou raça e grupos de idade."
+    },
+    {
+      "id": "10270",
+      "nome": "Pessoas indígenas de 14 anos ou mais de idade, por condição em relação à força de trabalho e condição de ocupação na semana de referência, sexo e nível de instrução"
+    },
+    {
+      "id": "10271",
+      "nome": "Pessoas indígenas de 10 anos ou mais de idade, por situação de ocupação na semana de referência, sexo e grupos de idade"
+    },
+    {
+      "id": "10272",
+      "nome": "Pessoas indígenas de 14 anos ou mais de idade ocupadas na semana de referência por posição na ocupação, categoria do emprego no trabalho principal e sexo"
+    },
+    {
+      "id": "10273",
+      "nome": "Pessoas indígenas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, condição de contribuição para instituto de previdência oficial no trabalho principal e grandes grupos de ocupação no trabalho principal"
+    },
+    {
+      "id": "10274",
+      "nome": "Pessoas indígenas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, condição de contribuição para instituto de previdência oficial no trabalho principal e seção de atividade econômica do trabalho principal"
+    },
+    {
+      "id": "10275",
+      "nome": "Pessoas indígenas de 14 anos ou mais de idade, por sexo, grupos de idade e nível de ocupação na semana de referência"
+    },
+    {
+      "id": "10276",
+      "nome": "Pessoas indígenas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, nível de instrução e número de trabalhos"
+    },
+    {
+      "id": "10278",
+      "nome": "Pessoas indígenas de 10 anos ou mais de idade, total e ocupadas na semana de referência, e nível da ocupação, na semana de referência, das pessoas indígenas de 10 anos ou mais de idade, por sexo e grupos de idade"
+    },
+    {
+      "id": "10279",
+      "nome": "Pessoas indígenas de 10 anos ou mais de idade, total e que trabalharam para alimentação dos moradores do domicílio na roça, criação de animais, pesca, extrativismo ou caça, por sexo e grupos de idade."
+    },
+    {
+      "id": "10280",
+      "nome": "Pessoas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, por sexo e segundo a posição na ocupação e categoria do emprego no trabalho principal"
+    },
+    {
+      "id": "10281",
+      "nome": "Pessoas de 14 anos ou mais de idade, ocupadas na semana de referência com rendimento de trabalho e Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, segundo o sexo, a cor ou raça, o nível de instrução e a condição de contribuição para instituto de previdência oficial no trabalho principal"
+    },
+    {
+      "id": "10286",
+      "nome": "Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, com rendimento de trabalho, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, com rendimento de trabalho, por sexo e condição de contribuição para instituto de previdência oficial no trabalho principal e seção de atividade do trabalho principal"
+    },
+    {
+      "id": "10289",
+      "nome": "Massa de rendimento nominal mensal de todos os trabalhos, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos das pessoas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, por sexo e cor ou raça"
+    },
+    {
+      "id": "10291",
+      "nome": "Pessoas de 10 anos ou mais de idade, ocupadas na semana de referência e com rendimento de trabalho, Valor do rendimento nominal mensal médio mensal e mediano de todos os trabalhos, por sexo, cor ou raça e grupos de idade"
+    },
+    {
+      "id": "10292",
+      "nome": "Pessoas de 14 anos ou mais ocupadas na semana de referência e sua distribuição, por sexo e classes de rendimento de todos os trabalhos em salários mínimos"
+    },
+    {
+      "id": "10295",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), valor do rendimento domiciliar mensal per capita, médio e mediano, por sexo, cor ou raça e grupos de idade"
+    },
+    {
+      "id": "10296",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por sexo, cor ou raça e classes de rendimento domiciliar per capita em salários mínimos"
+    },
+    {
+      "id": "10297",
+      "nome": "Participação percentual na composição do rendimento nominal mensal domiciliar dos moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por tipo de rendimento"
+    },
+    {
+      "id": "10299",
+      "nome": "Pessoas de 14 anos ou mais de idade, Valor do rendimento nominal mensal médio e mediano, por sexo, condição em relação à força de trabalho e condição de ocupação na semana de referência e grupos de idade"
+    },
+    {
+      "id": "10300",
+      "nome": "Pessoas de 14 anos ou mais de idade moradoras em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por condição em relação à força de trabalho e condição de ocupação na semana de referência e as classes de rendimento nominal mensal em salários mínimos"
+    },
+    {
+      "id": "10306",
+      "nome": "Pessoas indígenas de 14 anos ou mais ocupadas na semana de referência e sua distribuição por sexo e classes de rendimento de todos os trabalhos em salários mínimos"
+    },
+    {
+      "id": "10307",
+      "nome": "Pessoas indígenas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho e Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, por sexo, nível de instrução e condição de contribuição para instituto de previdência oficial no trabalho principal"
+    },
+    {
+      "id": "10308",
+      "nome": "Massa de rendimento nominal mensal de todos os trabalhos, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos das pessoas indígenas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, por sexo"
+    },
+    {
+      "id": "10310",
+      "nome": "População indígena moradora em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por sexo e classes de rendimento domiciliar per capita em salários mínimos"
+    },
+    {
+      "id": "10316",
+      "nome": "População indígena moradora em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), valor do rendimento domiciliar per capita mensal, médio e mediano, por sexo e grupos de idade"
+    },
+    {
+      "id": "10317",
+      "nome": "Pessoas indígenas de 14 anos ou mais de idade ocupadas na semana de referência, valor do rendimento nominal mensal, médio e mediano, por sexo e grupos de idade"
+    },
+    {
+      "id": "10321",
+      "nome": "Pessoas residentes em domicílios particulares, que frequentavam escola ou creche, por sexo, local da creche ou escola que frequentavam, cor ou raça e classes de rendimento nominal mensal domiciliar per capita"
+    },
+    {
+      "id": "10324",
+      "nome": "Pessoas residentes em domicílios particulares, que frequentavam escola ou creche, por sexo, local da escola ou creche que frequentavam, os grupos de idade e o curso que frequentavam"
+    },
+    {
+      "id": "10329",
+      "nome": "Pessoas de 10 anos ou mais de idade residentes em domicílios particulares, ocupadas na semana de referência, por local de exercício do trabalho principal, se retorna do trabalho para casa 3 dias ou mais na semana, sexo e classes de rendimento nominal mensal domiciliar per capita"
+    },
+    {
+      "id": "10330",
+      "nome": "Pessoas de 10 anos ou mais de idade, ocupadas na semana de referência, que, no trabalho principal, trabalhavam fora do domicílio e retornavam 3 dias ou mais na semana do trabalho para o domicílio, por cor ou raça, tempo habitual de deslocamento do domicílio para o trabalho principal, por meio de transporte em que passa mais tempo para chegar ao local de trabalho e local do exercício do trabalho principal"
+    },
+    {
+      "id": "10331",
+      "nome": "Pessoas de 10 anos ou mais de idade residentes em domicílios particulares, ocupadas na semana de referência, que, no trabalho principal, trabalhavam fora do domicílio, por tempo habitual de deslocamento do domicílio para o trabalho principal, sexo, cor ou raça e classes de rendimento nominal mensal domiciliar per capita"
+    },
+    {
+      "id": "10332",
+      "nome": "Pessoas de 10 anos ou mais de idade, ocupadas na semana de referência, que, no trabalho principal, trabalhavam fora do domicílio, por meio de transporte em que passa mais tempo para chegar ao local de trabalho, nível de instrução e cor ou raça"
+    },
+    {
+      "id": "10333",
+      "nome": "Pessoas de 10 anos ou mais de idade, ocupadas na semana de referência, que, no trabalho principal, trabalhavam fora do domicílio, por tempo habitual de deslocamento do domicílio para o trabalho principal, nível de instrução, grupo de idade e cor ou raça"
+    },
+    {
+      "id": "10334",
+      "nome": "Pessoas indígenas residentes em domicílios particulares, que frequentavam escola ou creche, por sexo, local da escola ou creche que frequentavam e classes de rendimento nominal mensal domiciliar per capita"
+    },
+    {
+      "id": "10335",
+      "nome": "Pessoas indígenas de 10 anos ou mais de idade, ocupadas na semana de referência, que, no trabalho principal, trabalhavam fora do domicílio ou propriedade e retornavam 3 dias ou mais na semana do trabalho para o domicílio, por tempo habitual de deslocamento do domicílio para o trabalho principal, por meio de transporte em que passa mais tempo para chegar ao local de trabalho e local do exercício do trabalho principal"
+    },
+    {
+      "id": "10336",
+      "nome": "Pessoas indígenas de 10 anos ou mais de idade residentes em domicílios particulares, ocupadas na semana de referência, que, no trabalho principal, trabalhavam fora do domicílio ou propriedade, por tempo habitual de deslocamento do domicílio para o trabalho principal, sexo e as classes de rendimento nominal mensal domiciliar per capita"
+    },
+    {
+      "id": "10337",
+      "nome": "Pessoas indígenas de 10 anos ou mais de idade, ocupadas na semana de referência, que, no trabalho principal, trabalhavam fora do domicílio ou propriedade, por meio de transporte em que passa mais tempo para chegar ao local de trabalho e nível de instrução"
+    },
+    {
+      "id": "10338",
+      "nome": "Pessoas indígenas de 10 anos ou mais de idade, ocupadas na semana de referência, que, no trabalho principal, trabalhavam fora do domicílio ou propriedade, por tempo habitual de deslocamento do domicílio para o trabalho principal, meio de transporte em que passa mais tempo para chegar ao local de trabalho, nível de instrução e grupos de idade"
+    },
+    {
+      "id": "10339",
+      "nome": "Moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por sexo, grupos de idade e existência e características do entorno, em Favelas e Comunidades Urbanas e fora de Favelas e Comunidades Urbanas - Municípios com presença de Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "10340",
+      "nome": "Moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, total e indígenas, por sexo e existência e características do entorno, em Favelas e Comunidades Urbanas e fora de Favelas e Comunidades Urbanas - Municípios com presença de Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "10341",
+      "nome": "Domicílios particulares permanentes ocupados e moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água e existência e características do entorno, em Favelas e Comunidades Urbanas e fora de Favelas e Comunidades Urbanas - Municípios com presença de Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "10342",
+      "nome": "Domicílios particulares permanentes ocupados e moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por existência de canalização de água, principal forma de abastecimento de água e existência e características do entorno, em Favelas e Comunidades Urbanas e fora de Favelas e Comunidades Urbanas - Municípios com presença de Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "10343",
+      "nome": "Domicílios particulares permanentes ocupados e moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio e existência e características do entorno, em Favelas e Comunidades Urbanas e fora de Favelas e Comunidades Urbanas - Municípios com presença de Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "10344",
+      "nome": "Domicílios particulares permanentes ocupados e moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por tipo de esgotamento sanitário e existência e características do entorno, em Favelas e Comunidades Urbanas e fora de Favelas e Comunidades Urbanas - Municípios com presença de Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "10345",
+      "nome": "Domicílios particulares permanentes ocupados e moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por destino do lixo e existência e características do entorno, em Favelas e Comunidades Urbanas e fora de Favelas e Comunidades Urbanas - Municípios com presença de Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "10346",
+      "nome": "Número de estabelecimentos, por espécie (finalidade ou uso), e número de edificações em construção ou em reforma em setores selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por existência e características do entorno, em Favelas e Comunidades Urbanas e fora de Favelas e Comunidades Urbanas - Municípios com presença de Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "10381",
+      "nome": "Pessoas de 10 anos ou mais ocupadas na semana de referência e sua distribuição, por cor ou raça, segundo as classes de rendimento de todos os trabalhos"
+    },
+    {
+      "id": "10392",
+      "nome": "Pessoas indígenas de 2 anos ou mais de idade, idade mediana de pessoas indígenas com 2 anos ou mais de idade, por status de declaração de etnia, status de declaração de língua indígena, condição de falar português no domicílio, localização e situação do domicílio"
+    },
+    {
+      "id": "10412",
+      "nome": "Número de etnias, povos ou grupos indígenas e número de línguas indígenas faladas ou utilizadas por pessoas indígenas nos domicílios"
+    },
+    {
+      "id": "10413",
+      "nome": "Número de etnias, povos ou grupos indígenas em Terras Indígenas e número de línguas indígenas faladas ou utilizadas por pessoas indígenas nos domicílios em Terras Indígenas"
+    },
+    {
+      "id": "10426",
+      "nome": "Pessoas indígenas e idade mediana das pessoas indígenas, por status de declaração de etnia, localização e situação do domicílio"
+    },
+    {
+      "id": "1539",
+      "nome": "Pessoas de 10 anos ou mais de idade, por estado conjugal"
+    },
+    {
+      "id": "2145",
+      "nome": "Naturalizados brasileiros e Estrangeiros, por grupos de anos em que fixaram residência no país, sexo e grupos de idade"
+    },
+    {
+      "id": "3182",
+      "nome": "Pessoas que já residiram fora do município, por tempo ininterrupto de residência no município, sexo e grupos de idade"
+    },
+    {
+      "id": "3517",
+      "nome": "Famílias únicas e conviventes principais residentes em domicílios particulares, por número de componentes, segundo o sexo, os grupos de idade e o nível de instrução das pessoas responsáveis pelas famílias"
+    },
+    {
+      "id": "4709",
+      "nome": "População residente, Variação absoluta de população residente e Taxa de crescimento geométrico"
+    },
+    {
+      "id": "4711",
+      "nome": "Domicílios recenseados, por espécie"
+    },
+    {
+      "id": "4712",
+      "nome": "Domicílios particulares permanentes ocupados, Moradores em domicílios particulares permanentes ocupados e Média de moradores em domicílios particulares permanentes ocupados"
+    },
+    {
+      "id": "4714",
+      "nome": "População Residente, Área territorial e Densidade demográfica"
+    },
+    {
+      "id": "617",
+      "nome": "Brasileiros natos por unidade da federação de nascimento e grupos de idade"
+    },
+    {
+      "id": "631",
+      "nome": "População residente, por sexo e lugar de nascimento"
+    },
+    {
+      "id": "6326",
+      "nome": "Domicílios particulares permanentes ocupados, por tipo de domicílio"
+    },
+    {
+      "id": "6417",
+      "nome": "Pessoas de 10 anos ou mais de idade, por cor ou raça, segundo o sexo e a religião"
+    },
+    {
+      "id": "6580",
+      "nome": "Pessoas de 14 anos ou mais de idade, por condição em relação à força de trabalho e condição de ocupação na semana de referência, sexo e grupos de idade"
+    },
+    {
+      "id": "6584",
+      "nome": "Óbitos de pessoas que haviam residido com moradores dos domicílios particulares, por mês e ano de ocorrência do falecimento, sexo e grupos de idade das pessoas ao falecerem"
+    },
+    {
+      "id": "6591",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por sexo, grupos de idade e existência e características do entorno"
+    },
+    {
+      "id": "6740",
+      "nome": "Pessoas de até 5 anos de idade, por existência e tipo de registro de nascimento, segundo a cor ou raça e a idade"
+    },
+    {
+      "id": "6741",
+      "nome": "Pessoas indígenas de até 5 anos de idade, por existência e tipo de registro de nascimento, segundo a idade"
+    },
+    {
+      "id": "6750",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por sexo, cor ou raça e existência e características do entorno"
+    },
+    {
+      "id": "6751",
+      "nome": "Domicílios particulares permanentes ocupados e moradores em domicílios particulares permanentes ocupados, em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água, e existência e características do entorno"
+    },
+    {
+      "id": "6752",
+      "nome": "Domicílios particulares permanentes ocupados e moradores em domicílios particulares permanentes ocupados, em setores selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio, e existência e características do entorno"
+    },
+    {
+      "id": "6803",
+      "nome": "Domicílios particulares permanentes ocupados, por existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água"
+    },
+    {
+      "id": "6804",
+      "nome": "Domicílios particulares permanentes ocupados, por existência de canalização de água e principal forma de abastecimento de água"
+    },
+    {
+      "id": "6805",
+      "nome": "Domicílios particulares permanentes ocupados, por tipo de esgotamento sanitário"
+    },
+    {
+      "id": "6806",
+      "nome": "Domicílios particulares permanentes ocupados, por existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio e por tipo de esgotamento sanitário"
+    },
+    {
+      "id": "6892",
+      "nome": "Domicílios particulares permanentes ocupados, por destino do lixo"
+    },
+    {
+      "id": "6893",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, por tipo do domicílio, segundo grupos de idade e cor ou raça"
+    },
+    {
+      "id": "6894",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, por existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água, segundo grupos de idade e cor ou raça"
+    },
+    {
+      "id": "6909",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, por existência de canalização de água e a principal forma de abastecimento de água, segundo grupos de idade e cor ou raça"
+    },
+    {
+      "id": "7240",
+      "nome": "População, total e indígena, de 15 anos ou mais de idade, por alfabetização, sexo, idade, quesito de declaração e localização do domicílio"
+    },
+    {
+      "id": "7523",
+      "nome": "Domicílios particulares permanentes ocupados e moradores em domicílios particulares permanentes ocupados, em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por destino do lixo, e existência e características do entorno"
+    },
+    {
+      "id": "7555",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, por tipo de esgotamento sanitário, segundo grupos de idade e cor ou raça"
+    },
+    {
+      "id": "8175",
+      "nome": "População indígena, por localização do domicílio, grupos de idade e sexo"
+    },
+    {
+      "id": "8176",
+      "nome": "População quilombola, por localização do domicílio, grupos de idade e sexo"
+    },
+    {
+      "id": "8177",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo da população indígena, segundo localização do domicílio e quesito de declaração"
+    },
+    {
+      "id": "8178",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo da população quilombola por localização do domicílio"
+    },
+    {
+      "id": "8180",
+      "nome": "Pessoas indígenas de 15 anos ou mais de idade, total e as alfabetizadas, por sexo e grupos de idade"
+    },
+    {
+      "id": "8181",
+      "nome": "Taxa de alfabetização das pessoas indígenas de 15 anos ou mais de idade por sexo e grupos de idade"
+    },
+    {
+      "id": "9397",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, por existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio e por tipo de esgotamento sanitário, segundo grupos de idade e cor ou raça"
+    },
+    {
+      "id": "9425",
+      "nome": "População, total e indígena, de 15 anos ou mais de idade residente em Terras Indígenas, por alfabetização, sexo, idade e quesito de declaração, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9514",
+      "nome": "População residente, por sexo, idade e forma de declaração da idade"
+    },
+    {
+      "id": "9515",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo da população"
+    },
+    {
+      "id": "9517",
+      "nome": "Pessoas de 14 anos ou mais de idade, por condição em relação à força de trabalho e condição de ocupação na semana de referência, sexo, cor ou raça e nível de instrução"
+    },
+    {
+      "id": "9537",
+      "nome": "Pessoas de 10 anos ou mais de idade, por religião, segundo o sexo e os grupos de idade"
+    },
+    {
+      "id": "9541",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, por destino do lixo, segundo grupos de idade e cor ou raça"
+    },
+    {
+      "id": "9542",
+      "nome": "Pessoas de 15 anos ou mais de idade, total e as alfabetizadas, por sexo, cor ou raça e grupos de idade"
+    },
+    {
+      "id": "9543",
+      "nome": "Taxa de alfabetização das pessoas de 15 anos ou mais de idade por sexo, cor ou raça e grupos de idade"
+    },
+    {
+      "id": "9578",
+      "nome": "População residente, total e quilombola, por localização do domicílio"
+    },
+    {
+      "id": "9583",
+      "nome": "Domicílios particulares permanentes ocupados, em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por tipo de domicílio e existência e características do entorno"
+    },
+    {
+      "id": "9584",
+      "nome": "Domicílios em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por espécie, e existência e características do entorno"
+    },
+    {
+      "id": "9585",
+      "nome": "Domicílios particulares permanentes ocupados, em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por existência e características do entorno, segundo as classes de tamanho de população dos municípios"
+    },
+    {
+      "id": "9586",
+      "nome": "Quantidade de faces de quadras por existência e características do entorno, em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios"
+    },
+    {
+      "id": "9587",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por sexo, grupos de idade e características do entorno por bueiro, iluminação pública, calçada e rampa para cadeirante"
+    },
+    {
+      "id": "9605",
+      "nome": "População residente, por cor ou raça, nos Censos Demográficos"
+    },
+    {
+      "id": "9606",
+      "nome": "População residente, por cor ou raça, segundo o sexo e a idade"
+    },
+    {
+      "id": "9608",
+      "nome": "População indígena, por grupos de idade e sexo"
+    },
+    {
+      "id": "9718",
+      "nome": "População residente, total e indígena, por localização do domicílio e quesito de declaração indígena nos Censos Demográficos - Primeiros Resultados do Universo"
+    },
+    {
+      "id": "9719",
+      "nome": "População residente em terras indígenas, total e indígenas, por quesito de declaração indígena, segundo as Terras Indígenas - Primeiros Resultados do Universo"
+    },
+    {
+      "id": "9720",
+      "nome": "Domicílios particulares permanentes ocupados com pelo menos um morador indígena e Moradores, total e indígenas, em domicílios particulares permanentes ocupados com pelo menos um morador indígena, por localização do domicílio, nos Censos Demográficos – Primeiros Resultados do Universo"
+    },
+    {
+      "id": "9721",
+      "nome": "Domicílios particulares permanentes ocupados com pelo menos um morador indígena e Moradores, total e indígenas, em domicílios particulares permanentes ocupados com pelo menos um morador indígena, segundo as Terras Indígenas – Primeiros Resultados do Universo"
+    },
+    {
+      "id": "9722",
+      "nome": "Domicílios particulares permanentes ocupados localizados em terras indígenas e Moradores, total e indígenas, em domicílios particulares permanentes ocupados localizados em terras indígenas, segundo as Terras Indígenas, nos Censos Demográficos – Primeiros Resultados do Universo"
+    },
+    {
+      "id": "9723",
+      "nome": "População residente em territórios quilombolas, total e quilombola, segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9724",
+      "nome": "Domicílios particulares permanentes ocupados com pelo menos um morador quilombola e Moradores, total e moradores quilombolas, em domicílios particulares permanentes ocupados com pelo menos um morador quilombola, por localização do domicílio"
+    },
+    {
+      "id": "9725",
+      "nome": "Domicílios particulares permanentes ocupados localizados em territórios quilombolas e Moradores, total e quilombolas, em domicílios particulares permanentes ocupados em territórios quilombolas, segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9726",
+      "nome": "Domicílios particulares permanentes ocupados com pelo menos um morador quilombola e Moradores, total e quilombolas, em domicílios particulares permanentes ocupados com pelo menos um morador quilombola, segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9727",
+      "nome": "Domicílios particulares permanentes ocupados e Moradores, total e quilombolas, em domicílios particulares permanentes ocupados, segundo localização do domicílio"
+    },
+    {
+      "id": "9728",
+      "nome": "Domicílios particulares permanentes ocupados e Moradores, total e indígenas, em domicílios particulares permanentes ocupados, por localização do domicílio, nos Censos Demográficos – Primeiros Resultados do Universo"
+    },
+    {
+      "id": "9756",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo, por cor ou raça"
+    },
+    {
+      "id": "9757",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo da população indígena, segundo quesito de declaração"
+    },
+    {
+      "id": "9764",
+      "nome": "População residente em terras indígenas, total e indígenas, por grupos de idade, sexo e quesito de declaração indígena, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9765",
+      "nome": "População residente em territórios quilombolas, total e quilombola, por grupos de idade e sexo, segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9766",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo da população residente em terras indígenas, total e indígenas, segundo quesito de declaração e as Terras Indígenas"
+    },
+    {
+      "id": "9767",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo da população residente em territórios quilombolas, total e quilombola, segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9792",
+      "nome": "População total e quilombola de 15 anos ou mais de idade, por alfabetização, sexo, idade e localização do domicílio"
+    },
+    {
+      "id": "9793",
+      "nome": "Taxa de alfabetização da população total e quilombola de 15 anos ou mais de idade, por sexo, idade e localização do domicílio"
+    },
+    {
+      "id": "9794",
+      "nome": "População de 15 anos ou mais de idade residente em territórios quilombolas, total e quilombola, por alfabetização, sexo e idade, segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9795",
+      "nome": "Taxa de alfabetização da população de 15 anos ou mais de idade residente em territórios quilombolas, total e quilombola, por sexo e idade, segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9802",
+      "nome": "População residente, total e quilombolas, em Territórios Quilombolas, por sexo, idade e forma de declaração, segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9803",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, por tipo de domicílio e localização do domicílio"
+    },
+    {
+      "id": "9804",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, por existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água e localização do domicílio"
+    },
+    {
+      "id": "9805",
+      "nome": "População quilombola, por sexo, idade, forma de declaração da idade e localização do domicílio"
+    },
+    {
+      "id": "9806",
+      "nome": "Domicílios particulares permanentes ocupados localizados em Territórios Quilombolas, total e com pelo menos um morador quilombola, por existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água e segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9807",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, por existência de canalização de água e principal forma de abastecimento de água e localização do domicílio"
+    },
+    {
+      "id": "9808",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo, total e quilombolas, segundo a localização do domicílio"
+    },
+    {
+      "id": "9809",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo das pessoas residentes em Territórios Quilombolas, total e quilombolas, segundos os Territórios Quilombolas"
+    },
+    {
+      "id": "9810",
+      "nome": "Domicílios particulares permanentes ocupados localizados em Territórios Quilombolas, total e com pelo menos um morador quilombola, por tipo de domicílio e segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9811",
+      "nome": "Domicílios particulares permanentes ocupados localizados em Territórios Quilombolas, total e com pelo menos um morador quilombola, por existência de canalização de água e principal forma de abastecimento, segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9812",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, por existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio, por tipo de esgotamento sanitário e localização do domicílio"
+    },
+    {
+      "id": "9813",
+      "nome": "Domicílios particulares permanentes ocupados localizados em Territórios Quilombolas, total e com pelo menos um morador quilombola, por existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio e por tipo de esgotamento sanitário, segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9814",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, por destino do lixo e localização do domicílio"
+    },
+    {
+      "id": "9815",
+      "nome": "Domicílios particulares permanentes ocupados localizados em Territórios Quilombolas, total e com pelo menos um morador quilombola, por destino do lixo e segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9816",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, por tipo de domicílio, segundo os grupos de idade e a localização do domicílio"
+    },
+    {
+      "id": "9817",
+      "nome": "Moradores, total e quilombolas, em domicílios particulares permanentes ocupados em Territórios Quilombolas, por tipo de domicílio, segundo os grupos de idade e os Territórios Quilombolas"
+    },
+    {
+      "id": "9818",
+      "nome": "Moradores, total e quilombolas, em domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, por existência de ligação à rede geral de distribuição de água e a principal forma de abastecimento, segundo os grupos de idade e a localização do domicílio"
+    },
+    {
+      "id": "9819",
+      "nome": "Moradores, total e quilombolas, em domicílios particulares permanentes ocupados localizados em Territórios Quilombolas, por existência de ligação à rede geral de distribuição de água e a principal forma de abastecimento, segundo os grupos de idade e os Territórios Quilombolas"
+    },
+    {
+      "id": "9820",
+      "nome": "Moradores, total e quilombolas, em domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, por existência de canalização de água e a principal forma de abastecimento de água, grupos de idade e localização do domicílio"
+    },
+    {
+      "id": "9821",
+      "nome": "Moradores, total e quilombolas, em domicílios particulares permanentes ocupados localizados em Territórios Quilombolas, por existência de canalização de água e a principal forma de abastecimento de água, grupos de idade e segundo os Territórios Quilombolas"
+    },
+    {
+      "id": "9822",
+      "nome": "Moradores, total e quilombolas, em domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, por existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio e por tipo de esgotamento sanitário, segundo os grupos de idade e a localização do domicílio"
+    },
+    {
+      "id": "9823",
+      "nome": "Moradores, total e quilombolas, em domicílios particulares permanentes ocupados localizados em Territórios Quilombolas, por existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio e por tipo de esgotamento sanitário, segundo os grupos de idade e os Territórios Quilombolas"
+    },
+    {
+      "id": "9824",
+      "nome": "Moradores, total e quilombolas, em domicílios particulares permanentes ocupados localizados em Territórios Quilombolas, por destino do lixo, segundo os grupos de idade e os Territórios Quilombolas"
+    },
+    {
+      "id": "9825",
+      "nome": "Moradores, total e quilombolas, em domicílios particulares permanentes ocupados, total e com pelo menos um morador quilombola, por destino do lixo, segundo os grupos de idade e a localização do domicílio"
+    },
+    {
+      "id": "9837",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por sexo, cor ou raça e existência e características do entorno por bueiro, iluminação pública, calçada e rampa para cadeirante"
+    },
+    {
+      "id": "9838",
+      "nome": "Domicílios particulares permanentes ocupados e moradores em domicílios particulares permanentes ocupados, em setores selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio, e existência e características do entorno por bueiro, iluminação pública, calçada e rampa para cadeirante"
+    },
+    {
+      "id": "9839",
+      "nome": "Domicílios particulares permanentes ocupados e moradores em domicílios particulares permanentes ocupados, em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por destino do lixo, e existência e características do entorno por bueiro, iluminação pública, calçada e rampa para cadeirante"
+    },
+    {
+      "id": "9841",
+      "nome": "Taxa de alfabetização da população, total e indígena, de 15 anos ou mais de idade, por sexo, idade, quesito de declaração e localização do domicílio"
+    },
+    {
+      "id": "9842",
+      "nome": "Taxa de alfabetização da população, total e indígena, de 15 anos ou mais de idade residente em Terras Indígenas, por sexo, idade e quesito de declaração, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9843",
+      "nome": "Pessoas de até 5 anos de idade, total e indígenas, por existência e tipo de registro de nascimento, segundo a idade, quesito de declaração e localização do domicílio"
+    },
+    {
+      "id": "9844",
+      "nome": "Pessoas de até 5 anos de idade, total e indígenas, residentes em Terras Indígenas, por existência e tipo de registro de nascimento, idade e quesito de declaração, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9845",
+      "nome": "População, total e indígena, por sexo, idade, forma de declaração da idade, quesito de declaração e localização do domicílio"
+    },
+    {
+      "id": "9846",
+      "nome": "População, total e indígena, residente em Terras Indígenas, por sexo, idade, forma de declaração da idade e quesito de declaração, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9847",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo, total e indígenas, por quesito de declaração e localização do domicílio"
+    },
+    {
+      "id": "9848",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador indígena, e moradores, total e indígenas, em domicílios particulares permanentes ocupados, por tipo de domicílio, principal forma de abastecimento de água, existência de canalização de água, tipo de esgotamento sanitário, destino do lixo e localização do domicílio"
+    },
+    {
+      "id": "9849",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador indígena, localizados em terras indígenas, e moradores, total e indígenas, em domicílios particulares permanentes ocupados localizados em terras indígenas, por tipo de domicílio, principal forma de abastecimento de água, existência de canalização de água, tipo de esgotamento sanitário e destino do lixo, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9850",
+      "nome": "Moradores, total e indígenas, em domicílios particulares permanentes ocupados, por tipo de domicílio, existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água, existência de canalização de água, existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio, grupos de idade e localização do domicílio"
+    },
+    {
+      "id": "9851",
+      "nome": "Moradores, total e indígenas, em domicílios particulares permanentes ocupados localizados em terras indígenas, por tipo de domicílio, existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água, existência de canalização de água, existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio e grupos de idade, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9852",
+      "nome": "Moradores, total e indígenas, em domicílios particulares permanentes ocupados, por tipo de domicílio, existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água, existência de canalização de água, tipo de esgotamento sanitário, grupos de idade e localização do domicílio"
+    },
+    {
+      "id": "9853",
+      "nome": "Moradores, total e indígenas, em domicílios particulares permanentes ocupados localizados em terras indígenas, por tipo de domicílio, existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água, existência de canalização de água, tipo de esgotamento sanitário e grupos de idade, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9854",
+      "nome": "Moradores, total e indígenas, em domicílios particulares permanentes ocupados, por tipo de domicílio, destino do lixo, grupos de idade e localização do domicílio"
+    },
+    {
+      "id": "9855",
+      "nome": "Moradores, total e indígenas, em domicílios particulares permanentes ocupados localizados em terras indígenas, por tipo de domicílio, destino do lixo e grupos de idade, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9856",
+      "nome": "Domicílios, total e com pelo menos um morador indígena, e Moradores, total e indígenas, em domicílios, por espécie e localização do domicílio"
+    },
+    {
+      "id": "9858",
+      "nome": "Moradores, total e indígenas, de 15 anos ou mais, total e alfabetizados, e taxa de alfabetização de moradores de 15 anos ou mais, total e indígenas, por tipo de domicílio, principal forma de abastecimento de água, existência de canalização de água, tipo de esgotamento sanitário, destino do lixo e localização do domicílio"
+    },
+    {
+      "id": "9859",
+      "nome": "Moradores, total e indígenas, de 15 anos ou mais, total e alfabetizados, em domicílios particulares permanentes ocupados localizados em terras indígenas, e taxa de alfabetização de moradores de 15 anos ou mais, total e indígena, em domicílios particulares permanentes ocupados localizados em terras indígenas, por tipo de domicílio, principal forma de abastecimento de água, existência de canalização de água, tipo de esgotamento sanitário e destino do lixo, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9860",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador indígena, e moradores, total e indígenas, em domicílios particulares permanentes ocupados, por tipo de domicílio, existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água, existência de canalização de água, existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio, tipo de esgotamento sanitário e localização do domicílio"
+    },
+    {
+      "id": "9861",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador indígena, localizados em terras indígenas, e moradores, total e indígenas, em domicílios particulares permanentes ocupados localizados em terras indígenas, por tipo de domicílio, existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água, existência de canalização de água, existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio e tipo de esgotamento sanitário, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9862",
+      "nome": "Moradores, total e indígenas, em domicílios, por espécie, grupos de idade, quesito de declaração e localização do domicílio"
+    },
+    {
+      "id": "9866",
+      "nome": "Domicílios não ocupados, por espécie e tipo de domicílio"
+    },
+    {
+      "id": "9872",
+      "nome": "Taxa de pessoas até 5 anos de idade com registro de nascimento em cartório, por idade"
+    },
+    {
+      "id": "9873",
+      "nome": "Taxa de pessoas indígenas de até 5 anos de idade com registro de nascimento em cartório, RANI e sem registro de nascimento, por idade"
+    },
+    {
+      "id": "9877",
+      "nome": "Média de moradores em domicílios particulares, por sexo, cor ou raça e grupos de idade da pessoa responsável pelo domicílio"
+    },
+    {
+      "id": "9878",
+      "nome": "Moradores em domicílios particulares, por condição no domicílio, segundo sexo, cor ou raça e grupos de idade da pessoa responsável pelo domicílio"
+    },
+    {
+      "id": "9879",
+      "nome": "Domicílios particulares, por espécie de unidade doméstica, número de moradores, segundo sexo, cor ou raça e grupos de idade da pessoa responsável pelo domicílio"
+    },
+    {
+      "id": "9880",
+      "nome": "Domicílios particulares, por tipo de domicílio e número de moradores, segundo sexo, cor ou raça e grupos de idade da pessoa responsável pelo domicílio"
+    },
+    {
+      "id": "9881",
+      "nome": "Domicílios particulares por presença de cônjuge da pessoa responsável pelo domicílio"
+    },
+    {
+      "id": "9882",
+      "nome": "Domicílios particulares, por presença de cônjuge da pessoa responsável e filhos da pessoa responsável ou do cônjuge, segundo o sexo da pessoa responsável pelo domicílio"
+    },
+    {
+      "id": "9883",
+      "nome": "Número de favelas e comunidades urbanas, segundo os Municípios"
+    },
+    {
+      "id": "9884",
+      "nome": "População residente em favelas e comunidades urbanas, por cor ou raça, sexo e grupos de idade, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9885",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo da população residente em favelas e comunidades urbanas, por cor ou raça, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9886",
+      "nome": "Pessoas de 15 anos ou mais de idade residentes em favelas e comunidades urbanas, por alfabetização, cor ou raça, sexo e grupos de idade, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9887",
+      "nome": "Domicílios e população residente em favelas e comunidades urbanas, por espécie de domicílio, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9888",
+      "nome": "População residente, Área territorial e Densidade demográfica em favelas e comunidades urbanas, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9889",
+      "nome": "Número de estabelecimentos, por espécie (finalidade ou uso), e número de edificações em construção ou em reforma em favelas e comunidades urbanas, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9890",
+      "nome": "Domicílios particulares permanentes ocupados em favelas e comunidades urbanas, por tipo de domicílio, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9891",
+      "nome": "Domicílios particulares permanentes ocupados em favelas e comunidades urbanas, por existência de canalização de água e principal forma de abastecimento de água, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9892",
+      "nome": "Domicílios particulares permanentes ocupados em favelas e comunidades urbanas, por existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio e tipo de esgotamento sanitário, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9893",
+      "nome": "Domicílios particulares permanentes ocupados em favelas e comunidades urbanas, por destino do lixo, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9894",
+      "nome": "Domicílios particulares permanentes ocupados em favelas e comunidades urbanas, por existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9895",
+      "nome": "Moradores em domicílios particulares permanentes ocupados em favelas e comunidades urbanas, por tipo de domicílio, cor ou raça, sexo e grupos de idade, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9896",
+      "nome": "Moradores em domicílios particulares permanentes ocupados em favelas e comunidades urbanas, por existência de ligação à rede geral de distribuição de água e principal forma de abastecimento de água, cor ou raça, sexo e grupos de idade, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9897",
+      "nome": "Moradores em domicílios particulares permanentes ocupados em favelas e comunidades urbanas, por existência de canalização de água e a principal forma de abastecimento de água, cor ou raça, sexo e grupos de idade, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9898",
+      "nome": "Moradores em domicílios particulares permanentes ocupados em favelas e comunidades urbanas, por existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio, tipo de esgotamento sanitário, cor ou raça, sexo e grupos de idade, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9899",
+      "nome": "Moradores em domicílios particulares permanentes ocupados em favelas e comunidades urbanas, por destino do lixo, cor ou raça, sexo e grupos de idade, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9900",
+      "nome": "População residente em favelas e comunidades urbanas, total e indígena, por sexo e grupos de idade, segundo as Favelas e Comunidades Urbanas"
+    },
+    {
+      "id": "9922",
+      "nome": "Domicílios particulares permanentes ocupados, moradores em domicílios particulares permanentes ocupados e média de moradores em domicílios particulares permanentes ocupados, segundo a situação do domicílio"
+    },
+    {
+      "id": "9923",
+      "nome": "População residente, por situação do domicílio"
+    },
+    {
+      "id": "9928",
+      "nome": "Domicílios particulares permanentes ocupados, por tipo de material das paredes externas, condição de ocupação do domicílio e tipo do domicílio"
+    },
+    {
+      "id": "9929",
+      "nome": "Domicílios particulares permanentes ocupados, por condição de ocupação do domicílio, segundo o número de moradores com 15 anos ou mais de idade e número de moradores com 14 anos ou menos de idade"
+    },
+    {
+      "id": "9930",
+      "nome": "Domicílios particulares permanentes ocupados, por número de cômodos, condição de ocupação do domicílio e tipo do domicílio"
+    },
+    {
+      "id": "9931",
+      "nome": "Domicílios particulares permanentes ocupados, por número de cômodos, número de banheiros de uso exclusivo do domicílio e número de dormitórios"
+    },
+    {
+      "id": "9933",
+      "nome": "Domicílios particulares permanentes ocupados, por número de moradores por dormitório, condição de ocupação do domicílio e tipo do domicílio"
+    },
+    {
+      "id": "9934",
+      "nome": "Domicílios particulares permanentes ocupados, por número de moradores por dormitório, segundo o número de moradores com 15 anos ou mais de idade e número de moradores com 14 anos ou menos de idade"
+    },
+    {
+      "id": "9935",
+      "nome": "Domicílios particulares permanentes ocupados, por presença de máquina de lavar roupas, condição de ocupação do domicílio e tipo do domicílio"
+    },
+    {
+      "id": "9936",
+      "nome": "Domicílios particulares permanentes ocupados, por existência de conexão domiciliar à Internet, condição de ocupação do domicílio e tipo do domicílio"
+    },
+    {
+      "id": "9937",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, por tipo de material das paredes externas, segundo a cor ou raça e os grupos de idade"
+    },
+    {
+      "id": "9938",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, por condição de ocupação do domicílio, segundo a cor ou raça e os grupos de idade"
+    },
+    {
+      "id": "9939",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, por número de cômodos, segundo a cor ou raça e os grupos de idade"
+    },
+    {
+      "id": "9940",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, por número de moradores por dormitório, segundo a cor ou raça e os grupos de idade"
+    },
+    {
+      "id": "9941",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, por presença de máquina de lavar roupa, segundo a cor ou raça e os grupos de idade"
+    },
+    {
+      "id": "9942",
+      "nome": "Moradores em domicílios particulares permanentes ocupados, por existência de conexão domiciliar à Internet, segundo a cor ou raça e os grupos de idade"
+    },
+    {
+      "id": "9943",
+      "nome": "Moradores indígenas em domicílios particulares permanentes ocupados, por tipo de material das paredes externas e grupos de idade"
+    },
+    {
+      "id": "9944",
+      "nome": "Moradores indígenas em domicílios particulares permanentes ocupados, por condição de ocupação do domicílio e os grupos de idade"
+    },
+    {
+      "id": "9945",
+      "nome": "Moradores indígenas em domicílios particulares permanentes ocupados, por número de cômodos e os grupos de idade"
+    },
+    {
+      "id": "9946",
+      "nome": "Moradores indígenas em domicílios particulares permanentes ocupados, por número de moradores por dormitório e os grupos de idade"
+    },
+    {
+      "id": "9947",
+      "nome": "Moradores indígenas em domicílios particulares permanentes ocupados, por presença de máquina de lavar roupa e os grupos de idade"
+    },
+    {
+      "id": "9948",
+      "nome": "Moradores indígenas em domicílios particulares permanentes ocupados, por existência de conexão domiciliar à Internet e os grupos de idade"
+    },
+    {
+      "id": "9951",
+      "nome": "Taxa de alfabetização da população, total e indígena, de 15 anos ou mais de idade, por sexo, grupos de idade, localização e situação do domicílio"
+    },
+    {
+      "id": "9952",
+      "nome": "População, total e indígena, de 15 anos ou mais de idade, por alfabetização, sexo, grupos de idade, localização e situação do domicílio"
+    },
+    {
+      "id": "9953",
+      "nome": "Pessoas de até 5 anos de idade, total e indígenas, por existência e tipo de registro de nascimento, segundo a idade, localização e situação do domicílio"
+    },
+    {
+      "id": "9954",
+      "nome": "População, total e indígena, residente em Terras Indígenas, por sexo, idade, segundo as Terras Indígenas e situação do domicílio"
+    },
+    {
+      "id": "9955",
+      "nome": "Índice de envelhecimento, idade mediana e razão de sexo, total e indígenas, por localização e situação do domicílio"
+    },
+    {
+      "id": "9956",
+      "nome": "Domicílios particulares permanentes ocupados, total e com pelo menos um morador indígena, e moradores, total e indígenas, em domicílios particulares permanentes ocupados, por tipo de domicílio, principal forma de abastecimento de água, existência de canalização de água, tipo de esgotamento sanitário, destino do lixo, localização e situação do domicílio"
+    },
+    {
+      "id": "9957",
+      "nome": "Moradores, total e indígenas, em domicílios particulares permanentes ocupados, por tipo de domicílio, tipo de esgotamento sanitário, localização e situação do domicílio"
+    },
+    {
+      "id": "9958",
+      "nome": "Moradores, total e indígenas, em domicílios particulares permanentes ocupados, por tipo de domicílio, existência de banheiro ou sanitário e número de banheiros de uso exclusivo do domicílio, localização e situação do domicílio"
+    },
+    {
+      "id": "9959",
+      "nome": "Moradores, total e indígenas, em domicílios particulares permanentes ocupados, por tipo de domicílio, destino do lixo, localização e situação do domicílio"
+    },
+    {
+      "id": "9960",
+      "nome": "Moradores, total e indígenas, em domicílios, por espécie, localização e situação do domicílio"
+    },
+    {
+      "id": "9961",
+      "nome": "Domicílios particulares permanentes ocupados com pelo menos um morador indígena, localizados em terras indígenas, por tipo de domicílio e número de moradores, segundo sexo, grupos de idade e pertencimento étnico indígena da pessoa responsável pelo domicílio, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9962",
+      "nome": "Média de moradores, total e indígenas, em domicílios particulares permanentes ocupados com pelo menos um morador indígena, por sexo, grupos de idade e pertencimento étnico indígena da pessoa responsável pelo domicílio, segundo localização e situação do domicílio"
+    },
+    {
+      "id": "9963",
+      "nome": "Média de moradores, total e indígenas, em domicílios particulares permanentes ocupados com pelo menos um morador indígena, localizados em terras indígenas, por sexo, grupos de idade e pertencimento étnico indígena da pessoa responsável pelo domicílio, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9964",
+      "nome": "Moradores em domicílios particulares permanentes ocupados com pelo menos um morador indígena, localizados em terras indígenas, por condição no domicílio, segundo sexo, grupos de idade e pertencimento étnico indígena da pessoa responsável pelo domicílio, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9965",
+      "nome": "Domicílios particulares com pelo menos um morador indígena, por presença de cônjuge da pessoa responsável pelo domicílio, segundo localização e situação do domicílio"
+    },
+    {
+      "id": "9966",
+      "nome": "Domicílios particulares com pelo menos um morador indígena, localizados em terras indígenas, por presença de cônjuge da pessoa responsável pelo domicílio e total de cônjuges, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9967",
+      "nome": "Domicílios particulares permanentes ocupados com pelo menos um morador indígena, por presença de cônjuge da pessoa responsável e filhos da pessoa responsável ou do cônjuge, segundo o sexo e pertencimento étnico indígena da pessoa responsável pelo domicílio e a localização e situação do domicílio"
+    },
+    {
+      "id": "9968",
+      "nome": "Domicílios particulares permanentes ocupados com pelo menos um morador indígena, localizados em terras indígenas, por presença de cônjuge da pessoa responsável, total de cônjuges, e filhos da pessoa responsável ou do cônjuge, segundo o sexo e pertencimento étnico indígena da pessoa responsável pelo domicílio, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9969",
+      "nome": "Óbitos de pessoas que haviam residido com moradores dos domicílios particulares permanentes ocupados com pelo menos um morador indígena, localizados em terras indígenas, por mês e ano de ocorrência do falecimento, sexo e grupos de idade das pessoas ao falecerem, segundo as Terras Indígenas"
+    },
+    {
+      "id": "9970",
+      "nome": "Pessoas indígenas, por idade, localização e situação do domicílio"
+    },
+    {
+      "id": "9971",
+      "nome": "Pessoas indígenas, por sexo, grupos de idade, localização e situação do domicílio"
+    }
+  ]
+}

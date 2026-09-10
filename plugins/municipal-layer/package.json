@@ -1,0 +1,11 @@
+{
+  "name": "@vpc/municipal-layer",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "exports": {".": "./dist/municipal-layer.js", "./style.css": "./dist/municipal-layer.css"},
+  "files": ["dist", "server", "README.md"],
+  "scripts": {"dev": "vite --host 127.0.0.1", "build": "vite build && vite build --mode library", "test": "python -B -m unittest discover -s server -p test_*.py"},
+  "peerDependencies": {"react": ">=18", "react-dom": ">=18"},
+  "devDependencies": {"vite": "^7.0.0", "@vitejs/plugin-react": "^4.7.0", "react": "^19.0.0", "react-dom": "^19.0.0"}
+}

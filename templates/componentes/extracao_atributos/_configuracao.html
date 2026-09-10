@@ -1,0 +1,49 @@
+<section class="ea-section" id="ea-config" aria-labelledby="ea-config-title">
+  <header class="ea-section-head"><span class="ea-number">1</span><div><h2 id="ea-config-title">Geoprocessamento — SLT</h2></div><span class="ea-badge" id="ea-config-count">Nenhuma base selecionada</span></header>
+  <div class="ea-section-body">
+    <div class="ea-map-toolbar"><button type="button" class="ea-btn" id="ea-refresh">Atualizar camadas e categorias</button><button type="button" class="ea-btn" id="ea-recover">Recuperar última análise</button></div>
+    <div class="ea-config-grid">
+      <section class="ea-panel" aria-labelledby="ea-bases-title">
+        <h3 class="ea-config-card-title" id="ea-bases-title"><span class="ea-subnumber">1.1</span><i class="fas fa-layer-group" aria-hidden="true"></i> Camadas base e categorias</h3>
+        <div class="ea-config-card-body">
+        <p class="ea-hint">As categorias organizam a análise e o relatório, sem alterar a interseção.</p>
+        <form id="ea-base-form" class="ea-base-form">
+          <div class="ea-field"><label for="ea-category-select">Categoria</label><select id="ea-category-select" required><option value="">Crie uma categoria</option></select></div>
+          <div class="ea-field"><label for="ea-base-browse">Camada base</label><input id="ea-base-select" type="hidden"><button id="ea-base-browse" type="button" class="ea-btn">Explorar storage</button><small id="ea-base-file" hidden></small></div>
+          <section class="ea-staging" id="ea-staging" aria-labelledby="ea-staging-title" hidden>
+            <h4 class="ea-staging-title" id="ea-staging-title">Lista de camadas por categoria</h4>
+            <div class="ea-staging-list" id="ea-staging-list" role="group" aria-labelledby="ea-staging-title"></div>
+            <div class="ea-staging-actions" id="ea-staging-actions" role="toolbar">
+              <button type="button" class="ea-btn ea-staging-symbol" id="ea-staging-confirmar"><i class="fas fa-check" aria-hidden="true"></i></button>
+              <button type="button" class="ea-btn ea-staging-symbol" id="ea-staging-salvar"><i class="fas fa-floppy-disk" aria-hidden="true"></i></button>
+              <button type="button" class="ea-btn ea-staging-symbol" id="ea-staging-editar"><i class="fas fa-pen-to-square" aria-hidden="true"></i></button>
+              <button type="button" class="ea-btn ea-staging-symbol" id="ea-staging-carregar"><i class="fas fa-folder-open" aria-hidden="true"></i></button>
+              <button type="button" class="ea-btn ea-staging-symbol" id="ea-staging-limpar"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
+              <button type="button" class="ea-btn ea-staging-symbol" id="ea-staging-cancelar"><i class="fas fa-rotate-left" aria-hidden="true"></i></button>
+            </div>
+          </section>
+          <div class="ea-local-alternative" data-alternative-for="ea-category-select"><p class="ea-or">ou</p><a class="ea-btn" target="_blank" rel="noopener" href="/restrict/admin/?menu=dominios&amp;esquema=dominios&amp;tabela=categoria_extracao_atributos"><i class="fas fa-folder-plus" aria-hidden="true"></i> Cadastrar uma nova categoria</a></div>
+          <div class="ea-local-alternative" id="ea-municipal-alternativa" hidden><p class="ea-or">ou</p><button type="button" id="ea-municipal-open" class="ea-btn"><i class="fas fa-table" aria-hidden="true"></i> Gerar camada municipal desta categoria</button></div>
+          <div class="ea-local-alternative" data-alternative-for="ea-base-select"><p class="ea-or">ou</p><a class="ea-btn" target="_blank" rel="noopener" href="/restrict/geoespacial/visualizador-insumos-geoespaciais/"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i> Upload de camada base</a></div>
+        </form>
+        </div>
+      </section>
+      <section class="ea-panel" aria-labelledby="ea-input-title">
+        <h3 class="ea-config-card-title" id="ea-input-title"><span class="ea-subnumber">1.2</span><i class="fas fa-location-dot" aria-hidden="true"></i> Camada de entrada · demanda</h3>
+        <div class="ea-config-card-body">
+        <p class="ea-hint">Representação espacial da demanda: um traçado, uma área ou um conjunto de pontos.</p>
+        <div class="ea-field"><label for="ea-input-browse">Camada de input</label><input id="ea-input-select" type="hidden"><button id="ea-input-browse" type="button" class="ea-btn">Explorar storage</button><button id="ea-input-clear" type="button" class="ea-btn" hidden>Remover entrada</button><small id="ea-input-info">A camada selecionada será exibida na bancada.</small></div>
+        <div class="ea-local-alternative" data-alternative-for="ea-input-select"><p class="ea-or">ou</p><a class="ea-btn" target="_blank" rel="noopener" href="/restrict/geoespacial/visualizador-insumos-geoespaciais/"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i> Upload de camada de entrada</a></div>
+        <div class="ea-note">Linhas: m e km. Polígonos: ha e km². Pontos: dentro ou fora. Percentuais relativos à entrada.</div>
+        </div>
+      </section>
+    </div>
+    <section class="ea-config-execution" aria-labelledby="ea-execution-title">
+      <h3 class="ea-config-card-title" id="ea-execution-title"><span class="ea-subnumber">1.3</span><i class="fas fa-play" aria-hidden="true"></i> Execução da extração</h3>
+      <div class="ea-config-footer">
+        <div class="ea-field"><label for="ea-operation">Geoprocesso</label><select id="ea-operation"><option value="intersection">Interseção · extrair atributos das bases</option><option value="identity">Identity · preservar também as partes externas</option></select></div>
+        <div class="ea-execute"><p id="ea-integration-status" class="ea-hint">Carregando catálogo...</p><button class="ea-btn ea-btn-primary" id="ea-run" type="button" disabled>Executar extração</button></div>
+      </div>
+    </section>
+  </div>
+</section>

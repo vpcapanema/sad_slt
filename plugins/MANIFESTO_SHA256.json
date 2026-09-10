@@ -1,0 +1,3178 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-09-10T02:26:54.961419+00:00",
+  "files": [
+    {
+      "path": "LEIA_PRIMEIRO.md",
+      "bytes": 754,
+      "sha256": "46ac01c182c9ba2fa4515fef2ce4d430c1000ed997c245021b04c06429415714"
+    },
+    {
+      "path": "censo2022_sp/ampliar_socioeconomico.py",
+      "bytes": 14221,
+      "sha256": "5bb029d161cbb05072b35ca9866b1bdd6bac5cb262910d8b410fa7b79f027ad0"
+    },
+    {
+      "path": "censo2022_sp/camada_unica/dicionario_campos.csv",
+      "bytes": 3546533,
+      "sha256": "adf6ecbca3b9be4283727b8e2bb3eebff11c08f0c30562c038e5b277ed1d865c"
+    },
+    {
+      "path": "censo2022_sp/camada_unica/LEIA_ME.md",
+      "bytes": 1494,
+      "sha256": "856118f25f06a98dc02d42257a39d0c0c506dac7e4e01573e1ada948e021fc72"
+    },
+    {
+      "path": "censo2022_sp/camada_unica/SP_Censo2022_completo.fgb",
+      "bytes": 51738488,
+      "sha256": "fcf82205408d80be374f86e73b12ee7ceb157e46f74e07c70673c41800153448"
+    },
+    {
+      "path": "censo2022_sp/camada_unica/SP_Censo2022_completo.qml",
+      "bytes": 1704061,
+      "sha256": "978686d06ad08cc85c59e737a5832d347eff2f18018f4c1a60af0f73b088bb9d"
+    },
+    {
+      "path": "censo2022_sp/camada_unica/validacao.json",
+      "bytes": 889,
+      "sha256": "976bdf49e339e045b066a2809fd7a7a96a89773aeca043047d2a2979123feb5d"
+    },
+    {
+      "path": "censo2022_sp/documentacao/ausencias_e_simbolos.csv.gz",
+      "bytes": 601431,
+      "sha256": "c23b78f6701efe630276b21d67045a018aedeff9a9c1e27173c30dc274724aa9"
+    },
+    {
+      "path": "censo2022_sp/documentacao/cobertura_catalogo.csv",
+      "bytes": 78596,
+      "sha256": "2e167461148439caf58869c927a26d5357e3cba0c5a8e7c7c73636ce3b991807"
+    },
+    {
+      "path": "censo2022_sp/documentacao/consultas.json",
+      "bytes": 105878,
+      "sha256": "4cbe1292699ec86f51acfbe690a54bd2720b29513f26473c35bd03bdd50c6965"
+    },
+    {
+      "path": "censo2022_sp/documentacao/dicionario_variaveis.csv",
+      "bytes": 3383582,
+      "sha256": "afbe30cdd8b0cb38c6e99e6d9cfa090558e5a92cf0cb18077ed236934c81156d"
+    },
+    {
+      "path": "censo2022_sp/documentacao/divulgacoes.json",
+      "bytes": 15098,
+      "sha256": "25598f1daaecd7b483d50f72723967c0883578072ce555f4d9dbbf3e06b3cef3"
+    },
+    {
+      "path": "censo2022_sp/documentacao/falhas.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "censo2022_sp/documentacao/resumo_temas.csv",
+      "bytes": 467,
+      "sha256": "91723c24d6f2c9f756889d4cb0f0750ba0adebcd1a4e6a4ff89b6b458622206c"
+    },
+    {
+      "path": "censo2022_sp/documentacao/validacao.json",
+      "bytes": 8507,
+      "sha256": "e35121842d471df6a2969e9ac1fea2cd61268cce1f978ddce13cf4e704dae844"
+    },
+    {
+      "path": "censo2022_sp/documentar_fontes.py",
+      "bytes": 1320,
+      "sha256": "80f85fc9743751949be6687a35f28479aa943173af5a333496d76751208c2f48"
+    },
+    {
+      "path": "censo2022_sp/extrair_socioeconomico.py",
+      "bytes": 5780,
+      "sha256": "3e02f71b7d93cf2d748297fea2fd27685c397ab680b4fa3a1ffcf65fedef8e89"
+    },
+    {
+      "path": "censo2022_sp/finalizar.py",
+      "bytes": 8776,
+      "sha256": "e772d15e6093e22cd1d2f4a4c22b47906d9b8a59cb09aa97269f43fe43d8c951"
+    },
+    {
+      "path": "censo2022_sp/fontes/catalogo_municipal.json",
+      "bytes": 91258,
+      "sha256": "bba0bfb098d31c4f21172dd95f1c140f4a8e02fe3a9c057f763fe3665b2853fc"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10055_7e30a6e0c2787313.json.gz",
+      "bytes": 26400,
+      "sha256": "7e3e17f41b61a641b1380a5f105d3f855ad825ea4c2542dacb59885f5c9ccad7"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10056_5d19236d50f942cc.json.gz",
+      "bytes": 52439,
+      "sha256": "facaf4fc71b7be6d694d60e87cdb7f1b20673eae1111e00fe108357e6c8d7111"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10056_7fd3d547bf4a4e34.json.gz",
+      "bytes": 26940,
+      "sha256": "f5d720b9f19f67f1ad691a234d632d335dfc04cd910be991142e0090b497a61f"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10056_ab2714a4867b4ceb.json.gz",
+      "bytes": 278053,
+      "sha256": "6f157f7ebbf7ba36c389b7caf33de395bb7614e13b9d37b18fdbf69635514e44"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10057_300de037956ee844.json.gz",
+      "bytes": 98784,
+      "sha256": "ca24d1e27bce1424e2d2596382f40b4471a68a9eed5bad51c90f773709f3752f"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10057_535ef690052fa735.json.gz",
+      "bytes": 157202,
+      "sha256": "8024f5f6663951df0490a63b87604d838425ac59f3e7d24e0ea06e2374e33d82"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10057_7733cb84fc1c5192.json.gz",
+      "bytes": 69141,
+      "sha256": "5486d9348ad48d0436cbc89ae3c35ba786c27defee994a07aad17b236c8db7c1"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10057_a780fa887af099a2.json.gz",
+      "bytes": 52137,
+      "sha256": "4973ec5f8f1a87f6239d92c15614b2b936b49aad037fdf45b5d771dcab065f8f"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10058_33c39422264768d3.json.gz",
+      "bytes": 52464,
+      "sha256": "46eb989e75e617e9d5f07a96c866d933141e97d03bb50f2736e3f1a6bf171324"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10058_4d629759dc0f12d3.json.gz",
+      "bytes": 101388,
+      "sha256": "337f22823a2cb2b13dd270023c00304d586fc1817e6d650afa576b0e0e7f6eb9"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10058_9136fd6ba4952ed2.json.gz",
+      "bytes": 147434,
+      "sha256": "5314c3aa020a953178715f75515aadabc5d2952781972f8b03959c681e89513b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10058_abbb26f42a10c758.json.gz",
+      "bytes": 297114,
+      "sha256": "7dc1537ef9cd27ec8c08c0de8b2d32e74ea5476f9fb695b6e122641dedb771a3"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10059_1ec3beb36d023a38.json.gz",
+      "bytes": 173056,
+      "sha256": "0d0de2fbc003985c24ed48f3bf2f4fba7c2e5464e686023532ca2f4d73639144"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10059_4f33ef08477ea08f.json.gz",
+      "bytes": 52430,
+      "sha256": "68ff4fdfe1e4bbf8ea0d1fc6533540b9a6100c9205ec1cc74c8147c8340e8dcd"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10059_a8605a3fde7f82aa.json.gz",
+      "bytes": 100297,
+      "sha256": "cc93b5445511d3d5fc4b98089742692480ba607e8aacda7e676aeec4bf373f5d"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10059_b23436335e58871d.json.gz",
+      "bytes": 169252,
+      "sha256": "ce3c393f8a40559904873ad3f191617b29e7b3c0ccc773414207a8e036e4efd8"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10061_0bc97f49885b2834.json.gz",
+      "bytes": 104774,
+      "sha256": "8b979f72f79ec1b4639b20d688d41f5ceca37482e8ff082ba7b50ca867c9cbc8"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10061_642aefa999ef116e.json.gz",
+      "bytes": 90190,
+      "sha256": "7b0e4cd235ef7caf813c6213b82247a339125865e7560389cb112cbe67f55527"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10061_b64a6df82642c692.json.gz",
+      "bytes": 335302,
+      "sha256": "1d66613f496ea602dd54308bca08e8b9f388d70586e5b8f46ee3261389f5b5c9"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10061_dd6f12da92d03d76.json.gz",
+      "bytes": 53428,
+      "sha256": "7051f00344ccd18597f280c797f533d8cb9900acd9644debd6b6c5d858a941e1"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10062_118a0a6e38ce4772.json.gz",
+      "bytes": 166823,
+      "sha256": "d91d28a597e4761bd58c92a50baf9e735abc176e4ba570b23128480fba146ec8"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10062_663396e4c17a039a.json.gz",
+      "bytes": 48079,
+      "sha256": "f5dd506c9231a0ca041da2a9944f31bde80363751a8c22398d2cce3c7c92b8ca"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10062_cd8aa2c02d4d5f32.json.gz",
+      "bytes": 23995,
+      "sha256": "6cbc5936b27068ae01ef52de5e9f8446965633483a83a94c4d2d016fde2d2819"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10075_4251ba6dccd73d7c.json.gz",
+      "bytes": 103377,
+      "sha256": "ccb0798ac333786b957605d3025cfea5196c8b4e24d97dc429574f77c6689f7e"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10075_c2149c484e858cd4.json.gz",
+      "bytes": 123489,
+      "sha256": "7cbdfa988be6bed9afde83538e80a7ec70271697d47fc18f8b3c9c4ccca780dd"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10075_f426d1055fbca55a.json.gz",
+      "bytes": 274210,
+      "sha256": "2fc7f7b502fc155f1e27e73a70c66101230b7274b6f418b1d81009e055b8760e"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10078_28b7ca249c9ad49b.json.gz",
+      "bytes": 410694,
+      "sha256": "2294dbcc6d5724a8de4abca612614d73228de50d75ea4e8eb0bd81b2058931ea"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10078_5f5b34f7581e6f36.json.gz",
+      "bytes": 479219,
+      "sha256": "09be0fe870baa0b9509c51c70ab5a2cc090e991e1af26711d5147f431ef5f839"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10078_6f10bcb03d2a1ea0.json.gz",
+      "bytes": 465579,
+      "sha256": "0079abff50e873600f5b247e3ae0ed4ccebea18f7267297f611bdbe7028a3d0a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10078_8471eee42459088f.json.gz",
+      "bytes": 468239,
+      "sha256": "70878a82d2f5f1fee99ee5928d84929e0a4f37191315d07488c39f92c3116a15"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10078_f75092afd03e7eaf.json.gz",
+      "bytes": 135857,
+      "sha256": "a5b7c828888ee7bac6447c547435e715fd6e669ade18e819e579cdff9e58a6ad"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10089_08e144bf03a2a75a.json.gz",
+      "bytes": 116782,
+      "sha256": "3199002865fbff0c20dad57b84c68aadde8605d766b249f276373f43b9e50ce2"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10089_313d7b9bcb978335.json.gz",
+      "bytes": 116578,
+      "sha256": "ad42605a8833dae136164a6ffa5d83b93f8be3165c81270c30a901be9a33b034"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10089_4c082942cd171d21.json.gz",
+      "bytes": 375563,
+      "sha256": "704ff350038d1afd67529aa359132bc51c6253878eef28931f2d73123bc21b9b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10089_a925a50af2cb88c5.json.gz",
+      "bytes": 110427,
+      "sha256": "82dad3358c0a7c154b6af41c4d804df61f850c4d8cd0ee6691c2d2127258d12b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10089_b22155bc0e044206.json.gz",
+      "bytes": 460248,
+      "sha256": "683c4355f574dfe786cb29568a69e57a13137b1fe5a160343c630404ea48a591"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10091_465216b718c77848.json.gz",
+      "bytes": 46084,
+      "sha256": "afd4d0019aec9bd64bf52829e04b0d7575bbc39ca8e3c5184e4eefa616654f61"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10091_dd5219d2ce990e4a.json.gz",
+      "bytes": 157107,
+      "sha256": "2b4959921a0ccd16ae056948731ac64d681dd69deb32f4e32039d2c12aa1f97b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10091_dfa828319ae3b4d9.json.gz",
+      "bytes": 47698,
+      "sha256": "bad8355ef9b60c84e480df3c3f21bd238dcf362c28238e3daee930058c80ac6a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10091_e03cee27b9906d9a.json.gz",
+      "bytes": 47766,
+      "sha256": "24e29ed4ae4ce60ae69312ab0741509a5f40d90fa5b0b3280e9e6c224469e8a1"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10097_56c7f2f8b789a969.json.gz",
+      "bytes": 136905,
+      "sha256": "5133939c345494a095874ab14c3f617c79b13fb8a574df45871dc16b2296eddd"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10097_e5f4ca03d172773e.json.gz",
+      "bytes": 142240,
+      "sha256": "5be93ace93feea737629e14aa887af5f2bf81d14adc985d6fcce6ae6f79f27e5"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10125_0a3d2337f53728b8.json.gz",
+      "bytes": 510279,
+      "sha256": "776ece0d5ec22ac88d852c2e69d2923420aa26f9896b0c95239085043a560dc4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10125_5ccfebb8f5c61b40.json.gz",
+      "bytes": 173278,
+      "sha256": "5ff81d5eabf6539b05133b4183142ccbc6a591a12923ef67420211de61884283"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10125_a703b2290d1d94fc.json.gz",
+      "bytes": 79424,
+      "sha256": "e30a39c069d7f8c74a8cb741925153dd5dcde852d74a3d693eb8a8b1a9c5499c"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10126_8716cb1956b10f42.json.gz",
+      "bytes": 151314,
+      "sha256": "10d74545a33b4163205665ac96df90d67fd11fdde56e1248ecb7ec8da831b3d3"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10127_eb5661b89074d656.json.gz",
+      "bytes": 153564,
+      "sha256": "c37323d9c7da977a77f969f193aaa92c050e3be35671e0ae3e9f9154eced1ffe"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10128_ba7b33ce8424cc45.json.gz",
+      "bytes": 50894,
+      "sha256": "3baf3911eef466850a5fc5df7e416323a7dd4b07670c222dad4c37363de2af26"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10130_6705d2f1d4dd8093.json.gz",
+      "bytes": 53113,
+      "sha256": "c517561c55e45eaeea107bd7c78dd0f3e0b9d5a8804d12ec7f43fabf72ce8d21"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10130_d9a6501be11d2f90.json.gz",
+      "bytes": 49087,
+      "sha256": "4d9d2a0b828a4484167737ed4e4e771f8bc203acb78d59196fee51fa212f6984"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10133_002b58e7f22a244d.json.gz",
+      "bytes": 83268,
+      "sha256": "aa8e81a61ab475941a181f6fe9cb7e922d6072d8d6a9eabafb5a7d2bb55b8b52"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10133_46db386248c1d3e9.json.gz",
+      "bytes": 433862,
+      "sha256": "3507a0057e55cce2dd9cf4d261306d45d069f03cc2a8ec8b5e100cafaebdaa3c"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10145_2d9558d3395ecfd2.json.gz",
+      "bytes": 484781,
+      "sha256": "a034c55b65a2ba75025ed909e1d5bbc591cab679d273eafe4dd47b7d7df0f4ac"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10145_5d2cb09a42d1d284.json.gz",
+      "bytes": 527192,
+      "sha256": "f8266eeff3810c38efa99a0ba0d9c01febc3f5434cabdb464e1a062fa8b5db15"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10145_a16be60807ab8d31.json.gz",
+      "bytes": 76996,
+      "sha256": "9faccba2070286ae17d93a5130dbd5bf166a2369c8d51ce83490d89241c42fba"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10145_e798ed7af7643f4c.json.gz",
+      "bytes": 42960,
+      "sha256": "1b6226771a59c0fa877ad08eeb9aa604bfad10af6b806a7e9ca5bb66e6ce8eef"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10147_79e970861fa0197c.json.gz",
+      "bytes": 145647,
+      "sha256": "eb9146996b80e6d66855be1daaafdfe3483ad85bf6e29f24d6dbae44c936005c"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10153_c1ae5b586f9c1d1b.json.gz",
+      "bytes": 76422,
+      "sha256": "f84aacda2c4734ffe6e04b2e4258ffd0a39ab8b43b4483d30a8092d06b364153"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10153_c2f0f9fbb56f4e70.json.gz",
+      "bytes": 125143,
+      "sha256": "fed3dafbf4ac92e5bc0ada98fd43e1cc6a8d7480eb9ca44e8f4ecb542a1f9e73"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10157_02d23d8151e70ead.json.gz",
+      "bytes": 53150,
+      "sha256": "a111baf69e8e9285be0dbb4f1f1c0f69e6de44a6873e771bc8965adac0e1d1d0"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10157_894b7018c704e1eb.json.gz",
+      "bytes": 66235,
+      "sha256": "3a62a1204b37d323439635c74d1fc55249b1fcd754d76974b6c054007612eed8"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10157_be9399c1825d9498.json.gz",
+      "bytes": 313123,
+      "sha256": "d3a4f3739980ee98d3546f0170d863387c55a207d59141dfa48e597f746664fc"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10158_8fd6bc24308217ab.json.gz",
+      "bytes": 488724,
+      "sha256": "f627098f83db8bf39be6461debaa79652af5f3e3a109351376bcb0a662287dd3"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10158_9e68a5aad4072581.json.gz",
+      "bytes": 140260,
+      "sha256": "2f050a2dbfbb72abc8f4df61c20835b649fd829d93da08aa7fe546e912f486e4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10160_a947a952ff65d7aa.json.gz",
+      "bytes": 52187,
+      "sha256": "3805a2c5f983a8ca1cd44a171f1fb9160067486b20ee55bac11a23fd638121c3"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10160_bf96d4b4be87355b.json.gz",
+      "bytes": 289632,
+      "sha256": "8ed90c9b9b95840f6f9bce7f356f88b7c9532d382064eaa28ecfce85fe0f0566"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10161_0f5396751fd97500.json.gz",
+      "bytes": 261390,
+      "sha256": "ead98588b18152d1c64f820ab02c689e95ca5fb97d999a5444e92b47161f9d7a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10161_4720946b9c7142f3.json.gz",
+      "bytes": 259336,
+      "sha256": "9f4b37a13781db308f657cfb5ac6c4cc953b051b9d3efa494282f3b71064ca37"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10161_6e554426a6e5f63d.json.gz",
+      "bytes": 261587,
+      "sha256": "b3f838cbbcd71614d88a56d4695e3e296ce170164a6dfd1d3b20054f5337cfd8"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10161_7cd72305887875d2.json.gz",
+      "bytes": 262896,
+      "sha256": "a14f03343927ab42324f66cfe72d6e8875f0749186a350b1de2e83e7c93e4aa6"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10161_7ceaecffe7b66c87.json.gz",
+      "bytes": 30360,
+      "sha256": "91612ef1cd2b9e50f40a158191605f3a85c853b6d3fc89ee9d0ed186ce5c9631"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10161_9270f52aead1f47e.json.gz",
+      "bytes": 85109,
+      "sha256": "bd3b03002e5e86a0c2ff4c8e28489f909b956f78ba66b89dc417d1b7de382124"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10161_92ce574947aaafe4.json.gz",
+      "bytes": 261719,
+      "sha256": "d43475fc8329a20f71f20ccb30a1fef429c90ab78e70e861c05904373d322772"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10161_9f2e3a0eba37fdf3.json.gz",
+      "bytes": 261328,
+      "sha256": "7450fb0193e4ebc670321bf4016f4aa31e1778da5e7c6d2920bd226d2a29714a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10175_3e00ac4bb8591ad7.json.gz",
+      "bytes": 66912,
+      "sha256": "4e9237649e848e4d44f2807163a6fefbb36a26dc12d78a8469cc9b860aa732f0"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10175_882654b1037b0cab.json.gz",
+      "bytes": 118000,
+      "sha256": "7901fae38212b76a2facab832cb6e737d6b2a372773695c0125a30c360acbeae"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10176_366a0af11f47310d.json.gz",
+      "bytes": 59987,
+      "sha256": "8a86af6f20c2267bdde7fc6062bf5c2f0bb105d100115459270fb293c8eee524"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10176_5075d50529c71e07.json.gz",
+      "bytes": 54175,
+      "sha256": "f09b2634532dc8e880fd1cfc8f0aa20b5ca354d8115a18a888ea0fd508901658"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10176_dfdc12f970a5eda9.json.gz",
+      "bytes": 45837,
+      "sha256": "fcc5617169691aec8f666609c17f1023959f46cc77b1a072d941314b71222cb5"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10176_eef6d9e3b43d803b.json.gz",
+      "bytes": 28060,
+      "sha256": "37971d39033fd61df42df2cf4e2ae2b1c954bbc5a97f153729c4589177d2b7a5"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10183_13a73a02426c69e2.json.gz",
+      "bytes": 85982,
+      "sha256": "7686086fdd1682efb71f2b8620973ef51e09c90a941637b09440e0c7ac65a148"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10183_5ca4481efea24b2b.json.gz",
+      "bytes": 28631,
+      "sha256": "79000ae56d38e47550efd6584f44f7067038a86517e3d0cd85820408adf5c4ea"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10183_95edc6159a2faf28.json.gz",
+      "bytes": 144063,
+      "sha256": "aa9b3e86479232188c4bea2ff3675550e2a6fb1b2b453f133176f781e0733b44"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10183_f8d0f351299692cc.json.gz",
+      "bytes": 28558,
+      "sha256": "b93ed9de0fb8fe86c9e067ac84f08299e06da4bb9f9a5c3284cb5150bfad6cb7"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10198_57b9a90fa1aec3fd.json.gz",
+      "bytes": 261846,
+      "sha256": "b299dfe9ed7c143b09ea36793b151a0a01e6da586157754ebb33bac6a0b70e79"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10198_bba5657655bd9db1.json.gz",
+      "bytes": 238642,
+      "sha256": "51c14d948900b63d4adc45c6c879143385d5acd6aa70507b10809442f96c0af0"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10198_ed9b2b712fde7d87.json.gz",
+      "bytes": 77803,
+      "sha256": "2130f58bc6b174516f277cecc7f887d87a2aa8e0204f2da3b0e89d08cbe630df"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10199_39c83afe167ed799.json.gz",
+      "bytes": 89792,
+      "sha256": "a2f9b3cc4b6a78218d74c27ce9dffda2cbe0fc7cf88ca200347e8321a80a5812"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10199_715deebb5a0129be.json.gz",
+      "bytes": 167942,
+      "sha256": "661068ca9d8ef349b40de91196501ec6f7997cea8880af9169461f08d547b837"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10199_7526e4aff1148999.json.gz",
+      "bytes": 53278,
+      "sha256": "b586ec9db165bc7329029711fea4fe71d281fa9e5c60b302504b8bd346140dd6"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10261_20eb917d17531d80.json.gz",
+      "bytes": 53468,
+      "sha256": "ef7bc617eee54a524978e14a2e47954a985abb8ca5957107b0582f782a67fe89"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10261_37f83934c40d25a8.json.gz",
+      "bytes": 399242,
+      "sha256": "054d377ea19e56efefa4dca537a35d4917a62a2f09418c1a5c67be62247f9498"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10261_514dc6011172e228.json.gz",
+      "bytes": 104041,
+      "sha256": "77a403c3cdb07b955914bc32e8e74faf629c8a3b46f42a86f6f7390433e9bef1"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10262_29608b9172595f56.json.gz",
+      "bytes": 398549,
+      "sha256": "32ff4c57f27a953ec631a96e13c32190dbde94551f0c3a42da474d58694371bf"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10262_fadaa256084380bc.json.gz",
+      "bytes": 393571,
+      "sha256": "96fa8ae0ef8f2a145f4867fbc3d7f9f32246013cf0c7c52059c99ad4b452cbd8"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10263_25f11f47c7cd7cf8.json.gz",
+      "bytes": 104061,
+      "sha256": "d7e82f9b702d64e4c76bff9bf61417097dfb711c0cedac91f8aa962af12dfce3"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10263_2a68a0e69548ef87.json.gz",
+      "bytes": 89883,
+      "sha256": "20ab7f9d69a73b8ad60f82de4a8c0ad999c0dca106efbd036871187851a2f9c0"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10263_c14e574ccefe5261.json.gz",
+      "bytes": 69557,
+      "sha256": "57ff32493af1b275d6e194d9fe58a4197123585d6bf636e2c952fa1e1706dd67"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10263_da824968f1628f81.json.gz",
+      "bytes": 53485,
+      "sha256": "7f6f17db5947e5abbd187e4ee10cb1ae06955c208bfcda06b55ebd3701bf0185"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10264_1839251730291632.json.gz",
+      "bytes": 104621,
+      "sha256": "e4954bae79cb6ea912e0bf2277911cf64f5bfaf10d429e76422839da000e32e4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10264_274af04fc3aea972.json.gz",
+      "bytes": 53761,
+      "sha256": "989558ceec4e311a49de00d969e612e74fab6e2a83c0fcc9824522bc6b487e56"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10264_27718c86c3539785.json.gz",
+      "bytes": 54132,
+      "sha256": "3d50299f7e01a2c7d8d95e7627ee5417597e350411e8c5e4bbadd9aa13e5688c"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10264_90721f61e8b9749a.json.gz",
+      "bytes": 212332,
+      "sha256": "c20cdde61e3815c4a396f00b3722e84482b090037eb17c973086ff802eace5c9"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10268_1a6d96c5dd0e2990.json.gz",
+      "bytes": 133420,
+      "sha256": "0314fa8f1ab500f7e2461ca64805e679de5f1ed917cda8d2d68b26823e2ad180"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10268_62a0bb087694a440.json.gz",
+      "bytes": 265335,
+      "sha256": "535666227b8392c55011c6a91dc4b4133e6f56d0a0ea73f452e282b2df12fd27"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10268_b1db0d44ca3c73af.json.gz",
+      "bytes": 261563,
+      "sha256": "a7bd275573ee09ae2e7e7675621c1ac67b7642e423df659eec543d199c0c76d6"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10268_ff9691e5e49506da.json.gz",
+      "bytes": 527957,
+      "sha256": "b22cbbdd6a9a7dd26d34be371fab0c96dfcc31de0e08a127d4676145507a7279"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10269_02b8da544ee08a0b.json.gz",
+      "bytes": 103312,
+      "sha256": "4bbbef31a88bb17075c9b396b3d8f9a7d7e594032b1c43fe03658effabd3d44d"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10269_3967a724464f8852.json.gz",
+      "bytes": 496148,
+      "sha256": "db5c0a3fc47e2a9b6e97c50d4a7d428482d52426b6fe4ae63163c88aa49db376"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10269_6dfd84ebdfc8f266.json.gz",
+      "bytes": 103308,
+      "sha256": "a536c800100806ad578ee3f660d02eae07b3da5fef21119704cee32986301220"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10269_8755ed00b6ffc1b7.json.gz",
+      "bytes": 197082,
+      "sha256": "1547206855cbf29c1c6948442beb3ee8c11653181ee454448eeef5dc1c39314a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10269_f03c012a71d04a1a.json.gz",
+      "bytes": 598356,
+      "sha256": "9c755331022ae65ad7532695906e364fcc55a19f1825b7670df3ea3b4bb01303"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10280_308192c232f81a9d.json.gz",
+      "bytes": 529729,
+      "sha256": "24952ac702601d65c91b8eadbfac40b28cfefafb138e18bcd1f9f1201b6fa55c"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10280_42797e164bc68339.json.gz",
+      "bytes": 107320,
+      "sha256": "b0ed0408536cd1f0860940de50d804d79cb832d0ee8abddbc107ea0f8802d40f"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10280_ee98ce0aacc21cf2.json.gz",
+      "bytes": 246715,
+      "sha256": "ad65be5991c72e3c8b140301f982b8afd8d527f61b445cf971635a03e48109c0"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10289_2e501d4ab2d3b187.json.gz",
+      "bytes": 90025,
+      "sha256": "706fc2bb130677fcea298b54c86baf3f3f7eda22d485d8b035ef65d563a10f92"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10289_c2223fe7bd76e4aa.json.gz",
+      "bytes": 173348,
+      "sha256": "59f0949abc1c25fde0478886a9276b646b7b54b32fd07a5cc092431fcb65672b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10292_8d9638a0d8e5f4dd.json.gz",
+      "bytes": 290950,
+      "sha256": "2f8b2c42e5f3f75f72c3ad6fb9d8ba7725978c461427285538b1e3bf74d6f301"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10292_d26fc7faa191e570.json.gz",
+      "bytes": 78414,
+      "sha256": "a7932a685f3895400da709fc58d1a1f6e2f983993539eeb72b9c59ac3adbb77a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10295_066c4d24c515e4e9.json.gz",
+      "bytes": 109046,
+      "sha256": "d7fdd6d37f8453bbba52d88e1c5ab8e4bd67918dddbdde6475bd579e400a78a2"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10295_3271595d37de70c6.json.gz",
+      "bytes": 215654,
+      "sha256": "5118946e257933dddddf0a8149affc7e25b54e4bef51c061f8f438d44d9ced25"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10295_b014ab6f98f91de5.json.gz",
+      "bytes": 542799,
+      "sha256": "e3722561f3ffe7dd055f0398fd2d49f1eb9b6dc7055848c7ce0e48a5b6f69dc4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10295_f46c61a5183066e1.json.gz",
+      "bytes": 287544,
+      "sha256": "c2cfa3a489f32e732d778ab588efd8dc5fa951cd156a5c8ffafb0f1184f61d2d"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10296_30017e70b0e573b1.json.gz",
+      "bytes": 207298,
+      "sha256": "3006ffa32da06086ce73adf98afee18f12fded3e8566fc8e69ca1a8be4971f82"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10296_4483faf9bfc83448.json.gz",
+      "bytes": 53502,
+      "sha256": "c58c41978a825ec695d671d8f746be5f5462abbf875ef40efd2fce274249d689"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10296_920c04f244998f94.json.gz",
+      "bytes": 105155,
+      "sha256": "80313c428c2c44941e02ebde313e170b0ed5005cc58c04ef6688e5524da65106"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10297_5712fbaa974e7920.json.gz",
+      "bytes": 58319,
+      "sha256": "d79524c6adabaa82c431bff78c14500aec3a4db57c415f9f916c314bdb2e4a99"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10299_0eab5385d6ac5ddc.json.gz",
+      "bytes": 178434,
+      "sha256": "67cdea8a84bd40c4d4defe424553f28c9d7658770e96bb0badeecf62663d8ca8"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10299_191ea6a689b9798f.json.gz",
+      "bytes": 107041,
+      "sha256": "e27f40cc0ae68216cdd71fb1930ad2a4b7b0eb2487926ff8606e8fbe83aecfed"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10299_4b8d0007bc8cd43c.json.gz",
+      "bytes": 533305,
+      "sha256": "cb29b130df08edcff108c74387113c1dcb04670fe7d58af236244963e3cde3ba"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10299_bae8b3a464944757.json.gz",
+      "bytes": 176584,
+      "sha256": "c62ef8e1b7823e8bf40e166baa583a1a579687878ccac8680431c4f4d8758d3f"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10321_0429010e58bb8179.json.gz",
+      "bytes": 53086,
+      "sha256": "9f85af9370cf4a4eb866274e628a08bd1d260ffe2aea9a88ac674dfae002b784"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10321_4fcec53be12e0a94.json.gz",
+      "bytes": 158074,
+      "sha256": "d01e7a4dedbcd29843a8e85c699fb48c6256d058224b489bfb4297e2c424b849"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10321_8dd8d90003b98a82.json.gz",
+      "bytes": 102934,
+      "sha256": "d1527917cd46c1413a6f0c6ba1837ca77c7132e1043d1ab28fb1d673f5589da7"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10321_a336e2adbe9e97f7.json.gz",
+      "bytes": 68642,
+      "sha256": "5b47bcd0a838312103717e0c341e554f5508d581e5537c2eec480581b1ee6ae6"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10324_18d16d93277631d7.json.gz",
+      "bytes": 27808,
+      "sha256": "40e06034fba01f110a566af9b3d087dc5c8d29ee126ea36654fe0119d48a5fe1"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10324_b468c96188215e10.json.gz",
+      "bytes": 71000,
+      "sha256": "c4b3f7f25bcaca82c753b00d130ef9f7cbbc8b144a132f0758b8e00a13bde0d5"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10324_b6d1def5fbc1dc69.json.gz",
+      "bytes": 70555,
+      "sha256": "8b96cd7859dd1e615811ee44ffa6ce568fa5ecf7a4c0a0b5c39532ec0a34da8b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10324_d0a91f61aeef6242.json.gz",
+      "bytes": 35177,
+      "sha256": "b89f8f918134271c5d47f5d864947d29161ed3a16efe153b10edb82a7c39e4be"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10329_9cb57749eabd4eca.json.gz",
+      "bytes": 157913,
+      "sha256": "e6a0be6eaa1680a6fc805cf62110214519ce224ed5e4cf8aa1f9ec389aaf19f0"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10329_e4ed70d3952c6b3e.json.gz",
+      "bytes": 123675,
+      "sha256": "8de90536655f45f315838640fac86d04b6a852c4bbf9f73def8c5d8d43bb5f84"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10329_e9ff33f5be0c1b5e.json.gz",
+      "bytes": 53534,
+      "sha256": "4db4406f5cbb55cb6bbba1c056ac1ae2c87ea929a2ddbb9bf228e29794dea1d6"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10329_f00b69c31d1dcdc1.json.gz",
+      "bytes": 54024,
+      "sha256": "ba02f53572a00e5c6549ea61f6527675daabb50459a68e3916f4957638828690"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10330_5f9e96f0ae624715.json.gz",
+      "bytes": 139046,
+      "sha256": "1d6b811c4ca211b915cc4a784c95142e96a42404e2fe4caba96b08b50968f4a4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10330_a0c0914c9ab12e91.json.gz",
+      "bytes": 68517,
+      "sha256": "99613d84ab5d2ef7ab982baffd893d6fcb93043282e812afa999cdee04d2c978"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10330_ed8dfe0eb46a4f26.json.gz",
+      "bytes": 104640,
+      "sha256": "e4868dcfbffe4dab4563370110006c9fcb1e65a5c60877d2979d27092e7a0dd3"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10330_fd52aafed603c077.json.gz",
+      "bytes": 250955,
+      "sha256": "abddf6ba566a04446e750e9291e57f36b23be0bdac21648fcef803e3541b682f"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10331_508faba75bd62e91.json.gz",
+      "bytes": 53853,
+      "sha256": "5367f0b2d1074967fc701c63e3c10e4906f5cadd66cccd36f367704f5b596f4f"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10331_648a0cf805673ec6.json.gz",
+      "bytes": 141338,
+      "sha256": "3b64fff1bd32ca8bddd3063736e4e59bba49bcbe02543db752e9a06ce0807c54"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10331_a945f6b7b717c299.json.gz",
+      "bytes": 104631,
+      "sha256": "8397a2c52e2722d109737e775852d64c4ec7dde5356d612c3b86cd11c19d407b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10331_e743e706a64149ee.json.gz",
+      "bytes": 156947,
+      "sha256": "98913459ba86bd274e1723a80bec6fd706733ba175916baa9464d395fbf4e8d5"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10332_1d237049dddfc7a6.json.gz",
+      "bytes": 89903,
+      "sha256": "57343b20c17aeb16c4c54368ef15be3efa86f037931a4c2912d0355255526962"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10332_ad023d3ebaa38e90.json.gz",
+      "bytes": 104063,
+      "sha256": "4b4010cfec7e3a67c72c8a4e5d9621f479f57940c1d59e1b9809197d06598ee7"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/10332_cbe0f4ac6df8c51c.json.gz",
+      "bytes": 249907,
+      "sha256": "fa9c599ceeea97c87bb26c572497488df68903b86005a70020808ceccb036f7f"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/2145_57d9251af4e93af0.json.gz",
+      "bytes": 286816,
+      "sha256": "4a7123a55f1da643235428191bcb010352578bd8eca261a4c1d4963bd26f396b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/2145_6bf548fff4800b5c.json.gz",
+      "bytes": 117545,
+      "sha256": "3ca83371f74319278592522a0fd7fceb9b4e1dba5ef1bbbb6cc27045bb7b85b1"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/2145_6cd65ec726421cab.json.gz",
+      "bytes": 437864,
+      "sha256": "a520f727239ff95f5b66b011720e18e16bd9fa4c6d1e9304c2c6dd27b395ba29"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/2145_8ee82b7ae5a0f5d4.json.gz",
+      "bytes": 94921,
+      "sha256": "8de6e4f36a20753fd793fc5afa9f0783eb4d5730353b11dee56861387cfe559b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/2145_f750861058689f04.json.gz",
+      "bytes": 554923,
+      "sha256": "ad7f6643b93b2efd5e22d0fb4b9ea35ca62b07dedf61dbe26999e7805eb076f3"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/3182_6f91884c7dae10cb.json.gz",
+      "bytes": 53106,
+      "sha256": "ff1fab2381a4899094ec6f34a7465879bdee88811c4c2ed03f34456d9833e229"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/3182_87b9d61cc3a95a7d.json.gz",
+      "bytes": 312569,
+      "sha256": "762904d86a60a5a242aa50554b58d765cc47421b10c35d7e6d848775704fe6e1"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/3182_af0390351e2df0cd.json.gz",
+      "bytes": 157464,
+      "sha256": "24c529c7ee0228ff163d1731bc75d3ba381dd21ff291676ed5dbee768adb6698"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/4709_be937e673ab47cee.json.gz",
+      "bytes": 27454,
+      "sha256": "26d8b39b482fba17fd31b9912c6cc683fa0da4dc656d11be9c2c5fa33625bd5a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/4711_9b621174172c9185.json.gz",
+      "bytes": 220625,
+      "sha256": "e7d76531a37254b67bc714c213ac4fb228878b3bc0e7f856edb66d86190f0b3d"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/4712_ee24c5dfa71bea02.json.gz",
+      "bytes": 27190,
+      "sha256": "a69332bd8621462b6d3661a000ef40e859f39b4f28a88c815821f11aa4766509"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/4714_eaa2c7f2876a5f42.json.gz",
+      "bytes": 29788,
+      "sha256": "dc50a956d7b757bea32c60f539fbe1bfc141e77295bcc63ae88220c8dd65444d"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/631_04197ea3aee0cf51.json.gz",
+      "bytes": 119709,
+      "sha256": "1923aca2874a0d5963a556d36c29b6c5e94aa800bee136e88576531fd11a1d41"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/631_9c8988a47403c080.json.gz",
+      "bytes": 53024,
+      "sha256": "b44aabe9a30b3d834b0cebbb74d15d541ca10ccf0b4079aac1fdbccf25c3ced5"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/631_c16cb5d5106e5eff.json.gz",
+      "bytes": 507148,
+      "sha256": "4b5c479eca04ed536a11cf7f67c6a3a2e7790c1079483988acc3739ba07df2c2"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6326_947df46904cf96cd.json.gz",
+      "bytes": 111664,
+      "sha256": "35389b1d07c484bba567a3066e9251fc77714d25bbb69a234febc8b20c69098a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6580_3f16753915fe66a8.json.gz",
+      "bytes": 90070,
+      "sha256": "6a571b2c9fbf220fe15e1d05cc092caa5877ffc1222cd4e92bd80b76bbbb9a00"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6580_de863581968d4296.json.gz",
+      "bytes": 53447,
+      "sha256": "14ed3a8ab0fcfb602b8874175315b942739c17883960af51f15054118a7bea81"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6580_dfa3bccfa1c485a6.json.gz",
+      "bytes": 283025,
+      "sha256": "fc95dbb3e7356d8066372e1914e6cbc72050ba34c950d5e83092c62c4a584a1c"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6584_9ab15620a310d354.json.gz",
+      "bytes": 65667,
+      "sha256": "88c7822fffb60d7862043538c1f25f0876ca558c89093b800a43e579b3158728"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6584_ad08dc214e1612dd.json.gz",
+      "bytes": 485902,
+      "sha256": "f8d175a140220d712aa45893b0c6eee1751a97505f99725aad237c70ce054a00"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6584_f130edb3723a4596.json.gz",
+      "bytes": 151075,
+      "sha256": "5c62c4969306124ec1a8f5a8cb771f40eca9ef1bafe2be5a045e5d5c2024bf42"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6740_0930f98941c3dddc.json.gz",
+      "bytes": 114331,
+      "sha256": "a9b81425f5bf4aef7001ead3eec41640cffdec1e0b9b3a600ea44c6548a519d3"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6740_10e003e8e550e183.json.gz",
+      "bytes": 123545,
+      "sha256": "79d1b7ef0631bd2fad094d9e3787202fa8ded001bebff83603b73af5b45f7a4b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6740_1c4ed15e44b7df0b.json.gz",
+      "bytes": 317894,
+      "sha256": "fb1ba998289b64672bf3ea9736b1270a9a914afaafbfccdbc5162939f952eb4b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6803_531dbf97cf53e0cd.json.gz",
+      "bytes": 289206,
+      "sha256": "5712fed18ba7ccef4b2eeb6a5768c6bf2c5a62c528654e9dddb80b5e0b4119af"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6804_9d37174cde10781f.json.gz",
+      "bytes": 66714,
+      "sha256": "2b3c0da7ebbf54e7f5f1a2096a1bb0ed78aa3f5111f046afd8b314dab5839eb6"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6804_c81dae29bbf34f4f.json.gz",
+      "bytes": 147628,
+      "sha256": "4110b39fdc5707da100036d1823129a8dba30939b4ffd79dc7eeaef608fb2456"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6805_df924a79d700f80e.json.gz",
+      "bytes": 167701,
+      "sha256": "a640b926044dc985caf545ac2b6581a78411a206d59eb88d294571848d2c2688"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6806_71d8dad2eda349fc.json.gz",
+      "bytes": 151188,
+      "sha256": "1f0109c9628fe4b8e7612740f6c07080e58b022eb4f24c1915ca8444850b7420"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6806_c5c973c209f00ffd.json.gz",
+      "bytes": 169225,
+      "sha256": "ee7bc4da8b9ecc17c22ceceee9b017d8262d34d76666ed23ab0984d7762c73c0"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6892_f4554753642427d4.json.gz",
+      "bytes": 135168,
+      "sha256": "4f2015834345b25f7edd0ee8f876fa46a0a79ed9362effbd233ea3893d554fdf"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6894_715bfcfa6016defe.json.gz",
+      "bytes": 105474,
+      "sha256": "253c2faf7e2794fb5aafaffe0fd10d6d2839039f53388ebf8fae356400afe085"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6894_ac0a09bdaf5dd80d.json.gz",
+      "bytes": 379664,
+      "sha256": "5480a0ac3fef66e80ece64cdcdccf926dd170153b373d3b204e8d5b6dc883c1e"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6894_f431edbf201f787e.json.gz",
+      "bytes": 294009,
+      "sha256": "b02f3b8bf1f03c8a5929dea1f62f8c733cf59931f13acfbaa749b4367f5003fb"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6909_0698c65b1ec734c4.json.gz",
+      "bytes": 105307,
+      "sha256": "11da93c58c057e1cf636a36955691d069b2dd5f739e8f0ded6caa11fc9d0011f"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6909_17bca48bafe18080.json.gz",
+      "bytes": 149930,
+      "sha256": "f4e2f7b184d37b29d0e48cdbed5479a3a8253d504a0e822f596871f7bf412329"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6909_7fa8893c698b7726.json.gz",
+      "bytes": 67674,
+      "sha256": "e9576480bc9238803f06f4484420afeee8c2299ba3c6ee2f8dffa6b6578cda43"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/6909_f03dbe7c9d7bdadb.json.gz",
+      "bytes": 379108,
+      "sha256": "3faefc0393ef66e19315e4509b3dc0eb275ca26c32e18e753e7fab677234a3aa"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/7555_1a572e6c2725999c.json.gz",
+      "bytes": 170561,
+      "sha256": "e4bdec5aedb062693207654b1edec36634e030eca7b093d45dff2545b31fe805"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/7555_56cc093055c9df26.json.gz",
+      "bytes": 104838,
+      "sha256": "cbb4143baf3a97af0a6214840a18ae4e836464eaf4bc4491d8a548347236e044"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/7555_bad312090794f8eb.json.gz",
+      "bytes": 377288,
+      "sha256": "2c07da779d5a8361d311bf623ed9671f44de71a442d3c64f450dae64fd8556bb"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/8180_04748f73b0824c73.json.gz",
+      "bytes": 47354,
+      "sha256": "c9008c4f14f225b6b103d5222c862a5be998a6800a2416b1e087e9b2779305c0"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/8180_107a3c4beb3a8f86.json.gz",
+      "bytes": 428911,
+      "sha256": "fb7652a6d89e40dd78843178d17f34f722cf3c8851431db09cb2348c391c8618"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/8180_5124a37bab6cde52.json.gz",
+      "bytes": 48235,
+      "sha256": "9d262afb97f0a7b6e3920fd87eabac5f8277dedab57274a2f55fdfc91ba6b132"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/8180_5bc1ee867cfa156d.json.gz",
+      "bytes": 457785,
+      "sha256": "232a25085ce5a74738e57e41cb1ca5ff2b6cc193749eeedc07344eb0a1c3abf0"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/8181_8ebb1cb13c1af307.json.gz",
+      "bytes": 24265,
+      "sha256": "7ad8c36dfd03e8c31b00718b4ced5c7050494e34e1b03dca86fd0e1d67cf6c61"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/8181_cb1c1d9bf1d1ac88.json.gz",
+      "bytes": 426915,
+      "sha256": "a462451094fdbb46364caba4864379b24ca19488f2c19b688d895d36da12d7b1"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9397_4d9ac5af775a97dd.json.gz",
+      "bytes": 380289,
+      "sha256": "77e1b64c9535f6c37e8a9e22f79dec566554e8a59d4943c2ba6ddd02cf571ec2"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9397_55abe43456c2d043.json.gz",
+      "bytes": 153262,
+      "sha256": "9f134568fe32d2fccfce8170ae32848efc3db6a598309e2af853d304916e87be"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9397_965265873bc06f8d.json.gz",
+      "bytes": 171918,
+      "sha256": "7f74fbadbd383aa275d341f3b439a1a53431288898051ed02f6eb956110ce15a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9397_a5ccfc2bf51ae068.json.gz",
+      "bytes": 105632,
+      "sha256": "d93b1e9066e8963d990b68f03dbb174d1337869f059855f0f638375b0e1c4447"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9514_145bd206937e590e.json.gz",
+      "bytes": 525991,
+      "sha256": "4bcd0eb8d3d3a74da2e3099d7657836e8f7db3bb545cc85a0798265fb0f85366"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9514_55ab388bceddd145.json.gz",
+      "bytes": 523731,
+      "sha256": "e86c698a171567324ead2a0fa5dcf1f1ca97070d514e5df4f50e3f2efb688d2c"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9514_5d82480b32be59cf.json.gz",
+      "bytes": 509862,
+      "sha256": "7f91a3cd57280f09ada4e771f3979e604cfbcf6a7573678a0efd4ea25297d411"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9514_67b777dc504d51f9.json.gz",
+      "bytes": 510184,
+      "sha256": "f4bb15040ade001e2ba27350fc7ba9540f3fc37511284fb8c1d136451115a8c4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9514_975d49106e114635.json.gz",
+      "bytes": 53171,
+      "sha256": "b403e4baba26a30d9463af72a048857f7496eae6ef5a29a776fc5ecff482cc59"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9514_af23220ced72f1ff.json.gz",
+      "bytes": 152573,
+      "sha256": "e475986c8a73c727a6fe29d66e396ade5a9ae48c116ffa9eb14e5054786bf45a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9514_c8516c47d886a7a9.json.gz",
+      "bytes": 53796,
+      "sha256": "2329028c8c3e3c6e3fbcd6a949bc0f662448cc86fa297c5641cbde1edb54b56d"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9515_94740940a480b4d9.json.gz",
+      "bytes": 26395,
+      "sha256": "3abd3c7b7a7a21edfa3dea22a309739a3ff8a8316fc09b92491c7cb50131b02c"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9517_0724e7e219d68d67.json.gz",
+      "bytes": 90598,
+      "sha256": "af908547f0e8da2e02f02f24d778e59b39c00367b26a573fcdf46163f60557d9"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9517_7125dcf4662eedea.json.gz",
+      "bytes": 105242,
+      "sha256": "01c4c4dbecbeecfcc8a546ca15db26b9cb0ff0d17da9eec208b50037b51bd947"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9517_7db17507efaa8529.json.gz",
+      "bytes": 53614,
+      "sha256": "58cf0472e38b68e72410016fd54dc255257cf923fbde52d30a71c5f1bdbc97bc"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9517_a96cc0f471ff8991.json.gz",
+      "bytes": 90337,
+      "sha256": "0d910de0af28fd95cd38f913307df5264c1b633e7ad72eaa0c649ca60dd76ec2"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9537_88d8585073b454c9.json.gz",
+      "bytes": 238434,
+      "sha256": "3eeb0061f3dd4b42581c4a6b8fb19c6792fd0c684a87299fffda6384393074b4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9537_b231d3b0205d7408.json.gz",
+      "bytes": 77829,
+      "sha256": "78d52224494594472ddafe2bc438b81796e8b2465560abfc9f6e0ff95824d056"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9537_be4f3393dfd0605f.json.gz",
+      "bytes": 287270,
+      "sha256": "792e9d588c068c3edf385ba082cf4d559eee5ce6ae389a1dff66f938eb1ccec1"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9541_2abc582de4d856a6.json.gz",
+      "bytes": 137571,
+      "sha256": "6d865637b656ecafe758f3df058b49b00367bb453629f95ff1dcdd224acbc81a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9541_442331fb906eb867.json.gz",
+      "bytes": 376813,
+      "sha256": "fea92ca0f5efaf2945d8d5bc99ebae414782894ffc46f90ec81eb10360adfc70"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9541_9024fbdf79cc7087.json.gz",
+      "bytes": 104728,
+      "sha256": "a4e40c2184f5bdec12a1e278f98c70b87220fd52723d7d6966a2bd0fae3128cd"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9542_1f4894878931d049.json.gz",
+      "bytes": 53379,
+      "sha256": "c6a36d6ecd3fe8070a9a99faba18ce033b7615becd1ef074ecf0ae2dd6303543"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9542_53269cd0ee5e1b75.json.gz",
+      "bytes": 492757,
+      "sha256": "b6bfa6114e90445f680465b49356aef9ecab617f0d73720724902382aded077a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9542_cfe1301816e3c2cb.json.gz",
+      "bytes": 53007,
+      "sha256": "825c1d64ab71230de2ffeef6d5bcf80afd79690597e69d9712172fdceaa321d6"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9542_d8114ff8bc11ab6d.json.gz",
+      "bytes": 104825,
+      "sha256": "3923fce98d9c11989a83308e21d8ed5798285afbb99eda1ee24bbdf6a1052595"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9542_edd739d5d660c3da.json.gz",
+      "bytes": 527982,
+      "sha256": "0a98fbbc509752f190ba31010124518edd828fa5d7ec6bcf0b3e0ea34ebb546b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9543_5423284ebe4b17f4.json.gz",
+      "bytes": 515846,
+      "sha256": "7661d15eb0b3c4005a959b9940261ba994a75d87f8f79d5404b68d458f2f31c3"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9543_5b3065e3922fdd70.json.gz",
+      "bytes": 51890,
+      "sha256": "837ed1722d9c69edb458e3aa85bc2093b1ffa77f06e6b6515340278cd572da61"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9543_90e03f8a25ed7919.json.gz",
+      "bytes": 26485,
+      "sha256": "c0062cbc98152343803b5c4b0a0507e6dc94456e1b951a65ad57b68d8822d06a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9578_959c0615623aa417.json.gz",
+      "bytes": 88853,
+      "sha256": "f1df23263860436ba869bbda012402f727399ed2b69ec1ab920ac8be7137cf0a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9583_08365d17bc40c863.json.gz",
+      "bytes": 598871,
+      "sha256": "a61015e6c8cc106757ec14fd01581e9490f52498216162c1e95327123c6589f8"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9583_50fae0a09d91152c.json.gz",
+      "bytes": 528885,
+      "sha256": "ad9ebb63cecc35c94aefd92ee0e6f703ba7ad6b89f929d90dcf6a540715f75c4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9583_59b99b9bdcb77616.json.gz",
+      "bytes": 70600,
+      "sha256": "6e1e804f1fa48b887aacc4e2a4d4428201df9c1fb594a9840054717abbb88c27"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9583_b6b7a94ab0f6f744.json.gz",
+      "bytes": 111917,
+      "sha256": "c0ac140d541031402360b0b50163ce65db75bd421bb8c47cf1fef9d6dc152bd8"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9584_531949a60f3b0b95.json.gz",
+      "bytes": 70713,
+      "sha256": "6c0b3cc8fb28c87b85d7ac86d0f97dc29c9548ecfba1981cfec91ca191670050"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9584_ef3fb86dfb282e64.json.gz",
+      "bytes": 531080,
+      "sha256": "cabeb8feb161b47a9711fbb98223240b548957f6370c7e50e70024e5d7d4a5d4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9584_f20f20b9c431d2a3.json.gz",
+      "bytes": 601186,
+      "sha256": "5f1e79e871b1437a443507765f490a2d26355782c86138d61cb6cd67b2929d6e"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9584_f2801451c3e19a5d.json.gz",
+      "bytes": 184646,
+      "sha256": "c1e0615b3550332847fa82c44432d1bd8e8dec42139e45082032ee82552e5d3c"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9586_283ae8f85dcc3a38.json.gz",
+      "bytes": 164060,
+      "sha256": "407566c662cfcbc40cbdff5e5f528ace9f738c18d392086e79ed0976544f2b2f"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9586_a70bbbacea1eee64.json.gz",
+      "bytes": 491813,
+      "sha256": "0785d90b45f64e5534d30c294eebe5e97f03404d162418602a71cbe93edeaa5b"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9586_e3cfaaea6aa2274b.json.gz",
+      "bytes": 477653,
+      "sha256": "f74cc29bd1c80277325d89ac94fe5d78ecce4c18ac46b4bf12cc889318ae3ec0"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9587_7f25c33ebeb463c7.json.gz",
+      "bytes": 53238,
+      "sha256": "f200bbcefafce28af8525b6711dd799107e8fc7b15c61491ce7671739fa7d0d5"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9587_c714129f2e76b4d4.json.gz",
+      "bytes": 227990,
+      "sha256": "a27811b689cfadbfb01f97d5d77301d79391bc6d7818848e26ef09de9aadd3f4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9587_dc784d0b5f5ead86.json.gz",
+      "bytes": 141713,
+      "sha256": "ca52a2c0a2db383f80e995da35e138c1ca8b874426ea638c6640870b66cd3063"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9605_caa0fd6d5c350e87.json.gz",
+      "bytes": 103972,
+      "sha256": "4f5285db0acffe10ff38b0a0d1c7e9163f06a3053bd02842f5aff8475526e318"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9606_1ca5cab988eabce2.json.gz",
+      "bytes": 509384,
+      "sha256": "a80fc387b3d6cb2f441b1568735e46d2a6648d928eb590c329d6e8b03a251dc3"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9606_28338252fae0396a.json.gz",
+      "bytes": 525525,
+      "sha256": "1da15f2b85e60e499a3319fe16ae9ed233b8689a1cd033d2090b3332efff4ee8"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9606_3a8fd5466bb49465.json.gz",
+      "bytes": 152420,
+      "sha256": "17546b75c2848390cf83f8687a9bc90de47179c07ce68fecae1e2eaf0c34776d"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9606_51955f523e006eb1.json.gz",
+      "bytes": 523276,
+      "sha256": "3dd7f15c100be41d78aa150edc51734d48ec58bd3db9e13728facb7a8a1f985e"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9606_673fac4340ff07a3.json.gz",
+      "bytes": 53144,
+      "sha256": "d12b4c7deb45dadf7a836d0015555c8bdcd957224a518217083fb3ae40f37948"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9606_7d7ec1b1ba1df597.json.gz",
+      "bytes": 509692,
+      "sha256": "e77696b05cdd6696e9d052fedd14994042483159227c3f1ffd7c8e6ef6e69fc6"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9606_be99d2aeffd8219d.json.gz",
+      "bytes": 104513,
+      "sha256": "2204b19924f07f7df560cdf6ee322ffdd3aba36126c9a3d52c7ec2735b0326d8"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9608_1e9eb8ec294e53a1.json.gz",
+      "bytes": 329320,
+      "sha256": "ab911c2eb4b9f37e20d509c3f9d2d822baa91e287666bbc77edd98c1f29c827a"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9608_f839afffbb8eb83a.json.gz",
+      "bytes": 48157,
+      "sha256": "d79013c99d274fd14f0cde9144a02e925ce913dad83728c65d01958e702ee107"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9718_9a0e64036f8cea15.json.gz",
+      "bytes": 115067,
+      "sha256": "a387d24d53fb0f1cb25cdb0d17f89f50af9aedd866a08c3bb478dd4e6321a1b6"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9718_d45cd4bd3ff7877d.json.gz",
+      "bytes": 152069,
+      "sha256": "8892d67c4231152968945876566faf12a0744cc8e9cbf29b1dd5c1e33822c77e"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9720_5f275abc07f771b0.json.gz",
+      "bytes": 163461,
+      "sha256": "f0e6db6d3ef62efb5700eee279f7cdc7a45a9e8eebd7ef21b96be8371e6b0bea"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9724_fe8ba0190daec5d4.json.gz",
+      "bytes": 208202,
+      "sha256": "26554ba7161a144c13cffb23440cb8f60a77a5fef2bea96f5a55949d6755a3dc"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9756_b3e175a512d52805.json.gz",
+      "bytes": 154744,
+      "sha256": "4972bbb249b929d75363aafa0a4b777595b8b7b00969dbb2dc8598afa39e3bc1"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9866_5c41070b1f9e7786.json.gz",
+      "bytes": 114128,
+      "sha256": "664f87ff061aa6fb9f5a337f40b1ae81983d74ec2f41597a4c3761ab2a278d99"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9866_92a4fd863498e6e9.json.gz",
+      "bytes": 53189,
+      "sha256": "2bcf69133dd70d6f28d9d6974ff5a3926002c7755ccbf39f28de786bedbc2cd1"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9872_40ab0c8e4dae704d.json.gz",
+      "bytes": 150372,
+      "sha256": "cbaf367f3fe62deafb74a4e9b9e077116e0e2064c56bb8fcac08bc2e3c64aa4d"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9877_4b0bd433dc66adc6.json.gz",
+      "bytes": 56567,
+      "sha256": "5fe9a8ab3df27909ce88dfc74c927482e056afc883208ff0b27d6dc99180ddc2"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9877_71c1247f53ab46e2.json.gz",
+      "bytes": 24629,
+      "sha256": "ba83544d19e649f93f87e35f6aa1241fe38d80f8b12b41fe6d85a52a41c917eb"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9877_9b956862a46e4f92.json.gz",
+      "bytes": 49329,
+      "sha256": "365b6364aeb2ae6e4cafa1543a97300bff113294646c85697618cd39a3536903"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9880_192a692ebadc09e3.json.gz",
+      "bytes": 53839,
+      "sha256": "8b39bc21319b1cfcdfdd281f8ba6b2bd7fb297b0c3ecc41a6df2d141691c24e6"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9880_35a2476548409a36.json.gz",
+      "bytes": 105579,
+      "sha256": "6506bcc3ddc485127ce9d24cc3e87e2924e546a21127c52dae9a604c2db6ddda"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9880_87abea230993436f.json.gz",
+      "bytes": 123975,
+      "sha256": "7e30e85b074f37845720647c578795ba704a9cacc5aab235b59544597f990450"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9880_cc68c5498cb11fd3.json.gz",
+      "bytes": 129154,
+      "sha256": "2fefa78623d7a299508e6096cad04d2b6493561b41c16aaebf4d32ce76d27472"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9880_f087757ed90fdd52.json.gz",
+      "bytes": 119100,
+      "sha256": "42859876f3cc373f69597c4040610d010108d85f0adfa982e7a97a09b76b46e4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9881_cf704befc4fb2778.json.gz",
+      "bytes": 69506,
+      "sha256": "afb3a1a678f248f2232cd87273465fad9c904f11770567fc6ceb2301e61c3fa6"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9882_33ed108dcfd75d16.json.gz",
+      "bytes": 53573,
+      "sha256": "d34617a494af444db8c7451fa961ca6f99a75b05331ca3b3f5cc7ca1ba699dee"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9882_be1be7a5555ab7b5.json.gz",
+      "bytes": 106515,
+      "sha256": "95a0b8a885126c2b7fbc19eed7f4fcf01d63900548eab94553b8263f22a3ce41"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9883_e8faae1be64be124.json.gz",
+      "bytes": 1538,
+      "sha256": "1434b3793b2d97640cf8885dc128623b4eb959d4ed8958d8ca0b8b4e29a0cf8d"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9887_b29f01bd365f6c4e.json.gz",
+      "bytes": 19025,
+      "sha256": "0f7c128f4bc37a907016bdc8c32afa01ce4ce1f9aa234be4fb20f8c7f54d1eed"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9888_b77291edc5c36e1f.json.gz",
+      "bytes": 3313,
+      "sha256": "c37f23e9e8c7e6537efe3e0727af96cde541041bb2dbafabb2de087519033517"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9889_59f36944822e669f.json.gz",
+      "bytes": 158454,
+      "sha256": "68dde3560512b27389db597c5a04593d99c42f43b5bfb4910339a34a6ce57e59"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9890_2d2aead875588e9e.json.gz",
+      "bytes": 6848,
+      "sha256": "03b39427907e19bf1780638b4c99903ae5128d13a111ac99d1e6190dd7bb6557"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9891_c6b2594c1f0d69e8.json.gz",
+      "bytes": 5389,
+      "sha256": "b4bd2563b54150c9c4f528eb36ad748c648d106c7edfda85f785e393c77cf87d"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9891_f8159ab4077a7044.json.gz",
+      "bytes": 8570,
+      "sha256": "971a2276ac15da05924953493433c8d2aa0d5c7db57b2777ae5371f00fcbe5c4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9892_6b49484cf022b655.json.gz",
+      "bytes": 10552,
+      "sha256": "3e60f3a5547591e86073c2559e76ce04a6c91683e16cf2b7bd19b4a0d510d46c"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9892_80db8e4e9d5c763b.json.gz",
+      "bytes": 9159,
+      "sha256": "d7306b78edc98c613061ca47f64739b47ca712da4b28a9929296fbea1493f4c4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9893_f4c387b067f170d0.json.gz",
+      "bytes": 8072,
+      "sha256": "f110b750c87daa8d0c9605c15746323172ec4171e4c838d9abc88e1cebbefcaa"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9922_c53165a7175c159a.json.gz",
+      "bytes": 79673,
+      "sha256": "73ada66e941af588b31f213ed0a0b97b34045b689d51376894be8fc2891666e9"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9923_3153e65814693313.json.gz",
+      "bytes": 53564,
+      "sha256": "bd2e6981671bd620a5be4eee3b64c1a899386c54f7a94c16243fc59735ab1208"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9928_2853fa1182a18de3.json.gz",
+      "bytes": 175651,
+      "sha256": "cd8839e1ef48c89667a98c99867ff9c5db3d13f1c8d1cf1e49bceffec365d6e4"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9928_5bd8424ecc4a00b1.json.gz",
+      "bytes": 129094,
+      "sha256": "c9a0ec53c2b60a7caedee5ba012df8f585769529fceaad28e853142f6a4ed7ce"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9928_7a24f65fd8cbb4ba.json.gz",
+      "bytes": 111524,
+      "sha256": "413708a14ae7f041bcfc27cce523b6ca535acbeb8b178468a64d31449dd10ee1"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9929_068eee1ecc189e47.json.gz",
+      "bytes": 88692,
+      "sha256": "3e88a4042d24842145263e3dcfd17b3d50eb97f411dd10acb20eb3cc7b5e59e3"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9929_498ec03d3ea03efd.json.gz",
+      "bytes": 88201,
+      "sha256": "52864340c3e88fd9bf3341006c6c9c1581ba3c6368ae444af9313cd4c16ec6c9"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9929_a4f71475ab4730b1.json.gz",
+      "bytes": 175811,
+      "sha256": "1dab2c451e00b6a63ce03a12e6493de112703218f759708d5e11a909cbdab1c3"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9930_13fee80418c1f152.json.gz",
+      "bytes": 138404,
+      "sha256": "5ac7548013390e695238aed380848658f65dd050368cfd1ff924d9c45a282f65"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9930_64aa79c9c3769c1b.json.gz",
+      "bytes": 111397,
+      "sha256": "70fb189c4427eb8f409b27ba9bb86538c47a343f31f55a7cc0df58a578d2a863"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9930_cfe6f9ea4fc1b3a3.json.gz",
+      "bytes": 175501,
+      "sha256": "93ac49114813485cc37c7b89deef02fd0555b1a8556fed7086ac59e440c4fb82"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9931_7a1ebf57881c4485.json.gz",
+      "bytes": 88146,
+      "sha256": "11ca2df4c6993845c6ec655713ed4f085fe4dd960553c1cc8015cbb79ec81bba"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9931_e2ef59e12eaa4287.json.gz",
+      "bytes": 138579,
+      "sha256": "00e5ee5138d475b4c333a2186915928d802be1f191598f8dbf63c500a5dcbea2"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9931_ef18d0d65e6ca5f3.json.gz",
+      "bytes": 87016,
+      "sha256": "00a64514d51432340872f8ea634cf1476aab4ba9e4833dba65d45d294c0bbd72"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9933_795391c0fbe1ade8.json.gz",
+      "bytes": 88309,
+      "sha256": "712f65254fa86a43c8d05bbf167ddbfe5b1fc298c43c1263575b28d66c2f7f8d"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9933_7e8f01c99612ff83.json.gz",
+      "bytes": 175976,
+      "sha256": "73de9105549d27a5ddbe8056c0584253e735370c08363b96eccbd9608908a3ed"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9933_97fdb9c15f82285d.json.gz",
+      "bytes": 111775,
+      "sha256": "1a56124c030617ea65dd538ee8d11886f8e80bc3eb8e8712182b6b143d8f2185"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9935_3b465c0b5a47d4e7.json.gz",
+      "bytes": 111633,
+      "sha256": "7bda04bd418daa84507628ebd129171f35e77589884dd8b1af3892e0a3e939ba"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9935_a622bfc3d6e64f88.json.gz",
+      "bytes": 175777,
+      "sha256": "4a652a6eae7b6a5296bce3870751cf25ac092b22686d102c3e6cd5a2a27b4209"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9935_a9ec25861d6a6a29.json.gz",
+      "bytes": 53529,
+      "sha256": "755d10964a7556786af41e8bcf8e54285558ef81cca6e37f6a31d80cf198c3d9"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9936_1570a3e14c468e22.json.gz",
+      "bytes": 111763,
+      "sha256": "86edfd367046f64bf7edaa5191fe41eff09b362ba8d146032b5c6dcb52bbea90"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9936_c05d28c441fbd335.json.gz",
+      "bytes": 53356,
+      "sha256": "b7399aaad689292d597e494ce384c9c9ab0f0aa4e4b2c2ea558c48975b86cdc9"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9936_f73814fa9d90eb3a.json.gz",
+      "bytes": 175953,
+      "sha256": "32085babbf888babe1327fe309b53320bc12f19bcbd4f3818609388b0a1ccd62"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9955_115e46970c106a84.json.gz",
+      "bytes": 335532,
+      "sha256": "5cff8d511f3d77c85c45d64e175ee400c1086132e63ac97f8e74fc06b8d66cf0"
+    },
+    {
+      "path": "censo2022_sp/fontes/dados/9955_fb1521a4ea5ffffd.json.gz",
+      "bytes": 348954,
+      "sha256": "553a574b72aac9179df923e070cbfe7f302b8cf29863e67c71bb1932911a63e1"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10055.json",
+      "bytes": 1362,
+      "sha256": "551ac058906ad6a29b46804d467eeacf2ccb61ee5e8a6de16805d9fa4e5536ef"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10056.json",
+      "bytes": 6370,
+      "sha256": "e532cf74d4b083e3d1addc378b2de66217057509c7366d74544b7746f79f60b7"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10057.json",
+      "bytes": 4511,
+      "sha256": "24dc034cd57035c9b60c99a3f35e069f655df3d916bbc90cfff074f35ec71e4f"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10058.json",
+      "bytes": 6283,
+      "sha256": "3d3978f77d869945d297b17d662e822eb5cfc590131d547607bb283f4bbb1aea"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10059.json",
+      "bytes": 5568,
+      "sha256": "d381bcd5211ab4fbc27c375074aed512f0b6571f4503c888d6388dae31ade06a"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10061.json",
+      "bytes": 5973,
+      "sha256": "e978f7b72b90966092a310bb045c647bd314a6e500b5d74e7ec98b27aa0381d7"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10062.json",
+      "bytes": 5155,
+      "sha256": "d85e90a9b5261747a60c7334512e9a936bff0d8272ba8cc26d8a66130eb1df2e"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10075.json",
+      "bytes": 5536,
+      "sha256": "824b35ad9595f1c628615089ba18578fcb586fa213c6bbddfcd4e3b1e8282150"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10078.json",
+      "bytes": 6982,
+      "sha256": "b7a9bd93198fd036d3a80843623d6b261d35dd28284c70de7ed64bc99bbe3c3e"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10089.json",
+      "bytes": 6175,
+      "sha256": "047454413bc1c678d7c14028450f36b2b5402272563db6001dbefac54c1d80bf"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10091.json",
+      "bytes": 4193,
+      "sha256": "84288770bdc35fe641133020b0357ef540f02bef762cef864bc4892fbe89ab6a"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10097.json",
+      "bytes": 2666,
+      "sha256": "4ca226038947a5fab5df164221ede0a4c3743c36e640fe95b83a2bf9e532ce91"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10125.json",
+      "bytes": 5394,
+      "sha256": "d75aad0485a0f4eaa7023d40179a26d1087a5defca76302b51853063dd6083d8"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10126.json",
+      "bytes": 2054,
+      "sha256": "a96ff689c69b68139cbf5ab89844fd8145055fdfa33d91c4abdad5a156ca9150"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10127.json",
+      "bytes": 2591,
+      "sha256": "9d0155a200f44c13a75e7a893298ff4acc4c70353aca45dd26aeea1abeb2aa13"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10128.json",
+      "bytes": 1558,
+      "sha256": "ca9bcfef02028d4da7fe26ef65c06a53048a649941e3cba8a5298f24940c2c39"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10130.json",
+      "bytes": 2013,
+      "sha256": "4292303eee7fdd6e5f4c9dc696d0a97e3e89db68b67af590465b8ad8e4ed34ec"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10133.json",
+      "bytes": 3101,
+      "sha256": "ca6174aa15ca4f73879b1807af4fb5d7a44f4183b7aa52789237198d6e055053"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10145.json",
+      "bytes": 4672,
+      "sha256": "b281ab36bff10101eef12e6292b1943999d67d17d557fc4a91cf4b0816a5185e"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10147.json",
+      "bytes": 1997,
+      "sha256": "cc66bc3371f17882e6f83ada8d338687f5e844f8437bce374a6fc7a253b39747"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10153.json",
+      "bytes": 2590,
+      "sha256": "26f06699665a7d680a3b67092378d97870bf6e527539305258aa6ee8753fedb2"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10157.json",
+      "bytes": 4607,
+      "sha256": "942b90f0476609df74c44a1de1bdfd2574dc53f0cbb58b7c18cbbf7a762dc2ce"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10158.json",
+      "bytes": 6476,
+      "sha256": "968945026c0e3eb40241852669a8d960b62f43fe4b198bbdb29cc28f47b1f9b0"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10160.json",
+      "bytes": 3995,
+      "sha256": "cfbcb3ca71e607ebb288b8586f6ce5d9cb0c76c5ada114a606283597da9b46c5"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10161.json",
+      "bytes": 27265,
+      "sha256": "ef652863e71663f29b96beafd04f558e28de919144fd0f44f22ac3818ef765a9"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10175.json",
+      "bytes": 4156,
+      "sha256": "1e75a465e80bf62c91ace77f7d4fd4ac4d91dc2412b76a120d47d37747cafe12"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10176.json",
+      "bytes": 4505,
+      "sha256": "33a9a08b1e61e27379390c4169033738617da1b53c392328b6a9a8f5637553d9"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10183.json",
+      "bytes": 5612,
+      "sha256": "3bd54baa470fc57e92494c5f4057acc2eefeb4984a828b69aad5aebcbfbe8339"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10198.json",
+      "bytes": 4659,
+      "sha256": "5e865d72234202fb800e3f493baa503b92e2329e046f46a5b5575d1a9636dd13"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10199.json",
+      "bytes": 3854,
+      "sha256": "fd67b858a8f39571ab7a9f1dbd8ccccb310dcc34596747327dcb3019411dd765"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10261.json",
+      "bytes": 6684,
+      "sha256": "57fefad4fb41f3a5f7b8a63e533ecb1436ff33d0ddd6096c21508977c53d2454"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10262.json",
+      "bytes": 9047,
+      "sha256": "13b4ef05249a2b997f0fe745e5077910c8335d97e050060c06a2f5866f9d022e"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10263.json",
+      "bytes": 4097,
+      "sha256": "5716b92277ef094325d484a34a53a5c63922d8a7f6d9565fca0eae7d2e4381b9"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10264.json",
+      "bytes": 5417,
+      "sha256": "ef3e1c5be0138d9cc28cb7a04250544d9dbc6a680698711dad57fef5bcf016cd"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10268.json",
+      "bytes": 5611,
+      "sha256": "31af4baaf1afb1921f2dbc37bb576424150bd7016c53edfe68fa9197af4d23a6"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10269.json",
+      "bytes": 5810,
+      "sha256": "e8ce55a5791716c12293894cab8b0b91079a445a15269a3e7cd3701323f07573"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10280.json",
+      "bytes": 6319,
+      "sha256": "c39f9f74c03f57477a4e4229312ab600c7bacdca1bff4add44382d8dcea521ec"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10289.json",
+      "bytes": 2982,
+      "sha256": "f32a91b2024bfcb3ade0767756d995b5270b755a62e67b1ebc3d063d5537ebee"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10292.json",
+      "bytes": 3821,
+      "sha256": "6a86776e8f1c122ac639e1d15ec09201e8ad7f7d5378a8dfcae29ce9ec0447b6"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10295.json",
+      "bytes": 6800,
+      "sha256": "b7a42efd97ab846d0a12f44b2cd662f4e11aa8f4ddb4dc8b17e20baf6afd0d81"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10296.json",
+      "bytes": 4841,
+      "sha256": "c65a54dcce660808a109a33cc7bb3f63379eb116c077adb368823d5bc6543d4a"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10297.json",
+      "bytes": 2097,
+      "sha256": "281cbc62565bfdc8af8acd7bc2ba80b2872c4b2a4fcd9a199161ceb9820f385a"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10299.json",
+      "bytes": 5674,
+      "sha256": "26f1d517705db968123dde389fd2ce2ff1775b826b57299a329ab26bf20e7b8e"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10321.json",
+      "bytes": 5102,
+      "sha256": "f685ac02433d93b6033f8377786087e2bca96226bfca576d48f8bf72acc7add1"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10324.json",
+      "bytes": 4670,
+      "sha256": "9ab3da6f9ed405419011dc17ce8299f372b48005dea0f082967bb6e263a4cb7f"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10329.json",
+      "bytes": 5411,
+      "sha256": "2df0c1010bdd37ba09e392d9fa132a218ae35beddca1b35b32706cadd8debb9d"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10330.json",
+      "bytes": 7003,
+      "sha256": "31f220a9be8b02effd5f31e301eb632372200c21d6e1cf81df1315b1a0b6da39"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10331.json",
+      "bytes": 6053,
+      "sha256": "2ae008c0304b1690e5a674b2cc5a85fce6b77ee23fedcf85133d39267e9d260f"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_10332.json",
+      "bytes": 5433,
+      "sha256": "893632ebeed65abe30706d7b5b5bc47545af5317440bc37fc5dbc87e35b17bca"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_2145.json",
+      "bytes": 5989,
+      "sha256": "bd61f95a735838803037ba485c6863aa31176b837d9776fa7e035a1793fe21d8"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_3182.json",
+      "bytes": 5438,
+      "sha256": "e588584b61877d70cbf38a23ad5296984120bc70fe37b6d3425d85862b906de1"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_4709.json",
+      "bytes": 1008,
+      "sha256": "9bc24377b3567681c0920a11d9744d108cdd1d66fd0d20d0ee3eaedac2d175d1"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_4711.json",
+      "bytes": 2893,
+      "sha256": "03cc876aabf9f969acaae335a050c218a485a6b15934c25b2702266bae6528fb"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_4712.json",
+      "bytes": 1114,
+      "sha256": "3cd54edb76b07d404ccb1eca61e2b4df5228e30d965e8cefad6b3f5ee7641cb8"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_4714.json",
+      "bytes": 940,
+      "sha256": "baa25a3d7716fcc5e502f46b0d49878a725b1216258b7c2e18e3f05f7f6cc475"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_631.json",
+      "bytes": 6719,
+      "sha256": "8c291cc97abe13e0a4205e5aac36a423be72915d19247c3443ec65a53003a91a"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_6326.json",
+      "bytes": 2112,
+      "sha256": "a8584ea5dfd258e590d0c2acdb9320c3470ccc9e93849b0de85f30809b08a033"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_6580.json",
+      "bytes": 4712,
+      "sha256": "00791078b003208c39c0b4d75ca2f2e477045fb933b0bcb9e15e1725d037f402"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_6584.json",
+      "bytes": 7466,
+      "sha256": "05c6a2841c1f534a5cc7b694f9052928f90a57d2082835d47041d5b879b31307"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_6740.json",
+      "bytes": 6059,
+      "sha256": "7f8cafb2415f0565b770e42b6a569c6182ac171c92489762d66336bd82e47130"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_6803.json",
+      "bytes": 4730,
+      "sha256": "4b192e4f02ee2663a3e585b3d6023b466be5316e297a65fd0a3905a240bf73fa"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_6804.json",
+      "bytes": 3246,
+      "sha256": "6ec6592d3385d6339408d00b8e1c16406169bafab84b1bed5e8cdd7b7e5f38f2"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_6805.json",
+      "bytes": 2580,
+      "sha256": "cce4b638ca8b59c928dbcb9afd54164ff128994d75ac659f83f1cb601f0efc10"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_6806.json",
+      "bytes": 4479,
+      "sha256": "cd33783d66c9be63328fcefaf60126a53a0eeb0be99dc590e6e490c6b8a36d6f"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_6892.json",
+      "bytes": 2249,
+      "sha256": "b9e15c20e6696910119b36609e4f6e34f5d2027e440388014a3e6939d133a1c0"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_6894.json",
+      "bytes": 8793,
+      "sha256": "c97f94d256b1d336a46c3a403446957713648eb188324ced28f4ce4e8cf21411"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_6909.json",
+      "bytes": 7311,
+      "sha256": "f4544b0b140305bb4b86e818ab401d9cc8179d9f6a96f6b58ca04f4400a7c207"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_7555.json",
+      "bytes": 6643,
+      "sha256": "53701c49614de78aa75eba032e37657f7a656a3b3fb645a2d2de4e80aa6cdeb2"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_8180.json",
+      "bytes": 9857,
+      "sha256": "24b06ad3cac015e3776d7b33a0265ab9a9c0e8b27cf7ded11851ada9f9e0894a"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_8181.json",
+      "bytes": 9093,
+      "sha256": "4d94c6fc2180284989cf727e53dc254dea0ba3bb7761126d86a0e4492d52aac7"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9397.json",
+      "bytes": 8542,
+      "sha256": "b0dc48deb474f29b788c9b6c47d697b0019a17f157fec0625542f5abbe534e4d"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9514.json",
+      "bytes": 19119,
+      "sha256": "354cc0a26fb07f9159328f5ea7aa756672e33804db2267138c2966c4501de595"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9515.json",
+      "bytes": 882,
+      "sha256": "9d1dc160a41f74fbe719bac08f6fa12c6e494d783dfc164829de544bf644b3ac"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9517.json",
+      "bytes": 4302,
+      "sha256": "bcbc4f1eb1074b2ebe3ab5d30075545eef5594e0668669e0395c5ca51570da72"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9537.json",
+      "bytes": 4744,
+      "sha256": "208761b82423dc355ebe2c0309c6031289a0a9da1377488c464bf9cbb232959d"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9541.json",
+      "bytes": 6312,
+      "sha256": "127413cb9a6b98bb2698a9708fd159f75e2e7a0ddb45f1365b347f4a912c63c5"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9542.json",
+      "bytes": 10719,
+      "sha256": "57a3356faeccb1af4620aaa98c0153f43775e1084093abc6b7e5c1e8b96c8ed1"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9543.json",
+      "bytes": 9967,
+      "sha256": "fbdd546c35b02b47e60c01b73721d3bba95e44264b97f0ff6aa9c8482d9b022e"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9578.json",
+      "bytes": 1755,
+      "sha256": "54f66a6f8a9aa5a8714a8c5823fcdf49d94f2c79aa88c3b85a6f91d19a4aaab9"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9583.json",
+      "bytes": 8428,
+      "sha256": "0e2799477e98d638aa3423a14756dfdeda8eb91682e9ac77729a1d668ed74435"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9584.json",
+      "bytes": 8838,
+      "sha256": "980598f70bc257b4f976259c9d30ed6959c309bab6fc4b1d7e8ca3189cec4bd7"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9586.json",
+      "bytes": 7685,
+      "sha256": "ee33038d96967c444661a1609a777744bd5851323ba199bdaa98c199e6281252"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9587.json",
+      "bytes": 5393,
+      "sha256": "c8670e2dec6dea0b35bfdbddc68f9bc263396a02fc3ab71baa0464f2d7fe3efb"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9605.json",
+      "bytes": 1791,
+      "sha256": "fc6b9cb61e149b14c411c6dd18bdcb8534aa4218aa6647de23a5ff90e10e3ac5"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9606.json",
+      "bytes": 19525,
+      "sha256": "4e275fc2b5b39addf1d773452221cd93496c2797345dcd752058ede8157c8af5"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9608.json",
+      "bytes": 4445,
+      "sha256": "c04ac4d7edabdd0c1aa9514581f7047e9b692c9c6c6347d90695254130a901eb"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9718.json",
+      "bytes": 2738,
+      "sha256": "a18cfef99eff54dcf48f7fcd82b62f8e107220e71b49bb7ccabdbc54160e30fc"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9720.json",
+      "bytes": 2999,
+      "sha256": "ec20326699cc7f627a4c74971b5197165dc1810d500bcb45c35c38830ce457e7"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9724.json",
+      "bytes": 3762,
+      "sha256": "c8264c4d70fa489ffd9e9cbf0908be49c08fe7a76045699e60ca19d87e861a89"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9756.json",
+      "bytes": 1890,
+      "sha256": "d30a5a38fa6189b6a637707b32e20654147f7c34808828729c6f07cc0b4fb36c"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9866.json",
+      "bytes": 2716,
+      "sha256": "bcdf942aa519b08f9e2bd65b22ca5061586f0a3d2ac51c7711b83480d3bcfa7d"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9872.json",
+      "bytes": 3476,
+      "sha256": "3a9692a47281fb919b0d7f5786696567452cdf54b8eba12af9046736125f7ca6"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9877.json",
+      "bytes": 3442,
+      "sha256": "b383fc162e4f04c926ebd2f4ca5da9feeabd9c1e10c4aa26c5eb211bb3653c32"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9880.json",
+      "bytes": 6081,
+      "sha256": "e5f32c5b72765869a780bfdd549a8510e5a1070a058ba9fcb18ed4ec6755c9d4"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9881.json",
+      "bytes": 1698,
+      "sha256": "cb8408b6d6df8b951a8be213a476f747f20dd45b1b04fadc9980d2fcfa3ae7aa"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9882.json",
+      "bytes": 2853,
+      "sha256": "633966f0c3d918dd054320919c6fac40b10556d5e4df94136f3ad93d03d9d991"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9883.json",
+      "bytes": 656,
+      "sha256": "e540a9c41b48c4955e763948570c6cc17237cdaf61e1e4d8c1ae091b434e762f"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9887.json",
+      "bytes": 3439,
+      "sha256": "7d4e0509ca3c40313081837f3ff0af44a9ce5a27fb8e92b82c3c7b894c9936c8"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9888.json",
+      "bytes": 1107,
+      "sha256": "cb18cc197b1088acb76aacd6709e18b099e78a3796018ba2b9870fb8f1b72650"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9889.json",
+      "bytes": 2537,
+      "sha256": "75c2f6a1b405ec841b1831d6070426e0b9a443f5ff0c05f9f85cb0d8a106209b"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9890.json",
+      "bytes": 2257,
+      "sha256": "4b60dc93c441520ea051374575bf7cc1db7bb9e74805e94cbc6dc5a077a5b00f"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9891.json",
+      "bytes": 3391,
+      "sha256": "538d12c1ea3bfcb2c08686fbffff862ad25933fe63ff2f80ffbe25d8d195b7b2"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9892.json",
+      "bytes": 4620,
+      "sha256": "60aacf8471962b168b5219ead68ee7c0894ead65c835cc9ec0d81c08a69ea323"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9893.json",
+      "bytes": 2394,
+      "sha256": "00a957b857ad1d22a5c811110fa99e949a2b506ab58938c3c3151eaf29ed4e2c"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9922.json",
+      "bytes": 1857,
+      "sha256": "f57cf775f654a8a0bba1d7dcd8fd7422be59055e8b59d54f801592248d25e32d"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9923.json",
+      "bytes": 1441,
+      "sha256": "2a92437ace1243f2023f80b9b1598d71463b5f4486dc9a2c8b5d91ce054e3f8d"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9928.json",
+      "bytes": 5214,
+      "sha256": "29413ac83b8983f72009039c106d22bbc2ad162cb7c41bc745671ddef36ab446"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9929.json",
+      "bytes": 4451,
+      "sha256": "31b53870390994561f94cae6f84311b559445420496d6c9517d8b3a3e427c1b6"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9930.json",
+      "bytes": 5072,
+      "sha256": "44c47776f1cf2db406071c2da4b0d9feab7af405a63d60a51fb521a27173fc62"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9931.json",
+      "bytes": 3934,
+      "sha256": "fe070fdca67f2d05dd2fa4f1348b67534b1fb80f9a08d9166f5cbde01069866a"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9933.json",
+      "bytes": 4794,
+      "sha256": "87c07349515eb2bcdf744473b180b13f201fad995610a1fa071e284d24e1a41c"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9935.json",
+      "bytes": 4440,
+      "sha256": "5358686a27f141480c4e263850e1c8e8beca8ed7cd8a235cd7913763373d7052"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9936.json",
+      "bytes": 4458,
+      "sha256": "628693890e297f5f4b55937236048aca3e434cfe44bd6d956a9a682caf75de62"
+    },
+    {
+      "path": "censo2022_sp/fontes/metadados_9955.json",
+      "bytes": 3792,
+      "sha256": "40d8ef52bbff1e7cb3b6feefda9f106f4ecc9e0383bd31859a0e2dbb00ca379c"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/amostra-caracteristicas-dos-domicilios.html",
+      "bytes": 73746,
+      "sha256": "c0ca3c55659cb274d1da8366fa45617077ac21312e8e2f8f8d2569d93cdbf14c"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/amostra-deslocamentos-para-trabalho-e-estudo.html",
+      "bytes": 70601,
+      "sha256": "a600b7a016c5fed7d0a248915a949b7191c52c408953208fe88c11d1edc64fc0"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/amostra-educacao.html",
+      "bytes": 71965,
+      "sha256": "949ff2b9a4b67ca979328107ddf37e6f5c0203f715fb501dfe00f93f88e7e652"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/amostra-fecundidade-e-migracao.html",
+      "bytes": 75538,
+      "sha256": "2b57f7349f8ea03f48302bb06901a2f87974195aad9bd8c15e6a180b8ed7c0de"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/amostra-nupcialidade-e-familia.html",
+      "bytes": 74433,
+      "sha256": "ee42dc40a8736d7fcd9fb685b2a891bf8624fc5fe84821d395579e12095726a4"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/amostra-pessoas-com-deficiencia-e-espectro-autista.html",
+      "bytes": 82838,
+      "sha256": "181337cfb0d109933ee22563f830945d7181fb0fb72aaaa0e0ccd117292eea34"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/amostra-religioes.html",
+      "bytes": 67346,
+      "sha256": "0652c1bdf6761147752207b360b10f0e42b7823eea15bef0c754a6a6f5fcb4ff"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/amostra-trabalho-e-rendimento.html",
+      "bytes": 99940,
+      "sha256": "24094bd72a32c643c0a65687860a7f5e3d63e3cd3af4c68e598003d7d47190bb"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/inicial.html",
+      "bytes": 63212,
+      "sha256": "b49965461c6085d3f19abc6adb4cd5691397c6fe4e288c629e458f0d686067f0"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/primeiros-resultados-indigenas.html",
+      "bytes": 69237,
+      "sha256": "133cb1fbbf9b8b20efd07a310d9cd08c6fb1f3585f19516e6e41921425c8bbba"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/primeiros-resultados-populacao-e-domicilios.html",
+      "bytes": 65312,
+      "sha256": "034cd1318d9342e10033929033dec2af99326c86f4e6bd7cb3e46227212229a5"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/primeiros-resultados-quilombolas.html",
+      "bytes": 67433,
+      "sha256": "cbb5d86822ff26aafc741c27687f60ba055388f6e09b4b368ff50d0476366607"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-alfabetizacao.html",
+      "bytes": 64839,
+      "sha256": "d18b4ea118e45d3195d54905ada57eb5daa9ab1fbd70a73078917502821ac0cf"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-caracteristicas-dos-domicilios.html",
+      "bytes": 68544,
+      "sha256": "4987e7b4277cb48ff681780724158ac13ea35840227bc5daafdcebbe08d8544f"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-caracteristicas-urbanisticas-do-entorno-dos-domicilios-nas-favelas-e-comunidades-urbanas.html",
+      "bytes": 73414,
+      "sha256": "13921b61a4e10ac86083ce2ae37fd1059e612dfc3372260ef4047779f24c5d5e"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-caracteristicas-urbanisticas-do-entorno-dos-domicilios.html",
+      "bytes": 76003,
+      "sha256": "429ca55aa37412e9b0dd6f9bb2fe346d5de13e5867dbb9e681a056bafddf5b0a"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-composicao-domiciliar-e-obitos-informados.html",
+      "bytes": 67528,
+      "sha256": "5704092df7624073c9243bf005152088bf8a40bce12df618fd53704d6faf89df"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-etnias-e-linguas-indigenas-caracteristicas-sociodemograficas.html",
+      "bytes": 80113,
+      "sha256": "a963ca2a8a6407de042e23bc9ad0811ca457d1cc7fbff0a181cef78b2799cffb"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-favelas-e-comunidades-urbanas.html",
+      "bytes": 74208,
+      "sha256": "95235be964180052e524187e396cff30db014cfe7300bd8fcc55cf21a0f923b5"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-indigenas-alfabetizacao-registros-de-nascimentos-e-domicilios.html",
+      "bytes": 80926,
+      "sha256": "969198b37ccccc4c68a667a843f098b49aecb0fccb2c636242ebd3f1be1259b6"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-indigenas-caracteristicas-pessoas-e-domicilios-situacao-urbana-ou-rural.html",
+      "bytes": 77734,
+      "sha256": "d64378d395904f6767353e1aeade29a37d7e05d75e72119d370d714c43d2ad44"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-populacao-e-domicilios-situacao-urbana-ou-rural.html",
+      "bytes": 63264,
+      "sha256": "760cba7f1cfa018ebd4635fe2be501ca7289ebe7cd872a7a9a67092dde3402b4"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-populacao-por-cor-ou-raca.html",
+      "bytes": 67334,
+      "sha256": "9c6a615f7eb0f1e9536c7865dd12ac771535472c6e50a331d7eb2c11ec9a2a97"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-populacao-por-idade-e-sexo.html",
+      "bytes": 63723,
+      "sha256": "d5430192ad70aae5cd5583ac0cc4869609929ac839e061faf6f6b1cde0d2c68f"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-quilombolas-alfabetizacao-e-domicilios.html",
+      "bytes": 81431,
+      "sha256": "c5b7842dd7b3cd2fa67f2d5c2d9674b048c265aec16729f54ef0bca62a4f490b"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-quilombolas-caracteristicas-pessoas-e-domicilios-situacao-urbana-ou-rural.html",
+      "bytes": 87016,
+      "sha256": "5b3d9d062297d87c8065695fcb9663abd7e42bf45364b6d56300b69d0c3cdd06"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-quilombolas-e-indigenas-por-sexo-e-idade.html",
+      "bytes": 70324,
+      "sha256": "4fed226cb5df9a35f8992b64d39c3c2e5f4100200fc10328e841bfdaff29689b"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-registros-de-nascimentos.html",
+      "bytes": 64365,
+      "sha256": "b2fd87c1029d23f2aa90d6c8e06279bd64029dc35625ed88ae3486f170eb5349"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-tipos-de-domicilios.html",
+      "bytes": 64649,
+      "sha256": "097014e347599c4726bcca40f764e40dba0c504c7eb8e41908a7ab1f4ecb93f0"
+    },
+    {
+      "path": "censo2022_sp/fontes/paginas_sidra/universo-unidades-de-conservacao-caracteristicas-pessoas-e-domicilios.html",
+      "bytes": 90377,
+      "sha256": "60ffd57122217e91e1bfdda8a48d02ccc43bc0a0b30f34c3609b493b4c4f2ac9"
+    },
+    {
+      "path": "censo2022_sp/fontes/populacao_uf_validacao.json",
+      "bytes": 725,
+      "sha256": "9047bc1919fd08c97732b3fcff6bcc99d0c5993263ef28e57715a3cd454227a1"
+    },
+    {
+      "path": "censo2022_sp/fontes/SP_Municipios_2022.zip",
+      "bytes": 10464202,
+      "sha256": "341664fdb610df9b92a8f01546e1a83474135cf686c4dcf6c2e0ea91552b0013"
+    },
+    {
+      "path": "censo2022_sp/gerar.py",
+      "bytes": 9389,
+      "sha256": "8b3b89b36dd3658148a86cd5b9da06a12d821b984d73103a783968699540256e"
+    },
+    {
+      "path": "censo2022_sp/LEIA_ME.md",
+      "bytes": 5777,
+      "sha256": "a00a5b38b54aa7b62b24ae833870b2fce7803c1a5c753f8746439918d54cc3fa"
+    },
+    {
+      "path": "censo2022_sp/malha_original/SP_Municipios_2022.cpg",
+      "bytes": 5,
+      "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824"
+    },
+    {
+      "path": "censo2022_sp/malha_original/SP_Municipios_2022.dbf",
+      "bytes": 46602,
+      "sha256": "fd2a7a29bd75f255109d4957b2080828f9e4b850bce350677f8d5e4ed112a28f"
+    },
+    {
+      "path": "censo2022_sp/malha_original/SP_Municipios_2022.prj",
+      "bytes": 174,
+      "sha256": "c9b61f7c5c0d268153118af4183b06d943c1652e94e1201f513a6dcf0ab06567"
+    },
+    {
+      "path": "censo2022_sp/malha_original/SP_Municipios_2022.shp",
+      "bytes": 13781880,
+      "sha256": "47f8959cadeb3f4da06ba741b511d5ba5cba270014d1a81866a76f42d8aaf226"
+    },
+    {
+      "path": "censo2022_sp/malha_original/SP_Municipios_2022.shx",
+      "bytes": 5260,
+      "sha256": "d54f81b27f84dd6602daec5a0a3bb44d8937f7063537274ef8fa97d7e3a8acc7"
+    },
+    {
+      "path": "censo2022_sp/preparar.py",
+      "bytes": 2715,
+      "sha256": "d778250ff0faa929ae90b2f65e1efc7e7e33ebc42a2e5c28a7c5076be6e04422"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/consultas.json",
+      "bytes": 45384,
+      "sha256": "5733aa8d7b382799c2820ba47d17747f3745846b34c4eb24d801be85f7bf0f41"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/correspondencia_codigos.csv",
+      "bytes": 10343,
+      "sha256": "b5e771a04abfdd043c6d0d4733603c987e2d7c0361f8b93e1daf8de16462ceb3"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/dicionario_campos.csv",
+      "bytes": 1263351,
+      "sha256": "1ab8450443fc41306992f102e95f45d5b5f0952e5b56c1dad31e4d1d82e860b2"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_19_2024_0.json",
+      "bytes": 637443,
+      "sha256": "8f491446f6b9f57d575c1445c36872110bcee89269120b3e247d2de2f72304ff"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_19_2024_100.json",
+      "bytes": 636942,
+      "sha256": "93eb59add45fd68e416a3184fbcfe5a969ca2f25754e8d2315a183f6b0f56b12"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_19_2024_200.json",
+      "bytes": 638418,
+      "sha256": "f00d694bc74cd6d74fdab64b78ae27925fd3d20a9a3b9ab4429ef16953312953"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_19_2024_300.json",
+      "bytes": 636482,
+      "sha256": "8433165cf6a28a7ed109141b05295977de84db0c9ffe7d7e55585b2eaac5cb59"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_19_2024_400.json",
+      "bytes": 636358,
+      "sha256": "02a01dc9d124ee49a681adda78237bd17b8196bad97747904235246a341e0406"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_19_2024_500.json",
+      "bytes": 637975,
+      "sha256": "f1bc99a2aaf9ff75fd9288abc1fa4614af0c6e9647b0fab0ad1a976cd0d896cd"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_19_2024_600.json",
+      "bytes": 287690,
+      "sha256": "10045290c08bea35d33d0fdfe08ec60c0851263d647ddc75de499f5d94e74d3b"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_19_2024_metadados.json",
+      "bytes": 22670,
+      "sha256": "392b5765a88e10258369a9a8ffe45880541878042c36f6eaed012130c05615cf"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_21_2025_0.json",
+      "bytes": 178432,
+      "sha256": "6aeef296d55a3b9f22cfe1412ab16b2451501299aca6ea82b8a134dcd3bd5c25"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_21_2025_100.json",
+      "bytes": 179013,
+      "sha256": "5a1b700eafb3ff7c570677de8bec110451295f5695b8f6cc3980dcbfdb07cece"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_21_2025_200.json",
+      "bytes": 180263,
+      "sha256": "26c0fc6cdd5f2f1ea5e02f0570356d0c22a1f4cceb56415491dee73958011a83"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_21_2025_300.json",
+      "bytes": 178241,
+      "sha256": "ebd43195109b1f0ca8fc896710b2ba8dc3983265515b37dd38afa6384dd8d794"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_21_2025_400.json",
+      "bytes": 176801,
+      "sha256": "451bd58177d5bca534712c9f2f42daa0f708bd753544e54f3801da7bcc427d2d"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_21_2025_500.json",
+      "bytes": 175276,
+      "sha256": "bea4d33065d91a42be1726ca2df2b15e5788b563d934f4668622a79113b44c97"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_21_2025_600.json",
+      "bytes": 81469,
+      "sha256": "fd3f66e2ee52923e2a27822aee243f13a61465f8c41caa2af4f2d037a86af8ba"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_21_2025_metadados.json",
+      "bytes": 5011,
+      "sha256": "54f26693f3d490205db28d7792f1433ca374dc360f73dae10f4c25011f3207d6"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2021_0.json",
+      "bytes": 65257,
+      "sha256": "f3050366be1d7f4461b9de804c796ccfa81351edbbee47950380d642a620922e"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2021_100.json",
+      "bytes": 65270,
+      "sha256": "c7c129f2e38196c2dc8f166faef6d194f45d881f8bdc55fde27614701f5f2400"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2021_200.json",
+      "bytes": 65343,
+      "sha256": "425732c241119f8c407c94684dfc489b26c7163fb631c608749ee2d62a122fd3"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2021_300.json",
+      "bytes": 65198,
+      "sha256": "0bb76d8ea2ffadcda5bf47006d81fd66d934df690284f3b4ffdb227f67585c5b"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2021_400.json",
+      "bytes": 65219,
+      "sha256": "49d36a4d5ec64f3b0e0e185e1a70ce610a7fcda9580755dfdeac07a959068184"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2021_500.json",
+      "bytes": 65271,
+      "sha256": "fe3d9e665d61224ab709d8ad33a0a11ace951a8a1f28933e43d8467338525051"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2021_600.json",
+      "bytes": 29439,
+      "sha256": "5c586feadb15caa7f04e85fff3faad4d829013992ba22243d3459092f1c8882b"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2021_metadados.json",
+      "bytes": 5046,
+      "sha256": "7908036ca17a4c7838f5de8f0a128908f9d7dc1c1cfc74bf314738e70a1919ba"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2022_0.json",
+      "bytes": 16262,
+      "sha256": "2d13b6fa082133ac47dcb6f9d35e3a117dfc7189c92f1b27a0ebc5d1ed198985"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2022_100.json",
+      "bytes": 16267,
+      "sha256": "5d200393c635af0d331e65d7af42ccfac4f4727d82a447e9b30a164ad6464cd5"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2022_200.json",
+      "bytes": 16269,
+      "sha256": "105f520522e5ef530f823a4be585c3c5db8640f6d6e7031381fc7d4becec9430"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2022_300.json",
+      "bytes": 16269,
+      "sha256": "1b17eab36837f4165c8d7c9ad74f35796d755d02a138849db238fd00cd60a875"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2022_400.json",
+      "bytes": 16254,
+      "sha256": "8fe10af3942d43a0a534a16e07c67bf2a03d2973ca72fdd6c166cb34227ab5ac"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2022_500.json",
+      "bytes": 16269,
+      "sha256": "9fa520753088b0a92b98a27c2a76d32c6b41377a6ba56e5773faa66023f934a1"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2022_600.json",
+      "bytes": 7327,
+      "sha256": "c4ed1febde28e285e761f264d7c12dd2da03688c055f2a938a67cfe4345e332b"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2022_metadados.json",
+      "bytes": 5046,
+      "sha256": "7908036ca17a4c7838f5de8f0a128908f9d7dc1c1cfc74bf314738e70a1919ba"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2023_0.json",
+      "bytes": 16279,
+      "sha256": "1f590fbae1c32b4e324fb33a0fa5979ee987f595c739a9c6bb00b6c19f7c987f"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2023_100.json",
+      "bytes": 16288,
+      "sha256": "d9e1af2f2adaeaf9cd96c6821134092e325f7b9460c4db94d87cbddf7bbe5e91"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2023_200.json",
+      "bytes": 16292,
+      "sha256": "b4f1a3a5b778a8c7d9f6a13e2b8124568f84e8199efd5c9208c74962ccd123cd"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2023_300.json",
+      "bytes": 16266,
+      "sha256": "b5ebced5884e1af2da995b83008e948f3788441d634f51e53eca3c0a43338e00"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2023_400.json",
+      "bytes": 16277,
+      "sha256": "9b013eac4dddfd119852b7f9624391e43997a2efea63047d49dbfd4f21c85d3e"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2023_500.json",
+      "bytes": 16272,
+      "sha256": "c60b14761d2181c762b81514fafd78e8f67656c6a37895415a3eaf39964a9826"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2023_600.json",
+      "bytes": 7338,
+      "sha256": "34e83e400ace7b1978664a478aa8b4272b7014dc0e55e09a195a29b4fda68f82"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_38_2023_metadados.json",
+      "bytes": 5046,
+      "sha256": "7908036ca17a4c7838f5de8f0a128908f9d7dc1c1cfc74bf314738e70a1919ba"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_40_2025_0.json",
+      "bytes": 50854,
+      "sha256": "7eebbf6856419cfe481e71257ff1c604f61ba13c0a426223bd0eda593a57fc51"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_40_2025_100.json",
+      "bytes": 51357,
+      "sha256": "5e3772b19b1f31e868ce2feb2305740944791a2ea16211eb53a9cdcb857a6f23"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_40_2025_200.json",
+      "bytes": 51351,
+      "sha256": "0eda170428fc8a8f96acc16f087996211ea338866fa5418aa5314b685ae1f6ec"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_40_2025_300.json",
+      "bytes": 50469,
+      "sha256": "d05cf3f4d43731fe6f754f9eac78ce79aca9b00f28ab3e74d46a05f405c1630b"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_40_2025_400.json",
+      "bytes": 50528,
+      "sha256": "287770e144ab8ca1bb2b4896ae63bdee327f77c7b29f09bd65ac4f6f332b58c3"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_40_2025_500.json",
+      "bytes": 52137,
+      "sha256": "830f25c7cb198897d5b59a22ee1f5afb461d72bac3770201ca72d32f77b8cb2c"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_40_2025_600.json",
+      "bytes": 22690,
+      "sha256": "200bb99ea06c698c411c23ff13278e0f61e00e2a625a5f4b577fab66871594f9"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_40_2025_metadados.json",
+      "bytes": 3057,
+      "sha256": "545b84e952732f002959321dcc6aa4cf4bc5f5d6a147624191c623101ca9d89e"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ibge_pesquisas.json",
+      "bytes": 204917,
+      "sha256": "7b529a9779c48765a8a013c552eb407d11576348f224474cfa696a7127777c6e"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_ESPVIDA.json",
+      "bytes": 2329485,
+      "sha256": "0599ea4ec4e625cbc7537a162d968545a92a648fbc45ad4e61f6bcf149fd7ff8"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_FECTOT.json",
+      "bytes": 2295949,
+      "sha256": "b7ddca69340ef540734a46862468b353951b90db1fa456015435bcfb5504b43b"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_GINI.json",
+      "bytes": 2262425,
+      "sha256": "d90df755279b612a13a1c1edffcb125193da894127fe9c8ec8eab7d294cb2c59"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_IDHM.json",
+      "bytes": 2279031,
+      "sha256": "2429dcfcb44a71ef70f021a858bd264e3f7dfe8a3224a442ea58e0ffd0aa20d4"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_IDHM_E.json",
+      "bytes": 2312560,
+      "sha256": "281c8b92e83553b97c16e648c09a7a4ca980ee073c9991af2fa1db70297bcf09"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_IDHM_L.json",
+      "bytes": 2312572,
+      "sha256": "9f2bfa1032a6950f183dfda4f21ca753089070f182f7876a29096d86e80c6377"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_IDHM_R.json",
+      "bytes": 2312604,
+      "sha256": "a70cb26ae03270daf792009509e7ea1574edcbb762328912ac1e0fc470032843"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_MORT1.json",
+      "bytes": 2289724,
+      "sha256": "d071f55471d670d82e04fede02fa368a7a2362fe9203085d9df5cb328cd33abf"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_MORT5.json",
+      "bytes": 2296816,
+      "sha256": "9bbc97c1ffd0846e45d666d9140037dd684c85d646fc7c8c72f136115ac7a70e"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_PIND.json",
+      "bytes": 2272507,
+      "sha256": "f7c352e81c62bea9e5bda046da93000816a4bb233581e427a8195cd6f0f240a2"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_PMPOB.json",
+      "bytes": 2293604,
+      "sha256": "c472273d76bd8675d2dd64773698f7ec8afd5aa75f571a76a0af9d2ec0268f32"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_PPOB.json",
+      "bytes": 2278969,
+      "sha256": "e51d6cd23f26a55685156017988b4991104e8e44c47218601b0ecf9f30df01a3"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_PREN10RICOS.json",
+      "bytes": 2396600,
+      "sha256": "53be37ca6ed2f858f5443178e125aed43226c3c8a5393272de0610d5b1014a64"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_PREN40.json",
+      "bytes": 2307345,
+      "sha256": "515369e699a9b45c00963b5f3c2fc97e8f4abf07fb90d9e430e6e04780503856"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_R1040.json",
+      "bytes": 2293073,
+      "sha256": "8f0dd70819c55d2f4565e977785ff28451433b35ea7b67556bfb6db865841e67"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_RAZDEP.json",
+      "bytes": 3154297,
+      "sha256": "47cd59e5ce04089eb943fff1873e2bbde34e66b1068e1437016bb0df83f7c394"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_RDPC.json",
+      "bytes": 2295155,
+      "sha256": "057e43cd20f76eb0496d5beab97b0c06644e8e58927f5b48740257828d2072e0"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_RDPC1.json",
+      "bytes": 2298812,
+      "sha256": "6165fde5662e39db7920d3ac938aecb7258082910548193179e0d5cfa493f3ea"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_RDPC10.json",
+      "bytes": 2339794,
+      "sha256": "27b43e771dc8426746d333a445d6ba479caa408658c01826d8b9edfeccb5fba5"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_RDPC2.json",
+      "bytes": 2305264,
+      "sha256": "6a8bd8c5c689822a6b5d7bf40577cb1bb17dfbf50c11dffe1824f56918db0ab6"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_RDPC3.json",
+      "bytes": 2308771,
+      "sha256": "2bf792d44fe33b0f9a2e547e2aa95cba8800419930fdf9ea227fbb69dc606064"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_RDPC4.json",
+      "bytes": 2311848,
+      "sha256": "c74caccfa8339299116251163a6f4d8a4f8c6ca73b2a63a58e6b74414e0e516b"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_RDPC5.json",
+      "bytes": 2319826,
+      "sha256": "ea5690d2fb2c40bdeacc0039e6064aa0a1e2597b3a50efb34debd37da573b3fc"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_SOBRE40.json",
+      "bytes": 2329582,
+      "sha256": "7e41fbd5b56b0da11b331130084a4706ed51a71480fe97281f0ae1b506157c18"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_SOBRE60.json",
+      "bytes": 2329436,
+      "sha256": "d9f5bb717803786b76c99f66347384208fba5d9769a5f35ff8dd9bd0914410ed"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipea_ADH_THEIL.json",
+      "bytes": 2279190,
+      "sha256": "b8ed18480c75a4c49becb4b5ccb6f14dcb72a39325f5aae2e0caa288d87c4ca6"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/fontes/ipeadata_metadados.json",
+      "bytes": 6807005,
+      "sha256": "30ee1603a50351e86f8dc6ec48ee87d8f521a657120753d763c6f416c4923c5f"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/indicadores_adicionais.csv",
+      "bytes": 627519,
+      "sha256": "431b3a825bbbadb5368561f432b16195afa1fc6b2ca20763033c9c58a2f7e3d8"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/LEIA_ME.md",
+      "bytes": 3874,
+      "sha256": "3346e7f385b0f69ea8c848bbcba626a817671b23efe4cad4ffe1199820a3ca24"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/resumo_temas.csv",
+      "bytes": 486,
+      "sha256": "948fbd50787b2a800339d220614a8f76377bc9be8d0a600560b7cafd4c7deae4"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/validacao.json",
+      "bytes": 495,
+      "sha256": "976ef4fef00474690115629d6d46e7e9b1d52bd328c26d7616646d517f0ad701"
+    },
+    {
+      "path": "censo2022_sp/socioeconomico_desenvolvimento/valores_originais_ibge.csv.gz",
+      "bytes": 535998,
+      "sha256": "d7087c0268d1a530fe6ab4178b0df4555961bdc85362f101e20e30be5c05914b"
+    },
+    {
+      "path": "censo2022_sp/tabelas/01_populacao.csv",
+      "bytes": 1010909,
+      "sha256": "8c5e4c972fa33d908f461b3ecae1bbcd61ac3fae9a0a607a6d7a20f114c1aeac"
+    },
+    {
+      "path": "censo2022_sp/tabelas/01_populacao_originais.csv.gz",
+      "bytes": 300454,
+      "sha256": "4e3c4229703f03e6b5fec444ae86859d7cd2e9991775c2e783ee693ecd6bf32d"
+    },
+    {
+      "path": "censo2022_sp/tabelas/02_cor_raca.csv",
+      "bytes": 1081418,
+      "sha256": "f43cc15dd809a5c817cbb3405513caff275039a637c9fa9dfec99601b4fa4fb7"
+    },
+    {
+      "path": "censo2022_sp/tabelas/02_cor_raca_originais.csv.gz",
+      "bytes": 314827,
+      "sha256": "561d4397ea41eb0b0a7dbaf9b4de75e09444f291e6666a1a76ff19898ea9fc90"
+    },
+    {
+      "path": "censo2022_sp/tabelas/03_domicilios.csv",
+      "bytes": 497288,
+      "sha256": "394e311e6cd57a2acb9253b6e821f052f45871fc0f8c2a1259aabd5a438a65f3"
+    },
+    {
+      "path": "censo2022_sp/tabelas/03_domicilios_originais.csv.gz",
+      "bytes": 158280,
+      "sha256": "4d2512ed07c0b9774962863f606a1fce7ebf9b57d517e9920ab2eaf4694b9bca"
+    },
+    {
+      "path": "censo2022_sp/tabelas/04_saneamento.csv",
+      "bytes": 1843212,
+      "sha256": "2f00413b3669c46e8f798dc387c14c4a2cd019a84535dafe4c1dcf63f9b95eff"
+    },
+    {
+      "path": "censo2022_sp/tabelas/04_saneamento_originais.csv.gz",
+      "bytes": 333309,
+      "sha256": "460a74abf398a7258e7286482d0018f13764b56889d25d1cf91006efeebe4845"
+    },
+    {
+      "path": "censo2022_sp/tabelas/05_educacao.csv",
+      "bytes": 1751803,
+      "sha256": "630e220e36c03ac0e1e3f641d608f9f1b49c42128ca455adc9dab9f7c66369d1"
+    },
+    {
+      "path": "censo2022_sp/tabelas/05_educacao_originais.csv.gz",
+      "bytes": 605722,
+      "sha256": "8e18b0decb5ddab0510b2fcff3e7a813f4db99ab214b96098cb5e87633c3acbb"
+    },
+    {
+      "path": "censo2022_sp/tabelas/06_renda.csv",
+      "bytes": 1820090,
+      "sha256": "9a988643f5867f89a781b554a72120e5e973e94ec71eeb853441f5750fbaea1b"
+    },
+    {
+      "path": "censo2022_sp/tabelas/06_renda_originais.csv.gz",
+      "bytes": 628769,
+      "sha256": "d7dffe29eebc4e461a506483997cdcb91f840d3b88a1868ac494ef62528ac83e"
+    },
+    {
+      "path": "censo2022_sp/tabelas/07_trabalho.csv",
+      "bytes": 1931194,
+      "sha256": "a3ffbc64421b221eb142aa29968a68e9300dd25fa4184bd20252fed4f01f691c"
+    },
+    {
+      "path": "censo2022_sp/tabelas/07_trabalho_originais.csv.gz",
+      "bytes": 564637,
+      "sha256": "0bf7351e7b0228ab5781b935f302a85b9bd1248499782e247fa964abb58927d5"
+    },
+    {
+      "path": "censo2022_sp/tabelas/08_habitacao_internet.csv",
+      "bytes": 980789,
+      "sha256": "6fc42640707a676d3a66450bfe18400746f42be5c2fb683c13d8929a53db062c"
+    },
+    {
+      "path": "censo2022_sp/tabelas/08_habitacao_internet_originais.csv.gz",
+      "bytes": 185265,
+      "sha256": "8996ca626e09be9571a01c1253e44e9f2eb4de0bf5b175e55107c1214e0b012e"
+    },
+    {
+      "path": "censo2022_sp/tabelas/09_entorno_urbano.csv",
+      "bytes": 1287990,
+      "sha256": "37e26e4e79fa7f01049288984284fada41d194a5fbf4dab77882b89274726859"
+    },
+    {
+      "path": "censo2022_sp/tabelas/09_entorno_urbano_originais.csv.gz",
+      "bytes": 366422,
+      "sha256": "7fbf3a42275c449b538bad0a68db9d49e7d35a40c89a101dc447725a3903410d"
+    },
+    {
+      "path": "censo2022_sp/tabelas/10_indigenas.csv",
+      "bytes": 1070490,
+      "sha256": "3355f586e9815213da52ddaaecf1429258227843c05125cbb399140c41b4179b"
+    },
+    {
+      "path": "censo2022_sp/tabelas/10_indigenas_originais.csv.gz",
+      "bytes": 161724,
+      "sha256": "801aa7ae4b616e0cb434ae7458b259a719ab69f9221d828f07fee849e31355a4"
+    },
+    {
+      "path": "censo2022_sp/tabelas/11_quilombolas.csv",
+      "bytes": 743456,
+      "sha256": "7f58e39016f74257bfaa7fe7ca50a8cea06e1a08c5d129acf79a3b0e7bd56773"
+    },
+    {
+      "path": "censo2022_sp/tabelas/11_quilombolas_originais.csv.gz",
+      "bytes": 132079,
+      "sha256": "7b6d69180f839cfd60ceadd672285b237f30f310a9386da2428d11bc14fb639e"
+    },
+    {
+      "path": "censo2022_sp/tabelas/12_deficiencia_autismo.csv",
+      "bytes": 1052017,
+      "sha256": "fc90a24d5f17b309e6ea0bc7cb2b92b9558a43dc8eae6196e36374347eacc321"
+    },
+    {
+      "path": "censo2022_sp/tabelas/12_deficiencia_autismo_originais.csv.gz",
+      "bytes": 295143,
+      "sha256": "ffbc2ca6a3cecc4c57507983f7d4f478684f5561014ff937366c86241529345f"
+    },
+    {
+      "path": "censo2022_sp/tabelas/13_migracao.csv",
+      "bytes": 2008438,
+      "sha256": "065569a424d674bec5af86d101864ffb3726b5454ca1bbf856bb6a23d3073ccc"
+    },
+    {
+      "path": "censo2022_sp/tabelas/13_migracao_originais.csv.gz",
+      "bytes": 384920,
+      "sha256": "05c3576050c61694296b7c12ea235f9834af93fe3f10db62bfb809fb2ee609eb"
+    },
+    {
+      "path": "censo2022_sp/tabelas/14_familias_fecundidade.csv",
+      "bytes": 1297606,
+      "sha256": "a5d8db13072189b1685aaa6d58832f469da85a56d2e04c755facdf9fbd194c52"
+    },
+    {
+      "path": "censo2022_sp/tabelas/14_familias_fecundidade_originais.csv.gz",
+      "bytes": 423880,
+      "sha256": "21e0a7253968aee7439b9a46a108ddb90a874a628ceee9ecfe17ffe3c7dc353a"
+    },
+    {
+      "path": "censo2022_sp/tabelas/15_religiao.csv",
+      "bytes": 599120,
+      "sha256": "7fc801597efc000006921232d96f4ccfc8046645f3b4661cadc4e8718322ef12"
+    },
+    {
+      "path": "censo2022_sp/tabelas/15_religiao_originais.csv.gz",
+      "bytes": 157833,
+      "sha256": "bcb22db1504d16684f75dd00fbaadf85a0f6a3098790eb387da741f4e30fe14a"
+    },
+    {
+      "path": "censo2022_sp/tabelas/16_deslocamentos.csv",
+      "bytes": 912671,
+      "sha256": "28874167c903a00611dc965a87dfdd8463df7768865ce6c8c3b00c785b0539f7"
+    },
+    {
+      "path": "censo2022_sp/tabelas/16_deslocamentos_originais.csv.gz",
+      "bytes": 295699,
+      "sha256": "a48d5b600449e4c3d7c0a49a4c16880a8576821538ac0a68fb4baba482456c1f"
+    },
+    {
+      "path": "censo2022_sp/tabelas/17_favelas.csv",
+      "bytes": 221097,
+      "sha256": "85a2c987fd7d297df1b939b54586b21cdf13fa599301a03423b0989c62c09375"
+    },
+    {
+      "path": "censo2022_sp/tabelas/17_favelas_originais.csv.gz",
+      "bytes": 36012,
+      "sha256": "c0103c5e2b1554f22dd92ee28ca357399936029680ad597aa9111f09a85babd1"
+    },
+    {
+      "path": "censo2022_sp/tabelas/18_registro_obitos.csv",
+      "bytes": 544602,
+      "sha256": "16d6a9cc2422a6965e338510496061008163c27752aae66b08dade68a7caee5e"
+    },
+    {
+      "path": "censo2022_sp/tabelas/18_registro_obitos_originais.csv.gz",
+      "bytes": 145614,
+      "sha256": "8a273bc1c2eaeae0ec5abfd9db3aa1903ebdd843fe36278bb837f9010e938114"
+    },
+    {
+      "path": "censo2022_sp/unificar.py",
+      "bytes": 4797,
+      "sha256": "01afba80048e9fc2dc0f798ff6994fb9a22cca846f5d8ebb7e19f041138db9de"
+    },
+    {
+      "path": "municipal-layer/.gitignore",
+      "bytes": 56,
+      "sha256": "b4b6885073f998c2e9f01e85d42311d9f4d62486194a343f1a365ffd72e837de"
+    },
+    {
+      "path": "municipal-layer/AGENTS.md",
+      "bytes": 2157,
+      "sha256": "ad69c46219fca0f67ac821e84203cbb1a2d5a6e81bc6e16431ff2da115eceb59"
+    },
+    {
+      "path": "municipal-layer/AMBIENTE_VALIDACAO.json",
+      "bytes": 791,
+      "sha256": "aead8181d162fd2283fd72f7d4c555f1cde9304fe2f59cd5991457e1e9615f20"
+    },
+    {
+      "path": "municipal-layer/data/catalog.sqlite",
+      "bytes": 185884672,
+      "sha256": "ee887271042e81b5943e9bd0344f48c06cf50fc9f012b225b3c43ed2b756f870"
+    },
+    {
+      "path": "municipal-layer/data/municipios.gpkg",
+      "bytes": 14430208,
+      "sha256": "1e5200f23ebf372d366edb03bd9bbd125f9398c3751dc0255b1cc3dab5e4e6f9"
+    },
+    {
+      "path": "municipal-layer/data/seade_ipdm.csv",
+      "bytes": 6806140,
+      "sha256": "d505796892c596ea776ef52e87bf683bce579b64e1245879338ce920ebaa7700"
+    },
+    {
+      "path": "municipal-layer/demo/main.jsx",
+      "bytes": 237,
+      "sha256": "770f20ee2bd3cdda36042166392706a91745efdb357dc547688b27488360e337"
+    },
+    {
+      "path": "municipal-layer/demo-dist/assets/index-B96ex2wb.css",
+      "bytes": 3939,
+      "sha256": "63a82af7e66d6f67da29fb15a0c7794df9f3a7e0a83758258989e6f27f1ab38d"
+    },
+    {
+      "path": "municipal-layer/demo-dist/assets/index-DDrR4zlV.js",
+      "bytes": 231441,
+      "sha256": "b5b1c41b3dcc36ceaf45343e2eb5a00c3d9cd0d52ca265f88583851de72a3ffa"
+    },
+    {
+      "path": "municipal-layer/demo-dist/index.html",
+      "bytes": 374,
+      "sha256": "56e42efb47ba528cb53c8caa4303e14c8f389f60438c9f60fce646121b22afd4"
+    },
+    {
+      "path": "municipal-layer/dist/municipal-layer.css",
+      "bytes": 3939,
+      "sha256": "63a82af7e66d6f67da29fb15a0c7794df9f3a7e0a83758258989e6f27f1ab38d"
+    },
+    {
+      "path": "municipal-layer/dist/municipal-layer.js",
+      "bytes": 12913,
+      "sha256": "767778d23f1f992dca345ab50b0373959b8f850d61d427db8f2b2eba56ea65cd"
+    },
+    {
+      "path": "municipal-layer/examples/exportar_api.py",
+      "bytes": 1499,
+      "sha256": "e3a79a474d6efefbd6006428755a43ec7469e33d0d52b2c2516b27879f76032f"
+    },
+    {
+      "path": "municipal-layer/index.html",
+      "bytes": 276,
+      "sha256": "4fd2e55db2269bf0a6e6dc62bef7dfe5bea85a4efcafb5e16b29e35f072f983d"
+    },
+    {
+      "path": "municipal-layer/package-lock.json",
+      "bytes": 60292,
+      "sha256": "c734f02f7f58da989d959eeba8f9a38d92d827daeed6ff3ff169b44fdc920b98"
+    },
+    {
+      "path": "municipal-layer/package.json",
+      "bytes": 581,
+      "sha256": "22fec4d0d2d9714422ee6e982226c1472a462aa55c860d23125c14e38ada4f4d"
+    },
+    {
+      "path": "municipal-layer/README.md",
+      "bytes": 30490,
+      "sha256": "4fe5a0421c844ef0e086bb4413c5e2f7020a07d4c568b5235a8513da2940954e"
+    },
+    {
+      "path": "municipal-layer/scripts/empacotar.py",
+      "bytes": 5460,
+      "sha256": "116532df10f8acbbc3a02118a08503a9171b02fe627eda4139635fb765b8b03c"
+    },
+    {
+      "path": "municipal-layer/scripts/verificar_pacote.py",
+      "bytes": 1822,
+      "sha256": "79ff64788254815923da727c88166d32cb8c22a75a1121a86c60e7a01f4c53e7"
+    },
+    {
+      "path": "municipal-layer/server/app.py",
+      "bytes": 7185,
+      "sha256": "c8138835c4ec13d6dccda1c9b7b4ed6d3a4afdc5998a480fdec0e82572ee9e90"
+    },
+    {
+      "path": "municipal-layer/server/import_data.py",
+      "bytes": 4975,
+      "sha256": "d242aa0725378375f73d8c258085065b5509af5d4ad79bf6ed459b67cfc012d8"
+    },
+    {
+      "path": "municipal-layer/server/requirements.txt",
+      "bytes": 68,
+      "sha256": "295f62b7f56c72135f86d6ff5695623004f3e0742c63cc32315f30f98d039045"
+    },
+    {
+      "path": "municipal-layer/server/test_layer.py",
+      "bytes": 3717,
+      "sha256": "7d34e20225254565f09eea2b05b69f679a7570e04de5b0a3ce6b4044a84c67cf"
+    },
+    {
+      "path": "municipal-layer/src/index.js",
+      "bytes": 88,
+      "sha256": "42f2886e08e16d9b53cb630e5f691669ad2daf8343d10ee6edf3d04f84617bb6"
+    },
+    {
+      "path": "municipal-layer/src/MunicipalLayerBuilder.jsx",
+      "bytes": 10208,
+      "sha256": "14c270b349a031170f1a90ed898d6c8a0a9e43fbaef3301c687836d9523503f4"
+    },
+    {
+      "path": "municipal-layer/src/style.css",
+      "bytes": 3943,
+      "sha256": "356cd6bb1d6338dbd62bd2bd6a01237c9276b6a268b3ce4fe4efac1531236e1a"
+    },
+    {
+      "path": "municipal-layer/VALIDACAO.md",
+      "bytes": 1223,
+      "sha256": "68b7c89ec2d40d1de5176b32aba6e9935ea0942a2a24c19969df6de245c9475d"
+    },
+    {
+      "path": "municipal-layer/vite.config.js",
+      "bytes": 467,
+      "sha256": "8a95eac01e8dd92e0c0fd904819db30f5e32add8aade5c54234056c42f785c94"
+    }
+  ],
+  "exclusions": [
+    "node_modules",
+    "virtualenvs",
+    "caches",
+    "runtime logs",
+    "redundant historical GIS exports"
+  ]
+}

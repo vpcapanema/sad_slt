@@ -1,0 +1,74 @@
+{
+  "id": 9881,
+  "nome": "Domicílios particulares por presença de cônjuge da pessoa responsável pelo domicílio",
+  "URL": "https://sidra.ibge.gov.br/tabela/9881",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Geral",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 800,
+      "nome": "Domicílios particulares",
+      "unidade": "Domicílios",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 1000800,
+      "nome": "Domicílios particulares - percentual do total geral",
+      "unidade": "%",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 1885,
+      "nome": "Presença de cônjuge da pessoa responsável pelo domicílio",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 72599,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 72600,
+          "nome": "Domicílio com responsável e cônjuge de sexo diferente",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72601,
+          "nome": "Domicílio com responsável e cônjuge de mesmo sexo",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72602,
+          "nome": "Domicílio sem cônjuge",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    }
+  ]
+}

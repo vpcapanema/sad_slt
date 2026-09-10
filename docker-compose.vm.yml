@@ -23,6 +23,8 @@ services:
       SIGMA_POSTGRES_PORT: "5432"
     ports:
       - "127.0.0.1:8070:8080"
+    volumes:
+      - ./data/geoespacial/outputs:/app/data/geoespacial/outputs
     networks:
       - default
       - sigma-backend

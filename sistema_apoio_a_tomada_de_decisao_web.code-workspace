@@ -24,6 +24,7 @@
     "python.linting.pylintPath": "${workspaceFolder}/.venv/Scripts/pylint.exe",
     "pylint.args": [],
     "liveServer.settings.port": 5501,
+    "r.lsp.promptToInstall": false,
   },
   "extensions": {
     "recommendations": [

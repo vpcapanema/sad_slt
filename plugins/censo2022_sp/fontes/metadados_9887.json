@@ -1,0 +1,142 @@
+{
+  "id": 9887,
+  "nome": "Domicílios e população residente em favelas e comunidades urbanas, por espécie de domicílio, segundo as Favelas e Comunidades Urbanas",
+  "URL": "https://sidra.ibge.gov.br/tabela/9887",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Características do domicílio",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 9909,
+      "nome": "Domicílios em favelas e comunidades urbanas",
+      "unidade": "Domicílios",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 1009909,
+      "nome": "Domicílios em favelas e comunidades urbanas - percentual do total geral",
+      "unidade": "%",
+      "sumarizacao": []
+    },
+    {
+      "id": 9612,
+      "nome": "População residente em favelas e comunidades urbanas",
+      "unidade": "Pessoas",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 1009612,
+      "nome": "População residente em favelas e comunidades urbanas - percentual do total geral",
+      "unidade": "%",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 3,
+      "nome": "Espécie",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 59993,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 9697,
+          "nome": "Particular",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 2504,
+          "nome": "Particular permanente",
+          "unidade": null,
+          "nivel": 2
+        },
+        {
+          "id": 59998,
+          "nome": "Particular permanente ocupado",
+          "unidade": null,
+          "nivel": 3
+        },
+        {
+          "id": 59999,
+          "nome": "Particular permanente ocupado - com entrevista",
+          "unidade": null,
+          "nivel": 4
+        },
+        {
+          "id": 60000,
+          "nome": "Particular permanente ocupado - sem entrevista",
+          "unidade": null,
+          "nivel": 4
+        },
+        {
+          "id": 60001,
+          "nome": "Particular permanente não ocupado",
+          "unidade": null,
+          "nivel": 3
+        },
+        {
+          "id": 60002,
+          "nome": "Particular permanente não ocupado - vago",
+          "unidade": null,
+          "nivel": 4
+        },
+        {
+          "id": 60003,
+          "nome": "Particular permanente não ocupado - uso ocasional",
+          "unidade": null,
+          "nivel": 4
+        },
+        {
+          "id": 2505,
+          "nome": "Particular improvisado",
+          "unidade": null,
+          "nivel": 2
+        },
+        {
+          "id": 103995,
+          "nome": "Coletivo",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 10004,
+          "nome": "Coletivo - com morador",
+          "unidade": null,
+          "nivel": 2
+        },
+        {
+          "id": 10005,
+          "nome": "Coletivo - sem morador",
+          "unidade": null,
+          "nivel": 2
+        }
+      ]
+    }
+  ]
+}

@@ -57,6 +57,9 @@
   // Aliases que só valem dentro de uma tabela específica (mesmo nome de coluna
   // tem sentidos diferentes em outras tabelas, ex.: "status", "codigo", "criado_em").
   const ALIAS_POR_TABELA = {
+    categoria_extracao_atributos: {
+      nome: "Categoria", conceito: "Conceito", criado_em: "Data de criação",
+    },
     hierarquizacao_portfolio: {
       codigo: "Código da hierarquização",
       status: "Situação",
@@ -86,6 +89,7 @@
 
   // ---------- Aliases de esquemas e tabelas (Title Case pt-BR) ----------
   const ESQUEMA_ALIAS = {
+    dominios: "Domínios",
     ahp: "AHP", auditoria: "Auditoria", demandas: "Demandas", geo: "Geografia",
     geoprocessamento: "Geoprocessamento", hierarquizacao_demandas: "Hierarquização de Demandas",
   };
@@ -109,6 +113,7 @@
     validacao: "Validação", hierarquizacao: "Hierarquização", portfolio_: "Portfólio",
   };
   const TABELA_ALIAS = {
+    categoria_extracao_atributos: "Categorias de Extração de Atributos",
     log_sistema: "Registros do Sistema",
     plano_unidade_espacial: "Unidades Espaciais do Plano",
     programa_unidade_espacial: "Unidades Espaciais do Programa",
@@ -137,7 +142,12 @@
     portal_servico: "Serviços do Portal", ambiente_usuario: "Ambiente por Usuário",
     mensagem_execucao: "Mensagens de Execução", execucao_etapa: "Etapas de Execução",
     produto_fonte: "Fontes do Produto",
+    dom_atributo_objeto: "Atributos do Objeto",
+    dom_status_hierarquizacao: "Status da Hierarquização",
+    dom_status_hierarquizacao_transicao: "Transições de Status da Hierarquização",
   };
+  // Rótulo curto do esquema para a etiqueta ao lado do nome, no grupo de domínios.
+  const ESQUEMA_BADGE = { hierarquizacao_demandas: "Hierarquização" };
   function aliasEsquema(nome) { return ESQUEMA_ALIAS[nome] || humanize(nome); }
   function aliasTabela(nome) {
     if (TABELA_ALIAS[nome]) return TABELA_ALIAS[nome];
@@ -184,7 +194,8 @@
       },
         el("i", { class: t.dominio ? "fa-solid fa-list" : "fa-solid fa-table", "aria-hidden": "true" }),
         el("span", {}, aliasTabela(t.nome)),
-        t.dominio ? el("span", { class: "dominio-badge" }, aliasEsquema(t.esquema)) : "",
+        t.dominio ? el("span", { class: "dominio-badge", title: aliasEsquema(t.esquema) },
+          ESQUEMA_BADGE[t.esquema] || aliasEsquema(t.esquema)) : "",
         el("span", { class: "admin-table-count" }, t.registros === null ? "—" : String(t.registros)));
       lista.append(el("li", {}, link));
     });
@@ -205,7 +216,8 @@
     const menu = params.get("menu");
     const esquema = params.get("esquema");
     const tabela = params.get("tabela");
-    const alvo = menu || esquema;
+    const destino = menu || esquema;
+    const alvo = destino === "dominios" ? "__dominios__" : destino;
     if (!alvo) return;
 
     const grupo = [...refs.menu.querySelectorAll(".admin-schema")]
@@ -262,7 +274,7 @@
     state.filtro = { coluna: null, tipo: "valor", valor: null, inverter: false };
     state.valoresCache = {};
     const destino = new URL(window.location.href);
-    destino.search = new URLSearchParams({ menu: esquema, esquema, tabela }).toString();
+    destino.search = new URLSearchParams({ menu: dominio ? "__dominios__" : esquema, esquema, tabela }).toString();
     history.replaceState(null, "", destino);
     carregarTabela();
   }
@@ -424,7 +436,7 @@
       // Sem PK: exibe dados, mas sem edição/exclusão.
     }
     const wrap = el("div", { class: "admin-table-wrap" });
-    const table = el("table", { class: "admin-data-table" });
+    const table = el("table", { class: "admin-data-table", "data-tabela": state.tabela });
 
     // Cabeçalho: checkbox + colunas (2 linhas)
     const thSelect = el("th", { class: "col-select" }, el("input", {
@@ -492,6 +504,9 @@
   }
 
   function campoEdicao(coluna, valor) {
+    if (state.esquema === "dominios" && state.tabela === "categoria_extracao_atributos" && coluna.nome === "conceito") {
+      return el("textarea", { "data-col": coluna.nome, rows: 5, "aria-label": "Conceito" }, valor ?? "");
+    }
     if (coluna.udt === "bool") {
       const sel = el("select", { "data-col": coluna.nome },
         el("option", { value: "" }, "—"),
@@ -601,7 +616,9 @@
     const corpo = el("div", { class: "admin-modal-body" });
     editaveis.forEach((c) => {
       let campo;
-      if (c.udt === "bool") {
+      if (state.esquema === "dominios" && state.tabela === "categoria_extracao_atributos" && c.nome === "conceito") {
+        campo = campoEdicao(c, "");
+      } else if (c.udt === "bool") {
         campo = el("select", { "data-col": c.nome }, el("option", { value: "" }, "—"), el("option", { value: "true" }, "Sim"), el("option", { value: "false" }, "Não"));
       } else {
         campo = el("input", { type: "text", "data-col": c.nome, placeholder: c.default ? `padrão: ${c.default}` : "" });

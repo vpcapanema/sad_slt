@@ -1,0 +1,43 @@
+{
+  "id": 9888,
+  "nome": "População residente, Área territorial e Densidade demográfica em favelas e comunidades urbanas, segundo as Favelas e Comunidades Urbanas",
+  "URL": "https://sidra.ibge.gov.br/tabela/9888",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Território",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 9612,
+      "nome": "População residente em favelas e comunidades urbanas",
+      "unidade": "Pessoas",
+      "sumarizacao": []
+    },
+    {
+      "id": 9911,
+      "nome": "Área territorial de favelas e comunidades urbanas",
+      "unidade": "Quilômetros quadrados",
+      "sumarizacao": []
+    },
+    {
+      "id": 13096,
+      "nome": "Densidade demográfica em favelas e comunidades urbanas",
+      "unidade": "Habitante por quilômetro quadrado",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": []
+}

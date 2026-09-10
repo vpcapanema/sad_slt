@@ -18,7 +18,7 @@ from api.services.geoprocessamento_engine import (
     REQUIRED_PARAMETERS,
     geoprocessamento_engine,
 )
-from api.services import geoprocessamento_relatorio
+from api.services import geoprocessamento_relatorio, ciclo_vida_arquivos as ciclo
 from api.services.geospatial_upload_storage import store_upload
 from api.services.importar_camadas_service import importar_camadas
 
@@ -109,7 +109,7 @@ class GeoprocessamentoJobs:
             snapshot = deepcopy(job)
         job["relatorio"] = geoprocessamento_relatorio.salvar(snapshot)
 
-    def create(self, operation_id: str, params: dict[str, Any]) -> dict[str, Any]:
+    def create(self, operation_id: str, params: dict[str, Any], responsavel: str | None = None) -> dict[str, Any]:
         op_id = operation_id.upper()
         if op_id not in CATALOG:
             raise ValueError(f"Algoritmo {op_id} não catalogado")
@@ -128,6 +128,7 @@ class GeoprocessamentoJobs:
         if op_id not in NO_PERSISTED_OUTPUT:
             tasks += ["Identificador da saída obtido", "Saída consultada no banco", "Persistência da saída confirmada"]
         tasks += ["Catálogo atualizado", "Resultado sincronizado", "Processo finalizado"]
+        execution_id = ciclo.iniciar(op_id, params, responsavel)
         job_id = self._new("operacao", tasks)
         with self._lock:
             job = self._jobs[job_id]
@@ -135,6 +136,7 @@ class GeoprocessamentoJobs:
             job["algoritmo"] = CATALOG[op_id]
             job["parametros"] = deepcopy(params)
             job["entradas"] = list(inputs)
+            job["execucao_id"] = execution_id
         self._advance(job_id, "Solicitação registrada")
         self._executor.submit(self._run_operation, job_id, op_id, deepcopy(params), inputs, required)
         return self.get(job_id) or {}
@@ -143,6 +145,8 @@ class GeoprocessamentoJobs:
         self, job_id: str, op_id: str, params: dict[str, Any],
         inputs: list[str], required: list[str],
     ) -> None:
+        execution_id = self.get(job_id)["execucao_id"]
+        token = ciclo.execucao_atual.set(execution_id)
         try:
             self._advance(job_id, f"Algoritmo localizado no catálogo: {CATALOG[op_id]}")
             for name in required:
@@ -192,11 +196,10 @@ class GeoprocessamentoJobs:
             elif resource_id and destination == "memoria":
                 result["formato_saida"] = "JSON"
                 if resource_id not in inputs:
-                    camada_geoespacial_repository.excluir(resource_id)
                     if resource_id in geo._metadados:
-                        geo._metadados[resource_id]["destino"] = "memoria"
-                    result["persistencia"] = "memoria_sessao"
-                    self._append_dynamic(job_id, "Resultado mantido somente na memória da sessão")
+                        geo._metadados[resource_id]["destino"] = "temporario"
+                    result["persistencia"] = "temporario_registrado"
+                    self._append_dynamic(job_id, "Resultado temporário registrado com arquivo recuperável")
             if op_id not in NO_PERSISTED_OUTPUT:
                 if not resource_id:
                     raise RuntimeError("A operação não retornou identificador de saída")
@@ -205,15 +208,26 @@ class GeoprocessamentoJobs:
                 self._advance(job_id, "Saída consultada no banco")
                 if persisted is None:
                     raise RuntimeError("A saída não foi encontrada no catálogo persistente")
+                if persisted.get("caminho_arquivo"):
+                    result["arquivo_resultado"] = {"caminho": persisted["caminho_arquivo"]}
                 self._advance(job_id, "Persistência da saída confirmada")
             catalog = asyncio.run(geo.listar_recursos())
             self._advance(job_id, "Catálogo de camadas atualizado", {"itens": len(catalog)})
             if resource_id and op_id not in NO_PERSISTED_OUTPUT and not any(item["id"] == resource_id for item in catalog):
                 raise RuntimeError("A saída não foi sincronizada no catálogo")
             self._advance(job_id, "Resultado sincronizado com o catálogo")
+            result["execucao_id"] = execution_id
             self._complete(job_id, result)
+            if resource_id:
+                from api.db.connection import get_connection
+                with get_connection() as conn:
+                    ciclo.registrar_uso(conn, resource_id, "relatorio", job_id)
+            ciclo.finalizar(execution_id, temporario=destination == "memoria")
         except Exception as exc:
+            ciclo.finalizar(execution_id, erro=type(exc).__name__)
             self._fail(job_id, exc)
+        finally:
+            ciclo.execucao_atual.reset(token)
 
     def _append_dynamic(self, job_id: str, label: str) -> None:
         """Acrescenta uma nanotarefa descoberta pelo serviço durante a execução."""

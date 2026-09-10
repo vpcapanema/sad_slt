@@ -113,9 +113,12 @@
 }
 .admin-table-link {
   width: 100%;
-  display: flex;
+  /* Grade: nome ocupa a linha inteira; o esquema desce para uma segunda linha
+     em vez de disputar largura com o nome e truncá-lo. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  column-gap: 8px;
   padding: 7px 16px 7px 34px;
   border: 0;
   background: transparent;
@@ -135,16 +138,22 @@
 }
 .admin-table-link .fa-table,
 .admin-table-link .fa-list {
+  grid-column: 1;
+  grid-row: 1;
   color: #8aa0b3;
   width: 14px;
 }
 .admin-table-link > span:not(.dominio-badge):not(.admin-table-count) {
-  flex: 1;
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .admin-table-count {
+  grid-column: 3;
+  grid-row: 1;
   font-size: 0.68rem;
   color: #94a3b8;
   font-variant-numeric: tabular-nums;
@@ -160,6 +169,10 @@
   background: #fdecec;
 }
 .admin-table-link .dominio-badge {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: start;
+  margin-top: 2px;
   font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -324,6 +337,7 @@
   font-style: italic;
 }
 .admin-data-table td.cell-editable input,
+.admin-data-table td.cell-editable textarea,
 .admin-data-table td.cell-editable select {
   width: 100%;
   min-width: 90px;
@@ -524,4 +538,20 @@
   color: #fff;
   background: rgba(54, 162, 105, 0.2);
   box-shadow: inset 3px 0 0 var(--pli-green, #36a269);
+}
+
+/* Conceitos extensos mantêm a leitura e a edição dentro da tabela de categorias. */
+.admin-data-table[data-tabela="categoria_extracao_atributos"] td:nth-child(4) {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 280px;
+  max-width: 520px;
+  text-align: left;
+  line-height: 1.5;
+}
+.admin-data-table[data-tabela="categoria_extracao_atributos"] textarea {
+  min-width: 280px;
+  text-align: left;
+  resize: vertical;
+  font: inherit;
 }

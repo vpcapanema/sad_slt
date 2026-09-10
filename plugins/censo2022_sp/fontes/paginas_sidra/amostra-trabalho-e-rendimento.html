@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+
+
+
+<html>
+
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" />
+    <title>Sistema IBGE de Recupera&#231;&#227;o Autom&#225;tica - SIDRA</title>
+    <link rel="shortcut icon" href="/content/imagens/sidra-icon.ico">
+
+
+
+<link href="/Content/bootstrap.css" rel="stylesheet"/>
+<link href="/Content/bootstrap-tour.css" rel="stylesheet"/>
+<link href="/Content/bootstrap-theme.css" rel="stylesheet"/>
+<link href="/Content/sidra-ui.css" rel="stylesheet"/>
+<link href="/Content/sidra.css" rel="stylesheet"/>
+<link href="/Content/perfil/jquery.perfil.login.css" rel="stylesheet"/>
+<link href="/Content/perfil/jquery.perfil.janelausuario.css" rel="stylesheet"/>
+<link href="/Content/jquery.janela.css" rel="stylesheet"/>
+<link href="/Content/jquery.arvore.css" rel="stylesheet"/>
+<link href="/Content/jquery.jqplot.min.css" rel="stylesheet"/>
+<link href="/Scripts/nvd3_1_8/nv.d3.css" rel="stylesheet"/>
+
+    <link href="/Content/home.css" rel="stylesheet"/>
+<link href="/Content/jquery.tabela.css" rel="stylesheet"/>
+<link href="/Content/contato.css" rel="stylesheet"/>
+<link href="/Content/page-internal.css" rel="stylesheet"/>
+<link href="/Content/jquery.sidra-slider.css" rel="stylesheet"/>
+
+<script src="/Scripts/jquery-2.1.1.js"></script>
+<script src="/Scripts/jquery.tmpl.js"></script>
+<script src="/Scripts/bootstrap.js"></script>
+<script src="/Scripts/bootstrap-tour.js"></script>
+<script src="/Scripts/tour.js"></script>
+<script src="/Scripts/bootbox.min.js"></script>
+<script src="/Scripts/string.js"></script>
+<script src="/Scripts/url.js"></script>
+<script src="/Scripts/editor-async.js"></script>
+<script src="/Scripts/sidra-ui.js"></script>
+<script src="/Scripts/blob.js"></script>
+<script src="/Scripts/base64.js"></script>
+<script src="/Scripts/jszip.min.js"></script>
+<script src="/Scripts/filesaver.js"></script>
+<script src="/Scripts/jquery.sidra.validator.js"></script>
+<script src="/Scripts/perfil/jquery.perfil.janelausuario.js"></script>
+<script src="/Scripts/sidra.js"></script>
+<script src="/Scripts/jquery.janela.js"></script>
+<script src="/Scripts/jquery.exportaSVG.js"></script>
+<script src="/Scripts/jquery.arvore.js"></script>
+<script src="/Scripts/jquery.loading.js"></script>
+<script src="/Scripts/sidra-widget-grafico.js"></script>
+<script src="/Scripts/nvd3_1_8/d3.js"></script>
+<script src="/Scripts/nvd3_1_8/nv.d3.js"></script>
+<script src="/Scripts/jquery.sidra.utils.js?v=1"></script>
+<script src="/Scripts/perfil/jquery.perfil.login.js?v=1"></script>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YR1L80XXVD"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-YR1L80XXVD');
+
+    </script>
+</head>
+
+
+<body onload="checkJquery()" class="" data-autenticado="0" data-email="" data-nome="" data-foto="">
+
+    <div id="barra-brasil" style="background:#7F7F7F; height: 20px; padding:0 0 0 10px; display:block;">
+        <ul id="menu-barra-temp" style="list-style:none;">
+            <li style="display:inline; float:left; padding-right:10px; margin-right:10px; border-right:1px solid #EDEDED">
+                <a href="http://brasil.gov.br" style="font-family:sans, sans-serif; text-decoration:none; color:white;">Portal do Governo Brasileiro</a>
+            </li>
+            <li>
+                <a style="font-family:sans, sans-serif; text-decoration:none; color:white;" href="http://epwg.governoeletronico.gov.br/barra/atualize.html">Atualize sua Barra de Governo</a>
+            </li>
+        </ul>
+    </div>
+    <div class="menu-ibge">
+        <div class="container-fluid">
+            <div class="wrapper-logo">
+                <a href="https://www.ibge.gov.br">
+                    <div class="logo-ibge xs"></div>
+                </a>
+            </div>
+            <div class="texto-ibge">Sistema IBGE de Recuperação Automática - SIDRA</div>
+        </div>
+    </div>
+    <div class="menu-sidra navbar navbar-default navbar-static-top" role="navigation">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <div class="vertical-align logo xs">
+                    <div class="cell">
+                        <a href="/">
+                            <div class="logo-img xs"></div>
+                        </a>
+                    </div>
+                </div>
+
+
+                <div class="vertical-align right xs">
+                    <div class="cell">
+
+                        <button type="button"
+                                class="navbar-toggle menu-link-text button-xs areausuario-link icone-area-usuario"
+                                data-href="/perfil"
+                                data-tipo="xs"
+                                aria-expanded="false">
+                            <i class="glyphicon glyphicon-user lupa"></i>
+                        </button>
+
+                        <button id="sidra-pesquisa-sm-button" type="button"
+                                class="navbar-toggle menu-link-text button-xs"
+                                data-target="#sidra-pesquisa-sm" aria-expanded="false">
+                            <i class="glyphicon glyphicon-search lupa"></i>
+                        </button>
+
+                        <button type="button" class="navbar-toggle button-xs"
+                                data-toggle="collapse" data-target="#sidra-menu-collapse"
+                                aria-expanded="false">
+
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                        </button>
+
+                        <div class="pesquisa pesquisa-sm" id="sidra-pesquisa-sm">
+                            <form data-target="#sidra-pesquisa-sm">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="pesquisar">
+                                    <div class="input-group-btn">
+                                        <button type="button" class="btn btn-default">
+                                            OK
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+
+            <div class="navbar-collapse collapse" id="sidra-menu-collapse">
+                <ul class="nav navbar-nav navbar-right xs">
+
+                    <li class="dropdown hidden-menu pesquisas-menu-dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Pesquisas<b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                    <div class="pesquisas-menu-arvore">
+
+        <div class="pesquisas-menu-form">
+            <input type="text" placeholder="Filtro" class="form-control" />
+        </div>
+
+        <ul>
+            <li>
+                <span>Indicadores</span>
+                <ul>
+                    <li>
+                        <span>Trabalho e Rendimento</span>
+                        <ul>
+                            <li><a href="/pesquisa/pnadcm">Pesquisa Nacional por Amostra de Domicílios Continua Mensal - PNADCM</a></li>
+                            <li><a href="/pesquisa/pnadct">Pesquisa Nacional por Amostra de Domicílios Continua Trimestral - PNADCT</a></li>
+                            <li><a href="/pesquisa/pme">Pesquisa Mensal de Emprego - PME (extinta)</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Agropecuária</span>
+                        <ul>
+                            <li><a href="/pesquisa/estoques">Pesquisa de Estoques - ESTOQUES</a></li>
+                            <li><a href="/pesquisa/lspa">Levantamento Sistemático da Produção Agrícola - LSPA</a></li>
+                            <li><a href="/pesquisa/abate">Pesquisa Trimestral do Abate de Animais - ABATE</a></li>
+                            <li><a href="/pesquisa/couro">Pesquisa Trimestral do Couro - COURO</a></li>
+                            <li><a href="/pesquisa/leite">Pesquisa Trimestral do Leite - LEITE</a></li>
+                            <li><a href="/pesquisa/pog">Produção de Ovos de Galinha - POG</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Indústria</span>
+                        <ul>
+                            <li><a href="/pesquisa/pimes">Pesquisa Industrial Mensal de Emprego e Salário - PIMES (extinta)</a></li>
+                            <li><a href="/pesquisa/pim-pf-brasil">Pesquisa Industrial Mensal - Produção Física - PIM-PF-Brasil</a></li>
+                            <li><a href="/pesquisa/pim-pf-regional">Pesquisa Industrial Mensal - Produção Física - PIM-PF-Regional</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Comércio</span>
+                        <ul>
+                            <li><a href="/pesquisa/pmc">Pesquisa Mensal de Comércio - PMC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Serviços</span>
+                        <ul>
+                            <li><a href="/pesquisa/pms">Pesquisa Mensal de Serviços - PMS</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Índices, Preços e Custos</span>
+                        <ul>
+                            <li><a href="/pesquisa/ipp">Índice de Preços ao Produtor - IPP</a></li>
+                            <li><a href="/pesquisa/sinapi">Sistema Nacional de Pesquisa de Custos e Índices da Construção Civil - SINAPI</a></li>
+                            <li><a href="/pesquisa/snipc">Índices de Preços ao Consumidor (IPCA, INPC e IPCA15) - SNIPC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Sistema de Contas Nacionais Trimestrais</span>
+                        <ul>
+                            <li><a href="/pesquisa/cnt">Contas Nacionais Trimestrais - CNT</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="/pesquisa/ods">Objetivos de Desenvolvimento Sustentável - ODS</a></li>
+                </ul>
+            </li>
+
+
+            <li>
+                <span>População</span>
+                <ul>
+                    <li>
+                        <a href="/pesquisa/censo-demografico">Censo Demográfico - Censo-Demografico</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/registro-civil">Estatísticas do Registro Civil - Registro-Civil</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pnadca">Pesquisa Nacional por Amostra de Domicílios Contínua Anual - PNADCA</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pnad">Pesquisa Nacional por Amostra de Domicílios - PNAD</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/estimapop">Estimativas de População - EstimaPop</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/projecao-da-populacao">Projeções da População</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pof">Pesquisa de Orçamentos Familiares - POF</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pns">Pesquisa Nacional de Saúde - PNS</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/ams">Pesquisa Assistência Médico-Sanitária - AMS</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pnsb">Pesquisa Nacional de Saneamento Básico - PNSB</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pense">Pesquisa Nacional de Saúde do Escolar - PeNSE</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/munic">Pesquisa de Informações Básicas Municipais - MUNIC</a>
+                    </li>
+                </ul>
+            </li>
+
+            <li>
+                <span>Economia</span>
+                <ul>
+                    <li>
+                        <span>Indústria</span>
+                        <ul>
+                            <li><a href="/pesquisa/paic">Pesquisa Anual da Indústria da Construção - PAIC</a></li>
+                            <li><a href="/pesquisa/pia-empresa">Pesquisa Industrial Anual - PIA-Empresa</a></li>
+                            <li><a href="/pesquisa/pia-produto">Pesquisa Industrial Anual - PIA-Produto</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Serviços</span>
+                        <ul>
+                            <li><a href="/pesquisa/pas">Pesquisa Anual de Serviços - PAS</a></li>
+                            <li><a href="/pesquisa/pspp">Pesquisa de Serviços de Publicidade e Promoção - PSPP</a></li>
+                            <li><a href="/pesquisa/psti">Pesquisa de Serviços de Tecnologia da Informação - PSTI</a></li>
+                            <li><a href="/pesquisa/psh">Pesquisa de Serviços de Hospedagem - PSH</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Agropecuária</span>
+                        <ul>
+                            <li><a href="/pesquisa/censo-agropecuario">Censo Agropecuário - Censo-Agropecuario</a></li>
+                            <li><a href="/pesquisa/pam">Produção Agrícola Municipal - PAM</a></li>
+                            <li><a href="/pesquisa/pevs">Produção da Extração Vegetal e da Silvicultura - PEVS</a></li>
+                            <li><a href="/pesquisa/ppm">Pesquisa da Pecuária Municipal - PPM</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Comércio</span>
+                        <ul>
+                            <li><a href="/pesquisa/pac">Pesquisa Anual de Comércio - PAC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Inovação e Empreendedorismo</span>
+                        <ul>
+                            <li><a href="/pesquisa/pintec">Pesquisa de Inovação - PINTEC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Contas Nacionais</span>
+                        <ul>
+                            <li><a href="/pesquisa/cna">Contas Nacionais Anuais - CNA</a></li>
+                            <li><a href="/pesquisa/pib-munic">Produto Interno Bruto dos Municípios - PIB-Munic</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais">Contas Econômicas Ambientais</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="/pesquisa/cempre">Cadastro Central de Empresas - CEMPRE</a></li>
+                    <li><a href="/pesquisa/demografia-das-empresas">Demografia das Empresas - Demografia-das-Empresas</a></li>
+                    <li><a href="/pesquisa/fasfil">Fundações Privadas e Associações sem Fins Lucrativos - FASFIL</a></li>
+                    <li><a href="/pesquisa/cadastros-de-mei">Estatísticas dos Cadastros de Microempreendedores Individuais (MEI) </a></li>
+                </ul>
+            </li>
+
+            <li>
+                <span>Meio Ambiente</span>
+                <ul>
+                    <li>
+                        <span>Contas Econômicas Ambientais</span>
+                        <ul>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-da-terra">Contas Econômicas Ambientais da Terra</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-economicas-da-agua">Contas Econômicas Ambientais da Água - CEAA</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-economicas-de-energia">Contas Econômicas Ambientais de Energia - CEAE</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-de-ecossistemas">Contas de Ecossistemas: O Uso da Terra nos Biomas</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-de-especies">Contas de Ecossistemas: Espécies Ameaçadas</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contribuicao-dos-polinizadores">Contribuição dos Polinizadores para as Produções Agrícola e Extrativista do Brasil</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="/pesquisa/ids">Indicadores de Desenvolvimento Sustentável - IDS</a></li>
+                    <li><a href="/pesquisa/areas-urbanizadas">Áreas Urbanizadas</a></li>
+                    <li><a href="/pesquisa/avaliacao-sobre-a-biodiversidade">Avaliação dos dados sobre a Biodiversidade Brasileira</a></li>
+                </ul>
+            </li>
+
+        </ul>
+
+    </div>
+
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="visible-menu pesquisas-menu-dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="modal" data-target="#pesquisas-menu-modal">Pesquisas</a>
+                    </li>
+
+                    <li><a href="/acervo">Acervo</a></li>
+                    <li><a href="/territorio">Território</a></li>
+                    <li><a href="/contato">Contato</a></li>
+                    <li><a href="/ajuda">Ajuda</a></li>
+
+                    <li class="areausuario-li">
+                        <a href="/perfil" title="Área do Usuário Sidra" data-tipo="lg"
+                           class="areausuario-perfil-link icone-area-usuario"
+                           onclick="javascript: sessionStorage.setItem('isFirstAccess', true);">
+                            <i class="glyphicon glyphicon-user"></i>
+                        </a>
+
+                            <div class="areausuario-login-container"
+         data-target=".areausuario-perfil-link"
+         data-link=".areausuario-link"
+         data-modo="janela">
+
+        <div class="areausuario-login-arrow">
+        </div>
+
+        <div class="areausuario-login">
+            <div class="login-header">
+                <button type="button" class="close" data-dismiss="modal">×</button>
+                <h4>Acessar sua Conta</h4>
+            </div>
+
+
+            <div class="login-body">
+                <ul class="opcao-login">
+                    <li class="active" data-target=".formulario-sidra">Sidra</li>
+                    <li data-target=".formulario-ibge-mfa">IBGE</li>
+                </ul>
+
+                <div class="formulario formulario-sidra">
+                    <form class="login-ajax-form" method="post" action="/perfil/login/sidra">
+                        <input type="hidden" name="ReturnUrl" />
+
+                        <span data-validator-for="Email">
+                        </span>
+                        <input placeholder="E-mail" name="Email"
+                               data-val-required="O campo Email é obrigatório."
+                               class="form-control primeiro" type="text" />
+
+                        <div class="separador"></div>
+
+                        <span data-validator-for="Senha"></span>
+                        <input placeholder="Senha" name="Senha"
+                               data-val-required="O campo Senha é obrigatório."
+                               class="form-control" type="password" />
+
+                        <div class="separador"></div>
+
+                        <label class="checkbox-inline"><input name="ManterContectado" type="checkbox" /> Manter-me conectado</label>
+
+                        <div class="separador"></div>
+
+                        <input type="submit" value="Entrar" class="btn btn-sm btn-success login" />
+
+                        <div class="separador"></div>
+
+                        <a class="esqueci" href="/perfil/usuario/recuperarsenha">Esqueci minha Senha</a>
+                        <a class="cadastro" href="/perfil/usuario/cadastro">Cadastre-se</a>
+                    </form>
+
+                    <div class="redes">
+                        <div class="redes-titulo">
+                            Acesse pelas redes sociais
+                        </div>
+                        <div class="icons">
+                            <a class="login-externo" data-action="Facebook" href="#" title="Facebook"><img class="icon-rede" src="/Content/imagens/login/facebook.png" /></a>
+                            <a class="login-externo" data-action="Google" href="#" title="Google"><img class="icon-rede" src="/Content/imagens/login/google.png" /></a>
+                            <a class="login-externo" data-action="Microsoft" href="#" title="Microsoft"><img class="icon-rede" src="/Content/imagens/login/microsoft.png" /></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="formulario formulario-ibge-mfa" style="display: none">
+                        <form class="login-ajax-form" method="post" action="/perfil/login/ibgemfa">
+                            <input type="hidden" name="ReturnUrl" />
+
+
+                            <span data-validator-for="Usuario"></span>
+                            <input placeholder="Usuário IBGE"
+                                   name="Usuario"
+                                   data-val-required="O campo Email é obrigatório."
+                                   class="form-control primeiro" type="text" />
+
+                            <div class="separador"></div>
+
+                            <span data-validator-for="Senha"></span>
+                            <input placeholder="Senha"
+                                   name="Senha"
+                                   data-val-required="O campo Senha é obrigatório."
+                                   class="form-control" type="password" />
+
+                            <div class="separador"></div>
+                            <label class="checkbox-inline"><input type="checkbox" /> Manter-me conectado</label>
+
+                            <div class="separador"></div>
+                            <input type="submit" value="Entrar" class="btn btn-sm btn-success login" />
+
+                            <div class="separador"></div>
+                            <span>Utilize seu login de rede</span>
+                        </form>
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+                        
+
+                    </li>
+
+                    <li class="lupa-li">
+
+                        <a href="#" data-target="#sidra-pesquisa-lg" title="Pesquisa Tabela">
+                            <i class="glyphicon glyphicon-search lupa"></i>
+                        </a>
+
+                        <div class="pesquisa" id="sidra-pesquisa-lg">
+                            <form data-target="#sidra-pesquisa-lg">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="pesquisar">
+                                    <div class="input-group-btn">
+                                        <button type="button" class="btn btn-default">
+                                            OK
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script src="/Scripts/barra.js" type="text/javascript"></script>
+
+    
+
+
+
+    <section class="page-banner" style="
+    background-image: url(/Content/imagens/censo.png);
+    background-repeat-y: no-repeat;
+    background-size: 500px 177px;
+    ">
+
+    <div class="text-center" style="
+    background-color: rgba(180, 230, 255, 0.5); 
+    height: 177px;
+    padding: 0;
+    text-shadow: 2px 2px black;">
+
+        <img style="margin-top: 20px;" src="/Content/imagens/censo-logo.png"/>
+        <h3 style="
+            margin: 0;
+            margin-top: 10px;
+            color: rgb(234, 194, 97);
+            font-weight: bold;
+            font-size: 24px;">Censo Demográfico</h3>
+    </div>
+</section>
+
+    <nav class="navbar navbar-inverse">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#sidra-pesquisa-menu-collapse" aria-expanded="false">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+        </div>
+
+        <div class="collapse navbar-collapse" id="sidra-pesquisa-menu-collapse">
+            <ul class="nav navbar-nav">
+                <li class="dropdown">
+                    <a href="/pesquisa/censo-demografico/series-temporais/series-temporais/">
+                        Séries Temporais
+                    </a>
+                </li>
+
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Demográfico 2022<b class="caret"></b></a>
+                    <ul class="dropdown-menu columns">
+                        <li>
+                            <!-- Content container to add padding -->
+                            <div class="container-menu">
+                                <div class="row">
+                                    <ul class="col-sm-4 list-unstyled list-border">
+                                        <li class="columns-title">Geral</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/inicial">Inicial</a></li>
+                                        <li class="columns-title columns-title-margin">Primeiros Resultados do Universo</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/primeiros-resultados-populacao-e-domicilios">População e Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/primeiros-resultados-quilombolas">Quilombolas</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/primeiros-resultados-indigenas">Indígenas</a></li>
+                                        <li class="columns-title columns-title-margin">Resultados preliminares da Amostra</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-caracteristicas-dos-domicilios">Características dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-educacao">Educação</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-pessoas-com-deficiencia-e-espectro-autista">Pessoas com deficiência e Pessoas diagnosticadas com transtorno do espectro autista</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-religioes">Religiões</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-fecundidade-e-migracao">Fecundidade e Migração</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-trabalho-e-rendimento">Trabalho e Rendimento</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-deslocamentos-para-trabalho-e-estudo">Deslocamentos para Trabalho e para Estudo</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-nupcialidade-e-familia">Nupcialidade e Família</a></li>
+                                    </ul>
+                                    <ul class="col-sm-8 list-unstyled">
+                                        <li class="columns-title">Resultados do Universo</li>
+                                    </ul>
+                                    <ul class="col-sm-4 list-unstyled list-border">
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-populacao-por-idade-e-sexo">População por Idade e Sexo</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-populacao-por-cor-ou-raca">População por Cor ou Raça</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-caracteristicas-dos-domicilios">Características dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-quilombolas-e-indigenas-por-sexo-e-idade">Quilombolas e Indígenas por Sexo e Idade</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-quilombolas-alfabetizacao-e-domicilios">Quilombolas: Alfabetização e Características dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-populacao-e-domicilios-situacao-urbana-ou-rural">População e Domicílios: Situação Urbana ou Rural</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-caracteristicas-urbanisticas-do-entorno-dos-domicilios">Características Urbanísticas do Entorno dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-unidades-de-conservacao-caracteristicas-pessoas-e-domicilios">Unidades de Conservação: Principais Características das Pessoas e dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-etnias-e-linguas-indigenas-caracteristicas-sociodemograficas">Etnias e Línguas Indígenas: Principais Características Sociodemográficas</a></li>
+                                    </ul>
+                                    <ul class="col-sm-4 list-unstyled">
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-alfabetizacao">Alfabetização</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-registros-de-nascimentos">Registros de Nascimentos</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-tipos-de-domicilios">Tipos de Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-indigenas-alfabetizacao-registros-de-nascimentos-e-domicilios">Indígenas: Alfabetização, Registros de Nascimentos e Características dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-composicao-domiciliar-e-obitos-informados">Composição Domiciliar e Óbitos Informados</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-favelas-e-comunidades-urbanas">Favelas e Comunidades Urbanas</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-indigenas-caracteristicas-pessoas-e-domicilios-situacao-urbana-ou-rural">Indígenas: Principais Características das Pessoas e dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-quilombolas-caracteristicas-pessoas-e-domicilios-situacao-urbana-ou-rural">Quilombolas: Principais Características das Pessoas e dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-caracteristicas-urbanisticas-do-entorno-dos-domicilios-nas-favelas-e-comunidades-urbanas">Favelas e Comunidades Urbanas: Características urbanísticas do entorno dos domicílios</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Demográfico 2010<b class="caret"></b></a>
+                    <ul class="dropdown-menu columns">
+                        <li>
+                            <!-- Content container to add padding -->
+                            <div class="container-menu">
+                                <div class="row">
+                                    <ul class="col-sm-4 list-unstyled list-border">
+                                        <li class="columns-title">Geral</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/inicial">Inicial</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/sinopse">Sinopse</a></li>
+
+                                        <li class="columns-title columns-title-margin">Universo</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/universo-resultados-preliminares">Resultados Preliminares</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/universo-caracteristicas-da-populacao-e-dos-domicilios">Características da População e dos Domicílios </a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/universo-aglomerados-subnormais">Aglomerados Subnormais</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/universo-caracteristicas-urbanisticas-do-entorno-dos-domicilios">Características Urbanísticas do Entorno dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/universo-caracteristicas-gerais-dos-indigenas">Características Gerais dos Indígenas</a></li>
+                                    </ul>
+                                    <ul class="col-sm-8 list-unstyled">
+                                        <li class="columns-title">Amostra</li>
+                                    </ul>
+                                    <ul class="col-sm-4 list-unstyled list-border">
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-resultados-preliminares">Resultados Preliminares</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-resultados-gerais">Resultados Gerais</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-caracteristicas-gerais-da-populacao-religiao-e-deficiencia">Características Gerais da População, Religião, e Deficiência</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-nupcialidade-fecundidade-e-migracao">Nupcialidade, Fecundidade e Migração</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-familias-e-domicilios">Famílias e Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-educacao-e-deslocamento">Educação e Deslocamento</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-trabalho-e-rendimento">Trabalho e Rendimento</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-trabalho-infantil">Trabalho Infantil</a></li>
+                                    </ul>
+                                    <ul class="col-sm-4 list-unstyled">
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-res-gerais-por-areas-div">Resultados Gerais por Áreas de Divulgação de Aglomerados Subnormais </a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/lev-de-inf-territoriais-area-div">Levantamento de Informações Territoriais por Áreas de Divulgação de Aglomerados Subnormais</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Demográfico 2000<b class="caret"></b></a>
+                    <ul class="dropdown-menu columns">
+                        <li>
+                            <!-- Content container to add padding -->
+                            <div class="container-menu">
+                                <div class="row">
+                                    <ul class="col-sm-6 list-unstyled list-border">
+                                        <li class="columns-title">Geral</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/inicial">Inicial</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/sinopse-preliminar">Sinopse Preliminar</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/universo">Universo</a></li>
+                                    </ul>
+
+                                    <ul class="col-sm-6 list-unstyled">
+                                        <li class="columns-title">Amostra</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-tabulacao-avancada">Tabulação Avançada</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-primeiros-resultados">Primeiros Resultados</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-caracteristicas-gerais-da-populacao">Características Gerais da População</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-migracao-e-deslocamento">Migração e Deslocamento</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-familias-e-domicilios">Famílias e Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-nupcialidade-e-fecundidade">Nupcialidade e Fecundidade</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-trabalho-e-rendimento">Trabalho e Rendimento</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-educacao">Educação</a></li>
+                                    </ul>
+
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contagem 2007<b class="caret"></b></a>
+                    <ul class="dropdown-menu multi-level">
+                        <li><a href="/pesquisa/censo-demografico/contagem-2007/tabelas">Tabelas</a></li>
+                    </ul>
+                </li>
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contagem 1996<b class="caret"></b></a>
+                    <ul class="dropdown-menu multi-level">
+                        <li><a href="/pesquisa/censo-demografico/contagem-1996/inicial">Inicial</a></li>
+                        <li><a href="/pesquisa/censo-demografico/contagem-1996/tabelas">Tabelas</a></li>
+                    </ul>
+                </li>
+
+
+            </ul>
+        </div><!-- /.navbar-collapse -->
+    </nav>
+
+
+
+<div class="container-fluid">
+    
+
+
+
+
+<section class="page-texto">
+
+    <h2>
+        Censo Demográfico 2022
+    </h2>
+    <h3>
+        Trabalho e Rendimento - Resultados preliminares da amostra
+    </h3>
+    <p>
+        As informações da presente divulgação temática se referem ao tema Trabalho e Rendimento, que disponibiliza uma série de indicadores sobre a dinâmica do mercado de trabalho e características do rendimento no Brasil, tais como: nível de ocupação, posição na ocupação, inserção em ocupações e atividades econômicas; além de indicadores de rendimento do trabalho e de rendimento de todas as fontes etc. Os dados encontram-se organizados por temas.
+    </p>
+    <p>
+        O conjunto de informações divulgadas, também acessível no portal do IBGE na Internet e canal Panorama Censo 2022, apresenta as informações referentes aos dados coletados pelo Censo Demográfico 2022, no período de 1º de agosto de 2022 a 28 de maio de 2023, com a incorporação das revisões realizadas entre 29 de maio a 7 de julho de 2023.
+    </p>
+    <p>
+        Os dados disponibilizados contemplam os níveis territoriais Brasil, Grandes Regiões, Unidades da Federação, Estados, Municípios e outros recortes geográficos compostos a partir de Municípios.
+    </p>
+    <p>
+        A seguir são apresentadas as tabelas.
+    </p>
+
+    <div class="margin2"></div>
+    <h4>Trabalho</h4>
+    <div class='wrapper-conteudo-scroll'><table class="tabela-panel ajax"><thead><tr><th></th><th>Número</th><th>Nome</th><th>Período</th><th>Território</th></tr></thead><tbody><tr class="tabela-6580"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/6580" data-id="6580" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/6580">6580</a></td><td><a title="Abrir Tabela" href="/tabela/6580">Pessoas de 14 anos ou mais de idade, por condição em relação à força de trabalho e condição de ocupação na semana de referência, sexo e grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9517"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9517" data-id="9517" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9517">9517</a></td><td><a title="Abrir Tabela" href="/tabela/9517">Pessoas de 14 anos ou mais de idade, por condição em relação à força de trabalho e condição de ocupação na semana de referência, sexo, cor ou raça e nível de instrução</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10253"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10253" data-id="10253" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10253">10253</a></td><td><a title="Abrir Tabela" href="/tabela/10253">Pessoas de 10 anos ou mais de idade, por situação de ocupação na semana de referência, sexo, cor ou raça e grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10261"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10261" data-id="10261" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10261">10261</a></td><td><a title="Abrir Tabela" href="/tabela/10261">Pessoas de 14 anos ou mais de idade ocupadas na semana de referência por posição na ocupação e categoria do emprego no trabalho principal, sexo e cor ou raça</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10262"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10262" data-id="10262" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10262">10262</a></td><td><a title="Abrir Tabela" href="/tabela/10262">Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, por posição na ocupação e categoria do emprego no trabalho principal e seção de atividade do trabalho principal</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10263"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10263" data-id="10263" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10263">10263</a></td><td><a title="Abrir Tabela" href="/tabela/10263">Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, cor ou raça, nível de instrução e número de trabalhos</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10264"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10264" data-id="10264" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10264">10264</a></td><td><a title="Abrir Tabela" href="/tabela/10264">Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, cor ou raça, condição de contribuição para instituto de previdência oficial no trabalho principal e grandes grupos de ocupação no trabalho principal</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10265"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10265" data-id="10265" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10265">10265</a></td><td><a title="Abrir Tabela" href="/tabela/10265">Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, nível de instrução e a posição na ocupação e categoria do emprego no trabalho principal</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10266"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10266" data-id="10266" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10266">10266</a></td><td><a title="Abrir Tabela" href="/tabela/10266">Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, cor ou raça, condição de contribuição para instituto de previdência oficial no trabalho principal e seção de atividade econômica do trabalho principal</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10268"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10268" data-id="10268" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10268">10268</a></td><td><a title="Abrir Tabela" href="/tabela/10268">Pessoas de 10 anos ou mais de idade, total e ocupadas na semana de referência, e nível da ocupação, na semana de referência, das pessoas de 10 anos ou mais de idade, por sexo, cor ou raça e grupo de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10269"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10269" data-id="10269" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10269">10269</a></td><td><a title="Abrir Tabela" href="/tabela/10269">Pessoas de 10 anos ou mais de idade, não ocupadas na semana de referência, total e que trabalharam para alimentação dos moradores do domicílio na roça, criação de animais, pesca, extrativismo ou caça, por sexo, cor ou raça e grupos de idade.</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10270"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10270" data-id="10270" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10270">10270</a></td><td><a title="Abrir Tabela" href="/tabela/10270">Pessoas indígenas de 14 anos ou mais de idade, por condição em relação à força de trabalho e condição de ocupação na semana de referência, sexo e nível de instrução</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10271"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10271" data-id="10271" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10271">10271</a></td><td><a title="Abrir Tabela" href="/tabela/10271">Pessoas indígenas de 10 anos ou mais de idade, por situação de ocupação na semana de referência, sexo e grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10272"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10272" data-id="10272" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10272">10272</a></td><td><a title="Abrir Tabela" href="/tabela/10272">Pessoas indígenas de 14 anos ou mais de idade ocupadas na semana de referência por posição na ocupação, categoria do emprego no trabalho principal e sexo</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10273"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10273" data-id="10273" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10273">10273</a></td><td><a title="Abrir Tabela" href="/tabela/10273">Pessoas indígenas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, condição de contribuição para instituto de previdência oficial no trabalho principal e grandes grupos de ocupação no trabalho principal</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10274"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10274" data-id="10274" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10274">10274</a></td><td><a title="Abrir Tabela" href="/tabela/10274">Pessoas indígenas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, condição de contribuição para instituto de previdência oficial no trabalho principal e seção de atividade econômica do trabalho principal</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10275"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10275" data-id="10275" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10275">10275</a></td><td><a title="Abrir Tabela" href="/tabela/10275">Pessoas indígenas de 14 anos ou mais de idade, por sexo, grupos de idade e nível de ocupação na semana de referência</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10276"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10276" data-id="10276" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10276">10276</a></td><td><a title="Abrir Tabela" href="/tabela/10276">Pessoas indígenas de 14 anos ou mais de idade ocupadas na semana de referência, por sexo, nível de instrução e número de trabalhos</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10278"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10278" data-id="10278" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10278">10278</a></td><td><a title="Abrir Tabela" href="/tabela/10278">Pessoas indígenas de 10 anos ou mais de idade, total e ocupadas na semana de referência, e nível da ocupação, na semana de referência, das pessoas indígenas de 10 anos ou mais de idade, por sexo e grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10279"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10279" data-id="10279" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10279">10279</a></td><td><a title="Abrir Tabela" href="/tabela/10279">Pessoas indígenas de 10 anos ou mais de idade, total e que trabalharam para alimentação dos moradores do domicílio na roça, criação de animais, pesca, extrativismo ou caça, por sexo e grupos de idade.</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr></tbody></table></div>
+
+    <div class="margin2"></div>
+    <h4>Rendimento</h4>
+    <div class='wrapper-conteudo-scroll'><table class="tabela-panel ajax"><thead><tr><th></th><th>Número</th><th>Nome</th><th>Período</th><th>Território</th></tr></thead><tbody><tr class="tabela-10280"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10280" data-id="10280" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10280">10280</a></td><td><a title="Abrir Tabela" href="/tabela/10280">Pessoas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, por sexo e segundo a posição na ocupação e categoria do emprego no trabalho principal</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10281"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10281" data-id="10281" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10281">10281</a></td><td><a title="Abrir Tabela" href="/tabela/10281">Pessoas de 14 anos ou mais de idade, ocupadas na semana de referência com rendimento de trabalho e Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, segundo o sexo, a cor ou raça, o nível de instrução e a condição de contribuição para instituto de previdência oficial no trabalho principal</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10282"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10282" data-id="10282" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10282">10282</a></td><td><a title="Abrir Tabela" href="/tabela/10282">Pessoas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, por sexo e cor ou raça e segundo os grandes grupos de ocupação no trabalho principal</a></td><td>2022</td><td>BR, GR, UF</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10283"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10283" data-id="10283" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10283">10283</a></td><td><a title="Abrir Tabela" href="/tabela/10283">Pessoas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, por sexo e cor ou raça e segundo os grandes grupos de ocupação, subgrupos principais, subgrupos e grupos de base da ocupação no trabalho principal</a></td><td>2022</td><td>BR</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10284"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10284" data-id="10284" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10284">10284</a></td><td><a title="Abrir Tabela" href="/tabela/10284">Pessoas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, por sexo e nível de instrução, segundo a seção de atividade do trabalho principal</a></td><td>2022</td><td>BR, GR, UF</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10285"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10285" data-id="10285" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10285">10285</a></td><td><a title="Abrir Tabela" href="/tabela/10285">Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, com rendimento de trabalho, Valor do rendimento nominal mensal médio e mediano, de todos os trabalhos, por cor ou raça e nível de instrução, segundo a seção de atividade do trabalho principal</a></td><td>2022</td><td>BR, GR, UF</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10286"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10286" data-id="10286" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10286">10286</a></td><td><a title="Abrir Tabela" href="/tabela/10286">Pessoas de 14 anos ou mais de idade ocupadas na semana de referência, com rendimento de trabalho, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, com rendimento de trabalho, por sexo e condição de contribuição para instituto de previdência oficial no trabalho principal e seção de atividade do trabalho principal</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10287"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10287" data-id="10287" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10287">10287</a></td><td><a title="Abrir Tabela" href="/tabela/10287">Pessoas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, ocupadas na semana de referência, com rendimento de trabalho, por sexo e cor ou raça e seção, divisão e classe de atividade do trabalho principal</a></td><td>2022</td><td>BR</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10289"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10289" data-id="10289" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10289">10289</a></td><td><a title="Abrir Tabela" href="/tabela/10289">Massa de rendimento nominal mensal de todos os trabalhos, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos das pessoas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, por sexo e cor ou raça</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10290"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10290" data-id="10290" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10290">10290</a></td><td><a title="Abrir Tabela" href="/tabela/10290">Valor do rendimento nominal médio mensal de todos os trabalhos das pessoas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, por posição na ocupação e categoria do emprego no trabalho principal, segundo a seção de atividade econômica do trabalho principal</a></td><td>2022</td><td>BR, GR, UF</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10291"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10291" data-id="10291" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10291">10291</a></td><td><a title="Abrir Tabela" href="/tabela/10291">Pessoas de 10 anos ou mais de idade, ocupadas na semana de referência e com rendimento de trabalho, Valor do rendimento nominal mensal médio mensal e mediano de todos os trabalhos, por sexo, cor ou raça e grupos de idade</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10292"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10292" data-id="10292" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10292">10292</a></td><td><a title="Abrir Tabela" href="/tabela/10292">Pessoas de 14 anos ou mais ocupadas na semana de referência e sua distribuição, por sexo e classes de rendimento de todos os trabalhos em salários mínimos</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10293"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10293" data-id="10293" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10293">10293</a></td><td><a title="Abrir Tabela" href="/tabela/10293">Distribuição da massa de rendimento nominal mensal domiciliar per capita dos moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por classes simples de percentual das pessoas em ordem crescente de rendimento domiciliar per capita nominal mensal</a></td><td>2022</td><td>BR</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10294"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10294" data-id="10294" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10294">10294</a></td><td><a title="Abrir Tabela" href="/tabela/10294">Distribuição da massa de rendimento nominal mensal domiciliar per capita dos moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por classes acumuladas de percentual das pessoas em ordem crescente de rendimento domiciliar per capita nominal mensal</a></td><td>2022</td><td>BR</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10295"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10295" data-id="10295" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10295">10295</a></td><td><a title="Abrir Tabela" href="/tabela/10295">Moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), valor do rendimento domiciliar mensal per capita, médio e mediano, por sexo, cor ou raça e grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10296"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10296" data-id="10296" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10296">10296</a></td><td><a title="Abrir Tabela" href="/tabela/10296">Moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por sexo, cor ou raça e classes de rendimento domiciliar per capita em salários mínimos</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10297"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10297" data-id="10297" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10297">10297</a></td><td><a title="Abrir Tabela" href="/tabela/10297">Participação percentual na composição do rendimento nominal mensal domiciliar dos moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por tipo de rendimento</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10299"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10299" data-id="10299" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10299">10299</a></td><td><a title="Abrir Tabela" href="/tabela/10299">Pessoas de 14 anos ou mais de idade, Valor do rendimento nominal mensal médio e mediano, por sexo, condição em relação à força de trabalho e condição de ocupação na semana de referência e grupos de idade</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10300"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10300" data-id="10300" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10300">10300</a></td><td><a title="Abrir Tabela" href="/tabela/10300">Pessoas de 14 anos ou mais de idade moradoras em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por condição em relação à força de trabalho e condição de ocupação na semana de referência e as classes de rendimento nominal mensal em salários mínimos</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10301"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10301" data-id="10301" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10301">10301</a></td><td><a title="Abrir Tabela" href="/tabela/10301">Índice de Gini da distribuição do rendimento domiciliar per capita mensal dos moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a)</a></td><td>2022</td><td>BR, GR, UF</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10302"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10302" data-id="10302" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10302">10302</a></td><td><a title="Abrir Tabela" href="/tabela/10302">Índice de Gini da distribuição do rendimento nominal mensal de todos os trabalhos das pessoas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho</a></td><td>2022</td><td>BR, GR, UF</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10303"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10303" data-id="10303" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10303">10303</a></td><td><a title="Abrir Tabela" href="/tabela/10303">Pessoas indígenas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, e Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, por sexo e grandes grupos de ocupação, subgrupos principais, subgrupos e grupos de base da ocupação no trabalho principal</a></td><td>2022</td><td>BR</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10304"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10304" data-id="10304" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10304">10304</a></td><td><a title="Abrir Tabela" href="/tabela/10304">Pessoas indígenas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, com rendimento de trabalho, por sexo e grandes grupos de ocupação no trabalho principal</a></td><td>2022</td><td>BR, GR, UF</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10305"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10305" data-id="10305" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10305">10305</a></td><td><a title="Abrir Tabela" href="/tabela/10305">Pessoas indígenas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, por nível de instrução e seção de atividade do trabalho principal</a></td><td>2022</td><td>BR, GR, UF</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10306"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10306" data-id="10306" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10306">10306</a></td><td><a title="Abrir Tabela" href="/tabela/10306">Pessoas indígenas de 14 anos ou mais ocupadas na semana de referência e sua distribuição por sexo e classes de rendimento de todos os trabalhos em salários mínimos</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10307"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10307" data-id="10307" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10307">10307</a></td><td><a title="Abrir Tabela" href="/tabela/10307">Pessoas indígenas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho e Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, por sexo, nível de instrução e condição de contribuição para instituto de previdência oficial no trabalho principal</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10308"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10308" data-id="10308" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10308">10308</a></td><td><a title="Abrir Tabela" href="/tabela/10308">Massa de rendimento nominal mensal de todos os trabalhos, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos das pessoas indígenas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, por sexo</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10310"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10310" data-id="10310" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10310">10310</a></td><td><a title="Abrir Tabela" href="/tabela/10310">População indígena moradora em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por sexo e classes de rendimento domiciliar per capita em salários mínimos</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10311"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10311" data-id="10311" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10311">10311</a></td><td><a title="Abrir Tabela" href="/tabela/10311">Distribuição da massa de rendimento domiciliar per capita nominal mensal da população indígena moradora em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por classes acumuladas de percentual das pessoas em ordem crescente de rendimento domiciliar per capita nominal mensal</a></td><td>2022</td><td>BR</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10312"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10312" data-id="10312" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10312">10312</a></td><td><a title="Abrir Tabela" href="/tabela/10312">Distribuição da massa de rendimento domiciliar per capita mensal nominal mensal da população indígena moradora em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por classes simples de percentual das pessoas em ordem crescente de rendimento domiciliar per capita nominal mensal</a></td><td>2022</td><td>BR</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10313"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10313" data-id="10313" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10313">10313</a></td><td><a title="Abrir Tabela" href="/tabela/10313">Pessoas indígenas de 14 anos ou mais de idade, ocupadas na semana de referência, com rendimento de trabalho, Valor do rendimento nominal mensal médio e mediano de todos os trabalhos, por sexo e seção, divisão e classe de atividade do trabalho principal</a></td><td>2022</td><td>BR</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10315"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10315" data-id="10315" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10315">10315</a></td><td><a title="Abrir Tabela" href="/tabela/10315">Valor do rendimento médio e mediano domiciliar per capita nominal mensal dos moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por sexo e classes simples de percentual em ordem crescente de rendimento domiciliar per capita nominal mensal</a></td><td>2022</td><td>BR</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10316"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10316" data-id="10316" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10316">10316</a></td><td><a title="Abrir Tabela" href="/tabela/10316">População indígena moradora em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), valor do rendimento domiciliar per capita mensal, médio e mediano, por sexo e grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10317"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10317" data-id="10317" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10317">10317</a></td><td><a title="Abrir Tabela" href="/tabela/10317">Pessoas indígenas de 14 anos ou mais de idade ocupadas na semana de referência, valor do rendimento nominal mensal, médio e mediano, por sexo e grupos de idade</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10381"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10381" data-id="10381" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10381">10381</a></td><td><a title="Abrir Tabela" href="/tabela/10381">Pessoas de 10 anos ou mais ocupadas na semana de referência e sua distribuição, por cor ou raça, segundo as classes de rendimento de todos os trabalhos</a></td><td>2022</td><td>BR, GR, UF, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10382"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10382" data-id="10382" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10382">10382</a></td><td><a title="Abrir Tabela" href="/tabela/10382">Distribuição da massa de rendimento nominal mensal domiciliar per capita da população moradora em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por cor ou raça e classes simples de percentual das pessoas em ordem crescente de rendimento domiciliar per capita</a></td><td>2022</td><td>BR</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-10383"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/10383" data-id="10383" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/10383">10383</a></td><td><a title="Abrir Tabela" href="/tabela/10383">Distribuição da massa de rendimento nominal mensal domiciliar per capita da população moradora em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por cor ou raça e classes acumuladas de percentual das pessoas em ordem crescente de rendimento domiciliar per capita</a></td><td>2022</td><td>BR</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr></tbody></table></div>
+
+</section>
+
+</div>
+
+
+<script src="/Scripts/jquery.exportaExcel.js"></script>
+<script src="/Scripts/jquery.tabela.js"></script>
+<script src="/Scripts/page-internal.js"></script>
+<script src="/Scripts/abas.js"></script>
+
+
+
+    <iframe class="print-frame"></iframe>
+
+    <div id="pesquisas-menu-modal" class="modal" role="dialog">
+        <div class="modal-dialog">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title">Pesquisas</h5>
+                </div>
+                <div class="modal-body">
+                        <div class="pesquisas-menu-arvore">
+
+        <div class="pesquisas-menu-form">
+            <input type="text" placeholder="Filtro" class="form-control" />
+        </div>
+
+        <ul>
+            <li>
+                <span>Indicadores</span>
+                <ul>
+                    <li>
+                        <span>Trabalho e Rendimento</span>
+                        <ul>
+                            <li><a href="/pesquisa/pnadcm">Pesquisa Nacional por Amostra de Domicílios Continua Mensal - PNADCM</a></li>
+                            <li><a href="/pesquisa/pnadct">Pesquisa Nacional por Amostra de Domicílios Continua Trimestral - PNADCT</a></li>
+                            <li><a href="/pesquisa/pme">Pesquisa Mensal de Emprego - PME (extinta)</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Agropecuária</span>
+                        <ul>
+                            <li><a href="/pesquisa/estoques">Pesquisa de Estoques - ESTOQUES</a></li>
+                            <li><a href="/pesquisa/lspa">Levantamento Sistemático da Produção Agrícola - LSPA</a></li>
+                            <li><a href="/pesquisa/abate">Pesquisa Trimestral do Abate de Animais - ABATE</a></li>
+                            <li><a href="/pesquisa/couro">Pesquisa Trimestral do Couro - COURO</a></li>
+                            <li><a href="/pesquisa/leite">Pesquisa Trimestral do Leite - LEITE</a></li>
+                            <li><a href="/pesquisa/pog">Produção de Ovos de Galinha - POG</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Indústria</span>
+                        <ul>
+                            <li><a href="/pesquisa/pimes">Pesquisa Industrial Mensal de Emprego e Salário - PIMES (extinta)</a></li>
+                            <li><a href="/pesquisa/pim-pf-brasil">Pesquisa Industrial Mensal - Produção Física - PIM-PF-Brasil</a></li>
+                            <li><a href="/pesquisa/pim-pf-regional">Pesquisa Industrial Mensal - Produção Física - PIM-PF-Regional</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Comércio</span>
+                        <ul>
+                            <li><a href="/pesquisa/pmc">Pesquisa Mensal de Comércio - PMC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Serviços</span>
+                        <ul>
+                            <li><a href="/pesquisa/pms">Pesquisa Mensal de Serviços - PMS</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Índices, Preços e Custos</span>
+                        <ul>
+                            <li><a href="/pesquisa/ipp">Índice de Preços ao Produtor - IPP</a></li>
+                            <li><a href="/pesquisa/sinapi">Sistema Nacional de Pesquisa de Custos e Índices da Construção Civil - SINAPI</a></li>
+                            <li><a href="/pesquisa/snipc">Índices de Preços ao Consumidor (IPCA, INPC e IPCA15) - SNIPC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Sistema de Contas Nacionais Trimestrais</span>
+                        <ul>
+                            <li><a href="/pesquisa/cnt">Contas Nacionais Trimestrais - CNT</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="/pesquisa/ods">Objetivos de Desenvolvimento Sustentável - ODS</a></li>
+                </ul>
+            </li>
+
+
+            <li>
+                <span>População</span>
+                <ul>
+                    <li>
+                        <a href="/pesquisa/censo-demografico">Censo Demográfico - Censo-Demografico</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/registro-civil">Estatísticas do Registro Civil - Registro-Civil</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pnadca">Pesquisa Nacional por Amostra de Domicílios Contínua Anual - PNADCA</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pnad">Pesquisa Nacional por Amostra de Domicílios - PNAD</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/estimapop">Estimativas de População - EstimaPop</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/projecao-da-populacao">Projeções da População</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pof">Pesquisa de Orçamentos Familiares - POF</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pns">Pesquisa Nacional de Saúde - PNS</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/ams">Pesquisa Assistência Médico-Sanitária - AMS</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pnsb">Pesquisa Nacional de Saneamento Básico - PNSB</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pense">Pesquisa Nacional de Saúde do Escolar - PeNSE</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/munic">Pesquisa de Informações Básicas Municipais - MUNIC</a>
+                    </li>
+                </ul>
+            </li>
+
+            <li>
+                <span>Economia</span>
+                <ul>
+                    <li>
+                        <span>Indústria</span>
+                        <ul>
+                            <li><a href="/pesquisa/paic">Pesquisa Anual da Indústria da Construção - PAIC</a></li>
+                            <li><a href="/pesquisa/pia-empresa">Pesquisa Industrial Anual - PIA-Empresa</a></li>
+                            <li><a href="/pesquisa/pia-produto">Pesquisa Industrial Anual - PIA-Produto</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Serviços</span>
+                        <ul>
+                            <li><a href="/pesquisa/pas">Pesquisa Anual de Serviços - PAS</a></li>
+                            <li><a href="/pesquisa/pspp">Pesquisa de Serviços de Publicidade e Promoção - PSPP</a></li>
+                            <li><a href="/pesquisa/psti">Pesquisa de Serviços de Tecnologia da Informação - PSTI</a></li>
+                            <li><a href="/pesquisa/psh">Pesquisa de Serviços de Hospedagem - PSH</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Agropecuária</span>
+                        <ul>
+                            <li><a href="/pesquisa/censo-agropecuario">Censo Agropecuário - Censo-Agropecuario</a></li>
+                            <li><a href="/pesquisa/pam">Produção Agrícola Municipal - PAM</a></li>
+                            <li><a href="/pesquisa/pevs">Produção da Extração Vegetal e da Silvicultura - PEVS</a></li>
+                            <li><a href="/pesquisa/ppm">Pesquisa da Pecuária Municipal - PPM</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Comércio</span>
+                        <ul>
+                            <li><a href="/pesquisa/pac">Pesquisa Anual de Comércio - PAC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Inovação e Empreendedorismo</span>
+                        <ul>
+                            <li><a href="/pesquisa/pintec">Pesquisa de Inovação - PINTEC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Contas Nacionais</span>
+                        <ul>
+                            <li><a href="/pesquisa/cna">Contas Nacionais Anuais - CNA</a></li>
+                            <li><a href="/pesquisa/pib-munic">Produto Interno Bruto dos Municípios - PIB-Munic</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais">Contas Econômicas Ambientais</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="/pesquisa/cempre">Cadastro Central de Empresas - CEMPRE</a></li>
+                    <li><a href="/pesquisa/demografia-das-empresas">Demografia das Empresas - Demografia-das-Empresas</a></li>
+                    <li><a href="/pesquisa/fasfil">Fundações Privadas e Associações sem Fins Lucrativos - FASFIL</a></li>
+                    <li><a href="/pesquisa/cadastros-de-mei">Estatísticas dos Cadastros de Microempreendedores Individuais (MEI) </a></li>
+                </ul>
+            </li>
+
+            <li>
+                <span>Meio Ambiente</span>
+                <ul>
+                    <li>
+                        <span>Contas Econômicas Ambientais</span>
+                        <ul>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-da-terra">Contas Econômicas Ambientais da Terra</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-economicas-da-agua">Contas Econômicas Ambientais da Água - CEAA</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-economicas-de-energia">Contas Econômicas Ambientais de Energia - CEAE</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-de-ecossistemas">Contas de Ecossistemas: O Uso da Terra nos Biomas</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-de-especies">Contas de Ecossistemas: Espécies Ameaçadas</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contribuicao-dos-polinizadores">Contribuição dos Polinizadores para as Produções Agrícola e Extrativista do Brasil</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="/pesquisa/ids">Indicadores de Desenvolvimento Sustentável - IDS</a></li>
+                    <li><a href="/pesquisa/areas-urbanizadas">Áreas Urbanizadas</a></li>
+                    <li><a href="/pesquisa/avaliacao-sobre-a-biodiversidade">Avaliação dos dados sobre a Biodiversidade Brasileira</a></li>
+                </ul>
+            </li>
+
+        </ul>
+
+    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="modal sidra-modal fade" id="sidra-modal" role="dialog">
+        <div class="modal-dialog modal-lg">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title"></h4>
+                </div>
+                <div class="modal-body">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    
+
+        <div class="areausuario-login-container"
+         data-target=".areausuario-perfil-link"
+         data-link=".areausuario-link"
+         data-modo="modal">
+
+        <div class="areausuario-login-arrow">
+        </div>
+
+        <div class="areausuario-login">
+            <div class="login-header">
+                <button type="button" class="close" data-dismiss="modal">×</button>
+                <h4>Acessar sua Conta</h4>
+            </div>
+
+
+            <div class="login-body">
+                <ul class="opcao-login">
+                    <li class="active" data-target=".formulario-sidra">Sidra</li>
+                    <li data-target=".formulario-ibge-mfa">IBGE</li>
+                </ul>
+
+                <div class="formulario formulario-sidra">
+                    <form class="login-ajax-form" method="post" action="/perfil/login/sidra">
+                        <input type="hidden" name="ReturnUrl" />
+
+                        <span data-validator-for="Email">
+                        </span>
+                        <input placeholder="E-mail" name="Email"
+                               data-val-required="O campo Email é obrigatório."
+                               class="form-control primeiro" type="text" />
+
+                        <div class="separador"></div>
+
+                        <span data-validator-for="Senha"></span>
+                        <input placeholder="Senha" name="Senha"
+                               data-val-required="O campo Senha é obrigatório."
+                               class="form-control" type="password" />
+
+                        <div class="separador"></div>
+
+                        <label class="checkbox-inline"><input name="ManterContectado" type="checkbox" /> Manter-me conectado</label>
+
+                        <div class="separador"></div>
+
+                        <input type="submit" value="Entrar" class="btn btn-sm btn-success login" />
+
+                        <div class="separador"></div>
+
+                        <a class="esqueci" href="/perfil/usuario/recuperarsenha">Esqueci minha Senha</a>
+                        <a class="cadastro" href="/perfil/usuario/cadastro">Cadastre-se</a>
+                    </form>
+
+                    <div class="redes">
+                        <div class="redes-titulo">
+                            Acesse pelas redes sociais
+                        </div>
+                        <div class="icons">
+                            <a class="login-externo" data-action="Facebook" href="#" title="Facebook"><img class="icon-rede" src="/Content/imagens/login/facebook.png" /></a>
+                            <a class="login-externo" data-action="Google" href="#" title="Google"><img class="icon-rede" src="/Content/imagens/login/google.png" /></a>
+                            <a class="login-externo" data-action="Microsoft" href="#" title="Microsoft"><img class="icon-rede" src="/Content/imagens/login/microsoft.png" /></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="formulario formulario-ibge-mfa" style="display: none">
+                        <form class="login-ajax-form" method="post" action="/perfil/login/ibgemfa">
+                            <input type="hidden" name="ReturnUrl" />
+
+
+                            <span data-validator-for="Usuario"></span>
+                            <input placeholder="Usuário IBGE"
+                                   name="Usuario"
+                                   data-val-required="O campo Email é obrigatório."
+                                   class="form-control primeiro" type="text" />
+
+                            <div class="separador"></div>
+
+                            <span data-validator-for="Senha"></span>
+                            <input placeholder="Senha"
+                                   name="Senha"
+                                   data-val-required="O campo Senha é obrigatório."
+                                   class="form-control" type="password" />
+
+                            <div class="separador"></div>
+                            <label class="checkbox-inline"><input type="checkbox" /> Manter-me conectado</label>
+
+                            <div class="separador"></div>
+                            <input type="submit" value="Entrar" class="btn btn-sm btn-success login" />
+
+                            <div class="separador"></div>
+                            <span>Utilize seu login de rede</span>
+                        </form>
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+</body>
+
+</html>
+
+
+
+
+
+
+

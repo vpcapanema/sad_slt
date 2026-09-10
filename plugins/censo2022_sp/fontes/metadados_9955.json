@@ -1,0 +1,169 @@
+{
+  "id": 9955,
+  "nome": "Índice de envelhecimento, idade mediana e razão de sexo, total e indígenas, por localização e situação do domicílio",
+  "URL": "https://sidra.ibge.gov.br/tabela/9955",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "População indígena",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [
+      "N134",
+      "N131"
+    ],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 9175,
+      "nome": "Índice de envelhecimento (Idosos: 60 anos ou mais de idade)",
+      "unidade": "Razão",
+      "sumarizacao": []
+    },
+    {
+      "id": 9176,
+      "nome": "Pessoas de 60 anos ou mais de idade",
+      "unidade": "Pessoas",
+      "sumarizacao": []
+    },
+    {
+      "id": 8846,
+      "nome": "Pessoas de 0 a 14 anos de idade",
+      "unidade": "Pessoas",
+      "sumarizacao": []
+    },
+    {
+      "id": 9265,
+      "nome": "Índice de envelhecimento da população indígena (Idosos: 60 anos ou mais de idade)",
+      "unidade": "Razão",
+      "sumarizacao": []
+    },
+    {
+      "id": 9179,
+      "nome": "Pessoas indígenas de 60 anos ou mais de idade",
+      "unidade": "Pessoas",
+      "sumarizacao": []
+    },
+    {
+      "id": 9177,
+      "nome": "Pessoas indígenas de 0 a 14 anos de idade",
+      "unidade": "Pessoas",
+      "sumarizacao": []
+    },
+    {
+      "id": 10613,
+      "nome": "Idade mediana",
+      "unidade": "Anos",
+      "sumarizacao": []
+    },
+    {
+      "id": 9260,
+      "nome": "Idade mediana da população indígena",
+      "unidade": "Anos",
+      "sumarizacao": []
+    },
+    {
+      "id": 8845,
+      "nome": "Razão de sexo",
+      "unidade": "Razão",
+      "sumarizacao": []
+    },
+    {
+      "id": 8853,
+      "nome": "População residente de homens",
+      "unidade": "Pessoas",
+      "sumarizacao": []
+    },
+    {
+      "id": 8856,
+      "nome": "População residente de mulheres",
+      "unidade": "Pessoas",
+      "sumarizacao": []
+    },
+    {
+      "id": 9261,
+      "nome": "Razão de sexo da população indígena",
+      "unidade": "Razão",
+      "sumarizacao": []
+    },
+    {
+      "id": 9180,
+      "nome": "População indígena de homens",
+      "unidade": "Pessoas",
+      "sumarizacao": []
+    },
+    {
+      "id": 9181,
+      "nome": "População indígena de mulheres",
+      "unidade": "Pessoas",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 2661,
+      "nome": "Localização do domicílio",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 32776,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 12869,
+          "nome": "Em terras indígenas",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 12870,
+          "nome": "Fora de terras indígenas",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "nome": "Situação do domicílio",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 6795,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 1,
+          "nome": "Urbana",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 2,
+          "nome": "Rural",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    }
+  ]
+}

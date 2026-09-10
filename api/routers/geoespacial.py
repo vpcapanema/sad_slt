@@ -13,9 +13,11 @@ import geopandas as gpd
 import rasterio
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
+from starlette.concurrency import run_in_threadpool
 from shapely.geometry import LineString, Point, Polygon
 
 from api.deps.auth import require_geospatial_access, require_operator
+from api.deps.execucao_geoespacial import rastrear_execucao
 from api.exceptions import DatabaseUnavailableError
 from api import path_policy
 from api.path_policy import GEO_OUTPUT_CATEGORIES, project_path
@@ -61,13 +63,14 @@ from api.services.geoprocessamento_engine import (
 )
 from api.services.geoprocessamento_jobs import geoprocessamento_jobs
 from api.services.session_service import SessionUser
+from api.routers.conciliacao_geoespacial import router as conciliacao_router
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/geoespacial",
     tags=["geoespacial"],
-    dependencies=[Depends(require_geospatial_access)],
+    dependencies=[Depends(require_geospatial_access), Depends(rastrear_execucao)],
 )
 
 
@@ -482,10 +485,10 @@ async def executar_algoritmo(algoritmo_id: str, parametros: dict) -> dict:
 
 
 @router.post("/operacoes-jobs/{algoritmo_id}", status_code=status.HTTP_202_ACCEPTED)
-async def iniciar_operacao_com_progresso(algoritmo_id: str, parametros: dict) -> dict:
+async def iniciar_operacao_com_progresso(algoritmo_id: str, parametros: dict, user: SessionUser = Depends(require_geospatial_access)) -> dict:
     """Inicia operação e retorna seu contador real de microtarefas."""
     try:
-        return geoprocessamento_jobs.create(algoritmo_id, parametros)
+        return geoprocessamento_jobs.create(algoritmo_id, parametros, str(user.id))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -824,168 +827,13 @@ async def iniciar_importacao_com_logs(arquivo: UploadFile = File(...)) -> dict:
 
 @router.get("/camadas-diretorio")
 async def listar_diretorio_camadas() -> dict[str, Any]:
-    """Arquivos do datastorage, biblioteca canônica e saídas processadas."""
-    database_available = True
+    from api.services.catalogo_arquivos import listar_diretorio
     try:
-        directory = camada_geoespacial_repository.listar_diretorio()
-    except DatabaseUnavailableError:
-        directory = {"importadas": [], "processadas": [], "homologadas": []}
-        database_available = False
-    imported_rows = directory.get("importadas", [])
-
-    def caminhos_do_registro(row: dict) -> list[str]:
-        """Todos os caminhos por onde um registro pode ser reconhecido.
-
-        São dois campos com significados distintos, e ambos precisam casar:
-        ``arquivo_original`` é a PASTA do pacote extraído (``…zip.contents``) e
-        ``caminho_arquivo`` é o DATASET legível dentro dela (o ``.shp``). A
-        varredura abaixo lista tanto pastas quanto arquivos, então cruzar só por
-        um dos dois deixava metade dos itens marcada como não registrada — era o
-        caso de todos eles enquanto `caminho_arquivo` esteve vazio no catálogo.
-        """
-        metadata = row.get("metadados") or {}
-        extras = metadata.get("metadados") or metadata
-        brutos = [
-            extras.get("caminho_arquivo"),
-            metadata.get("caminho_arquivo"),
-            extras.get("arquivo_original"),
-            metadata.get("arquivo_original"),
-        ]
-        return [str(v).replace("\\", "/") for v in brutos if v]
-
-    by_path: dict[str, dict] = {}
-    for row in imported_rows:
-        for caminho in caminhos_do_registro(row):
-            by_path.setdefault(caminho, row)
-            # O dataset mora dentro da pasta do pacote: indexar também a pasta
-            # faz o item extraído casar com o mesmo registro.
-            if ".contents/" in caminho:
-                by_path.setdefault(caminho.split(".contents/")[0] + ".contents", row)
-    accepted = {
-        ".shp", ".geojson", ".json", ".kml", ".gml", ".fgb", ".gpkg",
-        ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2",
-        ".zip", ".rar", ".7z", ".tar", ".tgz", ".gz",
-    }
-    # Ordem de preferência para detectar a camada principal dentro de um pacote extraído.
-    primary_priority = [
-        ".shp", ".gpkg", ".geojson", ".json", ".kml", ".gml", ".fgb",
-        ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2",
-    ]
-
-    def primary_extension(folder: Path, fallback: str) -> str:
-        """Determina a extensão da camada principal contida em uma pasta extraída."""
-        try:
-            candidates = [p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() in primary_priority]
-        except OSError:
-            candidates = []
-        if not candidates:
-            return fallback
-        candidates.sort(key=lambda p: (primary_priority.index(p.suffix.lower()), p.name.lower()))
-        return candidates[0].suffix.removeprefix(".").upper()
-
-    operational: list[dict] = []
-    storage_root = project_path("data/geoespacial/uploads/datastorage")
-
-    def append_storage_item(item: Path, category: str, pasta: str) -> None:
-        """Adiciona um arquivo solto ou pasta ``.contents`` à lista operacional."""
-        if item.is_file() and item.suffix.lower() in accepted:
-            relative = item.relative_to(project_path(".")).as_posix()
-            row = by_path.get(relative)
-            extensao = item.suffix.removeprefix(".").upper()
-            operational.append({
-                **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or item.stem,
-                "categoria_arquivo": category, "registrada": bool(row), "origem_diretorio": "datastorage",
-                # Rótulo: extensão do arquivo físico no storage.
-                "formato": extensao,
-                "pasta": pasta,
-            })
-        elif item.is_dir() and item.name.lower().endswith(".contents"):
-            # Pasta produzida pela extração de um pacote compactado. Representa
-            # UM item de storage (o pacote original foi descartado após extração).
-            relative = item.relative_to(project_path(".")).as_posix()
-            row = by_path.get(relative)
-            base = item.name[: -len(".contents")]
-            nome_base = Path(base).stem
-            archive_ext = Path(base).suffix.removeprefix(".").upper() or "PACOTE"
-            # Preferimos rotular pela camada principal contida no pacote (ex.: SHP)
-            # em vez da extensão do arquivo compactado descartado (ex.: ZIP).
-            extensao = primary_extension(item, archive_ext)
-            operational.append({
-                **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or nome_base,
-                "categoria_arquivo": category, "registrada": bool(row), "origem_diretorio": "datastorage",
-                "formato": extensao,
-                "extraido": True,
-                "pasta": pasta,
-            })
-
-    # `geodatabase` deixou de ser categoria quando o `.gpkg` passou a ser
-    # classificado como vetor pelas duas portas de entrada. Varrer a pasta
-    # anunciaria uma categoria que o sistema não produz mais.
-    for category in GEO_OUTPUT_CATEGORIES:
-        folder = storage_root / category
-        if not folder.exists():
-            continue
-        entries = sorted(folder.iterdir(), key=lambda item: item.name.lower())
-        for item in entries:
-            # Pasta de organização (ex.: RISCO, RESTRIÇÃO): não é arquivo solto
-            # nem pacote extraído (.contents). Descemos um nível para listar.
-            if (
-                item.is_dir()
-                and not item.name.lower().endswith(".contents")
-                and not item.name.startswith(".")
-            ):
-                pasta = item.name
-                for grouped in sorted(item.iterdir(), key=lambda sub: sub.name.lower()):
-                    append_storage_item(grouped, category, pasta)
-                continue
-            append_storage_item(item, category, None)
-
-    canonical: list[dict] = []
-    canonical_root = project_path("data/geoespacial/biblioteca_canonica")
-    if canonical_root.exists():
-        for path in sorted(item for item in canonical_root.rglob("*") if item.is_file() and item.suffix.lower() in accepted):
-            relative = path.relative_to(project_path(".")).as_posix()
-            row = by_path.get(relative)
-            canonical.append({
-                **(row or {}), "arquivo": relative, "nome": (row or {}).get("nome") or path.stem,
-                "categoria_arquivo": "biblioteca_canonica", "registrada": bool(row),
-                "origem_diretorio": "biblioteca_canonica",
-            })
-
-    outputs: list[dict] = []
-    outputs_root = project_path("data/geoespacial/outputs")
-    if outputs_root.exists():
-        for path in sorted(
-            item for item in outputs_root.rglob("*")
-            if item.is_file() and item.suffix.lower() in accepted
-        ):
-            relative = path.relative_to(project_path(".")).as_posix()
-            row = by_path.get(relative)
-            outputs.append({
-                **(row or {}),
-                "arquivo": relative,
-                "nome": (row or {}).get("nome") or path.stem,
-                "formato": path.suffix.removeprefix(".").upper(),
-                "categoria_arquivo": "saida_processada",
-                "registrada": bool(row),
-                "origem_diretorio": "outputs",
-            })
-    return {
-        "operacionais": operational,
-        "biblioteca_canonica": canonical,
-        "saidas_processadas": outputs,
-        "importadas": imported_rows,
-        "processadas": directory.get("processadas", []),
-        "homologadas": directory.get("homologadas", []),
-        "banco_disponivel": database_available,
-    }
+        return listar_diretorio()
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(503, "Catálogo do banco indisponível") from exc
 
 
-# Raízes que "carregar do sistema" oferece, e só elas. Antes a navegação abria
-# `data/geoespacial` inteiro — inclusive `local/` com 7,3 GB de fonte bruta
-# baixada, `arquivados/`, `relatorios/` e `tests/`. Nada disso é camada apta a
-# entrar num geoprocesso, e a mistura tornava impossível saber, ao carregar, se
-# o dado era acervo, produto de trabalho ou rascunho.
 RAIZES_CARREGAVEIS: dict[str, dict[str, str]] = {
     "acervo": {
         "caminho": "uploads/datastorage",
@@ -1046,12 +894,48 @@ async def navegar_diretorio_geoespacial(caminho: str = "") -> dict:
 
     pastas: list[dict] = []
     arquivos: list[dict] = []
-    for item in sorted(alvo.iterdir(), key=lambda p: p.name.lower()):
+    from api.services.catalogo_arquivos import camadas_dos_arquivos
+    items = sorted(alvo.iterdir(), key=lambda p: p.name.lower())
+    # Pastas ".zip.contents" guardam um shapefile já descompactado. Aparecem como
+    # camada selecionável, não como pasta, para permitir escolha em lote.
+    empacotados = {
+        item.name: unico
+        for item in items
+        if item.is_dir() and item.name.lower().endswith(".zip.contents")
+        and len(shapes := [s for s in item.glob("*.shp") if s.is_file()]) == 1
+        and (unico := shapes[0])
+    }
+    candidates = {
+        item.relative_to(project_path(".")).as_posix()
+        for item in items if not item.name.startswith(".")
+        and item.suffix.lower() in aceitos and item.is_file()
+    }
+    candidates |= {p.relative_to(project_path(".")).as_posix() for p in empacotados.values()}
+    try:
+        registered_paths = {
+            row["arquivo"] for row in await run_in_threadpool(camadas_dos_arquivos, candidates)
+        }
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(503, "Catálogo do banco indisponível") from exc
+    for item in items:
         if item.name.startswith("."):
             continue
         if item.is_dir():
-            pastas.append({"nome": item.name, "caminho": item.relative_to(raiz).as_posix()})
+            empacotado = empacotados.get(item.name)
+            if empacotado is None:
+                pastas.append({"nome": item.name, "caminho": item.relative_to(raiz).as_posix()})
+                continue
+            relativo_shp = empacotado.relative_to(project_path(".")).as_posix()
+            if relativo_shp not in registered_paths:
+                continue
+            arquivos.append({
+                "nome": item.name.removesuffix(".zip.contents").removesuffix(".ZIP.CONTENTS"),
+                "arquivo": relativo_shp,
+                "formato": "SHP (ZIP)",
+            })
         elif item.is_file() and item.suffix.lower() in aceitos:
+            if item.relative_to(project_path(".")).as_posix() not in registered_paths:
+                continue
             arquivos.append({
                 "nome": item.name,
                 "arquivo": item.relative_to(project_path(".")).as_posix(),
@@ -1095,31 +979,18 @@ def _envelope_recurso_carregado(recurso_id: str, nome: str, tipo: str, *, reutil
 
 
 def _recurso_catalogado(relativo: str) -> dict | None:
-    """Procura no catálogo um recurso que já aponte para este arquivo."""
-    for row in camada_geoespacial_repository.listar():
-        metadados = row.get("metadados") or {}
-        extras = metadados.get("metadados") or {}
-        for valor in (metadados.get("caminho_arquivo"), extras.get("caminho_arquivo")):
-            if valor and str(valor).replace("\\", "/") == relativo:
-                return row
+    from api.services.catalogo_arquivos import camadas_dos_arquivos
+    matches = camadas_dos_arquivos({relativo})
+    if len(matches) > 1:
+        raise HTTPException(409, "Arquivo com várias camadas. Selecione a camada pelo identificador no catálogo.")
+    if matches:
+        return {**matches[0], "recurso_sessao_id": matches[0]["id"]}
     return None
 
 
 @router.post("/camadas-arquivo/carregar")
 async def carregar_arquivo_do_sistema(arquivo: str = Form(...)) -> dict:
-    """Abre no espaço de trabalho um arquivo das raízes carregáveis.
-
-    Carregar deixou de ser sinônimo de importar. Antes, todo arquivo aberto por
-    aqui era jogado no pipeline de importação — que copia o arquivo para o
-    acervo e cria um registro novo. Abrir um produto de ``outputs/`` para
-    conferir bastava para ele virar camada do acervo, com nome sufixado por
-    hash: foi assim que os ``identity_*.gpkg`` acabaram existindo em dois
-    lugares. Com a biblioteca homologada seria pior — a cópia nasceria fora da
-    homologação, com o mesmo conteúdo e outra identidade.
-
-    Agora: já catalogado, apenas carrega; fora do acervo, cataloga referenciando
-    o arquivo onde ele está; dentro do acervo e órfão, importa para regularizar.
-    """
+    """Carrega somente uma camada registrada, sem criar cópias ou novos registros."""
     normalized = arquivo.replace("\\", "/").strip()
     if ".." in normalized.split("/") or not _raiz_carregavel(normalized):
         raise HTTPException(
@@ -1132,7 +1003,7 @@ async def carregar_arquivo_do_sistema(arquivo: str = Form(...)) -> dict:
         raise HTTPException(status_code=404, detail="Arquivo geoespacial não encontrado")
 
     try:
-        existente = _recurso_catalogado(normalized)
+        existente = await run_in_threadpool(_recurso_catalogado, normalized)
         if existente:
             recurso_id = existente["recurso_sessao_id"]
             await geoespacial_service.carregar_recurso(recurso_id)
@@ -1141,28 +1012,8 @@ async def carregar_arquivo_do_sistema(arquivo: str = Form(...)) -> dict:
                 recurso_id, existente.get("nome") or path.stem, tipo, reutilizada=True,
             )
 
-        if _raiz_carregavel(normalized) != "acervo":
-            # Produto ou homologado: entra no catálogo apontando para o arquivo
-            # onde já está, sem cópia no acervo.
-            categoria = path_policy.categoria_por_extensao(path.name)
-            if categoria == "raster":
-                with rasterio.open(path) as dataset:
-                    matriz = dataset.read(1)
-                    perfil = dataset.profile
-                recurso_id = geoespacial_service.registrar_raster(
-                    matriz, perfil, path.stem, "referencia", caminho_arquivo=normalized,
-                )
-                tipo = "raster"
-            else:
-                frame = gpd.read_file(path)
-                recurso_id = geoespacial_service.registrar_camada(
-                    frame, path.stem, "referencia", caminho_arquivo=normalized,
-                )
-                tipo = "vetorial"
-            return _envelope_recurso_carregado(recurso_id, path.stem, tipo, reutilizada=False)
+        raise HTTPException(409, "Arquivo sem vínculo no catálogo. Regularize na conciliação administrativa antes de carregar.")
 
-        nome_upload, conteudo = _conteudo_arquivo_geoespacial(path)
-        return await executar_importacao_camadas(nome_upload, conteudo)
     except HTTPException:
         raise
     except Exception as exc:
@@ -1240,7 +1091,7 @@ async def listar_biblioteca_camadas(modulo: str | None = None) -> list[dict]:
 @router.get("/biblioteca-canonica/arquivos")
 async def listar_arquivos_biblioteca_canonica(modulo: str | None = None) -> list[dict]:
     """Lista recursivamente todos os arquivos de camada em biblioteca_canonica."""
-    return camada_geoespacial_repository.listar_biblioteca_canonica_arquivos(modulo)
+    return [r for r in camada_geoespacial_repository.listar_biblioteca_canonica_arquivos(modulo) if r.get("registrada")]
 
 
 @router.get("/camadas/{camada_id}/geojson")
@@ -1971,3 +1822,10 @@ async def listar_fluxos(modulo: str | None = Query(None)) -> list[FluxoSchema]:
     """Lista todos os fluxos disponíveis."""
     fluxos = modelo_repo.listar("fluxo", modulo)
     return [FluxoSchema(**f) for f in fluxos]
+
+
+router.include_router(conciliacao_router)
+from api.routers.extracao_atributos import router as extracao_router
+router.include_router(extracao_router)
+from api.routers.bancada_arquivos import router as bancada_arquivos_router
+router.include_router(bancada_arquivos_router)

@@ -1,0 +1,329 @@
+{
+  "executado_em_utc": "2026-09-10T01:36:10.299714+00:00",
+  "municipios": 645,
+  "crs": "EPSG:4674",
+  "geometrias_invalidas_origem": 0,
+  "tabelas": 114,
+  "temas": 18,
+  "campos": 6159,
+  "consultas": 306,
+  "falhas": [],
+  "camadas": [
+    {
+      "camada": "01_populacao_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "01_populacao_02",
+      "municipios": 645,
+      "campos_censo": 91,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "02_cor_raca_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "02_cor_raca_02",
+      "municipios": 645,
+      "campos_censo": 112,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "03_domicilios_01",
+      "municipios": 645,
+      "campos_censo": 138,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "04_saneamento_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "04_saneamento_02",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "04_saneamento_03",
+      "municipios": 645,
+      "campos_censo": 124,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "05_educacao_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "05_educacao_02",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "05_educacao_03",
+      "municipios": 645,
+      "campos_censo": 86,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "06_renda_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "06_renda_02",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "06_renda_03",
+      "municipios": 645,
+      "campos_censo": 30,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "07_trabalho_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "07_trabalho_02",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "07_trabalho_03",
+      "municipios": 645,
+      "campos_censo": 123,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "08_habitacao_internet_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "08_habitacao_internet_02",
+      "municipios": 645,
+      "campos_censo": 72,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "09_entorno_urbano_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "09_entorno_urbano_02",
+      "municipios": 645,
+      "campos_censo": 159,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "10_indigenas_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "10_indigenas_02",
+      "municipios": 645,
+      "campos_censo": 159,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "11_quilombolas_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "11_quilombolas_02",
+      "municipios": 645,
+      "campos_censo": 44,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "12_deficiencia_autismo_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "12_deficiencia_autismo_02",
+      "municipios": 645,
+      "campos_censo": 100,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "13_migracao_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "13_migracao_02",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "13_migracao_03",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "13_migracao_04",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "13_migracao_05",
+      "municipios": 645,
+      "campos_censo": 14,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "14_familias_fecundidade_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "14_familias_fecundidade_02",
+      "municipios": 645,
+      "campos_censo": 163,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "15_religiao_01",
+      "municipios": 645,
+      "campos_censo": 161,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "16_deslocamentos_01",
+      "municipios": 645,
+      "campos_censo": 200,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "16_deslocamentos_02",
+      "municipios": 645,
+      "campos_censo": 50,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "17_favelas_01",
+      "municipios": 645,
+      "campos_censo": 167,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    },
+    {
+      "camada": "18_registro_obitos_01",
+      "municipios": 645,
+      "campos_censo": 166,
+      "join": "1:1 por CD_MUN",
+      "leitura_shapefile": "OK",
+      "leitura_geopackage": "OK"
+    }
+  ],
+  "populacao_soma_municipios": 44411238,
+  "populacao_uf_ibge": 44411238,
+  "reconciliacao_populacao": "OK",
+  "campos_totalmente_sem_valor_numerico": 46
+}

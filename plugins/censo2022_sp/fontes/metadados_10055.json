@@ -1,0 +1,47 @@
+{
+  "id": 10055,
+  "nome": "Percentual de cobertura de coleta dos domicílios particulares permanentes ocupados dos setores selecionados para a Pesquisa Urbanística do Entorno dos Domicílios",
+  "URL": "https://sidra.ibge.gov.br/tabela/10055",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Características do domicílio",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 13369,
+      "nome": "Domicílios particulares permanentes ocupados associados a face de quadra com questionário em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios",
+      "unidade": "Unidades",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 9599,
+      "nome": "Domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios",
+      "unidade": "Unidades",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 13306,
+      "nome": "Cobertura do entorno",
+      "unidade": "%",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": []
+}

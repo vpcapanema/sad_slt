@@ -429,6 +429,15 @@
     }
     return `<div class="layer-legend layer-legend--single" title="Editar simbologia">${layerSymbol(layer)}</div>`;
   }
+  function camadaVisivel(id){
+    const map=state.map;
+    if(!map?.getSource(id))return false;
+    for(const sufixo of ["","-line","-point"]){
+      const alvo=id+sufixo;
+      if(map.getLayer(alvo))return map.getLayoutProperty(alvo,"visibility")!=="none";
+    }
+    return true;
+  }
   function renderLayers(){
     const query=$("#gp-layer-search").value.toLocaleLowerCase("pt-BR"),items=state.layers.filter(layer=>layer.nome.toLocaleLowerCase("pt-BR").includes(query));
     const base=BASEMAPS.filter(item=>item.name.toLocaleLowerCase("pt-BR").includes(query)).map(item=>`<label class="tree-row tree-indent"><input type="checkbox" data-basemap-toggle="${item.id}" ${state.basemaps.has(item.id)?"checked":""}><i data-lucide="map"></i><span class="layer-name">${item.name}</span></label>`).join("");
@@ -437,15 +446,39 @@
       const meta=layer.metadados||{};
       return meta.arquivo_original||layer.caminho_arquivo||meta.caminho_arquivo||layer.url_origem||meta.url_origem||layer.nome;
     };
-    const operational=items.map(layer=>{
-      const onMap=Boolean(state.map?.getSource(layer.id));
+    const layerRow=(layer)=>{
+      const onMap=camadaVisivel(layer.id);
       const display=bySource?sourcePath(layer):layer.nome;
       const editing=state.editingLayers.has(layer.id);
       return `<div class="tree-row tree-indent tree-layer ${state.activeLayerId===layer.id?"active":""}" data-layer="${layer.id}" tabindex="0"><input type="checkbox" ${onMap?"checked":""} aria-label="Exibir ${escapeHtml(layer.nome)}"><div class="layer-entry"><div class="layer-entry-head"><span class="layer-name" title="${escapeHtml(display)}">${escapeHtml(display)}</span><button class="icon-btn layer-edit ${editing?"active":""}" type="button" data-edit-layer="${layer.id}" title="${editing?"Encerrar edição de atributos":"Editar atributos"}"><i data-lucide="pencil"></i></button><button class="icon-btn layer-zoom" type="button" data-zoom-layer="${layer.id}" title="Zoom para a camada"><i data-lucide="maximize"></i></button></div>${layerLegend(layer)}</div></div>`;
-    }).join("");
-    const group=(id,label,icon,content,empty)=>`<section class="layer-group ${state.layerGroups[id]?"collapsed":""}" data-layer-group="${id}"><button class="tree-row layer-group-title" type="button" aria-expanded="${!state.layerGroups[id]}"><i data-lucide="chevron-down" class="tree-chevron"></i><i data-lucide="${icon}"></i><strong>${label}</strong></button><div class="layer-group-children">${content||`<div class="empty compact">${empty}</div>`}</div></section>`;
+    };
+    // Dentro de Camadas operacionais, um subgrupo por origem (a categoria escolhida
+    // na extração). Grupos em ordem alfabética; camadas por geometria — ponto, linha,
+    // polígono — e depois pelo nome. A ordem da geometria usa o mesmo tipo do símbolo.
+    const geometriaBase=(layer)=>layer.tipo?.toLowerCase().includes("raster")?"raster":(state.geometryTypes[layer.id]||[])[0]||"";
+    const ordemGeometria=(layer)=>{const tipo=geometriaBase(layer);
+      return tipo.includes("Point")?0:tipo.includes("Line")?1:tipo.includes("Polygon")?2:tipo==="raster"?4:3;};
+    const porOrigem=new Map();
+    for(const layer of items){
+      const nome=String(layer.origem||"").trim()||"Sem categoria";
+      if(!porOrigem.has(nome))porOrigem.set(nome,[]);
+      porOrigem.get(nome).push(layer);
+    }
+    const group=(id,label,icon,content,empty,extra="",camadas=null)=>{
+      const marca=camadas?`<input type="checkbox" class="layer-group-check" data-layer-group-toggle="${escapeHtml(id)}"${camadas.ligadas?" checked":""}${camadas.ligadas&&camadas.ligadas<camadas.total?' data-parcial="1"':""} aria-label="Exibir todas as camadas de ${escapeHtml(camadas.rotulo)}">`:"";
+      return `<section class="layer-group ${extra} ${state.layerGroups[id]?"collapsed":""}" data-layer-group="${id}"><div class="tree-row layer-group-head">${marca}<button class="layer-group-title" type="button" aria-expanded="${!state.layerGroups[id]}"><i data-lucide="chevron-down" class="tree-chevron"></i><i data-lucide="${icon}"></i><strong>${label}</strong></button></div><div class="layer-group-children">${content||`<div class="empty compact">${empty}</div>`}</div></section>`;
+    };
+    const contagem=(rotulo,lista)=>({rotulo,total:lista.length,ligadas:lista.filter(l=>camadaVisivel(l.id)).length});
+    const operational=[...porOrigem.entries()]
+      .sort((a,b)=>a[0].localeCompare(b[0],"pt-BR",{sensitivity:"base"}))
+      .map(([nome,camadas])=>{
+        camadas.sort((a,b)=>ordemGeometria(a)-ordemGeometria(b)||String(a.nome).localeCompare(String(b.nome),"pt-BR",{sensitivity:"base"}));
+        return group(`origem:${nome}`,`${escapeHtml(nome)} <span class="layer-group-count">${camadas.length}</span>`,"folder",camadas.map(layerRow).join(""),"","layer-subgroup",contagem(nome,camadas));
+      }).join("");
     const operationalLabel=bySource?"Camadas por fonte":"Camadas operacionais";
-    $("#gp-layer-list").innerHTML=group("operational",operationalLabel,"layers-3",operational,"Nenhuma camada carregada.")+group("basemap","Basemap","map",base,"Nenhum mapa-base encontrado.");icons();
+    $("#gp-layer-list").innerHTML=group("operational",operationalLabel,"layers-3",operational,"Nenhuma camada carregada.","",items.length?contagem(operationalLabel,items):null)+group("basemap","Basemap","map",base,"Nenhum mapa-base encontrado.");icons();
+    // O estado intermediário só existe em JavaScript, não como atributo.
+    $$("#gp-layer-list [data-parcial]").forEach(node=>{node.indeterminate=true;});
     updateComponentPlaceholder();
   }
   // ---------------------------------------------------------------------------
@@ -1265,7 +1298,7 @@
     const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail||`Não foi possível excluir ${layerId}`);
     removeLayerFromMap(layerId,false);delete state.layerColors[layerId];save("gp-layer-colors",state.layerColors);log(`${layerId} excluída definitivamente do sistema.`,"ok");
   }
-  document.addEventListener("DOMContentLoaded",()=>{monitorFormAccessibility();initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.dataset.basemapToggle){setBasemap(e.target.dataset.basemapToggle,e.target.checked)}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest("[data-layer-group] > .layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const legend=e.target.closest(".layer-legend");if(legend){const legendRow=legend.closest("[data-layer]");if(legendRow){e.stopPropagation();state.activeLayerId=legendRow.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===legendRow));openSymbology(legendRow.dataset.layer);return}}const editBtn=e.target.closest("[data-edit-layer]");if(editBtn){e.stopPropagation();toggleLayerEditing(editBtn.dataset.editLayer);return}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});document.addEventListener("click",e=>{const menu=$("#gp-symbology-menu");if(menu&&!menu.contains(e.target)&&!e.target.closest(".layer-symbol"))closeSymbologyMenu();if(!e.target.closest(".symbol-select"))$$(".symbol-select.open").forEach(o=>{o.classList.remove("open");const l=o.querySelector(".symbol-select-list");if(l)l.hidden=true;const t=o.querySelector(".symbol-select-trigger");if(t)t.setAttribute("aria-expanded","false")})});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSymbologyMenu()});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.","ok");emit("pronto",{api:API})});
+  document.addEventListener("DOMContentLoaded",()=>{monitorFormAccessibility();initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.dataset.basemapToggle){setBasemap(e.target.dataset.basemapToggle,e.target.checked)}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest(".layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const legend=e.target.closest(".layer-legend");if(legend){const legendRow=legend.closest("[data-layer]");if(legendRow){e.stopPropagation();state.activeLayerId=legendRow.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===legendRow));openSymbology(legendRow.dataset.layer);return}}const editBtn=e.target.closest("[data-edit-layer]");if(editBtn){e.stopPropagation();toggleLayerEditing(editBtn.dataset.editLayer);return}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});document.addEventListener("click",e=>{const menu=$("#gp-symbology-menu");if(menu&&!menu.contains(e.target)&&!e.target.closest(".layer-symbol"))closeSymbologyMenu();if(!e.target.closest(".symbol-select"))$$(".symbol-select.open").forEach(o=>{o.classList.remove("open");const l=o.querySelector(".symbol-select-list");if(l)l.hidden=true;const t=o.querySelector(".symbol-select-trigger");if(t)t.setAttribute("aria-expanded","false")})});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSymbologyMenu()});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.","ok");emit("pronto",{api:API})});
   const TOOL_SUBGROUPS={"OP-01":"Importação e conexão","OP-02":"Qualidade e preparação","OP-02-CORR":"Qualidade e preparação","OP-03":"Qualidade e preparação","OP-04":"Geometria e proximidade","OP-05":"Sobreposição espacial","OP-05-IDENT":"Sobreposição espacial","OP-06":"Agregação vetorial","OP-07":"Consulta e seleção","OP-08":"Conversão de dados","OP-10":"Distância e custo","OP-11":"Distância e custo","OP-12":"Densidade e distribuição","OP-13":"Distância e custo","OP-14":"Interpolação e superfície","OP-15":"Agregação territorial","OP-16":"Criação de superfície","OP-17":"Álgebra de mapas","OP-20":"Normalização raster","OP-21":"Recorte e máscara","OP-22":"Estatística zonal","OP-23":"Amostragem raster","OP-24":"Extração zonal","OP-25":"Dados vetoriais","OP-26":"Dados raster"};
   Object.assign(TOOL_SUBGROUPS,{"OP-28":"Derivação geométrica","OP-29":"Derivação geométrica","OP-30":"Derivação geométrica","OP-31":"Generalização","OP-32":"Conversão geométrica","OP-33":"Recorte","OP-34":"Junção espacial","OP-35":"Mesclagem","OP-36":"Reprojeção","OP-37":"Medições","OP-38":"Medições","OP-39":"Reclassificação","OP-40":"Classificação binária","OP-41":"Transformação de valores","OP-42":"Estatística focal","OP-43":"Suavização"});
   renderToolbox=function(filter=""){
@@ -1341,7 +1374,11 @@
     if(!state.map){document.addEventListener("gp-modeler-state",()=>adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts),{once:true});return}
     if(!state.map.isStyleLoaded()){state.map.once("load",()=>adicionarCamadaGeoJsonEmMemoria(id,nome,geojson,opts));return}
     removeMapResource(id);
-    const color=layerColor(id);
+    // Sem isto a camada em memória fica sem tipo de geometria e o painel mostra o
+    // símbolo genérico em vez de ponto, linha ou polígono.
+    state.geometryTypes[id]=[...new Set((geojson.features||[]).map(f=>f.geometry?.type).filter(Boolean))];
+    if(!state.geometryTypes[id].length&&opts.geometria_tipo)state.geometryTypes[id]=[opts.geometria_tipo];
+    const color=layerColor(id,state.geometryTypes[id]);
     state.map.addSource(id,{type:"geojson",data:geojson});
     state.map.addLayer({id,type:"fill",source:id,paint:{"fill-color":color,"fill-opacity":.32,"fill-outline-color":color},filter:["==",["geometry-type"],"Polygon"]});
     state.map.addLayer({id:id+"-line",type:"line",source:id,paint:{"line-color":color,"line-width":2},filter:["==",["geometry-type"],"LineString"]});
@@ -1352,13 +1389,15 @@
     } else {
       initPointLayer(id,color);
     }
-    const bounds=new maplibregl.LngLatBounds();
-    (geojson.features||[]).forEach(f=>walkCoords(f.geometry?.coordinates,c=>bounds.extend(c)));
-    if(!bounds.isEmpty()) state.map.fitBounds(bounds,{padding:40,maxZoom:14});
+    if(!opts.lote){
+      const bounds=new maplibregl.LngLatBounds();
+      (geojson.features||[]).forEach(f=>walkCoords(f.geometry?.coordinates,c=>bounds.extend(c)));
+      if(!bounds.isEmpty()) state.map.fitBounds(bounds,{padding:40,maxZoom:14});
+    }
     const entry={id,nome:nome||id,tipo:opts.tipo||"vetorial (memória)",origem:opts.origem||"Hierarquização",destino:"memoria_local",crs:"EPSG:4326",geometria_tipo:opts.geometria_tipo||"Point"};
     const idx=state.layers.findIndex(l=>l.id===id);
     if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
-    renderLayers();
+    if(!opts.lote) renderLayers();
   }
   window.gpApp={state,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,consumePortalService,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,log,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer,carregarPorId,carregarPorIds,adicionarCamadaGeoJsonEmMemoria,aplicarCorPadraoCamada,openSymbology};
 })();

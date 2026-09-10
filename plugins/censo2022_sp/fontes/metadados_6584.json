@@ -1,0 +1,328 @@
+{
+  "id": 6584,
+  "nome": "Óbitos de pessoas que haviam residido com moradores dos domicílios particulares, por mês e ano de ocorrência do falecimento, sexo e grupos de idade das pessoas ao falecerem",
+  "URL": "https://sidra.ibge.gov.br/tabela/6584",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Mortalidade",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 13136,
+      "nome": "Óbitos de pessoas que haviam residido com moradores dos domicílios particulares",
+      "unidade": "Unidades",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 1013136,
+      "nome": "Óbitos de pessoas que haviam residido com moradores dos domicílios particulares - percentual do total geral",
+      "unidade": "%",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 322,
+      "nome": "Mês e ano de ocorrência do falecimento",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 72249,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 73020,
+          "nome": "Janeiro de 2022 a julho de 2022",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 73024,
+          "nome": "Agosto de 2021 a dezembro de 2021",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 73021,
+          "nome": "Janeiro de 2021 a julho de 2021",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 73025,
+          "nome": "Agosto de 2020 a dezembro de 2020",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 73023,
+          "nome": "Janeiro de 2020 a julho de 2020",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 73026,
+          "nome": "Agosto de 2019 a dezembro de 2019",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 73022,
+          "nome": "Janeiro de 2019 a julho de 2019",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 9702,
+          "nome": "Sem declaração",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    },
+    {
+      "id": 321,
+      "nome": "Sexo da pessoa falecida",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 72245,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 3090,
+          "nome": "Homens",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 3091,
+          "nome": "Mulheres",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 12102,
+          "nome": "Sem declaração",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    },
+    {
+      "id": 420,
+      "nome": "Grupos de idade das pessoas ao falecerem",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 10917,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 72571,
+          "nome": "0 a 4 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 10918,
+          "nome": "Menos de 1 ano",
+          "unidade": null,
+          "nivel": 2
+        },
+        {
+          "id": 73027,
+          "nome": "Menos de 1 mês",
+          "unidade": null,
+          "nivel": 3
+        },
+        {
+          "id": 73028,
+          "nome": "1 a 3 meses",
+          "unidade": null,
+          "nivel": 3
+        },
+        {
+          "id": 73029,
+          "nome": "4 a 6 meses",
+          "unidade": null,
+          "nivel": 3
+        },
+        {
+          "id": 73030,
+          "nome": "7 a 11 meses",
+          "unidade": null,
+          "nivel": 3
+        },
+        {
+          "id": 73102,
+          "nome": "Sem declaração de mês",
+          "unidade": null,
+          "nivel": 3
+        },
+        {
+          "id": 72572,
+          "nome": "1 a 4 anos",
+          "unidade": null,
+          "nivel": 2
+        },
+        {
+          "id": 72573,
+          "nome": "5 a 9 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72574,
+          "nome": "10 a 14 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72575,
+          "nome": "15 a 19 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72576,
+          "nome": "20 a 24 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72577,
+          "nome": "25 a 29 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72578,
+          "nome": "30 a 34 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72579,
+          "nome": "35 a 39 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72580,
+          "nome": "40 a 44 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72581,
+          "nome": "45 a 49 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72582,
+          "nome": "50 a 54 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72583,
+          "nome": "55 a 59 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72584,
+          "nome": "60 a 64 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72585,
+          "nome": "65 a 69 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72586,
+          "nome": "70 a 74 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72587,
+          "nome": "75 a 79 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72588,
+          "nome": "80 a 84 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72589,
+          "nome": "85 a 89 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72590,
+          "nome": "90 a 94 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72591,
+          "nome": "95 a 99 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72592,
+          "nome": "100 anos ou mais",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 11625,
+          "nome": "Sem declaração",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    }
+  ]
+}

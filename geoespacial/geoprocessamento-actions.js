@@ -114,9 +114,17 @@
     });
 
     $("#gp-layer-list").addEventListener("change", (event) => {
-      if (event.target.type !== "checkbox") return;
+      if (event.target.type !== "checkbox" || event.target.dataset.basemapToggle) return;
+      // A caixa do grupo comanda tudo o que está abaixo dela; a da camada
+      // recalcula as caixas acima ao redesenhar o painel.
+      if (event.target.dataset.layerGroupToggle) {
+        const secao = event.target.closest("[data-layer-group]");
+        secao.querySelectorAll("[data-layer]").forEach((row) => setLayerVisibility(row.dataset.layer, event.target.checked));
+        window.gpApp.renderLayers?.();
+        return;
+      }
       const id = event.target.closest("[data-layer]")?.dataset.layer;
-      if (id) setLayerVisibility(id, event.target.checked);
+      if (id) { setLayerVisibility(id, event.target.checked); window.gpApp.renderLayers?.(); }
     });
 
     $("#gp-catalog-search").addEventListener("input", (event) => {

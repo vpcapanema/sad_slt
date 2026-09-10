@@ -1,0 +1,96 @@
+{
+  "id": 9889,
+  "nome": "Número de estabelecimentos, por espécie (finalidade ou uso), e número de edificações em construção ou em reforma em favelas e comunidades urbanas, segundo as Favelas e Comunidades Urbanas",
+  "URL": "https://sidra.ibge.gov.br/tabela/9889",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Geral",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 13097,
+      "nome": "Número de estabelecimentos e número de edificações em construção ou em reforma",
+      "unidade": "Unidades",
+      "sumarizacao": []
+    },
+    {
+      "id": 13083,
+      "nome": "Número de estabelecimentos e número de edificações em construção ou em reforma em favelas e comunidades urbanas",
+      "unidade": "Unidades",
+      "sumarizacao": []
+    },
+    {
+      "id": 13098,
+      "nome": "Percentual de estabelecimentos e edificações em construção ou em reforma em favelas e comunidades urbanas no total de estabelecimentos e edificações em construção ou em reforma",
+      "unidade": "Razão",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 3,
+      "nome": "Espécie",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 59993,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 490,
+          "nome": "Estabelecimento de ensino",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 491,
+          "nome": "Estabelecimento de saúde",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72411,
+          "nome": "Estabelecimento religioso",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 489,
+          "nome": "Estabelecimento agropecuário",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 492,
+          "nome": "Estabelecimentos de outras finalidades",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72514,
+          "nome": "Edificação em construção ou em reforma",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    }
+  ]
+}

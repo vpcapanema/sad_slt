@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+
+
+
+<html>
+
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" />
+    <title>Sistema IBGE de Recupera&#231;&#227;o Autom&#225;tica - SIDRA</title>
+    <link rel="shortcut icon" href="/content/imagens/sidra-icon.ico">
+
+
+
+<link href="/Content/bootstrap.css" rel="stylesheet"/>
+<link href="/Content/bootstrap-tour.css" rel="stylesheet"/>
+<link href="/Content/bootstrap-theme.css" rel="stylesheet"/>
+<link href="/Content/sidra-ui.css" rel="stylesheet"/>
+<link href="/Content/sidra.css" rel="stylesheet"/>
+<link href="/Content/perfil/jquery.perfil.login.css" rel="stylesheet"/>
+<link href="/Content/perfil/jquery.perfil.janelausuario.css" rel="stylesheet"/>
+<link href="/Content/jquery.janela.css" rel="stylesheet"/>
+<link href="/Content/jquery.arvore.css" rel="stylesheet"/>
+<link href="/Content/jquery.jqplot.min.css" rel="stylesheet"/>
+<link href="/Scripts/nvd3_1_8/nv.d3.css" rel="stylesheet"/>
+
+    <link href="/Content/home.css" rel="stylesheet"/>
+<link href="/Content/jquery.tabela.css" rel="stylesheet"/>
+<link href="/Content/contato.css" rel="stylesheet"/>
+<link href="/Content/page-internal.css" rel="stylesheet"/>
+<link href="/Content/jquery.sidra-slider.css" rel="stylesheet"/>
+
+<script src="/Scripts/jquery-2.1.1.js"></script>
+<script src="/Scripts/jquery.tmpl.js"></script>
+<script src="/Scripts/bootstrap.js"></script>
+<script src="/Scripts/bootstrap-tour.js"></script>
+<script src="/Scripts/tour.js"></script>
+<script src="/Scripts/bootbox.min.js"></script>
+<script src="/Scripts/string.js"></script>
+<script src="/Scripts/url.js"></script>
+<script src="/Scripts/editor-async.js"></script>
+<script src="/Scripts/sidra-ui.js"></script>
+<script src="/Scripts/blob.js"></script>
+<script src="/Scripts/base64.js"></script>
+<script src="/Scripts/jszip.min.js"></script>
+<script src="/Scripts/filesaver.js"></script>
+<script src="/Scripts/jquery.sidra.validator.js"></script>
+<script src="/Scripts/perfil/jquery.perfil.janelausuario.js"></script>
+<script src="/Scripts/sidra.js"></script>
+<script src="/Scripts/jquery.janela.js"></script>
+<script src="/Scripts/jquery.exportaSVG.js"></script>
+<script src="/Scripts/jquery.arvore.js"></script>
+<script src="/Scripts/jquery.loading.js"></script>
+<script src="/Scripts/sidra-widget-grafico.js"></script>
+<script src="/Scripts/nvd3_1_8/d3.js"></script>
+<script src="/Scripts/nvd3_1_8/nv.d3.js"></script>
+<script src="/Scripts/jquery.sidra.utils.js?v=1"></script>
+<script src="/Scripts/perfil/jquery.perfil.login.js?v=1"></script>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YR1L80XXVD"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-YR1L80XXVD');
+
+    </script>
+</head>
+
+
+<body onload="checkJquery()" class="" data-autenticado="0" data-email="" data-nome="" data-foto="">
+
+    <div id="barra-brasil" style="background:#7F7F7F; height: 20px; padding:0 0 0 10px; display:block;">
+        <ul id="menu-barra-temp" style="list-style:none;">
+            <li style="display:inline; float:left; padding-right:10px; margin-right:10px; border-right:1px solid #EDEDED">
+                <a href="http://brasil.gov.br" style="font-family:sans, sans-serif; text-decoration:none; color:white;">Portal do Governo Brasileiro</a>
+            </li>
+            <li>
+                <a style="font-family:sans, sans-serif; text-decoration:none; color:white;" href="http://epwg.governoeletronico.gov.br/barra/atualize.html">Atualize sua Barra de Governo</a>
+            </li>
+        </ul>
+    </div>
+    <div class="menu-ibge">
+        <div class="container-fluid">
+            <div class="wrapper-logo">
+                <a href="https://www.ibge.gov.br">
+                    <div class="logo-ibge xs"></div>
+                </a>
+            </div>
+            <div class="texto-ibge">Sistema IBGE de Recuperação Automática - SIDRA</div>
+        </div>
+    </div>
+    <div class="menu-sidra navbar navbar-default navbar-static-top" role="navigation">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <div class="vertical-align logo xs">
+                    <div class="cell">
+                        <a href="/">
+                            <div class="logo-img xs"></div>
+                        </a>
+                    </div>
+                </div>
+
+
+                <div class="vertical-align right xs">
+                    <div class="cell">
+
+                        <button type="button"
+                                class="navbar-toggle menu-link-text button-xs areausuario-link icone-area-usuario"
+                                data-href="/perfil"
+                                data-tipo="xs"
+                                aria-expanded="false">
+                            <i class="glyphicon glyphicon-user lupa"></i>
+                        </button>
+
+                        <button id="sidra-pesquisa-sm-button" type="button"
+                                class="navbar-toggle menu-link-text button-xs"
+                                data-target="#sidra-pesquisa-sm" aria-expanded="false">
+                            <i class="glyphicon glyphicon-search lupa"></i>
+                        </button>
+
+                        <button type="button" class="navbar-toggle button-xs"
+                                data-toggle="collapse" data-target="#sidra-menu-collapse"
+                                aria-expanded="false">
+
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                        </button>
+
+                        <div class="pesquisa pesquisa-sm" id="sidra-pesquisa-sm">
+                            <form data-target="#sidra-pesquisa-sm">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="pesquisar">
+                                    <div class="input-group-btn">
+                                        <button type="button" class="btn btn-default">
+                                            OK
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+
+            <div class="navbar-collapse collapse" id="sidra-menu-collapse">
+                <ul class="nav navbar-nav navbar-right xs">
+
+                    <li class="dropdown hidden-menu pesquisas-menu-dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Pesquisas<b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                    <div class="pesquisas-menu-arvore">
+
+        <div class="pesquisas-menu-form">
+            <input type="text" placeholder="Filtro" class="form-control" />
+        </div>
+
+        <ul>
+            <li>
+                <span>Indicadores</span>
+                <ul>
+                    <li>
+                        <span>Trabalho e Rendimento</span>
+                        <ul>
+                            <li><a href="/pesquisa/pnadcm">Pesquisa Nacional por Amostra de Domicílios Continua Mensal - PNADCM</a></li>
+                            <li><a href="/pesquisa/pnadct">Pesquisa Nacional por Amostra de Domicílios Continua Trimestral - PNADCT</a></li>
+                            <li><a href="/pesquisa/pme">Pesquisa Mensal de Emprego - PME (extinta)</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Agropecuária</span>
+                        <ul>
+                            <li><a href="/pesquisa/estoques">Pesquisa de Estoques - ESTOQUES</a></li>
+                            <li><a href="/pesquisa/lspa">Levantamento Sistemático da Produção Agrícola - LSPA</a></li>
+                            <li><a href="/pesquisa/abate">Pesquisa Trimestral do Abate de Animais - ABATE</a></li>
+                            <li><a href="/pesquisa/couro">Pesquisa Trimestral do Couro - COURO</a></li>
+                            <li><a href="/pesquisa/leite">Pesquisa Trimestral do Leite - LEITE</a></li>
+                            <li><a href="/pesquisa/pog">Produção de Ovos de Galinha - POG</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Indústria</span>
+                        <ul>
+                            <li><a href="/pesquisa/pimes">Pesquisa Industrial Mensal de Emprego e Salário - PIMES (extinta)</a></li>
+                            <li><a href="/pesquisa/pim-pf-brasil">Pesquisa Industrial Mensal - Produção Física - PIM-PF-Brasil</a></li>
+                            <li><a href="/pesquisa/pim-pf-regional">Pesquisa Industrial Mensal - Produção Física - PIM-PF-Regional</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Comércio</span>
+                        <ul>
+                            <li><a href="/pesquisa/pmc">Pesquisa Mensal de Comércio - PMC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Serviços</span>
+                        <ul>
+                            <li><a href="/pesquisa/pms">Pesquisa Mensal de Serviços - PMS</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Índices, Preços e Custos</span>
+                        <ul>
+                            <li><a href="/pesquisa/ipp">Índice de Preços ao Produtor - IPP</a></li>
+                            <li><a href="/pesquisa/sinapi">Sistema Nacional de Pesquisa de Custos e Índices da Construção Civil - SINAPI</a></li>
+                            <li><a href="/pesquisa/snipc">Índices de Preços ao Consumidor (IPCA, INPC e IPCA15) - SNIPC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Sistema de Contas Nacionais Trimestrais</span>
+                        <ul>
+                            <li><a href="/pesquisa/cnt">Contas Nacionais Trimestrais - CNT</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="/pesquisa/ods">Objetivos de Desenvolvimento Sustentável - ODS</a></li>
+                </ul>
+            </li>
+
+
+            <li>
+                <span>População</span>
+                <ul>
+                    <li>
+                        <a href="/pesquisa/censo-demografico">Censo Demográfico - Censo-Demografico</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/registro-civil">Estatísticas do Registro Civil - Registro-Civil</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pnadca">Pesquisa Nacional por Amostra de Domicílios Contínua Anual - PNADCA</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pnad">Pesquisa Nacional por Amostra de Domicílios - PNAD</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/estimapop">Estimativas de População - EstimaPop</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/projecao-da-populacao">Projeções da População</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pof">Pesquisa de Orçamentos Familiares - POF</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pns">Pesquisa Nacional de Saúde - PNS</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/ams">Pesquisa Assistência Médico-Sanitária - AMS</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pnsb">Pesquisa Nacional de Saneamento Básico - PNSB</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pense">Pesquisa Nacional de Saúde do Escolar - PeNSE</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/munic">Pesquisa de Informações Básicas Municipais - MUNIC</a>
+                    </li>
+                </ul>
+            </li>
+
+            <li>
+                <span>Economia</span>
+                <ul>
+                    <li>
+                        <span>Indústria</span>
+                        <ul>
+                            <li><a href="/pesquisa/paic">Pesquisa Anual da Indústria da Construção - PAIC</a></li>
+                            <li><a href="/pesquisa/pia-empresa">Pesquisa Industrial Anual - PIA-Empresa</a></li>
+                            <li><a href="/pesquisa/pia-produto">Pesquisa Industrial Anual - PIA-Produto</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Serviços</span>
+                        <ul>
+                            <li><a href="/pesquisa/pas">Pesquisa Anual de Serviços - PAS</a></li>
+                            <li><a href="/pesquisa/pspp">Pesquisa de Serviços de Publicidade e Promoção - PSPP</a></li>
+                            <li><a href="/pesquisa/psti">Pesquisa de Serviços de Tecnologia da Informação - PSTI</a></li>
+                            <li><a href="/pesquisa/psh">Pesquisa de Serviços de Hospedagem - PSH</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Agropecuária</span>
+                        <ul>
+                            <li><a href="/pesquisa/censo-agropecuario">Censo Agropecuário - Censo-Agropecuario</a></li>
+                            <li><a href="/pesquisa/pam">Produção Agrícola Municipal - PAM</a></li>
+                            <li><a href="/pesquisa/pevs">Produção da Extração Vegetal e da Silvicultura - PEVS</a></li>
+                            <li><a href="/pesquisa/ppm">Pesquisa da Pecuária Municipal - PPM</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Comércio</span>
+                        <ul>
+                            <li><a href="/pesquisa/pac">Pesquisa Anual de Comércio - PAC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Inovação e Empreendedorismo</span>
+                        <ul>
+                            <li><a href="/pesquisa/pintec">Pesquisa de Inovação - PINTEC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Contas Nacionais</span>
+                        <ul>
+                            <li><a href="/pesquisa/cna">Contas Nacionais Anuais - CNA</a></li>
+                            <li><a href="/pesquisa/pib-munic">Produto Interno Bruto dos Municípios - PIB-Munic</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais">Contas Econômicas Ambientais</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="/pesquisa/cempre">Cadastro Central de Empresas - CEMPRE</a></li>
+                    <li><a href="/pesquisa/demografia-das-empresas">Demografia das Empresas - Demografia-das-Empresas</a></li>
+                    <li><a href="/pesquisa/fasfil">Fundações Privadas e Associações sem Fins Lucrativos - FASFIL</a></li>
+                    <li><a href="/pesquisa/cadastros-de-mei">Estatísticas dos Cadastros de Microempreendedores Individuais (MEI) </a></li>
+                </ul>
+            </li>
+
+            <li>
+                <span>Meio Ambiente</span>
+                <ul>
+                    <li>
+                        <span>Contas Econômicas Ambientais</span>
+                        <ul>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-da-terra">Contas Econômicas Ambientais da Terra</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-economicas-da-agua">Contas Econômicas Ambientais da Água - CEAA</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-economicas-de-energia">Contas Econômicas Ambientais de Energia - CEAE</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-de-ecossistemas">Contas de Ecossistemas: O Uso da Terra nos Biomas</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-de-especies">Contas de Ecossistemas: Espécies Ameaçadas</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contribuicao-dos-polinizadores">Contribuição dos Polinizadores para as Produções Agrícola e Extrativista do Brasil</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="/pesquisa/ids">Indicadores de Desenvolvimento Sustentável - IDS</a></li>
+                    <li><a href="/pesquisa/areas-urbanizadas">Áreas Urbanizadas</a></li>
+                    <li><a href="/pesquisa/avaliacao-sobre-a-biodiversidade">Avaliação dos dados sobre a Biodiversidade Brasileira</a></li>
+                </ul>
+            </li>
+
+        </ul>
+
+    </div>
+
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="visible-menu pesquisas-menu-dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="modal" data-target="#pesquisas-menu-modal">Pesquisas</a>
+                    </li>
+
+                    <li><a href="/acervo">Acervo</a></li>
+                    <li><a href="/territorio">Território</a></li>
+                    <li><a href="/contato">Contato</a></li>
+                    <li><a href="/ajuda">Ajuda</a></li>
+
+                    <li class="areausuario-li">
+                        <a href="/perfil" title="Área do Usuário Sidra" data-tipo="lg"
+                           class="areausuario-perfil-link icone-area-usuario"
+                           onclick="javascript: sessionStorage.setItem('isFirstAccess', true);">
+                            <i class="glyphicon glyphicon-user"></i>
+                        </a>
+
+                            <div class="areausuario-login-container"
+         data-target=".areausuario-perfil-link"
+         data-link=".areausuario-link"
+         data-modo="janela">
+
+        <div class="areausuario-login-arrow">
+        </div>
+
+        <div class="areausuario-login">
+            <div class="login-header">
+                <button type="button" class="close" data-dismiss="modal">×</button>
+                <h4>Acessar sua Conta</h4>
+            </div>
+
+
+            <div class="login-body">
+                <ul class="opcao-login">
+                    <li class="active" data-target=".formulario-sidra">Sidra</li>
+                    <li data-target=".formulario-ibge-mfa">IBGE</li>
+                </ul>
+
+                <div class="formulario formulario-sidra">
+                    <form class="login-ajax-form" method="post" action="/perfil/login/sidra">
+                        <input type="hidden" name="ReturnUrl" />
+
+                        <span data-validator-for="Email">
+                        </span>
+                        <input placeholder="E-mail" name="Email"
+                               data-val-required="O campo Email é obrigatório."
+                               class="form-control primeiro" type="text" />
+
+                        <div class="separador"></div>
+
+                        <span data-validator-for="Senha"></span>
+                        <input placeholder="Senha" name="Senha"
+                               data-val-required="O campo Senha é obrigatório."
+                               class="form-control" type="password" />
+
+                        <div class="separador"></div>
+
+                        <label class="checkbox-inline"><input name="ManterContectado" type="checkbox" /> Manter-me conectado</label>
+
+                        <div class="separador"></div>
+
+                        <input type="submit" value="Entrar" class="btn btn-sm btn-success login" />
+
+                        <div class="separador"></div>
+
+                        <a class="esqueci" href="/perfil/usuario/recuperarsenha">Esqueci minha Senha</a>
+                        <a class="cadastro" href="/perfil/usuario/cadastro">Cadastre-se</a>
+                    </form>
+
+                    <div class="redes">
+                        <div class="redes-titulo">
+                            Acesse pelas redes sociais
+                        </div>
+                        <div class="icons">
+                            <a class="login-externo" data-action="Facebook" href="#" title="Facebook"><img class="icon-rede" src="/Content/imagens/login/facebook.png" /></a>
+                            <a class="login-externo" data-action="Google" href="#" title="Google"><img class="icon-rede" src="/Content/imagens/login/google.png" /></a>
+                            <a class="login-externo" data-action="Microsoft" href="#" title="Microsoft"><img class="icon-rede" src="/Content/imagens/login/microsoft.png" /></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="formulario formulario-ibge-mfa" style="display: none">
+                        <form class="login-ajax-form" method="post" action="/perfil/login/ibgemfa">
+                            <input type="hidden" name="ReturnUrl" />
+
+
+                            <span data-validator-for="Usuario"></span>
+                            <input placeholder="Usuário IBGE"
+                                   name="Usuario"
+                                   data-val-required="O campo Email é obrigatório."
+                                   class="form-control primeiro" type="text" />
+
+                            <div class="separador"></div>
+
+                            <span data-validator-for="Senha"></span>
+                            <input placeholder="Senha"
+                                   name="Senha"
+                                   data-val-required="O campo Senha é obrigatório."
+                                   class="form-control" type="password" />
+
+                            <div class="separador"></div>
+                            <label class="checkbox-inline"><input type="checkbox" /> Manter-me conectado</label>
+
+                            <div class="separador"></div>
+                            <input type="submit" value="Entrar" class="btn btn-sm btn-success login" />
+
+                            <div class="separador"></div>
+                            <span>Utilize seu login de rede</span>
+                        </form>
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+                        
+
+                    </li>
+
+                    <li class="lupa-li">
+
+                        <a href="#" data-target="#sidra-pesquisa-lg" title="Pesquisa Tabela">
+                            <i class="glyphicon glyphicon-search lupa"></i>
+                        </a>
+
+                        <div class="pesquisa" id="sidra-pesquisa-lg">
+                            <form data-target="#sidra-pesquisa-lg">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="pesquisar">
+                                    <div class="input-group-btn">
+                                        <button type="button" class="btn btn-default">
+                                            OK
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script src="/Scripts/barra.js" type="text/javascript"></script>
+
+    
+
+
+
+    <section class="page-banner" style="
+    background-image: url(/Content/imagens/censo.png);
+    background-repeat-y: no-repeat;
+    background-size: 500px 177px;
+    ">
+
+    <div class="text-center" style="
+    background-color: rgba(180, 230, 255, 0.5); 
+    height: 177px;
+    padding: 0;
+    text-shadow: 2px 2px black;">
+
+        <img style="margin-top: 20px;" src="/Content/imagens/censo-logo.png"/>
+        <h3 style="
+            margin: 0;
+            margin-top: 10px;
+            color: rgb(234, 194, 97);
+            font-weight: bold;
+            font-size: 24px;">Censo Demográfico</h3>
+    </div>
+</section>
+
+    <nav class="navbar navbar-inverse">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#sidra-pesquisa-menu-collapse" aria-expanded="false">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+        </div>
+
+        <div class="collapse navbar-collapse" id="sidra-pesquisa-menu-collapse">
+            <ul class="nav navbar-nav">
+                <li class="dropdown">
+                    <a href="/pesquisa/censo-demografico/series-temporais/series-temporais/">
+                        Séries Temporais
+                    </a>
+                </li>
+
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Demográfico 2022<b class="caret"></b></a>
+                    <ul class="dropdown-menu columns">
+                        <li>
+                            <!-- Content container to add padding -->
+                            <div class="container-menu">
+                                <div class="row">
+                                    <ul class="col-sm-4 list-unstyled list-border">
+                                        <li class="columns-title">Geral</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/inicial">Inicial</a></li>
+                                        <li class="columns-title columns-title-margin">Primeiros Resultados do Universo</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/primeiros-resultados-populacao-e-domicilios">População e Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/primeiros-resultados-quilombolas">Quilombolas</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/primeiros-resultados-indigenas">Indígenas</a></li>
+                                        <li class="columns-title columns-title-margin">Resultados preliminares da Amostra</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-caracteristicas-dos-domicilios">Características dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-educacao">Educação</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-pessoas-com-deficiencia-e-espectro-autista">Pessoas com deficiência e Pessoas diagnosticadas com transtorno do espectro autista</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-religioes">Religiões</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-fecundidade-e-migracao">Fecundidade e Migração</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-trabalho-e-rendimento">Trabalho e Rendimento</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-deslocamentos-para-trabalho-e-estudo">Deslocamentos para Trabalho e para Estudo</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/amostra-nupcialidade-e-familia">Nupcialidade e Família</a></li>
+                                    </ul>
+                                    <ul class="col-sm-8 list-unstyled">
+                                        <li class="columns-title">Resultados do Universo</li>
+                                    </ul>
+                                    <ul class="col-sm-4 list-unstyled list-border">
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-populacao-por-idade-e-sexo">População por Idade e Sexo</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-populacao-por-cor-ou-raca">População por Cor ou Raça</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-caracteristicas-dos-domicilios">Características dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-quilombolas-e-indigenas-por-sexo-e-idade">Quilombolas e Indígenas por Sexo e Idade</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-quilombolas-alfabetizacao-e-domicilios">Quilombolas: Alfabetização e Características dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-populacao-e-domicilios-situacao-urbana-ou-rural">População e Domicílios: Situação Urbana ou Rural</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-caracteristicas-urbanisticas-do-entorno-dos-domicilios">Características Urbanísticas do Entorno dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-unidades-de-conservacao-caracteristicas-pessoas-e-domicilios">Unidades de Conservação: Principais Características das Pessoas e dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-etnias-e-linguas-indigenas-caracteristicas-sociodemograficas">Etnias e Línguas Indígenas: Principais Características Sociodemográficas</a></li>
+                                    </ul>
+                                    <ul class="col-sm-4 list-unstyled">
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-alfabetizacao">Alfabetização</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-registros-de-nascimentos">Registros de Nascimentos</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-tipos-de-domicilios">Tipos de Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-indigenas-alfabetizacao-registros-de-nascimentos-e-domicilios">Indígenas: Alfabetização, Registros de Nascimentos e Características dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-composicao-domiciliar-e-obitos-informados">Composição Domiciliar e Óbitos Informados</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-favelas-e-comunidades-urbanas">Favelas e Comunidades Urbanas</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-indigenas-caracteristicas-pessoas-e-domicilios-situacao-urbana-ou-rural">Indígenas: Principais Características das Pessoas e dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-quilombolas-caracteristicas-pessoas-e-domicilios-situacao-urbana-ou-rural">Quilombolas: Principais Características das Pessoas e dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2022/universo-caracteristicas-urbanisticas-do-entorno-dos-domicilios-nas-favelas-e-comunidades-urbanas">Favelas e Comunidades Urbanas: Características urbanísticas do entorno dos domicílios</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Demográfico 2010<b class="caret"></b></a>
+                    <ul class="dropdown-menu columns">
+                        <li>
+                            <!-- Content container to add padding -->
+                            <div class="container-menu">
+                                <div class="row">
+                                    <ul class="col-sm-4 list-unstyled list-border">
+                                        <li class="columns-title">Geral</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/inicial">Inicial</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/sinopse">Sinopse</a></li>
+
+                                        <li class="columns-title columns-title-margin">Universo</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/universo-resultados-preliminares">Resultados Preliminares</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/universo-caracteristicas-da-populacao-e-dos-domicilios">Características da População e dos Domicílios </a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/universo-aglomerados-subnormais">Aglomerados Subnormais</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/universo-caracteristicas-urbanisticas-do-entorno-dos-domicilios">Características Urbanísticas do Entorno dos Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/universo-caracteristicas-gerais-dos-indigenas">Características Gerais dos Indígenas</a></li>
+                                    </ul>
+                                    <ul class="col-sm-8 list-unstyled">
+                                        <li class="columns-title">Amostra</li>
+                                    </ul>
+                                    <ul class="col-sm-4 list-unstyled list-border">
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-resultados-preliminares">Resultados Preliminares</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-resultados-gerais">Resultados Gerais</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-caracteristicas-gerais-da-populacao-religiao-e-deficiencia">Características Gerais da População, Religião, e Deficiência</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-nupcialidade-fecundidade-e-migracao">Nupcialidade, Fecundidade e Migração</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-familias-e-domicilios">Famílias e Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-educacao-e-deslocamento">Educação e Deslocamento</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-trabalho-e-rendimento">Trabalho e Rendimento</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-trabalho-infantil">Trabalho Infantil</a></li>
+                                    </ul>
+                                    <ul class="col-sm-4 list-unstyled">
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/amostra-res-gerais-por-areas-div">Resultados Gerais por Áreas de Divulgação de Aglomerados Subnormais </a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2010/lev-de-inf-territoriais-area-div">Levantamento de Informações Territoriais por Áreas de Divulgação de Aglomerados Subnormais</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Demográfico 2000<b class="caret"></b></a>
+                    <ul class="dropdown-menu columns">
+                        <li>
+                            <!-- Content container to add padding -->
+                            <div class="container-menu">
+                                <div class="row">
+                                    <ul class="col-sm-6 list-unstyled list-border">
+                                        <li class="columns-title">Geral</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/inicial">Inicial</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/sinopse-preliminar">Sinopse Preliminar</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/universo">Universo</a></li>
+                                    </ul>
+
+                                    <ul class="col-sm-6 list-unstyled">
+                                        <li class="columns-title">Amostra</li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-tabulacao-avancada">Tabulação Avançada</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-primeiros-resultados">Primeiros Resultados</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-caracteristicas-gerais-da-populacao">Características Gerais da População</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-migracao-e-deslocamento">Migração e Deslocamento</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-familias-e-domicilios">Famílias e Domicílios</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-nupcialidade-e-fecundidade">Nupcialidade e Fecundidade</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-trabalho-e-rendimento">Trabalho e Rendimento</a></li>
+                                        <li><a href="/pesquisa/censo-demografico/demografico-2000/amostra-educacao">Educação</a></li>
+                                    </ul>
+
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contagem 2007<b class="caret"></b></a>
+                    <ul class="dropdown-menu multi-level">
+                        <li><a href="/pesquisa/censo-demografico/contagem-2007/tabelas">Tabelas</a></li>
+                    </ul>
+                </li>
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contagem 1996<b class="caret"></b></a>
+                    <ul class="dropdown-menu multi-level">
+                        <li><a href="/pesquisa/censo-demografico/contagem-1996/inicial">Inicial</a></li>
+                        <li><a href="/pesquisa/censo-demografico/contagem-1996/tabelas">Tabelas</a></li>
+                    </ul>
+                </li>
+
+
+            </ul>
+        </div><!-- /.navbar-collapse -->
+    </nav>
+
+
+
+<div class="container-fluid">
+    
+
+
+
+
+<section class="page-texto">
+    <h2>Censo Demográfico 2022</h2>
+    <h3>Características dos Domicílios - Resultados preliminares da Amostra</h3>
+
+    <p>
+        As informações dessa divulgação permitem conhecer a caracterização de elementos importantes dos domicílios e das condições de vida da população no Território Nacional sob a
+        perspectiva da condição de ocupação, do material das paredes externas, quantidade de cômodos e banheiros, presença de máquina de lavar roupa e  existência de conexão domiciliar
+        à Internet.
+    </p>
+    <p>
+        O conjunto de informações divulgados, também acessível no portal do IBGE na Internet e no canal Panorama Censo 2022, apresentam as informações referentes aos dados coletados
+        pelo Censo Demográfico 2022, no período de 1º de agosto de 2022 a 28 de maio de 2023, com a incorporação das revisões realizadas entre 29 maio a 07 de julho de 2023
+    </p>
+    <p>
+        Os dados disponibilizados são resultados preliminares da amostra, estimados a partir de áreas de ponderação preliminares, e contemplam os recortes Brasil, Grandes Regiões,
+        Unidades da Federação, Municípios e outros níveis compostos a partir de municípios.
+    </p>
+    <p>
+        A seguir são apresentadas as tabelas.
+    </p>
+
+    <div class="margin2"></div>
+    <h4 id="domicilios">Domicílios</h4>
+    <div class='wrapper-conteudo-scroll'><table class="tabela-panel ajax"><thead><tr><th></th><th>Número</th><th>Nome</th><th>Período</th><th>Território</th></tr></thead><tbody><tr class="tabela-9928"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9928" data-id="9928" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9928">9928</a></td><td><a title="Abrir Tabela" href="/tabela/9928">Domicílios particulares permanentes ocupados, por tipo de material das paredes externas, condição de ocupação do domicílio e tipo do domicílio</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9929"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9929" data-id="9929" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9929">9929</a></td><td><a title="Abrir Tabela" href="/tabela/9929">Domicílios particulares permanentes ocupados, por condição de ocupação do domicílio, segundo o número de moradores com 15 anos ou mais de idade e número de moradores com 14 anos ou menos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9930"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9930" data-id="9930" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9930">9930</a></td><td><a title="Abrir Tabela" href="/tabela/9930">Domicílios particulares permanentes ocupados, por número de cômodos, condição de ocupação do domicílio e tipo do domicílio</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9931"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9931" data-id="9931" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9931">9931</a></td><td><a title="Abrir Tabela" href="/tabela/9931">Domicílios particulares permanentes ocupados, por número de cômodos, número de banheiros de uso exclusivo do domicílio e número de dormitórios</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9932"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9932" data-id="9932" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9932">9932</a></td><td><a title="Abrir Tabela" href="/tabela/9932">Domicílios particulares permanentes ocupados, por número de cômodos, número de banheiros de uso exclusivo do domicílio, número de dormitórios, condição de ocupação do domicílio e tipo do domicílio</a></td><td>2022</td><td>BR, GR, UF</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9933"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9933" data-id="9933" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9933">9933</a></td><td><a title="Abrir Tabela" href="/tabela/9933">Domicílios particulares permanentes ocupados, por número de moradores por dormitório, condição de ocupação do domicílio e tipo do domicílio</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9934"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9934" data-id="9934" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9934">9934</a></td><td><a title="Abrir Tabela" href="/tabela/9934">Domicílios particulares permanentes ocupados, por número de moradores por dormitório, segundo o número de moradores com 15 anos ou mais de idade e número de moradores com 14 anos ou menos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9935"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9935" data-id="9935" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9935">9935</a></td><td><a title="Abrir Tabela" href="/tabela/9935">Domicílios particulares permanentes ocupados, por presença de máquina de lavar roupas, condição de ocupação do domicílio e tipo do domicílio</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9936"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9936" data-id="9936" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9936">9936</a></td><td><a title="Abrir Tabela" href="/tabela/9936">Domicílios particulares permanentes ocupados, por existência de conexão domiciliar à Internet, condição de ocupação do domicílio e tipo do domicílio</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9937"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9937" data-id="9937" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9937">9937</a></td><td><a title="Abrir Tabela" href="/tabela/9937">Moradores em domicílios particulares permanentes ocupados, por tipo de material das paredes externas, segundo a cor ou raça e os grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9938"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9938" data-id="9938" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9938">9938</a></td><td><a title="Abrir Tabela" href="/tabela/9938">Moradores em domicílios particulares permanentes ocupados, por condição de ocupação do domicílio, segundo a cor ou raça e os grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9939"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9939" data-id="9939" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9939">9939</a></td><td><a title="Abrir Tabela" href="/tabela/9939">Moradores em domicílios particulares permanentes ocupados, por número de cômodos, segundo a cor ou raça e os grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9940"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9940" data-id="9940" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9940">9940</a></td><td><a title="Abrir Tabela" href="/tabela/9940">Moradores em domicílios particulares permanentes ocupados, por número de moradores por dormitório, segundo a cor ou raça e os grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9941"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9941" data-id="9941" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9941">9941</a></td><td><a title="Abrir Tabela" href="/tabela/9941">Moradores em domicílios particulares permanentes ocupados, por presença de máquina de lavar roupa, segundo a cor ou raça e os grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9942"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9942" data-id="9942" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9942">9942</a></td><td><a title="Abrir Tabela" href="/tabela/9942">Moradores em domicílios particulares permanentes ocupados, por existência de conexão domiciliar à Internet, segundo a cor ou raça e os grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9943"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9943" data-id="9943" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9943">9943</a></td><td><a title="Abrir Tabela" href="/tabela/9943">Moradores indígenas em domicílios particulares permanentes ocupados, por tipo de material das paredes externas e grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9944"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9944" data-id="9944" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9944">9944</a></td><td><a title="Abrir Tabela" href="/tabela/9944">Moradores indígenas em domicílios particulares permanentes ocupados, por condição de ocupação do domicílio e os grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9945"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9945" data-id="9945" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9945">9945</a></td><td><a title="Abrir Tabela" href="/tabela/9945">Moradores indígenas em domicílios particulares permanentes ocupados, por número de cômodos e os grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9946"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9946" data-id="9946" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9946">9946</a></td><td><a title="Abrir Tabela" href="/tabela/9946">Moradores indígenas em domicílios particulares permanentes ocupados, por número de moradores por dormitório e os grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9947"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9947" data-id="9947" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9947">9947</a></td><td><a title="Abrir Tabela" href="/tabela/9947">Moradores indígenas em domicílios particulares permanentes ocupados, por presença de máquina de lavar roupa e os grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr><tr class="tabela-9948"><td><a title="Descrever Tabela" href="/ajax/tabela/descricao/1/9948" data-id="9948" class="glyphicon glyphicon-list-alt expander"></a></td><td><a title="Abrir Tabela" href="/tabela/9948">9948</a></td><td><a title="Abrir Tabela" href="/tabela/9948">Moradores indígenas em domicílios particulares permanentes ocupados, por existência de conexão domiciliar à Internet e os grupos de idade</a></td><td>2022</td><td>BR, GR, UF, IN, IM, CU, MU</td></tr><tr><td colspan="5" class="tabela-descricao" style="display: none"></td></tr></tbody></table></div>
+</section>
+
+</div>
+
+
+<script src="/Scripts/jquery.exportaExcel.js"></script>
+<script src="/Scripts/jquery.tabela.js"></script>
+<script src="/Scripts/page-internal.js"></script>
+<script src="/Scripts/abas.js"></script>
+
+
+
+    <iframe class="print-frame"></iframe>
+
+    <div id="pesquisas-menu-modal" class="modal" role="dialog">
+        <div class="modal-dialog">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title">Pesquisas</h5>
+                </div>
+                <div class="modal-body">
+                        <div class="pesquisas-menu-arvore">
+
+        <div class="pesquisas-menu-form">
+            <input type="text" placeholder="Filtro" class="form-control" />
+        </div>
+
+        <ul>
+            <li>
+                <span>Indicadores</span>
+                <ul>
+                    <li>
+                        <span>Trabalho e Rendimento</span>
+                        <ul>
+                            <li><a href="/pesquisa/pnadcm">Pesquisa Nacional por Amostra de Domicílios Continua Mensal - PNADCM</a></li>
+                            <li><a href="/pesquisa/pnadct">Pesquisa Nacional por Amostra de Domicílios Continua Trimestral - PNADCT</a></li>
+                            <li><a href="/pesquisa/pme">Pesquisa Mensal de Emprego - PME (extinta)</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Agropecuária</span>
+                        <ul>
+                            <li><a href="/pesquisa/estoques">Pesquisa de Estoques - ESTOQUES</a></li>
+                            <li><a href="/pesquisa/lspa">Levantamento Sistemático da Produção Agrícola - LSPA</a></li>
+                            <li><a href="/pesquisa/abate">Pesquisa Trimestral do Abate de Animais - ABATE</a></li>
+                            <li><a href="/pesquisa/couro">Pesquisa Trimestral do Couro - COURO</a></li>
+                            <li><a href="/pesquisa/leite">Pesquisa Trimestral do Leite - LEITE</a></li>
+                            <li><a href="/pesquisa/pog">Produção de Ovos de Galinha - POG</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Indústria</span>
+                        <ul>
+                            <li><a href="/pesquisa/pimes">Pesquisa Industrial Mensal de Emprego e Salário - PIMES (extinta)</a></li>
+                            <li><a href="/pesquisa/pim-pf-brasil">Pesquisa Industrial Mensal - Produção Física - PIM-PF-Brasil</a></li>
+                            <li><a href="/pesquisa/pim-pf-regional">Pesquisa Industrial Mensal - Produção Física - PIM-PF-Regional</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Comércio</span>
+                        <ul>
+                            <li><a href="/pesquisa/pmc">Pesquisa Mensal de Comércio - PMC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Serviços</span>
+                        <ul>
+                            <li><a href="/pesquisa/pms">Pesquisa Mensal de Serviços - PMS</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Índices, Preços e Custos</span>
+                        <ul>
+                            <li><a href="/pesquisa/ipp">Índice de Preços ao Produtor - IPP</a></li>
+                            <li><a href="/pesquisa/sinapi">Sistema Nacional de Pesquisa de Custos e Índices da Construção Civil - SINAPI</a></li>
+                            <li><a href="/pesquisa/snipc">Índices de Preços ao Consumidor (IPCA, INPC e IPCA15) - SNIPC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Sistema de Contas Nacionais Trimestrais</span>
+                        <ul>
+                            <li><a href="/pesquisa/cnt">Contas Nacionais Trimestrais - CNT</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="/pesquisa/ods">Objetivos de Desenvolvimento Sustentável - ODS</a></li>
+                </ul>
+            </li>
+
+
+            <li>
+                <span>População</span>
+                <ul>
+                    <li>
+                        <a href="/pesquisa/censo-demografico">Censo Demográfico - Censo-Demografico</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/registro-civil">Estatísticas do Registro Civil - Registro-Civil</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pnadca">Pesquisa Nacional por Amostra de Domicílios Contínua Anual - PNADCA</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pnad">Pesquisa Nacional por Amostra de Domicílios - PNAD</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/estimapop">Estimativas de População - EstimaPop</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/projecao-da-populacao">Projeções da População</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pof">Pesquisa de Orçamentos Familiares - POF</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pns">Pesquisa Nacional de Saúde - PNS</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/ams">Pesquisa Assistência Médico-Sanitária - AMS</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pnsb">Pesquisa Nacional de Saneamento Básico - PNSB</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/pense">Pesquisa Nacional de Saúde do Escolar - PeNSE</a>
+                    </li>
+                    <li>
+                        <a href="/pesquisa/munic">Pesquisa de Informações Básicas Municipais - MUNIC</a>
+                    </li>
+                </ul>
+            </li>
+
+            <li>
+                <span>Economia</span>
+                <ul>
+                    <li>
+                        <span>Indústria</span>
+                        <ul>
+                            <li><a href="/pesquisa/paic">Pesquisa Anual da Indústria da Construção - PAIC</a></li>
+                            <li><a href="/pesquisa/pia-empresa">Pesquisa Industrial Anual - PIA-Empresa</a></li>
+                            <li><a href="/pesquisa/pia-produto">Pesquisa Industrial Anual - PIA-Produto</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Serviços</span>
+                        <ul>
+                            <li><a href="/pesquisa/pas">Pesquisa Anual de Serviços - PAS</a></li>
+                            <li><a href="/pesquisa/pspp">Pesquisa de Serviços de Publicidade e Promoção - PSPP</a></li>
+                            <li><a href="/pesquisa/psti">Pesquisa de Serviços de Tecnologia da Informação - PSTI</a></li>
+                            <li><a href="/pesquisa/psh">Pesquisa de Serviços de Hospedagem - PSH</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Agropecuária</span>
+                        <ul>
+                            <li><a href="/pesquisa/censo-agropecuario">Censo Agropecuário - Censo-Agropecuario</a></li>
+                            <li><a href="/pesquisa/pam">Produção Agrícola Municipal - PAM</a></li>
+                            <li><a href="/pesquisa/pevs">Produção da Extração Vegetal e da Silvicultura - PEVS</a></li>
+                            <li><a href="/pesquisa/ppm">Pesquisa da Pecuária Municipal - PPM</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Comércio</span>
+                        <ul>
+                            <li><a href="/pesquisa/pac">Pesquisa Anual de Comércio - PAC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Inovação e Empreendedorismo</span>
+                        <ul>
+                            <li><a href="/pesquisa/pintec">Pesquisa de Inovação - PINTEC</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span>Contas Nacionais</span>
+                        <ul>
+                            <li><a href="/pesquisa/cna">Contas Nacionais Anuais - CNA</a></li>
+                            <li><a href="/pesquisa/pib-munic">Produto Interno Bruto dos Municípios - PIB-Munic</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais">Contas Econômicas Ambientais</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="/pesquisa/cempre">Cadastro Central de Empresas - CEMPRE</a></li>
+                    <li><a href="/pesquisa/demografia-das-empresas">Demografia das Empresas - Demografia-das-Empresas</a></li>
+                    <li><a href="/pesquisa/fasfil">Fundações Privadas e Associações sem Fins Lucrativos - FASFIL</a></li>
+                    <li><a href="/pesquisa/cadastros-de-mei">Estatísticas dos Cadastros de Microempreendedores Individuais (MEI) </a></li>
+                </ul>
+            </li>
+
+            <li>
+                <span>Meio Ambiente</span>
+                <ul>
+                    <li>
+                        <span>Contas Econômicas Ambientais</span>
+                        <ul>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-da-terra">Contas Econômicas Ambientais da Terra</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-economicas-da-agua">Contas Econômicas Ambientais da Água - CEAA</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-economicas-de-energia">Contas Econômicas Ambientais de Energia - CEAE</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-de-ecossistemas">Contas de Ecossistemas: O Uso da Terra nos Biomas</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contas-de-especies">Contas de Ecossistemas: Espécies Ameaçadas</a></li>
+                            <li><a href="/pesquisa/contas-economicas-ambientais/contribuicao-dos-polinizadores">Contribuição dos Polinizadores para as Produções Agrícola e Extrativista do Brasil</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="/pesquisa/ids">Indicadores de Desenvolvimento Sustentável - IDS</a></li>
+                    <li><a href="/pesquisa/areas-urbanizadas">Áreas Urbanizadas</a></li>
+                    <li><a href="/pesquisa/avaliacao-sobre-a-biodiversidade">Avaliação dos dados sobre a Biodiversidade Brasileira</a></li>
+                </ul>
+            </li>
+
+        </ul>
+
+    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="modal sidra-modal fade" id="sidra-modal" role="dialog">
+        <div class="modal-dialog modal-lg">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title"></h4>
+                </div>
+                <div class="modal-body">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    
+
+        <div class="areausuario-login-container"
+         data-target=".areausuario-perfil-link"
+         data-link=".areausuario-link"
+         data-modo="modal">
+
+        <div class="areausuario-login-arrow">
+        </div>
+
+        <div class="areausuario-login">
+            <div class="login-header">
+                <button type="button" class="close" data-dismiss="modal">×</button>
+                <h4>Acessar sua Conta</h4>
+            </div>
+
+
+            <div class="login-body">
+                <ul class="opcao-login">
+                    <li class="active" data-target=".formulario-sidra">Sidra</li>
+                    <li data-target=".formulario-ibge-mfa">IBGE</li>
+                </ul>
+
+                <div class="formulario formulario-sidra">
+                    <form class="login-ajax-form" method="post" action="/perfil/login/sidra">
+                        <input type="hidden" name="ReturnUrl" />
+
+                        <span data-validator-for="Email">
+                        </span>
+                        <input placeholder="E-mail" name="Email"
+                               data-val-required="O campo Email é obrigatório."
+                               class="form-control primeiro" type="text" />
+
+                        <div class="separador"></div>
+
+                        <span data-validator-for="Senha"></span>
+                        <input placeholder="Senha" name="Senha"
+                               data-val-required="O campo Senha é obrigatório."
+                               class="form-control" type="password" />
+
+                        <div class="separador"></div>
+
+                        <label class="checkbox-inline"><input name="ManterContectado" type="checkbox" /> Manter-me conectado</label>
+
+                        <div class="separador"></div>
+
+                        <input type="submit" value="Entrar" class="btn btn-sm btn-success login" />
+
+                        <div class="separador"></div>
+
+                        <a class="esqueci" href="/perfil/usuario/recuperarsenha">Esqueci minha Senha</a>
+                        <a class="cadastro" href="/perfil/usuario/cadastro">Cadastre-se</a>
+                    </form>
+
+                    <div class="redes">
+                        <div class="redes-titulo">
+                            Acesse pelas redes sociais
+                        </div>
+                        <div class="icons">
+                            <a class="login-externo" data-action="Facebook" href="#" title="Facebook"><img class="icon-rede" src="/Content/imagens/login/facebook.png" /></a>
+                            <a class="login-externo" data-action="Google" href="#" title="Google"><img class="icon-rede" src="/Content/imagens/login/google.png" /></a>
+                            <a class="login-externo" data-action="Microsoft" href="#" title="Microsoft"><img class="icon-rede" src="/Content/imagens/login/microsoft.png" /></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="formulario formulario-ibge-mfa" style="display: none">
+                        <form class="login-ajax-form" method="post" action="/perfil/login/ibgemfa">
+                            <input type="hidden" name="ReturnUrl" />
+
+
+                            <span data-validator-for="Usuario"></span>
+                            <input placeholder="Usuário IBGE"
+                                   name="Usuario"
+                                   data-val-required="O campo Email é obrigatório."
+                                   class="form-control primeiro" type="text" />
+
+                            <div class="separador"></div>
+
+                            <span data-validator-for="Senha"></span>
+                            <input placeholder="Senha"
+                                   name="Senha"
+                                   data-val-required="O campo Senha é obrigatório."
+                                   class="form-control" type="password" />
+
+                            <div class="separador"></div>
+                            <label class="checkbox-inline"><input type="checkbox" /> Manter-me conectado</label>
+
+                            <div class="separador"></div>
+                            <input type="submit" value="Entrar" class="btn btn-sm btn-success login" />
+
+                            <div class="separador"></div>
+                            <span>Utilize seu login de rede</span>
+                        </form>
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+</body>
+
+</html>
+
+
+
+
+
+
+

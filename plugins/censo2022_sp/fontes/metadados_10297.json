@@ -1,0 +1,66 @@
+{
+  "id": 10297,
+  "nome": "Participação percentual na composição do rendimento nominal mensal domiciliar dos moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a), por tipo de rendimento",
+  "URL": "https://sidra.ibge.gov.br/tabela/10297",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Geral",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 13506,
+      "nome": "Massa de rendimento nominal mensal domiciliar per capita dos moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a)",
+      "unidade": "Reais",
+      "sumarizacao": []
+    },
+    {
+      "id": 13504,
+      "nome": "Participação percentual na composição do rendimento domiciliar dos moradores em domicílios particulares permanentes ocupados, exclusive os cuja condição no domicílio era pensionista, empregado(a) doméstico(a) ou parente do(a) empregado(a) doméstico(a)",
+      "unidade": "%",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 11308,
+      "nome": "Tipo de rendimento",
+      "sumarizacao": {
+        "status": false,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 79450,
+          "nome": "Rendimento de todas as fontes",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 79451,
+          "nome": "Rendimento de todos os trabalhos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 79452,
+          "nome": "Rendimento de outras fontes",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    }
+  ]
+}

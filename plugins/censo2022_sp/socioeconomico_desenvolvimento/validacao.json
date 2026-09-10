@@ -1,0 +1,14 @@
+{
+  "gerado_em_utc": "2026-09-10T01:54:00.378591+00:00",
+  "municipios": 645,
+  "campos_adicionais": 164,
+  "campos_censo": 2235,
+  "campos_total": 2399,
+  "atributos_total": 2403,
+  "join_por_codigo": "OK 1:1",
+  "codigo_ibge_6_para_7": "Correspondencia bijetiva baseada na malha original, 645 codigos",
+  "valores_nulos_ordem_geometrias_crs": "OK na releitura",
+  "idhm_controle_pnud_tres_municipios": "OK",
+  "campos_excluidos_sem_valores": [],
+  "validacao_visual_qgis": false
+}

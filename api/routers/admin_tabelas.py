@@ -29,6 +29,7 @@ ESQUEMAS_PERMITIDOS: tuple[str, ...] = (
     "ahp",
     "auditoria",
     "demandas",
+    "dominios",
     "geo",
     "geoprocessamento",
     "hierarquizacao_demandas",
@@ -253,7 +254,7 @@ async def listar_esquemas(_user: SessionUser = Depends(require_admin)) -> dict[s
                     total = None
                 tabelas.append({
                     "nome": nome,
-                    "dominio": str(nome).startswith("dom_"),
+                    "dominio": esquema == "dominios" or str(nome).startswith("dom_"),
                     "registros": total,
                 })
             resultado.append({"esquema": esquema, "tabelas": tabelas})
@@ -353,7 +354,7 @@ async def obter_tabela(
             payload = {
                 "esquema": esquema,
                 "tabela": tabela,
-                "dominio": tabela.startswith("dom_"),
+                "dominio": esquema == "dominios" or tabela.startswith("dom_"),
                 "chave_primaria": chave,
                 "colunas": colunas_saida,
                 "linhas": linhas_dict,

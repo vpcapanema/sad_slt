@@ -157,7 +157,13 @@ def salvar_vetor(
             ),
             (database_id,),
         )
-        conn.commit()
+        if categoria == "processadas":
+            from api.services.ciclo_vida_arquivos import gravar_e_confirmar
+            spatial = gdf.to_crs(crs) if gdf.crs else gdf.set_crs(crs)
+            gravar_e_confirmar(conn, database_id, metadata, frame=spatial)
+            metadados.update(metadata)
+        else:
+            conn.commit()
         return database_id
 
 
@@ -203,7 +209,12 @@ def salvar_raster(
                 VALUES (%s,%s,%s,%s,1,%s,%s,%s)""").format(sql.Identifier(rasters)),
             (database_id, dados_geotiff, largura, altura, dtype, nodata, _jsonb(perfil)),
         )
-        conn.commit()
+        if categoria == "processadas":
+            from api.services.ciclo_vida_arquivos import gravar_e_confirmar
+            gravar_e_confirmar(conn, database_id, metadata, raster_bytes=dados_geotiff)
+            metadados.update(metadata)
+        else:
+            conn.commit()
         return database_id
 
 
@@ -211,7 +222,7 @@ def _find_working_layer(conn: Any, recurso_id: str) -> tuple[str, dict[str, Any]
     for categoria in ("processadas", "importadas"):
         catalog = STORAGES[categoria][0]
         row = conn.execute(
-            sql.SQL("SELECT * FROM geoprocessamento.{} WHERE recurso_sessao_id=%s").format(
+            sql.SQL("SELECT * FROM geoprocessamento.{} WHERE recurso_sessao_id=%s FOR UPDATE").format(
                 sql.Identifier(catalog)
             ),
             (recurso_id,),
@@ -265,6 +276,11 @@ def substituir_vetor(recurso_id: str, gdf: gpd.GeoDataFrame, metadados: dict[str
         categoria, camada = found
         catalog, features, _ = STORAGES[categoria]
         database_id = str(camada["id"])
+        if categoria == "processadas" and conn.execute(
+            "SELECT 1 FROM geoprocessamento.arquivo_resultado WHERE camada_id=%s FOR UPDATE",
+            (database_id,),
+        ).fetchone():
+            raise ValueError("Resultado com arquivo é imutável. Gere uma nova camada para editar seu conteúdo.")
         conn.execute(
             sql.SQL("DELETE FROM geoprocessamento.{} WHERE camada_id=%s").format(
                 sql.Identifier(features)
@@ -648,6 +664,8 @@ def homologar(
         if progress:
             progress("Camada de origem localizada no armazenamento de trabalho")
         categoria, source = found
+        from api.services.ciclo_vida_arquivos import registrar_uso
+        registrar_uso(conn, recurso_id, "homologacao", homologada_recurso_id)
         source_features = STORAGES[categoria][1]
         source_rasters = STORAGES[categoria][2]
         if source["tipo"] == "vetor":

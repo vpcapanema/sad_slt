@@ -1,0 +1,121 @@
+{
+  "id": 10097,
+  "nome": "Índice de envelhecimento, idade mediana e razão de sexo, total e quilombolas, por localização e situação do domicílio",
+  "URL": "https://sidra.ibge.gov.br/tabela/10097",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "População quilombola",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [
+      "N134",
+      "N131"
+    ],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 9175,
+      "nome": "Índice de envelhecimento (Idosos: 60 anos ou mais de idade)",
+      "unidade": "Razão",
+      "sumarizacao": []
+    },
+    {
+      "id": 9266,
+      "nome": "Índice de envelhecimento da população quilombola (Idosos: 60 anos ou mais)",
+      "unidade": "Razão",
+      "sumarizacao": []
+    },
+    {
+      "id": 10613,
+      "nome": "Idade mediana",
+      "unidade": "Anos",
+      "sumarizacao": []
+    },
+    {
+      "id": 9263,
+      "nome": "Idade mediana da população quilombola",
+      "unidade": "Anos",
+      "sumarizacao": []
+    },
+    {
+      "id": 8845,
+      "nome": "Razão de sexo",
+      "unidade": "Razão",
+      "sumarizacao": []
+    },
+    {
+      "id": 9264,
+      "nome": "Razão de sexo da população quilombola",
+      "unidade": "Razão",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 2661,
+      "nome": "Localização do domicílio",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 32776,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 60027,
+          "nome": "Em territórios quilombolas",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 60028,
+          "nome": "Fora de territórios quilombolas",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "nome": "Situação do domicílio",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 6795,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 1,
+          "nome": "Urbana",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 2,
+          "nome": "Rural",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    }
+  ]
+}

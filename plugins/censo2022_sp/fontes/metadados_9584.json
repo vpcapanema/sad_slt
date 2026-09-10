@@ -1,0 +1,336 @@
+{
+  "id": 9584,
+  "nome": "Domicílios em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por espécie, e existência e características do entorno",
+  "URL": "https://sidra.ibge.gov.br/tabela/9584",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Domicílios",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2022,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 9611,
+      "nome": "Domicílios em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios",
+      "unidade": "Domicílios",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 1009611,
+      "nome": "Domicílios em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios - percentual do total geral",
+      "unidade": "%",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 3,
+      "nome": "Espécie",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 59993,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 9697,
+          "nome": "Particular",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 2504,
+          "nome": "Particular permanente",
+          "unidade": null,
+          "nivel": 2
+        },
+        {
+          "id": 59998,
+          "nome": "Particular permanente ocupado",
+          "unidade": null,
+          "nivel": 3
+        },
+        {
+          "id": 60001,
+          "nome": "Particular permanente não ocupado",
+          "unidade": null,
+          "nivel": 3
+        },
+        {
+          "id": 60002,
+          "nome": "Particular permanente não ocupado - vago",
+          "unidade": null,
+          "nivel": 4
+        },
+        {
+          "id": 60003,
+          "nome": "Particular permanente não ocupado - uso ocasional",
+          "unidade": null,
+          "nivel": 4
+        },
+        {
+          "id": 2505,
+          "nome": "Particular improvisado",
+          "unidade": null,
+          "nivel": 2
+        },
+        {
+          "id": 103995,
+          "nome": "Coletivo",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 10004,
+          "nome": "Coletivo - com morador",
+          "unidade": null,
+          "nivel": 2
+        },
+        {
+          "id": 10005,
+          "nome": "Coletivo - sem morador",
+          "unidade": null,
+          "nivel": 2
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "nome": "Características do entorno",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 200,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 72240,
+          "nome": "Capacidade máxima de circulação da via - Caminhão ou ônibus",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72241,
+          "nome": "Capacidade máxima de circulação da via - Carro ou van",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72242,
+          "nome": "Capacidade máxima de circulação da via - Motocicletas, bicicletas e pedestres",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72243,
+          "nome": "Capacidade de circulação da via - Aquavias",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72244,
+          "nome": "Capacidade de circulação da via - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72246,
+          "nome": "Via pavimentada - Existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72247,
+          "nome": "Via pavimentada - Não existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72248,
+          "nome": "Via pavimentada - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72250,
+          "nome": "Existência de bueiro / boca de lobo - Existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72251,
+          "nome": "Existência de bueiro / boca de lobo - Não existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72252,
+          "nome": "Existência de bueiro / boca de lobo - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72254,
+          "nome": "Existência de iluminação pública - Existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72255,
+          "nome": "Existência de iluminação pública - Não existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72256,
+          "nome": "Existência de iluminação pública - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72258,
+          "nome": "Existência de ponto de ônibus / van - Existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72259,
+          "nome": "Existência de ponto de ônibus / van - Não existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72260,
+          "nome": "Existência de ponto de ônibus / van - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72262,
+          "nome": "Existência de via sinalizada para bicicleta - Existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72263,
+          "nome": "Existência de via sinalizada para bicicleta - Não existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72264,
+          "nome": "Existência de via sinalizada para bicicleta - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72266,
+          "nome": "Existência de calçada / passeio - Existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72267,
+          "nome": "Existência de calçada / passeio - Não existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72268,
+          "nome": "Existência de calçada / passeio - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72270,
+          "nome": "Existência de obstáculo na calçada - Existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72271,
+          "nome": "Existência de obstáculo na calçada - Não existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72272,
+          "nome": "Existência de obstáculo na calçada - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72274,
+          "nome": "Existência de rampa para cadeirante - Existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72275,
+          "nome": "Existência de rampa para cadeirante - Não existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72276,
+          "nome": "Existência de rampa para cadeirante - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72278,
+          "nome": "Arborização - Sem árvores",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72279,
+          "nome": "Arborização - De 1 a 2 árvores",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72280,
+          "nome": "Arborização - De 3 a 4 árvores",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72281,
+          "nome": "Arborização - 5 ou mais árvores",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72282,
+          "nome": "Arborização - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    }
+  ]
+}

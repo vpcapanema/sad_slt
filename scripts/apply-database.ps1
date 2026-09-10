@@ -236,7 +236,10 @@ $migrations = @(
     "100_padronizar_geometria_sirgas2000.sql",
     "101_backfill_crs_sirgas2000.sql",
     "102_sei_integracao_credencial.sql",
-    "103_analise_demanda.sql"
+    "103_analise_demanda.sql",
+    "104_categorias_extracao_atributos.sql",
+    "105_ciclo_vida_arquivos_geoespaciais.sql",
+    "106_base_municipal.sql"
 )
 
 if ($OnlyMigration) {
@@ -262,6 +265,18 @@ if (-not $OnlyMigration) {
     if (Test-SchemaReady $latestSchemaQuery) {
         Write-Ok "Schema ja esta na migration 091; nenhuma migration sera reaplicada"
         $migrations = @()
+        if (-not (Test-SchemaReady "SELECT to_regclass('dominios.categoria_extracao_atributos') IS NOT NULL;")) {
+            $migrations = @("104_categorias_extracao_atributos.sql")
+            Write-Ok "Dicionario de categorias pendente; aplicando migration 104"
+        }
+        if (-not (Test-SchemaReady "SELECT to_regclass('geoprocessamento.arquivo_resultado') IS NOT NULL;")) {
+            $migrations += "105_ciclo_vida_arquivos_geoespaciais.sql"
+            Write-Ok "Ciclo de vida de arquivos pendente; aplicando migration 105"
+        }
+        if (-not (Test-SchemaReady "SELECT to_regclass('base_municipal.observacao') IS NOT NULL;")) {
+            $migrations += "106_base_municipal.sql"
+            Write-Ok "Base municipal pendente; aplicando migration 106"
+        }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"
         $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 91 }

@@ -1,0 +1,36 @@
+{
+  "arquivo": "SP_Censo2022_completo.fgb",
+  "municipios": 645,
+  "campos_censo": 6159,
+  "atributos_totais": 6163,
+  "ordem": "CD_MUN, NM_MUN, SIGLA_UF, AREA_KM2, campos por tema e tabela",
+  "temas": [
+    "01_populacao",
+    "02_cor_raca",
+    "03_domicilios",
+    "04_saneamento",
+    "05_educacao",
+    "06_renda",
+    "07_trabalho",
+    "08_habitacao_internet",
+    "09_entorno_urbano",
+    "10_indigenas",
+    "11_quilombolas",
+    "12_deficiencia_autismo",
+    "13_migracao",
+    "14_familias_fecundidade",
+    "15_religiao",
+    "16_deslocamentos",
+    "17_favelas",
+    "18_registro_obitos"
+  ],
+  "crs": "EPSG:4674",
+  "verificacoes": {
+    "ordem_colunas": "OK",
+    "codigos_municipais": "OK",
+    "valores_e_nulos_sem_diferencas": "OK",
+    "geometrias_preservadas": "OK",
+    "crs_preservado": "OK"
+  },
+  "validacao_visual_qgis": false
+}

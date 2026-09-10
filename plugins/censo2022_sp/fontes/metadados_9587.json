@@ -1,0 +1,214 @@
+{
+  "id": 9587,
+  "nome": "Moradores em domicílios particulares permanentes ocupados, em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios, por sexo, grupos de idade e características do entorno por bueiro, iluminação pública, calçada e rampa para cadeirante",
+  "URL": "https://sidra.ibge.gov.br/tabela/9587",
+  "pesquisa": "Censo Demográfico",
+  "assunto": "Pessoas",
+  "periodicidade": {
+    "frequencia": "anual",
+    "inicio": 2010,
+    "fim": 2022
+  },
+  "nivelTerritorial": {
+    "Administrativo": [
+      "N1",
+      "N2",
+      "N6",
+      "N3"
+    ],
+    "Especial": [],
+    "IBGE": []
+  },
+  "variaveis": [
+    {
+      "id": 9598,
+      "nome": "Moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios",
+      "unidade": "Pessoas",
+      "sumarizacao": [
+        "nivelTerritorial"
+      ]
+    },
+    {
+      "id": 1009598,
+      "nome": "Moradores em domicílios particulares permanentes ocupados em setores censitários selecionados para a Pesquisa Urbanística do Entorno dos Domicílios - percentual do total geral",
+      "unidade": "%",
+      "sumarizacao": []
+    }
+  ],
+  "classificacoes": [
+    {
+      "id": 2,
+      "nome": "Sexo",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 6794,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 4,
+          "nome": "Homens",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 5,
+          "nome": "Mulheres",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    },
+    {
+      "id": 58,
+      "nome": "Grupo de idade",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 95253,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 1140,
+          "nome": "0 a 4 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 1141,
+          "nome": "5 a 9 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 3518,
+          "nome": "10 a 19 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 104870,
+          "nome": "20 a 39 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 99127,
+          "nome": "40 a 59 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 3520,
+          "nome": "60 a 69 anos",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 3244,
+          "nome": "70 anos ou mais",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "nome": "Características do entorno",
+      "sumarizacao": {
+        "status": true,
+        "excecao": []
+      },
+      "categorias": [
+        {
+          "id": 200,
+          "nome": "Total",
+          "unidade": null,
+          "nivel": 0
+        },
+        {
+          "id": 72250,
+          "nome": "Existência de bueiro / boca de lobo - Existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72251,
+          "nome": "Existência de bueiro / boca de lobo - Não existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72252,
+          "nome": "Existência de bueiro / boca de lobo - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72254,
+          "nome": "Existência de iluminação pública - Existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72255,
+          "nome": "Existência de iluminação pública - Não existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72256,
+          "nome": "Existência de iluminação pública - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72266,
+          "nome": "Existência de calçada / passeio - Existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72267,
+          "nome": "Existência de calçada / passeio - Não existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72268,
+          "nome": "Existência de calçada / passeio - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72274,
+          "nome": "Existência de rampa para cadeirante - Existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72275,
+          "nome": "Existência de rampa para cadeirante - Não existe",
+          "unidade": null,
+          "nivel": 1
+        },
+        {
+          "id": 72276,
+          "nome": "Existência de rampa para cadeirante - Não declarado",
+          "unidade": null,
+          "nivel": 1
+        }
+      ]
+    }
+  ]
+}
