@@ -458,23 +458,27 @@
     const geometriaBase=(layer)=>layer.tipo?.toLowerCase().includes("raster")?"raster":(state.geometryTypes[layer.id]||[])[0]||"";
     const ordemGeometria=(layer)=>{const tipo=geometriaBase(layer);
       return tipo.includes("Point")?0:tipo.includes("Line")?1:tipo.includes("Polygon")?2:tipo==="raster"?4:3;};
-    const porOrigem=new Map();
+    // So agrupa o que traz categoria da extracao. "origem" e procedencia
+    // ("arquivo", "banco", "STAC") e nunca foi nome de grupo.
+    const porCategoria=new Map(),soltas=[];
     for(const layer of items){
-      const nome=String(layer.origem||"").trim()||"Sem categoria";
-      if(!porOrigem.has(nome))porOrigem.set(nome,[]);
-      porOrigem.get(nome).push(layer);
+      const nome=String(layer.categoria||"").trim();
+      if(!nome){soltas.push(layer);continue;}
+      if(!porCategoria.has(nome))porCategoria.set(nome,[]);
+      porCategoria.get(nome).push(layer);
     }
     const group=(id,label,icon,content,empty,extra="",camadas=null)=>{
       const marca=camadas?`<input type="checkbox" class="layer-group-check" data-layer-group-toggle="${escapeHtml(id)}"${camadas.ligadas?" checked":""}${camadas.ligadas&&camadas.ligadas<camadas.total?' data-parcial="1"':""} aria-label="Exibir todas as camadas de ${escapeHtml(camadas.rotulo)}">`:"";
       return `<section class="layer-group ${extra} ${state.layerGroups[id]?"collapsed":""}" data-layer-group="${id}"><div class="tree-row layer-group-head">${marca}<button class="layer-group-title" type="button" aria-expanded="${!state.layerGroups[id]}"><i data-lucide="chevron-down" class="tree-chevron"></i><i data-lucide="${icon}"></i><strong>${label}</strong></button></div><div class="layer-group-children">${content||`<div class="empty compact">${empty}</div>`}</div></section>`;
     };
     const contagem=(rotulo,lista)=>({rotulo,total:lista.length,ligadas:lista.filter(l=>camadaVisivel(l.id)).length});
-    const operational=[...porOrigem.entries()]
+    const ordenar=lista=>lista.sort((a,b)=>ordemGeometria(a)-ordemGeometria(b)||String(a.nome).localeCompare(String(b.nome),"pt-BR",{sensitivity:"base"}));
+    const operational=[...porCategoria.entries()]
       .sort((a,b)=>a[0].localeCompare(b[0],"pt-BR",{sensitivity:"base"}))
       .map(([nome,camadas])=>{
-        camadas.sort((a,b)=>ordemGeometria(a)-ordemGeometria(b)||String(a.nome).localeCompare(String(b.nome),"pt-BR",{sensitivity:"base"}));
-        return group(`origem:${nome}`,`${escapeHtml(nome)} <span class="layer-group-count">${camadas.length}</span>`,"folder",camadas.map(layerRow).join(""),"","layer-subgroup",contagem(nome,camadas));
-      }).join("");
+        ordenar(camadas);
+        return group(`categoria:${nome}`,`${escapeHtml(nome)} <span class="layer-group-count">${camadas.length}</span>`,"folder",camadas.map(layerRow).join(""),"","layer-subgroup",contagem(nome,camadas));
+      }).join("")+ordenar(soltas).map(layerRow).join("");
     const operationalLabel=bySource?"Camadas por fonte":"Camadas operacionais";
     $("#gp-layer-list").innerHTML=group("operational",operationalLabel,"layers-3",operational,"Nenhuma camada carregada.","",items.length?contagem(operationalLabel,items):null)+group("basemap","Basemap","map",base,"Nenhum mapa-base encontrado.");icons();
     // O estado intermediário só existe em JavaScript, não como atributo.
@@ -838,7 +842,7 @@
       if(fit){const bounds=new maplibregl.LngLatBounds();data.features?.forEach(feature=>walkCoords(feature.geometry?.coordinates,coord=>bounds.extend(coord)));if(!bounds.isEmpty())state.map.fitBounds(bounds,{padding:40,maxZoom:15})}
       return true;
     }
-    state.geometryTypes[id]=resource.geometria_tipo?[resource.geometria_tipo]:[];
+    state.geometryTypes[id]=String(resource.geometria_tipo||"").split(",").map(t=>t.trim()).filter(Boolean);
     const color=layerColor(id,state.geometryTypes[id]);
     state.map.addSource(id,{type:"vector",tiles:[`${location.origin}${API}/camadas/${encodeURIComponent(id)}/tiles/{z}/{x}/{y}.pbf`],minzoom:0,maxzoom:22});
     state.map.addLayer({id,type:"fill",source:id,"source-layer":"camada",paint:{"fill-color":color,"fill-opacity":.32,"fill-outline-color":color},filter:["==",["geometry-type"],"Polygon"]});
@@ -1394,7 +1398,7 @@
       (geojson.features||[]).forEach(f=>walkCoords(f.geometry?.coordinates,c=>bounds.extend(c)));
       if(!bounds.isEmpty()) state.map.fitBounds(bounds,{padding:40,maxZoom:14});
     }
-    const entry={id,nome:nome||id,tipo:opts.tipo||"vetorial (memória)",origem:opts.origem||"Hierarquização",destino:"memoria_local",crs:"EPSG:4326",geometria_tipo:opts.geometria_tipo||"Point"};
+    const entry={id,nome:nome||id,tipo:opts.tipo||"vetorial (memória)",origem:opts.origem||"Hierarquização",categoria:opts.categoria||"",destino:"memoria_local",crs:"EPSG:4326",geometria_tipo:opts.geometria_tipo||"Point"};
     const idx=state.layers.findIndex(l=>l.id===id);
     if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
     if(!opts.lote) renderLayers();

@@ -24,8 +24,8 @@ export function criarMapa() {
         const id=item.id||item.key,previous=mounted.get(item.key);
         if(!previous||previous.geojson!==item.geojson||!app.state.layers.some(layer=>layer.id===id)){
           const lote=item!==ultimo;
-          if(item.arquivo&&item.revisao&&item.campos)files.adicionar({...item,id,origem:item.grupo},{lote});
-          else app.adicionarCamadaGeoJsonEmMemoria(id,item.nome,item.geojson,{origem:item.grupo,lote,geometria_tipo:item.geojson.features[0]?.geometry?.type});
+          if(item.arquivo&&item.revisao&&item.campos)files.adicionar({...item,id,categoria:item.grupo},{lote});
+          else app.adicionarCamadaGeoJsonEmMemoria(id,item.nome,item.geojson,{categoria:item.grupo,lote,geometria_tipo:item.geojson.features[0]?.geometry?.type});
           mounted.set(item.key,{id,geojson:item.geojson,color:item.color});
           if(item.color)app.applyLayerColor(id,item.color);
         }else if(previous.color!==item.color){app.applyLayerColor(id,item.color);previous.color=item.color;}

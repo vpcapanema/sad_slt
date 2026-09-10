@@ -211,6 +211,7 @@ class CamadaSchema(BaseModel):
     nome: str
     tipo: str
     crs: str | None = None
+    geometria_tipo: str | None = None
     origem: str
     data_importacao: str
     caminho_arquivo: str | None = None

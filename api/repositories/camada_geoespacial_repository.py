@@ -318,6 +318,7 @@ def listar() -> list[dict[str, Any]]:
             date_column = "homologado_em" if categoria == "homologadas" else "criado_em"
             selected = conn.execute(
                 sql.SQL("""SELECT id,recurso_sessao_id,nome,tipo,crs,formato,metadados,
+                           geometria_tipo,
                            {} AS criado_em,
                            TRUE AS persistida,(tipo='vetor') AS tem_vetor,
                            (tipo='raster') AS tem_raster,%s::text AS categoria

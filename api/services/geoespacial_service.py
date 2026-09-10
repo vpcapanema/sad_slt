@@ -315,6 +315,8 @@ class GeoespacialService:
                 "nome": row["nome"],
                 "tipo": "vetorial" if row["tipo"] == "vetor" else "raster",
                 "crs": row.get("crs"),
+                # O painel de camadas escolhe o simbolo por este campo.
+                "geometria_tipo": row.get("geometria_tipo"),
                 "origem": stored.get("origem", extras.get("origem", "banco")),
                 "data_importacao": row["criado_em"].isoformat(),
                 "caminho_arquivo": stored.get("caminho_arquivo"),

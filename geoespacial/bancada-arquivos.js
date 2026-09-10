@@ -37,7 +37,7 @@ function mount(file,opts={}){
     map.once('idle',()=>{if(sessions.get(file.id)===file)mount(file,opts);});return;
   }
   // origem nomeia o subgrupo em Camadas operacionais; quem chama pode informar a categoria.
-  app().adicionarCamadaGeoJsonEmMemoria(file.id,file.nome,file.geojson,{tipo:'vetorial',origem:file.origem||'Arquivo no storage',geometria_tipo:file.geojson.features[0]?.geometry?.type,lote:opts.lote});
+  app().adicionarCamadaGeoJsonEmMemoria(file.id,file.nome,file.geojson,{tipo:'vetorial',origem:'Arquivo no storage',categoria:file.categoria||'',geometria_tipo:file.geojson.features[0]?.geometry?.type,lote:opts.lote});
   Object.assign(app().state.layers.find(layer=>layer.id===file.id)||{}, {arquivo:file.arquivo,origem_geometria:'storage'});
   app().state.activeLayerId=file.id;
   if(!opts.lote)app().renderLayers();
