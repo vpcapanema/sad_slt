@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from inspect import signature
 from typing import Any, Callable, Literal, cast
 from uuid import uuid4
 
@@ -361,6 +362,14 @@ class GeoprocessamentoEngine:
         progress: Callable[[str], None] | None = None,
     ) -> dict[str, Any]:
         p = self._apply_selection_scope(op_id, p)
+
+        def aceitos(metodo, exceto="camada_id"):
+            # O formulario acrescenta nome_saida, crs_saida, destino e formato_saida
+            # a toda operacao. Repassar tudo como kwargs quebra os metodos que nao
+            # declaram esses campos, como o reparo de geometrias.
+            nomes = set(signature(metodo).parameters)
+            return {k: v for k, v in p.items() if k != exceto and k in nomes}
+
         dispatch = {
             "OP-01": lambda: geo.importar_camada(
                 p["tipo_entrada"],
@@ -371,13 +380,13 @@ class GeoprocessamentoEngine:
                 progress=progress,
             ),
             "OP-02": lambda: geo.validar_camada(
-                p["camada_id"], **{k: v for k, v in p.items() if k != "camada_id"}
+                p["camada_id"], **aceitos(geo.validar_camada)
             ),
             "OP-02-CORR": lambda: geo.reparar_geometrias(
-                p["camada_id"], **{k: v for k, v in p.items() if k != "camada_id"}
+                p["camada_id"], **aceitos(geo.reparar_geometrias)
             ),
             "OP-03": lambda: geo.normalizar_camada(
-                p["camada_id"], **{k: v for k, v in p.items() if k != "camada_id"}
+                p["camada_id"], **aceitos(geo.normalizar_camada)
             ),
             "OP-04": lambda: geo.criar_buffer(
                 p["camada_id"],
