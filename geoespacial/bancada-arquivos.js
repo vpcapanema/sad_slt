@@ -45,7 +45,10 @@ function mount(file,opts={}){
 }
 
 async function browse(){
-  if(busy||editor)return;
+  // Sem esta mensagem o botão "Carregar do sistema" não fazia absolutamente
+  // nada enquanto houvesse edição aberta, sem dizer por quê.
+  if(editor)throw new Error('Salve ou cancele a edição antes de abrir outro arquivo.');
+  if(busy)throw new Error('Aguarde a operação em andamento terminar.');
   const catalog=await json('/extracao-atributos/catalogo');
   const files=await escolherArquivo({catalog:catalog.camadas,multiple:true,title:'Abrir arquivos na bancada'});
   if(files)for(const file of files)mount(file);
@@ -194,6 +197,36 @@ function openEditor(editing=false){
   if(editing)activateEditRibbon();
 }
 
+const escapar=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// A calculadora do ribbon opera sobre a camada do catálogo; para um arquivo
+// aberto na bancada é preciso recarregar o arquivo depois, senão a sessão
+// segue mostrando a versão anterior do storage.
+async function calcularCampo(){
+  const file=active();
+  if(!file)throw new Error('Abra o arquivo pelo explorador da bancada.');
+  if(busy||editor)throw new Error('Salve ou cancele a edição antes de calcular um campo.');
+  window.gpCommands.openPanel('Calcular campo',`<form id="gp-file-calculate"><div class="editor-body"><div class="field"><label>Arquivo</label><input value="${escapar(file.nome)}" readonly></div><div class="field"><label>Campo de destino</label><input name="campo" required></div><div class="field"><label>Expressão</label><textarea name="expressao" required placeholder="Ex.: area * 2"></textarea></div><p class="field-help">O campo é gravado no arquivo do storage e no banco, e o arquivo é recarregado na bancada.</p></div><div class="editor-actions"><button class="btn primary">Calcular</button></div></form>`);
+  const form=document.querySelector('#gp-file-calculate');
+  form.onsubmit=event=>{
+    event.preventDefault();
+    const submit=form.querySelector('button.primary');
+    busy=true;submit.disabled=true;syncEditRibbon();
+    const query=new URLSearchParams({campo:form.campo.value,expressao:form.expressao.value});
+    json(`/camadas/${encodeURIComponent(file.id)}/calcular-campo?${query}`,{method:'POST'})
+      .then(result=>post('/extracao-atributos/arquivo-mapa',{arquivo:file.arquivo})
+        .then(atualizado=>{
+          mount(atualizado);
+          if(result.gravado_em_arquivo)app().log(`Campo ${form.campo.value} calculado em ${result.feicoes_atualizadas} feição(ões) e gravado no arquivo.`,'ok');
+          // Sem arquivo no acervo o campo existe só no banco; dizer isso evita
+          // o usuário concluir que o cálculo falhou ao não ver a coluna nova.
+          else report(`Campo ${form.campo.value} calculado no banco, mas esta camada não tem arquivo no acervo para regravar.`);
+        }))
+      .catch(error=>report(error.message))
+      .finally(()=>{busy=false;submit.disabled=false;syncEditRibbon();});
+  };
+}
+
 async function execute(form){
   if(busy||editor)throw new Error('Salve ou cancele a edição antes de executar.');
   const data=new FormData(form),params={};
@@ -231,9 +264,9 @@ function init(){
       event.preventDefault();event.stopImmediatePropagation();
       if(busy)return;
       if(edit)app().state.activeLayerId=edit.dataset.editLayer;
-      if(action==='calculate-field'){report('Abra Editar para alterar os atributos. A calculadora por expressão ainda não está integrada ao arquivo.');return;}
-      if(action==='refresh-source'){const file=active();if(editor)return;post('/extracao-atributos/arquivo-mapa',{arquivo:file.arquivo}).then(mount).catch(error=>report(error.message));return;}
-      try{openEditor(Boolean(edit)||['calculate-field','save-layer','save-result'].includes(action));}catch(error){report(error.message);}
+      if(action==='calculate-field'){calcularCampo().catch(error=>report(error.message));return;}
+      if(action==='refresh-source'){const file=active();if(editor){report('Salve ou cancele a edição antes de atualizar a fonte.');return;}post('/extracao-atributos/arquivo-mapa',{arquivo:file.arquivo}).then(mount).catch(error=>report(error.message));return;}
+      try{openEditor(Boolean(edit)||['save-layer','save-result'].includes(action));}catch(error){report(error.message);}
     }
   },true);
   document.addEventListener('submit',event=>{

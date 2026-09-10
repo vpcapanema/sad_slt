@@ -164,5 +164,12 @@ def analisar(input_frame, categories, operation='intersection', progress=lambda 
               'metodologia_estatistica':METHODOLOGY,'motor':'GDAL/OGR',
               'convencao_ids':'Índice de ordem da feição, começando em zero; pontos multipartes são individualizados.'}
     frame = gpd.GeoDataFrame(output,geometry=output_geometries,crs=5880)
+    # As colunas booleanas nascem esparsas: só as linhas externas trazem
+    # `externo` e só as de ponto trazem `dentro`. Em dtype object com NaN o
+    # GDAL grava a coluna como texto e a releitura devolve "True"; a conferência
+    # de integridade da gravação reprovava e derrubava toda extração identity.
+    for coluna in ('externo','dentro'):
+        if coluna in frame.columns:
+            frame[coluna] = frame[coluna].fillna(False).astype(bool)
     result['geojson'] = json.loads(frame.to_crs(4326).to_json(default=str))
     return result, frame

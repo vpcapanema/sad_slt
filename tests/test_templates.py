@@ -7,6 +7,7 @@ from urllib.parse import urljoin, urlparse
 
 from fastapi.testclient import TestClient
 
+from api.services.session_service import SessionUser, cookie_name, create_token
 from api.server import (
     GEOSPATIAL_PAGES,
     PUBLIC_CADASTRO_PAGES,
@@ -52,6 +53,9 @@ def test_no_legacy_html_remains_outside_template_directory() -> None:
         and "templates" not in path.parts
         # tmp/ e rascunho versionado fora do git: relatorio, captura, inventario.
         and "tmp" not in path.parts
+        # plugins/ é sub-projeto de front-end próprio (build do vite) e captura
+        # de páginas de fonte de dados; nada ali é página servida pela aplicação.
+        and "plugins" not in path.parts
         and path not in static_html_allowlist
     ]
     assert legacy_html == []
@@ -181,7 +185,22 @@ def test_stylesheet_resource_references_are_available() -> None:
 
 
 def test_all_internal_page_links_resolve() -> None:
+    # Anônimo, toda página protegida responde 401 e o teste não distinguia isso
+    # de rota inexistente. Autenticado, o rastreio cobre também os links que só
+    # existem para quem tem acesso — que é onde um link morto passaria batido.
     client = TestClient(app)
+    client.cookies.set(
+        cookie_name(),
+        create_token(
+            SessionUser(
+                id="00000000-0000-0000-0000-000000000010",
+                email="admin@example.org",
+                username="teste_admin",
+                nome="Admin de teste",
+                tipo_usuario="ADMIN",
+            )
+        ),
+    )
     links: set[str] = set()
 
     for page in _canonical_pages():

@@ -28,8 +28,21 @@ INTENTIONAL_FIXTURES = {
     Path("README.md"),
     Path("documentacao/hierarquizacao/DIAGNOSTICO_DADOS_FAVORABILIDADE_REDE.md"),
     Path("data/geoespacial/relatorios/inventario_fontes_brutas_fase1.json"),
+    # Estes dois passam um caminho absoluto de proposito, para provar que a
+    # politica de caminhos o recusa. E o caso de teste, nao um vazamento.
+    Path("tests/test_catalogo_arquivos.py"),
+    Path("tests/test_visualizacao_arquivo.py"),
+    # Metadados baixados do IPEA; o link em UNC esta no conteudo de origem.
+    Path("plugins/censo2022_sp/socioeconomico_desenvolvimento/fontes/ipeadata_metadados.json"),
 }
-VENDORED_ROOTS = (Path("assets/vendor"),)
+# Bundles minificados de terceiros ou gerados por build. Escapes como Ö
+# imitam um caminho UNC para a expressao regular, e nenhum deles e codigo desta
+# aplicacao — e o mesmo motivo pelo qual assets/vendor ja estava de fora.
+VENDORED_ROOTS = (
+    Path("assets/vendor"),
+    Path("geoespacial/extracao-atributos/municipal-plugin"),
+    Path("plugins/municipal-layer/demo-dist"),
+)
 
 
 class NoAbsolutePathsTest(unittest.TestCase):

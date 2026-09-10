@@ -459,6 +459,17 @@ def carregar_raster(recurso_id: str) -> tuple[bytes, dict[str, Any]] | None:
         return bytes(row["dados_geotiff"]), metadata
 
 
+def _remover_arquivo_de_saida(caminho: str) -> None:
+    """Apaga o arquivo de um resultado retirado, sem sair de outputs."""
+    raiz = project_path("data/geoespacial/outputs").resolve()
+    try:
+        alvo = project_path(caminho).resolve()
+    except (OSError, ValueError):
+        return
+    if alvo.is_relative_to(raiz) and alvo.is_file():
+        alvo.unlink(missing_ok=True)
+
+
 def excluir(recurso_id: str) -> bool:
     with get_connection() as conn:
         if conn.execute(
@@ -466,6 +477,24 @@ def excluir(recurso_id: str) -> bool:
             (recurso_id,),
         ).fetchone():
             raise ValueError("Camada homologada é somente leitura")
+        # arquivo_resultado referencia camada_processada com ON DELETE RESTRICT:
+        # sem retirar antes o registro do arquivo e seus usos, a exclusão da
+        # camada falha no banco e o endpoint devolvia um 409 enganoso.
+        arquivos = conn.execute(
+            """SELECT a.id, a.caminho FROM geoprocessamento.arquivo_resultado a
+               JOIN geoprocessamento.camada_processada c ON c.id = a.camada_id
+               WHERE c.recurso_sessao_id=%s""",
+            (recurso_id,),
+        ).fetchall()
+        for arquivo in arquivos:
+            conn.execute(
+                "DELETE FROM geoprocessamento.arquivo_resultado_uso WHERE arquivo_id=%s",
+                (arquivo["id"],),
+            )
+            conn.execute(
+                "DELETE FROM geoprocessamento.arquivo_resultado WHERE id=%s",
+                (arquivo["id"],),
+            )
         removido = False
         for categoria in ("processadas", "importadas"):
             catalog = STORAGES[categoria][0]
@@ -492,6 +521,9 @@ def excluir(recurso_id: str) -> bool:
 
         if removido:
             conn.commit()
+            # Só depois do commit: o arquivo não pode sumir se a transação cair.
+            for arquivo in arquivos:
+                _remover_arquivo_de_saida(arquivo["caminho"])
         return removido
 
 

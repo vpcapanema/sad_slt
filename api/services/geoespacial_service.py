@@ -693,13 +693,30 @@ class GeoespacialService:
         except Exception as exc:
             raise ValueError(f"Expressão inválida: {exc}") from exc
         gdf[campo] = resultado
+        # Mesma regra de `salvar_edicoes_atributos`: resultado com arquivo
+        # registrado é imutável, e onde a camada tem arquivo no acervo ele é
+        # reescrito junto com o banco. Sem isto o campo calculado existia só
+        # no PostGIS e a Bancada continuava lendo o arquivo antigo.
+        from api.services.ciclo_vida_arquivos import exigir_editavel
+        exigir_editavel(camada_id)
+
         metadata = self._metadados[camada_id]
         metadata["metadados"]["colunas"] = list(gdf.columns)
+        gravado_em_arquivo = False
+        caminho = self._caminho_arquivo_da_camada(camada_id)
+        if caminho is not None:
+            self._reescrever_arquivo_do_acervo(caminho, gdf)
+            gravado_em_arquivo = True
         camada_geoespacial_repository.substituir_vetor(
             camada_id, gdf, metadata
         )
         self._camadas[camada_id] = gdf
-        return {"camada_id": camada_id, "campo": campo, "feicoes_atualizadas": len(gdf)}
+        return {
+            "camada_id": camada_id,
+            "campo": campo,
+            "feicoes_atualizadas": len(gdf),
+            "gravado_em_arquivo": gravado_em_arquivo,
+        }
 
     def salvar_edicoes_atributos(
         self, camada_id: str, edicoes: list[dict[str, Any]]

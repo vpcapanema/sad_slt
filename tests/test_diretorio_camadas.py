@@ -1,12 +1,16 @@
-"""O inventário de camadas reconhece o que está registrado e não inventa categoria.
+"""O inventário de camadas reconhece o que está registrado e não inventa vínculo.
 
 Dois defeitos que se somavam na página de insumos geoespaciais:
 
-1. o cruzamento arquivo↔registro usava só `arquivo_original` (a PASTA do
-   pacote), enquanto a varredura lista também o dataset de dentro dela — com
-   `caminho_arquivo` vazio no catálogo, tudo aparecia como não registrado;
-2. a varredura ainda percorria `geodatabase`, categoria que deixou de existir
-   quando `.gpkg` passou a ser classificado como vetor pelas duas portas.
+1. o cruzamento arquivo↔registro não alcançava o dataset de dentro do pacote
+   (`…zip.contents/base.shp`), e tudo aparecia como não registrado;
+2. a varredura percorria `geodatabase`, categoria que deixou de existir quando
+   `.gpkg` passou a ser classificado como vetor pelas duas portas.
+
+A conciliação saiu de `api/routers/geoespacial.py` para
+`api/services/catalogo_arquivos.py` e deixou de varrer categoria por categoria.
+Por isso estes testes exercitam o comportamento de `conciliar`, e não o texto
+do módulo: é o resultado que precisa continuar valendo, não o formato do código.
 """
 from __future__ import annotations
 
@@ -15,30 +19,62 @@ from pathlib import Path
 import pytest
 
 from api.path_policy import GEO_OUTPUT_CATEGORIES
+from api.services.catalogo_arquivos import EXTENSIONS, conciliar
 
 RAIZ = Path("data/geoespacial/uploads/datastorage")
+ACERVO = "data/geoespacial/uploads/datastorage/vetor/PACOTE"
 
 
-def test_categorias_varridas_sao_as_canonicas():
-    """A varredura segue path_policy — não uma lista própria que envelhece."""
-    fonte = Path("api/routers/geoespacial.py").read_text(encoding="utf-8")
-    assert 'for category in GEO_OUTPUT_CATEGORIES:' in fonte
-    assert '("vetor", "raster", "geodatabase")' not in fonte
+def _registro(ident: str, caminho: str) -> dict:
+    return {"id": ident, "nome": f"Camada {ident}", "tipo": "vetor",
+            "metadados": {"caminho_arquivo": caminho}}
+
+
+def _arvore(tmp_path: Path, *relativos: str) -> Path:
+    for relativo in relativos:
+        alvo = tmp_path / relativo
+        alvo.parent.mkdir(parents=True, exist_ok=True)
+        alvo.write_bytes(b"conteudo")
+    return tmp_path
+
+
+def test_categoria_morta_saiu_e_gpkg_e_dataset_comum():
+    """`geodatabase` não é categoria e `.gpkg` é varrido como qualquer vetor."""
     assert "geodatabase" not in GEO_OUTPUT_CATEGORIES
+    assert ".gpkg" in EXTENSIONS
 
 
-def test_cruzamento_considera_os_dois_campos_de_caminho():
-    fonte = Path("api/routers/geoespacial.py").read_text(encoding="utf-8")
-    assert "def caminhos_do_registro" in fonte
-    trecho = fonte.split("def caminhos_do_registro")[1][:900]
-    for campo in ("caminho_arquivo", "arquivo_original"):
-        assert campo in trecho, f"o cruzamento deve considerar {campo}"
+def test_cruzamento_casa_registro_com_o_dataset_dentro_do_pacote(tmp_path):
+    """O dataset mora em `…zip.contents/`; o registro aponta para ele."""
+    dataset = f"{ACERVO}/base.zip.contents/base.shp"
+    raiz = _arvore(tmp_path, dataset)
+
+    relatorio = conciliar({"importadas": [_registro("1", dataset)],
+                           "processadas": [], "homologadas": []}, raiz)
+
+    camada = relatorio["camadas"][0]
+    assert camada["situacao"] == "disponivel"
+    assert camada["arquivo"] == dataset
+    arquivo = next(item for item in relatorio["arquivos"] if item["arquivo"] == dataset)
+    assert arquivo["registrada"] and arquivo["camadas_ids"] == ["1"]
 
 
-def test_pasta_do_pacote_casa_com_o_registro_do_dataset():
-    """O dataset mora dentro de `…zip.contents/`; a pasta tem de casar também."""
-    fonte = Path("api/routers/geoespacial.py").read_text(encoding="utf-8")
-    assert '".contents/" in caminho' in fonte
+def test_registro_e_arquivo_nao_se_atraem_por_semelhanca_de_nome(tmp_path):
+    """Vínculo só existe por caminho registrado — nunca por nome parecido."""
+    presente = f"{ACERVO}/base.gpkg"
+    raiz = _arvore(tmp_path, presente)
+    ausente = f"{ACERVO}/base.shp"
+
+    relatorio = conciliar({"importadas": [_registro("1", ausente)],
+                           "processadas": [], "homologadas": []}, raiz)
+
+    camada = relatorio["camadas"][0]
+    assert camada["situacao"] == "arquivo_nao_localizado"
+    assert camada["arquivo"] == ausente
+    arquivo = next(item for item in relatorio["arquivos"] if item["arquivo"] == presente)
+    assert not arquivo["registrada"]
+    assert arquivo["situacao"] == "aguardando_registro"
+    assert relatorio["arquivos_sem_registro"] == 1
 
 
 @pytest.mark.skipif(not RAIZ.exists(), reason="acervo ausente neste ambiente")

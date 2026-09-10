@@ -6,6 +6,7 @@ literal ``/api/...`` dos arquivos JS com o contrato publicado no OpenAPI.
 """
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -120,6 +121,12 @@ ASSET_ROOTS = (
 )
 
 CSS_IMPORT = re.compile(r"""@import\s+url\(["']?([^"')]+)""")
+# Módulo ES alcança outro arquivo sem passar por template: `from './x.js'`,
+# `import('./x.js')` e `new URL('./x.css', import.meta.url)`. Sem seguir estas
+# formas, todo o pacote de extração de atributos aparecia como órfão.
+JS_IMPORT = re.compile(
+    r"""(?:\bfrom\s*|\bimport\s*\(?\s*|\bnew\s+URL\(\s*)["'](\.[^"']+)["']"""
+)
 
 
 def _para_disco(url: str) -> Path | None:
@@ -171,9 +178,13 @@ def test_no_orphan_stylesheets_or_scripts() -> None:
         if atual.as_posix() in alcancaveis:
             continue
         alcancaveis.add(atual.as_posix())
-        if atual.suffix == ".css" and atual.is_file():
+        if atual.suffix in {".css", ".js"} and atual.is_file():
             conteudo = atual.read_text(encoding="utf-8")
-            fila.extend((atual.parent / imp).as_posix() for imp in CSS_IMPORT.findall(conteudo))
+            padrao = CSS_IMPORT if atual.suffix == ".css" else JS_IMPORT
+            fila.extend(
+                Path(os.path.normpath(atual.parent / imp)).as_posix()
+                for imp in padrao.findall(conteudo)
+            )
 
     orfaos = sorted(
         caminho.as_posix()

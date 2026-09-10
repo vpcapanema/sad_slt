@@ -187,8 +187,22 @@ def _validar_definicao_fluxo(fluxo: dict) -> None:
         raise HTTPException(status_code=422, detail={"erros": erros})
 
 
+def _rotas_sincronas() -> frozenset[str]:
+    """Slugs de /operacoes/... realmente declarados como rota neste módulo.
+
+    Só pode ser lido em tempo de requisição: as rotas síncronas são declaradas
+    depois deste ponto do arquivo.
+    """
+    return frozenset(
+        rota.path.removeprefix("/geoespacial/operacoes/")
+        for rota in router.routes
+        if getattr(rota, "path", "").startswith("/geoespacial/operacoes/")
+    )
+
+
 @router.get("/algoritmos")
 async def listar_algoritmos() -> list[dict]:
+    sincronas = _rotas_sincronas()
     return [
         {
             "id": key,
@@ -204,7 +218,15 @@ async def listar_algoritmos() -> list[dict]:
                 for input_id in TOOL_INPUTS[key]
             ],
             "saida": STANDARD_OUTPUT_FIELDS,
-            "endpoint": f"/api/geoespacial/operacoes/{OPERATION_ENDPOINTS[key]}",
+            # Rota síncrona só existe para parte do catálogo; a fila de jobs
+            # atende todo o catálogo e é o que a Bancada usa de fato. Anunciar
+            # a rota direta para todos apontava 17 algoritmos para um 404.
+            "endpoint": f"/api/geoespacial/operacoes-jobs/{key}",
+            "endpoint_sincrono": (
+                f"/api/geoespacial/operacoes/{OPERATION_ENDPOINTS[key]}"
+                if OPERATION_ENDPOINTS[key] in sincronas
+                else None
+            ),
         }
         for key, value in CATALOG.items()
     ]
@@ -698,8 +720,11 @@ async def deletar_camada(camada_id: str) -> dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:
+        # Antes qualquer falha virava "camada homologada", escondendo o motivo
+        # real da recusa. O texto do banco é o que o usuário precisa ver.
+        logger.exception("Falha ao excluir a camada %s", camada_id)
         raise HTTPException(
-            status_code=409, detail="Camadas homologadas não podem ser excluídas"
+            status_code=500, detail=f"Falha ao excluir a camada: {exc}"
         ) from exc
     if not deletado:
         raise HTTPException(status_code=404, detail="Camada não encontrada")

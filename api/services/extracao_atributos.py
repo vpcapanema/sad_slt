@@ -1,4 +1,5 @@
 """Catálogo, execução persistida e recuperação das extrações de atributos."""
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import json
@@ -12,6 +13,7 @@ from api.services import ciclo_vida_arquivos as ciclo
 from api.services.extracao_atributos_analise import analisar
 from api.services.geoespacial_service import geoespacial_service as geo
 
+_log = logging.getLogger(__name__)
 _pool = ThreadPoolExecutor(max_workers=1,thread_name_prefix='extracao')
 _progress = {}
 _lock = Lock()
@@ -112,6 +114,9 @@ def _execute(ident, params):
         ciclo.finalizar(ident)
     except Exception as exc:
         message = str(exc) if isinstance(exc,ValueError) else 'Falha ao processar ou persistir a análise. Verifique os dados e o serviço.'
+        # O texto genérico protege o usuário de detalhe interno, mas sem este
+        # log a causa real da falha não ficava registrada em lugar nenhum.
+        _log.exception('Extração de atributos %s falhou', ident)
         ciclo.finalizar(ident,erro=message)
     finally:
         ciclo.execucao_atual.reset(token)

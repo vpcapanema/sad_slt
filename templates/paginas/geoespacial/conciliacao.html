@@ -5,7 +5,7 @@
 {% block titulo %}Conciliação do catálogo — SICARD{% endblock %}
 {% block estilos_pagina %}<link rel="stylesheet" href="/assets/css/extracao-atributos.css">{% endblock %}
 {% block conteudo %}
-<main class="ea-main">
+<main class="conteudo-principal ea-main">
   <h1>Conciliação do catálogo geoespacial</h1>
   <p>Confira os registros e os arquivos deste servidor. Nenhum arquivo é movido ou excluído nesta consulta.</p>
   <div class="ea-panel">
@@ -17,7 +17,7 @@
   </div>
   <div class="ea-table-wrap"><table><thead><tr><th>Nome</th><th>Origem</th><th>Situação / ciclo de vida</th><th>Identificador</th><th>Arquivo</th><th>Ação</th></tr></thead><tbody id="conciliacao-linhas"></tbody></table></div>
   <p>Regularizar resultado exporta os dados existentes com GDAL, confere o conteúdo e vincula o arquivo à camada. Publicar no acervo torna o resultado disponível para reutilização sem duplicar o arquivo. Isso não equivale a homologação.</p>
-  <section class="ea-panel" aria-labelledby="retencao-titulo">
+  <section class="secao-retencao-de-temporarios ea-panel" aria-labelledby="retencao-titulo">
     <h2 id="retencao-titulo">Retenção de temporários</h2>
     <p>Somente arquivos temporários de execuções encerradas e sem referências de uso podem ser removidos. Resultados definitivos, publicados, utilizados por outra execução, relatório ou homologação são preservados.</p>
     <label for="retencao-dias">Prazo em dias (vazio desativa a retenção)</label>
