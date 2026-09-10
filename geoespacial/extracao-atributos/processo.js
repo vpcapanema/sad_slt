@@ -40,13 +40,13 @@ function moldura(titulo, estado, rotulo) {
 /** Resumo do que será executado; resolve true quando o usuário confirma. */
 export function confirmarExecucao(resumo) {
   return new Promise(resolve => {
-    const { dialog, situacao } = moldura('Confirmar execução da extração', 'amarelo', 'Aguardando sua confirmação');
-    situacao.textContent = 'Confira o que será processado antes de executar.';
+    const { dialog, situacao } = moldura(resumo.titulo || 'Confirmar execução da extração', 'amarelo', 'Aguardando sua confirmação');
+    situacao.textContent = resumo.chamada || 'Confira o que será processado antes de executar.';
 
     const lista = el('dl', undefined, 'ea-processo-resumo');
-    lista.append(el('dt', 'Entrada'), el('dd', resumo.entrada));
-    lista.append(el('dt', 'Geoprocesso'), el('dd', resumo.operacao));
-    lista.append(el('dt', 'Bases'), el('dd', `${resumo.totalCamadas} camada(s) em ${resumo.categorias.length} categoria(s)`));
+    if (resumo.entrada) lista.append(el('dt', 'Entrada'), el('dd', resumo.entrada));
+    if (resumo.operacao) lista.append(el('dt', 'Geoprocesso'), el('dd', resumo.operacao));
+    lista.append(el('dt', 'Camadas'), el('dd', `${resumo.totalCamadas} camada(s) em ${resumo.categorias.length} categoria(s)`));
     dialog.append(lista);
 
     const grupos = el('div', undefined, 'ea-processo-grupos');
@@ -59,12 +59,12 @@ export function confirmarExecucao(resumo) {
       grupos.append(grupo);
     }
     dialog.append(grupos);
-    dialog.append(el('p', 'A extração recusa bases com geometria inválida. Nesse caso o motivo aparece aqui mesmo.', 'ea-processo-nota'));
+    dialog.append(el('p', resumo.nota || 'A extração recusa bases com geometria inválida. Nesse caso o motivo aparece aqui mesmo.', 'ea-processo-nota'));
 
     const rodape = el('div', undefined, 'ea-processo-footer');
     const cancelar = el('button', 'Cancelar', 'ea-btn');
     cancelar.type = 'button';
-    const executar = el('button', 'Executar extração', 'ea-btn ea-btn-primary');
+    const executar = el('button', resumo.acao || 'Executar extração', 'ea-btn ea-btn-primary');
     executar.type = 'button';
     const fechar = valor => { dialog.close(); dialog.remove(); resolve(valor); };
     cancelar.addEventListener('click', () => fechar(false));
@@ -78,8 +78,8 @@ export function confirmarExecucao(resumo) {
 }
 
 /** Modal de acompanhamento: recebe as etapas tratadas e fecha por conta do usuário. */
-export function acompanharExecucao() {
-  const { dialog, situacao, luzes, cabeca } = moldura('Extração em andamento', 'amarelo', 'Processando');
+export function acompanharExecucao(titulo) {
+  const { dialog, situacao, luzes, cabeca } = moldura(titulo || 'Extração em andamento', 'amarelo', 'Processando');
   const registro = el('div', undefined, 'ea-processo-log');
   registro.setAttribute('role', 'log');
   registro.setAttribute('aria-live', 'polite');
@@ -120,6 +120,10 @@ export function acompanharExecucao() {
   };
 
   return {
+    // Mensagem avulsa, para processos que nao vem do historico do servidor.
+    etapa(mensagem, tipo = '') {
+      anotar(mensagem, relogio(), tipo === 'erro' ? 'is-erro' : tipo === 'sucesso' ? 'is-sucesso' : '');
+    },
     etapas(lista) {
       // Só as novas: o servidor devolve o histórico inteiro a cada consulta.
       for (const etapa of (lista || []).slice(vistas)) anotar(etapa.mensagem, relogio(etapa.em));

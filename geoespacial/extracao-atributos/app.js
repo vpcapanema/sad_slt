@@ -27,16 +27,30 @@ function syncMap() {
   map.sync(items.filter(item=>item.geojson));
 }
 let mapVersion=0;
-async function changed() {
+async function changed(painel) {
   const version=++mapVersion;
   if(state.result) {state.result=null;results.clear();feedback("A configuração mudou. Execute novamente para atualizar os resultados.");}
   state.loadingMap=true;config.render();syncMap();controls();
+  const falhas=[];
   try{
     const selected=state.catalog.filter(l=>l.id===state.input||state.bases.some(b=>b.id===l.id));
-    await Promise.all(selected.filter(l=>!l.geojson).map(async l=>{l.geojson=await chamar('carregarCamada',l);}));
+    const pendentes=selected.filter(l=>!l.geojson);
+    if(pendentes.length)painel?.etapa(`Lendo ${pendentes.length} arquivo(s) do storage.`);
+    // Uma camada com problema nao pode derrubar a importacao das demais.
+    await Promise.all(pendentes.map(async l=>{
+      try{
+        l.geojson=await chamar('carregarCamada',l);
+        painel?.etapa(`${l.nome}: ${l.geojson.features.length} feição(ões) no mapa.`);
+      }catch(error){
+        falhas.push(`${l.nome}: ${error.message}`);
+        painel?.etapa(`${l.nome}: ${error.message}`,'erro');
+      }
+    }));
     if(version===mapVersion){config.render();syncMap();}
-  }catch(error){feedback(`Não foi possível carregar uma camada no mapa: ${error.message}`);}
+    if(falhas.length)feedback(`Não foi possível carregar ${falhas.length} camada(s): ${falhas.join(' · ')}`);
+  }catch(error){falhas.push(error.message);painel?.etapa(error.message,'erro');feedback(`Não foi possível carregar uma camada no mapa: ${error.message}`);}
   finally{if(version===mapVersion){state.loadingMap=false;controls();}}
+  return falhas;
 }
 function busy(value) {
   state.busy=value;

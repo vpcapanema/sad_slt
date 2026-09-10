@@ -2,6 +2,7 @@
    camadas, troca de categoria e repete. Nada vai para a bancada antes de confirmar. */
 import { $, el, feedback } from './ui.js';
 import { json, post } from './api.js';
+import { confirmarExecucao, acompanharExecucao } from './processo.js';
 
 const ROTULO = {
   confirmar: 'Confirmar e enviar à bancada',
@@ -102,10 +103,26 @@ export function criarListaCamadas(state, changed) {
     return novos;
   }
 
-  botoes.confirmar.addEventListener('click', () => {
+  botoes.confirmar.addEventListener('click', async () => {
     if (state.busy || !state.staging.length) return;
+    const grupos = agrupar();
     const total = state.staging.length;
     const semCaminho = state.staging.filter(item => !caminhoDe(item)).map(item => nomeArquivo(item));
+    const confirmado = await confirmarExecucao({
+      titulo: 'Enviar camadas à bancada',
+      chamada: 'Cada categoria vira um grupo no painel de camadas.',
+      acao: 'Enviar à bancada',
+      totalCamadas: total,
+      categorias: grupos.map(({ category, itens }) => ({
+        nome: category.nome, camadas: itens.map(item => ({ nome: nomeArquivo(item) })),
+      })),
+      nota: semCaminho.length
+        ? `${semCaminho.length} camada(s) sem caminho de arquivo registrado não poderão ser desenhadas: ${semCaminho.join(', ')}.`
+        : 'As camadas são lidas do storage e desenhadas no mapa, agrupadas pelo nome da categoria.',
+    });
+    if (!confirmado) { feedback('Envio cancelado. A lista continua montada.'); return; }
+
+    const painel = acompanharExecucao('Enviando camadas à bancada');
     for (const item of state.staging) {
       if (!state.bases.some(base => base.id === item.id)) state.bases.push({ ...item });
     }
@@ -113,9 +130,16 @@ export function criarListaCamadas(state, changed) {
     ancora = [];
     editando = false;
     render();
-    feedback(`${total} camada(s) enviada(s) à bancada, agrupadas por categoria.`
-      + (semCaminho.length ? ` ${semCaminho.length} sem caminho de arquivo registrado: ${semCaminho.join(', ')}.` : ''));
-    changed();
+    painel.etapa(`${total} camada(s) enviada(s), agrupadas em ${grupos.length} categoria(s).`);
+    try {
+      const falhas = (await changed(painel)) || [];
+      if (falhas.length) painel.falhar(`${falhas.length} camada(s) não puderam ser desenhadas no mapa.`);
+      else painel.concluir('Camadas no painel da bancada e desenhadas no mapa.');
+      feedback(`${total} camada(s) enviada(s) à bancada, agrupadas por categoria.`);
+    } catch (error) {
+      painel.falhar(error.message);
+      feedback(`Não foi possível concluir o envio: ${error.message}`);
+    }
   });
 
   botoes.limpar.addEventListener('click', () => {

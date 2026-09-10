@@ -13,7 +13,8 @@ export function criarConfiguracao(state, changed) {
     $('#ea-municipal-alternativa').hidden=!$('#ea-category-select').value;
     lista.render();
   }
-  $("#ea-category-select").addEventListener("change",sincronizarAlternativas);
+  // Escolher a categoria precisa revelar a lista de montagem na hora.
+  $("#ea-category-select").addEventListener("change",()=>{sincronizarAlternativas();render();});
   function render() {
     if(state.lastBase&&!state.bases.some(b=>b.id===state.lastBase.id))state.lastBase=null;
     $("#ea-base-select").value=state.lastBase?.id||'';
