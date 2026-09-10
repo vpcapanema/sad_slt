@@ -28,6 +28,9 @@ services:
       # As configuracoes da bancada sao gravadas em execucao: sem este volume
       # elas viveriam so dentro do container e sumiriam a cada rebuild.
       - ./data/geoespacial/configuracoes:/app/data/geoespacial/configuracoes
+      # O acervo fica fora da imagem (.dockerignore) e recebe as camadas
+      # geradas em execucao: precisa vir do disco da VM.
+      - ./data/geoespacial/uploads:/app/data/geoespacial/uploads
     networks:
       - default
       - sigma-backend
