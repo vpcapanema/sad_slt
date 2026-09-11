@@ -14,9 +14,21 @@ export function abrirMunicipal({category,apiBase,onGenerated}) {
     const client=useMemo(()=>{
       let generated;
       async function request(path,config,signal){
-        const response=await fetch(`${apiBase}/extracao-atributos/municipal/${encodeURIComponent(category.id)}/${path}`,{
-          ...(config?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)}:{}),signal});
-        if(!response.ok){const error=await response.json().catch(()=>({}));throw new Error(typeof error.detail==='string'?error.detail:'Falha no gerador municipal.');}
+        let response;
+        try{
+          response=await fetch(`${apiBase}/extracao-atributos/municipal/${encodeURIComponent(category.id)}/${path}`,{
+            ...(config?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)}:{}),signal});
+        }catch(falha){
+          if(falha.name==='AbortError')throw falha;
+          // Conexao caiu no meio: quase sempre o servidor ficou sem memoria.
+          throw new Error('A conexão com o servidor caiu durante a geração. Isso costuma ser falta de memória para o tamanho da seleção: tente menos atributos.');
+        }
+        if(!response.ok){
+          const error=await response.json().catch(()=>({}));
+          if(response.status===502||response.status===503||response.status===504)
+            throw new Error(`O servidor não respondeu à geração (HTTP ${response.status}). Se a seleção for grande, tente menos atributos.`);
+          throw new Error(typeof error.detail==='string'?error.detail:'Falha no gerador municipal.');
+        }
         if(path==='export'){
           generated={arquivo:response.headers.get('X-Camada-Arquivo'),id:response.headers.get('X-Camada-Id')};
           return response.blob();

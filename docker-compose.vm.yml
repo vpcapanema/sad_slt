@@ -34,8 +34,10 @@ services:
     networks:
       - default
       - sigma-backend
-    mem_limit: 1024m
-    mem_reservation: 256m
+    # O gerador de camadas municipais chega perto de 1 GB numa selecao grande,
+    # e o kernel matava o processo no meio. A VM tem folga de sobra.
+    mem_limit: 2048m
+    mem_reservation: 512m
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/health"]
       interval: 30s

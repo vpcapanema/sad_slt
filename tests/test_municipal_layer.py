@@ -100,6 +100,26 @@ def test_pacote_nomeia_os_arquivos_pela_base(tmp_path):
     assert package[:2] == b'PK' and manifest['municipalities'] == 645
 
 
+def test_alias_do_pacote_sao_unicos():
+    # Rotulos longos de Renda ficavam iguais depois do corte e o GeoPackage,
+    # que exige nome unico por tabela, descartava o alias em silencio.
+    itens = [a for a in dados.catalog() if a['theme'] == '06_renda'][:400]
+    aliases = [e['alias'] for e in dados.dicionario(itens, 'gpkg')]
+    assert len(set(aliases)) == len(itens)
+    assert all(len(a) <= 250 for a in aliases)
+
+
+def test_capacidade_recusa_selecao_grande(monkeypatch):
+    monkeypatch.setenv('SLT_MUNICIPAL_ORCAMENTO_MB', '300')
+    assert dados.orcamento_mb() == 300
+    dados.conferir_capacidade(1000)          # cabe
+    with pytest.raises(ValueError) as erro:
+        dados.conferir_capacidade(6347)
+    assert 'MB' in str(erro.value) and 'por vez' in str(erro.value)
+    monkeypatch.setenv('SLT_MUNICIPAL_ORCAMENTO_MB', '99999')
+    dados.conferir_capacidade(6347)          # com folga, nao recusa
+
+
 def test_api_municipal_exige_sessao():
     from fastapi import FastAPI
     from fastapi.testclient import TestClient

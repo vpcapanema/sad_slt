@@ -12,6 +12,7 @@ import csv
 import io
 import re
 import json
+import os
 import unicodedata
 import tempfile
 import zipfile
@@ -186,8 +187,23 @@ def nomes_exportados(items: list[dict], fmt: str) -> dict[str, str]:
 def dicionario(items: list[dict], fmt: str) -> list[dict]:
     """Uma linha por atributo exportado, na ordem em que entram na tabela."""
     nomes = nomes_exportados(items, fmt)
+    # O GeoPackage guarda o alias em gpkg_data_columns, onde o nome e unico por
+    # tabela. Rotulos longos colidiam depois do corte e o alias era descartado.
+    # Conferir o texto final, e nao o original: dois rotulos distintos podem
+    # ficar iguais depois do corte, e o sufixo tem que resolver isso tambem.
+    usados: set[str] = set()
+    aliases = {}
+    for item in items:
+        rotulo = alias_de(item)
+        final, n = rotulo, 1
+        while final in usados:
+            n += 1
+            sufixo = f' ({n})'
+            final = rotulo[:250 - len(sufixo)] + sufixo
+        usados.add(final)
+        aliases[item['field']] = final
     return [{'campo_exportado': nomes[item['field']], 'campo_bruto': item['field'],
-             'alias': alias_de(item), 'significado': significado_de(item),
+             'alias': aliases[item['field']], 'significado': significado_de(item),
              'fonte': item.get('source'), 'tema': tema_legivel(item.get('theme')),
              'tema_bruto': item.get('theme'), 'ano': item.get('year'),
              'unidade': item.get('unit'), 'url': item.get('url'),
@@ -232,6 +248,57 @@ def estilo_qgis(entradas: list[dict]) -> str:
 PREFIXO = 'municipios_sp'
 
 
+# Custo medido exportando o catalogo real: um piso fixo mais um tanto por
+# atributo. Serve para recusar antes de comecar, em vez de o processo morrer.
+CUSTO_BASE_MB = 90
+CUSTO_POR_ATRIBUTO_MB = 0.12
+MARGEM_MB = 150
+
+
+def _cgroup_mb(nome: str) -> int | None:
+    for caminho in (f'/sys/fs/cgroup/{nome}', f'/sys/fs/cgroup/memory/{nome}'):
+        try:
+            with open(caminho, encoding='ascii') as arquivo:
+                valor = arquivo.read().strip()
+            if valor in ('max', ''):
+                return None
+            return int(valor) // (1024 * 1024)
+        except (OSError, ValueError):
+            continue
+    return None
+
+
+def orcamento_mb() -> int | None:
+    """Memória que ainda cabe nesta instância, ou None quando não há limite."""
+    forcado = os.getenv('SLT_MUNICIPAL_ORCAMENTO_MB')
+    if forcado:
+        return max(0, int(forcado))
+    limite = _cgroup_mb('memory.max') or _cgroup_mb('memory.limit_in_bytes')
+    if not limite or limite > 64 * 1024:      # Sem cgroup, ou limite irreal.
+        return None
+    em_uso = _cgroup_mb('memory.current') or _cgroup_mb('memory.usage_in_bytes') or 0
+    return max(0, limite - em_uso - MARGEM_MB)
+
+
+def estimativa_mb(quantos: int) -> int:
+    return int(CUSTO_BASE_MB + quantos * CUSTO_POR_ATRIBUTO_MB)
+
+
+def conferir_capacidade(quantos: int) -> None:
+    """Recusa a exportação que não caberia na memória desta instância."""
+    orcamento = orcamento_mb()
+    if orcamento is None:
+        return
+    preciso = estimativa_mb(quantos)
+    if preciso <= orcamento:
+        return
+    cabem = max(1, int((orcamento - CUSTO_BASE_MB) / CUSTO_POR_ATRIBUTO_MB))
+    raise ValueError(
+        f'A seleção de {quantos} atributos precisa de cerca de {preciso} MB e este '
+        f'servidor tem {orcamento} MB livres agora. Gere até {cabem} atributos por vez, '
+        'ou divida a seleção em mais de uma camada.')
+
+
 def export_layer(payload: dict, base: str = PREFIXO) -> bytes:
     """Gera o ZIP com camada, dicionário e metadados, sem simplificar geometria.
 
@@ -244,14 +311,16 @@ def export_layer(payload: dict, base: str = PREFIXO) -> bytes:
         raise ValueError('Formato inválido.')
     if len(items) > LIMITES[fmt]:
         raise ValueError(f'Este formato permite até {LIMITES[fmt]} atributos nesta aplicação. Use FlatGeobuf.')
+    conferir_capacidade(len(items))
     frame = layer(items)
     entradas = dicionario(items, fmt)
     fields = {e['campo_bruto']: e['campo_exportado'] for e in entradas}
     frame = frame.rename(columns=fields)
+    rotulos = {e['campo_bruto']: e['alias'] for e in entradas}
     manifest = {'municipalities': len(frame), 'crs': CRS, 'geometry_year': ANO_MALHA,
                 'geometry_source': ORIGEM_MALHA, 'format': fmt,
                 'attributes': [{**i, 'export_field': fields[i['field']],
-                                'alias': alias_de(i), 'significado': significado_de(i)} for i in items],
+                                'alias': rotulos[i['field']], 'significado': significado_de(i)} for i in items],
                 'campos_fixos': [{'campo': campo, 'alias': rotulo, 'significado': texto}
                                  for campo, (rotulo, texto) in CAMPOS_FIXOS.items()],
                 'aliases': {e['campo_exportado']: e['alias'] for e in entradas},
