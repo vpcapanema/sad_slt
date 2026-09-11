@@ -22,7 +22,7 @@ from api.routers.objetos_ahp import router as objetos_ahp_router
 from api.routers.painel import router as painel_router
 from api.routers.planos import router as planos_router
 from api.routers.programas import router as programas_router
-from api.routers.sei_integracao import router as sei_integracao_router
+from api.routers.sei_documentos import router as sei_documentos_router
 from api.routers.sigma import router as sigma_router
 from api.routers.universo import router as universo_router
 
@@ -47,4 +47,4 @@ api_router.include_router(complementacao_router)
 api_router.include_router(hierarquizacoes_router)
 api_router.include_router(atributos_objetos_router)
 api_router.include_router(universo_router)
-api_router.include_router(sei_integracao_router)
+api_router.include_router(sei_documentos_router)

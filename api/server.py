@@ -111,7 +111,7 @@ RESTRICTED_PAGES = {
     "demanda": "analise_demanda.html",
     "revisao-status": "revisao-status.html",
     "complementacao": "complementacao.html",
-    "sei-integracao": "sei_integracao.html",
+    "sei-documentos": "sei_documentos.html",
 }
 
 
@@ -411,6 +411,8 @@ LEGACY_PAGE_REDIRECTS = {
     "/restrict/hierarquizacao/step3-avaliacao.html": "/restrict/hierarquizacao/processos/avaliacao/",
     "/restrict/hierarquizacao/step4-ranking.html": "/restrict/hierarquizacao/processos/ranking/",
     "/restrict/hierarquizacao/step5-homologar.html": "/restrict/hierarquizacao/processos/homologacao/",
+    # A integração por navegação no portal SEI virou repositório de PDFs.
+    "/restrict/sei-integracao/": "/restrict/sei-documentos/",
     "/restrict/hierarquizacao/index.html": "/restrict/hierarquizacao/",
     "/restrict/hierarquizacao/home.html": "/restrict/hierarquizacao/processos/",
     "/restrict/hierarquizacao/apresentacao-processo-hierarquizacao.html": "/restrict/hierarquizacao/metodologia/",

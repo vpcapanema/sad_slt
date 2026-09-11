@@ -10,8 +10,8 @@ services:
       dockerfile: Dockerfile
     image: sicard-app:latest
     container_name: sicard_app
-    # A sessão pessoal do SEI e o CAPTCHA ficam na memória deste processo.
-    # Não aumentar workers sem implementar armazenamento compartilhado.
+    # A trava que impede criar duas demandas do mesmo PDF do SEI vive na
+    # memória deste processo. Não aumentar workers sem uma trava compartilhada.
     command: ["sh", "-c", "exec uvicorn api.server:app --host 0.0.0.0 --port 8080 --workers 1"]
     restart: unless-stopped
     env_file:

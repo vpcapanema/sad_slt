@@ -1,0 +1,88 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Admin — Contribuições do SEI" %}
+{% set navegacao = "restrita" %}
+{% set bloco_modulo = "mocad" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Contribuições do SEI — Admin SLT{% endblock %}
+{% block classes_body %}admin-data-page escala-revisada sei-page{% endblock %}
+{% block base_url %}<base href="/restrict/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/paginas/admin-sei-documentos.css">
+  <link rel="stylesheet" href="/assets/css/escala-tipografica.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
+
+  <main class="conteudo-principal app-main admin-main">
+    <section class="card-tipo-tabs secao-tipo-tabs card admin-card">
+      <div class="pli-section-label">
+        <i class="fas fa-file-arrow-up" aria-hidden="true"></i>
+        <span class="pli-section-title">Enviar PDFs recebidos pelo SEI</span>
+      </div>
+      <div class="admin-card-body">
+        <p class="step-intro">
+          Envie o PDF da solicitação que chegou pelo Sistema Eletrônico de
+          Informações (SEI). O documento fica guardado neste repositório e o
+          sistema lê o texto para sugerir o preenchimento do cadastro de
+          demanda. O que a leitura não encontrar permanece em branco para você
+          completar.
+        </p>
+
+        <form id="sei-upload-form" class="form-grid sei-form" autocomplete="off">
+          <div class="form-field sei-full">
+            <label for="sei-arquivos">Arquivos PDF</label>
+            <input type="file" id="sei-arquivos" name="arquivos" accept="application/pdf,.pdf" multiple required>
+            <p class="hint">Vários arquivos por vez. Até 20 MB por arquivo e 60 MB somados por envio. PDF digitalizado sem texto é aceito, mas não gera sugestão: não há reconhecimento óptico.</p>
+          </div>
+          <div class="form-field">
+            <button type="submit" class="btn btn-primary" id="sei-btn-enviar">Enviar</button>
+            <button type="button" class="btn btn-secondary" id="sei-btn-analisar-todos">Ler campos dos pendentes</button>
+          </div>
+        </form>
+
+        <p id="sei-upload-aviso" class="hint hidden" role="status"></p>
+      </div>
+    </section>
+
+    <section class="card-tipo-tabs secao-tipo-tabs card admin-card" id="sei-documentos-section">
+      <div class="pli-section-label">
+        <i class="fas fa-folder-open" aria-hidden="true"></i>
+        <span class="pli-section-title">Documentos no repositório</span>
+      </div>
+      <div class="admin-card-body">
+        <p class="step-intro">Leia os campos de um documento e revise a sugestão antes de criar a demanda. A criação usa os mesmos cadastros de plano, programa e projeto.</p>
+        <button type="button" class="btn btn-secondary" id="sei-btn-atualizar">Atualizar lista</button>
+        <p id="sei-lista-aviso" class="hint hidden" role="status"></p>
+        <div class="admin-table-wrap">
+          <table class="admin-table" id="sei-documentos-table">
+            <thead>
+              <tr>
+                <th scope="col">Arquivo</th>
+                <th scope="col">Processo</th>
+                <th scope="col">Enviado por</th>
+                <th scope="col">Recebido em</th>
+                <th scope="col">Situação</th>
+                <th scope="col">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="sei-documentos-body"></tbody>
+          </table>
+        </div>
+        <p id="sei-documentos-vazio" class="hint hidden">Nenhum documento enviado até agora.</p>
+      </div>
+    </section>
+  </main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-api.js"></script>
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/admin-ui.js"></script>
+  <script src="/assets/js/sigma-read.js"></script>
+  <script src="/assets/js/catalog.js"></script>
+  <script src="/restrict/sei_documentos.js"></script>
+{% endblock %}

@@ -101,9 +101,6 @@ async def logout(
 ):
     meta = get_request_meta(request)
     if user:
-        from api.services import sei_integracao_service
-        token = request.cookies.get(cookie_name()) or request.headers.get("authorization", "").removeprefix("Bearer ").strip()
-        sei_integracao_service.desconectar(user.id, key=sei_integracao_service.session_key(user.id, token))
         auth_service.logout_usuario(
             user,
             ip_address=meta["ip_address"],
