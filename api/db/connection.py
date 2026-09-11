@@ -1,6 +1,7 @@
 """Conexão PostgreSQL/PostGIS do banco SLT."""
 from __future__ import annotations
 
+import os
 from contextlib import contextmanager
 from threading import local
 from typing import Any, Generator, cast
@@ -13,6 +14,10 @@ from api.exceptions import DatabaseUnavailableError
 
 ConnectionDict = psycopg.Connection[dict[str, Any]]
 _thread_connections = local()
+
+# O PostgreSQL fica em outra maquina, pela internet. Cinco segundos derrubavam
+# varias leituras quando a bancada abria muitos arquivos de uma vez.
+_CONNECT_TIMEOUT = max(5, int(os.getenv("SLT_DB_CONNECT_TIMEOUT", "15")))
 
 
 def _persistent_connection(dsn: str) -> ConnectionDict:
@@ -29,7 +34,7 @@ def _persistent_connection(dsn: str) -> ConnectionDict:
             except Exception:
                 pass
     conn = psycopg.connect(
-        dsn, row_factory=cast(Any, dict_row), connect_timeout=5,
+        dsn, row_factory=cast(Any, dict_row), connect_timeout=_CONNECT_TIMEOUT,
     )
     _thread_connections.connection = conn
     _thread_connections.dsn = dsn

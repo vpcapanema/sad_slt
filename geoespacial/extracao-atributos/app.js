@@ -104,6 +104,8 @@ function syncMap() {
   if(state.result?.geojson) items.push({key:`resultado:${state.result.id}`,nome:"Geometria da extração",geojson:state.result.geojson,grupo:"Resultado",color:"#853eaf"});
   map.sync(items.filter(item=>item.geojson));
 }
+// Leitura de arquivo no servidor custa uma conexao ao banco remoto: fila curta.
+const SIMULTANEAS=3, TENTATIVAS=3;
 let mapVersion=0;
 async function changed(painel) {
   const version=++mapVersion;
@@ -113,17 +115,35 @@ async function changed(painel) {
   try{
     const selected=state.catalog.filter(l=>l.id===state.input||state.bases.some(b=>b.id===l.id));
     const pendentes=selected.filter(l=>!l.geojson);
-    if(pendentes.length)painel?.etapa(`Lendo ${pendentes.length} arquivo(s) do storage.`);
-    // Uma camada com problema nao pode derrubar a importacao das demais.
-    await Promise.all(pendentes.map(async l=>{
-      try{
-        l.geojson=await chamar('carregarCamada',l);
-        painel?.etapa(`${l.nome}: ${l.geojson.features.length} feição(ões) no mapa.`);
-      }catch(error){
-        falhas.push(`${l.nome}: ${error.message}`);
-        painel?.etapa(`${l.nome}: ${error.message}`,'erro');
+    if(pendentes.length)painel?.etapa(`Lendo ${pendentes.length} arquivo(s) do storage, ${SIMULTANEAS} por vez.`);
+    // Em paralelo sem limite, 18 camadas abriam 18 conexoes ao banco remoto e a
+    // maioria estourava o tempo de conexao. Uma fila curta resolve, e uma camada
+    // com problema nao derruba as demais.
+    let proxima=0,concluidas=0;
+    async function trabalhador(){
+      while(proxima<pendentes.length){
+        const l=pendentes[proxima++];
+        for(let tentativa=1;tentativa<=TENTATIVAS;tentativa++){
+          try{
+            l.geojson=await chamar('carregarCamada',l);
+            painel?.etapa(`${l.nome}: ${l.geojson.features.length} feição(ões) no mapa. (${++concluidas}/${pendentes.length})`);
+            break;
+          }catch(error){
+            const ultima=tentativa===TENTATIVAS;
+            if(!ultima&&/tempo|timeout|conectar/i.test(error.message)){
+              painel?.etapa(`${l.nome}: ${error.message} Tentando de novo.`);
+              await new Promise(resolve=>setTimeout(resolve,700*tentativa));
+              continue;
+            }
+            concluidas++;
+            falhas.push(`${l.nome}: ${error.message}`);
+            painel?.etapa(`${l.nome}: ${error.message}`,'erro');
+            break;
+          }
+        }
       }
-    }));
+    }
+    await Promise.all(Array.from({length:Math.min(SIMULTANEAS,pendentes.length)},trabalhador));
     if(version===mapVersion){config.render();syncMap();}
     if(falhas.length)feedback(`Não foi possível carregar ${falhas.length} camada(s): ${falhas.join(' · ')}`);
   }catch(error){falhas.push(error.message);painel?.etapa(error.message,'erro');feedback(`Não foi possível carregar uma camada no mapa: ${error.message}`);}
