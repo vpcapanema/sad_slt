@@ -5,6 +5,7 @@ FROM ghcr.io/osgeo/gdal:ubuntu-small-3.8.4
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     DEBIAN_FRONTEND=noninteractive \
+    TZ=America/Sao_Paulo \
     PORT=8080
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -13,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         curl \
         ca-certificates \
+        tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

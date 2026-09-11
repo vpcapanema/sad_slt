@@ -17,6 +17,9 @@ services:
     env_file:
       - .env
     environment:
+      # Sem isto o container roda em UTC e as datas gravadas sem fuso aparecem
+      # tres horas a frente para quem usa o sistema em Sao Paulo.
+      TZ: "America/Sao_Paulo"
       PORT: "8080"
       SIGMA_API_BASE: "http://sigma_pli_backend_prod:8000"
       SIGMA_POSTGRES_HOST: "sigma_pli_db"

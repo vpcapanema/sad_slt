@@ -120,6 +120,14 @@ def test_capacidade_recusa_selecao_grande(monkeypatch):
     dados.conferir_capacidade(6347)          # com folga, nao recusa
 
 
+def test_data_da_exportacao_segue_sao_paulo():
+    # O servidor roda em UTC; o nome da camada tem que usar o dia de Sao Paulo,
+    # senao depois das 21h a data sai um dia adiantada.
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    assert service.data_exportacao() == datetime.now(ZoneInfo('America/Sao_Paulo')).strftime('%Y-%m-%d')
+
+
 def test_api_municipal_exige_sessao():
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
