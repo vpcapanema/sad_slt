@@ -1510,27 +1510,25 @@ async def validar_camada(
 async def reparar_geometrias(
     camada_id: str,
     corrigir_geometrias_invalidas: bool = True,
-    corrigir_orientacao_aneis: bool = False,
-    corrigir_fechamento_aneis: bool = False,
-    corrigir_repeticao_pontos: bool = False,
     corrigir_auto_intersecoes: bool = True,
+    corrigir_orientacao_aneis: bool = False,
+    corrigir_repeticao_pontos: bool = False,
     corrigir_geometrias_degeneradas: bool = False,
-    corrigir_vertices_colineares: bool = False,
+    descartar_vazias: bool = False,
     tolerancia_correcao: float = 0.001,
     manter_geometria_original_falha: bool = True,
 ) -> dict:
     """Repara geometrias."""
     resultado = await geoespacial_service.reparar_geometrias(
         camada_id,
-        corrigir_geometrias_invalidas,
-        corrigir_orientacao_aneis,
-        corrigir_fechamento_aneis,
-        corrigir_repeticao_pontos,
-        corrigir_auto_intersecoes,
-        corrigir_geometrias_degeneradas,
-        corrigir_vertices_colineares,
-        tolerancia_correcao,
-        manter_geometria_original_falha,
+        corrigir_geometrias_invalidas=corrigir_geometrias_invalidas,
+        corrigir_auto_intersecoes=corrigir_auto_intersecoes,
+        corrigir_orientacao_aneis=corrigir_orientacao_aneis,
+        corrigir_repeticao_pontos=corrigir_repeticao_pontos,
+        corrigir_geometrias_degeneradas=corrigir_geometrias_degeneradas,
+        descartar_vazias=descartar_vazias,
+        tolerancia_correcao=tolerancia_correcao,
+        manter_geometria_original_falha=manter_geometria_original_falha,
     )
     return resultado
 

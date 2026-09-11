@@ -104,6 +104,44 @@ def _restringir_dimensao(
     return ajustado[ajustado.geometry.notna()].reset_index(drop=True)
 
 
+_DIMENSAO_GEOM: dict[str, int] = {
+    "Point": 0, "MultiPoint": 0, "LineString": 1, "LinearRing": 1,
+    "MultiLineString": 1, "Polygon": 2, "MultiPolygon": 2,
+}
+_MULTI_POR_DIMENSAO: dict[int, Any] = {}
+
+
+def _carregar_multis() -> None:
+    from shapely.geometry import MultiLineString, MultiPoint, MultiPolygon
+    _MULTI_POR_DIMENSAO.update({0: MultiPoint, 1: MultiLineString, 2: MultiPolygon})
+
+
+def _dimensao_predominante(gdf: gpd.GeoDataFrame) -> int:
+    """Dimensão da camada: a mais frequente entre as geometrias presentes."""
+    if not _MULTI_POR_DIMENSAO:
+        _carregar_multis()
+    contagem: dict[int, int] = {}
+    for tipo in gdf.geom_type:
+        dimensao = _DIMENSAO_GEOM.get(tipo)
+        if dimensao is not None:
+            contagem[dimensao] = contagem.get(dimensao, 0) + 1
+    if not contagem:
+        raise ValueError("A camada não possui geometrias de ponto, linha ou polígono.")
+    return max(contagem.items(), key=lambda item: item[1])[0]
+
+
+def _tem_pontos_suficientes(geom: Any) -> bool:
+    """Descarta componentes degenerados: o "too few points" do GEOS e os de área
+    zero, como o anel de quatro vértices iguais, que passa na contagem bruta."""
+    if geom.geom_type == "Polygon":
+        distintos = {tuple(ponto) for ponto in geom.exterior.coords}
+        return len(geom.exterior.coords) >= 4 and len(distintos) >= 3 and geom.area > 0
+    if geom.geom_type == "LineString":
+        distintos = {tuple(ponto) for ponto in geom.coords}
+        return len(geom.coords) >= 2 and len(distintos) >= 2
+    return True
+
+
 def _overlay_ogr(
     gdf1: gpd.GeoDataFrame,
     gdf2: gpd.GeoDataFrame,
@@ -1111,36 +1149,129 @@ class GeoespacialService:
         self,
         camada_id: str,
         corrigir_geometrias_invalidas: bool = True,
-        corrigir_orientacao_aneis: bool = False,
-        corrigir_fechamento_aneis: bool = False,
-        corrigir_repeticao_pontos: bool = False,
         corrigir_auto_intersecoes: bool = True,
+        corrigir_orientacao_aneis: bool = False,
+        corrigir_repeticao_pontos: bool = False,
         corrigir_geometrias_degeneradas: bool = False,
-        corrigir_vertices_colineares: bool = False,
+        descartar_vazias: bool = False,
         tolerancia_correcao: float = 0.001,
         manter_geometria_original_falha: bool = True,
     ) -> dict[str, Any]:
-        """Repara geometrias inválidas e topologia."""
+        """Repara geometrias preservando a dimensão da camada.
+
+        Segue o que um SIG faz em "corrigir geometrias": o núcleo é ``make_valid``
+        do GEOS, e a saída mantém apenas as partes da dimensão de entrada. Sem
+        isso um anel degenerado devolve GeometryCollection, que a extração recusa.
+
+        Este operador não simplifica nem generaliza: para isso existe a operação
+        Simplificar Geometrias (OP-31), que move e remove vértices de propósito.
+        """
+        from shapely import make_valid, remove_repeated_points
+        from shapely.geometry.polygon import orient
+        from shapely.validation import explain_validity
+
         gdf = self.obter_camada_dados(camada_id).copy()
-        correcoes: list[str] = []
+        dimensao = _dimensao_predominante(gdf)
+        contagem = {chave: 0 for chave in (
+            "repetidos", "degeneradas", "invalidas",
+            "auto_intersecoes", "orientacao", "preservadas", "vazias")}
 
-        if corrigir_geometrias_invalidas:
-            invalid_mask = ~gdf.geometry.is_valid
-            if invalid_mask.any():
-                gdf.loc[invalid_mask, "geometry"] = gdf.loc[invalid_mask, "geometry"].make_valid()
-                correcoes.append(f"Corrigidas {invalid_mask.sum()} geometrias inválidas")
+        def partes_da_dimensao(geom):
+            """Componentes com a dimensão da camada; descarta o resto, como o QGIS."""
+            if geom is None or geom.is_empty:
+                return []
+            if geom.geom_type.startswith("Multi") or geom.geom_type == "GeometryCollection":
+                return [parte for filho in geom.geoms for parte in partes_da_dimensao(filho)]
+            return [geom] if _DIMENSAO_GEOM.get(geom.geom_type) == dimensao else []
 
-        if corrigir_repeticao_pontos and hasattr(gdf.geometry, "remove_repeated_points"):
-            gdf["geometry"] = gdf.geometry.remove_repeated_points(tolerancia_correcao)
-            correcoes.append("Pontos repetidos removidos")
+        def juntar(componentes, original):
+            if not componentes:
+                return None
+            if len(componentes) == 1:
+                return componentes[0]
+            return _MULTI_POR_DIMENSAO[dimensao](componentes)
 
-        if corrigir_vertices_colineares:
-            gdf["geometry"] = gdf.geometry.simplify(tolerancia_correcao, preserve_topology=True)
-            correcoes.append("Vértices colineares simplificados")
+        novas = []
+        for original in gdf.geometry:
+            geom = original
+            if geom is None or geom.is_empty:
+                contagem["vazias"] += 1
+                novas.append(None if descartar_vazias else geom)
+                continue
+
+            if corrigir_repeticao_pontos:
+                # GEOS recusa anel degenerado; nesse caso nao ha o que reduzir.
+                try:
+                    reduzida = remove_repeated_points(geom, tolerancia_correcao)
+                except Exception:
+                    reduzida = None
+                if reduzida is not None and not reduzida.equals_exact(geom, 0):
+                    contagem["repetidos"] += 1
+                    geom = reduzida
+
+            if corrigir_geometrias_degeneradas:
+                limpa = juntar([c for c in partes_da_dimensao(geom) if _tem_pontos_suficientes(c)], geom)
+                if limpa is None:
+                    contagem["degeneradas"] += 1
+                    geom = original if manter_geometria_original_falha else None
+                    novas.append(geom)
+                    continue
+                if not limpa.equals_exact(geom, 0):
+                    contagem["degeneradas"] += 1
+                    geom = limpa
+
+            if not geom.is_valid:
+                motivo = explain_validity(geom)
+                auto = "self-intersection" in motivo.lower()
+                if corrigir_geometrias_invalidas or (corrigir_auto_intersecoes and auto):
+                    reparada = juntar(partes_da_dimensao(make_valid(geom)), geom)
+                    if reparada is None or not reparada.is_valid:
+                        contagem["preservadas"] += 1
+                        geom = original if manter_geometria_original_falha else reparada
+                    else:
+                        contagem["auto_intersecoes" if auto else "invalidas"] += 1
+                        geom = reparada
+
+            if corrigir_orientacao_aneis and dimensao == 2 and geom is not None and not geom.is_empty:
+                try:
+                    orientada = (orient(geom, 1.0) if geom.geom_type == "Polygon"
+                                 else _MULTI_POR_DIMENSAO[2]([orient(g, 1.0) for g in geom.geoms])
+                                 if geom.geom_type == "MultiPolygon" else geom)
+                except Exception:
+                    orientada = geom
+                if not orientada.equals_exact(geom, 0):
+                    contagem["orientacao"] += 1
+                geom = orientada
+
+            novas.append(geom)
+
+        gdf["geometry"] = novas
+        if descartar_vazias:
+            gdf = gdf[gdf.geometry.notna() & ~gdf.geometry.is_empty].reset_index(drop=True)
+
+        rotulos = {
+            "repetidos": "vértices repetidos removidos",
+            "degeneradas": "componentes degenerados descartados",
+            "invalidas": "geometrias inválidas corrigidas",
+            "auto_intersecoes": "auto-interseções corrigidas",
+            "orientacao": "anéis reorientados",
+            "preservadas": "geometrias preservadas por falha no reparo",
+            "vazias": "geometrias vazias encontradas",
+        }
+        correcoes = [f"{rotulos[k]}: {v}" for k, v in contagem.items() if v]
+        restantes = int((~gdf.geometry.is_valid).sum()) if len(gdf) else 0
+        mistas = sorted({g.geom_type for g in gdf.geometry if g is not None} - set(_DIMENSAO_GEOM))
+        if mistas:
+            correcoes.append(f"ATENÇÃO: a saída ainda contém {', '.join(mistas)}")
+        if restantes:
+            correcoes.append(f"ATENÇÃO: {restantes} geometria(s) continuam inválidas")
 
         nova_camada_id = self.registrar_camada(gdf, f"Geometrias reparadas de {camada_id}", "OP-02-CORR")
-
-        return {"camada_id": nova_camada_id, "correcoes": correcoes, "feicoes_corrigidas": int((~self._camadas[camada_id].geometry.is_valid).sum())}
+        return {"camada_id": nova_camada_id, "correcoes": correcoes,
+                "feicoes_corrigidas": sum(contagem[k] for k in
+                                          ("invalidas", "auto_intersecoes", "degeneradas",
+                                           "repetidos", "orientacao")),
+                "invalidas_restantes": restantes, "detalhes": contagem}
 
     async def normalizar_camada(
         self,
