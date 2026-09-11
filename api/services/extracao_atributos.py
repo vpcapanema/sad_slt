@@ -40,8 +40,21 @@ def catalogo():
     return {'categorias':categories,'camadas':layers}
 
 
-def caminho(ident):
-    return project_path(f'data/geoespacial/outputs/{UUID(str(ident))}/extracao.json')
+def caminho(ident, pasta=None):
+    """Arquivo do resultado. A pasta leva o nome da saida, nao o UUID.
+
+    O nome fica gravado em execucao_arquivo.parametros porque so o identificador
+    chega aqui na leitura. Execucoes antigas continuam na pasta com o UUID.
+    """
+    ident = str(UUID(str(ident)))
+    if pasta is None:
+        with get_connection() as conn:
+            linha = conn.execute("""SELECT parametros->>'pasta_resultado' AS pasta
+                FROM geoprocessamento.execucao_arquivo WHERE id=%s""", (ident,)).fetchone()
+        pasta = (linha or {}).get('pasta')
+    if not pasta:
+        return project_path(f'data/geoespacial/outputs/{ident}/extracao.json')
+    return project_path(f'data/geoespacial/outputs/{pasta}/extracao.json')
 
 
 def iniciar(payload, user):
@@ -107,12 +120,16 @@ def _execute(ident, params):
         from osgeo import gdal
         result.update(id=ident,camada_resultado_id=layer_id,input_id=params['camada_id'],input_nome=params['input_nome'],
                       criado_em=datetime.now(timezone.utc).isoformat(),gdal=gdal.VersionInfo())
-        path = caminho(ident)
-        path.parent.mkdir(parents=True,exist_ok=True)
+        destino = ciclo.pasta_de_saida(nome_saida, ident)
+        path = caminho(ident, destino.name)
         # Exclusivo desta execução; resultado só fica disponível após finalizar.
         with path.open('x',encoding='utf-8') as stream:
             json.dump(result,stream,ensure_ascii=False,allow_nan=False)
-        with get_connection() as conn: ciclo.registrar_uso(conn,layer_id,'relatorio',ident)
+        with get_connection() as conn:
+            conn.execute("""UPDATE geoprocessamento.execucao_arquivo
+                SET parametros = jsonb_set(coalesce(parametros,'{}'::jsonb),
+                    '{pasta_resultado}', to_jsonb(%s::text)) WHERE id=%s""", (destino.name, ident))
+            ciclo.registrar_uso(conn,layer_id,'relatorio',ident)
         ciclo.finalizar(ident)
     except Exception as exc:
         message = str(exc) if isinstance(exc,ValueError) else 'Falha ao processar ou persistir a análise. Verifique os dados e o serviço.'

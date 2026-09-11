@@ -27,9 +27,11 @@ def digest(path: Path) -> str:
 def caminho_exportacao(nome: str, categoria: str) -> Path:
     from api.path_policy import geo_output_path
     validated = geo_output_path(nome, categoria=categoria, label='saída')
-    path = project_path(f'data/geoespacial/outputs/exportacoes/{uuid4()}/{validated.name}')
-    path.parent.mkdir(parents=True, exist_ok=False)
-    return path
+    # A pasta leva o nome do que foi exportado; o UUID nao diz nada a quem abre.
+    base = project_path('data/geoespacial/outputs/exportacoes')
+    pasta = base / f'{apelido(validated.stem, 48) or "exportacao"}_{uuid4().hex[:8]}'
+    pasta.mkdir(parents=True, exist_ok=False)
+    return pasta / validated.name
 
 
 def registrar_exportacao(path: Path, recurso: str, tipo: str) -> dict:
@@ -156,16 +158,40 @@ def validar_vetor(path: Path, frame: gpd.GeoDataFrame) -> dict:
     return {'feicoes':len(frame),'crs':str(frame.crs),'reaberto_gdal':True,'conteudo_conferido':True}
 
 
-def _nome_de_arquivo(nome: str | None) -> str:
-    """Nome do arquivo: o nome da camada mais um sufixo curto que garante unicidade.
-
-    O arquivo antes era so um UUID, ilegivel para quem abre a pasta de saidas.
-    O sufixo continua porque duas camadas podem ter o mesmo nome e o caminho e
-    a chave do registro em arquivo_resultado.
-    """
+def apelido(nome: str | None, limite: int = 60) -> str:
+    """Reduz o nome da camada a algo seguro para nome de pasta ou de arquivo."""
     texto = unicodedata.normalize('NFKD', str(nome or '')).encode('ascii', 'ignore').decode()
-    limpo = re.sub(r'[^A-Za-z0-9]+', '_', texto).strip('_').lower()[:60].strip('_')
-    return f'{limpo}_{uuid4().hex[:8]}' if limpo else str(uuid4())
+    return re.sub(r'[^A-Za-z0-9]+', '_', texto).strip('_').lower()[:limite].strip('_')
+
+
+def pasta_de_saida(nome: str | None, referencia: str) -> Path:
+    """Cria a pasta da saida com o nome da camada, nao com o UUID da execucao.
+
+    Quem abre outputs/ le o que cada pasta contem. O sufixo curto vem do
+    identificador da execucao e so existe para separar execucoes homonimas;
+    se ainda assim colidir, entra um contador.
+    """
+    base = apelido(nome, 48) or 'saida'
+    curto = re.sub(r'[^0-9a-f]', '', str(referencia).lower())[:8] or uuid4().hex[:8]
+    raiz = project_path('data/geoespacial/outputs')
+    alvo = raiz / f'{base}_{curto}'
+    conta = 1
+    while alvo.exists():
+        conta += 1
+        alvo = raiz / f'{base}_{curto}_{conta}'
+    alvo.mkdir(parents=True)
+    return alvo
+
+
+def _nome_de_arquivo(pasta: Path, nome: str | None, extensao: str) -> Path:
+    """Arquivo com o nome da camada dentro da pasta; contador se houver homonimo."""
+    base = apelido(nome) or 'saida'
+    alvo = pasta / f'{base}{extensao}'
+    conta = 1
+    while alvo.exists():
+        conta += 1
+        alvo = pasta / f'{base}_{conta}{extensao}'
+    return alvo
 
 
 def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=None,
@@ -187,10 +213,9 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
     # ident e a chave primaria de arquivo_resultado, tem de continuar UUID.
     # O nome do arquivo em disco e outra coisa: leva o nome da camada.
     ident = str(uuid4())
-    arquivo = _nome_de_arquivo(metadata.get('nome'))
-    relative = f'data/geoespacial/outputs/{execution}/{arquivo}' + ('.gpkg' if frame is not None else '.tif')
-    path = project_path(relative)
-    path.parent.mkdir(parents=True,exist_ok=True)
+    pasta = pasta_de_saida(metadata.get('nome'), execution)
+    path = _nome_de_arquivo(pasta, metadata.get('nome'), '.gpkg' if frame is not None else '.tif')
+    relative = path.resolve().relative_to(project_path('.').resolve()).as_posix()
     try:
         if frame is not None:
             # Nome de geometria padronizado só no arquivo, sem mudar o objeto de entrada.

@@ -102,8 +102,20 @@ def test_nome_escolhido_no_formulario_vira_o_nome_da_camada():
         geo._camadas.pop('entrada_nome', None)
 
 
-def test_arquivo_de_saida_leva_o_nome_da_camada():
-    from api.services.ciclo_vida_arquivos import _nome_de_arquivo
-    nome = _nome_de_arquivo('Restrição jurídico-ambiental v1')
-    assert nome.startswith('restricao_juridico_ambiental_v1_')
-    assert _nome_de_arquivo('') != _nome_de_arquivo('')
+def test_pasta_e_arquivo_de_saida_levam_o_nome_da_camada(tmp_path, monkeypatch):
+    # Quem abre outputs/ tem de ler o que cada pasta contem, sem decorar UUID.
+    from api.services import ciclo_vida_arquivos as ciclo
+
+    monkeypatch.setattr(ciclo, 'project_path', lambda rel: tmp_path / rel)
+    nome = 'Restrição jurídico-ambiental v1'
+    pasta = ciclo.pasta_de_saida(nome, '7a6610b6-7ad9-4acb-9796-7a947caf1267')
+    assert pasta.name == 'restricao_juridico_ambiental_v1_7a6610b6'
+
+    arquivo = ciclo._nome_de_arquivo(pasta, nome, '.gpkg')
+    assert arquivo.name == 'restricao_juridico_ambiental_v1.gpkg'
+    arquivo.touch()
+    assert ciclo._nome_de_arquivo(pasta, nome, '.gpkg').name.endswith('_2.gpkg')
+
+    # Duas execucoes homonimas nao podem colidir nem sobrescrever.
+    outra = ciclo.pasta_de_saida(nome, '7a6610b6-0000-0000-0000-000000000000')
+    assert outra != pasta and outra.name.startswith('restricao_juridico_ambiental_v1_7a6610b6')
