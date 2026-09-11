@@ -26,7 +26,10 @@ export const adaptador={
     Object.assign(layer,file);return file.geojson;
   },
   async executar(request,aoAtualizar) {
+    // O corpo tem que carregar tudo o que a 1.3 configura: o nome da saida e as
+    // opcoes do operador do OGR ficavam para tras e o servidor usava os padroes.
     const job=await post('/extracao-atributos/execucoes',{input_id:request.input.id,operacao:request.operacao,
+      nome_saida:request.nome_saida||'',opcoes:request.opcoes||{},
       categorias:request.categorias.map(c=>({id:c.id,camadas:c.camadas.map(l=>l.id)}))});
     sessionStorage.setItem('slt-extracao-ultima',job.id);
     return esperar(job,id=>`/extracao-atributos/execucoes/${id}`,aoAtualizar);
