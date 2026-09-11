@@ -121,7 +121,11 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   },[api,chaveDaPrevia]);
   function toggle(id) {update({...config,attributes:selected.has(id)?config.attributes.filter(x=>x!==id):[...config.attributes,id]});}
   async function generate() {
-    setBusy(true);setError('');setStatus('Gerando geometria e tabela de atributos…');
+    setBusy(true);setError('');
+    // O destino vem do catalogo; fora do SICARD o plugin nao tem acervo.
+    setStatus(catalog?.destino
+      ? `Gerando geometria e tabela de atributos em ${catalog.destino}/`
+      : 'Gerando geometria e tabela de atributos…');
     const snapshot={...config,attributes:[...config.attributes]};
     try {
       const blob=await api.export(snapshot);

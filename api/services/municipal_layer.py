@@ -57,7 +57,7 @@ def categoria(codigo):
 def catalogo(codigo):
     category = categoria(codigo)
     return {'attributes': dados.catalog(), 'municipalities': dados.MUNICIPIOS, 'crs': dados.CRS,
-            'geometryYear': dados.ANO_MALHA, 'categoria': category}
+            'geometryYear': dados.ANO_MALHA, 'categoria': category, 'destino': DESTINO}
 
 
 LIMITE_GLOSSARIO = 300
