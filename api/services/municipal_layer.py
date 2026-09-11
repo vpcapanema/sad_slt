@@ -6,7 +6,9 @@ apenas como origem dos insumos e do componente React compilado.
 """
 import io
 import json
+import re
 import threading
+import unicodedata
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -36,9 +38,9 @@ def data_exportacao():
     return agora.strftime('%Y-%m-%d')
 
 
-def nome_padrao(category, manifest):
+def nome_padrao(category, itens):
     """Categoria escolhida, fonte majoritária da seleção e data da exportação."""
-    contagem = Counter(item['source'] for item in manifest['attributes'])
+    contagem = Counter(item['source'] for item in itens)
     fonte = contagem.most_common(1)[0][0] if contagem else 'Sem fonte'
     return f"{category['nome']} — {fonte} — {data_exportacao()}"[:200]
 
@@ -76,9 +78,19 @@ def previa(codigo, payload):
             'glossario': fixos + entradas, 'glossarioLimite': LIMITE_GLOSSARIO}
 
 
-def materializar(payload, folder):
+def base_arquivos(nome: str) -> str:
+    """municipios_sp + identificador curto + o nome que o usuário deu."""
+    texto = unicodedata.normalize('NFKD', str(nome)).encode('ascii', 'ignore').decode()
+    # 40 caracteres: o nome completo fica no banco; aqui o caminho precisa caber.
+    texto = re.sub(r'[^a-zA-Z0-9]+', '_', texto).strip('_').lower()[:40].strip('_')
+    curto = uuid4().hex[:8]
+    return '_'.join(parte for parte in (dados.PREFIXO, curto, texto) if parte)
+
+
+def materializar(payload, folder, base=None):
     """Exporta a base municipal e reabre o arquivo pelo GDAL antes do registro."""
-    package = dados.export_layer(payload)
+    base = base or dados.PREFIXO
+    package = dados.export_layer(payload, base)
     fmt = payload['format']
     with ZipFile(io.BytesIO(package)) as archive:
         for member in archive.infolist():
@@ -87,7 +99,7 @@ def materializar(payload, folder):
                 raise ValueError('Pacote municipal com caminho inválido.')
             with path.open('xb') as stream:
                 stream.write(archive.read(member))
-    path = folder/f'municipios_sp.{fmt}'
+    path = folder/f'{base}.{fmt}'
     dataset = gdal.OpenEx(str(path), gdal.OF_VECTOR | gdal.OF_READONLY)
     if dataset is None or dataset.GetLayerCount() != 1:
         raise ValueError('A exportação deve conter uma camada vetorial.')
@@ -98,7 +110,7 @@ def materializar(payload, folder):
     frame = gpd.read_file(path, engine='pyogrio')
     if frame.crs.to_epsg() != 4674 or not frame.CD_MUN.is_unique or not frame.CD_MUN.str.fullmatch(r'\d{7}').all():
         raise ValueError('CRS ou códigos municipais inválidos.')
-    manifest = json.loads((folder/'metadados.json').read_text(encoding='utf-8'))
+    manifest = json.loads((folder/f'{base}_metadados.json').read_text(encoding='utf-8'))
     if any(item['export_field'] not in frame for item in manifest['attributes']):
         raise ValueError('Um atributo selecionado não foi materializado.')
     return package, path, manifest, frame
@@ -114,13 +126,15 @@ def gerar(codigo, payload, nome, user):
     try:
         params = {'plugin': 'municipal-layer', 'versao': '1.0.0', 'categoria': category, **payload}
         execution = ciclo.iniciar('gerar_camada_municipal', params, str(user.id))
-        folder = project_path(f'{DESTINO}/municipal_{execution}')
+        # O nome sai antes da exportação: é ele que batiza a pasta e os arquivos.
+        name = nome.strip()[:200] or nome_padrao(category, dados.selection(payload['attributes']))
+        base = base_arquivos(name)
+        folder = project_path(f'{DESTINO}/{base}')
         folder.mkdir(parents=True, exist_ok=False)
-        package, path, manifest, frame = materializar(payload, folder)
+        package, path, manifest, frame = materializar(payload, folder, base)
         relative = path.relative_to(project_path('.').resolve()).as_posix()
         ident = 'camada_' + uuid4().hex
-        name = nome.strip()[:200] or nome_padrao(category, manifest)
-        metadata = {'caminho_arquivo': relative, 'origem': 'municipal-layer',
+        metadata = {'caminho_arquivo': relative, 'origem': 'municipal-layer', 'base_arquivos': base,
                     'categoria_extracao': category, 'execucao_id': execution, 'manifesto': manifest,
                     'feicoes': 645, 'colunas': list(frame.columns), 'sha256': ciclo.digest(path),
                     'componentes': [{'arquivo': p.relative_to(project_path('.')).as_posix(),

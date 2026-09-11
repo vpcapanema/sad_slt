@@ -229,8 +229,15 @@ def estilo_qgis(entradas: list[dict]) -> str:
             + '\n'.join(linhas) + '\n  </aliases>\n</qgis>\n')
 
 
-def export_layer(payload: dict) -> bytes:
-    """Gera o ZIP com camada, dicionário e metadados, sem simplificar geometria."""
+PREFIXO = 'municipios_sp'
+
+
+def export_layer(payload: dict, base: str = PREFIXO) -> bytes:
+    """Gera o ZIP com camada, dicionário e metadados, sem simplificar geometria.
+
+    ``base`` nomeia todos os arquivos do pacote, para que a pasta no acervo e o
+    conteúdo dela compartilhem o mesmo identificador.
+    """
     items = selection(payload.get('attributes'))
     fmt = payload.get('format', 'fgb')
     if fmt not in LIMITES:
@@ -255,12 +262,12 @@ def export_layer(payload: dict) -> bytes:
                           'Anos dos indicadores não alteram a malha de referência de 2022.']}
     with tempfile.TemporaryDirectory(prefix='base-municipal-') as temp:
         folder = Path(temp)
-        output = folder / f'municipios_sp.{fmt}'
+        output = folder / f'{base}.{fmt}'
         frame.to_file(output, driver=DRIVERS[fmt], encoding='UTF-8', index=False)
         manifest['alias_no_arquivo'] = bool(fmt == 'gpkg' and aplicar_aliases(output, entradas))
-        (folder / 'municipios_sp.qml').write_text(estilo_qgis(entradas), encoding='utf-8')
-        (folder / 'metadados.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
-        with (folder / 'dicionario.csv').open('w', encoding='utf-8-sig', newline='') as arquivo:
+        (folder / f'{base}.qml').write_text(estilo_qgis(entradas), encoding='utf-8')
+        (folder / f'{base}_metadados.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
+        with (folder / f'{base}_dicionario.csv').open('w', encoding='utf-8-sig', newline='') as arquivo:
             writer = csv.DictWriter(arquivo, fieldnames=['campo_exportado', 'alias', 'significado',
                                                          'campo_bruto', 'fonte', 'tema', 'ano',
                                                          'unidade', 'url', 'municipios_com_valor'])

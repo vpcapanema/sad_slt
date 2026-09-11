@@ -28,16 +28,16 @@ def test_materializa_atributos_reais(tmp_path, fmt):
     actual = actual.set_index('CD_MUN').sort_index()
     for item in manifest['attributes']:
         np.testing.assert_allclose(actual[item['export_field']], expected[item['field']], equal_nan=True)
-    assert (tmp_path/'dicionario.csv').exists()
+    assert (tmp_path/f'{dados.PREFIXO}_dicionario.csv').exists()
 
 
 def test_nome_padrao_usa_categoria_fonte_majoritaria_e_data():
-    manifesto = {'attributes': [{'source': 'Seade · IPDM'}, {'source': 'IBGE · Censo 2022'},
-                                {'source': 'IBGE · Censo 2022'}]}
-    nome = service.nome_padrao({'nome': 'Econômico'}, manifesto)
+    itens = [{'source': 'Seade · IPDM'}, {'source': 'IBGE · Censo 2022'},
+             {'source': 'IBGE · Censo 2022'}]
+    nome = service.nome_padrao({'nome': 'Econômico'}, itens)
     assert nome == f'Econômico — IBGE · Censo 2022 — {service.data_exportacao()}'
     assert len(nome) <= 200
-    assert service.nome_padrao({'nome': 'Social'}, {'attributes': []}).startswith('Social — Sem fonte — ')
+    assert service.nome_padrao({'nome': 'Social'}, []).startswith('Social — Sem fonte — ')
 
 
 def test_dicionario_traz_alias_e_significado():
@@ -66,12 +66,38 @@ def test_pacote_leva_dicionario_e_alias(tmp_path):
         {'attributes': [a['id'] for a in items], 'format': 'gpkg'}, tmp_path)
     assert manifest['alias_no_arquivo'] is True
     assert set(manifest['aliases']) == {i['field'] for i in items}
-    assert (tmp_path/'municipios_sp.qml').exists()
-    import csv, io
-    linhas = list(csv.DictReader((tmp_path/'dicionario.csv').read_text(encoding='utf-8-sig').splitlines()))
+    assert (tmp_path/f'{dados.PREFIXO}.qml').exists()
+    import csv
+    linhas = list(csv.DictReader(
+        (tmp_path/f'{dados.PREFIXO}_dicionario.csv').read_text(encoding='utf-8-sig').splitlines()))
     assert {'campo_exportado', 'alias', 'significado'} <= set(linhas[0])
     assert len(linhas) == len(items) + len(dados.CAMPOS_FIXOS)
     assert package[:2] == b'PK'
+
+
+def test_base_dos_arquivos_usa_prefixo_id_curto_e_nome():
+    base = service.base_arquivos('Risco hídrico 2026')
+    prefixo, curto, resto = base.split('_', 2)
+    assert prefixo == 'municipios'          # municipios_sp e o prefixo composto
+    assert base.startswith('municipios_sp_')
+    curto = base.removeprefix('municipios_sp_').split('_', 1)[0]
+    assert len(curto) == 8 and curto.isalnum()
+    assert base.endswith('_risco_hidrico_2026')
+    # Nome vazio ainda produz uma base valida, so com o identificador curto.
+    assert service.base_arquivos('   ').startswith('municipios_sp_')
+    # Dois pedidos iguais nunca colidem.
+    assert service.base_arquivos('igual') != service.base_arquivos('igual')
+
+
+def test_pacote_nomeia_os_arquivos_pela_base(tmp_path):
+    items = [a for a in dados.catalog() if a['field'] in {'seade_ipdm_2022', 'idh_idhm_2010'}]
+    base = 'municipios_sp_abcd1234_teste'
+    package, path, manifest, _ = service.materializar(
+        {'attributes': [a['id'] for a in items], 'format': 'gpkg'}, tmp_path, base)
+    assert path.name == f'{base}.gpkg'
+    assert {f.name for f in tmp_path.iterdir()} == {
+        f'{base}.gpkg', f'{base}.qml', f'{base}_dicionario.csv', f'{base}_metadados.json'}
+    assert package[:2] == b'PK' and manifest['municipalities'] == 645
 
 
 def test_api_municipal_exige_sessao():
