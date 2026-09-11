@@ -49,7 +49,7 @@ function readFacets(attribute) {
 const limits = {fgb:6500, gpkg:1900, shp:250};
 
 /** onExport({blob, filename, configuration, attributes}); download=false lets the host own delivery. */
-export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChange, onExport, download=true, className=''}) {
+export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChange, onExport, download=true, className='', categoriaNome=''}) {
   const api = useMemo(() => client || createLayerClient(apiBaseUrl), [client,apiBaseUrl]);
   const [catalog,setCatalog] = useState(null);
   const [local,setLocal] = useState({attributes:[],format:'fgb'});
@@ -77,6 +77,15 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   const available = attributes.filter(a=>a.source===source && a.year===activeYear);
   const themes = [...new Set(available.map(a=>a.theme))];
   const selected = new Set(config.attributes);
+  // Espelha a regra do servidor: categoria, fonte majoritaria da selecao e data.
+  const nomePadrao = useMemo(() => {
+    const escolhidos = attributes.filter(a=>selected.has(a.id));
+    if (!escolhidos.length) return 'Categoria — fonte majoritária — data da geração';
+    const contagem = new Map();
+    for (const a of escolhidos) contagem.set(a.source, (contagem.get(a.source) || 0) + 1);
+    const fonte = [...contagem.entries()].sort((x,y)=>y[1]-x[1])[0][0];
+    return `${categoriaNome || 'Categoria'} — ${fonte} — ${new Date().toLocaleDateString('en-CA')}`;
+  }, [attributes, config.attributes, categoriaNome]);
   const selectedItems = attributes.filter(a=>selected.has(a.id));
   const facetsById = useMemo(()=>new Map(attributes.map(a=>[a.id,readFacets(a)])),[attributes]);
   const scoped = available.filter(a=>(!theme || a.theme===theme) && `${a.label} ${a.field} ${a.unit}`.toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR')));
@@ -99,13 +108,17 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   const visible = filtered.slice(page*40,page*40+40);
   useEffect(()=>{setPage(0);},[source,year,theme,search,facets]);
   useEffect(()=>{setFacets({});},[source,year,theme]);
+  // So atributos e formato mudam a previa. Depender de config inteiro fazia o
+  // nome da camada apagar a previa e refazer a consulta a cada tecla digitada.
+  const chaveDaPrevia = `${config.format}|${[...config.attributes].join(',')}`;
   useEffect(()=>{
     setPreview(null);
     if(!config.attributes.length)return;
     const ctrl=new AbortController();
-    const timer=setTimeout(()=>api.preview(config,ctrl.signal).then(setPreview).catch(e=>{if(e.name!=='AbortError')setError(e.message);}),250);
+    const pedido={attributes:config.attributes,format:config.format};
+    const timer=setTimeout(()=>api.preview(pedido,ctrl.signal).then(setPreview).catch(e=>{if(e.name!=='AbortError')setError(e.message);}),250);
     return ()=>{clearTimeout(timer);ctrl.abort();};
-  },[api,config]);
+  },[api,chaveDaPrevia]);
   function toggle(id) {update({...config,attributes:selected.has(id)?config.attributes.filter(x=>x!==id):[...config.attributes,id]});}
   async function generate() {
     setBusy(true);setError('');setStatus('Gerando geometria e tabela de atributos…');
@@ -139,11 +152,14 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
         <div className="mlb-basket">{selectedItems.map(a=><article key={a.id} className="mlb-basket-item"><span className="mlb-basket-name">{a.label}</span><details><summary aria-label={`Fonte e definição de ${a.label}`}></summary><div className="mlb-detail"><p className="mlb-detail-meta">{a.source} · {a.year}</p><p>{themeLabel(a.theme)} · {a.unit || 'Unidade não informada'} · {a.coverage}/645 com valor</p><p>{a.field}</p></div></details><button type="button" className="mlb-basket-remove" disabled={busy} title={`Remover ${a.label}`} aria-label={`Remover ${a.label}`} onClick={()=>toggle(a.id)}>×</button></article>)}{!selectedItems.length && <p>Selecione atributos na lista ao lado.</p>}</div>
         <label>Formato da camada<select disabled={busy} value={config.format} onChange={e=>update({...config,format:e.target.value})}><option value="fgb">FlatGeobuf (.fgb)</option><option value="gpkg">GeoPackage (.gpkg)</option><option value="shp">Shapefile (.shp)</option></select></label>
         <p className="mlb-note">{config.format==='shp'?'Até 250 atributos. Nomes abreviados com correspondência no dicionário.':config.format==='gpkg'?'Até 1.900 atributos. Nomes completos preservados.':'Até 6.500 atributos. Nomes completos preservados.'} Todos os formatos são entregues em ZIP.</p>
+        <label className="mlb-nome">Nome da camada<input type="text" maxLength={200} disabled={busy} value={config.nome ?? ''} placeholder={nomePadrao} onChange={e=>update({...config,nome:e.target.value})}/></label>
+        <p className="mlb-note">Em branco, o nome é montado com a categoria, a fonte majoritária da seleção e a data.</p>
         {selected.size>limits[config.format] && <p className="mlb-error">Seleção excede o limite do formato. Escolha FlatGeobuf ou remova atributos.</p>}
         <button type="button" className="mlb-primary" disabled={busy || !selected.size || selected.size>limits[config.format]} onClick={generate}>{busy?'Gerando camada…':download?'Gerar e baixar camada':'Gerar camada'}</button>
         <p className="mlb-status" role="status">{status}</p><p className="mlb-note">Geometria de 2022. O período de cada indicador acompanha o campo nos metadados. Valores ausentes permanecem nulos.</p>
       </aside>
       {preview && <section className="mlb-panel mlb-preview"><h2>Prévia da tabela de atributos</h2><p>5 municípios · até 8 atributos da seleção. A exportação inclui todos os 645 municípios e todos os atributos escolhidos.</p><div className="mlb-table"><table><thead><tr><th>Código IBGE</th><th>Município</th>{preview.fields.map(f=><th key={f}>{f}</th>)}</tr></thead><tbody>{preview.rows.map(r=><tr key={r.CD_MUN}><td>{r.CD_MUN}</td><td>{r.NM_MUN}</td>{preview.fields.map(f=><td key={f}>{r[f] == null ? 'Sem valor' : r[f].toLocaleString('pt-BR',{maximumFractionDigits:8})}</td>)}</tr>)}</tbody></table></div></section>}
+      {preview?.glossario?.length ? <section className="mlb-panel mlb-glossario"><h2>Glossário e aliases de atributos</h2><p>Os campos abaixo são exatamente os que sairão na tabela de atributos da camada gerada. O nome do campo começa pelo identificador do tema; o nome por extenso viaja no alias, no dicionário e nos metadados do pacote.{preview.totalAttributes > (preview.glossarioLimite ?? 0) ? ` Exibindo os primeiros ${preview.glossarioLimite} de ${preview.totalAttributes.toLocaleString('pt-BR')} atributos; o dicionário do pacote traz todos.` : ''}</p><div className="mlb-table"><table><thead><tr><th>Campo exportado</th><th>Alias</th><th>Significado</th><th>Fonte</th></tr></thead><tbody>{preview.glossario.map(item=><tr key={item.campo_exportado}><td><code>{item.campo_exportado}</code></td><td>{item.alias}</td><td className="mlb-glossario-significado">{item.significado}</td><td>{item.fonte}</td></tr>)}</tbody></table></div></section> : null}
     </div>}
   </section>;
 }

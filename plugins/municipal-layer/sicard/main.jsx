@@ -10,8 +10,6 @@ export function abrirMunicipal({category,apiBase,onGenerated}) {
   const close=()=>{if(working)return;root.unmount();dialog.close();dialog.remove();};
   dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
   function App(){
-    // Vazio significa nome automático: categoria, fonte majoritária e data.
-    const [name,setName]=useState('');
     const [busy,setBusy]=useState(false);
     const client=useMemo(()=>{
       let generated;
@@ -26,7 +24,7 @@ export function abrirMunicipal({category,apiBase,onGenerated}) {
         return response.json();
       }
       return {catalog:signal=>request('catalog',null,signal),preview:(config,signal)=>request('preview',config,signal),
-        export:async config=>{working=true;setBusy(true);try{return await request('export',{...config,nome:host.querySelector('[name="municipal-name"]').value});}catch(error){working=false;setBusy(false);throw error;}},
+        export:async config=>{working=true;setBusy(true);try{return await request('export',{...config,nome:config.nome||''});}catch(error){working=false;setBusy(false);throw error;}},
         generated:()=>generated};
     },[]);
     async function saved(){
@@ -35,9 +33,8 @@ export function abrirMunicipal({category,apiBase,onGenerated}) {
     }
     return <>
       <header className="ea-municipal-header"><div><h2>Camada municipal · {category.nome}</h2><p>{category.conceito}</p></div><button type="button" aria-label="Fechar gerador municipal" disabled={busy} onClick={close}>×</button></header>
-      <label className="ea-municipal-name">Nome da camada<input name="municipal-name" value={name} disabled={busy} maxLength={200} placeholder={`${category.nome} — fonte majoritária da seleção — data da geração`} onChange={event=>setName(event.target.value)}/></label>
       <p className="ea-municipal-help">Escolha os atributos que representam esta categoria. Ao gerar, a camada será salva no acervo e adicionada às bases da análise.</p>
-      <MunicipalLayerBuilder client={client} download={false} onExport={saved}/>
+      <MunicipalLayerBuilder client={client} download={false} onExport={saved} categoriaNome={category.nome}/>
     </>;
   }
   dialog.showModal();root.render(<App/>);

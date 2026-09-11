@@ -40,6 +40,40 @@ def test_nome_padrao_usa_categoria_fonte_majoritaria_e_data():
     assert service.nome_padrao({'nome': 'Social'}, {'attributes': []}).startswith('Social — Sem fonte — ')
 
 
+def test_dicionario_traz_alias_e_significado():
+    campos = {'seade_ipdm_2022', 'economia_pib_per_capita_reais_2023'}
+    items = [a for a in dados.catalog() if a['field'] in campos]
+    assert len(items) == 2
+    linhas = {e['campo_bruto']: e for e in dados.dicionario(items, 'gpkg')}
+    assert linhas['seade_ipdm_2022']['alias'] == 'Desenvolvimento municipal · IPDM (2022)'
+    assert 'Unidade:' in linhas['seade_ipdm_2022']['significado']
+    # Nenhum significado pode carregar o JSON cru que algumas fontes poem em "nota".
+    assert not any('{"' in e['significado'] for e in linhas.values())
+
+
+def test_shapefile_usa_sigla_do_tema_em_dez_caracteres():
+    items = [a for a in dados.catalog() if a['theme'] == '01_populacao'][:3]
+    nomes = dados.nomes_exportados(items, 'shp')
+    assert all(len(nome) <= 10 and nome.startswith('POP') for nome in nomes.values())
+    assert len(set(nomes.values())) == len(items)
+    # Nos demais formatos o nome bruto ja comeca pelo identificador do tema.
+    assert dados.nomes_exportados(items, 'gpkg') == {i['field']: i['field'] for i in items}
+
+
+def test_pacote_leva_dicionario_e_alias(tmp_path):
+    items = [a for a in dados.catalog() if a['field'] in {'seade_ipdm_2022', 'idh_idhm_2010'}]
+    package, path, manifest, _ = service.materializar(
+        {'attributes': [a['id'] for a in items], 'format': 'gpkg'}, tmp_path)
+    assert manifest['alias_no_arquivo'] is True
+    assert set(manifest['aliases']) == {i['field'] for i in items}
+    assert (tmp_path/'municipios_sp.qml').exists()
+    import csv, io
+    linhas = list(csv.DictReader((tmp_path/'dicionario.csv').read_text(encoding='utf-8-sig').splitlines()))
+    assert {'campo_exportado', 'alias', 'significado'} <= set(linhas[0])
+    assert len(linhas) == len(items) + len(dados.CAMPOS_FIXOS)
+    assert package[:2] == b'PK'
+
+
 def test_api_municipal_exige_sessao():
     from fastapi import FastAPI
     from fastapi.testclient import TestClient

@@ -58,12 +58,22 @@ def catalogo(codigo):
             'geometryYear': dados.ANO_MALHA, 'categoria': category}
 
 
+LIMITE_GLOSSARIO = 300
+
+
 def previa(codigo, payload):
     categoria(codigo)
     items = dados.selection(payload['attributes'])
     frame = dados.layer(items[:8]).drop(columns='geometry').head(5)
+    # O glossario descreve a tabela de atributos da camada que sera gerada.
+    entradas = dados.dicionario(items[:LIMITE_GLOSSARIO], payload.get('format', 'fgb'))
+    fixos = [{'campo_exportado': campo, 'alias': rotulo, 'significado': texto,
+              'campo_bruto': campo, 'fonte': dados.ORIGEM_MALHA, 'tema': 'Malha municipal',
+              'ano': dados.ANO_MALHA, 'unidade': None}
+             for campo, (rotulo, texto) in dados.CAMPOS_FIXOS.items()]
     return {'rows': json.loads(frame.to_json(orient='records')),
-            'fields': [item['field'] for item in items[:8]], 'totalAttributes': len(items)}
+            'fields': [item['field'] for item in items[:8]], 'totalAttributes': len(items),
+            'glossario': fixos + entradas, 'glossarioLimite': LIMITE_GLOSSARIO}
 
 
 def materializar(payload, folder):
