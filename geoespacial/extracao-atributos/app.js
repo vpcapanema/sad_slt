@@ -15,7 +15,8 @@ const OPCOES_OVERLAY=[
   ["pretestar_continencia","Pré-testar continência","PRETEST_CONTAINMENT",false],
 ];
 const state={catalog:[],categories:[],bases:[],staging:[],input:"",operation:"intersection",
-  opcoes:Object.fromEntries(OPCOES_OVERLAY.map(([chave,,,padrao])=>[chave,padrao])),result:null,busy:false};
+  opcoes:Object.fromEntries(OPCOES_OVERLAY.map(([chave,,,padrao])=>[chave,padrao])),
+  nomeSaida:"",result:null,busy:false};
 const map=criarMapa(()=>reconciliarPainel()),results=criarResultados();
 const config=criarConfiguracao(state,changed);
 // Mostra na 1.3 exatamente o que o botao Executar extracao esta enxergando:
@@ -79,6 +80,12 @@ function controls() {
   $("#ea-run").disabled=state.busy||state.loadingMap||!disponivel("executar")||!state.input||!state.bases.length;
   $("#ea-export").disabled=state.busy||!state.result||!disponivel("exportar");
   renderSelecao();
+  const entrada=state.catalog.find(l=>l.id===state.input);
+  const campoSaida=$("#ea-nome-saida");
+  if(campoSaida){
+    campoSaida.placeholder=entrada?`Extração de ${entrada.nome}`:"Extração de <camada de entrada>";
+    campoSaida.disabled=state.busy;
+  }
   const falta=[!state.input&&"a camada de entrada",!state.bases.length&&"as camadas base"].filter(Boolean);
   $("#ea-integration-status").textContent=state.busy?"Processando…"
     :state.loadingMap?"Carregando camadas no mapa…"
@@ -177,7 +184,7 @@ function renderParametros() {
   host.append(grade);
 }
 function request() {
-  return {motor:"gdal",operacao:state.operation,opcoes:{...state.opcoes},input:state.catalog.find(l=>l.id===state.input),categorias:state.categories.filter(c=>state.bases.some(b=>b.category===c.id)).map(c=>({id:c.id,nome:c.nome,camadas:state.bases.filter(b=>b.category===c.id).map(b=>state.catalog.find(l=>l.id===b.id))}))};
+  return {motor:"gdal",operacao:state.operation,opcoes:{...state.opcoes},nome_saida:state.nomeSaida.trim(),input:state.catalog.find(l=>l.id===state.input),categorias:state.categories.filter(c=>state.bases.some(b=>b.category===c.id)).map(c=>({id:c.id,nome:c.nome,camadas:state.bases.filter(b=>b.category===c.id).map(b=>state.catalog.find(l=>l.id===b.id))}))};
 }
 $("#ea-run").addEventListener("click",async()=>{
   if(state.busy||!state.input||!state.bases.length) return;
@@ -185,6 +192,7 @@ $("#ea-run").addEventListener("click",async()=>{
   const pedido=request();
   const confirmado=await confirmarExecucao({
     entrada:pedido.input.nome,
+    saida:pedido.nome_saida||`Extração de ${pedido.input.nome}`,
     operacao:$("#ea-operation").selectedOptions[0]?.textContent||pedido.operacao,
     totalCamadas:pedido.categorias.reduce((soma,c)=>soma+c.camadas.length,0),
     categorias:pedido.categorias,

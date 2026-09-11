@@ -43,6 +43,7 @@
       <div class="ea-execucao-selecao" id="ea-run-selection" aria-live="polite"></div>
       <div class="ea-config-footer">
         <div class="ea-field"><label for="ea-operation">Geoprocesso</label><select id="ea-operation"><option value="intersection">Interseção · extrair atributos das bases</option><option value="identity">Identity · preservar também as partes externas</option></select><section class="ea-op-params" id="ea-operation-params" aria-label="Parâmetros do geoprocesso"></section></div>
+        <div class="ea-field ea-field-saida"><label for="ea-nome-saida">Nome da camada de saída</label><input id="ea-nome-saida" type="text" maxlength="200" autocomplete="off"><small id="ea-nome-saida-dica">Em branco, o sistema nomeia a partir da camada de entrada.</small></div>
         <div class="ea-execute"><p id="ea-integration-status" class="ea-hint">Carregando catálogo...</p><button class="ea-btn ea-btn-primary" id="ea-run" type="button" disabled>Executar extração</button></div>
       </div>
     </section>

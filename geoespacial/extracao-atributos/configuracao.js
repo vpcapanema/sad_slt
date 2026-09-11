@@ -72,5 +72,7 @@ export function criarConfiguracao(state, changed) {
   $("#ea-input-browse").addEventListener('click',()=>browse('input'));
   $("#ea-input-clear").addEventListener('click',()=>{state.input='';changed();});
   $("#ea-operation").addEventListener("change",event=>{state.operation=event.target.value;window.SICARDExtracao?.renderParametros?.();changed();});
+  // O nome da saida nao muda o mapa nem a previa: so guarda o texto.
+  $("#ea-nome-saida").addEventListener("input",event=>{state.nomeSaida=event.target.value;});
   return {render,marcarLista:lista.marcar};
 }

@@ -124,6 +124,7 @@ class OpcoesOverlay(BaseModel):
 
 class Extracao(BaseModel):
     input_id: str = Field(min_length=1,max_length=100)
+    nome_saida: str = Field(default='',max_length=200)
     operacao: Literal['intersection','identity'] = 'intersection'
     opcoes: OpcoesOverlay = OpcoesOverlay()
     categorias: list[Categoria] = Field(min_length=1,max_length=30)

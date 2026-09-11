@@ -66,6 +66,8 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 .ea-op-params .ea-field>span { font-size:.74rem; font-weight:650; color:#3e5368; }
 .ea-op-params .ea-field>small { font-size:.66rem; color:#8697a5; font-variant-numeric:tabular-nums; }
 .ea-op-params select { min-height:32px; font-size:.78rem; }
+.ea-field-saida { flex:1 1 320px; min-width:0; }
+.ea-field-saida small { color:#7c8b95; font-size:.7rem; }
 .ea-execute { text-align:right; }
 .ea-execute .ea-hint { margin:0 0 7px; }
 /* Configuração: proporções e cabeçalhos do Geoprocessamento — SLT da fase 2,

@@ -67,7 +67,8 @@ def iniciar(payload, user):
     opcoes = {chave: bool((payload.get('opcoes') or {}).get(chave, valor))
               for chave, valor in OPCOES_PADRAO.items()}
     params = {'camada_id':input_id,'camada_ids':sorted(used),'categorias':selected,
-              'operacao':payload['operacao'],'opcoes':opcoes,'input_nome':layers[input_id]['nome']}
+              'operacao':payload['operacao'],'opcoes':opcoes,'input_nome':layers[input_id]['nome'],
+              'nome_saida':str(payload.get('nome_saida') or '').strip()[:200]}
     ident = ciclo.iniciar('extracao_atributos',params,str(user.id))
     with _lock: _progress[ident] = [_etapa('Na fila de processamento')]
     try:
@@ -101,7 +102,8 @@ def _execute(ident, params):
                       for c in params['categorias']]
         result, frame = analisar(source,categories,params['operacao'],progress,params.get('opcoes'))
         progress('Gravando geometria e relatório da análise')
-        layer_id = geo.registrar_camada(frame,f"Extração de {params['input_nome']}",'OP-05',linhagem=params)
+        nome_saida = params.get('nome_saida') or f"Extração de {params['input_nome']}"
+        layer_id = geo.registrar_camada(frame,nome_saida,'OP-05',linhagem=params)
         from osgeo import gdal
         result.update(id=ident,camada_resultado_id=layer_id,input_id=params['camada_id'],input_nome=params['input_nome'],
                       criado_em=datetime.now(timezone.utc).isoformat(),gdal=gdal.VersionInfo())

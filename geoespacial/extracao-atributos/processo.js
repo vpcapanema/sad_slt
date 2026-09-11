@@ -46,6 +46,7 @@ export function confirmarExecucao(resumo) {
     const lista = el('dl', undefined, 'ea-processo-resumo');
     if (resumo.entrada) lista.append(el('dt', 'Entrada'), el('dd', resumo.entrada));
     if (resumo.operacao) lista.append(el('dt', 'Geoprocesso'), el('dd', resumo.operacao));
+    if (resumo.saida) lista.append(el('dt', 'Camada de saída'), el('dd', resumo.saida));
     lista.append(el('dt', 'Camadas'), el('dd', `${resumo.totalCamadas} camada(s) em ${resumo.categorias.length} categoria(s)`));
     dialog.append(lista);
 
