@@ -26,7 +26,7 @@ from scipy.sparse.csgraph import dijkstra
 from sklearn.neighbors import KernelDensity
 from pykrige.ok import OrdinaryKriging
 
-from api.services.geoespacial_service import geoespacial_service as geo
+from api.services.geoespacial_service import geoespacial_service as geo, nome_de_saida
 
 
 CATALOG = {
@@ -487,7 +487,9 @@ class GeoprocessamentoEngine:
             "OP-43": self.gaussian_smoothing,
         }
         if op_id in dispatch:
-            result = await dispatch[op_id]()
+            # O nome escolhido no formulario vale para a camada que a operacao criar.
+            with nome_de_saida(p.get("nome_saida")):
+                result = await dispatch[op_id]()
             if op_id in {"OP-02-CORR", "OP-03"}:
                 result.setdefault("camada_id", p["camada_id"])
             rid = result.get("raster_id") if isinstance(result, dict) else None
@@ -502,7 +504,8 @@ class GeoprocessamentoEngine:
                     geo._raster_profiles[rid] = self.profiles[rid]
             return result
         if op_id in custom:
-            return await custom[op_id](p)
+            with nome_de_saida(p.get("nome_saida")):
+                return await custom[op_id](p)
         raise ValueError(f"Algoritmo {op_id} não catalogado")
 
     def _apply_selection_scope(

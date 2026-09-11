@@ -5,8 +5,17 @@ import geopandas as gpd
 import pytest
 from shapely.geometry import MultiPolygon, Polygon
 
+from api.services import geoespacial_service as servico
 from api.services.extracao_atributos_analise import prepare
 from api.services.geoespacial_service import geoespacial_service as geo
+from api.services.geoprocessamento_engine import geoprocessamento_engine as motor
+
+
+@pytest.fixture(autouse=True)
+def sem_banco(monkeypatch):
+    """O banco e compartilhado com producao; o teste nao grava camada nele."""
+    monkeypatch.setattr(servico.camada_geoespacial_repository, "salvar_vetor",
+                        lambda **kwargs: "sem-banco")
 
 
 def reparar(frame, marca, **opcoes):
@@ -76,3 +85,25 @@ def test_auto_intersecao_mantem_as_duas_partes():
     reparada = saida.geometry.iloc[0]
     assert reparada.is_valid and reparada.geom_type == 'MultiPolygon'
     assert reparada.area == pytest.approx(2.0, rel=1e-9)
+
+
+def test_nome_escolhido_no_formulario_vira_o_nome_da_camada():
+    # Antes o nome do formulario era descartado e a camada nascia com rotulos
+    # como "Geometrias reparadas de arquivo_bancada_69cea1e1...".
+    geo._camadas['entrada_nome'] = gaveta([Polygon([(0, 0), (2, 2), (2, 0), (0, 2)])])
+    comum = {'camada_id': 'entrada_nome', 'crs_saida': 'entrada',
+             'destino': 'memoria', 'formato_saida': 'GeoPackage'}
+    try:
+        escolhido = asyncio.run(motor.execute('OP-02-CORR', {**comum, 'nome_saida': 'Bens reparados'}))
+        assert geo._metadados[escolhido['camada_id']]['nome'] == 'Bens reparados'
+        sem = asyncio.run(motor.execute('OP-02-CORR', {**comum, 'nome_saida': ''}))
+        assert geo._metadados[sem['camada_id']]['nome'].startswith('Geometrias reparadas')
+    finally:
+        geo._camadas.pop('entrada_nome', None)
+
+
+def test_arquivo_de_saida_leva_o_nome_da_camada():
+    from api.services.ciclo_vida_arquivos import _nome_de_arquivo
+    nome = _nome_de_arquivo('Restrição jurídico-ambiental v1')
+    assert nome.startswith('restricao_juridico_ambiental_v1_')
+    assert _nome_de_arquivo('') != _nome_de_arquivo('')

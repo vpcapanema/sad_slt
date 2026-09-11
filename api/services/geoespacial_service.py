@@ -7,6 +7,8 @@ import os
 import re
 import tempfile
 import unicodedata
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
@@ -216,6 +218,38 @@ def _overlay_ogr(
     return _restringir_dimensao(bruto, gdf1)
 
 
+# O formulario de toda operacao tem "Nome da saida". Antes cada operacao batizava
+# o proprio resultado e o nome escolhido era descartado, virando rotulos como
+# "Geometrias reparadas de arquivo_bancada_69cea1e1...". O nome do usuario passou
+# a valer para qualquer operacao, aqui no ponto unico em que a camada nasce.
+_nome_saida: ContextVar[list[str] | None] = ContextVar("nome_saida", default=None)
+
+
+@contextmanager
+def nome_de_saida(nome: str | None):
+    """Aplica o nome escolhido as camadas criadas dentro do bloco."""
+    escolhido = str(nome or "").strip()
+    if not escolhido:
+        yield
+        return
+    token = _nome_saida.set([escolhido])
+    try:
+        yield
+    finally:
+        _nome_saida.reset(token)
+
+
+def _nome_escolhido(padrao: str) -> str:
+    """Nome do usuario para a primeira camada; as seguintes ganham sufixo."""
+    pendente = _nome_saida.get()
+    if not pendente:
+        return padrao
+    base = pendente[0]
+    ordem = len(pendente)
+    pendente.append(base)
+    return base if ordem == 1 else f"{base} ({ordem})"
+
+
 class GeoespacialService:
     """Service para operações geoespaciais."""
 
@@ -254,6 +288,7 @@ class GeoespacialService:
         progress: Callable[[str], None] | None = None,
         **extras: Any,
     ) -> str:
+        nome = _nome_escolhido(nome)
         camada_id = f"camada_{uuid4().hex}"
         self._registrar_metadados(
             camada_id, nome, "vetorial", str(gdf.crs) if gdf.crs else None, origem,

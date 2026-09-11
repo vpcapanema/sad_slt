@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from contextvars import ContextVar
 import json
+import re
+import unicodedata
 from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
@@ -154,6 +156,18 @@ def validar_vetor(path: Path, frame: gpd.GeoDataFrame) -> dict:
     return {'feicoes':len(frame),'crs':str(frame.crs),'reaberto_gdal':True,'conteudo_conferido':True}
 
 
+def _nome_de_arquivo(nome: str | None) -> str:
+    """Nome do arquivo: o nome da camada mais um sufixo curto que garante unicidade.
+
+    O arquivo antes era so um UUID, ilegivel para quem abre a pasta de saidas.
+    O sufixo continua porque duas camadas podem ter o mesmo nome e o caminho e
+    a chave do registro em arquivo_resultado.
+    """
+    texto = unicodedata.normalize('NFKD', str(nome or '')).encode('ascii', 'ignore').decode()
+    limpo = re.sub(r'[^A-Za-z0-9]+', '_', texto).strip('_').lower()[:60].strip('_')
+    return f'{limpo}_{uuid4().hex[:8]}' if limpo else str(uuid4())
+
+
 def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=None,
            regularizacao: bool = False, responsavel: str | None = None) -> dict:
     """Usa a transação do chamador. Arquivo único; nunca sobrescreve outra saída."""
@@ -170,8 +184,11 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
             VALUES (%s,%s,%s,now(),%s,%s)''',(execution,'regularizacao_legado' if regularizacao else metadata.get('origem','registro_direto'),
                                     'regularizacao' if regularizacao else 'concluido',responsavel,
                                     Jsonb({'linhagem_original':metadata.get('linhagem'), 'regularizacao':regularizacao})))
+    # ident e a chave primaria de arquivo_resultado, tem de continuar UUID.
+    # O nome do arquivo em disco e outra coisa: leva o nome da camada.
     ident = str(uuid4())
-    relative = f'data/geoespacial/outputs/{execution}/{ident}' + ('.gpkg' if frame is not None else '.tif')
+    arquivo = _nome_de_arquivo(metadata.get('nome'))
+    relative = f'data/geoespacial/outputs/{execution}/{arquivo}' + ('.gpkg' if frame is not None else '.tif')
     path = project_path(relative)
     path.parent.mkdir(parents=True,exist_ok=True)
     try:
