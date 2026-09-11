@@ -14,7 +14,7 @@ const OPCOES_OVERLAY=[
   ["geometrias_preparadas","Geometrias preparadas","USE_PREPARED_GEOMETRIES",true],
   ["pretestar_continencia","Pré-testar continência","PRETEST_CONTAINMENT",false],
 ];
-const state={catalog:[],categories:[],bases:[],staging:[],input:"",operation:"intersection",
+const state={catalog:[],categories:[],bases:[],staging:[],input:"",operation:"",
   opcoes:Object.fromEntries(OPCOES_OVERLAY.map(([chave,,,padrao])=>[chave,padrao])),
   nomeSaida:"",result:null,busy:false};
 const map=criarMapa(()=>reconciliarPainel()),results=criarResultados();
@@ -36,7 +36,7 @@ function renderSelecao() {
   };
   const valor=document.createElement("span");valor.className="ea-execucao-valor";
   valor.textContent=entrada?entrada.nome:"";
-  host.append(linha("Entrada",valor,entrada?"":"nenhuma camada de entrada escolhida em 1.2"));
+  host.append(linha("Camadas de entrada:",valor,entrada?"":"nenhuma camada de entrada escolhida em 1.2"));
 
   const grupos=state.categories
     .map(c=>({c,itens:state.bases.filter(b=>b.category===c.id)}))
@@ -53,7 +53,7 @@ function renderSelecao() {
     }
     lista.append(grupo);
   }
-  host.append(linha(`Bases (${state.bases.length})`,lista,
+  host.append(linha(`Camadas de base: (${state.bases.length})`,lista,
     state.bases.length?"":"nenhuma base confirmada em 1.1; monte a lista e use Confirmar e enviar à bancada"));
 }
 // O que o processamento enxerga e o que esta no painel da bancada. Se o usuario
@@ -77,7 +77,7 @@ function reconciliarPainel() {
 }
 function controls() {
   document.querySelectorAll("#ea-config input, #ea-config select, #ea-config button").forEach(node=>{if(state.busy)node.disabled=true;});
-  $("#ea-run").disabled=state.busy||state.loadingMap||!disponivel("executar")||!state.input||!state.bases.length;
+  $("#ea-run").disabled=state.busy||state.loadingMap||!disponivel("executar")||!state.operation||!state.input||!state.bases.length;
   $("#ea-export").disabled=state.busy||!state.result||!disponivel("exportar");
   renderSelecao();
   const entrada=state.catalog.find(l=>l.id===state.input);
@@ -86,7 +86,8 @@ function controls() {
     campoSaida.placeholder=entrada?`Extração de ${entrada.nome}`:"Extração de <camada de entrada>";
     campoSaida.disabled=state.busy;
   }
-  const falta=[!state.input&&"a camada de entrada",!state.bases.length&&"as camadas base"].filter(Boolean);
+  const falta=[!state.operation&&"o geoprocesso",!state.input&&"a camada de entrada",
+    !state.bases.length&&"as camadas base"].filter(Boolean);
   $("#ea-integration-status").textContent=state.busy?"Processando…"
     :state.loadingMap?"Carregando camadas no mapa…"
     :!disponivel("executar")?"Carregando catálogo…"
@@ -164,8 +165,11 @@ function validateResult(value) {
 // Os parametros do operador do OGR abrem abaixo do seletor e seguem no pedido.
 function renderParametros() {
   const host=$("#ea-operation-params");if(!host)return;
-  const operador=state.operation==="identity"?"ogr.Layer.Identity":"ogr.Layer.Intersection";
   host.replaceChildren();
+  // Sem geoprocesso escolhido nao ha parametro que faca sentido mostrar.
+  host.hidden=!state.operation;
+  if(!state.operation)return;
+  const operador=state.operation==="identity"?"ogr.Layer.Identity":"ogr.Layer.Intersection";
   const titulo=document.createElement("h4");titulo.className="ea-op-params-title";
   titulo.textContent=`Parâmetros de ${operador}`;host.append(titulo);
   const grade=document.createElement("div");grade.className="ea-op-params-grid";
@@ -187,7 +191,7 @@ function request() {
   return {motor:"gdal",operacao:state.operation,opcoes:{...state.opcoes},nome_saida:state.nomeSaida.trim(),input:state.catalog.find(l=>l.id===state.input),categorias:state.categories.filter(c=>state.bases.some(b=>b.category===c.id)).map(c=>({id:c.id,nome:c.nome,camadas:state.bases.filter(b=>b.category===c.id).map(b=>state.catalog.find(l=>l.id===b.id))}))};
 }
 $("#ea-run").addEventListener("click",async()=>{
-  if(state.busy||!state.input||!state.bases.length) return;
+  if(state.busy||!state.operation||!state.input||!state.bases.length) return;
   try{map.assertReady();}catch(error){feedback(error.message);return;}
   const pedido=request();
   const confirmado=await confirmarExecucao({
