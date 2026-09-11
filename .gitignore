@@ -38,3 +38,6 @@ data/geoespacial/biblioteca_canonica/fase1/teste_risco_automatico_v1.gpkg
 # Acima do limite de 100 MB por arquivo do GitHub. A copia extraida do pacote
 # esta versionada ao lado; este ZIP vai para a VM por transferencia SSH.
 plugins/municipal-layer-completo-v1.0.0.zip
+
+# copias de seguranca das permissoes locais
+.claude/*.bak
