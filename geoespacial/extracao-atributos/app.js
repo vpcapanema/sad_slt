@@ -16,7 +16,7 @@ const OPCOES_OVERLAY=[
 ];
 const state={catalog:[],categories:[],bases:[],staging:[],input:"",operation:"intersection",
   opcoes:Object.fromEntries(OPCOES_OVERLAY.map(([chave,,,padrao])=>[chave,padrao])),result:null,busy:false};
-const map=criarMapa(),results=criarResultados();
+const map=criarMapa(()=>reconciliarPainel()),results=criarResultados();
 const config=criarConfiguracao(state,changed);
 // Mostra na 1.3 exatamente o que o botao Executar extracao esta enxergando:
 // mesma leitura de state.input e state.bases que decide se ele habilita.
@@ -54,6 +54,25 @@ function renderSelecao() {
   }
   host.append(linha(`Bases (${state.bases.length})`,lista,
     state.bases.length?"":"nenhuma base confirmada em 1.1; monte a lista e use Confirmar e enviar à bancada"));
+}
+// O que o processamento enxerga e o que esta no painel da bancada. Se o usuario
+// remove uma camada la, ela sai das bases e da entrada aqui.
+function reconciliarPainel() {
+  const noPainel=map.camadas();
+  if(!noPainel||state.busy)return;
+  const presentes=new Set(noPainel.map(item=>item.id));
+  const removidas=state.bases.filter(base=>!presentes.has(base.id));
+  const entradaSaiu=Boolean(state.input)&&!presentes.has(state.input);
+  if(!removidas.length&&!entradaSaiu)return;
+  const nome=id=>state.catalog.find(l=>l.id===id)?.nome||id;
+  const perdida=state.input;
+  state.bases=state.bases.filter(base=>presentes.has(base.id));
+  if(entradaSaiu)state.input='';
+  config.render();controls();
+  const partes=[];
+  if(removidas.length)partes.push(`${removidas.length} base(s) removida(s) no painel: ${removidas.map(b=>nome(b.id)).join(', ')}.`);
+  if(entradaSaiu)partes.push(`A camada de entrada ${nome(perdida)} saiu do painel.`);
+  feedback(`${partes.join(' ')} A extração passa a considerar apenas o que está no painel de camadas.`);
 }
 function controls() {
   document.querySelectorAll("#ea-config input, #ea-config select, #ea-config button").forEach(node=>{if(state.busy)node.disabled=true;});

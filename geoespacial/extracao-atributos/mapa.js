@@ -1,7 +1,7 @@
 import { $, feedback } from './ui.js';
 
 // Reutiliza o documento da bancada com seus módulos e estilos.
-export function criarMapa() {
+export function criarMapa(aoMudarPainel) {
   const frame=$('#ea-workbench-frame'),mounted=new Map();
   let latest=[],ready=false,timer;
   const context=()=>frame.contentWindow;
@@ -36,15 +36,35 @@ export function criarMapa() {
     clearTimeout(timer);ready=false;mounted.clear();let attempts=0;
     const check=()=>{
       const win=context();
-      if(win?.gpArquivos&&win.gpApp?.state.map?.isStyleLoaded()){ready=true;sync();return;}
+      if(win?.gpArquivos&&win.gpApp?.state.map?.isStyleLoaded()){ready=true;observar();sync();return;}
       if(++attempts<300)timer=setTimeout(check,100);
       else feedback('A bancada não terminou de carregar. Recarregue a página para tentar novamente.');
     };check();
+  }
+  // O painel da bancada e a fonte da verdade: remover uma camada la tem que
+  // tirá-la do processamento. renderLayers roda a cada mudança do painel.
+  let aviso;
+  function observar(){
+    const app=context()?.gpApp;
+    if(!app||app.__eaObservado)return;
+    app.__eaObservado=true;
+    const original=app.renderLayers;
+    app.renderLayers=function(...args){
+      const retorno=original.apply(this,args);
+      clearTimeout(aviso);aviso=setTimeout(()=>aoMudarPainel?.(),200);
+      return retorno;
+    };
+  }
+  /** Camadas hoje no painel, com a categoria que a extração atribuiu. */
+  function camadas(){
+    const app=context()?.gpApp;
+    if(!ready||!app)return null;
+    return app.state.layers.map(item=>({id:item.id,nome:item.nome,categoria:String(item.categoria||'')}));
   }
   frame.addEventListener('load',connect);connect();
   function assertReady(){
     if(!ready)throw new Error('Aguarde o carregamento da bancada.');
     if(editing())throw new Error('Salve ou cancele a edição na bancada. Para analisar uma nova versão salva, selecione esse arquivo na configuração.');
   }
-  return {sync,assertReady};
+  return {sync,assertReady,camadas};
 }
