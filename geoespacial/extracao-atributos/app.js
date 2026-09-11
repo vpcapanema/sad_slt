@@ -18,11 +18,54 @@ const state={catalog:[],categories:[],bases:[],staging:[],input:"",operation:"in
   opcoes:Object.fromEntries(OPCOES_OVERLAY.map(([chave,,,padrao])=>[chave,padrao])),result:null,busy:false};
 const map=criarMapa(),results=criarResultados();
 const config=criarConfiguracao(state,changed);
+// Mostra na 1.3 exatamente o que o botao Executar extracao esta enxergando:
+// mesma leitura de state.input e state.bases que decide se ele habilita.
+function renderSelecao() {
+  const host=$("#ea-run-selection");if(!host)return;
+  const nome=id=>state.catalog.find(l=>l.id===id)?.nome||id;
+  const entrada=state.catalog.find(l=>l.id===state.input);
+  host.replaceChildren();
+  const linha=(rotulo,conteudo,vazio)=>{
+    const bloco=document.createElement("div");bloco.className="ea-execucao-linha";
+    const titulo=document.createElement("span");titulo.className="ea-execucao-rotulo";titulo.textContent=rotulo;
+    bloco.append(titulo);
+    if(vazio){const alerta=document.createElement("em");alerta.className="ea-execucao-falta";alerta.textContent=vazio;bloco.append(alerta);}
+    else bloco.append(conteudo);
+    return bloco;
+  };
+  const valor=document.createElement("span");valor.className="ea-execucao-valor";
+  valor.textContent=entrada?entrada.nome:"";
+  host.append(linha("Entrada",valor,entrada?"":"nenhuma camada de entrada escolhida em 1.2"));
+
+  const grupos=state.categories
+    .map(c=>({c,itens:state.bases.filter(b=>b.category===c.id)}))
+    .filter(g=>g.itens.length);
+  const lista=document.createElement("div");lista.className="ea-execucao-bases";
+  for(const {c,itens} of grupos){
+    const grupo=document.createElement("div");grupo.className="ea-execucao-grupo";
+    const cabeca=document.createElement("strong");cabeca.textContent=c.nome;
+    const conta=document.createElement("span");conta.className="ea-badge";conta.textContent=String(itens.length);
+    grupo.append(cabeca,conta);
+    for(const base of itens){
+      const item=document.createElement("span");item.className="ea-execucao-base";item.textContent=nome(base.id);
+      grupo.append(item);
+    }
+    lista.append(grupo);
+  }
+  host.append(linha(`Bases (${state.bases.length})`,lista,
+    state.bases.length?"":"nenhuma base confirmada em 1.1; monte a lista e use Confirmar e enviar à bancada"));
+}
 function controls() {
   document.querySelectorAll("#ea-config input, #ea-config select, #ea-config button").forEach(node=>{if(state.busy)node.disabled=true;});
   $("#ea-run").disabled=state.busy||state.loadingMap||!disponivel("executar")||!state.input||!state.bases.length;
   $("#ea-export").disabled=state.busy||!state.result||!disponivel("exportar");
-  $("#ea-integration-status").textContent=state.busy?"Processando…":state.loadingMap?"Carregando camadas no mapa…":disponivel("executar")?"Selecione as bases e a entrada para executar.":"Carregando catálogo…";
+  renderSelecao();
+  const falta=[!state.input&&"a camada de entrada",!state.bases.length&&"as camadas base"].filter(Boolean);
+  $("#ea-integration-status").textContent=state.busy?"Processando…"
+    :state.loadingMap?"Carregando camadas no mapa…"
+    :!disponivel("executar")?"Carregando catálogo…"
+    :falta.length?`Falta selecionar ${falta.join(" e ")}.`
+    :`Pronto para executar sobre ${state.bases.length} base(s).`;
 }
 function syncMap() {
   const items=state.bases.map(base=>{
