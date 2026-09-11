@@ -66,6 +66,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .layer-subgroup{margin-left:10px;border-left:1px solid #dbe4ea}
 .layer-subgroup .layer-group-title{font-size:.78rem}
 .layer-subgroup .layer-group-title strong{font-weight:600}
+/* Segundo nivel: as categorias dentro de Camadas de base. */
+.layer-subgroup-2{margin-left:10px;border-left:1px solid #e6ecf1}
+.layer-subgroup-2 .layer-group-title{font-size:.75rem}
+.layer-subgroup-2 .layer-group-title strong{font-weight:500}
 .layer-group-count{margin-left:6px;padding:0 6px;border-radius:999px;background:#eef2f6;color:#647486;font-size:.68rem;font-variant-numeric:tabular-nums}
 .layer-symbol{width:14px;height:14px;display:inline-block;position:relative;flex:0 0 auto;--layer-color:#1683c4}.layer-symbol.point{width:9px;height:9px;margin:0 2px;border-radius:50%;background:var(--layer-color);border:1px solid #fff;box-shadow:0 0 0 1px var(--layer-color)}.layer-symbol.line::after{content:"";position:absolute;left:0;right:0;top:6px;border-top:2px solid var(--layer-color);transform:rotate(-25deg)}.layer-symbol.polygon{background:color-mix(in srgb,var(--layer-color) 32%,transparent);border:2px solid var(--layer-color)}.layer-symbol.raster{background:linear-gradient(135deg,#f5d76e,#d97819 48%,#438b69)}.layer-symbol.geometry{border:2px solid var(--layer-color);transform:rotate(45deg)}.tree-row .layer-zoom{display:none;margin-left:auto;width:24px;height:24px}.tree-row:hover .layer-zoom,.tree-row.active .layer-zoom{display:grid}.tree-row .layer-zoom svg{width:13px}
 #gp-layer-list .layer-symbol{cursor:pointer;border-radius:3px;transition:box-shadow .12s,transform .12s}#gp-layer-list .layer-symbol:hover{transform:scale(1.18)}#gp-layer-list .tree-row:not(.layer-group-title):hover .layer-symbol,#gp-layer-list .tree-row.active .layer-symbol{box-shadow:0 0 0 2px rgba(22,131,196,.35)}

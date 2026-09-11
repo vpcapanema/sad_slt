@@ -452,18 +452,21 @@
       const editing=state.editingLayers.has(layer.id);
       return `<div class="tree-row tree-indent tree-layer ${state.activeLayerId===layer.id?"active":""}" data-layer="${layer.id}" tabindex="0"><input type="checkbox" ${onMap?"checked":""} aria-label="Exibir ${escapeHtml(layer.nome)}"><div class="layer-entry"><div class="layer-entry-head"><span class="layer-name" title="${escapeHtml(display)}">${escapeHtml(display)}</span><button class="icon-btn layer-edit ${editing?"active":""}" type="button" data-edit-layer="${layer.id}" title="${editing?"Encerrar edição de atributos":"Editar atributos"}"><i data-lucide="pencil"></i></button><button class="icon-btn layer-zoom" type="button" data-zoom-layer="${layer.id}" title="Zoom para a camada"><i data-lucide="maximize"></i></button></div>${layerLegend(layer)}</div></div>`;
     };
-    // Dentro de Camadas operacionais, um subgrupo por origem (a categoria escolhida
-    // na extração). Grupos em ordem alfabética; camadas por geometria — ponto, linha,
-    // polígono — e depois pelo nome. A ordem da geometria usa o mesmo tipo do símbolo.
+    // Dentro de Camadas operacionais o papel de cada camada vira grupo: Camadas de
+    // entrada, Camadas de base com um subgrupo por categoria, e o resultado. Grupos em
+    // ordem alfabética; camadas por geometria — ponto, linha, polígono — e depois pelo
+    // nome. A ordem da geometria usa o mesmo tipo do símbolo.
     const geometriaBase=(layer)=>layer.tipo?.toLowerCase().includes("raster")?"raster":(state.geometryTypes[layer.id]||[])[0]||"";
     const ordemGeometria=(layer)=>{const tipo=geometriaBase(layer);
       return tipo.includes("Point")?0:tipo.includes("Line")?1:tipo.includes("Polygon")?2:tipo==="raster"?4:3;};
     // So agrupa o que traz categoria da extracao. "origem" e procedencia
     // ("arquivo", "banco", "STAC") e nunca foi nome de grupo.
-    const porCategoria=new Map(),soltas=[];
+    const porCategoria=new Map(),entradas=[],resultados=[],soltas=[];
     for(const layer of items){
       const nome=String(layer.categoria||"").trim();
       if(!nome){soltas.push(layer);continue;}
+      if(nome==="Input"){entradas.push(layer);continue;}
+      if(nome==="Resultado"){resultados.push(layer);continue;}
       if(!porCategoria.has(nome))porCategoria.set(nome,[]);
       porCategoria.get(nome).push(layer);
     }
@@ -473,12 +476,23 @@
     };
     const contagem=(rotulo,lista)=>({rotulo,total:lista.length,ligadas:lista.filter(l=>camadaVisivel(l.id)).length});
     const ordenar=lista=>lista.sort((a,b)=>ordemGeometria(a)-ordemGeometria(b)||String(a.nome).localeCompare(String(b.nome),"pt-BR",{sensitivity:"base"}));
-    const operational=[...porCategoria.entries()]
+    const rotulo=(texto,total)=>`${escapeHtml(texto)} <span class="layer-group-count">${total}</span>`;
+    const categorias=[...porCategoria.entries()]
       .sort((a,b)=>a[0].localeCompare(b[0],"pt-BR",{sensitivity:"base"}))
       .map(([nome,camadas])=>{
         ordenar(camadas);
-        return group(`categoria:${nome}`,`${escapeHtml(nome)} <span class="layer-group-count">${camadas.length}</span>`,"folder",camadas.map(layerRow).join(""),"","layer-subgroup",contagem(nome,camadas));
-      }).join("")+ordenar(soltas).map(layerRow).join("");
+        return group(`categoria:${nome}`,rotulo(nome,camadas.length),"folder",
+          camadas.map(layerRow).join(""),"","layer-subgroup layer-subgroup-2",contagem(nome,camadas));
+      }).join("");
+    const todasAsBases=[...porCategoria.values()].flat();
+    const papeis=[];
+    if(entradas.length)papeis.push(group("papel:entrada",rotulo("Camadas de entrada",entradas.length),
+      "map-pin",ordenar(entradas).map(layerRow).join(""),"","layer-subgroup",contagem("Camadas de entrada",entradas)));
+    if(todasAsBases.length)papeis.push(group("papel:base",rotulo("Camadas de base",todasAsBases.length),
+      "layers",categorias,"","layer-subgroup",contagem("Camadas de base",todasAsBases)));
+    if(resultados.length)papeis.push(group("papel:resultado",rotulo("Resultado da extração",resultados.length),
+      "sparkles",ordenar(resultados).map(layerRow).join(""),"","layer-subgroup",contagem("Resultado da extração",resultados)));
+    const operational=papeis.join("")+ordenar(soltas).map(layerRow).join("");
     const operationalLabel=bySource?"Camadas por fonte":"Camadas operacionais";
     $("#gp-layer-list").innerHTML=group("operational",operationalLabel,"layers-3",operational,"Nenhuma camada carregada.","",items.length?contagem(operationalLabel,items):null)+group("basemap","Basemap","map",base,"Nenhum mapa-base encontrado.");icons();
     // O estado intermediário só existe em JavaScript, não como atributo.
