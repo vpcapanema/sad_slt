@@ -61,6 +61,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .layer-group-head{display:flex;align-items:center;gap:6px;padding-left:8px}
 .layer-group-head:hover{background:#eef4fa}
 #gp-layer-list .layer-group-head>.layer-group-title{flex:1;min-width:0;padding-left:0;background:transparent}
+/* Sem flex o titulo era linha de texto: o nome assentava na base do icone e
+   descia em relacao a caixa seletora e ao chevron. */
+.layer-group-title{min-height:29px;display:flex;align-items:center;gap:6px}
+.layer-group-title>svg{flex:0 0 auto}
+.layer-group-title strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
 .layer-group-check{flex:0 0 auto;margin:0;cursor:pointer}
 /* Subgrupos de Camadas operacionais: um por categoria da extração. */
 .layer-subgroup{margin-left:10px;border-left:1px solid #dbe4ea}
