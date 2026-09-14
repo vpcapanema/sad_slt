@@ -172,6 +172,7 @@ body.page-admin-demanda {
   line-height: 1;
   color: var(--pli-muted, #5a7184);
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
 }
