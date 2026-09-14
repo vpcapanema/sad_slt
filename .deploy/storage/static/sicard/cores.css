@@ -314,7 +314,19 @@
 
 .table.table-row-dashed {
   margin-block: 1rem;
-  box-shadow: 0 0 0 1px var(--sicard-tabela-borda);
+  /* Contorno por dentro: o DataTables põe a tabela num contêiner com rolagem
+   * horizontal, que cortava uma sombra desenhada por fora. O outline com
+   * deslocamento negativo fica dentro da caixa e acima do fundo do cabeçalho. */
+  outline: 1px solid var(--sicard-tabela-borda);
+  outline-offset: -1px;
+}
+
+/* O DataTables fixa table.dataTable { margin: 0 !important }, o que anulava a
+ * margem acima e deixava a lista de arquivos colada no marcador de pasta. O
+ * seletor mais específico, também com !important, devolve só o espaço vertical. */
+table.dataTable.table-row-dashed {
+  margin-top: 1rem !important;
+  margin-bottom: 1rem !important;
 }
 
 .table:not(.table-bordered).table-row-dashed tr {
@@ -323,6 +335,16 @@
 
 .table.table-row-dashed > :not(caption) > tr > :is(th, td) {
   padding-inline: 0.75rem;
+}
+
+/* A primeira e a última coluna usam utilitários do tema com !important
+ * (gs-0, ps-0, pe-*), que deixavam o conteúdo colado no contorno. */
+.table.table-row-dashed > :not(caption) > tr > :is(th, td):first-child {
+  padding-left: 0.75rem !important;
+}
+
+.table.table-row-dashed > :not(caption) > tr > :is(th, td):last-child {
+  padding-right: 0.75rem !important;
 }
 
 .table.table-row-dashed > :not(caption) > tr > :is(th, td) + :is(th, td) {
