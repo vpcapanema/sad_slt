@@ -491,7 +491,8 @@
    platform-map.css (borda 1px, cantos arredondados, fundo branco) — para não
    misturar "Análise Multicritério" com "Ranqueamento" numa massa única de
    blocos sem contorno. */
-.secao-platform-mad .platform-subgroups {
+.secao-platform-mad .platform-subgroups,
+.secao-platform-administracao .platform-subgroups {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -500,7 +501,8 @@
   align-items: stretch;
 }
 
-.secao-platform-mad .platform-subgroup {
+.secao-platform-mad .platform-subgroup,
+.secao-platform-administracao .platform-subgroup {
   flex: 1 1 14rem;
   min-width: 0;
   display: flex;
@@ -513,19 +515,31 @@
   box-shadow: 0 3px 10px rgba(18, 48, 77, 0.05);
 }
 
-.secao-platform-mad .platform-subgroup__title {
+.secao-platform-mad .platform-subgroup__title,
+.secao-platform-administracao .platform-subgroup__title {
   margin: 0;
   font-size: 0.76rem;
   font-weight: 700;
   color: #314e68;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  text-align: center;
 }
 
 /* Coluna estreita (dois subcards dividem a largura de um módulo já span-4):
    dois itens por linha em ambos, senão os rótulos ficam espremidos demais. */
 .subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos .platform-grid { --itens-por-linha: 2; }
 .subgroup-ranqueamento .platform-grid { --itens-por-linha: 2; }
+
+/* ADMIN divide a linha com PÚBLICO e CATÁLOGOS, que têm duas fileiras: as
+   tabelas (7 itens, 4 por linha) e o storage (2 itens, 1 por linha) também
+   fecham em duas. As tabelas levam três partes da largura, o storage uma. */
+/* Base zero: com a base de 14rem do MAD a largura mal se dividia (os dois
+   subcards já a consomem). Prefixo da seção para vencer o `flex` acima. */
+.secao-platform-administracao .platform-subgroup { flex: 1 1 0; }
+.secao-platform-administracao .subgroup-tabelas-do-banco-de-dados { flex: 3 1 0; }
+.subgroup-tabelas-do-banco-de-dados .platform-grid { --itens-por-linha: 4; }
+.subgroup-storage-de-dados-geoespaciais .platform-grid { --itens-por-linha: 1; }
 
 .restrict-platform-groups .platform-tile {
   flex: 1 1 calc((100% - (var(--itens-por-linha) - 1) * var(--vao)) / var(--itens-por-linha));
@@ -577,6 +591,18 @@
   /* Em coluna única todos os módulos passam a duas colunas de itens. O item
      que sobra numa contagem ímpar cresce e ocupa a linha inteira, sem buraco. */
   .restrict-platform-groups .platform-grid {
+    --itens-por-linha: 2;
+  }
+
+  /* Subcards do ADMIN empilhados: lado a lado o storage ficaria estreito
+     demais. O prefixo vence as contagens próprias de cada subcard. */
+  .secao-platform-administracao .platform-subgroup,
+  .secao-platform-administracao .subgroup-tabelas-do-banco-de-dados {
+    flex: 1 1 100%;
+  }
+
+  .restrict-platform-groups .subgroup-tabelas-do-banco-de-dados .platform-grid,
+  .restrict-platform-groups .subgroup-storage-de-dados-geoespaciais .platform-grid {
     --itens-por-linha: 2;
   }
 }

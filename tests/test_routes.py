@@ -90,7 +90,12 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert ".secao-platform-geoprocessamento { grid-column: 1 / -1; }" in index_css
     assert ".secao-platform-administracao { grid-column: span 4; }" in index_css
     assert ".secao-platform-mad { grid-column: span 4; }" in index_css
-    assert "border: 1px solid" in index_css.split(".secao-platform-mad .platform-subgroup {", 1)[1].split("}", 1)[0]
+    # ADMIN usa o mesmo desenho de subcards: tabelas do banco e storage.
+    bloco_subcard = index_css.split(".secao-platform-administracao .platform-subgroup {", 1)[1].split("}", 1)[0]
+    assert "border: 1px solid" in bloco_subcard
+    trecho_admin = html.split('id="group-administracao"', 1)[1].split("</section>", 1)[0]
+    assert "Tabelas do banco de dados" in trecho_admin
+    assert "Storage de dados geoespaciais" in trecho_admin
     assert "Análise Multicritério (AHP) e obtenção de pesos" in trecho_mad
     assert "Ranqueamento" in trecho_mad
     assert "Elegibilidade territorial" in trecho_mad
@@ -474,7 +479,7 @@ def test_indice_restrito_nao_deixa_vao_nos_modulos() -> None:
         if usado + largura > 9:
             linhas.append(linha)
             linha, usado = [], 0
-        if secao == "mad":
+        if 'class="platform-subgroup ' in corpo:
             # MAD não tem uma grade única: hospeda dois subcards lado a lado,
             # cada um com sua contagem própria de fileiras. A altura do card é
             # ditada pelo subcard mais alto — os dois crescem juntos (align-
@@ -486,7 +491,7 @@ def test_indice_restrito_nao_deixa_vao_nos_modulos() -> None:
             subgrupos = re.findall(
                 r'class="platform-subgroup subgroup-([\w-]+)">(.*?)</div>\s*</div>', corpo, re.S
             )
-            assert subgrupos, "mad sem subcards"
+            assert subgrupos, f"{secao} sem subcards"
             fileiras_sub = []
             for nome, sub_corpo in subgrupos:
                 assert nome in itens_por_subgrupo, f"subgroup-{nome} não declara --itens-por-linha"
