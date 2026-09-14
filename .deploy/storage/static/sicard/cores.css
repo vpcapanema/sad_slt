@@ -377,3 +377,35 @@ table.dataTable.table-row-dashed {
 .table:not(.table-bordered).table-row-dashed > thead > tr {
   border-bottom: 2px solid var(--sicard-tabela-borda);
 }
+
+/* Telas de login: azul do SICARD com marca d'água de geoprocessamento.
+ * body.app-blank só existe em templates/common/baselogin.html (login, senha,
+ * 2FA, configuração inicial e login de compartilhamento); as páginas internas
+ * usam app-default e não são afetadas. A marca d'água é fundo-login.svg, com
+ * traços brancos de baixa opacidade; o azul vem do degradê. */
+body.app-blank {
+  background-color: #003b5a;
+  background-image: url("fundo-login.svg"), linear-gradient(135deg, #003b5a 0%, #116593 100%);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-attachment: fixed, fixed;
+}
+
+[data-bs-theme=dark] body.app-blank {
+  background-color: #021a28;
+  background-image: url("fundo-login.svg"), linear-gradient(135deg, #021a28 0%, #003b5a 100%);
+}
+
+/* O cartão precisa se destacar do fundo azul (shadow-sm usa !important). */
+body.app-blank #app_root .bg-body.rounded {
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Nomes de área longos ("Administração de acesso ao storage") quebram linha
+ * dentro do selo, em vez de passar da largura do cartão. */
+.row > .col-5:has(img[alt="Logo"]) + .col-7 > :is(h1, a) {
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.35;
+}
