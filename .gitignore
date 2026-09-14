@@ -13,6 +13,9 @@ data/geoespacial/local/vegetacao_sp/InventarioFlorestal2020.zip
 # Rascunhos e artefatos gerados (não versionar)
 tmp/
 data/geoespacial/uploads/
+# Saida temporaria da suite de testes (tests/test_geoprocessamento.py e
+# tests/test_edicao_atributos.py escrevem aqui).
+data/geoespacial/tests/
 data/geoespacial/outputs/*
 !data/geoespacial/outputs/normalizacao_favorabilidade_fase2.json
 data/geoespacial/relatorios/*.log
