@@ -33,8 +33,8 @@ ARQUIVOS = {
     'gpkg': ('.gpkg', 'GeoPackage com a geometria resultante e a entrada'),
     'pdf_processamento': ('_relatorio_processamento.pdf', 'Relatório de processamento'),
     'pdf_analitico': ('_relatorio_analitico.pdf', 'Relatório analítico'),
-    'xlsx': ('_ocorrencias.xlsx', 'Planilha de ocorrências e estatísticas'),
-    'csv': ('_ocorrencias.csv', 'Tabela de ocorrências'),
+    'xlsx': ('_tabela_atributos.xlsx', 'Tabela de atributos da geometria de saída, com as colunas agrupadas por categoria e camada base'),
+    'csv': ('_tabela_atributos.csv', 'Tabela de atributos da geometria de saída'),
 }
 FUSO = ZoneInfo('America/Sao_Paulo')
 
@@ -290,17 +290,19 @@ def ambiente() -> dict[str, str]:
             'Shapely': shapely.__version__, 'pyogrio': pyogrio.__version__, 'Python': platform.python_version()}
 
 
-def montar_pacote(result: dict, saida, entrada, proc: dict, bases=(), mapa_base: bool = True) -> tuple[bytes, str, list[dict]]:
+def montar_pacote(result: dict, saida, entrada, proc: dict, bases=(), mapa_base: bool = True,
+                  intersecoes=None) -> tuple[bytes, str, list[dict]]:
     """Escreve os cinco arquivos, confere cada um e devolve (zip, nome do zip, manifesto)."""
     arquivos = nomes(proc['nome_saida'])
     with tempfile.TemporaryDirectory(prefix='sicard_extracao_') as temporaria:
         pasta = Path(temporaria)
         escrever_gpkg(saida, entrada, pasta / arquivos['gpkg'])
         mapa = pasta / 'mapa_localizacao.png'
-        aviso_mapa = mapa_png(entrada, bases, saida, mapa, mapa_base)
-        exportacao.pdf(result, pasta / arquivos['pdf_analitico'], mapa=mapa, aviso_mapa=aviso_mapa)
-        exportacao.escrever_xlsx(result, pasta / arquivos['xlsx'])
-        exportacao.escrever_csv(result, pasta / arquivos['csv'])
+        # No mapa vão só as interseções: com entrada de pontos a tabela traz também os ausentes.
+        aviso_mapa = mapa_png(entrada, bases, saida if intersecoes is None else intersecoes, mapa, mapa_base)
+        exportacao.pdf(result, saida, pasta / arquivos['pdf_analitico'], mapa=mapa, aviso_mapa=aviso_mapa)
+        exportacao.escrever_xlsx(saida, result['tabela_saida'], pasta / arquivos['xlsx'])
+        exportacao.escrever_csv(saida, pasta / arquivos['csv'])
         pdf_processamento({**proc, 'arquivos': arquivos}, pasta / arquivos['pdf_processamento'])
         manifesto = []
         memoria = io.BytesIO()

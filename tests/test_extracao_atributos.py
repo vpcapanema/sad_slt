@@ -74,17 +74,51 @@ def completed():
     result.update(id=str(uuid4()),input_nome='Teste de relatório - demanda ferroviária',criado_em='2026-09-09',motor='GDAL/OGR',gdal='verificado em teste')
     return result
 
-def test_arquivos_reproduzem_resultado_e_protegem_formulas(tmp_path):
+def completed_com_tabela():
+    from api.services.extracao_atributos_saida import montar
+    source=frame([LineString([(X,Y),(X+100,Y)])],nome=['Demanda ferroviária'])
+    result,longa=analisar(source,group(frame([box(X+25,Y-10,X+75,Y+10)],nome=['Área contaminada'],formula=['=1+1'])))
+    result.update(id=str(uuid4()),input_nome='Teste de relatório - demanda ferroviária',criado_em='2026-09-09',motor='GDAL/OGR',gdal='verificado em teste')
+    tabela,result['tabela_saida']=montar(result,longa,source)
+    return result,tabela
+
+def test_tabela_de_saida_prefixa_categoria_e_camada_e_mede_pela_dimensao():
+    from api.services.extracao_atributos_saida import montar
+    source=frame([box(X,Y,X+100,Y+100)],demanda=['Área da demanda'])
+    result,longa=analisar(source,group(frame([box(X+50,Y,X+150,Y+100)],nome=['Base A'])))
+    tabela,estrutura=montar(result,longa,source)
+    assert list(tabela.columns[:5])==['id_intersecao','categoria','camada_base','fid_entrada','demanda']
+    assert tabela.loc[0,'risco__base_0__nome']=='Base A'
+    assert tabela.loc[0,'risco__base_0__area_ha']==pytest.approx(0.5)
+    assert estrutura['grupos'][0]['campos']==['risco__base_0__fid_base','risco__base_0__nome','risco__base_0__area_ha','risco__base_0__perc_entrada']
+    source=frame([LineString([(X,Y),(X+100,Y)])])
+    result,longa=analisar(source,group(frame([box(X+10,Y-10,X+60,Y+10)])))
+    tabela,_=montar(result,longa,source)
+    assert tabela.loc[0,'risco__base_0__comprimento_km']==pytest.approx(0.05)
+    source=frame([Point(X+5,Y+5),Point(X+20,Y+20)])
+    result,longa=analisar(source,group(frame([box(X,Y,X+10,Y+10)],nome=['Área'])))
+    tabela,estrutura=montar(result,longa,source)
+    assert estrutura['fixos']==['id_ponto','fid_entrada'] and len(tabela)==2, 'uma linha por ponto'
+    assert list(tabela['risco__base_0__presenca'])==['sim','não']
+    assert tabela.loc[0,'risco__base_0__nome']=='Área'
+
+def test_arquivos_saem_da_tabela_de_saida_e_protegem_formulas(tmp_path):
     from api.services import extracao_atributos_exportacao as exports
     from pypdf import PdfReader
     from openpyxl import load_workbook
-    result=completed()
-    exports.pdf(result,tmp_path/'analitico.pdf')
-    exports.escrever_csv(result,tmp_path/'ocorrencias.csv')
-    exports.escrever_xlsx(result,tmp_path/'ocorrencias.xlsx')
+    result,tabela=completed_com_tabela()
+    exports.pdf(result,tabela,tmp_path/'analitico.pdf')
+    exports.escrever_csv(tabela,tmp_path/'tabela.csv')
+    exports.escrever_xlsx(tabela,result['tabela_saida'],tmp_path/'tabela.xlsx')
     text=' '.join(p.extract_text() for p in PdfReader(tmp_path/'analitico.pdf').pages)
-    assert 'Área contaminada' in text and 'km' in text and 'Categoria de teste' in text
-    book=load_workbook(tmp_path/'ocorrencias.xlsx');assert 'Estatísticas' in book.sheetnames
+    for trecho in ['Tabela de atributos da geometria de saída','Por categoria','Por camada base','Área contaminada']:
+        assert trecho in text, trecho
+    conteudo=(tmp_path/'tabela.csv').read_text(encoding='utf-8-sig')
+    assert conteudo.splitlines()[0].startswith('id_intersecao;categoria;camada_base;fid_entrada;nome;risco__base_0__fid_base')
+    assert "'=1+1" in conteudo and '0,05' in conteudo
+    sheet=load_workbook(tmp_path/'tabela.xlsx')['Tabela de atributos']
+    assert sheet['A1'].value=='Identificação' and 'Risco' in [c.value for c in sheet[1]]
+    assert 'Base 0' in [c.value for c in sheet[2]] and 'risco__base_0__comprimento_km' in [c.value for c in sheet[3]]
     assert exports.safe('=1+1')=="'=1+1"
     assert len(exports.celula_xlsx('x'*40000))==exports.LIMITE_CELULA_XLSX, 'célula longa é cortada, não derruba o pacote'
 
@@ -108,12 +142,15 @@ def test_pacote_leva_geometria_relatorios_e_tabelas(tmp_path,com_ocorrencia):
     import pyogrio
     from pypdf import PdfReader
     from api.services.extracao_atributos_pacote import montar_pacote
+    from api.services.extracao_atributos_saida import montar
     source=frame([LineString([(X,Y),(X+100,Y)])],nome=['Demanda ferroviária'])
     base=box(X+25,Y-10,X+75,Y+10) if com_ocorrencia else box(X+100,Y,X+110,Y+10)
-    result,saida=analisar(source,group(frame([base],nome=['Área contaminada'])))
+    result,longa=analisar(source,group(frame([base],nome=['Área contaminada'])))
     result.update(id=str(uuid4()),input_nome='Demanda ferroviária',criado_em='2026-09-14',gdal='teste')
+    tabela,result['tabela_saida']=montar(result,longa,source)
     bases=[('Risco','Área contaminada',frame([base],nome=['Área contaminada']))]
-    pacote,nome,manifesto=montar_pacote(result,saida,source,_processamento(result,saida),bases=bases,mapa_base=False)
+    pacote,nome,manifesto=montar_pacote(result,tabela,source,_processamento(result,tabela),bases=bases,
+                                        mapa_base=False,intersecoes=longa)
     assert nome=='extracao_de_teste_ferrovia.zip'
     assert [item['chave'] for item in manifesto]==['gpkg','pdf_processamento','pdf_analitico','xlsx','csv']
     with zipfile.ZipFile(io.BytesIO(pacote)) as arquivo:
@@ -123,13 +160,15 @@ def test_pacote_leva_geometria_relatorios_e_tabelas(tmp_path,com_ocorrencia):
         texto=' '.join(p.extract_text() for p in PdfReader(io.BytesIO(arquivo.read(manifesto[1]['nome']))).pages)
         (tmp_path/'r.gpkg').write_bytes(arquivo.read(manifesto[0]['nome']))
         analitico=PdfReader(io.BytesIO(arquivo.read(manifesto[2]['nome'])))
+    assert 'Relatório de processamento' in texto and 'Carregando entrada e bases' in texto and 'Base 0' in texto
     assert len(analitico.pages[0].images)>=1, 'o relatório analítico abre com o mapa de localização'
     assert 'Mapa de localização' in analitico.pages[0].extract_text()
-    assert 'Relatório de processamento' in texto and 'Carregando entrada e bases' in texto and 'Base 0' in texto
     assert {nome for nome,_ in pyogrio.list_layers(tmp_path/'r.gpkg')}=={'resultado','entrada'}
     info=pyogrio.read_info(tmp_path/'r.gpkg',layer='resultado')
-    assert info['features']==len(saida) and info['crs']=='EPSG:4674'
+    assert info['features']==len(tabela) and info['crs']=='EPSG:4674'
+    assert 'risco__base_0__comprimento_km' in list(info['fields'])
     assert pyogrio.read_info(tmp_path/'r.gpkg',layer='entrada')['features']==1
+
 
 def test_api_rejeita_sem_sessao():
     from fastapi import FastAPI

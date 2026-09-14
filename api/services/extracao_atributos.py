@@ -125,10 +125,13 @@ def _execute(ident, params):
         categories = [{**c,'camadas':[{**b,'frame':carregar_para_extracao(b['id'])} for b in c['camadas']]}
                       for c in params['categorias']]
         result, frame = analisar(source,categories,params['operacao'],progress,params.get('opcoes'))
+        progress('Montando a tabela de atributos da geometria de saída')
+        from api.services.extracao_atributos_saida import montar as montar_tabela_saida
+        saida, result['tabela_saida'] = montar_tabela_saida(result,frame,source)
         progress('Gravando a geometria resultante no banco')
         nome_saida = params.get('nome_saida') or f"Extração de {params['input_nome']}"
         # Só no banco: o GeoPackage da saída viaja no pacote, não em data/geoespacial/outputs.
-        layer_id = geo.registrar_camada(frame,nome_saida,'OP-05',linhagem=params,gravar_arquivo=False)
+        layer_id = geo.registrar_camada(saida,nome_saida,'OP-05',linhagem=params,gravar_arquivo=False)
         from osgeo import gdal
         result.update(id=ident,camada_resultado_id=layer_id,input_id=params['camada_id'],input_nome=params['input_nome'],
                       criado_em=datetime.now(timezone.utc).isoformat(),gdal=gdal.VersionInfo('RELEASE_NAME'))
@@ -144,12 +147,13 @@ def _execute(ident, params):
                          'operacao':params['operacao'],'opcoes':params.get('opcoes'),
                          'iniciado_em':inicio.isoformat(),'finalizado_em':fim.isoformat(),
                          'duracao_segundos':(fim-inicio).total_seconds(),'entrada':entrada,'bases':bases,
-                         'saida':{'camada_resultado_id':layer_id,'feicoes':len(frame),
+                         'saida':{'camada_resultado_id':layer_id,'feicoes':len(saida),
                                   'ocorrencias':result['resumo'].get('ocorrencias'),
                                   'camadas_intersectadas':result['resumo'].get('camadas_intersectadas')},
                          'etapas':etapas,'ambiente':pacote_servico.ambiente()}
         pacote, nome_pacote, manifesto = pacote_servico.montar_pacote(
-            result,frame,source,processamento,bases=[(c['nome'],b['nome'],b['frame']) for c in categories for b in c['camadas']])
+            result,saida,source,processamento,bases=[(c['nome'],b['nome'],b['frame']) for c in categories for b in c['camadas']],
+            intersecoes=frame)
         progress(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
         with _lock: etapas = list(_progress.get(ident) or [])
         from hashlib import sha256

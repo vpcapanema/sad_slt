@@ -1,0 +1,747 @@
+{
+  "versao": "1.0.0",
+  "finalidade": "Contrato semantico dos campos de cadastro de plano, programa e projeto.",
+  "regras_gerais": {
+    "ausencia": "Nao preencher quando a informacao nao estiver sustentada por evidencia suficiente.",
+    "ambiguidade": "Manter o campo sem valor e registrar as alternativas encontradas.",
+    "conflito": "Nao escolher silenciosamente entre valores conflitantes; registrar todos os candidatos e suas evidencias.",
+    "texto": "Preservar o sentido do documento, remover apenas artefatos de extracao e espacos redundantes.",
+    "datas": "Normalizar datas completas para AAAA-MM-DD. Nao completar dia ou mes ausente.",
+    "moeda": "Normalizar valores monetarios para numero decimal em reais, sem simbolo e sem separador de milhar.",
+    "referencias": "Texto encontrado em documento nao equivale ao identificador interno. A referencia deve ser resolvida contra o cadastro indicado.",
+    "evidencia": "Todo valor sugerido deve guardar documento, pagina e trecho que o sustentam.",
+    "confianca": "A confianca qualifica a sustentacao do valor, mas nao substitui evidencia nem validacao de dominio.",
+    "confirmacao_humana": "Valores controlados, referencias cadastrais, classificacoes e inferencias semanticas permanecem sujeitos a revisao humana."
+  },
+  "modelo_resultado_campo": {
+    "valor_observado": "Texto ou valor tal como encontrado no documento.",
+    "valor_normalizado": "Valor convertido para o tipo e formato esperados pelo campo.",
+    "identificador_resolvido": "Identificador do cadastro interno, quando o campo for referencial.",
+    "confianca": "Numero entre 0 e 1.",
+    "estado": [
+      "nao_encontrado",
+      "extraido",
+      "normalizado",
+      "aguardando_resolucao",
+      "resolvido",
+      "ambiguo",
+      "conflitante",
+      "invalido",
+      "derivado",
+      "gerado_pelo_sistema"
+    ],
+    "evidencias": {
+      "tipo": "lista",
+      "item": {
+        "documento_id": "Identificador do PDF de origem.",
+        "pagina": "Numero da pagina, iniciado em 1.",
+        "trecho": "Trecho textual suficiente para conferir o valor.",
+        "metodo": "Forma de obtencao do valor."
+      }
+    },
+    "observacoes": "Justificativas, conflitos, transformacoes e pendencias."
+  },
+  "tipos_objeto": {
+    "plano": {
+      "definicao": "Instrumento de planejamento estrategico que organiza objetivos, diretrizes, horizonte e abrangencia de longo prazo.",
+      "campos": {
+        "nome": {
+          "rotulo": "Nome do plano",
+          "natureza": "textual_identificadora",
+          "tipo": "string",
+          "formato": "Texto sem espacos laterais, entre 1 e 200 caracteres.",
+          "obrigatorio": true,
+          "significado": "Denominacao oficial ou reconhecivel do instrumento de planejamento.",
+          "preenchimento": "sugerivel",
+          "validacoes": ["nao_vazio", "maximo_200_caracteres"]
+        },
+        "descricao": {
+          "rotulo": "Descricao",
+          "natureza": "textual_descritiva",
+          "tipo": "string",
+          "formato": "Texto livre nao vazio.",
+          "obrigatorio": true,
+          "significado": "Sintese do escopo, horizonte de planejamento, conteudo e finalidade do plano.",
+          "preenchimento": "sugerivel_com_sintese_fiel",
+          "validacoes": ["nao_vazio"]
+        },
+        "objetivo_estrategico": {
+          "rotulo": "Objetivo estrategico",
+          "natureza": "textual_semantica",
+          "tipo": "string_ou_null",
+          "formato": "Texto livre.",
+          "obrigatorio": false,
+          "significado": "Resultado estrutural ou de longo prazo que o plano pretende alcancar.",
+          "preenchimento": "sugerivel",
+          "nao_confundir_com": ["descricao", "lista de acoes", "justificativa"]
+        },
+        "diretoria_id": {
+          "rotulo": "Diretoria",
+          "natureza": "referencial_controlada",
+          "tipo": "string",
+          "formato": "Identificador de diretoria ativa.",
+          "obrigatorio": true,
+          "significado": "Unidade organizacional responsavel pelo enquadramento do plano.",
+          "preenchimento": "resolver_e_confirmar",
+          "catalogo": "config/catalogo-slt.json#diretorias"
+        },
+        "instituicao_id": {
+          "rotulo": "Instituicao interessada",
+          "natureza": "referencial_cadastral",
+          "tipo": "uuid",
+          "formato": "UUID de instituicao existente no SIGMA.",
+          "obrigatorio": true,
+          "significado": "Pessoa juridica interessada, proponente ou responsavel pelo cadastro.",
+          "preenchimento": "resolver_e_confirmar",
+          "catalogo": "SIGMA.instituicoes",
+          "chaves_resolucao": ["cnpj", "razao_social", "nome_fantasia"]
+        },
+        "instituicao_cnpj": {
+          "rotulo": "CNPJ",
+          "natureza": "identificador_fiscal_derivado",
+          "tipo": "string_ou_null",
+          "formato": "00.000.000/0000-00",
+          "obrigatorio": false,
+          "significado": "Identificacao fiscal da instituicao selecionada.",
+          "preenchimento": "derivado_da_instituicao",
+          "somente_leitura": true
+        },
+        "pessoa_id": {
+          "rotulo": "Representante legal",
+          "natureza": "referencial_cadastral",
+          "tipo": "uuid",
+          "formato": "UUID de pessoa existente no SIGMA.",
+          "obrigatorio": true,
+          "significado": "Pessoa fisica que responde legalmente pelo cadastro.",
+          "preenchimento": "resolver_e_confirmar",
+          "catalogo": "SIGMA.pessoas",
+          "chaves_resolucao": ["nome", "email", "telefone"]
+        },
+        "representante": {
+          "rotulo": "Dados do representante",
+          "natureza": "estrutura_cadastral_derivada",
+          "tipo": "object",
+          "formato": {
+            "pessoa_id": "uuid",
+            "nome": "string nao vazia",
+            "email": "string_ou_null",
+            "telefone": "string_ou_null"
+          },
+          "obrigatorio": true,
+          "significado": "Retrato dos dados da pessoa selecionada no momento do cadastro.",
+          "preenchimento": "derivado_da_pessoa",
+          "somente_leitura": true
+        },
+        "vigencia_inicio": {
+          "rotulo": "Vigencia inicio",
+          "natureza": "temporal",
+          "tipo": "date_ou_null",
+          "formato": "AAAA-MM-DD",
+          "obrigatorio": false,
+          "significado": "Data formal de inicio da vigencia do plano.",
+          "preenchimento": "sugerivel"
+        },
+        "vigencia_fim": {
+          "rotulo": "Vigencia fim",
+          "natureza": "temporal",
+          "tipo": "date_ou_null",
+          "formato": "AAAA-MM-DD",
+          "obrigatorio": false,
+          "significado": "Data formal de encerramento ou termino do horizonte vigente do plano.",
+          "preenchimento": "sugerivel",
+          "dependencias": ["quando ambas existirem, nao pode anteceder vigencia_inicio"]
+        },
+        "valor_global": {
+          "rotulo": "Valor total previsto para execucao do plano",
+          "natureza": "monetaria",
+          "tipo": "number_ou_null",
+          "formato": "Decimal em reais; interface exibe R$ 0,00.",
+          "obrigatorio": false,
+          "significado": "Total financeiro previsto para executar o plano.",
+          "preenchimento": "sugerivel",
+          "unidade": "BRL"
+        },
+        "maturidade_objeto": {
+          "rotulo": "Grau de maturidade do plano",
+          "natureza": "classificacao_ordinal",
+          "tipo": "enum_ou_null",
+          "formato": "Rotulo completo do nivel.",
+          "obrigatorio": false,
+          "significado": "Estagio mais avancado efetivamente alcancado pelo plano.",
+          "preenchimento": "classificar_com_evidencia_e_confirmar",
+          "valores": [
+            "Nível 1 — Plano em concepção",
+            "Nível 2 — Plano em elaboração",
+            "Nível 3 — Plano em consulta ou pactuação",
+            "Nível 4 — Plano aprovado",
+            "Nível 5 — Plano vigente"
+          ]
+        },
+        "prazo_referencia_meses": {
+          "rotulo": "Prazo estimado ate aprovacao ou inicio da vigencia",
+          "natureza": "temporal_quantitativa",
+          "tipo": "integer_ou_null",
+          "formato": "Numero inteiro nao negativo, em meses.",
+          "obrigatorio": false,
+          "significado": "Tempo esperado ate a aprovacao formal ou o inicio da vigencia do plano.",
+          "preenchimento": "sugerivel",
+          "unidade": "meses"
+        },
+        "base_estimativa_prazo": {
+          "rotulo": "Grau de definicao do horizonte temporal",
+          "natureza": "classificacao_ordinal_documental",
+          "tipo": "enum_ou_null",
+          "formato": "Rotulo completo do nivel.",
+          "obrigatorio": false,
+          "significado": "Documento ou estagio de planejamento que sustenta o prazo informado.",
+          "preenchimento": "classificar_com_evidencia_e_confirmar",
+          "valores": [
+            "Nível 1 — Estimativa preliminar do horizonte temporal",
+            "Nível 2 — Cronograma de elaboração do plano",
+            "Nível 3 — Cronograma de consultas e pactuação",
+            "Nível 4 — Cronograma aprovado",
+            "Nível 5 — Cronograma institucional vigente"
+          ]
+        },
+        "unidades_espaciais": {
+          "rotulo": "Abrangencia territorial",
+          "natureza": "referencial_espacial_multivalorado",
+          "tipo": "array_uuid",
+          "formato": "Lista nao vazia de IDs de unidades territoriais existentes.",
+          "obrigatorio": true,
+          "significado": "Territorios abrangidos pelo plano.",
+          "preenchimento": "resolver_e_confirmar",
+          "catalogo": "geo.unidade_espacial"
+        }
+      }
+    },
+    "programa": {
+      "definicao": "Conjunto coordenado de acoes ou projetos orientado a um objetivo operacional comum.",
+      "campos": {
+        "nome": {
+          "rotulo": "Nome do programa",
+          "natureza": "textual_identificadora",
+          "tipo": "string",
+          "formato": "Texto sem espacos laterais, entre 1 e 200 caracteres.",
+          "obrigatorio": true,
+          "significado": "Denominacao oficial ou reconhecivel do programa.",
+          "preenchimento": "sugerivel"
+        },
+        "descricao": {
+          "rotulo": "Descricao",
+          "natureza": "textual_descritiva",
+          "tipo": "string",
+          "formato": "Texto livre nao vazio.",
+          "obrigatorio": true,
+          "significado": "Sintese do escopo, finalidade e composicao do programa.",
+          "preenchimento": "sugerivel_com_sintese_fiel"
+        },
+        "objetivo": {
+          "rotulo": "Objetivo",
+          "natureza": "textual_semantica",
+          "tipo": "string_ou_null",
+          "formato": "Texto livre.",
+          "obrigatorio": false,
+          "significado": "Resultado operacional que o programa pretende produzir.",
+          "preenchimento": "sugerivel",
+          "nao_confundir_com": ["descricao", "justificativa"]
+        },
+        "publico_alvo": {
+          "rotulo": "Publico-alvo",
+          "natureza": "textual_semantica",
+          "tipo": "string_ou_null",
+          "formato": "Texto livre.",
+          "obrigatorio": false,
+          "significado": "Pessoas, setores, territorios ou organizacoes diretamente beneficiados.",
+          "preenchimento": "sugerivel"
+        },
+        "justificativa": {
+          "rotulo": "Justificativa",
+          "natureza": "textual_argumentativa",
+          "tipo": "string_ou_null",
+          "formato": "Texto livre.",
+          "obrigatorio": false,
+          "significado": "Problema, necessidade ou oportunidade que fundamenta o programa.",
+          "preenchimento": "sugerivel"
+        },
+        "orgao_responsavel": {
+          "rotulo": "Orgao responsavel",
+          "natureza": "textual_institucional",
+          "tipo": "string_ou_null",
+          "formato": "Texto com ate 200 caracteres.",
+          "obrigatorio": false,
+          "significado": "Orgao encarregado de coordenar ou executar o programa.",
+          "preenchimento": "sugerivel"
+        },
+        "vinculo_institucional": {
+          "rotulo": "Possui vinculo institucional",
+          "natureza": "logica",
+          "tipo": "boolean",
+          "formato": "true ou false.",
+          "obrigatorio": true,
+          "significado": "Indica se o programa pertence formalmente a um plano cadastrado.",
+          "preenchimento": "sugerivel_e_confirmar"
+        },
+        "plano_codigo": {
+          "rotulo": "Plano vinculado",
+          "natureza": "referencial_hierarquica",
+          "tipo": "string_ou_null",
+          "formato": "Codigo legivel de plano existente.",
+          "obrigatorio": "vinculo_institucional == true",
+          "significado": "Plano que fornece o contexto estrategico do programa.",
+          "preenchimento": "resolver_e_confirmar",
+          "catalogo": "demandas.plano"
+        },
+        "instituicao_id": {
+          "rotulo": "Instituicao interessada",
+          "natureza": "referencial_cadastral",
+          "tipo": "uuid",
+          "formato": "UUID de instituicao existente no SIGMA.",
+          "obrigatorio": true,
+          "significado": "Pessoa juridica interessada, proponente ou responsavel pelo cadastro.",
+          "preenchimento": "resolver_e_confirmar",
+          "catalogo": "SIGMA.instituicoes",
+          "chaves_resolucao": ["cnpj", "razao_social", "nome_fantasia"]
+        },
+        "instituicao_cnpj": {
+          "rotulo": "CNPJ",
+          "natureza": "identificador_fiscal_derivado",
+          "tipo": "string_ou_null",
+          "formato": "00.000.000/0000-00",
+          "obrigatorio": false,
+          "significado": "Identificacao fiscal da instituicao selecionada.",
+          "preenchimento": "derivado_da_instituicao",
+          "somente_leitura": true
+        },
+        "pessoa_id": {
+          "rotulo": "Representante legal",
+          "natureza": "referencial_cadastral",
+          "tipo": "uuid",
+          "formato": "UUID de pessoa existente no SIGMA.",
+          "obrigatorio": true,
+          "significado": "Pessoa fisica que responde legalmente pelo cadastro.",
+          "preenchimento": "resolver_e_confirmar",
+          "catalogo": "SIGMA.pessoas"
+        },
+        "representante": {
+          "rotulo": "Dados do representante",
+          "natureza": "estrutura_cadastral_derivada",
+          "tipo": "object",
+          "formato": {
+            "pessoa_id": "uuid",
+            "nome": "string nao vazia",
+            "email": "string_ou_null",
+            "telefone": "string_ou_null"
+          },
+          "obrigatorio": true,
+          "significado": "Retrato dos dados da pessoa selecionada no momento do cadastro.",
+          "preenchimento": "derivado_da_pessoa",
+          "somente_leitura": true
+        },
+        "valor_global": {
+          "rotulo": "Capex do programa",
+          "natureza": "monetaria",
+          "tipo": "number_ou_null",
+          "formato": "Decimal em reais; interface exibe R$ 0,00.",
+          "obrigatorio": false,
+          "significado": "Investimento total necessario para implantar o programa, sem custeio anual.",
+          "preenchimento": "sugerivel",
+          "unidade": "BRL"
+        },
+        "maturidade_objeto": {
+          "rotulo": "Grau de maturidade do programa",
+          "natureza": "classificacao_ordinal",
+          "tipo": "enum_ou_null",
+          "formato": "Rotulo completo do nivel.",
+          "obrigatorio": false,
+          "significado": "Estagio institucional mais avancado efetivamente alcancado pelo programa.",
+          "preenchimento": "classificar_com_evidencia_e_confirmar",
+          "valores": [
+            "Nível 1 — Programa em concepção",
+            "Nível 2 — Programa em estruturação",
+            "Nível 3 — Programa em pactuação",
+            "Nível 4 — Programa aprovado",
+            "Nível 5 — Programa em implantação"
+          ]
+        },
+        "capex_estimado": {
+          "rotulo": "Capex estimado",
+          "natureza": "monetaria",
+          "tipo": "number_ou_null",
+          "formato": "Decimal em reais.",
+          "obrigatorio": false,
+          "significado": "Valor de investimento estimado para a implantacao do programa.",
+          "preenchimento": "sugerivel",
+          "unidade": "BRL",
+          "relacao": "No formulario atual recebe o mesmo valor visual de valor_global."
+        },
+        "base_estimativa_capex": {
+          "rotulo": "Grau de definicao do custo de implantacao",
+          "natureza": "classificacao_ordinal_documental",
+          "tipo": "enum_ou_null",
+          "formato": "Rotulo completo do nivel.",
+          "obrigatorio": false,
+          "significado": "Documento tecnico mais avancado usado para calcular o Capex.",
+          "preenchimento": "classificar_com_evidencia_e_confirmar",
+          "valores": [
+            "Nível 1 — Estimativa preliminar de custo",
+            "Nível 2 — Estimativa baseada em estudo de viabilidade",
+            "Nível 3 — Orçamento baseado em anteprojeto",
+            "Nível 4 — Orçamento baseado em projeto básico",
+            "Nível 5 — Orçamento baseado em projeto executivo",
+            "Nível 6 — Preço contratado para implantação"
+          ]
+        },
+        "prazo_referencia_meses": {
+          "rotulo": "Prazo estimado para implantacao do programa",
+          "natureza": "temporal_quantitativa",
+          "tipo": "integer_ou_null",
+          "formato": "Numero inteiro nao negativo, em meses.",
+          "obrigatorio": false,
+          "significado": "Duracao prevista para implantar o programa.",
+          "preenchimento": "sugerivel",
+          "unidade": "meses"
+        },
+        "base_estimativa_prazo": {
+          "rotulo": "Grau de definicao do prazo de implantacao",
+          "natureza": "classificacao_ordinal_documental",
+          "tipo": "enum_ou_null",
+          "formato": "Rotulo completo do nivel.",
+          "obrigatorio": false,
+          "significado": "Documento ou cronograma que sustenta o prazo do programa.",
+          "preenchimento": "classificar_com_evidencia_e_confirmar",
+          "valores": [
+            "Nível 1 — Estimativa preliminar de prazo",
+            "Nível 2 — Cronograma inicial do programa",
+            "Nível 3 — Cronograma consolidado das ações",
+            "Nível 4 — Cronograma aprovado",
+            "Nível 5 — Cronograma pactuado entre os responsáveis",
+            "Nível 6 — Cronogramas detalhados dos projetos componentes"
+          ]
+        },
+        "unidades_espaciais": {
+          "rotulo": "Abrangencia territorial",
+          "natureza": "referencial_espacial_multivalorado",
+          "tipo": "array_uuid",
+          "formato": "Lista nao vazia de IDs de unidades territoriais existentes.",
+          "obrigatorio": true,
+          "significado": "Territorios abrangidos pelo programa.",
+          "preenchimento": "resolver_e_confirmar",
+          "catalogo": "geo.unidade_espacial"
+        }
+      }
+    },
+    "projeto": {
+      "definicao": "Intervencao concreta, territorializavel e executavel, com objeto, custo, prazo e localizacao proprios.",
+      "campos": {
+        "tipo_demandante": {
+          "rotulo": "Tipo de demandante",
+          "natureza": "classificacao_controlada",
+          "tipo": "enum",
+          "formato": "institucional ou privada.",
+          "obrigatorio": true,
+          "significado": "Natureza institucional ou privada da parte que apresenta a demanda.",
+          "preenchimento": "sugerivel_e_confirmar",
+          "valores": ["institucional", "privada"]
+        },
+        "nome": {
+          "rotulo": "Nome do projeto",
+          "natureza": "textual_identificadora",
+          "tipo": "string",
+          "formato": "Texto sem espacos laterais, entre 1 e 200 caracteres.",
+          "obrigatorio": true,
+          "significado": "Denominacao especifica e reconhecivel da intervencao.",
+          "preenchimento": "sugerivel"
+        },
+        "descricao": {
+          "rotulo": "Descricao",
+          "natureza": "textual_descritiva",
+          "tipo": "string_ou_null",
+          "formato": "Texto livre.",
+          "obrigatorio": false,
+          "significado": "Sintese do objetivo, escopo e justificativa da intervencao.",
+          "preenchimento": "sugerivel_com_sintese_fiel"
+        },
+        "vinculo_institucional": {
+          "rotulo": "Possui vinculo institucional",
+          "natureza": "logica",
+          "tipo": "boolean",
+          "formato": "true ou false.",
+          "obrigatorio": true,
+          "significado": "Indica se o projeto pertence formalmente a um plano ou programa cadastrado.",
+          "preenchimento": "sugerivel_e_confirmar"
+        },
+        "vinculo_tipo": {
+          "rotulo": "Tipo de vinculo",
+          "natureza": "classificacao_controlada",
+          "tipo": "enum_ou_null",
+          "formato": "programa, plano ou null.",
+          "obrigatorio": "vinculo_institucional == true",
+          "significado": "Nivel hierarquico ao qual o projeto se vincula.",
+          "preenchimento": "resolver_e_confirmar",
+          "valores": ["programa", "plano"]
+        },
+        "programa_codigo": {
+          "rotulo": "Programa vinculado",
+          "natureza": "referencial_hierarquica",
+          "tipo": "string_ou_null",
+          "formato": "Codigo legivel de programa existente.",
+          "obrigatorio": "vinculo_institucional == true e vinculo_tipo == programa",
+          "significado": "Programa que fornece o contexto institucional do projeto.",
+          "preenchimento": "resolver_e_confirmar",
+          "catalogo": "demandas.programa"
+        },
+        "plano_id": {
+          "rotulo": "Plano de referencia ou vinculado",
+          "natureza": "referencial_hierarquica",
+          "tipo": "string",
+          "formato": "Identificador ou codigo de plano reconhecido pelo cadastro.",
+          "obrigatorio": true,
+          "significado": "Plano que orienta o enquadramento e a classificacao do projeto.",
+          "preenchimento": "resolver_e_confirmar",
+          "catalogo": "demandas.plano"
+        },
+        "diretoria_id": {
+          "rotulo": "Diretoria",
+          "natureza": "referencial_controlada",
+          "tipo": "string",
+          "formato": "Identificador de diretoria ativa.",
+          "obrigatorio": true,
+          "significado": "Diretoria responsavel pelo enquadramento do projeto; pode ser herdada do vinculo.",
+          "preenchimento": "resolver_ou_derivar_e_confirmar",
+          "catalogo": "config/catalogo-slt.json#diretorias"
+        },
+        "instituicao_id": {
+          "rotulo": "Instituicao interessada",
+          "natureza": "referencial_cadastral",
+          "tipo": "uuid",
+          "formato": "UUID de instituicao existente no SIGMA.",
+          "obrigatorio": true,
+          "significado": "Pessoa juridica interessada ou proponente da intervencao.",
+          "preenchimento": "resolver_e_confirmar",
+          "catalogo": "SIGMA.instituicoes",
+          "chaves_resolucao": ["cnpj", "razao_social", "nome_fantasia"]
+        },
+        "instituicao_cnpj": {
+          "rotulo": "CNPJ",
+          "natureza": "identificador_fiscal_derivado",
+          "tipo": "string_ou_null",
+          "formato": "00.000.000/0000-00",
+          "obrigatorio": false,
+          "significado": "Identificacao fiscal da instituicao selecionada.",
+          "preenchimento": "derivado_da_instituicao",
+          "somente_leitura": true
+        },
+        "pessoa_id": {
+          "rotulo": "Representante legal",
+          "natureza": "referencial_cadastral",
+          "tipo": "uuid",
+          "formato": "UUID de pessoa existente no SIGMA.",
+          "obrigatorio": true,
+          "significado": "Pessoa fisica que responde legalmente pelo cadastro.",
+          "preenchimento": "resolver_e_confirmar",
+          "catalogo": "SIGMA.pessoas"
+        },
+        "representante": {
+          "rotulo": "Dados do representante",
+          "natureza": "estrutura_cadastral_derivada",
+          "tipo": "object",
+          "formato": {
+            "pessoa_id": "uuid",
+            "nome": "string nao vazia",
+            "email": "string_ou_null",
+            "telefone": "string_ou_null"
+          },
+          "obrigatorio": true,
+          "significado": "Retrato dos dados da pessoa selecionada no momento do cadastro.",
+          "preenchimento": "derivado_da_pessoa",
+          "somente_leitura": true
+        },
+        "classificacao": {
+          "rotulo": "Classificacao no plano",
+          "natureza": "estrutura_controlada_condicional",
+          "tipo": "object_ou_null",
+          "formato": "{tipo, frente_id} para PLI ou {tipo, eixo_id, corredor_tic_id} para PEF.",
+          "obrigatorio": "condicional ao plano de referencia",
+          "significado": "Enquadramento estrategico do projeto no plano aplicavel.",
+          "preenchimento": "classificar_e_confirmar",
+          "catalogos": [
+            "config/catalogo-slt.json#frentes_pli",
+            "config/catalogo-slt.json#eixos_pef",
+            "config/catalogo-slt.json#corredores_tic"
+          ]
+        },
+        "vigencia_inicio": {
+          "rotulo": "Inicio da vigencia do projeto",
+          "natureza": "temporal",
+          "tipo": "date_ou_null",
+          "formato": "AAAA-MM-DD",
+          "obrigatorio": false,
+          "significado": "Data em que o projeto ou seu instrumento passa formalmente a existir ou ser executado.",
+          "preenchimento": "sugerivel",
+          "nao_confundir_com": ["data da ideia", "inicio obrigatorio das obras"]
+        },
+        "vigencia_fim": {
+          "rotulo": "Fim da vigencia do projeto",
+          "natureza": "temporal",
+          "tipo": "date_ou_null",
+          "formato": "AAAA-MM-DD",
+          "obrigatorio": false,
+          "significado": "Data prevista para o encerramento formal do projeto ou instrumento.",
+          "preenchimento": "sugerivel",
+          "nao_confundir_com": ["entrada em operacao"],
+          "dependencias": ["quando ambas existirem, nao pode anteceder vigencia_inicio"]
+        },
+        "valor_global": {
+          "rotulo": "Capex",
+          "natureza": "monetaria",
+          "tipo": "number_ou_null",
+          "formato": "Decimal em reais; interface exibe R$ 0,00.",
+          "obrigatorio": false,
+          "significado": "Investimento total necessario para implantar o projeto e coloca-lo em operacao, excluindo custeio anual.",
+          "preenchimento": "sugerivel",
+          "unidade": "BRL"
+        },
+        "maturidade_objeto": {
+          "rotulo": "Grau de maturidade do projeto",
+          "natureza": "classificacao_ordinal",
+          "tipo": "enum_ou_null",
+          "formato": "Rotulo completo do nivel.",
+          "obrigatorio": false,
+          "significado": "Etapa tecnica mais avancada efetivamente concluida.",
+          "preenchimento": "classificar_com_evidencia_e_confirmar",
+          "valores": [
+            "Nível 1 — Ideia ou necessidade identificada",
+            "Nível 2 — Estudos preliminares em elaboração",
+            "Nível 3 — Estudo de viabilidade concluído",
+            "Nível 4 — Anteprojeto concluído",
+            "Nível 5 — Projeto básico concluído",
+            "Nível 6 — Projeto executivo concluído",
+            "Nível 7 — Projeto pronto para contratação ou implantação"
+          ]
+        },
+        "capex_estimado": {
+          "rotulo": "Capex estimado",
+          "natureza": "monetaria",
+          "tipo": "number_ou_null",
+          "formato": "Decimal em reais.",
+          "obrigatorio": false,
+          "significado": "Valor de investimento estimado para implantacao do projeto.",
+          "preenchimento": "sugerivel",
+          "unidade": "BRL",
+          "relacao": "No formulario atual recebe o mesmo valor visual de valor_global."
+        },
+        "base_estimativa_capex": {
+          "rotulo": "Grau de definicao do custo de implantacao",
+          "natureza": "classificacao_ordinal_documental",
+          "tipo": "enum_ou_null",
+          "formato": "Rotulo completo do nivel.",
+          "obrigatorio": false,
+          "significado": "Documento tecnico mais avancado usado para calcular o Capex.",
+          "preenchimento": "classificar_com_evidencia_e_confirmar",
+          "valores": [
+            "Nível 1 — Estimativa preliminar de custo",
+            "Nível 2 — Estimativa baseada em estudo de viabilidade",
+            "Nível 3 — Orçamento baseado em anteprojeto",
+            "Nível 4 — Orçamento baseado em projeto básico",
+            "Nível 5 — Orçamento baseado em projeto executivo",
+            "Nível 6 — Preço contratado para implantação"
+          ]
+        },
+        "prazo_referencia_meses": {
+          "rotulo": "Prazo ate entrada em operacao",
+          "natureza": "temporal_quantitativa",
+          "tipo": "integer_ou_null",
+          "formato": "Numero inteiro nao negativo, em meses.",
+          "obrigatorio": false,
+          "significado": "Tempo entre o inicio previsto da implantacao e a disponibilidade do objeto para uso ou operacao.",
+          "preenchimento": "sugerivel",
+          "unidade": "meses"
+        },
+        "base_estimativa_prazo": {
+          "rotulo": "Grau de definicao do prazo de implantacao",
+          "natureza": "classificacao_ordinal_documental",
+          "tipo": "enum_ou_null",
+          "formato": "Rotulo completo do nivel.",
+          "obrigatorio": false,
+          "significado": "Documento que sustenta o cronograma informado.",
+          "preenchimento": "classificar_com_evidencia_e_confirmar",
+          "valores": [
+            "Nível 1 — Estimativa preliminar de prazo",
+            "Nível 2 — Cronograma dos estudos de viabilidade",
+            "Nível 3 — Cronograma de anteprojeto",
+            "Nível 4 — Cronograma de projeto básico",
+            "Nível 5 — Cronograma de projeto executivo",
+            "Nível 6 — Cronograma contratual de implantação"
+          ]
+        },
+        "complementos": {
+          "rotulo": "Complementos",
+          "natureza": "estrutura_controlada_e_derivada",
+          "tipo": "object",
+          "formato": {
+            "modal_id": "string_ou_null",
+            "tipologia_id": "string_ou_null",
+            "carteira_id": "string_ou_null",
+            "regionalidades": "object_ou_null"
+          },
+          "obrigatorio": false,
+          "significado": "Modal predominante, natureza da intervencao, carteira institucional e enquadramentos territoriais.",
+          "preenchimento": "classificar_resolver_ou_derivar_e_confirmar",
+          "catalogos": [
+            "config/catalogo-slt.json#modais",
+            "config/catalogo-slt.json#tipologias",
+            "config/catalogo-slt.json#carteiras"
+          ]
+        },
+        "geometria": {
+          "rotulo": "Geometria",
+          "natureza": "espacial_estruturada",
+          "tipo": "geojson",
+          "formato": "{tipo, coordinates}, com tipo geometrico suportado pelo cadastro.",
+          "obrigatorio": true,
+          "significado": "Representacao espacial efetiva da intervencao.",
+          "preenchimento": "extrair_construir_ou_desenhar_e_confirmar",
+          "crs_entrada": "longitude/latitude",
+          "validacoes": ["geometria_valida", "coordenadas_presentes"]
+        },
+        "lat": {
+          "rotulo": "Latitude",
+          "natureza": "espacial_numerica",
+          "tipo": "number",
+          "formato": "Graus decimais entre -90 e 90.",
+          "obrigatorio": true,
+          "significado": "Latitude do ponto ou referencia calculada da geometria.",
+          "preenchimento": "extrair_ou_derivar_e_confirmar"
+        },
+        "lng": {
+          "rotulo": "Longitude",
+          "natureza": "espacial_numerica",
+          "tipo": "number",
+          "formato": "Graus decimais entre -180 e 180.",
+          "obrigatorio": true,
+          "significado": "Longitude do ponto ou referencia calculada da geometria.",
+          "preenchimento": "extrair_ou_derivar_e_confirmar"
+        }
+      }
+    }
+  },
+  "campos_sistemicos": {
+    "codigo": {
+      "natureza": "sistemica",
+      "preenchimento": "gerado_pelo_servidor"
+    },
+    "status": {
+      "natureza": "sistemica",
+      "preenchimento": "definido_pela_regra_de_negocio"
+    },
+    "criadoEm": {
+      "natureza": "sistemica_temporal",
+      "preenchimento": "gerado_pelo_sistema"
+    },
+    "auditoria": {
+      "natureza": "sistemica_referencial",
+      "preenchimento": "derivado_da_sessao_e_do_representante"
+    }
+  }
+}
