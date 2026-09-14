@@ -3,23 +3,17 @@
 A tabela vem de extracao_atributos_saida: uma linha por interseção (ou por ponto),
 campos da entrada com o nome original e, para cada categoria e camada base, os
 campos da base e as medidas com o prefixo categoria__camada__. O CSV leva a
-tabela como está; o XLSX agrupa as colunas por categoria e camada no cabeçalho;
-o relatório analítico traz o mapa, a tabela inteira e os recortes por categoria e
-por camada base. Quem monta o pacote é extracao_atributos_pacote.
+tabela como está; o XLSX agrupa as colunas por categoria e camada no cabeçalho.
+Os relatórios PDF ficam em extracao_atributos_relatorios; quem monta o pacote é
+extracao_atributos_pacote.
 """
 import csv
 import math
-from xml.sax.saxutils import escape
 
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.utils import ImageReader
-from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 # Uma célula XLSX guarda no máximo 32.767 caracteres. O pacote é obrigatório, então
 # o texto é cortado com aviso; o CSV do mesmo pacote leva o conteúdo completo.
@@ -29,10 +23,6 @@ OPERACOES = {'intersection': 'Interseção', 'identity': 'Identidade'}
 # Cor por categoria no cabeçalho do XLSX (tons claros, legíveis com texto escuro).
 CORES_CATEGORIA = ['DCEAF7', 'FBE3D0', 'E6DAF0', 'D5ECEC', 'F6ECC9', 'DDEBD3', 'F2D6D6', 'E1E5EA']
 COR_ENTRADA = 'E8EEF3'
-COLUNAS_POR_BLOCO = 7
-DIMENSOES = {0: 'pontos: uma linha por ponto, com presença ou ausência em cada camada',
-             1: 'linhas: uma linha por interseção, com comprimento em km',
-             2: 'polígonos: uma linha por interseção, com área em hectares'}
 
 
 def data_hora(valor):
@@ -161,89 +151,3 @@ def escrever_xlsx(tabela, estrutura, path):
     sheet.auto_filter.ref = f'A3:{get_column_letter(max(len(nomes), 1))}{max(sheet.max_row, 3)}'
     book.save(path)
 
-
-def pdf(result, tabela, path, mapa=None, aviso_mapa=None):
-    """Mapa, tabela de atributos da geometria de saída, recorte por categoria e por camada base."""
-    estrutura = result['tabela_saida']
-    dimensao = estrutura['dimensao']
-    styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='Cell', fontName='Helvetica', fontSize=6.5, leading=8, wordWrap='CJK'))
-    styles.add(ParagraphStyle(name='Head', fontName='Helvetica-Bold', fontSize=6.5, leading=8, wordWrap='CJK',
-                              textColor=colors.HexColor('#173a53')))
-    styles['BodyText'].fontSize = 9
-    styles['BodyText'].leading = 12
-    styles['Title'].textColor = colors.HexColor('#003b5a')
-    for nome in ('Heading1', 'Heading2'):
-        styles[nome].textColor = colors.HexColor('#003b5a')
-        styles[nome].spaceBefore = 6
-        styles[nome].spaceAfter = 4
-
-    def p(valor, estilo='BodyText'):
-        return Paragraph(escape(str(valor)), styles[estilo])
-
-    linhas_tabela = list(registros(tabela))
-    chave = estrutura['fixos'][0]
-
-    def em_blocos(linhas, cols):
-        if not linhas:
-            return [p('Nenhuma linha neste recorte.'), Spacer(1, 6)]
-        outras = [coluna for coluna in cols if coluna != chave]
-        partes = []
-        for inicio in range(0, max(len(outras), 1), COLUNAS_POR_BLOCO):
-            bloco = [chave, *outras[inicio:inicio + COLUNAS_POR_BLOCO]]
-            larguras = [45] + [(770 - 45) / max(len(bloco) - 1, 1)] * (len(bloco) - 1)
-            dados = [[Paragraph(escape(coluna), styles['Head']) for coluna in bloco]]
-            dados += [[Paragraph(escape(texto(linha.get(coluna)) or '—'), styles['Cell']) for coluna in bloco]
-                      for linha in linhas]
-            item = Table(dados, colWidths=larguras, repeatRows=1, hAlign='LEFT')
-            item.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e6eff5')),
-                ('LINEBELOW', (0, 0), (-1, 0), .7, colors.HexColor('#02a344')),
-                ('GRID', (0, 0), (-1, -1), .25, colors.HexColor('#c9d5df')),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f7f8')]),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 3), ('RIGHTPADDING', (0, 0), (-1, -1), 3)]))
-            partes += [item, Spacer(1, 8)]
-        return partes
-
-    base = [*estrutura['fixos'], *estrutura['entrada']]
-    historia = [
-        p('SICARD | Extração de atributos', 'Title'),
-        p(f"Entrada: {result.get('input_nome', '—')} · Operação: {OPERACOES.get(result.get('operacao'), result.get('operacao'))}"),
-        p(f"Execução: {result.get('id', '—')} · {data_hora(result.get('criado_em', ''))} · Motor: {result.get('motor', 'GDAL/OGR')} {result.get('gdal', '')}"),
-    ]
-    if mapa:
-        largura, altura = ImageReader(str(mapa)).getSize()
-        historia += [p('Mapa de localização', 'Heading2'), Image(str(mapa), width=770, height=770 * altura / largura),
-                     p('Camada de entrada (contorno azul) sobre todas as camadas consideradas no processamento, com o '
-                       'entorno. Em vermelho, a área extraída pela interseção.' + (f' {aviso_mapa}' if aviso_mapa else ''))]
-    historia += [
-        PageBreak(),
-        p('Tabela de atributos da geometria de saída', 'Heading1'),
-        p(f'{len(linhas_tabela)} linha(s). Entrada de {DIMENSOES[dimensao]}. Os campos da entrada mantêm o nome '
-          'original; os campos da base e as medidas levam o prefixo categoria__camada__. As colunas estão em blocos, '
-          f'e a coluna {chave} liga os blocos da mesma linha.'),
-        *em_blocos(linhas_tabela, colunas(tabela)),
-        PageBreak(),
-        p('Por categoria', 'Heading1'),
-    ]
-    for categoria_id, categoria in dict.fromkeys((g['categoria_id'], g['categoria']) for g in estrutura['grupos']):
-        cols = base + [c for g in estrutura['grupos'] if g['categoria_id'] == categoria_id for c in g['campos']]
-        linhas = linhas_tabela if dimensao == 0 else [l for l in linhas_tabela if l.get('categoria') == categoria]
-        historia += [p(categoria, 'Heading2'), *em_blocos(linhas, cols)]
-    historia += [PageBreak(), p('Por camada base', 'Heading1')]
-    for grupo in estrutura['grupos']:
-        linhas = linhas_tabela if dimensao == 0 else [
-            l for l in linhas_tabela if l.get('categoria') == grupo['categoria'] and l.get('camada_base') == grupo['camada']]
-        historia += [p(f"{grupo['categoria']} · {grupo['camada']}", 'Heading2'), *em_blocos(linhas, base + grupo['campos'])]
-
-    def rodape(canvas, doc):
-        canvas.saveState()
-        canvas.setFont('Helvetica', 8)
-        canvas.drawString(36, 20, 'SICARD - Extração espacial de atributos')
-        canvas.drawRightString(805, 20, f'Página {doc.page}')
-        canvas.restoreState()
-
-    SimpleDocTemplate(str(path), pagesize=landscape(A4), rightMargin=36, leftMargin=36, topMargin=32,
-                      bottomMargin=34, title='Extração de atributos - SICARD').build(
-        historia, onFirstPage=rodape, onLaterPages=rodape)

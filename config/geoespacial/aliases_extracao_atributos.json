@@ -1,0 +1,232 @@
+{
+  "codigo": "aliases_extracao_atributos",
+  "versao": "2026-09-14",
+  "descricao": "Nomes amigáveis usados no relatório analítico da extração de atributos. O nome e a fonte das camadas vêm primeiro da biblioteca de critérios (config/geoespacial/biblioteca_criterios_risco_restricao.json), pelo identificador igual ao nome do arquivo; o campo 'nome' aqui só é preenchido para as camadas que não estão na biblioteca. Campo sem alias aqui recebe o nome gerado pela regra automática e aparece como 'regra automática' no dicionário do relatório. Só recebeu alias o campo cujo significado é claro pelo nome e pelos valores da base; os demais aguardam confirmação.",
+  "campos_fixos": {
+    "id_intersecao": "Interseção",
+    "id_ponto": "Ponto",
+    "categoria": "Categoria",
+    "camada_base": "Camada base",
+    "fid_entrada": "Feição da entrada",
+    "fid_base": "Feição da base",
+    "area_ha": "Área atingida (ha)",
+    "comprimento_km": "Extensão atingida (km)",
+    "perc_entrada": "% da entrada",
+    "presenca": "Presença"
+  },
+  "opcoes": {
+    "promover_multipartes": "Promover a multipartes",
+    "manter_dimensoes_menores": "Manter bordas e toques",
+    "ignorar_falhas": "Ignorar feições com falha",
+    "geometrias_preparadas": "Geometrias preparadas",
+    "pretestar_continencia": "Pré-testar continência"
+  },
+  "camadas": {
+    "aprm_alto_juquery": {
+      "campo_nome": "Sub_areas",
+      "campos": {"Sub_areas": "Subárea"}
+    },
+    "aprm_alto_tiete_cabec": {
+      "campo_nome": "SubArea",
+      "campos": {
+        "SubArea": "Subárea", "Area_km2": "Área informada na base", "LoteMin_m2": "Lote mínimo (m²)",
+        "CoefAprov": "Coeficiente de aproveitamento", "TaxaPermea": "Taxa de permeabilidade (%)",
+        "IndAreaVeg": "Índice de área vegetada (%)"
+      }
+    },
+    "aprm_billings": {
+      "campo_nome": "DAREA",
+      "campos": {"DAREA": "Denominação da área"}
+    },
+    "aprm_guarapiranga": {
+      "campo_nome": "DCLASS",
+      "campos": {"DCLASS": "Classe"}
+    },
+    "areas_contaminadas_cetesb": {
+      "campo_nome": "Razao_Soci",
+      "campos": {
+        "OBJECTID": "Identificador do objeto", "Razao_Soci": "Razão social", "Atividade": "Atividade",
+        "Classifica": "Classificação", "Data_Class": "Data da classificação", "Grupo_Cont": "Grupo de contaminantes",
+        "Contaminan": "Contaminantes", "Data_Atual": "Data de atualização", "Meios_Impa": "Meios impactados",
+        "Endereco": "Endereço", "Localizaca": "Localização", "Complement": "Complemento", "Bairro": "Bairro",
+        "Distrito": "Distrito", "CEP": "CEP", "Municipio": "Município"
+      }
+    },
+    "areas_restricao_cetesb": {
+      "campo_nome": "RazaoSocia",
+      "campos": {"RazaoSocia": "Razão social", "Atividade": "Atividade"}
+    },
+    "assentamentos_sp": {
+      "campo_nome": "nome_proje",
+      "campos": {
+        "cd_sipra": "Código SIPRA", "uf": "UF", "nome_proje": "Nome do projeto de assentamento", "municipio": "Município",
+        "area_hecta": "Área (ha)", "capacidade": "Capacidade (famílias)", "num_famili": "Número de famílias",
+        "fase": "Fase", "data_de_cr": "Data de criação", "forma_obte": "Forma de obtenção",
+        "data_obten": "Data de obtenção", "area_calc_": "Área calculada", "sr": "Superintendência regional",
+        "descricao_": "Descrição"
+      }
+    },
+    "bem_poligono": {
+      "nome": "Bens materiais protegidos",
+      "fonte": "IPHAN",
+      "campo_nome": "identifica",
+      "campos": {
+        "id_bem": "Identificador do bem", "identifica": "Identificação do bem", "co_iphan": "Código IPHAN",
+        "no_logrado": "Logradouro", "nu_logrado": "Número", "id_naturez": "Código da natureza",
+        "ds_naturez": "Natureza do bem", "codigo_iph": "Sigla da natureza", "id_classif": "Código da classificação",
+        "ds_classif": "Classificação", "id_tipo_be": "Código do tipo de bem", "ds_tipo_be": "Tipo de bem",
+        "sg_tipo_be": "Sigla do tipo de bem", "sintese_be": "Síntese do bem", "dt_cadastr": "Data de cadastro"
+      }
+    },
+    "bens_tombados_condephaat": {
+      "campo_nome": "nome_bem_t",
+      "campos": {
+        "id": "Identificador", "nome_bem_t": "Nome do bem tombado", "processo": "Processo",
+        "link_regul": "Link da regulamentação", "observacao": "Observação",
+        "modo_produ": "Modo de produção do polígono", "produto": "Produto"
+      }
+    },
+    "bens_tombados_iphan_sp": {
+      "campo_nome": "identifica",
+      "campos": {
+        "id_bem": "Identificador do bem", "identifica": "Identificação do bem", "co_iphan": "Código IPHAN",
+        "no_logrado": "Logradouro", "nu_logrado": "Número", "id_naturez": "Código da natureza",
+        "ds_naturez": "Natureza do bem", "codigo_iph": "Sigla da natureza", "id_classif": "Código da classificação",
+        "ds_classif": "Classificação", "id_tipo_be": "Código do tipo de bem", "ds_tipo_be": "Tipo de bem",
+        "sg_tipo_be": "Sigla do tipo de bem", "sintese_be": "Síntese do bem", "dt_cadastr": "Data de cadastro"
+      }
+    },
+    "cavidades_influencia": {
+      "campo_nome": "Nome",
+      "campos": {"id": "Identificador", "Codigo_SBE": "Código SBE", "CODEX": "Código CODEX", "Nome": "Nome da cavidade"}
+    },
+    "embargos_estaduais_sigam": {
+      "campo_nome": "NumeroAuto",
+      "campos": {
+        "NumeroAuto": "Número do auto de infração", "NumeroProc": "Número do processo", "Situacao": "Situação",
+        "Fase": "Fase", "Status": "Status", "DataStatus": "Data do status", "Natureza": "Natureza",
+        "CategoriaI": "Categoria da infração", "NomeInfrac": "Nome do infrator",
+        "DescricaoI": "Descrição da infração", "DataInfrac": "Data da infração", "Municipio": "Município",
+        "AreaDegrad": "Área degradada", "AreaTotal": "Área total", "DataAtuali": "Data de atualização"
+      }
+    },
+    "embargos_ibama_ativos_sp": {
+      "campo_nome": "num_tad",
+      "campos": {
+        "origem_geo": "Origem da geometria", "seq_tad": "Sequencial do TAD", "num_tad": "Número do TAD",
+        "serie_tad": "Série do TAD", "cod_uf": "Código da UF", "uf": "UF", "cod_munici": "Código do município",
+        "municipio": "Município", "nome_imove": "Nome do imóvel", "des_locali": "Descrição da localização",
+        "nome_embar": "Nome do embargado", "cpf_cnpj_e": "CPF/CNPJ do embargado", "tipo_area": "Tipo de área",
+        "num_auto_i": "Número do auto de infração", "serie_auto": "Série do auto de infração",
+        "cod_tipo_b": "Código do bioma", "des_tipo_b": "Bioma", "operacao": "Operação",
+        "unid_contr": "Unidade de controle", "ordem_fisc": "Ordem de fiscalização", "num_proces": "Número do processo",
+        "des_tad": "Descrição do TAD", "des_infrac": "Descrição da infração", "num_longit": "Longitude",
+        "num_latitu": "Latitude", "dat_embarg": "Data do embargo", "dat_impres": "Data de impressão",
+        "dat_ult_al": "Data da última alteração", "st_area_sh": "Área da geometria na origem",
+        "st_perimet": "Perímetro da geometria na origem"
+      }
+    },
+    "malha_rodoviaria": {
+      "nome": "Malha rodoviária",
+      "campo_nome": "Rodovia",
+      "campos": {
+        "Rodovia": "Rodovia", "TipoRodovi": "Tipo de rodovia", "Orientacao": "Orientação", "Origem": "Origem",
+        "Municipio": "Município", "CodRegiona": "Código da diretoria regional", "SedeRegion": "Sede regional",
+        "Residencia": "Residência", "SedeReside": "Sede da residência", "KmInicial": "Km inicial",
+        "KmFinal": "Km final", "Extensao": "Extensão", "DescricaoI": "Descrição do início",
+        "DescricaoF": "Descrição do fim", "Jurisdicao": "Jurisdição", "Administra": "Administração",
+        "Conservado": "Conservado por", "TipoPista": "Tipo de pista", "Sobreposic": "Sobreposição",
+        "PerimetroU": "Perímetro urbano", "DataInicio": "Data de início", "Denominaca": "Denominação",
+        "Legislacao": "Legislação", "TransfMuni": "Transferência ao município", "Observacao": "Observação",
+        "Subtrecho": "Subtrecho", "AnoImplant": "Ano de implantação", "Status": "Status",
+        "DataCriaca": "Data de criação", "DataAtuali": "Data de atualização"
+      }
+    },
+    "manguezais_ibama_sp": {
+      "campo_nome": "nome",
+      "campos": {
+        "objectid": "Identificador do objeto", "nome": "Nome", "bioma": "Bioma", "area_ha": "Área (ha)",
+        "cd_uf": "Código da UF", "nm_uf": "UF", "sigla": "Sigla da UF", "nm_regiao": "Região"
+      }
+    },
+    "quilombos_sp": {
+      "campo_nome": "nm_comunid",
+      "campos": {
+        "cd_quilomb": "Código do território", "cd_sr": "Superintendência regional", "nr_process": "Número do processo",
+        "nm_comunid": "Nome da comunidade", "nm_municip": "Município", "cd_uf": "Código da UF",
+        "nr_familia": "Número de famílias", "dt_titulac": "Data de titulação", "nr_area_ha": "Área (ha)",
+        "nr_perimet": "Perímetro", "cd_sipra": "Código SIPRA", "ob_descric": "Observação",
+        "dt_decreto": "Data do decreto", "tp_levanta": "Tipo de levantamento", "nr_escalao": "Escala",
+        "area_calc_": "Área calculada", "perimetro_": "Perímetro calculado", "esfera": "Esfera", "fase": "Fase",
+        "responsave": "Responsável"
+      }
+    },
+    "sitios_arqueologicos": {
+      "campo_nome": "identifica",
+      "campos": {
+        "objectid": "Identificador do objeto", "id_bem": "Identificador do bem", "identifica": "Identificação do bem",
+        "co_iphan": "Código IPHAN", "no_logrado": "Logradouro", "nu_logrado": "Número",
+        "id_naturez": "Código da natureza", "ds_naturez": "Natureza do bem", "codigo_iph": "Sigla da natureza",
+        "id_classif": "Código da classificação"
+      }
+    },
+    "terras_indigenas_sp": {
+      "campo_nome": "terrai_nom",
+      "campos": {
+        "gid": "Identificador", "terrai_cod": "Código da terra indígena", "terrai_nom": "Nome da terra indígena",
+        "etnia_nome": "Etnia", "municipio_": "Município", "uf_sigla": "UF", "superficie": "Superfície",
+        "fase_ti": "Fase", "modalidade": "Modalidade", "reestudo_t": "Reestudo", "cr": "Coordenação regional",
+        "faixa_fron": "Faixa de fronteira", "undadm_cod": "Código da unidade administrativa",
+        "undadm_nom": "Unidade administrativa", "undadm_sig": "Sigla da unidade administrativa",
+        "data_atual": "Data de atualização", "epsg": "EPSG"
+      }
+    },
+    "ucs_protecao_integral_sp": {
+      "nome": "Unidades de Conservação de Proteção Integral",
+      "fonte": "CNUC/MMA via IBAMA PAMGIA",
+      "campo_nome": "nome_uc",
+      "campos": {
+        "objectid": "Identificador do objeto", "uc_id": "Identificador da UC", "cd_cnuc": "Código CNUC",
+        "nome_uc": "Nome da UC", "cria_ano": "Ano de criação", "cria_ato": "Ato de criação",
+        "pl_manejo": "Plano de manejo", "esfera": "Esfera", "uf": "UF", "municipio": "Município",
+        "org_gestor": "Órgão gestor", "grupo": "Grupo", "categoria": "Categoria de manejo",
+        "cat_iucn": "Categoria IUCN", "situacao": "Situação", "dt_sync": "Data de sincronização",
+        "shape_Leng": "Perímetro da geometria na origem", "shape_Area": "Área da geometria na origem"
+      }
+    },
+    "ucs_uso_sustentavel_sp": {
+      "nome": "Unidades de Conservação de Uso Sustentável",
+      "fonte": "CNUC/MMA via IBAMA PAMGIA",
+      "campo_nome": "nome_uc",
+      "campos": {
+        "objectid": "Identificador do objeto", "uc_id": "Identificador da UC", "cd_cnuc": "Código CNUC",
+        "nome_uc": "Nome da UC", "cria_ano": "Ano de criação", "cria_ato": "Ato de criação",
+        "pl_manejo": "Plano de manejo", "esfera": "Esfera", "uf": "UF", "municipio": "Município",
+        "org_gestor": "Órgão gestor", "grupo": "Grupo", "categoria": "Categoria de manejo",
+        "cat_iucn": "Categoria IUCN", "situacao": "Situação", "dt_sync": "Data de sincronização",
+        "shape_Leng": "Perímetro da geometria na origem", "shape_Area": "Área da geometria na origem"
+      }
+    },
+    "uf_sp": {
+      "nome": "Limite do Estado de São Paulo",
+      "campo_nome": "nm_uf",
+      "campos": {
+        "cd_uf": "Código da UF", "nm_uf": "Nome da UF", "area_ha": "Área (ha)", "area_km2": "Área (km²)",
+        "cd_regia": "Código da região", "nm_regia": "Região", "sigla_rg": "Sigla da região",
+        "sigla_uf": "Sigla da UF", "perimetro_": "Perímetro"
+      }
+    },
+    "vwm_area_risco_escorregamento_ig_2014_pol_polygon": {
+      "nome": "Áreas de risco de escorregamento",
+      "fonte": "Instituto Geológico/SEMIL — DataGEO",
+      "campo_nome": "Cod_Area",
+      "campos": {"Cod_Area": "Código da área", "Risco": "Grau de risco", "Municipio": "Município", "Ano": "Ano"}
+    },
+    "vwm_area_risco_inundacao_ig_2014_pol_polygon": {
+      "nome": "Áreas de risco de inundação",
+      "fonte": "Instituto Geológico/SEMIL — DataGEO",
+      "campo_nome": "Cod_area",
+      "campos": {"Cod_area": "Código da área", "Risco": "Grau de risco", "Municipio": "Município", "Ano": "Ano"}
+    }
+  }
+}

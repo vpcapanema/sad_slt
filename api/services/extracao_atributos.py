@@ -90,6 +90,7 @@ def iniciar(payload, user):
     opcoes = {chave: bool((payload.get('opcoes') or {}).get(chave, valor))
               for chave, valor in OPCOES_PADRAO.items()}
     params = {'camada_id':input_id,'camada_ids':sorted(used),'categorias':selected,'responsavel':str(user.id),
+              'responsavel_nome':getattr(user,'nome',None),
               'operacao':payload['operacao'],'opcoes':opcoes,'input_nome':layers[input_id]['nome'],
               'nome_saida':str(payload.get('nome_saida') or '').strip()[:200]}
     ident = ciclo.iniciar('extracao_atributos',params,str(user.id))
@@ -137,13 +138,14 @@ def _execute(ident, params):
                       criado_em=datetime.now(timezone.utc).isoformat(),gdal=gdal.VersionInfo('RELEASE_NAME'))
         progress('Registrando a procedência da entrada e das bases')
         entrada = _procedencia(params['camada_id'],params['input_nome'],source)
-        bases = [{**_procedencia(b['id'],b['nome'],b['frame']),'categoria':c['nome']}
+        bases = [{**_procedencia(b['id'],b['nome'],b['frame']),'categoria':c['nome'],'categoria_id':c['id']}
                  for c in categories for b in c['camadas']]
         progress('Gerando o pacote de saída: GeoPackage, relatórios PDF, XLSX e CSV')
         from api.services import extracao_atributos_pacote as pacote_servico
         with _lock: etapas = list(_progress.get(ident) or [])
         fim = datetime.now(timezone.utc)
         processamento = {'execucao_id':ident,'nome_saida':nome_saida,'responsavel':params.get('responsavel'),
+                         'responsavel_nome':params.get('responsavel_nome'),
                          'operacao':params['operacao'],'opcoes':params.get('opcoes'),
                          'iniciado_em':inicio.isoformat(),'finalizado_em':fim.isoformat(),
                          'duracao_segundos':(fim-inicio).total_seconds(),'entrada':entrada,'bases':bases,
