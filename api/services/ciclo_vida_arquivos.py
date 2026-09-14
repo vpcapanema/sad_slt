@@ -104,6 +104,11 @@ def iniciar(operacao: str, parametros: dict, responsavel: str | None = None) -> 
     snapshots = []
     with get_connection() as conn:
         for ref in referencias(parametros):
+            if ref.startswith('storage:'):
+                # Camada lida direto do storage (SFTPGo): não há registro nem
+                # arquivo de resultado no banco para travar ou conferir.
+                snapshots.append({'recurso_id': ref, 'origem': 'storage'})
+                continue
             row = conn.execute('''SELECT a.id,a.sha256,a.caminho FROM geoprocessamento.arquivo_resultado a
                 JOIN geoprocessamento.camada_processada c ON c.id=a.camada_id
                 WHERE c.recurso_sessao_id=%s FOR UPDATE OF a''', (ref,)).fetchone()

@@ -45,6 +45,8 @@ def arquivo(chave: str) -> Path:
 
 
 def geradas_pelo_plugin(ids: list[str]) -> set[str]:
+    # Camadas do storage não passam pelo banco, logo não vêm do gerador municipal.
+    ids = [ident for ident in ids if not str(ident).startswith('storage:')]
     if not ids:
         return set()
     with get_connection() as conn:

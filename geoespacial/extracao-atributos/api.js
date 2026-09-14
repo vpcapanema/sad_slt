@@ -22,7 +22,7 @@ export const adaptador={
   listarCatalogo:()=>json('/extracao-atributos/catalogo'),
   async carregarCamada(layer){
     if(!layer.arquivo)throw new Error('Selecione o arquivo no storage para visualizar a camada.');
-    const file=await post('/extracao-atributos/arquivo-mapa',{arquivo:layer.arquivo});
+    const file=await post('/extracao-atributos/arquivo-mapa',{arquivo:layer.arquivo,id:layer.id});
     Object.assign(layer,file);return file.geojson;
   },
   async executar(request,aoAtualizar) {

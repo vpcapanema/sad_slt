@@ -86,6 +86,38 @@ def test_extensao_e_tile_saem_do_arquivo(storage):
     assert storage_geoespacial.tile("base-geoespacial/vetor/uf_sp.gpkg", "uf", 6, longe.x, longe.y) == b""
 
 
+def test_explorador_navega_pastas_e_lista_cada_camada(storage):
+    raiz = storage_geoespacial.navegar("")
+    assert raiz["caminho"] == "base-geoespacial" and raiz["pai"] is None
+    assert [pasta["caminho"] for pasta in raiz["pastas"]] == ["base-geoespacial/raster", "base-geoespacial/vetor"]
+
+    vetor = storage_geoespacial.navegar("base-geoespacial/vetor")
+    assert vetor["pai"] == "base-geoespacial"
+    assert [c["id"] for c in vetor["arquivos"]] == [
+        "storage:base-geoespacial/vetor/duas.gpkg::rios",
+        "storage:base-geoespacial/vetor/duas.gpkg::lagos",
+        "storage:base-geoespacial/vetor/uf_sp.gpkg::uf",
+    ], "o txt fica fora e o GeoPackage com duas camadas vira duas entradas"
+    with pytest.raises(ValueError):
+        storage_geoespacial.navegar("../fora")
+
+
+def test_extracao_le_a_camada_do_arquivo_sem_banco(storage):
+    frame = storage_geoespacial.carregar_gdf("storage:base-geoespacial/vetor/duas.gpkg::lagos")
+    assert len(frame) == 1 and frame.crs.to_epsg() == 4674
+    assert frame.iloc[0]["nome"] == "São Paulo"
+
+    mapa = storage_geoespacial.ler_para_mapa("storage:base-geoespacial/vetor/uf_sp.gpkg::uf")
+    assert mapa["id"] == "storage:base-geoespacial/vetor/uf_sp.gpkg::uf"
+    assert mapa["arquivo"] == "base-geoespacial/vetor/uf_sp.gpkg" and mapa["revisao"]
+    assert [campo["nome"] for campo in mapa["campos"]] == ["nome"]
+    assert len(mapa["geojson"]["features"]) == 1
+
+    for invalido in ("0f9c2a", "storage:../x.gpkg::a"):
+        with pytest.raises(ValueError):
+            storage_geoespacial.carregar_gdf(invalido)
+
+
 def test_pagina_renomeada_e_rota_antiga_redireciona():
     client = TestClient(app)
     antiga = client.get("/restrict/geoespacial/visualizador-insumos-geoespaciais/", follow_redirects=False)

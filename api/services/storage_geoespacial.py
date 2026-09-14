@@ -11,6 +11,7 @@ sempre relativo à raiz do projeto.
 """
 from __future__ import annotations
 
+import json
 import os
 import uuid
 from functools import lru_cache
@@ -130,6 +131,107 @@ def arvore(raiz: str) -> dict[str, Any]:
     if not pasta.is_dir():
         return {"nome": raiz, "caminho": raiz, "grupos": [], "camadas": [], "disponivel": False}
     return {**_grupo(pasta, raiz), "disponivel": True}
+
+
+PREFIXO_ID = "storage:"
+
+
+def separar_id(ident: str) -> tuple[str, str | None]:
+    """`storage:<caminho>::<camada>` -> (caminho, camada)."""
+    texto = str(ident or "")
+    if not texto.startswith(PREFIXO_ID):
+        raise ValueError("Identificador de camada do storage inválido")
+    caminho, _, camada = texto[len(PREFIXO_ID):].partition("::")
+    return caminho, camada or None
+
+
+def camadas_vetoriais(raiz: str = "base-geoespacial") -> list[dict[str, Any]]:
+    """Camadas vetoriais legíveis de uma raiz, em qualquer nível de pasta."""
+    def coletar(grupo: dict[str, Any]) -> list[dict[str, Any]]:
+        return [*grupo["camadas"], *(c for filho in grupo["grupos"] for c in coletar(filho))]
+    return [c for c in coletar(arvore(raiz)) if c["tipo"] == "vetor" and not c.get("erro")]
+
+
+def navegar(caminho: str = "") -> dict[str, Any]:
+    """Uma pasta do storage: subpastas e camadas vetoriais, para o explorador."""
+    relativo = str(caminho or "").strip().replace("\\", "/").strip("/") or RAIZES[0]
+    partes = PurePosixPath(relativo).parts
+    if ".." in partes or partes[0] not in RAIZES:
+        raise ValueError("Pasta do storage inválida")
+    pasta = diretorio_storage().joinpath(*partes)
+    if not pasta.is_dir():
+        raise FileNotFoundError("Pasta não encontrada no storage")
+    pastas, arquivos = [], []
+    for item in sorted(pasta.iterdir(), key=lambda p: p.name.lower()):
+        if item.name.startswith("."):
+            continue
+        item_relativo = f"{relativo}/{item.name}"
+        if item.is_dir():
+            pastas.append({"nome": item.name, "caminho": item_relativo})
+        elif item.suffix.lower() in EXTENSOES_VETOR:
+            arquivos.extend({**c, "formato": item.suffix.lstrip(".").upper()}
+                            for c in _itens_do_arquivo(item, item_relativo) if not c.get("erro"))
+    pai = PurePosixPath(relativo).parent.as_posix() if len(partes) > 1 else None
+    return {"caminho": relativo, "pai": pai, "pastas": pastas, "arquivos": arquivos}
+
+
+def carregar_gdf(ident: str):
+    """Camada do storage como GeoDataFrame, no CRS e na dimensão das camadas do banco."""
+    import geopandas as gpd
+    import shapely
+
+    caminho, camada = separar_id(ident)
+    arquivo = resolver(caminho)
+    if arquivo.suffix.lower() not in EXTENSOES_VETOR:
+        raise ValueError("A camada não é vetorial")
+    frame = gpd.read_file(arquivo, layer=camada, engine="pyogrio")
+    if frame.crs is None:
+        raise ValueError(f"A camada {arquivo.name} não informa seu CRS")
+    if frame.crs.to_epsg() != 4674:
+        frame = frame.to_crs("EPSG:4674")
+    frame.geometry = shapely.force_2d(frame.geometry.values)
+    return frame
+
+
+def ler_para_mapa(ident: str) -> dict[str, Any]:
+    """Camada do storage no formato que a bancada da extração usa para o mapa."""
+    caminho, camada = separar_id(ident)
+    arquivo = resolver(caminho)
+    if arquivo.suffix.lower() not in EXTENSOES_VETOR:
+        raise ValueError("A camada não é vetorial")
+    estado = arquivo.stat()
+    ds = gdal.OpenEx(str(arquivo), gdal.OF_VECTOR | gdal.OF_READONLY)
+    lyr = ds.GetLayerByName(camada) if camada else ds.GetLayer(0)
+    if lyr is None:
+        raise FileNotFoundError("Camada não encontrada no arquivo")
+    srs = lyr.GetSpatialRef()
+    if srs is None:
+        raise ValueError("O arquivo não informa seu CRS. Defina o CRS antes de visualizar.")
+    memoria = f"/vsimem/sicard_storage_mapa_{uuid.uuid4().hex}.geojson"
+    try:
+        saida = gdal.VectorTranslate(
+            memoria, ds, format="GeoJSON", layers=[lyr.GetName()], dstSRS="EPSG:4326", preserveFID=True,
+            layerCreationOptions=["RFC7946=YES", "COORDINATE_PRECISION=7"],
+        )
+        saida = None
+        features = json.loads(bytes(gdal.VSIGetMemFileBuffer_unsafe(memoria)))["features"]
+    finally:
+        gdal.Unlink(memoria)
+    features = [feature for feature in features if feature.get("geometry")]
+    for feature in features:
+        feature["id"] = str(feature.get("id"))
+    if not features:
+        raise ValueError("A camada não contém geometrias disponíveis para visualização.")
+    definicao = lyr.GetLayerDefn()
+    return {
+        "id": ident, "nome": arquivo.stem if ds.GetLayerCount() == 1 else lyr.GetName(),
+        "vinculos": 1, "codificacao": "declarada pelo arquivo", "arquivo": caminho,
+        "origem_geometria": "storage", "revisao": f"{estado.st_mtime_ns}-{estado.st_size}",
+        "crs_arquivo": srs.ExportToWkt(),
+        "campos": [{"nome": definicao.GetFieldDefn(i).GetName(), "tipo": definicao.GetFieldDefn(i).GetTypeName()}
+                   for i in range(definicao.GetFieldCount())],
+        "geojson": {"type": "FeatureCollection", "features": features},
+    }
 
 
 def _abrir_camada(caminho: str, camada: str | None) -> tuple[gdal.Dataset, ogr.Layer]:

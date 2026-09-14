@@ -9,7 +9,7 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/restrict/hierarquizacao/platform-map.css?v=20260814-1">
-  <link rel="stylesheet" href="/restrict/index.css?v=20260819-ahp-admin" />
+  <link rel="stylesheet" href="/restrict/index.css?v=20260914-storage" />
   <link
       rel="stylesheet"
       href="/assets/vendor/fontawesome/css/all.min.css"
@@ -181,6 +181,9 @@
               {{ link_card('/restrict/admin/?menu=geo', 'fa-solid fa-earth-americas', 'Geografia', 'navy') }}
               {{ link_card('/restrict/admin/?menu=geoprocessamento', 'fa-solid fa-layer-group', 'Geoprocessamento', 'navy') }}
               {{ link_card('/restrict/admin/?menu=hierarquizacao_demandas', 'fa-solid fa-ranking-star', 'Hierarquização de Demandas', 'navy') }}
+              {# SFTPGo (contêiner sicard_storage), publicado pelo Nginx fora da app: caminho fixo, sem reescrita de sub-rota. #}
+              {{ link_card('/sicard/storage/web/admin/login', 'fa-solid fa-user-shield', 'Storage · Administração de acesso', 'navy') }}
+              {{ link_card('/sicard/storage/web/client/login', 'fa-solid fa-folder-open', 'Storage · Gestão de dados geoespaciais', 'navy') }}
             </div>
           </section>
         </div>

@@ -163,6 +163,9 @@ def gerar(codigo, payload, nome, user):
 
 
 def carregar_para_extracao(ident):
+    if str(ident).startswith('storage:'):
+        from api.services.storage_geoespacial import carregar_gdf
+        return carregar_gdf(ident)
     with get_connection() as conn:
         row = conn.execute("SELECT metadados FROM geoprocessamento.camada_importada WHERE recurso_sessao_id=%s", (ident,)).fetchone()
     metadata = (row or {}).get('metadados') or {}

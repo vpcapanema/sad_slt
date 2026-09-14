@@ -26,12 +26,17 @@ class NovaPasta(BaseModel):
 
 class ArquivoMapa(BaseModel):
     arquivo: str = Field(min_length=1,max_length=1000)
+    # Obrigatório para camadas do storage, cujo arquivo pode ter várias camadas.
+    id: str | None = Field(default=None,max_length=1200)
 
 
 @router.post('/arquivo-mapa')
 def arquivo_mapa(payload: ArquivoMapa):
-    from api.services.visualizacao_arquivo import ler_arquivo
     try:
+        if payload.id and payload.id.startswith('storage:'):
+            from api.services.storage_geoespacial import ler_para_mapa
+            return ler_para_mapa(payload.id)
+        from api.services.visualizacao_arquivo import ler_arquivo
         return ler_arquivo(payload.arquivo)
     except FileNotFoundError as exc:
         raise HTTPException(404,str(exc)) from exc

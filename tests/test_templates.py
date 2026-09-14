@@ -210,6 +210,9 @@ def test_all_internal_page_links_resolve() -> None:
                 continue
             if urlparse(reference).scheme:
                 continue
+            # Storage (SFTPGo): publicado pelo Nginx da VM, fora desta aplicação.
+            if reference.startswith("/sicard/storage/"):
+                continue
             links.add(urljoin(page, reference))
 
     for link in sorted(links):

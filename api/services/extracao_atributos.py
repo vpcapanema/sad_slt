@@ -37,6 +37,14 @@ def catalogo():
     layers = [{'id':r['recurso_sessao_id'],'nome':r['nome'],'tipo':'vetor','crs':r['crs'],
                'origem':r['categoria'],'arquivo':caminho_arquivo(r)}
               for r in repo.listar() if r['tipo']=='vetor' and r['recurso_sessao_id'] not in hidden]
+    # Bases geoespaciais do storage: lidas do arquivo na execução, sem registro no banco.
+    from api.services import storage_geoespacial
+    try:
+        layers += [{'id':c['id'],'nome':c['nome'],'tipo':'vetor','crs':c.get('crs'),
+                    'origem':'storage','arquivo':c['arquivo']}
+                   for c in storage_geoespacial.camadas_vetoriais()]
+    except OSError:
+        _log.exception('Storage indisponível ao montar o catálogo da extração')
     return {'categorias':categories,'camadas':layers}
 
 
