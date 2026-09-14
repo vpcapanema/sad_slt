@@ -20,8 +20,11 @@ def test_catalogo_oferece_rais_e_infosiga_por_municipio():
     rais = [a for a in catalogo if a['source'] == 'MTE / RAIS']
     infosiga = [a for a in catalogo if a['source'] == 'InfoSiga SP']
     assert {a['field'] for a in rais} == {
-        'rais_emprego_medio_formal_2024', 'rais_salario_medio_2024',
+        f'rais_{indicador}_{ano}'
+        for ano in range(2022, 2025)
+        for indicador in ('emprego_medio_formal', 'salario_medio')
     }
+    assert {a['year'] for a in rais} == {2022, 2023, 2024}
     assert len(infosiga) == 22
     assert {a['year'] for a in infosiga} == set(range(2015, 2026))
     assert {a['theme'] for a in infosiga} == {'seguranca_viaria'}
