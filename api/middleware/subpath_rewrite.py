@@ -13,7 +13,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-_REWRITE_PREFIXES = ("/assets", "/api", "/public", "/restrict", "/data", "/favicon.ico")
+# "/config/" leva a barra de propósito: sem ela, textos como "/configuracao/"
+# (comparados com location.pathname no AHP) também seriam prefixados.
+_REWRITE_PREFIXES = ("/assets", "/api", "/public", "/restrict", "/data", "/config/", "/favicon.ico")
 _REWRITE_CONTENT_TYPES = (
     "text/html",
     "text/css",

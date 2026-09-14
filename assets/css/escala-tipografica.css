@@ -69,7 +69,27 @@
 /* Teste de escala: a página inteira a 90%. Diferente de transform:scale, zoom
    refaz o layout — as quebras de linha e as colunas se reacomodam de verdade.
    Linha isolada de propósito: é o experimento, some com uma linha só. */
-body.escala-revisada { zoom: 0.9; }
+body.escala-revisada { --escala: 0.9; zoom: var(--escala); }
+
+/* Com zoom, 100vh passa a ocupar só 90% da janela: a grade terminava antes do
+   fim da tela e o rodapé subia junto. Estas regras devolvem às alturas presas
+   à janela o tamanho real, nas duas bases que usam a escala. Se o teste acima
+   sair, --escala deixa de existir e o reserva 1 devolve os 100vh originais. */
+body.escala-revisada.layout-with-sidebar,
+body.escala-revisada .layout-with-sidebar-grid { height: calc(100vh / var(--escala, 1)); }
+body.escala-revisada.pagina-painel-mapa,
+body.escala-revisada .estrutura-painel-mapa,
+body.escala-revisada.pagina-conteudo { min-height: calc(100vh / var(--escala, 1)); }
+body.escala-revisada .admin-area-shell { min-height: calc(100vh / var(--escala, 1) - 160px); }
+
+@media (max-width: 900px) {
+  /* Na tela estreita o layout cresce com o conteúdo (sidebar-layout.css). */
+  body.escala-revisada.layout-with-sidebar,
+  body.escala-revisada .layout-with-sidebar-grid {
+    height: auto;
+    min-height: calc(100vh / var(--escala, 1));
+  }
+}
 
 /* ------------------------------------------------------------------ *
  * MOCAD — mesmo conjunto de tamanhos, aplicado ao vocabulário próprio
