@@ -42,13 +42,15 @@ services:
       SFTPGO_HTTPD__BINDINGS__0__LANGUAGES: "pt,en"
       # Identidade visual do SICARD. Caminhos relativos a /static; os arquivos
       # ficam em ./static/sicard e o CSS só redefine as cores do tema.
-      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_CLIENT__NAME: "SICARD Storage"
-      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_CLIENT__SHORT_NAME: "SICARD"
+      # O nome curto de cada área aparece como subtítulo no cartão de login e o
+      # nome vai no título da aba: é o que diferencia as duas páginas.
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_CLIENT__NAME: "SICARD Storage · Gestão de dados"
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_CLIENT__SHORT_NAME: "Gestão de dados"
       SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_CLIENT__LOGO_PATH: "/sicard/logo.png"
       SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_CLIENT__FAVICON_PATH: "/sicard/favicon.png"
       SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_CLIENT__EXTRA_CSS: "/sicard/cores.css"
-      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_ADMIN__NAME: "SICARD Storage"
-      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_ADMIN__SHORT_NAME: "SICARD"
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_ADMIN__NAME: "SICARD Storage · Administração"
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_ADMIN__SHORT_NAME: "Administração"
       SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_ADMIN__LOGO_PATH: "/sicard/logo.png"
       SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_ADMIN__FAVICON_PATH: "/sicard/favicon.png"
       SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_ADMIN__EXTRA_CSS: "/sicard/cores.css"

@@ -140,12 +140,14 @@
   box-shadow: 0 0 0 1px #fff, 0 0 0 0.25rem var(--bs-focus-ring-color);
 }
 
-/* Logo do SICARD sem o nome ao lado.
- * Os templates escrevem o nome curto junto do logo, pensando no logo pequeno do
- * SFTPGo. O logo do SICARD já traz o nome e é largo: o texto ficava por cima.
+/* Logo do SICARD e nome curto da área.
+ * Os templates escrevem o nome curto ao lado do logo, pensando no logo pequeno
+ * do SFTPGo. O logo do SICARD já traz o nome e é largo: o texto ficava por cima.
  * Três padrões de marcação, conferidos no SFTPGo 2.7.5. */
 
-/* 1. Duas colunas (login, 2FA, senha, login de compartilhamento). */
+/* 1. Cartões em duas colunas (login, 2FA, senha, login de compartilhamento):
+ * logo na linha inteira e, abaixo dele, o nome curto como subtítulo da área
+ * ("Administração" ou "Gestão de dados"). */
 .row > .col-5:has(img[alt="Logo"]) {
   flex: 0 0 100%;
   max-width: 100%;
@@ -153,7 +155,23 @@
 }
 
 .row > .col-5:has(img[alt="Logo"]) + .col-7 {
-  display: none;
+  flex: 0 0 100%;
+  max-width: 100%;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.row > .col-5:has(img[alt="Logo"]) + .col-7 > :is(h1, a) {
+  display: inline-block;
+  margin: 0 !important;
+  padding: 0.3rem 0.9rem;
+  border-radius: 999px;
+  background-color: var(--bs-primary-light);
+  color: var(--bs-primary) !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 /* 2. Nome na mesma linha (mensagem, envio e download de compartilhamento). */
