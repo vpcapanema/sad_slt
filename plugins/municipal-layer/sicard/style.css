@@ -15,7 +15,6 @@
 .ea-municipal-name { display:flex; align-items:center; gap:.75rem; padding:1.25rem 1.5rem 0; font-size:.74rem; font-weight:650; letter-spacing:.04em; text-transform:uppercase; color:var(--pli-deep,#003b5a) }
 .ea-municipal-name input { flex:1; max-width:600px; min-height:38px; padding:.5rem .625rem; border:1px solid #bfcbd7; border-radius:4px; background:#fff; color:#243447; font:400 .82rem/1.5 "Roboto",Arial,sans-serif; text-transform:none; letter-spacing:0 }
 .ea-municipal-name input:focus-visible { outline:3px solid #5ba5df; outline-offset:3px }
-.ea-municipal-help { margin:.75rem 1.5rem 0; padding:.75rem; border-left:3px solid #6f9fbb; background:#f1f6fa; color:#526d80; font:400 .73rem/1.6 "Roboto",Arial,sans-serif }
 
 .ea-municipal-dialog .mlb { margin:0; max-width:none; background:transparent; padding:1.25rem 1.5rem 1.5rem }
 /* O título da janela já nomeia a operação; o cabeçalho interno vira apoio. */
@@ -28,6 +27,5 @@
   .ea-municipal-header { padding:.75rem 1rem }
   .ea-municipal-name { align-items:stretch; flex-direction:column; padding:1rem 1rem 0 }
   .ea-municipal-name input { max-width:none }
-  .ea-municipal-help { margin:.75rem 1rem 0 }
   .ea-municipal-dialog .mlb { padding:1rem }
 }

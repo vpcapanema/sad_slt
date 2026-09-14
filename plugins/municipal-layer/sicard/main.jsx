@@ -44,8 +44,7 @@ export function abrirMunicipal({category,apiBase,onGenerated}) {
       finally{working=false;setBusy(false);}
     }
     return <>
-      <header className="ea-municipal-header"><div><h2>Camada municipal · {category.nome}</h2><p>{category.conceito}</p></div><button type="button" aria-label="Fechar gerador municipal" disabled={busy} onClick={close}>×</button></header>
-      <p className="ea-municipal-help">Escolha os atributos que representam esta categoria. Ao gerar, a camada será salva no acervo e adicionada às bases da análise.</p>
+      <header className="ea-municipal-header"><div><h2>Camada municipal · {category.nome}</h2></div><button type="button" aria-label="Fechar gerador municipal" disabled={busy} onClick={close}>×</button></header>
       <MunicipalLayerBuilder client={client} download={false} onExport={saved} categoriaNome={category.nome}/>
     </>;
   }

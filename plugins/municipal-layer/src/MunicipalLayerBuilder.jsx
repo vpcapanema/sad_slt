@@ -34,6 +34,18 @@ const themeLabel = value => {
   const t = String(value).replace(/^\d+_/, '').replaceAll('_', ' ');
   return t.charAt(0).toLocaleUpperCase('pt-BR') + t.slice(1);
 };
+const SOURCE_LABEL = {
+  'IBGE · Censo 2022':'IBGE — Censo Demográfico 2022',
+  'IBGE / Cadastro Central de Empresas':'IBGE — Cadastro Central de Empresas',
+  'IBGE / Finanças públicas':'IBGE — Finanças Públicas',
+  'IBGE / Produto Interno Bruto dos Municípios':'IBGE — Produto Interno Bruto dos Municípios',
+  'IBGE / Índice de Desenvolvimento da Educação Básica':'IBGE — Índice de Desenvolvimento da Educação Básica',
+  'Ipeadata / Atlas do Desenvolvimento Humano (Censo Demográfico)':'Ipea — Atlas do Desenvolvimento Humano',
+  'InfoSiga SP':'Detran-SP — InfoSiga',
+  'MTE / RAIS':'MTE — RAIS',
+  'Seade · IPDM':'Fundação Seade — IPDM',
+};
+const sourceLabel = value => SOURCE_LABEL[value] || String(value).replace(/\s*[·/]\s*/g, ' — ');
 /** "Sexo: Homens | Idade: Total" -> {Sexo:'Homens', Idade:'Total'}: base dos filtros dinâmicos. */
 function readFacets(attribute) {
   let categories = '';
@@ -143,11 +155,11 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
     finally{if(mounted.current)setBusy(false);}
   }
   return <section className={`mlb ${className}`} aria-label="Gerador de camada municipal">
-    <header className="mlb-header"><div><span className="mlb-eyebrow">SÃO PAULO / DADOS MUNICIPAIS</span><h1>Monte sua camada</h1><p>Escolha os indicadores e receba uma camada vetorial com os atributos incorporados.</p></div><div className="mlb-geometry"><strong>645 municípios</strong><span>Malha IBGE 2022 · SIRGAS 2000</span></div></header>
+    <header className="mlb-header"><div><h1>Monte sua camada</h1><span className="mlb-eyebrow">SÃO PAULO - DADOS MUNICIPAIS</span><p>Selecione fontes, períodos, temas e atributos para compor uma única camada vetorial dos 645 municípios de São Paulo. Os dados escolhidos serão incorporados à tabela de atributos da malha municipal do IBGE de 2022.</p></div><div className="mlb-geometry"><strong>645 municípios</strong><span>Malha IBGE 2022 · SIRGAS 2000</span></div></header>
     {error && <div className="mlb-error" role="alert">{error}</div>}
     {!catalog ? <p role="status">{error ? 'Não foi possível carregar o catálogo. Verifique a API configurada.' : 'Carregando catálogo…'}</p> : <div className="mlb-layout">
       <main className="mlb-panel"><h2>1. Escolha os dados</h2><div className="mlb-filters">
-        <label>Fonte<select value={source} onChange={e=>{setSource(e.target.value);setTheme('');if(e.target.value===ALL_SOURCES)setYear('');}}><option value={ALL_SOURCES}>Todas</option>{sources.map(s=><option key={s}>{s}</option>)}</select></label>
+        <label>Fonte<select value={source} onChange={e=>{setSource(e.target.value);setTheme('');if(e.target.value===ALL_SOURCES)setYear('');}}><option value={ALL_SOURCES}>Todas as fontes</option>{sources.map(s=><option key={s} value={s}>{sourceLabel(s)}</option>)}</select></label>
         <label>Ano de referência<select value={allYears ? '' : activeYear ?? ''} onChange={e=>{setYear(e.target.value);setTheme('');}}>{allSources && <option value="">Todos os anos</option>}{years.map(y=><option key={y}>{y}</option>)}</select></label>
         <label>Tema<select value={theme} onChange={e=>setTheme(e.target.value)}><option value="">Todos os temas</option>{themes.map(t=><option key={t} value={t}>{themeLabel(t)}</option>)}</select></label>
       </div><div className="mlb-search"><label>Buscar atributo<input type="search" value={search} placeholder="Ex.: renda, RAIS, sinistros…" onChange={e=>setSearch(e.target.value)}/></label>
