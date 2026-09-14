@@ -19,3 +19,77 @@
 .app-nav .app-nav-bloco:hover {
   background: rgba(255, 255, 255, 0.24);
 }
+
+/*
+  Menus suspensos que agrupam paginas da mesma funcionalidade. Reaproveitam
+  .app-nav-group/.app-nav-submenu (app.css); o botao imita o link da navbar.
+  Abrem no hover, no foco do teclado e no clique (classe .aberto, para toque).
+*/
+.app-nav .app-nav-grupo-botao {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pli-white, #fff);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.app-nav .app-nav-grupo-modulo:hover > .app-nav-grupo-botao,
+.app-nav .app-nav-grupo-modulo:focus-within > .app-nav-grupo-botao,
+.app-nav .app-nav-grupo-modulo.aberto > .app-nav-grupo-botao,
+.app-nav .app-nav-grupo-modulo.active > .app-nav-grupo-botao {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.app-nav .app-nav-grupo-modulo.active > .app-nav-grupo-botao {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.app-nav .app-nav-grupo-botao:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.75);
+  outline-offset: 2px;
+}
+
+.app-nav-grupo-modulo .app-nav-submenu {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Ponte no vao entre botao e menu: sem ela o hover fecha o menu no caminho. */
+.app-nav-grupo-modulo .app-nav-submenu::before {
+  content: "";
+  position: absolute;
+  top: -0.45rem;
+  right: 0;
+  left: 0;
+  height: 0.45rem;
+}
+
+.app-nav-grupo-modulo.aberto .app-nav-submenu {
+  display: block;
+}
+
+/* A navbar fica encostada a direita: os ultimos menus abrem para a esquerda. */
+.app-nav-grupo-modulo:nth-last-child(-n + 2) .app-nav-submenu {
+  right: 0;
+  left: auto;
+}
+
+.app-nav-grupo-modulo .app-nav-submenu a.active {
+  background: rgba(255, 255, 255, 0.15);
+  font-weight: 700;
+}
+
+/* Em telas estreitas a navbar rola na horizontal, o que cortaria os menus. */
+@media (max-width: 900px) {
+  .app-nav:has(.app-nav-bloco),
+  .extracao-page .app-nav:has(.app-nav-bloco) {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+}

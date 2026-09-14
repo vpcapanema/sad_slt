@@ -11,13 +11,40 @@
     texto - rotulo exibido
     modo  - opcional; quando presente, o item so fica ativo se o query param
             "modo" da pagina for igual a este valor
+  ou, para agrupar paginas da mesma funcionalidade num menu suspenso:
+    texto - rotulo do menu
+    itens - lista de links no mesmo formato acima
+
+  Um link so fica ativo quando o caminho bate e, se o href tiver query string
+  (ex.: ?menu=auditoria), cada parametro dela bate com o da pagina atual.
 #}
+{% macro _ativo(item) -%}
+{%- set caminho = request.url.path if request is defined else "" -%}
+{%- set modo_atual = request.query_params.get("modo") if request is defined and request.query_params is defined else none -%}
+{%- set teste = namespace(ok=caminho.endswith(item.href.split("?")[0]) and (item.modo is not defined or item.modo == modo_atual)) -%}
+{%- if teste.ok and "?" in item.href and request is defined -%}
+  {%- for par in item.href.split("?", 1)[1].split("&") if "=" in par -%}
+    {%- if request.query_params.get(par.split("=", 1)[0]) != par.split("=", 1)[1] -%}{%- set teste.ok = false -%}{%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+{{- "1" if teste.ok else "" -}}
+{%- endmacro %}
 {% macro barra(rotulo, itens) %}
-{% set caminho = request.url.path if request is defined else "" %}
-{% set modo_atual = request.query_params.get("modo") if request is defined and request.query_params is defined else none %}
 <a class="app-nav-bloco" href="/restrict/"><i class="fa-solid fa-house" aria-hidden="true"></i> Início do bloco</a>
 {% for item in itens %}
-  {% set ativo = caminho.endswith(item.href.split("?")[0]) and (item.modo is not defined or item.modo == modo_atual) %}
-  <a href="{{ item.href }}"{% if ativo %} class="active" aria-current="page"{% endif %}>{{ item.texto }}</a>
+  {% if item.itens is defined %}
+    {% set grupo = namespace(ativo=false) %}
+    {% for filho in item.itens %}{% if _ativo(filho) | trim %}{% set grupo.ativo = true %}{% endif %}{% endfor %}
+  <div class="app-nav-group app-nav-grupo-modulo{% if grupo.ativo %} active{% endif %}">
+    <button type="button" class="app-nav-grupo-botao" aria-haspopup="true" aria-expanded="false">{{ item.texto }}<span class="app-nav-caret" aria-hidden="true">▾</span></button>
+    <div class="app-nav-submenu" aria-label="{{ item.texto }}">
+    {% for filho in item.itens %}
+      <a href="{{ filho.href }}"{% if _ativo(filho) | trim %} class="active" aria-current="page"{% endif %}>{{ filho.texto }}</a>
+    {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <a href="{{ item.href }}"{% if _ativo(item) | trim %} class="active" aria-current="page"{% endif %}>{{ item.texto }}</a>
+  {% endif %}
 {% endfor %}
 {% endmacro %}

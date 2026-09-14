@@ -1,13 +1,19 @@
 {% from "componentes/navbar_modulo/_barra.html" import barra with context %}
 {{ barra("Páginas do Geoprocessamento", [
-  {"href": "/api/geoespacial/catalogo/conciliacao/pagina", "texto": "Conciliação do catálogo"},
   {"href": "/restrict/geoespacial/", "texto": "Central geoespacial"},
-  {"href": "/restrict/geoespacial/visualizador-bases-geoespaciais/", "texto": "Bases geoespaciais"},
-  {"href": "/restrict/geoespacial/gerador-risco-restricao/", "texto": "Gerador de risco e restrição"},
-  {"href": "/restrict/geoespacial/gerador-favorabilidade/", "texto": "Gerador de favorabilidade"},
-  {"href": "/restrict/geoespacial/configuracao-risco-restricao/", "texto": "Biblioteca canônica"},
-  {"href": "/restrict/geoespacial/produtos/", "texto": "Camadas de Superfícies-índice"},
-  {"href": "/restrict/geoespacial/bancada/", "texto": "Bancada geoprocessamento"},
-  {"href": "/restrict/geoespacial/extracao-atributos/", "texto": "Extração de atributos"},
-  {"href": "/restrict/geoespacial/configurador-ajuste/", "texto": "Configurador da Priorização por atributos"}
+  {"texto": "Camadas", "itens": [
+    {"href": "/restrict/geoespacial/visualizador-bases-geoespaciais/", "texto": "Bases geoespaciais"},
+    {"href": "/restrict/geoespacial/produtos/", "texto": "Camadas de Superfícies-índice"},
+    {"href": "/api/geoespacial/catalogo/conciliacao/pagina", "texto": "Conciliação do catálogo"}
+  ]},
+  {"texto": "Geradores", "itens": [
+    {"href": "/restrict/geoespacial/gerador-risco-restricao/", "texto": "Gerador de risco e restrição"},
+    {"href": "/restrict/geoespacial/configuracao-risco-restricao/", "texto": "Biblioteca canônica"},
+    {"href": "/restrict/geoespacial/gerador-favorabilidade/", "texto": "Gerador de favorabilidade"}
+  ]},
+  {"texto": "Análise territorial", "itens": [
+    {"href": "/restrict/geoespacial/extracao-atributos/", "texto": "Extração de atributos"},
+    {"href": "/restrict/geoespacial/configurador-ajuste/", "texto": "Configurador da Priorização por atributos"},
+    {"href": "/restrict/geoespacial/bancada/", "texto": "Bancada geoprocessamento"}
+  ]}
 ]) }}
