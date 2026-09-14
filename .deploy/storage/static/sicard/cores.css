@@ -188,3 +188,72 @@
 [data-bs-theme=dark] img[alt="Logo"] {
   content: url("logo-escuro.png");
 }
+
+/* Barra lateral no padrão da barra do SICARD (assets/css/sidebar-theme.css):
+ * fundo marinho nos dois modos, verde no item ativo e no passar do mouse.
+ * O tema do SFTPGo já desenha essa barra escura com texto claro; aqui só a cor
+ * muda. As variáveis de menu são redefinidas dentro da barra para não afetar
+ * os menus suspensos do resto da interface. */
+.app-sidebar {
+  --bs-app-sidebar-base-bg-color: #003b5a;
+  --bs-app-sidebar-base-border-end: 1px solid rgba(255, 255, 255, 0.1);
+  --bs-menu-link-bg-color-active: rgba(74, 222, 128, 0.12);
+  --bs-menu-link-color-active: #4ade80;
+}
+
+/* A barra é escura mesmo no modo claro: o logo precisa ser o branco. */
+.app-sidebar-logo img[alt="Logo"] {
+  content: url("logo-escuro.png");
+}
+
+.app-sidebar-navs .menu .menu-item .menu-heading {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.app-sidebar-navs .menu .menu-item .menu-link,
+.app-sidebar-navs .menu .menu-item .menu-link .menu-title {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.app-sidebar-navs .menu .menu-item .menu-link .menu-icon,
+.app-sidebar-navs .menu .menu-item .menu-link .menu-icon .svg-icon,
+.app-sidebar-navs .menu .menu-item .menu-link .menu-icon i {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+/* Item ativo: o tema escreve background-color:#15171c direto nesta regra, sem
+ * variável, o que dava uma pílula quase preta sobre o marinho. Mesmo seletor,
+ * carregado depois do tema, com o verde da barra do SICARD. */
+.app-sidebar-navs .menu .menu-item .menu-link.active {
+  background-color: rgba(74, 222, 128, 0.12);
+  color: #4ade80;
+}
+
+.app-sidebar-navs .menu .menu-item .menu-link.active .menu-title,
+.app-sidebar-navs .menu .menu-item .menu-link.active .menu-icon,
+.app-sidebar-navs .menu .menu-item .menu-link.active .menu-icon .svg-icon,
+.app-sidebar-navs .menu .menu-item .menu-link.active .menu-icon i {
+  color: #4ade80;
+}
+
+/* Passar o mouse: mesmos seletores do tema, carregados depois dele. */
+.app-sidebar-navs .menu .menu-item.hover:not(.here)>.menu-link:not(.disabled):not(.active):not(.here),
+.app-sidebar-navs .menu .menu-item:not(.here) .menu-link:hover:not(.disabled):not(.active):not(.here) {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #4ade80;
+}
+
+.app-sidebar-navs .menu .menu-item.hover:not(.here)>.menu-link:not(.disabled):not(.active):not(.here) .menu-title,
+.app-sidebar-navs .menu .menu-item:not(.here) .menu-link:hover:not(.disabled):not(.active):not(.here) .menu-title,
+.app-sidebar-navs .menu .menu-item.hover:not(.here)>.menu-link:not(.disabled):not(.active):not(.here) .menu-icon i,
+.app-sidebar-navs .menu .menu-item:not(.here) .menu-link:hover:not(.disabled):not(.active):not(.here) .menu-icon i {
+  color: #4ade80;
+}
+
+.app-sidebar .hover-scroll-y:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.app-sidebar .hover-scroll-y:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}
