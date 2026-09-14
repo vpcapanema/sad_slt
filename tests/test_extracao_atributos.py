@@ -112,7 +112,8 @@ def test_pacote_leva_geometria_relatorios_e_tabelas(tmp_path,com_ocorrencia):
     base=box(X+25,Y-10,X+75,Y+10) if com_ocorrencia else box(X+100,Y,X+110,Y+10)
     result,saida=analisar(source,group(frame([base],nome=['Área contaminada'])))
     result.update(id=str(uuid4()),input_nome='Demanda ferroviária',criado_em='2026-09-14',gdal='teste')
-    pacote,nome,manifesto=montar_pacote(result,saida,source,_processamento(result,saida))
+    bases=[('Risco','Área contaminada',frame([base],nome=['Área contaminada']))]
+    pacote,nome,manifesto=montar_pacote(result,saida,source,_processamento(result,saida),bases=bases,mapa_base=False)
     assert nome=='extracao_de_teste_ferrovia.zip'
     assert [item['chave'] for item in manifesto]==['gpkg','pdf_processamento','pdf_analitico','xlsx','csv']
     with zipfile.ZipFile(io.BytesIO(pacote)) as arquivo:
@@ -121,6 +122,9 @@ def test_pacote_leva_geometria_relatorios_e_tabelas(tmp_path,com_ocorrencia):
             assert sha256(arquivo.read(item['nome'])).hexdigest()==item['sha256']
         texto=' '.join(p.extract_text() for p in PdfReader(io.BytesIO(arquivo.read(manifesto[1]['nome']))).pages)
         (tmp_path/'r.gpkg').write_bytes(arquivo.read(manifesto[0]['nome']))
+        analitico=PdfReader(io.BytesIO(arquivo.read(manifesto[2]['nome'])))
+    assert len(analitico.pages[0].images)>=1, 'o relatório analítico abre com o mapa de localização'
+    assert 'Mapa de localização' in analitico.pages[0].extract_text()
     assert 'Relatório de processamento' in texto and 'Carregando entrada e bases' in texto and 'Base 0' in texto
     assert {nome for nome,_ in pyogrio.list_layers(tmp_path/'r.gpkg')}=={'resultado','entrada'}
     info=pyogrio.read_info(tmp_path/'r.gpkg',layer='resultado')

@@ -11,7 +11,8 @@ from openpyxl import Workbook
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.utils import ImageReader
+from reportlab.platypus import Image, KeepTogether, SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 # Uma célula XLSX guarda no máximo 32.767 caracteres. O pacote é obrigatório, então
 # o texto é cortado com aviso; o CSV do mesmo pacote leva o conteúdo completo.
@@ -65,7 +66,7 @@ def safe(value):
     return value
 
 
-def pdf(result,path):
+def pdf(result,path,mapa=None,aviso_mapa=None):
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='Cell',fontName='Helvetica',fontSize=8,leading=11,wordWrap='CJK'))
     styles['BodyText'].fontSize=9; styles['BodyText'].leading=12
@@ -85,6 +86,9 @@ def pdf(result,path):
     story = [p('SICARD | Extração de atributos','Title'),p(result['input_nome'],'Heading2'),
              p(f"Execução: {result['id']} | {data_hora(result['criado_em'])}"),
              p(f"Motor: {result['motor']} | GDAL {result['gdal']} | Operação: {OPERACOES.get(result['operacao'],result['operacao'])}"),
+             *([p('Mapa de localização','Heading2'),Image(str(mapa),width=770,height=770*ImageReader(str(mapa)).getSize()[1]/ImageReader(str(mapa)).getSize()[0]),
+                p('Camada de entrada (contorno azul) sobre todas as camadas consideradas no processamento, com o entorno. '
+                  'Em vermelho, a área extraída pela interseção.'+(f' {aviso_mapa}' if aviso_mapa else ''))] if mapa else []),
              p('Síntese da análise','Heading2'),
              table([['Categorias','Camadas intersectadas','Ocorrências','Parcela da entrada'],
                     [len(result['categorias']),summary['camadas_intersectadas'],summary['ocorrencias'],f"{summary['percentual']:.4f}%"]],[160]*4),

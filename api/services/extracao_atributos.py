@@ -148,7 +148,8 @@ def _execute(ident, params):
                                   'ocorrencias':result['resumo'].get('ocorrencias'),
                                   'camadas_intersectadas':result['resumo'].get('camadas_intersectadas')},
                          'etapas':etapas,'ambiente':pacote_servico.ambiente()}
-        pacote, nome_pacote, manifesto = pacote_servico.montar_pacote(result,frame,source,processamento)
+        pacote, nome_pacote, manifesto = pacote_servico.montar_pacote(
+            result,frame,source,processamento,bases=[(c['nome'],b['nome'],b['frame']) for c in categories for b in c['camadas']])
         progress(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
         with _lock: etapas = list(_progress.get(ident) or [])
         from hashlib import sha256

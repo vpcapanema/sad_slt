@@ -182,6 +182,105 @@ def pdf_processamento(proc: dict, path: Path) -> None:
         historia, onFirstPage=rodape, onLaterPages=rodape)
 
 
+PALETA = ['#1769aa', '#e07b24', '#8c4495', '#217f83', '#b58900', '#52812e', '#a34242', '#58657a']
+FIGURA_MAPA = (12, 6.25)
+
+
+def _escala(ax, latitude: float) -> None:
+    """Barra de escala em metros reais: o Web Mercator estica as distâncias por 1/cos(latitude)."""
+    import math
+    x0, x1 = ax.get_xlim()
+    y0, y1 = ax.get_ylim()
+    fator = math.cos(math.radians(latitude))
+    alvo = (x1 - x0) * fator / 5
+    base = 10 ** math.floor(math.log10(alvo))
+    comprimento = max(m * base for m in (1, 2, 5) if m * base <= alvo)
+    tela = comprimento / fator
+    xs, ys = x0 + (x1 - x0) * 0.03, y0 + (y1 - y0) * 0.05
+    ax.plot([xs, xs + tela], [ys, ys], color='#1b2a38', linewidth=3, solid_capstyle='butt', zorder=50)
+    rotulo = f'{comprimento / 1000:g} km' if comprimento >= 1000 else f'{comprimento:g} m'
+    ax.text(xs + tela / 2, ys + (y1 - y0) * 0.018, rotulo, ha='center', va='bottom', fontsize=8, zorder=50,
+            bbox={'facecolor': 'white', 'edgecolor': 'none', 'alpha': .75, 'pad': 1})
+
+
+def mapa_png(entrada, bases, saida, path: Path, mapa_base: bool = True) -> str | None:
+    """Camada de entrada sobre todas as bases consideradas, com o entorno.
+
+    O enquadramento é a extensão da entrada mais 30% do maior lado (mínimo de 2 km),
+    na proporção da página. Devolve um aviso quando o mapa-base não pôde ser baixado.
+    """
+    import math
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+
+    web = entrada.to_crs(3857)
+    minx, miny, maxx, maxy = web.total_bounds
+    folga = max(maxx - minx, maxy - miny, 2000) * 0.3
+    centro_x, centro_y = (minx + maxx) / 2, (miny + maxy) / 2
+    meia_largura, meia_altura = (maxx - minx) / 2 + folga, (maxy - miny) / 2 + folga
+    proporcao = FIGURA_MAPA[0] * 0.72 / FIGURA_MAPA[1]
+    if meia_largura / meia_altura < proporcao:
+        meia_largura = meia_altura * proporcao
+    else:
+        meia_altura = meia_largura / proporcao
+    x0, x1 = centro_x - meia_largura, centro_x + meia_largura
+    y0, y1 = centro_y - meia_altura, centro_y + meia_altura
+
+    fig, ax = plt.subplots(figsize=FIGURA_MAPA, dpi=170)
+    ax.set_xlim(x0, x1)
+    ax.set_ylim(y0, y1)
+    ax.set_aspect('equal')
+    legenda = []
+    for indice, (categoria, nome, frame) in enumerate(bases):
+        cor = PALETA[indice % len(PALETA)]
+        recorte = frame.to_crs(3857).cx[x0:x1, y0:y1]
+        if not recorte.empty:
+            recorte.plot(ax=ax, facecolor=cor, edgecolor=cor, alpha=.3, linewidth=.7, markersize=12, zorder=10 + indice)
+        legenda.append(Patch(facecolor=cor, edgecolor=cor, alpha=.55,
+                             label=f'{categoria} · {nome} ({len(recorte)} no recorte)'))
+    if saida is not None and not saida.empty:
+        saida.to_crs(3857).plot(ax=ax, facecolor='#d62728', edgecolor='#8b0000', alpha=.6, linewidth=.8,
+                                markersize=16, zorder=40)
+        legenda.append(Patch(facecolor='#d62728', edgecolor='#8b0000', alpha=.75, label='Área extraída (interseção)'))
+    tipos = set(web.geom_type)
+    if tipos & {'Polygon', 'MultiPolygon'}:
+        web.boundary.plot(ax=ax, color='#003b5a', linewidth=1.8, zorder=45)
+    elif tipos & {'LineString', 'MultiLineString'}:
+        web.plot(ax=ax, color='#003b5a', linewidth=2.2, zorder=45)
+    else:
+        web.plot(ax=ax, color='#003b5a', markersize=20, zorder=45)
+    legenda.append(Line2D([0], [0], color='#003b5a', linewidth=2, label='Camada de entrada'))
+
+    aviso = None
+    if mapa_base:
+        try:
+            import contextily
+            # Esri World Topographic Map (ArcGIS Online, já usado no satélite dos visualizadores).
+            # A CARTO passou a exigir chave e o OpenStreetMap bloqueia download de tiles por
+            # aplicação: os dois devolviam aviso impresso no lugar do mapa, sem erro.
+            contextily.add_basemap(ax, crs='EPSG:3857', source=contextily.providers.Esri.WorldTopoMap,
+                                   attribution='Mapa-base: Esri, HERE, Garmin, © colaboradores do OpenStreetMap',
+                                   attribution_size=6, zorder=0)
+        except Exception:
+            aviso = 'O mapa-base não pôde ser carregado no momento da geração.'
+    ax.set_xlim(x0, x1)
+    ax.set_ylim(y0, y1)
+    _escala(ax, math.degrees(math.atan(math.sinh(centro_y / 6378137))))
+    ax.annotate('N', xy=(.965, .95), xytext=(.965, .84), xycoords='axes fraction', ha='center', va='center',
+                fontsize=10, fontweight='bold', arrowprops={'arrowstyle': '-|>', 'color': '#1b2a38', 'lw': 1.5}, zorder=50)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.legend(handles=legenda, loc='upper left', bbox_to_anchor=(1.01, 1), fontsize=7.5, frameon=False,
+              title='Legenda', title_fontsize=8.5, alignment='left')
+    # A legenda fica fora do quadro do mapa; o recorte justo evita que ela seja cortada.
+    fig.savefig(path, dpi=170, bbox_inches='tight', pad_inches=0.08)
+    plt.close(fig)
+    return aviso
+
+
 def ambiente() -> dict[str, str]:
     import geopandas
     import pyogrio
@@ -191,13 +290,15 @@ def ambiente() -> dict[str, str]:
             'Shapely': shapely.__version__, 'pyogrio': pyogrio.__version__, 'Python': platform.python_version()}
 
 
-def montar_pacote(result: dict, saida, entrada, proc: dict) -> tuple[bytes, str, list[dict]]:
+def montar_pacote(result: dict, saida, entrada, proc: dict, bases=(), mapa_base: bool = True) -> tuple[bytes, str, list[dict]]:
     """Escreve os cinco arquivos, confere cada um e devolve (zip, nome do zip, manifesto)."""
     arquivos = nomes(proc['nome_saida'])
     with tempfile.TemporaryDirectory(prefix='sicard_extracao_') as temporaria:
         pasta = Path(temporaria)
         escrever_gpkg(saida, entrada, pasta / arquivos['gpkg'])
-        exportacao.pdf(result, pasta / arquivos['pdf_analitico'])
+        mapa = pasta / 'mapa_localizacao.png'
+        aviso_mapa = mapa_png(entrada, bases, saida, mapa, mapa_base)
+        exportacao.pdf(result, pasta / arquivos['pdf_analitico'], mapa=mapa, aviso_mapa=aviso_mapa)
         exportacao.escrever_xlsx(result, pasta / arquivos['xlsx'])
         exportacao.escrever_csv(result, pasta / arquivos['csv'])
         pdf_processamento({**proc, 'arquivos': arquivos}, pasta / arquivos['pdf_processamento'])
