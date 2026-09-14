@@ -91,3 +91,6 @@
   .geoespacial-map-panel-page .geoespacial-map-sidebar { max-height: 34vh; }
   .geo-map-workspace { min-height: 66vh; }
 }
+
+/* Pastas do storage dentro de um grupo: recuo e guia como os demais níveis. */
+.geoespacial-map-sidebar .geo-storage-group > .layer-group-body { margin-left: var(--tree-step, 1.125rem); padding-left: .45rem; border-left: 1px solid var(--tree-guide, rgba(255,255,255,.14)); }

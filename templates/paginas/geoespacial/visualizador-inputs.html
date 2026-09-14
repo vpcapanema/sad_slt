@@ -1,10 +1,10 @@
 {% extends "bases/base_painel_mapa.html" %}
-{% set subtitulo = "Insumos geoespaciais" %}
+{% set subtitulo = "Bases geoespaciais" %}
 {% set navegacao = "restrita" %}
 {% set bloco_modulo = "geoprocessamento" %}
 {% set requer_autenticacao = true %}
 
-{% block titulo %}Insumos Geoespaciais — SICARD{% endblock %}
+{% block titulo %}Bases Geoespaciais — SICARD{% endblock %}
 {% block classes_body %}geoespacial-viewer-page geoespacial-map-panel-page{% endblock %}
 {% block classes_barra_lateral %}geoespacial-map-sidebar{% endblock %}
 {% block rotulo_barra_lateral %}Camadas operacionais{% endblock %}
@@ -12,7 +12,7 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/geoespacial.css">
-  <link rel="stylesheet" href="/assets/css/geoespacial-painel-mapa.css?v=20260722-9">
+  <link rel="stylesheet" href="/assets/css/geoespacial-painel-mapa.css?v=20260914-1">
   <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
@@ -20,15 +20,15 @@
 {% block barra_lateral %}
   <section class="secao-camadas-operacionais nav-section painel-layers-section">
     <div class="geo-sidebar-toolbar">
-      <span>Biblioteca de insumos</span>
+      <span>Bases geoespaciais</span>
       <div class="geo-sidebar-actions">
         <button type="button" id="btn-abrir-camadas" title="Atualizar camadas" aria-label="Atualizar camadas"><i class="fa-solid fa-rotate"></i></button>
         <button type="button" id="btn-importar-camadas" title="Importar camada" aria-label="Importar camada"><i class="fa-solid fa-file-arrow-up"></i></button>
       </div>
     </div>
     <nav class="geo-sidebar-mini-nav" aria-label="Navegação geoespacial">
-      <a href="/restrict/geoespacial/visualizador-insumos-geoespaciais/" class="active" aria-current="page">Biblioteca Insumos</a>
-      <a href="/restrict/geoespacial/produtos/">Biblioteca Produtos</a>
+      <a href="/restrict/geoespacial/visualizador-bases-geoespaciais/" class="active" aria-current="page">Bases geoespaciais</a>
+      <a href="/restrict/geoespacial/produtos/">Superfícies-índice</a>
       <a href="/restrict/geoespacial/bancada/">Bancada Geoprocessamento</a>
     </nav>
     <div class="layer-group layer-group--root layers-container demandas-tree" id="geo-layers-root">
@@ -41,7 +41,7 @@
           </button>
           <button type="button" id="toggle-operational-labels" class="layer-group-label-toggle" aria-pressed="false" aria-label="Exibir rótulos das camadas operacionais no mapa" title="Rótulos no mapa"><span class="layer-group-label-toggle-icon layer-group-label-toggle-icon--programa" aria-hidden="true"></span></button>
         </div>
-        <div id="geoespacial-layers-list" class="layer-group-body admin-records-list" role="list" aria-label="Camadas operacionais"><p class="layers-empty hint">Nenhuma camada carregada.</p></div>
+        <div id="geoespacial-layers-list" class="layer-group-body admin-records-list" role="list" aria-label="Camadas operacionais"><p class="layers-empty hint">Carregando camadas do storage…</p></div>
       </div>
       <div class="layer-group layer-group--tipo" id="geo-basemap-group">
         <div class="layer-group-header-row layer-group-header-row--tipo">
@@ -57,7 +57,7 @@
 {% endblock %}
 
 {% block painel %}
-  <main class="conteudo-principal geo-map-workspace" aria-label="Mapa dos insumos geoespaciais">
+  <main class="conteudo-principal geo-map-workspace" aria-label="Mapa das bases geoespaciais">
     <div id="map-geoespacial" class="geoespacial-map"><div class="painel-map-loading" role="status" aria-live="polite"><span class="painel-loading-spinner" aria-hidden="true"></span><span>Preparando mapa e camadas…</span></div></div>
     <div class="geoespacial-map-caption"><i class="fa-solid fa-circle-info"></i> Marque uma camada para adicioná-la ao mapa.</div>
     <aside class="geo-context-panel" aria-label="Legenda e detalhes">
@@ -106,5 +106,6 @@
 {% block scripts_pagina %}
   <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
   <script src="/assets/js/geoespacial-map.js?v=20260722-10"></script>
-  <script src="/restrict/geoespacial/geoespacial-visualizador-inputs.js?v=20260722-13"></script>
+  <script src="/restrict/geoespacial/geoespacial-storage-arvore.js?v=20260914-1"></script>
+  <script src="/restrict/geoespacial/geoespacial-visualizador-inputs.js?v=20260914-1"></script>
 {% endblock %}

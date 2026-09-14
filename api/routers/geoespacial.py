@@ -859,6 +859,47 @@ async def listar_diretorio_camadas() -> dict[str, Any]:
         raise HTTPException(503, "Catálogo do banco indisponível") from exc
 
 
+@router.get("/storage/{raiz}/arvore")
+async def listar_arvore_storage(raiz: str) -> dict[str, Any]:
+    """Pastas (grupos) e camadas de uma pasta publicada do storage."""
+    from api.services import storage_geoespacial
+    try:
+        return await run_in_threadpool(storage_geoespacial.arvore, raiz)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+def _erro_camada_storage(exc: Exception) -> HTTPException:
+    if isinstance(exc, FileNotFoundError):
+        return HTTPException(404, str(exc))
+    if isinstance(exc, ValueError):
+        return HTTPException(422, str(exc))
+    logger.exception("Falha ao ler camada do storage")
+    return HTTPException(500, "Não foi possível ler a camada do storage")
+
+
+@router.get("/storage/camada/bounds")
+async def obter_bounds_camada_storage(caminho: str, camada: str | None = None) -> dict:
+    from api.services import storage_geoespacial
+    try:
+        return {"bounds": await run_in_threadpool(storage_geoespacial.bounds, caminho, camada)}
+    except (FileNotFoundError, ValueError, RuntimeError) as exc:
+        raise _erro_camada_storage(exc) from exc
+
+
+@router.get("/storage/camada/tiles/{z}/{x}/{y}.pbf")
+async def obter_tile_camada_storage(z: int, x: int, y: int, caminho: str, camada: str | None = None) -> Response:
+    from api.services import storage_geoespacial
+    if not 0 <= z <= 22 or not (0 <= x < 2**z and 0 <= y < 2**z):
+        raise HTTPException(422, "Tile fora da grade")
+    try:
+        conteudo = await run_in_threadpool(storage_geoespacial.tile, caminho, camada, z, x, y)
+    except (FileNotFoundError, ValueError, RuntimeError) as exc:
+        raise _erro_camada_storage(exc) from exc
+    return Response(conteudo, media_type="application/vnd.mapbox-vector-tile",
+                    headers={"Cache-Control": "private, max-age=300"})
+
+
 RAIZES_CARREGAVEIS: dict[str, dict[str, str]] = {
     "acervo": {
         "caminho": "uploads/datastorage",

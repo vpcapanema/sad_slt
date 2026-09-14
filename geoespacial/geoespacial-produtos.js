@@ -1,8 +1,9 @@
-/* Visualizador de Camadas Finais — Módulo Geoespacial */
+/* Camadas de Superfícies-índice — Módulo Geoespacial */
 (function () {
   "use strict";
   const API = "/api/geoespacial";
   let camadas = [];
+  let arvore = { grupos: [], camadas: [] };
   const camadasVisiveis = new Set();
   let rotulosAtivos = localStorage.getItem("geoespacial-products-labels") === "true";
   const BASEMAPS = [
@@ -17,8 +18,6 @@
   let basemapAtual = BASEMAPS.some((item) => item.id === _basemapSalvo) ? _basemapSalvo : "osm";
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   const formatCrs = (value) => String(value || "CRS não informado").replace(/EPSG:4674(?!\s*\()/g, "EPSG:4674 (SIRGAS 2000)");
-  function formatDate(value) { if(!value)return "—";const date=new Date(value);return Number.isNaN(date.getTime())?String(value):new Intl.DateTimeFormat("pt-BR",{dateStyle:"short",timeStyle:"short"}).format(date); }
-  function generationDate(camada) { const metadata=camada.metadados||{},extras=metadata.metadados||metadata;return extras.data_geracao||extras.gerado_em||extras.generated_at||extras.data_referencia||camada.data_geracao||camada.criado_em||camada.homologado_em; }
   function activateContextTab(name) {
     document.querySelectorAll("[data-context-tab]").forEach((button) => { const active = button.dataset.contextTab === name; button.classList.toggle("active", active); button.setAttribute("aria-selected", String(active)); });
     document.querySelectorAll("[data-context-content]").forEach((panel) => { const active = panel.dataset.contextContent === name; panel.classList.toggle("active", active); panel.hidden = !active; });
@@ -37,7 +36,7 @@
   async function mapReady() { const map = GeoespacialMap.map; if (map?.isStyleLoaded()) return; await new Promise((resolve) => map.once("load", resolve)); }
   function detail(camada) {
     document.querySelectorAll(".geo-layer-record").forEach((item) => item.classList.toggle("active", item.dataset.id === camada.id));
-    document.getElementById("geoespacial-details-content").innerHTML = `<div class="geoespacial-detail-grid"><div class="geoespacial-detail-row"><span>Produto</span><strong>${escapeHtml(camada.nome)}</strong></div><div class="geoespacial-detail-row"><span>Tipo</span><strong>${escapeHtml(camada.tipo)}</strong></div><div class="geoespacial-detail-row"><span>CRS</span><strong>${escapeHtml(formatCrs(camada.crs))}</strong></div><div class="geoespacial-detail-row"><span>Status</span><strong>Homologado</strong></div><div class="geoespacial-detail-row"><span>Origem</span><strong>${escapeHtml(camada.origem)}</strong></div><div class="geoespacial-detail-row"><span>Geração da base</span><strong>${escapeHtml(formatDate(generationDate(camada)))}</strong></div><div class="geoespacial-detail-row"><span>Homologação</span><strong>${escapeHtml(formatDate(camada.homologado_em))}</strong></div></div>`;
+    document.getElementById("geoespacial-details-content").innerHTML = GeoespacialStorage.detalhesHtml(camada);
     showDetails();
   }
   function detailBasemap(item) {
@@ -55,28 +54,33 @@
   async function toggle(camada, visible) {
     if (!visible) { camadasVisiveis.delete(camada.id); GeoespacialMap.toggleLayer(camada.id, false); renderLegend(); return; }
     detail(camada);
+    if (GeoespacialMap.layers.has(camada.id)) { camadasVisiveis.add(camada.id); renderLegend(); return GeoespacialMap.toggleLayer(camada.id, true); }
+    await mapReady();
+    await GeoespacialStorage.adicionarNoMapa(camada, { uniqueStyle: true, label: displayName(camada), labelsVisible: rotulosAtivos });
     camadasVisiveis.add(camada.id); renderLegend();
-    if (GeoespacialMap.layers.has(camada.id)) return GeoespacialMap.toggleLayer(camada.id, true);
-    if (String(camada.tipo).toLowerCase().includes("raster")) return;
-    await mapReady(); GeoespacialMap.addVectorTileLayer(camada.id, `${API}/camadas/${encodeURIComponent(camada.id)}/tiles/{z}/{x}/{y}.pbf`, { uniqueStyle: true, label: displayName(camada), labelsVisible: rotulosAtivos });
-    const response = await fetch(`${API}/camadas/${encodeURIComponent(camada.id)}/bounds`);if(!response.ok)throw new Error("Extensão da camada indisponível");GeoespacialMap.layers.get(camada.id).bounds=(await response.json()).bounds;GeoespacialMap.fitBounds(camada.id);
   }
+  // As pastas de superficies-indices no storage são os grupos de camadas.
   function render() {
     const container = document.getElementById("geoespacial-layers-list"),basemapContainer=document.getElementById("geoespacial-basemap-list"); document.getElementById("viewer-layer-count").textContent = String(camadas.length);
-    container.innerHTML = camadas.length?camadas.map((camada) => `<div class="layer-group layer-group--record geo-layer-record" data-id="${escapeHtml(camada.id)}"><div class="layer-group-header-row"><label class="layer-visibility-toggle" for="layer-${escapeHtml(camada.id)}"><input type="checkbox" class="layer-visibility-input" id="layer-${escapeHtml(camada.id)}"></label><button type="button" class="layer-group-header layer-group-header--record" aria-expanded="false"><span class="layer-group-toggle" aria-hidden="true">›</span><span class="geo-layer-copy"><span class="layer-group-name">${escapeHtml(displayName(camada))}</span>${layerSymbol(camada)}</span></button></div></div>`).join(""):'<p class="layers-empty layers-empty--nested">Nenhuma camada homologada está disponível. Produtos processados só aparecem após homologação e publicação.</p>';
+    GeoespacialStorage.renderArvore(container, arvore, {
+      nome: displayName,
+      simbolo: layerSymbol,
+      aoSelecionar: detail,
+      aoEditar: openProperties,
+      aoAlternar: toggle,
+      aoFalhar: (error) => { document.getElementById("geoespacial-details-content").innerHTML = `<p class="hint">${escapeHtml(error.message)}</p>`; showDetails(); },
+    });
     basemapContainer.innerHTML=BASEMAPS.map(item=>`<div class="layer-group layer-group--record geo-layer-record" data-basemap-id="${item.id}"><div class="layer-group-header-row"><label class="layer-visibility-toggle"><input class="layer-visibility-input" type="radio" name="products-basemap" value="${item.id}" ${basemapAtual===item.id?"checked":""}></label><button type="button" class="layer-group-header layer-group-header--record" aria-expanded="false"><span class="layer-group-toggle" aria-hidden="true">›</span><span class="geo-layer-copy"><span class="layer-group-name">${escapeHtml(item.name)}</span><span class="geo-layer-tree-symbol geo-layer-tree-symbol--basemap" aria-label="Símbolo de mapa-base"></span></span></button></div></div>`).join("");
-    container.querySelectorAll(".geo-layer-record").forEach((item) => { const camada = camadas.find((value) => value.id === item.dataset.id); const button=item.querySelector("button"); button.addEventListener("click", () => { const expanded=item.classList.toggle("expanded");button.setAttribute("aria-expanded",String(expanded));detail(camada); });item.querySelector(".geo-layer-tree-symbol").addEventListener("click",event=>{event.stopPropagation();openProperties(camada,item)}); item.querySelector("input").addEventListener("change", async (event) => { try { await toggle(camada, event.target.checked); } catch (error) { event.target.checked = false; } }); });
     basemapContainer.querySelectorAll(".geo-layer-record").forEach(row=>{const item=BASEMAPS.find(value=>value.id===row.dataset.basemapId),button=row.querySelector("button");button.addEventListener("click",()=>{const expanded=row.classList.toggle("expanded");button.setAttribute("aria-expanded",String(expanded));detailBasemap(item)});row.querySelector("input").addEventListener("change",()=>selecionarBasemap(item.id))});
-    container.onclick=event=>{const symbol=event.target.closest(".geo-layer-tree-symbol");if(!symbol)return;event.stopPropagation();const row=symbol.closest(".geo-layer-record"),camada=camadas.find(value=>value.id===row.dataset.id);if(camada)openProperties(camada,row)};
   }
   async function load() {
-    const response = await fetch(`${API}/biblioteca-camadas`);
-    const biblioteca = response.ok ? await response.json() : [];
-    camadas = biblioteca.map((camada) => ({
-      ...camada,
-      nome: camada.nome_publicacao || camada.nome,
-      origem: `Biblioteca homologada · ${camada.versao}`,
-    }));
+    try {
+      arvore = await GeoespacialStorage.carregarArvore("superficies-indices");
+    } catch (error) {
+      arvore = { grupos: [], camadas: [], disponivel: false };
+      document.getElementById("geoespacial-details-content").innerHTML = `<p class="hint">${escapeHtml(error.message)}</p>`;
+    }
+    camadas = GeoespacialStorage.camadasDaArvore(arvore);
     render();
   }
 
@@ -123,7 +127,7 @@
     document.querySelectorAll("[data-context-tab]").forEach(button=>button.addEventListener("click",()=>activateContextTab(button.dataset.contextTab)));
     ["geo-operational-group","geo-basemap-group"].forEach(id=>{const group=document.getElementById(id),header=group.querySelector(":scope > .layer-group-header-row .layer-group-header--tipo");header.addEventListener("click",()=>{const collapsed=group.classList.toggle("collapsed");header.setAttribute("aria-expanded",String(!collapsed))})});
     const labelButton=document.getElementById("toggle-operational-labels");labelButton.classList.toggle("is-active",rotulosAtivos);labelButton.setAttribute("aria-pressed",String(rotulosAtivos));labelButton.addEventListener("click",()=>{rotulosAtivos=!rotulosAtivos;labelButton.classList.toggle("is-active",rotulosAtivos);labelButton.setAttribute("aria-pressed",String(rotulosAtivos));localStorage.setItem("geoespacial-products-labels",String(rotulosAtivos));camadas.forEach(camada=>GeoespacialMap.toggleLabels(camada.id,rotulosAtivos))});
-    document.getElementById("toggle-operational-group").addEventListener("change",event=>{document.querySelectorAll("#geoespacial-layers-list .layer-visibility-input").forEach(input=>{if(input.checked!==event.target.checked){input.checked=event.target.checked;input.dispatchEvent(new Event("change"))}})});
+    document.getElementById("toggle-operational-group").addEventListener("change",event=>{document.querySelectorAll("#geoespacial-layers-list .geo-layer-record .layer-visibility-input:not(:disabled)").forEach(input=>{if(input.checked!==event.target.checked){input.checked=event.target.checked;input.dispatchEvent(new Event("change"))}})});
     document.getElementById("toggle-basemap-group").addEventListener("change",()=>selecionarBasemap(basemapAtual));
     activateContextTab("legend");renderLegend();document.getElementById("btn-atualizar").addEventListener("click",load);await load();
   }

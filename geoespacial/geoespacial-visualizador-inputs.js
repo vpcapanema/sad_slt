@@ -1,8 +1,9 @@
-/* Visualizador de Inputs — Módulo Geoespacial */
+/* Visualizador de bases geoespaciais — Módulo Geoespacial */
 (function () {
   "use strict";
   const API = "/api/geoespacial";
   let camadas = [];
+  let arvore = { grupos: [], camadas: [] };
   let diretorio = { operacionais: [], biblioteca_canonica: [] };
   let arquivoInspecionado = null;
   let tokenImportacao = null;
@@ -21,17 +22,6 @@
   let rotulosAtivos = localStorage.getItem("geoespacial-viewer-labels") === "true";
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
   const formatCrs = (value) => String(value || "CRS não informado").replace(/EPSG:4674(?!\s*\()/g, "EPSG:4674 (SIRGAS 2000)");
-  function formatDate(value) {
-    if (!value) return "—";
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? String(value) : new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
-  }
-  function generationDate(camada) {
-    const metadata = camada.metadados || {};
-    const extras = metadata.metadados || metadata;
-    return extras.data_geracao || extras.gerado_em || extras.generated_at || extras.data_referencia || camada.data_geracao || camada.criado_em || camada.data_importacao;
-  }
-
   function activateContextTab(name) {
     document.querySelectorAll("[data-context-tab]").forEach((button) => {
       const active = button.dataset.contextTab === name;
@@ -83,14 +73,7 @@
   }
   function detail(camada) {
     document.querySelectorAll(".geo-layer-record").forEach((item) => item.classList.toggle("active", item.dataset.id === camada.id));
-    document.getElementById("geoespacial-operations-list").innerHTML = `<div class="geoespacial-detail-grid">
-      <div class="geoespacial-detail-row"><span>Nome</span><strong>${escapeHtml(camada.nome)}</strong></div>
-      <div class="geoespacial-detail-row"><span>Tipo</span><strong>${escapeHtml(camada.geometria_tipo || camada.tipo || camada.categoria_arquivo)}</strong></div>
-      <div class="geoespacial-detail-row"><span>CRS</span><strong>${escapeHtml(formatCrs(camada.crs))}</strong></div>
-      <div class="geoespacial-detail-row"><span>Origem</span><strong>${escapeHtml(camada.arquivo || camada.origem || "Datastorage")}</strong></div>
-      <div class="geoespacial-detail-row"><span>Geração da base</span><strong>${escapeHtml(formatDate(generationDate(camada)))}</strong></div>
-      <div class="geoespacial-detail-row"><span>Importação</span><strong>${escapeHtml(formatDate(camada.data_importacao || camada.criado_em))}</strong></div>
-    </div>`;
+    document.getElementById("geoespacial-operations-list").innerHTML = GeoespacialStorage.detalhesHtml(camada);
     showDetails();
   }
   function detailBasemap(item) {
@@ -106,20 +89,11 @@
   }
   async function toggle(camada, visible) {
     if (!visible) { camadasVisiveis.delete(camada.id); GeoespacialMap.toggleLayer(camada.id, false); renderLegend(); return; }
-    if (!camada.registrada || !camada.id) throw new Error("O arquivo existe no datastorage, mas ainda não possui registro válido no banco");
     detail(camada);
-    camadasVisiveis.add(camada.id); renderLegend();
-    if (GeoespacialMap.layers.has(camada.id)) return GeoespacialMap.toggleLayer(camada.id, true);
-    if (String(camada.tipo).toLowerCase().includes("raster")) {
-      document.getElementById("geoespacial-operations-list").insertAdjacentHTML("beforeend", '<p class="hint">O preview raster está disponível na bancada de geoprocessamento.</p>');
-      return;
-    }
+    if (GeoespacialMap.layers.has(camada.id)) { camadasVisiveis.add(camada.id); renderLegend(); return GeoespacialMap.toggleLayer(camada.id, true); }
     await mapReady();
-    GeoespacialMap.addVectorTileLayer(camada.id, `${API}/camadas/${encodeURIComponent(camada.id)}/tiles/{z}/{x}/{y}.pbf`, { uniqueStyle: true, label: displayName(camada), labelsVisible: rotulosAtivos });
-    const boundsResponse = await fetch(`${API}/camadas/${encodeURIComponent(camada.id)}/bounds`);
-    if (!boundsResponse.ok) throw new Error(`Não foi possível obter a extensão da camada (${boundsResponse.status})`);
-    GeoespacialMap.layers.get(camada.id).bounds = (await boundsResponse.json()).bounds;
-    GeoespacialMap.fitBounds(camada.id);
+    await GeoespacialStorage.adicionarNoMapa(camada, { uniqueStyle: true, label: displayName(camada), labelsVisible: rotulosAtivos });
+    camadasVisiveis.add(camada.id); renderLegend();
   }
   function selecionarBasemap(id) {
     basemapAtual = BASEMAPS.some((item) => item.id === id) ? id : "osm";
@@ -138,55 +112,52 @@
     }
     detailBasemap(BASEMAPS.find((item) => item.id === basemapAtual));
   }
+  // Camadas operacionais: as pastas de base-geoespacial no storage são os grupos.
   function render() {
     const container = document.getElementById("geoespacial-layers-list");
     const basemapContainer = document.getElementById("geoespacial-basemap-list");
     document.getElementById("viewer-layer-count").textContent = String(camadas.length);
-    const groups = [
-      ["ponto", "Ponto", "location-dot"], ["linha", "Linha", "route"],
-      ["poligono", "Polígono", "draw-polygon"], ["raster", "Raster", "border-all"],
-    ];
-    const category = (layer) => {
-      const type = `${layer.geometria_tipo || ""} ${layer.tipo || ""} ${layer.categoria_arquivo || ""}`.toLowerCase();
-      if (type.includes("point") || type.includes("ponto")) return "ponto";
-      if (type.includes("line") || type.includes("linha")) return "linha";
-      if (type.includes("polygon") || type.includes("poligono")) return "poligono";
-      if (type.includes("raster")) return "raster";
-      return layer.categoria_arquivo === "raster" ? "raster" : "poligono";
-    };
-    const operacionais = groups.flatMap(([key]) => camadas.filter((layer) => category(layer) === key));
-    const operationalRows = operacionais.length
-      ? operacionais.map((camada) => { const uid = camada.id || `file-${camadas.indexOf(camada)}`; return `<div class="layer-group layer-group--record geo-layer-record" data-id="${escapeHtml(uid)}"><div class="layer-group-header-row"><label class="layer-visibility-toggle" for="layer-${escapeHtml(uid)}"><input type="checkbox" class="layer-visibility-input" id="layer-${escapeHtml(uid)}" ${camada.registrada ? "" : "disabled"}></label><button type="button" class="layer-group-header layer-group-header--record" aria-expanded="false"><span class="layer-group-toggle" aria-hidden="true">›</span><span class="geo-layer-copy"><span class="layer-group-name">${escapeHtml(displayName(camada))}</span>${layerSymbol(camada)}</span></button></div></div>`; }).join("")
-      : '<p class="layers-empty layers-empty--nested">Nenhuma camada operacional.</p>';
+    GeoespacialStorage.renderArvore(container, arvore, {
+      nome: displayName,
+      simbolo: layerSymbol,
+      aoSelecionar: detail,
+      aoEditar: openProperties,
+      aoAlternar: toggle,
+      aoFalhar: (error) => { document.getElementById("geoespacial-operations-list").innerHTML = `<p class="hint">${escapeHtml(error.message)}</p>`; showDetails(); },
+    });
     const basemapRows = BASEMAPS.map((item) => `<div class="layer-group layer-group--record geo-layer-record geo-basemap-record" data-basemap-id="${item.id}"><div class="layer-group-header-row"><label class="layer-visibility-toggle"><input class="layer-visibility-input" type="radio" name="viewer-basemap" value="${item.id}" ${basemapAtual === item.id ? "checked" : ""}></label><button type="button" class="layer-group-header layer-group-header--record"><span class="layer-group-toggle" aria-hidden="true">•</span><span class="layer-group-name">${escapeHtml(item.name)}</span></button></div></div>`).join("");
-    container.innerHTML = operationalRows;
     basemapContainer.innerHTML = basemapRows;
     document.getElementById("geo-basemap-group").classList.toggle("collapsed", basemapRecolhido);
-    container.querySelectorAll(".geo-layer-record[data-id]").forEach((item) => {
-      const camada = camadas.find((value, index) => (value.id || `file-${index}`) === item.dataset.id);
-      const button = item.querySelector("button");
-      button.addEventListener("click", () => { const expanded = item.classList.toggle("expanded"); button.setAttribute("aria-expanded", String(expanded)); detail(camada); });
-      item.querySelector(".geo-layer-tree-symbol").addEventListener("click", (event) => { event.stopPropagation(); openProperties(camada,item); });
-      item.querySelector("input").addEventListener("change", async (event) => { try { await toggle(camada, event.target.checked); } catch (error) { event.target.checked = false; document.getElementById("geoespacial-operations-list").innerHTML = `<p class="hint">${escapeHtml(error.message)}</p>`; } });
-    });
     basemapContainer.querySelectorAll(".geo-basemap-record").forEach((row) => { const item=BASEMAPS.find((value)=>value.id===row.dataset.basemapId);row.querySelector("button").addEventListener("click",()=>detailBasemap(item));row.querySelector("input").addEventListener("change",()=>selecionarBasemap(item.id)); });
   }
   async function load() {
-    const response = await fetch(`${API}/camadas-diretorio`);
-    if (!response.ok) throw new Error("Catálogo de camadas indisponível");
-    diretorio = await response.json();
-    camadas = diretorio.operacionais || [];
-    if (diretorio.banco_disponivel === false) document.getElementById("geoespacial-operations-list").innerHTML = '<p class="hint">Arquivos locais exibidos. O catálogo do banco está temporariamente indisponível; tente atualizar em instantes.</p>';
+    try {
+      arvore = await GeoespacialStorage.carregarArvore("base-geoespacial");
+    } catch (error) {
+      arvore = { grupos: [], camadas: [], disponivel: false };
+      document.getElementById("geoespacial-operations-list").innerHTML = `<p class="hint">${escapeHtml(error.message)}</p>`;
+    }
+    camadas = GeoespacialStorage.camadasDaArvore(arvore);
+    render();
+    carregarCatalogoDeImportacao();
+  }
+  // A importação ainda grava no acervo do banco: a máscara de recorte e as
+  // pastas de destino continuam vindo desse catálogo, não do storage.
+  async function carregarCatalogoDeImportacao() {
+    try {
+      const response = await fetch(`${API}/camadas-diretorio`);
+      if (!response.ok) return;
+      diretorio = await response.json();
+    } catch { return; }
     preencherCamadasRecorte();
     preencherPastasExistentes();
-    render();
   }
   // Oferece as pastas que já existem no acervo, sem impedir um nome novo: o
   // campo é <input list>, então digitar cria a pasta no destino.
   function preencherPastasExistentes() {
     const destino = document.getElementById("import-pastas-existentes");
     if (!destino) return;
-    const pastas = [...new Set(camadas.map(item => item.pasta).filter(Boolean))].sort();
+    const pastas = [...new Set((diretorio.operacionais || []).map(item => item.pasta).filter(Boolean))].sort();
     destino.innerHTML = pastas.map(nome => `<option value="${nome}"></option>`).join("");
   }
 
@@ -308,8 +279,8 @@
     bindGroup("geo-basemap-group", (collapsed) => { basemapRecolhido = collapsed; localStorage.setItem("geoespacial-viewer-basemap-collapsed", String(collapsed)); });
     const labelButton = document.getElementById("toggle-operational-labels");
     labelButton.classList.toggle("is-active", rotulosAtivos); labelButton.setAttribute("aria-pressed", String(rotulosAtivos));
-    labelButton.addEventListener("click", () => { rotulosAtivos = !rotulosAtivos; labelButton.classList.toggle("is-active", rotulosAtivos); labelButton.setAttribute("aria-pressed", String(rotulosAtivos)); localStorage.setItem("geoespacial-viewer-labels", String(rotulosAtivos)); camadas.forEach((camada) => { if (camada.id) GeoespacialMap.toggleLabels(camada.id, rotulosAtivos); }); });
-    document.getElementById("toggle-operational-group").addEventListener("change", (event) => { document.querySelectorAll("#geoespacial-layers-list .layer-visibility-input:not(:disabled)").forEach((input) => { if (input.checked !== event.target.checked) { input.checked = event.target.checked; input.dispatchEvent(new Event("change")); } }); });
+    labelButton.addEventListener("click", () => { rotulosAtivos = !rotulosAtivos; labelButton.classList.toggle("is-active", rotulosAtivos); labelButton.setAttribute("aria-pressed", String(rotulosAtivos)); localStorage.setItem("geoespacial-viewer-labels", String(rotulosAtivos)); camadas.forEach((camada) => GeoespacialMap.toggleLabels(camada.id, rotulosAtivos)); });
+    document.getElementById("toggle-operational-group").addEventListener("change", (event) => { document.querySelectorAll("#geoespacial-layers-list .geo-layer-record .layer-visibility-input:not(:disabled)").forEach((input) => { if (input.checked !== event.target.checked) { input.checked = event.target.checked; input.dispatchEvent(new Event("change")); } }); });
     document.getElementById("toggle-basemap-group").addEventListener("change", () => selecionarBasemap(basemapAtual));
     const dialog = document.getElementById("dialog-importar-camadas");
     const progressDialog = document.getElementById("dialog-import-progress");

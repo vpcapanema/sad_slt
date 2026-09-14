@@ -66,7 +66,7 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "Central de julgamentos" in trecho_mad
     assert "Central de respostas" in trecho_mad
     assert "Módulo de apoio à decisão, análise multicritérios interativa e hierarquização colaborativa." in trecho_mad
-    assert "/restrict/geoespacial/visualizador-insumos-geoespaciais/" in trecho_geo
+    assert "/restrict/geoespacial/visualizador-bases-geoespaciais/" in trecho_geo
     assert "/restrict/geoespacial/gerador-risco-restricao/" in trecho_geo
     assert "/restrict/geoespacial/gerador-favorabilidade/" in trecho_geo
     assert "/restrict/geoespacial/configuracao-risco-restricao/" in trecho_geo

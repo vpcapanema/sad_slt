@@ -34,6 +34,10 @@ services:
       # O acervo fica fora da imagem (.dockerignore) e recebe as camadas
       # geradas em execucao: precisa vir do disco da VM.
       - ./data/geoespacial/uploads:/app/data/geoespacial/uploads
+      # Storage de arquivos brutos (.deploy/storage), pasta irmã do checkout.
+      # Somente leitura: o SICARD lê as camadas para o mapa e nunca grava lá;
+      # quem altera os dados é o SFTPGo ou o QGIS.
+      - ../sicard-storage/dados/sicard:/app/data/storage:ro
     networks:
       - default
       - sigma-backend

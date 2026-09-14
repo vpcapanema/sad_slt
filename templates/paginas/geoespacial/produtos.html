@@ -1,18 +1,18 @@
 {% extends "bases/base_painel_mapa.html" %}
-{% set subtitulo = "Produtos geoespaciais" %}
+{% set subtitulo = "Superfícies-índice" %}
 {% set navegacao = "restrita" %}
 {% set bloco_modulo = "geoprocessamento" %}
 {% set requer_autenticacao = true %}
 
-{% block titulo %}Camadas Homologadas — SICARD{% endblock %}
+{% block titulo %}Camadas de Superfícies-índice — SICARD{% endblock %}
 {% block classes_body %}geoespacial-viewer-page geoespacial-map-panel-page{% endblock %}
 {% block classes_barra_lateral %}geoespacial-map-sidebar{% endblock %}
-{% block rotulo_barra_lateral %}Camadas homologadas{% endblock %}
+{% block rotulo_barra_lateral %}Camadas de Superfícies-índice{% endblock %}
 {% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/geoespacial.css">
-  <link rel="stylesheet" href="/assets/css/geoespacial-painel-mapa.css?v=20260722-9">
+  <link rel="stylesheet" href="/assets/css/geoespacial-painel-mapa.css?v=20260914-1">
   <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
@@ -20,24 +20,24 @@
 {% block barra_lateral %}
   <section class="secao-camadas-homologadas nav-section painel-layers-section">
     <div class="geo-sidebar-toolbar">
-      <span>Biblioteca de produtos</span>
-      <div class="geo-sidebar-actions"><button type="button" id="btn-atualizar" title="Atualizar biblioteca" aria-label="Atualizar biblioteca"><i class="fa-solid fa-rotate"></i></button></div>
+      <span>Superfícies-índice</span>
+      <div class="geo-sidebar-actions"><button type="button" id="btn-atualizar" title="Atualizar camadas" aria-label="Atualizar camadas"><i class="fa-solid fa-rotate"></i></button></div>
     </div>
     <nav class="geo-sidebar-mini-nav" aria-label="Navegação geoespacial">
-      <a href="/restrict/geoespacial/visualizador-insumos-geoespaciais/">Biblioteca Insumos</a>
-      <a href="/restrict/geoespacial/produtos/" class="active" aria-current="page">Biblioteca Produtos</a>
+      <a href="/restrict/geoespacial/visualizador-bases-geoespaciais/">Bases geoespaciais</a>
+      <a href="/restrict/geoespacial/produtos/" class="active" aria-current="page">Superfícies-índice</a>
       <a href="/restrict/geoespacial/bancada/">Bancada Geoprocessamento</a>
     </nav>
     <div class="layer-group layer-group--root layers-container demandas-tree" id="geo-layers-root">
       <div class="layer-group layer-group--tipo" id="geo-operational-group">
         <div class="layer-group-header-row layer-group-header-row--tipo">
-          <label class="layer-visibility-toggle" for="toggle-operational-group" title="Exibir ou ocultar camadas homologadas"><input id="toggle-operational-group" class="layer-visibility-input" type="checkbox" checked></label>
+          <label class="layer-visibility-toggle" for="toggle-operational-group" title="Exibir ou ocultar as camadas de superfícies-índice"><input id="toggle-operational-group" class="layer-visibility-input" type="checkbox" checked></label>
           <button type="button" class="layer-group-header layer-group-header--section layer-group-header--tipo" aria-expanded="true">
-            <span class="layer-group-toggle" aria-hidden="true">▼</span><span class="layer-group-name layer-group-name--tipo">Camadas homologadas</span><span id="viewer-layer-count" class="layer-group-active-count">0</span>
+            <span class="layer-group-toggle" aria-hidden="true">▼</span><span class="layer-group-name layer-group-name--tipo">Camadas de Superfícies-índice</span><span id="viewer-layer-count" class="layer-group-active-count">0</span>
           </button>
-          <button type="button" id="toggle-operational-labels" class="layer-group-label-toggle" aria-pressed="false" aria-label="Exibir rótulos das camadas homologadas no mapa" title="Rótulos no mapa"><span class="layer-group-label-toggle-icon layer-group-label-toggle-icon--programa" aria-hidden="true"></span></button>
+          <button type="button" id="toggle-operational-labels" class="layer-group-label-toggle" aria-pressed="false" aria-label="Exibir rótulos das camadas de superfícies-índice no mapa" title="Rótulos no mapa"><span class="layer-group-label-toggle-icon layer-group-label-toggle-icon--programa" aria-hidden="true"></span></button>
         </div>
-        <div id="geoespacial-layers-list" class="layer-group-body admin-records-list" role="list" aria-label="Camadas homologadas"><p class="layers-empty hint">Nenhuma camada homologada disponível.</p></div>
+        <div id="geoespacial-layers-list" class="layer-group-body admin-records-list" role="list" aria-label="Camadas de Superfícies-índice"><p class="layers-empty hint">Carregando camadas do storage…</p></div>
       </div>
       <div class="layer-group layer-group--tipo" id="geo-basemap-group">
         <div class="layer-group-header-row layer-group-header-row--tipo">
@@ -51,10 +51,10 @@
 {% endblock %}
 
 {% block painel %}
-  <main class="conteudo-principal geo-map-workspace" aria-label="Mapa dos produtos geoespaciais homologados">
+  <main class="conteudo-principal geo-map-workspace" aria-label="Mapa das superfícies-índice">
     <div id="map-geoespacial" class="geoespacial-map"><div class="painel-map-loading" role="status" aria-live="polite"><span class="painel-loading-spinner" aria-hidden="true"></span><span>Preparando mapa e camadas…</span></div></div>
-    <div class="geoespacial-map-caption"><i class="fa-solid fa-circle-info"></i> Marque uma camada homologada para visualização.</div>
-    <aside class="geo-context-panel" aria-label="Legenda e detalhes do produto">
+    <div class="geoespacial-map-caption"><i class="fa-solid fa-circle-info"></i> Marque uma camada para visualização.</div>
+    <aside class="geo-context-panel" aria-label="Legenda e detalhes da camada">
       <div class="geo-context-tabs" role="tablist">
         <button type="button" class="active" data-context-tab="legend" role="tab" aria-selected="true"><i class="fa-solid fa-list"></i> Legenda</button>
         <button type="button" data-context-tab="details" role="tab" aria-selected="false" hidden><i class="fa-solid fa-file-lines"></i> Detalhes</button>
@@ -64,7 +64,7 @@
         <div id="geoespacial-legend" class="geo-map-legend"><p class="hint">Ative uma camada para visualizar sua legenda.</p></div>
       </section>
       <section class="secao-detalhes-produto geo-context-content" data-context-content="details" role="tabpanel" hidden>
-        <div id="geoespacial-details-content" class="geoespacial-viewer-details"><p class="hint">Selecione uma camada para consultar versão, fonte e metadados.</p></div>
+        <div id="geoespacial-details-content" class="geoespacial-viewer-details"><p class="hint">Selecione uma camada para consultar seus metadados.</p></div>
       </section>
       <section class="secao-propriedades-do-produto geo-context-content" data-context-content="properties" role="tabpanel" hidden><div id="geoespacial-properties-content"></div></section>
     </aside>
@@ -74,5 +74,6 @@
 {% block scripts_pagina %}
   <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
   <script src="/assets/js/geoespacial-map.js?v=20260722-10"></script>
-  <script src="/restrict/geoespacial/geoespacial-produtos.js?v=20260722-12"></script>
+  <script src="/restrict/geoespacial/geoespacial-storage-arvore.js?v=20260914-1"></script>
+  <script src="/restrict/geoespacial/geoespacial-produtos.js?v=20260914-1"></script>
 {% endblock %}
