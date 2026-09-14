@@ -20,8 +20,10 @@ services:
       SFTPGO_DATA_PROVIDER__CREATE_DEFAULT_ADMIN: "true"
       SFTPGO_DEFAULT_ADMIN_USERNAME: ${SFTPGO_ADMIN_USER}
       SFTPGO_DEFAULT_ADMIN_PASSWORD: ${SFTPGO_ADMIN_PASSWORD}
-      # Só SFTP para os arquivos; o cliente web não é usado.
-      SFTPGO_HTTPD__BINDINGS__0__ENABLE_WEB_CLIENT: "false"
+      # Cliente web: é onde se navega pelas pastas e arquivos no navegador, em
+      # /sicard/storage/web/client, com o usuário sicard. O painel de
+      # administração só gerencia usuários, senhas e quotas.
+      SFTPGO_HTTPD__BINDINGS__0__ENABLE_WEB_CLIENT: "true"
       # O painel é publicado pelo Nginx em https://<vm>/sicard/storage/
       # (.deploy/nginx/sicard-subpath.conf). Sem o web_root os links do painel
       # apontariam para a raiz do site, que é do SIGMA.
