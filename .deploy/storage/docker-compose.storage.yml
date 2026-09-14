@@ -1,0 +1,41 @@
+# SICARD — storage de arquivos brutos (SFTPGo), instância própria do SICARD.
+# Não usa nem toca o MinIO e o GeoServer do SIGMA que rodam na mesma VM.
+#
+# Na VM fica numa pasta própria, fora do checkout do SICARD (o deploy faz
+# git reset --hard no checkout e apagaria o que estivesse lá). Credenciais em
+# .env na mesma pasta, com permissão só do dono; nunca versionar esse arquivo.
+#
+# Sobe: docker compose -f docker-compose.storage.yml up -d
+
+name: sicard-storage
+
+services:
+  storage:
+    image: drakkan/sftpgo:latest
+    container_name: sicard_storage
+    restart: unless-stopped
+    user: "1000:1000"
+    environment:
+      TZ: "America/Sao_Paulo"
+      SFTPGO_DATA_PROVIDER__CREATE_DEFAULT_ADMIN: "true"
+      SFTPGO_DEFAULT_ADMIN_USERNAME: ${SFTPGO_ADMIN_USER}
+      SFTPGO_DEFAULT_ADMIN_PASSWORD: ${SFTPGO_ADMIN_PASSWORD}
+      # Só SFTP para os arquivos; o cliente web não é usado.
+      SFTPGO_HTTPD__BINDINGS__0__ENABLE_WEB_CLIENT: "false"
+    ports:
+      # SFTP. Fica restrito à VM até decidir a exposição: a porta 2222 está
+      # bloqueada no firewall da AWS; a alternativa é túnel pela porta 22.
+      - "127.0.0.1:2222:2022"
+      # Administração do SFTPGo, apenas de dentro da VM.
+      - "127.0.0.1:8095:8080"
+    volumes:
+      - ./dados:/srv/sftpgo/data
+      - ./backups:/srv/sftpgo/backups
+      - ./config:/var/lib/sftpgo
+    # A VM não tem swap: sem limite, um pico aqui poderia derrubar outro serviço.
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
