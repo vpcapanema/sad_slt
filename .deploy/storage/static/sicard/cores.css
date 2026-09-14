@@ -287,8 +287,11 @@
   color: #4ade80;
 }
 
-.app-sidebar .hover-scroll-y:hover {
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+/* Firefox e Chrome 121+; os demais usam o ::-webkit-scrollbar-thumb abaixo. */
+@supports (scrollbar-color: red transparent) {
+  .app-sidebar .hover-scroll-y:hover {
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
 }
 
 .app-sidebar .hover-scroll-y:hover::-webkit-scrollbar-thumb {

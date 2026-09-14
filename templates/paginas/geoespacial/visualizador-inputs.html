@@ -41,7 +41,7 @@
           </button>
           <button type="button" id="toggle-operational-labels" class="layer-group-label-toggle" aria-pressed="false" aria-label="Exibir rótulos das camadas operacionais no mapa" title="Rótulos no mapa"><span class="layer-group-label-toggle-icon layer-group-label-toggle-icon--programa" aria-hidden="true"></span></button>
         </div>
-        <div id="geoespacial-layers-list" class="layer-group-body admin-records-list" role="list" aria-label="Camadas operacionais"><p class="layers-empty hint">Carregando camadas do storage…</p></div>
+        <div id="geoespacial-layers-list" class="layer-group-body admin-records-list" role="group" aria-label="Camadas operacionais"><p class="layers-empty hint">Carregando camadas do storage…</p></div>
       </div>
       <div class="layer-group layer-group--tipo" id="geo-basemap-group">
         <div class="layer-group-header-row layer-group-header-row--tipo">
@@ -106,6 +106,6 @@
 {% block scripts_pagina %}
   <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
   <script src="/assets/js/geoespacial-map.js?v=20260722-10"></script>
-  <script src="/restrict/geoespacial/geoespacial-storage-arvore.js?v=20260914-1"></script>
+  <script src="/restrict/geoespacial/geoespacial-storage-arvore.js?v=20260914-2"></script>
   <script src="/restrict/geoespacial/geoespacial-visualizador-inputs.js?v=20260914-1"></script>
 {% endblock %}

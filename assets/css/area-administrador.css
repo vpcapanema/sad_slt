@@ -131,7 +131,9 @@
   background: #e9eff5;
 }
 .admin-table-link.active {
+  background: #eef3f8;
   background: color-mix(in srgb, var(--schema) 14%, #ffffff);
+  color: #1e2b39;
   color: color-mix(in srgb, var(--schema) 70%, #1e2b39);
   font-weight: 600;
   box-shadow: inset 3px 0 var(--schema);

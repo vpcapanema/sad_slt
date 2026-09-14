@@ -128,8 +128,14 @@
 
 .layout-sidebar-body {
   color: var(--sb-text);
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+/* Firefox e Chrome 121+; os demais usam o ::-webkit-scrollbar abaixo. */
+@supports (scrollbar-width: thin) {
+  .layout-sidebar-body {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  }
 }
 
 .layout-sidebar-header .app-brand-title {
