@@ -11,6 +11,9 @@
  * No modo escuro o azul fica mais claro para manter o contraste.
  */
 
+/* Mesma fonte da marca no SICARD (barra lateral). */
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&display=swap");
+
 :root,
 [data-bs-theme=light] {
   --bs-primary: #116593;
@@ -179,10 +182,7 @@
   display: none;
 }
 
-/* 3. Barra lateral. */
-.app-sidebar-logo > img[alt="Logo"] + span.text-sidebar {
-  display: none;
-}
+/* 3. Barra lateral: tratada na seção da barra, no fim deste arquivo. */
 
 /* No modo escuro, o nome do logo colorido (azul-marinho) some no fundo. */
 [data-bs-theme=dark] img[alt="Logo"] {
@@ -201,9 +201,46 @@
   --bs-menu-link-color-active: #4ade80;
 }
 
-/* A barra é escura mesmo no modo claro: o logo precisa ser o branco. */
-.app-sidebar-logo img[alt="Logo"] {
-  content: url("logo-escuro.png");
+/* Marca no topo da barra, igual à barra do SICARD
+ * (templates/componentes/navbar_painel_restrita.html): símbolo colorido,
+ * "SICARD" em verde e, abaixo, o nome da área em branco. O nome da área é o
+ * nome curto que o template já escreve ao lado do logo. */
+.app-sidebar .app-sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.app-sidebar .app-sidebar-logo img[alt="Logo"] {
+  content: url("simbolo.png");
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  flex-shrink: 0;
+}
+
+.app-sidebar .app-sidebar-logo > img[alt="Logo"] + span.text-sidebar {
+  display: block;
+  padding-left: 0 !important;
+  font-family: "Montserrat", Verdana, sans-serif;
+  font-size: 0.62rem !important;
+  font-weight: 600 !important;
+  line-height: 1.15;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.app-sidebar .app-sidebar-logo > img[alt="Logo"] + span.text-sidebar::before {
+  content: "SICARD";
+  display: block;
+  margin-bottom: 0.1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: #3ec26e;
 }
 
 .app-sidebar-navs .menu .menu-item .menu-heading {
@@ -256,4 +293,47 @@
 
 .app-sidebar .hover-scroll-y:hover::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Tabelas: linhas e colunas visivelmente separadas entre si e do resto.
+ * O tema usa só um tracejado quase invisível entre linhas (--bs-border-color
+ * #F1F1F4 no modo claro) e nenhuma divisão entre colunas. Vale para todas as
+ * tabelas do SFTPGo, que usam a classe table-row-dashed. */
+:root,
+[data-bs-theme=light] {
+  --sicard-tabela-borda: #d8dee4;
+  --sicard-tabela-cabecalho: #f1f5f8;
+  --sicard-tabela-cabecalho-texto: #3f4a54;
+}
+
+[data-bs-theme=dark] {
+  --sicard-tabela-borda: #3a3d47;
+  --sicard-tabela-cabecalho: #1e2027;
+  --sicard-tabela-cabecalho-texto: #c9ced6;
+}
+
+.table.table-row-dashed {
+  margin-block: 1rem;
+  box-shadow: 0 0 0 1px var(--sicard-tabela-borda);
+}
+
+.table:not(.table-bordered).table-row-dashed tr {
+  border-bottom: 1px solid var(--sicard-tabela-borda);
+}
+
+.table.table-row-dashed > :not(caption) > tr > :is(th, td) {
+  padding-inline: 0.75rem;
+}
+
+.table.table-row-dashed > :not(caption) > tr > :is(th, td) + :is(th, td) {
+  border-left: 1px solid var(--sicard-tabela-borda);
+}
+
+.table.table-row-dashed > thead > tr > th {
+  background-color: var(--sicard-tabela-cabecalho);
+  color: var(--sicard-tabela-cabecalho-texto) !important;
+}
+
+.table:not(.table-bordered).table-row-dashed > thead > tr {
+  border-bottom: 2px solid var(--sicard-tabela-borda);
 }
