@@ -177,7 +177,9 @@ def consultar(ident, user, completo=False):
     ident = str(UUID(str(ident)))
     with get_connection() as conn:
         row = conn.execute("SELECT id,status,erro,responsavel FROM geoprocessamento.execucao_arquivo WHERE id=%s AND operacao='extracao_atributos'",(ident,)).fetchone()
-    if not row or row['responsavel'] != str(user.id):
+    from api.services.session_service import is_gestor
+    # Quem executou vê a própria extração; gestor e administrador veem todas.
+    if not row or (row['responsavel'] != str(user.id) and not is_gestor(user)):
         raise LookupError('Extração não encontrada para esta sessão.')
     response = {'id':ident,'status':row['status'],'erro':row['erro']}
     with _lock: etapas = list(_progress.get(ident) or [])
@@ -198,6 +200,22 @@ def consultar(ident, user, completo=False):
             if legado.is_file():
                 response['resultado'] = json.loads(legado.read_text(encoding='utf-8'))
     return response
+
+
+def listar_execucoes(user, limite=50):
+    """Extrações com pacote de saída, da mais recente para a mais antiga."""
+    from api.services.session_service import is_gestor
+    with get_connection() as conn:
+        linhas = conn.execute('''SELECT execucao_id,nome_saida,operacao,responsavel,criado_em,pacote_nome,
+                pacote_tamanho_bytes,relatorio->'resumo' AS resumo,relatorio->>'input_nome' AS entrada,
+                jsonb_array_length(bases) AS bases
+            FROM geoprocessamento.extracao_atributos
+            WHERE %s OR responsavel=%s ORDER BY criado_em DESC LIMIT %s''',
+            (is_gestor(user),str(user.id),limite)).fetchall()
+    return [{'id':str(l['execucao_id']),'nome_saida':l['nome_saida'],'operacao':l['operacao'],
+             'entrada':l['entrada'],'bases':l['bases'],'resumo':l['resumo'],'pacote_nome':l['pacote_nome'],
+             'pacote_tamanho_bytes':l['pacote_tamanho_bytes'],'criado_em':l['criado_em'].isoformat(),
+             'minha':l['responsavel']==str(user.id)} for l in linhas]
 
 
 def _procedencia(ident, nome, frame):

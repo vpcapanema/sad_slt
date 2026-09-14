@@ -140,6 +140,12 @@ def catalogo():
     return service.catalogo()
 
 
+@router.get('/execucoes')
+def listar_execucoes(user: SessionUser = Depends(require_geospatial_access)):
+    """Extrações anteriores com pacote: as próprias; gestor e administrador veem todas."""
+    return service.listar_execucoes(user)
+
+
 @router.post('/execucoes',status_code=202)
 def executar(payload: Extracao, user: SessionUser = Depends(require_geospatial_access)):
     try:

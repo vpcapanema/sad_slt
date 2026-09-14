@@ -134,4 +134,18 @@ def test_api_rejeita_sem_sessao():
     app=FastAPI();app.include_router(router)
     with TestClient(app) as client:
         assert client.get('/extracao-atributos/catalogo').status_code==401
+        assert client.get('/extracao-atributos/execucoes').status_code==401
         assert client.post('/extracao-atributos/execucoes',json={}).status_code==401
+
+
+def test_indice_de_extracoes_e_o_destino_do_card_e_leva_a_nova_extracao():
+    from fastapi.testclient import TestClient
+    from api.server import app
+    client=TestClient(app)
+    indice=client.get('/restrict/geoespacial/extracoes-atributos/')
+    assert indice.status_code==200
+    assert 'class="standard-section-action-row"' in indice.text and 'Nova extração' in indice.text
+    assert 'href="/restrict/geoespacial/extracao-atributos/"' in indice.text
+    assert 'class="admin-table ea-indice-tabela"' in indice.text and 'mad-filter--composite' in indice.text
+    central=client.get('/restrict/geoespacial/').text
+    assert 'href="/restrict/geoespacial/extracoes-atributos/" class="card-extracao-de-atributos' in central

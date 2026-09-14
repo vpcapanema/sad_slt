@@ -256,6 +256,7 @@ async function carregarCatalogo(){
 window.addEventListener('extracao:integracao',async()=>{
   if(state.busy)return;busy(true);
   try{await carregarCatalogo();}catch(error){feedback(`Não foi possível carregar o catálogo: ${error.message}`);}finally{busy(false);}
+  abrirExtracaoDaUrl();
 });
 window.SICARDExtracao={conectar:conectarIntegracao,renderParametros};
 renderParametros();
@@ -270,3 +271,22 @@ document.getElementById('ea-recover').addEventListener('click',async()=>{
   try{const job=await json(`/extracao-atributos/execucoes/${id}`);state.result=validateResult(await esperar(job,id=>`/extracao-atributos/execucoes/${id}`));results.set(state.result);syncMap();feedback('Última análise recuperada.');}
   catch(e){feedback(e.message);}finally{busy(false);}
 });
+
+// Aberta pelo índice (?execucao=<id>): mostra o resultado da extração já executada.
+async function abrirExtracao(id){
+  if(state.busy)return;busy(true);
+  try{
+    const job=await json(`/extracao-atributos/execucoes/${encodeURIComponent(id)}`);
+    if(job.status!=='concluido'||!job.resultado)throw new Error('Esta extração não tem resultado disponível.');
+    state.result=validateResult(job.resultado);results.set(state.result);syncMap();
+    $("#ea-results").scrollIntoView({behavior:"smooth",block:"start"});
+    feedback(`Resultados de "${job.resultado.input_nome||'extração'}" abertos. O pacote de saída pode ser baixado na seção 03.`);
+  }catch(error){feedback(`Não foi possível abrir: ${error.message}`);}finally{busy(false);}
+}
+const execucaoDaUrl=new URLSearchParams(location.search).get('execucao');
+let execucaoAberta=false;
+function abrirExtracaoDaUrl(){
+  if(!execucaoDaUrl||execucaoAberta||state.busy)return;
+  execucaoAberta=true;abrirExtracao(execucaoDaUrl);
+}
+abrirExtracaoDaUrl();
