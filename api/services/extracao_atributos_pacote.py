@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from api.repositories.camada_geoespacial_repository import _json_safe
 from api.services import extracao_atributos_exportacao as exportacao
@@ -64,8 +64,10 @@ def escrever_gpkg(saida, entrada, path: Path) -> None:
     for camada, frame in (('resultado', saida), ('entrada', entrada)):
         data = _para_gpkg(frame.to_crs(4674))
         extras = {'geometry_type': 'Unknown'} if data.empty else {}
+        # Polígonos simples e multipartes na mesma camada gravavam o tipo como
+        # "Unknown"; promovidos a multi, a camada tem um tipo só no QGIS.
         data.to_file(path, driver='GPKG', layer=camada, engine='pyogrio', index=False,
-                     promote_to_multi=False, **extras)
+                     promote_to_multi=True, **extras)
 
 
 def _hora(valor) -> str:
@@ -126,12 +128,13 @@ def pdf_processamento(proc: dict, path: Path) -> None:
             ['Responsável', proc.get('responsavel') or '—'],
             ['Início', _hora(proc.get('iniciado_em'))],
             ['Fim do processamento', _hora(proc.get('finalizado_em'))],
-            ['Duração', f"{proc.get('duracao_segundos', 0):.1f} s"],
+            ['Duração', f"{proc.get('duracao_segundos', 0):.1f} s".replace('.', ',')],
             ['Operação', {'intersection': 'Interseção', 'identity': 'Identidade'}.get(proc['operacao'], proc['operacao'])],
         ], [150, 590], cabecalho=False),
-        p('Parâmetros do operador de overlay (GDAL/OGR)', 'Heading1'),
-        tabela([['Opção', 'Valor'], *[[chave, 'sim' if valor else 'não'] for chave, valor in opcoes.items()]], [300, 440]),
-        p('Camada de entrada', 'Heading1'),
+        # Cada título vai junto com a sua tabela: nada de título sozinho no pé da página.
+        KeepTogether([p('Parâmetros do operador de overlay (GDAL/OGR)', 'Heading1'),
+                      tabela([['Opção', 'Valor'], *[[chave, 'sim' if valor else 'não'] for chave, valor in opcoes.items()]], [300, 440])]),
+        KeepTogether([p('Camada de entrada', 'Heading1'),
         tabela([
             ['Nome', entrada.get('nome')], ['Identificador', entrada.get('id')],
             ['Origem', 'Storage do SICARD' if entrada.get('origem') == 'storage' else 'Banco do SICARD'],
@@ -140,28 +143,28 @@ def pdf_processamento(proc: dict, path: Path) -> None:
             ['Tamanho / modificação', f"{_bytes(entrada.get('tamanho_bytes'))} · {_hora(entrada.get('modificado_em'))}"
              if entrada.get('origem') == 'storage' else '—'],
             ['SHA-256 do arquivo', entrada.get('sha256') or '—'],
-        ], [150, 590], cabecalho=False),
-        p('Camadas de base', 'Heading1'),
+        ], [150, 590], cabecalho=False)]),
+        KeepTogether([p('Camadas de base', 'Heading1'),
         p('Lidas do storage no momento da execução. A impressão digital (tamanho, data e SHA-256) '
           'permite verificar se o arquivo ainda é o mesmo.'),
         tabela([['Categoria', 'Camada', 'Arquivo', 'Feições', 'Tamanho', 'Modificado em', 'SHA-256'],
                 *[[b.get('categoria'), b.get('nome'), b.get('arquivo') or b.get('id'), b.get('feicoes'),
                    _bytes(b.get('tamanho_bytes')), _hora(b.get('modificado_em')), b.get('sha256') or '—']
                   for b in proc['bases']]],
-               [85, 95, 150, 45, 55, 85, 225]),
-        p('Saída', 'Heading1'),
+               [85, 95, 150, 45, 55, 85, 225])]),
+        KeepTogether([p('Saída', 'Heading1'),
         tabela([
             ['Camada resultante (banco)', saida.get('camada_resultado_id')],
             ['Feições resultantes', saida.get('feicoes')],
             ['CRS no pacote', 'EPSG:4674 (SIRGAS 2000)'],
             ['Ocorrências', saida.get('ocorrencias')], ['Camadas intersectadas', saida.get('camadas_intersectadas')],
-        ], [150, 590], cabecalho=False),
-        p('Etapas do processamento', 'Heading1'),
-        tabela([['Horário', 'Etapa'], *[[_hora(e.get('em')), e.get('mensagem')] for e in proc['etapas']]], [120, 620]),
-        p('Ambiente de execução', 'Heading1'),
-        tabela([[chave, valor] for chave, valor in ambiente.items()], [150, 590], cabecalho=False),
-        p('Conteúdo do pacote', 'Heading1'),
-        tabela([['Arquivo', 'Descrição'], *[[nome, ARQUIVOS[chave][1]] for chave, nome in proc['arquivos'].items()]], [300, 440]),
+        ], [150, 590], cabecalho=False)]),
+        KeepTogether([p('Etapas do processamento', 'Heading1'),
+                      tabela([['Horário', 'Etapa'], *[[_hora(e.get('em')), e.get('mensagem')] for e in proc['etapas']]], [120, 620])]),
+        KeepTogether([p('Ambiente de execução', 'Heading1'),
+                      tabela([[chave, valor] for chave, valor in ambiente.items()], [150, 590], cabecalho=False)]),
+        KeepTogether([p('Conteúdo do pacote', 'Heading1'),
+                      tabela([['Arquivo', 'Descrição'], *[[nome, ARQUIVOS[chave][1]] for chave, nome in proc['arquivos'].items()]], [300, 440])]),
         Spacer(1, 6),
         p('As medidas e estatísticas estão no relatório analítico. O SHA-256 de cada arquivo do pacote fica '
           'registrado no banco junto com a execução.'),

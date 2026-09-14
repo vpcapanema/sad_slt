@@ -17,6 +17,17 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 # o texto é cortado com aviso; o CSV do mesmo pacote leva o conteúdo completo.
 LIMITE_CELULA_XLSX = 32767
 AVISO_CORTE = ' … [texto completo no CSV do pacote]'
+OPERACOES = {'intersection':'Interseção','identity':'Identidade'}
+
+
+def data_hora(valor):
+    """ISO em UTC -> data e hora de São Paulo; texto que não for data passa como veio."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    try:
+        return datetime.fromisoformat(str(valor)).astimezone(ZoneInfo('America/Sao_Paulo')).strftime('%d/%m/%Y %H:%M:%S')
+    except ValueError:
+        return str(valor)
 
 
 def medidas(value, dim):
@@ -72,8 +83,8 @@ def pdf(result,path):
         return item
     dim = result['dimensao_input']; summary = result['resumo']
     story = [p('SICARD | Extração de atributos','Title'),p(result['input_nome'],'Heading2'),
-             p(f"Execução: {result['id']} | {result['criado_em']}"),
-             p(f"Motor: {result['motor']} | GDAL {result['gdal']} | Operação: {result['operacao']}"),
+             p(f"Execução: {result['id']} | {data_hora(result['criado_em'])}"),
+             p(f"Motor: {result['motor']} | GDAL {result['gdal']} | Operação: {OPERACOES.get(result['operacao'],result['operacao'])}"),
              p('Síntese da análise','Heading2'),
              table([['Categorias','Camadas intersectadas','Ocorrências','Parcela da entrada'],
                     [len(result['categorias']),summary['camadas_intersectadas'],summary['ocorrencias'],f"{summary['percentual']:.4f}%"]],[160]*4),

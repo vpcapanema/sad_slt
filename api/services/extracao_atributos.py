@@ -131,7 +131,7 @@ def _execute(ident, params):
         layer_id = geo.registrar_camada(frame,nome_saida,'OP-05',linhagem=params,gravar_arquivo=False)
         from osgeo import gdal
         result.update(id=ident,camada_resultado_id=layer_id,input_id=params['camada_id'],input_nome=params['input_nome'],
-                      criado_em=datetime.now(timezone.utc).isoformat(),gdal=gdal.VersionInfo())
+                      criado_em=datetime.now(timezone.utc).isoformat(),gdal=gdal.VersionInfo('RELEASE_NAME'))
         progress('Registrando a procedência da entrada e das bases')
         entrada = _procedencia(params['camada_id'],params['input_nome'],source)
         bases = [{**_procedencia(b['id'],b['nome'],b['frame']),'categoria':c['nome']}
