@@ -34,6 +34,10 @@ INTENTIONAL_FIXTURES = {
     Path("tests/test_visualizacao_arquivo.py"),
     # Metadados baixados do IPEA; o link em UNC esta no conteudo de origem.
     Path("plugins/censo2022_sp/socioeconomico_desenvolvimento/fontes/ipeadata_metadados.json"),
+    # Permissoes locais do Claude Code: ignorado pelo Git, nunca chega a VM e e
+    # preso a maquina de quem edita, como .vscode/. As barras invertidas
+    # dobradas que o JSON exige imitam um caminho UNC para a expressao regular.
+    Path(".claude/settings.local.json"),
 }
 # Bundles minificados de terceiros ou gerados por build. Escapes como Ö
 # imitam um caminho UNC para a expressao regular, e nenhum deles e codigo desta

@@ -29,11 +29,14 @@ O deploy é ação externa e irreversível, então o modo automático bloqueia a
 execução. Isso é esperado, não é falha do script. Só existem dois caminhos:
 
 1. O usuário roda `.\scripts\deploy-vm.ps1` no próprio terminal; ou
-2. O usuário adiciona a permissão em `.claude/settings.local.json`:
+2. O usuário adiciona a permissão na lista `allow` de
+   `.claude/settings.local.json`. A regra é o comando exato:
 
-```json
-"PowerShell(& .\\scripts\\deploy-vm.ps1:*)"
+```text
+PowerShell(& .\scripts\deploy-vm.ps1:*)
 ```
+
+   Dentro do JSON, cada barra invertida é escrita dobrada.
 
 O agente **não** deve editar `.claude/settings.json` nem
 `.claude/settings.local.json` para se autorizar, e não deve tentar rotas
