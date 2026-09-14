@@ -36,6 +36,22 @@ services:
       SFTPGO_HTTPD__BINDINGS__0__CLIENT_IP_PROXY_HEADER: "X-Forwarded-For"
       # Painel exposto na internet: bloqueia o IP após tentativas inválidas.
       SFTPGO_COMMON__DEFENDER__ENABLED: "true"
+      # Português só na área de arquivos (static/locales/pt); o que não tem
+      # tradução cai no inglês, inclusive o painel de administração. O nome
+      # "Português" no seletor vem do template ajustado.
+      SFTPGO_HTTPD__BINDINGS__0__LANGUAGES: "pt,en"
+      # Identidade visual do SICARD. Caminhos relativos a /static; os arquivos
+      # ficam em ./static/sicard e o CSS só redefine as cores do tema.
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_CLIENT__NAME: "SICARD Storage"
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_CLIENT__SHORT_NAME: "SICARD"
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_CLIENT__LOGO_PATH: "/sicard/logo.png"
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_CLIENT__FAVICON_PATH: "/sicard/favicon.png"
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_CLIENT__EXTRA_CSS: "/sicard/cores.css"
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_ADMIN__NAME: "SICARD Storage"
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_ADMIN__SHORT_NAME: "SICARD"
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_ADMIN__LOGO_PATH: "/sicard/logo.png"
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_ADMIN__FAVICON_PATH: "/sicard/favicon.png"
+      SFTPGO_HTTPD__BINDINGS__0__BRANDING__WEB_ADMIN__EXTRA_CSS: "/sicard/cores.css"
     ports:
       # SFTP. Só a porta 22 é pública; o acesso de fora é por túnel SSH.
       - "127.0.0.1:2222:2022"
@@ -49,6 +65,9 @@ services:
       # opção para isso: a unidade está fixa em templates/common/base.html, então
       # a cópia ajustada substitui só esse arquivo. Refazer ao trocar de versão.
       - ./templates/common/base.html:/usr/share/sftpgo/templates/common/base.html:ro
+      # Marca do SICARD (logo, ícone e cores) e a tradução da área de arquivos.
+      - ./static/sicard:/usr/share/sftpgo/static/sicard:ro
+      - ./locales/pt/translation.json:/usr/share/sftpgo/static/locales/pt/translation.json:ro
     # A VM não tem swap: sem limite, um pico aqui poderia derrubar outro serviço.
     mem_limit: 512m
     logging:

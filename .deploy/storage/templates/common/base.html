@@ -190,6 +190,8 @@ explicit grant from the SFTPGo Team (support@sftpgo.com).
     lngs.de = { nativeName: 'Deutsch' };
     //{{- else if eq . "fr" }}
     lngs.fr = { nativeName: 'Français' };
+    //{{- else if eq . "pt" }}
+    lngs.pt = { nativeName: 'Português' };
     //{{- end}}
     //{{- end}}
     if (Object.keys(lngs).length == 0){
@@ -213,7 +215,7 @@ explicit grant from the SFTPGo Team (support@sftpgo.com).
             .init({
                 debug: false,
                 supportedLngs: Object.keys(lngs),
-                fallbackLng: Object.keys(lngs)[0],
+                fallbackLng: 'en',
                 load: 'languageOnly',
                 backend: {
                     backends: [

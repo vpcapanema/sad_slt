@@ -1,0 +1,172 @@
+/* SICARD Storage — cores do SICARD sobre o tema do SFTPGo 2.7.5.
+ *
+ * Carregado pela opção de marca extra_css, depois do tema. O tema guarda o azul
+ * em variáveis (--bs-primary e derivadas) e em algumas regras com a cor escrita
+ * direto; aqui as duas coisas são redefinidas com os mesmos seletores.
+ *
+ * Paleta, de assets/css/app.css do SICARD:
+ *   azul    #116593  (--pli-blue, cor principal)
+ *   marinho #1c3d59  (--pli-navy, passar do mouse e clique)
+ *   profundo #003b5a (--pli-deep)
+ * No modo escuro o azul fica mais claro para manter o contraste.
+ */
+
+:root,
+[data-bs-theme=light] {
+  --bs-primary: #116593;
+  --bs-primary-rgb: 17, 101, 147;
+  --bs-primary-active: #1c3d59;
+  --bs-primary-light: #e6f0f5;
+  --bs-primary-clarity: rgba(17, 101, 147, 0.2);
+  --bs-primary-inverse: #ffffff;
+  --bs-primary-text-emphasis: #0b3c58;
+  --bs-primary-bg-subtle: #cfe0e9;
+  --bs-primary-border-subtle: #a0c1d4;
+  --bs-text-primary: #116593;
+  --bs-link-color: #116593;
+  --bs-link-color-rgb: 17, 101, 147;
+  --bs-link-hover-color: #1c3d59;
+  --bs-focus-ring-color: rgba(17, 101, 147, 0.25);
+  --bs-component-active-bg: #116593;
+  --bs-component-checked-bg: #116593;
+  --bs-component-hover-color: #116593;
+  --bs-menu-link-color-active: #116593;
+  --bs-menu-link-color-here: #116593;
+  --bs-menu-link-color-hover: #116593;
+  --bs-menu-link-color-show: #116593;
+  --bs-scrolltop-bg-color: #116593;
+  --bs-scrolltop-bg-color-hover: #1c3d59;
+  --bs-ribbon-label-bg: #116593;
+}
+
+[data-bs-theme=dark] {
+  --bs-primary: #3a8fc0;
+  --bs-primary-rgb: 58, 143, 192;
+  --bs-primary-active: #5aa6d3;
+  --bs-primary-light: #14293a;
+  --bs-primary-clarity: rgba(58, 143, 192, 0.2);
+  --bs-primary-inverse: #ffffff;
+  --bs-primary-text-emphasis: #8cc2e2;
+  --bs-primary-bg-subtle: #0c2230;
+  --bs-primary-border-subtle: #1f5577;
+  --bs-text-primary: #3a8fc0;
+  --bs-link-color: #3a8fc0;
+  --bs-link-color-rgb: 58, 143, 192;
+  --bs-link-hover-color: #5aa6d3;
+  --bs-focus-ring-color: rgba(58, 143, 192, 0.25);
+  --bs-component-active-bg: #3a8fc0;
+  --bs-component-checked-bg: #3a8fc0;
+  --bs-component-hover-color: #3a8fc0;
+  --bs-menu-link-color-active: #3a8fc0;
+  --bs-menu-link-color-here: #3a8fc0;
+  --bs-menu-link-color-hover: #3a8fc0;
+  --bs-menu-link-color-show: #3a8fc0;
+  --bs-scrolltop-bg-color: #3a8fc0;
+  --bs-scrolltop-bg-color-hover: #5aa6d3;
+  --bs-ribbon-label-bg: #3a8fc0;
+}
+
+/* Botões: o tema fixa a cor nas variáveis de cada componente. */
+.btn-primary {
+  --bs-btn-bg: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: var(--bs-primary-active);
+  --bs-btn-hover-border-color: var(--bs-primary-active);
+  --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+  --bs-btn-active-bg: var(--bs-primary-active);
+  --bs-btn-active-border-color: var(--bs-primary-active);
+  --bs-btn-disabled-bg: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
+}
+
+/* Mesmo degradê do botão principal do SICARD. */
+.btn.btn-primary:not(:disabled):not(.disabled) {
+  background-image: linear-gradient(135deg, var(--bs-primary), var(--bs-primary-active));
+  border-color: var(--bs-primary);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
+  --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+  --bs-btn-active-bg: var(--bs-primary-active);
+  --bs-btn-active-border-color: var(--bs-primary-active);
+  --bs-btn-disabled-color: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
+}
+
+.nav-pills {
+  --bs-nav-pills-link-active-bg: var(--bs-primary);
+}
+
+.progress,
+.progress-stacked {
+  --bs-progress-bar-bg: var(--bs-primary);
+}
+
+/* Regras com o azul escrito direto, sem variável. */
+.form-check-input:checked,
+.form-check-input[type=checkbox]:indeterminate {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+}
+
+.form-check.form-check-solid .form-check-input[type=checkbox]:indeterminate {
+  background-color: var(--bs-primary);
+}
+
+.form-range::-webkit-slider-thumb {
+  background-color: var(--bs-primary);
+}
+
+.form-range::-moz-range-thumb {
+  background-color: var(--bs-primary);
+}
+
+.dt-hasChild.dtr-expanded .dtr-control:before {
+  background-color: var(--bs-primary);
+}
+
+/* Anel de foco. */
+.form-control:focus,
+.nav-link:focus-visible {
+  box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+}
+
+.form-range:focus::-webkit-slider-thumb,
+.form-range:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 1px #fff, 0 0 0 0.25rem var(--bs-focus-ring-color);
+}
+
+/* Logo do SICARD sem o nome ao lado.
+ * Os templates escrevem o nome curto junto do logo, pensando no logo pequeno do
+ * SFTPGo. O logo do SICARD já traz o nome e é largo: o texto ficava por cima.
+ * Três padrões de marcação, conferidos no SFTPGo 2.7.5. */
+
+/* 1. Duas colunas (login, 2FA, senha, login de compartilhamento). */
+.row > .col-5:has(img[alt="Logo"]) {
+  flex: 0 0 100%;
+  max-width: 100%;
+  text-align: center;
+}
+
+.row > .col-5:has(img[alt="Logo"]) + .col-7 {
+  display: none;
+}
+
+/* 2. Nome na mesma linha (mensagem, envio e download de compartilhamento). */
+.mb-12 > :has(> img[alt="Logo"]) + :is(a, span) {
+  display: none;
+}
+
+/* 3. Barra lateral. */
+.app-sidebar-logo > img[alt="Logo"] + span.text-sidebar {
+  display: none;
+}
+
+/* No modo escuro, o nome do logo colorido (azul-marinho) some no fundo. */
+[data-bs-theme=dark] img[alt="Logo"] {
+  content: url("logo-escuro.png");
+}
