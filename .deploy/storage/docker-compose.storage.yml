@@ -11,7 +11,9 @@ name: sicard-storage
 
 services:
   storage:
-    image: drakkan/sftpgo:latest
+    # Versão fixa: o template ajustado abaixo foi copiado desta versão, e uma
+    # atualização automática poderia torná-lo incompatível.
+    image: drakkan/sftpgo:v2.7.5
     container_name: sicard_storage
     restart: unless-stopped
     user: "1000:1000"
@@ -43,6 +45,10 @@ services:
       - ./dados:/srv/sftpgo/data
       - ./backups:/srv/sftpgo/backups
       - ./config:/var/lib/sftpgo
+      # Tamanhos em kB/MB/GB (base 1000) em vez de KiB/MiB/GiB. O SFTPGo não tem
+      # opção para isso: a unidade está fixa em templates/common/base.html, então
+      # a cópia ajustada substitui só esse arquivo. Refazer ao trocar de versão.
+      - ./templates/common/base.html:/usr/share/sftpgo/templates/common/base.html:ro
     # A VM não tem swap: sem limite, um pico aqui poderia derrubar outro serviço.
     mem_limit: 512m
     logging:
