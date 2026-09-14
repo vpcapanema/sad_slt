@@ -9,16 +9,35 @@ import { json } from './api.js';
 // escolha de uma única camada, o duplo clique já confirma. Backspace sobe uma pasta.
 const ROOT='base-geoespacial';
 const ROOT_NAMES={'base-geoespacial':'Bases geoespaciais'};
+// Ícone por formato, pela convenção mais comum: GeoPackage é um banco SQLite;
+// Shapefile, geometria vetorial; GeoJSON, texto estruturado; KML, o globo do
+// Google Earth; FlatGeobuf, arquivo binário; rasters, imagem.
+const FORMATOS={
+  gpkg:['fa-database','GeoPackage'], shp:['fa-draw-polygon','Shapefile'],
+  geojson:['fa-file-code','GeoJSON'], json:['fa-file-code','GeoJSON'],
+  kml:['fa-earth-americas','KML'], fgb:['fa-file','FlatGeobuf'],
+  tif:['fa-file-image','GeoTIFF'], tiff:['fa-file-image','GeoTIFF'], img:['fa-file-image','Raster'],
+};
+const VISOES=[['list','Lista','fa-list'],['details','Detalhes','fa-table-list'],['icons','Ícones grandes','fa-grip']];
+
+function fa(nome){const i=document.createElement('i');i.className=`fa-solid ${nome}`;i.setAttribute('aria-hidden','true');return i;}
+// "uf_sp.gpkg"; num GeoPackage com várias camadas, "bases.gpkg › rios".
+function partesDoNome(item){
+  const base=String(item.arquivo||'').split('/').pop(),ponto=base.lastIndexOf('.');
+  const radical=ponto>0?base.slice(0,ponto):base,extensao=ponto>0?base.slice(ponto):'';
+  return {radical,extensao,camada:item.nome!==radical?item.nome:'',formato:extensao.slice(1).toLowerCase()};
+}
+function rotulo(item){const p=partesDoNome(item);return `${p.radical}${p.extensao}${p.camada?` › ${p.camada}`:''}`;}
 
 export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
   return new Promise(resolve=>{
     const dialog=el('dialog',undefined,'ea-tool-dialog ea-storage-dialog');
-    const header=el('header'),heading=el('h2',title),close=icon('Fechar','×',()=>finish());
-    const minimize=icon('Minimizar','−',()=>{const small=dialog.classList.toggle('is-minimized');minimize.setAttribute('aria-label',small?'Restaurar':'Minimizar');minimize.title=small?'Restaurar':'Minimizar';});
-    const maximize=icon('Maximizar','□',()=>{dialog.classList.remove('is-minimized');minimize.setAttribute('aria-label','Minimizar');minimize.title='Minimizar';const full=dialog.classList.toggle('is-maximized');maximize.textContent=full?'❐':'□';maximize.title=full?'Restaurar tamanho':'Maximizar';maximize.setAttribute('aria-label',maximize.title);});
+    const header=el('header'),heading=el('h2',title),close=icon('Fechar','fa-xmark',()=>finish());
+    const minimize=icon('Minimizar','fa-window-minimize',()=>{const small=dialog.classList.toggle('is-minimized');setIcon(minimize,small?'Restaurar':'Minimizar',small?'fa-window-restore':'fa-window-minimize');});
+    const maximize=icon('Maximizar','fa-window-maximize',()=>{dialog.classList.remove('is-minimized');setIcon(minimize,'Minimizar','fa-window-minimize');const full=dialog.classList.toggle('is-maximized');setIcon(maximize,full?'Restaurar tamanho':'Maximizar',full?'fa-window-restore':'fa-window-maximize');});
     const windows=el('div',undefined,'ea-storage-window-controls');windows.append(minimize,maximize,close);
     heading.id='ea-storage-title';dialog.setAttribute('aria-labelledby',heading.id);header.append(heading,windows);
-    const toolbar=el('div',undefined,'ea-storage-toolbar'),up=icon('Pasta acima (Backspace)','↑',()=>goUp());
+    const toolbar=el('div',undefined,'ea-storage-toolbar'),up=icon('Subir um nível (Backspace)','fa-arrow-turn-up',()=>goUp());
     const trail=el('nav',undefined,'ea-storage-path');trail.setAttribute('aria-label','Caminho da pasta');
     const search=el('input');search.type='search';search.placeholder='Filtrar nesta pasta';search.setAttribute('aria-label','Filtrar pastas e camadas por nome');
     toolbar.append(up,trail,search);
@@ -27,14 +46,18 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
     const pane=el('section',undefined,'ea-storage-pane'),list=el('div',undefined,'ea-storage-list');
     const actions=el('div',undefined,'ea-storage-pane-toolbar');actions.setAttribute('role','toolbar');actions.setAttribute('aria-label','Ações do painel de camadas');
     const views=el('div',undefined,'ea-storage-view-menu');views.hidden=true;views.setAttribute('role','menu');
-    const view=icon('Visualização','▦',()=>{views.hidden=!views.hidden;view.setAttribute('aria-expanded',String(!views.hidden));});view.setAttribute('aria-haspopup','menu');view.setAttribute('aria-expanded','false');
-    for(const [value,label] of [['list','Lista'],['details','Detalhes'],['icons','Ícones grandes']]){
-      const option=button(label,()=>{mode=value;views.hidden=true;view.setAttribute('aria-expanded','false');paintList();});option.setAttribute('role','menuitemradio');option.dataset.view=value;views.append(option);
+    // O botão mostra o ícone da visualização atual, como nos exploradores de arquivos.
+    const view=icon('Modo de visualização','fa-list',()=>{views.hidden=!views.hidden;view.setAttribute('aria-expanded',String(!views.hidden));});
+    view.append(fa('fa-caret-down'));view.setAttribute('aria-haspopup','menu');view.setAttribute('aria-expanded','false');
+    for(const [value,label,simbolo] of VISOES){
+      const option=button('',()=>{mode=value;views.hidden=true;view.setAttribute('aria-expanded','false');paintList();});
+      option.append(fa(simbolo),document.createTextNode(label));option.setAttribute('role','menuitemradio');option.dataset.view=value;views.append(option);
     }
-    const clear=icon('Limpar seleção','↶',()=>{if(loading)return;picks.clear();paintList();});
-    const all=icon('Marcar camadas visíveis','☑',()=>{if(loading)return;for(const file of visibleFiles)picks.set(file.id,file);paintList();});
-    actions.append(view,clear,views);
+    const all=icon('Marcar todas as camadas visíveis','fa-square-check',()=>{if(loading)return;for(const file of visibleFiles)picks.set(file.id,file);paintList();});
+    const clear=icon('Desmarcar todas','fa-square-minus',()=>{if(loading)return;picks.clear();paintList();});
+    actions.append(view);
     if(multiple)actions.append(all);
+    actions.append(clear,views);
     pane.setAttribute('aria-label','Conteúdo da pasta');pane.append(actions,list);body.append(sidebar,pane);
     const confirmBar=el('div',undefined,'ea-storage-confirm'),selectionLabel=el('span','Nenhuma camada selecionada.');
     const confirm=button('Confirmar',()=>selectBatch(),'ea-btn ea-btn-primary ea-storage-confirm-button');confirm.disabled=true;
@@ -44,13 +67,14 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
     const cache=new Map(),pending=new Map(),expanded=new Set([ROOT]);let current=ROOT,loading=false,browsing=false,navigation=0,closed=false,mode='list';
     const picks=new Map(),loaded=new Map();let visibleFiles=[];
     function button(label,action,className='ea-btn'){const b=el('button',label,className);b.type='button';b.onclick=action;return b;}
-    function icon(label,symbol,action){const b=button(symbol,action,'ea-btn ea-storage-symbol');b.title=label;b.setAttribute('aria-label',label);return b;}
+    function setIcon(b,label,simbolo){b.title=label;b.setAttribute('aria-label',label);b.querySelector('i').className=`fa-solid ${simbolo}`;}
+    function icon(label,simbolo,action){const b=button('',action,'ea-btn ea-storage-symbol');b.append(fa(simbolo));b.title=label;b.setAttribute('aria-label',label);return b;}
     function controls(){
       clear.disabled=loading||!picks.size;
       confirm.disabled=loading||!picks.size;all.disabled=loading||!visibleFiles.length;
       confirm.textContent=multiple&&picks.size?`Confirmar (${picks.size})`:'Confirmar';
       close.disabled=loading&&!browsing;up.disabled=loading&&!browsing||current===ROOT;
-      selectionLabel.textContent=picks.size?`${picks.size} camada(s): ${[...picks.values()].map(file=>file.nome).join(', ')}`:'Nenhuma camada selecionada.';
+      selectionLabel.textContent=picks.size?`${picks.size} camada(s): ${[...picks.values()].map(rotulo).join(', ')}`:'Nenhuma camada selecionada.';
     }
     function finish(value=null){if(loading&&!browsing)return;closed=true;navigation++;dialog.close();dialog.remove();resolve(value);}
     dialog.addEventListener('cancel',event=>{event.preventDefault();finish();});
@@ -74,16 +98,19 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
       tree.replaceChildren();
       function branch(path,name,depth){
         const row=el('div',undefined,'ea-storage-tree-row');row.style.paddingLeft=`${depth*16}px`;
-        const toggle=button(expanded.has(path)?'▾':'▸',async()=>{
+        const aberta=expanded.has(path);
+        const toggle=button('',async()=>{
           if(loading&&!browsing)return;
           if(expanded.has(path)){expanded.delete(path);paintTree();return;}
           toggle.disabled=true;
           try{await directory(path);if(!closed){expanded.add(path);paintTree();}}catch(error){if(!closed)status.textContent=error.message;}finally{toggle.disabled=false;}
-        },'ea-storage-tree-toggle');toggle.setAttribute('aria-label',`${expanded.has(path)?'Recolher':'Expandir'} ${name}`);toggle.setAttribute('aria-expanded',String(expanded.has(path)));
-        const open=button(`📁 ${name}`,()=>navigate(path),'ea-storage-tree-open');open.title=path;
+        },'ea-storage-tree-toggle');
+        toggle.append(fa(aberta?'fa-caret-down':'fa-caret-right'));toggle.setAttribute('aria-label',`${aberta?'Recolher':'Expandir'} ${name}`);toggle.setAttribute('aria-expanded',String(aberta));
+        const open=button('',()=>navigate(path),'ea-storage-tree-open');open.title=path;
+        open.append(fa(current===path||aberta?'fa-folder-open':'fa-folder'),document.createTextNode(name));
         if(current===path)open.setAttribute('aria-current','location');
         row.append(toggle,open);tree.append(row);
-        if(expanded.has(path))for(const folder of cache.get(path)?.pastas||[])branch(folder.caminho,folder.nome,depth+1);
+        if(aberta)for(const folder of cache.get(path)?.pastas||[])branch(folder.caminho,folder.nome,depth+1);
       }
       branch(ROOT,ROOT_NAMES[ROOT],0);
     }
@@ -100,17 +127,21 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
       list.replaceChildren();
       list.dataset.mode=mode;
       for(const option of views.children)option.setAttribute('aria-checked',String(option.dataset.view===mode));
+      setIcon(view,`Modo de visualização: ${VISOES.find(v=>v[0]===mode)[1]}`,VISOES.find(v=>v[0]===mode)[2]);
       if(mode==='details'){
         const head=el('div',undefined,'ea-storage-details-head');head.append(el('span','Nome'),el('span','Tipo'),el('span','Caminho'));list.append(head);
       }
       let count=0;visibleFiles=[];
       for(const item of [...folders.map(f=>({...f,folder:true})),...files]){
-        if(!item.nome.toLocaleLowerCase('pt-BR').includes(term))continue;
+        if(!(item.folder?item.nome:rotulo(item)).toLocaleLowerCase('pt-BR').includes(term))continue;
         count++;
         let row;
+        const name=el('span',undefined,'ea-storage-entry-title');
         if(item.folder){
           row=button('',()=>{if(!loading||browsing)navigate(item.caminho);},'ea-btn ea-storage-entry ea-storage-entry--folder');
           row.title=`Abrir a pasta ${item.nome}`;
+          const simbolo=el('span',undefined,'ea-storage-entry-icon');simbolo.append(fa('fa-folder'));
+          name.append(simbolo,el('span',item.nome,'ea-storage-entry-name'));
         }else{
           visibleFiles.push(item);
           row=button('',event=>{
@@ -121,13 +152,16 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
           },'ea-btn ea-storage-entry ea-storage-entry--layer');
           row.dataset.file=item.id;row.setAttribute('aria-pressed',String(picks.has(item.id)));
           row.title=multiple?'Clique para marcar ou desmarcar':'Clique para selecionar; duplo clique confirma';
+          const partes=partesDoNome(item),[simboloFormato,nomeFormato]=FORMATOS[partes.formato]||['fa-file','Arquivo'];
+          const check=el('span',undefined,'ea-storage-check');check.append(fa('fa-check'));
+          const simbolo=el('span',undefined,'ea-storage-entry-icon');simbolo.title=nomeFormato;simbolo.append(fa(simboloFormato));
+          const nome=el('span',partes.radical,'ea-storage-entry-name');nome.append(el('span',partes.extensao,'ea-storage-entry-ext'));
+          if(partes.camada)nome.append(el('span',` › ${partes.camada}`,'ea-storage-entry-camada'));
+          name.append(check,simbolo,nome);
         }
-        const name=el('span',undefined,'ea-storage-entry-title');
-        if(!item.folder)name.append(el('span','','ea-storage-check'));
-        name.append(el('span',item.folder?'📁':'▧','ea-storage-entry-icon'),el('span',item.nome,'ea-storage-entry-name'));
-        row.append(name,el('small',item.folder?'Pasta':`${item.formato} · ${item.geometria_tipo||'vetor'}`));
+        row.append(name,el('small',item.folder?'Pasta':`${(FORMATOS[partesDoNome(item).formato]||[,'Arquivo'])[1]} · ${item.geometria_tipo||'vetor'}`));
         if(mode==='details')row.append(el('span',item.caminho||item.arquivo,'ea-storage-entry-path'));
-        if(item.folder)row.append(el('span','›','ea-storage-entry-open'));
+        if(item.folder){const seta=el('span',undefined,'ea-storage-entry-open');seta.append(fa('fa-chevron-right'));row.append(seta);}
         list.append(row);
       }
       if(!count)list.append(el('p',term?'Nenhum nome corresponde ao filtro.':'Esta pasta não contém subpastas ou camadas vetoriais.','ea-empty-small'));
@@ -165,7 +199,7 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
               if(excluded.includes(layer.id))throw new Error('Camada já selecionada como base ou entrada.');
               loaded.set(file.id,{...layer,...result});
             }
-          }catch(error){errors.push(`${file.nome}: ${error.message}`);}
+          }catch(error){errors.push(`${rotulo(file)}: ${error.message}`);}
           finally{status.textContent=`Carregando ${++done} de ${files.length} camada(s)…`;}
         }
       }
