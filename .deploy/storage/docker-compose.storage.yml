@@ -22,11 +22,20 @@ services:
       SFTPGO_DEFAULT_ADMIN_PASSWORD: ${SFTPGO_ADMIN_PASSWORD}
       # Só SFTP para os arquivos; o cliente web não é usado.
       SFTPGO_HTTPD__BINDINGS__0__ENABLE_WEB_CLIENT: "false"
+      # O painel é publicado pelo Nginx em https://<vm>/sicard/storage/
+      # (.deploy/nginx/sicard-subpath.conf). Sem o web_root os links do painel
+      # apontariam para a raiz do site, que é do SIGMA.
+      SFTPGO_HTTPD__WEB_ROOT: "/sicard/storage"
+      # O Nginx do host chega pelo gateway da rede do contêiner. Só dele o
+      # SFTPGo aceita X-Forwarded-For, para enxergar o IP real de quem acessa.
+      SFTPGO_HTTPD__BINDINGS__0__PROXY_ALLOWED: "192.168.16.1"
+      SFTPGO_HTTPD__BINDINGS__0__CLIENT_IP_PROXY_HEADER: "X-Forwarded-For"
+      # Painel exposto na internet: bloqueia o IP após tentativas inválidas.
+      SFTPGO_COMMON__DEFENDER__ENABLED: "true"
     ports:
-      # SFTP. Fica restrito à VM até decidir a exposição: a porta 2222 está
-      # bloqueada no firewall da AWS; a alternativa é túnel pela porta 22.
+      # SFTP. Só a porta 22 é pública; o acesso de fora é por túnel SSH.
       - "127.0.0.1:2222:2022"
-      # Administração do SFTPGo, apenas de dentro da VM.
+      # Painel. Público apenas através do Nginx na porta 443.
       - "127.0.0.1:8095:8080"
     volumes:
       - ./dados:/srv/sftpgo/data
