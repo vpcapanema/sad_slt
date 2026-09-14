@@ -348,5 +348,7 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 
 /* Índice da extração de atributos: tabela no padrão admin-table; aqui só o
    seletor do arquivo, que fica entre os botões de ação em lote. */
-.ea-indice-acoes { align-items:center; }
-.ea-indice-acoes select { min-height:2.25rem; padding:.35rem .5rem; border:1px solid #cbd6dd; border-radius:.45rem; background:#fff; color:var(--pli-deep,#123e56); font:inherit; font-size:.8rem; }
+.ahp-section-body .admin-bulk-actions.ea-indice-acoes { flex-wrap:nowrap; align-items:center; }
+/* Regras genéricas da página dão width:100% a todo select e quebravam a barra em três linhas. */
+.ahp-section-body .admin-bulk-actions.ea-indice-acoes select { flex:0 0 auto; width:auto; max-width:18rem; min-height:2.35rem; margin:0; padding:.35rem .5rem; border:1px solid #cbd6dd; border-radius:.45rem; background:#fff; color:var(--pli-deep,#123e56); font:inherit; font-size:.8rem; }
+.standard-section-action-row a.btn { text-decoration:none; }
