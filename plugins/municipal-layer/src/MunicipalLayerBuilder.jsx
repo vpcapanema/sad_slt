@@ -47,6 +47,7 @@ function readFacets(attribute) {
   return facets;
 }
 const limits = {fgb:6500, gpkg:1900, shp:250};
+const ALL_SOURCES = '__todas__';
 
 /** onExport({blob, filename, configuration, attributes}); download=false lets the host own delivery. */
 export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChange, onExport, download=true, className='', categoriaNome=''}) {
@@ -72,9 +73,13 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   function update(next) {if(value === undefined)setLocal(next);onChange?.(next);setStatus('');}
   const attributes = catalog?.attributes || [];
   const sources = [...new Set(attributes.map(a=>a.source))];
-  const years = [...new Set(attributes.filter(a=>a.source===source).map(a=>a.year))].sort((a,b)=>b-a);
-  const activeYear = years.includes(Number(year)) ? Number(year) : years[0];
-  const available = attributes.filter(a=>a.source===source && a.year===activeYear);
+  // "Todas" junta as fontes; com "Todos os anos", a lista traz o catálogo inteiro
+  // e "Adicionar resultados" monta a camada com todos os atributos.
+  const allSources = source === ALL_SOURCES;
+  const years = [...new Set(attributes.filter(a=>allSources || a.source===source).map(a=>a.year))].sort((a,b)=>b-a);
+  const allYears = allSources && year === '';
+  const activeYear = allYears ? null : years.includes(Number(year)) ? Number(year) : years[0];
+  const available = attributes.filter(a=>(allSources || a.source===source) && (allYears || a.year===activeYear));
   const themes = [...new Set(available.map(a=>a.theme))];
   const selected = new Set(config.attributes);
   // Espelha a regra do servidor: categoria, fonte majoritaria da selecao e data.
@@ -141,15 +146,15 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
     {error && <div className="mlb-error" role="alert">{error}</div>}
     {!catalog ? <p role="status">{error ? 'Não foi possível carregar o catálogo. Verifique a API configurada.' : 'Carregando catálogo…'}</p> : <div className="mlb-layout">
       <main className="mlb-panel"><h2>1. Escolha os dados</h2><div className="mlb-filters">
-        <label>Fonte<select value={source} onChange={e=>{setSource(e.target.value);setTheme('');}}>{sources.map(s=><option key={s}>{s}</option>)}</select></label>
-        <label>Ano de referência<select value={activeYear ?? ''} onChange={e=>{setYear(e.target.value);setTheme('');}}>{years.map(y=><option key={y}>{y}</option>)}</select></label>
+        <label>Fonte<select value={source} onChange={e=>{setSource(e.target.value);setTheme('');if(e.target.value===ALL_SOURCES)setYear('');}}><option value={ALL_SOURCES}>Todas</option>{sources.map(s=><option key={s}>{s}</option>)}</select></label>
+        <label>Ano de referência<select value={allYears ? '' : activeYear ?? ''} onChange={e=>{setYear(e.target.value);setTheme('');}}>{allSources && <option value="">Todos os anos</option>}{years.map(y=><option key={y}>{y}</option>)}</select></label>
         <label>Tema<select value={theme} onChange={e=>setTheme(e.target.value)}><option value="">Todos os temas</option>{themes.map(t=><option key={t} value={t}>{themeLabel(t)}</option>)}</select></label>
       </div><div className="mlb-search"><label>Buscar atributo<input type="search" value={search} placeholder="Ex.: renda, população, IPDM…" onChange={e=>setSearch(e.target.value)}/></label>
         {dimensions.map(([dimension,values])=><label key={dimension}>{dimension}<select value={facets[dimension] ?? ''} onChange={e=>setFacets({...facets,[dimension]:e.target.value})}><option value="">Todos ({values.length})</option>{values.map(v=><option key={v} value={v}>{v}</option>)}</select></label>)}
         {!!Object.values(facets).filter(Boolean).length && <button type="button" className="mlb-facet-reset" onClick={()=>setFacets({})}>Limpar filtros</button>}
       </div>
       <div className="mlb-listbar"><span>{filtered.length.toLocaleString('pt-BR')} atributos disponíveis</span><span className="mlb-listbar-actions"><button type="button" disabled={!filtered.length || busy} onClick={()=>update({...config,attributes:[...new Set([...config.attributes,...filtered.map(a=>a.id)])]})}>Adicionar resultados</button><button type="button" disabled={!selected.size || busy} onClick={()=>update({...config,attributes:[]})}>Limpar seleção</button></span></div>
-      <div className="mlb-attributes">{visible.map(a=><article key={a.id} className={selected.has(a.id)?'mlb-attribute mlb-chosen':'mlb-attribute'}><label><input type="checkbox" checked={selected.has(a.id)} disabled={busy} onChange={()=>toggle(a.id)}/><strong>{a.label}</strong></label><details><summary aria-label={`Fonte e definição de ${a.label}`}></summary><div className="mlb-detail"><p className="mlb-detail-meta">{themeLabel(a.theme)} · {a.unit || 'Unidade não informada'} · {a.coverage}/645 com valor</p><p>{a.field} · {a.year}</p><a href={a.url} target="_blank" rel="noreferrer">Consultar fonte oficial</a><p>{JSON.parse(a.detail).definicao || JSON.parse(a.detail).divulgacao || ""}</p><p>{JSON.parse(a.detail).nota || ""}</p></div></details></article>)}{!visible.length && <p className="mlb-empty">Nenhum atributo encontrado para estes filtros.</p>}</div>
+      <div className="mlb-attributes">{visible.map(a=><article key={a.id} className={selected.has(a.id)?'mlb-attribute mlb-chosen':'mlb-attribute'}><label><input type="checkbox" checked={selected.has(a.id)} disabled={busy} onChange={()=>toggle(a.id)}/><strong>{a.label}</strong></label><details><summary aria-label={`Fonte e definição de ${a.label}`}></summary><div className="mlb-detail"><p className="mlb-detail-meta">{themeLabel(a.theme)} · {a.unit || 'Unidade não informada'} · {a.coverage}/645 com valor</p><p>{allSources ? `${a.source} · ` : ''}{a.field} · {a.year}</p><a href={a.url} target="_blank" rel="noreferrer">Consultar fonte oficial</a><p>{JSON.parse(a.detail).definicao || JSON.parse(a.detail).divulgacao || ""}</p><p>{JSON.parse(a.detail).nota || ""}</p></div></details></article>)}{!visible.length && <p className="mlb-empty">Nenhum atributo encontrado para estes filtros.</p>}</div>
       <nav className="mlb-pages" aria-label="Páginas de atributos"><button type="button" disabled={!page} onClick={()=>setPage(page-1)}>Anterior</button><span>Página {page+1} de {Math.max(1,Math.ceil(filtered.length/40))}</span><button type="button" disabled={(page+1)*40>=filtered.length} onClick={()=>setPage(page+1)}>Próxima</button></nav>
       </main>
       <aside className="mlb-panel mlb-output"><h2>2. Gere a camada</h2><div className="mlb-count"><strong>{config.attributes.length.toLocaleString('pt-BR')}</strong><span>atributos selecionados</span></div><p>Você pode combinar fontes e anos. A seleção permanece ao trocar os filtros.</p>
