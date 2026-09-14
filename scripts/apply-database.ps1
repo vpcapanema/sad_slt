@@ -239,7 +239,8 @@ $migrations = @(
     "103_analise_demanda.sql",
     "104_categorias_extracao_atributos.sql",
     "105_ciclo_vida_arquivos_geoespaciais.sql",
-    "106_base_municipal.sql"
+    "106_base_municipal.sql",
+    "109_extracao_atributos_pacote.sql"
 )
 
 if ($OnlyMigration) {
@@ -276,6 +277,10 @@ if (-not $OnlyMigration) {
         if (-not (Test-SchemaReady "SELECT to_regclass('base_municipal.observacao') IS NOT NULL;")) {
             $migrations += "106_base_municipal.sql"
             Write-Ok "Base municipal pendente; aplicando migration 106"
+        }
+        if (-not (Test-SchemaReady "SELECT to_regclass('geoprocessamento.extracao_atributos') IS NOT NULL;")) {
+            $migrations += "109_extracao_atributos_pacote.sql"
+            Write-Ok "Pacote da extracao de atributos pendente; aplicando migration 109"
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

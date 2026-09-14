@@ -1,8 +1,10 @@
-"""Exportações da mesma análise usada na tela; sem recalcular estatísticas."""
+"""Arquivos da mesma análise usada na tela; sem recalcular estatísticas.
+
+Quem monta o pacote de cada extração é extracao_atributos_pacote: estas funções
+só escrevem cada arquivo no caminho recebido.
+"""
 import csv
 import json
-from threading import Lock
-from uuid import uuid4
 from xml.sax.saxutils import escape
 
 from openpyxl import Workbook
@@ -11,11 +13,10 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
-from api.db.connection import get_connection
-from api.path_policy import project_path
-from api.services.extracao_atributos import caminho
-
-_lock = Lock()
+# Uma célula XLSX guarda no máximo 32.767 caracteres. O pacote é obrigatório, então
+# o texto é cortado com aviso; o CSV do mesmo pacote leva o conteúdo completo.
+LIMITE_CELULA_XLSX = 32767
+AVISO_CORTE = ' … [texto completo no CSV do pacote]'
 
 
 def medidas(value, dim):
@@ -113,40 +114,28 @@ def pdf(result,path):
                       topMargin=32,bottomMargin=34,title='Extração de atributos - SICARD').build(story,onFirstPage=footer,onLaterPages=footer)
 
 
-def exportar(result,formato):
-    if formato=='gpkg':
-        with get_connection() as conn:
-            row = conn.execute('''SELECT a.caminho FROM geoprocessamento.arquivo_resultado a
-                JOIN geoprocessamento.camada_processada c ON c.id=a.camada_id
-                WHERE c.recurso_sessao_id=%s AND a.estado IN ('resultado','acervo')''',(result['camada_resultado_id'],)).fetchone()
-        if not row: raise ValueError('Arquivo de geometria não disponível.')
-        return project_path(row['caminho'])
-    path = caminho(result['id']).with_name('relatorio.'+formato)
-    with _lock:
-        if path.is_file(): return path
-        temporary = path.with_name(uuid4().hex+'.'+formato)
-        try:
-            if formato=='pdf': pdf(result,temporary)
-            elif formato=='geojson': temporary.write_text(json.dumps(result['geojson'],ensure_ascii=False),encoding='utf-8')
-            elif formato=='csv':
-                with temporary.open('w',newline='',encoding='utf-8-sig') as stream:
-                    csv.writer(stream,delimiter=';').writerows([[safe(v) for v in row] for row in cells(result)])
-            elif formato=='xlsx':
-                book=Workbook();sheet=book.active;sheet.title='Ocorrências'
-                for row in cells(result):
-                    if any(isinstance(v,str) and len(v)>32767 for v in row):
-                        raise ValueError('Um atributo excede o limite de célula XLSX. Exporte CSV ou GeoJSON.')
-                    sheet.append([safe(v) for v in row])
-                sheet.freeze_panes='A2';sheet.auto_filter.ref=sheet.dimensions
-                summary=book.create_sheet('Síntese');summary.append(['Categoria','Camada','Ocorrências','Medida única SI','Percentual'])
-                stats=book.create_sheet('Estatísticas');stats.append(['Categoria','Camada','Indicador','Valor'])
-                for c in result['categorias']:
-                    for name,e in [('Categoria consolidada',c),*((l['nome'],l) for l in c['camadas'])]:
-                        r=e['resumo'];summary.append([safe(c['nome']),safe(name),r['ocorrencias'],r.get('medida_unica_si'),r['percentual']])
-                        for key,value in e['estatisticas'].items():stats.append([safe(c['nome']),safe(name),key,value])
-                meta=book.create_sheet('Metodologia');meta.append([result['metodologia_estatistica']]);meta.append([result['convencao_ids']])
-                book.save(temporary)
-            else: raise ValueError('Formato não suportado.')
-            temporary.replace(path)
-        finally: temporary.unlink(missing_ok=True)
-    return path
+def escrever_csv(result,path):
+    with open(path,'w',newline='',encoding='utf-8-sig') as stream:
+        csv.writer(stream,delimiter=';').writerows([[safe(v) for v in row] for row in cells(result)])
+
+
+def celula_xlsx(value):
+    value = safe(value)
+    if isinstance(value,str) and len(value) > LIMITE_CELULA_XLSX:
+        return value[:LIMITE_CELULA_XLSX-len(AVISO_CORTE)]+AVISO_CORTE
+    return value
+
+
+def escrever_xlsx(result,path):
+    book=Workbook();sheet=book.active;sheet.title='Ocorrências'
+    for row in cells(result):
+        sheet.append([celula_xlsx(v) for v in row])
+    sheet.freeze_panes='A2';sheet.auto_filter.ref=sheet.dimensions
+    summary=book.create_sheet('Síntese');summary.append(['Categoria','Camada','Ocorrências','Medida única SI','Percentual'])
+    stats=book.create_sheet('Estatísticas');stats.append(['Categoria','Camada','Indicador','Valor'])
+    for c in result['categorias']:
+        for name,e in [('Categoria consolidada',c),*((l['nome'],l) for l in c['camadas'])]:
+            r=e['resumo'];summary.append([celula_xlsx(c['nome']),celula_xlsx(name),r['ocorrencias'],r.get('medida_unica_si'),r['percentual']])
+            for key,value in e['estatisticas'].items():stats.append([celula_xlsx(c['nome']),celula_xlsx(name),key,value])
+    meta=book.create_sheet('Metodologia');meta.append([result['metodologia_estatistica']]);meta.append([result['convencao_ids']])
+    book.save(path)

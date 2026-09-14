@@ -227,7 +227,7 @@ $("#ea-run").addEventListener("click",async()=>{
   try {
     const value=validateResult(await chamar("executar",pedido,job=>painel.etapas(job.etapas)));
     state.result=value;results.set(value);syncMap();
-    painel.concluir("Extração concluída. Os resultados estão disponíveis por categoria e camada.",
+    painel.concluir("Extração concluída. Os resultados estão na tela e o pacote de saída (.zip) está pronto para baixar.",
       ()=>$("#ea-results").scrollIntoView({behavior:"smooth",block:"start"}));
     feedback("Extração concluída. Consulte os resultados por categoria e camada.");
   } catch(error) {
@@ -240,8 +240,8 @@ $("#ea-run").addEventListener("click",async()=>{
 $("#ea-export").addEventListener("click",async()=>{
   if(!state.result||state.busy) return;
   busy(true);
-  try {await chamar("exportar",{resultado_id:state.result.id,formato:$("#ea-export-format").value});feedback("Exportação solicitada ao serviço.");}
-  catch(error) {feedback(`Não foi possível exportar: ${error.message}`);} finally {busy(false);}
+  try {await chamar("exportar",{resultado_id:state.result.id,formato:$("#ea-export-format").value});feedback("Download iniciado.");}
+  catch(error) {feedback(`Não foi possível baixar: ${error.message}`);} finally {busy(false);}
 });
 async function carregarCatalogo(){
   const catalog=await chamar('listarCatalogo'),previous=new Map(state.catalog.map(l=>[l.id,l]));

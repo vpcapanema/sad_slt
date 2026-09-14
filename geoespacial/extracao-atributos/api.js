@@ -36,8 +36,10 @@ export const adaptador={
   },
   async exportar({resultado_id,formato}) {
     const response=await fetch(`${base}/extracao-atributos/execucoes/${encodeURIComponent(resultado_id)}/exportar/${formato}`);
-    if(!response.ok){const data=await response.json();throw new Error(data.detail||'Falha ao exportar.');}
+    if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.detail||'Falha ao baixar o arquivo.');}
+    // O nome sai do servidor: é o nome da saída, igual ao que está dentro do pacote.
+    const nome=/filename="([^"]+)"/.exec(response.headers.get('Content-Disposition')||'')?.[1]||`extracao-${resultado_id}.${formato==='zip'?'zip':'bin'}`;
     const url=URL.createObjectURL(await response.blob()),link=document.createElement('a');
-    link.href=url;link.download=`extracao-${resultado_id}.${formato}`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    link.href=url;link.download=nome;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
   },
 };

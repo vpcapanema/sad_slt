@@ -145,6 +145,23 @@ def separar_id(ident: str) -> tuple[str, str | None]:
     return caminho, camada or None
 
 
+def impressao_digital(ident: str) -> dict[str, Any]:
+    """O arquivo do storage como estava na execução: tamanho, data e SHA-256."""
+    from datetime import datetime, timezone
+    from hashlib import sha256
+
+    caminho, camada = separar_id(ident)
+    arquivo = resolver(caminho)
+    estado = arquivo.stat()
+    resumo = sha256()
+    with arquivo.open("rb") as stream:
+        for bloco in iter(lambda: stream.read(1024 * 1024), b""):
+            resumo.update(bloco)
+    return {"arquivo": caminho, "camada": camada, "tamanho_bytes": estado.st_size,
+            "modificado_em": datetime.fromtimestamp(estado.st_mtime, timezone.utc).isoformat(timespec="seconds"),
+            "sha256": resumo.hexdigest()}
+
+
 def camadas_vetoriais(raiz: str = "base-geoespacial") -> list[dict[str, Any]]:
     """Camadas vetoriais legíveis de uma raiz, em qualquer nível de pasta."""
     def coletar(grupo: dict[str, Any]) -> list[dict[str, Any]]:

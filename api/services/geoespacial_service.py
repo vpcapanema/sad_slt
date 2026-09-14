@@ -286,6 +286,7 @@ class GeoespacialService:
         nome: str,
         origem: str = "processamento",
         progress: Callable[[str], None] | None = None,
+        gravar_arquivo: bool = True,
         **extras: Any,
     ) -> str:
         nome = _nome_escolhido(nome)
@@ -304,6 +305,7 @@ class GeoespacialService:
                 gdf=gdf,
                 metadados=self._metadados[camada_id],
                 hash_arquivo=extras.get("hash_arquivo"),
+                gravar_arquivo=gravar_arquivo,
             )
             if progress:
                 progress("Catálogo e feições vetoriais persistidos no PostGIS")

@@ -2,7 +2,7 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from api.deps.auth import require_geospatial_access
@@ -156,17 +156,19 @@ def consultar(ident: UUID, user: SessionUser = Depends(require_geospatial_access
         raise HTTPException(404,str(exc)) from exc
 
 
+TIPOS_PACOTE = {'zip':'application/zip','gpkg':'application/geopackage+sqlite3',
+                'pdf_processamento':'application/pdf','pdf_analitico':'application/pdf',
+                'xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'csv':'text/csv; charset=utf-8'}
+
+
 @router.get('/execucoes/{ident}/exportar/{formato}')
-def exportar(ident: UUID, formato: Literal['pdf','xlsx','csv','gpkg','geojson'], user: SessionUser = Depends(require_geospatial_access)):
+def exportar(ident: UUID, formato: Literal['zip','gpkg','pdf_processamento','pdf_analitico','xlsx','csv'],
+             user: SessionUser = Depends(require_geospatial_access)):
+    """O pacote gerado ao final da extração, ou um arquivo dele. Vem do banco, não do disco."""
     try:
-        state = service.consultar(ident,user,completo=True)
+        conteudo, nome = service.arquivo_do_pacote(ident,user,formato)
     except LookupError as exc:
         raise HTTPException(404,str(exc)) from exc
-    if state['status'] != 'concluido':
-        raise HTTPException(409,'A análise ainda não foi concluída.')
-    from api.services.extracao_atributos_exportacao import exportar as gerar
-    try:
-        path = gerar(state['resultado'],formato)
-    except ValueError as exc:
-        raise HTTPException(422,str(exc)) from exc
-    return FileResponse(path,filename=f'extracao-{ident}.{formato}')
+    return Response(conteudo,media_type=TIPOS_PACOTE[formato],
+                    headers={'Content-Disposition':f'attachment; filename="{nome}"','Cache-Control':'no-store'})

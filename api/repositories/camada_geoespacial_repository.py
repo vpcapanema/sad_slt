@@ -108,8 +108,14 @@ def _insert_features(conn: Any, table: str, database_id: str, rows: list[tuple[i
 def salvar_vetor(
     *, recurso_id: str, nome: str, origem: str, gdf: gpd.GeoDataFrame,
     metadados: dict[str, Any], hash_arquivo: str | None = None,
+    gravar_arquivo: bool = True,
 ) -> str:
-    """Grava vetor na tabela física correspondente à sua etapa."""
+    """Grava vetor na tabela física correspondente à sua etapa.
+
+    `gravar_arquivo=False`: saída processada fica só no banco, sem o GeoPackage em
+    data/geoespacial/outputs. É o caso da extração de atributos, cujo arquivo
+    viaja no pacote guardado em geoprocessamento.extracao_atributos.
+    """
     categoria = _categoria_origem(origem)
     catalog, features, _ = STORAGES[categoria]
     # O geom sempre acaba gravado em EPSG:4674 (ver _feature_rows) —
@@ -157,7 +163,7 @@ def salvar_vetor(
             ),
             (database_id,),
         )
-        if categoria == "processadas":
+        if categoria == "processadas" and gravar_arquivo:
             from api.services.ciclo_vida_arquivos import gravar_e_confirmar
             spatial = gdf.to_crs(crs) if gdf.crs else gdf.set_crs(crs)
             gravar_e_confirmar(conn, database_id, metadata, frame=spatial)
