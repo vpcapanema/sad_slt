@@ -118,6 +118,7 @@ TEMA_LEGIVEL = {
     'desenvolvimento_municipal': 'Desenvolvimento municipal', 'economia': 'Economia',
     'empresas_emprego': 'Empresas e emprego', 'financas_publicas': 'Finanças públicas',
     'ideb': 'IDEB', 'idh': 'IDH', 'pobreza_desigualdade': 'Pobreza e desigualdade',
+    'economico_produtivo': 'Econômico-produtivo', 'seguranca_viaria': 'Segurança viária',
 }
 CAMPOS_FIXOS = {'CD_MUN': ('Código do município (IBGE)', 'Código de sete dígitos do município no IBGE.'),
                 'NM_MUN': ('Nome do município', 'Nome oficial do município.'),

@@ -242,7 +242,11 @@ $migrations = @(
     "106_base_municipal.sql",
     "107_sei_documento.sql",
     "109_extracao_atributos_pacote.sql",
-    "110_sei_processamento_estruturado.sql"
+    "110_sei_processamento_estruturado.sql",
+    "111_rais_indicadores_municipais.sql",
+    "112_infosiga_microdados_localizacao.sql",
+    "113_corrigir_rais_indicadores_municipais.sql",
+    "114_infosiga_indicadores_municipais.sql"
 )
 
 if ($OnlyMigration) {
@@ -291,6 +295,14 @@ if (-not $OnlyMigration) {
         if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='integracoes' AND table_name='sei_documento' AND column_name='analise');")) {
             $migrations += "110_sei_processamento_estruturado.sql"
             Write-Ok "Processamento estruturado do SEI pendente; aplicando migration 110"
+        }
+        if (-not (Test-SchemaReady "SELECT to_regclass('rais.indicador_municipal') IS NOT NULL;")) {
+            $migrations += "111_rais_indicadores_municipais.sql"
+            Write-Ok "Indicadores municipais da RAIS pendentes; aplicando migration 111"
+        }
+        if (-not (Test-SchemaReady "SELECT to_regclass('infosiga.sinistro') IS NOT NULL;")) {
+            $migrations += "112_infosiga_microdados_localizacao.sql"
+            Write-Ok "Microdados e localizacao do InfoSiga pendentes; aplicando migration 112"
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

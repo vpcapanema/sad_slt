@@ -27,6 +27,7 @@ const THEME_LABEL = {
   desenvolvimento_municipal:'Desenvolvimento municipal', economia:'Economia',
   empresas_emprego:'Empresas e emprego', financas_publicas:'Finanças públicas',
   ideb:'IDEB', idh:'IDH', pobreza_desigualdade:'Pobreza e desigualdade',
+  economico_produtivo:'Econômico-produtivo', seguranca_viaria:'Segurança viária',
 };
 const themeLabel = value => {
   if (THEME_LABEL[value]) return THEME_LABEL[value];
@@ -149,7 +150,7 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
         <label>Fonte<select value={source} onChange={e=>{setSource(e.target.value);setTheme('');if(e.target.value===ALL_SOURCES)setYear('');}}><option value={ALL_SOURCES}>Todas</option>{sources.map(s=><option key={s}>{s}</option>)}</select></label>
         <label>Ano de referência<select value={allYears ? '' : activeYear ?? ''} onChange={e=>{setYear(e.target.value);setTheme('');}}>{allSources && <option value="">Todos os anos</option>}{years.map(y=><option key={y}>{y}</option>)}</select></label>
         <label>Tema<select value={theme} onChange={e=>setTheme(e.target.value)}><option value="">Todos os temas</option>{themes.map(t=><option key={t} value={t}>{themeLabel(t)}</option>)}</select></label>
-      </div><div className="mlb-search"><label>Buscar atributo<input type="search" value={search} placeholder="Ex.: renda, população, IPDM…" onChange={e=>setSearch(e.target.value)}/></label>
+      </div><div className="mlb-search"><label>Buscar atributo<input type="search" value={search} placeholder="Ex.: renda, RAIS, sinistros…" onChange={e=>setSearch(e.target.value)}/></label>
         {dimensions.map(([dimension,values])=><label key={dimension}>{dimension}<select value={facets[dimension] ?? ''} onChange={e=>setFacets({...facets,[dimension]:e.target.value})}><option value="">Todos ({values.length})</option>{values.map(v=><option key={v} value={v}>{v}</option>)}</select></label>)}
         {!!Object.values(facets).filter(Boolean).length && <button type="button" className="mlb-facet-reset" onClick={()=>setFacets({})}>Limpar filtros</button>}
       </div>

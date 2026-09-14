@@ -12045,7 +12045,9 @@ const fv = {
   financas_publicas: "Finanças públicas",
   ideb: "IDEB",
   idh: "IDH",
-  pobreza_desigualdade: "Pobreza e desigualdade"
+  pobreza_desigualdade: "Pobreza e desigualdade",
+  economico_produtivo: "Econômico-produtivo",
+  seguranca_viaria: "Segurança viária"
 }, No = (A) => {
   if (fv[A]) return fv[A];
   const nl = String(A).replace(/^\d+_/, "").replaceAll("_", " ");
@@ -12178,7 +12180,7 @@ function Sh({ apiBaseUrl: A = "/api", client: nl, value: Z, onChange: y, onExpor
         /* @__PURE__ */ b.jsxs("div", { className: "mlb-search", children: [
           /* @__PURE__ */ b.jsxs("label", { children: [
             "Buscar atributo",
-            /* @__PURE__ */ b.jsx("input", { type: "search", value: st, placeholder: "Ex.: renda, população, IPDM…", onChange: (S) => jt(S.target.value) })
+            /* @__PURE__ */ b.jsx("input", { type: "search", value: st, placeholder: "Ex.: renda, RAIS, sinistros…", onChange: (S) => jt(S.target.value) })
           ] }),
           me.map(([S, G]) => /* @__PURE__ */ b.jsxs("label", { children: [
             S,

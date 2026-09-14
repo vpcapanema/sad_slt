@@ -15,6 +15,33 @@ def test_base_municipal_carregada():
     assert all(isinstance(item['detail'], str) for item in catalogo)
 
 
+def test_catalogo_oferece_rais_e_infosiga_por_municipio():
+    catalogo = dados.catalog()
+    rais = [a for a in catalogo if a['source'] == 'MTE / RAIS']
+    infosiga = [a for a in catalogo if a['source'] == 'InfoSiga SP']
+    assert {a['field'] for a in rais} == {
+        'rais_emprego_medio_formal_2024', 'rais_salario_medio_2024',
+    }
+    assert len(infosiga) == 22
+    assert {a['year'] for a in infosiga} == set(range(2015, 2026))
+    assert {a['theme'] for a in infosiga} == {'seguranca_viaria'}
+    assert all(a['coverage'] == 645 for a in rais + infosiga)
+
+
+def test_exporta_selecao_combinada_rais_e_infosiga(tmp_path):
+    campos = {
+        'rais_emprego_medio_formal_2024', 'rais_salario_medio_2024',
+        'infosiga_obitos_transito_2025', 'infosiga_sinistros_veiculos_carga_2025',
+    }
+    itens = [a for a in dados.catalog() if a['field'] in campos]
+    assert {a['field'] for a in itens} == campos
+    pacote, caminho, manifesto, camada = service.materializar(
+        {'attributes': [a['id'] for a in itens], 'format': 'gpkg'}, tmp_path)
+    assert pacote[:2] == b'PK' and caminho.exists()
+    assert len(camada) == 645
+    assert {a['field'] for a in manifesto['attributes']} == campos
+
+
 @pytest.mark.parametrize('fmt', ['fgb', 'gpkg', 'shp'])
 def test_materializa_atributos_reais(tmp_path, fmt):
     fields = {'seade_ipdm_2022', 'idh_idhm_2010'}
