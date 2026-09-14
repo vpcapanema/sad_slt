@@ -291,3 +291,31 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
   .ea-section-head>div { flex-basis:calc(100% - 45px); }
 }
 @media(max-width:650px) { .ea-main { width:calc(100% - 20px); margin-top:15px; }.ea-section-head,.ea-section-body { padding:14px; }.ea-section-head { flex-wrap:wrap; }.ea-section-head .ea-badge { margin-left:45px; }.ea-panel { padding:12px; }.ea-base-form { grid-template-columns:1fr; }.ea-inline,.ea-config-footer { flex-direction:column; align-items:stretch; }.ea-execute { text-align:left; }.ea-workspace { display:flex; flex-direction:column; }.ea-layer-panel { max-height:220px; border-bottom:1px solid #dce3ea; border-right:0; }#ea-map { height:410px; }.ea-kpis { grid-template-columns:1fr 1fr; }.ea-kpis article { padding:12px; }.ea-kpis strong { font-size:1.3rem; }.ea-results-filters { grid-template-columns:1fr; }.ea-base-item { flex-wrap:wrap; }.ea-intro h1 { font-size:1.65rem; }.ea-export-controls { width:100%; }.ea-map-footer { font-size:.65rem; } }
+
+/* Explorador do storage: identidade SICARD (azul no cabeçalho, verde na seleção)
+   e linhas que não selecionam texto no duplo clique. */
+.ea-storage-dialog header { background:var(--pli-deep,#003b5a); border-bottom:3px solid var(--pli-green,#3ec26e); }
+.ea-storage-dialog header h2 { color:#fff; }
+.ea-storage-window-controls .ea-btn { background:#ffffff1f; border-color:#ffffff40; color:#fff; }
+.ea-storage-window-controls .ea-btn:hover:not(:disabled) { background:#ffffff33; border-color:#ffffff80; }
+.ea-storage-body h3 { color:var(--pli-deep,#003b5a); text-transform:uppercase; letter-spacing:.04em; font-size:.74rem; }
+.ea-storage-tree,.ea-storage-list,.ea-storage-path { -webkit-user-select:none; user-select:none; }
+.ea-storage-tree-row button { border-radius:4px; color:#294c65; cursor:pointer; }
+.ea-storage-tree-row button:hover:not(:disabled) { background:#e8f7ee; }
+.ea-storage-tree-row button[aria-current] { background:#e3f6ea; color:var(--pli-green-dark,#2aa358); font-weight:700; box-shadow:inset 3px 0 0 var(--pli-green,#3ec26e); }
+.ea-storage-path button { cursor:pointer; color:#294c65; }
+.ea-storage-path button[aria-current] { color:var(--pli-deep,#003b5a); font-weight:700; opacity:1; }
+.ea-storage-entry { align-items:center; cursor:pointer; background:#fff; transition:background .12s ease; }
+.ea-storage-entry:hover:not(:disabled) { background:#f1faf4; border-color:#e3e9ef; }
+.ea-storage-entry--folder .ea-storage-entry-name { font-weight:700; color:var(--pli-deep,#003b5a); }
+.ea-storage-entry-open { margin-left:auto; font-size:1.2rem; color:var(--pli-green-dark,#2aa358); }
+.ea-storage-list[data-mode=icons] .ea-storage-entry-open { display:none; }
+.ea-storage-check { flex-shrink:0; display:inline-grid; place-items:center; width:18px; height:18px; border:2px solid #9fb2c3; border-radius:4px; background:#fff; }
+.ea-storage-entry[aria-pressed=true] { background:#e3f6ea; outline:1px solid var(--pli-green,#3ec26e); outline-offset:-1px; box-shadow:inset 4px 0 0 var(--pli-green,#3ec26e); }
+.ea-storage-entry[aria-pressed=true]:hover:not(:disabled) { background:#d6f1e0; }
+.ea-storage-entry[aria-pressed=true] .ea-storage-check { background:var(--pli-green,#3ec26e); border-color:var(--pli-green-dark,#2aa358); }
+.ea-storage-entry[aria-pressed=true] .ea-storage-check::after { content:'✓'; color:#fff; font-size:.75rem; font-weight:900; line-height:1; }
+.ea-storage-dialog .ea-storage-confirm-button { background:var(--pli-green,#3ec26e); border-color:var(--pli-green-dark,#2aa358); color:#073b20; }
+.ea-storage-dialog .ea-storage-confirm-button:hover:not(:disabled) { background:var(--pli-green-dark,#2aa358); color:#fff; }
+.ea-storage-view-menu button[aria-checked=true] { background:#e3f6ea; color:var(--pli-green-dark,#2aa358); }
+.ea-storage-dialog button:focus-visible,.ea-storage-dialog input:focus-visible { outline-color:var(--pli-green,#3ec26e); }
