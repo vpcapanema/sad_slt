@@ -466,6 +466,7 @@ async def redirect_legacy_page_routes(request: Request, call_next):
 GEOSPATIAL_PAGES = {
     "extracao-atributos": "extracao-atributos.html",
     "extracoes-atributos": "extracoes-atributos.html",
+    "visualizador-camadas": "visualizador-camadas.html",
     "gerador-risco-restricao": "gerador-risco-restricao.html",
     "configuracao-risco-restricao": "configuracao-risco-restricao.html",
     "gerador-favorabilidade": "gerador-favorabilidade.html",

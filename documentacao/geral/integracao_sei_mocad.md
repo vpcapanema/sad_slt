@@ -1,113 +1,69 @@
 # Contribuições do SEI no MOCAD (SICARD)
 
-Revisão: 2026-09-11. Implementação local concluída, com testes automatizados em
-`tests/test_sei_documentos.py`. Não houve homologação com documentos reais nem
-aplicação das migrations em produção.
+Revisão: 2026-09-14.
 
-## Mudança de estratégia
+## Fluxo
 
-A versão anterior navegava no portal SEI-SP com a conta pessoal do usuário,
-resolvia login interno e externo, CAPTCHA e sessão. Essa integração foi
-descontinuada e o código correspondente foi removido: serviço, rotas, schemas,
-repositório de credencial, JavaScript, CSS, testes e a variável
-`SEI_CREDENTIALS_SECRET_KEY`. A tabela `integracoes.sei_credencial` é apagada
-pela migration `108_remover_sei_credencial.sql`, deliberadamente separada para
-ser aplicada só depois de conferir o conteúdo.
+O analista envia os PDFs recebidos pelo SEI, escolhe antes da análise se o
+cadastro será de Plano, Programa ou Projeto, e comanda o processamento. Projeto
+é o padrão. O resultado é uma proposta auditável: campos sem evidência ficam em
+branco e conflitos permanecem visíveis para decisão humana.
 
-No lugar dela, o analista envia o PDF da solicitação que chegou pelo SEI. O
-sistema guarda o documento, lê o texto e sugere o preenchimento do cadastro de
-demanda. O que a leitura não reconhecer fica em branco.
+Os arquivos ficam integralmente em `integracoes.sei_documento.conteudo`. O
+SHA-256 impede duplicata binária e a criação de demanda continua idempotente.
 
-## Escopo
+## Processamento
 
-- Página restrita em `/restrict/sei-documentos/`, dentro do SICARD/MOCAD.
-- Envio em lote de PDFs, com validação por assinatura do arquivo, não por
-  extensão. Limite de 20 MB por arquivo e 60 MB somados por requisição. O
-  `client_max_body_size` do snippet Nginx foi elevado a 64 MB para acomodar o
-  lote; a mudança só passa a valer no próximo deploy, porque o arquivo é
-  copiado para a VM por `.deploy/update_vm.sh`.
-- Repositório compartilhado: todo perfil autenticado enxerga os documentos;
-  enviar, analisar, excluir e criar demanda exigem perfil de operação.
-- O documento é candidato: somente a confirmação do analista cria demanda,
-  pelos serviços normais de plano, programa e projeto.
-- Código com segmento `SEI` (`I-PRJ-SEI-XXXXXXXX`), reconhecido pelo validador
-  em `api/codigos_demanda.py`. A origem legível permanece na descrição, como
-  `Processo SEI: <número>` ou `Documento SEI: <arquivo>` quando o número não foi
-  reconhecido.
+O motor está em `api/services/sei_processamento.py` e o fluxo de repositório em
+`api/services/sei_repositorio_service.py`. Os extratores anteriores foram
+removidos. O processamento atual:
 
-## Armazenamento
+- inventaria e processa todas as páginas;
+- usa texto nativo quando suficiente e OCR Tesseract em português nas páginas
+  digitalizadas ou com camada textual insuficiente;
+- classifica cada página por papel documental;
+- procura candidatos conforme o contrato de campos do tipo escolhido;
+- normaliza datas, moeda, prazo, coordenadas e identificadores;
+- conserva página, trecho, método, papel da fonte e confiança;
+- não seleciona silenciosamente valores concorrentes equivalentes;
+- deixa referências cadastrais aguardando resolução no SIGMA/SICARD.
 
-O PDF fica em `integracoes.sei_documento.conteudo`, coluna `bytea`, decisão
-explícita para que backup e restauração do banco levem o documento junto, sem
-volume adicional na VM. O `sha256` é único: reenviar o mesmo arquivo é recusado
-com a indicação de qual documento já o contém.
+O contrato funcional está em `config/campos-cadastro-demanda.json`. A análise
+do corpus real que fundamentou a arquitetura está em
+`documentacao/geral/analise_corpus_contribuicoes_sei.md`.
 
-A tabela guarda também o texto extraído, os campos sugeridos, o trecho de origem
-de cada campo e o vínculo com a demanda criada. A exclusão é bloqueada depois de
-a demanda existir.
+## Persistência
 
-## Leitura do texto e sugestão de campos
+A migration `110_sei_processamento_estruturado.sql` acrescenta `tipo_demanda`,
+com domínio Plano, Programa ou Projeto, e `analise`, JSONB com páginas,
+segmentos, candidatos, conflitos, métricas e resultados completos por campo.
 
-A extração do texto usa `pypdf`, com teto de 100 páginas por documento. PDF
-protegido por senha, ilegível ou sem camada de texto entra com status próprio e
-aviso visível; nenhum campo é sugerido nesse caso. **Não há reconhecimento
-óptico no projeto**: documento digitalizado precisa ser preenchido à mão.
+`campos_sugeridos` mantém somente valores normalizados com confiança mínima,
+para consumo da revisão. `evidencias` mantém o recorte auditável por campo.
 
-A sugestão de campos está em `api/services/sei_extracao_campos.py`, função pura
-sobre texto, sem banco, rede ou disco. Cada valor vem de um rótulo reconhecido
-(`Assunto:`, `Interessado:`, `Vigência:`, `Latitude:`, entre outros) ou de um
-formato inequívoco: número de processo, CNPJ, e-mail, telefone, data, moeda e
-coordenada em grau decimal ou grau/minuto/segundo. Os rótulos são casados com
-tolerância a acentuação.
+## Dependências operacionais
 
-Regras de produto que valem sempre:
+O container instala `tesseract-ocr` e `tesseract-ocr-por`. O Python usa
+PyMuPDF, Pillow e pytesseract. Sem o executável OCR, documentos textuais ainda
+são processados e a análise registra aviso explícito nas páginas afetadas.
 
-- Campo sem regra correspondente volta ausente, nunca aproximado e nunca zero.
-- Coordenada fora de faixa é descartada, não corrigida.
-- Cada campo sugerido carrega o trecho do PDF que o originou, exibido na
-  revisão para conferência.
-- O tipo inicial é Projeto, revisável para Plano ou Programa. Isso é regra de
-  produto, não classificação automática.
-- Instituição e representante legal são selecionados nos cadastros reais do
-  SIGMA. O CNPJ lido apenas pré-seleciona a instituição; nada é criado
-  automaticamente.
-
-Não existe modelo de linguagem neste fluxo. A extração é determinística e
-reproduzível, e foi isolada em um módulo próprio justamente para que a troca por
-outro motor, caso seja autorizada no futuro, não altere o restante.
+Os limites são 80 MB por arquivo e 160 MB por lote. O Nginx aceita 170 MB para
+acomodar o corpo multipart.
 
 ## Criação da demanda
 
-A criação exige perfil de operação, documento presente no repositório e payload
-validado pelo schema do tipo escolhido. O status não pode ser escolhido pelo
-payload de importação. A operação é idempotente: o vínculo em banco só aceita a
-primeira gravação e uma segunda confirmação devolve a demanda já criada. Uma
-trava em memória serializa requisições simultâneas do mesmo documento, e é por
-isso que o `docker-compose.vm.yml` mantém um único worker.
+O analista revisa os resultados e completa campos obrigatórios. A criação usa
+os mesmos schemas e serviços regulares de Plano, Programa e Projeto. O tipo
+analisado não pode ser trocado silenciosamente durante a revisão; para outro
+tipo, o documento deve ser reanalisado com o contrato correspondente.
 
-## Verificação
+## Implantação
 
-```powershell
-.venv\Scripts\python.exe -m pytest tests -q
-```
+Antes de publicar a funcionalidade, aplicar em ordem:
 
-`tests/test_sei_documentos.py` cobre recusa de arquivo que não é PDF, limite de
-tamanho, duplicata, PDF sem texto, cada regra de extração, o envio em lote, a
-exigência de sessão, a criação idempotente e o descarte do status vindo do
-payload. Os PDFs são gerados no próprio teste com reportlab; nenhum documento
-real do SEI é usado.
+1. `database/107_sei_documento.sql`, quando a tabela ainda não existir;
+2. `database/110_sei_processamento_estruturado.sql`;
+3. rebuild do container para instalar OCR e dependências Python.
 
-## Pendências
-
-- Aplicar `database/107_sei_documento.sql` no banco de produção; sem isso a
-  página responde erro de armazenamento indisponível. Estado conferido em
-  2026-09-11 no `slt_db` da VM: o schema `integracoes` existe e a tabela
-  `sei_documento` ainda não.
-- Aplicar `database/108_remover_sei_credencial.sql`. A conferência prévia foi
-  feita na mesma data: `integracoes.sei_credencial` existe e tem zero linhas,
-  ou seja, o DROP não descarta credencial alguma.
-- Homologar as regras de extração contra PDFs reais do SEI e ajustar a lista de
-  rótulos conforme os modelos de ofício efetivamente usados.
-- Geocodificação automática e correspondência automática de remetentes
-  continuam sem regra de produto homologada; a revisão usa seleção e
-  coordenadas explícitas.
+Depois do deploy, validar um PDF textual, um digitalizado e um híbrido no fluxo
+autenticado, conferindo página e evidência de cada sugestão.

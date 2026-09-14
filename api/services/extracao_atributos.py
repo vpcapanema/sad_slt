@@ -193,9 +193,10 @@ def consultar(ident, user, completo=False):
                          else 'Processamento em execução' if row['status'] == 'executando' else row['status'])
     if row['status']=='concluido' and completo:
         with get_connection() as conn:
-            linha = conn.execute('''SELECT relatorio,pacote_nome,pacote_tamanho_bytes,pacote_arquivos
+            linha = conn.execute('''SELECT nome_saida,relatorio,pacote_nome,pacote_tamanho_bytes,pacote_arquivos
                 FROM geoprocessamento.extracao_atributos WHERE execucao_id=%s''',(ident,)).fetchone()
         if linha:
+            response['nome_saida'] = linha['nome_saida']
             response['resultado'] = linha['relatorio']
             response['pacote'] = {'nome':linha['pacote_nome'],'tamanho_bytes':linha['pacote_tamanho_bytes'],
                                   'arquivos':linha['pacote_arquivos']}
@@ -234,7 +235,8 @@ def _procedencia(ident, nome, frame):
     return item
 
 
-FORMATOS_PACOTE = ('zip','gpkg','pdf_processamento','pdf_analitico','xlsx','csv')
+# Só o .zip é baixado; os relatórios também podem ser abertos renderizados no navegador.
+FORMATOS_PACOTE = ('zip','pdf_processamento','pdf_analitico')
 
 
 def arquivo_do_pacote(ident, user, formato):
@@ -255,3 +257,34 @@ def arquivo_do_pacote(ident, user, formato):
         raise LookupError('Arquivo inexistente no pacote.')
     from api.services.extracao_atributos_pacote import ler_do_pacote
     return ler_do_pacote(pacote,item['nome']), item['nome']
+
+def renomear_execucao(ident, user, nome_saida):
+    # Novo nome da saída, na extração e na camada gravada.
+    ident = consultar(ident,user)['id']
+    nome = str(nome_saida or '').strip()[:200]
+    if not nome:
+        raise ValueError('Informe o nome da saída.')
+    with get_connection() as conn:
+        linha = conn.execute('UPDATE geoprocessamento.extracao_atributos SET nome_saida=%s '
+                             'WHERE execucao_id=%s RETURNING camada_resultado_id',(nome,ident)).fetchone()
+        if not linha:
+            raise LookupError('Esta extração não tem pacote de saída.')
+        conn.execute('UPDATE geoprocessamento.camada_processada SET nome=%s WHERE recurso_sessao_id=%s',
+                     (nome,linha['camada_resultado_id']))
+    return {'id':ident,'nome_saida':nome}
+
+
+def excluir_execucao(ident, user):
+    # Apaga a extração pelo id exato: a camada de saída registrada nela e a execução.
+    # A linha de geoprocessamento.extracao_atributos (relatório e pacote) cai junto
+    # com a execução (ON DELETE CASCADE).
+    ident = consultar(ident,user)['id']
+    with get_connection() as conn:
+        linha = conn.execute('SELECT camada_resultado_id FROM geoprocessamento.extracao_atributos WHERE execucao_id=%s',
+                             (ident,)).fetchone()
+    if not linha:
+        raise LookupError('Esta extração não tem pacote de saída.')
+    repo.excluir(linha['camada_resultado_id'])
+    with get_connection() as conn:
+        conn.execute('DELETE FROM geoprocessamento.arquivo_resultado_uso WHERE referencia=%s',(ident,))
+        conn.execute("DELETE FROM geoprocessamento.execucao_arquivo WHERE id=%s AND operacao='extracao_atributos'",(ident,))

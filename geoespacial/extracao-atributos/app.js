@@ -240,7 +240,7 @@ $("#ea-run").addEventListener("click",async()=>{
 $("#ea-export").addEventListener("click",async()=>{
   if(!state.result||state.busy) return;
   busy(true);
-  try {await chamar("exportar",{resultado_id:state.result.id,formato:$("#ea-export-format").value});feedback("Download iniciado.");}
+  try {await chamar("exportar",{resultado_id:state.result.id});feedback("Download iniciado.");}
   catch(error) {feedback(`Não foi possível baixar: ${error.message}`);} finally {busy(false);}
 });
 async function carregarCatalogo(){

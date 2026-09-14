@@ -14,8 +14,8 @@ from fastapi.testclient import TestClient
 
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.routers import sei_documentos as rotas
-from api.services import sei_documentos_service as servico
-from api.services import sei_extracao_campos as extracao
+from api.services import sei_processamento as processamento
+from api.services import sei_repositorio_service as servico
 
 OFICIO = """GOVERNO DO ESTADO DE SAO PAULO
 Processo: 1234.00456789/2026-11
@@ -66,18 +66,21 @@ class RepositorioFalso:
     def inserir(self, **campos):
         registro = {
             "id": str(uuid4()), "numero_processo": None, "campos_sugeridos": {},
-            "evidencias": {}, "demanda_id": None, "criado_em": "2026-09-11T10:00:00-03:00",
+            "evidencias": {}, "analise": {}, "tipo_demanda": "projeto",
+            "demanda_id": None, "criado_em": "2026-09-11T10:00:00-03:00",
             "atualizado_em": "2026-09-11T10:00:00-03:00", **campos,
         }
         self.registros[registro["id"]] = registro
         return registro
 
-    def salvar_analise(self, *, documento_id, status, numero_processo, campos_sugeridos, evidencias):
+    def salvar_analise(self, *, documento_id, status, numero_processo, campos_sugeridos, evidencias,
+                       tipo_demanda, analise, aviso):
         registro = self.registros.get(str(documento_id))
         if not registro:
             return None
         registro.update(status=status, numero_processo=numero_processo,
-                        campos_sugeridos=campos_sugeridos, evidencias=evidencias)
+                        campos_sugeridos=campos_sugeridos, evidencias=evidencias,
+                        tipo_demanda=tipo_demanda, analise=analise, aviso=aviso)
         return registro
 
     def marcar_demanda(self, documento_id, demanda_id):
@@ -104,9 +107,9 @@ def enviar(nome="oficio.pdf", texto=OFICIO):
     return servico.receber(conteudo=pdf(texto), nome_arquivo=nome, usuario_id=str(uuid4()), usuario_nome="Analista")
 
 
-def test_extracao_le_os_campos_rotulados():
-    leitura = extracao.extrair_campos(OFICIO)
-    campos = leitura["campos"]
+def test_processamento_le_campos_rotulados_com_evidencia():
+    leitura = processamento.analisar(pdf(OFICIO), "projeto")
+    campos = leitura["campos_sugeridos"]
     assert leitura["numero_processo"] == "1234.00456789/2026-11"
     assert campos["nome"] == "Duplicacao da rodovia vicinal de acesso ao distrito industrial"
     assert campos["instituicao_label"] == "Prefeitura Municipal de Aracatuba"
@@ -118,33 +121,48 @@ def test_extracao_le_os_campos_rotulados():
     assert campos["vigencia_fim"] == "2028-02-28"
     assert campos["lat"] == pytest.approx(-21.2089)
     assert campos["lng"] == pytest.approx(-50.4328)
-    assert leitura["ausentes"] == []
+    assert leitura["tipo_demanda"] == "projeto"
+    assert leitura["campos"]["valor_global"]["evidencias"][0]["pagina"] == 1
 
 
 def test_campo_sem_regra_fica_ausente_e_nao_recebe_zero():
-    leitura = extracao.extrair_campos("Oficio sem rotulos reconheciveis.")
-    assert "lat" not in leitura["campos"]
-    assert "valor_global" not in leitura["campos"]
+    leitura = processamento.analisar(pdf("Oficio sem rotulos reconheciveis."), "projeto")
+    assert "lat" not in leitura["campos_sugeridos"]
+    assert "valor_global" not in leitura["campos_sugeridos"]
     assert "lat" in leitura["ausentes"] and "valor_global" in leitura["ausentes"]
     assert leitura["numero_processo"] is None
 
 
 def test_coordenada_fora_de_faixa_e_descartada():
-    leitura = extracao.extrair_campos("Latitude: -991,5\nLongitude: -50,4")
-    assert "lat" not in leitura["campos"]
-    assert leitura["campos"]["lng"] == pytest.approx(-50.4)
+    leitura = processamento.analisar(pdf("Latitude: -991,5\nLongitude: -50,4"), "projeto")
+    assert "lat" not in leitura["campos_sugeridos"]
+    assert leitura["campos_sugeridos"]["lng"] == pytest.approx(-50.4)
 
 
 def test_coordenada_em_grau_minuto_segundo():
-    leitura = extracao.extrair_campos("Latitude: 21°12'32\"S\nLongitude: 50°25'58\"O")
-    assert leitura["campos"]["lat"] == pytest.approx(-21.2089, abs=1e-3)
-    assert leitura["campos"]["lng"] == pytest.approx(-50.4328, abs=1e-3)
+    leitura = processamento.analisar(pdf("Latitude: 21°12'32\"S\nLongitude: 50°25'58\"O"), "projeto")
+    assert leitura["campos_sugeridos"]["lat"] == pytest.approx(-21.2089, abs=1e-3)
+    assert leitura["campos_sugeridos"]["lng"] == pytest.approx(-50.4328, abs=1e-3)
 
 
 def test_cada_campo_sugerido_tem_trecho_de_origem():
-    leitura = extracao.extrair_campos(OFICIO)
-    assert set(leitura["campos"]) - {"descricao"} <= set(leitura["evidencias"])
-    assert "R$ 12.450.000,00" in leitura["evidencias"]["valor_global"]
+    leitura = processamento.analisar(pdf(OFICIO), "projeto")
+    sugeridos = set(leitura["campos_sugeridos"])
+    assert all(leitura["campos"][campo]["evidencias"] for campo in sugeridos)
+    assert "R$ 12.450.000,00" in leitura["campos"]["valor_global"]["evidencias"][0]["trecho"]
+
+
+def test_tipo_e_escolhido_antes_da_analise():
+    leitura = processamento.analisar(pdf(OFICIO), "programa")
+    assert leitura["tipo_demanda"] == "programa"
+    assert "publico_alvo" in leitura["campos"]
+    assert "vigencia_inicio" not in leitura["campos"]
+
+
+def test_paginas_nao_duplicam_texto_integral_no_json():
+    leitura = processamento.analisar(pdf(OFICIO), "projeto")
+    assert leitura["paginas"][0]["caracteres"] > 0
+    assert "texto" not in leitura["paginas"][0]
 
 
 def test_arquivo_que_nao_e_pdf_e_recusado(repo):
@@ -170,7 +188,7 @@ def test_mesmo_pdf_nao_entra_duas_vezes(repo):
     assert len(repo.registros) == 1
 
 
-def test_pdf_sem_texto_nao_sugere_campos(repo):
+def test_pdf_sem_texto_e_aceito_para_ocr(repo, monkeypatch):
     from reportlab.pdfgen import canvas
 
     buffer = io.BytesIO()
@@ -179,14 +197,14 @@ def test_pdf_sem_texto_nao_sugere_campos(repo):
     pagina.save()
     documento = servico.receber(conteudo=buffer.getvalue(), nome_arquivo="digitalizado.pdf",
                                 usuario_id=str(uuid4()), usuario_nome="Analista")
-    assert documento["status"] == "sem_texto"
-    assert documento["aviso"]
-    with pytest.raises(DemandaValidationError):
-        servico.analisar(documento["id"])
+    assert documento["status"] == "recebido"
+    monkeypatch.setattr(processamento, "_ocr", lambda pagina: ("Assunto: Terminal intermodal", None))
+    analisado = servico.analisar(documento["id"], "projeto")
+    assert analisado["campos_sugeridos"]["nome"] == "Terminal intermodal"
 
 
 def test_analise_guarda_campos_e_numero_do_processo(repo):
-    documento = servico.analisar(enviar()["id"])
+    documento = servico.analisar(enviar()["id"], "projeto")
     assert documento["status"] == "analisado"
     assert documento["numero_processo"] == "1234.00456789/2026-11"
     assert documento["campos_sugeridos"]["nome"].startswith("Duplicacao")
@@ -232,13 +250,21 @@ def test_envio_em_lote_separa_aceito_de_recusado(repo, monkeypatch):
     assert corpo["erros"][0]["arquivo"] == "planilha.xlsx"
 
 
+def test_rota_de_analise_recebe_tipo(repo, monkeypatch):
+    client = aplicacao(repo, monkeypatch)
+    documento = enviar()
+    resposta = client.post(f"/sei/documentos/{documento['id']}/analisar", json={"tipo_demanda": "plano"})
+    assert resposta.status_code == 200
+    assert resposta.json()["tipo_demanda"] == "plano"
+
+
 def test_lote_acima_do_limite_de_corpo_tem_erro_proprio(repo, monkeypatch):
     client = aplicacao(repo, monkeypatch)
     volumoso = b"%PDF-" + b"0" * (servico.LIMITE_BYTES - 5)
     arquivos = [("arquivos", (f"parte{i}.pdf", volumoso, "application/pdf")) for i in range(4)]
     resposta = client.post("/sei/documentos", files=arquivos)
     assert resposta.status_code == 413
-    assert "60 MB" in resposta.json()["detail"]
+    assert "160 MB" in resposta.json()["detail"]
 
 
 def test_envio_exige_sessao():
@@ -250,7 +276,7 @@ def test_envio_exige_sessao():
 
 def test_criacao_valida_payload_e_nao_duplica(repo, monkeypatch):
     client = aplicacao(repo, monkeypatch)
-    documento = servico.analisar(enviar()["id"])
+    documento = servico.analisar(enviar()["id"], "projeto")
     chamadas = []
 
     def criar(payload, **kwargs):
@@ -288,7 +314,7 @@ def test_status_do_payload_e_ignorado(repo, monkeypatch):
 
 def test_documento_sem_numero_usa_o_arquivo_como_origem(repo, monkeypatch):
     client = aplicacao(repo, monkeypatch)
-    documento = servico.analisar(enviar(nome="solicitacao.pdf", texto="Oficio sem numero de processo.")["id"])
+    documento = servico.analisar(enviar(nome="solicitacao.pdf", texto="Oficio sem numero de processo.")["id"], "projeto")
     chamadas = []
     monkeypatch.setattr(rotas.demanda_service, "criar_demanda",
                         lambda payload, **kwargs: (chamadas.append(payload), {"id": "I-PRJ-SEI-000000BB"})[1])

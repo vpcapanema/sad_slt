@@ -9,7 +9,7 @@
 --
 -- O binário fica em `conteudo BYTEA` por decisão explícita: backup e restauração
 -- do banco levam o documento junto, sem volume adicional na VM. O limite de
--- tamanho é aplicado na aplicação (api/services/sei_documentos_service.py).
+-- tamanho é aplicado na aplicação (api/services/sei_repositorio_service.py).
 --
 -- Não existe schema local `usuarios` — a autenticação é delegada ao SIGMA. Por
 -- isso `usuario_id` é UUID sem FK física, no mesmo padrão das demais tabelas.

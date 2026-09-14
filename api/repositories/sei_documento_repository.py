@@ -10,7 +10,7 @@ from api.db.connection import get_connection
 # O binário nunca entra na listagem: `conteudo` só é lido no download.
 _COLUNAS = """
     id, usuario_id, usuario_nome, nome_arquivo, sha256, tamanho_bytes, paginas,
-    status, numero_processo, campos_sugeridos, evidencias, aviso, demanda_id,
+    status, tipo_demanda, numero_processo, campos_sugeridos, evidencias, analise, aviso, demanda_id,
     criado_em, atualizado_em
 """
 
@@ -103,6 +103,9 @@ def salvar_analise(
     numero_processo: str | None,
     campos_sugeridos: dict[str, Any],
     evidencias: dict[str, Any],
+    tipo_demanda: str,
+    analise: dict[str, Any],
+    aviso: str | None,
 ) -> dict[str, Any] | None:
     with get_connection() as conn:
         cur = conn.execute(
@@ -111,7 +114,10 @@ def salvar_analise(
                 status = %(status)s,
                 numero_processo = %(numero_processo)s,
                 campos_sugeridos = %(campos_sugeridos)s,
-                evidencias = %(evidencias)s
+                evidencias = %(evidencias)s,
+                tipo_demanda = %(tipo_demanda)s,
+                analise = %(analise)s,
+                aviso = %(aviso)s
             WHERE id = %(id)s
             RETURNING {_COLUNAS}
             """,
@@ -121,6 +127,9 @@ def salvar_analise(
                 "numero_processo": numero_processo,
                 "campos_sugeridos": Jsonb(campos_sugeridos),
                 "evidencias": Jsonb(evidencias),
+                "tipo_demanda": tipo_demanda,
+                "analise": Jsonb(analise),
+                "aviso": aviso,
             },
         )
         row = cur.fetchone()

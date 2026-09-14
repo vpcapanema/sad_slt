@@ -346,9 +346,10 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 .ea-storage-status { padding:6px 16px; font-size:.76rem; }
 .ea-storage-dialog button:focus-visible,.ea-storage-dialog input:focus-visible { outline-color:var(--sicard-verde); }
 
-/* Índice da extração de atributos: tabela no padrão admin-table; aqui só o
-   seletor do arquivo, que fica entre os botões de ação em lote. */
-.ahp-section-body .admin-bulk-actions.ea-indice-acoes { flex-wrap:nowrap; align-items:center; }
-/* Regras genéricas da página dão width:100% a todo select e quebravam a barra em três linhas. */
-.ahp-section-body .admin-bulk-actions.ea-indice-acoes select { flex:0 0 auto; width:auto; max-width:18rem; min-height:2.35rem; margin:0; padding:.35rem .5rem; border:1px solid #cbd6dd; border-radius:.45rem; background:#fff; color:var(--pli-deep,#123e56); font:inherit; font-size:.8rem; }
+/* Índice da extração de atributos: tabela no padrão admin-table, com a coluna Ação
+   logo após a seleção (botões-ícone por linha) e as ações em lote abaixo da tabela. */
+.ea-indice-tabela .col-acao { width:1%; white-space:nowrap; }
+.ea-acoes-linha { display:flex; align-items:center; gap:.3rem; }
+.ea-acoes-linha .admin-icon-btn { width:2rem; height:2rem; font-size:.82rem; }
+.ea-indice-tabela input[data-k] { width:100%; min-width:16rem; min-height:2rem; padding:.3rem .5rem; border:1px solid #cbd6dd; border-radius:.35rem; font:inherit; font-size:.82rem; }
 .standard-section-action-row a.btn { text-decoration:none; }

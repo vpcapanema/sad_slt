@@ -240,7 +240,9 @@ $migrations = @(
     "104_categorias_extracao_atributos.sql",
     "105_ciclo_vida_arquivos_geoespaciais.sql",
     "106_base_municipal.sql",
-    "109_extracao_atributos_pacote.sql"
+    "107_sei_documento.sql",
+    "109_extracao_atributos_pacote.sql",
+    "110_sei_processamento_estruturado.sql"
 )
 
 if ($OnlyMigration) {
@@ -281,6 +283,14 @@ if (-not $OnlyMigration) {
         if (-not (Test-SchemaReady "SELECT to_regclass('geoprocessamento.extracao_atributos') IS NOT NULL;")) {
             $migrations += "109_extracao_atributos_pacote.sql"
             Write-Ok "Pacote da extracao de atributos pendente; aplicando migration 109"
+        }
+        if (-not (Test-SchemaReady "SELECT to_regclass('integracoes.sei_documento') IS NOT NULL;")) {
+            $migrations += "107_sei_documento.sql"
+            Write-Ok "Repositorio de PDFs do SEI pendente; aplicando migration 107"
+        }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='integracoes' AND table_name='sei_documento' AND column_name='analise');")) {
+            $migrations += "110_sei_processamento_estruturado.sql"
+            Write-Ok "Processamento estruturado do SEI pendente; aplicando migration 110"
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

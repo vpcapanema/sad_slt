@@ -179,6 +179,13 @@ def test_api_rejeita_sem_sessao():
         assert client.get('/extracao-atributos/catalogo').status_code==401
         assert client.get('/extracao-atributos/execucoes').status_code==401
         assert client.post('/extracao-atributos/execucoes',json={}).status_code==401
+        ident='00000000-0000-0000-0000-000000000000'
+        assert client.patch(f'/extracao-atributos/execucoes/{ident}',json={'nome_saida':'x'}).status_code==401
+        assert client.delete(f'/extracao-atributos/execucoes/{ident}').status_code==401
+        assert client.get(f'/extracao-atributos/execucoes/{ident}/pacote').status_code==401
+        assert client.get(f'/extracao-atributos/execucoes/{ident}/relatorios/analitico').status_code==401
+    from api.services.extracao_atributos import FORMATOS_PACOTE
+    assert FORMATOS_PACOTE==('zip','pdf_processamento','pdf_analitico'), 'componentes do pacote não são baixados avulsos'
 
 
 def test_indice_de_extracoes_e_o_destino_do_card_e_leva_a_nova_extracao():
@@ -190,5 +197,19 @@ def test_indice_de_extracoes_e_o_destino_do_card_e_leva_a_nova_extracao():
     assert 'class="standard-section-action-row"' in indice.text and 'Nova extração' in indice.text
     assert 'href="/restrict/geoespacial/extracao-atributos/"' in indice.text
     assert 'class="admin-table ea-indice-tabela"' in indice.text and 'mad-filter--composite' in indice.text
+    assert indice.text.index('class="col-select"') < indice.text.index('>Ação</th>') < indice.text.index('Data da extração')
+    for botao in ['ea-indice-bulk-edit','ea-indice-bulk-cancel','ea-indice-bulk-save','ea-indice-bulk-delete']:
+        assert f'id="{botao}"' in indice.text, botao
+    assert 'ea-indice-arquivo' not in indice.text, 'sem seletor de arquivos: só o pacote é baixado'
     central=client.get('/restrict/geoespacial/').text
     assert 'href="/restrict/geoespacial/extracoes-atributos/" class="card-extracao-de-atributos' in central
+
+
+def test_visualizador_de_camadas_aponta_para_a_tabela_de_extracoes():
+    from fastapi.testclient import TestClient
+    from api.server import app
+    pagina=TestClient(app).get('/restrict/geoespacial/visualizador-camadas/')
+    assert pagina.status_code==200
+    assert 'href="/restrict/geoespacial/extracoes-atributos/"' in pagina.text
+    assert 'geoespacial-visualizador-camadas.js' in pagina.text
+    assert '/restrict/geoespacial/visualizador-bases-geoespaciais/' not in pagina.text.split('geo-sidebar-mini-nav',1)[1].split('</nav>',1)[0]

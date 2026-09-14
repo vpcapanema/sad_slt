@@ -27,16 +27,24 @@
         <p class="step-intro">
           Envie o PDF da solicitação que chegou pelo Sistema Eletrônico de
           Informações (SEI). O documento fica guardado neste repositório e o
-          sistema lê o texto para sugerir o preenchimento do cadastro de
-          demanda. O que a leitura não encontrar permanece em branco para você
-          completar.
+          sistema interpreta texto, digitalizações, tabelas e estrutura das
+          páginas para sugerir o preenchimento. Toda sugestão conserva sua
+          evidência e o que não estiver sustentado permanece em branco.
         </p>
 
         <form id="sei-upload-form" class="form-grid sei-form" autocomplete="off">
           <div class="form-field sei-full">
             <label for="sei-arquivos">Arquivos PDF</label>
             <input type="file" id="sei-arquivos" name="arquivos" accept="application/pdf,.pdf" multiple required>
-            <p class="hint">Vários arquivos por vez. Até 20 MB por arquivo e 60 MB somados por envio. PDF digitalizado sem texto é aceito, mas não gera sugestão: não há reconhecimento óptico.</p>
+            <p class="hint">Vários arquivos por vez. Até 80 MB por arquivo e 160 MB somados por envio.</p>
+          </div>
+          <div class="form-field">
+            <label for="sei-tipo-demanda">Formulário a preencher</label>
+            <select id="sei-tipo-demanda">
+              <option value="projeto" selected>Projeto</option>
+              <option value="plano">Plano</option>
+              <option value="programa">Programa</option>
+            </select>
           </div>
           <div class="form-field">
             <button type="submit" class="btn btn-primary" id="sei-btn-enviar">Enviar</button>

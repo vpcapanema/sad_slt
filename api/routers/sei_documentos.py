@@ -12,11 +12,11 @@ from api.schemas.demanda import DemandaCreateSchema
 from api.schemas.plano import PlanoCreateSchema
 from api.schemas.programa import ProgramaCreateSchema
 from api.schemas.sei_documentos import (
-    SeiAnaliseLoteResponseSchema, SeiCriarDemandaSchema, SeiDocumentoDetalheSchema,
+    SeiAnaliseRequestSchema, SeiAnaliseLoteResponseSchema, SeiCriarDemandaSchema, SeiDocumentoDetalheSchema,
     SeiDocumentoSchema, SeiUploadResponseSchema,
 )
 from api.services import demanda_service, plano_service, programa_service
-from api.services import sei_documentos_service as documentos
+from api.services import sei_repositorio_service as documentos
 from api.services.session_service import SessionUser
 
 router = APIRouter(prefix='/sei/documentos', tags=['sei-documentos'])
@@ -88,15 +88,15 @@ def baixar(documento_id: str, user: SessionUser = Depends(require_authenticated)
 
 
 @router.post('/analisar', response_model=SeiAnaliseLoteResponseSchema)
-def analisar_pendentes(user: SessionUser = Depends(require_operator)):
+def analisar_pendentes(body: SeiAnaliseRequestSchema, user: SessionUser = Depends(require_operator)):
     with _errors():
-        return documentos.analisar_pendentes()
+        return documentos.analisar_pendentes(body.tipo_demanda)
 
 
 @router.post('/{documento_id}/analisar', response_model=SeiDocumentoSchema)
-def analisar(documento_id: str, user: SessionUser = Depends(require_operator)):
+def analisar(documento_id: str, body: SeiAnaliseRequestSchema, user: SessionUser = Depends(require_operator)):
     with _errors():
-        return documentos.analisar(documento_id)
+        return documentos.analisar(documento_id, body.tipo_demanda)
 
 
 @router.delete('/{documento_id}')

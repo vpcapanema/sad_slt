@@ -19,12 +19,14 @@ class SeiDocumentoSchema(BaseModel):
     tamanho_bytes: int
     paginas: int | None = None
     status: Literal["recebido", "sem_texto", "analisado", "demanda_criada"]
+    tipo_demanda: Literal["plano", "programa", "projeto"] = "projeto"
     numero_processo: str | None = None
     campos_sugeridos: dict[str, Any] = Field(default_factory=dict)
     evidencias: dict[str, Any] = Field(
         default_factory=dict,
         description="Trecho do PDF que originou cada campo sugerido",
     )
+    analise: dict[str, Any] = Field(default_factory=dict)
     aviso: str | None = None
     demanda_id: str | None = None
     criado_em: datetime
@@ -55,8 +57,12 @@ class SeiAnaliseLoteResponseSchema(BaseModel):
     analisados: list[SeiDocumentoSchema] = Field(default_factory=list)
     ignorados: list[UUID] = Field(
         default_factory=list,
-        description="Documentos sem texto extraível ou já analisados",
+        description="Documentos que não foram processados no lote",
     )
+
+
+class SeiAnaliseRequestSchema(BaseModel):
+    tipo_demanda: Literal["plano", "programa", "projeto"] = "projeto"
 
 
 class SeiCriarDemandaSchema(BaseModel):

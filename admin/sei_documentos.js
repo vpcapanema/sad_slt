@@ -5,8 +5,8 @@
   const API = '/api/sei/documentos';
   const SITUACAO = {
     recebido: 'Recebido — campos ainda não lidos',
-    sem_texto: 'Sem texto extraível',
-    analisado: 'Campos lidos — aguardando revisão',
+    sem_texto: 'Aguardando nova análise com OCR',
+    analisado: 'Analisado — aguardando revisão',
     demanda_criada: 'Demanda criada',
   };
   const ROTULOS = {
@@ -42,7 +42,7 @@
 
   function acoes(doc) {
     const botoes = [`<button type="button" class="btn btn-secondary btn-sm" data-acao="baixar">Abrir PDF</button>`];
-    if (doc.status === 'recebido') botoes.unshift(`<button type="button" class="btn btn-secondary btn-sm" data-acao="analisar">Ler campos</button>`);
+    if (doc.status === 'recebido' || doc.status === 'sem_texto') botoes.unshift(`<button type="button" class="btn btn-secondary btn-sm" data-acao="analisar">Analisar PDF</button>`);
     if (doc.status === 'analisado' || doc.status === 'sem_texto') botoes.unshift(`<button type="button" class="btn btn-primary btn-sm" data-acao="revisar">Revisar e criar demanda</button>`);
     if (!doc.demanda_id) botoes.push(`<button type="button" class="btn btn-secondary btn-sm" data-acao="excluir">Excluir</button>`);
     return botoes.join(' ');
@@ -81,8 +81,8 @@
     botao.disabled = true;
     try {
       if (acao === 'analisar') {
-        await post(`${API}/${doc.id}/analisar`);
-        SLTAdminUi.showToast('Campos lidos. Revise antes de criar a demanda.');
+        await post(`${API}/${doc.id}/analisar`, { tipo_demanda: q('sei-tipo-demanda').value });
+        SLTAdminUi.showToast('PDF analisado. Revise as sugestões e evidências.');
         await listar();
       } else if (acao === 'excluir') {
         const confirmado = await SLTAdminUi.showConfirm({
@@ -107,16 +107,23 @@
   function leituraHtml(detalhe) {
     const campos = detalhe.campos_sugeridos || {};
     const evidencias = detalhe.evidencias || {};
-    const chaves = Object.keys(ROTULOS).filter(chave => chave in campos || chave === 'numero_processo' && detalhe.numero_processo);
+    const resultados = detalhe.analise?.campos || {};
+    const chaves = Object.keys(ROTULOS).filter(chave => chave in campos || chave in resultados || chave === 'numero_processo' && detalhe.numero_processo);
     const linhas = chaves.map(chave => {
       const valor = chave === 'numero_processo' ? detalhe.numero_processo : campos[chave];
-      const texto = chave === 'descricao' ? `${String(valor).slice(0, 400)}…` : valor;
-      return `<tr><th scope="row">${esc(ROTULOS[chave])}</th><td>${esc(texto)}</td><td class="hint">${esc(evidencias[chave] || '')}</td></tr>`;
+      const resultado = resultados[chave] || {};
+      const candidatos = (resultado.candidatos || []).map(c => String(c.valor)).join(' | ');
+      const exibido = valor ?? (resultado.estado === 'conflitante' ? `Conflito: ${candidatos}` : 'Não encontrado');
+      const texto = chave === 'descricao' ? String(exibido).slice(0, 400) : exibido;
+      const lista = resultado.evidencias || (Array.isArray(evidencias[chave]) ? evidencias[chave] : [evidencias[chave]].filter(Boolean));
+      const origem = lista.map(e => typeof e === 'string' ? e : `p. ${e.pagina}: ${e.trecho || ''}`).join(' | ');
+      const estado = resultado.estado ? ` (${resultado.estado}, ${Math.round((resultado.confianca || 0) * 100)}%)` : '';
+      return `<tr><th scope="row">${esc(ROTULOS[chave] + estado)}</th><td>${esc(texto)}</td><td class="hint">${esc(origem)}</td></tr>`;
     }).join('');
-    const ausentes = Object.keys(ROTULOS).filter(chave => !chaves.includes(chave)).map(chave => ROTULOS[chave]);
+    const ausentes = detalhe.analise?.ausentes || Object.keys(ROTULOS).filter(chave => !chaves.includes(chave));
     return `<details class="sei-leitura"><summary>O que o sistema leu do PDF (${chaves.length} campos)</summary>
       <table class="admin-table sei-leitura-tabela"><tbody>${linhas || '<tr><td>Nenhum campo reconhecido.</td></tr>'}</tbody></table>
-      ${ausentes.length ? `<p class="hint">Sem valor reconhecido, para você preencher: ${esc(ausentes.join(', '))}.</p>` : ''}</details>`;
+      ${ausentes.length ? `<p class="hint">Sem valor conclusivo, para você preencher: ${esc(ausentes.map(x => ROTULOS[x] || x).join(', '))}.</p>` : ''}</details>`;
   }
 
   async function revisar(documentoId) {
@@ -131,7 +138,7 @@
       ${detalhe.aviso ? `<p class="hint">${esc(detalhe.aviso)}</p>` : ''}
       ${leituraHtml(detalhe)}
       <form id="sei-revisao-form" class="form-grid sei-form">
-        <div class="form-field"><label for="rev-tipo">Tipo de demanda</label><select id="rev-tipo"><option value="projeto">Projeto</option><option value="plano">Plano</option><option value="programa">Programa</option></select></div>
+        <div class="form-field"><label for="rev-tipo">Tipo de demanda analisado</label><select id="rev-tipo" disabled><option value="projeto">Projeto</option><option value="plano">Plano</option><option value="programa">Programa</option></select></div>
         <div class="form-field"><label for="rev-nome">Nome</label><input id="rev-nome" type="text" required maxlength="200" value="${esc(campos.nome || '')}"></div>
         <div class="form-field sei-full"><label for="rev-descricao">Descrição</label><textarea id="rev-descricao" rows="6" required>${esc(campos.descricao || '')}</textarea></div>
         ${selectHtml('rev-instituicao', 'Instituição', instituicoes, SLTSigmaRead.labelInstituicao)}
@@ -149,6 +156,7 @@
       </form><p id="sei-revisao-erro" class="hint" role="alert"></p>`;
     const modal = SLTAdminUi.openModal(`Revisar ${esc(detalhe.nome_arquivo)}`, body, '<button type="button" class="btn btn-primary" id="sei-confirmar">Confirmar e criar demanda</button>');
     const f = id => modal.querySelector('#' + id);
+    f('rev-tipo').value = detalhe.tipo_demanda || 'projeto';
     if (instituicaoSugerida) f('rev-instituicao').value = String(instituicaoSugerida.id);
     function ajustar() {
       const t = f('rev-tipo').value, vinculo = f('rev-vinculo').checked;
@@ -163,12 +171,11 @@
       f('rev-diretoria').closest('.form-field').hidden = t !== 'plano';
       f('rev-diretoria').required = t === 'plano';
     }
-    f('rev-tipo').onchange = ajustar;
     f('rev-vinculo').onchange = ajustar;
     ajustar();
     f('sei-confirmar').onclick = async () => {
       if (!f('sei-revisao-form').reportValidity()) return;
-      const tipoDemanda = f('rev-tipo').value;
+      const tipoDemanda = detalhe.tipo_demanda || 'projeto';
       const inst = instituicoes.find(x => String(x.id) === f('rev-instituicao').value);
       const pessoa = pessoas.find(x => String(x.id) === f('rev-pessoa').value);
       const plano = planos.find(x => String(x.id) === f('rev-plano').value);
@@ -235,10 +242,10 @@
 
   async function analisarTodos() {
     q('sei-btn-analisar-todos').disabled = true;
-    aviso('sei-upload-aviso', 'Lendo os campos dos documentos pendentes…');
+    aviso('sei-upload-aviso', 'Analisando os documentos pendentes…');
     try {
-      const resultado = await post(`${API}/analisar`);
-      aviso('sei-upload-aviso', `${resultado.analisados.length} documento(s) analisado(s); ${resultado.ignorados.length} sem leitura possível ou já analisado(s).`);
+      const resultado = await post(`${API}/analisar`, { tipo_demanda: q('sei-tipo-demanda').value });
+      aviso('sei-upload-aviso', `${resultado.analisados.length} documento(s) analisado(s); ${resultado.ignorados.length} ignorado(s).`);
       await listar();
     } catch (e) {
       aviso('sei-upload-aviso', e.message);

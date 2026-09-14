@@ -18,7 +18,7 @@
   <section class="card-extracoes-de-atributos secao-extracoes-de-atributos card standard-page-hero">
     <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-layer-group" aria-hidden="true"></i><span>Extrações de atributos</span></h1>
     <p class="standard-page-hero__eyebrow">Análise territorial</p>
-    <p class="standard-page-hero__description">Consulte as extrações executadas, abra os resultados na tela e baixe o pacote de saída de cada uma.</p>
+    <p class="standard-page-hero__description">Consulte as extrações executadas, visualize a geometria de saída e os relatórios e baixe o pacote de saída de cada uma.</p>
   </section>
 
   <div class="standard-section-action-row">
@@ -37,34 +37,28 @@
           <thead>
             <tr>
               <th class="col-select" scope="col"><input type="checkbox" id="ea-indice-todas" aria-label="Selecionar todas as extrações filtradas"></th>
-              <th>Data da extração</th>
-              <th>Nome da saída</th>
-              <th>Camada de entrada</th>
-              <th>Operação</th>
-              <th>Bases</th>
-              <th>Ocorrências</th>
-              <th>Parcela da entrada</th>
-              <th>Executada por</th>
-              <th>Pacote de saída</th>
+              <th class="col-acao" scope="col">Ação</th>
+              <th scope="col">Data da extração</th>
+              <th scope="col">Nome da saída</th>
+              <th scope="col">Camada de entrada</th>
+              <th scope="col">Operação</th>
+              <th scope="col">Bases</th>
+              <th scope="col">Ocorrências</th>
+              <th scope="col">Parcela da entrada</th>
+              <th scope="col">Executada por</th>
+              <th scope="col">Pacote de saída</th>
             </tr>
           </thead>
           <tbody id="ea-indice-tbody">
-            <tr class="empty-row"><td colspan="10">Carregando extrações…</td></tr>
+            <tr class="empty-row"><td colspan="11">Carregando extrações…</td></tr>
           </tbody>
         </table>
       </div>
-      <div class="admin-bulk-actions ea-indice-acoes" aria-label="Ações sobre as extrações selecionadas">
-        <button type="button" class="admin-icon-btn" id="ea-indice-abrir" title="Abrir os resultados da extração selecionada" aria-label="Abrir os resultados da extração selecionada" disabled><i class="fas fa-eye" aria-hidden="true"></i><span class="sr-only">Abrir resultados</span></button>
-        <label class="sr-only" for="ea-indice-arquivo">Arquivo do pacote de saída</label>
-        <select id="ea-indice-arquivo">
-          <option value="zip">Pacote completo (.zip)</option>
-          <option value="gpkg">GeoPackage da geometria resultante</option>
-          <option value="pdf_processamento">Relatório de processamento (PDF)</option>
-          <option value="pdf_analitico">Relatório analítico (PDF)</option>
-          <option value="xlsx">Planilha XLSX</option>
-          <option value="csv">Tabela CSV</option>
-        </select>
-        <button type="button" class="admin-icon-btn admin-icon-btn-primary" id="ea-indice-baixar" title="Baixar o arquivo escolhido das extrações selecionadas" aria-label="Baixar o arquivo escolhido das extrações selecionadas" disabled><i class="fas fa-download" aria-hidden="true"></i><span class="sr-only">Baixar</span></button>
+      <div class="admin-bulk-actions" id="ea-indice-bulk-actions" aria-label="Ações em lote sobre as extrações selecionadas">
+        <button type="button" class="admin-icon-btn" id="ea-indice-bulk-edit" title="Editar o nome das extrações selecionadas" disabled><i class="fas fa-pen" aria-hidden="true"></i><span class="sr-only">Editar</span></button>
+        <button type="button" class="admin-icon-btn" id="ea-indice-bulk-cancel" title="Cancelar edição" disabled><i class="fas fa-xmark" aria-hidden="true"></i><span class="sr-only">Cancelar</span></button>
+        <button type="button" class="admin-icon-btn admin-icon-btn-primary" id="ea-indice-bulk-save" title="Salvar alterações" disabled><i class="fas fa-floppy-disk" aria-hidden="true"></i><span class="sr-only">Salvar</span></button>
+        <button type="button" class="admin-icon-btn admin-icon-btn-danger" id="ea-indice-bulk-delete" title="Excluir as extrações selecionadas" disabled><i class="fas fa-trash" aria-hidden="true"></i><span class="sr-only">Excluir</span></button>
       </div>
     </div>
   </section>

@@ -162,19 +162,49 @@ def consultar(ident: UUID, user: SessionUser = Depends(require_geospatial_access
         raise HTTPException(404,str(exc)) from exc
 
 
-TIPOS_PACOTE = {'zip':'application/zip','gpkg':'application/geopackage+sqlite3',
-                'pdf_processamento':'application/pdf','pdf_analitico':'application/pdf',
-                'xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'csv':'text/csv; charset=utf-8'}
+class RenomearExtracao(BaseModel):
+    nome_saida: str = Field(min_length=1,max_length=200)
 
 
-@router.get('/execucoes/{ident}/exportar/{formato}')
-def exportar(ident: UUID, formato: Literal['zip','gpkg','pdf_processamento','pdf_analitico','xlsx','csv'],
-             user: SessionUser = Depends(require_geospatial_access)):
-    """O pacote gerado ao final da extração, ou um arquivo dele. Vem do banco, não do disco."""
+@router.patch('/execucoes/{ident}')
+def renomear(ident: UUID, payload: RenomearExtracao, user: SessionUser = Depends(require_geospatial_access)):
     try:
-        conteudo, nome = service.arquivo_do_pacote(ident,user,formato)
+        return service.renomear_execucao(ident,user,payload.nome_saida)
     except LookupError as exc:
         raise HTTPException(404,str(exc)) from exc
-    return Response(conteudo,media_type=TIPOS_PACOTE[formato],
+    except ValueError as exc:
+        raise HTTPException(422,str(exc)) from exc
+
+
+@router.delete('/execucoes/{ident}',status_code=204)
+def excluir(ident: UUID, user: SessionUser = Depends(require_geospatial_access)):
+    try:
+        service.excluir_execucao(ident,user)
+    except LookupError as exc:
+        raise HTTPException(404,str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422,str(exc)) from exc
+    return Response(status_code=204)
+
+
+@router.get('/execucoes/{ident}/pacote')
+def baixar_pacote(ident: UUID, user: SessionUser = Depends(require_geospatial_access)):
+    """O pacote .zip da extração, lido do banco. Os arquivos não são baixados avulsos."""
+    try:
+        conteudo, nome = service.arquivo_do_pacote(ident,user,'zip')
+    except LookupError as exc:
+        raise HTTPException(404,str(exc)) from exc
+    return Response(conteudo,media_type='application/zip',
                     headers={'Content-Disposition':f'attachment; filename="{nome}"','Cache-Control':'no-store'})
+
+
+@router.get('/execucoes/{ident}/relatorios/{tipo}')
+def ver_relatorio(ident: UUID, tipo: Literal['processamento','analitico'],
+                  user: SessionUser = Depends(require_geospatial_access)):
+    """Relatório do pacote aberto (inline) para ser renderizado pelo navegador."""
+    try:
+        conteudo, nome = service.arquivo_do_pacote(ident,user,f'pdf_{tipo}')
+    except LookupError as exc:
+        raise HTTPException(404,str(exc)) from exc
+    return Response(conteudo,media_type='application/pdf',
+                    headers={'Content-Disposition':f'inline; filename="{nome}"','Cache-Control':'no-store'})
