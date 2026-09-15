@@ -2173,15 +2173,25 @@
     if (campos.valor_global != null && definirCampoSugerido(SUGESTAO_MOEDA[tipo], formatMoedaBr(Number(campos.valor_global)))) {
       preenchidos += 1;
     }
-    // Proponente só por identificação exata: CNPJ para a instituição, e-mail para o representante.
+    // Proponente só por identificação exata no SIGMA: CNPJ ou nome idêntico para a instituição,
+    // e-mail ou nome idêntico para o representante (ignorando acentos, caixa e espaços).
     const [instSel, repSel] = SUGESTAO_PROPONENTE[tipo];
+    const comparavel = (texto) =>
+      String(texto || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
     const cnpj = String(campos.instituicao_cnpj || "").replace(/\D/g, "");
-    const inst = cnpj
-      ? instituicoes.find((i) => SLTSigmaRead.cnpjDisplay(i).replace(/\D/g, "") === cnpj)
-      : null;
+    const nomeInstituicao = comparavel(campos.instituicao_label);
+    const inst =
+      (cnpj && instituicoes.find((i) => SLTSigmaRead.cnpjDisplay(i).replace(/\D/g, "") === cnpj)) ||
+      (nomeInstituicao &&
+        instituicoes.find((i) => [i.razao_social, i.nome, i.nome_fantasia].some((n) => comparavel(n) === nomeInstituicao))) ||
+      null;
     if (inst && definirCampoSugerido(instSel, inst.id)) preenchidos += 1;
-    const email = String(campos.representante_email || "").trim().toLowerCase();
-    const pessoa = email ? pessoas.find((p) => String(p.email || "").trim().toLowerCase() === email) : null;
+    const email = comparavel(campos.representante_email);
+    const nomeRepresentante = comparavel(campos.representante_nome);
+    const pessoa =
+      (email && pessoas.find((p) => comparavel(p.email) === email)) ||
+      (nomeRepresentante && pessoas.find((p) => comparavel(p.nome_completo || p.nome) === nomeRepresentante)) ||
+      null;
     if (pessoa && definirCampoSugerido(repSel, pessoa.id)) preenchidos += 1;
     return preenchidos;
   }

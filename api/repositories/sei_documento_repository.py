@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from psycopg.types.json import Jsonb
-
 from api.db.connection import get_connection
 
 # O binário nunca entra na listagem: `conteudo` só é lido no download.
@@ -94,46 +92,6 @@ def inserir(
         row = cur.fetchone()
         assert row is not None
         return dict(row)
-
-
-def salvar_analise(
-    *,
-    documento_id: str,
-    status: str,
-    numero_processo: str | None,
-    campos_sugeridos: dict[str, Any],
-    evidencias: dict[str, Any],
-    tipo_demanda: str,
-    analise: dict[str, Any],
-    aviso: str | None,
-) -> dict[str, Any] | None:
-    with get_connection() as conn:
-        cur = conn.execute(
-            f"""
-            UPDATE integracoes.sei_documento SET
-                status = %(status)s,
-                numero_processo = %(numero_processo)s,
-                campos_sugeridos = %(campos_sugeridos)s,
-                evidencias = %(evidencias)s,
-                tipo_demanda = %(tipo_demanda)s,
-                analise = %(analise)s,
-                aviso = %(aviso)s
-            WHERE id = %(id)s
-            RETURNING {_COLUNAS}
-            """,
-            {
-                "id": documento_id,
-                "status": status,
-                "numero_processo": numero_processo,
-                "campos_sugeridos": Jsonb(campos_sugeridos),
-                "evidencias": Jsonb(evidencias),
-                "tipo_demanda": tipo_demanda,
-                "analise": Jsonb(analise),
-                "aviso": aviso,
-            },
-        )
-        row = cur.fetchone()
-        return dict(row) if row else None
 
 
 def marcar_demanda(documento_id: str, demanda_id: str) -> dict[str, Any] | None:

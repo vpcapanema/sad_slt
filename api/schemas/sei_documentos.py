@@ -53,14 +53,6 @@ class SeiUploadResponseSchema(BaseModel):
     erros: list[SeiUploadErroSchema] = Field(default_factory=list)
 
 
-class SeiAnaliseLoteResponseSchema(BaseModel):
-    analisados: list[SeiDocumentoSchema] = Field(default_factory=list)
-    ignorados: list[UUID] = Field(
-        default_factory=list,
-        description="Documentos que não foram processados no lote",
-    )
-
-
 class SeiAnaliseRequestSchema(BaseModel):
     tipo_demanda: Literal["plano", "programa", "projeto"] = "projeto"
 

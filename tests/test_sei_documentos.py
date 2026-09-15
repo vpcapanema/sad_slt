@@ -73,16 +73,6 @@ class RepositorioFalso:
         self.registros[registro["id"]] = registro
         return registro
 
-    def salvar_analise(self, *, documento_id, status, numero_processo, campos_sugeridos, evidencias,
-                       tipo_demanda, analise, aviso):
-        registro = self.registros.get(str(documento_id))
-        if not registro:
-            return None
-        registro.update(status=status, numero_processo=numero_processo,
-                        campos_sugeridos=campos_sugeridos, evidencias=evidencias,
-                        tipo_demanda=tipo_demanda, analise=analise, aviso=aviso)
-        return registro
-
     def marcar_demanda(self, documento_id, demanda_id):
         registro = self.registros.get(str(documento_id))
         if not registro or registro["demanda_id"]:
@@ -123,6 +113,55 @@ def test_processamento_le_campos_rotulados_com_evidencia():
     assert campos["lng"] == pytest.approx(-50.4328)
     assert leitura["tipo_demanda"] == "projeto"
     assert leitura["campos"]["valor_global"]["evidencias"][0]["pagina"] == 1
+
+
+OFICIO_SEM_ROTULOS_DO_FORMULARIO = """PREFEITURA MUNICIPAL DE MARÍLIA
+Ofício nº 45/2026
+Ref.: Recuperação da ponte sobre o Rio do Peixe
+1. Descrição do objeto: Recuperação estrutural e alargamento da ponte na estrada vicinal MRL-010.
+2. Valor total da obra: R$ 3,2 milhões
+3. Prazo previsto para execução: 18 (dezoito) meses
+Período de vigência: de 1º de abril de 2026 a 30 de setembro de 2027
+Coordenadas geográficas: -22.2139, -49.9458
+Contato: (14) 3402-6000
+Maria Aparecida de Souza
+Prefeita Municipal
+"""
+
+
+def test_sinonimos_e_formatos_de_documento_real():
+    campos = processamento.analisar(pdf(OFICIO_SEM_ROTULOS_DO_FORMULARIO), "projeto")["campos_sugeridos"]
+    assert campos["nome"] == "Recuperação da ponte sobre o Rio do Peixe"
+    assert campos["descricao"].startswith("Recuperação estrutural e alargamento")
+    assert campos["valor_global"] == 3200000.0
+    assert campos["prazo_referencia_meses"] == 18
+    assert campos["vigencia_inicio"] == "2026-04-01"
+    assert campos["vigencia_fim"] == "2027-09-30"
+    assert campos["lat"] == pytest.approx(-22.2139)
+    assert campos["lng"] == pytest.approx(-49.9458)
+    assert campos["representante_nome"] == "Maria Aparecida de Souza"
+    assert campos["representante_telefone"] == "(14) 3402-6000"
+    assert campos["instituicao_label"] == "PREFEITURA MUNICIPAL DE MARÍLIA"
+    assert campos["municipio"] == "MARÍLIA"
+
+
+def test_mencao_em_frase_e_valor_na_linha_seguinte():
+    texto = "Objeto:\nImplantação de terminal intermodal de cargas\nO empreendimento tem investimento total estimado de R$ 45.000.000,00 e prazo de execução de 2 anos."
+    campos = processamento.analisar(pdf(texto), "projeto")["campos_sugeridos"]
+    assert campos["nome"] == "Implantação de terminal intermodal de cargas"
+    assert campos["valor_global"] == 45000000.0
+    assert campos["prazo_referencia_meses"] == 24
+
+
+def test_contrapartida_nao_vira_valor_do_empreendimento():
+    campos = processamento.analisar(pdf("Valor da contrapartida: R$ 100.000,00"), "projeto")["campos_sugeridos"]
+    assert "valor_global" not in campos
+
+
+def test_valores_concorrentes_nao_sao_sugeridos():
+    leitura = processamento.analisar(pdf("Valor total: R$ 100,00\nValor global: R$ 200,00"), "projeto")
+    assert "valor_global" not in leitura["campos_sugeridos"]
+    assert "valor_global" in leitura["conflitos"]
 
 
 def test_campo_sem_regra_fica_ausente_e_nao_recebe_zero():
@@ -203,19 +242,21 @@ def test_pdf_sem_texto_e_aceito_para_ocr(repo, monkeypatch):
     assert analisado["campos_sugeridos"]["nome"] == "Terminal intermodal"
 
 
-def test_analise_guarda_campos_e_numero_do_processo(repo):
-    documento = servico.analisar(enviar()["id"], "projeto")
-    assert documento["status"] == "analisado"
+def test_analise_devolve_leitura_sem_gravar(repo):
+    enviado = enviar()
+    documento = servico.analisar(enviado["id"], "projeto")
     assert documento["numero_processo"] == "1234.00456789/2026-11"
     assert documento["campos_sugeridos"]["nome"].startswith("Duplicacao")
+    gravado = repo.obter(enviado["id"])
+    assert gravado["status"] == "recebido"
+    assert gravado["campos_sugeridos"] == {} and gravado["numero_processo"] is None
 
 
-def test_lote_ignora_o_que_nao_pode_ser_lido(repo):
-    enviar()
-    enviar(nome="outro.pdf", texto="Oficio sem numero de processo mas com texto.")
-    resultado = servico.analisar_pendentes()
-    assert len(resultado["analisados"]) == 2
-    assert servico.analisar_pendentes()["analisados"] == []
+def test_reanalise_le_o_pdf_de_novo_com_outro_tipo(repo):
+    enviado = enviar()
+    assert servico.analisar(enviado["id"], "projeto")["tipo_demanda"] == "projeto"
+    assert servico.analisar(enviado["id"], "plano")["tipo_demanda"] == "plano"
+    assert repo.obter(enviado["id"])["tipo_demanda"] == "projeto"
 
 
 def test_identificador_invalido_nao_chega_ao_banco(repo):

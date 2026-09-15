@@ -14,7 +14,40 @@
 .sei-leitura-tabela th { text-align: left; white-space: nowrap; }
 
 .sei-acoes { white-space: nowrap; }
-.sei-acoes .btn { margin: 0.15rem 0.15rem 0.15rem 0; }
+
+/* Botões de ícone da coluna Ações: cada função com sua cor; no hover a cor preenche o botão. */
+.sei-icone {
+  --sei-cor: #475569;
+  display: inline-grid;
+  width: 2.1rem;
+  height: 2.1rem;
+  margin: 0.15rem;
+  place-items: center;
+  border: 1px solid var(--sei-cor);
+  border-radius: 0.55rem;
+  color: var(--sei-cor);
+  background: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.sei-icone:hover,
+.sei-icone:focus-visible {
+  color: #fff;
+  background: var(--sei-cor);
+  box-shadow: 0 6px 14px -6px var(--sei-cor);
+  transform: translateY(-2px);
+  outline: none;
+}
+.sei-icone:focus-visible { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--sei-cor); }
+.sei-icone:active { transform: translateY(0) scale(0.94); }
+.sei-icone:hover .fa-rotate { transform: rotate(180deg); }
+.sei-icone i { transition: transform 0.35s ease; }
+.sei-icone:disabled { cursor: wait; opacity: 0.5; transform: none; box-shadow: none; }
+.sei-icone--formulario { --sei-cor: #116593; }
+.sei-icone--reanalisar { --sei-cor: #b45309; }
+.sei-icone--baixar { --sei-cor: #0f766e; }
+.sei-icone--excluir { --sei-cor: #b42318; }
 
 #sei-documentos-section { margin-top: 1.5rem; }
 

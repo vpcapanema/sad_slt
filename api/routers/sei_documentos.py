@@ -12,7 +12,7 @@ from api.schemas.demanda import DemandaCreateSchema
 from api.schemas.plano import PlanoCreateSchema
 from api.schemas.programa import ProgramaCreateSchema
 from api.schemas.sei_documentos import (
-    SeiAnaliseRequestSchema, SeiAnaliseLoteResponseSchema, SeiCriarDemandaSchema, SeiDocumentoDetalheSchema,
+    SeiAnaliseRequestSchema, SeiCriarDemandaSchema, SeiDocumentoDetalheSchema,
     SeiDocumentoSchema, SeiUploadResponseSchema,
 )
 from api.services import demanda_service, plano_service, programa_service
@@ -85,12 +85,6 @@ def baixar(documento_id: str, user: SessionUser = Depends(require_authenticated)
         media_type='application/pdf',
         headers={'Content-Disposition': f'inline; filename="{nome}"', 'Cache-Control': 'no-store'},
     )
-
-
-@router.post('/analisar', response_model=SeiAnaliseLoteResponseSchema)
-def analisar_pendentes(body: SeiAnaliseRequestSchema, user: SessionUser = Depends(require_operator)):
-    with _errors():
-        return documentos.analisar_pendentes(body.tipo_demanda)
 
 
 @router.post('/{documento_id}/analisar', response_model=SeiDocumentoSchema)

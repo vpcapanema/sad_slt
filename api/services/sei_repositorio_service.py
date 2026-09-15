@@ -88,15 +88,24 @@ def arquivo(documento_id: str) -> tuple[str, bytes]:
     return registro["nome_arquivo"], bytes(registro["conteudo"])
 
 
-def analisar(documento_id: str, tipo_demanda: sei_processamento.TipoDemanda = "projeto") -> dict[str, Any]:
-    documento = obter(documento_id)
-    if documento["status"] == "demanda_criada":
-        raise DemandaValidationError("Este documento já gerou demanda; a análise não é refeita.")
+def _conteudo(documento: dict[str, Any]) -> bytes:
     registro = repo.obter_conteudo(documento["id"])
     if not registro:
         raise DemandaNotFoundError("Conteúdo do documento não encontrado.")
+    return bytes(registro["conteudo"])
+
+
+def analisar(documento_id: str, tipo_demanda: sei_processamento.TipoDemanda = "projeto") -> dict[str, Any]:
+    """Lê o PDF e devolve a sugestão sem gravar nada.
+
+    A leitura só existe na tela até o analista confirmar; reabrir ou reanalisar
+    o documento lê o PDF de novo. O registro no repositório não muda.
+    """
+    documento = obter(documento_id)
+    if documento["status"] == "demanda_criada":
+        raise DemandaValidationError("Este documento já gerou demanda; a análise não é refeita.")
     try:
-        analise = sei_processamento.analisar(bytes(registro["conteudo"]), tipo_demanda)
+        analise = sei_processamento.analisar(_conteudo(documento), tipo_demanda)
     except ValueError as exc:
         raise DemandaValidationError(str(exc)) from exc
     evidencias = {
@@ -104,34 +113,27 @@ def analisar(documento_id: str, tipo_demanda: sei_processamento.TipoDemanda = "p
         for campo, resultado in analise["campos"].items()
         if resultado.get("evidencias")
     }
-    aviso = " ".join(analise["avisos"]) or None
-    atualizado = repo.salvar_analise(
-        documento_id=documento["id"], status="analisado",
-        numero_processo=analise["numero_processo"],
-        campos_sugeridos=analise["campos_sugeridos"], evidencias=evidencias,
-        tipo_demanda=tipo_demanda, analise=analise, aviso=aviso,
-    )
-    if not atualizado:
-        raise DemandaNotFoundError("Documento não encontrado no repositório do SEI.")
-    atualizado["ausentes"] = analise["ausentes"]
-    return atualizado
-
-
-def analisar_pendentes(tipo_demanda: sei_processamento.TipoDemanda = "projeto") -> dict[str, Any]:
-    analisados, ignorados = [], []
-    for documento in repo.listar():
-        if documento["status"] not in {"recebido", "sem_texto"}:
-            ignorados.append(str(documento["id"]))
-            continue
-        try:
-            analisados.append(analisar(str(documento["id"]), tipo_demanda))
-        except DemandaValidationError:
-            ignorados.append(str(documento["id"]))
-    return {"analisados": analisados, "ignorados": ignorados}
+    return {
+        **documento,
+        "tipo_demanda": tipo_demanda,
+        "numero_processo": analise["numero_processo"],
+        "campos_sugeridos": analise["campos_sugeridos"],
+        "evidencias": evidencias,
+        "analise": analise,
+        "aviso": " ".join(analise["avisos"]) or documento.get("aviso"),
+        "ausentes": analise["ausentes"],
+    }
 
 
 def marcador_origem(documento: dict[str, Any]) -> str:
-    return f"Processo SEI: {documento['numero_processo']}" if documento.get("numero_processo") else f"Documento SEI: {documento['nome_arquivo']}"
+    # A leitura não é gravada: o número do processo é lido do PDF no momento da criação.
+    numero = documento.get("numero_processo")
+    if not numero:
+        try:
+            numero = sei_processamento.numero_processo(_conteudo(documento))
+        except (ValueError, DemandaNotFoundError):
+            numero = None
+    return f"Processo SEI: {numero}" if numero else f"Documento SEI: {documento['nome_arquivo']}"
 
 
 def registrar_demanda(documento_id: str, demanda_id: str) -> dict[str, Any] | None:

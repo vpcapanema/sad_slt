@@ -18,7 +18,9 @@
     criada: 'Demanda criada',
   };
   const ROTULOS = {
-    nome: 'Nome / objeto', descricao: 'Descrição', instituicao_label: 'Instituição',
+    nome: 'Nome / objeto', descricao: 'Descrição', objetivo: 'Objetivo',
+    objetivo_estrategico: 'Objetivo estratégico', justificativa: 'Justificativa', publico_alvo: 'Público-alvo',
+    orgao_responsavel: 'Órgão responsável', maturidade_objeto: 'Maturidade', instituicao_label: 'Instituição',
     instituicao_cnpj: 'CNPJ', representante_nome: 'Representante', representante_email: 'E-mail',
     representante_telefone: 'Telefone', municipio: 'Município', valor_global: 'Valor global',
     prazo_referencia_meses: 'Prazo (meses)', vigencia_inicio: 'Vigência — início',
@@ -26,7 +28,8 @@
     numero_processo: 'Número do processo',
   };
 
-  // Fila de PDFs na ordem de processamento. Cada item: { id, nome, tipo, estado, jaAnalisado, detalhe, erro }.
+  // Fila de PDFs na ordem de processamento. Cada item: { id, nome, tipo, estado, detalhe, erro, execucao }.
+  // `detalhe` é a leitura devolvida pelo extrator, que não é gravada; `execucao` descarta leituras superadas por Reanalisar.
   let fila = [];
   let atualId = null;
   let processando = false;
@@ -57,12 +60,21 @@
 
   // ---------------------------------------------------------------- tabela
 
+  const ICONES = {
+    formulario: { icone: 'fa-file-pen', titulo: 'Abrir no formulário' },
+    reanalisar: { icone: 'fa-rotate', titulo: 'Reanalisar o PDF' },
+    baixar: { icone: 'fa-file-pdf', titulo: 'Abrir PDF' },
+    excluir: { icone: 'fa-trash-can', titulo: 'Excluir documento' },
+  };
+
+  function botaoIcone(acao) {
+    const { icone, titulo } = ICONES[acao];
+    return `<button type="button" class="sei-icone sei-icone--${acao}" data-acao="${acao}" title="${titulo}" aria-label="${titulo}"><i class="fas ${icone}" aria-hidden="true"></i></button>`;
+  }
+
   function acoes(doc) {
-    const botoes = [];
-    if (!doc.demanda_id) botoes.push(`<button type="button" class="btn btn-primary btn-sm" data-acao="formulario">Abrir no formulário</button>`);
-    botoes.push(`<button type="button" class="btn btn-secondary btn-sm" data-acao="baixar">Abrir PDF</button>`);
-    if (!doc.demanda_id) botoes.push(`<button type="button" class="btn btn-secondary btn-sm" data-acao="excluir">Excluir</button>`);
-    return botoes.join(' ');
+    const acoesDoc = doc.demanda_id ? ['baixar'] : ['formulario', 'reanalisar', 'baixar', 'excluir'];
+    return acoesDoc.map(botaoIcone).join('');
   }
 
   async function listar() {
@@ -78,7 +90,7 @@
         const situacao = SITUACAO[doc.status] || doc.status;
         const demanda = doc.demanda_id ? ` (${esc(doc.demanda_id)})` : '';
         tr.innerHTML = `<td>${esc(doc.nome_arquivo)}${doc.aviso ? `<br><span class="hint">${esc(doc.aviso)}</span>` : ''}</td>
-          <td>${esc(doc.numero_processo || 'Não identificado')}</td>
+          <td>${esc(doc.numero_processo || '—')}</td>
           <td>${esc(doc.usuario_nome || '—')}</td>
           <td>${esc(dataHora(doc.criado_em))}</td>
           <td>${esc(situacao)}${demanda}</td>
@@ -96,6 +108,7 @@
   async function executar(botao, doc, acao) {
     if (acao === 'baixar') { window.open(`${API}/${doc.id}/arquivo`, '_blank', 'noopener'); return; }
     if (acao === 'formulario') { abrirDaTabela(doc); return; }
+    if (acao === 'reanalisar') { reanalisar(doc); return; }
     botao.disabled = true;
     try {
       if (acao === 'excluir') {
@@ -119,17 +132,30 @@
     const id = String(doc.id);
     let item = fila.find(x => x.id === id);
     if (!item) {
-      item = { id, nome: doc.nome_arquivo, tipo, estado: 'aguardando', jaAnalisado: doc.status === 'analisado', detalhe: null, erro: '' };
+      item = { id, nome: doc.nome_arquivo, tipo, estado: 'aguardando', detalhe: null, erro: '', execucao: 0 };
       fila.push(item);
     }
     return item;
   }
 
   function abrirDaTabela(doc) {
-    // Documento já analisado reabre com o tipo da análise; os demais usam o tipo escolhido no envio.
-    const tipo = doc.status === 'analisado' ? (doc.tipo_demanda || 'projeto') : q('sei-tipo-demanda').value;
-    const item = adicionarNaFila(doc, tipo);
+    // A leitura não é gravada: o PDF é lido de novo com o tipo escolhido em "Formulário a preencher".
+    const item = adicionarNaFila(doc, q('sei-tipo-demanda').value);
     abrirCard();
+    selecionar(item.id);
+    processarFila();
+  }
+
+  function reanalisar(doc) {
+    const item = adicionarNaFila(doc, q('sei-tipo-demanda').value);
+    // Descarta a leitura anterior (inclusive uma ainda em andamento) e recarrega o formulário limpo.
+    item.tipo = q('sei-tipo-demanda').value;
+    item.estado = 'aguardando';
+    item.detalhe = null;
+    item.erro = '';
+    item.execucao += 1;
+    abrirCard();
+    atualId = null;
     selecionar(item.id);
     processarFila();
   }
@@ -154,13 +180,16 @@
       let item;
       while ((item = fila.find(x => x.estado === 'aguardando'))) {
         item.estado = 'extraindo';
+        const execucao = item.execucao;
         renderFila();
         atualizarStatus();
         try {
-          if (!item.jaAnalisado) await post(`${API}/${item.id}/analisar`, { tipo_demanda: item.tipo });
-          item.detalhe = await request(`${API}/${item.id}`);
+          const leitura = await post(`${API}/${item.id}/analisar`, { tipo_demanda: item.tipo });
+          if (execucao !== item.execucao) continue; // reanalisado durante a leitura: vale a nova
+          item.detalhe = leitura;
           item.estado = 'pronto';
         } catch (e) {
+          if (execucao !== item.execucao) continue;
           item.estado = 'erro';
           item.erro = e.message;
         }
