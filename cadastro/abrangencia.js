@@ -105,8 +105,9 @@
         map.setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
         return;
       }
-      let combined = boxes[0];
-      for (let i = 1; i < boxes.length; i++) combined = combined.extend(boxes[i]);
+      // extend() altera o objeto; copiar evita que parentBounds acumule extensões antigas.
+      const combined = L.latLngBounds(boxes[0].getSouthWest(), boxes[0].getNorthEast());
+      for (let i = 1; i < boxes.length; i++) combined.extend(boxes[i]);
       map.fitBounds(combined.pad(0.1));
     }
 
@@ -233,6 +234,10 @@
     }
 
     let lastContainment = null;
+    // Contadores de requisição: só a resposta mais recente é aplicada.
+    let spatialRequestSeq = 0;
+    let mapRequestSeq = 0;
+    let unidadesRequestSeq = 0;
 
     function resetSpatialAck() {
       const ack = $("spatial-ack");
@@ -243,6 +248,7 @@
       const row = $("spatial-ack-row");
       const warn = $("spatial-warn");
       if (!row || !warn) return;
+      const reqId = ++spatialRequestSeq;
       if (!global.SLTSpatialConstraint?.hasParent() || !ids?.length) {
         lastContainment = null;
         row.classList.add("hidden");
@@ -256,6 +262,7 @@
           unidade_ids: ids,
           parent_unidade_ids: SLTSpatialConstraint.getParentIds(),
         });
+        if (reqId !== spatialRequestSeq) return;
         lastContainment = result;
         if (result.status === "inside") {
           row.classList.add("hidden");
@@ -268,6 +275,7 @@
         }
         opts.onSpatialAnalysis?.(result);
       } catch (err) {
+        if (reqId !== spatialRequestSeq) return;
         lastContainment = null;
         row.classList.add("hidden");
         warn.textContent = "";
@@ -278,6 +286,7 @@
     async function refreshMap() {
       const status = $("status");
       const ids = Array.from(selected.keys());
+      const reqId = ++mapRequestSeq;
       ensureMap();
       if (layer) {
         map.removeLayer(layer);
@@ -295,6 +304,7 @@
       status.textContent = "Carregando geometria…";
       try {
         const fc = await SLTDemandasApi.geoUnidadesGeojson(ids);
+        if (reqId !== mapRequestSeq) return;
         layer = L.geoJSON(fc, {
           pane: "abrUserPane",
           style: USER_STYLE,
@@ -307,6 +317,7 @@
         status.textContent = `${ids.length} unidade(s) na abrangência.`;
         updateSpatialWarning(ids);
       } catch (err) {
+        if (reqId !== mapRequestSeq) return;
         status.textContent = "Não foi possível carregar a geometria.";
       }
     }
@@ -331,6 +342,7 @@
 
     async function loadUnidades(tipo) {
       const sel = $("unidade");
+      const reqId = ++unidadesRequestSeq;
       if (!tipo) {
         sel.disabled = true;
         sel.innerHTML = '<option value="">Selecione a regionalização</option>';
@@ -340,11 +352,13 @@
       sel.innerHTML = '<option value="">Carregando…</option>';
       try {
         const unidades = await SLTDemandasApi.listGeoUnidades(tipo);
+        if (reqId !== unidadesRequestSeq) return;
         sel.innerHTML = unidades
           .map((u) => `<option value="${escapeHtml(u.id)}">${escapeHtml(u.nome)}</option>`)
           .join("");
         sel.disabled = false;
       } catch (err) {
+        if (reqId !== unidadesRequestSeq) return;
         sel.innerHTML = '<option value="">Falha ao carregar unidades</option>';
       }
     }
@@ -392,6 +406,7 @@
       clearParentReference: () => setParentReference(null),
       isOutsideParent: () => Boolean(lastContainment && lastContainment.status !== "inside"),
       getContainment: () => lastContainment,
+      refreshSpatialAnalysis: () => updateSpatialWarning(Array.from(selected.keys())),
       isSpatialAcknowledged: () => {
         if (!lastContainment || lastContainment.status === "inside") return true;
         return Boolean($("spatial-ack")?.checked);

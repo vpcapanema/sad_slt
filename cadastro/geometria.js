@@ -72,6 +72,7 @@
         child_kind: meta.childKind || "projeto",
         ref_kind: meta.refKind || "plano",
       });
+      if (geometria !== geom) return;
       lastContainment = result;
       spatialOutside = result.status !== "inside";
       if (result.status === "inside") {
@@ -86,6 +87,7 @@
       const ack = document.getElementById("map-spatial-ack");
       if (ack) ack.checked = false;
     } catch (err) {
+      if (geometria !== geom) return;
       lastContainment = null;
       spatialOutside = false;
       if (row) row.classList.add("hidden");
@@ -103,10 +105,32 @@
         type: geom.tipo,
         coordinates: geom.coordinates,
       });
+      if (geometria !== geom) return;
       regionalidades = result.regionalidades || null;
     } catch (err) {
+      if (geometria !== geom) return;
       regionalidades = null;
     }
+  }
+
+  /** Descarta análises da geometria anterior (limpeza, troca de modo, falha de upload). */
+  function resetAnalise() {
+    resetSpatialAck();
+    regionalidades = null;
+    notifyAnalysisChange();
+  }
+
+  /** Reavalia a geometria atual contra a referência do vínculo (que pode ter mudado). */
+  function refreshSpatialAnalysis() {
+    const geom = geometria;
+    if (!geom) {
+      resetSpatialAck();
+      notifyAnalysisChange();
+      return;
+    }
+    updateSpatialWarning(geom).then(() => {
+      if (geometria === geom) notifyAnalysisChange();
+    });
   }
 
   function isOutsideParent() {
@@ -162,8 +186,9 @@
       map.setView([-22.5, -48.5], 7);
       return;
     }
-    let combined = boxes[0];
-    for (let i = 1; i < boxes.length; i++) combined = combined.extend(boxes[i]);
+    // extend() altera o objeto; copiar evita que parentBounds acumule extensões antigas.
+    const combined = L.latLngBounds(boxes[0].getSouthWest(), boxes[0].getNorthEast());
+    for (let i = 1; i < boxes.length; i++) combined.extend(boxes[i]);
     map.fitBounds(combined.pad(0.1));
   }
 
@@ -404,9 +429,13 @@
       }
     }
     setError("");
-    updateSpatialWarning(geom).then(() =>
-      refreshRegionalidades(geom).then(() => notifyAnalysisChange())
-    );
+    regionalidades = null;
+    notifyAnalysisChange();
+    updateSpatialWarning(geom)
+      .then(() => refreshRegionalidades(geom))
+      .then(() => {
+        if (geometria === geom) notifyAnalysisChange();
+      });
   }
 
   function buildGeometriaPayload(tipo, coordinates) {
@@ -459,10 +488,13 @@
   function setModo(novo) {
     modo = novo;
     geometria = null;
+    disableDrawControl();
     clearLayers();
     clearCoordInputs();
+    const upload = document.getElementById("upload-perimetro");
+    if (upload) upload.value = "";
     setError("");
-    resetSpatialAck();
+    resetAnalise();
     setStatus(
       parentFc?.features?.length
         ? "Indique a localização no mapa. A área tracejada laranja é a abrangência do vínculo."
@@ -535,7 +567,7 @@
       clearLayers();
       clearCoordInputs();
       document.getElementById("upload-perimetro").value = "";
-      resetSpatialAck();
+      resetAnalise();
       setStatus(
         parentFc?.features?.length
           ? "Indique a localização no mapa. A área tracejada laranja é a abrangência do vínculo."
@@ -557,6 +589,7 @@
         geometria = null;
         clearLayers();
         clearCoordInputs();
+        resetAnalise();
         setStatus("Localização ainda não definida.");
         setError(err.message);
       }
@@ -609,5 +642,6 @@
     getRegionalidades,
     getContainment,
     setOnAnalysisChange,
+    refreshSpatialAnalysis,
   };
 })(window);

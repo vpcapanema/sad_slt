@@ -44,3 +44,7 @@ plugins/municipal-layer-completo-v1.0.0.zip
 
 # copias de seguranca das permissoes locais
 .claude/*.bak
+
+# Material local de trabalho geoespacial (QGIS): nao publicar pelo deploy.
+documentacao/geoespacial/PROMPT_INTERSECT_PROJETOS_POR_PROJ_ID_QGIS.md
+documentacao/geoespacial/entregas/

@@ -334,14 +334,17 @@
       visibleSectionNumber += 1;
       const numEl = findCadastroSectionNumEl(panel);
       if (numEl) numEl.textContent = String(visibleSectionNumber);
+      // initCadastroSectionCards move o conteúdo do card para .cadastro-section-body.
       let subIdx = 0;
-      panel.querySelectorAll(":scope > .form-subsection").forEach((sub) => {
-        if (sub.classList.contains("hidden") || sub.hidden) return;
-        subIdx += 1;
-        setSubsectionNumber(sub, visibleSectionNumber, subIdx);
-      });
+      panel
+        .querySelectorAll(":scope > .form-subsection, :scope > .cadastro-section-body > .form-subsection")
+        .forEach((sub) => {
+          if (sub.classList.contains("hidden") || sub.hidden) return;
+          subIdx += 1;
+          setSubsectionNumber(sub, visibleSectionNumber, subIdx);
+        });
       const collapsibleNumber = panel.querySelector(
-        ":scope > .collapsible-hdr .cadastro-subsec-num",
+        ":scope > .collapsible-hdr .cadastro-subsec-num, :scope > .cadastro-section-body > .collapsible-hdr .cadastro-subsec-num",
       );
       if (collapsibleNumber) collapsibleNumber.textContent = `${visibleSectionNumber}.${subIdx + 1}`;
     });
@@ -464,7 +467,8 @@
     $$('input[name="pg-vinculo"]').forEach((el) => {
       el.checked = false;
     });
-    syncProgramaPanelsVisibility();
+    // Sem vínculo marcado: limpa o plano escolhido e a referência espacial do vínculo anterior.
+    updatePgVinculoPanel();
     updateProgramaVinculoFlow();
   }
 
@@ -474,7 +478,8 @@
     $$('input[name="pj-vinculo"]').forEach((el) => {
       el.checked = false;
     });
-    syncProjetoPanelsVisibility();
+    // Sem vínculo marcado: limpa programa/plano escolhidos e a referência espacial do vínculo anterior.
+    updatePjVinculoPanel();
     updateProjetoVinculoFlow();
   }
 
@@ -999,10 +1004,11 @@
 
     if (plano.id === PLANO_PLI) {
       pli.classList.remove("hidden");
-      fillSelect($("#frente"), SLTCatalog.frentesPorPlano(planoId), "id", (f) => f.nome_oficial);
+      // Sem placeholder o navegador pré-seleciona a 1ª opção e a validação obrigatória nunca dispara.
+      fillSelect($("#frente"), SLTCatalog.frentesPorPlano(planoId), "id", (f) => f.nome_oficial, "Selecione…");
     } else if (plano.id === PLANO_PEF) {
       pef.classList.remove("hidden");
-      fillSelect($("#eixo"), SLTCatalog.eixosPorPlano(planoId), "id", (e) => e.nome_oficial);
+      fillSelect($("#eixo"), SLTCatalog.eixosPorPlano(planoId), "id", (e) => e.nome_oficial, "Selecione…");
       onEixoChange();
     }
     updateClassificacaoHints();
@@ -1031,6 +1037,7 @@
     } else hintEixo.classList.add("hidden");
 
     const ticId = $("#corredor_tic").value;
+    if (!hintTic) return;
     if (ticId && classificacaoRef.corredores_tic) {
       const t = classificacaoRef.corredores_tic.find((x) => x.id === ticId);
       hintTic.innerHTML = t ? `<strong>${escapeHtml(t.nome)}</strong> ${escapeHtml(t.ligacao)}` : "";
@@ -1228,6 +1235,7 @@
       SLTSpatialConstraint.clear();
       pgAbr?.clearParentReference?.();
       SLTGeometria.clearParentReference?.();
+      refreshSpatialAnalyses();
       return;
     }
     try {
@@ -1242,6 +1250,13 @@
       pgAbr?.clearParentReference?.();
       SLTGeometria.clearParentReference?.();
     }
+    refreshSpatialAnalyses();
+  }
+
+  /** O formulário é aberto: a localização pode ter sido marcada antes de o vínculo mudar. */
+  function refreshSpatialAnalyses() {
+    pgAbr?.refreshSpatialAnalysis?.();
+    SLTGeometria.refreshSpatialAnalysis?.();
   }
 
   async function syncProgramaParentSpatialConstraint() {
@@ -1836,7 +1851,6 @@
       programasCache = [];
     }
     updateProgramasSelect();
-    applyUrlParams();
   }
 
   function initTipoSelector() {
@@ -2059,13 +2073,21 @@
     });
 
     SLTGeometria.init();
-    SLTGeometria.setOnAnalysisChange(() => {
-      if (currentProjetoStep >= 4) renderReview();
-    });
+    // O fluxo é aberto (sem "Continuar"), então a revisão acompanha o preenchimento.
+    SLTGeometria.setOnAnalysisChange(renderReview);
+    $("#form-cadastro").addEventListener("input", renderReview);
+    $("#form-cadastro").addEventListener("change", renderReview);
+    renderReview();
     initTipoDemandanteSelector();
     initTipoSelector();
     initFieldFilledSync();
-    await loadAtributosObjetoDomain();
+    try {
+      await loadAtributosObjetoDomain();
+    } catch (err) {
+      // Falha nos atributos opcionais não pode impedir o restante do cadastro de iniciar.
+      console.error(err);
+      showToast(err.message);
+    }
     await loadPlanosCache();
     renumberProgramaSections();
     renumberPlanoSubsections();
@@ -2078,10 +2100,14 @@
     const params = new URLSearchParams(window.location.search);
     const demandanteParam = params.get("demandante");
     selectTipoDemandante(demandanteParam === "privada" ? "privada" : "institucional");
-    const tipoParam = params.get("tipo");
+    const TIPOS_VALIDOS = ["plano", "programa", "projeto"];
+    let tipoParam = params.get("tipo");
+    if (!TIPOS_VALIDOS.includes(tipoParam)) tipoParam = params.get("programa") ? "projeto" : null;
     if (currentTipoDemandante === "privada") selectTipo("projeto");
     else if (tipoParam) selectTipo(tipoParam);
     else selectTipo("plano");
+    // Depois de selectTipo, que reinicia o wizard e apagaria o vínculo vindo da URL.
+    if (!$("#form-cadastro").classList.contains("hidden")) applyUrlParams();
   }
 
   init().catch((err) => {
