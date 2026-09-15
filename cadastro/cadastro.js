@@ -225,7 +225,11 @@
     });
   }
 
+  // Última mensagem de validação: o formulário embutido (SEI) a devolve à página hospedeira.
+  let ultimoAviso = "";
+
   function showToast(msg) {
+    ultimoAviso = msg;
     const t = $("#toast");
     t.textContent = msg;
     t.classList.add("show");
@@ -1844,6 +1848,75 @@
     });
   }
 
+  function validarPlano() {
+    let erro = null;
+    if (!$("#pl-nome").value.trim() || !$("#pl-descricao").value.trim() || !$("#pl-diretoria").value) {
+      erro = "Preencha nome, descrição e diretoria do plano.";
+    } else if (!$("#pl-instituicao").value) {
+      erro = "Selecione a instituição interessada.";
+    } else if (!$("#pl-representante").value) {
+      erro = "Selecione o representante legal.";
+    } else if (!plAbr.getSelectedIds().length) {
+      erro = "Selecione ao menos uma unidade de abrangência.";
+    }
+    if (erro) showToast(erro);
+    return !erro;
+  }
+
+  function buildPlanoPayload() {
+    const rep = buildRepresentantePayload("#pl-representante", "#pl-rep_email", "#pl-rep_telefone");
+    const inst = buildInstituicaoPayload("#pl-instituicao", "#pl-cnpj");
+    return {
+      tipo_demandante: "institucional",
+      diretoria_id: $("#pl-diretoria").value,
+      nome: $("#pl-nome").value.trim(),
+      descricao: $("#pl-descricao").value.trim(),
+      objetivo_estrategico: $("#pl-objetivo").value.trim() || null,
+      ...inst,
+      pessoa_id: rep.pessoa_id,
+      representante: rep.representante,
+      vigencia_inicio: $("#pl-vig-ini").value || null,
+      vigencia_fim: $("#pl-vig-fim").value || null,
+      valor_global: parseMoedaBr($("#pl-valor").value),
+      atributos_cadastrais: cadastralAttributes("pl", false),
+      unidades_espaciais: plAbr.getSelectedIds(),
+    };
+  }
+
+  function validarPrograma() {
+    if (!validateProgramaStep(1) || !validateProgramaStep(3) || !validateProgramaStep(4)) return false;
+    if (isPgVinculoAtivo() && !validateProgramaStep(2)) return false;
+    return ensureSpatialAcknowledgedForSubmit("programa");
+  }
+
+  function buildProgramaPayload() {
+    const rep = buildRepresentantePayload("#pg-representante", "#pg-rep_email", "#pg-rep_telefone");
+    const inst = buildInstituicaoPayload("#pg-instituicao", "#pg-cnpj");
+    return {
+      tipo_demandante: "institucional",
+      plano_codigo: isPgVinculoAtivo() ? $("#pg-plano").value : null,
+      vinculo_institucional: isPgVinculoAtivo(),
+      nome: $("#pg-nome").value.trim(),
+      descricao: $("#pg-descricao").value.trim(),
+      objetivo: $("#pg-objetivo").value.trim() || null,
+      publico_alvo: $("#pg-publico").value.trim() || null,
+      justificativa: $("#pg-justificativa").value.trim() || null,
+      orgao_responsavel: $("#pg-orgao").value.trim() || null,
+      valor_global: parseMoedaBr($("#pg-capex").value),
+      atributos_cadastrais: cadastralAttributes("pg", true),
+      ...inst,
+      pessoa_id: rep.pessoa_id,
+      representante: rep.representante,
+      unidades_espaciais: pgAbr.getSelectedIds(),
+    };
+  }
+
+  function validarProjeto() {
+    if (!validateStep(1) || !validateStep(3) || !validateStep(5)) return false;
+    if (isPjVinculoAtivo() && !validateStep(2)) return false;
+    return ensureSpatialAcknowledgedForSubmit("projeto");
+  }
+
   function initPlanoForm() {
     const cat = SLTCatalog.catalog;
     fillSelect($("#pl-diretoria"), SLTCatalog.ativos(cat.diretorias), "id", (d) => d.nome_oficial, "Selecione…");
@@ -1857,40 +1930,8 @@
 
     $("#form-plano").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const unidades = plAbr.getSelectedIds();
-      if (!$("#pl-nome").value.trim() || !$("#pl-descricao").value.trim() || !$("#pl-diretoria").value) {
-        showToast("Preencha nome, descrição e diretoria do plano.");
-        return;
-      }
-      if (!$("#pl-instituicao").value) {
-        showToast("Selecione a instituição interessada.");
-        return;
-      }
-      if (!$("#pl-representante").value) {
-        showToast("Selecione o representante legal.");
-        return;
-      }
-      if (!unidades.length) {
-        showToast("Selecione ao menos uma unidade de abrangência.");
-        return;
-      }
-      const rep = buildRepresentantePayload("#pl-representante", "#pl-rep_email", "#pl-rep_telefone");
-      const inst = buildInstituicaoPayload("#pl-instituicao", "#pl-cnpj");
-      const payload = {
-        tipo_demandante: "institucional",
-        diretoria_id: $("#pl-diretoria").value,
-        nome: $("#pl-nome").value.trim(),
-        descricao: $("#pl-descricao").value.trim(),
-        objetivo_estrategico: $("#pl-objetivo").value.trim() || null,
-        ...inst,
-        pessoa_id: rep.pessoa_id,
-        representante: rep.representante,
-        vigencia_inicio: $("#pl-vig-ini").value || null,
-        vigencia_fim: $("#pl-vig-fim").value || null,
-        valor_global: parseMoedaBr($("#pl-valor").value),
-        atributos_cadastrais: cadastralAttributes("pl", false),
-        unidades_espaciais: unidades,
-      };
+      if (!validarPlano()) return;
+      const payload = buildPlanoPayload();
       const btn = e.submitter;
       if (btn) btn.disabled = true;
       try {
@@ -1940,29 +1981,8 @@
 
     $("#form-programa").addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (!validateProgramaStep(1) || !validateProgramaStep(3) || !validateProgramaStep(4)) return;
-      if (isPgVinculoAtivo() && !validateProgramaStep(2)) return;
-      if (!ensureSpatialAcknowledgedForSubmit("programa")) return;
-      const rep = buildRepresentantePayload("#pg-representante", "#pg-rep_email", "#pg-rep_telefone");
-      const inst = buildInstituicaoPayload("#pg-instituicao", "#pg-cnpj");
-      const unidades = pgAbr.getSelectedIds();
-      const payload = {
-        tipo_demandante: "institucional",
-        plano_codigo: isPgVinculoAtivo() ? $("#pg-plano").value : null,
-        vinculo_institucional: isPgVinculoAtivo(),
-        nome: $("#pg-nome").value.trim(),
-        descricao: $("#pg-descricao").value.trim(),
-        objetivo: $("#pg-objetivo").value.trim() || null,
-        publico_alvo: $("#pg-publico").value.trim() || null,
-        justificativa: $("#pg-justificativa").value.trim() || null,
-        orgao_responsavel: $("#pg-orgao").value.trim() || null,
-        valor_global: parseMoedaBr($("#pg-capex").value),
-        atributos_cadastrais: cadastralAttributes("pg", true),
-        ...inst,
-        pessoa_id: rep.pessoa_id,
-        representante: rep.representante,
-        unidades_espaciais: unidades,
-      };
+      if (!validarPrograma()) return;
+      const payload = buildProgramaPayload();
       const btn = e.submitter;
       if (btn) btn.disabled = true;
       try {
@@ -2030,9 +2050,7 @@
 
     $("#form-cadastro").addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (!validateStep(1) || !validateStep(3) || !validateStep(5)) return;
-      if (isPjVinculoAtivo() && !validateStep(2)) return;
-      if (!ensureSpatialAcknowledgedForSubmit("projeto")) return;
+      if (!validarProjeto()) return;
       const demanda = buildDemanda();
       const submitBtn = e.submitter || $("#form-cadastro").querySelector('[type="submit"]');
       if (submitBtn) submitBtn.disabled = true;
@@ -2101,8 +2119,102 @@
     }
   }
 
-  init().catch((err) => {
-    console.error(err);
-    showToast("Erro ao iniciar cadastro.");
+  // ---------------------------------------------------------------------------
+  // Modo embutido (?embed=sei): a página de Contribuições do SEI hospeda este
+  // formulário num iframe, preenche com o que foi extraído do PDF e cria a
+  // demanda pela própria rota do SEI, usando as mesmas validações e payloads.
+  // ---------------------------------------------------------------------------
+  const SUGESTAO_CAMPOS = {
+    projeto: {
+      nome: "#nome", descricao: "#descricao", vigencia_inicio: "#prj-vig-ini", vigencia_fim: "#prj-vig-fim",
+      prazo_referencia_meses: "#prj-prazo", maturidade_objeto: "#prj-maturidade", lat: "#lat", lng: "#lng",
+    },
+    plano: {
+      nome: "#pl-nome", descricao: "#pl-descricao", objetivo_estrategico: "#pl-objetivo",
+      vigencia_inicio: "#pl-vig-ini", vigencia_fim: "#pl-vig-fim",
+      prazo_referencia_meses: "#pl-prazo", maturidade_objeto: "#pl-maturidade",
+    },
+    programa: {
+      nome: "#pg-nome", descricao: "#pg-descricao", objetivo: "#pg-objetivo", publico_alvo: "#pg-publico",
+      justificativa: "#pg-justificativa", orgao_responsavel: "#pg-orgao",
+      prazo_referencia_meses: "#pg-prazo", maturidade_objeto: "#pg-maturidade",
+    },
+  };
+  const SUGESTAO_MOEDA = { projeto: "#prj-capex", plano: "#pl-valor", programa: "#pg-capex" };
+  const SUGESTAO_PROPONENTE = {
+    projeto: ["#instituicao", "#representante"],
+    plano: ["#pl-instituicao", "#pl-representante"],
+    programa: ["#pg-instituicao", "#pg-representante"],
+  };
+
+  function tipoFormularioAtivo() {
+    return document.querySelector(".tipo-form:not(.hidden)")?.dataset.tipo || "projeto";
+  }
+
+  function definirCampoSugerido(selector, valor) {
+    const el = $(selector);
+    if (!el || valor == null || valor === "") return false;
+    if (el.tagName === "SELECT" && ![...el.options].some((o) => o.value === String(valor))) return false;
+    el.value = String(valor);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    el.classList.add("sei-preenchido");
+    return true;
+  }
+
+  function preencherComSugestoes(detalhe) {
+    const tipo = tipoFormularioAtivo();
+    const campos = detalhe?.campos_sugeridos || {};
+    let preenchidos = 0;
+    Object.entries(SUGESTAO_CAMPOS[tipo]).forEach(([campo, selector]) => {
+      if (definirCampoSugerido(selector, campos[campo])) preenchidos += 1;
+    });
+    // O campo de moeda reformata o que é digitado; entra já no formato brasileiro.
+    if (campos.valor_global != null && definirCampoSugerido(SUGESTAO_MOEDA[tipo], formatMoedaBr(Number(campos.valor_global)))) {
+      preenchidos += 1;
+    }
+    // Proponente só por identificação exata: CNPJ para a instituição, e-mail para o representante.
+    const [instSel, repSel] = SUGESTAO_PROPONENTE[tipo];
+    const cnpj = String(campos.instituicao_cnpj || "").replace(/\D/g, "");
+    const inst = cnpj
+      ? instituicoes.find((i) => SLTSigmaRead.cnpjDisplay(i).replace(/\D/g, "") === cnpj)
+      : null;
+    if (inst && definirCampoSugerido(instSel, inst.id)) preenchidos += 1;
+    const email = String(campos.representante_email || "").trim().toLowerCase();
+    const pessoa = email ? pessoas.find((p) => String(p.email || "").trim().toLowerCase() === email) : null;
+    if (pessoa && definirCampoSugerido(repSel, pessoa.id)) preenchidos += 1;
+    return preenchidos;
+  }
+
+  function coletarParaEnvio() {
+    ultimoAviso = "";
+    const tipo = tipoFormularioAtivo();
+    const valido = tipo === "plano" ? validarPlano() : tipo === "programa" ? validarPrograma() : validarProjeto();
+    if (!valido) {
+      throw new Error(ultimoAviso || $("#map-error")?.textContent?.trim() || "Revise os campos do formulário.");
+    }
+    const campos = tipo === "plano" ? buildPlanoPayload() : tipo === "programa" ? buildProgramaPayload() : buildDemanda();
+    return { tipo, campos };
+  }
+
+  let resolverEmbedPronto;
+  let rejeitarEmbedPronto;
+  const embedPronto = new Promise((resolve, reject) => {
+    resolverEmbedPronto = resolve;
+    rejeitarEmbedPronto = reject;
   });
+  embedPronto.catch(() => {});
+  window.SLTCadastroEmbed = {
+    pronto: embedPronto,
+    preencher: preencherComSugestoes,
+    coletar: coletarParaEnvio,
+  };
+
+  init()
+    .then(() => resolverEmbedPronto())
+    .catch((err) => {
+      console.error(err);
+      showToast("Erro ao iniciar cadastro.");
+      rejeitarEmbedPronto(err);
+    });
 })();

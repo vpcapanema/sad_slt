@@ -3,11 +3,19 @@
   const q = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const API = '/api/sei/documentos';
+  const FORMULARIO_URL = '/public/cadastro/nova-demanda/';
   const SITUACAO = {
     recebido: 'Recebido — campos ainda não lidos',
     sem_texto: 'Aguardando nova análise com OCR',
     analisado: 'Analisado — aguardando revisão',
     demanda_criada: 'Demanda criada',
+  };
+  const ESTADO_FILA = {
+    aguardando: 'Na fila',
+    extraindo: 'Extraindo informações…',
+    pronto: 'Pronto para revisão',
+    erro: 'Falha na extração',
+    criada: 'Demanda criada',
   };
   const ROTULOS = {
     nome: 'Nome / objeto', descricao: 'Descrição', instituicao_label: 'Instituição',
@@ -17,6 +25,14 @@
     vigencia_fim: 'Vigência — fim', lat: 'Latitude', lng: 'Longitude',
     numero_processo: 'Número do processo',
   };
+
+  // Fila de PDFs na ordem de processamento. Cada item: { id, nome, tipo, estado, jaAnalisado, detalhe, erro }.
+  let fila = [];
+  let atualId = null;
+  let processando = false;
+  let frameSeq = 0;
+  let formularioProntoSeq = -1;
+  let observadorAltura = null;
 
   async function request(path, options = {}) {
     const res = await fetch(path, { credentials: 'include', ...options });
@@ -38,12 +54,13 @@
     q(id).classList.toggle('hidden', !texto);
   }
   const dataHora = (iso) => { const d = new Date(iso); return isNaN(d) ? '—' : d.toLocaleString('pt-BR'); };
-  const soDigitos = (v) => String(v || '').replace(/\D/g, '');
+
+  // ---------------------------------------------------------------- tabela
 
   function acoes(doc) {
-    const botoes = [`<button type="button" class="btn btn-secondary btn-sm" data-acao="baixar">Abrir PDF</button>`];
-    if (doc.status === 'recebido' || doc.status === 'sem_texto') botoes.unshift(`<button type="button" class="btn btn-secondary btn-sm" data-acao="analisar">Analisar PDF</button>`);
-    if (doc.status === 'analisado' || doc.status === 'sem_texto') botoes.unshift(`<button type="button" class="btn btn-primary btn-sm" data-acao="revisar">Revisar e criar demanda</button>`);
+    const botoes = [];
+    if (!doc.demanda_id) botoes.push(`<button type="button" class="btn btn-primary btn-sm" data-acao="formulario">Abrir no formulário</button>`);
+    botoes.push(`<button type="button" class="btn btn-secondary btn-sm" data-acao="baixar">Abrir PDF</button>`);
     if (!doc.demanda_id) botoes.push(`<button type="button" class="btn btn-secondary btn-sm" data-acao="excluir">Excluir</button>`);
     return botoes.join(' ');
   }
@@ -78,30 +95,195 @@
 
   async function executar(botao, doc, acao) {
     if (acao === 'baixar') { window.open(`${API}/${doc.id}/arquivo`, '_blank', 'noopener'); return; }
+    if (acao === 'formulario') { abrirDaTabela(doc); return; }
     botao.disabled = true;
     try {
-      if (acao === 'analisar') {
-        await post(`${API}/${doc.id}/analisar`, { tipo_demanda: q('sei-tipo-demanda').value });
-        SLTAdminUi.showToast('PDF analisado. Revise as sugestões e evidências.');
-        await listar();
-      } else if (acao === 'excluir') {
+      if (acao === 'excluir') {
         const confirmado = await SLTAdminUi.showConfirm({
           title: 'Excluir documento', message: `Excluir ${doc.nome_arquivo} do repositório?`,
           confirmLabel: 'Excluir', danger: true,
         });
         if (!confirmado) return;
         await request(`${API}/${doc.id}`, { method: 'DELETE' });
+        removerDaFila(String(doc.id));
         await listar();
-      } else if (acao === 'revisar') {
-        await revisar(doc.id);
       }
     } catch (e) {
       SLTAdminUi.showToast(e.message, true);
     } finally { botao.disabled = false; }
   }
 
-  function selectHtml(id, label, list, labelFn, required = true) {
-    return `<div class="form-field"><label for="${id}">${label}</label><select id="${id}" name="${id}" ${required ? 'required' : ''}><option value="">Selecione…</option>${list.map(x => `<option value="${esc(x.id)}">${esc(labelFn(x))}</option>`).join('')}</select></div>`;
+  // ------------------------------------------------------------------ fila
+
+  function adicionarNaFila(doc, tipo) {
+    const id = String(doc.id);
+    let item = fila.find(x => x.id === id);
+    if (!item) {
+      item = { id, nome: doc.nome_arquivo, tipo, estado: 'aguardando', jaAnalisado: doc.status === 'analisado', detalhe: null, erro: '' };
+      fila.push(item);
+    }
+    return item;
+  }
+
+  function abrirDaTabela(doc) {
+    // Documento já analisado reabre com o tipo da análise; os demais usam o tipo escolhido no envio.
+    const tipo = doc.status === 'analisado' ? (doc.tipo_demanda || 'projeto') : q('sei-tipo-demanda').value;
+    const item = adicionarNaFila(doc, tipo);
+    abrirCard();
+    selecionar(item.id);
+    processarFila();
+  }
+
+  function renderFila() {
+    q('sei-fila').innerHTML = fila.map((item, indice) => {
+      const atual = item.id === atualId ? ' is-atual' : '';
+      const detalhe = item.estado === 'erro' && item.erro ? ` — ${esc(item.erro)}` : '';
+      return `<li><button type="button" class="sei-fila-item${atual}" data-id="${esc(item.id)}" ${item.estado === 'criada' ? 'disabled' : ''} aria-current="${item.id === atualId}">
+        <strong>${indice + 1}. ${esc(item.nome)}</strong> <span class="hint">${esc(ESTADO_FILA[item.estado])} · ${esc(item.tipo)}${detalhe}</span>
+      </button></li>`;
+    }).join('');
+    q('sei-fila').querySelectorAll('button[data-id]').forEach(botao => {
+      botao.onclick = () => selecionar(botao.dataset.id);
+    });
+  }
+
+  async function processarFila() {
+    if (processando) return;
+    processando = true;
+    try {
+      let item;
+      while ((item = fila.find(x => x.estado === 'aguardando'))) {
+        item.estado = 'extraindo';
+        renderFila();
+        atualizarStatus();
+        try {
+          if (!item.jaAnalisado) await post(`${API}/${item.id}/analisar`, { tipo_demanda: item.tipo });
+          item.detalhe = await request(`${API}/${item.id}`);
+          item.estado = 'pronto';
+        } catch (e) {
+          item.estado = 'erro';
+          item.erro = e.message;
+        }
+        renderFila();
+        if (item.id === atualId) aplicarNoFormulario(item);
+      }
+    } finally {
+      processando = false;
+    }
+    listar();
+  }
+
+  function removerDaFila(id) {
+    fila = fila.filter(x => x.id !== id);
+    if (atualId === id) avancar();
+    else renderFila();
+  }
+
+  function avancar() {
+    const proximo = fila.find(x => x.estado !== 'criada');
+    if (proximo) selecionar(proximo.id);
+    else fecharCard();
+  }
+
+  // ------------------------------------------------------------ cardzão
+
+  function abrirCard() {
+    const secao = q('sei-formulario-section');
+    if (secao.classList.contains('hidden')) {
+      secao.classList.remove('hidden');
+      secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function fecharCard() {
+    fila = [];
+    atualId = null;
+    frameSeq += 1;
+    observadorAltura?.disconnect();
+    q('sei-formulario-frame').removeAttribute('src');
+    q('sei-leitura').innerHTML = '';
+    erroFormulario('');
+    q('sei-formulario-status').textContent = '';
+    q('sei-fila').innerHTML = '';
+    q('sei-formulario-section').classList.add('hidden');
+  }
+
+  function erroFormulario(texto) {
+    q('sei-formulario-erro').textContent = texto || '';
+  }
+
+  function atualizarStatus() {
+    const item = fila.find(x => x.id === atualId);
+    const status = q('sei-formulario-status');
+    const confirmar = q('sei-btn-confirmar');
+    if (!item) { status.textContent = ''; confirmar.disabled = true; return; }
+    const carregado = formularioProntoSeq === frameSeq;
+    if (!carregado) {
+      status.textContent = 'Carregando o formulário oficial…';
+    } else if (item.estado === 'aguardando' || item.estado === 'extraindo') {
+      status.textContent = 'Extraindo informações do PDF e preenchendo o formulário…';
+    } else if (item.estado === 'erro') {
+      status.textContent = 'Não foi possível extrair informações deste PDF. Preencha o formulário manualmente.';
+    }
+    // Enquanto a extração não termina, a confirmação espera para não criar demanda com o formulário incompleto.
+    confirmar.disabled = !carregado || item.estado === 'aguardando' || item.estado === 'extraindo';
+  }
+
+  function selecionar(id) {
+    const item = fila.find(x => x.id === id);
+    // Clicar no item já aberto não recarrega o formulário (perderia o que foi editado).
+    if (!item || item.estado === 'criada' || id === atualId) return;
+    atualId = id;
+    renderFila();
+    carregarFormulario(item);
+  }
+
+  function ajustarAltura(frame) {
+    observadorAltura?.disconnect();
+    const doc = frame.contentDocument;
+    if (!doc?.body) return;
+    const medir = () => {
+      const altura = doc.documentElement.scrollHeight;
+      if (Math.abs(frame.offsetHeight - altura) > 1) frame.style.height = `${altura}px`;
+    };
+    medir();
+    observadorAltura = new ResizeObserver(medir);
+    observadorAltura.observe(doc.body);
+  }
+
+  function carregarFormulario(item) {
+    const seq = ++frameSeq;
+    const frame = q('sei-formulario-frame');
+    erroFormulario('');
+    q('sei-leitura').innerHTML = item.detalhe ? leituraHtml(item.detalhe) : '';
+    atualizarStatus();
+    frame.onload = async () => {
+      if (seq !== frameSeq) return;
+      ajustarAltura(frame);
+      try {
+        await frame.contentWindow.SLTCadastroEmbed.pronto;
+      } catch (e) {
+        if (seq === frameSeq) erroFormulario(`Não foi possível carregar o formulário: ${e.message}`);
+        return;
+      }
+      if (seq !== frameSeq) return;
+      formularioProntoSeq = seq;
+      aplicarNoFormulario(item);
+    };
+    frame.src = `${FORMULARIO_URL}?embed=sei&tipo=${encodeURIComponent(item.tipo)}`;
+  }
+
+  function aplicarNoFormulario(item) {
+    if (item.id !== atualId) return;
+    atualizarStatus();
+    if (formularioProntoSeq !== frameSeq || item.estado !== 'pronto') return;
+    q('sei-leitura').innerHTML = leituraHtml(item.detalhe);
+    try {
+      const preenchidos = q('sei-formulario-frame').contentWindow.SLTCadastroEmbed.preencher(item.detalhe);
+      q('sei-formulario-status').textContent = `${preenchidos} campo(s) preenchido(s) a partir do PDF (destacados em verde). Revise e complete o formulário.`;
+    } catch (e) {
+      erroFormulario(`Não foi possível preencher o formulário: ${e.message}`);
+    }
   }
 
   function leituraHtml(detalhe) {
@@ -126,105 +308,43 @@
       ${ausentes.length ? `<p class="hint">Sem valor conclusivo, para você preencher: ${esc(ausentes.map(x => ROTULOS[x] || x).join(', '))}.</p>` : ''}</details>`;
   }
 
-  async function revisar(documentoId) {
-    const [detalhe, instituicoes, pessoas, catalog, planos] = await Promise.all([
-      request(`${API}/${documentoId}`),
-      SLTSigmaRead.listInstituicoes(), SLTSigmaRead.listPessoas(), SLTCatalog.loadCatalog(), SLTAdminApi.listPlanos(),
-    ]);
-    const campos = detalhe.campos_sugeridos || {};
-    const cnpj = soDigitos(campos.instituicao_cnpj);
-    const instituicaoSugerida = cnpj ? instituicoes.find(x => soDigitos(x.cnpj) === cnpj) : null;
-    const body = `<p class="step-intro">Confira o que foi lido do PDF, complete o que ficou em branco e confirme. Nenhum valor é preenchido por aproximação.</p>
-      ${detalhe.aviso ? `<p class="hint">${esc(detalhe.aviso)}</p>` : ''}
-      ${leituraHtml(detalhe)}
-      <form id="sei-revisao-form" class="form-grid sei-form">
-        <div class="form-field"><label for="rev-tipo">Tipo de demanda analisado</label><select id="rev-tipo" disabled><option value="projeto">Projeto</option><option value="plano">Plano</option><option value="programa">Programa</option></select></div>
-        <div class="form-field"><label for="rev-nome">Nome</label><input id="rev-nome" type="text" required maxlength="200" value="${esc(campos.nome || '')}"></div>
-        <div class="form-field sei-full"><label for="rev-descricao">Descrição</label><textarea id="rev-descricao" rows="6" required>${esc(campos.descricao || '')}</textarea></div>
-        ${selectHtml('rev-instituicao', 'Instituição', instituicoes, SLTSigmaRead.labelInstituicao)}
-        ${selectHtml('rev-pessoa', 'Representante legal', pessoas, SLTSigmaRead.labelPessoa)}
-        <div class="form-field sei-full" id="rev-vinculo-field"><label><input id="rev-vinculo" type="checkbox"> Vincular a um plano institucional</label></div>
-        ${selectHtml('rev-diretoria', 'Diretoria', SLTCatalog.ativos(catalog.diretorias), x => x.nome_oficial)}
-        ${selectHtml('rev-plano', 'Plano vinculado', planos, x => x.nome, false)}
-        <div class="form-field" data-projeto><label for="rev-lat">Latitude</label><input id="rev-lat" type="number" min="-90" max="90" step="any" required value="${esc(campos.lat ?? '')}"></div>
-        <div class="form-field" data-projeto><label for="rev-lng">Longitude</label><input id="rev-lng" type="number" min="-180" max="180" step="any" required value="${esc(campos.lng ?? '')}"></div>
-        <div class="form-field" data-vigencia><label for="rev-vig-ini">Vigência — início</label><input id="rev-vig-ini" type="date" value="${esc(campos.vigencia_inicio || '')}"></div>
-        <div class="form-field" data-vigencia><label for="rev-vig-fim">Vigência — fim</label><input id="rev-vig-fim" type="date" value="${esc(campos.vigencia_fim || '')}"></div>
-        <div class="form-field"><label for="rev-valor">Valor global (R$)</label><input id="rev-valor" type="number" min="0" step="0.01" value="${esc(campos.valor_global ?? '')}"></div>
-        <div class="form-field" data-projeto><label for="rev-prazo">Prazo de referência (meses)</label><input id="rev-prazo" type="number" min="0" step="1" value="${esc(campos.prazo_referencia_meses ?? '')}"></div>
-        <p class="hint sei-full" data-projeto>Informe as coordenadas reais do projeto. Valores ausentes não são substituídos por zero.</p>
-      </form><p id="sei-revisao-erro" class="hint" role="alert"></p>`;
-    const modal = SLTAdminUi.openModal(`Revisar ${esc(detalhe.nome_arquivo)}`, body, '<button type="button" class="btn btn-primary" id="sei-confirmar">Confirmar e criar demanda</button>');
-    const f = id => modal.querySelector('#' + id);
-    f('rev-tipo').value = detalhe.tipo_demanda || 'projeto';
-    if (instituicaoSugerida) f('rev-instituicao').value = String(instituicaoSugerida.id);
-    function ajustar() {
-      const t = f('rev-tipo').value, vinculo = f('rev-vinculo').checked;
-      modal.querySelectorAll('[data-projeto]').forEach(el => {
-        el.hidden = t !== 'projeto';
-        el.querySelectorAll('input').forEach(input => { input.disabled = t !== 'projeto'; });
-      });
-      modal.querySelectorAll('[data-vigencia]').forEach(el => { el.hidden = t === 'programa'; });
-      f('rev-vinculo-field').hidden = t === 'plano';
-      f('rev-plano').closest('.form-field').hidden = t === 'plano' || !vinculo;
-      f('rev-plano').required = t !== 'plano' && vinculo;
-      f('rev-diretoria').closest('.form-field').hidden = t !== 'plano';
-      f('rev-diretoria').required = t === 'plano';
+  async function confirmar() {
+    const item = fila.find(x => x.id === atualId);
+    if (!item) return;
+    erroFormulario('');
+    let dados;
+    try {
+      dados = q('sei-formulario-frame').contentWindow.SLTCadastroEmbed.coletar();
+    } catch (e) {
+      erroFormulario(e.message);
+      return;
     }
-    f('rev-vinculo').onchange = ajustar;
-    ajustar();
-    f('sei-confirmar').onclick = async () => {
-      if (!f('sei-revisao-form').reportValidity()) return;
-      const tipoDemanda = detalhe.tipo_demanda || 'projeto';
-      const inst = instituicoes.find(x => String(x.id) === f('rev-instituicao').value);
-      const pessoa = pessoas.find(x => String(x.id) === f('rev-pessoa').value);
-      const plano = planos.find(x => String(x.id) === f('rev-plano').value);
-      const vinculo = f('rev-vinculo').checked && tipoDemanda !== 'plano';
-      const numero = (v) => (String(v).trim() === '' ? null : Number(v));
-      const payload = {
-        nome: f('rev-nome').value.trim(), descricao: f('rev-descricao').value.trim(),
-        instituicao_id: String(inst.id), instituicao_label: SLTSigmaRead.labelInstituicao(inst),
-        instituicao_cnpj: inst.cnpj || null,
-        pessoa_id: String(pessoa.id),
-        representante: {
-          pessoa_id: String(pessoa.id), nome: SLTSigmaRead.labelPessoa(pessoa),
-          email: campos.representante_email || null, telefone: campos.representante_telefone || null,
-        },
-        valor_global: numero(f('rev-valor').value),
-      };
-      if (tipoDemanda !== 'programa') {
-        payload.vigencia_inicio = f('rev-vig-ini').value || null;
-        payload.vigencia_fim = f('rev-vig-fim').value || null;
-      }
-      if (tipoDemanda === 'projeto') {
-        Object.assign(payload, {
-          lat: Number(f('rev-lat').value), lng: Number(f('rev-lng').value),
-          diretoria_id: vinculo ? plano.diretoria_id : '', plano_id: vinculo ? plano.id : '',
-          vinculo_institucional: vinculo, vinculo_tipo: vinculo ? 'plano' : null,
-        });
-        const prazo = numero(f('rev-prazo').value);
-        if (prazo !== null) payload.atributos_cadastrais = { prazo_referencia_meses: prazo };
-      }
-      if (tipoDemanda === 'plano') payload.diretoria_id = f('rev-diretoria').value;
-      if (tipoDemanda === 'programa') Object.assign(payload, { vinculo_institucional: vinculo, plano_codigo: vinculo ? plano.id : null });
-      f('sei-confirmar').disabled = true;
-      f('sei-revisao-erro').textContent = '';
-      try {
-        const criada = await post(`${API}/${documentoId}/criar-demanda`, { tipo_demanda: tipoDemanda, campos: payload });
-        SLTAdminUi.closeModal();
-        SLTAdminUi.showToast(criada.ja_existia ? `Este documento já havia gerado a demanda ${criada.id}.` : `Demanda ${criada.id} criada a partir do PDF do SEI.`);
-        await listar();
-      } catch (e) {
-        f('sei-revisao-erro').textContent = e.message;
-        f('sei-confirmar').disabled = false;
-      }
-    };
+    const botao = q('sei-btn-confirmar');
+    botao.disabled = true;
+    try {
+      const criada = await post(`${API}/${item.id}/criar-demanda`, { tipo_demanda: dados.tipo, campos: dados.campos });
+      item.estado = 'criada';
+      SLTAdminUi.showToast(criada.ja_existia ? `Este documento já havia gerado a demanda ${criada.id}.` : `Demanda ${criada.id} criada a partir do PDF do SEI.`);
+      avancar();
+      await listar();
+    } catch (e) {
+      erroFormulario(e.message);
+      botao.disabled = false;
+    }
   }
+
+  function descartar() {
+    // Fecha este PDF sem criar demanda; o arquivo continua no repositório e pode ser reaberto pela tabela.
+    if (atualId) removerDaFila(atualId);
+  }
+
+  // ----------------------------------------------------------------- envio
 
   async function enviar(event) {
     event.preventDefault();
     const entrada = q('sei-arquivos');
     if (!entrada.files.length) return;
+    const tipo = q('sei-tipo-demanda').value;
     const dados = new FormData();
     for (const arquivo of entrada.files) dados.append('arquivos', arquivo);
     q('sei-btn-enviar').disabled = true;
@@ -234,29 +354,25 @@
       entrada.value = '';
       const recusados = (resultado.erros || []).map(e => `${e.arquivo}: ${e.mensagem}`).join(' ');
       aviso('sei-upload-aviso', `${resultado.recebidos.length} documento(s) recebido(s).${recusados ? ' Recusados — ' + recusados : ''}`);
+      if (resultado.recebidos.length) {
+        const novos = resultado.recebidos.map(doc => adicionarNaFila(doc, tipo));
+        abrirCard();
+        if (!atualId) selecionar(novos[0].id);
+        else renderFila();
+        processarFila();
+      }
       await listar();
     } catch (e) {
       aviso('sei-upload-aviso', e.message);
     } finally { q('sei-btn-enviar').disabled = false; }
   }
 
-  async function analisarTodos() {
-    q('sei-btn-analisar-todos').disabled = true;
-    aviso('sei-upload-aviso', 'Analisando os documentos pendentes…');
-    try {
-      const resultado = await post(`${API}/analisar`, { tipo_demanda: q('sei-tipo-demanda').value });
-      aviso('sei-upload-aviso', `${resultado.analisados.length} documento(s) analisado(s); ${resultado.ignorados.length} ignorado(s).`);
-      await listar();
-    } catch (e) {
-      aviso('sei-upload-aviso', e.message);
-    } finally { q('sei-btn-analisar-todos').disabled = false; }
-  }
-
   async function init() {
     if (!await SLTAdminAuth.requireAuth()) return;
     q('sei-upload-form').onsubmit = enviar;
-    q('sei-btn-analisar-todos').onclick = analisarTodos;
     q('sei-btn-atualizar').onclick = listar;
+    q('sei-btn-confirmar').onclick = confirmar;
+    q('sei-btn-descartar').onclick = descartar;
     await listar();
   }
   init().catch(e => SLTAdminUi.showToast(e.message, true));

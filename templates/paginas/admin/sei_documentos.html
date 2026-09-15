@@ -46,9 +46,8 @@
               <option value="programa">Programa</option>
             </select>
           </div>
-          <div class="form-field">
+          <div class="form-field sei-envio-acao">
             <button type="submit" class="btn btn-primary" id="sei-btn-enviar">Enviar</button>
-            <button type="button" class="btn btn-secondary" id="sei-btn-analisar-todos">Ler campos dos pendentes</button>
           </div>
         </form>
 
@@ -62,7 +61,7 @@
         <span class="pli-section-title">Documentos no repositório</span>
       </div>
       <div class="admin-card-body">
-        <p class="step-intro">Leia os campos de um documento e revise a sugestão antes de criar a demanda. A criação usa os mesmos cadastros de plano, programa e projeto.</p>
+        <p class="step-intro">Abra um documento no formulário para revisar o que foi extraído e criar a demanda. A criação usa os mesmos cadastros de plano, programa e projeto.</p>
         <button type="button" class="btn btn-secondary" id="sei-btn-atualizar">Atualizar lista</button>
         <p id="sei-lista-aviso" class="hint hidden" role="status"></p>
         <div class="admin-table-wrap">
@@ -83,6 +82,25 @@
         <p id="sei-documentos-vazio" class="hint hidden">Nenhum documento enviado até agora.</p>
       </div>
     </section>
+
+    <section class="card-tipo-tabs secao-tipo-tabs card admin-card hidden" id="sei-formulario-section" aria-labelledby="sei-formulario-titulo">
+      <div class="pli-section-label">
+        <i class="fas fa-file-pen" aria-hidden="true"></i>
+        <span class="pli-section-title" id="sei-formulario-titulo">Formulário da demanda</span>
+      </div>
+      <div class="admin-card-body">
+        <p class="step-intro">Os PDFs são processados na ordem da fila. Clique em um item para ver no formulário oficial o que foi extraído dele, complete o que faltar e confirme.</p>
+        <ol id="sei-fila" class="sei-fila" aria-label="Fila de PDFs"></ol>
+        <p id="sei-formulario-status" class="hint" role="status"></p>
+        <div id="sei-leitura"></div>
+        <iframe id="sei-formulario-frame" class="sei-formulario-frame" title="Formulário oficial de cadastro da demanda"></iframe>
+        <p id="sei-formulario-erro" class="hint sei-erro" role="alert"></p>
+        <div class="btn-row sei-formulario-acoes">
+          <button type="button" class="btn btn-primary" id="sei-btn-confirmar" disabled>Confirmar e criar demanda</button>
+          <button type="button" class="btn btn-secondary" id="sei-btn-descartar">Descartar demanda</button>
+        </div>
+      </div>
+    </section>
   </main>
 {% endblock %}
 
@@ -90,7 +108,5 @@
   <script src="/assets/js/admin-api.js"></script>
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/js/admin-ui.js"></script>
-  <script src="/assets/js/sigma-read.js"></script>
-  <script src="/assets/js/catalog.js"></script>
   <script src="/restrict/sei_documentos.js"></script>
 {% endblock %}

@@ -4,7 +4,7 @@
 {% set requer_autenticacao = false %}
 
 {% block titulo %}Nova demanda — SICARD{% endblock %}
-{% block classes_body %}cadastro-page{% endblock %}
+{% block classes_body %}cadastro-page{% if request.query_params is defined and request.query_params.get('embed') %} cadastro-embed{% endif %}{% endblock %}
 {% block base_url %}<base href="/public/cadastro/">{% endblock %}
 
 {% block estilos_pagina %}

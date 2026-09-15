@@ -242,6 +242,22 @@
   font-size: var(--font-control);
 }
 
+/* Modo embutido (?embed=sei): só o formulário; a página hospedeira tem os botões. */
+.cadastro-embed {
+  min-height: 0;
+}
+
+.cadastro-embed .app-header,
+.cadastro-embed .rodape-institucional,
+.cadastro-embed .card-nova-demanda,
+.cadastro-embed .btn-row:has(> button[type="submit"]) {
+  display: none;
+}
+
+.cadastro-embed .sei-preenchido {
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.35);
+}
+
 @media (max-width: 720px) {
   .tipo-demandante-selector {
     grid-template-columns: 1fr;

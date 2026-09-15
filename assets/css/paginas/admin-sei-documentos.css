@@ -3,6 +3,9 @@
 .sei-form .form-field { min-width: 0; }
 .sei-form .sei-full { grid-column: 1 / -1; }
 .sei-form button { margin: 0.25rem 0.25rem 0.25rem 0; }
+/* O botão Enviar não tem rótulo: alinha pela base com o select "Formulário a preencher". */
+.sei-form .sei-envio-acao { align-self: end; }
+.sei-form .sei-envio-acao button { margin: 0; }
 
 /* A tabela da leitura mostra valor e trecho de origem lado a lado; o trecho
    pode ser longo, então a área rola em vez de esticar o modal. */
@@ -14,6 +17,23 @@
 .sei-acoes .btn { margin: 0.15rem 0.15rem 0.15rem 0; }
 
 #sei-documentos-section { margin-top: 1.5rem; }
+
+/* Cardzão: fila de PDFs + formulário oficial embutido. */
+#sei-formulario-section { margin-top: 1.5rem; }
+.sei-fila { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 0.75rem; padding: 0; list-style: none; }
+.sei-fila-item {
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--pli-border);
+  border-radius: var(--pli-radius);
+  background: var(--pli-white);
+  text-align: left;
+  cursor: pointer;
+}
+.sei-fila-item.is-atual { border-color: var(--pli-blue); box-shadow: 0 0 0 2px rgba(17, 101, 147, 0.15); }
+.sei-fila-item:disabled { cursor: default; opacity: 0.7; }
+.sei-formulario-frame { display: block; width: 100%; min-height: 480px; border: 0; }
+.sei-erro { color: #b42318; }
+.sei-formulario-acoes { margin-top: 1rem; }
 
 @media (max-width: 640px) {
   .sei-form { grid-template-columns: 1fr; }
