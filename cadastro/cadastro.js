@@ -348,8 +348,6 @@
       );
       if (collapsibleNumber) collapsibleNumber.textContent = `${visibleSectionNumber}.${subIdx + 1}`;
     });
-    const enq = $("#pj-enquadramento-catalogo");
-    if (enq) enq.classList.toggle("hidden", isPjVinculoAtivo());
   }
 
   function renumberPlanoSubsections() {
@@ -738,45 +736,6 @@
     syncProjetoPanelsVisibility();
   }
 
-  function fillClsPlanosSelect(diretoriaId) {
-    const cat = SLTCatalog.catalog;
-    const planos = diretoriaId
-      ? SLTCatalog.ativos(cat.planos).filter((p) => p.diretoria_id === diretoriaId)
-      : [];
-    fillSelect(
-      $("#cls-plano"),
-      planos,
-      "id",
-      (p) => `${p.sigla} — ${p.nome_oficial}`,
-      "Selecione…"
-    );
-  }
-
-  function initClsEnquadramento() {
-    const cat = SLTCatalog.catalog;
-    fillSelect(
-      $("#cls-diretoria"),
-      SLTCatalog.ativos(cat.diretorias),
-      "id",
-      (d) => d.nome_oficial,
-      "Selecione…"
-    );
-    fillClsPlanosSelect("");
-    $("#cls-diretoria")?.addEventListener("change", () => {
-      fillClsPlanosSelect($("#cls-diretoria").value);
-      const link = $("#cls-link-planos");
-      if (link && $("#cls-diretoria").value) {
-        link.href =
-          "catalogo-planos/?diretoria=" + encodeURIComponent($("#cls-diretoria").value);
-      }
-      updateClassificacaoUI();
-    });
-    $("#cls-plano")?.addEventListener("change", () => {
-      updateClassificacaoUI();
-      updateCarteiras();
-    });
-  }
-
   function validateStep(step) {
     if (step === 1) {
       if (!$("#nome").value.trim()) {
@@ -978,7 +937,6 @@
     const pli = $("#classificacao-pli");
     const pef = $("#classificacao-pef");
     const hint = $("#classificacao-hint");
-    const enquadramento = $("#pj-enquadramento-catalogo");
     const vinculoAtivo = isPjVinculoAtivo();
     const subsection = $("#pj-classificacao-subsection");
     const sectionTitle = $("#pj-proponente-section-title");
@@ -991,7 +949,6 @@
         ? "Informe a instituição interessada, o representante legal e a classificação herdada do vínculo."
         : "Informe a instituição interessada e o representante legal responsáveis pelo cadastro.";
     }
-    if (enquadramento) enquadramento.classList.add("hidden");
     renumberProjetoSections();
 
     pli.classList.add("hidden");
@@ -1212,14 +1169,36 @@
   function applyUrlParams() {
     const params = new URLSearchParams(window.location.search);
     const programa = params.get("programa");
+    const planoParam = params.get("plano");
     if (programa && $("#programa")) {
       setPjVinculo(true);
       updatePjVinculoPanel();
       $("#programa").value = programa;
       $("#programa").dispatchEvent(new Event("change"));
+    } else if (planoParam && planosCache.some((p) => p.id === planoParam)) {
+      // Links dos catálogos: vínculo direto ao plano + frente/eixo/corredor TIC já escolhidos.
+      setPjVinculo(true);
+      const tipoPlano = document.querySelector('input[name="pj-vinculo-tipo"][value="plano"]');
+      if (tipoPlano) tipoPlano.checked = true;
+      updatePjVinculoPanel();
+      $("#pj-plano-vinculo").value = planoParam;
+      $("#pj-plano-vinculo").dispatchEvent(new Event("change"));
+      selectOptionIfExists("#frente", params.get("frente"));
+      if (selectOptionIfExists("#eixo", params.get("eixo"))) onEixoChange();
+      selectOptionIfExists("#corredor_tic", params.get("corredor_tic"));
+      updateClassificacaoHints();
+      syncFieldFilledStates($("#form-cadastro"));
+      renderReview();
     }
     const step = params.get("step");
     if (step) revealProjetoStep(Number(step));
+  }
+
+  function selectOptionIfExists(selector, value) {
+    const el = $(selector);
+    if (!el || !value || ![...el.options].some((o) => o.value === value)) return false;
+    el.value = value;
+    return true;
   }
 
   function labelGeometria(tipo) {
@@ -2024,7 +2003,6 @@
     $("#programa").addEventListener("change", updateProjetoStrategicContext);
     $("#pj-plano-vinculo")?.addEventListener("change", updateProjetoStrategicContext);
 
-    initClsEnquadramento();
     updateClassificacaoUI();
 
     $("#eixo").addEventListener("change", onEixoChange);
@@ -2102,12 +2080,25 @@
     selectTipoDemandante(demandanteParam === "privada" ? "privada" : "institucional");
     const TIPOS_VALIDOS = ["plano", "programa", "projeto"];
     let tipoParam = params.get("tipo");
-    if (!TIPOS_VALIDOS.includes(tipoParam)) tipoParam = params.get("programa") ? "projeto" : null;
+    if (!TIPOS_VALIDOS.includes(tipoParam)) {
+      tipoParam = params.get("programa") || params.get("plano") ? "projeto" : null;
+    }
     if (currentTipoDemandante === "privada") selectTipo("projeto");
     else if (tipoParam) selectTipo(tipoParam);
     else selectTipo("plano");
     // Depois de selectTipo, que reinicia o wizard e apagaria o vínculo vindo da URL.
     if (!$("#form-cadastro").classList.contains("hidden")) applyUrlParams();
+    // "Usar esta diretoria no cadastro" (catálogo): o plano é o nível que escolhe diretoria.
+    const diretoriaParam = params.get("diretoria");
+    const plDiretoria = $("#pl-diretoria");
+    if (
+      diretoriaParam &&
+      !$("#form-plano").classList.contains("hidden") &&
+      [...plDiretoria.options].some((o) => o.value === diretoriaParam)
+    ) {
+      plDiretoria.value = diretoriaParam;
+      syncFieldFilledState(plDiretoria);
+    }
   }
 
   init().catch((err) => {

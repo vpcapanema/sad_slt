@@ -246,7 +246,8 @@ $migrations = @(
     "111_rais_indicadores_municipais.sql",
     "112_infosiga_microdados_localizacao.sql",
     "113_corrigir_rais_indicadores_municipais.sql",
-    "114_infosiga_indicadores_municipais.sql"
+    "114_infosiga_indicadores_municipais.sql",
+    "115_restaurar_planos_estrategicos.sql"
 )
 
 if ($OnlyMigration) {
@@ -303,6 +304,10 @@ if (-not $OnlyMigration) {
         if (-not (Test-SchemaReady "SELECT to_regclass('infosiga.sinistro') IS NOT NULL;")) {
             $migrations += "112_infosiga_microdados_localizacao.sql"
             Write-Ok "Microdados e localizacao do InfoSiga pendentes; aplicando migration 112"
+        }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM demandas.plano WHERE codigo IN ('PLANO-PLI','PLANO-PEF') HAVING count(*) = 2);")) {
+            $migrations += "115_restaurar_planos_estrategicos.sql"
+            Write-Ok "Planos estrategicos PLI/PEF ausentes; aplicando migration 115"
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

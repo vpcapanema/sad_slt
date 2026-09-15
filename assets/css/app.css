@@ -1583,6 +1583,7 @@ th.slt-sortable-column {
   cursor: pointer;
   padding-right: 1.7rem;
   position: relative;
+  -webkit-user-select: none;
   user-select: none;
 }
 
