@@ -353,6 +353,28 @@
     });
   }
 
+  // Estes valores não têm campo de texto no formulário: instituição e
+  // representante são escolhidos no SIGMA, e o CNPJ vem junto dessa escolha.
+  // Lidos do PDF, servem para o analista localizar ou cadastrar o proponente —
+  // e sem mostrá-los o desfecho prometia campos que a tela nunca preencheria.
+  const SO_NO_SIGMA = ['instituicao_label', 'instituicao_cnpj', 'municipio',
+                       'representante_nome', 'representante_email', 'representante_telefone'];
+
+  function lidosSoNoSigma(leitura) {
+    const campos = leitura.campos_sugeridos || {};
+    return SO_NO_SIGMA
+      .filter(campo => campos[campo] !== undefined && campos[campo] !== null && campos[campo] !== '')
+      .map(campo => `${ROTULOS[campo] || campo}: ${campos[campo]}`);
+  }
+
+  function notaDoProponente(leitura) {
+    const lidos = lidosSoNoSigma(leitura);
+    return lidos.length
+      ? ` Do proponente o PDF trouxe — ${lidos.join('; ')} —, que não têm campo no formulário:`
+        + ' use esses valores para escolher a instituição e o representante, ou cadastrá-los.'
+      : '';
+  }
+
   function desfechoDaLeitura(nome, leitura) {
     const resumo = leitura.analise?.resumo;
     if (!resumo) {
@@ -363,7 +385,8 @@
       return {
         type: 'success',
         title: 'Analisado com sucesso',
-        message: `${nome}: os ${total} campos que o sistema sabe ler foram extraídos do PDF, cada um com o trecho que o sustenta. Revise o formulário e confirme para criar a demanda.`,
+        message: `${nome}: os ${total} campos que o sistema sabe ler foram extraídos do PDF, cada um com o trecho que o sustenta.`
+          + `${notaDoProponente(leitura)} Revise o formulário e confirme para criar a demanda.`,
       };
     }
     const ressalvas = [];
@@ -372,7 +395,8 @@
     return {
       type: 'warning',
       title: 'Analisado com ressalvas',
-      message: `${nome}: ${resumo.campos_lidos.length} de ${total} campos vieram do PDF. Ficaram em branco para você preencher — ${ressalvas.join('; ')}.`,
+      message: `${nome}: ${resumo.campos_lidos.length} de ${total} campos vieram do PDF. Ficaram em branco para você preencher — ${ressalvas.join('; ')}.`
+        + notaDoProponente(leitura),
     };
   }
 

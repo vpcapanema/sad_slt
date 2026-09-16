@@ -204,6 +204,16 @@ def test_sei_espera_o_usuario_dispensar_cada_desfecho():
     assert "await aguardarFechamento(proc.concluir(" in corpo
 
 
+def test_sei_mostra_o_proponente_lido_que_nao_cabe_no_formulario():
+    """Instituição, CNPJ, município e representante são escolhidos no SIGMA e
+    não têm campo de texto no formulário. Sem nomeá-los no desfecho, o modal
+    contava valores que a tela nunca preencheria — 4 lidos, 1 exibido."""
+    assert "SO_NO_SIGMA" in SEI_JS
+    corpo = SEI_JS.split("function desfechoDaLeitura(", 1)[1].split("async function confirmar(", 1)[0]
+    # Vale nos dois desfechos: sucesso e ressalvas.
+    assert corpo.count("notaDoProponente(leitura)") == 2
+
+
 def test_sei_envia_o_tipo_e_aproveita_a_leitura_que_voltou():
     """A leitura é gravada já no envio. Reprocessar depois leria o mesmo PDF
     duas vezes e mostraria dois desfechos para o mesmo documento."""
