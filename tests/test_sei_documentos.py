@@ -273,6 +273,42 @@ def test_ente_municipal_enderecado_nao_vira_o_proponente():
     assert instituicao("PREFEITURA MUNICIPAL DE MARILIA\nOficio nr 45/2026") == "PREFEITURA MUNICIPAL DE MARILIA"
 
 
+RELATORIO_QUE_REPETE_O_MUNICIPIO = """PREFEITURA MUNICIPAL DE DOIS CORREGOS
+Relatorio sobre a importancia da ferrovia para o desenvolvimento local.
+No municipio de Dois Corregos, destaca-se o museu ferroviario da cidade.
+"""
+
+
+def test_arroba_quebrada_pelo_ocr_nao_perde_o_email():
+    """Em página digitalizada o OCR entrega "(Q" no lugar do arroba; sem tratar
+    isso, o e-mail do proponente simplesmente some."""
+    campos = processamento.analisar(
+        pdf("E-mail: culturaeturismo(Qdoiscorregos.sp.gov.br"), "projeto")["campos_sugeridos"]
+    assert campos["representante_email"] == "culturaeturismo@doiscorregos.sp.gov.br"
+
+
+def test_parentese_solto_nao_vira_email():
+    """Controle negativo: a recomposição não pode inventar endereço."""
+    leitura = processamento.analisar(pdf("Reuniao (Q) sobre o tema\nCusto (Q1) de 2025"), "projeto")
+    assert "representante_email" not in leitura["campos_sugeridos"]
+
+
+def test_mesma_grafia_em_caixas_diferentes_nao_vira_conflito():
+    """O nome em caixa alta no cabeçalho e normal no corpo virava dois valores
+    distintos: empatavam em confiança, davam conflito e o campo ficava vazio —
+    o documento cancelava a si mesmo."""
+    leitura = processamento.analisar(pdf(RELATORIO_QUE_REPETE_O_MUNICIPIO), "projeto")
+    assert leitura["campos"]["municipio"]["estado"] == "normalizado"
+    assert processamento._sem_acento(leitura["campos_sugeridos"]["municipio"]) == "dois corregos"
+
+
+def test_municipios_realmente_diferentes_seguem_em_conflito():
+    """Controle negativo: a deduplicação não pode engolir divergência real."""
+    leitura = processamento.analisar(pdf("Municipio: Bauru\nMunicipio: Marilia"), "projeto")
+    assert leitura["campos"]["municipio"]["estado"] == "conflitante"
+    assert "municipio" not in leitura["campos_sugeridos"]
+
+
 def test_nome_do_municipio_nao_absorve_a_prosa_seguinte():
     """A captura terminava numa lista fixa de verbos. Fora dela o nome engolia
     o resto da frase, e o erro chegava preenchido ao formulário."""

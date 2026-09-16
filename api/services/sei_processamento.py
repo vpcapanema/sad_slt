@@ -27,7 +27,7 @@ import json
 import re
 import shutil
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from hashlib import sha256
 from pathlib import Path
@@ -80,6 +80,10 @@ CONFIANCA_PROCESSO_NO_NOME = 0.99
 _CNPJ = re.compile(r"\b\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}\b")
 _CNPJ_NUMERICO = re.compile(r"(?<!\d)\d{14}(?!\d)")
 _EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b")
+# Em página digitalizada o OCR costuma ler o arroba como "(Q", "(q" ou "©", e o
+# e-mail do proponente se perde. Só vale entre o nome e um domínio com ponto,
+# para que parêntese solto no meio do texto não vire endereço.
+_ARROBA_QUEBRADA = re.compile(r"(?<=[\w.+-])\s*(?:\(Q|\(q|©|\(@)\s*(?=[\w-]+(?:\.[\w-]+)+)")
 _TELEFONE = re.compile(r"(?<!\d)\(?\d{2}\)?[\s.-]?9?\d{4}[\s.-]?\d{4}(?!\d)")
 _DATA = re.compile(r"\b(\d{1,2})[./-](\d{1,2})[./-](\d{4})\b")
 _MESES = {
@@ -750,6 +754,17 @@ def _normalizar(campo: str, valor: str) -> Any:
     return valor.strip()
 
 
+def _chave_do_valor(valor: Any) -> Any:
+    """Chave que decide se dois candidatos dizem a mesma coisa.
+
+    Um documento que repete o próprio nome em caixa alta no cabeçalho e normal
+    no corpo produzia "DOIS CÓRREGOS" e "Dois Córregos" como valores distintos:
+    empatavam em confiança, viravam conflito e o campo ficava vazio — o
+    documento cancelava a si mesmo.
+    """
+    return _sem_acento(valor).strip() if isinstance(valor, str) else valor
+
+
 def _resultado(campo: str, candidatos: list[dict[str, Any]]) -> dict[str, Any]:
     normalizados = []
     for candidato in candidatos:
@@ -759,10 +774,13 @@ def _resultado(campo: str, candidatos: list[dict[str, Any]]) -> dict[str, Any]:
     if not normalizados:
         return {"estado": "nao_encontrado", "confianca": 0.0, "evidencias": [], "candidatos": []}
     normalizados.sort(key=lambda item: item["evidencia"]["confianca"], reverse=True)
-    distintos = []
+    distintos, vistos = [], set()
     for item in normalizados:
-        if item["normalizado"] not in [x["normalizado"] for x in distintos]:
-            distintos.append(item)
+        chave = _chave_do_valor(item["normalizado"])
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        distintos.append(item)
     melhor = distintos[0]
     conflito = len(distintos) > 1 and abs(melhor["evidencia"]["confianca"] - distintos[1]["evidencia"]["confianca"]) <= CONFIANCA_CONFLITO
     return {
@@ -841,6 +859,15 @@ def _segmentos(paginas: list[Pagina]) -> list[dict[str, Any]]:
     return segmentos
 
 
+def _com_arroba_corrigida(paginas: list[Pagina]) -> list[Pagina]:
+    """Páginas com o arroba recomposto, só para a busca de e-mail.
+
+    A correção não vaza para os demais campos: eles continuam vendo o texto
+    exatamente como o OCR entregou.
+    """
+    return [replace(pagina, texto=_ARROBA_QUEBRADA.sub("@", pagina.texto)) for pagina in paginas]
+
+
 def _candidatos_campo(campo: str, paginas: list[Pagina], tipo: TipoDemanda) -> list[dict[str, Any]]:
     if campo == "descricao":
         return _descricao(paginas, tipo)
@@ -849,7 +876,7 @@ def _candidatos_campo(campo: str, paginas: list[Pagina], tipo: TipoDemanda) -> l
     if campo == "instituicao_cnpj":
         return _candidatos_formato(paginas, _CNPJ, "cnpj") + _cnpj_sem_mascara(paginas)
     if campo == "representante_email":
-        return _candidatos_formato(paginas, _EMAIL, "email")
+        return _candidatos_formato(_com_arroba_corrigida(paginas), _EMAIL, "email")
     if campo == "representante_telefone":
         return _candidatos_formato(paginas, _TELEFONE, "telefone")
     candidatos = _linhas_rotuladas(paginas, campo, tipo)
