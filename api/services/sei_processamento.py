@@ -56,6 +56,27 @@ _ROOT = Path(__file__).resolve().parents[2]
 _CONTRATO = _ROOT / "config" / "campos-cadastro-demanda.json"
 
 _PROCESSO = re.compile(r"\b\d{3}[ .]\d{8}[ /]\d{4}[ -]\d{2}\b|\b\d{3,5}\.\d{6,8}/\d{4}-\d{2}\b")
+# O SEI carimba o processo no nome do arquivo, e muitas vezes o nome traz o
+# único título de projeto que existe: "SEI nº 020 00016588 2025 13 -
+# 02___Terminal_Urbano.pdf". O bloco do meio aparece com espaço interno ou com
+# zero sobrando, então é normalizado para oito dígitos.
+_PROCESSO_NO_NOME = re.compile(r"(\d{3})[\s.]+(\d[\d\s]{6,12}?)[\s.]+(\d{4})[\s.]+(\d{2})(?!\d)")
+_PREFIXO_SEI = re.compile(r"^SEI\s*n?[ºo°]?\s*[\d\s.]+(?:\s*e\s*[\d\s./-]+)?\s*[-–]?\s*", re.I)
+# Tipo documental e canal de entrega não nomeiam projeto nenhum.
+_TIPO_DOCUMENTAL = re.compile(
+    r"^(?:oficio|of|ofic|email|e[\s_-]?mail|gs|memorando|carta|planilha\s+orcamentaria|"
+    r"planilha|apresentacao|estudo|livro|anexo|doc|protocolo)\b[\s\-–.]*", re.I)
+_CANAL_NO_NOME = re.compile(r"\s*[-–]\s*(?:outlook|protocolo\s+spi|email|e[\s_-]?mail)\b.*$", re.I)
+_NOME_SEM_VALOR = re.compile(r"^(?:untitled|xerox\s*scan|scan|img|digitalizar|sn)\b", re.I)
+_VERBO_DE_PEDIDO = re.compile(
+    r"\b(?:solicitacao|proposta|projeto|implantacao|criacao|revitalizacao)\b", re.I)
+# Abaixo de qualquer rótulo do documento (0,92 / 0,88 / 0,85): onde o documento
+# diz "Assunto:", o texto é melhor que o nome do arquivo. A folga precisa passar
+# de CONFIANCA_CONFLITO, senão os dois empatam e o campo some em vez de escolher.
+CONFIANCA_NOME_ARQUIVO = 0.72
+# Acima do texto (máximo 0,90), também com folga maior que CONFIANCA_CONFLITO:
+# o carimbo do SEI no nome do arquivo é a fonte mais confiável do processo.
+CONFIANCA_PROCESSO_NO_NOME = 0.99
 _CNPJ = re.compile(r"\b\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}\b")
 _CNPJ_NUMERICO = re.compile(r"(?<!\d)\d{14}(?!\d)")
 _EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b")
@@ -68,8 +89,10 @@ _MESES = {
 _DATA_EXTENSO = re.compile(rf"\b(\d{{1,2}})(?:º|°|o)?\s+de\s+({'|'.join(_MESES)})\s+de\s+(\d{{4}})\b")
 # R$ com ou sem centavos; sem R$, só com centavos (evita confundir com qualquer número).
 _MOEDA = re.compile(r"R\$\s*((?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{2})?)|((?:\d{1,3}(?:\.\d{3})+|\d+),\d{2})")
-_MOEDA_EXTENSO = re.compile(r"(?:R\$\s*)?(\d{1,3}(?:,\d{1,3})?)\s*(mil|milh(?:ao|oes)|bilh(?:ao|oes))\b")
-_MULTIPLICADOR = {"mil": 1_000, "milh": 1_000_000, "bilh": 1_000_000_000}
+# Documento real abrevia a escala ("R$ 11 bi", "R$ 3,0 bi"); sem reconhecê-la o
+# valor lido virava onze reais.
+_MOEDA_EXTENSO = re.compile(
+    r"(?:R\$\s*)?(\d{1,3}(?:,\d{1,3})?)\s*(mil|milh(?:ao|oes)|mi|bilh(?:ao|oes)|bi)\b")
 _DURACAO = re.compile(r"\b(\d{1,4})\s*(?:\([^)]{0,40}\)\s*)?(mes(?:es)?|ano(?:s)?)\b")
 _DECIMAL = re.compile(r"-?\d{1,3}[.,]\d+")
 _DMS = re.compile(r"(\d{1,3})\s*[°º�]\s*(?:(\d{1,2})\s*['′]\s*)?(?:(\d{1,2}(?:[.,]\d+)?)\s*[\"″]?\s*)?([NSLOWE])?", re.I)
@@ -215,6 +238,19 @@ _ENTE_MUNICIPAL = re.compile(r"\b(prefeitura municipal|prefeitura|camara municip
 _PALAVRA_NOME = r"[A-Z][A-Za-z']*"
 _CONECTOR_NOME = r"(?:d[aeo]s?|D[AEO]S?)"
 _NOME_MUNICIPIO = re.compile(rf"{_PALAVRA_NOME}(?:\s+(?:{_CONECTOR_NOME}\s+)?{_PALAVRA_NOME}){{0,5}}")
+# Fecho de cortesia. Em ofício brasileiro a assinatura de quem pede vem depois
+# dele; o bloco de endereçamento (o destinatário) vem antes, e às vezes também
+# no rodapé da última página — por isso posição na página não resolve sozinha.
+_FECHO_CORTESIA = re.compile(
+    r"^(?:atenciosamente|respeitosamente|cordialmente|certos da aten|na certeza|"
+    r"sem mais|subscrevo|aproveito o ensejo)"
+)
+_TITULO_PESSOAL = re.compile(r"^(?:prof|profa|dr|dra|sr|sra|exmo|exma|eng|arq)[.ªº]*\s+", re.I)
+# Assinatura depois do fecho ganha folga maior que CONFIANCA_CONFLITO sobre a de
+# antes dele: sem isso as duas empatam, viram conflito e o campo fica vazio.
+CONFIANCA_ASSINATURA_POS_FECHO = 0.78
+CONFIANCA_ASSINATURA_PRE_FECHO = 0.62
+
 _VERBOS_SOLICITACAO = (
     "solicit", "requer", "pleite", "trata-se", "vimos por meio", "vem por meio", "tem por objetivo",
     "tem por objeto", "visa ", "consiste",
@@ -408,6 +444,32 @@ def _parece_rotulo(linha: str) -> bool:
     return nucleo in _TODOS_ROTULOS or (nucleo.endswith("s") and nucleo[:-1] in _TODOS_ROTULOS)
 
 
+_EMENDA_ANTES = ("-", "–", "—", ",")
+_FIM_DE_FRASE = (".", "!", "?", ";", ":")
+
+
+def _continuacao(linhas: list[str], indice: int, valor: str) -> str:
+    """Valor rotulado que segue nas linhas de baixo ("Assunto:" que quebra).
+
+    Só emenda quando a quebra é visível: a linha termina em travessão ou
+    vírgula, a seguinte começa em minúscula, ou a seguinte abre com travessão.
+    Sem essa exigência o valor engolia a saudação logo abaixo ("Prezados, bom
+    dia!") e o endereçamento do documento.
+    """
+    partes = [valor]
+    for proxima in linhas[indice + 1: indice + 4]:
+        seguinte = proxima.strip()
+        acumulado = " ".join(partes).rstrip()
+        if not seguinte or len(acumulado) >= 300 or acumulado.endswith(_FIM_DE_FRASE):
+            break
+        if _parece_rotulo(seguinte) or _enderecamento(seguinte):
+            break
+        if not (acumulado.endswith(_EMENDA_ANTES) or seguinte[0].islower() or seguinte[0] in "-–—"):
+            break
+        partes.append(seguinte)
+    return " ".join(partes)
+
+
 def _linhas_rotuladas(paginas: Iterable[Pagina], campo: str, tipo: TipoDemanda = "projeto") -> list[dict[str, Any]]:
     candidatos = []
     rotulos = _rotulos(campo, tipo)
@@ -421,7 +483,7 @@ def _linhas_rotuladas(paginas: Iterable[Pagina], campo: str, tipo: TipoDemanda =
                     # A normalização preserva o comprimento: o sufixo do original é o valor com acentos.
                     original = linha[len(linha) - len(valor):].strip()
                     if original:
-                        candidatos.append(_candidato(pagina, original, linha, confianca))
+                        candidatos.append(_candidato(pagina, _continuacao(linhas, indice, original), linha, confianca))
                     break
                 if _so_rotulo(normalizada, rotulo) and indice + 1 < len(linhas):
                     proxima = linhas[indice + 1].strip()
@@ -510,19 +572,53 @@ def _coordenadas_pareadas(paginas: Iterable[Pagina], campo: str) -> list[dict[st
     return candidatos
 
 
+def _enderecamento(linha: str) -> bool:
+    """A linha abre um bloco de endereçamento? O artigo é descartado antes da
+    comparação: "À Excelentíssima Senhora" normaliza para "a excelentissima..."
+    e não casaria com o marcador."""
+    normalizada = re.sub(r"^(?:a|ao|as|aos)\s+", "", _sem_acento(linha).strip())
+    return any(normalizada.startswith(marca) for marca in _ENDERECAMENTO)
+
+
+def _nome_assinatura(bruto: str) -> str:
+    """"Prof.ª Dra. Telma ..." e "DEPUTADO ESTADUAL - RICARDO MADALENA" trazem o
+    nome junto do tratamento ou do cargo."""
+    valor = bruto.strip(" ,.;")
+    if " - " in valor:
+        valor = valor.split(" - ")[-1].strip()
+    anterior = None
+    while valor != anterior:
+        anterior = valor
+        valor = _TITULO_PESSOAL.sub("", valor).strip()
+    return valor
+
+
 def _assinaturas(paginas: Iterable[Pagina]) -> list[dict[str, Any]]:
-    """Bloco de assinatura: nome da pessoa na linha acima do cargo."""
+    """Bloco de assinatura: nome da pessoa na linha acima do cargo.
+
+    O padrão "nome sobre cargo" também descreve o destinatário no cabeçalho
+    ("Natália Resende / Secretária de Meio Ambiente"), e era ele que vinha
+    preenchido como se fosse quem pede. Quem endereça fica de fora, e quem
+    assina depois do fecho de cortesia vale mais que quem aparece antes.
+    """
     candidatos = []
     for pagina in paginas:
         linhas = pagina.texto.splitlines()
+        fecho = next((i for i, linha in enumerate(linhas) if _FECHO_CORTESIA.match(_sem_acento(linha).strip())), None)
         for indice in range(1, len(linhas)):
             cargo = _sem_acento(linhas[indice]).strip(" ,.;")
-            nome = linhas[indice - 1].strip(" ,.;")
-            if not _CARGO_ASSINATURA.match(cargo) or not _NOME_PESSOA.match(nome) or re.search(r"\d|:", nome):
+            if not _CARGO_ASSINATURA.match(cargo):
+                continue
+            if _enderecamento(linhas[indice - 1]) or (indice >= 2 and _enderecamento(linhas[indice - 2])):
+                continue
+            nome = _nome_assinatura(linhas[indice - 1])
+            if not _NOME_PESSOA.match(nome) or re.search(r"\d|:", nome):
                 continue
             if any(termo in _sem_acento(nome) for termo in _TERMOS_INSTITUCIONAIS):
                 continue
-            candidatos.append(_candidato(pagina, nome, f"{linhas[indice - 1]}\n{linhas[indice]}", 0.7))
+            confianca = (CONFIANCA_ASSINATURA_POS_FECHO if fecho is not None and indice > fecho
+                         else CONFIANCA_ASSINATURA_PRE_FECHO)
+            candidatos.append(_candidato(pagina, nome, f"{linhas[indice - 1]}\n{linhas[indice]}", confianca))
     return candidatos
 
 
@@ -590,6 +686,16 @@ def _data_iso(valor: str) -> str | None:
     return datas[0][1] if datas else None
 
 
+def _escala(termo: str) -> int:
+    """Multiplicador da escala escrita por extenso ou abreviada."""
+    normalizado = _sem_acento(termo)
+    if normalizado.startswith("bi"):
+        return 1_000_000_000
+    if normalizado.startswith("milh") or normalizado == "mi":
+        return 1_000_000
+    return 1_000
+
+
 def _valor_monetario(valor: str) -> float | None:
     normalizado = _sem_acento(valor)
     moeda = _MOEDA.search(valor)
@@ -598,8 +704,7 @@ def _valor_monetario(valor: str) -> float | None:
     inicio_moeda = (moeda.start(1) if moeda.group(1) else moeda.start(2)) if moeda else None
     if extenso and (inicio_moeda is None or extenso.start(1) <= inicio_moeda):
         base = float(extenso.group(1).replace(",", "."))
-        chave = "mil" if extenso.group(2) == "mil" else extenso.group(2)[:4]
-        return round(base * _MULTIPLICADOR[chave], 2)
+        return round(base * _escala(extenso.group(2)), 2)
     if moeda:
         return _numero_ptbr(moeda.group(1) or moeda.group(2))
     return None
@@ -682,7 +787,9 @@ def _descricao(paginas: list[Pagina], tipo: TipoDemanda = "projeto") -> list[dic
             continue
         for trecho in re.split(r"(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚ])", pagina.texto):
             paragrafo = " ".join(trecho.split())
-            if 80 <= len(paragrafo) <= 1200:
+            # O cabeçalho do ofício não tem ponto final, então o endereçamento
+            # inteiro virava um parágrafo e era descrito como se fosse o objeto.
+            if 80 <= len(paragrafo) <= 1200 and not _enderecamento(paragrafo):
                 paragrafos.append((pagina, paragrafo))
     # Um único candidato por estratégia: dois parágrafos equivalentes virariam conflito.
     com_verbo = next(((p, t) for p, t in paragrafos if any(v in _sem_acento(t) for v in _VERBOS_SOLICITACAO)), None)
@@ -757,8 +864,59 @@ def _candidatos_campo(campo: str, paginas: list[Pagina], tipo: TipoDemanda) -> l
     return candidatos
 
 
-def numero_processo(conteudo: bytes) -> str | None:
+def _evidencia_do_nome(nome_arquivo: str, confianca: float) -> dict[str, Any]:
+    """Evidência de um valor tirado do nome do arquivo, e não de uma página."""
+    return {"pagina": 0, "trecho": nome_arquivo[:LIMITE_TRECHO], "metodo": "nome_arquivo",
+            "papel_fonte": "nome_arquivo", "confianca": round(confianca, 3)}
+
+
+def numero_no_nome(nome_arquivo: str | None) -> str | None:
+    """Número do processo como o SEI o carimba no nome do arquivo."""
+    achado = _PROCESSO_NO_NOME.search(nome_arquivo or "")
+    if not achado:
+        return None
+    meio = re.sub(r"\D", "", achado.group(2)).lstrip("0").zfill(8)
+    return f"{achado.group(1)}.{meio}/{achado.group(3)}-{achado.group(4)}"
+
+
+def titulo_no_nome(nome_arquivo: str | None) -> str | None:
+    """Título aproveitável como nome do objeto, quando o nome do arquivo tiver um.
+
+    Devolve None para o que só descreve o documento ("Ofício nº 1.145/2025",
+    "PLANILHA ORCAMENTARIA", "Xerox Scan 06182025"): virariam nome de projeto.
+    """
+    if not nome_arquivo:
+        return None
+    titulo = re.sub(r"\.pdf$", "", nome_arquivo.strip(), flags=re.I)
+    titulo = _PREFIXO_SEI.sub("", titulo)
+    titulo = re.sub(r"_{2,}", " - ", titulo).replace("_", " ")
+    titulo = _CANAL_NO_NOME.sub("", re.sub(r"\s{2,}", " ", titulo).strip(" -–"))
+    titulo = re.sub(r"^[\d.]+\s*[-–]?\s*", "", titulo)
+    pedido = _VERBO_DE_PEDIDO.search(titulo)
+    if pedido and pedido.start() > 0:
+        # "Oficio Bracell n - 043 - 2025 - Solicitacao Porto ..." começa no pedido.
+        titulo = titulo[pedido.start():]
+    else:
+        anterior = None
+        while titulo != anterior:
+            anterior = titulo
+            titulo = _TIPO_DOCUMENTAL.sub("", titulo)
+            if re.match(r"^(?:n[º°o]?\.?\s*)?\d", titulo):
+                titulo = re.sub(r"^(?:n[º°o]?\.?\s*)?[\d.\/-]+[\s\-–]*", "", titulo)
+            titulo = titulo.strip(" -–")
+    titulo = re.sub(r"\s{2,}", " ", titulo).strip(" -–")
+    if len(titulo) < 10 or _NOME_SEM_VALOR.match(titulo):
+        return None
+    if len(re.findall(r"[A-Za-zÀ-ÿ]{3,}", titulo)) < 2:
+        return None
+    return titulo[:200]
+
+
+def numero_processo(conteudo: bytes, nome_arquivo: str | None = None) -> str | None:
     """Só o número do processo SEI, quando identificado sem conflito."""
+    do_nome = numero_no_nome(nome_arquivo)
+    if do_nome:
+        return do_nome
     paginas, _ = extrair_paginas(conteudo)
     return _resultado("numero_processo", _candidatos_formato(paginas, _PROCESSO, "processo")).get("valor_normalizado")
 
@@ -776,7 +934,7 @@ def com_regra(campo: str, tipo: TipoDemanda) -> bool:
     return bool(_ROTULOS.get(campo) or _ROTULOS_POR_TIPO.get(tipo, {}).get(campo))
 
 
-def analisar(conteudo: bytes, tipo: TipoDemanda = "projeto") -> dict[str, Any]:
+def analisar(conteudo: bytes, tipo: TipoDemanda = "projeto", nome_arquivo: str | None = None) -> dict[str, Any]:
     contrato = json.loads(_CONTRATO.read_text(encoding="utf-8"))
     campos_contrato = contrato["tipos_objeto"][tipo]["campos"]
     paginas, avisos = extrair_paginas(conteudo)
@@ -786,10 +944,17 @@ def analisar(conteudo: bytes, tipo: TipoDemanda = "projeto") -> dict[str, Any]:
         if campo in CAMPOS_NAO_EXTRAIVEIS:
             resultados[campo] = {"estado": "aguardando_resolucao", "confianca": 0.0, "evidencias": [], "candidatos": []}
             continue
-        resultados[campo] = _resultado(campo, _candidatos_campo(campo, paginas, tipo))
+        candidatos = _candidatos_campo(campo, paginas, tipo)
+        if campo == "nome" and (titulo := titulo_no_nome(nome_arquivo)):
+            candidatos = [*candidatos, {"valor": titulo,
+                                        "evidencia": _evidencia_do_nome(nome_arquivo, CONFIANCA_NOME_ARQUIVO)}]
+        resultados[campo] = _resultado(campo, candidatos)
     resultados["maturidade_objeto"] = _maturidade(tipo, paginas, contrato)
 
     processos = _candidatos_formato(paginas, _PROCESSO, "processo")
+    if numero_no_arquivo := numero_no_nome(nome_arquivo):
+        processos = [*processos, {"valor": numero_no_arquivo,
+                                  "evidencia": _evidencia_do_nome(nome_arquivo, CONFIANCA_PROCESSO_NO_NOME)}]
     numero_processo = _resultado("numero_processo", processos)
     preenchiveis = {
         campo: resultado.get("valor_normalizado")

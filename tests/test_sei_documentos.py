@@ -280,6 +280,154 @@ def test_nome_composto_de_municipio_e_lido_inteiro():
     assert campos["municipio"] == "Sao Jose do Rio Preto"
 
 
+# "Nome sobre cargo" descreve tanto quem assina quanto o destinatário no
+# cabeçalho. Vinha preenchido o destinatário — o secretário a quem o ofício é
+# endereçado — como se fosse quem está pedindo. A forma destes documentos
+# reproduz ofícios reais recebidos pelo SEI; o conteúdo é fictício.
+
+OFICIO_COM_DESTINATARIO = """Ofício GAB n° 579/2025
+Bauru, 29 de outubro de 2025.
+Excelentíssima Senhora
+Marina Álvares Pinto
+Secretária de Meio Ambiente, Infraestrutura e Logística
+Assunto: Solicitação de apoio para o Projeto Rota dos Trilhos.
+Prezada Secretária,
+Cumprimentando-a cordialmente, venho apresentar o projeto e solicitar apoio.
+Atenciosamente,
+Prof.ª Dra. Telma Goncalves Carneiro Spera
+Prefeita do Municipio de Bauru
+"""
+
+
+def test_destinatario_do_oficio_nao_vira_o_representante():
+    campos = processamento.analisar(pdf(OFICIO_COM_DESTINATARIO), "projeto")["campos_sugeridos"]
+    # O tratamento ("Prof.ª Dra.") acompanha o nome na linha da assinatura.
+    assert campos["representante_nome"] == "Telma Goncalves Carneiro Spera"
+
+
+OFICIO_COM_DESTINATARIO_NO_RODAPE = """ASSEMBLEIA LEGISLATIVA
+Assunto: Implantacao de Ponte sobre o Rio Paranapanema.
+Senhora Secretaria,
+Solicitamos a insercao da contratacao do EVTEA no cronograma de investimentos.
+Atenciosamente,
+DEPUTADO ESTADUAL - RICARDO MADALENA
+Presidente da Comissao de Transportes e Comunicacoes
+Excelentissima Senhora
+Marina Alvares Pinto
+Secretaria de Meio Ambiente, Infraestrutura e Logistica
+"""
+
+
+def test_destinatario_no_rodape_nao_vence_quem_assinou():
+    """Aqui o destinatário aparece depois da assinatura: posição na página não
+    resolve, quem decide é o fecho de cortesia."""
+    campos = processamento.analisar(pdf(OFICIO_COM_DESTINATARIO_NO_RODAPE), "projeto")["campos_sugeridos"]
+    # O cargo acompanha o nome na mesma linha, separado por travessão.
+    assert campos["representante_nome"] == "RICARDO MADALENA"
+
+
+# O nome do arquivo que o SEI entrega carrega o número do processo e, num anexo
+# sem rótulo interno, o único título de projeto que existe.
+
+def test_numero_do_processo_sai_do_nome_do_arquivo():
+    assert processamento.numero_no_nome(
+        "SEI nº 020 00016588 2025 13 - 02___Terminal_Urbano.pdf") == "020.00016588/2025-13"
+    # Espaço dentro do bloco do meio e zero sobrando: o mesmo processo.
+    assert processamento.numero_no_nome("SEI nº 020 000 16588 2025 13 - x.pdf") == "020.00016588/2025-13"
+    assert processamento.numero_no_nome("SEI nº 020 000016588 2025 13 - x.pdf") == "020.00016588/2025-13"
+    assert processamento.numero_no_nome("documento_sem_processo.pdf") is None
+
+
+def test_analise_usa_o_processo_do_nome_quando_o_texto_nao_traz():
+    leitura = processamento.analisar(
+        pdf("Anexo tecnico sem numero de processo no corpo."), "projeto",
+        "SEI nº 020 00016588 2025 13 - 02___Terminal_Urbano.pdf")
+    assert leitura["numero_processo"] == "020.00016588/2025-13"
+
+
+def test_nome_do_projeto_sai_do_nome_do_arquivo_quando_o_pdf_nao_diz():
+    """Anexo sem rótulo nenhum: sem isto o formulário abria totalmente vazio."""
+    leitura = processamento.analisar(
+        pdf("Planta do terminal, sem rotulos."), "projeto",
+        "SEI nº 020 00016588 2025 13 - 02___Terminal_Urbano.pdf")
+    assert leitura["campos_sugeridos"]["nome"] == "Terminal Urbano"
+
+
+def test_rotulo_do_documento_vence_o_nome_do_arquivo():
+    """O "Assunto:" do ofício descreve melhor que o nome do arquivo, e a folga
+    entre os dois precisa passar de CONFIANCA_CONFLITO — senão empatam e o
+    campo some em vez de escolher."""
+    leitura = processamento.analisar(
+        pdf("Assunto: Revitalizacao do Eixo FEPASA e Tunel Historico"), "projeto",
+        "SEI nº 020 00016588 2025 13 - Oficio_GAB_579_2025___SEMIL.pdf")
+    assert leitura["campos"]["nome"]["estado"] == "normalizado"
+    assert leitura["campos_sugeridos"]["nome"] == "Revitalizacao do Eixo FEPASA e Tunel Historico"
+
+
+ASSUNTO_QUE_QUEBRA = """Oficio n 1.145/2025
+Assunto: Implantacao de Ponte sobre o Rio Paranapanema -
+Interligando duas Rodovias do Estado de Sao Paulo.
+Solicitacao: Contratacao de EVTEA.
+"""
+
+ASSUNTO_SEGUIDO_DE_SAUDACAO = """Assunto: Encaminha demanda da Prefeitura de Bauru
+Prezados, bom dia!
+Segue para protocolar e informar o numero SEI.
+"""
+
+
+def test_assunto_que_quebra_a_linha_e_lido_inteiro():
+    """O rótulo termina em travessão e o valor segue abaixo; sem emendar, o
+    nome do objeto parava em "Paranapanema -"."""
+    campos = processamento.analisar(pdf(ASSUNTO_QUE_QUEBRA), "projeto")["campos_sugeridos"]
+    assert campos["nome"] == (
+        "Implantacao de Ponte sobre o Rio Paranapanema - "
+        "Interligando duas Rodovias do Estado de Sao Paulo."
+    )
+
+
+def test_valor_rotulado_nao_engole_a_saudacao_seguinte():
+    """Controle negativo da emenda: sem sinal de quebra, a linha de baixo é
+    outra coisa."""
+    campos = processamento.analisar(pdf(ASSUNTO_SEGUIDO_DE_SAUDACAO), "projeto")["campos_sugeridos"]
+    assert campos["nome"] == "Encaminha demanda da Prefeitura de Bauru"
+
+
+OFICIO_COM_CORPO_LONGO = """Oficio GAB n 579/2025
+Excelentissima Senhora
+Marina Alvares Pinto
+Secretaria de Meio Ambiente, Infraestrutura e Logistica
+Prezada Secretaria, o Municipio solicita apoio para a revitalizacao do eixo
+ferroviario e do tunel historico, obra que resolve o alagamento cronico da
+regiao central e devolve a area degradada ao uso publico da cidade inteira.
+"""
+
+
+def test_descricao_nao_pega_o_bloco_de_enderecamento():
+    """O cabeçalho não tem ponto final, então o endereçamento inteiro virava um
+    parágrafo e era descrito como se fosse o objeto."""
+    campos = processamento.analisar(pdf(OFICIO_COM_CORPO_LONGO), "projeto")["campos_sugeridos"]
+    assert not str(campos.get("descricao", "")).startswith("Excelentissima")
+    assert "solicita apoio" in campos["descricao"]
+
+
+def test_escala_abreviada_do_valor_e_reconhecida():
+    """Documento real escreve "R$ 11 bi"; sem a abreviação virava onze reais."""
+    assert processamento._valor_monetario("R$ 11 bi") == 11_000_000_000
+    assert processamento._valor_monetario("R$ 25 mi") == 25_000_000
+    # As formas por extenso continuam valendo.
+    assert processamento._valor_monetario("R$ 3,2 milhões") == 3_200_000
+
+
+def test_nome_de_arquivo_sem_titulo_nao_vira_nome_de_projeto():
+    """Controle negativo: tipo documental e digitalização não nomeiam projeto."""
+    for arquivo in ("SEI nº 028 00000036 2025 60 - Xerox_Scan_06182025163457001.PDF",
+                    "SEI nº 002 00005157 2025 31 - Untitled_16102025_114628.pdf",
+                    "SEI nº 020 000017519 2025 19 - Oficio_n__1.145_2025.pdf",
+                    "SEI nº 020 00016588 2025 13 - PLANILHA_ORCAMENTARIA_TERMINAL.pdf"):
+        assert processamento.titulo_no_nome(arquivo) is None, arquivo
+
+
 def test_desfecho_ignora_campo_que_nenhuma_regra_sabe_ler():
     """Cobrar campo sem regra faria de toda análise uma ressalva por limite do
     próprio extrator; identificadores resolvidos no SIGMA também ficam fora."""

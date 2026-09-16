@@ -105,7 +105,9 @@ def analisar(documento_id: str, tipo_demanda: sei_processamento.TipoDemanda = "p
     if documento["status"] == "demanda_criada":
         raise DemandaValidationError("Este documento já gerou demanda; a análise não é refeita.")
     try:
-        analise = sei_processamento.analisar(_conteudo(documento), tipo_demanda)
+        # O nome do arquivo carrega o número do processo e, em anexo sem rótulo,
+        # o único título de projeto que existe.
+        analise = sei_processamento.analisar(_conteudo(documento), tipo_demanda, documento["nome_arquivo"])
     except ValueError as exc:
         raise DemandaValidationError(str(exc)) from exc
     evidencias = {
@@ -127,8 +129,9 @@ def analisar(documento_id: str, tipo_demanda: sei_processamento.TipoDemanda = "p
 
 def marcador_origem(documento: dict[str, Any]) -> str:
     # A leitura não é gravada: o número do processo é lido do PDF no momento da criação.
-    numero = documento.get("numero_processo")
+    numero = documento.get("numero_processo") or sei_processamento.numero_no_nome(documento.get("nome_arquivo"))
     if not numero:
+        # Só lê o PDF de novo quando o nome do arquivo não traz o processo.
         try:
             numero = sei_processamento.numero_processo(_conteudo(documento))
         except (ValueError, DemandaNotFoundError):
