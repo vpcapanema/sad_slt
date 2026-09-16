@@ -5,8 +5,11 @@ import unittest
 from pathlib import Path
 
 
+# O nome do servidor UNC exige dois caracteres ou mais. Com um só, os escapes
+# que o JSON obriga (\\r, \\n, \\t) imitavam um caminho de rede e acusavam
+# arquivos de dados onde nao ha caminho nenhum.
 WINDOWS_HOST_PATH = re.compile(
-    r"(?<![A-Za-z0-9])(?:[A-Za-z]:[\\/]|\\\\[A-Za-z0-9._-]+[\\/])"
+    r"(?<![A-Za-z0-9])(?:[A-Za-z]:[\\/]|\\\\[A-Za-z0-9._-]{2,}[\\/])"
 )
 UNIX_HOST_PATH = re.compile(
     r"(?<![A-Za-z0-9:])/(?:home|Users|opt|tmp|srv|mnt|workspace)/[A-Za-z0-9._~/-]+"
@@ -17,8 +20,11 @@ TEXT_SUFFIXES = {
 }
 # tmp/ guarda rascunhos e artefatos gerados (fora do versionamento) e .vscode/
 # guarda configuracao de editor, legitimamente presa a maquina de quem edita.
+# entregas/ e material local de trabalho no QGIS: o .gitignore o exclui e o
+# deploy nao o publica. Sem ele aqui, o teste acusava artefatos da maquina de
+# quem edita, que nao estao no repositorio e nunca chegam a VM.
 # O teste vigia o codigo da aplicacao, onde caminho absoluto e defeito de fato.
-IGNORED_PARTS = {".git", ".venv", "node_modules", "__pycache__", "tmp", ".vscode"}
+IGNORED_PARTS = {".git", ".venv", "node_modules", "__pycache__", "tmp", ".vscode", "entregas"}
 # Arquivos em que o caminho absoluto e o proprio conteudo, e nao um vazamento:
 # o script que fala com a VM, a doc que a descreve e registros/artefatos que
 # gravaram o diretorio da maquina que os gerou. Nenhum e codigo de aplicacao.
