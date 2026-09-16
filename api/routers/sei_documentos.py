@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from pydantic import ValidationError
+from starlette.concurrency import run_in_threadpool
 
 from api.deps.auth import require_authenticated, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
@@ -43,7 +44,13 @@ def listar(user: SessionUser = Depends(require_authenticated)):
 
 
 @router.post('', response_model=SeiUploadResponseSchema)
-async def enviar(arquivos: list[UploadFile] = File(...), user: SessionUser = Depends(require_operator)):
+async def enviar(
+    arquivos: list[UploadFile] = File(...),
+    # O tipo escolhido em "Formulário a preencher" decide o contrato de campos,
+    # e agora a leitura acontece já no envio.
+    tipo_demanda: str = Form('projeto'),
+    user: SessionUser = Depends(require_operator),
+):
     recebidos, erros = [], []
     total = 0
     for arquivo in arquivos:
@@ -54,11 +61,16 @@ async def enviar(arquivos: list[UploadFile] = File(...), user: SessionUser = Dep
             limite_mb = documentos.LIMITE_LOTE_BYTES // (1024 * 1024)
             raise HTTPException(413, f'O envio ultrapassa {limite_mb} MB somados. Divida em lotes menores.')
         try:
-            recebidos.append(documentos.receber(
+            # `receber` lê o PDF: trabalho de CPU, e esta rota é `async`. Sem o
+            # threadpool ele roda no event loop e, com `--workers 1` na VM,
+            # congela a aplicação inteira enquanto o documento é analisado.
+            recebidos.append(await run_in_threadpool(
+                documentos.receber,
                 conteudo=conteudo,
                 nome_arquivo=arquivo.filename or '',
                 usuario_id=user.id,
                 usuario_nome=user.nome,
+                tipo_demanda=tipo_demanda,
             ))
         except DemandaValidationError as exc:
             # Um arquivo recusado não invalida os demais do mesmo envio.

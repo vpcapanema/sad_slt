@@ -48,7 +48,28 @@ def _inventariar(conteudo: bytes) -> tuple[int | None, str | None]:
         return None, "O PDF não pôde ser interpretado; confira o arquivo de origem."
 
 
-def receber(*, conteudo: bytes, nome_arquivo: str, usuario_id: str, usuario_nome: str) -> dict[str, Any]:
+def _evidencias_da_analise(analise: dict[str, Any]) -> dict[str, Any]:
+    return {
+        campo: resultado.get("evidencias", [])
+        for campo, resultado in analise["campos"].items()
+        if resultado.get("evidencias")
+    }
+
+
+def receber(
+    *,
+    conteudo: bytes,
+    nome_arquivo: str,
+    usuario_id: str,
+    usuario_nome: str,
+    tipo_demanda: sei_processamento.TipoDemanda = "projeto",
+) -> dict[str, Any]:
+    """Lê o PDF e grava arquivo e leitura juntos, numa linha só.
+
+    A leitura acontece antes do INSERT de propósito: documento cuja leitura
+    falha não entra no repositório, e a rota transforma a falha em recusa
+    daquele arquivo sem invalidar os demais do mesmo envio.
+    """
     nome = (nome_arquivo or "").strip()[:255]
     if not nome:
         raise DemandaValidationError("Informe o arquivo a enviar.")
@@ -63,22 +84,31 @@ def receber(*, conteudo: bytes, nome_arquivo: str, usuario_id: str, usuario_nome
     if existente:
         raise DemandaValidationError(f"Este PDF já está no repositório como {existente['nome_arquivo']}.")
     paginas, aviso = _inventariar(conteudo)
+    try:
+        analise = sei_processamento.analisar(conteudo, tipo_demanda, nome)
+    except Exception as exc:
+        # PDF cifrado levanta ValueError, mas arquivo corrompido vem como erro
+        # do pymupdf. Qualquer falha de leitura vira recusa deste arquivo — nada
+        # é gravado e os demais do mesmo envio seguem.
+        raise DemandaValidationError(f"O arquivo {nome} não pôde ser lido: {exc}") from exc
     return repo.inserir(
         usuario_id=usuario_id, usuario_nome=usuario_nome or "", nome_arquivo=nome,
         sha256=digest, tamanho_bytes=len(conteudo), conteudo=conteudo,
-        paginas=paginas, texto="", status="recebido", aviso=aviso,
-        # O SEI carimba o processo no nome do arquivo: é uma propriedade do
-        # documento, conhecida no recebimento, e não um resultado da análise.
-        numero_processo=sei_processamento.numero_no_nome(nome),
+        paginas=paginas, texto="", status="analisado",
+        aviso=" ".join(analise["avisos"]) or aviso,
+        numero_processo=analise["numero_processo"],
+        tipo_demanda=tipo_demanda,
+        campos_sugeridos=analise["campos_sugeridos"],
+        evidencias=_evidencias_da_analise(analise),
+        analise=analise,
     )
 
 
 def listar() -> list[dict[str, Any]]:
-    """Lista os documentos com o processo que o SEI carimbou no nome do arquivo.
+    """Lista os documentos do repositório.
 
-    A leitura não é gravada, então o registro nunca guarda o número e a coluna
-    aparecia vazia mesmo quando o processo estava no nome. O registro em si
-    continua intocado: o número é acrescentado só na resposta.
+    O processo é gravado desde o recebimento; a derivação pelo nome do arquivo
+    cobre os documentos recebidos antes disso, que têm a coluna nula no banco.
     """
     documentos = []
     for documento in repo.listar():
@@ -112,10 +142,10 @@ def _conteudo(documento: dict[str, Any]) -> bytes:
 
 
 def analisar(documento_id: str, tipo_demanda: sei_processamento.TipoDemanda = "projeto") -> dict[str, Any]:
-    """Lê o PDF e devolve a sugestão sem gravar nada.
+    """Relê o PDF e regrava a leitura, com o tipo escolhido agora.
 
-    A leitura só existe na tela até o analista confirmar; reabrir ou reanalisar
-    o documento lê o PDF de novo. O registro no repositório não muda.
+    É o caminho do Reanalisar: o documento já está no repositório com uma
+    leitura gravada, e esta substitui a anterior.
     """
     documento = obter(documento_id)
     if documento["status"] == "demanda_criada":
@@ -126,17 +156,14 @@ def analisar(documento_id: str, tipo_demanda: sei_processamento.TipoDemanda = "p
         analise = sei_processamento.analisar(_conteudo(documento), tipo_demanda, documento["nome_arquivo"])
     except ValueError as exc:
         raise DemandaValidationError(str(exc)) from exc
-    evidencias = {
-        campo: resultado.get("evidencias", [])
-        for campo, resultado in analise["campos"].items()
-        if resultado.get("evidencias")
-    }
-    # A leitura em si continua sem ir para o banco; o que é gravado são as
-    # colunas que a lista do repositório mostra: situação e processo.
+    evidencias = _evidencias_da_analise(analise)
     gravado = repo.marcar_analisado(
         documento["id"],
         numero_processo=analise["numero_processo"],
         tipo_demanda=tipo_demanda,
+        campos_sugeridos=analise["campos_sugeridos"],
+        evidencias=evidencias,
+        analise=analise,
     )
     documento = gravado or documento
     return {

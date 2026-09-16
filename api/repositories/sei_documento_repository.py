@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from psycopg.types.json import Jsonb
+
 from api.db.connection import get_connection
 
 # O binário nunca entra na listagem: `conteudo` só é lido no download.
@@ -64,17 +66,28 @@ def inserir(
     status: str,
     aviso: str | None,
     numero_processo: str | None = None,
+    tipo_demanda: str = "projeto",
+    campos_sugeridos: dict[str, Any] | None = None,
+    evidencias: dict[str, Any] | None = None,
+    analise: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Grava o PDF e a leitura dele na mesma linha, num único INSERT.
+
+    As três colunas JSONB precisam de `Jsonb`: psycopg não adapta `dict` cru, e
+    o repositório falso dos testes aceitaria — a falha só apareceria em produção.
+    """
     with get_connection() as conn:
         cur = conn.execute(
             f"""
             INSERT INTO integracoes.sei_documento (
                 usuario_id, usuario_nome, nome_arquivo, sha256, tamanho_bytes,
-                conteudo, paginas, texto, status, aviso, numero_processo
+                conteudo, paginas, texto, status, aviso, numero_processo,
+                tipo_demanda, campos_sugeridos, evidencias, analise
             ) VALUES (
                 %(usuario_id)s, %(usuario_nome)s, %(nome_arquivo)s, %(sha256)s,
                 %(tamanho_bytes)s, %(conteudo)s, %(paginas)s, %(texto)s, %(status)s,
-                %(aviso)s, %(numero_processo)s
+                %(aviso)s, %(numero_processo)s, %(tipo_demanda)s,
+                %(campos_sugeridos)s, %(evidencias)s, %(analise)s
             )
             RETURNING {_COLUNAS}
             """,
@@ -90,6 +103,10 @@ def inserir(
                 "status": status,
                 "aviso": aviso,
                 "numero_processo": numero_processo,
+                "tipo_demanda": tipo_demanda,
+                "campos_sugeridos": Jsonb(campos_sugeridos or {}),
+                "evidencias": Jsonb(evidencias or {}),
+                "analise": Jsonb(analise or {}),
             },
         )
         row = cur.fetchone()
@@ -102,13 +119,15 @@ def marcar_analisado(
     *,
     numero_processo: str | None,
     tipo_demanda: str,
+    campos_sugeridos: dict[str, Any] | None = None,
+    evidencias: dict[str, Any] | None = None,
+    analise: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    """Move a situação para 'analisado' e grava as colunas que a lista mostra.
+    """Regrava a leitura do documento, usada quando o PDF é reanalisado.
 
-    O conteúdo da leitura continua fora do banco; aqui entram só o que a tabela
-    do repositório exibe. `COALESCE` preserva o número já gravado quando a nova
-    análise não encontra nenhum, e o filtro por `demanda_id` impede que um
-    documento que já gerou demanda regrida de situação.
+    `COALESCE` preserva o número já gravado quando a nova leitura não encontra
+    nenhum, e o filtro por `demanda_id` impede que um documento que já gerou
+    demanda regrida de situação.
     """
     with get_connection() as conn:
         cur = conn.execute(
@@ -116,11 +135,21 @@ def marcar_analisado(
             UPDATE integracoes.sei_documento
             SET status = 'analisado',
                 tipo_demanda = %(tipo_demanda)s,
-                numero_processo = COALESCE(%(numero_processo)s, numero_processo)
+                numero_processo = COALESCE(%(numero_processo)s, numero_processo),
+                campos_sugeridos = %(campos_sugeridos)s,
+                evidencias = %(evidencias)s,
+                analise = %(analise)s
             WHERE id = %(id)s AND demanda_id IS NULL
             RETURNING {_COLUNAS}
             """,
-            {"id": documento_id, "numero_processo": numero_processo, "tipo_demanda": tipo_demanda},
+            {
+                "id": documento_id,
+                "numero_processo": numero_processo,
+                "tipo_demanda": tipo_demanda,
+                "campos_sugeridos": Jsonb(campos_sugeridos or {}),
+                "evidencias": Jsonb(evidencias or {}),
+                "analise": Jsonb(analise or {}),
+            },
         )
         row = cur.fetchone()
         return dict(row) if row else None

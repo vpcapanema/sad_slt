@@ -73,12 +73,15 @@ class RepositorioFalso:
         self.registros[registro["id"]] = registro
         return registro
 
-    def marcar_analisado(self, documento_id, *, numero_processo, tipo_demanda):
+    def marcar_analisado(self, documento_id, *, numero_processo, tipo_demanda,
+                         campos_sugeridos=None, evidencias=None, analise=None):
         registro = self.registros.get(str(documento_id))
         if not registro or registro["demanda_id"]:
             return None
         registro.update(status="analisado", tipo_demanda=tipo_demanda,
-                        numero_processo=numero_processo or registro["numero_processo"])
+                        numero_processo=numero_processo or registro["numero_processo"],
+                        campos_sugeridos=campos_sugeridos or {},
+                        evidencias=evidencias or {}, analise=analise or {})
         return registro
 
     def marcar_demanda(self, documento_id, demanda_id):
@@ -510,7 +513,9 @@ def test_pdf_sem_texto_e_aceito_para_ocr(repo, monkeypatch):
     pagina.save()
     documento = servico.receber(conteudo=buffer.getvalue(), nome_arquivo="digitalizado.pdf",
                                 usuario_id=str(uuid4()), usuario_nome="Analista")
-    assert documento["status"] == "recebido"
+    # Já entra analisado; sem OCR disponível a leitura do envio não achou nada.
+    assert documento["status"] == "analisado"
+    assert documento["campos_sugeridos"] == {}
     monkeypatch.setattr(processamento, "_ocr", lambda pagina: ("Assunto: Terminal intermodal", None))
     analisado = servico.analisar(documento["id"], "projeto")
     assert analisado["campos_sugeridos"]["nome"] == "Terminal intermodal"
@@ -530,28 +535,29 @@ def test_lista_sem_processo_no_nome_continua_vazia(repo):
     assert servico.listar()[0]["numero_processo"] is None
 
 
-def test_analise_devolve_leitura_sem_gravar(repo):
+def test_leitura_e_gravada_junto_com_o_arquivo_no_envio(repo):
+    """O envio lê o PDF e grava arquivo e leitura na mesma linha. Antes a
+    leitura só existia na tela e o registro ficava vazio."""
     enviado = enviar()
-    documento = servico.analisar(enviado["id"], "projeto")
-    assert documento["numero_processo"] == "1234.00456789/2026-11"
-    assert documento["campos_sugeridos"]["nome"].startswith("Duplicacao")
     gravado = repo.obter(enviado["id"])
-    # O que a tabela do repositório mostra é gravado: situação e processo.
     assert gravado["status"] == "analisado"
     assert gravado["numero_processo"] == "1234.00456789/2026-11"
-    # A leitura em si continua fora do banco; reabrir o documento lê o PDF de novo.
-    assert gravado["campos_sugeridos"] == {}
-    assert gravado["evidencias"] == {}
+    assert gravado["campos_sugeridos"]["nome"].startswith("Duplicacao")
+    # A evidência de cada campo vai junto: é o que sustenta a sugestão.
+    assert gravado["evidencias"]["valor_global"]
+    assert gravado["analise"]["resumo"]["desfecho"] in {"sucesso", "ressalvas"}
 
 
 def test_reanalise_le_o_pdf_de_novo_com_outro_tipo(repo):
     enviado = enviar()
     assert servico.analisar(enviado["id"], "projeto")["tipo_demanda"] == "projeto"
     assert servico.analisar(enviado["id"], "plano")["tipo_demanda"] == "plano"
-    # O registro segue a última análise: é o que a tabela precisa mostrar.
-    assert repo.obter(enviado["id"])["tipo_demanda"] == "plano"
-    # Mesmo assim nenhum campo lido é gravado — a releitura sai sempre do PDF.
-    assert repo.obter(enviado["id"])["campos_sugeridos"] == {}
+    # O registro segue a última análise, leitura inclusive: reanalisar substitui
+    # o que estava gravado, em vez de acumular duas leituras divergentes.
+    gravado = repo.obter(enviado["id"])
+    assert gravado["tipo_demanda"] == "plano"
+    assert gravado["analise"]["tipo_demanda"] == "plano"
+    assert gravado["campos_sugeridos"]
 
 
 def test_identificador_invalido_nao_chega_ao_banco(repo):
@@ -584,6 +590,36 @@ def test_envio_em_lote_separa_aceito_de_recusado(repo, monkeypatch):
     corpo = resposta.json()
     assert len(corpo["recebidos"]) == 1
     assert corpo["erros"][0]["arquivo"] == "planilha.xlsx"
+
+
+def test_envio_devolve_a_leitura_ja_gravada(repo, monkeypatch):
+    """O formulário é preenchido com o que voltou do envio; não há segunda
+    chamada de análise no caminho do Enviar."""
+    client = aplicacao(repo, monkeypatch)
+    resposta = client.post("/sei/documentos", data={"tipo_demanda": "projeto"}, files=[
+        ("arquivos", ("SEI nº 020 00016588 2025 13 - oficio.pdf", pdf(OFICIO), "application/pdf")),
+    ])
+    assert resposta.status_code == 200
+    documento = resposta.json()["recebidos"][0]
+    assert documento["status"] == "analisado"
+    assert documento["numero_processo"] == "020.00016588/2025-13"
+    assert documento["campos_sugeridos"]["nome"].startswith("Duplicacao")
+    assert documento["evidencias"]["valor_global"]
+    assert documento["analise"]["resumo"]["desfecho"] in {"sucesso", "ressalvas"}
+
+
+def test_pdf_ilegivel_e_recusado_sem_derrubar_o_lote(repo, monkeypatch):
+    """PDF corrompido levanta erro do pymupdf, não ValueError. Sem tratar isso,
+    ler no envio transformava o lote inteiro em 500 em vez de recusar o arquivo."""
+    client = aplicacao(repo, monkeypatch)
+    resposta = client.post("/sei/documentos", data={"tipo_demanda": "projeto"}, files=[
+        ("arquivos", ("bom.pdf", pdf(OFICIO), "application/pdf")),
+        ("arquivos", ("corrompido.pdf", b"%PDF-lixo que nao abre", "application/pdf")),
+    ])
+    assert resposta.status_code == 200
+    assert [e["arquivo"] for e in resposta.json()["erros"]] == ["corrompido.pdf"]
+    # O recusado não deixa registro: a leitura vem antes do INSERT.
+    assert len(repo.registros) == 1
 
 
 def test_rota_de_analise_recebe_tipo(repo, monkeypatch):

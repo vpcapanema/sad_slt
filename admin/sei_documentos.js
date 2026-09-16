@@ -424,22 +424,37 @@
     if (!confirmado) return;
     const dados = new FormData();
     for (const arquivo of arquivos) dados.append('arquivos', arquivo);
+    // O tipo decide o contrato de campos, e a leitura acontece já no envio.
+    dados.append('tipo_demanda', tipo);
     q('sei-btn-enviar').disabled = true;
-    aviso('sei-upload-aviso', 'Enviando…');
+    const proc = SLTFeedback.processo(`Enviando e analisando ${arquivos.length} PDF(s)`);
+    const passo = proc.passo('O servidor está lendo cada PDF e gravando a leitura…', 'progress');
     try {
       const resultado = await request(API, { method: 'POST', body: dados });
       entrada.value = '';
+      proc.atualizar(passo, 'success', `${resultado.recebidos.length} documento(s) gravado(s) com a leitura.`);
+      proc.fechar();
       const recusados = (resultado.erros || []).map(e => `${e.arquivo}: ${e.mensagem}`).join(' ');
       aviso('sei-upload-aviso', `${resultado.recebidos.length} documento(s) recebido(s).${recusados ? ' Recusados — ' + recusados : ''}`);
       if (resultado.recebidos.length) {
-        const novos = resultado.recebidos.map(doc => adicionarNaFila(doc, tipo));
+        // A leitura veio do servidor junto do arquivo: não há o que reprocessar.
+        const novos = resultado.recebidos.map(doc => {
+          const item = adicionarNaFila(doc, tipo);
+          item.detalhe = doc;
+          item.estado = 'pronto';
+          return item;
+        });
         abrirCard();
         if (!atualId) selecionar(novos[0].id);
         else renderFila();
-        processarFila();
+        for (const item of novos) {
+          const desfecho = desfechoDaLeitura(item.nome, item.detalhe);
+          await aguardarFechamento(SLTFeedback.notify(desfecho.type, desfecho.message, desfecho.title));
+        }
       }
       await listar();
     } catch (e) {
+      proc.fechar();
       aviso('sei-upload-aviso', e.message);
     } finally { q('sei-btn-enviar').disabled = false; }
   }

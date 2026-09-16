@@ -202,3 +202,12 @@ def test_sei_espera_o_usuario_dispensar_cada_desfecho():
     documento com o do seguinte."""
     corpo = SEI_JS.split("async function processarFila()", 1)[1]
     assert "await aguardarFechamento(proc.concluir(" in corpo
+
+
+def test_sei_envia_o_tipo_e_aproveita_a_leitura_que_voltou():
+    """A leitura é gravada já no envio. Reprocessar depois leria o mesmo PDF
+    duas vezes e mostraria dois desfechos para o mesmo documento."""
+    corpo = SEI_JS.split("async function enviar(", 1)[1].split("async function init(", 1)[0]
+    assert "dados.append('tipo_demanda', tipo)" in corpo
+    assert "item.detalhe = doc" in corpo
+    assert "processarFila()" not in corpo
