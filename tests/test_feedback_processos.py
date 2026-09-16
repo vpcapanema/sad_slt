@@ -20,6 +20,8 @@ FASE1_JS = Path("hierarquizacao/js/fases.js").read_text(encoding="utf-8")
 FASE2_JS = Path("hierarquizacao/js/fase2.js").read_text(encoding="utf-8")
 FASE3_JS = Path("hierarquizacao/js/fase3.js").read_text(encoding="utf-8")
 UPLOAD_JS = Path("assets/js/paginas/cadastro-upload-camada.js").read_text(encoding="utf-8")
+SEI_JS = Path("admin/sei_documentos.js").read_text(encoding="utf-8")
+SEI_HTML = Path("templates/paginas/admin/sei_documentos.html").read_text(encoding="utf-8")
 
 TEMPLATES_DAS_CINCO_PAGINAS = [
     "templates/paginas/hierarquizacao/fase1-elegibilidade.html",
@@ -167,3 +169,36 @@ def test_finalidade_publicada_vem_do_tipo_e_nao_do_texto_livre():
     corpo = UPLOAD_JS.split("homologar-job`", 1)[1].split("});", 1)[0]
     assert 'finalidade: String(dados.get("tipo_camada") || "").trim() || null,' in corpo
     assert 'descricao: String(dados.get("finalidade") || "").trim() || null,' in corpo
+
+
+def test_sei_documentos_relata_pelo_feedback_e_nao_por_tabela_na_pagina():
+    """A leitura do PDF era despejada numa `admin-table sei-leitura-tabela` na
+    própria página; quem dá esse resultado é o modal de desfecho."""
+    assert "feedback-proprio" in SEI_HTML
+    assert "sei-leitura" not in SEI_HTML
+    assert "sei-leitura" not in SEI_JS
+    assert "admin-table sei-leitura-tabela" not in SEI_JS
+
+
+def test_sei_enviar_e_reanalisar_confirmam_antes_de_disparar():
+    for funcao, chamada in [
+        ("async function enviar(", "method: 'POST', body: dados"),
+        ("async function reanalisar(", "adicionarNaFila(doc, tipo)"),
+    ]:
+        antes = SEI_JS.split(funcao, 1)[1].split(chamada, 1)[0]
+        assert "SLTFeedback.confirmar" in antes, funcao
+
+
+def test_sei_tem_os_tres_desfechos_e_o_codigo_do_erro():
+    assert "Analisado com sucesso" in SEI_JS
+    assert "Analisado com ressalvas" in SEI_JS
+    # O código do erro é o status HTTP devolvido pela rota.
+    assert "erro.status = res.status;" in SEI_JS
+    assert "`Erro ${e.status" in SEI_JS
+
+
+def test_sei_espera_o_usuario_dispensar_cada_desfecho():
+    """Um modal por PDF: sem a espera, a fila sobrescreveria o resultado de um
+    documento com o do seguinte."""
+    corpo = SEI_JS.split("async function processarFila()", 1)[1]
+    assert "await aguardarFechamento(proc.concluir(" in corpo

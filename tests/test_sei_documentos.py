@@ -172,6 +172,124 @@ def test_campo_sem_regra_fica_ausente_e_nao_recebe_zero():
     assert leitura["numero_processo"] is None
 
 
+# O desfecho da análise alimenta o modal de status da tela de contribuições do
+# SEI: verde quando tudo que o extrator sabe ler saiu do PDF, amarelo quando
+# algo ficou em branco ou em conflito.
+
+OFICIO_COMPLETO = """PREFEITURA MUNICIPAL DE BAURU
+Assunto: Implantacao do contorno viario norte
+Descricao do objeto: Implantacao de contorno viario com 8 km de extensao, incluindo terraplenagem, pavimentacao e sinalizacao.
+Interessado: Prefeitura Municipal de Bauru - CNPJ 12.345.678/0001-90
+Representante legal: Joao Carlos Ferreira
+E-mail: obras@bauru.sp.gov.br
+Telefone: (14) 3235-1000
+Municipio: Bauru
+Valor total: R$ 25.000.000,00
+Prazo de execucao: 30 meses
+Vigencia: 01/02/2026 a 31/07/2028
+Latitude: -22,3147
+Longitude: -49,0606
+O projeto executivo concluido permite a licitacao imediata.
+"""
+
+
+def test_desfecho_verde_quando_tudo_que_o_extrator_le_veio_do_pdf():
+    resumo = processamento.analisar(pdf(OFICIO_COMPLETO), "projeto")["resumo"]
+    assert resumo["desfecho"] == "sucesso"
+    assert resumo["campos_faltando"] == []
+    assert resumo["campos_conflitantes"] == []
+    assert resumo["campos_lidos"] == resumo["campos_avaliados"]
+
+
+def test_desfecho_amarelo_nomeia_o_que_ficou_em_branco():
+    resumo = processamento.analisar(pdf(OFICIO), "projeto")["resumo"]
+    assert resumo["desfecho"] == "ressalvas"
+    # O ofício é uma lista de linhas rotuladas, sem descrição em prosa.
+    assert "descricao" in resumo["campos_faltando"]
+    assert "nome" in resumo["campos_lidos"]
+
+
+def test_desfecho_amarelo_separa_conflito_de_ausencia():
+    leitura = processamento.analisar(pdf("Valor total: R$ 100,00\nValor global: R$ 200,00"), "projeto")
+    resumo = leitura["resumo"]
+    assert resumo["desfecho"] == "ressalvas"
+    assert resumo["campos_conflitantes"] == ["valor_global"]
+    assert "valor_global" not in resumo["campos_faltando"]
+
+
+# Rótulos como o documento real escreve. O valor é neutro de propósito: com
+# "Prefeitura Municipal de X" a regra de ente municipal pesca o valor sozinha,
+# sem olhar o rótulo, e o teste passaria sem testar o que diz testar.
+INSTITUICAO = "Companhia Paulista de Obras e Servicos"
+
+
+def instituicao(texto: str) -> str | None:
+    return processamento.analisar(pdf(texto), "projeto")["campos_sugeridos"].get("instituicao_label")
+
+
+def test_rotulo_no_plural_e_lido():
+    """"Interessados:" é a forma da autuação do SEI; o `s` derrubava o casamento."""
+    assert instituicao(f"Interessado: {INSTITUICAO}") == INSTITUICAO
+    assert instituicao(f"Interessados: {INSTITUICAO}") == INSTITUICAO
+    assert instituicao(f"Requerentes: {INSTITUICAO}") == INSTITUICAO
+
+
+def test_rotulo_no_meio_da_linha_e_lido():
+    """Cabeçalho que junta processo e interessado na mesma linha."""
+    assert instituicao(f"Processo 123.456/2026 - Interessado: {INSTITUICAO}") == INSTITUICAO
+
+
+def test_rotulo_com_espacamento_entre_caracteres_e_lido():
+    assert instituicao(f"I n t e r e s s a d o: {INSTITUICAO}") == INSTITUICAO
+    assert instituicao(f"Inte r essado: {INSTITUICAO}") == INSTITUICAO
+    campos = processamento.analisar(pdf("V a l o r  t o t a l: R$ 25.000.000,00"), "projeto")["campos_sugeridos"]
+    assert campos["valor_global"] == 25000000.0
+
+
+def test_rotulo_desconhecido_nao_vira_instituicao():
+    """Controle negativo. Sem ele, uma regra que pesca o valor solto faz
+    qualquer rótulo — até um inventado — parecer reconhecido."""
+    assert instituicao(INSTITUICAO) is None
+    assert instituicao(f"Nivel de Acesso: {INSTITUICAO}") is None
+    assert instituicao(f"O documento cita a {INSTITUICAO} no anexo.") is None
+
+
+def test_ente_municipal_enderecado_nao_vira_o_proponente():
+    """A pesca de "Prefeitura Municipal de X" não distingue quem pede de quem
+    recebe: na linha de endereçamento ela preenchia a instituição errada."""
+    assert instituicao("Ao Senhor Prefeito da Prefeitura Municipal de Bauru") is None
+    # Sem endereçamento, o cabeçalho sem rótulo continua valendo.
+    assert instituicao("PREFEITURA MUNICIPAL DE MARILIA\nOficio nr 45/2026") == "PREFEITURA MUNICIPAL DE MARILIA"
+
+
+def test_nome_do_municipio_nao_absorve_a_prosa_seguinte():
+    """A captura terminava numa lista fixa de verbos. Fora dela o nome engolia
+    o resto da frase, e o erro chegava preenchido ao formulário."""
+    campos = processamento.analisar(
+        pdf("Aos interessados, a Prefeitura Municipal de Bauru informa o seguinte."), "projeto"
+    )["campos_sugeridos"]
+    assert campos["instituicao_label"] == "Prefeitura Municipal de Bauru"
+    assert campos["municipio"] == "Bauru"
+
+
+def test_nome_composto_de_municipio_e_lido_inteiro():
+    """O corte pela caixa não pode partir "Sao Jose do Rio Preto" no conector."""
+    campos = processamento.analisar(
+        pdf("A Prefeitura Municipal de Sao Jose do Rio Preto solicita apoio."), "projeto"
+    )["campos_sugeridos"]
+    assert campos["municipio"] == "Sao Jose do Rio Preto"
+
+
+def test_desfecho_ignora_campo_que_nenhuma_regra_sabe_ler():
+    """Cobrar campo sem regra faria de toda análise uma ressalva por limite do
+    próprio extrator; identificadores resolvidos no SIGMA também ficam fora."""
+    resumo = processamento.analisar(pdf(OFICIO_COMPLETO), "projeto")["resumo"]
+    avaliados = set(resumo["campos_avaliados"])
+    assert "capex_estimado" in resumo["campos_sem_regra"]
+    assert not avaliados & set(resumo["campos_sem_regra"])
+    assert not avaliados & processamento.CAMPOS_NAO_EXTRAIVEIS
+
+
 def test_coordenada_fora_de_faixa_e_descartada():
     leitura = processamento.analisar(pdf("Latitude: -991,5\nLongitude: -50,4"), "projeto")
     assert "lat" not in leitura["campos_sugeridos"]

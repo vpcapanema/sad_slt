@@ -41,6 +41,17 @@ CONFIANCA_MINIMA = 0.62
 CONFIANCA_CONFLITO = 0.08
 PENALIDADE_INVOLUCRO = 0.10
 
+# O extrator não tenta ler estes campos do PDF: são identificadores e vínculos
+# resolvidos no SIGMA ou escolhidos pelo analista. Ficam sempre
+# "aguardando_resolucao" e por isso não entram no desfecho da análise.
+CAMPOS_NAO_EXTRAIVEIS = frozenset({
+    "instituicao_id", "pessoa_id", "representante", "diretoria_id", "unidades_espaciais",
+    "geometria", "classificacao", "complementos", "plano_id", "plano_codigo",
+    "programa_codigo", "vinculo_tipo",
+})
+# Lidos pelo formato do próprio valor, sem depender de rótulo no documento.
+CAMPOS_POR_FORMATO = frozenset({"instituicao_cnpj", "representante_email", "representante_telefone"})
+
 _ROOT = Path(__file__).resolve().parents[2]
 _CONTRATO = _ROOT / "config" / "campos-cadastro-demanda.json"
 
@@ -64,6 +75,12 @@ _DECIMAL = re.compile(r"-?\d{1,3}[.,]\d+")
 _DMS = re.compile(r"(\d{1,3})\s*[°º�]\s*(?:(\d{1,2})\s*['′]\s*)?(?:(\d{1,2}(?:[.,]\d+)?)\s*[\"″]?\s*)?([NSLOWE])?", re.I)
 _PAR_DECIMAL = re.compile(r"(-?\d{1,2}[.,]\d{3,})(?:\s*[;/|]\s*|,\s+|\s+)(-?\d{1,3}[.,]\d{3,})")
 _ENUMERADOR = re.compile(r"^\s*(?:\(?\d{1,2}(?:\.\d{1,2})*[.)\-–]?|\(?[a-z][.)]|[•·*▪►\-–])\s+")
+# Linha que endereça alguém: o ente citado aqui é o destinatário, não quem pede.
+_ENDERECAMENTO = (
+    "ao senhor", "a senhora", "ao exmo", "a exma", "excelentissimo", "excelentissima",
+    "ao ilustrissimo", "a ilustrissima", "ao prefeito", "a prefeita", "ao magnifico",
+    "destinatario", "para:", "a sua excelencia",
+)
 
 # Sinônimos por campo. Comparação sem acento e sem caixa; os mais longos são
 # testados primeiro. Termos de uma palavra só valem como rótulo (com separador).
@@ -103,6 +120,8 @@ _ROTULOS: dict[str, tuple[str, ...]] = {
         "interessado", "interessada", "requerente", "solicitante", "proponente", "razao social", "instituicao",
         "instituicao proponente", "entidade", "entidade proponente", "orgao solicitante", "orgao interessado",
         "orgao proponente", "convenente", "tomador",
+        # Cabeçalho de autuação do SEI.
+        "remetente", "procedencia", "origem", "unidade geradora", "unidade de origem", "especificacao",
     ),
     "representante_nome": (
         "representante legal", "representante", "nome do representante", "responsavel legal", "responsavel",
@@ -188,10 +207,14 @@ _TERMOS_INSTITUCIONAIS = (
     "camara", "fundacao", "instituto", "universidade", "ltda", "s/a", "s.a", "consorcio", "assessoria",
     "gabinete", "diretoria", "coordenadoria",
 )
-_ENTE_MUNICIPAL = re.compile(
-    r"\b(prefeitura municipal|prefeitura|camara municipal|municipio)\s+(?:de|da|do)\s+"
-    r"([a-z' ]{2,50}?)(?=\s*(?:$|[,.;:()/]|\s[-–]\s|\bcnpj\b|\bvem\b|\bsolicit|\brequer|\bpor\b|\bno\b|\bna\b|\bem\b))"
-)
+# Gatilho do ente, casado no texto em minúscula; o nome vem logo depois.
+_ENTE_MUNICIPAL = re.compile(r"\b(prefeitura municipal|prefeitura|camara municipal|municipio)\s+(?:de|da|do)\s+")
+# O nome é uma sequência de palavras capitalizadas, com conectores no meio
+# ("Sao Jose do Rio Preto"). A primeira palavra em minúscula encerra o nome:
+# antes, a lista fixa de verbos deixava passar "Bauru informa o seguinte".
+_PALAVRA_NOME = r"[A-Z][A-Za-z']*"
+_CONECTOR_NOME = r"(?:d[aeo]s?|D[AEO]S?)"
+_NOME_MUNICIPIO = re.compile(rf"{_PALAVRA_NOME}(?:\s+(?:{_CONECTOR_NOME}\s+)?{_PALAVRA_NOME}){{0,5}}")
 _VERBOS_SOLICITACAO = (
     "solicit", "requer", "pleite", "trata-se", "vimos por meio", "vem por meio", "tem por objetivo",
     "tem por objeto", "visa ", "consiste",
@@ -229,6 +252,13 @@ class Pagina:
 
 def _sem_acento(valor: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", valor.lower()) if unicodedata.category(c) != "Mn")
+
+
+def _sem_acento_caixa(valor: str) -> str:
+    """Sem acento, preservando a caixa. É por ela que o nome do município sabe
+    onde termina: `_sem_acento` joga a caixa fora, e sem ela a prosa depois do
+    nome era indistinguível do nome."""
+    return "".join(c for c in unicodedata.normalize("NFD", valor) if unicodedata.category(c) != "Mn")
 
 
 _TODOS_ROTULOS = frozenset(
@@ -326,24 +356,56 @@ def _excluido(campo: str, texto: str) -> bool:
     return any(termo in _sem_acento(texto) for termo in _EXCLUSOES.get(campo, ()))
 
 
+def _casar_rotulo_espacado(normalizada: str, rotulo: str) -> str | None:
+    """"I n t e r e s s a d o: X" — espaçamento entre caracteres, comum em PDF
+    oficial, inclusive parcial ("Pr o cu r aç ã o", "Inte r essado").
+
+    `_limpar_texto` já colapsou os espaços, então não há como saber onde
+    terminava cada palavra: a comparação descarta todo espaço dos dois lados e
+    exige igualdade integral com o sinônimo. Só o lado do rótulo é tocado; o
+    valor sai intacto da linha original, o que preserva o alinhamento por
+    sufixo de que `_linhas_rotuladas` depende.
+    """
+    corte = re.search(r"[:\-–—=]\s*", normalizada)
+    if not corte or corte.start() > 60:
+        return None
+    cabeca = re.sub(r"\s+", "", normalizada[:corte.start()])
+    compacto = rotulo.replace(" ", "")
+    if cabeca not in {compacto, f"{compacto}s"}:
+        return None
+    return normalizada[corte.end():] or None
+
+
 def _casar_rotulo(normalizada: str, rotulo: str, campo: str) -> tuple[str | None, float]:
-    base = re.escape(rotulo)
+    # O plural é a forma de autuação do SEI ("Interessados:", "Requerentes:");
+    # sem o `s?` o sinônimo certo passa batido por causa de uma letra.
+    base = rf"{re.escape(rotulo)}s?"
     simples = re.match(rf"^{base}(?:\s*\([^)]{{0,30}}\))?\s*[:\-–—=]\s*(.+)$", normalizada)
     if simples:
         return simples.group(1), 0.92
     qualificado = re.match(rf"^{base}\s+({_QUALIFICADOR}\b[^:]{{0,50}}):\s*(.+)$", normalizada)
     if qualificado and not _excluido(campo, qualificado.group(1)):
         return qualificado.group(2), 0.88
+    # Cabeçalho que junta dois dados na linha: "Processo 123/2026 - Interessado: X".
+    meio = re.search(rf"[-–—|]\s*{base}\s*[:\-–—=]\s*(.+)$", normalizada)
+    if meio:
+        return meio.group(1), 0.86
+    espacado = _casar_rotulo_espacado(normalizada, rotulo)
+    if espacado:
+        return espacado, 0.80
     return None, 0.0
 
 
 def _so_rotulo(normalizada: str, rotulo: str) -> bool:
-    return re.fullmatch(rf"{re.escape(rotulo)}(?:\s*\([^)]{{0,30}}\))?\s*[:\-–—=]?", normalizada) is not None
+    return re.fullmatch(rf"{re.escape(rotulo)}s?(?:\s*\([^)]{{0,30}}\))?\s*[:\-–—=]?", normalizada) is not None
 
 
 def _parece_rotulo(linha: str) -> bool:
     normalizada = _sem_enumerador(_sem_acento(linha)).rstrip()
-    return normalizada.endswith(":") or normalizada.rstrip(" :-–—=") in _TODOS_ROTULOS
+    if normalizada.endswith(":"):
+        return True
+    nucleo = normalizada.rstrip(" :-–—=")
+    return nucleo in _TODOS_ROTULOS or (nucleo.endswith("s") and nucleo[:-1] in _TODOS_ROTULOS)
 
 
 def _linhas_rotuladas(paginas: Iterable[Pagina], campo: str, tipo: TipoDemanda = "projeto") -> list[dict[str, Any]]:
@@ -469,14 +531,26 @@ def _entes_municipais(paginas: Iterable[Pagina], campo: str) -> list[dict[str, A
     candidatos = []
     for pagina in paginas:
         for linha in pagina.texto.splitlines():
-            normalizada = _sem_acento(linha)
-            for match in _ENTE_MUNICIPAL.finditer(normalizada):
+            # A caixa é preservada aqui e descartada só na comparação: as duas
+            # formas têm o mesmo comprimento, então as posições valem na linha
+            # original.
+            caixa = _sem_acento_caixa(linha)
+            normalizada = caixa.lower()
+            # Sem rótulo, a pesca não distingue quem pede de quem recebe: numa
+            # linha de endereçamento ela preenchia a instituição errada com
+            # aparência de acerto.
+            if any(normalizada.startswith(marca) for marca in _ENDERECAMENTO):
+                continue
+            for gatilho in _ENTE_MUNICIPAL.finditer(normalizada):
+                nome = _NOME_MUNICIPIO.match(caixa, gatilho.end())
+                if not nome:
+                    continue
                 if campo == "instituicao_label":
-                    if match.group(1) == "municipio":
+                    if gatilho.group(1) == "municipio":
                         continue
-                    valor = linha[match.start():match.end()]
+                    valor = linha[gatilho.start():nome.end()]
                 else:
-                    valor = linha[match.start(2):match.end(2)]
+                    valor = linha[nome.start():nome.end()]
                 if valor.strip():
                     candidatos.append(_candidato(pagina, valor.strip(), linha, 0.7))
     return candidatos
@@ -689,6 +763,19 @@ def numero_processo(conteudo: bytes) -> str | None:
     return _resultado("numero_processo", _candidatos_formato(paginas, _PROCESSO, "processo")).get("valor_normalizado")
 
 
+def com_regra(campo: str, tipo: TipoDemanda) -> bool:
+    """Existe alguma estratégia capaz de ler este campo do PDF?
+
+    Campo sem regra nenhuma nunca seria preenchido; cobrá-lo no desfecho
+    transformaria toda análise em ressalva por um limite do próprio extrator.
+    """
+    if campo in CAMPOS_POR_FORMATO:
+        return True
+    if campo == "maturidade_objeto":
+        return tipo == "projeto"
+    return bool(_ROTULOS.get(campo) or _ROTULOS_POR_TIPO.get(tipo, {}).get(campo))
+
+
 def analisar(conteudo: bytes, tipo: TipoDemanda = "projeto") -> dict[str, Any]:
     contrato = json.loads(_CONTRATO.read_text(encoding="utf-8"))
     campos_contrato = contrato["tipos_objeto"][tipo]["campos"]
@@ -696,7 +783,7 @@ def analisar(conteudo: bytes, tipo: TipoDemanda = "projeto") -> dict[str, Any]:
     resultados: dict[str, Any] = {}
     extraiveis = set(campos_contrato) | {"instituicao_label", "representante_nome", "representante_email", "representante_telefone", "municipio"}
     for campo in sorted(extraiveis):
-        if campo in {"instituicao_id", "pessoa_id", "representante", "diretoria_id", "unidades_espaciais", "geometria", "classificacao", "complementos", "plano_id", "plano_codigo", "programa_codigo", "vinculo_tipo"}:
+        if campo in CAMPOS_NAO_EXTRAIVEIS:
             resultados[campo] = {"estado": "aguardando_resolucao", "confianca": 0.0, "evidencias": [], "candidatos": []}
             continue
         resultados[campo] = _resultado(campo, _candidatos_campo(campo, paginas, tipo))
@@ -709,14 +796,29 @@ def analisar(conteudo: bytes, tipo: TipoDemanda = "projeto") -> dict[str, Any]:
         for campo, resultado in resultados.items()
         if resultado.get("estado") == "normalizado" and resultado.get("confianca", 0) >= CONFIANCA_MINIMA
     }
+    # Desfecho da análise. Só entra no julgamento o que o extrator sabe procurar
+    # neste tipo: campo sem regra e campo resolvido no SIGMA ficam de fora.
+    avaliados = sorted(c for c in resultados if c not in CAMPOS_NAO_EXTRAIVEIS and com_regra(c, tipo))
+    conflitantes = [c for c in avaliados if resultados[c]["estado"] == "conflitante"]
+    # Valor abaixo da confiança mínima também não chega ao formulário: falta igual.
+    faltando = [c for c in avaliados if c not in preenchiveis and c not in conflitantes]
+    resumo = {
+        "desfecho": "sucesso" if not faltando and not conflitantes else "ressalvas",
+        "campos_avaliados": avaliados,
+        "campos_lidos": [c for c in avaliados if c in preenchiveis],
+        "campos_faltando": faltando,
+        "campos_conflitantes": conflitantes,
+        "campos_sem_regra": sorted(c for c in resultados if c not in CAMPOS_NAO_EXTRAIVEIS and not com_regra(c, tipo)),
+    }
     return {
-        "versao": "2.1.0",
+        "versao": "2.2.0",
         "tipo_demanda": tipo,
         "numero_processo": numero_processo.get("valor_normalizado"),
         "campos": resultados,
         "campos_sugeridos": preenchiveis,
         "ausentes": [campo for campo, resultado in resultados.items() if resultado["estado"] in {"nao_encontrado", "aguardando_resolucao"}],
         "conflitos": [campo for campo, resultado in resultados.items() if resultado["estado"] == "conflitante"],
+        "resumo": resumo,
         "paginas": [{
             "numero": pagina.numero,
             "metodo": pagina.metodo,

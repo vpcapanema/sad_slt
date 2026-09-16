@@ -7,12 +7,6 @@
 .sei-form .sei-envio-acao { align-self: end; }
 .sei-form .sei-envio-acao button { margin: 0; }
 
-/* A tabela da leitura mostra valor e trecho de origem lado a lado; o trecho
-   pode ser longo, então a área rola em vez de esticar o modal. */
-.sei-leitura { margin-bottom: 1rem; }
-.sei-leitura-tabela { max-height: 260px; display: block; overflow: auto; }
-.sei-leitura-tabela th { text-align: left; white-space: nowrap; }
-
 .sei-acoes { white-space: nowrap; }
 
 /* Botões de ícone da coluna Ações: cada função com sua cor; no hover a cor preenche o botão. */

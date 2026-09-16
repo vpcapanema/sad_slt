@@ -46,7 +46,10 @@
     }
     if (!res.ok) {
       const detail = body?.detail;
-      throw new Error(typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map(x => x.msg).join('; ') : 'Não foi possível concluir a operação.');
+      const erro = new Error(typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map(x => x.msg).join('; ') : 'Não foi possível concluir a operação.');
+      // O código do erro é o status HTTP; ele nomeia o modal de desfecho.
+      erro.status = res.status;
+      throw erro;
     }
     return body;
   }
@@ -108,7 +111,7 @@
   async function executar(botao, doc, acao) {
     if (acao === 'baixar') { window.open(`${API}/${doc.id}/arquivo`, '_blank', 'noopener'); return; }
     if (acao === 'formulario') { abrirDaTabela(doc); return; }
-    if (acao === 'reanalisar') { reanalisar(doc); return; }
+    if (acao === 'reanalisar') { await reanalisar(doc); return; }
     botao.disabled = true;
     try {
       if (acao === 'excluir') {
@@ -146,10 +149,19 @@
     processarFila();
   }
 
-  function reanalisar(doc) {
-    const item = adicionarNaFila(doc, q('sei-tipo-demanda').value);
+  async function reanalisar(doc) {
+    const tipo = q('sei-tipo-demanda').value;
+    const confirmado = await SLTFeedback.confirmar({
+      title: 'Reanalisar o PDF',
+      message: `${doc.nome_arquivo} será lido de novo, agora como ${tipo}.`,
+      detail: 'O formulário aberto deste documento é recarregado do zero: o que você já tiver editado nele se perde. O PDF e o registro no repositório não mudam, e nenhuma demanda é criada por esta ação.',
+      confirmLabel: 'Reanalisar',
+      danger: true,
+    });
+    if (!confirmado) return;
+    const item = adicionarNaFila(doc, tipo);
     // Descarta a leitura anterior (inclusive uma ainda em andamento) e recarrega o formulário limpo.
-    item.tipo = q('sei-tipo-demanda').value;
+    item.tipo = tipo;
     item.estado = 'aguardando';
     item.detalhe = null;
     item.erro = '';
@@ -183,15 +195,25 @@
         const execucao = item.execucao;
         renderFila();
         atualizarStatus();
+        const proc = SLTFeedback.processo(`Analisando ${item.nome}`);
+        const passo = proc.passo('Lendo o PDF e extraindo os campos…', 'progress');
         try {
           const leitura = await post(`${API}/${item.id}/analisar`, { tipo_demanda: item.tipo });
-          if (execucao !== item.execucao) continue; // reanalisado durante a leitura: vale a nova
+          if (execucao !== item.execucao) { proc.fechar(); continue; } // reanalisado durante a leitura: vale a nova
           item.detalhe = leitura;
           item.estado = 'pronto';
+          proc.atualizar(passo, 'success', 'PDF lido pelo servidor.');
+          await aguardarFechamento(proc.concluir(desfechoDaLeitura(item.nome, leitura)));
         } catch (e) {
-          if (execucao !== item.execucao) continue;
+          if (execucao !== item.execucao) { proc.fechar(); continue; }
           item.estado = 'erro';
           item.erro = e.message;
+          proc.atualizar(passo, 'error', 'Leitura interrompida.');
+          await aguardarFechamento(proc.concluir({
+            type: 'error',
+            title: `Erro ${e.status || 'de conexão'} — não foi possível analisar`,
+            message: `${item.nome}: ${e.message}`,
+          }));
         }
         renderFila();
         if (item.id === atualId) aplicarNoFormulario(item);
@@ -230,7 +252,6 @@
     frameSeq += 1;
     observadorAltura?.disconnect();
     q('sei-formulario-frame').removeAttribute('src');
-    q('sei-leitura').innerHTML = '';
     erroFormulario('');
     q('sei-formulario-status').textContent = '';
     q('sei-fila').innerHTML = '';
@@ -284,7 +305,6 @@
     const seq = ++frameSeq;
     const frame = q('sei-formulario-frame');
     erroFormulario('');
-    q('sei-leitura').innerHTML = item.detalhe ? leituraHtml(item.detalhe) : '';
     atualizarStatus();
     frame.onload = async () => {
       if (seq !== frameSeq) return;
@@ -306,7 +326,6 @@
     if (item.id !== atualId) return;
     atualizarStatus();
     if (formularioProntoSeq !== frameSeq || item.estado !== 'pronto') return;
-    q('sei-leitura').innerHTML = leituraHtml(item.detalhe);
     try {
       const preenchidos = q('sei-formulario-frame').contentWindow.SLTCadastroEmbed.preencher(item.detalhe);
       q('sei-formulario-status').textContent = `${preenchidos} campo(s) preenchido(s) a partir do PDF (destacados em verde). Revise e complete o formulário.`;
@@ -315,26 +334,46 @@
     }
   }
 
-  function leituraHtml(detalhe) {
-    const campos = detalhe.campos_sugeridos || {};
-    const evidencias = detalhe.evidencias || {};
-    const resultados = detalhe.analise?.campos || {};
-    const chaves = Object.keys(ROTULOS).filter(chave => chave in campos || chave in resultados || chave === 'numero_processo' && detalhe.numero_processo);
-    const linhas = chaves.map(chave => {
-      const valor = chave === 'numero_processo' ? detalhe.numero_processo : campos[chave];
-      const resultado = resultados[chave] || {};
-      const candidatos = (resultado.candidatos || []).map(c => String(c.valor)).join(' | ');
-      const exibido = valor ?? (resultado.estado === 'conflitante' ? `Conflito: ${candidatos}` : 'Não encontrado');
-      const texto = chave === 'descricao' ? String(exibido).slice(0, 400) : exibido;
-      const lista = resultado.evidencias || (Array.isArray(evidencias[chave]) ? evidencias[chave] : [evidencias[chave]].filter(Boolean));
-      const origem = lista.map(e => typeof e === 'string' ? e : `p. ${e.pagina}: ${e.trecho || ''}`).join(' | ');
-      const estado = resultado.estado ? ` (${resultado.estado}, ${Math.round((resultado.confianca || 0) * 100)}%)` : '';
-      return `<tr><th scope="row">${esc(ROTULOS[chave] + estado)}</th><td>${esc(texto)}</td><td class="hint">${esc(origem)}</td></tr>`;
-    }).join('');
-    const ausentes = detalhe.analise?.ausentes || Object.keys(ROTULOS).filter(chave => !chaves.includes(chave));
-    return `<details class="sei-leitura"><summary>O que o sistema leu do PDF (${chaves.length} campos)</summary>
-      <table class="admin-table sei-leitura-tabela"><tbody>${linhas || '<tr><td>Nenhum campo reconhecido.</td></tr>'}</tbody></table>
-      ${ausentes.length ? `<p class="hint">Sem valor conclusivo, para você preencher: ${esc(ausentes.map(x => ROTULOS[x] || x).join(', '))}.</p>` : ''}</details>`;
+  // -------------------------------------------------------------- desfecho
+
+  const rotular = (chaves) => chaves.map(chave => ROTULOS[chave] || chave).join(', ');
+
+  // O desfecho fica na tela até o usuário dispensá-lo; só então o próximo PDF
+  // da fila começa, para que nenhum resultado passe despercebido.
+  function aguardarFechamento(backdrop) {
+    const raiz = backdrop?.parentNode;
+    if (!raiz) return Promise.resolve();
+    return new Promise(resolve => {
+      const observador = new MutationObserver(() => {
+        if (backdrop.isConnected) return;
+        observador.disconnect();
+        resolve();
+      });
+      observador.observe(raiz, { childList: true });
+    });
+  }
+
+  function desfechoDaLeitura(nome, leitura) {
+    const resumo = leitura.analise?.resumo;
+    if (!resumo) {
+      return { type: 'success', title: 'Analisado', message: `${nome}: leitura concluída. Revise o formulário e confirme.` };
+    }
+    const total = resumo.campos_avaliados.length;
+    if (resumo.desfecho === 'sucesso') {
+      return {
+        type: 'success',
+        title: 'Analisado com sucesso',
+        message: `${nome}: os ${total} campos que o sistema sabe ler foram extraídos do PDF, cada um com o trecho que o sustenta. Revise o formulário e confirme para criar a demanda.`,
+      };
+    }
+    const ressalvas = [];
+    if (resumo.campos_faltando.length) ressalvas.push(`sem valor sustentado no PDF: ${rotular(resumo.campos_faltando)}`);
+    if (resumo.campos_conflitantes.length) ressalvas.push(`com valores concorrentes, nenhum escolhido: ${rotular(resumo.campos_conflitantes)}`);
+    return {
+      type: 'warning',
+      title: 'Analisado com ressalvas',
+      message: `${nome}: ${resumo.campos_lidos.length} de ${total} campos vieram do PDF. Ficaram em branco para você preencher — ${ressalvas.join('; ')}.`,
+    };
   }
 
   async function confirmar() {
@@ -374,8 +413,17 @@
     const entrada = q('sei-arquivos');
     if (!entrada.files.length) return;
     const tipo = q('sei-tipo-demanda').value;
+    // A seleção é copiada antes do modal: o input não é tocado durante a espera.
+    const arquivos = [...entrada.files];
+    const confirmado = await SLTFeedback.confirmar({
+      title: 'Enviar e analisar PDFs do SEI',
+      message: `${arquivos.length} arquivo(s) para o formulário de ${tipo}: ${arquivos.map(a => a.name).join(', ')}.`,
+      detail: 'Cada PDF é guardado no repositório e lido em seguida, um de cada vez. A leitura só preenche o que estiver sustentado no documento. Nenhuma demanda é criada agora: você ainda revisa e confirma cada formulário.',
+      confirmLabel: 'Enviar e analisar',
+    });
+    if (!confirmado) return;
     const dados = new FormData();
-    for (const arquivo of entrada.files) dados.append('arquivos', arquivo);
+    for (const arquivo of arquivos) dados.append('arquivos', arquivo);
     q('sei-btn-enviar').disabled = true;
     aviso('sei-upload-aviso', 'Enviando…');
     try {

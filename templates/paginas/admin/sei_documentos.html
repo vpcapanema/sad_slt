@@ -5,7 +5,7 @@
 {% set requer_autenticacao = true %}
 
 {% block titulo %}Contribuições do SEI — Admin SLT{% endblock %}
-{% block classes_body %}admin-data-page escala-revisada sei-page{% endblock %}
+{% block classes_body %}admin-data-page escala-revisada sei-page feedback-proprio{% endblock %}
 {% block base_url %}<base href="/restrict/">{% endblock %}
 
 {% block estilos_pagina %}
@@ -92,7 +92,6 @@
         <p class="step-intro">Os PDFs são processados na ordem da fila. Clique em um item para ver no formulário oficial o que foi extraído dele, complete o que faltar e confirme.</p>
         <ol id="sei-fila" class="sei-fila" aria-label="Fila de PDFs"></ol>
         <p id="sei-formulario-status" class="hint" role="status"></p>
-        <div id="sei-leitura"></div>
         <iframe id="sei-formulario-frame" class="sei-formulario-frame" title="Formulário oficial de cadastro da demanda"></iframe>
         <p id="sei-formulario-erro" class="hint sei-erro" role="alert"></p>
         <div class="btn-row sei-formulario-acoes">
