@@ -293,6 +293,22 @@ def test_parentese_solto_nao_vira_email():
     assert "representante_email" not in leitura["campos_sugeridos"]
 
 
+CABECALHO_COM_RUIDO_DE_BRASAO = """PREFEITURA MUNICIPAL DE DOIS CORREGOS CA
+Relatorio sobre a importancia da ferrovia para o desenvolvimento local.
+No municipio de Dois Corregos, destaca-se o museu ferroviario da cidade.
+"""
+
+
+def test_letra_solta_do_brasao_nao_entra_no_nome_do_municipio():
+    """O OCR cola o brasão como uma ou duas letras no fim do cabeçalho — "CA"
+    na VM, "<" aqui. Sem cortar, o documento conflitava consigo mesmo: o nome
+    com ruído e o nome do corpo viravam valores diferentes."""
+    leitura = processamento.analisar(pdf(CABECALHO_COM_RUIDO_DE_BRASAO), "projeto")
+    assert leitura["campos"]["municipio"]["estado"] == "normalizado"
+    assert processamento._sem_acento(leitura["campos_sugeridos"]["municipio"]) == "dois corregos"
+    assert leitura["campos_sugeridos"]["instituicao_label"].endswith("DOIS CORREGOS")
+
+
 def test_mesma_grafia_em_caixas_diferentes_nao_vira_conflito():
     """O nome em caixa alta no cabeçalho e normal no corpo virava dois valores
     distintos: empatavam em confiança, davam conflito e o campo ficava vazio —

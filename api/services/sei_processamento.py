@@ -242,6 +242,11 @@ _ENTE_MUNICIPAL = re.compile(r"\b(prefeitura municipal|prefeitura|camara municip
 _PALAVRA_NOME = r"[A-Z][A-Za-z']*"
 _CONECTOR_NOME = r"(?:d[aeo]s?|D[AEO]S?)"
 _NOME_MUNICIPIO = re.compile(rf"{_PALAVRA_NOME}(?:\s+(?:{_CONECTOR_NOME}\s+)?{_PALAVRA_NOME}){{0,5}}")
+# Brasão ao lado do cabeçalho vira letra solta no fim da linha: a mesma
+# prefeitura saiu como "DOIS CÓRREGOS CA" na VM e "DOIS CÓRREGOS <" aqui. Como
+# nome de município não termina em token de uma ou duas letras, o resto é ruído
+# de reconhecimento — e sem cortá-lo o documento conflitava consigo mesmo.
+_RUIDO_NO_FIM_DO_NOME = re.compile(r"(?:\s+[A-Za-z]{1,2})+$")
 # Fecho de cortesia. Em ofício brasileiro a assinatura de quem pede vem depois
 # dele; o bloco de endereçamento (o destinatário) vem antes, e às vezes também
 # no rodapé da última página — por isso posição na página não resolve sozinha.
@@ -645,12 +650,18 @@ def _entes_municipais(paginas: Iterable[Pagina], campo: str) -> list[dict[str, A
                 nome = _NOME_MUNICIPIO.match(caixa, gatilho.end())
                 if not nome:
                     continue
+                fim = nome.end()
+                ruido = _RUIDO_NO_FIM_DO_NOME.search(caixa, nome.start(), fim)
+                if ruido:
+                    fim = ruido.start()
+                if fim <= nome.start():
+                    continue
                 if campo == "instituicao_label":
                     if gatilho.group(1) == "municipio":
                         continue
-                    valor = linha[gatilho.start():nome.end()]
+                    valor = linha[gatilho.start():fim]
                 else:
-                    valor = linha[nome.start():nome.end()]
+                    valor = linha[nome.start():fim]
                 if valor.strip():
                     candidatos.append(_candidato(pagina, valor.strip(), linha, 0.7))
     return candidatos
