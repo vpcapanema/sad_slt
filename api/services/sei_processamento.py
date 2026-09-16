@@ -62,14 +62,25 @@ _PROCESSO = re.compile(r"\b\d{3}[ .]\d{8}[ /]\d{4}[ -]\d{2}\b|\b\d{3,5}\.\d{6,8}
 # zero sobrando, então é normalizado para oito dígitos.
 _PROCESSO_NO_NOME = re.compile(r"(\d{3})[\s.]+(\d[\d\s]{6,12}?)[\s.]+(\d{4})[\s.]+(\d{2})(?!\d)")
 _PREFIXO_SEI = re.compile(r"^SEI\s*n?[ºo°]?\s*[\d\s.]+(?:\s*e\s*[\d\s./-]+)?\s*[-–]?\s*", re.I)
-# Tipo documental e canal de entrega não nomeiam projeto nenhum.
-_TIPO_DOCUMENTAL = re.compile(
-    r"^(?:oficio|of|ofic|email|e[\s_-]?mail|gs|memorando|carta|planilha\s+orcamentaria|"
-    r"planilha|apresentacao|estudo|livro|anexo|doc|protocolo)\b[\s\-–.]*", re.I)
+# Canal e formato de entrega não dizem nada sobre o objeto: saem fora. O tipo de
+# conteúdo (planilha orçamentária, estudo, apresentação) PERMANECE, porque é o
+# que o documento é — removê-lo transformava "PLANILHA ORCAMENTARIA TERMINAL"
+# em "TERMINAL", que sugere outro objeto.
+_CANAL_DOCUMENTAL = re.compile(
+    r"^(?:oficio|of|ofic|email|e[\s_-]?mail|gs|memorando|carta|protocolo|anexo|doc|sn)"
+    r"\b[\s\-–.]*", re.I)
 _CANAL_NO_NOME = re.compile(r"\s*[-–]\s*(?:outlook|protocolo\s+spi|email|e[\s_-]?mail)\b.*$", re.I)
-_NOME_SEM_VALOR = re.compile(r"^(?:untitled|xerox\s*scan|scan|img|digitalizar|sn)\b", re.I)
-_VERBO_DE_PEDIDO = re.compile(
-    r"\b(?:solicitacao|proposta|projeto|implantacao|criacao|revitalizacao)\b", re.I)
+# Descritor do arquivo, não do objeto: "digitalizado.pdf" nomeia o formato do
+# que foi entregue, não o que está sendo pedido.
+_NOME_SEM_VALOR = re.compile(
+    r"^(?:untitled|xerox\s*scan|scan|img|digitaliza(?:r|d[oa])|escanead[oa])\b", re.I)
+# Arquivo que é só o canal de encaminhamento.
+_SO_CANAL = re.compile(r"^(?:email|e[\s_-]?mail|gs)\b", re.I)
+# Palavra genérica sozinha não nomeia projeto; preencheria o formulário com nada.
+_TITULO_GENERICO = re.compile(r"^(?:projeto|plano|programa|documento|proposta)$", re.I)
+# Só estes abrem o nome do objeto. "projeto", "criacao" e "implantacao" costumam
+# fazer parte do próprio nome, e cortar ali destruía títulos bons.
+_VERBO_DE_PEDIDO = re.compile(r"\b(?:solicitacao|proposta)\b", re.I)
 # Abaixo de qualquer rótulo do documento (0,92 / 0,88 / 0,85): onde o documento
 # diz "Assunto:", o texto é melhor que o nome do arquivo. A folga precisa passar
 # de CONFIANCA_CONFLITO, senão os dois empatam e o campo some em vez de escolher.
@@ -928,7 +939,12 @@ def titulo_no_nome(nome_arquivo: str | None) -> str | None:
     titulo = re.sub(r"\.pdf$", "", nome_arquivo.strip(), flags=re.I)
     titulo = _PREFIXO_SEI.sub("", titulo)
     titulo = re.sub(r"_{2,}", " - ", titulo).replace("_", " ")
-    titulo = _CANAL_NO_NOME.sub("", re.sub(r"\s{2,}", " ", titulo).strip(" -–"))
+    titulo = re.sub(r"\s{2,}", " ", titulo).strip(" -–")
+    # Decidido antes de remover qualquer token: o que sobraria de "Email - PM
+    # Assis" é o remetente, não um objeto.
+    if _NOME_SEM_VALOR.match(titulo) or _SO_CANAL.match(titulo):
+        return None
+    titulo = _CANAL_NO_NOME.sub("", titulo)
     titulo = re.sub(r"^[\d.]+\s*[-–]?\s*", "", titulo)
     pedido = _VERBO_DE_PEDIDO.search(titulo)
     if pedido and pedido.start() > 0:
@@ -938,14 +954,14 @@ def titulo_no_nome(nome_arquivo: str | None) -> str | None:
         anterior = None
         while titulo != anterior:
             anterior = titulo
-            titulo = _TIPO_DOCUMENTAL.sub("", titulo)
+            titulo = _CANAL_DOCUMENTAL.sub("", titulo)
             if re.match(r"^(?:n[º°o]?\.?\s*)?\d", titulo):
                 titulo = re.sub(r"^(?:n[º°o]?\.?\s*)?[\d.\/-]+[\s\-–]*", "", titulo)
             titulo = titulo.strip(" -–")
     titulo = re.sub(r"\s{2,}", " ", titulo).strip(" -–")
-    if len(titulo) < 10 or _NOME_SEM_VALOR.match(titulo):
+    if len(titulo) < 6 or _NOME_SEM_VALOR.match(titulo) or _TITULO_GENERICO.match(titulo):
         return None
-    if len(re.findall(r"[A-Za-zÀ-ÿ]{3,}", titulo)) < 2:
+    if not re.search(r"[A-Za-zÀ-ÿ]{4,}", titulo):
         return None
     return titulo[:200]
 

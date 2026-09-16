@@ -483,12 +483,36 @@ def test_escala_abreviada_do_valor_e_reconhecida():
 
 
 def test_nome_de_arquivo_sem_titulo_nao_vira_nome_de_projeto():
-    """Controle negativo: tipo documental e digitalização não nomeiam projeto."""
+    """Controle negativo: digitalização, canal de entrega e número solto não
+    nomeiam projeto."""
     for arquivo in ("SEI nº 028 00000036 2025 60 - Xerox_Scan_06182025163457001.PDF",
                     "SEI nº 002 00005157 2025 31 - Untitled_16102025_114628.pdf",
                     "SEI nº 020 000017519 2025 19 - Oficio_n__1.145_2025.pdf",
-                    "SEI nº 020 00016588 2025 13 - PLANILHA_ORCAMENTARIA_TERMINAL.pdf"):
+                    "SEI nº 020 00016588 2025 13 - Email___PM_Assis.pdf"):
         assert processamento.titulo_no_nome(arquivo) is None, arquivo
+
+
+def test_tipo_de_conteudo_permanece_no_nome_do_objeto():
+    """"Planilha orçamentária do terminal" descreve o documento; reduzir a
+    "TERMINAL" sugeria que o objeto era o terminal, e não o orçamento dele."""
+    assert processamento.titulo_no_nome(
+        "SEI nº 020 00016588 2025 13 - PLANILHA_ORCAMENTARIA_TERMINAL.pdf"
+    ) == "PLANILHA ORCAMENTARIA TERMINAL"
+    assert processamento.titulo_no_nome(
+        "SEI nº 020 00007603 2025 24 - ESTUDO_CRIACAO_ZPE__PERUIBE____AENBIO.pdf"
+    ).startswith("ESTUDO")
+
+
+def test_palavra_do_proprio_nome_nao_corta_o_titulo():
+    """"Projeto" e "criação" fazem parte do nome; cortar ali reduzia o título a
+    uma palavra genérica, que era então descartada — perdendo o nome inteiro."""
+    assert processamento.titulo_no_nome(
+        "SEI nº 020 00016588 2025 13 - 04__Praca_Terminal_Urbano_de_Passageiros___Projeto.pdf"
+    ) == "Praca Terminal Urbano de Passageiros - Projeto"
+    # "Solicitacao" continua abrindo o nome, que é para o que a regra serve.
+    assert processamento.titulo_no_nome(
+        "SEI nº 020 000 13968 2025 98 - Oficio_Bracell_n__043___2025___Solicitacao_Porto_Presidente_Epitacio___SP.pdf"
+    ) == "Solicitacao Porto Presidente Epitacio - SP"
 
 
 def test_desfecho_ignora_campo_que_nenhuma_regra_sabe_ler():
