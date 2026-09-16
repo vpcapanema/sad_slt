@@ -63,16 +63,18 @@ def inserir(
     texto: str,
     status: str,
     aviso: str | None,
+    numero_processo: str | None = None,
 ) -> dict[str, Any]:
     with get_connection() as conn:
         cur = conn.execute(
             f"""
             INSERT INTO integracoes.sei_documento (
                 usuario_id, usuario_nome, nome_arquivo, sha256, tamanho_bytes,
-                conteudo, paginas, texto, status, aviso
+                conteudo, paginas, texto, status, aviso, numero_processo
             ) VALUES (
                 %(usuario_id)s, %(usuario_nome)s, %(nome_arquivo)s, %(sha256)s,
-                %(tamanho_bytes)s, %(conteudo)s, %(paginas)s, %(texto)s, %(status)s, %(aviso)s
+                %(tamanho_bytes)s, %(conteudo)s, %(paginas)s, %(texto)s, %(status)s,
+                %(aviso)s, %(numero_processo)s
             )
             RETURNING {_COLUNAS}
             """,
@@ -87,11 +89,41 @@ def inserir(
                 "texto": texto,
                 "status": status,
                 "aviso": aviso,
+                "numero_processo": numero_processo,
             },
         )
         row = cur.fetchone()
         assert row is not None
         return dict(row)
+
+
+def marcar_analisado(
+    documento_id: str,
+    *,
+    numero_processo: str | None,
+    tipo_demanda: str,
+) -> dict[str, Any] | None:
+    """Move a situação para 'analisado' e grava as colunas que a lista mostra.
+
+    O conteúdo da leitura continua fora do banco; aqui entram só o que a tabela
+    do repositório exibe. `COALESCE` preserva o número já gravado quando a nova
+    análise não encontra nenhum, e o filtro por `demanda_id` impede que um
+    documento que já gerou demanda regrida de situação.
+    """
+    with get_connection() as conn:
+        cur = conn.execute(
+            f"""
+            UPDATE integracoes.sei_documento
+            SET status = 'analisado',
+                tipo_demanda = %(tipo_demanda)s,
+                numero_processo = COALESCE(%(numero_processo)s, numero_processo)
+            WHERE id = %(id)s AND demanda_id IS NULL
+            RETURNING {_COLUNAS}
+            """,
+            {"id": documento_id, "numero_processo": numero_processo, "tipo_demanda": tipo_demanda},
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
 
 
 def marcar_demanda(documento_id: str, demanda_id: str) -> dict[str, Any] | None:

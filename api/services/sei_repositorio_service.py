@@ -67,11 +67,27 @@ def receber(*, conteudo: bytes, nome_arquivo: str, usuario_id: str, usuario_nome
         usuario_id=usuario_id, usuario_nome=usuario_nome or "", nome_arquivo=nome,
         sha256=digest, tamanho_bytes=len(conteudo), conteudo=conteudo,
         paginas=paginas, texto="", status="recebido", aviso=aviso,
+        # O SEI carimba o processo no nome do arquivo: é uma propriedade do
+        # documento, conhecida no recebimento, e não um resultado da análise.
+        numero_processo=sei_processamento.numero_no_nome(nome),
     )
 
 
 def listar() -> list[dict[str, Any]]:
-    return repo.listar()
+    """Lista os documentos com o processo que o SEI carimbou no nome do arquivo.
+
+    A leitura não é gravada, então o registro nunca guarda o número e a coluna
+    aparecia vazia mesmo quando o processo estava no nome. O registro em si
+    continua intocado: o número é acrescentado só na resposta.
+    """
+    documentos = []
+    for documento in repo.listar():
+        if not documento.get("numero_processo"):
+            numero = sei_processamento.numero_no_nome(documento.get("nome_arquivo"))
+            if numero:
+                documento = {**documento, "numero_processo": numero}
+        documentos.append(documento)
+    return documentos
 
 
 def obter(documento_id: str) -> dict[str, Any]:
@@ -115,6 +131,14 @@ def analisar(documento_id: str, tipo_demanda: sei_processamento.TipoDemanda = "p
         for campo, resultado in analise["campos"].items()
         if resultado.get("evidencias")
     }
+    # A leitura em si continua sem ir para o banco; o que é gravado são as
+    # colunas que a lista do repositório mostra: situação e processo.
+    gravado = repo.marcar_analisado(
+        documento["id"],
+        numero_processo=analise["numero_processo"],
+        tipo_demanda=tipo_demanda,
+    )
+    documento = gravado or documento
     return {
         **documento,
         "tipo_demanda": tipo_demanda,

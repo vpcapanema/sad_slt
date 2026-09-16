@@ -73,6 +73,14 @@ class RepositorioFalso:
         self.registros[registro["id"]] = registro
         return registro
 
+    def marcar_analisado(self, documento_id, *, numero_processo, tipo_demanda):
+        registro = self.registros.get(str(documento_id))
+        if not registro or registro["demanda_id"]:
+            return None
+        registro.update(status="analisado", tipo_demanda=tipo_demanda,
+                        numero_processo=numero_processo or registro["numero_processo"])
+        return registro
+
     def marcar_demanda(self, documento_id, demanda_id):
         registro = self.registros.get(str(documento_id))
         if not registro or registro["demanda_id"]:
@@ -508,21 +516,42 @@ def test_pdf_sem_texto_e_aceito_para_ocr(repo, monkeypatch):
     assert analisado["campos_sugeridos"]["nome"] == "Terminal intermodal"
 
 
+def test_processo_do_nome_e_gravado_no_recebimento(repo):
+    """A coluna Processo da tabela ficava vazia porque nada a preenchia. O
+    número é propriedade do arquivo, conhecida antes de qualquer análise."""
+    enviar(nome="SEI nº 020 00016588 2025 13 - 02___Terminal_Urbano.pdf",
+           texto="Planta do terminal, sem rotulos internos.")
+    assert repo.listar()[0]["numero_processo"] == "020.00016588/2025-13"
+    assert servico.listar()[0]["numero_processo"] == "020.00016588/2025-13"
+
+
+def test_lista_sem_processo_no_nome_continua_vazia(repo):
+    enviar(nome="anexo_sem_processo.pdf", texto="Documento qualquer.")
+    assert servico.listar()[0]["numero_processo"] is None
+
+
 def test_analise_devolve_leitura_sem_gravar(repo):
     enviado = enviar()
     documento = servico.analisar(enviado["id"], "projeto")
     assert documento["numero_processo"] == "1234.00456789/2026-11"
     assert documento["campos_sugeridos"]["nome"].startswith("Duplicacao")
     gravado = repo.obter(enviado["id"])
-    assert gravado["status"] == "recebido"
-    assert gravado["campos_sugeridos"] == {} and gravado["numero_processo"] is None
+    # O que a tabela do repositório mostra é gravado: situação e processo.
+    assert gravado["status"] == "analisado"
+    assert gravado["numero_processo"] == "1234.00456789/2026-11"
+    # A leitura em si continua fora do banco; reabrir o documento lê o PDF de novo.
+    assert gravado["campos_sugeridos"] == {}
+    assert gravado["evidencias"] == {}
 
 
 def test_reanalise_le_o_pdf_de_novo_com_outro_tipo(repo):
     enviado = enviar()
     assert servico.analisar(enviado["id"], "projeto")["tipo_demanda"] == "projeto"
     assert servico.analisar(enviado["id"], "plano")["tipo_demanda"] == "plano"
-    assert repo.obter(enviado["id"])["tipo_demanda"] == "projeto"
+    # O registro segue a última análise: é o que a tabela precisa mostrar.
+    assert repo.obter(enviado["id"])["tipo_demanda"] == "plano"
+    # Mesmo assim nenhum campo lido é gravado — a releitura sai sempre do PDF.
+    assert repo.obter(enviado["id"])["campos_sugeridos"] == {}
 
 
 def test_identificador_invalido_nao_chega_ao_banco(repo):
