@@ -114,6 +114,10 @@ def _camadas(raiz: str, arquivos: list[tuple[str, Path]]) -> list[dict[str, Any]
                 nomes = fiona.listlayers(origem)
             except Exception:
                 continue
+            # GeoJSON, Shapefile e afins nomeiam a camada pelo arquivo: no storage
+            # ela leva o nome gravado, não o do arquivo temporário da inspeção.
+            if nomes == [origem.stem]:
+                nomes = [nome_arquivo]
             for nome in nomes:
                 camadas.append({"id": f"storage:{caminho}::{nome}", "tipo": "vetor", "arquivo": caminho,
                                 "nome": nome_arquivo if len(nomes) == 1 else nome})

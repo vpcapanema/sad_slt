@@ -61,7 +61,8 @@ class UploadStorageTest(unittest.TestCase):
         self.assertEqual(self.storage.enviados["superficies-indices/pontos_teste.geojson"], _geojson())
         self.assertEqual(resultado["pasta"], "superficies-indices")
         camada = resultado["camadas"][0]
-        self.assertTrue(camada["id"].startswith("storage:superficies-indices/pontos_teste.geojson::"))
+        # A camada de um GeoJSON leva o nome do arquivo gravado, não o do staging.
+        self.assertEqual(camada["id"], "storage:superficies-indices/pontos_teste.geojson::pontos_teste")
         self.assertEqual(camada["nome"], "pontos_teste")
         # Servidor local: a cópia do storage recebe o mesmo arquivo.
         self.assertTrue((Path(self.espelho.name) / "superficies-indices" / "pontos_teste.geojson").is_file())
