@@ -843,6 +843,26 @@ async def iniciar_importacao_validada_com_progresso(
     )
 
 
+@router.post("/storage/upload/job", status_code=status.HTTP_202_ACCEPTED)
+async def enviar_arquivo_ao_storage(
+    token_importacao: str = Form(...),
+    pasta: str = Form(...),
+    reprojetar_crs: str | None = Form(None),
+    recortar_camada_id: str | None = Form(None),
+) -> dict:
+    """Grava no storage do SICARD, em uma das pastas publicadas, o arquivo inspecionado."""
+    from api.services.upload_storage import pasta_destino
+    try:
+        pasta_destino(pasta)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return geoprocessamento_jobs.create_storage_upload(
+        token_importacao.strip(), pasta,
+        target_crs=(reprojetar_crs or "").strip() or None,
+        clip_layer_id=(recortar_camada_id or "").strip() or None,
+    )
+
+
 @router.post("/camadas/importar-job", status_code=status.HTTP_202_ACCEPTED)
 async def iniciar_importacao_com_logs(arquivo: UploadFile = File(...)) -> dict:
     """Recebe o upload e inicia importação auditável em nanotarefas."""

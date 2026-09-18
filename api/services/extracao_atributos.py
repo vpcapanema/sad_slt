@@ -74,6 +74,20 @@ def iniciar(payload, user):
     input_id = payload['input_id']
     if input_id not in layers:
         raise ValueError('A camada de entrada não está disponível no catálogo vetorial.')
+    from api.services.extracao_atributos_regras import normalizar_entrada, normalizar_finalidades
+    configs = {item['id']: item.get('config') for item in payload.get('entradas') or []}
+    if payload['operacao'] != 'enriquecimento' and (len(configs) > 1 or set(configs) - {input_id}
+                                                    or payload.get('finalidades')):
+        raise ValueError('Várias entradas, configuração de entrada e finalidades só existem no modo enriquecimento.')
+    # A entrada principal vem primeiro; as adicionais seguem na ordem informada.
+    entradas = []
+    for ident in [input_id, *[i for i in configs if i != input_id]]:
+        if ident not in layers:
+            raise ValueError('Camada de entrada indisponível no catálogo vetorial.')
+        entradas.append({'id': ident, 'nome': layers[ident]['nome'], 'config': normalizar_entrada(configs.get(ident))})
+    if len({e['nome'] for e in entradas}) != len(entradas):
+        raise ValueError('Duas camadas de entrada têm o mesmo nome no catálogo.')
+    ids_entrada = {e['id'] for e in entradas}
     used, selected = set(), []
     for group in payload['categorias']:
         if group['id'] not in categories:
@@ -82,17 +96,22 @@ def iniciar(payload, user):
             raise ValueError('Categoria repetida.')
         bases = []
         for ident in group['camadas']:
-            if ident not in layers or ident == input_id or ident in used:
+            if ident not in layers or ident in ids_entrada or ident in used:
                 raise ValueError('Base indisponível, repetida ou igual à entrada.')
-            used.add(ident); bases.append(layers[ident])
+            used.add(ident)
+            bases.append({**layers[ident],'regra':(group.get('regras') or {}).get(ident)})
         selected.append({**categories[group['id']],'camadas':bases})
+    # Regras por base normalizadas e checadas entre bases; ficam registradas nos parâmetros.
+    from api.services.extracao_atributos_regras import validar_conjunto
+    selected = validar_conjunto(selected)
     from api.services.extracao_atributos_analise import OPCOES_PADRAO
     opcoes = {chave: bool((payload.get('opcoes') or {}).get(chave, valor))
               for chave, valor in OPCOES_PADRAO.items()}
     params = {'camada_id':input_id,'camada_ids':sorted(used),'categorias':selected,'responsavel':str(user.id),
               'responsavel_nome':getattr(user,'nome',None),
               'operacao':payload['operacao'],'opcoes':opcoes,'input_nome':layers[input_id]['nome'],
-              'nome_saida':str(payload.get('nome_saida') or '').strip()[:200]}
+              'nome_saida':str(payload.get('nome_saida') or '').strip()[:200],
+              'entradas':entradas,'finalidades':normalizar_finalidades(payload.get('finalidades'))}
     ident = ciclo.iniciar('extracao_atributos',params,str(user.id))
     with _lock: _progress[ident] = [_etapa('Na fila de processamento')]
     try:
@@ -125,6 +144,9 @@ def _execute(ident, params):
         source = carregar_para_extracao(params['camada_id'])
         categories = [{**c,'camadas':[{**b,'frame':carregar_para_extracao(b['id'])} for b in c['camadas']]}
                       for c in params['categorias']]
+        if params['operacao'] == 'enriquecimento':
+            _executar_enriquecimento(ident,params,source,categories,progress,inicio)
+            return
         result, frame = analisar(source,categories,params['operacao'],progress,params.get('opcoes'))
         progress('Montando a tabela de atributos da geometria de saída')
         from api.services.extracao_atributos_saida import montar as montar_tabela_saida
@@ -178,6 +200,83 @@ def _execute(ident, params):
     finally:
         ciclo.execucao_atual.reset(token)
         with _lock: _progress.pop(ident,None)
+
+
+def _jsonavel(valor):
+    """Escalares NumPy e datas viram tipos que o Jsonb aceita."""
+    return json.loads(json.dumps(valor, ensure_ascii=False,
+                                 default=lambda v: v.item() if hasattr(v, 'item') else str(v)))
+
+
+def _executar_enriquecimento(ident, params, source, categories, progress, inicio):
+    """Modo enriquecimento: um registro por feição (ou trecho), com as regras de cada base."""
+    from hashlib import sha256
+    import pandas as pd
+    from api.services import extracao_atributos_pacote_enriquecimento as pacote_enriquecimento
+    from api.services.extracao_atributos_enriquecimento import enriquecer
+    from api.services.extracao_atributos_pacote import ambiente
+    from api.services.municipal_layer import carregar_para_extracao
+    # A entrada principal já foi carregada; as adicionais são lidas aqui.
+    lista = params.get('entradas') or [{'id':params['camada_id'],'nome':params['input_nome'],'config':{}}]
+    frames = {params['camada_id']:source}
+    entradas = [{**e,'frame':frames.get(e['id']) if e['id'] in frames else carregar_para_extracao(e['id'])}
+                for e in lista]
+    saida = enriquecer(categorias=categories,progress=progress,entradas=entradas,
+                       finalidades=[{'nome':f['nome'],'campos':f['campos']} for f in params.get('finalidades') or []])
+    nome_saida = params.get('nome_saida') or f"Extração de {params['input_nome']}"
+    camadas = {}
+    for nome, frame in saida['camadas'].items():
+        progress(f'Gravando a camada {nome} no banco')
+        camadas[nome] = {'camada_resultado_id':geo.registrar_camada(frame,f'{nome_saida} — {nome}','OP-05',
+                                                                     linhagem=params,gravar_arquivo=False),
+                         'registros':len(frame),'campos':len(frame.columns)-1}
+    progress('Registrando a procedência da entrada e das bases')
+    entrada = _procedencia(params['camada_id'],params['input_nome'],source)
+    entradas_proc = [{**_procedencia(e['id'],e['nome'],e['frame']),'config':e['config']} for e in entradas]
+    bases = [{**_procedencia(b['id'],b['nome'],b['frame']),'categoria':c['nome'],'categoria_id':c['id']}
+             for c in categories for b in c['camadas']]
+    etapas_motor = [etapa for info in saida['relatorio']['camadas'].values() for etapa in info['etapas']]
+    tocadas = {e['base'].split(' [')[0] for e in etapas_motor if e.get('registros_com_correspondencia')}
+    registros = sum(item['registros'] for item in camadas.values())
+    fim = datetime.now(timezone.utc)
+    from osgeo import gdal
+    geojson = json.loads(pd.concat([frame[[frame.geometry.name]].assign(camada=nome).to_crs(4326)
+                                    for nome, frame in saida['camadas'].items()]).to_json(default=str))
+    result = {'id':ident,'modo':'enriquecimento','operacao':'enriquecimento','input_id':params['camada_id'],
+              'input_nome':params['input_nome'],'criado_em':fim.isoformat(),'gdal':gdal.VersionInfo('RELEASE_NAME'),
+              'camada_resultado_id':next(iter(camadas.values()))['camada_resultado_id'],'camadas':camadas,
+              'resumo':{'ocorrencias':registros,'camadas_intersectadas':len(tocadas)},
+              'relatorio_enriquecimento':saida['relatorio'],'dicionario':saida['dicionario'],'categorias':[],
+              'validacao':saida['relatorio']['validacao'],'entradas':entradas_proc,
+              'finalidades':{chave:{'nome':item['nome'],'campos':item['campos']} for chave,item in saida['finalidades'].items()},
+              'geojson':geojson}
+    with _lock: etapas = list(_progress.get(ident) or [])
+    configuracao = {'execucao_id':ident,'nome_saida':nome_saida,'modo':'enriquecimento',
+                    'iniciado_em':inicio.isoformat(),'finalizado_em':fim.isoformat(),'entrada':entrada,
+                    'entradas':entradas_proc,'finalidades':params.get('finalidades') or [],
+                    'categorias':[{'id':c['id'],'nome':c['nome'],
+                                   'camadas':[{'id':b['id'],'nome':b['nome'],'regra':b['regra']} for b in c['camadas']]}
+                                  for c in categories],
+                    'bases':bases,'resultado':{'camadas':camadas,'relatorio':saida['relatorio']},
+                    'etapas':etapas,'ambiente':ambiente()}
+    progress('Gerando o pacote de saída: GeoPackage, CSV, XLSX, dicionário e configuração')
+    pacote, nome_pacote, manifesto = pacote_enriquecimento.montar_pacote(
+        saida['camadas'],source,saida['dicionario'],_jsonavel(configuracao),nome_saida,
+        finalidades=saida['finalidades'],validacao=_jsonavel(saida['relatorio']['validacao']))
+    progress(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
+    with _lock: etapas = list(_progress.get(ident) or [])
+    with get_connection() as conn:
+        conn.execute('''INSERT INTO geoprocessamento.extracao_atributos
+            (execucao_id,nome_saida,operacao,responsavel,entrada,entrada_geojson,bases,camada_resultado_id,
+             relatorio,etapas,pacote,pacote_nome,pacote_sha256,pacote_tamanho_bytes,pacote_arquivos)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+            (ident,nome_saida,'enriquecimento',params.get('responsavel'),Jsonb(_jsonavel(entrada)),
+             Jsonb(json.loads(source.to_crs(4674).to_json(default=str))),Jsonb(_jsonavel(bases)),
+             result['camada_resultado_id'],Jsonb(_jsonavel(result)),Jsonb(etapas),pacote,nome_pacote,
+             sha256(pacote).hexdigest(),len(pacote),Jsonb(manifesto)))
+        for item in camadas.values():
+            ciclo.registrar_uso(conn,item['camada_resultado_id'],'relatorio',ident)
+    ciclo.finalizar(ident)
 
 
 def consultar(ident, user, completo=False):
@@ -282,11 +381,16 @@ def excluir_execucao(ident, user):
     # com a execução (ON DELETE CASCADE).
     ident = consultar(ident,user)['id']
     with get_connection() as conn:
-        linha = conn.execute('SELECT camada_resultado_id FROM geoprocessamento.extracao_atributos WHERE execucao_id=%s',
-                             (ident,)).fetchone()
+        linha = conn.execute('''SELECT camada_resultado_id,relatorio->'camadas' AS camadas
+            FROM geoprocessamento.extracao_atributos WHERE execucao_id=%s''',(ident,)).fetchone()
     if not linha:
         raise LookupError('Esta extração não tem pacote de saída.')
-    repo.excluir(linha['camada_resultado_id'])
+    # O modo enriquecimento grava uma camada por tipo de geometria: todas saem juntas.
+    ids = {linha['camada_resultado_id']}
+    if isinstance(linha['camadas'], dict):
+        ids |= {item.get('camada_resultado_id') for item in linha['camadas'].values() if item.get('camada_resultado_id')}
+    for camada_id in sorted(ids):
+        repo.excluir(camada_id)
     with get_connection() as conn:
         conn.execute('DELETE FROM geoprocessamento.arquivo_resultado_uso WHERE referencia=%s',(ident,))
         conn.execute("DELETE FROM geoprocessamento.execucao_arquivo WHERE id=%s AND operacao='extracao_atributos'",(ident,))

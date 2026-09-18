@@ -1,11 +1,11 @@
-/* Lista de montagem da subseção 1.1: o usuário escolhe uma categoria, marca suas
+/* Lista de montagem da subseção 1.2: o usuário escolhe uma categoria, marca suas
    camadas, troca de categoria e repete. Nada vai para a bancada antes de confirmar. */
 import { $, el, feedback } from './ui.js';
-import { json, post } from './api.js';
+import { base, json, post } from './api.js';
 import { confirmarExecucao, acompanharExecucao } from './processo.js';
 
 const ROTULO = {
-  confirmar: 'Confirmar e enviar à bancada',
+  confirmar: 'Confirmar as bases da análise (também desenha no mapa)',
   salvar: 'Salvar esta lista como configuração',
   editar: 'Editar a lista: adicionar ou remover camadas',
   carregar: 'Carregar arquivo de configuração',
@@ -13,7 +13,7 @@ const ROTULO = {
   cancelar: 'Cancelar as mudanças desta lista',
 };
 
-export function criarListaCamadas(state, changed) {
+export function criarListaCamadas(state, changed, escolherCamadas) {
   let editando = false;
   const secao = $('#ea-staging');
   const box = $('#ea-staging-list');
@@ -60,6 +60,16 @@ export function criarListaCamadas(state, changed) {
       const grupo = el('div', undefined, 'ea-staging-group');
       const head = el('div', undefined, 'ea-staging-group-head');
       head.append(el('strong', category.nome), el('span', String(itens.length), 'ea-badge'));
+      if (editando && escolherCamadas) {
+        // Em edição, o + abre o explorador já na categoria deste grupo.
+        const mais = el('button', '+', 'ea-btn ea-staging-add');
+        mais.type = 'button';
+        mais.title = `Adicionar camadas à categoria ${category.nome}`;
+        mais.setAttribute('aria-label', mais.title);
+        mais.disabled = state.busy;
+        mais.addEventListener('click', () => escolherCamadas(category.id));
+        head.append(mais);
+      }
       grupo.append(head);
       for (const item of itens) {
         const rotulo = nomeArquivo(item);
@@ -109,9 +119,9 @@ export function criarListaCamadas(state, changed) {
     const total = state.staging.length;
     const semCaminho = state.staging.filter(item => !caminhoDe(item)).map(item => nomeArquivo(item));
     const confirmado = await confirmarExecucao({
-      titulo: 'Enviar camadas à bancada',
-      chamada: 'Cada categoria vira um grupo no painel de camadas.',
-      acao: 'Enviar à bancada',
+      titulo: 'Confirmar as bases da análise',
+      chamada: 'As bases confirmadas entram na análise e são desenhadas no mapa, agrupadas por categoria.',
+      acao: 'Confirmar bases',
       totalCamadas: total,
       categorias: grupos.map(({ category, itens }) => ({
         nome: category.nome, camadas: itens.map(item => ({ nome: nomeArquivo(item) })),
@@ -165,9 +175,21 @@ export function criarListaCamadas(state, changed) {
     if (!nome.trim()) { feedback('Informe um nome para a configuração.'); return; }
     botoes.salvar.disabled = true;
     try {
-      const grupos = agrupar().map(({ category, itens }) => ({ id: category.id, camadas: itens.map(item => item.id) }));
-      const resultado = await post('/extracao-atributos/configuracoes', { nome: nome.trim(), categorias: grupos });
-      feedback(`Configuração "${resultado.nome}" salva: ${resultado.camadas} camada(s) em ${resultado.categorias} categoria(s).`
+      // A regra de cada base (modo enriquecimento) vai junto na configuração.
+      const grupos = agrupar().map(({ category, itens }) => ({
+        id: category.id, camadas: itens.map(item => item.id),
+        regras: Object.fromEntries(itens.filter(item => item.regra).map(item => [item.id, item.regra])),
+      }));
+      // A análise inteira: bases com regra, entradas (identificador, filtro, campos) e finalidades.
+      const entradas = [
+        ...(state.input ? [{ id: state.input, config: state.inputConfig || {} }] : []),
+        ...state.entradasExtras.map(item => ({ id: item.id, config: item.config || {} })),
+      ];
+      const finalidades = (state.finalidades || []).map(f => ({ nome: f.nome, campos: [...f.campos] }));
+      const resultado = await post('/extracao-atributos/configuracoes',
+        { nome: nome.trim(), categorias: grupos, entradas, finalidades });
+      feedback(`Configuração "${resultado.nome}" salva: ${resultado.camadas} camada(s) em ${resultado.categorias} categoria(s),`
+        + ` ${resultado.entradas} entrada(s) e ${resultado.finalidades} finalidade(s).`
         + (resultado.camadas_ignoradas ? ` ${resultado.camadas_ignoradas} camada(s) do plugin não entram na configuração.` : ''));
     } catch (error) {
       feedback(`Não foi possível salvar: ${error.message}`);
@@ -188,7 +210,8 @@ export function criarListaCamadas(state, changed) {
       const vindas = dados.categorias.flatMap(grupo => grupo.camadas.map(camada => {
         const noCatalogo = state.catalog.find(l => l.id === camada.id);
         if (noCatalogo && camada.arquivo && !noCatalogo.arquivo) noCatalogo.arquivo = camada.arquivo;
-        return { id: camada.id, category: grupo.id, arquivo: camada.arquivo || noCatalogo?.arquivo || '' };
+        return { id: camada.id, category: grupo.id, arquivo: camada.arquivo || noCatalogo?.arquivo || '',
+          ...(camada.regra ? { regra: camada.regra } : {}) };
       }));
       const jaNaLista = [], jaNaBancada = [];
       let incluidas = 0;
@@ -202,9 +225,24 @@ export function criarListaCamadas(state, changed) {
         state.staging.push(item);
         incluidas++;
       }
+      // Entradas e finalidades vêm da configuração; a entrada principal é a primeira.
+      const entradas = dados.entradas || [];
+      if (entradas.length) {
+        state.input = entradas[0].id;
+        state.inputConfig = entradas[0].config || null;
+        state.entradasExtras = entradas.slice(1).map(item => ({ id: item.id, config: item.config || null }));
+      }
+      if (dados.finalidades?.length) state.finalidades = dados.finalidades.map(f => ({ nome: f.nome, campos: [...f.campos] }));
       ancora = state.staging.map(item => ({ ...item }));
       render();
+      if (entradas.length || dados.finalidades?.length) {
+        window.SICARDExtracao?.renderEntradas?.();
+        window.SICARDExtracao?.renderFinalidades?.();
+        window.SICARDExtracao?.renderSelecao?.();
+      }
       const partes = [`Configuração "${dados.nome}": ${incluidas} camada(s) acrescentada(s); a lista ficou com ${state.staging.length}.`];
+      if (entradas.length) partes.push(`Entrada principal: ${entradas[0].nome}${entradas.length > 1 ? ` (+${entradas.length - 1} adicional(is))` : ''}.`);
+      if (dados.finalidades?.length) partes.push(`${dados.finalidades.length} finalidade(s) restaurada(s).`);
       if (jaNaLista.length) partes.push(`${jaNaLista.length} já estava(m) na lista em outra categoria e foi(ram) mantida(s) onde estava(m): ${jaNaLista.join(', ')}.`);
       if (jaNaBancada.length) partes.push(`${jaNaBancada.length} já está(ão) na bancada: ${jaNaBancada.join(', ')}.`);
       if (dados.ausentes.length) partes.push(`${dados.ausentes.length} referência(s) não estão mais no catálogo: ${dados.ausentes.join(', ')}.`);
@@ -262,6 +300,7 @@ function escolherConfiguracao(configuracoes, pasta = '') {
         escolhido = item.chave;
         linhas.forEach(node => node.setAttribute('aria-pressed', String(node === linha)));
         confirmar.disabled = false;
+        excluir.disabled = false;
       });
       linha.ondblclick = () => fechar(item.chave);
       linha.setAttribute('aria-pressed', 'false');
@@ -288,11 +327,41 @@ function escolherConfiguracao(configuracoes, pasta = '') {
     const confirmar = el('button', pasta ? 'Abrir' : 'Carregar', 'ea-btn ea-btn-primary');
     confirmar.type = 'button';
     confirmar.disabled = true;
+    // A API tinha DELETE /configuracoes/{chave}, mas a tela não oferecia como apagar.
+    const excluir = el('button', 'Excluir', 'ea-btn ea-config-excluir');
+    excluir.type = 'button';
+    excluir.disabled = true;
+    excluir.addEventListener('click', async () => {
+      const indice = configuracoes.findIndex(item => item.chave === escolhido);
+      if (indice < 0) return;
+      const item = configuracoes[indice];
+      if (!window.confirm(`Excluir a configuração "${item.nome}"? O arquivo salvo será apagado e não pode ser recuperado.`)) return;
+      excluir.disabled = true;
+      confirmar.disabled = true;
+      try {
+        // Resposta 204 sem corpo: json() tentaria ler JSON e falharia.
+        const response = await fetch(`${base}/extracao-atributos/configuracoes/${encodeURIComponent(item.chave)}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const dados = await response.json().catch(() => ({}));
+          throw new Error(typeof dados.detail === 'string' ? dados.detail : 'Falha ao excluir a configuração.');
+        }
+        linhas[indice].remove();
+        linhas.splice(indice, 1);
+        configuracoes.splice(indice, 1);
+        escolhido = null;
+        feedback(`Configuração "${item.nome}" excluída.`);
+        if (!configuracoes.length) fechar(null);
+      } catch (error) {
+        feedback(`Não foi possível excluir: ${error.message}`);
+        excluir.disabled = false;
+        confirmar.disabled = false;
+      }
+    });
     function fechar(valor) { dialog.close(); dialog.remove(); resolve(valor); }
     cancelar.addEventListener('click', () => fechar(null));
     confirmar.addEventListener('click', () => fechar(escolhido));
     dialog.addEventListener('cancel', event => { event.preventDefault(); fechar(null); });
-    rodape.append(cancelar, confirmar);
+    rodape.append(excluir, cancelar, confirmar);
     dialog.append(titulo, ...(caminho ? [caminho, filtro] : []), lista, rodape);
     document.body.append(dialog);
     dialog.showModal();

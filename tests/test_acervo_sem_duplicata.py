@@ -69,20 +69,20 @@ def test_upload_respeita_a_pasta_escolhida(tmp_path, monkeypatch):
     assert resultado.original_path.parent.name == "MINHA PASTA"
 
 
-def test_interface_permite_escolher_ou_criar_pasta():
-    """O campo é <input list>: sugere as existentes sem impedir um nome novo."""
+def test_interface_escolhe_uma_das_pastas_do_storage():
+    """O upload grava no storage do SICARD, na pasta escolhida entre as publicadas."""
     pagina = Path("templates/paginas/geoespacial/visualizador-inputs.html").read_text(
         encoding="utf-8"
     )
-    assert 'id="import-pasta"' in pagina
-    assert 'list="import-pastas-existentes"' in pagina
-    assert "<datalist id=\"import-pastas-existentes\">" in pagina
+    assert '<select id="import-pasta" name="pasta" required>' in pagina
+    assert '<option value="base-geoespacial">' in pagina
+    assert '<option value="superficies-indices">' in pagina
 
     script = Path("geoespacial/geoespacial-visualizador-inputs.js").read_text(
         encoding="utf-8"
     )
     assert 'data.append("pasta", pasta)' in script, "a pasta escolhida deve ser enviada"
-    assert "preencherPastasExistentes" in script
+    assert "/storage/upload/job" in script
 
 
 def test_backend_nomeia_o_conceito_como_pasta():

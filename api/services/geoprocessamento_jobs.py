@@ -292,6 +292,32 @@ class GeoprocessamentoJobs:
         except Exception as exc:
             self._fail(job_id, exc)
 
+    def create_storage_upload(
+        self, inspection_token: str, raiz: str | None, *, target_crs: str | None = None,
+        clip_layer_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Envia ao storage o arquivo já inspecionado, na pasta escolhida no upload."""
+        tasks = ["Solicitação de upload registrada", "Envio ao storage iniciado", "Processo finalizado"]
+        job_id = self._new("upload_storage", tasks)
+        self._advance(job_id, "Solicitação de upload registrada", {"pasta": raiz})
+        self._executor.submit(self._run_storage_upload, job_id, inspection_token, raiz,
+                              target_crs, clip_layer_id)
+        return self.get(job_id) or {}
+
+    def _run_storage_upload(
+        self, job_id: str, inspection_token: str, raiz: str | None,
+        target_crs: str | None, clip_layer_id: str | None,
+    ) -> None:
+        from api.services.upload_storage import enviar_ao_storage
+        try:
+            self._advance(job_id, "Envio ao storage do SICARD iniciado")
+            callback: Callable[[str], None] = lambda label: self._append_dynamic(job_id, label)
+            result = enviar_ao_storage(inspection_token, raiz, target_crs=target_crs,
+                                       clip_layer_id=clip_layer_id, progress=callback)
+            self._complete(job_id, result)
+        except Exception as exc:
+            self._fail(job_id, exc)
+
     def _run_import(
         self, job_id: str, name: str, content: bytes, digest: str,
         existing: dict[str, Any] | None,

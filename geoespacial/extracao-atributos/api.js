@@ -30,7 +30,8 @@ export const adaptador={
     // opcoes do operador do OGR ficavam para tras e o servidor usava os padroes.
     const job=await post('/extracao-atributos/execucoes',{input_id:request.input.id,operacao:request.operacao,
       nome_saida:request.nome_saida||'',opcoes:request.opcoes||{},
-      categorias:request.categorias.map(c=>({id:c.id,camadas:c.camadas.map(l=>l.id)}))});
+      categorias:request.categorias.map(c=>({id:c.id,camadas:c.camadas.map(l=>l.id),regras:c.regras||{}})),
+      entradas:request.entradas||[],finalidades:request.finalidades||[]});
     sessionStorage.setItem('slt-extracao-ultima',job.id);
     return esperar(job,id=>`/extracao-atributos/execucoes/${id}`,aoAtualizar);
   },

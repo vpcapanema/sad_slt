@@ -82,7 +82,7 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 .ea-execute .ea-hint { margin:0 0 7px; }
 /* Configuração: proporções e cabeçalhos do Geoprocessamento — SLT da fase 2,
    restritos a esta seção para preservar a bancada e os resultados. */
-#ea-config { border-radius:8px; box-shadow:0 4px 20px #00000014; }
+#ea-config { border-radius:8px; box-shadow:0 4px 20px #00000014; --ea-altura-campo:36px; }
 #ea-config>.ea-section-head { background:var(--pli-deep,#003b5a); padding:.75rem 1.5rem; gap:.5rem; }
 #ea-config>.ea-section-head h2 { color:#fff; font-family:"Montserrat",Verdana,sans-serif; font-size:.8125rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
 #ea-config .ea-number { background:linear-gradient(135deg,#3ec26e,#116593); font-size:1rem; }
@@ -121,7 +121,8 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 /* Enquanto a lista está em edição, o botão fica visivelmente ativo. */
 #ea-config .ea-staging-symbol.is-active { color:#fff; background:#294c65; border-color:#294c65; }
 .ea-staging-actions { display:flex; justify-content:center; gap:.4rem; margin-top:.5rem; }
-#ea-config .ea-staging-symbol { flex:0 0 32px; display:grid; place-items:center; width:32px; height:32px; min-height:32px; padding:0; border-radius:4px; background:#fff; font-size:.8rem; }
+/* Com rótulo ao lado do ícone: seis botões só com símbolo obrigavam a passar o mouse. */
+#ea-config .ea-staging-symbol { flex:0 0 auto; display:inline-flex; align-items:center; gap:.35rem; height:32px; min-height:32px; padding:0 .55rem; border-radius:4px; background:#fff; font-size:.75rem; }
 #ea-config .ea-staging-symbol:first-child { color:#fff; background:var(--pli-blue,#116593); border-color:var(--pli-blue,#116593); }
 #ea-config .ea-staging-symbol:first-child:hover:not(:disabled) { background:#0d4f74; }
 .ea-config-dialog { width:min(520px,92vw); border:1px solid #ccd6df; border-radius:8px; padding:1.1rem 1.2rem; }
@@ -221,7 +222,10 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 .ea-main tbody tr:nth-child(even) { background:#f8fafc; }
 .ea-main details dl { display:grid; grid-template-columns:minmax(90px,1fr) 2fr; gap:5px 14px; }.ea-main dt { font-weight:600; }.ea-main dd { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
 .ea-export { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; border-top:1px solid #dce4eb; padding-top:18px; }.ea-export h3 { margin-bottom:4px; }.ea-export .ea-hint { margin:0; }.ea-export-controls { display:flex; gap:8px; }
-.ea-feedback { position:sticky; bottom:16px; background:#173e58; color:white; border-radius:5px; padding:12px 18px; z-index:500; box-shadow:0 3px 15px #173e5822; font-size:.84rem; }.ea-feedback:empty { display:none; }
+.ea-feedback { position:sticky; bottom:16px; display:flex; align-items:center; gap:.75rem; background:#173e58; color:white; border-radius:5px; padding:12px 18px; z-index:500; box-shadow:0 3px 15px #173e5822; font-size:.84rem; }.ea-feedback:empty { display:none; }
+.ea-feedback-texto { flex:1; min-width:0; }
+.ea-feedback-fechar { flex:0 0 auto; width:24px; height:24px; padding:0; border:1px solid #ffffff55; border-radius:4px; background:transparent; color:#fff; font-size:1rem; line-height:1; cursor:pointer; }
+.ea-feedback-fechar:hover { background:#ffffff22; }
 .ea-sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
 .ea-tool-dialog { width:min(520px,calc(100% - 32px)); max-height:85vh; overflow:auto; border:1px solid #bdcbd7; border-radius:8px; padding:24px; color:#243447; font-family:inherit; }
 .ea-tool-dialog::backdrop { background:#173e5899; }
@@ -353,3 +357,121 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 .ea-acoes-linha .admin-icon-btn { width:2rem; height:2rem; font-size:.82rem; }
 .ea-indice-tabela input[data-k] { width:100%; min-width:16rem; min-height:2rem; padding:.3rem .5rem; border:1px solid #cbd6dd; border-radius:.35rem; font:inherit; font-size:.82rem; }
 .standard-section-action-row a.btn { text-decoration:none; }
+
+/* Modo enriquecimento: botão de regra por base e editor da regra. */
+.ea-regra-botao { margin-left: .4rem; padding: .1rem .5rem; font-size: .78rem; }
+.ea-regra-dialog { width: min(720px, 94vw); }
+.ea-regra-corpo { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .6rem 1rem; max-height: 70vh; overflow: auto; }
+.ea-regra-campo textarea, .ea-regra-campo input[type="text"], .ea-regra-campo input[type="number"] { width: 100%; }
+.ea-regra-grupo { display: contents; }
+.ea-regra-grupo[hidden] { display: none; }
+.ea-regra-erro { grid-column: 1 / -1; color: #a33; min-height: 1.2em; margin: 0; }
+.ea-staging-add { margin-left: auto; padding: 0 .5rem; }
+.ea-config-excluir { margin-right: auto; }
+
+/* Bases confirmadas na 1.1, entradas na 1.2, finalidades na 1.3. */
+.ea-bases-confirmadas { margin-top: .6rem; padding-top: .6rem; border-top: 1px solid #e2e8ee; }
+.ea-base-confirmada { display: flex; align-items: center; gap: .5rem; padding: .15rem 0 .15rem .6rem; }
+.ea-base-confirmada > span { flex: 1; min-width: 0; font-size: .78rem; overflow-wrap: anywhere; }
+.ea-entradas, .ea-finalidades { margin-top: .7rem; padding-top: .6rem; border-top: 1px solid #e2e8ee; }
+.ea-entradas .ea-execucao-linha, .ea-finalidades .ea-execucao-linha { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .25rem 0; font-size: .8rem; }
+.ea-execucao-estimativa { color: #33566d; font-style: italic; }
+.ea-finalidade-dialog { width: min(680px, 94vw); }
+.ea-finalidade-campos { max-height: 46vh; overflow: auto; margin: .4rem 0; border: 1px solid #dce3ea; border-radius: 4px; padding: .3rem .5rem; }
+.ea-finalidade-campo { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .5rem; margin: .1rem 0; font-size: .8rem; }
+.ea-finalidade-campo input { width: auto; margin: 0; }
+.ea-finalidade-campo small { color: #6b7d8a; }
+/* A classe display:grid vencia o [hidden] do navegador e o filtro não escondia nada. */
+.ea-finalidade-campo[hidden] { display: none !important; }
+
+/* Card 1: três subcards do mesmo tamanho (1.1 entrada, 1.2 bases, 1.3 saída).
+   Campos estreitos para não cortar nem sobrepor conteúdo. */
+#ea-config .ea-config-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+#ea-config .ea-config-grid-3 > .ea-panel { display: flex; flex-direction: column; height: 100%; }
+#ea-config .ea-config-grid-3 > .ea-panel > .ea-config-card-title { min-height: 3.1rem; align-items: center; }
+#ea-config .ea-config-grid-3 .ea-config-card-body { flex: 1; display: flex; flex-direction: column; gap: .5rem; padding: .7rem .8rem; min-width: 0; }
+#ea-config .ea-config-grid-3 .ea-hint { margin: 0 0 .2rem; }
+#ea-config .ea-config-grid-3 .ea-field { min-width: 0; }
+#ea-config .ea-config-grid-3 .ea-field > small { overflow-wrap: anywhere; font-size: .68rem; }
+#ea-config .ea-config-grid-3 input:not([type=hidden]), #ea-config .ea-config-grid-3 select { width: 100%; max-width: 230px; height: var(--ea-altura-campo); min-height: var(--ea-altura-campo); font-size: .78rem; }
+/* Dois campos na mesma linha, em colunas iguais. */
+.ea-campos-duplos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .6rem; align-items: start; }
+/* Acoes do subcard: botoes-icone lado a lado, logo abaixo do ultimo campo. */
+.ea-acoes { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .2rem; }
+#ea-config .ea-acoes .ea-btn.ea-acao { flex: 0 0 auto; width: 40px; height: 40px; max-width: none;
+  display: inline-flex; align-items: center; justify-content: center; padding: 0;
+  background: #e8eef2; border-color: #dbe4ea; color: #294c65; }
+#ea-config .ea-acoes .ea-btn.ea-acao i { font-size: 1rem; color: var(--pli-blue, #116593); }
+#ea-config .ea-acoes .ea-btn.ea-acao[hidden] { display: none; }
+/* O rotulo continua no DOM para leitores de tela; o mouse ve o title. */
+.ea-acao-texto { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+/* Todos os botoes da secao 1 reagem igual ao mouse e ao teclado. */
+#ea-config .ea-btn { height: var(--ea-altura-campo); min-height: var(--ea-altura-campo);
+  display: inline-flex; align-items: center; justify-content: center; transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, border-color .16s ease; }
+#ea-config .ea-btn:not([disabled]):hover, #ea-config .ea-btn:not([disabled]):focus-visible {
+  transform: translateY(-2px); box-shadow: 0 4px 12px #0f4a6b26; background: #dce7ee; border-color: #b9cddb; }
+#ea-config .ea-btn.ea-btn-primary:not([disabled]):hover, #ea-config .ea-btn.ea-btn-primary:not([disabled]):focus-visible {
+  background: var(--pli-blue, #116593); border-color: var(--pli-blue, #116593); }
+#ea-config .ea-btn:not([disabled]):active { transform: translateY(0); box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { #ea-config .ea-btn { height: var(--ea-altura-campo); min-height: var(--ea-altura-campo);
+  display: inline-flex; align-items: center; justify-content: center; transition: none; }
+  #ea-config .ea-btn:not([disabled]):hover { transform: none; } }
+.ea-base-form-coluna { display: flex; flex-direction: column; gap: .5rem; min-width: 0; }
+/* 1.3: seletor do algoritmo e, ao lado, o desenho do que ele faz. */
+.ea-algoritmo { display: grid; grid-template-columns: minmax(0, 1fr); gap: .45rem; min-width: 0; }
+.ea-algoritmo-desenho { margin: 0; padding: .35rem .4rem; border: 1px solid #dce3ea; border-radius: 4px; background: #fbfcfd; }
+.ea-algoritmo-desenho .ea-diagrama { display: block; width: 100%; height: auto; }
+.ea-algoritmo-desenho figcaption { margin-top: .25rem; color: #5b6b7a; font-size: .68rem; line-height: 1.35; }
+.ea-diagrama-vazio { color: #7c8b95; font-size: .7rem; font-style: italic; }
+/* O seletor do algoritmo ocupa a coluna; o desenho vem abaixo, na largura do subcard. */
+#ea-config .ea-config-grid-3 #ea-operation { max-width: 100%; }
+#ea-config .ea-algoritmo-desenho { margin-top: .2rem; }
+#ea-config .ea-algoritmo-desenho .ea-diagrama { max-height: 96px; }
+/* Área dinâmica: tudo o que abre e fecha aparece abaixo do card principal. */
+.ea-dinamico { display: flex; flex-direction: column; gap: .7rem; margin-top: .9rem; }
+.ea-dinamico > section:not([hidden]), .ea-dinamico > .ea-checkup { margin: 0; }
+.ea-dinamico > .ea-execute { margin: 0; }
+.ea-dinamico .ea-entradas, .ea-dinamico .ea-finalidades, .ea-dinamico .ea-bases-confirmadas { padding: .7rem .8rem; border: 1px solid #dce3ea; border-radius: .55rem; background: #fbfcfd; margin: 0; border-top: 1px solid #dce3ea; }
+.ea-dinamico .ea-staging { padding: .7rem .8rem; border: 1px solid #dce3ea; border-radius: .55rem; background: #fbfcfd; margin: 0; }
+@media (max-width: 1080px) { #ea-config .ea-config-grid-3 { grid-template-columns: 1fr; } }
+/* Cards principais 2 e 3 com o mesmo cabecalho do card 1. */
+#ea-workbench, #ea-results { border-radius: 8px; box-shadow: 0 4px 20px #00000014; }
+#ea-workbench > .ea-section-head, #ea-results > .ea-section-head { background: var(--pli-deep, #003b5a); padding: .75rem 1.5rem; gap: .5rem; }
+#ea-workbench > .ea-section-head h2, #ea-results > .ea-section-head h2 { color: #fff; font-family: "Montserrat", Verdana, sans-serif; font-size: .8125rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+#ea-workbench > .ea-section-head p, #ea-results > .ea-section-head p { color: #d6e3ec; }
+#ea-workbench .ea-number, #ea-results .ea-number { background: linear-gradient(135deg, #3ec26e, #116593); font-size: 1rem; }
+#ea-results > .ea-section-head .ea-badge { background: #ffffff1f; color: #fff; }
+
+/* Botoes-icone dentro da moldura do campo, para casar com os outros campos. */
+#ea-config .ea-acoes.ea-acoes-campo { margin: 0; padding: 0 3px; gap: .3rem; flex-wrap: nowrap;
+  border: 1px solid #c9d4dd; border-radius: 4px; background: #fff;
+  height: var(--ea-altura-campo); align-items: center; }
+#ea-config .ea-acoes.ea-acoes-campo .ea-btn.ea-acao { width: 32px; height: 30px; min-height: 30px;
+  border-radius: 3px; }
+#ea-config .ea-acoes.ea-acoes-campo .ea-btn.ea-acao i { font-size: .82rem; }
+/* Areola: cada grupo dinamico usa a cor do subcard de origem e aponta para ele. */
+.ea-grupo-dinamico { position: relative; border: 1.5px solid var(--ea-origem, #116593); border-radius: .6rem;
+  padding: 1.5rem .7rem .7rem; background: var(--ea-origem-fundo, #f6fafd); }
+.ea-grupo-dinamico:not(:has(> section:not([hidden]))) { display: none; }
+.ea-grupo-dinamico[data-origem="1.1"] { --ea-origem: #1769aa; --ea-origem-fundo: #f4f9fd; }
+.ea-grupo-dinamico[data-origem="1.2"] { --ea-origem: #b06a17; --ea-origem-fundo: #fdf8f2; }
+.ea-grupo-dinamico[data-origem="1.3"] { --ea-origem: #7d2f83; --ea-origem-fundo: #fbf5fc; }
+/* A etiqueta fica centrada sobre a coluna do subcard de origem. */
+.ea-grupo-origem { position: absolute; top: -.72rem; left: var(--ea-origem-seta, 1rem); transform: translateX(-50%); margin: 0;
+  display: flex; align-items: center; gap: .35rem; padding: 1px 8px; border-radius: 999px;
+  background: var(--ea-origem); color: #fff; font-size: .66rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em; }
+.ea-grupo-tag { font-weight: 700; }
+.ea-grupo-dinamico[data-origem="1.1"] { --ea-origem-seta: 16.6%; }
+.ea-grupo-dinamico[data-origem="1.2"] { --ea-origem-seta: 50%; }
+.ea-grupo-dinamico[data-origem="1.3"] { --ea-origem-seta: 83.3%; }
+.ea-grupo-dinamico > section { border: 0 !important; background: transparent !important; padding: 0 !important; }
+.ea-grupo-dinamico > section + section:not([hidden]) { margin-top: .7rem; padding-top: .7rem !important;
+  border-top: 1px dashed #d4dde4 !important; }
+/* O subcard de origem recebe a mesma cor, fechando a aréola. */
+#ea-config .ea-config-grid-3 > .ea-panel:nth-child(1) { border-top: 3px solid #1769aa; }
+#ea-config .ea-config-grid-3 > .ea-panel:nth-child(2) { border-top: 3px solid #b06a17; }
+#ea-config .ea-config-grid-3 > .ea-panel:nth-child(3) { border-top: 3px solid #7d2f83; }
+#ea-config .ea-config-grid-3 > .ea-panel:nth-child(1) .ea-subnumber { color: #1769aa; }
+#ea-config .ea-config-grid-3 > .ea-panel:nth-child(2) .ea-subnumber { color: #b06a17; }
+#ea-config .ea-config-grid-3 > .ea-panel:nth-child(3) .ea-subnumber { color: #7d2f83; }

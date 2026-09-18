@@ -57,12 +57,9 @@ def test_extracao_persiste_recupera_e_exporta_com_proprietario(database,monkeypa
     from types import SimpleNamespace
     from shapely.geometry import box
     from api.services import extracao_atributos as service
-    from api.services import extracao_atributos_exportacao as exports
     conn, root = database
     monkeypatch.setattr(service,'get_connection',repo.get_connection)
-    monkeypatch.setattr(exports,'get_connection',repo.get_connection)
     monkeypatch.setattr(service,'project_path',lambda p:root/p)
-    monkeypatch.setattr(exports,'project_path',lambda p:root/p)
     source, _ = make_result()
     base_execution=ciclo.iniciar('teste_sintetico',{},'pytest_rollback')
     token=ciclo.execucao_atual.set(base_execution)
@@ -83,8 +80,11 @@ def test_extracao_persiste_recupera_e_exporta_com_proprietario(database,monkeypa
     assert result['categorias'][0]['camadas'][0]['ocorrencias'][0]['atributos']['nome']=='Base sintética'
     artifact=conn.execute('SELECT * FROM geoprocessamento.arquivo_resultado WHERE execucao_id=%s',(job['id'],)).fetchone()
     assert artifact['estado']=='resultado'
-    assert exports.exportar(result,'gpkg').is_file()
-    assert exports.exportar(result,'pdf').is_file()
+    # A exportação avulsa deu lugar ao pacote guardado no banco com a execução.
+    pacote,nome_pacote=service.arquivo_do_pacote(job['id'],user,'zip')
+    assert nome_pacote.endswith('.zip') and pacote
+    relatorio,_=service.arquivo_do_pacote(job['id'],user,'pdf_processamento')
+    assert relatorio.startswith(b'%PDF')
     with pytest.raises(LookupError):service.consultar(job['id'],SimpleNamespace(id='outro_usuario'),completo=True)
 
 

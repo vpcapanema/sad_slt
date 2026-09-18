@@ -2,15 +2,16 @@ import { $, el, options, feedback } from "./ui.js";
 import { escolherArquivo } from './explorador.js';
 import { abrirGeradorMunicipal } from './municipal.js';
 import { criarListaCamadas } from './lista-camadas.js';
+import { editarRegra, resumoRegra } from './regras.js';
 
 export function criarConfiguracao(state, changed) {
-  const lista = criarListaCamadas(state, changed);
+  const lista = criarListaCamadas(state, changed, categoria => browse('base', categoria));
   function sincronizarAlternativas() {
     document.querySelectorAll("[data-alternative-for]").forEach(node=>{
       node.hidden=Boolean(document.getElementById(node.dataset.alternativeFor).value);
     });
     // Some junto com a alternativa de cadastro: as duas dividem a mesma coluna.
-    $('#ea-municipal-alternativa').hidden=!$('#ea-category-select').value;
+    $('#ea-municipal-open').hidden=!$('#ea-category-select').value;
     lista.render();
   }
   // Escolher a categoria precisa revelar a lista de montagem na hora.
@@ -32,6 +33,47 @@ export function criarConfiguracao(state, changed) {
     // categoria; não há segunda lista aqui.
     state.staging=state.staging.filter(item=>state.catalog.some(l=>l.id===item.id)&&state.categories.some(c=>c.id===item.category)&&!state.bases.some(b=>b.id===item.id));
     lista.render();
+    renderBasesConfirmadas();
+  }
+  // Bases já confirmadas: a regra de cada uma fica aqui, onde a camada foi escolhida.
+  function renderBasesConfirmadas() {
+    const host=$("#ea-bases-confirmadas");if(!host)return;
+    host.replaceChildren();
+    host.hidden=!state.bases.length;
+    if(host.hidden)return;
+    const nome=id=>state.catalog.find(l=>l.id===id)?.nome||id;
+    host.append(el("h4","Bases confirmadas","ea-staging-title"));
+    for(const category of state.categories){
+      const itens=state.bases.filter(base=>base.category===category.id);
+      if(!itens.length)continue;
+      const grupo=el("div",undefined,"ea-staging-group");
+      const cabeca=el("div",undefined,"ea-staging-group-head");
+      cabeca.append(el("strong",category.nome),el("span",String(itens.length),"ea-badge"));
+      grupo.append(cabeca);
+      for(const base of itens){
+        const linha=el("div",undefined,"ea-base-confirmada");
+        linha.append(el("span",nome(base.id)));
+        if(state.operation==="enriquecimento"){
+          const botao=el("button",`Regra: ${resumoRegra(base.regra)}`,"ea-btn ea-regra-botao");
+          botao.type="button";botao.disabled=state.busy;
+          botao.addEventListener("click",async()=>{
+            const camada=state.catalog.find(l=>l.id===base.id);
+            const nova=await editarRegra({nomeBase:nome(base.id),regra:base.regra,
+              camposDisponiveis:Object.keys(camada?.geojson?.features?.[0]?.properties||{})});
+            if(!nova)return;
+            base.regra=nova;renderBasesConfirmadas();
+            window.SICARDExtracao?.renderSelecao?.();
+            feedback(`Regra de ${nome(base.id)} atualizada.`);
+          });
+          linha.append(botao);
+        }
+        grupo.append(linha);
+      }
+      host.append(grupo);
+    }
+    if(state.operation!=="enriquecimento"){
+      host.append(el("p","As regras por base valem no resultado \"um registro por feição\"; nos outros, todas as bases entram igual.","ea-hint"));
+    }
   }
   $("#ea-base-form").addEventListener("submit",event=>event.preventDefault());
   $('#ea-municipal-open').addEventListener('click',()=>{
@@ -74,5 +116,5 @@ export function criarConfiguracao(state, changed) {
   $("#ea-operation").addEventListener("change",event=>{state.operation=event.target.value;window.SICARDExtracao?.renderParametros?.();changed();});
   // O nome da saida nao muda o mapa nem a previa: so guarda o texto.
   $("#ea-nome-saida").addEventListener("input",event=>{state.nomeSaida=event.target.value;});
-  return {render,marcarLista:lista.marcar};
+  return {render,marcarLista:lista.marcar,renderBasesConfirmadas};
 }

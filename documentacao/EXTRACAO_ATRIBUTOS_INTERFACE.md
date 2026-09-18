@@ -6,29 +6,114 @@ Página: `/restrict/geoespacial/extracao-atributos/` (prefixo `/sicard` na VM).
 
 1. Carregar categorias ativas de `dominios.categoria_extracao_atributos` e camadas
    vetoriais do catálogo. Resultados temporários/removidos não são oferecidos.
-2. Escolher bases e entrada no explorador com raiz lógica `data/geoespacial`:
-   Entradas/acervo (`uploads/datastorage`), Biblioteca canônica
-   (`biblioteca_canonica`) e Saídas (`outputs`). Pastas internas não são expostas.
-   O botão Nova pasta cria subpastas dentro das três áreas, sem mover arquivos
-   ou alterar vínculos. A criação exige perfil com permissão de operação;
-   nomes inválidos, destinos externos e duplicações são recusados. O explorador
-   reutiliza `/camadas-arquivo/navegar` e `/camadas-arquivo/carregar`, oferece
-   formatos vetoriais/contêineres e confirma o ID no catálogo vetorial antes de
-   selecionar. Arquivos sem registro e rasters não entram na análise.
-   A barra de caminho oferece navegação por componentes. O painel possui modos
-   Lista, Detalhes e Ícones grandes e ações de criar/renomear pasta, salvar e
-   cancelar a edição. A renomeação aceita apenas pastas vazias e protege as três
-   pastas principais, preservando os vínculos de arquivos existentes.
-   Os controles da janela permitem minimizar, maximizar e fechar.
-   Escolher a categoria antes da base e clicar em Confirmar após selecionar o
-   arquivo. A confirmação envia a camada ao seletor e ao mapa. As geometrias selecionadas
-   são carregadas no Leaflet pela API existente. Uploads e cadastro de categorias
-   abrem as páginas próprias; o botão de atualização recarrega os seletores.
+2. Escolher bases e entrada no explorador do storage, com raiz `base-geoespacial`
+   (`GET /api/geoespacial/storage/navegar`). O explorador lista formatos vetoriais
+   (GeoPackage, Shapefile, GeoJSON, KML, FlatGeobuf) e só permite escolher camadas
+   presentes no catálogo vetorial; rasters e arquivos sem registro não entram. Ele
+   não cria nem renomeia pastas: as rotas `POST`/`PATCH /pastas` existem, mas esta
+   tela não as usa. Escolher a categoria antes da base. A entrada é uma única camada.
+   As camadas confirmadas são desenhadas na bancada embutida (seção 02). Uploads e
+   cadastro de categorias abrem as páginas próprias; o botão de atualização
+   recarrega os seletores.
 3. Executar interseção ou Identity com GDAL/OGR no servidor. O navegador envia IDs;
    nomes e conceitos são resolvidos no servidor e guardados com a execução.
 4. Consultar geometria, síntese, atributos e estatísticas por categoria e camada.
-5. Exportar a análise completa em PDF, XLSX, CSV, GeoJSON ou GeoPackage. Filtros da
-   tela não alteram os arquivos. Recuperar a última execução nesta sessão do navegador.
+5. Baixar o pacote `.zip` da extração: GeoPackage, relatório de processamento em
+   PDF, relatório analítico em PDF, XLSX e CSV. Filtros da tela não alteram os
+   arquivos. Recuperar a última execução nesta sessão do navegador. O índice de
+   extrações abre os relatórios no navegador, o visualizador de camadas e o pacote.
+
+## Modo enriquecimento
+
+Geoprocesso "Enriquecimento · um registro por feição, com regras por base". Segue
+`documentacao/geoespacial/FLUXO_CRUZAMENTO_ESPACIAL_CONFIGURAVEL.md`: em vez de uma
+linha por pedaço de interseção, cada feição de entrada vira um registro (ou um
+trecho por unidade de recorte) com os atributos de todas as bases.
+
+Cada base confirmada aparece em **Bases confirmadas**, na área dinâmica do card 1
+(conteúdo da 1.2), com o botão **Regra** ao lado (`geoespacial/extracao-atributos/regras.js`); o check up da extração
+apenas repete a seleção e mostra a estimativa de registros. A regra é validada no
+servidor por `api/services/extracao_atributos_regras.py`:
+
+| Item | Opções | Padrão |
+| --- | --- | --- |
+| Papel | atributos; unidade de recorte (no máximo uma, só polígonos) | atributos |
+| Ligação | por localização (intersecta, contém, está dentro); por atributo (chave da entrada = chave da base) | localização, intersecta |
+| Multiplicidade | maior sobreposição, primeira, todas (um registro por feição), resumo (soma de números, lista de textos) | maior sobreposição |
+| Campos, prefixo, apelidos | lista de campos; prefixo com letra minúscula e `_`; `CAMPO = Apelido` | todos; derivado do nome; nenhum |
+| Preparação | buffer em metros, corrigir geometrias, separar por tipo | sem buffer, corrigir, separar |
+
+O motor (`api/services/extracao_atributos_enriquecimento.py`) trabalha em EPSG:5880
+e grava em EPSG:4674:
+
+1. Prepara entrada e bases: corrige geometrias inválidas (`make_valid`), separa
+   pontos, linhas e polígonos e aplica o buffer. Não recusa camada mista ou inválida.
+2. Recorta linhas e polígonos pela unidade de recorte. Os atributos da unidade vêm
+   da própria interseção, sem junção espacial depois do corte, porque o trecho
+   termina na divisa e tocaria a unidade vizinha. Partes fora de todas as unidades
+   continuam como trechos, com os campos da unidade vazios.
+3. Enriquece base a base, na ordem das categorias. Registros sem correspondência
+   são mantidos. "Primeira" é a feição de menor posição na base; "maior
+   sobreposição" usa extensão ou área em comum e, sem medida (pontos), cai na
+   primeira. Na ligação por atributo as chaves são comparadas como texto.
+4. Cada base acrescenta `<prefixo>n_feicoes` (feições tocadas), `<prefixo>fid_base`
+   (feição escolhida) e, na maior sobreposição, a medida em comum.
+
+### Entradas, conferência e finalidades
+
+No enriquecimento, **Entradas desta análise** lista as entradas: a principal (o campo
+da 1.1) e as adicionais (**Adicionar entrada**), até 10.
+**Configurar** define, por entrada:
+
+- campo identificador, gravado em `id_origem`;
+- filtro: campo preenchido, igual, diferente ou em uma lista (texto sem espaços nas
+  pontas; valor só com espaços conta como vazio);
+- campos a manter.
+
+Registros de entradas com o mesmo tipo de geometria vão para a mesma camada de
+saída, com `camada_origem` (nome da entrada) e `fid_origem` (posição da feição na
+entrada original, antes do filtro).
+
+A **conferência** (etapa 5) roda depois do enriquecimento, por caminhos independentes,
+e fica em `validacao` no resultado e em `<saida>_validacao.json` no pacote:
+
+- `id_registro` único;
+- nenhuma feição de entrada sem registro;
+- cada trecho dentro da própria unidade de recorte (resíduo até 0,001 m ou m²) e
+  soma dos trechos igual à feição original;
+- na maior sobreposição e na primeira, a feição escolhida é recalculada contra as
+  candidatas da base;
+- identificadores repetidos em cada entrada (informativo).
+
+A execução não é interrompida: a tela mostra "aprovada" ou "REPROVADA" com os
+números por camada.
+
+**Recortes por finalidade** (etapa 6), conteúdo da 1.3: **Adicionar finalidade** abre um
+diálogo com nome e a lista dos campos que a saída terá, agrupados por entrada e por
+base, com filtro por nome. A lista é montada na tela a partir das entradas, das
+bases confirmadas e das regras (mesmo prefixo que o servidor deriva), então não é
+preciso digitar nome de campo nem executar antes. Cada finalidade leva os
+identificadores (`id_registro`, `camada_origem`, `fid_origem`, `id_origem`) e os
+campos escolhidos, e gera camadas `<finalidade>_<camada>` no GeoPackage e um CSV por
+camada. Campo inexistente em todas as camadas recusa a execução.
+
+A saída é uma camada por tipo de geometria da entrada, gravada no banco. O pacote
+(`api/services/extracao_atributos_pacote_enriquecimento.py`) traz o GeoPackage com
+as camadas e a entrada (apelidos como nome alternativo dos campos), um CSV por
+camada, o XLSX com uma aba por camada e a aba `dicionario_campos`, o dicionário em
+CSV e `configuracao.json` com entrada, bases, regras e procedência. Não há
+relatórios PDF neste modo.
+
+As configurações salvas estão na versão 3: guardam as bases com a regra de cada
+uma, as entradas (identificador, filtro e campos) e as finalidades, o que permite
+repetir a análise inteira. Arquivos das versões 1 e 2 continuam abrindo: o que falta
+entra com o padrão (regra padrão, sem entradas e sem finalidades).
+
+Na tela, o geoprocesso é escolhido pelo resultado desejado ("um registro por feição
+da entrada" para o enriquecimento; "um registro por pedaço de interseção" para os
+modos de sobreposição). Os indicadores da seção 03 mudam com o modo: no
+enriquecimento são camadas de saída, bases com correspondência, registros e o
+resultado da conferência.
 
 ## Organização e endpoints
 
@@ -42,16 +127,25 @@ Página: `/restrict/geoespacial/extracao-atributos/` (prefixo `/sicard` na VM).
 Sob `/api/geoespacial/extracao-atributos`:
 
 | Método | Caminho | Função |
-|---|---|---|
+| --- | --- | --- |
 | GET | `/catalogo` | Categorias e camadas reais |
+| POST | `/arquivo-mapa` | Ler uma camada para desenhar no mapa |
+| GET | `/configuracoes` | Listar configurações salvas |
+| POST | `/configuracoes` | Salvar a lista de camadas por categoria |
+| GET | `/configuracoes/{chave}` | Abrir uma configuração |
+| DELETE | `/configuracoes/{chave}` | Excluir uma configuração |
+| GET | `/execucoes` | Índice de extrações (próprias; gestor vê todas) |
 | POST | `/execucoes` | Iniciar análise e devolver ID |
-| POST | `/pastas` | Criar subpasta (`caminho`, `nome`) |
-| PATCH | `/pastas` | Renomear pasta vazia (`caminho`, `nome`) |
-| GET | `/execucoes/{id}` | Estado, erro ou resultado |
-| GET | `/execucoes/{id}/exportar/{formato}` | Baixar relatório/geometria |
+| GET | `/execucoes/{id}` | Estado, etapas, erro ou resultado |
+| PATCH | `/execucoes/{id}` | Renomear a saída |
+| DELETE | `/execucoes/{id}` | Excluir a extração |
+| GET | `/execucoes/{id}/pacote` | Baixar o pacote `.zip` |
+| GET | `/execucoes/{id}/relatorios/{processamento\|analitico}` | Abrir o PDF no navegador |
+| POST, PATCH | `/pastas` | Criar e renomear pastas (sem uso nesta tela) |
 
-Todos exigem acesso geoespacial; consulta e exportação exigem o proprietário da
-execução. Payload: `input_id`, `operacao` (`intersection` ou `identity`) e
+Todos exigem acesso geoespacial; consulta, pacote e relatórios exigem o
+proprietário da execução ou perfil gestor. Payload da execução: `input_id`,
+`operacao` (`intersection` ou `identity`), `nome_saida`, `opcoes` do operador OGR e
 `categorias: [{id, camadas: [id]}]`. Categorias inativas, bases repetidas ou iguais
 à entrada são rejeitadas. CRS ausente, geometrias inválidas/vazias e mistura de
 dimensões na mesma camada exigem correção na bancada.
@@ -79,12 +173,13 @@ automaticamente impactos positivos/negativos, severidade ou pesos.
 
 ## Persistência e bancada
 
-A execução usa `geoprocessamento.execucao_arquivo`. A saída passa por
-`registrar_camada` e pelo ciclo de vida existente: arquivo canônico, registro no
-banco e vínculo com a execução. `outputs/<execução>/extracao.json` guarda o
-relatório completo; as exportações derivadas são produzidas nessa pasta.
-O GeoPackage baixado é o arquivo canônico registrado. O resultado recebe vínculo
-de uso como relatório. Requer migrations 104 e 105 e storage persistente.
+A execução usa `geoprocessamento.execucao_arquivo`. A geometria de saída é gravada
+no banco por `registrar_camada`, sem arquivo em `data/geoespacial/outputs`. O
+relatório, as etapas, a procedência da entrada e das bases e o pacote `.zip`
+(com tamanho e SHA-256 de cada arquivo) ficam em `geoprocessamento.extracao_atributos`
+(migration 109). O resultado recebe vínculo de uso como relatório. Extrações
+anteriores ao pacote no banco ainda são lidas de `outputs/<execução>/extracao.json`.
+Requer as migrations 104, 105 e 109.
 
 A bancada simplificada chama os jobs existentes para validar, reparar,
 reprojetar, recortar, dissolver e selecionar por localização. Não reimplementa
@@ -95,10 +190,45 @@ concluídas sobrevivem à recarga da página. Reinício do serviço durante uma 
 não oferece retomada automática. Camadas são carregadas integralmente; conjuntos
 muito grandes podem exigir otimização posterior de memória e visualização.
 
+## Layout do card 1
+
+O card **1. Configuração geral da extração** tem três subcards do mesmo tamanho,
+na ordem do processamento: **1.1 Configurações da camada de entrada**,
+**1.2 Configurações das camadas de base e configurações** e
+**1.3 Configurações da camada de saída**. Só campos fixos ficam dentro deles; na
+1.2 a categoria e as camadas base ocupam duas colunas da mesma linha, e na 1.3 o
+nome da camada de saída e o algoritmo de processamento fazem o mesmo.
+
+As ações de cada subcard são botões-ícone do mesmo tamanho, lado a lado dentro de
+uma caixa com a moldura dos outros campos: na 1.1 abaixo de **Camada de input**
+(explorar storage, upload, remover entrada) e na 1.2 abaixo de **Camadas base**
+(explorar storage, cadastrar categoria, upload, gerar camada municipal). O rótulo
+fica no `title` e em texto para leitores de tela.
+
+Em 1.3, **Algoritmo de processamento** oferece Enriquecimento (Spatial Join),
+Interseção (Intersect) e Identidade (Identity). Abaixo do seletor,
+`geoespacial/extracao-atributos/diagramas.js` desenha em SVG o que o algoritmo faz
+— entrada, base e resultado — com uma legenda curta. Os desenhos são próprios, não
+são material de terceiros.
+
+Todo conteúdo dinâmico dos três subcards (entradas, lista de camadas por categoria,
+bases confirmadas, parâmetros do algoritmo, recortes por finalidade, check up e o
+botão de executar) é renderizado, mostrado e oculto na área `#ea-dinamico`, sempre
+abaixo dos subcards, para que eles mantenham altura e largura iguais.
+
+Cada conjunto dinâmico fica em uma aréola própria: moldura na cor do subcard de
+origem (1.1 azul, 1.2 âmbar, 1.3 roxo, a mesma cor da borda superior do subcard) e
+etiqueta com o número e o nome do subcard, centrada sobre a coluna dele. A aréola
+desaparece quando todo o seu conteúdo está oculto.
+
+Os cards principais são **1. Configuração geral da extração**,
+**2. Bancada básica de geoprocessamento** e **3. Resultados**, com o mesmo
+cabeçalho escuro.
+
 ## Lista de camadas por categoria
 
-A subseção 1.1 tem uma lista de montagem com a largura do card, abaixo dos campos
-de categoria e de camada base. O usuário escolhe uma categoria, marca suas camadas
+A lista de montagem da 1.2 fica na área dinâmica, com a largura do card 1, abaixo
+dos três subcards. O usuário escolhe uma categoria, marca suas camadas
 no explorador, troca de categoria e repete. Nada chega à bancada antes de confirmar.
 
 A lista guarda o caminho relativo de cada camada e mostra apenas o nome do
@@ -109,11 +239,13 @@ do que está registrado nos metadados da camada.
 Seis botões quadrados operam apenas sobre essa lista. Confirmar envia as camadas
 à bancada já agrupadas pelas categorias da lista. Salvar grava a lista como
 configuração. Editar alterna o modo de edição: com ele ativo, clicar em uma
-camada da lista a remove; fora dele a lista é só leitura. Para acrescentar
-camadas com a lista aberta, escolha a categoria no seletor e use o explorador: o
-que for selecionado entra no grupo daquela categoria. Carregar abre um explorador da pasta das
+camada da lista a remove, e o botão + de cada grupo abre o explorador já na
+categoria daquele grupo; fora dele a lista é só leitura. Também é possível escolher
+a categoria no seletor e usar o explorador: o que for selecionado entra no grupo
+daquela categoria. Carregar abre um explorador da pasta das
 configurações para escolher um arquivo salvo; o conteúdo é acrescentado à lista,
-sem apagar o que já estava montado. Camadas repetidas são ignoradas: quem já está
+sem apagar o que já estava montado. No mesmo diálogo, Excluir apaga a configuração
+selecionada, após confirmação. Camadas repetidas são ignoradas: quem já está
 na lista permanece na categoria em que estava, e quem já foi enviado à bancada não
 volta. A mensagem informa quantas entraram e o que foi ignorado. Limpar tudo esvazia a lista sem
 tocar na bancada. Cancelar restaura a lista ao último estado confirmado ou
@@ -195,5 +327,6 @@ consulta ao banco, e exige sessão na API.
 `tests/test_extracao_atributos.py` exercita o motor GDAL real com dados sintéticos,
 contatos, pontos, estatísticas, atributos e exportações. O teste de integração em
 `tests/test_ciclo_vida_banco.py` é opt-in (`SLT_TEST_CICLO_BANCO=1`): grava e recupera
-a extração com banco real em transação revertida e storage temporário, verifica
-GeoPackage e PDF e rejeita outro proprietário. Não constitui teste de carga.
+a extração com banco real em transação revertida e storage temporário, lê o pacote
+`.zip` e o relatório de processamento guardados no banco e rejeita outro
+proprietário. Não constitui teste de carga.

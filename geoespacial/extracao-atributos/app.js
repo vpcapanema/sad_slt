@@ -6,6 +6,9 @@ import { criarResultados } from "./resultados.js";
 
 import { adaptador, json, esperar } from './api.js';
 import { confirmarExecucao, acompanharExecucao } from './processo.js';
+import { editarEntrada, editarFinalidade, editarRegra, prefixoPadrao, resumoEntrada } from './regras.js';
+import { renderDiagrama } from './diagramas.js';
+import { escolherArquivo } from './explorador.js';
 
 const OPCOES_OVERLAY=[
   ["promover_multipartes","Promover a multipartes","PROMOTE_TO_MULTI",true],
@@ -16,7 +19,9 @@ const OPCOES_OVERLAY=[
 ];
 const state={catalog:[],categories:[],bases:[],staging:[],input:"",operation:"",
   opcoes:Object.fromEntries(OPCOES_OVERLAY.map(([chave,,,padrao])=>[chave,padrao])),
-  nomeSaida:"",result:null,busy:false};
+  nomeSaida:"",result:null,busy:false,
+  // Só no enriquecimento: configuração da entrada principal, entradas adicionais e finalidades.
+  inputConfig:null,entradasExtras:[],finalidades:[]};
 const map=criarMapa(()=>reconciliarPainel()),results=criarResultados();
 const config=criarConfiguracao(state,changed);
 // Mostra na 1.3 exatamente o que o botao Executar extracao esta enxergando:
@@ -36,7 +41,7 @@ function renderSelecao() {
   };
   const valor=document.createElement("span");valor.className="ea-execucao-valor";
   valor.textContent=entrada?entrada.nome:"";
-  host.append(linha("Camadas de entrada:",valor,entrada?"":"nenhuma camada de entrada escolhida em 1.2"));
+  host.append(linha("Camadas de entrada:",valor,entrada?"":"nenhuma camada de entrada escolhida em 1.1"));
 
   const grupos=state.categories
     .map(c=>({c,itens:state.bases.filter(b=>b.category===c.id)}))
@@ -47,6 +52,7 @@ function renderSelecao() {
     const cabeca=document.createElement("strong");cabeca.textContent=c.nome;
     const conta=document.createElement("span");conta.className="ea-badge";conta.textContent=String(itens.length);
     grupo.append(cabeca,conta);
+    // A regra de cada base fica na 1.1, ao lado da camada; aqui é só conferência.
     for(const base of itens){
       const item=document.createElement("span");item.className="ea-execucao-base";item.textContent=nome(base.id);
       grupo.append(item);
@@ -54,7 +60,53 @@ function renderSelecao() {
     lista.append(grupo);
   }
   host.append(linha(`Camadas de base: (${state.bases.length})`,lista,
-    state.bases.length?"":"nenhuma base confirmada em 1.1; monte a lista e use Confirmar e enviar à bancada"));
+    state.bases.length?"":"nenhuma base confirmada em 1.2; monte a lista e use Confirmar bases"));
+  // Estimativa antes de executar: o que se sabe sem processar.
+  if(state.operation==="enriquecimento"&&state.input){
+    const feicoes=entradasEnriquecimento().reduce((soma,item)=>{
+      const camada=state.catalog.find(l=>l.id===item.id);
+      return soma+(camada?.geojson?.features?.length||0);
+    },0);
+    const recorte=state.bases.some(b=>b.regra?.papel==="recorte");
+    const todas=state.bases.filter(b=>b.regra?.multiplicidade==="todas").map(b=>nome(b.id));
+    const partes=[feicoes?`${feicoes} feição(ões) de entrada`:"contagem da entrada indisponível"];
+    if(recorte)partes.push("o recorte divide linhas e polígonos entre as unidades, aumentando o número de registros");
+    if(todas.length)partes.push(`a regra "todas" em ${todas.join(", ")} repete o registro por feição tocada`);
+    if(!recorte&&!todas.length)partes.push("um registro por feição de entrada");
+    const texto=document.createElement("em");texto.className="ea-execucao-estimativa";
+    texto.textContent=`Estimativa: ${partes.join("; ")}.`;
+    host.append(linha("Registros previstos:",texto));
+  }
+}
+// Entradas do enriquecimento: a principal (1.2) e as adicionais.
+function entradasEnriquecimento() {
+  return [...(state.input?[{id:state.input,principal:true}]:[]),...state.entradasExtras];
+}
+// Campos que a saída terá, para escolher os das finalidades sem precisar executar antes.
+function camposPrevistos() {
+  const nome=id=>state.catalog.find(l=>l.id===id)?.nome||id;
+  const itens=[
+    {campo:"id_registro",rotulo:"id_registro · identificador do registro",grupo:"Identificação"},
+    {campo:"camada_origem",rotulo:"camada_origem · camada de entrada",grupo:"Identificação"},
+    {campo:"fid_origem",rotulo:"fid_origem · posição na entrada",grupo:"Identificação"},
+    {campo:"id_origem",rotulo:"id_origem · identificador da feição",grupo:"Identificação"},
+  ];
+  for(const entrada of entradasEnriquecimento()){
+    const camada=state.catalog.find(l=>l.id===entrada.id);
+    const config=entrada.principal?state.inputConfig:entrada.config;
+    const campos=config?.campos||Object.keys(camada?.geojson?.features?.[0]?.properties||{});
+    for(const campo of campos)if(!itens.some(i=>i.campo===campo))itens.push({campo,rotulo:campo,grupo:`Entrada · ${nome(entrada.id)}`});
+  }
+  for(const base of state.bases){
+    const camada=state.catalog.find(l=>l.id===base.id);
+    const prefixo=base.regra?.prefixo?(base.regra.prefixo.endsWith("_")?base.regra.prefixo:base.regra.prefixo+"_"):prefixoPadrao(nome(base.id));
+    const campos=base.regra?.campos||Object.keys(camada?.geojson?.features?.[0]?.properties||{});
+    const grupo=`Base · ${nome(base.id)}`;
+    for(const campo of campos)itens.push({campo:prefixo+campo,rotulo:prefixo+campo,grupo});
+    itens.push({campo:`${prefixo}n_feicoes`,rotulo:`${prefixo}n_feicoes · nº de feições tocadas`,grupo});
+    if(base.regra?.multiplicidade!=="resumo")itens.push({campo:`${prefixo}fid_base`,rotulo:`${prefixo}fid_base · feição escolhida`,grupo});
+  }
+  return itens;
 }
 // O que o processamento enxerga e o que esta no painel da bancada. Se o usuario
 // remove uma camada la, ela sai das bases e da entrada aqui.
@@ -86,7 +138,7 @@ function controls() {
     campoSaida.placeholder=entrada?`Extração de ${entrada.nome}`:"Extração de <camada de entrada>";
     campoSaida.disabled=state.busy;
   }
-  const falta=[!state.operation&&"o geoprocesso",!state.input&&"a camada de entrada",
+  const falta=[!state.operation&&"o algoritmo de processamento",!state.input&&"a camada de entrada",
     !state.bases.length&&"as camadas base"].filter(Boolean);
   $("#ea-integration-status").textContent=state.busy?"Processando…"
     :state.loadingMap?"Carregando camadas no mapa…"
@@ -174,6 +226,11 @@ function validateGeoJSON(value) {
   return value;
 }
 function validateResult(value) {
+  if(value?.modo==="enriquecimento"){
+    if(!value.id||!value.camadas||typeof value.camadas!=="object"||!Array.isArray(value.dicionario)) throw new Error("O serviço retornou um resultado incompatível com o contrato do enriquecimento.");
+    if(value.geojson?.features?.length) validateGeoJSON(value.geojson);
+    return value;
+  }
   if(!value?.id||![0,1,2].includes(value.dimensao_input)||!Array.isArray(value.categorias)) throw new Error("O serviço retornou um resultado incompatível com o contrato de extração.");
   for(const category of value.categorias) {
     if(!category.id||typeof category.nome!=="string"||!Array.isArray(category.camadas)) throw new Error("Categoria de resultado inválida.");
@@ -182,13 +239,88 @@ function validateResult(value) {
   if(value.geojson?.features?.length) validateGeoJSON(value.geojson);
   return value;
 }
+const criar=(tag,texto,classe)=>{const node=document.createElement(tag);if(texto!==undefined)node.textContent=texto;if(classe)node.className=classe;return node;};
+const botaoPequeno=(texto,acao)=>{const b=criar("button",texto,"ea-btn ea-regra-botao");b.type="button";b.disabled=state.busy;b.addEventListener("click",acao);return b;};
+const nomeCamada=id=>state.catalog.find(l=>l.id===id)?.nome||id;
+// Entradas do enriquecimento na própria 1.2: a principal e as adicionais, cada uma
+// com identificador, filtro e campos.
+export function renderEntradas() {
+  const host=$("#ea-entradas");if(!host)return;
+  host.replaceChildren();
+  host.hidden=state.operation!=="enriquecimento";
+  if(host.hidden)return;
+  host.append(criar("h4","Entradas desta análise","ea-op-params-title"));
+  const itens=entradasEnriquecimento();
+  if(!itens.length)host.append(criar("p","Escolha a camada de entrada acima; ela será a entrada principal.","ea-hint"));
+  for(const item of itens){
+    const linha=criar("div",undefined,"ea-execucao-linha");
+    const config=item.principal?state.inputConfig:item.config;
+    linha.append(criar("strong",`${nomeCamada(item.id)}${item.principal?" (principal)":""}`),criar("span",` · ${resumoEntrada(config)} `));
+    linha.append(botaoPequeno("Configurar",async()=>{
+      const camada=state.catalog.find(l=>l.id===item.id);
+      const nova=await editarEntrada({nomeEntrada:nomeCamada(item.id),config,camposDisponiveis:Object.keys(camada?.geojson?.features?.[0]?.properties||{})});
+      if(!nova)return;
+      if(item.principal)state.inputConfig=nova;else item.config=nova;
+      renderEntradas();renderSelecao();
+    }));
+    if(!item.principal)linha.append(" ",botaoPequeno("Remover",()=>{
+      state.entradasExtras=state.entradasExtras.filter(e=>e!==item);renderEntradas();renderSelecao();
+    }));
+    host.append(linha);
+  }
+  host.append(botaoPequeno("Adicionar entrada",async()=>{
+    const excluidas=[state.input,...state.entradasExtras.map(e=>e.id),...state.bases.map(b=>b.id),...state.staging.map(b=>b.id)].filter(Boolean);
+    const escolha=await escolherArquivo({catalog:state.catalog,excluded:excluidas,multiple:true,title:"Selecionar entradas adicionais"});
+    if(!escolha)return;
+    for(const camada of escolha)if(!state.entradasExtras.some(e=>e.id===camada.id))state.entradasExtras.push({id:camada.id,config:null});
+    renderEntradas();renderSelecao();
+  }));
+  host.append(criar("small","Cada entrada pode ter identificador, filtro e campos próprios. Entradas do mesmo tipo de geometria saem na mesma camada.","ea-hint"));
+}
+// Recortes por finalidade: os campos são escolhidos numa lista, sem digitar nome de campo.
+export function renderFinalidades() {
+  const host=$("#ea-finalidades");if(!host)return;
+  host.replaceChildren();
+  host.hidden=state.operation!=="enriquecimento";
+  if(host.hidden)return;
+  host.append(criar("h4","Recortes por finalidade (opcional)","ea-op-params-title"));
+  if(!state.finalidades.length)host.append(criar("p","Nenhum recorte. Use Adicionar finalidade para gerar no pacote camadas e tabelas só com os campos que interessam.","ea-hint"));
+  for(const finalidade of state.finalidades){
+    const linha=criar("div",undefined,"ea-execucao-linha");
+    linha.append(criar("strong",finalidade.nome),criar("span",` · ${finalidade.campos.length} campo(s): ${finalidade.campos.slice(0,4).join(", ")}${finalidade.campos.length>4?"…":""} `));
+    linha.append(botaoPequeno("Editar",async()=>{
+      const nova=await editarFinalidade({...finalidade,disponiveis:camposPrevistos()});
+      if(nova)Object.assign(finalidade,nova);
+      renderFinalidades();
+    }));
+    linha.append(" ",botaoPequeno("Remover",()=>{
+      state.finalidades=state.finalidades.filter(f=>f!==finalidade);renderFinalidades();
+    }));
+    host.append(linha);
+  }
+  host.append(botaoPequeno("Adicionar finalidade",async()=>{
+    const nova=await editarFinalidade({disponiveis:camposPrevistos()});
+    if(nova)state.finalidades.push(nova);
+    renderFinalidades();
+  }));
+}
 // Os parametros do operador do OGR abrem abaixo do seletor e seguem no pedido.
 function renderParametros() {
+  // O desenho do algoritmo fica no subcard 1.3, ao lado do seletor.
+  renderDiagrama($("#ea-algoritmo-desenho"),state.operation);
   const host=$("#ea-operation-params");if(!host)return;
   host.replaceChildren();
-  // Sem geoprocesso escolhido nao ha parametro que faca sentido mostrar.
+  // Sem algoritmo escolhido nao ha parametro que faca sentido mostrar.
   host.hidden=!state.operation;
   if(!state.operation)return;
+  renderEntradas();renderFinalidades();
+  if(state.operation==="enriquecimento"){
+    const titulo=document.createElement("h4");titulo.className="ea-op-params-title";titulo.textContent="Como as bases entram";
+    const texto=document.createElement("p");texto.className="ea-hint";
+    texto.textContent="Cada base confirmada tem um botão Regra na lista da seção 1.2, ao lado da camada: papel (atributos ou unidade de recorte), ligação, multiplicidade, campos, prefixo, apelidos e buffer. Sem mexer, vale o padrão: por localização, feição de maior sobreposição, todos os campos.";
+    host.append(titulo,texto);renderSelecao();
+    return;
+  }
   const operador=state.operation==="identity"?"ogr.Layer.Identity":"ogr.Layer.Intersection";
   const titulo=document.createElement("h4");titulo.className="ea-op-params-title";
   titulo.textContent=`Parâmetros de ${operador}`;host.append(titulo);
@@ -208,12 +340,17 @@ function renderParametros() {
   host.append(grade);
 }
 function request() {
-  return {motor:"gdal",operacao:state.operation,opcoes:{...state.opcoes},nome_saida:state.nomeSaida.trim(),input:state.catalog.find(l=>l.id===state.input),categorias:state.categories.filter(c=>state.bases.some(b=>b.category===c.id)).map(c=>({id:c.id,nome:c.nome,camadas:state.bases.filter(b=>b.category===c.id).map(b=>state.catalog.find(l=>l.id===b.id))}))};
+  return {motor:"gdal",operacao:state.operation,opcoes:{...state.opcoes},nome_saida:state.nomeSaida.trim(),input:state.catalog.find(l=>l.id===state.input),categorias:state.categories.filter(c=>state.bases.some(b=>b.category===c.id)).map(c=>({id:c.id,nome:c.nome,camadas:state.bases.filter(b=>b.category===c.id).map(b=>state.catalog.find(l=>l.id===b.id)),
+    regras:state.operation==="enriquecimento"?Object.fromEntries(state.bases.filter(b=>b.category===c.id&&b.regra).map(b=>[b.id,b.regra])):{}})),
+    ...(state.operation==="enriquecimento"?{
+      entradas:[{id:state.input,config:state.inputConfig||{}},...state.entradasExtras.map(e=>({id:e.id,config:e.config||{}}))],
+      finalidades:state.finalidades.map(f=>({nome:f.nome,campos:[...f.campos]}))}:{})};
 }
 $("#ea-run").addEventListener("click",async()=>{
   if(state.busy||!state.operation||!state.input||!state.bases.length) return;
   try{map.assertReady();}catch(error){feedback(error.message);return;}
-  const pedido=request();
+  let pedido;
+  try{pedido=request();}catch(error){feedback(error.message);return;}
   const confirmado=await confirmarExecucao({
     entrada:pedido.input.nome,
     saida:pedido.nome_saida||`Extração de ${pedido.input.nome}`,
@@ -258,7 +395,7 @@ window.addEventListener('extracao:integracao',async()=>{
   try{await carregarCatalogo();}catch(error){feedback(`Não foi possível carregar o catálogo: ${error.message}`);}finally{busy(false);}
   abrirExtracaoDaUrl();
 });
-window.SICARDExtracao={conectar:conectarIntegracao,renderParametros};
+window.SICARDExtracao={conectar:conectarIntegracao,renderParametros,renderSelecao,renderEntradas,renderFinalidades};
 renderParametros();
 changed();
 conectarIntegracao(adaptador);

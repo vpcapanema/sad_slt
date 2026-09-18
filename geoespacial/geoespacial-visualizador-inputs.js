@@ -4,7 +4,6 @@
   const API = "/api/geoespacial";
   let camadas = [];
   let arvore = { grupos: [], camadas: [] };
-  let diretorio = { operacionais: [], biblioteca_canonica: [] };
   let arquivoInspecionado = null;
   let tokenImportacao = null;
   const camadasVisiveis = new Set();
@@ -139,31 +138,12 @@
     }
     camadas = GeoespacialStorage.camadasDaArvore(arvore);
     render();
-    carregarCatalogoDeImportacao();
-  }
-  // A importação ainda grava no acervo do banco: a máscara de recorte e as
-  // pastas de destino continuam vindo desse catálogo, não do storage.
-  async function carregarCatalogoDeImportacao() {
-    try {
-      const response = await fetch(`${API}/camadas-diretorio`);
-      if (!response.ok) return;
-      diretorio = await response.json();
-    } catch { return; }
     preencherCamadasRecorte();
-    preencherPastasExistentes();
   }
-  // Oferece as pastas que já existem no acervo, sem impedir um nome novo: o
-  // campo é <input list>, então digitar cria a pasta no destino.
-  function preencherPastasExistentes() {
-    const destino = document.getElementById("import-pastas-existentes");
-    if (!destino) return;
-    const pastas = [...new Set((diretorio.operacionais || []).map(item => item.pasta).filter(Boolean))].sort();
-    destino.innerHTML = pastas.map(nome => `<option value="${nome}"></option>`).join("");
-  }
-
+  // Máscara de recorte: as camadas vetoriais do próprio storage.
   function preencherCamadasRecorte() {
     const select = document.getElementById("import-clip-layer");
-    const vetores = Object.values(diretorio).flat().filter((item) => item.registrada && (item.tipo === "vetor" || item.tipo === "vetorial"));
+    const vetores = camadas.filter((item) => item.tipo === "vetor" && !item.erro);
     select.innerHTML = '<option value="">Selecione uma camada vetorial</option>' + vetores.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.nome)} · ${escapeHtml(item.crs || "CRS não informado")}</option>`).join("");
   }
   async function inspecionar(file) {
@@ -215,17 +195,17 @@
     return job.resultado;
   }
   async function upload(file) {
+    if (!tokenImportacao) throw new Error(`Valide ${file.name} antes de enviar`);
+    const pasta = document.getElementById("import-pasta").value;
+    if (!pasta) throw new Error("Escolha a pasta de destino no storage");
     const data = new FormData();
-    if (tokenImportacao) data.append("token_importacao", tokenImportacao);
-    else data.append("arquivo", file);
+    data.append("token_importacao", tokenImportacao);
+    data.append("pasta", pasta);
     if (document.getElementById("import-reproject-enabled").checked) data.append("reprojetar_crs", document.getElementById("import-target-crs").value);
     if (document.getElementById("import-clip-enabled").checked) data.append("recortar_camada_id", document.getElementById("import-clip-layer").value);
-    // Pasta em branco não é enviada: o backend resolve para NAO_CLASSIFICADAS.
-    const pasta = (document.getElementById("import-pasta")?.value || "").trim();
-    if (pasta) data.append("pasta", pasta);
-    const response = await fetch(`${API}/importar_camadas/job`, { method: "POST", body: data });
+    const response = await fetch(`${API}/storage/upload/job`, { method: "POST", body: data });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.detail || `Falha no upload de ${file.name}`);
+    if (!response.ok) throw new Error(body.detail || `Falha no envio de ${file.name}`);
     return waitImportJob(body);
   }
 
@@ -312,7 +292,7 @@
         await load();
         const final = document.getElementById("import-progress-final");
         final.className = "import-progress-final"; final.hidden = false;
-        final.textContent = `${result.quantidade} camada(s) importada(s) com sucesso e confirmada(s) no catálogo.`;
+        final.textContent = `${result.arquivos.length} arquivo(s) gravado(s) no storage em ${result.pasta}: ${result.arquivos.join(", ")}.`;
         document.getElementById("btn-confirmar-progresso").disabled = false;
         arquivoInspecionado = null; tokenImportacao = null; form.reset();
       } catch (error) {

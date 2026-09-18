@@ -35,6 +35,8 @@ tmp/tomtom_flow_cache.csv
 
 # Dados de trabalho: vao para a VM por transferencia SSH, nao pelo Git.
 data/geoespacial/configuracoes/
+# Copia local do storage do SICARD (na VM: /opt/sicard-storage/dados/sicard, fora do checkout).
+data/storage/
 data/geoespacial/biblioteca_canonica/fase1/teste_restricao_automatica_v1.gpkg
 data/geoespacial/biblioteca_canonica/fase1/teste_risco_automatico_v1.gpkg
 
@@ -48,3 +50,6 @@ plugins/municipal-layer-completo-v1.0.0.zip
 # Material local de trabalho geoespacial (QGIS): nao publicar pelo deploy.
 documentacao/geoespacial/PROMPT_INTERSECT_PROJETOS_POR_PROJ_ID_QGIS.md
 documentacao/geoespacial/entregas/
+
+# Documentos de trabalho soltos na raiz (relatórios, planilhas do cliente): fora do Git.
+/*.docx

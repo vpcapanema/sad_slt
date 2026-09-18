@@ -3,10 +3,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from api.deps.auth import require_geospatial_access
 from api.services import extracao_atributos as service
+from api.services.extracao_atributos_regras import ConfigEntrada, Finalidade, RegraBase
 from api.services.session_service import SessionUser
 
 router = APIRouter(prefix='/extracao-atributos',dependencies=[Depends(require_geospatial_access)])
@@ -17,6 +18,15 @@ router.include_router(municipal_router)
 class Categoria(BaseModel):
     id: str = Field(min_length=1,max_length=50)
     camadas: list[str] = Field(min_length=1,max_length=50)
+    # Regra por camada (id -> regra); camada sem regra usa o padrão.
+    regras: dict[str, RegraBase] = Field(default_factory=dict,max_length=50)
+
+    @model_validator(mode='after')
+    def _regras_de_camadas_da_categoria(self):
+        sobrando = set(self.regras) - set(self.camadas)
+        if sobrando:
+            raise ValueError('Regra informada para camada que não está nesta categoria.')
+        return self
 
 
 class NovaPasta(BaseModel):
@@ -74,9 +84,17 @@ def renomear_pasta(payload: NovaPasta):
         raise HTTPException(403,'Não foi possível renomear a pasta.') from exc
 
 
+class EntradaExtracao(BaseModel):
+    id: str = Field(min_length=1,max_length=1200)
+    config: ConfigEntrada = ConfigEntrada()
+
+
 class Configuracao(BaseModel):
     nome: str = Field(min_length=1,max_length=120)
     categorias: list[Categoria] = Field(min_length=1,max_length=30)
+    # Guardadas junto com as bases para repetir a análise inteira (versão 3).
+    entradas: list[EntradaExtracao] = Field(default_factory=list,max_length=10)
+    finalidades: list[Finalidade] = Field(default_factory=list,max_length=20)
 
 
 @router.get('/configuracoes')
@@ -89,7 +107,9 @@ def listar_configuracoes():
 def salvar_configuracao(payload: Configuracao, user: SessionUser = Depends(require_geospatial_access)):
     from api.services import configuracao_bancada as configuracao
     try:
-        return configuracao.salvar(payload.nome,[g.model_dump() for g in payload.categorias],user)
+        return configuracao.salvar(payload.nome,[g.model_dump() for g in payload.categorias],user,
+                                   [e.model_dump() for e in payload.entradas],
+                                   [f.model_dump() for f in payload.finalidades])
     except ValueError as exc:
         raise HTTPException(422,str(exc)) from exc
     except OSError as exc:
@@ -130,9 +150,15 @@ class OpcoesOverlay(BaseModel):
 class Extracao(BaseModel):
     input_id: str = Field(min_length=1,max_length=100)
     nome_saida: str = Field(default='',max_length=200)
-    operacao: Literal['intersection','identity'] = 'intersection'
+    # intersection/identity: modo sobreposição (uma linha por interseção).
+    # enriquecimento: um registro por feição, com as regras de cada base.
+    operacao: Literal['intersection','identity','enriquecimento'] = 'intersection'
     opcoes: OpcoesOverlay = OpcoesOverlay()
     categorias: list[Categoria] = Field(min_length=1,max_length=30)
+    # Só no enriquecimento: entradas adicionais e configuração de cada entrada
+    # (identificador, filtro, campos), e recortes de campos por finalidade.
+    entradas: list[EntradaExtracao] = Field(default_factory=list,max_length=10)
+    finalidades: list[Finalidade] = Field(default_factory=list,max_length=20)
 
 
 @router.get('/catalogo')
