@@ -1364,7 +1364,7 @@
 
     limparErro();
     $("#executar-fase1").disabled = true;
-    const proc = window.SLTFeedback.processo("Calculando risco e restrição");
+    const proc = window.SLTFeedback.processo("Calcular risco e restrição (Fase 1)");
     const passo = proc.passo(
       `Enviando a rodada ${hierarquizacao.codigo} ao servidor…`,
       "progress"
@@ -1385,16 +1385,16 @@
       renderRelatorio(atualizado);
       proc.concluir({
         type: "success",
-        title: "Fase 1 concluída",
-        message:
-          "Elegibilidade territorial executada. Confira o relatório de risco e restrição abaixo.",
+        resultados: [
+          "Elegibilidade territorial executada.",
+          "Confira o relatório de risco e restrição abaixo.",
+        ],
       });
     } catch (e) {
       proc.atualizar(passo, "error", "O servidor interrompeu o cálculo.");
       proc.concluir({
         type: "error",
-        title: "Fase 1 interrompida",
-        message: e?.message || String(e),
+        resultados: e?.message || String(e),
       });
       const box = $("#fase1-erro");
       if (box) {

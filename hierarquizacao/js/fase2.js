@@ -193,7 +193,7 @@
         if (!confirmado) return;
 
         $("fase2-erro").classList.add("hidden");
-        const proc = window.SLTFeedback.processo("Calculando favorabilidade territorial");
+        const proc = window.SLTFeedback.processo("Calcular favorabilidade territorial (Fase 2)");
         const passo = proc.passo(`Extraindo valores das superfícies para a rodada ${h.codigo}…`, "progress");
         try {
           const updated = await HierApi.executarFase2(h.codigo, { camada_grade_id: grade, camada_rede_id: rede, metodo_extracao: "ponto" });
@@ -203,12 +203,14 @@
           renderResultados(updated);
           proc.concluir({
             type: "success",
-            title: "Fase 2 concluída",
-            message: "Favorabilidade de grade e da rede executada. Confira os indicadores e o ranking abaixo.",
+            resultados: [
+              "Favorabilidade de grade e da rede executada.",
+              "Confira os indicadores e o ranking abaixo.",
+            ],
           });
         } catch (error) {
           proc.atualizar(passo, "error", "O servidor interrompeu a extração.");
-          proc.concluir({ type: "error", title: "Fase 2 interrompida", message: error?.message || String(error) });
+          proc.concluir({ type: "error", resultados: error?.message || String(error) });
           const box = $("fase2-erro");
           if (box) { box.textContent = error?.message || error; box.classList.remove("hidden"); }
         }

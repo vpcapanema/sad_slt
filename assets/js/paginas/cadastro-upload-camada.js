@@ -207,8 +207,11 @@
       voltarAoInicio();
       mostrarFeedback(erro.message, true);
       window.SLTFeedback?.error(
-        `${erro.message} O arquivo foi recusado ainda na área temporária: nada foi gravado no acervo.`,
-        "Não foi possível ler o arquivo",
+        [
+          { message: erro.message, status: "error" },
+          { message: "O arquivo foi recusado ainda na área temporária: nada foi gravado no acervo.", status: "info" },
+        ],
+        "Analisar arquivo",
       );
     }
   });
@@ -272,7 +275,7 @@
     if (!confirmado) return;
 
     alvo.disabled = true;
-    const proc = window.SLTFeedback.processo("Enviando camada", { barra: true });
+    const proc = window.SLTFeedback.processo("Enviar e homologar camada", { barra: true });
     let camadaId = null;
 
     try {
@@ -292,8 +295,10 @@
     } catch (erro) {
       proc.concluir({
         type: "error",
-        title: "Importação interrompida",
-        message: `${erro.message} Nada foi gravado no acervo — corrija o apontado acima e envie novamente.`,
+        resultados: [
+          { message: `Importação interrompida: ${erro.message}`, status: "error" },
+          { message: "Nada foi gravado no acervo — corrija o apontado acima e envie novamente.", status: "info" },
+        ],
       });
       mostrarFeedback(erro.message, true);
       alvo.disabled = false;
@@ -330,8 +335,10 @@
       const fase = (dados.get("modulo_consumidor") || raiz.dataset.modulo) === "fase2" ? "Fase 2" : "Fase 1";
       proc.concluir({
         type: "success",
-        title: "Camada enviada e homologada",
-        message: `“${resultado.nome_publicacao || nomePublicacao}” já está disponível no seletor de camadas da ${fase}.`,
+        resultados: [
+          "Camada enviada e homologada.",
+          `“${resultado.nome_publicacao || nomePublicacao}” já está disponível no seletor de camadas da ${fase}.`,
+        ],
       });
       const publicado = resultado.nome_publicacao || nomePublicacao;
       voltarAoInicio();
@@ -340,8 +347,11 @@
       proc.concluir({
         // Desfecho parcial de verdade: a camada existe no acervo, mas não foi publicada.
         type: "warning",
-        title: "Importada, mas não homologada",
-        message: `${erro.message} A camada ficou no acervo com o identificador ${camadaId}, ainda não publicada — é possível homologá-la depois pela Bancada, sem reenviar o arquivo.`,
+        resultados: [
+          { message: `Camada importada no acervo com o identificador ${camadaId}.`, status: "success" },
+          { message: `Homologação interrompida: ${erro.message}`, status: "error" },
+          { message: "Camada ainda não publicada — é possível homologá-la depois pela Bancada, sem reenviar o arquivo.", status: "info" },
+        ],
       });
       mostrarFeedback(`Importada, mas não homologada: ${erro.message}`, true);
     } finally {

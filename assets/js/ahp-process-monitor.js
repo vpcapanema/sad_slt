@@ -11,7 +11,7 @@
   function mensagem(el) { return (el && (el.getAttribute("aria-label") || el.textContent || "")).replace(/\s+/g, " ").trim(); }
   function iniciar(acao) {
     if (!global.SLTFeedback || !ativo()) return null;
-    var proc = global.SLTFeedback.processo(acao || "Executando ação AHP");
+    var proc = global.SLTFeedback.processo(acao || "Executar ação AHP");
     var p1 = proc.passo("Validando dados…");
     proc.atualizar(p1, "success", "Dados validados");
     var p2 = proc.passo("Enviando operação…");

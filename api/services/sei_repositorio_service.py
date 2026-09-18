@@ -63,6 +63,7 @@ def receber(
     usuario_id: str,
     usuario_nome: str,
     tipo_demanda: sei_processamento.TipoDemanda = "projeto",
+    progresso: sei_processamento.Progresso | None = None,
 ) -> dict[str, Any]:
     """Lê o PDF e grava arquivo e leitura juntos, numa linha só.
 
@@ -84,14 +85,17 @@ def receber(
     if existente:
         raise DemandaValidationError(f"Este PDF já está no repositório como {existente['nome_arquivo']}.")
     paginas, aviso = _inventariar(conteudo)
+    sei_processamento._avisar(
+        progresso, f"{nome}: PDF válido, {len(conteudo) / 1024 / 1024:.1f} MB, sem duplicata no repositório"
+    )
     try:
-        analise = sei_processamento.analisar(conteudo, tipo_demanda, nome)
+        analise = sei_processamento.analisar(conteudo, tipo_demanda, nome, progresso)
     except Exception as exc:
         # PDF cifrado levanta ValueError, mas arquivo corrompido vem como erro
         # do pymupdf. Qualquer falha de leitura vira recusa deste arquivo — nada
         # é gravado e os demais do mesmo envio seguem.
         raise DemandaValidationError(f"O arquivo {nome} não pôde ser lido: {exc}") from exc
-    return repo.inserir(
+    gravado = repo.inserir(
         usuario_id=usuario_id, usuario_nome=usuario_nome or "", nome_arquivo=nome,
         sha256=digest, tamanho_bytes=len(conteudo), conteudo=conteudo,
         paginas=paginas, texto="", status="analisado",
@@ -102,6 +106,8 @@ def receber(
         evidencias=_evidencias_da_analise(analise),
         analise=analise,
     )
+    sei_processamento._avisar(progresso, f"{nome}: arquivo e leitura gravados no repositório")
+    return gravado
 
 
 def listar() -> list[dict[str, Any]]:
@@ -141,7 +147,11 @@ def _conteudo(documento: dict[str, Any]) -> bytes:
     return bytes(registro["conteudo"])
 
 
-def analisar(documento_id: str, tipo_demanda: sei_processamento.TipoDemanda = "projeto") -> dict[str, Any]:
+def analisar(
+    documento_id: str,
+    tipo_demanda: sei_processamento.TipoDemanda = "projeto",
+    progresso: sei_processamento.Progresso | None = None,
+) -> dict[str, Any]:
     """Relê o PDF e regrava a leitura, com o tipo escolhido agora.
 
     É o caminho do Reanalisar: o documento já está no repositório com uma
@@ -150,10 +160,13 @@ def analisar(documento_id: str, tipo_demanda: sei_processamento.TipoDemanda = "p
     documento = obter(documento_id)
     if documento["status"] == "demanda_criada":
         raise DemandaValidationError("Este documento já gerou demanda; a análise não é refeita.")
+    sei_processamento._avisar(progresso, f"{documento['nome_arquivo']}: localizado no repositório")
     try:
         # O nome do arquivo carrega o número do processo e, em anexo sem rótulo,
         # o único título de projeto que existe.
-        analise = sei_processamento.analisar(_conteudo(documento), tipo_demanda, documento["nome_arquivo"])
+        analise = sei_processamento.analisar(
+            _conteudo(documento), tipo_demanda, documento["nome_arquivo"], progresso
+        )
     except ValueError as exc:
         raise DemandaValidationError(str(exc)) from exc
     evidencias = _evidencias_da_analise(analise)
@@ -166,6 +179,7 @@ def analisar(documento_id: str, tipo_demanda: sei_processamento.TipoDemanda = "p
         analise=analise,
     )
     documento = gravado or documento
+    sei_processamento._avisar(progresso, f"{documento['nome_arquivo']}: nova leitura gravada no repositório")
     return {
         **documento,
         "tipo_demanda": tipo_demanda,

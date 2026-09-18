@@ -5,7 +5,6 @@ from contextlib import contextmanager
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from pydantic import ValidationError
-from starlette.concurrency import run_in_threadpool
 
 from api.deps.auth import require_authenticated, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
@@ -18,9 +17,12 @@ from api.schemas.sei_documentos import (
 )
 from api.services import demanda_service, plano_service, programa_service
 from api.services import sei_repositorio_service as documentos
+from api.services.sei_jobs import sei_jobs
 from api.services.session_service import SessionUser
 
 router = APIRouter(prefix='/sei/documentos', tags=['sei-documentos'])
+
+_TIPOS_DEMANDA = {'plano', 'programa', 'projeto'}
 
 
 @contextmanager
@@ -43,43 +45,56 @@ def listar(user: SessionUser = Depends(require_authenticated)):
         return documentos.listar()
 
 
-@router.post('', response_model=SeiUploadResponseSchema)
+@router.get('/jobs/{job_id}')
+def acompanhar(job_id: str, user: SessionUser = Depends(require_authenticated)):
+    """Andamento de uma leitura: cada passo real do extrator, na ordem."""
+    job = sei_jobs.obter(job_id)
+    if not job:
+        raise HTTPException(404, 'Acompanhamento não encontrado: a leitura terminou há mais de uma hora ou o servidor foi reiniciado.')
+    return job
+
+
+@router.post('', status_code=202)
 async def enviar(
     arquivos: list[UploadFile] = File(...),
     # O tipo escolhido em "Formulário a preencher" decide o contrato de campos,
-    # e agora a leitura acontece já no envio.
+    # e a leitura acontece já no envio.
     tipo_demanda: str = Form('projeto'),
     user: SessionUser = Depends(require_operator),
 ):
-    recebidos, erros = [], []
+    """Recebe os PDFs e devolve na hora o job que os lê e grava, um de cada vez."""
+    if tipo_demanda not in _TIPOS_DEMANDA:
+        raise HTTPException(422, f'Tipo de demanda inválido: {tipo_demanda}.')
+    lote: list[tuple[str, bytes]] = []
     total = 0
     for arquivo in arquivos:
         conteudo = await arquivo.read()
         total += len(conteudo)
         if total > documentos.LIMITE_LOTE_BYTES:
-            # Mensagem própria em vez do corte silencioso do proxy.
+            # Conferido antes do job: com 413, nenhum arquivo do lote é gravado.
             limite_mb = documentos.LIMITE_LOTE_BYTES // (1024 * 1024)
             raise HTTPException(413, f'O envio ultrapassa {limite_mb} MB somados. Divida em lotes menores.')
-        try:
-            # `receber` lê o PDF: trabalho de CPU, e esta rota é `async`. Sem o
-            # threadpool ele roda no event loop e, com `--workers 1` na VM,
-            # congela a aplicação inteira enquanto o documento é analisado.
-            recebidos.append(await run_in_threadpool(
-                documentos.receber,
-                conteudo=conteudo,
-                nome_arquivo=arquivo.filename or '',
-                usuario_id=user.id,
-                usuario_nome=user.nome,
-                tipo_demanda=tipo_demanda,
-            ))
-        except DemandaValidationError as exc:
-            # Um arquivo recusado não invalida os demais do mesmo envio.
-            erros.append({'arquivo': arquivo.filename or '', 'mensagem': str(exc)})
-        except DatabaseUnavailableError as exc:
-            raise HTTPException(503, 'O armazenamento dos documentos está indisponível. Tente novamente.') from exc
-    if not recebidos and erros:
-        raise HTTPException(422, '; '.join(erro['mensagem'] for erro in erros))
-    return {'recebidos': recebidos, 'erros': erros}
+        lote.append((arquivo.filename or '', conteudo))
+
+    def ler_lote(progresso):
+        # Roda na thread do job: a leitura (CPU e OCR) não ocupa o event loop.
+        recebidos, erros = [], []
+        for indice, (nome, conteudo) in enumerate(lote, start=1):
+            progresso(f'Arquivo {indice} de {len(lote)}: {nome}')
+            try:
+                recebidos.append(documentos.receber(
+                    conteudo=conteudo, nome_arquivo=nome, usuario_id=user.id,
+                    usuario_nome=user.nome, tipo_demanda=tipo_demanda, progresso=progresso,
+                ))
+            except DemandaValidationError as exc:
+                # Um arquivo recusado não invalida os demais do mesmo envio.
+                erros.append({'arquivo': nome, 'mensagem': str(exc)})
+                progresso(f'{nome}: recusado — {exc}', 'aviso')
+        if not recebidos and erros:
+            raise DemandaValidationError('; '.join(erro['mensagem'] for erro in erros))
+        return SeiUploadResponseSchema.model_validate({'recebidos': recebidos, 'erros': erros}).model_dump(mode='json')
+
+    return sei_jobs.criar('envio', ler_lote)
 
 
 @router.get('/{documento_id}', response_model=SeiDocumentoDetalheSchema)
@@ -99,10 +114,17 @@ def baixar(documento_id: str, user: SessionUser = Depends(require_authenticated)
     )
 
 
-@router.post('/{documento_id}/analisar', response_model=SeiDocumentoSchema)
+@router.post('/{documento_id}/analisar', status_code=202)
 def analisar(documento_id: str, body: SeiAnaliseRequestSchema, user: SessionUser = Depends(require_operator)):
+    """Relê o PDF em segundo plano e devolve o job que a página acompanha."""
     with _errors():
-        return documentos.analisar(documento_id, body.tipo_demanda)
+        documentos.obter(documento_id)  # 404/422 imediatos, antes de abrir o job
+
+    def reler(progresso):
+        leitura = documentos.analisar(documento_id, body.tipo_demanda, progresso=progresso)
+        return SeiDocumentoSchema.model_validate(leitura).model_dump(mode='json')
+
+    return sei_jobs.criar('analise', reler)
 
 
 @router.delete('/{documento_id}')

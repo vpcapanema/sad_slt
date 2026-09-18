@@ -150,7 +150,7 @@
             detail: "O resultado atual da Fase 3 será substituído e a síntese já gerada, se houver, ficará desatualizada.",
             confirmLabel: "Calcular Fase 3",
           },
-          titulo: "Calculando índice de priorização",
+          titulo: "Calcular índice de priorização (Fase 3)",
           mensagemInicial: `Enviando os critérios da rodada ${hierarquizacao.codigo}…`,
           executar: () => HierApi.executarFase3(hierarquizacao.codigo, {
             criterios: window.AtributosObjetos?.criteriosPayload() || [],
@@ -158,7 +158,7 @@
             completude_minima: Number($("fase3-completude").value) / 100,
             regra_ausentes: $("fase3-ausentes").value,
           }),
-          sucesso: "Índice de priorização calculado. Confira a tabela de objetos abaixo.",
+          sucesso: ["Índice de priorização calculado.", "Confira a tabela de objetos abaixo."],
         });
         if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
         hierarquizacoes = hierarquizacoes.map((item) => item.codigo === resposta.resultado.codigo ? resposta.resultado : item);
@@ -173,7 +173,7 @@
             message: `Os pesos exibidos serão gravados na hierarquização ${hierarquizacao.codigo}, substituindo os anteriores.`,
             confirmLabel: "Salvar pesos",
           },
-          titulo: "Salvando pesos dos atributos",
+          titulo: "Salvar pesos dos atributos",
           mensagemInicial: "Gravando os pesos no servidor…",
           executar: () => HierApi.salvarPesosFase3(hierarquizacao.codigo, { criterios: window.AtributosObjetos?.criteriosPayload() || [] }),
           sucesso: "Pesos dos atributos salvos.",
@@ -196,7 +196,7 @@
             confirmLabel: "Registrar decisão",
             danger: true,
           },
-          titulo: "Registrando tratamento dos riscos",
+          titulo: "Registrar tratamento dos riscos",
           mensagemInicial: "Gravando a decisão gerencial no servidor…",
           executar: () => HierApi.salvarRiscosFase3(hierarquizacao.codigo, payload),
           sucesso: "Tratamento dos riscos salvo.",
@@ -222,7 +222,7 @@
             detail: "A síntese anterior, se existir, é substituída. Ela combina os resultados das Fases 1, 2 e 3 como estão agora — confira se as três estão atualizadas antes de seguir.",
             confirmLabel: "Calcular síntese",
           },
-          titulo: "Calculando índice geral de hierarquização",
+          titulo: "Calcular índice geral de hierarquização",
           mensagemInicial: "Sintetizando as três fases no servidor…",
           executar: () => HierApi.sintetizar(hierarquizacao.codigo, {
             operador,
@@ -231,7 +231,7 @@
             peso_prioridade: Number($("peso-prioridade").value),
             incluir_restritos: false,
           }),
-          sucesso: "Índice geral calculado. O ranking final já está disponível.",
+          sucesso: ["Índice geral calculado.", "O ranking final já está disponível."],
           // Navegar sozinho tirava o usuário da página antes de ele ver o desfecho.
           acoesHtml:
             '<button type="button" class="btn btn-secondary" data-fb-close>Continuar na Fase 3</button>' +

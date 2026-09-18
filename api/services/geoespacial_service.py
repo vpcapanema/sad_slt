@@ -54,7 +54,7 @@ def _prefixo_overlay(regra_nomenclatura: str, fonte_id: str) -> str:
     regra = str(regra_nomenclatura or "<fonte_id>__<nome_campo>")
     if "<nome_campo>" not in regra:
         return f"{fonte_id}__"
-    return regra.split("<nome_campo>")[0].replace("<fonte_id>", fonte_id)
+    return regra.split("<nome_campo>", maxsplit=1)[0].replace("<fonte_id>", fonte_id)
 
 
 _DIMENSAO_POR_TIPO = {
@@ -173,7 +173,9 @@ def _overlay_ogr(
     # como linhas e pontos dentro de GEOMETRYCOLLECTION. Além de fugir da
     # semântica do ArcGIS, essas coleções reentram na rodada seguinte de um
     # encadeamento e derrubam o processo dentro do GDAL, sem exceção Python.
-    sim = lambda valor: "YES" if valor else "NO"
+    def sim(valor: bool) -> str:
+        return "YES" if valor else "NO"
+
     opcoes = [
         f"PROMOTE_TO_MULTI={sim(promover_multipartes)}",
         f"KEEP_LOWER_DIMENSION_GEOMETRIES={sim(manter_dimensoes_menores)}",
@@ -880,7 +882,10 @@ class GeoespacialService:
             except Exception:
                 layer = None
 
-        gdf.to_file(provisorio, layer=layer) if layer else gdf.to_file(provisorio)
+        if layer:
+            gdf.to_file(provisorio, layer=layer)
+        else:
+            gdf.to_file(provisorio)
         if sufixo.lower() == ".shp":
             for extensao in (".shp", ".shx", ".dbf", ".prj", ".cpg"):
                 origem = provisorio.with_suffix(extensao)

@@ -190,11 +190,30 @@ def test_sei_enviar_e_reanalisar_confirmam_antes_de_disparar():
 
 
 def test_sei_tem_os_tres_desfechos_e_o_codigo_do_erro():
-    assert "Analisado com sucesso" in SEI_JS
-    assert "Analisado com ressalvas" in SEI_JS
-    # O código do erro é o status HTTP devolvido pela rota.
+    # O semáforo vem do resumo da leitura (verde ou amarelo) e do erro (vermelho);
+    # o cabeçalho fica com o título da ação, então o status não é mais título.
+    corpo = SEI_JS.split("function desfechoDaLeitura(", 1)[1].split("async function confirmar(", 1)[0]
+    assert "'success' : 'warning'" in corpo
+    assert "type: 'error'" in SEI_JS
+    # O código do erro é o status HTTP devolvido pela rota, numa linha do corpo.
     assert "erro.status = res.status;" in SEI_JS
     assert "`Erro ${e.status" in SEI_JS
+
+
+def test_modal_mantem_o_titulo_da_acao_e_lista_uma_linha_por_resultado():
+    """Cabeçalho = título da ação; corpo = tarefas (processo) ou resultados
+    (status), um por linha. O desfecho não troca mais o título."""
+    corpo = FEEDBACK_JS.split('concluir({ type = "success"', 1)[1].split("fechar() {", 1)[0]
+    assert '.slt-fb-title").textContent' not in corpo
+    assert 'querySelector(".slt-fb-results")' in corpo
+    assert "slt-fb-tarefas" in corpo
+    assert ".slt-fb-results" in FEEDBACK_CSS
+
+
+def test_enter_nao_confirma_acao_perigosa_com_foco_em_cancelar():
+    corpo = FEEDBACK_JS.split("function confirmar(", 1)[1].split("function processo(", 1)[0]
+    assert '"[data-fb-cancelar], [data-fb-close]"' in corpo
+    assert '!danger || foco?.closest?.("[data-fb-confirmar]")' in corpo
 
 
 def test_sei_espera_o_usuario_dispensar_cada_desfecho():
@@ -209,9 +228,11 @@ def test_sei_mostra_o_proponente_lido_que_nao_cabe_no_formulario():
     não têm campo de texto no formulário. Sem nomeá-los no desfecho, o modal
     contava valores que a tela nunca preencheria — 4 lidos, 1 exibido."""
     assert "SO_NO_SIGMA" in SEI_JS
-    corpo = SEI_JS.split("function desfechoDaLeitura(", 1)[1].split("async function confirmar(", 1)[0]
-    # Vale nos dois desfechos: sucesso e ressalvas.
-    assert corpo.count("notaDoProponente(leitura)") == 2
+    corpo = SEI_JS.split("function linhasDaLeitura(", 1)[1].split("function desfechoDaLeitura(", 1)[0]
+    # Todo valor lido vira uma linha — os do proponente inclusive — e uma linha
+    # a mais diz que eles se escolhem ou cadastram no SIGMA.
+    assert "Object.entries(campos)" in corpo
+    assert "lidosSoNoSigma(leitura).length" in corpo
 
 
 def test_sei_envia_o_tipo_e_aproveita_a_leitura_que_voltou():

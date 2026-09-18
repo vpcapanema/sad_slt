@@ -39,6 +39,7 @@
   };
 
   let travado = false; // true enquanto um processo roda: ignora pedidos de fechar
+  let ouvinteTeclado = null; // Esc do modal aberto; sai junto com ele para não acumular
 
   function raiz() {
     let root = document.getElementById("slt-feedback-root");
@@ -55,12 +56,16 @@
     const bd = document.getElementById("slt-feedback-backdrop");
     if (bd) bd.remove();
     document.body.style.overflow = "";
+    if (ouvinteTeclado) {
+      document.removeEventListener("keydown", ouvinteTeclado);
+      ouvinteTeclado = null;
+    }
   }
 
   function addPasso(ul, passo) {
     const p = typeof passo === "string" ? { message: passo, status: "info" } : passo || {};
     const li = document.createElement("li");
-    li.className = `slt-fb-step slt-fb-step--${p.status || "info"}`;
+    li.className = `slt-fb-step slt-fb-step--${p.status || "info"}${p.destaque ? " slt-fb-step--destaque" : ""}`;
     li.innerHTML = `<i class="fas ${ICONS[p.status] || ICONS.info}"></i><span>${esc(p.message)}</span>`;
     ul.appendChild(li);
     ul.hidden = false;
@@ -68,7 +73,13 @@
     return li;
   }
 
-  function montar({ type = "info", title, message, steps, footerHtml, barra = false }) {
+  /** Texto ou lista de textos/linhas → linhas { message, status }; texto solto herda `status`. */
+  function linhas(conteudo, status) {
+    const lista = Array.isArray(conteudo) ? conteudo : conteudo ? [conteudo] : [];
+    return lista.map((l) => (typeof l === "string" ? { message: l, status } : l));
+  }
+
+  function montar({ type = "info", title, message, steps, resultados, footerHtml, barra = false }) {
     travado = false;
     fechar();
     const bd = document.createElement("div");
@@ -84,6 +95,7 @@
         <div class="slt-fb-body">
           ${message ? `<p class="slt-fb-message">${esc(message)}</p>` : ""}
           ${barra ? '<div class="slt-fb-bar"><div class="slt-fb-bar-fill" style="width:0%"></div></div><p class="slt-fb-etapa"></p>' : ""}
+          <ul class="slt-fb-results" hidden></ul>
           <ul class="slt-fb-steps" hidden></ul>
         </div>
         <footer class="slt-fb-foot">${footerHtml || '<button type="button" class="btn btn-primary" data-fb-close>OK</button>'}</footer>
@@ -93,27 +105,33 @@
     bd.addEventListener("click", (e) => {
       if (e.target === bd || e.target.closest("[data-fb-close]")) fechar();
     });
-    const onKey = (e) => {
-      if (e.key === "Escape" && !travado) {
-        fechar();
-        document.removeEventListener("keydown", onKey);
-      }
+    // O `fechar()` do início já removeu o ouvinte do modal anterior.
+    ouvinteTeclado = (e) => {
+      if (e.key === "Escape" && !travado) fechar();
     };
-    document.addEventListener("keydown", onKey);
+    document.addEventListener("keydown", ouvinteTeclado);
     const ul = bd.querySelector(".slt-fb-steps");
     (steps || []).forEach((s) => addPasso(ul, s));
+    const res = bd.querySelector(".slt-fb-results");
+    linhas(resultados, type).forEach((l) => addPasso(res, l));
     return bd;
   }
 
-  function notify(type, message, title) {
-    return montar({ type, message, title });
+  /**
+   * Modal de status: cabeçalho com o título da ação, corpo com os resultados,
+   * um por linha. `resultados` aceita texto ou lista de textos/{ message, status }.
+   */
+  function notify(type, resultados, title) {
+    return montar({ type, title, resultados });
   }
 
   /**
    * Estágio 1 — revisão e confirmação da ação que está por vir.
    * options: { title, message, detail, confirmLabel, cancelLabel, danger }
    * Resolve true (seguir) ou false (desistir). Esc, clique no fundo, X e
-   * "Cancelar" resolvem false; Enter e o botão de ação resolvem true.
+   * "Cancelar" resolvem false; o botão de ação resolve true. Enter aciona o
+   * botão focado; em ação perigosa (`danger`), só confirma com o foco no
+   * botão de ação — o foco inicial em "Cancelar" não pode virar confirmação.
    */
   function confirmar(options) {
     const opts = typeof options === "string" ? { message: options } : options || {};
@@ -147,8 +165,14 @@
         resolve(valor);
       };
       function onKey(e) {
-        if (e.key === "Escape") encerrar(false);
-        else if (e.key === "Enter") encerrar(true);
+        if (e.key === "Escape") {
+          encerrar(false);
+        } else if (e.key === "Enter") {
+          e.preventDefault(); // o clique nativo do botão focado decidiria de novo
+          const foco = document.activeElement;
+          if (foco?.closest?.("[data-fb-cancelar], [data-fb-close]")) encerrar(false);
+          else if (!danger || foco?.closest?.("[data-fb-confirmar]")) encerrar(true);
+        }
       }
       bd.addEventListener("click", (e) => {
         if (e.target.closest("[data-fb-confirmar]")) encerrar(true);
@@ -196,20 +220,31 @@
         }
         if (etapa && etapaAtual) etapa.textContent = etapaAtual;
       },
-      concluir({ type = "success", title: t, message, acoesHtml } = {}) {
+      /**
+       * Estágio 3. O cabeçalho mantém o título da ação; o status vem pela cor e
+       * pelo ícone. O corpo passa a listar os resultados, um por linha
+       * (`title` vira a linha de destaque, `message` e `resultados` as demais),
+       * e as tarefas executadas ficam recolhidas logo abaixo.
+       */
+      concluir({ type = "success", title: t, message, resultados, acoesHtml } = {}) {
         travado = false;
         modal.className = `slt-fb-modal slt-fb-modal--${type}`;
         const icone = bd.querySelector(".slt-fb-icon i");
         if (icone) icone.className = `fas ${ICONS[type] || ICONS.success}`;
-        bd.querySelector(".slt-fb-title").textContent = t || TITULOS[type] || TITULOS.success;
-        if (message) {
-          let p = bd.querySelector(".slt-fb-message");
-          if (!p) {
-            p = document.createElement("p");
-            p.className = "slt-fb-message";
-            bd.querySelector(".slt-fb-body").prepend(p);
-          }
-          p.textContent = message;
+        const res = bd.querySelector(".slt-fb-results");
+        res.replaceChildren();
+        const lista = [
+          ...(t ? [{ message: t, status: type, destaque: true }] : []),
+          ...linhas(message, type),
+          ...linhas(resultados, type),
+        ];
+        lista.forEach((l) => addPasso(res, l));
+        if (lista.length && ul.children.length) {
+          const tarefas = document.createElement("details");
+          tarefas.className = "slt-fb-tarefas";
+          tarefas.innerHTML = `<summary>Tarefas executadas (${ul.children.length})</summary>`;
+          ul.replaceWith(tarefas);
+          tarefas.appendChild(ul);
         }
         if (acoesHtml) foot.innerHTML = acoesHtml;
         foot.hidden = false;
@@ -235,10 +270,10 @@
     try {
       const resultado = await executar(proc);
       proc.atualizar(p, "success", "Servidor respondeu com sucesso.");
+      // O cabeçalho já é o título da ação; o corpo lista só os resultados.
       proc.concluir({
         type: "success",
-        title: "Processo concluído",
-        message: typeof sucesso === "function" ? sucesso(resultado) : sucesso,
+        resultados: typeof sucesso === "function" ? sucesso(resultado) : sucesso,
         acoesHtml,
       });
       return { ok: true, resultado, proc };
@@ -246,8 +281,7 @@
       proc.atualizar(p, "error", "O servidor interrompeu o processo.");
       proc.concluir({
         type: "error",
-        title: "Processo interrompido",
-        message: erro?.message || String(erro),
+        resultados: erro?.message || String(erro),
       });
       return { ok: false, erro };
     }

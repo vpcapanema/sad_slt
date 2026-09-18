@@ -33,6 +33,16 @@
 .slt-fb-step--error i{color:#c0392b}
 .slt-fb-step--warning i{color:#d4a017}
 .slt-fb-step--info i,.slt-fb-step--progress i{color:#116593}
+.slt-fb-steps[hidden],.slt-fb-results[hidden]{display:none}
+/* Resultados (modais de status): um por linha, separados, rolando se forem muitos. */
+.slt-fb-results{list-style:none;margin:0;padding:0;display:grid;max-height:46vh;overflow:auto}
+.slt-fb-results .slt-fb-step{padding:.35rem 0;border-bottom:1px solid #eef2f5}
+.slt-fb-results .slt-fb-step:last-child{border-bottom:0}
+.slt-fb-step--destaque span{font-weight:700;color:#12303f}
+/* Tarefas já executadas ficam recolhidas abaixo dos resultados. */
+.slt-fb-tarefas{margin-top:.6rem;padding-top:.5rem;border-top:1px solid #e6ecf1}
+.slt-fb-tarefas summary{cursor:pointer;font-size:.78rem;color:#5b7180}
+.slt-fb-tarefas .slt-fb-steps{margin-top:.45rem}
 .slt-fb-foot{display:flex;justify-content:flex-end;gap:.5rem;padding:.65rem .85rem;border-top:1px solid #e6ecf1}
 .slt-fb-foot[hidden]{display:none}
 .slt-fb-foot .btn-danger{background:#c0392b;color:#fff}

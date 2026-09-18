@@ -55,6 +55,36 @@
   }
   const post = (path, body) => request(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) });
 
+  const NIVEL_DO_PASSO = { erro: 'error', aviso: 'warning' };
+
+  // Acompanha o job de leitura: cada passo que o servidor registra (página
+  // aberta, OCR, campo lido…) vira uma linha do modal, na ordem em que ocorre.
+  // Devolve o resultado do job ou lança o erro com o código HTTP equivalente.
+  async function acompanharJob(inicial, proc) {
+    let job = inicial;
+    let vistos = 0;
+    let emAndamento = null;
+    for (;;) {
+      for (const log of job.logs.slice(vistos)) {
+        if (emAndamento) proc.atualizar(emAndamento, 'success');
+        const status = NIVEL_DO_PASSO[log.nivel];
+        const linha = proc.passo(log.mensagem, status || 'progress');
+        emAndamento = status ? null : linha;
+      }
+      vistos = job.logs.length;
+      if (job.status !== 'executando') break;
+      await new Promise(resolve => setTimeout(resolve, 400));
+      job = await request(`${API}/jobs/${job.id}`);
+    }
+    if (job.status === 'concluido') {
+      if (emAndamento) proc.atualizar(emAndamento, 'success');
+      return job.resultado;
+    }
+    const erro = new Error(job.erro || 'A leitura foi interrompida.');
+    erro.status = job.erro_status;
+    throw erro;
+  }
+
   function aviso(id, texto) {
     q(id).textContent = texto || '';
     q(id).classList.toggle('hidden', !texto);
@@ -115,14 +145,23 @@
     botao.disabled = true;
     try {
       if (acao === 'excluir') {
-        const confirmado = await SLTAdminUi.showConfirm({
-          title: 'Excluir documento', message: `Excluir ${doc.nome_arquivo} do repositório?`,
-          confirmLabel: 'Excluir', danger: true,
+        const { ok } = await SLTFeedback.acao({
+          confirmacao: {
+            title: 'Excluir documento',
+            message: `Excluir ${doc.nome_arquivo} do repositório?`,
+            detail: 'O PDF é apagado do banco e não pode ser recuperado. Nenhuma demanda é afetada: documento que já gerou demanda não pode ser excluído.',
+            confirmLabel: 'Excluir',
+            danger: true,
+          },
+          titulo: 'Excluir documento',
+          mensagemInicial: 'Pedindo ao servidor a exclusão do PDF…',
+          executar: () => request(`${API}/${doc.id}`, { method: 'DELETE' }),
+          sucesso: `${doc.nome_arquivo} foi excluído do repositório.`,
         });
-        if (!confirmado) return;
-        await request(`${API}/${doc.id}`, { method: 'DELETE' });
-        removerDaFila(String(doc.id));
-        await listar();
+        if (ok) {
+          removerDaFila(String(doc.id));
+          await listar();
+        }
       }
     } catch (e) {
       SLTAdminUi.showToast(e.message, true);
@@ -195,24 +234,25 @@
         const execucao = item.execucao;
         renderFila();
         atualizarStatus();
-        const proc = SLTFeedback.processo(`Analisando ${item.nome}`);
-        const passo = proc.passo('Lendo o PDF e extraindo os campos…', 'progress');
+        const proc = SLTFeedback.processo(`Análise de ${item.nome}`);
+        const passo = proc.passo(`Pedindo ao servidor a leitura do PDF como ${item.tipo}…`, 'progress');
         try {
-          const leitura = await post(`${API}/${item.id}/analisar`, { tipo_demanda: item.tipo });
+          const job = await post(`${API}/${item.id}/analisar`, { tipo_demanda: item.tipo });
+          proc.atualizar(passo, 'success', `Servidor iniciou a leitura como ${item.tipo}.`);
+          const leitura = await acompanharJob(job, proc);
           if (execucao !== item.execucao) { proc.fechar(); continue; } // reanalisado durante a leitura: vale a nova
           item.detalhe = leitura;
           item.estado = 'pronto';
-          proc.atualizar(passo, 'success', 'PDF lido pelo servidor.');
-          await aguardarFechamento(proc.concluir(desfechoDaLeitura(item.nome, leitura)));
+          await aguardarFechamento(proc.concluir(desfechoDaLeitura(leitura)));
         } catch (e) {
           if (execucao !== item.execucao) { proc.fechar(); continue; }
           item.estado = 'erro';
           item.erro = e.message;
-          proc.atualizar(passo, 'error', 'Leitura interrompida.');
+          // Se o pedido foi aceito, a falha já está no log do job; senão, marca o pedido.
+          if (!passo.classList.contains('slt-fb-step--success')) proc.atualizar(passo, 'error', 'O servidor recusou o pedido de leitura.');
           await aguardarFechamento(proc.concluir({
             type: 'error',
-            title: `Erro ${e.status || 'de conexão'} — não foi possível analisar`,
-            message: `${item.nome}: ${e.message}`,
+            resultados: [linhaDeErro(e), 'O formulário fica em branco para preenchimento manual.'],
           }));
         }
         renderFila();
@@ -336,7 +376,8 @@
 
   // -------------------------------------------------------------- desfecho
 
-  const rotular = (chaves) => chaves.map(chave => ROTULOS[chave] || chave).join(', ');
+  const rotulo = (chave) => ROTULOS[chave] || chave;
+  const linhaDeErro = (e) => ({ message: `Erro ${e.status || 'de conexão'}: ${e.message}`, status: 'error' });
 
   // O desfecho fica na tela até o usuário dispensá-lo; só então o próximo PDF
   // da fila começa, para que nenhum resultado passe despercebido.
@@ -367,36 +408,38 @@
       .map(campo => `${ROTULOS[campo] || campo}: ${campos[campo]}`);
   }
 
-  function notaDoProponente(leitura) {
-    const lidos = lidosSoNoSigma(leitura);
-    return lidos.length
-      ? ` Do proponente o PDF trouxe — ${lidos.join('; ')} —, que não têm campo no formulário:`
-        + ' use esses valores para escolher a instituição e o representante, ou cadastrá-los.'
-      : '';
+  /** Resultado da leitura, um por linha: lidos (verde), sem valor ou concorrentes (amarelo). */
+  function linhasDaLeitura(leitura) {
+    const campos = leitura.campos_sugeridos || {};
+    const resumo = leitura.analise?.resumo;
+    const linhas = [];
+    if (leitura.numero_processo) linhas.push({ message: `Processo SEI: ${leitura.numero_processo}`, status: 'info' });
+    for (const [chave, valor] of Object.entries(campos)) {
+      if (valor === undefined || valor === null || valor === '') continue;
+      const texto = String(valor);
+      linhas.push({ message: `${rotulo(chave)}: ${texto.length > 140 ? `${texto.slice(0, 140)}…` : texto}`, status: 'success' });
+    }
+    for (const chave of resumo?.campos_faltando || []) {
+      linhas.push({ message: `${rotulo(chave)}: não encontrado no PDF`, status: 'warning' });
+    }
+    for (const chave of resumo?.campos_conflitantes || []) {
+      linhas.push({ message: `${rotulo(chave)}: valores concorrentes no PDF, nenhum escolhido`, status: 'warning' });
+    }
+    if (lidosSoNoSigma(leitura).length) {
+      linhas.push({
+        message: 'Instituição, CNPJ, município e representante não têm campo no formulário: use os valores lidos para escolhê-los ou cadastrá-los no SIGMA.',
+        status: 'info',
+      });
+    }
+    if (!linhas.length) linhas.push({ message: 'Nenhum campo com valor sustentado no PDF.', status: 'warning' });
+    return linhas;
   }
 
-  function desfechoDaLeitura(nome, leitura) {
+  function desfechoDaLeitura(leitura) {
     const resumo = leitura.analise?.resumo;
-    if (!resumo) {
-      return { type: 'success', title: 'Analisado', message: `${nome}: leitura concluída. Revise o formulário e confirme.` };
-    }
-    const total = resumo.campos_avaliados.length;
-    if (resumo.desfecho === 'sucesso') {
-      return {
-        type: 'success',
-        title: 'Analisado com sucesso',
-        message: `${nome}: os ${total} campos que o sistema sabe ler foram extraídos do PDF, cada um com o trecho que o sustenta.`
-          + `${notaDoProponente(leitura)} Revise o formulário e confirme para criar a demanda.`,
-      };
-    }
-    const ressalvas = [];
-    if (resumo.campos_faltando.length) ressalvas.push(`sem valor sustentado no PDF: ${rotular(resumo.campos_faltando)}`);
-    if (resumo.campos_conflitantes.length) ressalvas.push(`com valores concorrentes, nenhum escolhido: ${rotular(resumo.campos_conflitantes)}`);
     return {
-      type: 'warning',
-      title: 'Analisado com ressalvas',
-      message: `${nome}: ${resumo.campos_lidos.length} de ${total} campos vieram do PDF. Ficaram em branco para você preencher — ${ressalvas.join('; ')}.`
-        + notaDoProponente(leitura),
+      type: !resumo || resumo.desfecho === 'sucesso' ? 'success' : 'warning',
+      resultados: linhasDaLeitura(leitura),
     };
   }
 
@@ -408,26 +451,73 @@
     try {
       dados = q('sei-formulario-frame').contentWindow.SLTCadastroEmbed.coletar();
     } catch (e) {
+      // A validação do formulário oficial barrou o envio: nada foi ao servidor.
       erroFormulario(e.message);
+      SLTFeedback.notify('warning', [e.message, 'Nada foi enviado ao servidor: complete o formulário e confirme de novo.'], 'Criar demanda');
       return;
     }
+    const nome = dados.campos?.nome || item.nome;
+    const confirmado = await SLTFeedback.confirmar({
+      title: 'Criar demanda',
+      message: `Criar ${dados.tipo} "${nome}" a partir de ${item.nome}?`,
+      detail: 'A demanda é gravada no banco com os dados do formulário, na situação inicial de análise. O PDF fica ligado a ela e deixa de poder ser reanalisado ou excluído.',
+      confirmLabel: 'Criar demanda',
+    });
+    if (!confirmado) return;
     const botao = q('sei-btn-confirmar');
     botao.disabled = true;
+    const proc = SLTFeedback.processo('Criar demanda');
+    proc.passo('Formulário validado pelas regras do cadastro oficial.', 'success');
+    const passo = proc.passo(`Enviando o ${dados.tipo} ao servidor…`, 'progress');
     try {
       const criada = await post(`${API}/${item.id}/criar-demanda`, { tipo_demanda: dados.tipo, campos: dados.campos });
       item.estado = 'criada';
-      SLTAdminUi.showToast(criada.ja_existia ? `Este documento já havia gerado a demanda ${criada.id}.` : `Demanda ${criada.id} criada a partir do PDF do SEI.`);
+      proc.atualizar(passo, 'success', `Servidor respondeu: ${criada.ja_existia ? 'demanda já existente' : 'demanda gravada'}.`);
+      // O próximo PDF da fila só abre depois que o desfecho for lido.
+      await aguardarFechamento(proc.concluir(criada.ja_existia
+        ? {
+            type: 'warning',
+            resultados: [
+              `Demanda ${criada.id} já existia para ${item.nome}.`,
+              'Nada novo foi gravado.',
+            ],
+          }
+        : {
+            type: 'success',
+            resultados: [
+              `Demanda criada: ${criada.id}`,
+              `Tipo: ${dados.tipo}`,
+              `Nome: ${nome}`,
+              `Origem: ${item.nome}`,
+            ],
+          }));
       avancar();
       await listar();
     } catch (e) {
+      proc.atualizar(passo, 'error', 'O servidor recusou a criação.');
       erroFormulario(e.message);
+      await aguardarFechamento(proc.concluir({
+        type: 'error',
+        // Só a recusa de validação garante que nada foi gravado.
+        resultados: [linhaDeErro(e), e.status === 422
+          ? 'Nenhuma demanda foi gravada.'
+          : 'Confira a tabela antes de tentar de novo: a demanda pode ter sido gravada antes da falha.'],
+      }));
       botao.disabled = false;
     }
   }
 
-  function descartar() {
-    // Fecha este PDF sem criar demanda; o arquivo continua no repositório e pode ser reaberto pela tabela.
-    if (atualId) removerDaFila(atualId);
+  async function descartar() {
+    const item = fila.find(x => x.id === atualId);
+    if (!item) return;
+    const confirmado = await SLTFeedback.confirmar({
+      title: 'Descartar demanda',
+      message: `Fechar ${item.nome} sem criar demanda?`,
+      detail: 'O que foi preenchido ou editado no formulário se perde. O PDF continua no repositório e pode ser reaberto pela tabela.',
+      confirmLabel: 'Descartar',
+      danger: true,
+    });
+    if (confirmado) removerDaFila(item.id);
   }
 
   // ----------------------------------------------------------------- envio
@@ -451,14 +541,28 @@
     // O tipo decide o contrato de campos, e a leitura acontece já no envio.
     dados.append('tipo_demanda', tipo);
     q('sei-btn-enviar').disabled = true;
-    const proc = SLTFeedback.processo(`Enviando e analisando ${arquivos.length} PDF(s)`);
-    const passo = proc.passo('O servidor está lendo cada PDF e gravando a leitura…', 'progress');
+    const proc = SLTFeedback.processo(`Enviar e analisar ${arquivos.length} PDF(s)`);
+    const passo = proc.passo(`Enviando ${arquivos.length} arquivo(s) ao servidor para gravar e ler…`, 'progress');
     try {
-      const resultado = await request(API, { method: 'POST', body: dados });
+      const job = await request(API, { method: 'POST', body: dados });
       entrada.value = '';
-      proc.atualizar(passo, 'success', `${resultado.recebidos.length} documento(s) gravado(s) com a leitura.`);
-      proc.fechar();
-      const recusados = (resultado.erros || []).map(e => `${e.arquivo}: ${e.mensagem}`).join(' ');
+      proc.atualizar(passo, 'success', 'Arquivos recebidos pelo servidor; leitura iniciada.');
+      // Cada arquivo, página e campo lido aparece como linha enquanto o job roda.
+      const resultado = await acompanharJob(job, proc);
+      const erros = resultado.erros || [];
+      if (erros.length) {
+        // Recusa parcial: o modal fica amarelo e lista cada arquivo, aceito ou recusado.
+        await aguardarFechamento(proc.concluir({
+          type: 'warning',
+          resultados: [
+            ...resultado.recebidos.map(doc => ({ message: `${doc.nome_arquivo}: aceito`, status: 'success' })),
+            ...erros.map(e => ({ message: `${e.arquivo}: recusado — ${e.mensagem}`, status: 'error' })),
+          ],
+        }));
+      } else {
+        proc.fechar();
+      }
+      const recusados = erros.map(e => `${e.arquivo}: ${e.mensagem}`).join(' ');
       aviso('sei-upload-aviso', `${resultado.recebidos.length} documento(s) recebido(s).${recusados ? ' Recusados — ' + recusados : ''}`);
       if (resultado.recebidos.length) {
         // A leitura veio do servidor junto do arquivo: não há o que reprocessar.
@@ -472,14 +576,23 @@
         if (!atualId) selecionar(novos[0].id);
         else renderFila();
         for (const item of novos) {
-          const desfecho = desfechoDaLeitura(item.nome, item.detalhe);
-          await aguardarFechamento(SLTFeedback.notify(desfecho.type, desfecho.message, desfecho.title));
+          const desfecho = desfechoDaLeitura(item.detalhe);
+          await aguardarFechamento(SLTFeedback.notify(desfecho.type, desfecho.resultados, `Análise de ${item.nome}`));
         }
       }
       await listar();
     } catch (e) {
-      proc.fechar();
+      // Nenhum arquivo aceito (ou falha de conexão): o erro fica no modal, em vermelho.
+      if (!passo.classList.contains('slt-fb-step--success')) proc.atualizar(passo, 'error', 'O servidor recusou o envio.');
       aviso('sei-upload-aviso', e.message);
+      await aguardarFechamento(proc.concluir({
+        type: 'error',
+        // 413 = lote grande demais, conferido antes de gravar; 422 = todos recusados.
+        // Outros códigos (503, 500, conexão) podem vir depois de arquivos já gravados.
+        resultados: [linhaDeErro(e), [413, 422].includes(e.status)
+          ? 'Nenhum arquivo foi gravado.'
+          : 'Confira a tabela antes de reenviar: parte dos arquivos pode ter sido gravada antes da falha.'],
+      }));
     } finally { q('sei-btn-enviar').disabled = false; }
   }
 

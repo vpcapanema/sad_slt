@@ -646,6 +646,17 @@ def test_documento_inexistente(repo):
         servico.obter(str(uuid4()))
 
 
+def aguardar_job(client, job, limite=30.0):
+    """Consulta o job da leitura até ele terminar, como a página faz."""
+    import time
+
+    fim = time.monotonic() + limite
+    while job["status"] == "executando" and time.monotonic() < fim:
+        time.sleep(0.05)
+        job = client.get(f"/sei/documentos/jobs/{job['id']}").json()
+    return job
+
+
 def aplicacao(repo, monkeypatch, perfil="OPERADOR"):
     app = FastAPI()
     app.include_router(rotas.router)
@@ -662,10 +673,35 @@ def test_envio_em_lote_separa_aceito_de_recusado(repo, monkeypatch):
         ("arquivos", ("oficio.pdf", pdf(OFICIO), "application/pdf")),
         ("arquivos", ("planilha.xlsx", b"PK\x03\x04nao-e-pdf", "application/vnd.ms-excel")),
     ])
-    assert resposta.status_code == 200
-    corpo = resposta.json()
+    assert resposta.status_code == 202
+    job = aguardar_job(client, resposta.json())
+    assert job["status"] == "concluido", job
+    corpo = job["resultado"]
     assert len(corpo["recebidos"]) == 1
     assert corpo["erros"][0]["arquivo"] == "planilha.xlsx"
+    mensagens = [log["mensagem"] for log in job["logs"]]
+    assert any(m.startswith("planilha.xlsx: recusado") for m in mensagens)
+
+
+def test_job_de_leitura_relata_paginas_e_campos_em_ordem(repo, monkeypatch):
+    """Cada passo real do extrator vira uma linha que a página mostra."""
+    client = aplicacao(repo, monkeypatch)
+    resposta = client.post("/sei/documentos", files=[("arquivos", ("oficio.pdf", pdf(OFICIO), "application/pdf"))])
+    job = aguardar_job(client, resposta.json())
+    assert job["status"] == "concluido", job
+    mensagens = [log["mensagem"] for log in job["logs"]]
+    assert mensagens[0] == "Arquivo 1 de 1: oficio.pdf"
+    assert "PDF aberto: 1 página(s)" in mensagens
+    assert any(m.startswith("Página 1: texto nativo") for m in mensagens)
+    assert any(m.startswith("Número do processo: 1234.00456789/2026-11") for m in mensagens)
+    assert mensagens[-1] == "oficio.pdf: arquivo e leitura gravados no repositório"
+
+
+def test_job_com_todos_recusados_termina_em_erro_422(repo, monkeypatch):
+    client = aplicacao(repo, monkeypatch)
+    resposta = client.post("/sei/documentos", files=[("arquivos", ("a.xlsx", b"PK\x03\x04", "application/vnd.ms-excel"))])
+    job = aguardar_job(client, resposta.json())
+    assert job["status"] == "erro" and job["erro_status"] == 422
 
 
 def test_envio_devolve_a_leitura_ja_gravada(repo, monkeypatch):
@@ -675,8 +711,10 @@ def test_envio_devolve_a_leitura_ja_gravada(repo, monkeypatch):
     resposta = client.post("/sei/documentos", data={"tipo_demanda": "projeto"}, files=[
         ("arquivos", ("SEI nº 020 00016588 2025 13 - oficio.pdf", pdf(OFICIO), "application/pdf")),
     ])
-    assert resposta.status_code == 200
-    documento = resposta.json()["recebidos"][0]
+    assert resposta.status_code == 202
+    job = aguardar_job(client, resposta.json())
+    assert job["status"] == "concluido", job
+    documento = job["resultado"]["recebidos"][0]
     assert documento["status"] == "analisado"
     assert documento["numero_processo"] == "020.00016588/2025-13"
     assert documento["campos_sugeridos"]["nome"].startswith("Duplicacao")
@@ -692,8 +730,10 @@ def test_pdf_ilegivel_e_recusado_sem_derrubar_o_lote(repo, monkeypatch):
         ("arquivos", ("bom.pdf", pdf(OFICIO), "application/pdf")),
         ("arquivos", ("corrompido.pdf", b"%PDF-lixo que nao abre", "application/pdf")),
     ])
-    assert resposta.status_code == 200
-    assert [e["arquivo"] for e in resposta.json()["erros"]] == ["corrompido.pdf"]
+    assert resposta.status_code == 202
+    job = aguardar_job(client, resposta.json())
+    assert job["status"] == "concluido", job
+    assert [e["arquivo"] for e in job["resultado"]["erros"]] == ["corrompido.pdf"]
     # O recusado não deixa registro: a leitura vem antes do INSERT.
     assert len(repo.registros) == 1
 
@@ -702,8 +742,10 @@ def test_rota_de_analise_recebe_tipo(repo, monkeypatch):
     client = aplicacao(repo, monkeypatch)
     documento = enviar()
     resposta = client.post(f"/sei/documentos/{documento['id']}/analisar", json={"tipo_demanda": "plano"})
-    assert resposta.status_code == 200
-    assert resposta.json()["tipo_demanda"] == "plano"
+    assert resposta.status_code == 202
+    job = aguardar_job(client, resposta.json())
+    assert job["status"] == "concluido", job
+    assert job["resultado"]["tipo_demanda"] == "plano"
 
 
 def test_lote_acima_do_limite_de_corpo_tem_erro_proprio(repo, monkeypatch):

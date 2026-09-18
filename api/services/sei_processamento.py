@@ -31,7 +31,7 @@ from dataclasses import dataclass, replace
 from datetime import date
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Iterable, Literal
+from typing import Any, Callable, Iterable, Literal
 
 TipoDemanda = Literal["plano", "programa", "projeto"]
 
@@ -340,6 +340,44 @@ def _papel(texto: str) -> str:
     return melhor if pontuacoes[melhor] else "conteúdo_não_classificado"
 
 
+# Recebe cada passo real da leitura, na ordem em que acontece (job do SEI).
+Progresso = Callable[[str], None]
+
+_METODO_LEGIVEL = {
+    "texto_nativo": "texto nativo",
+    "ocr": "texto por OCR",
+    "texto_nativo_insuficiente": "pouco texto nativo, o OCR não trouxe mais",
+}
+_ROTULO_EXTRA = {
+    "instituicao_label": "Instituição", "representante_nome": "Representante",
+    "representante_email": "E-mail do representante", "representante_telefone": "Telefone do representante",
+    "municipio": "Município",
+}
+
+
+def _avisar(progresso: Progresso | None, mensagem: str) -> None:
+    if progresso:
+        progresso(mensagem)
+
+
+def _resumir(valor: Any, limite: int = 60) -> str:
+    texto = str(valor)
+    return texto if len(texto) <= limite else f"{texto[:limite]}…"
+
+
+def _situacao_campo(resultado: dict[str, Any], tem_regra: bool = True) -> str:
+    if not tem_regra:
+        return "sem regra de leitura (preenchimento manual)"
+    estado = resultado.get("estado")
+    if estado == "normalizado":
+        if resultado.get("confianca", 0) >= CONFIANCA_MINIMA:
+            return f"lido ({_resumir(resultado.get('valor_normalizado'))})"
+        return "lido com confiança baixa, não sugerido"
+    if estado == "conflitante":
+        return "valores concorrentes, nenhum escolhido"
+    return "não encontrado"
+
+
 def _ocr(pagina: Any) -> tuple[str, str | None]:
     if not shutil.which("tesseract"):
         return "", "OCR local indisponível no servidor."
@@ -357,7 +395,7 @@ def _ocr(pagina: Any) -> tuple[str, str | None]:
         return "", f"Falha no OCR da página: {type(exc).__name__}."
 
 
-def extrair_paginas(conteudo: bytes) -> tuple[list[Pagina], list[str]]:
+def extrair_paginas(conteudo: bytes, progresso: Progresso | None = None) -> tuple[list[Pagina], list[str]]:
     """Extrai texto e metadados de cada página, acionando OCR quando preciso."""
     import pymupdf
 
@@ -366,10 +404,12 @@ def extrair_paginas(conteudo: bytes) -> tuple[list[Pagina], list[str]]:
     with pymupdf.open(stream=conteudo, filetype="pdf") as documento:
         if documento.needs_pass:
             raise ValueError("PDF protegido por senha.")
+        _avisar(progresso, f"PDF aberto: {documento.page_count} página(s)")
         for indice, pagina in enumerate(documento):
             nativo = _limpar_texto(pagina.get_text("text", sort=True))
             texto, metodo, aviso = nativo, "texto_nativo", None
             if len(nativo) < MINIMO_TEXTO_NATIVO:
+                _avisar(progresso, f"Página {indice + 1}: pouco texto nativo, aplicando OCR…")
                 reconhecido, aviso = _ocr(pagina)
                 reconhecido = _limpar_texto(reconhecido)
                 if len(reconhecido) > len(nativo):
@@ -378,6 +418,8 @@ def extrair_paginas(conteudo: bytes) -> tuple[list[Pagina], list[str]]:
                     metodo = "texto_nativo_insuficiente"
             confianca = (min(0.9, 0.7 + len(texto) / 1000) if metodo == "ocr" else (1.0 if texto else 0.0))
             paginas.append(Pagina(indice + 1, texto, metodo, _papel(texto), round(confianca, 3), aviso))
+            leitura = _METODO_LEGIVEL.get(metodo, metodo) if texto else "sem texto legível"
+            _avisar(progresso, f"Página {indice + 1}: {leitura}, {len(texto)} caracteres")
             if aviso and aviso not in avisos:
                 avisos.append(aviso)
     return paginas, avisos
@@ -988,10 +1030,17 @@ def com_regra(campo: str, tipo: TipoDemanda) -> bool:
     return bool(_ROTULOS.get(campo) or _ROTULOS_POR_TIPO.get(tipo, {}).get(campo))
 
 
-def analisar(conteudo: bytes, tipo: TipoDemanda = "projeto", nome_arquivo: str | None = None) -> dict[str, Any]:
+def analisar(
+    conteudo: bytes,
+    tipo: TipoDemanda = "projeto",
+    nome_arquivo: str | None = None,
+    progresso: Progresso | None = None,
+) -> dict[str, Any]:
+    """Lê o PDF conforme o contrato do tipo. `progresso` recebe cada passo real."""
     contrato = json.loads(_CONTRATO.read_text(encoding="utf-8"))
     campos_contrato = contrato["tipos_objeto"][tipo]["campos"]
-    paginas, avisos = extrair_paginas(conteudo)
+    _avisar(progresso, f"Contrato de campos do formulário de {tipo} carregado")
+    paginas, avisos = extrair_paginas(conteudo, progresso)
     resultados: dict[str, Any] = {}
     extraiveis = set(campos_contrato) | {"instituicao_label", "representante_nome", "representante_email", "representante_telefone", "municipio"}
     for campo in sorted(extraiveis):
@@ -1003,13 +1052,19 @@ def analisar(conteudo: bytes, tipo: TipoDemanda = "projeto", nome_arquivo: str |
             candidatos = [*candidatos, {"valor": titulo,
                                         "evidencia": _evidencia_do_nome(nome_arquivo, CONFIANCA_NOME_ARQUIVO)}]
         resultados[campo] = _resultado(campo, candidatos)
+        if campo != "maturidade_objeto":  # a maturidade tem leitura própria, logo abaixo
+            rotulo = campos_contrato.get(campo, {}).get("rotulo") or _ROTULO_EXTRA.get(campo, campo)
+            _avisar(progresso, f"{rotulo}: {_situacao_campo(resultados[campo], com_regra(campo, tipo))}")
     resultados["maturidade_objeto"] = _maturidade(tipo, paginas, contrato)
+    if tipo == "projeto":
+        _avisar(progresso, f"Grau de maturidade: {_situacao_campo(resultados['maturidade_objeto'])}")
 
     processos = _candidatos_formato(paginas, _PROCESSO, "processo")
     if numero_no_arquivo := numero_no_nome(nome_arquivo):
         processos = [*processos, {"valor": numero_no_arquivo,
                                   "evidencia": _evidencia_do_nome(nome_arquivo, CONFIANCA_PROCESSO_NO_NOME)}]
     numero_processo = _resultado("numero_processo", processos)
+    _avisar(progresso, f"Número do processo: {numero_processo.get('valor_normalizado') or 'não identificado'}")
     preenchiveis = {
         campo: resultado.get("valor_normalizado")
         for campo, resultado in resultados.items()
