@@ -287,6 +287,27 @@
     syncFieldFilledState(el);
   }
 
+  // Tipologia sem modal_ids é transversal: vale para qualquer modal.
+  function tipologiaServeAoModal(tipologia, modalId) {
+    const modais = tipologia.modal_ids || [];
+    return modais.length === 0 || (Boolean(modalId) && modais.includes(modalId));
+  }
+
+  // Refaz #tipologia conforme #modal: específicas do modal primeiro, depois as transversais.
+  function atualizarTipologiasPorModal() {
+    const sel = $("#tipologia");
+    const modalId = $("#modal").value;
+    const atual = sel.value;
+    const opcoes = SLTCatalog.ativos(SLTCatalog.catalog?.tipologias).filter((t) => tipologiaServeAoModal(t, modalId));
+    const especificas = opcoes.filter((t) => (t.modal_ids || []).length > 0);
+    const transversais = opcoes.filter((t) => !(t.modal_ids || []).length);
+    const placeholder = modalId ? "— Opcional —" : "— Opcional (selecione o modal para ver as específicas) —";
+    fillSelect(sel, [...especificas, ...transversais], "id", (t) => t.nome, placeholder);
+    // Mantém a escolha se ainda serve ao modal; senão, limpa.
+    sel.value = opcoes.some((t) => t.id === atual) ? atual : "";
+    syncFieldFilledState(sel);
+  }
+
   function setSubsectionNumber(subsection, sectionNumber, subsectionNumber) {
     const heading = subsection.querySelector(":scope > h3");
     if (!heading) return;
@@ -2010,7 +2031,8 @@
     const cat = SLTCatalog.catalog;
 
     fillSelect($("#modal"), SLTCatalog.ativos(cat.modais), "id", (m) => m.nome, "— Opcional —");
-    fillSelect($("#tipologia"), SLTCatalog.ativos(cat.tipologias), "id", (t) => t.nome, "— Opcional —");
+    atualizarTipologiasPorModal();
+    $("#modal").addEventListener("change", atualizarTipologiasPorModal);
 
     $("#instituicao").addEventListener("change", onInstituicaoChange);
     $("#representante").addEventListener("change", onRepresentanteChange);
@@ -2126,6 +2148,8 @@
   // ---------------------------------------------------------------------------
   const SUGESTAO_CAMPOS = {
     projeto: {
+      // O modal vem antes: o change dele refaz a lista de tipologias do 3.3.
+      modal_id: "#modal",
       nome: "#nome", descricao: "#descricao", vigencia_inicio: "#prj-vig-ini", vigencia_fim: "#prj-vig-fim",
       prazo_referencia_meses: "#prj-prazo", maturidade_objeto: "#prj-maturidade", lat: "#lat", lng: "#lng",
     },

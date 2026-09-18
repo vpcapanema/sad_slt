@@ -153,7 +153,7 @@ def test_sinonimos_e_formatos_de_documento_real():
     assert campos["representante_nome"] == "Maria Aparecida de Souza"
     assert campos["representante_telefone"] == "(14) 3402-6000"
     assert campos["instituicao_label"] == "PREFEITURA MUNICIPAL DE MARÍLIA"
-    assert campos["municipio"] == "MARÍLIA"
+    assert campos["municipio"] == "Marília"  # nome oficial do município, não a caixa do PDF
 
 
 def test_mencao_em_frase_e_valor_na_linha_seguinte():
@@ -173,6 +173,62 @@ def test_valores_concorrentes_nao_sao_sugeridos():
     leitura = processamento.analisar(pdf("Valor total: R$ 100,00\nValor global: R$ 200,00"), "projeto")
     assert "valor_global" not in leitura["campos_sugeridos"]
     assert "valor_global" in leitura["conflitos"]
+
+
+def test_localizacao_resolve_municipio_e_faixa_litoranea():
+    from api.services import sei_localizacao as loc
+
+    peruibe = loc.municipio_por_nome("PERUIBE UF: SP")
+    assert peruibe is not None and peruibe.nome == "Peruíbe"
+    assert loc.municipio_por_nome("Peruíbe-SP").nome == "Peruíbe"
+    assert [m.nome for m in loc.municipios_no_texto("ESTUDO CRIACAO ZPE  PERUIBE  AENBIO")] == ["Peruíbe"]
+    municipal = loc.area_permitida(peruibe, litoral=False)
+    faixa = loc.area_permitida(peruibe, litoral=True)
+    assert faixa.litoranea and not municipal.litoranea
+    assert faixa.geometria.area < municipal.geometria.area
+    lat, lng = loc.ponto_estimado(faixa)
+    assert loc.contem(faixa, lat, lng) and loc.contem(municipal, lat, lng)
+
+
+ESTUDO_PORTO = """PROJETO: PORTO DE EXPORTAÇÃO – ZPE DA SÃO
+PAULO
+O terminal portuário terá cais para atracação de navios e retroárea.
+Cidade: PERUIBE UF: SP
+Responsável: SINCAL SOCIEDADE IND E COM LTDA
+• Custo Estimado: U$ 350 milhões
+• Custo Estimado: R$ 2.000 a R$ 5.000 por funcionário por ano.
+Total Geral: R$ 483.530.000,00
+• CAPEX: -36,08% (negativo)
+• Prazo de carência: 2 anos.
+"""
+
+
+def test_estudo_longo_nome_municipio_valor_modal_e_coordenada_estimada():
+    from api.services import sei_localizacao as loc
+
+    leitura = processamento.analisar(
+        pdf(ESTUDO_PORTO), "projeto", "SEI nº 020 00007603 2025 24 - ESTUDO_CRIACAO_ZPE__PERUIBE____AENBIO.pdf"
+    )
+    campos = leitura["campos_sugeridos"]
+    assert campos["nome"] == "PORTO DE EXPORTAÇÃO – ZPE DA SÃO PAULO"  # título que quebra em "SÃO"/"PAULO"
+    assert campos["municipio"] == "Peruíbe"  # "PERUIBE UF: SP" vira o nome oficial
+    assert campos["valor_global"] == 483530000.0  # dólar, faixa por funcionário e percentual descartados
+    assert "representante_nome" not in campos  # empresa não é representante legal
+    assert "prazo_referencia_meses" not in campos  # prazo de carência não é de implantação
+    assert campos["modal_id"] == "MOD-PORT"
+    # Sem coordenadas no PDF: ponto estimado na faixa litorânea de Peruíbe, marcado como estimativa.
+    assert leitura["campos"]["lat"]["estado"] == "estimado"
+    faixa = loc.area_permitida(loc.municipio_por_nome("Peruíbe"), litoral=True)
+    assert loc.contem(faixa, campos["lat"], campos["lng"])
+    assert leitura["resumo"]["desfecho"] == "ressalvas"
+    assert set(leitura["resumo"]["campos_estimados"]) == {"lat", "lng"}
+
+
+def test_coordenada_lida_fora_do_municipio_nao_e_sugerida():
+    texto = "Municipio: Peruibe\nLatitude: -21,2089\nLongitude: -50,4328"  # ponto em Araçatuba
+    leitura = processamento.analisar(pdf(texto), "projeto")
+    assert leitura["campos"]["lat"]["estado"] == "estimado"
+    assert leitura["campos_sugeridos"]["lat"] != pytest.approx(-21.2089)
 
 
 def test_campo_sem_regra_fica_ausente_e_nao_recebe_zero():
@@ -340,7 +396,7 @@ def test_nome_composto_de_municipio_e_lido_inteiro():
     campos = processamento.analisar(
         pdf("A Prefeitura Municipal de Sao Jose do Rio Preto solicita apoio."), "projeto"
     )["campos_sugeridos"]
-    assert campos["municipio"] == "Sao Jose do Rio Preto"
+    assert campos["municipio"] == "São José do Rio Preto"  # inteiro e com o nome oficial
 
 
 # "Nome sobre cargo" descreve tanto quem assina quanto o destinatário no

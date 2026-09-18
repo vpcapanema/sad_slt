@@ -21,6 +21,14 @@ def sheet_rows(wb, name):
     return data
 
 
+def tipologias(wb):
+    """modal_ids vem da planilha como "MOD-A;MOD-B"; no JSON vira lista (vazia = transversal)."""
+    rows = sheet_rows(wb, "Tipologias_Intervencao")
+    for row in rows:
+        row["modal_ids"] = [m.strip() for m in str(row.get("modal_ids") or "").split(";") if m.strip()]
+    return rows
+
+
 def main():
     if not XLSX.is_file():
         raise SystemExit(f"Arquivo não encontrado: {XLSX}")
@@ -34,7 +42,7 @@ def main():
         "eixos_pef": sheet_rows(wb, "Eixos_PEF"),
         "corredores_tic": sheet_rows(wb, "Corredores_TIC"),
         "modais": sheet_rows(wb, "Modais"),
-        "tipologias": sheet_rows(wb, "Tipologias_Intervencao"),
+        "tipologias": tipologias(wb),
         "carteiras": sheet_rows(wb, "Carteiras_Projetos"),
         "entidades": sheet_rows(wb, "Entidades_Demandantes"),
     }

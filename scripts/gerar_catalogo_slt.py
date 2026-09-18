@@ -276,22 +276,66 @@ add_sheet(
     [12, 18, 48, 8],
 )
 
+# modal_ids: ids da aba Modais separados por ";". Vazio = transversal (vale para todos).
 add_sheet(
     wb,
     "Tipologias_Intervencao",
-    ["id", "nome", "descricao", "ativo"],
+    ["id", "nome", "descricao", "ativo", "modal_ids"],
     [
-        ("TIP-OBRA", "Obra de infraestrutura", "Construção ou ampliação física", "SIM"),
-        ("TIP-DUP", "Duplicação / melhoria viária", "Duplicação, faixas, contornos rodoviários", "SIM"),
-        ("TIP-REAT", "Reativação ferroviária", "Recuperação e retomada de operação sobre trilhos", "SIM"),
-        ("TIP-TERM", "Terminal intermodal", "Terminal de cargas, passageiros ou transferência modal", "SIM"),
-        ("TIP-HIDR", "Intervenção hidroviária", "Dragagem, eclusas, estruturas de apoio à navegação", "SIM"),
-        ("TIP-PORT", "Intervenção portuária", "Berços, acessos, infraestrutura portuária", "SIM"),
-        ("TIP-EST", "Estudo e projeto", "Estudo de viabilidade, plano básico, projeto executivo", "SIM"),
-        ("TIP-CONS", "Conservação e operação", "Manutenção, conservação especial, operação", "SIM"),
-        ("TIP-DIG", "Plataforma e dados", "Sistemas, automação, geoinformação", "SIM"),
+        # Transversais
+        ("TIP-OBRA", "Obra de infraestrutura", "Construção ou ampliação física", "SIM", ""),
+        ("TIP-EST", "Estudo e projeto", "Estudo de viabilidade, plano básico, projeto executivo", "SIM", ""),
+        ("TIP-CONS", "Conservação e operação", "Manutenção, conservação especial, operação", "SIM", ""),
+        ("TIP-DIG", "Plataforma e dados", "Sistemas, automação, geoinformação", "SIM", ""),
+        ("TIP-AMB", "Adequação ambiental", "Mitigação e compensação ambiental, drenagem, passagens de fauna", "SIM", ""),
+        ("TIP-DESAP", "Desapropriação e faixa de domínio", "Desapropriação, reassentamento e regularização da faixa de domínio", "SIM", ""),
+        # Rodoviário
+        ("TIP-DUP", "Duplicação / melhoria viária", "Duplicação, faixas, contornos rodoviários", "SIM", "MOD-RODO"),
+        ("TIP-RODO-IMPL", "Implantação e pavimentação de rodovia", "Rodovia nova ou pavimentação de estrada de terra", "SIM", "MOD-RODO"),
+        ("TIP-RODO-REST", "Recuperação e restauração de pavimento", "Restauração, reforço estrutural ou reconstrução do pavimento", "SIM", "MOD-RODO"),
+        ("TIP-RODO-CONT", "Contorno / variante rodoviária", "Desvio de travessia urbana ou novo traçado de trecho", "SIM", "MOD-RODO"),
+        ("TIP-RODO-ACES", "Acesso e dispositivo de entroncamento", "Trevos, rotatórias, interseções em desnível e acessos", "SIM", "MOD-RODO"),
+        ("TIP-RODO-3FX", "Terceira faixa / faixa adicional", "Faixa adicional de subida, acostamento e faixa de aceleração", "SIM", "MOD-RODO"),
+        ("TIP-RODO-SEG", "Segurança viária e sinalização", "Sinalização, defensas e tratamento de pontos críticos", "SIM", "MOD-RODO"),
+        ("TIP-OAE", "Obra de arte especial (ponte / viaduto)", "Construção, alargamento ou recuperação de pontes, viadutos e túneis", "SIM", "MOD-RODO;MOD-FERR"),
+        # Ferroviário
+        ("TIP-REAT", "Reativação ferroviária", "Recuperação e retomada de operação sobre trilhos", "SIM", "MOD-FERR"),
+        ("TIP-FERR-IMPL", "Implantação de ferrovia", "Novo trecho ou corredor ferroviário", "SIM", "MOD-FERR"),
+        ("TIP-FERR-DUP", "Duplicação de linha férrea", "Segunda linha, desvios de cruzamento e ganho de capacidade", "SIM", "MOD-FERR"),
+        ("TIP-FERR-VIA", "Remodelação da via permanente", "Troca de trilhos, dormentes e lastro; aumento de carga por eixo e velocidade", "SIM", "MOD-FERR"),
+        ("TIP-FERR-PATIO", "Pátio ferroviário", "Pátio de cruzamento, manobra, formação ou estacionamento", "SIM", "MOD-FERR"),
+        ("TIP-FERR-TERM", "Terminal ferroviário", "Terminal de cargas ou estação de passageiros sobre trilhos", "SIM", "MOD-FERR"),
+        ("TIP-FERR-PN", "Eliminação de passagem em nível", "Transposição em desnível de cruzamento rodoferroviário", "SIM", "MOD-FERR;MOD-RODO"),
+        ("TIP-FERR-CONT", "Contorno ferroviário", "Retirada da linha de área urbana por novo traçado", "SIM", "MOD-FERR"),
+        # Portuário
+        ("TIP-PORT", "Intervenção portuária", "Berços, acessos, infraestrutura portuária", "SIM", "MOD-PORT"),
+        ("TIP-PORT-TERM", "Implantação de terminal portuário", "Novo terminal arrendado ou terminal de uso privado (TUP)", "SIM", "MOD-PORT"),
+        ("TIP-PORT-CAIS", "Ampliação de cais e berços", "Novos berços, prolongamento ou reforço de cais e píeres", "SIM", "MOD-PORT"),
+        ("TIP-PORT-DRAG", "Dragagem portuária", "Aprofundamento ou manutenção de canal de acesso, bacia de evolução e berços", "SIM", "MOD-PORT"),
+        ("TIP-PORT-RETRO", "Retroárea e pátio de armazenagem", "Pátios, armazéns, silos e tancagem na área portuária", "SIM", "MOD-PORT"),
+        ("TIP-PORT-ACES", "Acesso terrestre ao porto", "Acessos rodoviários e ferroviários à área portuária", "SIM", "MOD-PORT"),
+        ("TIP-PORT-ALF", "Área alfandegada / pátio regulador", "Recinto alfandegado, pátio regulador de caminhões ou ZPE vinculada ao porto", "SIM", "MOD-PORT"),
+        # Hidroviário
+        ("TIP-HIDR", "Intervenção hidroviária", "Dragagem, eclusas, estruturas de apoio à navegação", "SIM", "MOD-HIDR"),
+        ("TIP-HIDR-DRAG", "Dragagem e derrocamento de canal", "Aprofundamento e alargamento do canal navegável; remoção de pedrais", "SIM", "MOD-HIDR"),
+        ("TIP-HIDR-ECL", "Eclusa", "Construção, ampliação ou modernização de eclusa", "SIM", "MOD-HIDR"),
+        ("TIP-HIDR-PONTE", "Ampliação de vão e proteção de pilares", "Adequação de pontes sobre a via navegável", "SIM", "MOD-HIDR"),
+        ("TIP-HIDR-TERM", "Terminal hidroviário", "Terminal fluvial de cargas ou passageiros", "SIM", "MOD-HIDR"),
+        ("TIP-HIDR-SIN", "Sinalização e balizamento náutico", "Boias, balizas e auxílios à navegação no canal", "SIM", "MOD-HIDR"),
+        ("TIP-HIDR-TRAV", "Travessia hidroviária", "Atracadouros, rampas e embarcações de travessias litorâneas e fluviais", "SIM", "MOD-HIDR"),
+        # Aeroportuário
+        ("TIP-AERO-IMPL", "Implantação de aeroporto", "Novo aeroporto ou aeródromo regional", "SIM", "MOD-AERO"),
+        ("TIP-AERO-PISTA", "Pista de pouso e decolagem", "Implantação, ampliação ou recuperação de pista e pistas de táxi", "SIM", "MOD-AERO"),
+        ("TIP-AERO-PATIO", "Pátio de aeronaves", "Implantação ou ampliação de pátio de estacionamento de aeronaves", "SIM", "MOD-AERO"),
+        ("TIP-AERO-TPS", "Terminal de passageiros", "Implantação, ampliação ou reforma do terminal de passageiros", "SIM", "MOD-AERO"),
+        ("TIP-AERO-TECA", "Terminal de cargas", "Terminal de carga aérea (TECA)", "SIM", "MOD-AERO"),
+        ("TIP-AERO-AUX", "Balizamento e auxílios à navegação aérea", "Balizamento luminoso, auxílios visuais e por instrumentos, estação meteorológica", "SIM", "MOD-AERO"),
+        # Intermodal
+        ("TIP-TERM", "Terminal intermodal", "Terminal de cargas, passageiros ou transferência modal", "SIM", "MOD-INTER"),
+        ("TIP-INTER-CLOG", "Plataforma / centro logístico", "Área de consolidação e distribuição de cargas com múltiplos operadores", "SIM", "MOD-INTER"),
+        ("TIP-INTER-PSECO", "Porto seco", "Recinto alfandegado interior para armazenagem e desembaraço de cargas", "SIM", "MOD-INTER"),
     ],
-    [12, 28, 48, 8],
+    [16, 34, 52, 8, 22],
 )
 
 add_sheet(

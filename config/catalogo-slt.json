@@ -263,55 +263,396 @@
       "id": "TIP-OBRA",
       "nome": "Obra de infraestrutura",
       "descricao": "Construção ou ampliação física",
-      "ativo": "SIM"
-    },
-    {
-      "id": "TIP-DUP",
-      "nome": "Duplicação / melhoria viária",
-      "descricao": "Duplicação, faixas, contornos rodoviários",
-      "ativo": "SIM"
-    },
-    {
-      "id": "TIP-REAT",
-      "nome": "Reativação ferroviária",
-      "descricao": "Recuperação e retomada de operação sobre trilhos",
-      "ativo": "SIM"
-    },
-    {
-      "id": "TIP-TERM",
-      "nome": "Terminal intermodal",
-      "descricao": "Terminal de cargas, passageiros ou transferência modal",
-      "ativo": "SIM"
-    },
-    {
-      "id": "TIP-HIDR",
-      "nome": "Intervenção hidroviária",
-      "descricao": "Dragagem, eclusas, estruturas de apoio à navegação",
-      "ativo": "SIM"
-    },
-    {
-      "id": "TIP-PORT",
-      "nome": "Intervenção portuária",
-      "descricao": "Berços, acessos, infraestrutura portuária",
-      "ativo": "SIM"
+      "ativo": "SIM",
+      "modal_ids": []
     },
     {
       "id": "TIP-EST",
       "nome": "Estudo e projeto",
       "descricao": "Estudo de viabilidade, plano básico, projeto executivo",
-      "ativo": "SIM"
+      "ativo": "SIM",
+      "modal_ids": []
     },
     {
       "id": "TIP-CONS",
       "nome": "Conservação e operação",
       "descricao": "Manutenção, conservação especial, operação",
-      "ativo": "SIM"
+      "ativo": "SIM",
+      "modal_ids": []
     },
     {
       "id": "TIP-DIG",
       "nome": "Plataforma e dados",
       "descricao": "Sistemas, automação, geoinformação",
-      "ativo": "SIM"
+      "ativo": "SIM",
+      "modal_ids": []
+    },
+    {
+      "id": "TIP-AMB",
+      "nome": "Adequação ambiental",
+      "descricao": "Mitigação e compensação ambiental, drenagem, passagens de fauna",
+      "ativo": "SIM",
+      "modal_ids": []
+    },
+    {
+      "id": "TIP-DESAP",
+      "nome": "Desapropriação e faixa de domínio",
+      "descricao": "Desapropriação, reassentamento e regularização da faixa de domínio",
+      "ativo": "SIM",
+      "modal_ids": []
+    },
+    {
+      "id": "TIP-DUP",
+      "nome": "Duplicação / melhoria viária",
+      "descricao": "Duplicação, faixas, contornos rodoviários",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-RODO"
+      ]
+    },
+    {
+      "id": "TIP-RODO-IMPL",
+      "nome": "Implantação e pavimentação de rodovia",
+      "descricao": "Rodovia nova ou pavimentação de estrada de terra",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-RODO"
+      ]
+    },
+    {
+      "id": "TIP-RODO-REST",
+      "nome": "Recuperação e restauração de pavimento",
+      "descricao": "Restauração, reforço estrutural ou reconstrução do pavimento",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-RODO"
+      ]
+    },
+    {
+      "id": "TIP-RODO-CONT",
+      "nome": "Contorno / variante rodoviária",
+      "descricao": "Desvio de travessia urbana ou novo traçado de trecho",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-RODO"
+      ]
+    },
+    {
+      "id": "TIP-RODO-ACES",
+      "nome": "Acesso e dispositivo de entroncamento",
+      "descricao": "Trevos, rotatórias, interseções em desnível e acessos",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-RODO"
+      ]
+    },
+    {
+      "id": "TIP-RODO-3FX",
+      "nome": "Terceira faixa / faixa adicional",
+      "descricao": "Faixa adicional de subida, acostamento e faixa de aceleração",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-RODO"
+      ]
+    },
+    {
+      "id": "TIP-RODO-SEG",
+      "nome": "Segurança viária e sinalização",
+      "descricao": "Sinalização, defensas e tratamento de pontos críticos",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-RODO"
+      ]
+    },
+    {
+      "id": "TIP-OAE",
+      "nome": "Obra de arte especial (ponte / viaduto)",
+      "descricao": "Construção, alargamento ou recuperação de pontes, viadutos e túneis",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-RODO",
+        "MOD-FERR"
+      ]
+    },
+    {
+      "id": "TIP-REAT",
+      "nome": "Reativação ferroviária",
+      "descricao": "Recuperação e retomada de operação sobre trilhos",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-FERR"
+      ]
+    },
+    {
+      "id": "TIP-FERR-IMPL",
+      "nome": "Implantação de ferrovia",
+      "descricao": "Novo trecho ou corredor ferroviário",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-FERR"
+      ]
+    },
+    {
+      "id": "TIP-FERR-DUP",
+      "nome": "Duplicação de linha férrea",
+      "descricao": "Segunda linha, desvios de cruzamento e ganho de capacidade",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-FERR"
+      ]
+    },
+    {
+      "id": "TIP-FERR-VIA",
+      "nome": "Remodelação da via permanente",
+      "descricao": "Troca de trilhos, dormentes e lastro; aumento de carga por eixo e velocidade",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-FERR"
+      ]
+    },
+    {
+      "id": "TIP-FERR-PATIO",
+      "nome": "Pátio ferroviário",
+      "descricao": "Pátio de cruzamento, manobra, formação ou estacionamento",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-FERR"
+      ]
+    },
+    {
+      "id": "TIP-FERR-TERM",
+      "nome": "Terminal ferroviário",
+      "descricao": "Terminal de cargas ou estação de passageiros sobre trilhos",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-FERR"
+      ]
+    },
+    {
+      "id": "TIP-FERR-PN",
+      "nome": "Eliminação de passagem em nível",
+      "descricao": "Transposição em desnível de cruzamento rodoferroviário",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-FERR",
+        "MOD-RODO"
+      ]
+    },
+    {
+      "id": "TIP-FERR-CONT",
+      "nome": "Contorno ferroviário",
+      "descricao": "Retirada da linha de área urbana por novo traçado",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-FERR"
+      ]
+    },
+    {
+      "id": "TIP-PORT",
+      "nome": "Intervenção portuária",
+      "descricao": "Berços, acessos, infraestrutura portuária",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-PORT"
+      ]
+    },
+    {
+      "id": "TIP-PORT-TERM",
+      "nome": "Implantação de terminal portuário",
+      "descricao": "Novo terminal arrendado ou terminal de uso privado (TUP)",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-PORT"
+      ]
+    },
+    {
+      "id": "TIP-PORT-CAIS",
+      "nome": "Ampliação de cais e berços",
+      "descricao": "Novos berços, prolongamento ou reforço de cais e píeres",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-PORT"
+      ]
+    },
+    {
+      "id": "TIP-PORT-DRAG",
+      "nome": "Dragagem portuária",
+      "descricao": "Aprofundamento ou manutenção de canal de acesso, bacia de evolução e berços",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-PORT"
+      ]
+    },
+    {
+      "id": "TIP-PORT-RETRO",
+      "nome": "Retroárea e pátio de armazenagem",
+      "descricao": "Pátios, armazéns, silos e tancagem na área portuária",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-PORT"
+      ]
+    },
+    {
+      "id": "TIP-PORT-ACES",
+      "nome": "Acesso terrestre ao porto",
+      "descricao": "Acessos rodoviários e ferroviários à área portuária",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-PORT"
+      ]
+    },
+    {
+      "id": "TIP-PORT-ALF",
+      "nome": "Área alfandegada / pátio regulador",
+      "descricao": "Recinto alfandegado, pátio regulador de caminhões ou ZPE vinculada ao porto",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-PORT"
+      ]
+    },
+    {
+      "id": "TIP-HIDR",
+      "nome": "Intervenção hidroviária",
+      "descricao": "Dragagem, eclusas, estruturas de apoio à navegação",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-HIDR"
+      ]
+    },
+    {
+      "id": "TIP-HIDR-DRAG",
+      "nome": "Dragagem e derrocamento de canal",
+      "descricao": "Aprofundamento e alargamento do canal navegável; remoção de pedrais",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-HIDR"
+      ]
+    },
+    {
+      "id": "TIP-HIDR-ECL",
+      "nome": "Eclusa",
+      "descricao": "Construção, ampliação ou modernização de eclusa",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-HIDR"
+      ]
+    },
+    {
+      "id": "TIP-HIDR-PONTE",
+      "nome": "Ampliação de vão e proteção de pilares",
+      "descricao": "Adequação de pontes sobre a via navegável",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-HIDR"
+      ]
+    },
+    {
+      "id": "TIP-HIDR-TERM",
+      "nome": "Terminal hidroviário",
+      "descricao": "Terminal fluvial de cargas ou passageiros",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-HIDR"
+      ]
+    },
+    {
+      "id": "TIP-HIDR-SIN",
+      "nome": "Sinalização e balizamento náutico",
+      "descricao": "Boias, balizas e auxílios à navegação no canal",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-HIDR"
+      ]
+    },
+    {
+      "id": "TIP-HIDR-TRAV",
+      "nome": "Travessia hidroviária",
+      "descricao": "Atracadouros, rampas e embarcações de travessias litorâneas e fluviais",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-HIDR"
+      ]
+    },
+    {
+      "id": "TIP-AERO-IMPL",
+      "nome": "Implantação de aeroporto",
+      "descricao": "Novo aeroporto ou aeródromo regional",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-AERO"
+      ]
+    },
+    {
+      "id": "TIP-AERO-PISTA",
+      "nome": "Pista de pouso e decolagem",
+      "descricao": "Implantação, ampliação ou recuperação de pista e pistas de táxi",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-AERO"
+      ]
+    },
+    {
+      "id": "TIP-AERO-PATIO",
+      "nome": "Pátio de aeronaves",
+      "descricao": "Implantação ou ampliação de pátio de estacionamento de aeronaves",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-AERO"
+      ]
+    },
+    {
+      "id": "TIP-AERO-TPS",
+      "nome": "Terminal de passageiros",
+      "descricao": "Implantação, ampliação ou reforma do terminal de passageiros",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-AERO"
+      ]
+    },
+    {
+      "id": "TIP-AERO-TECA",
+      "nome": "Terminal de cargas",
+      "descricao": "Terminal de carga aérea (TECA)",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-AERO"
+      ]
+    },
+    {
+      "id": "TIP-AERO-AUX",
+      "nome": "Balizamento e auxílios à navegação aérea",
+      "descricao": "Balizamento luminoso, auxílios visuais e por instrumentos, estação meteorológica",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-AERO"
+      ]
+    },
+    {
+      "id": "TIP-TERM",
+      "nome": "Terminal intermodal",
+      "descricao": "Terminal de cargas, passageiros ou transferência modal",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-INTER"
+      ]
+    },
+    {
+      "id": "TIP-INTER-CLOG",
+      "nome": "Plataforma / centro logístico",
+      "descricao": "Área de consolidação e distribuição de cargas com múltiplos operadores",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-INTER"
+      ]
+    },
+    {
+      "id": "TIP-INTER-PSECO",
+      "nome": "Porto seco",
+      "descricao": "Recinto alfandegado interior para armazenagem e desembaraço de cargas",
+      "ativo": "SIM",
+      "modal_ids": [
+        "MOD-INTER"
+      ]
     }
   ],
   "carteiras": [

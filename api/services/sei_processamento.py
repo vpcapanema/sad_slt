@@ -28,10 +28,13 @@ import re
 import shutil
 import unicodedata
 from dataclasses import dataclass, replace
+from functools import lru_cache
 from datetime import date
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Callable, Iterable, Literal
+
+from api.services import sei_localizacao
 
 TipoDemanda = Literal["plano", "programa", "projeto"]
 
@@ -40,6 +43,18 @@ MINIMO_TEXTO_NATIVO = 80
 CONFIANCA_MINIMA = 0.62
 CONFIANCA_CONFLITO = 0.08
 PENALIDADE_INVOLUCRO = 0.10
+# Rótulo dentro de item de lista ("• Descrição:", "• Custo estimado:") descreve
+# uma parte do documento, não o objeto: perde para o mesmo rótulo fora de lista.
+PENALIDADE_ITEM_DE_LISTA = 0.10
+CONFIANCA_MUNICIPIO_NO_NOME = 0.80
+# Rótulo sozinho na linha e valor na de baixo (quadro, tabela): menos seguro
+# que "Rótulo: valor", e com folga maior que CONFIANCA_CONFLITO para perder dele.
+CONFIANCA_LINHA_SEGUINTE = 0.83
+# CNPJ a poucas linhas da razão social já identificada é o da instituição.
+CONFIANCA_CNPJ_JUNTO = 0.95
+# Coordenada estimada a partir da área válida: basta para chegar ao formulário,
+# sempre marcada como estimativa.
+CONFIANCA_ESTIMADA = 0.64
 
 # O extrator não tenta ler estes campos do PDF: são identificadores e vínculos
 # resolvidos no SIGMA ou escolhidos pelo analista. Ficam sempre
@@ -113,6 +128,38 @@ _DECIMAL = re.compile(r"-?\d{1,3}[.,]\d+")
 _DMS = re.compile(r"(\d{1,3})\s*[°º�]\s*(?:(\d{1,2})\s*['′]\s*)?(?:(\d{1,2}(?:[.,]\d+)?)\s*[\"″]?\s*)?([NSLOWE])?", re.I)
 _PAR_DECIMAL = re.compile(r"(-?\d{1,2}[.,]\d{3,})(?:\s*[;/|]\s*|,\s+|\s+)(-?\d{1,3}[.,]\d{3,})")
 _ENUMERADOR = re.compile(r"^\s*(?:\(?\d{1,2}(?:\.\d{1,2})*[.)\-–]?|\(?[a-z][.)]|[•·*▪►\-–])\s+")
+# Só marcador de lista; numeração ("1. Objeto:") é seção do ofício e não perde confiança.
+_MARCADOR_LISTA = re.compile(r"^\s*[•·*▪►\-–]\s+")
+# Palavra que não fecha título: "ZPE DA SÃO" continua na linha de baixo ("PAULO").
+_NAO_FECHA_TITULO = frozenset({
+    "de", "da", "do", "das", "dos", "e", "em", "na", "no", "nas", "nos", "a", "o", "para", "com",
+    "sao", "santa", "santo",
+})
+# "Responsável: SINCAL SOCIEDADE IND E COM LTDA" é empresa, não representante legal.
+_EMPRESA = re.compile(
+    r"\b(?:ltda|s/a|s\.a|eireli|epp|cia|sociedade|ind|com|comercio|industria|associacao|cooperativa|"
+    r"consorcio|empresa|prefeitura|secretaria|instituto|fundacao)\b"
+)
+_UF_NO_FIM = re.compile(r"\s*(?:[-–/,(]\s*)?(?:UF\s*:?\s*)?\b(?:SP|S\.P\.)\)?\s*$", re.I)
+# Valor que não é o do empreendimento: moeda estrangeira, faixa, por unidade.
+_MOEDA_ESTRANGEIRA = re.compile(r"(?:u\$|us\$|usd|€|eur|euros?)\s*$")
+_FAIXA_DE_VALOR = re.compile(r"\s*(?:a|ate|-|–)\s*(?:r\$\s*)?\d")
+_POR_UNIDADE = re.compile(
+    r"\s*(?:por|/|ao|a cada)\s*(?:ano|mes|dia|hora|funcionario|pessoa|habitante|unidade|m2|m²|km|metro|"
+    r"tonelada|kg|litro|mwh|kwh|leito|aluno|vaga)"
+)
+# Termos que indicam o modal (prefixo, sem acento). O título pesa mais que o corpo.
+_SINAIS_MODAL: dict[str, tuple[str, ...]] = {
+    "MOD-PORT": ("porto", "portuari", "terminal portuario", "cais", "atracacao", "retroarea", "navio",
+                 "calado", "maritim"),
+    "MOD-HIDR": ("hidrovia", "hidroviari", "eclusa", "fluvial", "barcaca"),
+    "MOD-FERR": ("ferrovia", "ferroviari", "linha ferrea", "trilhos", "vagao", "vagoes", "bitola"),
+    "MOD-RODO": ("rodovia", "rodoviari", "estrada vicinal", "pavimentacao", "acostamento"),
+    "MOD-AERO": ("aeroporto", "aeroportuari", "aerodromo", "pista de pouso", "aeronave", "heliporto"),
+    "MOD-INTER": ("intermodal", "multimodal", "porto seco", "plataforma logistica", "centro logistico"),
+}
+# "Porto Feliz", "Porto Ferreira" são municípios; "porto seco" é intermodal.
+_NAO_E_PORTO = r"(?!\s+(?:seco|feliz|ferreira|alegre|velho|seguro))"
 # Linha que endereça alguém: o ente citado aqui é o destinatário, não quem pede.
 _ENDERECAMENTO = (
     "ao senhor", "a senhora", "ao exmo", "a exma", "excelentissimo", "excelentissima",
@@ -218,7 +265,11 @@ _QUALIFICADOR = (
 # O complemento muda o sentido: não é o valor/prazo do empreendimento.
 _EXCLUSOES: dict[str, tuple[str, ...]] = {
     "valor_global": ("contrapartida", "unitari", "mensal", "anual", "parcela", "bdi", "medicao", "empenh", "aditivo"),
-    "prazo_referencia_meses": ("validade", "garantia", "pagamento", "resposta", "recurso", "proposta"),
+    "prazo_referencia_meses": (
+        "validade", "garantia", "pagamento", "resposta", "recurso", "proposta",
+        # Prazos financeiros de estudo de viabilidade, não de implantação.
+        "carencia", "amortizacao", "concessao", "financiamento", "payback", "retorno", "depreciacao",
+    ),
 }
 
 _CONTEXTO_FORMATO: dict[str, tuple[str, ...]] = {
@@ -526,7 +577,9 @@ def _continuacao(linhas: list[str], indice: int, valor: str) -> str:
             break
         if _parece_rotulo(seguinte) or _enderecamento(seguinte):
             break
-        if not (acumulado.endswith(_EMENDA_ANTES) or seguinte[0].islower() or seguinte[0] in "-–—"):
+        palavras = _sem_acento(acumulado).split()
+        titulo_aberto = bool(palavras) and palavras[-1] in _NAO_FECHA_TITULO
+        if not (acumulado.endswith(_EMENDA_ANTES) or seguinte[0].islower() or seguinte[0] in "-–—" or titulo_aberto):
             break
         partes.append(seguinte)
     return " ".join(partes)
@@ -545,14 +598,38 @@ def _linhas_rotuladas(paginas: Iterable[Pagina], campo: str, tipo: TipoDemanda =
                     # A normalização preserva o comprimento: o sufixo do original é o valor com acentos.
                     original = linha[len(linha) - len(valor):].strip()
                     if original:
-                        candidatos.append(_candidato(pagina, _continuacao(linhas, indice, original), linha, confianca))
+                        item_de_lista = bool(_MARCADOR_LISTA.match(linha))
+                        if item_de_lista:
+                            confianca -= PENALIDADE_ITEM_DE_LISTA
+                        candidato = _candidato(pagina, _continuacao(linhas, indice, original), linha, confianca)
+                        candidato["lista"] = item_de_lista
+                        candidatos.append(candidato)
                     break
                 if _so_rotulo(normalizada, rotulo) and indice + 1 < len(linhas):
                     proxima = linhas[indice + 1].strip()
-                    if len(proxima) >= 2 and not _parece_rotulo(proxima):
-                        candidatos.append(_candidato(pagina, proxima, f"{linha}\n{proxima}", 0.85))
+                    # Descrição de uma linha curta é cabeçalho de tabela ("(600 TON/DIA)"), não texto.
+                    curta_demais = campo == "descricao" and len(proxima) < 40
+                    if len(proxima) >= 2 and not _parece_rotulo(proxima) and not curta_demais:
+                        item_de_lista = bool(_MARCADOR_LISTA.match(linha))
+                        confianca = CONFIANCA_LINHA_SEGUINTE - (PENALIDADE_ITEM_DE_LISTA if item_de_lista else 0)
+                        candidato = _candidato(pagina, proxima, f"{linha}\n{proxima}", confianca)
+                        candidato["lista"] = item_de_lista
+                        candidatos.append(candidato)
                     break
+    _marcar_rotulo_repetido_na_pagina(candidatos)
     return candidatos
+
+
+def _marcar_rotulo_repetido_na_pagina(candidatos: list[dict[str, Any]]) -> None:
+    """O mesmo campo com valores diferentes na mesma página é lista de itens
+    ("Descrição:" de cada etapa num quadro): perde para o valor único do documento."""
+    por_pagina: dict[int, set[Any]] = {}
+    for candidato in candidatos:
+        por_pagina.setdefault(candidato["evidencia"]["pagina"], set()).add(_chave_do_valor(candidato["valor"]))
+    for candidato in candidatos:
+        if len(por_pagina[candidato["evidencia"]["pagina"]]) >= 2 and not candidato.get("lista"):
+            candidato["lista"] = True
+            candidato["evidencia"]["confianca"] = round(candidato["evidencia"]["confianca"] - PENALIDADE_ITEM_DE_LISTA, 3)
 
 
 def _posicao_termo(normalizada: str, termo: str) -> int:
@@ -771,11 +848,23 @@ def _valor_monetario(valor: str) -> float | None:
     # Compara o início dos números: "R$ 3,2 milhões" casa "R$ 3" em _MOEDA e "3,2 milhoes" por extenso.
     inicio_moeda = (moeda.start(1) if moeda.group(1) else moeda.start(2)) if moeda else None
     if extenso and (inicio_moeda is None or extenso.start(1) <= inicio_moeda):
-        base = float(extenso.group(1).replace(",", "."))
-        return round(base * _escala(extenso.group(2)), 2)
-    if moeda:
-        return _numero_ptbr(moeda.group(1) or moeda.group(2))
-    return None
+        inicio, fim = extenso.start(), extenso.end()
+        numero = round(float(extenso.group(1).replace(",", ".")) * _escala(extenso.group(2)), 2)
+    elif moeda:
+        inicio, fim = moeda.start(), moeda.end()
+        numero = _numero_ptbr(moeda.group(1) or moeda.group(2))
+    else:
+        return None
+    # "U$ 350 milhões", "R$ 2.000 a R$ 5.000 por funcionário", "-36,08%": nenhum é o
+    # valor do empreendimento. `normalizado` tem o mesmo comprimento de `valor`.
+    antes, depois = normalizado[max(0, inicio - 8):inicio], normalizado[fim:fim + 40]
+    if _MOEDA_ESTRANGEIRA.search(antes) or depois.lstrip().startswith("%"):
+        return None
+    if re.match(r"\s*(?:€|eur\b|euros?\b|usd\b|dolar(?:es)?\b|us\$)", depois):  # "1.790.404,00 €"
+        return None
+    if _FAIXA_DE_VALOR.match(depois) or _POR_UNIDADE.match(depois):
+        return None
+    return numero
 
 
 def _coordenada(valor: str, maximo: float) -> float | None:
@@ -814,6 +903,12 @@ def _normalizar(campo: str, valor: str) -> Any:
         limpo = valor.strip()
         if campo == "instituicao_label":
             limpo = re.sub(r"\s*[-–]?\s*(?:CNPJ\s*)?\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}.*$", "", limpo, flags=re.I)
+        if campo == "representante_nome" and _EMPRESA.search(_sem_acento(limpo)):
+            return None  # representante legal é pessoa
+        if campo == "municipio":
+            # "PERUIBE UF: SP" → "Peruíbe": o nome oficial, quando é um município de SP.
+            municipio = sei_localizacao.municipio_por_nome(limpo)
+            return municipio.nome if municipio else _UF_NO_FIM.sub("", limpo)[:200]
         return limpo[:200]
     return valor.strip()
 
@@ -861,8 +956,12 @@ def _resultado(campo: str, candidatos: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _descricao(paginas: list[Pagina], tipo: TipoDemanda = "projeto") -> list[dict[str, Any]]:
     candidatos = _linhas_rotuladas(paginas, "descricao", tipo)
-    if candidatos:
+    fora_de_lista = [c for c in candidatos if not c.get("lista")]
+    if fora_de_lista:
+        return fora_de_lista
+    if len({_chave_do_valor(c["valor"]) for c in candidatos}) == 1:
         return candidatos
+    # Vários "• Descrição:" descrevem etapas ou itens, não o objeto: vale o parágrafo.
     paragrafos = []
     for pagina in paginas:
         if pagina.papel not in {"solicitação_principal", "fonte_técnica"}:
@@ -1008,6 +1107,149 @@ def titulo_no_nome(nome_arquivo: str | None) -> str | None:
     return titulo[:200]
 
 
+_FORMA_JURIDICA = re.compile(r"\b(?:ltda|s/?a|eireli|epp|me|spe|cia)\b|[^a-z0-9 ]")
+_PALAVRAS_GENERICAS = frozenset({"de", "da", "do", "das", "dos", "e", "sao", "paulo", "estado", "municipal",
+                                 "secretaria", "governo", "ltda"})
+
+
+def _nucleo_do_nome(nome: str) -> str:
+    """"SPE - SUPER PORTO SÃO PAULO LTDA" → "super porto sao paulo": sem forma jurídica."""
+    return re.sub(r"\s+", " ", _FORMA_JURIDICA.sub(" ", _sem_acento(nome))).strip()
+
+
+def _cnpj_perto_da_instituicao(paginas: list[Pagina], instituicao: dict[str, Any]) -> list[dict[str, Any]]:
+    """CNPJs a até 6 linhas de qualquer ocorrência do nome da instituição lida."""
+    if instituicao.get("estado") != "normalizado":
+        return []
+    nucleo = _nucleo_do_nome(str(instituicao.get("valor_normalizado") or ""))
+    if len(nucleo) < 6:
+        return []
+    candidatos = []
+    for pagina in paginas:
+        linhas = pagina.texto.splitlines()
+        for indice, linha in enumerate(linhas):
+            if nucleo not in _nucleo_do_nome(linha):
+                continue
+            for vizinha in linhas[max(0, indice - 6): indice + 7]:
+                for achado in (*_CNPJ.finditer(vizinha), *_CNPJ_NUMERICO.finditer(vizinha)):
+                    candidatos.append(_candidato(pagina, achado.group(0), vizinha, CONFIANCA_CNPJ_JUNTO))
+    return candidatos
+
+
+def _organizacao_da_assinatura(trecho: str) -> set[str]:
+    """Palavras da organização citada no cargo ("Diretor da AENBIO – Ambiental…")."""
+    linhas = trecho.splitlines()
+    if len(linhas) < 2:
+        return set()
+    cargo = re.search(r"\b(?:d[aeo]s?)\s+(.+)$", _sem_acento(linhas[-1]))
+    if not cargo:
+        return set()
+    return {p for p in re.findall(r"[a-z0-9]{3,}", cargo.group(1)) if p not in _PALAVRAS_GENERICAS}
+
+
+def _assina_por_outra_organizacao(representante: dict[str, Any], instituicao: dict[str, Any]) -> bool:
+    """Signatário cujo cargo cita uma organização que não é a instituição lida."""
+    if representante.get("estado") != "normalizado" or instituicao.get("estado") != "normalizado":
+        return False
+    evidencia = (representante.get("evidencias") or [{}])[0]
+    organizacao = _organizacao_da_assinatura(evidencia.get("trecho", ""))
+    if not organizacao:
+        return False
+    palavras_instituicao = set(re.findall(r"[a-z0-9]{3,}", _nucleo_do_nome(str(instituicao["valor_normalizado"]))))
+    return not organizacao & (palavras_instituicao - _PALAVRAS_GENERICAS)
+
+
+@lru_cache(maxsize=1)
+def _nomes_modais() -> dict[str, str]:
+    catalogo = json.loads((_ROOT / "config" / "catalogo-slt.json").read_text(encoding="utf-8"))
+    return {modal["id"]: modal["nome"] for modal in catalogo.get("modais", [])}
+
+
+def _ocorrencias(texto: str, termo: str) -> int:
+    padrao = rf"(?<![a-z]){re.escape(termo)}" + (_NAO_E_PORTO if termo == "porto" else "")
+    return len(re.findall(padrao, texto))
+
+
+def _inferir_modal(paginas: list[Pagina], nome_arquivo: str | None, titulo: str | None) -> dict[str, Any]:
+    """Modal pela frequência de termos: cada termo no título vale 10, no corpo 1 (até 30)."""
+    cabeca = _sem_acento(f"{(nome_arquivo or '').replace('_', ' ')} {titulo or ''}")
+    corpo = _sem_acento("\n".join(p.texto for p in paginas))
+    placar = []
+    for modal, termos in _SINAIS_MODAL.items():
+        no_titulo = [t for t in termos if _ocorrencias(cabeca, t)]
+        no_corpo = sum(min(_ocorrencias(corpo, t), 30) for t in termos)
+        placar.append((10 * len(no_titulo) + no_corpo, modal, no_titulo, no_corpo))
+    placar.sort(reverse=True)
+    pontos, modal, no_titulo, no_corpo = placar[0]
+    segundo = placar[1][0]
+    if pontos < 10 or pontos < 2 * segundo:
+        return {"estado": "nao_encontrado", "confianca": 0.0, "evidencias": [], "candidatos": [],
+                "observacoes": "Sem predominância clara de um modal no documento."}
+    confianca = 0.78 if no_titulo else 0.68
+    if no_titulo and nome_arquivo:
+        evidencia = _evidencia_do_nome(nome_arquivo, confianca)
+    else:
+        termo = next(t for t in _SINAIS_MODAL[modal] if _ocorrencias(corpo, t))
+        pagina, linha = next(
+            (p, texto) for p in paginas for texto in p.texto.splitlines() if _ocorrencias(_sem_acento(texto), termo)
+        )
+        evidencia = _evidencia(pagina, linha, confianca)
+    nome = _nomes_modais().get(modal, modal)
+    return {
+        "valor_observado": f"{nome} (título: {', '.join(no_titulo) or '—'}; {no_corpo} menção(ões) no texto)",
+        "valor_normalizado": modal,
+        "identificador_resolvido": modal,
+        "confianca": confianca,
+        "estado": "normalizado",
+        "evidencias": [evidencia],
+        "candidatos": [{"valor": m, "pontos": p} for p, m, _, _ in placar[:3]],
+        "observacoes": "Modal inferido pelos termos do documento; confirme no formulário.",
+    }
+
+
+def _localizar(resultados: dict[str, Any], modal_id: str | None, progresso: Progresso | None) -> None:
+    """Confere as coordenadas contra a área do município (faixa litorânea se porto)
+    e, sem coordenada utilizável, estima um ponto dentro dessa área."""
+    if "lat" not in resultados or "lng" not in resultados:
+        return
+    lido = resultados.get("municipio") or {}
+    municipio = sei_localizacao.municipio_por_nome(lido.get("valor_normalizado")) if lido.get("estado") == "normalizado" else None
+    if not municipio:
+        _avisar(progresso, "Coordenadas: município não identificado; a área válida não pôde ser delimitada")
+        return
+    area = sei_localizacao.area_permitida(municipio, litoral=modal_id == "MOD-PORT")
+    _avisar(progresso, f"Área válida para as coordenadas: {area.descricao}")
+    lat, lng = resultados["lat"], resultados["lng"]
+    lats = [c["valor"] for c in lat.get("candidatos", [])]
+    lngs = [c["valor"] for c in lng.get("candidatos", [])]
+    if lats and lngs:
+        dentro = sorted({(a, b) for a in lats for b in lngs if sei_localizacao.contem(area, a, b)})
+        if len(dentro) == 1:
+            a, b = dentro[0]
+            for resultado, valor in ((lat, a), (lng, b)):
+                resultado.update(estado="normalizado", valor_normalizado=valor, valor_observado=str(valor),
+                                 confianca=max(resultado.get("confianca", 0), CONFIANCA_MINIMA),
+                                 observacoes=f"Único par lido dentro da área válida ({area.descricao}).")
+            _avisar(progresso, f"Coordenadas: o par lido ({a}, {b}) está dentro da área válida")
+            return
+        if len(dentro) > 1:
+            for resultado in (lat, lng):
+                resultado.update(estado="conflitante", valor_normalizado=None, valor_observado=None,
+                                 observacoes=f"{len(dentro)} pares lidos estão dentro da área válida ({area.descricao}).")
+            _avisar(progresso, f"Coordenadas: {len(dentro)} pares diferentes dentro da área válida, nenhum escolhido")
+            return
+        _avisar(progresso, "Coordenadas: os pares lidos ficam fora da área válida e foram descartados")
+    lat_estimada, lng_estimada = sei_localizacao.ponto_estimado(area)
+    motivo = "Coordenadas lidas fora da área" if lats and lngs else "Sem coordenadas no PDF"
+    evidencia = {"pagina": 0, "trecho": f"Ponto representativo da {area.descricao}", "metodo": "inferencia_espacial",
+                 "papel_fonte": "inferencia", "confianca": CONFIANCA_ESTIMADA}
+    for resultado, valor in ((lat, lat_estimada), (lng, lng_estimada)):
+        resultado.update(estado="estimado", valor_normalizado=valor, valor_observado=None, confianca=CONFIANCA_ESTIMADA,
+                         evidencias=[evidencia, *resultado.get("evidencias", [])][:5],
+                         observacoes=f"{motivo}: ponto estimado na {area.descricao}. Confira no mapa.")
+    _avisar(progresso, f"Coordenadas estimadas ({lat_estimada}, {lng_estimada}) na {area.descricao} — confira no mapa")
+
+
 def numero_processo(conteudo: bytes, nome_arquivo: str | None = None) -> str | None:
     """Só o número do processo SEI, quando identificado sem conflito."""
     do_nome = numero_no_nome(nome_arquivo)
@@ -1051,6 +1293,12 @@ def analisar(
         if campo == "nome" and (titulo := titulo_no_nome(nome_arquivo)):
             candidatos = [*candidatos, {"valor": titulo,
                                         "evidencia": _evidencia_do_nome(nome_arquivo, CONFIANCA_NOME_ARQUIVO)}]
+        if campo == "municipio":
+            # "ESTUDO_CRIACAO_ZPE__PERUIBE____AENBIO.pdf": o título do arquivo cita o município.
+            no_nome = sei_localizacao.municipios_no_texto(re.sub(r"\.pdf$", "", nome_arquivo or "", flags=re.I))
+            if len(no_nome) == 1:
+                candidatos = [*candidatos, {"valor": no_nome[0].nome,
+                                            "evidencia": _evidencia_do_nome(nome_arquivo, CONFIANCA_MUNICIPIO_NO_NOME)}]
         resultados[campo] = _resultado(campo, candidatos)
         if campo != "maturidade_objeto":  # a maturidade tem leitura própria, logo abaixo
             rotulo = campos_contrato.get(campo, {}).get("rotulo") or _ROTULO_EXTRA.get(campo, campo)
@@ -1065,24 +1313,50 @@ def analisar(
                                   "evidencia": _evidencia_do_nome(nome_arquivo, CONFIANCA_PROCESSO_NO_NOME)}]
     numero_processo = _resultado("numero_processo", processos)
     _avisar(progresso, f"Número do processo: {numero_processo.get('valor_normalizado') or 'não identificado'}")
+
+    # O CNPJ ao lado da razão social identificada vence os de certidões anexadas.
+    junto = _cnpj_perto_da_instituicao(paginas, resultados.get("instituicao_label") or {})
+    if junto and "instituicao_cnpj" in resultados:
+        resultados["instituicao_cnpj"] = _resultado("instituicao_cnpj", junto)
+        _avisar(progresso, f"CNPJ junto da instituição: {_situacao_campo(resultados['instituicao_cnpj'])}")
+
+    representante = resultados.get("representante_nome") or {}
+    if _assina_por_outra_organizacao(representante, resultados.get("instituicao_label") or {}):
+        nome = representante.get("valor_normalizado")
+        representante.update(estado="nao_encontrado", valor_normalizado=None, valor_observado=None,
+                             observacoes=f"{nome} assina por outra organização, não pela instituição lida.")
+        _avisar(progresso, f"Representante: {nome} descartado — assina por outra organização")
+
+    if tipo == "projeto":
+        titulo = (resultados.get("nome") or {}).get("valor_normalizado")
+        resultados["modal_id"] = _inferir_modal(paginas, nome_arquivo, titulo)
+        modal = resultados["modal_id"]
+        _avisar(progresso, f"Modal: {modal['valor_observado']}" if modal["estado"] == "normalizado"
+                else f"Modal: {modal['observacoes']}")
+        _localizar(resultados, resultados["modal_id"].get("valor_normalizado"), progresso)
+
     preenchiveis = {
         campo: resultado.get("valor_normalizado")
         for campo, resultado in resultados.items()
-        if resultado.get("estado") == "normalizado" and resultado.get("confianca", 0) >= CONFIANCA_MINIMA
+        if resultado.get("estado") in {"normalizado", "estimado"} and resultado.get("confianca", 0) >= CONFIANCA_MINIMA
     }
     # Desfecho da análise. Só entra no julgamento o que o extrator sabe procurar
-    # neste tipo: campo sem regra e campo resolvido no SIGMA ficam de fora.
-    avaliados = sorted(c for c in resultados if c not in CAMPOS_NAO_EXTRAIVEIS and com_regra(c, tipo))
+    # neste tipo: campo sem regra e campo resolvido no SIGMA ficam de fora. O
+    # modal é inferido (opcional no formulário) e não pesa no desfecho.
+    julgaveis = [c for c in resultados if c not in CAMPOS_NAO_EXTRAIVEIS and c != "modal_id"]
+    avaliados = sorted(c for c in julgaveis if com_regra(c, tipo))
     conflitantes = [c for c in avaliados if resultados[c]["estado"] == "conflitante"]
+    estimados = [c for c in avaliados if resultados[c]["estado"] == "estimado"]
     # Valor abaixo da confiança mínima também não chega ao formulário: falta igual.
     faltando = [c for c in avaliados if c not in preenchiveis and c not in conflitantes]
     resumo = {
-        "desfecho": "sucesso" if not faltando and not conflitantes else "ressalvas",
+        "desfecho": "sucesso" if not faltando and not conflitantes and not estimados else "ressalvas",
         "campos_avaliados": avaliados,
-        "campos_lidos": [c for c in avaliados if c in preenchiveis],
+        "campos_lidos": [c for c in avaliados if c in preenchiveis and c not in estimados],
         "campos_faltando": faltando,
         "campos_conflitantes": conflitantes,
-        "campos_sem_regra": sorted(c for c in resultados if c not in CAMPOS_NAO_EXTRAIVEIS and not com_regra(c, tipo)),
+        "campos_estimados": estimados,
+        "campos_sem_regra": sorted(c for c in julgaveis if not com_regra(c, tipo)),
     }
     return {
         "versao": "2.2.0",

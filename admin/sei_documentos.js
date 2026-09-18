@@ -18,7 +18,7 @@
     criada: 'Demanda criada',
   };
   const ROTULOS = {
-    nome: 'Nome / objeto', descricao: 'Descrição', objetivo: 'Objetivo',
+    modal_id: 'Modal', nome: 'Nome / objeto', descricao: 'Descrição', objetivo: 'Objetivo',
     objetivo_estrategico: 'Objetivo estratégico', justificativa: 'Justificativa', publico_alvo: 'Público-alvo',
     orgao_responsavel: 'Órgão responsável', maturidade_objeto: 'Maturidade', instituicao_label: 'Instituição',
     instituicao_cnpj: 'CNPJ', representante_nome: 'Representante', representante_email: 'E-mail',
@@ -414,10 +414,19 @@
     const resumo = leitura.analise?.resumo;
     const linhas = [];
     if (leitura.numero_processo) linhas.push({ message: `Processo SEI: ${leitura.numero_processo}`, status: 'info' });
+    const analisados = leitura.analise?.campos || {};
     for (const [chave, valor] of Object.entries(campos)) {
       if (valor === undefined || valor === null || valor === '') continue;
-      const texto = String(valor);
-      linhas.push({ message: `${rotulo(chave)}: ${texto.length > 140 ? `${texto.slice(0, 140)}…` : texto}`, status: 'success' });
+      const resultado = analisados[chave] || {};
+      // O modal chega como id (MOD-PORT); a linha mostra o nome e o porquê.
+      const texto = chave === 'modal_id' ? (resultado.valor_observado || String(valor)) : String(valor);
+      const curto = texto.length > 140 ? `${texto.slice(0, 140)}…` : texto;
+      if (resultado.estado === 'estimado') {
+        // Coordenada inferida da área do município: vai ao formulário, mas em amarelo.
+        linhas.push({ message: `${rotulo(chave)}: ${curto} — estimada. ${resultado.observacoes || ''}`.trim(), status: 'warning' });
+      } else {
+        linhas.push({ message: `${rotulo(chave)}: ${curto}`, status: 'success' });
+      }
     }
     for (const chave of resumo?.campos_faltando || []) {
       linhas.push({ message: `${rotulo(chave)}: não encontrado no PDF`, status: 'warning' });
