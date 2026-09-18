@@ -126,3 +126,27 @@ def enviar(destino: str, origem: Path) -> None:
                           content=fluxo)
     if resposta.status_code not in (200, 201):
         raise StorageIndisponivel(f"O storage recusou {Path(destino).name}: {_mensagem(resposta)}")
+
+
+def criar_pasta(caminho: str) -> None:
+    with _cliente() as cliente:
+        resposta = _pedir(cliente, "POST", "/user/dirs", params={"path": _absoluto(caminho)})
+    if resposta.status_code not in (200, 201):
+        raise StorageIndisponivel(f"O storage recusou criar {caminho}: {_mensagem(resposta)}")
+
+
+def mover(origem: str, destino: str) -> None:
+    """Renomeia (move) um arquivo ou pasta dentro do storage."""
+    with _cliente() as cliente:
+        resposta = _pedir(cliente, "POST", "/user/file-actions/move",
+                          params={"path": _absoluto(origem), "target": _absoluto(destino)})
+    if resposta.status_code not in (200, 201):
+        raise StorageIndisponivel(f"O storage recusou renomear {origem}: {_mensagem(resposta)}")
+
+
+def apagar_pasta(caminho: str) -> None:
+    """Apaga a pasta com o que houver dentro: quem chama confere antes que está vazia."""
+    with _cliente() as cliente:
+        resposta = _pedir(cliente, "DELETE", "/user/dirs", params={"path": _absoluto(caminho)})
+    if resposta.status_code not in (200, 204):
+        raise StorageIndisponivel(f"O storage recusou excluir {caminho}: {_mensagem(resposta)}")

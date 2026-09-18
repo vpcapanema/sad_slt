@@ -34,12 +34,13 @@ from api.services.storage_geoespacial import (
 _RESERVADOS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
-def pasta_destino(raiz: str | None) -> str:
-    """Uma das pastas publicadas do storage; nada fora delas."""
-    valor = str(raiz or "").strip().strip("/")
-    if valor not in RAIZES:
-        raise ValueError(f"Escolha a pasta de destino no storage: {' ou '.join(RAIZES)}.")
-    return valor
+def pasta_destino(pasta: str | None) -> str:
+    """Pasta escolhida no explorador: uma das publicadas do storage ou subpasta delas."""
+    from api.services.pastas_storage import caminho_valido
+    try:
+        return caminho_valido(pasta)
+    except ValueError as exc:
+        raise ValueError(f"Escolha a pasta de destino no storage, dentro de {' ou '.join(RAIZES)}.") from exc
 
 
 def _nome_seguro(nome: str) -> str:
@@ -165,7 +166,7 @@ def enviar_ao_storage(token: str, raiz: str | None, *, target_crs: str | None = 
             if repetidos:
                 raise FileExistsError(
                     f"Já existe em {destino}: {', '.join(repetidos)}. "
-                    "Renomeie o arquivo ou escolha a outra pasta; o storage não é sobrescrito.")
+                    "Renomeie o arquivo ou escolha outra pasta; o storage não é sobrescrito.")
             for indice, (relativo, origem) in enumerate(arquivos, 1):
                 storage_remoto.enviar(f"{destino}/{relativo}", origem)
                 avisar(f"Enviado ao storage ({indice}/{len(arquivos)}): {destino}/{relativo}")

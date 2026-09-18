@@ -1,0 +1,96 @@
+/* Upload para o storage: modal "Importar camada" e explorador de pastas.
+   Em px, não rem: a bancada usa fonte-base de 13px e a página de bases 16px, e o
+   explorador precisa ter o mesmo tamanho nas duas. */
+
+/* --- Modal de importação --- */
+.importar-storage-dialog { width: min(560px, calc(100vw - 24px)); padding: 0; border: 0; border-radius: 10px; box-shadow: 0 18px 60px rgba(0, 0, 0, .28); }
+.importar-storage-dialog::backdrop { background: rgba(15, 32, 25, .55); }
+.importar-storage { display: grid; gap: 12px; padding: 16px 18px; color: #263b31; font-size: 12.5px; }
+.importar-storage-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.importar-storage-head h2 { margin: 0; font-size: 16.8px; }
+.importar-storage-head p { margin: 3px 0 0; color: #607269; font-size: 11.5px; }
+.importar-storage-fechar, .storage-pastas-fechar { flex: 0 0 auto; width: 30px; height: 30px; border: 0; border-radius: 6px; background: transparent; color: #4b5d54; font-size: 20.8px; line-height: 1; cursor: pointer; }
+.importar-storage-fechar:hover, .storage-pastas-fechar:hover { background: #edf3ef; }
+.importar-storage-bloco { display: grid; gap: 8px; padding: 10px 12px 12px; border: 1px solid #dbe5df; border-radius: 8px; background: #fbfdfc; }
+.importar-storage-bloco h3 { display: flex; align-items: center; gap: 7px; margin: 0; color: #155e3d; font-size: 11.8px; letter-spacing: .03em; text-transform: uppercase; }
+.importar-storage-bloco h3 span { display: inline-grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: #26975e; color: #fff; font-size: 10.9px; }
+.importar-storage-dica { margin: 0; color: #607269; font-size: 11.2px; line-height: 1.4; }
+.importar-storage-arquivo { position: relative; display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 7px 11px; border: 1.5px dashed #9fc1ad; border-radius: 7px; background: #fff; color: #1e4d36; font-weight: 600; cursor: pointer; transition: border-color .15s, background-color .15s; }
+.importar-storage-arquivo:hover, .importar-storage-arquivo:focus-within { border-color: #26975e; background: #f3faf6; }
+.importar-storage-arquivo input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.importar-storage-arquivo span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.importar-storage-destino { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 5px 5px 5px 11px; border: 1px solid #c8d6ce; border-radius: 7px; background: #fff; }
+.importar-storage-destino > i { color: #d19a2a; }
+.importar-storage-destino span { flex: 1; min-width: 0; overflow: hidden; color: #1e3a2c; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.importar-storage-destino span.vazio { color: #8a9a91; font-weight: 500; font-style: italic; }
+.importar-storage-destino .btn { flex: 0 0 auto; }
+.importar-storage-opcao { display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: center; gap: 8px; }
+.importar-storage .geoespacial-import-field { display: grid; gap: 4px; font-weight: 600; }
+.importar-storage input[type=text], .importar-storage select { width: 100%; min-height: 32px; padding: 5px 8px; border: 1px solid #b9c7c0; border-radius: 6px; background: #fff; font-size: 12px; }
+.importar-storage select:disabled { background: #f2f5f3; color: #8a9a91; }
+.importar-storage-rodape, .storage-pastas-botoes { display: flex; justify-content: flex-end; gap: 8px; }
+.importar-storage .btn, .storage-pastas .btn { min-height: 32px; padding: 6px 12px; font-size: 11.8px; }
+@media (max-width: 520px) { .importar-storage-opcao { grid-template-columns: 1fr; } .importar-storage-destino { flex-wrap: wrap; } }
+
+/* --- Explorador de pastas do storage --- */
+.storage-pastas-dialog { width: min(620px, calc(100vw - 24px)); padding: 0; border: 0; border-radius: 10px; box-shadow: 0 22px 70px rgba(0, 0, 0, .34); }
+.storage-pastas-dialog::backdrop { background: rgba(15, 32, 25, .45); }
+.storage-pastas { display: grid; gap: 10px; padding: 16px 18px; color: #263b31; font-size: 12.5px; }
+.storage-pastas-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.storage-pastas-head h2 { margin: 0; font-size: 16.3px; }
+.storage-pastas-head p { margin: 3px 0 0; color: #607269; font-size: 11.5px; }
+.storage-pastas-trilha { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 6px 8px; border-radius: 6px; background: #f1f6f3; }
+.storage-pastas-trilha button { padding: 3px 6px; border: 0; border-radius: 4px; background: transparent; color: #155e3d; font-weight: 700; font-size: 11.8px; cursor: pointer; }
+.storage-pastas-trilha button:last-of-type { color: #1e3a2c; }
+.storage-pastas-trilha button:hover { background: #dcebe2; }
+.storage-pastas-trilha span { color: #93a69b; }
+.storage-pastas-ferramentas { display: flex; flex-wrap: wrap; gap: 6px; }
+.storage-pastas-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 5px 10px; border: 1px solid #c8d6ce; border-radius: 6px; background: #fff; color: #1e4d36; font-weight: 600; font-size: 11.8px; cursor: pointer; transition: background-color .15s, border-color .15s, transform .15s; }
+.storage-pastas-btn:not(:disabled):hover { border-color: #26975e; background: #eef8f2; transform: translateY(-1px); }
+.storage-pastas-btn:disabled { opacity: .45; cursor: default; }
+.storage-pastas-perigo { color: #9b2a1f; }
+.storage-pastas-perigo:not(:disabled):hover { border-color: #c0392b; background: #fff1ef; }
+.storage-pastas-atualizar { margin-left: auto; width: 32px; justify-content: center; padding: 0; }
+.storage-pastas-edicao { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; padding: 9px 10px; border: 1px solid #cfe3d7; border-radius: 7px; background: #f3faf6; }
+.storage-pastas-edicao label { display: grid; flex: 1 1 220px; gap: 4px; font-weight: 600; }
+.storage-pastas-edicao input { min-height: 32px; padding: 5px 8px; border: 1px solid #b9c7c0; border-radius: 6px; font-size: 12.2px; }
+.storage-pastas-confirmar { flex: 1 1 100%; margin: 0; color: #7a2419; }
+.storage-pastas .btn-danger { border: 1px solid #b42318; background: #b42318; color: #fff; border-radius: 6px; font-weight: 700; cursor: pointer; }
+.storage-pastas .btn-danger:hover { background: #8f1d16; }
+.storage-pastas-lista { height: 280px; overflow: auto; padding: 4px; border: 1px solid #d7e0db; border-radius: 7px; background: #fff; outline: none; }
+.storage-pastas-lista:focus-visible { box-shadow: 0 0 0 2px #9fd1b5; }
+.storage-pastas-item { display: flex; align-items: center; gap: 9px; min-height: 34px; padding: 4px 6px 4px 9px; border-radius: 5px; cursor: pointer; user-select: none; }
+.storage-pastas-item span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.storage-pastas-item > i { width: 16px; color: #d19a2a; text-align: center; }
+.storage-pastas-item .fa-database { color: #26975e; }
+.storage-pastas-item:hover { background: #f1f7f3; }
+.storage-pastas-item.selecionada { background: #dcf0e4; box-shadow: inset 3px 0 0 #26975e; }
+.storage-pastas-acima { color: #4b5d54; }
+.storage-pastas-acima > i { color: #7b8d83; }
+.storage-pastas-arquivo { color: #7b8d83; cursor: default; }
+.storage-pastas-arquivo:hover { background: transparent; }
+.storage-pastas-arquivo > i { color: #a3b2aa; }
+.storage-pastas-entrar { flex: 0 0 auto; width: 26px; height: 26px; border: 0; border-radius: 4px; background: transparent; color: #4b5d54; cursor: pointer; }
+.storage-pastas-entrar:hover { background: #cfe7d9; }
+.storage-pastas-vazio { margin: 18px 10px; color: #7b8d83; font-style: italic; text-align: center; }
+.storage-pastas-status { min-height: 1.1em; margin: 0; color: #155e3d; font-size: 11.5px; }
+.storage-pastas-status.erro { color: #b42318; font-weight: 600; }
+.storage-pastas-rodape { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 4px; border-top: 1px solid #e3ebe6; }
+.storage-pastas-destino { display: grid; min-width: 0; gap: 1px; }
+.storage-pastas-destino span { color: #607269; font-size: 10.6px; letter-spacing: .04em; text-transform: uppercase; }
+.storage-pastas-destino strong { overflow: hidden; color: #1e3a2c; text-overflow: ellipsis; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .storage-pastas-btn, .importar-storage-arquivo { transition: none; } .storage-pastas-btn:not(:disabled):hover { transform: none; } }
+.storage-pastas-edicao[hidden] { display: none; }
+.importar-storage .geoespacial-import-field > span { color: #4b5d54; font-size: 11.5px; font-weight: 600; }
+.importar-storage-arquivo span { font-size: 12.5px; }
+/* Camada recém-enviada: destaque breve no painel de camadas. */
+.geo-layer-recem-enviada > .layer-group-header-row { animation: geo-recem-enviada 2.4s ease-out 2; }
+@keyframes geo-recem-enviada { 0% { background: #bfe6cf; } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .geo-layer-recem-enviada > .layer-group-header-row { animation: none; background: #dff2e7; } }
+/* Botões do explorador independentes da página que o abre (bancada ou bases). */
+.storage-pastas .btn { border: 1px solid transparent; border-radius: 6px; font-weight: 700; cursor: pointer; }
+.storage-pastas .btn-primary { border-color: #1d4e6e; background: #1d4e6e; color: #fff; }
+.storage-pastas .btn-primary:not(:disabled):hover { background: #163c55; }
+.storage-pastas .btn-primary:disabled { opacity: .5; cursor: default; }
+.storage-pastas .btn-secondary { border-color: #d7e0db; background: #eef2f0; color: #263b31; }
+.storage-pastas .btn-secondary:hover { background: #e2e9e5; }

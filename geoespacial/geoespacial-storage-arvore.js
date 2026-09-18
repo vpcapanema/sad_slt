@@ -86,7 +86,7 @@
       const linhaCamada = (camada) => {
         const indice = camadas.push(camada) - 1;
         const domId = `${prefixo}-camada-${indice}`;
-        return `<div class="layer-group layer-group--record geo-layer-record" data-id="${escapeHtml(camada.id)}" data-indice="${indice}"><div class="layer-group-header-row"><label class="layer-visibility-toggle" for="${domId}"><input type="checkbox" class="layer-visibility-input" id="${domId}" ${camada.erro ? "disabled" : ""}></label><button type="button" class="layer-group-header layer-group-header--record" aria-expanded="false" title="${escapeHtml(camada.arquivo)}"><span class="layer-group-toggle" aria-hidden="true">›</span><span class="geo-layer-copy"><span class="layer-group-name">${escapeHtml(opcoes.nome(camada))}</span>${opcoes.simbolo(camada)}</span></button></div></div>`;
+        return `<div class="layer-group layer-group--record geo-layer-record" data-id="${escapeHtml(camada.id)}" data-indice="${indice}"><div class="layer-group-header-row"><label class="layer-visibility-toggle" for="${domId}"><input type="checkbox" class="layer-visibility-input" id="${domId}" ${camada.erro ? "disabled" : ""} ${opcoes.visiveis?.has(camada.id) ? "checked" : ""}></label><button type="button" class="layer-group-header layer-group-header--record" aria-expanded="false" title="${escapeHtml(camada.arquivo)}"><span class="layer-group-toggle" aria-hidden="true">›</span><span class="geo-layer-copy"><span class="layer-group-name">${escapeHtml(opcoes.nome(camada))}</span>${opcoes.simbolo(camada)}</span></button></div></div>`;
       };
       const blocoGrupo = (grupo) => {
         const total = contar(grupo);
@@ -122,6 +122,8 @@
           });
         });
       });
+      // Redesenho (ex.: depois de um upload) mantém marcadas as camadas que seguem no mapa.
+      sincronizarGrupos();
       // Delegado: o símbolo é trocado ao salvar as propriedades da camada.
       container.onclick = (event) => {
         const simbolo = event.target.closest(".geo-layer-tree-symbol");

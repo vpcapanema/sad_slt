@@ -119,6 +119,7 @@
     GeoespacialStorage.renderArvore(container, arvore, {
       nome: displayName,
       simbolo: layerSymbol,
+      visiveis: camadasVisiveis,
       aoSelecionar: detail,
       aoEditar: openProperties,
       aoAlternar: toggle,
@@ -139,6 +140,22 @@
     camadas = GeoespacialStorage.camadasDaArvore(arvore);
     render();
     preencherCamadasRecorte();
+  }
+  // Camadas recém-enviadas: entram no painel já ligadas no mapa, com as pastas abertas.
+  function ativarEnviadas(resultado) {
+    const ids = new Set((resultado.camadas || []).filter((c) => c.tipo === "vetor").map((c) => c.id));
+    const linhas = [...document.querySelectorAll("#geoespacial-layers-list .geo-layer-record")].filter((l) => ids.has(l.dataset.id));
+    linhas.forEach((linha) => {
+      for (let grupo = linha.parentElement?.closest(".geo-storage-group"); grupo; grupo = grupo.parentElement?.closest(".geo-storage-group")) {
+        grupo.classList.remove("collapsed");
+        grupo.querySelector(":scope > .layer-group-header-row .layer-group-header--tipo")?.setAttribute("aria-expanded", "true");
+      }
+      linha.classList.add("geo-layer-recem-enviada");
+      const entrada = linha.querySelector(".layer-visibility-input");
+      if (entrada && !entrada.checked && !entrada.disabled) { entrada.checked = true; entrada.dispatchEvent(new Event("change")); }
+    });
+    linhas[0]?.scrollIntoView({ block: "center", behavior: "smooth" });
+    return linhas.length;
   }
   // Máscara de recorte: as camadas vetoriais do próprio storage.
   function preencherCamadasRecorte() {
@@ -272,7 +289,19 @@
     document.getElementById("btn-confirmar-progresso").addEventListener("click", () => progressDialog.close());
     document.getElementById("import-reproject-enabled").addEventListener("change", (event) => { document.getElementById("import-target-crs").disabled = !event.target.checked; });
     document.getElementById("import-clip-enabled").addEventListener("change", (event) => { document.getElementById("import-clip-layer").disabled = !event.target.checked; });
+    // Pasta de destino: escolhida no explorador do storage e mantida para o próximo envio.
+    function definirPasta(caminho) {
+      document.getElementById("import-pasta").value = caminho || "";
+      const rotulo = document.getElementById("import-pasta-rotulo");
+      rotulo.textContent = caminho || "Nenhuma pasta escolhida";
+      rotulo.classList.toggle("vazio", !caminho);
+    }
+    document.getElementById("btn-escolher-pasta").addEventListener("click", async () => {
+      const escolhida = await StoragePastas.escolher({ inicial: document.getElementById("import-pasta").value });
+      if (escolhida) definirPasta(escolhida);
+    });
     input.addEventListener("change", async () => {
+      document.getElementById("import-file-name").textContent = input.files[0]?.name || "Selecionar arquivo geoespacial";
       try { if (input.files[0]) await inspecionar(input.files[0]); }
       catch (error) { arquivoInspecionado = null; tokenImportacao = null; document.getElementById("import-inspection-status").textContent = error.message; }
     });
@@ -290,11 +319,16 @@
         dialog.close(); progressDialog.showModal();
         const result = await upload(arquivoInspecionado);
         await load();
+        const noPainel = ativarEnviadas(result);
         const final = document.getElementById("import-progress-final");
         final.className = "import-progress-final"; final.hidden = false;
         final.textContent = `${result.arquivos.length} arquivo(s) gravado(s) no storage em ${result.pasta}: ${result.arquivos.join(", ")}.`;
+        if (noPainel) final.textContent += ` ${noPainel} camada(s) adicionada(s) ao painel e ao mapa.`;
+        else if (result.pasta.startsWith("superficies-indices")) { const aviso = document.createElement("span"); aviso.innerHTML = ' Esta pasta aparece em <a href="/restrict/geoespacial/produtos/">Camadas de Superfícies-índice</a>.'; final.append(aviso); }
         document.getElementById("btn-confirmar-progresso").disabled = false;
-        arquivoInspecionado = null; tokenImportacao = null; form.reset();
+        const pastaUsada = document.getElementById("import-pasta").value;
+        arquivoInspecionado = null; tokenImportacao = null; form.reset(); definirPasta(pastaUsada);
+        document.getElementById("import-file-name").textContent = "Selecionar arquivo geoespacial";
       } catch (error) {
         status.textContent = error.message; confirm.disabled = false;
         if (progressDialog.open) { const final=document.getElementById("import-progress-final");final.className="import-progress-final error";final.hidden=false;final.textContent=`Falha: ${error.message}`;document.getElementById("btn-confirmar-progresso").disabled=false; }

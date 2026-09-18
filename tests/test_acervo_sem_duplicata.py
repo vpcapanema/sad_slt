@@ -74,15 +74,17 @@ def test_interface_escolhe_uma_das_pastas_do_storage():
     pagina = Path("templates/paginas/geoespacial/visualizador-inputs.html").read_text(
         encoding="utf-8"
     )
-    assert '<select id="import-pasta" name="pasta" required>' in pagina
-    assert '<option value="base-geoespacial">' in pagina
-    assert '<option value="superficies-indices">' in pagina
+    # A pasta vem do explorador do storage, aberto pelo botão do bloco de destino.
+    assert '<input id="import-pasta" name="pasta" type="hidden">' in pagina
+    assert 'id="btn-escolher-pasta"' in pagina
+    assert "geoespacial-storage-pastas.js" in pagina
 
     script = Path("geoespacial/geoespacial-visualizador-inputs.js").read_text(
         encoding="utf-8"
     )
     assert 'data.append("pasta", pasta)' in script, "a pasta escolhida deve ser enviada"
     assert "/storage/upload/job" in script
+    assert "StoragePastas.escolher" in script
 
 
 def test_backend_nomeia_o_conceito_como_pasta():

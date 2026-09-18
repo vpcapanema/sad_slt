@@ -14,6 +14,7 @@ import rasterio
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from starlette.concurrency import run_in_threadpool
+from pydantic import BaseModel, Field
 from shapely.geometry import LineString, Point, Polygon
 
 from api.deps.auth import require_geospatial_access, require_operator
@@ -841,6 +842,62 @@ async def iniciar_importacao_validada_com_progresso(
         inspection_token=(token_importacao or "").strip() or None,
         pasta=(pasta or "").strip() or None,
     )
+
+
+class PastaStorage(BaseModel):
+    caminho: str = Field(min_length=1, max_length=1000)
+    nome: str = Field(min_length=1, max_length=120)
+
+
+def _erro_pasta_storage(exc: Exception) -> HTTPException:
+    from api.services.storage_remoto import StorageIndisponivel
+    if isinstance(exc, FileExistsError):
+        return HTTPException(409, str(exc))
+    if isinstance(exc, FileNotFoundError):
+        return HTTPException(404, str(exc))
+    if isinstance(exc, ValueError):
+        return HTTPException(422, str(exc))
+    if isinstance(exc, StorageIndisponivel):
+        return HTTPException(502, str(exc))
+    logger.exception("Falha na operação de pasta do storage")
+    return HTTPException(500, "Não foi possível concluir a operação no storage")
+
+
+@router.get("/storage/pastas")
+async def listar_pastas_storage(caminho: str = "") -> dict[str, Any]:
+    """Pastas do storage da VM para o explorador do upload."""
+    from api.services import pastas_storage
+    try:
+        return await run_in_threadpool(pastas_storage.listar, caminho)
+    except Exception as exc:
+        raise _erro_pasta_storage(exc) from exc
+
+
+@router.post("/storage/pastas", status_code=status.HTTP_201_CREATED)
+async def criar_pasta_storage(payload: PastaStorage) -> dict[str, Any]:
+    from api.services import pastas_storage
+    try:
+        return await run_in_threadpool(pastas_storage.criar, payload.caminho, payload.nome)
+    except Exception as exc:
+        raise _erro_pasta_storage(exc) from exc
+
+
+@router.patch("/storage/pastas")
+async def renomear_pasta_storage(payload: PastaStorage) -> dict[str, Any]:
+    from api.services import pastas_storage
+    try:
+        return await run_in_threadpool(pastas_storage.renomear, payload.caminho, payload.nome)
+    except Exception as exc:
+        raise _erro_pasta_storage(exc) from exc
+
+
+@router.delete("/storage/pastas")
+async def excluir_pasta_storage(caminho: str) -> dict[str, Any]:
+    from api.services import pastas_storage
+    try:
+        return await run_in_threadpool(pastas_storage.excluir, caminho)
+    except Exception as exc:
+        raise _erro_pasta_storage(exc) from exc
 
 
 @router.post("/storage/upload/job", status_code=status.HTTP_202_ACCEPTED)

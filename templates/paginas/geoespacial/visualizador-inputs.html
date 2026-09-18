@@ -13,6 +13,7 @@
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/geoespacial.css">
   <link rel="stylesheet" href="/assets/css/geoespacial-painel-mapa.css?v=20260914-1">
+  <link rel="stylesheet" href="/assets/css/storage-pastas.css?v=20260918-1">
   <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
@@ -76,18 +77,48 @@
     </aside>
   </main>
 
-  <dialog id="dialog-importar-camadas" class="geoespacial-import-dialog">
-    <form id="form-importar-camadas" class="geoespacial-import-form">
-      <header><div><h2>Importar camadas</h2><p>O arquivo é validado e gravado no storage do SICARD, na pasta escolhida.</p></div><button type="button" class="btn-icon" id="btn-fechar-importacao" aria-label="Fechar">×</button></header>
-      <label class="geoespacial-import-field"><span>Arquivo</span><input id="viewer-file-input" name="arquivo" type="file" accept=".shp,.geojson,.json,.kml,.gml,.fgb,.gpkg,.tif,.tiff,.img,.asc,.vrt,.jp2,.zip,.rar,.7z,.tar,.tgz,.gz" required></label>
-      <div id="import-inspection-status" class="hint">Selecione um arquivo para identificar tipo, CRS e conteúdo.</div>
-      <label class="geoespacial-import-field"><span>Pasta de destino no storage</span><select id="import-pasta" name="pasta" required><option value="">Escolha a pasta</option><option value="base-geoespacial">base-geoespacial</option><option value="superficies-indices">superficies-indices</option></select></label>
-      <label class="geoespacial-import-field"><span>CRS atual da camada</span><input id="import-current-crs" type="text" placeholder="Detectado após selecionar o arquivo" readonly></label>
-      <label class="geoespacial-import-check"><input id="import-reproject-enabled" type="checkbox"><span>Reprojetar CRS</span></label>
-      <label class="geoespacial-import-field"><span>CRS de destino</span><select id="import-target-crs" disabled><option value="EPSG:4674">EPSG:4674 (SIRGAS 2000) — recomendado</option><option value="EPSG:4326">EPSG:4326 — WGS 84</option><option value="EPSG:31983">EPSG:31983 — SIRGAS 2000 / UTM 23S</option></select></label>
-      <label class="geoespacial-import-check"><input id="import-clip-enabled" type="checkbox"><span>Recortar pela camada</span></label>
-      <label class="geoespacial-import-field"><span>Camada de máscara</span><select id="import-clip-layer" disabled><option value="">Selecione uma camada vetorial</option></select></label>
-      <footer><button type="button" class="btn btn-secondary" id="btn-cancelar-importacao">Cancelar</button><button type="submit" class="btn btn-primary" id="btn-confirmar-importacao" disabled>Enviar ao storage</button></footer>
+  <dialog id="dialog-importar-camadas" class="importar-storage-dialog" aria-labelledby="importar-storage-titulo">
+    <form id="form-importar-camadas" class="importar-storage">
+      <header class="importar-storage-head">
+        <div><h2 id="importar-storage-titulo">Importar camada para o storage</h2><p>O arquivo é validado aqui e gravado no storage do SICARD, na pasta que você escolher.</p></div>
+        <button type="button" class="importar-storage-fechar" id="btn-fechar-importacao" aria-label="Fechar">×</button>
+      </header>
+
+      <section class="importar-storage-bloco secao-arquivo-da-importacao" aria-labelledby="importar-bloco-arquivo">
+        <h3 id="importar-bloco-arquivo"><span>1</span> Arquivo</h3>
+        <label class="importar-storage-arquivo">
+          <input id="viewer-file-input" name="arquivo" type="file" accept=".shp,.geojson,.json,.kml,.gml,.fgb,.gpkg,.tif,.tiff,.img,.asc,.vrt,.jp2,.zip,.rar,.7z,.tar,.tgz,.gz" required>
+          <i class="fas fa-file-arrow-up" aria-hidden="true"></i>
+          <span id="import-file-name">Selecionar arquivo geoespacial</span>
+        </label>
+        <p id="import-inspection-status" class="importar-storage-dica">Shapefile vai em um .zip com .shp, .shx e .dbf. Tipo, CRS e conteúdo são identificados ao selecionar.</p>
+      </section>
+
+      <section class="importar-storage-bloco secao-pasta-de-destino" aria-labelledby="importar-bloco-destino">
+        <h3 id="importar-bloco-destino"><span>2</span> Pasta de destino</h3>
+        <div class="importar-storage-destino">
+          <input id="import-pasta" name="pasta" type="hidden">
+          <i class="fas fa-folder" aria-hidden="true"></i>
+          <span id="import-pasta-rotulo" class="vazio">Nenhuma pasta escolhida</span>
+          <button type="button" class="btn btn-secondary" id="btn-escolher-pasta"><i class="fas fa-folder-open" aria-hidden="true"></i> Escolher pasta…</button>
+        </div>
+      </section>
+
+      <section class="importar-storage-bloco secao-opcoes-da-importacao" aria-labelledby="importar-bloco-opcoes">
+        <h3 id="importar-bloco-opcoes"><span>3</span> Opções</h3>
+        <label class="geoespacial-import-field"><span>CRS atual da camada</span><input id="import-current-crs" type="text" placeholder="Detectado após selecionar o arquivo" readonly></label>
+        <div class="importar-storage-opcao">
+          <label class="geoespacial-import-check"><input id="import-reproject-enabled" type="checkbox"><span>Reprojetar CRS</span></label>
+          <select id="import-target-crs" disabled aria-label="CRS de destino"><option value="EPSG:4674">EPSG:4674 (SIRGAS 2000) — recomendado</option><option value="EPSG:4326">EPSG:4326 — WGS 84</option><option value="EPSG:31983">EPSG:31983 — SIRGAS 2000 / UTM 23S</option></select>
+        </div>
+        <div class="importar-storage-opcao">
+          <label class="geoespacial-import-check"><input id="import-clip-enabled" type="checkbox"><span>Recortar pela camada</span></label>
+          <select id="import-clip-layer" disabled aria-label="Camada de máscara"><option value="">Selecione uma camada vetorial</option></select>
+        </div>
+        <p class="importar-storage-dica">Com reprojeção ou recorte, o storage recebe o resultado (GeoPackage ou GeoTIFF); sem eles, o arquivo como veio.</p>
+      </section>
+
+      <footer class="importar-storage-rodape"><button type="button" class="btn btn-secondary" id="btn-cancelar-importacao">Cancelar</button><button type="submit" class="btn btn-primary" id="btn-confirmar-importacao" disabled>Enviar ao storage</button></footer>
     </form>
   </dialog>
   <dialog id="dialog-import-progress" class="geoespacial-import-dialog geoespacial-progress-dialog">
@@ -106,5 +137,6 @@
   <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
   <script src="/assets/js/geoespacial-map.js?v=20260722-10"></script>
   <script src="/restrict/geoespacial/geoespacial-storage-arvore.js?v=20260914-2"></script>
-  <script src="/restrict/geoespacial/geoespacial-visualizador-inputs.js?v=20260914-1"></script>
+  <script src="/restrict/geoespacial/geoespacial-storage-pastas.js?v=20260918-1"></script>
+  <script src="/restrict/geoespacial/geoespacial-visualizador-inputs.js?v=20260918-1"></script>
 {% endblock %}
