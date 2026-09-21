@@ -30,7 +30,7 @@ from api.schemas.plano import PlanoUpdateSchema
 from api.schemas.programa import ProgramaUpdateSchema
 from api.services import demanda_service, objeto_ahp_service, plano_service, programa_service
 from api.services.session_service import SessionUser
-from api.services.status_transicoes import destinos_permitidos
+from api.services.status_transicoes import destinos_permitidos_com_handoff
 
 CRITERIOS: tuple[dict[str, str], ...] = (
     {
@@ -363,7 +363,9 @@ def _aplicar_transicao(
     decisao: str = "",
 ) -> str:
     """Aplica a transição pelos fluxos já existentes, sem reimplementar a matriz."""
-    permitidos = destinos_permitidos(status_atual)
+    # Aprovar/Reprovar são handoff dedicado (via_aprovar), fora da matriz do
+    # PATCH administrativo — validar só pelo PATCH recusava toda decisão.
+    permitidos = destinos_permitidos_com_handoff(status_atual)
     if destino not in permitidos:
         raise DemandaValidationError(
             f"Transição de status inválida: «{status_atual}» → «{destino}».",
