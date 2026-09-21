@@ -254,6 +254,85 @@
   display: none;
 }
 
+/* Select com botão de atualizar a lista ao lado. */
+.cadastro-page .campo-com-acao {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cadastro-page .campo-com-acao select {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cadastro-page .btn-atualizar-lista {
+  display: inline-grid;
+  width: 2.1rem;
+  height: 2.1rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--pli-border);
+  border-radius: 0.5rem;
+  color: var(--pli-blue);
+  background: var(--pli-white);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.cadastro-page .btn-atualizar-lista:hover,
+.cadastro-page .btn-atualizar-lista:focus-visible {
+  color: var(--pli-white);
+  border-color: var(--pli-blue);
+  background: var(--pli-blue);
+  outline: none;
+}
+
+.cadastro-page .btn-atualizar-lista:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.cadastro-page .btn-atualizar-lista.is-atualizando i {
+  animation: giro-atualizar 0.8s linear infinite;
+}
+
+@keyframes giro-atualizar {
+  to { transform: rotate(360deg); }
+}
+
+/* Proponente lido do PDF que não está nas listas do SIGMA: aviso com link de cadastro. */
+.cadastro-page .aviso-sigma {
+  margin: 0.45rem 0 0.2rem;
+  padding: 0.55rem 0.7rem;
+  border-left: 3px solid #d4a017;
+  border-radius: 4px;
+  color: #5a4300;
+  background: #fff8e6;
+  font-size: var(--font-help);
+  line-height: 1.45;
+}
+
+.cadastro-page .aviso-sigma a {
+  font-weight: 700;
+}
+
+.cadastro-page .aviso-sigma-atualizar {
+  padding: 0;
+  border: 0;
+  color: var(--pli-blue);
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.cadastro-page .aviso-sigma-nota {
+  margin: 0.35rem 0 0;
+}
+
 .cadastro-embed .sei-preenchido {
   box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.35);
 }

@@ -167,9 +167,12 @@
           <div class="proponente-fields">
             <div class="proponente-grupo proponente-grupo--instituicao">
               <label for="instituicao">Instituição interessada <span class="req">*</span></label>
-              <select id="instituicao" name="instituicao" required disabled>
-                <option value="">Carregando instituições…</option>
-              </select>
+              <div class="campo-com-acao">
+                <select id="instituicao" name="instituicao" required disabled>
+                  <option value="">Carregando instituições…</option>
+                </select>
+                <button type="button" class="btn-atualizar-lista" data-lista="instituicoes" title="Atualizar a lista de instituições" aria-label="Atualizar a lista de instituições"><i class="fas fa-rotate" aria-hidden="true"></i></button>
+              </div>
               <p class="field-help">Selecione a pessoa jurídica interessada. Caso não a encontre na lista, <a class="link-catalogo" href="https://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener">cadastre-a antes de continuar ↗</a>.</p>
               <div class="proponente-cnpj">
                 <label for="cnpj">CNPJ</label>
@@ -180,9 +183,12 @@
               <div class="form-grid">
                 <div class="form-field-block full">
                   <label for="representante">Representante legal <span class="req">*</span></label>
-                  <select id="representante" name="representante" required disabled>
-                    <option value="">Carregando pessoas…</option>
-                  </select>
+                  <div class="campo-com-acao">
+                    <select id="representante" name="representante" required disabled>
+                      <option value="">Carregando pessoas…</option>
+                    </select>
+                    <button type="button" class="btn-atualizar-lista" data-lista="pessoas" title="Atualizar a lista de representantes" aria-label="Atualizar a lista de representantes"><i class="fas fa-rotate" aria-hidden="true"></i></button>
+                  </div>
                   <p class="field-help">Selecione a pessoa física que responde legalmente por este cadastro. Caso não a encontre na lista, <a class="link-catalogo" href="https://56.125.163.194/cadastro/pessoa/" target="_blank" rel="noopener">cadastre-a antes de continuar ↗</a>.</p>
                 </div>
                 <div class="form-field-block">
@@ -226,7 +232,7 @@
                 </select>
               </div>
             </div>
-            <p id="classificacao-hint" class="hint">Selecione diretoria e plano acima, ou informe o vínculo institucional na seção inicial, para classificar a demanda.</p>
+            <p id="classificacao-hint" class="hint hidden"></p>
           </div>
         </div>
 
@@ -402,9 +408,12 @@
         <div class="proponente-fields">
           <div class="proponente-grupo proponente-grupo--instituicao">
             <label for="pl-instituicao">Instituição interessada <span class="req">*</span></label>
-            <select id="pl-instituicao" disabled>
-              <option value="">Carregando instituições…</option>
-            </select>
+            <div class="campo-com-acao">
+              <select id="pl-instituicao" disabled>
+                <option value="">Carregando instituições…</option>
+              </select>
+              <button type="button" class="btn-atualizar-lista" data-lista="instituicoes" title="Atualizar a lista de instituições" aria-label="Atualizar a lista de instituições"><i class="fas fa-rotate" aria-hidden="true"></i></button>
+            </div>
             <p class="field-help">Selecione a pessoa jurídica vinculada a este plano. Caso não a encontre na lista, <a class="link-catalogo" href="https://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener">cadastre-a antes de continuar ↗</a>.</p>
             <div class="proponente-cnpj">
               <label for="pl-cnpj">CNPJ</label>
@@ -415,9 +424,12 @@
             <div class="form-grid">
               <div class="form-field-block full">
                 <label for="pl-representante">Representante legal <span class="req">*</span></label>
-                <select id="pl-representante" required disabled>
-                  <option value="">Carregando pessoas…</option>
-                </select>
+                <div class="campo-com-acao">
+                  <select id="pl-representante" required disabled>
+                    <option value="">Carregando pessoas…</option>
+                  </select>
+                  <button type="button" class="btn-atualizar-lista" data-lista="pessoas" title="Atualizar a lista de representantes" aria-label="Atualizar a lista de representantes"><i class="fas fa-rotate" aria-hidden="true"></i></button>
+                </div>
                 <p class="field-help">Selecione a pessoa física que responde legalmente por este cadastro. Caso não a encontre na lista, <a class="link-catalogo" href="https://56.125.163.194/cadastro/pessoa/" target="_blank" rel="noopener">cadastre-a antes de continuar ↗</a>.</p>
               </div>
               <div class="form-field-block">
@@ -556,9 +568,12 @@
         <div class="proponente-fields">
           <div class="proponente-grupo proponente-grupo--instituicao">
             <label for="pg-instituicao">Instituição interessada <span class="req">*</span></label>
-            <select id="pg-instituicao" disabled>
-              <option value="">Carregando instituições…</option>
-            </select>
+            <div class="campo-com-acao">
+              <select id="pg-instituicao" disabled>
+                <option value="">Carregando instituições…</option>
+              </select>
+              <button type="button" class="btn-atualizar-lista" data-lista="instituicoes" title="Atualizar a lista de instituições" aria-label="Atualizar a lista de instituições"><i class="fas fa-rotate" aria-hidden="true"></i></button>
+            </div>
             <p class="field-help">Selecione a pessoa jurídica vinculada a este programa. Caso não a encontre na lista, <a class="link-catalogo" href="https://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener">cadastre-a antes de continuar ↗</a>.</p>
             <div class="proponente-cnpj">
               <label for="pg-cnpj">CNPJ</label>
@@ -569,9 +584,12 @@
             <div class="form-grid">
               <div class="form-field-block full">
                 <label for="pg-representante">Representante legal <span class="req">*</span></label>
-                <select id="pg-representante" required disabled>
-                  <option value="">Carregando pessoas…</option>
-                </select>
+                <div class="campo-com-acao">
+                  <select id="pg-representante" required disabled>
+                    <option value="">Carregando pessoas…</option>
+                  </select>
+                  <button type="button" class="btn-atualizar-lista" data-lista="pessoas" title="Atualizar a lista de representantes" aria-label="Atualizar a lista de representantes"><i class="fas fa-rotate" aria-hidden="true"></i></button>
+                </div>
                 <p class="field-help">Selecione a pessoa física que responde legalmente por este cadastro. Caso não a encontre na lista, <a class="link-catalogo" href="https://56.125.163.194/cadastro/pessoa/" target="_blank" rel="noopener">cadastre-a antes de continuar ↗</a>.</p>
               </div>
               <div class="form-field-block">

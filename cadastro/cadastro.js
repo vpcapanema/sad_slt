@@ -820,7 +820,6 @@
         $("#map-error").classList.remove("hidden");
         return false;
       }
-      const geom = getGeometria();
       $("#map-error").classList.add("hidden");
       renderReview();
       return true;
@@ -923,6 +922,60 @@
     });
   }
 
+  const LISTAS_SIGMA = {
+    instituicoes: { seletores: ["#instituicao", "#pl-instituicao", "#pg-instituicao"], nome: "instituições" },
+    pessoas: { seletores: ["#representante", "#pl-representante", "#pg-representante"], nome: "representantes" },
+  };
+
+  /**
+   * Recarrega uma lista do SIGMA sem recarregar a página: traz quem foi cadastrado
+   * depois que a página abriu e preserva o que já estava escolhido em cada formulário.
+   */
+  async function recarregarLista(lista) {
+    const { seletores } = LISTAS_SIGMA[lista];
+    const escolhidos = seletores.map((selector) => $(selector)?.value || "");
+    if (lista === "instituicoes") {
+      instituicoes = await SLTSigmaRead.listInstituicoes();
+      fillInstituicaoSelects();
+    } else {
+      pessoas = await SLTSigmaRead.listPessoas();
+      fillRepresentanteSelects();
+    }
+    seletores.forEach((selector, indice) => {
+      const campo = $(selector);
+      if (!campo) return;
+      const anterior = escolhidos[indice];
+      campo.value =
+        anterior && [...campo.options].some((opcao) => opcao.value === anterior) ? anterior : "";
+      // O change resincroniza CNPJ, e-mail e telefone — inclusive quando a escolha saiu da lista.
+      campo.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    // Com a lista nova, a sugestão lida do PDF pode encontrar o proponente que faltava.
+    if (ultimaSugestao) preencherProponente(ultimaSugestao.tipo, ultimaSugestao.campos);
+    return (lista === "instituicoes" ? instituicoes : pessoas).length;
+  }
+
+  async function aoAtualizarLista(botao) {
+    const lista = botao.dataset.lista;
+    botao.disabled = true;
+    botao.classList.add("is-atualizando");
+    try {
+      const total = await recarregarLista(lista);
+      showToast(`Lista atualizada: ${total} ${LISTAS_SIGMA[lista].nome}.`);
+    } catch (erro) {
+      showToast(`Não foi possível atualizar a lista de ${LISTAS_SIGMA[lista].nome}.`);
+    } finally {
+      botao.disabled = false;
+      botao.classList.remove("is-atualizando");
+    }
+  }
+
+  function initAtualizarListas() {
+    $$(".btn-atualizar-lista").forEach((botao) => {
+      botao.addEventListener("click", () => aoAtualizarLista(botao));
+    });
+  }
+
   async function loadSigmaCadastros() {
     const hint = $("#cadastro-load-hint");
 
@@ -980,7 +1033,11 @@
     pef.classList.add("hidden");
     hint.classList.add("hidden");
 
-    if (!vinculoAtivo || !plano) {
+    if (!vinculoAtivo) return;
+
+    if (!plano) {
+      hint.textContent = "Selecione o plano ou o programa do vínculo para classificar a demanda.";
+      hint.classList.remove("hidden");
       return;
     }
 
@@ -992,6 +1049,10 @@
       pef.classList.remove("hidden");
       fillSelect($("#eixo"), SLTCatalog.eixosPorPlano(planoId), "id", (e) => e.nome_oficial, "Selecione…");
       onEixoChange();
+    } else {
+      // Plano sem frentes nem eixos: a subseção ficaria vazia sem explicação.
+      hint.textContent = `O plano ${plano.sigla || plano.nome_oficial} não possui frente ou eixo para classificar a demanda.`;
+      hint.classList.remove("hidden");
     }
     updateClassificacaoHints();
   }
@@ -2099,6 +2160,7 @@
     initTipoDemandanteSelector();
     initTipoSelector();
     initFieldFilledSync();
+    initAtualizarListas();
     try {
       await loadAtributosObjetoDomain();
     } catch (err) {
@@ -2186,6 +2248,117 @@
     return true;
   }
 
+  // Cadastros do SIGMA para o proponente lido do PDF que ainda não está nas listas.
+  const SIGMA_CADASTRO = {
+    instituicao: { url: SLTSigmaRead.CADASTRO_INSTITUICAO_URL, campo: "#cnpj", rotulo: "cadastro da instituição" },
+    pessoa: { url: SLTSigmaRead.CADASTRO_PESSOA_URL, campo: "#nomeCompleto", rotulo: "cadastro do representante legal" },
+  };
+  // Última sugestão do PDF: o "atualize a lista" refaz só o proponente, sem tocar no resto do formulário.
+  let ultimaSugestao = null;
+
+  function removerAvisoSigma(selector) {
+    document.getElementById(`aviso-sigma-${selector.slice(1)}`)?.remove();
+  }
+
+  async function copiarValor(valor, aviso) {
+    aviso.querySelector(".aviso-sigma-nota")?.remove();
+    if (!valor) return;
+    const nota = document.createElement("p");
+    nota.className = "aviso-sigma-nota";
+    try {
+      await navigator.clipboard.writeText(valor);
+      nota.textContent = `Não foi possível preencher o SIGMA a partir daqui: "${valor}" foi copiado — cole no formulário.`;
+    } catch (erro) {
+      nota.textContent = `Não foi possível preencher o SIGMA a partir daqui: copie "${valor}" e cole no formulário.`;
+    }
+    aviso.append(nota);
+  }
+
+  // SICARD (/sicard/) e SIGMA (/cadastro/) estão na mesma origem na VM: a aba aberta
+  // é acessível daqui, e o campo é preenchido assim que o formulário do SIGMA carrega.
+  // Em outra origem (ambiente local) o navegador bloqueia o acesso: o valor é copiado.
+  function abrirCadastroSigma(cadastro, valor, aviso) {
+    const { url, campo } = SIGMA_CADASTRO[cadastro];
+    const aba = window.open(url, "_blank");
+    if (!aba) {
+      copiarValor(valor, aviso);
+      return;
+    }
+    if (!valor) return;
+    const limite = Date.now() + 20000;
+    const tentar = () => {
+      let input = null;
+      try {
+        if (aba.location.href !== "about:blank" && aba.document.readyState === "complete") {
+          input = aba.document.querySelector(campo);
+        }
+      } catch (erro) {
+        copiarValor(valor, aviso); // outra origem
+        return;
+      }
+      if (input) {
+        input.value = valor;
+        // Os eventos acionam as máscaras e as validações do próprio SIGMA.
+        ["input", "change", "blur"].forEach((tipo) => input.dispatchEvent(new Event(tipo, { bubbles: true })));
+        return;
+      }
+      if (aba.closed) return;
+      if (Date.now() < limite) setTimeout(tentar, 300);
+      else copiarValor(valor, aviso);
+    };
+    setTimeout(tentar, 300);
+  }
+
+  async function atualizarListasSigma(botao) {
+    botao.disabled = true;
+    botao.textContent = "atualizando…";
+    try {
+      await recarregarLista("instituicoes");
+      await recarregarLista("pessoas");
+    } catch (erro) {
+      botao.disabled = false;
+      botao.textContent = "não foi possível atualizar — tente de novo";
+    }
+  }
+
+  /** Aviso abaixo do campo: o proponente lido do PDF não está na lista do SIGMA. */
+  function avisarNaoEncontrado(selector, cadastro, nome, cnpj) {
+    const campo = $(selector);
+    if (!campo) return;
+    const { url, rotulo } = SIGMA_CADASTRO[cadastro];
+    const aviso = document.createElement("div");
+    aviso.id = `aviso-sigma-${selector.slice(1)}`;
+    aviso.className = "aviso-sigma";
+    aviso.setAttribute("role", "status");
+    const link = `<a href="${escapeHtml(url)}" target="_blank" data-cadastro-sigma>${rotulo}</a>`;
+    const atualizar = '<button type="button" class="aviso-sigma-atualizar">atualize a lista</button>';
+    if (cadastro === "instituicao") {
+      const quem = nome ? `A instituição <strong>“${escapeHtml(nome)}”</strong>` : "A instituição";
+      const documento = cnpj ? `, CNPJ <strong>${escapeHtml(cnpj)}</strong>,` : " (CNPJ não identificado no PDF)";
+      aviso.innerHTML = `${quem}${documento} lida do PDF, não foi encontrada na lista disponível. `
+        + `Ela é a instituição desta demanda? Se for, faça o ${link} no SIGMA`
+        + `${cnpj ? " — o CNPJ já vai preenchido —" : ""} e depois ${atualizar}.`;
+    } else {
+      aviso.innerHTML = `O representante legal <strong>“${escapeHtml(nome)}”</strong>, lido do PDF, não foi encontrado na lista disponível. `
+        + `Ele é o representante desta demanda? Se for, faça o ${link} no SIGMA — o nome completo já vai preenchido — e depois ${atualizar}.`;
+    }
+    // O select fica dentro do flex com o botão de atualizar: o aviso vai depois do conjunto.
+    (campo.closest(".campo-com-acao") || campo).insertAdjacentElement("afterend", aviso);
+    const valor = cadastro === "instituicao" ? cnpj || "" : nome || "";
+    aviso.querySelector("[data-cadastro-sigma]").addEventListener("click", (evento) => {
+      evento.preventDefault();
+      abrirCadastroSigma(cadastro, valor, aviso);
+    });
+    aviso.querySelector(".aviso-sigma-atualizar").addEventListener("click", (evento) => atualizarListasSigma(evento.currentTarget));
+    // Escolhido um valor da lista, o aviso deixa de valer (ouvinte único por campo).
+    if (!campo.dataset.avisoSigma) {
+      campo.dataset.avisoSigma = "1";
+      campo.addEventListener("change", () => {
+        if (campo.value) removerAvisoSigma(selector);
+      });
+    }
+  }
+
   function preencherComSugestoes(detalhe) {
     const tipo = tipoFormularioAtivo();
     const campos = detalhe?.campos_sugeridos || {};
@@ -2197,8 +2370,17 @@
     if (campos.valor_global != null && definirCampoSugerido(SUGESTAO_MOEDA[tipo], formatMoedaBr(Number(campos.valor_global)))) {
       preenchidos += 1;
     }
-    // Proponente só por identificação exata no SIGMA: CNPJ ou nome idêntico para a instituição,
-    // e-mail ou nome idêntico para o representante (ignorando acentos, caixa e espaços).
+    ultimaSugestao = { tipo, campos };
+    return preenchidos + preencherProponente(tipo, campos);
+  }
+
+  /**
+   * Proponente só por identificação exata no SIGMA: CNPJ ou nome idêntico para a instituição,
+   * e-mail ou nome idêntico para o representante (ignorando acentos, caixa e espaços).
+   * Sem correspondência, o valor lido não é escolhido: um aviso abaixo do campo leva ao cadastro no SIGMA.
+   */
+  function preencherProponente(tipo, campos) {
+    let preenchidos = 0;
     const [instSel, repSel] = SUGESTAO_PROPONENTE[tipo];
     const comparavel = (texto) =>
       String(texto || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -2209,14 +2391,24 @@
       (nomeInstituicao &&
         instituicoes.find((i) => [i.razao_social, i.nome, i.nome_fantasia].some((n) => comparavel(n) === nomeInstituicao))) ||
       null;
-    if (inst && definirCampoSugerido(instSel, inst.id)) preenchidos += 1;
+    removerAvisoSigma(instSel);
+    if (inst) {
+      if (definirCampoSugerido(instSel, inst.id)) preenchidos += 1;
+    } else if (cnpj || nomeInstituicao) {
+      avisarNaoEncontrado(instSel, "instituicao", campos.instituicao_label, campos.instituicao_cnpj);
+    }
     const email = comparavel(campos.representante_email);
     const nomeRepresentante = comparavel(campos.representante_nome);
     const pessoa =
       (email && pessoas.find((p) => comparavel(p.email) === email)) ||
       (nomeRepresentante && pessoas.find((p) => comparavel(p.nome_completo || p.nome) === nomeRepresentante)) ||
       null;
-    if (pessoa && definirCampoSugerido(repSel, pessoa.id)) preenchidos += 1;
+    removerAvisoSigma(repSel);
+    if (pessoa) {
+      if (definirCampoSugerido(repSel, pessoa.id)) preenchidos += 1;
+    } else if (nomeRepresentante) {
+      avisarNaoEncontrado(repSel, "pessoa", campos.representante_nome);
+    }
     return preenchidos;
   }
 

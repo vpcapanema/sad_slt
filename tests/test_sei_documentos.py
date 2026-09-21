@@ -231,6 +231,79 @@ def test_coordenada_lida_fora_do_municipio_nao_e_sugerida():
     assert leitura["campos_sugeridos"]["lat"] != pytest.approx(-21.2089)
 
 
+@pytest.mark.parametrize("assunto, esperado", [
+    # Casos reduzidos dos PDFs reais do SEI.
+    # (curto: linha maior que a página do PDF de teste seria cortada pelo reportlab)
+    ("Solicitação de apoio para o Projeto Rota dos Trilhos – Eixo FEPASA.", "Projeto Rota dos Trilhos – Eixo FEPASA"),
+    ("Encaminhamento de Proposta – Corredor Porto-Indústria de Cubatão.", "Corredor Porto-Indústria de Cubatão"),
+    ("Solicitação de reativação da malha ferroviária de Araçatuba —- EFNOB",
+     "Reativação da malha ferroviária de Araçatuba — EFNOB"),
+    ("Corredor Porto-Indústria (COPI) – Protocolo ARTESP nº", "Corredor Porto-Indústria (COPI)"),
+    ("Implantação de Ponte sobre o Rio Paranapanema", "Implantação de Ponte sobre o Rio Paranapanema"),
+])
+def test_nome_do_objeto_sai_do_pedido(assunto, esperado):
+    campos = processamento.analisar(pdf(f"Assunto: {assunto}"), "projeto")["campos_sugeridos"]
+    assert campos["nome"] == esperado
+
+
+@pytest.mark.parametrize("assunto", [
+    "AL/RM/OFÍCIO Nº 0158/2026",
+    "Encaminha demanda da Prefeitura de Assis para inserir no SEI",
+    "Atualização – Complemento ao material enviado anteriormente",
+    "Dois Córregos",
+])
+def test_referencia_tramite_e_municipio_nao_viram_nome(assunto):
+    campos = processamento.analisar(pdf(f"Assunto: {assunto}"), "projeto")["campos_sugeridos"]
+    assert "nome" not in campos
+
+
+def test_assunto_do_email_perde_para_o_ref_do_oficio():
+    """Caso Bracell: o ofício (Ref.:) e o e-mail que o encaminha (Assunto:) no mesmo PDF."""
+    from reportlab.pdfgen import canvas
+
+    buffer = io.BytesIO()
+    pagina = canvas.Canvas(buffer)
+    for indice, linha in enumerate(["OFICIO N 038/2025 - RI", "Protocolo interno 12", "Ref.: Utilizacao do porto de Presidente Epitacio - SP"]):
+        pagina.drawString(40, 800 - indice * 16, linha)
+    pagina.showPage()
+    email = ["De: Institucional <inst@empresa.com>", "Enviado: terca-feira, 1 de julho de 2025",
+             "Para: gabinete@prefeitura.sp.gov.br", "Assunto: Solicitacao Bracell - Porto Presidente Epitacio"]
+    for indice, linha in enumerate(email):
+        pagina.drawString(40, 800 - indice * 16, linha)
+    pagina.save()
+    campos = processamento.analisar(buffer.getvalue(), "projeto")["campos_sugeridos"]
+    assert campos["nome"] == "Utilizacao do porto de Presidente Epitacio - SP"
+
+
+def test_url_com_hifen_nao_e_rotulo():
+    campos = processamento.analisar(pdf("imigrantes-pode-ter-acesso-direto-ao-porto\nprojeto-com-aps-1.481184"), "projeto")
+    assert "nome" not in campos["campos_sugeridos"]
+
+
+def test_servico_da_planilha_nomeia_o_objeto_mas_cabecalho_de_coluna_nao():
+    planilha = "FINALIDADE: URBANIZAÇÃO DE ESPAÇO PÚBLICO\nSERVIÇO: CONSTRUÇÃO DA PRAÇA TERMINAL URBANO DE PASSAGEIROS\nITEM\nSERVIÇO\nUN"
+    campos = processamento.analisar(pdf(planilha), "projeto")["campos_sugeridos"]
+    assert campos["nome"] == "CONSTRUÇÃO DA PRAÇA TERMINAL URBANO DE PASSAGEIROS"
+
+
+def test_titulo_em_fonte_grande_na_capa_e_timbre_nao():
+    from reportlab.pdfgen import canvas
+
+    def capa(titulo):
+        buffer = io.BytesIO()
+        pagina = canvas.Canvas(buffer)
+        pagina.setFont("Helvetica-Bold", 40)
+        pagina.drawString(40, 700, titulo)
+        pagina.setFont("Helvetica", 11)
+        for indice in range(12):
+            pagina.drawString(40, 600 - indice * 16, "Texto corrido da apresentação com várias palavras de conteúdo.")
+        pagina.save()
+        return buffer.getvalue()
+
+    assert processamento.analisar(capa("INTERFACE PB"), "projeto")["campos_sugeridos"]["nome"] == "INTERFACE PB"
+    assert "nome" not in processamento.analisar(capa("PREFEITURA MUNICIPAL DE ASSIS"), "projeto")["campos_sugeridos"]
+
+
 def test_campo_sem_regra_fica_ausente_e_nao_recebe_zero():
     leitura = processamento.analisar(pdf("Oficio sem rotulos reconheciveis."), "projeto")
     assert "lat" not in leitura["campos_sugeridos"]
@@ -489,7 +562,7 @@ Interligando duas Rodovias do Estado de Sao Paulo.
 Solicitacao: Contratacao de EVTEA.
 """
 
-ASSUNTO_SEGUIDO_DE_SAUDACAO = """Assunto: Encaminha demanda da Prefeitura de Bauru
+ASSUNTO_SEGUIDO_DE_SAUDACAO = """Assunto: Terminal rodoviario da Prefeitura de Bauru
 Prezados, bom dia!
 Segue para protocolar e informar o numero SEI.
 """
@@ -501,7 +574,7 @@ def test_assunto_que_quebra_a_linha_e_lido_inteiro():
     campos = processamento.analisar(pdf(ASSUNTO_QUE_QUEBRA), "projeto")["campos_sugeridos"]
     assert campos["nome"] == (
         "Implantacao de Ponte sobre o Rio Paranapanema - "
-        "Interligando duas Rodovias do Estado de Sao Paulo."
+        "Interligando duas Rodovias do Estado de Sao Paulo"  # nome do objeto sai sem o ponto final
     )
 
 
@@ -509,7 +582,8 @@ def test_valor_rotulado_nao_engole_a_saudacao_seguinte():
     """Controle negativo da emenda: sem sinal de quebra, a linha de baixo é
     outra coisa."""
     campos = processamento.analisar(pdf(ASSUNTO_SEGUIDO_DE_SAUDACAO), "projeto")["campos_sugeridos"]
-    assert campos["nome"] == "Encaminha demanda da Prefeitura de Bauru"
+    # O assunto é um objeto de verdade: "Encaminha demanda…" agora é trâmite e nem vira nome.
+    assert campos["nome"] == "Terminal rodoviario da Prefeitura de Bauru"
 
 
 OFICIO_COM_CORPO_LONGO = """Oficio GAB n 579/2025

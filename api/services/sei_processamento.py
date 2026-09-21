@@ -29,6 +29,7 @@ import shutil
 import unicodedata
 from dataclasses import dataclass, replace
 from functools import lru_cache
+import statistics
 from datetime import date
 from hashlib import sha256
 from pathlib import Path
@@ -50,6 +51,16 @@ CONFIANCA_MUNICIPIO_NO_NOME = 0.80
 # Rótulo sozinho na linha e valor na de baixo (quadro, tabela): menos seguro
 # que "Rótulo: valor", e com folga maior que CONFIANCA_CONFLITO para perder dele.
 CONFIANCA_LINHA_SEGUINTE = 0.83
+# Título em fonte grande na página 1 (capa, apresentação): abaixo dos rótulos
+# (0,92) e acima do nome do arquivo (0,72), com folga maior que CONFIANCA_CONFLITO.
+CONFIANCA_TITULO_FONTE = 0.82
+# Quanto a maior fonte da página 1 precisa superar a do corpo para ser título.
+PROPORCAO_TITULO_FONTE = 1.8
+# "Assunto:" de e-mail de encaminhamento descreve o e-mail, não o objeto: perde
+# para o rótulo do documento anexado quando ele existe no mesmo PDF.
+PENALIDADE_ASSUNTO_DE_EMAIL = 0.10
+# Rótulos que só valem com separador: "SERVIÇO" sozinho é cabeçalho de coluna.
+_SO_COM_SEPARADOR = frozenset({"servico"})
 # CNPJ a poucas linhas da razão social já identificada é o da instituição.
 CONFIANCA_CNPJ_JUNTO = 0.95
 # Coordenada estimada a partir da área válida: basta para chegar ao formulário,
@@ -160,6 +171,26 @@ _SINAIS_MODAL: dict[str, tuple[str, ...]] = {
 }
 # "Porto Feliz", "Porto Ferreira" são municípios; "porto seco" é intermodal.
 _NAO_E_PORTO = r"(?!\s+(?:seco|feliz|ferreira|alegre|velho|seguro))"
+# Separador entre rótulo e valor. O hífen só vale com espaço antes: colado ele é
+# parte da palavra ("projeto-com-aps-1.481184" numa URL não é "Projeto: com…").
+_SEPARADOR_ROTULO = r"(?:\s*[:=]|\s*[–—]|\s+-)"
+
+# Nome do objeto: o que o "Assunto" diz além do pedido e do trâmite.
+_PREFIXO_ENCAMINHAMENTO = re.compile(r"^(?:(?:re|res|enc|fw|fwd|tr)\s*:\s*)+", re.I)
+_ATE_O_PROJETO = re.compile(
+    r"^(?:solicita[cç][aã]o|pedido|requerimento|encaminhamento|proposta)\b.*?\b(?=projeto\b)", re.I)
+_PEDIDO_NO_INICIO = re.compile(
+    r"^(?:solicita[cç][aã]o|pedido|requerimento|encaminhamento)\s+(?:de|da|do)\s+(?:proposta\s*[–—-]\s*)?", re.I)
+_REFERENCIA_NO_INICIO = re.compile(
+    r"^(?:[\w]{1,6}/)*(?:of[ií]cio|memorando|despacho|processo)\s*(?:n[ºo°.]*\s*)?[\d./-]+\s*[-–—:]?\s*", re.I)
+_SUFIXO_DE_REFERENCIA = re.compile(r"\s*[-–—]\s*(?:protocolo|of[ií]cio)\b.*$", re.I)
+_TRAMITE = re.compile(
+    r"inserir no sei|autuar|complemento ao material|material enviado|protocolos? of[ií]cios"
+    r"|encaminha(?:mento)?\s+(?:de\s+)?(?:demanda|documentos?|of[ií]cios?)", re.I)
+# Texto de timbre em fonte grande: identifica quem escreve, não o objeto.
+_TIMBRE = re.compile(
+    r"^(?:governo|estado de|secretaria|prefeitura|ministerio|camara|assembleia|tribunal|departamento|"
+    r"companhia|diretoria|assessoria|gabinete|republica|universidade|instituto|fundacao)")
 # Linha que endereça alguém: o ente citado aqui é o destinatário, não quem pede.
 _ENDERECAMENTO = (
     "ao senhor", "a senhora", "ao exmo", "a exma", "excelentissimo", "excelentissima",
@@ -174,6 +205,8 @@ _ROTULOS: dict[str, tuple[str, ...]] = {
         "objeto", "objeto do contrato", "objeto do convenio", "objeto da solicitacao", "objeto do pedido",
         "assunto", "titulo", "denominacao", "empreendimento", "nome do empreendimento", "nome da obra",
         "obra", "intervencao", "identificacao do objeto", "ref.", "ref",
+        # Planilha orçamentária: "SERVIÇO: CONSTRUÇÃO DA PRAÇA TERMINAL URBANO DE PASSAGEIROS".
+        "servico",
     ),
     "descricao": (
         "descricao", "descricao do objeto", "descricao do projeto", "descricao da obra",
@@ -515,7 +548,7 @@ def _casar_rotulo_espacado(normalizada: str, rotulo: str) -> str | None:
     valor sai intacto da linha original, o que preserva o alinhamento por
     sufixo de que `_linhas_rotuladas` depende.
     """
-    corte = re.search(r"[:\-–—=]\s*", normalizada)
+    corte = re.search(r"\s*[:=–—]\s*|\s+-\s*", normalizada)
     if not corte or corte.start() > 60:
         return None
     cabeca = re.sub(r"\s+", "", normalizada[:corte.start()])
@@ -529,14 +562,14 @@ def _casar_rotulo(normalizada: str, rotulo: str, campo: str) -> tuple[str | None
     # O plural é a forma de autuação do SEI ("Interessados:", "Requerentes:");
     # sem o `s?` o sinônimo certo passa batido por causa de uma letra.
     base = rf"{re.escape(rotulo)}s?"
-    simples = re.match(rf"^{base}(?:\s*\([^)]{{0,30}}\))?\s*[:\-–—=]\s*(.+)$", normalizada)
+    simples = re.match(rf"^{base}(?:\s*\([^)]{{0,30}}\))?{_SEPARADOR_ROTULO}\s*(.+)$", normalizada)
     if simples:
         return simples.group(1), 0.92
     qualificado = re.match(rf"^{base}\s+({_QUALIFICADOR}\b[^:]{{0,50}}):\s*(.+)$", normalizada)
     if qualificado and not _excluido(campo, qualificado.group(1)):
         return qualificado.group(2), 0.88
     # Cabeçalho que junta dois dados na linha: "Processo 123/2026 - Interessado: X".
-    meio = re.search(rf"[-–—|]\s*{base}\s*[:\-–—=]\s*(.+)$", normalizada)
+    meio = re.search(rf"\s[-–—|]\s*{base}{_SEPARADOR_ROTULO}\s*(.+)$", normalizada)
     if meio:
         return meio.group(1), 0.86
     espacado = _casar_rotulo_espacado(normalizada, rotulo)
@@ -592,6 +625,8 @@ def _linhas_rotuladas(paginas: Iterable[Pagina], campo: str, tipo: TipoDemanda =
         linhas = pagina.texto.splitlines()
         for indice, linha in enumerate(linhas):
             normalizada = _sem_enumerador(_sem_acento(linha))
+            if "http" in normalizada or "www." in normalizada:
+                continue  # endereço de site não tem rótulo, só palavras separadas por hífen
             for rotulo in rotulos:
                 valor, confianca = _casar_rotulo(normalizada, rotulo, campo)
                 if valor:
@@ -605,7 +640,7 @@ def _linhas_rotuladas(paginas: Iterable[Pagina], campo: str, tipo: TipoDemanda =
                         candidato["lista"] = item_de_lista
                         candidatos.append(candidato)
                     break
-                if _so_rotulo(normalizada, rotulo) and indice + 1 < len(linhas):
+                if rotulo not in _SO_COM_SEPARADOR and _so_rotulo(normalizada, rotulo) and indice + 1 < len(linhas):
                     proxima = linhas[indice + 1].strip()
                     # Descrição de uma linha curta é cabeçalho de tabela ("(600 TON/DIA)"), não texto.
                     curta_demais = campo == "descricao" and len(proxima) < 40
@@ -905,6 +940,8 @@ def _normalizar(campo: str, valor: str) -> Any:
             limpo = re.sub(r"\s*[-–]?\s*(?:CNPJ\s*)?\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}.*$", "", limpo, flags=re.I)
         if campo == "representante_nome" and _EMPRESA.search(_sem_acento(limpo)):
             return None  # representante legal é pessoa
+        if campo == "nome":
+            return _nome_do_objeto(limpo)
         if campo == "municipio":
             # "PERUIBE UF: SP" → "Peruíbe": o nome oficial, quando é um município de SP.
             municipio = sei_localizacao.municipio_por_nome(limpo)
@@ -1250,6 +1287,97 @@ def _localizar(resultados: dict[str, Any], modal_id: str | None, progresso: Prog
     _avisar(progresso, f"Coordenadas estimadas ({lat_estimada}, {lng_estimada}) na {area.descricao} — confira no mapa")
 
 
+def _nome_do_objeto(valor: str) -> str | None:
+    """O objeto dentro do "Assunto": sem encaminhamento, pedido nem referência de documento.
+
+    "ENC: Solicitação de apoio … para o Projeto Rota dos Trilhos – …" → "Projeto Rota dos Trilhos – …";
+    "Encaminhamento de Proposta – Corredor Porto-Indústria de Cubatão." → "Corredor Porto-Indústria de Cubatão".
+    Trâmite ("… para inserir no SEI"), referência pura ("AL/RM/OFÍCIO Nº 0158/2026") e
+    nome de município sozinho não nomeiam objeto: None.
+    """
+    texto = _PREFIXO_ENCAMINHAMENTO.sub("", valor.strip())
+    if _TRAMITE.search(texto):
+        return None
+    texto = _REFERENCIA_NO_INICIO.sub("", texto)
+    texto = _ATE_O_PROJETO.sub("", texto)
+    texto = _PEDIDO_NO_INICIO.sub("", texto)
+    texto = _SUFIXO_DE_REFERENCIA.sub("", texto)
+    texto = re.sub(r"\s*[—–-]{2,}\s*", " — ", texto).strip(" .;:-–—")
+    if not re.search(r"[A-Za-zÀ-ÿ]{4,}", texto) or sei_localizacao.municipio_por_nome(texto):
+        return None
+    return (texto[0].upper() + texto[1:])[:200]
+
+
+_CABECALHO_DE_EMAIL = re.compile(r"^(?:de|enviad[oa](?: em)?|para|cc|assunto)\s*:")
+
+
+def _pagina_de_email(pagina: Pagina) -> bool:
+    """Página de mensagem de e-mail: "Outlook" no topo ou dois cabeçalhos De:/Enviado:/Para:.
+
+    O papel geral (`_papel`) não serve aqui: sinais soltos como "de:" e "protocolo"
+    aparecem em ofício, e o ofício digitalizado da Bracell saía como invólucro.
+    """
+    linhas = [_sem_acento(linha).strip() for linha in pagina.texto.splitlines()]
+    if linhas and linhas[0] == "outlook":
+        return True
+    return sum(1 for linha in linhas if _CABECALHO_DE_EMAIL.match(linha)) >= 2
+
+
+def _rebaixar_assunto_de_email(candidatos: list[dict[str, Any]], paginas: list[Pagina]) -> None:
+    """Se o PDF tem rótulo fora das páginas de e-mail, o assunto do e-mail perde para ele."""
+    de_email = {pagina.numero for pagina in paginas if _pagina_de_email(pagina)}
+    if not any(c["evidencia"]["pagina"] >= 1 and c["evidencia"]["pagina"] not in de_email for c in candidatos):
+        return
+    for candidato in candidatos:
+        if candidato["evidencia"]["pagina"] in de_email:
+            candidato["evidencia"]["confianca"] = round(
+                candidato["evidencia"]["confianca"] - PENALIDADE_ASSUNTO_DE_EMAIL, 3)
+
+
+def _titulo_aproveitavel(titulo: str) -> bool:
+    normalizado = _sem_acento(titulo).strip()
+    if not 4 <= len(titulo) <= 150 or not re.search(r"[A-Za-zÀ-ÿ]{4,}", titulo):
+        return False
+    if _TIMBRE.match(normalizado) or _EMPRESA.search(normalizado):
+        return False
+    return sei_localizacao.municipio_por_nome(titulo) is None
+
+
+def _titulo_pela_fonte(conteudo: bytes) -> list[dict[str, Any]]:
+    """Título em fonte bem maior que a do corpo na página 1 (capa de apresentação, estudo).
+
+    Medido nos PDFs reais do SEI: em ofício a fonte é uniforme e não há título; a
+    fonte grande costuma ser timbre ("PREFEITURA MUNICIPAL DE ASSIS"), município
+    ("PERUÍBE") ou empresa ("Cia dos Portos") — descartados por `_titulo_aproveitavel`.
+    """
+    import pymupdf
+
+    try:
+        with pymupdf.open(stream=conteudo, filetype="pdf") as documento:
+            if documento.needs_pass or not documento.page_count:
+                return []
+            linhas = []
+            for bloco in documento[0].get_text("dict")["blocks"]:
+                for linha in bloco.get("lines", []):
+                    spans = [s for s in linha["spans"] if s["text"].strip()]
+                    if spans:
+                        linhas.append((max(s["size"] for s in spans), " ".join(s["text"].strip() for s in spans)))
+    except Exception:  # noqa: BLE001 — sem título pela fonte, os demais caminhos seguem
+        return []
+    if not linhas:
+        return []
+    corpo = statistics.median(tamanho for tamanho, texto in linhas for _ in texto)
+    maior = max(tamanho for tamanho, _ in linhas)
+    if maior < corpo * PROPORCAO_TITULO_FONTE:
+        return []
+    titulo = re.sub(r"\s+", " ", " ".join(texto for tamanho, texto in linhas if tamanho >= maior - 0.5)).strip()
+    if not _titulo_aproveitavel(titulo):
+        return []
+    evidencia = {"pagina": 1, "trecho": titulo[:LIMITE_TRECHO], "metodo": "titulo_por_fonte",
+                 "papel_fonte": "capa", "confianca": CONFIANCA_TITULO_FONTE}
+    return [{"valor": titulo, "evidencia": evidencia}]
+
+
 def numero_processo(conteudo: bytes, nome_arquivo: str | None = None) -> str | None:
     """Só o número do processo SEI, quando identificado sem conflito."""
     do_nome = numero_no_nome(nome_arquivo)
@@ -1290,6 +1418,9 @@ def analisar(
             resultados[campo] = {"estado": "aguardando_resolucao", "confianca": 0.0, "evidencias": [], "candidatos": []}
             continue
         candidatos = _candidatos_campo(campo, paginas, tipo)
+        if campo == "nome":
+            _rebaixar_assunto_de_email(candidatos, paginas)
+            candidatos = [*candidatos, *_titulo_pela_fonte(conteudo)]
         if campo == "nome" and (titulo := titulo_no_nome(nome_arquivo)):
             candidatos = [*candidatos, {"valor": titulo,
                                         "evidencia": _evidencia_do_nome(nome_arquivo, CONFIANCA_NOME_ARQUIVO)}]
