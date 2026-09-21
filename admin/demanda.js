@@ -613,7 +613,7 @@
       const parecer = $("#fld-parecer");
       if (parecer && atualizada.parecer_texto) parecer.value = atualizada.parecer_texto;
     } catch (err) {
-      SLTAdminUi.showToast(err.message, true);
+      reportarErroAnalise(err.message, "Critérios de análise");
     }
   }
 
@@ -643,7 +643,7 @@
       SLTAdminUi.showToast("Complementação do parecer salva.");
       fecharComplemento();
     } catch (err) {
-      SLTAdminUi.showToast(err.message, true);
+      reportarErroAnalise(err.message, "Complementação do parecer");
     }
   }
 
@@ -659,6 +659,18 @@
     setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
 
+  /**
+   * Erro de decisão/análise no modal do SLTFeedback: o servidor recusa por
+   * regra de negócio (critérios pendentes, transição inválida, ressalva sem
+   * complementação) e o texto precisa ficar na tela, não só no console.
+   * Toast é usado apenas onde o feedback não está carregado.
+   */
+  function reportarErroAnalise(mensagem, titulo) {
+    const texto = mensagem || "Erro na requisição.";
+    if (window.SLTFeedback) window.SLTFeedback.error(texto, titulo || "Análise da demanda");
+    else SLTAdminUi.showToast(texto, true);
+  }
+
   async function decideRecord(decisaoId) {
     const decisao = DECISOES.find((item) => item.id === decisaoId);
     if (!decisao) return;
@@ -666,9 +678,9 @@
     const respostas = collectCriterios();
     const placar = computeResultado(respostas);
     if (!placar.completo) {
-      SLTAdminUi.showToast(
+      reportarErroAnalise(
         "Responda os cinco critérios de análise antes de registrar a decisão.",
-        true,
+        decisao.label,
       );
       $("#sec-criterios")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
@@ -678,9 +690,9 @@
       const campo = $("#fld-parecer-complemento");
       const texto = campo?.value.trim() || "";
       if (!texto) {
-        SLTAdminUi.showToast(
+        reportarErroAnalise(
           "Para aprovar com ressalvas é obrigatório preencher a complementação do parecer.",
-          true,
+          decisao.label,
         );
         abrirComplemento();
         campo?.focus();
@@ -689,7 +701,7 @@
       try {
         await SLTAdminApi.saveAnaliseComplemento(record.id, texto);
       } catch (err) {
-        SLTAdminUi.showToast(err.message, true);
+        reportarErroAnalise(err.message, "Complementação do parecer");
         return;
       }
     }
@@ -709,12 +721,15 @@
       try {
         await downloadParecer(record.id);
       } catch (err) {
-        SLTAdminUi.showToast(`Decisão registrada, mas o download falhou: ${err.message}`, true);
+        reportarErroAnalise(
+          `Decisão registrada, mas o download do parecer falhou: ${err.message}`,
+          decisao.label,
+        );
       }
       await refreshLists();
       renderPage(await API[tipo].get(record.id));
     } catch (err) {
-      SLTAdminUi.showToast(err.message, true);
+      reportarErroAnalise(err.message, `Decisão «${decisao.label}» não registrada`);
     }
   }
 
