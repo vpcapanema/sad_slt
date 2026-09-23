@@ -54,6 +54,13 @@ def categoria(codigo):
     return dict(row)
 
 
+def categorias():
+    """A ferramenta independente não precisa inventariar arquivos do storage."""
+    with get_connection() as conn:
+        return [dict(row) for row in conn.execute('''SELECT codigo AS id,nome,conceito
+            FROM dominios.categoria_extracao_atributos WHERE ativo ORDER BY ordem,nome''').fetchall()]
+
+
 def catalogo(codigo):
     category = categoria(codigo)
     return {'attributes': dados.catalog(), 'municipalities': dados.MUNICIPIOS, 'crs': dados.CRS,

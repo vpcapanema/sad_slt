@@ -23,6 +23,11 @@ def invoke(fn, *args):
         raise HTTPException(422, str(exc)) from exc
 
 
+@router.get('/categorias')
+def categorias():
+    return {'categorias': service.categorias()}
+
+
 @router.get('/{categoria}/catalog')
 def catalog(categoria: str):
     return invoke(service.catalogo, categoria)

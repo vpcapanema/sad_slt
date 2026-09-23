@@ -31,7 +31,7 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 .ea-main button:focus-visible,.ea-main input:focus-visible,.ea-main select:focus-visible,.ea-main a:focus-visible,.ea-main summary:focus-visible { outline:3px solid #5ba5df; outline-offset:3px; }
 .ea-btn { border:1px solid #bdcbd7; border-radius:4px; background:#fff; color:#294c65; font:inherit; font-size:.8rem; font-weight:600; padding:9px 13px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; }
 .ea-btn:hover:not(:disabled) { background:#edf5fa; border-color:#1769aa; }
-.ea-btn-primary { background:#1769aa; color:#fff; border-color:#1769aa; }
+.ea-btn-primary,.ea-main a.ea-btn-primary { background:#1769aa; color:#fff; border-color:#1769aa; }
 .ea-btn-primary:hover:not(:disabled) { background:#12568c; color:#fff; }
 .ea-main :disabled { cursor:not-allowed; opacity:.55; }
 .ea-inline { display:flex; align-items:end; gap:8px; margin:18px 0 14px; }
@@ -221,7 +221,7 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 .ea-main th { background:#f0f5f9; color:#345a74; position:sticky; top:0; }.ea-main td { overflow-wrap:anywhere; }
 .ea-main tbody tr:nth-child(even) { background:#f8fafc; }
 .ea-main details dl { display:grid; grid-template-columns:minmax(90px,1fr) 2fr; gap:5px 14px; }.ea-main dt { font-weight:600; }.ea-main dd { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
-.ea-export { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; border-top:1px solid #dce4eb; padding-top:18px; }.ea-export h3 { margin-bottom:4px; }.ea-export .ea-hint { margin:0; }.ea-export-controls { display:flex; gap:8px; }
+.ea-export { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; border-top:1px solid #dce4eb; padding-top:18px; }.ea-export h3 { margin-bottom:4px; }.ea-export .ea-hint { margin:0; }.ea-export-controls { display:flex; flex-wrap:wrap; gap:8px; }
 .ea-feedback { position:sticky; bottom:16px; display:flex; align-items:center; gap:.75rem; background:#173e58; color:white; border-radius:5px; padding:12px 18px; z-index:500; box-shadow:0 3px 15px #173e5822; font-size:.84rem; }.ea-feedback:empty { display:none; }
 .ea-feedback-texto { flex:1; min-width:0; }
 .ea-feedback-fechar { flex:0 0 auto; width:24px; height:24px; padding:0; border:1px solid #ffffff55; border-radius:4px; background:transparent; color:#fff; font-size:1rem; line-height:1; cursor:pointer; }
@@ -290,7 +290,7 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 @media(max-width:1100px) { .ea-workspace { grid-template-columns:220px minmax(0,1fr); } }
 @media(max-width:650px) {
   #ea-config .ea-base-form { grid-template-columns:1fr; }
-  .extracao-page .app-nav { flex:1 1 100%; flex-wrap:nowrap; overflow-x:auto; padding-bottom:7px; }
+  .extracao-page .app-nav { flex:1 1 100%; flex-wrap:wrap; overflow:visible; padding-bottom:7px; }
   .extracao-page .app-nav a { flex-shrink:0; }
   .ea-section-head>div { flex-basis:calc(100% - 45px); }
 }
@@ -393,9 +393,9 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 #ea-config .ea-config-grid-3 .ea-hint { margin: 0 0 .2rem; }
 #ea-config .ea-config-grid-3 .ea-field { min-width: 0; }
 #ea-config .ea-config-grid-3 .ea-field > small { overflow-wrap: anywhere; font-size: .68rem; }
-#ea-config .ea-config-grid-3 input:not([type=hidden]), #ea-config .ea-config-grid-3 select { width: 100%; max-width: 230px; height: var(--ea-altura-campo); min-height: var(--ea-altura-campo); font-size: .78rem; }
-/* Dois campos na mesma linha, em colunas iguais. */
-.ea-campos-duplos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .6rem; align-items: start; }
+#ea-config .ea-config-grid-3 input:not([type=hidden]), #ea-config .ea-config-grid-3 select { width: 100%; max-width: 100%; height: var(--ea-altura-campo); min-height: var(--ea-altura-campo); font-size: .78rem; }
+/* Campos da saída em linhas próprias para manter o algoritmo legível. */
+.ea-campos-duplos { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; align-items: start; }
 /* Acoes do subcard: botoes-icone lado a lado, logo abaixo do ultimo campo. */
 .ea-acoes { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .2rem; }
 #ea-config .ea-acoes .ea-btn.ea-acao { flex: 0 0 auto; width: 40px; height: 40px; max-width: none;
@@ -406,14 +406,14 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 /* O rotulo continua no DOM para leitores de tela; o mouse ve o title. */
 .ea-acao-texto { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 /* Todos os botoes da secao 1 reagem igual ao mouse e ao teclado. */
-#ea-config .ea-btn { height: var(--ea-altura-campo); min-height: var(--ea-altura-campo);
+#ea-config .ea-btn { height: auto; min-height: var(--ea-altura-campo);
   display: inline-flex; align-items: center; justify-content: center; transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, border-color .16s ease; }
 #ea-config .ea-btn:not([disabled]):hover, #ea-config .ea-btn:not([disabled]):focus-visible {
   transform: translateY(-2px); box-shadow: 0 4px 12px #0f4a6b26; background: #dce7ee; border-color: #b9cddb; }
 #ea-config .ea-btn.ea-btn-primary:not([disabled]):hover, #ea-config .ea-btn.ea-btn-primary:not([disabled]):focus-visible {
   background: var(--pli-blue, #116593); border-color: var(--pli-blue, #116593); }
 #ea-config .ea-btn:not([disabled]):active { transform: translateY(0); box-shadow: none; }
-@media (prefers-reduced-motion: reduce) { #ea-config .ea-btn { height: var(--ea-altura-campo); min-height: var(--ea-altura-campo);
+@media (prefers-reduced-motion: reduce) { #ea-config .ea-btn { height: auto; min-height: var(--ea-altura-campo);
   display: inline-flex; align-items: center; justify-content: center; transition: none; }
   #ea-config .ea-btn:not([disabled]):hover { transform: none; } }
 .ea-base-form-coluna { display: flex; flex-direction: column; gap: .5rem; min-width: 0; }
@@ -496,3 +496,38 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 .ea-municipal-entry h4 { margin:0 0 .5rem; font-size:.9rem; }
 #ea-config .ea-municipal-entry .ea-hint { margin:0 0 .7rem; }
 @media(max-width:650px) { .ea-config-tools > strong { flex-basis:100%; } }
+
+/* Diálogos ficam no body, fora de ea-main: preservar seus estados ocultos. */
+.extracao-page .ea-tool-dialog [hidden] { display:none !important; }
+.extracao-page .ea-tool-dialog:not(.ea-storage-dialog) { box-sizing:border-box; max-width:calc(100vw - 24px); max-height:90dvh; overflow:auto; }
+.ea-tool-dialog .ea-field { overflow-wrap:anywhere; }
+.ea-tool-dialog .ea-field small { max-height:8rem; overflow:auto; }
+.ea-tool-dialog .ea-config-dialog-footer { flex-wrap:wrap; }
+.ea-main .ea-btn { max-width:100%; white-space:normal; overflow-wrap:anywhere; }
+.ea-main .ea-btn[aria-disabled=true] { opacity:.55; cursor:not-allowed; }
+@media(max-width:650px) {
+  #ea-config>.ea-section-body { padding:14px; }
+  .ea-execute { flex-direction:column; align-items:stretch; text-align:left; }
+  .ea-finalidade-campo { grid-template-columns:auto minmax(0,1fr); overflow-wrap:anywhere; }
+  .ea-finalidade-campo small { grid-column:2; }
+}
+
+.ea-tool-dialog input[type=checkbox] { display:inline-block; width:auto; padding:0; }
+.ea-tool-dialog .ea-finalidade-campo { display:grid; }
+
+/* A bancada embutida precisa caber no iframe, inclusive com os docks recolhidos. */
+@media(max-width:650px) {
+  .ea-embedded-workbench .gp-app,
+  .ea-embedded-workbench .gp-app.left-collapsed,
+  .ea-embedded-workbench .gp-app.right-collapsed,
+  .ea-embedded-workbench .gp-app.left-collapsed.right-collapsed {
+    grid-template-columns:minmax(0,1fr);
+    grid-template-areas:"title" "ribbon" "map" "status";
+  }
+  .ea-embedded-workbench .gp-left-rail { position:absolute; left:0; top:146px; bottom:25px; width:min(280px,90vw); z-index:19; }
+  .ea-embedded-workbench .gp-ribbon-tabs { padding-left:0; }
+  .ea-embedded-workbench .gp-ribbon-tabs button { padding-inline:7px; }
+  .ea-embedded-workbench .gp-statusbar { gap:6px; min-width:0; overflow:auto; white-space:nowrap; }
+  .ea-embedded-workbench .gp-log { width:100%; }
+  .ea-embedded-workbench .gp-view-menu-popup { left:auto; right:0; }
+}

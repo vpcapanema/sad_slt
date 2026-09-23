@@ -133,6 +133,8 @@ function reconciliarPainel() {
   feedback(`${partes.join(' ')} A extração passa a considerar apenas o que está no painel de camadas.`);
 }
 function controls() {
+  $("#ea-municipal-open").setAttribute("aria-disabled",String(state.busy));
+  $("#ea-recover").disabled=state.busy;
   document.querySelectorAll("#ea-config input, #ea-config select, #ea-config button").forEach(node=>{if(state.busy)node.disabled=true;});
   $("#ea-run").disabled=state.busy||state.loadingMap||!disponivel("executar")||!state.operation||!state.input||!state.bases.length;
   $("#ea-export").disabled=state.busy||!state.result||!disponivel("exportar");
@@ -428,7 +430,7 @@ document.getElementById('ea-refresh').addEventListener('click',async()=>{
   if(state.busy)return;busy(true);try{await carregarCatalogo();await changed();feedback('Catálogo atualizado.');}catch(e){feedback(e.message);}finally{busy(false);}
 });
 document.getElementById('ea-recover').addEventListener('click',async()=>{
-  const id=sessionStorage.getItem('slt-extracao-ultima');if(!id){feedback('Nenhuma execução salva nesta sessão do navegador.');return;}
+  let id;try{id=sessionStorage.getItem('slt-extracao-ultima');}catch{feedback('O navegador bloqueou a sessão local. Use Ver todas as extrações para recuperar sua análise.');return;}if(!id){feedback('Nenhuma execução salva nesta sessão do navegador.');return;}
   if(state.busy)return;busy(true);
   try{const job=await json(`/extracao-atributos/execucoes/${id}`);state.result=validateResult(await esperar(job,id=>`/extracao-atributos/execucoes/${id}`));results.set(state.result);syncMap();feedback('Última análise recuperada.');}
   catch(e){feedback(e.message);}finally{busy(false);}

@@ -75,7 +75,6 @@ def test_rota_tabela_paginacao_e_sessao(monkeypatch):
 
 def test_configuracao_preserva_analise_completa(tmp_path,monkeypatch):
     monkeypatch.setattr(config,'raiz',lambda:tmp_path)
-    monkeypatch.setattr(config,'geradas_pelo_plugin',lambda ids:set())
     monkeypatch.setattr(service,'catalogo',lambda:{'categorias':[{'id':'ambiental','nome':'Ambiental'}],
         'camadas':[{'id':i,'nome':i} for i in ['entrada','base']]})
     config.salvar('Análise completa',[{'id':'ambiental','camadas':['base']}],SimpleNamespace(id='teste'),
@@ -97,3 +96,45 @@ def test_visualizacao_municipal_usa_arquivo_materializado(monkeypatch):
     result=service.camada_para_mapa('municipal_exata')
     assert calls==['municipal_exata']
     assert result['geojson']['features'][0]['properties']['CD_MUN']=='3550308'
+
+
+def test_configuracao_municipal_preserva_referencia_e_indica_ausencia(tmp_path,monkeypatch):
+    monkeypatch.setattr(config,'raiz',lambda:tmp_path)
+    catalog={'categorias':[{'id':'social','nome':'Social'}], 'camadas':[
+        {'id':'municipal','nome':'Municípios','origem':'municipal-layer',
+         'arquivo':'data/geoespacial/uploads/datastorage/vetor/municipios_sp_teste/base.fgb'}]}
+    monkeypatch.setattr(service,'catalogo',lambda:catalog)
+    saved=config.salvar('Municipal',[{'id':'social','camadas':['municipal']}],SimpleNamespace(id='teste'))
+    assert saved['camadas']==1 and saved['camadas_ignoradas']==0
+    loaded=config.carregar('municipal')
+    assert loaded['categorias'][0]['camadas'][0]['id']=='municipal'
+    assert not list(tmp_path.glob('*.tmp'))
+    catalog['camadas']=[]
+    assert config.carregar('municipal')['ausentes']==['Municípios']
+
+
+def test_falha_na_gravacao_preserva_configuracao_anterior(tmp_path,monkeypatch):
+    monkeypatch.setattr(config,'raiz',lambda:tmp_path)
+    monkeypatch.setattr(config,'montar',lambda *a,**k:{'nome':'Anterior'})
+    original=tmp_path/'anterior.json';original.write_text('conteudo anterior')
+    def fail(*args):
+        raise OSError('disco indisponivel')
+    monkeypatch.setattr(config.os,'replace',fail)
+    with pytest.raises(OSError):
+        config.salvar('Anterior',[],None)
+    assert original.read_text()=='conteudo anterior'
+    assert not list(tmp_path.glob('*.tmp'))
+
+
+def test_categorias_municipais_independem_do_storage(monkeypatch):
+    from api.routers.municipal_layer import router
+    from api.services import municipal_layer
+    app=FastAPI();app.include_router(router)
+    with TestClient(app) as client:
+        assert client.get('/municipal/categorias').status_code==401
+        app.dependency_overrides[require_geospatial_access]=lambda:SimpleNamespace(id='teste')
+        monkeypatch.setattr(municipal_layer,'categorias',lambda:[{'id':'social','nome':'Social'}])
+        def forbidden():
+            raise AssertionError('Não deve listar camadas para escolher uma categoria')
+        monkeypatch.setattr(service,'catalogo',forbidden)
+        assert client.get('/municipal/categorias').json()=={'categorias':[{'id':'social','nome':'Social'}]}

@@ -1,12 +1,13 @@
-import React, {useMemo} from 'react';
+import React, {useMemo,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {MunicipalLayerBuilder} from '../src/index.js';
 import './style.css';
 
 // O hospedeiro fornece a página; o plugin não cria janelas nem navegação.
-export function montarMunicipal(host,{category,apiBase,onGenerated,onBusyChange=()=>{}}) {
+export function montarMunicipal(host,{category,apiBase,onGenerated,onBusyChange=()=>{},configuration,onChange=()=>{}}) {
   const root=createRoot(host);
   function App(){
+    const [selection,setSelection]=useState(configuration||{attributes:[],format:"fgb"});
     const client=useMemo(()=>{
       let generated;
       async function request(path,config,signal){
@@ -37,7 +38,7 @@ export function montarMunicipal(host,{category,apiBase,onGenerated,onBusyChange=
       try{await onGenerated(client.generated(),output);}
       finally{onBusyChange(false);}
     }
-    return <MunicipalLayerBuilder client={client} download={false} onExport={saved} categoriaNome={category.nome}/>;
+    return <MunicipalLayerBuilder value={selection} onChange={next=>{setSelection(next);onChange(next);}} client={client} download={false} onExport={saved} categoriaNome={category.nome}/>;
   }
   root.render(<App/>);
   return ()=>root.unmount();

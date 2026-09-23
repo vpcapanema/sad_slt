@@ -29,6 +29,9 @@ const THEME_LABEL = {
   ideb:'IDEB', idh:'IDH', pobreza_desigualdade:'Pobreza e desigualdade',
   economico_produtivo:'Econômico-produtivo', seguranca_viaria:'Segurança viária',
 };
+const metadata = attribute => {
+  try { return JSON.parse(attribute.detail) || {}; } catch { return {}; }
+};
 const themeLabel = value => {
   if (THEME_LABEL[value]) return THEME_LABEL[value];
   const t = String(value).replace(/^\d+_/, '').replaceAll('_', ' ');
@@ -66,6 +69,9 @@ const ALL_SOURCES = '__todas__';
 export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChange, onExport, download=true, className='', categoriaNome=''}) {
   const api = useMemo(() => client || createLayerClient(apiBaseUrl), [client,apiBaseUrl]);
   const [catalog,setCatalog] = useState(null);
+  const [attempt,setAttempt] = useState(0);
+  const [previewError,setPreviewError] = useState('');
+  const [previewAttempt,setPreviewAttempt] = useState(0);
   const [local,setLocal] = useState({attributes:[],format:'fgb'});
   const config = value ?? local;
   const [source,setSource] = useState('');
@@ -82,7 +88,7 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   useEffect(() => { mounted.current=true; const ctrl=new AbortController(); setCatalog(null); setError('');
     api.catalog(ctrl.signal).then(data => {setCatalog(data);setSource(data.attributes.find(a=>a.source==='IBGE · Censo 2022')?.source || data.attributes[0]?.source || '');}).catch(e=> {if(e.name!=='AbortError')setError(e.message);});
     return () => {mounted.current=false;ctrl.abort();};
-  }, [api]);
+  }, [api,attempt]);
   function update(next) {if(value === undefined)setLocal(next);onChange?.(next);setStatus('');}
   const attributes = catalog?.attributes || [];
   const sources = [...new Set(attributes.map(a=>a.source))];
@@ -130,13 +136,13 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   // nome da camada apagar a previa e refazer a consulta a cada tecla digitada.
   const chaveDaPrevia = `${config.format}|${[...config.attributes].join(',')}`;
   useEffect(()=>{
-    setPreview(null);
-    if(!config.attributes.length)return;
+    setPreview(null);setPreviewError('');
+    if(!config.attributes.length || config.attributes.length>limits[config.format])return;
     const ctrl=new AbortController();
     const pedido={attributes:config.attributes,format:config.format};
-    const timer=setTimeout(()=>api.preview(pedido,ctrl.signal).then(setPreview).catch(e=>{if(e.name!=='AbortError')setError(e.message);}),250);
+    const timer=setTimeout(()=>api.preview(pedido,ctrl.signal).then(data=>{if(!ctrl.signal.aborted)setPreview(data);}).catch(e=>{if(!ctrl.signal.aborted)setPreviewError(e.message);}),250);
     return ()=>{clearTimeout(timer);ctrl.abort();};
-  },[api,chaveDaPrevia]);
+  },[api,chaveDaPrevia,previewAttempt]);
   function toggle(id) {update({...config,attributes:selected.has(id)?config.attributes.filter(x=>x!==id):[...config.attributes,id]});}
   async function generate() {
     setBusy(true);setError('');
@@ -155,10 +161,10 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
     finally{if(mounted.current)setBusy(false);}
   }
   return <section className={`mlb ${className}`} aria-label="Gerador de camada municipal">
-    <header className="mlb-header"><div><h1>Monte sua camada</h1><span className="mlb-eyebrow">SÃO PAULO - DADOS MUNICIPAIS</span><p>Selecione fontes, períodos, temas e atributos para compor uma única camada vetorial dos 645 municípios de São Paulo. Os dados escolhidos serão incorporados à tabela de atributos da malha municipal do IBGE de 2022.</p></div><div className="mlb-geometry"><strong>645 municípios</strong><span>Malha IBGE 2022 · SIRGAS 2000</span></div></header>
+    <header className="mlb-header"><div><h2 className="mlb-title">Monte sua camada</h2><span className="mlb-eyebrow">SÃO PAULO - DADOS MUNICIPAIS</span><p>Selecione fontes, períodos, temas e atributos para compor uma única camada vetorial dos 645 municípios de São Paulo. Os dados escolhidos serão incorporados à tabela de atributos da malha municipal do IBGE de 2022.</p></div><div className="mlb-geometry"><strong>645 municípios</strong><span>Malha IBGE 2022 · SIRGAS 2000</span></div></header>
     {error && <div className="mlb-error" role="alert">{error}</div>}
-    {!catalog ? <p role="status">{error ? 'Não foi possível carregar o catálogo. Verifique a API configurada.' : 'Carregando catálogo…'}</p> : <div className="mlb-layout">
-      <main className="mlb-panel"><h2>1. Escolha os dados</h2><div className="mlb-filters">
+    {!catalog ? <p role="status">{error ? <>Não foi possível carregar o catálogo. <button type="button" onClick={()=>setAttempt(n=>n+1)}>Tentar novamente</button></> : 'Carregando catálogo…'}</p> : <div className="mlb-layout">
+      <section className="mlb-panel"><h2>1. Escolha os dados</h2><div className="mlb-filters">
         <label>Fonte<select value={source} onChange={e=>{setSource(e.target.value);setTheme('');if(e.target.value===ALL_SOURCES)setYear('');}}><option value={ALL_SOURCES}>Todas as fontes</option>{sources.map(s=><option key={s} value={s}>{sourceLabel(s)}</option>)}</select></label>
         <label>Ano de referência<select value={allYears ? '' : activeYear ?? ''} onChange={e=>{setYear(e.target.value);setTheme('');}}>{allSources && <option value="">Todos os anos</option>}{years.map(y=><option key={y}>{y}</option>)}</select></label>
         <label>Tema<select value={theme} onChange={e=>setTheme(e.target.value)}><option value="">Todos os temas</option>{themes.map(t=><option key={t} value={t}>{themeLabel(t)}</option>)}</select></label>
@@ -167,9 +173,9 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
         {!!Object.values(facets).filter(Boolean).length && <button type="button" className="mlb-facet-reset" onClick={()=>setFacets({})}>Limpar filtros</button>}
       </div>
       <div className="mlb-listbar"><span>{filtered.length.toLocaleString('pt-BR')} atributos disponíveis</span><span className="mlb-listbar-actions"><button type="button" disabled={!filtered.length || busy} onClick={()=>update({...config,attributes:[...new Set([...config.attributes,...filtered.map(a=>a.id)])]})}>Adicionar resultados</button><button type="button" disabled={!selected.size || busy} onClick={()=>update({...config,attributes:[]})}>Limpar seleção</button></span></div>
-      <div className="mlb-attributes">{visible.map(a=><article key={a.id} className={selected.has(a.id)?'mlb-attribute mlb-chosen':'mlb-attribute'}><label><input type="checkbox" checked={selected.has(a.id)} disabled={busy} onChange={()=>toggle(a.id)}/><strong>{a.label}</strong></label><details><summary aria-label={`Fonte e definição de ${a.label}`}></summary><div className="mlb-detail"><p className="mlb-detail-meta">{themeLabel(a.theme)} · {a.unit || 'Unidade não informada'} · {a.coverage}/645 com valor</p><p>{allSources ? `${a.source} · ` : ''}{a.field} · {a.year}</p><a href={a.url} target="_blank" rel="noreferrer">Consultar fonte oficial</a><p>{JSON.parse(a.detail).definicao || JSON.parse(a.detail).divulgacao || ""}</p><p>{JSON.parse(a.detail).nota || ""}</p></div></details></article>)}{!visible.length && <p className="mlb-empty">Nenhum atributo encontrado para estes filtros.</p>}</div>
+      <div className="mlb-attributes">{visible.map(a=><article key={a.id} className={selected.has(a.id)?'mlb-attribute mlb-chosen':'mlb-attribute'}><label><input type="checkbox" checked={selected.has(a.id)} disabled={busy} onChange={()=>toggle(a.id)}/><strong>{a.label}</strong></label><details><summary aria-label={`Fonte e definição de ${a.label}`}></summary><div className="mlb-detail"><p className="mlb-detail-meta">{themeLabel(a.theme)} · {a.unit || 'Unidade não informada'} · {a.coverage}/645 com valor</p><p>{allSources ? `${a.source} · ` : ''}{a.field} · {a.year}</p><a href={a.url} target="_blank" rel="noreferrer">Consultar fonte oficial</a><p>{metadata(a).definicao || metadata(a).divulgacao || ""}</p><p>{metadata(a).nota || ""}</p></div></details></article>)}{!visible.length && <p className="mlb-empty">Nenhum atributo encontrado para estes filtros.</p>}</div>
       <nav className="mlb-pages" aria-label="Páginas de atributos"><button type="button" disabled={!page} onClick={()=>setPage(page-1)}>Anterior</button><span>Página {page+1} de {Math.max(1,Math.ceil(filtered.length/40))}</span><button type="button" disabled={(page+1)*40>=filtered.length} onClick={()=>setPage(page+1)}>Próxima</button></nav>
-      </main>
+      </section>
       <aside className="mlb-panel mlb-output"><h2>2. Gere a camada</h2><div className="mlb-count"><strong>{config.attributes.length.toLocaleString('pt-BR')}</strong><span>atributos selecionados</span></div><p>Você pode combinar fontes e anos. A seleção permanece ao trocar os filtros.</p>
         <div className="mlb-basket">{selectedItems.map(a=><article key={a.id} className="mlb-basket-item"><span className="mlb-basket-name">{a.label}</span><details><summary aria-label={`Fonte e definição de ${a.label}`}></summary><div className="mlb-detail"><p className="mlb-detail-meta">{a.source} · {a.year}</p><p>{themeLabel(a.theme)} · {a.unit || 'Unidade não informada'} · {a.coverage}/645 com valor</p><p>{a.field}</p></div></details><button type="button" className="mlb-basket-remove" disabled={busy} title={`Remover ${a.label}`} aria-label={`Remover ${a.label}`} onClick={()=>toggle(a.id)}>×</button></article>)}{!selectedItems.length && <p>Selecione atributos na lista ao lado.</p>}</div>
         <label>Formato da camada<select disabled={busy} value={config.format} onChange={e=>update({...config,format:e.target.value})}><option value="fgb">FlatGeobuf (.fgb)</option><option value="gpkg">GeoPackage (.gpkg)</option><option value="shp">Shapefile (.shp)</option></select></label>
@@ -180,8 +186,9 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
         <button type="button" className="mlb-primary" disabled={busy || !selected.size || selected.size>limits[config.format]} onClick={generate}>{busy?'Gerando camada…':download?'Gerar e baixar camada':'Gerar camada'}</button>
         <p className="mlb-status" role="status">{status}</p><p className="mlb-note">Geometria de 2022. O período de cada indicador acompanha o campo nos metadados. Valores ausentes permanecem nulos.</p>
       </aside>
-      {preview && <section className="mlb-panel mlb-preview"><h2>Prévia da tabela de atributos</h2><p>5 municípios · até 8 atributos da seleção. A exportação inclui todos os 645 municípios e todos os atributos escolhidos.</p><div className="mlb-table"><table><thead><tr><th>Código IBGE</th><th>Município</th>{preview.fields.map(f=><th key={f}>{f}</th>)}</tr></thead><tbody>{preview.rows.map(r=><tr key={r.CD_MUN}><td>{r.CD_MUN}</td><td>{r.NM_MUN}</td>{preview.fields.map(f=><td key={f}>{r[f] == null ? 'Sem valor' : r[f].toLocaleString('pt-BR',{maximumFractionDigits:8})}</td>)}</tr>)}</tbody></table></div></section>}
-      {preview?.glossario?.length ? <section className="mlb-panel mlb-glossario"><h2>Glossário e aliases de atributos</h2><p>Os campos abaixo são exatamente os que sairão na tabela de atributos da camada gerada. O nome do campo começa pelo identificador do tema; o nome por extenso viaja no alias, no dicionário e nos metadados do pacote.{preview.totalAttributes > (preview.glossarioLimite ?? 0) ? ` Exibindo os primeiros ${preview.glossarioLimite} de ${preview.totalAttributes.toLocaleString('pt-BR')} atributos; o dicionário do pacote traz todos.` : ''}</p><div className="mlb-table"><table><thead><tr><th>Campo exportado</th><th>Alias</th><th>Significado</th><th>Fonte</th></tr></thead><tbody>{preview.glossario.map(item=><tr key={item.campo_exportado}><td><code>{item.campo_exportado}</code></td><td>{item.alias}</td><td className="mlb-glossario-significado">{item.significado}</td><td>{item.fonte}</td></tr>)}</tbody></table></div></section> : null}
+      {previewError && <div className="mlb-error mlb-preview" role="alert">Prévia indisponível: {previewError} <button type="button" onClick={()=>setPreviewAttempt(n=>n+1)}>Tentar novamente</button></div>}
+      {preview && <section className="mlb-panel mlb-preview"><h2>Prévia da tabela de atributos</h2><p>5 municípios · até 8 atributos da seleção. A exportação inclui todos os 645 municípios e todos os atributos escolhidos.</p><div className="mlb-table"><table data-table-sort="off"><thead><tr><th>Código IBGE</th><th>Município</th>{preview.fields.map(f=><th key={f}>{f}</th>)}</tr></thead><tbody>{preview.rows.map(r=><tr key={r.CD_MUN}><td>{r.CD_MUN}</td><td>{r.NM_MUN}</td>{preview.fields.map(f=><td key={f}>{r[f] == null ? 'Sem valor' : r[f].toLocaleString('pt-BR',{maximumFractionDigits:8})}</td>)}</tr>)}</tbody></table></div></section>}
+      {preview?.glossario?.length ? <section className="mlb-panel mlb-glossario"><h2>Glossário e aliases de atributos</h2><p>Os campos abaixo são exatamente os que sairão na tabela de atributos da camada gerada. O nome do campo começa pelo identificador do tema; o nome por extenso viaja no alias, no dicionário e nos metadados do pacote.{preview.totalAttributes > (preview.glossarioLimite ?? 0) ? ` Exibindo os primeiros ${preview.glossarioLimite} de ${preview.totalAttributes.toLocaleString('pt-BR')} atributos; o dicionário do pacote traz todos.` : ''}</p><div className="mlb-table"><table data-table-sort="off"><thead><tr><th>Campo exportado</th><th>Alias</th><th>Significado</th><th>Fonte</th></tr></thead><tbody>{preview.glossario.map(item=><tr key={item.campo_exportado}><td><code>{item.campo_exportado}</code></td><td>{item.alias}</td><td className="mlb-glossario-significado">{item.significado}</td><td>{item.fonte}</td></tr>)}</tbody></table></div></section> : null}
     </div>}
   </section>;
 }

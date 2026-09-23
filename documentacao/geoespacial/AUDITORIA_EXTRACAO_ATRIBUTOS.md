@@ -120,3 +120,86 @@ independente retornou 200 com autenticação declarada. Chromium verificou naveg
 real entre páginas, ausência de modal/iframe, layouts de 390 e 1440 px, preservação
 do rascunho e retorno da camada gerada (respostas da API controladas no teste).
 Não foi gerada uma nova camada no banco de produção para esta mudança de interface.
+
+
+## Revisão conjunta da extração e da página territorial — 23/09/2026
+
+Correções desta revisão:
+
+- Links de ação principal com texto branco; campos de saída em linhas próprias e
+  sem limite artificial de 230px; botões com altura flexível e exportações com quebra.
+- Navegação do módulo sem recorte dos menus no celular; acesso à página territorial
+  também no menu Geradores.
+- Nomes completos dos indicadores e da seleção com quebra de linha, filtros com
+  colunas que encolhem, ações e paginação adaptadas a 320px; listas pequenas deixam
+  de reservar uma área vazia de altura fixa.
+- Removidos o segundo `h1` e o `main` aninhado do componente integrado. As tabelas
+  React não são mais reordenadas pelo manipulador global de DOM.
+- Catálogo e prévia municipal oferecem tentativa novamente; metadados descritivos
+  inválidos não derrubam a página; respostas de prévias canceladas são ignoradas.
+- Categoria pode ser trocada preservando atributos, formato e nome; resultado
+  identifica a categoria de sua geração. Retorno à extração fica desabilitado
+  durante a geração.
+- Campos condicionais dos diálogos respeitam `hidden` fora do elemento principal;
+  checkboxes e textos extensos de regras não estouram a largura do diálogo.
+- Erro de uma consulta antiga da tabela não apaga uma consulta mais recente. Filtros
+  de categoria/base ficam ocultos onde não se aplicam (tabela de saída e enriquecimento).
+- Bloqueio do sessionStorage deixa de interromper o acompanhamento de uma execução
+  já iniciada; o histórico continua sendo o caminho de recuperação.
+- Configurações passam a preservar também as referências municipais. Escrita
+  temporária e substituição atômica protegem a configuração anterior contra falhas.
+
+### Destinos confirmados na VM
+
+| Objeto | Persistência |
+|---|---|
+| Camada municipal e auxiliares | `/opt/sicard/data/geoespacial/uploads/datastorage/vetor/municipios_sp_<id_curto>_<nome>/`, montado em `/app/data/geoespacial/uploads` |
+| Cadastro municipal | `geoprocessamento.camada_importada`: caminho relativo, manifesto, componentes e hashes; sem duplicar feições |
+| Saída da extração | Geometrias no PostgreSQL; ZIP, relatório, procedência e etapas em `geoprocessamento.extracao_atributos` |
+| Configurações da extração | `/opt/sicard/data/geoespacial/configuracoes/extracao-atributos/*.json`, volume persistente do contêiner |
+| Outras saídas de geoprocessos | `data/geoespacial/outputs`, conforme `geo_output_path`; leituras legadas preservadas |
+
+Os dois contratos específicos acima já constavam na documentação dos módulos.
+O comentário de `path_policy.py` foi esclarecido; não houve migração nem mudança
+silenciosa de destino dos arquivos existentes. Download também grava uma cópia no
+destino escolhido pelo navegador do usuário.
+
+### Verificações reais e limites
+
+- Catálogo oficial: 6.375 atributos municipais.
+- Três exportações em temporários da VM, reabertas: FGB/GPKG/SHP, 645 municípios,
+  EPSG:4674, PIB 2022, IPDM 2022 e IDHM 2010. Geometrias comparadas por código
+  municipal e valores comparados com tolerância numérica, preservando nulos.
+- Os dois pacotes de extração mais recentes tiveram SHA-256 e integridade ZIP
+  conferidos contra o banco.
+- Teste de navegador territorial passou com catálogo controlado e com os 6.375
+  metadados reais em 320, 390, 768, 1024 e 1440px, sem erros JS ou assets faltantes.
+  Prévia/escrita interceptadas: não é uma geração autenticada na UI pública.
+- Teste de extração ampliado com contraste dos links, 320px e editor condicional
+  de regras, mantendo seleção, mapa, geração, retorno, tabela, exportação e recuperação.
+
+### Recuperação do acervo e fechamento dos testes
+
+A conferência física encontrou duas referências cujas pastas não estavam na VM:
+`municipios_sp_ba1598e7_censo_2022_pib` (6.161 atributos) e
+`municipal_c7c4c2d1-7c8d-4094-a58d-27ca073288c9` (6.159 atributos).
+Os dois FGB foram reconstruídos em temporários no Codespace consultando o banco
+oficial, porque a proteção de memória da VM recusou a seleção integral naquele
+momento (829 MB estimados, 413 MB disponíveis). Ambos tiveram SHA-256 idêntico ao
+original antes de serem transferidos. CSV, QML e JSON foram reconstruídos usando
+os manifestos originais; QML/JSON preservaram as quebras de linha Windows.
+Todos os oito arquivos restaurados conferiram com os hashes já registrados.
+Não houve alteração dos IDs, manifestos, hashes no banco, geometria ou valores.
+Arquivos existentes não foram sobrescritos. Os limites de memória permanecem
+ativos: uma seleção pode exigir menos atributos ou mais capacidade disponível.
+
+Fechamento: 62 testes Python aprovados (31 motor/pacotes, 17 regras, 4 configurações,
+10 contratos). A primeira execução dos testes dependentes do catálogo falhou por
+falta do túnel; os 21 testes de regras/configurações passaram após restabelecê-lo.
+Três builds do plugin concluídos. Sintaxe de 31 arquivos JS e 10 folhas CSS
+verificada integralmente; testes Chromium não registraram erros JS. A bancada
+embutida agora recolhe os painéis em telas pequenas e o mapa cabe na largura do
+iframe; os controles permitem reabrir cada painel.
+
+A página territorial consulta uma rota própria de categorias, evitando inventariar
+todas as camadas do storage apenas para iniciar o gerador.

@@ -260,9 +260,9 @@ O símbolo de cada camada corresponde à sua geometria.
 As configurações ficam em `data/geoespacial/configuracoes/extracao-atributos`,
 um JSON por configuração, fora das áreas do explorador de camadas. O arquivo
 guarda só referências: identificador e nome de cada camada, agrupados por
-categoria. Não copia geometria nem atributos. Camadas geradas pelo plugin
-municipal são descartadas ao salvar, porque cada geração cria um arquivo próprio
-no acervo cuja referência não se repete em outro ambiente. Ao carregar, o serviço
+categoria. Não copia geometria nem atributos. Inclui referências às camadas municipais
+materializadas no acervo. A gravação usa arquivo temporário e substituição atômica,
+preservando a configuração anterior se a escrita falhar. Ao carregar, o serviço
 confere o catálogo atual e informa quais referências não existem mais, em vez de
 falhar.
 
@@ -310,7 +310,7 @@ o dia às 21h. O campo de nome abre vazio e mostra a convenção como sugestão;
 qualquer texto digitado substitui o nome automático.
 
 Cada geração grava uma pasta própria em
-`data/geoespacial/uploads/datastorage/vetor/municipal_<execucao>/` com camada,
+`data/geoespacial/uploads/datastorage/vetor/municipios_sp_<id_curto>_<nome>/` com camada,
 dicionário e metadados, e registra a camada, a procedência e os hashes em
 `geoprocessamento.camada_importada`. As feições não são copiadas para o banco de
 geoprocessamento: a extração relê o arquivo. FlatGeobuf aceita todos os

@@ -22,7 +22,7 @@ await p.route('**/api/**',async r=>{
  if(path.endsWith('/test-poll'))return ++polls===1?r.fulfill({status:503,contentType:'text/html',body:'<h1>Unavailable</h1>'}):send({id:'job',status:'concluido',resultado:{ok:true}});
  if(path.includes('/auth/'))return send({authenticated:true,id:'ui-test',nome:'Teste local',username:'UI_ADMIN',tipo_usuario:'ADMIN'});
  if(path.endsWith('/storage/navegar'))return send({pastas:[],arquivos:[]});
- if(path.endsWith('/extracao-atributos/catalogo'))return send(catalog);
+ if((path.endsWith('/extracao-atributos/catalogo')||path.endsWith('/municipal/categorias')))return send(catalog);
  if(path.endsWith('/arquivo-mapa')){const body=r.request().postDataJSON();return send({...catalog.camadas.find(c=>c.id===body.id),geojson:fc,campos:[{nome:'nome'},{nome:'id'},{nome:'campo_de_outro_registro'}]});}
  if(path.endsWith('/configuracoes')&&method==='POST'){saved=r.request().postDataJSON();return send({nome:saved.nome,camadas:1,categorias:1,entradas:saved.entradas.length,finalidades:0});}
  if(path.endsWith('/configuracoes')&&method==='GET')return send({configuracoes:[{chave:'teste',nome:saved.nome,camadas:1,categorias:1}]});
@@ -36,12 +36,15 @@ await p.goto(`${process.env.SICARD_TEST_URL||'http://127.0.0.1:8081'}/restrict/g
 await p.waitForFunction(()=>window.SICARDExtracao&&document.querySelector('#ea-category-select').options.length>1);
 await p.waitForFunction(()=>document.querySelector('iframe').contentWindow.gpApp?.state.map?.isStyleLoaded());
 assert.equal(await p.locator('#ea-category-select').inputValue(),'');
-for(const width of [390,1440]){
+for(const width of [320,390,768,1440]){
  await p.setViewportSize({width,height:1000});
  const button=p.getByRole('link',{name:'Abrir ferramenta',exact:true});
  assert.equal(await button.isVisible(),true);
+ assert.equal(await button.evaluate(el=>getComputedStyle(el).color),'rgb(255, 255, 255)');
  assert.equal(await button.locator('span').evaluate(el=>getComputedStyle(el).position),'static');
  assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ if(width<=390){await p.waitForFunction(()=>document.querySelector('iframe').contentDocument.body.classList.contains('ea-embedded-workbench'));
+ assert.equal(await p.locator('iframe').evaluate(f=>{const r=f.contentDocument.querySelector('.gp-map-view').getBoundingClientRect();return r.left>=0&&r.right<=f.clientWidth+1;}),true,'Mapa cabe no iframe móvel');}
 }
 await choose('#ea-input-browse','entrada');
 await p.selectOption('#ea-operation','enriquecimento');await p.fill('#ea-nome-saida','Rascunho preservado');
@@ -71,6 +74,14 @@ await choose('#ea-input-browse','entrada');await p.selectOption('#ea-operation',
 await p.locator('#ea-staging-confirmar').click();await p.locator('dialog').getByRole('button',{name:'Confirmar bases',exact:true}).click();
 await p.locator('dialog').getByRole('button',{name:'Fechar',exact:true}).click();
 assert.equal(await p.locator('#ea-staging-salvar').isEnabled(),true);
+await p.locator('#ea-bases-confirmadas').getByRole('button',{name:/Regra:/}).click();
+assert.equal(await p.locator('.ea-regra-grupo').isVisible(),false,'Chaves ocultas para ligação espacial');
+await p.locator('dialog select[name=ligacao]').selectOption('atributo');
+assert.equal(await p.locator('.ea-regra-grupo').isVisible(),true);
+await p.setViewportSize({width:390,height:844});
+assert.equal(await p.locator('dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true,'Editor de regras sem corte lateral');
+await p.locator('dialog').getByRole('button',{name:'Cancelar',exact:true}).click();
+await p.setViewportSize({width:1440,height:1000});
 await p.getByRole('button',{name:'Adicionar entrada',exact:true}).click();const d=p.locator('dialog.ea-storage-dialog');await d.getByRole('button',{name:'Camadas cadastradas no banco',exact:true}).click();assert.equal(await d.locator('[data-file="base"]').isDisabled(),true);await d.locator('[data-file="adicional"]').click();await d.locator('.ea-storage-confirm-button').click();await d.waitFor({state:'detached'});
 await p.fill('#ea-nome-saida','Resultado conferido');await p.locator('#ea-staging-salvar').click();await p.waitForTimeout(200);assert.equal(saved.operacao,'enriquecimento');assert.equal(saved.nome_saida,'Resultado conferido');assert.equal(saved.entradas.length,2);assert.equal(saved.categorias[0].camadas[0],'base');
 await p.locator('#ea-run').click();await p.locator('dialog').getByRole('button',{name:'Executar extração',exact:true}).click();await p.locator('dialog').getByRole('button',{name:'Fechar',exact:true}).click();

@@ -49,7 +49,7 @@ export function criarResultados() {
         status.textContent=data.total?`${offset+1}–${offset+data.linhas.length} de ${data.total} registros. Todos os campos estão disponíveis; role a tabela horizontalmente.`:'0 registros. O pacote preserva a estrutura dos campos.';
         previous.disabled=offset===0;next.disabled=offset+data.linhas.length>=data.total;
       }catch(error){
-        if(version!==tableVersion||!body.isConnected)return;
+        if(version!==tableVersion||current!==request||!body.isConnected)return;
         status.textContent=error.message;body.replaceChildren();
         const retry=el('button','Tentar novamente','ea-btn');retry.type='button';retry.onclick=load;body.append(retry);
       }
@@ -139,6 +139,7 @@ export function criarResultados() {
     $("#ea-results-content").replaceChildren();
     const filters=result.modo!=='enriquecimento'&&view!=='attributes';
     categorySelect.disabled=!filters;layerSelect.disabled=!filters;
+    categorySelect.closest('.ea-results-filters').hidden=!filters;
     if(view==='attributes'){outputTable();return;}
     if(result.modo==="enriquecimento"){enriquecimento();return;}
     if(!result.categorias.length) { $("#ea-results-content").append(el("p","Processamento concluído sem ocorrências de extração.","ea-empty-small")); return; }
@@ -155,7 +156,7 @@ export function criarResultados() {
   const empty=$("#ea-results-content").innerHTML;
   function clear() {
     tableVersion++;
-    result=null;view='summary';$("#ea-results-content").innerHTML=empty;
+    result=null;view='summary';categorySelect.closest('.ea-results-filters').hidden=false;$("#ea-results-content").innerHTML=empty;
     document.querySelectorAll('#ea-results [data-view]').forEach(button=>{
       const selected=button.dataset.view===view;
       button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));

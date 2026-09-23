@@ -36,7 +36,18 @@ export function criarMapa(aoMudarPainel) {
     clearTimeout(timer);ready=false;mounted.clear();let attempts=0;
     const check=()=>{
       const win=context();
-      if(win?.gpArquivos&&win.gpApp?.state.map?.isStyleLoaded()){ready=true;observar();sync();return;}
+      if(win?.gpArquivos&&win.gpApp?.state.map?.isStyleLoaded()){
+        if(!win.document.body.classList.contains('ea-embedded-workbench')){
+          win.document.body.classList.add('ea-embedded-workbench');
+          const narrow=win.matchMedia('(max-width:650px)');
+          const resize=()=>{
+            if(narrow.matches){win.gpDocks.collapse('left');win.gpDocks.collapse('right');}
+            win.gpApp.state.map.resize();
+          };
+          narrow.addEventListener('change',resize);resize();
+        }
+        ready=true;observar();sync();return;
+      }
       if(++attempts<300)timer=setTimeout(check,100);
       else feedback('A bancada não terminou de carregar. Recarregue a página para tentar novamente.');
     };check();

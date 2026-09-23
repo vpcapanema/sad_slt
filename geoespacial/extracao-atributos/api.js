@@ -57,7 +57,9 @@ export const adaptador={
       nome_saida:request.nome_saida||'',opcoes:request.opcoes||{},
       categorias:request.categorias.map(c=>({id:c.id,camadas:c.camadas.map(l=>l.id),regras:c.regras||{}})),
       entradas:request.entradas||[],finalidades:request.finalidades||[]});
-    sessionStorage.setItem('slt-extracao-ultima',job.id);
+    try{sessionStorage.setItem('slt-extracao-ultima',job.id);}catch{
+      feedback('A execução foi iniciada. O navegador não permitiu guardar o atalho; consulte o histórico para recuperá-la.');
+    }
     return esperar(job,id=>`/extracao-atributos/execucoes/${id}`,aoAtualizar);
   },
   async exportar({resultado_id}) {

@@ -2,7 +2,7 @@
 .territorial-builder { margin-top:1rem; border:1px solid #dce3ea; border-radius:8px; background:#fff; min-width:0; }
 .territorial-builder .mlb { margin:0; max-width:none; background:transparent; padding:1.25rem 1.5rem; }
 .territorial-builder .mlb-header { align-items:flex-end; margin-bottom:1.25rem; padding-bottom:1rem; border-bottom:1px solid #dce3ea; }
-.territorial-builder .mlb h1 { font-size:1.15rem; }
+.territorial-builder .mlb .mlb-title { font-size:1.15rem; }
 .territorial-builder .mlb-header p { margin-bottom:0; }
 .territorial-controls { display:flex; flex-wrap:wrap; align-items:start; gap:1rem; padding:1rem; background:#fff; border:1px solid #dce3ea; border-radius:8px; }
 .territorial-controls .ea-field { flex:1 1 240px; }

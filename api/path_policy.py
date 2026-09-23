@@ -13,7 +13,10 @@ from pathlib import Path, PurePosixPath
 PROJECT_ROOT = Path(__file__).parent.parent
 _WINDOWS_ABSOLUTE = re.compile(r"^[A-Za-z]:[/\\]")
 
-# Destino único, canônico, para toda saída geoprocessada.
+# Destino canônico das saídas de geoprocessos que gravam arquivos por esta API.
+# Contratos específicos: extrações persistem pacote/geometria no PostgreSQL;
+# municipal-layer materializa bases no acervo uploads/datastorage/vetor.
+# Ver documentacao/EXTRACAO_ATRIBUTOS_INTERFACE.md (Persistência e bancada).
 GEO_OUTPUTS_DIR = "data/geoespacial/outputs"
 
 # Categorias reconhecidas do dado. Servem para validar a extensão do arquivo
@@ -79,7 +82,7 @@ def project_relative(value: Path) -> str:
 
 
 def geo_outputs_dir() -> Path:
-    """Diretório absoluto onde toda saída geoprocessada deve ser gravada."""
+    """Diretório absoluto para os arquivos de saída geridos por esta política."""
     caminho = PROJECT_ROOT / GEO_OUTPUTS_DIR
     caminho.mkdir(parents=True, exist_ok=True)
     return caminho
@@ -136,7 +139,7 @@ def geo_output_path(
 ) -> Path:
     """Resolve o caminho de saída dentro do destino único de geoprocessos.
 
-    Toda saída fica diretamente em ``data/geoespacial/outputs``, sem subpasta
+    Toda saída resolvida por esta função fica diretamente em ``data/geoespacial/outputs``, sem subpasta
     por categoria: a categoria é atributo do dado, registrado nos metadados e no
     relatório de execução, e não um nível de diretório.
 

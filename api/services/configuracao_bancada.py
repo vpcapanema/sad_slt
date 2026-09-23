@@ -1,19 +1,20 @@
 """Configurações da bancada: quais camadas o usuário agrupou em cada categoria.
 
 O arquivo guarda apenas referências: identificador, nome e caminho de cada
-camada. Não copia geometria nem atributos. Camadas geradas pelo plugin municipal
-ficam de fora, porque cada geração cria um arquivo próprio no acervo e a
-referência não se repetiria em outro ambiente.
+camada. Não copia geometria nem atributos. Inclui as camadas municipais
+materializadas no acervo; referências que não existirem mais são informadas
+ao carregar, como qualquer outra base.
 """
 from __future__ import annotations
 
 import json
 import re
+import os
+import tempfile
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
-from api.db.connection import get_connection
 from api.path_policy import project_path
 
 PASTA = 'data/geoespacial/configuracoes/extracao-atributos'
@@ -49,18 +50,6 @@ def arquivo(chave: str) -> Path:
     return destino
 
 
-def geradas_pelo_plugin(ids: list[str]) -> set[str]:
-    # Camadas do storage não passam pelo banco, logo não vêm do gerador municipal.
-    ids = [ident for ident in ids if not str(ident).startswith('storage:')]
-    if not ids:
-        return set()
-    with get_connection() as conn:
-        rows = conn.execute('''SELECT recurso_sessao_id FROM geoprocessamento.camada_importada
-            WHERE recurso_sessao_id = ANY(%s) AND metadados->>'origem' = 'municipal-layer' ''',
-                            (list(ids),)).fetchall()
-    return {row['recurso_sessao_id'] for row in rows}
-
-
 def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None = None,
            finalidades: list[dict] | None = None, *, operacao: str = 'intersection',
            opcoes: dict | None = None, nome_saida: str = '') -> dict:
@@ -79,8 +68,7 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
     catalog = catalogo()
     layers = {item['id']: item for item in catalog['camadas']}
     categories = {item['id']: item for item in catalog['categorias']}
-    excluidas = geradas_pelo_plugin([ident for grupo in categorias for ident in grupo['camadas']])
-    conteudo, vistos, ignoradas = [], set(), 0
+    conteudo, vistos = [], set()
     for grupo in categorias:
         if grupo['id'] not in categories:
             raise ValueError('Categoria inexistente ou inativa. Atualize o catálogo.')
@@ -88,9 +76,6 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
             raise ValueError('Categoria repetida na configuração.')
         camadas = []
         for ident in grupo['camadas']:
-            if ident in excluidas:
-                ignoradas += 1
-                continue
             if ident not in layers:
                 raise ValueError('Camada indisponível no catálogo. Atualize o catálogo.')
             if ident in vistos:
@@ -103,7 +88,7 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
             conteudo.append({'id': grupo['id'], 'nome': categories[grupo['id']]['nome'],
                              'camadas': camadas})
     if not conteudo:
-        raise ValueError('Nenhuma camada elegível. Camadas geradas pelo plugin não são salvas.')
+        raise ValueError('Selecione ao menos uma base disponível no catálogo.')
     # Restrições entre bases (uma só unidade de recorte, prefixo informado repetido).
     regras.validar_conjunto(conteudo)
     entradas_gravadas = []
@@ -124,7 +109,7 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
             'salvo_em': datetime.now(timezone.utc).isoformat(timespec='seconds'),
             'salvo_por': str(getattr(user, 'id', '')), 'categorias': conteudo,
             'entradas': entradas_gravadas, 'finalidades': regras.normalizar_finalidades(finalidades),
-            'camadas_ignoradas': ignoradas}
+            'camadas_ignoradas': 0}
 
 
 def salvar(nome: str, categorias: list[dict], user, entradas: list[dict] | None = None,
@@ -134,7 +119,18 @@ def salvar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
     destino = arquivo(chave)
     if not destino.exists() and len(list(raiz().glob('*.json'))) >= LIMITE_ARQUIVOS:
         raise ValueError(f'Limite de {LIMITE_ARQUIVOS} configurações atingido. Apague alguma antes.')
-    destino.write_text(json.dumps(conteudo, ensure_ascii=False, indent=2), encoding='utf-8')
+    temporario = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=destino.parent,
+                                         suffix='.tmp', delete=False) as stream:
+            temporario = Path(stream.name)
+            json.dump(conteudo, stream, ensure_ascii=False, indent=2)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporario, destino)
+    finally:
+        if temporario is not None:
+            temporario.unlink(missing_ok=True)
     return {'chave': chave, 'nome': conteudo['nome'], 'salvo_em': conteudo['salvo_em'],
             'categorias': len(conteudo['categorias']),
             'camadas': sum(len(c['camadas']) for c in conteudo['categorias']),
