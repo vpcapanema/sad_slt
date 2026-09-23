@@ -8,6 +8,7 @@ import { adaptador, json, esperar } from './api.js';
 import { confirmarExecucao, acompanharExecucao } from './processo.js';
 import { editarEntrada, editarFinalidade, editarRegra, prefixoPadrao, resumoEntrada } from './regras.js';
 import { renderDiagrama } from './diagramas.js';
+import { restaurarRetornoMunicipal } from './municipal.js';
 import { escolherArquivo } from './explorador.js';
 
 const OPCOES_OVERLAY=[
@@ -409,7 +410,14 @@ async function carregarCatalogo(){
 }
 window.addEventListener('extracao:integracao',async()=>{
   if(state.busy)return;busy(true);
-  try{await carregarCatalogo();}catch(error){feedback(`Não foi possível carregar o catálogo: ${error.message}`);}finally{busy(false);}
+  try{
+    await carregarCatalogo();
+    const retorno=restaurarRetornoMunicipal(state);
+    if(retorno){
+      $('#ea-operation').value=state.operation;$('#ea-nome-saida').value=state.nomeSaida;
+      renderParametros();await changed();feedback(retorno);
+    }
+  }catch(error){feedback(`Não foi possível carregar a configuração: ${error.message}`);}finally{busy(false);}
   abrirExtracaoDaUrl();
 });
 window.SICARDExtracao={conectar:conectarIntegracao,renderParametros,renderSelecao,renderEntradas,renderFinalidades,changed};

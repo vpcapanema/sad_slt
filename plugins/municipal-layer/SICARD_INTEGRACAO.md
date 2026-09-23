@@ -9,7 +9,7 @@ O ZIP original permanece em `plugins/municipal-layer-completo-v1.0.0.zip`. A có
 > insumos e do componente React compilado; o servidor standalone em `server/app.py`
 > segue funcionando por conta própria, mas não participa mais da execução do SICARD.
 
-Na configuração do extrator, escolha uma categoria e abra **Gerar camada municipal desta categoria**. O componente React original permite selecionar indicadores de fontes e anos distintos. Não há correspondência oficial categoria/indicador no pacote: a categoria identifica o destino conceitual, e o usuário escolhe os atributos; nenhum filtro temático implícito oculta indicadores.
+O card da extração abre a página independente `/restrict/geoespacial/gerador-camadas-territoriais/` na mesma aba. Essa URL também pode ser acessada diretamente. A categoria é escolhida na página; não há modal nem iframe para hospedar a ferramenta. O componente React original permite selecionar indicadores de fontes e anos distintos. Não há correspondência oficial categoria/indicador no pacote: a categoria identifica o destino conceitual, e o usuário escolhe os atributos; nenhum filtro temático implícito oculta indicadores.
 
 O hospedeiro usa `client`, `download=false` e `onExport`. A API autenticada fica em `/api/geoespacial/extracao-atributos/municipal/{categoria}/{catalog|preview|export}`. A exportação é feita por `api/services/base_municipal.py` sobre o schema `base_municipal`, materializa geometria e atributos e reabre o arquivo com GDAL. GeoPackage, FlatGeobuf e Shapefile preservam os limites do plugin. O botão usa o texto **Gerar camada** quando o download é desativado.
 
@@ -17,7 +17,7 @@ Cada geração recebe uma pasta exclusiva em `data/geoespacial/uploads/datastora
 
 O nome da camada é montado como categoria, fonte majoritária da seleção e data da geração, no fuso de São Paulo. O campo de nome abre vazio e exibe a convenção como sugestão; texto digitado prevalece.
 
-A resposta de geração contém o ZIP real do plugin e os cabeçalhos `X-Camada-Arquivo` e `X-Camada-Id`. O hospedeiro usa esses identificadores para ler a representação pelo GDAL e adicionar a base à categoria selecionada e à bancada. Falhas de leitura posteriores ao salvamento não apagam a camada; ela continua disponível pelo explorador. Não há troca automática das bases existentes: cada nova geração cria uma camada.
+A resposta de geração contém o ZIP real do plugin e os cabeçalhos `X-Camada-Arquivo` e `X-Camada-Id`. A página apresenta o download do ZIP e o link **Usar na extração**. Esse link retorna à bancada com o ID da camada e sua categoria. O extrator restaura as referências/opções guardadas na sessão do navegador e acrescenta a camada à lista pendente; **Confirmar bases** a inclui no mapa e no processamento. **Voltar à extração** restaura a configuração sem adicionar uma camada. O rascunho não guarda geometrias nem credenciais. Falhas de leitura posteriores ao salvamento não apagam a camada; ela continua disponível pelo explorador. Não há troca automática das bases existentes: cada nova geração cria uma camada.
 
 ## Build
 
@@ -29,7 +29,7 @@ npm run build
 npx vite build --config vite.sicard.config.js
 ```
 
-O último comando compila React e o adaptador `sicard/` em `geoespacial/extracao-atributos/municipal-plugin/`. Esses arquivos são carregados sob demanda pelo extrator. Não é necessário iniciar o servidor standalone na porta 18765: a API Python é hospedada pelo SICARD.
+O último comando compila React e o adaptador `sicard/` em `geoespacial/extracao-atributos/municipal-plugin/`. Esses arquivos são carregados pela página independente. O adaptador exporta `montarMunicipal(host, {category, apiBase, onGenerated, onBusyChange})`; o componente original e seu contrato de exportação permanecem iguais. Não é necessário iniciar o servidor standalone na porta 18765: a API Python é hospedada pelo SICARD.
 
 ## Validação realizada
 

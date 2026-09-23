@@ -102,3 +102,21 @@ Verificação: teste Chromium passou a conferir a visibilidade do acesso antes d
 escolher categoria, em 390 e 1440 px, e a abertura do componente React real com
 o destino correto (API interceptada no teste). Sete testes de contratos passaram,
 incluindo a leitura de uma camada municipal cujo registro não contém feições no banco.
+
+## Ferramenta em página independente
+
+A ferramenta agora possui a rota `/restrict/geoespacial/gerador-camadas-territoriais/`.
+O card navega para essa página na mesma aba. A categoria é escolhida na própria
+página, e o componente React é montado diretamente no conteúdo, sem modal ou iframe.
+O título aprovado, a autenticação e as APIs do gerador foram preservados.
+
+O link **Voltar à extração** restaura o rascunho da análise; **Usar na extração** também
+acrescenta a camada gerada à lista para confirmação. Somente referências e opções
+são guardadas no sessionStorage da aba, sem geometrias. A página permite baixar o
+ZIP retornado pela geração. Os setores censitários permanecem uma funcionalidade futura.
+
+Validação: builds da demonstração, biblioteca e adaptador SICARD concluídos; rota
+independente retornou 200 com autenticação declarada. Chromium verificou navegação
+real entre páginas, ausência de modal/iframe, layouts de 390 e 1440 px, preservação
+do rascunho e retorno da camada gerada (respostas da API controladas no teste).
+Não foi gerada uma nova camada no banco de produção para esta mudança de interface.
