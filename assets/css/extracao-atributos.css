@@ -493,5 +493,6 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 #ea-config .ea-config-grid-3 #ea-category-select { max-width:100%; }
 .ea-category-link { display:inline-block; margin-top:.3rem; font-size:.75rem; }
 .ea-municipal-entry { padding:.7rem; background:#eef6fa; border:1px solid #bfd8e8; border-radius:6px; }
-#ea-config .ea-municipal-entry .ea-hint { margin-top:.5rem; }
+.ea-municipal-entry h4 { margin:0 0 .5rem; font-size:.9rem; }
+#ea-config .ea-municipal-entry .ea-hint { margin:0 0 .7rem; }
 @media(max-width:650px) { .ea-config-tools > strong { flex-basis:100%; } }

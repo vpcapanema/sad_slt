@@ -33,7 +33,7 @@ await p.waitForFunction(()=>document.querySelector('iframe').contentWindow.gpApp
 assert.equal(await p.locator('#ea-category-select').inputValue(),'');
 for(const width of [390,1440]){
  await p.setViewportSize({width,height:1000});
- const button=p.getByRole('button',{name:'Gerar camada de municípios',exact:true});
+ const button=p.getByRole('button',{name:'Abrir ferramenta',exact:true});
  assert.equal(await button.isVisible(),true);
  assert.equal(await button.locator('span').evaluate(el=>getComputedStyle(el).position),'static');
  assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
