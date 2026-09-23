@@ -37,3 +37,9 @@ export function atributos(properties) {
   }
   return list;
 }
+
+// O esquema completo inclui campos ausentes ou nulos na primeira feição.
+export function camposCamada(camada) {
+  return [...new Set([...(camada?.campos||[]).map(c=>typeof c==='string'?c:c.nome),
+    ...(camada?.geojson?.features||[]).flatMap(f=>Object.keys(f.properties||{}))])].filter(Boolean);
+}

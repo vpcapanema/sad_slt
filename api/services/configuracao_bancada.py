@@ -20,8 +20,9 @@ PASTA = 'data/geoespacial/configuracoes/extracao-atributos'
 # Versão 2 guarda a regra de cada base (papel, ligação, multiplicidade, campos...).
 # Versão 3 guarda também as entradas (identificador, filtro, campos) e as
 # finalidades. Versões anteriores continuam legíveis: o que falta vira o padrão.
-VERSAO = 3
-VERSOES_LIDAS = (1, 2, 3)
+# Versão 4 também preserva algoritmo, opções e nome da saída.
+VERSAO = 4
+VERSOES_LIDAS = (1, 2, 3, 4)
 LIMITE_ARQUIVOS = 300
 
 
@@ -61,13 +62,19 @@ def geradas_pelo_plugin(ids: list[str]) -> set[str]:
 
 
 def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None = None,
-           finalidades: list[dict] | None = None) -> dict:
+           finalidades: list[dict] | None = None, *, operacao: str = 'intersection',
+           opcoes: dict | None = None, nome_saida: str = '') -> dict:
     """Valida a lista contra o catálogo e devolve o conteúdo a gravar.
 
     ``categorias``: [{id, camadas: [ids], regras?: {id da camada: regra}}].
     ``entradas``: [{id, config?}] (a primeira é a principal). ``finalidades``: [{nome, campos}].
     """
     from api.services import extracao_atributos_regras as regras
+    from api.services.extracao_atributos_analise import OPCOES_PADRAO
+    if operacao not in ('intersection','identity','enriquecimento'):
+        raise ValueError('Algoritmo de processamento inválido.')
+    if set(opcoes or {}) - set(OPCOES_PADRAO):
+        raise ValueError('Opção do algoritmo desconhecida.')
     from api.services.extracao_atributos import catalogo
     catalog = catalogo()
     layers = {item['id']: item for item in catalog['camadas']}
@@ -106,10 +113,14 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
             raise ValueError('Camada de entrada indisponível no catálogo. Atualize o catálogo.')
         if any(e['id'] == ident for e in entradas_gravadas):
             raise ValueError('A mesma camada aparece duas vezes nas entradas.')
+        if ident in vistos:
+            raise ValueError('A camada de entrada não pode ser também uma base.')
         entradas_gravadas.append({'id': ident, 'nome': layers[ident]['nome'],
                                   'arquivo': layers[ident].get('arquivo'),
                                   'config': regras.normalizar_entrada(item.get('config'))})
     return {'versao': VERSAO, 'nome': str(nome).strip()[:120],
+            'operacao':operacao,'opcoes':{**OPCOES_PADRAO,**(opcoes or {})},
+            'nome_saida':str(nome_saida).strip()[:200],
             'salvo_em': datetime.now(timezone.utc).isoformat(timespec='seconds'),
             'salvo_por': str(getattr(user, 'id', '')), 'categorias': conteudo,
             'entradas': entradas_gravadas, 'finalidades': regras.normalizar_finalidades(finalidades),
@@ -117,8 +128,8 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
 
 
 def salvar(nome: str, categorias: list[dict], user, entradas: list[dict] | None = None,
-           finalidades: list[dict] | None = None) -> dict:
-    conteudo = montar(nome, categorias, user, entradas, finalidades)
+           finalidades: list[dict] | None = None, **execucao) -> dict:
+    conteudo = montar(nome, categorias, user, entradas, finalidades, **execucao)
     chave = identificador(conteudo['nome'])
     destino = arquivo(chave)
     if not destino.exists() and len(list(raiz().glob('*.json'))) >= LIMITE_ARQUIVOS:
@@ -201,6 +212,8 @@ def carregar(chave: str) -> dict:
     except ValueError:
         finalidades = []  # Arquivo editado à mão: a lista de finalidades é descartada.
     return {'chave': destino.stem, 'nome': dados.get('nome') or destino.stem,
+            'operacao':dados.get('operacao'),'opcoes':dados.get('opcoes') or {},
+            'nome_saida':dados.get('nome_saida') or '',
             'salvo_em': dados.get('salvo_em'), 'categorias': presentes, 'entradas': entradas,
             'finalidades': finalidades, 'ausentes': ausentes}
 

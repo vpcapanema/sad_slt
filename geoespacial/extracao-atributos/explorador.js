@@ -1,14 +1,15 @@
 import { el } from './ui.js';
 import { json } from './api.js';
 
-// O explorador abre as bases geoespaciais do storage do SICARD (SFTPGo). Só
-// escolhe camadas: pastas e arquivos são geridos no próprio storage ou no QGIS,
+// O explorador abre as bases geoespaciais do storage do SICARD (SFTPGo). e as camadas cadastradas no banco.
+// Só escolhe camadas: pastas e arquivos são geridos no próprio storage ou no QGIS,
 // por isso não há criar nem renomear pasta aqui.
 //
 // Navegação: um clique abre a pasta; um clique marca ou desmarca a camada; na
 // escolha de uma única camada, o duplo clique já confirma. Backspace sobe uma pasta.
 const ROOT='base-geoespacial';
-const ROOT_NAMES={'base-geoespacial':'Bases geoespaciais'};
+const BANK='@banco';
+const ROOT_NAMES={'base-geoespacial':'Bases geoespaciais',[BANK]:'Camadas cadastradas no banco'};
 // Ícone por formato, pela convenção mais comum: GeoPackage é um banco SQLite;
 // Shapefile, geometria vetorial; GeoJSON, texto estruturado; KML, o globo do
 // Google Earth; FlatGeobuf, arquivo binário; rasters, imagem.
@@ -23,7 +24,7 @@ const VISOES=[['list','Lista','fa-list'],['details','Detalhes','fa-table-list'],
 function fa(nome){const i=document.createElement('i');i.className=`fa-solid ${nome}`;i.setAttribute('aria-hidden','true');return i;}
 // "uf_sp.gpkg"; num GeoPackage com várias camadas, "bases.gpkg › rios".
 function partesDoNome(item){
-  const base=String(item.arquivo||'').split('/').pop(),ponto=base.lastIndexOf('.');
+  const base=String(item.arquivo||item.nome||'').split('/').pop(),ponto=base.lastIndexOf('.');
   const radical=ponto>0?base.slice(0,ponto):base,extensao=ponto>0?base.slice(ponto):'';
   return {radical,extensao,camada:item.nome!==radical?item.nome:'',formato:extensao.slice(1).toLowerCase()};
 }
@@ -73,7 +74,7 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
       clear.disabled=loading||!picks.size;
       confirm.disabled=loading||!picks.size;all.disabled=loading||!visibleFiles.length;
       confirm.textContent=multiple&&picks.size?`Confirmar (${picks.size})`:'Confirmar';
-      close.disabled=loading&&!browsing;up.disabled=loading&&!browsing||current===ROOT;
+      close.disabled=loading&&!browsing;up.disabled=loading&&!browsing||current===ROOT||current===BANK;
       selectionLabel.textContent=picks.size?`${picks.size} camada(s): ${[...picks.values()].map(rotulo).join(', ')}`:'Nenhuma camada selecionada.';
     }
     function finish(value=null){if(loading&&!browsing)return;closed=true;navigation++;dialog.close();dialog.remove();resolve(value);}
@@ -85,9 +86,10 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
       event.preventDefault();goUp();
     });
     function goUp(){if(current!==ROOT)navigate(cache.get(current)?.pai||ROOT);}
-    function valid(path){return path===ROOT||path.startsWith(ROOT+'/');}
+    function valid(path){return path===BANK||path===ROOT||path.startsWith(ROOT+'/');}
     async function directory(path){
       if(!valid(path))throw new Error('Escolha uma pasta dentro das bases geoespaciais do storage.');
+      if(path===BANK)return {caminho:BANK,pai:null,pastas:[],arquivos:catalog.filter(item=>!item.id.startsWith('storage:'))};
       if(!cache.has(path)){
         if(!pending.has(path))pending.set(path,json(`/storage/navegar?caminho=${encodeURIComponent(path)}`).then(data=>{cache.set(path,data);return data;}).finally(()=>pending.delete(path)));
         await pending.get(path);
@@ -113,6 +115,7 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
         if(aberta)for(const folder of cache.get(path)?.pastas||[])branch(folder.caminho,folder.nome,depth+1);
       }
       branch(ROOT,ROOT_NAMES[ROOT],0);
+      branch(BANK,ROOT_NAMES[BANK],0);
     }
     function toggleFile(item){
       if(multiple){if(picks.has(item.id))picks.delete(item.id);else picks.set(item.id,item);}
@@ -143,7 +146,7 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
           const simbolo=el('span',undefined,'ea-storage-entry-icon');simbolo.append(fa('fa-folder'));
           name.append(simbolo,el('span',item.nome,'ea-storage-entry-name'));
         }else{
-          visibleFiles.push(item);
+          if(!excluded.includes(item.id))visibleFiles.push(item);
           row=button('',event=>{
             if(loading)return;
             // O segundo clique de um duplo clique não desfaz a marcação do primeiro.
@@ -151,6 +154,7 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
             toggleFile(item);
           },'ea-btn ea-storage-entry ea-storage-entry--layer');
           row.dataset.file=item.id;row.setAttribute('aria-pressed',String(picks.has(item.id)));
+          row.disabled=excluded.includes(item.id);
           row.title=multiple?'Clique para marcar ou desmarcar':'Clique para selecionar; duplo clique confirma';
           const partes=partesDoNome(item),[simboloFormato,nomeFormato]=FORMATOS[partes.formato]||['fa-file','Arquivo'];
           const check=el('span',undefined,'ea-storage-check');check.append(fa('fa-check'));
@@ -159,7 +163,7 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
           if(partes.camada)nome.append(el('span',` › ${partes.camada}`,'ea-storage-entry-camada'));
           name.append(check,simbolo,nome);
         }
-        row.append(name,el('small',item.folder?'Pasta':`${(FORMATOS[partesDoNome(item).formato]||[,'Arquivo'])[1]} · ${item.geometria_tipo||'vetor'}`));
+        row.append(name,el('small',item.folder?'Pasta':`${current===BANK?'Banco':(FORMATOS[partesDoNome(item).formato]||[,'Arquivo'])[1]} · ${item.geometria_tipo||'vetor'}${excluded.includes(item.id)?' · já selecionada':''}`));
         if(mode==='details')row.append(el('span',item.caminho||item.arquivo,'ea-storage-entry-path'));
         if(item.folder){const seta=el('span',undefined,'ea-storage-entry-open');seta.append(fa('fa-chevron-right'));row.append(seta);}
         list.append(row);
@@ -173,7 +177,7 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
       const request=++navigation;
       loading=true;browsing=true;controls();status.textContent='Carregando pasta…';
       try{
-        await directory(path);if(closed||request!==navigation)return;current=path;expanded.add(path);search.value='';
+        const data=await directory(path);if(closed||request!==navigation)return;cache.set(path,data);current=path;expanded.add(path);search.value='';
         trail.replaceChildren();let target='';
         for(const [index,name] of ['storage',...path.split('/').filter(Boolean)].entries()){
           if(index>0)target+=(target?'/':'')+name;
@@ -193,9 +197,9 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
         while(next<files.length){const file=files[next++];
           try{
             if(!loaded.has(file.id)){
-              const result=await json('/extracao-atributos/arquivo-mapa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({arquivo:file.arquivo,id:file.id})});
-              const layer=catalog.find(item=>item.id===result.id);
-              if(!layer)throw new Error('Camada não disponível no catálogo. Atualize o catálogo.');
+              const result=await json('/extracao-atributos/arquivo-mapa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({arquivo:file.arquivo||undefined,id:file.id})});
+              let layer=catalog.find(item=>item.id===result.id);
+              if(!layer){layer={...file,...result};catalog.push(layer);}
               if(excluded.includes(layer.id))throw new Error('Camada já selecionada como base ou entrada.');
               loaded.set(file.id,{...layer,...result});
             }

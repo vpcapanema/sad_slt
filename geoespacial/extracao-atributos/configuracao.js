@@ -1,4 +1,4 @@
-import { $, el, options, feedback } from "./ui.js";
+import { $, el, options, feedback, camposCamada } from "./ui.js";
 import { escolherArquivo } from './explorador.js';
 import { abrirGeradorMunicipal } from './municipal.js';
 import { criarListaCamadas } from './lista-camadas.js';
@@ -59,14 +59,17 @@ export function criarConfiguracao(state, changed) {
           botao.addEventListener("click",async()=>{
             const camada=state.catalog.find(l=>l.id===base.id);
             const nova=await editarRegra({nomeBase:nome(base.id),regra:base.regra,
-              camposDisponiveis:Object.keys(camada?.geojson?.features?.[0]?.properties||{})});
+              camposDisponiveis:camposCamada(camada)});
             if(!nova)return;
-            base.regra=nova;renderBasesConfirmadas();
-            window.SICARDExtracao?.renderSelecao?.();
+            base.regra=nova;changed();
             feedback(`Regra de ${nome(base.id)} atualizada.`);
           });
           linha.append(botao);
         }
+        const remover=el('button','Remover','ea-btn');remover.type='button';remover.disabled=state.busy;
+        remover.setAttribute('aria-label',`Remover a base ${nome(base.id)}`);
+        remover.addEventListener('click',()=>{state.bases=state.bases.filter(item=>item.id!==base.id);changed();});
+        linha.append(remover);
         grupo.append(linha);
       }
       host.append(grupo);
@@ -93,12 +96,12 @@ export function criarConfiguracao(state, changed) {
     // Em edição, o + de cada grupo informa a categoria; fora dela, vale a do seletor.
     const category=categoriaAlvo||$("#ea-category-select").value;
     if(target==='base'&&!category){feedback('Selecione a categoria da base antes de escolher o arquivo.');$('#ea-category-select').focus();return;}
-    const selection=await escolherArquivo({catalog:state.catalog,excluded:[...state.bases.map(b=>b.id),...state.staging.map(item=>item.id),...(target==='base'?[state.input]:[])],multiple:target==='base',title:target==='base'?'Selecionar camadas base':'Selecionar camada de entrada'});
+    const selection=await escolherArquivo({catalog:state.catalog,excluded:[...state.bases.map(b=>b.id),...state.staging.map(item=>item.id),...state.entradasExtras.map(item=>item.id),...(target==='base'?[state.input]:[])],multiple:target==='base',title:target==='base'?'Selecionar camadas base':'Selecionar camada de entrada'});
     if(!selection)return;
     for(const layer of target==='base'?selection:[selection]){
       Object.assign(state.catalog.find(item=>item.id===layer.id),layer);
       if(target==='base')state.lastBase=layer;
-      else state.input=layer.id;
+      else {if(state.input!==layer.id)state.inputConfig=null;state.input=layer.id;}
     }
     if(target==='base'){
       // A escolha alimenta a lista da categoria atual; a bancada só recebe ao confirmar.
@@ -112,9 +115,9 @@ export function criarConfiguracao(state, changed) {
   }
   $("#ea-base-browse").addEventListener('click',()=>browse('base'));
   $("#ea-input-browse").addEventListener('click',()=>browse('input'));
-  $("#ea-input-clear").addEventListener('click',()=>{state.input='';changed();});
+  $("#ea-input-clear").addEventListener('click',()=>{state.input='';state.inputConfig=null;changed();});
   $("#ea-operation").addEventListener("change",event=>{state.operation=event.target.value;window.SICARDExtracao?.renderParametros?.();changed();});
   // O nome da saida nao muda o mapa nem a previa: so guarda o texto.
-  $("#ea-nome-saida").addEventListener("input",event=>{state.nomeSaida=event.target.value;});
+  $("#ea-nome-saida").addEventListener("input",event=>{state.nomeSaida=event.target.value;changed();});
   return {render,marcarLista:lista.marcar,renderBasesConfirmadas};
 }

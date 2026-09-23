@@ -2,8 +2,26 @@ import { feedback } from './ui.js';
 const prefix=location.pathname.includes('/sicard/')?'/sicard':'';
 export const base=`${prefix}/api/geoespacial`;
 export async function json(path,options={}) {
-  const response=await fetch(base+path,options),data=await response.json();
-  if(!response.ok)throw new Error(typeof data.detail==='string'?data.detail:'Não foi possível concluir a solicitação. Confira os campos e sua sessão.');
+  let response;
+  try {
+    response=await fetch(base+path,{credentials:'same-origin',...options,
+      signal:options.signal||AbortSignal.timeout(180000)});
+  } catch(cause) {
+    const error=new Error(cause.name==='TimeoutError'?'O servidor demorou para responder. Tente novamente; uma execução já iniciada pode ser recuperada.':'A conexão foi interrompida. Confira sua rede e tente novamente.');
+    error.status=0;throw error;
+  }
+  if(response.status===204)return null;
+  const text=await response.text();let data;
+  try{data=text?JSON.parse(text):null;}catch{data=null;}
+  if(!response.ok){
+    const detail=data?.detail;
+    const message=response.status===401?'Sua sessão expirou. Entre novamente para continuar ou recuperar a análise.'
+      :response.status===403?'Seu perfil não permite esta operação.'
+      :typeof detail==='string'?detail:Array.isArray(detail)?detail.map(item=>`${(item.loc||[]).filter(v=>v!=='body').join(' → ')}: ${item.msg}`).join('; ')
+      :`O serviço está indisponível (HTTP ${response.status}). Tente novamente.`;
+    const error=new Error(message);error.status=response.status;throw error;
+  }
+  if(data===null)throw new Error('O serviço retornou uma resposta inválida. Atualize a página e tente novamente.');
   return data;
 }
 export const post=(path,body)=>json(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -12,7 +30,15 @@ export async function esperar(job,statusPath,aoAtualizar) {
   const notificar=aoAtualizar||(atual=>feedback(atual.etapa||atual.etapa_atual||'Processando…'));
   while(job.status==='executando'||job.status==='pendente') {
     notificar(job);
-    await new Promise(resolve=>setTimeout(resolve,1200));job=await json(statusPath(job.id));
+    await new Promise(resolve=>setTimeout(resolve,1200));
+    for(let tentativa=0;;tentativa++){
+      try{job=await json(statusPath(job.id));break;}
+      catch(error){
+        if(tentativa>=2||![0,502,503,504].includes(error.status))throw error;
+        notificar({...job,etapa:'Reconectando ao processamento…'});
+        await new Promise(resolve=>setTimeout(resolve,1200*(tentativa+1)));
+      }
+    }
   }
   notificar(job);
   if(job.status!=='concluido')throw new Error(job.erro||'O processamento não foi concluído.');
@@ -21,8 +47,7 @@ export async function esperar(job,statusPath,aoAtualizar) {
 export const adaptador={
   listarCatalogo:()=>json('/extracao-atributos/catalogo'),
   async carregarCamada(layer){
-    if(!layer.arquivo)throw new Error('Selecione o arquivo no storage para visualizar a camada.');
-    const file=await post('/extracao-atributos/arquivo-mapa',{arquivo:layer.arquivo,id:layer.id});
+    const file=await post('/extracao-atributos/arquivo-mapa',{arquivo:layer.arquivo||undefined,id:layer.id});
     Object.assign(layer,file);return file.geojson;
   },
   async executar(request,aoAtualizar) {

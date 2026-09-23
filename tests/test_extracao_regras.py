@@ -99,7 +99,7 @@ def test_configuracao_v3_guarda_entradas_e_finalidades(pasta):
         finalidades=[{'nome': 'Indicadores', 'campos': ['id_registro', 'camada_origem']}])
     assert salvo['entradas'] == 1 and salvo['finalidades'] == 1
     gravado = json.loads((pasta / 'analise-completa.json').read_text(encoding='utf-8'))
-    assert gravado['versao'] == 3
+    assert gravado['versao'] == configuracao.VERSAO
     carregado = configuracao.carregar('analise-completa')
     entrada = carregado['entradas'][0]
     assert entrada['id'] == camadas[0] and entrada['config']['campo_id'] == 'proj_id'

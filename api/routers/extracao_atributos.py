@@ -1,7 +1,7 @@
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, model_validator
 
@@ -35,9 +35,15 @@ class NovaPasta(BaseModel):
 
 
 class ArquivoMapa(BaseModel):
-    arquivo: str = Field(min_length=1,max_length=1000)
+    arquivo: str | None = Field(default=None,min_length=1,max_length=1000)
     # Obrigatório para camadas do storage, cujo arquivo pode ter várias camadas.
     id: str | None = Field(default=None,max_length=1200)
+
+    @model_validator(mode='after')
+    def _origem_obrigatoria(self):
+        if not self.id and not self.arquivo:
+            raise ValueError('Selecione uma camada do catálogo ou um arquivo.')
+        return self
 
 
 @router.post('/arquivo-mapa')
@@ -46,6 +52,8 @@ def arquivo_mapa(payload: ArquivoMapa):
         if payload.id and payload.id.startswith('storage:'):
             from api.services.storage_geoespacial import ler_para_mapa
             return ler_para_mapa(payload.id)
+        if payload.id:
+            return service.camada_para_mapa(payload.id)
         from api.services.visualizacao_arquivo import ler_arquivo
         return ler_arquivo(payload.arquivo)
     except FileNotFoundError as exc:
@@ -95,6 +103,9 @@ class Configuracao(BaseModel):
     # Guardadas junto com as bases para repetir a análise inteira (versão 3).
     entradas: list[EntradaExtracao] = Field(default_factory=list,max_length=10)
     finalidades: list[Finalidade] = Field(default_factory=list,max_length=20)
+    operacao: Literal['intersection','identity','enriquecimento'] = 'intersection'
+    opcoes: dict[str, bool] = Field(default_factory=dict)
+    nome_saida: str = Field(default='',max_length=200)
 
 
 @router.get('/configuracoes')
@@ -109,7 +120,8 @@ def salvar_configuracao(payload: Configuracao, user: SessionUser = Depends(requi
     try:
         return configuracao.salvar(payload.nome,[g.model_dump() for g in payload.categorias],user,
                                    [e.model_dump() for e in payload.entradas],
-                                   [f.model_dump() for f in payload.finalidades])
+                                   [f.model_dump() for f in payload.finalidades],
+                                   operacao=payload.operacao,opcoes=payload.opcoes,nome_saida=payload.nome_saida)
     except ValueError as exc:
         raise HTTPException(422,str(exc)) from exc
     except OSError as exc:
@@ -148,7 +160,7 @@ class OpcoesOverlay(BaseModel):
 
 
 class Extracao(BaseModel):
-    input_id: str = Field(min_length=1,max_length=100)
+    input_id: str = Field(min_length=1,max_length=1200)
     nome_saida: str = Field(default='',max_length=200)
     # intersection/identity: modo sobreposição (uma linha por interseção).
     # enriquecimento: um registro por feição, com as regras de cada base.
@@ -159,6 +171,15 @@ class Extracao(BaseModel):
     # (identificador, filtro, campos), e recortes de campos por finalidade.
     entradas: list[EntradaExtracao] = Field(default_factory=list,max_length=10)
     finalidades: list[Finalidade] = Field(default_factory=list,max_length=20)
+
+    @model_validator(mode='after')
+    def _entradas_unicas(self):
+        ids = [entrada.id for entrada in self.entradas]
+        if len(ids) != len(set(ids)):
+            raise ValueError('A mesma camada aparece duas vezes nas entradas.')
+        if self.operacao != 'enriquecimento' and (self.entradas or self.finalidades):
+            raise ValueError('Entradas configuráveis e finalidades exigem o modo enriquecimento.')
+        return self
 
 
 @router.get('/catalogo')
@@ -190,6 +211,16 @@ def consultar(ident: UUID, user: SessionUser = Depends(require_geospatial_access
 
 class RenomearExtracao(BaseModel):
     nome_saida: str = Field(min_length=1,max_length=200)
+
+
+@router.get('/execucoes/{ident}/tabela')
+def tabela_resultado(ident: UUID, camada: str = Query(default='resultado',max_length=200),
+                    offset: int = Query(default=0,ge=0), limite: int = Query(default=100,ge=1,le=1000),
+                    user: SessionUser = Depends(require_geospatial_access)):
+    try:
+        return service.tabela_resultado(ident,user,camada,offset,limite)
+    except LookupError as exc:
+        raise HTTPException(404,str(exc)) from exc
 
 
 @router.patch('/execucoes/{ident}')

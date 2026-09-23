@@ -475,3 +475,11 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
 #ea-config .ea-config-grid-3 > .ea-panel:nth-child(1) .ea-subnumber { color: #1769aa; }
 #ea-config .ea-config-grid-3 > .ea-panel:nth-child(2) .ea-subnumber { color: #b06a17; }
 #ea-config .ea-config-grid-3 > .ea-panel:nth-child(3) .ea-subnumber { color: #7d2f83; }
+
+/* Ações e rótulos continuam acessíveis em telas estreitas. */
+@media(max-width:650px) {
+  #ea-staging-actions { flex-wrap:wrap; justify-content:flex-start; }
+  .ea-grupo-origem { left:.5rem; transform:none; max-width:calc(100% - 1rem); white-space:normal; box-sizing:border-box; }
+  .ea-base-confirmada { flex-wrap:wrap; }
+  .ea-regra-corpo { grid-template-columns:minmax(0,1fr); }
+}

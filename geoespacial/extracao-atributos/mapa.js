@@ -66,5 +66,6 @@ export function criarMapa(aoMudarPainel) {
     if(!ready)throw new Error('Aguarde o carregamento da bancada.');
     if(editing())throw new Error('Salve ou cancele a edição na bancada. Para analisar uma nova versão salva, selecione esse arquivo na configuração.');
   }
-  return {sync,assertReady,camadas};
+  const exibida=id=>[...mounted.values()].some(item=>item.id===id);
+  return {sync,assertReady,camadas,exibida};
 }

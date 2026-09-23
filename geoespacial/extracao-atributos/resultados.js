@@ -1,5 +1,6 @@
 import { $, el, options, numero, atributos } from "./ui.js";
 import { rotulo as rotuloRegra } from "./regras.js";
+import { base, json } from './api.js';
 
 // Valores e estatísticas vêm do serviço. A interface somente os apresenta.
 export function medida(value, dimension) {
@@ -18,12 +19,44 @@ function table(headers, rows) {
   tbl.append(head,body);wrap.append(tbl);return wrap;
 }
 export function criarResultados() {
-  let result=null,view="summary";
+  let result=null,view="summary",tableVersion=0;
   const categorySelect=$("#ea-result-category"),layerSelect=$("#ea-result-layer");
   function groups() {
     return (result?.categorias||[]).filter(c=>!categorySelect.value||c.id===categorySelect.value);
   }
   function layers(category) { return category.camadas.filter(l=>!layerSelect.value||l.id===layerSelect.value); }
+  function outputTable(){
+    const host=$('#ea-results-content'),execution=result.id,version=++tableVersion;
+    const names=result.modo==='enriquecimento'?Object.keys(result.camadas||{}):['resultado'];
+    const select=el('select');select.setAttribute('aria-label','Camada da tabela de saída');
+    names.forEach(name=>select.append(new Option(name,name)));
+    const body=el('div'),status=el('p',undefined,'ea-hint');status.setAttribute('role','status');
+    const previous=el('button','Anterior','ea-btn'),next=el('button','Próxima','ea-btn');
+    previous.type=next.type='button';let offset=0,request=0;
+    const actions=el('div',undefined,'ea-map-toolbar');actions.append(previous,status,next);
+    host.append(select,body,actions);
+    async function load(){
+      const current=++request;previous.disabled=next.disabled=true;
+      status.textContent='Carregando tabela de atributos…';
+      try{
+        const data=await json(`/extracao-atributos/execucoes/${encodeURIComponent(execution)}/tabela?camada=${encodeURIComponent(select.value)}&offset=${offset}&limite=100`);
+        if(version!==tableVersion||current!==request||!body.isConnected)return;
+        body.replaceChildren();
+        if(data.linhas.length)body.append(table(data.campos,data.linhas.map(row=>data.campos.map(field=>{
+          const value=row[field];return value==null?'—':typeof value==='object'?JSON.stringify(value):String(value);
+        }))));
+        else body.append(el('p','Nenhum registro nesta camada de saída.','ea-empty-small'));
+        status.textContent=data.total?`${offset+1}–${offset+data.linhas.length} de ${data.total} registros. Todos os campos estão disponíveis; role a tabela horizontalmente.`:'0 registros. O pacote preserva a estrutura dos campos.';
+        previous.disabled=offset===0;next.disabled=offset+data.linhas.length>=data.total;
+      }catch(error){
+        if(version!==tableVersion||!body.isConnected)return;
+        status.textContent=error.message;body.replaceChildren();
+        const retry=el('button','Tentar novamente','ea-btn');retry.type='button';retry.onclick=load;body.append(retry);
+      }
+    }
+    select.onchange=()=>{offset=0;load();};
+    previous.onclick=()=>{offset=Math.max(0,offset-100);load();};next.onclick=()=>{offset+=100;load();};load();
+  }
   function summary() {
     const host=$("#ea-results-content"),dim=result.dimensao_input;
     for(const category of groups()) {
@@ -102,7 +135,11 @@ export function criarResultados() {
   }
   function render() {
     if(!result) return;
+    tableVersion++;
     $("#ea-results-content").replaceChildren();
+    const filters=result.modo!=='enriquecimento'&&view!=='attributes';
+    categorySelect.disabled=!filters;layerSelect.disabled=!filters;
+    if(view==='attributes'){outputTable();return;}
     if(result.modo==="enriquecimento"){enriquecimento();return;}
     if(!result.categorias.length) { $("#ea-results-content").append(el("p","Processamento concluído sem ocorrências de extração.","ea-empty-small")); return; }
     ({summary,statistics,attributes:extracted})[view]();
@@ -117,21 +154,45 @@ export function criarResultados() {
   }));
   const empty=$("#ea-results-content").innerHTML;
   function clear() {
-    result=null;$("#ea-results-content").innerHTML=empty;
+    tableVersion++;
+    result=null;view='summary';$("#ea-results-content").innerHTML=empty;
+    document.querySelectorAll('#ea-results [data-view]').forEach(button=>{
+      const selected=button.dataset.view===view;
+      button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));
+      button.hidden=button.dataset.view==='dictionary';
+    });
+    $('#ea-results [data-view="summary"]').textContent='Síntese por categoria';
     document.querySelectorAll("#ea-kpis article").forEach((artigo,index)=>{
       artigo.querySelector("span").textContent=KPIS.sobreposicao[index];
       artigo.querySelector("strong").textContent="—";
     });
     options(categorySelect,[],"Todas as categorias");options(layerSelect,[],"Todas as camadas");categorySelect.disabled=true;layerSelect.disabled=true;
     $("#ea-result-status").textContent="Aguardando processamento";
+    $('#ea-package-description').textContent='O conteúdo do pacote será informado após o processamento, conforme o algoritmo escolhido.';
+    $('#ea-pdf-processamento').hidden=$('#ea-pdf-analitico').hidden=true;
   }
   // Rótulo do 4º indicador: no enriquecimento não existe "parcela da entrada".
   const KPIS={sobreposicao:["Categorias analisadas","Camadas intersectadas","Ocorrências","Parcela da entrada atingida"],
     enriquecimento:["Camadas de saída","Bases com correspondência","Registros","Conferência"]};
   function set(value) {
-    result=value;options(categorySelect,result.categorias,"Todas as categorias");categorySelect.disabled=false;layerSelect.disabled=false;
+    view='summary';
+    document.querySelectorAll('#ea-results [data-view]').forEach(button=>{
+      button.classList.toggle('is-active',button.dataset.view===view);
+      button.setAttribute('aria-pressed',String(button.dataset.view===view));
+    });
+    result=value;options(categorySelect,result.categorias||[],"Todas as categorias");categorySelect.disabled=false;layerSelect.disabled=false;
     const summary=result.resumo||{};
     const enriquecimento=result.modo==="enriquecimento";
+    $('#ea-results [data-view="summary"]').textContent=enriquecimento?'Síntese e conferência':'Síntese por categoria';
+    $('#ea-results [data-view="statistics"]').hidden=enriquecimento;
+    $('#ea-results [data-view="dictionary"]').hidden=!enriquecimento;
+    $('#ea-package-description').textContent=enriquecimento
+      ?'GeoPackage, tabelas CSV e XLSX, dicionário de campos, configuração e conferência. Os recortes por finalidade são incluídos quando configurados. Este modo não gera relatórios PDF.'
+      :'GeoPackage com entrada e resultado, relatórios de processamento e analítico em PDF, tabela de atributos em XLSX e CSV.';
+    for(const tipo of ['processamento','analitico']){
+      const link=$(`#ea-pdf-${tipo}`);link.hidden=enriquecimento;
+      link.href=`${base}/extracao-atributos/execucoes/${encodeURIComponent(result.id)}/relatorios/${tipo}`;
+    }
     const aprovada=(result.validacao||result.relatorio_enriquecimento?.validacao||{}).aprovada;
     const numbers=enriquecimento
       ?[numero(Object.keys(result.camadas||{}).length,0),numero(summary.camadas_intersectadas,0),numero(summary.ocorrencias,0),

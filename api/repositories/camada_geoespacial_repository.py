@@ -370,6 +370,26 @@ def carregar_vetor(recurso_id: str) -> tuple[gpd.GeoDataFrame, dict[str, Any]] |
     return gdf, camada
 
 
+def atributos_paginados(recurso_id: str, offset: int = 0, limite: int = 100) -> dict[str, Any] | None:
+    """Tabela integral por páginas, sem carregar ou simplificar as geometrias."""
+    with get_connection() as conn:
+        found = _find_layer(conn, recurso_id)
+        if not found or found[1]['tipo'] != 'vetor':
+            return None
+        categoria, camada = found
+        tabela = sql.Identifier(STORAGES[categoria][1])
+        total = conn.execute(sql.SQL('SELECT count(*) AS total FROM geoprocessamento.{} WHERE camada_id=%s').format(tabela),
+                             (camada['id'],)).fetchone()['total']
+        campos = conn.execute(sql.SQL('SELECT DISTINCT jsonb_object_keys(propriedades) AS campo '
+                                     'FROM geoprocessamento.{} WHERE camada_id=%s ORDER BY campo').format(tabela),
+                              (camada['id'],)).fetchall()
+        rows = conn.execute(sql.SQL('SELECT propriedades FROM geoprocessamento.{} WHERE camada_id=%s '
+                                   'ORDER BY ordem LIMIT %s OFFSET %s').format(tabela),
+                            (camada['id'],limite,offset)).fetchall()
+    return {'campos':[r['campo'] for r in campos],'linhas':[r['propriedades'] for r in rows],
+            'total':total,'offset':offset,'limite':limite}
+
+
 def carregar_vetor_geojson(recurso_id: str) -> dict[str, Any] | None:
     """Monta o GeoJSON integral diretamente no PostGIS, sem alterar geometrias."""
     with get_connection() as conn:

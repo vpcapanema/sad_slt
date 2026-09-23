@@ -29,6 +29,23 @@ def caminho_arquivo(row):
     return str(valor).replace('\\', '/') if valor else None
 
 
+def camada_para_mapa(ident):
+    """A visualização usa a mesma camada integral do banco que a execução."""
+    item = repo.carregar_vetor(ident)
+    if item is None:
+        raise FileNotFoundError('Camada vetorial não encontrada no banco.')
+    frame, metadata = item
+    if frame.crs is None:
+        raise ValueError('A camada não informa seu CRS.')
+    if frame.empty:
+        raise ValueError('A camada não contém feições disponíveis para visualização.')
+    return {'id':ident,'nome':metadata['nome'],'origem_geometria':'banco',
+            'crs_arquivo':str(frame.crs),
+            'campos':[{'nome':name,'tipo':str(frame[name].dtype)} for name in frame.columns
+                      if name != frame.geometry.name],
+            'geojson':json.loads(frame.to_crs(4326).to_json(default=str))}
+
+
 def catalogo():
     with get_connection() as conn:
         categories = [dict(r) for r in conn.execute('''SELECT codigo AS id,nome,conceito
@@ -307,6 +324,23 @@ def consultar(ident, user, completo=False):
             if legado.is_file():
                 response['resultado'] = json.loads(legado.read_text(encoding='utf-8'))
     return response
+
+
+def tabela_resultado(ident, user, camada='resultado', offset=0, limite=100):
+    job = consultar(ident,user,completo=True)
+    resultado = job.get('resultado') or {}
+    if job['status'] != 'concluido':
+        raise LookupError('A tabela estará disponível quando o processamento terminar.')
+    if resultado.get('modo') == 'enriquecimento':
+        recurso = (resultado.get('camadas',{}).get(camada) or {}).get('camada_resultado_id')
+    else:
+        recurso = resultado.get('camada_resultado_id') if camada == 'resultado' else None
+    if not recurso:
+        raise LookupError('Camada de saída não encontrada nesta extração.')
+    tabela = repo.atributos_paginados(recurso,offset,limite)
+    if tabela is None:
+        raise LookupError('Tabela de saída não encontrada.')
+    return {'camada':camada,**tabela}
 
 
 def listar_execucoes(user, limite=50):

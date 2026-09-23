@@ -9,7 +9,7 @@ const ROTULO = {
   salvar: 'Salvar esta lista como configuração',
   editar: 'Editar a lista: adicionar ou remover camadas',
   carregar: 'Carregar arquivo de configuração',
-  limpar: 'Limpar tudo',
+  limpar: 'Limpar somente a lista pendente',
   cancelar: 'Cancelar as mudanças desta lista',
 };
 
@@ -29,11 +29,12 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     .map(category => ({ category, itens: state.staging.filter(item => item.category === category.id) }))
     .filter(grupo => grupo.itens.length);
   const categoriaAtiva = () => $('#ea-category-select').value || '';
+  const paraSalvar = () => [...state.bases,...state.staging];
 
   function marcar() {
     const total = state.staging.length;
     botoes.confirmar.disabled = state.busy || !total;
-    botoes.salvar.disabled = state.busy || !total;
+    botoes.salvar.disabled = state.busy || !paraSalvar().length;
     botoes.limpar.disabled = state.busy || !total;
     botoes.cancelar.disabled = state.busy || JSON.stringify(state.staging) === JSON.stringify(ancora);
     botoes.editar.disabled = state.busy || !state.staging.length;
@@ -44,8 +45,8 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
 
   function render() {
     const ativa = categoriaAtiva();
-    // A lista só existe depois que uma categoria é escolhida, ou enquanto houver itens.
-    secao.hidden = !ativa && !state.staging.length;
+    // A ação Carregar precisa estar disponível mesmo antes da primeira seleção.
+    secao.hidden = false;
     const grupos = agrupar();
     const atual = state.categories.find(item => item.id === ativa);
     // A categoria recém-escolhida já aparece, vazia, esperando as camadas.
@@ -117,7 +118,6 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     if (state.busy || !state.staging.length) return;
     const grupos = agrupar();
     const total = state.staging.length;
-    const semCaminho = state.staging.filter(item => !caminhoDe(item)).map(item => nomeArquivo(item));
     const confirmado = await confirmarExecucao({
       titulo: 'Confirmar as bases da análise',
       chamada: 'As bases confirmadas entram na análise e são desenhadas no mapa, agrupadas por categoria.',
@@ -126,9 +126,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       categorias: grupos.map(({ category, itens }) => ({
         nome: category.nome, camadas: itens.map(item => ({ nome: nomeArquivo(item) })),
       })),
-      nota: semCaminho.length
-        ? `${semCaminho.length} camada(s) sem caminho de arquivo registrado não poderão ser desenhadas: ${semCaminho.join(', ')}.`
-        : 'As camadas são lidas do storage e desenhadas no mapa, agrupadas pelo nome da categoria.',
+      nota: 'As camadas selecionadas são lidas do banco ou do storage e desenhadas por categoria.',
     });
     if (!confirmado) { feedback('Envio cancelado. A lista continua montada.'); return; }
 
@@ -169,14 +167,15 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
   });
 
   botoes.salvar.addEventListener('click', async () => {
-    if (state.busy || !state.staging.length) return;
+    if (state.busy || !paraSalvar().length) return;
     const nome = prompt('Nome da configuração:', '');
     if (nome === null) return;
     if (!nome.trim()) { feedback('Informe um nome para a configuração.'); return; }
     botoes.salvar.disabled = true;
     try {
       // A regra de cada base (modo enriquecimento) vai junto na configuração.
-      const grupos = agrupar().map(({ category, itens }) => ({
+      const grupos = state.categories.map(category=>({category,itens:paraSalvar().filter(item=>item.category===category.id)}))
+        .filter(grupo=>grupo.itens.length).map(({ category, itens }) => ({
         id: category.id, camadas: itens.map(item => item.id),
         regras: Object.fromEntries(itens.filter(item => item.regra).map(item => [item.id, item.regra])),
       }));
@@ -187,7 +186,8 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       ];
       const finalidades = (state.finalidades || []).map(f => ({ nome: f.nome, campos: [...f.campos] }));
       const resultado = await post('/extracao-atributos/configuracoes',
-        { nome: nome.trim(), categorias: grupos, entradas, finalidades });
+        { nome: nome.trim(), categorias: grupos, entradas, finalidades,
+          operacao:state.operation||'intersection',opcoes:state.opcoes,nome_saida:state.nomeSaida });
       feedback(`Configuração "${resultado.nome}" salva: ${resultado.camadas} camada(s) em ${resultado.categorias} categoria(s),`
         + ` ${resultado.entradas} entrada(s) e ${resultado.finalidades} finalidade(s).`
         + (resultado.camadas_ignoradas ? ` ${resultado.camadas_ignoradas} camada(s) do plugin não entram na configuração.` : ''));
@@ -206,45 +206,38 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       const escolha = await escolherConfiguracao(configuracoes, explorador ? pastaDados.pasta : '');
       if (!escolha) return;
       const dados = await json(`/extracao-atributos/configuracoes/${encodeURIComponent(escolha)}`);
-      // Carregar acrescenta à lista: o que já estava montado permanece.
+      if((state.input||state.bases.length||state.staging.length)&&!confirm('Substituir a configuração atual pela configuração salva? Nenhuma camada ou resultado será apagado do banco.'))return;
+      // Restaurar integralmente evita executar regras diferentes das que foram salvas.
       const vindas = dados.categorias.flatMap(grupo => grupo.camadas.map(camada => {
         const noCatalogo = state.catalog.find(l => l.id === camada.id);
         if (noCatalogo && camada.arquivo && !noCatalogo.arquivo) noCatalogo.arquivo = camada.arquivo;
         return { id: camada.id, category: grupo.id, arquivo: camada.arquivo || noCatalogo?.arquivo || '',
           ...(camada.regra ? { regra: camada.regra } : {}) };
       }));
-      const jaNaLista = [], jaNaBancada = [];
-      let incluidas = 0;
-      for (const item of vindas) {
-        if (state.bases.some(base => base.id === item.id)) { jaNaBancada.push(nomeArquivo(item)); continue; }
-        const presente = state.staging.find(outro => outro.id === item.id);
-        if (presente) {
-          if (presente.category !== item.category) jaNaLista.push(nomeArquivo(item));
-          continue;
-        }
-        state.staging.push(item);
-        incluidas++;
-      }
+      state.bases=[];state.staging=vindas;
+      state.input='';state.inputConfig=null;state.entradasExtras=[];
       // Entradas e finalidades vêm da configuração; a entrada principal é a primeira.
       const entradas = dados.entradas || [];
+      const idsEntrada=new Set(entradas.map(item=>item.id));
+      state.bases=state.bases.filter(item=>!idsEntrada.has(item.id));
+      state.staging=state.staging.filter(item=>!idsEntrada.has(item.id));
       if (entradas.length) {
         state.input = entradas[0].id;
         state.inputConfig = entradas[0].config || null;
         state.entradasExtras = entradas.slice(1).map(item => ({ id: item.id, config: item.config || null }));
       }
-      if (dados.finalidades?.length) state.finalidades = dados.finalidades.map(f => ({ nome: f.nome, campos: [...f.campos] }));
+      state.finalidades = (dados.finalidades||[]).map(f => ({ nome: f.nome, campos: [...f.campos] }));
+      state.operation=dados.operacao||'';$('#ea-operation').value=state.operation;
+      state.opcoes={...state.opcoes,...(dados.opcoes||{})};
+      state.nomeSaida=dados.nome_saida||'';$('#ea-nome-saida').value=state.nomeSaida;
       ancora = state.staging.map(item => ({ ...item }));
       render();
-      if (entradas.length || dados.finalidades?.length) {
-        window.SICARDExtracao?.renderEntradas?.();
-        window.SICARDExtracao?.renderFinalidades?.();
-        window.SICARDExtracao?.renderSelecao?.();
-      }
-      const partes = [`Configuração "${dados.nome}": ${incluidas} camada(s) acrescentada(s); a lista ficou com ${state.staging.length}.`];
+      window.SICARDExtracao?.renderParametros?.();
+      await changed();
+      const partes = [`Configuração "${dados.nome}": ${state.staging.length} base(s) restaurada(s). Use Confirmar bases para colocá-las na bancada.`];
       if (entradas.length) partes.push(`Entrada principal: ${entradas[0].nome}${entradas.length > 1 ? ` (+${entradas.length - 1} adicional(is))` : ''}.`);
       if (dados.finalidades?.length) partes.push(`${dados.finalidades.length} finalidade(s) restaurada(s).`);
-      if (jaNaLista.length) partes.push(`${jaNaLista.length} já estava(m) na lista em outra categoria e foi(ram) mantida(s) onde estava(m): ${jaNaLista.join(', ')}.`);
-      if (jaNaBancada.length) partes.push(`${jaNaBancada.length} já está(ão) na bancada: ${jaNaBancada.join(', ')}.`);
+      if(!dados.operacao)partes.push('Esta configuração antiga não guardava o algoritmo. Escolha o algoritmo e confira suas opções antes de executar.');
       if (dados.ausentes.length) partes.push(`${dados.ausentes.length} referência(s) não estão mais no catálogo: ${dados.ausentes.join(', ')}.`);
       feedback(partes.join(' '));
     } catch (error) {
