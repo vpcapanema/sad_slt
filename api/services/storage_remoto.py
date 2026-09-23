@@ -88,13 +88,14 @@ def _obter_token(cliente: httpx.Client, renovar: bool = False) -> str:
 
 
 def _pedir(cliente: httpx.Client, metodo: str, rota: str, **kwargs: Any) -> httpx.Response:
+    headers = dict(kwargs.pop("headers", {}))
     for tentativa in (0, 1):
         token = _obter_token(cliente, renovar=bool(tentativa))
         # Token recusado no meio do caminho: o corpo já foi lido e volta ao início.
         if tentativa and hasattr(kwargs.get("content"), "seek"):
             kwargs["content"].seek(0)
         try:
-            resposta = cliente.request(metodo, rota, headers={"Authorization": f"Bearer {token}"}, **kwargs)
+            resposta = cliente.request(metodo, rota, headers={**headers, "Authorization": f"Bearer {token}"}, **kwargs)
         except httpx.HTTPError as exc:
             raise StorageIndisponivel(f"Storage inacessível: {exc}") from exc
         if resposta.status_code != 401:

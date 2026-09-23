@@ -1,0 +1,6 @@
+{
+  "name": "SICARD",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "containerEnv": {"GIT_LFS_SKIP_SMUDGE": "1"},
+  "postStartCommand": "bash scripts/start-storage-codespace.sh"
+}

@@ -5,6 +5,9 @@ __pycache__/
 .pytest_cache/
 tmp/
 .env
+.deploy/*.local.*
+.devcontainer/
+data/storage/
 *.ppk
 *.pem
 node_modules/
