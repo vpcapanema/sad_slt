@@ -85,3 +85,15 @@ def test_configuracao_preserva_analise_completa(tmp_path,monkeypatch):
     assert saved['nome_saida']=='Resultado conferido' and saved['entradas'][0]['id']=='entrada'
     with pytest.raises(ValueError,match='também uma base'):
         config.salvar('Inválida',[{'id':'ambiental','camadas':['base']}],None,entradas=[{'id':'base'}])
+
+
+def test_visualizacao_municipal_usa_arquivo_materializado(monkeypatch):
+    from api.services import municipal_layer
+    vazio=gpd.GeoDataFrame(geometry=[],crs=4674)
+    materializado=gpd.GeoDataFrame({'CD_MUN':['3550308']},geometry=[Point(-46.6,-23.5)],crs=4674)
+    monkeypatch.setattr(service.repo,'carregar_vetor',lambda ident:(vazio,{'nome':'Municipal','metadados':{'origem':'municipal-layer'}}))
+    calls=[]
+    monkeypatch.setattr(municipal_layer,'carregar_para_extracao',lambda ident:calls.append(ident) or materializado)
+    result=service.camada_para_mapa('municipal_exata')
+    assert calls==['municipal_exata']
+    assert result['geojson']['features'][0]['properties']['CD_MUN']=='3550308'

@@ -14,7 +14,7 @@ export async function abrirGeradorMunicipal(category,onGenerated){
       if(!result?.arquivo)throw new Error('O gerador não retornou o arquivo salvo.');
       const [layer,catalog]=await Promise.all([post('/extracao-atributos/arquivo-mapa',{arquivo:result.arquivo}),json('/extracao-atributos/catalogo')]);
       onGenerated(layer,catalog);
-      feedback(`Camada municipal salva e adicionada à categoria ${category.nome}.`);
+      feedback(`Camada municipal salva na lista da categoria ${category.nome}. Use Confirmar bases para incluí-la na análise.`);
     }});
   }catch(error){bundle=null;feedback(`Não foi possível abrir o gerador: ${error.message}`);}
 }

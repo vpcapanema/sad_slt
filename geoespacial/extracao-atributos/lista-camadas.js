@@ -6,7 +6,7 @@ import { confirmarExecucao, acompanharExecucao } from './processo.js';
 
 const ROTULO = {
   confirmar: 'Confirmar as bases da análise (também desenha no mapa)',
-  salvar: 'Salvar esta lista como configuração',
+  salvar: 'Salvar entradas, bases, regras e algoritmo como configuração',
   editar: 'Editar a lista: adicionar ou remover camadas',
   carregar: 'Carregar arquivo de configuração',
   limpar: 'Limpar somente a lista pendente',

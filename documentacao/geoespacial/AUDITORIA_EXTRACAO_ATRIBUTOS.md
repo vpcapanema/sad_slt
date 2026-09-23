@@ -83,3 +83,22 @@ integralmente: esta correção não introduz simplificação nem amostragem sile
 Configurações legadas não contêm algoritmo/opções que nunca foram gravados; é necessário
 conferir esses parâmetros ao reutilizá-las. A tabela é paginada por registros; camadas
 com muitos campos exigem rolagem horizontal dentro da tabela.
+
+## Ajuste de navegação para o gerador municipal
+
+O acesso ao plugin estava oculto até escolher uma categoria e usava apenas um
+ícone de cidade. Agora **Gerar camada de municípios** permanece visível em
+**1.2 · Camadas base**, com descrição e destaque. Sem categoria selecionada,
+um diálogo permite escolher o destino antes de abrir o componente existente.
+A camada produzida entra na lista pendente e segue o mesmo botão **Confirmar bases**
+das outras camadas. O banco continua registrando a procedência; as feições municipais
+são lidas do arquivo materializado também ao reabrir a camada pelo ID.
+
+Selecionar e enviar camadas têm rótulos visíveis. Cadastrar categoria fica junto ao
+seletor de categoria; salvar/carregar configuração ficam no início da configuração
+geral; recuperar análise e consultar o histórico ficam em Resultados.
+
+Verificação: teste Chromium passou a conferir a visibilidade do acesso antes de
+escolher categoria, em 390 e 1440 px, e a abertura do componente React real com
+o destino correto (API interceptada no teste). Sete testes de contratos passaram,
+incluindo a leitura de uma camada municipal cujo registro não contém feições no banco.

@@ -35,11 +35,15 @@ def camada_para_mapa(ident):
     if item is None:
         raise FileNotFoundError('Camada vetorial não encontrada no banco.')
     frame, metadata = item
+    if (metadata.get('metadados') or {}).get('origem') == 'municipal-layer':
+        from api.services.municipal_layer import carregar_para_extracao
+        frame = carregar_para_extracao(ident)
     if frame.crs is None:
         raise ValueError('A camada não informa seu CRS.')
     if frame.empty:
         raise ValueError('A camada não contém feições disponíveis para visualização.')
-    return {'id':ident,'nome':metadata['nome'],'origem_geometria':'banco',
+    return {'id':ident,'nome':metadata['nome'],
+            'origem_geometria':'arquivo' if (metadata.get('metadados') or {}).get('origem') == 'municipal-layer' else 'banco',
             'crs_arquivo':str(frame.crs),
             'campos':[{'nome':name,'tipo':str(frame[name].dtype)} for name in frame.columns
                       if name != frame.geometry.name],

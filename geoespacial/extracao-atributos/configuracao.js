@@ -10,8 +10,6 @@ export function criarConfiguracao(state, changed) {
     document.querySelectorAll("[data-alternative-for]").forEach(node=>{
       node.hidden=Boolean(document.getElementById(node.dataset.alternativeFor).value);
     });
-    // Some junto com a alternativa de cadastro: as duas dividem a mesma coluna.
-    $('#ea-municipal-open').hidden=!$('#ea-category-select').value;
     lista.render();
   }
   // Escolher a categoria precisa revelar a lista de montagem na hora.
@@ -79,16 +77,36 @@ export function criarConfiguracao(state, changed) {
     }
   }
   $("#ea-base-form").addEventListener("submit",event=>event.preventDefault());
-  $('#ea-municipal-open').addEventListener('click',()=>{
+  function escolherCategoriaMunicipal(){
+    return new Promise(resolve=>{
+      const dialog=el('dialog',undefined,'ea-tool-dialog');dialog.setAttribute('aria-labelledby','ea-municipal-category-title');
+      const title=el('h2','Categoria da camada municipal');title.id='ea-municipal-category-title';
+      const field=el('label',undefined,'ea-field'),select=el('select');
+      field.append(el('span','Em qual categoria a camada será usada?'),select);
+      options(select,state.categories,'Selecione uma categoria');select.required=true;
+      const form=el('form'),actions=el('div',undefined,'ea-config-tools');
+      const cancel=el('button','Cancelar','ea-btn'),open=el('button','Abrir gerador de municípios','ea-btn ea-btn-primary');
+      cancel.type='button';open.type='submit';actions.append(cancel,open);form.append(field,actions);
+      const finish=value=>{dialog.close();dialog.remove();resolve(value);};
+      cancel.onclick=()=>finish(null);dialog.addEventListener('cancel',e=>{e.preventDefault();finish(null);});
+      form.onsubmit=e=>{e.preventDefault();finish(state.categories.find(c=>c.id===select.value));};
+      dialog.append(title,form);document.body.append(dialog);dialog.showModal();select.focus();
+    });
+  }
+  $('#ea-municipal-open').addEventListener('click',async()=>{
     if(state.busy)return;
-    const category=state.categories.find(item=>item.id===$('#ea-category-select').value);
-    if(!category)return;
+    if(!state.categories.length){feedback('As categorias ainda não estão disponíveis. Use Atualizar camadas e categorias e tente novamente.');return;}
+    const category=state.categories.find(item=>item.id===$('#ea-category-select').value)||await escolherCategoriaMunicipal();
+    if(!category||state.busy)return;
+    $('#ea-category-select').value=category.id;
+    render();
     abrirGeradorMunicipal(category,(layer,catalog)=>{
       const existing=state.catalog.find(item=>item.id===layer.id);
       if(existing)Object.assign(existing,layer);
       else state.catalog.push({...catalog.camadas.find(item=>item.id===layer.id),...layer});
-      if(!state.bases.some(item=>item.id===layer.id))state.bases.push({id:layer.id,category:category.id});
-      state.lastBase=layer;changed();
+      lista.adicionar([layer.id],category.id);
+      state.lastBase=layer;render();
+      $('#ea-staging').scrollIntoView({behavior:'smooth',block:'center'});
     });
   });
   async function browse(target,categoriaAlvo){

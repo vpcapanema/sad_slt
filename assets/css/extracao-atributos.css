@@ -483,3 +483,15 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
   .ea-base-confirmada { flex-wrap:wrap; }
   .ea-regra-corpo { grid-template-columns:minmax(0,1fr); }
 }
+
+/* Ações nomeadas, junto ao objeto sobre o qual atuam. */
+.ea-config-tools { display:flex; flex-wrap:wrap; align-items:center; gap:.6rem; margin-bottom:1rem; }
+.ea-config-tools > strong { margin-right:auto; font-size:.85rem; }
+.ea-layer-actions { display:flex; flex-direction:column; gap:.5rem; }
+#ea-config .ea-btn.ea-layer-action { width:100%; height:auto; min-height:40px; padding:.6rem .75rem; justify-content:flex-start; gap:.55rem; white-space:normal; text-align:left; line-height:1.4; }
+#ea-config .ea-btn[hidden] { display:none; }
+#ea-config .ea-config-grid-3 #ea-category-select { max-width:100%; }
+.ea-category-link { display:inline-block; margin-top:.3rem; font-size:.75rem; }
+.ea-municipal-entry { padding:.7rem; background:#eef6fa; border:1px solid #bfd8e8; border-radius:6px; }
+#ea-config .ea-municipal-entry .ea-hint { margin-top:.5rem; }
+@media(max-width:650px) { .ea-config-tools > strong { flex-basis:100%; } }
