@@ -52,12 +52,25 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
   const adicionar=(ids,category)=>editor.adicionar(ids,category);
 
   botoes.confirmar.addEventListener('click',async()=>{
-    if(state.busy||state.uploading||state.loadingMap)return;
-    const total=enviarPrevia(state);editando=false;state.undoPrevia=null;render();
+    if(state.busy||state.uploading||state.loadingMap||state.validatingBases)return;
+    const candidata={...state};
+    const total=enviarPrevia(candidata);
+    if(!total)return;
+    window.SICARDExtracao.ocupar(true);
+    feedback('Conferindo e compatibilizando espacialmente as camadas…');
     try{
+      const camadas=[
+        ...candidata.bancadaEntradas.map(e=>({id:e.id,nome:e.layer.nome,papel:'entrada',arquivo_local:e.layer.arquivo_local})),
+        ...candidata.bancadaBases.map(b=>({id:b.id,nome:b.layer.nome,papel:'base',arquivo_local:b.layer.arquivo_local,regra:b.regra})),
+      ];
+      const resultado=await post('/extracao-atributos/compatibilizar',{camadas,operacao:state.operation||null});
+      if(resultado.compativel!==true)throw new Error((resultado.erros||[]).map(e=>`${e.nome}: ${e.motivo}`).join('; ')||'A compatibilização não foi concluída.');
+      Object.assign(state,{bancadaEntradas:candidata.bancadaEntradas,bancadaBases:candidata.bancadaBases,bases:candidata.bases,staging:candidata.staging});
+      editando=false;state.undoPrevia=null;render();
       const falhas=await changed();
-      if(!falhas?.length)window.SLTFeedback.success(`${total} camada(s) enviada(s) à bancada. Camadas inválidas ou incompatíveis permanecem apenas na prévia.`);
-    }catch(error){window.SLTFeedback.error(`Não foi possível atualizar a bancada: ${error.message}`);}
+      if(!falhas?.length)window.SLTFeedback.success(`${total} camada(s) enviada(s) à bancada. Compatibilidade espacial conferida; originais preservados.`);
+    }catch(error){window.SLTFeedback.error(`Não foi possível enviar à bancada: ${error.message}`);}
+    finally{window.SICARDExtracao.ocupar(false);render();}
   });
   botoes.limpar.addEventListener('click',()=>{
     if(state.busy)return;guardarPrevia(state);state.input='';state.inputConfig=null;state.entradasExtras=[];state.staging=[];state.bases=[];state.previaLocal=null;editando=false;render();changed();

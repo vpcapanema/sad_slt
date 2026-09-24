@@ -2,8 +2,9 @@
 
 ## Deploy: caminho único
 
-Publicar em produção é **sempre** o script, nunca comandos soltos de git, ssh,
-docker ou rsync:
+Publicar em produção usa o script correspondente ao ambiente. No Codespace,
+revise e prepare o índice e execute `bash scripts/deploy-codespace.sh "descricao"`.
+No Windows:
 
 ```powershell
 .\scripts\deploy-vm.ps1 -Mensagem "descricao da alteracao"

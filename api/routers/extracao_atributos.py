@@ -94,6 +94,42 @@ class Categoria(BaseModel):
         return self
 
 
+class CamadaCompatibilizacao(BaseModel):
+    id: str = Field(min_length=1, max_length=1200)
+    nome: str = Field(default='', max_length=200)
+    papel: Literal['entrada', 'base']
+    arquivo_local: ArquivoLocal | None = None
+    regra: RegraBase | None = None
+
+    @model_validator(mode='after')
+    def origem(self):
+        if self.id.startswith('local:') != bool(self.arquivo_local):
+            raise ValueError('Uma camada local exige o arquivo original em memória.')
+        return self
+
+
+class Compatibilizacao(BaseModel):
+    camadas: list[CamadaCompatibilizacao] = Field(min_length=1, max_length=1510)
+    operacao: Literal['enriquecimento', 'estatisticas'] | None = None
+
+    @model_validator(mode='after')
+    def unicas(self):
+        if len({c.id for c in self.camadas}) != len(self.camadas):
+            raise ValueError('Uma camada não pode aparecer duas vezes no conjunto.')
+        if sum(c.papel == 'entrada' for c in self.camadas) > 10:
+            raise ValueError('Prepare até dez entradas por análise.')
+        return self
+
+
+@router.post('/compatibilizar')
+def compatibilizar(payload: Compatibilizacao):
+    from api.services.compatibilidade_espacial import conferir
+    try:
+        return conferir([c.model_dump() for c in payload.camadas], payload.operacao)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
 class NovaPasta(BaseModel):
     caminho: str = Field(min_length=1,max_length=1000)
     nome: str = Field(min_length=1,max_length=120)

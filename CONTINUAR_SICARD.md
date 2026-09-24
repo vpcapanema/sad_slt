@@ -1,3 +1,9 @@
+> Referência operacional vigente: README.md, seções Codespace e deploy.
+> Os registros abaixo são históricos. A porta atual é 8083, o interpretador
+> pode ser selecionado por SICARD_PYTHON e a disponibilidade do runtime/FUSE
+> precisa ser verificada na sessão. Não reinstalar componentes apenas com base
+> em um registro histórico, nem sobrescrever o .env existente.
+
 # Continuidade SICARD — 22/09/2026
 
 > Estado atualizado em 23/09/2026: a ponte Windows foi aberta, o acesso SSH

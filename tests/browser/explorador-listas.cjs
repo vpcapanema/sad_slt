@@ -10,6 +10,7 @@ await p.route('**/api/**',async r=>{
  if(path.endsWith('/catalogo'))return send({categorias:[{id:'risco',nome:'Risco'}],camadas:[{id:'base',nome:'Base'}]});
  if(path.endsWith('/storage/navegar')){browse.push(u.searchParams.get('detalhar'));return send({caminho:'base-geoespacial',pastas:[],arquivos:[{id:'storage:base-geoespacial/duas.gpkg',nome:'duas',arquivo:'base-geoespacial/duas.gpkg',inventariar:true}]});}
  if(path.endsWith('/storage/camadas-arquivo')){inventory.push(u.searchParams.get('arquivo'));return send({camadas:layers});}
+ if(path.endsWith('/compatibilizar'))return send({compativel:true,camadas:[],erros:[]});
  if(path.endsWith('/arquivo-mapa')){const {id}=r.request().postDataJSON();reads.push(id);return send({...layers.find(l=>l.id===id),id,geojson:fc});}
  if(path.endsWith('/configuracoes'))return send({pasta:'data/geoespacial/configuracoes/extracao-atributos',configuracoes:[{chave:'risco',nome:'Risco',arquivo:'risco.json',escopo:'analise',lista_legada:true,camadas:1,categorias:1,bytes:900}]});
  if(path.endsWith('/configuracoes/risco'))return send({nome:'Risco',escopo:'analise',categorias:[{id:'risco',camadas:[{id:'base',nome:'Base'}]}],entradas:[{id:'nao-restaurar'}],operacao:'enriquecimento',nome_saida:'Não substituir',ausentes:[]});

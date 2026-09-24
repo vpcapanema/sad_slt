@@ -26,6 +26,7 @@ await p.route('**/api/**',async r=>{
  if(path.includes('/auth/'))return send({authenticated:true,id:'ui-test',nome:'Teste local',username:'UI_ADMIN',tipo_usuario:'ADMIN'});
  if(path.endsWith('/storage/navegar'))return send({pastas:[],arquivos:[]});
  if((path.endsWith('/extracao-atributos/catalogo')||path.endsWith('/municipal/categorias')))return send(catalog);
+ if(path.endsWith('/compatibilizar'))return send({compativel:true,camadas:[],erros:[]});
  if(path.endsWith('/arquivo-mapa')){const body=r.request().postDataJSON();return send({...catalog.camadas.find(c=>c.id===body.id),geojson:fc,campos:[{nome:'nome'},{nome:'id'},{nome:'campo_de_outro_registro'}]});}
  if(path.endsWith('/configuracoes')&&method==='POST'){saved=r.request().postDataJSON();return send({nome:saved.nome,camadas:1,categorias:1,entradas:saved.entradas.length,finalidades:0});}
  if(path.endsWith('/configuracoes')&&method==='GET')return send({configuracoes:[{chave:'teste',nome:saved.nome,escopo:saved.escopo,camadas:1,categorias:1}]});

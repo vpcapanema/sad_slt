@@ -1,6 +1,6 @@
 # PowerShell compartilhado entre VS Code e Windows
 
-PowerShell e tmux estão instalados no Codespace. O perfil Linux padrão do VS Code
+O ambiente preparado usa PowerShell e tmux no Codespace. Verifique a disponibilidade com `command -v pwsh tmux`; a configuração versionada não garante que estejam acessíveis em toda sessão. O perfil Linux padrão do VS Code
 é **Host do agente — PowerShell compartilhado**. A tarefa de mesmo nome abre na
 entrada da pasta (`runOn: folderOpen`); o VS Code pode pedir para permitir tarefas
 automáticas. Também pode ser iniciada por **Terminal: Run Task**.

@@ -46,3 +46,12 @@ Em 23/09/2026 foram executadas consultas reais a partir do Codespace, com
 20 linhas em `sigma_pli_qr53.usuarios.usuario`. O registro sem credenciais fica
 em `.deploy/database-validation.local.json`. Nenhuma escrita no banco foi
 realizada na validacao. O banco e compartilhado com producao.
+
+## Inicialização corrente
+
+`start-dev-codespace.sh` chama o supervisor com `--background`, que exige
+`tmux`, além de Plink e da chave privada local. O modo foreground continua
+útil para diagnóstico. Confira `command -v tmux plink` antes de usar o fluxo.
+O servidor usa 8083; os túneis 10022 e 15433 não são portas de navegação.
+Relatórios datados acima são evidências históricas, não prova da conexão atual.
+Procedimentos completos de desenvolvimento e deploy estão no README.

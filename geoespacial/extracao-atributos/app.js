@@ -407,7 +407,7 @@ window.addEventListener('extracao:integracao',async()=>{
   }catch(error){feedback(`Não foi possível carregar o catálogo: ${error.message}`,'error');}
   abrirExtracaoDaUrl();
 });
-window.SICARDExtracao={atualizarControles:controls,conectar:conectarIntegracao,renderParametros,renderSelecao,renderFinalidades,changed};
+window.SICARDExtracao={ocupar:busy,atualizarControles:controls,conectar:conectarIntegracao,renderParametros,renderSelecao,renderFinalidades,changed};
 renderParametros();
 changed();
 conectarIntegracao(adaptador);

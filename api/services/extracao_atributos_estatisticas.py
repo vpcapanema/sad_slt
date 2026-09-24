@@ -57,7 +57,8 @@ def agregar(valores, estatistica):
 def _geometrias_trabalho(frame, nome):
     if frame.crs is None:
         raise ValueError(f'{nome}: a camada não tem sistema de referência (CRS).')
-    geoms = frame.to_crs(CRS_MEDIDA).geometry.reset_index(drop=True)
+    from api.services.compatibilidade_espacial import normalizar_crs
+    geoms = normalizar_crs(frame, nome, CRS_MEDIDA).geometry.reset_index(drop=True)
     invalidas = pd.Series([g is not None for g in geoms], dtype=bool) & ~geoms.is_valid
     geoms.loc[invalidas] = geoms.loc[invalidas].make_valid()
     return geoms, {'feicoes': len(frame), 'corrigidas_para_consulta': int(invalidas.sum()),

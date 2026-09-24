@@ -5,6 +5,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
 const b=await chromium.launch({headless:true,args:['--no-sandbox','--no-proxy-server','--enable-unsafe-swiftshader']});
 const p=await b.newPage({viewport:{width:1440,height:1000}});const errors=[],requests=[];let falharTabela=false,saved,polls=0,municipalCatalog=0,municipalPayload;
 p.on('pageerror',e=>errors.push(e.message));
+await p.addLocatorHandler(p.locator('.slt-fb-processes [data-fb-close]').first(),async()=>{await p.locator('.slt-fb-processes [data-fb-close]').first().click();});
 await p.addLocatorHandler(p.locator('.slt-fb-modal--info'),async()=>{await p.evaluate(()=>window.SLTFeedback.fechar());});await p.addLocatorHandler(p.locator('.slt-fb-modal').filter({hasText:'Bancada de geoprocessamento'}).filter({has:p.locator('[data-fb-close]')}),async()=>{if(await p.locator('#slt-feedback-backdrop[data-processando="true"]').count()===0)await p.locator('.slt-fb-foot [data-fb-close]').click();});
 p.on('dialog',d=>d.accept(d.type()==='prompt'?'Configuração teste':undefined));
 const fc={type:'FeatureCollection',features:[{type:'Feature',properties:{nome:'Teste',id:1},geometry:{type:'Point',coordinates:[-47,-23]}}]};
@@ -26,6 +27,7 @@ await p.route('**/api/**',async r=>{
  if(path.includes('/auth/'))return send({authenticated:true,id:'ui-test',nome:'Teste local',username:'UI_ADMIN',tipo_usuario:'ADMIN'});
  if(path.endsWith('/storage/navegar'))return send({pastas:[],arquivos:[]});
  if((path.endsWith('/extracao-atributos/catalogo')||path.endsWith('/municipal/categorias')))return send(catalog);
+ if(path.endsWith('/compatibilizar'))return send({compativel:true,camadas:[],erros:[]});
  if(path.endsWith('/arquivo-mapa')){const body=r.request().postDataJSON();return send({...catalog.camadas.find(c=>c.id===body.id),geojson:fc,campos:[{nome:'nome'},{nome:'id'},{nome:'campo_de_outro_registro'}]});}
  if(path.endsWith('/configuracoes')&&method==='POST'){saved=r.request().postDataJSON();return send({nome:saved.nome,camadas:1,categorias:1,entradas:saved.entradas.length,finalidades:0});}
  if(path.endsWith('/configuracoes')&&method==='GET')return send({configuracoes:[{chave:'teste',nome:saved.nome,camadas:1,categorias:1}]});
@@ -74,8 +76,10 @@ assert.equal(await p.locator('.ea-config-tools #ea-config-carregar').count(),1);
 
 async function choose(button,id){await p.locator(button).click();const d=p.locator('dialog.ea-storage-dialog');await d.getByRole('button',{name:'Camadas cadastradas no banco',exact:true}).click();await d.locator(`[data-file="${id}"]`).click();await d.locator('.ea-storage-confirm-button').click();await d.waitFor({state:'detached'});}
 await choose('#ea-input-browse','entrada');await p.selectOption('#ea-operation','enriquecimento');await choose('#ea-base-browse','base');
-await p.locator('#ea-staging-confirmar').click();await p.locator('#slt-feedback-backdrop').getByRole('button',{name:'Confirmar bases',exact:true}).click();
-await p.locator('#slt-feedback-backdrop').getByRole('button',{name:'OK',exact:true}).click();
+await p.locator('#ea-base-list-confirmar').click();
+await p.waitForFunction(()=>document.querySelectorAll('#ea-input-preview-layers .ea-preview-layer').length===2);
+await p.locator('#ea-staging-confirmar').click();
+await p.waitForFunction(()=>!document.querySelector('#ea-staging-confirmar').disabled);
 assert.equal(await p.locator('#ea-config-salvar').isEnabled(),true);
 await p.locator('#ea-bases-confirmadas').getByRole('button',{name:/Regra:/}).click();
 assert.equal(await p.locator('.ea-regra-grupo').isVisible(),false,'Chaves ocultas para ligação espacial');
@@ -104,14 +108,16 @@ await p.locator('dialog').getByRole('button',{name:'Aplicar',exact:true}).click(
 await p.setViewportSize({width:1440,height:1000});
 await p.locator('#ea-input-browse').click();const d=p.locator('dialog.ea-storage-dialog');await d.getByRole('button',{name:'Camadas cadastradas no banco',exact:true}).click();assert.equal(await d.locator('[data-file="base"]').isDisabled(),true);await d.locator('[data-file="entrada"]').click();await d.locator('[data-file="adicional"]').click();await d.locator('.ea-storage-confirm-button').click();await d.waitFor({state:'detached'});
 await p.fill('#ea-nome-saida','Resultado conferido');await p.locator('#ea-config-salvar').click();await p.locator('[data-fb-input]').waitFor();await p.locator('[data-fb-input]').fill('Configuração teste');await p.locator('[data-fb-confirmar]').click();await p.waitForTimeout(200);assert.equal(saved.operacao,'enriquecimento');assert.equal(saved.nome_saida,'Resultado conferido');assert.equal(saved.entradas.length,2);assert.equal(saved.categorias[0].camadas[0],'base');assert.equal(saved.categorias[0].regras.base.estatistica,'mediana');assert.equal(saved.categorias[0].regras.base.estatisticas_campos.nome,'moda');
-await p.locator('#ea-run').click();await p.locator('#slt-feedback-backdrop').getByRole('button',{name:'Executar extração',exact:true}).click();await p.locator('#slt-feedback-backdrop').getByRole('button',{name:'OK',exact:true}).click();
+await p.locator('#ea-staging-confirmar').click();await p.waitForFunction(()=>!document.querySelector('#ea-run').disabled);
+await p.locator('#ea-run').click();await p.locator('[data-fb-confirmar]').click();await p.waitForFunction(()=>!document.querySelector('#ea-export').disabled);
 assert.equal(requests.length,1);assert.equal(requests[0].entradas.length,2);assert.equal(await p.locator('#ea-export').isEnabled(),true);
 await p.locator('#ea-results [data-view="attributes"]').click();await p.getByText('1–100 de 101 registros.',{exact:false}).waitFor();assert.equal(await p.locator('#ea-results-content tbody tr').count(),100);await p.locator('#ea-results-content').getByRole('button',{name:'Próxima'}).click();await p.getByText('101–101 de 101 registros.',{exact:false}).waitFor();
-falharTabela=true;await p.locator('#ea-results-content').getByRole('button',{name:'Anterior'}).click();await p.locator('.slt-fb-modal--error').waitFor();assert.match(await p.locator('.slt-fb-results').textContent(),/Tabela temporariamente/);await p.locator('.slt-fb-foot [data-fb-close]').click();falharTabela=false;await p.locator('#ea-results-content').getByRole('button',{name:'Tentar novamente'}).click();await p.getByText('1–100 de 101 registros.',{exact:false}).waitFor();
+falharTabela=true;await p.locator('#ea-results-content').getByRole('button',{name:'Anterior'}).click();await p.getByText('Tabela temporariamente',{exact:false}).waitFor();falharTabela=false;await p.locator('#ea-results-content').getByRole('button',{name:'Tentar novamente'}).click();await p.getByText('1–100 de 101 registros.',{exact:false}).waitFor();
 assert.equal(await p.locator('#ea-results [data-view="dictionary"]').isVisible(),true);assert.equal(await p.locator('#ea-results [data-view="statistics"]').isVisible(),false);
 const download=p.waitForEvent('download');await p.locator('#ea-export').click();assert.equal((await download).suggestedFilename(),'resultado.zip');
 await p.selectOption('#ea-operation','estatisticas');
-await p.locator('#ea-run').click();await p.locator('#slt-feedback-backdrop').getByRole('button',{name:'Executar extração',exact:true}).click();await p.locator('#slt-feedback-backdrop').getByRole('button',{name:'OK',exact:true}).click();
+await p.locator('#ea-staging-confirmar').click();await p.waitForFunction(()=>!document.querySelector('#ea-run').disabled);
+await p.locator('#ea-run').click();await p.locator('[data-fb-confirmar]').click();await p.waitForFunction(()=>!document.querySelector('#ea-export').disabled);
 assert.equal(requests.length,2);assert.equal(requests[1].operacao,'estatisticas');
 assert.equal(requests[1].categorias[0].regras.base.estatistica,'mediana');
 assert.equal(requests[1].categorias[0].regras.base.estatisticas_campos.nome,'moda');
@@ -122,11 +128,12 @@ await p.evaluate(async()=>{const r=await import('/restrict/geoespacial/extracao-
 assert.equal(await p.locator('dialog select[name=estatistica]').count(),0);
 assert.match(await p.locator('dialog').textContent(),/Sim.*Não/);
 await p.locator('dialog').getByRole('button',{name:'Cancelar',exact:true}).click();
-await choose('#ea-input-browse','entrada');assert.equal(await p.locator('#ea-export').isDisabled(),true);
+await choose('#ea-input-browse','entrada');assert.equal(await p.locator('#ea-export').isEnabled(),true,'Editar a prévia preserva o resultado da composição confirmada');
+await p.locator('#ea-staging-confirmar').click();await p.waitForFunction(()=>document.querySelector('#ea-export').disabled);
 await p.locator('#ea-config-carregar').click();await p.locator('dialog .ea-config-entry').click();await p.locator('dialog').getByRole('button',{name:'Carregar',exact:true}).click();
 await p.locator('[data-fb-confirmar]').click();
 await p.waitForFunction(()=>document.querySelector('#ea-input-info').textContent.includes('adicional'));
-assert.equal(await p.locator('#ea-bases-confirmadas').isVisible(),true);
+assert.equal(await p.locator('#ea-base-list-card').isVisible(),true);
 assert.equal(await p.locator('#ea-operation').inputValue(),'estatisticas');assert.equal(await p.locator('#ea-nome-saida').inputValue(),'Resultado conferido');
 const apiChecks=await p.evaluate(async()=>{
  const api=await import('/restrict/geoespacial/extracao-atributos/api.js');
@@ -143,7 +150,6 @@ await p.getByRole('checkbox',{name:'Indicador de teste',exact:true}).check();
 await p.getByRole('button',{name:'Gerar camada',exact:true}).click();
 await p.locator('[data-fb-confirmar]').click();
 await p.locator('#territorial-result:not([hidden])').waitFor();assert.deepEqual(municipalPayload.attributes,['teste']);
-await p.locator('#slt-feedback-backdrop').getByRole('button',{name:'OK',exact:true}).click();
 const layerDownload=p.waitForEvent('download');await p.locator('#territorial-download').click();
 assert.equal((await layerDownload).suggestedFilename(),'municipios_sp_fgb.zip');
 await p.locator('#territorial-use').click();await p.waitForURL('**/extracao-atributos/**');

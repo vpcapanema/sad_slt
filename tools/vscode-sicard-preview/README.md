@@ -9,6 +9,6 @@ Extensão local do workspace para abrir templates Jinja renderizados pelo FastAP
 3. Clique com o botão direito no editor ou no Explorer.
 4. Escolha **SICARD: iniciar e abrir página atual**.
 
-A extensão reaproveita o servidor se `http://127.0.0.1:8080/api/health` já estiver respondendo. Caso contrário, executa a tarefa `SICARD: Iniciar ambiente de desenvolvimento`, espera o healthcheck e abre a rota local correspondente ao template.
+A extensão usa `sicardPreview.baseUrl`: neste workspace, `http://127.0.0.1:8083`; o padrão da extensão para outros ambientes permanece 8080. Reaproveita o servidor se `/api/health` responder. Caso contrário, executa a tarefa `SICARD: Iniciar ambiente de desenvolvimento`, espera o healthcheck e abre a rota local correspondente ao template.
 
 Templates-base e componentes não possuem rota própria e, por isso, não podem ser abertos isoladamente.

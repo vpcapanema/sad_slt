@@ -26,38 +26,69 @@ O backend é organizado em:
 | SQL e persistência | `api/repositories/` |
 | Conexões | `api/db/` |
 
-## Executar em desenvolvimento
+## Executar em desenvolvimento no Codespace
 
-Na raiz do repositório:
+O Codespace executa o código local; GitHub guarda o código publicado; a VM
+executa produção. Desenvolvimento usa o **mesmo banco oficial da produção**.
+Não iniciar o banco de contingência para substituir essa conexão.
 
-```powershell
-.\scripts\start-dev.ps1
+1. Preserve o `.env` privado existente. `.env.example` é somente um modelo;
+   não o copie sobre uma configuração funcional.
+2. Confira o Python configurado em `.vscode/settings.json`:
+   `/home/codespace/.venvs/sicard-app/bin/python`. Ele precisa das dependências
+   de `requirements.txt`, com os bindings GDAL compatíveis com a biblioteca
+   nativa. Um interpretador já preparado pode ser indicado por `SICARD_PYTHON`.
+3. Mantenha a ponte Windows → Codespace ativa e confira o túnel do banco,
+   conforme [Banco no Codespace](documentacao/BANCO_CODESPACE.md).
+4. Confira o storage remoto conforme
+   [Storage no Codespace](documentacao/STORAGE_CODESPACE.md).
+5. Na raiz do repositório, execute:
+
+```bash
+bash scripts/start-dev-codespace.sh
 ```
 
-`start-dev.ps1` valida o `slt_db` em `56.125.163.194:5433`, confere as migrations,
-inicia a API e valida as integrações. O Docker local não é iniciado. O comando
-`apply-database.ps1` permanece disponível para manutenção do schema remoto.
+O script lê `.env`, inicia/reutiliza o supervisor do túnel, verifica o banco
+com `SELECT 1` e inicia FastAPI em `127.0.0.1:8083`. No VS Code, a tarefa
+**SICARD: Iniciar ambiente de desenvolvimento** executa esse mesmo script.
+Na aba **Ports**, abra a porta **8083**, mantida privada, e navegue para
+`/restrict/geoespacial/extracao-atributos/`.
 
-Para validar todo o ambiente e encerrá-lo sem abrir o navegador:
+- Saúde do processo: `http://127.0.0.1:8083/api/health`.
+- Integrações: `http://127.0.0.1:8083/api/health/ready`.
+- Contratos: `http://127.0.0.1:8083/docs`.
 
-```powershell
-.\scripts\start-dev.ps1 -CheckOnly -NoBrowser
+`/health` sozinho não comprova acesso ao banco ou às camadas. A leitura de
+uma camada real deve ser verificada separadamente. A extensão de prévia usa
+`sicardPreview.baseUrl`, configurado neste workspace para a porta 8083.
+
+### Ponte e túneis
+
+```text
+Codespace:10022 → ponte mantida pelo Windows → VM:22 (SSH)
+Codespace:15433 → SSH autenticado pela ponte → VM:5433 (PostgreSQL)
+Codespace → HTTPS /sicard/storage-api/ → SFTPGo → montagem FUSE local
+Navegador → porta encaminhada 8083 → FastAPI no Codespace
 ```
 
-Execução manual da API:
+A extensão `tools/vscode-sicard-tunnel` roda no **VS Code do Windows** e
+mantém a ponte 10022. O supervisor `scripts/start-database-tunnel.sh` roda
+no **Codespace** e mantém 15433. As portas 10022 e 15433 são privadas e não
+devem ser publicadas. O storage usa HTTPS e independe da ponte SSH.
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m api.server
-```
+O `postCreateCommand` prepara PowerShell/tmux; o `postStartCommand` chama
+`scripts/start-storage-codespace.sh`. A existência desses comandos no
+repositório não comprova que foram executados na sessão atual. Antes de
+instalar algo, confira interpretadores, executáveis, `/dev/fuse` e montagens.
+Não confunda limitações do ambiente do agente com o estado do Codespace inteiro.
 
-Endereços locais:
+### Desenvolvimento no Windows
 
-- aplicação: <http://127.0.0.1:8080/public/>;
-- documentação OpenAPI: <http://127.0.0.1:8080/docs>;
-- saúde básica: <http://127.0.0.1:8080/api/health>;
-- prontidão das integrações: <http://127.0.0.1:8080/api/health/ready>.
+No Windows, `scripts/start-dev.ps1` usa o ambiente Python local, verifica
+banco/migrations e inicia a aplicação na porta 8080 por padrão. Esse fluxo é
+separado do script Linux acima. O Docker local é apenas contingência.
+O terminal compartilhado é descrito em
+[PowerShell compartilhado](documentacao/TERMINAL_POWERSHELL_COMPARTILHADO.md).
 
 ## Configuração
 
@@ -227,33 +258,66 @@ na mesma VM do SIGMA, publicada como sub-rota do Nginx dele
 (`.deploy/nginx/sicard-subpath.conf`). O clone fica em `/opt/sicard`, também
 com checkout em `main`.
 
+Antes da publicação, execute os testes relevantes, revise `git diff` e
+selecione os arquivos do commit. Nunca inclua `.env`, chaves, permissões
+privadas de agentes ou dados/relatórios alterados sem validação de integridade.
+`main` só corresponde à versão publicada depois de confirmar o SHA na VM.
+
+No Codespace, com a ponte Windows ativa e Plink disponível:
+
+```bash
+git add <arquivos-revisados>
+bash scripts/deploy-codespace.sh "descricao da alteracao"
+```
+
+O script exige `main`, commita **somente o índice revisado**, verifica que o
+remoto não está adiante, faz push e usa a ponte para executar
+`.deploy/update_vm.sh main` na VM. Se não houver arquivos no índice, publica
+o commit atual. Alterações fora do índice permanecem locais.
+
+No Windows, o fluxo existente é:
+
 ```powershell
 .\scripts\deploy-vm.ps1 -Mensagem "descricao da alteracao"
 ```
 
-O script commita, empurra para o GitHub e manda a VM executar
-`.deploy/update_vm.sh`, que faz `git reset --hard origin/main`, reconstrói a
-imagem e reinicia o container.
+Esse script Windows usa Plink/PPK locais e inclui todas as alterações pelo
+`git add -A`; só o utilize depois de revisar integralmente a árvore de trabalho.
+Ele não é o comando de inicialização do Codespace.
 
-Como o deploy publica a branch em checkout, existe guarda em duas camadas
-contra publicar outra coisa por engano:
+Ambos convergem em `.deploy/update_vm.sh`: sincronização de `origin/main`,
+build, reinício de `sicard_app` e verificações HTTP. A implantação usa
+`docker-compose.vm.yml`, um worker, porta interna 8080 e publicação local
+na VM em 8070, acessível pelo Nginx em `/sicard/`. Volumes persistem uploads,
+configurações e saídas; o storage bruto é montado para leitura.
 
-- `deploy-vm.ps1` aborta antes de commitar quando a branch não é `main`, e
-  também em `HEAD` destacado. Para um hotfix consciente, repita o nome exato em
-  `-BranchAlternativa`;
-- `update_vm.sh` assume `main` por padrão e exige `SICARD_PERMITIR_BRANCH` com
-  o nome exato para publicar qualquer outra branch.
+O fluxo não usa push forçado. Branch alternativa exige autorização explícita
+nos scripts Windows/VM; o script do Codespace aceita somente `main`.
+Confira o SHA final e `/api/health/ready`, além da página alterada. Falha
+após o push significa que GitHub e produção podem estar em versões diferentes;
+não anuncie deploy concluído sem verificar a VM.
 
-O push também é abortado se o remoto tiver commits que o local não contém,
-situação que só passaria com `--force`.
-
-**Atenção:** o deploy roda `docker compose build --pull`. Como o
-`requirements.txt` usa faixas (`>=`), todo rebuild pode instalar versões de
-dependências diferentes das que estão em execução — não é uma operação neutra.
-Para alterações que não tocam o código da aplicação, prefira apenas atualizar o
-checkout da VM, sem rebuild.
+O build usa `--pull` e dependências com faixas de versão. Registre falhas de
+build/integração; não substitua dados ou aplique migrations automaticamente
+para contornar uma falha. Deploy requer autorização do usuário; iniciar o
+servidor local não autoriza publicação.
 
 ## Testes
+
+No Codespace, use o mesmo interpretador do servidor. Para a extração:
+
+```bash
+/home/codespace/.venvs/sicard-app/bin/python -m pytest tests/test_compatibilidade_espacial.py tests/test_extracao_estatisticas.py tests/test_extracao_enriquecimento.py tests/test_extracao_contratos.py -q
+SICARD_TEST_URL=http://127.0.0.1:8083 node tests/browser/extracao-atributos.cjs
+```
+
+O teste de navegador exige Playwright/Chromium instalados. Ele intercepta as
+APIs para não persistir resultados. Alguns testes de configurações consultam
+o catálogo oficial e gravam somente em diretórios temporários. Outros testes
+da suíte geral escrevem no banco: revise-os antes de apontar ao banco compartilhado.
+Os testes `previa-bancada.cjs` e `lista-bases-preparacao.cjs` usam a porta 8083.
+
+No Windows:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q

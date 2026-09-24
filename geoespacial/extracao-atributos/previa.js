@@ -62,14 +62,17 @@ export function criarPrevia(state, changed){
       const itens=pacote.camadas.filter(c=>c.grupo===origem);
       const raiz=grupo(titulo,itens,'ea-preview-status-group');
       if(!itens.length)raiz.body.append(el('p','Nenhuma camada.','ea-preview-empty'));
-      const arquivos=new Map();
+      const subgrupos=new Map();
       for(const item of itens){
-        const nome=item.arquivoOrigem||item.arquivo||item.nome;
-        if(!arquivos.has(nome))arquivos.set(nome,[]);
-        arquivos.get(nome).push(item);
+        const chave=origem==='base'?item.categoriaId:item.arquivoOrigem||item.arquivo||item.nome;
+        if(!subgrupos.has(chave))subgrupos.set(chave,[]);
+        subgrupos.get(chave).push(item);
       }
-      for(const [nome,camadas] of arquivos){
-        const arquivoGrupo=grupo(nomeArquivo(nome),camadas,'ea-preview-file-group');
+      for(const [chave,camadas] of subgrupos){
+        const categoria=origem==='base';
+        const subgrupo=grupo(categoria?camadas[0].categoria:nomeArquivo(chave),camadas,
+          categoria?'ea-preview-category-group':'ea-preview-file-group');
+        if(categoria)subgrupo.section.dataset.category=chave;
         for(const item of camadas){
           const row=el('div',undefined,'ea-preview-tree-row');
           const botao=el('button',undefined,'ea-preview-layer');botao.type='button';botao.dataset.layer=item.chave;
@@ -88,9 +91,9 @@ export function criarPrevia(state, changed){
             remover.setAttribute('aria-label',`Remover da prévia: ${item.nome}`);
             remover.addEventListener('click',()=>{removerPrevia(state,item);changed();});row.append(remover);
           }
-          arquivoGrupo.body.append(row);
+          subgrupo.body.append(row);
         }
-        raiz.body.append(arquivoGrupo.section);
+        raiz.body.append(subgrupo.section);
       }
       lista.append(raiz.section);
     }
@@ -209,9 +212,9 @@ export function criarPrevia(state, changed){
     if(!state.input&&state.previaLocal&&!state.previaLocal.entrada)for(const item of state.previaLocal.camadas)camadas.push({...item,chave:`entrada:${item.chave||item.id}`,grupo:'entrada'});
     for(const base of [...state.bases,...state.staging]){
       const layer=state.catalog.find(c=>c.id===base.id);if(!layer)continue;
-      camadas.push({...layer,chave:`base:${layer.id}`,grupo:'base',arquivoOrigem:layer.arquivo_local?.nome||layer.arquivo,categoria:state.categories.find(c=>c.id===base.category)?.nome||base.category,pendente:!state.bancadaBases.some(b=>b.id===base.id),status_validacao:layer.erro?'invalida':layer.geojson?'valida':'pendente'});
+      camadas.push({...layer,chave:`base:${layer.id}`,grupo:'base',categoriaId:base.category,arquivoOrigem:layer.arquivo_local?.nome||layer.arquivo,categoria:state.categories.find(c=>c.id===base.category)?.nome||base.category,pendente:!state.bancadaBases.some(b=>b.id===base.id),status_validacao:layer.erro?'invalida':layer.geojson?'valida':'pendente'});
     }
-    const assinatura=[state.editandoBases,state.undoPrevia,state.busy,...camadas.flatMap(c=>[c.chave,c.geojson,c.geojson_resumido,c.metadados_local,c.nome,c.categoria,c.pendente,c.erro])];
+    const assinatura=[state.editandoBases,state.undoPrevia,state.busy,...camadas.flatMap(c=>[c.chave,c.geojson,c.geojson_resumido,c.metadados_local,c.nome,c.categoriaId,c.categoria,c.pendente,c.erro])];
     if(assinatura.length===assinaturaAnterior.length&&assinatura.every((v,i)=>v===assinaturaAnterior[i])){sincronizarVisibilidade();return;}
     assinaturaAnterior=assinatura;
     pacote=camadas.length||state.undoPrevia?{camadas}:null;

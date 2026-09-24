@@ -54,6 +54,15 @@ export const adaptador={
   async executar(request,aoAtualizar) {
     // O corpo tem que carregar tudo o que a 1.3 configura: o nome da saida e as
     // opcoes do operador do OGR ficavam para tras e o servidor usava os padroes.
+    const entradas=request.entradas?.length?request.entradas:[{id:request.input.id}];
+    const compatibilidade=await post('/extracao-atributos/compatibilizar',{
+      operacao:request.operacao,
+      camadas:[
+        ...entradas.map(e=>({id:e.id,papel:'entrada',arquivo_local:e.id===request.input.id?request.input.arquivo_local:request.entradas_locais?.[e.id]})),
+        ...request.categorias.flatMap(c=>c.camadas.map(l=>({id:l.id,nome:l.nome,papel:'base',arquivo_local:l.arquivo_local,regra:c.regras?.[l.id]}))),
+      ],
+    });
+    if(compatibilidade.compativel!==true)throw new Error((compatibilidade.erros||[]).map(e=>`${e.nome}: ${e.motivo}`).join('; ')||'Não foi possível confirmar a compatibilidade espacial.');
     const job=await post('/extracao-atributos/execucoes',{input_id:request.input.id,operacao:request.operacao,
       nome_saida:request.nome_saida||'',opcoes:request.opcoes||{},
       ...(request.input.arquivo_local?{arquivo_local:request.input.arquivo_local}:{}),

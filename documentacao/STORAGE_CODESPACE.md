@@ -42,3 +42,14 @@ O adaptador marca os arquivos ja versionados das montagens com `skip-worktree`
 e `assume-unchanged` no indice local, para o Git nao reler dados remotos nem
 grava-los novamente no cache LFS. Isso se aplica somente as tres pastas de
 camadas; o codigo continua sendo acompanhado normalmente pelo Git.
+
+## Verificar antes de remontar
+
+Confira a disponibilidade de `/dev/fuse`, `fusermount`, libfuse e do runtime
+`~/.venvs/sicard-storage`, além das montagens efetivas (`findmnt`). O script
+`start-storage-codespace.sh` pode instalar libfuse com sudo e criar o runtime;
+não é uma operação exclusivamente de leitura. Sessões de agentes podem ter
+filesystem e ferramentas diferentes do terminal principal do Codespace.
+Ausência de acesso nessa sessão não comprova perda dos dados ou da configuração.
+O `.env` e o marcador existentes devem ser preservados. Não criar uma cópia
+local integral como substituto silencioso da montagem remota.

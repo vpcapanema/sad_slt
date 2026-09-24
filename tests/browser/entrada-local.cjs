@@ -29,6 +29,7 @@ await page.route('**/api/**',async route=>{
   return send({arquivo:nome,camadas,entrada,resumo:{total:camadas.length,validas:camadas.filter(c=>c.status_validacao==='valida').length,invalidas:camadas.filter(c=>c.status_validacao==='invalida').length,vetores:vetores.length,rasters:camadas.filter(c=>c.tipo==='raster').length}});
 
  }
+ if(path.endsWith('/compatibilizar'))return send({compativel:true,camadas:[],erros:[]});
  if(path.endsWith('/arquivo-mapa'))return send({...catalog.camadas.find(c=>c.id===route.request().postDataJSON().id),geojson:fc,campos:[{nome:'valor'}]});
  if(path.endsWith('/configuracoes')&&route.request().method()==='POST'){saved.push(route.request().postDataJSON());return send({nome:'Config local',camadas:1,categorias:1,entradas:0,finalidades:0});}
  if(path.endsWith('/execucoes')&&route.request().method()==='POST'){

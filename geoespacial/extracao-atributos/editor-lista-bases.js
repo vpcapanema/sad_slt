@@ -34,7 +34,8 @@ export function criarEditorListaBases(state,changed,escolher,salvar){
     const row=el('div',undefined,'ea-base-list-row'),check=el('input');check.type='checkbox';check.checked=selecionadas.has(item.id);check.disabled=!editando||validando||state.busy;
     const layer=state.catalog.find(c=>c.id===item.id);const label=layer?.nome||item.nome||item.id;
     check.setAttribute('aria-label',`Selecionar para excluir: ${label}`);check.onchange=()=>{if(check.checked)selecionadas.add(item.id);else selecionadas.delete(item.id);marcar();};
-    const text=el('div');text.append(el('strong',label),el('small',item.arquivo||layer?.arquivo||'Caminho não informado'));
+    const text=el('div'),caminho=item.arquivo||layer?.arquivo||'Caminho não informado';
+    text.title=`${label}\n${caminho}`;text.append(el('strong',label),el('small',caminho));
     const select=el('select');select.setAttribute('aria-label',`Categoria de ${label}`);select.disabled=!editando||validando||state.busy;
     if(!category)select.append(new Option(id,id));for(const c of state.categories)select.append(new Option(c.nome,c.id));select.value=id;
     select.onchange=()=>{item.category=select.value;render();};row.append(check,text,select);grupo.append(row);

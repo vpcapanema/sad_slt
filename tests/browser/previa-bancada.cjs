@@ -2,7 +2,7 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict');
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--no-proxy-server','--enable-unsafe-swiftshader']});
- const p=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[],pedidos=[];let seq=0;
+ const p=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[],pedidos=[];let seq=0,recusarCompatibilidade=false;const conferencias=[];
  p.on('pageerror',e=>errors.push(e.message));
  const fc={type:'FeatureCollection',features:[{type:'Feature',properties:{valor:1},geometry:{type:'Point',coordinates:[-46,-23]}}]};
  const catalog={categorias:[{id:'social',nome:'Social'}],camadas:['entrada','base'].map(id=>({id,nome:id,origem:'importadas',arquivo:`acervo/${id}.gpkg`}))};
@@ -11,7 +11,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
   if(path.includes('/auth/'))return send({authenticated:true,id:'teste',nome:'Teste',username:'TESTE',tipo_usuario:'ADMIN'});
   if(path.endsWith('/catalogo'))return send(catalog);
   if(path.endsWith('/storage/navegar'))return send({pastas:[],arquivos:[]});
-  if(path.endsWith('/arquivo-mapa'))return send({...catalog.camadas.find(c=>c.id===r.request().postDataJSON().id),geojson:fc,campos:[{nome:'valor'}]});
+  if(path.endsWith('/compatibilizar')){conferencias.push(r.request().postDataJSON());return send({compativel:!recusarCompatibilidade,camadas:[],erros:recusarCompatibilidade?[{nome:'base',motivo:'CRS incompatível de teste'}]:[]});}
+ if(path.endsWith('/arquivo-mapa'))return send({...catalog.camadas.find(c=>c.id===r.request().postDataJSON().id),geojson:fc,campos:[{nome:'valor'}]});
   if(path.endsWith('/entrada-local/jobs')){
    const nome=u.searchParams.get('nome'),id=++seq;
    const camadas=[0,1].map(i=>({id:`local:${id}:${i}`,chave:`${nome}::${i}`,arquivo:nome,nome:`Camada ${id}.${i}`,tipo:'vetor',origem:'local',status_validacao:'valida',geojson:fc}));
@@ -29,10 +30,13 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  await escolher('#ea-input-browse','entrada');assert.deepEqual(await bancada(),[],'Existente apenas na prévia');
  await escolher('#ea-base-browse','base');assert.deepEqual(await bancada(),[],'Base apenas na lista');await p.locator('#ea-base-list-confirmar').click();await p.waitForFunction(()=>document.querySelectorAll('#ea-input-preview-layers .ea-preview-layer').length===2);
  await p.locator('#ea-input-file').setInputFiles(['um.gpkg','dois.gpkg','tres.gpkg'].map(name=>({name,mimeType:'application/octet-stream',buffer:Buffer.from('fixture')})));
- await p.waitForFunction(()=>document.querySelectorAll('#ea-input-preview-layers .ea-preview-file-group').length===5);
+ await p.waitForFunction(()=>document.querySelectorAll('#ea-input-preview-layers .ea-preview-file-group').length===4);
  assert.deepEqual(await bancada(),[],'Upload não confirma bancada');
  const groups=await p.locator('#ea-input-preview-layers .ea-preview-file-group > .ea-preview-tree-row .ea-preview-group-toggle').allTextContents();
- for(const n of ['entrada.gpkg','base.gpkg','um.gpkg','dois.gpkg','tres.gpkg'])assert(groups.some(t=>t.includes(n)));
+ for(const n of ['entrada.gpkg','um.gpkg','dois.gpkg','tres.gpkg'])assert(groups.some(t=>t.includes(n)));
+ const bases=p.locator('#ea-input-preview-layers .ea-preview-category-group[data-category="social"]');
+ assert.equal(await bases.locator('.ea-preview-layer').count(),1);
+ assert.equal(await bases.locator('.ea-preview-file-group').count(),0,'Bases aparecem diretamente na categoria');
  assert(!groups.some(t=>t.includes('acervo/')));
  await p.locator('#ea-input-preview-layers .ea-preview-layer').filter({hasText:'entrada'}).click();assert.match(await p.locator('#ea-input-preview-data').textContent(),/acervo\/entrada.gpkg/);
 
@@ -51,7 +55,17 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  await p.waitForFunction(()=>window.__previewMap);
  assert(await p.evaluate(()=>window.__previewMap.scrollWheelZoom.enabled()));
  const zoom=await p.evaluate(()=>window.__previewMap.getZoom());await p.locator('#ea-input-preview-map .leaflet-control-zoom-in').click();await p.waitForTimeout(350);assert((await p.evaluate(()=>window.__previewMap.getZoom()))>zoom);
+ recusarCompatibilidade=true;
+ await p.locator('#ea-staging-confirmar').click();
+ await p.getByText('Não foi possível enviar à bancada:',{exact:false}).waitFor();
+ assert.deepEqual(await bancada(),[],'Falha espacial preserva bancada anterior');
+ await p.locator('.slt-fb-notice--error [aria-label="Dispensar notificação"]').click();
+ await p.waitForFunction(()=>!document.querySelector('#ea-staging-confirmar').disabled);
+ recusarCompatibilidade=false;
  await p.locator('#ea-staging-confirmar').click();await p.waitForFunction(()=>document.querySelector('iframe').contentWindow.gpApp.state.layers.length===8);
+ assert.equal(conferencias.at(-1).camadas.length,5,'Todas as quatro fontes de entrada e a base conferidas');
+ assert.equal(conferencias.at(-1).camadas.filter(c=>c.arquivo_local?.conteudo_base64).length,3,'Originais locais enviados à conferência');
+
 
  const frame=p.frameLocator('#ea-workbench-frame');
  assert.equal(await frame.locator('[data-layer-group="papel:entrada"] [data-layer]').count(),7);

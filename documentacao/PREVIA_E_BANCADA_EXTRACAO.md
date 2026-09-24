@@ -4,7 +4,7 @@ Para entradas, selecionar uma camada existente e enviar arquivos locais alimenta
 
 Editar, limpar e desfazer atuam na preparação. Remover uma camada diretamente na bancada a retira também da preparação e do pedido de execução. Alterações nas regras de bases preparadas devem ser confirmadas novamente. Algoritmo e nome da saída continuam definidos na seção 1.3.
 
-A árvore possui raízes fixas de entrada e base, subgrupos pelo arquivo e suas camadas. Caminhos ficam nas informações. Arquivos inválidos e rasters permanecem identificados na prévia, mas os dois algoritmos vetoriais não os recebem. Múltiplos arquivos locais conservam originais separados; a execução valida a correspondência exata entre esses arquivos e as entradas confirmadas.
+A árvore possui raízes fixas de entrada e base. Entradas mantêm subgrupos por arquivo; bases têm subgrupos pela categoria da lista, com as camadas diretamente dentro de cada categoria, sem repetir a camada como grupo de arquivo. A lista de bases tem altura limitada e rolagem interna, preservando seus controles. Caminhos ficam nas informações. Arquivos inválidos e rasters permanecem identificados na prévia, mas os dois algoritmos vetoriais não os recebem. Múltiplos arquivos locais conservam originais separados; a execução valida a correspondência exata entre esses arquivos e as entradas confirmadas.
 
 ## Lista categorizada de bases
 
@@ -32,3 +32,40 @@ Limites atuais: dez entradas, 16 MB por arquivo, 30 MB codificados no conjunto d
 - `tests/test_extracao_multiplos_locais.py`: originais de múltiplas entradas e recusa antes da persistência.
 
 Alterações locais; implantação na VM depende de autorização.
+
+## Compatibilização espacial antes da bancada
+
+Enviar pra bancada chama `POST /api/geoespacial/extracao-atributos/compatibilizar`
+com todas as entradas e bases candidatas. Arquivos locais seguem integrais em
+memória; fontes cadastradas são lidas pelo identificador usado na execução.
+O servidor utiliza a preparação dos motores existentes: verifica CRS e
+coordenadas finitas, reprojeta cópias para EPSG:5880 e prepara as geometrias
+conforme o algoritmo. CRS ausente não é adivinhado. Nomes e tipos de atributos
+não são padronizados por esta etapa; as fontes não são gravadas ou alteradas.
+
+A composição anterior da bancada só é substituída se todas as fontes candidatas
+passarem. Durante a conferência, os controles da configuração e a bancada ficam
+bloqueados. Erros são apresentados por camada. Arquivos já identificados como
+inválidos ou raster na prévia continuam fora da composição vetorial candidata.
+
+Sem algoritmo escolhido, a conferência usa a preparação geométrica do modo
+estatístico. Antes de executar, o cliente repete a conferência com o algoritmo
+e as regras atuais; os motores também normalizam as cópias efetivamente lidas
+na execução. A prévia simplificada nunca substitui o arquivo original.
+
+No modo configurável, correção, separação por tipo e buffer obedecem às regras
+existentes. O diagnóstico informa geometrias vazias/colapsadas e corrigidas;
+o comportamento de cada algoritmo sobre esses casos permanece o mesmo.
+Compatibilidade espacial não significa que camadas necessariamente se
+sobreponham: ausência de interseção pode ser um resultado legítimo.
+
+A conferência é síncrona, não persiste as cópias preparadas e não reserva uma
+versão da fonte. A execução refaz a preparação, pois uma fonte pode mudar após
+sua validação. O cliente mantém o timeout de 180 segundos para a requisição.
+
+Testes da compatibilização: `tests/test_compatibilidade_espacial.py` cobre
+CRS distintos, coordenadas incoerentes/não finitas, preservação da fonte e dos
+atributos, correção em cópia, regras de recorte/correção, autenticação e
+correspondência do arquivo local. `tests/browser/previa-bancada.cjs` verifica
+que uma recusa espacial mantém a bancada anterior e que todos os originais
+locais candidatos são enviados à conferência.

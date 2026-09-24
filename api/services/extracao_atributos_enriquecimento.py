@@ -85,7 +85,8 @@ def preparar(frame, nome, corrigir=True, separar=True, buffer_m=None):
     """
     if frame.crs is None:
         raise ValueError(f'{nome}: a camada não tem sistema de referência (CRS).')
-    dados = frame.to_crs(CRS_MEDIDA).reset_index(drop=True)
+    from api.services.compatibilidade_espacial import normalizar_crs
+    dados = normalizar_crs(frame, nome, CRS_MEDIDA).reset_index(drop=True)
     geometria = dados.geometry.name
     dados[_FID] = np.arange(len(dados))
     estat = {'feicoes': len(dados), 'sem_geometria': 0, 'corrigidas': 0, 'colapsadas': 0}

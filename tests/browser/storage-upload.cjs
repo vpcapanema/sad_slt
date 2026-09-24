@@ -26,6 +26,7 @@ await page.route('**/api/geoespacial/**',async r=>{
   return r.continue();
  }
  if(path.endsWith('/catalogo'))return r.fulfill({json:{categorias:[{id:'social',nome:'Social'},{id:'ambiental',nome:'Ambiental'}],camadas:[]}});
+ if(path.endsWith('/compatibilizar'))return r.fulfill({json:{compativel:true,camadas:[],erros:[]}});
  if(path.endsWith('/arquivo-mapa'))return r.fulfill({json:{...layer,geojson:{type:'FeatureCollection',features:[{type:'Feature',properties:{},geometry:{type:'Point',coordinates:[-46,-23]}}]}}});
  return r.fulfill({json:[]});
 });
