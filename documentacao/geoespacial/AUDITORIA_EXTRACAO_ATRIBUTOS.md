@@ -266,3 +266,17 @@ roteiros Playwright (regressão da extração existente e novo upload local).
   GPKG vetorial/misto, GeoTIFF e File Geodatabase com duas feature classes).
 - A publicação depende da reabertura do túnel Windows; não confundir validação
   local com confirmação da versão implantada.
+
+## Correção: prévia de todas as camadas do arquivo
+
+O fluxo de seleção individual foi substituído pela validação em lote. GeoPackage
+com três camadas gera três prévias sobrepostas, sem pergunta intermediária.
+O painel lateral separa válidas e inválidas; clicar no nome exibe os metadados ou
+a falha. O conjunto completo de feições vetoriais válidas segue para execução,
+com procedência por camada e união dos atributos; não há cadastro da entrada.
+
+Testes adicionais cobrem três camadas reais no GPKG, CRS ausente em uma camada,
+componentes ilegíveis, todas inválidas, orçamento cumulativo, reenvio do arquivo
+inteiro para a thread e vários GeoPackages aninhados. O teste de navegador cobre
+painel à esquerda, agrupamento por validação, troca de metadados sem alterar a
+entrada, resposta em uma única requisição e execução sem filtro de camada.

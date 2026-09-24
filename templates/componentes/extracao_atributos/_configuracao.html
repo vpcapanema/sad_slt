@@ -26,12 +26,6 @@
             <small>Arquivo local: até 16 MB. ZIP/RAR/7z/TAR e compactações aninhadas; vetores e rasters. Shapefile: pacote com .shp, .shx, .dbf e .prj. File Geodatabase: compacte a pasta .gdb inteira.</small>
             <p id="ea-input-upload-status" class="ea-hint" role="status" aria-live="polite" hidden></p>
             <button id="ea-input-upload-cancel" type="button" class="ea-btn" hidden>Cancelar validação</button>
-            <div id="ea-input-layer-choice" hidden>
-              <label for="ea-input-local-layer">Camada dentro do arquivo</label>
-              <select id="ea-input-local-layer"></select>
-              <button id="ea-input-local-confirm" type="button" class="ea-btn">Validar camada selecionada</button>
-              <button id="ea-input-local-cancel" type="button" class="ea-btn">Cancelar arquivo</button>
-            </div>
             <small id="ea-input-info">A camada selecionada será exibida na bancada.</small>
           </div>
         </div>
@@ -54,12 +48,6 @@
             <input id="ea-base-local-file" type="file" accept=".zip,.rar,.7z,.tar,.tgz,.tbz2,.txz,.gz,.bz2,.xz,.gpkg,.geojson,.json,.fgb,.kml,.kmz,.gml,.tif,.tiff,.img,.asc,.jp2" hidden aria-label="Arquivo local da camada base">
             <p id="ea-base-local-upload-status" class="ea-hint" role="status" aria-live="polite" hidden></p>
             <button id="ea-base-local-upload-cancel" type="button" class="ea-btn" hidden>Cancelar validação</button>
-            <div id="ea-base-local-layer-choice" hidden>
-              <label for="ea-base-local-local-layer">Camada dentro do arquivo</label>
-              <select id="ea-base-local-local-layer"></select>
-              <button id="ea-base-local-local-confirm" type="button" class="ea-btn">Validar camada selecionada</button>
-              <button id="ea-base-local-local-cancel" type="button" class="ea-btn">Cancelar arquivo</button>
-            </div>
             <small>Bases locais ficam em memória até sair desta página. Selecione a categoria antes de enviar.</small>
             <div class="ea-municipal-entry" role="group" aria-labelledby="ea-territorial-title">
               <h4 id="ea-territorial-title">Ferramenta de Tributação de Camadas Territoriais</h4>
@@ -103,7 +91,10 @@
       <section id="ea-input-preview" class="ea-input-preview" aria-labelledby="ea-input-preview-title" hidden>
         <header><h4 id="ea-input-preview-title">1.1 · Pré-visualização da camada de entrada</h4>
           <p id="ea-input-preview-name"></p></header>
-        <div id="ea-input-preview-map" role="region" aria-label="Mapa Leaflet da camada de entrada"></div>
+        <div class="ea-preview-layout">
+          <aside id="ea-input-preview-layers" class="ea-preview-layers" aria-label="Camadas importadas por situação de validação"></aside>
+          <div id="ea-input-preview-map" role="region" aria-label="Mapa Leaflet de todas as camadas validadas"></div>
+        </div>
         <p id="ea-input-preview-map-status" class="ea-hint" role="status"></p>
         <div id="ea-input-preview-data" class="ea-preview-metadata"></div>
         <p class="ea-hint">Entrada temporária: fica somente na memória desta página. Ao recarregar ou sair, selecione o arquivo novamente. Executar a análise salva os resultados, sem cadastrar este arquivo no acervo.</p>
@@ -111,7 +102,10 @@
       <section id="ea-base-local-preview" class="ea-base-local-preview" aria-labelledby="ea-base-local-preview-title" hidden>
         <header><h4 id="ea-base-local-preview-title">1.2 · Pré-visualização da camada base</h4>
           <p id="ea-base-local-preview-name"></p></header>
-        <div id="ea-base-local-preview-map" role="region" aria-label="Mapa Leaflet da camada de entrada"></div>
+        <div class="ea-preview-layout">
+          <aside id="ea-base-local-preview-layers" class="ea-preview-layers" aria-label="Camadas importadas por situação de validação"></aside>
+          <div id="ea-base-local-preview-map" role="region" aria-label="Mapa Leaflet de todas as camadas validadas"></div>
+        </div>
         <p id="ea-base-local-preview-map-status" class="ea-hint" role="status"></p>
         <div id="ea-base-local-preview-data" class="ea-preview-metadata"></div>
         <p class="ea-hint">Base temporária: fica somente na memória desta página. Ao recarregar ou sair, selecione o arquivo novamente. Executar a análise salva os resultados, sem cadastrar este arquivo no acervo.</p>

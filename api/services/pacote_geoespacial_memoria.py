@@ -96,7 +96,7 @@ def componentes(conteudo, nome, limite):
 
 
 @contextmanager
-def abrir(componentes):
+def abrir(componentes, incluir_invalidas=False):
     """Expõe arquivos em /vsimem e enumera TODAS as camadas, vetoriais e raster."""
     raiz = f'/vsimem/entrada-{uuid4().hex}'
     gdal.Mkdir(raiz, 0o700)
@@ -125,7 +125,11 @@ def abrir(componentes):
                 nomes = {p.lower() for p in componentes}
                 faltando = [e for e in ('.shx', '.dbf', '.prj') if radical+e not in nomes]
                 if faltando:
-                    avisos.append(f'Shapefile incompleto em {relativo}: faltam {", ".join(faltando)}.'); continue
+                    erro = f'Shapefile incompleto em {relativo}: faltam {", ".join(faltando)}.'
+                    avisos.append(erro)
+                    if incluir_invalidas:
+                        opcoes.append(dict(chave=relativo+'::erro', nome=PurePosixPath(relativo).stem, arquivo=relativo, tipo='vetor', erro=erro))
+                    continue
             path = f'{raiz}/{relativo}'
             encontrou = False
             for tipo, drivers in [('vetor', VETORES), ('raster', RASTERS)]:
@@ -153,13 +157,22 @@ def abrir(componentes):
                 else:
                     subs = ds.GetSubDatasets()
                     for i, (subpath, descricao) in enumerate(subs or [(path, PurePosixPath(relativo).stem)]):
-                        raster = gdal.OpenEx(subpath, gdal.OF_RASTER | gdal.OF_READONLY, allowed_drivers=[drivers[ext]]) if subs else ds
+                        try:
+                            raster = gdal.OpenEx(subpath, gdal.OF_RASTER | gdal.OF_READONLY, allowed_drivers=[drivers[ext]]) if subs else ds
+                        except RuntimeError:
+                            raster = None
+                        if raster is None and incluir_invalidas:
+                            encontrou = True
+                            opcoes.append(dict(chave=f'{relativo}::raster:{i}', nome=descricao.replace(raiz+'/', ''),
+                                               arquivo=relativo, tipo=tipo, erro='Não foi possível abrir este raster do contêiner.'))
                         if raster is not None and raster.RasterCount:
                             datasets.append(raster); encontrou = True
                             opcoes.append(dict(chave=f'{relativo}::raster:{i}', nome=descricao.replace(raiz+'/', ''),
                                                arquivo=relativo, tipo=tipo, formato=drivers[ext], raster=raster))
             if not encontrou:
                 avisos.append(f'Não foi possível ler dados geoespaciais em {relativo} ({VETORES.get(ext, RASTERS.get(ext))}: arquivo inválido ou recurso não suportado pelo driver instalado).')
+                if incluir_invalidas:
+                    opcoes.append(dict(chave=relativo+'::erro', nome=PurePosixPath(relativo).stem, arquivo=relativo, tipo='vetor' if ext in VETORES else 'raster', erro=avisos[-1]))
         if not opcoes:
             raise ValueError('Nenhuma camada vetorial ou raster compatível foi encontrada. ' + ' '.join(avisos))
         yield opcoes, avisos, raiz

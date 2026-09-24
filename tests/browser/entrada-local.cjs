@@ -17,10 +17,15 @@ await page.route('**/api/**',async route=>{
  if(path.endsWith('/entrada-local')){
   uploads.push(route.request().postDataBuffer());if(delay)await new Promise(r=>setTimeout(r,delay));
   if(fail)return route.fulfill({status:422,json:{detail:'GeoJSON inválido.'}});
-  if(url.searchParams.get('nome')==='pacote.zip'&&!url.searchParams.get('camada'))return send({camadas:[{chave:'dados.gpkg::0',nome:'Base vetorial',arquivo:'dados.gpkg',tipo:'vetor'},{chave:'dados.gpkg::raster:0',nome:'Imagem',arquivo:'dados.gpkg',tipo:'raster'}]});
-  if(url.searchParams.get('camada')==='dados.gpkg::raster:0')return send({tipo:'raster',compativel_extracao:false,mensagem:'Raster identificado. Os algoritmos desta página exigem camadas vetoriais.',geojson:fc,metadados_local:{arquivo:'pacote.zip',nome_camada:'Imagem',formato:'GPKG',bytes:100,largura:8,altura:8,bandas:[{banda:1,tipo:'Byte',nodata:0}],crs:'EPSG:4326',crs_nome:'WGS 84',limites_wgs84:[-47,-24,-46,-23],avisos:[]}});
+  const nome=url.searchParams.get('nome');
+  const seq=++sequence;
+  function vetor(i){return {id:`local:${seq}-camada-${i}`,chave:`dados.gpkg::${i}`,nome:`Camada ${i+1}`,arquivo:'dados.gpkg',tipo:'vetor',status_validacao:'valida',origem:'local',origem_geometria:'memoria',geojson:{type:'FeatureCollection',features:[{...feature,geometry:{type:'Point',coordinates:[-46.63+i/10,-23.55+i/10]}}]},campos:[{nome:'codigo'},{nome:'valor'}],metadados_local:{arquivo:nome,nome_camada:`Camada ${i+1}`,camada:`dados.gpkg::${i}`,formato:'GPKG',bytes:file.length,bytes_descompactados:file.length,feicoes:1,campos_total:2,tipos_geometria:['Point'],crs:'EPSG:4326',crs_nome:'WGS 84',unidade:'degree',limites_wgs84:[-46.63,-23.55,-46.63,-23.55],avisos:[],localizacao:{fonte:'IBGE · Malha municipal 2022',cobertura:'Estado de São Paulo',ufs:['SP'],municipios:[{nm_mun:'São Paulo',cd_mun:'3550308',sigla_uf:'SP'}],aviso:'Consulta espacial em SP.'}}};}
+  const camadas=nome==='multicamadas.gpkg'?[vetor(0),vetor(1),vetor(2),{chave:'dados.gpkg::erro',nome:'Sem CRS',arquivo:'dados.gpkg',tipo:'vetor',status_validacao:'invalida',erro:'CRS ausente ou inválido.'}]:[vetor(0)];
+  if(nome==='pacote.zip')camadas.push({chave:'dados.gpkg::raster:0',nome:'Imagem',arquivo:'dados.gpkg',status_validacao:'valida',tipo:'raster',compativel_extracao:false,mensagem:'Os algoritmos desta página exigem camadas vetoriais.',geojson:fc,metadados_local:{arquivo:nome,nome_camada:'Imagem',formato:'GPKG',bytes:100,largura:8,altura:8,bandas:[{banda:1,tipo:'Byte',nodata:0}],crs:'EPSG:4326',crs_nome:'WGS 84',limites_wgs84:[-47,-24,-46,-23],avisos:[]}});
+  const vetores=camadas.filter(c=>c.tipo==='vetor'&&c.status_validacao==='valida');
+  const entrada={...vetores[0],id:`local:${seq}`,nome:nome,geojson:{type:'FeatureCollection',features:vetores.flatMap(c=>c.geojson.features)}};
+  return send({arquivo:nome,camadas,entrada,resumo:{total:camadas.length,validas:camadas.filter(c=>c.status_validacao==='valida').length,invalidas:camadas.filter(c=>c.status_validacao==='invalida').length,vetores:vetores.length,rasters:camadas.filter(c=>c.tipo==='raster').length}});
 
-  return send({id:`local:${++sequence}`,nome:'Pontos locais',origem:'local',origem_geometria:'memoria',geojson:fc,campos:[{nome:'codigo'},{nome:'valor'}],metadados_local:{arquivo:url.searchParams.get('nome'),nome_camada:'Pontos locais',camada:'pontos.geojson::0',formato:'GeoJSON',bytes:file.length,bytes_descompactados:file.length,feicoes:1,campos_total:2,tipos_geometria:['Point'],crs:'EPSG:4326',crs_nome:'WGS 84',unidade:'degree',limites_wgs84:[-46.63,-23.55,-46.63,-23.55],avisos:[],localizacao:{fonte:'IBGE · Malha municipal 2022',cobertura:'Estado de São Paulo',ufs:['SP'],municipios:[{nm_mun:'São Paulo',cd_mun:'3550308',sigla_uf:'SP'}],aviso:'Consulta espacial em SP.'}}});
  }
  if(path.endsWith('/arquivo-mapa'))return send({...catalog.camadas[0],geojson:fc,campos:[{nome:'valor'}]});
  if(path.endsWith('/configuracoes')&&route.request().method()==='POST'){saved.push(route.request().postDataJSON());return send({nome:'Config local',camadas:1,categorias:1,entradas:0,finalidades:0});}
@@ -67,24 +72,36 @@ await page.locator('#ea-run').click();await page.locator('dialog').getByRole('bu
 assert.equal(execs[0].input_id,'local:1');assert.equal(Buffer.from(execs[0].arquivo_local.conteudo_base64,'base64').toString(),file.toString());
 await page.locator('#ea-refresh').click();await page.waitForTimeout(200);assert.equal(await page.locator('#ea-input-select').inputValue(),'local:1');
 await page.locator('#ea-input-clear').click();assert.equal(await page.locator('#ea-input-preview').isVisible(),false);
-// O segundo botão também abre seletor nativo; pacote misto permite inspeção e escolha.
-await page.locator('#ea-input-file').setInputFiles({name:'entrada.geojson',mimeType:'application/json',buffer:file});
+// GeoPackage multicamada não oferece seletor: valida todas e mostra as três juntas.
+await page.locator('#ea-input-file').setInputFiles({name:'multicamadas.gpkg',mimeType:'application/octet-stream',buffer:file});
 await page.waitForFunction(()=>document.querySelector('#ea-input-select').value==='local:2');
+assert.equal(await page.locator('#ea-input-layer-choice').count(),0);
+assert.equal(await page.locator('#ea-input-preview-layers [data-validation="valida"] button').count(),3);
+assert.equal(await page.locator('#ea-input-preview-layers [data-validation="invalida"] button').count(),1);
+const mapBounds=await page.locator('#ea-input-preview-map').boundingBox();
+const panelBounds=await page.locator('#ea-input-preview-layers').boundingBox();
+assert.ok(panelBounds.x+panelBounds.width<=mapBounds.x,'Painel fica à esquerda do mapa');
+await page.locator('#ea-input-preview-layers').getByRole('button',{name:/Camada 3/}).click();
+assert.match(await page.locator('#ea-input-preview-data').textContent(),/Camada 3/);
+assert.equal(await page.locator('#ea-input-select').inputValue(),'local:2','Clicar metadados não muda a entrada inteira');
+await page.locator('#ea-input-preview-layers').getByRole('button',{name:/Sem CRS/}).click();
+assert.match(await page.locator('#ea-input-preview-data').textContent(),/Não validada: CRS/);
+await page.locator('#ea-input-preview-layers').getByRole('button',{name:/Camada 2/}).click();
+if(process.env.SICARD_TEST_SCREENSHOT)await page.locator('#ea-input-preview').screenshot({path:process.env.SICARD_TEST_SCREENSHOT});
+assert.equal(uploads.length,3,'A validação em lote usa só uma requisição por arquivo, sem selecionar camada');
+// Base local também importa todos os vetores; raster aparece na mesma prévia.
 const chooserBase=page.waitForEvent('filechooser');await page.locator('#ea-base-local-upload').click();
 await (await chooserBase).setFiles({name:'pacote.zip',mimeType:'application/zip',buffer:file});
-await page.locator('#ea-base-local-layer-choice:not([hidden])').waitFor();
-assert.equal(page.url(),url);
-assert.match(await page.locator('#ea-base-local-local-layer').textContent(),/Raster.*dados.gpkg/);
-await page.selectOption('#ea-base-local-local-layer','dados.gpkg::raster:0');await page.locator('#ea-base-local-local-confirm').click();
 await page.locator('#ea-base-local-preview:not([hidden])').waitFor();
+assert.equal(page.url(),url);
+await page.locator('#ea-base-local-preview-layers').getByRole('button',{name:/Imagem/}).click();
 assert.match(await page.locator('#ea-base-local-preview-data').textContent(),/8 × 8 pixels/);
 assert.equal(await page.locator('#ea-input-select').inputValue(),'local:2');
-assert.equal(await page.locator('#ea-staging').isVisible(),false,'Raster não é incluído como vetor');
-await page.selectOption('#ea-base-local-local-layer','dados.gpkg::0');await page.locator('#ea-base-local-local-confirm').click();
 await page.locator('#ea-staging:not([hidden])').waitFor();
 await page.locator('#ea-staging-confirmar').click();await page.locator('dialog').getByRole('button',{name:'Confirmar bases',exact:true}).click();await page.locator('dialog').getByRole('button',{name:'Fechar',exact:true}).click();
 await page.locator('#ea-run').click();await page.locator('dialog').getByRole('button',{name:'Executar extração',exact:true}).click();await page.locator('dialog').getByRole('button',{name:'Fechar',exact:true}).click();
 assert.equal(Object.keys(execs[1].bases_locais).length,1);
+assert.equal(execs[1].arquivo_local.camada,undefined,'Execução recebe o pacote inteiro, sem restrição a uma camada');
 assert.equal(Buffer.from(Object.values(execs[1].bases_locais)[0].conteudo_base64,'base64').toString(),file.toString());
 await page.locator('#ea-input-clear').click();
 assert.equal(await page.locator('#ea-bases-confirmadas').isVisible(),true,'Limpar entrada preserva bases locais');

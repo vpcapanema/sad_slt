@@ -419,10 +419,27 @@ Os dois botões **Enviar nova camada** (entrada e base) usam o mesmo leitor loca
 
 Cada pacote tem seu namespace. São percorridos todos os arquivos reconhecidos,
 GeoPackages e classes de feições da geodatabase, sem escolher silenciosamente o
-primeiro. O inventário distingue vetor/raster e mostra o arquivo de origem;
-componentes não legíveis produzem avisos. A leitura do vetor selecionado chega
-às feições e seus atributos, preservando o CRS original. Vários vetores do mesmo
-pacote podem ser adicionados às bases, um por vez, pela seleção que permanece aberta.
+primeiro. O upload valida automaticamente todas as camadas encontradas. O inventário
+retorna `status_validacao` e metadados/GeoJSON para cada camada válida, ou o erro
+individual para cada camada não validada. Não há seletor intermediário.
+Componentes geoespaciais ilegíveis também aparecem como não validados.
+
+O painel esquerdo da prévia separa **Validadas** e **Não validadas**. Todas as
+válidas são desenhadas juntas, com cores distintas e enquadramento do conjunto.
+Clicar no nome (ou na geometria) muda apenas os metadados abaixo do mapa; não
+exclui as outras camadas nem altera a entrada da análise. Em telas estreitas,
+a lista passa para cima do mapa.
+
+A entrada enviada para análise é o conjunto de todas as feições vetoriais
+válidas do arquivo, com a união dos atributos e nulos nos campos ausentes. Em
+arquivos multicamada, `slt_camada_origem` identifica o componente/camada de cada
+feição; o nome recebe sufixo se já existir na fonte. Os vetores são reprojetados
+para o CRS da primeira camada válida para compor a entrada; a prévia individual
+continua mostrando o CRS original. O servidor reabre e revalida o conjunto na
+execução. O arquivo é enviado uma única vez, sem filtro de camada. Rasters não
+entram na análise vetorial. Um lote sem vetores válidos limpa a entrada anterior
+e mantém os diagnósticos visíveis, evitando executar uma entrada antiga por engano.
+No upload de bases, todas as camadas vetoriais válidas entram na lista da categoria.
 
 **Raster é inspecionável, não executável nos algoritmos vetoriais atuais.** A
 interface exibe dimensões, bandas, tipo de pixel, NoData, resolução, CRS,
@@ -438,7 +455,7 @@ locais são bloqueadas com orientação para cadastrar as bases no storage.
 
 Limites: 16 MB por envio, 32 MB expandidos **somando todos os níveis**, 2000
 componentes, 5 níveis de compactação, orçamento de 60 segundos para exploração,
-50 mil feições por vetor, 500 mil vértices e 2000 campos. Na execução, arquivos
+50 mil feições e 500 mil vértices somados no conjunto; até 1999 atributos de origem mais o identificador da camada. Camadas que excedem o orçamento ficam no painel de não validadas com o motivo. Na execução, arquivos
 locais somam no máximo 30 MB codificados. Caminhos externos, links, arquivos
 cifrados/multipartidos e formatos de conexão OGR/VRT não são aceitos.
 
@@ -446,7 +463,7 @@ A descompactação usa libarchive-c/libarchive, em memória; o Docker instala a
 biblioteca nativa explicitamente. O serviço de importação permanente de outros
 módulos não foi alterado: estas regras valem para os botões da extração.
 
-A prévia aparece abaixo dos cards 1.1/1.2/1.3 apenas após a validação. Usa Leaflet
+A prévia aparece abaixo dos cards 1.1/1.2/1.3 apenas após a validação de todas as camadas. Usa Leaflet
 1.9.4 já presente no acervo de assets e tiles OpenStreetMap. Falha no mapa de
 fundo não oculta a geometria. O contêiner mostra arquivo, tamanho, formato,
 camada, contagens, tipos geométricos, CRS original/nome/unidade, limites WGS 84,

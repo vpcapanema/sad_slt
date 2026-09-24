@@ -19,113 +19,124 @@ function base64(file) {
 export function criarEntradaLocal(state, changed, {alvo='input', adicionar} = {}) {
   const baseLocal=alvo==='base';
   const node=id=>$(`#ea-${baseLocal?'base-local':'input'}-${id}`);
-  let inspecaoRaster=null, ultimaBase=null;
-  const selecionar = node('upload'), arquivo = node('file'), status = node('upload-status');
-  const escolha = node('layer-choice'), opcoes = node('local-layer');
-  const host = node('preview'), mapaHost = node('preview-map'), dados = node('preview-data');
-  let mapa, desenho, atual, pendente, versao = 0, controller;
-  selecionar.addEventListener('click', () => { if (!state.busy && !state.uploading) {if(baseLocal&&!$('#ea-category-select').value){mostrarStatus('Selecione a categoria da base antes de enviar.',true);return;}arquivo.click();} });
-
-  function mostrarStatus(texto, erro = false) {
-    status.textContent = texto;status.hidden = !texto;status.setAttribute('role', erro ? 'alert' : 'status');
+  const selecionar=node('upload'), arquivo=node('file'), status=node('upload-status');
+  const host=node('preview'), mapaHost=node('preview-map'), dados=node('preview-data'), lista=node('preview-layers');
+  let pacote=null, selecionada=null, mapa=null, desenho=null, atual=null, versao=0, controller;
+  const cores=['#1769aa','#b64d11','#247947','#854cb0','#b52c65','#087f8c'];
+  const vetorial=item=>item.status_validacao==='valida'&&item.tipo!=='raster';
+  function mostrarStatus(texto,erro=false){status.textContent=texto;status.hidden=!texto;status.setAttribute('role',erro?'alert':'status');}
+  function ocupado(valor){
+    state.uploading=valor;
+    for(const id of ['ea-input-upload','ea-base-local-upload','ea-input-browse','ea-input-clear','ea-base-browse'])$('#'+id).disabled=valor||state.busy;
+    node('upload-cancel').hidden=!valor;
+    $('#ea-run').disabled=valor||state.busy||!state.operation||!state.input||!state.bases.length;
   }
-  function ocupado(valor) {
-    state.uploading = valor;
-    selecionar.disabled = valor || state.busy;
-    $('#ea-input-browse').disabled = valor || state.busy;
-    $('#ea-input-clear').disabled = valor || state.busy;
-    $('#ea-base-browse').disabled = valor || state.busy;
-    node('local-confirm').disabled = valor;
-    node('upload-cancel').hidden = !valor;
-    $('#ea-run').disabled = valor || state.busy || !state.operation || !state.input || !state.bases.length;
-  }
-  async function ler(file, camada) {
-    const categoriaUpload=baseLocal?$('#ea-category-select').value:null;
-    const minhaVersao = ++versao;
-    controller?.abort();controller = new AbortController();
-    ocupado(true);escolha.hidden = true;
-    mostrarStatus('Lendo, descompactando e validando a camada…');
-    try {
-      const response = await fetch(`${base}/extracao-atributos/entrada-local?nome=${encodeURIComponent(file.name)}${camada ? '&camada=' + encodeURIComponent(camada) : ''}`, {
-        method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/octet-stream'}, body: file,
-        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(180000)]),
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(typeof result?.detail === 'string' ? result.detail : `Falha na validação (HTTP ${response.status}).`);
-      if (minhaVersao !== versao) return;
-      if (result?.camadas) {
-        pendente = file;opcoes.replaceChildren(new Option('Selecione uma camada', ''));
-        for (const item of result.camadas) opcoes.append(new Option(`${item.tipo==='raster'?'Raster':'Vetor'} · ${item.arquivo} › ${item.nome}`, item.chave));
-        escolha.hidden = false;mostrarStatus('Conteúdo do pacote: escolha uma camada para validar ou um raster para inspecionar.' + (result.avisos?.length ? ' '+result.avisos.join(' ') : ''));return;
-      }
-      if(result?.tipo==='raster'){inspecaoRaster=result;mostrarStatus(result.mensagem+(state.input?' A entrada selecionada anteriormente foi mantida.':''));render();return;}
-      inspecaoRaster=null;
-      if (!result?.geojson?.features?.length || !result.metadados_local) throw new Error('A validação não retornou uma camada utilizável.');
-      const conteudo = await base64(file);
-      if (minhaVersao !== versao) return;
-      result.arquivo_local = {nome: file.name, camada: result.metadados_local.camada, conteudo_base64: conteudo};
-      // Uma entrada local por vez; substituir também libera as referências antigas da página.
-      if(!baseLocal)state.catalog=state.catalog.filter(item=>item.id!==state.input||item.origem!=='local');
-      state.catalog.push(result);
-      if(baseLocal){ultimaBase=result;adicionar([result.id],categoriaUpload);}else{state.input=result.id;state.inputConfig=null;}
-      if(!camada)pendente = null;
-      mostrarStatus(baseLocal?'Base validada e adicionada à lista da categoria. Confirme a lista para usá-la na análise.':'Camada validada e selecionada como entrada. O arquivo permanece somente na memória desta página.');
-      render();
-      await changed();
-    } catch (error) {
-      if (minhaVersao !== versao || error.name === 'AbortError') return;
-      mostrarStatus(`${error.name==='TimeoutError'?'A validação demorou demais. Tente novamente.':error.message}${state.input ? ' A seleção anterior foi mantida.' : ''}`, true);
-    } finally {
-      if (minhaVersao === versao) {ocupado(false);if(pendente&&opcoes.options.length>1)escolha.hidden=false;}
-    }
-  }
-  arquivo.addEventListener('change', () => {
-    const file = arquivo.files[0];arquivo.value = '';
+  selecionar.addEventListener('click',()=>{
     if(state.busy||state.uploading)return;
-    if (!file) return;
-    if (!file.size || file.size > MAX_BYTES) { mostrarStatus('Escolha um arquivo não vazio de até 16 MB.', true);return; }
-    pendente = null;opcoes.replaceChildren();ler(file);
+    if(baseLocal&&!$('#ea-category-select').value){mostrarStatus('Selecione a categoria da base antes de enviar.',true);return;}
+    arquivo.click();
   });
-  node('local-confirm').addEventListener('click', () => {
-    if (!pendente || !opcoes.value) { mostrarStatus('Selecione uma camada do arquivo.', true);return; }
-    ler(pendente, opcoes.value);
+  async function ler(file){
+    const categoriaUpload=baseLocal?$('#ea-category-select').value:null;
+    const minhaVersao=++versao;controller?.abort();controller=new AbortController();ocupado(true);
+    mostrarStatus('Explorando o arquivo e validando todas as camadas…');
+    try{
+      const response=await fetch(`${base}/extracao-atributos/entrada-local?nome=${encodeURIComponent(file.name)}`,{
+        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:file,
+        signal:AbortSignal.any([controller.signal,AbortSignal.timeout(180000)])});
+      const result=await response.json().catch(()=>null);
+      if(!response.ok)throw new Error(typeof result?.detail==='string'?result.detail:`Falha na validação (HTTP ${response.status}).`);
+      if(minhaVersao!==versao)return;
+      if(!Array.isArray(result?.camadas)||!result.resumo)throw new Error('O servidor não retornou a validação de todas as camadas. Atualize a página e tente novamente.');
+      const validas=result.camadas.filter(vetorial);
+      const conteudo=validas.length?await base64(file):null;
+      if(minhaVersao!==versao)return;
+      if(baseLocal){
+        for(const item of validas){
+          item.arquivo_local={nome:file.name,camada:item.metadados_local.camada,conteudo_base64:conteudo};
+          state.catalog.push(item);
+        }
+        if(validas.length)adicionar(validas.map(item=>item.id),categoriaUpload);
+      }else{
+        // Um conjunto de entrada: nunca conservar silenciosamente a entrada antiga após um lote sem vetores válidos.
+        state.catalog=state.catalog.filter(item=>item.id!==state.input||item.origem!=='local');
+        state.input='';state.inputConfig=null;
+        if(result.entrada&&validas.length){
+          result.entrada.arquivo_local={nome:file.name,conteudo_base64:conteudo};
+          result.entrada.camadas_importadas=result.camadas;
+          state.catalog.push(result.entrada);state.input=result.entrada.id;
+        }
+      }
+      pacote=result;selecionada=result.camadas[0]?.chave||null;
+      const r=result.resumo;
+      mostrarStatus(`${r.total} camada(s) encontrada(s): ${r.validas} validada(s), ${r.invalidas} não validada(s). `+
+        (baseLocal?`${validas.length} base(s) vetorial(is) adicionada(s) à lista da categoria.`:`${validas.length} camada(s) vetorial(is) compõem a entrada da análise.`)+
+        (r.rasters?' Rasters aparecem na prévia; os algoritmos de extração disponíveis trabalham com vetores.':''));
+      render();await changed();
+    }catch(error){
+      if(minhaVersao!==versao||error.name==='AbortError')return;
+      mostrarStatus(`${error.name==='TimeoutError'?'A validação demorou demais. Tente novamente.':error.message}${state.input?' A seleção anterior foi mantida.':''}`,true);
+    }finally{if(minhaVersao===versao)ocupado(false);}
+  }
+  arquivo.addEventListener('change',()=>{
+    const file=arquivo.files[0];arquivo.value='';
+    if(!file||state.busy||state.uploading)return;
+    if(!file.size||file.size>MAX_BYTES){mostrarStatus('Escolha um arquivo não vazio de até 16 MB.',true);return;}
+    ler(file);
   });
-  const cancelar = () => {
-    controller?.abort();versao++;pendente = null;escolha.hidden = true;ocupado(false);mostrarStatus('Seleção do arquivo cancelada.');
-  };
-  node('local-cancel').addEventListener('click', cancelar);
-  node('upload-cancel').addEventListener('click', cancelar);
-  function render() {
-    const layer=inspecaoRaster||(baseLocal?ultimaBase:state.catalog.find(item=>item.id===state.input&&item.origem==='local'));
-    const raster=layer?.tipo==='raster';
-    host.hidden = !layer;
-    if (!layer) {
-      if (desenho) { desenho.remove();desenho = null; }
-      atual = null;dados.replaceChildren();return;
+  node('upload-cancel').addEventListener('click',()=>{controller?.abort();versao++;ocupado(false);mostrarStatus('Validação cancelada. A prévia anterior foi mantida.');});
+  function renderLista(){
+    lista.replaceChildren();
+    for(const [statusValidacao,titulo] of [['valida','Validadas'],['invalida','Não validadas']]){
+      const itens=pacote.camadas.filter(c=>c.status_validacao===statusValidacao);
+      const grupo=el('section',undefined,'ea-preview-layer-group');grupo.dataset.validation=statusValidacao;
+      grupo.append(el('h5',`${titulo} (${itens.length})`));
+      if(!itens.length)grupo.append(el('p','Nenhuma camada.','ea-hint'));
+      for(const item of itens){
+        const botao=el('button',undefined,'ea-preview-layer');botao.type='button';botao.dataset.layer=item.chave;
+        botao.setAttribute('aria-pressed',String(item.chave===selecionada));
+        const index=pacote.camadas.indexOf(item);botao.style.setProperty('--layer-color',cores[index%cores.length]);
+        botao.append(el('strong',item.nome),el('small',`${item.tipo==='raster'?'Raster':'Vetor'} · ${item.arquivo}`));
+        if(item.erro)botao.title=item.erro;
+        botao.addEventListener('click',()=>{selecionada=item.chave;renderLista();renderDetalhes(item);});
+        grupo.append(botao);
+      }
+      lista.append(grupo);
     }
-    if (atual === layer) return;
-    atual = layer;
-    if (!mapa) {
-      mapa = window.L.map(mapaHost, {preferCanvas: true, scrollWheelZoom: false}).setView([-23.5, -46.6], 7);
-      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19,
-      }).addTo(mapa).on('tileerror', () => {
-        node('preview-map-status').textContent = 'Mapa de fundo indisponível. A geometria da entrada continua visível.';
-      });
-      window.L.control.scale({imperial: false}).addTo(mapa);
-      new ResizeObserver(() => mapa.invalidateSize()).observe(mapaHost);
+  }
+  function render(){
+    host.hidden=!pacote;
+    if(!pacote){desenho?.remove();desenho=null;atual=null;lista.replaceChildren();dados.replaceChildren();return;}
+    if(atual===pacote)return;atual=pacote;
+    if(!mapa){
+      mapa=window.L.map(mapaHost,{preferCanvas:true,scrollWheelZoom:false}).setView([-23.5,-46.6],7);
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+        attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19,
+      }).addTo(mapa).on('tileerror',()=>{node('preview-map-status').textContent='Mapa de fundo indisponível. As camadas validadas continuam visíveis.';});
+      window.L.control.scale({imperial:false}).addTo(mapa);
+      new ResizeObserver(()=>mapa.invalidateSize()).observe(mapaHost);
     }
-    desenho?.remove();
-    desenho = window.L.geoJSON(layer.geojson||{type:'FeatureCollection',features:[]}, {
-      style: {color: '#1769aa', weight: 3, fillOpacity: .2},
-      pointToLayer: (_, latlng) => window.L.circleMarker(latlng, {radius: 5, color: '#1769aa', fillOpacity: .75}),
-    }).addTo(mapa);
-    const limites = desenho.getBounds();
-    if(layer.imagem&&limites.isValid()){const grupo=window.L.featureGroup([desenho,window.L.imageOverlay(layer.imagem,limites)]).addTo(mapa);desenho=grupo;}
-    requestAnimationFrame(() => { mapa.invalidateSize();if (limites.isValid()) mapa.fitBounds(limites, {padding: [24, 24], maxZoom: 15}); });
-    dados.replaceChildren();
-    const meta = layer.metadados_local;
-    node('preview-name').textContent = `${meta.arquivo} › ${meta.nome_camada}`;
+    desenho?.remove();desenho=window.L.featureGroup().addTo(mapa);
+    pacote.camadas.forEach((item,index)=>{
+      if(item.status_validacao!=='valida'||!item.geojson)return;
+      const color=cores[index%cores.length];
+      const camada=window.L.geoJSON(item.geojson,{
+        style:{color,weight:3,fillOpacity:.18},pointToLayer:(_,latlng)=>window.L.circleMarker(latlng,{radius:5,color,fillOpacity:.8})});
+      camada.on('click',()=>{selecionada=item.chave;renderLista();renderDetalhes(item);});
+      desenho.addLayer(camada);
+      if(item.imagem&&camada.getBounds().isValid())desenho.addLayer(window.L.imageOverlay(item.imagem,camada.getBounds(),{opacity:.8}));
+    });
+    const limites=desenho.getBounds();requestAnimationFrame(()=>{mapa.invalidateSize();if(limites.isValid())mapa.fitBounds(limites,{padding:[24,24],maxZoom:15});});
+    node('preview-name').textContent=`${pacote.arquivo} · ${pacote.resumo.total} camada(s) importada(s)`;
+    renderLista();renderDetalhes(pacote.camadas.find(c=>c.chave===selecionada)||pacote.camadas[0]);
+  }
+  function renderDetalhes(layer){
+    dados.replaceChildren();if(!layer)return;
+    const titulo=el('h5',layer.nome,'ea-preview-selected-title');dados.append(titulo);
+    if(layer.status_validacao==='invalida'){
+      dados.append(el('p',`Arquivo: ${layer.arquivo}`),el('p',`Não validada: ${layer.erro}`,'ea-preview-error'));return;
+    }
+    const meta=layer.metadados_local,raster=layer.tipo==='raster';
     function grupo(titulo, pares) {
       const bloco = el('section', undefined, 'ea-preview-meta-group');bloco.append(el('h5', titulo));
       const lista = el('dl');
@@ -149,8 +160,6 @@ export function criarEntradaLocal(state, changed, {alvo='input', adicionar} = {}
       ['Consulta', [local.aviso,local.aviso_ufs].filter(Boolean).join(' ') || 'Consulta concluída.']]);
     for (const aviso of meta.avisos || []) dados.append(el('p', aviso, 'ea-hint'));
   }
-  function limpar() {
-    inspecaoRaster=null;ultimaBase=null;controller?.abort();versao++;pendente=null;escolha.hidden=true;ocupado(false);mostrarStatus('');render();
-  }
+  function limpar(){controller?.abort();versao++;pacote=null;selecionada=null;ocupado(false);mostrarStatus('');render();}
   return {render,limpar};
 }

@@ -34,7 +34,9 @@ def test_previa_nao_cadastra_camada(monkeypatch):
     monkeypatch.setattr(local, 'localizacao', lambda f: {'ufs':['SP'],'municipios':[{'nm_mun':'São Paulo','cd_mun':'3550308','sigla_uf':'SP'}]})
     from api.services.geoespacial_service import geoespacial_service as geo
     monkeypatch.setattr(geo, 'registrar_camada', lambda *a,**kw: pytest.fail('Upload não cadastra camada'))
-    resultado=local.previa(geojson(),'pontos.geojson')
+    lote=local.previa(geojson(),'pontos.geojson')
+    assert lote['resumo']=={'total':1,'validas':1,'invalidas':0,'vetores':1,'rasters':0}
+    resultado=lote['camadas'][0]
     assert resultado['origem']=='local' and resultado['id'].startswith('local:')
     assert resultado['metadados_local']['localizacao']['ufs']==['SP']
     assert resultado['geojson']['features'][0]['properties']['codigo']=='001'
@@ -134,7 +136,7 @@ def test_endpoint_auth_validacao_e_nao_cache(monkeypatch):
     with TestClient(app) as client:
         result=client.post('/extracao-atributos/entrada-local?nome=p.geojson',content=geojson())
         assert result.status_code==200 and result.headers['cache-control']=='no-store'
-        assert result.json()['metadados_local']['feicoes']==1
+        assert result.json()['entrada']['metadados_local']['feicoes']==1
         assert client.post('/extracao-atributos/entrada-local?nome=a.zip',content=b'bad').status_code==422
 
 
