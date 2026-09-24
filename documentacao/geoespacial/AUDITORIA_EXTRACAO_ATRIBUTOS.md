@@ -249,3 +249,20 @@ não faz parte desses testes; nenhuma saída de teste foi cadastrada em produç�
 
 Validação final desta alteração: **85 testes Python passaram**, além dos dois
 roteiros Playwright (regressão da extração existente e novo upload local).
+
+## Ampliação do upload local — 24/09/2026
+
+- Entrada e bases abrem seletores locais e compartilham o leitor em RAM.
+- ZIP/RAR/7z/TAR e variantes: expansão recursiva com orçamento cumulativo de bytes,
+  profundidade, componentes, caminhos e links verificados, sem `extractall` em disco.
+- Inventário de todos os GeoPackages e File Geodatabases, distinguindo vetores e
+  rasters. O usuário escolhe a camada; pacotes mistos não descartam datasets.
+- Raster: inspeção/miniatura/metadados; uso em algoritmos vetoriais recusado de
+  forma explícita na interface e no servidor. Análise matricial não implementada.
+- Bases locais são revalidadas e passadas à thread em memória, sem cadastro.
+- Validação: 105 testes Python aprovados; dois testes de navegador aprovados,
+  incluindo pacote misto, base local no payload e preservação da entrada anterior.
+- Testes usam arquivos sintéticos reais (RAR4 stored, 7z, ZIP, TAR/GZ/BZ2/XZ,
+  GPKG vetorial/misto, GeoTIFF e File Geodatabase com duas feature classes).
+- A publicação depende da reabertura do túnel Windows; não confundir validação
+  local com confirmação da versão implantada.

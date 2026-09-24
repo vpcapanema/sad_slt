@@ -17,6 +17,9 @@ await page.route('**/api/**',async route=>{
  if(path.endsWith('/entrada-local')){
   uploads.push(route.request().postDataBuffer());if(delay)await new Promise(r=>setTimeout(r,delay));
   if(fail)return route.fulfill({status:422,json:{detail:'GeoJSON inválido.'}});
+  if(url.searchParams.get('nome')==='pacote.zip'&&!url.searchParams.get('camada'))return send({camadas:[{chave:'dados.gpkg::0',nome:'Base vetorial',arquivo:'dados.gpkg',tipo:'vetor'},{chave:'dados.gpkg::raster:0',nome:'Imagem',arquivo:'dados.gpkg',tipo:'raster'}]});
+  if(url.searchParams.get('camada')==='dados.gpkg::raster:0')return send({tipo:'raster',compativel_extracao:false,mensagem:'Raster identificado. Os algoritmos desta página exigem camadas vetoriais.',geojson:fc,metadados_local:{arquivo:'pacote.zip',nome_camada:'Imagem',formato:'GPKG',bytes:100,largura:8,altura:8,bandas:[{banda:1,tipo:'Byte',nodata:0}],crs:'EPSG:4326',crs_nome:'WGS 84',limites_wgs84:[-47,-24,-46,-23],avisos:[]}});
+
   return send({id:`local:${++sequence}`,nome:'Pontos locais',origem:'local',origem_geometria:'memoria',geojson:fc,campos:[{nome:'codigo'},{nome:'valor'}],metadados_local:{arquivo:url.searchParams.get('nome'),nome_camada:'Pontos locais',camada:'pontos.geojson::0',formato:'GeoJSON',bytes:file.length,bytes_descompactados:file.length,feicoes:1,campos_total:2,tipos_geometria:['Point'],crs:'EPSG:4326',crs_nome:'WGS 84',unidade:'degree',limites_wgs84:[-46.63,-23.55,-46.63,-23.55],avisos:[],localizacao:{fonte:'IBGE · Malha municipal 2022',cobertura:'Estado de São Paulo',ufs:['SP'],municipios:[{nm_mun:'São Paulo',cd_mun:'3550308',sigla_uf:'SP'}],aviso:'Consulta espacial em SP.'}}});
  }
  if(path.endsWith('/arquivo-mapa'))return send({...catalog.camadas[0],geojson:fc,campos:[{nome:'valor'}]});
@@ -64,6 +67,27 @@ await page.locator('#ea-run').click();await page.locator('dialog').getByRole('bu
 assert.equal(execs[0].input_id,'local:1');assert.equal(Buffer.from(execs[0].arquivo_local.conteudo_base64,'base64').toString(),file.toString());
 await page.locator('#ea-refresh').click();await page.waitForTimeout(200);assert.equal(await page.locator('#ea-input-select').inputValue(),'local:1');
 await page.locator('#ea-input-clear').click();assert.equal(await page.locator('#ea-input-preview').isVisible(),false);
+// O segundo botão também abre seletor nativo; pacote misto permite inspeção e escolha.
+await page.locator('#ea-input-file').setInputFiles({name:'entrada.geojson',mimeType:'application/json',buffer:file});
+await page.waitForFunction(()=>document.querySelector('#ea-input-select').value==='local:2');
+const chooserBase=page.waitForEvent('filechooser');await page.locator('#ea-base-local-upload').click();
+await (await chooserBase).setFiles({name:'pacote.zip',mimeType:'application/zip',buffer:file});
+await page.locator('#ea-base-local-layer-choice:not([hidden])').waitFor();
+assert.equal(page.url(),url);
+assert.match(await page.locator('#ea-base-local-local-layer').textContent(),/Raster.*dados.gpkg/);
+await page.selectOption('#ea-base-local-local-layer','dados.gpkg::raster:0');await page.locator('#ea-base-local-local-confirm').click();
+await page.locator('#ea-base-local-preview:not([hidden])').waitFor();
+assert.match(await page.locator('#ea-base-local-preview-data').textContent(),/8 × 8 pixels/);
+assert.equal(await page.locator('#ea-input-select').inputValue(),'local:2');
+assert.equal(await page.locator('#ea-staging').isVisible(),false,'Raster não é incluído como vetor');
+await page.selectOption('#ea-base-local-local-layer','dados.gpkg::0');await page.locator('#ea-base-local-local-confirm').click();
+await page.locator('#ea-staging:not([hidden])').waitFor();
+await page.locator('#ea-staging-confirmar').click();await page.locator('dialog').getByRole('button',{name:'Confirmar bases',exact:true}).click();await page.locator('dialog').getByRole('button',{name:'Fechar',exact:true}).click();
+await page.locator('#ea-run').click();await page.locator('dialog').getByRole('button',{name:'Executar extração',exact:true}).click();await page.locator('dialog').getByRole('button',{name:'Fechar',exact:true}).click();
+assert.equal(Object.keys(execs[1].bases_locais).length,1);
+assert.equal(Buffer.from(Object.values(execs[1].bases_locais)[0].conteudo_base64,'base64').toString(),file.toString());
+await page.locator('#ea-input-clear').click();
+assert.equal(await page.locator('#ea-bases-confirmadas').isVisible(),true,'Limpar entrada preserva bases locais');
 assert.deepEqual(errors,[]);console.log('PASS: seletor local, prévia pós-validação em Leaflet, metadados, listas condicionais, erros, memória e execução.');
 await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

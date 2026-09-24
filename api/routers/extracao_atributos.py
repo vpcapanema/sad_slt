@@ -185,6 +185,7 @@ class OpcoesOverlay(BaseModel):
 
 
 class Extracao(BaseModel):
+    bases_locais: dict[str, ArquivoLocal] = Field(default_factory=dict, max_length=20)
     arquivo_local: ArquivoLocal | None = None
     input_id: str = Field(min_length=1,max_length=1200)
     nome_saida: str = Field(default='',max_length=200)

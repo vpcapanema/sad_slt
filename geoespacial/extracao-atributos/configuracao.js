@@ -8,6 +8,7 @@ import { editarRegra, resumoRegra, editarEstatisticas, resumoEstatisticas } from
 export function criarConfiguracao(state, changed) {
   const entradaLocal = criarEntradaLocal(state, changed);
   const lista = criarListaCamadas(state, changed, categoria => browse('base', categoria));
+  const baseLocal=criarEntradaLocal(state,changed,{alvo:'base',adicionar:lista.adicionar});
   function sincronizarAlternativas() {
     document.querySelectorAll("[data-alternative-for]").forEach(node=>{
       node.hidden=Boolean(document.getElementById(node.dataset.alternativeFor).value);
@@ -36,7 +37,7 @@ export function criarConfiguracao(state, changed) {
     // categoria; não há segunda lista aqui.
     state.staging=state.staging.filter(item=>state.catalog.some(l=>l.id===item.id)&&state.categories.some(c=>c.id===item.category)&&!state.bases.some(b=>b.id===item.id));
     lista.render();
-    renderBasesConfirmadas();entradaLocal.render();
+    renderBasesConfirmadas();entradaLocal.render();baseLocal.render();
   }
   // Bases já confirmadas: a regra de cada uma fica aqui, onde a camada foi escolhida.
   function renderBasesConfirmadas() {
@@ -108,13 +109,13 @@ export function criarConfiguracao(state, changed) {
       render();
       return;
     }
-    state.catalog=state.catalog.filter(item=>item.origem!=='local');
+    state.catalog=state.catalog.filter(item=>item.origem!=='local'||state.bases.some(b=>b.id===item.id)||state.staging.some(b=>b.id===item.id));
     entradaLocal.limpar();
     changed();
   }
   $("#ea-base-browse").addEventListener('click',()=>browse('base'));
   $("#ea-input-browse").addEventListener('click',()=>browse('input'));
-  $("#ea-input-clear").addEventListener('click',()=>{if(state.uploading)return;state.catalog=state.catalog.filter(l=>l.origem!=='local');state.input='';state.inputConfig=null;entradaLocal.limpar();changed();});
+  $("#ea-input-clear").addEventListener('click',()=>{if(state.uploading)return;state.catalog=state.catalog.filter(l=>l.id!==state.input||l.origem!=='local');state.input='';state.inputConfig=null;entradaLocal.limpar();changed();});
   $("#ea-operation").addEventListener("change",event=>{state.operation=event.target.value;window.SICARDExtracao?.renderParametros?.();changed();});
   // O nome da saida nao muda o mapa nem a previa: so guarda o texto.
   $("#ea-nome-saida").addEventListener("input",event=>{state.nomeSaida=event.target.value;changed();});

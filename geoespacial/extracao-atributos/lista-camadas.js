@@ -168,6 +168,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
 
   botoes.salvar.addEventListener('click', async () => {
     if (state.busy || !paraSalvar().length) return;
+    if(paraSalvar().some(item=>item.id.startsWith('local:'))){feedback('As bases locais são temporárias. Para salvar uma configuração reutilizável, cadastre as bases no storage e selecione-as novamente.');return;}
     const nome = prompt('Nome da configuração:', '');
     if (nome === null) return;
     if (!nome.trim()) { feedback('Informe um nome para a configuração.'); return; }

@@ -104,6 +104,19 @@ def iniciar(payload, user):
         raise ValueError('O arquivo local deve corresponder à entrada selecionada.')
     if input_id not in layers:
         raise ValueError('A camada de entrada não está disponível no catálogo vetorial.')
+    bases_locais = {}
+    solicitadas = {i for g in payload['categorias'] for i in g['camadas'] if i.startswith('local:')}
+    arquivos_bases = payload.get('bases_locais') or {}
+    if set(arquivos_bases) != solicitadas:
+        raise ValueError('Selecione novamente os arquivos das bases locais.')
+    tamanho_total = sum(len(a.get('conteudo_base64', '')) for a in arquivos_bases.values()) + len((payload.get('arquivo_local') or {}).get('conteudo_base64', ''))
+    if tamanho_total > 30 * 1024 * 1024:
+        raise ValueError('Os arquivos locais da execução excedem 30 MB codificados. Reduza o conjunto de bases.')
+    for chave, arquivo in arquivos_bases.items():
+        from api.services.extracao_entrada_local import restaurar
+        frame, meta = restaurar(arquivo)
+        bases_locais[chave] = frame
+        layers[chave] = {'id': chave, 'nome': meta['nome_camada'], 'origem': 'local', 'metadados_local': meta}
     from api.services.extracao_atributos_regras import normalizar_entrada, normalizar_finalidades
     configs = {item['id']: item.get('config') for item in payload.get('entradas') or []}
     if payload['operacao'] not in ('enriquecimento', 'estatisticas') and (len(configs) > 1 or set(configs) - {input_id}
@@ -153,7 +166,9 @@ def iniciar(payload, user):
     ident = ciclo.iniciar('extracao_atributos',params,str(user.id))
     with _lock: _progress[ident] = [_etapa('Na fila de processamento')]
     try:
-        if entrada_local is not None:
+        if bases_locais:
+            _pool.submit(_execute,ident,params,entrada_local,bases_locais)
+        elif entrada_local is not None:
             _pool.submit(_execute,ident,params,entrada_local)
         else:
             _pool.submit(_execute,ident,params)
@@ -170,7 +185,7 @@ def _etapa(mensagem):
     return {'em': datetime.now(timezone.utc).isoformat(timespec='seconds'), 'mensagem': mensagem}
 
 
-def _execute(ident, params, entrada_local=None):
+def _execute(ident, params, entrada_local=None, bases_locais=None):
     token = ciclo.execucao_atual.set(ident)
     def progress(message):
         # O modal de acompanhamento lê esta lista; o corte evita crescer sem limite.
@@ -183,7 +198,7 @@ def _execute(ident, params, entrada_local=None):
         progress('Carregando entrada e bases')
         from api.services.municipal_layer import carregar_para_extracao
         source = entrada_local if entrada_local is not None else carregar_para_extracao(params['camada_id'])
-        categories = [{**c,'camadas':[{**b,'frame':carregar_para_extracao(b['id'])} for b in c['camadas']]}
+        categories = [{**c,'camadas':[{**b,'frame':bases_locais[b['id']] if bases_locais and b['id'] in bases_locais else carregar_para_extracao(b['id'])} for b in c['camadas']]}
                       for c in params['categorias']]
         if params['operacao'] in ('enriquecimento', 'estatisticas'):
             _executar_enriquecimento(ident,params,source,categories,progress,inicio)

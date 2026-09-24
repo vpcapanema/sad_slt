@@ -8,18 +8,16 @@ from __future__ import annotations
 
 import base64
 import binascii
-import io
 import json
 import logging
 from hashlib import sha256
 from pathlib import PurePosixPath
 from uuid import uuid4
-from zipfile import BadZipFile, ZipFile
 
 import geopandas as gpd
 import numpy as np
 import shapely
-from osgeo import gdal, ogr
+from osgeo import gdal
 from pyproj import CRS
 
 from api.db.connection import get_connection
@@ -29,8 +27,6 @@ MAX_ARQUIVO = 16 * 1024 * 1024
 MAX_DESCOMPACTADO = 32 * 1024 * 1024
 MAX_FEICOES = 50000
 MAX_VERTICES = 500000
-EXTENSOES = {'.gpkg': 'GPKG', '.shp': 'ESRI Shapefile', '.geojson': 'GeoJSON',
-             '.json': 'GeoJSON', '.fgb': 'FlatGeobuf', '.kml': 'KML'}
 _log = logging.getLogger(__name__)
 
 
@@ -42,36 +38,13 @@ def _nome(nome):
 
 
 def _componentes(conteudo, nome):
-    extensao = PurePosixPath(nome).suffix.lower()
-    if extensao not in ('.zip', '.kmz'):
-        if extensao == '.shp':
-            raise ValueError('Envie o Shapefile em ZIP, incluindo .shp, .shx, .dbf e .prj.')
-        if extensao not in EXTENSOES:
-            raise ValueError('Use GeoPackage, GeoJSON, FlatGeobuf, KML/KMZ ou Shapefile em ZIP.')
-        return {nome: conteudo}
-    try:
-        with ZipFile(io.BytesIO(conteudo)) as arquivo:
-            itens = arquivo.infolist()
-            if len(itens) > 200 or sum(i.file_size for i in itens) > MAX_DESCOMPACTADO:
-                raise ValueError('O ZIP excede o limite de 200 componentes ou 32 MB descompactados.')
-            saida = {}
-            for item in itens:
-                path = PurePosixPath(item.filename.replace('\\', '/'))
-                if path.is_absolute() or '..' in path.parts or ':' in str(path) or ((item.external_attr >> 16) & 0o170000) == 0o120000:
-                    raise ValueError('O ZIP contém um caminho ou link não permitido.')
-                if item.is_dir() or '__MACOSX' in path.parts or path.name.startswith('.'):
-                    continue
-                if item.flag_bits & 1:
-                    raise ValueError('ZIP protegido por senha não é aceito.')
-                chave = str(path)
-                if chave in saida:
-                    raise ValueError('O ZIP contém nomes de arquivos repetidos.')
-                if path.suffix.lower() not in {*EXTENSOES, '.shx', '.dbf', '.prj', '.cpg', '.qix', '.sbn', '.sbx', '.qml', '.sld', '.txt', '.xml'}:
-                    continue
-                saida[chave] = arquivo.read(item)
-            return saida
-    except (BadZipFile, RuntimeError, NotImplementedError) as exc:
-        raise ValueError('Não foi possível descompactar o ZIP. Confira se o arquivo está íntegro e sem senha.') from exc
+    from api.services.pacote_geoespacial_memoria import componentes, COMPACTADOS, VETORES, RASTERS
+    ext = PurePosixPath(nome).suffix.lower()
+    if ext == '.shp':
+        raise ValueError('Envie o Shapefile em ZIP, RAR ou 7z, incluindo .shp, .shx, .dbf e .prj.')
+    if ext not in {*COMPACTADOS, *VETORES, *RASTERS}:
+        raise ValueError('Use GeoPackage, GeoJSON, File Geodatabase compactada, vetor ou raster compatível; pacotes ZIP, RAR, 7z, TAR, GZ, BZ2 e XZ.')
+    return componentes(conteudo, nome, MAX_DESCOMPACTADO)
 
 
 def validar(frame):
@@ -104,59 +77,29 @@ def validar(frame):
 
 
 def ler(conteudo: bytes, nome: str, camada: str | None = None):
+    from pyproj.exceptions import ProjError
+    try:
+        return _ler(conteudo, nome, camada)
+    except (RuntimeError, ProjError, UnicodeError) as exc:
+        raise ValueError('Não foi possível ler a camada. Verifique integridade, codificação e sistema de coordenadas (CRS).') from exc
+
+
+def _ler(conteudo: bytes, nome: str, camada: str | None = None):
     """Devolve escolhas de camada ou (frame, metadados). Nunca escreve no disco."""
     nome = _nome(nome)
     if not conteudo or len(conteudo) > MAX_ARQUIVO:
         raise ValueError('Envie um arquivo não vazio de até 16 MB.')
     componentes = _componentes(conteudo, nome)
-    raiz = f'/vsimem/entrada-{uuid4().hex}'
-    gdal.Mkdir(raiz, 0o700)
-    datasets = []
-    try:
-        for relativo, dados in componentes.items():
-            destino = f'{raiz}/{relativo}'
-            partes = PurePosixPath(relativo).parts[:-1]
-            for i in range(len(partes)):
-                gdal.Mkdir(f"{raiz}/{'/'.join(partes[:i+1])}", 0o700)
-            gdal.FileFromMemBuffer(destino, dados)
-        opcoes = []
-        for relativo in componentes:
-            extensao = PurePosixPath(relativo).suffix.lower()
-            if extensao not in EXTENSOES:
-                continue
-            # Metadados JSON auxiliares dentro de pacotes não são GeoJSON.
-            if extensao in ('.json', '.geojson'):
-                try:
-                    if json.loads(componentes[relativo]).get('type') not in ('FeatureCollection', 'Feature'):
-                        continue
-                except (ValueError, AttributeError):
-                    if len(componentes) == 1:
-                        raise ValueError('GeoJSON inválido.')
-                    continue
-            if extensao == '.shp':
-                radical = str(PurePosixPath(relativo).with_suffix('')).lower()
-                nomes = {p.lower() for p in componentes}
-                faltando = [ext for ext in ('.shx', '.dbf', '.prj') if radical+ext not in nomes]
-                if faltando:
-                    raise ValueError(f'Shapefile incompleto: faltam {", ".join(faltando)}.')
-            dataset = gdal.OpenEx(f'{raiz}/{relativo}', gdal.OF_VECTOR | gdal.OF_READONLY,
-                                 allowed_drivers=[EXTENSOES[extensao]])
-            if dataset is None:
-                raise ValueError(f'Não foi possível ler a camada em {relativo}.')
-            datasets.append(dataset)
-            for i in range(dataset.GetLayerCount()):
-                layer = dataset.GetLayerByIndex(i)
-                if layer.GetGeomType() == ogr.wkbNone:
-                    continue
-                chave = f'{relativo}::{i}'
-                opcoes.append({'chave': chave, 'nome': layer.GetName(), 'arquivo': relativo, 'layer': layer})
-        if not opcoes:
-            raise ValueError('Nenhuma camada vetorial compatível foi encontrada no arquivo.')
+    from api.services.pacote_geoespacial_memoria import abrir, inventario
+    with abrir(componentes) as (opcoes, avisos_pacote, raiz):
+        lista = inventario(opcoes)
         if len(opcoes) > 1 and not camada:
-            return None, {'camadas': [{k:v for k,v in o.items() if k != 'layer'} for o in opcoes]}
+            return None, {'camadas': lista, 'avisos': avisos_pacote}
         escolha = next((o for o in opcoes if o['chave'] == camada), None) if camada else opcoes[0]
         if escolha is None:
             raise ValueError('A camada escolhida não existe neste arquivo.')
+        if escolha['tipo'] == 'raster':
+            return None, _previa_raster(escolha, nome, conteudo, componentes, avisos_pacote, raiz)
         layer = escolha['layer']
         srs = layer.GetSpatialRef()
         if srs is None:
@@ -192,28 +135,15 @@ def ler(conteudo: bytes, nome: str, camada: str | None = None):
         comprimento = sum(geod.geometry_length(g) for g in mapa.geometry if g is not None and not g.is_empty and g.geom_type in ('LineString','MultiLineString'))
         area = sum(abs(geod.geometry_area_perimeter(g)[0]) for g in mapa.geometry if g is not None and not g.is_empty and g.is_valid and g.geom_type in ('Polygon','MultiPolygon'))
         meta = {'comprimento_km': comprimento/1000, 'area_km2': area/1000000, 'arquivo': nome, 'componente': escolha['arquivo'], 'camada': escolha['chave'],
-                'nome_camada': escolha['nome'], 'formato': EXTENSOES[PurePosixPath(escolha['arquivo']).suffix.lower()],
+                'nome_camada': escolha['nome'], 'formato': escolha['formato'], 'tipo': 'vetor',
                 'bytes': len(conteudo), 'bytes_descompactados': sum(map(len, componentes.values())),
                 'sha256': sha256(conteudo).hexdigest(), 'feicoes': len(frame), 'campos_total': len(campos),
                 'tipos_geometria': sorted(set(frame.geom_type.dropna())), 'crs': crs.to_string(),
                 'crs_nome': crs.name, 'crs_wkt': crs.to_wkt(),
                 'unidade': crs.axis_info[0].unit_name if crs.axis_info else None,
-                'limites_wgs84': mapa.total_bounds.tolist(), 'avisos': avisos,
+                'limites_wgs84': mapa.total_bounds.tolist(), 'avisos': avisos_pacote + avisos,
                 'campos': [{'nome': c, 'tipo': t} for c,t in zip(campos, tipos)]}
         return frame, meta
-    except (RuntimeError, UnicodeError) as exc:
-        raise ValueError('Falha ao ler o arquivo vetorial. Verifique sua integridade, formato e codificação.') from exc
-    finally:
-        # Layer referencia seu dataset; liberar ambos antes de remover os buffers.
-        if 'opcoes' in locals():
-            opcoes.clear()
-        layer = None
-        escolha = None
-        feature = None
-        geom = None
-        datasets.clear()
-        dataset = None
-        gdal.RmdirRecursive(raiz)
 
 
 def localizacao(frame):
@@ -271,5 +201,60 @@ def restaurar(payload):
         raise ValueError('Conteúdo da entrada local inválido.') from exc
     frame, meta = ler(conteudo, payload.get('nome'), payload.get('camada'))
     if frame is None:
-        raise ValueError('Escolha a camada do arquivo antes de executar.')
+        raise ValueError('Escolha uma camada vetorial: os algoritmos de extração atuais não processam rasters.')
     return frame, meta
+
+
+def _previa_raster(escolha, nome, conteudo, componentes, avisos, raiz):
+    """Inspeciona bandas e pixels sem converter a matriz em feições de análise."""
+    raster = escolha['raster']
+    wkt = raster.GetProjection()
+    crs = CRS.from_wkt(wkt) if wkt else None
+    transform = raster.GetGeoTransform(can_return_null=True)
+    bandas = [{'banda': i, 'tipo': gdal.GetDataTypeName(raster.GetRasterBand(i).DataType),
+               'nodata': _json_safe(raster.GetRasterBand(i).GetNoDataValue())}
+              for i in range(1, raster.RasterCount + 1)]
+    meta = dict(arquivo=nome, componente=escolha['arquivo'], camada=escolha['chave'],
+                nome_camada=escolha['nome'], formato=escolha['formato'], tipo='raster',
+                bytes=len(conteudo), bytes_descompactados=sum(map(len, componentes.values())),
+                largura=raster.RasterXSize, altura=raster.RasterYSize, bandas=bandas,
+                crs=crs.to_string() if crs else None, crs_nome=crs.name if crs else None,
+                resolucao=list(transform[1::4]) if transform else None,
+                avisos=list(avisos), sha256=sha256(conteudo).hexdigest())
+    resultado = {'tipo': 'raster', 'compativel_extracao': False, 'metadados_local': meta,
+                 'mensagem': 'Raster identificado. Os algoritmos desta página exigem camadas vetoriais; não convertemos pixels em feições automaticamente.'}
+    if crs and transform:
+        from shapely.geometry import Polygon
+        corners = [gdal.ApplyGeoTransform(transform, x, y) for x,y in
+                   [(0,0),(raster.RasterXSize,0),(raster.RasterXSize,raster.RasterYSize),(0,raster.RasterYSize)]]
+        frame = gpd.GeoDataFrame(geometry=[Polygon(corners)], crs=crs)
+        mapa = frame.to_crs(4326)
+        if not np.isfinite(mapa.total_bounds).all():
+            raise ValueError('Extensão ou CRS inválido no raster.')
+        meta['limites_wgs84'] = mapa.total_bounds.tolist()
+        meta['localizacao'] = localizacao(frame)
+        resultado['geojson'] = json.loads(mapa.to_json())
+        # Miniatura limitada a 512x512; nenhuma leitura integral da matriz.
+        preview = png = None
+        try:
+            preview = gdal.Warp(f'{raiz}/preview.tif', raster, format='GTiff', dstSRS='EPSG:4326',
+                                width=512, height=512, resampleAlg='near', warpMemoryLimit=16)
+            if preview:
+                pngpath = f'{raiz}/preview.png'
+                bands = [1,2,3] if preview.RasterCount >= 3 else [1]
+                png = gdal.Translate(pngpath, preview, format='PNG', outputType=gdal.GDT_Byte,
+                                     bandList=bands, scaleParams=[[]])
+                png = None
+                f = gdal.VSIFOpenL(pngpath, 'rb')
+                try:
+                    raw = gdal.VSIFReadL(1, gdal.VSIStatL(pngpath).size, f)
+                    resultado['imagem'] = 'data:image/png;base64,' + base64.b64encode(raw).decode()
+                finally:
+                    gdal.VSIFCloseL(f)
+        except RuntimeError:
+            meta['avisos'].append('Miniatura indisponível; exibindo a extensão geográfica do raster.')
+        finally:
+            preview = png = None
+    else:
+        meta['avisos'].append('Raster sem CRS ou georreferenciamento: a localização e a miniatura no mapa não puderam ser confirmadas.')
+    return resultado

@@ -35,3 +35,6 @@ xarray-spatial>=0.3.0
 fiona>=1.9.0
 rarfile>=4.2
 py7zr>=0.22.0
+
+# Leitura streaming de ZIP/RAR/7z/TAR em memoria
+libarchive-c==5.3

@@ -20,10 +20,10 @@
             <div class="ea-layer-actions">
             <button id="ea-input-browse" type="button" class="ea-btn ea-layer-action" title="Escolher camada"><i class="fas fa-folder-tree" aria-hidden="true"></i><span class="ea-action-label">Selecionar camada existente</span></button>
             <button id="ea-input-upload" type="button" class="ea-btn ea-layer-action"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i><span class="ea-action-label">Enviar nova camada</span></button>
-            <input id="ea-input-file" type="file" accept=".zip,.gpkg,.geojson,.json,.fgb,.kml,.kmz" hidden aria-label="Arquivo local da camada de entrada">
+            <input id="ea-input-file" type="file" accept=".zip,.rar,.7z,.tar,.tgz,.tbz2,.txz,.gz,.bz2,.xz,.gpkg,.geojson,.json,.fgb,.kml,.kmz,.gml,.tif,.tiff,.img,.asc,.jp2" hidden aria-label="Arquivo local da camada de entrada">
             <button id="ea-input-clear" type="button" class="ea-btn ea-layer-action" title="Limpar entrada" hidden><i class="fas fa-eraser" aria-hidden="true"></i><span class="ea-action-label">Limpar entrada</span></button>
             </div>
-            <small>Arquivo local: até 16 MB. Shapefile deve estar em ZIP com .shp, .shx, .dbf e .prj.</small>
+            <small>Arquivo local: até 16 MB. ZIP/RAR/7z/TAR e compactações aninhadas; vetores e rasters. Shapefile: pacote com .shp, .shx, .dbf e .prj. File Geodatabase: compacte a pasta .gdb inteira.</small>
             <p id="ea-input-upload-status" class="ea-hint" role="status" aria-live="polite" hidden></p>
             <button id="ea-input-upload-cancel" type="button" class="ea-btn" hidden>Cancelar validação</button>
             <div id="ea-input-layer-choice" hidden>
@@ -49,8 +49,18 @@
             <input id="ea-base-select" type="hidden">
             <div class="ea-layer-actions" role="group" aria-label="Adicionar camadas base">
               <button id="ea-base-browse" type="button" class="ea-btn ea-layer-action"><i class="fas fa-folder-open" aria-hidden="true"></i><span>Selecionar bases existentes</span></button>
-              <a class="ea-btn ea-layer-action" target="_blank" rel="noopener" href="/restrict/geoespacial/visualizador-bases-geoespaciais/"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i><span>Enviar nova camada base</span></a>
+              <button id="ea-base-local-upload" type="button" class="ea-btn ea-layer-action"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i><span>Enviar nova camada base</span></button>
             </div>
+            <input id="ea-base-local-file" type="file" accept=".zip,.rar,.7z,.tar,.tgz,.tbz2,.txz,.gz,.bz2,.xz,.gpkg,.geojson,.json,.fgb,.kml,.kmz,.gml,.tif,.tiff,.img,.asc,.jp2" hidden aria-label="Arquivo local da camada base">
+            <p id="ea-base-local-upload-status" class="ea-hint" role="status" aria-live="polite" hidden></p>
+            <button id="ea-base-local-upload-cancel" type="button" class="ea-btn" hidden>Cancelar validação</button>
+            <div id="ea-base-local-layer-choice" hidden>
+              <label for="ea-base-local-local-layer">Camada dentro do arquivo</label>
+              <select id="ea-base-local-local-layer"></select>
+              <button id="ea-base-local-local-confirm" type="button" class="ea-btn">Validar camada selecionada</button>
+              <button id="ea-base-local-local-cancel" type="button" class="ea-btn">Cancelar arquivo</button>
+            </div>
+            <small>Bases locais ficam em memória até sair desta página. Selecione a categoria antes de enviar.</small>
             <div class="ea-municipal-entry" role="group" aria-labelledby="ea-territorial-title">
               <h4 id="ea-territorial-title">Ferramenta de Tributação de Camadas Territoriais</h4>
               <p id="ea-municipal-help" class="ea-hint">Crie camadas com indicadores e atributos em diferentes escalas territoriais:</p>
@@ -97,6 +107,14 @@
         <p id="ea-input-preview-map-status" class="ea-hint" role="status"></p>
         <div id="ea-input-preview-data" class="ea-preview-metadata"></div>
         <p class="ea-hint">Entrada temporária: fica somente na memória desta página. Ao recarregar ou sair, selecione o arquivo novamente. Executar a análise salva os resultados, sem cadastrar este arquivo no acervo.</p>
+      </section>
+      <section id="ea-base-local-preview" class="ea-base-local-preview" aria-labelledby="ea-base-local-preview-title" hidden>
+        <header><h4 id="ea-base-local-preview-title">1.2 · Pré-visualização da camada base</h4>
+          <p id="ea-base-local-preview-name"></p></header>
+        <div id="ea-base-local-preview-map" role="region" aria-label="Mapa Leaflet da camada de entrada"></div>
+        <p id="ea-base-local-preview-map-status" class="ea-hint" role="status"></p>
+        <div id="ea-base-local-preview-data" class="ea-preview-metadata"></div>
+        <p class="ea-hint">Base temporária: fica somente na memória desta página. Ao recarregar ou sair, selecione o arquivo novamente. Executar a análise salva os resultados, sem cadastrar este arquivo no acervo.</p>
       </section>
       <!-- Cada grupo tem a cor e a seta do subcard de origem: a aréola liga o que
            está aberto aqui ao subcard 1.1, 1.2 ou 1.3. -->

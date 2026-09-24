@@ -12,10 +12,10 @@ Página: `/restrict/geoespacial/extracao-atributos/` (prefixo `/sicard` na VM).
    presentes no catálogo vetorial; rasters e arquivos sem registro não entram. Ele
    não cria nem renomeia pastas: as rotas `POST`/`PATCH /pastas` existem, mas esta
    tela não as usa. Escolher a categoria antes da base. A entrada é uma única camada.
-   As camadas confirmadas são desenhadas na bancada embutida (seção 02). Uploads e
-   cadastro de categorias abrem as páginas próprias; o botão de atualização
+   As camadas confirmadas são desenhadas na bancada embutida (seção 02). Uploads abrem seletores locais nesta página;
+   cadastro de categorias abre sua página própria; o botão de atualização
    recarrega os seletores.
-3. Executar interseção ou Identity com GDAL/OGR no servidor. O navegador envia IDs;
+3. Executar interseção ou Identity com GDAL/OGR no servidor. O navegador envia IDs e, para camadas locais, o arquivo em memória;
    nomes e conceitos são resolvidos no servidor e guardados com a execução.
 4. Consultar geometria, síntese, atributos e estatísticas por categoria e camada.
 5. Baixar o pacote `.zip` da extração: GeoPackage, relatório de processamento em
@@ -408,12 +408,43 @@ CRS e hash. O arquivo original não é registrado no banco, não preenche o snap
 `entrada_geojson` e não é incluído como camada `entrada` no GeoPackage persistido.
 Os **resultados derivados** continuam seguindo a política normal da extração.
 
-Formatos aceitos: GPKG, GeoJSON/JSON, FGB, KML, KMZ e ZIP de Shapefile ou de camadas
-vetoriais. ZIP de Shapefile exige SHP, SHX, DBF e PRJ. Arquivo com várias camadas
-mostra um seletor para escolher a entrada antes de validar/desenhar. Limites da
-leitura em memória: 16 MB enviados, 32 MB descompactados, 200 componentes,
-50 mil feições, 500 mil vértices e 2000 campos. Caminhos externos, links,
-arquivos cifrados e formatos de conexão OGR não são aceitos.
+Os dois botões **Enviar nova camada** (entrada e base) usam o mesmo leitor local:
+
+| Conteúdo | Formatos |
+| --- | --- |
+| Pacotes, inclusive aninhados | ZIP, RAR, 7z, TAR, TGZ/TAR.GZ, TBZ2/TAR.BZ2, TXZ/TAR.XZ, GZ, BZ2, XZ e KMZ |
+| Vetores | GeoJSON/JSON, GeoPackage, FlatGeobuf, KML, GML e Shapefile compactado com SHP/SHX/DBF/PRJ |
+| Geodatabase ESRI | File Geodatabase: pasta `.gdb` inteira dentro de um pacote, lida por OpenFileGDB; não é uma Personal Geodatabase `.mdb` |
+| Rasters | GeoTIFF/TIFF, IMG, ASCII Grid/ASC, JPEG2000/JP2, tabelas raster de GeoPackage e rasters File Geodatabase suportados pelo driver instalado |
+
+Cada pacote tem seu namespace. São percorridos todos os arquivos reconhecidos,
+GeoPackages e classes de feições da geodatabase, sem escolher silenciosamente o
+primeiro. O inventário distingue vetor/raster e mostra o arquivo de origem;
+componentes não legíveis produzem avisos. A leitura do vetor selecionado chega
+às feições e seus atributos, preservando o CRS original. Vários vetores do mesmo
+pacote podem ser adicionados às bases, um por vez, pela seleção que permanece aberta.
+
+**Raster é inspecionável, não executável nos algoritmos vetoriais atuais.** A
+interface exibe dimensões, bandas, tipo de pixel, NoData, resolução, CRS,
+extensão e miniatura georreferenciada limitada a 512×512. Sem CRS/geotransformação,
+mostra os metadados e informa por que não há localização. Não converte pixels em
+polígonos, nem adiciona a matriz como base vetorial. O servidor também recusa tal
+execução. Análise zonal/raster exige um algoritmo próprio e não foi implementada.
+
+Bases locais são incluídas na lista da categoria selecionada, confirmadas pelo
+usuário e reenviadas na execução em `bases_locais`; os frames só são passados à
+thread em RAM. Não há cadastro no banco. Configurações reutilizáveis com bases
+locais são bloqueadas com orientação para cadastrar as bases no storage.
+
+Limites: 16 MB por envio, 32 MB expandidos **somando todos os níveis**, 2000
+componentes, 5 níveis de compactação, orçamento de 60 segundos para exploração,
+50 mil feições por vetor, 500 mil vértices e 2000 campos. Na execução, arquivos
+locais somam no máximo 30 MB codificados. Caminhos externos, links, arquivos
+cifrados/multipartidos e formatos de conexão OGR/VRT não são aceitos.
+
+A descompactação usa libarchive-c/libarchive, em memória; o Docker instala a
+biblioteca nativa explicitamente. O serviço de importação permanente de outros
+módulos não foi alterado: estas regras valem para os botões da extração.
 
 A prévia aparece abaixo dos cards 1.1/1.2/1.3 apenas após a validação. Usa Leaflet
 1.9.4 já presente no acervo de assets e tiles OpenStreetMap. Falha no mapa de

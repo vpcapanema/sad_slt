@@ -11,6 +11,7 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-pip \
         python3-dev \
+        libarchive13 \
         build-essential \
         curl \
         ca-certificates \
