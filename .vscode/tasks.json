@@ -1,6 +1,39 @@
 {
 	"version": "2.0.0",
 	"tasks": [
+{
+  "label": "SICARD: Host do agente — PowerShell compartilhado",
+  "type": "process",
+  "command": "/bin/bash",
+  "args": [
+    "${workspaceFolder}/scripts/shared-powershell.sh"
+  ],
+  "options": {
+    "cwd": "${workspaceFolder}"
+  },
+  "windows": {
+    "command": "powershell.exe",
+    "args": [
+      "-NoProfile",
+      "-NoExit",
+      "-Command",
+      "& \"$env:ProgramFiles\\GitHub CLI\\gh.exe\" codespace ssh -c scaling-space-giggle-g46xvg6r7vx52w7jw -- -t \"bash /workspaces/sad_slt/scripts/shared-powershell.sh\""
+    ]
+  },
+  "runOptions": {
+    "runOn": "folderOpen",
+    "instanceLimit": 1
+  },
+  "isBackground": true,
+  "problemMatcher": [],
+  "presentation": {
+    "reveal": "always",
+    "panel": "dedicated",
+    "focus": false,
+    "close": false
+  },
+  "detail": "Sessão PowerShell no Codespace compartilhada com o Windows via tmux."
+},
 		{
 			"label": "SICARD: Iniciar ambiente de desenvolvimento",
 			"type": "process",

@@ -8,6 +8,15 @@
     }
   },
   "terminal.integrated.defaultProfile.windows": "Windows PowerShell",
+  "terminal.integrated.profiles.linux": {
+    "PowerShell (Codespace)": {"path": "/usr/bin/pwsh", "args": ["-NoLogo"]},
+    "Host do agente — PowerShell compartilhado": {
+      "path": "/bin/bash",
+      "args": ["${workspaceFolder}/scripts/shared-powershell.sh"],
+      "overrideName": true
+    }
+  },
+  "terminal.integrated.defaultProfile.linux": "Host do agente — PowerShell compartilhado",
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
   "python.terminal.useEnvFile": true,
   "python.terminal.activateEnvironment": true,
