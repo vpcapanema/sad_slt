@@ -1,27 +1,83 @@
 {
   "name": "sicard-windows-tunnel",
-  "displayName": "SICARD — Túnel do Windows",
-  "description": "Inicia a ponte Windows → Codespace → VM ao abrir sad_slt e exibe o controle no Explorador Remoto.",
+  "displayName": "SICARD — Conexões e túneis",
+  "description": "Controla a ponte SSH da VM, o túnel SLT/SIGMA e o acesso ao servidor local no Explorador Remoto.",
   "publisher": "vpcapanema",
-  "version": "0.1.0",
-  "engines": {"vscode": "^1.85.0"},
+  "version": "0.2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
   "main": "./extension.js",
-  "extensionKind": ["ui"],
-  "activationEvents": ["onStartupFinished"],
-  "capabilities": {"untrustedWorkspaces": {"supported": false}, "virtualWorkspaces": false},
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": false
+  },
   "contributes": {
     "commands": [
-      {"command": "sicardTunnel.start", "title": "SICARD: iniciar túnel do Windows"},
-      {"command": "sicardTunnel.stop", "title": "SICARD: parar túnel do Windows"},
-      {"command": "sicardTunnel.log", "title": "SICARD: mostrar log do túnel"},
-      {"command": "sicardTunnel.sshConfig", "title": "SICARD: configurar conexão no Explorador Remoto"}
+      {
+        "command": "sicardTunnel.start",
+        "title": "SICARD: iniciar túnel do Windows"
+      },
+      {
+        "command": "sicardTunnel.stop",
+        "title": "SICARD: parar túnel do Windows"
+      },
+      {
+        "command": "sicardTunnel.log",
+        "title": "SICARD: mostrar log do túnel"
+      },
+      {
+        "command": "sicardTunnel.sshConfig",
+        "title": "SICARD: configurar conexão no Explorador Remoto"
+      },
+      {
+        "command": "sicardTunnel.refresh",
+        "title": "SICARD: verificar conexões"
+      },
+      {
+        "command": "sicardTunnel.databaseStart",
+        "title": "SICARD: iniciar túnel do banco"
+      },
+      {
+        "command": "sicardTunnel.databaseStop",
+        "title": "SICARD: parar túnel do banco"
+      },
+      {
+        "command": "sicardTunnel.web",
+        "title": "SICARD: abrir servidor local"
+      }
     ],
-    "views": {"remote": [{"id": "sicardTunnel.view", "name": "SICARD · Ponte da VM"}]},
+    "views": {
+      "remote": [
+        {
+          "id": "sicardTunnel.view",
+          "name": "SICARD · Conexões e túneis"
+        }
+      ]
+    },
     "configuration": {
       "title": "SICARD · Túnel do Windows",
       "properties": {
-        "sicardTunnel.autoStart": {"type": "boolean", "default": true, "scope": "machine", "description": "Iniciar automaticamente ao abrir o projeto sad_slt no VS Code Desktop do Windows."},
-        "sicardTunnel.codespace": {"type": "string", "default": "scaling-space-giggle-g46xvg6r7vx52w7jw", "scope": "machine", "description": "Nome do Codespace que recebe a ponte SSH."}
+        "sicardTunnel.autoStart": {
+          "type": "boolean",
+          "default": true,
+          "scope": "machine",
+          "description": "Iniciar automaticamente ao abrir o projeto sad_slt no VS Code Desktop do Windows."
+        },
+        "sicardTunnel.codespace": {
+          "type": "string",
+          "default": "scaling-space-giggle-g46xvg6r7vx52w7jw",
+          "scope": "machine",
+          "description": "Nome do Codespace que recebe a ponte SSH."
+        }
       }
     }
   }

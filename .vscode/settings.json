@@ -1,7 +1,13 @@
 {
   "workbench.iconTheme": "vscode-icons",
   "cSpell.language": "en,pt-BR",
-  "cSpell.words": ["autenticacao", "conteudo", "MOCAD", "navegacao", "SICARD"],
+  "cSpell.words": [
+    "autenticacao",
+    "conteudo",
+    "MOCAD",
+    "navegacao",
+    "SICARD"
+  ],
   "terminal.integrated.profiles.windows": {
     "Windows PowerShell": {
       "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
@@ -9,10 +15,17 @@
   },
   "terminal.integrated.defaultProfile.windows": "Windows PowerShell",
   "terminal.integrated.profiles.linux": {
-    "PowerShell (Codespace)": {"path": "/usr/bin/pwsh", "args": ["-NoLogo"]},
+    "PowerShell (Codespace)": {
+      "path": "/usr/bin/pwsh",
+      "args": [
+        "-NoLogo"
+      ]
+    },
     "Host do agente — PowerShell compartilhado": {
       "path": "/bin/bash",
-      "args": ["${workspaceFolder}/scripts/shared-powershell.sh"],
+      "args": [
+        "${workspaceFolder}/scripts/shared-powershell.sh"
+      ],
       "overrideName": true
     }
   },
@@ -27,18 +40,32 @@
     "--ignore-paths=tmp,scripts,.venv,data",
     "--disable=global-statement,line-too-long,unused-argument,unused-variable,protected-access,redefined-outer-name,reimported,too-many-lines,consider-using-dict-items,use-sequence-for-iteration,multiple-statements,superfluous-parens,multiple-imports,use-implicit-booleaness-not-len,f-string-without-interpolation,no-member,wrong-import-order,wrong-import-position"
   ],
-  "pylint.ignorePatterns": ["tmp/**", "scripts/**", "data/**"],
+  "pylint.ignorePatterns": [
+    "tmp/**",
+    "scripts/**",
+    "data/**"
+  ],
   "flake8.args": [
     "--max-line-length=200",
     "--extend-ignore=E203,W503,E501,E401,E402,E702,F401,F541,E302,E305",
     "--exclude=.venv,tmp,scripts,build,dist,__pycache__,data"
   ],
-  "flake8.ignorePatterns": ["tmp/**", "scripts/**", "data/**"],
-  "black-formatter.args": ["--line-length=200"],
-  "isort.args": ["--line-length=200"],
+  "flake8.ignorePatterns": [
+    "tmp/**",
+    "scripts/**",
+    "data/**"
+  ],
+  "black-formatter.args": [
+    "--line-length=200"
+  ],
+  "isort.args": [
+    "--line-length=200"
+  ],
   "djlint.showInstallError": false,
   "cursorpyright.analysis.diagnosticMode": "workspace",
-  "cursorpyright.analysis.extraPaths": ["${workspaceFolder}"],
+  "cursorpyright.analysis.extraPaths": [
+    "${workspaceFolder}"
+  ],
   "cursorpyright.analysis.exclude": [
     "scripts/**",
     "**/node_modules",
@@ -59,7 +86,11 @@
     "editor.defaultFormatter": "vscode.html-language-features"
   },
   "[sql]": {
-    "editor.quickSuggestions": { "other": false, "comments": false, "strings": false }
+    "editor.quickSuggestions": {
+      "other": false,
+      "comments": false,
+      "strings": false
+    }
   },
   "sqltools.useNodeRuntime": true,
   "sqltools.disableReleaseNotifications": true,
@@ -68,5 +99,18 @@
     "geoespacial"
   ],
   "python.testing.unittestEnabled": false,
-  "python.testing.pytestEnabled": true
+  "python.testing.pytestEnabled": true,
+  "remote.restoreForwardedPorts": true,
+  "remote.portsAttributes": {
+    "8083": {
+      "label": "SICARD · Servidor local",
+      "onAutoForward": "silent"
+    },
+    "10022": {
+      "onAutoForward": "ignore"
+    },
+    "15433": {
+      "onAutoForward": "ignore"
+    }
+  }
 }
