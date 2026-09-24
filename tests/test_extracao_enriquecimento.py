@@ -149,7 +149,8 @@ def test_pacote_leva_camadas_apelidos_dicionario_e_configuracao(tmp_path):
     assert configuracao == {'modo': 'enriquecimento'}
 
 
-def test_execucao_do_servico_grava_camadas_pacote_e_finaliza_sem_erro(monkeypatch):
+@pytest.mark.parametrize('modo', ['enriquecimento', 'estatisticas'])
+def test_execucao_do_servico_grava_camadas_pacote_e_finaliza_sem_erro(monkeypatch, modo):
     """Caminho completo do serviço com banco e gravação de camada simulados."""
     from contextlib import contextmanager
     from api.services import ciclo_vida_arquivos as ciclo
@@ -177,15 +178,18 @@ def test_execucao_do_servico_grava_camadas_pacote_e_finaliza_sem_erro(monkeypatc
         {'id': 'adm', 'nome': 'Administrativo', 'conceito': '', 'camadas': [
             {'id': 'mun', 'nome': 'Municípios', 'regra': {'papel': 'recorte', 'prefixo': 'mun'}}]},
         {'id': 'amb', 'nome': 'Ambiental', 'conceito': '', 'camadas': [{'id': 'uc', 'nome': 'UC', 'regra': None}]}])
-    params = {'camada_id': 'entrada', 'input_nome': 'Projetos', 'operacao': 'enriquecimento', 'categorias': categorias,
+    params = {'camada_id': 'entrada', 'input_nome': 'Projetos', 'operacao': modo, 'categorias': categorias,
               'responsavel': 'teste', 'nome_saida': 'Projetos enriquecidos', 'opcoes': {}}
     service._execute('00000000-0000-0000-0000-000000000001', params)
     assert finalizacoes == [{}], finalizacoes
     assert sorted(nome for nome, _ in gravadas) == ['Projetos enriquecidos — linhas', 'Projetos enriquecidos — pontos']
     assert sorted(usos) == ['camada_1', 'camada_2']
     sql, valores = inseridos[-1]
-    assert 'INSERT INTO geoprocessamento.extracao_atributos' in sql and valores[2] == 'enriquecimento'
+    assert 'INSERT INTO geoprocessamento.extracao_atributos' in sql and valores[2] == modo
     relatorio = valores[8].obj
+    assert relatorio['operacao'] == modo
+    if modo == 'estatisticas':
+        assert sum(n for _, n in gravadas) == len(entrada)
     assert relatorio['modo'] == 'enriquecimento' and set(relatorio['camadas']) == {'linhas', 'pontos'}
     assert relatorio['resumo']['camadas_intersectadas'] >= 1 and valores[11].endswith('.zip')
 

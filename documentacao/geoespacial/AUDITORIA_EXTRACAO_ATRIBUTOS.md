@@ -203,3 +203,24 @@ iframe; os controles permitem reabrir cada painel.
 
 A página territorial consulta uma rota própria de categorias, evitando inventariar
 todas as camadas do storage apenas para iniciar o gerador.
+
+## 24/09/2026 — contratos de enriquecimento separados
+
+Por orientação do usuário, mantido o algoritmo configurável que permite recorte
+e duplicação. Adicionado o algoritmo `estatisticas` (enriquecimento sem recorte),
+com classificação binária por interseção nas categorias Risco e Restrição e nove
+medidas selecionáveis por base/campo nas demais categorias. Os dois editores
+coexistem e a configuração identifica o algoritmo escolhido.
+
+A validação cobre valores esperados das nove medidas, nulos/zeros, textos,
+empates, feições multipartes, toque na borda, bases vazias, geometrias inválidas
+ou vazias, preservação de WKB, reabertura de GeoPackage/XLSX, regras persistidas,
+contratos de API e execução do serviço nos dois modos. O teste de navegador usa
+HTML/JS reais e APIs interceptadas: alternância dos editores, nove opções,
+medida personalizada por campo, salvar/carregar e payload de execução. Não
+representa uma execução autenticada de usuário em produção.
+
+Validação local final: **73 testes Python passaram**, incluindo regressões de
+leitura de camadas e CRS, além do teste Playwright atualizado para os dois
+fluxos e verificação sintática dos JavaScripts alterados. Os testes de leitura
+exigiram restaurar o túnel autorizado ao banco; passaram após a restauração.

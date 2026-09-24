@@ -26,6 +26,8 @@ from api.services.ciclo_vida_arquivos import apelido
 PAPEIS = ('atributos', 'recorte')
 LIGACOES = ('localizacao', 'atributo')
 PREDICADOS = ('intersecta', 'contem', 'esta_dentro')
+Estatistica = Literal['media', 'moda', 'mediana', 'total', 'minimo', 'maximo', 'desvio_padrao', 'variancia', 'contagem']
+
 MULTIPLICIDADES = ('maior_sobreposicao', 'primeira', 'todas', 'resumo')
 
 # Nome de campo aceito por GeoPackage, Shapefile renomeado e planilhas sem aspas.
@@ -57,7 +59,9 @@ class RegraBase(BaseModel):
     chave_entrada: str | None = Field(default=None, max_length=255)
     chave_base: str | None = Field(default=None, max_length=255)
     multiplicidade: Literal['maior_sobreposicao', 'primeira', 'todas', 'resumo'] = 'maior_sobreposicao'
-    campos: list[str] | None = Field(default=None, max_length=5000)
+    estatistica: Estatistica = 'media'
+    estatisticas_campos: dict[str, Estatistica] = Field(default_factory=dict, max_length=10000)
+    campos: list[str] | None = Field(default=None, max_length=10000)
     prefixo: str | None = Field(default=None, max_length=40)
     apelidos: dict[str, str] = Field(default_factory=dict, max_length=5000)
     preparacao: Preparacao = Field(default_factory=Preparacao)
@@ -215,3 +219,26 @@ def validar_conjunto(categorias: list[dict]) -> list[dict]:
     if len(recortes) > 1:
         raise ValueError(f'Só uma base pode ser a unidade de recorte; foram marcadas: {", ".join(recortes)}.')
     return saida
+
+
+def categoria_binaria(categoria: dict) -> bool:
+    """Categorias oficiais; não inferir risco pelo nome do arquivo da base."""
+    import unicodedata
+    def chave(valor):
+        return unicodedata.normalize('NFKD', str(valor or '')).encode('ascii', 'ignore').decode().lower().strip()
+    return any(chave(categoria.get(c)) in ('risco', 'riscos', 'restricao', 'restricoes') for c in ('id', 'nome'))
+
+
+def normalizar_estatisticas(categorias: list[dict]) -> list[dict]:
+    """Contrato atual: interseção real, todos os campos, nenhuma divisão/duplicação."""
+    grupos = []
+    for categoria in categorias:
+        camadas = []
+        for camada in categoria['camadas']:
+            regra = dict(camada.get('regra') or {})
+            regra.update(papel='atributos', ligacao='localizacao', predicado='intersecta',
+                         chave_entrada=None, chave_base=None, multiplicidade='resumo', campos=None,
+                         preparacao={'buffer_m': None, 'corrigir_geometrias': True, 'separar_por_tipo': False})
+            camadas.append({**camada, 'regra': regra})
+        grupos.append({**categoria, 'camadas': camadas})
+    return validar_conjunto(grupos)

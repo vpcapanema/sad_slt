@@ -124,7 +124,7 @@ export function criarResultados() {
             e.papel==="recorte"?`${numero(e.fora_das_unidades,0)} fora das unidades`:numero(e.registros_com_correspondencia,0),
             e.papel==="recorte"?"—":numero(e.registros_com_multiplas_feicoes,0),numero(e.registros_depois,0)])));
       }
-      host.append(el("p","Registros sem correspondência são mantidos com os campos da base vazios. O pacote de saída traz o GeoPackage, as tabelas, o dicionário de campos e a configuração usada.","ea-hint"));
+      host.append(el("p",(result.operacao==='estatisticas'?"Risco e Restrição: Sim/Não. Demais campos: estatística das feições intersectadas. ":"")+"Registros sem correspondência são mantidos; os campos estatísticos ficam vazios. O pacote de saída traz o GeoPackage, as tabelas, o dicionário de campos e a configuração usada.","ea-hint"));
       return;
     }
     if(view==="statistics"){

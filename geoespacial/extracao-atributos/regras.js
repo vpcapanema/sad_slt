@@ -14,6 +14,7 @@ const ROTULOS = {
   ligacao: { localizacao: 'Por localização', atributo: 'Por atributo (chave comum)' },
   predicado: { intersecta: 'Intersecta', contem: 'Contém a feição da base', esta_dentro: 'Está dentro da feição da base' },
   multiplicidade: {
+    binaria: 'Interseção: Sim/Não', estatisticas: 'Estatísticas sem recorte',
     maior_sobreposicao: 'Maior sobreposição', primeira: 'Primeira feição',
     todas: 'Todas (um registro por feição)', resumo: 'Resumo (contagem, soma, lista)',
   },
@@ -35,7 +36,7 @@ export function resumoRegra(regra) {
 function select(nome, valor) {
   const campo = document.createElement('select');
   campo.name = nome;
-  for (const [chave, rotulo] of Object.entries(ROTULOS[nome])) campo.append(new Option(rotulo, chave));
+  for (const [chave, rotulo] of Object.entries(ROTULOS[nome])) if (!['binaria','estatisticas'].includes(chave)) campo.append(new Option(rotulo, chave));
   campo.value = valor;
   return campo;
 }
@@ -75,7 +76,7 @@ export function resumoEntrada(config) {
 }
 
 /* Identificador, filtro e campos de uma camada de entrada do enriquecimento. */
-export function editarEntrada({ nomeEntrada, config, camposDisponiveis = [] }) {
+export function editarEntrada({ nomeEntrada, config, preservar = false, camposDisponiveis = [] }) {
   const c = config || {};
   return new Promise(resolve => {
     const dialog = el('dialog', undefined, 'ea-tool-dialog ea-regra-dialog');
@@ -101,6 +102,10 @@ export function editarEntrada({ nomeEntrada, config, camposDisponiveis = [] }) {
     corpo.append(linha('Campo identificador', campoId, 'Vira id_origem em cada registro.'),
       linha('Filtrar pelo campo', filtroCampo), linha('Condição', operador), linha('Valor', valor),
       linha('Campos a manter', campos, dica), erro);
+    if (preservar) {
+      for (const controle of [filtroCampo, operador, valor, campos]) controle.closest('label').hidden = true;
+      corpo.append(el('p', 'Todas as feições e atributos serão mantidos. Aplicar remove filtros antigos desta entrada.', 'ea-hint'));
+    }
     const rodape = el('div', undefined, 'ea-config-dialog-footer');
     const cancelar = el('button', 'Cancelar', 'ea-btn');
     const aplicar = el('button', 'Aplicar', 'ea-btn ea-btn-primary');
@@ -111,7 +116,7 @@ export function editarEntrada({ nomeEntrada, config, camposDisponiveis = [] }) {
     dialog.addEventListener('cancel', event => { event.preventDefault(); fechar(null); });
     aplicar.addEventListener('click', () => {
       let filtro = null;
-      if (operador.value) {
+      if (!preservar && operador.value) {
         if (!filtroCampo.value.trim()) { erro.textContent = 'Informe o campo do filtro.'; return; }
         const lista = valor.value.split(',').map(t => t.trim()).filter(Boolean);
         if (['igual', 'diferente'].includes(operador.value) && !valor.value.trim()) { erro.textContent = 'Informe o valor do filtro.'; return; }
@@ -120,7 +125,7 @@ export function editarEntrada({ nomeEntrada, config, camposDisponiveis = [] }) {
           valor: operador.value === 'em' ? lista : ['igual', 'diferente'].includes(operador.value) ? valor.value.trim() : null };
       }
       const listaCampos = campos.value.split(/[,;\n]/).map(t => t.trim()).filter(Boolean);
-      fechar({ campo_id: campoId.value.trim() || null, filtro, campos: listaCampos.length ? listaCampos : null });
+      fechar({ campo_id: campoId.value.trim() || null, filtro, campos: !preservar && listaCampos.length ? listaCampos : null });
     });
     rodape.append(cancelar, aplicar);
     dialog.append(titulo, corpo, rodape);
@@ -288,6 +293,7 @@ export function editarRegra({ nomeBase, regra, camposDisponiveis = [] }) {
       const metros = buffer.value === '' ? null : Number(buffer.value);
       if (metros !== null && !(metros > 0)) { erro.textContent = 'O buffer deve ser maior que zero.'; return; }
       fechar({
+        estatistica: r.estatistica || 'media', estatisticas_campos: r.estatisticas_campos || {},
         papel: papel.value, ligacao: ligacao.value, predicado: predicado.value,
         chave_entrada: porAtributo ? chaveEntrada.value.trim() : null,
         chave_base: porAtributo ? chaveBase.value.trim() : null,
@@ -301,5 +307,91 @@ export function editarRegra({ nomeBase, regra, camposDisponiveis = [] }) {
     dialog.append(titulo, corpo, rodape);
     document.body.append(dialog);
     dialog.showModal();
+  });
+}
+
+export const ESTATISTICAS = Object.freeze({
+  media: 'Média', moda: 'Moda', mediana: 'Mediana', total: 'Total', minimo: 'Mínimo',
+  maximo: 'Máximo', desvio_padrao: 'Desvio padrão', variancia: 'Variância', contagem: 'Contagem',
+});
+
+export function categoriaBinaria(categoria) {
+  return [categoria?.id, categoria?.nome].some(v => ['risco', 'riscos', 'restricao', 'restricoes'].includes(
+    String(v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()));
+}
+
+export function resumoEstatisticas(regra, categoria) {
+  if (categoriaBinaria(categoria)) return 'Interseção: Sim / Não';
+  const quantidade = Object.keys(regra?.estatisticas_campos || {}).length;
+  return `${ESTATISTICAS[regra?.estatistica || 'media']}${quantidade ? ` · ${quantidade} campo(s) personalizado(s)` : ''}`;
+}
+
+// O editor antigo permanece intacto para o enriquecimento configurável.
+export function editarEstatisticas({ nomeBase, regra, categoria, camposDisponiveis = [] }) {
+  return new Promise(resolve => {
+    const dialog = el('dialog', undefined, 'ea-tool-dialog ea-regra-dialog');
+    const titulo = el('h2', `Estatísticas · ${nomeBase}`);
+    titulo.id = 'ea-estatisticas-titulo';
+    dialog.setAttribute('aria-labelledby', titulo.id);
+    const corpo = el('div', undefined, 'ea-regra-corpo');
+    const binaria = categoriaBinaria(categoria);
+    const erro = el('p', '', 'ea-regra-erro');
+    erro.setAttribute('role', 'alert');
+    const estatistica = document.createElement('select');
+    estatistica.name = 'estatistica';
+    for (const [id, texto] of Object.entries(ESTATISTICAS)) estatistica.append(new Option(texto, id));
+    estatistica.value = regra?.estatistica || 'media';
+    const porCampo = {...(regra?.estatisticas_campos || {})};
+    if (binaria) {
+      corpo.append(el('p', 'Todos os campos desta base recebem Sim quando houver interseção e Não quando não houver. Os valores originais da base não são copiados.'));
+    } else {
+      corpo.append(linha('Estatística padrão da base', estatistica), el('p',
+        'Só as feições realmente intersectadas entram no cálculo, com o mesmo peso. Nulos são ignorados; sem interseção, os campos ficam vazios. Total significa soma. Contagem conta valores preenchidos.', 'ea-hint'),
+        el('p', 'Desvio padrão e variância são populacionais. Na moda, um empate usa o primeiro valor na ordem da base. Campos de texto aceitam moda e contagem; nas outras medidas ficam vazios, sem conversão de códigos em números.', 'ea-hint'));
+      const campos = [...new Set([...camposDisponiveis, ...Object.keys(porCampo)])];
+      const campo = document.createElement('select');
+      campo.name = 'campo_estatistica';
+      campo.append(new Option('Escolha um campo', ''));
+      for (const nome of campos) campo.append(new Option(nome, nome));
+      const medida = document.createElement('select');
+      medida.name = 'estatistica_campo';
+      medida.append(new Option('Usar padrão da base', ''));
+      for (const [id, texto] of Object.entries(ESTATISTICAS)) medida.append(new Option(texto, id));
+      medida.disabled = true;
+      campo.addEventListener('change', () => { medida.disabled = !campo.value; medida.value = porCampo[campo.value] || ''; });
+      const lista = el('div');
+      function render() {
+        lista.replaceChildren();
+        for (const [nome, valor] of Object.entries(porCampo)) {
+          const item = el('p');
+          const remover = el('button', 'Usar padrão', 'ea-btn');
+          remover.type = 'button';
+          remover.setAttribute('aria-label', `Usar padrão para ${nome}`);
+          remover.addEventListener('click', () => { delete porCampo[nome]; if (campo.value === nome) medida.value = ''; render(); });
+          item.append(el('span', `${nome}: ${ESTATISTICAS[valor]} `), remover);lista.append(item);
+        }
+      }
+      medida.addEventListener('change', () => { if (!campo.value) return; if (medida.value) porCampo[campo.value] = medida.value; else delete porCampo[campo.value]; render(); });
+      render();
+      corpo.append(linha('Personalizar um campo (opcional)', campo), linha('Estatística desse campo', medida), lista);
+      if (!campos.length) corpo.append(el('p', 'Carregue a base na bancada para personalizar seus campos.', 'ea-hint'));
+    }
+    const prefixo = entrada('prefixo', regra?.prefixo);
+    prefixo.placeholder = 'Em branco: derivado do nome da base';
+    corpo.append(linha('Prefixo dos campos de saída', prefixo), erro);
+    const rodape = el('div', undefined, 'ea-config-dialog-footer');
+    const cancelar = el('button', 'Cancelar', 'ea-btn');
+    const aplicar = el('button', 'Aplicar', 'ea-btn ea-btn-primary');
+    cancelar.type = aplicar.type = 'button';
+    const fechar = valor => { dialog.close(); dialog.remove(); resolve(valor); };
+    cancelar.addEventListener('click', () => fechar(null));
+    dialog.addEventListener('cancel', e => { e.preventDefault(); fechar(null); });
+    aplicar.addEventListener('click', () => {
+      const valor = prefixo.value.trim().toLowerCase();
+      if (valor && !/^[a-z][a-z0-9_]{0,38}_?$/.test(valor)) { erro.textContent = 'Prefixo deve começar com letra e usar letras minúsculas, números e sublinhado.'; return; }
+      // Preservar regras do modo configurável permite alternar sem perder as escolhas.
+      fechar({...regra, estatistica: estatistica.value, estatisticas_campos: porCampo, prefixo: valor || null});
+    });
+    rodape.append(cancelar, aplicar);dialog.append(titulo, corpo, rodape);document.body.append(dialog);dialog.showModal();
   });
 }

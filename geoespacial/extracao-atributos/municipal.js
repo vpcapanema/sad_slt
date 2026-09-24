@@ -20,7 +20,7 @@ export function restaurarRetornoMunicipal(state){
     state.bases=(draft.bases||[]).filter(validBase);
     state.staging=(draft.staging||[]).filter(validBase);
     state.finalidades=draft.finalidades||[];
-    state.operation=['intersection','identity','enriquecimento'].includes(draft.operation)?draft.operation:'';
+    state.operation=['intersection','identity','enriquecimento','estatisticas'].includes(draft.operation)?draft.operation:'';
     state.opcoes={...state.opcoes,...draft.opcoes};state.nomeSaida=draft.nomeSaida||'';
   }
   const selecionada=params.get('categoria')||(raw?JSON.parse(raw).categoria:'');

@@ -60,7 +60,7 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
     """
     from api.services import extracao_atributos_regras as regras
     from api.services.extracao_atributos_analise import OPCOES_PADRAO
-    if operacao not in ('intersection','identity','enriquecimento'):
+    if operacao not in ('intersection','identity','enriquecimento','estatisticas'):
         raise ValueError('Algoritmo de processamento inválido.')
     if set(opcoes or {}) - set(OPCOES_PADRAO):
         raise ValueError('Opção do algoritmo desconhecida.')
@@ -90,7 +90,10 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
     if not conteudo:
         raise ValueError('Selecione ao menos uma base disponível no catálogo.')
     # Restrições entre bases (uma só unidade de recorte, prefixo informado repetido).
-    regras.validar_conjunto(conteudo)
+    if operacao == 'estatisticas':
+        conteudo = regras.normalizar_estatisticas(conteudo)
+    else:
+        regras.validar_conjunto(conteudo)
     entradas_gravadas = []
     for item in entradas or []:
         ident = item['id']

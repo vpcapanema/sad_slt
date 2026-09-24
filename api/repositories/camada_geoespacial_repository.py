@@ -65,12 +65,12 @@ def _jsonb(value: Any) -> Jsonb:
     return Jsonb(_json_safe(value))
 
 
-def _feature_rows(gdf: gpd.GeoDataFrame) -> list[tuple[int, Jsonb, str | None]]:
+def _feature_rows(gdf: gpd.GeoDataFrame, *, usar_wkb: bool = False) -> list[tuple[int, Jsonb, str | bytes | None]]:
     # EPSG:4674 (SIRGAS 2000) é o CRS de armazenamento do sistema — ver
     # migração 100_padronizar_geometria_sirgas2000.sql.
     spatial = gdf.to_crs("EPSG:4674") if gdf.crs else gdf.set_crs("EPSG:4674")
     geometry_name = str(spatial.geometry.name)
-    rows: list[tuple[int, Jsonb, str | None]] = []
+    rows: list[tuple[int, Jsonb, str | bytes | None]] = []
     for order, (_, feature) in enumerate(spatial.iterrows()):
         properties = {column: value for column, value in feature.items() if column != geometry_name}
         normalized = _json_safe(properties)
@@ -80,6 +80,8 @@ def _feature_rows(gdf: gpd.GeoDataFrame) -> list[tuple[int, Jsonb, str | None]]:
             if isinstance(geometry, BaseGeometry) and not geometry.is_empty
             else None
         )
+        if usar_wkb:
+            geometry_json = geometry.wkb if isinstance(geometry, BaseGeometry) else None
         rows.append((order, _jsonb(normalized), geometry_json))
     return rows
 
@@ -89,10 +91,18 @@ def _categoria_origem(origem: str) -> str:
     return "processadas" if normalized == "processamento" or normalized.startswith("OP-") else "importadas"
 
 
-def _insert_features(conn: Any, table: str, database_id: str, rows: list[tuple[int, Jsonb, str | None]]) -> None:
+def _insert_features(conn: Any, table: str, database_id: str, rows: list[tuple[int, Jsonb, str | bytes | None]], *, usar_wkb: bool = False) -> None:
     if not rows:
         return
     with conn.cursor() as cursor:
+        if usar_wkb:
+            cursor.executemany(
+                sql.SQL("""INSERT INTO geoprocessamento.{}
+                    (camada_id,ordem,propriedades,geom)
+                    VALUES (%s,%s,%s,ST_GeomFromWKB(%s::bytea,4674))""").format(sql.Identifier(table)),
+                [(database_id, order, props, geom) for order, props, geom in rows],
+            )
+            return
         cursor.executemany(
             sql.SQL("""INSERT INTO geoprocessamento.{}
                    (camada_id,ordem,propriedades,geom)
@@ -109,6 +119,7 @@ def salvar_vetor(
     *, recurso_id: str, nome: str, origem: str, gdf: gpd.GeoDataFrame,
     metadados: dict[str, Any], hash_arquivo: str | None = None,
     gravar_arquivo: bool = True,
+    preservar_geometrias: bool = False,
 ) -> str:
     """Grava vetor na tabela física correspondente à sua etapa.
 
@@ -124,7 +135,7 @@ def salvar_vetor(
     crs = "EPSG:4674"
     geometry_types = sorted(set(gdf.geometry.geom_type.dropna().astype(str)))
     geometry_type = ",".join(geometry_types) or None
-    rows = _feature_rows(gdf)
+    rows = _feature_rows(gdf, usar_wkb=preservar_geometrias)
     metadata = {**metadados, "origem": origem, "categoria_armazenamento": categoria}
     with get_connection() as conn:
         if categoria == "importadas":
@@ -153,7 +164,7 @@ def salvar_vetor(
         if not camada:
             raise RuntimeError("Persistência vetorial não retornou identificador")
         database_id = str(camada["id"])
-        _insert_features(conn, features, database_id, rows)
+        _insert_features(conn, features, database_id, rows, usar_wkb=preservar_geometrias)
         conn.execute(
             sql.SQL("""UPDATE geoprocessamento.{} c
                 SET envelope=(SELECT ST_Envelope(ST_Collect(geom))

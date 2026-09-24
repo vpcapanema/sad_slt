@@ -103,7 +103,7 @@ class Configuracao(BaseModel):
     # Guardadas junto com as bases para repetir a análise inteira (versão 3).
     entradas: list[EntradaExtracao] = Field(default_factory=list,max_length=10)
     finalidades: list[Finalidade] = Field(default_factory=list,max_length=20)
-    operacao: Literal['intersection','identity','enriquecimento'] = 'intersection'
+    operacao: Literal['intersection','identity','enriquecimento','estatisticas'] = 'intersection'
     opcoes: dict[str, bool] = Field(default_factory=dict)
     nome_saida: str = Field(default='',max_length=200)
 
@@ -164,7 +164,7 @@ class Extracao(BaseModel):
     nome_saida: str = Field(default='',max_length=200)
     # intersection/identity: modo sobreposição (uma linha por interseção).
     # enriquecimento: um registro por feição, com as regras de cada base.
-    operacao: Literal['intersection','identity','enriquecimento'] = 'intersection'
+    operacao: Literal['intersection','identity','enriquecimento','estatisticas'] = 'intersection'
     opcoes: OpcoesOverlay = OpcoesOverlay()
     categorias: list[Categoria] = Field(min_length=1,max_length=30)
     # Só no enriquecimento: entradas adicionais e configuração de cada entrada
@@ -177,7 +177,7 @@ class Extracao(BaseModel):
         ids = [entrada.id for entrada in self.entradas]
         if len(ids) != len(set(ids)):
             raise ValueError('A mesma camada aparece duas vezes nas entradas.')
-        if self.operacao != 'enriquecimento' and (self.entradas or self.finalidades):
+        if self.operacao not in ('enriquecimento', 'estatisticas') and (self.entradas or self.finalidades):
             raise ValueError('Entradas configuráveis e finalidades exigem o modo enriquecimento.')
         return self
 

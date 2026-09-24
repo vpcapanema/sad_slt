@@ -75,6 +75,8 @@ const ENRIQUECIMENTO = svg('Enriquecimento de atributos',
   </g>`);
 
 export const DIAGRAMAS = {
+  estatisticas: { nome: 'Enriquecimento sem recorte', svg: ENRIQUECIMENTO,
+    resumo: 'Preserva todas as feições e geometrias da entrada. Risco e Restrição: Sim/Não por interseção. Demais bases: estatística escolhida por campo; sem interseção, valor vazio.' },
   intersection: { nome: 'Interseção (Intersect)', svg: INTERSECAO,
     resumo: 'Mantém apenas os pedaços em que a entrada e a base se sobrepõem. Uma linha por pedaço.' },
   identity: { nome: 'Identidade (Identity)', svg: IDENTIDADE,

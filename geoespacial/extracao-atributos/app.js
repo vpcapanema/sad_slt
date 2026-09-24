@@ -6,7 +6,7 @@ import { criarResultados } from "./resultados.js";
 
 import { adaptador, json, esperar } from './api.js';
 import { confirmarExecucao, acompanharExecucao } from './processo.js';
-import { editarEntrada, editarFinalidade, editarRegra, prefixoPadrao, resumoEntrada } from './regras.js';
+import { editarEntrada, editarFinalidade, editarRegra, prefixoPadrao, resumoEntrada, categoriaBinaria } from './regras.js';
 import { renderDiagrama } from './diagramas.js';
 import { restaurarRetornoMunicipal } from './municipal.js';
 import { escolherArquivo } from './explorador.js';
@@ -41,7 +41,7 @@ function renderSelecao() {
     return bloco;
   };
   const valor=document.createElement("span");valor.className="ea-execucao-valor";
-  valor.textContent=entrada?[entrada.nome,...(state.operation==='enriquecimento'?state.entradasExtras.map(e=>nome(e.id)):[])].join('; '):"";
+  valor.textContent=entrada?[entrada.nome,...(['enriquecimento','estatisticas'].includes(state.operation)?state.entradasExtras.map(e=>nome(e.id)):[])].join('; '):"";
   host.append(linha("Camadas de entrada:",valor,entrada?"":"nenhuma camada de entrada escolhida em 1.1"));
 
   const grupos=state.categories
@@ -63,13 +63,13 @@ function renderSelecao() {
   host.append(linha(`Camadas de base: (${state.bases.length})`,lista,
     state.bases.length?"":"nenhuma base confirmada em 1.2; monte a lista e use Confirmar bases"));
   // Estimativa antes de executar: o que se sabe sem processar.
-  if(state.operation==="enriquecimento"&&state.input){
+  if(['enriquecimento','estatisticas'].includes(state.operation)&&state.input){
     const feicoes=entradasEnriquecimento().reduce((soma,item)=>{
       const camada=state.catalog.find(l=>l.id===item.id);
       return soma+(camada?.geojson?.features?.length||0);
     },0);
-    const recorte=state.bases.some(b=>b.regra?.papel==="recorte");
-    const todas=state.bases.filter(b=>b.regra?.multiplicidade==="todas").map(b=>nome(b.id));
+    const recorte=state.operation==='enriquecimento'&&state.bases.some(b=>b.regra?.papel==="recorte");
+    const todas=state.operation==='enriquecimento'?state.bases.filter(b=>b.regra?.multiplicidade==="todas").map(b=>nome(b.id)):[];
     const partes=[feicoes?`${feicoes} feição(ões) de entrada`:"contagem da entrada indisponível"];
     if(recorte)partes.push("o recorte divide linhas e polígonos entre as unidades, aumentando o número de registros");
     if(todas.length)partes.push(`a regra "todas" em ${todas.join(", ")} repete o registro por feição tocada`);
@@ -101,11 +101,12 @@ function camposPrevistos() {
   for(const base of state.bases){
     const camada=state.catalog.find(l=>l.id===base.id);
     const prefixo=base.regra?.prefixo?(base.regra.prefixo.endsWith("_")?base.regra.prefixo:base.regra.prefixo+"_"):prefixoPadrao(nome(base.id));
-    const campos=base.regra?.campos||camposCamada(camada);
+    const campos=state.operation==='estatisticas'?camposCamada(camada):base.regra?.campos||camposCamada(camada);
     const grupo=`Base · ${nome(base.id)}`;
+    if(state.operation==='estatisticas'&&categoriaBinaria(state.categories.find(c=>c.id===base.category)))itens.push({campo:`${prefixo}intersecao`,rotulo:`${prefixo}intersecao · Sim / Não`,grupo});
     for(const campo of campos)itens.push({campo:prefixo+campo,rotulo:prefixo+campo,grupo});
     itens.push({campo:`${prefixo}n_feicoes`,rotulo:`${prefixo}n_feicoes · nº de feições tocadas`,grupo});
-    if(base.regra?.multiplicidade!=="resumo")itens.push({campo:`${prefixo}fid_base`,rotulo:`${prefixo}fid_base · feição escolhida`,grupo});
+    if(state.operation!=='estatisticas'&&base.regra?.multiplicidade!=="resumo")itens.push({campo:`${prefixo}fid_base`,rotulo:`${prefixo}fid_base · feição escolhida`,grupo});
   }
   return itens;
 }
@@ -118,7 +119,7 @@ function reconciliarPainel() {
   const carregada=id=>map.exibida(id);
   const removidas=state.bases.filter(base=>carregada(base.id)&&!presentes.has(base.id));
   const entradaSaiu=Boolean(state.input)&&carregada(state.input)&&!presentes.has(state.input);
-  const extrasRemovidas=state.operation==='enriquecimento'?state.entradasExtras.filter(e=>carregada(e.id)&&!presentes.has(e.id)):[];
+  const extrasRemovidas=['enriquecimento','estatisticas'].includes(state.operation)?state.entradasExtras.filter(e=>carregada(e.id)&&!presentes.has(e.id)):[];
   if(!removidas.length&&!entradaSaiu&&!extrasRemovidas.length)return;
   const nome=id=>state.catalog.find(l=>l.id===id)?.nome||id;
   const perdida=state.input;
@@ -161,7 +162,7 @@ function syncMap() {
   });
   const input=state.catalog.find(l=>l.id===state.input);
   if(input) items.push({...input,key:`input:${input.id}`,grupo:"Input",color:"#d6542b"});
-  if(state.operation==='enriquecimento')for(const entrada of state.entradasExtras){
+  if(['enriquecimento','estatisticas'].includes(state.operation))for(const entrada of state.entradasExtras){
     const layer=state.catalog.find(l=>l.id===entrada.id);
     if(layer)items.push({...layer,key:`input:${layer.id}`,grupo:'Input',color:'#d6542b'});
   }
@@ -183,7 +184,7 @@ async function changed(painel) {
   const falhas=[];
   try{
     const selected=state.catalog.filter(l=>l.id===state.input||state.bases.some(b=>b.id===l.id)
-      ||state.operation==='enriquecimento'&&state.entradasExtras.some(e=>e.id===l.id));
+      ||['enriquecimento','estatisticas'].includes(state.operation)&&state.entradasExtras.some(e=>e.id===l.id));
     const pendentes=selected.filter(l=>!l.geojson);
     if(pendentes.length)painel?.etapa(`Lendo ${pendentes.length} arquivo(s) do storage, ${SIMULTANEAS} por vez.`);
     // Em paralelo sem limite, 18 camadas abriam 18 conexoes ao banco remoto e a
@@ -265,7 +266,7 @@ const nomeCamada=id=>state.catalog.find(l=>l.id===id)?.nome||id;
 export function renderEntradas() {
   const host=$("#ea-entradas");if(!host)return;
   host.replaceChildren();
-  host.hidden=state.operation!=="enriquecimento";
+  host.hidden=!['enriquecimento','estatisticas'].includes(state.operation);
   if(host.hidden)return;
   host.append(criar("h4","Entradas desta análise","ea-op-params-title"));
   const itens=entradasEnriquecimento();
@@ -276,7 +277,7 @@ export function renderEntradas() {
     linha.append(criar("strong",`${nomeCamada(item.id)}${item.principal?" (principal)":""}`),criar("span",` · ${resumoEntrada(config)} `));
     linha.append(botaoPequeno("Configurar",async()=>{
       const camada=state.catalog.find(l=>l.id===item.id);
-      const nova=await editarEntrada({nomeEntrada:nomeCamada(item.id),config,camposDisponiveis:camposCamada(camada)});
+      const nova=await editarEntrada({nomeEntrada:nomeCamada(item.id),config,preservar:state.operation==='estatisticas',camposDisponiveis:camposCamada(camada)});
       if(!nova)return;
       if(item.principal)state.inputConfig=nova;else item.config=nova;
       changed();
@@ -296,13 +297,13 @@ export function renderEntradas() {
     }
     changed();
   }));
-  host.append(criar("small","Cada entrada pode ter identificador, filtro e campos próprios. Entradas do mesmo tipo de geometria saem na mesma camada.","ea-hint"));
+  host.append(criar("small",state.operation==='estatisticas'?"Cada entrada mantém todas as feições e atributos; pode ter um campo identificador. Entradas do mesmo tipo saem na mesma camada.":"Cada entrada pode ter identificador, filtro e campos próprios. Entradas do mesmo tipo de geometria saem na mesma camada.","ea-hint"));
 }
 // Recortes por finalidade: os campos são escolhidos numa lista, sem digitar nome de campo.
 export function renderFinalidades() {
   const host=$("#ea-finalidades");if(!host)return;
   host.replaceChildren();
-  host.hidden=state.operation!=="enriquecimento";
+  host.hidden=!['enriquecimento','estatisticas'].includes(state.operation);
   if(host.hidden)return;
   host.append(criar("h4","Recortes por finalidade (opcional)","ea-op-params-title"));
   if(!state.finalidades.length)host.append(criar("p","Nenhum recorte. Use Adicionar finalidade para gerar no pacote camadas e tabelas só com os campos que interessam.","ea-hint"));
@@ -333,10 +334,10 @@ function renderParametros() {
   host.hidden=!state.operation;
   renderEntradas();renderFinalidades();
   if(!state.operation)return;
-  if(state.operation==="enriquecimento"){
+  if(['enriquecimento','estatisticas'].includes(state.operation)){
     const titulo=document.createElement("h4");titulo.className="ea-op-params-title";titulo.textContent="Como as bases entram";
     const texto=document.createElement("p");texto.className="ea-hint";
-    texto.textContent="Cada base confirmada tem um botão Regra na lista da seção 1.2, ao lado da camada: papel (atributos ou unidade de recorte), ligação, multiplicidade, campos, prefixo, apelidos e buffer. Sem mexer, vale o padrão: por localização, feição de maior sobreposição, todos os campos.";
+    texto.textContent=state.operation==='estatisticas'?"Cada feição mantém sua geometria e seus atributos. Risco e Restrição recebem Sim/Não; nas outras bases, escolha a estatística padrão e personalize por campo no botão Regra da seção 1.2. Sem interseção, os campos estatísticos ficam vazios.":"Cada base confirmada tem um botão Regra na lista da seção 1.2, ao lado da camada: papel (atributos ou unidade de recorte), ligação, multiplicidade, campos, prefixo, apelidos e buffer. Sem mexer, vale o padrão: por localização, feição de maior sobreposição, todos os campos.";
     host.append(titulo,texto);renderSelecao();
     return;
   }
@@ -360,8 +361,8 @@ function renderParametros() {
 }
 function request() {
   return {motor:"gdal",operacao:state.operation,opcoes:{...state.opcoes},nome_saida:state.nomeSaida.trim(),input:state.catalog.find(l=>l.id===state.input),categorias:state.categories.filter(c=>state.bases.some(b=>b.category===c.id)).map(c=>({id:c.id,nome:c.nome,camadas:state.bases.filter(b=>b.category===c.id).map(b=>state.catalog.find(l=>l.id===b.id)),
-    regras:state.operation==="enriquecimento"?Object.fromEntries(state.bases.filter(b=>b.category===c.id&&b.regra).map(b=>[b.id,b.regra])):{}})),
-    ...(state.operation==="enriquecimento"?{
+    regras:['enriquecimento','estatisticas'].includes(state.operation)?Object.fromEntries(state.bases.filter(b=>b.category===c.id&&b.regra).map(b=>[b.id,b.regra])):{}})),
+    ...(['enriquecimento','estatisticas'].includes(state.operation)?{
       entradas:[{id:state.input,config:state.inputConfig||{}},...state.entradasExtras.map(e=>({id:e.id,config:e.config||{}}))],
       finalidades:state.finalidades.map(f=>({nome:f.nome,campos:[...f.campos]}))}:{})};
 }

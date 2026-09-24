@@ -308,6 +308,7 @@ class GeoespacialService:
                 metadados=self._metadados[camada_id],
                 hash_arquivo=extras.get("hash_arquivo"),
                 gravar_arquivo=gravar_arquivo,
+                preservar_geometrias=bool(extras.get("preservar_geometrias")),
             )
             if progress:
                 progress("Catálogo e feições vetoriais persistidos no PostGIS")

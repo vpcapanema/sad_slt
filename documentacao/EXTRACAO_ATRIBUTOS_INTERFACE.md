@@ -330,3 +330,56 @@ contatos, pontos, estatísticas, atributos e exportações. O teste de integraç
 a extração com banco real em transação revertida e storage temporário, lê o pacote
 `.zip` e o relatório de processamento guardados no banco e rejeita outro
 proprietário. Não constitui teste de carga.
+
+## Dois modos de enriquecimento — 24/09/2026
+
+O seletor de algoritmo oferece os dois contratos; as configurações anteriores
+com `operacao=enriquecimento` continuam no modo configurável.
+
+| Opção | Contrato |
+| --- | --- |
+| Enriquecimento configurável (`enriquecimento`) | Mantém papel de recorte, ligação por chave, buffer e multiplicidade, inclusive `todas`. Pode dividir ou duplicar a entrada. |
+| Enriquecimento sem recorte (`estatisticas`) | Preserva cada feição, sua geometria e todos os atributos de entrada. Acrescenta todos os campos de cada base, sem dividir ou duplicar. |
+
+No modo sem recorte, a categoria oficial **Risco** ou **Restrição** determina o
+resultado binário: cada campo da base recebe **Sim** se ao menos uma feição da
+base intersectar a entrada, ou **Não** se nenhuma intersectar. Existe também
+`<prefixo>intersecao`, inclusive para bases sem campos. Esse indicador expressa
+somente a relação espacial, não gravidade ou aplicabilidade jurídica.
+
+Nas demais categorias, o botão **Regra** oferece média, moda, mediana, total
+(soma), mínimo, máximo, desvio padrão, variância e contagem. A medida padrão da
+base é média; `estatisticas_campos` pode definir outra medida para cada campo.
+Cada feição intersectada contribui uma única vez, com peso igual. Multipartes
+não multiplicam sua contribuição. Toque na borda conta como interseção.
+
+- Valores nulos são ignorados; zero participa dos cálculos.
+- Sem interseção, todos os campos estatísticos ficam nulos, inclusive contagem.
+- Havendo interseção com todos os valores nulos, contagem é zero; as outras
+  medidas ficam nulas.
+- Contagem conta valores não nulos do campo. O campo técnico `n_feicoes` conta
+  as feições intersectadas, independentemente de seus atributos.
+- Desvio padrão e variância são populacionais (`ddof=0`); uma observação resulta
+  em zero. Não existe ponderação por área ou comprimento.
+- Textos, códigos textuais e datas aceitam moda e contagem. Medidas numéricas
+  nesses campos retornam nulo. Não se convertem códigos textuais em números.
+- Empates na moda usam o primeiro valor na ordem da base usada na execução.
+
+O novo modo ignora configurações antigas de recorte, buffer, seleção de campos
+da base e junção por chave, normalizando-as para interseção real. Filtros ou
+seleções de campos na **entrada** são recusados explicitamente: abra Configurar
+na entrada e aplique a preservação integral, ou volte ao modo configurável.
+As regras estatísticas ficam salvas na configuração e no pacote, e a medida
+efetiva consta no dicionário de campos.
+
+Geometrias inválidas são reparadas apenas em cópias de trabalho para consultar
+interseções. A saída mantém a geometria original, no CRS padrão EPSG:4674;
+feições nulas/vazias não são descartadas. A persistência do novo modo usa WKB e
+seu GeoPackage não promove geometrias simples para multipartes. Entradas de
+tipos distintos são agrupadas por tipo; a soma de todas as camadas de saída é
+igual à quantidade total de feições de entrada. Finalidades são cópias opcionais
+com subconjuntos de atributos, fora dessa contagem principal.
+
+Os destinos permanecem os mesmos: feições processadas e pacote ZIP no PostgreSQL;
+configurações no diretório persistente de configurações da extração. Este novo
+modo não copia bases completas para o Codespace nem altera o gerador territorial.

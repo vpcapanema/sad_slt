@@ -55,7 +55,7 @@ def _texto_xlsx(valor):
     return ILLEGAL_CHARACTERS_RE.sub('', valor) if isinstance(valor, str) else valor
 
 
-def escrever_gpkg(camadas: dict, entrada, dicionario: list[dict], path: Path, finalidades=None) -> None:
+def escrever_gpkg(camadas: dict, entrada, dicionario: list[dict], path: Path, finalidades=None, preservar_geometrias=False) -> None:
     from osgeo import gdal, ogr
     # nome da camada no GeoPackage -> (tabela, camada de saída de onde vêm os apelidos)
     todas = {nome: (frame, nome) for nome, frame in camadas.items()}
@@ -64,13 +64,15 @@ def escrever_gpkg(camadas: dict, entrada, dicionario: list[dict], path: Path, fi
             todas[f'{chave}_{nome}'] = (frame, nome)
     for nome, (frame, _) in {**todas, 'entrada': (entrada, None)}.items():
         _para_gpkg(frame.to_crs(4674)).to_file(path, driver='GPKG', layer=nome, engine='pyogrio', index=False,
-                                                promote_to_multi=True)
+                                                promote_to_multi=not preservar_geometrias,
+                                                **({'geometry_type': 'Unknown'} if preservar_geometrias else {}))
     gdal.UseExceptions()
     fonte = ogr.Open(str(path), 1)
     try:
         for nome, (_, origem) in todas.items():
             camada = fonte.GetLayerByName(nome)
             definicao = camada.GetLayerDefn()
+            apelidos_usados = set()
             for item in dicionario:
                 if item['camada'] != origem or not item.get('apelido'):
                     continue
@@ -78,7 +80,14 @@ def escrever_gpkg(camadas: dict, entrada, dicionario: list[dict], path: Path, fi
                 if indice < 0:
                     continue
                 campo = ogr.FieldDefn(item['campo'], definicao.GetFieldDefn(indice).GetType())
-                campo.SetAlternativeName(str(item['apelido'])[:255])
+                apelido_campo = str(item['apelido'])[:255]
+                raiz_apelido, numero = apelido_campo, 2
+                while apelido_campo.casefold() in apelidos_usados:
+                    sufixo = f' ({numero})'
+                    apelido_campo = raiz_apelido[:255-len(sufixo)] + sufixo
+                    numero += 1
+                apelidos_usados.add(apelido_campo.casefold())
+                campo.SetAlternativeName(apelido_campo)
                 camada.AlterFieldDefn(indice, campo, ogr.ALTER_ALTERNATIVE_NAME_FLAG)
     finally:
         fonte = None
@@ -121,12 +130,12 @@ def escrever_xlsx(camadas: dict, dicionario: list[dict], path: Path) -> None:
 
 
 def montar_pacote(camadas: dict, entrada, dicionario: list[dict], configuracao: dict,
-                  nome_saida: str, finalidades=None, validacao=None) -> tuple[bytes, str, list[dict]]:
+                  nome_saida: str, finalidades=None, validacao=None, preservar_geometrias=False) -> tuple[bytes, str, list[dict]]:
     """Escreve os arquivos, confere cada um e devolve (zip, nome do zip, manifesto)."""
     arquivos = nomes(nome_saida, camadas, finalidades)
     with tempfile.TemporaryDirectory(prefix='sicard_enriquecimento_') as temporaria:
         pasta = Path(temporaria)
-        escrever_gpkg(camadas, entrada, dicionario, pasta / arquivos['gpkg'][0], finalidades)
+        escrever_gpkg(camadas, entrada, dicionario, pasta / arquivos['gpkg'][0], finalidades, preservar_geometrias)
         for nome, frame in camadas.items():
             exportacao.escrever_csv(frame, pasta / arquivos[f'csv_{nome}'][0])
         for chave, item in (finalidades or {}).items():

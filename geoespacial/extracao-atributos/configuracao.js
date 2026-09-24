@@ -2,7 +2,7 @@ import { $, el, options, feedback, camposCamada } from "./ui.js";
 import { escolherArquivo } from './explorador.js';
 import { salvarRascunhoMunicipal } from './municipal.js';
 import { criarListaCamadas } from './lista-camadas.js';
-import { editarRegra, resumoRegra } from './regras.js';
+import { editarRegra, resumoRegra, editarEstatisticas, resumoEstatisticas } from './regras.js';
 
 export function criarConfiguracao(state, changed) {
   const lista = criarListaCamadas(state, changed, categoria => browse('base', categoria));
@@ -54,12 +54,13 @@ export function criarConfiguracao(state, changed) {
       for(const base of itens){
         const linha=el("div",undefined,"ea-base-confirmada");
         linha.append(el("span",nome(base.id)));
-        if(state.operation==="enriquecimento"){
-          const botao=el("button",`Regra: ${resumoRegra(base.regra)}`,"ea-btn ea-regra-botao");
+        if(['enriquecimento','estatisticas'].includes(state.operation)){
+          const botao=el("button",`Regra: ${state.operation==='estatisticas'?resumoEstatisticas(base.regra,category):resumoRegra(base.regra)}`,"ea-btn ea-regra-botao");
           botao.type="button";botao.disabled=state.busy;
           botao.addEventListener("click",async()=>{
             const camada=state.catalog.find(l=>l.id===base.id);
-            const nova=await editarRegra({nomeBase:nome(base.id),regra:base.regra,
+            const editor=state.operation==='estatisticas'?editarEstatisticas:editarRegra;
+            const nova=await editor({nomeBase:nome(base.id),regra:base.regra,categoria:category,
               camposDisponiveis:camposCamada(camada)});
             if(!nova)return;
             base.regra=nova;changed();
@@ -75,7 +76,7 @@ export function criarConfiguracao(state, changed) {
       }
       host.append(grupo);
     }
-    if(state.operation!=="enriquecimento"){
+    if(!['enriquecimento','estatisticas'].includes(state.operation)){
       host.append(el("p","As regras por base valem no resultado \"um registro por feição\"; nos outros, todas as bases entram igual.","ea-hint"));
     }
   }
