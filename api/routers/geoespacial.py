@@ -936,12 +936,23 @@ async def listar_diretorio_camadas() -> dict[str, Any]:
         raise HTTPException(503, "Catálogo do banco indisponível") from exc
 
 
+@router.get("/storage/camadas-arquivo")
+async def camadas_arquivo_storage(arquivo: str) -> dict[str, Any]:
+    from api.services import storage_geoespacial
+    try:
+        return await run_in_threadpool(storage_geoespacial.inventariar_arquivo, arquivo)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
 @router.get("/storage/navegar")
-async def navegar_storage(caminho: str = "") -> dict[str, Any]:
+async def navegar_storage(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
     """Uma pasta do storage (subpastas e camadas vetoriais), para o explorador da extração."""
     from api.services import storage_geoespacial
     try:
-        return await run_in_threadpool(storage_geoespacial.navegar, caminho)
+        return await run_in_threadpool(storage_geoespacial.navegar, caminho, detalhar)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     except FileNotFoundError as exc:

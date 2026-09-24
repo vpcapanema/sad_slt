@@ -3,6 +3,7 @@
   const $ = (selector, root = document) => root.querySelector(selector);
 
   function message(text) {
+    if(window.gpFeedback){window.gpFeedback.info(text,"Bancada de geoprocessamento");return;}
     const status = $("#gp-save-state");
     status.textContent = text;
     clearTimeout(message.timer);
@@ -235,7 +236,7 @@
       }
       if (action === "remove" && activeLayerId()) {
         window.gpApp.removeLayerFromMap(activeLayerId());
-        message("Camada removida do mapa; permanece salva no sistema.");
+        message(document.body.classList.contains("ea-embedded-workbench")?"Camada removida da bancada e do processamento da extração.":"Camada removida do mapa; permanece salva no sistema.");
       }
       if (action === "delete-layer" && !activeLayerId()) message("Selecione a camada que deseja excluir do sistema.");
       if (action === "delete-layer" && activeLayerId()) window.gpApp.deleteLayerFromSystem(activeLayerId()).catch(error => message(error.message));

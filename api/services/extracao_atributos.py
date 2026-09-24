@@ -18,6 +18,8 @@ from api.services.geoespacial_service import geoespacial_service as geo
 _log = logging.getLogger(__name__)
 _pool = ThreadPoolExecutor(max_workers=1,thread_name_prefix='extracao')
 _progress = {}
+_controles = {}
+from api.services.controle_processamento import ControleProcessamento, ProcessamentoCancelado
 _lock = Lock()
 
 
@@ -42,12 +44,17 @@ def camada_para_mapa(ident):
         raise ValueError('A camada não informa seu CRS.')
     if frame.empty:
         raise ValueError('A camada não contém feições disponíveis para visualização.')
-    return {'id':ident,'nome':metadata['nome'],
+    from api.services.extracao_entrada_local import _representacao_mapa, MAX_VERTICES_PREVIA
+    geojson, detalhe = _representacao_mapa(frame, MAX_VERTICES_PREVIA)
+    extra = {}
+    if detalhe['metodo'] != 'original':
+        extra['geojson_resumido'], _ = _representacao_mapa(frame, MAX_VERTICES_PREVIA // 10)
+    return {'id':ident,'nome':metadata['nome'],'representacao_previa':detalhe,**extra,
             'origem_geometria':'arquivo' if (metadata.get('metadados') or {}).get('origem') == 'municipal-layer' else 'banco',
             'crs_arquivo':str(frame.crs),
             'campos':[{'nome':name,'tipo':str(frame[name].dtype)} for name in frame.columns
                       if name != frame.geometry.name],
-            'geojson':json.loads(frame.to_crs(4326).to_json(default=str))}
+            'geojson':geojson}
 
 
 def catalogo():
@@ -94,24 +101,32 @@ def iniciar(payload, user):
     categories = {r['id']:r for r in catalog['categorias']}
     input_id = payload['input_id']
     entrada_local, meta_local = None, None
-    if input_id.startswith('local:'):
-        from api.services.extracao_entrada_local import restaurar
-        if not payload.get('arquivo_local'):
-            raise ValueError('Selecione novamente o arquivo da entrada local.')
-        entrada_local, meta_local = restaurar(payload['arquivo_local'])
-        layers[input_id] = {'id': input_id, 'nome': meta_local['nome_camada'], 'origem': 'local'}
-    elif payload.get('arquivo_local'):
-        raise ValueError('O arquivo local deve corresponder à entrada selecionada.')
-    if input_id not in layers:
-        raise ValueError('A camada de entrada não está disponível no catálogo vetorial.')
+    entradas_locais = {}
+    arquivos_entrada = dict(payload.get('entradas_locais') or {})
+    if payload.get('arquivo_local'):
+        if not input_id.startswith('local:'):
+            raise ValueError('O arquivo local deve corresponder à entrada selecionada.')
+        arquivos_entrada[input_id] = payload['arquivo_local']
+    ids_entrada = {input_id, *(e['id'] for e in payload.get('entradas') or [])}
+    if set(arquivos_entrada) != {i for i in ids_entrada if i.startswith('local:')}:
+        raise ValueError('Selecione novamente os arquivos das entradas locais presentes na bancada.')
     bases_locais = {}
     solicitadas = {i for g in payload['categorias'] for i in g['camadas'] if i.startswith('local:')}
     arquivos_bases = payload.get('bases_locais') or {}
     if set(arquivos_bases) != solicitadas:
         raise ValueError('Selecione novamente os arquivos das bases locais.')
-    tamanho_total = sum(len(a.get('conteudo_base64', '')) for a in arquivos_bases.values()) + len((payload.get('arquivo_local') or {}).get('conteudo_base64', ''))
+    tamanho_total = sum(len(a.get('conteudo_base64', '')) for a in [*arquivos_bases.values(), *arquivos_entrada.values()])
     if tamanho_total > 30 * 1024 * 1024:
-        raise ValueError('Os arquivos locais da execução excedem 30 MB codificados. Reduza o conjunto de bases.')
+        raise ValueError('Os arquivos locais da execução excedem 30 MB codificados. Reduza o conjunto de arquivos.')
+    for chave, arquivo in arquivos_entrada.items():
+        from api.services.extracao_entrada_local import restaurar
+        frame, meta = restaurar(arquivo)
+        entradas_locais[chave] = frame
+        layers[chave] = {'id': chave, 'nome': arquivo['nome'], 'origem': 'local'}
+        if chave == input_id:
+            entrada_local, meta_local = frame, meta
+    if input_id not in layers:
+        raise ValueError('A camada de entrada não está disponível no catálogo vetorial.')
     for chave, arquivo in arquivos_bases.items():
         from api.services.extracao_entrada_local import restaurar
         frame, meta = restaurar(arquivo)
@@ -164,9 +179,15 @@ def iniciar(payload, user):
     if meta_local is not None:
         params['entrada_local'] = meta_local
     ident = ciclo.iniciar('extracao_atributos',params,str(user.id))
-    with _lock: _progress[ident] = [_etapa('Na fila de processamento')]
+    with _lock:
+        encerrados=[chave for chave,valor in _controles.items() if valor.status!='executando']
+        for chave in encerrados[:-99]:_controles.pop(chave,None)
+        _progress[ident] = [_etapa('Na fila de processamento')]
+        _controles[str(ident)] = ControleProcessamento()
     try:
-        if bases_locais:
+        if entradas_locais:
+            _pool.submit(_execute,ident,params,entrada_local,bases_locais,entradas_locais)
+        elif bases_locais:
             _pool.submit(_execute,ident,params,entrada_local,bases_locais)
         elif entrada_local is not None:
             _pool.submit(_execute,ident,params,entrada_local)
@@ -185,28 +206,46 @@ def _etapa(mensagem):
     return {'em': datetime.now(timezone.utc).isoformat(timespec='seconds'), 'mensagem': mensagem}
 
 
-def _execute(ident, params, entrada_local=None, bases_locais=None):
+def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_locais=None):
     token = ciclo.execucao_atual.set(ident)
+    with _lock: controle = _controles.setdefault(str(ident), ControleProcessamento())
     def progress(message):
+        controle.mensagem(message)
         # O modal de acompanhamento lê esta lista; o corte evita crescer sem limite.
         with _lock:
             etapas = _progress.setdefault(ident, [])
             etapas.append(_etapa(message))
             del etapas[:-LIMITE_ETAPAS]
+    progress.tarefa = controle.tarefa
+    progress.fase = controle.fase
     inicio = datetime.now(timezone.utc)
     try:
-        progress('Carregando entrada e bases')
+        controle.fase(1, 'Carregando entrada e bases')
         from api.services.municipal_layer import carregar_para_extracao
         source = entrada_local if entrada_local is not None else carregar_para_extracao(params['camada_id'])
-        categories = [{**c,'camadas':[{**b,'frame':bases_locais[b['id']] if bases_locais and b['id'] in bases_locais else carregar_para_extracao(b['id'])} for b in c['camadas']]}
-                      for c in params['categorias']]
+        categories = []
+        total = 1 + sum(len(c['camadas']) for c in params['categorias'])
+        feitas = 1
+        controle.tarefa(feitas,total)
+        for categoria in params['categorias']:
+            camadas = []
+            for base in categoria['camadas']:
+                progress(f"Lendo a base {base['nome']}")
+                frame = bases_locais[base['id']] if bases_locais and base['id'] in bases_locais else carregar_para_extracao(base['id'])
+                camadas.append({**base,'frame':frame})
+                feitas += 1
+                controle.tarefa(feitas,total)
+            categories.append({**categoria,'camadas':camadas})
+        controle.fase(2, 'Analisando as relações entre entrada e bases')
         if params['operacao'] in ('enriquecimento', 'estatisticas'):
-            _executar_enriquecimento(ident,params,source,categories,progress,inicio)
+            _executar_enriquecimento(ident,params,source,categories,progress,inicio,entradas_locais)
+            controle.encerrar('concluido')
             return
         result, frame = analisar(source,categories,params['operacao'],progress,params.get('opcoes'))
         progress('Montando a tabela de atributos da geometria de saída')
         from api.services.extracao_atributos_saida import montar as montar_tabela_saida
         saida, result['tabela_saida'] = montar_tabela_saida(result,frame,source)
+        controle.fase(3, 'Salvando saídas e preparando o pacote', cancelavel=False)
         progress('Gravando a geometria resultante no banco')
         nome_saida = params.get('nome_saida') or f"Extração de {params['input_nome']}"
         # Só no banco: o GeoPackage da saída viaja no pacote, não em data/geoespacial/outputs.
@@ -247,12 +286,17 @@ def _execute(ident, params, entrada_local=None, bases_locais=None):
                  Jsonb(result),Jsonb(etapas),pacote,nome_pacote,sha256(pacote).hexdigest(),len(pacote),Jsonb(manifesto)))
             ciclo.registrar_uso(conn,layer_id,'relatorio',ident)
         ciclo.finalizar(ident)
+        controle.encerrar('concluido')
+    except ProcessamentoCancelado as exc:
+        ciclo.finalizar(ident,erro=str(exc))
+        controle.encerrar('cancelado')
     except Exception as exc:
         message = str(exc) if isinstance(exc,ValueError) else 'Falha ao processar ou persistir a análise. Verifique os dados e o serviço.'
         # O texto genérico protege o usuário de detalhe interno, mas sem este
         # log a causa real da falha não ficava registrada em lugar nenhum.
         _log.exception('Extração de atributos %s falhou', ident)
         ciclo.finalizar(ident,erro=message)
+        controle.encerrar('erro')
     finally:
         ciclo.execucao_atual.reset(token)
         with _lock: _progress.pop(ident,None)
@@ -264,7 +308,7 @@ def _jsonavel(valor):
                                  default=lambda v: v.item() if hasattr(v, 'item') else str(v)))
 
 
-def _executar_enriquecimento(ident, params, source, categories, progress, inicio):
+def _executar_enriquecimento(ident, params, source, categories, progress, inicio, entradas_locais=None):
     """Persiste os dois modos de enriquecimento e registra qual foi executado."""
     from hashlib import sha256
     import pandas as pd
@@ -277,12 +321,13 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
     from api.services.municipal_layer import carregar_para_extracao
     # A entrada principal já foi carregada; as adicionais são lidas aqui.
     lista = params.get('entradas') or [{'id':params['camada_id'],'nome':params['input_nome'],'config':{}}]
-    frames = {params['camada_id']:source}
+    frames = {**(entradas_locais or {}), params['camada_id']:source}
     entradas = [{**e,'frame':frames.get(e['id']) if e['id'] in frames else carregar_para_extracao(e['id'])}
                 for e in lista]
     saida = enriquecer(categorias=categories,progress=progress,entradas=entradas,
                        finalidades=[{'nome':f['nome'],'campos':f['campos']} for f in params.get('finalidades') or []])
     nome_saida = params.get('nome_saida') or f"Extração de {params['input_nome']}"
+    if hasattr(progress,'fase'):progress.fase(3, 'Salvando saídas e preparando o pacote', cancelavel=False)
     camadas = {}
     for nome, frame in saida['camadas'].items():
         progress(f'Gravando a camada {nome} no banco')
@@ -348,9 +393,14 @@ def consultar(ident, user, completo=False):
     # Quem executou vê a própria extração; gestor e administrador veem todas.
     if not row or (row['responsavel'] != str(user.id) and not is_gestor(user)):
         raise LookupError('Extração não encontrada para esta sessão.')
-    response = {'id':ident,'status':row['status'],'erro':row['erro']}
+    response = {'id':ident,'status':'cancelado' if row['erro']=='Processamento cancelado pelo usuário antes da gravação das saídas.' else row['status'],'erro':row['erro']}
     with _lock: etapas = list(_progress.get(ident) or [])
     response['etapas'] = etapas
+    with _lock: controle = _controles.get(str(ident))
+    if controle:
+        observado=controle.snapshot()
+        response.update(observado)
+        etapas=observado['etapas']
     response['etapa'] = (etapas[-1]['mensagem'] if etapas
                          else 'Processamento em execução' if row['status'] == 'executando' else row['status'])
     if row['status']=='concluido' and completo:
@@ -475,3 +525,13 @@ def excluir_execucao(ident, user):
     with get_connection() as conn:
         conn.execute('DELETE FROM geoprocessamento.arquivo_resultado_uso WHERE referencia=%s',(ident,))
         conn.execute("DELETE FROM geoprocessamento.execucao_arquivo WHERE id=%s AND operacao='extracao_atributos'",(ident,))
+
+
+def cancelar(ident, user):
+    consultar(ident, user)  # Mesma checagem de responsável da consulta.
+    with _lock:
+        controle = _controles.get(str(ident))
+    if controle is None:
+        raise ValueError('Não há um processamento ativo que possa ser interrompido.')
+    controle.cancelar()
+    return controle.snapshot()

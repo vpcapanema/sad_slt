@@ -107,7 +107,7 @@ def analisar(input_frame, categories, operation='intersection', progress=lambda 
             frame = frame.to_crs(5880)
             properties = [_json_safe(dict(row.drop(frame.geometry.name))) for _,row in frame.iterrows()]
             right = gpd.GeoDataFrame({'ea_base':[str(i) for i in range(len(frame))]},geometry=frame.geometry,crs=5880)
-            intersection = _overlay_ogr(left,right,operador,**opcoes)
+            intersection = _overlay_ogr(left,right,operador,**opcoes,**({'progresso':progress.tarefa} if hasattr(progress,'tarefa') else {}))
             geometries, by_input, occurrences = [], defaultdict(list), []
             base_geometries.extend(frame.geometry)
             for _,feature in intersection.iterrows():
@@ -152,7 +152,7 @@ def analisar(input_frame, categories, operation='intersection', progress=lambda 
     if operation == 'identity':
         # Exterior calculado uma única vez contra a união de todas as bases.
         mask = gpd.GeoDataFrame(geometry=[union(base_geometries)],crs=5880)
-        external = _overlay_ogr(left,mask,'difference',**opcoes)
+        external = _overlay_ogr(left,mask,'difference',**opcoes,**({'progresso':progress.tarefa} if hasattr(progress,'tarefa') else {}))
         for _,feature in external.iterrows():
             if measure(feature.geometry,dimension)>0:
                 output.append({'input_id':str(feature['ea_input']),'externo':True,

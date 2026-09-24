@@ -2,21 +2,22 @@
    camadas, troca de categoria e repete. Nada vai para a bancada antes de confirmar. */
 import { $, el, feedback } from './ui.js';
 import { base, json, post } from './api.js';
-import { confirmarExecucao, acompanharExecucao } from './processo.js';
+import { entradasPreparadas, guardarPrevia, desfazerPrevia, enviarPrevia } from './preparacao.js';
+import { criarEditorListaBases } from './editor-lista-bases.js';
 
 const ROTULO = {
-  confirmar: 'Confirmar as bases da análise (também desenha no mapa)',
-  salvar: 'Salvar entradas, bases, regras e algoritmo como configuração',
-  editar: 'Editar a lista: adicionar ou remover camadas',
-  carregar: 'Carregar arquivo de configuração',
-  limpar: 'Limpar somente a lista pendente',
-  cancelar: 'Cancelar as mudanças desta lista',
+  confirmar: 'Enviar pra bancada',
+  salvar: 'Salvar somente a lista de bases e categorias',
+  editar: 'Editar camadas da prévia',
+  carregar: 'Carregar listas',
+  limpar: 'Limpar camadas da prévia',
+  cancelar: 'Desfazer edição da prévia',
 };
 
 export function criarListaCamadas(state, changed, escolherCamadas) {
   let editando = false;
-  const secao = $('#ea-staging');
-  const box = $('#ea-staging-list');
+  const editor=criarEditorListaBases(state,changed,escolherCamadas,()=>salvar('bases'));
+  const configSalvar=$('#ea-config-salvar'),configCarregar=$('#ea-config-carregar');
   const bar = $('#ea-staging-actions');
   const botoes = Object.fromEntries(
     Object.keys(ROTULO).map(chave => [chave, $(`#ea-staging-${chave}`)]));
@@ -29,152 +30,49 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     .map(category => ({ category, itens: state.staging.filter(item => item.category === category.id) }))
     .filter(grupo => grupo.itens.length);
   const categoriaAtiva = () => $('#ea-category-select').value || '';
-  const paraSalvar = () => [...state.bases,...state.staging];
+  const paraSalvar = () => editor.itens()||[...state.bases,...state.staging];
 
   function marcar() {
-    const total = state.staging.length;
-    botoes.confirmar.disabled = state.busy || !total;
+    editor.marcar();
+    const total = state.staging.length+state.bases.length+entradasPreparadas(state).length;
+    botoes.confirmar.disabled = state.busy || state.uploading || state.validatingBases || state.loadingMap || !total;
     botoes.salvar.disabled = state.busy || !paraSalvar().length;
     botoes.limpar.disabled = state.busy || !total;
-    botoes.cancelar.disabled = state.busy || JSON.stringify(state.staging) === JSON.stringify(ancora);
-    botoes.editar.disabled = state.busy || !state.staging.length;
+    state.temUndoBases=Boolean(state.undoPrevia);
+    botoes.cancelar.disabled = state.busy || !state.temUndoBases;
+    botoes.editar.disabled = state.busy || !total;
     botoes.editar.setAttribute('aria-pressed', String(editando));
     botoes.editar.classList.toggle('is-active', editando);
     botoes.carregar.disabled = state.busy;
+    configSalvar.disabled=state.busy;configCarregar.disabled=state.busy;
   }
 
-  function render() {
-    const ativa = categoriaAtiva();
-    // Carregar fica na barra geral; a lista só aparece quando há itens pendentes.
-    secao.hidden = !state.staging.length;
-    const grupos = agrupar();
-    const atual = state.categories.find(item => item.id === ativa);
-    // A categoria recém-escolhida já aparece, vazia, esperando as camadas.
-    if (state.staging.length && atual && !grupos.some(grupo => grupo.category.id === ativa)) grupos.unshift({ category: atual, itens: [] });
-    box.replaceChildren();
-    if (!grupos.length) {
-      box.append(el('p', 'Escolha uma categoria e selecione suas camadas. Repita para cada categoria; nada vai para a bancada antes de confirmar.', 'ea-staging-empty'));
-      marcar();
-      return;
-    }
-    for (const { category, itens } of grupos) {
-      const grupo = el('div', undefined, 'ea-staging-group');
-      const head = el('div', undefined, 'ea-staging-group-head');
-      head.append(el('strong', category.nome), el('span', String(itens.length), 'ea-badge'));
-      if (editando && escolherCamadas) {
-        // Em edição, o + abre o explorador já na categoria deste grupo.
-        const mais = el('button', '+', 'ea-btn ea-staging-add');
-        mais.type = 'button';
-        mais.title = `Adicionar camadas à categoria ${category.nome}`;
-        mais.setAttribute('aria-label', mais.title);
-        mais.disabled = state.busy;
-        mais.addEventListener('click', () => escolherCamadas(category.id));
-        head.append(mais);
-      }
-      grupo.append(head);
-      for (const item of itens) {
-        const rotulo = nomeArquivo(item);
-        const caminho = caminhoDe(item);
-        if (!editando) {
-          const linha = el('div', undefined, 'ea-staging-item');
-          const nome = el('span', rotulo);
-          nome.title = caminho || rotulo;   // O caminho fica no título, fora do rótulo.
-          linha.append(nome);
-          grupo.append(linha);
-          continue;
-        }
-        // Em edição a linha inteira é um botão: clicar remove a camada da lista.
-        const linha = el('button', undefined, 'ea-btn ea-staging-item ea-staging-item-edit');
-        linha.type = 'button';
-        linha.title = `Remover ${rotulo}${caminho ? ` (${caminho})` : ''}`;
-        linha.setAttribute('aria-label', linha.title);
-        linha.disabled = state.busy;
-        linha.addEventListener('click', () => {
-          state.staging = state.staging.filter(other => other.id !== item.id);
-          render();
-        });
-        linha.append(el('span', rotulo), el('span', '×', 'ea-staging-remove-mark'));
-        grupo.append(linha);
-      }
-      if (!itens.length) grupo.append(el('p', 'Aguardando as camadas desta categoria.', 'ea-staging-vazio'));
-      box.append(grupo);
-    }
-    marcar();
-  }
+  function render() {state.editandoBases=editando;marcar();editor.render();}
 
-  function adicionar(ids, category) {
-    let novos = 0;
-    for (const id of ids) {
-      if (state.staging.some(item => item.id === id)) continue;
-      if (state.bases.some(base => base.id === id)) continue;
-      state.staging.push({ id, category, arquivo: state.catalog.find(l => l.id === id)?.arquivo || '' });
-      novos++;
-    }
-    render();
-    return novos;
-  }
+  const adicionar=(ids,category)=>editor.adicionar(ids,category);
 
-  botoes.confirmar.addEventListener('click', async () => {
-    if (state.busy || !state.staging.length) return;
-    const grupos = agrupar();
-    const total = state.staging.length;
-    const confirmado = await confirmarExecucao({
-      titulo: 'Confirmar as bases da análise',
-      chamada: 'As bases confirmadas entram na análise e são desenhadas no mapa, agrupadas por categoria.',
-      acao: 'Confirmar bases',
-      totalCamadas: total,
-      categorias: grupos.map(({ category, itens }) => ({
-        nome: category.nome, camadas: itens.map(item => ({ nome: nomeArquivo(item) })),
-      })),
-      nota: 'As camadas selecionadas são lidas do banco ou do storage e desenhadas por categoria.',
-    });
-    if (!confirmado) { feedback('Envio cancelado. A lista continua montada.'); return; }
-
-    const painel = acompanharExecucao('Enviando camadas à bancada');
-    for (const item of state.staging) {
-      if (!state.bases.some(base => base.id === item.id)) state.bases.push({ ...item });
-    }
-    state.staging = [];
-    ancora = [];
-    editando = false;
-    render();
-    painel.etapa(`${total} camada(s) enviada(s), agrupadas em ${grupos.length} categoria(s).`);
-    try {
-      const falhas = (await changed(painel)) || [];
-      if (falhas.length) painel.falhar(`${falhas.length} camada(s) não puderam ser desenhadas no mapa.`);
-      else painel.concluir('Camadas no painel da bancada e desenhadas no mapa.');
-      feedback(`${total} camada(s) enviada(s) à bancada, agrupadas por categoria.`);
-    } catch (error) {
-      painel.falhar(error.message);
-      feedback(`Não foi possível concluir o envio: ${error.message}`);
-    }
+  botoes.confirmar.addEventListener('click',async()=>{
+    if(state.busy||state.uploading||state.loadingMap)return;
+    const total=enviarPrevia(state);editando=false;state.undoPrevia=null;render();
+    try{
+      const falhas=await changed();
+      if(!falhas?.length)window.SLTFeedback.success(`${total} camada(s) enviada(s) à bancada. Camadas inválidas ou incompatíveis permanecem apenas na prévia.`);
+    }catch(error){window.SLTFeedback.error(`Não foi possível atualizar a bancada: ${error.message}`);}
   });
-
-  botoes.limpar.addEventListener('click', () => {
-    if (state.busy || !state.staging.length) return;
-    state.staging = [];
-    ancora = [];
-    editando = false;
-    render();
-    feedback('Lista esvaziada. Nenhuma camada foi removida da bancada.');
+  botoes.limpar.addEventListener('click',()=>{
+    if(state.busy)return;guardarPrevia(state);state.input='';state.inputConfig=null;state.entradasExtras=[];state.staging=[];state.bases=[];state.previaLocal=null;editando=false;render();changed();
   });
+  botoes.cancelar.addEventListener('click',()=>{if(state.busy)return;desfazerPrevia(state);render();changed();});
 
-  botoes.cancelar.addEventListener('click', () => {
-    if (state.busy) return;
-    state.staging = ancora.map(item => ({ ...item }));
-    render();
-    feedback('Lista restaurada ao último estado confirmado ou carregado.');
-  });
-
-  botoes.salvar.addEventListener('click', async () => {
-    if (state.busy || !paraSalvar().length) return;
+  async function salvar(escopo='analise'){
+    if (state.busy || state.validatingBases || (escopo==='bases'&&!paraSalvar().length)) return;
     if(paraSalvar().some(item=>item.id.startsWith('local:'))){feedback('As bases locais são temporárias. Para salvar uma configuração reutilizável, cadastre as bases no storage e selecione-as novamente.');return;}
-    const nome = prompt('Nome da configuração:', '');
-    if (nome === null) return;
+    const nome = (escopo==='bases'&&editor.lista()?.nome)||await window.SLTFeedback.solicitar({title:escopo==='bases'?'Salvar lista de bases':'Salvar configuração',message:escopo==='bases'?'Dê um nome à lista de bases e categorias.':'Dê um nome à configuração das três subseções.',label:'Nome',confirmLabel:'Salvar'});
+    if (!nome) return;
     if (!nome.trim()) { feedback('Informe um nome para a configuração.'); return; }
     botoes.salvar.disabled = true;
     try {
-      // A regra de cada base (modo enriquecimento) vai junto na configuração.
+      // Listas guardam bases e categorias; configurações guardam as três subseções.
       const grupos = state.categories.map(category=>({category,itens:paraSalvar().filter(item=>item.category===category.id)}))
         .filter(grupo=>grupo.itens.length).map(({ category, itens }) => ({
         id: category.id, camadas: itens.map(item => item.id),
@@ -183,40 +81,50 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       // A análise inteira: bases com regra, entradas (identificador, filtro, campos) e finalidades.
       const entradas = [
         ...(state.input && !state.input.startsWith('local:') ? [{ id: state.input, config: state.inputConfig || {} }] : []),
-        ...state.entradasExtras.map(item => ({ id: item.id, config: item.config || {} })),
+        ...state.entradasExtras.filter(item=>!item.id.startsWith('local:')).map(item => ({ id: item.id, config: item.config || {} })),
       ];
       const finalidades = (state.finalidades || []).map(f => ({ nome: f.nome, campos: [...f.campos] }));
       const resultado = await post('/extracao-atributos/configuracoes',
-        { nome: nome.trim(), categorias: grupos, entradas, finalidades,
-          operacao:state.operation||'intersection',opcoes:state.opcoes,nome_saida:state.nomeSaida });
-      feedback(`Configuração "${resultado.nome}" salva: ${resultado.camadas} camada(s) em ${resultado.categorias} categoria(s),`
-        + ` ${resultado.entradas} entrada(s) e ${resultado.finalidades} finalidade(s).`
-        + (state.input.startsWith('local:') ? ' A entrada local é temporária: selecione o arquivo novamente ao carregar esta configuração.' : '')
+        { nome: nome.trim(), escopo, chave_lista:escopo==='bases'?editor.lista()?.chave:undefined, categorias: grupos, entradas:escopo==='bases'?[]:entradas, finalidades:escopo==='bases'?[]:finalidades,
+          operacao:escopo==='bases'?'':state.operation,opcoes:escopo==='bases'?{}:state.opcoes,nome_saida:escopo==='bases'?'':state.nomeSaida, categoria_ativa:$('#ea-category-select').value });
+      if(escopo==='bases')editor.salva(resultado);
+      feedback(`${escopo==='bases'?'Lista de bases':'Configuração'} "${resultado.nome}" salva: ${resultado.camadas} camada(s) em ${resultado.categorias} categoria(s),`
+        + (escopo==='bases'?' Entradas, algoritmo e saída não são alterados.':` ${resultado.entradas} entrada(s) e ${resultado.finalidades} finalidade(s).`)
+        + (escopo==='analise'&&state.input.startsWith('local:') ? ' A entrada local é temporária: selecione o arquivo novamente ao carregar esta configuração.' : '')
         + (resultado.camadas_ignoradas ? ` ${resultado.camadas_ignoradas} camada(s) do plugin não entram na configuração.` : ''));
     } catch (error) {
-      feedback(`Não foi possível salvar: ${error.message}`);
+      feedback(`Não foi possível salvar: ${error.message}`,'error');
     } finally { marcar(); }
-  });
+  }
+  configSalvar.addEventListener('click',()=>salvar('analise'));
+  botoes.salvar.addEventListener('click',()=>salvar('bases'));
 
   // Um só caminho de carregamento; o explorador muda apenas a forma de escolher.
-  async function abrirSalva(explorador) {
+  async function abrirSalva(explorador,escopo='analise') {
     if (state.busy) return;
     try {
       const pastaDados = await json('/extracao-atributos/configuracoes');
-      const configuracoes = pastaDados.configuracoes;
-      if (!configuracoes.length) { feedback('Nenhuma configuração salva ainda. Monte uma lista e use Salvar.'); return; }
-      const escolha = await escolherConfiguracao(configuracoes, explorador ? pastaDados.pasta : '');
+      const configuracoes = pastaDados.configuracoes.filter(c=>(c.escopo||'analise')===escopo||(escopo==='bases'&&c.lista_legada));
+      if (!configuracoes.length) { feedback(escopo==='bases'?`Nenhuma lista encontrada em ${pastaDados.pasta}. Arquivos salvos na VM ou em outro computador precisam estar disponíveis neste ambiente.`:'Nenhuma configuração salva ainda.'); return; }
+      const escolha = await escolherConfiguracao(configuracoes, explorador ? pastaDados.pasta : '',escopo);
       if (!escolha) return;
-      const dados = await json(`/extracao-atributos/configuracoes/${encodeURIComponent(escolha)}`);
-      if((state.input||state.bases.length||state.staging.length)&&!confirm('Substituir a configuração atual pela configuração salva? Nenhuma camada ou resultado será apagado do banco.'))return;
+      const dados = await json(`/extracao-atributos/configuracoes/${encodeURIComponent(escolha)}${escopo==='bases'?'?lista=true':''}`);
+      if(escopo!=='bases'&&(state.input||state.bases.length||state.staging.length)&&!(await window.SLTFeedback.confirmar({title:escopo==='bases'?'Carregar listas':'Carregar configuração',message:escopo==='bases'?'Substituir apenas as bases e categorias? Entradas e algoritmo serão mantidos.':'Substituir as escolhas das três subseções pela configuração salva?',detail:'Nenhuma camada ou resultado será apagado do banco.'})))return;
       // Restaurar integralmente evita executar regras diferentes das que foram salvas.
       const vindas = dados.categorias.flatMap(grupo => grupo.camadas.map(camada => {
         const noCatalogo = state.catalog.find(l => l.id === camada.id);
         if (noCatalogo && camada.arquivo && !noCatalogo.arquivo) noCatalogo.arquivo = camada.arquivo;
-        return { id: camada.id, category: grupo.id, arquivo: camada.arquivo || noCatalogo?.arquivo || '',
+        return { id: camada.id, nome:camada.nome, category: grupo.id, arquivo: camada.arquivo || noCatalogo?.arquivo || '',
           ...(camada.regra ? { regra: camada.regra } : {}) };
       }));
-      state.bases=[];state.staging=vindas;
+      if(escopo==='bases'){
+        const entradas=new Set([state.input,...state.entradasExtras.map(e=>e.id)]);
+        for(const g of dados.categorias)for(const camada of g.camadas)if(!state.catalog.some(c=>c.id===camada.id))state.catalog.push({...camada});
+        editor.carregar(vindas,dados);
+        if(dados.categoria_ativa)$('#ea-category-select').value=dados.categoria_ativa;
+        render();feedback(`Lista "${dados.nome}" carregada para edição. Confirme a lista para validar as camadas e enviá-las à prévia.`);return;
+      }
+      editor.carregar(vindas);
       state.input='';state.inputConfig=null;state.entradasExtras=[];
       // Entradas e finalidades vêm da configuração; a entrada principal é a primeira.
       const entradas = dados.entradas || [];
@@ -229,32 +137,34 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
         state.entradasExtras = entradas.slice(1).map(item => ({ id: item.id, config: item.config || null }));
       }
       state.finalidades = (dados.finalidades||[]).map(f => ({ nome: f.nome, campos: [...f.campos] }));
-      state.operation=dados.operacao||'';$('#ea-operation').value=state.operation;
+      state.operation=['enriquecimento','estatisticas'].includes(dados.operacao)?dados.operacao:'';$('#ea-operation').value=state.operation;
       state.opcoes={...state.opcoes,...(dados.opcoes||{})};
       state.nomeSaida=dados.nome_saida||'';$('#ea-nome-saida').value=state.nomeSaida;
-      ancora = state.staging.map(item => ({ ...item }));
+      if(dados.categoria_ativa)$('#ea-category-select').value=dados.categoria_ativa;
+      state.previaLocal=null;
+      ancora = structuredClone(state.staging);
       render();
       window.SICARDExtracao?.renderParametros?.();
       await changed();
-      const partes = [`Configuração "${dados.nome}": ${state.staging.length} base(s) restaurada(s). Use Confirmar bases para colocá-las na bancada.`];
+      const partes = [`Configuração "${dados.nome}": ${vindas.length} base(s) restaurada(s) na lista. Confirme a lista para enviá-las à prévia.`];
       if (entradas.length) partes.push(`Entrada principal: ${entradas[0].nome}${entradas.length > 1 ? ` (+${entradas.length - 1} adicional(is))` : ''}.`);
       if (dados.finalidades?.length) partes.push(`${dados.finalidades.length} finalidade(s) restaurada(s).`);
-      if(!dados.operacao)partes.push('Esta configuração antiga não guardava o algoritmo. Escolha o algoritmo e confira suas opções antes de executar.');
+      if(!state.operation)partes.push('Escolha um dos dois algoritmos de enriquecimento e confira suas opções antes de executar.');
       if (dados.ausentes.length) partes.push(`${dados.ausentes.length} referência(s) não estão mais no catálogo: ${dados.ausentes.join(', ')}.`);
       feedback(partes.join(' '));
     } catch (error) {
-      feedback(`Não foi possível carregar: ${error.message}`);
+      feedback(`Não foi possível carregar: ${error.message}`,'error');
     } finally { marcar(); }
   }
   botoes.editar.addEventListener('click', () => {
-    if (state.busy || !state.staging.length) return;
+    if (state.busy) return;
+    if(!editando)guardarPrevia(state);
     editando = !editando;
-    render();
-    feedback(editando
-      ? 'Lista em edição: use + para adicionar camadas à categoria e × para remover.'
-      : 'Edição encerrada. A lista continua aguardando o envio à bancada.');
+    render();changed();
   });
-  botoes.carregar.addEventListener('click', () => { botoes.carregar.disabled = true; abrirSalva(true); });
+  botoes.carregar.addEventListener('click', () => { botoes.carregar.disabled = true; abrirSalva(true,'bases'); });
+
+  configCarregar.addEventListener('click',()=>abrirSalva(true,'analise'));
 
   for (const [chave, botao] of Object.entries(botoes)) {
     botao.title = ROTULO[chave];
@@ -267,10 +177,10 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
 const tamanho = bytes => bytes >= 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${bytes} B`;
 
 /* Com `pasta`, o diálogo vira o explorador do diretório das configurações. */
-function escolherConfiguracao(configuracoes, pasta = '') {
+function escolherConfiguracao(configuracoes, pasta = '',escopo='analise') {
   return new Promise(resolve => {
     const dialog = el('dialog', undefined, 'ea-tool-dialog ea-config-dialog');
-    const titulo = el('h2', pasta ? 'Abrir arquivo de configuração' : 'Configurações salvas');
+    const titulo = el('h2', escopo==='bases'?'Carregar listas':pasta ? 'Abrir arquivo de configuração' : 'Configurações salvas');
     titulo.id = 'ea-config-dialog-title';
     dialog.setAttribute('aria-labelledby', titulo.id);
     const caminho = pasta ? el('p', `${pasta}/`, 'ea-config-path') : null;
@@ -330,7 +240,7 @@ function escolherConfiguracao(configuracoes, pasta = '') {
       const indice = configuracoes.findIndex(item => item.chave === escolhido);
       if (indice < 0) return;
       const item = configuracoes[indice];
-      if (!window.confirm(`Excluir a configuração "${item.nome}"? O arquivo salvo será apagado e não pode ser recuperado.`)) return;
+      if (!(await window.SLTFeedback.confirmar({title:"Excluir configuração",message:`Excluir a configuração "${item.nome}"? O arquivo salvo será apagado e não pode ser recuperado.`,danger:true,confirmLabel:"Excluir"}))) return;
       excluir.disabled = true;
       confirmar.disabled = true;
       try {
@@ -347,7 +257,7 @@ function escolherConfiguracao(configuracoes, pasta = '') {
         feedback(`Configuração "${item.nome}" excluída.`);
         if (!configuracoes.length) fechar(null);
       } catch (error) {
-        feedback(`Não foi possível excluir: ${error.message}`);
+        feedback(`Não foi possível excluir: ${error.message}`,'error');
         excluir.disabled = false;
         confirmar.disabled = false;
       }

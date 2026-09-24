@@ -18,11 +18,11 @@ from api.services import extracao_atributos as service
 def test_identificador_longo_e_entradas_invalidas():
     payload = dict(input_id='storage:base-geoespacial/'+'a'*150+'.gpkg::entrada',
                    categorias=[{'id':'ambiental','camadas':['base']}])
-    assert routes.Extracao(**payload).input_id == payload['input_id']
+    assert routes.Extracao(**payload,operacao='intersection').input_id == payload['input_id']
     with pytest.raises(ValidationError, match='duas vezes'):
         routes.Extracao(**payload,operacao='enriquecimento',entradas=[{'id':'a'},{'id':'a'}])
     with pytest.raises(ValidationError, match='exigem'):
-        routes.Extracao(**payload,entradas=[{'id':'a'}])
+        routes.Extracao(**payload,operacao='intersection',entradas=[{'id':'a'}])
     with pytest.raises(ValidationError, match='Selecione'):
         routes.ArquivoMapa()
 
@@ -138,3 +138,13 @@ def test_categorias_municipais_independem_do_storage(monkeypatch):
             raise AssertionError('Não deve listar camadas para escolher uma categoria')
         monkeypatch.setattr(service,'catalogo',forbidden)
         assert client.get('/municipal/categorias').json()=={'categorias':[{'id':'social','nome':'Social'}]}
+
+
+def test_execucao_exige_entrada_base_e_algoritmo_mas_nome_e_opcional():
+    valido={'input_id':'entrada','operacao':'estatisticas','categorias':[{'id':'social','camadas':['base']}]}
+    assert routes.Extracao(**valido).nome_saida==''
+    for campo in ['input_id','operacao','categorias']:
+        with pytest.raises(ValidationError):
+            routes.Extracao(**{k:v for k,v in valido.items() if k!=campo})
+    with pytest.raises(ValidationError):
+        routes.Extracao(**{**valido,'categorias':[{'id':'social','camadas':[]}]})

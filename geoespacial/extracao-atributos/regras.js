@@ -1,7 +1,7 @@
 /* Editor da regra de uma base no modo enriquecimento (etapa 2 do fluxo configurável).
    A validação definitiva é do servidor (extracao_atributos_regras.py); aqui só se
    evita enviar o que já se sabe incoerente. */
-import { el } from './ui.js';
+import { el, feedback } from './ui.js';
 
 export const REGRA_PADRAO = Object.freeze({
   papel: 'atributos', ligacao: 'localizacao', predicado: 'intersecta', chave_entrada: null, chave_base: null,
@@ -117,10 +117,10 @@ export function editarEntrada({ nomeEntrada, config, preservar = false, camposDi
     aplicar.addEventListener('click', () => {
       let filtro = null;
       if (!preservar && operador.value) {
-        if (!filtroCampo.value.trim()) { erro.textContent = 'Informe o campo do filtro.'; return; }
+        if (!filtroCampo.value.trim()) { window.SLTFeedback.campo(filtroCampo,'Informe o campo do filtro.'); return; }
         const lista = valor.value.split(',').map(t => t.trim()).filter(Boolean);
-        if (['igual', 'diferente'].includes(operador.value) && !valor.value.trim()) { erro.textContent = 'Informe o valor do filtro.'; return; }
-        if (operador.value === 'em' && !lista.length) { erro.textContent = 'Informe ao menos um valor na lista.'; return; }
+        if (['igual', 'diferente'].includes(operador.value) && !valor.value.trim()) { window.SLTFeedback.campo(valor,'Informe o valor do filtro.'); return; }
+        if (operador.value === 'em' && !lista.length) { window.SLTFeedback.campo(valor,'Informe ao menos um valor na lista.'); return; }
         filtro = { campo: filtroCampo.value.trim(), operador: operador.value,
           valor: operador.value === 'em' ? lista : ['igual', 'diferente'].includes(operador.value) ? valor.value.trim() : null };
       }
@@ -148,7 +148,8 @@ export function editarFinalidade({ nome = '', campos = [], disponiveis = [] }) {
     filtro.placeholder = 'Filtrar campos';
     filtro.setAttribute('aria-label', 'Filtrar campos pelo nome');
     const lista = el('div', undefined, 'ea-finalidade-campos');
-    const escolhidos = new Set(campos);
+    const existentes = new Set(disponiveis.map(item => item.campo));
+    const escolhidos = new Set(campos.filter(campo => existentes.has(campo)));
     const linhas = disponiveis.map(item => {
       const linha = el('label', undefined, 'ea-finalidade-campo');
       const marca = entrada(item.campo, '', 'checkbox');
@@ -180,8 +181,8 @@ export function editarFinalidade({ nome = '', campos = [], disponiveis = [] }) {
     cancelar.addEventListener('click', () => fechar(null));
     dialog.addEventListener('cancel', evento => { evento.preventDefault(); fechar(null); });
     aplicar.addEventListener('click', () => {
-      if (!campoNome.value.trim()) { erro.textContent = 'Informe o nome da finalidade.'; return; }
-      if (!escolhidos.size) { erro.textContent = 'Escolha ao menos um campo.'; return; }
+      if (!campoNome.value.trim()) { window.SLTFeedback.campo(campoNome,'Informe o nome da finalidade.'); return; }
+      if (!escolhidos.size) { window.SLTFeedback.contextual(lista,'warning','Escolha ao menos um campo.'); return; }
       fechar({ nome: campoNome.value.trim(), campos: [...escolhidos] });
     });
     rodape.append(cancelar, aplicar);
@@ -272,33 +273,43 @@ export function editarRegra({ nomeBase, regra, camposDisponiveis = [] }) {
     const aplicar = el('button', 'Aplicar', 'ea-btn ea-btn-primary');
     for (const botao of [padrao, cancelar, aplicar]) botao.type = 'button';
     function fechar(valor) { dialog.close(); dialog.remove(); resolve(valor); }
-    padrao.addEventListener('click', () => fechar(structuredClone(REGRA_PADRAO)));
+    padrao.addEventListener('click', () => fechar({ ...structuredClone(REGRA_PADRAO),
+      ...(r.estatistica ? { estatistica: r.estatistica } : {}), ...(r.estatisticas_campos ? { estatisticas_campos: r.estatisticas_campos } : {}) }));
     cancelar.addEventListener('click', () => fechar(null));
     dialog.addEventListener('cancel', event => { event.preventDefault(); fechar(null); });
     aplicar.addEventListener('click', () => {
       const listaCampos = campos.value.split(/[,;\n]/).map(t => t.trim()).filter(Boolean);
+      if (new Set(listaCampos).size !== listaCampos.length) { window.SLTFeedback.campo(campos,'Há campos repetidos na lista.'); return; }
       const mapaApelidos = {};
       for (const texto of apelidos.value.split('\n').map(t => t.trim()).filter(Boolean)) {
         const posicao = texto.indexOf('=');
-        if (posicao <= 0) { erro.textContent = `Apelido sem "=": ${texto}`; return; }
-        mapaApelidos[texto.slice(0, posicao).trim()] = texto.slice(posicao + 1).trim();
+        if (posicao <= 0) { window.SLTFeedback.campo(apelidos,`Apelido sem "=": ${texto}`); return; }
+        const apelido = texto.slice(posicao + 1).trim();
+        if (!apelido) { window.SLTFeedback.campo(apelidos,`Apelido vazio: ${texto}`); return; }
+        mapaApelidos[texto.slice(0, posicao).trim()] = apelido;
       }
       const porAtributo = ligacao.value === 'atributo';
       if (porAtributo && (!chaveEntrada.value.trim() || !chaveBase.value.trim())) {
-        erro.textContent = 'Ligação por atributo exige a chave da entrada e a chave da base.'; return;
+        feedback('Ligação por atributo exige a chave da entrada e a chave da base.', 'warning'); return;
       }
       if (papel.value === 'recorte' && porAtributo) {
-        erro.textContent = 'A unidade de recorte usa ligação por localização.'; return;
+        feedback('A unidade de recorte usa ligação por localização.', 'warning'); return;
       }
       const metros = buffer.value === '' ? null : Number(buffer.value);
-      if (metros !== null && !(metros > 0)) { erro.textContent = 'O buffer deve ser maior que zero.'; return; }
+      if (papel.value !== 'recorte' && (buffer.validity.badInput || (metros !== null && !(metros > 0 && metros <= 100000)))) {
+        window.SLTFeedback.campo(buffer,'O buffer deve ser maior que zero e no máximo 100000 m.'); return;
+      }
+      const prefixoValor = prefixo.value.trim().toLowerCase();
+      if (prefixoValor && !/^[a-z][a-z0-9_]{0,38}_?$/.test(prefixoValor)) {
+        window.SLTFeedback.campo(prefixo,'Prefixo deve começar com letra e usar letras minúsculas, números e sublinhado.'); return;
+      }
       fechar({
         estatistica: r.estatistica || 'media', estatisticas_campos: r.estatisticas_campos || {},
         papel: papel.value, ligacao: ligacao.value, predicado: predicado.value,
         chave_entrada: porAtributo ? chaveEntrada.value.trim() : null,
         chave_base: porAtributo ? chaveBase.value.trim() : null,
         multiplicidade: multiplicidade.value, campos: listaCampos.length ? listaCampos : null,
-        prefixo: prefixo.value.trim() || null, apelidos: mapaApelidos,
+        prefixo: prefixoValor || null, apelidos: mapaApelidos,
         preparacao: { buffer_m: papel.value === 'recorte' ? null : metros,
           corrigir_geometrias: corrigir.checked, separar_por_tipo: separar.checked },
       });
@@ -388,7 +399,7 @@ export function editarEstatisticas({ nomeBase, regra, categoria, camposDisponive
     dialog.addEventListener('cancel', e => { e.preventDefault(); fechar(null); });
     aplicar.addEventListener('click', () => {
       const valor = prefixo.value.trim().toLowerCase();
-      if (valor && !/^[a-z][a-z0-9_]{0,38}_?$/.test(valor)) { erro.textContent = 'Prefixo deve começar com letra e usar letras minúsculas, números e sublinhado.'; return; }
+      if (valor && !/^[a-z][a-z0-9_]{0,38}_?$/.test(valor)) { window.SLTFeedback.campo(prefixo,'Prefixo deve começar com letra e usar letras minúsculas, números e sublinhado.'); return; }
       // Preservar regras do modo configurável permite alternar sem perder as escolhas.
       fechar({...regra, estatistica: estatistica.value, estatisticas_campos: porCampo, prefixo: valor || null});
     });

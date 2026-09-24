@@ -108,6 +108,7 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
     for categoria in categorias:
         binaria = categoria_binaria(categoria)
         for camada in categoria['camadas']:
+            if hasattr(progress,'tarefa'): progress.tarefa(0,len(trabalho))
             progress(f"Cruzando {categoria['nome']} / {camada['nome']}")
             base, regra = camada['frame'].reset_index(drop=True), camada['regra']
             campos = [c for c in base.columns if c != base.geometry.name]
@@ -116,39 +117,55 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
                 raise ValueError(f"{camada['nome']}: campo(s) inexistente(s) nas estatísticas: {', '.join(sorted(faltando))}.")
             geoms, estat = _geometrias_trabalho(base, camada['nome'])
             indice = geoms.sindex
-            pares = indice.query(trabalho, predicate='intersects')
-            correspondencias = [[] for _ in range(len(resultado))]
-            for entrada_pos, base_pos in zip(*pares):
-                correspondencias[int(entrada_pos)].append(int(base_pos))
-            correspondencias = [sorted(set(posicoes)) for posicoes in correspondencias]
-            novas = {}
             nomes = {c: _nome_livre(regra['prefixo'] + str(c), usados) for c in campos}
+            novas = {nome: [] for nome in nomes.values()}
+            contagens = []
+            # Consultar e agregar cada lote antes de liberar seus candidatos.
+            # Uma feição muito complexa vai sozinha, sem simplificar o original.
+            vertices = shapely.get_num_coordinates(trabalho.values)
+            inicio = 0
+            while inicio < len(trabalho):
+                fim = inicio + 1
+                carga = int(vertices[inicio])
+                while fim < len(trabalho) and fim - inicio < 64 and carga + int(vertices[fim]) <= 200000:
+                    carga += int(vertices[fim]); fim += 1
+                pares = indice.query(trabalho.iloc[inicio:fim], predicate='intersects')
+                correspondencias = [[] for _ in range(fim - inicio)]
+                for entrada_pos, base_pos in zip(*pares):
+                    correspondencias[int(entrada_pos)].append(int(base_pos))
+                correspondencias = [sorted(set(posicoes)) for posicoes in correspondencias]
+                contagens.extend(len(p) for p in correspondencias)
+                for campo, nome in nomes.items():
+                    medida = regra['estatisticas_campos'].get(campo, regra['estatistica'])
+                    novas[nome].extend(('Sim' if posicoes else 'Não') if binaria else
+                                       agregar(base[campo].iloc[posicoes], medida) if posicoes else None
+                                       for posicoes in correspondencias)
+                inicio = fim
+                if hasattr(progress,'tarefa'): progress.tarefa(fim,len(trabalho))
+                progress(f"{camada['nome']}: {fim}/{len(trabalho)} feições analisadas com geometria integral")
             for campo, nome in nomes.items():
                 medida = regra['estatisticas_campos'].get(campo, regra['estatistica'])
-                novas[nome] = [('Sim' if posicoes else 'Não') if binaria else
-                               agregar(base[campo].iloc[posicoes], medida) if posicoes else None
-                               for posicoes in correspondencias]
                 dicionario.append({'campo': nome, 'apelido': regra['apelidos'].get(campo), 'tema': categoria['nome'],
                                    'base': camada['nome'], 'campo_origem': campo,
                                    'regra': 'Interseção: Sim/Não' if binaria else ROTULOS[medida] + '; somente feições intersectadas'})
             # Presença também existe nas bases que não possuem nenhum campo de atributos.
             if binaria:
                 nome = _nome_livre(regra['prefixo'] + 'intersecao', usados)
-                novas[nome] = ['Sim' if p else 'Não' for p in correspondencias]
+                novas[nome] = ['Sim' if n else 'Não' for n in contagens]
                 dicionario.append({'campo': nome, 'apelido': f"{camada['nome']} · interseção", 'tema': categoria['nome'],
                                    'base': camada['nome'], 'campo_origem': None, 'regra': 'Interseção: Sim/Não'})
             col_n = _nome_livre(regra['prefixo'] + 'n_feicoes', usados)
-            novas[col_n] = [len(p) for p in correspondencias]
+            novas[col_n] = contagens
             dicionario.append({'campo': col_n, 'apelido': f"{camada['nome']} · nº de feições intersectadas", 'tema': categoria['nome'],
                                'base': camada['nome'], 'campo_origem': None, 'regra': 'Contagem espacial de feições'})
             resultado = gpd.GeoDataFrame(pd.concat([resultado, pd.DataFrame(novas)], axis=1), crs=CRS_SAIDA)
             etapas.append({'base': camada['nome'], 'papel': 'atributos', 'ligacao': 'localizacao',
                            'multiplicidade': 'binaria' if binaria else 'estatisticas',
                            'estatistica': None if binaria else regra['estatistica'],
-                           'registros_com_correspondencia': sum(bool(p) for p in correspondencias),
-                           'registros_com_multiplas_feicoes': sum(len(p) > 1 for p in correspondencias),
+                           'registros_com_correspondencia': sum(n > 0 for n in contagens),
+                           'registros_com_multiplas_feicoes': sum(n > 1 for n in contagens),
                            'registros_antes': len(resultado), 'registros_depois': len(resultado)})
-            contagens_bases.append([len(p) for p in correspondencias])
+            contagens_bases.append(contagens)
             bases_info.append({'tema': categoria['nome'], 'nome': camada['nome'], 'preparacao': estat})
     resultado.insert(0, 'id_registro', np.arange(1, len(resultado) + 1))
     fixos = [{'campo': c, 'apelido': None, 'tema': 'Entrada', 'base': nome_entrada, 'campo_origem': None,

@@ -1,37 +1,40 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Ferramenta de Tributação de Camadas Territoriais" %}
+{% set subtitulo = "Camadas territoriais" %}
 {% set navegacao = "restrita" %}
 {% set bloco_modulo = "geoprocessamento" %}
 {% set requer_autenticacao = true %}
 {% block titulo %}Ferramenta de Tributação de Camadas Territoriais — SICARD{% endblock %}
-{% block classes_body %}extracao-page{% endblock %}
+{% block classes_body %}extracao-page feedback-proprio{% endblock %}
 {% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/assets/css/ahp-module.css">
+<link rel="stylesheet" href="/assets/css/page-title-standard.css">
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
 <link rel="stylesheet" href="/restrict/geoespacial/extracao-atributos/municipal-plugin/municipal-plugin.css">
 {% endblock %}
 {% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="conteudo-principal ea-main" id="territorial-app">
-  <header class="ea-intro">
-    <nav class="ea-breadcrumb" aria-label="Localização"><a href="/restrict/">Início</a> / <a href="/restrict/geoespacial/">Geoprocessamento</a> / Camadas territoriais</nav>
-    <h1>Ferramenta de Tributação de Camadas Territoriais</h1>
-    <p>Crie camadas com indicadores e atributos em diferentes escalas territoriais:</p>
-    <a class="ea-btn" id="territorial-back" href="/restrict/geoespacial/extracao-atributos/?retomar=municipal">Voltar à extração</a>
-  </header>
-  <section class="territorial-controls" aria-label="Configuração territorial">
+  <nav class="ea-breadcrumb" aria-label="Localização"><a href="/restrict/">Início</a> / <a href="/restrict/geoespacial/">Geoprocessamento</a> / Camadas territoriais</nav>
+  <section class="card-camadas-territoriais secao-camadas-territoriais card standard-page-hero ea-intro">
+    <h1 class="ahp-page-title standard-page-hero__title"><i class="fas fa-city" aria-hidden="true"></i><span>Ferramenta de Tributação de Camadas Territoriais</span></h1>
+    <span class="ea-eyebrow standard-page-hero__eyebrow">Geoprocessamento</span>
+    <p class="standard-page-hero__description">Crie camadas com indicadores e atributos em diferentes escalas territoriais.</p>
+  </section>
+  <div class="standard-section-action-row"><a class="btn btn-secondary" id="territorial-back" href="/restrict/geoespacial/extracao-atributos/?retomar=municipal">Voltar à extração</a></div>
+  <section class="secao-camadas-territoriais-controles territorial-controls" aria-label="Configuração territorial">
     <div class="ea-field"><label for="territorial-scale">Escala territorial</label><select id="territorial-scale"><option value="municipios">Municípios de São Paulo</option></select><small>Setores censitários serão disponibilizados futuramente.</small></div>
     <div class="ea-field"><label for="territorial-category">Categoria da camada</label><select id="territorial-category" disabled><option value="">Carregando categorias…</option></select></div>
     <button class="ea-btn" id="territorial-retry" type="button" hidden>Tentar novamente</button>
   </section>
-  <section id="territorial-result" class="territorial-result" aria-label="Camada gerada" hidden>
+  <section id="territorial-result" class="secao-camadas-territoriais-resultado territorial-result" aria-label="Camada gerada" hidden>
     <h2>Camada gerada e salva</h2>
     <p><strong id="territorial-result-name"></strong> · Categoria: <span id="territorial-result-category"></span></p>
     <p>O arquivo está disponível no acervo. Você pode baixá-lo ou incluí-lo na extração.</p>
     <div class="ea-config-tools"><a class="ea-btn" id="territorial-download">Baixar camada (.zip)</a><a class="ea-btn ea-btn-primary" id="territorial-use">Usar na extração</a></div>
   </section>
   <div id="territorial-builder" class="territorial-builder"><p class="ea-hint">Escolha a categoria para selecionar os indicadores da camada.</p></div>
-  <p id="ea-feedback" class="ea-feedback" role="status" aria-live="polite"></p>
 </main>
 {% endblock %}
 {% block scripts_pagina %}

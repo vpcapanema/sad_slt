@@ -234,7 +234,7 @@
         vistos.add(log.sequencia);
         proc.passo(log.mensagem, log.nivel === "erro" ? "error" : "success");
       });
-      proc.progresso(atual.percentual, atual.etapa_atual);
+      proc.progresso(atual.percentual, atual.etapa_atual, atual.progresso_tarefa);
       await new Promise(resolve => setTimeout(resolve, 250));
       const resposta = await fetch(`${API}/operacoes-jobs/status/${atual.id}`);
       if (!resposta.ok) throw new Error("Perdi o contato com o processo no servidor.");
@@ -245,7 +245,7 @@
       vistos.add(log.sequencia);
       proc.passo(log.mensagem, log.nivel === "erro" ? "error" : "success");
     });
-    proc.progresso(atual.percentual, atual.etapa_atual);
+    proc.progresso(atual.percentual, atual.etapa_atual, atual.progresso_tarefa);
     if (atual.status === "erro") throw new Error(atual.erro || "O servidor interrompeu o processo.");
     return atual.resultado || {};
   }

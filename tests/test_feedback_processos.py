@@ -1,10 +1,8 @@
-"""Feedback de ações e processos nas cinco páginas de hierarquização.
+"""Contratos de integração do feedback com hierarquização, upload e SEI.
 
-Cada ação que grava ou calcula passa por três estágios visíveis: confirmação
-antes de sair do navegador, acompanhamento enquanto roda (com o log real do
-servidor, quando existe) e desfecho em semáforo. Estes testes travam esse
-contrato — o que voltar a disparar direto no clique, ou a anunciar sucesso sem
-o servidor ter respondido, quebra aqui.
+A revisão de ações com consequências é preservada. O acompanhamento não bloqueia
+outras tarefas nem a fila; os desfechos dependem da resposta real do servidor.
+Os comportamentos de foco, componentes e cancelamento são exercitados no navegador.
 """
 from __future__ import annotations
 
@@ -43,14 +41,13 @@ def test_confirmacao_nao_foca_o_botao_perigoso():
     assert 'bd.querySelector(danger ? "[data-fb-cancelar]" : "[data-fb-confirmar]")?.focus()' in corpo
 
 
-def test_modal_de_processo_nao_fecha_enquanto_roda():
-    """Sem cancelamento real no servidor, fechar só esconderia o que continua rodando."""
-    assert "if (travado) return;" in FEEDBACK_JS
-    assert 'if (e.key === "Escape" && !travado)' in FEEDBACK_JS
-    processo = FEEDBACK_JS.split("function processo(title,", 1)[1]
-    assert "travado = true;" in processo.split("return {", 1)[0]
-    assert "travado = false;" in processo.split("concluir({", 1)[1].split("\n      }", 1)[0]
-    assert ".slt-fb-modal--progress .slt-fb-close{display:none}" in FEEDBACK_CSS
+def test_processo_pode_ser_recolhido_sem_cancelar():
+    processo = FEEDBACK_JS.split("function processo(title,", 1)[1].split("async function acao", 1)[0]
+    assert "painel:true" in processo
+    assert "travado = true;" not in processo
+    assert "Recolher acompanhamento" in processo
+    assert "await cancelar()" in processo
+    assert "controller.abort()" in processo
 
 
 def test_semaforo_tem_as_tres_cores():
@@ -104,7 +101,7 @@ def test_upload_usa_as_rotas_com_log_real_do_servidor():
 def test_upload_desenha_cada_log_do_servidor_como_passo():
     corpo = UPLOAD_JS.split("async function acompanharJob(", 1)[1].split("\n  }", 1)[0]
     assert "proc.passo(log.mensagem" in corpo
-    assert "proc.progresso(atual.percentual, atual.etapa_atual)" in corpo
+    assert "proc.progresso(atual.percentual, atual.etapa_atual, atual.progresso_tarefa)" in corpo
     assert 'atual.status === "erro"' in corpo
 
 
@@ -216,11 +213,10 @@ def test_enter_nao_confirma_acao_perigosa_com_foco_em_cancelar():
     assert '!danger || foco?.closest?.("[data-fb-confirmar]")' in corpo
 
 
-def test_sei_espera_o_usuario_dispensar_cada_desfecho():
-    """Um modal por PDF: sem a espera, a fila sobrescreveria o resultado de um
-    documento com o do seguinte."""
+def test_sei_continua_fila_sem_exigir_dispensar_resultados():
     corpo = SEI_JS.split("async function processarFila()", 1)[1]
-    assert "await aguardarFechamento(proc.concluir(" in corpo
+    assert "aguardarFechamento" not in corpo
+    assert "proc.concluir(desfechoDaLeitura(leitura))" in corpo
 
 
 def test_sei_mostra_o_proponente_lido_que_nao_cabe_no_formulario():

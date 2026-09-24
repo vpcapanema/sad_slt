@@ -7,6 +7,8 @@
 Este arquivo resume a conversa anterior para continuidade no Codex do VS Code. Nao e importacao nativa do chat. Revalide o estado antes de alterar algo.
 
 ## Pedido e politica do usuario
+**Regra vigente (24/09/2026): fazer e validar as alterações localmente primeiro. Deploy somente após autorização explícita do usuário para publicar as alterações. Autorizações históricas não liberam novos deploys.**
+
 Codespace e desenvolvimento; GitHub e repositorio; conteiner na VM e producao; slt_db na VM e banco oficial compartilhado por desenvolvimento e producao. Storage SICARD da VM e fonte das camadas completas, sem copias integrais no Codespace. Nao substituir por banco local ou dados ficticios. Leitura deve preservar 100% dos dados, atributos, geometrias e CRS.
 O usuario autorizou localizar credenciais existentes na configuracao do conteiner/VM e configurar o acesso do Codespace. Nunca mostrar senhas nem colocar no Git. O outro laptop esta em manutencao. SSH deve permanecer restrito ao IP do usuario; ele rejeitou liberar SSH para IP do Codespace e rejeitou criar WebDAV. Alteracoes no banco compartilhado atingem producao; validar inicialmente com leitura.
 

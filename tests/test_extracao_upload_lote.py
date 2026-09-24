@@ -91,7 +91,8 @@ def test_api_entrega_validacao_completa_de_uma_so_vez(tmp_path):
         assert len(r.json()['entrada']['geojson']['features'])==3
 
 
-def test_execucao_recebe_todas_as_camadas_sem_salvar_arquivo_original(tmp_path,monkeypatch):
+@pytest.mark.parametrize('restringir',[False,True])
+def test_execucao_recebe_camadas_da_bancada_sem_salvar_arquivo_original(tmp_path,monkeypatch,restringir):
     from types import SimpleNamespace
     from api.services import extracao_atributos as service
     data=gpkg(tmp_path,True)
@@ -99,12 +100,18 @@ def test_execucao_recebe_todas_as_camadas_sem_salvar_arquivo_original(tmp_path,m
     monkeypatch.setattr(service,'catalogo',lambda:{'camadas':[{'id':'base','nome':'Base'}],'categorias':[{'id':'social','nome':'Social'}]})
     monkeypatch.setattr(service.ciclo,'iniciar',lambda *args:persistidos.append(args[1]) or 'teste')
     monkeypatch.setattr(service._pool,'submit',lambda *args:tarefas.append(args))
-    service.iniciar({'input_id':'local:lote','operacao':'estatisticas',
+    from api.routers.extracao_atributos import Extracao
+    arquivo={'nome':'camadas.gpkg','conteudo_base64':base64.b64encode(data).decode()}
+    if restringir:
+        arquivo['camadas']=[c['chave'] for c in local.previa(data,'camadas.gpkg')['camadas'][:2]]
+    payload=Extracao(**{'input_id':'local:lote','operacao':'estatisticas',
                      'categorias':[{'id':'social','camadas':['base']}],
-                     'arquivo_local':{'nome':'camadas.gpkg','conteudo_base64':base64.b64encode(data).decode()}},SimpleNamespace(id='usuario'))
-    assert len(tarefas[0][3])==3
-    assert persistidos[0]['entrada_local']['camadas_total']==3
-    assert len(persistidos[0]['entrada_local']['camadas_origem'])==3
+                     'arquivo_local':arquivo}).model_dump()
+    service.iniciar(payload,SimpleNamespace(id='usuario'))
+    esperado=2 if restringir else 3
+    assert len(tarefas[0][3])==esperado
+    assert persistidos[0]['entrada_local']['camadas_total']==esperado
+    assert len(persistidos[0]['entrada_local']['camadas_origem'])==esperado
     assert 'conteudo_base64' not in str(persistidos)
 
 
@@ -138,3 +145,29 @@ def test_multiplos_rasters_sao_validados_e_desenhados_independentemente(tmp_path
     assert result['entrada'] is None
     assert all(c['imagem'].startswith('data:image/png;base64,') for c in result['camadas'])
     assert result['camadas'][0]['metadados_local']['limites_wgs84']!=result['camadas'][1]['metadados_local']['limites_wgs84']
+
+
+def test_bancada_restaura_apenas_camadas_remanescentes(tmp_path):
+    data=gpkg(tmp_path)
+    previa=local.previa(data,'multicamadas.gpkg')
+    selecionadas=[previa['camadas'][i]['chave'] for i in [0,2]]
+    frame,meta=local.restaurar({'nome':'multicamadas.gpkg','conteudo_base64':base64.b64encode(data).decode(),'camadas':selecionadas})
+    assert frame.codigo.tolist()==['000','002']
+    assert 'atributo_1' not in frame.columns
+    assert len(frame)==2 and meta['camadas_total']==2
+    assert set(frame[meta['campo_origem']])==set(selecionadas)
+
+
+@pytest.mark.parametrize('selecao',[[],['nao_existe'],['multicamadas.gpkg::0','multicamadas.gpkg::0']])
+def test_bancada_nao_restaura_todas_com_selecao_invalida(tmp_path,selecao):
+    data=gpkg(tmp_path)
+    with pytest.raises(ValueError):
+        local.restaurar({'nome':'multicamadas.gpkg','conteudo_base64':base64.b64encode(data).decode(),'camadas':selecao})
+
+
+def test_bancada_nao_omite_camada_solicitada_sem_crs(tmp_path):
+    data=gpkg(tmp_path,True)
+    previa=local.previa(data,'multicamadas.gpkg')
+    with pytest.raises(ValueError,match='não é um vetor válido'):
+        local.restaurar({'nome':'multicamadas.gpkg','conteudo_base64':base64.b64encode(data).decode(),
+                        'camadas':[c['chave'] for c in previa['camadas']]})

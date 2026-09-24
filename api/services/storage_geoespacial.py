@@ -18,6 +18,8 @@ from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from api.services import storage_pacotes
+
 import mercantile
 from osgeo import gdal, ogr, osr
 
@@ -84,12 +86,20 @@ def _camadas_do_arquivo(arquivo: str, _versao: tuple[int, int]) -> tuple[dict[st
             "camada": camada.GetName(),
             "geometria_tipo": ogr.GeometryTypeToName(camada.GetGeomType()),
             "crs": _crs_texto(camada.GetSpatialRef()),
-            "feicoes": camada.GetFeatureCount(),
+            "feicoes": (n if (n := camada.GetFeatureCount(0)) >= 0 else None),
         })
     return tuple(camadas)
 
 
+@lru_cache(maxsize=64)
+def _inventario_pacote(arquivo: str, relativo: str, versao: tuple[int, int]):
+    return tuple(storage_pacotes.inventario(Path(arquivo), relativo))
+
+
 def _itens_do_arquivo(arquivo: Path, relativo: str) -> list[dict[str, Any]]:
+    if arquivo.suffix.lower() in storage_pacotes.COMPACTADOS:
+        estado=arquivo.stat()
+        return [dict(item) for item in _inventario_pacote(str(arquivo), relativo, (estado.st_mtime_ns, estado.st_size))]
     extensao = arquivo.suffix.lower()
     estado = arquivo.stat()
     base = {"arquivo": relativo, "tamanho_bytes": estado.st_size, "modificado_em": estado.st_mtime}
@@ -166,10 +176,19 @@ def camadas_vetoriais(raiz: str = "base-geoespacial") -> list[dict[str, Any]]:
     """Camadas vetoriais legíveis de uma raiz, em qualquer nível de pasta."""
     def coletar(grupo: dict[str, Any]) -> list[dict[str, Any]]:
         return [*grupo["camadas"], *(c for filho in grupo["grupos"] for c in coletar(filho))]
-    return [c for c in coletar(arvore(raiz)) if c["tipo"] == "vetor" and not c.get("erro")]
+    itens = coletar(arvore(raiz))
+    # A extração lê pacotes em RAM; a árvore de tiles permanece restrita aos
+    # arquivos que o GDAL abre diretamente. Nada é extraído no storage.
+    for arquivo in (diretorio_storage() / raiz).rglob('*'):
+        if arquivo.is_file() and arquivo.suffix.lower() in storage_pacotes.COMPACTADOS:
+            try:
+                itens.extend(_itens_do_arquivo(arquivo, arquivo.relative_to(diretorio_storage()).as_posix()))
+            except (ValueError, OSError, RuntimeError):
+                continue
+    return [c for c in itens if c["tipo"] == "vetor" and not c.get("erro")]
 
 
-def navegar(caminho: str = "") -> dict[str, Any]:
+def navegar(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
     """Uma pasta do storage: subpastas e camadas vetoriais, para o explorador."""
     relativo = str(caminho or "").strip().replace("\\", "/").strip("/") or RAIZES[0]
     partes = PurePosixPath(relativo).parts
@@ -185,11 +204,32 @@ def navegar(caminho: str = "") -> dict[str, Any]:
         item_relativo = f"{relativo}/{item.name}"
         if item.is_dir():
             pastas.append({"nome": item.name, "caminho": item_relativo})
+        elif not detalhar and item.suffix.lower() in EXTENSOES_VETOR | storage_pacotes.COMPACTADOS:
+            arquivos.append({'id': f'storage:{item_relativo}', 'nome': item.stem,
+                             'arquivo': item_relativo, 'formato': item.suffix.lstrip('.').upper(),
+                             'inventariar': True})
+        elif item.suffix.lower() in storage_pacotes.COMPACTADOS:
+            try:
+                arquivos.extend(c for c in _itens_do_arquivo(item, item_relativo) if c.get("tipo")=="vetor" and not c.get("erro"))
+            except (ValueError, OSError, RuntimeError):
+                continue
         elif item.suffix.lower() in EXTENSOES_VETOR:
             arquivos.extend({**c, "formato": item.suffix.lstrip(".").upper()}
                             for c in _itens_do_arquivo(item, item_relativo) if not c.get("erro"))
     pai = PurePosixPath(relativo).parent.as_posix() if len(partes) > 1 else None
     return {"caminho": relativo, "pai": pai, "pastas": pastas, "arquivos": arquivos}
+
+
+def inventariar_arquivo(caminho: str) -> dict[str, Any]:
+    """Abre somente o arquivo escolhido; navegar não precisa ler geometrias."""
+    arquivo = resolver(caminho)
+    if arquivo.suffix.lower() not in EXTENSOES_VETOR | storage_pacotes.COMPACTADOS:
+        raise ValueError('Selecione um arquivo vetorial ou pacote compatível.')
+    itens = _itens_do_arquivo(arquivo, caminho)
+    camadas = [item for item in itens if item.get('tipo') == 'vetor' and not item.get('erro')]
+    if not camadas:
+        raise ValueError('O arquivo não contém camadas vetoriais legíveis.')
+    return {'arquivo': caminho, 'camadas': camadas}
 
 
 def carregar_gdf(ident: str):
@@ -199,6 +239,11 @@ def carregar_gdf(ident: str):
 
     caminho, camada = separar_id(ident)
     arquivo = resolver(caminho)
+    if arquivo.suffix.lower() in storage_pacotes.COMPACTADOS:
+        frame,_ = storage_pacotes.carregar(arquivo, camada)
+        frame=frame.to_crs("EPSG:4674")
+        frame.geometry=shapely.force_2d(frame.geometry.values)
+        return frame
     if arquivo.suffix.lower() not in EXTENSOES_VETOR:
         raise ValueError("A camada não é vetorial")
     frame = gpd.read_file(arquivo, layer=camada, engine="pyogrio")
@@ -214,6 +259,8 @@ def ler_para_mapa(ident: str) -> dict[str, Any]:
     """Camada do storage no formato que a bancada da extração usa para o mapa."""
     caminho, camada = separar_id(ident)
     arquivo = resolver(caminho)
+    if arquivo.suffix.lower() in storage_pacotes.COMPACTADOS:
+        return storage_pacotes.previa(arquivo, camada, ident, caminho)
     if arquivo.suffix.lower() not in EXTENSOES_VETOR:
         raise ValueError("A camada não é vetorial")
     estado = arquivo.stat()

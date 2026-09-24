@@ -1,22 +1,6 @@
-/**
- * SLTFeedback — feedback do sistema por modal.
- *
- * Três estágios de uma ação:
- *   1. `confirmar()`  — revisão do que vai acontecer, antes de qualquer chamada.
- *   2. `processo()`   — acompanhamento enquanto roda (mensagens reais do servidor).
- *   3. `concluir()`   — semáforo do desfecho: verde, amarelo (parcial) ou vermelho.
- *
- * Uso:
- *   if (!(await SLTFeedback.confirmar({ title: "Enviar camada", message: "…", confirmLabel: "Enviar" }))) return;
- *   const proc = SLTFeedback.processo("Enviando camada");
- *   const p = proc.passo("Enviando restrição…");
- *   proc.atualizar(p, "success");
- *   proc.concluir({ type: "success", message: "Par homologado carregado." });
- *
- * Enquanto o processo roda o modal não fecha (X, Esc e clique no fundo ficam
- * inertes): nenhuma destas operações tem cancelamento real no servidor, e
- * fechar a janela só esconderia do usuário algo que continua acontecendo.
- */
+/** Feedback oficial SICARD: notificações, validação contextual, diálogos de
+ * decisão e acompanhamento independente de processos. Cor expressa estado;
+ * o componente expressa urgência e necessidade de interromper a tarefa. */
 (function (global) {
   "use strict";
 
@@ -34,28 +18,47 @@
     question: "fa-circle-question",
   };
   const TITULOS = {
-    success: "Sucesso", error: "Erro", warning: "Concluído com ressalvas",
+    success: "Sucesso", error: "Erro", warning: "Atenção",
     info: "Informação", progress: "Processando", question: "Confirmar ação",
   };
 
-  let travado = false; // true enquanto um processo roda: ignora pedidos de fechar
+  let retornoFoco=null, overflowAnterior="", contador=0;
+  const processos=new Set();
+  let travado = false; // reservado aos diálogos bloqueantes
+  let finalizarDialogo = null;
   let ouvinteTeclado = null; // Esc do modal aberto; sai junto com ele para não acumular
 
+  let rootPersistente;
+  function posicionarRaiz() {
+    if (!rootPersistente) return;
+    const dialog = [...document.querySelectorAll("dialog[open]")].filter(d => !rootPersistente.contains(d)).at(-1);
+    const destino = dialog || document.body;
+    if (rootPersistente.parentNode !== destino) destino.append(rootPersistente);
+  }
+  // Formulários nativos estão no top layer. O feedback acompanha o formulário
+  // e volta ao documento quando ele fecha, sem se perder ao remover o dialog.
+  new MutationObserver(posicionarRaiz).observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:["open"]});
+
   function raiz() {
-    let root = document.getElementById("slt-feedback-root");
+    let root = rootPersistente || document.getElementById("slt-feedback-root");
     if (!root) {
       root = document.createElement("div");
       root.id = "slt-feedback-root";
       document.body.appendChild(root);
     }
+    rootPersistente = root;
+    posicionarRaiz();
     return root;
   }
 
   function fechar() {
     if (travado) return;
+    if(finalizarDialogo){const finalizar=finalizarDialogo;finalizarDialogo=null;finalizar(false);}
     const bd = document.getElementById("slt-feedback-backdrop");
     if (bd) bd.remove();
-    document.body.style.overflow = "";
+    document.body.style.overflow = overflowAnterior;
+    if(retornoFoco?.isConnected)retornoFoco.focus({preventScroll:true});
+    retornoFoco=null;
     if (ouvinteTeclado) {
       document.removeEventListener("keydown", ouvinteTeclado);
       ouvinteTeclado = null;
@@ -66,7 +69,7 @@
     const p = typeof passo === "string" ? { message: passo, status: "info" } : passo || {};
     const li = document.createElement("li");
     li.className = `slt-fb-step slt-fb-step--${p.status || "info"}${p.destaque ? " slt-fb-step--destaque" : ""}`;
-    li.innerHTML = `<i class="fas ${ICONS[p.status] || ICONS.info}"></i><span>${esc(p.message)}</span>`;
+    li.innerHTML = `<i class="fas ${ICONS[p.status] || ICONS.info}"></i><span>${esc(String(p.message??'').replace(/nanotarefas|microtarefas/g,'tarefas').replace(/materializando/gi,'preparando').replace(/persistindo/gi,'salvando'))}</span>`;
     ul.appendChild(li);
     ul.hidden = false;
     ul.scrollTop = ul.scrollHeight;
@@ -79,37 +82,48 @@
     return lista.map((l) => (typeof l === "string" ? { message: l, status } : l));
   }
 
-  function montar({ type = "info", title, message, steps, resultados, footerHtml, barra = false }) {
-    travado = false;
-    fechar();
+  function montar({ type = "info", title, message, steps, resultados, footerHtml, barra = false, painel = false }) {
+    if(!painel){travado = false;fechar();retornoFoco=document.activeElement;overflowAnterior=document.body.style.overflow;}
     const bd = document.createElement("div");
-    bd.id = "slt-feedback-backdrop";
-    bd.className = "slt-fb-backdrop";
+    bd.id = painel ? `slt-feedback-processo-${++contador}` : "slt-feedback-backdrop";
+    bd.className = painel ? "slt-fb-process-panel" : "slt-fb-backdrop";
     bd.innerHTML = `
-      <div class="slt-fb-modal slt-fb-modal--${type}" role="dialog" aria-modal="true" aria-live="polite">
+      <div class="slt-fb-modal slt-fb-modal--${type}" role="${painel?'region':'dialog'}" ${painel?'':'aria-modal="true"'} aria-labelledby="${bd.id}-titulo" tabindex="-1">
         <header class="slt-fb-head">
           <span class="slt-fb-icon"><i class="fas ${ICONS[type] || ICONS.info}"></i></span>
-          <h3 class="slt-fb-title">${esc(title || TITULOS[type] || "Mensagem")}</h3>
+          <h3 class="slt-fb-title" id="${bd.id}-titulo">${esc(title || TITULOS[type] || "Mensagem")}</h3>
           <button type="button" class="slt-fb-close" data-fb-close aria-label="Fechar"><i class="fas fa-xmark"></i></button>
         </header>
         <div class="slt-fb-body">
           ${message ? `<p class="slt-fb-message">${esc(message)}</p>` : ""}
-          ${barra ? '<div class="slt-fb-bar"><div class="slt-fb-bar-fill" style="width:0%"></div></div><p class="slt-fb-etapa"></p>' : ""}
-          <ul class="slt-fb-results" hidden></ul>
-          <ul class="slt-fb-steps" hidden></ul>
+
+          <ul class="slt-fb-results" aria-live="polite" hidden></ul>
+          <ul class="slt-fb-steps" role="log" aria-live="polite" aria-relevant="additions" hidden></ul>
+          ${barra ? `<div class="slt-fb-progress" aria-label="Progresso do processamento">
+            ${[['tarefa','Tarefa atual'],['geral','Processo geral']].map(([key,label])=>`<div class="slt-fb-progress-item"><span>${label}</span><div class="slt-fb-bar slt-fb-bar--${key}" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="100"><div class="slt-fb-bar-fill"></div><strong class="slt-fb-percent">Aguardando medição</strong></div></div>`).join('')}
+            <p class="slt-fb-etapa"></p></div>` : ""}
         </div>
         <footer class="slt-fb-foot">${footerHtml || '<button type="button" class="btn btn-primary" data-fb-close>OK</button>'}</footer>
       </div>`;
-    raiz().appendChild(bd);
-    document.body.style.overflow = "hidden";
+    if(painel){let area=raiz().querySelector('.slt-fb-processes');if(!area){area=document.createElement('div');area.className='slt-fb-processes';area.setAttribute('aria-label','Acompanhamento de processos');raiz().append(area);}area.append(bd);}
+    else raiz().appendChild(bd);
+    if(!painel)document.body.style.overflow = "hidden";
     bd.addEventListener("click", (e) => {
-      if (e.target === bd || e.target.closest("[data-fb-close]")) fechar();
+      if(!painel&&(e.target === bd || e.target.closest("[data-fb-close]"))) fechar();
     });
     // O `fechar()` do início já removeu o ouvinte do modal anterior.
-    ouvinteTeclado = (e) => {
+    if(!painel){ouvinteTeclado = (e) => {
+      if(e.key==='Tab'){
+        const focus=[...bd.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"]')].filter(n=>!n.disabled&&n.getClientRects().length);
+        const first=focus[0],last=focus.at(-1);
+        if(!focus.length){e.preventDefault();bd.querySelector('[role="dialog"]').focus();}
+        else if(e.shiftKey&&(document.activeElement===first||!bd.contains(document.activeElement))){e.preventDefault();last.focus();}
+        else if(!e.shiftKey&&(document.activeElement===last||!bd.contains(document.activeElement))){e.preventDefault();first.focus();}
+      }
+      if(e.key === "Escape"){e.preventDefault();e.stopPropagation();}
       if (e.key === "Escape" && !travado) fechar();
     };
-    document.addEventListener("keydown", ouvinteTeclado);
+    document.addEventListener("keydown", ouvinteTeclado);bd.querySelector(".slt-fb-modal").focus();}
     const ul = bd.querySelector(".slt-fb-steps");
     (steps || []).forEach((s) => addPasso(ul, s));
     const res = bd.querySelector(".slt-fb-results");
@@ -121,8 +135,80 @@
    * Modal de status: cabeçalho com o título da ação, corpo com os resultados,
    * um por linha. `resultados` aceita texto ou lista de textos/{ message, status }.
    */
-  function notify(type, resultados, title) {
-    return montar({ type, title, resultados });
+  function notify(type, resultados, title, options = {}) {
+    const opts=typeof title==='object'&&title!==null?title:options;
+    title=typeof title==='string'?title:opts.title;
+    if(opts.field)return campo(opts.field,linhas(resultados,type).map(l=>l.message).join(' '));
+    if(opts.target)return contextual(opts.target,type,resultados,{...opts,title});
+    if(opts.modal||opts.critical)return montar({type,title,resultados});
+    const area=notificacoes();
+    const texto=linhas(resultados,type).map(l=>l.message).join(' ');
+    const repetida=[...area.children].find(n=>n.dataset.mensagem===texto&&n.dataset.type===type);
+    if(repetida)return repetida;
+    const node=document.createElement('section');node.className=`slt-fb-notice slt-fb-notice--${type}`;
+    node.dataset.type=type;node.dataset.mensagem=texto;
+    node.innerHTML=`<div role="${type==='error'?'alert':'status'}" aria-atomic="true"><strong>${esc(title||TITULOS[type])}</strong><p>${esc(texto)}</p></div>`;
+    let timer,restante=opts.action?0:opts.duration??((type==='info'||type==='success')?7000:0),inicio;
+    const fecharAviso=()=>{clearTimeout(timer);document.removeEventListener('visibilitychange',visibilidade);node.remove();};
+    if(opts.action){const acao=document.createElement('button');acao.type='button';acao.textContent=opts.action.label;acao.onclick=async()=>{acao.disabled=true;try{await opts.action.run();fecharAviso();}catch(e){acao.disabled=false;contextual(node,'error',e.message||'Não foi possível concluir a ação.');}};node.append(acao);}
+    const fecharBotao=document.createElement('button');fecharBotao.type='button';fecharBotao.className='slt-fb-dismiss';fecharBotao.textContent='×';fecharBotao.setAttribute('aria-label','Dispensar notificação');fecharBotao.onclick=fecharAviso;node.append(fecharBotao);
+    const pausar=()=>{if(timer){clearTimeout(timer);timer=null;restante=Math.max(0,restante-(Date.now()-inicio));}};
+    const iniciar=()=>{if(!timer&&restante>0&&!document.hidden&&!node.matches(':hover')&&!node.contains(document.activeElement)){inicio=Date.now();timer=setTimeout(fecharAviso,restante);}};
+    node.addEventListener('mouseenter',pausar);node.addEventListener('mouseleave',iniciar);node.addEventListener('focusin',pausar);node.addEventListener('focusout',()=>setTimeout(iniciar,0));
+    const visibilidade=()=>document.hidden?pausar():iniciar();document.addEventListener('visibilitychange',visibilidade);
+    area.append(node);iniciar();return node;
+  }
+  function notificacoes(){let area=raiz().querySelector('.slt-fb-notices');if(!area){area=document.createElement('div');area.className='slt-fb-notices';area.setAttribute('aria-label','Notificações do sistema');raiz().append(area);}return area;}
+  const alvo=value=>typeof value==='string'?document.querySelector(value):value;
+  function contextual(target,type,message,{action,title}={}){
+    const host=alvo(target);if(!host)return notify(type,message,title);
+    host.querySelector(':scope > .slt-fb-context')?.remove();
+    const node=document.createElement('div');node.className=`slt-fb-context slt-fb-notice--${type}`;node.setAttribute('role',type==='error'?'alert':'status');
+    if(title){const h=document.createElement('strong');h.textContent=title;node.append(h);}
+    const texto=document.createElement('p');texto.textContent=linhas(message,type).map(l=>l.message).join(' ');node.append(texto);
+    if(action){const b=document.createElement('button');b.type='button';b.textContent=action.label;b.onclick=action.run;node.append(b);}
+    host.append(node);return node;
+  }
+  const campos=new WeakMap();
+  function limparCampo(target){const input=alvo(target),registro=input&&campos.get(input);if(!registro)return;
+    document.querySelectorAll('.slt-fb-error-summary button').forEach(b=>{if(b.dataset.feedbackError===registro.node.id){const summary=b.parentNode;b.remove();if(!summary.querySelector('button'))summary.remove();}});
+    registro.node.remove();input.removeAttribute('aria-invalid');
+    const ids=(input.getAttribute('aria-describedby')||'').split(/\s+/).filter(id=>id&&id!==registro.node.id);
+    if(ids.length)input.setAttribute('aria-describedby',ids.join(' '));else input.removeAttribute('aria-describedby');
+    input.removeEventListener('input',registro.limpar);input.removeEventListener('change',registro.limpar);campos.delete(input);
+  }
+  function campo(target,message){const input=alvo(target);if(!input)return notify('warning',message);
+    limparCampo(input);const node=document.createElement('p');node.id=`slt-fb-campo-${++contador}`;node.className='slt-fb-field-error';node.textContent=message;node.setAttribute('role','alert');
+    input.setAttribute('aria-invalid','true');input.setAttribute('aria-describedby',[input.getAttribute('aria-describedby'),node.id].filter(Boolean).join(' '));input.insertAdjacentElement('afterend',node);
+    const limpar=()=>limparCampo(input);campos.set(input,{node,limpar});input.addEventListener('input',limpar);input.addEventListener('change',limpar);return node;
+  }
+  function validar(form){form=alvo(form);if(!form)return false;
+    form.querySelector('.slt-fb-error-summary')?.remove();const invalidos=[...form.querySelectorAll('input,select,textarea')].filter(n=>n.willValidate&&!n.validity.valid);
+    if(!invalidos.length)return true;
+    const summary=document.createElement('div');summary.className='slt-fb-error-summary';summary.tabIndex=-1;summary.setAttribute('role','alert');
+    const h=document.createElement('strong');h.textContent='Revise os campos indicados';summary.append(h);
+    invalidos.forEach(input=>{const message=mensagemCampo(input);campo(input,message);const b=document.createElement('button');b.type='button';b.textContent=`${input.labels?.[0]?.textContent.trim()||input.name||'Campo'}: ${message}`;b.dataset.feedbackError=campos.get(input).node.id;b.onclick=()=>input.focus();summary.append(b);});form.prepend(summary);summary.focus();return false;
+  }
+  function mensagemCampo(input){
+    if(input.dataset.errorMessage)return input.dataset.errorMessage;
+    if(input.validity.valueMissing)return input.tagName==='SELECT'?'Selecione uma opção.':'Preencha este campo.';
+    if(input.validity.typeMismatch)return input.type==='email'?'Informe um endereço de e-mail válido.':'Informe um valor no formato solicitado.';
+    return input.validationMessage||'Confira o valor informado.';
+  }
+  const formulariosPendentes=new Set();
+  document.addEventListener('invalid',event=>{
+    const input=event.target;if(!input.matches?.('input,select,textarea')||input.closest('[data-feedback-validation="off"]'))return;
+    event.preventDefault();campo(input,mensagemCampo(input));
+    if(input.form&&!formulariosPendentes.has(input.form)){
+      const form=input.form;formulariosPendentes.add(form);queueMicrotask(()=>{formulariosPendentes.delete(form);validar(form);});
+    }
+  },true);
+  const ocupados=new WeakMap();
+  function carregamento(target,title='Carregando…'){
+    const host=alvo(target)||raiz();const estado=ocupados.get(host)||{total:0,anterior:host.getAttribute('aria-busy')};estado.total++;ocupados.set(host,estado);host.setAttribute('aria-busy','true');
+    const node=document.createElement('div');node.className='slt-fb-loading';node.setAttribute('role','status');node.textContent=title;host.append(node);
+    let encerrado=false;const fechar=()=>{if(encerrado)return;encerrado=true;node.remove();estado.total--;if(!estado.total){if(estado.anterior===null)host.removeAttribute('aria-busy');else host.setAttribute('aria-busy',estado.anterior);ocupados.delete(host);}};
+    return {element:node,signal:new AbortController().signal,passo(message){node.textContent=message;return node;},atualizar(_,status,message){if(message)node.textContent=message;},progresso(){},fechar,concluir({type='success',message,resultados,action}={}){fechar();if(type!=='success')return contextual(host,type,message||resultados,{action});}};
   }
 
   /**
@@ -156,14 +242,26 @@
         footerHtml,
       });
 
+      let campo;
+      if (opts.input) {
+        const label = document.createElement("label");label.textContent = opts.input.label || "Nome";
+        campo = document.createElement("input");campo.type = "text";campo.value = opts.input.value || "";
+        campo.required = true;campo.maxLength = opts.input.maxLength || 200;
+        campo.setAttribute("data-fb-input", "");label.append(campo);bd.querySelector(".slt-fb-body").append(label);
+      }
       let resolvido = false;
       const encerrar = (valor) => {
         if (resolvido) return;
+        if (valor && campo) {
+          if (!campo.value.trim()) {global.SLTFeedback.campo(campo,"Informe um nome.");campo.focus();return;}
+          valor = campo.value.trim();
+        }
         resolvido = true;
         document.removeEventListener("keydown", onKey);
         fechar();
         resolve(valor);
       };
+      finalizarDialogo=encerrar;
       function onKey(e) {
         if (e.key === "Escape") {
           encerrar(false);
@@ -182,24 +280,55 @@
       });
       document.addEventListener("keydown", onKey);
       // Ação destrutiva nunca começa com o botão perigoso focado.
-      bd.querySelector(danger ? "[data-fb-cancelar]" : "[data-fb-confirmar]")?.focus();
+      if(campo)campo.focus();
+      else bd.querySelector(danger ? "[data-fb-cancelar]" : "[data-fb-confirmar]")?.focus();
     });
   }
 
-  /**
-   * Estágio 2 — acompanhamento da execução. O modal fica travado (não fecha)
-   * até `concluir()` — estágio 3, que pinta o semáforo e libera o fechamento.
-   */
-  function processo(title, { barra = false } = {}) {
-    const bd = montar({ type: "progress", title: title || TITULOS.progress, barra });
+  /** Acompanhamento não modal: recolher preserva execução, cancelamento depende do serviço. */
+  function processo(title, { barra = true, cancelar, restaurar, target } = {}) {
+    const bd = montar({ type: "progress", title: title || TITULOS.progress, barra: true, painel:true });
+    if(target&&alvo(target)){alvo(target).append(bd);bd.classList.add("slt-fb-process-inline");}
     const modal = bd.querySelector(".slt-fb-modal");
     const ul = bd.querySelector(".slt-fb-steps");
     const foot = bd.querySelector(".slt-fb-foot");
-    const fill = bd.querySelector(".slt-fb-bar-fill");
     const etapa = bd.querySelector(".slt-fb-etapa");
-    foot.hidden = true; // sem botão OK enquanto o processo roda
-    travado = true;
-    return {
+    let cancelando=false,cancelado=false,finalizado=false,sequencia=0,desfechoPendente;
+    const controller=new AbortController();
+    function barraReal(nome,valor){
+      const bar=bd.querySelector(`.slt-fb-bar--${nome}`),label=bar.querySelector('.slt-fb-percent');
+      const valido=typeof valor==='number'&&Number.isFinite(valor);
+      bar.classList.toggle('is-indeterminate',!valido);
+      if(valido){const n=Math.round(Math.max(0,Math.min(100,valor)));bar.setAttribute('aria-valuenow',String(n));bar.querySelector('.slt-fb-bar-fill').style.width=`${n}%`;label.textContent=`${n}%`;}
+      else{bar.removeAttribute('aria-valuenow');bar.querySelector('.slt-fb-bar-fill').style.width='0%';label.textContent='Aguardando medição';}
+    }
+    const cancelButton=document.createElement('button');cancelButton.type='button';cancelButton.className='btn btn-secondary';cancelButton.textContent='Cancelar';cancelButton.dataset.fbCancelProcesso='';
+    const motivo=document.createElement('small');motivo.className='slt-fb-cancel-reason';
+    const alternar=document.createElement('button');alternar.type='button';alternar.className='btn btn-secondary';alternar.textContent='Recolher acompanhamento';
+    const recolher=()=>{const hidden=bd.classList.toggle('is-collapsed');alternar.textContent=hidden?'Mostrar acompanhamento':'Recolher acompanhamento';alternar.setAttribute('aria-expanded',String(!hidden));};
+    alternar.onclick=recolher;alternar.setAttribute('aria-expanded','true');
+    foot.replaceChildren(motivo,alternar,cancelButton);foot.hidden=false;
+    bd.querySelector('[data-fb-close]').remove();
+    function permitirCancelamento(fn,razao){cancelar=fn;cancelButton.disabled=!fn||cancelando;motivo.textContent=fn?'':razao||'Este serviço ainda não oferece interrupção segura.';}
+    cancelButton.onclick=async()=>{
+      if(!cancelar||cancelando||finalizado)return;
+      cancelando=true;cancelButton.disabled=true;cancelButton.textContent='Cancelando…';
+      addPasso(ul,{message:'Solicitando a interrupção. Aguarde a confirmação.',status:'info'});
+      try{await cancelar();cancelado=true;controller.abort();await restaurar?.();api.concluir({type:'info',message:'Processo cancelado. Você pode revisar as entradas e tentar novamente.'});}
+      catch(error){addPasso(ul,{message:error?.message||'Não foi possível confirmar o cancelamento.',status:'error'});cancelando=false;cancelButton.textContent='Cancelar';permitirCancelamento(cancelar);if(desfechoPendente)api.concluir(desfechoPendente);}
+    };
+    permitirCancelamento(cancelar);barraReal('tarefa',null);barraReal('geral',null);
+    processos.add(bd);bd.dataset.processando = "true";
+    const api = {
+      element:bd,
+      signal:controller.signal,
+      definirCancelamento(fn,razao){permitirCancelamento(fn,razao);},
+      acompanhar(job){
+        const logs=job.logs||job.etapas||[];
+        for(const item of logs){const seq=item.sequencia??logs.indexOf(item)+1;if(seq<=sequencia)continue;
+          addPasso(ul,{message:item.mensagem||item.message,status:({sucesso:'success',erro:'error',aviso:'warning'})[item.nivel]||item.status||'info'});sequencia=seq;}
+        api.progresso(job.percentual??job.progresso_geral,job.etapa_atual||job.etapa,job.progresso_tarefa);
+      },
       passo(message, status = "progress") {
         return addPasso(ul, { message, status });
       },
@@ -214,12 +343,12 @@
         }
       },
       /** Progresso real relatado pelo servidor (percentual + etapa corrente). */
-      progresso(percentual, etapaAtual) {
-        if (fill && Number.isFinite(percentual)) {
-          fill.style.width = `${Math.max(0, Math.min(100, percentual))}%`;
-        }
-        if (etapa && etapaAtual) etapa.textContent = etapaAtual;
+      progresso(percentual, etapaAtual, percentualTarefa) {
+        if(finalizado||cancelado)return;
+        barraReal('geral',percentual);barraReal('tarefa',percentualTarefa);
+        if(etapa&&etapaAtual)etapa.textContent=etapaAtual;
       },
+      progressoTarefa(percentual){if(!finalizado)barraReal('tarefa',percentual);},
       /**
        * Estágio 3. O cabeçalho mantém o título da ação; o status vem pela cor e
        * pelo ícone. O corpo passa a listar os resultados, um por linha
@@ -227,7 +356,14 @@
        * e as tarefas executadas ficam recolhidas logo abaixo.
        */
       concluir({ type = "success", title: t, message, resultados, acoesHtml } = {}) {
-        travado = false;
+        if (!bd.isConnected || finalizado) return bd;
+        if(cancelando&&!cancelado){desfechoPendente={type,title:t,message,resultados,acoesHtml};return bd;}
+        finalizado=true;
+        if(type==='success'){barraReal('tarefa',100);barraReal('geral',100);}
+        processos.delete(bd);
+        delete bd.dataset.processando;
+        bd.querySelectorAll('.slt-fb-bar.is-indeterminate .slt-fb-percent').forEach(n=>n.textContent='Não medido');
+        foot.innerHTML='<button type="button" class="btn btn-primary" data-fb-close>OK</button>';
         modal.className = `slt-fb-modal slt-fb-modal--${type}`;
         const icone = bd.querySelector(".slt-fb-icon i");
         if (icone) icone.className = `fas ${ICONS[type] || ICONS.success}`;
@@ -248,37 +384,39 @@
         }
         if (acoesHtml) foot.innerHTML = acoesHtml;
         foot.hidden = false;
-        foot.querySelector("button")?.focus();
+        foot.querySelector('[data-fb-close]')?.addEventListener('click',()=>bd.remove());
+        if(bd.classList.contains('is-collapsed')){alternar.textContent='Mostrar resultados';foot.prepend(alternar);notify(type,message||t||'Processo finalizado.',title);}
+        // A conclusão não rouba o foco da atividade atual.
         return bd;
       },
       fechar() {
-        travado = false;
-        fechar();
+        if (!bd.isConnected) return;
+        if(!finalizado){if(!bd.classList.contains("is-collapsed"))recolher();}
+        else bd.remove();
       },
     };
+    return api;
   }
 
-  /**
-   * Ação síncrona (uma requisição, uma resposta) com os três estágios.
-   * `executar` recebe o handle do processo para registrar passos próprios.
-   * Devolve { ok, resultado, erro } — quem chama segue renderizando a página.
-   */
-  async function acao({ confirmacao, titulo, mensagemInicial, executar, sucesso, acoesHtml }) {
+  /** Confirmação opcional, execução e desfecho baseados na resposta da operação. */
+  async function acao({ confirmacao, titulo, mensagemInicial, executar, sucesso, acoesHtml, cancelar, restaurar, acompanhamento = false, target }) {
     if (confirmacao && !(await confirmar(confirmacao))) return { ok: false, cancelado: true };
-    const proc = processo(titulo);
+    const monitor=acompanhamento||Boolean(cancelar)||Boolean(acoesHtml);
+    const proc = monitor?processo(titulo, {cancelar,restaurar,target}):carregamento(alvo(target)||document.activeElement?.closest('form,section')||document.body,titulo);
     const p = proc.passo(mensagemInicial || "Enviando a solicitação ao servidor…", "progress");
     try {
       const resultado = await executar(proc);
       proc.atualizar(p, "success", "Servidor respondeu com sucesso.");
-      // O cabeçalho já é o título da ação; o corpo lista só os resultados.
+      const mensagemSucesso=typeof sucesso==='function'?sucesso(resultado):sucesso;
       proc.concluir({
         type: "success",
-        resultados: typeof sucesso === "function" ? sucesso(resultado) : sucesso,
+        resultados: mensagemSucesso,
         acoesHtml,
       });
-      return { ok: true, resultado, proc };
+      if(!monitor)notify('success',mensagemSucesso||'Operação concluída.',titulo);
+      return proc.signal.aborted?{ok:false,cancelado:true,proc}:{ ok: true, resultado, proc };
     } catch (erro) {
-      proc.atualizar(p, "error", "O servidor interrompeu o processo.");
+      proc.atualizar(p, "error", "Não foi possível confirmar a conclusão da operação.");
       proc.concluir({
         type: "error",
         resultados: erro?.message || String(erro),
@@ -289,11 +427,13 @@
 
   global.SLTFeedback = {
     notify,
-    success: (m, t) => notify("success", m, t),
-    error: (m, t) => notify("error", m, t),
-    warning: (m, t) => notify("warning", m, t),
-    info: (m, t) => notify("info", m, t),
+    campo,limparCampo,validar,contextual,carregamento,
+    success: (m, t, o) => notify("success", m, t, o),
+    error: (m, t, o) => notify("error", m, t, o),
+    warning: (m, t, o) => notify("warning", m, t, o),
+    info: (m, t, o) => notify("info", m, t, o),
     confirmar,
+    solicitar: options => confirmar({...options, input: options.input || {label: options.label, value: options.value}}),
     processo,
     acao,
     fechar,

@@ -94,10 +94,10 @@ def base_arquivos(nome: str) -> str:
     return '_'.join(parte for parte in (dados.PREFIXO, curto, texto) if parte)
 
 
-def materializar(payload, folder, base=None):
+def materializar(payload, folder, base=None, controle=None):
     """Exporta a base municipal e reabre o arquivo pelo GDAL antes do registro."""
     base = base or dados.PREFIXO
-    package = dados.export_layer(payload, base)
+    package = dados.export_layer(payload, base, controle) if controle else dados.export_layer(payload, base)
     fmt = payload['format']
     with ZipFile(io.BytesIO(package)) as archive:
         for member in archive.infolist():
@@ -123,7 +123,7 @@ def materializar(payload, folder, base=None):
     return package, path, manifest, frame
 
 
-def gerar(codigo, payload, nome, user):
+def gerar(codigo, payload, nome, user, controle=None):
     category = categoria(codigo)
     if not _lock.acquire(blocking=False):
         raise ValueError('Há uma camada municipal sendo gerada. Aguarde e tente novamente.')
@@ -138,7 +138,7 @@ def gerar(codigo, payload, nome, user):
         base = base_arquivos(name)
         folder = project_path(f'{DESTINO}/{base}')
         folder.mkdir(parents=True, exist_ok=False)
-        package, path, manifest, frame = materializar(payload, folder, base)
+        package, path, manifest, frame = materializar(payload, folder, base, controle) if controle else materializar(payload, folder, base)
         relative = path.relative_to(project_path('.').resolve()).as_posix()
         ident = 'camada_' + uuid4().hex
         metadata = {'caminho_arquivo': relative, 'origem': 'municipal-layer', 'base_arquivos': base,
@@ -147,6 +147,7 @@ def gerar(codigo, payload, nome, user):
                     'componentes': [{'arquivo': p.relative_to(project_path('.')).as_posix(),
                                     'sha256': ciclo.digest(p)} for p in folder.iterdir() if p.is_file()]}
         # O banco guarda o catálogo e a procedência; as feições permanecem no arquivo.
+        if controle:controle.fase(3,'Registrando a camada validada no acervo',cancelavel=False)
         registering = True
         with get_connection() as conn:
             conn.execute('''INSERT INTO geoprocessamento.camada_importada

@@ -10,7 +10,7 @@
   function icons() { window.lucide?.createIcons({ attrs: { "stroke-width": 1.7 } }); }
   function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char])); }
   function activeLayer() { const id = $("[data-layer].active")?.dataset.layer || state().activeLayerId; return state().layers.find(layer => layer.id === id) || null; }
-  function notify(text) { const status = $("#gp-save-state"); status.textContent = text; clearTimeout(notify.timer); notify.timer = setTimeout(() => status.textContent = "Ambiente local", 3500); }
+  function notify(text) { if(window.gpFeedback){window.gpFeedback.info(text,"Bancada de geoprocessamento");return;}const status = $("#gp-save-state"); status.textContent = text; clearTimeout(notify.timer); notify.timer = setTimeout(() => status.textContent = "Ambiente local", 3500); }
 
   function openPanel(title, html) {
     const tab = $('[data-right-tab="tools"]'); tab.hidden = false; tab.click();

@@ -44,6 +44,17 @@ INTENTIONAL_FIXTURES = {
     # preso a maquina de quem edita, como .vscode/. As barras invertidas
     # dobradas que o JSON exige imitam um caminho UNC para a expressao regular.
     Path(".claude/settings.local.json"),
+    # Documentos que descrevem a VM e o contêiner: o caminho absoluto é o
+    # assunto do texto, como no README.md.
+    Path("CONTINUAR_SICARD.md"),
+    Path("documentacao/geoespacial/AUDITORIA_EXTRACAO_ATRIBUTOS.md"),
+    # Ferramentas que rodam só no Windows de quem edita: a extensão de editor
+    # usa os diretórios padrão do sistema como reserva quando falta a variável
+    # de ambiente, e o script registra a VM no Explorador Remoto com o caminho
+    # da chave privada daquela máquina como valor padrão. Fazem o mesmo papel do
+    # deploy-vm.ps1, listado acima.
+    Path("tools/vscode-sicard-tunnel/extension.js"),
+    Path("scripts/configure-vm-remote-explorer.ps1"),
 }
 # Bundles minificados de terceiros ou gerados por build. Escapes como Ö
 # imitam um caminho UNC para a expressao regular, e nenhum deles e codigo desta

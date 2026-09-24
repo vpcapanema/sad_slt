@@ -13,22 +13,10 @@ export function numero(value, digits = 2) {
   return typeof value === "number" && Number.isFinite(value)
     ? value.toLocaleString("pt-BR", { maximumFractionDigits: digits }) : "—";
 }
-// A faixa fica sobre o conteúdo (sticky) e tapava o botão Executar: soma um botão
-// de fechar e se apaga sozinha, para a mensagem não virar obstáculo.
-let _feedbackTimer = null;
-export function feedback(message) {
-  const faixa = $("#ea-feedback");
-  faixa.replaceChildren();
-  clearTimeout(_feedbackTimer);
-  if (!message) return;
-  const texto = el("span", message, "ea-feedback-texto");
-  const fechar = el("button", "×", "ea-feedback-fechar");
-  fechar.type = "button";
-  fechar.title = "Fechar mensagem";
-  fechar.setAttribute("aria-label", "Fechar mensagem");
-  fechar.addEventListener("click", () => feedback(""));
-  faixa.append(texto, fechar);
-  _feedbackTimer = setTimeout(() => feedback(""), 12000);
+// Todos os módulos usam o mesmo componente, inclusive dentro de formulários.
+export function feedback(message, type='info') {
+  if (message) window.SLTFeedback.notify(type,message,
+    location.pathname.includes('gerador-camadas-territoriais')?'Camadas territoriais':'Extração de atributos');
 }
 export function atributos(properties) {
   const list = el("dl");

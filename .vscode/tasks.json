@@ -36,6 +36,10 @@
 },
 		{
 			"label": "SICARD: Iniciar ambiente de desenvolvimento",
+			"linux": {
+				"command": "/bin/bash",
+				"args": ["${workspaceFolder}/scripts/start-dev-codespace.sh"]
+			},
 			"type": "process",
 			"command": "powershell.exe",
 			"args": [
@@ -54,7 +58,7 @@
 				"panel": "dedicated",
 				"clear": true
 			},
-			"detail": "Sobe a API SICARD na porta 8080 usando 56.125.163.194:5433/slt_db"
+			"detail": "Inicia o servidor local com .env privado e valida o banco oficial; Codespace na porta 8083"
 		},
 		{
 			"label": "SLT: Subir banco local de contingência",

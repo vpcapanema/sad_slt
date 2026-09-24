@@ -57,7 +57,7 @@ class GeoprocessamentoJobs:
         job = {
             "id": job_id, "tipo": kind, "status": "pendente",
             "microtarefas": tasks, "logs": [], "concluidas": 0,
-            "total": len(tasks), "percentual": 0,
+            "total": len(tasks), "percentual": 0, "progresso_tarefa": None,
             "etapa_atual": tasks[0], "resultado": None, "erro": None,
             "iniciado_em": datetime.now(timezone.utc).isoformat(),
             "parametros": {}, "entradas": [], "relatorio": [],
@@ -77,6 +77,7 @@ class GeoprocessamentoJobs:
             job["concluidas"] = min(job["total"], job["concluidas"] + 1)
             job["percentual"] = round(job["concluidas"] * 100 / job["total"])
             job["etapa_atual"] = label
+            job["progresso_tarefa"] = None
             job["status"] = "executando"
             job["logs"].append({
                 "sequencia": len(job["logs"]) + 1,
@@ -91,6 +92,7 @@ class GeoprocessamentoJobs:
             job["status"] = "concluido"
             job["concluidas"] = job["total"]
             job["percentual"] = 100
+            job["progresso_tarefa"] = 100
             job["resultado"] = result
             snapshot = deepcopy(job)
         job["relatorio"] = geoprocessamento_relatorio.salvar(snapshot)

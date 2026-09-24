@@ -48,3 +48,46 @@
 .slt-fb-foot .btn-danger{background:#c0392b;color:#fff}
 /* Enquanto o processo roda não há como fechar: o X sai de cena junto com o OK. */
 .slt-fb-modal--progress .slt-fb-close{display:none}
+
+/* Cabeçalho do feedback global: o status preenche toda a área. */
+.slt-fb-modal{--fb-status:#116593;border-top:0;width:min(660px,96vw)}
+.slt-fb-modal--success{--fb-status:#187b43}.slt-fb-modal--error{--fb-status:#b33226}.slt-fb-modal--warning{--fb-status:#946500}
+.slt-fb-head{background:var(--fb-status);border-bottom:0;padding:1rem}
+.slt-fb-head .slt-fb-title,.slt-fb-head .slt-fb-icon,.slt-fb-head .slt-fb-close{color:#fff}
+.slt-fb-progress{display:grid;gap:.75rem;margin-top:1rem}
+.slt-fb-progress-item>span{display:block;font-size:.8rem;font-weight:600;margin-bottom:.3rem}
+.slt-fb-bar{position:relative;height:30px;width:100%;margin:0;border:1px solid #bbcbd4;border-radius:5px;background:#e6ecf1;overflow:hidden}
+.slt-fb-bar-fill{width:0;height:100%;transition:width .2s linear}
+.slt-fb-bar--geral .slt-fb-bar-fill{background:#116593}
+.slt-fb-bar--tarefa .slt-fb-bar-fill{background:repeating-linear-gradient(135deg,#247e71 0px,#247e71 8px,#32988a 8px,#32988a 16px)}
+.slt-fb-percent{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;text-shadow:0 1px 2px #102e3e,0 -1px 2px #102e3e}
+.slt-fb-bar.is-indeterminate .slt-fb-percent{color:#28404e;text-shadow:none;font-size:.75rem}
+.slt-fb-foot{align-items:center;flex-wrap:wrap}.slt-fb-cancel-reason{font-size:.75rem;flex:1;color:#526674}
+.slt-fb-foot button:disabled{opacity:.55;cursor:not-allowed}
+
+/* O estado e a urgência escolhem o componente; notificações não bloqueiam a página. */
+.slt-fb-notices { position:fixed; top:1rem; right:1rem; width:min(390px,calc(100vw - 2rem)); max-height:65vh; overflow:auto; display:grid; gap:.6rem; z-index:4100; }
+.slt-fb-notice,.slt-fb-context { --fb-status:#116593; background:#fff; color:#173746; border:1px solid #ccd8e0; border-left:4px solid var(--fb-status); border-radius:6px; padding:.8rem; font-size:.85rem; overflow-wrap:anywhere; }
+.slt-fb-notice { position:relative; padding-right:2.3rem; box-shadow:0 4px 18px #12303f25; }
+.slt-fb-notice--error { --fb-status:#b33226; }.slt-fb-notice--warning { --fb-status:#946500; }.slt-fb-notice--success { --fb-status:#187b43; }
+.slt-fb-notice p,.slt-fb-context p { margin:.3rem 0; }.slt-fb-notice button,.slt-fb-context button { cursor:pointer; }
+.slt-fb-dismiss { position:absolute; top:.35rem; right:.4rem; border:0; background:none; color:#173746; font-size:1.3rem; }
+.slt-fb-context { margin:.5rem 0; }
+.slt-fb-field-error { color:#b33226; margin:.3rem 0; font-size:.85rem; }
+[aria-invalid="true"] { border-color:#b33226!important; }
+.slt-fb-error-summary { border:2px solid #b33226; padding:1rem; margin-bottom:1rem; }
+.slt-fb-error-summary button { display:block; background:none; border:0; color:#b33226; text-decoration:underline; text-align:left; cursor:pointer; margin:.4rem 0; }
+.slt-fb-loading { padding:.5rem; color:#173746; font-size:.85rem; }
+.slt-fb-loading::before { content:''; display:inline-block; width:.8rem; height:.8rem; border:2px solid #b8ccd8; border-top-color:#116593; border-radius:50%; margin-right:.5rem; animation:slt-fb-spin 1s linear infinite; }
+.slt-fb-processes { position:fixed; bottom:1rem; right:1rem; width:min(620px,calc(100vw - 2rem)); max-height:75vh; overflow:auto; display:grid; gap:.6rem; z-index:4050; }
+.slt-fb-process-panel .slt-fb-modal { width:100%; max-height:70vh; border:1px solid #c9d6df; }
+.slt-fb-process-panel.is-collapsed .slt-fb-body { display:none; }
+.slt-fb-process-inline { margin:.7rem 0; }
+.slt-fb-process-panel .slt-fb-steps { max-height:22vh; }
+.slt-fb-bar.is-indeterminate .slt-fb-bar-fill { width:30%!important; background:#9ebbc9; animation:slt-fb-indeterminate 1.6s ease-in-out infinite; opacity:.5; }
+@keyframes slt-fb-spin { to {transform:rotate(360deg)} }
+@keyframes slt-fb-indeterminate { from {transform:translateX(-110%)} to {transform:translateX(340%)} }
+@media(prefers-reduced-motion:reduce) { .slt-fb-loading::before,.slt-fb-bar.is-indeterminate .slt-fb-bar-fill { animation:none; }.slt-fb-bar-fill {transition:none;} }
+/* Uma decisão modal tem precedência sobre notificações e monitores abertos. */
+.slt-fb-backdrop { z-index:4200; }
+.slt-fb-process-panel:not([data-processando]) .slt-fb-bar.is-indeterminate .slt-fb-bar-fill { animation:none; width:0!important; }

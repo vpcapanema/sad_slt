@@ -44,3 +44,42 @@ def export(categoria: str, body: Selecao, user: SessionUser = Depends(require_ge
     return Response(package, media_type='application/zip', headers={
         'X-Camada-Arquivo': result['arquivo'], 'X-Camada-Id': result['id'],
         'Cache-Control': 'no-store'})
+
+
+@router.post('/{categoria}/jobs',status_code=202)
+def iniciar_job(categoria: str, body: Selecao, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import municipal_jobs
+    return invoke(municipal_jobs.iniciar,categoria,body.model_dump(),user)
+
+
+@router.get('/{categoria}/jobs/{ident}')
+def consultar_job(categoria: str, ident: str, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import municipal_jobs
+    try:
+        return municipal_jobs.consultar(ident,user)
+    except LookupError as exc:
+        raise HTTPException(404,str(exc)) from exc
+
+
+@router.post('/{categoria}/jobs/{ident}/cancelar',status_code=202)
+def cancelar_job(categoria: str, ident: str, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import municipal_jobs
+    try:
+        return municipal_jobs.cancelar(ident,user)
+    except LookupError as exc:
+        raise HTTPException(404,str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409,str(exc)) from exc
+
+
+@router.get('/{categoria}/jobs/{ident}/pacote')
+def pacote_job(categoria: str, ident: str, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import municipal_jobs
+    try:
+        package,result=municipal_jobs.pacote(ident,user)
+    except LookupError as exc:
+        raise HTTPException(404,str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409,str(exc)) from exc
+    return Response(package,media_type='application/zip',headers={
+        'X-Camada-Arquivo':result['arquivo'],'X-Camada-Id':result['id'],'Cache-Control':'no-store'})

@@ -16,7 +16,7 @@ export async function json(path,options={}) {
   if(!response.ok){
     const detail=data?.detail;
     const message=response.status===401?'Sua sessão expirou. Entre novamente para continuar ou recuperar a análise.'
-      :response.status===403?'Seu perfil não permite esta operação.'
+      :response.status===403?(typeof detail==='string'?detail:'Seu perfil não permite esta operação.')
       :typeof detail==='string'?detail:Array.isArray(detail)?detail.map(item=>`${(item.loc||[]).filter(v=>v!=='body').join(' → ')}: ${item.msg}`).join('; ')
       :`O serviço está indisponível (HTTP ${response.status}). Tente novamente.`;
     const error=new Error(message);error.status=response.status;throw error;
@@ -41,6 +41,7 @@ export async function esperar(job,statusPath,aoAtualizar) {
     }
   }
   notificar(job);
+  if(job.status==='cancelado'){const error=new Error('Processamento cancelado. A configuração foi mantida.');error.name='AbortError';throw error;}
   if(job.status!=='concluido')throw new Error(job.erro||'O processamento não foi concluído.');
   return job.resultado;
 }
@@ -56,6 +57,7 @@ export const adaptador={
     const job=await post('/extracao-atributos/execucoes',{input_id:request.input.id,operacao:request.operacao,
       nome_saida:request.nome_saida||'',opcoes:request.opcoes||{},
       ...(request.input.arquivo_local?{arquivo_local:request.input.arquivo_local}:{}),
+      entradas_locais:request.entradas_locais||{},
       bases_locais:Object.fromEntries(request.categorias.flatMap(c=>c.camadas).filter(l=>l.arquivo_local).map(l=>[l.id,l.arquivo_local])),
       categorias:request.categorias.map(c=>({id:c.id,camadas:c.camadas.map(l=>l.id),regras:c.regras||{}})),
       entradas:request.entradas||[],finalidades:request.finalidades||[]});

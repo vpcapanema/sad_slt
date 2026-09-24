@@ -110,7 +110,11 @@ def test_iniciar_passa_frame_so_para_thread_nunca_parametros_persistidos(monkeyp
     params=gravado[0][1]
     assert 'arquivo_local' not in params and 'conteudo_base64' not in json.dumps(params)
     assert params['entrada_local']['feicoes']==1
-    assert len(tarefas[0])==4 and isinstance(tarefas[0][3],gpd.GeoDataFrame)
+    assert len(tarefas[0])==6 and isinstance(tarefas[0][3],gpd.GeoDataFrame)
+    assert tarefas[0][4] == {}  # Nenhuma base local neste pedido.
+    assert set(tarefas[0][5]) == {'local:teste'}
+    assert tarefas[0][5]['local:teste'] is tarefas[0][3]
+    assert 'entradas_locais' not in params
 
 
 def test_pacote_nao_inclui_entrada_temporaria(tmp_path):
@@ -161,4 +165,4 @@ def test_api_recusa_upload_grande_e_reenvio_sem_arquivo(monkeypatch):
     with TestClient(app) as client:
         assert client.post('/extracao-atributos/entrada-local?nome=p.geojson',content=b'1234').status_code==413
     with pytest.raises(ValueError,match='arquivo em memória'):
-        Extracao(input_id='local:x',categorias=[{'id':'social','camadas':['b']}])
+        Extracao(input_id='local:x',operacao='intersection',categorias=[{'id':'social','camadas':['b']}])

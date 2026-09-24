@@ -80,7 +80,7 @@ def malha() -> gpd.GeoDataFrame:
     return frame.set_index('CD_MUN')
 
 
-def layer(items: list[dict]) -> gpd.GeoDataFrame:
+def layer(items: list[dict], controle=None) -> gpd.GeoDataFrame:
     """Malha acrescida de uma coluna por atributo, alinhada pelo código municipal."""
     frame = malha()
     columns: dict[str, pd.Series] = {}
@@ -91,7 +91,10 @@ def layer(items: list[dict]) -> gpd.GeoDataFrame:
                 WHERE atributo_id = ANY(%s) GROUP BY atributo_id''', ([i['id'] for i in items],)).fetchall()
         series = {r['atributo_id']: pd.Series(r['valores'], index=r['municipios'], dtype='float64')
                   for r in rows}
-        for item in items:
+        for indice,item in enumerate(items,1):
+            if controle:
+                controle.mensagem(f"Preparando indicador {indice} de {len(items)}: {item.get('label', item['field'])}")
+                controle.tarefa(indice,len(items))
             columns[item['field']] = series.get(item['id'], pd.Series(dtype='float64'))
     frame = frame.join(pd.DataFrame(columns)).reset_index()
     return gpd.GeoDataFrame(frame, geometry='geometry', crs=CRS)
@@ -300,7 +303,7 @@ def conferir_capacidade(quantos: int) -> None:
         'ou divida a seleção em mais de uma camada.')
 
 
-def export_layer(payload: dict, base: str = PREFIXO) -> bytes:
+def export_layer(payload: dict, base: str = PREFIXO, controle=None) -> bytes:
     """Gera o ZIP com camada, dicionário e metadados, sem simplificar geometria.
 
     ``base`` nomeia todos os arquivos do pacote, para que a pasta no acervo e o
@@ -313,7 +316,9 @@ def export_layer(payload: dict, base: str = PREFIXO) -> bytes:
     if len(items) > LIMITES[fmt]:
         raise ValueError(f'Este formato permite até {LIMITES[fmt]} atributos nesta aplicação. Use FlatGeobuf.')
     conferir_capacidade(len(items))
-    frame = layer(items)
+    if controle:controle.fase(1,'Lendo municípios e indicadores selecionados')
+    frame = layer(items,controle) if controle else layer(items)
+    if controle:controle.fase(2,'Gerando geometria, atributos e dicionário')
     entradas = dicionario(items, fmt)
     fields = {e['campo_bruto']: e['campo_exportado'] for e in entradas}
     frame = frame.rename(columns=fields)
@@ -333,7 +338,9 @@ def export_layer(payload: dict, base: str = PREFIXO) -> bytes:
     with tempfile.TemporaryDirectory(prefix='base-municipal-') as temp:
         folder = Path(temp)
         output = folder / f'{base}.{fmt}'
+        if controle:controle.mensagem('Gravando a camada em um arquivo temporário')
         frame.to_file(output, driver=DRIVERS[fmt], encoding='UTF-8', index=False)
+        if controle:controle.mensagem('Preparando metadados e dicionário de campos')
         manifest['alias_no_arquivo'] = bool(fmt == 'gpkg' and aplicar_aliases(output, entradas))
         (folder / f'{base}.qml').write_text(estilo_qgis(entradas), encoding='utf-8')
         (folder / f'{base}_metadados.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
@@ -350,6 +357,10 @@ def export_layer(payload: dict, base: str = PREFIXO) -> bytes:
                 writer.writerow({chave: entrada[chave] for chave in writer.fieldnames})
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
-            for arquivo in folder.iterdir():
+            arquivos=list(folder.iterdir())
+            for indice,arquivo in enumerate(arquivos,1):
+                if controle:
+                    controle.mensagem(f'Compactando {arquivo.name}')
+                    controle.tarefa(indice,len(arquivos))
                 archive.write(arquivo, arquivo.name)
         return buffer.getvalue()

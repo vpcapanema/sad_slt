@@ -26,7 +26,8 @@ from api.repositories.camada_geoespacial_repository import _json_safe
 MAX_ARQUIVO = 16 * 1024 * 1024
 MAX_DESCOMPACTADO = 32 * 1024 * 1024
 MAX_FEICOES = 50000
-MAX_VERTICES = 500000
+MAX_VERTICES_PREVIA = 100000
+LOTE_VALIDACAO = 256
 _log = logging.getLogger(__name__)
 
 
@@ -47,6 +48,18 @@ def _componentes(conteudo, nome):
     return componentes(conteudo, nome, MAX_DESCOMPACTADO)
 
 
+def _coordenadas_validas(geometrias, geograficas=False):
+    total = 0
+    for inicio in range(0, len(geometrias), LOTE_VALIDACAO):
+        coords = shapely.get_coordinates(geometrias.iloc[inicio:inicio + LOTE_VALIDACAO].values)
+        total += len(coords)
+        if not np.isfinite(coords).all():
+            return False
+        if geograficas and (np.any(np.abs(coords[:, 0]) > 180) or np.any(np.abs(coords[:, 1]) > 90)):
+            return False
+    return total > 0
+
+
 def validar(frame):
     if frame.crs is None:
         raise ValueError('A camada não informa o sistema de coordenadas. Inclua o .prj no ZIP ou defina o CRS no arquivo.')
@@ -57,20 +70,16 @@ def validar(frame):
     if not frame.columns.is_unique:
         raise ValueError('A camada contém nomes de campos repetidos.')
     geometrias = frame.geometry
-    coordenadas = shapely.get_coordinates(geometrias.values, include_z=False)
-    if len(coordenadas) > MAX_VERTICES:
-        raise ValueError('A entrada excede o limite de 500 mil vértices para upload em memória.')
-    if not len(coordenadas) or not np.isfinite(coordenadas).all():
+    if not _coordenadas_validas(geometrias):
         raise ValueError('A camada não contém coordenadas válidas para visualização.')
     mapa = frame.to_crs(4326)
-    coords_mapa = shapely.get_coordinates(mapa.geometry.values)
-    if not np.isfinite(coords_mapa).all() or np.any(np.abs(coords_mapa[:, 0]) > 180) or np.any(np.abs(coords_mapa[:, 1]) > 90):
+    if not _coordenadas_validas(mapa.geometry, geograficas=True):
         raise ValueError('As coordenadas não correspondem ao CRS declarado no arquivo.')
     invalidas = int(sum(g is not None and not g.is_empty and not g.is_valid for g in geometrias))
     vazias = int(sum(g is None or g.is_empty for g in geometrias))
     avisos = []
     if invalidas:
-        avisos.append(f'{invalidas} geometria(s) inválida(s). A prévia preserva o original; confira antes de executar e use as opções de correção do algoritmo.')
+        avisos.append(f'{invalidas} geometria(s) inválida(s). O original é preservado para análise; confira antes de executar e use as opções de correção do algoritmo.')
     if vazias:
         avisos.append(f'{vazias} feição(ões) sem geometria visível; seus registros foram mantidos.')
     return mapa, avisos
@@ -103,7 +112,7 @@ def _ler(conteudo: bytes, nome: str, camada: str | None = None):
         return _ler_vetor(escolha, nome, conteudo, componentes, avisos_pacote)
 
 
-def _ler_vetor(escolha, nome, conteudo, componentes, avisos_pacote):
+def _ler_vetor(escolha, nome, conteudo, componentes, avisos_pacote, progresso=None):
     layer = escolha['layer']
     srs = layer.GetSpatialRef()
     if srs is None:
@@ -116,16 +125,18 @@ def _ler_vetor(escolha, nome, conteudo, componentes, avisos_pacote):
         raise ValueError('A camada deve ter até 2000 campos, sem nomes repetidos.')
     registros, geometrias = [], []
     vertices = 0
+    total_leitura = layer.GetFeatureCount() if progresso else 0
     for feature in layer:
+        if progresso and len(registros) % LOTE_VALIDACAO == 0:
+            progresso(len(registros), total_leitura)
         if len(registros) >= MAX_FEICOES:
             raise ValueError('A entrada excede o limite de 50 mil feições.')
         registros.append({c: feature.GetField(i) for i,c in enumerate(campos)})
         geom = feature.GetGeometryRef()
         geometria_lida = shapely.from_wkb(bytes(geom.ExportToWkb())) if geom is not None else None
         vertices += int(shapely.get_num_coordinates(geometria_lida))
-        if vertices > MAX_VERTICES:
-            raise ValueError('A entrada excede o limite de 500 mil vértices para leitura em memória.')
         geometrias.append(geometria_lida)
+    if progresso: progresso(len(registros), total_leitura)
     # Não sobrescrever um atributo que já se chama geometry.
     geometria = '__geometria_local__'
     while geometria in campos:
@@ -141,7 +152,7 @@ def _ler_vetor(escolha, nome, conteudo, componentes, avisos_pacote):
     meta = {'comprimento_km': comprimento/1000, 'area_km2': area/1000000, 'arquivo': nome, 'componente': escolha['arquivo'], 'camada': escolha['chave'],
             'nome_camada': escolha['nome'], 'formato': escolha['formato'], 'tipo': 'vetor',
             'bytes': len(conteudo), 'bytes_descompactados': sum(map(len, componentes.values())),
-            'sha256': sha256(conteudo).hexdigest(), 'feicoes': len(frame), 'campos_total': len(campos),
+            'sha256': sha256(conteudo).hexdigest(), 'vertices': vertices, 'feicoes': len(frame), 'campos_total': len(campos),
             'tipos_geometria': sorted(set(frame.geom_type.dropna())), 'crs': crs.to_string(),
             'crs_nome': crs.name, 'crs_wkt': crs.to_wkt(),
             'unidade': crs.axis_info[0].unit_name if crs.axis_info else None,
@@ -183,15 +194,60 @@ def localizacao(frame):
     return resultado
 
 
-def _camada_previa(frame, meta):
+def _representacao_mapa(frame, limite):
+    """Reduz somente uma cópia em WGS84. Nunca usada pelos algoritmos de análise."""
+    mapa = frame.to_crs(4326).copy()
+    originais = mapa.geometry.values
+    total = int(shapely.get_num_coordinates(originais).sum())
+    # Não eliminar registros para cumprir o orçamento de desenho.
+    limite = max(limite, 5 * len(frame))
+    metodo = 'original'
+    tolerancia = 0.0
+    if total > limite:
+        oeste, sul, leste, norte = mapa.total_bounds
+        tolerancia = max(leste - oeste, norte - sul, 1e-6) / max(4096, limite * 2)
+        for _ in range(14):
+            try:
+                geometrias = shapely.simplify(originais, tolerancia, preserve_topology=True)
+            except shapely.errors.GEOSException:
+                mapa.geometry = shapely.envelope(originais)
+                metodo = 'limites'
+                break
+            if int(shapely.get_num_coordinates(geometrias).sum()) <= limite:
+                mapa.geometry = geometrias
+                metodo = 'simplificada'
+                break
+            tolerancia *= 2
+        else:
+            # MultiPoint ou ilhas/anéis irredutíveis: limites de cada feição,
+            # explicitamente identificados como aproximação, sem invalidar o original.
+            mapa.geometry = shapely.envelope(originais)
+            metodo = 'limites'
+    return json.loads(mapa.to_json(default=_json_safe)), {
+        'metodo': metodo, 'vertices_originais': total,
+        'vertices_exibidos': int(shapely.get_num_coordinates(mapa.geometry.values).sum()),
+        'tolerancia_graus': tolerancia if metodo == 'simplificada' else None,
+    }
+
+
+def _camada_previa(frame, meta, limite=MAX_VERTICES_PREVIA):
     meta['localizacao'] = localizacao(frame)
-    return {'id': f'local:{uuid4().hex}', 'nome': meta['nome_camada'], 'origem': 'local',
+    geojson, detalhe = _representacao_mapa(frame, limite)
+    meta['previa'] = detalhe
+    resultado = {'id': f'local:{uuid4().hex}', 'nome': meta['nome_camada'], 'origem': 'local',
             'tipo': 'vetor', 'origem_geometria': 'memoria', 'crs_arquivo': meta['crs'], 'campos': meta['campos'],
-            'metadados_local': meta,
-            'geojson': json.loads(frame.to_crs(4326).to_json(default=_json_safe))}
+            'metadados_local': meta, 'geojson': geojson}
+    if detalhe['metodo'] != 'original':
+        resumo, info = _representacao_mapa(frame, max(1, limite // 10))
+        resultado['geojson_resumido'] = resumo
+        meta['previa']['nivel_resumido'] = info
+        meta['avisos'].append('Prévia aproximada: o mapa alterna o nível de detalhe conforme o zoom. '
+                             'A análise usa todas as coordenadas e atributos do arquivo original. '
+                             + ('A representação usa os limites das feições.' if detalhe['metodo'] == 'limites' else ''))
+    return resultado
 
 
-def _lote(conteudo, nome, com_previa=True):
+def _lote(conteudo, nome, com_previa=True, selecionadas=None, progresso=None):
     """Abre uma vez, valida todas e isola falhas sem descartar as outras camadas."""
     from api.services.pacote_geoespacial_memoria import abrir
     from pyproj.exceptions import ProjError
@@ -200,10 +256,17 @@ def _lote(conteudo, nome, com_previa=True):
         raise ValueError('Envie um arquivo não vazio de até 16 MB.')
     componentes = _componentes(conteudo, nome)
     itens, vetores = [], []
-    feicoes = vertices = 0
+    feicoes = 0
     campos_conjunto = set()
     with abrir(componentes, incluir_invalidas=True) as (opcoes, avisos, raiz):
-        for escolha in opcoes:
+        if selecionadas is not None:
+            chaves = {opcao['chave'] for opcao in opcoes}
+            if not set(selecionadas) <= chaves:
+                raise ValueError('Uma camada da bancada não existe no arquivo enviado.')
+            opcoes = [opcao for opcao in opcoes if opcao['chave'] in selecionadas]
+        limite_previa = max(1, MAX_VERTICES_PREVIA // max(1, sum(o['tipo'] == 'vetor' for o in opcoes)))
+        for indice, escolha in enumerate(opcoes):
+            if progresso: progresso(indice, len(opcoes), f"Validando {escolha['nome']} ({indice+1}/{len(opcoes)})")
             item = {k: v for k, v in escolha.items() if k not in ('layer', 'raster')}
             try:
                 if escolha.get('erro'):
@@ -215,30 +278,32 @@ def _lote(conteudo, nome, com_previa=True):
                         if not previa.get('geojson'):
                             raise ValueError('Raster sem CRS ou georreferenciamento válido para o mapa.')
                 else:
-                    frame, meta = _ler_vetor(escolha, nome, conteudo, componentes, [])
-                    quantidade_vertices = int(shapely.get_num_coordinates(frame.geometry.values).sum())
-                    if feicoes + len(frame) > MAX_FEICOES or vertices + quantidade_vertices > MAX_VERTICES:
-                        raise ValueError('O conjunto ultrapassa 50 mil feições ou 500 mil vértices. Esta camada não foi incluída; divida o arquivo para processar o restante.')
+                    frame, meta = _ler_vetor(escolha, nome, conteudo, componentes, [],
+                        (lambda feitas, total: progresso(indice, len(opcoes), f"Lendo feições de {escolha['nome']}: {feitas}/{total if total >= 0 else '?'}", feitas/total*100 if total > 0 else None)) if progresso else None)
+                    if progresso: progresso(indice, len(opcoes), f"Preparando prévia e metadados de {escolha['nome']}")
+                    if feicoes + len(frame) > MAX_FEICOES:
+                        raise ValueError('O conjunto ultrapassa 50 mil feições. Esta camada não foi incluída; divida o arquivo para processar o restante.')
                     novos_campos = set(frame.columns) - {frame.geometry.name}
                     if len(campos_conjunto | novos_campos) > 1999:
                         raise ValueError('O conjunto ultrapassa 1999 atributos mais o campo de origem. Esta camada não foi incluída.')
                     # Compatibilidade das camadas no CRS comum também faz parte da validação.
                     if vetores:
                         frame_comum = frame.to_crs(vetores[0][0].crs)
-                        if not np.isfinite(shapely.get_coordinates(frame_comum.geometry.values)).all():
+                        if not _coordenadas_validas(frame_comum.geometry):
                             raise ValueError('Não foi possível transformar esta camada para o CRS comum da entrada.')
                     if com_previa:
-                        item.update(_camada_previa(frame, meta))
+                        item.update(_camada_previa(frame, meta, limite_previa))
                     else:
                         item['metadados_local'] = meta
                     campos_conjunto |= novos_campos
-                    feicoes += len(frame); vertices += quantidade_vertices
+                    feicoes += len(frame)
                     vetores.append((frame, meta))
                 item['status_validacao'] = 'valida'
             except (ValueError, RuntimeError, ProjError, UnicodeError) as exc:
                 item.update(status_validacao='invalida', erro=('CRS ausente ou inválido: não foi possível transformar as coordenadas.' if isinstance(exc, ProjError) else str(exc) or 'Falha ao validar a camada.'))
                 item.pop('geojson', None); item.pop('imagem', None)
             itens.append(item)
+            if progresso: progresso(indice+1, len(opcoes), f"{escolha['nome']}: {'validada' if item['status_validacao'] == 'valida' else 'não validada'}")
     return itens, vetores, avisos
 
 
@@ -266,7 +331,7 @@ def _agrupar_vetores(vetores, nome):
         frames.append(frame)
     conjunto = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), geometry=geometria, crs=crs)
     meta = {**vetores[0][1], 'nome_camada': nome, 'camada': None, 'componente': nome,
-            'feicoes': len(conjunto), 'camadas_total': len(vetores), 'campo_origem': origem,
+            'vertices': sum(m['vertices'] for _,m in vetores), 'feicoes': len(conjunto), 'camadas_total': len(vetores), 'campo_origem': origem,
             'area_km2': sum(m['area_km2'] for _,m in vetores),
             'comprimento_km': sum(m['comprimento_km'] for _,m in vetores),
             'campos_total': len(conjunto.columns)-1,
@@ -277,19 +342,22 @@ def _agrupar_vetores(vetores, nome):
     return conjunto, meta
 
 
-def previa(conteudo, nome, camada=None):
+def previa(conteudo, nome, camada=None, progresso=None):
     # Compatibilidade com execuções antigas que identificam uma camada individual.
     if camada:
         frame, meta = ler(conteudo, nome, camada)
         return _camada_previa(frame, meta) if frame is not None else meta
-    itens, vetores, avisos = _lote(conteudo, nome)
+    itens, vetores, avisos = _lote(conteudo, nome, progresso=progresso)
     frame, meta = _agrupar_vetores(vetores, nome)
     entrada = None
     if frame is not None:
         entrada = {'id': f'local:{uuid4().hex}', 'nome': meta['nome_camada'], 'origem': 'local',
                    'tipo': 'vetor', 'origem_geometria': 'memoria', 'crs_arquivo': meta['crs'],
                    'campos': meta['campos'], 'metadados_local': meta,
-                   'geojson': json.loads(frame.to_crs(4326).to_json(default=_json_safe))}
+                   'geojson': {'type': 'FeatureCollection', 'features': [
+                       {**f, 'properties': {**f['properties'], **({meta['campo_origem']: item['chave']} if meta.get('campo_origem') else {})}}
+                       for item in itens if item.get('tipo') == 'vetor' and item.get('status_validacao') == 'valida'
+                       for f in item['geojson']['features']]}}
     validas = sum(i['status_validacao'] == 'valida' for i in itens)
     return {'arquivo': nome, 'camadas': itens, 'entrada': entrada, 'avisos': avisos,
             'resumo': {'total': len(itens), 'validas': validas, 'invalidas': len(itens)-validas,
@@ -304,10 +372,20 @@ def restaurar(payload):
         conteudo = base64.b64decode(texto, validate=True)
     except (ValueError, binascii.Error) as exc:
         raise ValueError('Conteúdo da entrada local inválido.') from exc
+    selecionadas = payload.get('camadas')
+    if selecionadas is not None:
+        if (not isinstance(selecionadas, list) or not selecionadas
+                or any(not isinstance(c, str) or not c or len(c) > 1000 for c in selecionadas)
+                or len(set(selecionadas)) != len(selecionadas)):
+            raise ValueError('Informe as camadas de entrada presentes na bancada, sem repetições.')
+        if payload.get('camada'):
+            raise ValueError('Informe uma camada ou uma lista de camadas, não ambas.')
     if payload.get('camada'):
         frame, meta = ler(conteudo, payload.get('nome'), payload['camada'])
     else:
-        _, vetores, _ = _lote(conteudo, payload.get('nome'), com_previa=False)
+        itens, vetores, _ = _lote(conteudo, payload.get('nome'), com_previa=False, selecionadas=selecionadas)
+        if selecionadas is not None and any(i['status_validacao'] != 'valida' or i['tipo'] != 'vetor' for i in itens):
+            raise ValueError('Uma camada da bancada não é um vetor válido. Valide novamente o arquivo antes de executar.')
         frame, meta = _agrupar_vetores(vetores, payload.get('nome'))
     if frame is None:
         raise ValueError('Escolha uma camada vetorial: os algoritmos de extração atuais não processam rasters.')

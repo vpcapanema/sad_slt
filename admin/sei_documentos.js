@@ -62,22 +62,13 @@
   // Devolve o resultado do job ou lança o erro com o código HTTP equivalente.
   async function acompanharJob(inicial, proc) {
     let job = inicial;
-    let vistos = 0;
-    let emAndamento = null;
     for (;;) {
-      for (const log of job.logs.slice(vistos)) {
-        if (emAndamento) proc.atualizar(emAndamento, 'success');
-        const status = NIVEL_DO_PASSO[log.nivel];
-        const linha = proc.passo(log.mensagem, status || 'progress');
-        emAndamento = status ? null : linha;
-      }
-      vistos = job.logs.length;
+      proc.acompanhar(job);
       if (job.status !== 'executando') break;
       await new Promise(resolve => setTimeout(resolve, 400));
       job = await request(`${API}/jobs/${job.id}`);
     }
     if (job.status === 'concluido') {
-      if (emAndamento) proc.atualizar(emAndamento, 'success');
       return job.resultado;
     }
     const erro = new Error(job.erro || 'A leitura foi interrompida.');
@@ -240,20 +231,20 @@
           const job = await post(`${API}/${item.id}/analisar`, { tipo_demanda: item.tipo });
           proc.atualizar(passo, 'success', `Servidor iniciou a leitura como ${item.tipo}.`);
           const leitura = await acompanharJob(job, proc);
-          if (execucao !== item.execucao) { proc.fechar(); continue; } // reanalisado durante a leitura: vale a nova
+          if (execucao !== item.execucao) { proc.concluir({type:'info',message:'Resultado substituído por uma nova análise.'});proc.fechar(); continue; } // reanalisado durante a leitura: vale a nova
           item.detalhe = leitura;
           item.estado = 'pronto';
-          await aguardarFechamento(proc.concluir(desfechoDaLeitura(leitura)));
+          proc.concluir(desfechoDaLeitura(leitura));
         } catch (e) {
-          if (execucao !== item.execucao) { proc.fechar(); continue; }
+          if (execucao !== item.execucao) { proc.concluir({type:'info',message:'Resultado substituído por uma nova análise.'});proc.fechar(); continue; }
           item.estado = 'erro';
           item.erro = e.message;
           // Se o pedido foi aceito, a falha já está no log do job; senão, marca o pedido.
           if (!passo.classList.contains('slt-fb-step--success')) proc.atualizar(passo, 'error', 'O servidor recusou o pedido de leitura.');
-          await aguardarFechamento(proc.concluir({
+          proc.concluir({
             type: 'error',
             resultados: [linhaDeErro(e), 'O formulário fica em branco para preenchimento manual.'],
-          }));
+          });
         }
         renderFila();
         if (item.id === atualId) aplicarNoFormulario(item);
@@ -299,7 +290,8 @@
   }
 
   function erroFormulario(texto) {
-    q('sei-formulario-erro').textContent = texto || '';
+    const host=q('sei-formulario-erro');host.replaceChildren();
+    if(texto)SLTFeedback.contextual(host,'error',texto);
   }
 
   function atualizarStatus() {
@@ -379,21 +371,6 @@
   const rotulo = (chave) => ROTULOS[chave] || chave;
   const linhaDeErro = (e) => ({ message: `Erro ${e.status || 'de conexão'}: ${e.message}`, status: 'error' });
 
-  // O desfecho fica na tela até o usuário dispensá-lo; só então o próximo PDF
-  // da fila começa, para que nenhum resultado passe despercebido.
-  function aguardarFechamento(backdrop) {
-    const raiz = backdrop?.parentNode;
-    if (!raiz) return Promise.resolve();
-    return new Promise(resolve => {
-      const observador = new MutationObserver(() => {
-        if (backdrop.isConnected) return;
-        observador.disconnect();
-        resolve();
-      });
-      observador.observe(raiz, { childList: true });
-    });
-  }
-
   // Estes valores não têm campo de texto no formulário: instituição e
   // representante são escolhidos no SIGMA, e o CNPJ vem junto dessa escolha.
   // Lidos do PDF, servem para o analista localizar ou cadastrar o proponente —
@@ -462,7 +439,6 @@
     } catch (e) {
       // A validação do formulário oficial barrou o envio: nada foi ao servidor.
       erroFormulario(e.message);
-      SLTFeedback.notify('warning', [e.message, 'Nada foi enviado ao servidor: complete o formulário e confirme de novo.'], 'Criar demanda');
       return;
     }
     const nome = dados.campos?.nome || item.nome;
@@ -482,8 +458,8 @@
       const criada = await post(`${API}/${item.id}/criar-demanda`, { tipo_demanda: dados.tipo, campos: dados.campos });
       item.estado = 'criada';
       proc.atualizar(passo, 'success', `Servidor respondeu: ${criada.ja_existia ? 'demanda já existente' : 'demanda gravada'}.`);
-      // O próximo PDF da fila só abre depois que o desfecho for lido.
-      await aguardarFechamento(proc.concluir(criada.ja_existia
+      // O resultado permanece consultável; a fila não exige dispensar uma mensagem.
+      proc.concluir(criada.ja_existia
         ? {
             type: 'warning',
             resultados: [
@@ -499,19 +475,19 @@
               `Nome: ${nome}`,
               `Origem: ${item.nome}`,
             ],
-          }));
+          });
       avancar();
       await listar();
     } catch (e) {
       proc.atualizar(passo, 'error', 'O servidor recusou a criação.');
       erroFormulario(e.message);
-      await aguardarFechamento(proc.concluir({
+      proc.concluir({
         type: 'error',
         // Só a recusa de validação garante que nada foi gravado.
         resultados: [linhaDeErro(e), e.status === 422
           ? 'Nenhuma demanda foi gravada.'
           : 'Confira a tabela antes de tentar de novo: a demanda pode ter sido gravada antes da falha.'],
-      }));
+      });
       botao.disabled = false;
     }
   }
@@ -561,15 +537,15 @@
       const erros = resultado.erros || [];
       if (erros.length) {
         // Recusa parcial: o modal fica amarelo e lista cada arquivo, aceito ou recusado.
-        await aguardarFechamento(proc.concluir({
+        proc.concluir({
           type: 'warning',
           resultados: [
             ...resultado.recebidos.map(doc => ({ message: `${doc.nome_arquivo}: aceito`, status: 'success' })),
             ...erros.map(e => ({ message: `${e.arquivo}: recusado — ${e.mensagem}`, status: 'error' })),
           ],
-        }));
+        });
       } else {
-        proc.fechar();
+        proc.concluir({message:'Arquivos recebidos e analisados.'});proc.fechar();
       }
       const recusados = erros.map(e => `${e.arquivo}: ${e.mensagem}`).join(' ');
       aviso('sei-upload-aviso', `${resultado.recebidos.length} documento(s) recebido(s).${recusados ? ' Recusados — ' + recusados : ''}`);
@@ -586,7 +562,7 @@
         else renderFila();
         for (const item of novos) {
           const desfecho = desfechoDaLeitura(item.detalhe);
-          await aguardarFechamento(SLTFeedback.notify(desfecho.type, desfecho.resultados, `Análise de ${item.nome}`));
+          SLTFeedback.processo(`Análise de ${item.nome}`).concluir(desfecho);
         }
       }
       await listar();
@@ -594,14 +570,14 @@
       // Nenhum arquivo aceito (ou falha de conexão): o erro fica no modal, em vermelho.
       if (!passo.classList.contains('slt-fb-step--success')) proc.atualizar(passo, 'error', 'O servidor recusou o envio.');
       aviso('sei-upload-aviso', e.message);
-      await aguardarFechamento(proc.concluir({
+      proc.concluir({
         type: 'error',
         // 413 = lote grande demais, conferido antes de gravar; 422 = todos recusados.
         // Outros códigos (503, 500, conexão) podem vir depois de arquivos já gravados.
         resultados: [linhaDeErro(e), [413, 422].includes(e.status)
           ? 'Nenhum arquivo foi gravado.'
           : 'Confira a tabela antes de reenviar: parte dos arquivos pode ter sido gravada antes da falha.'],
-      }));
+      });
     } finally { q('sei-btn-enviar').disabled = false; }
   }
 

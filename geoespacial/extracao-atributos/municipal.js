@@ -9,6 +9,10 @@ export function salvarRascunhoMunicipal(state){
 export function restaurarRetornoMunicipal(state){
   const params=new URLSearchParams(location.search);
   if(params.get('retomar')!=='municipal')return null;
+  const id=params.get('camada_municipal'),category=params.get('categoria');
+  // Valida antes de alterar o estado: um erro aqui não pode deixar o estado pela metade.
+  if(id&&(!state.catalog.some(layer=>layer.id===id)||!state.categories.some(c=>c.id===category)))
+    throw new Error('A camada gerada ou sua categoria não está disponível no catálogo. Atualize a página para tentar novamente.');
   const raw=sessionStorage.getItem(KEY);
   if(raw){
     const draft=JSON.parse(raw);
@@ -26,10 +30,7 @@ export function restaurarRetornoMunicipal(state){
   const selecionada=params.get('categoria')||(raw?JSON.parse(raw).categoria:'');
   document.querySelector('#ea-category-select').value=selecionada||'';
   let message=raw?'Configuração da extração restaurada.':'';
-  const id=params.get('camada_municipal'),category=params.get('categoria');
   if(id){
-    if(!state.catalog.some(layer=>layer.id===id)||!state.categories.some(c=>c.id===category))
-      throw new Error('A camada gerada ou sua categoria não está disponível no catálogo. Atualize a página para tentar novamente.');
     if(!state.bases.some(item=>item.id===id)&&!state.staging.some(item=>item.id===id))
       state.staging.push({id,category});
     message+=' Camada gerada adicionada à lista. Use Confirmar bases para incluí-la na análise.';

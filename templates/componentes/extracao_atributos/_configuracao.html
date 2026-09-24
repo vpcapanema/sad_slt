@@ -1,11 +1,12 @@
 <section class="ea-section" id="ea-config" aria-labelledby="ea-config-title">
-  <header class="ea-section-head"><span class="ea-number">1</span><div><h2 id="ea-config-title">Configuração geral da extração</h2></div><span class="ea-badge" id="ea-config-count">Nenhuma base selecionada</span></header>
+  <header class="ea-section-head"><span class="ea-number">1</span><div><h2 id="ea-config-title">Preparação das camadas e do processamento</h2></div><span class="ea-badge" id="ea-config-count">Nenhuma base selecionada</span></header>
   <div class="ea-section-body">
-    <div class="ea-config-tools" role="toolbar" aria-label="Configuração da análise">
-      <strong>Configuração da análise</strong>
-      <button type="button" class="ea-btn" id="ea-staging-carregar"><i class="fas fa-folder-open" aria-hidden="true"></i> Carregar configuração</button>
-      <button type="button" class="ea-btn" id="ea-staging-salvar"><i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar configuração</button>
+    <div class="ea-municipal-entry ea-preparation-card" role="group" aria-labelledby="ea-territorial-title">
+      <h4 id="ea-territorial-title">Ferramenta de Tributação de Camadas Territoriais</h4>
+      <p id="ea-municipal-help" class="ea-hint">Crie camadas com indicadores e atributos em diferentes escalas territoriais:</p>
+      <a href="/restrict/geoespacial/gerador-camadas-territoriais/" id="ea-municipal-open" class="ea-btn ea-btn-primary ea-layer-action" aria-describedby="ea-territorial-title ea-municipal-help"><i class="fas fa-city" aria-hidden="true"></i><span>Abrir ferramenta</span></a>
     </div>
+    <p id="ea-catalog-status" class="ea-hint" role="status" aria-live="polite" hidden></p>
     <!-- Três subcards do mesmo tamanho: entrada, bases e saída. Só os campos fixos
          ficam aqui; tudo o que abre e fecha é renderizado abaixo do card principal. -->
     <div class="ea-config-grid ea-config-grid-3">
@@ -33,7 +34,7 @@
       <section class="ea-panel" aria-labelledby="ea-bases-title">
         <h3 class="ea-config-card-title" id="ea-bases-title"><span class="ea-subnumber">1.2</span><i class="fas fa-layer-group" aria-hidden="true"></i> Camadas base</h3>
         <div class="ea-config-card-body">
-          <p class="ea-hint">As categorias organizam a análise e o relatório. A regra de cada base fica na lista abaixo.</p>
+          <p class="ea-hint">Escolha uma categoria e adicione as camadas de base. Repita para organizar os grupos da análise.</p>
           <form id="ea-base-form" class="ea-base-form-coluna">
             <div class="ea-field">
               <label for="ea-category-select">Categoria das bases</label>
@@ -42,41 +43,36 @@
             </div>
             <input id="ea-base-select" type="hidden">
             <div class="ea-layer-actions" role="group" aria-label="Adicionar camadas base">
+            <button type="button" class="ea-btn ea-layer-action" id="ea-refresh"><i class="fas fa-rotate" aria-hidden="true"></i><span>Atualizar camadas e categorias</span></button>
               <button id="ea-base-browse" type="button" class="ea-btn ea-layer-action"><i class="fas fa-folder-open" aria-hidden="true"></i><span>Selecionar bases existentes</span></button>
               <button id="ea-base-local-upload" type="button" class="ea-btn ea-layer-action"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i><span>Enviar nova camada base</span></button>
             </div>
-            <input id="ea-base-local-file" type="file" accept=".zip,.rar,.7z,.tar,.tgz,.tbz2,.txz,.gz,.bz2,.xz,.gpkg,.geojson,.json,.fgb,.kml,.kmz,.gml,.tif,.tiff,.img,.asc,.jp2" hidden aria-label="Arquivo local da camada base">
-            <p id="ea-base-local-upload-status" class="ea-hint" role="status" aria-live="polite" hidden></p>
-            <button id="ea-base-local-upload-cancel" type="button" class="ea-btn" hidden>Cancelar validação</button>
-            <small>Bases locais ficam em memória até sair desta página. Selecione a categoria antes de enviar.</small>
-            <div class="ea-municipal-entry" role="group" aria-labelledby="ea-territorial-title">
-              <h4 id="ea-territorial-title">Ferramenta de Tributação de Camadas Territoriais</h4>
-              <p id="ea-municipal-help" class="ea-hint">Crie camadas com indicadores e atributos em diferentes escalas territoriais:</p>
-              <a href="/restrict/geoespacial/gerador-camadas-territoriais/" id="ea-municipal-open" class="ea-btn ea-btn-primary ea-layer-action" aria-describedby="ea-territorial-title ea-municipal-help"><i class="fas fa-city" aria-hidden="true"></i><span>Abrir ferramenta</span></a>
+            <div class="ea-layer-actions" role="group" aria-label="Listas de bases e categorias">
+              <button type="button" class="ea-btn" id="ea-staging-carregar">Carregar listas</button>
+              <button type="button" class="ea-btn" id="ea-staging-salvar">Salvar lista de bases</button>
             </div>
-            <button type="button" class="ea-btn ea-layer-action" id="ea-refresh"><i class="fas fa-rotate" aria-hidden="true"></i><span>Atualizar camadas e categorias</span></button>
+            <p id="ea-base-local-upload-status" class="ea-hint" role="status" aria-live="polite" hidden></p>
+            <small>O envio grava no storage. Depois, escolha a categoria e confirme a lista para validar as camadas.</small>
             <small id="ea-base-file" hidden></small>
           </form>
         </div>
       </section>
       <section class="ea-panel" aria-labelledby="ea-output-title">
-        <h3 class="ea-config-card-title" id="ea-output-title"><span class="ea-subnumber">1.3</span><i class="fas fa-play" aria-hidden="true"></i> Resultado da extração</h3>
+        <h3 class="ea-config-card-title" id="ea-output-title"><span class="ea-subnumber">1.3</span><i class="fas fa-play" aria-hidden="true"></i> Algoritmo de execução e camada de saída</h3>
         <div class="ea-config-card-body">
-          <p class="ea-hint">O algoritmo define o que sai da extração; o nome identifica a camada de saída.</p>
+          <p class="ea-hint">Selecione o algoritmo de execução e, se desejar, dê um nome à camada de saída.</p>
           <div class="ea-campos-duplos">
             <div class="ea-field">
-              <label for="ea-nome-saida">Nome da camada de saída</label>
+              <label for="ea-nome-saida">Nome da camada de saída (opcional)</label>
               <input id="ea-nome-saida" type="text" maxlength="200" autocomplete="off">
               <small id="ea-nome-saida-dica">Em branco, o sistema nomeia a partir da camada de entrada.</small>
             </div>
             <div class="ea-field">
-              <label for="ea-operation">Algoritmo de processamento</label>
-              <select id="ea-operation">
+              <label for="ea-operation">Algoritmo de processamento (obrigatório)</label>
+              <select id="ea-operation" required>
                 <option value="">Selecione o algoritmo</option>
                 <option value="estatisticas">Enriquecimento sem recorte (Sim/Não e estatísticas)</option>
                 <option value="enriquecimento">Enriquecimento configurável (permite recortar e duplicar)</option>
-                <option value="intersection">Interseção (Intersect)</option>
-                <option value="identity">Identidade (Identity)</option>
               </select>
             </div>
           </div>
@@ -85,61 +81,62 @@
         </div>
       </section>
     </div>
+    <div class="ea-config-tools ea-preparation-card" role="group" aria-labelledby="ea-config-tools-title">
+      <h4 id="ea-config-tools-title">Configuração da análise</h4>
+      <p class="ea-hint">Salve as escolhas das três subseções ou carregue uma configuração para continuar a preparação.</p>
+      <button type="button" class="ea-btn" id="ea-config-carregar"><i class="fas fa-folder-open" aria-hidden="true"></i> Carregar configuração</button>
+      <button type="button" class="ea-btn" id="ea-config-salvar"><i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar configuração</button>
+    </div>
     <!-- Conteúdo dinâmico dos três subcards: aparece e desaparece aqui, sempre
          abaixo do card principal, para os subcards manterem o mesmo tamanho. -->
     <div class="ea-dinamico" id="ea-dinamico">
+      <section id="ea-base-list-card" class="ea-base-list-card" aria-labelledby="ea-base-list-title" hidden>
+        <header><h4 id="ea-base-list-title">1.2 · Lista de camadas por categoria</h4><p id="ea-base-list-name"></p></header>
+        <p class="ea-hint">Monte e salve a lista por categoria. Confirme para validar suas camadas e disponibilizá-las na prévia.</p>
+        <div id="ea-base-list-body"></div>
+        <footer class="ea-base-list-actions">
+          <button type="button" class="ea-btn" id="ea-base-list-editar">Editar</button>
+          <button type="button" class="ea-btn" id="ea-base-list-adicionar">Adicionar camadas</button>
+          <button type="button" class="ea-btn" id="ea-base-list-salvar">Salvar</button>
+          <button type="button" class="ea-btn" id="ea-base-list-cancelar">Cancelar</button>
+          <button type="button" class="ea-btn" id="ea-base-list-excluir">Excluir selecionadas</button>
+          <button type="button" class="ea-btn ea-btn-primary" id="ea-base-list-confirmar">Confirmar</button>
+        </footer>
+        <p class="ea-hint">Excluir retira camadas somente desta lista. Arquivos no storage e camadas já confirmadas na bancada são preservados.</p>
+      </section>
+      <div class="ea-preview-workspace">
       <section id="ea-input-preview" class="ea-input-preview" aria-labelledby="ea-input-preview-title" hidden>
-        <header><h4 id="ea-input-preview-title">1.1 · Pré-visualização da camada de entrada</h4>
+        <header><h4 id="ea-input-preview-title">Pré-visualização das camadas do geoprocesso</h4>
           <p id="ea-input-preview-name"></p></header>
         <div class="ea-preview-layout">
-          <aside id="ea-input-preview-layers" class="ea-preview-layers" aria-label="Camadas importadas por situação de validação"></aside>
-          <div id="ea-input-preview-map" role="region" aria-label="Mapa Leaflet de todas as camadas validadas"></div>
+          <aside class="ea-preview-panel" aria-label="Painel de camadas">
+            <div id="ea-input-preview-layers" class="ea-preview-layers" aria-label="Camadas de entrada e de base"></div>
+        <footer class="ea-staging-actions" id="ea-staging-actions" role="toolbar">
+          <button type="button" class="ea-btn ea-btn-primary ea-staging-symbol" id="ea-staging-confirmar" title="Enviar pra bancada" aria-label="Enviar pra bancada"><i class="fas fa-arrow-right-to-bracket" aria-hidden="true"></i></button>
+          <button type="button" class="ea-btn ea-staging-symbol" id="ea-staging-editar" title="Editar camadas da prévia" aria-label="Editar camadas da prévia"><i class="fas fa-pen-to-square" aria-hidden="true"></i></button>
+          <button type="button" class="ea-btn ea-staging-symbol" id="ea-staging-limpar" title="Limpar camadas da prévia" aria-label="Limpar camadas da prévia"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
+          <button type="button" class="ea-btn ea-staging-symbol" id="ea-staging-cancelar" title="Desfazer edição da prévia" aria-label="Desfazer edição da prévia"><i class="fas fa-rotate-left" aria-hidden="true"></i></button>
+        </footer>
+          </aside>
+          <div id="ea-input-preview-map" role="region" aria-label="Mapa das camadas de entrada e de base"></div>
         </div>
         <p id="ea-input-preview-map-status" class="ea-hint" role="status"></p>
+        <p class="ea-hint">Ative ou oculte camadas apenas para visualizar. Use Enviar pra bancada para confirmar todas as camadas válidas da prévia. Novas seleções e edições só alteram a bancada após outro envio.</p>
+      </section>
+      <section id="ea-layer-information" class="ea-input-preview" aria-labelledby="ea-layer-information-title" hidden>
+        <header><h4 id="ea-layer-information-title">Informações das camadas do geoprocesso</h4></header>
         <div id="ea-input-preview-data" class="ea-preview-metadata"></div>
-        <p class="ea-hint">Entrada temporária: fica somente na memória desta página. Ao recarregar ou sair, selecione o arquivo novamente. Executar a análise salva os resultados, sem cadastrar este arquivo no acervo.</p>
       </section>
-      <section id="ea-base-local-preview" class="ea-base-local-preview" aria-labelledby="ea-base-local-preview-title" hidden>
-        <header><h4 id="ea-base-local-preview-title">1.2 · Pré-visualização da camada base</h4>
-          <p id="ea-base-local-preview-name"></p></header>
-        <div class="ea-preview-layout">
-          <aside id="ea-base-local-preview-layers" class="ea-preview-layers" aria-label="Camadas importadas por situação de validação"></aside>
-          <div id="ea-base-local-preview-map" role="region" aria-label="Mapa Leaflet de todas as camadas validadas"></div>
-        </div>
-        <p id="ea-base-local-preview-map-status" class="ea-hint" role="status"></p>
-        <div id="ea-base-local-preview-data" class="ea-preview-metadata"></div>
-        <p class="ea-hint">Base temporária: fica somente na memória desta página. Ao recarregar ou sair, selecione o arquivo novamente. Executar a análise salva os resultados, sem cadastrar este arquivo no acervo.</p>
-      </section>
+      </div>
       <!-- Cada grupo tem a cor e a seta do subcard de origem: a aréola liga o que
            está aberto aqui ao subcard 1.1, 1.2 ou 1.3. -->
-      <div class="ea-grupo-dinamico" data-origem="1.1">
-        <p class="ea-grupo-origem"><span class="ea-grupo-tag">1.1</span> Camada de entrada</p>
-        <section class="ea-entradas" id="ea-entradas" aria-label="Camadas de entrada (1.1)" hidden></section>
-      </div>
-      <div class="ea-grupo-dinamico" data-origem="1.2">
-        <p class="ea-grupo-origem"><span class="ea-grupo-tag">1.2</span> Camadas base</p>
-      <section class="ea-staging" id="ea-staging" aria-labelledby="ea-staging-title" hidden>
-        <h4 class="ea-staging-title" id="ea-staging-title">1.2 · Lista de camadas por categoria</h4>
-        <div class="ea-staging-list" id="ea-staging-list" role="group" aria-labelledby="ea-staging-title"></div>
-        <div class="ea-staging-actions" id="ea-staging-actions" role="toolbar">
-          <button type="button" class="ea-btn ea-btn-primary ea-staging-symbol" id="ea-staging-confirmar"><i class="fas fa-check" aria-hidden="true"></i><span>Confirmar bases</span></button>
-          <button type="button" class="ea-btn ea-staging-symbol" id="ea-staging-editar"><i class="fas fa-pen-to-square" aria-hidden="true"></i><span>Editar</span></button>
-          <button type="button" class="ea-btn ea-staging-symbol" id="ea-staging-limpar"><i class="fas fa-trash-can" aria-hidden="true"></i><span>Limpar</span></button>
-          <button type="button" class="ea-btn ea-staging-symbol" id="ea-staging-cancelar"><i class="fas fa-rotate-left" aria-hidden="true"></i><span>Desfazer</span></button>
-        </div>
-      </section>
-      <section class="ea-bases-confirmadas" id="ea-bases-confirmadas" aria-label="Bases confirmadas (1.2)" hidden></section>
-      </div>
       <div class="ea-grupo-dinamico" data-origem="1.3">
-        <p class="ea-grupo-origem"><span class="ea-grupo-tag">1.3</span> Resultado da extração</p>
+        <p class="ea-grupo-origem"><span class="ea-grupo-tag">1.3</span> Algoritmo de execução e camada de saída</p>
         <section class="ea-op-params" id="ea-operation-params" aria-label="Parâmetros do algoritmo (1.3)" hidden></section>
+        <section class="ea-bases-confirmadas" id="ea-bases-confirmadas" aria-label="Regras das bases preparadas" hidden></section>
         <section class="ea-finalidades" id="ea-finalidades" aria-label="Recortes por finalidade (1.3)" hidden></section>
       </div>
-      <section class="ea-checkup" aria-labelledby="ea-checkup-title">
-        <h4 class="ea-checkup-title" id="ea-checkup-title">Conferir e executar</h4>
-        <div class="ea-execucao-selecao" id="ea-run-selection" aria-live="polite"></div>
-      </section>
-      <div class="ea-execute"><p id="ea-integration-status" class="ea-hint">Carregando catálogo...</p><button class="ea-btn ea-btn-primary" id="ea-run" type="button" disabled>Executar extração</button></div>
+
     </div>
   </div>
 </section>

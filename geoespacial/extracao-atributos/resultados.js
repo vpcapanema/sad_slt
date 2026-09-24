@@ -1,4 +1,4 @@
-import { $, el, options, numero, atributos } from "./ui.js";
+import { $, el, options, numero, atributos, feedback } from "./ui.js";
 import { rotulo as rotuloRegra } from "./regras.js";
 import { base, json } from './api.js';
 
@@ -19,6 +19,21 @@ function table(headers, rows) {
   tbl.append(head,body);wrap.append(tbl);return wrap;
 }
 export function criarResultados() {
+  for(const tipo of ['processamento','analitico']){
+    const link=$(`#ea-pdf-${tipo}`);
+    link.addEventListener('click',async event=>{
+      event.preventDefault();if(link.dataset.baixando)return;link.dataset.baixando='true';
+      const proc=window.SLTFeedback.processo('Baixando relatório');
+      try{
+        const response=await fetch(link.href,{credentials:'same-origin',signal:AbortSignal.timeout(180000)});
+        if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(typeof data.detail==='string'?data.detail:`Falha ao baixar relatório (HTTP ${response.status}).`);}
+        const blob=await response.blob(),url=URL.createObjectURL(blob),anchor=el('a');anchor.href=url;
+        anchor.download=/filename="([^"\r\n]+)"/.exec(response.headers.get('Content-Disposition')||'')?.[1]||`relatorio-${tipo}.pdf`;
+        anchor.click();setTimeout(()=>URL.revokeObjectURL(url),30000);proc.concluir({message:'Download do relatório iniciado.'});
+      }catch(error){proc.concluir({type:'error',message:error.name==='TimeoutError'?'O servidor demorou demais para gerar o relatório. Tente novamente.':error.message});}
+      finally{delete link.dataset.baixando;}
+    });
+  }
   let result=null,view="summary",tableVersion=0;
   const categorySelect=$("#ea-result-category"),layerSelect=$("#ea-result-layer");
   function groups() {
@@ -37,11 +52,12 @@ export function criarResultados() {
     host.append(select,body,actions);
     async function load(){
       const current=++request;previous.disabled=next.disabled=true;
-      status.textContent='Carregando tabela de atributos…';
+      status.textContent='';
+      const processo=window.SLTFeedback.carregamento(body,'Carregando tabela de atributos…');
       try{
         const data=await json(`/extracao-atributos/execucoes/${encodeURIComponent(execution)}/tabela?camada=${encodeURIComponent(select.value)}&offset=${offset}&limite=100`);
-        if(version!==tableVersion||current!==request||!body.isConnected)return;
-        body.replaceChildren();
+        if(version!==tableVersion||current!==request||!body.isConnected){processo.fechar();return;}
+        processo.fechar();body.replaceChildren();
         if(data.linhas.length)body.append(table(data.campos,data.linhas.map(row=>data.campos.map(field=>{
           const value=row[field];return value==null?'—':typeof value==='object'?JSON.stringify(value):String(value);
         }))));
@@ -49,8 +65,8 @@ export function criarResultados() {
         status.textContent=data.total?`${offset+1}–${offset+data.linhas.length} de ${data.total} registros. Todos os campos estão disponíveis; role a tabela horizontalmente.`:'0 registros. O pacote preserva a estrutura dos campos.';
         previous.disabled=offset===0;next.disabled=offset+data.linhas.length>=data.total;
       }catch(error){
-        if(version!==tableVersion||current!==request||!body.isConnected)return;
-        status.textContent=error.message;body.replaceChildren();
+        if(version!==tableVersion||current!==request||!body.isConnected){processo.fechar();return;}
+        status.textContent='';body.replaceChildren();processo.concluir({type:'error',message:error.message});
         const retry=el('button','Tentar novamente','ea-btn');retry.type='button';retry.onclick=load;body.append(retry);
       }
     }

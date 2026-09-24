@@ -156,6 +156,7 @@ def _overlay_ogr(
     ignorar_falhas: bool = False,
     geometrias_preparadas: bool = True,
     pretestar_continencia: bool = False,
+    progresso=None,
 ) -> gpd.GeoDataFrame:
     """Executa o overlay pelo motor nativo do OGR, preservando os atributos.
 
@@ -206,7 +207,24 @@ def _overlay_ogr(
         saida = destino.CreateLayer(
             "resultado", camada_1.GetSpatialRef(), camada_1.GetGeomType()
         )
-        erro = getattr(camada_1, metodo)(camada_2, saida, options=opcoes)
+        interrompido=[]
+        def callback(fracao, mensagem, dados):
+            try:
+                progresso(fracao * 100, 100)
+                return 1
+            except Exception as exc:
+                interrompido.append(exc)
+                return 0
+        try:
+            erro = getattr(camada_1, metodo)(camada_2, saida, options=opcoes,
+                                           **({'callback':callback} if progresso else {}))
+        except RuntimeError:
+            if interrompido:raise interrompido[0]
+            raise
+        finally:
+            camada_1 = camada_2 = saida = None
+            destino = fonte_1 = fonte_2 = None
+        if interrompido:raise interrompido[0]
         if erro != ogr.OGRERR_NONE:
             raise RuntimeError(f"O overlay {tipo_overlay} falhou no OGR (código {erro})")
 

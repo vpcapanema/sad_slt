@@ -35,7 +35,7 @@ async function load(){
     if(categories.length===1)select.value=categories[0].id;
     if(!categories.length)feedback('Nenhuma categoria ativa. Cadastre uma categoria na administração para gerar camadas.');
     mount();
-  }catch(error){feedback(error.message);$('#territorial-retry').hidden=false;}
+  }catch(error){feedback(error.message,'error');$('#territorial-retry').hidden=false;}
 }
 $('#territorial-back').addEventListener('click',event=>{if(busy)event.preventDefault();});
 select.addEventListener('change',mount);

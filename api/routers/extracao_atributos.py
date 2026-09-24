@@ -14,6 +14,8 @@ from api.services.session_service import SessionUser
 router = APIRouter(prefix='/extracao-atributos',dependencies=[Depends(require_geospatial_access)])
 from api.routers.municipal_layer import router as municipal_router
 router.include_router(municipal_router)
+from api.routers.storage_upload_web import router as storage_upload_router
+router.include_router(storage_upload_router)
 
 
 @router.post('/entrada-local')
@@ -34,9 +36,47 @@ async def validar_entrada_local(request: Request, nome: str = Query(min_length=1
         raise HTTPException(422, str(exc)) from exc
 
 
+@router.post('/entrada-local/jobs', status_code=202)
+async def iniciar_previa(request: Request, nome: str = Query(min_length=1, max_length=200),
+                        user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import entrada_previa_jobs as jobs
+    from api.services.extracao_entrada_local import MAX_ARQUIVO
+    conteudo = bytearray()
+    async for parte in request.stream():
+        if len(conteudo)+len(parte) > MAX_ARQUIVO:
+            raise HTTPException(413, 'O arquivo excede o limite de 16 MB para leitura em memória.')
+        conteudo.extend(parte)
+    try:
+        return jobs.iniciar(bytes(conteudo), nome, user.id)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.get('/entrada-local/jobs/{ident}')
+def status_previa(ident: str, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import entrada_previa_jobs as jobs
+    try:
+        return Response(json.dumps(jobs.obter(ident, user.id), ensure_ascii=False),
+                        media_type='application/json', headers={'Cache-Control': 'no-store'})
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.post('/entrada-local/jobs/{ident}/cancelar')
+def cancelar_previa(ident: str, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import entrada_previa_jobs as jobs
+    try:
+        return jobs.cancelar(ident, user.id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
 class ArquivoLocal(BaseModel):
     nome: str = Field(min_length=1, max_length=200)
     camada: str | None = Field(default=None, max_length=1000)
+    camadas: list[str] | None = Field(default=None, min_length=1, max_length=2000)
     conteudo_base64: str = Field(min_length=1, max_length=22369624, repr=False)
 
 
@@ -124,11 +164,14 @@ class EntradaExtracao(BaseModel):
 
 class Configuracao(BaseModel):
     nome: str = Field(min_length=1,max_length=120)
-    categorias: list[Categoria] = Field(min_length=1,max_length=30)
+    categorias: list[Categoria] = Field(default_factory=list,max_length=30)
     # Guardadas junto com as bases para repetir a análise inteira (versão 3).
     entradas: list[EntradaExtracao] = Field(default_factory=list,max_length=10)
     finalidades: list[Finalidade] = Field(default_factory=list,max_length=20)
-    operacao: Literal['intersection','identity','enriquecimento','estatisticas'] = 'intersection'
+    escopo: Literal['analise','bases'] = 'analise'
+    chave_lista: str | None = Field(default=None, max_length=80)
+    categoria_ativa: str = Field(default='',max_length=120)
+    operacao: Literal['','intersection','identity','enriquecimento','estatisticas'] = 'intersection'
     opcoes: dict[str, bool] = Field(default_factory=dict)
     nome_saida: str = Field(default='',max_length=200)
 
@@ -146,7 +189,8 @@ def salvar_configuracao(payload: Configuracao, user: SessionUser = Depends(requi
         return configuracao.salvar(payload.nome,[g.model_dump() for g in payload.categorias],user,
                                    [e.model_dump() for e in payload.entradas],
                                    [f.model_dump() for f in payload.finalidades],
-                                   operacao=payload.operacao,opcoes=payload.opcoes,nome_saida=payload.nome_saida)
+                                   operacao=payload.operacao,opcoes=payload.opcoes,nome_saida=payload.nome_saida,
+                                   escopo=payload.escopo,categoria_ativa=payload.categoria_ativa,chave_lista=payload.chave_lista)
     except ValueError as exc:
         raise HTTPException(422,str(exc)) from exc
     except OSError as exc:
@@ -154,10 +198,10 @@ def salvar_configuracao(payload: Configuracao, user: SessionUser = Depends(requi
 
 
 @router.get('/configuracoes/{chave}')
-def abrir_configuracao(chave: str):
+def abrir_configuracao(chave: str, lista: bool = False):
     from api.services import configuracao_bancada as configuracao
     try:
-        return configuracao.carregar(chave)
+        return configuracao.carregar(chave, referencias=lista)
     except FileNotFoundError as exc:
         raise HTTPException(404,str(exc)) from exc
     except ValueError as exc:
@@ -185,13 +229,14 @@ class OpcoesOverlay(BaseModel):
 
 
 class Extracao(BaseModel):
+    entradas_locais: dict[str, ArquivoLocal] = Field(default_factory=dict, max_length=10)
     bases_locais: dict[str, ArquivoLocal] = Field(default_factory=dict, max_length=20)
     arquivo_local: ArquivoLocal | None = None
     input_id: str = Field(min_length=1,max_length=1200)
     nome_saida: str = Field(default='',max_length=200)
     # intersection/identity: modo sobreposição (uma linha por interseção).
     # enriquecimento: um registro por feição, com as regras de cada base.
-    operacao: Literal['intersection','identity','enriquecimento','estatisticas'] = 'intersection'
+    operacao: Literal['intersection','identity','enriquecimento','estatisticas']
     opcoes: OpcoesOverlay = OpcoesOverlay()
     categorias: list[Categoria] = Field(min_length=1,max_length=30)
     # Só no enriquecimento: entradas adicionais e configuração de cada entrada
@@ -294,3 +339,13 @@ def ver_relatorio(ident: UUID, tipo: Literal['processamento','analitico'],
         raise HTTPException(404,str(exc)) from exc
     return Response(conteudo,media_type='application/pdf',
                     headers={'Content-Disposition':f'inline; filename="{nome}"','Cache-Control':'no-store'})
+
+
+@router.post('/execucoes/{ident}/cancelar',status_code=202)
+def cancelar(ident: UUID, user: SessionUser = Depends(require_geospatial_access)):
+    try:
+        return service.cancelar(ident,user)
+    except LookupError as exc:
+        raise HTTPException(404,str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409,str(exc)) from exc

@@ -1,4 +1,4 @@
-import { el } from './ui.js';
+import { el, feedback } from './ui.js';
 import { json } from './api.js';
 
 // O explorador abre as bases geoespaciais do storage do SICARD (SFTPGo). e as camadas cadastradas no banco.
@@ -30,7 +30,7 @@ function partesDoNome(item){
 }
 function rotulo(item){const p=partesDoNome(item);return `${p.radical}${p.extensao}${p.camada?` › ${p.camada}`:''}`;}
 
-export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
+export function escolherArquivo({catalog,excluded=[],title,multiple=false,validar=true}) {
   return new Promise(resolve=>{
     const dialog=el('dialog',undefined,'ea-tool-dialog ea-storage-dialog');
     const header=el('header'),heading=el('h2',title),close=icon('Fechar','fa-xmark',()=>finish());
@@ -91,7 +91,7 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
       if(!valid(path))throw new Error('Escolha uma pasta dentro das bases geoespaciais do storage.');
       if(path===BANK)return {caminho:BANK,pai:null,pastas:[],arquivos:catalog.filter(item=>!item.id.startsWith('storage:')&&!item.id.startsWith('local:'))};
       if(!cache.has(path)){
-        if(!pending.has(path))pending.set(path,json(`/storage/navegar?caminho=${encodeURIComponent(path)}`).then(data=>{cache.set(path,data);return data;}).finally(()=>pending.delete(path)));
+        if(!pending.has(path))pending.set(path,json(`/storage/navegar?detalhar=false&caminho=${encodeURIComponent(path)}`).then(data=>{cache.set(path,data);return data;}).finally(()=>pending.delete(path)));
         await pending.get(path);
       }
       return cache.get(path);
@@ -105,7 +105,7 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
           if(loading&&!browsing)return;
           if(expanded.has(path)){expanded.delete(path);paintTree();return;}
           toggle.disabled=true;
-          try{await directory(path);if(!closed){expanded.add(path);paintTree();}}catch(error){if(!closed)status.textContent=error.message;}finally{toggle.disabled=false;}
+          try{await directory(path);if(!closed){expanded.add(path);paintTree();}}catch(error){if(!closed)feedback(error.message,'error');}finally{toggle.disabled=false;}
         },'ea-storage-tree-toggle');
         toggle.append(fa(aberta?'fa-caret-down':'fa-caret-right'));toggle.setAttribute('aria-label',`${aberta?'Recolher':'Expandir'} ${name}`);toggle.setAttribute('aria-expanded',String(aberta));
         const open=button('',()=>navigate(path),'ea-storage-tree-open');open.title=path;
@@ -163,21 +163,22 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
           if(partes.camada)nome.append(el('span',` › ${partes.camada}`,'ea-storage-entry-camada'));
           name.append(check,simbolo,nome);
         }
-        row.append(name,el('small',item.folder?'Pasta':`${current===BANK?'Banco':(FORMATOS[partesDoNome(item).formato]||[,'Arquivo'])[1]} · ${item.geometria_tipo||'vetor'}${excluded.includes(item.id)?' · já selecionada':''}`));
+        row.append(name,el('small',item.folder?'Pasta':`${current===BANK?'Banco':(FORMATOS[partesDoNome(item).formato]||[,'Arquivo'])[1]} · ${item.geometria_tipo||(item.inventariar?'arquivo — camadas lidas ao confirmar':'vetor')}${excluded.includes(item.id)?' · já selecionada':''}`));
         if(mode==='details')row.append(el('span',item.caminho||item.arquivo,'ea-storage-entry-path'));
         if(item.folder){const seta=el('span',undefined,'ea-storage-entry-open');seta.append(fa('fa-chevron-right'));row.append(seta);}
         list.append(row);
       }
       if(!count)list.append(el('p',term?'Nenhum nome corresponde ao filtro.':'Esta pasta não contém subpastas ou camadas vetoriais.','ea-empty-small'));
-      status.textContent=`${folders.length} pasta(s) · ${files.length} camada(s). Clique numa pasta para abrir. ${multiple?'Clique nas camadas para marcar ou desmarcar; a seleção é mantida entre pastas.':'Clique numa camada para selecionar; duplo clique confirma.'}`;
+      status.textContent=`${folders.length} pasta(s) · ${files.length} ${files.some(f=>f.inventariar)?'arquivo(s) — as camadas serão lidas ao confirmar':'camada(s)'}. Clique numa pasta para abrir. ${multiple?'Clique nas camadas para marcar ou desmarcar; a seleção é mantida entre pastas.':'Clique numa camada para selecionar; duplo clique confirma.'}`;
       controls();
     }
     async function navigate(path){
       if((loading&&!browsing)||closed||!valid(path))return;
       const request=++navigation;
-      loading=true;browsing=true;controls();status.textContent='Carregando pasta…';
+      loading=true;browsing=true;controls();status.textContent='';
+      const processo=window.SLTFeedback.carregamento(list,'Abrindo pasta do storage…');processo.passo('Consultando camadas e subpastas…');
       try{
-        const data=await directory(path);if(closed||request!==navigation)return;cache.set(path,data);current=path;expanded.add(path);search.value='';
+        const data=await directory(path);if(closed||request!==navigation){processo.fechar();return;}cache.set(path,data);current=path;expanded.add(path);search.value='';
         trail.replaceChildren();let target='';
         for(const [index,name] of ['storage',...path.split('/').filter(Boolean)].entries()){
           if(index>0)target+=(target?'/':'')+name;
@@ -186,13 +187,26 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
           if(destination===current)crumb.setAttribute('aria-current','location');
           trail.append(crumb);
         }
-        paintTree();paintList();list.scrollTop=0;
-      }catch(error){if(!closed&&request===navigation)status.textContent=error.message;}finally{if(!closed&&request===navigation){loading=false;browsing=false;controls();}}
+        paintTree();paintList();list.scrollTop=0;processo.fechar();
+      }catch(error){if(closed||request!==navigation)processo.fechar();else processo.concluir({type:'error',message:error.message});}finally{if(!closed&&request===navigation){loading=false;browsing=false;controls();}}
     }
     async function selectBatch(){
       if(loading||!picks.size)return;loading=true;controls();
-      const files=[...picks.values()],errors=[];let next=0,done=0;
-      status.textContent=`Carregando 0 de ${files.length} camada(s)…`;
+      let files=[...picks.values()];const errors=[];let next=0,done=0;
+      const processo=window.SLTFeedback.processo('Carregando camadas selecionadas',{barra:true});
+      try{
+        const expandidos=[];
+        for(const file of files){
+          if(!file.inventariar){expandidos.push(file);continue;}
+          processo.passo(`Identificando camadas de ${rotulo(file)}…`);
+          const resultado=await json(`/storage/camadas-arquivo?arquivo=${encodeURIComponent(file.arquivo)}`);
+          expandidos.push(...resultado.camadas.filter(c=>!excluded.includes(c.id)));
+        }
+        files=[...new Map(expandidos.map(c=>[c.id,c])).values()];
+        if(!files.length)throw new Error('Todas as camadas desses arquivos já estão selecionadas.');
+      }catch(error){loading=false;controls();processo.concluir({type:'error',message:error.message});return;}
+      if(!validar){loading=false;controls();processo.concluir({message:'Referências adicionadas à lista; a validação será feita ao confirmá-la.'});processo.fechar();finish(multiple?files:files[0]);return;}
+      processo.progresso(0,`0 de ${files.length} camadas`);
       async function worker(){
         while(next<files.length){const file=files[next++];
           try{
@@ -204,14 +218,14 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
               loaded.set(file.id,{...layer,...result});
             }
           }catch(error){errors.push(`${rotulo(file)}: ${error.message}`);}
-          finally{status.textContent=`Carregando ${++done} de ${files.length} camada(s)…`;}
+          finally{processo.progresso(++done/files.length*100,`${done} de ${files.length} camadas`);}
         }
       }
       await Promise.all(Array.from({length:Math.min(2,files.length)},worker));
       loading=false;controls();
-      if(errors.length){status.textContent=`${errors.join(' · ')} Desmarque as camadas com erro ou confirme para tentar novamente. As demais já estão carregadas.`;return;}
+      if(errors.length){processo.concluir({type:'warning',message:'Desmarque as camadas com erro ou confirme para tentar novamente. As demais já estão carregadas.',resultados:errors});return;}
       const unique=[...new Map(files.map(file=>{const layer=loaded.get(file.id);return [layer.id,layer];})).values()];
-      finish(multiple?unique:unique[0]);
+      processo.concluir({message:'Camadas carregadas.'});processo.fechar();finish(multiple?unique:unique[0]);
     }
     search.addEventListener('input',()=>{if(!loading)paintList();});
     paintTree();navigate(ROOT);

@@ -78,6 +78,10 @@ def require_geospatial_access(
     request: Request,
     user: SessionUser = Depends(require_authenticated),
 ) -> SessionUser:
+    if "/extracao-atributos/storage-upload/" in request.url.path:
+        if user.tipo_usuario.strip().upper() not in _ANALYZE_PROFILES:
+            raise HTTPException(403, detail="Seu perfil SICARD não tem permissão para enviar camadas de base. O envio exige perfil Analista, Gestor ou Admin.")
+        return user
     if request.method == "GET":
         return user
     if "/homologar" in request.url.path:

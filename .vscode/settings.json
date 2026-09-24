@@ -17,7 +17,7 @@
     }
   },
   "terminal.integrated.defaultProfile.linux": "Host do agente — PowerShell compartilhado",
-  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+  "python.defaultInterpreterPath": "/home/codespace/.venvs/sicard-app/bin/python",
   "python.terminal.useEnvFile": true,
   "python.terminal.activateEnvironment": true,
   "python.linting.pylintEnabled": false,

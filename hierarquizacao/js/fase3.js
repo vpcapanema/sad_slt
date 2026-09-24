@@ -142,7 +142,7 @@
       document.addEventListener("visibilitychange", atualizarDadosAoRetomar);
       $("executar-fase3").onclick = async () => {
         const hierarquizacao = atual();
-        if (!hierarquizacao) return erro("Selecione a hierarquização.");
+        if (!hierarquizacao) { window.SLTFeedback.campo($("fase-hierarquizacao"),"Selecione a hierarquização."); $("fase-hierarquizacao").focus(); return; }
         const resposta = await window.SLTFeedback.acao({
           confirmacao: {
             title: "Calcular índice de priorização (Fase 3)",
@@ -150,6 +150,7 @@
             detail: "O resultado atual da Fase 3 será substituído e a síntese já gerada, se houver, ficará desatualizada.",
             confirmLabel: "Calcular Fase 3",
           },
+          acompanhamento: true,
           titulo: "Calcular índice de priorização (Fase 3)",
           mensagemInicial: `Enviando os critérios da rodada ${hierarquizacao.codigo}…`,
           executar: () => HierApi.executarFase3(hierarquizacao.codigo, {
@@ -166,7 +167,7 @@
       };
       $("salvar-pesos-fase3").onclick = async () => {
         const hierarquizacao = atual();
-        if (!hierarquizacao) return erro("Selecione a hierarquização.");
+        if (!hierarquizacao) { window.SLTFeedback.campo($("fase-hierarquizacao"),"Selecione a hierarquização."); $("fase-hierarquizacao").focus(); return; }
         const resposta = await window.SLTFeedback.acao({
           confirmacao: {
             title: "Salvar pesos dos atributos",
@@ -185,7 +186,7 @@
       const salvarRiscos = $("salvar-tratamentos-riscos-fase3");
       if (salvarRiscos) salvarRiscos.onclick = async () => {
         const hierarquizacao = atual();
-        if (!hierarquizacao) return erro("Selecione a hierarquização.");
+        if (!hierarquizacao) { window.SLTFeedback.campo($("fase-hierarquizacao"),"Selecione a hierarquização."); $("fase-hierarquizacao").focus(); return; }
         const payload = window.AtributosObjetos?.tratamentosRiscosPayload() || { tratamentos: {} };
         const quantos = Object.keys(payload.tratamentos || {}).length;
         const resposta = await window.SLTFeedback.acao({
@@ -213,7 +214,7 @@
       }));
       $("sintetizar").onclick = async () => {
         const hierarquizacao = atual();
-        if (!hierarquizacao) return erro("Selecione a hierarquização.");
+        if (!hierarquizacao) { window.SLTFeedback.campo($("fase-hierarquizacao"),"Selecione a hierarquização."); $("fase-hierarquizacao").focus(); return; }
         const operador = operadorSintese();
         const resposta = await window.SLTFeedback.acao({
           confirmacao: {
@@ -222,6 +223,7 @@
             detail: "A síntese anterior, se existir, é substituída. Ela combina os resultados das Fases 1, 2 e 3 como estão agora — confira se as três estão atualizadas antes de seguir.",
             confirmLabel: "Calcular síntese",
           },
+          acompanhamento: true,
           titulo: "Calcular índice geral de hierarquização",
           mensagemInicial: "Sintetizando as três fases no servidor…",
           executar: () => HierApi.sintetizar(hierarquizacao.codigo, {

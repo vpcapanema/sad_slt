@@ -11,11 +11,11 @@ Página: `/restrict/geoespacial/extracao-atributos/` (prefixo `/sicard` na VM).
    (GeoPackage, Shapefile, GeoJSON, KML, FlatGeobuf) e só permite escolher camadas
    presentes no catálogo vetorial; rasters e arquivos sem registro não entram. Ele
    não cria nem renomeia pastas: as rotas `POST`/`PATCH /pastas` existem, mas esta
-   tela não as usa. Escolher a categoria antes da base. A entrada é uma única camada.
+   tela não as usa. Escolher a categoria antes da base. Uploads podem conter várias camadas de entrada.
    As camadas confirmadas são desenhadas na bancada embutida (seção 02). Uploads abrem seletores locais nesta página;
    cadastro de categorias abre sua página própria; o botão de atualização
    recarrega os seletores.
-3. Executar interseção ou Identity com GDAL/OGR no servidor. O navegador envia IDs e, para camadas locais, o arquivo em memória;
+3. Conferir as camadas efetivamente presentes na bancada (seção 2) e usar Executar extração abaixo dela. Executar o algoritmo selecionado com GDAL/OGR no servidor. O navegador envia IDs e, para camadas locais, o arquivo em memória;
    nomes e conceitos são resolvidos no servidor e guardados com a execução.
 4. Consultar geometria, síntese, atributos e estatísticas por categoria e camada.
 5. Baixar o pacote `.zip` da extração: GeoPackage, relatório de processamento em
@@ -408,7 +408,7 @@ CRS e hash. O arquivo original não é registrado no banco, não preenche o snap
 `entrada_geojson` e não é incluído como camada `entrada` no GeoPackage persistido.
 Os **resultados derivados** continuam seguindo a política normal da extração.
 
-Os dois botões **Enviar nova camada** (entrada e base) usam o mesmo leitor local:
+O botão **Enviar nova camada de entrada** usa o leitor local abaixo. O botão de **base** usa agora o upload nativo do storage, descrito ao final; pacotes enviados são lidos pelo mesmo explorador em RAM após o envio:
 
 | Conteúdo | Formatos |
 | --- | --- |
@@ -424,19 +424,28 @@ retorna `status_validacao` e metadados/GeoJSON para cada camada válida, ou o er
 individual para cada camada não validada. Não há seletor intermediário.
 Componentes geoespaciais ilegíveis também aparecem como não validados.
 
-O painel esquerdo da prévia separa **Validadas** e **Não validadas**. Todas as
-válidas são desenhadas juntas, com cores distintas e enquadramento do conjunto.
-Clicar no nome (ou na geometria) muda apenas os metadados abaixo do mapa; não
-exclui as outras camadas nem altera a entrada da análise. Em telas estreitas,
-a lista passa para cima do mapa.
+O painel esquerdo da prévia segue o visual da árvore do visualizador de bases:
+fundo azul, grupos **Validadas** e **Não validadas**, arquivos como subgrupos,
+guias de hierarquia, símbolos e grupos recolhíveis. Todas as válidas começam
+visíveis, com cores distintas e enquadramento do conjunto. Os checkboxes da
+camada, do arquivo e do grupo controlam a visibilidade; grupos parcialmente
+visíveis têm checkbox indeterminado. Ocultar um raster remove tanto sua imagem
+quanto seu contorno. Recolher um grupo não modifica a visibilidade no mapa.
 
-A entrada enviada para análise é o conjunto de todas as feições vetoriais
-válidas do arquivo, com a união dos atributos e nulos nos campos ausentes. Em
+Clicar no nome (ou na geometria) mostra seus metadados abaixo do mapa; mudar o
+checkbox também mostra os metadados da camada, indicando se está oculta.
+Ocultar na prévia **não altera a composição da bancada**. Somente a seção 2 define quais camadas participarão da análise. Camadas não validadas têm
+checkbox desabilitado, mas seu nome continua acessível para consultar a falha.
+Em telas estreitas, a árvore da entrada passa para cima do mapa. O envio de bases ao storage usa seu modal nativo e a lista pendente da seção 1.2.
+
+Cada camada vetorial válida do upload é adicionada individualmente à bancada.
+A entrada enviada para análise reúne todas as feições das camadas mantidas
+nessa bancada, com a união dos atributos e nulos nos campos ausentes. Em
 arquivos multicamada, `slt_camada_origem` identifica o componente/camada de cada
 feição; o nome recebe sufixo se já existir na fonte. Os vetores são reprojetados
 para o CRS da primeira camada válida para compor a entrada; a prévia individual
 continua mostrando o CRS original. O servidor reabre e revalida o conjunto na
-execução. O arquivo é enviado uma única vez, sem filtro de camada. Rasters não
+execução. O arquivo é enviado uma única vez, acompanhado de `arquivo_local.camadas`: as chaves das camadas mantidas na bancada. O backend valida a seleção, rejeita chaves ausentes/inválidas e restaura apenas esse subconjunto; lista vazia nunca significa executar todas. Pedidos antigos sem a lista preservam a leitura integral legada. Rasters não
 entram na análise vetorial. Um lote sem vetores válidos limpa a entrada anterior
 e mantém os diagnósticos visíveis, evitando executar uma entrada antiga por engano.
 No upload de bases, todas as camadas vetoriais válidas entram na lista da categoria.
@@ -448,14 +457,11 @@ mostra os metadados e informa por que não há localização. Não converte pixe
 polígonos, nem adiciona a matriz como base vetorial. O servidor também recusa tal
 execução. Análise zonal/raster exige um algoritmo próprio e não foi implementada.
 
-Bases locais são incluídas na lista da categoria selecionada, confirmadas pelo
-usuário e reenviadas na execução em `bases_locais`; os frames só são passados à
-thread em RAM. Não há cadastro no banco. Configurações reutilizáveis com bases
-locais são bloqueadas com orientação para cadastrar as bases no storage.
+O backend mantém compatibilidade com pedidos antigos de `bases_locais` em RAM. O botão da seção 1.2 não produz mais esse payload: envia os arquivos ao storage e usa IDs `storage:...`, reutilizáveis nas configurações salvas.
 
 Limites: 16 MB por envio, 32 MB expandidos **somando todos os níveis**, 2000
 componentes, 5 níveis de compactação, orçamento de 60 segundos para exploração,
-50 mil feições e 500 mil vértices somados no conjunto; até 1999 atributos de origem mais o identificador da camada. Camadas que excedem o orçamento ficam no painel de não validadas com o motivo. Na execução, arquivos
+50 mil feições no conjunto, sem teto de 500 mil vértices; até 1999 atributos de origem mais o identificador da camada. Camadas que excedem o orçamento ficam no painel de não validadas com o motivo. Na execução, arquivos
 locais somam no máximo 30 MB codificados. Caminhos externos, links, arquivos
 cifrados/multipartidos e formatos de conexão OGR/VRT não são aceitos.
 
@@ -480,3 +486,187 @@ upload preserva a seleção anterior. Limpar a entrada libera as referências em
 memória; atualizar o catálogo mantém a entrada local. Recarregar/sair da página
 exige selecionar novamente o arquivo. Configurações salvas incluem somente
 entradas persistentes, com mensagem explícita sobre a entrada local omitida.
+
+
+### Vetores complexos: original integral e prévia por escala (24/09/2026)
+
+O teto de 500 mil vértices foi removido da leitura, da validação individual e do
+conjunto. Continuam os limites de bytes, expansão, feições e atributos descritos
+acima: não se promete processamento ilimitado em RAM. Não há cadastro novo no
+banco nem gravação temporária dos arquivos enviados.
+
+- O arquivo original fica em memória e é reaberto no backend na execução. A
+  seleção `arquivo_local.camadas` da bancada continua definindo o subconjunto.
+  Os algoritmos nunca recebem o GeoJSON simplificado mostrado pelo navegador.
+- Coordenadas são verificadas em lotes de 256 feições, preservando todas as
+  coordenadas. Uma feição grande é validada inteira; não é rejeitada por vértices.
+- A prévia detalhada tem orçamento de 100 mil vértices dividido entre as camadas;
+  o nível para zoom distante usa um décimo desse orçamento. Simplificação
+  topológica é aplicada exclusivamente a cópias WGS84. Todas as feições e seus
+  atributos continuam representados. Cada orçamento tem piso de 5 vértices por
+  feição para permitir o desenho de seu envelope sem eliminar registros.
+- Geometrias irredutíveis pelo orçamento (por exemplo MultiPoint com muitos
+  pontos) usam os limites de cada feição, com aviso explícito de aproximação.
+  Isso não invalida nem simplifica a fonte para processamento.
+- Leaflet e a bancada MapLibre alternam os níveis no zoom 12. Os metadados
+  mostram contagem original e tipo da representação; a bancada identifica
+  prévias aproximadas e impede sua edição como se fossem os dados originais.
+- Área, comprimento, localização cadastral e quantidade de feições derivam do
+  original. A prévia agregada reutiliza as representações leves individuais;
+  não volta a serializar toda a geometria original.
+- Estatísticas usam índice espacial por base e agregam lotes de até 64 entradas
+  ou 200 mil vértices. Uma feição maior é processada sozinha, sem perder vértices.
+  Candidatos são liberados entre lotes; contagens e estatísticas consideram todas
+  as interseções. Os demais algoritmos continuam recebendo os frames integrais.
+
+Validação: GeoPackage com mais de 600 mil vértices, restauração WKB idêntica ao
+original, interseção próxima à borda original que desaparece na prévia mas entra
+corretamente na análise, lote de duas camadas somando mais de 500 mil vértices,
+representação por limites e estatísticas com múltiplos lotes. Sem deploy.
+
+
+### Composição da bancada e execução (24/09/2026)
+
+- Seção 1: selecionar, validar e configurar entradas, bases e algoritmo. Bases
+  pendentes só são enviadas à bancada ao confirmar a lista.
+- Seção 2: a bancada é a composição final. Remover pelo ribbon atualiza o painel,
+  a configuração e o payload imediatamente. Uma remoção não é desfeita por troca
+  de algoritmo, nome ou atualização do catálogo. A prévia conserva o inventário.
+- O resumo e o botão de execução ficam abaixo do iframe, na seção 2. Só habilita
+  com entrada, base, algoritmo e todas as camadas participantes presentes no painel.
+  A execução também revalida a presença antes e depois da confirmação; camadas
+  que falharam ao carregar não podem entrar silenciosamente no pedido.
+- Nome da saída é opcional. `operacao` é obrigatório também no contrato HTTP;
+  omissão não escolhe mais interseção implicitamente.
+- Upload multicamada aparece em linhas independentes no grupo Input. A remoção
+  de uma linha restringe a lista de chaves enviada ao backend e preserva as demais.
+  Remover a última entrada ou base bloqueia a execução. Uma entrada adicional
+  existente pode assumir o lugar da principal removida nos modos compatíveis.
+- Durante a execução, a bancada fica inerte para manter estável a composição
+  confirmada. Resultados e camadas apenas pendentes não compõem o pedido.
+
+### Servidor local no Codespace
+
+Use a tarefa **SICARD: Iniciar ambiente de desenvolvimento**, que no Linux chama
+`bash scripts/start-dev-codespace.sh`. Ela carrega o `.env` privado, ignora as duas
+substituições SLT usadas nos testes, verifica o banco com SELECT 1 e inicia a porta
+8083. Quando o destino é 127.0.0.1:15433, inicia automaticamente o supervisor
+`bash scripts/start-database-tunnel.sh --background`. Ele vive na sessão tmux
+`sicard-db-tunnel` (servidor `sicard`), com lock de instância única, log privado
+em `.deploy/database-tunnel.local.log` e reconexão após 5 segundos se o SSH cair.
+A ponte Windows em 10022 deve continuar ativa; o supervisor não pode iniciá-la
+no computador Windows a partir do Codespace.
+
+Não iniciar o servidor de desenvolvimento com `SLT_DATABASE_URL=''`: isso é
+exclusivo dos processos de teste e sobrepõe o valor do `.env`. A inicialização
+local não realiza deploy nem altera as credenciais ou a VM.
+
+
+## Envio de bases pelo gestor do storage e feedback SICARD (local)
+
+- A sessão autenticada do SICARD define a autorização. Apenas `ANALISTA`,
+  `GESTOR` e `ADMIN` podem iniciar ou continuar a integração; `OPERADOR` e
+  `VISUALIZADOR` recebem HTTP 403 com a explicação. Sessão ausente recebe 401.
+- Só após essa validação, o servidor autentica separadamente no SFTPGo com
+  `SICARD_STORAGE_API_USER=sicard` e a senha privada já configurada. Nenhuma
+  senha, cookie de login ou token de acesso do storage é entregue ao frontend.
+- `/extracao-atributos/storage-upload/sessoes` cria uma janela vinculada ao ID
+  SICARD. A ponte encaminha apenas assets, consulta de existência, listagem,
+  manutenção de sessão e upload. Não expõe administração, exclusão ou download.
+- O modal/Dropzone e `uploadFiles` vêm do cliente SFTPGo instalado. Apenas os
+  endereços são encaminhados pela ponte e a apresentação é adaptada. O algoritmo
+  nativo, incluindo progresso e confirmação de sobrescrita, permanece inalterado.
+- Destino dos arquivos: `base-geoespacial` no storage oficial. O servidor transmite
+  o corpo em streaming; não grava cópia local nem cadastra feições no banco.
+- Somente respostas 201 do storage registram arquivos enviados. O recarregamento
+  final nativo abre automaticamente a escolha obrigatória de categoria. Todos os
+  vetores encontrados no arquivo são propostos; nenhuma base entra na bancada
+  antes de **Confirmar bases**. Falhas e matrizes incompatíveis ficam explicadas.
+- **Classificar depois** conserva o envio pendente nesta página; os arquivos
+  continuam salvos no storage. **Conferir arquivos enviados** recupera sucessos
+  parciais sem anunciar como enviados os arquivos que falharam.
+- GeoPackages multicamada e pacotes compactados são explorados após o envio. O
+  pacote permanece intacto no storage. A leitura de pacotes em RAM mantém seus
+  limites atuais de 16 MB de arquivo e 32 MB expandidos; isso não altera o upload
+  nativo. Arquivos que não podem ser lidos continuam no storage e não são
+  apresentados como bases prontas para análise.
+- As sessões da ponte são mantidas em memória por até duas horas de inatividade,
+  no worker único configurado para a VM (o mesmo contrato dos jobs atuais).
+- A extração e a ferramenta territorial usam `SLTFeedback` para avisos,
+  confirmações, acompanhamento e desfechos. A faixa `ea-feedback` foi removida.
+  Campos de formulário, metadados e diagnósticos de camadas permanecem na página.
+
+Validação local: testes de autorização/isolamento e leitura de GPKG/ZIP; navegador
+com cliente SFTPGo real e upload interceptado, sem gravar dados de teste na VM.
+Esta alteração não foi implantada em produção.
+
+### Feedback em todas as seções
+
+As duas páginas usam o feedback oficial também na validação local (com
+cancelamento real), explorador, configuração salva, editores de regras,
+bancada incorporada, recuperação, tabela de atributos e downloads de relatórios.
+Os comandos, a edição de arquivos e o modelador da bancada encaminham suas
+mensagens ao componente da página hospedeira. Os formulários de escolha e os
+metadados continuam nos painéis; erros, avisos e confirmações não usam faixas.
+
+O cliente do storage mantém seu transporte e suas verificações nativas. A ponte
+adapta somente a apresentação de mensagens e confirmações, preservando o retorno
+`isConfirmed` esperado pelo cliente. A categoria continua obrigatória depois do
+envio; a bancada recebe as bases somente em **Confirmar bases**.
+
+`SLTFeedback.solicitar` coleta nomes no diálogo oficial; `processo` aceita um
+callback opcional `cancelar` apenas quando existe cancelamento real. Mensagens
+recebidas durante um processo são registradas nas etapas. O componente acompanha
+formulários `dialog` abertos e retorna ao documento quando eles são removidos.
+
+### Navbar restrita e acompanhamento global (24/09/2026)
+
+As duas páginas incluem `navbar_painel_restrita.html`, o menu adaptável
+`navbar_modulo/geoprocessamento.html` e `admin-session-bar`. A identificação
+vem da sessão autenticada, pelo mesmo `admin-auth.js` dos outros módulos.
+
+O componente compartilhado `assets/js/feedback.js` e seu CSS usam cabeçalho
+preenchido pela cor do status, título branco e duas barras abaixo do histórico:
+a tarefa atual, verde com faixas, e o processo geral, azul. As porcentagens
+vêm do servidor; não existem timers para fazer a barra avançar. Quando um
+serviço não informa uma medição, a barra indica **Aguardando medição**.
+
+Contrato incremental para os consumidores existentes:
+
+- `progresso(percentualGeral, mensagem, percentualTarefa)` mantém os dois
+  argumentos antigos e aceita a medição da tarefa como terceiro argumento.
+- `acompanhar(job)` apresenta `logs` ou `etapas` sequenciadas, `percentual`,
+  `progresso_tarefa` e a etapa atual, sem repetir eventos.
+- `definirCancelamento(callback, motivo)` habilita a ação somente quando o
+  consumidor oferece interrupção real. O callback precisa aguardar a confirmação
+  do servidor. `restaurar` pode devolver o formulário ao estado de preparação.
+- Serviços antigos sem endpoint de cancelamento mantêm o botão desabilitado,
+  com explicação. Abortar o HTTP não é tratado como prova de cancelamento no
+  servidor. Operações já persistidas não são desfeitas automaticamente.
+
+A extração e a geração territorial oferecem cancelamento cooperativo durante
+leitura e cálculo, com verificação entre tarefas. O OGR também verifica a
+interrupção no callback nativo. Ao iniciar a gravação final, o servidor rejeita
+novo cancelamento para não deixar saídas parciais. A configuração da interface
+permanece disponível para uma nova tentativa. Cancelamento aceito na geração
+municipal limpa a pasta de saída ainda não registrada; o audit trail permanece.
+
+O progresso geral dessas duas operações conta três fases concluídas: leitura,
+análise/materialização e gravação. Não representa previsão de duração. A
+medição da tarefa usa feições, indicadores, arquivos ou o callback do OGR;
+etapas sem contador não recebem percentuais inventados.
+
+A geração municipal utiliza jobs privados por usuário, consultados a cada
+500 ms. O endpoint síncrono de exportação foi preservado por compatibilidade.
+Os novos jobs e controles vivem no worker local; reiniciar durante um cálculo
+não o recupera automaticamente. Nenhuma alteração foi implantada na VM.
+
+### Preparação unificada das camadas
+
+A subseção 1.3 contém somente os dois modos de enriquecimento. Configurações antigas de Intersect/Identity continuam legíveis no serviço, mas a interface solicita a escolha de um dos algoritmos atuais antes de executar.
+
+O painel Leaflet da seção 1 reúne entradas (com validação e arquivos de origem) e bases (por categoria). Selecionar uma camada exibe seus metadados no contêiner independente de informações. As caixas de visibilidade não alteram a composição de processamento. Bases pendentes só entram na bancada ao usar **Enviar bases à bancada**; editar, limpar e desfazer têm alcance explicitamente restrito às bases pendentes. A remoção na bancada continua sendo definitiva para a composição da execução.
+
+O contrato de configuração versão 5 distingue `escopo=analise` (três subseções, inclusive algoritmo, regras, entradas, finalidades e nome de saída) de `escopo=bases` (somente bases, regras e categorias). As listas têm identificadores prefixados por `lista-bases-` e são filtradas separadamente no explorador. Arquivos anteriores são considerados configurações de análise. O carregamento de listas não altera entradas, algoritmo ou nome de saída e devolve as bases ao estado pendente de confirmação. Rascunhos de análise podem ser salvos antes de escolher bases ou algoritmo. Arquivos de entrada locais continuam temporários: os dados binários não são incluídos nos arquivos de configuração.
+
+Os cards auxiliares de ferramenta territorial e configuração da análise usam o mesmo padrão vertical (título, descrição e uma ação por linha). No desktop, têm a largura de uma coluna: ferramenta à direita acima de 1.3 e configuração à esquerda abaixo de 1.1; em telas estreitas ocupam a largura disponível. O card dinâmico “Entradas desta análise” foi removido. A seleção de uma ou várias entradas ocorre no explorador de 1.1, e os dois algoritmos consomem esse mesmo conjunto; enviar um arquivo local ou limpar a entrada substitui/limpa também as entradas adicionais anteriores.

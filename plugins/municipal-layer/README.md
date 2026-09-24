@@ -306,6 +306,7 @@ Esse exemplo recebe o ZIP em memória. O hospedeiro decide o destino de `arquivo
 | Propriedade | Contrato |
 | --- | --- |
 | `apiBaseUrl` | String, padrão `/api` |
+| `feedback` | Componente opcional do hospedeiro com `confirmar`, `processo`, `warning` e `error`; o SICARD fornece `SLTFeedback`, dispensando faixas próprias de interação |
 | `client` | Adaptador opcional com métodos async `catalog(signal)`, `preview(config, signal)` e `export(config, signal)` |
 | `value` | Configuração completa: `attributes` como lista de IDs e `format` como `fgb`, `gpkg` ou `shp` |
 | `onChange` | Recebe a próxima configuração; no modo controlado o hospedeiro deve atualizar `value` |
@@ -542,3 +543,11 @@ python -B scripts/empacotar.py
 O script recusa sobrescrever a saída. Use `--output` com outro nome ou preserve a versão anterior. Ele não compila nem testa automaticamente: execute build/testes antes se mudou código. Inclui os builds existentes, gera o manifesto e verifica os hashes.
 
 [VALIDACAO.md](VALIDACAO.md) registra a validação funcional anterior. A entrega do pacote informa separadamente as verificações de empacotamento executadas. Um servidor ativo no computador de preparação não será iniciado automaticamente no computador que recebe o ZIP.
+
+
+A integração SICARD acompanha a geração por jobs autenticados e encaminha os
+logs e as duas medidas de progresso ao feedback global. O callback de exportação
+pode receber `(configuration, signal, feedbackProcess)`; clientes existentes
+continuam compatíveis. Cancelar aguarda a confirmação do servidor, preserva a
+seleção e não executa `onExport`. O registro final no acervo é uma etapa atômica
+que não aceita nova solicitação de cancelamento.

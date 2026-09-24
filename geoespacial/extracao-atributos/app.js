@@ -6,10 +6,11 @@ import { criarResultados } from "./resultados.js";
 
 import { adaptador, json, esperar } from './api.js';
 import { confirmarExecucao, acompanharExecucao } from './processo.js';
-import { editarEntrada, editarFinalidade, editarRegra, prefixoPadrao, resumoEntrada, categoriaBinaria } from './regras.js';
+import { editarFinalidade, editarRegra, prefixoPadrao, categoriaBinaria } from './regras.js';
 import { renderDiagrama } from './diagramas.js';
 import { restaurarRetornoMunicipal } from './municipal.js';
-import { escolherArquivo } from './explorador.js';
+
+import { componentes, removerPrevia } from './preparacao.js';
 
 const OPCOES_OVERLAY=[
   ["promover_multipartes","Promover a multipartes","PROMOTE_TO_MULTI",true],
@@ -18,19 +19,34 @@ const OPCOES_OVERLAY=[
   ["geometrias_preparadas","Geometrias preparadas","USE_PREPARED_GEOMETRIES",true],
   ["pretestar_continencia","Pré-testar continência","PRETEST_CONTAINMENT",false],
 ];
-const state={catalog:[],categories:[],bases:[],staging:[],input:"",operation:"",
+const state={bancadaEntradas:[],bancadaBases:[],catalog:[],categories:[],bases:[],staging:[],input:"",operation:"",
   opcoes:Object.fromEntries(OPCOES_OVERLAY.map(([chave,,,padrao])=>[chave,padrao])),
-  nomeSaida:"",result:null,busy:false,uploading:false,
+  nomeSaida:"",result:null,busy:false,uploading:false,loadingCatalog:false,catalogError:false,
   // Só no enriquecimento: configuração da entrada principal, entradas adicionais e finalidades.
   inputConfig:null,entradasExtras:[],finalidades:[]};
-const map=criarMapa(()=>reconciliarPainel()),results=criarResultados();
+const map=criarMapa(()=>{reconciliarPainel();controls();}),results=criarResultados();
 const config=criarConfiguracao(state,changed);
-// Mostra na 1.3 exatamente o que o botao Executar extracao esta enxergando:
-// mesma leitura de state.input e state.bases que decide se ele habilita.
+// A seção 2 confirma a composição real da bancada, independentemente de visibilidade.
+const componentesEntrada=componentes;
+const camadaEntrada=id=>state.bancadaEntradas.find(e=>e.id===id)?.layer||state.catalog.find(l=>l.id===id);
+function idsDaComposicao(){
+  return [...state.bancadaBases.map(b=>b.id),...entradasEnriquecimento()
+    .filter(e=>e.principal||['enriquecimento','estatisticas'].includes(state.operation))
+    .flatMap(e=>componentesEntrada(camadaEntrada(e.id)).map(l=>l.id))];
+}
+function bancadaCompleta(){
+  const painel=map.camadas();if(!painel)return false;
+  const presentes=new Set(painel.map(l=>l.id));
+  return idsDaComposicao().every(id=>presentes.has(id));
+}
 function renderSelecao() {
   const host=$("#ea-run-selection");if(!host)return;
   const nome=id=>state.catalog.find(l=>l.id===id)?.nome||id;
-  const entrada=state.catalog.find(l=>l.id===state.input);
+  const presentes=new Set((map.camadas()||[]).map(l=>l.id));
+  const entradas=entradasEnriquecimento().filter(e=>e.principal||['enriquecimento','estatisticas'].includes(state.operation))
+    .flatMap(e=>componentesEntrada(camadaEntrada(e.id))).filter(l=>presentes.has(l.id));
+  const entrada=entradas[0];
+  const bases=state.bancadaBases.filter(b=>presentes.has(b.id));
   host.replaceChildren();
   const linha=(rotulo,conteudo,vazio)=>{
     const bloco=document.createElement("div");bloco.className="ea-execucao-linha";
@@ -41,11 +57,11 @@ function renderSelecao() {
     return bloco;
   };
   const valor=document.createElement("span");valor.className="ea-execucao-valor";
-  valor.textContent=entrada?[entrada.nome,...(['enriquecimento','estatisticas'].includes(state.operation)?state.entradasExtras.map(e=>nome(e.id)):[])].join('; '):"";
-  host.append(linha("Camadas de entrada:",valor,entrada?"":"nenhuma camada de entrada escolhida em 1.1"));
+  valor.textContent=entradas.map(e=>e.nome).join('; ');
+  host.append(linha("Camadas de entrada:",valor,entrada?"":"nenhuma camada de entrada adicionada à bancada"));
 
   const grupos=state.categories
-    .map(c=>({c,itens:state.bases.filter(b=>b.category===c.id)}))
+    .map(c=>({c,itens:bases.filter(b=>b.category===c.id)}))
     .filter(g=>g.itens.length);
   const lista=document.createElement("div");lista.className="ea-execucao-bases";
   for(const {c,itens} of grupos){
@@ -60,16 +76,22 @@ function renderSelecao() {
     }
     lista.append(grupo);
   }
-  host.append(linha(`Camadas de base: (${state.bases.length})`,lista,
-    state.bases.length?"":"nenhuma base confirmada em 1.2; monte a lista e use Confirmar bases"));
+  host.append(linha(`Camadas de base: (${bases.length})`,lista,
+    bases.length?"":"nenhuma base adicionada à bancada; prepare e confirme as bases em 1.2"));
+  const algoritmo=document.createElement('span');algoritmo.className='ea-execucao-valor';
+  algoritmo.textContent=state.operation?$('#ea-operation').selectedOptions[0]?.textContent:'';
+  host.append(linha('Algoritmo:',algoritmo,state.operation?'':'nenhum algoritmo selecionado em 1.3'));
+  const saida=document.createElement('span');saida.className='ea-execucao-valor';
+  saida.textContent=state.nomeSaida.trim()||(entrada?`Extração de ${state.bancadaEntradas[0]?.layer.nome} (automático)`:'Nome automático após adicionar a entrada');
+  host.append(linha('Camada de saída:',saida));
   // Estimativa antes de executar: o que se sabe sem processar.
-  if(['enriquecimento','estatisticas'].includes(state.operation)&&state.input){
+  if(['enriquecimento','estatisticas'].includes(state.operation)&&state.bancadaEntradas.length){
     const feicoes=entradasEnriquecimento().reduce((soma,item)=>{
-      const camada=state.catalog.find(l=>l.id===item.id);
+      const camada=camadaEntrada(item.id);
       return soma+(camada?.geojson?.features?.length||0);
     },0);
-    const recorte=state.operation==='enriquecimento'&&state.bases.some(b=>b.regra?.papel==="recorte");
-    const todas=state.operation==='enriquecimento'?state.bases.filter(b=>b.regra?.multiplicidade==="todas").map(b=>nome(b.id)):[];
+    const recorte=state.operation==='enriquecimento'&&bases.some(b=>b.regra?.papel==="recorte");
+    const todas=state.operation==='enriquecimento'?bases.filter(b=>b.regra?.multiplicidade==="todas").map(b=>nome(b.id)):[];
     const partes=[feicoes?`${feicoes} feição(ões) de entrada`:"contagem da entrada indisponível"];
     if(recorte)partes.push("o recorte divide linhas e polígonos entre as unidades, aumentando o número de registros");
     if(todas.length)partes.push(`a regra "todas" em ${todas.join(", ")} repete o registro por feição tocada`);
@@ -81,7 +103,7 @@ function renderSelecao() {
 }
 // Entradas do enriquecimento: a principal (1.2) e as adicionais.
 function entradasEnriquecimento() {
-  return [...(state.input?[{id:state.input,principal:true}]:[]),...state.entradasExtras];
+  return state.bancadaEntradas.map((e,i)=>({...e,principal:i===0}));
 }
 // Campos que a saída terá, para escolher os das finalidades sem precisar executar antes.
 function camposPrevistos() {
@@ -93,13 +115,13 @@ function camposPrevistos() {
     {campo:"id_origem",rotulo:"id_origem · identificador da feição",grupo:"Identificação"},
   ];
   for(const entrada of entradasEnriquecimento()){
-    const camada=state.catalog.find(l=>l.id===entrada.id);
-    const config=entrada.principal?state.inputConfig:entrada.config;
-    const campos=config?.campos||camposCamada(camada);
+    const camada=camadaEntrada(entrada.id);
+    const config=entrada.config;
+    const campos=state.operation==='estatisticas'?camposCamada(camada):config?.campos||camposCamada(camada);
     for(const campo of campos)if(!itens.some(i=>i.campo===campo))itens.push({campo,rotulo:campo,grupo:`Entrada · ${nome(entrada.id)}`});
   }
-  for(const base of state.bases){
-    const camada=state.catalog.find(l=>l.id===base.id);
+  for(const base of state.bancadaBases){
+    const camada=base.layer;
     const prefixo=base.regra?.prefixo?(base.regra.prefixo.endsWith("_")?base.regra.prefixo:base.regra.prefixo+"_"):prefixoPadrao(nome(base.id));
     const campos=state.operation==='estatisticas'?camposCamada(camada):base.regra?.campos||camposCamada(camada);
     const grupo=`Base · ${nome(base.id)}`;
@@ -113,79 +135,80 @@ function camposPrevistos() {
 // O que o processamento enxerga e o que esta no painel da bancada. Se o usuario
 // remove uma camada la, ela sai das bases e da entrada aqui.
 function reconciliarPainel() {
-  const noPainel=map.camadas();
-  if(!noPainel||state.busy||state.loadingMap)return;
-  const presentes=new Set(noPainel.map(item=>item.id));
-  const carregada=id=>map.exibida(id);
-  const removidas=state.bases.filter(base=>carregada(base.id)&&!presentes.has(base.id));
-  const entradaSaiu=Boolean(state.input)&&carregada(state.input)&&!presentes.has(state.input);
-  const extrasRemovidas=['enriquecimento','estatisticas'].includes(state.operation)?state.entradasExtras.filter(e=>carregada(e.id)&&!presentes.has(e.id)):[];
-  if(!removidas.length&&!entradaSaiu&&!extrasRemovidas.length)return;
-  const nome=id=>state.catalog.find(l=>l.id===id)?.nome||id;
-  const perdida=state.input;
-  state.bases=state.bases.filter(base=>!removidas.includes(base));
-  if(entradaSaiu){state.input='';state.inputConfig=null;}
-  state.entradasExtras=state.entradasExtras.filter(e=>!extrasRemovidas.includes(e));
-  invalidarResultado();config.render();controls();
-  const partes=[];
-  if(extrasRemovidas.length)partes.push(`${extrasRemovidas.length} entrada(s) adicional(is) removida(s) no painel.`);
-  if(removidas.length)partes.push(`${removidas.length} base(s) removida(s) no painel: ${removidas.map(b=>nome(b.id)).join(', ')}.`);
-  if(entradaSaiu)partes.push(`A camada de entrada ${nome(perdida)} saiu do painel.`);
-  feedback(`${partes.join(' ')} A extração passa a considerar apenas o que está no painel de camadas.`);
+ const noPainel=map.camadas();if(!noPainel||state.busy)return;
+ const presentes=new Set(noPainel.map(l=>l.id)),saiu=id=>map.exibida(id)&&!presentes.has(id);
+ let alterou=false;
+ state.bancadaEntradas=state.bancadaEntradas.filter(e=>{
+  const l=e.layer;
+  if(l.camadas_bancada){const removidas=l.camadas_bancada.filter(c=>saiu(c.id));for(const c of removidas)removerPrevia(state,{grupo:'entrada',entradaId:e.id,chaveOriginal:c.chave});const restantes=l.camadas_bancada.filter(c=>!saiu(c.id));
+   if(restantes.length!==l.camadas_bancada.length){alterou=true;l.camadas_bancada=restantes;l.arquivo_local={...l.arquivo_local,camadas:restantes.map(c=>c.chave)};l.geojson={type:'FeatureCollection',features:restantes.flatMap(c=>c.geojson.features)};}
+   return restantes.length>0;
+  }
+  if(saiu(e.id)){removerPrevia(state,{grupo:'entrada',entradaId:e.id});alterou=true;return false;}return true;
+ });
+ state.bancadaBases=state.bancadaBases.filter(b=>{if(saiu(b.id)){removerPrevia(state,{grupo:'base',id:b.id});alterou=true;return false;}return true;});
+ if(alterou){invalidarResultado();config.render();syncMap();controls();}
 }
+
 function controls() {
+  config.marcarLista();
   $("#ea-municipal-open").setAttribute("aria-disabled",String(state.busy));
   $("#ea-recover").disabled=state.busy;
+  $('#ea-refresh').disabled=state.busy||state.uploading||state.loadingCatalog;
+  const catalogStatus=$('#ea-catalog-status');
+  catalogStatus.hidden=true;catalogStatus.textContent='';
   document.querySelectorAll("#ea-config input, #ea-config select, #ea-config button").forEach(node=>{if(state.busy)node.disabled=true;});
-  $("#ea-run").disabled=state.busy||state.uploading||state.loadingMap||!disponivel("executar")||!state.operation||!state.input||!state.bases.length;
+  $("#ea-run").disabled=state.busy||state.uploading||state.validatingBases||state.loadingMap||state.loadingCatalog||!disponivel("executar")||!state.operation||!state.bancadaEntradas.length||!state.bancadaBases.length||!bancadaCompleta();
   $("#ea-export").disabled=state.busy||!state.result||!disponivel("exportar");
   renderSelecao();
-  renderEntradas();renderFinalidades();
+  renderFinalidades();
   const entrada=state.catalog.find(l=>l.id===state.input);
   const campoSaida=$("#ea-nome-saida");
   if(campoSaida){
     campoSaida.placeholder=entrada?`Extração de ${entrada.nome}`:"Extração de <camada de entrada>";
     campoSaida.disabled=state.busy;
   }
-  const falta=[!state.operation&&"o algoritmo de processamento",!state.input&&"a camada de entrada",
-    !state.bases.length&&"as camadas base"].filter(Boolean);
+  const falta=[!state.operation&&"o algoritmo de processamento",!state.bancadaEntradas.length&&"a camada de entrada na bancada",
+    !state.bancadaBases.length&&"as camadas base"].filter(Boolean);
   $("#ea-integration-status").textContent=state.busy?"Processando…"
+    :state.loadingCatalog?"Carregando catálogo; a preparação na seção 1 continua disponível…"
     :state.loadingMap?"Carregando camadas no mapa…"
     :!disponivel("executar")?"Carregando catálogo…"
     :falta.length?`Falta selecionar ${falta.join(" e ")}.`
-    :`Pronto para executar sobre ${state.bases.length} base(s).`;
+    :!bancadaCompleta()?'Aguardando a inclusão das camadas na bancada.':`Pronto para executar com as entradas e ${state.bancadaBases.length} base(s) presentes na bancada.`;
 }
 function syncMap() {
-  const items=state.bases.map(base=>{
-    const layer=state.catalog.find(l=>l.id===base.id),category=state.categories.find(c=>c.id===base.category);
-    return {...layer,key:`base:${layer.id}`,grupo:category.nome,color:category.color};
+  const items=state.bancadaBases.map(base=>{
+    const layer=base.layer,category=state.categories.find(c=>c.id===base.category);
+    return {...layer,key:`base:${layer.id}`,grupo:category?.nome||base.category,papelExtracao:'base',arquivoGrupo:layer.arquivo_local?.nome||layer.arquivo||layer.nome,color:category?.color};
   });
-  const input=state.catalog.find(l=>l.id===state.input);
-  if(input) items.push({...input,key:`input:${input.id}`,grupo:"Input",color:"#d6542b"});
-  if(['enriquecimento','estatisticas'].includes(state.operation))for(const entrada of state.entradasExtras){
-    const layer=state.catalog.find(l=>l.id===entrada.id);
-    if(layer)items.push({...layer,key:`input:${layer.id}`,grupo:'Input',color:'#d6542b'});
-  }
+  for(const entrada of state.bancadaEntradas)for(const layer of componentesEntrada(entrada.layer))items.push({...layer,key:`input:${layer.id}`,grupo:'Input',papelExtracao:'entrada',arquivoGrupo:entrada.layer.arquivo_local?.nome||entrada.layer.arquivo||layer.arquivo||entrada.layer.nome,color:'#d6542b'});
   if(state.result?.geojson) items.push({key:`resultado:${state.result.id}`,nome:"Geometria da extração",geojson:state.result.geojson,grupo:"Resultado",color:"#853eaf"});
   map.sync(items.filter(item=>item.geojson));
 }
 // Leitura de arquivo no servidor custa uma conexao ao banco remoto: fila curta.
 const SIMULTANEAS=3, TENTATIVAS=3;
-let mapVersion=0;
+let mapVersion=0,assinaturaExecucao="";
 function invalidarResultado(){
   if(!state.result)return;
   state.result=null;results.clear();
   feedback('A configuração mudou. Execute novamente para atualizar os resultados.');
 }
+// Assinatura do pedido sem os GeoJSON (podem ter dezenas de MB): ids e contagem de feições bastam.
+function assinaturaDe(pedido){
+  const leve=l=>l?{id:l.id,n:l.geojson?.features?.length}:l;
+  return JSON.stringify({...pedido,input:leve(pedido.input),categorias:pedido.categorias.map(c=>({...c,camadas:c.camadas.map(leve)}))});
+}
 async function changed(painel) {
   const version=++mapVersion;
-  invalidarResultado();
-  state.loadingMap=true;config.render();syncMap();controls();
   const falhas=[];
   try{
-    const selected=state.catalog.filter(l=>l.id===state.input||state.bases.some(b=>b.id===l.id)
-      ||['enriquecimento','estatisticas'].includes(state.operation)&&state.entradasExtras.some(e=>e.id===l.id));
-    const pendentes=selected.filter(l=>!l.geojson);
+    const assinatura=assinaturaDe(request());
+    if(assinatura!==assinaturaExecucao){invalidarResultado();assinaturaExecucao=assinatura;}
+    state.loadingMap=true;config.render();syncMap();controls();
+    const selected=state.catalog.filter(l=>l.id===state.input||state.bases.some(b=>b.id===l.id)||state.staging.some(b=>b.id===l.id)
+      ||state.entradasExtras.some(e=>e.id===l.id));
+    const pendentes=selected.filter(l=>!l.geojson&&l.origem!=='local');
     if(pendentes.length)painel?.etapa(`Lendo ${pendentes.length} arquivo(s) do storage, ${SIMULTANEAS} por vez.`);
     // Em paralelo sem limite, 18 camadas abriam 18 conexoes ao banco remoto e a
     // maioria estourava o tempo de conexao. Uma fila curta resolve, e uma camada
@@ -196,7 +219,8 @@ async function changed(painel) {
         const l=pendentes[proxima++];
         for(let tentativa=1;tentativa<=TENTATIVAS;tentativa++){
           try{
-            l.geojson=await chamar('carregarCamada',l);
+            l.carregamento??=chamar('carregarCamada',l).finally(()=>{delete l.carregamento;});
+            l.geojson=await l.carregamento;delete l.erro;
             painel?.etapa(`${l.nome}: ${l.geojson.features.length} feição(ões) no mapa. (${++concluidas}/${pendentes.length})`);
             break;
           }catch(error){
@@ -207,7 +231,7 @@ async function changed(painel) {
               continue;
             }
             concluidas++;
-            falhas.push(`${l.nome}: ${error.message}`);
+            l.erro=error.message;falhas.push(`${l.nome}: ${error.message}`);
             painel?.etapa(`${l.nome}: ${error.message}`,'erro');
             break;
           }
@@ -216,13 +240,14 @@ async function changed(painel) {
     }
     await Promise.all(Array.from({length:Math.min(SIMULTANEAS,pendentes.length)},trabalhador));
     if(version===mapVersion){config.render();syncMap();}
-    if(falhas.length)feedback(`Não foi possível carregar ${falhas.length} camada(s): ${falhas.join(' · ')}`);
-  }catch(error){falhas.push(error.message);painel?.etapa(error.message,'erro');feedback(`Não foi possível carregar uma camada no mapa: ${error.message}`);}
-  finally{if(version===mapVersion){state.loadingMap=false;controls();}}
+    if(falhas.length&&version===mapVersion)feedback(`Não foi possível carregar ${falhas.length} camada(s): ${falhas.join(' · ')}`,'error');
+  }catch(error){falhas.push(error.message);painel?.etapa(error.message,'erro');if(version===mapVersion)feedback(`Não foi possível carregar uma camada no mapa: ${error.message}`,'error');}
+  finally{if(version===mapVersion){state.loadingMap=false;config.marcarLista();reconciliarPainel();controls();}}
   return falhas;
 }
 function busy(value) {
   state.busy=value;
+  $("#ea-workbench-frame").inert=value;
   document.querySelectorAll("#ea-config input, #ea-config select, #ea-config button").forEach(node=>{node.disabled=value;});
   if(!value) config.render();controls();
   $("#ea-run").textContent=value?"Processando…":"Executar extração";
@@ -261,44 +286,6 @@ function validateResult(value) {
 const criar=(tag,texto,classe)=>{const node=document.createElement(tag);if(texto!==undefined)node.textContent=texto;if(classe)node.className=classe;return node;};
 const botaoPequeno=(texto,acao)=>{const b=criar("button",texto,"ea-btn ea-regra-botao");b.type="button";b.disabled=state.busy;b.addEventListener("click",acao);return b;};
 const nomeCamada=id=>state.catalog.find(l=>l.id===id)?.nome||id;
-// Entradas do enriquecimento na própria 1.2: a principal e as adicionais, cada uma
-// com identificador, filtro e campos.
-export function renderEntradas() {
-  const host=$("#ea-entradas");if(!host)return;
-  host.replaceChildren();
-  host.hidden=!['enriquecimento','estatisticas'].includes(state.operation);
-  if(host.hidden)return;
-  host.append(criar("h4","Entradas desta análise","ea-op-params-title"));
-  const itens=entradasEnriquecimento();
-  if(!itens.length)host.append(criar("p","Escolha a camada de entrada acima; ela será a entrada principal.","ea-hint"));
-  for(const item of itens){
-    const linha=criar("div",undefined,"ea-execucao-linha");
-    const config=item.principal?state.inputConfig:item.config;
-    linha.append(criar("strong",`${nomeCamada(item.id)}${item.principal?" (principal)":""}`),criar("span",` · ${resumoEntrada(config)} `));
-    linha.append(botaoPequeno("Configurar",async()=>{
-      const camada=state.catalog.find(l=>l.id===item.id);
-      const nova=await editarEntrada({nomeEntrada:nomeCamada(item.id),config,preservar:state.operation==='estatisticas',camposDisponiveis:camposCamada(camada)});
-      if(!nova)return;
-      if(item.principal)state.inputConfig=nova;else item.config=nova;
-      changed();
-    }));
-    if(!item.principal)linha.append(" ",botaoPequeno("Remover",()=>{
-      state.entradasExtras=state.entradasExtras.filter(e=>e!==item);changed();
-    }));
-    host.append(linha);
-  }
-  host.append(botaoPequeno("Adicionar entrada",async()=>{
-    const excluidas=[state.input,...state.entradasExtras.map(e=>e.id),...state.bases.map(b=>b.id),...state.staging.map(b=>b.id)].filter(Boolean);
-    const escolha=await escolherArquivo({catalog:state.catalog,excluded:excluidas,multiple:true,title:"Selecionar entradas adicionais"});
-    if(!escolha)return;
-    for(const camada of escolha){
-      Object.assign(state.catalog.find(layer=>layer.id===camada.id),camada);
-      if(!state.entradasExtras.some(e=>e.id===camada.id))state.entradasExtras.push({id:camada.id,config:null});
-    }
-    changed();
-  }));
-  host.append(criar("small",state.operation==='estatisticas'?"Cada entrada mantém todas as feições e atributos; pode ter um campo identificador. Entradas do mesmo tipo saem na mesma camada.":"Cada entrada pode ter identificador, filtro e campos próprios. Entradas do mesmo tipo de geometria saem na mesma camada.","ea-hint"));
-}
 // Recortes por finalidade: os campos são escolhidos numa lista, sem digitar nome de campo.
 export function renderFinalidades() {
   const host=$("#ea-finalidades");if(!host)return;
@@ -331,46 +318,32 @@ function renderParametros() {
   const host=$("#ea-operation-params");if(!host)return;
   host.replaceChildren();
   // Sem algoritmo escolhido nao ha parametro que faca sentido mostrar.
-  host.hidden=!state.operation;
-  renderEntradas();renderFinalidades();
-  if(!state.operation)return;
+  host.hidden=!['enriquecimento','estatisticas'].includes(state.operation);
+  renderFinalidades();
+  if(host.hidden)return;
   if(['enriquecimento','estatisticas'].includes(state.operation)){
     const titulo=document.createElement("h4");titulo.className="ea-op-params-title";titulo.textContent="Como as bases entram";
     const texto=document.createElement("p");texto.className="ea-hint";
-    texto.textContent=state.operation==='estatisticas'?"Cada feição mantém sua geometria e seus atributos. Risco e Restrição recebem Sim/Não; nas outras bases, escolha a estatística padrão e personalize por campo no botão Regra da seção 1.2. Sem interseção, os campos estatísticos ficam vazios.":"Cada base confirmada tem um botão Regra na lista da seção 1.2, ao lado da camada: papel (atributos ou unidade de recorte), ligação, multiplicidade, campos, prefixo, apelidos e buffer. Sem mexer, vale o padrão: por localização, feição de maior sobreposição, todos os campos.";
+    texto.textContent=state.operation==='estatisticas'?"Cada feição mantém sua geometria e seus atributos. Risco e Restrição recebem Sim/Não; nas outras bases, escolha a estatística padrão e personalize por campo no botão Regra abaixo. Sem interseção, os campos estatísticos ficam vazios.":"Configure a regra de cada base abaixo: papel (atributos ou unidade de recorte), ligação, multiplicidade, campos, prefixo, apelidos e buffer. Sem mexer, vale o padrão: por localização, feição de maior sobreposição, todos os campos.";
     host.append(titulo,texto);renderSelecao();
     return;
   }
-  const operador=state.operation==="identity"?"ogr.Layer.Identity":"ogr.Layer.Intersection";
-  const titulo=document.createElement("h4");titulo.className="ea-op-params-title";
-  titulo.textContent=`Parâmetros de ${operador}`;host.append(titulo);
-  const grade=document.createElement("div");grade.className="ea-op-params-grid";
-  for(const [chave,rotulo,opcao] of OPCOES_OVERLAY){
-    const campo=document.createElement("label");campo.className="ea-field";
-    const nome=document.createElement("span");nome.textContent=rotulo;
-    const dica=document.createElement("small");dica.textContent=opcao;
-    const select=document.createElement("select");
-    select.append(new Option("Sim","sim"),new Option("Não","nao"));
-    select.value=state.opcoes[chave]?"sim":"nao";
-    select.disabled=state.busy;
-    select.setAttribute("aria-label",`${rotulo} (${opcao})`);
-    select.addEventListener("change",()=>{state.opcoes[chave]=select.value==="sim";changed();});
-    campo.append(nome,dica,select);grade.append(campo);
-  }
-  host.append(grade);
+
 }
 function request() {
-  return {motor:"gdal",operacao:state.operation,opcoes:{...state.opcoes},nome_saida:state.nomeSaida.trim(),input:state.catalog.find(l=>l.id===state.input),categorias:state.categories.filter(c=>state.bases.some(b=>b.category===c.id)).map(c=>({id:c.id,nome:c.nome,camadas:state.bases.filter(b=>b.category===c.id).map(b=>state.catalog.find(l=>l.id===b.id)),
-    regras:['enriquecimento','estatisticas'].includes(state.operation)?Object.fromEntries(state.bases.filter(b=>b.category===c.id&&b.regra).map(b=>[b.id,b.regra])):{}})),
+  return {motor:"gdal",operacao:state.operation,opcoes:{...state.opcoes},nome_saida:state.nomeSaida.trim(),input:state.bancadaEntradas[0]?.layer,categorias:state.categories.filter(c=>state.bancadaBases.some(b=>b.category===c.id)).map(c=>({id:c.id,nome:c.nome,camadas:state.bancadaBases.filter(b=>b.category===c.id).map(b=>b.layer),
+    regras:['enriquecimento','estatisticas'].includes(state.operation)?Object.fromEntries(state.bancadaBases.filter(b=>b.category===c.id&&b.regra).map(b=>[b.id,b.regra])):{}})),
     ...(['enriquecimento','estatisticas'].includes(state.operation)?{
-      entradas:[{id:state.input,config:state.inputConfig||{}},...state.entradasExtras.map(e=>({id:e.id,config:e.config||{}}))],
+      entradas:state.bancadaEntradas.map(e=>({id:e.id,config:e.config||{}})),
+      entradas_locais:Object.fromEntries(state.bancadaEntradas.slice(1).filter(e=>e.layer.arquivo_local).map(e=>[e.id,e.layer.arquivo_local])),
       finalidades:state.finalidades.map(f=>({nome:f.nome,campos:[...f.campos]}))}:{})};
 }
 $("#ea-run").addEventListener("click",async()=>{
-  if(state.busy||state.uploading||!state.operation||!state.input||!state.bases.length) return;
-  try{map.assertReady();}catch(error){feedback(error.message);return;}
+  reconciliarPainel();
+  if(state.busy||state.uploading||state.validatingBases||state.loadingMap||state.loadingCatalog||!state.operation||!state.bancadaEntradas.length||!state.bancadaBases.length) return;
+  try{map.assertReady(idsDaComposicao());}catch(error){feedback(error.message,'error');return;}
   let pedido;
-  try{pedido=request();}catch(error){feedback(error.message);return;}
+  try{pedido=request();}catch(error){feedback(error.message,'error');return;}
   const confirmado=await confirmarExecucao({
     entrada:pedido.input.nome,
     saida:pedido.nome_saida||`Extração de ${pedido.input.nome}`,
@@ -379,30 +352,37 @@ $("#ea-run").addEventListener("click",async()=>{
     categorias:pedido.categorias,
   });
   if(!confirmado){feedback("Execução cancelada. Nada foi processado.");return;}
+  reconciliarPainel();
+  try{map.assertReady(idsDaComposicao());if(!state.bancadaEntradas.length||!state.bancadaBases.length||assinaturaDe(request())!==assinaturaDe(pedido))throw new Error('A composição da bancada mudou. Confira e execute novamente.');}catch(error){feedback(error.message,'error');return;}
   busy(true);state.result=null;results.clear();syncMap();
   const painel=acompanharExecucao();
   try {
-    const value=validateResult(await chamar("executar",pedido,job=>painel.etapas(job.etapas)));
+    const value=validateResult(await chamar("executar",pedido,job=>painel.acompanhar(job)));
     state.result=value;results.set(value);syncMap();
     painel.concluir("Extração concluída. Os resultados estão na tela e o pacote de saída (.zip) está pronto para baixar.",
       ()=>$("#ea-results").scrollIntoView({behavior:"smooth",block:"start"}));
-    feedback("Extração concluída. Consulte os resultados por categoria e camada.");
+
   } catch(error) {
     state.result=null;results.clear();syncMap();
-    painel.falhar(error.message);
-    feedback(`Não foi possível executar: ${error.message}`);
+    painel.falhar(error.message,error.name==='AbortError');
+
   }
   finally {busy(false);}
 });
 $("#ea-export").addEventListener("click",async()=>{
   if(!state.result||state.busy) return;
   busy(true);
-  try {await chamar("exportar",{resultado_id:state.result.id});feedback("Download iniciado.");}
-  catch(error) {feedback(`Não foi possível baixar: ${error.message}`);} finally {busy(false);}
+  const processo=window.SLTFeedback.processo("Baixando pacote de saída");
+  try {await chamar("exportar",{resultado_id:state.result.id});processo.concluir({message:"Download iniciado."});}
+  catch(error) {processo.concluir({type:"error",message:`Não foi possível baixar: ${error.message}`});} finally {busy(false);}
 });
 async function carregarCatalogo(){
+  if(state.loadingCatalog)return;
+  state.loadingCatalog=true;state.catalogError=false;controls();
+  try{
   const catalog=await chamar('listarCatalogo');
-  state.catalog=[...catalog.camadas,...state.catalog.filter(l=>l.origem==='local')];
+  const selecionadas=new Set([state.input,...state.bases.map(b=>b.id),...state.staging.map(b=>b.id),...state.entradasExtras.map(e=>e.id)]);
+  state.catalog=[...catalog.camadas,...state.catalog.filter(l=>(l.origem==='local'||selecionadas.has(l.id))&&!catalog.camadas.some(c=>c.id===l.id))];
   const colors=['#1769aa','#52812e','#ad5b22','#8c4495','#217f83','#a34242','#58657a'];
   state.categories=catalog.categorias.map((c,i)=>({...c,color:colors[i%colors.length]}));
   state.bases=state.bases.filter(b=>state.catalog.some(l=>l.id===b.id)&&state.categories.some(c=>c.id===b.category));
@@ -410,31 +390,37 @@ async function carregarCatalogo(){
   if(!state.catalog.some(l=>l.id===state.input))state.input='';
   state.entradasExtras=state.entradasExtras.filter(e=>state.catalog.some(l=>l.id===e.id));
   config.render();syncMap();controls();
+  }catch(error){state.catalogError=true;throw error;}
+  finally{state.loadingCatalog=false;controls();}
 }
 window.addEventListener('extracao:integracao',async()=>{
-  if(state.busy)return;busy(true);
+  if(state.busy||state.loadingCatalog)return;
+  const versaoInicial=mapVersion;
   try{
     await carregarCatalogo();
-    const retorno=restaurarRetornoMunicipal(state);
+    const retorno=mapVersion===versaoInicial?restaurarRetornoMunicipal(state):null;
     if(retorno){
+      if(!['enriquecimento','estatisticas'].includes(state.operation))state.operation='';
       $('#ea-operation').value=state.operation;$('#ea-nome-saida').value=state.nomeSaida;
       renderParametros();await changed();feedback(retorno);
     }
-  }catch(error){feedback(`Não foi possível carregar a configuração: ${error.message}`);}finally{busy(false);}
+  }catch(error){feedback(`Não foi possível carregar o catálogo: ${error.message}`,'error');}
   abrirExtracaoDaUrl();
 });
-window.SICARDExtracao={conectar:conectarIntegracao,renderParametros,renderSelecao,renderEntradas,renderFinalidades,changed};
+window.SICARDExtracao={atualizarControles:controls,conectar:conectarIntegracao,renderParametros,renderSelecao,renderFinalidades,changed};
 renderParametros();
 changed();
 conectarIntegracao(adaptador);
 document.getElementById('ea-refresh').addEventListener('click',async()=>{
-  if(state.busy)return;busy(true);try{await carregarCatalogo();await changed();feedback('Catálogo atualizado.');}catch(e){feedback(e.message);}finally{busy(false);}
+  if(state.busy||state.uploading||state.loadingCatalog)return;
+  try{await carregarCatalogo();await changed();feedback('Catálogo atualizado.');}catch(e){feedback(e.message,'error');}
 });
 document.getElementById('ea-recover').addEventListener('click',async()=>{
   let id;try{id=sessionStorage.getItem('slt-extracao-ultima');}catch{feedback('O navegador bloqueou a sessão local. Use Ver todas as extrações para recuperar sua análise.');return;}if(!id){feedback('Nenhuma execução salva nesta sessão do navegador.');return;}
   if(state.busy)return;busy(true);
-  try{const job=await json(`/extracao-atributos/execucoes/${id}`);state.result=validateResult(await esperar(job,id=>`/extracao-atributos/execucoes/${id}`));results.set(state.result);syncMap();feedback('Última análise recuperada.');}
-  catch(e){feedback(e.message);}finally{busy(false);}
+  const painel=acompanharExecucao('Recuperando análise');
+  try{const job=await json(`/extracao-atributos/execucoes/${id}`);state.result=validateResult(await esperar(job,id=>`/extracao-atributos/execucoes/${id}`,j=>painel.acompanhar(j)));results.set(state.result);syncMap();painel.concluir('Última análise recuperada.');}
+  catch(e){painel.falhar(e.message);}finally{busy(false);}
 });
 
 // Aberta pelo índice (?execucao=<id>): mostra o resultado da extração já executada.
@@ -446,7 +432,7 @@ async function abrirExtracao(id){
     state.result=validateResult(job.resultado);results.set(state.result);syncMap();
     $("#ea-results").scrollIntoView({behavior:"smooth",block:"start"});
     feedback(`Resultados de "${job.resultado.input_nome||'extração'}" abertos. O pacote de saída pode ser baixado na seção 03.`);
-  }catch(error){feedback(`Não foi possível abrir: ${error.message}`);}finally{busy(false);}
+  }catch(error){feedback(`Não foi possível abrir: ${error.message}`,'error');}finally{busy(false);}
 }
 const execucaoDaUrl=new URLSearchParams(location.search).get('execucao');
 let execucaoAberta=false;

@@ -66,7 +66,7 @@ const limits = {fgb:6500, gpkg:1900, shp:250};
 const ALL_SOURCES = '__todas__';
 
 /** onExport({blob, filename, configuration, attributes}); download=false lets the host own delivery. */
-export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChange, onExport, download=true, className='', categoriaNome=''}) {
+export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChange, onExport, download=true, className='', categoriaNome='', feedback}) {
   const api = useMemo(() => client || createLayerClient(apiBaseUrl), [client,apiBaseUrl]);
   const [catalog,setCatalog] = useState(null);
   const [attempt,setAttempt] = useState(0);
@@ -86,10 +86,10 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   const [preview,setPreview] = useState(null);
   const mounted = useRef(true);
   useEffect(() => { mounted.current=true; const ctrl=new AbortController(); setCatalog(null); setError('');
-    api.catalog(ctrl.signal).then(data => {setCatalog(data);setSource(data.attributes.find(a=>a.source==='IBGE · Censo 2022')?.source || data.attributes[0]?.source || '');}).catch(e=> {if(e.name!=='AbortError')setError(e.message);});
+    api.catalog(ctrl.signal).then(data => {setCatalog(data);setSource(data.attributes.find(a=>a.source==='IBGE · Censo 2022')?.source || data.attributes[0]?.source || '');}).catch(e=> {if(e.name!=='AbortError'){setError(e.message);feedback?.error(e.message,'Catálogo de indicadores');}});
     return () => {mounted.current=false;ctrl.abort();};
   }, [api,attempt]);
-  function update(next) {if(value === undefined)setLocal(next);onChange?.(next);setStatus('');}
+  function update(next) {if(feedback && next.attributes.length>limits[next.format] && (next.format!==config.format || config.attributes.length<=limits[config.format]))feedback.warning('Seleção excede o limite do formato. Escolha FlatGeobuf ou remova atributos.','Formato da camada');if(value === undefined)setLocal(next);onChange?.(next);setStatus('');}
   const attributes = catalog?.attributes || [];
   const sources = [...new Set(attributes.map(a=>a.source))];
   // "Todas" junta as fontes; com "Todos os anos", a lista traz o catálogo inteiro
@@ -140,11 +140,14 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
     if(!config.attributes.length || config.attributes.length>limits[config.format])return;
     const ctrl=new AbortController();
     const pedido={attributes:config.attributes,format:config.format};
-    const timer=setTimeout(()=>api.preview(pedido,ctrl.signal).then(data=>{if(!ctrl.signal.aborted)setPreview(data);}).catch(e=>{if(!ctrl.signal.aborted)setPreviewError(e.message);}),250);
+    const timer=setTimeout(()=>api.preview(pedido,ctrl.signal).then(data=>{if(!ctrl.signal.aborted)setPreview(data);}).catch(e=>{if(!ctrl.signal.aborted){setPreviewError(e.message);feedback?.error(e.message,'Prévia dos indicadores');}}),250);
     return ()=>{clearTimeout(timer);ctrl.abort();};
   },[api,chaveDaPrevia,previewAttempt]);
   function toggle(id) {update({...config,attributes:selected.has(id)?config.attributes.filter(x=>x!==id):[...config.attributes,id]});}
   async function generate() {
+    if(feedback && !(await feedback.confirmar({title:'Gerar camada territorial',message:`Gerar uma camada com ${config.attributes.length} atributos dos 645 municípios de São Paulo?`,confirmLabel:'Gerar camada'})))return;
+    const processo=feedback?.processo('Gerando camada territorial');
+    processo?.passo('Gerando a geometria e materializando os atributos selecionados…');
     setBusy(true);setError('');
     // O destino vem do catalogo; fora do SICARD o plugin nao tem acervo.
     setStatus(catalog?.destino
@@ -152,17 +155,18 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
       : 'Gerando geometria e tabela de atributos…');
     const snapshot={...config,attributes:[...config.attributes]};
     try {
-      const blob=await api.export(snapshot);
+      const blob=await api.export(snapshot,processo?.signal,processo);
       const filename=`municipios_sp_${snapshot.format}.zip`;
       await onExport?.({blob,filename,configuration:snapshot,attributes:selectedItems});
       if(download){const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
       if(mounted.current)setStatus('Camada gerada. O pacote contém a camada, o dicionário e os metadados.');
-    }catch(e){if(mounted.current){setError(e.message);setStatus('');}}
+      processo?.concluir({type:'success',message:'Camada gerada e disponível no acervo. O pacote contém a camada, o dicionário e os metadados.'});
+    }catch(e){if(mounted.current){setError(e.message);setStatus('');}processo?.concluir({type:e.name==='AbortError'?'info':'error',message:e.message});}
     finally{if(mounted.current)setBusy(false);}
   }
   return <section className={`mlb ${className}`} aria-label="Gerador de camada municipal">
     <header className="mlb-header"><div><h2 className="mlb-title">Monte sua camada</h2><span className="mlb-eyebrow">SÃO PAULO - DADOS MUNICIPAIS</span><p>Selecione fontes, períodos, temas e atributos para compor uma única camada vetorial dos 645 municípios de São Paulo. Os dados escolhidos serão incorporados à tabela de atributos da malha municipal do IBGE de 2022.</p></div><div className="mlb-geometry"><strong>645 municípios</strong><span>Malha IBGE 2022 · SIRGAS 2000</span></div></header>
-    {error && <div className="mlb-error" role="alert">{error}</div>}
+    {error && !feedback && <div className="mlb-error" role="alert">{error}</div>}
     {!catalog ? <p role="status">{error ? <>Não foi possível carregar o catálogo. <button type="button" onClick={()=>setAttempt(n=>n+1)}>Tentar novamente</button></> : 'Carregando catálogo…'}</p> : <div className="mlb-layout">
       <section className="mlb-panel"><h2>1. Escolha os dados</h2><div className="mlb-filters">
         <label>Fonte<select value={source} onChange={e=>{setSource(e.target.value);setTheme('');if(e.target.value===ALL_SOURCES)setYear('');}}><option value={ALL_SOURCES}>Todas as fontes</option>{sources.map(s=><option key={s} value={s}>{sourceLabel(s)}</option>)}</select></label>
@@ -182,11 +186,11 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
         <p className="mlb-note">{config.format==='shp'?'Até 250 atributos. Nomes abreviados com correspondência no dicionário.':config.format==='gpkg'?'Até 1.900 atributos. Nomes completos preservados.':'Até 6.500 atributos. Nomes completos preservados.'} Todos os formatos são entregues em ZIP.</p>
         <label className="mlb-nome">Nome da camada<input type="text" maxLength={200} disabled={busy} value={config.nome ?? ''} placeholder={nomePadrao} onChange={e=>update({...config,nome:e.target.value})}/></label>
         <p className="mlb-note">Em branco, o nome é montado com a categoria, a fonte majoritária da seleção e a data.</p>
-        {selected.size>limits[config.format] && <p className="mlb-error">Seleção excede o limite do formato. Escolha FlatGeobuf ou remova atributos.</p>}
+        {!feedback && selected.size>limits[config.format] && <p className="mlb-error">Seleção excede o limite do formato. Escolha FlatGeobuf ou remova atributos.</p>}
         <button type="button" className="mlb-primary" disabled={busy || !selected.size || selected.size>limits[config.format]} onClick={generate}>{busy?'Gerando camada…':download?'Gerar e baixar camada':'Gerar camada'}</button>
-        <p className="mlb-status" role="status">{status}</p><p className="mlb-note">Geometria de 2022. O período de cada indicador acompanha o campo nos metadados. Valores ausentes permanecem nulos.</p>
+        {!feedback && <p className="mlb-status" role="status">{status}</p>}<p className="mlb-note">Geometria de 2022. O período de cada indicador acompanha o campo nos metadados. Valores ausentes permanecem nulos.</p>
       </aside>
-      {previewError && <div className="mlb-error mlb-preview" role="alert">Prévia indisponível: {previewError} <button type="button" onClick={()=>setPreviewAttempt(n=>n+1)}>Tentar novamente</button></div>}
+      {previewError && <div className={feedback?"mlb-preview":"mlb-error mlb-preview"}>{!feedback && <>Prévia indisponível: {previewError} </>}<button type="button" onClick={()=>setPreviewAttempt(n=>n+1)}>Tentar novamente</button></div>}
       {preview && <section className="mlb-panel mlb-preview"><h2>Prévia da tabela de atributos</h2><p>5 municípios · até 8 atributos da seleção. A exportação inclui todos os 645 municípios e todos os atributos escolhidos.</p><div className="mlb-table"><table data-table-sort="off"><thead><tr><th>Código IBGE</th><th>Município</th>{preview.fields.map(f=><th key={f}>{f}</th>)}</tr></thead><tbody>{preview.rows.map(r=><tr key={r.CD_MUN}><td>{r.CD_MUN}</td><td>{r.NM_MUN}</td>{preview.fields.map(f=><td key={f}>{r[f] == null ? 'Sem valor' : r[f].toLocaleString('pt-BR',{maximumFractionDigits:8})}</td>)}</tr>)}</tbody></table></div></section>}
       {preview?.glossario?.length ? <section className="mlb-panel mlb-glossario"><h2>Glossário e aliases de atributos</h2><p>Os campos abaixo são exatamente os que sairão na tabela de atributos da camada gerada. O nome do campo começa pelo identificador do tema; o nome por extenso viaja no alias, no dicionário e nos metadados do pacote.{preview.totalAttributes > (preview.glossarioLimite ?? 0) ? ` Exibindo os primeiros ${preview.glossarioLimite} de ${preview.totalAttributes.toLocaleString('pt-BR')} atributos; o dicionário do pacote traz todos.` : ''}</p><div className="mlb-table"><table data-table-sort="off"><thead><tr><th>Campo exportado</th><th>Alias</th><th>Significado</th><th>Fonte</th></tr></thead><tbody>{preview.glossario.map(item=><tr key={item.campo_exportado}><td><code>{item.campo_exportado}</code></td><td>{item.alias}</td><td className="mlb-glossario-significado">{item.significado}</td><td>{item.fonte}</td></tr>)}</tbody></table></div></section> : null}
     </div>}
