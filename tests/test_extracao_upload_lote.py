@@ -118,3 +118,23 @@ def test_zip_com_varios_geopackages_e_subpacotes(tmp_path):
     result=local.previa(exterior.getvalue(),'pacote.zip')
     assert result['resumo']['vetores']==6 and len(result['entrada']['geojson']['features'])==6
     assert len({i['chave'] for i in result['camadas']})==6
+
+
+def test_multiplos_rasters_sao_validados_e_desenhados_independentemente(tmp_path):
+    from osgeo import osr
+    stream=io.BytesIO()
+    with ZipFile(stream,'w') as z:
+        for i in range(2):
+            # Nome preview.tif também não pode colidir com a miniatura interna.
+            nome='preview.tif' if i==0 else 'segundo.tif'
+            path=tmp_path/nome
+            ds=gdal.GetDriverByName('GTiff').Create(str(path),8,8,1,gdal.GDT_Byte)
+            ds.SetGeoTransform([-47+i,0.01,0,-23,0,-0.01])
+            crs=osr.SpatialReference();crs.ImportFromEPSG(4326);ds.SetProjection(crs.ExportToWkt())
+            ds.GetRasterBand(1).Fill(25+i);ds=None
+            z.writestr(nome,path.read_bytes())
+    result=local.previa(stream.getvalue(),'rasters.zip')
+    assert result['resumo']['validas']==2 and result['resumo']['rasters']==2
+    assert result['entrada'] is None
+    assert all(c['imagem'].startswith('data:image/png;base64,') for c in result['camadas'])
+    assert result['camadas'][0]['metadados_local']['limites_wgs84']!=result['camadas'][1]['metadados_local']['limites_wgs84']

@@ -267,6 +267,8 @@ def _agrupar_vetores(vetores, nome):
     conjunto = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), geometry=geometria, crs=crs)
     meta = {**vetores[0][1], 'nome_camada': nome, 'camada': None, 'componente': nome,
             'feicoes': len(conjunto), 'camadas_total': len(vetores), 'campo_origem': origem,
+            'area_km2': sum(m['area_km2'] for _,m in vetores),
+            'comprimento_km': sum(m['comprimento_km'] for _,m in vetores),
             'campos_total': len(conjunto.columns)-1,
             'campos': [{'nome': c, 'tipo': str(conjunto[c].dtype)} for c in conjunto.columns if c != geometria],
             'tipos_geometria': sorted(set(conjunto.geom_type.dropna())),
@@ -343,11 +345,12 @@ def _previa_raster(escolha, nome, conteudo, componentes, avisos, raiz):
         resultado['geojson'] = json.loads(mapa.to_json())
         # Miniatura limitada a 512x512; nenhuma leitura integral da matriz.
         preview = png = None
+        caminho_previa = f'{raiz}/previa-{uuid4().hex}'
         try:
-            preview = gdal.Warp(f'{raiz}/preview.tif', raster, format='GTiff', dstSRS='EPSG:4326',
+            preview = gdal.Warp(caminho_previa+'.tif', raster, format='GTiff', dstSRS='EPSG:4326',
                                 width=512, height=512, resampleAlg='near', warpMemoryLimit=16)
             if preview:
-                pngpath = f'{raiz}/preview.png'
+                pngpath = caminho_previa+'.png'
                 bands = [1,2,3] if preview.RasterCount >= 3 else [1]
                 png = gdal.Translate(pngpath, preview, format='PNG', outputType=gdal.GDT_Byte,
                                      bandList=bands, scaleParams=[[]])
