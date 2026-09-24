@@ -224,3 +224,28 @@ Validação local final: **73 testes Python passaram**, incluindo regressões de
 leitura de camadas e CRS, além do teste Playwright atualizado para os dois
 fluxos e verificação sintática dos JavaScripts alterados. Os testes de leitura
 exigiram restaurar o túnel autorizado ao banco; passaram após a restauração.
+
+## 24/09/2026 — entrada local em memória e prévia na mesma página
+
+Removido o redirecionamento do botão Enviar nova camada da subseção 1.1.
+Implementados seletor nativo, leitor GDAL em RAM, validação, escolha entre camadas
+no mesmo arquivo e prévia Leaflet condicional imediatamente abaixo dos três
+cards. Metadados ficam abaixo do mapa. A lista de montagem das bases agora só
+aparece com itens pendentes. Mantido o explorador de storage da seleção existente.
+
+Verificados arquivos reais de teste em GeoJSON, GPKG, FGB, Shapefile ZIP e KML/KMZ,
+rejeições de arquivo inválido, CRS ausente, ZIP inseguro/incompleto e limites;
+autorização HTTP; limpeza de `/vsimem`; execução dos dois enriquecimentos com
+entrada temporária; ausência de bytes no registro da tarefa e da entrada
+original no GeoPackage de resultados. Playwright usa HTML/Leaflet reais com
+APIs controladas e verifica seletor nativo, posição/visibilidade da prévia,
+metadados, layouts 320/390/768/1440, seleção anterior após erro, configuração sem
+arquivo local, payload de execução e atualização de catálogo.
+
+Consulta cadastral real, somente leitura, confirmou São Paulo/SP (IBGE 3550308)
+para coordenadas de teste. A cobertura é nacional para UFs e paulista para
+municípios. A execução autenticada de uma análise real de usuário em produção
+não faz parte desses testes; nenhuma saída de teste foi cadastrada em produção.
+
+Validação final desta alteração: **85 testes Python passaram**, além dos dois
+roteiros Playwright (regressão da extração existente e novo upload local).

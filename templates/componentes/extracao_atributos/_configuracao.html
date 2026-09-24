@@ -19,8 +19,18 @@
             <!-- Ações com rótulos visíveis, junto à camada de entrada. -->
             <div class="ea-layer-actions">
             <button id="ea-input-browse" type="button" class="ea-btn ea-layer-action" title="Escolher camada"><i class="fas fa-folder-tree" aria-hidden="true"></i><span class="ea-action-label">Selecionar camada existente</span></button>
-            <a class="ea-btn ea-layer-action" target="_blank" rel="noopener" title="Enviar nova camada" href="/restrict/geoespacial/visualizador-bases-geoespaciais/"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i><span class="ea-action-label">Enviar nova camada</span></a>
+            <button id="ea-input-upload" type="button" class="ea-btn ea-layer-action"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i><span class="ea-action-label">Enviar nova camada</span></button>
+            <input id="ea-input-file" type="file" accept=".zip,.gpkg,.geojson,.json,.fgb,.kml,.kmz" hidden aria-label="Arquivo local da camada de entrada">
             <button id="ea-input-clear" type="button" class="ea-btn ea-layer-action" title="Limpar entrada" hidden><i class="fas fa-eraser" aria-hidden="true"></i><span class="ea-action-label">Limpar entrada</span></button>
+            </div>
+            <small>Arquivo local: até 16 MB. Shapefile deve estar em ZIP com .shp, .shx, .dbf e .prj.</small>
+            <p id="ea-input-upload-status" class="ea-hint" role="status" aria-live="polite" hidden></p>
+            <button id="ea-input-upload-cancel" type="button" class="ea-btn" hidden>Cancelar validação</button>
+            <div id="ea-input-layer-choice" hidden>
+              <label for="ea-input-local-layer">Camada dentro do arquivo</label>
+              <select id="ea-input-local-layer"></select>
+              <button id="ea-input-local-confirm" type="button" class="ea-btn">Validar camada selecionada</button>
+              <button id="ea-input-local-cancel" type="button" class="ea-btn">Cancelar arquivo</button>
             </div>
             <small id="ea-input-info">A camada selecionada será exibida na bancada.</small>
           </div>
@@ -80,6 +90,14 @@
     <!-- Conteúdo dinâmico dos três subcards: aparece e desaparece aqui, sempre
          abaixo do card principal, para os subcards manterem o mesmo tamanho. -->
     <div class="ea-dinamico" id="ea-dinamico">
+      <section id="ea-input-preview" class="ea-input-preview" aria-labelledby="ea-input-preview-title" hidden>
+        <header><h4 id="ea-input-preview-title">1.1 · Pré-visualização da camada de entrada</h4>
+          <p id="ea-input-preview-name"></p></header>
+        <div id="ea-input-preview-map" role="region" aria-label="Mapa Leaflet da camada de entrada"></div>
+        <p id="ea-input-preview-map-status" class="ea-hint" role="status"></p>
+        <div id="ea-input-preview-data" class="ea-preview-metadata"></div>
+        <p class="ea-hint">Entrada temporária: fica somente na memória desta página. Ao recarregar ou sair, selecione o arquivo novamente. Executar a análise salva os resultados, sem cadastrar este arquivo no acervo.</p>
+      </section>
       <!-- Cada grupo tem a cor e a seta do subcard de origem: a aréola liga o que
            está aberto aqui ao subcard 1.1, 1.2 ou 1.3. -->
       <div class="ea-grupo-dinamico" data-origem="1.1">

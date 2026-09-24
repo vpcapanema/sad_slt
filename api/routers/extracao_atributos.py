@@ -1,7 +1,8 @@
+import json
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, model_validator
 
@@ -13,6 +14,30 @@ from api.services.session_service import SessionUser
 router = APIRouter(prefix='/extracao-atributos',dependencies=[Depends(require_geospatial_access)])
 from api.routers.municipal_layer import router as municipal_router
 router.include_router(municipal_router)
+
+
+@router.post('/entrada-local')
+async def validar_entrada_local(request: Request, nome: str = Query(min_length=1, max_length=200),
+                               camada: str | None = Query(default=None, max_length=1000)):
+    from starlette.concurrency import run_in_threadpool
+    from api.services import extracao_entrada_local as local
+    conteudo = bytearray()
+    async for parte in request.stream():
+        if len(conteudo) + len(parte) > local.MAX_ARQUIVO:
+            raise HTTPException(413, 'O arquivo excede o limite de 16 MB para leitura em memória.')
+        conteudo.extend(parte)
+    try:
+        resultado = await run_in_threadpool(local.previa, bytes(conteudo), nome, camada)
+        return Response(json.dumps(resultado, ensure_ascii=False), media_type='application/json',
+                        headers={'Cache-Control': 'no-store'})
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+class ArquivoLocal(BaseModel):
+    nome: str = Field(min_length=1, max_length=200)
+    camada: str | None = Field(default=None, max_length=1000)
+    conteudo_base64: str = Field(min_length=1, max_length=22369624, repr=False)
 
 
 class Categoria(BaseModel):
@@ -160,6 +185,7 @@ class OpcoesOverlay(BaseModel):
 
 
 class Extracao(BaseModel):
+    arquivo_local: ArquivoLocal | None = None
     input_id: str = Field(min_length=1,max_length=1200)
     nome_saida: str = Field(default='',max_length=200)
     # intersection/identity: modo sobreposição (uma linha por interseção).
@@ -174,6 +200,8 @@ class Extracao(BaseModel):
 
     @model_validator(mode='after')
     def _entradas_unicas(self):
+        if self.input_id.startswith('local:') != bool(self.arquivo_local):
+            raise ValueError('A entrada local exige o arquivo em memória. Selecione o arquivo novamente.')
         ids = [entrada.id for entrada in self.entradas]
         if len(ids) != len(set(ids)):
             raise ValueError('A mesma camada aparece duas vezes nas entradas.')

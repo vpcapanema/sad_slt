@@ -531,3 +531,19 @@ body.extracao-page .app-header .app-header-brand { flex:0 1 300px; }
   .ea-embedded-workbench .gp-log { width:100%; }
   .ea-embedded-workbench .gp-view-menu-popup { left:auto; right:0; }
 }
+
+/* Prévia da entrada local: ocupa a largura abaixo dos três cards, só após validar. */
+.ea-input-preview { border:1px solid #bfd2e1; border-radius:.6rem; padding:1rem; background:#f7fbfe; min-width:0; }
+.ea-input-preview header h4 { margin:0 0 .35rem; color:#174967; font-size:1rem; }
+#ea-input-preview-name { margin:0 0 .7rem; overflow-wrap:anywhere; }
+#ea-input-preview-map { height:360px; width:100%; z-index:0; border:1px solid #c9d6e1; border-radius:.4rem; }
+#ea-input-preview-map a { color:#1769aa; }
+.ea-preview-metadata { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin-top:.7rem; }
+.ea-preview-meta-group { min-width:0; }
+.ea-preview-meta-group h5 { margin:.4rem 0; font-size:.85rem; color:#174967; }
+.ea-preview-meta-group dl { margin:0; font-size:.8rem; }
+.ea-preview-meta-group dt { font-weight:650; margin-top:.5rem; }
+.ea-preview-meta-group dd { margin:0; overflow-wrap:anywhere; max-height:12rem; overflow:auto; }
+#ea-input-layer-choice { display:grid; gap:.4rem; }
+#ea-input-file[hidden] { display:none!important; }
+@media(max-width:800px) { .ea-preview-metadata { grid-template-columns:1fr; } #ea-input-preview-map { height:300px; } }

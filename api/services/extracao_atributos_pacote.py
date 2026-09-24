@@ -54,8 +54,8 @@ def _para_gpkg(frame):
     return data
 
 
-def escrever_gpkg(saida, entrada, path: Path) -> None:
-    for camada, frame in (('resultado', saida), ('entrada', entrada)):
+def escrever_gpkg(saida, entrada, path: Path, incluir_entrada=True) -> None:
+    for camada, frame in ([('resultado', saida), ('entrada', entrada)] if incluir_entrada else [('resultado', saida)]):
         data = _para_gpkg(frame.to_crs(4674))
         extras = {'geometry_type': 'Unknown'} if data.empty else {}
         # Polígonos simples e multipartes na mesma camada gravavam o tipo como
@@ -185,12 +185,12 @@ def ambiente() -> dict[str, str]:
 
 
 def montar_pacote(result: dict, saida, entrada, proc: dict, bases=(), mapa_base: bool = True,
-                  intersecoes=None) -> tuple[bytes, str, list[dict]]:
+                  intersecoes=None, incluir_entrada=True) -> tuple[bytes, str, list[dict]]:
     """Escreve os cinco arquivos, confere cada um e devolve (zip, nome do zip, manifesto)."""
     arquivos = nomes(proc['nome_saida'])
     with tempfile.TemporaryDirectory(prefix='sicard_extracao_') as temporaria:
         pasta = Path(temporaria)
-        escrever_gpkg(saida, entrada, pasta / arquivos['gpkg'])
+        escrever_gpkg(saida, entrada, pasta / arquivos['gpkg'], incluir_entrada)
         mapa = pasta / 'mapa_localizacao.png'
         # No mapa vão só as interseções: com entrada de pontos a tabela traz também os ausentes.
         aviso_mapa = mapa_png(entrada, [(categoria, aliases.nome_camada(None, nome), frame) for categoria, nome, frame in bases],
@@ -216,7 +216,7 @@ def montar_pacote(result: dict, saida, entrada, proc: dict, bases=(), mapa_base:
                 if not dados:
                     raise ValueError(f'O arquivo {nome} do pacote saiu vazio.')
                 pacote.writestr(nome, dados)
-                manifesto.append({'chave': chave, 'nome': nome, 'descricao': ARQUIVOS[chave][1],
+                manifesto.append({'chave': chave, 'nome': nome, 'descricao': ARQUIVOS[chave][1] if incluir_entrada or chave != 'gpkg' else 'GeoPackage com a geometria resultante (entrada local temporária não incluída)',
                                   'tamanho_bytes': len(dados), 'sha256': sha256(dados).hexdigest()})
     return memoria.getvalue(), f"{Path(arquivos['gpkg']).stem}.zip", manifesto
 

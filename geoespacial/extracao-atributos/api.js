@@ -55,6 +55,7 @@ export const adaptador={
     // opcoes do operador do OGR ficavam para tras e o servidor usava os padroes.
     const job=await post('/extracao-atributos/execucoes',{input_id:request.input.id,operacao:request.operacao,
       nome_saida:request.nome_saida||'',opcoes:request.opcoes||{},
+      ...(request.input.arquivo_local?{arquivo_local:request.input.arquivo_local}:{}),
       categorias:request.categorias.map(c=>({id:c.id,camadas:c.camadas.map(l=>l.id),regras:c.regras||{}})),
       entradas:request.entradas||[],finalidades:request.finalidades||[]});
     try{sessionStorage.setItem('slt-extracao-ultima',job.id);}catch{

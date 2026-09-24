@@ -383,3 +383,52 @@ com subconjuntos de atributos, fora dessa contagem principal.
 Os destinos permanecem os mesmos: feições processadas e pacote ZIP no PostgreSQL;
 configurações no diretório persistente de configurações da extração. Este novo
 modo não copia bases completas para o Codespace nem altera o gerador territorial.
+
+## Entrada local temporária — 24/09/2026
+
+**Selecionar camada existente** continua abrindo o explorador de storage.
+**Enviar nova camada** abre o seletor de arquivos do computador na própria
+página; não navega para outro módulo. A lista de montagem das bases fica oculta
+até existir ao menos uma camada pendente. Bases confirmadas têm seu painel
+próprio; a lista pendente volta a ficar oculta quando esvaziada.
+
+O upload usa `POST /extracao-atributos/entrada-local`, autenticado, corpo binário
+e resposta `Cache-Control: no-store`. O servidor lê o corpo por streaming com
+limite, descompacta e abre os componentes somente em `/vsimem` do GDAL. Não usa
+`UploadFile`/spool, arquivos temporários em disco nem cadastro de camada. O proxy
+Nginx desta API desativa buffers de requisição e resposta para também evitar
+spool do upload ou da prévia no proxy.
+
+A entrada original e sua prévia ficam apenas no estado da página. Não são
+armazenadas em localStorage, sessionStorage ou IndexedDB. Ao executar, o cliente
+reenvia o arquivo original; o servidor revalida e entrega o GeoDataFrame em RAM
+à tarefa. Isso funciona com os dois workers HTTP sem cache compartilhado. Os
+parâmetros persistidos levam apenas metadados de procedência, incluindo tamanho,
+CRS e hash. O arquivo original não é registrado no banco, não preenche o snapshot
+`entrada_geojson` e não é incluído como camada `entrada` no GeoPackage persistido.
+Os **resultados derivados** continuam seguindo a política normal da extração.
+
+Formatos aceitos: GPKG, GeoJSON/JSON, FGB, KML, KMZ e ZIP de Shapefile ou de camadas
+vetoriais. ZIP de Shapefile exige SHP, SHX, DBF e PRJ. Arquivo com várias camadas
+mostra um seletor para escolher a entrada antes de validar/desenhar. Limites da
+leitura em memória: 16 MB enviados, 32 MB descompactados, 200 componentes,
+50 mil feições, 500 mil vértices e 2000 campos. Caminhos externos, links,
+arquivos cifrados e formatos de conexão OGR não são aceitos.
+
+A prévia aparece abaixo dos cards 1.1/1.2/1.3 apenas após a validação. Usa Leaflet
+1.9.4 já presente no acervo de assets e tiles OpenStreetMap. Falha no mapa de
+fundo não oculta a geometria. O contêiner mostra arquivo, tamanho, formato,
+camada, contagens, tipos geométricos, CRS original/nome/unidade, limites WGS 84,
+comprimentos de linhas e áreas de polígonos válidos quando aplicáveis, além de
+UFs/municípios/códigos IBGE. A fonte e cobertura cadastral são explícitas:
+**UFs do Brasil**, pela malha nacional do acervo, e **municípios de SP**, pela
+malha IBGE 2022 em `base_municipal.municipio`, consultada somente para leitura.
+Indisponibilidade cadastral é informada sem invalidar um arquivo válido.
+
+Geometrias vazias ou inválidas são contabilizadas e geram avisos; não são
+silenciosamente descartadas ou reparadas na prévia. A preparação da execução
+continua determinada pelo algoritmo escolhido. Erro ou cancelamento de um novo
+upload preserva a seleção anterior. Limpar a entrada libera as referências em
+memória; atualizar o catálogo mantém a entrada local. Recarregar/sair da página
+exige selecionar novamente o arquivo. Configurações salvas incluem somente
+entradas persistentes, com mensagem explícita sobre a entrada local omitida.

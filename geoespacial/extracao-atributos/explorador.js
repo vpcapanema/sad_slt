@@ -89,7 +89,7 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false}) {
     function valid(path){return path===BANK||path===ROOT||path.startsWith(ROOT+'/');}
     async function directory(path){
       if(!valid(path))throw new Error('Escolha uma pasta dentro das bases geoespaciais do storage.');
-      if(path===BANK)return {caminho:BANK,pai:null,pastas:[],arquivos:catalog.filter(item=>!item.id.startsWith('storage:'))};
+      if(path===BANK)return {caminho:BANK,pai:null,pastas:[],arquivos:catalog.filter(item=>!item.id.startsWith('storage:')&&!item.id.startsWith('local:'))};
       if(!cache.has(path)){
         if(!pending.has(path))pending.set(path,json(`/storage/navegar?caminho=${encodeURIComponent(path)}`).then(data=>{cache.set(path,data);return data;}).finally(()=>pending.delete(path)));
         await pending.get(path);

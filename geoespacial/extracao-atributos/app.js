@@ -20,7 +20,7 @@ const OPCOES_OVERLAY=[
 ];
 const state={catalog:[],categories:[],bases:[],staging:[],input:"",operation:"",
   opcoes:Object.fromEntries(OPCOES_OVERLAY.map(([chave,,,padrao])=>[chave,padrao])),
-  nomeSaida:"",result:null,busy:false,
+  nomeSaida:"",result:null,busy:false,uploading:false,
   // Só no enriquecimento: configuração da entrada principal, entradas adicionais e finalidades.
   inputConfig:null,entradasExtras:[],finalidades:[]};
 const map=criarMapa(()=>reconciliarPainel()),results=criarResultados();
@@ -137,7 +137,7 @@ function controls() {
   $("#ea-municipal-open").setAttribute("aria-disabled",String(state.busy));
   $("#ea-recover").disabled=state.busy;
   document.querySelectorAll("#ea-config input, #ea-config select, #ea-config button").forEach(node=>{if(state.busy)node.disabled=true;});
-  $("#ea-run").disabled=state.busy||state.loadingMap||!disponivel("executar")||!state.operation||!state.input||!state.bases.length;
+  $("#ea-run").disabled=state.busy||state.uploading||state.loadingMap||!disponivel("executar")||!state.operation||!state.input||!state.bases.length;
   $("#ea-export").disabled=state.busy||!state.result||!disponivel("exportar");
   renderSelecao();
   renderEntradas();renderFinalidades();
@@ -367,7 +367,7 @@ function request() {
       finalidades:state.finalidades.map(f=>({nome:f.nome,campos:[...f.campos]}))}:{})};
 }
 $("#ea-run").addEventListener("click",async()=>{
-  if(state.busy||!state.operation||!state.input||!state.bases.length) return;
+  if(state.busy||state.uploading||!state.operation||!state.input||!state.bases.length) return;
   try{map.assertReady();}catch(error){feedback(error.message);return;}
   let pedido;
   try{pedido=request();}catch(error){feedback(error.message);return;}
@@ -402,7 +402,7 @@ $("#ea-export").addEventListener("click",async()=>{
 });
 async function carregarCatalogo(){
   const catalog=await chamar('listarCatalogo');
-  state.catalog=catalog.camadas;
+  state.catalog=[...catalog.camadas,...state.catalog.filter(l=>l.origem==='local')];
   const colors=['#1769aa','#52812e','#ad5b22','#8c4495','#217f83','#a34242','#58657a'];
   state.categories=catalog.categorias.map((c,i)=>({...c,color:colors[i%colors.length]}));
   state.bases=state.bases.filter(b=>state.catalog.some(l=>l.id===b.id)&&state.categories.some(c=>c.id===b.category));

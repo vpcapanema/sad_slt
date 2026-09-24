@@ -93,6 +93,15 @@ def iniciar(payload, user):
     layers = {r['id']:r for r in catalog['camadas']}
     categories = {r['id']:r for r in catalog['categorias']}
     input_id = payload['input_id']
+    entrada_local, meta_local = None, None
+    if input_id.startswith('local:'):
+        from api.services.extracao_entrada_local import restaurar
+        if not payload.get('arquivo_local'):
+            raise ValueError('Selecione novamente o arquivo da entrada local.')
+        entrada_local, meta_local = restaurar(payload['arquivo_local'])
+        layers[input_id] = {'id': input_id, 'nome': meta_local['nome_camada'], 'origem': 'local'}
+    elif payload.get('arquivo_local'):
+        raise ValueError('O arquivo local deve corresponder à entrada selecionada.')
     if input_id not in layers:
         raise ValueError('A camada de entrada não está disponível no catálogo vetorial.')
     from api.services.extracao_atributos_regras import normalizar_entrada, normalizar_finalidades
@@ -139,10 +148,15 @@ def iniciar(payload, user):
               'operacao':payload['operacao'],'opcoes':opcoes,'input_nome':layers[input_id]['nome'],
               'nome_saida':str(payload.get('nome_saida') or '').strip()[:200],
               'entradas':entradas,'finalidades':normalizar_finalidades(payload.get('finalidades'))}
+    if meta_local is not None:
+        params['entrada_local'] = meta_local
     ident = ciclo.iniciar('extracao_atributos',params,str(user.id))
     with _lock: _progress[ident] = [_etapa('Na fila de processamento')]
     try:
-        _pool.submit(_execute,ident,params)
+        if entrada_local is not None:
+            _pool.submit(_execute,ident,params,entrada_local)
+        else:
+            _pool.submit(_execute,ident,params)
     except Exception:
         ciclo.finalizar(ident,erro='Não foi possível iniciar o processamento.')
         raise
@@ -156,7 +170,7 @@ def _etapa(mensagem):
     return {'em': datetime.now(timezone.utc).isoformat(timespec='seconds'), 'mensagem': mensagem}
 
 
-def _execute(ident, params):
+def _execute(ident, params, entrada_local=None):
     token = ciclo.execucao_atual.set(ident)
     def progress(message):
         # O modal de acompanhamento lê esta lista; o corte evita crescer sem limite.
@@ -168,7 +182,7 @@ def _execute(ident, params):
     try:
         progress('Carregando entrada e bases')
         from api.services.municipal_layer import carregar_para_extracao
-        source = carregar_para_extracao(params['camada_id'])
+        source = entrada_local if entrada_local is not None else carregar_para_extracao(params['camada_id'])
         categories = [{**c,'camadas':[{**b,'frame':carregar_para_extracao(b['id'])} for b in c['camadas']]}
                       for c in params['categorias']]
         if params['operacao'] in ('enriquecimento', 'estatisticas'):
@@ -204,7 +218,7 @@ def _execute(ident, params):
                          'etapas':etapas,'ambiente':pacote_servico.ambiente()}
         pacote, nome_pacote, manifesto = pacote_servico.montar_pacote(
             result,saida,source,processamento,bases=[(c['nome'],b['nome'],b['frame']) for c in categories for b in c['camadas']],
-            intersecoes=frame)
+            intersecoes=frame,incluir_entrada=not params.get('entrada_local'))
         progress(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
         with _lock: etapas = list(_progress.get(ident) or [])
         from hashlib import sha256
@@ -214,7 +228,7 @@ def _execute(ident, params):
                  relatorio,etapas,pacote,pacote_nome,pacote_sha256,pacote_tamanho_bytes,pacote_arquivos)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
                 (ident,nome_saida,params['operacao'],params.get('responsavel'),Jsonb(entrada),
-                 Jsonb(json.loads(source.to_crs(4674).to_json(default=str))),Jsonb(bases),layer_id,
+                 Jsonb({'type':'FeatureCollection','features':[]} if params.get('entrada_local') else json.loads(source.to_crs(4674).to_json(default=str))),Jsonb(bases),layer_id,
                  Jsonb(result),Jsonb(etapas),pacote,nome_pacote,sha256(pacote).hexdigest(),len(pacote),Jsonb(manifesto)))
             ciclo.registrar_uso(conn,layer_id,'relatorio',ident)
         ciclo.finalizar(ident)
@@ -294,7 +308,7 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
     pacote, nome_pacote, manifesto = pacote_enriquecimento.montar_pacote(
         saida['camadas'],source,saida['dicionario'],_jsonavel(configuracao),nome_saida,
         finalidades=saida['finalidades'],validacao=_jsonavel(saida['relatorio']['validacao']),
-        preservar_geometrias=params['operacao']=='estatisticas')
+        preservar_geometrias=params['operacao']=='estatisticas',incluir_entrada=not params.get('entrada_local'))
     progress(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
     with _lock: etapas = list(_progress.get(ident) or [])
     with get_connection() as conn:
@@ -303,7 +317,7 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
              relatorio,etapas,pacote,pacote_nome,pacote_sha256,pacote_tamanho_bytes,pacote_arquivos)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
             (ident,nome_saida,params['operacao'],params.get('responsavel'),Jsonb(_jsonavel(entrada)),
-             Jsonb(json.loads(source.to_crs(4674).to_json(default=str))),Jsonb(_jsonavel(bases)),
+             Jsonb({'type':'FeatureCollection','features':[]} if params.get('entrada_local') else json.loads(source.to_crs(4674).to_json(default=str))),Jsonb(_jsonavel(bases)),
              result['camada_resultado_id'],Jsonb(_jsonavel(result)),Jsonb(etapas),pacote,nome_pacote,
              sha256(pacote).hexdigest(),len(pacote),Jsonb(manifesto)))
         for item in camadas.values():
@@ -380,6 +394,9 @@ def _procedencia(ident, nome, frame):
     if str(ident).startswith('storage:'):
         from api.services.storage_geoespacial import impressao_digital
         item.update(origem='storage',**impressao_digital(ident))
+    elif str(ident).startswith('local:'):
+        item['origem'] = 'memoria'
+        item['temporaria'] = True
     else:
         item['origem'] = 'banco'
     return item

@@ -45,12 +45,12 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
 
   function render() {
     const ativa = categoriaAtiva();
-    // A ação Carregar precisa estar disponível mesmo antes da primeira seleção.
-    secao.hidden = false;
+    // Carregar fica na barra geral; a lista só aparece quando há itens pendentes.
+    secao.hidden = !state.staging.length;
     const grupos = agrupar();
     const atual = state.categories.find(item => item.id === ativa);
     // A categoria recém-escolhida já aparece, vazia, esperando as camadas.
-    if (atual && !grupos.some(grupo => grupo.category.id === ativa)) grupos.unshift({ category: atual, itens: [] });
+    if (state.staging.length && atual && !grupos.some(grupo => grupo.category.id === ativa)) grupos.unshift({ category: atual, itens: [] });
     box.replaceChildren();
     if (!grupos.length) {
       box.append(el('p', 'Escolha uma categoria e selecione suas camadas. Repita para cada categoria; nada vai para a bancada antes de confirmar.', 'ea-staging-empty'));
@@ -181,7 +181,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       }));
       // A análise inteira: bases com regra, entradas (identificador, filtro, campos) e finalidades.
       const entradas = [
-        ...(state.input ? [{ id: state.input, config: state.inputConfig || {} }] : []),
+        ...(state.input && !state.input.startsWith('local:') ? [{ id: state.input, config: state.inputConfig || {} }] : []),
         ...state.entradasExtras.map(item => ({ id: item.id, config: item.config || {} })),
       ];
       const finalidades = (state.finalidades || []).map(f => ({ nome: f.nome, campos: [...f.campos] }));
@@ -190,6 +190,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
           operacao:state.operation||'intersection',opcoes:state.opcoes,nome_saida:state.nomeSaida });
       feedback(`Configuração "${resultado.nome}" salva: ${resultado.camadas} camada(s) em ${resultado.categorias} categoria(s),`
         + ` ${resultado.entradas} entrada(s) e ${resultado.finalidades} finalidade(s).`
+        + (state.input.startsWith('local:') ? ' A entrada local é temporária: selecione o arquivo novamente ao carregar esta configuração.' : '')
         + (resultado.camadas_ignoradas ? ` ${resultado.camadas_ignoradas} camada(s) do plugin não entram na configuração.` : ''));
     } catch (error) {
       feedback(`Não foi possível salvar: ${error.message}`);

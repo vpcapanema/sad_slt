@@ -150,7 +150,8 @@ def test_pacote_leva_camadas_apelidos_dicionario_e_configuracao(tmp_path):
 
 
 @pytest.mark.parametrize('modo', ['enriquecimento', 'estatisticas'])
-def test_execucao_do_servico_grava_camadas_pacote_e_finaliza_sem_erro(monkeypatch, modo):
+@pytest.mark.parametrize('entrada_memoria', [False, True])
+def test_execucao_do_servico_grava_camadas_pacote_e_finaliza_sem_erro(monkeypatch, modo, entrada_memoria):
     """Caminho completo do serviço com banco e gravação de camada simulados."""
     from contextlib import contextmanager
     from api.services import ciclo_vida_arquivos as ciclo
@@ -180,12 +181,17 @@ def test_execucao_do_servico_grava_camadas_pacote_e_finaliza_sem_erro(monkeypatc
         {'id': 'amb', 'nome': 'Ambiental', 'conceito': '', 'camadas': [{'id': 'uc', 'nome': 'UC', 'regra': None}]}])
     params = {'camada_id': 'entrada', 'input_nome': 'Projetos', 'operacao': modo, 'categorias': categorias,
               'responsavel': 'teste', 'nome_saida': 'Projetos enriquecidos', 'opcoes': {}}
-    service._execute('00000000-0000-0000-0000-000000000001', params)
+    if entrada_memoria:
+        params.update(camada_id='local:teste', entrada_local={'arquivo':'teste.geojson'})
+    service._execute('00000000-0000-0000-0000-000000000001', params, entrada if entrada_memoria else None)
     assert finalizacoes == [{}], finalizacoes
     assert sorted(nome for nome, _ in gravadas) == ['Projetos enriquecidos — linhas', 'Projetos enriquecidos — pontos']
     assert sorted(usos) == ['camada_1', 'camada_2']
     sql, valores = inseridos[-1]
     assert 'INSERT INTO geoprocessamento.extracao_atributos' in sql and valores[2] == modo
+    if entrada_memoria:
+        assert valores[5].obj == {'type':'FeatureCollection','features':[]}
+        assert valores[4].obj['origem']=='memoria'
     relatorio = valores[8].obj
     assert relatorio['operacao'] == modo
     if modo == 'estatisticas':

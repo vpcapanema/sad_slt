@@ -1,10 +1,12 @@
 import { $, el, options, feedback, camposCamada } from "./ui.js";
 import { escolherArquivo } from './explorador.js';
 import { salvarRascunhoMunicipal } from './municipal.js';
+import { criarEntradaLocal } from './entrada-local.js';
 import { criarListaCamadas } from './lista-camadas.js';
 import { editarRegra, resumoRegra, editarEstatisticas, resumoEstatisticas } from './regras.js';
 
 export function criarConfiguracao(state, changed) {
+  const entradaLocal = criarEntradaLocal(state, changed);
   const lista = criarListaCamadas(state, changed, categoria => browse('base', categoria));
   function sincronizarAlternativas() {
     document.querySelectorAll("[data-alternative-for]").forEach(node=>{
@@ -34,7 +36,7 @@ export function criarConfiguracao(state, changed) {
     // categoria; não há segunda lista aqui.
     state.staging=state.staging.filter(item=>state.catalog.some(l=>l.id===item.id)&&state.categories.some(c=>c.id===item.category)&&!state.bases.some(b=>b.id===item.id));
     lista.render();
-    renderBasesConfirmadas();
+    renderBasesConfirmadas();entradaLocal.render();
   }
   // Bases já confirmadas: a regra de cada uma fica aqui, onde a camada foi escolhida.
   function renderBasesConfirmadas() {
@@ -87,7 +89,7 @@ export function criarConfiguracao(state, changed) {
     catch(error){event.preventDefault();feedback('Não foi possível guardar a configuração para voltar da ferramenta. Salve a configuração antes de continuar.');}
   });
   async function browse(target,categoriaAlvo){
-    if(state.busy)return;
+    if(state.busy||state.uploading)return;
     // Em edição, o + de cada grupo informa a categoria; fora dela, vale a do seletor.
     const category=categoriaAlvo||$("#ea-category-select").value;
     if(target==='base'&&!category){feedback('Selecione a categoria da base antes de escolher o arquivo.');$('#ea-category-select').focus();return;}
@@ -106,11 +108,13 @@ export function criarConfiguracao(state, changed) {
       render();
       return;
     }
+    state.catalog=state.catalog.filter(item=>item.origem!=='local');
+    entradaLocal.limpar();
     changed();
   }
   $("#ea-base-browse").addEventListener('click',()=>browse('base'));
   $("#ea-input-browse").addEventListener('click',()=>browse('input'));
-  $("#ea-input-clear").addEventListener('click',()=>{state.input='';state.inputConfig=null;changed();});
+  $("#ea-input-clear").addEventListener('click',()=>{if(state.uploading)return;state.catalog=state.catalog.filter(l=>l.origem!=='local');state.input='';state.inputConfig=null;entradaLocal.limpar();changed();});
   $("#ea-operation").addEventListener("change",event=>{state.operation=event.target.value;window.SICARDExtracao?.renderParametros?.();changed();});
   // O nome da saida nao muda o mapa nem a previa: so guarda o texto.
   $("#ea-nome-saida").addEventListener("input",event=>{state.nomeSaida=event.target.value;changed();});

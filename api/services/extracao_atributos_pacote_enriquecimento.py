@@ -55,14 +55,14 @@ def _texto_xlsx(valor):
     return ILLEGAL_CHARACTERS_RE.sub('', valor) if isinstance(valor, str) else valor
 
 
-def escrever_gpkg(camadas: dict, entrada, dicionario: list[dict], path: Path, finalidades=None, preservar_geometrias=False) -> None:
+def escrever_gpkg(camadas: dict, entrada, dicionario: list[dict], path: Path, finalidades=None, preservar_geometrias=False, incluir_entrada=True) -> None:
     from osgeo import gdal, ogr
     # nome da camada no GeoPackage -> (tabela, camada de saída de onde vêm os apelidos)
     todas = {nome: (frame, nome) for nome, frame in camadas.items()}
     for chave, item in (finalidades or {}).items():
         for nome, frame in item['camadas'].items():
             todas[f'{chave}_{nome}'] = (frame, nome)
-    for nome, (frame, _) in {**todas, 'entrada': (entrada, None)}.items():
+    for nome, (frame, _) in {**todas, **({'entrada': (entrada, None)} if incluir_entrada else {})}.items():
         _para_gpkg(frame.to_crs(4674)).to_file(path, driver='GPKG', layer=nome, engine='pyogrio', index=False,
                                                 promote_to_multi=not preservar_geometrias,
                                                 **({'geometry_type': 'Unknown'} if preservar_geometrias else {}))
@@ -130,12 +130,14 @@ def escrever_xlsx(camadas: dict, dicionario: list[dict], path: Path) -> None:
 
 
 def montar_pacote(camadas: dict, entrada, dicionario: list[dict], configuracao: dict,
-                  nome_saida: str, finalidades=None, validacao=None, preservar_geometrias=False) -> tuple[bytes, str, list[dict]]:
+                  nome_saida: str, finalidades=None, validacao=None, preservar_geometrias=False, incluir_entrada=True) -> tuple[bytes, str, list[dict]]:
     """Escreve os arquivos, confere cada um e devolve (zip, nome do zip, manifesto)."""
     arquivos = nomes(nome_saida, camadas, finalidades)
+    if not incluir_entrada:
+        arquivos['gpkg'] = (arquivos['gpkg'][0], 'GeoPackage de resultados e finalidades; entrada local temporária não incluída')
     with tempfile.TemporaryDirectory(prefix='sicard_enriquecimento_') as temporaria:
         pasta = Path(temporaria)
-        escrever_gpkg(camadas, entrada, dicionario, pasta / arquivos['gpkg'][0], finalidades, preservar_geometrias)
+        escrever_gpkg(camadas, entrada, dicionario, pasta / arquivos['gpkg'][0], finalidades, preservar_geometrias, incluir_entrada)
         for nome, frame in camadas.items():
             exportacao.escrever_csv(frame, pasta / arquivos[f'csv_{nome}'][0])
         for chave, item in (finalidades or {}).items():
