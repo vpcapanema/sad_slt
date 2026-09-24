@@ -55,3 +55,24 @@ realizada na validacao. O banco e compartilhado com producao.
 O servidor usa 8083; os túneis 10022 e 15433 não são portas de navegação.
 Relatórios datados acima são evidências históricas, não prova da conexão atual.
 Procedimentos completos de desenvolvimento e deploy estão no README.
+
+## Recuperar uma ponte travada
+
+Se o Windows alcança `56.125.163.194:22`, mas a porta 10022 não retorna a
+identificação SSH, abra uma ponte alternativa no PowerShell do Windows e
+mantenha esse terminal aberto:
+
+```powershell
+& "$env:ProgramFiles\GitHub CLI\gh.exe" codespace ssh -c scaling-space-giggle-g46xvg6r7vx52w7jw -- -T -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -R 127.0.0.1:10023:56.125.163.194:22
+```
+
+No Codespace, o helper e o deploy aceitam a porta alternativa explicitamente:
+
+```bash
+SICARD_SSH_PORT=10023 bash scripts/ssh-vm-via-windows.sh
+SICARD_SSH_PORT=10023 bash scripts/deploy-codespace.sh "descricao"
+```
+
+O padrão continua sendo 10022. Essa opção não muda a porta do supervisor do
+banco nem publica uma porta na VM; mantém a autenticação e a impressão digital
+SSH existentes. Não encaminhe 10023 publicamente pela aba Ports.

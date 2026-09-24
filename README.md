@@ -275,6 +275,10 @@ remoto não está adiante, faz push e usa a ponte para executar
 `.deploy/update_vm.sh main` na VM. Se não houver arquivos no índice, publica
 o commit atual. Alterações fora do índice permanecem locais.
 
+Se a ponte padrão estiver travada, o helper e o deploy aceitam
+`SICARD_SSH_PORT=10023`, após abrir essa ponte pelo Windows. Consulte a seção
+de recuperação em [Banco no Codespace](documentacao/BANCO_CODESPACE.md).
+
 No Windows, o fluxo existente é:
 
 ```powershell
