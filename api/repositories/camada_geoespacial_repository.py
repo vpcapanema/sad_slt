@@ -401,6 +401,31 @@ def atributos_paginados(recurso_id: str, offset: int = 0, limite: int = 100) -> 
             'total':total,'offset':offset,'limite':limite}
 
 
+def atributos_dashboard(recurso_id: str) -> list[dict] | None:
+    """Atributos integrais sem transferir as geometrias para cada filtro."""
+    with get_connection() as conn:
+        found = _find_layer(conn, recurso_id)
+        if not found or found[1]['tipo'] != 'vetor':
+            return None
+        categoria, camada = found
+        return conn.execute(sql.SQL('SELECT ordem,propriedades FROM geoprocessamento.{} '
+                                    'WHERE camada_id=%s ORDER BY ordem').format(sql.Identifier(STORAGES[categoria][1])),
+                            (camada['id'],)).fetchall()
+
+
+def geometrias_dashboard(recurso_id: str, ordens: list[int]):
+    """Somente as geometrias da página; ordem liga cada feição à linha exata."""
+    with get_connection() as conn:
+        found = _find_layer(conn, recurso_id)
+        if not found or found[1]['tipo'] != 'vetor':
+            raise LookupError('Camada de saída não encontrada.')
+        categoria, camada = found
+        rows = conn.execute(sql.SQL('SELECT ordem,ST_AsGeoJSON(geom)::jsonb AS geometria '
+                                    'FROM geoprocessamento.{} WHERE camada_id=%s AND ordem=ANY(%s) ORDER BY ordem')
+                            .format(sql.Identifier(STORAGES[categoria][1])), (camada['id'], ordens)).fetchall()
+    return rows
+
+
 def carregar_vetor_geojson(recurso_id: str) -> dict[str, Any] | None:
     """Monta o GeoJSON integral diretamente no PostGIS, sem alterar geometrias."""
     with get_connection() as conn:

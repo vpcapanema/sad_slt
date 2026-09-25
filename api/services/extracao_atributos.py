@@ -353,6 +353,7 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
               'resumo':{'ocorrencias':registros,'camadas_intersectadas':len(tocadas)},
               'relatorio_enriquecimento':saida['relatorio'],'dicionario':saida['dicionario'],'categorias':[],
               'validacao':saida['relatorio']['validacao'],'entradas':entradas_proc,
+              'categorias_analiticas':[{'id':c['id'],'nome':c['nome'],'conceito':c.get('conceito','')} for c in categories],
               'finalidades':{chave:{'nome':item['nome'],'campos':item['campos']} for chave,item in saida['finalidades'].items()},
               'geojson':geojson}
     with _lock: etapas = list(_progress.get(ident) or [])
@@ -435,6 +436,23 @@ def tabela_resultado(ident, user, camada='resultado', offset=0, limite=100):
     if tabela is None:
         raise LookupError('Tabela de saída não encontrada.')
     return {'camada':camada,**tabela}
+
+
+def dashboard_resultado(ident, user, camada='resultado', **filtros):
+    from api.services.extracao_atributos_dashboard import carregar
+
+    def conceitos():
+        with get_connection() as conn:
+            return [dict(r) for r in conn.execute(
+                'SELECT codigo AS id,nome,conceito FROM dominios.categoria_extracao_atributos').fetchall()]
+
+    def representar(features):
+        import geopandas as gpd
+        from api.services.extracao_entrada_local import _representacao_mapa
+        return _representacao_mapa(gpd.GeoDataFrame.from_features(features, crs=4674), 40000)
+
+    return carregar(ident, user, camada, consultar=consultar, repo=repo,
+                    carregar_conceitos=conceitos, representar_mapa=representar, **filtros)
 
 
 def listar_execucoes(user, limite=50):

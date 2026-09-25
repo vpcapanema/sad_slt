@@ -1,6 +1,7 @@
 import { $, el, options, numero, atributos, feedback } from "./ui.js";
 import { rotulo as rotuloRegra } from "./regras.js";
 import { base, json } from './api.js';
+import { criarDashboard } from './dashboard.js';
 
 // Valores e estatísticas vêm do serviço. A interface somente os apresenta.
 export function medida(value, dimension) {
@@ -34,7 +35,7 @@ export function criarResultados() {
       finally{delete link.dataset.baixando;}
     });
   }
-  let result=null,view="summary",tableVersion=0;
+  let result=null,view="dashboard",tableVersion=0,dashboard;
   const categorySelect=$("#ea-result-category"),layerSelect=$("#ea-result-layer");
   function groups() {
     return (result?.categorias||[]).filter(c=>!categorySelect.value||c.id===categorySelect.value);
@@ -151,11 +152,14 @@ export function criarResultados() {
   }
   function render() {
     if(!result) return;
+    dashboard?.dispose();
     tableVersion++;
     $("#ea-results-content").replaceChildren();
-    const filters=result.modo!=='enriquecimento'&&view!=='attributes';
+    $('#ea-kpis').hidden=view==='dashboard';
+    const filters=result.modo!=='enriquecimento'&&view!=='attributes'&&view!=='dashboard';
     categorySelect.disabled=!filters;layerSelect.disabled=!filters;
     categorySelect.closest('.ea-results-filters').hidden=!filters;
+    if(view==='dashboard'){dashboard.mount($('#ea-results-content'));return;}
     if(view==='attributes'){outputTable();return;}
     if(result.modo==="enriquecimento"){enriquecimento();return;}
     if(!result.categorias.length) { $("#ea-results-content").append(el("p","Processamento concluído sem ocorrências de extração.","ea-empty-small")); return; }
@@ -172,7 +176,9 @@ export function criarResultados() {
   const empty=$("#ea-results-content").innerHTML;
   function clear() {
     tableVersion++;
-    result=null;view='summary';categorySelect.closest('.ea-results-filters').hidden=false;$("#ea-results-content").innerHTML=empty;
+    dashboard?.dispose();dashboard=null;
+    result=null;view='dashboard';categorySelect.closest('.ea-results-filters').hidden=true;$("#ea-results-content").innerHTML=empty;
+    $('#ea-kpis').hidden=true;
     document.querySelectorAll('#ea-results [data-view]').forEach(button=>{
       const selected=button.dataset.view===view;
       button.classList.toggle('is-active',selected);button.setAttribute('aria-pressed',String(selected));
@@ -192,7 +198,8 @@ export function criarResultados() {
   const KPIS={sobreposicao:["Categorias analisadas","Camadas intersectadas","Ocorrências","Parcela da entrada atingida"],
     enriquecimento:["Camadas de saída","Bases com correspondência","Registros","Conferência"]};
   function set(value) {
-    view='summary';
+    dashboard?.dispose();dashboard=criarDashboard(value);
+    view='dashboard';
     document.querySelectorAll('#ea-results [data-view]').forEach(button=>{
       button.classList.toggle('is-active',button.dataset.view===view);
       button.setAttribute('aria-pressed',String(button.dataset.view===view));
@@ -200,12 +207,13 @@ export function criarResultados() {
     result=value;options(categorySelect,result.categorias||[],"Todas as categorias");categorySelect.disabled=false;layerSelect.disabled=false;
     const summary=result.resumo||{};
     const enriquecimento=result.modo==="enriquecimento";
-    $('#ea-results [data-view="summary"]').textContent=enriquecimento?'Síntese e conferência':'Síntese por categoria';
+    $('#ea-results [data-view="summary"]').textContent=enriquecimento?'Conferência do processamento':'Resumo das interseções';
     $('#ea-results [data-view="statistics"]').hidden=enriquecimento;
     $('#ea-results [data-view="dictionary"]').hidden=!enriquecimento;
     $('#ea-package-description').textContent=enriquecimento
       ?'GeoPackage, tabelas CSV e XLSX, dicionário de campos, configuração e conferência. Os recortes por finalidade são incluídos quando configurados. Este modo não gera relatórios PDF.'
       :'GeoPackage com entrada e resultado, relatórios de processamento e analítico em PDF, tabela de atributos em XLSX e CSV.';
+    $('#ea-package-description').textContent+=' Pacote integral da execução; os filtros do painel não alteram o download.';
     for(const tipo of ['processamento','analitico']){
       const link=$(`#ea-pdf-${tipo}`);link.hidden=enriquecimento;
       link.href=`${base}/extracao-atributos/execucoes/${encodeURIComponent(result.id)}/relatorios/${tipo}`;

@@ -670,3 +670,49 @@ O painel Leaflet da seção 1 reúne entradas (com validação e arquivos de ori
 O contrato de configuração versão 5 distingue `escopo=analise` (três subseções, inclusive algoritmo, regras, entradas, finalidades e nome de saída) de `escopo=bases` (somente bases, regras e categorias). As listas têm identificadores prefixados por `lista-bases-` e são filtradas separadamente no explorador. Arquivos anteriores são considerados configurações de análise. O carregamento de listas não altera entradas, algoritmo ou nome de saída e devolve as bases ao estado pendente de confirmação. Rascunhos de análise podem ser salvos antes de escolher bases ou algoritmo. Arquivos de entrada locais continuam temporários: os dados binários não são incluídos nos arquivos de configuração.
 
 Os cards auxiliares de ferramenta territorial e configuração da análise usam o mesmo padrão vertical (título, descrição e uma ação por linha). No desktop, têm a largura de uma coluna: ferramenta à direita acima de 1.3 e configuração à esquerda abaixo de 1.1; em telas estreitas ocupam a largura disponível. O card dinâmico “Entradas desta análise” foi removido. A seleção de uma ou várias entradas ocorre no explorador de 1.1, e os dois algoritmos consomem esse mesmo conjunto; enviar um arquivo local ou limpar a entrada substitui/limpa também as entradas adicionais anteriores.
+
+### Painel descritivo de resultados (25/09/2026)
+
+A seção de resultados abre em **Painel analítico**. A conferência técnica,
+a tabela completa, o dicionário e os downloads continuam nas opções próprias.
+
+- Filtros por saída, categoria, base, feição de origem, atributo e busca textual.
+- Correspondências por categoria, com abertura das bases; união das feições,
+  sem somar sobreposições entre bases. As regras podem ser espaciais ou por atributo.
+- Frequências clicáveis para atributos categóricos; histograma, mínimo, máximo,
+  média e mediana para atributos numéricos. Nenhuma unidade é presumida.
+- Indicadores de feições distintas, registros, valores preenchidos e ausentes.
+- Tabela ordenável e paginada, ligada ao mapa e ao detalhamento dos atributos.
+- Conceitos e procedência acessíveis em um bloco expansível.
+
+O endpoint de leitura `POST /api/geoespacial/extracao-atributos/execucoes/{id}/dashboard`
+reutiliza a autorização da execução antes de ler sua saída. Os filtros ficam no
+corpo da consulta. Não há escrita de dados nem migrations para abrir o painel.
+Os cálculos usam todos os atributos da saída selecionada, sem amostragem. Somente
+as geometrias da página (25 registros) são carregadas para o mapa; simplificações
+visuais são explicitamente indicadas e nunca entram nos cálculos.
+
+Feições distintas usam `camada_origem` + `fid_origem`; `id_origem` pode ser
+repetido e serve como rótulo. Nos resultados históricos usa-se `fid_entrada`.
+Sem identificação completa, a contagem de feições fica indisponível e o gráfico
+conta registros. Distribuições numéricas e categóricas descrevem registros de
+saída, que podem repetir feições após recortes/duplicações. Categoria/base
+selecionam o assunto e os campos, preservando os registros sem correspondência.
+Ausência de metadados de correspondência é **não informado**, nunca zero inferido.
+
+Novas execuções preservam os conceitos das categorias. As anteriores consultam
+o catálogo atual, identificado como não versionado na execução. O painel não
+atribui viabilidade, benefício, gravidade, prioridade ou recomendações às demandas.
+O pacote para download permanece integral e independe dos filtros do painel.
+
+Validação isolada, sem banco de produção:
+
+```bash
+python -m unittest discover -s tests -p 'test_extracao_dashboard.py' -v
+node tests/browser/extracao-dashboard.cjs
+```
+
+O teste de navegador requer Playwright/Chromium; inicia um servidor de fixtures
+em uma porta local livre, usa os componentes reais e o cálculo descritivo, e
+encerra o servidor ao terminar. Não inicia o backend principal. Verifica filtros,
+paginação, histograma, mapa/tabela, erros, invalidação e larguras de 320 a 1440 px.

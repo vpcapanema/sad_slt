@@ -333,6 +333,32 @@ def tabela_resultado(ident: UUID, camada: str = Query(default='resultado',max_le
         raise HTTPException(404,str(exc)) from exc
 
 
+class ConsultaDashboard(BaseModel):
+    camada: str = Field(default='resultado', max_length=200)
+    categoria: str = Field(default='', max_length=200)
+    base: str = Field(default='', max_length=500)
+    origem: str = Field(default='', max_length=2000)
+    campo: str = Field(default='', max_length=500)
+    valor: str = Field(default='', max_length=10000)
+    busca: str = Field(default='', max_length=200)
+    ordem: Literal['origem', 'valor'] = 'origem'
+    descendente: bool = False
+    pagina: int = Field(default=0, ge=0)
+
+
+@router.post('/execucoes/{ident}/dashboard')
+def dashboard_resultado(ident: UUID, payload: ConsultaDashboard,
+                        user: SessionUser = Depends(require_geospatial_access)):
+    try:
+        data = service.dashboard_resultado(ident, user, **payload.model_dump())
+        return Response(json.dumps(data, ensure_ascii=False, allow_nan=False), media_type='application/json',
+                        headers={'Cache-Control':'no-store'})
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
 @router.patch('/execucoes/{ident}')
 def renomear(ident: UUID, payload: RenomearExtracao, user: SessionUser = Depends(require_geospatial_access)):
     try:
