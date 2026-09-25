@@ -29,7 +29,7 @@ class LayerTests(unittest.TestCase):
         ids=[a['id'] for a in chosen]
         expected=layer(selection(ids)).set_index('CD_MUN').sort_index()
         self.assertAlmostEqual(expected.loc['3550308','seade_ipdm_2022'],.577)
-        for fmt in ['fgb','gpkg','shp']:
+        for fmt in ['fgb','gpkg','shp','geojson']:
             with self.subTest(format=fmt),tempfile.TemporaryDirectory() as temp:
                 with zipfile.ZipFile(io.BytesIO(export_layer({'attributes':ids,'format':fmt}))) as archive:
                     archive.extractall(temp)

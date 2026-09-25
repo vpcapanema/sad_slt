@@ -62,7 +62,7 @@ function readFacets(attribute) {
   }
   return facets;
 }
-const limits = {fgb:6500, gpkg:1900, shp:250};
+const limits = {fgb:6500, gpkg:1900, shp:250, geojson:6500};
 const ALL_SOURCES = '__todas__';
 
 /** onExport({blob, filename, configuration, attributes}); download=false lets the host own delivery. */
@@ -159,8 +159,8 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
       const filename=`municipios_sp_${snapshot.format}.zip`;
       await onExport?.({blob,filename,configuration:snapshot,attributes:selectedItems});
       if(download){const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
-      if(mounted.current)setStatus('Camada gerada. O pacote contém a camada, o dicionário e os metadados.');
-      processo?.concluir({type:'success',message:'Camada gerada e disponível no acervo. O pacote contém a camada, o dicionário e os metadados.'});
+      if(mounted.current)setStatus('Camada gerada. O pacote contém a camada, o relatório do join, o glossário, os metadados e a tabela em CSV, XLSX e TXT.');
+      processo?.concluir({type:'success',message:'Camada gerada e disponível no acervo. O pacote contém a camada, o relatório do join, o glossário, os metadados e a tabela em CSV, XLSX e TXT.'});
     }catch(e){if(mounted.current){setError(e.message);setStatus('');}processo?.concluir({type:e.name==='AbortError'?'info':'error',message:e.message});}
     finally{if(mounted.current)setBusy(false);}
   }
@@ -182,8 +182,8 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
       </section>
       <aside className="mlb-panel mlb-output"><h2>2. Gere a camada</h2><div className="mlb-count"><strong>{config.attributes.length.toLocaleString('pt-BR')}</strong><span>atributos selecionados</span></div><p>Você pode combinar fontes e anos. A seleção permanece ao trocar os filtros.</p>
         <div className="mlb-basket">{selectedItems.map(a=><article key={a.id} className="mlb-basket-item"><span className="mlb-basket-name">{a.label}</span><details><summary aria-label={`Fonte e definição de ${a.label}`}></summary><div className="mlb-detail"><p className="mlb-detail-meta">{a.source} · {a.year}</p><p>{themeLabel(a.theme)} · {a.unit || 'Unidade não informada'} · {a.coverage}/645 com valor</p><p>{a.field}</p></div></details><button type="button" className="mlb-basket-remove" disabled={busy} title={`Remover ${a.label}`} aria-label={`Remover ${a.label}`} onClick={()=>toggle(a.id)}>×</button></article>)}{!selectedItems.length && <p>Selecione atributos na lista ao lado.</p>}</div>
-        <label>Formato da camada<select disabled={busy} value={config.format} onChange={e=>update({...config,format:e.target.value})}><option value="fgb">FlatGeobuf (.fgb)</option><option value="gpkg">GeoPackage (.gpkg)</option><option value="shp">Shapefile (.shp)</option></select></label>
-        <p className="mlb-note">{config.format==='shp'?'Até 250 atributos. Nomes abreviados com correspondência no dicionário.':config.format==='gpkg'?'Até 1.900 atributos. Nomes completos preservados.':'Até 6.500 atributos. Nomes completos preservados.'} Todos os formatos são entregues em ZIP.</p>
+        <label>Formato da camada<select disabled={busy} value={config.format} onChange={e=>update({...config,format:e.target.value})}><option value="fgb">FlatGeobuf (.fgb)</option><option value="gpkg">GeoPackage (.gpkg)</option><option value="shp">Shapefile (.shp)</option><option value="geojson">GeoJSON (.geojson)</option></select></label>
+        <p className="mlb-note">{config.format==='shp'?'Até 250 atributos. Nomes abreviados com correspondência no dicionário.':config.format==='gpkg'?'Até 1.900 atributos. Nomes completos preservados.':'Até 6.500 atributos. Nomes completos preservados.'} Todos os formatos são entregues em ZIP com relatório do join, glossário e tabela em CSV, XLSX e TXT.</p>
         <label className="mlb-nome">Nome da camada<input type="text" maxLength={200} disabled={busy} value={config.nome ?? ''} placeholder={nomePadrao} onChange={e=>update({...config,nome:e.target.value})}/></label>
         <p className="mlb-note">Em branco, o nome é montado com a categoria, a fonte majoritária da seleção e a data.</p>
         {!feedback && selected.size>limits[config.format] && <p className="mlb-error">Seleção excede o limite do formato. Escolha FlatGeobuf ou remova atributos.</p>}

@@ -45,7 +45,7 @@ def test_exporta_selecao_combinada_rais_e_infosiga(tmp_path):
     assert {a['field'] for a in manifesto['attributes']} == campos
 
 
-@pytest.mark.parametrize('fmt', ['fgb', 'gpkg', 'shp'])
+@pytest.mark.parametrize('fmt', ['fgb', 'gpkg', 'shp', 'geojson'])
 def test_materializa_atributos_reais(tmp_path, fmt):
     fields = {'seade_ipdm_2022', 'idh_idhm_2010'}
     items = [a for a in dados.catalog() if a['field'] in fields]
@@ -126,7 +126,8 @@ def test_pacote_nomeia_os_arquivos_pela_base(tmp_path):
         {'attributes': [a['id'] for a in items], 'format': 'gpkg'}, tmp_path, base)
     assert path.name == f'{base}.gpkg'
     assert {f.name for f in tmp_path.iterdir()} == {
-        f'{base}.gpkg', f'{base}.qml', f'{base}_dicionario.csv', f'{base}_metadados.json'}
+        f'{base}.gpkg', f'{base}.qml', f'{base}_dicionario.csv', f'{base}_metadados.json',
+        f'{base}_relatorio_join.txt', f'{base}_atributos.csv', f'{base}_atributos.xlsx', f'{base}_atributos.txt'}
     assert package[:2] == b'PK' and manifest['municipalities'] == 645
 
 

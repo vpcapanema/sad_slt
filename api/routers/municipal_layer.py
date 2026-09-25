@@ -12,7 +12,7 @@ router = APIRouter(prefix='/municipal', dependencies=[Depends(require_geospatial
 
 class Selecao(BaseModel):
     attributes: list[str] = Field(min_length=1, max_length=6500)
-    format: Literal['fgb', 'gpkg', 'shp'] = 'fgb'
+    format: Literal['fgb', 'gpkg', 'shp', 'geojson'] = 'fgb'
     nome: str = Field(default='', max_length=200)
 
 

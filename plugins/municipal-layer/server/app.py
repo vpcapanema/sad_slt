@@ -12,8 +12,10 @@ import geopandas as gpd
 import pandas as pd
 try:
     from .import_data import DATA, ROOT
+    from . import export_support
 except ImportError:  # Execução standalone e testes originais.
     from import_data import DATA, ROOT
+    import export_support
 
 @contextmanager
 def connection():
@@ -49,14 +51,13 @@ def layer(items):
     with connection() as conn:
         for item in items:
             records = conn.execute('SELECT municipality,value FROM observations WHERE attribute_id=?', (item['id'],)).fetchall()
-            columns[item['field']] = pd.Series({r[0]: r[1] for r in records}, dtype='float64')
-    frame = frame.join(pd.DataFrame(columns)).reset_index()
-    return gpd.GeoDataFrame(frame, geometry='geometry', crs='EPSG:4674')
+            columns[item['field']] = pd.Series([r[1] for r in records], index=[r[0] for r in records], dtype='float64')
+    return export_support.join_attributes(frame, columns)
 
 def export_layer(payload):
     items = selection(payload.get('attributes'))
     fmt = payload.get('format', 'fgb')
-    limits = {'fgb':6500, 'gpkg':1900, 'shp':250}
+    limits = {'fgb':6500, 'gpkg':1900, 'shp':250, 'geojson':6500}
     if fmt not in limits:
         raise ValueError('Formato inválido.')
     if len(items) > limits[fmt]:
@@ -67,7 +68,7 @@ def export_layer(payload):
     # Uma geometria homogênea, sem simplificação, para interoperabilidade.
     from shapely.geometry import MultiPolygon
     frame.geometry = frame.geometry.map(lambda g: MultiPolygon([g]) if g.geom_type == 'Polygon' else g)
-    manifest = {'municipalities':len(frame),'crs':'EPSG:4674','geometry_year':2022,
+    manifest = {'join':frame.attrs['join'], 'municipalities':len(frame),'crs':'EPSG:4674','geometry_year':2022,
                 'geometry_source':'IBGE · Malha municipal 2022 · São Paulo',
                 'format':fmt,'attributes':[{**i,'export_field':fields[i['field']]} for i in items],
                 'notes':['Ausência de valor permanece nula; zero é preservado.',
@@ -76,13 +77,18 @@ def export_layer(payload):
     with tempfile.TemporaryDirectory(prefix='municipal-layer-') as temp:
         folder = Path(temp)
         output = folder/f'municipios_sp.{fmt}'
-        frame.to_file(output, driver={'fgb':'FlatGeobuf','gpkg':'GPKG','shp':'ESRI Shapefile'}[fmt], encoding='UTF-8', index=False)
-        (folder/'metadados.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
+        frame.to_file(output, driver={'fgb':'FlatGeobuf','gpkg':'GPKG','shp':'ESRI Shapefile','geojson':'GeoJSON'}[fmt], encoding='UTF-8', index=False,
+                      **({'COORDINATE_PRECISION': 17, 'SIGNIFICANT_FIGURES': 17} if fmt == 'geojson' else {}))
         with (folder/'dicionario.csv').open('w', encoding='utf-8-sig',newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=['campo','indicador','fonte','ano','tema','unidade','url','municipios_com_valor'])
+            writer = csv.DictWriter(f, fieldnames=['campo','indicador','fonte','ano','tema','unidade','url','municipios_com_valor','campo_bruto','alias'])
             writer.writeheader()
+            for field, label in [('CD_MUN','Código do município (IBGE)'),('NM_MUN','Nome do município'),('SIGLA_UF','Unidade da federação'),('AREA_KM2','Área do município (km²)')]:
+                writer.writerow({'campo':field,'campo_bruto':field,'alias':label,'indicador':label})
             for i in items:
-                writer.writerow(dict(zip(writer.fieldnames,[fields[i['field']],i['label'],i['source'],i['year'],i['theme'],i['unit'],i['url'],i['coverage']])))
+                writer.writerow(dict(zip(writer.fieldnames,[fields[i['field']],i['label'],i['source'],i['year'],i['theme'],i['unit'],i['url'],i['coverage'],i['field'],i['label']])))
+        actual = export_support.reopen_and_validate(output, frame)
+        export_support.write_tables_and_report(folder, 'municipios_sp', actual, manifest, metadata_name='metadados.json')
+        (folder/'metadados.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer,'w',zipfile.ZIP_DEFLATED) as archive:
             for file in folder.iterdir():

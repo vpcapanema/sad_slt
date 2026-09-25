@@ -4,11 +4,12 @@ Substitui a leitura do SQLite e do GeoPackage que acompanhavam o pacote
 municipal-layer. As funções mantêm as assinaturas e os contratos que o
 gerador de camadas e sua interface React já consumiam: o catálogo entrega
 ``detail`` como texto JSON, a exportação devolve um ZIP com camada,
-dicionário e metadados, e ausência de valor permanece nula.
+glossário, metadados, relatório e tabelas CSV/XLSX/TXT. Ausência de valor permanece nula.
 """
 from __future__ import annotations
 
 import csv
+from importlib import import_module
 import io
 import re
 import json
@@ -23,12 +24,14 @@ import pandas as pd
 
 from api.db.connection import get_connection
 
+export_support = import_module('plugins.municipal-layer.server.export_support')
+
 MUNICIPIOS = 645
 CRS = 'EPSG:4674'
 ANO_MALHA = 2022
 ORIGEM_MALHA = 'IBGE · Malha municipal 2022 · São Paulo'
-LIMITES = {'fgb': 6500, 'gpkg': 1900, 'shp': 250}
-DRIVERS = {'fgb': 'FlatGeobuf', 'gpkg': 'GPKG', 'shp': 'ESRI Shapefile'}
+LIMITES = {'fgb': 6500, 'gpkg': 1900, 'shp': 250, 'geojson': 6500}
+DRIVERS = {'fgb': 'FlatGeobuf', 'gpkg': 'GPKG', 'shp': 'ESRI Shapefile', 'geojson': 'GeoJSON'}
 
 
 def catalog() -> list[dict]:
@@ -96,8 +99,7 @@ def layer(items: list[dict], controle=None) -> gpd.GeoDataFrame:
                 controle.mensagem(f"Preparando indicador {indice} de {len(items)}: {item.get('label', item['field'])}")
                 controle.tarefa(indice,len(items))
             columns[item['field']] = series.get(item['id'], pd.Series(dtype='float64'))
-    frame = frame.join(pd.DataFrame(columns)).reset_index()
-    return gpd.GeoDataFrame(frame, geometry='geometry', crs=CRS)
+    return export_support.join_attributes(frame, columns)
 
 
 # ---------------------------------------------------------------------------
@@ -304,7 +306,7 @@ def conferir_capacidade(quantos: int) -> None:
 
 
 def export_layer(payload: dict, base: str = PREFIXO, controle=None) -> bytes:
-    """Gera o ZIP com camada, dicionário e metadados, sem simplificar geometria.
+    """Gera o ZIP completo com camada, glossário, relatório e tabelas de atributos.
 
     ``base`` nomeia todos os arquivos do pacote, para que a pasta no acervo e o
     conteúdo dela compartilhem o mesmo identificador.
@@ -323,7 +325,7 @@ def export_layer(payload: dict, base: str = PREFIXO, controle=None) -> bytes:
     fields = {e['campo_bruto']: e['campo_exportado'] for e in entradas}
     frame = frame.rename(columns=fields)
     rotulos = {e['campo_bruto']: e['alias'] for e in entradas}
-    manifest = {'municipalities': len(frame), 'crs': CRS, 'geometry_year': ANO_MALHA,
+    manifest = {'join': frame.attrs['join'], 'municipalities': len(frame), 'crs': CRS, 'geometry_year': ANO_MALHA,
                 'geometry_source': ORIGEM_MALHA, 'format': fmt,
                 'attributes': [{**i, 'export_field': fields[i['field']],
                                 'alias': rotulos[i['field']], 'significado': significado_de(i)} for i in items],
@@ -339,11 +341,11 @@ def export_layer(payload: dict, base: str = PREFIXO, controle=None) -> bytes:
         folder = Path(temp)
         output = folder / f'{base}.{fmt}'
         if controle:controle.mensagem('Gravando a camada em um arquivo temporário')
-        frame.to_file(output, driver=DRIVERS[fmt], encoding='UTF-8', index=False)
+        frame.to_file(output, driver=DRIVERS[fmt], encoding='UTF-8', index=False,
+                      **({'COORDINATE_PRECISION': 17, 'SIGNIFICANT_FIGURES': 17} if fmt == 'geojson' else {}))
         if controle:controle.mensagem('Preparando metadados e dicionário de campos')
         manifest['alias_no_arquivo'] = bool(fmt == 'gpkg' and aplicar_aliases(output, entradas))
         (folder / f'{base}.qml').write_text(estilo_qgis(entradas), encoding='utf-8')
-        (folder / f'{base}_metadados.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
         with (folder / f'{base}_dicionario.csv').open('w', encoding='utf-8-sig', newline='') as arquivo:
             writer = csv.DictWriter(arquivo, fieldnames=['campo_exportado', 'alias', 'significado',
                                                          'campo_bruto', 'fonte', 'tema', 'ano',
@@ -355,6 +357,10 @@ def export_layer(payload: dict, base: str = PREFIXO, controle=None) -> bytes:
                                  'ano': ANO_MALHA})
             for entrada in entradas:
                 writer.writerow({chave: entrada[chave] for chave in writer.fieldnames})
+        if controle:controle.mensagem('Reabrindo camada para conferir feições, atributos e geometrias')
+        actual = export_support.reopen_and_validate(output, frame)
+        export_support.write_tables_and_report(folder, base, actual, manifest, controle)
+        (folder / f'{base}_metadados.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
             arquivos=list(folder.iterdir())

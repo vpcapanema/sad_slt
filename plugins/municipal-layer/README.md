@@ -10,7 +10,7 @@ O usuário escolhe **fonte, ano e atributos**. O sistema reúne os valores pelo 
 | Geometria | Malha IBGE 2022, SIRGAS 2000, EPSG:4674 |
 | Catálogo | 6.347 combinações de atributo e período |
 | Banco | 4.093.815 registros municipais, incluindo valores nulos |
-| Saídas | FlatGeobuf, GeoPackage ou Shapefile em ZIP |
+| Saídas | FlatGeobuf, GeoPackage, GeoJSON ou Shapefile em ZIP |
 | Integração | Componente React, propriedades, callbacks e cliente de API substituível |
 
 Este documento descreve o código e os dados desta versão. Não é necessário conhecer a conversa que originou o projeto.
@@ -96,7 +96,7 @@ Nesse caso abra `http://127.0.0.1:18766`. O proxy de desenvolvimento Vite contin
 
 A exportação inclui todos os 645 municípios e todos os atributos selecionados. Não há filtro espacial ou recorte municipal nesta versão. **Agrupamento temático significa proximidade dos campos na tabela**, não camadas separadas.
 
-No QGIS, por exemplo, adicione o `.fgb`, `.gpkg` ou `.shp` extraído como camada vetorial. Mantenha os auxiliares do Shapefile juntos. Para operações métricas, escolha uma projeção adequada à operação; a entrega mantém o CRS geográfico de origem.
+No QGIS, por exemplo, adicione o `.fgb`, `.gpkg`, `.geojson` ou `.shp` extraído como camada vetorial. Mantenha os auxiliares do Shapefile juntos. Para operações métricas, escolha uma projeção adequada à operação; a entrega mantém o CRS geográfico de origem.
 
 ## 3. Estrutura do pacote
 
@@ -164,7 +164,7 @@ GeoPackage: geometria por CD_MUN
         ↓
 Join por código IBGE + ordenação dos campos
         ↓
-Uma camada + dicionário + metadados
+Uma camada + glossário + metadados + relatório + tabelas CSV/XLSX/TXT
         ↓
 Blob ZIP → download ou callback do hospedeiro
 ```
@@ -239,16 +239,21 @@ A ordem final é **fonte → tema → ano crescente → campo**. A ordem de cliq
 | Formato | Limite da aplicação | Nomes dos indicadores |
 | --- | ---: | --- |
 | FlatGeobuf (`fgb`) | 6.500 | Completos, com ano |
+| GeoJSON (`geojson`) | 6.500 | Completos, com ano |
 | GeoPackage (`gpkg`) | 1.900 | Completos, com ano |
 | Shapefile (`shp`) | 250 | `A000001`, `A000002` etc. |
 
 Esses limites são regras adotadas pela aplicação, não limites universais de todos os leitores. Shapefile restringe nomes do DBF, por isso usa correspondência no dicionário. **`A000001` pode representar indicadores diferentes em seleções diferentes.** Leia o dicionário do mesmo ZIP.
 
 ```text
-municipios_sp.fgb              OU municipios_sp.gpkg
+municipios_sp.fgb              OU municipios_sp.gpkg OU municipios_sp.geojson
                               OU municipios_sp.shp + auxiliares
 dicionario.csv                campo, indicador, fonte, ano, tema, unidade, URL, cobertura
 metadados.json                CRS, ano da geometria, formato e atributos completos
+municipios_sp_relatorio_join.txt  diagnóstico completo do join
+municipios_sp_atributos.csv    tabela de atributos, UTF-8 com BOM
+municipios_sp_atributos.xlsx   tabela de atributos, códigos como texto
+municipios_sp_atributos.txt    tabela de atributos, UTF-8 com tabulação
 ```
 
 O CSV usa UTF-8 com BOM e vírgula como delimitador; o JSON usa UTF-8. `export_field`, nos metadados, informa o nome efetivamente escrito. `detail` é uma string contendo JSON, que precisa ser decodificada para acessar seus campos. A interface baixa `municipios_sp_<formato>.zip`; os nomes internos são fixos.
@@ -308,7 +313,7 @@ Esse exemplo recebe o ZIP em memória. O hospedeiro decide o destino de `arquivo
 | `apiBaseUrl` | String, padrão `/api` |
 | `feedback` | Componente opcional do hospedeiro com `confirmar`, `processo`, `warning` e `error`; o SICARD fornece `SLTFeedback`, dispensando faixas próprias de interação |
 | `client` | Adaptador opcional com métodos async `catalog(signal)`, `preview(config, signal)` e `export(config, signal)` |
-| `value` | Configuração completa: `attributes` como lista de IDs e `format` como `fgb`, `gpkg` ou `shp` |
+| `value` | Configuração completa: `attributes` como lista de IDs e `format` como `fgb`, `gpkg`, `geojson` ou `shp` |
 | `onChange` | Recebe a próxima configuração; no modo controlado o hospedeiro deve atualizar `value` |
 | `onExport` | Recebe `{blob, filename, configuration, attributes}`; pode retornar Promise |
 | `download` | Boolean, padrão `true`; `false` desativa o download automático |
@@ -437,7 +442,7 @@ python -B -m unittest discover -s server -p 'test_*.py'
 
 O build gera `demo-dist/` e depois `dist/`. React, React DOM e JSX runtime ficam externos à biblioteca. Não edite builds diretamente; edite `src/` e recompile.
 
-`npm test` chama os mesmos testes com `python` do PATH. Se utilizar ambiente virtual sem ativação, chame seu Python explicitamente. Os quatro testes usam dados reais e verificam integridade, períodos, erros de seleção, limite Shapefile, reabertura das três exportações e exportação de todo o catálogo em FGB, comparando valores/nulos e geometria.
+`npm test` chama os mesmos testes com `python` do PATH. Se utilizar ambiente virtual sem ativação, chame seu Python explicitamente. Os quatro testes originais usam dados reais e verificam integridade, períodos, erros de seleção, limite Shapefile, reabertura das quatro exportações e exportação de todo o catálogo em FGB, comparando valores/nulos e geometria.
 
 Contagens fixas dos testes só devem ser alteradas quando o catálogo mudar de forma intencional e comprovada. [VALIDACAO.md](VALIDACAO.md) descreve as evidências de interface e as limitações. Testes de backend não equivalem a homologação de toda a UI ou de todos os softwares GIS.
 
@@ -551,3 +556,33 @@ pode receber `(configuration, signal, feedbackProcess)`; clientes existentes
 continuam compatíveis. Cancelar aguarda a confirmação do servidor, preserva a
 seleção e não executa `onExport`. O registro final no acervo é uma etapa atômica
 que não aceita nova solicitação de cancelamento.
+
+
+## Garantias do join e do pacote
+
+O universo de saída é exatamente o da malha de entrada. O join é à esquerda,
+por `CD_MUN`, com validação de unicidade; observações externas à malha não
+criam feições. Ausência de observação e valor nulo mantêm o município com célula
+vazia; zero permanece zero. O arquivo é reaberto antes de entregar o ZIP e seus
+códigos, contagem, CRS, geometrias, campos, valores e nulos são comparados com
+a camada preparada. Divergência impede a entrega.
+
+Todos os formatos incluem relatório TXT com origem, chave, método, quantidades,
+seleção, fonte/ano/unidade, contagens por indicador de correspondências, ausências,
+nulos e zeros, códigos fora da malha e resultado da validação. O glossário CSV
+inclui campos fixos, nomes brutos, nomes exportados e aliases. As tabelas CSV,
+XLSX e TXT são derivadas da camada reaberta, sem geometria e sem eliminar linhas.
+O TXT é tabulado; o XLSX usa escrita em fluxo para seleções extensas.
+
+GeoJSON mantém o CRS da malha (EPSG:4674, declarado no arquivo); não é uma
+exportação RFC 7946 reprojetada para WGS84. O Shapefile inclui `.shp`, `.shx`,
+`.dbf`, `.prj` e `.cpg` no ZIP. Consulte o glossário para os nomes abreviados.
+No SICARD os arquivos recebem o prefixo exclusivo da geração; o dicionário já
+inclui significados e o pacote mantém também o QML de aliases.
+
+O módulo `server/export_support.py` é compartilhado entre o servidor standalone
+e o exportador SICARD para preservar essas regras. Os testes isolados
+`server/test_export_support.py` cobrem ausências totais/parciais, zero, códigos
+fora da malha, duplicatas e reabertura dos quatro formatos. Não substituem os
+testes com o catálogo original em `server/test_layer.py`, que dependem dos
+insumos locais `data/catalog.sqlite` e `data/municipios.gpkg`.
