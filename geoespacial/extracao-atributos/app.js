@@ -180,7 +180,7 @@ function controls() {
 function syncMap() {
   const items=state.bancadaBases.map(base=>{
     const layer=base.layer,category=state.categories.find(c=>c.id===base.category);
-    return {...layer,key:`base:${layer.id}`,grupo:category?.nome||base.category,papelExtracao:'base',arquivoGrupo:layer.arquivo_local?.nome||layer.arquivo||layer.nome,color:category?.color};
+    return {...layer,key:`base:${layer.id}`,grupo:category?.nome||base.category,papelExtracao:'base',color:category?.color};
   });
   for(const entrada of state.bancadaEntradas)for(const layer of componentesEntrada(entrada.layer))items.push({...layer,key:`input:${layer.id}`,grupo:'Input',papelExtracao:'entrada',arquivoGrupo:entrada.layer.arquivo_local?.nome||entrada.layer.arquivo||layer.arquivo||entrada.layer.nome,color:'#d6542b'});
   if(state.result?.geojson) items.push({key:`resultado:${state.result.id}`,nome:"Geometria da extração",geojson:state.result.geojson,grupo:"Resultado",color:"#853eaf"});
@@ -407,7 +407,12 @@ window.addEventListener('extracao:integracao',async()=>{
   }catch(error){feedback(`Não foi possível carregar o catálogo: ${error.message}`,'error');}
   abrirExtracaoDaUrl();
 });
-window.SICARDExtracao={ocupar:busy,atualizarControles:controls,conectar:conectarIntegracao,renderParametros,renderSelecao,renderFinalidades,changed};
+window.SICARDExtracao={async aguardarBancada(){
+  for(let i=0;i<300;i++){
+    try{map.assertReady(idsDaComposicao());return;}catch(error){if(i===299)throw error;}
+    await new Promise(resolve=>setTimeout(resolve,100));
+  }
+},ocupar:busy,atualizarControles:controls,conectar:conectarIntegracao,renderParametros,renderSelecao,renderFinalidades,changed};
 renderParametros();
 changed();
 conectarIntegracao(adaptador);

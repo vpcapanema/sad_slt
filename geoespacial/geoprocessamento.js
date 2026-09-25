@@ -496,7 +496,7 @@
     if(entradas.length||daExtracao)papeis.push(group("papel:entrada",rotulo("Camadas de entrada",entradas.length),
       "map-pin",daExtracao?porArquivo(entradas,'entrada'):ordenar(entradas).map(layerRow).join(""),"Nenhuma camada de entrada.","layer-subgroup",contagem("Camadas de entrada",entradas)));
     if(todasAsBases.length||daExtracao)papeis.push(group("papel:base",rotulo("Camadas de base",todasAsBases.length),
-      "layers",daExtracao?porArquivo(todasAsBases,'base'):categorias,"Nenhuma camada de base.","layer-subgroup",contagem("Camadas de base",todasAsBases)));
+      "layers",categorias,"Nenhuma camada de base.","layer-subgroup",contagem("Camadas de base",todasAsBases)));
     if(resultados.length)papeis.push(group("papel:resultado",rotulo("Resultado da extração",resultados.length),
       "sparkles",ordenar(resultados).map(layerRow).join(""),"","layer-subgroup",contagem("Resultado da extração",resultados)));
     const operational=papeis.join("")+ordenar(soltas).map(layerRow).join("");

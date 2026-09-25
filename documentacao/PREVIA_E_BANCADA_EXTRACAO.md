@@ -4,7 +4,7 @@ Para entradas, selecionar uma camada existente e enviar arquivos locais alimenta
 
 Editar, limpar e desfazer atuam na preparação. Remover uma camada diretamente na bancada a retira também da preparação e do pedido de execução. Alterações nas regras de bases preparadas devem ser confirmadas novamente. Algoritmo e nome da saída continuam definidos na seção 1.3.
 
-A árvore possui raízes fixas de entrada e base. Entradas mantêm subgrupos por arquivo; bases têm subgrupos pela categoria da lista, com as camadas diretamente dentro de cada categoria, sem repetir a camada como grupo de arquivo. A lista de bases tem altura limitada e rolagem interna, preservando seus controles. Caminhos ficam nas informações. Arquivos inválidos e rasters permanecem identificados na prévia, mas os dois algoritmos vetoriais não os recebem. Múltiplos arquivos locais conservam originais separados; a execução valida a correspondência exata entre esses arquivos e as entradas confirmadas.
+As árvores da prévia e da bancada possuem raízes fixas de entrada e base e preservam as mesmas categorias de bases. Entradas mantêm subgrupos por arquivo; bases têm subgrupos pela categoria da lista, com as camadas diretamente dentro de cada categoria, sem repetir a camada como grupo de arquivo. A lista de bases tem altura limitada e rolagem interna, preservando seus controles. Caminhos ficam nas informações. Arquivos inválidos e rasters permanecem identificados na prévia, mas os dois algoritmos vetoriais não os recebem. Múltiplos arquivos locais conservam originais separados; a execução valida a correspondência exata entre esses arquivos e as entradas confirmadas.
 
 ## Lista categorizada de bases
 
@@ -12,7 +12,7 @@ O card começa oculto e aparece ao selecionar bases ou carregar uma lista. Edita
 
 Salvar persiste a lista sem exigir leitura de geometria. Uma lista aberta é atualizada na sua chave original, inclusive listas legadas da versão 1. Configurações completas não podem ser sobrescritas por essa atualização de listas.
 
-Confirmar valida as referências com no máximo duas leituras simultâneas. Só após todas passarem o conjunto categorizado substitui as bases da prévia. Qualquer falha mantém a prévia anterior. Cancelar descarta respostas de leituras que já estavam em andamento; não há gravação no servidor nessa etapa. A bancada continua independente até Enviar pra bancada.
+Confirmar valida as referências com no máximo duas leituras simultâneas. Só após todas passarem o conjunto categorizado substitui as bases da prévia. Qualquer falha mantém a prévia anterior. Cancelar descarta respostas de leituras que já estavam em andamento; não há gravação no servidor nessa etapa. Após a inserção bem-sucedida na prévia, o card fecha e os seletores da subseção retornam ao estado inicial. As camadas e suas categorias permanecem na prévia. Em caso de falha, a lista permanece aberta para correção. A bancada continua independente até Enviar pra bancada.
 
 `GET /api/geoespacial/extracao-atributos/configuracoes/{chave}?lista=true` lê apenas as referências salvas, sem consultar o banco nem abrir camadas. Categorias ou referências indisponíveis permanecem editáveis e são verificadas ao confirmar.
 
@@ -45,7 +45,7 @@ não são padronizados por esta etapa; as fontes não são gravadas ou alteradas
 
 A composição anterior da bancada só é substituída se todas as fontes candidatas
 passarem. Durante a conferência, os controles da configuração e a bancada ficam
-bloqueados. Erros são apresentados por camada. Arquivos já identificados como
+bloqueados. O painel padrão de feedback acompanha a compatibilização e a inserção no mapa, sem percentuais artificiais. O sucesso só é informado quando todas as camadas esperadas estão na bancada. Erros são apresentados por camada. Arquivos já identificados como
 inválidos ou raster na prévia continuam fora da composição vetorial candidata.
 
 Sem algoritmo escolhido, a conferência usa a preparação geométrica do modo

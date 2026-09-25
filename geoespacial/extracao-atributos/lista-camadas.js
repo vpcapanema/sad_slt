@@ -57,7 +57,8 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     const total=enviarPrevia(candidata);
     if(!total)return;
     window.SICARDExtracao.ocupar(true);
-    feedback('Conferindo e compatibilizando espacialmente as camadas…');
+    const proc=window.SLTFeedback.processo('Enviando camadas à bancada');
+    proc.passo('Conferindo e compatibilizando espacialmente todas as entradas e bases…');
     try{
       const camadas=[
         ...candidata.bancadaEntradas.map(e=>({id:e.id,nome:e.layer.nome,papel:'entrada',arquivo_local:e.layer.arquivo_local})),
@@ -65,11 +66,14 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       ];
       const resultado=await post('/extracao-atributos/compatibilizar',{camadas,operacao:state.operation||null});
       if(resultado.compativel!==true)throw new Error((resultado.erros||[]).map(e=>`${e.nome}: ${e.motivo}`).join('; ')||'A compatibilização não foi concluída.');
+      proc.passo('Compatibilização espacial concluída. Inserindo camadas e categorias no mapa da bancada.','success');
       Object.assign(state,{bancadaEntradas:candidata.bancadaEntradas,bancadaBases:candidata.bancadaBases,bases:candidata.bases,staging:candidata.staging});
       editando=false;state.undoPrevia=null;render();
-      const falhas=await changed();
-      if(!falhas?.length)window.SLTFeedback.success(`${total} camada(s) enviada(s) à bancada. Compatibilidade espacial conferida; originais preservados.`);
-    }catch(error){window.SLTFeedback.error(`Não foi possível enviar à bancada: ${error.message}`);}
+      const falhas=await changed({etapa:(mensagem,tipo)=>proc.passo(mensagem,tipo==='erro'?'error':'info')});
+      if(falhas?.length)throw new Error(falhas.join('; '));
+      await window.SICARDExtracao.aguardarBancada();
+      proc.concluir({message:`${total} camada(s) enviada(s) à bancada. Compatibilidade espacial conferida; originais preservados.`});
+    }catch(error){proc.concluir({type:'error',message:`Não foi possível enviar à bancada: ${error.message}`});}
     finally{window.SICARDExtracao.ocupar(false);render();}
   });
   botoes.limpar.addEventListener('click',()=>{

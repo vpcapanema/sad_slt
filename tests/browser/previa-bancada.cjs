@@ -59,7 +59,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  await p.locator('#ea-staging-confirmar').click();
  await p.getByText('Não foi possível enviar à bancada:',{exact:false}).waitFor();
  assert.deepEqual(await bancada(),[],'Falha espacial preserva bancada anterior');
- await p.locator('.slt-fb-notice--error [aria-label="Dispensar notificação"]').click();
+ await p.locator('.slt-fb-processes .slt-fb-modal--error [data-fb-close]').click();
  await p.waitForFunction(()=>!document.querySelector('#ea-staging-confirmar').disabled);
  recusarCompatibilidade=false;
  await p.locator('#ea-staging-confirmar').click();await p.waitForFunction(()=>document.querySelector('iframe').contentWindow.gpApp.state.layers.length===8);
@@ -71,7 +71,10 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  assert.equal(await frame.locator('[data-layer-group="papel:entrada"] [data-layer]').count(),7);
  assert.equal(await frame.locator('[data-layer-group="papel:base"] [data-layer]').count(),1);
  assert.equal(await frame.locator('[data-layer-group="papel:entrada"] [data-layer-group^="arquivo:"]').count(),4);
- assert.equal(await frame.locator('[data-layer-group="papel:base"] [data-layer-group^="arquivo:"]').count(),1);
+ assert.equal(await frame.locator('[data-layer-group="papel:base"] [data-layer-group^="arquivo:"]').count(),0);
+ assert.equal(await frame.locator('[data-layer-group="papel:base"] [data-layer-group="categoria:Social"] [data-layer]').count(),1);
+ assert(await p.locator('.slt-fb-processes').getByText('Enviando camadas à bancada',{exact:true}).count());
+ await p.locator('.slt-fb-processes [data-fb-close]').evaluateAll(nodes=>nodes.forEach(n=>n.click()));
  assert.equal(await p.locator('.ea-preview-panel > footer button').count(),4);
  for(const button of await p.locator('.ea-preview-panel > footer button').all()){assert.equal((await button.textContent()).trim(),'');assert(await button.getAttribute('aria-label'));}
  const zin=await p.locator('#ea-input-preview-map .leaflet-control-zoom-in').boundingBox(),zout=await p.locator('#ea-input-preview-map .leaflet-control-zoom-out').boundingBox();
@@ -88,6 +91,6 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  await p.waitForFunction(()=>!Array.from(document.querySelectorAll('.ea-preview-layer')).some(n=>n.textContent==='Camada 2.0'));
  await p.locator('#ea-staging-limpar').click();assert.equal((await bancada()).length,6,'Limpar prévia mantém bancada confirmada');
  await p.locator('#ea-staging-cancelar').click();assert(await p.locator('#ea-input-preview-layers .ea-preview-layer').count()>0);
- for(const width of [390,768,1440]){await p.setViewportSize({width,height:1000});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));const cards=await p.locator('.ea-preview-workspace > section').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().height));assert(Math.abs(cards[0]-cards[1])<1);const panel=await p.locator('.ea-preview-panel').boundingBox(),map=await p.locator('#ea-input-preview-map').boundingBox();assert(Math.abs(panel.height-map.height)<=1,`Alturas diferentes em ${width}px`);}
+ for(const width of [390,768,1440]){await p.setViewportSize({width,height:1000});assert((await p.locator('.ea-config-tools').boundingBox()).height<=36,'Configuração em uma linha');assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));const cards=await p.locator('.ea-preview-workspace > section').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().height));assert(Math.abs(cards[0]-cards[1])<1);const panel=await p.locator('.ea-preview-panel').boundingBox(),map=await p.locator('#ea-input-preview-map').boundingBox();assert(Math.abs(panel.height-map.height)<=1,`Alturas diferentes em ${width}px`);}
  assert.deepEqual(errors,[]);await p.evaluate(()=>{document.querySelectorAll('.slt-fb-process-panel:not([data-processando]) [data-fb-close]').forEach(b=>b.click());document.querySelectorAll('.slt-fb-notice').forEach(n=>n.querySelector('button[aria-label]')?.click());});await p.locator('.ea-preview-workspace').screenshot({path:'/tmp/sicard-previa-informacoes.png'});await p.screenshot({path:'/tmp/sicard-previa-bancada.png',fullPage:true});await browser.close();console.log('OK: prévia, três arquivos, agrupamento, mapa, confirmação, payload e remoção.');
 })().catch(e=>{console.error(e);process.exit(1)});

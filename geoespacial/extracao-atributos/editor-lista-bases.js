@@ -73,7 +73,12 @@ export function criarEditorListaBases(state,changed,escolher,salvar){
    if(falhas.length){proc.concluir({type:'error',message:'A lista não foi enviada à prévia. Corrija ou remova as camadas com erro e confirme novamente.',resultados:falhas});return;}
    for(const {id,layer} of carregadas){const atual=state.catalog.find(c=>c.id===id);if(atual)Object.assign(atual,layer);else state.catalog.push({...layer,id});}
    state.bases=[];state.staging=itens;editando=false;sessaoAberta=false;anterior=copia(lista());selecionadas.clear();
-   await changed();proc.concluir({message:`${itens.length} camada(s) validada(s) e disponibilizada(s) na prévia. Use Enviar pra bancada para confirmar a participação no processamento.`});
+   const errosMapa=await changed();
+   if(errosMapa?.length)throw new Error(errosMapa.join('; '));
+   state.listaBases=null;anterior=null;editando=false;sessaoAberta=false;selecionadas.clear();
+   state.lastBase=null;$('#ea-category-select').value='';$('#ea-base-select').value='';
+   $('#ea-category-select').dispatchEvent(new Event('change'));
+   proc.concluir({message:`${itens.length} camada(s) validada(s) e disponibilizada(s) na prévia. Use Enviar pra bancada para confirmar a participação no processamento.`});
   }catch(e){proc.concluir({type:'error',message:e.message});}
   finally{if(token===versao){validando=false;state.validatingBases=false;render();window.SICARDExtracao?.atualizarControles?.();}}
  };
