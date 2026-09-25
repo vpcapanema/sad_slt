@@ -1,13 +1,74 @@
-import React, {useMemo,useState} from 'react';
+import React, {useEffect,useMemo,useRef,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {MunicipalLayerBuilder} from '../src/index.js';
 import './style.css';
 
+// Mapa da camada salva: todas as feições com a geometria do arquivo gerado.
+// smoothFactor 0 impede o Leaflet de simplificar os contornos ao desenhar.
+function MapaCamada({url}){
+  const host=useRef(null);
+  const [estado,setEstado]=useState('Carregando a camada no mapa…');
+  useEffect(()=>{
+    const L=window.L;
+    if(!L){setEstado('Biblioteca de mapa indisponível nesta página.');return;}
+    const map=L.map(host.current,{scrollWheelZoom:false});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:19}).addTo(map);
+    map.setView([-22.3,-48.6],6);
+    const ctrl=new AbortController();
+    setEstado('Carregando a camada no mapa…');
+    fetch(url,{credentials:'same-origin',signal:ctrl.signal}).then(async response=>{
+      if(!response.ok)throw new Error(`Não foi possível carregar a camada no mapa (HTTP ${response.status}).`);
+      return response.json();
+    }).then(data=>{
+      const camada=L.geoJSON(data,{
+        style:{color:'#176b95',weight:1,fillColor:'#4f97bf',fillOpacity:.25},
+        smoothFactor:0,
+        onEachFeature:(feature,layer)=>{
+          const p=feature.properties||{};
+          layer.bindTooltip(p.NM_MUN?`${p.NM_MUN} (${p.CD_MUN})`:String(p.CD_MUN??''),{sticky:true});
+          layer.on('click',()=>{
+            const tabela=document.createElement('table');tabela.className='territorial-mapa-popup';
+            for(const [campo,valor] of Object.entries(p)){
+              const linha=tabela.insertRow();linha.insertCell().textContent=campo;
+              linha.insertCell().textContent=valor==null?'Sem valor':typeof valor==='number'?valor.toLocaleString('pt-BR',{maximumFractionDigits:8}):String(valor);
+            }
+            layer.bindPopup(tabela,{maxWidth:420,maxHeight:320}).openPopup();
+          });
+        },
+      }).addTo(map);
+      if(camada.getBounds().isValid())map.fitBounds(camada.getBounds(),{padding:[16,16]});
+      setEstado(`${(data.features||[]).length.toLocaleString('pt-BR')} feições exibidas com a geometria original da camada salva. Clique em um município para ver seus atributos.`);
+    }).catch(error=>{if(error.name!=='AbortError')setEstado(error.message);});
+    const timer=setTimeout(()=>map.invalidateSize(),0);
+    return ()=>{ctrl.abort();clearTimeout(timer);map.remove();};
+  },[url]);
+  return <><div ref={host} className="territorial-mapa" role="region" aria-label="Mapa da camada gerada"/><p className="territorial-mapa-status" role="status">{estado}</p></>;
+}
+
+function CamadaGerada({gerada}){
+  const ref=useRef(null);
+  useEffect(()=>{ref.current?.scrollIntoView({behavior:'smooth',block:'start'});},[gerada]);
+  return <>
+    <section ref={ref} id="territorial-result" className="mlb-bloco territorial-result" aria-label="Camada gerada">
+      <h3>Camada gerada e salva</h3>
+      <p><strong>{gerada.nome}</strong> · Categoria: <span>{gerada.categoria}</span></p>
+      <p>O arquivo está disponível no acervo. Você pode baixá-lo ou incluí-lo na extração.</p>
+      <div className="ea-config-tools"><a id="territorial-download" className="ea-btn" href={gerada.download.href} download={gerada.download.filename}>Baixar camada (.zip)</a><a id="territorial-use" className="ea-btn ea-btn-primary" href={gerada.usar}>Usar na extração</a></div>
+    </section>
+    <section className="mlb-bloco territorial-mapa-bloco" aria-label="Mapa da camada gerada">
+      <h3>Mapa da camada gerada</h3>
+      <MapaCamada url={gerada.geojson}/>
+    </section>
+  </>;
+}
+
 // O hospedeiro fornece a página; o plugin não cria janelas nem navegação.
+// onGenerated devolve {nome, categoria, download:{href,filename}, usar, geojson} para o painel Resultados.
 export function montarMunicipal(host,{category,apiBase,onGenerated,onBusyChange=()=>{},configuration,onChange=()=>{}}) {
   const root=createRoot(host);
   function App(){
     const [selection,setSelection]=useState(configuration||{attributes:[],format:"fgb"});
+    const [gerada,setGerada]=useState(null);
     const client=useMemo(()=>{
       let generated;
       async function request(path,config,signal){
@@ -57,10 +118,10 @@ export function montarMunicipal(host,{category,apiBase,onGenerated,onBusyChange=
         generated:()=>generated};
     },[]);
     async function saved(output){
-      try{await onGenerated(client.generated(),output);}
+      try{const resultado=await onGenerated(client.generated(),output);if(resultado)setGerada(resultado);}
       finally{onBusyChange(false);}
     }
-    return <MunicipalLayerBuilder value={selection} onChange={next=>{setSelection(next);onChange(next);}} client={client} download={false} onExport={saved} categoriaNome={category.nome} feedback={window.SLTFeedback}/>;
+    return <MunicipalLayerBuilder value={selection} onChange={next=>{setSelection(next);onChange(next);}} client={client} download={false} onExport={saved} categoriaNome={category.nome} feedback={window.SLTFeedback} resultado={gerada && <CamadaGerada gerada={gerada}/>}/>;
   }
   root.render(<App/>);
   return ()=>root.unmount();

@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
 from threading import Lock
+from api.services.progresso_eventos import CanalProgresso
 from typing import Any, Callable
 from uuid import uuid4
 
@@ -50,6 +51,7 @@ class GeoprocessamentoJobs:
     def __init__(self) -> None:
         self._jobs: dict[str, dict[str, Any]] = {}
         self._lock = Lock()
+        self._eventos = {}
         self._executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="gp-job")
 
     def _new(self, kind: str, tasks: list[str]) -> str:
@@ -58,32 +60,53 @@ class GeoprocessamentoJobs:
             "id": job_id, "tipo": kind, "status": "pendente",
             "microtarefas": tasks, "logs": [], "concluidas": 0,
             "total": len(tasks), "percentual": 0, "progresso_tarefa": None,
-            "etapa_atual": tasks[0], "resultado": None, "erro": None,
+            "etapa_atual": None, "tarefa_id": 0, "resultado": None, "erro": None,
             "iniciado_em": datetime.now(timezone.utc).isoformat(),
             "parametros": {}, "entradas": [], "relatorio": [],
         }
         with self._lock:
             self._jobs[job_id] = job
+            self._eventos[job_id] = CanalProgresso()
+            self._eventos[job_id].publicar(job)
         return job_id
 
     def get(self, job_id: str) -> dict[str, Any] | None:
         with self._lock:
             job = self._jobs.get(job_id)
-            return deepcopy(job) if job else None
+            return {**deepcopy(job), 'eventos_url':f'/api/geoespacial/operacoes-jobs/status/{job_id}/eventos'} if job else None
 
-    def _advance(self, job_id: str, label: str, details: dict[str, Any] | None = None) -> None:
+    def eventos(self, job_id):
+        with self._lock:
+            return self._eventos.get(job_id)
+
+    def _publicar(self, job_id):
+        canal = self._eventos.get(job_id)
+        if canal:
+            canal.publicar(self._jobs[job_id])
+
+    def _start(self, job_id: str, label: str) -> None:
+        """Mensagem ativa é emitida antes do trabalho; logs registram conclusões."""
+        with self._lock:
+            job = self._jobs[job_id]
+            job.update(etapa_atual=label, progresso_tarefa=None, status="executando",
+                       tarefa_id=job["tarefa_id"] + 1)
+            self._publicar(job_id)
+
+    def _advance(self, job_id: str, label: str, details: dict[str, Any] | None = None, *, concluir_tarefa: bool = True) -> None:
         with self._lock:
             job = self._jobs[job_id]
             job["concluidas"] = min(job["total"], job["concluidas"] + 1)
             job["percentual"] = round(job["concluidas"] * 100 / job["total"])
-            job["etapa_atual"] = label
-            job["progresso_tarefa"] = None
+            if concluir_tarefa:
+                job["etapa_atual"] = None
+                job["progresso_tarefa"] = 100
             job["status"] = "executando"
             job["logs"].append({
                 "sequencia": len(job["logs"]) + 1,
                 "instante": datetime.now(timezone.utc).isoformat(),
                 "nivel": "sucesso", "mensagem": label, "detalhes": details or {},
             })
+            self._publicar(job_id)
 
     def _complete(self, job_id: str, result: dict[str, Any]) -> None:
         self._advance(job_id, "Processo finalizado")
@@ -94,6 +117,7 @@ class GeoprocessamentoJobs:
             job["percentual"] = 100
             job["progresso_tarefa"] = 100
             job["resultado"] = result
+            self._publicar(job_id)
             snapshot = deepcopy(job)
         job["relatorio"] = geoprocessamento_relatorio.salvar(snapshot)
 
@@ -108,6 +132,7 @@ class GeoprocessamentoJobs:
                 "instante": datetime.now(timezone.utc).isoformat(),
                 "nivel": "erro", "mensagem": str(exc), "detalhes": {},
             })
+            self._publicar(job_id)
             snapshot = deepcopy(job)
         job["relatorio"] = geoprocessamento_relatorio.salvar(snapshot)
 
@@ -158,10 +183,12 @@ class GeoprocessamentoJobs:
             normalized = deepcopy(params)
             self._advance(job_id, "Parâmetros copiados e normalizados")
             for index, reference in enumerate(inputs, start=1):
+                self._start(job_id, f"Localizando a entrada {index} no catálogo")
                 metadata = asyncio.run(geo.obter_recurso(reference))
                 if metadata is None:
                     raise ValueError(f"Entrada {reference} não encontrada")
                 self._advance(job_id, f"Entrada {index} localizada no catálogo", {"id": reference})
+                self._start(job_id, f"Lendo o conteúdo da entrada {index}")
                 if metadata["tipo"] == "raster":
                     content = geo.obter_raster_dados(reference)
                 else:
@@ -172,6 +199,7 @@ class GeoprocessamentoJobs:
                 self._advance(job_id, f"Tipo da entrada {index} conferido: {metadata['tipo']}")
             self._advance(job_id, "Executor assíncrono selecionado")
             callback: Callable[[str], None] = lambda label: self._append_dynamic(job_id, label)
+            self._start(job_id, f"Executando algoritmo: {CATALOG[op_id]}")
             result = asyncio.run(geoprocessamento_engine.execute(op_id, normalized, progress=callback))
             self._advance(job_id, f"Núcleo concluído: {CATALOG[op_id]}")
             if not isinstance(result, dict):
@@ -190,6 +218,7 @@ class GeoprocessamentoJobs:
                 storage_format, extension = OUTPUT_FORMATS[requested_format]
                 output_name = Path(str(normalized.get("nome_saida") or CATALOG[op_id])).stem + extension
                 output_crs = str(normalized.get("crs_saida") or "entrada")
+                self._start(job_id, "Salvando a camada de saída no storage")
                 result["arquivo_saida"] = asyncio.run(geo.salvar_camada(
                     resource_id, "data/geoespacial/outputs", output_name,
                     "auto" if output_crs == "entrada" else output_crs, storage_format,
@@ -206,6 +235,7 @@ class GeoprocessamentoJobs:
                 if not resource_id:
                     raise RuntimeError("A operação não retornou identificador de saída")
                 self._advance(job_id, "Identificador da saída obtido", {"id": resource_id})
+                self._start(job_id, "Consultando a camada de saída no banco")
                 persisted = asyncio.run(geo.obter_recurso(resource_id))
                 self._advance(job_id, "Saída consultada no banco")
                 if persisted is None:
@@ -213,6 +243,7 @@ class GeoprocessamentoJobs:
                 if persisted.get("caminho_arquivo"):
                     result["arquivo_resultado"] = {"caminho": persisted["caminho_arquivo"]}
                 self._advance(job_id, "Persistência da saída confirmada")
+            self._start(job_id, "Atualizando o catálogo de camadas")
             catalog = asyncio.run(geo.listar_recursos())
             self._advance(job_id, "Catálogo de camadas atualizado", {"itens": len(catalog)})
             if resource_id and op_id not in NO_PERSISTED_OUTPUT and not any(item["id"] == resource_id for item in catalog):
@@ -238,7 +269,7 @@ class GeoprocessamentoJobs:
             insert_at = max(job["concluidas"] + 1, job["total"] - 5)
             job["microtarefas"].insert(insert_at, label)
             job["total"] += 1
-        self._advance(job_id, label)
+        self._advance(job_id, label, concluir_tarefa=False)
 
     def create_import(self, filename: str, content: bytes) -> dict[str, Any]:
         name = Path(filename or "camada").name
@@ -286,6 +317,7 @@ class GeoprocessamentoJobs:
         try:
             self._advance(job_id, "Pipeline transacional de importação iniciado")
             callback: Callable[[str], None] = lambda label: self._append_dynamic(job_id, label)
+            self._start(job_id, "Importando e validando a camada")
             result = asyncio.run(importar_camadas(
                 filename, content, target_crs=target_crs, clip_layer_id=clip_layer_id,
                 inspection_token=inspection_token, pasta=pasta, progress=callback,
@@ -314,6 +346,7 @@ class GeoprocessamentoJobs:
         try:
             self._advance(job_id, "Envio ao storage do SICARD iniciado")
             callback: Callable[[str], None] = lambda label: self._append_dynamic(job_id, label)
+            self._start(job_id, "Enviando o arquivo ao storage")
             result = enviar_ao_storage(inspection_token, raiz, target_crs=target_crs,
                                        clip_layer_id=clip_layer_id, progress=callback)
             self._complete(job_id, result)
@@ -333,12 +366,14 @@ class GeoprocessamentoJobs:
                 self._advance(job_id, "Resposta da importação idempotente preparada")
                 self._complete(job_id, result)
                 return
+            self._start(job_id, "Salvando o arquivo de entrada")
             stored = store_upload(name, content)
             self._advance(job_id, f"Diretório datastorage/{stored.category} preparado")
             self._advance(job_id, "Arquivo original preservado no armazenamento categorizado")
             relative = stored.relative_import_path
             self._advance(job_id, f"Formato identificado: {stored.category}")
             callback: Callable[[str], None] = lambda label: self._append_dynamic(job_id, label)
+            self._start(job_id, "Importando o conteúdo geoespacial")
             if stored.category == "raster":
                 result = asyncio.run(geo.importar_raster(relative, digest, progress=callback))
             else:
@@ -353,6 +388,7 @@ class GeoprocessamentoJobs:
             if not any(item.get("recurso_sessao_id") == resource_id for item in camada_geoespacial_repository.listar()):
                 raise RuntimeError("Recurso importado não foi encontrado no banco")
             self._advance(job_id, "Persistência física da importação confirmada")
+            self._start(job_id, "Atualizando o catálogo de camadas")
             catalog = asyncio.run(geo.listar_recursos())
             self._advance(job_id, "Catálogo sincronizado após importação", {"itens": len(catalog)})
             self._complete(job_id, result)
@@ -370,10 +406,12 @@ class GeoprocessamentoJobs:
 
     def _run_load(self, job_id: str, resource_id: str) -> None:
         try:
-            callback: Callable[[str], None] = lambda label: self._advance(job_id, label)
+            callback: Callable[[str], None] = lambda label: self._advance(job_id, label, concluir_tarefa=False)
+            self._start(job_id, "Carregando o recurso geoespacial")
             result = asyncio.run(geo.carregar_recurso(resource_id, progress=callback))
             self._advance(job_id, f"Tipo de conteúdo conferido: {result['tipo']}")
             self._advance(job_id, "Resposta de carregamento preparada")
+            self._start(job_id, "Sincronizando o catálogo de camadas")
             asyncio.run(geo.listar_recursos())
             self._advance(job_id, "Catálogo da sessão sincronizado")
             self._complete(job_id, result)
@@ -410,7 +448,8 @@ class GeoprocessamentoJobs:
             if not str(payload.get("versao", "")).strip():
                 raise ValueError("Versão obrigatória")
             self._advance(job_id, "Versão da publicação validada")
-            callback: Callable[[str], None] = lambda label: self._advance(job_id, label)
+            callback: Callable[[str], None] = lambda label: self._advance(job_id, label, concluir_tarefa=False)
+            self._start(job_id, "Homologando e publicando a camada")
             result = camada_geoespacial_repository.homologar(
                 resource_id,
                 modulo_consumidor=payload["modulo_consumidor"],
@@ -421,6 +460,7 @@ class GeoprocessamentoJobs:
                 produto_id=str(payload["produto_id"]) if payload.get("produto_id") else None,
                 metadados=payload.get("metadados") or {}, progress=callback,
             )
+            self._start(job_id, "Consultando a biblioteca homologada")
             library = camada_geoespacial_repository.listar_biblioteca()
             self._advance(job_id, "Biblioteca homologada consultada", {"itens": len(library)})
             if not any(item["id"] == result["id"] for item in library):

@@ -120,12 +120,12 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
   async function abrirSalva(explorador,escopo='analise') {
     if (state.busy) return;
     try {
-      const pastaDados = await json('/extracao-atributos/configuracoes');
-      const configuracoes = pastaDados.configuracoes.filter(c=>(c.escopo||'analise')===escopo||(escopo==='bases'&&c.lista_legada));
+      const pastaDados = await json(`/extracao-atributos/configuracoes?escopo=${escopo}`);
+      const configuracoes = pastaDados.configuracoes;
       if (!configuracoes.length) { feedback(escopo==='bases'?`Nenhuma lista encontrada em ${pastaDados.pasta}. Arquivos salvos na VM ou em outro computador precisam estar disponíveis neste ambiente.`:'Nenhuma configuração salva ainda.'); return; }
       const escolha = await escolherConfiguracao(configuracoes, explorador ? pastaDados.pasta : '',escopo);
       if (!escolha) return;
-      const dados = await json(`/extracao-atributos/configuracoes/${encodeURIComponent(escolha)}${escopo==='bases'?'?lista=true':''}`);
+      const dados = await json(`/extracao-atributos/configuracoes/${encodeURIComponent(escolha)}?escopo=${escopo}${escopo==='bases'?'&lista=true':''}`);
       if(escopo!=='bases'&&(state.input||state.bases.length||state.staging.length)&&!(await window.SLTFeedback.confirmar({title:escopo==='bases'?'Carregar listas':'Carregar configuração',message:escopo==='bases'?'Substituir apenas as bases e categorias? Entradas e algoritmo serão mantidos.':'Substituir as escolhas das três subseções pela configuração salva?',detail:'Nenhuma camada ou resultado será apagado do banco.'})))return;
       // Restaurar integralmente evita executar regras diferentes das que foram salvas.
       const vindas = dados.categorias.flatMap(grupo => grupo.camadas.map(camada => {
@@ -262,7 +262,7 @@ function escolherConfiguracao(configuracoes, pasta = '',escopo='analise') {
       confirmar.disabled = true;
       try {
         // Resposta 204 sem corpo: json() tentaria ler JSON e falharia.
-        const response = await fetch(`${base}/extracao-atributos/configuracoes/${encodeURIComponent(item.chave)}`, { method: 'DELETE' });
+        const response = await fetch(`${base}/extracao-atributos/configuracoes/${encodeURIComponent(item.chave)}?escopo=${escopo}`, { method: 'DELETE' });
         if (!response.ok) {
           const dados = await response.json().catch(() => ({}));
           throw new Error(typeof dados.detail === 'string' ? dados.detail : 'Falha ao excluir a configuração.');

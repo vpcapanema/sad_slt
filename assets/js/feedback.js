@@ -98,9 +98,9 @@
           ${message ? `<p class="slt-fb-message">${esc(message)}</p>` : ""}
 
           <ul class="slt-fb-results" aria-live="polite" hidden></ul>
-          <ul class="slt-fb-steps" role="log" aria-live="polite" aria-relevant="additions" hidden></ul>
+          ${painel?'<div class="slt-fb-current-message">':''}<ul class="slt-fb-steps" role="log" aria-live="polite" aria-relevant="additions" hidden></ul>${painel?'</div>':''}
           ${barra ? `<div class="slt-fb-progress" aria-label="Progresso do processamento">
-            ${[['tarefa','Tarefa atual'],['geral','Processo geral']].map(([key,label])=>`<div class="slt-fb-progress-item"><span>${label}</span><div class="slt-fb-bar slt-fb-bar--${key}" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="100"><div class="slt-fb-bar-fill"></div><strong class="slt-fb-percent">Aguardando medição</strong></div></div>`).join('')}
+            ${[['tarefa','Tarefa atual'],['geral','Processo geral']].map(([key,label])=>`<div class="slt-fb-progress-item" data-progress="${key}"><div class="slt-fb-progress-label"><span>${label}</span><strong class="slt-fb-percent">Sem percentual informado</strong></div><div class="slt-fb-bar slt-fb-bar--${key}" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="100"><div class="slt-fb-bar-fill"></div></div></div>`).join('')}
             <p class="slt-fb-etapa"></p></div>` : ""}
         </div>
         <footer class="slt-fb-foot">${footerHtml || '<button type="button" class="btn btn-primary" data-fb-close>OK</button>'}</footer>
@@ -293,14 +293,33 @@
     const ul = bd.querySelector(".slt-fb-steps");
     const foot = bd.querySelector(".slt-fb-foot");
     const etapa = bd.querySelector(".slt-fb-etapa");
-    let cancelando=false,cancelado=false,finalizado=false,sequencia=0,desfechoPendente;
+    etapa.hidden=true;
+    ul.setAttribute('role','status');ul.setAttribute('aria-atomic','true');ul.removeAttribute('aria-relevant');
+    let tarefaAtual=null,chaveAtual=null;
+    function ocultarTarefa(){ul.replaceChildren();ul.hidden=true;tarefaAtual=null;bd.querySelector('[data-progress="tarefa"]').hidden=true;}
+    function iniciarTarefa(message,status='progress',chave=message){
+      if(finalizado||cancelado)return null;
+      if(chave===chaveAtual){if(tarefaAtual)tarefaAtual.querySelector('span').textContent=message;return tarefaAtual;}
+      ocultarTarefa();chaveAtual=chave;
+      // Zerar sem interpolar a barra da tarefa anterior até a próxima.
+      const fill=bd.querySelector('.slt-fb-bar--tarefa .slt-fb-bar-fill');
+      fill.style.transition='none';barraReal('tarefa',0);void fill.offsetWidth;fill.style.transition='';
+      const registro=addPasso(document.createElement('ul'),{message,status});
+      if(status==='success')return registro;
+      tarefaAtual=registro;ul.replaceChildren(tarefaAtual);ul.hidden=false;bd.querySelector('[data-progress="tarefa"]').hidden=false;
+      bd.querySelector('.slt-fb-bar--tarefa').setAttribute('aria-label',`Progresso: ${message}`);
+      bd.querySelector('[data-progress="tarefa"] .slt-fb-progress-label > span').textContent=message;
+      return tarefaAtual;
+    }
+    let cancelando=false,cancelado=false,finalizado=false,desfechoPendente;
     const controller=new AbortController();
     function barraReal(nome,valor){
-      const bar=bd.querySelector(`.slt-fb-bar--${nome}`),label=bar.querySelector('.slt-fb-percent');
+      const bar=bd.querySelector(`.slt-fb-bar--${nome}`),label=bar.closest('.slt-fb-progress-item').querySelector('.slt-fb-percent');
       const valido=typeof valor==='number'&&Number.isFinite(valor);
+      bar.removeAttribute('aria-valuetext');
       bar.classList.toggle('is-indeterminate',!valido);
       if(valido){const n=Math.round(Math.max(0,Math.min(100,valor)));bar.setAttribute('aria-valuenow',String(n));bar.querySelector('.slt-fb-bar-fill').style.width=`${n}%`;label.textContent=`${n}%`;}
-      else{bar.removeAttribute('aria-valuenow');bar.querySelector('.slt-fb-bar-fill').style.width='0%';label.textContent='Aguardando medição';}
+      else{bar.removeAttribute('aria-valuenow');bar.querySelector('.slt-fb-bar-fill').style.width='0%';label.textContent='Sem percentual informado';}
     }
     const cancelButton=document.createElement('button');cancelButton.type='button';cancelButton.className='btn btn-secondary';cancelButton.textContent='Cancelar';cancelButton.dataset.fbCancelProcesso='';
     const motivo=document.createElement('small');motivo.className='slt-fb-cancel-reason';
@@ -313,27 +332,84 @@
     cancelButton.onclick=async()=>{
       if(!cancelar||cancelando||finalizado)return;
       cancelando=true;cancelButton.disabled=true;cancelButton.textContent='Cancelando…';
-      addPasso(ul,{message:'Solicitando a interrupção. Aguarde a confirmação.',status:'info'});
+      iniciarTarefa('Solicitando a interrupção. Aguarde a confirmação.','info');
       try{await cancelar();cancelado=true;controller.abort();await restaurar?.();api.concluir({type:'info',message:'Processo cancelado. Você pode revisar as entradas e tentar novamente.'});}
-      catch(error){addPasso(ul,{message:error?.message||'Não foi possível confirmar o cancelamento.',status:'error'});cancelando=false;cancelButton.textContent='Cancelar';permitirCancelamento(cancelar);if(desfechoPendente)api.concluir(desfechoPendente);}
+      catch(error){iniciarTarefa(error?.message||'Não foi possível confirmar o cancelamento.','error');cancelando=false;cancelButton.textContent='Cancelar';permitirCancelamento(cancelar);if(desfechoPendente)api.concluir(desfechoPendente);}
     };
-    permitirCancelamento(cancelar);barraReal('tarefa',null);barraReal('geral',null);
+    permitirCancelamento(cancelar);barraReal('tarefa',null);barraReal('geral',null);ocultarTarefa();
     processos.add(bd);bd.dataset.processando = "true";
+    let canal=null,canalUrl=null,canalJob=null,referenciaCanal=null,tempoReal=false,versaoEvento=-1;
+    function desligarCanal(){canal?.close();canal=null;}
+    function mudarRede(){
+      if(!navigator.onLine){desligarCanal();canalUrl=null;tempoReal=false;}
+      else if(referenciaCanal&&!finalizado)conectarCanal(referenciaCanal);
+    }
+    window.addEventListener('offline',mudarRede);window.addEventListener('online',mudarRede);
+    function encerrarAssinatura(){desligarCanal();window.removeEventListener('offline',mudarRede);window.removeEventListener('online',mudarRede);observarRemocao.disconnect();}
+    const observarRemocao=new MutationObserver(()=>{if(!bd.isConnected)encerrarAssinatura();});
+    observarRemocao.observe(document.body,{childList:true,subtree:true});
+    function conectarCanal(job){
+      if(job.id!=null&&String(job.id)!==canalJob){desligarCanal();canalJob=String(job.id);referenciaCanal=null;canalUrl=null;tempoReal=false;versaoEvento=-1;}
+      if(!job.eventos_url||!window.EventSource||finalizado||cancelado)return;
+      referenciaCanal=job;if(!navigator.onLine)return;
+      const url=new URL(job.eventos_url,location.href);
+      if(url.origin!==location.origin||url.href===canalUrl)return;
+      desligarCanal();canalUrl=url.href;tempoReal=false;versaoEvento=-1;
+      const origem=new EventSource(url.href,{withCredentials:true});canal=origem;
+      origem.addEventListener('progresso',event=>{
+        if(canal!==origem||finalizado||!bd.isConnected)return;
+        try{
+          const atual=JSON.parse(event.data),versao=Number(event.lastEventId);
+          if(String(atual.id)!==String(job.id)||!Number.isFinite(versao)||versao<versaoEvento)return;
+          tempoReal=true;if(versao===versaoEvento)return;
+          versaoEvento=versao;mostrarAcompanhamento(atual);
+          if(['concluido','erro','cancelado'].includes(atual.status)){referenciaCanal=null;desligarCanal();}
+        }catch{tempoReal=false;}
+      });
+      origem.onerror=()=>{if(canal===origem)tempoReal=false;};
+    }
+    function mostrarAcompanhamento(job){
+      if(finalizado||cancelado||cancelando)return;
+      const logs=job.logs||job.etapas||[],ultimo=logs.at(-1);
+      const message=Object.hasOwn(job,'etapa_atual')?job.etapa_atual:Object.hasOwn(job,'etapa')?job.etapa:ultimo?.nivel==='sucesso'?null:ultimo?.mensagem||ultimo?.message;
+      const chave=job.tarefa_id!=null?`${job.id||''}:${job.tarefa_id}`:(ultimo?.sequencia!=null?`${ultimo.sequencia}:${message}`:message);
+      if(job.atividade){
+        api.atividade({id:chave,nome:job.atividade,detalhe:job.detalhe||message,concluidas:job.concluidas,total:job.total,unidade:job.unidade,percentual:job.progresso_tarefa,geral:job.percentual??job.progresso_geral});
+      }else if(message)iniciarTarefa(message,'progress',chave);else{ocultarTarefa();chaveAtual=null;}
+      if(!job.atividade){barraReal('geral',job.percentual??job.progresso_geral);barraReal('tarefa',job.progresso_tarefa);}
+      if(job.progresso_tarefa===100||['concluido','erro','cancelado'].includes(job.status))ocultarTarefa();
+    }
     const api = {
       element:bd,
       signal:controller.signal,
       definirCancelamento(fn,razao){permitirCancelamento(fn,razao);},
       acompanhar(job){
-        const logs=job.logs||job.etapas||[];
-        for(const item of logs){const seq=item.sequencia??logs.indexOf(item)+1;if(seq<=sequencia)continue;
-          addPasso(ul,{message:item.mensagem||item.message,status:({sucesso:'success',erro:'error',aviso:'warning'})[item.nivel]||item.status||'info'});sequencia=seq;}
-        api.progresso(job.percentual??job.progresso_geral,job.etapa_atual||job.etapa,job.progresso_tarefa);
+        if(finalizado||cancelado)return;
+        conectarCanal(job);
+        if(!tempoReal)mostrarAcompanhamento(job);
+      },
+      /** Contexto fixo no título; atividade, contagem e detalhe vêm de cada execução. */
+      atividade({id,nome,detalhe,concluidas,total,unidade='',percentual,geral}={}) {
+        if(finalizado||cancelado)return;
+        if(!nome){ocultarTarefa();chaveAtual=null;return;}
+        iniciarTarefa(detalhe||nome,'progress',id??nome);
+        const item=bd.querySelector('[data-progress="tarefa"]');
+        item.querySelector('.slt-fb-progress-label > span').textContent=nome;
+        const contagem=Number.isFinite(concluidas)&&Number.isFinite(total)&&total>0&&concluidas>=0&&concluidas<=total;
+        barraReal('tarefa',contagem?concluidas/total*100:percentual);
+        const bar=item.querySelector('[role="progressbar"]');
+        bar.setAttribute('aria-label',nome);
+        if(contagem){
+          const texto=`${concluidas} de ${total}${unidade?' '+unidade:''}`;
+          item.querySelector('.slt-fb-percent').textContent=texto;bar.setAttribute('aria-valuetext',texto);
+        }else bar.removeAttribute('aria-valuetext');
+        if(geral!==undefined)barraReal('geral',geral);
       },
       passo(message, status = "progress") {
-        return addPasso(ul, { message, status });
+        return iniciarTarefa(message,status,Symbol(message));
       },
       atualizar(li, status, message) {
-        if (!li) return;
+        if (!li || finalizado) return;
         li.className = `slt-fb-step slt-fb-step--${status}`;
         const icone = li.querySelector("i");
         if (icone) icone.className = `fas ${ICONS[status] || ICONS.info}`;
@@ -341,28 +417,37 @@
           const span = li.querySelector("span");
           if (span) span.textContent = message;
         }
+        if(li===tarefaAtual){
+          if(status==='success'||status==='error')ocultarTarefa();
+          else if(message!=null)bd.querySelector('.slt-fb-bar--tarefa').setAttribute('aria-label',`Progresso: ${message}`);
+        }
       },
       /** Progresso real relatado pelo servidor (percentual + etapa corrente). */
       progresso(percentual, etapaAtual, percentualTarefa) {
         if(finalizado||cancelado)return;
+        if(etapaAtual)iniciarTarefa(etapaAtual);
+        else if(etapaAtual===null||etapaAtual===''){ocultarTarefa();chaveAtual=null;}
         barraReal('geral',percentual);barraReal('tarefa',percentualTarefa);
-        if(etapa&&etapaAtual)etapa.textContent=etapaAtual;
+        if(percentualTarefa===100)ocultarTarefa();
       },
-      progressoTarefa(percentual){if(!finalizado)barraReal('tarefa',percentual);},
+      progressoTarefa(percentual){if(!finalizado){barraReal('tarefa',percentual);if(percentual===100)ocultarTarefa();}},
       /**
        * Estágio 3. O cabeçalho mantém o título da ação; o status vem pela cor e
        * pelo ícone. O corpo passa a listar os resultados, um por linha
        * (`title` vira a linha de destaque, `message` e `resultados` as demais),
-       * e as tarefas executadas ficam recolhidas logo abaixo.
+       * e a mensagem da tarefa corrente sai de cena. O log auditável permanece
+       * no serviço, sem acumular mensagens no acompanhamento.
        */
       concluir({ type = "success", title: t, message, resultados, acoesHtml } = {}) {
         if (!bd.isConnected || finalizado) return bd;
         if(cancelando&&!cancelado){desfechoPendente={type,title:t,message,resultados,acoesHtml};return bd;}
-        finalizado=true;
+        encerrarAssinatura();ocultarTarefa();finalizado=true;
+        bd.querySelector('[data-progress="tarefa"]').hidden=true;
         if(type==='success'){barraReal('tarefa',100);barraReal('geral',100);}
         processos.delete(bd);
         delete bd.dataset.processando;
-        bd.querySelectorAll('.slt-fb-bar.is-indeterminate .slt-fb-percent').forEach(n=>n.textContent='Não medido');
+        bd.querySelectorAll('.slt-fb-bar.is-indeterminate').forEach(n=>n.closest('.slt-fb-progress-item').querySelector('.slt-fb-percent').textContent='Percentual não informado');
+        bd.querySelector('.slt-fb-current-message').hidden=true;
         foot.innerHTML='<button type="button" class="btn btn-primary" data-fb-close>OK</button>';
         modal.className = `slt-fb-modal slt-fb-modal--${type}`;
         const icone = bd.querySelector(".slt-fb-icon i");
@@ -375,13 +460,6 @@
           ...linhas(resultados, type),
         ];
         lista.forEach((l) => addPasso(res, l));
-        if (lista.length && ul.children.length) {
-          const tarefas = document.createElement("details");
-          tarefas.className = "slt-fb-tarefas";
-          tarefas.innerHTML = `<summary>Tarefas executadas (${ul.children.length})</summary>`;
-          ul.replaceWith(tarefas);
-          tarefas.appendChild(ul);
-        }
         if (acoesHtml) foot.innerHTML = acoesHtml;
         foot.hidden = false;
         foot.querySelector('[data-fb-close]')?.addEventListener('click',()=>bd.remove());

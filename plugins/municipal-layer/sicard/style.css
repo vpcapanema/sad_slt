@@ -6,7 +6,12 @@
 .territorial-builder .mlb-header p { margin-bottom:0; }
 .territorial-controls { display:flex; flex-wrap:wrap; align-items:start; gap:1rem; padding:1rem; background:#fff; border:1px solid #dce3ea; border-radius:8px; }
 .territorial-controls .ea-field { flex:1 1 240px; }
-.territorial-result { margin-top:1rem; padding:1rem; border:1px solid #86b698; border-radius:8px; background:#f0faf3; }
-.territorial-result[hidden] { display:none; }
+.territorial-builder .territorial-result { padding:1rem; border:1px solid #86b698; border-radius:8px; background:#f0faf3; }
+.territorial-builder .territorial-result + .mlb-bloco { border-top:0; padding-top:0; }
 .territorial-result .ea-config-tools { margin-bottom:0; }
-@media(max-width:650px) { .territorial-builder .mlb { padding:1rem; } }
+.territorial-mapa { height:520px; border:1px solid #d5dfe8; border-radius:4px; }
+.territorial-mapa-status { margin:.5rem 0 0; font-size:.78rem; color:#526d80; }
+.territorial-mapa-popup { border-collapse:collapse; font-size:.75rem; }
+.territorial-mapa-popup td { padding:.2rem .4rem; border-bottom:1px solid #e3e9ef; vertical-align:top; }
+.territorial-mapa-popup td:first-child { font-weight:600; white-space:nowrap; }
+@media(max-width:650px) { .territorial-builder .mlb { padding:1rem; } .territorial-mapa { height:380px; } }

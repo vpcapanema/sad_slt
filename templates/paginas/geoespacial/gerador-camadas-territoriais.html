@@ -8,6 +8,7 @@
 {% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/assets/css/ahp-module.css">
 <link rel="stylesheet" href="/assets/css/page-title-standard.css">
 <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
@@ -28,16 +29,11 @@
     <div class="ea-field"><label for="territorial-category">Categoria da camada</label><select id="territorial-category" disabled><option value="">Carregando categorias…</option></select></div>
     <button class="ea-btn" id="territorial-retry" type="button" hidden>Tentar novamente</button>
   </section>
-  <section id="territorial-result" class="secao-camadas-territoriais-resultado territorial-result" aria-label="Camada gerada" hidden>
-    <h2>Camada gerada e salva</h2>
-    <p><strong id="territorial-result-name"></strong> · Categoria: <span id="territorial-result-category"></span></p>
-    <p>O arquivo está disponível no acervo. Você pode baixá-lo ou incluí-lo na extração.</p>
-    <div class="ea-config-tools"><a class="ea-btn" id="territorial-download">Baixar camada (.zip)</a><a class="ea-btn ea-btn-primary" id="territorial-use">Usar na extração</a></div>
-  </section>
   <div id="territorial-builder" class="territorial-builder"><p class="ea-hint">Escolha a categoria para selecionar os indicadores da camada.</p></div>
 </main>
 {% endblock %}
 {% block scripts_pagina %}
 <script src="/assets/js/admin-auth.js"></script>
+<script src="/assets/vendor/leaflet/leaflet.js"></script>
 <script type="module" src="/restrict/geoespacial/gerador-camadas-territoriais.js"></script>
 {% endblock %}

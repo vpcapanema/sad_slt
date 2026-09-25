@@ -702,7 +702,7 @@
         set:(value,label)=>proc.progresso(value,label),
         configure(n,label){total=Number(n)||0;done=0;proc.progresso(0,label);return true;},
         advance(label){proc.progresso(total?++done/total*100:0,label);},
-        sync(job){proc.progresso(job.percentual,job.etapa_atual,job.progresso_tarefa);for(const item of (job.logs||[]).slice(seen))proc.passo(item.mensagem,item.nivel==="erro"?"error":"info");seen=(job.logs||[]).length;},
+        sync(job){proc.acompanhar(job);},
         note:label=>proc.passo(label),remove:()=>proc.fechar(),
         complete:()=>proc.concluir({message:"Operação concluída."}),
         fail:message=>proc.concluir({type:"error",message}),

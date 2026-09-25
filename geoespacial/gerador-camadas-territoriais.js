@@ -18,12 +18,12 @@ function mount(){
     if(!result?.id||!result?.arquivo)throw new Error('O servidor não informou o arquivo salvo. Consulte o acervo antes de gerar novamente.');
     if(downloadUrl)URL.revokeObjectURL(downloadUrl);
     downloadUrl=URL.createObjectURL(output.blob);
-    const download=$('#territorial-download');download.href=downloadUrl;download.download=output.filename;
     const params=new URLSearchParams({retomar:'municipal',camada_municipal:result.id,categoria:category.id});
-    $('#territorial-use').href=`${prefix}/restrict/geoespacial/extracao-atributos/?${params}`;
-    $('#territorial-result-name').textContent=output.configuration.nome||'Camada municipal';
-    $('#territorial-result-category').textContent=category.nome;
-    $('#territorial-result').hidden=false;$('#territorial-result').scrollIntoView({behavior:'smooth',block:'center'});
+    // O adaptador desenha o cartão e o mapa no painel Resultados.
+    return {nome:output.configuration.nome||'Camada municipal',categoria:category.nome,
+      download:{href:downloadUrl,filename:output.filename},
+      usar:`${prefix}/restrict/geoespacial/extracao-atributos/?${params}`,
+      geojson:`${base}/camadas/${encodeURIComponent(result.id)}/geojson`};
   }});
 }
 async function load(){

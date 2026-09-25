@@ -81,3 +81,45 @@ def test_cancelamento_extracao_exige_autorizacao(monkeypatch):
     monkeypatch.setattr(extracao,'consultar',negar)
     with pytest.raises(LookupError):extracao.cancelar(ident,SimpleNamespace(id='outro'))
     assert not c.solicitado
+
+
+def test_nova_tarefa_nao_herda_percentual_da_anterior():
+    c = ControleProcessamento()
+    c.mensagem('Cruzando camada A')
+    primeira = c.snapshot()['tarefa_id']
+    c.tarefa(9, 10)
+    c.mensagem('Cruzando camada B')
+    atual = c.snapshot()
+    assert atual['tarefa_id'] > primeira
+    assert atual['progresso_tarefa'] == 0
+    assert atual['etapa'] == 'Cruzando camada B'
+    c.tarefa(1, 4)
+    assert c.snapshot()['progresso_tarefa'] == 25
+    c.tarefa(0, 0)
+    assert c.snapshot()['progresso_tarefa'] is None
+
+
+def test_jobs_separam_mensagem_ativa_dos_logs_concluidos():
+    from api.services.geoprocessamento_jobs import GeoprocessamentoJobs
+    jobs = GeoprocessamentoJobs()
+    try:
+        ident = jobs._new('teste', ['Lido', 'Validado', 'Finalizado'])
+        assert jobs.get(ident)['etapa_atual'] is None
+        jobs._start(ident, 'Lendo camada')
+        inicio = jobs.get(ident)
+        assert inicio['etapa_atual'] == 'Lendo camada'
+        assert inicio['progresso_tarefa'] is None
+        jobs._advance(ident, 'Camada lida')
+        fim = jobs.get(ident)
+        assert fim['etapa_atual'] is None
+        assert fim['progresso_tarefa'] == 100
+        assert fim['logs'][-1]['mensagem'] == 'Camada lida'
+        jobs._start(ident, 'Validando camada')
+        jobs._append_dynamic(ident, 'Colunas conferidas')
+        atual = jobs.get(ident)
+        assert atual['tarefa_id'] > inicio['tarefa_id']
+        assert atual['etapa_atual'] == 'Validando camada'
+        assert atual['progresso_tarefa'] is None
+        assert atual['logs'][-1]['mensagem'] == 'Colunas conferidas'
+    finally:
+        jobs._executor.shutdown(wait=True)

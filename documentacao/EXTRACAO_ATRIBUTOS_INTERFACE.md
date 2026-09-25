@@ -673,7 +673,8 @@ Os cards auxiliares de ferramenta territorial e configuração da análise usam 
 
 ### Painel descritivo de resultados (25/09/2026)
 
-A seção de resultados abre em **Painel analítico**. A conferência técnica,
+A seção de resultados abre em **Risco e restrição por entrada**. A exploração
+genérica de campos está em **Explorar atributos**. A conferência técnica,
 a tabela completa, o dicionário e os downloads continuam nas opções próprias.
 
 - Filtros por saída, categoria, base, feição de origem, atributo e busca textual.
@@ -716,3 +717,115 @@ O teste de navegador requer Playwright/Chromium; inicia um servidor de fixtures
 em uma porta local livre, usa os componentes reais e o cálculo descritivo, e
 encerra o servidor ao terminar. Não inicia o backend principal. Verifica filtros,
 paginação, histograma, mapa/tabela, erros, invalidação e larguras de 320 a 1440 px.
+
+
+### Relações por entrada e estrutura HTML
+
+- Cada camada de entrada tem tabelas de risco e restrição, com identificação da
+  feição, situação da interseção, base, posição da área na fonte e seus atributos.
+- Filtros por entrada, feição, categoria, base, situação e texto; gráficos por
+  base; mapa ligado às tabelas. Indicadores abrangem o recorte completo, enquanto
+  tabelas e mapa mostram uma página de 25 feições.
+- Novas execuções guardam `intersecoes_territoriais` no relatório existente:
+  pares calculados por `intersects` entre entradas selecionadas e polígonos das
+  bases oficiais de risco/restrição, antes de recortes e sem buffers. Contato na
+  borda conta. Geometrias inválidas são reparadas para consulta; a preparação é
+  registrada. Não são atribuídas gravidade, viabilidade ou prioridade.
+- Bases não poligonais e geometrias ausentes não comprovam ausência de
+  interseção. Informação insuficiente e categoria não avaliada são estados
+  distintos. Identificadores comerciais repetidos não fundem feições.
+- Resultados anteriores exibem apenas os vínculos preservados. Contagens
+  binárias não permitem recuperar a identificação das áreas. Ligações por
+  atributo não são convertidas em interseções. Para preservar todos os pares,
+  execute novamente a extração.
+- `POST /api/geoespacial/extracao-atributos/execucoes/{id}/intersecoes` valida a
+  sessão e a autorização da execução antes de acessar os dados. Novos snapshots
+  não dependem de releitura das bases atuais. Não há migration.
+- Painéis, filtros, tabelas e modelos de linhas estão nos partials HTML
+  `_painel_territorial`, `_painel_atributos`, `_resultados_tecnicos` e
+  `_resultados_templates`. JavaScript preenche valores, replica esses modelos,
+  gerencia eventos e desenha gráficos/mapas; não constrói a estrutura em HTML.
+
+Testes espaciais isolados: `pytest tests/test_extracao_territorial.py`.
+O teste de navegador também cobre vínculos por entrada, seleção de áreas,
+paginação, preservação dos elementos HTML e responsividade do painel territorial.
+
+
+### Carregamento do catálogo no Codespace
+
+A listagem da extração e o catálogo da bancada consultam metadados sem o campo
+`manifesto`, excluído na projeção SQL (também quando aninhado em `metadados`).
+Os manifestos integrais continuam persistidos e a listagem genérica do repositório
+mantém seu comportamento padrão. Não há remoção de dados nem migration.
+
+`listar_recursos` executa a leitura síncrona em uma thread de trabalho: atrasos
+na conexão remota não bloqueiam o atendimento de HTML, arquivos estáticos e outras
+requisições. Na medição local de 25/09/2026, os manifestos representavam 54 MB dos
+55 MB de metadados importados. A listagem sem manifestos retornou 170 recursos
+em 3,3 s; o catálogo da extração terminou em 4,2 s. São medições desta conexão,
+não garantias de latência da porta encaminhada ao navegador.
+
+Regressão: `pytest tests/test_catalogo_desempenho.py` verifica preservação das
+referências e que uma consulta lenta não bloqueia o event loop.
+
+
+### Diretórios separados das configurações
+
+Os botões **Carregar listas / Salvar listas** usam exclusivamente
+`data/geoespacial/configuracoes/extracao-atributos/config-lista-camadas-base`.
+Os botões **Carregar configuração / Salvar configuração** usam exclusivamente
+`data/geoespacial/configuracoes/extracao-atributos/config-analise`.
+As rotas GET/DELETE de configurações recebem `escopo=bases` ou `escopo=analise`
+(padrão); POST usa o mesmo campo no corpo. O escopo delimita a listagem,
+leitura, atualização e exclusão, inclusive quando os arquivos têm a mesma chave.
+
+Arquivos JSON antigos na raiz são migrados mantendo seu conteúdo: listas com
+apenas categorias vão para `config-lista-camadas-base`; configurações com entradas,
+finalidades ou opções de execução vão para `config-analise`. Um `escopo` explícito
+prevalece. Colisões com conteúdo diferente recebem sufixo de identificação sem
+sobrescrever o destino; arquivos inválidos permanecem na raiz para conferência.
+
+
+### Mensagens em tempo real por execução
+
+O acompanhamento assina `eventos_url` informado pelo servidor. Extrações usam
+`GET /api/geoespacial/extracao-atributos/execucoes/{id}/eventos`; jobs da bancada e
+upload usam `GET /api/geoespacial/operacoes-jobs/status/{id}/eventos`.
+
+Os workers publicam mudanças de tarefa, percentual e estado diretamente num canal
+SSE (`event: progresso`). Não se intercepta stdout nem logs de outras execuções.
+O canal transmite apenas o estado de acompanhamento, sem resultados/geometrias.
+A extração mantém a autorização de autoria/gestor; jobs genéricos herdam o mesmo
+acesso autenticado de sua consulta de status. A conexão usa o cookie da sessão.
+
+Há uma única mensagem ativa, sem reproduzir tarefas antigas. Filas limitadas
+conservam o estado mais recente se o navegador ficar lento. Reconexão recebe o
+estado atual; heartbeat mantém a conexão, sem compressão/buffering do fluxo.
+Consultar status continua obtendo o resultado final e serve de fallback quando
+a conexão de eventos cai. Respostas de polling não substituem eventos mais novos.
+Conclusão, troca de job e remoção do painel encerram sua assinatura. Recolher o
+painel mantém o acompanhamento. O canal tem a mesma vida em memória dos workers;
+reinício do processo encerra as conexões e o cliente recorre à consulta persistida.
+
+Validação: `pytest tests/test_progresso_eventos.py` e
+`node tests/browser/progresso-eventos.cjs` (fixture isolada, sem banco de produção).
+
+O monitor separa o título da ação que o abriu, a atividade corrente e seu detalhe.
+`processo.atividade({id,nome,detalhe,concluidas,total,unidade,percentual,geral})`
+atualiza esses dados sem substituir o cabeçalho. Contagens válidas determinam a
+primeira barra; sem contagem ou percentual, ela fica indeterminada. Trocar `id`
+reinicia a barra; mudar o detalhe do mesmo `id` substitui a mensagem visível.
+Jobs SSE também podem fornecer `atividade`, `detalhe`, `concluidas`, `total` e
+`unidade`. O título continua sendo fornecido pelo chamador ao abrir o monitor.
+
+Na seleção de arquivos, o título vem do botão que abriu o explorador. O detalhe
+centralizado identifica as camadas cujas requisições estão pendentes, conservando
+as duas leituras concorrentes. Cada resposta remove a camada ativa e incrementa
+a contagem de leituras encerradas; erros aparecem no resultado. A rota síncrona
+`arquivo-mapa` não publica subetapas internas: durante sua requisição o detalhe
+informa a leitura/preparação dos dados, sem simular procedimentos intermediários.
+
+Validação adicional: `tests/browser/explorador-listas.cjs` mantém respostas de
+leitura pendentes para conferir título, nomes ativos, contagem e remoção da camada
+concluída. `tests/browser/feedback-global.cjs` verifica troca de atividade,
+atualização do detalhe, reinício da barra e disposição em tela estreita.

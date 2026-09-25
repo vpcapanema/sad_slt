@@ -98,10 +98,10 @@ def test_upload_usa_as_rotas_com_log_real_do_servidor():
     assert "/homologar`" not in UPLOAD_JS
 
 
-def test_upload_desenha_cada_log_do_servidor_como_passo():
+def test_upload_acompanha_estado_ativo_sem_reexibir_logs_concluidos():
     corpo = UPLOAD_JS.split("async function acompanharJob(", 1)[1].split("\n  }", 1)[0]
-    assert "proc.passo(log.mensagem" in corpo
-    assert "proc.progresso(atual.percentual, atual.etapa_atual, atual.progresso_tarefa)" in corpo
+    assert "proc.acompanhar(atual)" in corpo
+    assert "proc.passo(log.mensagem" not in corpo
     assert 'atual.status === "erro"' in corpo
 
 
@@ -203,7 +203,8 @@ def test_modal_mantem_o_titulo_da_acao_e_lista_uma_linha_por_resultado():
     corpo = FEEDBACK_JS.split('concluir({ type = "success"', 1)[1].split("fechar() {", 1)[0]
     assert '.slt-fb-title").textContent' not in corpo
     assert 'querySelector(".slt-fb-results")' in corpo
-    assert "slt-fb-tarefas" in corpo
+    assert "ocultarTarefa()" in corpo
+    assert "slt-fb-tarefas" not in corpo
     assert ".slt-fb-results" in FEEDBACK_CSS
 
 

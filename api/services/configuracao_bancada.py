@@ -8,16 +8,19 @@ ao carregar, como qualquer outra base.
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import os
 import tempfile
 import unicodedata
+from threading import Lock
 from datetime import datetime, timezone
 from pathlib import Path
 
 from api.path_policy import project_path
 
 PASTA = 'data/geoespacial/configuracoes/extracao-atributos'
+SUBPASTAS = {'bases': 'config-lista-camadas-base', 'analise': 'config-analise'}
 # Versão 2 guarda a regra de cada base (papel, ligação, multiplicidade, campos...).
 # Versão 3 guarda também as entradas (identificador, filtro, campos) e as
 # finalidades. Versões anteriores continuam legíveis: o que falta vira o padrão.
@@ -25,12 +28,85 @@ PASTA = 'data/geoespacial/configuracoes/extracao-atributos'
 VERSAO = 5
 VERSOES_LIDAS = (1, 2, 3, 4, 5)
 LIMITE_ARQUIVOS = 300
+_MIGRACAO_LOCK = Lock()
 
 
 def raiz() -> Path:
     destino = project_path(PASTA)
     destino.mkdir(parents=True, exist_ok=True)
     return destino.resolve()
+
+
+def pasta(escopo: str) -> str:
+    if escopo not in SUBPASTAS:
+        raise ValueError('Tipo de configuração inválido.')
+    return f'{PASTA}/{SUBPASTAS[escopo]}'
+
+
+def diretorio(escopo: str) -> Path:
+    pasta(escopo)
+    destino = (raiz() / SUBPASTAS[escopo]).resolve()
+    if destino.parent != raiz():
+        raise ValueError('Caminho fora da pasta de configurações.')
+    destino.mkdir(parents=True, exist_ok=True)
+    return destino
+
+
+def escopo_conteudo(dados: dict) -> str:
+    if dados.get('escopo') in SUBPASTAS:
+        return dados['escopo']
+    # Listas antigas guardavam só categorias; análises completas não viram listas.
+    return 'bases' if dados.get('categorias') and not any(
+        dados.get(campo) for campo in ('entradas', 'finalidades', 'operacao', 'nome_saida', 'opcoes')
+    ) else 'analise'
+
+
+def migrar_legadas() -> list[dict]:
+    """Serializa a migração entre requisições concorrentes deste processo."""
+    with _MIGRACAO_LOCK:
+        return _migrar_legadas()
+
+
+def _migrar_legadas() -> list[dict]:
+    """Move JSONs da raiz sem sobrescrever destinos e preserva o conteúdo original."""
+    for escopo in SUBPASTAS:
+        diretorio(escopo)
+    movidos = []
+    for origem in sorted(raiz().glob('*.json')):
+        if origem.is_symlink():
+            continue
+        try:
+            conteudo = origem.read_bytes()
+            dados = json.loads(conteudo)
+            if not isinstance(dados, dict) or dados.get('versao') not in VERSOES_LIDAS:
+                continue
+            escopo = escopo_conteudo(dados)
+            identificador_original = origem.stem
+            if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,79}', identificador_original):
+                continue
+        except (OSError, ValueError, TypeError):
+            continue
+        destino = arquivo(origem.stem, escopo)
+        if destino.exists() and destino.read_bytes() != conteudo:
+            sufixo = hashlib.sha256(conteudo).hexdigest()[:12]
+            destino = arquivo(f'{identificador_original[:59]}-legado-{sufixo}', escopo)
+        criado = False
+        try:
+            with destino.open('xb') as stream:
+                criado = True
+                stream.write(conteudo)
+                stream.flush()
+                os.fsync(stream.fileno())
+        except FileExistsError:
+            if destino.read_bytes() != conteudo:
+                raise ValueError(f'Conflito na migração da configuração {origem.name}.')
+        except OSError:
+            if criado:
+                destino.unlink(missing_ok=True)
+            raise
+        origem.unlink(missing_ok=True)
+        movidos.append({'arquivo': origem.name, 'destino': str(destino), 'escopo': escopo})
+    return movidos
 
 
 def identificador(nome: str) -> str:
@@ -41,11 +117,11 @@ def identificador(nome: str) -> str:
     return texto
 
 
-def arquivo(chave: str) -> Path:
+def arquivo(chave: str, escopo: str = 'analise') -> Path:
     if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,79}', str(chave)):
         raise ValueError('Identificador de configuração inválido.')
-    destino = (raiz() / f'{chave}.json').resolve()
-    if destino.parent != raiz():
+    destino = (diretorio(escopo) / f'{chave}.json').resolve()
+    if destino.parent != diretorio(escopo):
         raise ValueError('Caminho fora da pasta de configurações.')
     return destino
 
@@ -121,20 +197,24 @@ def montar(nome: str, categorias: list[dict], user, entradas: list[dict] | None 
 
 def salvar(nome: str, categorias: list[dict], user, entradas: list[dict] | None = None,
            finalidades: list[dict] | None = None, **execucao) -> dict:
+    migrar_legadas()
     chave_lista = execucao.pop('chave_lista', None)
     if chave_lista:
         if execucao.get('escopo') != 'bases':
             raise ValueError('Somente listas de bases podem ser atualizadas por esta opção.')
-        origem = arquivo(chave_lista)
+        origem = arquivo(chave_lista, 'bases')
         if not origem.is_file():
+            if arquivo(chave_lista, 'analise').is_file():
+                raise ValueError('Uma configuração completa não pode ser substituída por uma lista de bases.')
             raise ValueError('A lista original não está mais disponível. Carregue-a novamente.')
         anterior = json.loads(origem.read_text(encoding='utf-8'))
         if anterior.get('escopo') != 'bases' and ('escopo' in anterior or anterior.get('entradas') or anterior.get('finalidades')):
             raise ValueError('Uma configuração completa não pode ser substituída por uma lista de bases.')
     conteudo = montar(nome, categorias, user, entradas, finalidades, **execucao)
     chave = chave_lista or identificador(('lista-bases-' if conteudo.get('escopo')=='bases' else '')+conteudo['nome'])
-    destino = arquivo(chave)
-    if not destino.exists() and len(list(raiz().glob('*.json'))) >= LIMITE_ARQUIVOS:
+    escopo = conteudo.get('escopo', 'analise')
+    destino = arquivo(chave, escopo)
+    if not destino.exists() and len(list(diretorio(escopo).glob('*.json'))) >= LIMITE_ARQUIVOS:
         raise ValueError(f'Limite de {LIMITE_ARQUIVOS} configurações atingido. Apague alguma antes.')
     temporario = None
     try:
@@ -159,7 +239,7 @@ def _resumo(path: Path) -> dict | None:
     try:
         dados = json.loads(path.read_text(encoding='utf-8'))
         return {'chave': path.stem, 'nome': dados.get('nome') or path.stem,
-                'escopo':dados.get('escopo','analise'), 'lista_legada': 'escopo' not in dados and bool(dados.get('categorias')), 'arquivo': path.name, 'bytes': path.stat().st_size,
+                'escopo':escopo_conteudo(dados), 'lista_legada': 'escopo' not in dados and escopo_conteudo(dados) == 'bases', 'arquivo': path.name, 'bytes': path.stat().st_size,
                 'salvo_em': dados.get('salvo_em'),
                 'categorias': len(dados.get('categorias') or []),
                 'camadas': sum(len(c.get('camadas') or []) for c in dados.get('categorias') or []),
@@ -169,13 +249,16 @@ def _resumo(path: Path) -> dict | None:
         return None  # Um arquivo corrompido não impede listar os demais.
 
 
-def listar() -> list[dict]:
-    itens = [item for path in sorted(raiz().glob('*.json')) if (item := _resumo(path))]
+def listar(escopo: str | None = None) -> list[dict]:
+    migrar_legadas()
+    escopos = [escopo] if escopo is not None else SUBPASTAS
+    itens = [item for tipo in escopos for path in sorted(diretorio(tipo).glob('*.json')) if (item := _resumo(path))]
     return sorted(itens, key=lambda item: item['salvo_em'] or '', reverse=True)
 
 
-def carregar(chave: str, referencias: bool = False) -> dict:
-    destino = arquivo(chave)
+def carregar(chave: str, referencias: bool = False, escopo: str = 'analise') -> dict:
+    migrar_legadas()
+    destino = arquivo(chave, escopo)
     if not destino.is_file():
         raise FileNotFoundError('Configuração não encontrada.')
     try:
@@ -191,7 +274,7 @@ def carregar(chave: str, referencias: bool = False) -> dict:
             raise ValueError('A lista contém referências inválidas.')
         # Preparar uma lista não lê geometrias nem depende do catálogo remoto.
         return {'chave': destino.stem, 'nome': dados.get('nome') or destino.stem,
-                'escopo': dados.get('escopo','analise'), 'categoria_ativa': dados.get('categoria_ativa',''),
+                'escopo': escopo_conteudo(dados), 'categoria_ativa': dados.get('categoria_ativa',''),
                 'categorias': grupos, 'ausentes': [], 'entradas': [], 'finalidades': []}
     from api.services import extracao_atributos_regras as regras
     # O catálogo muda com o tempo: separar o que ainda existe do que se perdeu.
@@ -234,15 +317,16 @@ def carregar(chave: str, referencias: bool = False) -> dict:
     except ValueError:
         finalidades = []  # Arquivo editado à mão: a lista de finalidades é descartada.
     return {'chave': destino.stem, 'nome': dados.get('nome') or destino.stem,
-            'escopo':dados.get('escopo','analise'),'categoria_ativa':dados.get('categoria_ativa',''),
+            'escopo':escopo_conteudo(dados),'categoria_ativa':dados.get('categoria_ativa',''),
             'operacao':dados.get('operacao'),'opcoes':dados.get('opcoes') or {},
             'nome_saida':dados.get('nome_saida') or '',
             'salvo_em': dados.get('salvo_em'), 'categorias': presentes, 'entradas': entradas,
             'finalidades': finalidades, 'ausentes': ausentes}
 
 
-def excluir(chave: str) -> None:
-    destino = arquivo(chave)
+def excluir(chave: str, escopo: str = 'analise') -> None:
+    migrar_legadas()
+    destino = arquivo(chave, escopo)
     if not destino.is_file():
         raise FileNotFoundError('Configuração não encontrada.')
     destino.unlink()

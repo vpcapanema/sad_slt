@@ -66,7 +66,7 @@ def catalogo():
             WHERE a.estado IN ('temporario','removido')''').fetchall()}
     layers = [{'id':r['recurso_sessao_id'],'nome':r['nome'],'tipo':'vetor','crs':r['crs'],
                'origem':r['categoria'],'arquivo':caminho_arquivo(r)}
-              for r in repo.listar() if r['tipo']=='vetor' and r['recurso_sessao_id'] not in hidden]
+              for r in repo.listar(incluir_manifesto=False) if r['tipo']=='vetor' and r['recurso_sessao_id'] not in hidden]
     # Bases geoespaciais do storage: lidas do arquivo na execução, sem registro no banco.
     from api.services import storage_geoespacial
     try:
@@ -196,7 +196,8 @@ def iniciar(payload, user):
     except Exception:
         ciclo.finalizar(ident,erro='Não foi possível iniciar o processamento.')
         raise
-    return {'id':ident,'status':'executando'}
+    return {'id':ident,'status':'executando',
+            'eventos_url':f'/api/geoespacial/extracao-atributos/execucoes/{ident}/eventos'}
 
 
 LIMITE_ETAPAS = 300
@@ -220,21 +221,18 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
     progress.fase = controle.fase
     inicio = datetime.now(timezone.utc)
     try:
-        controle.fase(1, 'Carregando entrada e bases')
+        controle.fase(1, 'Lendo a camada de entrada')
         from api.services.municipal_layer import carregar_para_extracao
         source = entrada_local if entrada_local is not None else carregar_para_extracao(params['camada_id'])
         categories = []
-        total = 1 + sum(len(c['camadas']) for c in params['categorias'])
-        feitas = 1
-        controle.tarefa(feitas,total)
+        controle.tarefa(1, 1)
         for categoria in params['categorias']:
             camadas = []
             for base in categoria['camadas']:
                 progress(f"Lendo a base {base['nome']}")
                 frame = bases_locais[base['id']] if bases_locais and base['id'] in bases_locais else carregar_para_extracao(base['id'])
                 camadas.append({**base,'frame':frame})
-                feitas += 1
-                controle.tarefa(feitas,total)
+                controle.tarefa(1, 1)
             categories.append({**categoria,'camadas':camadas})
         controle.fase(2, 'Analisando as relações entre entrada e bases')
         if params['operacao'] in ('enriquecimento', 'estatisticas'):
@@ -242,6 +240,9 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
             controle.encerrar('concluido')
             return
         result, frame = analisar(source,categories,params['operacao'],progress,params.get('opcoes'))
+        from api.services.extracao_intersecoes_territoriais import registrar as registrar_intersecoes
+        result['intersecoes_territoriais'] = registrar_intersecoes(
+            [{'id':params['camada_id'], 'nome':params['input_nome'], 'frame':source}], categories, progress)
         progress('Montando a tabela de atributos da geometria de saída')
         from api.services.extracao_atributos_saida import montar as montar_tabela_saida
         saida, result['tabela_saida'] = montar_tabela_saida(result,frame,source)
@@ -326,6 +327,8 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
                 for e in lista]
     saida = enriquecer(categorias=categories,progress=progress,entradas=entradas,
                        finalidades=[{'nome':f['nome'],'campos':f['campos']} for f in params.get('finalidades') or []])
+    from api.services.extracao_intersecoes_territoriais import registrar as registrar_intersecoes
+    intersecoes_territoriais = registrar_intersecoes(entradas, categories, progress)
     nome_saida = params.get('nome_saida') or f"Extração de {params['input_nome']}"
     if hasattr(progress,'fase'):progress.fase(3, 'Salvando saídas e preparando o pacote', cancelavel=False)
     camadas = {}
@@ -354,6 +357,7 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
               'relatorio_enriquecimento':saida['relatorio'],'dicionario':saida['dicionario'],'categorias':[],
               'validacao':saida['relatorio']['validacao'],'entradas':entradas_proc,
               'categorias_analiticas':[{'id':c['id'],'nome':c['nome'],'conceito':c.get('conceito','')} for c in categories],
+              'intersecoes_territoriais':intersecoes_territoriais,
               'finalidades':{chave:{'nome':item['nome'],'campos':item['campos']} for chave,item in saida['finalidades'].items()},
               'geojson':geojson}
     with _lock: etapas = list(_progress.get(ident) or [])
@@ -401,6 +405,7 @@ def consultar(ident, user, completo=False):
     if controle:
         observado=controle.snapshot()
         response.update(observado)
+        response['eventos_url'] = f'/api/geoespacial/extracao-atributos/execucoes/{ident}/eventos'
         etapas=observado['etapas']
     response['etapa'] = (etapas[-1]['mensagem'] if etapas
                          else 'Processamento em execução' if row['status'] == 'executando' else row['status'])
@@ -419,6 +424,16 @@ def consultar(ident, user, completo=False):
             if legado.is_file():
                 response['resultado'] = json.loads(legado.read_text(encoding='utf-8'))
     return response
+
+
+def eventos_progresso(ident, user):
+    # Mesma autorização de autoria/gestor aplicada à consulta da execução.
+    consultar(ident, user)
+    with _lock:
+        controle = _controles.get(str(ident))
+    if controle is None:
+        raise LookupError('Acompanhamento em tempo real indisponível para esta execução.')
+    return controle.eventos
 
 
 def tabela_resultado(ident, user, camada='resultado', offset=0, limite=100):
@@ -453,6 +468,52 @@ def dashboard_resultado(ident, user, camada='resultado', **filtros):
 
     return carregar(ident, user, camada, consultar=consultar, repo=repo,
                     carregar_conceitos=conceitos, representar_mapa=representar, **filtros)
+
+
+def intersecoes_resultado(ident, user, **filtros):
+    from api.services.extracao_resultados_territoriais import consultar as apresentar, legado
+    job = consultar(ident, user, completo=True)
+    if job['status'] != 'concluido' or not job.get('resultado'):
+        raise LookupError('As interseções estarão disponíveis quando o processamento terminar.')
+    result = job['resultado']
+    snapshot = result.get('intersecoes_territoriais')
+    recursos = {name:info['camada_resultado_id'] for name,info in result.get('camadas',{}).items()}
+    if not recursos and result.get('camada_resultado_id'):
+        recursos = {'resultado':result['camada_resultado_id']}
+    if snapshot is None:
+        tabelas = {}
+        for name,recurso in recursos.items():
+            rows = repo.atributos_dashboard(recurso)
+            if rows is None:
+                raise LookupError('Uma camada de saída não está disponível para a consulta.')
+            tabelas[name] = rows
+        snapshot = legado(result, tabelas)
+    data = apresentar(snapshot, **filtros)
+    # Resultados antigos não preservaram a geometria original no snapshot analítico.
+    # O mapa identifica explicitamente quando está mostrando geometrias de saída.
+    data['mapa_saida'] = {'type':'FeatureCollection','features':[]}
+    data['mapa_saida_limitado'] = False
+    if data['legado']:
+        import geopandas as gpd
+        from api.services.extracao_entrada_local import _representacao_mapa
+        by_output = {}
+        total = 0
+        for item in data['linhas']:
+            for ref in item.pop('_mapa', []):
+                total += 1
+                if total > 200:
+                    data['mapa_saida_limitado'] = True
+                    continue
+                by_output.setdefault(ref['saida'], {})[ref['ordem']] = item['chave']
+        features = []
+        for name, ordens in by_output.items():
+            for row in repo.geometrias_dashboard(recursos[name],list(ordens)):
+                if row['geometria']:
+                    features.append({'type':'Feature','geometry':row['geometria'],'properties':{'chave':ordens[row['ordem']]}})
+        if features:
+            data['mapa_saida'], data['representacao_saida'] = _representacao_mapa(gpd.GeoDataFrame.from_features(features,crs=4674),40000)
+    data['execucao'] = str(ident)
+    return data
 
 
 def listar_execucoes(user, limite=50):

@@ -57,15 +57,19 @@ export function criarEditorListaBases(state,changed,escolher,salvar){
   const token=++versao,itens=copia(lista().itens),entradas=new Set([state.input,...state.entradasExtras.map(e=>e.id)]);
   if(itens.some(i=>entradas.has(i.id))){feedback('Uma camada da lista já está selecionada como entrada. Remova-a da lista de bases.','error');return;}
   if(itens.some(i=>!state.categories.some(c=>c.id===i.category))){feedback('Escolha uma categoria disponível para cada camada.','error');return;}
+  const tituloAcao=buttons.confirmar.textContent.trim();
   if(!sessaoAberta)anterior=copia(lista());sessaoAberta=true;validando=true;state.validatingBases=true;render();window.SICARDExtracao?.atualizarControles?.();
-  const proc=window.SLTFeedback.processo('Validando lista de bases');proc.passo('Lendo as camadas da lista confirmada…');
-  const carregadas=[],falhas=[];let indice=0,feitas=0;
-  async function worker(){while(indice<itens.length&&token===versao){const item=itens[indice++];try{
+  const proc=window.SLTFeedback.processo(tituloAcao);
+  const carregadas=[],falhas=[],ativas=new Map();let indice=0,feitas=0;
+  const acompanhar=()=>proc.atividade({id:'validacao',nome:'Validando lista de bases',concluidas:feitas,total:itens.length,unidade:'camadas',geral:feitas/itens.length*100,
+   detalhe:[...ativas.values()].join('\n\n')||'Leitura encerrada.'});
+  async function worker(){while(indice<itens.length&&token===versao){const item=itens[indice++];
+   ativas.set(item.id,`${item.nome||item.id}\nLendo a camada para verificar as feições da prévia.`);acompanhar();try{
    const layer=await post('/extracao-atributos/arquivo-mapa',{id:item.id,arquivo:item.arquivo||undefined});
    if(!layer.geojson?.features?.length)throw new Error('A camada não contém feições disponíveis para a prévia.');
-   carregadas.push({...item,layer});proc.passo(`${item.nome||layer.nome||item.id}: validada.`);
-  }catch(e){falhas.push(`${item.nome||item.id}: ${e.message}`);proc.passo(falhas.at(-1),'error');}
-  proc.progresso(++feitas/itens.length*100,`${feitas} de ${itens.length} camadas`);
+   carregadas.push({...item,layer});
+  }catch(e){falhas.push(`${item.nome||item.id}: ${e.message}`);}
+  feitas++;ativas.delete(item.id);acompanhar();
   }}
   try{
    await Promise.all(Array.from({length:Math.min(2,itens.length)},worker));
@@ -73,6 +77,7 @@ export function criarEditorListaBases(state,changed,escolher,salvar){
    if(falhas.length){proc.concluir({type:'error',message:'A lista não foi enviada à prévia. Corrija ou remova as camadas com erro e confirme novamente.',resultados:falhas});return;}
    for(const {id,layer} of carregadas){const atual=state.catalog.find(c=>c.id===id);if(atual)Object.assign(atual,layer);else state.catalog.push({...layer,id});}
    state.bases=[];state.staging=itens;editando=false;sessaoAberta=false;anterior=copia(lista());selecionadas.clear();
+   proc.atividade({id:'previa',nome:'Preparando prévia',detalhe:'Disponibilizando as camadas validadas no mapa.',percentual:null});
    const errosMapa=await changed();
    if(errosMapa?.length)throw new Error(errosMapa.join('; '));
    state.listaBases=null;anterior=null;editando=false;sessaoAberta=false;selecionadas.clear();

@@ -28,7 +28,7 @@ def test_salvar_listar_e_carregar(sem_arquivos):
     categoria, camadas = duas_camadas()
     salvo = configuracao.salvar('Minha bancada', [{'id': categoria, 'camadas': camadas}], Usuario())
     assert salvo['chave'] == 'minha-bancada' and salvo['camadas'] == 2
-    assert (sem_arquivos / 'minha-bancada.json').is_file()
+    assert (sem_arquivos / 'config-analise' / 'minha-bancada.json').is_file()
 
     listagem = configuracao.listar()
     assert [item['chave'] for item in listagem] == ['minha-bancada']
@@ -50,7 +50,7 @@ def test_camada_repetida_e_categoria_invalida(sem_arquivos):
 def test_referencia_perdida_vira_ausente(sem_arquivos):
     categoria, camadas = duas_camadas()
     configuracao.salvar('Bancada', [{'id': categoria, 'camadas': camadas}], Usuario())
-    caminho = sem_arquivos / 'bancada.json'
+    caminho = sem_arquivos / 'config-analise' / 'bancada.json'
     dados = json.loads(caminho.read_text(encoding='utf-8'))
     dados['categorias'][0]['camadas'].append({'id': 'camada_inexistente', 'nome': 'Sumida'})
     caminho.write_text(json.dumps(dados, ensure_ascii=False), encoding='utf-8')

@@ -1,0 +1,19 @@
+<div id="ea-panel-summary" data-result-pane="summary" hidden>
+  <section data-role="validation"><h3 data-role="validation-title">Conferência</h3><div class="ea-table-wrap"><table><thead><tr><th>Camada</th><th>Registros</th><th>ID único</th><th>Feições sem registro</th><th>Trechos fora da unidade</th><th>Soma de trechos divergente</th><th>Divergências de multiplicidade</th></tr></thead><tbody data-table="validation"></tbody></table></div></section>
+  <section data-role="outputs"><h3>Camadas de saída</h3><div class="ea-table-wrap"><table><thead><tr><th>Camada de saída</th><th>Registros</th><th>Campos</th></tr></thead><tbody data-table="outputs"></tbody></table></div></section>
+  <ul class="ea-analytics-notes"><li data-role="duplicates" hidden></li><li data-role="purposes" hidden></li></ul>
+  <div data-role="steps"></div><div data-role="legacy-summary"></div>
+</div>
+<div id="ea-panel-statistics" data-result-pane="statistics" hidden><div data-role="statistics-groups"></div><p class="ea-hint" data-role="methodology"></p></div>
+<div id="ea-panel-attributes" data-result-pane="attributes" hidden>
+  <label class="ea-field">Camada da tabela de saída<select data-role="output" aria-label="Camada da tabela de saída"></select></label>
+  <p data-role="loading" role="status" class="ea-hint" hidden>Carregando tabela de atributos…</p>
+  <div data-role="error" hidden><p role="alert"></p><button type="button" class="ea-btn" data-action="retry">Tentar novamente</button></div>
+  <div class="ea-table-wrap" tabindex="0"><table><thead><tr data-role="columns"></tr></thead><tbody data-role="rows"></tbody></table></div>
+  <p data-role="empty" class="ea-empty-small" hidden>Nenhum registro nesta camada de saída.</p>
+  <div class="ea-analytics-actions"><button type="button" class="ea-btn" data-action="previous">Anterior</button><span data-role="pagination" role="status"></span><button type="button" class="ea-btn" data-action="next">Próxima</button></div>
+</div>
+<div id="ea-panel-dictionary" data-result-pane="dictionary" hidden><div class="ea-table-wrap"><table><thead><tr><th>Camada</th><th>Campo</th><th>Apelido</th><th>Tema</th><th>Base</th><th>Regra</th></tr></thead><tbody data-table="dictionary"></tbody></table></div></div>
+<template id="ea-tpl-steps"><section class="ea-analytics-card"><h3 data-value="title"></h3><div class="ea-table-wrap"><table><thead><tr><th>Base</th><th>Papel</th><th>Multiplicidade</th><th>Com correspondência</th><th>Com mais de uma feição</th><th>Registros depois</th></tr></thead><tbody></tbody></table></div></section></template>
+<template id="ea-tpl-legacy-summary"><details class="ea-summary-card" open><summary data-value="title"></summary><p class="ea-hint" data-value="measure"></p><meter min="0" max="100"></meter><div class="ea-table-wrap"><table><thead><tr><th>Camada</th><th>Ocorrências</th><th data-value="measure-label">Extensão única atingida</th><th>% da entrada</th></tr></thead><tbody></tbody></table></div></details></template>
+<template id="ea-tpl-legacy-statistics"><section><h3 data-value="title"></h3><div class="ea-table-wrap"><table><thead><tr data-role="columns"></tr></thead><tbody></tbody></table></div></section></template>

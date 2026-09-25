@@ -327,21 +327,24 @@ def migrar_vetor_existente(database_id: str, recurso_id: str, gdf: gpd.GeoDataFr
     )
 
 
-def listar() -> list[dict[str, Any]]:
+def listar(*, incluir_manifesto: bool = True) -> list[dict[str, Any]]:
     """Une os três catálogos apenas na resposta; o armazenamento permanece separado."""
+    # O inventário integral dos pacotes não é necessário à navegação.
+    metadata = sql.SQL("metadados" if incluir_manifesto else
+                       "(metadados - 'manifesto') #- '{metadados,manifesto}'")
     rows: list[dict[str, Any]] = []
     with get_connection() as conn:
         for categoria, (catalog, _, _) in STORAGES.items():
             date_column = "homologado_em" if categoria == "homologadas" else "criado_em"
             selected = conn.execute(
-                sql.SQL("""SELECT id,recurso_sessao_id,nome,tipo,crs,formato,metadados,
+                sql.SQL("""SELECT id,recurso_sessao_id,nome,tipo,crs,formato,{} AS metadados,
                            geometria_tipo,
                            {} AS criado_em,
                            TRUE AS persistida,(tipo='vetor') AS tem_vetor,
                            (tipo='raster') AS tem_raster,%s::text AS categoria
                     FROM geoprocessamento.{}
                     WHERE recurso_sessao_id IS NOT NULL ORDER BY {}""").format(
-                    sql.Identifier(date_column), sql.Identifier(catalog),
+                    metadata, sql.Identifier(date_column), sql.Identifier(catalog),
                     sql.Identifier(date_column)
                 ),
                 (categoria,),

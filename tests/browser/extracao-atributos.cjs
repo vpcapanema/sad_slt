@@ -21,6 +21,7 @@ await p.route('**/api/**',async r=>{
   return send({id:'municipal-job',status:'concluido',resultado:{id:'municipal'}});
  }
  if(path.endsWith('/jobs/municipal-job/pacote'))return r.fulfill({contentType:'application/zip',headers:{'X-Camada-Id':'municipal','X-Camada-Arquivo':'teste/municipal.fgb'},body:'fixture-download'});
+ if(path.endsWith('/intersecoes'))return send({legado:false,entradas:[],feicoes_opcoes:[],bases:[],grafico:[],resumo_entradas:[],resumo:{feicoes:0,risco:null,restricao:null,areas:0},linhas:[],areas:{},pagina:0,paginas:0,total:0});
  if(path.endsWith('/test-204'))return r.fulfill({status:204});
  if(path.endsWith('/test-401'))return r.fulfill({status:401,json:{detail:'negado'}});
  if(path.endsWith('/test-poll'))return ++polls===1?r.fulfill({status:503,contentType:'text/html',body:'<h1>Unavailable</h1>'}):send({id:'job',status:'concluido',resultado:{ok:true}});
@@ -111,7 +112,7 @@ await p.fill('#ea-nome-saida','Resultado conferido');await p.locator('#ea-config
 await p.locator('#ea-staging-confirmar').click();await p.waitForFunction(()=>!document.querySelector('#ea-run').disabled);
 await p.locator('#ea-run').click();await p.locator('[data-fb-confirmar]').click();await p.waitForFunction(()=>!document.querySelector('#ea-export').disabled);
 assert.equal(requests.length,1);assert.equal(requests[0].entradas.length,2);assert.equal(await p.locator('#ea-export').isEnabled(),true);
-await p.locator('#ea-results [data-view="attributes"]').click();await p.getByText('1–100 de 101 registros.',{exact:false}).waitFor();assert.equal(await p.locator('#ea-results-content tbody tr').count(),100);await p.locator('#ea-results-content').getByRole('button',{name:'Próxima'}).click();await p.getByText('101–101 de 101 registros.',{exact:false}).waitFor();
+await p.locator('#ea-results [data-view="attributes"]').click();await p.getByText('1–100 de 101 registros.',{exact:false}).waitFor();assert.equal(await p.locator('#ea-panel-attributes tbody tr').count(),100);await p.locator('#ea-results-content').getByRole('button',{name:'Próxima'}).click();await p.getByText('101–101 de 101 registros.',{exact:false}).waitFor();
 falharTabela=true;await p.locator('#ea-results-content').getByRole('button',{name:'Anterior'}).click();await p.getByText('Tabela temporariamente',{exact:false}).waitFor();falharTabela=false;await p.locator('#ea-results-content').getByRole('button',{name:'Tentar novamente'}).click();await p.getByText('1–100 de 101 registros.',{exact:false}).waitFor();
 assert.equal(await p.locator('#ea-results [data-view="dictionary"]').isVisible(),true);assert.equal(await p.locator('#ea-results [data-view="statistics"]').isVisible(),false);
 const download=p.waitForEvent('download');await p.locator('#ea-export').click();assert.equal((await download).suggestedFilename(),'resultado.zip');

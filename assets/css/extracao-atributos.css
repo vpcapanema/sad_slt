@@ -721,3 +721,31 @@ button.ea-chart-row { cursor:pointer; }
 .ea-analytics-card .ea-table-wrap table { min-width:960px; }
 .ea-analytics-card th { color:#203e54; }
 .ea-analytics-card td:last-child .ea-btn { white-space:nowrap; min-width:90px; }
+/* A estrutura dos painéis e das linhas repetidas está nos templates HTML. */
+.ea-territorial-layer { margin:20px 0; border:1px solid #cfdae3; border-radius:12px; padding:16px; }
+.ea-territorial-layer>header h3 { margin:0 0 6px; color:#203e54; font-size:1.05rem; }
+.ea-territorial-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.ea-territorial-grid .ea-analytics-card { margin:8px 0; padding:12px; }
+.ea-territorial-grid .ea-table-wrap table { min-width:540px; }
+.ea-territorial-grid h4 { margin:0 0 12px; color:#203e54; }
+.ea-territorial-grid td:first-child .ea-hint { display:block; margin-top:6px; }
+.ea-area-list { margin:0; padding-left:16px; min-width:200px; }
+.ea-area-list>li { margin:0 0 12px; }
+.ea-area-link { border:0; padding:0; background:none; color:#17577c; text-align:left; text-decoration:underline; cursor:pointer; font:inherit; overflow-wrap:anywhere; }
+.ea-area-list details { margin-top:6px; }.ea-area-list summary { cursor:pointer; font-size:.75rem; }
+.ea-area-list dt { font-weight:600; }.ea-area-list dd { margin:2px 0 8px; overflow-wrap:anywhere; }
+#ea-panel-territorial .ea-analytics-grid .ea-table-wrap table { min-width:580px; }
+#ea-results th { color:#203e54; background:#edf3f7; }
+#ea-results td .ea-btn { white-space:normal; overflow-wrap:anywhere; }
+#ea-results [aria-busy="true"]>.ea-analytics-filters { opacity:.65; }
+@media(max-width:1100px){.ea-territorial-grid { grid-template-columns:1fr; }}
+@media(max-width:520px){.ea-territorial-layer { padding:10px; }}
+
+#ea-panel-territorial [data-role="summary"] td:first-child { min-width:120px; }
+#ea-panel-territorial [data-role="summary"] .ea-btn { word-break:normal; }
+.ea-area-list [data-area-summary] { margin:8px 0; }
+.ea-area-list [data-area-summary] dd { margin-left:0; }
+
+.ea-feature-attributes { font-size:.76rem; margin:8px 0; overflow-wrap:anywhere; }
+.ea-feature-attributes dt { color:#526b7d; }
+.ea-feature-attributes dd { margin:0 0 6px; }

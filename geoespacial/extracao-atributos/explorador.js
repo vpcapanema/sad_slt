@@ -30,7 +30,7 @@ function partesDoNome(item){
 }
 function rotulo(item){const p=partesDoNome(item);return `${p.radical}${p.extensao}${p.camada?` › ${p.camada}`:''}`;}
 
-export function escolherArquivo({catalog,excluded=[],title,multiple=false,validar=true}) {
+export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=false,validar=true}) {
   return new Promise(resolve=>{
     const dialog=el('dialog',undefined,'ea-tool-dialog ea-storage-dialog');
     const header=el('header'),heading=el('h2',title),close=icon('Fechar','fa-xmark',()=>finish());
@@ -193,12 +193,12 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false,valida
     async function selectBatch(){
       if(loading||!picks.size)return;loading=true;controls();
       let files=[...picks.values()];const errors=[];let next=0,done=0;
-      const processo=window.SLTFeedback.processo('Carregando camadas selecionadas',{barra:true});
+      const processo=window.SLTFeedback.processo(acao,{barra:true});
       try{
         const expandidos=[];
         for(const file of files){
           if(!file.inventariar){expandidos.push(file);continue;}
-          processo.passo(`Identificando camadas de ${rotulo(file)}…`);
+          processo.atividade({id:'inventario',nome:'Identificando camadas dos arquivos',detalhe:`${rotulo(file)}\nConsultando as camadas disponíveis no arquivo.`});
           const resultado=await json(`/storage/camadas-arquivo?arquivo=${encodeURIComponent(file.arquivo)}`);
           expandidos.push(...resultado.camadas.filter(c=>!excluded.includes(c.id)));
         }
@@ -206,9 +206,14 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false,valida
         if(!files.length)throw new Error('Todas as camadas desses arquivos já estão selecionadas.');
       }catch(error){loading=false;controls();processo.concluir({type:'error',message:error.message});return;}
       if(!validar){loading=false;controls();processo.concluir({message:'Referências adicionadas à lista; a validação será feita ao confirmá-la.'});processo.fechar();finish(multiple?files:files[0]);return;}
-      processo.progresso(0,`0 de ${files.length} camadas`);
+      const ativas=new Map();
+      const acompanhar=()=>processo.atividade({id:'carregamento',nome:'Carregando camadas selecionadas',
+        concluidas:done,total:files.length,unidade:'camadas',geral:done/files.length*100,
+        detalhe:[...ativas.values()].join('\n\n')||'Leitura encerrada.'});
+      acompanhar();
       async function worker(){
         while(next<files.length){const file=files[next++];
+          ativas.set(file.id,`${rotulo(file)}\n${loaded.has(file.id)?'Recuperando camada já carregada.':'Lendo a camada e preparando os dados de visualização.'}`);acompanhar();
           try{
             if(!loaded.has(file.id)){
               const result=await json('/extracao-atributos/arquivo-mapa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({arquivo:file.arquivo||undefined,id:file.id})});
@@ -218,7 +223,7 @@ export function escolherArquivo({catalog,excluded=[],title,multiple=false,valida
               loaded.set(file.id,{...layer,...result});
             }
           }catch(error){errors.push(`${rotulo(file)}: ${error.message}`);}
-          finally{processo.progresso(++done/files.length*100,`${done} de ${files.length} camadas`);}
+          finally{done++;ativas.delete(file.id);acompanhar();}
         }
       }
       await Promise.all(Array.from({length:Math.min(2,files.length)},worker));

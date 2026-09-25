@@ -17,7 +17,7 @@ Cada geração recebe uma pasta exclusiva em `data/geoespacial/uploads/datastora
 
 O nome da camada é montado como categoria, fonte majoritária da seleção e data da geração, no fuso de São Paulo. O campo de nome abre vazio e exibe a convenção como sugestão; texto digitado prevalece.
 
-A resposta de geração contém o ZIP real do plugin e os cabeçalhos `X-Camada-Arquivo` e `X-Camada-Id`. A seleção de atributos, formato e nome é preservada ao trocar a categoria nesta página. A página apresenta o download do ZIP e o link **Usar na extração**. Esse link retorna à bancada com o ID da camada e sua categoria. O extrator restaura as referências/opções guardadas na sessão do navegador e acrescenta a camada à lista pendente; **Confirmar bases** a inclui no mapa e no processamento. **Voltar à extração** restaura a configuração sem adicionar uma camada. O rascunho não guarda geometrias nem credenciais. Falhas de leitura posteriores ao salvamento não apagam a camada; ela continua disponível pelo explorador. Não há troca automática das bases existentes: cada nova geração cria uma camada.
+A resposta de geração contém o ZIP real do plugin e os cabeçalhos `X-Camada-Arquivo` e `X-Camada-Id`. A seleção de atributos, formato e nome é preservada ao trocar a categoria nesta página. Depois de "1. Escolha os dados" e "2. Gere a camada", o painel **Resultados** agrupa, nesta ordem: **Camada gerada e salva** (download do ZIP e link **Usar na extração**), o mapa Leaflet da camada salva, a **Prévia da tabela de atributos** e o **Glossário e aliases de atributos**. O mapa lê `/api/geoespacial/camadas/{id}/geojson`, que devolve todas as feições com a geometria do arquivo gravado, apenas reprojetada para EPSG:4326; o desenho usa `smoothFactor: 0`, sem simplificação. Esse link retorna à bancada com o ID da camada e sua categoria. O extrator restaura as referências/opções guardadas na sessão do navegador e acrescenta a camada à lista pendente; **Confirmar bases** a inclui no mapa e no processamento. **Voltar à extração** restaura a configuração sem adicionar uma camada. O rascunho não guarda geometrias nem credenciais. Falhas de leitura posteriores ao salvamento não apagam a camada; ela continua disponível pelo explorador. Não há troca automática das bases existentes: cada nova geração cria uma camada.
 
 ## Build
 
@@ -29,7 +29,7 @@ npm run build
 npx vite build --config vite.sicard.config.js
 ```
 
-O último comando compila React e o adaptador `sicard/` em `geoespacial/extracao-atributos/municipal-plugin/`. Esses arquivos são carregados pela página independente. O adaptador exporta `montarMunicipal(host, {category, apiBase, onGenerated, onBusyChange})`; o componente original e seu contrato de exportação permanecem iguais. Não é necessário iniciar o servidor standalone na porta 18765: a API Python é hospedada pelo SICARD.
+O último comando compila React e o adaptador `sicard/` em `geoespacial/extracao-atributos/municipal-plugin/`. Esses arquivos são carregados pela página independente. O adaptador exporta `montarMunicipal(host, {category, apiBase, onGenerated, onBusyChange})`; `onGenerated` devolve `{nome, categoria, download:{href, filename}, usar, geojson}`, que o adaptador exibe no painel Resultados pela propriedade opcional `resultado` do componente; o componente original e seu contrato de exportação permanecem iguais. Não é necessário iniciar o servidor standalone na porta 18765: a API Python é hospedada pelo SICARD.
 
 ## Validação realizada
 

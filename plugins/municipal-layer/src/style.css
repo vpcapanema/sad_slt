@@ -80,12 +80,16 @@
 .mlb-nome { margin-top:.9rem }
 .mlb-nome input { width:100%; min-height:38px; padding:.5rem .625rem; border:1px solid #bfcbd7; border-radius:4px; background:var(--surface); color:var(--ink); font-size:.82rem; font-weight:400 }
 /* Glossario: uma linha por campo que sai na tabela de atributos. */
-.mlb-glossario { grid-column:1/-1 }
 .mlb-glossario code { font-size:.74rem; background:#eef3f7; border-radius:3px; padding:1px 5px; white-space:nowrap }
 .mlb-glossario td { white-space:normal; vertical-align:top }
 .mlb-glossario .mlb-table { max-max-height:420px }
 .mlb-glossario-significado { color:var(--muted); min-width:260px }
-.mlb-preview { grid-column:1/-1 }
+/* Resultados ocupa a largura toda, logo abaixo das etapas 1 e 2. */
+.mlb-resultados { grid-column:1/-1; display:flex; flex-direction:column; gap:1.5rem }
+.mlb-resultados > h2 { margin-bottom:0 }
+.mlb-bloco { min-width:0 }
+.mlb-bloco + .mlb-bloco { border-top:1px solid #dce4eb; padding-top:1.25rem }
+.mlb h3 { font-family:"Montserrat",Verdana,sans-serif; font-size:.78rem; font-weight:700; color:var(--deep); margin:0 0 .75rem }
 .mlb-table { overflow:auto; max-height:460px; border:1px solid #d5dfe8; border-radius:4px }
 .mlb table { border-collapse:collapse; width:100%; font-size:.8rem }
 .mlb th,.mlb td { text-align:left; padding:.625rem .75rem; border:1px solid #dce4eb; white-space:nowrap }

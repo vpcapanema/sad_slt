@@ -98,7 +98,7 @@ export function criarConfiguracao(state, changed) {
     // Em edição, o + de cada grupo informa a categoria; fora dela, vale a do seletor.
     const category=categoriaAlvo||$("#ea-category-select").value;
     if(target==='base'&&!category){window.SLTFeedback.campo($('#ea-category-select'),'Selecione a categoria da base antes de escolher o arquivo.');$('#ea-category-select').focus();return;}
-    const selection=await escolherArquivo({catalog:state.catalog,excluded:[...(target==='base'?(state.listaBases?.itens||[]).map(b=>b.id):[...state.bases,...state.staging].map(b=>b.id)),...(target==='base'?[state.input,...state.entradasExtras.map(item=>item.id)]:[])],multiple:true,validar:target!=='base',title:target==='base'?'Selecionar camadas base':'Selecionar camadas de entrada'});
+    const selection=await escolherArquivo({catalog:state.catalog,excluded:[...(target==='base'?(state.listaBases?.itens||[]).map(b=>b.id):[...state.bases,...state.staging].map(b=>b.id)),...(target==='base'?[state.input,...state.entradasExtras.map(item=>item.id)]:[])],multiple:true,validar:target!=='base',acao:$(target==='base'?'#ea-base-browse':'#ea-input-browse').textContent.trim(),title:target==='base'?'Selecionar camadas base':'Selecionar camadas de entrada'});
     if(!selection)return;
     for(const layer of selection){
       const atual=state.catalog.find(item=>item.id===layer.id);

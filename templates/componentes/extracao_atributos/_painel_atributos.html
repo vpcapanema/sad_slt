@@ -1,0 +1,36 @@
+<div id="ea-panel-atributos" data-result-pane="explore" hidden>
+  <div class="ea-analytics-filters">
+    {% for key, label in [('camada','Camada de saída'),('categoria','Categoria'),('base','Camada base'),('origem','Feição de entrada'),('campo','Atributo em análise')] %}
+    <label class="ea-field">{{ label }}<select data-filter="{{ key }}" aria-label="{{ label }}"></select></label>
+    {% endfor %}
+    <label class="ea-field">Buscar nos atributos<input data-filter="busca" type="search" maxlength="200" aria-label="Buscar nos atributos"></label>
+  </div>
+  <div class="ea-analytics-actions"><button type="button" class="ea-btn" data-action="reset">Limpar filtros</button><button type="button" class="ea-btn" data-action="clear-value" hidden>Remover filtro de valor</button></div>
+  <p data-role="loading" class="ea-hint" role="status" hidden>Calculando a análise descritiva…</p>
+  <div data-role="error" hidden><p role="alert" class="ea-hint"></p><button type="button" class="ea-btn" data-action="retry">Tentar novamente</button></div>
+  <div data-role="body" hidden>
+    <div class="ea-kpis ea-analytics-kpis">
+      {% for key,label in [('feicoes_entrada','Feições de entrada distintas'),('registros','Registros no recorte'),('preenchidos','Valores preenchidos no atributo'),('ausentes','Valores ausentes no atributo')] %}
+      <article><span>{{ label }}</span><strong data-kpi="{{ key }}">—</strong></article>
+      {% endfor %}
+    </div>
+    <ul class="ea-analytics-notes"><li>Feições distintas: camada de origem e posição original. Uma demanda pode conter várias feições.</li><li>Categoria e base selecionam atributos; registros sem correspondência permanecem na análise.</li><li data-role="field-source"></li></ul>
+    <div class="ea-analytics-grid">
+      <section class="ea-analytics-card"><h3 data-role="coverage-title">Correspondências por categoria</h3><div data-role="coverage"></div><p class="ea-hint" data-role="coverage-empty" hidden>Sem metadados de categorias e bases.</p><ul class="ea-analytics-notes"><li>Contagens entre bases não são somáveis.</li><li>Correspondência segue a regra espacial ou por atributo da extração.</li></ul></section>
+      <section class="ea-analytics-card"><h3 data-role="distribution-title">Distribuição dos valores</h3><p class="ea-hint">População: registros de saída no recorte · frequência absoluta</p>
+        <p class="ea-empty-small" data-role="distribution-empty" hidden>Nenhum valor preenchido neste recorte.</p>
+        <div class="ea-frequency-chart" data-role="frequency"></div><div class="ea-histogram" data-role="histogram" hidden></div>
+        <dl class="ea-descriptive-stats" data-role="statistics" hidden>{% for key,label in [('minimo','Mínimo'),('mediana','Mediana'),('media','Média'),('maximo','Máximo')] %}<div><dt>{{ label }}</dt><dd data-stat="{{ key }}"></dd></div>{% endfor %}</dl>
+        <ul class="ea-analytics-notes"><li data-role="distribution-note"></li><li>Valores na unidade do campo; nenhuma unidade é presumida. Recortes e duplicações podem repetir feições de entrada.</li></ul>
+      </section>
+    </div>
+    <section class="ea-analytics-card"><h3>Localização e atributos</h3><div class="ea-analytics-map-grid"><div class="ea-analytics-map" data-role="map" aria-label="Mapa dos registros da página da tabela"></div><aside class="ea-analytics-selection"><h4 data-role="selection-title">Selecione um registro</h4><dl data-role="selection-attributes"></dl></aside></div><ul class="ea-analytics-notes"><li data-role="map-scope"></li></ul></section>
+    <section class="ea-analytics-card"><h3>Comparação dos registros</h3>
+      <div class="ea-analytics-actions"><label class="ea-field">Ordenar por<select data-filter="ordem" aria-label="Ordenar por"><option value="origem">Feição de entrada</option><option value="valor">Valor do atributo</option></select></label><button type="button" class="ea-btn" data-action="sort">Ordem crescente ↑</button></div>
+      <div class="ea-table-wrap" tabindex="0"><table><thead><tr data-role="columns"></tr></thead><tbody data-role="rows"></tbody></table></div>
+      <p class="ea-empty-small" data-role="empty" hidden>Nenhum registro corresponde aos filtros.</p>
+      <div class="ea-analytics-actions"><button type="button" class="ea-btn" data-action="previous">Anterior</button><span data-role="pagination" role="status"></span><button type="button" class="ea-btn" data-action="next">Próxima</button></div>
+    </section>
+    <details class="ea-analytics-source"><summary>Categorias e origem dos dados</summary><dl data-role="concepts"></dl><ul class="ea-analytics-notes"><li data-role="source"></li></ul></details>
+  </div>
+</div>

@@ -65,8 +65,9 @@ function readFacets(attribute) {
 const limits = {fgb:6500, gpkg:1900, shp:250, geojson:6500};
 const ALL_SOURCES = '__todas__';
 
-/** onExport({blob, filename, configuration, attributes}); download=false lets the host own delivery. */
-export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChange, onExport, download=true, className='', categoriaNome='', feedback}) {
+/** onExport({blob, filename, configuration, attributes}); download=false lets the host own delivery.
+ *  resultado: nó opcional do hospedeiro, exibido no topo do painel Resultados. */
+export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChange, onExport, download=true, className='', categoriaNome='', feedback, resultado=null}) {
   const api = useMemo(() => client || createLayerClient(apiBaseUrl), [client,apiBaseUrl]);
   const [catalog,setCatalog] = useState(null);
   const [attempt,setAttempt] = useState(0);
@@ -190,9 +191,13 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
         <button type="button" className="mlb-primary" disabled={busy || !selected.size || selected.size>limits[config.format]} onClick={generate}>{busy?'Gerando camada…':download?'Gerar e baixar camada':'Gerar camada'}</button>
         {!feedback && <p className="mlb-status" role="status">{status}</p>}<p className="mlb-note">Geometria de 2022. O período de cada indicador acompanha o campo nos metadados. Valores ausentes permanecem nulos.</p>
       </aside>
-      {previewError && <div className={feedback?"mlb-preview":"mlb-error mlb-preview"}>{!feedback && <>Prévia indisponível: {previewError} </>}<button type="button" onClick={()=>setPreviewAttempt(n=>n+1)}>Tentar novamente</button></div>}
-      {preview && <section className="mlb-panel mlb-preview"><h2>Prévia da tabela de atributos</h2><p>5 municípios · até 8 atributos da seleção. A exportação inclui todos os 645 municípios e todos os atributos escolhidos.</p><div className="mlb-table"><table data-table-sort="off"><thead><tr><th>Código IBGE</th><th>Município</th>{preview.fields.map(f=><th key={f}>{f}</th>)}</tr></thead><tbody>{preview.rows.map(r=><tr key={r.CD_MUN}><td>{r.CD_MUN}</td><td>{r.NM_MUN}</td>{preview.fields.map(f=><td key={f}>{r[f] == null ? 'Sem valor' : r[f].toLocaleString('pt-BR',{maximumFractionDigits:8})}</td>)}</tr>)}</tbody></table></div></section>}
-      {preview?.glossario?.length ? <section className="mlb-panel mlb-glossario"><h2>Glossário e aliases de atributos</h2><p>Os campos abaixo são exatamente os que sairão na tabela de atributos da camada gerada. O nome do campo começa pelo identificador do tema; o nome por extenso viaja no alias, no dicionário e nos metadados do pacote.{preview.totalAttributes > (preview.glossarioLimite ?? 0) ? ` Exibindo os primeiros ${preview.glossarioLimite} de ${preview.totalAttributes.toLocaleString('pt-BR')} atributos; o dicionário do pacote traz todos.` : ''}</p><div className="mlb-table"><table data-table-sort="off"><thead><tr><th>Campo exportado</th><th>Alias</th><th>Significado</th><th>Fonte</th></tr></thead><tbody>{preview.glossario.map(item=><tr key={item.campo_exportado}><td><code>{item.campo_exportado}</code></td><td>{item.alias}</td><td className="mlb-glossario-significado">{item.significado}</td><td>{item.fonte}</td></tr>)}</tbody></table></div></section> : null}
+      {/* Resultados: camada salva (hospedeiro), prévia e glossário, nesta ordem. */}
+      {(resultado || previewError || preview) && <section className="mlb-panel mlb-resultados" aria-label="Resultados"><h2>Resultados</h2>
+        {resultado}
+        {previewError && <div className={feedback?"mlb-bloco mlb-preview":"mlb-bloco mlb-error mlb-preview"}>{!feedback && <>Prévia indisponível: {previewError} </>}<button type="button" onClick={()=>setPreviewAttempt(n=>n+1)}>Tentar novamente</button></div>}
+        {preview && <section className="mlb-bloco mlb-preview"><h3>Prévia da tabela de atributos</h3><p>5 municípios · até 8 atributos da seleção. A exportação inclui todos os 645 municípios e todos os atributos escolhidos.</p><div className="mlb-table"><table data-table-sort="off"><thead><tr><th>Código IBGE</th><th>Município</th>{preview.fields.map(f=><th key={f}>{f}</th>)}</tr></thead><tbody>{preview.rows.map(r=><tr key={r.CD_MUN}><td>{r.CD_MUN}</td><td>{r.NM_MUN}</td>{preview.fields.map(f=><td key={f}>{r[f] == null ? 'Sem valor' : r[f].toLocaleString('pt-BR',{maximumFractionDigits:8})}</td>)}</tr>)}</tbody></table></div></section>}
+        {preview?.glossario?.length ? <section className="mlb-bloco mlb-glossario"><h3>Glossário e aliases de atributos</h3><p>Os campos abaixo são exatamente os que sairão na tabela de atributos da camada gerada. O nome do campo começa pelo identificador do tema; o nome por extenso viaja no alias, no dicionário e nos metadados do pacote.{preview.totalAttributes > (preview.glossarioLimite ?? 0) ? ` Exibindo os primeiros ${preview.glossarioLimite} de ${preview.totalAttributes.toLocaleString('pt-BR')} atributos; o dicionário do pacote traz todos.` : ''}</p><div className="mlb-table"><table data-table-sort="off"><thead><tr><th>Campo exportado</th><th>Alias</th><th>Significado</th><th>Fonte</th></tr></thead><tbody>{preview.glossario.map(item=><tr key={item.campo_exportado}><td><code>{item.campo_exportado}</code></td><td>{item.alias}</td><td className="mlb-glossario-significado">{item.significado}</td><td>{item.fonte}</td></tr>)}</tbody></table></div></section> : null}
+      </section>}
     </div>}
   </section>;
 }

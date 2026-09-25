@@ -14,8 +14,8 @@ await p.route('**/api/**',async r=>{
  if(path.endsWith('/compatibilizar'))return send({compativel:true,camadas:[],erros:[]});
  if(path.endsWith('/arquivo-mapa')){const {id}=r.request().postDataJSON();reads.push(id);if(delay)await new Promise(r=>setTimeout(r,delay));if(fail&&id==='c')return r.fulfill({status:422,json:{detail:'CRS ausente'}});return send({...catalog.camadas.find(c=>c.id===id),geojson:fc});}
  if(path.endsWith('/configuracoes')&&r.request().method()==='POST'){const data=r.request().postDataJSON();saves.push(data);return send({nome:data.nome,chave:data.chave_lista||'lista-bases-teste',camadas:2,categorias:2});}
- if(path.endsWith('/configuracoes'))return send({pasta:'data/geoespacial/configuracoes/extracao-atributos',configuracoes:[{chave:'risco',nome:'Risco salvo',arquivo:'risco.json',escopo:'analise',lista_legada:true,camadas:2,categorias:2,bytes:900}]});
- if(path.endsWith('/configuracoes/risco')){assert.equal(u.searchParams.get('lista'),'true');return send({chave:'risco',nome:'Risco salvo',categorias:saves.length?saves.at(-1).categorias.map(g=>({id:g.id,camadas:g.camadas.map(id=>catalog.camadas.find(c=>c.id===id))})):[{id:'risco',camadas:[catalog.camadas[0]]},{id:'social',camadas:[catalog.camadas[1]]}],ausentes:[]});}
+ if(path.endsWith('/configuracoes')){assert.equal(u.searchParams.get('escopo'),'bases');return send({pasta:'data/geoespacial/configuracoes/extracao-atributos/config-lista-camadas-base',configuracoes:[{chave:'risco',nome:'Risco salvo',arquivo:'risco.json',escopo:'bases',lista_legada:true,camadas:2,categorias:2,bytes:900}]});}
+ if(path.endsWith('/configuracoes/risco')){assert.equal(u.searchParams.get('escopo'),'bases');assert.equal(u.searchParams.get('lista'),'true');return send({chave:'risco',nome:'Risco salvo',categorias:saves.length?saves.at(-1).categorias.map(g=>({id:g.id,camadas:g.camadas.map(id=>catalog.camadas.find(c=>c.id===id))})):[{id:'risco',camadas:[catalog.camadas[0]]},{id:'social',camadas:[catalog.camadas[1]]}],ausentes:[]});}
  return send([]);
 });
 await p.goto('http://127.0.0.1:8083/restrict/geoespacial/extracao-atributos/',{waitUntil:'domcontentloaded'});

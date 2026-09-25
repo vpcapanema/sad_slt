@@ -25,6 +25,7 @@ from rasterio.transform import array_bounds
 from rasterio.warp import Resampling, calculate_default_transform, reproject, transform_bounds
 from rasterio.windows import Window, from_bounds
 from affine import Affine
+from starlette.concurrency import run_in_threadpool
 
 from api.path_policy import (
     project_path,
@@ -399,7 +400,7 @@ class GeoespacialService:
         return raster_id
 
     def _catalogar_persistidas(self) -> None:
-        for row in camada_geoespacial_repository.listar():
+        for row in camada_geoespacial_repository.listar(incluir_manifesto=False):
             recurso_id = row.get("recurso_sessao_id")
             tem_conteudo = row.get("tem_vetor") or row.get("tem_raster")
             if not recurso_id or not tem_conteudo:
@@ -519,9 +520,13 @@ class GeoespacialService:
 
     async def listar_recursos(self) -> list[dict[str, Any]]:
         """Lista o catálogo efetivamente usado pelo motor de processamento."""
+        return await run_in_threadpool(self._listar_recursos)
+
+    def _listar_recursos(self) -> list[dict[str, Any]]:
+        # A conexão síncrona com o banco remoto não pode bloquear o event loop.
         self._catalogar_persistidas()
         recursos: list[dict[str, Any]] = []
-        for recurso_id in self._metadados:
+        for recurso_id in list(self._metadados):
             meta = self._metadados.get(recurso_id)
             if meta:
                 recursos.append(meta)

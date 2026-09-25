@@ -213,9 +213,9 @@ class Configuracao(BaseModel):
 
 
 @router.get('/configuracoes')
-def listar_configuracoes():
+def listar_configuracoes(escopo: Literal['analise','bases'] = 'analise'):
     from api.services import configuracao_bancada as configuracao
-    return {'pasta': configuracao.PASTA, 'configuracoes': configuracao.listar()}
+    return {'pasta': configuracao.pasta(escopo), 'configuracoes': configuracao.listar(escopo)}
 
 
 @router.post('/configuracoes',status_code=201)
@@ -234,10 +234,10 @@ def salvar_configuracao(payload: Configuracao, user: SessionUser = Depends(requi
 
 
 @router.get('/configuracoes/{chave}')
-def abrir_configuracao(chave: str, lista: bool = False):
+def abrir_configuracao(chave: str, lista: bool = False, escopo: Literal['analise','bases'] = 'analise'):
     from api.services import configuracao_bancada as configuracao
     try:
-        return configuracao.carregar(chave, referencias=lista)
+        return configuracao.carregar(chave, referencias=lista, escopo=escopo)
     except FileNotFoundError as exc:
         raise HTTPException(404,str(exc)) from exc
     except ValueError as exc:
@@ -245,10 +245,10 @@ def abrir_configuracao(chave: str, lista: bool = False):
 
 
 @router.delete('/configuracoes/{chave}',status_code=204)
-def apagar_configuracao(chave: str, user: SessionUser = Depends(require_geospatial_access)):
+def apagar_configuracao(chave: str, escopo: Literal['analise','bases'] = 'analise', user: SessionUser = Depends(require_geospatial_access)):
     from api.services import configuracao_bancada as configuracao
     try:
-        configuracao.excluir(chave)
+        configuracao.excluir(chave, escopo=escopo)
     except FileNotFoundError as exc:
         raise HTTPException(404,str(exc)) from exc
     except ValueError as exc:
@@ -323,6 +323,15 @@ class RenomearExtracao(BaseModel):
     nome_saida: str = Field(min_length=1,max_length=200)
 
 
+@router.get('/execucoes/{ident}/eventos')
+def acompanhar_eventos(ident: UUID, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services.progresso_eventos import resposta
+    try:
+        return resposta(service.eventos_progresso(ident, user), ident)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
 @router.get('/execucoes/{ident}/tabela')
 def tabela_resultado(ident: UUID, camada: str = Query(default='resultado',max_length=200),
                     offset: int = Query(default=0,ge=0), limite: int = Query(default=100,ge=1,le=1000),
@@ -357,6 +366,27 @@ def dashboard_resultado(ident: UUID, payload: ConsultaDashboard,
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+
+
+class ConsultaIntersecoes(BaseModel):
+    entrada: str = Field(default='', max_length=500)
+    feicao: str = Field(default='', max_length=2000)
+    categoria: Literal['', 'risco', 'restricao'] = ''
+    base: str = Field(default='', max_length=2000)
+    situacao: Literal['', 'com', 'sem', 'nao_avaliado', 'nao_informado'] = ''
+    busca: str = Field(default='', max_length=200)
+    pagina: int = Field(default=0, ge=0)
+
+
+@router.post('/execucoes/{ident}/intersecoes')
+def intersecoes_resultado(ident: UUID, payload: ConsultaIntersecoes,
+                         user: SessionUser = Depends(require_geospatial_access)):
+    try:
+        data = service.intersecoes_resultado(ident,user,**payload.model_dump())
+        return Response(json.dumps(data,ensure_ascii=False,allow_nan=False),media_type='application/json',
+                        headers={'Cache-Control':'no-store'})
+    except LookupError as exc:
+        raise HTTPException(404,str(exc)) from exc
 
 
 @router.patch('/execucoes/{ident}')

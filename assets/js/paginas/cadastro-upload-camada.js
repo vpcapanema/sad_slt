@@ -222,30 +222,19 @@
   });
 
   /**
-   * Acompanha um job do servidor até o desfecho, desenhando cada log real que
-   * ele emite como um passo do modal. Devolve o `resultado` do job; lança com a
+   * Acompanha o estado ativo pelo canal de eventos até o desfecho. Devolve o `resultado` do job; lança com a
    * mensagem de erro que o próprio servidor registrou.
    */
   async function acompanharJob(job, proc, vistos) {
     let atual = job;
     while (atual.status === "pendente" || atual.status === "executando") {
-      (atual.logs || []).forEach(log => {
-        if (vistos.has(log.sequencia)) return;
-        vistos.add(log.sequencia);
-        proc.passo(log.mensagem, log.nivel === "erro" ? "error" : "success");
-      });
-      proc.progresso(atual.percentual, atual.etapa_atual, atual.progresso_tarefa);
+      proc.acompanhar(atual);
       await new Promise(resolve => setTimeout(resolve, 250));
       const resposta = await fetch(`${API}/operacoes-jobs/status/${atual.id}`);
       if (!resposta.ok) throw new Error("Perdi o contato com o processo no servidor.");
       atual = await resposta.json();
     }
-    (atual.logs || []).forEach(log => {
-      if (vistos.has(log.sequencia)) return;
-      vistos.add(log.sequencia);
-      proc.passo(log.mensagem, log.nivel === "erro" ? "error" : "success");
-    });
-    proc.progresso(atual.percentual, atual.etapa_atual, atual.progresso_tarefa);
+    proc.acompanhar(atual);
     if (atual.status === "erro") throw new Error(atual.erro || "O servidor interrompeu o processo.");
     return atual.resultado || {};
   }

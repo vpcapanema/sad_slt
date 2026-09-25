@@ -1,7 +1,7 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict');
 (async()=>{
 const b=await chromium.launch({headless:true,args:['--no-sandbox','--no-proxy-server','--enable-unsafe-swiftshader']}),p=await b.newPage();
-const errors=[],inventory=[],reads=[],browse=[];p.on('pageerror',e=>errors.push(e.message));
+const errors=[],inventory=[],reads=[],browse=[],pendentes=new Map();let segurar=true;p.on('pageerror',e=>errors.push(e.message));
 const fc={type:'FeatureCollection',features:[{type:'Feature',properties:{id:1},geometry:{type:'Point',coordinates:[-46,-23]}}]};
 const layers=['rios','lagos'].map(nome=>({id:`storage:base-geoespacial/duas.gpkg::${nome}`,nome,arquivo:'base-geoespacial/duas.gpkg',origem:'storage'}));
 await p.route('**/api/**',async r=>{
@@ -11,8 +11,8 @@ await p.route('**/api/**',async r=>{
  if(path.endsWith('/storage/navegar')){browse.push(u.searchParams.get('detalhar'));return send({caminho:'base-geoespacial',pastas:[],arquivos:[{id:'storage:base-geoespacial/duas.gpkg',nome:'duas',arquivo:'base-geoespacial/duas.gpkg',inventariar:true}]});}
  if(path.endsWith('/storage/camadas-arquivo')){inventory.push(u.searchParams.get('arquivo'));return send({camadas:layers});}
  if(path.endsWith('/compatibilizar'))return send({compativel:true,camadas:[],erros:[]});
- if(path.endsWith('/arquivo-mapa')){const {id}=r.request().postDataJSON();reads.push(id);return send({...layers.find(l=>l.id===id),id,geojson:fc});}
- if(path.endsWith('/configuracoes'))return send({pasta:'data/geoespacial/configuracoes/extracao-atributos',configuracoes:[{chave:'risco',nome:'Risco',arquivo:'risco.json',escopo:'analise',lista_legada:true,camadas:1,categorias:1,bytes:900}]});
+ if(path.endsWith('/arquivo-mapa')){const {id}=r.request().postDataJSON();reads.push(id);if(segurar)await new Promise(resolve=>pendentes.set(id,resolve));return send({...layers.find(l=>l.id===id),id,geojson:fc});}
+ if(path.endsWith('/configuracoes'))return send({pasta:'data/geoespacial/configuracoes/extracao-atributos/config-lista-camadas-base',configuracoes:[{chave:'risco',nome:'Risco',arquivo:'risco.json',escopo:'bases',lista_legada:true,camadas:1,categorias:1,bytes:900}]});
  if(path.endsWith('/configuracoes/risco'))return send({nome:'Risco',escopo:'analise',categorias:[{id:'risco',camadas:[{id:'base',nome:'Base'}]}],entradas:[{id:'nao-restaurar'}],operacao:'enriquecimento',nome_saida:'Não substituir',ausentes:[]});
  return send([]);
 });
@@ -21,7 +21,22 @@ await p.waitForFunction(()=>window.SICARDExtracao&&document.querySelector('#ea-c
 await p.locator('#ea-input-browse').click();const d=p.locator('dialog.ea-storage-dialog');await d.locator('[data-file]').waitFor();
 assert.deepEqual(browse,['false']);assert.deepEqual(inventory,[]);assert.deepEqual(reads,[]);
 await d.locator('[data-file]').click();assert.deepEqual(inventory,[]);
-await d.locator('.ea-storage-confirm-button').click();await d.waitFor({state:'detached'});
+const titulo=await p.locator('#ea-input-browse').innerText();
+await d.locator('.ea-storage-confirm-button').click();
+await p.waitForFunction(()=>document.querySelector('.slt-fb-current-message')?.textContent.includes('lagos'));
+const painel=p.locator('.slt-fb-process-panel[data-processando]');
+assert.equal((await painel.locator('.slt-fb-title').innerText()).trim(),titulo.trim());
+assert.equal(await painel.locator('[data-progress="tarefa"] .slt-fb-progress-label > span').innerText(),'Carregando camadas selecionadas');
+assert.equal(await painel.locator('[data-progress="tarefa"] .slt-fb-percent').innerText(),'0 de 2 camadas');
+assert.match(await painel.locator('.slt-fb-current-message').innerText(),/rios/);
+assert.match(await painel.locator('.slt-fb-current-message').innerText(),/Lendo a camada/);
+pendentes.get(layers[0].id)();
+await p.waitForFunction(()=>document.querySelector('[data-progress="tarefa"] .slt-fb-percent')?.textContent==='1 de 2 camadas');
+assert.equal(await painel.locator('.slt-fb-bar--tarefa').getAttribute('aria-valuenow'),'50');
+assert.doesNotMatch(await painel.locator('.slt-fb-current-message').innerText(),/rios/);
+assert.match(await painel.locator('.slt-fb-current-message').innerText(),/lagos/);
+await p.screenshot({path:'/tmp/sicard-modal-atividade.png'});
+segurar=false;pendentes.get(layers[1].id)();await d.waitFor({state:'detached'});
 assert.deepEqual(inventory,['base-geoespacial/duas.gpkg']);assert.deepEqual(new Set(reads),new Set(layers.map(l=>l.id)));
 await p.selectOption('#ea-operation','estatisticas');await p.locator('#ea-nome-saida').fill('Minha saída');
 const selected=await p.locator('#ea-input-select').inputValue();

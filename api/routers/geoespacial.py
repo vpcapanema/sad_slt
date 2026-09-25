@@ -524,6 +524,16 @@ async def consultar_progresso_operacao(job_id: str) -> dict:
     return job
 
 
+@router.get("/operacoes-jobs/status/{job_id}/eventos")
+def eventos_progresso_operacao(job_id: str):
+    # Herda o acesso autenticado do mesmo router da consulta de status.
+    from api.services.progresso_eventos import resposta
+    canal = geoprocessamento_jobs.eventos(job_id)
+    if canal is None:
+        raise HTTPException(status_code=404, detail="Execução não encontrada")
+    return resposta(canal, job_id)
+
+
 @router.post("/operacoes/salvar-camada")
 async def salvar_camada(parametros: dict) -> dict:
     """Salva uma camada usando somente entrada, destino e saída."""

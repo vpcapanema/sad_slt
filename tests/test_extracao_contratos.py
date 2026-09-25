@@ -116,7 +116,7 @@ def test_configuracao_municipal_preserva_referencia_e_indica_ausencia(tmp_path,m
 def test_falha_na_gravacao_preserva_configuracao_anterior(tmp_path,monkeypatch):
     monkeypatch.setattr(config,'raiz',lambda:tmp_path)
     monkeypatch.setattr(config,'montar',lambda *a,**k:{'nome':'Anterior'})
-    original=tmp_path/'anterior.json';original.write_text('conteudo anterior')
+    original=config.arquivo('anterior');original.write_text('conteudo anterior')
     def fail(*args):
         raise OSError('disco indisponivel')
     monkeypatch.setattr(config.os,'replace',fail)
@@ -148,3 +148,58 @@ def test_execucao_exige_entrada_base_e_algoritmo_mas_nome_e_opcional():
             routes.Extracao(**{k:v for k,v in valido.items() if k!=campo})
     with pytest.raises(ValidationError):
         routes.Extracao(**{**valido,'categorias':[{'id':'social','camadas':[]}]})
+
+
+def test_intersecoes_snapshot_e_autorizacao(monkeypatch):
+    user=object(); ident=uuid4()
+    saved={'versao':1,'entradas':[],'bases':[],'areas':{}}
+    def allowed(i,u,completo=False):
+        assert i==ident and u is user and completo
+        return {'status':'concluido','resultado':{'intersecoes_territoriais':saved}}
+    monkeypatch.setattr(service,'consultar',allowed)
+    def forbidden(*args):
+        raise AssertionError('Snapshot não deve reler bases ou saídas atuais')
+    monkeypatch.setattr(service.repo,'atributos_dashboard',forbidden)
+    assert service.intersecoes_resultado(ident,user)['total']==0
+    def denied(*args,**kwargs):
+        raise LookupError('Extração não encontrada para esta sessão.')
+    monkeypatch.setattr(service,'consultar',denied)
+    with pytest.raises(LookupError,match='sessão'):
+        service.intersecoes_resultado(ident,user)
+
+
+def test_rota_intersecoes_exige_sessao_e_valida_filtros(monkeypatch):
+    app=FastAPI();app.include_router(routes.router)
+    with TestClient(app) as client:
+        path=f'/extracao-atributos/execucoes/{uuid4()}/intersecoes'
+        assert client.post(path,json={}).status_code==401
+        app.dependency_overrides[require_geospatial_access]=lambda:SimpleNamespace(id='teste')
+        monkeypatch.setattr(service,'intersecoes_resultado',lambda *a,**k:{'total':0})
+        response=client.post(path,json={})
+        assert response.status_code==200 and response.headers['cache-control']=='no-store'
+        for body in [{'pagina':-1},{'categoria':'inexistente'},{'situacao':'provavel'}]:
+            assert client.post(path,json=body).status_code==422
+
+
+def test_configuracoes_api_isola_escopos(tmp_path, monkeypatch):
+    import json
+    monkeypatch.setattr(config, 'raiz', lambda: tmp_path)
+    for escopo in ['analise', 'bases']:
+        config.arquivo('comum', escopo).write_text(json.dumps({
+            'versao':5, 'escopo':escopo, 'nome':escopo, 'categorias':[]}))
+    app = FastAPI()
+    app.include_router(routes.router)
+    app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='teste')
+    with TestClient(app) as client:
+        base = '/extracao-atributos/configuracoes'
+        for escopo, diretorio in [('bases','config-lista-camadas-base'), ('analise','config-analise')]:
+            response = client.get(base, params={'escopo':escopo})
+            assert response.status_code == 200
+            assert response.json()['pasta'].endswith('/' + diretorio)
+            assert [item['nome'] for item in response.json()['configuracoes']] == [escopo]
+            response = client.get(base+'/comum', params={'escopo':escopo, 'lista':'true'})
+            assert response.status_code == 200 and response.json()['nome'] == escopo
+        assert client.get(base, params={'escopo':'../fora'}).status_code == 422
+        assert client.delete(base+'/comum', params={'escopo':'bases'}).status_code == 204
+        assert config.arquivo('comum').is_file()
+        assert client.get(base+'/comum', params={'escopo':'bases'}).status_code == 404

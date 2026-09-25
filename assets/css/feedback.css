@@ -91,3 +91,30 @@
 /* Uma decisão modal tem precedência sobre notificações e monitores abertos. */
 .slt-fb-backdrop { z-index:4200; }
 .slt-fb-process-panel:not([data-processando]) .slt-fb-bar.is-indeterminate .slt-fb-bar-fill { animation:none; width:0!important; }
+
+/* Uma tarefa ativa: mensagem em espaço estável, medidores discretos abaixo. */
+.slt-fb-current-message { height:8rem; overflow:auto; padding:.25rem 0; }
+.slt-fb-current-message[hidden],.slt-fb-progress-item[hidden] { display:none; }
+.slt-fb-current-message .slt-fb-steps { max-height:none; overflow:visible; }
+.slt-fb-current-message .slt-fb-step { font-size:.9375rem; line-height:1.5; overflow-wrap:anywhere; }
+.slt-fb-process-panel .slt-fb-title { font-size:1rem; line-height:1.35; }
+.slt-fb-process-panel .slt-fb-head { padding:.75rem 1rem; }
+.slt-fb-progress { gap:.65rem; margin-top:.65rem; }
+.slt-fb-progress-label { display:flex; align-items:baseline; justify-content:space-between; gap:1rem; margin-bottom:.3rem; font-size:.8125rem; color:#526674; }
+.slt-fb-percent { position:static; display:block; color:#526674; text-shadow:none; font-size:.8125rem; font-weight:400; text-align:right; }
+.slt-fb-bar { height:6px; border:0; border-radius:3px; }
+.slt-fb-bar--tarefa .slt-fb-bar-fill { background:#247e71; }
+@media(max-width:480px) {
+  .slt-fb-current-message { height:9rem; }
+  .slt-fb-process-panel .slt-fb-foot { gap:.4rem; padding:.6rem; }
+  .slt-fb-process-panel .slt-fb-cancel-reason { flex-basis:100%; }
+}
+.slt-fb-process-panel[data-processando] [data-progress="tarefa"][hidden] { display:block; visibility:hidden; }
+
+/* O detalhe ativo fica centralizado no espaço reservado, inclusive em telas estreitas. */
+.slt-fb-current-message { display:flex; flex-direction:column; }
+.slt-fb-current-message .slt-fb-steps { width:100%; margin-block:auto; flex-shrink:0; }
+.slt-fb-current-message .slt-fb-step { justify-content:center; text-align:center; }
+.slt-fb-current-message .slt-fb-step span { white-space:pre-line; }
+.slt-fb-progress-label > span { min-width:0; overflow-wrap:anywhere; }
+.slt-fb-progress-label .slt-fb-percent { flex-shrink:0; }

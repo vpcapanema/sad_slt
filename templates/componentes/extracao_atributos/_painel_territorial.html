@@ -1,0 +1,57 @@
+<div id="ea-panel-territorial" data-result-pane="dashboard" hidden>
+  <div class="ea-analytics-filters">
+    <label class="ea-field">Camada de entrada<select data-filter="entrada" aria-label="Camada de entrada"><option value="">Todas as entradas</option></select></label>
+    <label class="ea-field">Feição de entrada<select data-filter="feicao" aria-label="Feição de entrada"><option value="">Todas as feições</option></select></label>
+    <label class="ea-field">Categoria<select data-filter="categoria" aria-label="Categoria territorial"><option value="">Risco e restrição</option><option value="risco">Risco</option><option value="restricao">Restrição</option></select></label>
+    <label class="ea-field">Camada de risco ou restrição<select data-filter="base" aria-label="Camada de risco ou restrição"><option value="">Todas as bases</option></select></label>
+    <label class="ea-field">Interseção registrada<select data-filter="situacao" aria-label="Interseção registrada"><option value="">Todas as feições</option><option value="com">Com interseção</option><option value="sem">Sem interseção</option><option value="nao_avaliado">Categoria não avaliada</option><option value="nao_informado">Informação insuficiente</option></select></label>
+    <label class="ea-field">Buscar feição ou área<input type="search" maxlength="200" data-filter="busca" aria-label="Buscar feição ou área" placeholder="Identificação ou atributo"></label>
+  </div>
+  <div class="ea-analytics-actions"><button type="button" class="ea-btn" data-action="reset">Limpar filtros</button></div>
+  <p class="ea-hint" data-role="loading" role="status" hidden>Carregando vínculos entre entradas e áreas…</p>
+  <div data-role="error" hidden><p role="alert" class="ea-hint"></p><button type="button" class="ea-btn" data-action="retry">Tentar novamente</button></div>
+  <div data-role="body" hidden>
+    <div class="ea-kpis">
+      <article><span>Feições de entrada no recorte</span><strong data-kpi="feicoes">—</strong></article>
+      <article><span>Com interseção em risco</span><strong data-kpi="risco">—</strong></article>
+      <article><span>Com interseção em restrição</span><strong data-kpi="restricao">—</strong></article>
+      <article><span>Áreas distintas identificadas</span><strong data-kpi="areas">—</strong></article>
+    </div>
+    <ul class="ea-analytics-notes">
+      <li>Uma feição pode intersectar várias áreas e aparecer em ambas as categorias. As contagens não são somáveis.</li>
+      <li data-role="method">Interseção geométrica com os polígonos das bases selecionadas; inclui contato na borda. Não representa gravidade ou impedimento.</li>
+      <li data-role="incomplete" hidden>Há feições sem informação suficiente; as contagens exibem apenas as interseções comprovadas.</li>
+      <li data-role="legacy" hidden>Extração anterior: as bases com interseção são exibidas quando registradas. A identificação das áreas pode estar incompleta. Uma nova extração preserva todos os vínculos.</li>
+    </ul>
+    <div class="ea-analytics-grid">
+      <section class="ea-analytics-card"><h3>Feições por camada de entrada</h3>
+        <div class="ea-table-wrap" tabindex="0"><table><thead><tr><th scope="col">Entrada</th><th scope="col">Feições no recorte</th><th scope="col">Risco</th><th scope="col">Restrição</th></tr></thead><tbody data-role="summary"></tbody></table></div>
+      </section>
+      <section class="ea-analytics-card"><h3>Feições que intersectam cada base</h3><div data-role="chart" class="ea-frequency-chart"></div><p class="ea-hint" data-role="chart-empty" hidden>Nenhuma base de risco ou restrição foi registrada nesta extração.</p></section>
+    </div>
+    <div data-role="layers"></div>
+    <p class="ea-empty-small" data-role="empty" hidden>Nenhuma feição corresponde aos filtros.</p>
+    <div class="ea-analytics-actions"><button type="button" class="ea-btn" data-action="previous">Anterior</button><span data-role="pagination" role="status"></span><button type="button" class="ea-btn" data-action="next">Próxima</button></div>
+    <section class="ea-analytics-card"><h3>Feições e áreas no mapa</h3>
+      <div class="ea-analytics-map-grid"><div class="ea-analytics-map" data-role="map" aria-label="Mapa das feições e áreas da página"></div>
+        <aside class="ea-analytics-selection"><h4 data-role="selection-title">Selecione uma feição ou área</h4><dl data-role="selection-attributes"></dl></aside>
+      </div>
+      <ul class="ea-analytics-notes"><li>Azul: entrada · roxo: área de risco · ocre: área de restrição. As cores identificam as categorias.</li><li data-role="map-scope"></li></ul>
+    </section>
+  </div>
+</div>
+<template id="ea-tpl-input-summary"><tr><td><button type="button" class="ea-btn" data-value="nome"></button></td><td data-value="total"></td><td data-value="risco"></td><td data-value="restricao"></td></tr></template>
+<template id="ea-tpl-input-layer">
+  <article class="ea-territorial-layer"><header><h3 data-value="nome"></h3><p class="ea-hint" data-value="scope"></p></header>
+    <div class="ea-territorial-grid">
+      {% for tipo, rotulo in [('risco', 'Risco'), ('restricao', 'Restrição')] %}
+      <section class="ea-analytics-card" data-territorial-category="{{ tipo }}"><h4>{{ rotulo }}</h4>
+        <div class="ea-table-wrap" tabindex="0"><table><thead><tr><th scope="col">Feição de entrada</th><th scope="col">Interseção</th><th scope="col">Áreas e camadas intersectadas</th></tr></thead><tbody></tbody></table></div>
+      </section>
+      {% endfor %}
+    </div>
+  </article>
+</template>
+<template id="ea-tpl-territorial-row"><tr><td><button type="button" class="ea-btn" data-value="feicao"></button><small class="ea-hint" data-value="fid"></small><dl class="ea-feature-attributes" data-feature-attributes></dl></td><td data-value="estado"></td><td><ul class="ea-area-list"></ul></td></tr></template>
+<template id="ea-tpl-area"><li><button type="button" class="ea-area-link" data-value="titulo"></button><dl data-area-summary></dl><details><summary>Todos os atributos da área</summary><dl data-area-details></dl></details></li></template>
+<template id="ea-tpl-base-only"><li><strong data-value="base"></strong><span class="ea-hint"> · identificação da área não registrada</span></li></template>
