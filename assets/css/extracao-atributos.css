@@ -751,17 +751,13 @@ button.ea-chart-row { cursor:pointer; }
 .ea-feature-attributes dd { margin:0 0 6px; }
 
 .ea-grupo-dinamico[hidden]{display:none!important;}
-/* Identificação, parâmetros por camada e comparação descritiva. */
-#ea-identificacao { margin: 1rem 0; }
-#ea-identificacao table, #ea-operation-params table { width: 100%; font-size: .85rem; }
-#ea-identificacao td, #ea-operation-params td { padding: .6rem; vertical-align: top; }
-#ea-identificacao select, #ea-operation-params select, #ea-operation-params input { max-width: 100%; min-width: 9rem; }
-#ea-identificacao small { display: block; max-width: 24rem; }
+/* Identificação e comparação descritiva. */
+#ea-identificacao select { max-width: 100%; min-width: 9rem; }
 #ea-panel-territorial .is-selected { background: var(--bg-hover, #edf5f8); }
 #ea-panel-territorial [data-ranking] { min-width: 0; }
 #ea-panel-territorial [data-role="selection-attributes"] { max-height: 340px; overflow: auto; overflow-wrap: anywhere; }
 #ea-panel-territorial [data-role="occurrences"] small { display: block; }
-@media(max-width: 800px) { #ea-identificacao .ea-table-wrap, #ea-operation-params .ea-table-wrap { overflow-x: auto; } }
+@media(max-width: 800px) { #ea-identificacao .ea-table-wrap { overflow-x: auto; } }
 
 /* Diagramas e filtros dos componentes Jinja, sem estilos inline. */
 .mlb-facets { display: contents; }
@@ -775,3 +771,11 @@ button.ea-chart-row { cursor:pointer; }
 @media(max-width: 520px) {
   #ea-panel-territorial .ea-chart-row { grid-template-columns: minmax(0, 1fr) minmax(60px, 1fr) auto; }
 }
+/* Identificação tem a mesma hierarquia e escala da lista de bases de 1.2. */
+#ea-identificacao { padding: .45rem .6rem; margin: 0 0 .6rem; }
+#ea-identificacao table { font-size: .72rem; width: 100%; min-width: 340px; }
+#ea-identificacao td { padding: .35rem .5rem; vertical-align: middle; }
+#ea-identificacao select { font: inherit; min-height: 28px; width: 100%; }
+#ea-run-selection .ea-table-wrap { margin: .4rem 0; }
+#ea-run-selection table { width: 100%; min-width: 340px; font-size: .78rem; }
+#ea-run-warning { color: #8b4513; }

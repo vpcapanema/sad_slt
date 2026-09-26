@@ -58,17 +58,17 @@
         </div>
       </section>
       <section class="ea-panel" aria-labelledby="ea-output-title">
-        <h3 class="ea-config-card-title" id="ea-output-title"><span class="ea-subnumber">1.3</span><i class="fas fa-play" aria-hidden="true"></i> Processamento em lote e saídas</h3>
+        <h3 class="ea-config-card-title" id="ea-output-title"><span class="ea-subnumber">1.3</span><i class="fas fa-play" aria-hidden="true"></i> Algoritmo e saída</h3>
         <div class="ea-config-card-body">
-          <p class="ea-hint">Escolha o modo padrão. Ajuste cada camada na tabela de execução abaixo.</p>
+          <p class="ea-hint">Escolha como os atributos serão associados às demandas.</p>
           <div class="ea-campos-duplos">
             <div class="ea-field">
-              <label for="ea-nome-saida">Nome do lote (opcional)</label>
+              <label for="ea-nome-saida">Nome da saída (opcional)</label>
               <input id="ea-nome-saida" type="text" maxlength="200" autocomplete="off">
-              <small id="ea-nome-saida-dica">Cada camada terá sua própria saída; este nome identifica o pacote geral.</small>
+              <small id="ea-nome-saida-dica">Confira as camadas e o modo de execução abaixo da bancada.</small>
             </div>
             <div class="ea-field">
-              <label for="ea-operation">Algoritmo padrão do lote</label>
+              <label for="ea-operation">Algoritmo de processamento</label>
               <select id="ea-operation" required>
                 <option value="">Selecione o algoritmo</option>
                 <option value="estatisticas">Sem recorte · Spatial Join</option>
@@ -119,10 +119,12 @@
         </div>
       </section>
     </div>
-    <section id="ea-identificacao" class="ea-op-params" aria-labelledby="ea-identificacao-title" hidden>
-      <h4 id="ea-identificacao-title">1.1 · Identificação das demandas por camada</h4>
-      <p class="ea-hint">Confirme a sugestão ou escolha outro campo. Códigos repetidos na mesma camada agrupam várias feições em uma demanda. “Uma demanda por feição” preserva o identificador da feição na saída.</p>
-      <div class="ea-table-wrap"><table><thead><tr><th>Processar</th><th>Camada / geometria</th><th>ID da feição</th><th>Identificador da demanda</th><th>Inspeção do campo</th><th>Categoria dos pontos</th><th>Confirmar</th></tr></thead><tbody id="ea-identificacao-camadas"></tbody></table></div>
+    <section id="ea-identificacao" class="ea-base-list-card" aria-labelledby="ea-identificacao-title" hidden>
+      <header><h4 id="ea-identificacao-title">1.1 · Identificação das demandas por camada</h4></header>
+      <p class="ea-hint">Escolha o ID da demanda. Se várias feições pertencerem à mesma demanda, use o código comum a elas.</p>
+      <div class="ea-table-wrap"><table><thead><tr><th>Camada de entrada</th><th>ID da demanda</th></tr></thead><tbody id="ea-identificacao-camadas"></tbody></table></div>
+      <footer class="ea-base-list-actions"><button type="button" class="ea-btn ea-btn-primary" id="ea-identificacao-confirmar">Confirmar configuração</button></footer>
+      <p id="ea-identificacao-status" class="ea-hint" role="status"></p>
     </section>
     <div class="ea-config-tools" role="group" aria-labelledby="ea-config-tools-title">
       <h4 id="ea-config-tools-title">Configuração da análise</h4>
@@ -173,14 +175,7 @@
       <!-- Cada grupo tem a cor e a seta do subcard de origem: a aréola liga o que
            está aberto aqui ao subcard 1.1, 1.2 ou 1.3. -->
       <div class="ea-grupo-dinamico" data-origem="1.3">
-        <p class="ea-grupo-origem"><span class="ea-grupo-tag">1.3</span> Processamento em lote e saídas</p>
-        <section class="ea-op-params" id="ea-operation-params" aria-label="Parâmetros do algoritmo (1.3)" hidden>
-          <h4>Execuções por camada de demanda</h4>
-          <p class="ea-hint">Uma execução por camada. Todos os atributos são preservados. O código escolhido em 1.1 acompanha os fragmentos do Identity.</p>
-          <div class="ea-table-wrap"><table><thead><tr><th>Camada</th><th>Identificação</th><th>Algoritmo</th><th>Base que define o recorte</th><th>Nome da saída</th></tr></thead><tbody id="ea-lote-parametros"></tbody></table></div>
-          <p class="ea-hint">Spatial Join: relação Intersects, mantém todas as feições e geometrias. Identity: usa uma base de polígonos sem sobreposição entre unidades e mantém as parcelas internas e externas. Pontos conservam sua representação. CRS de trabalho: SIRGAS 2000 / Brazil Polyconic (EPSG:5880); saída: SIRGAS 2000. Falhas geométricas interrompem a execução.</p>
-          <p class="ea-hint" id="ea-campos-automaticos"></p>
-        </section>
+        <p class="ea-grupo-origem"><span class="ea-grupo-tag">1.3</span> Algoritmo e saída</p>
         <section class="ea-bases-confirmadas" id="ea-bases-confirmadas" aria-label="Regras das bases preparadas" hidden><h4>Parâmetros das bases</h4><p class="ea-hint">Categoria organiza os resultados. Escolha o atributo que identifica os elementos; todos os atributos serão preservados.</p><div class="ea-table-wrap"><table><thead><tr><th>Categoria</th><th>Camada base</th><th>Nome do elemento</th><th>Atributos e cálculos</th></tr></thead><tbody id="ea-regras-bases"></tbody></table></div></section>
         <section class="ea-finalidades" id="ea-finalidades" aria-label="Tabelas por finalidade (1.3)" hidden><h4>Tabelas por finalidade (opcional)</h4><p class="ea-hint">Cria versões adicionais com os campos escolhidos. A saída integral continua preservada.</p><div id="ea-finalidades-lista"></div><button class="ea-btn" type="button" id="ea-finalidade-adicionar">Adicionar finalidade</button></section>
       </div>
@@ -189,16 +184,7 @@
   </div>
 </section>
 
-<template id="ea-tpl-identificacao"><tr>
-<td><input type="checkbox" data-id="processar" aria-label="Processar camada"></td>
-<td><strong data-id="nome"></strong><small class="ea-hint" data-id="geometria"></small></td>
-<td data-id="fid"></td><td><select data-id="campo" aria-label="Identificador da demanda"></select></td>
-<td><small data-id="inspecao"></small></td><td><select data-id="categoria" aria-label="Categoria dos pontos"></select></td>
-<td><label><input type="checkbox" data-id="confirmar"> Confirmado</label></td></tr></template>
-<template id="ea-tpl-lote-parametro"><tr><td data-id="nome"></td><td data-id="identificacao"></td>
-<td><select data-id="operacao" aria-label="Algoritmo da camada"><option value="">Usar algoritmo do lote</option><option value="estatisticas">Sem recorte · Spatial Join</option><option value="enriquecimento">Com recorte · Identity</option></select></td>
-<td><select data-id="recorte" aria-label="Base de recorte"><option value="">Selecione a base</option></select></td>
-<td><input data-id="saida" maxlength="200" aria-label="Nome da saída"></td></tr></template>
+<template id="ea-tpl-identificacao"><tr><td data-id="nome"></td><td><select data-id="campo" aria-label="ID da demanda"></select></td></tr></template>
 
 <template id="ea-tpl-base-regra"><tr><td data-category></td><td data-base></td><td><select data-label aria-label="Atributo que identifica o elemento"></select></td><td><button class="ea-btn" type="button" data-rule>Configurar cálculos</button></td></tr></template>
 <template id="ea-tpl-finalidade"><div class="ea-execucao-linha"><strong data-name></strong><span data-fields></span><button class="ea-btn" type="button" data-edit>Editar</button><button class="ea-btn" type="button" data-remove>Remover</button></div></template>

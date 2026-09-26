@@ -871,15 +871,19 @@ verificam a edição de operações e o detalhamento dos vínculos.
 
 ### Execução por camada e identificação das demandas (26/09/2026)
 
-A seção 1.1 apresenta a inspeção dos identificadores e exige confirmação do campo
-que identifica a demanda em cada camada. A opção “Uma demanda por feição” conserva
-o FID de origem; códigos repetidos agrupam feições da mesma camada nos resultados.
-Para pontos, um campo opcional permite apresentar a distribuição por categoria.
+A seção 1.1 apresenta somente a escolha do identificador da demanda por camada,
+com sugestão automática e um único botão para confirmar a configuração.
+A opção “ID da feição” conserva o FID de origem; códigos repetidos agrupam
+feições da mesma camada nos resultados. O título segue a hierarquia da lista de bases.
 
-Na seção 1.3, cada camada pode herdar o algoritmo do lote ou escolher Spatial Join
-ou Identity. Identity exige a seleção da base de recorte. É possível excluir uma
-camada da execução e definir seu nome de saída. A confirmação e os parâmetros
-integram a configuração salva e o pedido enviado ao servidor.
+Na seção 1.3 são escolhidos o algoritmo (Spatial Join ou Identity) e o nome da
+saída. “Conferir e executar”, abaixo da bancada, permite execução individual ou
+em lote e, para Identity, a escolha de uma base de recorte visível.
+Somente demandas e bases presentes e marcadas no mapa da bancada compõem o
+pedido. A conferência mostra essas camadas, seus IDs e categorias. A execução
+individual exige uma única camada de demanda marcada; o lote usa todas as
+marcadas. Arquivos com várias camadas são filtrados também no pedido ao servidor,
+preservando a preparação original para permitir marcar as camadas novamente.
 
 Cada camada selecionada gera uma saída independente. O pacote geral reúne os
 pacotes individuais, os GeoPackages e tabelas e análises unificadas. Elementos das

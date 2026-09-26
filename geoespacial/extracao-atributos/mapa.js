@@ -1,3 +1,8 @@
+export function camadaVisivel(map,id){
+  if(!map?.getSource(id))return false;
+  for(const suffix of ['','-line','-point'])if(map.getLayer(id+suffix))return map.getLayoutProperty(id+suffix,'visibility')!=='none';
+  return false;
+}
 import { $, feedback } from './ui.js';
 
 // Reutiliza o documento da bancada com seus módulos e estilos.
@@ -102,7 +107,8 @@ export function criarMapa(aoMudarPainel) {
   function camadas(){
     const app=context()?.gpApp;
     if(!ready||!app)return null;
-    return app.state.layers.map(item=>({id:item.id,nome:item.nome,categoria:String(item.categoria||'')}));
+    return app.state.layers.map(item=>({id:item.id,nome:item.nome,categoria:String(item.categoria||''),
+      visivel:camadaVisivel(app.state.map,item.id)}));
   }
   frame.addEventListener('load',connect);connect();
   function assertReady(ids=[]){

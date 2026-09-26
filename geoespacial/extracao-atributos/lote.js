@@ -32,43 +32,25 @@ function clone(id){return document.getElementById(id).content.firstElementChild.
 export function renderLote(state,changed){
  const entries=entradas(state),host=document.getElementById('ea-identificacao');host.hidden=!entries.length;
  const rows=document.getElementById('ea-identificacao-camadas');rows.replaceChildren();
- const params=document.getElementById('ea-lote-parametros');params.replaceChildren();
+ let pronta=entries.length>0;
  for(const {layer,config} of entries){
   const info=inspecao(layer);if(info.total>0&&!config.campo_id)config.campo_id=info.sugestao;
-  const row=clone('ea-tpl-identificacao'),q=k=>row.querySelector(`[data-id="${k}"]`);
-  q('nome').textContent=layer.nome;
-  const types=layer.metadados_local?.tipos_geometria||[...new Set((layer.geojson?.features||[]).map(f=>f.geometry?.type))];
-  q('geometria').textContent=`${types.join(', ')} · ${layer.metadados_local?.feicoes??info.total} feições`;
-  q('fid').textContent=info.fid_nativo||info.campos.find(c=>c.id_feicao)?.nome||'Identificador posicional preservado';
-  q('campo').append(new Option('Uma demanda por feição','__feicao__'));
-  q('categoria').append(new Option('Sem agrupamento por categoria',''));
-  for(const c of info.campos){q('campo').append(new Option(`${c.nome}${c.nome===info.sugestao?' (sugestão)':''}`,c.nome));q('categoria').append(new Option(c.nome,c.nome));}
-  if(!info.total){q('campo').prepend(new Option('Aguardando inspeção',''));q('campo').disabled=true;q('confirmar').disabled=true;}
-  q('campo').value=config.campo_id||'';q('categoria').value=config.categoria_pontos||'';
-  q('categoria').disabled=!types.some(t=>/Point/.test(t));
-  q('processar').checked=config.processar!==false;q('confirmar').checked=!!config.identificacao_confirmada;
+  const row=clone('ea-tpl-identificacao'),campo=row.querySelector('[data-id="campo"]');
+  row.querySelector('[data-id="nome"]').textContent=layer.nome;
+  campo.append(new Option('ID da feição · uma demanda por feição','__feicao__'));
+  for(const c of info.campos)campo.append(new Option(`${c.nome}${c.nome===info.sugestao?' (sugestão)':''}`,c.nome));
+  if(!info.total){campo.prepend(new Option('Aguardando leitura da camada',''));campo.disabled=true;}
+  campo.value=config.campo_id||'';
   const selected=info.campos.find(c=>c.nome===config.campo_id);
-  q('inspecao').textContent=selected?`${info.completa?'Camada completa':'Prévia; validação integral na execução'}: ${selected.distintos} valores distintos; ${selected.repetidos} repetições; ${selected.nulos} vazios. Amostra: ${selected.amostra.join(' · ')}`:'Cada feição será uma demanda independente.';
-  for(const [control,key] of [['campo','campo_id'],['categoria','categoria_pontos'],['processar','processar'],['confirmar','identificacao_confirmada']])q(control).onchange=()=>{
-   config[key]=q(control).type==='checkbox'?q(control).checked:q(control).value||null;
-   if(control==='campo')config.identificacao_confirmada=false;
-   changed();
-  };
+  if(!info.total||!config.campo_id||(info.completa&&selected?.nulos))pronta=false;
+  campo.onchange=()=>{config.campo_id=campo.value||null;config.identificacao_confirmada=false;changed();};
   rows.append(row);
-  if(config.processar===false)continue;
-  const p=clone('ea-tpl-lote-parametro'),f=k=>p.querySelector(`[data-id="${k}"]`);
-  f('nome').textContent=layer.nome;f('identificacao').textContent=`${config.campo_id==='__feicao__'?'Uma demanda por feição':config.campo_id}${config.identificacao_confirmada?'':' · confirmar em 1.1'}`;
-  f('operacao').value=config.operacao||'';
-  const bases=[...new Map([...state.bancadaBases,...state.bases,...state.staging].map(b=>[b.id,b])).values()];
-  for(const b of bases)f('recorte').append(new Option(b.layer?.nome||state.catalog.find(l=>l.id===b.id)?.nome||b.id,b.id));
-  f('recorte').value=config.camada_recorte||'';f('recorte').disabled=(config.operacao||state.operation)!=='enriquecimento';
-  f('saida').value=config.nome_saida||'';f('saida').placeholder=layer.nome;
-  for(const [control,key] of [['operacao','operacao'],['recorte','camada_recorte'],['saida','nome_saida']])f(control).onchange=()=>{config[key]=f(control).value;changed();};
-  params.append(p);
  }
- const selected=new Set(state.bancadaBases.map(b=>b.category));
- const auto=state.categories.filter(c=>selected.has(c.id)&&/risco|restri/i.test(c.nome)).map(c=>/restri/i.test(c.nome)?'restricao':'risco');
- document.getElementById('ea-campos-automaticos').textContent=`Saída: atributos da demanda + atributos das bases + identificadores e correspondências.${auto.length?' Campos automáticos: '+auto.join(', ')+' (0: sem correspondência; 1: com correspondência).':''}`;
+ const confirm=document.getElementById('ea-identificacao-confirmar');
+ const confirmed=entries.length>0&&entries.every(e=>e.config.identificacao_confirmada);
+ confirm.disabled=state.busy||!pronta||confirmed;
+ document.getElementById('ea-identificacao-status').textContent=confirmed?'Identificação confirmada.':pronta?'Confira os IDs e confirme a configuração.':'Aguarde a leitura e escolha um ID preenchido em todas as feições.';
+ confirm.onclick=()=>{for(const e of entries)e.config.identificacao_confirmada=true;changed();};
 }
 export function validarLote(state){
  const all=entradas(state,true).filter(e=>e.config.processar!==false);

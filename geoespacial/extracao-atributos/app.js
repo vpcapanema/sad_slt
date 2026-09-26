@@ -1,4 +1,5 @@
-import {renderLote,validarLote} from './lote.js';
+import {renderLote} from './lote.js';
+import {composicaoVisivel,validarComposicao,pedidoDaComposicao} from './composicao.js';
 import { $, feedback, camposCamada } from "./ui.js";
 import { conectarIntegracao, disponivel, chamar } from "./integracao.js";
 import { criarMapa } from "./mapa.js";
@@ -22,12 +23,12 @@ const OPCOES_OVERLAY=[
 ];
 const state={bancadaEntradas:[],bancadaBases:[],catalog:[],categories:[],bases:[],staging:[],input:"",operation:"",
   opcoes:Object.fromEntries(OPCOES_OVERLAY.map(([chave,,,padrao])=>[chave,padrao])),
-  nomeSaida:"",result:null,busy:false,uploading:false,loadingCatalog:false,catalogError:false,
+  executarEmLote:false,camadaRecorte:"",nomeSaida:"",result:null,busy:false,uploading:false,loadingCatalog:false,catalogError:false,
   // Só no enriquecimento: configuração da entrada principal, entradas adicionais e finalidades.
   inputConfig:null,entradasExtras:[],finalidades:[]};
 const map=criarMapa(()=>{reconciliarPainel();controls();}),results=criarResultados();
 const config=criarConfiguracao(state,changed);
-// A seção 2 confirma a composição real da bancada, independentemente de visibilidade.
+// A seção 2 usa somente camadas presentes e visíveis na bancada.
 const componentesEntrada=componentes;
 const camadaEntrada=id=>state.bancadaEntradas.find(e=>e.id===id)?.layer||state.catalog.find(l=>l.id===id);
 function idsDaComposicao(){
@@ -40,67 +41,26 @@ function bancadaCompleta(){
   const presentes=new Set(painel.map(l=>l.id));
   return idsDaComposicao().every(id=>presentes.has(id));
 }
+function composicaoAtual(){return composicaoVisivel(state,map.camadas());}
 function renderSelecao() {
-  const host=$("#ea-run-selection");if(!host)return;
-  const nome=id=>state.catalog.find(l=>l.id===id)?.nome||id;
-  const presentes=new Set((map.camadas()||[]).map(l=>l.id));
-  const entradas=entradasEnriquecimento().filter(e=>e.principal||['enriquecimento','estatisticas'].includes(state.operation))
-    .flatMap(e=>componentesEntrada(camadaEntrada(e.id))).filter(l=>presentes.has(l.id));
-  const entrada=entradas[0];
-  const bases=state.bancadaBases.filter(b=>presentes.has(b.id));
-  host.replaceChildren();
-  const linha=(rotulo,conteudo,vazio)=>{
-    const bloco=document.createElement("div");bloco.className="ea-execucao-linha";
-    const titulo=document.createElement("span");titulo.className="ea-execucao-rotulo";titulo.textContent=rotulo;
-    bloco.append(titulo);
-    if(vazio){const alerta=document.createElement("em");alerta.className="ea-execucao-falta";alerta.textContent=vazio;bloco.append(alerta);}
-    else bloco.append(conteudo);
-    return bloco;
-  };
-  const valor=document.createElement("span");valor.className="ea-execucao-valor";
-  valor.textContent=entradas.map(e=>e.nome).join('; ');
-  host.append(linha("Camadas de entrada:",valor,entrada?"":"nenhuma camada de entrada adicionada à bancada"));
-
-  const grupos=state.categories
-    .map(c=>({c,itens:bases.filter(b=>b.category===c.id)}))
-    .filter(g=>g.itens.length);
-  const lista=document.createElement("div");lista.className="ea-execucao-bases";
-  for(const {c,itens} of grupos){
-    const grupo=document.createElement("div");grupo.className="ea-execucao-grupo";
-    const cabeca=document.createElement("strong");cabeca.textContent=c.nome;
-    const conta=document.createElement("span");conta.className="ea-badge";conta.textContent=String(itens.length);
-    grupo.append(cabeca,conta);
-    // A regra de cada base fica na 1.1, ao lado da camada; aqui é só conferência.
-    for(const base of itens){
-      const item=document.createElement("span");item.className="ea-execucao-base";item.textContent=nome(base.id);
-      grupo.append(item);
-    }
-    lista.append(grupo);
-  }
-  host.append(linha(`Camadas de base: (${bases.length})`,lista,
-    bases.length?"":"nenhuma base adicionada à bancada; prepare e confirme as bases em 1.2"));
-  const algoritmo=document.createElement('span');algoritmo.className='ea-execucao-valor';
-  algoritmo.textContent=state.operation?$('#ea-operation').selectedOptions[0]?.textContent:'';
-  host.append(linha('Algoritmo:',algoritmo,state.operation?'':'nenhum algoritmo selecionado em 1.3'));
-  const saida=document.createElement('span');saida.className='ea-execucao-valor';
-  saida.textContent=state.nomeSaida.trim()||(entrada?`Extração de ${state.bancadaEntradas[0]?.layer.nome} (automático)`:'Nome automático após adicionar a entrada');
-  host.append(linha('Camada de saída:',saida));
-  // Estimativa antes de executar: o que se sabe sem processar.
-  if(['enriquecimento','estatisticas'].includes(state.operation)&&state.bancadaEntradas.length){
-    const feicoes=entradasEnriquecimento().reduce((soma,item)=>{
-      const camada=camadaEntrada(item.id);
-      return soma+(camada?.geojson?.features?.length||0);
-    },0);
-    const recorte=state.operation==='enriquecimento'&&bases.some(b=>b.regra?.papel==="recorte");
-    const todas=state.operation==='enriquecimento'?bases.filter(b=>b.regra?.multiplicidade==="todas").map(b=>nome(b.id)):[];
-    const partes=[feicoes?`${feicoes} feição(ões) de entrada`:"contagem da entrada indisponível"];
-    if(recorte)partes.push("o recorte divide linhas e polígonos entre as unidades, aumentando o número de registros");
-    if(todas.length)partes.push(`a regra "todas" em ${todas.join(", ")} repete o registro por feição tocada`);
-    if(!recorte&&!todas.length)partes.push("um registro por feição de entrada");
-    const texto=document.createElement("em");texto.className="ea-execucao-estimativa";
-    texto.textContent=`Estimativa: ${partes.join("; ")}.`;
-    host.append(linha("Registros previstos:",texto));
-  }
+  const comp=composicaoAtual();
+  const mode=$('#ea-run-mode');mode.value=state.executarEmLote?'lote':'individual';mode.disabled=state.busy;
+  mode.onchange=()=>{state.executarEmLote=mode.value==='lote';controls();};
+  const cut=$('#ea-run-cut'),previous=state.camadaRecorte;
+  cut.replaceChildren(new Option('Selecione uma base marcada na bancada',''));
+  for(const b of comp.bases)cut.append(new Option(b.layer.nome,b.id));
+  cut.value=previous;cut.disabled=state.busy;
+  $('#ea-run-cut-field').hidden=state.operation!=='enriquecimento';
+  cut.onchange=()=>{state.camadaRecorte=cut.value;controls();};
+  $('#ea-run-algorithm').textContent=$('#ea-operation').selectedOptions[0]?.textContent||'Selecione em 1.3';
+  const inputs=$('#ea-run-inputs'),bases=$('#ea-run-bases');inputs.replaceChildren();bases.replaceChildren();
+  const row=(name,value)=>{const r=$('#ea-tpl-run-row').content.firstElementChild.cloneNode(true);r.querySelector('[data-name]').textContent=name;r.querySelector('[data-value]').textContent=value;return r;};
+  for(const e of comp.camadas)inputs.append(row(e.layer.nome,(e.config.campo_id==='__feicao__'?'ID da feição':e.config.campo_id||'Não definido')+(e.config.identificacao_confirmada?'':' · confirmar em 1.1')));
+  for(const b of comp.bases)bases.append(row(b.layer.nome,state.categories.find(c=>c.id===b.category)?.nome||b.category));
+  $('#ea-run-count').textContent=`${comp.camadas.length} camada(s) de demanda e ${comp.bases.length} base(s) marcadas para ${state.executarEmLote?'execução em lote':'execução individual'}.`;
+  let warning='';try{validarComposicao(state,comp);}catch(e){warning=e.message;}
+  $('#ea-run-warning').textContent=warning;$('#ea-run-warning').hidden=!warning;
+  if(warning)$('#ea-run').disabled=true;
 }
 // Entradas do enriquecimento: a principal (1.2) e as adicionais.
 function entradasEnriquecimento() {
@@ -178,7 +138,7 @@ function controls() {
     :state.loadingMap?"Carregando camadas no mapa…"
     :!disponivel("executar")?"Carregando catálogo…"
     :falta.length?`Falta selecionar ${falta.join(" e ")}.`
-    :!bancadaCompleta()?'Aguardando a inclusão das camadas na bancada.':`Pronto para executar com as entradas e ${state.bancadaBases.length} base(s) presentes na bancada.`;
+    :!bancadaCompleta()?'Aguardando a inclusão das camadas na bancada.':$('#ea-run-warning').textContent||$('#ea-run-count').textContent;
 }
 function syncMap() {
   const items=state.bancadaBases.map(base=>{
@@ -307,27 +267,20 @@ function renderParametros() {
   // O desenho do algoritmo fica no subcard 1.3, ao lado do seletor.
   const grupo=document.querySelector('.ea-grupo-dinamico[data-origem="1.3"]');if(grupo)grupo.hidden=!state.operation;
   renderDiagrama($("#ea-algoritmo-desenho"),state.operation);
-  const host=$("#ea-operation-params");if(!host)return;
-  host.hidden=!['enriquecimento','estatisticas'].includes(state.operation);
   renderFinalidades();
   renderLote(state,changed);
   if(state.busy)document.querySelectorAll("#ea-config input, #ea-config select, #ea-config button").forEach(node=>{node.disabled=true;});
 }
 
 function request() {
-  return {motor:"gdal",operacao:state.operation,opcoes:{...state.opcoes},nome_saida:state.nomeSaida.trim(),input:state.bancadaEntradas[0]?.layer,categorias:state.categories.filter(c=>state.bancadaBases.some(b=>b.category===c.id)).map(c=>({id:c.id,nome:c.nome,camadas:state.bancadaBases.filter(b=>b.category===c.id).map(b=>b.layer),
-    regras:['enriquecimento','estatisticas'].includes(state.operation)?Object.fromEntries(state.bancadaBases.filter(b=>b.category===c.id&&b.regra).map(b=>[b.id,b.regra])):{}})),
-    ...(['enriquecimento','estatisticas'].includes(state.operation)?{
-      entradas:state.bancadaEntradas.map(e=>({id:e.id,config:e.config||{}})),
-      entradas_locais:Object.fromEntries(state.bancadaEntradas.slice(1).filter(e=>e.layer.arquivo_local).map(e=>[e.id,e.layer.arquivo_local])),
-      finalidades:state.finalidades.map(f=>({nome:f.nome,campos:[...f.campos]}))}:{})};
+  return pedidoDaComposicao(state,composicaoAtual());
 }
 $("#ea-run").addEventListener("click",async()=>{
   reconciliarPainel();
   if(state.busy||state.uploading||state.validatingBases||state.loadingMap||state.loadingCatalog||!state.operation||!state.bancadaEntradas.length||!state.bancadaBases.length) return;
-  try{map.assertReady(idsDaComposicao());}catch(error){feedback(error.message,'error');return;}
+  try{map.assertReady(composicaoAtual().ids);}catch(error){feedback(error.message,'error');return;}
   let pedido;
-  try{validarLote(state);pedido=request();}catch(error){feedback(error.message,'error');return;}
+  try{validarComposicao(state,composicaoAtual());pedido=request();}catch(error){feedback(error.message,'error');return;}
   const confirmado=await confirmarExecucao({
     entrada:(pedido.entradas||[pedido.input]).map(e=>e.nome||e.id).join('; '),
     saida:pedido.nome_saida||`Extração de ${pedido.input.nome}`,
@@ -337,7 +290,7 @@ $("#ea-run").addEventListener("click",async()=>{
   });
   if(!confirmado){feedback("Execução cancelada. Nada foi processado.");return;}
   reconciliarPainel();
-  try{map.assertReady(idsDaComposicao());if(!state.bancadaEntradas.length||!state.bancadaBases.length||assinaturaDe(request())!==assinaturaDe(pedido))throw new Error('A composição da bancada mudou. Confira e execute novamente.');}catch(error){feedback(error.message,'error');return;}
+  try{validarComposicao(state,composicaoAtual());map.assertReady(composicaoAtual().ids);if(!state.bancadaEntradas.length||!state.bancadaBases.length||assinaturaDe(request())!==assinaturaDe(pedido))throw new Error('A composição da bancada mudou. Confira e execute novamente.');}catch(error){feedback(error.message,'error');return;}
   busy(true);state.result=null;results.clear();syncMap();
   const painel=acompanharExecucao();
   try {
