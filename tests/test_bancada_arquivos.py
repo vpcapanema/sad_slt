@@ -155,3 +155,52 @@ def test_operacao_mistura_arquivo_e_camada_do_catalogo(source,monkeypatch):
     assert result['resultado']['camada_id']=='saida'
     assert frames[0].geometry.iloc[0].area==pytest.approx(500000)
     assert not service.geo._camadas and not service.geo._metadados
+
+
+@pytest.mark.parametrize('json_subtype', [ogr.OFSTNone, ogr.OFSTJSON])
+def test_excluir_nulos_e_salvar_preserva_booleanos_e_json(source, monkeypatch, json_subtype):
+    import json
+    original, path = source
+    ds = ogr.Open(str(path), 1)
+    layer = ds.GetLayer(0)
+    for name, kind, subtype in [('ativo', ogr.OFTInteger, ogr.OFSTBoolean),
+                                ('valores', ogr.OFTString, json_subtype)]:
+        field = ogr.FieldDefn(name, kind)
+        field.SetSubType(subtype)
+        layer.CreateField(field)
+    for name, active, values in [(None, True, '["remover"]'), ('Manter', False, '["a",null]')]:
+        feature = ogr.Feature(layer.GetLayerDefn())
+        if name is not None:
+            feature.SetField('nome', name)
+        feature.SetField('ativo', int(active))
+        feature.SetField('valores', values)
+        feature.SetGeometry(ogr.CreateGeometryFromWkt('POLYGON ((0 0,1000 0,1000 1000,0 1000,0 0))'))
+        layer.CreateFeature(feature)
+    ds = None
+    original = reader.ler_arquivo(original['arquivo'])
+    before = path.read_bytes()
+    edited = deepcopy(original['geojson'])
+    edited['features'] = [f for f in edited['features'] if f['properties']['nome'] is not None]
+    remaining = next(f for f in edited['features'] if f['properties']['nome'] == 'Manter')
+    assert remaining['properties']['ativo'] is False
+    assert remaining['properties']['valores'] == ['a', None]
+    monkeypatch.setattr(service.ciclo, 'iniciar', lambda *args: 'teste-exclusao')
+    monkeypatch.setattr(service.ciclo, 'finalizar', lambda *a, **k: None)
+    monkeypatch.setattr(service.geo, '_metadados', {})
+    def register(frame, *args, **kwargs):
+        assert len(frame) == 2
+        kept = frame.loc[frame.nome == 'Manter'].iloc[0]
+        assert not kept.ativo
+        assert json.loads(kept.valores) == ['a', None]
+        output = path.with_name('sem-nulos.gpkg')
+        frame.to_file(output, driver='GPKG', engine='pyogrio')
+        service.geo._metadados['nova'] = {'caminho_arquivo': 'data/geoespacial/outputs/sem-nulos.gpkg'}
+        return 'nova'
+    monkeypatch.setattr(service.geo, 'registrar_camada', register)
+    result = service.salvar(original['arquivo'], original['revisao'], edited, 'Sem nulos', SimpleNamespace(id='teste'))
+    assert len(result['geojson']['features']) == 2
+    saved = next(f for f in result['geojson']['features'] if f['properties']['nome'] == 'Manter')
+    assert saved['properties']['ativo'] is False
+    assert saved['properties']['valores'] == ['a', None]
+    assert path.read_bytes() == before
+    assert remaining['properties']['valores'] == ['a', None], 'Não altera o payload recebido'

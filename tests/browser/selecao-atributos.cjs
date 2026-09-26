@@ -6,6 +6,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
  try{
   const page=await browser.newPage({viewport:{width:1200,height:900}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
+  page.on('console',message=>{if(message.text().includes('Table Not Initialized'))errors.push(message.text());});
   const html=fs.readFileSync('templates/componentes/_geoprocessamento.html','utf8');
   await page.setContent(`<div id="gp-editor-view"></div>${html.match(/<template id="gp-attribute-template">[\s\S]*?<\/template>/)[0]}`);
   for(const file of ['assets/vendor/tabulator/tabulator.min.css','assets/css/geoprocessamento-atributos.css'])await page.addStyleTag({path:path.resolve(file)});
@@ -72,6 +73,26 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await page.locator('[data-at-operator]').selectOption('is_null');
   await page.locator('[data-at-query] button').click();
   assert.deepEqual(await selected(),[...nulls,1].sort((a,b)=>a-b));
+  // Excluir os nulos e salvar mantém as feições restantes e reinicializa a grade.
+  page.on('dialog',dialog=>dialog.accept());
+  await page.evaluate(()=>{
+   window.gpArquivos={sessions:new Map([['teste',{arquivo:'data/geoespacial/outputs/teste.gpkg',revisao:'a'.repeat(64),nome:'Teste'}]]),adicionar:()=>{}};
+   window.fetch=async(url,options)=>{
+    window.savedRequest={url,payload:JSON.parse(options.body)};
+    return {ok:true,json:async()=>({id:'teste'})};
+   };
+   gpApp.showAttributes=async()=>{
+    const features=savedRequest.payload.geojson.features;
+    gpAttributeTable.render('teste',{...body,registros:features.map(f=>({...f.properties,__gp_feature:f}))});
+   };
+  });
+  await page.locator('[data-at-delete]').click();
+  await page.waitForFunction(()=>gpAttributeTable.grid.getData().length===69);
+  await page.locator('[data-at-save]').click();
+  await page.waitForFunction(()=>document.querySelector('[data-at-status]').textContent.includes('Nova versão salva'));
+  assert.equal(await page.evaluate(()=>savedRequest.payload.geojson.features.length),69);
+  assert.equal(await page.evaluate(()=>savedRequest.payload.geojson.features.every(f=>f.properties.numero!==null)),true);
+  assert.equal(await page.evaluate(()=>savedRequest.url),'/api/geoespacial/bancada-arquivos/salvar');
   await page.screenshot({path:'/tmp/sicard-selecao-atributos.png',fullPage:true});
   assert.deepEqual(errors,[]);
   console.log('Seleção de nulos/não nulos, inversão, paginação, escopo, mapa e rascunho: OK');

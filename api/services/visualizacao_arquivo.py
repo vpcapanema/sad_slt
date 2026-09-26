@@ -3,7 +3,7 @@ import json
 from hashlib import sha256
 from uuid import uuid4
 
-from osgeo import gdal, osr
+from osgeo import gdal, ogr, osr
 
 from api.path_policy import project_path, relative_path
 from api.services.catalogo_arquivos import camadas_dos_arquivos
@@ -92,7 +92,8 @@ def _ler(path, relative, revision, vinculo, vinculos, encoding):
             raise ValueError('O arquivo foi alterado durante a leitura. Abra novamente.')
         definition = layer.GetLayerDefn()
         fields = [{'nome': definition.GetFieldDefn(i).GetName(),
-                   'tipo': definition.GetFieldDefn(i).GetTypeName()}
+                   'tipo': definition.GetFieldDefn(i).GetTypeName(),
+                   'subtipo': ogr.GetFieldSubTypeName(definition.GetFieldDefn(i).GetSubType())}
                   for i in range(definition.GetFieldCount())]
         result = {'id': vinculo['id'], 'nome': vinculo.get('nome', path.stem),
                 'vinculos': vinculos, 'codificacao': encoding or 'declarada pelo arquivo',

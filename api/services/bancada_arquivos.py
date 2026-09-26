@@ -22,6 +22,8 @@ def frame_editado(source, data):
     if data.get('type') != 'FeatureCollection' or not data.get('features'):
         raise ValueError('A versão deve conter ao menos uma feição.')
     fields = {field['nome']: field['tipo'] for field in source['campos']}
+    subtypes = {field['nome']: field.get('subtipo') for field in source['campos']}
+    features = []
     kinds = {f['geometry']['type'].removeprefix('Multi') for f in source['geojson']['features']}
     ids = set()
     for feature in data['features']:
@@ -37,6 +39,14 @@ def frame_editado(source, data):
             value = properties[name]
             if value is None:
                 continue
+            if subtypes[name] == 'Boolean':
+                if not isinstance(value, bool):
+                    raise ValueError(f'O campo {name} exige um valor booleano.')
+                continue
+            if subtypes[name] == 'JSON' or (kind == 'String' and isinstance(value, (dict, list))):
+                # O driver GeoJSON expande campos JSON em listas/objetos.
+                # Regrave-os como JSON, preservando o tipo textual no arquivo.
+                continue
             if kind in {'Integer', 'Integer64'} and (not isinstance(value, int) or isinstance(value, bool)):
                 raise ValueError(f'O campo {name} exige um número inteiro.')
             if kind == 'Real' and (not isinstance(value, (int, float)) or isinstance(value, bool)):
@@ -46,7 +56,15 @@ def frame_editado(source, data):
         geometry = ogr.CreateGeometryFromJson(json.dumps(feature.get('geometry'), allow_nan=False))
         if geometry is None or geometry.IsEmpty() or not geometry.IsValid():
             raise ValueError('Existe geometria vazia ou inválida. Corrija antes de salvar.')
-    frame = gpd.GeoDataFrame.from_features(data['features'], crs=4326)
+        features.append({**feature, 'properties': {
+            name: json.dumps(value, ensure_ascii=False, allow_nan=False)
+            if value is not None and (subtypes[name] == 'JSON' or
+                                     (fields[name] == 'String' and isinstance(value, (dict, list)))) else value
+            for name, value in properties.items()}})
+    frame = gpd.GeoDataFrame.from_features(features, crs=4326)
+    for name, subtype in subtypes.items():
+        if subtype == 'Boolean':
+            frame[name] = frame[name].astype('boolean')
     if not frame.geometry.is_valid.all():
         raise ValueError('Existem geometrias inválidas.')
     west, south, east, north = frame.total_bounds
