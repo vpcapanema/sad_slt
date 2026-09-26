@@ -184,7 +184,7 @@
   </div>
 </section>
 
-<template id="ea-tpl-identificacao"><tr><td data-id="nome"></td><td><select data-id="campo" aria-label="ID da demanda"></select></td><td><select data-id="categoria" aria-label="Categoria da demanda"></select></td></tr></template>
+<template id="ea-tpl-identificacao"><tr><td><span data-id="nome"></span><small data-id="status" class="ea-identificacao-erro" hidden></small></td><td><select data-id="campo" aria-label="ID da demanda"></select></td><td><select data-id="categoria" aria-label="Categoria da demanda"></select></td></tr></template>
 
 <template id="ea-tpl-base-regra"><tr><td data-category></td><td data-base></td><td><select data-label aria-label="Atributo que identifica o elemento"></select></td><td><button class="ea-btn" type="button" data-rule>Configurar cálculos</button></td></tr></template>
 <template id="ea-tpl-finalidade"><div class="ea-execucao-linha"><strong data-name></strong><span data-fields></span><button class="ea-btn" type="button" data-edit>Editar</button><button class="ea-btn" type="button" data-remove>Remover</button></div></template>
