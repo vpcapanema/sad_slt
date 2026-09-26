@@ -1,11 +1,18 @@
 const assert=require('node:assert/strict'),fs=require('fs');
 (async()=>{
- const {enviarPrevia,removerPrevia,guardarPrevia,desfazerPrevia,limparPreparacao}=await import('data:text/javascript;base64,'+fs.readFileSync('geoespacial/extracao-atributos/preparacao.js').toString('base64'));
+ const {entradasParaPrevia,enviarPrevia,removerPrevia,guardarPrevia,desfazerPrevia,limparPreparacao}=await import('data:text/javascript;base64,'+fs.readFileSync('geoespacial/extracao-atributos/preparacao.js').toString('base64'));
  const fc={type:'FeatureCollection',features:[]};
  const a={id:'local:a',chave:'a',geojson:fc,tipo:'vetor'},b={id:'local:b',chave:'b',geojson:fc,tipo:'vetor'};
  const input={id:'local:file',geojson:fc,camadas_importadas:[a,b],camadas_bancada:[a,b],arquivo_local:{nome:'file.gpkg',camadas:['a','b']}};
- const s={input:input.id,inputConfig:null,entradasExtras:[],catalog:[input,{id:'base',geojson:fc}],bases:[],staging:[{id:'base',category:'social'}],bancadaEntradas:[],bancadaBases:[]};
+ const s={input:input.id,inputConfig:{camadas:{a:{campo_id:'id',categoria_demanda:'tipo',identificacao_confirmada:true},b:{campo_id:'id',categoria_demanda:'tipo',identificacao_confirmada:true}}},entradasExtras:[],catalog:[input,{id:'base',geojson:fc}],bases:[],staging:[{id:'base',category:'social'}],bancadaEntradas:[],bancadaBases:[]};
+ const pendente=structuredClone(s);pendente.inputConfig=null;
+ assert.equal(entradasParaPrevia(pendente).length,0,'Seleção de arquivo não envia demandas à prévia');
+ assert.equal(enviarPrevia(pendente),1,'Sem confirmação, só as bases podem ser enviadas');
+ limparPreparacao(pendente);assert.equal(pendente.input,input.id,'Enviar bases preserva demandas aguardando identificação');
  assert.equal(s.bancadaEntradas.length,0);assert.equal(enviarPrevia(s),3);
+ assert.equal(s.bancadaEntradas[0].config.camadas.a.categoria_demanda,'tipo');
+ s.inputConfig.camadas.a.categoria_demanda='nova';
+ assert.equal(s.bancadaEntradas[0].config.camadas.a.categoria_demanda,'tipo','Snapshot da bancada preserva a configuração confirmada');
  removerPrevia(s,{grupo:'entrada',entradaId:input.id,chaveOriginal:'a'});
  assert.equal(s.catalog[0].camadas_bancada.length,1);
  assert.equal(s.bancadaEntradas[0].layer.camadas_bancada.length,2,'Editar prévia não modifica confirmação');

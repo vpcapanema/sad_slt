@@ -871,16 +871,28 @@ verificam a edição de operações e o detalhamento dos vínculos.
 
 ### Execução por camada e identificação das demandas (26/09/2026)
 
-A seção 1.1 apresenta somente a escolha do identificador da demanda por camada,
-com sugestão automática e um único botão para confirmar a configuração.
+Ao selecionar um arquivo, suas camadas aguardam na seção 1.1 a escolha do
+identificador e do atributo de categoria da demanda (ou “Sem categorização”).
+Um único botão confirma a configuração e envia as camadas à prévia. Alterar
+essas escolhas retira a camada da prévia até nova confirmação; a bancada
+preserva sua composição já confirmada. Enviar bases não descarta demandas
+ainda aguardando identificação.
 A opção “ID da feição” conserva o FID de origem; códigos repetidos agrupam
 feições da mesma camada nos resultados. O título segue a hierarquia da lista de bases.
 
 Na seção 1.3 são escolhidos o algoritmo (Spatial Join ou Identity) e o nome da
 saída. “Conferir e executar”, abaixo da bancada, permite execução individual ou
-em lote e, para Identity, a escolha de uma base de recorte visível.
+em lote e, para Identity, a escolha de uma base de recorte visível. As opções de
+execução são exclusivas e dispostas em coluna: sem demandas ambas ficam inativas;
+com uma demanda fica selecionada Individual; com duas ou mais, Em lote. A opção
+incompatível fica desabilitada. A conferência usa controles e tabelas compactos,
+com as tabelas lado a lado no desktop e empilhadas em telas estreitas.
 Somente demandas e bases presentes e marcadas no mapa da bancada compõem o
-pedido. A conferência mostra essas camadas, seus IDs e categorias. A execução
+pedido. A conferência mostra essas camadas, seus IDs, o atributo de categoria
+da demanda e as categorias de base. Esses parâmetros acompanham o pedido
+e o esquema gravado na saída. Os resultados leem a categoria da saída e
+mostram contagens de pontos, comprimentos de linhas e áreas de polígonos
+por categoria, conforme a representação. A execução
 individual exige uma única camada de demanda marcada; o lote usa todas as
 marcadas. Arquivos com várias camadas são filtrados também no pedido ao servidor,
 preservando a preparação original para permitir marcar as camadas novamente.

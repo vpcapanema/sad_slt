@@ -44,18 +44,22 @@ function bancadaCompleta(){
 function composicaoAtual(){return composicaoVisivel(state,map.camadas());}
 function renderSelecao() {
   const comp=composicaoAtual();
-  const mode=$('#ea-run-mode');mode.value=state.executarEmLote?'lote':'individual';mode.disabled=state.busy;
-  mode.onchange=()=>{state.executarEmLote=mode.value==='lote';controls();};
+  const quantidade=comp.camadas.length;
+  state.executarEmLote=quantidade>1;
+  for(const [id,lote,possivel] of [['#ea-run-individual',false,quantidade===1],['#ea-run-batch',true,quantidade>1]]){
+    const option=$(id);option.checked=possivel;option.disabled=state.busy||!possivel;
+    option.onchange=()=>{state.executarEmLote=lote;controls();};
+  }
   const cut=$('#ea-run-cut'),previous=state.camadaRecorte;
   cut.replaceChildren(new Option('Selecione uma base marcada na bancada',''));
   for(const b of comp.bases)cut.append(new Option(b.layer.nome,b.id));
-  cut.value=previous;cut.disabled=state.busy;
+  cut.value=previous;cut.disabled=state.busy||!comp.bases.length;
   $('#ea-run-cut-field').hidden=state.operation!=='enriquecimento';
   cut.onchange=()=>{state.camadaRecorte=cut.value;controls();};
   $('#ea-run-algorithm').textContent=$('#ea-operation').selectedOptions[0]?.textContent||'Selecione em 1.3';
   const inputs=$('#ea-run-inputs'),bases=$('#ea-run-bases');inputs.replaceChildren();bases.replaceChildren();
-  const row=(name,value)=>{const r=$('#ea-tpl-run-row').content.firstElementChild.cloneNode(true);r.querySelector('[data-name]').textContent=name;r.querySelector('[data-value]').textContent=value;return r;};
-  for(const e of comp.camadas)inputs.append(row(e.layer.nome,(e.config.campo_id==='__feicao__'?'ID da feição':e.config.campo_id||'Não definido')+(e.config.identificacao_confirmada?'':' · confirmar em 1.1')));
+  const row=(name,value,category)=>{const r=$(category===undefined?'#ea-tpl-run-row':'#ea-tpl-run-input').content.firstElementChild.cloneNode(true);r.querySelector('[data-name]').textContent=name;r.querySelector('[data-value]').textContent=value;if(category!==undefined)r.querySelector('[data-category]').textContent=category;return r;};
+  for(const e of comp.camadas)inputs.append(row(e.layer.nome,(e.config.campo_id==='__feicao__'?'ID da feição':e.config.campo_id||'Não definido')+(e.config.identificacao_confirmada?'':' · confirmar em 1.1'),e.config.categoria_demanda||e.config.categoria_pontos||'Sem categorização'));
   for(const b of comp.bases)bases.append(row(b.layer.nome,state.categories.find(c=>c.id===b.category)?.nome||b.category));
   $('#ea-run-count').textContent=`${comp.camadas.length} camada(s) de demanda e ${comp.bases.length} base(s) marcadas para ${state.executarEmLote?'execução em lote':'execução individual'}.`;
   let warning='';try{validarComposicao(state,comp);}catch(e){warning=e.message;}
@@ -139,6 +143,7 @@ function controls() {
     :!disponivel("executar")?"Carregando catálogo…"
     :falta.length?`Falta selecionar ${falta.join(" e ")}.`
     :!bancadaCompleta()?'Aguardando a inclusão das camadas na bancada.':$('#ea-run-warning').textContent||$('#ea-run-count').textContent;
+  $('#ea-integration-status').hidden=[$('#ea-run-warning').textContent,$('#ea-run-count').textContent].includes($('#ea-integration-status').textContent);
 }
 function syncMap() {
   const items=state.bancadaBases.map(base=>{

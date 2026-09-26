@@ -1,5 +1,5 @@
 import { $, el, feedback } from './ui.js';
-import { removerPrevia } from './preparacao.js';
+import { removerPrevia, entradasParaPrevia, componentes, configuracaoDaCamada } from './preparacao.js';
 const nomeArquivo=valor=>String(valor||'Arquivo sem nome').split(/[\\/]/).pop();
 const quantidade=n=>Number(n).toLocaleString('pt-BR');
 const tamanho=n=>n==null?'Não informado':`${(n/1024).toLocaleString('pt-BR',{maximumFractionDigits:2})} KB`;
@@ -172,6 +172,9 @@ export function criarPrevia(state, changed){
       ['Formato',meta.formato||layer.formato||(caminho?.includes('.')?caminho.split('.').pop().toUpperCase():null)],
       ['Categoria',layer.categoria||'Não se aplica'],['Tamanho',tamanho(meta.bytes??layer.tamanho_bytes)],
       ['Descompactado',tamanho(meta.bytes_descompactados)]]);
+    if(layer.identificacao)grupo('Identificação das demandas',[
+      ['ID da demanda',layer.identificacao.campo_id==='__feicao__'?'ID da feição':layer.identificacao.campo_id],
+      ['Categoria da demanda',layer.identificacao.categoria_demanda||layer.identificacao.categoria_pontos||'Sem categorização']]);
     grupo('Validação e uso',[
       ['Validação',situacao],['Motivo',layer.erro||'Sem erro informado'],
       ['Visibilidade',visiveis.has(layer.chave)?'Visível no mapa':'Não exibida no mapa'],
@@ -205,18 +208,18 @@ export function criarPrevia(state, changed){
   let assinaturaAnterior=[];
   function atualizar(){
     const camadas=[];
-    for(const id of [state.input,...state.entradasExtras.map(e=>e.id)].filter(Boolean)){
-      const layer=state.catalog.find(c=>c.id===id);if(!layer)continue;
-      for(const item of layer.camadas_importadas||[layer]){
-        camadas.push({...item,chave:`entrada:${id}:${item.chave||item.id}`,entradaId:id,chaveOriginal:item.chave,arquivoOrigem:layer.arquivo_local?.nome||layer.arquivo||item.arquivo,pendente:!state.bancadaEntradas.some(e=>e.id===id&&(!e.layer.camadas_bancada||e.layer.camadas_bancada.some(c=>c.chave===item.chave))),grupo:'entrada',status_validacao:item.status_validacao||(item.geojson?'valida':'pendente')});
+    for(const entry of entradasParaPrevia(state)){
+      const {id,layer}=entry;
+      for(const item of componentes(layer)){
+        const identificacao=configuracaoDaCamada(entry,layer,item);
+        camadas.push({...item,identificacao,chave:`entrada:${id}:${item.chave||item.id}`,entradaId:id,chaveOriginal:item.chave,arquivoOrigem:layer.arquivo_local?.nome||layer.arquivo||item.arquivo,pendente:!state.bancadaEntradas.some(e=>e.id===id&&(!e.layer.camadas_bancada||e.layer.camadas_bancada.some(c=>c.chave===item.chave))),grupo:'entrada',status_validacao:item.status_validacao||(item.geojson?'valida':'pendente')});
       }
     }
-    if(!state.input&&state.previaLocal&&!state.previaLocal.entrada)for(const item of state.previaLocal.camadas)camadas.push({...item,chave:`entrada:${item.chave||item.id}`,grupo:'entrada'});
     for(const base of [...state.bases,...state.staging]){
       const layer=state.catalog.find(c=>c.id===base.id);if(!layer)continue;
       camadas.push({...layer,chave:`base:${layer.id}`,grupo:'base',categoriaId:base.category,arquivoOrigem:layer.arquivo_local?.nome||layer.arquivo,categoria:state.categories.find(c=>c.id===base.category)?.nome||base.category,pendente:!state.bancadaBases.some(b=>b.id===base.id),status_validacao:layer.erro?'invalida':layer.geojson?'valida':'pendente'});
     }
-    const assinatura=[state.editandoBases,state.undoPrevia,state.busy,...camadas.flatMap(c=>[c.chave,c.geojson,c.geojson_resumido,c.metadados_local,c.nome,c.categoriaId,c.categoria,c.pendente,c.erro])];
+    const assinatura=[state.editandoBases,state.undoPrevia,state.busy,...camadas.flatMap(c=>[c.chave,c.geojson,c.geojson_resumido,c.metadados_local,c.nome,c.categoriaId,c.categoria,c.pendente,c.erro,c.identificacao?.campo_id,c.identificacao?.categoria_demanda])];
     if(assinatura.length===assinaturaAnterior.length&&assinatura.every((v,i)=>v===assinaturaAnterior[i])){sincronizarVisibilidade();return;}
     assinaturaAnterior=assinatura;
     pacote=camadas.length||state.undoPrevia?{camadas}:null;

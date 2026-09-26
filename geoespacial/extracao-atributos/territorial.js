@@ -66,8 +66,9 @@ export function criarTerritorial(result){
   definicoes(role('selection-attributes'),Object.fromEntries(attrs));
   const m=item?.relacoes?.[area?.id];
   if(m?.por_categoria&&Object.keys(m.por_categoria).some(k=>k!=='Sem categoria')){
-   const title=document.createElement('h4');title.textContent=`Pontos por categoria · ${area.nome||area.fid}`;role('point-categories').append(title);
-   for(const [label,count] of Object.entries(m.por_categoria))bar(role('point-categories'),label,count,Math.max(...Object.values(m.por_categoria)),'pontos',()=>{});
+   const unidade=({ponto:'pontos',linha:'m',poligono:'m²'})[m.representacao_entrada]||'';
+   const title=document.createElement('h4');title.textContent=`Demandas por categoria · ${area.nome||area.fid}`;role('point-categories').append(title);
+   for(const [label,count] of Object.entries(m.por_categoria))bar(role('point-categories'),label,count,Math.max(...Object.values(m.por_categoria)),unidade,()=>{});
   }
   const features=[];
   if(area?.geometria)features.push({type:'Feature',geometry:area.geometria,properties:{chave:`area:${area.id}`,papel:'area',categoria:area.categoria,rotulo:area.nome||area.base}});

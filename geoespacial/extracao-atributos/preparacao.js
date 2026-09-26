@@ -1,6 +1,15 @@
 // A prévia e a bancada têm estados independentes. Somente enviar() confirma a composição.
 export const entradasPreparadas=s=>[...(s.input?[{id:s.input,config:s.inputConfig}]:[]),...s.entradasExtras];
 export const componentes=l=>l?.camadas_bancada||(l?[l]:[]);
+export const configuracaoDaCamada=(entry,layer,item)=>layer.camadas_bancada?entry.config?.camadas?.[item.chave]:entry.config;
+export function entradasParaPrevia(s){
+ return entradasPreparadas(s).flatMap(entry=>{
+  const original=s.catalog.find(l=>l.id===entry.id);if(!original)return [];
+  const partes=componentes(original).filter(l=>configuracaoDaCamada(entry,original,l)?.identificacao_confirmada);
+  if(!partes.length)return [];
+  return [{...entry,layer:original.camadas_bancada?{...original,camadas_bancada:partes}:original}];
+ });
+}
 const copiar=l=>({...l,...(l.camadas_bancada?{camadas_bancada:[...l.camadas_bancada]}:{}),...(l.arquivo_local?{arquivo_local:{...l.arquivo_local}}:{})});
 export function guardarPrevia(s){
  s.undoPrevia={input:s.input,inputConfig:structuredClone(s.inputConfig),entradasExtras:structuredClone(s.entradasExtras),bases:structuredClone(s.bases),staging:structuredClone(s.staging),previaLocal:s.previaLocal,
@@ -29,8 +38,8 @@ export function removerPrevia(s,item){
 }
 export function enviarPrevia(s){
  const marcada=chave=>!s.previaVisiveis||s.previaVisiveis.has(chave);
- const entradas=entradasPreparadas(s).flatMap(e=>{
-  const original=s.catalog.find(l=>l.id===e.id);if(!original?.geojson||original.erro)return [];
+ const entradas=entradasParaPrevia(s).flatMap(e=>{
+  const original=e.layer;if(!original?.geojson||original.erro)return [];
   const partes=componentes(original).filter(l=>l.tipo!=='raster'&&!l.erro&&l.status_validacao!=='invalida'&&marcada(`entrada:${e.id}:${l.chave||l.id}`));
   if(!partes.length)return [];
   const layer=copiar(original);
@@ -44,5 +53,7 @@ export function enviarPrevia(s){
  return entradas.reduce((n,e)=>n+componentes(e.layer).length,0)+prontas.length;
 }
 export function limparPreparacao(s){
+ const pendentes=entradasPreparadas(s).filter(e=>{const l=s.catalog.find(l=>l.id===e.id);return componentes(l).some(c=>!configuracaoDaCamada(e,l,c)?.identificacao_confirmada);});
  Object.assign(s,{input:'',inputConfig:null,entradasExtras:[],bases:[],staging:[],previaLocal:null,listaBases:null,undoPrevia:null,lastBase:null,editandoBases:false,previaVisiveis:new Set(),preparacaoConcluida:true});
+ if(pendentes.length)Object.assign(s,{input:pendentes[0].id,inputConfig:pendentes[0].config,entradasExtras:pendentes.slice(1),preparacaoConcluida:false});
 }

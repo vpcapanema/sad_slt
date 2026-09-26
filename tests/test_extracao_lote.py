@@ -96,3 +96,24 @@ def test_download_individual_exige_execucao_autorizada(monkeypatch):
     assert service.arquivo_do_pacote('execucao','usuario','entrada_1')==(b'zip individual','entrada_1/pontos.zip')
     assert calls==[('execucao','usuario')]
     with pytest.raises(LookupError):service.arquivo_do_pacote('execucao','usuario','../entrada_1')
+
+
+def test_categoria_demanda_percorre_algoritmos_saida_e_resultados():
+    entries, cats = dados()
+    for entry in entries:
+        entry['frame']['categoria'] = 'Transporte'
+        entry['config'].pop('categoria_pontos', None)
+        entry['config']['categoria_demanda'] = 'categoria'
+    lote = entradas_do_lote(entries)
+    assert all(e['config']['categoria_demanda'] == 'categoria' for e in lote)
+    res = executar(lote, cats, 'estatisticas', lambda _: None)
+    for frame in res['camadas'].values():
+        schema = json.loads(frame.iloc[0]['sicard_esquema'])
+        assert schema['campo_categoria_demanda'] == 'categoria'
+    result = consultar(snapshot_saida(res['camadas']))
+    for nome, esperado in [('Pontos', 2), ('Linhas', 5), ('Áreas', 50)]:
+        item = next(i for i in result['linhas'] if i['entrada'] == nome and i['identificador'] in ('A', 'P'))
+        assert item['relacoes']['restricao:base:0']['por_categoria']['Transporte'] == pytest.approx(esperado)
+    entries[0]['config']['categoria_demanda'] = 'inexistente'
+    with pytest.raises(ValueError, match='categoria da demanda inexistente'):
+        entradas_do_lote(entries)

@@ -19,7 +19,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, Field, ValidationError, field_validator, model_validator
 
 from api.services.ciclo_vida_arquivos import apelido
 
@@ -130,7 +130,7 @@ class FiltroEntrada(BaseModel):
 
 class ConfigCamada(BaseModel):
     identificacao_confirmada: bool = False
-    categoria_pontos: str | None = Field(default=None, max_length=255)
+    categoria_demanda: str | None = Field(default=None, max_length=255, validation_alias=AliasChoices('categoria_demanda', 'categoria_pontos'))
     operacao: Literal['', 'estatisticas', 'enriquecimento'] = ''
     nome_saida: str = Field(default='', max_length=200)
     camada_recorte: str | None = Field(default=None, max_length=1200)

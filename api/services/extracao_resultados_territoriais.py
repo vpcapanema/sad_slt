@@ -223,7 +223,7 @@ def da_saida(tabelas):
             fields = schema.get('dicionario') or []
             original = {d['campo']:d.get('campo_origem') or d['campo'] for d in fields if d.get('tema')=='Entrada'}
             feature['atributos'].update({original[k]:v for k,v in row.items() if k in original and presente(v)})
-            campo_categoria = next((d['campo'] for d in fields if d.get('tema')=='Entrada' and d.get('campo_origem')==schema.get('campo_categoria_pontos')),None)
+            campo_categoria = next((d['campo'] for d in fields if d.get('tema')=='Entrada' and d.get('campo_origem')==schema.get('campo_categoria_demanda',schema.get('campo_categoria_pontos'))),None)
             classe = row.get(campo_categoria) if campo_categoria else None
             for tipo in TIPOS:
                 if tipo in row: feature['flags'][tipo] = max(feature['flags'].get(tipo,0), int(row[tipo] or 0))
@@ -286,18 +286,22 @@ def metricas_par(registros):
         for g in geoms[1:]: common = common.Union(g)
         demand = ogr.CreateGeometryFromWkb(bytes.fromhex(sample['demanda_medida']))
         dim = demand.GetDimension(); types.add(dim)
+        label = str(sample.get('categoria_ponto') if sample.get('categoria_ponto') is not None else 'Sem categoria')
         if dim==0:
             qtd = sum(1 for g in geo.parts_ogr(common) if g.GetDimension()==0)
             metrics['pontos'] += qtd
             metrics['total'] += sum(1 for g in geo.parts_ogr(demand) if g.GetDimension()==0)
-            label = str(sample.get('categoria_ponto') if sample.get('categoria_ponto') is not None else 'Sem categoria')
             metrics['por_categoria'][label] = metrics['por_categoria'].get(label,0)+qtd
         elif dim==1:
-            metrics['comprimento_m'] += sum(g.Length() for g in geo.parts_ogr(common) if g.GetDimension()==1)
+            comprimento = sum(g.Length() for g in geo.parts_ogr(common) if g.GetDimension()==1)
+            metrics['comprimento_m'] += comprimento
+            metrics['por_categoria'][label] = metrics['por_categoria'].get(label,0)+comprimento
             metrics['total'] += sum(g.Length() for g in geo.parts_ogr(demand) if g.GetDimension()==1)
         elif dim==2:
             polygons = [g for g in geo.parts_ogr(common) if g.GetDimension()==2]
-            metrics['area_m2'] += sum(g.GetArea() for g in polygons)
+            area = sum(g.GetArea() for g in polygons)
+            metrics['area_m2'] += area
+            metrics['por_categoria'][label] = metrics['por_categoria'].get(label,0)+area
             metrics['perimetro_m'] += sum(g.Boundary().Length() for g in polygons)
             metrics['total'] += sum(g.GetArea() for g in geo.parts_ogr(demand) if g.GetDimension()==2)
     if not types and fallback:

@@ -77,7 +77,7 @@ export function criarEntradaLocal(state,changed){
    await changed();
    const total=resultados.reduce((n,r)=>n+r.resumo.total,0),invalidas=resultados.reduce((n,r)=>n+r.resumo.invalidas,0);
    processo.sucesso({_status:invalidas?'partial':undefined,title:invalidas?'Validação com camadas recusadas':'Camadas validadas',
-    message:`${total} camada(s) examinada(s) em ${resultados.length} arquivo(s); ${invalidas} não validada(s). Confira a prévia e use Enviar pra bancada para confirmar as camadas válidas.`});
+    message:`${total} camada(s) examinada(s) em ${resultados.length} arquivo(s); ${invalidas} não validada(s). Escolha o ID e a categoria em 1.1 e confirme a configuração para enviar as camadas válidas à prévia.`});
   }catch(e){if(cancelando){processo.fechar();feedback('Validação cancelada. A prévia anterior foi mantida.');}else processo.erro({message:e.message,solution:'A prévia anterior foi mantida. Corrija o arquivo e envie de novo.'});}
   finally{iniciando=null;ocupado(false);}
  }

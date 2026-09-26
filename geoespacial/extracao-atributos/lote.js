@@ -30,13 +30,20 @@ function inspecao(layer){
 }
 function clone(id){return document.getElementById(id).content.firstElementChild.cloneNode(true);}
 export function renderLote(state,changed){
- const entries=entradas(state),host=document.getElementById('ea-identificacao');host.hidden=!entries.length;
+ const entries=state.input||state.entradasExtras.length?entradas(state):[],host=document.getElementById('ea-identificacao');host.hidden=!entries.length;
  const rows=document.getElementById('ea-identificacao-camadas');rows.replaceChildren();
  let pronta=entries.length>0;
  for(const {layer,config} of entries){
   const info=inspecao(layer);if(info.total>0&&!config.campo_id)config.campo_id=info.sugestao;
   const row=clone('ea-tpl-identificacao'),campo=row.querySelector('[data-id="campo"]');
   row.querySelector('[data-id="nome"]').textContent=layer.nome;
+  const categoria=row.querySelector('[data-id="categoria"]');
+  categoria.append(new Option('Sem categorização',''));
+  for(const c of info.campos)categoria.append(new Option(c.nome,c.nome));
+  config.categoria_demanda ??= config.categoria_pontos || null;
+  delete config.categoria_pontos;
+  categoria.value=config.categoria_demanda||'';categoria.disabled=!info.total;
+  categoria.onchange=()=>{config.categoria_demanda=categoria.value||null;config.identificacao_confirmada=false;changed();};
   campo.append(new Option('ID da feição · uma demanda por feição','__feicao__'));
   for(const c of info.campos)campo.append(new Option(`${c.nome}${c.nome===info.sugestao?' (sugestão)':''}`,c.nome));
   if(!info.total){campo.prepend(new Option('Aguardando leitura da camada',''));campo.disabled=true;}
@@ -49,7 +56,7 @@ export function renderLote(state,changed){
  const confirm=document.getElementById('ea-identificacao-confirmar');
  const confirmed=entries.length>0&&entries.every(e=>e.config.identificacao_confirmada);
  confirm.disabled=state.busy||!pronta||confirmed;
- document.getElementById('ea-identificacao-status').textContent=confirmed?'Identificação confirmada.':pronta?'Confira os IDs e confirme a configuração.':'Aguarde a leitura e escolha um ID preenchido em todas as feições.';
+ document.getElementById('ea-identificacao-status').textContent=confirmed?'Configuração confirmada. Camadas disponíveis na prévia.':pronta?'Confira os IDs e as categorias. Confirme para enviar à prévia.':'Aguarde a leitura e escolha um ID preenchido em todas as feições.';
  confirm.onclick=()=>{for(const e of entries)e.config.identificacao_confirmada=true;changed();};
 }
 export function validarLote(state){

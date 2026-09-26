@@ -2,7 +2,7 @@
    camadas, troca de categoria e repete. Nada vai para a bancada antes de confirmar. */
 import { $, el, feedback } from './ui.js';
 import { base, json, post } from './api.js';
-import { entradasPreparadas, guardarPrevia, desfazerPrevia, enviarPrevia, limparPreparacao } from './preparacao.js';
+import { entradasParaPrevia, entradasPreparadas, guardarPrevia, desfazerPrevia, enviarPrevia, limparPreparacao } from './preparacao.js';
 import { criarEditorListaBases } from './editor-lista-bases.js';
 
 const ROTULO = {
@@ -34,7 +34,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
 
   function marcar() {
     editor.marcar();
-    const total = state.staging.length+state.bases.length+entradasPreparadas(state).length;
+    const total = state.staging.length+state.bases.length+entradasParaPrevia(state).length;
     botoes.confirmar.disabled = state.busy || state.uploading || state.validatingBases || state.loadingMap || !total || (state.previaVisiveis&&!state.previaVisiveis.size);
     botoes.salvar.disabled = state.busy || !paraSalvar().length;
     botoes.limpar.disabled = state.busy || !total;

@@ -121,8 +121,8 @@
     </div>
     <section id="ea-identificacao" class="ea-base-list-card" aria-labelledby="ea-identificacao-title" hidden>
       <header><h4 id="ea-identificacao-title">1.1 · Identificação das demandas por camada</h4></header>
-      <p class="ea-hint">Escolha o ID da demanda. Se várias feições pertencerem à mesma demanda, use o código comum a elas.</p>
-      <div class="ea-table-wrap"><table><thead><tr><th>Camada de entrada</th><th>ID da demanda</th></tr></thead><tbody id="ea-identificacao-camadas"></tbody></table></div>
+      <p class="ea-hint">Escolha o ID e o atributo que categoriza as demandas. Use um código comum para agrupar feições da mesma demanda. Se não houver categorias, escolha “Sem categorização”. Confirme para enviar as camadas à prévia.</p>
+      <div class="ea-table-wrap"><table><thead><tr><th>Camada de entrada</th><th>ID da demanda</th><th>Categoria da demanda</th></tr></thead><tbody id="ea-identificacao-camadas"></tbody></table></div>
       <footer class="ea-base-list-actions"><button type="button" class="ea-btn ea-btn-primary" id="ea-identificacao-confirmar">Confirmar configuração</button></footer>
       <p id="ea-identificacao-status" class="ea-hint" role="status"></p>
     </section>
@@ -184,7 +184,7 @@
   </div>
 </section>
 
-<template id="ea-tpl-identificacao"><tr><td data-id="nome"></td><td><select data-id="campo" aria-label="ID da demanda"></select></td></tr></template>
+<template id="ea-tpl-identificacao"><tr><td data-id="nome"></td><td><select data-id="campo" aria-label="ID da demanda"></select></td><td><select data-id="categoria" aria-label="Categoria da demanda"></select></td></tr></template>
 
 <template id="ea-tpl-base-regra"><tr><td data-category></td><td data-base></td><td><select data-label aria-label="Atributo que identifica o elemento"></select></td><td><button class="ea-btn" type="button" data-rule>Configurar cálculos</button></td></tr></template>
 <template id="ea-tpl-finalidade"><div class="ea-execucao-linha"><strong data-name></strong><span data-fields></span><button class="ea-btn" type="button" data-edit>Editar</button><button class="ea-btn" type="button" data-remove>Remover</button></div></template>

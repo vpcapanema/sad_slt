@@ -2,23 +2,28 @@
   <header class="ea-section-head"><span class="ea-number">02</span><div><h2 id="ea-map-title">Bancada básica de geoprocessamento</h2><p>Confira aqui as camadas que participarão da execução. Somente camadas marcadas como visíveis no painel entram no processamento.</p></div></header>
   <iframe id="ea-workbench-frame" class="ea-workbench-frame" src="/restrict/geoespacial/bancada/" title="Bancada de geoprocessamento da extração de atributos" allow="fullscreen"></iframe>
   <div class="ea-section-body">
-    <p class="ea-hint">Obrigatórios: ao menos uma camada de entrada, uma camada de base e um algoritmo selecionado. O nome da saída é opcional e será preenchido automaticamente.</p>
       <section class="ea-checkup" aria-labelledby="ea-checkup-title">
         <h4 class="ea-checkup-title" id="ea-checkup-title">Conferir e executar</h4>
-        <div class="ea-analytics-filters">
-          <label class="ea-field">Executar<select id="ea-run-mode"><option value="individual">Uma camada de demanda</option><option value="lote">Em lote · todas as demandas marcadas</option></select></label>
+        <div class="ea-checkup-controls">
+          <fieldset class="ea-run-options" id="ea-run-mode"><legend>Modo de execução</legend>
+            <label class="ea-run-option"><input id="ea-run-individual" type="radio" name="ea-run-mode" value="individual" aria-describedby="ea-run-individual-help"><span><strong>Individual</strong><small id="ea-run-individual-help">Uma camada de demanda marcada.</small></span></label>
+            <label class="ea-run-option"><input id="ea-run-batch" type="radio" name="ea-run-mode" value="lote" aria-describedby="ea-run-batch-help"><span><strong>Em lote</strong><small id="ea-run-batch-help">Duas ou mais camadas de demanda marcadas.</small></span></label>
+          </fieldset>
           <label class="ea-field" id="ea-run-cut-field" hidden>Base de recorte<select id="ea-run-cut"><option value="">Selecione uma base marcada na bancada</option></select></label>
         </div>
-        <p class="ea-hint">Marque ou desmarque as camadas no painel da bancada. Esta lista mostra exatamente o que será enviado ao processamento.</p>
+        <p class="ea-hint">Somente camadas marcadas na bancada entram no processamento.</p>
         <div class="ea-execucao-selecao" id="ea-run-selection" aria-live="polite">
           <div class="ea-execucao-linha"><strong>Algoritmo:</strong> <span id="ea-run-algorithm"></span></div>
-          <div class="ea-table-wrap"><table><thead><tr><th>Camada de demanda</th><th>ID da demanda</th></tr></thead><tbody id="ea-run-inputs"></tbody></table></div>
+          <div class="ea-checkup-tables">
+          <div class="ea-table-wrap"><table><thead><tr><th>Camada de demanda</th><th>ID da demanda</th><th>Categoria da demanda</th></tr></thead><tbody id="ea-run-inputs"></tbody></table></div>
           <div class="ea-table-wrap"><table><thead><tr><th>Camada base</th><th>Categoria</th></tr></thead><tbody id="ea-run-bases"></tbody></table></div>
+          </div>
           <p class="ea-hint" id="ea-run-count"></p><p class="ea-hint" id="ea-run-warning" role="status"></p>
         </div>
+        <div class="ea-execute"><p id="ea-integration-status" class="ea-hint">Carregando catálogo...</p><button class="ea-btn ea-btn-primary" id="ea-run" type="button" disabled>Executar extração</button></div>
       </section>
-      <div class="ea-execute"><p id="ea-integration-status" class="ea-hint">Carregando catálogo...</p><button class="ea-btn ea-btn-primary" id="ea-run" type="button" disabled>Executar extração</button></div>
   </div>
 </section>
 
+<template id="ea-tpl-run-input"><tr><td data-name></td><td data-value></td><td data-category></td></tr></template>
 <template id="ea-tpl-run-row"><tr><td data-name></td><td data-value></td></tr></template>
