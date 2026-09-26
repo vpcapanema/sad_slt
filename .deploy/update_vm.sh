@@ -48,6 +48,14 @@ git rev-parse --verify --quiet "refs/remotes/origin/$BRANCH" >/dev/null 2>&1 \
 step "Sincronizando com o GitHub (origin/$BRANCH)"
 OLD_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
 git fetch origin "$BRANCH"
+# The Windows task pins the fetched revision to the commit just published.
+EXPECTED_SHA="${2:-}"
+if [[ -n "$EXPECTED_SHA" ]]; then
+    [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] || die "SHA esperado invalido"
+    [[ "$(git rev-parse "origin/$BRANCH")" == "$EXPECTED_SHA" ]] \
+        || die "origin mudou durante o deploy; execute novamente"
+fi
+
 git checkout -B "$BRANCH" "origin/$BRANCH" >/dev/null 2>&1 || git checkout "$BRANCH"
 git reset --hard "origin/$BRANCH"
 NEW_SHA=$(git rev-parse --short HEAD)
