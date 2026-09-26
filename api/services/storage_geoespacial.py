@@ -296,7 +296,8 @@ def ler_para_mapa(ident: str) -> dict[str, Any]:
         "vinculos": 1, "codificacao": "declarada pelo arquivo", "arquivo": caminho,
         "origem_geometria": "storage", "revisao": f"{estado.st_mtime_ns}-{estado.st_size}",
         "crs_arquivo": srs.ExportToWkt(),
-        "campos": [{"nome": definicao.GetFieldDefn(i).GetName(), "tipo": definicao.GetFieldDefn(i).GetTypeName()}
+        "campos": [{"nome": definicao.GetFieldDefn(i).GetName(), "tipo": definicao.GetFieldDefn(i).GetTypeName(),
+                    "subtipo": ogr.GetFieldSubTypeName(definicao.GetFieldDefn(i).GetSubType())}
                    for i in range(definicao.GetFieldCount())],
         "geojson": {"type": "FeatureCollection", "features": features},
     }

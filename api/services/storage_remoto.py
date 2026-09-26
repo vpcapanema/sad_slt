@@ -151,3 +151,11 @@ def apagar_pasta(caminho: str) -> None:
         resposta = _pedir(cliente, "DELETE", "/user/dirs", params={"path": _absoluto(caminho)})
     if resposta.status_code not in (200, 204):
         raise StorageIndisponivel(f"O storage recusou excluir {caminho}: {_mensagem(resposta)}")
+
+
+def apagar_arquivo(caminho: str) -> None:
+    """Remove um arquivo pelo caminho exato (por exemplo, um índice obsoleto)."""
+    with _cliente() as cliente:
+        resposta = _pedir(cliente, "DELETE", "/user/files", params={"path": _absoluto(caminho)})
+    if resposta.status_code not in (200, 204, 404):
+        raise StorageIndisponivel(f"O storage recusou remover {Path(caminho).name}: {_mensagem(resposta)}")

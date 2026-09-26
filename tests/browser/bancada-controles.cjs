@@ -21,7 +21,7 @@ const root=path.resolve(__dirname,'../..');
   const u=new URL(r.request().url()),url=u.pathname;requests.push({url,method:r.request().method()});
   let body=[];
   if(url.includes('/operacoes-jobs/OP-')){payloads.push({op:url.split('/').pop(),params:r.request().postDataJSON()});return r.fulfill({json:{id:'job-test',status:'concluido',total:3,resultado:{validado:true}}});}
-  if(url.endsWith('/bancada-arquivos/salvar')){const data=r.request().postDataJSON();return r.fulfill({json:{id:'editada',nome:data.nome,arquivo:'outputs/editada.gpkg',revisao:'b'.repeat(64),geojson:data.geojson,campos:[{nome:'valor',tipo:'Real'}]}});}
+  if(url.endsWith('/bancada-arquivos/salvar')){const data=r.request().postDataJSON();return r.fulfill({json:{id:data.camada_id,nome:'Arquivo de teste',arquivo:data.arquivo,revisao:'b'.repeat(64),geojson:data.geojson,campos:[{nome:'valor',tipo:'Real'}]}});}
   if(url.endsWith('/consultar-atributos')||url.endsWith('/bancada-arquivos/consultar'))body={geojson:fc,total:1};
   if(url.endsWith('/ambientes'))body={};
   if(url.endsWith('/catalogo/projeto'))body={toolboxes:[]};
@@ -43,7 +43,7 @@ const root=path.resolve(__dirname,'../..');
  // A bancada autônoma fornece o feedback exigido pelo explorador compartilhado.
  assert.equal(await p.evaluate(()=>typeof window.ProcessFeedback?.iniciarCadastro),'function');
  await p.locator('[data-action="load-system"]').click();
- await p.locator('.ea-storage-entry--folder').filter({hasText:'Teste'}).click();
+ await p.locator('.ea-storage-entry--folder').filter({hasText:'Teste'}).click().catch(async error=>{console.error(await p.locator('body').innerText());console.error(errors);throw error;});
  await p.locator('[aria-label="Subir um nível (Backspace)"]').click();
  await p.locator('.ea-storage-entry--folder').filter({hasText:'Teste'}).click();
  await p.locator('.ea-storage-entry[data-file="storage:teste"]').click();
@@ -209,18 +209,18 @@ const root=path.resolve(__dirname,'../..');
  await p.locator('[data-file-action="redo"]').click();
  assert.equal(await p.getByLabel('valor — feição 1',{exact:true}).inputValue(),'9');
  await p.locator('[data-file-action="save"]').click();
- await p.waitForFunction(()=>gpArquivos.sessions.has('editada'));
- assert.equal(await p.evaluate(()=>gpArquivos.sessions.get('editada').geojson.features[0].properties.valor),9);
+ await p.waitForFunction(()=>gpArquivos.sessions.get('arquivo')?.revisao==='b'.repeat(64));
+ assert.equal(await p.evaluate(()=>gpArquivos.sessions.get('arquivo').geojson.features[0].properties.valor),9);
  assert(requests.some(r=>r.url.endsWith('/bancada-arquivos/salvar')&&r.method==='POST'));
- // A própria grade salva a edição do arquivo pela API de novas versões.
- await p.evaluate(()=>gpApp.showAttributes('editada'));
+ // A própria grade salva a edição do arquivo pela API de edição do original.
+ await p.evaluate(()=>gpApp.showAttributes('arquivo'));
  await p.waitForSelector('.tabulator-row');
  await p.locator('[data-at-action="edit"]').click();
  await p.locator('.tabulator-cell[tabulator-field="valor"]').first().dblclick();
  await p.locator('.tabulator-cell.tabulator-editing input').fill('11');
  await p.locator('.tabulator-cell.tabulator-editing input').press('Enter');
  await p.locator('[data-at-save]').click();
- await p.waitForFunction(()=>gpArquivos.sessions.get('editada').geojson.features[0].properties.valor===11);
+ await p.waitForFunction(()=>gpArquivos.sessions.get('arquivo').geojson.features[0].properties.valor===11);
  await p.waitForFunction(()=>document.querySelector('[data-at-save]')?.disabled===true);
  const download=p.waitForEvent('download');
  await p.locator('[data-at-action="csv"]').click();

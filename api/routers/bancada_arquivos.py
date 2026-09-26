@@ -10,12 +10,13 @@ router = APIRouter(prefix='/bancada-arquivos', dependencies=[Depends(require_geo
 
 class Arquivo(BaseModel):
     arquivo: str = Field(min_length=1, max_length=1000)
-    revisao: str = Field(min_length=64, max_length=64)
+    revisao: str = Field(min_length=1, max_length=128)
+    camada_id: str | None = Field(default=None, max_length=1200)
 
 
 class Edicao(Arquivo):
     geojson: dict
-    nome: str = Field(min_length=1, max_length=200)
+    nome: str | None = Field(default=None, max_length=200)
 
 
 class Operacao(BaseModel):
@@ -35,7 +36,7 @@ def resposta(fn, *args):
 
 @router.post('/salvar')
 def salvar(payload: Edicao, user: SessionUser = Depends(require_geospatial_access)):
-    return resposta(service.salvar, payload.arquivo, payload.revisao, payload.geojson, payload.nome, user)
+    return resposta(service.salvar, payload.arquivo, payload.revisao, payload.geojson, payload.nome, user, payload.camada_id)
 
 
 @router.post('/executar')

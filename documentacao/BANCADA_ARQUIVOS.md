@@ -7,7 +7,8 @@ Componente: `templates/componentes/_geoprocessamento.html`, servido em
 
 O comando **Abrir arquivo** (também **Carregar do sistema**) reutiliza o explorador
 de `data/geoespacial`. O catálogo verifica o vínculo; GDAL lê o conteúdo do arquivo.
-`bancada-arquivos.js` mantém caminho, revisão SHA-256, CRS original, esquema dos
+O storage SFTPGo também pode ser aberto por IDs `storage:<caminho>::<camada>`.
+`bancada-arquivos.js` mantém caminho, revisão, CRS original, esquema dos
 campos e GeoJSON da sessão. Não substitui essa representação por geometria do banco.
 
 ## Exploração e edição
@@ -22,12 +23,15 @@ Os campos da feição selecionada ficam editáveis; desfazer/refazer atua no ras
 Aplicar na barra do Leaflet.Draw apenas confirma a operação no rascunho.
 Cancelar edições fecha a sessão sem gravar.
 
-**Salvar nova versão** verifica a revisão do arquivo, campos, identificadores,
-geometrias e coordenadas. Converte o rascunho para o CRS de origem e reutiliza o
-ciclo de persistência existente: GeoPackage de saída via GDAL/pyogrio, validação
-por reabertura, registro e vínculo com a execução. A fonte não é sobrescrita,
-incluindo a biblioteca canônica. A nova versão passa a ser a camada ativa.
-O ciclo existente normaliza a persistência vetorial para EPSG:4674.
+**Salvar alterações** verifica a revisão do arquivo, campos, identificadores,
+geometrias e coordenadas. Grava no mesmo caminho do storage, no CRS de origem,
+atualiza o registro existente no catálogo e mantém a camada ativa com o mesmo ID.
+Não cria cópia, backup ou nova camada. A edição salva substitui o conteúdo anterior.
+A escrita usa um arquivo temporário apenas durante a substituição, sem mantê-lo
+como versão. No storage SFTPGo a substituição usa sua API REST; a montagem de
+leitura continua somente leitura. GeoPackages multicamada preservam as demais
+camadas e os FIDs da camada editada. A revisão é o hash do acervo ou a combinação
+de data e tamanho do storage. Uma sessão com revisão antiga deve reabrir o arquivo antes de salvar.
 
 ## Execução
 
@@ -57,7 +61,7 @@ são reabertas por GDAL e adicionadas à bancada.
 ## Validação
 
 `tests/test_bancada_arquivos.py` verifica edição, CRS, rejeições, revisão concorrente,
-nova versão e uso do motor. Usa arquivos GDAL reais em diretório temporário e
+gravação no original e uso do motor. Usa arquivos GDAL reais em diretório temporário e
 substitutos para persistência no banco, sem publicar dados de teste no catálogo.
 
 ## Seleção por atributo e inversão

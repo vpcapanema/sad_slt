@@ -89,7 +89,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
   await page.locator('[data-at-delete]').click();
   await page.waitForFunction(()=>gpAttributeTable.grid.getData().length===69);
   await page.locator('[data-at-save]').click();
-  await page.waitForFunction(()=>document.querySelector('[data-at-status]').textContent.includes('Nova versão salva'));
+  await page.waitForFunction(()=>document.querySelector('[data-at-status]').textContent.includes('Alterações salvas no arquivo original'));
   assert.equal(await page.evaluate(()=>savedRequest.payload.geojson.features.length),69);
   assert.equal(await page.evaluate(()=>savedRequest.payload.geojson.features.every(f=>f.properties.numero!==null)),true);
   assert.equal(await page.evaluate(()=>savedRequest.url),'/api/geoespacial/bancada-arquivos/salvar');

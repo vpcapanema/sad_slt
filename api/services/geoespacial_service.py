@@ -951,18 +951,26 @@ class GeoespacialService:
             except Exception:
                 layer = None
 
-        if layer:
-            gdf.to_file(provisorio, layer=layer)
-        else:
-            gdf.to_file(provisorio)
-        if sufixo.lower() == ".shp":
-            for extensao in (".shp", ".shx", ".dbf", ".prj", ".cpg"):
-                origem = provisorio.with_suffix(extensao)
-                destino = caminho.with_suffix(extensao)
-                if origem.exists():
-                    os.replace(origem, destino)
-        else:
-            os.replace(provisorio, caminho)
+        try:
+            if layer:
+                gdf.to_file(provisorio, layer=layer, **({"FID": gdf.index.name} if gdf.index.name and gdf.index.name not in gdf.columns else {}))
+            else:
+                gdf.to_file(provisorio)
+            if sufixo.lower() == ".shp":
+                for extensao in (".shp", ".shx", ".dbf", ".prj", ".cpg"):
+                    origem = provisorio.with_suffix(extensao)
+                    destino = caminho.with_suffix(extensao)
+                    if origem.exists():
+                        os.replace(origem, destino)
+                for extensao in (".qix", ".sbn", ".sbx"):
+                    caminho.with_suffix(extensao).unlink(missing_ok=True)
+            else:
+                os.replace(provisorio, caminho)
+        finally:
+            # Temporários da escrita não são versões nem backups.
+            for resto in provisorio.parent.glob(provisorio.stem + ".*"):
+                resto.unlink(missing_ok=True)
+
 
     @staticmethod
     def _gdf_para_geojson(gdf: gpd.GeoDataFrame) -> dict[str, Any]:

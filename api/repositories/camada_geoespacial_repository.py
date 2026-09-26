@@ -283,7 +283,8 @@ def _find_layer(conn: Any, recurso_id: str) -> tuple[str, dict[str, Any]] | None
     return None
 
 
-def substituir_vetor(recurso_id: str, gdf: gpd.GeoDataFrame, metadados: dict[str, Any]) -> None:
+def substituir_vetor(recurso_id: str, gdf: gpd.GeoDataFrame, metadados: dict[str, Any],
+                      *, arquivo_editado: Path | None = None, gravar_arquivo: Callable[[], None] | None = None) -> None:
     """Substitui somente uma camada de trabalho; snapshots nunca entram nesta busca."""
     rows = _feature_rows(gdf)
     with get_connection() as conn:
@@ -293,7 +294,13 @@ def substituir_vetor(recurso_id: str, gdf: gpd.GeoDataFrame, metadados: dict[str
         categoria, camada = found
         catalog, features, _ = STORAGES[categoria]
         database_id = str(camada["id"])
-        if categoria == "processadas" and conn.execute(
+        if (arquivo_editado is None) != (gravar_arquivo is None):
+            raise ValueError("A gravação exige o caminho e a operação de escrita do arquivo.")
+        if arquivo_editado is not None:
+            registrado = (camada.get("metadados") or {}).get("caminho_arquivo") or ((camada.get("metadados") or {}).get("metadados") or {}).get("caminho_arquivo")
+            if not registrado or project_path(registrado).resolve() != arquivo_editado.resolve():
+                raise ValueError("O arquivo não corresponde à camada informada.")
+        if arquivo_editado is None and categoria == "processadas" and conn.execute(
             "SELECT 1 FROM geoprocessamento.arquivo_resultado WHERE camada_id=%s FOR UPDATE",
             (database_id,),
         ).fetchone():
@@ -315,6 +322,19 @@ def substituir_vetor(recurso_id: str, gdf: gpd.GeoDataFrame, metadados: dict[str
             ),
             ("EPSG:4674", _jsonb(metadados), database_id),
         )
+        if gravar_arquivo is not None:
+            # O mesmo registro e o mesmo arquivo recebem a edição. Não cria saída nem backup.
+            gravar_arquivo()
+            from api.services.ciclo_vida_arquivos import digest
+            checksum = digest(arquivo_editado)
+            if categoria == "processadas":
+                conn.execute("""UPDATE geoprocessamento.arquivo_resultado
+                    SET sha256=%s,tamanho_bytes=%s,validacao=COALESCE(validacao,'{}'::jsonb)||%s WHERE camada_id=%s""",
+                    (checksum, arquivo_editado.stat().st_size,
+                     _jsonb({"feicoes": len(gdf), "edicao_no_original": True}), database_id))
+            else:
+                conn.execute("UPDATE geoprocessamento.camada_importada SET hash_arquivo=%s WHERE id=%s",
+                             (checksum, database_id))
         conn.commit()
 
 

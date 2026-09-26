@@ -98,7 +98,7 @@ def _ler(path, relative, revision, vinculo, vinculos, encoding):
         result = {'id': vinculo['id'], 'nome': vinculo.get('nome', path.stem),
                 'vinculos': vinculos, 'codificacao': encoding or 'declarada pelo arquivo',
                 'arquivo': relative, 'origem_geometria': 'storage', 'revisao': revision,
-                'crs_arquivo': source_wkt, 'campos': fields,
+                'crs_arquivo': source_wkt, 'campos': fields, 'coluna_fid': layer.GetFIDColumn(),
                 'geojson': {'type': 'FeatureCollection', 'features': features}}
         from api.services.metadados_previa import descrever_geojson
         result['metadados_local'] = descrever_geojson(result, arquivo=path, formato=dataset.GetDriver().ShortName, componente=layer.GetName(), camada_ogr=layer)

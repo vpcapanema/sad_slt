@@ -91,24 +91,41 @@ def test_algoritmo_reusa_motor_com_arquivo_e_limpa_cache_temporario(source, monk
     assert service.geo._camadas == {}
 
 
-def test_salva_nova_versao_e_rastreia_original(source, monkeypatch):
+def preparar_gravacao_no_original(monkeypatch, original, path):
+    monkeypatch.setattr(service, 'project_path', lambda _: path)
+    monkeypatch.setattr(service.geo, '_metadados', {original['id']: {'caminho_arquivo': original['arquivo']}})
+    monkeypatch.setattr(service.geo, '_camadas', {})
+    def substituir(ident, frame, metadata, *, arquivo_editado, gravar_arquivo):
+        assert ident == original['id']
+        assert arquivo_editado == path
+        gravar_arquivo()
+    monkeypatch.setattr(service.repo, 'substituir_vetor', substituir)
+    monkeypatch.setattr(service.geo, 'registrar_camada', lambda *a, **k: pytest.fail('Não deve criar uma camada'))
+
+
+def test_salva_no_original_sem_copia_e_mantem_identidade(source, monkeypatch):
     original, path = source
     before = path.read_bytes()
     calls = []
     monkeypatch.setattr(service.ciclo, 'iniciar', lambda *args: calls.append(args) or 'execucao-teste')
     monkeypatch.setattr(service.ciclo, 'finalizar', lambda *a, **k: None)
-    monkeypatch.setattr(service.geo, '_metadados', {})
-    def register(frame, name, origin, **kwargs):
-        assert origin == 'processamento'
-        output = path.with_name('nova.gpkg')
-        frame.to_file(output, driver='GPKG', engine='pyogrio')
-        service.geo._metadados['nova'] = {'caminho_arquivo': 'data/geoespacial/outputs/nova.gpkg'}
-        return 'nova'
-    monkeypatch.setattr(service.geo, 'registrar_camada', register)
-    result = service.salvar(original['arquivo'], original['revisao'], original['geojson'], 'Nova versão', SimpleNamespace(id='teste'))
-    assert result['arquivo'].endswith('nova.gpkg')
+    preparar_gravacao_no_original(monkeypatch, original, path)
+    edited = deepcopy(original['geojson'])
+    edited['features'][0]['properties']['nome'] = 'Editada no original'
+    result = service.salvar(original['arquivo'], original['revisao'], edited, 'Nome ignorado', SimpleNamespace(id='teste'))
+    assert result['arquivo'] == original['arquivo']
+    assert result['id'] == original['id']
+    assert result['nome'] == original['nome']
+    assert result['revisao'] != original['revisao']
+    assert result['geojson']['features'][0]['properties']['nome'] == 'Editada no original'
     assert calls[0][1]['camada_id'] == 'original'
-    assert path.read_bytes() == before
+    assert path.read_bytes() != before
+    assert list(path.parent.iterdir()) == [path], 'Nenhuma cópia, backup ou temporário residual'
+    with pytest.raises(ValueError, match='mudou'):
+        service.salvar(original['arquivo'], original['revisao'], edited, '', SimpleNamespace(id='teste'))
+    edited['features'][0]['properties']['nome'] = 'Segunda edição'
+    again = service.salvar(result['arquivo'], result['revisao'], edited, '', SimpleNamespace(id='teste'))
+    assert again['geojson']['features'][0]['properties']['nome'] == 'Segunda edição'
 
 
 def test_endpoints_exigem_sessao():
@@ -186,21 +203,14 @@ def test_excluir_nulos_e_salvar_preserva_booleanos_e_json(source, monkeypatch, j
     assert remaining['properties']['valores'] == ['a', None]
     monkeypatch.setattr(service.ciclo, 'iniciar', lambda *args: 'teste-exclusao')
     monkeypatch.setattr(service.ciclo, 'finalizar', lambda *a, **k: None)
-    monkeypatch.setattr(service.geo, '_metadados', {})
-    def register(frame, *args, **kwargs):
-        assert len(frame) == 2
-        kept = frame.loc[frame.nome == 'Manter'].iloc[0]
-        assert not kept.ativo
-        assert json.loads(kept.valores) == ['a', None]
-        output = path.with_name('sem-nulos.gpkg')
-        frame.to_file(output, driver='GPKG', engine='pyogrio')
-        service.geo._metadados['nova'] = {'caminho_arquivo': 'data/geoespacial/outputs/sem-nulos.gpkg'}
-        return 'nova'
-    monkeypatch.setattr(service.geo, 'registrar_camada', register)
+    preparar_gravacao_no_original(monkeypatch, original, path)
     result = service.salvar(original['arquivo'], original['revisao'], edited, 'Sem nulos', SimpleNamespace(id='teste'))
     assert len(result['geojson']['features']) == 2
+    assert {f['id'] for f in result['geojson']['features']} == {f['id'] for f in edited['features']}
     saved = next(f for f in result['geojson']['features'] if f['properties']['nome'] == 'Manter')
     assert saved['properties']['ativo'] is False
     assert saved['properties']['valores'] == ['a', None]
-    assert path.read_bytes() == before
+    assert path.read_bytes() != before
+    assert result['arquivo'] == original['arquivo']
+    assert list(path.parent.iterdir()) == [path]
     assert remaining['properties']['valores'] == ['a', None], 'Não altera o payload recebido'

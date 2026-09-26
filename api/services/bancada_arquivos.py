@@ -1,4 +1,4 @@
-"""Sessão de arquivo da bancada: validação e nova versão com rastreabilidade."""
+"""Sessão de arquivo da bancada: edição do arquivo original com rastreabilidade."""
 import asyncio
 from uuid import uuid4
 
@@ -6,12 +6,22 @@ import geopandas as gpd
 from osgeo import ogr
 
 from api.services import ciclo_vida_arquivos as ciclo
+from api.path_policy import project_path
+from api.repositories import camada_geoespacial_repository as repo
 from api.services.visualizacao_arquivo import ler_arquivo
 from api.services.geoespacial_service import geoespacial_service as geo
 
 
-def abrir(arquivo, revisao=None):
-    source = ler_arquivo(arquivo)
+def abrir(arquivo, revisao=None, camada_id=None):
+    if camada_id and camada_id.startswith('storage:') or arquivo.startswith(('base-geoespacial/', 'superficies-indices/')):
+        from api.services import storage_geoespacial as storage
+        ident = camada_id or 'storage:' + arquivo
+        caminho, _ = storage.separar_id(ident)
+        if caminho != arquivo:
+            raise ValueError('O arquivo não corresponde à camada informada.')
+        source = storage.ler_para_mapa(ident)
+    else:
+        source = ler_arquivo(arquivo)
     if revisao is not None and source['revisao'] != revisao:
         raise ValueError('O arquivo mudou desde a abertura. Reabra antes de salvar ou executar.')
     return source
@@ -73,18 +83,44 @@ def frame_editado(source, data):
     return frame.to_crs(source['crs_arquivo'])
 
 
-def salvar(arquivo, revisao, data, nome, user):
-    source = abrir(arquivo, revisao)
+def salvar(arquivo, revisao, data, nome, user, camada_id=None):
+    source = abrir(arquivo, revisao, camada_id)
     frame = frame_editado(source, data)
+    if source['id'].startswith('storage:'):
+        from api.services.edicao_storage import gravar
+        return gravar(source, frame, data)
+    if source.get('coluna_fid'):
+        ids = [int(f['id']) for f in source['geojson']['features'] if str(f['id']).isdigit()]
+        next_id = max(ids, default=0) + 1
+        kept = []
+        for feature in data['features']:
+            if str(feature['id']).isdigit():
+                kept.append(int(feature['id']))
+            else:
+                kept.append(next_id)
+                next_id += 1
+        frame.index = kept
+        frame.index.name = source['coluna_fid']
     params = {'camada_id': source['id'], 'arquivo': arquivo, 'revisao': revisao,
               'fids_origem': [f['id'] for f in data['features']]}
     ident = ciclo.iniciar('edicao_arquivo_bancada', params, str(user.id))
     token = ciclo.execucao_atual.set(ident)
     try:
-        output = geo.registrar_camada(frame, nome, 'processamento', linhagem=params)
-        path = geo._metadados[output]['caminho_arquivo']
+        path = project_path(source['arquivo'])
+        if source['id'] not in geo._metadados:
+            geo._catalogar_persistidas()
+        metadata = geo._metadados.get(source['id'])
+        if not metadata:
+            raise ValueError('Camada não encontrada no catálogo.')
+        def gravar():
+            # Reconfere após obter o bloqueio do registro no banco.
+            abrir(arquivo, revisao)
+            geo._reescrever_arquivo_do_acervo(path, frame)
+        repo.substituir_vetor(source['id'], frame, metadata,
+                             arquivo_editado=path, gravar_arquivo=gravar)
+        geo._camadas[source['id']] = frame
         ciclo.finalizar(ident)
-        return {**ler_arquivo(path), 'execucao_id': ident}
+        return {**ler_arquivo(source['arquivo']), 'execucao_id': ident}
     except Exception as exc:
         ciclo.finalizar(ident, erro=str(exc))
         raise
@@ -100,7 +136,7 @@ def executar(operacao, parametros, arquivos, user):
         raise ValueError('Os arquivos informados devem corresponder às entradas da operação.')
     if parametros.get('processar_sobre') == 'selecionadas':
         raise ValueError('Salve a seleção como camada antes de executar sobre parte do arquivo.')
-    sources = {ident: abrir(value['arquivo'], value['revisao']) for ident, value in arquivos.items()}
+    sources = {ident: abrir(value['arquivo'], value['revisao'], ident if ident.startswith('storage:') else None) for ident, value in arquivos.items()}
     if any(value['id'] != ident for ident, value in sources.items()):
         raise ValueError('O arquivo não corresponde à camada informada.')
     execution = ciclo.iniciar(operacao, {**parametros, 'arquivos': arquivos}, str(user.id))

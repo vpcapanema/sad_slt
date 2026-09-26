@@ -12,7 +12,7 @@ function button(label,action){const node=el('button',label,'btn');node.type='but
 
 function editRibbon(){
   const host=document.querySelector('#gp-ribbon-tools');host.replaceChildren();
-  const groups=[['Sessão',[['pencil','Iniciar edição','start'],['save','Salvar nova versão','save'],['x','Cancelar edições','cancel']]],['Geometria',[['map-pin','Criar ponto','Point'],['waypoints','Criar linha','LineString'],['pentagon','Criar polígono','Polygon'],['pen-tool','Editar vértices','vertices'],['trash-2','Excluir feições','delete']]],['Operação',[['check','Aplicar','apply'],['undo-2','Cancelar operação','revert']]],['Histórico',[['undo','Desfazer','undo'],['redo','Refazer','redo']]]];
+  const groups=[['Sessão',[['pencil','Iniciar edição','start'],['save','Salvar alterações','save'],['x','Cancelar edições','cancel']]],['Geometria',[['map-pin','Criar ponto','Point'],['waypoints','Criar linha','LineString'],['pentagon','Criar polígono','Polygon'],['pen-tool','Editar vértices','vertices'],['trash-2','Excluir feições','delete']]],['Operação',[['check','Aplicar','apply'],['undo-2','Cancelar operação','revert']]],['Histórico',[['undo','Desfazer','undo'],['redo','Refazer','redo']]]];
   for(const [label,items] of groups){
     const group=el('div',undefined,'ribbon-group');group.dataset.label=label;
     for(const [icon,label,action] of items){
@@ -66,7 +66,7 @@ function openEditor(editing=false){
   const only=el('input');only.type='checkbox';const onlyLabel=el('label','Somente selecionada');onlyLabel.prepend(only);
   const scroll=el('div',undefined,'gp-file-table-scroll'),pages=el('div',undefined,'gp-file-table-controls');
   tableControls.append(filter,onlyLabel);table.append(tableControls,scroll,pages);workspace.append(mapHost,table);
-  const footer=el('footer'),name=el('input');name.value=`${source.nome} — edição`;name.setAttribute('aria-label','Nome da nova versão');name.maxLength=200;
+  const footer=el('footer');
   dialog.append(header,workspace,status,footer);
   if(editing){dialog.classList.add('gp-file-inline');document.querySelector('.gp-map-view').append(dialog);dialog.show();}
   else{document.body.append(dialog);dialog.showModal();}
@@ -141,19 +141,18 @@ function openEditor(editing=false){
     const previous=button('←',()=>{page--;render();}),next=button('→',()=>{page++;render();});previous.disabled=page===0;next.disabled=(page+1)*100>=rows.length;
     pages.replaceChildren(previous,el('span',`${rows.length} registros · página ${page+1}`),next);
     group.eachLayer(layer=>layer.setStyle?.({color:layer._fileId===selected?'#ef7b16':'#1769aa'}));
-    status.textContent=(!window.gpFeedback&&lastError)||(editor.dirty?'Edições pendentes. Salvar cria uma nova versão no storage.':editing?'Selecione uma feição no mapa ou na tabela para editar seus atributos.':'Fonte: '+source.arquivo);
+    status.textContent=(!window.gpFeedback&&lastError)||(editor.dirty?'Edições pendentes. Salvar altera o arquivo original no storage.':editing?'Selecione uma feição no mapa ou na tabela para editar seus atributos.':'Fonte: '+source.arquivo);
     undo.disabled=cursor===0||drawing;redo.disabled=cursor===history.length-1||drawing;save.disabled=!editing||!editor.dirty||drawing||busy;
     syncEditRibbon();
   }
   const undo=button('Desfazer',()=>{draft=clone(history[--cursor]);editor.dirty=cursor>0;draw();render();});
   const redo=button('Refazer',()=>{draft=clone(history[++cursor]);editor.dirty=cursor>0;draw();render();});
-  const save=button('Salvar nova versão',async()=>{
-    busy=true;save.disabled=true;syncEditRibbon();const proc=window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Salvando nova versão',tasks:['Validar e gravar no storage']});proc?.tarefaAtual('Validar e gravar no storage');if(!proc)status.textContent='Validando e gravando nova versão…';
-    try{const file=await post('/bancada-arquivos/salvar',{arquivo:source.arquivo,revisao:source.revisao,geojson:draft,nome:name.value});closed();mount(file);if(proc){proc.concluirTarefa('Validar e gravar no storage','Gravada');proc.sucesso({title:'Nova versão salva',message:'Nova versão salva no storage e vinculada à execução.'});}else app().log('Nova versão salva no storage e vinculada à execução.','ok');}
+  const save=button('Salvar alterações',async()=>{
+    busy=true;save.disabled=true;syncEditRibbon();const proc=window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Salvando alterações',tasks:['Validar e gravar no storage']});proc?.tarefaAtual('Validar e gravar no storage');if(!proc)status.textContent='Validando e gravando no arquivo original…';
+    try{const file=await post('/bancada-arquivos/salvar',{arquivo:source.arquivo,camada_id:source.id,revisao:source.revisao,geojson:draft});closed();mount(file);if(proc){proc.concluirTarefa('Validar e gravar no storage','Gravada');proc.sucesso({title:'Alterações salvas',message:'Alterações gravadas no arquivo original do storage.'});}else app().log('Alterações gravadas no arquivo original do storage.','ok');}
     catch(error){lastError=error.message;proc?.erro({message:error.message});}finally{busy=false;if(editor)render();else syncEditRibbon();}
   });
-  if(editing){const label=el('label','Nome da nova versão');label.append(name);footer.append(label);}
-  else footer.append(button('Fechar',cancel));
+  if(!editing)footer.append(button('Fechar',cancel));
   filter.oninput=()=>{page=0;render();};only.onchange=()=>{page=0;render();};
   if(editing){
     const kinds=new Set(source.geojson.features.map(f=>f.geometry.type.replace('Multi','')));
