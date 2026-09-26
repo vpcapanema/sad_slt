@@ -56,6 +56,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     const candidata={...state};
     const total=enviarPrevia(candidata);
     if(!total)return;
+    if(!await window.ProcessFeedback.confirmar({title:"Enviar camadas à bancada",message:`Compatibilizar ${total} camada(s) e inserir no mapa da bancada?`,confirmLabel:"Compatibilizar e abrir"}))return;
     window.SICARDExtracao.ocupar(true);
     const COMPATIBILIZAR='Compatibilizar as camadas',MAPA='Inserir no mapa da bancada';
     const proc=window.ProcessFeedback.iniciarCadastro({title:'Enviando camadas à bancada',subtitle:`${total} camada(s)`,tasks:[COMPATIBILIZAR,MAPA]});

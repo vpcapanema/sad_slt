@@ -21,11 +21,11 @@ def test_worker_publica_sem_polling_e_remove_assinante():
         # Publicação feita por outra thread, como nos workers reais.
         await asyncio.to_thread(c.mensagem,'Lendo base')
         atual=dado(await asyncio.wait_for(anext(stream),1))
-        assert atual['etapa']=='Lendo base' and atual['progresso_tarefa']==0
+        assert atual['etapa']=='Lendo base' and atual['progresso_tarefa'] is None
         await asyncio.to_thread(c.tarefa,3,4)
         assert dado(await asyncio.wait_for(anext(stream),1))['progresso_tarefa']==75
         c.mensagem('Gravando saída')
-        assert dado(await anext(stream))['progresso_tarefa']==0
+        assert dado(await anext(stream))['progresso_tarefa'] is None
         c.encerrar('concluido')
         assert dado(await anext(stream))['status']=='concluido'
         with pytest.raises(StopAsyncIteration):await anext(stream)

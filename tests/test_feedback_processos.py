@@ -264,9 +264,10 @@ def test_overlay_de_progresso_segue_o_sigma():
 
 
 def test_log_do_servidor_entra_uma_vez_por_sequencia():
-    corpo = FEEDBACK_JS.split("_aplicarJob(p, st, job) {", 1)[1].split("\n        }\n", 1)[0]
+    corpo = FEEDBACK_JS.split("_aplicarLogs(p, st, job) {", 1)[1].split("\n        }\n", 1)[0]
     assert "if (seq <= st.seq || !msg) return;" in corpo
-    assert "p.concluirTarefa(msg, 'Concluído')" in corpo
+    assert "p.log(" in corpo
+    assert "job.progresso_tarefa===100" in FEEDBACK_JS
 
 
 def test_captura_do_sigma_para_respostas_do_servidor():
@@ -292,7 +293,7 @@ def test_nenhuma_tela_usa_o_feedback_antigo():
             if arquivo.suffix not in {".js", ".jsx", ".html"} or "node_modules" in arquivo.parts:
                 continue
             texto = arquivo.read_text(encoding="utf-8", errors="ignore")
-            if "SLTFeedback" in texto or "feedback.js" in texto or "/assets/css/feedback.css" in texto:
+            if "SLTFeedback" in texto or "/assets/js/feedback.js" in texto or "/assets/css/feedback.css" in texto:
                 restantes.append(str(arquivo))
     assert restantes == []
 

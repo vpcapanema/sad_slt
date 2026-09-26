@@ -72,8 +72,11 @@ def executar(entradas, categorias, operacao, progress, finalidades=None):
         def progresso_camada(message):
             progress(f"Camada {i+1}/{len(entradas)} · {entry['nome']} — {message}")
         if hasattr(progress,'tarefa'): progresso_camada.tarefa = progress.tarefa
+        if hasattr(progress,'detalhe'): progresso_camada.detalhe = lambda message: progress.detalhe(f"{entry['nome']} — {message}")
+        if hasattr(progress,'progresso_fase'): progresso_camada.progresso_fase = lambda feitas,total: progress.progresso_fase(i + feitas / max(1,total),len(entradas))
         res = (join if modo=='estatisticas' else identity)(entradas=[entry],categorias=bases,progress=progresso_camada,finalidades=[])
         if hasattr(progress,'tarefa'): progress.tarefa(1,1)
+        if hasattr(progress,'progresso_fase'): progress.progresso_fase(i+1,len(entradas))
         remap = {n:f"{entry['chave']}_{n}" for n in res['camadas']}
         campos = [{**d,'camada':remap[d['camada']]} for d in res['dicionario']]
         for n, frame in res['camadas'].items():

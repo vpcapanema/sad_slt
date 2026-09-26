@@ -8,7 +8,7 @@ from typing import Any
 from starlette.responses import StreamingResponse
 
 CAMPOS = ('id','status','etapa','etapa_atual','tarefa_id','percentual','progresso_geral',
-          'progresso_tarefa','atividade','detalhe','concluidas','total','unidade','cancelavel','cancelamento_solicitado','erro')
+          'progresso_tarefa','atividade','detalhe','concluidas','total','total_fases','fases_concluidas','tarefa_concluidas','tarefa_total','unidade_tarefa','unidade','cancelavel','cancelamento_solicitado','erro')
 FINAIS = {'concluido','erro','cancelado'}
 
 
@@ -28,6 +28,10 @@ class CanalProgresso:
 
     def publicar(self, estado):
         resumo = {k:estado[k] for k in CAMPOS if k in estado}
+        logs = estado.get('logs') or estado.get('etapas') or []
+        if logs:
+            resumo['logs'] = [{k:v for k,v in row.items() if k in ('sequencia','mensagem','nivel','em','detalhes')}
+                              for row in logs[-250:]]
         with self.lock:
             if resumo == self.atual:
                 return

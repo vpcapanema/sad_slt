@@ -55,7 +55,7 @@ def _texto_xlsx(valor):
     return ILLEGAL_CHARACTERS_RE.sub('', valor) if isinstance(valor, str) else valor
 
 
-def escrever_gpkg(camadas: dict, entrada, dicionario: list[dict], path: Path, finalidades=None, preservar_geometrias=False, incluir_entrada=True) -> None:
+def escrever_gpkg(camadas: dict, entrada, dicionario: list[dict], path: Path, finalidades=None, preservar_geometrias=False, incluir_entrada=True, progress=None) -> None:
     from osgeo import gdal, ogr
     # nome da camada no GeoPackage -> (tabela, camada de saída de onde vêm os apelidos)
     todas = {nome: (frame, nome) for nome, frame in camadas.items()}
@@ -130,21 +130,25 @@ def escrever_xlsx(camadas: dict, dicionario: list[dict], path: Path) -> None:
 
 
 def montar_pacote(camadas: dict, entrada, dicionario: list[dict], configuracao: dict,
-                  nome_saida: str, finalidades=None, validacao=None, preservar_geometrias=False, incluir_entrada=True) -> tuple[bytes, str, list[dict]]:
+                  nome_saida: str, finalidades=None, validacao=None, preservar_geometrias=False, incluir_entrada=True, progress=None) -> tuple[bytes, str, list[dict]]:
     """Escreve os arquivos, confere cada um e devolve (zip, nome do zip, manifesto)."""
+    report = progress or (lambda message: None)
     arquivos = nomes(nome_saida, camadas, finalidades)
     if not incluir_entrada:
         arquivos['gpkg'] = (arquivos['gpkg'][0], 'GeoPackage de resultados e finalidades; entrada local temporária não incluída')
     with tempfile.TemporaryDirectory(prefix='sicard_enriquecimento_') as temporaria:
         pasta = Path(temporaria)
+        report(f'{nome_saida}: gravando GeoPackage com {len(camadas)} camada(s)')
         escrever_gpkg(camadas, entrada, dicionario, pasta / arquivos['gpkg'][0], finalidades, preservar_geometrias, incluir_entrada)
         for nome, frame in camadas.items():
+            report(f'{nome_saida}: exportando CSV de {nome}, {len(frame)} registros')
             exportacao.escrever_csv(frame, pasta / arquivos[f'csv_{nome}'][0])
         for chave, item in (finalidades or {}).items():
             for nome, frame in item['camadas'].items():
                 exportacao.escrever_csv(frame, pasta / arquivos[f'csv_{chave}_{nome}'][0])
         (pasta / arquivos['validacao'][0]).write_text(
             json.dumps(validacao or {}, ensure_ascii=False, indent=2, default=str), encoding='utf-8')
+        report(f'{nome_saida}: gravando planilha XLSX e dicionário de atributos')
         escrever_xlsx(camadas, dicionario, pasta / arquivos['xlsx'][0])
         escrever_dicionario_csv(dicionario, pasta / arquivos['csv_dicionario'][0])
         (pasta / arquivos['configuracao'][0]).write_text(
@@ -153,6 +157,7 @@ def montar_pacote(camadas: dict, entrada, dicionario: list[dict], configuracao: 
         memoria = io.BytesIO()
         with zipfile.ZipFile(memoria, 'w', zipfile.ZIP_DEFLATED) as pacote:
             for chave, (nome, descricao) in arquivos.items():
+                report(f'{nome_saida}: conferindo e compactando {nome}')
                 dados = (pasta / nome).read_bytes()
                 if not dados:
                     raise ValueError(f'O arquivo {nome} do pacote saiu vazio.')
@@ -177,7 +182,7 @@ def arquivos_analiticos(snapshot):
             'relacoes_por_demanda.csv':stream.getvalue().encode('utf-8-sig')}
 
 
-def montar_lote(saida, configuracao, nome_saida):
+def montar_lote(saida, configuracao, nome_saida, progress=None):
     """ZIP por entrada e ZIP geral; tabela unificada sempre derivada das saídas."""
     import geopandas as gpd
     memoria = io.BytesIO()
@@ -201,7 +206,7 @@ def montar_lote(saida, configuracao, nome_saida):
             fins = {k:{**f,'camadas':{n:df for n,df in f['camadas'].items() if n in item['camadas']}}
                     for k,f in saida['finalidades'].items() if any(n in item['camadas'] for n in f['camadas'])}
             conteudo, nome, _ = montar_pacote(camadas,item['entrada']['frame'],dic,cfg,item['nome_saida'],
-                finalidades=fins,validacao=item['validacao'],preservar_geometrias=True,incluir_entrada=False)
+                finalidades=fins,validacao=item['validacao'],preservar_geometrias=True,incluir_entrada=False,progress=progress)
             memoria_individual = io.BytesIO(conteudo)
             with zipfile.ZipFile(memoria_individual,'a',zipfile.ZIP_DEFLATED) as individual:
                 for arquivo,dados in arquivos_analiticos(snapshot).items(): individual.writestr(arquivo,dados)

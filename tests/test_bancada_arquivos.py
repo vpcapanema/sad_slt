@@ -214,3 +214,27 @@ def test_excluir_nulos_e_salvar_preserva_booleanos_e_json(source, monkeypatch, j
     assert result['arquivo'] == original['arquivo']
     assert list(path.parent.iterdir()) == [path]
     assert remaining['properties']['valores'] == ['a', None], 'Não altera o payload recebido'
+
+
+def test_job_publica_etapas_e_resultado_sem_modal_geral(monkeypatch):
+    from time import monotonic, sleep
+    from types import SimpleNamespace
+    from api.services import bancada_arquivos as service
+    from api.services.geoprocessamento_jobs import geoprocessamento_jobs as jobs
+    from api.services import geoprocessamento_relatorio
+    def executar(op, params, files, user, progress=None):
+        progress('Lendo arquivo teste: 4 feições')
+        progress('Executando Buffer')
+        progress('Preparando resultado')
+        return {'execucao_id':'teste','resultado':{'camada_id':'saida'}}
+    monkeypatch.setattr(service,'executar',executar)
+    monkeypatch.setattr(geoprocessamento_relatorio,'salvar',lambda snapshot:[])
+    job=service.iniciar_execucao('OP-01',{}, {},SimpleNamespace(id='teste'))
+    deadline=monotonic()+3
+    while job['status'] not in ('concluido','erro') and monotonic()<deadline:
+        sleep(.01)
+        job=jobs.get(job['id'])
+    assert job['status']=='concluido'
+    assert job['resultado']['execucao_id']=='teste'
+    assert [item['mensagem'] for item in job['logs']][:3]==['Lendo arquivo teste: 4 feições','Executando Buffer','Preparando resultado']
+    assert job['percentual']==100

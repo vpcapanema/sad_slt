@@ -32,6 +32,7 @@ export function criarEntradaLocal(state,changed){
  node('upload').addEventListener('click',()=>{if(!state.busy&&!ativo)arquivo.click();});
  node('upload-cancel').addEventListener('click',()=>{if(ativo)cancelar().catch(e=>feedback(e.message,'error'));});
  async function ler(files){
+  if(!await window.ProcessFeedback.confirmar({title:'Validar arquivos de entrada',message:`Enviar e validar ${files.length} arquivo(s)?`,warning:files.map(f=>`${f.name} · ${(f.size/1024/1024).toFixed(2)} MB`).join('\n'),confirmLabel:'Enviar e validar'}))return;
   ocupado(true);cancelando=false;job=null;
   const tarefa=file=>`Validar ${file.name}`;
   processo=window.ProcessFeedback.iniciarCadastro({title:'Validando camadas de entrada',subtitle:`${files.length} arquivo(s)`,

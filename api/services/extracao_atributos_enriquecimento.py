@@ -246,7 +246,7 @@ def _pares_atributo(registros, base, regra, nome_base):
             for pos in por_chave.get(texto(valor), [])]
 
 
-def enriquecer_base(registros, dimensao, base, dimensao_base, regra, nome_base, usados, dicionario, tema, referencias=None, on_match=None):
+def enriquecer_base(registros, dimensao, base, dimensao_base, regra, nome_base, usados, dicionario, tema, referencias=None, on_match=None, progress=None):
     from api.services.extracao_correspondencias import registro as evidencia, serializar
     from api.services.extracao_atributos_estatisticas import agregar
     campos = _campos_da_base(base, regra, nome_base)
@@ -288,7 +288,12 @@ def enriquecer_base(registros, dimensao, base, dimensao_base, regra, nome_base, 
     geometria = registros.geometry.name
     linhas = []
     com, multiplos = 0, 0
+    if progress:
+        getattr(progress,'detalhe',progress)(f'{nome_base}: {len(pares)} correspondências candidatas; consolidando {len(registros)} registros e {len(campos)} campos.')
     for reg, (_, registro) in enumerate(registros.iterrows()):
+        if progress and reg % 32 == 0:
+            if hasattr(progress,'tarefa'): progress.tarefa(reg,len(registros))
+            getattr(progress,'detalhe',progress)(f'{nome_base}: {reg}/{len(registros)} registros consolidados; {com} com correspondência, {multiplos} com múltiplas feições.')
         lista = sorted(candidatos.get(reg, []))  # ordem da feição na base
         com += bool(lista)
         multiplos += len(lista) > 1
@@ -325,6 +330,7 @@ def enriquecer_base(registros, dimensao, base, dimensao_base, regra, nome_base, 
     for coluna in [col_n, col_fid, col_medida, *nomes.values()]:
         if coluna and coluna not in tabela.columns:
             tabela[coluna] = None
+    if progress and hasattr(progress,'tarefa'): progress.tarefa(len(registros),len(registros))
     return tabela.reset_index(drop=True), {
         'base': nome_base, 'papel': 'atributos', 'ligacao': regra['ligacao'], 'multiplicidade': multiplicidade,
         'registros_com_correspondencia': com, 'registros_com_multiplas_feicoes': multiplos,
@@ -565,7 +571,7 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
                 progress(f"Enriquecendo {nome_dim}: {base['tema']} / {nome_base}")
                 inicio_campos = len(dicionario)
                 registros, info = enriquecer_base(registros, dimensao, frame, dimensao_base, regra, nome_base,
-                                                  usados, dicionario, base['tema'], referencias=referencias)
+                                                  usados, dicionario, base['tema'], referencias=referencias, progress=progress)
                 for d in dicionario[inicio_campos:]:
                     d.update(categoria_id=base['categoria_id'], base_id=base['base_id'], ligacao_espacial=regra['ligacao']=='localizacao')
                 etapas.append(info)

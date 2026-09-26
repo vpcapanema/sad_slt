@@ -91,7 +91,7 @@ def test_nova_tarefa_nao_herda_percentual_da_anterior():
     c.mensagem('Cruzando camada B')
     atual = c.snapshot()
     assert atual['tarefa_id'] > primeira
-    assert atual['progresso_tarefa'] == 0
+    assert atual['progresso_tarefa'] is None
     assert atual['etapa'] == 'Cruzando camada B'
     c.tarefa(1, 4)
     assert c.snapshot()['progresso_tarefa'] == 25
@@ -123,3 +123,19 @@ def test_jobs_separam_mensagem_ativa_dos_logs_concluidos():
         assert atual['logs'][-1]['mensagem'] == 'Colunas conferidas'
     finally:
         jobs._executor.shutdown(wait=True)
+
+
+def test_detalhes_preservam_tarefa_contador_e_progresso():
+    c = ControleProcessamento()
+    c.fase(2, 'Cruzar base')
+    c.tarefa(32, 100, 'feições')
+    tarefa = c.snapshot()['tarefa_id']
+    c.detalhe('32 registros; 12 correspondências candidatas')
+    c.progresso_fase(32, 100)
+    snapshot = c.snapshot()
+    assert snapshot['tarefa_id'] == tarefa
+    assert snapshot['progresso_tarefa'] == 32
+    assert snapshot['tarefa_concluidas'] == 32
+    assert snapshot['percentual'] == 44
+    assert c.eventos.atual['logs'][-1]['mensagem'].startswith('32 registros')
+    assert len(c.eventos.atual['logs']) == 2

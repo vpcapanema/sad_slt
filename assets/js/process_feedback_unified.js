@@ -55,6 +55,10 @@
         <div class="pfs-task-info"><div class="pfs-task-name" data-pfs="task-name">Iniciando...</div><div class="pfs-task-desc" data-pfs="task-desc"></div></div>
         <div class="pfs-task-spinner"><i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i></div>
       </div>
+      <div class="pfs-task-progress" id="pfsTaskProgress">
+        <div class="pfs-progress-info"><span data-pfs="task-progress-detail">Aguardando medição da tarefa</span><span data-pfs="task-progress-percent">Em andamento</span></div>
+        <div class="pfs-progress-bar pfs-progress-indeterminate" id="pfsTaskProgressBar" role="progressbar" aria-label="Progresso da tarefa atual" aria-valuemin="0" aria-valuemax="100"><div class="pfs-progress-fill" id="pfsTaskProgressFill"></div></div>
+      </div>
       <div class="pfs-completed-list" id="pfsCompletedList"></div>
       <div class="pfs-log" id="pfsLog" role="log" aria-label="Log do processo"></div>
     </div>
@@ -272,6 +276,7 @@
             this.logEl.innerHTML = '';
             this.progressFill.style.width = '0%';
             this._barra(0);
+            this.progressoTarefa(null);
             pfsText('progress-meta', `Tarefa 0 de ${this.tasks.length}`);
 
             /* Task card */
@@ -308,16 +313,17 @@
         }
 
         /* ── Tarefa atual ── */
-        tarefaAtual(taskName, description) {
+        tarefaAtual(taskName, description, taskId) {
             this._bind(); this._touch();
-            let idx = this.tasks.findIndex(t => t.name === taskName);
+            let idx = this.tasks.findIndex(t => taskId != null ? t.id === taskId : t.name === taskName);
             if (idx === -1) {
-                this.tasks.push({ name: taskName, desc: description || '', weight: 1, completed: false });
+                this.tasks.push({ id: taskId, name: taskName, desc: description || '', weight: 1, completed: false });
                 idx = this.tasks.length - 1;
                 const s = document.createElement('div'); s.className = 'pfs-segment';
                 this.segmentsEl.appendChild(s);
                 pfsText('task-step-total', `de ${this.tasks.length}`);
             }
+            if (this.currentTaskIndex !== idx) this.progressoTarefa(null);
             this.currentTaskIndex = idx;
             pfsText('progress-current-task', taskName);
             pfsText('task-step-num', String(idx + 1));
@@ -347,12 +353,13 @@
         etapa(message) { this._touch(); this.log(message, 'step'); }
 
         /* ── Concluir tarefa ── */
-        concluirTarefa(taskName, message) {
+        concluirTarefa(taskName, message, taskId) {
             this._touch();
-            const idx = this.tasks.findIndex(t => t.name === taskName);
+            const idx = this.tasks.findIndex(t => taskId != null ? t.id === taskId : t.name === taskName);
             if (idx >= 0) {
                 if (this.tasks[idx].completed) return;
                 this.tasks[idx].completed = true;
+                if(idx === this.currentTaskIndex) this.progressoTarefa(100);
                 const seg = this.segmentsEl.children[idx];
                 if (seg) { seg.classList.remove('pfs-segment--active'); seg.classList.add('pfs-segment--completed'); }
             }
@@ -382,7 +389,22 @@
         }
         _barra(pct) {
             pfsText('progress-percent', pct + '%');
-            q('#pfsProgressBox .pfs-progress-bar')?.setAttribute('aria-valuenow', String(pct));
+            q('#pfsProgressFill')?.parentElement.setAttribute('aria-valuenow', String(pct));
+        }
+
+        /* A barra individual usa somente medidas recebidas; ausência é indeterminada. */
+        progressoTarefa(percent, feitas, total, unidade) {
+            const bar=q('#pfsTaskProgressBar'), fill=q('#pfsTaskProgressFill');
+            if(!bar)return;
+            const measured=typeof percent==='number' && Number.isFinite(percent);
+            const pct=measured?Math.min(100,Math.max(0,percent)):null;
+            bar.classList.toggle('pfs-progress-indeterminate',!measured);
+            if(measured){bar.setAttribute('aria-valuenow',String(pct));fill.style.width=pct+'%';}
+            else{bar.removeAttribute('aria-valuenow');fill.style.width='';}
+            pfsText('task-progress-percent',measured?`${Math.round(pct)}%`:'Em andamento');
+            pfsText('task-progress-detail',Number.isFinite(feitas)&&Number.isFinite(total)&&total>0
+                ?`${feitas.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')} ${unidade||'itens'}`
+                :measured?'Progresso da tarefa atual':'Tarefa em execução; percentual ainda não informado');
         }
 
         /* ── Log ── */
@@ -464,6 +486,7 @@
             this._stop();
             const elapsed = this._elapsed();
             this.progresso(100);
+            this.progressoTarefa(100);
             this.log(data && data._status === 'partial' ? 'Processo concluído com ressalvas.' : 'Processo concluído com sucesso!', data && data._status === 'partial' ? 'warning' : 'success');
             setTimeout(() => {
                 this._fecharSeCorrente();
@@ -1094,7 +1117,7 @@
                 }
             }
             /* Com o canal entregando, o retrato do polling (que pode estar atrasado) não sobrescreve. */
-            if (st.vivo && st.canal) return;
+            if (st.vivo && st.canal) { this._aplicarLogs(p, st, job); return; }
             this._aplicarJob(p, st, job);
         }
 
@@ -1129,7 +1152,7 @@
 
         _fecharCanal(p, st) { st.canal?.close(); st.canal = null; st.vivo = false; }
 
-        _aplicarJob(p, st, job) {
+        _aplicarLogs(p, st, job) {
             const logs = job.logs || job.etapas || [];
             const niveis = { sucesso: 'success', erro: 'error', aviso: 'warning', atencao: 'warning', info: 'info' };
             logs.forEach((e, i) => {
@@ -1138,15 +1161,24 @@
                 if (seq <= st.seq || !msg) return;
                 st.seq = seq;
                 const nivel = niveis[e.nivel] || 'info';
-                const corrente = p.tasks[p.currentTaskIndex];
-                if (nivel === 'success' && corrente && !corrente.completed && corrente.name === msg) p.concluirTarefa(msg, 'Concluído');
-                else p.log(msg, nivel);
+                const detalhes=e.detalhes?Object.entries(e.detalhes).map(([k,v])=>`${k}: ${typeof v==='object'?JSON.stringify(v):v}`).join(' · '):'';
+                p.log(detalhes?`${msg} — ${detalhes}`:msg,nivel);
             });
+        }
+
+        _aplicarJob(p, st, job) {
+            this._aplicarLogs(p, st, job);
             const etapa = Object.hasOwn(job, 'etapa_atual') ? job.etapa_atual : job.etapa;
             const nome = job.atividade || etapa;
             const chave = job.tarefa_id != null ? `${job.id ?? ''}:${job.tarefa_id}` : nome;
-            if (nome && chave !== st.chave) { st.chave = chave; p.tarefaAtual(nome, job.detalhe || (job.atividade ? etapa : '') || ''); }
+            if (nome && chave !== st.chave) {
+                if(st.tarefa)p.concluirTarefa(st.tarefa.nome,'Concluída',st.tarefa.chave);
+                st.chave = chave; st.tarefa={nome,chave};
+                p.tarefaAtual(nome, job.detalhe || (job.atividade ? etapa : '') || '',chave);
+            }
             else if (nome && (job.detalhe || job.atividade)) p.detalhe(job.detalhe || etapa || '');
+            if(!nome && job.progresso_tarefa===100 && st.tarefa)p.concluirTarefa(st.tarefa.nome,'Concluída',st.tarefa.chave);
+            p.progressoTarefa(job.progresso_tarefa,job.tarefa_concluidas,job.tarefa_total,job.unidade_tarefa);
             /* Linha de informação: etapa ou fase do job e, quando medido, o percentual da tarefa em curso. */
             const total = Number(job.total ?? job.total_fases), feitas = Number(job.concluidas ?? job.fases_concluidas);
             const rotulo = job.total != null ? 'Etapa' : 'Fase';

@@ -116,8 +116,8 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
     contagens_bases = []
     for categoria in categorias:
         for camada in categoria['camadas']:
-            if hasattr(progress,'tarefa'): progress.tarefa(0,len(trabalho))
             progress(f"Cruzando {categoria['nome']} / {camada['nome']}")
+            if hasattr(progress,'tarefa'): progress.tarefa(0,len(trabalho))
             base, regra = camada['frame'].reset_index(drop=True), camada['regra']
             campos = [c for c in base.columns if c != base.geometry.name]
             faltando = set(regra['estatisticas_campos']) - set(campos)
@@ -161,9 +161,10 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
                     medida = regra['estatisticas_campos'].get(campo, 'valores')
                     novas[nome].extend(agregar(base[campo].iloc[posicoes], medida) if posicoes else None
                                        for posicoes in correspondencias)
-                inicio = fim
                 if hasattr(progress,'tarefa'): progress.tarefa(fim,len(trabalho))
-                progress(f"{camada['nome']}: {fim}/{len(trabalho)} feições analisadas com geometria integral")
+                getattr(progress,'detalhe',progress)(f"{camada['nome']}: {fim}/{len(trabalho)} feições analisadas; lote {inicio+1}–{fim}, {len(pares)} correspondências candidatas; atributos de {len(campos)} campos consolidados.")
+                inicio = fim
+                if hasattr(progress,'progresso_fase'): progress.progresso_fase(len(etapas) + fim / max(1,len(trabalho)), sum(len(c['camadas']) for c in categorias))
             indice.close()
             for campo, nome in nomes.items():
                 medida = regra['estatisticas_campos'].get(campo, 'valores')

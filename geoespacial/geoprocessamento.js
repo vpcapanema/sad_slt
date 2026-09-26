@@ -701,16 +701,17 @@
       payload.chaves_selecionadas=[...new Set(selected.map(feature=>feature.properties?.__gp_selection_key).filter(value=>value!=null).map(String))];
       payload.atributos_selecionados=selected.map(feature=>({...cleanSelectionProperties(feature.properties),__gp_feature:feature,__gp_selection_key:feature.properties.__gp_selection_key}));
     }
+    if(!await window.gpFeedback.ProcessFeedback.confirmar({title:`Executar ${op[1]}`,message:'Confira os parâmetros antes de iniciar.',warning:JSON.stringify(payload,null,2),confirmLabel:'Executar'}))return;
     log(`Executando ${op[1]}…`);
     const startedAt=Date.now();
     const controller=new AbortController(),submit=form.querySelector('.editor-actions .primary'),submitLabel=submit?.textContent;
-    let progress=null;
+    let progress=createExecutionProgress(form);
+    progress.note(`Preparando ${op[1]} e enviando os parâmetros ao servidor.`);
     state.activeExecution=controller;state.activeJob=null;if(submit){submit.disabled=true;submit.textContent="Executando…"}
     try{
       const started=await fetch(`${API}/operacoes-jobs/${op[0]}`,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(payload),signal:controller.signal});
       let job=await started.json();if(!started.ok)throw new Error(job.detail||`HTTP ${started.status}`);state.activeJob=job;
-      if(job.total>3){progress=createExecutionProgress(form);job=await waitForJob(job,progress,controller.signal)}
-      else job=await waitForJob(job,null,controller.signal);
+      job=await waitForJob(job,progress,controller.signal);
       const body=job.resultado||{};
       const resultId=body.camada_id||body.raster_id;
       const visible=await refreshLayers(true,resultId?[resultId]:[],resultId);

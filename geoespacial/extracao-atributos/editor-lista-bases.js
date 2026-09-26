@@ -57,6 +57,7 @@ export function criarEditorListaBases(state,changed,escolher,salvar){
   const token=++versao,itens=copia(lista().itens),entradas=new Set([state.input,...state.entradasExtras.map(e=>e.id)]);
   if(itens.some(i=>entradas.has(i.id))){feedback('Uma camada da lista já está selecionada como entrada. Remova-a da lista de bases.','error');return;}
   if(itens.some(i=>!state.categories.some(c=>c.id===i.category))){feedback('Escolha uma categoria disponível para cada camada.','error');return;}
+  if(!await window.ProcessFeedback.confirmar({title:'Validar lista de bases',message:`Ler e validar ${itens.length} camada(s) e preparar a prévia?`,warning:itens.map(i=>i.nome||i.id).join('\n'),confirmLabel:'Validar bases'}))return;
   const tituloAcao=buttons.confirmar.textContent.trim();
   if(!sessaoAberta)anterior=copia(lista());sessaoAberta=true;validando=true;state.validatingBases=true;render();window.SICARDExtracao?.atualizarControles?.();
   // Uma tarefa por camada da lista, mais a prévia; o percentual conta as camadas lidas.

@@ -58,11 +58,17 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
 
   // Job do SICARD: etapa vira tarefa; log "sucesso" da tarefa corrente conclui; polling não duplica.
   await page.evaluate(()=>{ProcessFeedback.acompanhar({id:'j1',tarefa_id:1,etapa_atual:'Gravando camada',concluidas:0,total:3,percentual:10,logs:[]});
-    const snap={id:'j1',tarefa_id:1,etapa_atual:null,concluidas:1,total:3,percentual:33,logs:[{sequencia:1,nivel:'sucesso',mensagem:'Gravando camada'},{sequencia:2,nivel:'aviso',mensagem:'CRS ausente'}]};
+    const snap={id:'j1',tarefa_id:1,etapa_atual:null,progresso_tarefa:100,concluidas:1,total:3,percentual:33,logs:[{sequencia:1,nivel:'sucesso',mensagem:'Gravando camada'},{sequencia:2,nivel:'aviso',mensagem:'CRS ausente'}]};
     ProcessFeedback.acompanhar(snap);ProcessFeedback.acompanhar(snap);});
   assert.equal(await page.locator('.pfs-completed-item').filter({hasText:'Gravando camada'}).count(),1);
   assert.equal(await page.locator('.pfs-log-entry--warning').filter({hasText:'CRS ausente'}).count(),1);
   assert.equal(await page.locator('[data-pfs="progress-percent"]').innerText(),'33%');
+
+  // Medidas individuais e detalhes atualizam sem recriar a tarefa nem zerar a barra.
+  await page.evaluate(()=>{ProcessFeedback.acompanhar({id:'medicao',tarefa_id:1,etapa:'Cruzar base',percentual:40,progresso_tarefa:32,tarefa_concluidas:32,tarefa_total:100,unidade_tarefa:'feições',logs:[{sequencia:1,mensagem:'32 feições processadas'}]});ProcessFeedback.acompanhar({id:'medicao',tarefa_id:1,etapa:'Cruzar base',detalhe:'12 correspondências',percentual:40,progresso_tarefa:32,tarefa_concluidas:32,tarefa_total:100,unidade_tarefa:'feições',logs:[{sequencia:1,mensagem:'32 feições processadas'}]});});
+  assert.equal(await page.locator('#pfsTaskProgressBar').getAttribute('aria-valuenow'),'32');
+  assert.match(await page.locator('[data-pfs="task-progress-detail"]').innerText(),/32 de 100 feições/);
+  assert.equal(await page.locator('.pfs-log-entry').filter({hasText:'32 feições processadas'}).count(),1);
 
   // Sucesso → modal verde com resumo, subprocessos e ação em código.
   await page.evaluate(()=>{window.acionado=false;ProcessFeedback.sucesso({title:'Fase 1 calculada',message:'Confira o relatório.',summary:[{label:'Demandas',value:148}],

@@ -424,3 +424,10 @@
   .pfs-result-icon, .pfs-error-icon, .pfs-segment--active, .pfs-progress-fill::after { animation: none; }
   .pfs-log-spinner { animation-duration: 1.5s; }
 }
+
+/* Medição da tarefa corrente, separada do progresso geral. */
+.pfs-task-progress{padding:0 0 14px;}
+.pfs-task-progress .pfs-progress-bar{height:8px;}
+.pfs-progress-indeterminate .pfs-progress-fill{width:28%;animation:pfs-indeterminate 1.5s ease-in-out infinite;}
+@keyframes pfs-indeterminate{from{transform:translateX(-100%);}to{transform:translateX(400%);}}
+@media(prefers-reduced-motion:reduce){.pfs-progress-indeterminate .pfs-progress-fill{animation:none;transform:none;}}

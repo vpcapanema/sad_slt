@@ -60,7 +60,7 @@ export function criarMapa(aoMudarPainel) {
       if(win?.gpArquivos&&win.gpApp?.state.map?.isStyleLoaded()){
         if(!win.document.body.classList.contains('ea-embedded-workbench')){
           win.document.body.classList.add('ea-embedded-workbench');
-          win.gpFeedback={ProcessFeedback:window.ProcessFeedback,StatusFeedback:window.StatusFeedback,Notify:window.Notify};
+          // A bancada mantém seu próprio feedback, inclusive quando incorporada.
           const narrow=win.matchMedia('(max-width:650px)');
           const resize=()=>{
             if(narrow.matches){win.gpDocks.collapse('left');win.gpDocks.collapse('right');}

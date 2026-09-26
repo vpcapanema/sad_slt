@@ -128,7 +128,11 @@ def salvar(arquivo, revisao, data, nome, user, camada_id=None):
         ciclo.execucao_atual.reset(token)
 
 
-def executar(operacao, parametros, arquivos, user):
+def executar(operacao, parametros, arquivos, user, progress=None):
+    def report(message, feitas=None, total=None):
+        if progress:
+            if total is None: progress(message)
+            else: progress(message, feitas, total)
     from api.services.geoprocessamento_jobs import _input_references, INPUT_KEYS
     from api.services.geoprocessamento_engine import geoprocessamento_engine
     references = _input_references(parametros)
@@ -136,7 +140,11 @@ def executar(operacao, parametros, arquivos, user):
         raise ValueError('Os arquivos informados devem corresponder às entradas da operação.')
     if parametros.get('processar_sobre') == 'selecionadas':
         raise ValueError('Salve a seleção como camada antes de executar sobre parte do arquivo.')
-    sources = {ident: abrir(value['arquivo'], value['revisao'], ident if ident.startswith('storage:') else None) for ident, value in arquivos.items()}
+    sources = {}
+    for ident, value in arquivos.items():
+        report(f"Lendo e conferindo revisão: {value['arquivo']}",len(sources),len(arquivos))
+        sources[ident] = abrir(value['arquivo'], value['revisao'], ident if ident.startswith('storage:') else None)
+        report(f"Leitura concluída: {sources[ident]['nome']} — {len(sources[ident]['geojson']['features'])} feições",len(sources),len(arquivos))
     if any(value['id'] != ident for ident, value in sources.items()):
         raise ValueError('O arquivo não corresponde à camada informada.')
     execution = ciclo.iniciar(operacao, {**parametros, 'arquivos': arquivos}, str(user.id))
@@ -155,9 +163,11 @@ def executar(operacao, parametros, arquivos, user):
                 params[key] = temporary.get(value, value)
             elif key in {'camada_ids', 'raster_ids'}:
                 params[key] = [temporary.get(item, item) for item in value]
-        result = asyncio.run(geoprocessamento_engine.execute(operacao, params))
+        report(f'Executando algoritmo {operacao}: {len(sources)} arquivo(s) de entrada')
+        result = asyncio.run(geoprocessamento_engine.execute(operacao, params, **({'progress': report} if progress else {})))
         resource_id = result.get('camada_id') or result.get('raster_id')
         if resource_id and params.get('destino') == 'storage' and operacao not in {'OP-25','OP-26','OP-27'}:
+            report('Gravando o resultado no storage')
             filename, output_format = geoprocessamento_engine._canonical_output_file(params)
             output_crs = params.get('crs_saida', 'entrada')
             result['arquivo_saida'] = asyncio.run(geo.salvar_camada(resource_id, 'data/geoespacial/outputs', filename,
@@ -169,6 +179,7 @@ def executar(operacao, parametros, arquivos, user):
         result_id = result.get('camada_id')
         metadata = geo._metadados.get(result_id) or {}
         path = metadata.get('caminho_arquivo')
+        report('Preparando a camada resultante para visualização')
         return {'resultado': result, 'execucao_id': execution,
                 'camada': ler_arquivo(path) if path else None}
     except Exception as exc:
@@ -191,3 +202,28 @@ def consultar(arquivo, revisao, expressao, inverter_selecao=False):
     selected = selecionar(frame, expressao, inverter_selecao)
     import json
     return {'total': len(selected), 'geojson': json.loads(selected.to_json(default=str))}
+
+
+def iniciar_execucao(operacao, parametros, arquivos, user):
+    """Expõe as etapas reais do fluxo de arquivos no monitor da bancada."""
+    from api.services.geoprocessamento_jobs import geoprocessamento_jobs as jobs
+    ident = jobs._new('bancada-arquivos', ['Executar operação'])
+    with jobs._lock:
+        jobs._jobs[ident].update(responsavel=str(user.id), cancelavel=False)
+    def run():
+        def report(message, feitas=None, total=None):
+            # A duração do algoritmo nativo é desconhecida: não inventar percentual.
+            with jobs._lock:
+                job = jobs._jobs[ident]
+                job['logs'].append({'sequencia':len(job['logs'])+1,'mensagem':message,'nivel':'info'})
+                job.update(status='executando',etapa_atual=message,tarefa_id=job['tarefa_id']+1,
+                           percentual=None,progresso_tarefa=feitas/total*100 if total else None,
+                           tarefa_concluidas=feitas,tarefa_total=total,unidade_tarefa='arquivos')
+                jobs._publicar(ident)
+        try:
+            result = executar(operacao, parametros, arquivos, user, progress=report)
+            jobs._complete(ident, result)
+        except Exception as exc:
+            jobs._fail(ident, exc)
+    jobs._executor.submit(run)
+    return jobs.get(ident)

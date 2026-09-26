@@ -77,7 +77,7 @@
     }
     selectRows(rows);status(`${rows.length} registros encontrados.`);
   }
-  async function save(){const d=current;d.busy=true;controls();try{
+  async function save(){const d=current;if(window.gpFeedback&&!await window.gpFeedback.ProcessFeedback.confirmar({title:'Salvar alterações',message:'Gravar as edições e exclusões na camada original?',warning:'O arquivo original será alterado. Não será criada uma cópia.',confirmLabel:'Salvar alterações'}))return;d.busy=true;controls();try{
     const file=window.gpArquivos?.sessions.get(d.id),layer=app().state.layers.find(l=>l.id===d.id);
     const geojson={type:'FeatureCollection',features:d.rows.map(row=>({...row.__gp_feature,properties:clean(row)}))};
     let id=d.id;

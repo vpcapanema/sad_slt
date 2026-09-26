@@ -19,6 +19,11 @@ class ControleProcessamento:
         self.status = 'executando'
         self.logs = []
         self.sequencia = 0
+        self.tarefa_id = 0
+        self.descricao = ""
+        self.feitas = self.total = None
+        self.fracao_fase = 0
+        self.unidade = "itens"
         self.eventos = CanalProgresso()
         self.eventos.publicar(self.snapshot(com_etapas=False))
 
@@ -40,6 +45,7 @@ class ControleProcessamento:
         with self.lock:
             self.verificar()
             self.fase_atual = indice
+            self.fracao_fase = 0
             self.percentual_tarefa = None
             self.cancelavel = cancelavel
             self.mensagem(mensagem)
@@ -47,16 +53,37 @@ class ControleProcessamento:
     def mensagem(self, mensagem):
         with self.lock:
             self.verificar()
-            self.percentual_tarefa = 0
+            self.percentual_tarefa = None
+            self.feitas = self.total = None
+            self.descricao = ""
+            self.tarefa_id += 1
+            self.etapa = mensagem
             self.sequencia += 1
             self.logs.append({'sequencia': self.sequencia, 'em': datetime.now(timezone.utc).isoformat(),
                               'mensagem': mensagem, 'nivel': 'info'})
             self.logs = self.logs[-2000:]
             self.eventos.publicar(self.snapshot(com_etapas=False))
 
-    def tarefa(self, feitas, total):
+    def detalhe(self, mensagem):
         with self.lock:
             self.verificar()
+            self.descricao = mensagem
+            self.sequencia += 1
+            self.logs.append({'sequencia': self.sequencia, 'em': datetime.now(timezone.utc).isoformat(),
+                              'mensagem': mensagem, 'nivel': 'info'})
+            self.logs = self.logs[-2000:]
+            self.eventos.publicar(self.snapshot(com_etapas=False))
+
+    def progresso_fase(self, feitas, total):
+        with self.lock:
+            self.verificar()
+            self.fracao_fase = min(1, max(0, feitas / total)) if total else 0
+            self.eventos.publicar(self.snapshot(com_etapas=False))
+
+    def tarefa(self, feitas, total, unidade='itens'):
+        with self.lock:
+            self.verificar()
+            self.feitas, self.total, self.unidade = feitas, total, unidade
             self.percentual_tarefa = min(100, max(0, feitas / total * 100)) if total else None
             self.eventos.publicar(self.snapshot(com_etapas=False))
 
@@ -71,9 +98,11 @@ class ControleProcessamento:
     def snapshot(self, *, com_etapas=True):
         with self.lock:
             return {'status': self.status, 'etapas': list(self.logs) if com_etapas else [],
-                    'percentual': 100 if self.status == 'concluido' else round(max(0, self.fase_atual-1) / self.total_fases * 100),
-                    'progresso_tarefa': self.percentual_tarefa, 'tarefa_id': self.sequencia, 'cancelavel': self.cancelavel,
+                    'percentual': 100 if self.status == 'concluido' else round((max(0, self.fase_atual-1) + self.fracao_fase) / self.total_fases * 100),
+                    'logs': list(self.logs[-250:]), 'detalhe': self.descricao,
+                    'tarefa_concluidas': self.feitas, 'tarefa_total': self.total, 'unidade_tarefa': self.unidade,
+                    'progresso_tarefa': self.percentual_tarefa, 'tarefa_id': self.tarefa_id, 'cancelavel': self.cancelavel,
                     'cancelamento_solicitado': self.solicitado,
-                    'etapa': self.logs[-1]['mensagem'] if self.logs else 'Aguardando processamento',
+                    'etapa': getattr(self, 'etapa', 'Aguardando processamento'),
                     'fases_concluidas': self.total_fases if self.status == 'concluido' else max(0,self.fase_atual-1),
                     'total_fases': self.total_fases}

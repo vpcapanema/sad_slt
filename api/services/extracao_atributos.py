@@ -222,6 +222,14 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
             etapas.append(_etapa(message))
             del etapas[:-LIMITE_ETAPAS]
     progress.tarefa = controle.tarefa
+    def detalhe(message):
+        controle.detalhe(message)
+        with _lock:
+            etapas = _progress.setdefault(ident, [])
+            etapas.append(_etapa(message))
+            del etapas[:-LIMITE_ETAPAS]
+    progress.detalhe = detalhe
+    progress.progresso_fase = controle.progresso_fase
     progress.fase = controle.fase
     inicio = datetime.now(timezone.utc)
     try:
@@ -229,14 +237,21 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
         from api.services.municipal_layer import carregar_para_extracao
         source = entrada_local if entrada_local is not None else carregar_para_extracao(params['camada_id'])
         categories = []
-        controle.tarefa(1, 1)
+        leituras = 1 + sum(len(c['camadas']) for c in params['categorias'])
+        lidas = 1
+        controle.detalhe(f'Entrada carregada: {len(source):,} feições; CRS {source.crs}.')
+        controle.tarefa(1, 1, 'camada')
+        controle.progresso_fase(lidas, leituras)
         for categoria in params['categorias']:
             camadas = []
             for base in categoria['camadas']:
                 progress(f"Lendo a base {base['nome']}")
                 frame = bases_locais[base['id']] if bases_locais and base['id'] in bases_locais else carregar_para_extracao(base['id'])
                 camadas.append({**base,'frame':frame})
-                controle.tarefa(1, 1)
+                controle.detalhe(f"{base['nome']}: {len(frame):,} feições e {len(frame.columns)-1} campos carregados; CRS {frame.crs}.")
+                controle.tarefa(1, 1, 'camada')
+                lidas += 1
+                controle.progresso_fase(lidas, leituras)
             categories.append({**categoria,'camadas':camadas})
         controle.fase(2, 'Analisando as relações entre entrada e bases')
         if params['operacao'] in ('enriquecimento', 'estatisticas'):
@@ -336,7 +351,7 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
     nome_saida = params.get('nome_saida') or f"Extração de {params['input_nome']}"
     if hasattr(progress,'fase'):progress.fase(3, 'Salvando saídas e preparando o pacote', cancelavel=False)
     camadas = {}
-    for nome, frame in saida['camadas'].items():
+    for indice_saida, (nome, frame) in enumerate(saida['camadas'].items()):
         item_saida = next(r for r in saida['individuais'] if nome in r['camadas'])
         nome_camada = f"{item_saida['nome_saida']} — {nome.removeprefix(item_saida['chave']+'_')}"
         progress(f'Gravando a camada {nome_camada} no banco')
@@ -344,6 +359,8 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
                                                                      linhagem=params,gravar_arquivo=False,
                                                                      preservar_geometrias=True),
                          'registros':len(frame),'campos':len(frame.columns)-1}
+        if hasattr(progress,'tarefa'): progress.tarefa(len(frame),len(frame),'registros')
+        if hasattr(progress,'progresso_fase'): progress.progresso_fase(indice_saida+1,len(saida['camadas'])+2)
     progress('Registrando a procedência da entrada e das bases')
     entrada = _procedencia(params['camada_id'],params['input_nome'],source)
     entradas_proc = [{**_procedencia(e['id'],e['nome'],e['frame']),'config':e['config']} for e in entradas]
@@ -377,7 +394,7 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
                     'bases':bases,'resultado':{'camadas':camadas,'relatorio':saida['relatorio']},
                     'etapas':etapas,'ambiente':ambiente()}
     progress('Gerando o pacote de saída: GeoPackage, CSV, XLSX, dicionário e configuração')
-    pacote, nome_pacote, manifesto = pacote_enriquecimento.montar_lote(saida, _jsonavel(configuracao), nome_saida)
+    pacote, nome_pacote, manifesto = pacote_enriquecimento.montar_lote(saida, _jsonavel(configuracao), nome_saida, progress=progress)
     progress(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
     with _lock: etapas = list(_progress.get(ident) or [])
     with get_connection() as conn:
@@ -411,7 +428,7 @@ def consultar(ident, user, completo=False):
         response.update(observado)
         response['eventos_url'] = f'/api/geoespacial/extracao-atributos/execucoes/{ident}/eventos'
         etapas=observado['etapas']
-    response['etapa'] = (etapas[-1]['mensagem'] if etapas
+    response['etapa'] = observado['etapa'] if controle else (etapas[-1]['mensagem'] if etapas
                          else 'Processamento em execução' if row['status'] == 'executando' else row['status'])
     if row['status']=='concluido' and completo:
         with get_connection() as conn:

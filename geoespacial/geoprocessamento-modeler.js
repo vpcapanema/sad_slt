@@ -505,6 +505,7 @@
     step(`${labels[action]} iniciado.`);return {step,complete:message=>{step(message,"success");finish(message)},fail:message=>{step(message,"error");finish(message,true)}};
   }
   async function runWithFeedback(editor,action){
+    if(action==="run"&&!await window.gpFeedback.ProcessFeedback.confirmar({title:`Executar ${editor.title}`,message:"Iniciar todas as etapas configuradas neste fluxo?",confirmLabel:"Executar fluxo"}))return;
     editor.busy=true; updateModelRibbon();
     const feedback=processFeedback(editor,action);
     try{

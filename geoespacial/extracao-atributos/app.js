@@ -329,7 +329,7 @@ $("#ea-run").addEventListener("click",async()=>{
   let pedido;
   try{validarLote(state);pedido=request();}catch(error){feedback(error.message,'error');return;}
   const confirmado=await confirmarExecucao({
-    entrada:pedido.input.nome,
+    entrada:(pedido.entradas||[pedido.input]).map(e=>e.nome||e.id).join('; '),
     saida:pedido.nome_saida||`Extração de ${pedido.input.nome}`,
     operacao:$("#ea-operation").selectedOptions[0]?.textContent||pedido.operacao,
     totalCamadas:pedido.categorias.reduce((soma,c)=>soma+c.camadas.length,0),

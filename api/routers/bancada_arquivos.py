@@ -53,3 +53,9 @@ class Consulta(Arquivo):
 @router.post('/consultar')
 def consultar(payload: Consulta):
     return resposta(service.consultar, payload.arquivo, payload.revisao, payload.expressao, payload.inverter_selecao)
+
+
+@router.post('/executar-job', status_code=202)
+def executar_job(payload: Operacao, user: SessionUser = Depends(require_geospatial_access)):
+    return resposta(service.iniciar_execucao, payload.operacao, payload.parametros,
+                    {key: value.model_dump() for key, value in payload.arquivos.items()}, user)
