@@ -86,6 +86,11 @@ def frame_editado(source, data):
 def salvar(arquivo, revisao, data, nome, user, camada_id=None):
     source = abrir(arquivo, revisao, camada_id)
     frame = frame_editado(source, data)
+    return _persistir(source, frame, data, user)
+
+
+def _persistir(source, frame, data, user):
+    arquivo, revisao = source['arquivo'], source['revisao']
     if source['id'].startswith('storage:'):
         from api.services.edicao_storage import gravar
         return gravar(source, frame, data)
@@ -128,6 +133,18 @@ def salvar(arquivo, revisao, data, nome, user, camada_id=None):
         ciclo.execucao_atual.reset(token)
 
 
+def calcular_campo(arquivo, revisao, campo, expressao, user, camada_id=None,
+                   chaves_selecionadas=None, filtro=None):
+    from api.services.calculo_campo import calcular
+    source = abrir(arquivo, revisao, camada_id)
+    features = source['geojson']['features']
+    frame = gpd.GeoDataFrame.from_features(features, crs=4326).to_crs(source['crs_arquivo'])
+    frame, count = calcular(frame, campo, expressao, chaves_selecionadas, filtro,
+                            ids=[feature['id'] for feature in features])
+    result = _persistir(source, frame, source['geojson'], user)
+    return {**result, 'feicoes_atualizadas': count, 'campo_calculado': campo}
+
+
 def executar(operacao, parametros, arquivos, user, progress=None):
     def report(message, feitas=None, total=None):
         if progress:
@@ -138,8 +155,6 @@ def executar(operacao, parametros, arquivos, user, progress=None):
     references = _input_references(parametros)
     if not references or not set(arquivos).issubset(references):
         raise ValueError('Os arquivos informados devem corresponder às entradas da operação.')
-    if parametros.get('processar_sobre') == 'selecionadas':
-        raise ValueError('Salve a seleção como camada antes de executar sobre parte do arquivo.')
     sources = {}
     for ident, value in arquivos.items():
         report(f"Lendo e conferindo revisão: {value['arquivo']}",len(sources),len(arquivos))
@@ -156,6 +171,7 @@ def executar(operacao, parametros, arquivos, user, progress=None):
             key = 'arquivo_bancada_' + uuid4().hex
             temporary[ident] = key
             geo._camadas[key] = gpd.GeoDataFrame.from_features(source['geojson']['features'], crs=4326).to_crs(source['crs_arquivo'])
+            geo._camadas[key].index = [str(feature['id']) for feature in source['geojson']['features']]
             geo._metadados[key] = {'id':key,'nome':source['nome'],'tipo':'vetorial','crs':source['crs_arquivo'],'destino':'memoria_local'}
         params = dict(parametros)
         for key, value in params.items():
@@ -163,6 +179,7 @@ def executar(operacao, parametros, arquivos, user, progress=None):
                 params[key] = temporary.get(value, value)
             elif key in {'camada_ids', 'raster_ids'}:
                 params[key] = [temporary.get(item, item) for item in value]
+        params['filtros_camadas'] = {temporary.get(key, key): value for key, value in params.get('filtros_camadas', {}).items()}
         report(f'Executando algoritmo {operacao}: {len(sources)} arquivo(s) de entrada')
         result = asyncio.run(geoprocessamento_engine.execute(operacao, params, **({'progress': report} if progress else {})))
         resource_id = result.get('camada_id') or result.get('raster_id')
@@ -192,10 +209,10 @@ def executar(operacao, parametros, arquivos, user, progress=None):
             geo._metadados.pop(key, None)
 
 
-def consultar(arquivo, revisao, expressao, inverter_selecao=False):
+def consultar(arquivo, revisao, expressao, inverter_selecao=False, camada_id=None):
     """Consulta o snapshot atual do arquivo sem alterar o original."""
     from api.services.expressoes_atributos import selecionar
-    source = abrir(arquivo, revisao)
+    source = abrir(arquivo, revisao, camada_id)
     frame = gpd.GeoDataFrame.from_features(source['geojson']['features'], crs=4326)
     # Manter o identificador original usado pela seleção no mapa.
     frame.index = [str(feature['id']) for feature in source['geojson']['features']]

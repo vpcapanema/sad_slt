@@ -1,0 +1,4 @@
+interface:
+  display_name: "Especialista da bancada GIS"
+  short_description: "Testa e corrige fluxos com referência no ArcGIS Pro"
+  default_prompt: "Use $auditar-bancada para inventariar, testar e corrigir os fluxos dos botões da bancada SICARD com evidências e referência oficial do ArcGIS Pro."

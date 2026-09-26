@@ -804,21 +804,14 @@ class GeoespacialService:
         fronteiras = (centroides[:-1] + centroides[1:]) / 2
         return [float(v) for v in fronteiras]
 
-    async def calcular_campo(self, camada_id: str, campo: str, expressao: str) -> dict[str, Any]:
-        """Cria ou atualiza um campo usando uma expressão vetorizada."""
+    async def calcular_campo(self, camada_id: str, campo: str, expressao: str,
+                             chaves_selecionadas=None, filtro=None) -> dict[str, Any]:
+        """Calcula somente o escopo informado, preservando o restante da camada."""
         if camada_geoespacial_repository.esta_homologada(camada_id):
             raise ValueError("Camada homologada é somente leitura")
-        gdf = self.obter_camada_dados(camada_id).copy()
-        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", campo):
-            raise ValueError("Nome de campo inválido")
-        if not expressao.strip():
-            raise ValueError("Informe a expressão de cálculo")
-        try:
-            from api.services.expressoes_atributos import avaliar
-            resultado = avaliar(gdf, expressao)
-        except Exception as exc:
-            raise ValueError(f"Expressão inválida: {exc}") from exc
-        gdf[campo] = resultado
+        from api.services.calculo_campo import calcular
+        gdf, total_calculado = calcular(self.obter_camada_dados(camada_id), campo, expressao,
+                                       chaves_selecionadas, filtro)
         # Mesma regra de `salvar_edicoes_atributos`: resultado com arquivo
         # registrado é imutável, e onde a camada tem arquivo no acervo ele é
         # reescrito junto com o banco. Sem isto o campo calculado existia só
@@ -840,7 +833,7 @@ class GeoespacialService:
         return {
             "camada_id": camada_id,
             "campo": campo,
-            "feicoes_atualizadas": len(gdf),
+            "feicoes_atualizadas": total_calculado,
             "gravado_em_arquivo": gravado_em_arquivo,
         }
 
@@ -990,7 +983,7 @@ class GeoespacialService:
             selecionadas = selecionar(gdf, expressao, inverter_selecao)
         except Exception as exc:
             raise ValueError(f"Consulta inválida: {exc}") from exc
-        return {"camada_id": camada_id, "total": len(selecionadas), "geojson": self._gdf_para_geojson(selecionadas)}
+        return {"camada_id": camada_id, "total": len(selecionadas), "geojson": json.loads((selecionadas.to_crs(4326) if selecionadas.crs is not None else selecionadas).to_json(default=str))}
 
     async def atualizar_fonte(self, camada_id: str) -> dict[str, Any]:
         """Relê a fonte externa preservando o identificador da camada."""

@@ -136,3 +136,32 @@ def test_releitura_nao_devolve_revisao_obsoleta(original, monkeypatch):
                             None, SimpleNamespace(id='teste'), source['id'])
     assert len(reads) == 2
     assert result['revisao'] == original_reader(source['id'])['revisao']
+
+
+def test_calculo_campo_storage_respeita_escopo_e_atualiza_revisao(original):
+    source, path, writes = original
+    from api.routers.bancada_arquivos import router
+    from api.deps.auth import require_geospatial_access
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[require_geospatial_access] = lambda: SimpleNamespace(id='teste')
+    with TestClient(app) as client:
+        response = client.post('/bancada-arquivos/calcular-campo', json={
+            'arquivo': source['arquivo'], 'camada_id': source['id'], 'revisao': source['revisao'],
+            'campo': 'valor', 'expressao': '42', 'chaves_selecionadas': ['3', '12'], 'filtro': 'valor < 10'})
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result['revisao'] != source['revisao']
+        assert result['feicoes_atualizadas'] == 1
+        assert {f['id']: f['properties']['valor'] for f in result['geojson']['features']} == {'3': 42, '7': None, '12': 12}
+        again = client.post('/bancada-arquivos/calcular-campo', json={
+            'arquivo': result['arquivo'], 'camada_id': result['id'], 'revisao': result['revisao'],
+            'campo': 'novo', 'expressao': '2', 'chaves_selecionadas': ['7']})
+        assert again.status_code == 200, again.text
+        values = {f['id']: f['properties']['novo'] for f in again.json()['geojson']['features']}
+        assert values == {'3': None, '7': 2, '12': None}
+    preserved = storage.ler_para_mapa('storage:base-geoespacial/original.gpkg::preservar')
+    assert len(preserved['geojson']['features']) == 3
+    assert 'novo' not in preserved['geojson']['features'][0]['properties']
+    assert len(writes) == 2
+    assert list(path.parent.iterdir()) == [path]

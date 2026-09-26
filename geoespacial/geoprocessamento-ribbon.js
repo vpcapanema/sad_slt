@@ -21,7 +21,7 @@
   }
 
   function activeLayerId() {
-    return $("[data-layer].active")?.dataset.layer || window.gpApp.state.activeLayerId || null;
+    return window.gpApp.state.activeLayerId || null;
   }
 
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -257,8 +257,8 @@
         window.gpApp.addCatalogLayerToMap(id,false).then(()=>{[id,`${id}-line`,`${id}-point`].forEach(layer=>{if(map.getLayer(layer))map.setLayoutProperty(layer,"visibility","visible")});window.gpApp.renderLayers();return window.gpApp.zoomToCatalogLayer(id);}).catch(error=>message(error.message));
       }
       if (action === "add-result" && !activeLayerId()) message("Selecione o resultado que deseja adicionar ao mapa.");
-      if (["edit-function", "validate-function", "run-function"].includes(action)) window.gpApp.showLibrary("functions");
-      if (["edit-flow", "validate-flow", "run-flow"].includes(action)) window.gpApp.showLibrary("flows");
+      if (["edit-function", "validate-function", "run-function"].includes(action)) window.gpApp.showLibrary("functions",action.split("-")[0]);
+      if (["edit-flow", "validate-flow", "run-flow"].includes(action)) window.gpApp.showLibrary("flows",action.split("-")[0]);
       if (action === "new-function") window.gpApp.newFunction();
       if (action === "new-flow") window.gpApp.newFlow();
       if (action === "history") window.gpApp.showHistory();

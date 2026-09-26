@@ -32,16 +32,7 @@
       }
     });
 
-    $("#gp-editor-view").addEventListener("change", (event) => {
-      if (!event.target.matches('select[name^="camada_id"]')) return;
-      const output = event.target.form?.elements.saida;
-      if (!output) return;
-      const clean = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
-      const layer = event.target.selectedOptions[0]?.textContent || "camada";
-      const operation = $("#gp-right-title").textContent || "resultado";
-      const extension = output.value.toLowerCase().endsWith(".tif") ? "tif" : "gpkg";
-      output.value = `${clean(layer)}_${clean(operation)}.${extension}`;
-    });
+    // O nome de saída é controlado por bindOutputNameAuto/configureOutputFields
+    // no formulário central, que preserva nomes definidos pelo usuário.
   });
 })();

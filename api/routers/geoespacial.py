@@ -13,7 +13,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import geopandas as gpd
 import rasterio
 import httpx
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from shapely.geometry import LineString, Point, Polygon
@@ -1363,11 +1363,18 @@ def obter_preview_raster(raster_id: str) -> dict:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+class EscopoCalculoCampo(BaseModel):
+    chaves_selecionadas: list[str] | None = None
+    filtro: str | None = Field(default=None, max_length=4000)
+
+
 @router.post("/camadas/{camada_id}/calcular-campo")
-def calcular_campo(camada_id: str, campo: str, expressao: str) -> dict:
+def calcular_campo(camada_id: str, campo: str, expressao: str,
+                   escopo: EscopoCalculoCampo | None = Body(default=None)) -> dict:
     """Cria ou atualiza um campo por expressão."""
     try:
-        return asyncio.run(geoespacial_service.calcular_campo(camada_id, campo, expressao))
+        return asyncio.run(geoespacial_service.calcular_campo(
+            camada_id, campo, expressao, **(escopo.model_dump() if escopo else {})))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

@@ -231,24 +231,29 @@ async function calcularCampo(){
   const file=active();
   if(!file)throw new Error('Abra o arquivo pelo explorador da bancada.');
   if(busy||editor)throw new Error('Salve ou cancele a edição antes de calcular um campo.');
-  window.gpCommands.openPanel('Calcular campo',`<form id="gp-file-calculate"><div class="editor-body"><div class="field"><label>Arquivo</label><input value="${escapar(file.nome)}" readonly></div><div class="field"><label>Campo de destino</label><input name="campo" required></div><div class="field"><label>Expressão</label><textarea name="expressao" required placeholder="Ex.: area * 2"></textarea></div><p class="field-help">O campo é gravado no arquivo do storage e no banco, e o arquivo é recarregado na bancada.</p></div><div class="editor-actions"><button class="btn primary">Calcular</button></div></form>`);
+  if(window.gpAttributeTable?.hasPendingChanges?.(file.id))throw new Error('Salve ou descarte as edições da tabela antes de calcular um campo.');
+  const scope=window.gpCommands.calculationScope(file.id);
+  window.gpCommands.openPanel('Calcular campo',`<form id="gp-file-calculate"><div class="editor-body"><div class="field"><label>Arquivo</label><input value="${escapar(file.nome)}" readonly></div><div class="field"><label>Campo de destino</label><input name="campo" required></div><div class="field"><label>Expressão</label><textarea name="expressao" required placeholder="Ex.: area * 2"></textarea></div><p class="field-help" data-calculation-scope>${escapar(scope.description)}. O cálculo será gravado no arquivo original do storage.</p></div><div class="editor-actions"><button class="btn primary">Calcular</button></div></form>`);
   const form=document.querySelector('#gp-file-calculate');
-  form.onsubmit=event=>{
+  form.onsubmit=async event=>{
     event.preventDefault();
     const submit=form.querySelector('button.primary');
+    if(busy||submit.disabled)return;
     busy=true;submit.disabled=true;syncEditRibbon();
-    const query=new URLSearchParams({campo:form.campo.value,expressao:form.expressao.value});
-    json(`/camadas/${encodeURIComponent(file.id)}/calcular-campo?${query}`,{method:'POST'})
-      .then(result=>post('/extracao-atributos/arquivo-mapa',{arquivo:file.arquivo})
-        .then(atualizado=>{
-          mount(atualizado);
-          if(result.gravado_em_arquivo)app().log(`Campo ${form.campo.value} calculado em ${result.feicoes_atualizadas} feição(ões) e gravado no arquivo.`,'ok');
-          // Sem arquivo no acervo o campo existe só no banco; dizer isso evita
-          // o usuário concluir que o cálculo falhou ao não ver a coluna nova.
-          else report(`Campo ${form.campo.value} calculado no banco, mas esta camada não tem arquivo no acervo para regravar.`);
-        }))
-      .catch(error=>report(error.message))
-      .finally(()=>{busy=false;submit.disabled=false;syncEditRibbon();});
+    let progress;
+    try{
+      if(window.gpAttributeTable?.hasPendingChanges?.(file.id))throw new Error('Salve ou descarte as edições da tabela antes de calcular um campo.');
+      if(!await window.gpFeedback.ProcessFeedback.confirmar({title:'Calcular campo',message:`Atualizar ${form.campo.value} em ${file.nome}?`,warning:`${scope.description}. O arquivo original será alterado: ${file.arquivo}`,confirmLabel:'Calcular'}))return;
+      progress=app().createTaskProgress(form);
+      progress.note(`Calculando ${form.campo.value}: ${scope.description}`);
+      const result=await post('/bancada-arquivos/calcular-campo',{arquivo:file.arquivo,camada_id:file.id,revisao:file.revisao,campo:form.campo.value,expressao:form.expressao.value,...scope.payload});
+      progress.note(`${result.feicoes_atualizadas} feição(ões) gravadas; atualizando a sessão da bancada`);
+      await sincronizarSalvamento(result);
+      await window.gpCommands.refreshLayerFilter?.(file.id);
+      progress.complete();
+      app().log(`Campo ${result.campo_calculado} calculado em ${result.feicoes_atualizadas} feição(ões) no arquivo original.`,'ok');
+    }catch(error){progress?.fail(error.message);report(error.message);}
+    finally{busy=false;submit.disabled=false;syncEditRibbon();}
   };
 }
 
@@ -261,12 +266,21 @@ async function execute(form){
   }
   for(const input of form.querySelectorAll('input[type=checkbox]'))params[input.name]=input.checked;
   if(params.pesos)params.pesos=String(params.pesos).split(',').map(Number);
-  if(params.processar_sobre==='selecionadas')throw new Error('Neste fluxo execute sobre todas as feições ou salve a seleção como uma camada separada.');
+  if(params.processar_sobre==='selecionadas'){
+    const input=[...form.elements].find(element=>element.name.startsWith('camada_id')&&!element.multiple);
+    const selected=(app().state.selectedGeoJSON?.features||[]).filter(feature=>feature.properties?.__gp_layer_id===input?.value);
+    if(!selected.length)throw new Error('Não há feições selecionadas na camada de entrada.');
+    params.chaves_selecionadas=selected.map(feature=>String(feature.properties.__gp_selection_key));
+    params.atributos_selecionados=selected.map(feature=>({__gp_feature:feature}));
+  }
+  params.filtros_camadas=Object.fromEntries(Object.entries(app().state.layerFilters||{}).filter(([id])=>Object.values(params).some(value=>value===id||Array.isArray(value)&&value.includes(id))));
   const files={};for(const [id,file] of sessions)if(Object.values(params).some(value=>value===id||Array.isArray(value)&&value.includes(id)))files[id]={arquivo:file.arquivo,revisao:file.revisao};
   if(!await window.gpFeedback.ProcessFeedback.confirmar({title:'Executar operação da bancada',message:`Iniciar ${form.dataset.op}?`,warning:JSON.stringify(params,null,2),confirmLabel:'Executar'}))return;
   const proc=window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Processando arquivos da bancada',tasks:['Executar a operação no servidor']});proc?.tarefaAtual('Executar a operação no servidor');busy=true;const submit=form.querySelector('button[type=submit],button.primary');if(submit)submit.disabled=true;
-  try{let job=await post('/bancada-arquivos/executar-job',{operacao:form.dataset.op,parametros:params,arquivos:files});window.gpFeedback.ProcessFeedback.acompanhar(job);while(!['concluido','erro','cancelado'].includes(job.status)){await new Promise(resolve=>setTimeout(resolve,300));const response=await fetch(`/api/geoespacial/operacoes-jobs/status/${job.id}`,{credentials:'same-origin'});job=await response.json();if(!response.ok)throw new Error(job.detail||'Falha ao acompanhar operação');window.gpFeedback.ProcessFeedback.acompanhar(job);}if(job.status!=='concluido')throw new Error(job.erro||'Operação interrompida');const result=job.resultado;if(result.camada)mount(result.camada);else if(result.resultado?.raster_id)await app().refreshLayers(true,[result.resultado.raster_id],result.resultado.raster_id);else app().showOperationResult('Resultado da operação',result.resultado||result);if(proc){proc.concluirTarefa('Executar a operação no servidor','Concluída');proc.sucesso({title:'Execução concluída',message:`Execução ${result.execucao_id} concluída.`,summary:[{label:'Execução',value:result.execucao_id,icon:'fa-hashtag'}]});}else app().log(`Execução concluída: ${result.execucao_id}`,'ok');}
-  catch(error){proc?.erro({message:error.message});throw error;}
+  const startedAt=Date.now();
+  const record=(status,result)=>{app().state.history.unshift({at:new Date().toISOString(),op:form.dataset.op,name:app().operations.find(op=>op.id===form.dataset.op)?.nome||form.dataset.op,status,durationMs:Date.now()-startedAt,parameters:params,result});localStorage.setItem('gp-history',JSON.stringify(app().state.history.slice(0,100)));};
+  try{let job=await post('/bancada-arquivos/executar-job',{operacao:form.dataset.op,parametros:params,arquivos:files});window.gpFeedback.ProcessFeedback.acompanhar(job);while(!['concluido','erro','cancelado'].includes(job.status)){await new Promise(resolve=>setTimeout(resolve,300));const response=await fetch(`/api/geoespacial/operacoes-jobs/status/${job.id}`,{credentials:'same-origin'});job=await response.json();if(!response.ok)throw new Error(job.detail||'Falha ao acompanhar operação');window.gpFeedback.ProcessFeedback.acompanhar(job);}if(job.status!=='concluido')throw new Error(job.erro||'Operação interrompida');const result=job.resultado;if(result.camada)mount(result.camada);else if(result.resultado?.raster_id||result.resultado?.camada_id){const id=result.resultado.camada_id||result.resultado.raster_id;await app().refreshLayers(true,[id],id);}else app().showOperationResult('Resultado da operação',result.resultado||result);record('concluído',result);if(proc){proc.concluirTarefa('Executar a operação no servidor','Concluída');proc.sucesso({title:'Execução concluída',message:`Execução ${result.execucao_id} concluída.`,summary:[{label:'Execução',value:result.execucao_id,icon:'fa-hashtag'}]});}else app().log(`Execução concluída: ${result.execucao_id}`,'ok');}
+  catch(error){record('erro',error.message);proc?.erro({message:error.message});throw error;}
   finally{busy=false;if(submit)submit.disabled=false;}
 }
 
@@ -292,7 +306,7 @@ function init(){
       if(busy)return;
       if(edit)app().state.activeLayerId=edit.dataset.editLayer;
       if(action==='calculate-field'){calcularCampo().catch(error=>report(error.message));return;}
-      if(action==='refresh-source'){const file=active();if(editor){report('Salve ou cancele a edição antes de atualizar a fonte.');return;}post('/extracao-atributos/arquivo-mapa',{arquivo:file.arquivo}).then(mount).catch(error=>report(error.message));return;}
+      if(action==='refresh-source'){const file=active();if(editor){report('Salve ou cancele a edição antes de atualizar a fonte.');return;}post('/extracao-atributos/arquivo-mapa',{arquivo:file.arquivo,...(file.id.startsWith('storage:')?{id:file.id}:{})}).then(async refreshed=>{mount(refreshed);window.gpAttributeTable?.atualizarArquivo(refreshed.id);window.dispatchEvent(new CustomEvent('gp-arquivo-atualizado',{detail:refreshed}));await window.gpCommands?.refreshLayerFilter?.(refreshed.id);}).catch(error=>report(error.message));return;}
       try{openEditor(Boolean(edit)||['save-layer','save-result'].includes(action));}catch(error){report(error.message);}
     }
   },true);

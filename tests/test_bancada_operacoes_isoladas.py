@@ -334,3 +334,37 @@ def test_tabela_http_edita_exclui_e_recusa_revisao(api_client, atributo_editavel
     assert saved.json()['linhas_excluidas']==1
     assert api_client.post(url+'/salvar',json=payload).status_code==422
     assert len(api_client.get(url+'/tabela').json()['registros'])==3
+
+
+def test_filtro_limita_algoritmo_sem_alterar_original(bancada):
+    result=asyncio.run(bancada.engine.execute('OP-28', {'camada_id':'area','filtros_camadas':{'area':'valor == 4'}}))
+    assert len(bancada.vectors[result['camada_id']]) == 1
+    assert bancada.vectors[result['camada_id']]['valor'].tolist() == [4.]
+    assert len(bancada.vectors['area']) == 2
+    assert not any(key.startswith('filtro_') for key in bancada.vectors)
+
+
+def test_filtro_vazio_nao_processa_camada_inteira(bancada):
+    with pytest.raises(ValueError, match='não contém feições'):
+        asyncio.run(bancada.engine.execute('OP-28', {'camada_id':'area','filtros_camadas':{'area':'valor > 100'}}))
+    assert len(bancada.vectors['area']) == 2
+
+
+def test_filtro_em_multiplas_entradas(bancada):
+    result=asyncio.run(bancada.engine.execute('OP-35', {'camada_ids':['area','points'],'filtros_camadas':{'area':'valor == 4','points':'valor == 1'}}))
+    assert len(bancada.vectors[result['camada_id']]) == 2
+    assert not any(key.startswith('filtro_') for key in bancada.vectors)
+
+
+def test_filtro_com_selecao_intersecta_escopos(bancada):
+    result=asyncio.run(bancada.engine.execute('OP-28', {'camada_id':'area','filtros_camadas':{'area':'valor > 2'},'processar_sobre':'selecionadas','chaves_selecionadas':['1'],'atributos_selecionados':[{'valor':4}]}))
+    assert len(bancada.vectors[result['camada_id']]) == 1
+    assert len(bancada.vectors['area']) == 2
+
+
+def test_consulta_preserva_identidade_da_tabela(bancada, monkeypatch):
+    from api.repositories import camada_geoespacial_repository as repo
+    monkeypatch.setattr(repo, "esta_homologada", lambda ident: False)
+    response=asyncio.run(geo.consultar_por_atributo('area', 'valor == 4'))
+    table=asyncio.run(geo.atributos_camada('area'))
+    assert response['geojson']['features'][0]['id'] == table['registros'][1]['__gp_feature']['id']

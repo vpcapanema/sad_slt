@@ -71,6 +71,10 @@
       "model-duplicate":Boolean(editor&&!editor.busy&&editor.selected&&!editor.nodes.find(n=>n.id===editor.selected&&["input","output","iterator"].includes(n.kind))),
       "model-delete":Boolean(editor&&!editor.busy&&(editor.selected||editor.selectedEdge)),
     };
+    $$("#gp-model-properties-view input, #gp-model-properties-view select, #gp-model-properties-view textarea, #gp-model-properties-view button").forEach(control=>{
+      if(editor?.busy&&!control.disabled){control.disabled=true;control.dataset.modelBusyDisabled="true";}
+      else if(!editor?.busy&&control.dataset.modelBusyDisabled){control.disabled=false;delete control.dataset.modelBusyDisabled;}
+    });
     $$('[data-model-command]').forEach(button=>{
       const enabled=Boolean(state[button.dataset.modelCommand]);
       button.disabled=!enabled;
@@ -79,7 +83,7 @@
     });
   }
   async function handleModelCommand(command){
-    const editor=activeEditor(); if(!editor)return;
+    const editor=activeEditor(); if(!editor||editor.busy)return;
     if(command==="model-save")return runWithFeedback(editor,"save");
     if(command==="model-validate")return runWithFeedback(editor,"validate");
     if(command==="model-run")return runWithFeedback(editor,"run");
@@ -146,7 +150,7 @@
     menu.style.left=`${Math.round(left)}px`;
   }
   function toggleModelMenu(kind,anchor){
-    const editor=activeEditor(); if(!editor)return;
+    const editor=activeEditor(); if(!editor||editor.busy)return;
     const alreadyOpen=Boolean(document.querySelector(`.model-menu[data-menu-kind="${kind}"]`));
     closeModelMenu();
     if(alreadyOpen)return;
@@ -221,6 +225,7 @@
     return `<details class="model-tips" open><summary><i data-lucide="lightbulb"></i><span>${title}</span></summary><p class="model-tips-intro">${intro}</p><ol class="model-tips-steps">${steps.map(step=>`<li>${step}</li>`).join("")}</ol><p class="model-tips-hotkeys">${hotkeys}</p></details>`;
   }
   function addNode(editor,kind,ref,label,x=240,y=150){
+    if(editor.busy)return;
     if(kind==="iterator"&&editor.nodes.some(n=>n.kind==="iterator")) throw new Error("Cada função ou fluxo aceita somente um iterador.");
     const pos=findFreePosition(editor,x,y); x=pos.x; y=pos.y;
     const sequence=base=>{let index=editor.nodes.filter(node=>node.kind===kind).length+1,candidate=index===1?base:`${base}_${index}`;while(editor.nodes.some(node=>node.ref===candidate)){index+=1;candidate=`${base}_${index}`}return candidate};
@@ -315,7 +320,11 @@
       const layers=inputLayers(editor),iterator=iteratorKind(editor),multiple=["vector_layers","raster_layers"].includes(iterator),selected=Array.isArray(node.params.valor)?node.params.valor:[node.params.valor];body.innerHTML=`<div class="field"><label>Nome do elemento</label><input data-node-label value="${esc(node.label)}"></div><div class="field"><label>Chave da entrada</label><input data-input-ref value="${esc(node.ref)}" placeholder="Ex.: camada_entrada"></div>${iterator==="values"?`<div class="field"><label>Valor da entrada</label><input data-system-values value="${esc(JSON.stringify(node.params.valor||[]))}" placeholder='Ex.: [10, 20, 30]'></div>`:`<div class="field"><label>Valor da entrada</label><select data-system-input ${multiple?'multiple size="6"':""}><option value="">Selecione no Painel de Conteúdo…</option>${layers.map(layer=>`<option value="${esc(layer.id)}" ${selected.includes(layer.id)?"selected":""}>${esc(layer.nome)}</option>`).join("")}</select></div>`}<p class="field-help">Os parâmetros posteriores usam esta entrada como <code>$${esc(node.ref)}</code>. Tipo aceito: ${iterator==="raster_layers"?"um ou mais rasters":iterator==="features"?"uma camada vetorial cujas feições serão iteradas":iterator==="values"?"uma lista de valores":"uma ou mais camadas vetoriais"}.</p><button class="btn danger" data-delete-node>Excluir elemento</button>`;return;
     }
     if(node.kind==="output"){
-      const raster=RASTER_RESULTS.has(sourceProcess(editor,node)?.ref);body.innerHTML=`<div class="field"><label>Nome do elemento</label><input data-node-label value="${esc(node.label)}"></div><div class="field"><label>Nome da saída</label><input data-output-field="nome_saida" value="${esc(node.params.nome_saida||editor.title)}" placeholder="Ex.: resultado_final"></div><div class="field"><label>CRS</label><select data-output-field="crs_saida"><option value="entrada">Da camada de entrada</option><option value="EPSG:4674">EPSG:4674 (SIRGAS 2000)</option><option value="EPSG:4326">EPSG:4326 (WGS 84)</option><option value="EPSG:3857">EPSG:3857 (WGS 84 / Pseudo-Mercator)</option></select></div><div class="field"><label>Destino</label><select data-output-field="destino"><option value="memoria">Memória</option><option value="storage">Storage</option></select></div><div class="field"><label>Formato</label><select data-output-field="formato_saida">${(raster?["JSON","GeoTIFF"]:["GeoJSON","GeoPackage","Shapefile"]).map(format=>`<option value="${format}">${format}</option>`).join("")}</select></div><button class="btn danger" data-delete-node>Excluir elemento</button>`;return;
+      const raster=RASTER_RESULTS.has(sourceProcess(editor,node)?.ref);body.innerHTML=`<div class="field"><label>Nome do elemento</label><input data-node-label value="${esc(node.label)}"></div><div class="field"><label>Nome da saída</label><input data-output-field="nome_saida" value="${esc(node.params.nome_saida||editor.title)}" placeholder="Ex.: resultado_final"></div><div class="field"><label>CRS</label><select data-output-field="crs_saida"><option value="entrada">Da camada de entrada</option><option value="EPSG:4674">EPSG:4674 (SIRGAS 2000)</option><option value="EPSG:4326">EPSG:4326 (WGS 84)</option><option value="EPSG:3857">EPSG:3857 (WGS 84 / Pseudo-Mercator)</option></select></div><div class="field"><label>Destino</label><select data-output-field="destino"><option value="memoria">Memória</option><option value="storage">Storage</option></select></div><div class="field"><label>Formato</label><select data-output-field="formato_saida">${(raster?["JSON","GeoTIFF"]:["GeoJSON","GeoPackage","Shapefile"]).map(format=>`<option value="${format}">${format}</option>`).join("")}</select></div><button class="btn danger" data-delete-node>Excluir elemento</button>`;
+      body.querySelectorAll("[data-output-field]").forEach(control=>{
+        const value=node.params[control.dataset.outputField];
+        if(value!==undefined&&value!==null)control.value=value;
+      });return;
     }
     const parameterRows=Object.entries(node.params||{}).filter(([key])=>node.kind!=="iterator"||!["fonte","variavel"].includes(key)).map(([key,value],index)=>parameterRow(key,value,index)).join("");
     const variables=editor.nodes.filter(item=>["input","variable","output"].includes(item.kind)&&item.id!==node.id),variableSource=node.kind==="variable"?sourceProcess(editor,node):null;
@@ -331,11 +340,13 @@
     node.params=preserved;editor.dirty=true;
   }
   function deleteSelection(editor){
+    if(editor.busy)return;
     if(editor.selected){editor.nodes=editor.nodes.filter(n=>n.id!==editor.selected);editor.edges=editor.edges.filter(e=>e.from!==editor.selected&&e.to!==editor.selected);editor.selected=null;editor.dirty=true;editor.validated=false;render(editor);return true;}
     if(editor.selectedEdge){const edge=editor.edges.find(e=>e.id===editor.selectedEdge);if(edge){const target=editor.nodes.find(n=>n.id===edge.to);if(target&&edge.parameter&&target.params?.[edge.parameter])target.params[edge.parameter]="";}editor.edges=editor.edges.filter(e=>e.id!==editor.selectedEdge);editor.selectedEdge=null;editor.dirty=true;editor.validated=false;render(editor);return true;}
     return false;
   }
   function duplicateSelection(editor){
+    if(editor.busy)return;
     if(!editor.selected)return null;
     const src=editor.nodes.find(n=>n.id===editor.selected);if(!src||["input","output","iterator"].includes(src.kind)&&editor.nodes.filter(n=>n.kind===src.kind).length&&src.kind==="iterator")return null;
     const clone=structuredClone(src);clone.id=uid("node");clone.x=src.x+40;clone.y=src.y+40;
@@ -378,7 +389,8 @@
   }
   function isFormField(el){return el&&(el.matches?.("input,textarea,select")||el.isContentEditable);}
   function handleInspectorInput(editor,event){
-    if(!event.target.matches("[data-model-search]"))editor.validated=false;
+    if(editor.busy)return;
+    if(!event.target.matches("[data-model-search]")){editor.validated=false;editor.dirty=true;}
     updateModelRibbon();
     if(event.target.matches("[data-model-search]"))return;
     const node=editor.nodes.find(n=>n.id===editor.selected);
@@ -398,9 +410,11 @@
     if(event.target.matches("[data-parameter-key],[data-parameter-value]")){syncParameters(editor);editor.dirty=true;return;}
   }
   function handleInspectorChange(editor,event){
+    if(editor.busy)return;
     if(event.target.matches("[data-insert-variable]")&&event.target.value){const inspector=$("#gp-model-properties-view");const empty=[...inspector.querySelectorAll("[data-parameter-value]")].find(input=>!input.value);if(empty){empty.value=event.target.value;empty.dispatchEvent(new Event("input",{bubbles:true}))}else notify("Adicione um parâmetro e selecione a variável novamente.");event.target.value=""}
   }
   async function handleInspectorClick(editor,event){
+    if(editor.busy)return;
     try{
       if(event.target.closest("[data-add-parameter]")){syncParameters(editor);const node=editor.nodes.find(item=>item.id===editor.selected);if(!node)return;node.params[`campo_${Object.keys(node.params).length+1}`]="";editor.dirty=true;render(editor);return;}
       if(event.target.closest("[data-remove-parameter]")){const row=event.target.closest("[data-parameter-row]"),key=row?.querySelector("[data-parameter-key]")?.value;const node=editor.nodes.find(item=>item.id===editor.selected);if(node&&key){delete node.params[key];editor.dirty=true;render(editor)}return;}
@@ -411,13 +425,14 @@
     const view=$(`[data-model-document="${editor.id}"]`),canvas=view.querySelector(".model-canvas");
     view.addEventListener("dragstart",event=>{const row=event.target.closest("[data-palette-kind]");if(row)event.dataTransfer.setData("application/json",JSON.stringify(row.dataset));});
     canvas.ondragover=event=>event.preventDefault();
-    canvas.ondrop=event=>{event.preventDefault();let data;try{data=JSON.parse(event.dataTransfer.getData("application/json")||"{}")}catch{return}if(!data.paletteKind)return;const rect=canvas.getBoundingClientRect();try{addNode(editor,data.paletteKind,data.paletteRef,data.paletteLabel,event.clientX-rect.left+canvas.scrollLeft,event.clientY-rect.top+canvas.scrollTop)}catch(error){notify(error.message)}};
+    canvas.ondrop=event=>{event.preventDefault();if(editor.busy)return;let data;try{data=JSON.parse(event.dataTransfer.getData("application/json")||"{}")}catch{return}if(!data.paletteKind)return;const rect=canvas.getBoundingClientRect();try{addNode(editor,data.paletteKind,data.paletteRef,data.paletteLabel,event.clientX-rect.left+canvas.scrollLeft,event.clientY-rect.top+canvas.scrollTop)}catch(error){notify(error.message)}};
     canvas.addEventListener("click",event=>{
       const edgePath=event.target.closest("[data-edge]");
       if(edgePath){event.stopPropagation();selectEdge(editor,edgePath.dataset.edge);return;}
       if(event.target===canvas||event.target.classList.contains("model-nodes")||event.target.classList.contains("model-hint")){editor.selected=null;editor.selectedEdge=null;render(editor);}
     });
     view.addEventListener("pointerdown",event=>{
+      if(editor.busy)return;
       const article=event.target.closest("[data-node]");if(!article)return;
       const node=editor.nodes.find(n=>n.id===article.dataset.node);editor.selected=node.id;editor.selectedEdge=null;
       if(editor.connectionMode){if(!editor.connectSource){editor.connectSource=node.id;notify("Origem escolhida. Agora clique no elemento que receberá a conexão.");render(editor);return}editor.connecting=editor.connectSource;editor.connectSource=null;editor.connectionMode=false;canvas.classList.remove("connect-mode");updateModelRibbon();event.preventDefault();return}
@@ -505,7 +520,17 @@
     step(`${labels[action]} iniciado.`);return {step,complete:message=>{step(message,"success");finish(message)},fail:message=>{step(message,"error");finish(message,true)}};
   }
   async function runWithFeedback(editor,action){
-    if(action==="run"&&!await window.gpFeedback.ProcessFeedback.confirmar({title:`Executar ${editor.title}`,message:"Iniciar todas as etapas configuradas neste fluxo?",confirmLabel:"Executar fluxo"}))return;
+    if(editor.busy)return;
+    if(action==="run"){
+      // Reserve the editor before awaiting confirmation to prevent duplicate runs.
+      editor.busy=true;updateModelRibbon();
+      const approved=window.gpFeedback
+        ?await window.gpFeedback.ProcessFeedback.confirmar({title:`Executar ${editor.title}`,message:"Iniciar todas as etapas configuradas neste fluxo?",confirmLabel:"Executar fluxo"})
+        :confirm(`Executar todas as etapas de ${editor.title}?`);
+      editor.busy=false;
+      if(!approved){updateModelRibbon();return;}
+    }
+    if(action!=="save")editor.validated=false;
     editor.busy=true; updateModelRibbon();
     const feedback=processFeedback(editor,action);
     try{
@@ -525,7 +550,7 @@
   async function runEditor(editor,feedback){feedback?.step("Preparando definição para execução.");const valid=await validateEditor(editor,feedback);if(!valid.valido)throw new Error(valid.erros.join("; ")||"A definição não pode ser executada.");const inputNodes=editor.nodes.filter(node=>node.kind==="input"&&node.params.valor!==undefined&&node.params.valor!==""),inputs=Object.fromEntries(inputNodes.map(node=>[node.ref,node.params.valor])),endpoint=editor.type==="function"?"funcoes":"fluxos";feedback?.step(`${inputNodes.length} entrada(s) preparada(s).`,"success");feedback?.step("Executando algoritmos e funções encadeados no servidor.");const result=await request(`/${endpoint}/${editor.definitionId}/executar`,{method:"POST",body:JSON.stringify(inputs)});feedback?.step(Array.isArray(result?.resultados)?`Servidor concluiu ${result.resultados.length} etapa(s) de processamento.`:"Servidor concluiu todas as etapas de processamento.","success");feedback?.step("Atualizando camadas no Painel de Conteúdo.");await window.gpApp.syncExecutionResults(result);window.gpApp.renderLayers?.();feedback?.step("Painel de Conteúdo sincronizado.","success");notify("Execução concluída; as saídas foram atualizadas no Painel de Conteúdo.");return result;}
   function updateTab(editor){const span=$(`[data-document-tab="${editor.id}"] span`);if(span)span.textContent=editor.title;}
   function notify(message){if(window.gpFeedback){window.gpFeedback.Notify.info("Bancada de geoprocessamento",message,{duration:5000});return;}const status=$("#gp-save-state");status.textContent=message;clearTimeout(notify.timer);notify.timer=setTimeout(()=>status.textContent="Ambiente local",4500);}
-  async function close(id){const editor=editors.get(id);if(editor?.dirty&&!(window.gpFeedback?await window.gpFeedback.ProcessFeedback.confirmar({message:"Fechar sem salvar as alterações?",danger:true,confirmLabel:"Fechar sem salvar"}):confirm("Fechar sem salvar as alterações?")))return;editors.delete(id);$(`[data-document-tab="${id}"]`)?.remove();$(`[data-model-document="${id}"]`)?.remove();activate("mapa");}
+  async function close(id){const editor=editors.get(id);if(editor?.busy){notify("Aguarde a operação terminar antes de fechar este modelo.");return;}if(editor?.dirty&&!(window.gpFeedback?await window.gpFeedback.ProcessFeedback.confirmar({message:"Fechar sem salvar as alterações?",danger:true,confirmLabel:"Fechar sem salvar"}):confirm("Fechar sem salvar as alterações?")))return;editors.delete(id);$(`[data-document-tab="${id}"]`)?.remove();$(`[data-model-document="${id}"]`)?.remove();activate("mapa");}
   document.addEventListener("DOMContentLoaded",()=>{
     $("#gp-ribbon-tools").addEventListener("click",event=>{
       const button=event.target.closest("[data-model-command]"); if(!button||button.disabled)return;
@@ -539,7 +564,7 @@
     inspector?.addEventListener("click",event=>{const editor=activeEditor();if(editor)handleInspectorClick(editor,event);});
     document.addEventListener("keydown",event=>{
       if(event.key==="Escape"){closeModelMenu();document.querySelector(".model-context-menu")?.remove();const editor=activeEditor();if(editor?.connectionMode){editor.connectionMode=false;editor.connectSource=null;$(`[data-model-document="${editor.id}"] .model-canvas`)?.classList.remove("connect-mode");updateModelRibbon();}return;}
-      const editor=activeEditor();if(!editor||isFormField(event.target))return;
+      const editor=activeEditor();if(!editor||editor.busy||isFormField(event.target))return;
       if((event.key==="Delete"||event.key==="Backspace")&&(editor.selected||editor.selectedEdge)){event.preventDefault();deleteSelection(editor);return;}
       if((event.ctrlKey||event.metaKey)&&(event.key==="d"||event.key==="D")&&editor.selected){event.preventDefault();duplicateSelection(editor);return;}
     });

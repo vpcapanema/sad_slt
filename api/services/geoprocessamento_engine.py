@@ -369,7 +369,51 @@ class GeoprocessamentoEngine:
         transform = from_origin(minx, maxy, resolution, resolution)
         return transform, width, height
 
-    async def execute(
+    async def execute(self, op_id, p, progress=None):
+        """Apply layer definition filters without mutating the original inputs."""
+        from api.services.expressoes_atributos import selecionar
+        params = dict(p)
+        filters = params.pop('filtros_camadas', {}) or {}
+        if not isinstance(filters, dict):
+            raise ValueError('Filtros de camada inválidos.')
+        temporary = {}
+        result = None
+        try:
+            for name in TOOL_INPUTS.get(op_id, []):
+                value = params.get(name)
+                identifiers = value if isinstance(value, list) else [value]
+                replacements = []
+                for ident in identifiers:
+                    if ident in filters and filters[ident]:
+                        if ident not in temporary:
+                            subset = selecionar(self._layer(ident), filters[ident])
+                            if subset.empty:
+                                raise ValueError('O filtro da camada não contém feições para processar.')
+                            key = 'filtro_' + uuid4().hex
+                            temporary[ident] = key
+                            geo._camadas[key] = subset.copy()
+                            geo._metadados[key] = {'id': key, 'nome': 'Entrada filtrada', 'tipo': 'vetorial', 'destino': 'memoria_local'}
+                            if progress:
+                                progress(f'Filtro aplicado: {len(subset)} feições na entrada {name}')
+                        ident = temporary[ident]
+                    replacements.append(ident)
+                if value is not None:
+                    params[name] = replacements if isinstance(value, list) else replacements[0]
+            scoped = self._apply_selection_scope(op_id, params)
+            for name in TOOL_INPUTS.get(op_id, []):
+                if scoped.get(name) != params.get(name) and isinstance(scoped.get(name), str):
+                    temporary['selection:' + name] = scoped[name]
+            result = await self._execute(op_id, scoped, progress)
+            return result
+        finally:
+            # Operações in-place devolvem a entrada: nesse caso ela é o resultado.
+            keep = result.get('camada_id') if isinstance(result, dict) else None
+            for key in temporary.values():
+                if key != keep:
+                    geo._camadas.pop(key, None)
+                    geo._metadados.pop(key, None)
+
+    async def _execute(
         self,
         op_id: str,
         p: dict[str, Any],
@@ -379,7 +423,6 @@ class GeoprocessamentoEngine:
         for key in REQUIRED_PARAMETERS.get(op_id, set()):
             if key not in p or p[key] == []:
                 raise ValueError(f"Parâmetro obrigatório ausente: {key}")
-        p = self._apply_selection_scope(op_id, p)
 
         def aceitos(metodo, exceto="camada_id"):
             # O formulario acrescenta nome_saida, crs_saida, destino e formato_saida
@@ -560,7 +603,14 @@ class GeoprocessamentoEngine:
             ),
             None,
         )
-        if identity_column:
+        selected_attributes = params.get('atributos_selecionados') or []
+        feature_ids = {str(item['__gp_feature']['id']) for item in selected_attributes
+                       if isinstance(item.get('__gp_feature'), dict) and item['__gp_feature'].get('id') is not None}
+        if feature_ids:
+            mask = source.index.astype(str).isin(feature_ids)
+        elif not identity_column and selected_keys.issubset(set(source.index.astype(str))):
+            mask = source.index.astype(str).isin(selected_keys)
+        elif identity_column:
             mask = source[identity_column].astype(str).isin(selected_keys)
         else:
             selected_attributes = params.get("atributos_selecionados") or []

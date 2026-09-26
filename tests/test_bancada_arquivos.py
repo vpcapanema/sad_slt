@@ -238,3 +238,33 @@ def test_job_publica_etapas_e_resultado_sem_modal_geral(monkeypatch):
     assert job['resultado']['execucao_id']=='teste'
     assert [item['mensagem'] for item in job['logs']][:3]==['Lendo arquivo teste: 4 feições','Executando Buffer','Preparando resultado']
     assert job['percentual']==100
+
+
+def test_processar_selecao_e_filtro_de_arquivo_preserva_fids(source, monkeypatch):
+    original, path = source
+    snapshot = deepcopy(original)
+    snapshot['geojson']['features'][0]['id'] = '71'
+    other = deepcopy(snapshot['geojson']['features'][0])
+    other['id'] = '92'
+    other['properties']['nome'] = 'Outra'
+    snapshot['geojson']['features'].append(other)
+    before = path.read_bytes()
+    monkeypatch.setattr(service, 'abrir', lambda *args: snapshot)
+    monkeypatch.setattr(service.ciclo, 'iniciar', lambda *args: 'teste')
+    monkeypatch.setattr(service.ciclo, 'finalizar', lambda *args, **kwargs: None)
+    monkeypatch.setattr(service.geo, '_camadas', {})
+    monkeypatch.setattr(service.geo, '_metadados', {})
+    frames = []
+    def register(frame, *args, **kwargs):
+        frames.append(frame.copy())
+        return 'resultado'
+    monkeypatch.setattr(service.geo, 'registrar_camada', register)
+    result = service.executar('OP-28', {
+        'camada_id': original['id'], 'processar_sobre': 'selecionadas',
+        'chaves_selecionadas': ['92'], 'atributos_selecionados': [{'__gp_feature': other}],
+        'filtros_camadas': {original['id']: "nome == 'Outra'"},
+    }, {original['id']: {'arquivo': original['arquivo'], 'revisao': original['revisao']}}, SimpleNamespace(id='teste'))
+    assert result['resultado']['camada_id'] == 'resultado'
+    assert frames[0]['nome'].tolist() == ['Outra']
+    assert path.read_bytes() == before
+    assert service.geo._camadas == {}

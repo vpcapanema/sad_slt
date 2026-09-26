@@ -110,8 +110,7 @@
       const box = [[event.point.x - 4, event.point.y - 4], [event.point.x + 4, event.point.y + 4]], allowed = new Set(state().layers.map(layer => layer.id));
       const feature = map.queryRenderedFeatures(box).find(item => allowed.has(item.source));
       if (!feature) return;
-      selectFeature(feature.source,{type:"Feature",id:feature.id,geometry:feature.geometry,properties:feature.properties},Boolean(event.originalEvent?.shiftKey));
-      window.gpApp.showAttributes(feature.source);
+      // Identificar não altera a seleção nem a tabela de edição.
       new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: "380px" }).setLngLat(event.lngLat).setHTML(popupHtml(feature, event.lngLat)).addTo(map);
     };
     map.on("click", state().exploreHandler); notify("Explorar ativo: clique em uma feição para consultar seus atributos.");
@@ -136,15 +135,14 @@
 
   function showEnvironments() {
     const env = JSON.parse(localStorage.getItem("gp-environments") || "{}");
-    openPanel("Ambientes de geoprocessamento", `<form id="gp-environments-form"><div class="editor-body"><div class="field"><label>CRS de saída padrão</label><input name="crs" value="${escapeHtml(env.crs || "")}" placeholder="Ex.: EPSG:31983 (SIRGAS 2000 / UTM zona 23S)"></div><div class="field"><label>Resolução raster padrão</label><input name="resolution" type="number" min="0" step="any" value="${escapeHtml(env.resolution || "")}" placeholder="Ex.: 50"></div><label class="field-check"><input name="overwrite" type="checkbox" ${env.overwrite ? "checked" : ""}> Sobrescrever saídas existentes</label><p class="field-help">Os padrões são salvos para o seu usuário e aplicados às ferramentas compatíveis.</p></div><div class="editor-actions"><button class="btn primary">Salvar ambientes</button></div></form>`);
+    openPanel("Ambientes de geoprocessamento", `<form id="gp-environments-form"><div class="editor-body"><div class="field"><label>CRS de saída padrão</label><input name="crs" value="${escapeHtml(env.crs || "")}" placeholder="Ex.: EPSG:31983 (SIRGAS 2000 / UTM zona 23S)"></div><div class="field"><label>Resolução raster padrão</label><input name="resolution" type="number" min="0" step="any" value="${escapeHtml(env.resolution || "")}" placeholder="Ex.: 50"></div><p class="field-help">Os padrões são salvos para o seu usuário e aplicados às ferramentas compatíveis.</p></div><div class="editor-actions"><button class="btn primary">Salvar ambientes</button></div></form>`);
     $("#gp-environments-form").elements.crs.placeholder = "Ex.: EPSG:31983 (SIRGAS 2000 / UTM zona 23S)";
     const form = $("#gp-environments-form");
     loadEnvironments().then(loaded => {
       form.crs.value = loaded.crs || "";
       form.resolution.value = loaded.resolution || "";
-      form.overwrite.checked = Boolean(loaded.overwrite);
     });
-    form.onsubmit = async event => { event.preventDefault(); try { const payload = { crs: form.crs.value.trim() || null, resolution: form.resolution.value ? Number(form.resolution.value) : null, overwrite: form.overwrite.checked }; const saved = await request(`${API}/ambientes`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); localStorage.setItem("gp-environments", JSON.stringify(saved)); notify("Ambientes salvos."); } catch (error) { notify(error.message); } };
+    form.onsubmit = async event => { event.preventDefault(); try { const payload = { crs: form.crs.value.trim() || null, resolution: form.resolution.value ? Number(form.resolution.value) : null, overwrite: false }; const saved = await request(`${API}/ambientes`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); localStorage.setItem("gp-environments", JSON.stringify(saved)); notify("Ambientes salvos."); } catch (error) { notify(error.message); } };
   }
   function applyEnvironments(form) {
     if (!form) return; const env = JSON.parse(localStorage.getItem("gp-environments") || "{}");
@@ -152,10 +150,30 @@
     if (env.resolution) [...form.elements].filter(element => element.name?.startsWith("resolucao_")).forEach(element => element.value = env.resolution);
   }
 
+  function calculationScope(id) {
+    const features=(state().selectedGeoJSON?.features||[]).filter(feature=>feature.properties?.__gp_layer_id===id);
+    const filtro=state().layerFilters?.[id]||null;
+    const chaves=features.length?features.map(feature=>feature.properties.__gp_selection_key):null;
+    return {payload:{chaves_selecionadas:chaves,filtro},description:chaves?`${chaves.length} feição(ões) selecionada(s)${filtro?' dentro do filtro ativo':''}`:filtro?'Feições correspondentes ao filtro ativo':'Todas as feições da camada'};
+  }
   async function calculateField() {
-    const layer = activeLayer(); if (!layer) return notify("Selecione uma camada vetorial.");
-    openPanel("Calcular campo", `<form id="gp-calculate-field"><div class="editor-body"><div class="field"><label>Camada</label><input value="${escapeHtml(layer.nome)}" readonly></div><div class="field"><label>Campo de destino</label><input name="field" required></div><div class="field"><label>Expressão</label><textarea name="expression" required placeholder="Ex.: OBJECTID * 2"></textarea></div></div><div class="editor-actions"><button class="btn primary">Calcular</button></div></form>`);
-    $("#gp-calculate-field").onsubmit = async event => { event.preventDefault(); try { const form = event.target; const params = new URLSearchParams({ campo: form.field.value, expressao: form.expression.value }); const result = await request(`${API}/camadas/${layer.id}/calcular-campo?${params}`, { method: "POST" }); notify(`${result.feicoes_atualizadas} registros atualizados.`); window.gpApp.showAttributes(layer.id); } catch (error) { notify(error.message); } };
+    const layer = activeLayer(); if (!layer || layer.tipo?.toLowerCase().includes('raster')) return notify("Selecione uma camada vetorial.");
+    if(window.gpAttributeTable?.hasPendingChanges?.(layer.id))return notify("Salve ou descarte as edições da tabela antes de calcular um campo.");
+    const scope=calculationScope(layer.id);
+    openPanel("Calcular campo", `<form id="gp-calculate-field"><div class="editor-body"><div class="field"><label>Camada</label><input value="${escapeHtml(layer.nome)}" readonly></div><div class="field"><label>Campo de destino</label><input name="field" required></div><div class="field"><label>Expressão</label><textarea name="expression" required placeholder="Ex.: OBJECTID * 2"></textarea></div><p class="field-help" data-calculation-scope>${escapeHtml(scope.description)}</p></div><div class="editor-actions"><button class="btn primary">Calcular</button></div></form>`);
+    $("#gp-calculate-field").onsubmit = async event => {
+      event.preventDefault(); const form=event.target,submit=form.querySelector('button.primary');
+      if(submit.disabled)return;
+      submit.disabled=true;
+      try {
+        if(window.gpAttributeTable?.hasPendingChanges?.(layer.id))throw new Error('Salve ou descarte as edições da tabela antes de calcular um campo.');
+        if(!await window.gpFeedback.ProcessFeedback.confirmar({title:'Calcular campo',message:`Atualizar ${form.field.value} em ${layer.nome}?`,warning:`${scope.description}. Os valores serão gravados na camada original.`,confirmLabel:'Calcular'}))return;
+        const params = new URLSearchParams({ campo: form.field.value, expressao: form.expression.value });
+        const result = await request(`${API}/camadas/${encodeURIComponent(layer.id)}/calcular-campo?${params}`, { method: "POST",headers:{'Content-Type':'application/json'},body:JSON.stringify(scope.payload) });
+        await window.gpCommands.refreshLayerFilter?.(layer.id);
+        notify(`${result.feicoes_atualizadas} registros atualizados.`); window.gpAttributeTable?.atualizarArquivo(layer.id); await window.gpApp.showAttributes(layer.id);
+      } catch (error) { notify(error.message); } finally {submit.disabled=false;}
+    };
   }
 
   function displayFilteredLayer(id,data){
@@ -182,9 +200,42 @@
     const layer = activeLayer(); if (!layer) return notify("Selecione uma camada vetorial."); if(layer.tipo?.toLowerCase().includes("raster"))return notify("Esta consulta requer uma camada vetorial."); const filtering = mode === "filter";
     openPanel(filtering ? "Filtrar camada" : "Selecionar por atributo", `<form id="gp-query-attributes"><div class="editor-body"><div class="field"><label>Camada</label><input value="${escapeHtml(layer.nome)}" readonly></div><div class="field"><label>Expressão</label><textarea name="expression" required placeholder="Ex.: Municipio == 'Campinas'"></textarea></div><p class="field-help">Use nomes de campos, operadores ==, !=, &gt;, &lt;, and, or e valores entre aspas.</p></div><div class="editor-actions">${filtering ? '<button type="button" class="btn" data-clear-filter>Limpar filtro</button>' : ""}<button class="btn primary">${filtering ? "Aplicar filtro" : "Selecionar"}</button></div></form>`);
     const form = $("#gp-query-attributes");
-    form.onsubmit = async event => { event.preventDefault(); try { const params = new URLSearchParams({ expressao: form.expression.value }); const file=window.gpArquivos?.sessions.get(layer.id);
-      const result=file?await request(`${API}/bancada-arquivos/consultar`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({arquivo:file.arquivo,revisao:file.revisao,expressao:form.expression.value})}):await request(`${API}/camadas/${layer.id}/consultar-atributos?${params}`, { method: "POST" }); if (filtering) { displayFilteredLayer(layer.id,result.geojson); state().layerFilters ??= {}; state().layerFilters[layer.id] = form.expression.value; notify(`${result.total} feições exibidas.`); } else { renderSelection(tagSelection(result.geojson, layer.id)); notify(`${result.total} feições selecionadas.`); } } catch (error) { notify(error.message); } };
-    if (filtering) $("[data-clear-filter]").onclick = async () => { try{await restoreLayer(layer.id);delete state().layerFilters?.[layer.id];form.expression.value="";notify("Filtro removido.");}catch(error){notify(error.message);} };
+    form.elements.expression.value = filtering ? (state().layerFilters?.[layer.id] || '') : '';
+    form.onsubmit = async event => {
+      event.preventDefault();
+      const submit=form.querySelector('button.primary');submit.disabled=true;
+      try {
+        const expression=form.elements.expression.value;
+        const filter=state().layerFilters?.[layer.id];
+        const result=await queryLayer(layer.id,!filtering&&filter?`(${filter}) and (${expression})`:expression);
+        if(filtering){
+          state().layerFilters??={};state().layerFilters[layer.id]=expression;
+          applyLayerFilter(layer.id,result.geojson);
+          notify(`${result.total} feições disponíveis no mapa, na tabela e nas ferramentas.`);
+        }else{
+          setLayerSelection(layer.id,result.geojson.features);
+          notify(`${result.total} feições selecionadas.`);
+        }
+      }catch(error){notify(error.message);}finally{submit.disabled=false;}
+    };
+    if(filtering)$('[data-clear-filter]').onclick=async()=>{
+      try{await restoreLayer(layer.id);delete state().layerFilters?.[layer.id];delete state().layerFilterFeatures?.[layer.id];window.gpAttributeTable?.applyLayerFilter(layer.id);form.elements.expression.value='';notify('Filtro removido.');}catch(error){notify(error.message);}
+    };
+  }
+  async function queryLayer(id,expression){
+    const file=window.gpArquivos?.sessions.get(id);
+    return file?request(`${API}/bancada-arquivos/consultar`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({arquivo:file.arquivo,camada_id:id,revisao:file.revisao,expressao:expression})}):request(`${API}/camadas/${encodeURIComponent(id)}/consultar-atributos?${new URLSearchParams({expressao:expression})}`,{method:'POST'});
+  }
+  function applyLayerFilter(id,geojson){
+    state().layerFilterFeatures??={};state().layerFilterFeatures[id]=geojson;
+    displayFilteredLayer(id,geojson);
+    const keys=new Set(geojson.features.map(f=>featureKey(f.properties,f.id)));
+    setLayerSelection(id,(state().selectedGeoJSON?.features||[]).filter(f=>f.properties.__gp_layer_id===id&&keys.has(f.properties.__gp_selection_key)));
+    window.gpAttributeTable?.applyLayerFilter(id);
+  }
+  async function refreshLayerFilter(id){
+    const expression=state().layerFilters?.[id];if(!expression)return null;
+    const result=await queryLayer(id,expression);applyLayerFilter(id,result.geojson);return result.geojson;
   }
 
   async function refreshSource() {
@@ -208,5 +259,5 @@
     $("#gp-definition-command").onsubmit = async event => { event.preventDefault(); try { const [kind, ...parts] = event.target.definition.value.split(":"), id = parts.join(":"), entry = pool.find(value => value.kind === kind && value.item.id === id); if (!entry) throw new Error("Selecione uma definição"); const copy = structuredClone(entry.item); if (action === "duplicate") { copy.id = `${kind === "functions" ? "funcao" : "fluxo"}_${Date.now()}`; copy.nome = `${copy.nome} (cópia)`; const saved = await request(`${API}/${kind === "functions" ? "funcoes" : "fluxos"}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(copy) }); state()[kind].push(saved); window.gpApp.showLibrary(kind); notify("Definição duplicada."); } else { const blob = new Blob([JSON.stringify({ tipo: kind, definicao: copy }, null, 2)], { type: "application/json" }), url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = `${copy.id}.json`; link.click(); URL.revokeObjectURL(url); notify("Definição exportada."); } } catch (error) { notify(error.message); } };
   }
 
-  window.gpCommands = { featureKey, setLayerSelection, selectFeature, activeLayer, notify, openPanel, fitAllLayers, fitSelection, selectOnMap, explore, clearSelection, loadEnvironments, showEnvironments, applyEnvironments, calculateField, selectByAttribute: () => queryPanel("select"), filterLayer: () => queryPanel("filter"), refreshSource, duplicateDefinition: () => definitionCommand("duplicate"), importDefinition: () => definitionCommand("import"), exportDefinition: () => definitionCommand("export") };
+  window.gpCommands = { refreshLayerFilter, calculationScope, featureKey, setLayerSelection, selectFeature, activeLayer, notify, openPanel, fitAllLayers, fitSelection, selectOnMap, explore, clearSelection, loadEnvironments, showEnvironments, applyEnvironments, calculateField, selectByAttribute: () => queryPanel("select"), filterLayer: () => queryPanel("filter"), refreshSource, duplicateDefinition: () => definitionCommand("duplicate"), importDefinition: () => definitionCommand("import"), exportDefinition: () => definitionCommand("export") };
 })();
