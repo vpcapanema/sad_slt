@@ -44,6 +44,30 @@ function mount(file,opts={}){
   syncEditRibbon();
 }
 
+// A gravação só termina na UI depois de reler a versão efetivamente persistida.
+async function sincronizarSalvamento(saved){
+  const activeId=app().state.activeLayerId;
+  const reference=file=>({arquivo:file.arquivo,...(file.id.startsWith('storage:')?{id:file.id}:{})});
+  const related=[...sessions.values()].filter(file=>file.arquivo===saved.arquivo&&file.id!==saved.id);
+  // Preserve também a resposta da gravação se a releitura perder a conexão.
+  mount(saved);
+  let latest=saved;
+  try{latest=await post('/extracao-atributos/arquivo-mapa',reference(saved));mount(latest);}
+  catch(error){app().log(`Alterações gravadas. Não foi possível reler a camada: ${error.message}`,'error');}
+  window.gpAttributeTable?.atualizarArquivo(latest.id);
+  window.dispatchEvent(new CustomEvent('gp-arquivo-atualizado',{detail:latest}));
+  for(const file of related){
+    try{
+      const refreshed=await post('/extracao-atributos/arquivo-mapa',reference(file));
+      mount(refreshed,{lote:true});
+      window.gpAttributeTable?.atualizarArquivo(refreshed.id);
+      window.dispatchEvent(new CustomEvent('gp-arquivo-atualizado',{detail:refreshed}));
+    }catch(error){app().log(`Arquivo salvo, mas não foi possível atualizar ${file.nome}: ${error.message}`,'error');}
+  }
+  app().state.activeLayerId=activeId;app().renderLayers();
+  return latest;
+}
+
 async function browse(){
   // Sem esta mensagem o botão "Carregar do sistema" não fazia absolutamente
   // nada enquanto houvesse edição aberta, sem dizer por quê.
@@ -72,6 +96,7 @@ function openEditor(editing=false){
   else{document.body.append(dialog);dialog.showModal();}
   const map=L.map(mapHost,{preferCanvas:true,zoomAnimation:false}).setView([-22,-48],6),group=L.featureGroup().addTo(map),editGroup=L.featureGroup(),signatures=new Map();
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  const revisaoInicial=source.revisao;
   const snapshot=clone(source.geojson);let draft=clone(snapshot),history=[clone(snapshot)],cursor=0,selected=null,page=0,sort=null,ascending=true,drawing=false,lastError='';
   editor={dirty:false,table};let handler=null,operation=null;
   const closed=()=>{handler?.disable();map.stop();map.remove();dialog.close();dialog.remove();editor=null;syncEditRibbon();app().state.map?.resize();};
@@ -150,7 +175,7 @@ function openEditor(editing=false){
   const save=button('Salvar alterações',async()=>{
     if(!await window.gpFeedback.ProcessFeedback.confirmar({title:'Salvar alterações',message:'Gravar as alterações no arquivo original do storage?',warning:source.arquivo,confirmLabel:'Salvar alterações'}))return;
     busy=true;save.disabled=true;syncEditRibbon();const proc=window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Salvando alterações',tasks:['Validar e gravar no storage']});proc?.tarefaAtual('Validar e gravar no storage');if(!proc)status.textContent='Validando e gravando no arquivo original…';
-    try{const file=await post('/bancada-arquivos/salvar',{arquivo:source.arquivo,camada_id:source.id,revisao:source.revisao,geojson:draft});closed();mount(file);if(proc){proc.concluirTarefa('Validar e gravar no storage','Gravada');proc.sucesso({title:'Alterações salvas',message:'Alterações gravadas no arquivo original do storage.'});}else app().log('Alterações gravadas no arquivo original do storage.','ok');}
+    try{const file=await post('/bancada-arquivos/salvar',{arquivo:source.arquivo,camada_id:source.id,revisao:revisaoInicial,geojson:draft});closed();await sincronizarSalvamento(file);if(proc){proc.concluirTarefa('Validar e gravar no storage','Gravada');proc.sucesso({title:'Alterações salvas',message:'Alterações gravadas no arquivo original do storage.'});}else app().log('Alterações gravadas no arquivo original do storage.','ok');}
     catch(error){lastError=error.message;proc?.erro({message:error.message});}finally{busy=false;if(editor)render();else syncEditRibbon();}
   });
   if(!editing)footer.append(button('Fechar',cancel));
@@ -278,6 +303,6 @@ function init(){
     event.preventDefault();event.stopImmediatePropagation();execute(event.target).catch(error=>report(error.message));
   },true);
   window.addEventListener('beforeunload',event=>{if(editor?.dirty||busy){event.preventDefault();event.returnValue='';}});
-  window.gpArquivos={get busy(){return busy;},abrir:browse,adicionar:mount,editar:()=>openEditor(true),tabela:()=>app().showAttributes(app().state.activeLayerId),sessions};
+  window.gpArquivos={get busy(){return busy;},abrir:browse,adicionar:mount,editar:()=>openEditor(true),tabela:()=>app().showAttributes(app().state.activeLayerId),sessions,sincronizarSalvamento};
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();

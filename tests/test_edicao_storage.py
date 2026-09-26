@@ -105,3 +105,34 @@ def test_salvar_outros_formatos_no_mesmo_caminho(tmp_path, monkeypatch, driver, 
     assert result['geojson']['features'][0]['properties']['valor'] == 99
     assert all(Path(name).stem == 'original' for name in sent)
     assert not path.with_suffix('.qix').exists()
+
+
+def test_duas_gravacoes_seguidas_usam_revisao_retornada(original):
+    source, path, writes = original
+    for value in (90, 91):
+        edited = deepcopy(source['geojson'])
+        edited['features'][0]['properties']['valor'] = value
+        source = service.salvar(source['arquivo'], source['revisao'], edited, None,
+                                SimpleNamespace(id='teste'), source['id'])
+        assert source['geojson']['features'][0]['properties']['valor'] == value
+        assert source['revisao'] == storage.ler_para_mapa(source['id'])['revisao']
+    assert len(writes) == 2
+
+
+def test_releitura_nao_devolve_revisao_obsoleta(original, monkeypatch):
+    source, path, writes = original
+    original_reader = storage.ler_para_mapa
+    reads = []
+    def read(ident):
+        result = original_reader(ident)
+        if writes:
+            reads.append(result['revisao'])
+            if len(reads) == 1:
+                result['revisao'] = source['revisao']
+        return result
+    monkeypatch.setattr(storage, 'ler_para_mapa', read)
+    monkeypatch.setattr('api.services.edicao_storage.time.sleep', lambda _: None)
+    result = service.salvar(source['arquivo'], source['revisao'], deepcopy(source['geojson']),
+                            None, SimpleNamespace(id='teste'), source['id'])
+    assert len(reads) == 2
+    assert result['revisao'] == original_reader(source['id'])['revisao']

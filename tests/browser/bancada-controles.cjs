@@ -16,12 +16,14 @@ const root=path.resolve(__dirname,'../..');
  try{
  const p=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[],requests=[],payloads=[];
  p.on('pageerror',e=>errors.push(e.stack||e.message));
+ const savedFiles=new Map();
  const fc={type:'FeatureCollection',features:[{type:'Feature',id:1,properties:{valor:2},geometry:{type:'Point',coordinates:[-46,-23]}}]};
  await p.route('**/api/**',r=>{
   const u=new URL(r.request().url()),url=u.pathname;requests.push({url,method:r.request().method()});
   let body=[];
   if(url.includes('/operacoes-jobs/OP-')){payloads.push({op:url.split('/').pop(),params:r.request().postDataJSON()});return r.fulfill({json:{id:'job-test',status:'concluido',total:3,resultado:{validado:true}}});}
-  if(url.endsWith('/bancada-arquivos/salvar')){const data=r.request().postDataJSON();return r.fulfill({json:{id:data.camada_id,nome:'Arquivo de teste',arquivo:data.arquivo,revisao:'b'.repeat(64),geojson:data.geojson,campos:[{nome:'valor',tipo:'Real'}]}});}
+  if(url.endsWith('/bancada-arquivos/salvar')){const data=r.request().postDataJSON(),prior=savedFiles.get(data.camada_id);if(prior&&data.revisao!==prior.revisao)return r.fulfill({status:422,json:{detail:'O arquivo mudou desde a abertura.'}});const file={id:data.camada_id,nome:'Arquivo de teste',arquivo:data.arquivo,revisao:prior?(prior.revisao==='b'.repeat(64)?'c':'d').repeat(64):'b'.repeat(64),geojson:data.geojson,campos:[{nome:'valor',tipo:'Real'}]};savedFiles.set(file.id,file);return r.fulfill({json:file});}
+  if(url.endsWith('/extracao-atributos/arquivo-mapa')){const data=r.request().postDataJSON(),saved=[...savedFiles.values()].find(file=>data.id?file.id===data.id:file.arquivo===data.arquivo);if(saved)return r.fulfill({json:saved});}
   if(url.endsWith('/consultar-atributos')||url.endsWith('/bancada-arquivos/consultar'))body={geojson:fc,total:1};
   if(url.endsWith('/ambientes'))body={};
   if(url.endsWith('/catalogo/projeto'))body={toolboxes:[]};
@@ -227,6 +229,16 @@ const root=path.resolve(__dirname,'../..');
  await p.locator('.gp-feedback-confirm button.primary').click();
  await p.waitForFunction(()=>gpArquivos.sessions.get('arquivo').geojson.features[0].properties.valor===11);
  await p.waitForFunction(()=>document.querySelector('[data-at-save]')?.disabled===true);
+ // Salvar novamente a mesma camada sem reabrir usa a revisão atualizada.
+ await p.locator('[data-at-action="edit"]').click();
+ await p.locator('.tabulator-cell[tabulator-field="valor"]').first().dblclick();
+ await p.locator('.tabulator-cell.tabulator-editing input').fill('12');
+ await p.locator('.tabulator-cell.tabulator-editing input').press('Enter');
+ await p.locator('[data-at-save]').click();
+ await p.locator('.gp-feedback-confirm button.primary').click();
+ await p.waitForFunction(()=>gpArquivos.sessions.get('arquivo').geojson.features[0].properties.valor===12);
+ await p.waitForFunction(()=>document.querySelector('[data-at-save]')?.disabled===true);
+ assert.equal(await p.evaluate(()=>gpArquivos.sessions.get('arquivo').revisao),'d'.repeat(64));
  const download=p.waitForEvent('download');
  await p.locator('[data-at-action="csv"]').click();
  assert((await download).suggestedFilename().endsWith('.csv'));

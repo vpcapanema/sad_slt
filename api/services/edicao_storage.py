@@ -59,6 +59,9 @@ def gravar(source, frame, data):
         while time.monotonic() < deadline:
             state = original.stat()
             if f'{state.st_mtime_ns}-{state.st_size}' != source['revisao']:
-                return storage.ler_para_mapa(source['id'])
+                refreshed = storage.ler_para_mapa(source['id'])
+                final = original.stat()
+                if refreshed['revisao'] == f'{final.st_mtime_ns}-{final.st_size}':
+                    return refreshed
             time.sleep(.2)
         raise RuntimeError('Arquivo gravado no storage. Reabra a camada para atualizar a sessão.')

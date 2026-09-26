@@ -81,7 +81,7 @@
     const file=window.gpArquivos?.sessions.get(d.id),layer=app().state.layers.find(l=>l.id===d.id);
     const geojson={type:'FeatureCollection',features:d.rows.map(row=>({...row.__gp_feature,properties:clean(row)}))};
     let id=d.id;
-    if(file){const result=await request('/api/geoespacial/bancada-arquivos/salvar',{arquivo:file.arquivo,camada_id:d.id,revisao:file.revisao,geojson});window.gpArquivos.adicionar(result);id=result.id;}
+    if(file){const result=await request('/api/geoespacial/bancada-arquivos/salvar',{arquivo:file.arquivo,camada_id:d.id,revisao:d.body.revisao||file.revisao,geojson});drafts.delete(d.id);await window.gpArquivos.sincronizarSalvamento(result);id=result.id;}
     else if(layer?.destino==='memoria_local'){app().state.map.getSource(id).setData(geojson);}
     else {const present=new Set(d.rows.map(r=>r._indice)),originals=new Map(d.original.map(r=>[r._indice,r]));const edicoes=d.rows.filter(r=>JSON.stringify(clean(r))!==JSON.stringify(clean(originals.get(r._indice)||{}))).map(r=>({indice:r._indice,campos:clean(r)}));await request(`/api/geoespacial/camadas/${encodeURIComponent(id)}/atributos/salvar`,{edicoes,excluidos:d.original.filter(r=>!present.has(r._indice)).map(r=>r._indice),revisao:d.body.revisao});const source=app().state.map.getSource(id);if(source?.setData)source.setData(geojson);else if(source?.setTiles)source.setTiles(source.serialize().tiles.map(tile=>tile.split('?')[0]+'?v='+Date.now()));else await app().refreshLayers(true,[id],id);}
     drafts.delete(d.id);window.gpCommands.setLayerSelection(d.id,[]);await app().showAttributes(id);status(file?'Alterações salvas no arquivo original do storage.':'Alterações salvas.');
@@ -111,5 +111,5 @@
   }
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&root?.classList.contains('attribute-maximized'))maximize();});
   window.addEventListener('beforeunload',event=>{if([...drafts.values()].some(d=>changed(d))){event.preventDefault();event.returnValue='';}});
-  window.gpAttributeTable={render,sync,get grid(){return grid;}};
+  window.gpAttributeTable={render,sync,atualizarArquivo(id){const draft=drafts.get(id);if(!draft?.dirty)drafts.delete(id);if(app().state.attributeTableCache)delete app().state.attributeTableCache[id];},get grid(){return grid;}};
 })();

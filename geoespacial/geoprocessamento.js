@@ -1284,7 +1284,7 @@
       if(local?.type==="FeatureCollection"){
         const features=local.features||[];
         const names=[...new Set([...(file?.campos||[]).map(c=>c.nome),...features.flatMap(f=>Object.keys(f.properties||{}))])];
-        body={colunas:names.map(nome=>({nome,tipo:(file?.campos?.find(c=>c.nome===nome)?.subtipo==="Boolean"?"bool":file?.campos?.find(c=>c.nome===nome)?.tipo)||(features.some(f=>typeof f.properties?.[nome]==="number")?"float64":features.some(f=>typeof f.properties?.[nome]==="boolean")?"bool":"string")})),registros:features.map(f=>({...f.properties,__gp_feature:f})),total:features.length,offset,limite:100};
+        body={revisao:file?.revisao,colunas:names.map(nome=>({nome,tipo:(file?.campos?.find(c=>c.nome===nome)?.subtipo==="Boolean"?"bool":file?.campos?.find(c=>c.nome===nome)?.tipo)||(features.some(f=>typeof f.properties?.[nome]==="number")?"float64":features.some(f=>typeof f.properties?.[nome]==="boolean")?"bool":"string")})),registros:features.map(f=>({...f.properties,__gp_feature:f})),total:features.length,offset,limite:100};
       }else{
         const response=await fetch(`${API}/camadas/${encodeURIComponent(layerId)}/atributos/tabela`);
         body=await response.json();
