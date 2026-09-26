@@ -5,7 +5,7 @@ import math
 from api.services.extracao_atributos_dashboard import chave, presente, identidade, correspondencia
 from api.services.extracao_intersecoes_territoriais import tipo_categoria
 
-TIPOS = ('risco', 'restricao')
+TIPOS = ('restricao', 'risco')
 
 
 def legado(result, tabelas):
@@ -98,6 +98,8 @@ def legado(result, tabelas):
 
 
 def estado(snapshot, feature, tipo):
+    if snapshot.get('fonte') == 'camada_saida':
+        return ('com' if feature['flags'][tipo] else 'sem') if tipo in feature.get('flags', {}) else 'nao_avaliado'
     bases = [b for b in snapshot['bases'] if b['categoria'] == tipo]
     if not bases:
         return 'nao_avaliado'
@@ -111,12 +113,22 @@ def estado(snapshot, feature, tipo):
     return 'sem'
 
 
-def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situacao='', busca='', pagina=0, tamanho=25):
+def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situacao='', busca='', pagina=0, tamanho=25, atributo=''):
     bases = {b['id']:b for b in snapshot['bases']}
+    if categoria and categoria not in {b['categoria'] for b in bases.values()}:
+        raise ValueError('Categoria não encontrada nas saídas desta execução.')
     all_items = []
     for entry in snapshot['entradas']:
         for feature in entry['feicoes']:
-            all_items.append({**feature, 'entrada':entry['nome'], 'chave':chave([entry['nome'],feature['fid']]),
+            # Snapshots anteriores já guardam as relações por elemento, mas
+            # ainda não possuem o campo de contagens usado pelas tabelas.
+            contagens = feature.get('contagens')
+            if contagens is None:
+                from collections import Counter
+                contagens = dict(Counter(snapshot['areas'][aid]['categoria']
+                                         for aid in set(feature['areas']) if aid in snapshot['areas']))
+            all_items.append({**feature, 'entrada':entry['nome'], 'chave':chave([entry['nome'],feature.get('identificador') if snapshot.get('fonte')=='camada_saida' else feature['fid']]),
+                'contagens':contagens,
                 'estados':{t:estado(snapshot,feature,t) for t in TIPOS},
                 'representacao_mapa':entry.get('representacao_mapa', {}).get('metodo', 'original')})
     def selected(item):
@@ -124,7 +136,7 @@ def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situaca
             return False
         if base and base not in item['bases_intersectadas']:
             return False
-        if situacao and not any(item['estados'][t] == situacao for t in (TIPOS if not categoria else (categoria,))):
+        if situacao and not any(item['estados'].get(t) == situacao for t in (TIPOS if not categoria else (categoria,))):
             return False
         if busca:
             source = [item['entrada'], item.get('identificador'), item['fid'], *item['atributos'].values()]
@@ -136,6 +148,18 @@ def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situaca
                 return False
         return True
     items = sorted((item for item in all_items if selected(item)), key=lambda x:(x['entrada'],str(x.get('identificador') or ''),str(x['fid'])))
+    rankings = {}
+    for tipo in TIPOS:
+        ordered = sorted(items, key=lambda x:(-x.get('contagens',{}).get(tipo,0), x['entrada'],str(x.get('identificador'))))
+        previous, position = None, 0
+        rankings[tipo] = []
+        for index,item in enumerate(ordered):
+            count = item.get('contagens',{}).get(tipo,0)
+            if count != previous: position = index+1
+            previous = count
+            rankings[tipo].append({'chave':item['chave'],'entrada':item['entrada'],'demanda':item.get('identificador'),
+                'ocorrencias':count,'posicao':position,'estado':item['estados'][tipo]})
+    items.sort(key=lambda x:(-x.get('contagens',{}).get(categoria or 'restricao',0),x['entrada'],str(x.get('identificador'))))
     resumo_entradas = []
     for entry in snapshot['entradas']:
         group = [i for i in items if i['entrada'] == entry['nome']]
@@ -160,7 +184,8 @@ def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situaca
     def count(tipo):
         return sum(i['estados'][tipo] == 'com' for i in items) if not items or any(
             i['estados'][tipo] in ('com', 'sem') for i in items) else None
-    return {'legado':snapshot['versao'] == 0,
+    return {'campos_categorias':{cat:sorted({k for a in snapshot['areas'].values() if a['categoria']==cat for k in a['atributos']}) for cat in {b['categoria'] for b in bases.values()}}, 'rankings':rankings, 'categorias':list({b['categoria']:b.get('categoria_nome',b['categoria']) for b in bases.values()}.items()),
+        'legado':snapshot['versao'] == 0,
         'entradas':[{'nome':e['nome'],'total':len(e['feicoes'])} for e in snapshot['entradas']],
         'resumo_entradas':resumo_entradas,
         'feicoes_opcoes':[{'id':i['chave'],'nome':f"{i['entrada']} · {i.get('identificador') or i['fid']} · feição {i['fid']}"}
@@ -171,3 +196,122 @@ def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situaca
                   'areas':len(area_ids) if snapshot['versao'] else None},
         'linhas':page, 'areas':{aid:snapshot['areas'][aid] for aid in areas_used},
         'pagina':pagina,'paginas':math.ceil(len(items)/tamanho),'total':len(items)}
+
+
+def da_saida(tabelas):
+    """Agrupa demandas e pares exclusivamente a partir das evidências da saída."""
+    import json
+    from api.services.extracao_saida_analitica import CAMPO_VINCULOS
+    snapshot = {'versao':4, 'fonte':'camada_saida', 'entradas':[], 'bases':[], 'areas':{}}
+    entries, bases = {}, {}
+    for name, rows in tabelas.items():
+        for stored in rows:
+            row = stored['propriedades']
+            if CAMPO_VINCULOS not in row: continue
+            links = json.loads(row[CAMPO_VINCULOS])
+            schema = json.loads(row.get('sicard_esquema') or '{}')
+            origin = row.get('camada_origem') or name
+            fid = row.get('fid_origem', stored['ordem'])
+            codigo = row.get('id_origem')
+            ident = str(codigo) if presente(codigo) else str(fid)
+            feature = entries.setdefault(origin, {}).setdefault(ident, {
+                'fid':fid, 'identificador':codigo if presente(codigo) else fid, 'atributos':{},
+                'areas':[], 'bases_intersectadas':[], 'relacoes':{}, 'flags':{},
+                '_mapa':[], '_pares':{}, '_demanda':{}, 'geometria_disponivel':True})
+            if isinstance(row.get('sicard_demanda'),str) and row['sicard_demanda']: feature['_demanda'].setdefault(str(fid),set()).add(row['sicard_demanda'])
+            feature['_mapa'].append({'saida':name,'ordem':stored['ordem']})
+            fields = schema.get('dicionario') or []
+            original = {d['campo']:d.get('campo_origem') or d['campo'] for d in fields if d.get('tema')=='Entrada'}
+            feature['atributos'].update({original[k]:v for k,v in row.items() if k in original and presente(v)})
+            campo_categoria = next((d['campo'] for d in fields if d.get('tema')=='Entrada' and d.get('campo_origem')==schema.get('campo_categoria_pontos')),None)
+            classe = row.get(campo_categoria) if campo_categoria else None
+            for tipo in TIPOS:
+                if tipo in row: feature['flags'][tipo] = max(feature['flags'].get(tipo,0), int(row[tipo] or 0))
+            for link in links:
+                tipo = link.get('tipo') or str(link['categoria_id'])
+                bid = f"{link['categoria_id']}:{link['base_id']}"
+                bases.setdefault(bid, {'id':bid,'nome':link['base'],'categoria':tipo,'categoria_nome':link['categoria'],
+                    'cobertura_completa':link['espacial']})
+                if not link['espacial']: continue
+                for pair in link['correspondencias']:
+                    aid = f"{bid}:{pair['fid_base']}"
+                    attrs = pair['atributos']
+                    nome = attrs.get(link.get('campo_rotulo')) or next((v for k,v in attrs.items() if presente(v) and any(t in k.lower() for t in ('nome','name','denomin','nm_','descricao'))),f"Feição {pair['fid_base']}")
+                    snapshot['areas'].setdefault(aid, {'id':aid,'nome':str(nome),'base_id':bid,'base':link['base'],
+                        'categoria':tipo,'fid':pair['fid_base'],'atributos':attrs,'geometria':pair.get('geometria_base')})
+                    if aid not in feature['areas']: feature['areas'].append(aid)
+                    if bid not in feature['bases_intersectadas']: feature['bases_intersectadas'].append(bid)
+                    evidence = {k:v for k,v in pair.items() if k not in ('fid_base','atributos','geometria_base')}
+                    feature['_pares'].setdefault(aid,{}).setdefault(str(fid),{})[(link.get('fragmento') or stored['ordem'],pair.get('geometria_medida'))] = {**evidence,'categoria_ponto':classe}
+    for features in entries.values():
+        for feature in features.values():
+            from osgeo import ogr
+            from api.services import extracao_ogr as geo
+            totals = {0:0.,1:0.,2:0.}
+            for parts in feature.pop('_demanda').values():
+                geoms = [ogr.CreateGeometryFromWkb(bytes.fromhex(w)) for w in parts]
+                full = geoms[0]
+                for geom in geoms[1:]: full = full.Union(geom)
+                for g in geo.parts_ogr(full):
+                    dim = g.GetDimension()
+                    if dim in totals: totals[dim] += 1 if dim==0 else g.Length() if dim==1 else g.GetArea()
+            for aid, rows in feature.pop('_pares').items():
+                metric = metricas_par(rows)
+                dim = {'ponto':0,'linha':1,'poligono':2}.get(metric.get('representacao_entrada'))
+                if dim is not None and totals[dim]:
+                    num = metric.get(('pontos','comprimento_m','area_m2')[dim])
+                    if num is not None: metric['percentual_entrada'] = 100*num/totals[dim]
+                    metric['total_demanda'] = totals[dim]
+                feature['relacoes'][aid] = metric
+            feature['contagens'] = dict(__import__('collections').Counter(snapshot['areas'][aid]['categoria'] for aid in feature['areas']))
+    snapshot['bases'] = list(bases.values())
+    snapshot['entradas'] = [{'nome':nome,'feicoes':list(features.values())} for nome,features in entries.items()]
+    return snapshot
+
+
+def metricas_par(registros):
+    """Consolida fragmentos do mesmo par via GDAL; não procura novas relações."""
+    from osgeo import ogr
+    from api.services import extracao_ogr as geo
+    metrics = {'pontos':0,'area_m2':0.,'perimetro_m':0.,'comprimento_m':0.,'total':0.,'por_categoria':{}}
+    types = set()
+    fallback = []
+    for fragments in registros.values():
+        values = list(fragments.values())
+        sample = values[0]
+        if not sample.get('geometria_medida'):
+            fallback.extend(values); continue
+        geoms = [ogr.CreateGeometryFromWkb(bytes.fromhex(v['geometria_medida'])) for v in values if v.get('geometria_medida')]
+        common = geoms[0]
+        for g in geoms[1:]: common = common.Union(g)
+        demand = ogr.CreateGeometryFromWkb(bytes.fromhex(sample['demanda_medida']))
+        dim = demand.GetDimension(); types.add(dim)
+        if dim==0:
+            qtd = sum(1 for g in geo.parts_ogr(common) if g.GetDimension()==0)
+            metrics['pontos'] += qtd
+            metrics['total'] += sum(1 for g in geo.parts_ogr(demand) if g.GetDimension()==0)
+            label = str(sample.get('categoria_ponto') if sample.get('categoria_ponto') is not None else 'Sem categoria')
+            metrics['por_categoria'][label] = metrics['por_categoria'].get(label,0)+qtd
+        elif dim==1:
+            metrics['comprimento_m'] += sum(g.Length() for g in geo.parts_ogr(common) if g.GetDimension()==1)
+            metrics['total'] += sum(g.Length() for g in geo.parts_ogr(demand) if g.GetDimension()==1)
+        elif dim==2:
+            polygons = [g for g in geo.parts_ogr(common) if g.GetDimension()==2]
+            metrics['area_m2'] += sum(g.GetArea() for g in polygons)
+            metrics['perimetro_m'] += sum(g.Boundary().Length() for g in polygons)
+            metrics['total'] += sum(g.GetArea() for g in geo.parts_ogr(demand) if g.GetDimension()==2)
+    if not types and fallback:
+        first = dict(fallback[0])
+        for field in ('area_m2','comprimento_m','comprimento_interior_m','comprimento_borda_m','percentual_entrada'):
+            nums = [v[field] for v in fallback if v.get(field) is not None]
+            first[field] = sum(nums) if nums else None
+        return first
+    dim = next(iter(types)) if len(types)==1 else None
+    metrics['representacao_entrada'] = {0:'ponto',1:'linha',2:'poligono'}.get(dim,'mista')
+    numerador = metrics['pontos'] if dim==0 else metrics['comprimento_m'] if dim==1 else metrics['area_m2']
+    metrics['percentual_entrada'] = 100*numerador/metrics['total'] if metrics['total'] and dim is not None else None
+    metrics['situacao'] = 'correspondencia_espacial'
+    if dim!=0: metrics['pontos']=None
+    if dim!=1: metrics['comprimento_m']=None
+    if dim!=2: metrics['area_m2']=metrics['perimetro_m']=None
+    return metrics

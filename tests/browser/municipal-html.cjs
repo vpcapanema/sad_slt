@@ -31,7 +31,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  assert.equal(await p.locator('#territorial-category').inputValue(),'');
  assert(await q('generate').isDisabled());
  await p.selectOption('#territorial-category','economico');
- await p.evaluate(()=>{window.SLTFeedback.confirmar=async()=>true;});
+ await p.evaluate(()=>{window.ProcessFeedback.confirmar=async()=>true;});
  await q('generate').click();await p.locator('#territorial-result').waitFor({state:'visible'});
  assert.equal(payload.nome,'Camada de teste');assert.equal(payload.attributes.length,1);
  assert.equal(await p.locator('#territorial-download').getAttribute('download'),'municipios_sp_fgb.zip');

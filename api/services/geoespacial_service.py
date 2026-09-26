@@ -632,7 +632,10 @@ class GeoespacialService:
     async def atributos_camada(self, camada_id: str, limite: int = 100, offset: int = 0) -> dict[str, Any]:
         gdf = self.obter_camada_dados(camada_id).copy()
         dados = gdf.drop(columns=[gdf.geometry.name], errors="ignore").iloc[offset:offset + limite]
-        dados = dados.where(dados.notna(), None)
+        colunas = [{"nome": c, "tipo": str(dados[c].dtype)} for c in dados.columns]
+        # Float/nullable dtypes mantêm NaN/pd.NA sem a conversão para object.
+        # A API e a seleção da tabela precisam receber null JSON real.
+        dados = dados.astype(object).where(dados.notna(), None)
         registros = dados.to_dict(orient="records")
         # `_indice` é a posição absoluta em obter_camada_dados(camada_id) — a
         # mesma ordem que salvar_edicoes_atributos usa para endereçar cada
@@ -647,7 +650,7 @@ class GeoespacialService:
             registro["__gp_feature"] = feicao
         return {
             "camada_id": camada_id,
-            "colunas": [{"nome": c, "tipo": str(dados[c].dtype)} for c in dados.columns],
+            "colunas": colunas,
             "registros": registros,
             "total": len(gdf),
             "offset": offset,
@@ -971,12 +974,12 @@ class GeoespacialService:
         gdf.to_file(buffer, driver="GeoJSON")
         return json.loads(buffer.getvalue().decode("utf-8"))
 
-    async def consultar_por_atributo(self, camada_id: str, expressao: str) -> dict[str, Any]:
+    async def consultar_por_atributo(self, camada_id: str, expressao: str, inverter_selecao: bool = False) -> dict[str, Any]:
         """Retorna as feições que atendem a uma expressão atributiva."""
         gdf = self.obter_camada_dados(camada_id).copy()
         try:
             from api.services.expressoes_atributos import selecionar
-            selecionadas = selecionar(gdf, expressao)
+            selecionadas = selecionar(gdf, expressao, inverter_selecao)
         except Exception as exc:
             raise ValueError(f"Consulta inválida: {exc}") from exc
         return {"camada_id": camada_id, "total": len(selecionadas), "geojson": self._gdf_para_geojson(selecionadas)}

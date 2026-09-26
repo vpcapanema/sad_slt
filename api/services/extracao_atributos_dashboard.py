@@ -72,7 +72,7 @@ def analisar(linhas, dicionario, categorias=(), *, categoria='', base='', origem
     bases = sorted({b for t, b in grupos if not categoria or t == categoria})
     if base and base not in bases:
         raise ValueError('Base não encontrada neste recorte.')
-    campos_visiveis = [d for d in campos.values() if (not categoria or d.get('tema') == categoria)
+    campos_visiveis = [d for d in campos.values() if d.get('papel_analitico') not in ('linhagem','geometria_tecnica') and (not categoria or d.get('tema') == categoria)
                        and (not base or d.get('base') == base)]
     if campo and campo not in {d['campo'] for d in campos_visiveis}:
         raise ValueError('Campo não encontrado neste recorte.')
@@ -178,18 +178,25 @@ def carregar(ident, user, camada, *, consultar, repo, carregar_conceitos, repres
     if loaded is None:
         raise LookupError('Camada de saída não encontrada.')
     rows = [r['propriedades'] for r in loaded]
-    dictionary = [d for d in result.get('dicionario', []) if d.get('camada') == camada]
-    # Execuções históricas de interseção têm a linhagem no contrato da tabela.
-    if not dictionary:
-        for group in result.get('tabela_saida', {}).get('grupos', []):
-            for field in group['campos']:
-                dictionary.append({'campo':field,'tema':group['categoria'],'base':group['camada'],
-                                   'papel_analitico':'presenca' if field.endswith('__presenca') else None})
-    categories = result.get('categorias_analiticas') or result.get('categorias') or []
-    conceito_origem = 'Conceitos registrados na execução'
-    if not categories:
-        categories = carregar_conceitos()
-        conceito_origem = 'Conceitos atuais do catálogo; não versionados nesta execução'
+    if result.get('fonte_analitica') == 'camada_saida':
+        from api.services.extracao_saida_analitica import CAMPO_ESQUEMA
+        esquema = json.loads(rows[0][CAMPO_ESQUEMA]) if rows else {}
+        dictionary = esquema.get('dicionario', [])
+        categories = esquema.get('categorias', [])
+        conceito_origem = 'Conceitos preservados na camada de saída'
+    else:
+        dictionary = [d for d in result.get('dicionario', []) if d.get('camada') == camada]
+        # Execuções históricas de interseção têm a linhagem no contrato da tabela.
+        if not dictionary:
+            for group in result.get('tabela_saida', {}).get('grupos', []):
+                for field in group['campos']:
+                    dictionary.append({'campo':field,'tema':group['categoria'],'base':group['camada'],
+                                       'papel_analitico':'presenca' if field.endswith('__presenca') else None})
+        categories = result.get('categorias_analiticas') or result.get('categorias') or []
+        conceito_origem = 'Conceitos registrados na execução'
+        if not categories:
+            categories = carregar_conceitos()
+            conceito_origem = 'Conceitos atuais do catálogo; não versionados nesta execução'
     data = analisar(rows, dictionary, categories, **filtros)
     positions = [r['posicao'] for r in data['linhas']]
     data['mapa'] = {'type':'FeatureCollection','features':[]}

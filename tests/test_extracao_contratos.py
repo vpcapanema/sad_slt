@@ -177,7 +177,8 @@ def test_rota_intersecoes_exige_sessao_e_valida_filtros(monkeypatch):
         monkeypatch.setattr(service,'intersecoes_resultado',lambda *a,**k:{'total':0})
         response=client.post(path,json={})
         assert response.status_code==200 and response.headers['cache-control']=='no-store'
-        for body in [{'pagina':-1},{'categoria':'inexistente'},{'situacao':'provavel'}]:
+        assert client.post(path,json={'categoria':'social','atributo':'nome'}).status_code==200
+        for body in [{'pagina':-1},{'categoria':'x'*501},{'situacao':'provavel'}]:
             assert client.post(path,json=body).status_code==422
 
 

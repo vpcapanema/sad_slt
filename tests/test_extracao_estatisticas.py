@@ -57,7 +57,7 @@ def test_preserva_geometria_contagem_campos_e_intersecoes_independentes():
     assert saida.iloc[0].b_texto == 'A' and pd.isna(saida.iloc[1].b_texto)
     assert json.loads(saida.iloc[0].r_numero) == [0.,4.] and json.loads(saida.iloc[0].r_texto) == ['A','B']
     assert pd.isna(saida.iloc[1].r_numero) and pd.isna(saida.iloc[1].r_texto)
-    assert list(saida.r_intersecao) == ['Sim','Não']
+    assert list(saida.risco) == [1,0]
     assert res['relatorio']['validacao']['geometrias_preservadas']
 
 
@@ -68,7 +68,7 @@ def test_binario_independe_de_atributo_nulo_e_toque_na_borda(categoria):
     res = enriquecer(entrada, grupo(base, id=categoria))['camadas']['pontos']
     assert res.iloc[0].b_vazio == '[null]' and pd.isna(res.iloc[1].b_vazio)
     assert list(res.b_n_contato_borda) == [1,0]
-    assert list(res.b_intersecao) == ['Sim', 'Não']
+    assert list(res[categoria]) == [1,0]
 
 
 def test_base_vazia_mantem_campos_e_preserva_geometrias_nulas_e_invalidas():

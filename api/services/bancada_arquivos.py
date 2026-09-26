@@ -127,13 +127,13 @@ def executar(operacao, parametros, arquivos, user):
             geo._metadados.pop(key, None)
 
 
-def consultar(arquivo, revisao, expressao):
+def consultar(arquivo, revisao, expressao, inverter_selecao=False):
     """Consulta o snapshot atual do arquivo sem alterar o original."""
     from api.services.expressoes_atributos import selecionar
     source = abrir(arquivo, revisao)
     frame = gpd.GeoDataFrame.from_features(source['geojson']['features'], crs=4326)
     # Manter o identificador original usado pela seleção no mapa.
     frame.index = [str(feature['id']) for feature in source['geojson']['features']]
-    selected = selecionar(frame, expressao)
+    selected = selecionar(frame, expressao, inverter_selecao)
     import json
     return {'total': len(selected), 'geojson': json.loads(selected.to_json(default=str))}

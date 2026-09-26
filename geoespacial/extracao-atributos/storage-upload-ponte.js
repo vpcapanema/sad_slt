@@ -7,14 +7,17 @@
   document.head.append(css);
   // Somente apresentação: o contrato {isConfirmed} e todas as rotinas de
   // duplicatas, fila, validação e upload do storage continuam sendo os nativos.
-  const oficial=parent.SLTFeedback;
-  if(oficial && window.ModalAlert){
+  // Confirmação e aviso do storage aparecem no feedback oficial (SIGMA-PLI) da página-mãe.
+  const oficial=parent.ProcessFeedback,avisos=parent.Notify;
+  if(oficial && avisos && window.ModalAlert){
     window.ModalAlert.fire=async params=>{
       if(params.cancelButtonText)return {isConfirmed:await oficial.confirmar({
-        title:'Envio ao storage',message:params.text,detail:(params.items||[]).join('\n'),
+        title:'Envio ao storage',message:params.text,warning:(params.items||[]).join('\n'),
         confirmLabel:params.confirmButtonText,cancelLabel:params.cancelButtonText,danger:params.icon==='warning'})};
-      const modal=oficial.notify(params.icon||'info',[params.text,...(params.items||[])],'Envio ao storage');
-      return new Promise(resolve=>{const observer=new MutationObserver(()=>{if(!modal.isConnected){observer.disconnect();resolve({isConfirmed:true});}});
+      const tipo=['success','error','warning','info'].includes(params.icon)?params.icon:'info';
+      const aviso=avisos[tipo]('Envio ao storage',[params.text,...(params.items||[])].filter(Boolean).join('\n'));
+      // O contrato {isConfirmed} do storage espera o aviso ser dispensado.
+      return new Promise(resolve=>{const observer=new MutationObserver(()=>{if(!aviso?.element?.isConnected){observer.disconnect();resolve({isConfirmed:true});}});
         observer.observe(parent.document.documentElement,{childList:true,subtree:true});});
     };
   }

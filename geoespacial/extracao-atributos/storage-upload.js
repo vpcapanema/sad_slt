@@ -62,12 +62,11 @@ export function criarUploadStorage(state, lista, render){
   botao.addEventListener('click',async()=>{
     if(state.busy||state.uploading||aberto)return;
     aberto=true;state.uploading=true;marcar();
-    const autenticacao=window.SLTFeedback.carregamento(document.querySelector('#ea-base-form'),'Abrindo envio ao storage…');
-    autenticacao.passo('Verificando o perfil da sessão SICARD e autenticando no storage…');
+    const autenticacao=window.Notify.loading('Abrindo envio ao storage','Verificando o perfil da sessão SICARD e autenticando no storage…');
     let sessao;
     try{sessao=(await post('/extracao-atributos/storage-upload/sessoes',{})).sessao;}
-    catch(e){aberto=false;state.uploading=false;marcar();autenticacao.concluir({type:e.status===403?'warning':'error',message:e.message});return;}
-    autenticacao.fechar();
+    catch(e){aberto=false;state.uploading=false;marcar();autenticacao?.remove();window.Notify[e.status===403?'warning':'error']('Envio ao storage',e.message);return;}
+    autenticacao?.remove();
     const rota=`/extracao-atributos/storage-upload/sessoes/${encodeURIComponent(sessao)}`;
     const d=dialogo('Enviar camadas de base ao storage');
     const info=el('p','Destino: base-geoespacial. Selecione os arquivos no modal do storage e confirme o envio. A categoria será solicitada ao concluir.');
@@ -88,8 +87,8 @@ export function criarUploadStorage(state, lista, render){
     async function conferir(saindo=false){
       if(enviando||lendo)return;
       lendo=true;concluir.disabled=true;fechar.disabled=true;
-      const processo=progressoUpload||window.SLTFeedback.processo('Conferindo arquivos enviados');progressoUpload=null;
-      processo.passo('Validando as camadas disponíveis no storage…');
+      const processo=progressoUpload||window.ProcessFeedback.iniciarCadastro({title:'Conferindo arquivos enviados',tasks:['Validar as camadas no storage']});progressoUpload=null;
+      processo.tarefaAtual('Validar as camadas no storage','Validando as camadas disponíveis no storage…');
       try{
         const dados=await json(`${rota}/resultado`);processo.fechar();
         if(dados.arquivos.length){
@@ -104,14 +103,14 @@ export function criarUploadStorage(state, lista, render){
     }
     function mensagem(e){
       if(e.origin!==location.origin||e.source!==iframe.contentWindow)return;
-      if(e.data?.tipo==='sicard-storage-enviando'){enviando=Boolean(e.data.ativo);if(enviando&&!progressoUpload){progressoUpload=window.SLTFeedback.processo('Enviando camadas ao storage');progressoUpload.passo('Transferindo arquivos pelo cliente do storage…');}fechar.disabled=enviando;concluir.disabled=enviando;}
+      if(e.data?.tipo==='sicard-storage-enviando'){enviando=Boolean(e.data.ativo);if(enviando&&!progressoUpload){progressoUpload=window.ProcessFeedback.iniciarCadastro({title:'Enviando camadas ao storage',tasks:['Transferir arquivos']});progressoUpload.tarefaAtual('Transferir arquivos','Transferindo arquivos pelo cliente do storage…');}fechar.disabled=enviando;concluir.disabled=enviando;}
       if(e.data?.tipo==='sicard-storage-concluido')conferir();
       if(e.data?.tipo==='sicard-storage-cancelado')conferir(true);
       if(e.data?.tipo==='sicard-storage-erro'){
         // A ponte emite o erro genérico (axios) e o específico (#errorMsg) quase juntos: agrupa e mostra um só.
         erroMensagem=e.data.mensagem||erroMensagem;clearTimeout(erroTempo);
         erroTempo=setTimeout(()=>{
-          progressoUpload?.concluir({type:'error',message:erroMensagem||'Falha no envio ao storage.'});progressoUpload=null;
+          progressoUpload?.erro({message:erroMensagem||'Falha no envio ao storage.',solution:'Os arquivos já enviados podem ser recuperados em Conferir arquivos enviados.'});progressoUpload=null;
           informar(erroMensagem||'Falha no envio ao storage. Os arquivos já enviados podem ser recuperados em Conferir arquivos enviados.','error');erroMensagem='';
         },400);
       }

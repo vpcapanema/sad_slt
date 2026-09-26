@@ -37,6 +37,10 @@ def avaliar(frame, expression):
                 right = visit(comparator)
                 if type(op) in COMPARE:
                     current = COMPARE[type(op)](left, right)
+                elif isinstance(op, (ast.Is, ast.IsNot)) and right is None:
+                    current = left.isna() if isinstance(left, pd.Series) else pd.isna(left)
+                    if isinstance(op, ast.IsNot):
+                        current = ~current if isinstance(current, pd.Series) else not current
                 elif isinstance(op, (ast.In, ast.NotIn)) and isinstance(left, pd.Series) and isinstance(right, list):
                     current = left.isin(right)
                     if isinstance(op, ast.NotIn): current = ~current
@@ -54,10 +58,15 @@ def avaliar(frame, expression):
         raise ValueError('Expressão atributiva inválida.') from exc
 
 
-def selecionar(frame, expression):
+def selecionar(frame, expression, inverter_selecao=False):
     mask = avaliar(frame, expression)
     if isinstance(mask, bool):
+        if inverter_selecao:
+            mask = not mask
         return frame.copy() if mask else frame.iloc[:0].copy()
     if not isinstance(mask, pd.Series) or not pd.api.types.is_bool_dtype(mask.dtype):
         raise ValueError('A consulta deve produzir uma condição verdadeira ou falsa.')
-    return frame.loc[mask.fillna(False)].copy()
+    mask = mask.fillna(False)
+    if inverter_selecao:
+        mask = ~mask
+    return frame.loc[mask].copy()

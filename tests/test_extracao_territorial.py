@@ -69,3 +69,15 @@ def test_relatorio_anterior_preserva_identidade_da_area_sem_reler_base():
     assert data['linhas'][0]['estados']['risco']=='com'
     assert list(data['areas'].values())[0]['atributos']=={'nome':'Área A'}
     assert data['linhas'][0]['atributos']=={'nome':'Ponto A'}
+
+
+def test_comparacao_de_snapshot_anterior_conta_elementos_sem_duplicar():
+    saved = snapshot()
+    # Arquivos anteriores não contêm contagens pré-calculadas.
+    feature = saved['entradas'][0]['feicoes'][0]
+    feature['areas'].append(feature['areas'][0])
+    data = consultar(saved)
+    first = next(i for i in data['linhas'] if i['entrada'] == 'Demandas' and i['fid'] == 0)
+    assert first['contagens']['risco'] == 2
+    assert data['rankings']['risco'][0]['ocorrencias'] == 2
+    assert data['rankings']['risco'][0]['posicao'] == 1

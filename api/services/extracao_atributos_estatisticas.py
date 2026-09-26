@@ -1,4 +1,4 @@
-"""Interseção sem recorte: exatamente um registro por feição original.
+"""Junção espacial esquerda sem recorte: um registro por feição original.
 
 A geometria original é usada na saída (EPSG:4674). Correções só afetam cópias
 para consulta espacial, sem buffer e sem explodir multipartes. Cada feição da
@@ -18,7 +18,7 @@ from api.services.extracao_atributos_enriquecimento import (
     CRS_MEDIDA, CRS_SAIDA, DIMENSIONS, NOMES_DIMENSAO, _finalidades, _nome_livre, _texto, _valor,
 )
 from api.services.extracao_atributos_regras import (
-    categoria_binaria, normalizar_entrada, normalizar_estatisticas, normalizar_finalidades,
+    normalizar_entrada, normalizar_estatisticas, normalizar_finalidades,
 )
 
 ROTULOS = {'valores': 'Valores distintos (JSON; sem agregação numérica)', 'media': 'Média', 'moda': 'Moda', 'mediana': 'Mediana', 'total': 'Total',
@@ -70,6 +70,7 @@ def _geometrias_trabalho(frame, nome):
 def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lambda mensagem: None,
                entradas=None, finalidades=None):
     from api.services.extracao_correspondencias import registro, serializar
+    from api.services.extracao_saida_analitica import materializar, snapshot_saida, CAMPOS_RESERVADOS
     categorias = normalizar_estatisticas(list(categorias))
     from api.services.extracao_atributos_regras import validar_agregacao
     for categoria in categorias:
@@ -79,14 +80,14 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
     if not entradas or len({e['nome'] for e in entradas}) != len(entradas):
         raise ValueError('Informe entradas com nomes distintos.')
     originais, trabalho, estat_entradas = [], [], []
-    usados = {'id_registro', 'camada_origem', 'fid_origem', 'id_origem', 'geometry'}
+    usados = {'id_registro', 'camada_origem', 'fid_origem', 'id_origem', 'geometry'} | CAMPOS_RESERVADOS
     nomes_entrada, dicionario = {}, []
     for item in entradas:
         frame = item['frame']
         if frame.empty:
             raise ValueError(f"{item['nome']}: a camada de entrada está vazia.")
         config = normalizar_entrada(item.get('config'))
-        if config['filtro'] or config['campos'] is not None:
+        if config['filtro']:
             raise ValueError('O enriquecimento sem recorte preserva todas as feições e atributos. '
                              'Remova o filtro e a seleção de campos da entrada, ou use o enriquecimento configurável.')
         if config['campo_id'] and config['campo_id'] not in frame.columns:
@@ -114,7 +115,6 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
     etapas, bases_info = [], []
     contagens_bases = []
     for categoria in categorias:
-        binaria = categoria_binaria(categoria)
         for camada in categoria['camadas']:
             if hasattr(progress,'tarefa'): progress.tarefa(0,len(trabalho))
             progress(f"Cruzando {categoria['nome']} / {camada['nome']}")
@@ -124,7 +124,7 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
             if faltando:
                 raise ValueError(f"{camada['nome']}: campo(s) inexistente(s) nas estatísticas: {', '.join(sorted(faltando))}.")
             geoms, estat = _geometrias_trabalho(base, camada['nome'])
-            indice = espacial.SpatialIndex(geoms)
+            indice = espacial.SpatialJoin(geoms)
             nomes = {c: _nome_livre(regra['prefixo'] + str(c), usados) for c in campos}
             novas = {nome: [] for nome in nomes.values()}
             contagens, vinculos, bordas, interiores, pontuais = [], [], [], [], []
@@ -138,27 +138,35 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
                 carga = int(vertices[inicio])
                 while fim < len(trabalho) and fim - inicio < 64 and carga + int(vertices[fim]) <= 200000:
                     carga += int(vertices[fim]); fim += 1
-                pares = indice.query(trabalho.iloc[inicio:fim], predicate='intersects')
+                pares = indice.pairs(trabalho.iloc[inicio:fim])
+                comuns = {}
                 correspondencias = [[] for _ in range(fim - inicio)]
-                for entrada_pos, base_pos in zip(*pares):
+                for entrada_pos, base_pos in pares:
+                    if base_pos is None:
+                        continue
+                    # Medida descritiva de um par já associado pelo spatial join;
+                    # nunca produz feições de saída nem decide a correspondência.
+                    comum = espacial.intersection(trabalho.iloc[inicio+entrada_pos], geoms.iloc[base_pos])
+                    comuns[(entrada_pos, base_pos)] = comum
                     correspondencias[int(entrada_pos)].append(int(base_pos))
                 correspondencias = [sorted(set(posicoes)) for posicoes in correspondencias]
                 contagens.extend(len(p) for p in correspondencias)
                 for local, posicoes in enumerate(correspondencias):
-                    evidencias = [registro(base_consulta, p, trabalho.iloc[inicio+local]) for p in posicoes]
+                    evidencias = [registro(base_consulta, p, trabalho.iloc[inicio+local], comum=comuns[(local,p)]) for p in posicoes]
                     vinculos.append(serializar(evidencias))
                     bordas.append(sum(e['tipo'] == 'contato_borda' for e in evidencias))
                     interiores.append(sum(e['tipo'] == 'intersecao_interior' for e in evidencias))
                     pontuais.append(sum(e['tipo'] == 'cruzamento_pontual' for e in evidencias))
                 for campo, nome in nomes.items():
-                    medida = 'valores' if binaria else regra['estatisticas_campos'].get(campo, 'valores')
+                    medida = regra['estatisticas_campos'].get(campo, 'valores')
                     novas[nome].extend(agregar(base[campo].iloc[posicoes], medida) if posicoes else None
                                        for posicoes in correspondencias)
                 inicio = fim
                 if hasattr(progress,'tarefa'): progress.tarefa(fim,len(trabalho))
                 progress(f"{camada['nome']}: {fim}/{len(trabalho)} feições analisadas com geometria integral")
+            indice.close()
             for campo, nome in nomes.items():
-                medida = 'valores' if binaria else regra['estatisticas_campos'].get(campo, 'valores')
+                medida = regra['estatisticas_campos'].get(campo, 'valores')
                 dicionario.append({'campo': nome, 'apelido': regra['apelidos'].get(campo), 'tema': categoria['nome'],
                                    'base': camada['nome'], 'campo_origem': campo,
                                    'regra': ROTULOS[medida] + '; feições intersectadas com pesos iguais; inclui contato na borda'})
@@ -170,22 +178,15 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
                 coluna = _nome_livre(regra['prefixo'] + sufixo, usados)
                 novas[coluna] = valores
                 dicionario.append({'campo': coluna, 'apelido': descricao, 'tema': categoria['nome'],
-                                   'base': camada['nome'], 'campo_origem': None, 'regra': descricao})
-            # Presença também existe nas bases que não possuem nenhum campo de atributos.
-            if binaria:
-                nome = _nome_livre(regra['prefixo'] + 'intersecao', usados)
-                novas[nome] = ['Não avaliado' if g is None or g.is_empty else 'Sim' if n else 'Não'
-                               for g, n in zip(trabalho, contagens)]
-                dicionario.append({'campo': nome, 'apelido': f"{camada['nome']} · interseção", 'tema': categoria['nome'],
-                                   'base': camada['nome'], 'campo_origem': None, 'regra': 'Interseção: Sim/Não'})
+                                   'base': camada['nome'], 'campo_origem': None, 'regra': descricao, **({'papel_analitico':'vinculos', 'categoria_id':categoria.get('id', categoria['nome']), 'base_id':camada.get('id', camada['nome']), 'ligacao_espacial':True} if sufixo == 'correspondencias' else {})})
             col_n = _nome_livre(regra['prefixo'] + 'n_feicoes', usados)
             novas[col_n] = contagens
             dicionario.append({'campo': col_n, 'apelido': f"{camada['nome']} · nº de feições intersectadas", 'tema': categoria['nome'],
                                'base': camada['nome'], 'campo_origem': None, 'regra': 'Contagem espacial de feições'})
             resultado = gpd.GeoDataFrame(pd.concat([resultado, pd.DataFrame(novas)], axis=1), crs=CRS_SAIDA)
             etapas.append({'base': camada['nome'], 'papel': 'atributos', 'ligacao': 'localizacao',
-                           'multiplicidade': 'binaria' if binaria else 'estatisticas',
-                           'estatistica': None if binaria else regra['estatistica'],
+                           'multiplicidade': 'estatisticas',
+                           'estatistica': regra['estatistica'],
                            'registros_com_correspondencia': sum(n > 0 for n in contagens),
                            'registros_com_multiplas_feicoes': sum(n > 1 for n in contagens),
                            'registros_antes': len(resultado), 'registros_depois': len(resultado)})
@@ -215,8 +216,10 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
              'registros_com_correspondencia': sum(contas[i] > 0 for i in posicoes),
              'registros_com_multiplas_feicoes': sum(contas[i] > 1 for i in posicoes)}
             for e, contas in zip(etapas, contagens_bases)]}
-    return {'camadas': saidas, 'finalidades': _finalidades(saidas, normalizar_finalidades(finalidades)),
-            'dicionario': [{**d, 'camada': nome} for nome in saidas for d in dicionario],
+    dicionario = [{**d, 'camada':nome} for nome in saidas for d in dicionario]
+    materializar(saidas, dicionario, categorias)
+    return {'intersecoes_territoriais':snapshot_saida(saidas), 'camadas': saidas, 'finalidades': _finalidades(saidas, normalizar_finalidades(finalidades)),
+            'dicionario': dicionario,
             'relatorio': {'geoprocessamento': espacial.provenance(), 'entradas': estat_entradas, 'camadas': rel_camadas,
                           'validacao': validacao, 'bases': bases_info, 'crs_medida': f'EPSG:{CRS_MEDIDA}',
                           'crs_saida': f'EPSG:{CRS_SAIDA}'}}

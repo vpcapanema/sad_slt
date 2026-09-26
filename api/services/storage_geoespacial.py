@@ -246,7 +246,11 @@ def carregar_gdf(ident: str):
         return frame
     if arquivo.suffix.lower() not in EXTENSOES_VETOR:
         raise ValueError("A camada não é vetorial")
-    frame = gpd.read_file(arquivo, layer=camada, engine="pyogrio")
+    frame = gpd.read_file(arquivo, layer=camada, engine="pyogrio", fid_as_index=True)
+    campo_fid = 'slt_fid_origem'
+    while campo_fid in frame.columns: campo_fid += '_'
+    frame[campo_fid] = frame.index
+    frame = frame.reset_index(drop=True)
     if frame.crs is None:
         raise ValueError(f"A camada {arquivo.name} não informa seu CRS")
     if frame.crs.to_epsg() != 4674:

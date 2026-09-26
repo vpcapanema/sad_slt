@@ -5,7 +5,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
 const b=await chromium.launch({headless:true,args:['--no-sandbox','--no-proxy-server','--enable-unsafe-swiftshader']});
 const p=await b.newPage({viewport:{width:1440,height:1000}});const errors=[],requests=[];let falharTabela=false,saved,polls=0,municipalCatalog=0,municipalPayload;
 p.on('pageerror',e=>errors.push(e.message));
-await p.addLocatorHandler(p.locator('.slt-fb-modal--info'),async()=>{await p.evaluate(()=>window.SLTFeedback.fechar());});await p.addLocatorHandler(p.locator('.slt-fb-modal').filter({hasText:'Bancada de geoprocessamento'}).filter({has:p.locator('[data-fb-close]')}),async()=>{if(await p.locator('#slt-feedback-backdrop[data-processando="true"]').count()===0)await p.locator('.slt-fb-foot [data-fb-close]').click();});
+await p.addLocatorHandler(p.locator('.notification-toast.info').first(),async()=>{await p.evaluate(()=>Notify.clearAll());});await p.addLocatorHandler(p.locator('#pfsStatusOverlay.pfs-active').filter({hasText:'Bancada de geoprocessamento'}),async()=>{await p.evaluate(()=>StatusFeedback.fechar());});
 p.on('dialog',d=>d.accept(d.type()==='prompt'?'Configuração teste':undefined));
 const fc={type:'FeatureCollection',features:[{type:'Feature',properties:{nome:'Teste',id:1},geometry:{type:'Point',coordinates:[-47,-23]}}]};
 const catalog={categorias:[{id:'ambiental',nome:'Ambiental'},{id:'social',nome:'Social'}],camadas:['entrada','base','adicional'].map(id=>({id,nome:id,origem:'importadas'}))};
@@ -59,13 +59,13 @@ await p.locator('#ea-staging-editar').click();await tree.getByRole('button',{nam
 await p.locator('#ea-staging-cancelar').click();await tree.getByRole('button',{name:'base',exact:true}).waitFor();
 await p.locator('#ea-staging-limpar').click();assert.equal(await tree.getByRole('button',{name:'base',exact:true}).count(),0);
 await p.locator('#ea-staging-cancelar').click();await tree.getByRole('button',{name:'base',exact:true}).waitFor();
-await p.locator('#ea-staging-salvar').click();await p.locator('[data-fb-input]').fill('Lista');await p.locator('[data-fb-confirmar]').click();await p.waitForFunction(()=>!document.querySelector('[data-fb-input]'));
+await p.locator('#ea-staging-salvar').click();await p.locator('#pfsConfirmInput').fill('Lista');await p.locator('#pfsConfirmOk').click();await p.waitForFunction(()=>!document.querySelector('#pfsConfirmOverlay.pfs-active'));
 assert.equal(saved.escopo,'bases');assert.deepEqual(saved.entradas,[]);assert.equal(saved.operacao,'');assert.equal(saved.nome_saida,'');
-await p.locator('#ea-staging-carregar').click();await p.locator('dialog .ea-config-entry').click();await p.locator('dialog').getByRole('button',{name:'Carregar',exact:true}).click();await p.locator('[data-fb-confirmar]').click();
+await p.locator('#ea-staging-carregar').click();await p.locator('dialog .ea-config-entry').click();await p.locator('dialog').getByRole('button',{name:'Carregar',exact:true}).click();await p.locator('#pfsConfirmOk').click();
 await tree.getByRole('button',{name:'base',exact:true}).waitFor();
 assert.equal(await p.locator('#ea-input-select').inputValue(),'entrada');assert.equal(await p.locator('#ea-operation').inputValue(),'estatisticas');assert.equal(await p.locator('#ea-nome-saida').inputValue(),'Preservar saída');
 assert.equal(await p.locator('#ea-run').isDisabled(),true);
-await p.locator('#ea-staging-confirmar').click();await p.locator('[data-fb-confirmar]').click();await p.locator('.slt-fb-foot [data-fb-close]').click();
+await p.locator('#ea-staging-confirmar').click();await p.locator('#pfsConfirmOk').click();await p.locator('#pfsStatusOverlay .pfs-box.pfs-active .pfs-footer .pfs-btn').click();
 await p.waitForFunction(()=>!document.querySelector('#ea-run').disabled);
 for(const width of [390,1440]){await p.setViewportSize({width,height:1000});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);}
 const positions=await p.evaluate(()=>{

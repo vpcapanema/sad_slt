@@ -22,17 +22,17 @@ await p.goto('http://127.0.0.1:8083/restrict/geoespacial/gerador-camadas-territo
 await p.locator('#admin-session-bar:not(.hidden)').waitFor();assert.equal(await p.locator('.navbar-painel-restrita').count(),1);
 assert.match(await p.locator('#admin-session-bar').textContent(),/Teste.*analista.*Administrador/s);
 await p.locator('.mlb-attribute input').check();
-async function iniciar(){await p.getByRole('button',{name:'Gerar camada',exact:true}).click();await p.locator('[data-fb-confirmar]').click();await p.locator('.slt-fb-bar--tarefa[aria-valuenow="65"]').waitFor();}
+async function iniciar(){await p.getByRole('button',{name:'Gerar camada',exact:true}).click();await p.locator('#pfsConfirmOk').click();await p.waitForFunction(()=>document.querySelector('[data-pfs="progress-meta"]')?.textContent.includes('Tarefa atual: 65%'));}
 await iniciar();assert.equal(exportacoes,1);
-assert.equal(await p.locator('.slt-fb-bar--geral').getAttribute('aria-valuenow'),'33');
-assert.match(await p.locator('.slt-fb-steps').textContent(),/Municípios carregados.*Preparando indicador 13/s);
-const visual=await p.evaluate(()=>{const a=document.querySelector('.slt-fb-bar--tarefa').getBoundingClientRect(),b=document.querySelector('.slt-fb-bar--geral').getBoundingClientRect(),log=document.querySelector('.slt-fb-steps').getBoundingClientRect();return {equal:a.width===b.width,after:a.top>=log.bottom&&b.top>a.bottom,height:a.height,head:getComputedStyle(document.querySelector('.slt-fb-head')).backgroundColor,text:getComputedStyle(document.querySelector('.slt-fb-title')).color};});
-assert.ok(visual.equal&&visual.after&&visual.height>=28);assert.equal(visual.head,'rgb(17, 101, 147)');assert.equal(visual.text,'rgb(255, 255, 255)');
+assert.equal(await p.locator('[data-pfs="progress-percent"]').innerText(),'33%');
+assert.match(await p.locator('#pfsProgressBox .pfs-body').textContent(),/Municípios carregados.*Preparando indicador 13/s);
+const visual=await p.evaluate(()=>{const barra=document.querySelector('#pfsProgressBox .pfs-progress-bar').getBoundingClientRect(),log=document.querySelector('#pfsLog').getBoundingClientRect();return {after:barra.top>=log.bottom,head:getComputedStyle(document.querySelector('#pfsProgressBox .pfs-header')).backgroundImage,text:getComputedStyle(document.querySelector('[data-pfs="progress-title"]')).color};});
+assert.ok(visual.after);assert.match(visual.head,/linear-gradient\(135deg, rgb\(28, 61, 89\).*rgb\(17, 101, 147\)/);assert.equal(visual.text,'rgb(255, 255, 255)');
 await p.screenshot({path:'/tmp/sicard-feedback-progresso.png'});
-await p.getByRole('button',{name:'Cancelar',exact:true}).click();await p.locator('.slt-fb-modal--info').waitFor();assert.equal(cancelamentos,1);
-await p.locator('.slt-fb-foot [data-fb-close]').click();assert.equal(await p.locator('.mlb-attribute input').isChecked(),true);assert.equal(await p.locator('#territorial-result').isVisible(),false);
-estado='executando';await iniciar();estado='concluido';await p.locator('.slt-fb-modal--success').waitFor();assert.equal(await p.locator('#territorial-result').isVisible(),true);
-assert.equal(await p.locator('.mlb-status,#ea-feedback').count(),0);await p.locator('.slt-fb-foot [data-fb-close]').click();
-estado='executando';await iniciar();estado='erro';await p.locator('.slt-fb-modal--error').waitFor();assert.match(await p.locator('#slt-feedback-backdrop').textContent(),/Geração indisponível/);
-assert.deepEqual(errors,[]);console.log('PASS: navbar restrita e userbar, mensagens reais, duas barras independentes, cabeçalho azul/branco, cancelamento e seleção preservada, sucesso e erro.');
+await p.getByRole('button',{name:'CANCELAR',exact:true}).click();await p.locator('.notification-toast.info').waitFor();assert.equal(cancelamentos,1);
+await p.evaluate(()=>Notify.clearAll());assert.equal(await p.locator('.mlb-attribute input').isChecked(),true);assert.equal(await p.locator('#territorial-result').isVisible(),false);
+estado='executando';await iniciar();estado='concluido';await p.locator('#pfsSuccessBox.pfs-active').waitFor();assert.equal(await p.locator('#territorial-result').isVisible(),true);
+assert.equal(await p.locator('.mlb-status,#ea-feedback').count(),0);await p.locator('#pfsStatusOverlay .pfs-box.pfs-active .pfs-footer .pfs-btn').click();
+estado='executando';await iniciar();estado='erro';await p.locator('#pfsErrorBox.pfs-active').waitFor();assert.match(await p.locator('#pfsErrorBox').textContent(),/Geração indisponível/);
+assert.deepEqual(errors,[]);console.log('PASS: navbar restrita e userbar, mensagens reais, progresso com tarefa e percentual geral, cabeçalho azul/branco, cancelamento e seleção preservada, sucesso e erro.');
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

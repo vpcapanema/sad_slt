@@ -123,6 +123,11 @@ def _ler_vetor(escolha, nome, conteudo, componentes, avisos_pacote, progresso=No
     tipos = [definicao.GetFieldDefn(i).GetTypeName() for i in range(definicao.GetFieldCount())]
     if len(campos) > 2000 or len(set(campos)) != len(campos):
         raise ValueError('A camada deve ter até 2000 campos, sem nomes repetidos.')
+    fid_campo = 'slt_fid_origem'
+    while fid_campo in campos:
+        fid_campo += '_'
+    campos.append(fid_campo)
+    tipos.append('Integer64')
     registros, geometrias = [], []
     vertices = 0
     total_leitura = layer.GetFeatureCount() if progresso else 0
@@ -131,7 +136,7 @@ def _ler_vetor(escolha, nome, conteudo, componentes, avisos_pacote, progresso=No
             progresso(len(registros), total_leitura)
         if len(registros) >= MAX_FEICOES:
             raise ValueError('A entrada excede o limite de 50 mil feições.')
-        registros.append({c: feature.GetField(i) for i,c in enumerate(campos)})
+        registros.append({**{c: feature.GetField(i) for i,c in enumerate(campos[:-1])}, fid_campo:feature.GetFID()})
         geom = feature.GetGeometryRef()
         geometria_lida = shapely.from_wkb(bytes(geom.ExportToWkb())) if geom is not None else None
         vertices += int(shapely.get_num_coordinates(geometria_lida))
@@ -158,6 +163,8 @@ def _ler_vetor(escolha, nome, conteudo, componentes, avisos_pacote, progresso=No
             'unidade': crs.axis_info[0].unit_name if crs.axis_info else None,
             'limites_wgs84': mapa.total_bounds.tolist(), 'avisos': avisos_pacote + avisos,
             'campos': [{'nome': c, 'tipo': t} for c,t in zip(campos, tipos)]}
+    from api.services.extracao_identificacao import inspecionar
+    meta['identificacao'] = inspecionar(frame, fid_campo)
     return frame, meta
 
 def localizacao(frame):
@@ -312,7 +319,9 @@ def _agrupar_vetores(vetores, nome):
     if not vetores:
         return None, None
     if len(vetores) == 1:
-        return vetores[0]
+        frame, meta = vetores[0]
+        frame.attrs['sicard_partes'] = [{'chave':meta['camada'], 'nome':meta['nome_camada'], 'campos':list(frame.columns)}]
+        return frame, meta
     import pandas as pd
     campos = set().union(*(set(f.columns) - {f.geometry.name} for f, _ in vetores))
     origem = 'slt_camada_origem'
@@ -339,6 +348,8 @@ def _agrupar_vetores(vetores, nome):
             'tipos_geometria': sorted(set(conjunto.geom_type.dropna())),
             'limites_wgs84': conjunto.to_crs(4326).total_bounds.tolist(),
             'camadas_origem': [{'camada': m['camada'], 'nome': m['nome_camada'], 'crs': m['crs'], 'feicoes': len(f)} for f,m in vetores]}
+    conjunto.attrs['sicard_campo_origem'] = origem
+    conjunto.attrs['sicard_partes'] = [{'chave':m['camada'], 'nome':m['nome_camada'], 'campos':[c for c in f.columns if c != f.geometry.name]} for f,m in vetores]
     return conjunto, meta
 
 

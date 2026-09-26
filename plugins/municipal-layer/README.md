@@ -311,7 +311,7 @@ Esse exemplo recebe o ZIP em memória. O hospedeiro decide o destino de `arquivo
 | Propriedade | Contrato |
 | --- | --- |
 | `apiBaseUrl` | String, padrão `/api` |
-| `feedback` | Componente opcional do hospedeiro com `confirmar`, `processo`, `warning` e `error`; o SICARD fornece `SLTFeedback`, dispensando faixas próprias de interação |
+| `feedback` | Componente opcional do hospedeiro com `confirmar`, `processo`, `warning` e `error`; o adaptador `sicard/main.jsx` atende esse contrato com o feedback oficial do SICARD (ProcessFeedback e Notify do SIGMA-PLI), dispensando faixas próprias de interação |
 | `client` | Adaptador opcional com métodos async `catalog(signal)`, `preview(config, signal)` e `export(config, signal)` |
 | `value` | Configuração completa: `attributes` como lista de IDs e `format` como `fgb`, `gpkg`, `geojson` ou `shp` |
 | `onChange` | Recebe a próxima configuração; no modo controlado o hospedeiro deve atualizar `value` |

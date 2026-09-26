@@ -8,28 +8,29 @@
     return document.body.classList.contains("ahp-module-page") || document.body.classList.contains("ahp-colaborativa-page");
   }
   function mensagem(el) { return (el && (el.getAttribute("aria-label") || el.textContent || "")).replace(/\s+/g, " ").trim(); }
+  var TAREFA = "Aguardando a resposta do serviço";
   function iniciar(acao) {
-    if (!global.SLTFeedback || !ativo()) return null;
-    var proc = global.SLTFeedback.processo(acao || "Executar ação AHP");
-    var p2 = proc.passo("Aguardando a resposta do serviço…");
-    return { proc: proc, passo: p2 };
+    if (!global.ProcessFeedback || !ativo()) return null;
+    var proc = global.ProcessFeedback.iniciarCadastro(acao || "Executar ação AHP", [TAREFA]);
+    proc.tarefaAtual(TAREFA);
+    return { proc: proc, acao: acao || "Executar ação AHP" };
   }
   function concluir(ref, tipo, texto) {
     if (!ref) return;
-    ref.proc.atualizar(ref.passo, tipo === "success" ? "success" : typeo(tipo), texto);
-    ref.proc.concluir({ type: tipo || "success", message: texto || "Operação concluída." });
+    if (tipo === "error") { ref.proc.erro({ message: texto || "O serviço recusou a operação." }); return; }
+    ref.proc.concluirTarefa(TAREFA, "Resposta recebida");
+    ref.proc.sucesso({ message: texto || "Operação concluída.", _status: tipo === "warning" ? "partial" : undefined });
   }
-  function typeo(tipo) { return tipo === "warning" ? "warning" : tipo === "error" ? "error" : "info"; }
   // O chamador inicia/conclui com a resposta real. Cliques e timers não
   // comprovam validação, execução ou sucesso no servidor.
   global.addEventListener("error", function (event) {
-    if (!ativo() || !global.SLTFeedback) return;
-    global.SLTFeedback.error(event.message || "Erro inesperado no navegador.", "Falha no processo AHP");
+    if (!ativo() || !global.Notify) return;
+    global.Notify.error("Falha no processo AHP", event.message || "Erro inesperado no navegador.");
   });
   global.addEventListener("unhandledrejection", function (event) {
-    if (!ativo() || !global.SLTFeedback) return;
+    if (!ativo() || !global.Notify) return;
     var reason = event.reason && event.reason.message ? event.reason.message : String(event.reason || "Erro inesperado.");
-    global.SLTFeedback.error(reason, "Falha na operação AHP");
+    global.Notify.error("Falha na operação AHP", reason);
   });
   global.SLTAhpProcess = { iniciar: iniciar, concluir: concluir };
 })(window);

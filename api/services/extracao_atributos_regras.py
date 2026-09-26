@@ -53,6 +53,7 @@ class Preparacao(BaseModel):
 
 
 class RegraBase(BaseModel):
+    campo_rotulo: str | None = Field(default=None, max_length=255)
     papel: Literal['atributos', 'recorte'] = 'atributos'
     ligacao: Literal['localizacao', 'atributo'] = 'localizacao'
     predicado: Literal['intersecta', 'contem', 'esta_dentro'] = 'intersecta'
@@ -127,7 +128,13 @@ class FiltroEntrada(BaseModel):
         return self
 
 
-class ConfigEntrada(BaseModel):
+class ConfigCamada(BaseModel):
+    identificacao_confirmada: bool = False
+    categoria_pontos: str | None = Field(default=None, max_length=255)
+    operacao: Literal['', 'estatisticas', 'enriquecimento'] = ''
+    nome_saida: str = Field(default='', max_length=200)
+    camada_recorte: str | None = Field(default=None, max_length=1200)
+    processar: bool = True
     campo_id: str | None = Field(default=None, max_length=255)
     filtro: FiltroEntrada | None = None
     campos: list[str] | None = Field(default=None, max_length=5000)
@@ -136,6 +143,10 @@ class ConfigEntrada(BaseModel):
     @classmethod
     def _campos(cls, valor):
         return _limpar_campos(valor)
+
+
+class ConfigEntrada(ConfigCamada):
+    camadas: dict[str, ConfigCamada] = Field(default_factory=dict, max_length=100)
 
 
 class Finalidade(BaseModel):

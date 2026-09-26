@@ -1,8 +1,10 @@
-"""Contratos de integração do feedback com hierarquização, upload e SEI.
+"""Contratos de integração do feedback (ProcessFeedback do SIGMA-PLI) com
+hierarquização, upload e SEI.
 
-A revisão de ações com consequências é preservada. O acompanhamento não bloqueia
-outras tarefas nem a fila; os desfechos dependem da resposta real do servidor.
-Os comportamentos de foco, componentes e cancelamento são exercitados no navegador.
+O SICARD usa o sistema de feedback do SIGMA-PLI: confirmação, overlay de
+progresso com tarefas e modais de sucesso, parcial e erro. A revisão de ações
+com consequências é preservada e os desfechos dependem da resposta real do
+servidor. Foco, componentes e cancelamento são exercitados no navegador.
 """
 from __future__ import annotations
 
@@ -11,8 +13,9 @@ from pathlib import Path
 
 from api.services.geoprocessamento_jobs import geoprocessamento_jobs
 
-FEEDBACK_JS = Path("assets/js/feedback.js").read_text(encoding="utf-8")
-FEEDBACK_CSS = Path("assets/css/feedback.css").read_text(encoding="utf-8")
+FEEDBACK_JS = Path("assets/js/process_feedback_unified.js").read_text(encoding="utf-8")
+FEEDBACK_CSS = Path("assets/css/process_feedback_system.css").read_text(encoding="utf-8")
+NOTIFY_JS = Path("assets/js/notification_system.js").read_text(encoding="utf-8")
 MONITOR_JS = Path("assets/js/ahp-process-monitor.js").read_text(encoding="utf-8")
 FASE1_JS = Path("hierarquizacao/js/fases.js").read_text(encoding="utf-8")
 FASE2_JS = Path("hierarquizacao/js/fase2.js").read_text(encoding="utf-8")
@@ -31,28 +34,34 @@ TEMPLATES_DAS_CINCO_PAGINAS = [
 
 
 def test_feedback_expoe_os_tres_estagios():
-    assert "confirmar," in FEEDBACK_JS
-    assert "processo," in FEEDBACK_JS
-    assert "acao," in FEEDBACK_JS
+    """Confirmação, progresso e desfecho, com os globais do SIGMA."""
+    for nome in ("window.ProcessFeedback = ", "window.ProcessFeedbackV2 = ", "window.StatusFeedback = "):
+        assert nome in FEEDBACK_JS
+    for metodo in ("confirmar(opts)", "iniciarCadastro(", "sucesso(data)", "erro(data)", "async processar(fetchFn"):
+        assert metodo in FEEDBACK_JS
+    assert "window.Notify = new NotificationSystem()" in NOTIFY_JS
+    assert not Path("assets/js/feedback.js").exists()
+    assert not Path("assets/css/feedback.css").exists()
 
 
 def test_confirmacao_nao_foca_o_botao_perigoso():
-    corpo = FEEDBACK_JS.split("function confirmar(options) {", 1)[1].split("\n  }", 1)[0]
-    assert 'bd.querySelector(danger ? "[data-fb-cancelar]" : "[data-fb-confirmar]")?.focus()' in corpo
+    corpo = FEEDBACK_JS.split("        confirmar(opts) {", 1)[1].split("\n        _dismiss(", 1)[0]
+    assert "opts.danger ? this.cancelBtn : this.okBtn" in corpo
 
 
 def test_processo_pode_ser_recolhido_sem_cancelar():
-    processo = FEEDBACK_JS.split("function processo(title,", 1)[1].split("async function acao", 1)[0]
-    assert "painel:true" in processo
-    assert "travado = true;" not in processo
-    assert "Recolher acompanhamento" in processo
-    assert "await cancelar()" in processo
-    assert "controller.abort()" in processo
+    """Ocultar o acompanhamento não cancela; CANCELAR só aparece com onCancel."""
+    assert "q('#pfsProgressClose')?.addEventListener('click', () => _progressSystem?.fechar())" in FEEDBACK_JS
+    assert "this.cancelBtn.hidden = !this.config.onCancel;" in FEEDBACK_JS
+    cancelar = FEEDBACK_JS.split("        cancelar() {", 1)[1].split("\n        }", 1)[0]
+    assert "this.config.onCancel()" in cancelar
 
 
 def test_semaforo_tem_as_tres_cores():
-    for cor in ("success", "warning", "error"):
-        assert f".slt-fb-modal--{cor}{{border-top-color:" in FEEDBACK_CSS
+    """Cabeçalhos dos modais: verde sucesso, amarelo parcial, vermelho erro."""
+    for estado in ("success", "partial", "error"):
+        assert f".pfs-header--{estado} {{ background:" in FEEDBACK_CSS
+        assert f"pfs-header pfs-header--{estado}" in FEEDBACK_JS
 
 
 def test_monitor_generico_sai_de_cena_onde_ha_feedback_real():
@@ -73,20 +82,25 @@ def test_cada_botao_das_fases_confirma_antes_de_chamar_o_servidor():
         (FASE3_JS, "HierApi.sintetizar"),
     ]:
         antes = js.split(chamada, 1)[0]
-        assert "SLTFeedback.confirmar" in antes or "confirmacao:" in antes, chamada
+        assert "ProcessFeedback.confirmar" in antes or "confirmacao:" in antes, chamada
 
 
 def test_fases_1_e_2_relatam_o_desfecho_pelo_processo_e_nao_por_toast_solto():
     for js in (FASE1_JS, FASE2_JS):
-        assert "SLTFeedback.processo(" in js
-        assert 'proc.concluir({\n        type: "error"' in js or 'type: "error"' in js
+        assert "ProcessFeedback.iniciarCadastro(" in js
+        assert "proc.sucesso({" in js
+        assert "proc.erro({" in js
 
 
 def test_sintetizar_nao_redireciona_sozinho():
-    """Navegar na resposta tirava o usuário da tela antes de ele ver o desfecho."""
+    """Navegar na resposta tirava o usuário da tela antes de ele ver o desfecho:
+    o modal de sucesso oferece o link "Ver ranking" e OK continua na Fase 3."""
     trecho = FASE3_JS.split("HierApi.sintetizar", 1)[1]
-    assert "data-ir-ranking" in trecho
-    assert "Ver ranking" in trecho
+    assert "irRanking: true" in trecho
+    assert "window.location" not in trecho
+    helper = FASE3_JS.split("async function executarAcao(", 1)[1].split("$(\"executar-fase3\")", 1)[0]
+    assert 'action_label: "Ver ranking"' in helper
+    assert "/restrict/hierarquizacao/processos/ranking/?codigo=" in helper
 
 
 def test_upload_usa_as_rotas_com_log_real_do_servidor():
@@ -100,14 +114,14 @@ def test_upload_usa_as_rotas_com_log_real_do_servidor():
 
 def test_upload_acompanha_estado_ativo_sem_reexibir_logs_concluidos():
     corpo = UPLOAD_JS.split("async function acompanharJob(", 1)[1].split("\n  }", 1)[0]
-    assert "proc.acompanhar(atual)" in corpo
-    assert "proc.passo(log.mensagem" not in corpo
+    assert "window.ProcessFeedback.acompanhar(atual)" in corpo
+    assert "log.mensagem" not in corpo
     assert 'atual.status === "erro"' in corpo
 
 
 def test_upload_distingue_importado_de_homologado():
     """Importar e não homologar é um desfecho real e parcial — amarelo, não verde nem vermelho."""
-    assert 'type: "warning"' in UPLOAD_JS
+    assert '_status: "partial"' in UPLOAD_JS
     assert "Importada, mas não homologada" in UPLOAD_JS
     assert "ainda não publicada" in UPLOAD_JS
 
@@ -130,14 +144,14 @@ def test_botao_e_guardado_antes_da_confirmacao():
     """`currentTarget` só existe durante o disparo do evento: depois do await da
     confirmação ele é null, e desabilitar o botão explodia com TypeError."""
     handler = UPLOAD_JS.split('getElementById("btn-enviar").addEventListener', 1)[1]
-    antes_do_await = handler.split("await window.SLTFeedback.confirmar", 1)[0]
+    antes_do_await = handler.split("await window.ProcessFeedback.confirmar", 1)[0]
     assert "const alvo = evento.currentTarget;" in antes_do_await
     assert "botao.currentTarget" not in UPLOAD_JS
 
 def test_confirmacao_nomeia_o_arquivo_e_o_que_ele_contem():
     """Publicar o arquivo errado era invisível: o modal só falava do nome de
     publicação, que o usuário digita, e não do arquivo que o servidor leu."""
-    trecho = UPLOAD_JS.split("SLTFeedback.confirmar({", 1)[1].split("});", 1)[0]
+    trecho = UPLOAD_JS.split("ProcessFeedback.confirmar({", 1)[1].split("});", 1)[0]
     assert "inspecao.arquivo_escolhido" in trecho
     assert "resumoDaInspecao()" in trecho
     resumo = UPLOAD_JS.split("function resumoDaInspecao() {", 1)[1].split("\n  }", 1)[0]
@@ -147,7 +161,7 @@ def test_confirmacao_nomeia_o_arquivo_e_o_que_ele_contem():
 def test_pagina_volta_ao_inicio_depois_de_publicar():
     """O bilhete da inspeção é consumido no servidor; manter a prévia na tela
     convidava a reenviar uma seleção que já não vale."""
-    depois = UPLOAD_JS.split('type: "success",', 1)[1]
+    depois = UPLOAD_JS.split('title: "Camada enviada e homologada."', 1)[1]
     assert "voltarAoInicio();" in depois.split("catch", 1)[0]
 
 def test_pasta_do_acervo_segue_o_tipo_da_camada():
@@ -183,7 +197,7 @@ def test_sei_enviar_e_reanalisar_confirmam_antes_de_disparar():
         ("async function reanalisar(", "adicionarNaFila(doc, tipo)"),
     ]:
         antes = SEI_JS.split(funcao, 1)[1].split(chamada, 1)[0]
-        assert "SLTFeedback.confirmar" in antes, funcao
+        assert "ProcessFeedback.confirmar" in antes, funcao
 
 
 def test_sei_tem_os_tres_desfechos_e_o_codigo_do_erro():
@@ -191,33 +205,32 @@ def test_sei_tem_os_tres_desfechos_e_o_codigo_do_erro():
     # o cabeçalho fica com o título da ação, então o status não é mais título.
     corpo = SEI_JS.split("function desfechoDaLeitura(", 1)[1].split("async function confirmar(", 1)[0]
     assert "'success' : 'warning'" in corpo
-    assert "type: 'error'" in SEI_JS
+    assert "proc.erro({" in SEI_JS
     # O código do erro é o status HTTP devolvido pela rota, numa linha do corpo.
     assert "erro.status = res.status;" in SEI_JS
     assert "`Erro ${e.status" in SEI_JS
 
 
 def test_modal_mantem_o_titulo_da_acao_e_lista_uma_linha_por_resultado():
-    """Cabeçalho = título da ação; corpo = tarefas (processo) ou resultados
-    (status), um por linha. O desfecho não troca mais o título."""
-    corpo = FEEDBACK_JS.split('concluir({ type = "success"', 1)[1].split("fechar() {", 1)[0]
-    assert '.slt-fb-title").textContent' not in corpo
-    assert 'querySelector(".slt-fb-results")' in corpo
-    assert "ocultarTarefa()" in corpo
-    assert "slt-fb-tarefas" not in corpo
-    assert ".slt-fb-results" in FEEDBACK_CSS
+    """Cabeçalho do modal de resultado = título da ação; corpo = título do
+    desfecho, mensagem, resumo e subprocessos (um por linha)."""
+    assert "_statusSystem.mostrarSucesso({ actionTitle: this._actionTitle" in FEEDBACK_JS
+    assert "_statusSystem.mostrarErro({ actionTitle: this._actionTitle" in FEEDBACK_JS
+    for alvo in ("pfsSuccessSummary", "pfsSuccessSubprocesses", "pfsPartialSubprocesses", "pfsErrorLog"):
+        assert f'id="{alvo}"' in FEEDBACK_JS
+    assert ".pfs-sp-item" in FEEDBACK_CSS
 
 
 def test_enter_nao_confirma_acao_perigosa_com_foco_em_cancelar():
-    corpo = FEEDBACK_JS.split("function confirmar(", 1)[1].split("function processo(", 1)[0]
-    assert '"[data-fb-cancelar], [data-fb-close]"' in corpo
-    assert '!danger || foco?.closest?.("[data-fb-confirmar]")' in corpo
+    """Enter só confirma no campo de entrada; nos botões vale o botão focado."""
+    corpo = FEEDBACK_JS.split("        confirmar(opts) {", 1)[1].split("\n        _dismiss(", 1)[0]
+    assert "e.key === 'Enter' && this._inputMode && document.activeElement === this._inputEl" in corpo
 
 
 def test_sei_continua_fila_sem_exigir_dispensar_resultados():
     corpo = SEI_JS.split("async function processarFila()", 1)[1]
     assert "aguardarFechamento" not in corpo
-    assert "proc.concluir(desfechoDaLeitura(leitura))" in corpo
+    assert "proc.sucesso(desfechoDaLeitura(leitura))" in corpo
 
 
 def test_sei_mostra_o_proponente_lido_que_nao_cabe_no_formulario():
@@ -241,30 +254,50 @@ def test_sei_envia_o_tipo_e_aproveita_a_leitura_que_voltou():
     assert "processarFila()" not in corpo
 
 
-def test_painel_de_processo_segue_o_desenho_do_sigma_com_semaforo():
-    """Cabeçalho com tarefa e passo, log com hora por linha e três luzes; a
-    situação acende uma só: amarelo em andamento, verde concluído, vermelho erro."""
-    assert 'class="slt-fb-step-badge"' in FEEDBACK_JS
-    assert 'role="log"' in FEEDBACK_JS
-    assert 'hora.className = "slt-fb-time"' in FEEDBACK_JS
-    semaforo = FEEDBACK_JS.split("const SEMAFORO = {", 1)[1].split("};", 1)[0]
-    for estado, luz in (("progress", "amarelo"), ("warning", "amarelo"),
-                        ("success", "verde"), ("error", "vermelho")):
-        assert f'{estado}: "{luz}"' in semaforo
-    for luz in ("vermelho", "amarelo", "verde"):
-        assert f'[data-semaforo="{luz}"] [data-luz="{luz}"]' in FEEDBACK_CSS
+def test_overlay_de_progresso_segue_o_sigma():
+    """Card da tarefa com passo, tarefas concluídas, log com hora, segmentos e barra."""
+    for alvo in ('id="pfsTaskCard"', 'id="pfsCompletedList"', 'id="pfsLog"', 'id="pfsSegments"', 'id="pfsProgressFill"', 'data-pfs="task-step-num"'):
+        assert alvo in FEEDBACK_JS
+    assert '<span class="pfs-log-time">${now()}</span>' in FEEDBACK_JS
+    for classe in ("pfs-segment--completed", "pfs-segment--active", "pfs-segment--error"):
+        assert f".{classe}" in FEEDBACK_CSS
 
 
 def test_log_do_servidor_entra_uma_vez_por_sequencia():
-    corpo = FEEDBACK_JS.split("function registrarLogs(job,logs){", 1)[1].split("function mostrarAcompanhamento", 1)[0]
-    assert "sequencia<=ultimaSequencia" in corpo
+    corpo = FEEDBACK_JS.split("_aplicarJob(p, st, job) {", 1)[1].split("\n        }\n", 1)[0]
+    assert "if (seq <= st.seq || !msg) return;" in corpo
+    assert "p.concluirTarefa(msg, 'Concluído')" in corpo
 
 
-def test_contrato_do_sigma_disponivel_sem_recarregar_a_pagina():
-    """Código do SIGMA-PLI roda no SICARD; recarregar só quando pedido."""
-    for nome in ("global.ProcessFeedbackV2", "global.ProcessFeedback", "global.Notify"):
-        assert nome in FEEDBACK_JS
-    for evento in ('case "task"', 'case "log"', 'case "progress"', 'case "done"', 'case "error"'):
+def test_captura_do_sigma_para_respostas_do_servidor():
+    """processar(fetch): stream vai ao roteador; JSON ok → sucesso; erro → modal de erro."""
+    corpo = FEEDBACK_JS.split("async processar(fetchFn, onSuccess, onError) {", 1)[1].split("\n        get atual()", 1)[0]
+    assert "ct.includes('text/event-stream') || ct.includes('application/x-ndjson')" in corpo
+    assert "if (resp.ok) { if (_progressSystem) _progressSystem.sucesso(result)" in corpo
+    assert "else { if (_progressSystem) _progressSystem.erro(result)" in corpo
+    for evento in ("case 'task':", "case 'task_complete':", "case 'partial':", "case 'done': case 'success':", "case 'error':"):
         assert evento in FEEDBACK_JS
-    assert "opts.reloadOnSuccess === true" in FEEDBACK_JS
-    assert "reloadOnSuccess !== false" not in FEEDBACK_JS
+    # Erros do FastAPI (detail com loc/msg) viram linhas legíveis.
+    assert "e.msg && e.loc" in FEEDBACK_JS
+    assert "Aguardando resposta do servidor..." in FEEDBACK_JS
+
+
+
+def test_nenhuma_tela_usa_o_feedback_antigo():
+    """O sistema anterior (SLTFeedback) foi removido; as telas usam o SIGMA."""
+    raizes = ["admin", "assets/js", "hierarquizacao", "geoespacial", "ahp", "templates", "plugins/municipal-layer/sicard"]
+    restantes = []
+    for raiz in raizes:
+        for arquivo in Path(raiz).rglob("*"):
+            if arquivo.suffix not in {".js", ".jsx", ".html"} or "node_modules" in arquivo.parts:
+                continue
+            texto = arquivo.read_text(encoding="utf-8", errors="ignore")
+            if "SLTFeedback" in texto or "feedback.js" in texto or "/assets/css/feedback.css" in texto:
+                restantes.append(str(arquivo))
+    assert restantes == []
+
+
+def test_notify_nao_interpreta_html_de_mensagem_do_servidor():
+    """O Notify do SIGMA usava innerHTML; mensagens do servidor entram como texto."""
+    assert "if (html) messageEl.innerHTML = message;" in NOTIFY_JS
+    assert "else messageEl.textContent = message;" in NOTIFY_JS

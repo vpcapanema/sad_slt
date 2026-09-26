@@ -31,7 +31,7 @@ await page.route('**/api/geoespacial/**',async r=>{
  return r.fulfill({json:[]});
 });
 await page.goto(`${process.env.SICARD_TEST_URL||'http://127.0.0.1:8084'}/restrict/geoespacial/extracao-atributos/`,{waitUntil:'domcontentloaded',timeout:90000});
-await page.waitForFunction(()=>window.SICARDExtracao&&document.querySelector('#ea-catalog-status').hidden).catch(async e=>{console.log(await page.evaluate(()=>({ready:!!window.SICARDExtracao,status:document.querySelector('#ea-catalog-status')?.outerHTML,body:document.querySelector('#slt-feedback-backdrop')?.textContent,url:location.href})),fails);throw e;});
+await page.waitForFunction(()=>window.SICARDExtracao&&document.querySelector('#ea-catalog-status').hidden).catch(async e=>{console.log(await page.evaluate(()=>({ready:!!window.SICARDExtracao,status:document.querySelector('#ea-catalog-status')?.outerHTML,body:document.querySelector('#pfsStatusOverlay.pfs-active')?.textContent,url:location.href})),fails);throw e;});
 await page.locator('#ea-base-local-upload').click();
 const frame=page.frameLocator('iframe[title="Upload nativo do storage SICARD"]');
 await frame.locator('#modal_upload.show').waitFor({timeout:60000});
@@ -44,20 +44,20 @@ assert.equal(await page.getByRole('button',{name:'Adicionar à lista da categori
 await page.locator('#ea-upload-category').selectOption('ambiental');await page.getByRole('button',{name:'Adicionar à lista da categoria',exact:true}).click();
 assert.match(await page.locator('#ea-input-preview-layers').textContent(),/Ambiental/);
 assert.equal(await page.evaluate(id=>document.querySelector('#ea-workbench-frame').contentWindow.gpApp.state.layers.some(l=>l.id===id),layer.id),false);
-await page.locator('#slt-feedback-backdrop [data-fb-close]').last().click();
-await page.locator('#ea-staging-confirmar').click();await page.locator('[data-fb-confirmar]').click();
-await page.locator('.slt-fb-modal--success').waitFor();
+await page.evaluate(()=>{StatusFeedback.fechar();Notify.clearAll();});
+await page.locator('#ea-staging-confirmar').click();await page.locator('#pfsConfirmOk').click();
+await page.locator('#pfsSuccessBox.pfs-active').waitFor();
 await page.waitForFunction(id=>document.querySelector('#ea-workbench-frame').contentWindow.gpApp.state.layers.some(l=>l.id===id),layer.id);
 assert.equal(await page.locator('#ea-feedback').count(),0);
 assert.deepEqual(errors,[]);assert.deepEqual(fails,[]);
-await page.locator('#slt-feedback-backdrop').getByRole('button',{name:'OK',exact:true}).click();
+await page.locator('#pfsStatusOverlay .pfs-box.pfs-active').getByRole('button',{name:'OK',exact:true}).click();
 for(const perfil of ['OPERADOR','VISUALIZADOR']){
  await page.context().addCookies([{name:'slt_session',value:tokenFor(perfil),domain:'127.0.0.1',path:'/'}]);
  await page.locator('#ea-base-local-upload').click();
- await page.locator('.slt-fb-modal--warning').waitFor();
- assert.match(await page.locator('#slt-feedback-backdrop').textContent(),/perfil Analista, Gestor ou Admin/);
+ await page.locator('.notification-toast.warning').waitFor();
+ assert.match(await page.locator('.notification-toast.warning').textContent(),/perfil Analista, Gestor ou Admin/);
  assert.equal(await page.locator('iframe[title="Upload nativo do storage SICARD"]').count(),0);
- await page.locator('#slt-feedback-backdrop').getByRole('button',{name:'OK',exact:true}).click();
+ await page.evaluate(()=>Notify.clearAll());
 }
 
 console.log('PASS: modal e seletor nativos, upload preservado, categoria obrigatória após envio, bancada só após Confirmar bases, feedback SICARD.');

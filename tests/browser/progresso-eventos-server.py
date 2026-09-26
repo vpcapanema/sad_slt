@@ -14,10 +14,10 @@ app=FastAPI();controle=ControleProcessamento()
 app.mount('/assets',StaticFiles(directory=ROOT/'assets'),name='assets')
 @app.get('/')
 def index():
-    return HTMLResponse('''<html><link rel="stylesheet" href="/assets/css/feedback.css"><body>
-    <script src="/assets/js/feedback.js"></script><script>
-    window.proc=SLTFeedback.processo('Processo de teste');
-    proc.acompanhar({id:'teste',status:'executando',eventos_url:'/eventos'});
+    return HTMLResponse('''<html><link rel="stylesheet" href="/assets/css/process_feedback_system.css"><body>
+    <script src="/assets/js/notification_system.js"></script><script src="/assets/js/process_feedback_unified.js"></script><script>
+    window.proc=ProcessFeedback.iniciarCadastro({title:'Processo de teste'});
+    ProcessFeedback.acompanhar({id:'teste',status:'executando',eventos_url:'/eventos'});
     </script></body></html>''')
 @app.get('/eventos')
 def eventos():return resposta(controle.eventos,'teste')

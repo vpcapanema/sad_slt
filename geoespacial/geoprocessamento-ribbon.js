@@ -3,7 +3,7 @@
   const $ = (selector, root = document) => root.querySelector(selector);
 
   function message(text) {
-    if(window.gpFeedback){window.gpFeedback.info(text,"Bancada de geoprocessamento");return;}
+    if(window.gpFeedback){window.gpFeedback.Notify.info("Bancada de geoprocessamento",text,{duration:5000});return;}
     const status = $("#gp-save-state");
     status.textContent = text;
     clearTimeout(message.timer);

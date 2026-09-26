@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.9                                                                                                                                                                      |
-| **Data de emissão**        | 14/08/2026                                                                                                                                                               |
+| **Versão**                 | 1.10                                                                                                                                                                      |
+| **Data de emissão**        | 26/09/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -42,6 +42,8 @@
 | 1.7     | 10/08/2026 | `[preencher]` | Vinculação dos produtos reescalonados aos critérios explícitos da matriz v3, consolidação prévia dos indicadores pertencentes ao mesmo critério e geração de superfícies não ponderadas de grade e rede por média simples dos critérios calculáveis. |
 | 1.8     | 13/08/2026 | `[preencher]` | Revisão metodológica da matriz v3 (50 critérios em 11 dimensões): adoção do modelo de enquadramento em duas classes (risco e restrição, sem gradações); unificação dos critérios de cavidade natural subterrânea; alinhamento de métricas, unidades, operadores e fontes de dado às variáveis implementadas; padronização da coluna Relação. Separação das camadas de Unidades de Conservação por esfera (estadual e federal) e exclusão da vegetação nativa do rol de critérios da Fase 1. Atualização da camada de sítios arqueológicos com a base integral do IPHAN. Ampliação da cobertura do critério de lentidão recorrente por imputação hierárquica e normalização por percentil dos atributos de tráfego. |
 | 1.9     | 14/08/2026 | `[preencher]` | Formalização do preenchimento colaborativo da matriz de comparação pareada do AHP: coleta de julgamentos individuais de especialistas convidados, com exigência de razão de consistência inferior a 0,10 por resposta, e consolidação do julgamento do grupo por média geométrica elemento a elemento das matrizes individuais (agregação de julgamentos individuais — AIJ), com registro da matriz consolidada, dos pesos resultantes e dos indicadores de consistência. |
+
+| 1.10    | 26/09/2026 | `[preencher]` | Registro dos operadores nativos da extração geoespacial, preservação das correspondências na saída e distinção entre atributo nulo e ausência de incidência territorial. |
 
 ---
 
@@ -368,6 +370,25 @@ entornos ou faixas derivadas por buffer.
 **Saídas mínimas:** `status_fase1`, `restricoes_intersectadas`,
 `riscos_intersectados`, `alertas_fase1`, `geometria_ou_area_afetada`,
 `criterios_fase3_sugeridos`.
+
+
+**Rastreabilidade da extração geoespacial.** No módulo de extração de atributos,
+o modo sem recorte utiliza junção espacial esquerda com `ST_Intersects`, executada
+por GDAL/OGR e SQLite/SpatiaLite. Preservam-se os registros e as geometrias das
+demandas, inclusive quando não há correspondência. No modo com recorte, o operador
+nativo `OGR.Layer.Identity` fornece os fragmentos e a identificação da unidade de
+recorte. As correspondências conservam os atributos de origem na camada de saída;
+relações múltiplas também são registradas em campos JSON.
+
+Quando as categorias de risco e restrição são selecionadas na extração, seus
+indicadores registram a existência de correspondência espacial: 1 para presença
+e 0 para ausência. Um atributo nulo na base intersectada não significa ausência
+de incidência. Os campos `sicard_vinculos` e `sicard_esquema` preservam as relações
+e sua estrutura analítica, permitindo consultar painéis e mapas a partir da saída
+materializada. Esses indicadores descritivos subsidiam a avaliação territorial;
+a classificação da Fase 1 segue as regras de elegibilidade descritas acima.
+O contrato operacional é detalhado em
+`documentacao/geoespacial/FLUXO_CRUZAMENTO_ESPACIAL_CONFIGURAVEL.md`.
 
 ### 8.2 Fase 2 — Hierarquização por favorabilidade territorial
 

@@ -7,7 +7,6 @@ buffer e transformação de coordenadas são executados por OGR/OSR.
 import math
 import uuid
 import weakref
-import numpy as np
 import geopandas as gpd
 from osgeo import ogr, osr, gdal
 
@@ -169,68 +168,135 @@ def reproject(frame, target, name='Camada'):
         raise ValueError(f'{name}: GDAL/OSR não conseguiu transformar o CRS: {exc}') from exc
 
 
-class SpatialIndex:
-    """Camada OGR por base; filtro espacial de envelopes seguido de predicado exato.
+class LayerOverlay:
+    """Adaptador de dados para a álgebra nativa de camadas OGR.
 
-    O FID é a posição original, inclusive quando há feições vazias entre válidas.
-    Bases maiores usam GeoPackage temporário com R-tree gerido pelo GDAL.
-    O datasource vive junto com a layer; nenhuma conexão é compartilhada por jobs.
+    OGR Layer.Intersection/Identity executam a busca e o overlay. Python apenas
+    transfere geometrias e posições de linhas, sem selecionar envelopes ou
+    implementar interseção/recorte. FIDs são posições, nunca índices do pandas.
     """
     def __init__(self, geometries):
         if ogr.GetGEOSVersionMajor() < 1:
-            raise ValueError('GDAL/OGR precisa de suporte GEOS para predicados espaciais exatos.')
-        geometries = list(geometries)
-        self.path = f'/vsimem/sicard-{uuid.uuid4().hex}.gpkg' if len(geometries)>256 else None
+            raise ValueError('GDAL/OGR precisa de suporte GEOS para overlay.')
+        self.geometries = list(geometries)
+        self.path = f'/vsimem/sicard-{uuid.uuid4().hex}.gpkg' if len(self.geometries)>256 else None
         self.dataset = ogr.GetDriverByName('GPKG' if self.path else 'Memory').CreateDataSource(self.path or '')
-        self.layer = self.dataset.CreateLayer('base', geom_type=ogr.wkbUnknown,
-                                              options=['SPATIAL_INDEX=YES'] if self.path else [])
+        self.layer = self._layer(self.dataset, 'base', self.geometries, 'base_pos', indexed=bool(self.path))
         self._resources = {'layer':self.layer,'dataset':self.dataset,'path':self.path}
         self._finalizer = weakref.finalize(self, self._release, self._resources)
-        if self.path: self.layer.StartTransaction()
-        for pos, value in enumerate(geometries):
+
+    @staticmethod
+    def _layer(dataset, name, values, field, indexed=False):
+        layer = dataset.CreateLayer(name, geom_type=ogr.wkbUnknown,
+                                    options=['SPATIAL_INDEX=YES'] if indexed else [])
+        layer.CreateField(ogr.FieldDefn(field, ogr.OFTInteger64))
+        if indexed: layer.StartTransaction()
+        for pos, value in enumerate(values):
             g = geometry(value)
             if g is None or g.IsEmpty(): continue
-            f = ogr.Feature(self.layer.GetLayerDefn())
-            f.SetFID(pos)
-            f.SetGeometry(g)
-            if self.layer.CreateFeature(f)!=0: raise ValueError('GDAL/OGR: falha ao preparar base espacial.')
-        if self.path:
-            self.layer.CommitTransaction()
-            self.layer.SyncToDisk()
+            feature = ogr.Feature(layer.GetLayerDefn())
+            feature.SetFID(pos)
+            feature.SetField(field, pos)
+            feature.SetGeometry(g)
+            if layer.CreateFeature(feature) != ogr.OGRERR_NONE:
+                raise ValueError('GDAL/OGR: falha ao preparar camada para overlay.')
+        if indexed:
+            layer.CommitTransaction()
+            layer.SyncToDisk()
+        return layer
 
     @staticmethod
     def _release(resources):
         resources['layer'] = None
         resources['dataset'] = None
-        if resources['path']:
-            gdal.Unlink(resources['path'])
+        if resources['path']: gdal.Unlink(resources['path'])
 
     def close(self):
         self.layer = None
         self.dataset = None
         self._finalizer()
 
-    def query(self, values, predicate='intersects'):
-        if values is None or hasattr(values,'wkb') or isinstance(values,ogr.Geometry):
-            return np.asarray(self._one(values,predicate), dtype=np.int64)
-        pairs = [(i,j) for i,g in enumerate(values) for j in self._one(g,predicate)]
-        return np.asarray(pairs,dtype=np.int64).T if pairs else np.empty((2,0),dtype=np.int64)
-
-    def _one(self, value, name):
-        g = geometry(value)
-        if g is None or g.IsEmpty(): return []
-        xmin,xmax,ymin,ymax = g.GetEnvelope()
-        self.layer.SetSpatialFilterRect(xmin,ymin,xmax,ymax)
-        self.layer.ResetReading()
-        method = {'intersects':'Intersects','contains':'Contains','within':'Within'}[name]
+    def records(self, values, operation='Intersection', predicate_name='intersects'):
+        """(posição entrada, posição base ou None, geometria do overlay)."""
+        if operation not in ('Intersection', 'Identity'):
+            raise ValueError('Operação de camada não suportada.')
+        if predicate_name not in ('intersects', 'within', 'contains'):
+            raise ValueError('Predicado espacial não suportado.')
+        values = list(values)
+        dataset = ogr.GetDriverByName('Memory').CreateDataSource('')
+        source = self._layer(dataset, 'entrada', values, 'entrada_pos')
+        result = dataset.CreateLayer('resultado', geom_type=ogr.wkbUnknown)
         try:
-            return sorted(f.GetFID() for f in self.layer if getattr(g,method)(f.GetGeometryRef()))
+            code = getattr(source, operation)(self.layer, result, options=[
+                'SKIP_FAILURES=NO', 'KEEP_LOWER_DIMENSION_GEOMETRIES=YES'])
+            if code != ogr.OGRERR_NONE:
+                raise ValueError(f'GDAL/OGR: Layer.{operation} falhou ({code}).')
+            rows = []
+            for feature in result:
+                left, right = feature.GetField('entrada_pos'), feature.GetField('base_pos')
+                if right is not None and predicate_name != 'intersects' and not predicate(values[left], self.geometries[right], predicate_name):
+                    continue
+                rows.append((left, right, external(feature.GetGeometryRef())))
+            return sorted(rows, key=lambda r: (r[0], r[1] is None, r[1] or 0))
         except RuntimeError as exc:
-            raise ValueError(f'GDAL/OGR: falha na junção espacial: {exc}') from exc
+            raise ValueError(f'GDAL/OGR: Layer.{operation}: {exc}') from exc
         finally:
-            self.layer.SetSpatialFilter(None)
+            result = source = dataset = None
+
+
+class SpatialJoin:
+    """Junção espacial esquerda nativa GDAL/OGR + SQLite/SpatiaLite.
+
+    Apenas posições de linhas atravessam este adaptador. A geometria e os
+    atributos originais da demanda permanecem no GeoDataFrame de saída.
+    SpatiaLite executa o predicado espacial e consulta seu índice R-tree.
+    """
+    def __init__(self, geometries):
+        self.dataset = ogr.GetDriverByName('SQLite').CreateDataSource(':memory:', options=['SPATIALITE=YES'])
+        self._write_layer('base', geometries, 'base_pos')
+
+    def _write_layer(self, name, geometries, field):
+        layer = self.dataset.CreateLayer(name, geom_type=ogr.wkbUnknown,
+                                        options=['GEOMETRY_NAME=geometry', 'SPATIAL_INDEX=YES'])
+        layer.CreateField(ogr.FieldDefn(field, ogr.OFTInteger64))
+        layer.StartTransaction()
+        for pos, value in enumerate(geometries):
+            feature = ogr.Feature(layer.GetLayerDefn())
+            feature.SetField(field, pos)
+            geom = geometry(value)
+            if geom is not None and not geom.IsEmpty(): feature.SetGeometry(geom)
+            if layer.CreateFeature(feature) != ogr.OGRERR_NONE:
+                raise ValueError('GDAL/OGR: falha ao carregar camada da junção espacial.')
+        layer.CommitTransaction()
+
+    def pairs(self, geometries):
+        """Inclui (posição da demanda, None) para feições sem correspondência."""
+        if self.dataset.GetLayerByName('entrada') is not None:
+            self.dataset.DeleteLayer('entrada')
+        self._write_layer('entrada', geometries, 'entrada_pos')
+        result = None
+        try:
+            result = self.dataset.ExecuteSQL("""
+                SELECT e.entrada_pos, b.base_pos
+                FROM entrada AS e
+                LEFT JOIN base AS b ON
+                    b.ROWID IN (SELECT ROWID FROM SpatialIndex
+                                WHERE f_table_name = 'base' AND search_frame = e.geometry)
+                    AND ST_Intersects(e.geometry, b.geometry) = 1
+                ORDER BY e.entrada_pos, b.base_pos
+            """)
+            if result is None:
+                raise ValueError('GDAL/OGR: a junção espacial não retornou resultado.')
+            return [(f.GetField('entrada_pos'), f.GetField('base_pos')) for f in result]
+        except RuntimeError as exc:
+            raise ValueError(f'GDAL/OGR: falha na junção espacial esquerda: {exc}') from exc
+        finally:
+            if result is not None: self.dataset.ReleaseResultSet(result)
+
+    def close(self):
+        self.dataset = None
 
 
 def provenance():
     return {'motor':'GDAL/OGR','versao':gdal.VersionInfo('RELEASE_NAME'),
-            'junção':'OGR spatial filter + exact predicate','transformacao':'GDAL/OSR'}
+            'junção':'GDAL/OGR SQLite/SpatiaLite LEFT JOIN ST_Intersects', 'overlay':'OGR.Layer.Intersection', 'recorte':'OGR.Layer.Identity','transformacao':'GDAL/OSR'}

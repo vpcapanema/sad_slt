@@ -19,7 +19,7 @@ def valores_distintos(valores):
     return serializar(saida)
 
 
-def relacao(a, b, demanda_original=None):
+def relacao(a, b, demanda_original=None, comum=None):
     """Operação depende das duas representações; medidas no CRS métrico de trabalho.
 
     Percentual é geométrico por par, nunca peso automático para atributos. Pares
@@ -29,7 +29,7 @@ def relacao(a, b, demanda_original=None):
         return {'tipo': 'nao_avaliado', 'area_m2': None, 'comprimento_m': None,
                 'situacao': 'nao_avaliado', 'percentual_entrada': None}
     demanda = a if demanda_original is None else demanda_original
-    comum = espacial.intersection(a, b)
+    comum = espacial.intersection(a, b) if comum is None else comum
     da, db = int(espacial.dimension(a)), int(espacial.dimension(b))
     dim = min(da, db)
     tipo = ('sem_intersecao' if comum.is_empty else 'contato_borda' if espacial.predicate(a, b, 'touches')
@@ -77,9 +77,24 @@ def relacao(a, b, demanda_original=None):
     return saida
 
 
-def registro(base, pos, geometria, fid=None, espacial=True, demanda_original=None):
+def registro(base, pos, geometria, fid=None, espacial=True, demanda_original=None, comum=None):
     linha = base.iloc[pos]
-    return {'fid_base': int(pos if fid is None else fid),
+    detalhes = {}
+    if espacial and geometria is not None:
+        from api.services import extracao_ogr as geo
+        import geopandas as gpd
+        geom_base = linha[base.geometry.name]
+        comum = geo.intersection(geometria, geom_base) if comum is None else comum
+        # Evidência geométrica do par, preservada na saída; nenhuma nova busca no painel.
+        detalhes['geometria_medida'] = comum.wkb_hex if comum is not None else None
+        original = geometria if demanda_original is None else demanda_original
+        detalhes['demanda_medida'] = original.wkb_hex
+        cache = base.attrs.setdefault('_sicard_mapa', {})
+        if pos not in cache:
+            mapa = geo.reproject(gpd.GeoDataFrame(geometry=[geom_base],crs=base.crs),4674,'Base relacionada')
+            cache[pos] = json.loads(mapa.to_json())['features'][0]['geometry']
+        detalhes['geometria_base'] = cache[pos]
+    return {**detalhes, 'fid_base': int(pos if fid is None else fid),
             'atributos': _json_safe(linha.drop([base.geometry.name, '__ea_fid'], errors='ignore').to_dict()),
-            **(relacao(geometria, linha[base.geometry.name], demanda_original) if espacial else
+            **(relacao(geometria, linha[base.geometry.name], demanda_original, comum=comum) if espacial else
                {'tipo': 'chave_atributo', 'area_m2': None, 'comprimento_m': None})}

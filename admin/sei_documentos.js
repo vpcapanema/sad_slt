@@ -60,10 +60,10 @@
   // Acompanha o job de leitura: cada passo que o servidor registra (página
   // aberta, OCR, campo lido…) vira uma linha do modal, na ordem em que ocorre.
   // Devolve o resultado do job ou lança o erro com o código HTTP equivalente.
-  async function acompanharJob(inicial, proc) {
+  async function acompanharJob(inicial) {
     let job = inicial;
     for (;;) {
-      proc.acompanhar(job);
+      window.ProcessFeedback.acompanhar(job);
       if (job.status !== 'executando') break;
       await new Promise(resolve => setTimeout(resolve, 400));
       job = await request(`${API}/jobs/${job.id}`);
@@ -136,19 +136,26 @@
     botao.disabled = true;
     try {
       if (acao === 'excluir') {
-        const { ok } = await SLTFeedback.acao({
-          confirmacao: {
-            title: 'Excluir documento',
-            message: `Excluir ${doc.nome_arquivo} do repositório?`,
-            detail: 'O PDF é apagado do banco e não pode ser recuperado. Nenhuma demanda é afetada: documento que já gerou demanda não pode ser excluído.',
-            confirmLabel: 'Excluir',
-            danger: true,
-          },
-          titulo: 'Excluir documento',
-          mensagemInicial: 'Pedindo ao servidor a exclusão do PDF…',
-          executar: () => request(`${API}/${doc.id}`, { method: 'DELETE' }),
-          sucesso: `${doc.nome_arquivo} foi excluído do repositório.`,
+        const confirmado = await ProcessFeedback.confirmar({
+          title: 'Excluir documento',
+          message: `Excluir ${doc.nome_arquivo} do repositório?`,
+          warning: 'O PDF é apagado do banco e não pode ser recuperado. Nenhuma demanda é afetada: documento que já gerou demanda não pode ser excluído.',
+          confirmLabel: 'Excluir',
+          danger: true,
         });
+        if (!confirmado) return;
+        const TAREFA = 'Excluir o PDF no servidor';
+        const proc = ProcessFeedback.iniciarCadastro({ title: 'Excluir documento', subtitle: doc.nome_arquivo, tasks: [TAREFA] });
+        proc.tarefaAtual(TAREFA);
+        let ok = false;
+        try {
+          await request(`${API}/${doc.id}`, { method: 'DELETE' });
+          proc.concluirTarefa(TAREFA, 'Excluído');
+          proc.sucesso({ title: 'Documento excluído', message: `${doc.nome_arquivo} foi excluído do repositório.` });
+          ok = true;
+        } catch (e) {
+          proc.erro(erroDoServidor(e));
+        }
         if (ok) {
           removerDaFila(String(doc.id));
           await listar();
@@ -181,10 +188,10 @@
 
   async function reanalisar(doc) {
     const tipo = q('sei-tipo-demanda').value;
-    const confirmado = await SLTFeedback.confirmar({
+    const confirmado = await ProcessFeedback.confirmar({
       title: 'Reanalisar o PDF',
       message: `${doc.nome_arquivo} será lido de novo, agora como ${tipo}.`,
-      detail: 'O formulário aberto deste documento é recarregado do zero: o que você já tiver editado nele se perde. O PDF e o registro no repositório não mudam, e nenhuma demanda é criada por esta ação.',
+      warning: 'O formulário aberto deste documento é recarregado do zero: o que você já tiver editado nele se perde. O PDF e o registro no repositório não mudam, e nenhuma demanda é criada por esta ação.',
       confirmLabel: 'Reanalisar',
       danger: true,
     });
@@ -225,25 +232,32 @@
         const execucao = item.execucao;
         renderFila();
         atualizarStatus();
-        const proc = SLTFeedback.processo(`Análise de ${item.nome}`);
-        const passo = proc.passo(`Pedindo ao servidor a leitura do PDF como ${item.tipo}…`, 'progress');
+        const PEDIDO = 'Pedir a leitura ao servidor';
+        const LEITURA = `Ler o PDF como ${item.tipo}`;
+        const proc = ProcessFeedback.iniciarCadastro({ title: `Análise de ${item.nome}`, tasks: [PEDIDO, LEITURA] });
+        proc.tarefaAtual(PEDIDO, `Pedindo ao servidor a leitura do PDF como ${item.tipo}…`);
+        let aceito = false;
         try {
           const job = await post(`${API}/${item.id}/analisar`, { tipo_demanda: item.tipo });
-          proc.atualizar(passo, 'success', `Servidor iniciou a leitura como ${item.tipo}.`);
-          const leitura = await acompanharJob(job, proc);
-          if (execucao !== item.execucao) { proc.concluir({type:'info',message:'Resultado substituído por uma nova análise.'});proc.fechar(); continue; } // reanalisado durante a leitura: vale a nova
+          aceito = true;
+          proc.concluirTarefa(PEDIDO, `Leitura iniciada como ${item.tipo}`);
+          proc.tarefaAtual(LEITURA);
+          const leitura = await acompanharJob(job);
+          // Reanalisado durante a leitura: vale a nova, esta sai sem desfecho.
+          if (execucao !== item.execucao) { proc.fechar(); continue; }
           item.detalhe = leitura;
           item.estado = 'pronto';
-          proc.concluir(desfechoDaLeitura(leitura));
+          proc.concluirTarefa(LEITURA, 'Leitura concluída');
+          proc.sucesso(desfechoDaLeitura(leitura));
         } catch (e) {
-          if (execucao !== item.execucao) { proc.concluir({type:'info',message:'Resultado substituído por uma nova análise.'});proc.fechar(); continue; }
+          if (execucao !== item.execucao) { proc.fechar(); continue; }
           item.estado = 'erro';
           item.erro = e.message;
-          // Se o pedido foi aceito, a falha já está no log do job; senão, marca o pedido.
-          if (!passo.classList.contains('slt-fb-step--success')) proc.atualizar(passo, 'error', 'O servidor recusou o pedido de leitura.');
-          proc.concluir({
-            type: 'error',
-            resultados: [linhaDeErro(e), 'O formulário fica em branco para preenchimento manual.'],
+          // Se o pedido foi aceito, a falha está no log do job; senão, o pedido foi recusado.
+          proc.erro({
+            ...erroDoServidor(e),
+            title: aceito ? 'A leitura foi interrompida' : 'O servidor recusou o pedido de leitura',
+            solution: 'O formulário fica em branco para preenchimento manual.',
           });
         }
         renderFila();
@@ -290,8 +304,10 @@
   }
 
   function erroFormulario(texto) {
-    const host=q('sei-formulario-erro');host.replaceChildren();
-    if(texto)SLTFeedback.contextual(host,'error',texto);
+    const host = q('sei-formulario-erro');
+    host.textContent = texto || '';
+    host.classList.toggle('hidden', !texto);
+    if (texto) Notify.error('Formulário da demanda', texto);
   }
 
   function atualizarStatus() {
@@ -369,7 +385,8 @@
   // -------------------------------------------------------------- desfecho
 
   const rotulo = (chave) => ROTULOS[chave] || chave;
-  const linhaDeErro = (e) => ({ message: `Erro ${e.status || 'de conexão'}: ${e.message}`, status: 'error' });
+  /** Erro de rota para o modal de erro: o código HTTP vai numa linha dos detalhes. */
+  const erroDoServidor = (e) => ({ message: e.message, details: [`Erro ${e.status || 'de conexão'}: ${e.message}`] });
 
   // Estes valores não têm campo de texto no formulário: instituição e
   // representante são escolhidos no SIGMA, e o CNPJ vem junto dessa escolha.
@@ -421,11 +438,15 @@
     return linhas;
   }
 
+  /** Desfecho da leitura no modal de resultado: verde se tudo sustentado, amarelo com ressalvas. */
   function desfechoDaLeitura(leitura) {
     const resumo = leitura.analise?.resumo;
+    const tipo = !resumo || resumo.desfecho === 'sucesso' ? 'success' : 'warning';
     return {
-      type: !resumo || resumo.desfecho === 'sucesso' ? 'success' : 'warning',
-      resultados: linhasDaLeitura(leitura),
+      _status: tipo === 'success' ? undefined : 'partial',
+      title: tipo === 'success' ? 'Leitura concluída' : 'Leitura concluída com ressalvas',
+      message: 'Confira os valores lidos no formulário antes de criar a demanda.',
+      subprocesses: linhasDaLeitura(leitura).map(l => ({ name: l.message, status: l.status === 'info' ? 'skip' : l.status })),
     };
   }
 
@@ -442,51 +463,51 @@
       return;
     }
     const nome = dados.campos?.nome || item.nome;
-    const confirmado = await SLTFeedback.confirmar({
+    const confirmado = await ProcessFeedback.confirmar({
       title: 'Criar demanda',
       message: `Criar ${dados.tipo} "${nome}" a partir de ${item.nome}?`,
-      detail: 'A demanda é gravada no banco com os dados do formulário, na situação inicial de análise. O PDF fica ligado a ela e deixa de poder ser reanalisado ou excluído.',
+      warning: 'A demanda é gravada no banco com os dados do formulário, na situação inicial de análise. O PDF fica ligado a ela e deixa de poder ser reanalisado ou excluído.',
       confirmLabel: 'Criar demanda',
     });
     if (!confirmado) return;
     const botao = q('sei-btn-confirmar');
     botao.disabled = true;
-    const proc = SLTFeedback.processo('Criar demanda');
-    proc.passo('Formulário validado pelas regras do cadastro oficial.', 'success');
-    const passo = proc.passo(`Enviando o ${dados.tipo} ao servidor…`, 'progress');
+    const VALIDAR = 'Validar o formulário';
+    const GRAVAR = `Gravar o ${dados.tipo}`;
+    const proc = ProcessFeedback.iniciarCadastro({ title: 'Criar demanda', subtitle: nome, tasks: [VALIDAR, GRAVAR] });
+    proc.concluirTarefa(VALIDAR, 'Regras do cadastro oficial');
+    proc.tarefaAtual(GRAVAR, `Enviando o ${dados.tipo} ao servidor…`);
     try {
       const criada = await post(`${API}/${item.id}/criar-demanda`, { tipo_demanda: dados.tipo, campos: dados.campos });
       item.estado = 'criada';
-      proc.atualizar(passo, 'success', `Servidor respondeu: ${criada.ja_existia ? 'demanda já existente' : 'demanda gravada'}.`);
-      // O resultado permanece consultável; a fila não exige dispensar uma mensagem.
-      proc.concluir(criada.ja_existia
+      proc.concluirTarefa(GRAVAR, criada.ja_existia ? 'Demanda já existente' : 'Demanda gravada');
+      proc.sucesso(criada.ja_existia
         ? {
-            type: 'warning',
-            resultados: [
-              `Demanda ${criada.id} já existia para ${item.nome}.`,
-              'Nada novo foi gravado.',
-            ],
+            _status: 'partial',
+            title: `Demanda ${criada.id} já existia`,
+            message: `A demanda já existia para ${item.nome}. Nada novo foi gravado.`,
           }
         : {
-            type: 'success',
-            resultados: [
-              `Demanda criada: ${criada.id}`,
-              `Tipo: ${dados.tipo}`,
-              `Nome: ${nome}`,
-              `Origem: ${item.nome}`,
+            title: 'Demanda criada',
+            message: `${dados.tipo} "${nome}" gravada na situação inicial de análise.`,
+            summary: [
+              { label: 'Demanda', value: criada.id, icon: 'fa-hashtag' },
+              { label: 'Tipo', value: dados.tipo, icon: 'fa-tag' },
+              { label: 'Nome', value: nome, icon: 'fa-signature' },
+              { label: 'Origem', value: item.nome, icon: 'fa-file-pdf' },
             ],
           });
       avancar();
       await listar();
     } catch (e) {
-      proc.atualizar(passo, 'error', 'O servidor recusou a criação.');
       erroFormulario(e.message);
-      proc.concluir({
-        type: 'error',
+      proc.erro({
+        ...erroDoServidor(e),
+        title: 'O servidor recusou a criação',
         // Só a recusa de validação garante que nada foi gravado.
-        resultados: [linhaDeErro(e), e.status === 422
-          ? 'Nenhuma demanda foi gravada.'
-          : 'Confira a tabela antes de tentar de novo: a demanda pode ter sido gravada antes da falha.'],
+        solution: e.status === 422
+          ? 'Nenhuma demanda foi gravada. Corrija o formulário e confirme de novo.'
+          : 'Confira a tabela antes de tentar de novo: a demanda pode ter sido gravada antes da falha.',
       });
       botao.disabled = false;
     }
@@ -495,10 +516,10 @@
   async function descartar() {
     const item = fila.find(x => x.id === atualId);
     if (!item) return;
-    const confirmado = await SLTFeedback.confirmar({
+    const confirmado = await ProcessFeedback.confirmar({
       title: 'Descartar demanda',
       message: `Fechar ${item.nome} sem criar demanda?`,
-      detail: 'O que foi preenchido ou editado no formulário se perde. O PDF continua no repositório e pode ser reaberto pela tabela.',
+      warning: 'O que foi preenchido ou editado no formulário se perde. O PDF continua no repositório e pode ser reaberto pela tabela.',
       confirmLabel: 'Descartar',
       danger: true,
     });
@@ -514,10 +535,10 @@
     const tipo = q('sei-tipo-demanda').value;
     // A seleção é copiada antes do modal: o input não é tocado durante a espera.
     const arquivos = [...entrada.files];
-    const confirmado = await SLTFeedback.confirmar({
+    const confirmado = await ProcessFeedback.confirmar({
       title: 'Enviar e analisar PDFs do SEI',
       message: `${arquivos.length} arquivo(s) para o formulário de ${tipo}: ${arquivos.map(a => a.name).join(', ')}.`,
-      detail: 'Cada PDF é guardado no repositório e lido em seguida, um de cada vez. A leitura só preenche o que estiver sustentado no documento. Nenhuma demanda é criada agora: você ainda revisa e confirma cada formulário.',
+      warning: 'Cada PDF é guardado no repositório e lido em seguida, um de cada vez. A leitura só preenche o que estiver sustentado no documento. Nenhuma demanda é criada agora: você ainda revisa e confirma cada formulário.',
       confirmLabel: 'Enviar e analisar',
     });
     if (!confirmado) return;
@@ -526,27 +547,38 @@
     // O tipo decide o contrato de campos, e a leitura acontece já no envio.
     dados.append('tipo_demanda', tipo);
     q('sei-btn-enviar').disabled = true;
-    const proc = SLTFeedback.processo(`Enviar e analisar ${arquivos.length} PDF(s)`);
-    const passo = proc.passo(`Enviando ${arquivos.length} arquivo(s) ao servidor para gravar e ler…`, 'progress');
+    const ENVIO = `Enviar ${arquivos.length} arquivo(s)`;
+    const LEITURA = 'Gravar e ler cada PDF';
+    const proc = ProcessFeedback.iniciarCadastro({ title: `Enviar e analisar ${arquivos.length} PDF(s)`, subtitle: `Formulário de ${tipo}`, tasks: [ENVIO, LEITURA] });
+    proc.tarefaAtual(ENVIO, 'Enviando os arquivos ao servidor para gravar e ler…');
+    let aceito = false;
     try {
       const job = await request(API, { method: 'POST', body: dados });
+      aceito = true;
       entrada.value = '';
-      proc.atualizar(passo, 'success', 'Arquivos recebidos pelo servidor; leitura iniciada.');
-      // Cada arquivo, página e campo lido aparece como linha enquanto o job roda.
-      const resultado = await acompanharJob(job, proc);
+      proc.concluirTarefa(ENVIO, 'Recebidos pelo servidor');
+      proc.tarefaAtual(LEITURA);
+      // Cada arquivo, página e campo lido aparece no log enquanto o job roda.
+      const resultado = await acompanharJob(job);
+      proc.concluirTarefa(LEITURA, `${resultado.recebidos.length} lido(s)`);
       const erros = resultado.erros || [];
-      if (erros.length) {
-        // Recusa parcial: o modal fica amarelo e lista cada arquivo, aceito ou recusado.
-        proc.concluir({
-          type: 'warning',
-          resultados: [
-            ...resultado.recebidos.map(doc => ({ message: `${doc.nome_arquivo}: aceito`, status: 'success' })),
-            ...erros.map(e => ({ message: `${e.arquivo}: recusado — ${e.mensagem}`, status: 'error' })),
-          ],
-        });
-      } else {
-        proc.concluir({message:'Arquivos recebidos e analisados.'});proc.fechar();
-      }
+      // Um modal de resultado por envio: cada arquivo numa linha, com a leitura resumida.
+      const leituras = resultado.recebidos.map(doc => {
+        const desfecho = desfechoDaLeitura(doc);
+        return {
+          name: `${doc.nome_arquivo}: aceito`,
+          status: desfecho._status === 'partial' ? 'warning' : 'success',
+          detail: desfecho.subprocesses.map(l => l.name).join('\n'),
+        };
+      });
+      const recusas = erros.map(e => ({ name: `${e.arquivo}: recusado`, status: 'error', detail: e.mensagem }));
+      const ressalvas = erros.length || leituras.some(l => l.status === 'warning');
+      proc.sucesso({
+        _status: ressalvas ? 'partial' : undefined,
+        title: erros.length ? 'Parte dos arquivos foi recusada' : (ressalvas ? 'Arquivos analisados com ressalvas' : 'Arquivos recebidos e analisados'),
+        message: 'Revise e confirme cada formulário na fila abaixo; nenhuma demanda foi criada ainda.',
+        subprocesses: [...leituras, ...recusas],
+      });
       const recusados = erros.map(e => `${e.arquivo}: ${e.mensagem}`).join(' ');
       aviso('sei-upload-aviso', `${resultado.recebidos.length} documento(s) recebido(s).${recusados ? ' Recusados — ' + recusados : ''}`);
       if (resultado.recebidos.length) {
@@ -560,23 +592,19 @@
         abrirCard();
         if (!atualId) selecionar(novos[0].id);
         else renderFila();
-        for (const item of novos) {
-          const desfecho = desfechoDaLeitura(item.detalhe);
-          SLTFeedback.processo(`Análise de ${item.nome}`).concluir(desfecho);
-        }
       }
       await listar();
     } catch (e) {
       // Nenhum arquivo aceito (ou falha de conexão): o erro fica no modal, em vermelho.
-      if (!passo.classList.contains('slt-fb-step--success')) proc.atualizar(passo, 'error', 'O servidor recusou o envio.');
       aviso('sei-upload-aviso', e.message);
-      proc.concluir({
-        type: 'error',
+      proc.erro({
+        ...erroDoServidor(e),
+        title: aceito ? 'A leitura foi interrompida' : 'O servidor recusou o envio',
         // 413 = lote grande demais, conferido antes de gravar; 422 = todos recusados.
         // Outros códigos (503, 500, conexão) podem vir depois de arquivos já gravados.
-        resultados: [linhaDeErro(e), [413, 422].includes(e.status)
+        solution: [413, 422].includes(e.status)
           ? 'Nenhum arquivo foi gravado.'
-          : 'Confira a tabela antes de reenviar: parte dos arquivos pode ter sido gravada antes da falha.'],
+          : 'Confira a tabela antes de reenviar: parte dos arquivos pode ter sido gravada antes da falha.',
       });
     } finally { q('sei-btn-enviar').disabled = false; }
   }

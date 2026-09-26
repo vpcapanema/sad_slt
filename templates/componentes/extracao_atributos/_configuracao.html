@@ -34,7 +34,7 @@
       <section class="ea-panel" aria-labelledby="ea-bases-title">
         <h3 class="ea-config-card-title" id="ea-bases-title"><span class="ea-subnumber">1.2</span><i class="fas fa-layer-group" aria-hidden="true"></i> Camadas base</h3>
         <div class="ea-config-card-body">
-          <p class="ea-hint">Escolha uma categoria e adicione as camadas de base. Repita para organizar os grupos da análise.</p>
+          <p class="ea-hint">Organize as bases por categoria para orientar a apresentação dos resultados. Todos os atributos serão preservados.</p>
           <form id="ea-base-form" class="ea-base-form-coluna">
             <div class="ea-field">
               <label for="ea-category-select">Categoria das bases</label>
@@ -58,29 +58,72 @@
         </div>
       </section>
       <section class="ea-panel" aria-labelledby="ea-output-title">
-        <h3 class="ea-config-card-title" id="ea-output-title"><span class="ea-subnumber">1.3</span><i class="fas fa-play" aria-hidden="true"></i> Algoritmo de execução e camada de saída</h3>
+        <h3 class="ea-config-card-title" id="ea-output-title"><span class="ea-subnumber">1.3</span><i class="fas fa-play" aria-hidden="true"></i> Processamento em lote e saídas</h3>
         <div class="ea-config-card-body">
-          <p class="ea-hint">Selecione o algoritmo de execução e, se desejar, dê um nome à camada de saída.</p>
+          <p class="ea-hint">Escolha o modo padrão. Ajuste cada camada na tabela de execução abaixo.</p>
           <div class="ea-campos-duplos">
             <div class="ea-field">
-              <label for="ea-nome-saida">Nome da camada de saída (opcional)</label>
+              <label for="ea-nome-saida">Nome do lote (opcional)</label>
               <input id="ea-nome-saida" type="text" maxlength="200" autocomplete="off">
-              <small id="ea-nome-saida-dica">Em branco, o sistema nomeia a partir da camada de entrada.</small>
+              <small id="ea-nome-saida-dica">Cada camada terá sua própria saída; este nome identifica o pacote geral.</small>
             </div>
             <div class="ea-field">
-              <label for="ea-operation">Algoritmo de processamento (obrigatório)</label>
+              <label for="ea-operation">Algoritmo padrão do lote</label>
               <select id="ea-operation" required>
                 <option value="">Selecione o algoritmo</option>
-                <option value="estatisticas">Enriquecimento sem recorte (atributos e estatísticas por campo)</option>
-                <option value="enriquecimento">Enriquecimento configurável (permite recortar e duplicar)</option>
+                <option value="estatisticas">Sem recorte · Spatial Join</option>
+                <option value="enriquecimento">Com recorte · Identity</option>
               </select>
             </div>
           </div>
           <!-- Desenho do que o algoritmo faz: entrada, base e resultado. -->
-          <figure class="ea-algoritmo-desenho" id="ea-algoritmo-desenho" aria-live="polite"></figure>
+          <div class="ea-algoritmo-desenho" id="ea-algoritmo-desenho" aria-live="polite"><p data-algoritmo="">Escolha o algoritmo para ver o que ele faz.</p><figure data-algoritmo="estatisticas" hidden><svg viewBox="0 0 250 92" role="img" aria-label="Enriquecimento de atributos" class="ea-diagrama">
+  <title>Enriquecimento de atributos</title><desc>Cada feição da entrada conserva seu registro e recebe os atributos das bases que intersecta; nada da entrada se perde.</desc>
+  <defs><marker id="pontaEaestatisticas" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M0 0 L8 4 L0 8 z" fill="#33566d"/></marker></defs>
+
+  <rect x="8" y="20" width="40" height="40" rx="2" fill="#f7e0cb" stroke="#d1701f" stroke-width="1.4"/>
+  <circle cx="20" cy="32" r="3.4" fill="#1769aa"/><circle cx="36" cy="46" r="3.4" fill="#1769aa"/>
+  <circle cx="62" cy="30" r="3.4" fill="#1769aa"/>
+  <text class="rot" x="37" y="72">Entrada sobre a base</text>
+  <path class="seta" d="M78 40 h16"/>
+  <g>
+    <rect x="104" y="18" width="138" height="44" rx="2" fill="#fff" stroke="#8e2f8e" stroke-width="1.4"/>
+    <line x1="104" y1="30" x2="242" y2="30" stroke="#8e2f8e" stroke-width="1"/>
+    <line x1="104" y1="44" x2="242" y2="44" stroke="#dbe4ea" stroke-width="1"/>
+    <line x1="146" y1="18" x2="146" y2="62" stroke="#dbe4ea" stroke-width="1"/>
+    <line x1="196" y1="18" x2="196" y2="62" stroke="#dbe4ea" stroke-width="1"/>
+    <text class="rot ea-diagrama-cabecalho" x="125" y="27">feição</text>
+    <text class="rot ea-diagrama-cabecalho" x="171" y="27">base</text>
+    <text class="rot ea-diagrama-cabecalho" x="219" y="27">atributos</text>
+    <text class="rot" x="125" y="40">1</text><text class="rot" x="171" y="40">sim</text><text class="rot" x="219" y="40">A, B…</text>
+    <text class="rot" x="125" y="56">2</text><text class="rot" x="171" y="56">não</text><text class="rot" x="219" y="56">vazio</text>
+    <text class="rot" x="173" y="72">Um registro por feição da entrada</text>
+  </g>
+</svg><figcaption>Preserva todas as feições e geometrias da entrada. Todas as bases: atributos e correspondências preservados; cálculos opcionais por campo; sem interseção, valor vazio.</figcaption></figure><figure data-algoritmo="enriquecimento" hidden><svg viewBox="0 0 250 92" role="img" aria-label="Identidade" class="ea-diagrama">
+  <title>Identidade</title><desc>A entrada é dividida pela base: a parte de dentro recebe os atributos da base e a parte de fora é mantida.</desc>
+  <defs><marker id="pontaEaenriquecimento" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M0 0 L8 4 L0 8 z" fill="#33566d"/></marker></defs>
+
+  <rect x="8" y="23" width="46" height="34" rx="2"
+  fill="#cfe3f3" stroke="#1769aa" stroke-width="1.6"/><circle cx="66" cy="40" r="19" fill="#f7e0cb"
+  stroke="#d1701f" stroke-width="1.6"/>
+  <text class="rot" x="37" y="72">Entrada + base</text>
+  <path class="seta" d="M96 40 h16"/>
+  <g>
+    <path d="M132 23 h46 v34 h-46 z" fill="#cfe3f3" stroke="#1769aa" stroke-width="1.6"/>
+    <path d="M178 23 A19 19 0 0 0 178 57 z" fill="#8e2f8e" fill-opacity=".55" stroke="#8e2f8e" stroke-width="1.6"/>
+    <text class="rot" x="168" y="72">Dentro e fora, separados</text>
+  </g>
+</svg><figcaption>Divide a demanda pela base de recorte, preservando as parcelas externas e o identificador original. Registros sem correspondência ficam com os campos vazios.</figcaption></figure></div>
         </div>
       </section>
     </div>
+    <section id="ea-identificacao" class="ea-op-params" aria-labelledby="ea-identificacao-title" hidden>
+      <h4 id="ea-identificacao-title">1.1 · Identificação das demandas por camada</h4>
+      <p class="ea-hint">Confirme a sugestão ou escolha outro campo. Códigos repetidos na mesma camada agrupam várias feições em uma demanda. “Uma demanda por feição” preserva o identificador da feição na saída.</p>
+      <div class="ea-table-wrap"><table><thead><tr><th>Processar</th><th>Camada / geometria</th><th>ID da feição</th><th>Identificador da demanda</th><th>Inspeção do campo</th><th>Categoria dos pontos</th><th>Confirmar</th></tr></thead><tbody id="ea-identificacao-camadas"></tbody></table></div>
+    </section>
     <div class="ea-config-tools" role="group" aria-labelledby="ea-config-tools-title">
       <h4 id="ea-config-tools-title">Configuração da análise</h4>
       <button type="button" class="ea-btn" id="ea-config-carregar" title="Carregar configuração" aria-label="Carregar configuração"><i class="fas fa-folder-open" aria-hidden="true"></i></button>
@@ -130,12 +173,32 @@
       <!-- Cada grupo tem a cor e a seta do subcard de origem: a aréola liga o que
            está aberto aqui ao subcard 1.1, 1.2 ou 1.3. -->
       <div class="ea-grupo-dinamico" data-origem="1.3">
-        <p class="ea-grupo-origem"><span class="ea-grupo-tag">1.3</span> Algoritmo de execução e camada de saída</p>
-        <section class="ea-op-params" id="ea-operation-params" aria-label="Parâmetros do algoritmo (1.3)" hidden></section>
-        <section class="ea-bases-confirmadas" id="ea-bases-confirmadas" aria-label="Regras das bases preparadas" hidden></section>
-        <section class="ea-finalidades" id="ea-finalidades" aria-label="Recortes por finalidade (1.3)" hidden></section>
+        <p class="ea-grupo-origem"><span class="ea-grupo-tag">1.3</span> Processamento em lote e saídas</p>
+        <section class="ea-op-params" id="ea-operation-params" aria-label="Parâmetros do algoritmo (1.3)" hidden>
+          <h4>Execuções por camada de demanda</h4>
+          <p class="ea-hint">Uma execução por camada. Todos os atributos são preservados. O código escolhido em 1.1 acompanha os fragmentos do Identity.</p>
+          <div class="ea-table-wrap"><table><thead><tr><th>Camada</th><th>Identificação</th><th>Algoritmo</th><th>Base que define o recorte</th><th>Nome da saída</th></tr></thead><tbody id="ea-lote-parametros"></tbody></table></div>
+          <p class="ea-hint">Spatial Join: relação Intersects, mantém todas as feições e geometrias. Identity: usa uma base de polígonos sem sobreposição entre unidades e mantém as parcelas internas e externas. Pontos conservam sua representação. CRS de trabalho: SIRGAS 2000 / Brazil Polyconic (EPSG:5880); saída: SIRGAS 2000. Falhas geométricas interrompem a execução.</p>
+          <p class="ea-hint" id="ea-campos-automaticos"></p>
+        </section>
+        <section class="ea-bases-confirmadas" id="ea-bases-confirmadas" aria-label="Regras das bases preparadas" hidden><h4>Parâmetros das bases</h4><p class="ea-hint">Categoria organiza os resultados. Escolha o atributo que identifica os elementos; todos os atributos serão preservados.</p><div class="ea-table-wrap"><table><thead><tr><th>Categoria</th><th>Camada base</th><th>Nome do elemento</th><th>Atributos e cálculos</th></tr></thead><tbody id="ea-regras-bases"></tbody></table></div></section>
+        <section class="ea-finalidades" id="ea-finalidades" aria-label="Tabelas por finalidade (1.3)" hidden><h4>Tabelas por finalidade (opcional)</h4><p class="ea-hint">Cria versões adicionais com os campos escolhidos. A saída integral continua preservada.</p><div id="ea-finalidades-lista"></div><button class="ea-btn" type="button" id="ea-finalidade-adicionar">Adicionar finalidade</button></section>
       </div>
 
     </div>
   </div>
 </section>
+
+<template id="ea-tpl-identificacao"><tr>
+<td><input type="checkbox" data-id="processar" aria-label="Processar camada"></td>
+<td><strong data-id="nome"></strong><small class="ea-hint" data-id="geometria"></small></td>
+<td data-id="fid"></td><td><select data-id="campo" aria-label="Identificador da demanda"></select></td>
+<td><small data-id="inspecao"></small></td><td><select data-id="categoria" aria-label="Categoria dos pontos"></select></td>
+<td><label><input type="checkbox" data-id="confirmar"> Confirmado</label></td></tr></template>
+<template id="ea-tpl-lote-parametro"><tr><td data-id="nome"></td><td data-id="identificacao"></td>
+<td><select data-id="operacao" aria-label="Algoritmo da camada"><option value="">Usar algoritmo do lote</option><option value="estatisticas">Sem recorte · Spatial Join</option><option value="enriquecimento">Com recorte · Identity</option></select></td>
+<td><select data-id="recorte" aria-label="Base de recorte"><option value="">Selecione a base</option></select></td>
+<td><input data-id="saida" maxlength="200" aria-label="Nome da saída"></td></tr></template>
+
+<template id="ea-tpl-base-regra"><tr><td data-category></td><td data-base></td><td><select data-label aria-label="Atributo que identifica o elemento"></select></td><td><button class="ea-btn" type="button" data-rule>Configurar cálculos</button></td></tr></template>
+<template id="ea-tpl-finalidade"><div class="ea-execucao-linha"><strong data-name></strong><span data-fields></span><button class="ea-btn" type="button" data-edit>Editar</button><button class="ea-btn" type="button" data-remove>Remover</button></div></template>

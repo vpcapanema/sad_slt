@@ -54,7 +54,7 @@ const IDENTIDADE = svg('Identidade', 'A entrada é dividida pela base: a parte d
 
 /* Enriquecimento: um registro por feição da entrada, com os atributos da base. */
 const ENRIQUECIMENTO = svg('Enriquecimento de atributos',
-  'Cada feição da entrada vira um registro e recebe os atributos da base que a contém; nada da entrada se perde.', `
+  'Cada feição da entrada conserva seu registro e recebe os atributos das bases que intersecta; nada da entrada se perde.', `
   <rect x="8" y="20" width="40" height="40" rx="2" fill="${LARANJA_CLARO}" stroke="${LARANJA}" stroke-width="1.4"/>
   <circle cx="20" cy="32" r="3.4" fill="${AZUL}"/><circle cx="36" cy="46" r="3.4" fill="${AZUL}"/>
   <circle cx="62" cy="30" r="3.4" fill="${AZUL}"/>
@@ -76,22 +76,17 @@ const ENRIQUECIMENTO = svg('Enriquecimento de atributos',
 
 export const DIAGRAMAS = {
   estatisticas: { nome: 'Enriquecimento sem recorte', svg: ENRIQUECIMENTO,
-    resumo: 'Preserva todas as feições e geometrias da entrada. Risco e Restrição: presença e atributos originais de todas as áreas; contato na borda identificado. Demais bases: estatística escolhida por campo; sem interseção, valor vazio.' },
+    resumo: 'Preserva todas as feições e geometrias da entrada. Todas as bases: atributos e correspondências preservados; cálculos opcionais por campo; sem interseção, valor vazio.' },
   intersection: { nome: 'Interseção (Intersect)', svg: INTERSECAO,
     resumo: 'Mantém apenas os pedaços em que a entrada e a base se sobrepõem. Uma linha por pedaço.' },
   identity: { nome: 'Identidade (Identity)', svg: IDENTIDADE,
     resumo: 'Divide a entrada pela base e mantém também o que ficou fora dela. Uma linha por pedaço.' },
-  enriquecimento: { nome: 'Enriquecimento (Spatial Join)', svg: ENRIQUECIMENTO,
-    resumo: 'Um registro por feição da entrada (ou por trecho, com unidade de recorte), com os atributos das bases. Registros sem correspondência ficam com os campos vazios.' },
+  enriquecimento: { nome: 'Com recorte · Identity', svg: IDENTIDADE,
+    resumo: 'Divide a demanda pela base de recorte, preservando as parcelas externas e o identificador original. Registros sem correspondência ficam com os campos vazios.' },
 };
 
 /* Desenha no <figure> do subcard 1.3; sem algoritmo escolhido, mostra o convite. */
 export function renderDiagrama(host, algoritmo) {
-  if (!host) return;
-  const item = DIAGRAMAS[algoritmo];
-  if (!item) {
-    host.innerHTML = '<figcaption class="ea-diagrama-vazio">Escolha o algoritmo para ver o que ele faz.</figcaption>';
-    return;
-  }
-  host.innerHTML = `${item.svg}<figcaption>${item.resumo}</figcaption>`;
+  if(!host)return;
+  for(const figure of host.querySelectorAll('[data-algoritmo]'))figure.hidden=figure.dataset.algoritmo!==(algoritmo||'');
 }

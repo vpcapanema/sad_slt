@@ -35,7 +35,48 @@
     values.forEach(value=>{const option=document.createElement('option');option.value=value;options.append(option);});
     $('[data-at-values]').replaceChildren(options);
   }
-  function query(){const field=$('[data-at-field]').value,type=$('[data-at-operator]').value;let value=$('[data-at-value]').value;const column=current.body.colunas.find(c=>c.nome===field);if(/int|float|real|double/i.test(column?.tipo||'')&&type!=='like'){value=Number(value);if(!Number.isFinite(value))throw Error('Informe um número válido.');}if(/bool/i.test(column?.tipo||'')&&type!=='like'){if(!['true','false'].includes(String(value).toLowerCase()))throw Error('Escolha true ou false.');value=String(value).toLowerCase()==='true';}let rows=grid.searchRows(field,type,value);if($('[data-at-scope]').value==='selection'){const ids=new Set(grid.getSelectedData().map(r=>r.__gp_row));rows=rows.filter(r=>ids.has(r.getIndex()));}syncing=true;grid.deselectRow();grid.selectRow(rows.map(r=>r.getIndex()));syncing=false;selection();applyView();status(`${rows.length} registros encontrados.`);}
+  function nullOperator(){return ['is_null','is_not_null'].includes($('[data-at-operator]').value);}
+  function queryControls(){
+    const input=$('[data-at-value]'),nullable=nullOperator();
+    input.disabled=nullable;
+    if(nullable)input.value='';
+    input.placeholder=nullable?'Não requer valor':'Escolha ou digite um valor';
+  }
+  function selectRows(rows){
+    syncing=true;
+    try{grid.deselectRow();grid.selectRow(rows.map(r=>r.getIndex()));}
+    finally{syncing=false;}
+    selection();applyView();
+  }
+  function invertSelection(){
+    const selected=new Set(grid.getSelectedData().map(r=>r.__gp_row));
+    const rows=grid.getRows().filter(r=>!selected.has(r.getIndex()));
+    selectRows(rows);status(`${rows.length} registros selecionados após inverter a seleção.`);
+  }
+  function query(){
+    const field=$('[data-at-field]').value,type=$('[data-at-operator]').value;
+    let rows;
+    if(nullOperator()){
+      rows=grid.getRows().filter(row=>type==='is_null'?row.getData()[field]==null:row.getData()[field]!=null);
+    }else{
+      let value=$('[data-at-value]').value;
+      const column=current.body.colunas.find(c=>c.nome===field);
+      if(/int|float|real|double/i.test(column?.tipo||'')&&type!=='like'){
+        if(!value.trim())throw Error('Informe um número válido.');
+        value=Number(value);if(!Number.isFinite(value))throw Error('Informe um número válido.');
+      }
+      if(/bool/i.test(column?.tipo||'')&&type!=='like'){
+        if(!['true','false'].includes(String(value).toLowerCase()))throw Error('Escolha true ou false.');
+        value=String(value).toLowerCase()==='true';
+      }
+      rows=grid.searchRows(field,type,value);
+    }
+    if($('[data-at-scope]').value==='selection'){
+      const ids=new Set(grid.getSelectedData().map(r=>r.__gp_row));
+      rows=rows.filter(r=>ids.has(r.getIndex()));
+    }
+    selectRows(rows);status(`${rows.length} registros encontrados.`);
+  }
   async function save(){const d=current;d.busy=true;controls();try{
     const file=window.gpArquivos?.sessions.get(d.id),layer=app().state.layers.find(l=>l.id===d.id);
     const geojson={type:'FeatureCollection',features:d.rows.map(row=>({...row.__gp_feature,properties:clean(row)}))};
@@ -45,7 +86,7 @@
     else {const present=new Set(d.rows.map(r=>r._indice)),originals=new Map(d.original.map(r=>[r._indice,r]));const edicoes=d.rows.filter(r=>JSON.stringify(clean(r))!==JSON.stringify(clean(originals.get(r._indice)||{}))).map(r=>({indice:r._indice,campos:clean(r)}));await request(`/api/geoespacial/camadas/${encodeURIComponent(id)}/atributos/salvar`,{edicoes,excluidos:d.original.filter(r=>!present.has(r._indice)).map(r=>r._indice),revisao:d.body.revisao});const source=app().state.map.getSource(id);if(source?.setData)source.setData(geojson);else if(source?.setTiles)source.setTiles(source.serialize().tiles.map(tile=>tile.split('?')[0]+'?v='+Date.now()));else await app().refreshLayers(true,[id],id);}
     drafts.delete(d.id);window.gpCommands.setLayerSelection(d.id,[]);await app().showAttributes(id);status(file?'Nova versão salva no storage.':'Alterações salvas.');
   }catch(error){status(error.message,true);}finally{d.busy=false;controls();}}
-  async function remove(){const selected=grid.getSelectedData();if(!selected.length)return;const ok=window.gpFeedback?await window.gpFeedback.confirmar({title:'Excluir registros',message:`Remover ${selected.length} registro(s) e suas geometrias? A exclusão só será gravada ao salvar.`,danger:true,confirmLabel:'Remover da edição'}):window.confirm(`Remover ${selected.length} registro(s) e suas geometrias?`);if(!ok)return;const ids=new Set(selected.map(r=>r.__gp_row));current.rows=current.rows.filter(r=>!ids.has(r.__gp_row));await grid.deleteRow([...ids]);current.dirty=true;selection();controls();status('Exclusão pendente. Salve para confirmar ou descarte para restaurar.');}
+  async function remove(){const selected=grid.getSelectedData();if(!selected.length)return;const ok=window.gpFeedback?await window.gpFeedback.ProcessFeedback.confirmar({title:'Excluir registros',message:`Remover ${selected.length} registro(s) e suas geometrias? A exclusão só será gravada ao salvar.`,danger:true,confirmLabel:'Remover da edição'}):window.confirm(`Remover ${selected.length} registro(s) e suas geometrias?`);if(!ok)return;const ids=new Set(selected.map(r=>r.__gp_row));current.rows=current.rows.filter(r=>!ids.has(r.__gp_row));await grid.deleteRow([...ids]);current.dirty=true;selection();controls();status('Exclusão pendente. Salve para confirmar ou descarte para restaurar.');}
   function maximize(){const expanded=root.classList.toggle('attribute-maximized'),button=$('[data-at-maximize]');const label=expanded?'Restaurar painel':'Maximizar tabela';button.title=label;button.setAttribute('aria-label',label);button.setAttribute('aria-expanded',String(expanded));button.innerHTML=`<i data-lucide="${expanded?'minimize':'maximize'}" aria-hidden="true"></i>`;window.lucide?.createIcons();grid.redraw(true);}
 
   function render(id,body){
@@ -58,9 +99,11 @@
     columns.forEach(c=>{const option=document.createElement('option');option.value=option.textContent=c.nome;$('[data-at-field]').append(option);});
     grid=new Tabulator($('[data-at-grid]'),{data:d.rows,index:'__gp_row',height:'100%',layout:'fitDataStretch',nestedFieldSeparator:false,history:true,movableColumns:true,selectableRows:true,selectableRowsRangeMode:'click',editTriggerEvent:'dblclick',pagination:true,paginationSize:100,paginationSizeSelector:[25,50,100,500],locale:'pt-br',langs:{'pt-br':{pagination:{page_size:'Por página',first:pageSymbol(['m11 17-5-5 5-5','m18 17-5-5 5-5']),first_title:'Primeira página',last:pageSymbol(['m6 17 5-5-5-5','m13 17 5-5-5-5']),last_title:'Última página',prev:pageSymbol(['m15 18-6-6 6-6']),prev_title:'Página anterior',next:pageSymbol(['m9 18 6-6-6-6']),next_title:'Próxima página',page_title:'Ir para a página',all:'Todos'}}},placeholder:'Nenhum registro encontrado',rowHeader:{formatter:'rowSelection',titleFormatter:'rowSelection',titleFormatterParams:{rowRange:'active'},headerSort:false,hozAlign:'center',width:38,frozen:true},columns:columns.map(c=>({title:esc(c.nome),field:c.nome,minWidth:135,formatter:'plaintext',editor:/bool/i.test(c.tipo)?'tickCross':/int|float|real|double/i.test(c.tipo)?'number':'input',editorParams:/int|float|real|double/i.test(c.tipo)?{step:/int/i.test(c.tipo)?1:'any'}:{},editable:cell=>d.editing&&!d.readonly&&!d.busy&&(cell.getValue()===null||typeof cell.getValue()!=='object'),validator:/int/i.test(c.tipo)?'integer':undefined}))});
     grid.on('tableBuilt',()=>{ready=true;sync();controls();});grid.on('rowSelectionChanged',selection);grid.on('cellEdited',()=>{markDirty(d);});grid.on('historyUndo',()=>{markDirty(d);});grid.on('historyRedo',()=>{markDirty(d);});
-    root.addEventListener('click',event=>{const action=event.target.closest('[data-at-action]')?.dataset.atAction;if(!action||!ready||current.busy)return;Promise.resolve().then(async()=>{if(action==='maximize')maximize();if(action==='query')query();if(action==='clear'){grid.clearFilter(true);grid.deselectRow();$('[data-at-only]').setAttribute('aria-pressed','false');$('[data-at-only]').classList.remove('active');}if(action==='only'){const button=$('[data-at-only]'),active=button.getAttribute('aria-pressed')!=='true';button.setAttribute('aria-pressed',String(active));button.classList.toggle('active',active);applyView();}if(action==='all')grid.selectRow('active');if(action==='zoom')window.gpCommands.fitSelection();if(action==='edit'){d.editing=!d.editing;controls();status(d.editing?'Duplo clique na célula para editar. Salve ao terminar.':'Edição desativada.');}if(action==='delete')await remove();if(action==='save')await save();if(action==='discard'){drafts.delete(id);render(id,body);}if(action==='undo')grid.undo();if(action==='redo')grid.redo();if(action==='csv')grid.download('csv',`${id}.csv`,{bom:true});}).catch(e=>status(e.message,true));});
+    root.addEventListener('click',event=>{const action=event.target.closest('[data-at-action]')?.dataset.atAction;if(!action||!ready||current.busy)return;Promise.resolve().then(async()=>{if(action==='maximize')maximize();if(action==='query')query();if(action==='invert')invertSelection();if(action==='clear'){grid.clearFilter(true);grid.deselectRow();$('[data-at-only]').setAttribute('aria-pressed','false');$('[data-at-only]').classList.remove('active');}if(action==='only'){const button=$('[data-at-only]'),active=button.getAttribute('aria-pressed')!=='true';button.setAttribute('aria-pressed',String(active));button.classList.toggle('active',active);applyView();}if(action==='all')grid.selectRow('active');if(action==='zoom')window.gpCommands.fitSelection();if(action==='edit'){d.editing=!d.editing;controls();status(d.editing?'Duplo clique na célula para editar. Salve ao terminar.':'Edição desativada.');}if(action==='delete')await remove();if(action==='save')await save();if(action==='discard'){drafts.delete(id);render(id,body);}if(action==='undo')grid.undo();if(action==='redo')grid.redo();if(action==='csv')grid.download('csv',`${id}.csv`,{bom:true});}).catch(e=>status(e.message,true));});
     window.lucide?.createIcons();
     $('[data-at-field]').onchange=()=>{$('[data-at-value]').value='';suggestValues();};
+    $('[data-at-operator]').onchange=queryControls;
+    queryControls();
     $('[data-at-value]').onfocus=suggestValues;
     suggestValues();
     $('[data-at-query]').onsubmit=event=>{event.preventDefault();try{query();}catch(e){status(e.message,true);}};

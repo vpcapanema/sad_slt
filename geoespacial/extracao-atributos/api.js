@@ -27,7 +27,8 @@ export async function json(path,options={}) {
 export const post=(path,body)=>json(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 export async function esperar(job,statusPath,aoAtualizar) {
   // aoAtualizar recebe o job inteiro, com o historico de etapas, para o modal.
-  const notificar=aoAtualizar||(atual=>feedback(atual.etapa||atual.etapa_atual||'Processando…'));
+  // Sem acompanhamento próprio, o retrato do job vai para o processo aberto no ProcessFeedback.
+  const notificar=aoAtualizar||(atual=>window.ProcessFeedback?.acompanhar(atual));
   while(job.status==='executando'||job.status==='pendente') {
     notificar(job);
     await new Promise(resolve=>setTimeout(resolve,1200));

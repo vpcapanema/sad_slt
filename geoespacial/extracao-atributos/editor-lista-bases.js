@@ -59,32 +59,33 @@ export function criarEditorListaBases(state,changed,escolher,salvar){
   if(itens.some(i=>!state.categories.some(c=>c.id===i.category))){feedback('Escolha uma categoria disponível para cada camada.','error');return;}
   const tituloAcao=buttons.confirmar.textContent.trim();
   if(!sessaoAberta)anterior=copia(lista());sessaoAberta=true;validando=true;state.validatingBases=true;render();window.SICARDExtracao?.atualizarControles?.();
-  const proc=window.SLTFeedback.processo(tituloAcao);
-  const carregadas=[],falhas=[],ativas=new Map();let indice=0,feitas=0;
-  const acompanhar=()=>proc.atividade({id:'validacao',nome:'Validando lista de bases',concluidas:feitas,total:itens.length,unidade:'camadas',geral:feitas/itens.length*100,
-   detalhe:[...ativas.values()].join('\n\n')||'Leitura encerrada.'});
+  // Uma tarefa por camada da lista, mais a prévia; o percentual conta as camadas lidas.
+  const nomeDe=item=>item.nome||item.id,PREVIA='Preparar a prévia';
+  const proc=window.ProcessFeedback.iniciarCadastro({title:tituloAcao,subtitle:`${itens.length} camada(s)`,tasks:[...itens.map(nomeDe),PREVIA]});
+  const carregadas=[],falhas=[];let indice=0,feitas=0;
   async function worker(){while(indice<itens.length&&token===versao){const item=itens[indice++];
-   ativas.set(item.id,`${item.nome||item.id}\nLendo a camada para verificar as feições da prévia.`);acompanhar();try{
+   proc.tarefaAtual(nomeDe(item),'Lendo a camada para verificar as feições da prévia.');try{
    const layer=await post('/extracao-atributos/arquivo-mapa',{id:item.id,arquivo:item.arquivo||undefined});
    if(!layer.geojson?.features?.length)throw new Error('A camada não contém feições disponíveis para a prévia.');
-   carregadas.push({...item,layer});
-  }catch(e){falhas.push(`${item.nome||item.id}: ${e.message}`);}
-  feitas++;ativas.delete(item.id);acompanhar();
+   carregadas.push({...item,layer});proc.concluirTarefa(nomeDe(item),`${layer.geojson.features.length} feição(ões)`);
+  }catch(e){falhas.push({name:nomeDe(item),status:'error',detail:e.message});proc.log(`${nomeDe(item)}: ${e.message}`,'error');}
+  feitas++;proc.progresso(feitas/itens.length*90);
   }}
   try{
    await Promise.all(Array.from({length:Math.min(2,itens.length)},worker));
-   if(token!==versao){proc.concluir({type:'info',message:'Envio da lista cancelado. A prévia anterior foi mantida.'});return;}
-   if(falhas.length){proc.concluir({type:'error',message:'A lista não foi enviada à prévia. Corrija ou remova as camadas com erro e confirme novamente.',resultados:falhas});return;}
+   if(token!==versao){proc.fechar();feedback('Envio da lista cancelado. A prévia anterior foi mantida.');return;}
+   if(falhas.length){proc.erro({title:'A lista não foi enviada à prévia',message:'Corrija ou remova as camadas com erro e confirme novamente.',details:falhas.map(f=>`${f.name}: ${f.detail}`)});return;}
    for(const {id,layer} of carregadas){const atual=state.catalog.find(c=>c.id===id);if(atual)Object.assign(atual,layer);else state.catalog.push({...layer,id});}
    state.bases=[];state.staging=itens;editando=false;sessaoAberta=false;anterior=copia(lista());selecionadas.clear();
-   proc.atividade({id:'previa',nome:'Preparando prévia',detalhe:'Disponibilizando as camadas validadas no mapa.',percentual:null});
+   proc.tarefaAtual(PREVIA,'Disponibilizando as camadas validadas no mapa.');
    const errosMapa=await changed();
    if(errosMapa?.length)throw new Error(errosMapa.join('; '));
    state.listaBases=null;anterior=null;editando=false;sessaoAberta=false;selecionadas.clear();
    state.lastBase=null;$('#ea-category-select').value='';$('#ea-base-select').value='';
    $('#ea-category-select').dispatchEvent(new Event('change'));
-   proc.concluir({message:`${itens.length} camada(s) validada(s) e disponibilizada(s) na prévia. Use Enviar pra bancada para confirmar a participação no processamento.`});
-  }catch(e){proc.concluir({type:'error',message:e.message});}
+   proc.concluirTarefa(PREVIA,'Camadas no mapa');
+   proc.sucesso({title:'Lista validada',message:`${itens.length} camada(s) validada(s) e disponibilizada(s) na prévia. Use Enviar pra bancada para confirmar a participação no processamento.`});
+  }catch(e){proc.erro({message:e.message});}
   finally{if(token===versao){validando=false;state.validatingBases=false;render();window.SICARDExtracao?.atualizarControles?.();}}
  };
  return {limpar(){versao++;anterior=null;editando=false;sessaoAberta=false;selecionadas.clear();state.listaBases=null;nome.textContent="";render();},adicionar,carregar,render,marcar,itens:()=>lista()?.itens,lista,salva(dados){if(lista()){Object.assign(lista(),{nome:dados.nome,chave:dados.chave});anterior=copia(lista());render();}}};

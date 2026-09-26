@@ -33,12 +33,14 @@ export function criarEntradaLocal(state,changed){
  node('upload-cancel').addEventListener('click',()=>{if(ativo)cancelar().catch(e=>feedback(e.message,'error'));});
  async function ler(files){
   ocupado(true);cancelando=false;job=null;
-  processo=window.SLTFeedback.processo('Validando camadas de entrada',{cancelar});
+  const tarefa=file=>`Validar ${file.name}`;
+  processo=window.ProcessFeedback.iniciarCadastro({title:'Validando camadas de entrada',subtitle:`${files.length} arquivo(s)`,
+   tasks:files.map(tarefa),onCancel:()=>{cancelar().catch(e=>feedback(e.message,'error'));}});
   const resultados=[];
   try{
    for(const [indice,file] of files.entries()){
     if(cancelando)break;
-    processo.passo(`Enviando ${file.name} para validação (${indice+1}/${files.length}).`);
+    processo.tarefaAtual(tarefa(file),`Enviando para validação (${indice+1}/${files.length}).`);
     iniciando=(async()=>{
      const response=await fetch(`${base}/extracao-atributos/entrada-local/jobs?nome=${encodeURIComponent(file.name)}`,{
       method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:file,signal:AbortSignal.timeout(180000)});
@@ -48,10 +50,10 @@ export function criarEntradaLocal(state,changed){
     })();
     await iniciando;iniciando=null;
     while(!terminais.has(job.status)){
-     processo.acompanhar({...job,id:`${job.id}`,etapas:job.etapas?.map(e=>({...e,sequencia:indice*100000+e.sequencia})),percentual:job.percentual==null?null:(indice+job.percentual/100)/files.length*100});
+     window.ProcessFeedback.acompanhar({...job,percentual:job.percentual==null?null:(indice+job.percentual/100)/files.length*100});
      await dormir(350);job=await json(`/extracao-atributos/entrada-local/jobs/${job.id}`);
     }
-    processo.acompanhar({...job,etapas:job.etapas?.map(e=>({...e,sequencia:indice*100000+e.sequencia})),percentual:job.percentual==null?null:(indice+job.percentual/100)/files.length*100});
+    window.ProcessFeedback.acompanhar({...job,percentual:job.percentual==null?null:(indice+job.percentual/100)/files.length*100});
     if(cancelando||job.status==='cancelado')break;
     if(job.status!=='concluido')throw new Error(job.erro||'A validação não foi concluída.');
     const result=job.resultado;
@@ -61,9 +63,10 @@ export function criarEntradaLocal(state,changed){
     Object.assign(entrada,{arquivo:file.name,camadas_importadas:result.camadas,camadas_bancada:validas});
     if(validas.length)entrada.arquivo_local={nome:file.name,conteudo_base64:await base64(file),camadas:validas.map(c=>c.chave)};
     resultados.push({entrada,resumo:result.resumo});
+    processo.concluirTarefa(tarefa(file),`${result.resumo.total} camada(s), ${result.resumo.invalidas} não validada(s)`);
    }
    if(cancelando||job?.status==='cancelado'){
-    processo.concluir({type:'info',message:'Validação cancelada. A prévia anterior foi mantida.'});return;
+    processo.fechar();feedback('Validação cancelada. A prévia anterior foi mantida.');return;
    }
    guardarPrevia(state);
    for(const {entrada} of resultados)state.catalog.push(entrada);
@@ -72,8 +75,9 @@ export function criarEntradaLocal(state,changed){
    state.previaLocal=null;
    await changed();
    const total=resultados.reduce((n,r)=>n+r.resumo.total,0),invalidas=resultados.reduce((n,r)=>n+r.resumo.invalidas,0);
-   processo.concluir({type:invalidas?'warning':'success',message:`${total} camada(s) examinada(s) em ${resultados.length} arquivo(s); ${invalidas} não validada(s). Confira a prévia e use Enviar pra bancada para confirmar as camadas válidas.`});
-  }catch(e){processo.concluir({type:'error',message:`${e.message} A prévia anterior foi mantida.`});}
+   processo.sucesso({_status:invalidas?'partial':undefined,title:invalidas?'Validação com camadas recusadas':'Camadas validadas',
+    message:`${total} camada(s) examinada(s) em ${resultados.length} arquivo(s); ${invalidas} não validada(s). Confira a prévia e use Enviar pra bancada para confirmar as camadas válidas.`});
+  }catch(e){if(cancelando){processo.fechar();feedback('Validação cancelada. A prévia anterior foi mantida.');}else processo.erro({message:e.message,solution:'A prévia anterior foi mantida. Corrija o arquivo e envie de novo.'});}
   finally{iniciando=null;ocupado(false);}
  }
  arquivo.addEventListener('change',()=>{

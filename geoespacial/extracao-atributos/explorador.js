@@ -176,9 +176,11 @@ export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=f
       if((loading&&!browsing)||closed||!valid(path))return;
       const request=++navigation;
       loading=true;browsing=true;controls();status.textContent='';
-      const processo=window.SLTFeedback.carregamento(list,'Abrindo pasta do storage…');processo.passo('Consultando camadas e subpastas…');
+      // Navegação curta: a própria lista informa a espera; falha vai para o Notify.
+      list.setAttribute('aria-busy','true');status.textContent='Abrindo pasta do storage… Consultando camadas e subpastas.';
+      const liberar=()=>list.removeAttribute('aria-busy');
       try{
-        const data=await directory(path);if(closed||request!==navigation){processo.fechar();return;}cache.set(path,data);current=path;expanded.add(path);search.value='';
+        const data=await directory(path);if(closed||request!==navigation){liberar();return;}cache.set(path,data);current=path;expanded.add(path);search.value='';
         trail.replaceChildren();let target='';
         for(const [index,name] of ['storage',...path.split('/').filter(Boolean)].entries()){
           if(index>0)target+=(target?'/':'')+name;
@@ -187,30 +189,31 @@ export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=f
           if(destination===current)crumb.setAttribute('aria-current','location');
           trail.append(crumb);
         }
-        paintTree();paintList();list.scrollTop=0;processo.fechar();
-      }catch(error){if(closed||request!==navigation)processo.fechar();else processo.concluir({type:'error',message:error.message});}finally{if(!closed&&request===navigation){loading=false;browsing=false;controls();}}
+        liberar();paintTree();paintList();list.scrollTop=0;
+      }catch(error){liberar();if(!closed&&request===navigation){status.textContent=error.message;window.Notify.error('Storage',`Não foi possível abrir a pasta: ${error.message}`);}}finally{if(!closed&&request===navigation){loading=false;browsing=false;controls();}}
     }
     async function selectBatch(){
       if(loading||!picks.size)return;loading=true;controls();
       let files=[...picks.values()];const errors=[];let next=0,done=0;
-      const processo=window.SLTFeedback.processo(acao,{barra:true});
+      const INVENTARIO='Identificar camadas dos arquivos',CARREGAR='Carregar camadas selecionadas';
+      const processo=window.ProcessFeedback.iniciarCadastro({title:acao,tasks:[...(files.some(f=>f.inventariar)?[INVENTARIO]:[]),...(validar?[CARREGAR]:[])]});
       try{
         const expandidos=[];
         for(const file of files){
           if(!file.inventariar){expandidos.push(file);continue;}
-          processo.atividade({id:'inventario',nome:'Identificando camadas dos arquivos',detalhe:`${rotulo(file)}\nConsultando as camadas disponíveis no arquivo.`});
+          processo.tarefaAtual(INVENTARIO,`${rotulo(file)}\nConsultando as camadas disponíveis no arquivo.`);
           const resultado=await json(`/storage/camadas-arquivo?arquivo=${encodeURIComponent(file.arquivo)}`);
           expandidos.push(...resultado.camadas.filter(c=>!excluded.includes(c.id)));
         }
         files=[...new Map(expandidos.map(c=>[c.id,c])).values()];
         if(!files.length)throw new Error('Todas as camadas desses arquivos já estão selecionadas.');
-      }catch(error){loading=false;controls();processo.concluir({type:'error',message:error.message});return;}
-      if(!validar){loading=false;controls();processo.concluir({message:'Referências adicionadas à lista; a validação será feita ao confirmá-la.'});processo.fechar();finish(multiple?files:files[0]);return;}
+        if(files.length&&processo.tasks.some(t=>t.name===INVENTARIO))processo.concluirTarefa(INVENTARIO,`${files.length} camada(s)`);
+      }catch(error){loading=false;controls();processo.erro({message:error.message});return;}
+      // Só referências: a validação acontece ao confirmar a lista; não há desfecho a mostrar.
+      if(!validar){loading=false;controls();processo.fechar();finish(multiple?files:files[0]);return;}
       const ativas=new Map();
-      const acompanhar=()=>processo.atividade({id:'carregamento',nome:'Carregando camadas selecionadas',
-        concluidas:done,total:files.length,unidade:'camadas',geral:done/files.length*100,
-        detalhe:[...ativas.values()].join('\n\n')||'Leitura encerrada.'});
-      acompanhar();
+      const acompanhar=()=>{processo.detalhe([...ativas.values()].join('\n\n')||'Leitura encerrada.');processo.progresso(done/files.length*100);};
+      processo.tarefaAtual(CARREGAR,`${files.length} camada(s)`);acompanhar();
       async function worker(){
         while(next<files.length){const file=files[next++];
           ativas.set(file.id,`${rotulo(file)}\n${loaded.has(file.id)?'Recuperando camada já carregada.':'Lendo a camada e preparando os dados de visualização.'}`);acompanhar();
@@ -222,15 +225,16 @@ export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=f
               if(excluded.includes(layer.id))throw new Error('Camada já selecionada como base ou entrada.');
               loaded.set(file.id,{...layer,...result});
             }
-          }catch(error){errors.push(`${rotulo(file)}: ${error.message}`);}
+          }catch(error){errors.push(`${rotulo(file)}: ${error.message}`);processo.log(`${rotulo(file)}: ${error.message}`,'error');}
           finally{done++;ativas.delete(file.id);acompanhar();}
         }
       }
       await Promise.all(Array.from({length:Math.min(2,files.length)},worker));
       loading=false;controls();
-      if(errors.length){processo.concluir({type:'warning',message:'Desmarque as camadas com erro ou confirme para tentar novamente. As demais já estão carregadas.',resultados:errors});return;}
+      if(errors.length){processo.sucesso({_status:'partial',title:'Algumas camadas não carregaram',message:'Desmarque as camadas com erro ou confirme para tentar novamente. As demais já estão carregadas.',subprocesses:errors.map(e=>({name:e,status:'error'}))});return;}
       const unique=[...new Map(files.map(file=>{const layer=loaded.get(file.id);return [layer.id,layer];})).values()];
-      processo.concluir({message:'Camadas carregadas.'});processo.fechar();finish(multiple?unique:unique[0]);
+      // Seleção concluída: o próprio diálogo mostra o resultado, sem modal de sucesso.
+      processo.concluirTarefa(CARREGAR,'Camadas carregadas');processo.fechar();finish(multiple?unique:unique[0]);
     }
     search.addEventListener('input',()=>{if(!loading)paintList();});
     paintTree();navigate(ROOT);

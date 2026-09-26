@@ -30,7 +30,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     .map(category => ({ category, itens: state.staging.filter(item => item.category === category.id) }))
     .filter(grupo => grupo.itens.length);
   const categoriaAtiva = () => $('#ea-category-select').value || '';
-  const paraSalvar = () => editor.itens()||[...state.bases,...state.staging];
+  const paraSalvar = () => editor.itens()||(state.bases.length||state.staging.length?[...state.bases,...state.staging]:state.bancadaBases||[]);
 
   function marcar() {
     editor.marcar();
@@ -57,8 +57,9 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     const total=enviarPrevia(candidata);
     if(!total)return;
     window.SICARDExtracao.ocupar(true);
-    const proc=window.SLTFeedback.processo('Enviando camadas à bancada');
-    proc.passo('Conferindo e compatibilizando as camadas marcadas na prévia…');
+    const COMPATIBILIZAR='Compatibilizar as camadas',MAPA='Inserir no mapa da bancada';
+    const proc=window.ProcessFeedback.iniciarCadastro({title:'Enviando camadas à bancada',subtitle:`${total} camada(s)`,tasks:[COMPATIBILIZAR,MAPA]});
+    proc.tarefaAtual(COMPATIBILIZAR,'Conferindo e compatibilizando as camadas marcadas na prévia…');
     try{
       const camadas=[
         ...candidata.bancadaEntradas.map(e=>({id:e.id,nome:e.layer.nome,papel:'entrada',arquivo_local:e.layer.arquivo_local})),
@@ -66,17 +67,19 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       ];
       const resultado=await post('/extracao-atributos/compatibilizar',{camadas,operacao:state.operation||null});
       if(resultado.compativel!==true)throw new Error((resultado.erros||[]).map(e=>`${e.nome}: ${e.motivo}`).join('; ')||'A compatibilização não foi concluída.');
-      proc.passo('Compatibilização espacial concluída. Inserindo camadas e categorias no mapa da bancada.','success');
+      proc.concluirTarefa(COMPATIBILIZAR,'Compatibilidade espacial conferida');
+      proc.tarefaAtual(MAPA,'Inserindo camadas e categorias no mapa da bancada.');
       Object.assign(state,{bancadaEntradas:candidata.bancadaEntradas,bancadaBases:candidata.bancadaBases,bases:candidata.bases,staging:candidata.staging});
       editando=false;state.undoPrevia=null;render();
-      const falhas=await changed({etapa:(mensagem,tipo)=>proc.passo(mensagem,tipo==='erro'?'error':'info')});
+      const falhas=await changed({etapa:(mensagem,tipo)=>proc.log(mensagem,tipo==='erro'?'error':'step')});
       if(falhas?.length)throw new Error(falhas.join('; '));
       await window.SICARDExtracao.aguardarBancada();
       limparPreparacao(state);editor.limpar();
       window.SICARDExtracao.renderParametros();
       await changed();
-      proc.concluir({message:`${total} camada(s) enviada(s) à bancada. Compatibilidade espacial conferida; originais preservados.`});
-    }catch(error){proc.concluir({type:'error',message:`Não foi possível enviar à bancada: ${error.message}`});}
+      proc.concluirTarefa(MAPA,'Camadas na bancada');
+      proc.sucesso({title:'Camadas enviadas à bancada',message:`${total} camada(s) enviada(s) à bancada. Compatibilidade espacial conferida; originais preservados.`});
+    }catch(error){proc.erro({title:'Não foi possível enviar à bancada',message:error.message});}
     finally{window.SICARDExtracao.ocupar(false);render();}
   });
   botoes.limpar.addEventListener('click',()=>{
@@ -87,7 +90,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
   async function salvar(escopo='analise'){
     if (state.busy || state.validatingBases || (escopo==='bases'&&!paraSalvar().length)) return;
     if(paraSalvar().some(item=>item.id.startsWith('local:'))){feedback('As bases locais são temporárias. Para salvar uma configuração reutilizável, cadastre as bases no storage e selecione-as novamente.');return;}
-    const nome = (escopo==='bases'&&editor.lista()?.nome)||await window.SLTFeedback.solicitar({title:escopo==='bases'?'Salvar lista de bases':'Salvar configuração',message:escopo==='bases'?'Dê um nome à lista de bases e categorias.':'Dê um nome à configuração das três subseções.',label:'Nome',confirmLabel:'Salvar'});
+    const nome = (escopo==='bases'&&editor.lista()?.nome)||await window.ProcessFeedback.confirmar({title:escopo==='bases'?'Salvar lista de bases':'Salvar configuração',message:escopo==='bases'?'Dê um nome à lista de bases e categorias.':'Dê um nome à configuração das três subseções.',input:{label:'Nome'},confirmLabel:'Salvar'});
     if (!nome) return;
     if (!nome.trim()) { feedback('Informe um nome para a configuração.'); return; }
     botoes.salvar.disabled = true;
@@ -99,10 +102,9 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
         regras: Object.fromEntries(itens.filter(item => item.regra).map(item => [item.id, item.regra])),
       }));
       // A análise inteira: bases com regra, entradas (identificador, filtro, campos) e finalidades.
-      const entradas = [
-        ...(state.input && !state.input.startsWith('local:') ? [{ id: state.input, config: state.inputConfig || {} }] : []),
-        ...state.entradasExtras.filter(item=>!item.id.startsWith('local:')).map(item => ({ id: item.id, config: item.config || {} })),
-      ];
+      const preparadas = entradasPreparadas(state);
+      const entradas = (preparadas.length?preparadas:state.bancadaEntradas||[])
+        .filter(item=>!item.id.startsWith('local:')).map(item=>({id:item.id,config:item.config||{}}));
       const finalidades = (state.finalidades || []).map(f => ({ nome: f.nome, campos: [...f.campos] }));
       const resultado = await post('/extracao-atributos/configuracoes',
         { nome: nome.trim(), escopo, chave_lista:escopo==='bases'?editor.lista()?.chave:undefined, categorias: grupos, entradas:escopo==='bases'?[]:entradas, finalidades:escopo==='bases'?[]:finalidades,
@@ -129,7 +131,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       const escolha = await escolherConfiguracao(configuracoes, explorador ? pastaDados.pasta : '',escopo);
       if (!escolha) return;
       const dados = await json(`/extracao-atributos/configuracoes/${encodeURIComponent(escolha)}?escopo=${escopo}${escopo==='bases'?'&lista=true':''}`);
-      if(escopo!=='bases'&&(state.input||state.bases.length||state.staging.length)&&!(await window.SLTFeedback.confirmar({title:escopo==='bases'?'Carregar listas':'Carregar configuração',message:escopo==='bases'?'Substituir apenas as bases e categorias? Entradas e algoritmo serão mantidos.':'Substituir as escolhas das três subseções pela configuração salva?',detail:'Nenhuma camada ou resultado será apagado do banco.'})))return;
+      if(escopo!=='bases'&&(state.input||state.bases.length||state.staging.length)&&!(await window.ProcessFeedback.confirmar({title:escopo==='bases'?'Carregar listas':'Carregar configuração',message:escopo==='bases'?'Substituir apenas as bases e categorias? Entradas e algoritmo serão mantidos.':'Substituir as escolhas das três subseções pela configuração salva?',warning:'Nenhuma camada ou resultado será apagado do banco.'})))return;
       // Restaurar integralmente evita executar regras diferentes das que foram salvas.
       const vindas = dados.categorias.flatMap(grupo => grupo.camadas.map(camada => {
         const noCatalogo = state.catalog.find(l => l.id === camada.id);
@@ -260,7 +262,7 @@ function escolherConfiguracao(configuracoes, pasta = '',escopo='analise') {
       const indice = configuracoes.findIndex(item => item.chave === escolhido);
       if (indice < 0) return;
       const item = configuracoes[indice];
-      if (!(await window.SLTFeedback.confirmar({title:"Excluir configuração",message:`Excluir a configuração "${item.nome}"? O arquivo salvo será apagado e não pode ser recuperado.`,danger:true,confirmLabel:"Excluir"}))) return;
+      if (!(await window.ProcessFeedback.confirmar({title:"Excluir configuração",message:`Excluir a configuração "${item.nome}"? O arquivo salvo será apagado e não pode ser recuperado.`,danger:true,confirmLabel:"Excluir"}))) return;
       excluir.disabled = true;
       confirmar.disabled = true;
       try {

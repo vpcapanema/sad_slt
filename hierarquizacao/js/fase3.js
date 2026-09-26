@@ -140,14 +140,44 @@
       $("fase-hierarquizacao").onchange = () => { render(atual()).catch(erro); };
       globalThis.addEventListener("focus", atualizarDadosAoRetomar);
       document.addEventListener("visibilitychange", atualizarDadosAoRetomar);
+      /** Campo obrigatório: aviso do Notify e foco no seletor. */
+      function exigirHierarquizacao() {
+        window.Notify.warning("Hierarquização", "Selecione a hierarquização.");
+        $("fase-hierarquizacao").focus();
+      }
+      /**
+       * Confirmação → progresso → desfecho, no ProcessFeedback (SIGMA). O
+       * sucesso só é anunciado depois que o servidor responde.
+       */
+      async function executarAcao({ confirmacao, titulo, mensagemInicial, executar, sucesso, irRanking }) {
+        if (confirmacao && !(await window.ProcessFeedback.confirmar(confirmacao))) return { ok: false, cancelado: true };
+        const tarefa = (mensagemInicial || "Enviando a solicitação ao servidor").replace(/…$/, "");
+        const proc = window.ProcessFeedback.iniciarCadastro({ title: titulo, tasks: [tarefa] });
+        proc.tarefaAtual(tarefa);
+        try {
+          const resultado = await executar();
+          proc.concluirTarefa(tarefa, "Servidor respondeu");
+          const [titulo1, ...resto] = [].concat(sucesso || "Operação concluída.");
+          const subprocesses = irRanking ? [{
+            name: "Ranking final", status: "success", detail: "Abra o ranking desta hierarquização.",
+            action_label: "Ver ranking",
+            action_url: `/restrict/hierarquizacao/processos/ranking/?codigo=${encodeURIComponent(resultado.codigo)}`,
+          }] : [];
+          proc.sucesso({ title: titulo1, message: resto.join("\n"), subprocesses });
+          return { ok: true, resultado };
+        } catch (e) {
+          proc.erro({ message: e?.message || String(e), detail: e?.detail });
+          return { ok: false, erro: e };
+        }
+      }
       $("executar-fase3").onclick = async () => {
         const hierarquizacao = atual();
-        if (!hierarquizacao) { window.SLTFeedback.campo($("fase-hierarquizacao"),"Selecione a hierarquização."); $("fase-hierarquizacao").focus(); return; }
-        const resposta = await window.SLTFeedback.acao({
+        if (!hierarquizacao) { exigirHierarquizacao(); return; }
+        const resposta = await executarAcao({
           confirmacao: {
             title: "Calcular índice de priorização (Fase 3)",
             message: `Hierarquização ${hierarquizacao.codigo}, pesos por “${$("fase3-modo-pesos").value}”, completude mínima de ${$("fase3-completude").value}%.`,
-            detail: "O resultado atual da Fase 3 será substituído e a síntese já gerada, se houver, ficará desatualizada.",
+            warning: "O resultado atual da Fase 3 será substituído e a síntese já gerada, se houver, ficará desatualizada.",
             confirmLabel: "Calcular Fase 3",
           },
           acompanhamento: true,
@@ -167,8 +197,8 @@
       };
       $("salvar-pesos-fase3").onclick = async () => {
         const hierarquizacao = atual();
-        if (!hierarquizacao) { window.SLTFeedback.campo($("fase-hierarquizacao"),"Selecione a hierarquização."); $("fase-hierarquizacao").focus(); return; }
-        const resposta = await window.SLTFeedback.acao({
+        if (!hierarquizacao) { exigirHierarquizacao(); return; }
+        const resposta = await executarAcao({
           confirmacao: {
             title: "Salvar pesos dos atributos",
             message: `Os pesos exibidos serão gravados na hierarquização ${hierarquizacao.codigo}, substituindo os anteriores.`,
@@ -186,14 +216,14 @@
       const salvarRiscos = $("salvar-tratamentos-riscos-fase3");
       if (salvarRiscos) salvarRiscos.onclick = async () => {
         const hierarquizacao = atual();
-        if (!hierarquizacao) { window.SLTFeedback.campo($("fase-hierarquizacao"),"Selecione a hierarquização."); $("fase-hierarquizacao").focus(); return; }
+        if (!hierarquizacao) { exigirHierarquizacao(); return; }
         const payload = window.AtributosObjetos?.tratamentosRiscosPayload() || { tratamentos: {} };
         const quantos = Object.keys(payload.tratamentos || {}).length;
-        const resposta = await window.SLTFeedback.acao({
+        const resposta = await executarAcao({
           confirmacao: {
             title: "Registrar tratamento dos riscos",
             message: `${quantos} tratamento(s) de risco serão registrados na hierarquização ${hierarquizacao.codigo}.`,
-            detail: "Esta é uma decisão gerencial: ela fica registrada em nome do gestor autenticado e altera o índice de priorização dos objetos afetados.",
+            warning: "Esta é uma decisão gerencial: ela fica registrada em nome do gestor autenticado e altera o índice de priorização dos objetos afetados.",
             confirmLabel: "Registrar decisão",
             danger: true,
           },
@@ -214,13 +244,13 @@
       }));
       $("sintetizar").onclick = async () => {
         const hierarquizacao = atual();
-        if (!hierarquizacao) { window.SLTFeedback.campo($("fase-hierarquizacao"),"Selecione a hierarquização."); $("fase-hierarquizacao").focus(); return; }
+        if (!hierarquizacao) { exigirHierarquizacao(); return; }
         const operador = operadorSintese();
-        const resposta = await window.SLTFeedback.acao({
+        const resposta = await executarAcao({
           confirmacao: {
             title: "Calcular índice geral de hierarquização",
             message: `A síntese final da hierarquização ${hierarquizacao.codigo} será gerada com o operador “${operador}”.`,
-            detail: "A síntese anterior, se existir, é substituída. Ela combina os resultados das Fases 1, 2 e 3 como estão agora — confira se as três estão atualizadas antes de seguir.",
+            warning: "A síntese anterior, se existir, é substituída. Ela combina os resultados das Fases 1, 2 e 3 como estão agora — confira se as três estão atualizadas antes de seguir.",
             confirmLabel: "Calcular síntese",
           },
           acompanhamento: true,
@@ -234,16 +264,12 @@
             incluir_restritos: false,
           }),
           sucesso: ["Índice geral calculado.", "O ranking final já está disponível."],
-          // Navegar sozinho tirava o usuário da página antes de ele ver o desfecho.
-          acoesHtml:
-            '<button type="button" class="btn btn-secondary" data-fb-close>Continuar na Fase 3</button>' +
-            '<button type="button" class="btn btn-primary" data-ir-ranking>Ver ranking</button>',
+          // Navegar sozinho tirava o usuário da página antes de ele ver o desfecho:
+          // o modal de sucesso oferece "Ver ranking" e OK continua na Fase 3.
+          irRanking: true,
         });
         if (!resposta.ok) { if (resposta.erro) erro(resposta.erro); return; }
         const codigo = resposta.resultado.codigo;
-        document.querySelector("[data-ir-ranking]")?.addEventListener("click", () => {
-          window.location.href = `/restrict/hierarquizacao/processos/ranking/?codigo=${encodeURIComponent(codigo)}`;
-        });
         hierarquizacoes = hierarquizacoes.map((item) => item.codigo === codigo ? resposta.resultado : item);
         await render(resposta.resultado);
       };

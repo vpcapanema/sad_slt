@@ -149,7 +149,7 @@ def iniciar(payload, user):
         entradas.append({'id': ident, 'nome': layers[ident]['nome'], 'config': normalizar_entrada(configs.get(ident))})
     if len({e['nome'] for e in entradas}) != len(entradas):
         raise ValueError('Duas camadas de entrada têm o mesmo nome no catálogo.')
-    if payload['operacao'] == 'estatisticas' and any(e['config']['filtro'] or e['config']['campos'] is not None for e in entradas):
+    if payload['operacao'] == 'estatisticas' and any(e['config']['filtro'] for e in entradas):
         raise ValueError('No modo sem recorte, abra Configurar na entrada e aplique a preservação de todas as feições e campos.')
     ids_entrada = {e['id'] for e in entradas}
     used, selected = set(), []
@@ -329,18 +329,20 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
     frames = {**(entradas_locais or {}), params['camada_id']:source}
     entradas = [{**e,'frame':frames.get(e['id']) if e['id'] in frames else carregar_para_extracao(e['id'])}
                 for e in lista]
-    saida = enriquecer(categorias=categories,progress=progress,entradas=entradas,
-                       finalidades=[{'nome':f['nome'],'campos':f['campos']} for f in params.get('finalidades') or []])
-    from api.services.extracao_intersecoes_territoriais import registrar as registrar_intersecoes
-    intersecoes_territoriais = registrar_intersecoes(entradas, categories, progress)
+    from api.services.extracao_lote import entradas_do_lote, executar as executar_lote
+    entradas = entradas_do_lote(entradas)
+    saida = executar_lote(entradas, categories, params['operacao'], progress,
+                         finalidades=params.get('finalidades') or [])
     nome_saida = params.get('nome_saida') or f"Extração de {params['input_nome']}"
     if hasattr(progress,'fase'):progress.fase(3, 'Salvando saídas e preparando o pacote', cancelavel=False)
     camadas = {}
     for nome, frame in saida['camadas'].items():
-        progress(f'Gravando a camada {nome} no banco')
-        camadas[nome] = {'camada_resultado_id':geo.registrar_camada(frame,f'{nome_saida} — {nome}','OP-05',
+        item_saida = next(r for r in saida['individuais'] if nome in r['camadas'])
+        nome_camada = f"{item_saida['nome_saida']} — {nome.removeprefix(item_saida['chave']+'_')}"
+        progress(f'Gravando a camada {nome_camada} no banco')
+        camadas[nome] = {'nome':nome_camada, 'camada_resultado_id':geo.registrar_camada(frame,nome_camada,'OP-05',
                                                                      linhagem=params,gravar_arquivo=False,
-                                                                     preservar_geometrias=params['operacao']=='estatisticas'),
+                                                                     preservar_geometrias=True),
                          'registros':len(frame),'campos':len(frame.columns)-1}
     progress('Registrando a procedência da entrada e das bases')
     entrada = _procedencia(params['camada_id'],params['input_nome'],source)
@@ -361,7 +363,8 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
               'relatorio_enriquecimento':saida['relatorio'],'dicionario':saida['dicionario'],'categorias':[],
               'validacao':saida['relatorio']['validacao'],'entradas':entradas_proc,
               'categorias_analiticas':[{'id':c['id'],'nome':c['nome'],'conceito':c.get('conceito','')} for c in categories],
-              'intersecoes_territoriais':intersecoes_territoriais,
+              'fonte_analitica':'camada_saida',
+              'saidas_individuais':[{k:v for k,v in r.items() if k not in ('entrada','validacao')} for r in saida['individuais']],
               'finalidades':{chave:{'nome':item['nome'],'campos':item['campos']} for chave,item in saida['finalidades'].items()},
               'geojson':geojson}
     with _lock: etapas = list(_progress.get(ident) or [])
@@ -374,10 +377,7 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
                     'bases':bases,'resultado':{'camadas':camadas,'relatorio':saida['relatorio']},
                     'etapas':etapas,'ambiente':ambiente()}
     progress('Gerando o pacote de saída: GeoPackage, CSV, XLSX, dicionário e configuração')
-    pacote, nome_pacote, manifesto = pacote_enriquecimento.montar_pacote(
-        saida['camadas'],source,saida['dicionario'],_jsonavel(configuracao),nome_saida,
-        finalidades=saida['finalidades'],validacao=_jsonavel(saida['relatorio']['validacao']),
-        preservar_geometrias=params['operacao']=='estatisticas',incluir_entrada=not params.get('entrada_local'))
+    pacote, nome_pacote, manifesto = pacote_enriquecimento.montar_lote(saida, _jsonavel(configuracao), nome_saida)
     progress(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
     with _lock: etapas = list(_progress.get(ident) or [])
     with get_connection() as conn:
@@ -475,7 +475,7 @@ def dashboard_resultado(ident, user, camada='resultado', **filtros):
 
 
 def intersecoes_resultado(ident, user, **filtros):
-    from api.services.extracao_resultados_territoriais import consultar as apresentar, legado
+    from api.services.extracao_resultados_territoriais import consultar as apresentar, legado, da_saida
     job = consultar(ident, user, completo=True)
     if job['status'] != 'concluido' or not job.get('resultado'):
         raise LookupError('As interseções estarão disponíveis quando o processamento terminar.')
@@ -484,20 +484,20 @@ def intersecoes_resultado(ident, user, **filtros):
     recursos = {name:info['camada_resultado_id'] for name,info in result.get('camadas',{}).items()}
     if not recursos and result.get('camada_resultado_id'):
         recursos = {'resultado':result['camada_resultado_id']}
-    if snapshot is None:
+    if snapshot is None or result.get('fonte_analitica') == 'camada_saida':
         tabelas = {}
         for name,recurso in recursos.items():
             rows = repo.atributos_dashboard(recurso)
             if rows is None:
                 raise LookupError('Uma camada de saída não está disponível para a consulta.')
             tabelas[name] = rows
-        snapshot = legado(result, tabelas)
+        snapshot = da_saida(tabelas) if result.get('fonte_analitica') == 'camada_saida' else legado(result, tabelas)
     data = apresentar(snapshot, **filtros)
     # Resultados antigos não preservaram a geometria original no snapshot analítico.
     # O mapa identifica explicitamente quando está mostrando geometrias de saída.
     data['mapa_saida'] = {'type':'FeatureCollection','features':[]}
     data['mapa_saida_limitado'] = False
-    if data['legado']:
+    if data['legado'] or snapshot.get('fonte') == 'camada_saida':
         import geopandas as gpd
         from api.services.extracao_entrada_local import _representacao_mapa
         by_output = {}
@@ -505,7 +505,7 @@ def intersecoes_resultado(ident, user, **filtros):
         for item in data['linhas']:
             for ref in item.pop('_mapa', []):
                 total += 1
-                if total > 200:
+                if total > 200 and snapshot.get('fonte') != 'camada_saida':
                     data['mapa_saida_limitado'] = True
                     continue
                 by_output.setdefault(ref['saida'], {})[ref['ordem']] = item['chave']
@@ -516,6 +516,17 @@ def intersecoes_resultado(ident, user, **filtros):
                     features.append({'type':'Feature','geometry':row['geometria'],'properties':{'chave':ordens[row['ordem']]}})
         if features:
             data['mapa_saida'], data['representacao_saida'] = _representacao_mapa(gpd.GeoDataFrame.from_features(features,crs=4674),40000)
+    if snapshot.get('fonte') == 'camada_saida':
+        from api.services.extracao_entrada_local import _representacao_mapa
+        import geopandas as gpd
+        features = [{'type':'Feature','geometry':a['geometria'],'properties':{'id':aid}}
+                    for aid,a in data['areas'].items() if a.get('geometria')]
+        if features:
+            mapa, info = _representacao_mapa(gpd.GeoDataFrame.from_features(features,crs=4674),40000)
+            for f in mapa['features']:
+                data['areas'][f['properties']['id']]['geometria'] = f['geometry']
+                data['areas'][f['properties']['id']]['representacao_mapa'] = info['metodo']
+    data['fonte'] = snapshot.get('fonte', 'legado')
     data['execucao'] = str(ident)
     return data
 
@@ -556,7 +567,7 @@ FORMATOS_PACOTE = ('zip','pdf_processamento','pdf_analitico')
 
 def arquivo_do_pacote(ident, user, formato):
     """O .zip inteiro ou um arquivo dele, lido do banco. Só para quem executou."""
-    if formato not in FORMATOS_PACOTE:
+    if formato not in FORMATOS_PACOTE and not __import__('re').fullmatch(r'entrada_[1-9][0-9]*', formato):
         raise LookupError('Arquivo inexistente no pacote.')
     ident = consultar(ident,user)['id']
     with get_connection() as conn:

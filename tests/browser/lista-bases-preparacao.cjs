@@ -3,7 +3,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
 const b=await chromium.launch({headless:true,args:['--no-sandbox','--no-proxy-server','--enable-unsafe-swiftshader']}),p=await b.newPage({viewport:{width:1440,height:1000}});
 const errors=[],reads=[],saves=[];let fail=false,delay=0;
 p.on('pageerror',e=>errors.push(e.message));
-await p.addLocatorHandler(p.locator('.slt-fb-processes .slt-fb-modal:not(.slt-fb-modal--error) [data-fb-close]').first(),async()=>{await p.locator('.slt-fb-processes .slt-fb-modal:not(.slt-fb-modal--error) [data-fb-close]').first().click();});
+await p.addLocatorHandler(p.locator('#pfsSuccessBox.pfs-active, #pfsPartialBox.pfs-active'),async()=>{await p.evaluate(()=>StatusFeedback.fechar());});
 const fc={type:'FeatureCollection',features:[{type:'Feature',properties:{v:1},geometry:{type:'Point',coordinates:[-46,-23]}}]};
 const catalog={categorias:[{id:'risco',nome:'Risco'},{id:'social',nome:'Social'}],camadas:['a','b','c','entrada'].map(id=>({id,nome:id,arquivo:`acervo/${id}.gpkg`}))};
 await p.route('**/api/**',async r=>{
@@ -29,10 +29,10 @@ await p.locator('#ea-base-list-editar').click();await card.getByRole('checkbox',
 await p.locator('#ea-base-list-cancelar').click();assert(!await card.isVisible());assert.deepEqual(reads,[]);
 await carregar();await p.locator('#ea-base-list-editar').click();await card.getByRole('checkbox',{name:'Selecionar para excluir: b',exact:true}).check();await p.locator('#ea-base-list-excluir').click();
 await p.selectOption('#ea-category-select','social');await escolher('c');assert.equal(await rows.count(),2);assert.deepEqual(reads,[]);
-await p.locator('#ea-base-list-salvar').click();await p.waitForFunction(()=>Array.from(document.querySelectorAll('.slt-fb-notice')).some(n=>n.textContent.includes('salva:')));
+await p.locator('#ea-base-list-salvar').click();await p.waitForFunction(()=>Array.from(document.querySelectorAll('.notification-toast')).some(n=>n.textContent.includes('salva:')));
 assert.equal(saves[0].chave_lista,'risco');assert.deepEqual(saves[0].categorias.map(g=>g.camadas),[['a'],['c']]);assert.equal(saves[0].escopo,'bases');assert(!await p.locator('#ea-input-preview').isVisible());
-fail=true;await p.locator('#ea-base-list-confirmar').click();await p.getByText('A lista não foi enviada à prévia.',{exact:false}).waitFor();assert(!await p.locator('#ea-input-preview').isVisible());
-await p.locator('.slt-fb-processes .slt-fb-modal--error [data-fb-close]').click();
+fail=true;await p.locator('#ea-base-list-confirmar').click();await p.locator('#pfsErrorBox.pfs-active').waitFor();assert.equal(await p.locator('[data-pfs="error-title"]').innerText(),'A lista não foi enviada à prévia');assert(!await p.locator('#ea-input-preview').isVisible());
+await p.evaluate(()=>StatusFeedback.fechar());
 fail=false;await p.locator('#ea-base-list-confirmar').click();await p.locator('#ea-input-preview').waitFor();assert.equal(await p.locator('#ea-input-preview-layers .ea-preview-layer').count(),2);
 const categorias=p.locator('#ea-input-preview-layers .ea-preview-category-group');
 assert.equal(await categorias.count(),2);

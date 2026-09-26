@@ -592,8 +592,9 @@ local não realiza deploy nem altera as credenciais ou a VM.
   apresentados como bases prontas para análise.
 - As sessões da ponte são mantidas em memória por até duas horas de inatividade,
   no worker único configurado para a VM (o mesmo contrato dos jobs atuais).
-- A extração e a ferramenta territorial usam `SLTFeedback` para avisos,
-  confirmações, acompanhamento e desfechos. A faixa `ea-feedback` foi removida.
+- A extração e a ferramenta territorial usam o feedback oficial do SIGMA-PLI
+  (`ProcessFeedback`, `StatusFeedback` e `Notify`, ver `FEEDBACK_SICARD.md`) para
+  avisos, confirmações, acompanhamento e desfechos. A faixa `ea-feedback` foi removida.
   Campos de formulário, metadados e diagnósticos de camadas permanecem na página.
 
 Validação local: testes de autorização/isolamento e leitura de GPKG/ZIP; navegador
@@ -614,10 +615,11 @@ adapta somente a apresentação de mensagens e confirmações, preservando o ret
 `isConfirmed` esperado pelo cliente. A categoria continua obrigatória depois do
 envio; a bancada recebe as bases somente em **Confirmar bases**.
 
-`SLTFeedback.solicitar` coleta nomes no diálogo oficial; `processo` aceita um
-callback opcional `cancelar` apenas quando existe cancelamento real. Mensagens
-recebidas durante um processo são registradas nas etapas. O componente acompanha
-formulários `dialog` abertos e retorna ao documento quando eles são removidos.
+`ProcessFeedback.confirmar({input})` coleta nomes no modal de confirmação; o botão
+CANCELAR do overlay de progresso só aparece quando existe cancelamento real
+(`onCancel` ou `ProcessFeedback.permitirCancelamento`). Mensagens recebidas durante
+um processo entram no log. O componente e os avisos acompanham formulários
+`dialog` abertos e voltam ao documento quando eles são removidos.
 
 ### Navbar restrita e acompanhamento global (24/09/2026)
 
@@ -625,24 +627,24 @@ As duas páginas incluem `navbar_painel_restrita.html`, o menu adaptável
 `navbar_modulo/geoprocessamento.html` e `admin-session-bar`. A identificação
 vem da sessão autenticada, pelo mesmo `admin-auth.js` dos outros módulos.
 
-O componente compartilhado `assets/js/feedback.js` e seu CSS usam cabeçalho
-preenchido pela cor do status, título branco e duas barras abaixo do histórico:
-a tarefa atual, verde com faixas, e o processo geral, azul. As porcentagens
-vêm do servidor; não existem timers para fazer a barra avançar. Quando um
-serviço não informa uma medição, a barra indica **Aguardando medição**.
+O acompanhamento usa o overlay de progresso do SIGMA-PLI
+(`assets/js/process_feedback_unified.js` e `assets/css/process_feedback_system.css`):
+cabeçalho azul com o título da ação, card da tarefa atual com o passo, lista de
+tarefas concluídas, log com hora e uma barra com segmentos por tarefa. As
+porcentagens vêm do servidor; não existem timers para fazer a barra avançar.
 
-Contrato incremental para os consumidores existentes:
+Contrato com os jobs do SICARD:
 
-- `progresso(percentualGeral, mensagem, percentualTarefa)` mantém os dois
-  argumentos antigos e aceita a medição da tarefa como terceiro argumento.
-- `acompanhar(job)` apresenta `logs` ou `etapas` sequenciadas, `percentual`,
-  `progresso_tarefa` e a etapa atual, sem repetir eventos.
-- `definirCancelamento(callback, motivo)` habilita a ação somente quando o
-  consumidor oferece interrupção real. O callback precisa aguardar a confirmação
-  do servidor. `restaurar` pode devolver o formulário ao estado de preparação.
-- Serviços antigos sem endpoint de cancelamento mantêm o botão desabilitado,
-  com explicação. Abortar o HTTP não é tratado como prova de cancelamento no
-  servidor. Operações já persistidas não são desfeitas automaticamente.
+- `ProcessFeedback.acompanhar(job)` traduz `etapa_atual`/`etapa` em tarefa, os
+  `logs`/`etapas` sequenciados em linhas do log (sem repetir eventos),
+  `percentual` na barra e `progresso_tarefa` na linha de informação. Com
+  `eventos_url`, abre o canal SSE do job e ignora retratos atrasados do polling.
+- `ProcessFeedback.permitirCancelamento(callback)` mostra o botão CANCELAR
+  somente quando o consumidor oferece interrupção real. O callback confirma o
+  cancelamento no servidor e avisa o resultado pelo `Notify`.
+- Serviços sem endpoint de cancelamento não mostram o botão. Abortar o HTTP não
+  é tratado como prova de cancelamento no servidor. Operações já persistidas não
+  são desfeitas automaticamente.
 
 A extração e a geração territorial oferecem cancelamento cooperativo durante
 leitura e cálculo, com verificação entre tarefas. O OGR também verifica a
@@ -866,3 +868,25 @@ OGR. `test_extracao_correspondencias.py` verifica atributos, topologia por tipo
 de demanda e percentuais após recorte. Os testes de exportação reabrem GeoPackage
 e XLSX. Os navegadores `enriquecimento-regras.cjs` e `extracao-dashboard.cjs`
 verificam a edição de operações e o detalhamento dos vínculos.
+
+### Execução por camada e identificação das demandas (26/09/2026)
+
+A seção 1.1 apresenta a inspeção dos identificadores e exige confirmação do campo
+que identifica a demanda em cada camada. A opção “Uma demanda por feição” conserva
+o FID de origem; códigos repetidos agrupam feições da mesma camada nos resultados.
+Para pontos, um campo opcional permite apresentar a distribuição por categoria.
+
+Na seção 1.3, cada camada pode herdar o algoritmo do lote ou escolher Spatial Join
+ou Identity. Identity exige a seleção da base de recorte. É possível excluir uma
+camada da execução e definir seu nome de saída. A confirmação e os parâmetros
+integram a configuração salva e o pedido enviado ao servidor.
+
+Cada camada selecionada gera uma saída independente. O pacote geral reúne os
+pacotes individuais, os GeoPackages e tabelas e análises unificadas. Elementos das
+bases relacionados às demandas acompanham os pacotes, com seus atributos.
+
+O painel de resultados apresenta comparações descritivas de restrições e riscos,
+com empates na posição, uma matriz demanda × categoria e exploração dos atributos
+originais dos elementos relacionados. A seleção sincroniza detalhes, métricas e
+mapa. As contagens não representam gravidade, viabilidade ou homologação do ranking
+metodológico. A leitura de execuções históricas permanece disponível.

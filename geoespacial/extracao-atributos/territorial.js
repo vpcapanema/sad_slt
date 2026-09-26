@@ -1,115 +1,124 @@
-import {json} from './api.js';
+import {json,base as apiBase} from './api.js';
 import {numero} from './ui.js';
 import {clone,valor,opcoes,definicoes,texto} from './resultados-dom.js';
 import {desenharMapa} from './resultados-mapa.js';
-const ESTADOS={com:'Com interseção',sem:'Sem interseção registrada',nao_avaliado:'Categoria não avaliada',nao_informado:'Informação insuficiente'};
-const ROTULOS={risco:'Risco',restricao:'Restrição'};
+const n=v=>v==null?'—':Number(v).toLocaleString('pt-BR',{maximumFractionDigits:2});
+const labelValue=v=>v==null?'Sem valor':typeof v==='object'?JSON.stringify(v):String(v);
+function metric(m){
+ if(!m)return 'Métrica não registrada';
+ const parts=[];
+ if(m.pontos!=null)parts.push(`${n(m.pontos)} ponto(s)`);
+ if(m.comprimento_m!=null)parts.push(`${n(m.comprimento_m)} m / ${n(m.comprimento_m/1000)} km`);
+ if(m.area_m2!=null)parts.push(`${n(m.area_m2)} m² / ${n(m.area_m2/10000)} ha`);
+ if(m.perimetro_m!=null)parts.push(`Perímetro: ${n(m.perimetro_m)} m`);
+ if(m.percentual_entrada!=null)parts.push(`${n(m.percentual_entrada)}% da demanda`);
+ return parts.join(' · ')||m.situacao||'Correspondência registrada';
+}
 export function criarTerritorial(result){
-  const initial=()=>({entrada:'',feicao:'',categoria:'',base:'',situacao:'',busca:'',pagina:0});
-  let state=initial(),host,controller,version=0,map;
-  const q=selector=>host.querySelector(selector), role=name=>q(`[data-role="${name}"]`);
-  const change=values=>{Object.assign(state,{pagina:0},values);load();};
-  function dispose(){version++;controller?.abort();map?.destroy();map=null;host=null;}
-  function draw(data){
-    const all=(name,items)=>[{id:'',nome:name},...items];
-    opcoes(q('[data-filter="entrada"]'),all('Todas as entradas',data.entradas.map(e=>({id:e.nome,nome:e.nome}))),state.entrada);
-    opcoes(q('[data-filter="feicao"]'),all('Todas as feições',data.feicoes_opcoes),state.feicao);
-    opcoes(q('[data-filter="base"]'),all('Todas as bases',data.bases.filter(b=>!state.categoria||b.categoria===state.categoria).map(b=>({id:b.id,nome:`${ROTULOS[b.categoria]} · ${b.nome}`}))),state.base);
-    for(const control of host.querySelectorAll('[data-filter]'))control.value=state[control.dataset.filter];
-    for(const node of host.querySelectorAll('[data-kpi]'))node.textContent=numero(data.resumo[node.dataset.kpi],0);
-    role('legacy').hidden=!data.legado;role('incomplete').hidden=!data.grafico.some(g=>!g.completa);
-    role('method').textContent=data.legado?'Interseções registradas na saída histórica; ligações por atributo não são tratadas como interseção espacial.':'Interseção geométrica da entrada com os polígonos originais das bases; inclui contato na borda, sem buffers ou recorte. Não representa gravidade ou impedimento.';
-    role('summary').replaceChildren();
-    for(const entry of data.resumo_entradas){
-      const row=clone('ea-tpl-input-summary');valor(row,'nome',entry.nome);valor(row,'total',entry.total);
-      for(const tipo of ['risco','restricao']){
-        const counts=entry[tipo];valor(row,tipo,`${counts.com} com · ${counts.sem} sem${counts.nao_avaliado?` · ${counts.nao_avaliado} não avaliadas`:""}${counts.nao_informado?` · ${counts.nao_informado} não informadas`:""}`);
-      }
-      row.querySelector('button').onclick=()=>change({entrada:entry.nome,feicao:''});role('summary').append(row);
-    }
-    role('chart').replaceChildren();role('chart-empty').hidden=!!data.grafico.length;
-    const maximum=Math.max(1,...data.grafico.map(g=>g.feicoes));
-    for(const entry of data.grafico){
-      const bar=clone('ea-tpl-chart-bar');bar.querySelector('.ea-chart-label').textContent=`${ROTULOS[entry.categoria]} · ${entry.nome}`;
-      bar.querySelector('.ea-chart-fill').style.width=`${100*entry.feicoes/maximum}%`;bar.querySelector('strong').textContent=numero(entry.feicoes,0);
-      bar.disabled=entry.feicoes===null;bar.title=entry.completa?'Contagem das feições no recorte':'Contagem parcial: há feições sem informação suficiente';bar.onclick=()=>change({categoria:entry.categoria,base:entry.id,situacao:'com'});role('chart').append(bar);
-    }
-    role('layers').replaceChildren();
-    const byLayer=new Map();for(const item of data.linhas){if(!byLayer.has(item.entrada))byLayer.set(item.entrada,[]);byLayer.get(item.entrada).push(item);}
-    const values=new Map(),features=[];
-    function select(key){
-      const item=values.get(key);if(!item)return;
-      role('selection-title').textContent=item.rotulo;definicoes(role('selection-attributes'),item.atributos);map?.focus(key);
-      host.querySelectorAll('[data-feature-key]').forEach(row=>row.classList.toggle('is-selected',row.dataset.featureKey===key));
-    }
-    for(const area of Object.values(data.areas)){
-      const key=`area:${area.id}`,label=`${area.base} · feição de origem ${area.fid}`;
-      values.set(key,{rotulo:label,atributos:area.atributos});
-      if(area.geometria&&(!state.categoria||area.categoria===state.categoria))features.push({type:'Feature',geometry:area.geometria,properties:{chave:key,rotulo:label,papel:'area',categoria:area.categoria}});
-    }
-    for(const [name,items] of byLayer){
-      const section=clone('ea-tpl-input-layer');valor(section,'nome',name);valor(section,'scope',`${items.length} feições nesta página. Identificadores e áreas conforme a fonte.`);
-      for(const tipo of ['risco','restricao']){
-        const block=section.querySelector(`[data-territorial-category="${tipo}"]`);block.hidden=!!state.categoria&&state.categoria!==tipo;
-        for(const item of items){
-          const row=clone('ea-tpl-territorial-row');row.dataset.featureKey=item.chave;
-          valor(row,'feicao',item.identificador??`Feição ${item.fid}`);valor(row,'fid',`${data.legado?"Posição na análise":"Posição original"}: ${item.fid}`);valor(row,'estado',ESTADOS[item.estados[tipo]]);
-          row.querySelector('button').onclick=()=>select(item.chave);definicoes(row.querySelector('[data-feature-attributes]'),Object.fromEntries(Object.entries(item.atributos).slice(0,2)));
-          const list=row.querySelector('ul'),known=new Set();
-          for(const aid of item.areas){
-            const area=data.areas[aid];if(area.categoria!==tipo)continue;known.add(area.base_id);
-            const li=clone('ea-tpl-area');valor(li,'titulo',`${area.base} · feição ${area.fid}`);
-            const relacao=item.relacoes?.[aid];
-            const tipos={contato_borda:'Contato na borda',intersecao_interior:'Interseção no interior',cruzamento_pontual:'Cruzamento pontual',
-              ponto_na_borda:'Ponto na borda',ponto_no_interior:'Ponto no interior',sobreposicao_area:'Sobreposição de área',
-              contato_linear:'Contato linear na borda',contato_pontual:'Contato pontual',trecho_no_interior:'Trecho no interior',
-              trecho_na_borda:'Trecho na borda',trechos_interior_e_borda:'Trechos no interior e na borda',intersecao_mista:'Interseção com geometria mista'};
-            li.querySelector('[data-area-relation]').textContent=relacao
-              ? [tipos[relacao.situacao||relacao.tipo]||relacao.situacao||relacao.tipo,relacao.area_m2!=null?`${relacao.area_m2.toLocaleString('pt-BR')} m² em comum`:null,relacao.comprimento_m!=null?`${relacao.comprimento_m.toLocaleString('pt-BR')} m em comum`:null,relacao.comprimento_interior_m!=null?`${relacao.comprimento_interior_m.toLocaleString('pt-BR')} m no interior`:null,relacao.comprimento_borda_m!=null?`${relacao.comprimento_borda_m.toLocaleString('pt-BR')} m na borda`:null,relacao.percentual_entrada!=null?`${relacao.percentual_entrada.toLocaleString('pt-BR')}% da geometria de entrada`:null].filter(Boolean).join(' · ')
-              : 'Tipo de contato não registrado nesta extração.';
-            li.querySelector('button').onclick=()=>select(`area:${aid}`);definicoes(li.querySelector('[data-area-summary]'),Object.fromEntries(Object.entries(area.atributos).slice(0,3)));definicoes(li.querySelector('[data-area-details]'),area.atributos);li.querySelector('details').hidden=Object.keys(area.atributos).length<=3;list.append(li);
-          }
-          for(const bid of item.bases_intersectadas){
-            const base=data.bases.find(b=>b.id===bid);if(!base||base.categoria!==tipo)continue;
-            if(!known.has(bid)||data.legado){const li=clone('ea-tpl-base-only');valor(li,'base',base.nome);
-              if(known.has(bid))li.querySelector('span').textContent=' · identificação histórica pode estar incompleta';list.append(li);}
-          }
-          if(!list.children.length){const li=clone('ea-tpl-list-item');li.textContent=ESTADOS[item.estados[tipo]];list.append(li);}
-          block.querySelector('tbody').append(row);
-        }
-      }
-      role('layers').append(section);
-    }
-    for(const item of data.linhas){
-      const label=`${item.entrada} · ${item.identificador??item.fid}`;
-      values.set(item.chave,{rotulo:label,atributos:item.atributos});
-      if(item.geometria)features.push({type:'Feature',geometry:item.geometria,properties:{chave:item.chave,rotulo:label,papel:'entrada'}});
-    }
-    for(const feature of data.mapa_saida?.features||[])features.push({...feature,properties:{...feature.properties,papel:'entrada',rotulo:values.get(feature.properties.chave)?.rotulo}});
-    map?.destroy();map=desenharMapa(role('map'),features,select);
-    role('selection-title').textContent='Selecione uma feição ou área';definicoes(role('selection-attributes'),{});
-    role('empty').hidden=!!data.linhas.length;
-    role('pagination').textContent=`Página ${data.paginas?data.pagina+1:0} de ${data.paginas} · ${data.total} feições no recorte`;
-    q('[data-action="previous"]').disabled=data.pagina===0;q('[data-action="next"]').disabled=data.pagina+1>=data.paginas;
-    const approximate=data.linhas.some(i=>i.representacao_mapa!=='original')||Object.values(data.areas).some(a=>a.representacao_mapa&&a.representacao_mapa!=='original')||data.representacao_saida?.metodo&&data.representacao_saida.metodo!=='original';
-    role('map-scope').textContent=`Mapa: feições e áreas da página atual. ${data.legado?'As geometrias exibidas são da saída histórica, que pode estar recortada. ':''}${approximate?'Prévia aproximada; a análise usa geometrias integrais. ':''}${data.mapa_saida_limitado?'Exibidas até 200 geometrias de saída nesta página.':''}`;
+ const initial=()=>({entrada:'',feicao:'',categoria:'',atributo:'',busca:'',pagina:0});
+ let state=initial(),host,controller,version=0,map,data,selectedKey=null,selectedArea=null,chartMetric='espacial';
+ const q=s=>host.querySelector(s),role=k=>q(`[data-role="${k}"]`);
+ function dispose(){version++;controller?.abort();map?.destroy();map=null;host=null;}
+ function change(values){Object.assign(state,{pagina:0},values);selectedArea=null;load();}
+ function selectDemand(key,tipo){
+  if(tipo!==undefined){state.categoria=tipo;state.atributo='';}
+  selectedKey=key;selectedArea=null;
+  if(!data.linhas.some(i=>i.chave===key)){change({feicao:key});return;}
+  draw();
+ }
+ function filters(){
+  opcoes(q('[data-filter="entrada"]'),[{id:'',nome:'Unificado · todas as demandas'},...data.entradas.map(e=>({id:e.nome,nome:e.nome}))],state.entrada);
+  opcoes(q('[data-filter="categoria"]'),[{id:'',nome:'Todas as categorias'},...(data.categorias||[]).map(([id,nome])=>({id,nome}))],state.categoria);
+  const fields=data.campos_categorias?.[state.categoria]||[...new Set(Object.values(data.areas).filter(a=>!state.categoria||a.categoria===state.categoria).flatMap(a=>Object.keys(a.atributos)))];
+  opcoes(q('[data-filter="atributo"]'),[{id:'',nome:'Nome do elemento'},...fields.map(id=>({id,nome:id}))],state.atributo);
+  q('[data-filter="busca"]').value=state.busca;
+  const output=result.saidas_individuais?.find(e=>e.nome===state.entrada);
+  role('download').href=`${apiBase}/extracao-atributos/execucoes/${encodeURIComponent(result.id)}/pacote${output?'?saida='+encodeURIComponent(output.chave):''}`;
+  role('download').textContent=output?'Baixar esta saída':'Baixar todas as saídas';
+ }
+ function bar(container,label,value,max,unit,action){
+  const b=clone('ea-tpl-chart-bar');b.querySelector('.ea-chart-label').textContent=label;
+  b.querySelector('.ea-chart-fill').style.width=`${100*Math.abs(value)/Math.max(1,max)}%`;b.querySelector('strong').textContent=`${n(value)} ${unit}`;
+  b.onclick=action;container.append(b);
+ }
+ function detail(){
+  const item=data.linhas.find(i=>i.chave===selectedKey);
+  role('occurrences').replaceChildren();role('chart').replaceChildren();role('point-categories').replaceChildren();
+  role('selection-title').textContent=item?`Demanda ${item.identificador??item.fid} · ${item.entrada}`:'Selecione uma demanda nas tabelas';
+  const areas=item?item.areas.map(id=>data.areas[id]).filter(a=>a&&(!state.categoria||a.categoria===state.categoria)):[];
+  role('empty').hidden=!!areas.length;role('empty').textContent=item?'Nenhuma correspondência registrada nesta categoria.':'Selecione uma demanda.';
+  const numeric=!!state.atributo&&!/(^id$|codigo|código|(^|_)cod($|_)|(^|_)id($|_)|fid|objectid)/i.test(state.atributo)&&areas.length>0&&areas.every(a=>typeof a.atributos[state.atributo]==='number'&&Number.isFinite(a.atributos[state.atributo]));
+  role('chart-metric').querySelector('[value="atributo"]').disabled=!numeric;
+  if(!numeric)chartMetric='espacial';role('chart-metric').value=chartMetric;
+  role('attribute-note').hidden=chartMetric!=='atributo';
+  const values=areas.map(a=>{const m=item.relacoes?.[a.id]||{};return {a,m,v:chartMetric==='atributo'?a.atributos[state.atributo]:m.pontos??m.comprimento_m??m.area_m2??0,unit:chartMetric==='atributo'?'':m.pontos!=null?'pontos':m.comprimento_m!=null?'m':'m²'};});
+  const max=Math.max(1,...values.map(v=>Math.abs(v.v)));
+  for(const {a,m,v,unit} of values){
+   const row=clone('ea-tpl-occurrence-row');valor(row,'nome',a.nome||`Feição ${a.fid}`);valor(row,'base',a.base);
+   valor(row,'atributo',state.atributo?labelValue(a.atributos[state.atributo]):a.nome||a.fid);valor(row,'metrica',metric(m));
+   const select=()=>{selectedArea=a.id;detail();};row.querySelector('button').onclick=select;row.classList.toggle('is-selected',a.id===selectedArea);role('occurrences').append(row);
+   bar(role('chart'),`${a.nome||a.fid}${state.atributo?' · '+labelValue(a.atributos[state.atributo]):''}`,v,max,unit,select);
   }
-  async function load(){
-    if(!host)return;const current=++version,target=host;controller?.abort();controller=new AbortController();
-    target.setAttribute('aria-busy','true');role('loading').hidden=false;role('error').hidden=true;role('body').hidden=true;
-    try{
-      const data=await json(`/extracao-atributos/execucoes/${encodeURIComponent(result.id)}/intersecoes`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state),signal:AbortSignal.any([controller.signal,AbortSignal.timeout(180000)])});
-      if(current!==version||host!==target)return;
-      state.pagina=data.pagina;role('body').hidden=false;draw(data);
-    }catch(error){if(current!==version||host!==target)return;role('error').hidden=false;role('error').querySelector('p').textContent=error.message;}
-    finally{if(current===version&&host===target){role('loading').hidden=true;target.removeAttribute('aria-busy');}}
+  const area=areas.find(a=>a.id===selectedArea)||areas[0];selectedArea=area?.id;
+  role('element-title').textContent=area?`${area.nome||area.fid} · ${area.base}`:'Selecione um elemento relacionado.';
+  const attrs=Object.entries(area?.atributos||{}).filter(([,v])=>v!=null&&v!=='');
+  attrs.sort(([a],[b])=>Number(/nome|name|codigo|class|descr|tipo|nm_/i.test(b))-Number(/nome|name|codigo|class|descr|tipo|nm_/i.test(a)));
+  definicoes(role('selection-attributes'),Object.fromEntries(attrs));
+  const m=item?.relacoes?.[area?.id];
+  if(m?.por_categoria&&Object.keys(m.por_categoria).some(k=>k!=='Sem categoria')){
+   const title=document.createElement('h4');title.textContent=`Pontos por categoria · ${area.nome||area.fid}`;role('point-categories').append(title);
+   for(const [label,count] of Object.entries(m.por_categoria))bar(role('point-categories'),label,count,Math.max(...Object.values(m.por_categoria)),'pontos',()=>{});
   }
-  return {dispose,mount(target){dispose();host=target;
-    for(const control of host.querySelectorAll('[data-filter]'))control.onchange=()=>{
-      const key=control.dataset.filter,extra=key==='entrada'?{feicao:''}:key==='categoria'?{base:''}:{};change({...extra,[key]:control.value});
-    };
-    q('[data-filter="busca"]').onkeydown=e=>{if(e.key==='Enter')e.target.blur();};
-    q('[data-action="reset"]').onclick=()=>{state=initial();load();};q('[data-action="retry"]').onclick=load;
-    q('[data-action="previous"]').onclick=()=>change({pagina:state.pagina-1});q('[data-action="next"]').onclick=()=>change({pagina:state.pagina+1});load();
-  }};
+  const features=[];
+  if(area?.geometria)features.push({type:'Feature',geometry:area.geometria,properties:{chave:`area:${area.id}`,papel:'area',categoria:area.categoria,rotulo:area.nome||area.base}});
+  for(const f of data.mapa_saida?.features||[])if(!item||f.properties.chave===item.chave)features.push({...f,properties:{...f.properties,papel:'entrada',rotulo:item?String(item.identificador):f.properties.chave}});
+  if(item?.geometria)features.push({type:'Feature',geometry:item.geometria,properties:{chave:item.chave,papel:'entrada',rotulo:String(item.identificador)}});
+  map?.destroy();map=desenharMapa(role('map'),features,key=>{if(!key.startsWith('area:'))selectDemand(key);});
+  if(item)map.focus(item.chave);
+  role('map-scope').textContent=data.mapa_saida_limitado?'Prévia limitada a 200 geometrias. Os cálculos e arquivos usam todos os registros.':(area?.representacao_mapa&&area.representacao_mapa!=='original'||data.representacao_saida?.metodo&&data.representacao_saida.metodo!=='original')?'Prévia simplificada para navegação. Métricas e arquivos usam geometrias integrais.':'Geometrias e atributos preservados na saída.';
+ }
+ function draw(){
+  filters();for(const node of host.querySelectorAll('[data-kpi]'))node.textContent=numero(data.resumo[node.dataset.kpi],0);
+  role('legacy').hidden=!data.legado;
+  for(const tipo of ['restricao','risco']){
+   const section=q(`[data-ranking="${tipo}"]`),tbody=section.querySelector('tbody');tbody.replaceChildren();
+   section.querySelector('[data-empty]').hidden=data.bases.some(b=>b.categoria===tipo);
+   const ranked=data.rankings?.[tipo]||[];
+   for(const r of ranked.slice(state.pagina*25,state.pagina*25+25)){
+    const row=clone('ea-tpl-ranking-row');for(const key of ['posicao','demanda','entrada'])valor(row,key,r[key]);
+    valor(row,'ocorrencias',r.estado==='nao_avaliado'?'Não avaliado':r.ocorrencias);
+    row.querySelector('button').onclick=()=>selectDemand(r.chave,tipo);tbody.append(row);
+   }
+  }
+  const matrix=role('matrix'),head=matrix.querySelector('thead tr'),body=matrix.querySelector('tbody');
+  while(head.children.length>2)head.lastElementChild.remove();body.replaceChildren();
+  for(const [,nome] of data.categorias||[]){const th=document.createElement('th');th.textContent=nome;head.append(th);}
+  for(const item of data.linhas){
+   const row=document.createElement('tr');
+   for(const v of [item.identificador??item.fid,item.entrada]){const td=document.createElement('td');td.textContent=v;row.append(td);}
+   for(const [id] of data.categorias||[]){const td=document.createElement('td'),b=document.createElement('button');b.className='ea-btn';b.type='button';const related=item.areas.map(a=>data.areas[a]).filter(a=>a?.categoria===id);b.textContent=state.atributo&&id===state.categoria?[...new Set(related.map(a=>labelValue(a.atributos[state.atributo])))].join(' · ')||'Sem correspondência':item.contagens?.[id]||0;b.onclick=()=>selectDemand(item.chave,id);td.append(b);row.append(td);}
+   body.append(row);
+  }
+  role('pagination').textContent=`Página ${data.paginas?data.pagina+1:0} de ${data.paginas} · ${data.total} demandas`;
+  q('[data-action="previous"]').disabled=data.pagina===0;q('[data-action="next"]').disabled=data.pagina+1>=data.paginas;
+  detail();
+ }
+ async function load(){
+  if(!host)return;const current=++version,target=host;controller?.abort();controller=new AbortController();
+  role('loading').hidden=false;role('error').hidden=true;target.setAttribute('aria-busy','true');
+  try{const response=await json(`/extracao-atributos/execucoes/${encodeURIComponent(result.id)}/intersecoes`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state),signal:controller.signal});
+   if(current!==version||host!==target)return;data=response;state.pagina=data.pagina;role('body').hidden=false;draw();
+  }catch(e){if(current!==version||host!==target)return;role('error').hidden=false;role('error').querySelector('p').textContent=e.message;}
+  finally{if(current===version&&host===target){role('loading').hidden=true;target.removeAttribute('aria-busy');}}
+ }
+ return {dispose,mount(target){dispose();host=target;
+  role('chart-metric').onchange=()=>{chartMetric=role('chart-metric').value;detail();};
+  for(const control of host.querySelectorAll('[data-filter]'))control.onchange=()=>{
+   const key=control.dataset.filter;
+   if(['categoria','atributo'].includes(key)){state[key]=control.value;if(key==='categoria')state.atributo='';draw();return;}
+   selectedKey=null;change({[key]:control.value,feicao:''});
+  };
+  q('[data-action="reset"]').onclick=()=>{state=initial();selectedKey=null;load();};q('[data-action="retry"]').onclick=load;
+  q('[data-action="previous"]').onclick=()=>change({pagina:state.pagina-1,feicao:''});q('[data-action="next"]').onclick=()=>change({pagina:state.pagina+1,feicao:''});load();
+ }};
 }

@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
   <link rel="stylesheet" href="/assets/css/geoprocessamento.css?v=20260926-table-values">
   <link rel="stylesheet" href="/assets/css/extracao-atributos.css">
-  <link rel="stylesheet" href="/assets/css/feedback.css?v=20260926-explorador">
+  <link rel="stylesheet" href="/assets/css/process_feedback_system.css">
   <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="/assets/vendor/leaflet-draw/leaflet.draw.css">
   <link rel="stylesheet" href="/assets/css/bancada-arquivos.css">
@@ -145,12 +145,13 @@
       <nav class="attribute-layer-tabs" data-at-layers aria-label="Camadas abertas"></nav>
       <div class="attribute-toolbar" role="toolbar" aria-label="Controles da tabela">
         <button type="button" data-at-action="all" class="attribute-icon-button" title="Selecionar todos os registros visíveis" aria-label="Selecionar todos os registros visíveis"><i data-lucide="list-checks" aria-hidden="true"></i></button><button type="button" data-at-action="clear" class="attribute-icon-button" title="Limpar seleção" aria-label="Limpar seleção"><i data-lucide="list-x" aria-hidden="true"></i></button><button type="button" data-at-action="zoom" class="attribute-icon-button" title="Zoom na seleção" aria-label="Zoom na seleção"><i data-lucide="zoom-in" aria-hidden="true"></i></button>
+        <button type="button" data-at-action="invert" class="attribute-icon-button" title="Inverter seleção em todos os registros da camada" aria-label="Inverter seleção"><i data-lucide="arrow-left-right" aria-hidden="true"></i></button>
         <button type="button" class="attribute-icon-button" data-at-action="only" data-at-only aria-pressed="false" title="Mostrar somente selecionados" aria-label="Mostrar somente selecionados"><i data-lucide="list-filter" aria-hidden="true"></i></button>
         <button type="button" data-at-action="edit" data-at-edit aria-pressed="false" class="attribute-icon-button" title="Editar registros" aria-label="Editar registros"><i data-lucide="pencil" aria-hidden="true"></i></button><button type="button" data-at-action="delete" data-at-delete class="attribute-icon-button" title="Excluir registros selecionados" aria-label="Excluir registros selecionados"><i data-lucide="trash-2" aria-hidden="true"></i></button>
         <button type="button" data-at-action="undo" class="attribute-icon-button" title="Desfazer" aria-label="Desfazer"><i data-lucide="undo-2" aria-hidden="true"></i></button><button type="button" data-at-action="redo" class="attribute-icon-button" title="Refazer" aria-label="Refazer"><i data-lucide="redo-2" aria-hidden="true"></i></button><button type="button" data-at-action="csv" class="attribute-icon-button" title="Exportar CSV" aria-label="Exportar CSV"><i data-lucide="download" aria-hidden="true"></i></button>
       </div>
       <details class="attribute-query"><summary>Selecionar por atributo</summary>
-        <form data-at-query><label>Campo<select data-at-field></select></label><label>Condição<select data-at-operator><option value="=">Igual a</option><option value="!=">Diferente de</option><option value="like">Contém</option><option value=">">Maior que</option><option value=">=">Maior ou igual</option><option value="<">Menor que</option><option value="<=">Menor ou igual</option></select></label><label>Valor<input data-at-value list="gp-attribute-values" autocomplete="off" placeholder="Escolha ou digite um valor"><datalist id="gp-attribute-values" data-at-values></datalist></label><label>Pesquisar em<select data-at-scope><option value="all">Todos os registros</option><option value="selection">Somente na seleção atual</option></select></label><button type="submit">Selecionar</button></form>
+        <form data-at-query><label>Campo<select data-at-field></select></label><label>Condição<select data-at-operator><option value="=">Igual a</option><option value="!=">Diferente de</option><option value="like">Contém</option><option value="is_null">É nulo</option><option value="is_not_null">Não é nulo</option><option value=">">Maior que</option><option value=">=">Maior ou igual</option><option value="<">Menor que</option><option value="<=">Menor ou igual</option></select></label><label>Valor<input data-at-value list="gp-attribute-values" autocomplete="off" placeholder="Escolha ou digite um valor"><datalist id="gp-attribute-values" data-at-values></datalist></label><label>Pesquisar em<select data-at-scope><option value="all">Todos os registros</option><option value="selection">Somente na seleção atual</option></select></label><button type="submit">Selecionar</button></form>
       </details>
       <div class="attribute-grid" data-at-grid></div>
       <footer class="attribute-grid-footer"><span data-at-count></span><div><button type="button" data-at-action="discard" data-at-discard>Descartar</button><button type="button" data-at-action="save" data-at-save>Salvar alterações</button></div><p data-at-status role="status" aria-live="polite"></p></footer>
@@ -158,10 +159,11 @@
   </template>
   <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
   <script src="/assets/vendor/lucide/lucide.min.js"></script>
-  <script src="/assets/js/feedback.js?v=20260926-explorador"></script>
+  <script src="/assets/js/notification_system.js"></script>
+  <script src="/assets/js/process_feedback_unified.js"></script>
   <script src="/assets/js/status-colors.js"></script>
   <script src="/assets/vendor/tabulator/tabulator.min.js"></script>
-  <script src="/restrict/geoespacial/geoprocessamento-atributos.js?v=20260926-table-values"></script>
+  <script src="/restrict/geoespacial/geoprocessamento-atributos.js?v=20260926-null-selection"></script>
   <script src="/restrict/geoespacial/geoprocessamento.js?v=20260926-table-values"></script>
   <script src="/restrict/geoespacial/geoprocessamento-modeler.js?v=20260926-table-values"></script>
   <script src="/restrict/geoespacial/geoprocessamento-docks.js?v=20260810-simbologia"></script>

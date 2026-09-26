@@ -1,3 +1,4 @@
+import {renderLote,validarLote} from './lote.js';
 import { $, feedback, camposCamada } from "./ui.js";
 import { conectarIntegracao, disponivel, chamar } from "./integracao.js";
 import { criarMapa } from "./mapa.js";
@@ -117,15 +118,14 @@ function camposPrevistos() {
   for(const entrada of entradasEnriquecimento()){
     const camada=camadaEntrada(entrada.id);
     const config=entrada.config;
-    const campos=state.operation==='estatisticas'?camposCamada(camada):config?.campos||camposCamada(camada);
+    const campos=camposCamada(camada);
     for(const campo of campos)if(!itens.some(i=>i.campo===campo))itens.push({campo,rotulo:campo,grupo:`Entrada · ${nome(entrada.id)}`});
   }
   for(const base of state.bancadaBases){
     const camada=base.layer;
     const prefixo=base.regra?.prefixo?(base.regra.prefixo.endsWith("_")?base.regra.prefixo:base.regra.prefixo+"_"):prefixoPadrao(nome(base.id));
-    const campos=state.operation==='estatisticas'?camposCamada(camada):base.regra?.campos||camposCamada(camada);
+    const campos=camposCamada(camada);
     const grupo=`Base · ${nome(base.id)}`;
-    if(state.operation==='estatisticas'&&categoriaBinaria(state.categories.find(c=>c.id===base.category)))itens.push({campo:`${prefixo}intersecao`,rotulo:`${prefixo}intersecao · Sim / Não`,grupo});
     for(const campo of campos)itens.push({campo:prefixo+campo,rotulo:prefixo+campo,grupo});
     if(base.regra?.papel!=='recorte')itens.push({campo:`${prefixo}correspondencias`,rotulo:`${prefixo}correspondencias · todas as feições e atributos (JSON)`,grupo});
     itens.push({campo:`${prefixo}n_feicoes`,rotulo:`${prefixo}n_feicoes · nº de feições tocadas`,grupo});
@@ -163,6 +163,8 @@ function controls() {
   $("#ea-export").disabled=state.busy||!state.result||!disponivel("exportar");
   renderSelecao();
   renderFinalidades();
+  renderLote(state,changed);
+  if(state.busy)document.querySelectorAll("#ea-config input, #ea-config select, #ea-config button").forEach(node=>{node.disabled=true;});
   const entrada=state.catalog.find(l=>l.id===state.input);
   const campoSaida=$("#ea-nome-saida");
   if(campoSaida){
@@ -289,49 +291,29 @@ const botaoPequeno=(texto,acao)=>{const b=criar("button",texto,"ea-btn ea-regra-
 const nomeCamada=id=>state.catalog.find(l=>l.id===id)?.nome||id;
 // Recortes por finalidade: os campos são escolhidos numa lista, sem digitar nome de campo.
 export function renderFinalidades() {
-  const host=$("#ea-finalidades");if(!host)return;
-  host.replaceChildren();
-  host.hidden=Boolean(state.preparacaoConcluida)||!['enriquecimento','estatisticas'].includes(state.operation);
-  if(host.hidden)return;
-  host.append(criar("h4","Recortes por finalidade (opcional)","ea-op-params-title"));
-  if(!state.finalidades.length)host.append(criar("p","Nenhum recorte. Use Adicionar finalidade para gerar no pacote camadas e tabelas só com os campos que interessam.","ea-hint"));
-  for(const finalidade of state.finalidades){
-    const linha=criar("div",undefined,"ea-execucao-linha");
-    linha.append(criar("strong",finalidade.nome),criar("span",` · ${finalidade.campos.length} campo(s): ${finalidade.campos.slice(0,4).join(", ")}${finalidade.campos.length>4?"…":""} `));
-    linha.append(botaoPequeno("Editar",async()=>{
-      const nova=await editarFinalidade({...finalidade,disponiveis:camposPrevistos()});
-      if(nova){Object.assign(finalidade,nova);changed();}
-    }));
-    linha.append(" ",botaoPequeno("Remover",()=>{
-      state.finalidades=state.finalidades.filter(f=>f!==finalidade);changed();
-    }));
-    host.append(linha);
+  const host=$('#ea-finalidades');host.hidden=!state.operation;
+  const body=$('#ea-finalidades-lista');body.replaceChildren();
+  for(const item of state.finalidades){
+    const row=$('#ea-tpl-finalidade').content.firstElementChild.cloneNode(true);
+    row.querySelector('[data-name]').textContent=item.nome;
+    row.querySelector('[data-fields]').textContent=`${item.campos.length} campos`;
+    row.querySelector('[data-edit]').onclick=async()=>{const nova=await editarFinalidade({...item,disponiveis:camposPrevistos()});if(nova){Object.assign(item,nova);changed();}};
+    row.querySelector('[data-remove]').onclick=()=>{state.finalidades=state.finalidades.filter(f=>f!==item);changed();};body.append(row);
   }
-  host.append(botaoPequeno("Adicionar finalidade",async()=>{
-    const nova=await editarFinalidade({disponiveis:camposPrevistos()});
-    if(nova){state.finalidades.push(nova);changed();}
-  }));
+  $('#ea-finalidade-adicionar').onclick=async()=>{const nova=await editarFinalidade({disponiveis:camposPrevistos()});if(nova){state.finalidades.push(nova);changed();}};
 }
 // Os parametros do operador do OGR abrem abaixo do seletor e seguem no pedido.
 function renderParametros() {
   // O desenho do algoritmo fica no subcard 1.3, ao lado do seletor.
-  const grupo=document.querySelector('.ea-grupo-dinamico[data-origem="1.3"]');if(grupo)grupo.hidden=Boolean(state.preparacaoConcluida);
+  const grupo=document.querySelector('.ea-grupo-dinamico[data-origem="1.3"]');if(grupo)grupo.hidden=!state.operation;
   renderDiagrama($("#ea-algoritmo-desenho"),state.operation);
   const host=$("#ea-operation-params");if(!host)return;
-  host.replaceChildren();
-  // Sem algoritmo escolhido nao ha parametro que faca sentido mostrar.
-  host.hidden=Boolean(state.preparacaoConcluida)||!['enriquecimento','estatisticas'].includes(state.operation);
+  host.hidden=!['enriquecimento','estatisticas'].includes(state.operation);
   renderFinalidades();
-  if(host.hidden)return;
-  if(['enriquecimento','estatisticas'].includes(state.operation)){
-    const titulo=document.createElement("h4");titulo.className="ea-op-params-title";titulo.textContent="Como as bases entram";
-    const texto=document.createElement("p");texto.className="ea-hint";
-    texto.textContent=state.operation==='estatisticas'?"Cada feição mantém sua geometria e seus atributos. Todos os vínculos e atributos das bases são preservados; risco e restrição têm presença em campo separado. Escolha operações por campo no botão Regra. Contatos na borda são identificados. Sem interseção, os campos estatísticos ficam vazios.":"Configure a regra de cada base abaixo: papel (atributos ou unidade de recorte), ligação, multiplicidade, campos, prefixo, apelidos e buffer. O padrão preserva valores distintos e todas as correspondências por localização; cálculos exigem escolha por campo.";
-    host.append(titulo,texto);renderSelecao();
-    return;
-  }
-
+  renderLote(state,changed);
+  if(state.busy)document.querySelectorAll("#ea-config input, #ea-config select, #ea-config button").forEach(node=>{node.disabled=true;});
 }
+
 function request() {
   return {motor:"gdal",operacao:state.operation,opcoes:{...state.opcoes},nome_saida:state.nomeSaida.trim(),input:state.bancadaEntradas[0]?.layer,categorias:state.categories.filter(c=>state.bancadaBases.some(b=>b.category===c.id)).map(c=>({id:c.id,nome:c.nome,camadas:state.bancadaBases.filter(b=>b.category===c.id).map(b=>b.layer),
     regras:['enriquecimento','estatisticas'].includes(state.operation)?Object.fromEntries(state.bancadaBases.filter(b=>b.category===c.id&&b.regra).map(b=>[b.id,b.regra])):{}})),
@@ -345,7 +327,7 @@ $("#ea-run").addEventListener("click",async()=>{
   if(state.busy||state.uploading||state.validatingBases||state.loadingMap||state.loadingCatalog||!state.operation||!state.bancadaEntradas.length||!state.bancadaBases.length) return;
   try{map.assertReady(idsDaComposicao());}catch(error){feedback(error.message,'error');return;}
   let pedido;
-  try{pedido=request();}catch(error){feedback(error.message,'error');return;}
+  try{validarLote(state);pedido=request();}catch(error){feedback(error.message,'error');return;}
   const confirmado=await confirmarExecucao({
     entrada:pedido.input.nome,
     saida:pedido.nome_saida||`Extração de ${pedido.input.nome}`,
@@ -374,9 +356,10 @@ $("#ea-run").addEventListener("click",async()=>{
 $("#ea-export").addEventListener("click",async()=>{
   if(!state.result||state.busy) return;
   busy(true);
-  const processo=window.SLTFeedback.processo("Baixando pacote de saída");
-  try {await chamar("exportar",{resultado_id:state.result.id});processo.concluir({message:"Download iniciado."});}
-  catch(error) {processo.concluir({type:"error",message:`Não foi possível baixar: ${error.message}`});} finally {busy(false);}
+  const TAREFA="Gerar o pacote no servidor";
+  const processo=window.ProcessFeedback.iniciarCadastro({title:"Baixando pacote de saída",tasks:[TAREFA]});processo.tarefaAtual(TAREFA);
+  try {await chamar("exportar",{resultado_id:state.result.id});processo.concluirTarefa(TAREFA,"Pacote gerado");processo.sucesso({title:"Download iniciado",message:"O pacote de saída (.zip) foi gerado e o download começou."});}
+  catch(error) {processo.erro({title:"Não foi possível baixar",message:error.message});} finally {busy(false);}
 });
 async function carregarCatalogo(){
   if(state.loadingCatalog)return;

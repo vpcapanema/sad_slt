@@ -13,10 +13,22 @@ export function numero(value, digits = 2) {
   return typeof value === "number" && Number.isFinite(value)
     ? value.toLocaleString("pt-BR", { maximumFractionDigits: digits }) : "—";
 }
-// Todos os módulos usam o mesmo componente, inclusive dentro de formulários.
+// Todos os módulos usam o Notify oficial (SIGMA-PLI). Aviso e erro pedem ação
+// para fechar; sucesso e informação somem sozinhos em 7 s.
 export function feedback(message, type='info') {
-  if (message) window.SLTFeedback.notify(type,message,
-    location.pathname.includes('gerador-camadas-territoriais')?'Camadas territoriais':'Extração de atributos');
+  if (!message) return;
+  const titulo=location.pathname.includes('gerador-camadas-territoriais')?'Camadas territoriais':'Extração de atributos';
+  const tipo=['success','error','warning','info'].includes(type)?type:'info';
+  window.Notify?.[tipo](titulo,message,tipo==='error'||tipo==='warning'?{}:{duration:7000});
+}
+/** Campo obrigatório ou inválido: aviso do Notify, campo marcado e foco nele. */
+export function exigirCampo(campo, message) {
+  feedback(message, 'warning');
+  if (!campo) return;
+  campo.setAttribute('aria-invalid', 'true');
+  const limpar = () => { campo.removeAttribute('aria-invalid'); campo.removeEventListener('input', limpar); campo.removeEventListener('change', limpar); };
+  campo.addEventListener('input', limpar); campo.addEventListener('change', limpar);
+  campo.focus();
 }
 export function atributos(properties) {
   const list = el("dl");

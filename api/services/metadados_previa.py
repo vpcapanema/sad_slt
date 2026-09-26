@@ -53,6 +53,8 @@ def descrever_vetor(frame, *, arquivo=None, formato=None, componente=None, campo
             meta['avisos'].append(f'{invalidas} geometria(s) inválida(s) excluída(s) das medições de área e comprimento.')
         from api.services.extracao_entrada_local import localizacao
         meta['localizacao'] = localizacao(frame)
+    from api.services.extracao_identificacao import inspecionar
+    meta['identificacao'] = inspecionar(frame)
     return meta
 
 
@@ -73,4 +75,6 @@ def descrever_geojson(data, *, arquivo=None, formato=None, componente=None, cama
                 vertices += int(shapely.get_num_coordinates(original))
                 tipos.add(original.geom_type)
         meta.update(feicoes=camada_ogr.GetFeatureCount(), vertices=vertices, tipos_geometria=sorted(tipos))
+    from api.services.extracao_identificacao import inspecionar
+    meta['identificacao'] = inspecionar(frame, (camada_ogr.GetFIDColumn() or 'FID (GDAL)') if camada_ogr is not None else None)
     return meta

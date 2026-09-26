@@ -80,6 +80,41 @@ function CamadaGerada({gerada,htmlHost}){
 
 // O hospedeiro fornece a página; o plugin não cria janelas nem navegação.
 // onGenerated devolve {nome, categoria, download:{href,filename}, usar, geojson} para o painel Resultados.
+/**
+ * Contrato de feedback do componente (error, warning, confirmar, processo)
+ * atendido pelo feedback oficial do SICARD: ProcessFeedback e Notify do SIGMA-PLI.
+ */
+function criarFeedbackSigma(){
+  const pf=window.ProcessFeedback,notify=window.Notify;
+  if(!pf||!notify)return null;
+  const TITULO='Camadas territoriais';
+  return {
+    error:(message,title)=>notify.error(title||TITULO,message),
+    warning:(message,title)=>notify.warning(title||TITULO,message),
+    confirmar:opcoes=>pf.confirmar(opcoes),
+    processo(title){
+      const TAREFA='Gerar geometria e atributos';
+      const proc=pf.iniciarCadastro({title,tasks:[TAREFA]});
+      return {
+        signal:new AbortController().signal,
+        passo:message=>proc.tarefaAtual(TAREFA,message),
+        acompanhar:job=>{if(pf.atual===proc)pf.acompanhar(job);},
+        definirCancelamento:fn=>{if(pf.atual===proc)pf.permitirCancelamento(fn?()=>{
+          fn().then(()=>notify.info(title,'Geração cancelada. Sua seleção foi mantida.',{duration:7000}))
+            .catch(error=>notify.error(title,error.message));
+        }:null);},
+        concluir:({type='success',message}={})=>{
+          if(type==='success'){proc.concluirTarefa(TAREFA,'Camada gerada');proc.sucesso({title:'Camada gerada',message});}
+          else if(type==='warning')proc.sucesso({_status:'partial',message});
+          // Cancelado pelo botão: o aviso vem da confirmação do servidor.
+          else if(type==='info'){const pelaInterface=proc._finalizado;proc.fechar();if(!pelaInterface)notify.info(title,message,{duration:7000});}
+          else proc.erro({message});
+        },
+      };
+    },
+  };
+}
+
 export function montarMunicipal(host,{category,apiBase,onGenerated,onBusyChange=()=>{},configuration,onChange=()=>{}}) {
   const htmlHost=host.querySelector('[data-mlb="source"]')?host:null;
   // O React conserva o estado; a árvore persistente pertence ao template Jinja.
@@ -137,11 +172,12 @@ export function montarMunicipal(host,{category,apiBase,onGenerated,onBusyChange=
         },
         generated:()=>generated};
     },[]);
+    const feedback=useMemo(criarFeedbackSigma,[]);
     async function saved(output){
       try{const resultado=await onGenerated(client.generated(),output);if(resultado)setGerada(resultado);}
       finally{onBusyChange(false);}
     }
-    return <MunicipalLayerBuilder htmlHost={htmlHost} value={selection} onChange={next=>{setSelection(next);onChange(next);}} client={client} download={false} onExport={saved} categoriaNome={category?.nome||''} canGenerate={!!category} feedback={window.SLTFeedback} resultado={gerada && <CamadaGerada gerada={gerada} htmlHost={htmlHost}/>}/>;
+    return <MunicipalLayerBuilder htmlHost={htmlHost} value={selection} onChange={next=>{setSelection(next);onChange(next);}} client={client} download={false} onExport={saved} categoriaNome={category?.nome||''} canGenerate={!!category} feedback={feedback} resultado={gerada && <CamadaGerada gerada={gerada} htmlHost={htmlHost}/>}/>;
   }
   root.render(<App category={category}/>);
   const dispose=()=>{

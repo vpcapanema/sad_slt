@@ -660,14 +660,14 @@
   }
 
   /**
-   * Erro de decisão/análise no modal do SLTFeedback: o servidor recusa por
-   * regra de negócio (critérios pendentes, transição inválida, ressalva sem
-   * complementação) e o texto precisa ficar na tela, não só no console.
+   * Erro de decisão/análise no modal de erro do ProcessFeedback (SIGMA): o
+   * servidor recusa por regra de negócio (critérios pendentes, transição
+   * inválida, ressalva sem complementação) e o texto precisa ficar na tela.
    * Toast é usado apenas onde o feedback não está carregado.
    */
   function reportarErroAnalise(mensagem, titulo) {
     const texto = mensagem || "Erro na requisição.";
-    if (window.SLTFeedback) window.SLTFeedback.error(texto, titulo || "Análise da demanda");
+    if (window.StatusFeedback) window.StatusFeedback.erro({ actionTitle: titulo || "Análise da demanda", message: texto });
     else SLTAdminUi.showToast(texto, true);
   }
 

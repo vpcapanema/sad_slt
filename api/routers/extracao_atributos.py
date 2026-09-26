@@ -371,7 +371,8 @@ def dashboard_resultado(ident: UUID, payload: ConsultaDashboard,
 class ConsultaIntersecoes(BaseModel):
     entrada: str = Field(default='', max_length=500)
     feicao: str = Field(default='', max_length=2000)
-    categoria: Literal['', 'risco', 'restricao'] = ''
+    categoria: str = Field(default='', max_length=500)
+    atributo: str = Field(default='', max_length=255)
     base: str = Field(default='', max_length=2000)
     situacao: Literal['', 'com', 'sem', 'nao_avaliado', 'nao_informado'] = ''
     busca: str = Field(default='', max_length=200)
@@ -411,10 +412,10 @@ def excluir(ident: UUID, user: SessionUser = Depends(require_geospatial_access))
 
 
 @router.get('/execucoes/{ident}/pacote')
-def baixar_pacote(ident: UUID, user: SessionUser = Depends(require_geospatial_access)):
+def baixar_pacote(ident: UUID, saida: str = Query(default='', pattern=r'^(entrada_[1-9][0-9]*)?$'), user: SessionUser = Depends(require_geospatial_access)):
     """O pacote .zip da extração, lido do banco. Os arquivos não são baixados avulsos."""
     try:
-        conteudo, nome = service.arquivo_do_pacote(ident,user,'zip')
+        conteudo, nome = service.arquivo_do_pacote(ident,user,saida or 'zip')
     except LookupError as exc:
         raise HTTPException(404,str(exc)) from exc
     return Response(conteudo,media_type='application/zip',

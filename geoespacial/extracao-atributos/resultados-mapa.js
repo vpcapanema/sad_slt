@@ -1,7 +1,7 @@
 import {clone} from './resultados-dom.js';
 export function desenharMapa(container, features, selecionar) {
   if (!window.L) return {destroy(){}, focus(){}};
-  const map=window.L.map(container,{scrollWheelZoom:false});
+  const map=window.L.map(container,{scrollWheelZoom:false,zoomAnimation:false,fadeAnimation:false,markerZoomAnimation:false});
   window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:19}).addTo(map);
   const byKey=new Map(), color=feature=>feature.properties.papel==='area'?(feature.properties.categoria==='risco'?'#6a4791':'#ac7421'):'#176b95';
   const drawing=window.L.geoJSON({type:'FeatureCollection',features}, {
@@ -11,7 +11,7 @@ export function desenharMapa(container, features, selecionar) {
       const key=feature.properties.chave;
       if(!byKey.has(key))byKey.set(key,[]);byKey.get(key).push(layer);
       const tooltip=clone('ea-tpl-tooltip');tooltip.textContent=feature.properties.rotulo||key;
-      layer.bindTooltip(tooltip);layer.on('click',()=>{selecionar(key);focus(key);});
+      layer.bindTooltip(tooltip);layer.on('click',()=>{focus(key);selecionar(key);});
     },
   }).addTo(map);
   if(drawing.getBounds().isValid())map.fitBounds(drawing.getBounds(),{maxZoom:14,padding:[20,20]});
@@ -23,5 +23,5 @@ export function desenharMapa(container, features, selecionar) {
     for(const [id,layers] of byKey)for(const layer of layers)layer.setStyle?.({weight:id===key?5:2});
   }
   const timer=setTimeout(()=>map.invalidateSize(),0);
-  return {focus,destroy(){clearTimeout(timer);map.remove();}};
+  return {focus,destroy(){clearTimeout(timer);map.stop();map.remove();}};
 }

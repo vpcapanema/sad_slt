@@ -364,8 +364,8 @@
       box.textContent = value?.message || value;
       box.classList.remove("hidden");
     }
-    if (window.SLTFeedback) {
-      window.SLTFeedback.error(value?.message || String(value), "Não foi possível continuar");
+    if (window.Notify) {
+      window.Notify.error("Não foi possível continuar", value?.message || String(value));
     }
   }
 
@@ -1351,11 +1351,11 @@
 
     const nomeRestricao = restricaoOption?.textContent?.trim() || camadaRestricao;
     const nomeRisco = $("#camada-risco").selectedOptions[0]?.textContent?.trim() || camadaRisco;
-    const confirmado = await window.SLTFeedback.confirmar({
+    const confirmado = await window.ProcessFeedback.confirmar({
       title: "Calcular risco e restrição (Fase 1)",
       message:
         `Hierarquização ${hierarquizacao.codigo}. Restrição: ${nomeRestricao}. Risco: ${nomeRisco}.`,
-      detail:
+      warning:
         "O resultado atual da Fase 1 será substituído. Como as Fases 2 e 3 partem dele, " +
         "elas podem ficar desatualizadas e precisar de novo cálculo.",
       confirmLabel: "Calcular Fase 1",
@@ -1364,11 +1364,13 @@
 
     limparErro();
     $("#executar-fase1").disabled = true;
-    const proc = window.SLTFeedback.processo("Calcular risco e restrição (Fase 1)");
-    const passo = proc.passo(
-      `Enviando a rodada ${hierarquizacao.codigo} ao servidor…`,
-      "progress"
-    );
+    const TAREFA = "Calcular elegibilidade territorial";
+    const proc = window.ProcessFeedback.iniciarCadastro({
+      title: "Calcular risco e restrição (Fase 1)",
+      subtitle: `Rodada ${hierarquizacao.codigo}`,
+      tasks: [TAREFA, "Atualizar relatório"],
+    });
+    proc.tarefaAtual(TAREFA, `Restrição: ${nomeRestricao}. Risco: ${nomeRisco}.`);
     try {
       const atualizado = await HierApi.executarFase1(hierarquizacao.codigo, {
         par_id: pacote ? pacote.pacote_id : null,
@@ -1380,22 +1382,18 @@
         item.codigo === atualizado.codigo ? atualizado : item
       );
 
-      proc.atualizar(passo, "success", "Servidor concluiu o cálculo da Fase 1.");
+      proc.concluirTarefa(TAREFA, "Servidor concluiu o cálculo");
+      proc.tarefaAtual("Atualizar relatório");
       renderHierarquizacao();
       renderRelatorio(atualizado);
-      proc.concluir({
-        type: "success",
-        resultados: [
-          "Elegibilidade territorial executada.",
-          "Confira o relatório de risco e restrição abaixo.",
-        ],
+      proc.concluirTarefa("Atualizar relatório", "Relatório na página");
+      proc.sucesso({
+        title: "Elegibilidade territorial executada",
+        message: "Confira o relatório de risco e restrição abaixo.",
+        summary: [{ label: "Hierarquização", value: atualizado.codigo, icon: "fa-layer-group" }],
       });
     } catch (e) {
-      proc.atualizar(passo, "error", "O servidor interrompeu o cálculo.");
-      proc.concluir({
-        type: "error",
-        resultados: e?.message || String(e),
-      });
+      proc.erro({ title: "O servidor interrompeu o cálculo", message: e?.message || String(e), detail: e?.detail });
       const box = $("#fase1-erro");
       if (box) {
         box.textContent = e?.message || e;

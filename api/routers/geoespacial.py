@@ -1373,10 +1373,10 @@ def calcular_campo(camada_id: str, campo: str, expressao: str) -> dict:
 
 
 @router.post("/camadas/{camada_id}/consultar-atributos")
-def consultar_atributos(camada_id: str, expressao: str) -> dict:
+def consultar_atributos(camada_id: str, expressao: str, inverter_selecao: bool = False) -> dict:
     """Seleciona ou filtra feições por expressão atributiva."""
     try:
-        return asyncio.run(geoespacial_service.consultar_por_atributo(camada_id, expressao))
+        return asyncio.run(geoespacial_service.consultar_por_atributo(camada_id, expressao, inverter_selecao))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

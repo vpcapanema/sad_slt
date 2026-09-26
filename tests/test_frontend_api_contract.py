@@ -102,11 +102,13 @@ MOUNTS = (
     ("/restrict", "admin"),
 )
 
-# Arquivos servidos por rota dedicada em api/server.py, fora dos mounts.
+# Arquivos referenciados por respostas HTML construídas nas rotas Python.
 ROTAS_DEDICADAS = (
     "assets/js/navbar.js",
     "assets/js/admin-api.js",
     "admin/login.js",
+    # api/routers/storage_upload_web.py injeta a ponte no cliente do storage.
+    "geoespacial/extracao-atributos/storage-upload-ponte.js",
 )
 
 ASSET_ROOTS = (
@@ -182,7 +184,7 @@ def test_no_orphan_stylesheets_or_scripts() -> None:
             conteudo = atual.read_text(encoding="utf-8")
             padrao = CSS_IMPORT if atual.suffix == ".css" else JS_IMPORT
             fila.extend(
-                Path(os.path.normpath(atual.parent / imp)).as_posix()
+                Path(os.path.normpath(atual.parent / imp.split("?")[0].split("#")[0])).as_posix()
                 for imp in padrao.findall(conteudo)
             )
 

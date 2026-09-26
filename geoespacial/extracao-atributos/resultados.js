@@ -20,13 +20,15 @@ export function criarResultados(){
   for(const tipo of ['processamento','analitico']){
     const link=$(`#ea-pdf-${tipo}`);link.onclick=async event=>{
       event.preventDefault();if(link.dataset.baixando)return;link.dataset.baixando='true';
-      const proc=window.SLTFeedback.processo('Baixando relatório');
+      const TAREFA='Gerar o PDF no servidor';
+      const proc=window.ProcessFeedback.iniciarCadastro({title:'Baixando relatório',tasks:[TAREFA]});proc.tarefaAtual(TAREFA);
       try{const response=await fetch(link.href,{credentials:'same-origin',signal:AbortSignal.timeout(180000)});
         if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(typeof data.detail==='string'?data.detail:`Falha ao baixar relatório (HTTP ${response.status}).`);}
         const url=URL.createObjectURL(await response.blob()),anchor=clone('ea-tpl-download');anchor.href=url;
         anchor.download=/filename="([^"\r\n]+)"/.exec(response.headers.get('Content-Disposition')||'')?.[1]||`relatorio-${tipo}.pdf`;
-        anchor.click();setTimeout(()=>URL.revokeObjectURL(url),30000);proc.concluir({message:'Download iniciado.'});
-      }catch(error){proc.concluir({type:'error',message:error.message});}finally{delete link.dataset.baixando;}
+        anchor.click();setTimeout(()=>URL.revokeObjectURL(url),30000);proc.concluirTarefa(TAREFA,'PDF gerado');
+        proc.sucesso({title:'Download iniciado',message:'O relatório foi gerado e o download começou.',name:anchor.download});
+      }catch(error){proc.erro({message:error.message});}finally{delete link.dataset.baixando;}
     };
   }
   function outputTable(){

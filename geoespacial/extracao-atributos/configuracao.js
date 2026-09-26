@@ -1,4 +1,4 @@
-import { $, el, options, feedback, camposCamada } from "./ui.js";
+import { $, el, options, feedback, camposCamada, exigirCampo } from "./ui.js";
 import { escolherArquivo } from './explorador.js';
 import { salvarRascunhoMunicipal } from './municipal.js';
 import { criarEntradaLocal } from './entrada-local.js';
@@ -45,47 +45,28 @@ export function criarConfiguracao(state, changed) {
   }
   // Bases já confirmadas: a regra de cada uma fica aqui, onde a camada foi escolhida.
   function renderBasesConfirmadas() {
-    const host=$("#ea-bases-confirmadas");if(!host)return;
-    host.replaceChildren();
-    const preparadas=[...state.bases,...state.staging];
-    host.hidden=!preparadas.length||!['enriquecimento','estatisticas'].includes(state.operation);
-    if(host.hidden)return;
-    const nome=id=>state.catalog.find(l=>l.id===id)?.nome||id;
-    host.append(el("h4","Regras das bases preparadas","ea-staging-title"));
-    for(const category of state.categories){
-      const itens=preparadas.filter(base=>base.category===category.id);
-      if(!itens.length)continue;
-      const grupo=el("div",undefined,"ea-staging-group");
-      const cabeca=el("div",undefined,"ea-staging-group-head");
-      cabeca.append(el("strong",category.nome),el("span",String(itens.length),"ea-badge"));
-      grupo.append(cabeca);
-      for(const base of itens){
-        const linha=el("div",undefined,"ea-base-confirmada");
-        linha.append(el("span",nome(base.id)));
-        if(['enriquecimento','estatisticas'].includes(state.operation)){
-          const botao=el("button",`Regra: ${state.operation==='estatisticas'?resumoEstatisticas(base.regra,category):resumoRegra(base.regra)}`,"ea-btn ea-regra-botao");
-          botao.type="button";botao.disabled=state.busy;
-          botao.addEventListener("click",async()=>{
-            const camada=state.catalog.find(l=>l.id===base.id);
-            const editor=state.operation==='estatisticas'?editarEstatisticas:editarRegra;
-            const nova=await editor({nomeBase:nome(base.id),regra:base.regra,categoria:category,
-              camposDisponiveis:camposCamada(camada)});
-            if(!nova)return;
-            base.regra=nova;const referencia=state.listaBases?.itens.find(i=>i.id===base.id);if(referencia)referencia.regra=structuredClone(nova);changed();
-
-          });
-          linha.append(botao);
-        }
-        const remover=el('button','Remover','ea-btn');remover.type='button';remover.disabled=state.busy;
-        remover.setAttribute('aria-label',`Remover a base ${nome(base.id)}`);
-        remover.addEventListener('click',()=>{state.bases=state.bases.filter(item=>item.id!==base.id);state.staging=state.staging.filter(item=>item.id!==base.id);changed();});
-        linha.append(remover);
-        grupo.append(linha);
-      }
-      host.append(grupo);
-    }
-    if(!['enriquecimento','estatisticas'].includes(state.operation)){
-      host.append(el("p","As regras por base valem no resultado \"um registro por feição\"; nos outros, todas as bases entram igual.","ea-hint"));
+    const host=$('#ea-bases-confirmadas'), body=$('#ea-regras-bases');
+    const bases=[...new Map([...state.bancadaBases,...state.bases,...state.staging].map(b=>[b.id,b])).values()];
+    host.hidden=!bases.length||!state.operation;body.replaceChildren();
+    for(const base of bases){
+      const layer=state.catalog.find(l=>l.id===base.id)||base.layer;
+      const category=state.categories.find(c=>c.id===base.category);
+      const row=$('#ea-tpl-base-regra').content.firstElementChild.cloneNode(true);
+      row.querySelector('[data-category]').textContent=category?.nome||base.category;
+      row.querySelector('[data-base]').textContent=layer?.nome||base.id;
+      const label=row.querySelector('[data-label]');label.append(new Option('Identificar pelo nome disponível',''));
+      for(const campo of camposCamada(layer))label.append(new Option(campo,campo));
+      label.value=base.regra?.campo_rotulo||'';
+      const save=regra=>{
+        for(const b of [...state.bancadaBases,...state.bases,...state.staging,...(state.listaBases?.itens||[])])if(b.id===base.id)b.regra=structuredClone(regra);
+        changed();
+      };
+      label.onchange=()=>save({...base.regra,campo_rotulo:label.value||null});
+      row.querySelector('[data-rule]').onclick=async()=>{
+        const nova=await editarEstatisticas({nomeBase:layer?.nome||base.id,regra:base.regra,categoria:category,camposDisponiveis:camposCamada(layer)});
+        if(nova)save(nova);
+      };
+      body.append(row);
     }
   }
   $("#ea-base-form").addEventListener("submit",event=>event.preventDefault());
@@ -98,7 +79,7 @@ export function criarConfiguracao(state, changed) {
     if(state.busy||state.uploading||state.validatingBases)return;
     // Em edição, o + de cada grupo informa a categoria; fora dela, vale a do seletor.
     const category=categoriaAlvo||$("#ea-category-select").value;
-    if(target==='base'&&!category){window.SLTFeedback.campo($('#ea-category-select'),'Selecione a categoria da base antes de escolher o arquivo.');$('#ea-category-select').focus();return;}
+    if(target==='base'&&!category){exigirCampo($('#ea-category-select'),'Selecione a categoria da base antes de escolher o arquivo.');$('#ea-category-select').focus();return;}
     const selection=await escolherArquivo({catalog:state.catalog,excluded:[...(target==='base'?(state.listaBases?.itens||[]).map(b=>b.id):[...state.bases,...state.staging].map(b=>b.id)),...(target==='base'?[state.input,...state.entradasExtras.map(item=>item.id)]:[])],multiple:true,validar:target!=='base',acao:$(target==='base'?'#ea-base-browse':'#ea-input-browse').textContent.trim(),title:target==='base'?'Selecionar camadas base':'Selecionar camadas de entrada'});
     if(!selection)return;
     for(const layer of selection){

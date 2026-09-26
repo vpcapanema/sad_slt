@@ -73,7 +73,7 @@ def test_ligacao_por_atributo_com_chave_numerica_e_texto():
     assert list(linhas['eco_pib']) == ['[10.0]', '[20.0]']
     entrada_dic = next(d for d in saida['dicionario'] if d['campo'] == 'eco_pib')
     assert entrada_dic['apelido'] == 'PIB municipal' and entrada_dic['tema'] == 'Econômico'
-    assert 'mun_NM_MUN' not in linhas.columns, 'só os campos escolhidos'
+    assert 'mun_NM_MUN' in linhas.columns, 'saída bruta preserva todos os campos'
 
 
 def test_buffer_transforma_pontos_da_base_em_areas():
@@ -188,9 +188,10 @@ def test_execucao_do_servico_grava_camadas_pacote_e_finaliza_sem_erro(monkeypatc
     if base_memoria:
         categorias[0]['camadas'][0]['id']='local:base'
         locais={'local:base':frames.pop('mun')}
+    params['entradas']=[{'id':params['camada_id'],'nome':'Projetos','config':{'campo_id':'proj_id','identificacao_confirmada':True,'camada_recorte':categorias[0]['camadas'][0]['id']}}]
     service._execute('00000000-0000-0000-0000-000000000001', params, entrada if entrada_memoria else None, locais)
     assert finalizacoes == [{}], finalizacoes
-    assert sorted(nome for nome, _ in gravadas) == ['Projetos enriquecidos — linhas', 'Projetos enriquecidos — pontos']
+    assert sorted(nome for nome, _ in gravadas) == ['Projetos — linhas', 'Projetos — pontos']
     assert sorted(usos) == ['camada_1', 'camada_2']
     sql, valores = inseridos[-1]
     assert 'INSERT INTO geoprocessamento.extracao_atributos' in sql and valores[2] == modo
@@ -201,7 +202,7 @@ def test_execucao_do_servico_grava_camadas_pacote_e_finaliza_sem_erro(monkeypatc
     assert relatorio['operacao'] == modo
     if modo == 'estatisticas':
         assert sum(n for _, n in gravadas) == len(entrada)
-    assert relatorio['modo'] == 'enriquecimento' and set(relatorio['camadas']) == {'linhas', 'pontos'}
+    assert relatorio['modo'] == 'enriquecimento' and set(relatorio['camadas']) == {'entrada_1_linhas', 'entrada_1_pontos'}
     assert relatorio['resumo']['camadas_intersectadas'] >= 1 and valores[11].endswith('.zip')
 
 
@@ -218,9 +219,9 @@ def test_varias_entradas_com_identificador_filtro_e_campos():
     saida = enriquecer(categorias=tema(('municipios', MUNICIPIOS, {'papel': 'recorte', 'prefixo': 'mun'})),
                        entradas=entradas)
     pontos_saida = saida['camadas']['pontos']
-    # Só o ponto com proj_id preenchido; posição original e identificador preservados; 'extra' descartado.
+    # Só o ponto com proj_id preenchido; posição original e identificador preservados; 'extra' preservado.
     assert list(pontos_saida['camada_origem']) == ['Pontos1'] and list(pontos_saida['fid_origem']) == [0]
-    assert list(pontos_saida['id_origem']) == ['A1'] and 'extra' not in pontos_saida.columns
+    assert list(pontos_saida['id_origem']) == ['A1'] and 'extra' in pontos_saida.columns
     linhas_saida = saida['camadas']['linhas']
     assert set(linhas_saida['camada_origem']) == {'Linhas1'} and set(linhas_saida['id_origem']) == {'L1'}
     entradas_rel = {e['nome']: e for e in saida['relatorio']['entradas']}

@@ -160,3 +160,71 @@ def montar_pacote(camadas: dict, entrada, dicionario: list[dict], configuracao: 
                 manifesto.append({'chave': chave, 'nome': nome, 'descricao': descricao,
                                   'tamanho_bytes': len(dados), 'sha256': sha256(dados).hexdigest()})
     return memoria.getvalue(), f"{Path(arquivos['gpkg'][0]).stem}.zip", manifesto
+
+
+def arquivos_analiticos(snapshot):
+    from api.services.extracao_resultados_territoriais import consultar
+    data = consultar(snapshot,tamanho=max(1,sum(len(e['feicoes']) for e in snapshot['entradas'])))
+    stream=io.StringIO(); writer=csv.writer(stream,delimiter=';')
+    writer.writerow(['camada_demanda','codigo_demanda','categoria','camada_base','elemento','pontos','comprimento_m','area_m2','perimetro_m','percentual_demanda','pontos_por_categoria','atributos_base'])
+    for row in data['linhas']:
+        for aid in row['areas']:
+            area=data['areas'][aid]; m=row.get('relacoes',{}).get(aid,{})
+            writer.writerow([exportacao.safe(v) for v in [row['entrada'],row.get('identificador'),area['categoria'],area['base'],area.get('nome',area['fid']),
+                m.get('pontos'),m.get('comprimento_m'),m.get('area_m2'),m.get('perimetro_m'),m.get('percentual_entrada'),
+                json.dumps(m.get('por_categoria',{}),ensure_ascii=False),json.dumps(area['atributos'],ensure_ascii=False,default=str)]])
+    return {'analise_descritiva.json':json.dumps(data,ensure_ascii=False,default=str).encode(),
+            'relacoes_por_demanda.csv':stream.getvalue().encode('utf-8-sig')}
+
+
+def montar_lote(saida, configuracao, nome_saida):
+    """ZIP por entrada e ZIP geral; tabela unificada sempre derivada das saídas."""
+    import geopandas as gpd
+    memoria = io.BytesIO()
+    manifesto = []
+    def adicionar(pacote, chave, nome, dados, descricao):
+        pacote.writestr(nome, dados)
+        manifesto.append({'chave':chave,'nome':nome,'descricao':descricao,'tamanho_bytes':len(dados),'sha256':sha256(dados).hexdigest()})
+    with zipfile.ZipFile(memoria,'w',zipfile.ZIP_DEFLATED) as geral:
+        for item in saida['individuais']:
+            camadas = {n:saida['camadas'][n] for n in item['camadas']}
+            dic = [d for d in saida['dicionario'] if d['camada'] in camadas]
+            # Camada auxiliar contém somente elementos vinculados, nunca a base integral.
+            from api.services.extracao_saida_analitica import snapshot_saida
+            snapshot = snapshot_saida(camadas)
+            areas = [a for a in snapshot['areas'].values() if a.get('geometria')]
+            if areas:
+                camadas = {**camadas, 'elementos_relacionados':gpd.GeoDataFrame.from_features([
+                    {'type':'Feature','geometry':a['geometria'],'properties':{'elemento_id':a['id'],'base':a['base'],
+                     'categoria':a['categoria'],'atributos':json.dumps(a['atributos'],ensure_ascii=False,default=str)}} for a in areas],crs=4674)}
+            cfg = {**configuracao,'entrada':{k:v for k,v in item['entrada'].items() if k != 'frame'},'operacao':item['operacao']}
+            fins = {k:{**f,'camadas':{n:df for n,df in f['camadas'].items() if n in item['camadas']}}
+                    for k,f in saida['finalidades'].items() if any(n in item['camadas'] for n in f['camadas'])}
+            conteudo, nome, _ = montar_pacote(camadas,item['entrada']['frame'],dic,cfg,item['nome_saida'],
+                finalidades=fins,validacao=item['validacao'],preservar_geometrias=True,incluir_entrada=False)
+            memoria_individual = io.BytesIO(conteudo)
+            with zipfile.ZipFile(memoria_individual,'a',zipfile.ZIP_DEFLATED) as individual:
+                for arquivo,dados in arquivos_analiticos(snapshot).items(): individual.writestr(arquivo,dados)
+            conteudo = memoria_individual.getvalue()
+            adicionar(geral,item['chave'],f"{item['chave']}/{nome}",conteudo,'Pacote individual: '+item['nome'])
+            with zipfile.ZipFile(io.BytesIO(conteudo)) as individual:
+                for arq in individual.namelist():
+                    if arq.endswith('.gpkg'):
+                        adicionar(geral,item['chave']+'_gpkg',f"geopackages/{item['chave']}_{arq}",individual.read(arq),'GeoPackage individual')
+        with tempfile.TemporaryDirectory(prefix='sicard_lote_') as tmp:
+            path = Path(tmp)
+            escrever_xlsx(saida['camadas'],saida['dicionario'],path/'tabelas_unificadas.xlsx')
+            adicionar(geral,'xlsx','unificado/tabelas.xlsx',(path/'tabelas_unificadas.xlsx').read_bytes(),'Tabelas de todas as saídas')
+            snapshot = snapshot_saida(saida['camadas'])
+            from api.services.extracao_resultados_territoriais import consultar
+            for arquivo,dados in arquivos_analiticos(snapshot).items():
+                adicionar(geral,'analitico_'+arquivo,'unificado/'+arquivo,dados,'Análise descritiva por demanda e elemento')
+            ranking = consultar(snapshot,tamanho=max(1,sum(len(e['feicoes']) for e in snapshot['entradas'])))
+            adicionar(geral,'analise','unificado/analise.json',json.dumps(ranking,ensure_ascii=False,default=str).encode(),'Análise descritiva unificada')
+            columns = ['entrada','demanda','restricoes','riscos']
+            stream=io.StringIO(); writer=csv.writer(stream,delimiter=';'); writer.writerow(columns)
+            for row in ranking['linhas']:
+                writer.writerow([exportacao.safe(row['entrada']),exportacao.safe(row.get('identificador')),row.get('contagens',{}).get('restricao',0),row.get('contagens',{}).get('risco',0)])
+            adicionar(geral,'ranking','unificado/demandas.csv',stream.getvalue().encode('utf-8-sig'),'Comparação descritiva das demandas')
+        adicionar(geral,'configuracao','unificado/configuracao.json',json.dumps(configuracao,ensure_ascii=False,default=str).encode(),'Procedência do lote')
+    return memoria.getvalue(),f"{apelido(nome_saida,60) or 'extracao'}_lote.zip",manifesto

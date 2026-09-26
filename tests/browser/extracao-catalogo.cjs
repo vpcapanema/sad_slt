@@ -30,8 +30,9 @@ const assert=require('node:assert/strict');
   await page.fill('#ea-nome-saida','Preparação durante carregamento');
   const chooser=page.waitForEvent('filechooser');await page.locator('#ea-input-upload').click();await(await chooser).setFiles([]);
   soltar();
-  await page.locator('.slt-fb-modal--error').waitFor();assert.equal(await page.locator('#ea-catalog-status').isVisible(),false);
-  await page.locator('#slt-feedback-backdrop').getByRole('button',{name:'OK',exact:true}).click();
+  // Falha de carregamento do catálogo: aviso de erro do Notify, que pede ação para fechar.
+  await page.locator('.notification-toast.error').waitFor();assert.equal(await page.locator('#ea-catalog-status').isVisible(),false);
+  await page.locator('.notification-toast.error .notification-close').click();
   assert.equal(await page.locator('#ea-input-upload').isEnabled(),true);
   assert.equal(await page.locator('#ea-refresh').isEnabled(),true);
   assert.equal(await page.locator('#ea-operation').inputValue(),'estatisticas');

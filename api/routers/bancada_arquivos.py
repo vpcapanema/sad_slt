@@ -46,8 +46,9 @@ def executar(payload: Operacao, user: SessionUser = Depends(require_geospatial_a
 
 class Consulta(Arquivo):
     expressao: str = Field(min_length=1, max_length=4000)
+    inverter_selecao: bool = False
 
 
 @router.post('/consultar')
 def consultar(payload: Consulta):
-    return resposta(service.consultar, payload.arquivo, payload.revisao, payload.expressao)
+    return resposta(service.consultar, payload.arquivo, payload.revisao, payload.expressao, payload.inverter_selecao)

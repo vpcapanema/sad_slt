@@ -142,7 +142,7 @@
       box.textContent = error.message || error;
       box.classList.remove("hidden");
     }
-    if (window.SLTFeedback) window.SLTFeedback.error(error?.message || String(error), "Não foi possível continuar");
+    if (window.Notify) window.Notify.error("Não foi possível continuar", error?.message || String(error));
   }
 
   function moverControlesParaCards() {
@@ -184,33 +184,37 @@
         if (grade === rede) return erro("Selecione camadas diferentes para grade e rede.");
         const nomeGrade = $("camada-grade-fase2").selectedOptions[0]?.textContent?.trim() || grade;
         const nomeRede = $("camada-rede-fase2").selectedOptions[0]?.textContent?.trim() || rede;
-        const confirmado = await window.SLTFeedback.confirmar({
+        const confirmado = await window.ProcessFeedback.confirmar({
           title: "Calcular favorabilidade territorial (Fase 2)",
           message: `Hierarquização ${h.codigo}. Grade: ${nomeGrade}. Rede: ${nomeRede}.`,
-          detail: "O resultado atual da Fase 2 será substituído, e a Fase 3 e a síntese que dependem dele podem ficar desatualizadas.",
+          warning: "O resultado atual da Fase 2 será substituído, e a Fase 3 e a síntese que dependem dele podem ficar desatualizadas.",
           confirmLabel: "Calcular Fase 2",
         });
         if (!confirmado) return;
 
         $("fase2-erro").classList.add("hidden");
-        const proc = window.SLTFeedback.processo("Calcular favorabilidade territorial (Fase 2)");
-        const passo = proc.passo(`Extraindo valores das superfícies para a rodada ${h.codigo}…`, "progress");
+        const TAREFA = "Extrair valores das superfícies";
+        const proc = window.ProcessFeedback.iniciarCadastro({
+          title: "Calcular favorabilidade territorial (Fase 2)",
+          subtitle: `Rodada ${h.codigo}`,
+          tasks: [TAREFA, "Atualizar indicadores e ranking"],
+        });
+        proc.tarefaAtual(TAREFA, `Grade: ${nomeGrade}. Rede: ${nomeRede}.`);
         try {
           const updated = await HierApi.executarFase2(h.codigo, { camada_grade_id: grade, camada_rede_id: rede, metodo_extracao: "ponto" });
           hierarquizacoes = hierarquizacoes.map((item) => item.codigo === updated.codigo ? updated : item);
-          proc.atualizar(passo, "success", "Servidor concluiu a extração de grade e rede.");
+          proc.concluirTarefa(TAREFA, "Grade e rede extraídas");
+          proc.tarefaAtual("Atualizar indicadores e ranking");
           renderResumo(updated);
           renderResultados(updated);
-          proc.concluir({
-            type: "success",
-            resultados: [
-              "Favorabilidade de grade e da rede executada.",
-              "Confira os indicadores e o ranking abaixo.",
-            ],
+          proc.concluirTarefa("Atualizar indicadores e ranking", "Resultados na página");
+          proc.sucesso({
+            title: "Favorabilidade de grade e da rede executada",
+            message: "Confira os indicadores e o ranking abaixo.",
+            summary: [{ label: "Hierarquização", value: updated.codigo, icon: "fa-layer-group" }],
           });
         } catch (error) {
-          proc.atualizar(passo, "error", "O servidor interrompeu a extração.");
-          proc.concluir({ type: "error", resultados: error?.message || String(error) });
+          proc.erro({ title: "O servidor interrompeu a extração", message: error?.message || String(error), detail: error?.detail });
           const box = $("fase2-erro");
           if (box) { box.textContent = error?.message || error; box.classList.remove("hidden"); }
         }

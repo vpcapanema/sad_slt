@@ -3,7 +3,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),http
 (async()=>{
  const root=path.resolve('.');
  const server=http.createServer((req,res)=>{
-  if(req.url==='/'){res.setHeader('Content-Type','text/html');return res.end('<html><body><script src="/assets/js/feedback.js"></script></body></html>');}
+  if(req.url==='/'){res.setHeader('Content-Type','text/html');return res.end('<html><body><script src="/assets/js/notification_system.js"></script><script src="/assets/js/process_feedback_unified.js"></script></body></html>');}
   const file=path.resolve(root,'.'+req.url);
   if(!file.startsWith(root+'/')){res.statusCode=404;return res.end();}
   res.setHeader('Content-Type','text/javascript');fs.createReadStream(file).on('error',()=>{res.statusCode=404;res.end();}).pipe(res);

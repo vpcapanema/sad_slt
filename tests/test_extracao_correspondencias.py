@@ -73,7 +73,7 @@ def test_risco_preserva_atributos_bordas_e_geometria_ausente():
     porfid={r.fid_origem:r for r in linhas}
     assert porfid[0].b_n_contato_borda==1 and porfid[1].b_n_intersecao_interior==1
     assert json.loads(porfid[0].b_classe)==['Alta']
-    assert porfid[2].b_intersecao=='Não avaliado'
+    assert porfid[2].risco==0 and json.loads(porfid[2].b_correspondencias)==[]
 
 
 def test_recorte_sobreposto_nao_publica_resultado_reprovado():

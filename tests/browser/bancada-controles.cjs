@@ -12,7 +12,7 @@ const root=path.resolve(__dirname,'../..');
   fs.readFile(file,(err,data)=>{if(err){res.writeHead(404).end();return;}res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'application/octet-stream');res.end(data);});
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
- const browser=await chromium.launch({headless:true,args:['--no-sandbox','--no-proxy-server','--enable-unsafe-swiftshader']});
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox','--no-proxy-server','--enable-unsafe-swiftshader','--disable-dev-shm-usage']});
  try{
  const p=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[],requests=[],payloads=[];
  p.on('pageerror',e=>errors.push(e.stack||e.message));
@@ -41,7 +41,7 @@ const root=path.resolve(__dirname,'../..');
  await p.waitForTimeout(500);
  await p.evaluate(()=>{gpApp.state.layers=[{id:'pontos',nome:'Pontos',tipo:'vetorial',crs:'EPSG:4326'},{id:'raster',nome:'Raster',tipo:'raster',crs:'EPSG:3857'}];});
  // A bancada autônoma fornece o feedback exigido pelo explorador compartilhado.
- assert.equal(await p.evaluate(()=>typeof window.SLTFeedback?.carregamento),'function');
+ assert.equal(await p.evaluate(()=>typeof window.ProcessFeedback?.iniciarCadastro),'function');
  await p.locator('[data-action="load-system"]').click();
  await p.locator('.ea-storage-entry--folder').filter({hasText:'Teste'}).click();
  await p.locator('[aria-label="Subir um nível (Backspace)"]').click();
@@ -173,7 +173,7 @@ const root=path.resolve(__dirname,'../..');
  const customConfirmation=await p.evaluate(()=>Boolean(window.gpFeedback));
  if(!customConfirmation)p.once('dialog',dialog=>dialog.accept());
  await p.locator('[data-at-action="delete"]').click();
- if(customConfirmation)await p.locator('[data-fb-confirmar]').click();
+ if(customConfirmation)await p.locator('#pfsConfirmOk').click();
  await p.waitForFunction(()=>gpAttributeTable.grid.getDataCount()===104);
  await p.locator('[data-at-save]').click();
  await p.waitForFunction(()=>gpApp.state.map.getSource('memoria')._data.features.length===104);

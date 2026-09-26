@@ -131,7 +131,7 @@ function openEditor(editing=false){
             const next=input.value===''?null:numeric?Number(input.value):typeof value==='object'&&value!==null?JSON.parse(input.value):input.value;
             if(numeric&&next!==null&&(!Number.isFinite(next)||(field.tipo!=='Real'&&!Number.isInteger(next))))throw new Error('Informe um número válido.');
             feature.properties[field.nome]=next;group.eachLayer(layer=>{if(layer._fileId===String(feature.id))layer.feature.properties=clone(feature.properties);});commit();
-          }catch(error){if(window.gpFeedback)window.gpFeedback.warning(error.message,"Editar atributos");else status.textContent=error.message;}};cell.append(input);
+          }catch(error){if(window.gpFeedback)window.gpFeedback.Notify.warning("Editar atributos",error.message);else status.textContent=error.message;}};cell.append(input);
         }else cell.textContent=value==null?'':typeof value==='object'?JSON.stringify(value):String(value);
         row.append(cell);
       }
@@ -148,9 +148,9 @@ function openEditor(editing=false){
   const undo=button('Desfazer',()=>{draft=clone(history[--cursor]);editor.dirty=cursor>0;draw();render();});
   const redo=button('Refazer',()=>{draft=clone(history[++cursor]);editor.dirty=cursor>0;draw();render();});
   const save=button('Salvar nova versão',async()=>{
-    busy=true;save.disabled=true;syncEditRibbon();const proc=window.gpFeedback?.processo('Salvando nova versão');if(!proc)status.textContent='Validando e gravando nova versão…';
-    try{const file=await post('/bancada-arquivos/salvar',{arquivo:source.arquivo,revisao:source.revisao,geojson:draft,nome:name.value});closed();mount(file);if(proc)proc.concluir({message:'Nova versão salva no storage e vinculada à execução.'});else app().log('Nova versão salva no storage e vinculada à execução.','ok');}
-    catch(error){lastError=error.message;proc?.concluir({type:"error",message:error.message});}finally{busy=false;if(editor)render();else syncEditRibbon();}
+    busy=true;save.disabled=true;syncEditRibbon();const proc=window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Salvando nova versão',tasks:['Validar e gravar no storage']});proc?.tarefaAtual('Validar e gravar no storage');if(!proc)status.textContent='Validando e gravando nova versão…';
+    try{const file=await post('/bancada-arquivos/salvar',{arquivo:source.arquivo,revisao:source.revisao,geojson:draft,nome:name.value});closed();mount(file);if(proc){proc.concluirTarefa('Validar e gravar no storage','Gravada');proc.sucesso({title:'Nova versão salva',message:'Nova versão salva no storage e vinculada à execução.'});}else app().log('Nova versão salva no storage e vinculada à execução.','ok');}
+    catch(error){lastError=error.message;proc?.erro({message:error.message});}finally{busy=false;if(editor)render();else syncEditRibbon();}
   });
   if(editing){const label=el('label','Nome da nova versão');label.append(name);footer.append(label);}
   else footer.append(button('Fechar',cancel));
@@ -238,9 +238,9 @@ async function execute(form){
   if(params.pesos)params.pesos=String(params.pesos).split(',').map(Number);
   if(params.processar_sobre==='selecionadas')throw new Error('Neste fluxo execute sobre todas as feições ou salve a seleção como uma camada separada.');
   const files={};for(const [id,file] of sessions)if(Object.values(params).some(value=>value===id||Array.isArray(value)&&value.includes(id)))files[id]={arquivo:file.arquivo,revisao:file.revisao};
-  const proc=window.gpFeedback?.processo('Processando arquivos da bancada');busy=true;const submit=form.querySelector('button[type=submit],button.primary');if(submit)submit.disabled=true;
-  try{const result=await post('/bancada-arquivos/executar',{operacao:form.dataset.op,parametros:params,arquivos:files});if(result.camada)mount(result.camada);else if(result.resultado?.raster_id)await app().refreshLayers(true,[result.resultado.raster_id],result.resultado.raster_id);else app().showOperationResult('Resultado da operação',result.resultado||result);if(proc)proc.concluir({message:`Execução concluída: ${result.execucao_id}`});else app().log(`Execução concluída: ${result.execucao_id}`,'ok');}
-  catch(error){proc?.concluir({type:'error',message:error.message});throw error;}
+  const proc=window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Processando arquivos da bancada',tasks:['Executar a operação no servidor']});proc?.tarefaAtual('Executar a operação no servidor');busy=true;const submit=form.querySelector('button[type=submit],button.primary');if(submit)submit.disabled=true;
+  try{const result=await post('/bancada-arquivos/executar',{operacao:form.dataset.op,parametros:params,arquivos:files});if(result.camada)mount(result.camada);else if(result.resultado?.raster_id)await app().refreshLayers(true,[result.resultado.raster_id],result.resultado.raster_id);else app().showOperationResult('Resultado da operação',result.resultado||result);if(proc){proc.concluirTarefa('Executar a operação no servidor','Concluída');proc.sucesso({title:'Execução concluída',message:`Execução ${result.execucao_id} concluída.`,summary:[{label:'Execução',value:result.execucao_id,icon:'fa-hashtag'}]});}else app().log(`Execução concluída: ${result.execucao_id}`,'ok');}
+  catch(error){proc?.erro({message:error.message});throw error;}
   finally{busy=false;if(submit)submit.disabled=false;}
 }
 

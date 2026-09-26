@@ -59,3 +59,24 @@ são reabertas por GDAL e adicionadas à bancada.
 `tests/test_bancada_arquivos.py` verifica edição, CRS, rejeições, revisão concorrente,
 nova versão e uso do motor. Usa arquivos GDAL reais em diretório temporário e
 substitutos para persistência no banco, sem publicar dados de teste no catálogo.
+
+## Seleção por atributo e inversão
+
+Na tabela, **É nulo** seleciona valores ausentes e **Não é nulo** seleciona os
+valores preenchidos. Zero, `false` e texto vazio são valores não nulos. Essas
+condições dispensam o campo Valor e respeitam a opção **Somente na seleção atual**.
+A consulta usa os valores do rascunho, incluindo edições ainda não salvas.
+
+**Inverter seleção** troca os selecionados pelos demais registros da camada,
+considerando todas as páginas. Com **Mostrar somente selecionados** ativo, a
+visualização acompanha o novo conjunto. Seleção vazia passa a selecionar todos;
+seleção completa passa a vazia. A operação sincroniza o mapa e não grava dados.
+
+As APIs `camadas/{id}/consultar-atributos` e `bancada-arquivos/consultar` aceitam
+expressões como `campo is None` e `campo is not None`, e o parâmetro opcional
+`inverter_selecao` (query string na primeira, JSON na segunda). A inversão inclui
+as linhas que não atenderam à condição, inclusive comparações sem resultado por
+valor ausente. Chamadas de funções continuam proibidas nas expressões.
+
+Validação isolada: `tests/test_selecao_atributos.py` e
+`tests/browser/selecao-atributos.cjs`, sem escrita no banco oficial.
