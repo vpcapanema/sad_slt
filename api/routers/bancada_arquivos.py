@@ -42,3 +42,12 @@ def salvar(payload: Edicao, user: SessionUser = Depends(require_geospatial_acces
 def executar(payload: Operacao, user: SessionUser = Depends(require_geospatial_access)):
     return resposta(service.executar, payload.operacao, payload.parametros,
                     {key: value.model_dump() for key, value in payload.arquivos.items()}, user)
+
+
+class Consulta(Arquivo):
+    expressao: str = Field(min_length=1, max_length=4000)
+
+
+@router.post('/consultar')
+def consultar(payload: Consulta):
+    return resposta(service.consultar, payload.arquivo, payload.revisao, payload.expressao)

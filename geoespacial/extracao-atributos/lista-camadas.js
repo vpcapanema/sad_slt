@@ -2,7 +2,7 @@
    camadas, troca de categoria e repete. Nada vai para a bancada antes de confirmar. */
 import { $, el, feedback } from './ui.js';
 import { base, json, post } from './api.js';
-import { entradasPreparadas, guardarPrevia, desfazerPrevia, enviarPrevia } from './preparacao.js';
+import { entradasPreparadas, guardarPrevia, desfazerPrevia, enviarPrevia, limparPreparacao } from './preparacao.js';
 import { criarEditorListaBases } from './editor-lista-bases.js';
 
 const ROTULO = {
@@ -35,7 +35,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
   function marcar() {
     editor.marcar();
     const total = state.staging.length+state.bases.length+entradasPreparadas(state).length;
-    botoes.confirmar.disabled = state.busy || state.uploading || state.validatingBases || state.loadingMap || !total;
+    botoes.confirmar.disabled = state.busy || state.uploading || state.validatingBases || state.loadingMap || !total || (state.previaVisiveis&&!state.previaVisiveis.size);
     botoes.salvar.disabled = state.busy || !paraSalvar().length;
     botoes.limpar.disabled = state.busy || !total;
     state.temUndoBases=Boolean(state.undoPrevia);
@@ -58,7 +58,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     if(!total)return;
     window.SICARDExtracao.ocupar(true);
     const proc=window.SLTFeedback.processo('Enviando camadas à bancada');
-    proc.passo('Conferindo e compatibilizando espacialmente todas as entradas e bases…');
+    proc.passo('Conferindo e compatibilizando as camadas marcadas na prévia…');
     try{
       const camadas=[
         ...candidata.bancadaEntradas.map(e=>({id:e.id,nome:e.layer.nome,papel:'entrada',arquivo_local:e.layer.arquivo_local})),
@@ -72,6 +72,9 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       const falhas=await changed({etapa:(mensagem,tipo)=>proc.passo(mensagem,tipo==='erro'?'error':'info')});
       if(falhas?.length)throw new Error(falhas.join('; '));
       await window.SICARDExtracao.aguardarBancada();
+      limparPreparacao(state);editor.limpar();
+      window.SICARDExtracao.renderParametros();
+      await changed();
       proc.concluir({message:`${total} camada(s) enviada(s) à bancada. Compatibilidade espacial conferida; originais preservados.`});
     }catch(error){proc.concluir({type:'error',message:`Não foi possível enviar à bancada: ${error.message}`});}
     finally{window.SICARDExtracao.ocupar(false);render();}

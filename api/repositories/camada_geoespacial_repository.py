@@ -493,7 +493,7 @@ def carregar_vetor_mvt(recurso_id: str, z: int, x: int, y: int) -> bytes | None:
                            -- comum, perdendo feição perto da borda do tile.
                            ST_Transform(ST_TileEnvelope(%s,%s,%s, margin => 0.015625),4674) AS query_geom
                 ), tile_rows AS (
-                    SELECT propriedades,
+                    SELECT propriedades, f.ordem AS __gp_indice,
                            ST_AsMVTGeom(ST_Transform(f.geom,3857),b.geom,4096,64,true) AS geom
                     FROM geoprocessamento.{} f CROSS JOIN tile_bounds b
                     WHERE f.camada_id=%s AND f.geom && b.query_geom

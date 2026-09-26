@@ -12,7 +12,7 @@ from numbers import Real
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import shapely
+from api.services import extracao_ogr as espacial
 
 from api.services.extracao_atributos_enriquecimento import (
     CRS_MEDIDA, CRS_SAIDA, DIMENSIONS, NOMES_DIMENSAO, _finalidades, _nome_livre, _texto, _valor,
@@ -21,7 +21,7 @@ from api.services.extracao_atributos_regras import (
     categoria_binaria, normalizar_entrada, normalizar_estatisticas, normalizar_finalidades,
 )
 
-ROTULOS = {'media': 'Média', 'moda': 'Moda', 'mediana': 'Mediana', 'total': 'Total',
+ROTULOS = {'valores': 'Valores distintos (JSON; sem agregação numérica)', 'media': 'Média', 'moda': 'Moda', 'mediana': 'Mediana', 'total': 'Total',
            'minimo': 'Mínimo', 'maximo': 'Máximo', 'desvio_padrao': 'Desvio padrão populacional',
            'variancia': 'Variância populacional', 'contagem': 'Contagem de valores preenchidos'}
 
@@ -33,6 +33,9 @@ def agregar(valores, estatistica):
     tudo nulo quando não há interseção. Textos não são convertidos em números
     (preserva códigos com zeros à esquerda); só aceitam moda ou contagem.
     """
+    if estatistica == 'valores':
+        from api.services.extracao_correspondencias import valores_distintos
+        return valores_distintos(valores)
     valores = [_valor(v) for v in valores]
     valores = [v for v in valores if v is not None]
     if estatistica == 'contagem':
@@ -42,7 +45,7 @@ def agregar(valores, estatistica):
     if estatistica == 'moda':
         return Counter(valores).most_common(1)[0][0]
     if not all(isinstance(v, Real) and not isinstance(v, bool) for v in valores):
-        return None
+        raise ValueError('Estatística numérica aplicada a campo não numérico; escolha valores distintos, moda ou contagem.')
     numeros = np.asarray(valores, dtype=float)
     if not np.isfinite(numeros).all():
         raise ValueError('A base contém valor numérico infinito; corrija a fonte antes de calcular estatísticas.')
@@ -57,17 +60,21 @@ def agregar(valores, estatistica):
 def _geometrias_trabalho(frame, nome):
     if frame.crs is None:
         raise ValueError(f'{nome}: a camada não tem sistema de referência (CRS).')
-    from api.services.compatibilidade_espacial import normalizar_crs
-    geoms = normalizar_crs(frame, nome, CRS_MEDIDA).geometry.reset_index(drop=True)
-    invalidas = pd.Series([g is not None for g in geoms], dtype=bool) & ~geoms.is_valid
-    geoms.loc[invalidas] = geoms.loc[invalidas].make_valid()
+    geoms = espacial.reproject(frame, CRS_MEDIDA, nome).geometry.reset_index(drop=True)
+    invalidas = pd.Series([g is not None for g in geoms], dtype=bool) & ~geoms.map(espacial.is_valid)
+    geoms.loc[invalidas] = geoms.loc[invalidas].map(espacial.make_valid)
     return geoms, {'feicoes': len(frame), 'corrigidas_para_consulta': int(invalidas.sum()),
                    'sem_geometria': int((geoms.isna() | geoms.is_empty).sum())}
 
 
 def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lambda mensagem: None,
                entradas=None, finalidades=None):
+    from api.services.extracao_correspondencias import registro, serializar
     categorias = normalizar_estatisticas(list(categorias))
+    from api.services.extracao_atributos_regras import validar_agregacao
+    for categoria in categorias:
+        for camada in categoria['camadas']:
+            validar_agregacao(camada['regra'])
     entradas = entradas if entradas is not None else [{'nome': nome_entrada, 'frame': entrada, 'config': {}}]
     if not entradas or len({e['nome'] for e in entradas}) != len(entradas):
         raise ValueError('Informe entradas com nomes distintos.')
@@ -87,7 +94,7 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
         progress(f"Preparando a entrada {item['nome']} sem alterar a geometria original")
         geoms, estat = _geometrias_trabalho(frame, item['nome'])
         trabalho.extend(geoms)
-        original = frame.to_crs(CRS_SAIDA).reset_index(drop=True)
+        original = espacial.reproject(frame, CRS_SAIDA, item['nome']).reset_index(drop=True)
         tabela = original.drop(columns=original.geometry.name).copy()
         for campo in tabela.columns:
             if campo not in nomes_entrada:
@@ -117,13 +124,14 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
             if faltando:
                 raise ValueError(f"{camada['nome']}: campo(s) inexistente(s) nas estatísticas: {', '.join(sorted(faltando))}.")
             geoms, estat = _geometrias_trabalho(base, camada['nome'])
-            indice = geoms.sindex
+            indice = espacial.SpatialIndex(geoms)
             nomes = {c: _nome_livre(regra['prefixo'] + str(c), usados) for c in campos}
             novas = {nome: [] for nome in nomes.values()}
-            contagens = []
+            contagens, vinculos, bordas, interiores, pontuais = [], [], [], [], []
+            base_consulta = base.set_geometry(geoms).set_crs(CRS_MEDIDA, allow_override=True)
             # Consultar e agregar cada lote antes de liberar seus candidatos.
             # Uma feição muito complexa vai sozinha, sem simplificar o original.
-            vertices = shapely.get_num_coordinates(trabalho.values)
+            vertices = [espacial.vertex_count(g) for g in trabalho]
             inicio = 0
             while inicio < len(trabalho):
                 fim = inicio + 1
@@ -136,23 +144,38 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
                     correspondencias[int(entrada_pos)].append(int(base_pos))
                 correspondencias = [sorted(set(posicoes)) for posicoes in correspondencias]
                 contagens.extend(len(p) for p in correspondencias)
+                for local, posicoes in enumerate(correspondencias):
+                    evidencias = [registro(base_consulta, p, trabalho.iloc[inicio+local]) for p in posicoes]
+                    vinculos.append(serializar(evidencias))
+                    bordas.append(sum(e['tipo'] == 'contato_borda' for e in evidencias))
+                    interiores.append(sum(e['tipo'] == 'intersecao_interior' for e in evidencias))
+                    pontuais.append(sum(e['tipo'] == 'cruzamento_pontual' for e in evidencias))
                 for campo, nome in nomes.items():
-                    medida = regra['estatisticas_campos'].get(campo, regra['estatistica'])
-                    novas[nome].extend(('Sim' if posicoes else 'Não') if binaria else
-                                       agregar(base[campo].iloc[posicoes], medida) if posicoes else None
+                    medida = 'valores' if binaria else regra['estatisticas_campos'].get(campo, 'valores')
+                    novas[nome].extend(agregar(base[campo].iloc[posicoes], medida) if posicoes else None
                                        for posicoes in correspondencias)
                 inicio = fim
                 if hasattr(progress,'tarefa'): progress.tarefa(fim,len(trabalho))
                 progress(f"{camada['nome']}: {fim}/{len(trabalho)} feições analisadas com geometria integral")
             for campo, nome in nomes.items():
-                medida = regra['estatisticas_campos'].get(campo, regra['estatistica'])
+                medida = 'valores' if binaria else regra['estatisticas_campos'].get(campo, 'valores')
                 dicionario.append({'campo': nome, 'apelido': regra['apelidos'].get(campo), 'tema': categoria['nome'],
                                    'base': camada['nome'], 'campo_origem': campo,
-                                   'regra': 'Interseção: Sim/Não' if binaria else ROTULOS[medida] + '; somente feições intersectadas'})
+                                   'regra': ROTULOS[medida] + '; feições intersectadas com pesos iguais; inclui contato na borda'})
+            for sufixo, valores, descricao in [
+                ('correspondencias', vinculos, 'Todas as correspondências e atributos originais (JSON)'),
+                ('n_contato_borda', bordas, 'Feições com contato na borda'),
+                ('n_intersecao_interior', interiores, 'Feições com interseção no interior'),
+                ('n_cruzamento_pontual', pontuais, 'Feições com cruzamento pontual')]:
+                coluna = _nome_livre(regra['prefixo'] + sufixo, usados)
+                novas[coluna] = valores
+                dicionario.append({'campo': coluna, 'apelido': descricao, 'tema': categoria['nome'],
+                                   'base': camada['nome'], 'campo_origem': None, 'regra': descricao})
             # Presença também existe nas bases que não possuem nenhum campo de atributos.
             if binaria:
                 nome = _nome_livre(regra['prefixo'] + 'intersecao', usados)
-                novas[nome] = ['Sim' if n else 'Não' for n in contagens]
+                novas[nome] = ['Não avaliado' if g is None or g.is_empty else 'Sim' if n else 'Não'
+                               for g, n in zip(trabalho, contagens)]
                 dicionario.append({'campo': nome, 'apelido': f"{camada['nome']} · interseção", 'tema': categoria['nome'],
                                    'base': camada['nome'], 'campo_origem': None, 'regra': 'Interseção: Sim/Não'})
             col_n = _nome_livre(regra['prefixo'] + 'n_feicoes', usados)
@@ -194,6 +217,6 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
             for e, contas in zip(etapas, contagens_bases)]}
     return {'camadas': saidas, 'finalidades': _finalidades(saidas, normalizar_finalidades(finalidades)),
             'dicionario': [{**d, 'camada': nome} for nome in saidas for d in dicionario],
-            'relatorio': {'entradas': estat_entradas, 'camadas': rel_camadas,
+            'relatorio': {'geoprocessamento': espacial.provenance(), 'entradas': estat_entradas, 'camadas': rel_camadas,
                           'validacao': validacao, 'bases': bases_info, 'crs_medida': f'EPSG:{CRS_MEDIDA}',
                           'crs_saida': f'EPSG:{CRS_SAIDA}'}}

@@ -11,7 +11,7 @@ bases ficam agrupadas em temas (as categorias da extração) e cada base leva:
 * preparação: buffer, correção de geometria e separação por tipo de geometria.
 
 Base sem regra informada usa o padrão: atributos por localização (intersecta),
-feição de maior sobreposição, todos os campos, prefixo derivado do nome da camada,
+resumo dos valores distintos, todos os campos, prefixo derivado do nome da camada,
 geometrias corrigidas e separadas por tipo.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ from api.services.ciclo_vida_arquivos import apelido
 PAPEIS = ('atributos', 'recorte')
 LIGACOES = ('localizacao', 'atributo')
 PREDICADOS = ('intersecta', 'contem', 'esta_dentro')
-Estatistica = Literal['media', 'moda', 'mediana', 'total', 'minimo', 'maximo', 'desvio_padrao', 'variancia', 'contagem']
+Estatistica = Literal['valores', 'media', 'moda', 'mediana', 'total', 'minimo', 'maximo', 'desvio_padrao', 'variancia', 'contagem']
 
 MULTIPLICIDADES = ('maior_sobreposicao', 'primeira', 'todas', 'resumo')
 
@@ -58,8 +58,8 @@ class RegraBase(BaseModel):
     predicado: Literal['intersecta', 'contem', 'esta_dentro'] = 'intersecta'
     chave_entrada: str | None = Field(default=None, max_length=255)
     chave_base: str | None = Field(default=None, max_length=255)
-    multiplicidade: Literal['maior_sobreposicao', 'primeira', 'todas', 'resumo'] = 'maior_sobreposicao'
-    estatistica: Estatistica = 'media'
+    multiplicidade: Literal['maior_sobreposicao', 'primeira', 'todas', 'resumo'] = 'resumo'
+    estatistica: Estatistica = 'valores'
     estatisticas_campos: dict[str, Estatistica] = Field(default_factory=dict, max_length=10000)
     campos: list[str] | None = Field(default=None, max_length=10000)
     prefixo: str | None = Field(default=None, max_length=40)
@@ -242,3 +242,8 @@ def normalizar_estatisticas(categorias: list[dict]) -> list[dict]:
             camadas.append({**camada, 'regra': regra})
         grupos.append({**categoria, 'camadas': camadas})
     return validar_conjunto(grupos)
+
+
+def validar_agregacao(regra):
+    if regra.get('estatistica', 'valores') != 'valores':
+        raise ValueError('Revise a regra da base: estatísticas devem ser escolhidas por campo; o padrão deve preservar valores distintos. Configurações antigas não são convertidas automaticamente.')

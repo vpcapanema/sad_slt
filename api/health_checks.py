@@ -1,10 +1,12 @@
 """Verificações de saúde do backend SLT."""
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import Any
 
 import httpx
+from starlette.concurrency import run_in_threadpool
 
 from api.config import get_settings
 from api.sigma_proxy import SIGMA_BASE, fetch_instituicoes, fetch_pessoas_sigma
@@ -70,7 +72,8 @@ async def check_slt_database() -> dict[str, Any]:
 async def run_ready_checks() -> dict[str, Any]:
     inst = await check_sigma_instituicoes()
     pessoas = await check_sigma_pessoas()
-    db = await check_slt_database()
+    # A checagem do banco é síncrona por dentro; fora do laço, não trava as demais requisições.
+    db = await run_in_threadpool(asyncio.run, check_slt_database())
 
     blocking = not inst["ok"] or not db["ok"]
     return {

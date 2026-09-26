@@ -1,0 +1,47 @@
+<section class="mlb" aria-label="Gerador de camada municipal">
+  <header class="mlb-header"><div><h2 class="mlb-title">Monte sua camada</h2><span class="mlb-eyebrow">SÃO PAULO - DADOS MUNICIPAIS</span></div><div class="mlb-geometry"><strong>645 municípios</strong><span>Malha IBGE 2022 · SIRGAS 2000</span></div></header>
+  <p class="territorial-builder-description">Selecione fontes, períodos, temas e atributos para compor uma única camada vetorial dos 645 municípios de São Paulo. Os dados escolhidos serão incorporados à tabela de atributos da malha municipal do IBGE de 2022.</p>
+  <p data-mlb="loading" role="status">Carregando catálogo de indicadores…</p>
+  <button data-mlb="retry" type="button" hidden class="ea-btn">Tentar novamente</button>
+  <div data-mlb="error" class="mlb-error" role="alert" hidden></div>
+  <div class="mlb-layout">
+    <section class="mlb-panel"><h2>1. Escolha os dados</h2>
+      <div class="mlb-filters">
+        <label>Fonte<select data-mlb="source" disabled><option value="__todas__">Todas as fontes</option></select></label>
+        <label>Ano de referência<select data-mlb="year" disabled></select></label>
+        <label>Tema<select data-mlb="theme" disabled><option value="">Todos os temas</option></select></label>
+      </div>
+      <div class="mlb-search"><label>Buscar atributo<input data-mlb="search" type="search" placeholder="Ex.: renda, RAIS, sinistros…" disabled></label><div data-mlb="facets" style="display:contents"></div><button data-mlb="reset" type="button" class="mlb-facet-reset ea-btn" hidden>Limpar filtros</button></div>
+      <div class="mlb-listbar"><span data-mlb="available">0 atributos disponíveis</span><span class="mlb-listbar-actions"><button data-mlb="add" type="button" disabled class="ea-btn">Adicionar resultados</button><button data-mlb="clear" type="button" disabled class="ea-btn">Limpar seleção</button></span></div>
+      <div class="mlb-attributes"><div data-mlb="attributes"></div><p data-mlb="empty" class="mlb-empty">Nenhum atributo encontrado para estes filtros.</p></div>
+      <nav class="mlb-pages" aria-label="Páginas de atributos"><button data-mlb="previous" type="button" disabled class="ea-btn">Anterior</button><span data-mlb="page">Página 1 de 1</span><button data-mlb="next" type="button" disabled class="ea-btn">Próxima</button></nav>
+    </section>
+    <aside class="mlb-panel mlb-output"><h2>2. Gere a camada</h2><div class="mlb-count"><strong data-mlb="count">0</strong><span>atributos selecionados</span></div><p>Você pode combinar fontes e anos. A seleção permanece ao trocar os filtros.</p>
+      <div class="mlb-basket"><div data-mlb="basket"></div><p data-mlb="basket-empty">Selecione atributos na lista ao lado.</p></div>
+      <label>Formato da camada<select data-mlb="format" disabled><option value="fgb">FlatGeobuf (.fgb)</option><option value="gpkg">GeoPackage (.gpkg)</option><option value="shp">Shapefile (.shp)</option><option value="geojson">GeoJSON (.geojson)</option></select></label>
+      <p class="mlb-note"><span data-mlb="format-note">Até 6.500 atributos. Nomes completos preservados.</span> Todos os formatos são entregues em ZIP com relatório do join, glossário e tabela em CSV, XLSX e TXT.</p>
+      <label class="mlb-nome">Nome da camada<input data-mlb="name" type="text" maxlength="200" placeholder="Categoria — fonte majoritária — data da geração" disabled></label>
+      <p class="mlb-note">Em branco, o nome é montado com a categoria, a fonte majoritária da seleção e a data.</p>
+      <p data-mlb="limit" class="mlb-error" hidden>Seleção excede o limite do formato. Escolha FlatGeobuf ou remova atributos.</p>
+      <p data-mlb="category-required" class="ea-hint">Selecione a categoria da camada para habilitar a geração.</p>
+      <button data-mlb="generate" type="button" class="mlb-primary ea-btn ea-btn-primary" disabled>Gerar camada</button>
+      <p data-mlb="status" class="mlb-status" role="status"></p><p class="mlb-note">Geometria de 2022. O período de cada indicador acompanha o campo nos metadados. Valores ausentes permanecem nulos.</p>
+    </aside>
+    <section data-mlb="results" class="mlb-panel mlb-resultados" aria-label="Resultados" hidden><h2>Resultados</h2>
+      <section id="territorial-result" class="mlb-bloco territorial-result" aria-label="Camada gerada" hidden><h3>Camada gerada e salva</h3><p><strong data-mlb="result-name"></strong> · Categoria: <span data-mlb="result-category"></span></p><p>O arquivo está disponível no acervo. Você pode baixá-lo ou incluí-lo na extração.</p><div class="ea-config-tools"><a id="territorial-download" class="ea-btn">Baixar camada (.zip)</a><a id="territorial-use" class="ea-btn ea-btn-primary">Usar na extração</a></div></section>
+      <section data-mlb="map-section" class="mlb-bloco territorial-mapa-bloco" aria-label="Mapa da camada gerada" hidden><h3>Mapa da camada gerada</h3><div data-mlb="map" class="territorial-mapa" role="region" aria-label="Mapa da camada gerada"></div><p data-mlb="map-status" class="territorial-mapa-status" role="status"></p></section>
+      <div data-mlb="preview-error" class="mlb-bloco mlb-preview" hidden><span data-mlb="preview-error-text"></span><button data-mlb="preview-retry" type="button" class="ea-btn">Tentar novamente</button></div>
+      <section data-mlb="preview" class="mlb-bloco mlb-preview" hidden><h3>Prévia da tabela de atributos</h3><p>5 municípios · até 8 atributos da seleção. A exportação inclui todos os 645 municípios e todos os atributos escolhidos.</p><div class="mlb-table"><table data-table-sort="off"><thead><tr data-mlb="preview-head"><th>Código IBGE</th><th>Município</th></tr></thead><tbody data-mlb="preview-body"></tbody></table></div></section>
+      <section data-mlb="glossary" class="mlb-bloco mlb-glossario" hidden><h3>Glossário e aliases de atributos</h3><p>Os campos abaixo são exatamente os que sairão na tabela de atributos da camada gerada. O nome do campo começa pelo identificador do tema; o nome por extenso viaja no alias, no dicionário e nos metadados do pacote.<span data-mlb="glossary-note"></span></p><div class="mlb-table"><table data-table-sort="off"><thead><tr><th>Campo exportado</th><th>Alias</th><th>Significado</th><th>Fonte</th></tr></thead><tbody data-mlb="glossary-body"></tbody></table></div></section>
+    </section>
+  </div>
+  <!-- Estruturas repetidas; o controlador apenas clona e preenche os valores. -->
+  <template data-mlb-template="option"><option></option></template>
+  <template data-mlb-template="facet"><label><span></span><select></select></label></template>
+  <template data-mlb-template="attribute"><article class="mlb-attribute"><label><input type="checkbox"><strong></strong></label><details><summary></summary><div class="mlb-detail"><p class="mlb-detail-meta"></p><p data-field></p><a target="_blank" rel="noreferrer">Consultar fonte oficial</a><p data-definition></p><p data-note></p></div></details></article></template>
+  <template data-mlb-template="basket"><article class="mlb-basket-item"><span class="mlb-basket-name"></span><details><summary></summary><div class="mlb-detail"><p class="mlb-detail-meta"></p><p data-description></p><p data-field></p></div></details><button type="button" class="mlb-basket-remove">×</button></article></template>
+  <template data-mlb-template="head"><th></th></template>
+  <template data-mlb-template="cell"><td></td></template>
+  <template data-mlb-template="row"><tr></tr></template>
+  <template data-mlb-template="glossary"><tr><td><code></code></td><td></td><td class="mlb-glossario-significado"></td><td></td></tr></template>
+</section>

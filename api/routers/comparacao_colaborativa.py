@@ -28,7 +28,7 @@ router = APIRouter(prefix="/ahp/comparacao-colaborativa", tags=["ahp-comparacao-
 
 
 @router.get("/configuracoes")
-async def listar_configuracoes_origem(
+def listar_configuracoes_origem(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[dict]:
     try:
@@ -38,7 +38,7 @@ async def listar_configuracoes_origem(
 
 
 @router.get("/respostas", response_model=list[RespostaCentralResponseSchema])
-async def listar_respostas_central(
+def listar_respostas_central(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[RespostaCentralResponseSchema]:
     """Lista global da Central de respostas colaborativas."""
@@ -53,7 +53,7 @@ def _base_url(request: Request) -> str:
 
 
 @router.get("/ambientes", response_model=list[AmbienteColaborativoResponseSchema])
-async def listar_ambientes(
+def listar_ambientes(
     request: Request,
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[AmbienteColaborativoResponseSchema]:
@@ -64,7 +64,7 @@ async def listar_ambientes(
 
 
 @router.post("/ambientes", response_model=AmbienteColaborativoResponseSchema, status_code=201)
-async def criar_ambiente(
+def criar_ambiente(
     body: AmbienteColaborativoCreateSchema,
     request: Request,
     _user: SessionUser = Depends(require_analyst),
@@ -79,7 +79,7 @@ async def criar_ambiente(
 
 
 @router.patch("/ambientes/{ambiente_id}", response_model=AmbienteColaborativoResponseSchema)
-async def atualizar_ambiente(
+def atualizar_ambiente(
     ambiente_id: str,
     body: AmbienteColaborativoUpdateSchema,
     request: Request,
@@ -94,7 +94,7 @@ async def atualizar_ambiente(
 
 
 @router.delete("/ambientes/{ambiente_id}", status_code=204)
-async def excluir_ambiente(
+def excluir_ambiente(
     ambiente_id: str,
     _user: SessionUser = Depends(require_analyst),
 ) -> None:
@@ -107,7 +107,7 @@ async def excluir_ambiente(
 
 
 @router.patch("/respostas/{resposta_id}", response_model=RespostaColaborativaResponseSchema)
-async def atualizar_resposta(
+def atualizar_resposta(
     resposta_id: str,
     body: RespostaColaborativaUpdateSchema,
     _user: SessionUser = Depends(require_analyst),
@@ -121,7 +121,7 @@ async def atualizar_resposta(
 
 
 @router.delete("/respostas/{resposta_id}", status_code=204)
-async def excluir_resposta(
+def excluir_resposta(
     resposta_id: str,
     _user: SessionUser = Depends(require_analyst),
 ) -> None:
@@ -139,7 +139,7 @@ async def excluir_resposta(
     "/hierarquizacoes/{hierarquizacao_id}/ambientes",
     response_model=list[AmbienteColaborativoResponseSchema],
 )
-async def listar_ambientes_hierarquizacao(
+def listar_ambientes_hierarquizacao(
     hierarquizacao_id: UUID,
     request: Request,
     _user: SessionUser = Depends(require_authenticated),
@@ -154,7 +154,7 @@ async def listar_ambientes_hierarquizacao(
 
 
 @router.get("/ambientes/{ambiente_id}/respostas", response_model=list[RespostaColaborativaResponseSchema])
-async def listar_respostas(
+def listar_respostas(
     ambiente_id: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[RespostaColaborativaResponseSchema]:
@@ -168,7 +168,7 @@ async def listar_respostas(
 
 
 @router.get("/ambientes/{ambiente_id}/espaco-analitico")
-async def obter_espaco_analitico(ambiente_id: str, request: Request, _user: SessionUser = Depends(require_authenticated)) -> dict:
+def obter_espaco_analitico(ambiente_id: str, request: Request, _user: SessionUser = Depends(require_authenticated)) -> dict:
     try:
         return service.obter_espaco_analitico(ambiente_id, base_url=_base_url(request))
     except DemandaValidationError as exc:
@@ -178,12 +178,12 @@ async def obter_espaco_analitico(ambiente_id: str, request: Request, _user: Sess
 
 
 @router.get("/ambientes/{ambiente_id}/analises", response_model=list[AnaliseColaborativaResponseSchema])
-async def listar_analises(ambiente_id: str, _user: SessionUser = Depends(require_authenticated)) -> list[AnaliseColaborativaResponseSchema]:
+def listar_analises(ambiente_id: str, _user: SessionUser = Depends(require_authenticated)) -> list[AnaliseColaborativaResponseSchema]:
     return service.listar_analises(ambiente_id)
 
 
 @router.post("/ambientes/{ambiente_id}/analises", response_model=AnaliseColaborativaResponseSchema, status_code=201)
-async def criar_analise(ambiente_id: str, body: AnaliseColaborativaCreateSchema, user: SessionUser = Depends(require_analyst)) -> AnaliseColaborativaResponseSchema:
+def criar_analise(ambiente_id: str, body: AnaliseColaborativaCreateSchema, user: SessionUser = Depends(require_analyst)) -> AnaliseColaborativaResponseSchema:
     try:
         return service.criar_analise(ambiente_id, body, str(user.id))
     except DemandaValidationError as exc:
@@ -193,7 +193,7 @@ async def criar_analise(ambiente_id: str, body: AnaliseColaborativaCreateSchema,
 
 
 @router.post("/analises/{analise_id}/homologar", response_model=AnaliseColaborativaResponseSchema)
-async def homologar_analise(analise_id: str, user: SessionUser = Depends(require_analyst)) -> AnaliseColaborativaResponseSchema:
+def homologar_analise(analise_id: str, user: SessionUser = Depends(require_analyst)) -> AnaliseColaborativaResponseSchema:
     try:
         return service.homologar_analise(analise_id, str(user.id))
     except DemandaValidationError as exc:
@@ -203,7 +203,7 @@ async def homologar_analise(analise_id: str, user: SessionUser = Depends(require
 
 
 @router.get("/ambientes/{ambiente_id}", response_model=AmbienteColaborativoResponseSchema)
-async def obter_ambiente_id(
+def obter_ambiente_id(
     ambiente_id: str,
     request: Request,
     _user: SessionUser = Depends(require_authenticated),
@@ -218,7 +218,7 @@ async def obter_ambiente_id(
 
 
 @router.post("/ambientes/{ambiente_id}/consolidar", response_model=AmbienteColaborativoResponseSchema)
-async def consolidar_ambiente(
+def consolidar_ambiente(
     ambiente_id: str,
     request: Request,
     _user: SessionUser = Depends(require_analyst),
@@ -233,7 +233,7 @@ async def consolidar_ambiente(
 
 
 @router.get("/hierarquizacoes/{hierarquizacao_id}/ambiente", response_model=AmbienteColaborativoResponseSchema)
-async def obter_ambiente_hierarquizacao(
+def obter_ambiente_hierarquizacao(
     hierarquizacao_id: UUID,
     request: Request,
     _user: SessionUser = Depends(require_authenticated),
@@ -251,7 +251,7 @@ async def obter_ambiente_hierarquizacao(
 
 
 @router.get("/publico/{token}", response_model=AmbientePublicoSchema)
-async def obter_ambiente_publico(
+def obter_ambiente_publico(
     token: str,
     email: str | None = Query(None),
 ) -> AmbientePublicoSchema:
@@ -265,7 +265,7 @@ async def obter_ambiente_publico(
 
 
 @router.post("/publico/{token}/respostas", response_model=RespostaColaborativaResponseSchema, status_code=201)
-async def enviar_resposta(
+def enviar_resposta(
     token: str,
     body: RespostaColaborativaCreateSchema,
 ) -> RespostaColaborativaResponseSchema:
@@ -279,7 +279,7 @@ async def enviar_resposta(
 
 
 @router.post("/publico/{token}/respostas/iniciar", response_model=RespostaColaborativaResponseSchema)
-async def iniciar_resposta_publica(
+def iniciar_resposta_publica(
     token: str, body: RespostaColaborativaInicioSchema
 ) -> RespostaColaborativaResponseSchema:
     try:
@@ -291,7 +291,7 @@ async def iniciar_resposta_publica(
 
 
 @router.patch("/publico/{token}/respostas/progresso", response_model=RespostaColaborativaResponseSchema)
-async def salvar_progresso_resposta_publica(
+def salvar_progresso_resposta_publica(
     token: str, body: RespostaColaborativaProgressoSchema
 ) -> RespostaColaborativaResponseSchema:
     try:

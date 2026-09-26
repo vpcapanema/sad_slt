@@ -1,5 +1,6 @@
 """Contrato sem recorte: cálculos independentes, geometria, pacote e API."""
 import io
+import json
 import zipfile
 
 import geopandas as gpd
@@ -31,7 +32,8 @@ def test_nove_estatisticas_com_zero_e_nulos(medida, esperado):
 def test_textos_empates_e_nulos():
     assert agregar(['B', 'A', 'A', 'B'], 'moda') == 'B'
     assert agregar(['0007', '0007', None], 'moda') == '0007'
-    assert agregar(['0007', '3'], 'media') is None
+    with pytest.raises(ValueError, match='não numérico'):
+        agregar(['0007', '3'], 'media')
     assert agregar([None, pd.NA], 'media') is None
     assert agregar([None, pd.NA], 'contagem') == 0
     assert agregar([7], 'desvio_padrao') == 0
@@ -42,7 +44,7 @@ def test_preserva_geometria_contagem_campos_e_intersecoes_independentes():
     entrada = frame([MultiLineString([[(X, Y+2), (X+25, Y+2)], [(X, Y+5), (X+25, Y+5)]]),
                      LineString([(X+100, Y), (X+110, Y)])], identificador=['dentro', 'fora'])
     base = frame([box(X, Y, X+10, Y+10), box(X+10, Y, X+30, Y+10)], numero=[0., 4.], texto=['A', 'B'])
-    categorias = grupo(base, {'estatistica': 'media', 'estatisticas_campos': {'texto': 'moda'}})
+    categorias = grupo(base, {'estatisticas_campos': {'numero':'media', 'texto': 'moda'}})
     categorias += [{'id': 'risco', 'nome': 'Risco', 'camadas': [{'id': 'r', 'nome': 'Risco', 'frame': base,
                      'regra': {'prefixo': 'r'}}]}]
     res = enriquecer(entrada, categorias)
@@ -53,7 +55,9 @@ def test_preserva_geometria_contagem_campos_e_intersecoes_independentes():
     assert list(saida.b_n_feicoes) == [2, 0], 'multipartes não contam a mesma base duas vezes'
     assert saida.iloc[0].b_numero == 2 and pd.isna(saida.iloc[1].b_numero)
     assert saida.iloc[0].b_texto == 'A' and pd.isna(saida.iloc[1].b_texto)
-    assert list(saida.r_numero) == ['Sim', 'Não'] and list(saida.r_texto) == ['Sim', 'Não']
+    assert json.loads(saida.iloc[0].r_numero) == [0.,4.] and json.loads(saida.iloc[0].r_texto) == ['A','B']
+    assert pd.isna(saida.iloc[1].r_numero) and pd.isna(saida.iloc[1].r_texto)
+    assert list(saida.r_intersecao) == ['Sim','Não']
     assert res['relatorio']['validacao']['geometrias_preservadas']
 
 
@@ -62,7 +66,8 @@ def test_binario_independe_de_atributo_nulo_e_toque_na_borda(categoria):
     entrada = frame([Point(X, Y), Point(X+100, Y)], codigo=['a', 'b'])
     base = frame([box(X, Y, X+10, Y+10)], vazio=[None])
     res = enriquecer(entrada, grupo(base, id=categoria))['camadas']['pontos']
-    assert list(res.b_vazio) == ['Sim', 'Não']
+    assert res.iloc[0].b_vazio == '[null]' and pd.isna(res.iloc[1].b_vazio)
+    assert list(res.b_n_contato_borda) == [1,0]
     assert list(res.b_intersecao) == ['Sim', 'Não']
 
 
@@ -79,7 +84,7 @@ def test_base_vazia_mantem_campos_e_preserva_geometrias_nulas_e_invalidas():
 def test_contagem_distingue_sem_intersecao_de_valores_nulos():
     entrada = frame([Point(X, Y), Point(X+100,Y)])
     base = frame([box(X-1,Y-1,X+1,Y+1)], v=[None])
-    saida = enriquecer(entrada, grupo(base, {'estatistica': 'contagem'}))['camadas']['pontos']
+    saida = enriquecer(entrada, grupo(base, {'estatisticas_campos': {'v':'contagem'}}))['camadas']['pontos']
     assert saida.iloc[0].b_v == 0 and pd.isna(saida.iloc[1].b_v)
 
 
@@ -88,7 +93,7 @@ def test_regra_antiga_nao_recorta_nem_aplica_buffer_no_novo_modo():
     base = frame([box(X,Y,X+10,Y+10), box(X+10,Y,X+20,Y+10)], v=[1,3])
     res = enriquecer(entrada, grupo(base, {'papel':'recorte', 'multiplicidade':'todas',
                                          'preparacao': {'buffer_m':20}}))['camadas']['linhas']
-    assert len(res) == 1 and res.iloc[0].b_v == 2
+    assert len(res) == 1 and res.iloc[0].b_v == '[1,3]'
     assert res.geometry.to_wkb().equals(entrada.to_crs(4674).geometry.to_wkb())
 
 
@@ -108,13 +113,14 @@ def test_pacote_reaberto_tem_valores_e_geometrias(tmp_path):
     from api.services.extracao_atributos_pacote_enriquecimento import montar_pacote
     entrada = frame([Point(X,Y), Point(X+100,Y)], codigo=['a','b'])
     base = frame([box(X-1,Y-1,X+1,Y+1), box(X-2,Y-2,X+2,Y+2)], valor=[2,6])
-    resultado = enriquecer(entrada, grupo(base, {'estatistica':'total'}))
+    resultado = enriquecer(entrada, grupo(base, {'estatisticas_campos': {'valor':'total'}}))
     pacote, _, arquivos = montar_pacote(resultado['camadas'], entrada, resultado['dicionario'],
                                          {'operacao':'estatisticas'}, 'Teste', preservar_geometrias=True, validacao=resultado['relatorio']['validacao'])
     with zipfile.ZipFile(io.BytesIO(pacote)) as z:
         gpkg = tmp_path/'s.gpkg';gpkg.write_bytes(z.read(arquivos[0]['nome']))
         livro = load_workbook(io.BytesIO(z.read(next(a['nome'] for a in arquivos if a['chave']=='xlsx'))))
     saida = pyogrio.read_dataframe(gpkg, layer='pontos')
+    assert [r['atributos']['valor'] for r in json.loads(saida.iloc[0].b_correspondencias)] == [2,6]
     assert len(saida)==2 and saida.iloc[0].b_valor==8 and pd.isna(saida.iloc[1].b_valor)
     assert saida.geometry.to_wkb().equals(entrada.to_crs(4674).geometry.to_wkb())
     cab = [c.value for c in livro['pontos'][1]]

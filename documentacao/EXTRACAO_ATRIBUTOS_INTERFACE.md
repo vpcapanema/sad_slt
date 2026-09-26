@@ -341,29 +341,29 @@ com `operacao=enriquecimento` continuam no modo configurável.
 | Enriquecimento configurável (`enriquecimento`) | Mantém papel de recorte, ligação por chave, buffer e multiplicidade, inclusive `todas`. Pode dividir ou duplicar a entrada. |
 | Enriquecimento sem recorte (`estatisticas`) | Preserva cada feição, sua geometria e todos os atributos de entrada. Acrescenta todos os campos de cada base, sem dividir ou duplicar. |
 
-No modo sem recorte, a categoria oficial **Risco** ou **Restrição** determina o
-resultado binário: cada campo da base recebe **Sim** se ao menos uma feição da
-base intersectar a entrada, ou **Não** se nenhuma intersectar. Existe também
-`<prefixo>intersecao`, inclusive para bases sem campos. Esse indicador expressa
-somente a relação espacial, não gravidade ou aplicabilidade jurídica.
+Nos dois modos, o padrão preserva valores distintos (listas JSON) e registra
+`<prefixo>correspondencias`, com a posição e os atributos originais de cada feição
+correspondente. Não se presume que números sejam somáveis. No configurável,
+`primeira`, `maior_sobreposicao` e `todas` são escolhas explícitas e não removem o
+registro completo das correspondências.
 
-Nas demais categorias, o botão **Regra** oferece média, moda, mediana, total
-(soma), mínimo, máximo, desvio padrão, variância e contagem. A medida padrão da
-base é média; `estatisticas_campos` pode definir outra medida para cada campo.
-Cada feição intersectada contribui uma única vez, com peso igual. Multipartes
-não multiplicam sua contribuição. Toque na borda conta como interseção.
+No modo sem recorte, Risco e Restrição preservam nomes, classes e demais valores;
+`<prefixo>intersecao` informa presença separadamente. Geometria ausente produz
+“Não avaliado”. O indicador não expressa gravidade ou aplicabilidade jurídica.
 
-- Valores nulos são ignorados; zero participa dos cálculos.
-- Sem interseção, todos os campos estatísticos ficam nulos, inclusive contagem.
-- Havendo interseção com todos os valores nulos, contagem é zero; as outras
-  medidas ficam nulas.
-- Contagem conta valores não nulos do campo. O campo técnico `n_feicoes` conta
-  as feições intersectadas, independentemente de seus atributos.
-- Desvio padrão e variância são populacionais (`ddof=0`); uma observação resulta
-  em zero. Não existe ponderação por área ou comprimento.
-- Textos, códigos textuais e datas aceitam moda e contagem. Medidas numéricas
-  nesses campos retornam nulo. Não se convertem códigos textuais em números.
-- Empates na moda usam o primeiro valor na ordem da base usada na execução.
+O botão Regra permite escolher operações **por campo**: média simples, moda,
+mediana, soma, mínimo, máximo, desvio padrão, variância ou contagem. Configurações
+antigas com operação global continuam legíveis, mas precisam de revisão antes
+da execução. Não há migração silenciosa de seus cálculos.
+
+- Nulos são ignorados nos cálculos; zero participa. Listas preservam nulos.
+- Sem correspondência, campos ficam nulos e a lista de correspondências é vazia.
+- Contagem conta valores preenchidos; `n_feicoes` conta feições correspondentes.
+- Textos não são convertidos em números; operações numéricas incompatíveis falham.
+- Média simples dá peso igual a cada feição; não estima o valor da parcela atingida.
+- Desvio padrão e variância são populacionais. Moda empatada usa o primeiro valor
+  da base; os valores de todas as correspondências permanecem disponíveis.
+- Não há ponderação espacial automática nem soma automática de códigos/índices.
 
 O novo modo ignora configurações antigas de recorte, buffer, seleção de campos
 da base e junção por chave, normalizando-as para interseção real. Filtros ou
@@ -829,3 +829,40 @@ Validação adicional: `tests/browser/explorador-listas.cjs` mantém respostas d
 leitura pendentes para conferir título, nomes ativos, contagem e remoção da camada
 concluída. `tests/browser/feedback-global.cjs` verifica troca de atividade,
 atualização do detalhe, reinício da barra e disposição em tela estreita.
+
+
+## Motor GDAL/OGR e demanda como unidade de análise — 26/09/2026
+
+Os dois enriquecimentos usam `api/services/extracao_ogr.py`: OGR executa
+`Intersects`, `Contains`, `Within`, `Intersection`, `Difference`, `MakeValid`,
+`Buffer`, `Boundary`, `UnionCascaded` e as medidas. OSR executa as reprojeções com
+ordem tradicional x/y. GeoPandas é recipiente tabular e conversor WKB, sem
+`sjoin`, índice espacial ou operações construtivas Shapely nos motores.
+
+A junção consulta uma camada OGR e confirma o predicado exato após filtrar o
+envelope. Bases acima de 256 feições usam GeoPackage temporário em `/vsimem`
+com R-tree do GDAL; os recursos são liberados ao encerrar seu uso. Datasources
+são exclusivos da execução. O relatório registra motor e versão GDAL. OGR pode
+usar GEOS internamente, como previsto pela biblioteca; não existe fallback de
+predicados para simples sobreposição de envelopes.
+
+A demanda permanece identificada por camada e feição de origem. Pontos recebem
+relações de posição, sem área ou extensão inventada. Linhas recebem extensão no
+interior, na borda e identificação de contatos pontuais. Polígonos recebem área
+em comum e distinguem contatos sem área positiva. O tipo da base também conta:
+um polígono de demanda cruzado com base linear recebe comprimento, não área
+ocupada. Percentuais usam a geometria da demanda original, inclusive quando o
+registro é um trecho recortado; não representam peso para atributos e não devem
+ser somados entre bases/áreas sobrepostas.
+
+O painel territorial mostra a relação e medidas por demanda–área. Resultados
+antigos sem essa informação exibem “Tipo de contato não registrado”. Resultados
+reprovados na conferência geométrica não são persistidos. O modo sem recorte
+mantém todas as feições e as geometrias de saída em EPSG:4674.
+
+Testes: `test_extracao_ogr.py` bloqueia operações espaciais Shapely e `gpd.sjoin`
+durante a execução dos dois motores; verifica também CRS, predicados e índice
+OGR. `test_extracao_correspondencias.py` verifica atributos, topologia por tipo
+de demanda e percentuais após recorte. Os testes de exportação reabrem GeoPackage
+e XLSX. Os navegadores `enriquecimento-regras.cjs` e `extracao-dashboard.cjs`
+verificam a edição de operações e o detalhamento dos vínculos.

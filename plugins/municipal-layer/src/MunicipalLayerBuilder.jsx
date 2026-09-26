@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import './style.css';
+import {updatePersistentView} from './persistent-view.js';
 
 export function createLayerClient(baseUrl = '/api') {
   async function request(path, payload, signal) {
@@ -67,7 +68,7 @@ const ALL_SOURCES = '__todas__';
 
 /** onExport({blob, filename, configuration, attributes}); download=false lets the host own delivery.
  *  resultado: nó opcional do hospedeiro, exibido no topo do painel Resultados. */
-export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChange, onExport, download=true, className='', categoriaNome='', feedback, resultado=null}) {
+export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChange, onExport, download=true, className='', categoriaNome='', feedback, resultado=null, htmlHost=null, canGenerate=true}) {
   const api = useMemo(() => client || createLayerClient(apiBaseUrl), [client,apiBaseUrl]);
   const [catalog,setCatalog] = useState(null);
   const [attempt,setAttempt] = useState(0);
@@ -146,6 +147,7 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
   },[api,chaveDaPrevia,previewAttempt]);
   function toggle(id) {update({...config,attributes:selected.has(id)?config.attributes.filter(x=>x!==id):[...config.attributes,id]});}
   async function generate() {
+    if(!canGenerate)return;
     if(feedback && !(await feedback.confirmar({title:'Gerar camada territorial',message:`Gerar uma camada com ${config.attributes.length} atributos dos 645 municípios de São Paulo?`,confirmLabel:'Gerar camada'})))return;
     const processo=feedback?.processo('Gerando camada territorial');
     processo?.passo('Gerando a geometria e materializando os atributos selecionados…');
@@ -165,6 +167,14 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
     }catch(e){if(mounted.current){setError(e.message);setStatus('');}processo?.concluir({type:e.name==='AbortError'?'info':'error',message:e.message});}
     finally{if(mounted.current)setBusy(false);}
   }
+  useEffect(() => {
+    if (!htmlHost) return;
+    updatePersistentView(htmlHost, {catalog,error,feedback,busy,config,selected,source,allSources,allYears,activeYear,
+      sources,years,themes,theme,search,facets,dimensions,filtered,visible,page,selectedItems,
+      sourceLabel,themeLabel,metadata,limits,preview,previewError,resultado,nomePadrao,download,status,canGenerate,
+      setAttempt,setSource,setTheme,setYear,setSearch,setFacets,update,toggle,setPage,generate,setPreviewAttempt});
+  });
+  if (htmlHost) return resultado;
   return <section className={`mlb ${className}`} aria-label="Gerador de camada municipal">
     <header className="mlb-header"><div><h2 className="mlb-title">Monte sua camada</h2><span className="mlb-eyebrow">SÃO PAULO - DADOS MUNICIPAIS</span><p>Selecione fontes, períodos, temas e atributos para compor uma única camada vetorial dos 645 municípios de São Paulo. Os dados escolhidos serão incorporados à tabela de atributos da malha municipal do IBGE de 2022.</p></div><div className="mlb-geometry"><strong>645 municípios</strong><span>Malha IBGE 2022 · SIRGAS 2000</span></div></header>
     {error && !feedback && <div className="mlb-error" role="alert">{error}</div>}
@@ -188,7 +198,7 @@ export function MunicipalLayerBuilder({apiBaseUrl='/api', client, value, onChang
         <label className="mlb-nome">Nome da camada<input type="text" maxLength={200} disabled={busy} value={config.nome ?? ''} placeholder={nomePadrao} onChange={e=>update({...config,nome:e.target.value})}/></label>
         <p className="mlb-note">Em branco, o nome é montado com a categoria, a fonte majoritária da seleção e a data.</p>
         {!feedback && selected.size>limits[config.format] && <p className="mlb-error">Seleção excede o limite do formato. Escolha FlatGeobuf ou remova atributos.</p>}
-        <button type="button" className="mlb-primary" disabled={busy || !selected.size || selected.size>limits[config.format]} onClick={generate}>{busy?'Gerando camada…':download?'Gerar e baixar camada':'Gerar camada'}</button>
+        <button type="button" className="mlb-primary" disabled={!canGenerate || busy || !selected.size || selected.size>limits[config.format]} onClick={generate}>{busy?'Gerando camada…':download?'Gerar e baixar camada':'Gerar camada'}</button>
         {!feedback && <p className="mlb-status" role="status">{status}</p>}<p className="mlb-note">Geometria de 2022. O período de cada indicador acompanha o campo nos metadados. Valores ausentes permanecem nulos.</p>
       </aside>
       {/* Resultados: camada salva (hospedeiro), prévia e glossário, nesta ordem. */}

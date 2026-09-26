@@ -2,6 +2,28 @@
 	"version": "2.0.0",
 	"tasks": [
 {
+  "label": "SICARD: Limpar porta e reiniciar servidor local",
+  "type": "process",
+  "command": "/bin/bash",
+  "args": [
+    "${workspaceFolder}/scripts/restart-dev-codespace.sh"
+  ],
+  "options": {
+    "cwd": "${workspaceFolder}",
+    "env": {"SICARD_BRIDGE_READY": "${command:sicardTunnel.ensureBridge}"}
+  },
+  "runOptions": {
+    "instanceLimit": 1
+  },
+  "problemMatcher": [],
+  "presentation": {
+    "reveal": "always",
+    "panel": "dedicated",
+    "clear": true
+  },
+  "detail": "Verifica e recupera a ponte Windows e o túnel do banco; depois libera a porta 8083 e inicia o servidor. Requer extensão SICARD 0.3.0 no Windows. Ctrl+C encerra o servidor."
+},
+{
   "label": "SICARD: Host do agente — PowerShell compartilhado",
   "type": "process",
   "command": "/bin/bash",
@@ -34,11 +56,33 @@
   },
   "detail": "Sessão PowerShell no Codespace compartilhada com o Windows via tmux."
 },
+{
+  "label": "Claude: acompanhar comandos do agente",
+  "type": "process",
+  "command": "/bin/bash",
+  "args": ["-c", "touch ~/.claude/terminal-espelho.log && tail -n 200 -F ~/.claude/terminal-espelho.log"],
+  "runOptions": {
+    "instanceLimit": 1
+  },
+  "isBackground": true,
+  "problemMatcher": [],
+  "presentation": {
+    "reveal": "always",
+    "panel": "dedicated",
+    "focus": false,
+    "close": false
+  },
+  "detail": "Espelha, em tempo real, os comandos Bash que o Claude Code executa e a saída deles (hook em ~/.claude/settings.json)."
+},
 		{
 			"label": "SICARD: Iniciar ambiente de desenvolvimento",
 			"linux": {
 				"command": "/bin/bash",
-				"args": ["${workspaceFolder}/scripts/start-dev-codespace.sh"]
+				"args": ["${workspaceFolder}/scripts/restart-dev-codespace.sh"],
+                "options": {
+                    "cwd": "${workspaceFolder}",
+                    "env": {"SICARD_BRIDGE_READY": "${command:sicardTunnel.ensureBridge}"}
+                }
 			},
 			"type": "process",
 			"command": "powershell.exe",
@@ -58,7 +102,7 @@
 				"panel": "dedicated",
 				"clear": true
 			},
-			"detail": "Inicia o servidor local com .env privado e valida o banco oficial; Codespace na porta 8083"
+			"detail": "Codespace: verifica e recupera ponte e túnel, valida o banco e reinicia o servidor na porta 8083; requer extensão SICARD 0.3.0 no Windows"
 		},
 		{
 			"label": "SLT: Subir banco local de contingência",

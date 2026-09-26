@@ -61,8 +61,8 @@ def categorias():
             FROM dominios.categoria_extracao_atributos WHERE ativo ORDER BY ordem,nome''').fetchall()]
 
 
-def catalogo(codigo):
-    category = categoria(codigo)
+def catalogo(codigo=None):
+    category = categoria(codigo) if codigo is not None else None
     return {'attributes': dados.catalog(), 'municipalities': dados.MUNICIPIOS, 'crs': dados.CRS,
             'geometryYear': dados.ANO_MALHA, 'categoria': category, 'destino': DESTINO}
 
@@ -71,7 +71,8 @@ LIMITE_GLOSSARIO = 300
 
 
 def previa(codigo, payload):
-    categoria(codigo)
+    if codigo is not None:
+        categoria(codigo)
     items = dados.selection(payload['attributes'])
     frame = dados.layer(items[:8]).drop(columns='geometry').head(5)
     # O glossario descreve a tabela de atributos da camada que sera gerada.

@@ -18,6 +18,8 @@ export function criarPrevia(state, changed){
     renderDetalhes(item);
   }
   function sincronizarVisibilidade(){
+    state.previaVisiveis=new Set(visiveis);
+    const enviar=$('#ea-staging-confirmar');if(enviar)enviar.disabled=state.busy||state.uploading||state.loadingMap||state.validatingBases||!visiveis.size;
     for(const [checkbox,itens] of controles){
       const exibiveis=itens.filter(item=>camadasMapa.has(item.chave));
       const ativas=exibiveis.filter(item=>visiveis.has(item.chave)).length;
@@ -26,8 +28,8 @@ export function criarPrevia(state, changed){
       checkbox.disabled=state.busy||!exibiveis.length;
     }
     node('preview-map-status').textContent=visiveis.size?
-      `${visiveis.size} camada(s) visível(is) no mapa. Ocultar aqui não altera a composição da bancada.`:
-      'Nenhuma camada visível no mapa. Confira na bancada quais camadas participarão da análise.';
+      `${visiveis.size} camada(s) visível(is) no mapa. Somente as camadas marcadas serão enviadas à bancada.`:
+      'Marque ao menos uma camada para enviar à bancada.';
   }
   function caixaVisibilidade(itens,rotulo){
     const checkbox=el('input',undefined,'ea-preview-visibility');checkbox.type='checkbox';
@@ -107,7 +109,7 @@ export function criarPrevia(state, changed){
   }
   function render(){
     host.hidden=!pacote;$('#ea-layer-information').hidden=!pacote?.camadas.length;
-    if(!pacote){desenho?.remove();desenho=null;atual=null;camadasMapa.clear();visiveis.clear();niveis=[];controles=[];botoes=[];lista.replaceChildren();dados.replaceChildren();return;}
+    if(!pacote){desenho?.remove();desenho=null;atual=null;camadasMapa.clear();visiveis.clear();niveis=[];controles=[];botoes=[];lista.replaceChildren();dados.replaceChildren();node('preview-name').textContent='';node('preview-map-status').textContent='';selecionada=null;state.previaVisiveis=new Set();return;}
     const anteriores=new Set(camadasMapa.keys()), ocultas=new Set([...anteriores].filter(id=>!visiveis.has(id)));atual=pacote;
     if(!mapa){
       mapa=window.L.map(mapaHost,{preferCanvas:true,scrollWheelZoom:true,zoomSnap:0.5,zoomDelta:0.5,maxZoom:22}).setView([-23.5,-46.6],7);
@@ -139,7 +141,7 @@ export function criarPrevia(state, changed){
       camadasMapa.set(item.chave,grupo);if(!ocultas.has(item.chave)){visiveis.add(item.chave);desenho.addLayer(grupo);}
     });
     atualizarDetalheMapa();
-    const limites=desenho.getBounds();requestAnimationFrame(()=>{mapa.invalidateSize();if(limites.isValid()&&pacote.camadas.some(c=>!anteriores.has(c.chave)))mapa.fitBounds(limites,{padding:[24,24],maxZoom:15,animate:false});});
+    const limites=desenho.getBounds(),pacoteAtual=pacote;requestAnimationFrame(()=>{if(pacote!==pacoteAtual)return;mapa.invalidateSize();if(limites.isValid()&&pacote.camadas.some(c=>!anteriores.has(c.chave)))mapa.fitBounds(limites,{padding:[24,24],maxZoom:15,animate:false});});
     node('preview-name').textContent=`${pacote.camadas.filter(c=>c.grupo==='entrada').length} entrada(s) · ${pacote.camadas.filter(c=>c.grupo==='base').length} base(s)`;
     renderLista();renderDetalhes(pacote.camadas.find(c=>c.chave===selecionada)||pacote.camadas[0]);
   }
@@ -181,7 +183,7 @@ export function criarPrevia(state, changed){
       ['Feições na prévia',layer.geojson?numero(features.length):'Não disponível'],
       ['Vértices originais',raster?'Não se aplica':numero(meta.vertices??representacao?.vertices_originais)],
       ['Geometrias',raster?'Não se aplica':unir(meta.tipos_geometria||[...new Set(features.map(f=>f.geometry?.type).filter(Boolean))])],
-      ['Quantidade de campos',numero(meta.campos_total??(nomesCampos.length||null))],['Campos',unir(nomesCampos)],
+      ['Quantidade de campos',numero(meta.campos_total??nomesCampos.length)],['Campos',unir(nomesCampos)],
       ['Área total',meta.area_km2!=null?`${numero(meta.area_km2)} km²`:'Não informada'],
       ['Comprimento total',meta.comprimento_km!=null?`${numero(meta.comprimento_km)} km`:'Não informado'],
       ...(raster?[
@@ -194,7 +196,7 @@ export function criarPrevia(state, changed){
       ['CRS da prévia',layer.geojson?'WGS 84 · EPSG:4326':'Prévia indisponível'],
       ['Limites O / S / L / N',meta.limites_wgs84?.map(n=>Number(n).toFixed(6)).join(' · ')]]);
     grupo('Localização cadastral',[
-      ['UF',unir(local.ufs)],['Municípios / IBGE',local.municipios?.map(m=>`${m.nm_mun} (${m.cd_mun}) / ${m.sigla_uf}`).join('; ')||'Não confirmados'],
+      ['UF',unir(local.ufs)],['Municípios / IBGE',local.municipios?.map(m=>`${m.nm_mun} (${m.cd_mun}) / ${m.sigla_uf}`).join('; ')||(local.status==='consultado'?'Nenhum município identificado na cobertura consultada':'Não confirmados')],
       ['Fonte',local.fonte],['Cobertura',local.cobertura],
       ['Consulta',[local.aviso,local.aviso_ufs].filter(Boolean).join(' ')||(local.status==='consultado'?'Consulta concluída':'Não informada')]]);
     grupo('Observações',[

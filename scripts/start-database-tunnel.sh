@@ -8,10 +8,25 @@ sicard_lock="$sicard_root/.deploy/database-tunnel.local.lock"
 test -f "$sicard_key" || { echo 'Chave PPK ausente.' >&2; exit 1; }
 chmod 600 "$sicard_key"
 umask 077
+if [[ "${1:-}" == '--restart' ]]; then
+    if tmux -L sicard has-session -t '=sicard-db-tunnel' 2>/dev/null; then
+        echo 'Reiniciando o supervisor do túnel do banco…'
+        tmux -L sicard send-keys -t '=sicard-db-tunnel:' C-c
+        for ((sicard_attempt=0; sicard_attempt<50; sicard_attempt++)); do
+            tmux -L sicard has-session -t '=sicard-db-tunnel' 2>/dev/null || break
+            sleep 0.2
+        done
+        if tmux -L sicard has-session -t '=sicard-db-tunnel' 2>/dev/null; then
+            echo 'Não foi possível encerrar o supervisor anterior com segurança.' >&2
+            exit 1
+        fi
+    fi
+    exec bash "$sicard_root/scripts/start-database-tunnel.sh" --background
+fi
 if [[ "${1:-}" == '--background' ]]; then
     # O servidor tmux mantém o processo independente do terminal que o iniciou.
     if tmux -L sicard has-session -t '=sicard-db-tunnel' 2>/dev/null; then
-        echo 'Supervisor do túnel já está ativo.'
+        echo 'Supervisor do túnel já está ativo; a conexão com o banco ainda precisa ser validada.'
         exit 0
     fi
     tmux -L sicard new-session -d -s sicard-db-tunnel -c "$sicard_root" \
@@ -25,7 +40,7 @@ if [[ "${1:-}" == '--supervised' ]]; then
     exec >>"$sicard_log" 2>&1
 fi
 exec 9>"$sicard_lock"
-flock -n 9 || { echo 'Supervisor do túnel já está ativo.'; exit 0; }
+flock -n 9 || { echo 'Supervisor do túnel já está ativo; a conexão com o banco ainda precisa ser validada.'; exit 0; }
 sicard_child=''
 sicard_stop() {
     trap - INT TERM EXIT

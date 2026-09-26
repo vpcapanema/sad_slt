@@ -17,7 +17,7 @@ router = APIRouter(prefix="/ahp/universo", tags=["ahp-universo"])
 
 
 @router.get("/{tipo}/campos", response_model=list[CampoUniversoSchema])
-async def listar_campos(
+def listar_campos(
     tipo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[CampoUniversoSchema]:
@@ -30,7 +30,7 @@ async def listar_campos(
 
 
 @router.get("/{tipo}", response_model=list[UniversoItemSchema])
-async def listar_universo(
+def listar_universo(
     tipo: str,
     status: str | None = Query(None),
     _user: SessionUser = Depends(require_authenticated),

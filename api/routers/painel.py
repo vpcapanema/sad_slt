@@ -12,7 +12,7 @@ router = APIRouter(prefix="/painel", tags=["painel"])
 
 
 @router.get("/demandas", response_model=list[PainelDemandaSchema])
-async def listar_demandas_painel() -> list[PainelDemandaSchema]:
+def listar_demandas_painel() -> list[PainelDemandaSchema]:
     """Lista todas as demandas do painel, sem dados pessoais no detalhamento."""
     try:
         return painel_service.listar_demandas_painel(public_only=True)
@@ -21,7 +21,7 @@ async def listar_demandas_painel() -> list[PainelDemandaSchema]:
 
 
 @router.get("/demandas/internas", response_model=list[PainelDemandaSchema])
-async def listar_demandas_painel_interno(
+def listar_demandas_painel_interno(
     _user=Depends(require_authenticated),
 ) -> list[PainelDemandaSchema]:
     """Lista interna completa para os operadores autenticados."""

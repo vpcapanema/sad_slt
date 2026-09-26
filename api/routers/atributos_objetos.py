@@ -11,6 +11,7 @@ não chegavam à página da Fase 3.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException
@@ -64,7 +65,7 @@ def _mesclar(da_matriz: list[dict[str, Any]], do_configurador: list[dict[str, An
 
 
 @router.get("/hierarquizacoes/{codigo}/colunas")
-async def colunas_por_hierarquizacao(
+def colunas_por_hierarquizacao(
     codigo: str,
     _user=Depends(require_authenticated),
 ) -> dict[str, Any]:
@@ -73,7 +74,7 @@ async def colunas_por_hierarquizacao(
     if row is None:
         raise HTTPException(status_code=404, detail=f"Hierarquização não encontrada: {codigo}")
     da_matriz = extrair_colunas(_matriz_da_hierarquizacao(row))
-    colunas = _mesclar(da_matriz, await _colunas_configuradas())
+    colunas = _mesclar(da_matriz, asyncio.run(_colunas_configuradas()))
     return {
         "codigo": codigo,
         "total": len(colunas),
@@ -86,7 +87,7 @@ async def colunas_por_hierarquizacao(
 
 
 @router.post("/colunas/preview")
-async def colunas_preview(
+def colunas_preview(
     matriz: Any = Body(..., embed=True),
     _user=Depends(require_authenticated),
 ) -> dict[str, Any]:

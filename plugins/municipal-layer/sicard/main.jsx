@@ -5,13 +5,13 @@ import './style.css';
 
 // Mapa da camada salva: todas as feições com a geometria do arquivo gerado.
 // smoothFactor 0 impede o Leaflet de simplificar os contornos ao desenhar.
-function MapaCamada({url}){
+function MapaCamada({url,htmlHost}){
   const host=useRef(null);
   const [estado,setEstado]=useState('Carregando a camada no mapa…');
   useEffect(()=>{
     const L=window.L;
     if(!L){setEstado('Biblioteca de mapa indisponível nesta página.');return;}
-    const map=L.map(host.current,{scrollWheelZoom:false});
+    const map=L.map(htmlHost?.querySelector('[data-mlb="map"]') || host.current,{scrollWheelZoom:false});
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:19}).addTo(map);
     map.setView([-22.3,-48.6],6);
     const ctrl=new AbortController();
@@ -42,12 +42,28 @@ function MapaCamada({url}){
     const timer=setTimeout(()=>map.invalidateSize(),0);
     return ()=>{ctrl.abort();clearTimeout(timer);map.remove();};
   },[url]);
+  useEffect(()=>{if(htmlHost)htmlHost.querySelector('[data-mlb="map-status"]').textContent=estado;},[htmlHost,estado]);
+  if(htmlHost)return null;
   return <><div ref={host} className="territorial-mapa" role="region" aria-label="Mapa da camada gerada"/><p className="territorial-mapa-status" role="status">{estado}</p></>;
 }
 
-function CamadaGerada({gerada}){
+function CamadaGerada({gerada,htmlHost}){
   const ref=useRef(null);
   useEffect(()=>{ref.current?.scrollIntoView({behavior:'smooth',block:'start'});},[gerada]);
+  useEffect(()=>{
+    if(!htmlHost)return;
+    const result=htmlHost.querySelector('#territorial-result');
+    const mapSection=htmlHost.querySelector('[data-mlb="map-section"]');
+    result.hidden=false;mapSection.hidden=false;
+    htmlHost.querySelector('[data-mlb="results"]').hidden=false;
+    htmlHost.querySelector('[data-mlb="result-name"]').textContent=gerada.nome;
+    htmlHost.querySelector('[data-mlb="result-category"]').textContent=gerada.categoria;
+    const link=htmlHost.querySelector('#territorial-download');link.href=gerada.download.href;link.download=gerada.download.filename;
+    htmlHost.querySelector('#territorial-use').href=gerada.usar;
+    result.scrollIntoView({behavior:'smooth',block:'start'});
+    return ()=>{result.hidden=true;mapSection.hidden=true;};
+  },[htmlHost,gerada]);
+  if(htmlHost)return <MapaCamada url={gerada.geojson} htmlHost={htmlHost}/>;
   return <>
     <section ref={ref} id="territorial-result" className="mlb-bloco territorial-result" aria-label="Camada gerada">
       <h3>Camada gerada e salva</h3>
@@ -65,8 +81,11 @@ function CamadaGerada({gerada}){
 // O hospedeiro fornece a página; o plugin não cria janelas nem navegação.
 // onGenerated devolve {nome, categoria, download:{href,filename}, usar, geojson} para o painel Resultados.
 export function montarMunicipal(host,{category,apiBase,onGenerated,onBusyChange=()=>{},configuration,onChange=()=>{}}) {
-  const root=createRoot(host);
-  function App(){
+  const htmlHost=host.querySelector('[data-mlb="source"]')?host:null;
+  // O React conserva o estado; a árvore persistente pertence ao template Jinja.
+  const root=createRoot(htmlHost?document.createDocumentFragment():host);
+  function App({category}){
+    const categoryRef=useRef(category);categoryRef.current=category;
     const [selection,setSelection]=useState(configuration||{attributes:[],format:"fgb"});
     const [gerada,setGerada]=useState(null);
     const client=useMemo(()=>{
@@ -74,7 +93,7 @@ export function montarMunicipal(host,{category,apiBase,onGenerated,onBusyChange=
       async function request(path,config,signal){
         let response;
         try{
-          response=await fetch(`${apiBase}/extracao-atributos/municipal/${encodeURIComponent(category.id)}/${path}`,{
+          response=await fetch(`${apiBase}/extracao-atributos/municipal/${['catalog','preview'].includes(path)?'':`${encodeURIComponent(categoryRef.current.id)}/`}${path}`,{
             credentials:'same-origin',...(config?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)}:{}),signal});
         }catch(error){
           if(error.name==='AbortError')throw error;
@@ -93,6 +112,7 @@ export function montarMunicipal(host,{category,apiBase,onGenerated,onBusyChange=
       }
       return {catalog:signal=>request('catalog',null,signal),preview:(config,signal)=>request('preview',config,signal),
         export:async(config,signal,proc)=>{
+          if(!categoryRef.current)throw new Error('Selecione a categoria da camada antes de gerar.');
           onBusyChange(true);
           try{
             let job=await request('jobs',{...config,nome:config.nome||''});
@@ -121,8 +141,19 @@ export function montarMunicipal(host,{category,apiBase,onGenerated,onBusyChange=
       try{const resultado=await onGenerated(client.generated(),output);if(resultado)setGerada(resultado);}
       finally{onBusyChange(false);}
     }
-    return <MunicipalLayerBuilder value={selection} onChange={next=>{setSelection(next);onChange(next);}} client={client} download={false} onExport={saved} categoriaNome={category.nome} feedback={window.SLTFeedback} resultado={gerada && <CamadaGerada gerada={gerada}/>}/>;
+    return <MunicipalLayerBuilder htmlHost={htmlHost} value={selection} onChange={next=>{setSelection(next);onChange(next);}} client={client} download={false} onExport={saved} categoriaNome={category?.nome||''} canGenerate={!!category} feedback={window.SLTFeedback} resultado={gerada && <CamadaGerada gerada={gerada} htmlHost={htmlHost}/>}/>;
   }
-  root.render(<App/>);
-  return ()=>root.unmount();
+  root.render(<App category={category}/>);
+  const dispose=()=>{
+    root.unmount();
+    if(!htmlHost)return;
+    for(const node of htmlHost.querySelectorAll('input,select,button'))node.disabled=true;
+    for(const key of ['attributes','basket','facets','preview-body','glossary-body']){
+      const node=htmlHost.querySelector(`[data-mlb="${key}"]`);node.replaceChildren();delete node.dataset.content;
+    }
+    for(const key of ['results','retry','error'])htmlHost.querySelector(`[data-mlb="${key}"]`).hidden=true;
+    htmlHost.querySelector('[data-mlb="loading"]').hidden=false;
+  };
+  dispose.setCategory=category=>root.render(<App category={category}/>);
+  return dispose;
 }

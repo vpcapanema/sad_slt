@@ -29,6 +29,8 @@ const assert = require('node:assert/strict');
     assert.equal(await territorial.locator('[data-territorial-category="risco"] tbody tr').count(),2);
     assert.match(await territorial.locator('[data-territorial-category="risco"]').textContent(),/Inundação/);
     assert.match(await territorial.locator('[data-territorial-category="restricao"]').textContent(),/Área protegida/);
+    assert.match(await territorial.locator('[data-territorial-category="risco"]').textContent(),/Contato na borda/);
+    assert.match(await territorial.locator('[data-territorial-category="restricao"]').textContent(),/12 m² em comum/);
     await territorial.locator('[data-territorial-category="risco"] .ea-area-link').click();
     assert.match(await territorial.locator('[data-role="selection-attributes"]').textContent(),/Inundação/);
     await territorial.getByLabel('Categoria territorial').selectOption('restricao');await readyFor('#ea-panel-territorial');

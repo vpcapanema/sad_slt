@@ -14,7 +14,7 @@ router = APIRouter(prefix="/planos", tags=["planos"])
 
 
 @router.post("", response_model=PlanoResponseSchema, status_code=201)
-async def criar_plano(body: PlanoCreateSchema) -> PlanoResponseSchema:
+def criar_plano(body: PlanoCreateSchema) -> PlanoResponseSchema:
     """Cadastra um novo plano (nível 1)."""
     try:
         return plano_service.criar_plano(body)
@@ -25,7 +25,7 @@ async def criar_plano(body: PlanoCreateSchema) -> PlanoResponseSchema:
 
 
 @router.get("", response_model=list[PlanoResponseSchema])
-async def listar_planos() -> list[PlanoResponseSchema]:
+def listar_planos() -> list[PlanoResponseSchema]:
     """Lista os planos cadastrados."""
     try:
         return [item for item in plano_service.listar_planos() if item.status == "hierarq_ranqueada"]
@@ -34,7 +34,7 @@ async def listar_planos() -> list[PlanoResponseSchema]:
 
 
 @router.get("/vinculaveis", response_model=list[PlanoResponseSchema])
-async def listar_planos_vinculaveis() -> list[PlanoResponseSchema]:
+def listar_planos_vinculaveis() -> list[PlanoResponseSchema]:
     """Lista os planos que podem ser selecionados como pai no cadastro."""
     try:
         return plano_service.listar_planos()
@@ -43,14 +43,14 @@ async def listar_planos_vinculaveis() -> list[PlanoResponseSchema]:
 
 
 @router.get("/internas", response_model=list[PlanoResponseSchema])
-async def listar_planos_internos(
+def listar_planos_internos(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[PlanoResponseSchema]:
     return plano_service.listar_planos()
 
 
 @router.get("/internas/{codigo}", response_model=PlanoResponseSchema)
-async def obter_plano_interno(
+def obter_plano_interno(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> PlanoResponseSchema:
@@ -58,7 +58,7 @@ async def obter_plano_interno(
 
 
 @router.get("/{codigo}", response_model=PlanoResponseSchema)
-async def obter_plano(codigo: str) -> PlanoResponseSchema:
+def obter_plano(codigo: str) -> PlanoResponseSchema:
     """Obtém os detalhes de um plano pelo código."""
     try:
         item = plano_service.obter_plano(codigo)
@@ -72,7 +72,7 @@ async def obter_plano(codigo: str) -> PlanoResponseSchema:
 
 
 @router.post("/{codigo}/aprovar", response_model=PlanoResponseSchema)
-async def aprovar_plano(
+def aprovar_plano(
     codigo: str,
     body: AprovarDemandaSchema | None = None,
     user: SessionUser = Depends(require_analyst),
@@ -91,7 +91,7 @@ async def aprovar_plano(
 
 
 @router.post("/{codigo}/reprovar", response_model=PlanoResponseSchema)
-async def reprovar_plano(
+def reprovar_plano(
     codigo: str,
     body: ReprovarDemandaSchema,
     user: SessionUser = Depends(require_analyst),
@@ -112,7 +112,7 @@ async def reprovar_plano(
 
 
 @router.patch("/{codigo}", response_model=PlanoResponseSchema)
-async def atualizar_plano(
+def atualizar_plano(
     codigo: str,
     body: PlanoUpdateSchema,
     _user: SessionUser = Depends(require_operator),
@@ -129,7 +129,7 @@ async def atualizar_plano(
 
 
 @router.delete("/{codigo}", status_code=204)
-async def excluir_plano(
+def excluir_plano(
     codigo: str,
     _user: SessionUser = Depends(require_gestor),
 ) -> None:

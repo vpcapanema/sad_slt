@@ -127,8 +127,9 @@ function camposPrevistos() {
     const grupo=`Base · ${nome(base.id)}`;
     if(state.operation==='estatisticas'&&categoriaBinaria(state.categories.find(c=>c.id===base.category)))itens.push({campo:`${prefixo}intersecao`,rotulo:`${prefixo}intersecao · Sim / Não`,grupo});
     for(const campo of campos)itens.push({campo:prefixo+campo,rotulo:prefixo+campo,grupo});
+    if(base.regra?.papel!=='recorte')itens.push({campo:`${prefixo}correspondencias`,rotulo:`${prefixo}correspondencias · todas as feições e atributos (JSON)`,grupo});
     itens.push({campo:`${prefixo}n_feicoes`,rotulo:`${prefixo}n_feicoes · nº de feições tocadas`,grupo});
-    if(state.operation!=='estatisticas'&&base.regra?.multiplicidade!=="resumo")itens.push({campo:`${prefixo}fid_base`,rotulo:`${prefixo}fid_base · feição escolhida`,grupo});
+    if(state.operation!=='estatisticas'&&(base.regra?.multiplicidade||'resumo')!=="resumo")itens.push({campo:`${prefixo}fid_base`,rotulo:`${prefixo}fid_base · feição escolhida`,grupo});
   }
   return itens;
 }
@@ -290,7 +291,7 @@ const nomeCamada=id=>state.catalog.find(l=>l.id===id)?.nome||id;
 export function renderFinalidades() {
   const host=$("#ea-finalidades");if(!host)return;
   host.replaceChildren();
-  host.hidden=!['enriquecimento','estatisticas'].includes(state.operation);
+  host.hidden=Boolean(state.preparacaoConcluida)||!['enriquecimento','estatisticas'].includes(state.operation);
   if(host.hidden)return;
   host.append(criar("h4","Recortes por finalidade (opcional)","ea-op-params-title"));
   if(!state.finalidades.length)host.append(criar("p","Nenhum recorte. Use Adicionar finalidade para gerar no pacote camadas e tabelas só com os campos que interessam.","ea-hint"));
@@ -314,17 +315,18 @@ export function renderFinalidades() {
 // Os parametros do operador do OGR abrem abaixo do seletor e seguem no pedido.
 function renderParametros() {
   // O desenho do algoritmo fica no subcard 1.3, ao lado do seletor.
+  const grupo=document.querySelector('.ea-grupo-dinamico[data-origem="1.3"]');if(grupo)grupo.hidden=Boolean(state.preparacaoConcluida);
   renderDiagrama($("#ea-algoritmo-desenho"),state.operation);
   const host=$("#ea-operation-params");if(!host)return;
   host.replaceChildren();
   // Sem algoritmo escolhido nao ha parametro que faca sentido mostrar.
-  host.hidden=!['enriquecimento','estatisticas'].includes(state.operation);
+  host.hidden=Boolean(state.preparacaoConcluida)||!['enriquecimento','estatisticas'].includes(state.operation);
   renderFinalidades();
   if(host.hidden)return;
   if(['enriquecimento','estatisticas'].includes(state.operation)){
     const titulo=document.createElement("h4");titulo.className="ea-op-params-title";titulo.textContent="Como as bases entram";
     const texto=document.createElement("p");texto.className="ea-hint";
-    texto.textContent=state.operation==='estatisticas'?"Cada feição mantém sua geometria e seus atributos. Risco e Restrição recebem Sim/Não; nas outras bases, escolha a estatística padrão e personalize por campo no botão Regra abaixo. Sem interseção, os campos estatísticos ficam vazios.":"Configure a regra de cada base abaixo: papel (atributos ou unidade de recorte), ligação, multiplicidade, campos, prefixo, apelidos e buffer. Sem mexer, vale o padrão: por localização, feição de maior sobreposição, todos os campos.";
+    texto.textContent=state.operation==='estatisticas'?"Cada feição mantém sua geometria e seus atributos. Todos os vínculos e atributos das bases são preservados; risco e restrição têm presença em campo separado. Escolha operações por campo no botão Regra. Contatos na borda são identificados. Sem interseção, os campos estatísticos ficam vazios.":"Configure a regra de cada base abaixo: papel (atributos ou unidade de recorte), ligação, multiplicidade, campos, prefixo, apelidos e buffer. O padrão preserva valores distintos e todas as correspondências por localização; cálculos exigem escolha por campo.";
     host.append(titulo,texto);renderSelecao();
     return;
   }

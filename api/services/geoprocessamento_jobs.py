@@ -47,6 +47,10 @@ def _input_references(params: dict[str, Any]) -> list[str]:
     return list(dict.fromkeys(references))
 
 
+class OperacaoCancelada(Exception):
+    pass
+
+
 class GeoprocessamentoJobs:
     def __init__(self) -> None:
         self._jobs: dict[str, dict[str, Any]] = {}
@@ -84,6 +88,29 @@ class GeoprocessamentoJobs:
         if canal:
             canal.publicar(self._jobs[job_id])
 
+    def cancel(self, job_id: str, responsavel: str) -> dict[str, Any]:
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if not job or job.get('responsavel') != responsavel:
+                raise KeyError('Execução não encontrada')
+            if job['status'] in {'concluido', 'erro', 'cancelado'}:
+                return deepcopy(job)
+            if not job.get('cancelavel'):
+                raise ValueError('O algoritmo já iniciou; esta etapa não oferece interrupção segura. Aguarde a conclusão.')
+            job['cancelamento_solicitado'] = True
+            job['etapa_atual'] = 'Cancelamento solicitado; aguardando a leitura atual terminar'
+            self._publicar(job_id)
+            return deepcopy(job)
+
+    def _begin_execution(self, job_id):
+        with self._lock:
+            job = self._jobs[job_id]
+            if job.get('cancelamento_solicitado'):
+                raise OperacaoCancelada('Execução cancelada antes de iniciar o algoritmo.')
+            # Não interromper bibliotecas nativas ou gravações em andamento.
+            job['cancelavel'] = False
+            self._publicar(job_id)
+
     def _start(self, job_id: str, label: str) -> None:
         """Mensagem ativa é emitida antes do trabalho; logs registram conclusões."""
         with self._lock:
@@ -95,6 +122,8 @@ class GeoprocessamentoJobs:
     def _advance(self, job_id: str, label: str, details: dict[str, Any] | None = None, *, concluir_tarefa: bool = True) -> None:
         with self._lock:
             job = self._jobs[job_id]
+            if job.get('cancelamento_solicitado') and job.get('cancelavel'):
+                raise OperacaoCancelada('Execução cancelada antes de iniciar o algoritmo.')
             job["concluidas"] = min(job["total"], job["concluidas"] + 1)
             job["percentual"] = round(job["concluidas"] * 100 / job["total"])
             if concluir_tarefa:
@@ -124,7 +153,7 @@ class GeoprocessamentoJobs:
     def _fail(self, job_id: str, exc: Exception) -> None:
         with self._lock:
             job = self._jobs[job_id]
-            job["status"] = "erro"
+            job["status"] = "cancelado" if isinstance(exc, OperacaoCancelada) else "erro"
             job["erro"] = str(exc)
             job["etapa_atual"] = "Processo interrompido"
             job["logs"].append({
@@ -159,6 +188,8 @@ class GeoprocessamentoJobs:
         job_id = self._new("operacao", tasks)
         with self._lock:
             job = self._jobs[job_id]
+            job["cancelavel"] = True
+            job["responsavel"] = responsavel
             job["algoritmo_id"] = op_id
             job["algoritmo"] = CATALOG[op_id]
             job["parametros"] = deepcopy(params)
@@ -199,6 +230,7 @@ class GeoprocessamentoJobs:
                 self._advance(job_id, f"Tipo da entrada {index} conferido: {metadata['tipo']}")
             self._advance(job_id, "Executor assíncrono selecionado")
             callback: Callable[[str], None] = lambda label: self._append_dynamic(job_id, label)
+            self._begin_execution(job_id)
             self._start(job_id, f"Executando algoritmo: {CATALOG[op_id]}")
             result = asyncio.run(geoprocessamento_engine.execute(op_id, normalized, progress=callback))
             self._advance(job_id, f"Núcleo concluído: {CATALOG[op_id]}")

@@ -52,12 +52,12 @@ def test_mais_de_600_mil_vertices_valida_previa_leve_e_processa_original(gigante
     saida=enriquecer(frame,[{'id':'social','nome':'Social','camadas':[{'id':'b','nome':'Base','frame':base,'regra':{'prefixo':'b'}}]}])
     resultado=saida['camadas']['poligonos']
     assert resultado.geometry.iloc[0].wkb==original.to_crs(4674).geometry.iloc[0].wkb
-    assert resultado['b_medida'].tolist()==[11]
+    assert resultado['b_medida'].tolist()==['[11]']
     assert len(resultado)==1
     restaurada,_=local.restaurar({'nome':'entrada.gpkg','conteudo_base64':base64.b64encode(data).decode(),'camada':camada['chave']})
     assert restaurada.geometry.iloc[0].wkb==original.geometry.iloc[0].wkb
     inverso=enriquecer(base,[{'id':'social','nome':'Social','camadas':[{'id':'complexa','nome':'Base complexa','frame':restaurada,'regra':{'prefixo':'c'}}]}])
-    assert inverso['camadas']['pontos']['c_valor'].tolist()==[7]
+    assert inverso['camadas']['pontos']['c_valor'].tolist()==['[7]']
     assert set(local.gdal.ReadDir('/vsimem') or [])==antes
     print(f'600 mil vertices: previa + restauracao + analise em {time.monotonic()-inicio:.2f}s; JSON {len(json.dumps(result))} bytes')
 
@@ -89,7 +89,7 @@ def test_estatisticas_em_lotes_preserva_contagens_e_geometrias():
     entrada=gpd.GeoDataFrame({'codigo':list(range(150))},geometry=pontos,crs=4326)
     base=gpd.GeoDataFrame({'valor':[2,4]},geometry=[shapely.box(-48,-24,-46,-22)]*2,crs=4326)
     etapas=[]
-    saida=enriquecer(entrada,[{'id':'social','nome':'Social','camadas':[{'id':'b','nome':'Base','frame':base,'regra':{'prefixo':'b','estatistica':'total'}}]}],progress=etapas.append)
+    saida=enriquecer(entrada,[{'id':'social','nome':'Social','camadas':[{'id':'b','nome':'Base','frame':base,'regra':{'prefixo':'b','estatisticas_campos':{'valor':'total'}}}]}],progress=etapas.append)
     resultado=saida['camadas']['pontos']
     assert len(resultado)==150 and resultado['b_valor'].tolist()==[6]*150
     assert resultado['b_n_feicoes'].tolist()==[2]*150

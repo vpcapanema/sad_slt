@@ -61,7 +61,7 @@ app.include_router(api_router)
 
 
 @app.get("/favicon.ico", include_in_schema=False)
-async def favicon() -> FileResponse:
+def favicon() -> FileResponse:
     return FileResponse(
         project_path("assets/img/brand/sicard-simbolo.png"),
         media_type="image/png",
@@ -70,7 +70,7 @@ async def favicon() -> FileResponse:
 
 
 @app.get("/assets/js/navbar.js", include_in_schema=False)
-async def navbar_javascript() -> FileResponse:
+def navbar_javascript() -> FileResponse:
     """Evita que uma versão obsoleta mantenha chamadas ao endpoint protegido."""
     return FileResponse(
         project_path("assets/js/navbar.js"),
@@ -80,7 +80,7 @@ async def navbar_javascript() -> FileResponse:
 
 
 @app.get("/assets/js/admin-api.js", include_in_schema=False)
-async def admin_api_javascript() -> FileResponse:
+def admin_api_javascript() -> FileResponse:
     return FileResponse(
         project_path("assets/js/admin-api.js"),
         media_type="text/javascript",
@@ -89,7 +89,7 @@ async def admin_api_javascript() -> FileResponse:
 
 
 @app.get("/restrict/login.js", include_in_schema=False)
-async def admin_login_javascript() -> FileResponse:
+def admin_login_javascript() -> FileResponse:
     return FileResponse(
         project_path("admin/login.js"),
         media_type="text/javascript",
@@ -116,17 +116,17 @@ RESTRICTED_PAGES = {
 
 
 @app.get("/public/", include_in_schema=False)
-async def pagina_inicial_publica(request: Request) -> Response:
+def pagina_inicial_publica(request: Request) -> Response:
     return render_page(request, "paginas/index.html")
 
 
 @app.get("/public/cadastro/", include_in_schema=False)
-async def pagina_indice_cadastro(request: Request) -> Response:
+def pagina_indice_cadastro(request: Request) -> Response:
     return render_page(request, "paginas/cadastro/index.html")
 
 
 @app.get("/public/cadastro/{pagina}/", include_in_schema=False)
-async def pagina_publica_cadastro(request: Request, pagina: str) -> Response:
+def pagina_publica_cadastro(request: Request, pagina: str) -> Response:
     arquivo = PUBLIC_CADASTRO_PAGES.get(pagina)
     if not arquivo:
         from fastapi import HTTPException
@@ -135,62 +135,62 @@ async def pagina_publica_cadastro(request: Request, pagina: str) -> Response:
 
 
 @app.get("/public/painel/", include_in_schema=False)
-async def pagina_painel_publico(request: Request) -> Response:
+def pagina_painel_publico(request: Request) -> Response:
     return render_page(request, "paginas/painel/index.html")
 
 
 @app.get("/public/documentacao/", include_in_schema=False)
-async def pagina_documentacao_publica(request: Request) -> Response:
+def pagina_documentacao_publica(request: Request) -> Response:
     return render_page(request, "paginas/documentacao/index.html")
 
 
 @app.get("/public/documentacao/glossario/", include_in_schema=False)
-async def pagina_glossario_publico(request: Request) -> Response:
+def pagina_glossario_publico(request: Request) -> Response:
     return render_page(request, "paginas/documentacao/glossario.html")
 
 
 @app.get("/public/transparencia/", include_in_schema=False)
-async def pagina_transparencia_publica(request: Request) -> Response:
+def pagina_transparencia_publica(request: Request) -> Response:
     return render_page(request, "paginas/transparencia/index.html")
 
 
 @app.get("/public/login/", include_in_schema=False)
-async def pagina_login_publico(request: Request) -> Response:
+def pagina_login_publico(request: Request) -> Response:
     return render_page(request, "paginas/admin/login.html")
 
 
 @app.get("/restrict/", include_in_schema=False)
-async def pagina_inicial_restrita(request: Request) -> Response:
+def pagina_inicial_restrita(request: Request) -> Response:
     return render_page(request, "paginas/admin/index.html")
 
 
 @app.get("/restrict/admin/", include_in_schema=False)
-async def pagina_area_administrador(request: Request) -> Response:
+def pagina_area_administrador(request: Request) -> Response:
     return render_page(request, "paginas/admin/area-administrador.html")
 
 
 @app.get("/restrict/hierarquizacao/", include_in_schema=False)
-async def pagina_indice_hierarquizacao_restrita(request: Request) -> Response:
+def pagina_indice_hierarquizacao_restrita(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/index.html")
 
 
 @app.get("/restrict/hierarquizacao/processos/", include_in_schema=False)
-async def pagina_processos_hierarquizacao(request: Request) -> Response:
+def pagina_processos_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/home.html")
 
 
 @app.get("/restrict/hierarquizacao/metodologia/", include_in_schema=False)
-async def pagina_metodologia_hierarquizacao(request: Request) -> Response:
+def pagina_metodologia_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/apresentacao-processo-hierarquizacao.html")
 
 
 @app.get("/restrict/hierarquizacao/fase-1/", include_in_schema=False)
-async def pagina_fase_1_hierarquizacao(request: Request) -> Response:
+def pagina_fase_1_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/fase1-elegibilidade.html")
 
 
 @app.get("/restrict/hierarquizacao/fase-2/", include_in_schema=False)
-async def pagina_fase_2_hierarquizacao(request: Request) -> Response:
+def pagina_fase_2_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/fase2-favorabilidade.html")
 
 
@@ -212,7 +212,7 @@ TIPOS_CAMADA_ELEGIBILIDADE = [
 
 
 @app.get("/restrict/geoespacial/documentacao-favorabilidade/", include_in_schema=False)
-async def pagina_documentacao_favorabilidade(request: Request) -> Response:
+def pagina_documentacao_favorabilidade(request: Request) -> Response:
     """Biblioteca da favorabilidade: da premissa ao índice, com os mapas gerados."""
     from api.services.documentacao_favorabilidade import montar_contexto
 
@@ -224,7 +224,7 @@ async def pagina_documentacao_favorabilidade(request: Request) -> Response:
 
 
 @app.get("/restrict/hierarquizacao/cadastro-upload-favorabilidade/", include_in_schema=False)
-async def pagina_cadastro_upload_favorabilidade(request: Request) -> Response:
+def pagina_cadastro_upload_favorabilidade(request: Request) -> Response:
     return render_page(
         request, "paginas/hierarquizacao/cadastro-upload-camada.html",
         modulo="fase2",
@@ -242,7 +242,7 @@ async def pagina_cadastro_upload_favorabilidade(request: Request) -> Response:
 
 
 @app.get("/restrict/hierarquizacao/cadastro-upload-elegibilidade/", include_in_schema=False)
-async def pagina_cadastro_upload_elegibilidade(request: Request) -> Response:
+def pagina_cadastro_upload_elegibilidade(request: Request) -> Response:
     return render_page(
         request, "paginas/hierarquizacao/cadastro-upload-camada.html",
         modulo="fase1",
@@ -260,12 +260,12 @@ async def pagina_cadastro_upload_elegibilidade(request: Request) -> Response:
 
 
 @app.get("/restrict/hierarquizacao/fase-3/", include_in_schema=False)
-async def pagina_fase_3_hierarquizacao(request: Request) -> Response:
+def pagina_fase_3_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/fase3-ajuste-fino.html")
 
 
 @app.get("/restrict/hierarquizacao/ranking/", include_in_schema=False)
-async def pagina_ranking_privado_hierarquizacao(request: Request) -> Response:
+def pagina_ranking_privado_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/ranking-privado.html")
 
 
@@ -293,7 +293,7 @@ DESCONTINUADO_PROCESSO = (
 
 @app.get("/restrict/ahp/", include_in_schema=False)
 @app.get("/restrict/ahp/{pagina}/", include_in_schema=False)
-async def pagina_ahp_descontinuada(request: Request, pagina: str = "") -> Response:
+def pagina_ahp_descontinuada(request: Request, pagina: str = "") -> Response:
     """As páginas do AHP foram desabilitadas; os templates seguem versionados.
 
     Responde 410 (e não 404) para distinguir "existiu e foi retirado" de
@@ -307,13 +307,13 @@ async def pagina_ahp_descontinuada(request: Request, pagina: str = "") -> Respon
 
 
 @app.get("/public/ahp/colaborativa/", include_in_schema=False)
-async def pagina_ahp_colaborativa_publica(request: Request) -> Response:
+def pagina_ahp_colaborativa_publica(request: Request) -> Response:
     """Formulário público acessado pelo token de um convite AHP."""
     return render_page(request, "paginas/ahp/colaborativa.html")
 
 
 @app.get("/restrict/analise-multicriterio/", include_in_schema=False)
-async def pagina_julgamentos_multicriterio(request: Request) -> Response:
+def pagina_julgamentos_multicriterio(request: Request) -> Response:
     return render_page(request, "paginas/analise_multicriterio/julgamentos.html")
 
 
@@ -321,7 +321,7 @@ async def pagina_julgamentos_multicriterio(request: Request) -> Response:
     "/restrict/analise-multicriterio/julgamentos/{julgamento_id}/",
     include_in_schema=False,
 )
-async def pagina_julgamento_multicriterio(
+def pagina_julgamento_multicriterio(
     request: Request, julgamento_id: str
 ) -> Response:
     return render_page(
@@ -332,7 +332,7 @@ async def pagina_julgamento_multicriterio(
 
 
 @app.get("/public/analise-multicriterio/{token}/", include_in_schema=False)
-async def pagina_formulario_multicriterio(request: Request, token: str) -> Response:
+def pagina_formulario_multicriterio(request: Request, token: str) -> Response:
     return render_page(request, "paginas/analise_multicriterio/formulario.html", token=token)
 
 
@@ -346,7 +346,7 @@ HIERARQUIZACAO_PROCESS_PAGES = {
 
 
 @app.get("/restrict/hierarquizacao/processos/{pagina}/", include_in_schema=False)
-async def pagina_processo_descontinuada(request: Request, pagina: str) -> Response:
+def pagina_processo_descontinuada(request: Request, pagina: str) -> Response:
     """Etapas avulsas da rodada desabilitadas; ver `pagina_ahp_descontinuada`."""
     from fastapi import HTTPException
 
@@ -356,7 +356,7 @@ async def pagina_processo_descontinuada(request: Request, pagina: str) -> Respon
 
 
 @app.get("/restrict/{pagina}/", include_in_schema=False)
-async def pagina_restrita(request: Request, pagina: str) -> Response:
+def pagina_restrita(request: Request, pagina: str) -> Response:
     # Esta rota genérica é declarada antes do catálogo geoespacial; trate o
     # índice explicitamente para preservar /restrict/geoespacial/ como canônica.
     if pagina == "geoespacial":
@@ -487,12 +487,12 @@ HIERARQUIZACAO_DOCUMENTS = {
 
 
 @app.get("/restrict/geoespacial/", include_in_schema=False)
-async def pagina_indice_geoespacial(request: Request) -> Response:
+def pagina_indice_geoespacial(request: Request) -> Response:
     return render_page(request, "paginas/geoespacial/index.html")
 
 
 @app.get("/restrict/geoespacial/{pagina}/", include_in_schema=False)
-async def pagina_geoespacial(request: Request, pagina: str) -> Response:
+def pagina_geoespacial(request: Request, pagina: str) -> Response:
     arquivo = GEOSPATIAL_PAGES.get(pagina)
     if not arquivo:
         from fastapi import HTTPException
@@ -503,7 +503,7 @@ async def pagina_geoespacial(request: Request, pagina: str) -> Response:
 
 
 @app.get("/documentos/hierarquizacao/{documento}", include_in_schema=False)
-async def documento_hierarquizacao(documento: str) -> FileResponse:
+def documento_hierarquizacao(documento: str) -> FileResponse:
     """Expõe apenas as especificações metodológicas explicitamente autorizadas."""
     if documento not in HIERARQUIZACAO_DOCUMENTS:
         from fastapi import HTTPException

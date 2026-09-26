@@ -14,7 +14,7 @@ router = APIRouter(prefix="/programas", tags=["programas"])
 
 
 @router.post("", response_model=ProgramaResponseSchema, status_code=201)
-async def criar_programa(body: ProgramaCreateSchema) -> ProgramaResponseSchema:
+def criar_programa(body: ProgramaCreateSchema) -> ProgramaResponseSchema:
     """Cadastra um novo programa (nível 2)."""
     try:
         return programa_service.criar_programa(body)
@@ -25,7 +25,7 @@ async def criar_programa(body: ProgramaCreateSchema) -> ProgramaResponseSchema:
 
 
 @router.get("", response_model=list[ProgramaResponseSchema])
-async def listar_programas() -> list[ProgramaResponseSchema]:
+def listar_programas() -> list[ProgramaResponseSchema]:
     """Lista os programas cadastrados."""
     try:
         return [item for item in programa_service.listar_programas() if item.status == "hierarq_ranqueada"]
@@ -34,7 +34,7 @@ async def listar_programas() -> list[ProgramaResponseSchema]:
 
 
 @router.get("/vinculaveis", response_model=list[ProgramaResponseSchema])
-async def listar_programas_vinculaveis() -> list[ProgramaResponseSchema]:
+def listar_programas_vinculaveis() -> list[ProgramaResponseSchema]:
     """Lista os programas que podem ser selecionados como pai no cadastro."""
     try:
         return programa_service.listar_programas()
@@ -43,14 +43,14 @@ async def listar_programas_vinculaveis() -> list[ProgramaResponseSchema]:
 
 
 @router.get("/internas", response_model=list[ProgramaResponseSchema])
-async def listar_programas_internos(
+def listar_programas_internos(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[ProgramaResponseSchema]:
     return programa_service.listar_programas()
 
 
 @router.get("/internas/{codigo}", response_model=ProgramaResponseSchema)
-async def obter_programa_interno(
+def obter_programa_interno(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> ProgramaResponseSchema:
@@ -58,7 +58,7 @@ async def obter_programa_interno(
 
 
 @router.get("/{codigo}", response_model=ProgramaResponseSchema)
-async def obter_programa(codigo: str) -> ProgramaResponseSchema:
+def obter_programa(codigo: str) -> ProgramaResponseSchema:
     """Obtém os detalhes de um programa pelo código."""
     try:
         item = programa_service.obter_programa(codigo)
@@ -72,7 +72,7 @@ async def obter_programa(codigo: str) -> ProgramaResponseSchema:
 
 
 @router.post("/{codigo}/aprovar", response_model=ProgramaResponseSchema)
-async def aprovar_programa(
+def aprovar_programa(
     codigo: str,
     body: AprovarDemandaSchema | None = None,
     user: SessionUser = Depends(require_analyst),
@@ -91,7 +91,7 @@ async def aprovar_programa(
 
 
 @router.post("/{codigo}/reprovar", response_model=ProgramaResponseSchema)
-async def reprovar_programa(
+def reprovar_programa(
     codigo: str,
     body: ReprovarDemandaSchema,
     user: SessionUser = Depends(require_analyst),
@@ -112,7 +112,7 @@ async def reprovar_programa(
 
 
 @router.patch("/{codigo}", response_model=ProgramaResponseSchema)
-async def atualizar_programa(
+def atualizar_programa(
     codigo: str,
     body: ProgramaUpdateSchema,
     _user: SessionUser = Depends(require_operator),
@@ -129,7 +129,7 @@ async def atualizar_programa(
 
 
 @router.delete("/{codigo}", status_code=204)
-async def excluir_programa(
+def excluir_programa(
     codigo: str,
     _user: SessionUser = Depends(require_gestor),
 ) -> None:

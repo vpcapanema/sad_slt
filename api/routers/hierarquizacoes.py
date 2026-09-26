@@ -36,24 +36,24 @@ router = APIRouter(prefix="/ahp/hierarquizacoes", tags=["ahp-hierarquizacoes"])
 
 
 @router.get("/fatiamentos/fase1", response_model=list[dict])
-async def listar_fatiamentos_fase1(_user: SessionUser = Depends(require_authenticated)) -> list[dict]:
+def listar_fatiamentos_fase1(_user: SessionUser = Depends(require_authenticated)) -> list[dict]:
     return service.listar_fatiamentos_fase1()
 
 
 @router.post("/fatiamentos/fase1", response_model=dict)
-async def salvar_fatiamento_fase1(body: ConfiguracaoFatiamentoFase1Schema, _user: SessionUser = Depends(require_operator)) -> dict:
+def salvar_fatiamento_fase1(body: ConfiguracaoFatiamentoFase1Schema, _user: SessionUser = Depends(require_operator)) -> dict:
     return service.salvar_fatiamento_fase1(body)
 
 
 @router.get("/pacotes/{modulo}", response_model=list[dict])
-async def listar_pacotes_fase(modulo: str, _user: SessionUser = Depends(require_authenticated)) -> list[dict]:
+def listar_pacotes_fase(modulo: str, _user: SessionUser = Depends(require_authenticated)) -> list[dict]:
     if modulo not in {"fase1", "fase2"}:
         raise HTTPException(status_code=422, detail="Módulo inválido")
     return service.listar_pacotes_fase(modulo)
 
 
 @router.post("/{codigo}/fases/2/executar", response_model=HierarquizacaoResponseSchema)
-async def executar_fase_2(codigo: str, body: HierarquizacaoFase2ExecutarSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+def executar_fase_2(codigo: str, body: HierarquizacaoFase2ExecutarSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
     try:
         return service.executar_fase_2(codigo, body)
     except HierarquizacaoNotFoundError as exc:
@@ -65,7 +65,7 @@ async def executar_fase_2(codigo: str, body: HierarquizacaoFase2ExecutarSchema, 
 
 
 @router.post("/{codigo}/fases/3/executar", response_model=HierarquizacaoResponseSchema)
-async def executar_fase_3(codigo: str, body: HierarquizacaoFase3ExecutarSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+def executar_fase_3(codigo: str, body: HierarquizacaoFase3ExecutarSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
     try:
         return service.executar_fase_3(codigo, body)
     except HierarquizacaoNotFoundError as exc:
@@ -77,7 +77,7 @@ async def executar_fase_3(codigo: str, body: HierarquizacaoFase3ExecutarSchema, 
 
 
 @router.patch("/{codigo}/fases/3/atributos", response_model=HierarquizacaoResponseSchema)
-async def salvar_atributos_fase_3(codigo: str, body: HierarquizacaoFase3AtributosSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+def salvar_atributos_fase_3(codigo: str, body: HierarquizacaoFase3AtributosSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
     try:
         return service.salvar_atributos_fase3(codigo, body)
     except HierarquizacaoNotFoundError as exc:
@@ -89,7 +89,7 @@ async def salvar_atributos_fase_3(codigo: str, body: HierarquizacaoFase3Atributo
 
 
 @router.patch("/{codigo}/fases/3/pesos", response_model=HierarquizacaoResponseSchema)
-async def salvar_pesos_fase_3(codigo: str, body: HierarquizacaoFase3PesosSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+def salvar_pesos_fase_3(codigo: str, body: HierarquizacaoFase3PesosSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
     try:
         return service.salvar_pesos_fase3(codigo, body)
     except HierarquizacaoNotFoundError as exc:
@@ -101,7 +101,7 @@ async def salvar_pesos_fase_3(codigo: str, body: HierarquizacaoFase3PesosSchema,
 
 
 @router.patch("/{codigo}/fases/3/riscos", response_model=HierarquizacaoResponseSchema)
-async def salvar_tratamentos_riscos_fase_3(
+def salvar_tratamentos_riscos_fase_3(
     codigo: str,
     body: HierarquizacaoFase3RiscosSchema,
     _user: SessionUser = Depends(require_gestor),
@@ -117,7 +117,7 @@ async def salvar_tratamentos_riscos_fase_3(
 
 
 @router.post("/{codigo}/sintetizar", response_model=HierarquizacaoResponseSchema)
-async def sintetizar(codigo: str, body: HierarquizacaoSinteseSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
+def sintetizar(codigo: str, body: HierarquizacaoSinteseSchema, _user: SessionUser = Depends(require_operator)) -> HierarquizacaoResponseSchema:
     try:
         return service.sintetizar(codigo, body)
     except HierarquizacaoNotFoundError as exc:
@@ -129,7 +129,7 @@ async def sintetizar(codigo: str, body: HierarquizacaoSinteseSchema, _user: Sess
 
 
 @router.post("/{codigo}/fases/1/executar", response_model=HierarquizacaoResponseSchema)
-async def executar_fase_1(
+def executar_fase_1(
     codigo: str,
     body: HierarquizacaoFase1ExecutarSchema,
     _user: SessionUser = Depends(require_operator),
@@ -145,7 +145,7 @@ async def executar_fase_1(
 
 
 @router.get("/{codigo}/fases/1/mapa-sobreposicao", response_model=dict)
-async def mapa_sobreposicao_fase_1(
+def mapa_sobreposicao_fase_1(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> dict:
@@ -158,7 +158,7 @@ async def mapa_sobreposicao_fase_1(
 
 
 @router.patch("/{codigo}/fases/1", response_model=HierarquizacaoResponseSchema)
-async def salvar_fase_1(
+def salvar_fase_1(
     codigo: str,
     body: HierarquizacaoFase1UpdateSchema,
     _user: SessionUser = Depends(require_operator),
@@ -174,7 +174,7 @@ async def salvar_fase_1(
 
 
 @router.post("", response_model=HierarquizacaoResponseSchema, status_code=201)
-async def criar_hierarquizacao(
+def criar_hierarquizacao(
     body: HierarquizacaoCreateSchema,
     user: SessionUser = Depends(require_operator),
 ) -> HierarquizacaoResponseSchema:
@@ -189,7 +189,7 @@ async def criar_hierarquizacao(
 
 
 @router.get("", response_model=list[HierarquizacaoResponseSchema])
-async def listar_hierarquizacoes(
+def listar_hierarquizacoes(
     status: str | None = Query(None),
     grupo: str | None = Query(None),
     _user: SessionUser = Depends(require_authenticated),
@@ -201,7 +201,7 @@ async def listar_hierarquizacoes(
 
 
 @router.get("/portfolio", response_model=list[HierarquizacaoResponseSchema])
-async def listar_hierarquizacoes_portfolio(
+def listar_hierarquizacoes_portfolio(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[HierarquizacaoResponseSchema]:
     """Lista exclusivamente ``hierarquizacao_demandas.hierarquizacao_portfolio``.
@@ -216,7 +216,7 @@ async def listar_hierarquizacoes_portfolio(
 
 
 @router.get("/{codigo}", response_model=HierarquizacaoResponseSchema)
-async def obter_hierarquizacao(
+def obter_hierarquizacao(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> HierarquizacaoResponseSchema:
@@ -229,7 +229,7 @@ async def obter_hierarquizacao(
 
 
 @router.patch("/{codigo}", response_model=HierarquizacaoResponseSchema)
-async def atualizar_hierarquizacao(
+def atualizar_hierarquizacao(
     codigo: str,
     body: HierarquizacaoUpdateSchema,
     _user: SessionUser = Depends(require_operator),
@@ -245,7 +245,7 @@ async def atualizar_hierarquizacao(
 
 
 @router.delete("/{codigo}", status_code=204)
-async def excluir_hierarquizacao(
+def excluir_hierarquizacao(
     codigo: str,
     _user: SessionUser = Depends(require_gestor),
 ) -> None:
@@ -258,7 +258,7 @@ async def excluir_hierarquizacao(
 
 
 @router.get("/{codigo}/matriz")
-async def baixar_matriz(
+def baixar_matriz(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> JSONResponse:
@@ -273,7 +273,7 @@ async def baixar_matriz(
 
 
 @router.post("/{codigo}/calcular", response_model=HierarquizacaoResponseSchema)
-async def calcular_hierarquizacao(
+def calcular_hierarquizacao(
     codigo: str,
     _user: SessionUser = Depends(require_operator),
 ) -> HierarquizacaoResponseSchema:
@@ -288,7 +288,7 @@ async def calcular_hierarquizacao(
 
 
 @router.post("/{codigo}/homologar", response_model=HierarquizacaoResponseSchema)
-async def homologar_hierarquizacao(
+def homologar_hierarquizacao(
     codigo: str,
     user: SessionUser = Depends(require_gestor),
 ) -> HierarquizacaoResponseSchema:

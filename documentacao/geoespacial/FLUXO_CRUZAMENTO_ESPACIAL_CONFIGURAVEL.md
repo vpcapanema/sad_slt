@@ -16,7 +16,7 @@ Agrupar as bases em **temas**, por exemplo socioeconômico, ambiental, fundiári
   - *por atributo*, com uma chave comum (código IBGE, por exemplo);
   - *por localização*, com um predicado: intersecta, contém ou está dentro.
 - **Regra de multiplicidade**, quando o registro toca mais de uma feição:
-  - maior sobreposição, primeira feição, todas (um registro por feição) ou resumo (contagem, soma, lista).
+  - maior sobreposição, primeira feição, todas (um registro por feição) ou preservação de valores distintos (padrão); cálculos são escolhidos por campo.
 - **Campos** a trazer, com **prefixo** e **apelidos**.
 - **Preparação** necessária, como buffer, reprojeção ou separação por tipo de geometria.
 
@@ -45,3 +45,13 @@ Percorrer os temas e as bases na ordem configurada. Em cada base, aplicar a form
 - Tabelas de atributos em formatos tabulares, como CSV e XLSX.
 - Dicionário de campos: nome, apelido, tema, base de origem e regra aplicada.
 - Registro da configuração usada, para que o processamento possa ser reproduzido.
+
+
+## Motor e unidade de referência
+
+As operações espaciais dos dois fluxos são executadas por GDAL/OGR e as
+reprojeções por OSR. A demanda é a referência: pontos são associados por posição;
+linhas por extensão e polígonos por área. Contatos na borda são descritos
+separadamente. Todo trecho conserva a identificação da demanda original e os
+percentuais usam essa demanda como denominador. A saída registra todas as
+correspondências mesmo quando se escolhe uma feição para os atributos principais.

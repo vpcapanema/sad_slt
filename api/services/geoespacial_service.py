@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import base64
+import hashlib
 import os
 import re
 import tempfile
@@ -639,6 +640,11 @@ class GeoespacialService:
         # OBJECTID/FID único.
         for posicao, registro in enumerate(registros):
             registro["_indice"] = offset + posicao
+        pagina = gdf.iloc[offset:offset + limite]
+        pagina = pagina.set_crs("EPSG:4326") if pagina.crs is None else pagina.to_crs("EPSG:4326")
+        feicoes = json.loads(pagina.to_json(default=str))["features"]
+        for registro, feicao in zip(registros, feicoes):
+            registro["__gp_feature"] = feicao
         return {
             "camada_id": camada_id,
             "colunas": [{"nome": c, "tipo": str(dados[c].dtype)} for c in dados.columns],
@@ -648,6 +654,21 @@ class GeoespacialService:
             "limite": limite,
             "homologada": camada_geoespacial_repository.esta_homologada(camada_id),
         }
+
+    @staticmethod
+    def revisao_atributos(gdf):
+        return hashlib.sha256(gdf.to_json(default=str).encode()).hexdigest()
+
+    async def tabela_atributos(self, camada_id):
+        gdf = self.obter_camada_dados(camada_id)
+        result = await self.atributos_camada(camada_id, len(gdf), 0)
+        result["revisao"] = self.revisao_atributos(gdf)
+        from api.services.ciclo_vida_arquivos import exigir_editavel
+        try:
+            exigir_editavel(camada_id)
+        except ValueError as exc:
+            result["somente_leitura"] = str(exc)
+        return result
 
     def _colunas_atributos(self, gdf: gpd.GeoDataFrame) -> list[str]:
         geometria = gdf.geometry.name if gdf.geometry is not None else None
@@ -790,7 +811,8 @@ class GeoespacialService:
         if not expressao.strip():
             raise ValueError("Informe a expressão de cálculo")
         try:
-            resultado = gdf.eval(expressao, engine="python")
+            from api.services.expressoes_atributos import avaliar
+            resultado = avaliar(gdf, expressao)
         except Exception as exc:
             raise ValueError(f"Expressão inválida: {exc}") from exc
         gdf[campo] = resultado
@@ -820,7 +842,7 @@ class GeoespacialService:
         }
 
     def salvar_edicoes_atributos(
-        self, camada_id: str, edicoes: list[dict[str, Any]]
+        self, camada_id: str, edicoes: list[dict[str, Any]], excluidos=None, revisao=None
     ) -> dict[str, Any]:
         """Grava edições de atributo feitas na Bancada — na fonte real da camada.
 
@@ -838,13 +860,20 @@ class GeoespacialService:
         """
         if camada_geoespacial_repository.esta_homologada(camada_id):
             raise ValueError("Camada homologada é somente leitura")
-        if not edicoes:
+        excluidos = excluidos or []
+        if not edicoes and not excluidos:
             raise ValueError("Nenhuma edição informada")
         from api.services.ciclo_vida_arquivos import exigir_editavel
         exigir_editavel(camada_id)
 
         gdf = self.obter_camada_dados(camada_id).copy()
         total = len(gdf)
+        if revisao is not None and revisao != self.revisao_atributos(gdf):
+            raise ValueError("A camada mudou. Recarregue a tabela antes de salvar.")
+        if excluidos and revisao is None:
+            raise ValueError("Recarregue a tabela antes de excluir registros.")
+        if any(type(i) is not int or not 0 <= i < total for i in excluidos):
+            raise ValueError("Índice de exclusão inválido")
         for edicao in edicoes:
             indice = edicao.get("indice")
             campos = edicao.get("campos") or {}
@@ -858,7 +887,19 @@ class GeoespacialService:
                     raise ValueError(f"Campo inexistente na camada: {campo!r}")
                 if campo == gdf.geometry.name:
                     raise ValueError("Geometria não é editável nesta versão")
+                dtype = gdf[campo].dtype
+                if valor is not None:
+                    if pd.api.types.is_bool_dtype(dtype):
+                        if type(valor) is not bool:
+                            raise ValueError(f"O campo {campo} exige verdadeiro ou falso")
+                    elif pd.api.types.is_numeric_dtype(dtype):
+                        if isinstance(valor, bool) or not isinstance(valor, (int, float)) or not np.isfinite(valor):
+                            raise ValueError(f"O campo {campo} exige um número finito")
+                        if pd.api.types.is_integer_dtype(dtype) and valor != int(valor):
+                            raise ValueError(f"O campo {campo} exige um inteiro")
                 gdf.iat[indice, gdf.columns.get_loc(campo)] = valor
+        if excluidos:
+            gdf = gdf.iloc[[i for i in range(total) if i not in set(excluidos)]].copy()
 
         gravado_em_arquivo = False
         caminho = self._caminho_arquivo_da_camada(camada_id)
@@ -872,6 +913,7 @@ class GeoespacialService:
         return {
             "camada_id": camada_id,
             "linhas_editadas": len(edicoes),
+            "linhas_excluidas": len(set(excluidos)),
             "gravado_em_arquivo": gravado_em_arquivo,
         }
 
@@ -933,7 +975,8 @@ class GeoespacialService:
         """Retorna as feições que atendem a uma expressão atributiva."""
         gdf = self.obter_camada_dados(camada_id).copy()
         try:
-            selecionadas = gdf.query(expressao, engine="python")
+            from api.services.expressoes_atributos import selecionar
+            selecionadas = selecionar(gdf, expressao)
         except Exception as exc:
             raise ValueError(f"Consulta inválida: {exc}") from exc
         return {"camada_id": camada_id, "total": len(selecionadas), "geojson": self._gdf_para_geojson(selecionadas)}
@@ -1632,6 +1675,7 @@ class GeoespacialService:
         else:
             raise ValueError(f"Método de normalização inválido: {metodo_normalizacao}")
 
+        raster_norm[~valid] = np.nan
         novo_raster_id = self.registrar_raster(
             raster_norm, self._raster_profiles[raster_id],
             f"Raster normalizado de {raster_id}", "OP-20",
@@ -1663,6 +1707,14 @@ class GeoespacialService:
         if len(set(shapes)) > 1:
             raise ValueError("Rasters com shapes diferentes")
 
+        reference = self._raster_profiles[raster_ids[0]]
+        from pyproj import CRS
+        for ident in raster_ids[1:]:
+            profile = self._raster_profiles[ident]
+            if (CRS.from_user_input(profile['crs']) != CRS.from_user_input(reference['crs'])
+                    or not profile['transform'].almost_equals(reference['transform'])):
+                raise ValueError("Os rasters devem ter o mesmo CRS e a mesma grade espacial; reprojete e alinhe antes de combinar.")
+
         if operador == "media_ponderada":
             if pesos is None:
                 pesos = [1.0 / len(rasters)] * len(rasters)
@@ -1672,7 +1724,7 @@ class GeoespacialService:
             if soma_pesos <= 0:
                 raise ValueError("A soma dos pesos deve ser maior que zero")
             pesos = [float(peso) / soma_pesos for peso in pesos]
-            resultado = np.zeros_like(rasters[0])
+            resultado = np.zeros_like(rasters[0], dtype=float)
             for r, p in zip(rasters, pesos):
                 resultado += r * p
         elif operador == "soma":
@@ -1829,7 +1881,9 @@ class GeoespacialService:
             if progress:
                 progress("Matriz raster serializada em memória")
             return {
-                "raster_data": raster.tolist(),
+                "raster_data": np.where(np.isfinite(raster), raster, None).tolist(),
+                "crs": str(self._raster_profiles[raster_id]["crs"]),
+                "transform": list(self._raster_profiles[raster_id]["transform"]),
                 "shape": raster.shape,
                 "formato": "array",
             }

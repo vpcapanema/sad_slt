@@ -1,5 +1,6 @@
 """Rastreia operações HTTP diretas; jobs possuem contexto próprio no worker."""
 from fastapi import Depends, Request
+from starlette.concurrency import run_in_threadpool
 
 from api.deps.auth import require_geospatial_access
 from api.services import ciclo_vida_arquivos as ciclo
@@ -20,14 +21,14 @@ async def rastrear_execucao(request: Request, user: SessionUser = Depends(requir
         body = await request.json()
         if isinstance(body, dict):
             parameters.update(body)
-    ident = ciclo.iniciar(path, parameters, str(user.id))
+    ident = await run_in_threadpool(ciclo.iniciar, path, parameters, str(user.id))
     token = ciclo.execucao_atual.set(ident)
     try:
         yield
     except Exception as exc:
-        ciclo.finalizar(ident, erro=type(exc).__name__)
+        await run_in_threadpool(ciclo.finalizar, ident, erro=type(exc).__name__)
         raise
     else:
-        ciclo.finalizar(ident, temporario=parameters.get('destino') == 'memoria')
+        await run_in_threadpool(ciclo.finalizar, ident, temporario=parameters.get('destino') == 'memoria')
     finally:
         ciclo.execucao_atual.reset(token)

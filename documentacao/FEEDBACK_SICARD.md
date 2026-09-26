@@ -20,10 +20,48 @@ A API `acao` usa carregamento contextual por padrão; cálculos longos declaram 
 
 Cada processo mantém seu painel e histórico. **Recolher acompanhamento não cancela**; é possível reabrir o mesmo painel. A conclusão não captura o foco. As duas barras indicam tarefa atual e processo geral; recebem valores reais via `progresso(geral, etapa, tarefa)` ou `acompanhar(job)`. Sem medição, o indicador é indeterminado, sem porcentagem fabricada. Progresso por contagem de etapas não representa estimativa de tempo. Registros de atividades distintas não são misturados.
 
+## Painel de processo no desenho do SIGMA-PLI
+
+O painel segue o `ProcessFeedbackV2` do SIGMA-PLI, com a paleta PLI do SICARD (`--pli-navy`, `--pli-blue`, `--pli-green`):
+
+- **Cabeçalho**: título da ação, tarefa em curso logo abaixo, selo de passo (`2/5`, vindo de `concluidas/total` do job ou de `tarefa(nome, passo, total)`) e semáforo.
+- **Log**: fundo escuro e fonte monoespaçada, com hora, ícone do nível e mensagem em cada linha. O histórico acumula; cada log do servidor entra uma vez, pela `sequencia`, então polling e SSE não duplicam linhas. Só a tarefa corrente gira; as anteriores ficam marcadas como percorridas. Quando o servidor registra a conclusão de uma tarefa, a linha dela passa a verde em vez de se repetir.
+- **Rodapé**: barras de tarefa atual e de processo geral, na cor do semáforo.
+- **Desfecho**: última linha do log e lista de resultados abaixo dele.
+
+O semáforo tem três luzes e acende uma só:
+
+| Situação | Luz | Quando |
+| --- | --- | --- |
+| Em andamento | amarela (pulsando) | enquanto o processo roda |
+| Concluído com ressalvas | amarela | `concluir({type:'warning'})` |
+| Concluído | verde | `concluir({type:'success'})` |
+| Interrompido por erro | vermelha | `concluir({type:'error'})` |
+| Encerrado (cancelado) | apagadas, azul SICARD | `concluir({type:'info'})` |
+
+A situação também aparece em texto (`aria-label` do semáforo e linha do cabeçalho), então cor não é o único indicador. As notificações usam as mesmas cores e mostram uma barra de contagem quando fecham sozinhas. A contagem pausa junto com o temporizador.
+
+### Contrato do SIGMA (`ProcessFeedbackV2`, `ProcessFeedback`, `Notify`)
+
+Código escrito para o SIGMA-PLI funciona no SICARD sem alteração e é desenhado por este componente:
+
+```js
+ProcessFeedbackV2.start('/api/.../stream', { title: 'Enviando', onSuccess, onError }); // SSE
+ProcessFeedbackV2.open({ title: 'Processando' });
+await ProcessFeedbackV2.connectStream(await fetch(url, { method: 'POST', body })); // NDJSON
+ProcessFeedbackV2.task('Gerando relatório', 1, 3);
+ProcessFeedbackV2.log('info', 'Coletando dados...');
+ProcessFeedbackV2.progress(45);
+ProcessFeedbackV2.success({ message: 'Relatório gerado.' });
+Notify.success('Salvo', 'Configuração gravada'); // (título, mensagem), como no SIGMA
+```
+
+Eventos aceitos, um JSON por linha: `task` (`name`, `step`, `total`), `log` (`level`, `msg`), `progress` (`pct`), `done` (`data`) e `error` (`message`, `details`). Diferenças deliberadas em relação ao SIGMA: o painel não bloqueia a página, pode ser recolhido e não recarrega a página no sucesso, a menos que `reloadOnSuccess: true` seja pedido. `ProcessFeedback` mantém a assinatura legada `start(título, mensagem)`.
+
 O botão Cancelar só é habilitado com uma implementação de interrupção fornecida pelo serviço. A solicitação permanece pendente até a confirmação; só então o sinal é abortado e `restaurar` é chamado. Falha de cancelamento preserva o acompanhamento e o resultado real. Serviços sem endpoint de cancelamento continuam informando essa limitação; o componente visual não cria uma capacidade inexistente no backend.
 
 Integrações revisadas: validação e navegação do extrator, leituras de tabelas, autenticação do envio ao storage, preparação das bases, hierarquização e fila de PDFs do SEI. Esta última mantém resultados consultáveis sem exigir dispensar uma mensagem para analisar o próximo documento. O algoritmo nativo de upload do storage permanece intacto.
 
-Validação automatizada: `tests/browser/feedback-global.cjs` cobre foco, concorrência, cancelamento e componentes; `tests/browser/feedback-integracao.cjs` cobre o fluxo na página de extração com APIs simuladas; `tests/test_feedback_processos.py` cobre contratos dos consumidores. Não equivale a executar fluxos de produção de todos os módulos.
+Validação automatizada: `tests/browser/feedback-global.cjs` cobre foco, concorrência, cancelamento, componentes, log acumulado e semáforo; `tests/browser/feedback-sigma.cjs` cobre o contrato do SIGMA (modo manual, NDJSON, assinatura legada e `Notify`); `tests/browser/feedback-integracao.cjs` cobre o fluxo na página de extração com APIs simuladas; `tests/test_feedback_processos.py` cobre contratos dos consumidores. Não equivale a executar fluxos de produção de todos os módulos.
 
 Referências: [IBM Carbon](https://carbondesignsystem.com/patterns/notification-pattern/), [Google Material](https://codelabs.developers.google.com/codelabs/material-communication-guidance), [GOV.UK](https://design-system.service.gov.uk/components/error-summary/) e [W3C](https://www.w3.org/WAI/ARIA/apg/patterns/alert/).

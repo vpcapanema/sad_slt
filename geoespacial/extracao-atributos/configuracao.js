@@ -24,6 +24,7 @@ export function criarConfiguracao(state, changed) {
   // Escolher a categoria precisa revelar a lista de montagem na hora.
   $("#ea-category-select").addEventListener("change",()=>{sincronizarAlternativas();render();});
   function render() {
+    if(state.preparacaoConcluida&&(state.input||state.entradasExtras.length||state.bases.length||state.staging.length||state.listaBases)){state.preparacaoConcluida=false;window.SICARDExtracao?.renderParametros?.();}
     if(state.lastBase&&!state.bases.some(b=>b.id===state.lastBase.id))state.lastBase=null;
     $("#ea-base-select").value=state.lastBase?.id||'';
     $("#ea-base-file").textContent=state.lastBase?.arquivo||'';
@@ -121,7 +122,7 @@ export function criarConfiguracao(state, changed) {
   $("#ea-base-browse").addEventListener('click',()=>browse('base'));
   $("#ea-input-browse").addEventListener('click',()=>browse('input'));
   $("#ea-input-clear").addEventListener('click',()=>{if(state.uploading)return;state.catalog=state.catalog.filter(l=>l.id!==state.input||l.origem!=='local');state.input='';state.inputConfig=null;state.entradasExtras=[];entradaLocal.limpar();changed();});
-  $("#ea-operation").addEventListener("change",event=>{state.operation=event.target.value;window.SICARDExtracao?.renderParametros?.();changed();});
+  $("#ea-operation").addEventListener("change",event=>{state.preparacaoConcluida=false;state.operation=event.target.value;window.SICARDExtracao?.renderParametros?.();changed();});
   // O nome da saida nao muda o mapa nem a previa: so guarda o texto.
   $("#ea-nome-saida").addEventListener("input",event=>{state.nomeSaida=event.target.value;changed();});
   return {render,marcarLista:lista.marcar,renderBasesConfirmadas};

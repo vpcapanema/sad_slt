@@ -231,7 +231,7 @@ def _preparar_escrita(
 
 
 @router.get("/esquemas")
-async def listar_esquemas(_user: SessionUser = Depends(require_admin)) -> dict[str, Any]:
+def listar_esquemas(_user: SessionUser = Depends(require_admin)) -> dict[str, Any]:
     """Lista os esquemas liberados, suas tabelas e a contagem de registros de cada uma."""
     resultado: list[dict[str, Any]] = []
     with get_connection() as conn:
@@ -262,7 +262,7 @@ async def listar_esquemas(_user: SessionUser = Depends(require_admin)) -> dict[s
 
 
 @router.get("/tabelas/{esquema}/{tabela}")
-async def obter_tabela(
+def obter_tabela(
     esquema: str,
     tabela: str,
     pagina: int = Query(1, ge=1),
@@ -378,7 +378,7 @@ async def obter_tabela(
 
 
 @router.get("/tabelas/{esquema}/{tabela}/valores")
-async def valores_coluna(
+def valores_coluna(
     esquema: str,
     tabela: str,
     coluna: str = Query(...),
@@ -415,7 +415,7 @@ async def valores_coluna(
 
 
 @router.post("/tabelas/{esquema}/{tabela}", status_code=201)
-async def inserir_registro(
+def inserir_registro(
     esquema: str,
     tabela: str,
     valores: dict[str, Any] = Body(..., embed=True),
@@ -465,7 +465,7 @@ async def inserir_registro(
 
 
 @router.patch("/tabelas/{esquema}/{tabela}")
-async def atualizar_registro(
+def atualizar_registro(
     esquema: str,
     tabela: str,
     payload: dict[str, Any] = Body(...),
@@ -524,7 +524,7 @@ async def atualizar_registro(
 
 
 @router.delete("/tabelas/{esquema}/{tabela}")
-async def excluir_registros(
+def excluir_registros(
     esquema: str,
     tabela: str,
     payload: dict[str, Any] = Body(...),

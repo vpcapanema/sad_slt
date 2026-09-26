@@ -239,3 +239,32 @@ def test_sei_envia_o_tipo_e_aproveita_a_leitura_que_voltou():
     assert "dados.append('tipo_demanda', tipo)" in corpo
     assert "item.detalhe = doc" in corpo
     assert "processarFila()" not in corpo
+
+
+def test_painel_de_processo_segue_o_desenho_do_sigma_com_semaforo():
+    """Cabeçalho com tarefa e passo, log com hora por linha e três luzes; a
+    situação acende uma só: amarelo em andamento, verde concluído, vermelho erro."""
+    assert 'class="slt-fb-step-badge"' in FEEDBACK_JS
+    assert 'role="log"' in FEEDBACK_JS
+    assert 'hora.className = "slt-fb-time"' in FEEDBACK_JS
+    semaforo = FEEDBACK_JS.split("const SEMAFORO = {", 1)[1].split("};", 1)[0]
+    for estado, luz in (("progress", "amarelo"), ("warning", "amarelo"),
+                        ("success", "verde"), ("error", "vermelho")):
+        assert f'{estado}: "{luz}"' in semaforo
+    for luz in ("vermelho", "amarelo", "verde"):
+        assert f'[data-semaforo="{luz}"] [data-luz="{luz}"]' in FEEDBACK_CSS
+
+
+def test_log_do_servidor_entra_uma_vez_por_sequencia():
+    corpo = FEEDBACK_JS.split("function registrarLogs(job,logs){", 1)[1].split("function mostrarAcompanhamento", 1)[0]
+    assert "sequencia<=ultimaSequencia" in corpo
+
+
+def test_contrato_do_sigma_disponivel_sem_recarregar_a_pagina():
+    """Código do SIGMA-PLI roda no SICARD; recarregar só quando pedido."""
+    for nome in ("global.ProcessFeedbackV2", "global.ProcessFeedback", "global.Notify"):
+        assert nome in FEEDBACK_JS
+    for evento in ('case "task"', 'case "log"', 'case "progress"', 'case "done"', 'case "error"'):
+        assert evento in FEEDBACK_JS
+    assert "opts.reloadOnSuccess === true" in FEEDBACK_JS
+    assert "reloadOnSuccess !== false" not in FEEDBACK_JS

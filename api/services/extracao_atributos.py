@@ -49,7 +49,11 @@ def camada_para_mapa(ident):
     extra = {}
     if detalhe['metodo'] != 'original':
         extra['geojson_resumido'], _ = _representacao_mapa(frame, MAX_VERTICES_PREVIA // 10)
-    return {'id':ident,'nome':metadata['nome'],'representacao_previa':detalhe,**extra,
+    from api.services.metadados_previa import descrever_vetor
+    tabela = repo.STORAGES.get(metadata.get('categoria'), (None, None))[1]
+    ficha = descrever_vetor(frame, formato='PostGIS', componente=f'geoprocessamento.{tabela}' if tabela else None)
+    ficha['previa'] = detalhe
+    return {'id':ident,'nome':metadata['nome'],'metadados_local':ficha,'representacao_previa':detalhe,**extra,
             'origem_geometria':'arquivo' if (metadata.get('metadados') or {}).get('origem') == 'municipal-layer' else 'banco',
             'crs_arquivo':str(frame.crs),
             'campos':[{'nome':name,'tipo':str(frame[name].dtype)} for name in frame.columns

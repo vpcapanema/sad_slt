@@ -14,7 +14,7 @@ router = APIRouter(prefix="/demandas", tags=["demandas"])
 
 
 @router.post("", response_model=DemandaResponseSchema, status_code=201)
-async def criar_demanda(body: DemandaCreateSchema) -> DemandaResponseSchema:
+def criar_demanda(body: DemandaCreateSchema) -> DemandaResponseSchema:
     """Cria uma nova demanda de projeto."""
     try:
         return demanda_service.criar_demanda(body)
@@ -25,7 +25,7 @@ async def criar_demanda(body: DemandaCreateSchema) -> DemandaResponseSchema:
 
 
 @router.get("", response_model=list[DemandaResponseSchema])
-async def listar_demandas() -> list[DemandaResponseSchema]:
+def listar_demandas() -> list[DemandaResponseSchema]:
     """Lista somente demandas cuja publicação foi autorizada pelo status."""
     try:
         return [item for item in demanda_service.listar_demandas() if item.status == "hierarq_ranqueada"]
@@ -34,14 +34,14 @@ async def listar_demandas() -> list[DemandaResponseSchema]:
 
 
 @router.get("/internas", response_model=list[DemandaResponseSchema])
-async def listar_demandas_internas(
+def listar_demandas_internas(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[DemandaResponseSchema]:
     return demanda_service.listar_demandas()
 
 
 @router.get("/internas/{codigo}", response_model=DemandaResponseSchema)
-async def obter_demanda_interna(
+def obter_demanda_interna(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> DemandaResponseSchema:
@@ -49,7 +49,7 @@ async def obter_demanda_interna(
 
 
 @router.get("/{codigo}", response_model=DemandaResponseSchema)
-async def obter_demanda(codigo: str) -> DemandaResponseSchema:
+def obter_demanda(codigo: str) -> DemandaResponseSchema:
     """Obtém os detalhes de uma demanda pelo código."""
     try:
         item = demanda_service.obter_demanda(codigo)
@@ -63,7 +63,7 @@ async def obter_demanda(codigo: str) -> DemandaResponseSchema:
 
 
 @router.post("/{codigo}/aprovar", response_model=ObjetoAhpResponseSchema, status_code=201)
-async def aprovar_demanda(
+def aprovar_demanda(
     codigo: str,
     body: AprovarDemandaSchema | None = None,
     user: SessionUser = Depends(require_analyst),
@@ -86,7 +86,7 @@ async def aprovar_demanda(
 
 
 @router.post("/{codigo}/reprovar", response_model=DemandaResponseSchema)
-async def reprovar_demanda(
+def reprovar_demanda(
     codigo: str,
     body: ReprovarDemandaSchema,
     user: SessionUser = Depends(require_analyst),
@@ -107,7 +107,7 @@ async def reprovar_demanda(
 
 
 @router.patch("/{codigo}", response_model=DemandaResponseSchema)
-async def atualizar_demanda(
+def atualizar_demanda(
     codigo: str,
     body: DemandaUpdateSchema,
     _user: SessionUser = Depends(require_operator),
@@ -124,7 +124,7 @@ async def atualizar_demanda(
 
 
 @router.delete("/{codigo}", status_code=204)
-async def excluir_demanda(
+def excluir_demanda(
     codigo: str,
     _user: SessionUser = Depends(require_gestor),
 ) -> None:

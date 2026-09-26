@@ -287,7 +287,7 @@ def ler_para_mapa(ident: str) -> dict[str, Any]:
     if not features:
         raise ValueError("A camada não contém geometrias disponíveis para visualização.")
     definicao = lyr.GetLayerDefn()
-    return {
+    result = {
         "id": ident, "nome": arquivo.stem if ds.GetLayerCount() == 1 else lyr.GetName(),
         "vinculos": 1, "codificacao": "declarada pelo arquivo", "arquivo": caminho,
         "origem_geometria": "storage", "revisao": f"{estado.st_mtime_ns}-{estado.st_size}",
@@ -297,6 +297,10 @@ def ler_para_mapa(ident: str) -> dict[str, Any]:
         "geojson": {"type": "FeatureCollection", "features": features},
     }
 
+
+    from api.services.metadados_previa import descrever_geojson
+    result["metadados_local"] = descrever_geojson(result, arquivo=arquivo, formato=ds.GetDriver().ShortName, componente=lyr.GetName(), camada_ogr=lyr)
+    return result
 
 def _abrir_camada(caminho: str, camada: str | None) -> tuple[gdal.Dataset, ogr.Layer]:
     arquivo = resolver(caminho)

@@ -10,7 +10,7 @@ router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
-async def health():
+def health():
     return {
         "status": "ok",
         "sigma_base": SIGMA_BASE,

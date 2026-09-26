@@ -20,7 +20,7 @@ router = APIRouter(prefix="/dominios", tags=["dominios"])
 
 
 @router.get("/atributos-objeto", response_model=list[AtributoObjetoDominioSchema])
-async def listar_atributos_objeto() -> list[AtributoObjetoDominioSchema]:
+def listar_atributos_objeto() -> list[AtributoObjetoDominioSchema]:
     """Lista publica usada pelos formularios de cadastro."""
     try:
         return [AtributoObjetoDominioSchema(**row) for row in dominio_repository.list_atributos_objeto()]
@@ -43,7 +43,7 @@ def _map_status(rows: list[dict]) -> list[StatusDominioSchema]:
 
 
 @router.get("/status-demanda", response_model=list[StatusDominioSchema])
-async def listar_status_demanda(
+def listar_status_demanda(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[StatusDominioSchema]:
     """Lista domínio de status do ciclo de vida (cadastro/análise → hierarquização → execução)."""
@@ -54,7 +54,7 @@ async def listar_status_demanda(
 
 
 @router.get("/transicoes-status-demanda", response_model=MatrizTransicaoStatusSchema)
-async def listar_transicoes_status_demanda(
+def listar_transicoes_status_demanda(
     _user: SessionUser = Depends(require_authenticated),
 ) -> MatrizTransicaoStatusSchema:
     """Matriz origem → destinos permitidos no PATCH (dom_status_demanda_transicao)."""
@@ -65,7 +65,7 @@ async def listar_transicoes_status_demanda(
 
 
 @router.get("/status-objeto-ahp", response_model=list[StatusDominioSchema])
-async def listar_status_objeto_ahp(
+def listar_status_objeto_ahp(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[StatusDominioSchema]:
     """Status da fase de hierarquização (fase hierarquizacao)."""
@@ -76,7 +76,7 @@ async def listar_status_objeto_ahp(
 
 
 @router.get("/tipo-demanda", response_model=list[TipoDemandaSchema])
-async def listar_tipo_demanda(
+def listar_tipo_demanda(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[TipoDemandaSchema]:
     """Domínio plano / programa / projeto."""

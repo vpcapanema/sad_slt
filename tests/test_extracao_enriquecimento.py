@@ -38,7 +38,7 @@ def test_maior_sobreposicao_escolhe_a_feicao_que_cobre_mais_o_trecho():
     entrada = gdf([LineString([(X, Y), (X + 100, Y)])], proj_id=['P1'])
     # Feição 0 cobre 20 m; feição 1 cobre 80 m.
     base = gdf([box(X - 10, Y - 5, X + 20, Y + 5), box(X + 20, Y - 5, X + 110, Y + 5)], nome=['pequena', 'grande'])
-    maior = enriquecer(entrada, tema(('uc', base, {'prefixo': 'uc'})))['camadas']['linhas'].iloc[0]
+    maior = enriquecer(entrada, tema(('uc', base, {'prefixo': 'uc', 'multiplicidade': 'maior_sobreposicao'})))['camadas']['linhas'].iloc[0]
     assert maior['uc_nome'] == 'grande' and maior['uc_n_feicoes'] == 2 and maior['uc_fid_base'] == 1
     assert round(maior['uc_comprimento_comum_m']) == 80
     primeira = enriquecer(entrada, tema(('uc', base, {'prefixo': 'uc', 'multiplicidade': 'primeira'})))
@@ -53,7 +53,7 @@ def test_todas_duplica_e_resumo_agrega_sem_perder_registros():
     assert list(todas['b_nome'].fillna('')) == ['A', 'B', '']
     resumo = enriquecer(entrada, tema(('b', base, {'prefixo': 'b', 'multiplicidade': 'resumo'})))['camadas']['pontos']
     dentro, fora = resumo.iloc[0], resumo.iloc[1]
-    assert dentro['b_nome'] == 'A | B' and dentro['b_area'] == 4.0 and dentro['b_n_feicoes'] == 2
+    assert dentro['b_nome'] == '["A","B"]' and dentro['b_area'] == '[1.5,2.5]' and dentro['b_n_feicoes'] == 2
     assert fora['b_n_feicoes'] == 0 and (fora['b_nome'] is None or fora['b_nome'] != fora['b_nome'])
 
 
@@ -70,7 +70,7 @@ def test_ligacao_por_atributo_com_chave_numerica_e_texto():
     ]
     saida = enriquecer(entrada, categorias)
     linhas = saida['camadas']['linhas'].sort_values('mun_CD_MUN')
-    assert list(linhas['eco_pib']) == [10.0, 20.0]
+    assert list(linhas['eco_pib']) == ['[10.0]', '[20.0]']
     entrada_dic = next(d for d in saida['dicionario'] if d['campo'] == 'eco_pib')
     assert entrada_dic['apelido'] == 'PIB municipal' and entrada_dic['tema'] == 'Econômico'
     assert 'mun_NM_MUN' not in linhas.columns, 'só os campos escolhidos'
@@ -106,7 +106,7 @@ def test_entrada_com_tipos_mistos_gera_uma_camada_por_tipo_e_crs_de_saida():
     saida = enriquecer(entrada, tema(('b', base, {'prefixo': 'b'})))
     assert set(saida['camadas']) == {'pontos', 'linhas', 'poligonos'}
     assert all(str(c.crs) == 'EPSG:4674' for c in saida['camadas'].values())
-    assert all(c.iloc[0]['b_nome'] == 'B' for c in saida['camadas'].values())
+    assert all(c.iloc[0]['b_nome'] == '["B"]' for c in saida['camadas'].values())
 
 
 def test_campo_inexistente_e_prefixo_repetido_sao_recusados():
@@ -232,7 +232,7 @@ def test_validacao_aprova_resultado_correto_e_reprova_escolha_adulterada():
     entrada = gdf([LineString([(X, Y + 50), (X + 250, Y + 50)])], proj_id=['P1'])
     base = gdf([box(X - 10, Y + 40, X + 20, Y + 60), box(X + 20, Y + 40, X + 110, Y + 60)], nome=['pequena', 'grande'])
     categorias = tema(('municipios', MUNICIPIOS, {'papel': 'recorte', 'prefixo': 'mun'}),
-                      ('uc', base, {'prefixo': 'uc'}))
+                      ('uc', base, {'prefixo': 'uc', 'multiplicidade': 'maior_sobreposicao'}))
     validacao = enriquecer(entrada, categorias)['relatorio']['validacao']
     linhas = validacao['linhas']
     assert validacao['aprovada'] and linhas['aprovada']
@@ -249,10 +249,10 @@ def test_validacao_aprova_resultado_correto_e_reprova_escolha_adulterada():
         return tabela, info
     motor.enriquecer_base = adulterado
     try:
-        reprovada = enriquecer(entrada, categorias)['relatorio']['validacao']
+        with pytest.raises(ValueError, match='reprovado'):
+            enriquecer(entrada, categorias)
     finally:
         motor.enriquecer_base = original
-    assert not reprovada['aprovada'] and reprovada['linhas']['multiplicidade_conferida'][0]['divergencias'] > 0
 
 
 def test_finalidade_gera_subconjunto_de_campos_e_recusa_campo_inexistente():

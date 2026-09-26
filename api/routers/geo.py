@@ -70,7 +70,7 @@ def _contorno_estado_sao_paulo() -> dict[str, Any]:
 
 
 @router.get("/limites/estado-sao-paulo")
-async def limite_estado_sao_paulo() -> dict[str, Any]:
+def limite_estado_sao_paulo() -> dict[str, Any]:
     """Retorna o contorno oficial simplificado do Estado de São Paulo."""
     return _contorno_estado_sao_paulo()
 
@@ -100,7 +100,7 @@ def _containment_message(result: dict[str, Any], *, child: str, ref_kind: str) -
 
 
 @router.post("/analyze/containment", response_model=ContainmentResultSchema)
-async def analisar_containment(body: ContainmentAnalyzeSchema) -> ContainmentResultSchema:
+def analisar_containment(body: ContainmentAnalyzeSchema) -> ContainmentResultSchema:
     """Percentual dentro/fora da abrangência do vínculo institucional."""
     if not body.parent_unidade_ids:
         return ContainmentResultSchema(status="inside", pct_inside=100, pct_outside=0, message="")
@@ -119,15 +119,15 @@ async def analisar_containment(body: ContainmentAnalyzeSchema) -> ContainmentRes
 
 
 @router.post("/analyze/containment-programa", response_model=ContainmentResultSchema)
-async def analisar_containment_programa(body: ContainmentAnalyzeSchema) -> ContainmentResultSchema:
+def analisar_containment_programa(body: ContainmentAnalyzeSchema) -> ContainmentResultSchema:
     """Percentual da abrangência do programa dentro do plano vinculado."""
     body.child_kind = "programa"
     body.ref_kind = "plano"
-    return await analisar_containment(body)
+    return analisar_containment(body)
 
 
 @router.post("/analyze/locate", response_model=LocateResultSchema)
-async def analisar_localizacao(body: LocateAnalyzeSchema) -> LocateResultSchema:
+def analisar_localizacao(body: LocateAnalyzeSchema) -> LocateResultSchema:
     """Regionalidades oficiais onde a geometria do projeto se insere."""
     try:
         data = geo_repository.locate_geometry(body.geometry.model_dump())
@@ -137,7 +137,7 @@ async def analisar_localizacao(body: LocateAnalyzeSchema) -> LocateResultSchema:
 
 
 @router.post("/analyze/programa-regionalidades")
-async def analisar_programa_regionalidades(body: ProgramaRegionalidadesSchema) -> dict[str, Any]:
+def analisar_programa_regionalidades(body: ProgramaRegionalidadesSchema) -> dict[str, Any]:
     """Regionalidades hierarquicamente maiores sobrepostas à abrangência do programa."""
     try:
         return geo_repository.programa_regionalidades_sobrepostas(body.unidade_ids)
@@ -146,7 +146,7 @@ async def analisar_programa_regionalidades(body: ProgramaRegionalidadesSchema) -
 
 
 @router.get("/tipos")
-async def listar_tipos() -> list[dict[str, Any]]:
+def listar_tipos() -> list[dict[str, Any]]:
     """Lista os tipos de regionalização (município, RA, RG, RM, UGRHI, zona ZEE...)."""
     try:
         return geo_repository.list_tipos()
@@ -155,7 +155,7 @@ async def listar_tipos() -> list[dict[str, Any]]:
 
 
 @router.get("/unidades/geojson")
-async def unidades_geojson(ids: str = "") -> dict[str, Any]:
+def unidades_geojson(ids: str = "") -> dict[str, Any]:
     """FeatureCollection das unidades informadas (ids separados por vírgula)."""
     id_list = [s.strip() for s in ids.split(",") if s.strip()]
     try:
@@ -181,7 +181,7 @@ async def unidades_geojson(ids: str = "") -> dict[str, Any]:
 
 
 @router.get("/unidades")
-async def listar_unidades(tipo: str | None = None) -> list[dict[str, Any]]:
+def listar_unidades(tipo: str | None = None) -> list[dict[str, Any]]:
     """Lista unidades espaciais (sem geometria), opcionalmente filtradas por tipo."""
     try:
         rows = geo_repository.list_unidades(tipo)

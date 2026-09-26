@@ -27,7 +27,7 @@ router = APIRouter(prefix="/ahp/configuracoes", tags=["ahp-configuracoes"])
 
 
 @router.post("", response_model=ConfigResponseSchema, status_code=201)
-async def criar_config(
+def criar_config(
     body: ConfigCreateSchema,
     user: SessionUser = Depends(require_analyst),
 ) -> ConfigResponseSchema:
@@ -40,7 +40,7 @@ async def criar_config(
 
 
 @router.get("", response_model=list[ConfigResponseSchema])
-async def listar_configs(
+def listar_configs(
     tipo: str = Query(..., description="avulsa | portfolio"),
     status: str | None = Query(None),
     tipo_demanda: str | None = Query(None, description="plano | programa | projeto"),
@@ -55,7 +55,7 @@ async def listar_configs(
 
 
 @router.get("/{tipo}/{codigo}", response_model=ConfigResponseSchema)
-async def obter_config(
+def obter_config(
     tipo: str,
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
@@ -71,7 +71,7 @@ async def obter_config(
 
 
 @router.get("/{tipo}/{codigo}/matriz-excel", response_class=Response)
-async def baixar_matriz_excel(
+def baixar_matriz_excel(
     tipo: str,
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
@@ -93,7 +93,7 @@ async def baixar_matriz_excel(
 
 
 @router.patch("/{tipo}/{codigo}", response_model=ConfigResponseSchema)
-async def atualizar_config(
+def atualizar_config(
     tipo: str,
     codigo: str,
     body: ConfigUpdateSchema,
@@ -110,7 +110,7 @@ async def atualizar_config(
 
 
 @router.post("/{tipo}/{codigo}/calcular", response_model=ConfigResponseSchema)
-async def calcular_config(
+def calcular_config(
     tipo: str,
     codigo: str,
     _user: SessionUser = Depends(require_analyst),
@@ -126,7 +126,7 @@ async def calcular_config(
 
 
 @router.post("/{tipo}/{codigo}/homologar", response_model=ConfigResponseSchema)
-async def homologar_config(
+def homologar_config(
     tipo: str,
     codigo: str,
     user: SessionUser = Depends(require_gestor),

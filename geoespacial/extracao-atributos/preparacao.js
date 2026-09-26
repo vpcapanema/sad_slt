@@ -28,11 +28,21 @@ export function removerPrevia(s,item){
  if(s.previaLocal)s.previaLocal=null;
 }
 export function enviarPrevia(s){
- const entradas=entradasPreparadas(s).map(e=>({...e,layer:s.catalog.find(l=>l.id===e.id)}))
-  .filter(e=>e.layer?.geojson&&!e.layer.erro&&componentes(e.layer).some(l=>l.tipo!=='raster'));
- s.bancadaEntradas=entradas.map(e=>({...e,config:structuredClone(e.config),layer:copiar(e.layer)}));
- const prontas=[...s.bases,...s.staging].filter(b=>{const l=s.catalog.find(l=>l.id===b.id);return l?.geojson&&!l.erro&&l.tipo!=='raster'&&!entradas.some(e=>e.id===b.id);});
+ const marcada=chave=>!s.previaVisiveis||s.previaVisiveis.has(chave);
+ const entradas=entradasPreparadas(s).flatMap(e=>{
+  const original=s.catalog.find(l=>l.id===e.id);if(!original?.geojson||original.erro)return [];
+  const partes=componentes(original).filter(l=>l.tipo!=='raster'&&!l.erro&&l.status_validacao!=='invalida'&&marcada(`entrada:${e.id}:${l.chave||l.id}`));
+  if(!partes.length)return [];
+  const layer=copiar(original);
+  if(original.camadas_bancada){layer.camadas_bancada=partes;layer.geojson={type:'FeatureCollection',features:partes.flatMap(l=>l.geojson?.features||[])};if(layer.arquivo_local)layer.arquivo_local.camadas=partes.map(l=>l.chave);}
+  return [{...e,config:structuredClone(e.config),layer}];
+ });
+ const prontas=[...s.bases,...s.staging].filter(b=>{const l=s.catalog.find(l=>l.id===b.id);return marcada(`base:${b.id}`)&&l?.geojson&&!l.erro&&l.tipo!=='raster'&&!entradas.some(e=>e.id===b.id);});
+ s.bancadaEntradas=entradas;
  s.bancadaBases=prontas.map(b=>({...structuredClone(b),layer:copiar(s.catalog.find(l=>l.id===b.id))}));
  s.bases=prontas;s.staging=s.staging.filter(b=>!prontas.some(p=>p.id===b.id));
  return entradas.reduce((n,e)=>n+componentes(e.layer).length,0)+prontas.length;
+}
+export function limparPreparacao(s){
+ Object.assign(s,{input:'',inputConfig:null,entradasExtras:[],bases:[],staging:[],previaLocal:null,listaBases:null,undoPrevia:null,lastBase:null,editandoBases:false,previaVisiveis:new Set(),preparacaoConcluida:true});
 }

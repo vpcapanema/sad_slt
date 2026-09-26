@@ -23,7 +23,9 @@
     ["Álgebra e filtros raster",[["OP-39","Reclassificar raster",null,1],["OP-40","Aplicar limiar raster",null,1],["OP-41","Inverter raster",null,1],["OP-42","Filtro focal raster",null,1],["OP-43","Suavização gaussiana",null,1]]],
     ["Exportação",[["OP-25","Exportar camada vetorial","exportar-camada",1],["OP-26","Exportar raster","exportar-raster",2],["OP-27","Salvar camada","salvar-camada",1]]]
   ];
+  OPS.push(["Classificação Fase 1",[["OP-CLASS","Classificar por feição (Fase 1)","classificar-por-feicao-fase1",1]]]);
   const OP_ENDPOINTS={
+    "OP-CLASS":"classificar-por-feicao-fase1",
     "OP-01":"importar-camada","OP-02":"validar-camada","OP-02-CORR":"reparar-geometrias",
     "OP-03":"normalizar-camada","OP-04":"criar-buffer","OP-05":"sobrepor-camadas",
     "OP-05-IDENT":"sobrepor-camadas",
@@ -91,12 +93,13 @@
     "OP-42":[["raster_id","Camada","layer"],["tamanho_janela","Tamanho da janela","number",3],["estatistica","Estatística","select",["media","minimo","maximo"]]],
     "OP-43":[["raster_id","Camada","layer"],["sigma","Sigma","number",1]]
   });
+  FIELDS["OP-CLASS"]=[["camada_id","Camada","layer"],["criterio_id","Código do critério da Fase 1","text"],["fonte_id","Código da fonte (opcional)","text"]];
   FIELDS["OP-27"]=[["entrada","Camada","layer"]];
-  const RASTER_OUTPUT=new Set(["OP-08","OP-10","OP-11","OP-12","OP-13","OP-14","OP-16","OP-17","OP-20","OP-21","OP-22","OP-23","OP-24","OP-26","OP-39","OP-40","OP-41","OP-42","OP-43"]);
+  const RASTER_OUTPUT=new Set(["OP-08","OP-10","OP-11","OP-12","OP-13","OP-14","OP-16","OP-17","OP-20","OP-21","OP-26","OP-39","OP-40","OP-41","OP-42","OP-43"]);
   const CONTENT_INPUTS=new Set(["camada_id","camada_id_1","camada_id_2","camada_ref_id","camada_ids","raster_id","raster_ids","camada_mascara_id","camada_zona_id","camada_pontos_id","camada_poligono_id","entrada"]);
   OPS.flatMap(group=>group[1]).forEach(op=>{
     const raster=RASTER_OUTPUT.has(op[0]),base=op[1].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
-    FIELDS[op[0]]=(FIELDS[op[0]]||[]).map(field=>CONTENT_INPUTS.has(field[0])?[field[0],"Camada",["raster_ids","camada_ids"].includes(field[0])?"layers":"layer",field[3]]:field);
+    FIELDS[op[0]]=(FIELDS[op[0]]||[]).map(field=>CONTENT_INPUTS.has(field[0])?[field[0],field[1],["raster_ids","camada_ids"].includes(field[0])?"layers":"layer",field[3]]:field);
     FIELDS[op[0]].push(
       ["nome_saida","Nome da saída","text",`${base}_saida`],
       ["crs_saida","CRS","select",["entrada","EPSG:4674","EPSG:4326","EPSG:3857","EPSG:31982","EPSG:31983","EPSG:31984","EPSG:5880"]],
@@ -384,10 +387,12 @@
       const resources=await response.json();onStage?.("Catálogo atualizado");
       if(!state.map?.isStyleLoaded()){
         await new Promise((resolve,reject)=>{
-          const timeout=setTimeout(()=>reject(new Error("Mapa não ficou pronto para representar a camada")),10000);
-          const pronto=()=>{clearTimeout(timeout);resolve()};
-          state.map.once("load",pronto);
-          state.map.once("style.load",pronto);
+          const events=["load","style.load","idle"];
+          const cleanup=()=>events.forEach(event=>state.map.off(event,pronto));
+          const timeout=setTimeout(()=>{cleanup();reject(new Error("Mapa não ficou pronto para representar a camada"));},10000);
+          const pronto=()=>{if(!state.map.isStyleLoaded())return;clearTimeout(timeout);cleanup();resolve();};
+          events.forEach(event=>state.map.on(event,pronto));
+          pronto();
         });
       }
       return await reconcileCatalog(resources,requestedIds,focusId,onStage);
@@ -555,13 +560,13 @@
     if (item.style) {
       carregarBasemapVetorial(item)
         .then(() => alternarGrupoBasemap(id, state.basemaps.has(id)))
-        .catch(() => basemapsVetoriaisCarregados.delete(id));
+        .catch(error => {basemapsVetoriaisCarregados.delete(id);state.basemaps.delete(id);renderLayers();log(`Não foi possível carregar o mapa-base: ${error.message}`,"error");});
       return;
     }
     alternarGrupoBasemap(id, show);
   }
   function renderToolbox(filter=""){const f=filter.toLowerCase();$("#gp-toolbox").innerHTML=OPS.map(([g,ops])=>{const rows=ops.filter(o=>(o[0]+o[1]).toLowerCase().includes(f));return rows.length?`<div class="tool-group"><button class="tool-group-title"><i data-lucide="briefcase"></i>${g}</button>${rows.map(o=>`<button class="tool-row" data-op="${o[0]}"><span class="tool-name">${o[1]}</span><span class="availability ${o[3]===2?"partial":""}" title="${o[3]===1?"Disponível":o[3]===2?"Backend em implementação":"Catalogado; motor pendente"}"></span></button>`).join("")}</div>`:""}).join("");icons()}
-  function selectOp(id){state.selected=id;$$('[data-right-tab]').forEach(b=>b.classList.toggle("active",b.dataset.rightTab==="tools"));showEditor();const op=OPS.flatMap(x=>x[1]).find(x=>x[0]===id);const fields=FIELDS[id]||[];$("#gp-right-title").textContent=op[1];$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>${op[1]}</h2></div><form id="gp-op-form" data-op="${op[0]}"><div class="editor-body">${fields.length?fields.map(fieldHtml).join(""):`<div class="empty">O algoritmo está catalogado na stack, mas seu contrato de execução ainda não foi implementado no backend.</div>`}</div><div class="editor-actions"><button type="button" class="btn" data-add-function>Adicionar à função</button><button class="btn primary" ${!op[2]?"disabled":""}>Executar</button></div></form>`;icons();const form=$("#gp-op-form");configureOutputFields(form,RASTER_OUTPUT.has(id),op);configureSelectionScope(form);bindOutputNameAuto(form,op);window.gpCommands?.applyEnvironments(form);form.onsubmit=e=>{e.preventDefault();executeOp(op,e.target)};form.addEventListener("invalid",e=>{const campo=e.target,rotulo=campo.closest("label")?.textContent?.trim()||form.querySelector(`label[for="${campo.id}"]`)?.textContent?.trim()||campo.name;if(!form.dataset.avisando){form.dataset.avisando="1";log(`${op[1]}: preencha ${rotulo.replace(/\s+/g," ")} antes de executar.`,"error");setTimeout(()=>delete form.dataset.avisando,0);}campo.scrollIntoView({block:"center",behavior:"smooth"});},true);$("[data-back]").onclick=()=>showTools();$("[data-add-function]").onclick=()=>window.gpApp.newFunction(id);updateComponentPlaceholder()}
+  function selectOp(id){if(!OPS.some(group=>group[1].some(op=>op[0]===id))){log(`Ferramenta ${id} não disponível nesta versão da bancada.`,"error");return;}activateToolsTab();state.selected=id;$$('[data-right-tab]').forEach(b=>b.classList.toggle("active",b.dataset.rightTab==="tools"));showEditor();const op=OPS.flatMap(x=>x[1]).find(x=>x[0]===id);const fields=FIELDS[id]||[];$("#gp-right-title").textContent=op[1];$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>${op[1]}</h2></div><form id="gp-op-form" data-op="${op[0]}"><div class="editor-body">${fields.length?fields.map(fieldHtml).join(""):`<div class="empty">O algoritmo está catalogado na stack, mas seu contrato de execução ainda não foi implementado no backend.</div>`}</div><div class="editor-actions"><button type="button" class="btn" data-add-function>Adicionar à função</button><button class="btn primary" ${!op[2]?"disabled":""}>Executar</button></div></form>`;icons();const form=$("#gp-op-form");configureOutputFields(form,RASTER_OUTPUT.has(id),op);configureSelectionScope(form);bindOutputNameAuto(form,op);window.gpCommands?.applyEnvironments(form);form.onsubmit=e=>{e.preventDefault();executeOp(op,e.target)};form.addEventListener("invalid",e=>{const campo=e.target,rotulo=campo.closest("label")?.textContent?.trim()||form.querySelector(`label[for="${campo.id}"]`)?.textContent?.trim()||campo.name;if(!form.dataset.avisando){form.dataset.avisando="1";log(`${op[1]}: preencha ${rotulo.replace(/\s+/g," ")} antes de executar.`,"error");setTimeout(()=>delete form.dataset.avisando,0);}campo.scrollIntoView({block:"center",behavior:"smooth"});},true);$("[data-back]").onclick=()=>showTools();$("[data-add-function]").onclick=()=>window.gpApp.newFunction(id);updateComponentPlaceholder()}
   function configureSelectionScope(form){
     form?.querySelector("[data-selection-scope]")?.remove();
     if(!form)return;
@@ -587,13 +592,14 @@
       if(op)suggestOutputName(form,op);
     };
     const refresh=()=>{
-      const formats=destination.value==="memoria"?["JSON"]:(raster?["GeoTIFF"]:["GeoPackage","GeoJSON","Shapefile"]);
+      const outputRaster=op?.[0]==="OP-27"?state.layers.find(layer=>layer.id===layerInput?.value)?.tipo?.toLowerCase().includes("raster"):raster;
+      const formats=destination.value==="memoria"?["JSON"]:(outputRaster?["GeoTIFF"]:["GeoPackage","GeoJSON","Shapefile"]);
       format.innerHTML=formats.map(value=>`<option value="${value}">${value}</option>`).join("");
-      format.disabled=destination.value==="memoria";
+      format.disabled=false;
     };
-    destination.onchange=refresh;layerInput?.addEventListener("change",refreshCrs);refreshCrs();refresh();
+    destination.onchange=refresh;layerInput?.addEventListener("change",refresh);layerInput?.addEventListener("change",refreshCrs);refreshCrs();refresh();
   }
-  function fieldHtml(f){const [id,label,type,val]=f;if(type==="check")return `<label class="field-check"><input name="${id}" type="checkbox" ${val?"checked":""}>${label}</label>`;let input;if(type==="select")input=`<select name="${id}">${val.map(x=>`<option>${x}</option>`).join("")}</select>`;else if(type==="layer")input=`<select name="${id}" required><option value="">Selecione…</option>${state.layers.map(x=>`<option value="${x.id}">${escapeHtml(x.nome)}</option>`).join("")}</select>`;else input=`<input name="${id}" type="${type}" value="${val??""}" ${["number","text"].includes(type)?"":""}>`;return `<div class="field"><label>${label}</label>${input}</div>`}
+  function fieldHtml(f){const [id,label,type,val]=f;if(type==="check")return `<label class="field-check"><input name="${id}" type="checkbox" ${val?"checked":""}>${label}</label>`;let input;if(type==="select")input=`<select name="${id}">${val.map(x=>`<option>${x}</option>`).join("")}</select>`;else if(type==="layer")input=`<select name="${id}" required><option value="">Selecione…</option>${state.layers.filter(x=>id==="entrada"||Boolean(x.tipo?.toLowerCase().includes("raster"))===id.startsWith("raster")).map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.nome)}</option>`).join("")}</select>`;else input=`<input name="${id}" type="${type}" value="${val??""}" ${["number","text"].includes(type)?"":""}>`;return `<div class="field"><label>${label}</label>${input}</div>`}
   let pastaStorageEscolhida="";
   function configureLoadOperation(){
     const form=$("#gp-op-form"),type=form?.elements.tipo_entrada;
@@ -636,11 +642,43 @@
     };
     type.onchange=render;render();
   }
+  async function syncExecutionResults(body){
+    const ids=new Set();
+    const visit=value=>{
+      if(!value||typeof value!=='object')return;
+      if(Array.isArray(value)){value.forEach(visit);return;}
+      if(typeof value.camada_id==='string')ids.add(value.camada_id);
+      if(typeof value.raster_id==='string')ids.add(value.raster_id);
+      ['resultados','iteracoes','resultado','contexto'].forEach(key=>visit(value[key]));
+    };
+    visit(body);const outputs=[...ids];
+    await refreshLayers(true,outputs,outputs.at(-1));
+    if(!outputs.length)showOperationResult('Resultado da execução',body);
+    return outputs;
+  }
+  function showOperationResult(title,body){
+    const dialog=$("#gp-operation-result");if(!dialog)return;
+    $("#gp-operation-result-title").textContent=title;
+    $("#gp-operation-result-summary").textContent=body.valido===false?"A validação encontrou problemas na camada.":"Resultado retornado pelo servidor.";
+    $("#gp-operation-result-details").textContent=JSON.stringify(body,null,2);
+    const rows=body.estatisticas||body.valores?.map((valor,index)=>({feicao:index+1,valor}))||[];
+    const columns=[...new Set(rows.flatMap(row=>Object.keys(row)))];
+    const head=dialog.querySelector('thead'),table=dialog.querySelector('tbody');head.replaceChildren();table.replaceChildren();
+    const tr=document.createElement('tr');columns.forEach(column=>{const th=document.createElement('th');th.textContent=column;tr.append(th);});head.append(tr);
+    rows.forEach(row=>{const tr=document.createElement('tr');columns.forEach(column=>{const td=document.createElement('td');td.textContent=row[column]==null?'—':String(row[column]);tr.append(td);});table.append(tr);});
+    $("#gp-operation-result-download").onclick=()=>{
+      const data=body.geojson||body,url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),link=document.createElement('a');
+      link.href=url;link.download=slugifyName(title)+(body.geojson?'.geojson':'.json');link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    };
+    $("#gp-operation-result-close").onclick=()=>dialog.close();if(!dialog.open)dialog.showModal();
+  }
   async function executeOp(op,form){
     if(!op[2])return;
+    if(state.activeExecution){log("Aguarde a execução atual terminar.","error");return;}
     const fd=new FormData(form),params=new URLSearchParams(),payload={};
     for(const [k,v] of fd){
-      let value=form.elements[k]?.type==="number"&&v!==""?Number(v):v;
+      if(String(v).trim()==="")continue;
+      let value=form.elements[k]?.type==="number"?Number(v):v;
       if(["raster_ids","camada_ids"].includes(k)){
         if(payload[k])continue;
         payload[k]=fd.getAll(k).map(String).filter(Boolean);
@@ -661,38 +699,37 @@
       const layerInput=[...form.elements].find(element=>CONTENT_INPUTS.has(element.name)&&element.name.startsWith("camada_id")&&!element.multiple),layerId=layerInput?.value;
       const selected=(state.selectedGeoJSON?.features||[]).filter(feature=>feature.properties?.__gp_layer_id===layerId);
       payload.chaves_selecionadas=[...new Set(selected.map(feature=>feature.properties?.__gp_selection_key).filter(value=>value!=null).map(String))];
-      payload.atributos_selecionados=selected.map(feature=>cleanSelectionProperties(feature.properties));
+      payload.atributos_selecionados=selected.map(feature=>({...cleanSelectionProperties(feature.properties),__gp_feature:feature,__gp_selection_key:feature.properties.__gp_selection_key}));
     }
     log(`Executando ${op[1]}…`);
-    const knownResources=new Set(state.layers.map(layer=>layer.id)),startedAt=Date.now();
+    const startedAt=Date.now();
     const controller=new AbortController(),submit=form.querySelector('.editor-actions .primary'),submitLabel=submit?.textContent;
     let progress=null;
-    state.activeExecution=controller;if(submit){submit.disabled=true;submit.textContent="Executando…"}
+    state.activeExecution=controller;state.activeJob=null;if(submit){submit.disabled=true;submit.textContent="Executando…"}
     try{
       const started=await fetch(`${API}/operacoes-jobs/${op[0]}`,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(payload),signal:controller.signal});
-      let job=await started.json();if(!started.ok)throw new Error(job.detail||`HTTP ${started.status}`);
+      let job=await started.json();if(!started.ok)throw new Error(job.detail||`HTTP ${started.status}`);state.activeJob=job;
       if(job.total>3){progress=createExecutionProgress(form);job=await waitForJob(job,progress,controller.signal)}
       else job=await waitForJob(job,null,controller.signal);
       const body=job.resultado||{};
       const resultId=body.camada_id||body.raster_id;
       const visible=await refreshLayers(true,resultId?[resultId]:[],resultId);
       if(resultId&&!visible.has(resultId)){
-        if(!knownResources.has(resultId))await fetch(`${API}/camadas/${resultId}`,{method:"DELETE"}).catch(()=>{});
-        removeMapResource(resultId);state.layers=state.layers.filter(layer=>layer.id!==resultId);renderLayers();
-        throw new Error("O resultado foi calculado, mas não pôde ser representado no mapa; a operação foi desfeita")
+        log(`Resultado ${resultId} calculado e preservado. A visualização falhou; tente adicioná-lo ao mapa novamente.`,"error");
       }
       log(`${op[1]} concluído.`,"ok");
       state.history.unshift({at:new Date().toISOString(),op:op[0],name:op[1],status:"concluído",durationMs:Date.now()-startedAt,parameters:payload,result:body});
       save("gp-history",state.history.slice(0,100));
       emit("resultado",{algoritmo_id:op[0],resultado:body});
       progress?.complete();
+      if(!resultId)showOperationResult(op[1],body);
     }catch(e){
       const cancelled=e.name==="AbortError",message=cancelled?"Execução cancelada pelo usuário.":e.message;
       log(`${op[1]} ${cancelled?"cancelado":"falhou"}: ${message}`,cancelled?"":"error");
       state.history.unshift({at:new Date().toISOString(),op:op[0],name:op[1],status:cancelled?"cancelado":"erro",durationMs:Date.now()-startedAt,parameters:payload,result:String(message)});
       save("gp-history",state.history.slice(0,100));if(!cancelled)$("#gp-log").classList.add("open");
       progress?.fail(cancelled?"Execução cancelada":`Falha: ${message}`);
-    }finally{if(state.activeExecution===controller)state.activeExecution=null;if(submit){submit.disabled=false;submit.textContent=submitLabel||"Executar"}}
+    }finally{if(state.activeExecution===controller){state.activeExecution=null;state.activeJob=null;}if(submit){submit.disabled=false;submit.textContent=submitLabel||"Executar"}}
   }
   function createExecutionProgress(host){
     if(window.gpFeedback){
@@ -723,14 +760,25 @@
   }
   async function waitForJob(initial,progress=null,signal=null){
     let job=initial;if(progress){progress.configure(job.total,job.etapa_atual);progress.sync(job)}
-    while(!["concluido","erro"].includes(job.status)){
-      await new Promise((resolve,reject)=>{const timer=setTimeout(resolve,250);signal?.addEventListener("abort",()=>{clearTimeout(timer);reject(new DOMException("Cancelado","AbortError"))},{once:true})});
-      const response=await fetch(`${API}/operacoes-jobs/status/${job.id}`,{signal});job=await response.json();if(!response.ok)throw new Error(job.detail||`HTTP ${response.status}`);progress?.sync(job);
+    while(!["concluido","erro","cancelado"].includes(job.status)){
+      await new Promise((resolve,reject)=>{const abort=()=>{clearTimeout(timer);reject(new DOMException("Cancelado","AbortError"))};const timer=setTimeout(()=>{signal?.removeEventListener("abort",abort);resolve();},250);if(signal?.aborted)abort();else signal?.addEventListener("abort",abort,{once:true})});
+      const response=await fetch(`${API}/operacoes-jobs/status/${job.id}`,{signal});job=await response.json();if(!response.ok)throw new Error(job.detail||`HTTP ${response.status}`);progress?.sync(job);if(state.activeJob?.id===job.id)state.activeJob=job;
     }
+    if(job.status==="cancelado")throw new DOMException(job.erro||"Execução cancelada","AbortError");
     if(job.status==="erro")throw new Error(job.erro||"Falha no processamento");
     return job;
   }
-  function cancelExecution(){if(!state.activeExecution)return false;state.activeExecution.abort();return true}
+  async function cancelExecution(){
+    if(window.gpArquivos?.busy){log("A operação de arquivo está em andamento e não oferece interrupção segura. Aguarde a conclusão.","error");return true;}
+    if(!state.activeExecution)return false;
+    if(!state.activeJob){log("Aguarde o servidor registrar a execução antes de cancelar.","error");return true;}
+    try{
+      const response=await fetch(`${API}/operacoes-jobs/status/${state.activeJob.id}/cancelar`,{method:"POST"});
+      const body=await response.json();if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
+      log(body.status==="concluido"?"A execução já foi concluída.":"Cancelamento solicitado ao servidor.");
+    }catch(error){log(error.message,"error");}
+    return true;
+  }
   function activateRightTab(id){const tab=$(`[data-right-tab="${id}"]`);if(!tab)return;tab.hidden=false;$$('[data-right-tab]').forEach(button=>{const active=button===tab;button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active))});$(".gp-app").classList.remove("right-collapsed");tab.scrollIntoView({block:"nearest",inline:"nearest"})}
   function activateToolsTab(){activateRightTab("tools")}
   function showTools(){activateToolsTab();$("#gp-right-title").textContent="Geoprocessamento";$("#gp-tools-view").classList.add("active");$("#gp-editor-view").classList.remove("active")}
@@ -820,13 +868,13 @@
         }
         const response=await fetch(`${API}/${endpoint}/${item.id}/executar`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(inputs)}),body=await response.json();
         if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
-        log(`${isFn?"Função":"Fluxo"} executado com sucesso.`,"ok");await refreshLayers();showLibrary(kind);
+        log(`${isFn?"Função":"Fluxo"} executado com sucesso.`,"ok");await syncExecutionResults(body);showLibrary(kind);
       }catch(error){log(error.message,"error");$("#gp-log").classList.add("open")}
     };
   }
   function showLibrary(kind){
     if(kind==="properties"){showProperties(state.layers.find(layer=>layer.id===state.activeLayerId)||null);return}
-    showEditor();const isFn=kind==="functions",list=isFn?state.functions:state.flows,endpoint=isFn?"funcoes":"fluxos";
+    activateRightTab(kind);showEditor();const isFn=kind==="functions",list=isFn?state.functions:state.flows,endpoint=isFn?"funcoes":"fluxos";
     $("#gp-right-title").textContent=isFn?"Funções":"Fluxos";
     const tips=window.gpModelTips?window.gpModelTips(isFn?"function":"flow"):"";
     $("#gp-editor-view").innerHTML=`<div class="editor-head"><h2>${isFn?"Funções":"Fluxos"}</h2><button class="btn primary" data-new>${isFn?"Nova função":"Novo fluxo"}</button></div>${tips}${list.length?`<div class="editor-body builder-list">${list.map(x=>`<div class="builder-item"><i data-lucide="${isFn?"blocks":"workflow"}"></i><strong>${escapeHtml(x.nome)}</strong><span>${(isFn?x.passos:x.itens)?.length||0}</span><button class="btn" data-edit-definition="${x.id}">Editar</button><button class="btn" data-validate-definition="${x.id}">Validar</button><button class="btn primary" data-run-definition="${x.id}">Executar</button><button class="icon-btn danger" data-delete="${x.id}"><i data-lucide="trash-2"></i></button></div>`).join("")}</div>`:`<div class="empty">Nenhum item criado.</div>`}`;icons();
@@ -836,12 +884,12 @@
       try{
         if(edit){const item=list.find(value=>value.id===edit.dataset.editDefinition);if(window.gpApp.openVisualDefinition)window.gpApp.openVisualDefinition(kind,item);else{const chosen=isFn?item.passos.map(step=>({ref:step.algoritmo_id,parametros:step.parametros||{}})):item.itens.map(step=>({ref:step.funcao_id?`funcao:${step.funcao_id}`:`algoritmo:${step.algoritmo_id}`,parametros:step.parametros||{}}));builder(isFn?"function":"flow",chosen,item)}}
         if(del){const response=await fetch(`${API}/${endpoint}/${del.dataset.delete}`,{method:"DELETE"});if(!response.ok)throw new Error(`HTTP ${response.status}`);await refreshDefinitions();showLibrary(kind)}
-        if(validate){const response=await fetch(`${API}/${endpoint}/${validate.dataset.validateDefinition}/validar`,{method:"POST"}),body=await response.json();log(body.valido?"Definição válida.":body.erros.join("; "),body.valido?"ok":"error")}
+        if(validate){const response=await fetch(`${API}/${endpoint}/${validate.dataset.validateDefinition}/validar`,{method:"POST"}),body=await response.json();if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);log(body.valido?"Definição válida.":(body.erros||[]).join("; "),body.valido?"ok":"error")}
         if(run)showDefinitionRun(kind,list.find(value=>value.id===run.dataset.runDefinition));
       }catch(error){log(error.message,"error");$("#gp-log").classList.add("open")}
     };
   }
-  function showHistory(){showEditor();$("#gp-right-title").textContent="Histórico";$("#gp-editor-view").innerHTML=state.history.length?`<div class="editor-body builder-list">${state.history.map(x=>`<details class="history-item"><summary><i data-lucide="${x.status==="erro"?"circle-x":x.status==="cancelado"?"circle-stop":"circle-check"}"></i><strong>${escapeHtml(x.name)}</strong><span>${escapeHtml(x.status)} · ${new Date(x.at).toLocaleString()}${Number.isFinite(x.durationMs)?` · ${(x.durationMs/1000).toFixed(1)} s`:""}</span></summary><div class="history-details"><strong>Parâmetros</strong><pre>${escapeHtml(JSON.stringify(x.parameters||{},null,2))}</pre><strong>Resultado</strong><pre>${escapeHtml(JSON.stringify(x.result,null,2))}</pre></div></details>`).join("")}</div>`:`<div class="empty">Nenhuma execução registrada.</div>`;icons()}
+  function showHistory(){activateRightTab("history");showEditor();$("#gp-right-title").textContent="Histórico";$("#gp-editor-view").innerHTML=state.history.length?`<div class="editor-body builder-list">${state.history.map(x=>`<details class="history-item"><summary><i data-lucide="${x.status==="erro"?"circle-x":x.status==="cancelado"?"circle-stop":"circle-check"}"></i><strong>${escapeHtml(x.name)}</strong><span>${escapeHtml(x.status)} · ${new Date(x.at).toLocaleString()}${Number.isFinite(x.durationMs)?` · ${(x.durationMs/1000).toFixed(1)} s`:""}</span></summary><div class="history-details"><strong>Parâmetros</strong><pre>${escapeHtml(JSON.stringify(x.parameters||{},null,2))}</pre><strong>Resultado</strong><pre>${escapeHtml(JSON.stringify(x.result,null,2))}</pre></div></details>`).join("")}</div>`:`<div class="empty">Nenhuma execução registrada.</div>`;icons()}
   async function zoomToCatalogLayer(id){
     const resource=state.layers.find(layer=>layer.id===id),bounds=new maplibregl.LngLatBounds();
     if(resource?.tipo?.toLowerCase().includes("raster")){
@@ -883,7 +931,7 @@
     }
     state.geometryTypes[id]=String(resource.geometria_tipo||"").split(",").map(t=>t.trim()).filter(Boolean);
     const color=layerColor(id,state.geometryTypes[id]);
-    state.map.addSource(id,{type:"vector",tiles:[`${location.origin}${API}/camadas/${encodeURIComponent(id)}/tiles/{z}/{x}/{y}.pbf`],minzoom:0,maxzoom:22});
+    state.map.addSource(id,{type:"vector",tiles:[`${location.origin}${API}/camadas/${encodeURIComponent(id)}/tiles/{z}/{x}/{y}.pbf?v=20260926-grid`],minzoom:0,maxzoom:22});
     state.map.addLayer({id,type:"fill",source:id,"source-layer":"camada",paint:{"fill-color":color,"fill-opacity":.32,"fill-outline-color":color},filter:["==",["geometry-type"],"Polygon"]});
     state.map.addLayer({id:id+"-line",type:"line",source:id,"source-layer":"camada",paint:{"line-color":color,"line-width":2},filter:["==",["geometry-type"],"LineString"]});
     initPointLayer(id,color,true);
@@ -927,7 +975,7 @@
     },0);
   }
   function walkCoords(v,cb){if(!Array.isArray(v))return;if(typeof v[0]==="number")cb(v);else v.forEach(x=>walkCoords(x,cb))}
-  function bind(){ribbon();renderToolbox();refreshLayers();refreshDefinitions();window.gpCommands?.loadEnvironments?.();$("#gp-tool-search").oninput=e=>renderToolbox(e.target.value);$("#gp-layer-search").oninput=renderLayers;$("#gp-toolbox").addEventListener("click",e=>{const b=e.target.closest("[data-op]");if(b)selectOp(b.dataset.op)});$$('[data-ribbon]').forEach(b=>b.onclick=()=>{$$('[data-ribbon]').forEach(x=>x.classList.toggle("active",x===b));ribbon(b.dataset.ribbon)});$$('[data-right-tab]').forEach(b=>b.addEventListener("click",()=>{$$('[data-right-tab]').forEach(x=>{const active=x===b;x.classList.toggle("active",active);x.setAttribute("aria-selected",String(active))});if(b.dataset.rightTab==="tools")showTools();else if(b.dataset.rightTab==="history")showHistory();else if(b.dataset.rightTab==="model-elements"||b.dataset.rightTab==="model-properties")window.gpModeler?.showPanel?.(b.dataset.rightTab==="model-elements"?"elements":"properties");else showLibrary(b.dataset.rightTab)}));$("#gp-file-input").onchange=e=>{abrirEnvioAoStorage(e.target.files);e.target.value=""};const mapView=$(".gp-map-view");["dragenter","dragover"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.add("dragging")}));["dragleave","drop"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.remove("dragging")}));mapView.addEventListener("drop",e=>abrirEnvioAoStorage(e.dataTransfer.files));$("#gp-home").onclick=()=>state.map.flyTo({center:[-48.5,-22.4],zoom:6.2});$("#gp-fit").onclick=()=>state.map.fitBounds([[-53.2,-25.5],[-44,-19.5]],{padding:20});$("#gp-log-toggle").onclick=()=>$("#gp-log").classList.toggle("open")}
+  function bind(){ribbon();renderToolbox();refreshLayers();refreshDefinitions();window.gpCommands?.loadEnvironments?.();$("#gp-tool-search").oninput=e=>renderToolbox(e.target.value);$("#gp-layer-search").oninput=renderLayers;$("#gp-toolbox").addEventListener("click",e=>{const b=e.target.closest("[data-op]");if(b)selectOp(b.dataset.op)});$$('[data-ribbon]').forEach(b=>b.onclick=()=>{$$('[data-ribbon]').forEach(x=>x.classList.toggle("active",x===b));ribbon(b.dataset.ribbon)});$$('[data-right-tab]').forEach(b=>b.addEventListener("click",()=>{$$('[data-right-tab]').forEach(x=>{const active=x===b;x.classList.toggle("active",active);x.setAttribute("aria-selected",String(active))});if(b.dataset.rightTab==="tools")showTools();else if(b.dataset.rightTab==="history")showHistory();else if(b.dataset.rightTab==="model-elements"||b.dataset.rightTab==="model-properties")window.gpModeler?.showPanel?.(b.dataset.rightTab==="model-elements"?"elements":"properties");else showLibrary(b.dataset.rightTab)}));$("#gp-file-input").onchange=e=>{abrirEnvioAoStorage(e.target.files);e.target.value=""};const mapView=$(".gp-map-view");["dragenter","dragover"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.add("dragging")}));["dragleave","drop"].forEach(n=>mapView.addEventListener(n,e=>{e.preventDefault();mapView.classList.remove("dragging")}));mapView.addEventListener("drop",e=>abrirEnvioAoStorage(e.dataTransfer.files));$("#gp-home").onclick=()=>state.map.flyTo({center:[-48.5,-22.4],zoom:6.2});$("#gp-fit").onclick=()=>window.gpCommands.fitAllLayers().catch(error=>log(error.message,"error"));$("#gp-log-toggle").onclick=()=>$("#gp-log").classList.toggle("open")}
   function symbolPreview(kind,value,color){
     const c=color||"#334155";
     if(kind==="shape"){const paths={circle:'<circle cx="23" cy="7" r="5.5"/>',square:'<rect x="17.5" y="1.5" width="11" height="11"/>',triangle:'<polygon points="23,1 29,12 17,12"/>',diamond:'<polygon points="23,1 29,7 23,13 17,7"/>',star:'<polygon points="23,1 24.6,5.6 29.4,5.6 25.4,8.5 27,13 23,10.2 19,13 20.6,8.5 16.6,5.6 21.4,5.6"/>',cross:'<polygon points="20.5,1 25.5,1 25.5,4.5 29,4.5 29,9.5 25.5,9.5 25.5,13 20.5,13 20.5,9.5 17,9.5 17,4.5 20.5,4.5"/>'};return `<svg class="sym-preview" viewBox="0 0 46 14" aria-hidden="true"><g fill="${c}" stroke="#334155" stroke-width="1">${paths[value]||paths.circle}</g></svg>`}
@@ -1213,52 +1261,38 @@
     tab.dataset.layerId=state.activeAttributeLayerId||"";
     activateRightTab(tabId);tab.scrollIntoView({behavior:"smooth",block:"nearest",inline:"nearest"});return tab;
   }
-  function attributeRecordKey(record={}){const id=record.OBJECTID??record.ObjectID??record.objectid??record.FID??record.fid??record.id;return id!=null?String(id):JSON.stringify(record)}
+  function attributeRecordKey(record={}){const id=record.__gp_selection_key??record.__gp_feature?.id??record.OBJECTID??record.ObjectID??record.objectid??record.FID??record.fid??record.id;return id!=null?String(id):JSON.stringify(Object.fromEntries(Object.entries(record).filter(([key])=>key!=="_indice"&&!key.startsWith("__gp_"))))}
   function cleanSelectionProperties(properties={}){return Object.fromEntries(Object.entries(properties).filter(([key])=>!key.startsWith("__gp_")))}
-  function selectedRecordsForLayer(layerId){return(state.selectedGeoJSON?.features||[]).filter(feature=>feature.properties?.__gp_layer_id===layerId).map(feature=>cleanSelectionProperties(feature.properties))}
-  function renderAttributeTable(layerId){
-    const body=state.attributeTableCache?.[layerId];if(!body)return;
-    const editing=state.editingLayers.has(layerId);
-    const selected=selectedRecordsForLayer(layerId),selectedKeys=new Set(selected.map(attributeRecordKey));
-    state.attributeTableModes??={};let mode=state.attributeTableModes[layerId]||"all";if(!selected.length)mode="all";state.attributeTableModes[layerId]=mode;
-    const fetched=body.registros||[],known=new Set(fetched.map(attributeRecordKey)),all=[...selected.filter(row=>!known.has(attributeRecordKey(row))),...fetched],rows=mode==="selection"?selected:all;
-    const columns=[...new Set([...(body.colunas||[]).map(column=>column.nome),...rows.flatMap(row=>Object.keys(row))])].filter(column=>column!=="_indice"),opened=(state.attributeTableLayers||[]).filter(id=>state.layers.some(layer=>layer.id===id));
-    const pendentes=state.attributeEdits[layerId]||{};
-    const celula=(row,column)=>{
-      // Só linhas vindas da página buscada (com _indice) são endereçáveis para
-      // edição — uma linha só de seleção, ainda não presente na página atual,
-      // fica somente leitura (mesma regra para valor complexo: dict/lista).
-      const editavel=editing&&row._indice!=null&&typeof row[column]!=="object";
-      if(!editavel)return `<td>${escapeHtml(row[column]??"")}</td>`;
-      const valor=pendentes[row._indice]?.[column]??row[column]??"";
-      const tipo=(body.colunas||[]).find(c=>c.nome===column)?.tipo||"";
-      const inputType=/int|float/.test(tipo)?"number":"text";
-      return `<td class="attribute-cell-editavel"><input type="${inputType}" ${inputType==="number"?"step=\"any\"":""} value="${escapeHtml(valor)}" data-edit-row="${row._indice}" data-edit-field="${escapeHtml(column)}"></td>`;
-    };
-    $("#gp-editor-view").innerHTML=`<div class="attribute-workspace ${editing?"attribute-workspace--editando":""}"><div class="attribute-layer-tabs" role="tablist" aria-label="Camadas com tabela aberta">${opened.map(id=>{const layer=state.layers.find(item=>item.id===id);return`<button type="button" role="tab" data-attribute-layer="${escapeHtml(id)}" class="${id===layerId?"active":""}" aria-selected="${id===layerId}">${escapeHtml(layer?.nome||id)}</button>`}).join("")}</div>${editing?'<p class="attribute-edit-hint"><i data-lucide="pencil"></i> Editando atributos — clique numa célula para alterar. As mudanças só são gravadas ao clicar em "Salvar edições".</p>':""}<div class="attribute-table-area"><div class="attribute-table-wrap"><table><thead><tr>${columns.map(column=>`<th>${escapeHtml(column)}</th>`).join("")}</tr></thead><tbody>${rows.map(row=>`<tr class="${selectedKeys.has(attributeRecordKey(row))?"selected-record":""}" data-record-key="${escapeHtml(attributeRecordKey(row))}">${columns.map(column=>celula(row,column)).join("")}</tr>`).join("")}</tbody></table></div>${rows.length?"":'<div class="empty compact">Nenhum registro nesta visualização.</div>'}</div><footer class="attribute-footer"><div class="attribute-record-tabs" role="tablist"><button type="button" data-attribute-mode="all" class="${mode==="all"?"active":""}">Todos os registros</button><button type="button" data-attribute-mode="selection" class="${mode==="selection"?"active":""}" ${selected.length?"":"hidden"}>Seleção (${selected.length})</button></div>${editing?`<div class="attribute-edit-actions"><span class="attribute-edit-count">${contarEdicoesPendentes(layerId)} edição(ões) pendente(s)</span><button type="button" class="btn ghost" data-attribute-discard ${contarEdicoesPendentes(layerId)?"":"disabled"}>Descartar edições</button><button type="button" class="btn primary" data-attribute-save ${contarEdicoesPendentes(layerId)?"":"disabled"}>Salvar edições</button></div>`:`<span>${selected.length} de ${body.total} selecionados</span>`}</footer></div>`;
-    icons();
-    $$('[data-attribute-layer]').forEach(button=>button.onclick=()=>showAttributes(button.dataset.attributeLayer));
-    $$('[data-attribute-mode]').forEach(button=>button.onclick=()=>{state.attributeTableModes[layerId]=button.dataset.attributeMode;renderAttributeTable(layerId)});
-    $$('[data-edit-row]').forEach(input=>input.onchange=()=>{
-      marcarEdicaoDeAtributo(layerId,Number(input.dataset.editRow),input.dataset.editField,input.value);
-      const contador=$(".attribute-edit-count"),n=contarEdicoesPendentes(layerId);
-      if(contador)contador.textContent=`${n} edição(ões) pendente(s)`;
-      $$('[data-attribute-save],[data-attribute-discard]').forEach(botao=>botao.disabled=!n);
-    });
-    const salvar=$('[data-attribute-save]');if(salvar)salvar.onclick=()=>salvarEdicoesDeAtributo(layerId);
-    const descartar=$('[data-attribute-discard]');if(descartar)descartar.onclick=()=>descartarEdicoesDeAtributo(layerId);
-    if(mode==="all")$(".selected-record")?.scrollIntoView({block:"nearest"});
-  }
-  async function showAttributes(layerId){
-    layerId=layerId||state.activeAttributeLayerId||state.activeLayerId;if(layerId)ensureAttributesTab(layerId);showEditor();$("#gp-right-title").textContent="Tabela de Atributos";
-    if(!layerId){$("#gp-editor-view").innerHTML='<div class="empty">Selecione uma camada vetorial.</div>';return}
+  function selectedRecordsForLayer(layerId){return(state.selectedGeoJSON?.features||[]).filter(feature=>feature.properties?.__gp_layer_id===layerId).map(feature=>({...cleanSelectionProperties(feature.properties),__gp_feature:feature,__gp_selection_key:feature.properties.__gp_selection_key}))}
+  function renderAttributeTable(layerId){const body=state.attributeTableCache?.[layerId];if(body)window.gpAttributeTable.render(layerId,body);}
+  let attributeRequest=0;
+  async function showAttributes(layerId,offset=0){
+    const request=++attributeRequest;
+    layerId=layerId||state.activeLayerId||state.activeAttributeLayerId;
+    const layer=state.layers.find(item=>item.id===layerId);
+    showEditor();$("#gp-right-title").textContent="Tabela de Atributos";
+    if(!layerId||layer?.tipo?.toLowerCase().includes("raster")){$("#gp-editor-view").innerHTML='<div class="empty">Selecione uma camada vetorial.</div>';return}
+    ensureAttributesTab(layerId);
+    $("#gp-editor-view").innerHTML='<div class="empty">Carregando atributos…</div>';
     try{
-      const response=await fetch(`${API}/camadas/${layerId}/atributos?limite=100`),body=await response.json();
-      if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
+      const file=window.gpArquivos?.sessions.get(layerId);
+      const local=file?.geojson||(layer?.destino==="memoria_local"?state.map.getSource(layerId)?._data:null);
+      let body;
+      if(local?.type==="FeatureCollection"){
+        const features=local.features||[];
+        const names=[...new Set([...(file?.campos||[]).map(c=>c.nome),...features.flatMap(f=>Object.keys(f.properties||{}))])];
+        body={colunas:names.map(nome=>({nome,tipo:file?.campos?.find(c=>c.nome===nome)?.tipo||(features.some(f=>typeof f.properties?.[nome]==="number")?"float64":features.some(f=>typeof f.properties?.[nome]==="boolean")?"bool":"string")})),registros:features.map(f=>({...f.properties,__gp_feature:f})),total:features.length,offset,limite:100};
+      }else{
+        const response=await fetch(`${API}/camadas/${encodeURIComponent(layerId)}/atributos/tabela`);
+        body=await response.json();
+        if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
+      }
+      if(request!==attributeRequest)return;
       state.attributeTableCache??={};state.attributeTableCache[layerId]=body;state.activeAttributeLayerId=layerId;renderAttributeTable(layerId);
-    }catch(error){$("#gp-editor-view").innerHTML=`<div class="empty">${escapeHtml(error.message)}</div>`}
+    }catch(error){if(request===attributeRequest)$("#gp-editor-view").innerHTML=`<div class="empty">${escapeHtml(error.message)}</div>`}
   }
-  function syncAttributeSelection(){const layerId=state.activeAttributeLayerId;if(layerId&&state.attributeTableCache?.[layerId]&&$('[data-right-tab="attributes"].active'))renderAttributeTable(layerId)}
+  function syncAttributeSelection(){window.gpAttributeTable?.sync();}
+
   // Sessão de edição por camada, como o "Toggle Editing" do QGIS / "Edit" do
   // ArcGIS Pro: liga/desliga, e ao salvar grava na fonte real da camada
   // (arquivo do acervo quando ela tem um, e sempre também o PostGIS) — ver
@@ -1342,7 +1376,7 @@
   };
   function toolRow(op){return`<button class="tool-row" data-op="${op[0]}" title="${escapeHtml(op[1])}"><i data-lucide="settings-2"></i><span class="tool-name">${escapeHtml(op[1])}</span><span class="availability" title="Disponível"></span></button>`}
   function openToolboxScope(scope="geral"){state.toolboxScope=TOOLBOX_SCOPES[scope]?scope:"geral";activateToolsTab();showTools();$("#gp-right-title").textContent=TOOLBOX_SCOPES[state.toolboxScope].nome;renderToolbox($("#gp-tool-search").value)}
-  fieldHtml=function(f){const[id,label,type,val]=f,prefix=id==="nome_saida"?'<div class="form-section-title"><i data-lucide="save"></i><span>Saída</span></div>':"";if(type==="check")return`${prefix}<label class="field-check"><input name="${id}" type="checkbox" ${val?"checked":""}>${label}</label>`;let input,help="";if(type==="select")input=`<select name="${id}" required>${val.map(x=>`<option value="${x}">${crsLabel(x)}</option>`).join("")}</select>`;else if(type==="layer"||type==="layers"){input=`<select name="${id}" required ${type==="layers"?'multiple size="5"':""}><option value="">Selecione no Painel de Conteúdo…</option>${state.layers.map(x=>`<option value="${x.id}">${escapeHtml(x.nome)}</option>`).join("")}</select>`;help='<p class="field-help">Origem: Painel de Conteúdo.</p>'}else input=`<input name="${id}" type="${type}" value="${escapeHtml(val??"")}" required>`;return`${prefix}<div class="field"><label>${label}</label>${input}${help}</div>`};
+  fieldHtml=function(f){const[id,label,type,val]=f,prefix=id==="nome_saida"?'<div class="form-section-title"><i data-lucide="save"></i><span>Saída</span></div>':"";if(type==="check")return`${prefix}<label class="field-check"><input name="${id}" type="checkbox" ${val?"checked":""}>${label}</label>`;let input,help="";if(type==="select")input=`<select name="${id}" required>${val.map(x=>`<option value="${x}">${crsLabel(x)}</option>`).join("")}</select>`;else if(type==="layer"||type==="layers"){input=`<select name="${id}" required ${type==="layers"?'multiple size="5"':""}><option value="">Selecione no Painel de Conteúdo…</option>${state.layers.filter(x=>id==="entrada"||Boolean(x.tipo?.toLowerCase().includes("raster"))===id.startsWith("raster")).map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.nome)}</option>`).join("")}</select>`;help='<p class="field-help">Origem: Painel de Conteúdo.</p>'}else input=`<input name="${id}" type="${type}" value="${escapeHtml(val??"")}" ${type==="number"?'step="any"':""} ${["fonte_id","campo_agrupamento","distancia_maxima","valor_minimo","valor_maximo","pesos","atributo_rasterizacao","atributo_agregacao"].includes(id)?"":"required"}>`;return`${prefix}<div class="field"><label>${label}</label>${input}${help}</div>`};
   TOOL_SUBGROUPS["OP-27"]="Persistência";
   document.addEventListener("gp-modeler-state",()=>{const tab=$("[data-ribbon].active")?.dataset.ribbon||"modelo";ribbon(tab)});
   document.addEventListener("click",event=>{const fnRow=event.target.closest?.("[data-toolbox-function]"),flowRow=event.target.closest?.("[data-toolbox-flow]");if(fnRow){const fn=state.functions.find(item=>item.id===fnRow.dataset.toolboxFunction);if(fn)showDefinitionRun("functions",fn)}if(flowRow){const flow=state.flows.find(item=>item.id===flowRow.dataset.toolboxFlow);if(flow)showDefinitionRun("flows",flow)}});
@@ -1422,5 +1456,5 @@
     if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
     if(!opts.lote) renderLayers();
   }
-  window.gpApp={state,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,consumePortalService,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,log,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer,carregarPorId,carregarPorIds,adicionarCamadaGeoJsonEmMemoria,aplicarCorPadraoCamada,openSymbology};
+  window.gpApp={state,showOperationResult,syncExecutionResults,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,consumePortalService,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,log,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer,carregarPorId,carregarPorIds,adicionarCamadaGeoJsonEmMemoria,aplicarCorPadraoCamada,openSymbology};
 })();

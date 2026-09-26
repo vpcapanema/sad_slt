@@ -3,7 +3,7 @@
   "displayName": "SICARD — Conexões e túneis",
   "description": "Controla a ponte SSH da VM, o túnel SLT/SIGMA e o acesso ao servidor local no Explorador Remoto.",
   "publisher": "vpcapanema",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -53,6 +53,10 @@
       {
         "command": "sicardTunnel.web",
         "title": "SICARD: abrir servidor local"
+      },
+      {
+        "command": "sicardTunnel.ensureBridge",
+        "title": "SICARD: verificar e recuperar ponte antes da tarefa"
       }
     ],
     "views": {

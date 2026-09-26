@@ -18,8 +18,8 @@
       <article><span>Áreas distintas identificadas</span><strong data-kpi="areas">—</strong></article>
     </div>
     <ul class="ea-analytics-notes">
-      <li>Uma feição pode intersectar várias áreas e aparecer em ambas as categorias. As contagens não são somáveis.</li>
-      <li data-role="method">Interseção geométrica com os polígonos das bases selecionadas; inclui contato na borda. Não representa gravidade ou impedimento.</li>
+      <li>Uma feição pode intersectar várias áreas e aparecer em ambas as categorias. As contagens e percentuais por área não são somáveis. Pontos indicam posição; linhas informam extensão e polígonos informam área em comum.</li>
+      <li data-role="method">Interseção geométrica com os polígonos das bases selecionadas; contato na borda e interseção no interior são identificados em cada vínculo. Não representa gravidade ou impedimento.</li>
       <li data-role="incomplete" hidden>Há feições sem informação suficiente; as contagens exibem apenas as interseções comprovadas.</li>
       <li data-role="legacy" hidden>Extração anterior: as bases com interseção são exibidas quando registradas. A identificação das áreas pode estar incompleta. Uma nova extração preserva todos os vínculos.</li>
     </ul>
@@ -53,5 +53,5 @@
   </article>
 </template>
 <template id="ea-tpl-territorial-row"><tr><td><button type="button" class="ea-btn" data-value="feicao"></button><small class="ea-hint" data-value="fid"></small><dl class="ea-feature-attributes" data-feature-attributes></dl></td><td data-value="estado"></td><td><ul class="ea-area-list"></ul></td></tr></template>
-<template id="ea-tpl-area"><li><button type="button" class="ea-area-link" data-value="titulo"></button><dl data-area-summary></dl><details><summary>Todos os atributos da área</summary><dl data-area-details></dl></details></li></template>
+<template id="ea-tpl-area"><li><button type="button" class="ea-area-link" data-value="titulo"></button><p class="ea-hint" data-area-relation></p><dl data-area-summary></dl><details><summary>Todos os atributos da área</summary><dl data-area-details></dl></details></li></template>
 <template id="ea-tpl-base-only"><li><strong data-value="base"></strong><span class="ea-hint"> · identificação da área não registrada</span></li></template>

@@ -81,12 +81,12 @@ async def login(
 
 
 @router.get("/me", response_model=SessionUserSchema)
-async def me(user: SessionUser = Depends(require_authenticated)):
+def me(user: SessionUser = Depends(require_authenticated)):
     return _user_schema(user)
 
 
 @router.get("/session")
-async def session(user: SessionUser | None = Depends(get_optional_session)):
+def session(user: SessionUser | None = Depends(get_optional_session)):
     """Consulta pública de sessão, sem transformar ausência de cookie em erro 401."""
     if not user:
         return {"authenticated": False, "user": None}
@@ -94,7 +94,7 @@ async def session(user: SessionUser | None = Depends(get_optional_session)):
 
 
 @router.post("/logout")
-async def logout(
+def logout(
     response: Response,
     request: Request,
     user: SessionUser | None = Depends(get_optional_session),

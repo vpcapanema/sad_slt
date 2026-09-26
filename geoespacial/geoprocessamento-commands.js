@@ -13,6 +13,7 @@
   function notify(text) { if(window.gpFeedback){window.gpFeedback.info(text,"Bancada de geoprocessamento");return;}const status = $("#gp-save-state"); status.textContent = text; clearTimeout(notify.timer); notify.timer = setTimeout(() => status.textContent = "Ambiente local", 3500); }
 
   function openPanel(title, html) {
+    $(".gp-app").classList.remove("right-collapsed");
     const tab = $('[data-right-tab="tools"]'); tab.hidden = false; tab.click();
     $("#gp-right-title").textContent = title; $("#gp-tools-view").classList.remove("active"); $("#gp-editor-view").classList.add("active");
     $("#gp-editor-view").innerHTML = `<div class="editor-head"><button class="icon-btn" data-command-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>${escapeHtml(title)}</h2></div>${html}`;
@@ -47,7 +48,9 @@
       if (layer.tipo?.toLowerCase().includes("raster")) {
         const preview = await request(`${API}/camadas/${layer.id}/preview`); preview.coordinates.forEach(coord => bounds.extend(coord));
       } else {
-        const data = await request(`${API}/camadas/${layer.id}/geojson`); data.features?.forEach(feature => walkCoordinates(feature.geometry?.coordinates, coord => bounds.extend(coord)));
+        const local=window.gpArquivos?.sessions.get(layer.id)?.geojson || state().map.getSource(layer.id)?._data;
+        if(local&&typeof local==='object')local.features?.forEach(feature=>walkCoordinates(feature.geometry?.coordinates,coord=>bounds.extend(coord)));
+        else {const data=await request(`${API}/camadas/${encodeURIComponent(layer.id)}/bounds`);if(data.bounds?.length===4){bounds.extend(data.bounds.slice(0,2));bounds.extend(data.bounds.slice(2,4));}}
       }
     }
     if (!bounds.isEmpty()) state().map.fitBounds(bounds, { padding: 40, maxZoom: 15 }); else notify("Não há camadas para ajustar.");
@@ -74,6 +77,17 @@
     window.gpApp.syncAttributeSelection?.();
     window.gpApp.configureSelectionScope?.();
   }
+  function selectFeature(layerId,feature,add=false){
+    const tagged=tagSelection({type:"FeatureCollection",features:[feature]},layerId).features;
+    const previous=add?(state().selectedGeoJSON?.features||[]):[];
+    state().activeLayerId=layerId;
+    renderSelection({type:"FeatureCollection",features:[...new Map([...previous,...tagged].map(f=>[`${f.properties.__gp_layer_id}:${f.properties.__gp_selection_key}`,f])).values()]});
+  }
+  function setLayerSelection(layerId,features){
+    const others=(state().selectedGeoJSON?.features||[]).filter(f=>f.properties?.__gp_layer_id!==layerId);
+    const tagged=tagSelection({type:'FeatureCollection',features},layerId);
+    renderSelection({type:'FeatureCollection',features:[...others,...tagged.features]});
+  }
   function clearSelection() { removeSelectionLayers(); state().selectedGeoJSON = { type: "FeatureCollection", features: [] }; $("#gp-selection").textContent = "0 selecionadas"; window.gpApp.syncAttributeSelection?.(); window.gpApp.configureSelectionScope?.(); }
   function fitSelection() { const data = state().selectedGeoJSON; if (!data?.features?.length) return notify("Não há feições selecionadas."); fitGeoJSON(data); }
   function setActiveMapTool(action) { $$('[data-action="explore"],[data-action="select"]').forEach(button => button.classList.toggle("active-tool", button.dataset.action === action)); }
@@ -96,6 +110,8 @@
       const box = [[event.point.x - 4, event.point.y - 4], [event.point.x + 4, event.point.y + 4]], allowed = new Set(state().layers.map(layer => layer.id));
       const feature = map.queryRenderedFeatures(box).find(item => allowed.has(item.source));
       if (!feature) return;
+      selectFeature(feature.source,{type:"Feature",id:feature.id,geometry:feature.geometry,properties:feature.properties},Boolean(event.originalEvent?.shiftKey));
+      window.gpApp.showAttributes(feature.source);
       new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: "380px" }).setLngLat(event.lngLat).setHTML(popupHtml(feature, event.lngLat)).addTo(map);
     };
     map.on("click", state().exploreHandler); notify("Explorar ativo: clique em uma feição para consultar seus atributos.");
@@ -105,10 +121,15 @@
     setActiveMapTool("select");
     state().selectionHandler = event => {
       const box = [[event.point.x - 4, event.point.y - 4], [event.point.x + 4, event.point.y + 4]];
-      const allowed = new Set(state().layers.map(layer => layer.id)); const seen = new Set();
-      const features = map.queryRenderedFeatures(box).filter(feature => allowed.has(feature.source)).filter(feature => { const key = `${feature.source}:${featureKey(feature.properties, feature.id)}`; if (seen.has(key)) return false; seen.add(key); return true; }).map(feature => ({ type: "Feature", geometry: feature.geometry, properties: { ...(feature.properties || {}), __gp_layer_id: feature.source, __gp_selection_key: featureKey(feature.properties, feature.id) } }));
-      const previous = event.originalEvent.shiftKey ? (state().selectedGeoJSON?.features || []) : [];
-      renderSelection({ type: "FeatureCollection", features: [...previous, ...features] });
+      const allowed = new Set(state().layers.filter(layer=>!layer.tipo?.toLowerCase().includes('raster')).map(layer => layer.id));
+      const hits=map.queryRenderedFeatures(box).filter(feature=>allowed.has(feature.source));
+      const hit=hits.find(feature=>feature.source===state().activeLayerId)||hits[0];
+      const local=hit&&(window.gpArquivos?.sessions.get(hit.source)?.geojson||map.getSource(hit.source)?._data);
+      const full=hit&&(local?.features?.find(feature=>featureKey(feature.properties,feature.id)===featureKey(hit.properties,hit.id))||hit);
+      const features=hit?tagSelection({type:'FeatureCollection',features:[{type:'Feature',id:full.id,geometry:full.geometry,properties:full.properties}]},hit.source).features:[];
+      const previous = event.originalEvent?.shiftKey ? (state().selectedGeoJSON?.features || []) : [];
+      renderSelection({ type: "FeatureCollection", features: [...new Map([...previous,...features].map(f=>[`${f.properties.__gp_layer_id}:${f.properties.__gp_selection_key}`,f])).values()] });
+      if(features.length){state().activeLayerId=features[0].properties.__gp_layer_id;window.gpApp.showAttributes(state().activeLayerId);}
     };
     map.on("click", state().selectionHandler); notify("Clique no mapa para selecionar; Shift adiciona à seleção.");
   }
@@ -137,12 +158,33 @@
     $("#gp-calculate-field").onsubmit = async event => { event.preventDefault(); try { const form = event.target; const params = new URLSearchParams({ campo: form.field.value, expressao: form.expression.value }); const result = await request(`${API}/camadas/${layer.id}/calcular-campo?${params}`, { method: "POST" }); notify(`${result.feicoes_atualizadas} registros atualizados.`); window.gpApp.showAttributes(layer.id); } catch (error) { notify(error.message); } };
   }
 
+  function displayFilteredLayer(id,data){
+    const map=state().map,source=map.getSource(id);
+    if(!source)throw new Error("Adicione a camada ao mapa antes de filtrar.");
+    if(source.setData){source.setData(data);return;}
+    const layers=map.getStyle().layers.filter(layer=>layer.source===id);
+    state().filterSources??={};state().filterSources[id]??=source.serialize();
+    layers.forEach(layer=>map.removeLayer(layer.id));map.removeSource(id);
+    map.addSource(id,{type:"geojson",data});
+    layers.forEach(layer=>{const copy={...layer};delete copy['source-layer'];map.addLayer(copy);});
+  }
+  async function restoreLayer(id){
+    const file=window.gpArquivos?.sessions.get(id);
+    if(file){displayFilteredLayer(id,file.geojson);return;}
+    const map=state().map,original=state().filterSources?.[id];
+    if(original){
+      const layers=map.getStyle().layers.filter(layer=>layer.source===id);
+      layers.forEach(layer=>map.removeLayer(layer.id));map.removeSource(id);map.addSource(id,original);
+      layers.forEach(layer=>map.addLayer({...layer,'source-layer':'camada'}));delete state().filterSources[id];
+    }else displayFilteredLayer(id,await request(`${API}/camadas/${id}/geojson`));
+  }
   async function queryPanel(mode) {
-    const layer = activeLayer(); if (!layer) return notify("Selecione uma camada vetorial."); const filtering = mode === "filter";
+    const layer = activeLayer(); if (!layer) return notify("Selecione uma camada vetorial."); if(layer.tipo?.toLowerCase().includes("raster"))return notify("Esta consulta requer uma camada vetorial."); const filtering = mode === "filter";
     openPanel(filtering ? "Filtrar camada" : "Selecionar por atributo", `<form id="gp-query-attributes"><div class="editor-body"><div class="field"><label>Camada</label><input value="${escapeHtml(layer.nome)}" readonly></div><div class="field"><label>Expressão</label><textarea name="expression" required placeholder="Ex.: Municipio == 'Campinas'"></textarea></div><p class="field-help">Use nomes de campos, operadores ==, !=, &gt;, &lt;, and, or e valores entre aspas.</p></div><div class="editor-actions">${filtering ? '<button type="button" class="btn" data-clear-filter>Limpar filtro</button>' : ""}<button class="btn primary">${filtering ? "Aplicar filtro" : "Selecionar"}</button></div></form>`);
     const form = $("#gp-query-attributes");
-    form.onsubmit = async event => { event.preventDefault(); try { const params = new URLSearchParams({ expressao: form.expression.value }); const result = await request(`${API}/camadas/${layer.id}/consultar-atributos?${params}`, { method: "POST" }); if (filtering) { state().map.getSource(layer.id).setData(result.geojson); state().layerFilters ??= {}; state().layerFilters[layer.id] = form.expression.value; notify(`${result.total} feições exibidas.`); } else { renderSelection(tagSelection(result.geojson, layer.id)); notify(`${result.total} feições selecionadas.`); } } catch (error) { notify(error.message); } };
-    if (filtering) $("[data-clear-filter]").onclick = async () => { const data = await request(`${API}/camadas/${layer.id}/geojson`); state().map.getSource(layer.id).setData(data); delete state().layerFilters?.[layer.id]; form.expression.value = ""; notify("Filtro removido."); };
+    form.onsubmit = async event => { event.preventDefault(); try { const params = new URLSearchParams({ expressao: form.expression.value }); const file=window.gpArquivos?.sessions.get(layer.id);
+      const result=file?await request(`${API}/bancada-arquivos/consultar`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({arquivo:file.arquivo,revisao:file.revisao,expressao:form.expression.value})}):await request(`${API}/camadas/${layer.id}/consultar-atributos?${params}`, { method: "POST" }); if (filtering) { displayFilteredLayer(layer.id,result.geojson); state().layerFilters ??= {}; state().layerFilters[layer.id] = form.expression.value; notify(`${result.total} feições exibidas.`); } else { renderSelection(tagSelection(result.geojson, layer.id)); notify(`${result.total} feições selecionadas.`); } } catch (error) { notify(error.message); } };
+    if (filtering) $("[data-clear-filter]").onclick = async () => { try{await restoreLayer(layer.id);delete state().layerFilters?.[layer.id];form.expression.value="";notify("Filtro removido.");}catch(error){notify(error.message);} };
   }
 
   async function refreshSource() {
@@ -166,5 +208,5 @@
     $("#gp-definition-command").onsubmit = async event => { event.preventDefault(); try { const [kind, ...parts] = event.target.definition.value.split(":"), id = parts.join(":"), entry = pool.find(value => value.kind === kind && value.item.id === id); if (!entry) throw new Error("Selecione uma definição"); const copy = structuredClone(entry.item); if (action === "duplicate") { copy.id = `${kind === "functions" ? "funcao" : "fluxo"}_${Date.now()}`; copy.nome = `${copy.nome} (cópia)`; const saved = await request(`${API}/${kind === "functions" ? "funcoes" : "fluxos"}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(copy) }); state()[kind].push(saved); window.gpApp.showLibrary(kind); notify("Definição duplicada."); } else { const blob = new Blob([JSON.stringify({ tipo: kind, definicao: copy }, null, 2)], { type: "application/json" }), url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = `${copy.id}.json`; link.click(); URL.revokeObjectURL(url); notify("Definição exportada."); } } catch (error) { notify(error.message); } };
   }
 
-  window.gpCommands = { activeLayer, notify, openPanel, fitAllLayers, fitSelection, selectOnMap, explore, clearSelection, loadEnvironments, showEnvironments, applyEnvironments, calculateField, selectByAttribute: () => queryPanel("select"), filterLayer: () => queryPanel("filter"), refreshSource, duplicateDefinition: () => definitionCommand("duplicate"), importDefinition: () => definitionCommand("import"), exportDefinition: () => definitionCommand("export") };
+  window.gpCommands = { featureKey, setLayerSelection, selectFeature, activeLayer, notify, openPanel, fitAllLayers, fitSelection, selectOnMap, explore, clearSelection, loadEnvironments, showEnvironments, applyEnvironments, calculateField, selectByAttribute: () => queryPanel("select"), filterLayer: () => queryPanel("filter"), refreshSource, duplicateDefinition: () => definitionCommand("duplicate"), importDefinition: () => definitionCommand("import"), exportDefinition: () => definitionCommand("export") };
 })();

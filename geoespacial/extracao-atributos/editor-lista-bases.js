@@ -87,5 +87,5 @@ export function criarEditorListaBases(state,changed,escolher,salvar){
   }catch(e){proc.concluir({type:'error',message:e.message});}
   finally{if(token===versao){validando=false;state.validatingBases=false;render();window.SICARDExtracao?.atualizarControles?.();}}
  };
- return {adicionar,carregar,render,marcar,itens:()=>lista()?.itens,lista,salva(dados){if(lista()){Object.assign(lista(),{nome:dados.nome,chave:dados.chave});anterior=copia(lista());render();}}};
+ return {limpar(){versao++;anterior=null;editando=false;sessaoAberta=false;selecionadas.clear();state.listaBases=null;nome.textContent="";render();},adicionar,carregar,render,marcar,itens:()=>lista()?.itens,lista,salva(dados){if(lista()){Object.assign(lista(),{nome:dados.nome,chave:dados.chave});anterior=copia(lista());render();}}};
 }

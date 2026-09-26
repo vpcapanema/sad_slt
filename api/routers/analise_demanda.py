@@ -29,7 +29,7 @@ def _erro_http(exc: Exception) -> HTTPException:
 
 
 @router.get("/{codigo}", response_model=AnaliseDemandaResponseSchema)
-async def obter_analise(
+def obter_analise(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> AnaliseDemandaResponseSchema:
@@ -41,7 +41,7 @@ async def obter_analise(
 
 
 @router.put("/{codigo}/criterios", response_model=AnaliseDemandaResponseSchema)
-async def salvar_criterios(
+def salvar_criterios(
     codigo: str,
     body: CriteriosAnaliseSchema,
     user: SessionUser = Depends(require_analyst),
@@ -54,7 +54,7 @@ async def salvar_criterios(
 
 
 @router.put("/{codigo}/complemento", response_model=AnaliseDemandaResponseSchema)
-async def salvar_complemento(
+def salvar_complemento(
     codigo: str,
     body: ComplementoParecerSchema,
     user: SessionUser = Depends(require_analyst),
@@ -67,7 +67,7 @@ async def salvar_complemento(
 
 
 @router.post("/{codigo}/decidir", response_model=DecisaoAnaliseResponseSchema)
-async def decidir(
+def decidir(
     codigo: str,
     body: DecisaoAnaliseSchema,
     user: SessionUser = Depends(require_analyst),
@@ -88,7 +88,7 @@ async def decidir(
 
 
 @router.get("/{codigo}/parecer.pdf")
-async def baixar_parecer_pdf(
+def baixar_parecer_pdf(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> Response:

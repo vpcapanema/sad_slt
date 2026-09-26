@@ -13,7 +13,7 @@ router = APIRouter(prefix="/ahp/objetos", tags=["ahp"])
 
 
 @router.get("", response_model=list[ObjetoAhpResponseSchema])
-async def listar_objetos(
+def listar_objetos(
     status: str | None = Query(None, description="Filtrar por status (ex.: elegivel_ahp)"),
     grupo: str | None = Query(None, description="Filtrar por grupo_comparacao"),
     _user: SessionUser = Depends(require_authenticated),
@@ -25,7 +25,7 @@ async def listar_objetos(
 
 
 @router.get("/{codigo}", response_model=ObjetoAhpResponseSchema)
-async def obter_objeto(
+def obter_objeto(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> ObjetoAhpResponseSchema:
@@ -38,7 +38,7 @@ async def obter_objeto(
 
 
 @router.patch("/{codigo}", response_model=ObjetoAhpResponseSchema)
-async def atualizar_objeto(
+def atualizar_objeto(
     codigo: str,
     body: ObjetoAhpUpdateSchema,
     _user: SessionUser = Depends(require_analyst),

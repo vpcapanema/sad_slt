@@ -17,6 +17,8 @@ def tipo_categoria(codigo, nome=''):
 
 
 def registrar(entradas, categorias, progress=lambda message: None):
+    from api.services import extracao_ogr as espacial
+    from api.services.extracao_correspondencias import relacao
     import geopandas as gpd
     from api.repositories.camada_geoespacial_repository import _json_safe
     from api.services.extracao_atributos_enriquecimento import filtrar_entrada, _POS, _ID
@@ -24,7 +26,7 @@ def registrar(entradas, categorias, progress=lambda message: None):
     from api.services.extracao_entrada_local import _representacao_mapa
     from api.services.extracao_atributos_regras import normalizar_entrada
 
-    snapshot = {'versao':1, 'metodo':'intersects', 'entradas':[], 'bases':[], 'areas':{}}
+    snapshot = {'versao':2, 'metodo':'OGR.Intersects', 'geoprocessamento':espacial.provenance(), 'entradas':[], 'bases':[], 'areas':{}}
     preparadas = []
     for category in categorias:
         tipo = tipo_categoria(category.get('id'), category.get('nome'))
@@ -40,7 +42,7 @@ def registrar(entradas, categorias, progress=lambda message: None):
                         'preparacao':preparation, 'poligonos':len(polygons),
                         'cobertura_completa':bool(mask.all())}
             snapshot['bases'].append(metadata)
-            preparadas.append((metadata, base['frame'], polygons, polygons.sindex))
+            preparadas.append((metadata, base['frame'], polygons, espacial.SpatialIndex(polygons)))
 
     for entry in entradas:
         progress(f"Relacionando {entry['nome']} às áreas de risco e restrição")
@@ -54,7 +56,7 @@ def registrar(entradas, categorias, progress=lambda message: None):
             feature = {'fid':int(row[_POS]), 'identificador':_json_safe(row[_ID]),
                        'atributos':_json_safe(row.drop([frame.geometry.name,_POS,_ID]).to_dict()),
                        'geometria':preview['features'][pos]['geometry'], 'geometria_disponivel':valid,
-                       'areas':[], 'bases_intersectadas':[]}
+                       'areas':[], 'relacoes':{}, 'bases_intersectadas':[]}
             if valid:
                 for base, source, polygons, spatial_index in preparadas:
                     candidates = sorted(int(polygons.index[int(i)]) for i in spatial_index.query(geometry, predicate='intersects'))
@@ -63,6 +65,7 @@ def registrar(entradas, categorias, progress=lambda message: None):
                     for fid in candidates:
                         area_id = f"{base['id']}:{fid}"
                         feature['areas'].append(area_id)
+                        feature['relacoes'][area_id] = relacao(geometry, polygons.loc[fid])
                         if area_id not in snapshot['areas']:
                             snapshot['areas'][area_id] = {'id':area_id, 'base_id':base['id'], 'base':base['nome'],
                                 'categoria':base['categoria'], 'fid':fid,

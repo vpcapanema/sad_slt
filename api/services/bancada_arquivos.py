@@ -78,8 +78,8 @@ def executar(operacao, parametros, arquivos, user):
     from api.services.geoprocessamento_jobs import _input_references, INPUT_KEYS
     from api.services.geoprocessamento_engine import geoprocessamento_engine
     references = _input_references(parametros)
-    if not references or set(references) != set(arquivos):
-        raise ValueError('Abra no storage todos os arquivos de entrada desta operação.')
+    if not references or not set(arquivos).issubset(references):
+        raise ValueError('Os arquivos informados devem corresponder às entradas da operação.')
     if parametros.get('processar_sobre') == 'selecionadas':
         raise ValueError('Salve a seleção como camada antes de executar sobre parte do arquivo.')
     sources = {ident: abrir(value['arquivo'], value['revisao']) for ident, value in arquivos.items()}
@@ -94,6 +94,7 @@ def executar(operacao, parametros, arquivos, user):
             key = 'arquivo_bancada_' + uuid4().hex
             temporary[ident] = key
             geo._camadas[key] = gpd.GeoDataFrame.from_features(source['geojson']['features'], crs=4326).to_crs(source['crs_arquivo'])
+            geo._metadados[key] = {'id':key,'nome':source['nome'],'tipo':'vetorial','crs':source['crs_arquivo'],'destino':'memoria_local'}
         params = dict(parametros)
         for key, value in params.items():
             if key in INPUT_KEYS:
@@ -101,6 +102,15 @@ def executar(operacao, parametros, arquivos, user):
             elif key in {'camada_ids', 'raster_ids'}:
                 params[key] = [temporary.get(item, item) for item in value]
         result = asyncio.run(geoprocessamento_engine.execute(operacao, params))
+        resource_id = result.get('camada_id') or result.get('raster_id')
+        if resource_id and params.get('destino') == 'storage' and operacao not in {'OP-25','OP-26','OP-27'}:
+            filename, output_format = geoprocessamento_engine._canonical_output_file(params)
+            output_crs = params.get('crs_saida', 'entrada')
+            result['arquivo_saida'] = asyncio.run(geo.salvar_camada(resource_id, 'data/geoespacial/outputs', filename,
+                                                    'auto' if output_crs == 'entrada' else output_crs, output_format))
+        for original, transient in temporary.items():
+            if result.get('camada_id') == transient:
+                result['camada_id'] = original
         ciclo.finalizar(execution)
         result_id = result.get('camada_id')
         metadata = geo._metadados.get(result_id) or {}
@@ -115,3 +125,15 @@ def executar(operacao, parametros, arquivos, user):
         for key in temporary.values():
             geo._camadas.pop(key, None)
             geo._metadados.pop(key, None)
+
+
+def consultar(arquivo, revisao, expressao):
+    """Consulta o snapshot atual do arquivo sem alterar o original."""
+    from api.services.expressoes_atributos import selecionar
+    source = abrir(arquivo, revisao)
+    frame = gpd.GeoDataFrame.from_features(source['geojson']['features'], crs=4326)
+    # Manter o identificador original usado pela seleção no mapa.
+    frame.index = [str(feature['id']) for feature in source['geojson']['features']]
+    selected = selecionar(frame, expressao)
+    import json
+    return {'total': len(selected), 'geojson': json.loads(selected.to_json(default=str))}

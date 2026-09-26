@@ -15,3 +15,5 @@
 .territorial-mapa-popup td { padding:.2rem .4rem; border-bottom:1px solid #e3e9ef; vertical-align:top; }
 .territorial-mapa-popup td:first-child { font-weight:600; white-space:nowrap; }
 @media(max-width:650px) { .territorial-builder .mlb { padding:1rem; } .territorial-mapa { height:380px; } }
+/* A estrutura permanece no documento mesmo quando um painel não tem dados. */
+.territorial-builder [hidden] { display:none !important; }

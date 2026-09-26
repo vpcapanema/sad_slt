@@ -4,7 +4,6 @@ from urllib.parse import urlsplit
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
-from starlette.concurrency import run_in_threadpool
 
 from api.deps.auth import require_authenticated
 from api.services import storage_upload_web as service
@@ -35,11 +34,11 @@ async def abrir(request: Request, user: SessionUser = Depends(require_storage_up
 
 
 @router.get('/sessoes/{chave}/resultado')
-async def resultado(chave: str, user: SessionUser = Depends(require_storage_upload)):
+def resultado(chave: str, user: SessionUser = Depends(require_storage_upload)):
     sessao = service.obter(chave, user.id)
     if sessao.enviando:
         raise HTTPException(409, 'Aguarde o término do envio.')
-    dados = await run_in_threadpool(service.resultados, sessao)
+    dados = service.resultados(sessao)
     return dados
 
 

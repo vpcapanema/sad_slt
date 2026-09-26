@@ -261,6 +261,7 @@ REQUIRED_PARAMETERS = {
     "OP-03": {"camada_id"},
     "OP-04": {"camada_id", "distancia_buffer"},
     "OP-05": {"camada_id_1", "camada_id_2"},
+    "OP-05-IDENT": {"camada_id_1", "camada_id_2"},
     "OP-06": {"camada_id"},
     "OP-07": {"camada_id", "camada_ref_id"},
     "OP-08": {"camada_id"},
@@ -347,7 +348,20 @@ class GeoprocessamentoEngine:
     def _grid(
         self, gdf: gpd.GeoDataFrame, resolution: float
     ) -> tuple[Affine, int, int]:
+        if not np.isfinite(resolution) or resolution <= 0:
+            raise ValueError("A resolução deve ser um número positivo e finito.")
+        if gdf.empty or gdf.crs is None:
+            raise ValueError("A entrada deve conter feições e um CRS definido.")
         minx, miny, maxx, maxy = gdf.total_bounds
+        if not np.isfinite([minx, miny, maxx, maxy]).all():
+            raise ValueError("A entrada não possui limites espaciais válidos.")
+        # Para pontos e linhas, incluir os extremos em centros de células;
+        # sem a margem, pontos na borda direita/inferior caíam fora da grade.
+        if gdf.geometry.geom_type.isin(['Point', 'MultiPoint', 'LineString', 'MultiLineString']).any():
+            minx -= resolution / 2
+            miny -= resolution / 2
+            maxx += resolution / 2
+            maxy += resolution / 2
         width = max(1, int(np.ceil((maxx - minx) / resolution)))
         height = max(1, int(np.ceil((maxy - miny) / resolution)))
         if width * height > 25_000_000:
@@ -361,6 +375,10 @@ class GeoprocessamentoEngine:
         p: dict[str, Any],
         progress: Callable[[str], None] | None = None,
     ) -> dict[str, Any]:
+        p = {key: value for key, value in p.items() if value != "" and value is not None}
+        for key in REQUIRED_PARAMETERS.get(op_id, set()):
+            if key not in p or p[key] == []:
+                raise ValueError(f"Parâmetro obrigatório ausente: {key}")
         p = self._apply_selection_scope(op_id, p)
 
         def aceitos(metodo, exceto="camada_id"):
@@ -596,8 +614,27 @@ class GeoprocessamentoEngine:
         rid = self._new_raster(data, {"crs": gdf.crs, "transform": transform})
         return {"raster_id": rid, "shape": list(data.shape), "resolucao": resolution}
 
+    def _distance_crs(self, params):
+        from pyproj import CRS
+        frame = self._layer(params['camada_id'])
+        if frame.crs is None:
+            raise ValueError('Defina o CRS da camada antes de calcular distâncias.')
+        unit = params.get('unidade_distancia', 'metros')
+        if unit == 'graus':
+            return 'EPSG:4326'
+        if unit != 'metros':
+            raise ValueError('Unidade de distância deve ser metros ou graus.')
+        crs = CRS.from_user_input(frame.crs)
+        if crs.is_projected and all(abs(axis.unit_conversion_factor - 1) < 1e-9 for axis in crs.axis_info[:2]):
+            return crs
+        target = frame.estimate_utm_crs()
+        if target is None:
+            raise ValueError('Não foi possível definir um CRS métrico para a camada.')
+        return target
+
     async def distance(self, p: dict[str, Any]) -> dict[str, Any]:
         q = dict(p)
+        q["crs_destino"] = self._distance_crs(p)
         q.setdefault("resolucao_raster", p.get("resolucao_distancia", 50))
         q["valor_preenchimento"] = 0
         base = await self.rasterize(q)
@@ -618,6 +655,7 @@ class GeoprocessamentoEngine:
     async def weighted_distance(self, p: dict[str, Any]) -> dict[str, Any]:
         field = p["atributo_peso"]
         q = dict(p)
+        q["crs_destino"] = self._distance_crs(p)
         q["resolucao_raster"] = p.get("resolucao_distancia", 50)
         q["atributo_rasterizacao"] = field
         q["valor_preenchimento"] = 0
@@ -813,7 +851,7 @@ class GeoprocessamentoEngine:
             row, col = rowcol(profile["transform"], geom.centroid.x, geom.centroid.y)
             out.append(
                 float(data[row, col])
-                if 0 <= row < data.shape[0] and 0 <= col < data.shape[1]
+                if 0 <= row < data.shape[0] and 0 <= col < data.shape[1] and np.isfinite(data[row, col])
                 else None
             )
         return {"valores": out}
@@ -1028,6 +1066,7 @@ class GeoprocessamentoEngine:
             float(p.get("valor_acima", 1)),
             float(p.get("valor_abaixo", 0)),
         ).astype("float32")
+        result[~np.isfinite(source)] = np.nan
         rid = self._new_raster(result, self.profiles[p["raster_id"]])
         return {"raster_id": rid, "shape": list(result.shape)}
 
@@ -1051,15 +1090,28 @@ class GeoprocessamentoEngine:
         }
         if method not in filters:
             raise ValueError("Estatística focal deve ser media, minimo ou maximo")
-        result = filters[method](source.astype("float32"), size=size)
+        valid = np.isfinite(source)
+        if method == 'media':
+            weights = uniform_filter(valid.astype(float), size=size)
+            sums = uniform_filter(np.where(valid, source, 0.).astype(float), size=size)
+            result = np.divide(sums, weights, out=np.full(source.shape, np.nan), where=weights > 0)
+        else:
+            fill = np.inf if method == 'minimo' else -np.inf
+            result = filters[method](np.where(valid, source, fill).astype(float), size=size)
+        result[~valid] = np.nan
         rid = self._new_raster(result, self.profiles[p["raster_id"]])
         return {"raster_id": rid, "shape": list(result.shape), "estatistica": method}
 
     async def gaussian_smoothing(self, p: dict[str, Any]) -> dict[str, Any]:
         source = self._raster(p["raster_id"])
-        result = gaussian_filter(
-            source.astype("float32"), sigma=float(p.get("sigma", 1))
-        )
+        sigma = float(p.get("sigma", 1))
+        if not np.isfinite(sigma) or sigma <= 0:
+            raise ValueError("Sigma deve ser um número positivo e finito.")
+        valid = np.isfinite(source)
+        weights = gaussian_filter(valid.astype(float), sigma=sigma)
+        sums = gaussian_filter(np.where(valid, source, 0.).astype(float), sigma=sigma)
+        result = np.divide(sums, weights, out=np.full(source.shape, np.nan), where=weights > 0)
+        result[~valid] = np.nan
         rid = self._new_raster(result, self.profiles[p["raster_id"]])
         return {"raster_id": rid, "shape": list(result.shape)}
 

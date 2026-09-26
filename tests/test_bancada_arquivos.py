@@ -10,6 +10,8 @@ from api.services import visualizacao_arquivo as reader
 
 @pytest.fixture
 def source(tmp_path, monkeypatch):
+    from api.services import extracao_entrada_local
+    monkeypatch.setattr(extracao_entrada_local, 'localizacao', lambda _: {'status':'consultado','ufs':['SP'],'municipios':[]})
     relative = 'data/geoespacial/outputs/origem.gpkg'
     path = tmp_path / relative
     path.parent.mkdir(parents=True)
@@ -30,6 +32,9 @@ def source(tmp_path, monkeypatch):
 
 def test_geometria_e_atributo_editados_preservam_crs(source):
     original, path = source
+    assert original['metadados_local']['componente']=='area'
+    assert original['metadados_local']['vertices']==5
+    assert original['metadados_local']['bytes']==path.stat().st_size
     before = path.read_bytes()
     edited = deepcopy(original['geojson'])
     edited['features'][0]['properties']['nome'] = 'Editada'
@@ -115,3 +120,38 @@ def test_endpoints_exigem_sessao():
     with TestClient(app) as client:
         assert client.post('/bancada-arquivos/salvar', json={}).status_code == 401
         assert client.post('/bancada-arquivos/executar', json={}).status_code == 401
+
+
+def test_consulta_arquivo_preserva_ids_e_original(source):
+    original,path=source
+    before=path.read_bytes()
+    result=service.consultar(original['arquivo'],original['revisao'],'nome == "Original"')
+    assert result['total']==1
+    assert result['geojson']['features'][0]['id']==str(original['geojson']['features'][0]['id'])
+    assert path.read_bytes()==before
+
+
+def test_consulta_sem_correspondencia_e_expressao_invalida(source):
+    original,_=source
+    assert service.consultar(original['arquivo'],original['revisao'],'nome == "Ausente"')['total']==0
+    with pytest.raises(ValueError):
+        service.consultar(original['arquivo'],original['revisao'],'nome.mean()')
+
+
+def test_operacao_mistura_arquivo_e_camada_do_catalogo(source,monkeypatch):
+    import geopandas as gpd
+    from shapely.geometry import box
+    original,_=source
+    monkeypatch.setattr(service.ciclo,'iniciar',lambda *a:'teste-misto')
+    monkeypatch.setattr(service.ciclo,'finalizar',lambda *a,**kw:None)
+    monkeypatch.setattr(service.geo,'_camadas',{})
+    monkeypatch.setattr(service.geo,'_metadados',{})
+    mask=gpd.GeoDataFrame(geometry=[box(0,0,500,1000)],crs=3857)
+    frames=[]
+    monkeypatch.setattr(service.geo,'obter_camada_dados',lambda ident:mask if ident=='mascara' else service.geo._camadas[ident])
+    monkeypatch.setattr(service.geo,'registrar_camada',lambda frame,*a,**kw:frames.append(frame.copy()) or 'saida')
+    result=service.executar('OP-33',{'camada_id':'original','camada_mascara_id':'mascara'},
+                            {'original':{'arquivo':original['arquivo'],'revisao':original['revisao']}},SimpleNamespace(id='teste'))
+    assert result['resultado']['camada_id']=='saida'
+    assert frames[0].geometry.iloc[0].area==pytest.approx(500000)
+    assert not service.geo._camadas and not service.geo._metadados

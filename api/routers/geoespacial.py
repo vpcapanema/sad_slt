@@ -1,6 +1,7 @@
 """Rotas HTTP — Módulo Geoespacial."""
 from __future__ import annotations
 
+import asyncio
 from io import BytesIO
 import logging
 from pathlib import Path
@@ -202,7 +203,7 @@ def _rotas_sincronas() -> frozenset[str]:
 
 
 @router.get("/algoritmos")
-async def listar_algoritmos() -> list[dict]:
+def listar_algoritmos() -> list[dict]:
     sincronas = _rotas_sincronas()
     return [
         {
@@ -234,26 +235,26 @@ async def listar_algoritmos() -> list[dict]:
 
 
 @router.get("/ambientes", response_model=AmbienteGeoprocessamentoSchema)
-async def obter_ambientes_geoprocessamento(
+def obter_ambientes_geoprocessamento(
     user: SessionUser = Depends(require_geospatial_access),
 ) -> dict[str, Any]:
     """Retorna os padrões de execução persistidos para o usuário autenticado."""
-    return await geoespacial_repository.obter_ambiente_usuario(user.id)
+    return asyncio.run(geoespacial_repository.obter_ambiente_usuario(user.id))
 
 
 @router.put("/ambientes", response_model=AmbienteGeoprocessamentoSchema)
-async def salvar_ambientes_geoprocessamento(
+def salvar_ambientes_geoprocessamento(
     ambiente: AmbienteGeoprocessamentoSchema,
     user: SessionUser = Depends(require_geospatial_access),
 ) -> dict[str, Any]:
     """Atualiza os padrões de execução do usuário autenticado."""
-    return await geoespacial_repository.salvar_ambiente_usuario(
+    return asyncio.run(geoespacial_repository.salvar_ambiente_usuario(
         user.id, ambiente.model_dump(),
-    )
+    ))
 
 
 @router.get("/catalogo/projeto")
-async def obter_catalogo_projeto() -> dict[str, list[dict[str, Any]]]:
+def obter_catalogo_projeto() -> dict[str, list[dict[str, Any]]]:
     """Lista os recursos reais que compõem o projeto geoespacial."""
     grupos_toolbox: dict[str, list[dict[str, str]]] = {}
     for operacao_id, familia in TOOL_FAMILIES.items():
@@ -278,22 +279,22 @@ async def obter_catalogo_projeto() -> dict[str, list[dict[str, Any]]]:
         }],
         "bancos_de_dados": [{"nome": "PostgreSQL/PostGIS SLT", "tipo": "postgresql"}],
         "pastas": folders,
-        "conexoes": await geoespacial_repository.listar_servicos_portal(),
+        "conexoes": asyncio.run(geoespacial_repository.listar_servicos_portal()),
     }
 
 
 @router.get("/catalogo/portal/servicos")
-async def listar_servicos_portal() -> list[dict[str, Any]]:
+def listar_servicos_portal() -> list[dict[str, Any]]:
     """Serviços WMS/WFS aprovados para consumo na bancada."""
-    return await geoespacial_repository.listar_servicos_portal()
+    return asyncio.run(geoespacial_repository.listar_servicos_portal())
 
 
 @router.post("/catalogo/portal/servicos", status_code=status.HTTP_201_CREATED)
-async def criar_servico_portal(
+def criar_servico_portal(
     servico: PortalServicoInputSchema,
     _: SessionUser = Depends(require_operator),
 ) -> dict[str, Any]:
-    return await geoespacial_repository.criar_servico_portal(servico.model_dump())
+    return asyncio.run(geoespacial_repository.criar_servico_portal(servico.model_dump()))
 
 
 async def _servico_portal(servico_id: str, *tipos: str) -> dict[str, Any]:
@@ -328,7 +329,7 @@ def _asset_stac_raster(asset: dict[str, Any]) -> bool:
 @router.get("/catalogo/portal/{servico_id}/colecoes")
 async def listar_colecoes_stac(servico_id: str) -> list[dict[str, str]]:
     """Lista coleções de um STAC configurado, sem expor URLs arbitrárias ao cliente."""
-    servico = await _servico_portal(servico_id, "STAC")
+    servico = await run_in_threadpool(asyncio.run, _servico_portal(servico_id, "STAC"))
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.get(f"{servico['url'].rstrip('/')}/collections")
@@ -353,7 +354,7 @@ async def listar_colecoes_stac(servico_id: str) -> list[dict[str, str]]:
 @router.post("/catalogo/portal/stac/buscar")
 async def buscar_itens_stac(parametros: dict[str, Any]) -> list[dict[str, Any]]:
     """Pesquisa cenas STAC na extensão e período escolhidos pelo usuário."""
-    servico = await _servico_portal(str(parametros.get("servico_id", "")), "STAC")
+    servico = await run_in_threadpool(asyncio.run, _servico_portal(str(parametros.get("servico_id", "")), "STAC"))
     collection = str(parametros.get("colecao", "")).strip()
     if not collection:
         raise HTTPException(status_code=422, detail="Selecione uma coleção")
@@ -382,25 +383,25 @@ async def buscar_itens_stac(parametros: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 @router.post("/catalogo/portal/stac/importar")
-async def importar_asset_stac(parametros: dict[str, Any]) -> dict[str, Any]:
+def importar_asset_stac(parametros: dict[str, Any]) -> dict[str, Any]:
     """Importa um COG escolhido pelo usuário para o catálogo e mapa da bancada."""
-    await _servico_portal(str(parametros.get("servico_id", "")), "STAC")
+    asyncio.run(_servico_portal(str(parametros.get("servico_id", "")), "STAC"))
     url = str(parametros.get("url", ""))
     if not _asset_stac_raster({"href": url, "type": parametros.get("tipo")}):
         raise HTTPException(status_code=422, detail="Selecione um asset GeoTIFF/COG do resultado da pesquisa")
     try:
-        return await geoespacial_service.importar_raster_url(
+        return asyncio.run(geoespacial_service.importar_raster_url(
             url, str(parametros.get("titulo") or "Asset STAC"),
             _bbox_portal(parametros["bbox"]) if parametros.get("bbox") else None,
-        )
+        ))
     except (RuntimeError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/catalogo/portal/{servico_id}/mapbiomas/colecoes")
-async def listar_colecoes_mapbiomas(servico_id: str) -> list[dict[str, Any]]:
+def listar_colecoes_mapbiomas(servico_id: str) -> list[dict[str, Any]]:
     """Expõe as séries anuais públicas do MapBiomas com suas fontes oficiais."""
-    servico = await _servico_portal(servico_id, "MAPBIOMAS")
+    servico = asyncio.run(_servico_portal(servico_id, "MAPBIOMAS"))
     return [
         {
             "id": "cobertura-10-1-30m",
@@ -424,7 +425,7 @@ async def listar_colecoes_mapbiomas(servico_id: str) -> list[dict[str, Any]]:
 @router.post("/catalogo/portal/osm/importar")
 async def importar_osm_portal(parametros: dict[str, Any]) -> dict[str, Any]:
     """Consulta feições OSM na extensão do mapa e registra uma camada vetorial."""
-    servico = await _servico_portal(str(parametros.get("servico_id", "")), "OGCAPI")
+    servico = await run_in_threadpool(asyncio.run, _servico_portal(str(parametros.get("servico_id", "")), "OGCAPI"))
     bbox = _bbox_portal(parametros.get("bbox"))
     tema = str(parametros.get("tema", "vias"))
     filtros = {"vias": 'way["highway"]', "hidrografia": 'way["waterway"]', "edificios": 'way["building"]'}
@@ -472,43 +473,43 @@ async def importar_osm_portal(parametros: dict[str, Any]) -> dict[str, Any]:
 
 
 @router.get("/catalogo/favoritos")
-async def listar_favoritos_catalogo(
+def listar_favoritos_catalogo(
     user: SessionUser = Depends(require_geospatial_access),
 ) -> list[dict[str, Any]]:
-    return await geoespacial_repository.listar_favoritos_portal(user.id)
+    return asyncio.run(geoespacial_repository.listar_favoritos_portal(user.id))
 
 
 @router.post("/catalogo/favoritos", status_code=status.HTTP_201_CREATED)
-async def salvar_favorito_catalogo(
+def salvar_favorito_catalogo(
     favorito: PortalFavoritoInputSchema,
     user: SessionUser = Depends(require_geospatial_access),
 ) -> dict[str, Any]:
-    return await geoespacial_repository.salvar_favorito_portal(
+    return asyncio.run(geoespacial_repository.salvar_favorito_portal(
         user.id, favorito.model_dump(mode="json"),
-    )
+    ))
 
 
 @router.delete("/catalogo/favoritos/{servico_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def excluir_favorito_catalogo(
+def excluir_favorito_catalogo(
     servico_id: str,
     camada: str = Query(default=""),
     user: SessionUser = Depends(require_geospatial_access),
 ) -> Response:
-    if not await geoespacial_repository.excluir_favorito_portal(user.id, servico_id, camada):
+    if not asyncio.run(geoespacial_repository.excluir_favorito_portal(user.id, servico_id, camada)):
         raise HTTPException(status_code=404, detail="Favorito não encontrado")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/algoritmos/{algoritmo_id}/executar")
-async def executar_algoritmo(algoritmo_id: str, parametros: dict) -> dict:
+def executar_algoritmo(algoritmo_id: str, parametros: dict) -> dict:
     try:
-        return await geoprocessamento_engine.execute(algoritmo_id.upper(), parametros)
+        return asyncio.run(geoprocessamento_engine.execute(algoritmo_id.upper(), parametros))
     except (ValueError, KeyError, TypeError, RuntimeError, NotImplementedError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/operacoes-jobs/{algoritmo_id}", status_code=status.HTTP_202_ACCEPTED)
-async def iniciar_operacao_com_progresso(algoritmo_id: str, parametros: dict, user: SessionUser = Depends(require_geospatial_access)) -> dict:
+def iniciar_operacao_com_progresso(algoritmo_id: str, parametros: dict, user: SessionUser = Depends(require_geospatial_access)) -> dict:
     """Inicia operação e retorna seu contador real de microtarefas."""
     try:
         return geoprocessamento_jobs.create(algoritmo_id, parametros, str(user.id))
@@ -517,11 +518,21 @@ async def iniciar_operacao_com_progresso(algoritmo_id: str, parametros: dict, us
 
 
 @router.get("/operacoes-jobs/status/{job_id}")
-async def consultar_progresso_operacao(job_id: str) -> dict:
+def consultar_progresso_operacao(job_id: str) -> dict:
     job = geoprocessamento_jobs.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Execução não encontrada")
     return job
+
+
+@router.post("/operacoes-jobs/status/{job_id}/cancelar")
+def cancelar_operacao(job_id: str, user: SessionUser = Depends(require_geospatial_access)) -> dict:
+    try:
+        return geoprocessamento_jobs.cancel(job_id, str(user.id))
+    except KeyError as exc:
+        raise HTTPException(404, detail="Execução não encontrada") from exc
+    except ValueError as exc:
+        raise HTTPException(409, detail=str(exc)) from exc
 
 
 @router.get("/operacoes-jobs/status/{job_id}/eventos")
@@ -535,19 +546,19 @@ def eventos_progresso_operacao(job_id: str):
 
 
 @router.post("/operacoes/salvar-camada")
-async def salvar_camada(parametros: dict) -> dict:
+def salvar_camada(parametros: dict) -> dict:
     """Salva uma camada usando somente entrada, destino e saída."""
     try:
-        return await geoespacial_service.salvar_camada(
+        return asyncio.run(geoespacial_service.salvar_camada(
             parametros["entrada"], parametros["destino"], parametros["saida"],
             parametros.get("crs", "auto"), parametros.get("formato", "auto"),
-        )
+        ))
     except (ValueError, KeyError, TypeError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/funcoes")
-async def salvar_funcao(funcao: dict) -> dict:
+def salvar_funcao(funcao: dict) -> dict:
     _validar_definicao_funcao(funcao)
     funcao_id = funcao.get("id") or f"funcao_{len(modelo_repo.listar('funcao'))+1}"
     funcao["id"] = funcao_id
@@ -555,14 +566,14 @@ async def salvar_funcao(funcao: dict) -> dict:
 
 
 @router.put("/funcoes/{funcao_id}")
-async def editar_funcao(funcao_id: str, funcao: dict) -> dict:
+def editar_funcao(funcao_id: str, funcao: dict) -> dict:
     _validar_definicao_funcao(funcao)
     funcao["id"] = funcao_id
     return modelo_repo.salvar(funcao, "funcao")
 
 
 @router.get("/funcoes/{funcao_id}")
-async def obter_funcao(funcao_id: str) -> dict:
+def obter_funcao(funcao_id: str) -> dict:
     funcao = modelo_repo.obter(funcao_id, "funcao")
     if not funcao:
         raise HTTPException(status_code=404, detail="Função não encontrada")
@@ -570,14 +581,14 @@ async def obter_funcao(funcao_id: str) -> dict:
 
 
 @router.delete("/funcoes/{funcao_id}")
-async def excluir_funcao(funcao_id: str) -> dict:
+def excluir_funcao(funcao_id: str) -> dict:
     if not modelo_repo.excluir(funcao_id, "funcao"):
         raise HTTPException(status_code=404, detail="Função não encontrada")
     return {"message": "Função excluída"}
 
 
 @router.post("/funcoes/{funcao_id}/validar")
-async def validar_funcao(funcao_id: str) -> dict:
+def validar_funcao(funcao_id: str) -> dict:
     funcao = modelo_repo.obter(funcao_id, "funcao")
     if not funcao:
         raise HTTPException(status_code=404, detail="Função não encontrada")
@@ -591,7 +602,7 @@ async def validar_funcao(funcao_id: str) -> dict:
 
 
 @router.post("/funcoes/{funcao_id}/executar")
-async def executar_funcao(funcao_id: str, entradas: dict) -> dict:
+def executar_funcao(funcao_id: str, entradas: dict) -> dict:
     funcao = modelo_repo.obter(funcao_id, "funcao")
     if not funcao:
         raise HTTPException(status_code=404, detail="Função não encontrada")
@@ -605,15 +616,15 @@ async def executar_funcao(funcao_id: str, entradas: dict) -> dict:
             item["chave"]: item.get("valor") for item in funcao.get("parametros_expostos", [])
             if item.get("chave") and item.get("valor") not in (None, "")
         })
-        return await geoprocessamento_engine.run_steps(
+        return asyncio.run(geoprocessamento_engine.run_steps(
             funcao.get("passos", []), {**defaults, **entradas}
-        )
+        ))
     except (ValueError, KeyError, TypeError, RuntimeError, NotImplementedError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/fluxos")
-async def salvar_fluxo(fluxo: dict) -> dict:
+def salvar_fluxo(fluxo: dict) -> dict:
     _validar_definicao_fluxo(fluxo)
     fluxo_id = fluxo.get("id") or f"fluxo_{len(modelo_repo.listar('fluxo'))+1}"
     fluxo["id"] = fluxo_id
@@ -621,14 +632,14 @@ async def salvar_fluxo(fluxo: dict) -> dict:
 
 
 @router.put("/fluxos/{fluxo_id}")
-async def editar_fluxo(fluxo_id: str, fluxo: dict) -> dict:
+def editar_fluxo(fluxo_id: str, fluxo: dict) -> dict:
     _validar_definicao_fluxo(fluxo)
     fluxo["id"] = fluxo_id
     return modelo_repo.salvar(fluxo, "fluxo")
 
 
 @router.get("/fluxos/{fluxo_id}")
-async def obter_fluxo(fluxo_id: str) -> dict:
+def obter_fluxo(fluxo_id: str) -> dict:
     fluxo = modelo_repo.obter(fluxo_id, "fluxo")
     if not fluxo:
         raise HTTPException(status_code=404, detail="Fluxo não encontrado")
@@ -636,14 +647,14 @@ async def obter_fluxo(fluxo_id: str) -> dict:
 
 
 @router.delete("/fluxos/{fluxo_id}")
-async def excluir_fluxo(fluxo_id: str) -> dict:
+def excluir_fluxo(fluxo_id: str) -> dict:
     if not modelo_repo.excluir(fluxo_id, "fluxo"):
         raise HTTPException(status_code=404, detail="Fluxo não encontrado")
     return {"message": "Fluxo excluído"}
 
 
 @router.post("/fluxos/{fluxo_id}/validar")
-async def validar_fluxo(fluxo_id: str) -> dict:
+def validar_fluxo(fluxo_id: str) -> dict:
     fluxo = modelo_repo.obter(fluxo_id, "fluxo")
     if not fluxo:
         raise HTTPException(status_code=404, detail="Fluxo não encontrado")
@@ -657,7 +668,7 @@ async def validar_fluxo(fluxo_id: str) -> dict:
 
 
 @router.post("/fluxos/{fluxo_id}/executar")
-async def executar_fluxo(fluxo_id: str, entradas: dict) -> dict:
+def executar_fluxo(fluxo_id: str, entradas: dict) -> dict:
     fluxo = modelo_repo.obter(fluxo_id, "fluxo")
     if not fluxo:
         raise HTTPException(status_code=404, detail="Fluxo não encontrado")
@@ -671,9 +682,9 @@ async def executar_fluxo(fluxo_id: str, entradas: dict) -> dict:
             item["chave"]: item.get("valor") for item in fluxo.get("parametros_expostos", [])
             if item.get("chave") and item.get("valor") not in (None, "")
         })
-        return await geoprocessamento_engine.run_steps(
+        return asyncio.run(geoprocessamento_engine.run_steps(
             fluxo.get("itens", []), {**defaults, **entradas}
-        )
+        ))
     except (ValueError, KeyError, TypeError, RuntimeError, NotImplementedError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -681,23 +692,23 @@ async def executar_fluxo(fluxo_id: str, entradas: dict) -> dict:
 # ==================== CAMADAS ====================
 
 @router.get("/camadas", response_model=list[CamadaSchema])
-async def listar_camadas() -> list[CamadaSchema]:
+def listar_camadas() -> list[CamadaSchema]:
     """Lista todas as camadas disponíveis no sistema."""
-    camadas = await geoespacial_service.listar_recursos()
+    camadas = asyncio.run(geoespacial_service.listar_recursos())
     return [CamadaSchema(**c) for c in camadas]
 
 
 @router.post("/camadas", response_model=CamadaSchema)
-async def criar_camada(camada: CamadaInputSchema) -> CamadaSchema:
+def criar_camada(camada: CamadaInputSchema) -> CamadaSchema:
     """Importa uma camada de arquivo externo ou WFS."""
     origem = camada.url_origem or camada.caminho_arquivo
     if not origem:
         raise HTTPException(status_code=422, detail="Informe caminho_arquivo ou url_origem")
     try:
-        resultado = await geoespacial_service.importar_camada(
+        resultado = asyncio.run(geoespacial_service.importar_camada(
             "WFS" if camada.url_origem else "local", origem, camada.crs
-        )
-        recurso = await geoespacial_service.obter_recurso(resultado["camada_id"])
+        ))
+        recurso = asyncio.run(geoespacial_service.obter_recurso(resultado["camada_id"]))
         if recurso is None:
             raise RuntimeError("Camada carregada não foi encontrada no catálogo")
         return CamadaSchema(**recurso)
@@ -706,18 +717,18 @@ async def criar_camada(camada: CamadaInputSchema) -> CamadaSchema:
 
 
 @router.get("/camadas/{camada_id}", response_model=CamadaSchema)
-async def obter_camada(camada_id: str) -> CamadaSchema:
+def obter_camada(camada_id: str) -> CamadaSchema:
     """Obtém uma camada específica por ID."""
-    camada = await geoespacial_service.obter_recurso(camada_id)
+    camada = asyncio.run(geoespacial_service.obter_recurso(camada_id))
     if not camada:
         raise HTTPException(status_code=404, detail="Camada não encontrada")
     return CamadaSchema(**camada)
 
 
 @router.delete("/camadas/{camada_id}")
-async def deletar_camada(camada_id: str) -> dict[str, Any]:
+def deletar_camada(camada_id: str) -> dict[str, Any]:
     """Remove a camada do PostGIS e apaga o arquivo original do datastorage."""
-    recurso = await geoespacial_service.obter_recurso(camada_id)
+    recurso = asyncio.run(geoespacial_service.obter_recurso(camada_id))
     arquivo_original: str | None = None
     if recurso:
         extras = (recurso.get("metadados") or {})
@@ -727,7 +738,7 @@ async def deletar_camada(camada_id: str) -> dict[str, Any]:
             or (extras.get("metadados") or {}).get("arquivo_original")
         )
     try:
-        deletado = await geoespacial_service.excluir_recurso(camada_id)
+        deletado = asyncio.run(geoespacial_service.excluir_recurso(camada_id))
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:
@@ -769,7 +780,7 @@ async def deletar_camada(camada_id: str) -> dict[str, Any]:
 @router.post("/importar_camadas")
 @router.post("/camadas/importar", deprecated=True, include_in_schema=False)
 @router.post("/camadas/upload", deprecated=True, include_in_schema=False)
-async def importar_arquivo_camada(
+def importar_arquivo_camada(
     arquivo: UploadFile | None = File(None),
     token_importacao: str | None = Form(None),
     reprojetar_crs: str | None = Form(None),
@@ -778,22 +789,22 @@ async def importar_arquivo_camada(
 ) -> dict:
     """Valida, classifica, transforma e importa camadas com rollback compensatório."""
     nome = Path(arquivo.filename or "camada").name if arquivo else None
-    conteudo = await arquivo.read() if arquivo else None
+    conteudo = arquivo.file.read() if arquivo else None
     try:
-        return await executar_importacao_camadas(
+        return asyncio.run(executar_importacao_camadas(
             nome,
             conteudo,
             target_crs=(reprojetar_crs or "").strip() or None,
             clip_layer_id=(recortar_camada_id or "").strip() or None,
             inspection_token=(token_importacao or "").strip() or None,
             pasta=(pasta or "").strip() or None,
-        )
+        ))
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/importar_camadas/previa/{token}")
-async def previa_da_camada_inspecionada(token: str) -> dict:
+def previa_da_camada_inspecionada(token: str) -> dict:
     """GeoJSON leve da inspeção, para pré-visualizar antes de confirmar o envio."""
     try:
         return previa_da_inspecao(token)
@@ -802,12 +813,12 @@ async def previa_da_camada_inspecionada(token: str) -> dict:
 
 
 @router.post("/importar_camadas/inspecionar")
-async def inspecionar_arquivo_camada(arquivo: UploadFile = File(...)) -> dict:
+def inspecionar_arquivo_camada(arquivo: UploadFile = File(...)) -> dict:
     """Lê e valida o upload em staging para preencher as opções da interface."""
     try:
         return inspecionar_camadas(
             Path(arquivo.filename or "camada").name,
-            await arquivo.read(),
+            arquivo.file.read(),
         )
     except ValueError as exc:
         detail = str(exc)
@@ -833,7 +844,7 @@ async def inspecionar_arquivo_camada(arquivo: UploadFile = File(...)) -> dict:
 
 
 @router.post("/importar_camadas/job", status_code=status.HTTP_202_ACCEPTED)
-async def iniciar_importacao_validada_com_progresso(
+def iniciar_importacao_validada_com_progresso(
     arquivo: UploadFile | None = File(None),
     token_importacao: str | None = Form(None),
     reprojetar_crs: str | None = Form(None),
@@ -842,7 +853,7 @@ async def iniciar_importacao_validada_com_progresso(
 ) -> dict:
     """Executa o importador transacional novo expondo microtarefas reais."""
     nome = Path(arquivo.filename or "camada").name if arquivo else None
-    conteudo = await arquivo.read() if arquivo else None
+    conteudo = arquivo.file.read() if arquivo else None
     if not token_importacao and not arquivo:
         raise HTTPException(status_code=422, detail="Informe um arquivo ou token de inspeção")
     return geoprocessamento_jobs.create_validated_import(
@@ -874,44 +885,44 @@ def _erro_pasta_storage(exc: Exception) -> HTTPException:
 
 
 @router.get("/storage/pastas")
-async def listar_pastas_storage(caminho: str = "") -> dict[str, Any]:
+def listar_pastas_storage(caminho: str = "") -> dict[str, Any]:
     """Pastas do storage da VM para o explorador do upload."""
     from api.services import pastas_storage
     try:
-        return await run_in_threadpool(pastas_storage.listar, caminho)
+        return pastas_storage.listar(caminho)
     except Exception as exc:
         raise _erro_pasta_storage(exc) from exc
 
 
 @router.post("/storage/pastas", status_code=status.HTTP_201_CREATED)
-async def criar_pasta_storage(payload: PastaStorage) -> dict[str, Any]:
+def criar_pasta_storage(payload: PastaStorage) -> dict[str, Any]:
     from api.services import pastas_storage
     try:
-        return await run_in_threadpool(pastas_storage.criar, payload.caminho, payload.nome)
+        return pastas_storage.criar(payload.caminho, payload.nome)
     except Exception as exc:
         raise _erro_pasta_storage(exc) from exc
 
 
 @router.patch("/storage/pastas")
-async def renomear_pasta_storage(payload: PastaStorage) -> dict[str, Any]:
+def renomear_pasta_storage(payload: PastaStorage) -> dict[str, Any]:
     from api.services import pastas_storage
     try:
-        return await run_in_threadpool(pastas_storage.renomear, payload.caminho, payload.nome)
+        return pastas_storage.renomear(payload.caminho, payload.nome)
     except Exception as exc:
         raise _erro_pasta_storage(exc) from exc
 
 
 @router.delete("/storage/pastas")
-async def excluir_pasta_storage(caminho: str) -> dict[str, Any]:
+def excluir_pasta_storage(caminho: str) -> dict[str, Any]:
     from api.services import pastas_storage
     try:
-        return await run_in_threadpool(pastas_storage.excluir, caminho)
+        return pastas_storage.excluir(caminho)
     except Exception as exc:
         raise _erro_pasta_storage(exc) from exc
 
 
 @router.post("/storage/upload/job", status_code=status.HTTP_202_ACCEPTED)
-async def enviar_arquivo_ao_storage(
+def enviar_arquivo_ao_storage(
     token_importacao: str = Form(...),
     pasta: str = Form(...),
     reprojetar_crs: str | None = Form(None),
@@ -931,14 +942,14 @@ async def enviar_arquivo_ao_storage(
 
 
 @router.post("/camadas/importar-job", status_code=status.HTTP_202_ACCEPTED)
-async def iniciar_importacao_com_logs(arquivo: UploadFile = File(...)) -> dict:
+def iniciar_importacao_com_logs(arquivo: UploadFile = File(...)) -> dict:
     """Recebe o upload e inicia importação auditável em nanotarefas."""
-    conteudo = await arquivo.read()
+    conteudo = arquivo.file.read()
     return geoprocessamento_jobs.create_import(arquivo.filename or "camada", conteudo)
 
 
 @router.get("/camadas-diretorio")
-async def listar_diretorio_camadas() -> dict[str, Any]:
+def listar_diretorio_camadas() -> dict[str, Any]:
     from api.services.catalogo_arquivos import listar_diretorio
     try:
         return listar_diretorio()
@@ -947,10 +958,10 @@ async def listar_diretorio_camadas() -> dict[str, Any]:
 
 
 @router.get("/storage/camadas-arquivo")
-async def camadas_arquivo_storage(arquivo: str) -> dict[str, Any]:
+def camadas_arquivo_storage(arquivo: str) -> dict[str, Any]:
     from api.services import storage_geoespacial
     try:
-        return await run_in_threadpool(storage_geoespacial.inventariar_arquivo, arquivo)
+        return storage_geoespacial.inventariar_arquivo(arquivo)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
     except (ValueError, RuntimeError) as exc:
@@ -958,11 +969,11 @@ async def camadas_arquivo_storage(arquivo: str) -> dict[str, Any]:
 
 
 @router.get("/storage/navegar")
-async def navegar_storage(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
+def navegar_storage(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
     """Uma pasta do storage (subpastas e camadas vetoriais), para o explorador da extração."""
     from api.services import storage_geoespacial
     try:
-        return await run_in_threadpool(storage_geoespacial.navegar, caminho, detalhar)
+        return storage_geoespacial.navegar(caminho, detalhar)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     except FileNotFoundError as exc:
@@ -970,11 +981,11 @@ async def navegar_storage(caminho: str = "", detalhar: bool = True) -> dict[str,
 
 
 @router.get("/storage/{raiz}/arvore")
-async def listar_arvore_storage(raiz: str) -> dict[str, Any]:
+def listar_arvore_storage(raiz: str) -> dict[str, Any]:
     """Pastas (grupos) e camadas de uma pasta publicada do storage."""
     from api.services import storage_geoespacial
     try:
-        return await run_in_threadpool(storage_geoespacial.arvore, raiz)
+        return storage_geoespacial.arvore(raiz)
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
 
@@ -989,21 +1000,21 @@ def _erro_camada_storage(exc: Exception) -> HTTPException:
 
 
 @router.get("/storage/camada/bounds")
-async def obter_bounds_camada_storage(caminho: str, camada: str | None = None) -> dict:
+def obter_bounds_camada_storage(caminho: str, camada: str | None = None) -> dict:
     from api.services import storage_geoespacial
     try:
-        return {"bounds": await run_in_threadpool(storage_geoespacial.bounds, caminho, camada)}
+        return {"bounds": storage_geoespacial.bounds(caminho, camada)}
     except (FileNotFoundError, ValueError, RuntimeError) as exc:
         raise _erro_camada_storage(exc) from exc
 
 
 @router.get("/storage/camada/tiles/{z}/{x}/{y}.pbf")
-async def obter_tile_camada_storage(z: int, x: int, y: int, caminho: str, camada: str | None = None) -> Response:
+def obter_tile_camada_storage(z: int, x: int, y: int, caminho: str, camada: str | None = None) -> Response:
     from api.services import storage_geoespacial
     if not 0 <= z <= 22 or not (0 <= x < 2**z and 0 <= y < 2**z):
         raise HTTPException(422, "Tile fora da grade")
     try:
-        conteudo = await run_in_threadpool(storage_geoespacial.tile, caminho, camada, z, x, y)
+        conteudo = storage_geoespacial.tile(caminho, camada, z, x, y)
     except (FileNotFoundError, ValueError, RuntimeError) as exc:
         raise _erro_camada_storage(exc) from exc
     return Response(conteudo, media_type="application/vnd.mapbox-vector-tile",
@@ -1030,7 +1041,7 @@ RAIZES_CARREGAVEIS: dict[str, dict[str, str]] = {
 
 
 @router.get("/camadas-arquivo/navegar")
-async def navegar_diretorio_geoespacial(caminho: str = "") -> dict:
+def navegar_diretorio_geoespacial(caminho: str = "") -> dict:
     """Navega pelas raízes carregáveis, listando pastas e arquivos aptos."""
     aceitos = {
         ".shp", ".geojson", ".json", ".kml", ".gml", ".fgb", ".gpkg",
@@ -1089,7 +1100,7 @@ async def navegar_diretorio_geoespacial(caminho: str = "") -> dict:
     candidates |= {p.relative_to(project_path(".")).as_posix() for p in empacotados.values()}
     try:
         registered_paths = {
-            row["arquivo"] for row in await run_in_threadpool(camadas_dos_arquivos, candidates)
+            row["arquivo"] for row in camadas_dos_arquivos(candidates)
         }
     except DatabaseUnavailableError as exc:
         raise HTTPException(503, "Catálogo do banco indisponível") from exc
@@ -1165,7 +1176,7 @@ def _recurso_catalogado(relativo: str) -> dict | None:
 
 
 @router.post("/camadas-arquivo/carregar")
-async def carregar_arquivo_do_sistema(arquivo: str = Form(...)) -> dict:
+def carregar_arquivo_do_sistema(arquivo: str = Form(...)) -> dict:
     """Carrega somente uma camada registrada, sem criar cópias ou novos registros."""
     normalized = arquivo.replace("\\", "/").strip()
     if ".." in normalized.split("/") or not _raiz_carregavel(normalized):
@@ -1179,10 +1190,10 @@ async def carregar_arquivo_do_sistema(arquivo: str = Form(...)) -> dict:
         raise HTTPException(status_code=404, detail="Arquivo geoespacial não encontrado")
 
     try:
-        existente = await run_in_threadpool(_recurso_catalogado, normalized)
+        existente = _recurso_catalogado(normalized)
         if existente:
             recurso_id = existente["recurso_sessao_id"]
-            await geoespacial_service.carregar_recurso(recurso_id)
+            asyncio.run(geoespacial_service.carregar_recurso(recurso_id))
             tipo = "raster" if existente.get("tipo") == "raster" else "vetorial"
             return _envelope_recurso_carregado(
                 recurso_id, existente.get("nome") or path.stem, tipo, reutilizada=True,
@@ -1197,16 +1208,16 @@ async def carregar_arquivo_do_sistema(arquivo: str = Form(...)) -> dict:
 
 
 @router.post("/camadas/{camada_id}/carregar")
-async def carregar_camada_do_sistema(camada_id: str) -> dict:
+def carregar_camada_do_sistema(camada_id: str) -> dict:
     """Carrega uma camada existente do banco para a bancada/cache."""
     try:
-        return await geoespacial_service.carregar_recurso(camada_id)
+        return asyncio.run(geoespacial_service.carregar_recurso(camada_id))
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/camadas/{camada_id}/carregar-job", status_code=status.HTTP_202_ACCEPTED)
-async def iniciar_carregamento_com_logs(camada_id: str) -> dict:
+def iniciar_carregamento_com_logs(camada_id: str) -> dict:
     """Carrega uma camada por job e registra cada nanotarefa concluída."""
     return geoprocessamento_jobs.create_load(camada_id)
 
@@ -1221,7 +1232,7 @@ def _responsavel_pela_homologacao(body: HomologarCamadaSchema, user: SessionUser
 
 
 @router.post("/camadas/{camada_id}/homologar", status_code=201)
-async def homologar_camada(
+def homologar_camada(
     camada_id: str,
     body: HomologarCamadaSchema,
     user: SessionUser = Depends(require_geospatial_access),
@@ -1245,7 +1256,7 @@ async def homologar_camada(
 
 
 @router.post("/camadas/{camada_id}/homologar-job", status_code=status.HTTP_202_ACCEPTED)
-async def iniciar_homologacao_com_logs(
+def iniciar_homologacao_com_logs(
     camada_id: str,
     body: HomologarCamadaSchema,
     user: SessionUser = Depends(require_geospatial_access),
@@ -1257,7 +1268,7 @@ async def iniciar_homologacao_com_logs(
 
 
 @router.get("/biblioteca-camadas")
-async def listar_biblioteca_camadas(modulo: str | None = None) -> list[dict]:
+def listar_biblioteca_camadas(modulo: str | None = None) -> list[dict]:
     """Biblioteca somente leitura de insumos homologados."""
     if modulo and modulo not in {"fase1", "fase2"}:
         raise HTTPException(status_code=422, detail="Módulo consumidor inválido")
@@ -1265,15 +1276,15 @@ async def listar_biblioteca_camadas(modulo: str | None = None) -> list[dict]:
 
 
 @router.get("/biblioteca-canonica/arquivos")
-async def listar_arquivos_biblioteca_canonica(modulo: str | None = None) -> list[dict]:
+def listar_arquivos_biblioteca_canonica(modulo: str | None = None) -> list[dict]:
     """Lista recursivamente todos os arquivos de camada em biblioteca_canonica."""
     return [r for r in camada_geoespacial_repository.listar_biblioteca_canonica_arquivos(modulo) if r.get("registrada")]
 
 
 @router.get("/camadas/{camada_id}/geojson")
-async def obter_camada_geojson(camada_id: str) -> dict:
+def obter_camada_geojson(camada_id: str) -> dict:
     try:
-        return await geoespacial_service.camada_geojson(camada_id)
+        return asyncio.run(geoespacial_service.camada_geojson(camada_id))
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -1299,29 +1310,37 @@ def obter_tile_vetorial(camada_id: str, z: int, x: int, y: int) -> Response:
     )
 
 
+@router.get("/camadas/{camada_id}/atributos/tabela")
+def obter_tabela_atributos(camada_id: str) -> dict:
+    try:
+        return asyncio.run(geoespacial_service.tabela_atributos(camada_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @router.get("/camadas/{camada_id}/atributos")
-async def obter_atributos_camada(
+def obter_atributos_camada(
     camada_id: str,
     limite: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
 ) -> dict:
     try:
-        return await geoespacial_service.atributos_camada(camada_id, limite, offset)
+        return asyncio.run(geoespacial_service.atributos_camada(camada_id, limite, offset))
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/camadas/{camada_id}/simbologia/campos")
-async def simbologia_campos(camada_id: str) -> dict:
+def simbologia_campos(camada_id: str) -> dict:
     """Campos da camada com metadados para simbologia por atributo."""
     try:
-        return await geoespacial_service.simbologia_campos(camada_id)
+        return asyncio.run(geoespacial_service.simbologia_campos(camada_id))
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/camadas/{camada_id}/simbologia/classificacao")
-async def simbologia_classificacao(
+def simbologia_classificacao(
     camada_id: str,
     campo: str,
     metodo: str = "intervalos_iguais",
@@ -1329,57 +1348,57 @@ async def simbologia_classificacao(
 ) -> dict:
     """Classifica um campo (valores únicos ou quebras numéricas) para simbologia."""
     try:
-        return await geoespacial_service.simbologia_classificacao(
+        return asyncio.run(geoespacial_service.simbologia_classificacao(
             camada_id, campo, metodo, classes
-        )
+        ))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/camadas/{raster_id}/preview")
-async def obter_preview_raster(raster_id: str) -> dict:
+def obter_preview_raster(raster_id: str) -> dict:
     try:
-        return await geoespacial_service.preview_raster(raster_id)
+        return asyncio.run(geoespacial_service.preview_raster(raster_id))
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/camadas/{camada_id}/calcular-campo")
-async def calcular_campo(camada_id: str, campo: str, expressao: str) -> dict:
+def calcular_campo(camada_id: str, campo: str, expressao: str) -> dict:
     """Cria ou atualiza um campo por expressão."""
     try:
-        return await geoespacial_service.calcular_campo(camada_id, campo, expressao)
+        return asyncio.run(geoespacial_service.calcular_campo(camada_id, campo, expressao))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/camadas/{camada_id}/consultar-atributos")
-async def consultar_atributos(camada_id: str, expressao: str) -> dict:
+def consultar_atributos(camada_id: str, expressao: str) -> dict:
     """Seleciona ou filtra feições por expressão atributiva."""
     try:
-        return await geoespacial_service.consultar_por_atributo(camada_id, expressao)
+        return asyncio.run(geoespacial_service.consultar_por_atributo(camada_id, expressao))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/camadas/{camada_id}/atualizar-fonte")
-async def atualizar_fonte(camada_id: str) -> dict:
+def atualizar_fonte(camada_id: str) -> dict:
     """Relê a fonte externa da camada."""
     try:
-        return await geoespacial_service.atualizar_fonte(camada_id)
+        return asyncio.run(geoespacial_service.atualizar_fonte(camada_id))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/camadas/{camada_id}/atributos/salvar")
-async def salvar_edicoes_atributos(camada_id: str, body: dict) -> dict:
+def salvar_edicoes_atributos(camada_id: str, body: dict) -> dict:
     """Grava edições feitas na tabela de atributos da Bancada.
 
     Escreve na fonte real da camada — o arquivo do acervo, quando ela tem um,
     e sempre também o PostGIS — para as duas cópias não divergirem.
     """
     try:
-        return geoespacial_service.salvar_edicoes_atributos(camada_id, body.get("edicoes") or [])
+        return geoespacial_service.salvar_edicoes_atributos(camada_id, body.get("edicoes") or [], body.get("excluidos") or [], body.get("revisao"))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except RuntimeError as exc:
@@ -1389,63 +1408,63 @@ async def salvar_edicoes_atributos(camada_id: str, body: dict) -> dict:
 # ==================== PRODUTOS DOS MÓDULOS GERADORES ====================
 
 @router.get("/produtos-geradores", response_model=list[ProdutoGeradorSchema])
-async def listar_produtos_geradores(modulo: str | None = None) -> list[ProdutoGeradorSchema]:
-    produtos = await geoespacial_repository.listar_produtos_geradores(modulo)
+def listar_produtos_geradores(modulo: str | None = None) -> list[ProdutoGeradorSchema]:
+    produtos = asyncio.run(geoespacial_repository.listar_produtos_geradores(modulo))
     return [ProdutoGeradorSchema(**produto) for produto in produtos]
 
 
 @router.post("/produtos-geradores", response_model=ProdutoGeradorSchema, status_code=201)
-async def criar_produto_gerador(body: ProdutoGeradorInputSchema) -> ProdutoGeradorSchema:
+def criar_produto_gerador(body: ProdutoGeradorInputSchema) -> ProdutoGeradorSchema:
     try:
-        produto = await geoespacial_repository.criar_produto_gerador(body.model_dump())
+        produto = asyncio.run(geoespacial_repository.criar_produto_gerador(body.model_dump()))
         return ProdutoGeradorSchema(**produto)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/produtos-geradores/{produto_id}", response_model=ProdutoGeradorSchema)
-async def obter_produto_gerador(produto_id: str) -> ProdutoGeradorSchema:
-    produto = await geoespacial_repository.obter_produto_gerador(produto_id)
+def obter_produto_gerador(produto_id: str) -> ProdutoGeradorSchema:
+    produto = asyncio.run(geoespacial_repository.obter_produto_gerador(produto_id))
     if not produto:
         raise HTTPException(status_code=404, detail="Produto gerador não encontrado")
     return ProdutoGeradorSchema(**produto)
 
 
 @router.get("/produtos-geradores/{produto_id}/fluxos", response_model=list[FluxoProdutoSchema])
-async def listar_fluxos_produto(produto_id: str) -> list[FluxoProdutoSchema]:
-    fluxos = await geoespacial_repository.listar_fluxos_produto(produto_id)
+def listar_fluxos_produto(produto_id: str) -> list[FluxoProdutoSchema]:
+    fluxos = asyncio.run(geoespacial_repository.listar_fluxos_produto(produto_id))
     return [FluxoProdutoSchema(**fluxo) for fluxo in fluxos]
 
 
 @router.post("/produtos-geradores/{produto_id}/fluxos", response_model=FluxoProdutoSchema, status_code=201)
-async def criar_fluxo_produto(produto_id: str, body: FluxoProdutoInputSchema) -> FluxoProdutoSchema:
-    if not await geoespacial_repository.obter_produto_gerador(produto_id):
+def criar_fluxo_produto(produto_id: str, body: FluxoProdutoInputSchema) -> FluxoProdutoSchema:
+    if not asyncio.run(geoespacial_repository.obter_produto_gerador(produto_id)):
         raise HTTPException(status_code=404, detail="Produto gerador não encontrado")
-    fluxo = await geoespacial_repository.criar_fluxo_produto(produto_id, body.model_dump())
+    fluxo = asyncio.run(geoespacial_repository.criar_fluxo_produto(produto_id, body.model_dump()))
     return FluxoProdutoSchema(**fluxo)
 
 
 # ==================== FONTES (FASE 1) ====================
 
 @router.get("/fontes", response_model=list[FonteSchema])
-async def listar_fontes() -> list[FonteSchema]:
+def listar_fontes() -> list[FonteSchema]:
     """Lista todas as fontes."""
-    fontes = await geoespacial_repository.listar_fontes()
+    fontes = asyncio.run(geoespacial_repository.listar_fontes())
     return [FonteSchema(**f) for f in fontes]
 
 
 @router.post("/fontes", response_model=FonteSchema)
-async def criar_fonte(fonte: FonteInputSchema) -> FonteSchema:
+def criar_fonte(fonte: FonteInputSchema) -> FonteSchema:
     """Cria uma nova fonte."""
     fonte_dict = fonte.model_dump()
-    nova_fonte = await geoespacial_repository.criar_fonte(fonte_dict)
+    nova_fonte = asyncio.run(geoespacial_repository.criar_fonte(fonte_dict))
     return FonteSchema(**nova_fonte)
 
 
 @router.get("/fontes/{fonte_id}", response_model=FonteSchema)
-async def obter_fonte(fonte_id: str) -> FonteSchema:
+def obter_fonte(fonte_id: str) -> FonteSchema:
     """Obtém uma fonte por ID."""
-    fonte = await geoespacial_repository.obter_fonte(fonte_id)
+    fonte = asyncio.run(geoespacial_repository.obter_fonte(fonte_id))
     if not fonte:
         raise HTTPException(status_code=404, detail="Fonte não encontrada")
     return FonteSchema(**fonte)
@@ -1454,24 +1473,24 @@ async def obter_fonte(fonte_id: str) -> FonteSchema:
 # ==================== CRITÉRIOS (FASE 2) ====================
 
 @router.get("/criterios-fase2", response_model=list[CriterioFase2Schema])
-async def listar_criterios_fase2() -> list[CriterioFase2Schema]:
+def listar_criterios_fase2() -> list[CriterioFase2Schema]:
     """Lista todos os critérios da Fase 2."""
-    criterios = await geoespacial_repository.listar_criterios_fase2()
+    criterios = asyncio.run(geoespacial_repository.listar_criterios_fase2())
     return [CriterioFase2Schema(**c) for c in criterios]
 
 
 @router.post("/criterios-fase2", response_model=CriterioFase2Schema)
-async def criar_criterio_fase2(criterio: CriterioFase2InputSchema) -> CriterioFase2Schema:
+def criar_criterio_fase2(criterio: CriterioFase2InputSchema) -> CriterioFase2Schema:
     """Cria um novo critério da Fase 2."""
     criterio_dict = criterio.model_dump()
-    novo_criterio = await geoespacial_repository.criar_criterio_fase2(criterio_dict)
+    novo_criterio = asyncio.run(geoespacial_repository.criar_criterio_fase2(criterio_dict))
     return CriterioFase2Schema(**novo_criterio)
 
 
 @router.get("/criterios-fase2/{criterio_id}", response_model=CriterioFase2Schema)
-async def obter_criterio_fase2(criterio_id: str) -> CriterioFase2Schema:
+def obter_criterio_fase2(criterio_id: str) -> CriterioFase2Schema:
     """Obtém um critério por ID."""
-    criterio = await geoespacial_repository.obter_criterio_fase2(criterio_id)
+    criterio = asyncio.run(geoespacial_repository.obter_criterio_fase2(criterio_id))
     if not criterio:
         raise HTTPException(status_code=404, detail="Critério não encontrado")
     return CriterioFase2Schema(**criterio)
@@ -1480,24 +1499,24 @@ async def obter_criterio_fase2(criterio_id: str) -> CriterioFase2Schema:
 # ==================== ATRIBUTOS (FASE 3) ====================
 
 @router.get("/atributos-fase3", response_model=list[AtributoFase3Schema])
-async def listar_atributos_fase3() -> list[AtributoFase3Schema]:
+def listar_atributos_fase3() -> list[AtributoFase3Schema]:
     """Lista todos os atributos da Fase 3."""
-    atributos = await geoespacial_repository.listar_atributos_fase3()
+    atributos = asyncio.run(geoespacial_repository.listar_atributos_fase3())
     return [AtributoFase3Schema(**a) for a in atributos]
 
 
 @router.post("/atributos-fase3", response_model=AtributoFase3Schema)
-async def criar_atributo_fase3(atributo: AtributoFase3InputSchema) -> AtributoFase3Schema:
+def criar_atributo_fase3(atributo: AtributoFase3InputSchema) -> AtributoFase3Schema:
     """Cria um novo atributo da Fase 3."""
     atributo_dict = atributo.model_dump()
-    novo_atributo = await geoespacial_repository.criar_atributo_fase3(atributo_dict)
+    novo_atributo = asyncio.run(geoespacial_repository.criar_atributo_fase3(atributo_dict))
     return AtributoFase3Schema(**novo_atributo)
 
 
 @router.get("/atributos-fase3/{atributo_id}", response_model=AtributoFase3Schema)
-async def obter_atributo_fase3(atributo_id: str) -> AtributoFase3Schema:
+def obter_atributo_fase3(atributo_id: str) -> AtributoFase3Schema:
     """Obtém um atributo por ID."""
-    atributo = await geoespacial_repository.obter_atributo_fase3(atributo_id)
+    atributo = asyncio.run(geoespacial_repository.obter_atributo_fase3(atributo_id))
     if not atributo:
         raise HTTPException(status_code=404, detail="Atributo não encontrado")
     return AtributoFase3Schema(**atributo)
@@ -1506,32 +1525,32 @@ async def obter_atributo_fase3(atributo_id: str) -> AtributoFase3Schema:
 # ==================== PACOTES (FASE 1) ====================
 
 @router.get("/pacotes-fase1", response_model=list[PacoteFase1Schema])
-async def listar_pacotes_fase1() -> list[PacoteFase1Schema]:
+def listar_pacotes_fase1() -> list[PacoteFase1Schema]:
     """Lista todos os pacotes da Fase 1."""
-    pacotes = await geoespacial_repository.listar_pacotes_fase1()
+    pacotes = asyncio.run(geoespacial_repository.listar_pacotes_fase1())
     return [PacoteFase1Schema(**p) for p in pacotes]
 
 
 @router.post("/pacotes-fase1", response_model=PacoteFase1Schema)
-async def criar_pacote_fase1(pacote: dict) -> PacoteFase1Schema:
+def criar_pacote_fase1(pacote: dict) -> PacoteFase1Schema:
     """Cria um novo pacote da Fase 1."""
-    novo_pacote = await geoespacial_repository.criar_pacote_fase1(pacote)
+    novo_pacote = asyncio.run(geoespacial_repository.criar_pacote_fase1(pacote))
     return PacoteFase1Schema(**novo_pacote)
 
 
 @router.get("/pacotes-fase1/{pacote_id}", response_model=PacoteFase1Schema)
-async def obter_pacote_fase1(pacote_id: str) -> PacoteFase1Schema:
+def obter_pacote_fase1(pacote_id: str) -> PacoteFase1Schema:
     """Obtém um pacote por ID."""
-    pacote = await geoespacial_repository.obter_pacote_fase1(pacote_id)
+    pacote = asyncio.run(geoespacial_repository.obter_pacote_fase1(pacote_id))
     if not pacote:
         raise HTTPException(status_code=404, detail="Pacote não encontrado")
     return PacoteFase1Schema(**pacote)
 
 
 @router.post("/pacotes-fase1/{pacote_id}/homologar", response_model=PacoteFase1Schema)
-async def homologar_pacote_fase1(pacote_id: str, responsavel: str) -> PacoteFase1Schema:
+def homologar_pacote_fase1(pacote_id: str, responsavel: str) -> PacoteFase1Schema:
     """Homologa um pacote da Fase 1."""
-    pacote = await geoespacial_repository.homologar_pacote_fase1(pacote_id, responsavel)
+    pacote = asyncio.run(geoespacial_repository.homologar_pacote_fase1(pacote_id, responsavel))
     if not pacote:
         raise HTTPException(status_code=404, detail="Pacote não encontrado")
     return PacoteFase1Schema(**pacote)
@@ -1540,32 +1559,32 @@ async def homologar_pacote_fase1(pacote_id: str, responsavel: str) -> PacoteFase
 # ==================== PACOTES (FASE 2) ====================
 
 @router.get("/pacotes-fase2", response_model=list[PacoteFase2Schema])
-async def listar_pacotes_fase2() -> list[PacoteFase2Schema]:
+def listar_pacotes_fase2() -> list[PacoteFase2Schema]:
     """Lista todos os pacotes da Fase 2."""
-    pacotes = await geoespacial_repository.listar_pacotes_fase2()
+    pacotes = asyncio.run(geoespacial_repository.listar_pacotes_fase2())
     return [PacoteFase2Schema(**p) for p in pacotes]
 
 
 @router.post("/pacotes-fase2", response_model=PacoteFase2Schema)
-async def criar_pacote_fase2(pacote: dict) -> PacoteFase2Schema:
+def criar_pacote_fase2(pacote: dict) -> PacoteFase2Schema:
     """Cria um novo pacote da Fase 2."""
-    novo_pacote = await geoespacial_repository.criar_pacote_fase2(pacote)
+    novo_pacote = asyncio.run(geoespacial_repository.criar_pacote_fase2(pacote))
     return PacoteFase2Schema(**novo_pacote)
 
 
 @router.get("/pacotes-fase2/{pacote_id}", response_model=PacoteFase2Schema)
-async def obter_pacote_fase2(pacote_id: str) -> PacoteFase2Schema:
+def obter_pacote_fase2(pacote_id: str) -> PacoteFase2Schema:
     """Obtém um pacote por ID."""
-    pacote = await geoespacial_repository.obter_pacote_fase2(pacote_id)
+    pacote = asyncio.run(geoespacial_repository.obter_pacote_fase2(pacote_id))
     if not pacote:
         raise HTTPException(status_code=404, detail="Pacote não encontrado")
     return PacoteFase2Schema(**pacote)
 
 
 @router.post("/pacotes-fase2/{pacote_id}/homologar", response_model=PacoteFase2Schema)
-async def homologar_pacote_fase2(pacote_id: str, responsavel: str) -> PacoteFase2Schema:
+def homologar_pacote_fase2(pacote_id: str, responsavel: str) -> PacoteFase2Schema:
     """Homologa um pacote da Fase 2."""
-    pacote = await geoespacial_repository.homologar_pacote_fase2(pacote_id, responsavel)
+    pacote = asyncio.run(geoespacial_repository.homologar_pacote_fase2(pacote_id, responsavel))
     if not pacote:
         raise HTTPException(status_code=404, detail="Pacote não encontrado")
     return PacoteFase2Schema(**pacote)
@@ -1574,35 +1593,35 @@ async def homologar_pacote_fase2(pacote_id: str, responsavel: str) -> PacoteFase
 # ==================== RODADAS (FASE 3) ====================
 
 @router.get("/rodadas-fase3", response_model=list[RodadaFase3Schema])
-async def listar_rodadas_fase3() -> list[RodadaFase3Schema]:
+def listar_rodadas_fase3() -> list[RodadaFase3Schema]:
     """Lista todas as rodadas da Fase 3."""
-    rodadas = await geoespacial_repository.listar_rodadas_fase3()
+    rodadas = asyncio.run(geoespacial_repository.listar_rodadas_fase3())
     return [RodadaFase3Schema(**r) for r in rodadas]
 
 
 @router.post("/rodadas-fase3", response_model=RodadaFase3Schema)
-async def criar_rodada_fase3(rodada: dict) -> RodadaFase3Schema:
+def criar_rodada_fase3(rodada: dict) -> RodadaFase3Schema:
     """Cria uma nova rodada da Fase 3."""
-    nova_rodada = await geoespacial_repository.criar_rodada_fase3(rodada)
+    nova_rodada = asyncio.run(geoespacial_repository.criar_rodada_fase3(rodada))
     return RodadaFase3Schema(**nova_rodada)
 
 
 @router.get("/rodadas-fase3/{rodada_id}", response_model=RodadaFase3Schema)
-async def obter_rodada_fase3(rodada_id: str) -> RodadaFase3Schema:
+def obter_rodada_fase3(rodada_id: str) -> RodadaFase3Schema:
     """Obtém uma rodada por ID."""
-    rodada = await geoespacial_repository.obter_rodada_fase3(rodada_id)
+    rodada = asyncio.run(geoespacial_repository.obter_rodada_fase3(rodada_id))
     if not rodada:
         raise HTTPException(status_code=404, detail="Rodada não encontrada")
     return RodadaFase3Schema(**rodada)
 
 
 @router.post("/rodadas-fase3/{rodada_id}/homologar", response_model=RodadaFase3Schema)
-async def homologar_rodada_fase3(rodada_id: str, body: dict) -> RodadaFase3Schema:
+def homologar_rodada_fase3(rodada_id: str, body: dict) -> RodadaFase3Schema:
     """Homologa uma rodada da Fase 3."""
     responsavel = str(body.get("responsavel") or "").strip()
     if not responsavel:
         raise HTTPException(status_code=422, detail="Informe o responsável pela homologação")
-    rodada = await geoespacial_repository.homologar_rodada_fase3(rodada_id, responsavel)
+    rodada = asyncio.run(geoespacial_repository.homologar_rodada_fase3(rodada_id, responsavel))
     if not rodada:
         raise HTTPException(status_code=404, detail="Rodada não encontrada")
     return RodadaFase3Schema(**rodada)
@@ -1612,7 +1631,7 @@ async def homologar_rodada_fase3(rodada_id: str, body: dict) -> RodadaFase3Schem
 
 @router.post("/operacoes/importar-camada")
 @router.post("/operacoes/carregar-camada", deprecated=True, include_in_schema=False)
-async def importar_camada(
+def importar_camada(
     tipo_entrada: str,
     caminho_arquivo: str,
     crs_origem: str | None = None,
@@ -1620,14 +1639,14 @@ async def importar_camada(
     filtro_atributivo: str | None = None,
 ) -> dict:
     """Importa camada vetorial de uma origem externa."""
-    resultado = await geoespacial_service.importar_camada(
+    resultado = asyncio.run(geoespacial_service.importar_camada(
         tipo_entrada, caminho_arquivo, crs_origem, filtro_espacial, filtro_atributivo
-    )
+    ))
     return resultado
 
 
 @router.post("/operacoes/validar-camada")
-async def validar_camada(
+def validar_camada(
     camada_id: str,
     validar_sobreposicoes: bool = False,
     validar_lacunas: bool = False,
@@ -1641,7 +1660,7 @@ async def validar_camada(
     percentual_critico_erros: float = 10.0,
 ) -> dict:
     """Valida camada."""
-    resultado = await geoespacial_service.validar_camada(
+    resultado = asyncio.run(geoespacial_service.validar_camada(
         camada_id,
         validar_sobreposicoes,
         validar_lacunas,
@@ -1653,12 +1672,12 @@ async def validar_camada(
         validar_campos_obrigatorios,
         tolerancia_topologica,
         percentual_critico_erros,
-    )
+    ))
     return resultado
 
 
 @router.post("/operacoes/reparar-geometrias")
-async def reparar_geometrias(
+def reparar_geometrias(
     camada_id: str,
     corrigir_geometrias_invalidas: bool = True,
     corrigir_auto_intersecoes: bool = True,
@@ -1670,7 +1689,7 @@ async def reparar_geometrias(
     manter_geometria_original_falha: bool = True,
 ) -> dict:
     """Repara geometrias."""
-    resultado = await geoespacial_service.reparar_geometrias(
+    resultado = asyncio.run(geoespacial_service.reparar_geometrias(
         camada_id,
         corrigir_geometrias_invalidas=corrigir_geometrias_invalidas,
         corrigir_auto_intersecoes=corrigir_auto_intersecoes,
@@ -1680,12 +1699,12 @@ async def reparar_geometrias(
         descartar_vazias=descartar_vazias,
         tolerancia_correcao=tolerancia_correcao,
         manter_geometria_original_falha=manter_geometria_original_falha,
-    )
+    ))
     return resultado
 
 
 @router.post("/operacoes/normalizar-camada")
-async def normalizar_camada(
+def normalizar_camada(
     camada_id: str,
     crs_destino: str = "EPSG:4674",
     recortar_area_estudo: bool = False,
@@ -1697,7 +1716,7 @@ async def normalizar_camada(
     regra_nomenclatura: str = "<fonte_id>__<nome_campo>",
 ) -> dict:
     """Normaliza camada."""
-    resultado = await geoespacial_service.normalizar_camada(
+    resultado = asyncio.run(geoespacial_service.normalizar_camada(
         camada_id,
         crs_destino,
         recortar_area_estudo,
@@ -1707,12 +1726,12 @@ async def normalizar_camada(
         explodir_multipartes,
         padronizar_nomes_campos,
         regra_nomenclatura,
-    )
+    ))
     return resultado
 
 
 @router.post("/operacoes/criar-buffer")
-async def criar_buffer(
+def criar_buffer(
     camada_id: str,
     distancia_buffer: float,
     unidade_buffer: str = "metros",
@@ -1721,14 +1740,14 @@ async def criar_buffer(
     recortar_area_estudo: bool = False,
 ) -> dict:
     """Cria buffer."""
-    resultado = await geoespacial_service.criar_buffer(
+    resultado = asyncio.run(geoespacial_service.criar_buffer(
         camada_id, distancia_buffer, unidade_buffer, tipo_buffer, dissolver_geometrias, recortar_area_estudo
-    )
+    ))
     return resultado
 
 
 @router.post("/operacoes/sobrepor-camadas")
-async def sobrepor_camadas(
+def sobrepor_camadas(
     camada_id_1: str,
     camada_id_2: str,
     tipo_overlay: str = "identity",
@@ -1736,14 +1755,14 @@ async def sobrepor_camadas(
     regra_nomenclatura: str = "<fonte_id>__<nome_campo>",
 ) -> dict:
     """Sobrepõe camadas."""
-    resultado = await geoespacial_service.sobrepor_camadas(
+    resultado = asyncio.run(geoespacial_service.sobrepor_camadas(
         camada_id_1, camada_id_2, tipo_overlay, resolver_conflitos_campos, regra_nomenclatura
-    )
+    ))
     return resultado
 
 
 @router.post("/operacoes/exportar-camada")
-async def exportar_camada(
+def exportar_camada(
     camada_id: str,
     nome_saida: str,
     formato_saida: str = "GeoPackage",
@@ -1751,64 +1770,64 @@ async def exportar_camada(
     destino: str = "memoria",
 ) -> dict:
     """Exporta camada."""
-    return await geoprocessamento_engine.execute("OP-25", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-25", {
         "camada_id": camada_id, "nome_saida": nome_saida,
         "formato_saida": formato_saida, "crs_saida": crs_saida, "destino": destino,
-    })
+    }))
 
 
 @router.post("/operacoes/normalizar-raster")
-async def normalizar_raster(
+def normalizar_raster(
     raster_id: str,
     metodo_normalizacao: str = "linear",
     valor_minimo: float | None = None,
     valor_maximo: float | None = None,
 ) -> dict:
     """Normaliza raster."""
-    return await geoprocessamento_engine.execute("OP-20", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-20", {
         "raster_id": raster_id, "metodo_normalizacao": metodo_normalizacao,
         "valor_minimo": valor_minimo, "valor_maximo": valor_maximo,
-    })
+    }))
 
 
 @router.post("/operacoes/combinar-rasters")
-async def combinar_rasters(
+def combinar_rasters(
     raster_ids: list[str] = Query(...),
     pesos: list[float] | None = Query(None),
     operador: str = "media_ponderada",
 ) -> dict:
     """Combina rasters."""
-    return await geoprocessamento_engine.execute("OP-17", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-17", {
         "raster_ids": raster_ids, "pesos": pesos, "operador": operador,
-    })
+    }))
 
 
 @router.post("/operacoes/dissolver")
-async def dissolver(
+def dissolver(
     camada_id: str,
     campo_agrupamento: str | None = None,
     funcao_agregacao: str = "soma",
     manter_geometria_multi: bool = False,
 ) -> dict:
     """Dissolve geometrias."""
-    resultado = await geoespacial_service.dissolver(camada_id, campo_agrupamento, funcao_agregacao, manter_geometria_multi)
+    resultado = asyncio.run(geoespacial_service.dissolver(camada_id, campo_agrupamento, funcao_agregacao, manter_geometria_multi))
     return resultado
 
 
 @router.post("/operacoes/selecionar-por-localizacao")
-async def selecionar_por_localizacao(
+def selecionar_por_localizacao(
     camada_id: str,
     camada_ref_id: str,
     tipo_selecao: str = "intersects",
     inverter_selecao: bool = False,
 ) -> dict:
     """Seleciona por localização."""
-    resultado = await geoespacial_service.selecionar_por_localizacao(camada_id, camada_ref_id, tipo_selecao, inverter_selecao)
+    resultado = asyncio.run(geoespacial_service.selecionar_por_localizacao(camada_id, camada_ref_id, tipo_selecao, inverter_selecao))
     return resultado
 
 
 @router.post("/operacoes/converter-para-raster")
-async def converter_para_raster(
+def converter_para_raster(
     camada_id: str,
     resolucao_raster: float = 10.0,
     crs_destino: str | None = None,
@@ -1817,44 +1836,44 @@ async def converter_para_raster(
     valor_preenchimento: float = 0.0,
 ) -> dict:
     """Converte para raster."""
-    return await geoprocessamento_engine.execute("OP-08", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-08", {
         "camada_id": camada_id, "resolucao_raster": resolucao_raster,
         "crs_destino": crs_destino, "metodo_rasterizacao": metodo_rasterizacao,
         "atributo_rasterizacao": atributo_rasterizacao,
         "valor_preenchimento": valor_preenchimento,
-    })
+    }))
 
 
 @router.post("/operacoes/calcular-distancia")
-async def calcular_distancia(
+def calcular_distancia(
     camada_id: str,
     resolucao_distancia: float = 10.0,
     distancia_maxima: float | None = None,
     unidade_distancia: str = "metros",
 ) -> dict:
     """Calcula distância."""
-    return await geoprocessamento_engine.execute("OP-10", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-10", {
         "camada_id": camada_id, "resolucao_distancia": resolucao_distancia,
         "distancia_maxima": distancia_maxima, "unidade_distancia": unidade_distancia,
-    })
+    }))
 
 
 @router.post("/operacoes/calcular-distancia-ponderada")
-async def calcular_distancia_ponderada(
+def calcular_distancia_ponderada(
     camada_id: str,
     atributo_peso: str,
     resolucao_distancia: float = 50.0,
     distancia_maxima: float | None = None,
 ) -> dict:
     """Calcula distância usando o atributo informado como ponderador."""
-    return await geoprocessamento_engine.execute("OP-11", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-11", {
         "camada_id": camada_id, "atributo_peso": atributo_peso,
         "resolucao_distancia": resolucao_distancia, "distancia_maxima": distancia_maxima,
-    })
+    }))
 
 
 @router.post("/operacoes/calcular-densidade")
-async def calcular_densidade(
+def calcular_densidade(
     camada_id: str,
     tipo_kernel: str = "gaussiano",
     largura_kernel: float = 1.0,
@@ -1862,28 +1881,28 @@ async def calcular_densidade(
     normalizar_resultado: bool = True,
 ) -> dict:
     """Calcula densidade."""
-    return await geoprocessamento_engine.execute("OP-12", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-12", {
         "camada_id": camada_id, "tipo_kernel": tipo_kernel,
         "largura_kernel": largura_kernel, "resolucao_kernel": resolucao_kernel,
         "normalizar_resultado": normalizar_resultado,
-    })
+    }))
 
 
 @router.post("/operacoes/calcular-custo-acumulado")
-async def calcular_custo_acumulado(
+def calcular_custo_acumulado(
     raster_id: str,
     origem_linha: int = 0,
     origem_coluna: int = 0,
 ) -> dict:
     """Calcula custo acumulado sobre raster de fricção."""
-    return await geoprocessamento_engine.execute("OP-13", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-13", {
         "raster_id": raster_id, "origem_linha": origem_linha,
         "origem_coluna": origem_coluna,
-    })
+    }))
 
 
 @router.post("/operacoes/interpolar-valores")
-async def interpolar_valores(
+def interpolar_valores(
     camada_id: str,
     atributo_valor: str | None = None,
     metodo_interpolacao: str = "idw",
@@ -1892,66 +1911,66 @@ async def interpolar_valores(
     raio_busca: float | None = None,
 ) -> dict:
     """Interpola valores."""
-    return await geoprocessamento_engine.execute("OP-14", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-14", {
         "camada_id": camada_id, "metodo_interpolacao": metodo_interpolacao,
         "atributo_valor": atributo_valor,
         "resolucao_interpolacao": resolucao_interpolacao,
         "potencia_interpolacao": potencia_interpolacao, "raio_busca": raio_busca,
-    })
+    }))
 
 
 @router.post("/operacoes/criar-camada-booleana")
-async def criar_camada_booleana(
+def criar_camada_booleana(
     camada_id: str,
     resolucao_raster: float = 50.0,
     crs_destino: str | None = None,
 ) -> dict:
     """Rasteriza presença como 1 e ausência como 0."""
-    return await geoprocessamento_engine.execute("OP-16", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-16", {
         "camada_id": camada_id, "resolucao_raster": resolucao_raster,
         "crs_destino": crs_destino,
-    })
+    }))
 
 
 @router.post("/operacoes/recortar-raster")
-async def recortar_raster(raster_id: str, camada_mascara_id: str) -> dict:
+def recortar_raster(raster_id: str, camada_mascara_id: str) -> dict:
     """Recorta raster usando uma camada vetorial como máscara."""
-    return await geoprocessamento_engine.execute("OP-21", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-21", {
         "raster_id": raster_id, "camada_mascara_id": camada_mascara_id,
-    })
+    }))
 
 
 @router.post("/operacoes/estatisticas-por-zona")
-async def estatisticas_por_zona(raster_id: str, camada_zona_id: str) -> dict:
+def estatisticas_por_zona(raster_id: str, camada_zona_id: str) -> dict:
     """Calcula estatísticas do raster por feição de uma camada zonal."""
-    return await geoprocessamento_engine.execute("OP-22", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-22", {
         "raster_id": raster_id, "camada_zona_id": camada_zona_id,
-    })
+    }))
 
 
 @router.post("/operacoes/amostrar-raster-pontos")
-async def amostrar_raster_pontos(raster_id: str, camada_pontos_id: str) -> dict:
+def amostrar_raster_pontos(raster_id: str, camada_pontos_id: str) -> dict:
     """Amostra valores raster nas geometrias de uma camada."""
-    return await geoprocessamento_engine.execute("OP-23", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-23", {
         "raster_id": raster_id, "camada_pontos_id": camada_pontos_id,
-    })
+    }))
 
 
 @router.post("/operacoes/extrair-valores-poligono")
-async def extrair_valores_poligono(
+def extrair_valores_poligono(
     raster_id: str,
     camada_poligono_id: str,
     estatistica: str = "media",
 ) -> dict:
     """Extrai estatística raster para cada polígono."""
-    return await geoprocessamento_engine.execute("OP-24", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-24", {
         "raster_id": raster_id, "camada_poligono_id": camada_poligono_id,
         "estatistica": estatistica,
-    })
+    }))
 
 
 @router.post("/operacoes/agregar-por-territorio")
-async def agregar_por_territorio(
+def agregar_por_territorio(
     camada_id: str,
     campo_unidade: str,
     funcao_agregacao: str = "soma",
@@ -1959,14 +1978,14 @@ async def agregar_por_territorio(
     resolucao_saida: float | None = None,
 ) -> dict:
     """Agrega por território."""
-    resultado = await geoespacial_service.agregar_por_territorio(
+    resultado = asyncio.run(geoespacial_service.agregar_por_territorio(
         camada_id, campo_unidade, funcao_agregacao, atributo_agregacao, resolucao_saida
-    )
+    ))
     return resultado
 
 
 @router.post("/operacoes/exportar-raster")
-async def exportar_raster(
+def exportar_raster(
     raster_id: str,
     nome_saida: str,
     formato_saida: str = "GeoTIFF",
@@ -1975,24 +1994,24 @@ async def exportar_raster(
     destino: str = "memoria",
 ) -> dict:
     """Exporta raster."""
-    return await geoprocessamento_engine.execute("OP-26", {
+    return asyncio.run(geoprocessamento_engine.execute("OP-26", {
         "raster_id": raster_id, "nome_saida": nome_saida,
         "formato_saida": formato_saida, "crs_saida": crs_saida,
         "comprimir_arquivo": comprimir_arquivo, "destino": destino,
-    })
+    }))
 
 
 # ==================== FUNÇÕES E FLUXOS ====================
 
 @router.get("/funcoes", response_model=list[FuncaoSchema])
-async def listar_funcoes(modulo: str | None = Query(None)) -> list[FuncaoSchema]:
+def listar_funcoes(modulo: str | None = Query(None)) -> list[FuncaoSchema]:
     """Lista todas as funções disponíveis."""
     funcoes = modelo_repo.listar("funcao", modulo)
     return [FuncaoSchema(**f) for f in funcoes]
 
 
 @router.get("/fluxos", response_model=list[FluxoSchema])
-async def listar_fluxos(modulo: str | None = Query(None)) -> list[FluxoSchema]:
+def listar_fluxos(modulo: str | None = Query(None)) -> list[FluxoSchema]:
     """Lista todos os fluxos disponíveis."""
     fluxos = modelo_repo.listar("fluxo", modulo)
     return [FluxoSchema(**f) for f in fluxos]

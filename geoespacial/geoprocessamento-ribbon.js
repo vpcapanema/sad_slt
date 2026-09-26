@@ -253,7 +253,8 @@
         else message("Selecione uma camada ou raster.");
       }
       if (action === "add-result" && activeLayerId()) {
-        const id=activeLayerId(),map=window.gpApp.state.map;[id,`${id}-line`,`${id}-point`].forEach(layer=>{if(map.getLayer(layer))map.setLayoutProperty(layer,"visibility","visible")});window.gpApp.zoomToCatalogLayer(id).catch(error => message(error.message));
+        const id=activeLayerId(),map=window.gpApp.state.map;
+        window.gpApp.addCatalogLayerToMap(id,false).then(()=>{[id,`${id}-line`,`${id}-point`].forEach(layer=>{if(map.getLayer(layer))map.setLayoutProperty(layer,"visibility","visible")});window.gpApp.renderLayers();return window.gpApp.zoomToCatalogLayer(id);}).catch(error=>message(error.message));
       }
       if (action === "add-result" && !activeLayerId()) message("Selecione o resultado que deseja adicionar ao mapa.");
       if (["edit-function", "validate-function", "run-function"].includes(action)) window.gpApp.showLibrary("functions");
@@ -262,7 +263,7 @@
       if (action === "new-flow") window.gpApp.newFlow();
       if (action === "history") window.gpApp.showHistory();
       if (action === "environments") window.gpCommands.showEnvironments();
-      if (action === "cancel" && !window.gpApp.cancelExecution()) message("Não há execução ativa para cancelar.");
+      if (action === "cancel") window.gpApp.cancelExecution().then(active=>{if(!active)message("Não há execução ativa para cancelar.");});
       if (action === "duplicate") window.gpCommands.duplicateDefinition();
       if (action === "import-definition") window.gpCommands.importDefinition();
       if (action === "export-definition") window.gpCommands.exportDefinition();

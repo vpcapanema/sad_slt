@@ -55,6 +55,16 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  await p.waitForFunction(()=>window.__previewMap);
  assert(await p.evaluate(()=>window.__previewMap.scrollWheelZoom.enabled()));
  const zoom=await p.evaluate(()=>window.__previewMap.getZoom());await p.locator('#ea-input-preview-map .leaflet-control-zoom-in').click();await p.waitForTimeout(350);assert((await p.evaluate(()=>window.__previewMap.getZoom()))>zoom);
+
+ const footer=await p.locator('#ea-staging-actions').evaluate(n=>{const style=getComputedStyle(n),buttons=[...n.children].map(b=>b.getBoundingClientRect());return {available:n.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),gap:parseFloat(style.columnGap),widths:buttons.map(b=>b.width)};});
+ assert(Math.max(...footer.widths)-Math.min(...footer.widths)<1);
+ assert(Math.abs(footer.widths.reduce((a,b)=>a+b,0)+3*footer.gap-footer.available)<2);
+ const headers=await p.locator('.ea-preview-workspace > section > header').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().height));
+ assert(Math.abs(headers[0]-headers[1])<1);
+ await p.selectOption('#ea-operation','estatisticas');
+ await p.locator('input[aria-label="Visibilidade no mapa: entrada"]').uncheck();
+ await p.locator('input[aria-label="Visibilidade no mapa: Camada 1.0"]').uncheck();
+ await p.locator('.ea-preview-workspace').screenshot({path:'/tmp/sicard-previa-informacoes.png'});
  recusarCompatibilidade=true;
  await p.locator('#ea-staging-confirmar').click();
  await p.getByText('Não foi possível enviar à bancada:',{exact:false}).waitFor();
@@ -62,35 +72,24 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  await p.locator('.slt-fb-processes .slt-fb-modal--error [data-fb-close]').click();
  await p.waitForFunction(()=>!document.querySelector('#ea-staging-confirmar').disabled);
  recusarCompatibilidade=false;
- await p.locator('#ea-staging-confirmar').click();await p.waitForFunction(()=>document.querySelector('iframe').contentWindow.gpApp.state.layers.length===8);
- assert.equal(conferencias.at(-1).camadas.length,5,'Todas as quatro fontes de entrada e a base conferidas');
- assert.equal(conferencias.at(-1).camadas.filter(c=>c.arquivo_local?.conteudo_base64).length,3,'Originais locais enviados à conferência');
-
-
- const frame=p.frameLocator('#ea-workbench-frame');
- assert.equal(await frame.locator('[data-layer-group="papel:entrada"] [data-layer]').count(),7);
- assert.equal(await frame.locator('[data-layer-group="papel:base"] [data-layer]').count(),1);
- assert.equal(await frame.locator('[data-layer-group="papel:entrada"] [data-layer-group^="arquivo:"]').count(),4);
- assert.equal(await frame.locator('[data-layer-group="papel:base"] [data-layer-group^="arquivo:"]').count(),0);
- assert.equal(await frame.locator('[data-layer-group="papel:base"] [data-layer-group="categoria:Social"] [data-layer]').count(),1);
- assert(await p.locator('.slt-fb-processes').getByText('Enviando camadas à bancada',{exact:true}).count());
+ await p.locator('#ea-staging-confirmar').click();
+ await p.waitForFunction(()=>document.querySelector('iframe').contentWindow.gpApp.state.layers.length===6);
+ await p.waitForFunction(()=>document.querySelector('#ea-input-preview').hidden);
+ assert.equal(conferencias.at(-1).camadas.length,4);
+ const local=conferencias.at(-1).camadas.find(c=>c.arquivo_local?.nome==='um.gpkg');
+ assert.deepEqual(local.arquivo_local.camadas,['um.gpkg::1']);
+ const ids=await bancada();assert(!ids.includes('entrada'));assert(!ids.includes('local:1:0'));
+ for(const id of ['ea-input-preview','ea-layer-information','ea-base-list-card','ea-operation-params','ea-finalidades'])assert(await p.locator('#'+id).evaluate(n=>n.hidden));
+ assert.equal(await p.locator('#ea-input-preview-data').textContent(),'');
+ assert.equal(await p.locator('#ea-input-preview-layers').textContent(),'');
+ assert.equal(await p.locator('#ea-base-list-body').textContent(),'');
+ assert.equal(await p.locator('#ea-operation-params').textContent(),'');
+ await p.waitForFunction(()=>!document.querySelector('#ea-run').disabled);
  await p.locator('.slt-fb-processes [data-fb-close]').evaluateAll(nodes=>nodes.forEach(n=>n.click()));
- assert.equal(await p.locator('.ea-preview-panel > footer button').count(),4);
- for(const button of await p.locator('.ea-preview-panel > footer button').all()){assert.equal((await button.textContent()).trim(),'');assert(await button.getAttribute('aria-label'));}
- const zin=await p.locator('#ea-input-preview-map .leaflet-control-zoom-in').boundingBox(),zout=await p.locator('#ea-input-preview-map .leaflet-control-zoom-out').boundingBox();
- for(const button of await p.locator('#ea-input-preview-map .ea-preview-map-tools button').all()){
-  const box=await button.boundingBox();assert(Math.abs(box.width-zin.width)<=1);assert(Math.abs(box.height-zin.height)<=1);assert(box.y>=zout.y+zout.height);assert(Math.abs(box.x-zin.x)<=1);assert.equal((await button.textContent()).trim(),'');
- }
- await p.selectOption('#ea-operation','estatisticas');await p.waitForFunction(()=>!document.querySelector('#ea-run').disabled);
- await p.locator('#ea-run').click();await p.locator('[data-fb-confirmar]').click();await p.waitForTimeout(500);
- assert.equal(pedidos.length,1);assert.equal(Object.keys(pedidos[0].entradas_locais).length,3);assert.equal(pedidos[0].entradas.length,4);
- await p.waitForFunction(()=>!document.querySelector('#ea-staging-editar').disabled);
- await p.locator('#ea-staging-editar').click();await p.locator('#ea-input-preview-layers [aria-label="Remover da prévia: Camada 1.0"]').click();assert.equal((await bancada()).length,8,'Edição aguarda nova confirmação');
- await p.locator('#ea-staging-confirmar').click();await p.waitForFunction(()=>document.querySelector('iframe').contentWindow.gpApp.state.layers.length===7);
- await p.evaluate(()=>document.querySelector('iframe').contentWindow.gpApp.removeLayerFromMap('local:2:0'));
- await p.waitForFunction(()=>!Array.from(document.querySelectorAll('.ea-preview-layer')).some(n=>n.textContent==='Camada 2.0'));
- await p.locator('#ea-staging-limpar').click();assert.equal((await bancada()).length,6,'Limpar prévia mantém bancada confirmada');
- await p.locator('#ea-staging-cancelar').click();assert(await p.locator('#ea-input-preview-layers .ea-preview-layer').count()>0);
- for(const width of [390,768,1440]){await p.setViewportSize({width,height:1000});assert((await p.locator('.ea-config-tools').boundingBox()).height<=36,'Configuração em uma linha');assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));const cards=await p.locator('.ea-preview-workspace > section').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().height));assert(Math.abs(cards[0]-cards[1])<1);const panel=await p.locator('.ea-preview-panel').boundingBox(),map=await p.locator('#ea-input-preview-map').boundingBox();assert(Math.abs(panel.height-map.height)<=1,`Alturas diferentes em ${width}px`);}
- assert.deepEqual(errors,[]);await p.evaluate(()=>{document.querySelectorAll('.slt-fb-process-panel:not([data-processando]) [data-fb-close]').forEach(b=>b.click());document.querySelectorAll('.slt-fb-notice').forEach(n=>n.querySelector('button[aria-label]')?.click());});await p.locator('.ea-preview-workspace').screenshot({path:'/tmp/sicard-previa-informacoes.png'});await p.screenshot({path:'/tmp/sicard-previa-bancada.png',fullPage:true});await browser.close();console.log('OK: prévia, três arquivos, agrupamento, mapa, confirmação, payload e remoção.');
+ await p.locator('#ea-run').click();await p.locator('[data-fb-confirmar]').click();
+ await p.waitForTimeout(500);
+ assert.equal(pedidos.length,1);assert.equal(pedidos[0].entradas.length,3);
+ assert.equal(Object.keys(pedidos[0].entradas_locais).length,2);assert.deepEqual(pedidos[0].arquivo_local.camadas,['um.gpkg::1']);
+ assert.deepEqual(errors,[]);
+ await browser.close();console.log('OK: checkboxes, componentes de arquivo, falha preservada, limpeza após envio, layout e execução.');
 })().catch(e=>{console.error(e);process.exit(1)});

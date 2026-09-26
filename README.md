@@ -51,6 +51,19 @@ bash scripts/start-dev-codespace.sh
 O script lê `.env`, inicia/reutiliza o supervisor do túnel, verifica o banco
 com `SELECT 1` e inicia FastAPI em `127.0.0.1:8083`. No VS Code, a tarefa
 **SICARD: Iniciar ambiente de desenvolvimento** executa esse mesmo script.
+Para liberar a porta ocupada e iniciar novamente, use **Terminal → Run Task →
+SICARD: Limpar porta e reiniciar servidor local**, ou execute
+`bash scripts/restart-dev-codespace.sh`. Pelo VS Code Desktop Windows, a tarefa usa a extensão
+SICARD 0.3.0 para verificar e recuperar a ponte SSH antes de executar o script.
+Atualize o VSIX conforme [estas instruções](tools/vscode-sicard-tunnel/README.md).
+O script verifica a ponte e reinicia o túnel do banco se a consulta de conexão falhar;
+a execução direta pelo terminal não inicia processos no Windows. Depois aguarda a conexão com o banco por até 90 segundos
+(ajustável por `SICARD_DB_WAIT_SECONDS`, de 5 a 300). Se a conexão falhar,
+mantém o servidor existente. Após validar o banco, encerra os processos em escuta
+na porta 8083 (ou `SICARD_DEV_PORT`), tenta desligamento gracioso por 10 segundos
+e força a saída se necessário. Depois usa o startup acima. O servidor permanece
+no terminal da tarefa; `Ctrl+C` o encerra. Para repetir uma tarefa que já está
+rodando, use **Tasks: Restart Running Task**.
 Na aba **Ports**, abra a porta **8083**, mantida privada, e navegue para
 `/restrict/geoespacial/extracao-atributos/`.
 

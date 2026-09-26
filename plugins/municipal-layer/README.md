@@ -586,3 +586,21 @@ e o exportador SICARD para preservar essas regras. Os testes isolados
 fora da malha, duplicatas e reabertura dos quatro formatos. Não substituem os
 testes com o catálogo original em `server/test_layer.py`, que dependem dos
 insumos locais `data/catalog.sqlite` e `data/municipios.gpkg`.
+
+## HTML persistente no SICARD
+
+Na página de camadas territoriais, `templates/componentes/_municipal_builder.html`
+é incluído pelo servidor e define os controles, os resultados e os templates de
+linhas repetidas. O adaptador passa `htmlHost` ao componente React, que conserva
+a lógica de estado e requisições e preenche essa estrutura com
+`src/persistent-view.js`. A montagem não substitui o HTML do hospedeiro.
+O uso independente do componente continua disponível sem `htmlHost`.
+Após mudanças, execute também `npx vite build --config vite.sicard.config.js`
+para atualizar o bundle servido pelo SICARD.
+
+O catálogo e a prévia do SICARD usam `/municipal/catalog` e
+`/municipal/preview`, independentes da categoria. A página inicia ambas as
+consultas de catálogo e categorias sem dependência entre elas, mantendo a
+categoria no placeholder. Trocar a categoria atualiza o destino de geração,
+sem remontar o componente, perder filtros ou buscar novamente o catálogo.
+A geração continua exigindo uma categoria ativa validada no servidor.

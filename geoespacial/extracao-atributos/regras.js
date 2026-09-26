@@ -5,7 +5,7 @@ import { el, feedback } from './ui.js';
 
 export const REGRA_PADRAO = Object.freeze({
   papel: 'atributos', ligacao: 'localizacao', predicado: 'intersecta', chave_entrada: null, chave_base: null,
-  multiplicidade: 'maior_sobreposicao', campos: null, prefixo: null, apelidos: {},
+  multiplicidade: 'resumo', campos: null, prefixo: null, apelidos: {},
   preparacao: { buffer_m: null, corrigir_geometrias: true, separar_por_tipo: true },
 });
 
@@ -15,8 +15,8 @@ const ROTULOS = {
   predicado: { intersecta: 'Intersecta', contem: 'Contém a feição da base', esta_dentro: 'Está dentro da feição da base' },
   multiplicidade: {
     binaria: 'Interseção: Sim/Não', estatisticas: 'Estatísticas sem recorte',
-    maior_sobreposicao: 'Maior sobreposição', primeira: 'Primeira feição',
-    todas: 'Todas (um registro por feição)', resumo: 'Resumo (contagem, soma, lista)',
+    maior_sobreposicao: 'Maior sobreposição', primeira: 'Primeira na ordem da base (seleção explícita)',
+    todas: 'Todas (um registro por feição)', resumo: 'Preservar valores e correspondências',
   },
 };
 
@@ -262,11 +262,17 @@ export function editarRegra({ nomeBase, regra, camposDisponiveis = [] }) {
     corpo.append(
       linha('Papel', papel, 'A unidade de recorte divide linhas e polígonos nos seus limites; só uma por execução.'),
       linha('Ligação', ligacao), blocoPredicado, blocoChaves,
-      linha('Multiplicidade', multiplicidade, 'Quando o registro toca mais de uma feição desta base.'),
+      linha('Multiplicidade', multiplicidade, 'Todas as correspondências são registradas. Primeira e maior sobreposição selecionam apenas os atributos principais; todas duplica registros. O padrão preserva os valores sem cálculo.'),
       linha('Campos a trazer', campos, dicaCampos), linha('Prefixo', prefixo), linha('Apelidos', apelidos),
       linha('Buffer (metros)', buffer, 'Transforma as feições da base em áreas antes do cruzamento.'),
       linha('Corrigir geometrias inválidas', corrigir), linha('Separar por tipo de geometria', separar), erro);
 
+    const agregacoes=el('button','Operações por campo do resumo','ea-btn');agregacoes.type='button';
+    agregacoes.addEventListener('click',async()=>{
+      const atualizado=await editarEstatisticas({nomeBase,regra:r,camposDisponiveis});
+      if(atualizado){r.estatistica=atualizado.estatistica;r.estatisticas_campos=atualizado.estatisticas_campos;}
+    });
+    corpo.append(agregacoes);
     const rodape = el('div', undefined, 'ea-config-dialog-footer');
     const padrao = el('button', 'Restaurar padrão', 'ea-btn');
     const cancelar = el('button', 'Cancelar', 'ea-btn');
@@ -304,7 +310,7 @@ export function editarRegra({ nomeBase, regra, camposDisponiveis = [] }) {
         window.SLTFeedback.campo(prefixo,'Prefixo deve começar com letra e usar letras minúsculas, números e sublinhado.'); return;
       }
       fechar({
-        estatistica: r.estatistica || 'media', estatisticas_campos: r.estatisticas_campos || {},
+        estatistica: r.estatistica || 'valores', estatisticas_campos: r.estatisticas_campos || {},
         papel: papel.value, ligacao: ligacao.value, predicado: predicado.value,
         chave_entrada: porAtributo ? chaveEntrada.value.trim() : null,
         chave_base: porAtributo ? chaveBase.value.trim() : null,
@@ -322,7 +328,7 @@ export function editarRegra({ nomeBase, regra, camposDisponiveis = [] }) {
 }
 
 export const ESTATISTICAS = Object.freeze({
-  media: 'Média', moda: 'Moda', mediana: 'Mediana', total: 'Total', minimo: 'Mínimo',
+  valores: 'Valores distintos (sem cálculo)', media: 'Média simples das feições', moda: 'Moda', mediana: 'Mediana', total: 'Total', minimo: 'Mínimo',
   maximo: 'Máximo', desvio_padrao: 'Desvio padrão', variancia: 'Variância', contagem: 'Contagem',
 });
 
@@ -332,9 +338,9 @@ export function categoriaBinaria(categoria) {
 }
 
 export function resumoEstatisticas(regra, categoria) {
-  if (categoriaBinaria(categoria)) return 'Interseção: Sim / Não';
+  if (categoriaBinaria(categoria)) return 'Presença + atributos e áreas identificadas';
   const quantidade = Object.keys(regra?.estatisticas_campos || {}).length;
-  return `${ESTATISTICAS[regra?.estatistica || 'media']}${quantidade ? ` · ${quantidade} campo(s) personalizado(s)` : ''}`;
+  return `${ESTATISTICAS[regra?.estatistica || 'valores']}${quantidade ? ` · ${quantidade} campo(s) personalizado(s)` : ''}`;
 }
 
 // O editor antigo permanece intacto para o enriquecimento configurável.
@@ -350,15 +356,16 @@ export function editarEstatisticas({ nomeBase, regra, categoria, camposDisponive
     erro.setAttribute('role', 'alert');
     const estatistica = document.createElement('select');
     estatistica.name = 'estatistica';
-    for (const [id, texto] of Object.entries(ESTATISTICAS)) estatistica.append(new Option(texto, id));
-    estatistica.value = regra?.estatistica || 'media';
+    estatistica.append(new Option(ESTATISTICAS.valores, 'valores'));
+    estatistica.value = 'valores';
+    if(regra?.estatistica&&regra.estatistica!=='valores')corpo.append(el('p', 'Esta configuração antiga aplicava '+(ESTATISTICAS[regra.estatistica]||regra.estatistica)+' a todos os campos. Revise as operações por campo; Aplicar passa a preservar valores nos demais.', 'ea-hint'));
     const porCampo = {...(regra?.estatisticas_campos || {})};
     if (binaria) {
-      corpo.append(el('p', 'Todos os campos desta base recebem Sim quando houver interseção e Não quando não houver. Os valores originais da base não são copiados.'));
+      corpo.append(el('p', 'Os atributos originais e todas as áreas correspondentes são preservados. A presença Sim/Não é um campo separado. Contato na borda e interseção no interior são identificados; não representam gravidade ou impedimento.'));
     } else {
-      corpo.append(linha('Estatística padrão da base', estatistica), el('p',
-        'Só as feições realmente intersectadas entram no cálculo, com o mesmo peso. Nulos são ignorados; sem interseção, os campos ficam vazios. Total significa soma. Contagem conta valores preenchidos.', 'ea-hint'),
-        el('p', 'Desvio padrão e variância são populacionais. Na moda, um empate usa o primeiro valor na ordem da base. Campos de texto aceitam moda e contagem; nas outras medidas ficam vazios, sem conversão de códigos em números.', 'ea-hint'));
+      corpo.append(linha('Tratamento dos campos sem operação definida', estatistica), el('p',
+        'Por padrão, preserva valores distintos em listas JSON, inclusive códigos e nulos. Escolha cálculos apenas nos campos em que a operação tem significado. Soma requer valores somáveis; média simples atribui o mesmo peso a cada feição, inclusive às que só tocam a borda. Não estima valores da parcela intersectada.', 'ea-hint'),
+        el('p', 'Desvio padrão e variância são populacionais. Na moda, um empate usa o primeiro valor na ordem da base. Campos de texto aceitam valores distintos, moda e contagem; operações numéricas incompatíveis são rejeitadas. Ausência de interseção deixa o campo vazio. Todas as correspondências ficam registradas separadamente.', 'ea-hint'));
       const campos = [...new Set([...camposDisponiveis, ...Object.keys(porCampo)])];
       const campo = document.createElement('select');
       campo.name = 'campo_estatistica';
@@ -384,7 +391,7 @@ export function editarEstatisticas({ nomeBase, regra, categoria, camposDisponive
       }
       medida.addEventListener('change', () => { if (!campo.value) return; if (medida.value) porCampo[campo.value] = medida.value; else delete porCampo[campo.value]; render(); });
       render();
-      corpo.append(linha('Personalizar um campo (opcional)', campo), linha('Estatística desse campo', medida), lista);
+      corpo.append(linha('Escolher operação por campo', campo), linha('Estatística desse campo', medida), lista);
       if (!campos.length) corpo.append(el('p', 'Carregue a base na bancada para personalizar seus campos.', 'ea-hint'));
     }
     const prefixo = entrada('prefixo', regra?.prefixo);

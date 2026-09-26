@@ -59,6 +59,14 @@ export function criarTerritorial(result){
           for(const aid of item.areas){
             const area=data.areas[aid];if(area.categoria!==tipo)continue;known.add(area.base_id);
             const li=clone('ea-tpl-area');valor(li,'titulo',`${area.base} · feição ${area.fid}`);
+            const relacao=item.relacoes?.[aid];
+            const tipos={contato_borda:'Contato na borda',intersecao_interior:'Interseção no interior',cruzamento_pontual:'Cruzamento pontual',
+              ponto_na_borda:'Ponto na borda',ponto_no_interior:'Ponto no interior',sobreposicao_area:'Sobreposição de área',
+              contato_linear:'Contato linear na borda',contato_pontual:'Contato pontual',trecho_no_interior:'Trecho no interior',
+              trecho_na_borda:'Trecho na borda',trechos_interior_e_borda:'Trechos no interior e na borda',intersecao_mista:'Interseção com geometria mista'};
+            li.querySelector('[data-area-relation]').textContent=relacao
+              ? [tipos[relacao.situacao||relacao.tipo]||relacao.situacao||relacao.tipo,relacao.area_m2!=null?`${relacao.area_m2.toLocaleString('pt-BR')} m² em comum`:null,relacao.comprimento_m!=null?`${relacao.comprimento_m.toLocaleString('pt-BR')} m em comum`:null,relacao.comprimento_interior_m!=null?`${relacao.comprimento_interior_m.toLocaleString('pt-BR')} m no interior`:null,relacao.comprimento_borda_m!=null?`${relacao.comprimento_borda_m.toLocaleString('pt-BR')} m na borda`:null,relacao.percentual_entrada!=null?`${relacao.percentual_entrada.toLocaleString('pt-BR')}% da geometria de entrada`:null].filter(Boolean).join(' · ')
+              : 'Tipo de contato não registrado nesta extração.';
             li.querySelector('button').onclick=()=>select(`area:${aid}`);definicoes(li.querySelector('[data-area-summary]'),Object.fromEntries(Object.entries(area.atributos).slice(0,3)));definicoes(li.querySelector('[data-area-details]'),area.atributos);li.querySelector('details').hidden=Object.keys(area.atributos).length<=3;list.append(li);
           }
           for(const bid of item.bases_intersectadas){

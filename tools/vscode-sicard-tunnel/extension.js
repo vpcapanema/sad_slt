@@ -66,15 +66,49 @@ function activate(context) {
   function stop(){
     stopped=true;clearTimeout(timer);timer=null;
     const proc=child;child=null;
+    let killed=Promise.resolve();
     if(proc?.pid){
       // Encerra somente o processo que esta extensão iniciou e seus filhos ssh.
-      execFile(path.join(process.env.SystemRoot||'C:\\Windows','System32','taskkill.exe'),['/PID',String(proc.pid),'/T','/F'],{windowsHide:true},()=>{});
+      killed=new Promise(resolve=>execFile(path.join(process.env.SystemRoot||'C:\\Windows','System32','taskkill.exe'),['/PID',String(proc.pid),'/T','/F'],{windowsHide:true},()=>resolve()));
     }
     if(lease){lease.close();lease=null;}
     update('Parado');
+    return killed;
+  }
+  let ensuring=null;
+  async function ensureBridge(){
+    if(ensuring)return ensuring;
+    ensuring=(async()=>{
+      if(!vscode.workspace.isTrusted||!isProject(vscode.workspace.workspaceFolders))
+        throw new Error('Abra o workspace sad_slt e confie nele para recuperar a ponte.');
+      const codespace=config().get('codespace');argumentsFor(codespace);
+      const probe=async()=>{
+        try{
+          await promisify(execFile)(gh(),['codespace','ssh','-c',codespace,'--',
+            'timeout 8 bash /workspaces/sad_slt/scripts/ssh-vm-via-windows.sh true'],
+            {windowsHide:true,timeout:20000,maxBuffer:65536});
+          return true;
+        }catch{return false;}
+      };
+      output.appendLine('Tarefa: verificando a ponte e a autenticação SSH na VM…');
+      if(await probe())return 'ready';
+      output.appendLine('Ponte indisponível: reiniciando o processo local e aguardando reconexão…');
+      await stop();attempt=0;await start();
+      const deadline=Date.now()+120000;
+      while(Date.now()<deadline&&!disposed){
+        await new Promise(resolve=>setTimeout(resolve,3000));
+        if(await probe()){
+          update('Ponte validada');return 'ready';
+        }
+      }
+      output.show();
+      throw new Error('Não foi possível recuperar a ponte Windows. Consulte o log SICARD · Túnel do Windows. O servidor atual foi preservado.');
+    })();
+    try{return await ensuring;}finally{ensuring=null;}
   }
   function auto(){if(isProject(vscode.workspace.workspaceFolders)){status.show();if(config().get('autoStart')&&vscode.workspace.isTrusted)start();}else{stop();status.hide();}}
   context.subscriptions.push(output,event,status,vscode.window.registerTreeDataProvider('sicardTunnel.view',provider),
+    vscode.commands.registerCommand('sicardTunnel.ensureBridge',ensureBridge),
     vscode.commands.registerCommand('sicardTunnel.start',()=>{attempt=0;start();}),
     vscode.commands.registerCommand('sicardTunnel.stop',stop),
     vscode.commands.registerCommand('sicardTunnel.log',()=>output.show()),

@@ -29,6 +29,7 @@ AREAS = {key:{'id':key,'base_id':base,'base':name,'categoria':category,'fid':i,
 SNAPSHOT = {'versao':1,'bases':BASES,'areas':AREAS,'entradas':[
     {'nome':name,'feicoes':[{'fid':i,'identificador':f'D-{i}','atributos':{'nome':f'Demanda {i}'},
                            'geometria_disponivel':True,'geometria':{'type':'Point','coordinates':[-46.99+i*.001,-22.99]},
+                           'relacoes':{'r1':{'tipo':'contato_borda','area_m2':0,'comprimento_m':None},'s1':{'tipo':'intersecao_interior','area_m2':12,'comprimento_m':None}},
                            'areas':(['r1'] if i%2==0 else [])+(['s1'] if i%3==0 else []),
                            'bases_intersectadas':(['r'] if i%2==0 else [])+(['s'] if i%3==0 else [])}
                           for i in range(n)]} for name,n in [('Rodovias',30),('Ferrovias',2)]]}

@@ -70,11 +70,11 @@ function openEditor(editing=false){
   dialog.append(header,workspace,status,footer);
   if(editing){dialog.classList.add('gp-file-inline');document.querySelector('.gp-map-view').append(dialog);dialog.show();}
   else{document.body.append(dialog);dialog.showModal();}
-  const map=L.map(mapHost,{preferCanvas:true}).setView([-22,-48],6),group=L.featureGroup().addTo(map),editGroup=L.featureGroup(),signatures=new Map();
+  const map=L.map(mapHost,{preferCanvas:true,zoomAnimation:false}).setView([-22,-48],6),group=L.featureGroup().addTo(map),editGroup=L.featureGroup(),signatures=new Map();
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
   const snapshot=clone(source.geojson);let draft=clone(snapshot),history=[clone(snapshot)],cursor=0,selected=null,page=0,sort=null,ascending=true,drawing=false,lastError='';
   editor={dirty:false,table};let handler=null,operation=null;
-  const closed=()=>{handler?.disable();map.remove();dialog.close();dialog.remove();editor=null;syncEditRibbon();app().state.map?.resize();};
+  const closed=()=>{handler?.disable();map.stop();map.remove();dialog.close();dialog.remove();editor=null;syncEditRibbon();app().state.map?.resize();};
   const cancel=()=>{if(busy)return;closed();};
   header.append(button('×',cancel));header.lastChild.setAttribute('aria-label','Cancelar e fechar');
   dialog.addEventListener('cancel',event=>{event.preventDefault();cancel();});
@@ -231,6 +231,7 @@ async function execute(form){
   if(busy||editor)throw new Error('Salve ou cancele a edição antes de executar.');
   const data=new FormData(form),params={};
   for(const [key,value] of data){
+    if(String(value).trim()==='')continue;
     const input=form.elements[key];params[key]=input?.multiple?data.getAll(key):input?.type==='number'&&value!==''?Number(value):value;
   }
   for(const input of form.querySelectorAll('input[type=checkbox]'))params[input.name]=input.checked;
@@ -238,14 +239,13 @@ async function execute(form){
   if(params.processar_sobre==='selecionadas')throw new Error('Neste fluxo execute sobre todas as feições ou salve a seleção como uma camada separada.');
   const files={};for(const [id,file] of sessions)if(Object.values(params).some(value=>value===id||Array.isArray(value)&&value.includes(id)))files[id]={arquivo:file.arquivo,revisao:file.revisao};
   const proc=window.gpFeedback?.processo('Processando arquivos da bancada');busy=true;const submit=form.querySelector('button[type=submit],button.primary');if(submit)submit.disabled=true;
-  try{const result=await post('/bancada-arquivos/executar',{operacao:form.dataset.op,parametros:params,arquivos:files});if(result.camada)mount(result.camada);if(proc)proc.concluir({message:`Execução concluída: ${result.execucao_id}`});else app().log(`Execução concluída: ${result.execucao_id}`,'ok');}
+  try{const result=await post('/bancada-arquivos/executar',{operacao:form.dataset.op,parametros:params,arquivos:files});if(result.camada)mount(result.camada);else if(result.resultado?.raster_id)await app().refreshLayers(true,[result.resultado.raster_id],result.resultado.raster_id);else app().showOperationResult('Resultado da operação',result.resultado||result);if(proc)proc.concluir({message:`Execução concluída: ${result.execucao_id}`});else app().log(`Execução concluída: ${result.execucao_id}`,'ok');}
   catch(error){proc?.concluir({type:'error',message:error.message});throw error;}
   finally{busy=false;if(submit)submit.disabled=false;}
 }
 
 function init(){
-  const previousAttributes=app().showAttributes,previousZoom=app().zoomToCatalogLayer;
-  app().showAttributes=id=>{if(sessions.has(id)){app().state.activeLayerId=id;return openEditor(false);}return previousAttributes(id);};
+  const previousZoom=app().zoomToCatalogLayer;
   app().zoomToCatalogLayer=async id=>{
     const file=sessions.get(id);if(!file)return previousZoom(id);
     const bounds=new maplibregl.LngLatBounds();
@@ -261,7 +261,7 @@ function init(){
     if(event.target.closest('[data-ribbon="editar"]')){event.preventDefault();event.stopImmediatePropagation();activateEditRibbon();return;}
     const action=event.target.closest('[data-action]')?.dataset.action,edit=event.target.closest('[data-edit-layer]');
     if(action==='load-system'){event.preventDefault();event.stopImmediatePropagation();browse().catch(error=>report(error.message));}
-    else if((edit&&sessions.has(edit.dataset.editLayer))||active()&&['attributes','calculate-field','select-attribute','filter-layer','save-layer','save-result','refresh-source'].includes(action)){
+    else if((edit&&sessions.has(edit.dataset.editLayer))||active()&&['calculate-field','save-layer','save-result','refresh-source'].includes(action)){
       event.preventDefault();event.stopImmediatePropagation();
       if(busy)return;
       if(edit)app().state.activeLayerId=edit.dataset.editLayer;
@@ -277,6 +277,6 @@ function init(){
     event.preventDefault();event.stopImmediatePropagation();execute(event.target).catch(error=>report(error.message));
   },true);
   window.addEventListener('beforeunload',event=>{if(editor?.dirty||busy){event.preventDefault();event.returnValue='';}});
-  window.gpArquivos={abrir:browse,adicionar:mount,editar:()=>openEditor(true),tabela:()=>openEditor(false),sessions};
+  window.gpArquivos={get busy(){return busy;},abrir:browse,adicionar:mount,editar:()=>openEditor(true),tabela:()=>app().showAttributes(app().state.activeLayerId),sessions};
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();

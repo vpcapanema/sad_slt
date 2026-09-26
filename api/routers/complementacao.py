@@ -59,7 +59,7 @@ def _item(row: dict[str, Any], obj: dict[str, Any], *, pode_editar: bool) -> dic
 
 
 @router.get("/objetos")
-async def listar_objetos(user: SessionUser = Depends(require_operator)) -> list[dict[str, Any]]:
+def listar_objetos(user: SessionUser = Depends(require_operator)) -> list[dict[str, Any]]:
     itens: list[dict[str, Any]] = []
     pessoa_id = _pessoa_id(user)
     for row in hierarquizacao_repository.list_all():
@@ -73,7 +73,7 @@ async def listar_objetos(user: SessionUser = Depends(require_operator)) -> list[
 
 
 @router.get("/{hierarquizacao_codigo}/{objeto_codigo}")
-async def obter_complementacao(hierarquizacao_codigo: str, objeto_codigo: str,
+def obter_complementacao(hierarquizacao_codigo: str, objeto_codigo: str,
                                user: SessionUser = Depends(require_operator)) -> dict[str, Any]:
     row = hierarquizacao_repository.get_by_codigo(hierarquizacao_codigo)
     if not row:
@@ -87,7 +87,7 @@ async def obter_complementacao(hierarquizacao_codigo: str, objeto_codigo: str,
 
 
 @router.patch("/{hierarquizacao_codigo}/{objeto_codigo}")
-async def salvar_complementacao(hierarquizacao_codigo: str, objeto_codigo: str,
+def salvar_complementacao(hierarquizacao_codigo: str, objeto_codigo: str,
                                 valores: dict[str, Any] = Body(..., embed=True),
                                 user: SessionUser = Depends(require_operator)) -> dict[str, Any]:
     row = hierarquizacao_repository.get_by_codigo(hierarquizacao_codigo)

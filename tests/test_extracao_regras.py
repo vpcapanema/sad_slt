@@ -10,7 +10,7 @@ from api.services.extracao_atributos import catalogo
 def test_padrao_reproduz_atributos_por_localizacao():
     regra = regras.normalizar(None)
     assert regra['papel'] == 'atributos' and regra['ligacao'] == 'localizacao'
-    assert regra['predicado'] == 'intersecta' and regra['multiplicidade'] == 'maior_sobreposicao'
+    assert regra['predicado'] == 'intersecta' and regra['multiplicidade'] == 'resumo'
     assert regra['campos'] is None and regra['prefixo'] is None and regra['apelidos'] == {}
     assert regra['preparacao'] == {'buffer_m': None, 'corrigir_geometrias': True, 'separar_por_tipo': True}
 
@@ -58,6 +58,10 @@ class Usuario:
 
 @pytest.fixture
 def pasta(tmp_path, monkeypatch):
+    from api.services import extracao_atributos as service
+    catalogo_teste = lambda: {'categorias':[{'id':'t','nome':'Tema'}], 'camadas':[{'id':'a','nome':'A'},{'id':'b','nome':'B'}]}
+    monkeypatch.setattr(service, 'catalogo', catalogo_teste)
+    monkeypatch.setattr(__import__(__name__), 'catalogo', catalogo_teste)
     monkeypatch.setattr(configuracao, 'raiz', lambda: tmp_path)
     return tmp_path
 
@@ -73,7 +77,7 @@ def test_configuracao_v2_guarda_regra_e_le_v1(pasta):
     categoria, camadas = _duas_camadas()
     regra = {'multiplicidade': 'resumo', 'prefixo': 'uc', 'campos': ['nome'], 'apelidos': {'nome': 'Nome da UC'}}
     configuracao.salvar('Com regras', [{'id': categoria, 'camadas': camadas, 'regras': {camadas[0]: regra}}], Usuario())
-    gravado = json.loads((pasta / 'com-regras.json').read_text(encoding='utf-8'))
+    gravado = json.loads((pasta / 'config-analise' / 'com-regras.json').read_text(encoding='utf-8'))
     assert gravado['versao'] == configuracao.VERSAO
     carregado = configuracao.carregar('com-regras')
     primeira, segunda = carregado['categorias'][0]['camadas']
@@ -85,7 +89,7 @@ def test_configuracao_v2_guarda_regra_e_le_v1(pasta):
     gravado['versao'] = 1
     for camada in gravado['categorias'][0]['camadas']:
         camada.pop('regra')
-    (pasta / 'antiga.json').write_text(json.dumps(gravado, ensure_ascii=False), encoding='utf-8')
+    (pasta / 'config-analise' / 'antiga.json').write_text(json.dumps(gravado, ensure_ascii=False), encoding='utf-8')
     antiga = configuracao.carregar('antiga')
     assert all(c['regra'] == regras.normalizar(None) for c in antiga['categorias'][0]['camadas'])
 
@@ -98,7 +102,7 @@ def test_configuracao_v3_guarda_entradas_e_finalidades(pasta):
                                                 'filtro': {'campo': 'proj_id', 'operador': 'preenchido'}}}],
         finalidades=[{'nome': 'Indicadores', 'campos': ['id_registro', 'camada_origem']}])
     assert salvo['entradas'] == 1 and salvo['finalidades'] == 1
-    gravado = json.loads((pasta / 'analise-completa.json').read_text(encoding='utf-8'))
+    gravado = json.loads((pasta / 'config-analise' / 'analise-completa.json').read_text(encoding='utf-8'))
     assert gravado['versao'] == configuracao.VERSAO
     carregado = configuracao.carregar('analise-completa')
     entrada = carregado['entradas'][0]

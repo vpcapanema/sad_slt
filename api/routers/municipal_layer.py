@@ -28,6 +28,16 @@ def categorias():
     return {'categorias': service.categorias()}
 
 
+@router.get('/catalog')
+def catalog_comum():
+    return invoke(service.catalogo)
+
+
+@router.post('/preview')
+def preview_comum(body: Selecao):
+    return invoke(service.previa, None, body.model_dump())
+
+
 @router.get('/{categoria}/catalog')
 def catalog(categoria: str):
     return invoke(service.catalogo, categoria)

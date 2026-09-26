@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('fs');
 (async()=>{
- const {enviarPrevia,removerPrevia,guardarPrevia,desfazerPrevia}=await import('data:text/javascript;base64,'+fs.readFileSync('geoespacial/extracao-atributos/preparacao.js').toString('base64'));
+ const {enviarPrevia,removerPrevia,guardarPrevia,desfazerPrevia,limparPreparacao}=await import('data:text/javascript;base64,'+fs.readFileSync('geoespacial/extracao-atributos/preparacao.js').toString('base64'));
  const fc={type:'FeatureCollection',features:[]};
  const a={id:'local:a',chave:'a',geojson:fc,tipo:'vetor'},b={id:'local:b',chave:'b',geojson:fc,tipo:'vetor'};
  const input={id:'local:file',geojson:fc,camadas_importadas:[a,b],camadas_bancada:[a,b],arquivo_local:{nome:'file.gpkg',camadas:['a','b']}};
@@ -11,5 +11,13 @@ const assert=require('node:assert/strict'),fs=require('fs');
  assert.equal(s.bancadaEntradas[0].layer.camadas_bancada.length,2,'Editar prévia não modifica confirmação');
  assert.equal(enviarPrevia(s),2);assert.deepEqual(s.bancadaEntradas[0].layer.arquivo_local.camadas,['b']);
  guardarPrevia(s);s.input='';s.bases=[];assert.equal(s.bancadaEntradas.length,1);desfazerPrevia(s);assert.equal(s.input,'local:file');
+ s.previaVisiveis=new Set(['entrada:local:file:b']);
+ assert.equal(enviarPrevia(s),1);
+ assert.equal(s.bancadaBases.length,0,'Base desmarcada não é enviada');
+ assert.deepEqual(s.bancadaEntradas[0].layer.arquivo_local.camadas,['b']);
+ limparPreparacao(s);
+ assert.equal(s.input,'');assert.equal(s.preparacaoConcluida,true);
+ assert.equal(s.bancadaEntradas.length,1,'Limpeza preserva composição confirmada');
+ assert.equal(s.bases.length+s.staging.length,0);
  console.log('Preparação independente, confirmação explícita e desfazer: OK');
 })();

@@ -9,8 +9,8 @@ router = APIRouter(tags=["geometria"])
 
 
 @router.post("/geometria/parse")
-async def api_geometria_parse(file: UploadFile = File(...)):
-    content = await file.read()
+def api_geometria_parse(file: UploadFile = File(...)):
+    content = file.file.read()
     if len(content) > 50 * 1024 * 1024:
         raise HTTPException(413, "Arquivo maior que 50 MB.")
     try:
