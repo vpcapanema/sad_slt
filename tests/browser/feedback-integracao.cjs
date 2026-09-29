@@ -39,7 +39,7 @@ await p.route('**/api/**',async r=>{
 await p.goto('http://127.0.0.1:8083/restrict/geoespacial/extracao-atributos/',{waitUntil:'domcontentloaded'});
 await p.waitForFunction(()=>window.SICARDExtracao&&document.querySelector('#ea-category-select').options.length>1);
 await p.waitForFunction(()=>document.querySelector('iframe').contentWindow.gpApp?.state.map?.isStyleLoaded());
-async function choose(button,id){await p.locator(button).click();const d=p.locator('dialog.ea-storage-dialog');await d.getByRole('button',{name:'Camadas cadastradas no banco',exact:true}).click();await d.locator(`[data-file="${id}"]`).click();await d.locator('.ea-storage-confirm-button').click();await d.waitFor({state:'detached'});}
+async function choose(button,id){await p.locator(button).click();const d=p.locator('dialog.ea-storage-dialog');await d.getByRole('button',{name:'Camadas cadastradas no banco',exact:true}).click();await d.locator(`[data-file="${id}"]`).click();await d.locator('.ea-storage-confirm-button').click();if(button==='#ea-input-browse'){await d.locator('#pfsConfirmBox.pfs-active').waitFor();await d.locator('#pfsConfirmOk').click();}await d.waitFor({state:'detached'});}
 await p.locator('#ea-base-browse').click();assert.equal(await p.locator('#ea-category-select').getAttribute('aria-invalid'),'true');assert.equal(await p.locator('.notification-toast.warning').count(),1);assert.equal(await p.locator('#pfsConfirmOverlay.pfs-active').count(),0);await p.evaluate(()=>Notify.clearAll());
 await p.selectOption('#ea-category-select','ambiental');assert.equal(await p.locator('#ea-category-select').getAttribute('aria-invalid'),null);
 await choose('#ea-input-browse','entrada');await p.selectOption('#ea-operation','estatisticas');await choose('#ea-base-browse','base');

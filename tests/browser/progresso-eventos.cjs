@@ -15,7 +15,7 @@ const {chromium}=require('playwright'),{spawn}=require('node:child_process'),pat
   await page.waitForFunction(()=>document.querySelector('[data-pfs="progress-meta"]').textContent.includes('Tarefa atual: 75%'));
   await post({mensagem:'Calculando interseções'});
   await tarefaE('Calculando interseções');
-  assert.match(await page.locator('[data-pfs="progress-meta"]').innerText(),/Tarefa atual: 0%/);
+  assert.equal(await page.locator('#pfsTaskProgressBar').getAttribute('aria-valuenow'),null,'Nova operação permanece indeterminada até receber medição');
   assert.equal(await page.locator('.pfs-log-spinner').count(),1,'Só a tarefa corrente gira');
   // Poll atrasado não pode substituir uma mensagem já recebida pelo canal vivo.
   await page.evaluate(()=>ProcessFeedback.acompanhar({id:'teste',status:'executando',etapa:'Estado antigo',tarefa_id:1,progresso_tarefa:75,eventos_url:'/eventos'}));

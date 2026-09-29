@@ -240,16 +240,30 @@ def test_job_publica_etapas_e_resultado_sem_modal_geral(monkeypatch):
     assert job['percentual']==100
 
 
-def test_processar_selecao_e_filtro_de_arquivo_preserva_fids(source, monkeypatch):
-    original, path = source
-    snapshot = deepcopy(original)
-    snapshot['geojson']['features'][0]['id'] = '71'
-    other = deepcopy(snapshot['geojson']['features'][0])
-    other['id'] = '92'
-    other['properties']['nome'] = 'Outra'
-    snapshot['geojson']['features'].append(other)
-    before = path.read_bytes()
-    monkeypatch.setattr(service, 'abrir', lambda *args: snapshot)
+def _gravar_fids(path, fids):
+    ds = ogr.Open(str(path), 1)
+    layer = ds.GetLayer(0)
+    layer.DeleteFeature(layer.GetNextFeature().GetFID())
+    for fid, nome in fids:
+        feature = ogr.Feature(layer.GetLayerDefn())
+        feature.SetFID(fid)
+        feature.SetField('nome', nome)
+        feature.SetGeometry(ogr.CreateGeometryFromWkt('POLYGON ((0 0,1000 0,1000 1000,0 1000,0 0))'))
+        layer.CreateFeature(feature)
+    ds = None
+
+
+def _proibir_leitura_de_mapa(monkeypatch):
+    from api.services import storage_geoespacial as storage
+    def falhar(*args, **kwargs):
+        pytest.fail('A execução não deve gerar GeoJSON de mapa para as entradas')
+    monkeypatch.setattr(service, 'ler_arquivo', falhar)
+    monkeypatch.setattr(reader, 'ler_arquivo', falhar)
+    monkeypatch.setattr(storage, 'ler_para_mapa', falhar)
+    monkeypatch.setattr(service, 'abrir', falhar)
+
+
+def _preparar_execucao(monkeypatch):
     monkeypatch.setattr(service.ciclo, 'iniciar', lambda *args: 'teste')
     monkeypatch.setattr(service.ciclo, 'finalizar', lambda *args, **kwargs: None)
     monkeypatch.setattr(service.geo, '_camadas', {})
@@ -259,6 +273,17 @@ def test_processar_selecao_e_filtro_de_arquivo_preserva_fids(source, monkeypatch
         frames.append(frame.copy())
         return 'resultado'
     monkeypatch.setattr(service.geo, 'registrar_camada', register)
+    return frames
+
+
+def test_processar_selecao_e_filtro_de_arquivo_preserva_fids(source, monkeypatch):
+    original, path = source
+    _gravar_fids(path, [(71, 'Original'), (92, 'Outra')])
+    original = reader.ler_arquivo(original['arquivo'])
+    other = next(f for f in original['geojson']['features'] if f['id'] == '92')
+    before = path.read_bytes()
+    _proibir_leitura_de_mapa(monkeypatch)
+    frames = _preparar_execucao(monkeypatch)
     result = service.executar('OP-28', {
         'camada_id': original['id'], 'processar_sobre': 'selecionadas',
         'chaves_selecionadas': ['92'], 'atributos_selecionados': [{'__gp_feature': other}],
@@ -267,4 +292,142 @@ def test_processar_selecao_e_filtro_de_arquivo_preserva_fids(source, monkeypatch
     assert result['resultado']['camada_id'] == 'resultado'
     assert frames[0]['nome'].tolist() == ['Outra']
     assert path.read_bytes() == before
+    assert service.geo._camadas == {}
+
+
+def test_carga_de_execucao_preserva_fids_e_crs_sem_geojson(source, monkeypatch):
+    original, path = source
+    _gravar_fids(path, [(71, 'Original'), (92, 'Outra')])
+    revisao = reader.ler_arquivo(original['arquivo'])['revisao']
+    _proibir_leitura_de_mapa(monkeypatch)
+    loaded = service.carregar_para_execucao(original['arquivo'], revisao)
+    assert loaded['id'] == original['id']
+    assert loaded['revisao'] == revisao
+    assert loaded['frame'].index.tolist() == ['71', '92']
+    assert loaded['frame'].crs.to_epsg() == 3857
+    assert loaded['frame'].geometry.iloc[0].area == pytest.approx(1000000)
+    assert 'slt_fid_origem' not in loaded['frame'].columns
+
+
+def test_execucao_rejeita_revisao_obsoleta_de_arquivo(source, monkeypatch):
+    original, path = source
+    _gravar_fids(path, [(3, 'Alterada depois da abertura')])
+    _proibir_leitura_de_mapa(monkeypatch)
+    _preparar_execucao(monkeypatch)
+    monkeypatch.setattr(service.ciclo, 'iniciar', lambda *a: pytest.fail('Não deve iniciar execução'))
+    with pytest.raises(ValueError, match='mudou'):
+        service.executar('OP-28', {'camada_id': original['id']},
+                         {original['id']: {'arquivo': original['arquivo'], 'revisao': original['revisao']}},
+                         SimpleNamespace(id='teste'))
+    assert service.geo._camadas == {}
+
+
+@pytest.fixture
+def storage_source(tmp_path, monkeypatch):
+    from api.services import storage_geoespacial as storage
+    monkeypatch.setattr(storage, 'diretorio_storage', lambda: tmp_path)
+    path = tmp_path / 'base-geoespacial' / 'teste.gpkg'
+    path.parent.mkdir(parents=True)
+    dataset = ogr.GetDriverByName('GPKG').CreateDataSource(str(path))
+    crs = osr.SpatialReference()
+    crs.ImportFromEPSG(3857)
+    layer = dataset.CreateLayer('area', crs, ogr.wkbPolygon)
+    layer.CreateField(ogr.FieldDefn('nome', ogr.OFTString))
+    for fid, x in [(5, 0), (9, 5000)]:
+        feature = ogr.Feature(layer.GetLayerDefn())
+        feature.SetFID(fid)
+        feature.SetField('nome', f'fid-{fid}')
+        feature.SetGeometry(ogr.CreateGeometryFromWkt(
+            f'POLYGON (({x} 0,{x + 1000} 0,{x + 1000} 1000,{x} 1000,{x} 0))'))
+        layer.CreateFeature(feature)
+    dataset = None
+    stat = path.stat()
+    return 'base-geoespacial/teste.gpkg', f'{stat.st_mtime_ns}-{stat.st_size}', path
+
+
+def test_execucao_storage_le_original_sem_ler_para_mapa(storage_source, monkeypatch):
+    arquivo, revisao, path = storage_source
+    ident = 'storage:' + arquivo
+    before = path.read_bytes()
+    _proibir_leitura_de_mapa(monkeypatch)
+    frames = _preparar_execucao(monkeypatch)
+    captured = {}
+    from api.services.geoprocessamento_engine import geoprocessamento_engine
+    engine_execute = geoprocessamento_engine.execute
+    async def spy(operacao, params, **kwargs):
+        frame = service.geo._camadas[params['camada_id']]
+        captured.update(index=frame.index.tolist(), epsg=frame.crs.to_epsg(),
+                        area=frame.geometry.area.tolist())
+        return await engine_execute(operacao, params, **kwargs)
+    monkeypatch.setattr(geoprocessamento_engine, 'execute', spy)
+    result = service.executar('OP-28', {'camada_id': ident},
+                              {ident: {'arquivo': arquivo, 'revisao': revisao}}, SimpleNamespace(id='teste'))
+    assert result['resultado']['camada_id'] == 'resultado'
+    assert captured['index'] == ['5', '9']
+    assert captured['epsg'] == 3857
+    assert captured['area'] == pytest.approx([1000000, 1000000])
+    assert len(frames[0]) == 2
+    assert path.read_bytes() == before
+    assert service.geo._camadas == {} and service.geo._metadados == {}
+
+
+def test_execucao_storage_3d_em_31983_preserva_z_crs_e_fids(tmp_path, monkeypatch):
+    from api.services import storage_geoespacial as storage
+    monkeypatch.setattr(storage, 'diretorio_storage', lambda: tmp_path)
+    path = tmp_path / 'base-geoespacial' / 'relevo.gpkg'
+    path.parent.mkdir(parents=True)
+    dataset = ogr.GetDriverByName('GPKG').CreateDataSource(str(path))
+    crs = osr.SpatialReference()
+    crs.ImportFromEPSG(31983)
+    layer = dataset.CreateLayer('curvas', crs, ogr.wkbPolygon25D)
+    for fid, x, z in [(4, 330000, 710.5), (11, 331000, 815.25)]:
+        feature = ogr.Feature(layer.GetLayerDefn())
+        feature.SetFID(fid)
+        feature.SetGeometry(ogr.CreateGeometryFromWkt(
+            f'POLYGON Z (({x} 7390000 {z},{x + 100} 7390000 {z},{x + 100} 7390100 {z},{x} 7390000 {z}))'))
+        layer.CreateFeature(feature)
+    dataset = None
+    stat = path.stat()
+    arquivo, revisao = 'base-geoespacial/relevo.gpkg', f'{stat.st_mtime_ns}-{stat.st_size}'
+    ident = 'storage:' + arquivo
+    before = path.read_bytes()
+    _proibir_leitura_de_mapa(monkeypatch)
+    monkeypatch.setattr(storage, 'carregar_gdf', lambda *a: pytest.fail('Não deve reprojetar nem forçar 2D'))
+    _preparar_execucao(monkeypatch)
+    captured = {}
+    from api.services.geoprocessamento_engine import geoprocessamento_engine
+    engine_execute = geoprocessamento_engine.execute
+    async def spy(operacao, params, **kwargs):
+        frame = service.geo._camadas[params['camada_id']]
+        captured.update(index=frame.index.tolist(), epsg=frame.crs.to_epsg(),
+                        z=frame.geometry.has_z.tolist(),
+                        cotas=[geom.exterior.coords[0][2] for geom in frame.geometry],
+                        x=[geom.exterior.coords[0][0] for geom in frame.geometry],
+                        crs=service.geo._metadados[params['camada_id']]['crs'])
+        return await engine_execute(operacao, params, **kwargs)
+    monkeypatch.setattr(geoprocessamento_engine, 'execute', spy)
+    service.executar('OP-28', {'camada_id': ident},
+                     {ident: {'arquivo': arquivo, 'revisao': revisao}}, SimpleNamespace(id='teste'))
+    assert captured['index'] == ['4', '11']
+    assert captured['epsg'] == 31983 and '31983' in captured['crs']
+    assert captured['z'] == [True, True]
+    assert captured['cotas'] == [710.5, 815.25]
+    assert captured['x'] == [330000, 331000]
+    assert path.read_bytes() == before
+    assert service.geo._camadas == {} and service.geo._metadados == {}
+
+@pytest.mark.parametrize('case', ['revisao', 'identificador'])
+def test_execucao_storage_rejeita_revisao_e_identificador(storage_source, monkeypatch, case):
+    arquivo, revisao, _ = storage_source
+    ident = 'storage:' + arquivo
+    if case == 'revisao':
+        revisao, message = 'revisao-antiga', 'mudou'
+    else:
+        ident, message = 'storage:base-geoespacial/outro.gpkg', 'não corresponde'
+    _proibir_leitura_de_mapa(monkeypatch)
+    _preparar_execucao(monkeypatch)
+    monkeypatch.setattr(service.ciclo, 'iniciar', lambda *a: pytest.fail('Não deve iniciar execução'))
+    with pytest.raises(ValueError, match=message):
+        service.executar('OP-28', {'camada_id': ident},
+                         {ident: {'arquivo': arquivo, 'revisao': revisao}}, SimpleNamespace(id='teste'))
     assert service.geo._camadas == {}

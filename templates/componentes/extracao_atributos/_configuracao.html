@@ -22,7 +22,6 @@
             <button id="ea-input-browse" type="button" class="ea-btn ea-layer-action" title="Escolher camada"><i class="fas fa-folder-tree" aria-hidden="true"></i><span class="ea-action-label">Selecionar camada existente</span></button>
             <button id="ea-input-upload" type="button" class="ea-btn ea-layer-action"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i><span class="ea-action-label">Enviar nova camada</span></button>
             <input id="ea-input-file" type="file" accept=".zip,.rar,.7z,.tar,.tgz,.tbz2,.txz,.gz,.bz2,.xz,.gpkg,.geojson,.json,.fgb,.kml,.kmz,.gml,.tif,.tiff,.img,.asc,.jp2" hidden aria-label="Arquivo local da camada de entrada">
-            <button id="ea-input-clear" type="button" class="ea-btn ea-layer-action" title="Limpar entrada" hidden><i class="fas fa-eraser" aria-hidden="true"></i><span class="ea-action-label">Limpar entrada</span></button>
             </div>
             <small>Arquivo local: até 16 MB. ZIP/RAR/7z/TAR e compactações aninhadas; vetores e rasters. Shapefile: pacote com .shp, .shx, .dbf e .prj. File Geodatabase: compacte a pasta .gdb inteira.</small>
             <p id="ea-input-upload-status" class="ea-hint" role="status" aria-live="polite" hidden></p>
@@ -118,14 +117,17 @@
 </svg><figcaption>Divide a demanda pela base de recorte, preservando as parcelas externas e o identificador original. Registros sem correspondência ficam com os campos vazios.</figcaption></figure></div>
         </div>
       </section>
+      <section id="ea-identificacao" class="ea-base-list-card" aria-labelledby="ea-identificacao-title" hidden>
+        <header><h4 id="ea-identificacao-title">1.1 · Identificação das demandas por camada</h4></header>
+        <p class="ea-hint">Escolha o ID e o atributo que categoriza as demandas. Use um código comum para agrupar feições da mesma demanda. Se não houver categorias, escolha “Sem categorização”. Confirme para enviar as camadas à prévia.</p>
+        <div class="ea-table-wrap"><table><thead><tr><th>Camada de entrada</th><th>ID da demanda</th><th>Categoria da demanda</th></tr></thead><tbody id="ea-identificacao-camadas"></tbody></table></div>
+        <footer class="ea-base-list-actions">
+          <button type="button" class="ea-btn ea-btn-primary" id="ea-identificacao-confirmar">Confirmar configuração</button>
+          <button id="ea-input-clear" type="button" class="ea-btn" title="Limpar entrada" hidden><i class="fas fa-eraser" aria-hidden="true"></i><span class="ea-action-label">Limpar entrada</span></button>
+        </footer>
+        <p id="ea-identificacao-status" class="ea-hint" role="status"></p>
+      </section>
     </div>
-    <section id="ea-identificacao" class="ea-base-list-card" aria-labelledby="ea-identificacao-title" hidden>
-      <header><h4 id="ea-identificacao-title">1.1 · Identificação das demandas por camada</h4></header>
-      <p class="ea-hint">Escolha o ID e o atributo que categoriza as demandas. Use um código comum para agrupar feições da mesma demanda. Se não houver categorias, escolha “Sem categorização”. Confirme para enviar as camadas à prévia.</p>
-      <div class="ea-table-wrap"><table><thead><tr><th>Camada de entrada</th><th>ID da demanda</th><th>Categoria da demanda</th></tr></thead><tbody id="ea-identificacao-camadas"></tbody></table></div>
-      <footer class="ea-base-list-actions"><button type="button" class="ea-btn ea-btn-primary" id="ea-identificacao-confirmar">Confirmar configuração</button></footer>
-      <p id="ea-identificacao-status" class="ea-hint" role="status"></p>
-    </section>
     <div class="ea-config-tools" role="group" aria-labelledby="ea-config-tools-title">
       <h4 id="ea-config-tools-title">Configuração da análise</h4>
       <button type="button" class="ea-btn" id="ea-config-carregar" title="Carregar configuração" aria-label="Carregar configuração"><i class="fas fa-folder-open" aria-hidden="true"></i></button>

@@ -3,7 +3,7 @@
 (()=>{
   const avisar=(tipo,extra={})=>parent.postMessage({tipo,...extra},location.origin);
   const css=document.createElement('style');
-  css.textContent='#kt_app_page{display:none!important}body{background:#fff!important}.modal-dialog{margin:1rem auto;max-width:95%}.modal-backdrop{background:#fff}#errorMsg{margin:1rem!important}';
+  css.textContent='#kt_app_page{display:none!important}body{background:#fff!important}.modal-dialog{margin:1rem auto;max-width:95%}.modal-backdrop{background:#f0f0f1e0;backdrop-filter:blur(12px)}#modal_upload .modal-content{border:0;border-radius:16px;overflow:hidden;box-shadow:0 25px 50px -12px #003b5a47}#modal_upload .modal-header{padding:9px 16px;background:linear-gradient(135deg,#1c3d59,#116593);color:#fff}#modal_upload .modal-header .btn-close{filter:invert(1)}#modal_upload .modal-footer{padding:8px 16px;background:#f3f6f8;border-top:1px solid #dfe6eb}#errorMsg{margin:1rem!important}@media(max-width:560px){#modal_upload .modal-content{border-radius:12px}#modal_upload .modal-header{padding:9px 12px}#modal_upload .modal-footer{padding:8px 12px}}';
   document.head.append(css);
   // Somente apresentação: o contrato {isConfirmed} e todas as rotinas de
   // duplicatas, fila, validação e upload do storage continuam sendo os nativos.

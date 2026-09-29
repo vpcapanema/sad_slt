@@ -8,8 +8,8 @@ function oy() {
     var Z = null;
     if (H !== void 0 && (Z = "" + H), G.key !== void 0 && (Z = "" + G.key), "key" in G) {
       H = {};
-      for (var el in G)
-        el !== "key" && (H[el] = G[el]);
+      for (var nl in G)
+        nl !== "key" && (H[nl] = G[nl]);
     } else H = G;
     return G = H.ref, {
       $$typeof: O,
@@ -30,7 +30,7 @@ var e0;
 function ry() {
   if (e0) return $;
   e0 = 1;
-  var O = /* @__PURE__ */ Symbol.for("react.transitional.element"), A = /* @__PURE__ */ Symbol.for("react.portal"), D = /* @__PURE__ */ Symbol.for("react.fragment"), d = /* @__PURE__ */ Symbol.for("react.strict_mode"), G = /* @__PURE__ */ Symbol.for("react.profiler"), H = /* @__PURE__ */ Symbol.for("react.consumer"), Z = /* @__PURE__ */ Symbol.for("react.context"), el = /* @__PURE__ */ Symbol.for("react.forward_ref"), J = /* @__PURE__ */ Symbol.for("react.suspense"), ul = /* @__PURE__ */ Symbol.for("react.memo"), B = /* @__PURE__ */ Symbol.for("react.lazy"), T = /* @__PURE__ */ Symbol.for("react.activity"), j = /* @__PURE__ */ Symbol.for("react.view_transition"), F = Symbol.iterator;
+  var O = /* @__PURE__ */ Symbol.for("react.transitional.element"), A = /* @__PURE__ */ Symbol.for("react.portal"), D = /* @__PURE__ */ Symbol.for("react.fragment"), d = /* @__PURE__ */ Symbol.for("react.strict_mode"), G = /* @__PURE__ */ Symbol.for("react.profiler"), H = /* @__PURE__ */ Symbol.for("react.consumer"), Z = /* @__PURE__ */ Symbol.for("react.context"), nl = /* @__PURE__ */ Symbol.for("react.forward_ref"), J = /* @__PURE__ */ Symbol.for("react.suspense"), el = /* @__PURE__ */ Symbol.for("react.memo"), B = /* @__PURE__ */ Symbol.for("react.lazy"), T = /* @__PURE__ */ Symbol.for("react.activity"), j = /* @__PURE__ */ Symbol.for("react.view_transition"), F = Symbol.iterator;
   function Nl(f) {
     return f === null || typeof f != "object" ? null : (f = F && f[F] || f["@@iterator"], typeof f == "function" ? f : null);
   }
@@ -336,7 +336,7 @@ function ry() {
   }, $.createRef = function() {
     return { current: null };
   }, $.forwardRef = function(f) {
-    return { $$typeof: el, render: f };
+    return { $$typeof: nl, render: f };
   }, $.isValidElement = il, $.lazy = function(f) {
     return {
       $$typeof: B,
@@ -345,7 +345,7 @@ function ry() {
     };
   }, $.memo = function(f, S) {
     return {
-      $$typeof: ul,
+      $$typeof: el,
       type: f,
       compare: S === void 0 ? null : S
     };
@@ -441,19 +441,19 @@ function dy() {
         return H.now();
       };
     } else {
-      var Z = Date, el = Z.now();
+      var Z = Date, nl = Z.now();
       O.unstable_now = function() {
-        return Z.now() - el;
+        return Z.now() - nl;
       };
     }
-    var J = [], ul = [], B = 1, T = null, j = 3, F = !1, Nl = !1, ql = !1, tl = !1, Ul = typeof setTimeout == "function" ? setTimeout : null, Zl = typeof clearTimeout == "function" ? clearTimeout : null, _t = typeof setImmediate < "u" ? setImmediate : null;
+    var J = [], el = [], B = 1, T = null, j = 3, F = !1, Nl = !1, ql = !1, tl = !1, Ul = typeof setTimeout == "function" ? setTimeout : null, Zl = typeof clearTimeout == "function" ? clearTimeout : null, _t = typeof setImmediate < "u" ? setImmediate : null;
     function Bl(p) {
-      for (var Q = D(ul); Q !== null; ) {
-        if (Q.callback === null) d(ul);
+      for (var Q = D(el); Q !== null; ) {
+        if (Q.callback === null) d(el);
         else if (Q.startTime <= p)
-          d(ul), Q.sortIndex = Q.expirationTime, A(J, Q);
+          d(el), Q.sortIndex = Q.expirationTime, A(J, Q);
         else break;
-        Q = D(ul);
+        Q = D(el);
       }
     }
     function Rl(p) {
@@ -461,7 +461,7 @@ function dy() {
         if (D(J) !== null)
           Nl = !0, El || (El = !0, il());
         else {
-          var Q = D(ul);
+          var Q = D(el);
           Q !== null && jl(Rl, Q.startTime - p);
         }
     }
@@ -497,7 +497,7 @@ function dy() {
                 }
                 if (T !== null) Q = !0;
                 else {
-                  var pl = D(ul);
+                  var pl = D(el);
                   pl !== null && jl(
                     Rl,
                     pl.startTime - p
@@ -604,7 +604,7 @@ function dy() {
         startTime: R,
         expirationTime: cl,
         sortIndex: -1
-      }, R > rl ? (p.sortIndex = R, A(ul, p), D(J) === null && p === D(ul) && (ql ? (Zl(M), M = -1) : ql = !0, jl(Rl, R - rl))) : (p.sortIndex = cl, A(J, p), Nl || F || (Nl = !0, El || (El = !0, il()))), p;
+      }, R > rl ? (p.sortIndex = R, A(el, p), D(J) === null && p === D(el) && (ql ? (Zl(M), M = -1) : ql = !0, jl(Rl, R - rl))) : (p.sortIndex = cl, A(J, p), Nl || F || (Nl = !0, El || (El = !0, il()))), p;
     }, O.unstable_shouldYield = hl, O.unstable_wrapCallback = function(p) {
       var Q = j;
       return function() {
@@ -657,7 +657,7 @@ function vy() {
     p: 0,
     findDOMNode: null
   }, G = /* @__PURE__ */ Symbol.for("react.portal"), H = /* @__PURE__ */ Symbol.for("react.recoverable"), Z = /* @__PURE__ */ Symbol.for("react.optimistic_key");
-  function el(B, T, j) {
+  function nl(B, T, j) {
     var F = 3 < arguments.length && arguments[3] !== void 0 ? arguments[3] : null;
     return {
       $$typeof: G,
@@ -668,7 +668,7 @@ function vy() {
     };
   }
   var J = O.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
-  function ul(B, T) {
+  function el(B, T) {
     if (B === "font") return "";
     if (typeof T == "string")
       return T === "use-credentials" ? T : "";
@@ -679,7 +679,7 @@ function vy() {
     var j = 2 < arguments.length && arguments[2] !== void 0 ? arguments[2] : null;
     if (!T || T.nodeType !== 1 && T.nodeType !== 9 && T.nodeType !== 11)
       throw Error(A(299));
-    return el(B, T, null, j);
+    return nl(B, T, null, j);
   }, ft.flushSync = function(B) {
     var T = J.T, j = d.p;
     try {
@@ -693,7 +693,7 @@ function vy() {
     typeof B == "string" && d.d.D(B);
   }, ft.preinit = function(B, T) {
     if (typeof B == "string" && T && typeof T.as == "string") {
-      var j = T.as, F = ul(j, T.crossOrigin), Nl = typeof T.integrity == "string" ? T.integrity : void 0, ql = typeof T.fetchPriority == "string" ? T.fetchPriority : void 0;
+      var j = T.as, F = el(j, T.crossOrigin), Nl = typeof T.integrity == "string" ? T.integrity : void 0, ql = typeof T.fetchPriority == "string" ? T.fetchPriority : void 0;
       j === "style" ? d.d.S(
         B,
         typeof T.precedence == "string" ? T.precedence : void 0,
@@ -713,7 +713,7 @@ function vy() {
     if (typeof B == "string")
       if (typeof T == "object" && T !== null) {
         if (T.as == null || T.as === "script") {
-          var j = ul(
+          var j = el(
             T.as,
             T.crossOrigin
           );
@@ -727,7 +727,7 @@ function vy() {
       } else T == null && d.d.M(B);
   }, ft.preload = function(B, T) {
     if (typeof B == "string" && typeof T == "object" && T !== null && typeof T.as == "string") {
-      var j = T.as, F = ul(j, T.crossOrigin);
+      var j = T.as, F = el(j, T.crossOrigin);
       d.d.L(B, j, {
         crossOrigin: F,
         integrity: typeof T.integrity == "string" ? T.integrity : void 0,
@@ -743,7 +743,7 @@ function vy() {
   }, ft.preloadModule = function(B, T) {
     if (typeof B == "string")
       if (T) {
-        var j = ul(T.as, T.crossOrigin);
+        var j = el(T.as, T.crossOrigin);
         d.d.m(B, {
           as: typeof T.as == "string" && T.as !== "script" ? T.as : void 0,
           crossOrigin: j,
@@ -806,7 +806,7 @@ function yy() {
     }
     return null;
   }
-  function el(l) {
+  function nl(l) {
     if (l.tag === 31) {
       var t = l.memoizedState;
       if (t === null && (l = l.alternate, l !== null && (t = l.memoizedState)), t !== null) return t.dehydrated;
@@ -817,7 +817,7 @@ function yy() {
     if (H(l) !== l)
       throw Error(d(188));
   }
-  function ul(l) {
+  function el(l) {
     var t = l.alternate;
     if (!t) {
       if (t = H(l), t === null) throw Error(d(188));
@@ -2633,7 +2633,7 @@ Error generating stack: ` + e.message + `
   function Xs(l, t) {
     Xt[Qt++] = na, Xt[Qt++] = ia, Xt[Qt++] = qa, na = t.id, ia = t.overflow, qa = l;
   }
-  var Pl = null, Ml = null, nl = !1, Ba = null, Vt = !1, pc = Error(d(519));
+  var Pl = null, Ml = null, ul = !1, Ba = null, Vt = !1, pc = Error(d(519));
   function Ya(l) {
     var t = Error(
       d(
@@ -2709,7 +2709,7 @@ Error generating stack: ` + e.message + `
   }
   function $e(l) {
     if (l !== Pl) return !1;
-    if (!nl) return Ln(l), nl = !0, !1;
+    if (!ul) return Ln(l), ul = !0, !1;
     var t = l.tag, a;
     if ((a = t !== 3 && t !== 27) && ((a = t === 5) && (a = l.type, a = !(a !== "form" && a !== "button") || uo(l.type, l.memoizedProps)), a = !a), a && Ml && Ya(l), Ln(l), t === 13) {
       if (l = l.memoizedState, l = l !== null ? l.dehydrated : null, !l) throw Error(d(317));
@@ -2722,7 +2722,7 @@ Error generating stack: ` + e.message + `
     return !0;
   }
   function ye() {
-    Ml = Pl = null, nl = !1;
+    Ml = Pl = null, ul = !1;
   }
   function Cc() {
     var l = Ba;
@@ -3238,7 +3238,7 @@ Error generating stack: ` + e.message + `
         l && X && gl.alternate === null && t(m, X), s = n(gl, s, K), ml === null ? x = gl : ml.sibling = gl, ml = gl, X = Fl;
       }
       if (K === h.length)
-        return a(m, X), nl && za(m, K), x;
+        return a(m, X), ul && za(m, K), x;
       if (X === null) {
         for (; K < h.length; K++)
           X = _(m, h[K], z), X !== null && (s = n(
@@ -3246,7 +3246,7 @@ Error generating stack: ` + e.message + `
             s,
             K
           ), ml === null ? x = X : ml.sibling = X, ml = X);
-        return nl && za(m, K), x;
+        return ul && za(m, K), x;
       }
       for (X = e(X); K < h.length; K++)
         Fl = y(
@@ -3262,7 +3262,7 @@ Error generating stack: ` + e.message + `
         ), ml === null ? x = Fl : ml.sibling = Fl, ml = Fl);
       return l && X.forEach(function(ne) {
         return t(m, ne);
-      }), nl && za(m, K), x;
+      }), ul && za(m, K), x;
     }
     function q(m, s, h, z) {
       if (h == null) throw Error(d(151));
@@ -3276,11 +3276,11 @@ Error generating stack: ` + e.message + `
         l && X && ne.alternate === null && t(m, X), s = n(ne, s, K), ml === null ? x = ne : ml.sibling = ne, ml = ne, X = Fl;
       }
       if (gl.done)
-        return a(m, X), nl && za(m, K), x;
+        return a(m, X), ul && za(m, K), x;
       if (X === null) {
         for (; !gl.done; K++, gl = h.next())
           gl = _(m, gl.value, z), gl !== null && (s = n(gl, s, K), ml === null ? x = gl : ml.sibling = gl, ml = gl);
-        return nl && za(m, K), x;
+        return ul && za(m, K), x;
       }
       for (X = e(X); !gl.done; K++, gl = h.next())
         gl = y(X, m, K, gl.value, z), gl !== null && (l && (Fl = gl.alternate, Fl !== null && X.delete(
@@ -3288,7 +3288,7 @@ Error generating stack: ` + e.message + `
         )), s = n(gl, s, K), ml === null ? x = gl : ml.sibling = gl, ml = gl);
       return l && X.forEach(function(fy) {
         return t(m, fy);
-      }), nl && za(m, K), x;
+      }), ul && za(m, K), x;
     }
     function P(m, s, h, z) {
       if (typeof h == "object" && h !== null && h.type === Gl && h.key === null && h.props.ref === void 0 && (h = h.props.children), typeof h == "object" && h !== null) {
@@ -3822,7 +3822,7 @@ Error generating stack: ` + e.message + `
     return [n, e];
   }
   function nr(l, t, a) {
-    var e = k, u = Ll(), n = nl;
+    var e = k, u = Ll(), n = ul;
     if (n) {
       if (a === void 0) throw Error(d(407));
       a = a();
@@ -3967,12 +3967,12 @@ Error generating stack: ` + e.message + `
     return t;
   }
   function gr(l, t) {
-    if (nl) {
+    if (ul) {
       var a = Cl.formState;
       if (a !== null) {
         l: {
           var e = k;
-          if (nl) {
+          if (ul) {
             if (Ml) {
               t: {
                 for (var u = Ml, n = Vt; u.nodeType !== 8; ) {
@@ -4473,7 +4473,7 @@ Error generating stack: ` + e.message + `
     },
     useSyncExternalStore: function(l, t, a) {
       var e = k, u = dt();
-      if (nl) {
+      if (ul) {
         if (a === void 0)
           throw Error(d(407));
         a = a();
@@ -4501,7 +4501,7 @@ Error generating stack: ` + e.message + `
     },
     useId: function() {
       var l = dt(), t = Cl.identifierPrefix;
-      if (nl) {
+      if (ul) {
         var a = ia, e = na;
         a = (e & ~(1 << 32 - Ct(e) - 1)).toString(32) + a, t = "_" + t + "R_" + a, a = ti++, 0 < a && (t += "H" + a.toString(32)), t += "_";
       } else
@@ -4755,7 +4755,7 @@ Error generating stack: ` + e.message + `
       }
       return Jf(l, e, u), Di(), !1;
     }
-    if (nl)
+    if (ul)
       return t = ut.current, t !== null ? ((t.flags & 65536) === 0 && (t.flags |= 256), t.flags |= 65536, t.lanes = u, e !== pc && (l = Error(d(422), { cause: e }), Gu(Gt(l, a)))) : (e !== pc && (t = Error(d(423), {
         cause: e
       }), Gu(
@@ -4813,7 +4813,7 @@ Error generating stack: ` + e.message + `
       i,
       n,
       u
-    ), c = Kc(), l !== null && !$l ? (Jc(l, t, u), pa(l, t, u)) : (nl && c && Vn(t), t.flags |= 1, Il(l, t, e, u), t.child);
+    ), c = Kc(), l !== null && !$l ? (Jc(l, t, u), pa(l, t, u)) : (ul && c && Vn(t), t.flags |= 1, Il(l, t, e, u), t.child);
   }
   function Wr(l, t, a, e, u) {
     if (l === null) {
@@ -4923,7 +4923,7 @@ Error generating stack: ` + e.message + `
   function Gv(l, t, a) {
     var e = t.pendingProps, u = (t.flags & 128) !== 0;
     if (t.flags &= -129, l === null) {
-      if (nl) {
+      if (ul) {
         if (e.mode === "hidden")
           return l = si(t, e), t.lanes = 536870912, l.memoizedState = { baseLanes: 0, cachePool: null }, Iu(null, l);
         if (Qc(t), (l = Ml) ? (l = Am(
@@ -4964,7 +4964,7 @@ Error generating stack: ` + e.message + `
           a
         );
       } else
-        l = n.treeContext, Ml = Zt(i.nextSibling), Pl = t, nl = !0, Ba = null, Vt = !1, l !== null && Xs(t, l), t = si(t, e), t.flags |= 134221824;
+        l = n.treeContext, Ml = Zt(i.nextSibling), Pl = t, ul = !0, Ba = null, Vt = !1, l !== null && Xs(t, l), t = si(t, e), t.flags |= 134221824;
       return t;
     }
     return l = Ea(l.child, {
@@ -4990,7 +4990,7 @@ Error generating stack: ` + e.message + `
       e,
       void 0,
       u
-    ), e = Kc(), l !== null && !$l ? (Jc(l, t, u), pa(l, t, u)) : (nl && e && Vn(t), t.flags |= 1, Il(l, t, a, u), t.child);
+    ), e = Kc(), l !== null && !$l ? (Jc(l, t, u), pa(l, t, u)) : (ul && e && Vn(t), t.flags |= 1, Il(l, t, a, u), t.child);
   }
   function td(l, t, a, e, u, n) {
     return Se(t), t.updateQueue = null, a = ur(
@@ -4998,7 +4998,7 @@ Error generating stack: ` + e.message + `
       e,
       a,
       u
-    ), er(l), e = Kc(), l !== null && !$l ? (Jc(l, t, n), pa(l, t, n)) : (nl && e && Vn(t), t.flags |= 1, Il(l, t, a, n), t.child);
+    ), er(l), e = Kc(), l !== null && !$l ? (Jc(l, t, n), pa(l, t, n)) : (ul && e && Vn(t), t.flags |= 1, Il(l, t, a, n), t.child);
   }
   function ad(l, t, a, e, u) {
     if (Se(t), t.stateNode === null) {
@@ -5098,7 +5098,7 @@ Error generating stack: ` + e.message + `
   function ud(l, t, a) {
     var e = t.pendingProps, u = !1, n = (t.flags & 128) !== 0, i;
     if ((i = n) || (i = l !== null && l.memoizedState === null ? !1 : (nt.current & 2) !== 0), i && (u = !0, t.flags &= -129), i = (t.flags & 32) !== 0, t.flags &= -33, l === null) {
-      if (nl) {
+      if (ul) {
         if (u ? Ka(t) : Ja(), (l = Ml) ? (l = Am(
           l,
           Vt
@@ -5219,7 +5219,7 @@ Error generating stack: ` + e.message + `
         c
       );
     }
-    return ro(n) ? (t.flags |= 192, t.child = l.child, null) : (l = i.treeContext, Ml = Zt(n.nextSibling), Pl = t, nl = !0, Ba = null, Vt = !1, l !== null && Xs(t, l), t = vf(
+    return ro(n) ? (t.flags |= 192, t.child = l.child, null) : (l = i.treeContext, Ml = Zt(n.nextSibling), Pl = t, ul = !0, Ba = null, Vt = !1, l !== null && Xs(t, l), t = vf(
       t,
       u.children
     ), t.flags |= 134221824, t);
@@ -5262,7 +5262,7 @@ Error generating stack: ` + e.message + `
     if (t.flags & 128)
       return wu(t, i), null;
     var c = (i & 2) !== 0;
-    if (c ? (i = i & 1 | 2, t.flags |= 128) : i &= 1, wu(t, i), u === "backwards" && l !== null ? (hf(l), Il(l, t, e, a), hf(l)) : Il(l, t, e, a), e = nl ? Yu : 0, !c && l !== null && (l.flags & 128) !== 0)
+    if (c ? (i = i & 1 | 2, t.flags |= 128) : i &= 1, wu(t, i), u === "backwards" && l !== null ? (hf(l), Il(l, t, e, a), hf(l)) : Il(l, t, e, a), e = ul ? Yu : 0, !c && l !== null && (l.flags & 128) !== 0)
       l: for (l = t.child; l !== null; ) {
         if (l.tag === 13)
           l.memoizedState !== null && nd(l, a, t);
@@ -5452,7 +5452,7 @@ Error generating stack: ` + e.message + `
         $l = (l.flags & 131072) !== 0;
       }
     else
-      $l = !1, nl && (t.flags & 1048576) !== 0 && Gs(t, Yu, t.index);
+      $l = !1, ul && (t.flags & 1048576) !== 0 && Gs(t, Yu, t.index);
     switch (t.lanes = 0, t.tag) {
       case 16:
         l: {
@@ -5564,7 +5564,7 @@ Error generating stack: ` + e.message + `
               );
               break l;
             } else
-              for (l = t.stateNode.containerInfo, l.nodeType === 9 ? l = l.body : l = l.nodeName === "HTML" ? l.ownerDocument.body : l, Ml = Zt(l.firstChild), Pl = t, nl = !0, Ba = null, Vt = !0, a = ks(
+              for (l = t.stateNode.containerInfo, l.nodeType === 9 ? l = l.body : l = l.nodeName === "HTML" ? l.ownerDocument.body : l, Ml = Zt(l.firstChild), Pl = t, ul = !0, Ba = null, Vt = !0, a = ks(
                 t,
                 null,
                 e,
@@ -5591,7 +5591,7 @@ Error generating stack: ` + e.message + `
           null,
           t.pendingProps,
           null
-        )) ? t.memoizedState = a : nl || (t.stateNode = dm(
+        )) ? t.memoizedState = a : ul || (t.stateNode = dm(
           t.type,
           t.pendingProps,
           Jt.current,
@@ -5603,7 +5603,7 @@ Error generating stack: ` + e.message + `
           l.memoizedState
         ), null;
       case 27:
-        return wt(t), l === null && nl && (e = t.stateNode = Mm(
+        return wt(t), l === null && ul && (e = t.stateNode = Mm(
           t.type,
           t.pendingProps,
           Jt.current
@@ -5614,7 +5614,7 @@ Error generating stack: ` + e.message + `
           a
         ), tu(l, t), l === null && (t.flags |= 4194304), t.child;
       case 5:
-        return l === null && nl && ((u = e = Ml) && (e = Hh(
+        return l === null && ul && ((u = e = Ml) && (e = Hh(
           e,
           t.type,
           t.pendingProps,
@@ -5628,7 +5628,7 @@ Error generating stack: ` + e.message + `
           a
         ), Su._currentValue = u), tu(l, t), Il(l, t, e, a), t.child;
       case 6:
-        return l === null && nl && ((l = a = Ml) && (a = qh(
+        return l === null && ul && ((l = a = Ml) && (a = qh(
           a,
           t.pendingProps,
           Vt
@@ -5718,7 +5718,7 @@ Error generating stack: ` + e.message + `
           paired: null,
           clones: null,
           ref: null
-        }), e = t.pendingProps, e.name != null && e.name !== "auto" ? t.flags |= l === null ? 18882560 : 18874368 : nl && Vn(t), l !== null && l.memoizedProps.name !== e.name ? t.flags |= 4194816 : tu(l, t), Il(l, t, e.children, a), t.child;
+        }), e = t.pendingProps, e.name != null && e.name !== "auto" ? t.flags |= l === null ? 18882560 : 18874368 : ul && Vn(t), l !== null && l.memoizedProps.name !== e.name ? t.flags |= 4194816 : tu(l, t), Il(l, t, e.children, a), t.child;
       case 29:
         throw t.pendingProps;
     }
@@ -5749,7 +5749,7 @@ Error generating stack: ` + e.message + `
     t !== null && (l.flags |= 4), l.flags & 16384 && (t = l.tag !== 22 ? Bo() : 536870912, l.lanes |= t, iu |= t);
   }
   function ku(l, t) {
-    if (!nl)
+    if (!ul)
       switch (l.tailMode) {
         case "visible":
           break;
@@ -5985,7 +5985,7 @@ Error generating stack: ` + e.message + `
                   return wu(
                     t,
                     nt.current & 1 | 2
-                  ), nl && za(t, e.treeForkCount), t.child;
+                  ), ul && za(t, e.treeForkCount), t.child;
                 }
                 l = l.sibling;
               }
@@ -5994,7 +5994,7 @@ Error generating stack: ` + e.message + `
         else {
           if (!u)
             if (l = Pn(n), l !== null) {
-              if (t.flags |= 128, u = !0, l = l.updateQueue, t.updateQueue = l, vi(t, l), ku(e, !0), e.tail === null && e.tailMode !== "collapsed" && e.tailMode !== "visible" && !n.alternate && !nl)
+              if (t.flags |= 128, u = !0, l = l.updateQueue, t.updateQueue = l, vi(t, l), ku(e, !0), e.tail === null && e.tailMode !== "collapsed" && e.tailMode !== "visible" && !n.alternate && !ul)
                 return Dl(t), null;
             } else
               2 * At() - e.renderingStartTime > Ai && a !== 536870912 && (t.flags |= 128, u = !0, ku(e, !1), t.lanes = 4194304);
@@ -6012,7 +6012,7 @@ Error generating stack: ` + e.message + `
             }
             a = !0;
           }
-          return e.rendering = l, e.tail = l.sibling, e.renderingStartTime = At(), l.sibling = null, n = nt.current, n = u ? n & 1 | 2 : n & 1, e.tailMode === "visible" || e.tailMode === "collapsed" || !a || nl ? wu(t, n) : (a = n, fl(ut, t), fl(nt, a), ot === null && (ot = t)), nl && za(t, e.treeForkCount), l;
+          return e.rendering = l, e.tail = l.sibling, e.renderingStartTime = At(), l.sibling = null, n = nt.current, n = u ? n & 1 | 2 : n & 1, e.tailMode === "visible" || e.tailMode === "collapsed" || !a || ul ? wu(t, n) : (a = n, fl(ut, t), fl(nt, a), ot === null && (ot = t)), ul && za(t, e.treeForkCount), l;
         }
         return Dl(t), null;
       case 22:
@@ -7969,7 +7969,7 @@ Error generating stack: ` + e.message + `
   }
   function Gd() {
     if (xt === 0)
-      if ((dl & 536870912) === 0 || nl) {
+      if ((dl & 536870912) === 0 || ul) {
         var l = zn;
         zn <<= 1, (zn & 3932160) === 0 && (zn = 262144), xt = l;
       } else xt = 536870912;
@@ -8403,7 +8403,7 @@ Error generating stack: ` + e.message + `
       case 5:
         wc(t);
         var e = t;
-        e === Pl && (nl ? (Ln(e), e.tag === 5 && e.stateNode != null && (Ml = e.stateNode)) : (Ln(e), nl = !0));
+        e === Pl && (ul ? (Ln(e), e.tag === 5 && e.stateNode != null && (Ml = e.stateNode)) : (Ln(e), ul = !0));
       default:
         sd(a, t), t = ol = qs(t, Ma), t = fd(a, t, Ma);
     }
@@ -8434,7 +8434,7 @@ Error generating stack: ` + e.message + `
       ), ol = null;
       return;
     }
-    t.flags & 32768 ? (nl || e === 1 ? l = !0 : nu || (dl & 536870912) !== 0 ? l = !1 : (Fa = l = !0, (e === 2 || e === 9 || e === 3 || e === 6) && (e = ut.current, e !== null && e.tag === 13 && (e.flags |= 16384))), $d(t, l)) : Ui(t);
+    t.flags & 32768 ? (ul || e === 1 ? l = !0 : nu || (dl & 536870912) !== 0 ? l = !1 : (Fa = l = !0, (e === 2 || e === 9 || e === 3 || e === 6) && (e = ut.current, e !== null && e.tag === 13 && (e.flags |= 16384))), $d(t, l)) : Ui(t);
   }
   function Ui(l) {
     var t = l;
@@ -11554,7 +11554,7 @@ Error generating stack: ` + e.message + `
           if (l = Z(t), l !== null) return l;
           l = null;
         } else if (a === 31) {
-          if (l = el(t), l !== null) return l;
+          if (l = nl(t), l !== null) return l;
           l = null;
         } else if (a === 3) {
           if (t.stateNode.current.memoizedState.isDehydrated)
@@ -11764,7 +11764,7 @@ Error generating stack: ` + e.message + `
             return;
           }
         } else if (t === 31) {
-          if (t = el(a), t !== null) {
+          if (t = nl(a), t !== null) {
             l.blockedOn = t, Vo(l.priority, function() {
               wm(a);
             });
@@ -11935,7 +11935,7 @@ Error generating stack: ` + e.message + `
     var t = l._reactInternals;
     if (t === void 0)
       throw typeof l.render == "function" ? Error(d(188)) : (l = Object.keys(l).join(","), Error(d(268, l)));
-    return l = ul(t), l = l !== null ? B(l) : null, l = l === null ? null : l.stateNode, l;
+    return l = el(t), l = l !== null ? B(l) : null, l = l === null ? null : l.stateNode, l;
   };
   var cy = {
     bundleType: 0,
@@ -12013,7 +12013,7 @@ function Sy(O, A) {
   }, Z = (f, S, N = !1) => {
     D(f).onclick = S, D(f).disabled = N;
   };
-  function el(f, S, N) {
+  function nl(f, S, N) {
     const U = JSON.stringify(S);
     f.dataset.options !== U && (f.replaceChildren(...S.map(([w, ll]) => {
       const W = d("option");
@@ -12025,7 +12025,7 @@ function Sy(O, A) {
     U.dataset.content !== w && (U.replaceChildren(...N()), U.dataset.content = w);
   }
   const {
-    catalog: ul,
+    catalog: el,
     error: B,
     feedback: T,
     busy: j,
@@ -12053,8 +12053,8 @@ function Sy(O, A) {
     preview: R,
     previewError: rl,
     resultado: cl
-  } = A, pl = !ul || j;
-  H("loading", !ul), G("loading", B ? "Não foi possível carregar o catálogo." : "Carregando catálogo…"), H("retry", !ul && !!B), Z("retry", () => A.setAttempt((f) => f + 1)), H("error", !!B && !T), G("error", B), el(D("source"), [["__todas__", "Todas as fontes"], ..._t.map((f) => [f, ht(f)])], ql), el(D("year"), [...tl ? [["", "Todos os anos"]] : [], ...Bl.map((f) => [f, f])], Ul ? "" : Zl ?? ""), el(D("theme"), [["", "Todos os temas"], ...Rl.map((f) => [f, jl(f)])], El);
+  } = A, pl = !el || j;
+  H("loading", !el), G("loading", B ? "Não foi possível carregar o catálogo." : "Carregando catálogo…"), H("retry", !el && !!B), Z("retry", () => A.setAttempt((f) => f + 1)), H("error", !!B && !T), G("error", B), nl(D("source"), [["__todas__", "Todas as fontes"], ..._t.map((f) => [f, ht(f)])], ql), nl(D("year"), [...tl ? [["", "Todos os anos"]] : [], ...Bl.map((f) => [f, f])], Ul ? "" : Zl ?? ""), nl(D("theme"), [["", "Todos os temas"], ...Rl.map((f) => [f, jl(f)])], El);
   for (const f of ["source", "year", "theme", "search", "format", "name"]) D(f).disabled = pl;
   D("source").onchange = (f) => {
     A.setSource(f.target.value), A.setTheme(""), f.target.value === "__todas__" && A.setYear("");
@@ -12064,7 +12064,7 @@ function Sy(O, A) {
     const N = d("facet");
     N.querySelector("span").textContent = f;
     const U = N.querySelector("select");
-    return U.dataset.dimension = f, el(U, [["", `Todos (${S.length})`], ...S.map((w) => [w, w])], L[f] ?? ""), N;
+    return U.dataset.dimension = f, nl(U, [["", `Todos (${S.length})`], ...S.map((w) => [w, w])], L[f] ?? ""), N;
   }));
   for (const f of D("facets").querySelectorAll("select"))
     f.value = L[f.dataset.dimension] ?? "", f.disabled = pl, f.onchange = (S) => A.setFacets({ ...L, [f.dataset.dimension]: S.target.value });
@@ -12196,7 +12196,7 @@ function zy(O) {
   return D;
 }
 const zu = { fgb: 6500, gpkg: 1900, shp: 250, geojson: 6500 }, Uo = "__todas__";
-function _y({ apiBaseUrl: O = "/api", client: A, value: D, onChange: d, onExport: G, download: H = !0, className: Z = "", categoriaNome: el = "", feedback: J, resultado: ul = null, htmlHost: B = null, canGenerate: T = !0 }) {
+function _y({ apiBaseUrl: O = "/api", client: A, value: D, onChange: d, onExport: G, download: H = !0, className: Z = "", categoriaNome: nl = "", feedback: J, resultado: el = null, htmlHost: B = null, canGenerate: T = !0 }) {
   const j = vl.useMemo(() => A || Ty(O), [A, O]), [F, Nl] = vl.useState(null), [ql, tl] = vl.useState(0), [Ul, Zl] = vl.useState(""), [_t, Bl] = vl.useState(0), [Rl, El] = vl.useState({ attributes: [], format: "fgb" }), M = D ?? Rl, [L, al] = vl.useState(""), [hl, Gl] = vl.useState("2022"), [il, Wl] = vl.useState(""), [ht, jl] = vl.useState(""), [p, Q] = vl.useState({}), [R, rl] = vl.useState(0), [cl, pl] = vl.useState(""), [Xl, st] = vl.useState(!1), [f, S] = vl.useState(""), [N, U] = vl.useState(null), w = vl.useRef(!0);
   vl.useEffect(() => {
     w.current = !0;
@@ -12218,8 +12218,8 @@ function _y({ apiBaseUrl: O = "/api", client: A, value: D, onChange: d, onExport
     const I = /* @__PURE__ */ new Map();
     for (const xl of E) I.set(xl.source, (I.get(xl.source) || 0) + 1);
     const yl = [...I.entries()].sort((xl, ea) => ea[1] - xl[1])[0][0];
-    return `${el || "Categoria"} — ${yl} — ${(/* @__PURE__ */ new Date()).toLocaleDateString("en-CA")}`;
-  }, [W, M.attributes, el]), aa = W.filter((E) => fl.has(E.id)), Jt = vl.useMemo(() => new Map(W.map((E) => [E.id, zy(E)])), [W]), ie = Ot.filter((E) => (!il || E.theme === il) && `${E.label} ${E.field} ${E.unit}`.toLocaleLowerCase("pt-BR").includes(ht.toLocaleLowerCase("pt-BR"))), ce = (E, I) => Object.entries(p).every(([yl, xl]) => !xl || yl === I || Jt.get(E.id)?.[yl] === xl), ha = (() => {
+    return `${nl || "Categoria"} — ${yl} — ${(/* @__PURE__ */ new Date()).toLocaleDateString("en-CA")}`;
+  }, [W, M.attributes, nl]), aa = W.filter((E) => fl.has(E.id)), Jt = vl.useMemo(() => new Map(W.map((E) => [E.id, zy(E)])), [W]), ie = Ot.filter((E) => (!il || E.theme === il) && `${E.label} ${E.field} ${E.unit}`.toLocaleLowerCase("pt-BR").includes(ht.toLocaleLowerCase("pt-BR"))), ce = (E, I) => Object.entries(p).every(([yl, xl]) => !xl || yl === I || Jt.get(E.id)?.[yl] === xl), ha = (() => {
     if (!il) return [];
     const E = /* @__PURE__ */ new Map();
     for (const I of ie) for (const [yl, xl] of Object.entries(Jt.get(I.id) || {}))
@@ -12293,7 +12293,7 @@ function _y({ apiBaseUrl: O = "/api", client: A, value: D, onChange: d, onExport
       limits: zu,
       preview: N,
       previewError: Ul,
-      resultado: ul,
+      resultado: el,
       nomePadrao: Nt,
       download: H,
       status: f,
@@ -12310,7 +12310,7 @@ function _y({ apiBaseUrl: O = "/api", client: A, value: D, onChange: d, onExport
       generate: $t,
       setPreviewAttempt: Bl
     });
-  }), B ? ul : /* @__PURE__ */ b.jsxs("section", { className: `mlb ${Z}`, "aria-label": "Gerador de camada municipal", children: [
+  }), B ? el : /* @__PURE__ */ b.jsxs("section", { className: `mlb ${Z}`, "aria-label": "Gerador de camada municipal", children: [
     /* @__PURE__ */ b.jsxs("header", { className: "mlb-header", children: [
       /* @__PURE__ */ b.jsxs("div", { children: [
         /* @__PURE__ */ b.jsx("h2", { className: "mlb-title", children: "Monte sua camada" }),
@@ -12479,9 +12479,9 @@ function _y({ apiBaseUrl: O = "/api", client: A, value: D, onChange: d, onExport
         !J && /* @__PURE__ */ b.jsx("p", { className: "mlb-status", role: "status", children: f }),
         /* @__PURE__ */ b.jsx("p", { className: "mlb-note", children: "Geometria de 2022. O período de cada indicador acompanha o campo nos metadados. Valores ausentes permanecem nulos." })
       ] }),
-      (ul || Ul || N) && /* @__PURE__ */ b.jsxs("section", { className: "mlb-panel mlb-resultados", "aria-label": "Resultados", children: [
+      (el || Ul || N) && /* @__PURE__ */ b.jsxs("section", { className: "mlb-panel mlb-resultados", "aria-label": "Resultados", children: [
         /* @__PURE__ */ b.jsx("h2", { children: "Resultados" }),
-        ul,
+        el,
         Ul && /* @__PURE__ */ b.jsxs("div", { className: J ? "mlb-bloco mlb-preview" : "mlb-bloco mlb-error mlb-preview", children: [
           !J && /* @__PURE__ */ b.jsxs(b.Fragment, { children: [
             "Prévia indisponível: ",
@@ -12544,12 +12544,12 @@ function m0({ url: O, htmlHost: A }) {
     }
     const Z = H.map(A?.querySelector('[data-mlb="map"]') || D.current, { scrollWheelZoom: !1 });
     H.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap contributors", maxZoom: 19 }).addTo(Z), Z.setView([-22.3, -48.6], 6);
-    const el = new AbortController();
-    G("Carregando a camada no mapa…"), fetch(O, { credentials: "same-origin", signal: el.signal }).then(async (ul) => {
-      if (!ul.ok) throw new Error(`Não foi possível carregar a camada no mapa (HTTP ${ul.status}).`);
-      return ul.json();
-    }).then((ul) => {
-      const B = H.geoJSON(ul, {
+    const nl = new AbortController();
+    G("Carregando a camada no mapa…"), fetch(O, { credentials: "same-origin", signal: nl.signal }).then(async (el) => {
+      if (!el.ok) throw new Error(`Não foi possível carregar a camada no mapa (HTTP ${el.status}).`);
+      return el.json();
+    }).then((el) => {
+      const B = H.geoJSON(el, {
         style: { color: "#176b95", weight: 1, fillColor: "#4f97bf", fillOpacity: 0.25 },
         smoothFactor: 0,
         onEachFeature: (T, j) => {
@@ -12565,13 +12565,13 @@ function m0({ url: O, htmlHost: A }) {
           });
         }
       }).addTo(Z);
-      B.getBounds().isValid() && Z.fitBounds(B.getBounds(), { padding: [16, 16] }), G(`${(ul.features || []).length.toLocaleString("pt-BR")} feições exibidas com a geometria original da camada salva. Clique em um município para ver seus atributos.`);
-    }).catch((ul) => {
-      ul.name !== "AbortError" && G(ul.message);
+      B.getBounds().isValid() && Z.fitBounds(B.getBounds(), { padding: [16, 16] }), G(`${(el.features || []).length.toLocaleString("pt-BR")} feições exibidas com a geometria original da camada salva. Clique em um município para ver seus atributos.`);
+    }).catch((el) => {
+      el.name !== "AbortError" && G(el.message);
     });
     const J = setTimeout(() => Z.invalidateSize(), 0);
     return () => {
-      el.abort(), clearTimeout(J), Z.remove();
+      nl.abort(), clearTimeout(J), Z.remove();
     };
   }, [O]), vl.useEffect(() => {
     A && (A.querySelector('[data-mlb="map-status"]').textContent = d);
@@ -12628,19 +12628,20 @@ function Ny() {
         acompanhar: (Z) => {
           O.atual === H && O.acompanhar(Z);
         },
+        // Devolver a Promise permite ao modal tratar recusa/falha sem confirmar cancelamento.
         definirCancelamento: (Z) => {
-          O.atual === H && O.permitirCancelamento(Z ? () => {
-            Z().then(() => A.info(d, "Geração cancelada. Sua seleção foi mantida.", { duration: 7e3 })).catch((el) => A.error(d, el.message));
+          O.atual === H && O.permitirCancelamento(Z ? async () => {
+            await Z(), H.confirmarCancelamento("Geração cancelada. Sua seleção foi mantida."), A.info(d, "Geração cancelada. Sua seleção foi mantida.", { duration: 7e3 });
           } : null);
         },
-        concluir: ({ type: Z = "success", message: el } = {}) => {
+        concluir: ({ type: Z = "success", message: nl } = {}) => {
           if (Z === "success")
-            H.concluirTarefa(G, "Camada gerada"), H.sucesso({ title: "Camada gerada", message: el });
-          else if (Z === "warning") H.sucesso({ _status: "partial", message: el });
+            H.concluirTarefa(G, "Camada gerada"), H.sucesso({ title: "Camada gerada", message: nl });
+          else if (Z === "warning") H.sucesso({ _status: "partial", message: nl });
           else if (Z === "info") {
             const J = H._finalizado;
-            H.fechar(), J || A.info(d, el, { duration: 7e3 });
-          } else H.erro({ message: el });
+            H.confirmarCancelamento(nl), J || A.info(d, nl, { duration: 7e3 });
+          } else H.erro({ message: nl });
         }
       };
     }
@@ -12649,8 +12650,8 @@ function Ny() {
 function Ay(O, { category: A, apiBase: D, onGenerated: d, onBusyChange: G = () => {
 }, configuration: H, onChange: Z = () => {
 } }) {
-  const el = O.querySelector('[data-mlb="source"]') ? O : null, J = by.createRoot(el ? document.createDocumentFragment() : O);
-  function ul({ category: T }) {
+  const nl = O.querySelector('[data-mlb="source"]') ? O : null, J = by.createRoot(nl ? document.createDocumentFragment() : O);
+  function el({ category: T }) {
     const j = vl.useRef(T);
     j.current = T;
     const [F, Nl] = vl.useState(H || { attributes: [], format: "fgb" }), [ql, tl] = vl.useState(null), Ul = vl.useMemo(() => {
@@ -12710,23 +12711,23 @@ function Ay(O, { category: A, apiBase: D, onGenerated: d, onBusyChange: G = () =
         G(!1);
       }
     }
-    return /* @__PURE__ */ b.jsx(_y, { htmlHost: el, value: F, onChange: (Bl) => {
+    return /* @__PURE__ */ b.jsx(_y, { htmlHost: nl, value: F, onChange: (Bl) => {
       Nl(Bl), Z(Bl);
-    }, client: Ul, download: !1, onExport: _t, categoriaNome: T?.nome || "", canGenerate: !!T, feedback: Zl, resultado: ql && /* @__PURE__ */ b.jsx(Oy, { gerada: ql, htmlHost: el }) });
+    }, client: Ul, download: !1, onExport: _t, categoriaNome: T?.nome || "", canGenerate: !!T, feedback: Zl, resultado: ql && /* @__PURE__ */ b.jsx(Oy, { gerada: ql, htmlHost: nl }) });
   }
-  J.render(/* @__PURE__ */ b.jsx(ul, { category: A }));
+  J.render(/* @__PURE__ */ b.jsx(el, { category: A }));
   const B = () => {
-    if (J.unmount(), !!el) {
-      for (const T of el.querySelectorAll("input,select,button")) T.disabled = !0;
+    if (J.unmount(), !!nl) {
+      for (const T of nl.querySelectorAll("input,select,button")) T.disabled = !0;
       for (const T of ["attributes", "basket", "facets", "preview-body", "glossary-body"]) {
-        const j = el.querySelector(`[data-mlb="${T}"]`);
+        const j = nl.querySelector(`[data-mlb="${T}"]`);
         j.replaceChildren(), delete j.dataset.content;
       }
-      for (const T of ["results", "retry", "error"]) el.querySelector(`[data-mlb="${T}"]`).hidden = !0;
-      el.querySelector('[data-mlb="loading"]').hidden = !1;
+      for (const T of ["results", "retry", "error"]) nl.querySelector(`[data-mlb="${T}"]`).hidden = !0;
+      nl.querySelector('[data-mlb="loading"]').hidden = !1;
     }
   };
-  return B.setCategory = (T) => J.render(/* @__PURE__ */ b.jsx(ul, { category: T })), B;
+  return B.setCategory = (T) => J.render(/* @__PURE__ */ b.jsx(el, { category: T })), B;
 }
 export {
   Ay as montarMunicipal

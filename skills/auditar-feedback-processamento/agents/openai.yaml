@@ -1,0 +1,4 @@
+interface:
+  display_name: "Auditor de feedback de processamento"
+  short_description: "Audita granularidade, mensagens e progresso real"
+  default_prompt: "Use $auditar-feedback-processamento para pesquisar boas práticas e auditar o feedback do SICARD, rastreando operações reais do backend até a área de mensagens e salvando achados e critérios de aceite."

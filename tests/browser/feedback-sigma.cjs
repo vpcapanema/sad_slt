@@ -11,7 +11,7 @@ const BASE='http://sicard.teste';
    const url=new URL(rota.request().url());
    const arquivo={'/process_feedback_system.css':'assets/css/process_feedback_system.css','/notification_system.js':'assets/js/notification_system.js','/process_feedback_unified.js':'assets/js/process_feedback_unified.js'}[url.pathname];
    if(arquivo)return rota.fulfill({body:fs.readFileSync(path.resolve(arquivo),'utf8'),contentType:arquivo.endsWith('.css')?'text/css':'application/javascript'});
-   if(url.pathname==='/')return rota.fulfill({contentType:'text/html',body:'<!doctype html><html lang="pt-BR"><head><link rel="stylesheet" href="/process_feedback_system.css"></head><body><script src="/notification_system.js"></script><script src="/process_feedback_unified.js"></script></body></html>'});
+   if(url.pathname==='/')return rota.fulfill({contentType:'text/html',body:'<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><link rel="stylesheet" href="/process_feedback_system.css"></head><body><script src="/notification_system.js"></script><script src="/process_feedback_unified.js"></script></body></html>'});
    if(url.pathname==='/api/ok')return rota.fulfill({json:{id:42,nome:'camada.fgb',tamanho:'2 MB'}});
    if(url.pathname==='/api/recusa')return rota.fulfill({status:422,json:{detail:[{loc:['body','pasta'],msg:'campo obrigatório'}]}});
    if(url.pathname==='/api/stream')return rota.fulfill({contentType:'application/x-ndjson',body:ndjson([
@@ -20,7 +20,7 @@ const BASE='http://sicard.teste';
    if(url.pathname==='/api/stream-erro')return rota.fulfill({contentType:'application/x-ndjson',body:ndjson([{type:'task',name:'Ler'},{type:'error',message:'Geometria inválida',errors:['Feição 12']}])});
    if(url.pathname==='/api/sse')return rota.fulfill({contentType:'text/event-stream',body:['{"type":"task","name":"Sincronizar"}','{"type":"progress","percent":50}','{"type":"done","data":{"message":"Sincronizado."}}'].map(d=>`data: ${d}\n\n`).join('')});
    if(url.pathname==='/api/job/eventos')return rota.fulfill({contentType:'text/event-stream',body:
-     `event: progresso\nid: 1\ndata: ${JSON.stringify({id:'j9',tarefa_id:2,etapa_atual:'Recortar municípios',percentual:60,concluidas:1,total:3,logs:[{sequencia:1,nivel:'sucesso',mensagem:'Validar entrada'}]})}\n\n`});
+     `event: progresso\nid: 1\ndata: ${JSON.stringify({id:'j9',tarefa_id:2,etapa_atual:'Recortar municípios',percentual:60,concluidas:1,total:3,logs:[{sequencia:1,tarefa_id:1,tipo:'concluido',nivel:'sucesso',mensagem:'Validar entrada'}]})}\n\n`});
    return rota.fulfill({status:404,body:''});
   });
   await page.goto(`${BASE}/`);
@@ -34,12 +34,14 @@ const BASE='http://sicard.teste';
   await aguardar('#pfsSuccessBox');
   assert.deepEqual(await page.evaluate(()=>okCb),{id:42,nome:'camada.fgb',tamanho:'2 MB'});
   assert.equal(await page.evaluate(()=>r1.ok),true);
+  await page.locator('#pfsSuccessBox .pfs-details-toggle').click();
   const resumo=await page.locator('#pfsSuccessSummary').innerText();
   assert.match(resumo,/ID:\s*42/);assert.match(resumo,/Arquivo:\s*camada\.fgb/);assert.match(resumo,/Tempo:/);
   await fecharResultado();
   // Resposta de erro do FastAPI → modal de erro com loc → msg.
   await page.evaluate(async()=>{ProcessFeedback.iniciarCadastro({title:'Enviar camada'});await ProcessFeedback.processar(()=>fetch('/api/recusa'),null,e=>{window.erroCb=e;});});
   await aguardar('#pfsErrorBox');
+  await page.locator('#pfsErrorOk').click();
   assert.equal(await page.locator('#pfsErrorLog').innerText(),'pasta: campo obrigatório');
   assert.deepEqual(await page.evaluate(()=>erroCb.detail[0].loc),['body','pasta']);
   await fecharResultado();
@@ -59,7 +61,8 @@ const BASE='http://sicard.teste';
   // connectStream: erro do stream vira modal de erro e marca o segmento da tarefa.
   await page.evaluate(async()=>{await ProcessFeedback.connectStream(()=>fetch('/api/stream-erro'),{title:'Validar arquivo',tasks:['Ler']});});
   assert.equal(await page.locator('.pfs-segment--error').count(),1);
-  await aguardar('#pfsErrorBox');assert.equal(await page.locator('#pfsErrorLog').innerText(),'Feição 12');
+  await aguardar('#pfsErrorBox');await page.locator('#pfsErrorOk').click();
+  assert.equal(await page.locator('#pfsErrorLog').innerText(),'Feição 12');
   await fecharResultado();
   // SSE: startSSE com eventos "data:".
   await page.evaluate(()=>{ProcessFeedback.startSSE('/api/sse',{title:'Sincronizar acervo'});});
@@ -73,7 +76,7 @@ const BASE='http://sicard.teste';
   await page.waitForFunction(()=>document.querySelector('[data-pfs="task-name"]').textContent==='Recortar municípios');
   assert.equal(await page.locator('.pfs-completed-item').filter({hasText:'Validar entrada'}).count(),1);
   assert.equal(await page.locator('[data-pfs="progress-percent"]').innerText(),'60%');
-  assert.equal(await page.locator('[data-pfs="progress-meta"]').innerText(),'Etapa 2 de 3');
+  assert.equal(await page.locator('[data-pfs="progress-meta"]').innerText(),'Avanço das etapas · Etapa 2 de 3');
   await page.evaluate(()=>ProcessFeedback.fechar());
 
   assert.deepEqual(errors,[]);

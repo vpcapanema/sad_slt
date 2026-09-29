@@ -8,17 +8,24 @@ próprio arquivo.
 Na VM a pasta de dados do storage é montada somente leitura dentro do projeto
 (docker-compose.vm.yml). O caminho é configurável por SICARD_STORAGE_DIR,
 sempre relativo à raiz do projeto.
+
+O storage é um só: o do SFTPGo da VM. Onde há montagem (VM, Codespace) ele é
+lido como pasta; num servidor local sem montagem (Windows, sem FUSE) o mesmo
+storage é lido pela API desse SFTPGo, e nunca pelos dois caminhos ao mesmo
+tempo. Nesse modo não existe pasta de trabalho local: o GDAL abre o arquivo
+onde ele está, por /vsicurl, buscando só os trechos de que precisa.
 """
 from __future__ import annotations
 
 import json
 import os
 import uuid
+from collections.abc import Iterator
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from api.services import storage_pacotes
+from api.services import storage_pacotes, storage_remoto
 
 import mercantile
 from osgeo import gdal, ogr, osr
@@ -37,18 +44,143 @@ EXTENSOES_RASTER = {".tif", ".tiff", ".img"}
 # das camadas do banco: evita cortes visíveis na borda entre tiles vizinhos.
 _MARGEM_TILE = 64
 _EXTENSAO_TILE = 4096
+CAMPO_FID_TILE = "slt_fid"
+
+
+def campo_fid_tile(camada: ogr.Layer) -> str:
+    existentes = {
+        camada.GetLayerDefn().GetFieldDefn(index).GetName().casefold()
+        for index in range(camada.GetLayerDefn().GetFieldCount())
+    }
+    campo = CAMPO_FID_TILE
+    while campo.casefold() in existentes:
+        campo += "_"
+    return campo
 
 
 def diretorio_storage() -> Path:
     return project_path(os.getenv("SICARD_STORAGE_DIR", "data/storage"), label="storage")
 
 
-def resolver(caminho: str) -> Path:
+def montado() -> bool:
+    """O storage está acessível como pasta (montagem da VM ou FUSE do Codespace)?"""
+    return any((diretorio_storage() / raiz).is_dir() for raiz in RAIZES)
+
+
+def _via_api() -> bool:
+    """Sem montagem, o storage é lido pela API do SFTPGo da VM."""
+    return not montado() and storage_remoto.configurado()
+
+
+def _listar(relativo: str) -> list[dict[str, Any]]:
+    """Conteúdo de uma pasta do storage, venha ela da montagem ou da API."""
+    if _via_api():
+        try:
+            itens = storage_remoto.listar(relativo, estrito=True)
+        except storage_remoto.StorageIndisponivel as exc:
+            raise FileNotFoundError("Pasta não encontrada no storage") from exc
+        except FileNotFoundError as exc:
+            raise FileNotFoundError("Pasta não encontrada no storage") from exc
+    else:
+        pasta = diretorio_storage().joinpath(*PurePosixPath(relativo).parts)
+        if not pasta.is_dir():
+            raise FileNotFoundError("Pasta não encontrada no storage")
+        itens = [{"nome": i.name, "pasta": i.is_dir()} for i in pasta.iterdir()]
+    return sorted((i for i in itens if not str(i.get("nome") or "").startswith(".")),
+                  key=lambda i: str(i.get("nome") or "").lower())
+
+
+def _existe_pasta(relativo: str) -> bool:
+    try:
+        _listar(relativo)
+    except (FileNotFoundError, OSError):
+        return False
+    return True
+
+
+def _meta_remoto(relativo: str) -> dict[str, Any] | None:
+    caminho = PurePosixPath(relativo)
+    for item in storage_remoto.listar(caminho.parent.as_posix()):
+        if item.get("nome") == caminho.name and not item.get("pasta"):
+            return item
+    return None
+
+
+class ArquivoStorage(os.PathLike):
+    """Arquivo lido onde ele está, no storage, sem cópia em disco.
+
+    Expõe o mesmo punhado de atributos de Path que o restante do módulo usa,
+    e como os.PathLike entrega ao GDAL e ao pyogrio o endereço /vsicurl.
+    """
+
+    __slots__ = ("relativo", "name", "stem", "suffix", "_tamanho", "_modificado")
+
+    def __init__(self, relativo: str, tamanho: int, modificado: float) -> None:
+        nome = PurePosixPath(relativo)
+        self.relativo = relativo
+        self.name, self.stem, self.suffix = nome.name, nome.stem, nome.suffix
+        self._tamanho, self._modificado = int(tamanho), float(modificado)
+
+    def __fspath__(self) -> str:
+        # Renova a credencial a cada uso: o token do SFTPGo dura 20 minutos.
+        storage_remoto.preparar_gdal()
+        return storage_remoto.endereco_vsi(self.relativo)
+
+    def __str__(self) -> str:
+        return self.__fspath__()
+
+    def __repr__(self) -> str:
+        return f"ArquivoStorage({self.relativo!r})"
+
+    def stat(self) -> os.stat_result:
+        """Tamanho e data que o storage informa, no formato que Path.stat devolve."""
+        nanos = int(self._modificado * 1_000_000_000)
+        campos = [0] * 10
+        campos[6] = self._tamanho
+        campos[7] = campos[8] = campos[9] = int(self._modificado)
+        return os.stat_result(
+            tuple(campos),
+            {"st_atime_ns": nanos, "st_mtime_ns": nanos, "st_ctime_ns": nanos},
+        )
+
+    def read_bytes(self) -> bytes:
+        return storage_remoto.baixar(self.relativo)
+
+    def with_suffix(self, suffix: str) -> "ArquivoStorage":
+        return ArquivoStorage(str(PurePosixPath(self.relativo).with_suffix(suffix)), 0, 0.0)
+
+    def exists(self) -> bool:
+        try:
+            return _meta_remoto(self.relativo) is not None
+        except storage_remoto.StorageIndisponivel:
+            return False
+
+    def is_file(self) -> bool:
+        return self.exists()
+
+    def open(self, mode: str = "rb"):
+        import io
+
+        if mode != "rb":
+            raise ValueError("O storage é lido somente em modo binário")
+        return io.BytesIO(self.read_bytes())
+
+
+def resolver(caminho: str) -> Path | ArquivoStorage:
     """Caminho relativo ao storage -> arquivo, recusando fuga e raízes não publicadas."""
     bruto = str(caminho or "").strip().replace("\\", "/")
     partes = PurePosixPath(bruto).parts
     if not partes or bruto.startswith("/") or ".." in partes or partes[0] not in RAIZES:
         raise ValueError("Caminho de camada inválido")
+    if _via_api():
+        relativo = "/".join(partes)
+        try:
+            meta = _meta_remoto(relativo)
+        except storage_remoto.StorageIndisponivel as exc:
+            raise FileNotFoundError("Camada não encontrada no storage") from exc
+        if meta is None:
+            raise FileNotFoundError("Camada não encontrada no storage")
+        return ArquivoStorage(relativo, meta["tamanho"], meta["modificado"])
     alvo = diretorio_storage().joinpath(*partes)
     if not alvo.is_file():
         raise FileNotFoundError("Camada não encontrada no storage")
@@ -93,13 +225,14 @@ def _camadas_do_arquivo(arquivo: str, _versao: tuple[int, int]) -> tuple[dict[st
 
 @lru_cache(maxsize=64)
 def _inventario_pacote(arquivo: str, relativo: str, versao: tuple[int, int]):
-    return tuple(storage_pacotes.inventario(Path(arquivo), relativo))
+    # `arquivo` entra só como chave do cache; o pacote é reaberto na origem.
+    return tuple(storage_pacotes.inventario(resolver(relativo), relativo))
 
 
-def _itens_do_arquivo(arquivo: Path, relativo: str) -> list[dict[str, Any]]:
+def _itens_do_arquivo(arquivo: Path | ArquivoStorage, relativo: str) -> list[dict[str, Any]]:
     if arquivo.suffix.lower() in storage_pacotes.COMPACTADOS:
         estado=arquivo.stat()
-        return [dict(item) for item in _inventario_pacote(str(arquivo), relativo, (estado.st_mtime_ns, estado.st_size))]
+        return [dict(item) for item in _inventario_pacote(str(relativo), relativo, (estado.st_mtime_ns, estado.st_size))]
     extensao = arquivo.suffix.lower()
     estado = arquivo.stat()
     base = {"arquivo": relativo, "tamanho_bytes": estado.st_size, "modificado_em": estado.st_mtime}
@@ -120,27 +253,25 @@ def _itens_do_arquivo(arquivo: Path, relativo: str) -> list[dict[str, Any]]:
     ]
 
 
-def _grupo(pasta: Path, relativo: str) -> dict[str, Any]:
+def _grupo(relativo: str) -> dict[str, Any]:
     grupos, camadas = [], []
-    for item in sorted(pasta.iterdir(), key=lambda p: p.name.lower()):
-        if item.name.startswith("."):
-            continue
-        item_relativo = f"{relativo}/{item.name}"
-        if item.is_dir():
-            grupos.append(_grupo(item, item_relativo))
-        elif item.suffix.lower() in EXTENSOES_VETOR | EXTENSOES_RASTER:
-            camadas.extend(_itens_do_arquivo(item, item_relativo))
-    return {"nome": pasta.name, "caminho": relativo, "grupos": grupos, "camadas": camadas}
+    for item in _listar(relativo):
+        item_relativo = f"{relativo}/{item['nome']}"
+        if item["pasta"]:
+            grupos.append(_grupo(item_relativo))
+        elif PurePosixPath(item["nome"]).suffix.lower() in EXTENSOES_VETOR | EXTENSOES_RASTER:
+            camadas.extend(_itens_do_arquivo(resolver(item_relativo), item_relativo))
+    return {"nome": PurePosixPath(relativo).name, "caminho": relativo,
+            "grupos": grupos, "camadas": camadas}
 
 
 def arvore(raiz: str) -> dict[str, Any]:
     """Pastas (grupos) e camadas de uma raiz publicada do storage."""
     if raiz not in RAIZES:
         raise ValueError("Pasta do storage não publicada")
-    pasta = diretorio_storage() / raiz
-    if not pasta.is_dir():
+    if not _existe_pasta(raiz):
         return {"nome": raiz, "caminho": raiz, "grupos": [], "camadas": [], "disponivel": False}
-    return {**_grupo(pasta, raiz), "disponivel": True}
+    return {**_grupo(raiz), "disponivel": True}
 
 
 PREFIXO_ID = "storage:"
@@ -179,13 +310,27 @@ def camadas_vetoriais(raiz: str = "base-geoespacial") -> list[dict[str, Any]]:
     itens = coletar(arvore(raiz))
     # A extração lê pacotes em RAM; a árvore de tiles permanece restrita aos
     # arquivos que o GDAL abre diretamente. Nada é extraído no storage.
-    for arquivo in (diretorio_storage() / raiz).rglob('*'):
-        if arquivo.is_file() and arquivo.suffix.lower() in storage_pacotes.COMPACTADOS:
+    for relativo in _percorrer(raiz):
+        if PurePosixPath(relativo).suffix.lower() in storage_pacotes.COMPACTADOS:
             try:
-                itens.extend(_itens_do_arquivo(arquivo, arquivo.relative_to(diretorio_storage()).as_posix()))
+                itens.extend(_itens_do_arquivo(resolver(relativo), relativo))
             except (ValueError, OSError, RuntimeError):
                 continue
     return [c for c in itens if c["tipo"] == "vetor" and not c.get("erro")]
+
+
+def _percorrer(relativo: str) -> Iterator[str]:
+    """Caminhos relativos de todos os arquivos sob uma pasta do storage."""
+    try:
+        itens = _listar(relativo)
+    except (FileNotFoundError, OSError):
+        return
+    for item in itens:
+        filho = f"{relativo}/{item['nome']}"
+        if item["pasta"]:
+            yield from _percorrer(filho)
+        else:
+            yield filho
 
 
 def navegar(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
@@ -194,28 +339,27 @@ def navegar(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
     partes = PurePosixPath(relativo).parts
     if ".." in partes or partes[0] not in RAIZES:
         raise ValueError("Pasta do storage inválida")
-    pasta = diretorio_storage().joinpath(*partes)
-    if not pasta.is_dir():
-        raise FileNotFoundError("Pasta não encontrada no storage")
     pastas, arquivos = [], []
-    for item in sorted(pasta.iterdir(), key=lambda p: p.name.lower()):
-        if item.name.startswith("."):
-            continue
-        item_relativo = f"{relativo}/{item.name}"
-        if item.is_dir():
-            pastas.append({"nome": item.name, "caminho": item_relativo})
-        elif not detalhar and item.suffix.lower() in EXTENSOES_VETOR | storage_pacotes.COMPACTADOS:
-            arquivos.append({'id': f'storage:{item_relativo}', 'nome': item.stem,
-                             'arquivo': item_relativo, 'formato': item.suffix.lstrip('.').upper(),
+    for item in _listar(relativo):
+        nome = item["nome"]
+        item_relativo = f"{relativo}/{nome}"
+        sufixo = PurePosixPath(nome).suffix.lower()
+        if item["pasta"]:
+            pastas.append({"nome": nome, "caminho": item_relativo})
+        elif not detalhar and sufixo in EXTENSOES_VETOR | storage_pacotes.COMPACTADOS:
+            arquivos.append({'id': f'storage:{item_relativo}', 'nome': PurePosixPath(nome).stem,
+                             'arquivo': item_relativo, 'formato': sufixo.lstrip('.').upper(),
                              'inventariar': True})
-        elif item.suffix.lower() in storage_pacotes.COMPACTADOS:
+        elif sufixo in storage_pacotes.COMPACTADOS:
             try:
-                arquivos.extend(c for c in _itens_do_arquivo(item, item_relativo) if c.get("tipo")=="vetor" and not c.get("erro"))
+                arquivos.extend(c for c in _itens_do_arquivo(resolver(item_relativo), item_relativo)
+                                if c.get("tipo") == "vetor" and not c.get("erro"))
             except (ValueError, OSError, RuntimeError):
                 continue
-        elif item.suffix.lower() in EXTENSOES_VETOR:
-            arquivos.extend({**c, "formato": item.suffix.lstrip(".").upper()}
-                            for c in _itens_do_arquivo(item, item_relativo) if not c.get("erro"))
+        elif sufixo in EXTENSOES_VETOR:
+            arquivos.extend({**c, "formato": sufixo.lstrip(".").upper()}
+                            for c in _itens_do_arquivo(resolver(item_relativo), item_relativo)
+                            if not c.get("erro"))
     pai = PurePosixPath(relativo).parent.as_posix() if len(partes) > 1 else None
     return {"caminho": relativo, "pai": pai, "pastas": pastas, "arquivos": arquivos}
 
@@ -356,9 +500,15 @@ def _tile(arquivo: str, camada: str | None, _versao: tuple[int, int], z: int, x:
         filtro = list(osr.CoordinateTransformation(_srs(epsg=3857), origem).TransformBounds(*filtro, 21))
     destino = f"/vsimem/sicard_storage_mvt_{uuid.uuid4().hex}"
     try:
+        campo_fid = campo_fid_tile(lyr)
+        nome_sql = lyr.GetName().replace('"', '""')
+        consulta = f'SELECT FID AS "{campo_fid}", * FROM "{nome_sql}"'
         gdal.VectorTranslate(
-            destino, ds, format="MVT", layers=[lyr.GetName()], layerName="camada", spatFilter=filtro,
-            datasetCreationOptions=[f"MINZOOM={z}", f"MAXZOOM={z}", "COMPRESS=NO", "FORMAT=DIRECTORY"],
+            destino, ds, format="MVT", SQLStatement=consulta, SQLDialect="OGRSQL",
+            layerName="camada", spatFilter=filtro,
+            datasetCreationOptions=[
+                f"MINZOOM={z}", f"MAXZOOM={z}", "COMPRESS=NO", "FORMAT=DIRECTORY",
+            ],
         )
         alvo = f"{destino}/{z}/{x}/{y}.pbf"
         if gdal.VSIStatL(alvo) is None:

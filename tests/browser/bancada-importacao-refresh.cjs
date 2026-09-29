@@ -8,7 +8,7 @@ const root=path.resolve(__dirname,'../..');
   if(name==='/')name='/templates/componentes/_geoprocessamento.html';
   name=name.replace('/restrict/geoespacial/','/geoespacial/');
   const file=path.join(root,name);
-  if(!file.startsWith(root+'/')){res.writeHead(403).end();return;}
+  if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}
   fs.readFile(file,(err,data)=>{if(err){res.writeHead(404).end();return;}res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'application/octet-stream');res.end(data);});
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -30,19 +30,19 @@ const root=path.resolve(__dirname,'../..');
  await p.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded'});
  await p.waitForFunction(()=>window.gpApp?.state.map?.isStyleLoaded()&&window.gpArquivos).catch(async e=>{console.error(errors);console.error(await p.evaluate(()=>({app:!!window.gpApp,map:!!window.gpApp?.state.map,arquivos:!!window.gpArquivos})));throw e;});
  await p.locator('[data-action="import-file"]').click();
- for(const name of ['A.geojson','B.geojson']){await p.locator('#gp-local-upload').setInputFiles({name,mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fc))});await p.waitForTimeout(100);}
+ for(const name of ['A.geojson','B.geojson']){await p.locator('#gp-local-upload').setInputFiles({name,mimeType:'application/json',buffer:Buffer.from(JSON.stringify(fc))});await p.waitForTimeout(100);if(await p.locator('#pfsStatusOverlay').evaluate(element=>element.classList.contains('pfs-active')))await p.locator('#pfsSuccessOk').click();}
  assert.equal(pending.length,2);
  const inspection=token=>({token_importacao:token,camadas:[],categoria:'vetor',crs_identificado:'EPSG:4326'});
- await pending[1].fulfill({json:inspection('TOKEN_B')});await p.waitForTimeout(100);
- await pending[0].fulfill({json:inspection('TOKEN_A')});await p.waitForTimeout(100);
- await p.evaluate(()=>{document.querySelector('#gp-import-pasta').value='teste';document.querySelector('#gp-op-form').requestSubmit();});await p.locator('.gp-feedback-confirm button:not(.primary)').click();assert.equal(uploads.length,0);await p.evaluate(()=>document.querySelector('#gp-op-form').requestSubmit());await p.locator('.gp-feedback-confirm button.primary').click();await p.waitForTimeout(400);
- assert.equal(uploads.length,1);assert(uploads[0].includes('TOKEN_B'));assert(!uploads[0].includes('TOKEN_A'));assert.equal(await p.evaluate(()=>gpApp.state.activeImport),true);assert.equal(await p.evaluate(()=>gpApp.cancelExecution()),true);assert((await p.locator('#gp-log').innerText()).includes('não oferece interrupção segura'));await uploadRoute.fulfill({json:{id:'up',status:'concluido',total:1,resultado:{pasta:'teste',arquivos:[],camadas:[]}}});await p.waitForFunction(()=>!gpApp.state.activeImport);
+ await pending[1].fulfill({json:inspection('TOKEN_B')});await p.locator('#pfsSuccessOk').waitFor({state:'visible'});await p.locator('#pfsSuccessOk').click();
+ await pending[0].fulfill({json:inspection('TOKEN_A')});
+ await p.evaluate(()=>{document.querySelector('#gp-import-pasta').value='teste';document.querySelector('#gp-op-form').requestSubmit();});await p.locator('#pfsConfirmCancel').click();assert.equal(uploads.length,0);await p.evaluate(()=>document.querySelector('#gp-op-form').requestSubmit());await p.locator('#pfsConfirmOk').click();await p.waitForTimeout(400);
+ assert.equal(uploads.length,1);assert(uploads[0].includes('TOKEN_B'));assert(!uploads[0].includes('TOKEN_A'));assert.equal(await p.evaluate(()=>gpApp.state.activeImport),true);assert.equal(await p.evaluate(()=>gpApp.cancelExecution()),true);assert((await p.locator('#gp-log').innerText()).includes('não oferece interrupção segura'));await uploadRoute.fulfill({json:{id:'up',status:'concluido',total:1,resultado:{pasta:'teste',arquivos:[],camadas:[]}}});await p.waitForFunction(()=>!gpApp.state.activeImport);await p.locator('#pfsSuccessOk').click();
  await p.evaluate(fc=>gpArquivos.adicionar({id:'storage:segunda',nome:'Segunda',arquivo:'teste.gpkg',revisao:'a'.repeat(64),geojson:fc}),fc);
  await p.locator('[data-ribbon="dados"]').click();await p.locator('[data-action="refresh-source"]').click();
  await p.waitForFunction(()=>gpArquivos.sessions.get('storage:segunda')?.revisao==='b'.repeat(64));assert.equal(refs.at(-1).id,'storage:segunda');
  assert.equal(await p.evaluate(()=>gpArquivos.sessions.has('storage:primeira')),false);
  await p.evaluate(()=>{gpApp.selectOp('OP-02');const f=document.querySelector('#gp-op-form');f.elements.camada_id.value='storage:segunda';f.requestSubmit();});
- await p.locator('.gp-feedback-confirm button.primary').click();await p.waitForFunction(()=>gpApp.state.history.some(x=>x.op==='OP-02'));
+ await p.locator('#pfsConfirmOk').click();await p.waitForFunction(()=>gpApp.state.history.some(x=>x.op==='OP-02'));
  assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem('gp-history'))[0].result.execucao_id),'exec-test');
  if(await p.locator('#gp-operation-result').evaluate(d=>d.open))await p.locator('#gp-operation-result-close').click();
  await p.evaluate(()=>gpCommands.showEnvironments());assert.equal(await p.locator('[name="overwrite"]').count(),0);assert.deepEqual(errors,[]);

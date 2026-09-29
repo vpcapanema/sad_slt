@@ -13,6 +13,7 @@ from api.path_policy import project_path
 from api.repositories import camada_geoespacial_repository as repo
 from api.services import ciclo_vida_arquivos as ciclo
 from api.services.extracao_atributos_analise import analisar
+from api.services.feedback_operacao import operacao
 from api.services.geoespacial_service import geoespacial_service as geo
 
 _log = logging.getLogger(__name__)
@@ -215,12 +216,15 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
     token = ciclo.execucao_atual.set(ident)
     with _lock: controle = _controles.setdefault(str(ident), ControleProcessamento())
     def progress(message):
-        controle.mensagem(message)
+        tarefa_id = controle.mensagem(message)
         # O modal de acompanhamento lê esta lista; o corte evita crescer sem limite.
         with _lock:
             etapas = _progress.setdefault(ident, [])
             etapas.append(_etapa(message))
             del etapas[:-LIMITE_ETAPAS]
+        return tarefa_id
+    progress.concluir = controle.concluir
+    progress.verificar = controle.verificar
     progress.tarefa = controle.tarefa
     def detalhe(message):
         controle.detalhe(message)
@@ -241,6 +245,7 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
         lidas = 1
         controle.detalhe(f'Entrada carregada: {len(source):,} feições; CRS {source.crs}.')
         controle.tarefa(1, 1, 'camada')
+        controle.concluir()
         controle.progresso_fase(lidas, leituras)
         for categoria in params['categorias']:
             camadas = []
@@ -250,6 +255,7 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
                 camadas.append({**base,'frame':frame})
                 controle.detalhe(f"{base['nome']}: {len(frame):,} feições e {len(frame.columns)-1} campos carregados; CRS {frame.crs}.")
                 controle.tarefa(1, 1, 'camada')
+                controle.concluir()
                 lidas += 1
                 controle.progresso_fase(lidas, leituras)
             categories.append({**categoria,'camadas':camadas})
@@ -292,8 +298,9 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
                          'etapas':etapas,'ambiente':pacote_servico.ambiente()}
         pacote, nome_pacote, manifesto = pacote_servico.montar_pacote(
             result,saida,source,processamento,bases=[(c['nome'],b['nome'],b['frame']) for c in categories for b in c['camadas']],
-            intersecoes=frame,incluir_entrada=not params.get('entrada_local'))
-        progress(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
+            intersecoes=frame,incluir_entrada=not params.get('entrada_local'), progress=progress)
+        getattr(progress, 'detalhe', progress)(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
+        progress('Persistindo pacote, relatório e referências da execução; percentual interno indisponível')
         with _lock: etapas = list(_progress.get(ident) or [])
         from hashlib import sha256
         with get_connection() as conn:
@@ -342,8 +349,10 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
     # A entrada principal já foi carregada; as adicionais são lidas aqui.
     lista = params.get('entradas') or [{'id':params['camada_id'],'nome':params['input_nome'],'config':{}}]
     frames = {**(entradas_locais or {}), params['camada_id']:source}
-    entradas = [{**e,'frame':frames.get(e['id']) if e['id'] in frames else carregar_para_extracao(e['id'])}
-                for e in lista]
+    entradas = []
+    for e in lista:
+        with operacao(progress, f"Carregando entrada {e['nome']}; percentual interno indisponível"):
+            entradas.append({**e, 'frame': frames[e['id']] if e['id'] in frames else carregar_para_extracao(e['id'])})
     from api.services.extracao_lote import entradas_do_lote, executar as executar_lote
     entradas = entradas_do_lote(entradas)
     saida = executar_lote(entradas, categories, params['operacao'], progress,
@@ -360,6 +369,7 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
                                                                      preservar_geometrias=True),
                          'registros':len(frame),'campos':len(frame.columns)-1}
         if hasattr(progress,'tarefa'): progress.tarefa(len(frame),len(frame),'registros')
+        if hasattr(progress,'concluir'): progress.concluir()
         if hasattr(progress,'progresso_fase'): progress.progresso_fase(indice_saida+1,len(saida['camadas'])+2)
     progress('Registrando a procedência da entrada e das bases')
     entrada = _procedencia(params['camada_id'],params['input_nome'],source)
@@ -395,7 +405,8 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
                     'etapas':etapas,'ambiente':ambiente()}
     progress('Gerando o pacote de saída: GeoPackage, CSV, XLSX, dicionário e configuração')
     pacote, nome_pacote, manifesto = pacote_enriquecimento.montar_lote(saida, _jsonavel(configuracao), nome_saida, progress=progress)
-    progress(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
+    getattr(progress, 'detalhe', progress)(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
+    progress('Persistindo pacote, relatório e referências da execução; percentual interno indisponível')
     with _lock: etapas = list(_progress.get(ident) or [])
     with get_connection() as conn:
         conn.execute('''INSERT INTO geoprocessamento.extracao_atributos

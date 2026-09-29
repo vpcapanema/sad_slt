@@ -267,7 +267,7 @@
     const items=COLOR_RAMPS.map(r=>`<li role="option" data-option="${r.id}" aria-selected="${r.id===cur.id}">${rampSwatch(r)}<span>${r.nome}</span></li>`).join("");
     return`<div class="ramp-select symbol-select" data-sym-rampa data-value="${cur.id}"><button type="button" class="symbol-select-trigger" aria-haspopup="listbox" aria-expanded="false"><span class="symbol-select-preview">${rampSwatch(cur)}</span><span class="symbol-select-text">${cur.nome}</span><i data-lucide="chevron-down" class="symbol-select-caret"></i></button><ul class="symbol-select-list" role="listbox" hidden>${items}</ul></div>`;
   }
-  function campoOptionLabel(field,showCount){return`<strong class="campo-nome">${escapeHtml(field.nome)}</strong>${showCount&&!field.numerico?`<span class="campo-count">${fmtNum(field.n_distintos)} valores</span>`:""}`}
+  function campoOptionLabel(field,showCount){return`<strong class="campo-nome">${escapeHtml(field.nome)}</strong>${showCount&&!field.numerico&&field.n_distintos!=null?`<span class="campo-count">${fmtNum(field.n_distintos)} valores</span>`:""}`}
   function campoSelect(fields,current,showCount){
     const cur=fields.find(f=>f.nome===current)||null;
     const items=fields.map(f=>`<li role="option" data-option="${escapeHtml(f.nome)}" aria-selected="${f.nome===current}">${campoOptionLabel(f,showCount)}</li>`).join("")||'<li class="campo-empty">Sem campos disponíveis</li>';
@@ -360,14 +360,18 @@
     $("#gp-ribbon-tools").innerHTML=sets[tab].map(([g,items])=>`<div class="ribbon-group" data-label="${g}">${items.map(([i,n,a,t])=>{const menu=typeof t==="string"&&t.startsWith("menu:")?t.slice(5):"";const toolbox=t===true;return `<button class="ribbon-action ${toolbox?"toolbox":""}" data-action="${a}" ${a.startsWith("model-")?`data-model-command="${a}"`:""} ${menu?`data-model-menu="${menu}" aria-haspopup="true" aria-expanded="false"`:""} title="${n}">${marks[a]?`<span class="toolbox-ribbon-icon"><i data-lucide="briefcase"></i><b aria-hidden="true">${marks[a]}</b></span>`:`<i data-lucide="${i}"></i>`}<span>${n}</span></button>`}).join("")}</div>`).join("");icons();window.gpModeler?.updateRibbon?.();
   }
   function initMap(){const sources={},layers=[];BASEMAPS.forEach((b)=>{if(b.style)return;sources[b.id]={type:"raster",tiles:b.tiles,tileSize:256,attribution:"© provedores do mapa"};layers.push({id:`basemap-${b.id}`,type:"raster",source:b.id,layout:{visibility:state.basemaps.has(b.id)?"visible":"none"}})});state.map=new maplibregl.Map({container:"gp-map",center:[-48.5,-22.4],zoom:6.2,style:{version:8,glyphs:OFM_GLYPHS,sprite:OFM_SPRITE,sources,layers}});state.map.addControl(new maplibregl.NavigationControl({showCompass:false}),"bottom-right");state.map.on("mousemove",e=>$("#gp-coordinates").textContent=`${e.lngLat.lng.toFixed(5)}, ${e.lngLat.lat.toFixed(5)}`);state.map.on("zoom",()=>$("#gp-scale").textContent=`Zoom ${state.map.getZoom().toFixed(1)}`)}
-  function removeMapResource(id){
+  function removeMapResource(id,{preserveSelection=false}={}){
+    const hasSelection=state.selectedGeoJSON?.features?.some(feature=>feature.properties?.__gp_layer_id===id);
+    if(preserveSelection||!hasSelection)window.gpCommands?.clearNativeSelectionLayers?.(id);
+    else window.gpCommands?.setLayerSelection?.(id,[]);
     [`${id}-point`,`${id}-line`,id].forEach(layerId=>{if(state.map?.getLayer(layerId))state.map.removeLayer(layerId)});
     if(state.map?.getSource(id))state.map.removeSource(id);
     delete state.geometryTypes[id];
   }
   async function reconcileCatalog(resources,requestedIds=[],focusId=null,onStage=null){
     const resourceIds=new Set(resources.map(resource=>resource.id));
-    const inMemory=state.layers.filter(layer=>layer.destino==="memoria_local");
+    // Arquivos do storage abertos na bancada não pertencem ao catálogo de camadas.
+    const inMemory=state.layers.filter(layer=>layer.destino==="memoria_local"||layer.destino==="storage_original");
     const inMemoryIds=new Set(inMemory.map(layer=>layer.id));
     state.layers.filter(layer=>!resourceIds.has(layer.id)&&!inMemoryIds.has(layer.id)).forEach(layer=>removeMapResource(layer.id));
     const loadedIds=new Set([...state.layers.map(layer=>layer.id),...requestedIds]);
@@ -408,11 +412,15 @@
   }
   function layerSymbol(layer){
     if(layer.tipo?.toLowerCase().includes("raster"))return '<span class="layer-symbol raster" title="Raster"></span>';
-    const types=state.geometryTypes[layer.id]||[],type=types[0]||"geometry",symbolStyle=state.layerStyles[layer.id]||{},color=symbolStyle.fillColor||symbolStyle.borderColor||layerColor(layer.id,types),style=` style="--layer-color:${color}"`;
+    const types=tiposGeometriaCamada(layer),type=types[0]||"geometry",symbolStyle=state.layerStyles[layer.id]||{},color=symbolStyle.fillColor||symbolStyle.borderColor||layerColor(layer.id,types),style=` style="--layer-color:${color}"`;
     if(type.includes("Point")){const shape=symbolStyle.pointShape||"circle";if(shape!=="circle")return `<span class="layer-symbol layer-symbol-shape" title="Pontos">${symbolPreview("shape",shape,color)}</span>`;return `<span class="layer-symbol point"${style} title="Pontos"></span>`}
     if(type.includes("Line"))return `<span class="layer-symbol line"${style} title="Linhas"></span>`;
     if(type.includes("Polygon"))return `<span class="layer-symbol polygon"${style} title="Polígonos"></span>`;
     return `<span class="layer-symbol geometry"${style} title="Geometria vetorial"></span>`;
+  }
+  function tiposGeometriaCamada(layer){
+    const declarados=String(layer.geometria_tipo||"").split(",").map(tipoGeometriaBase).filter(Boolean);
+    return declarados.length?declarados:state.geometryTypes[layer.id]||[];
   }
   function legendField(renderer){
     // Entre o nome da camada e os símbolos: sem isto, graduado/categorizado
@@ -461,7 +469,7 @@
     // entrada, Camadas de base com um subgrupo por categoria, e o resultado. Grupos em
     // ordem alfabética; camadas por geometria — ponto, linha, polígono — e depois pelo
     // nome. A ordem da geometria usa o mesmo tipo do símbolo.
-    const geometriaBase=(layer)=>layer.tipo?.toLowerCase().includes("raster")?"raster":(state.geometryTypes[layer.id]||[])[0]||"";
+    const geometriaBase=(layer)=>layer.tipo?.toLowerCase().includes("raster")?"raster":tiposGeometriaCamada(layer)[0]||"";
     const ordemGeometria=(layer)=>{const tipo=geometriaBase(layer);
       return tipo.includes("Point")?0:tipo.includes("Line")?1:tipo.includes("Polygon")?2:tipo==="raster"?4:3;};
     // So agrupa o que traz categoria da extracao. "origem" e procedencia
@@ -566,7 +574,48 @@
     alternarGrupoBasemap(id, show);
   }
   function renderToolbox(filter=""){const f=filter.toLowerCase();$("#gp-toolbox").innerHTML=OPS.map(([g,ops])=>{const rows=ops.filter(o=>(o[0]+o[1]).toLowerCase().includes(f));return rows.length?`<div class="tool-group"><button class="tool-group-title"><i data-lucide="briefcase"></i>${g}</button>${rows.map(o=>`<button class="tool-row" data-op="${o[0]}"><span class="tool-name">${o[1]}</span><span class="availability ${o[3]===2?"partial":""}" title="${o[3]===1?"Disponível":o[3]===2?"Backend em implementação":"Catalogado; motor pendente"}"></span></button>`).join("")}</div>`:""}).join("");icons()}
-  function selectOp(id){if(!OPS.some(group=>group[1].some(op=>op[0]===id))){log(`Ferramenta ${id} não disponível nesta versão da bancada.`,"error");return;}activateToolsTab();state.selected=id;$$('[data-right-tab]').forEach(b=>b.classList.toggle("active",b.dataset.rightTab==="tools"));showEditor();const op=OPS.flatMap(x=>x[1]).find(x=>x[0]===id);const fields=FIELDS[id]||[];$("#gp-right-title").textContent=op[1];$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>${op[1]}</h2></div><form id="gp-op-form" data-op="${op[0]}"><div class="editor-body">${fields.length?fields.map(fieldHtml).join(""):`<div class="empty">O algoritmo está catalogado na stack, mas seu contrato de execução ainda não foi implementado no backend.</div>`}</div><div class="editor-actions"><button type="button" class="btn" data-add-function>Adicionar à função</button><button class="btn primary" ${!op[2]?"disabled":""}>Executar</button></div></form>`;icons();const form=$("#gp-op-form");configureOutputFields(form,RASTER_OUTPUT.has(id),op);configureSelectionScope(form);bindOutputNameAuto(form,op);window.gpCommands?.applyEnvironments(form);form.onsubmit=e=>{e.preventDefault();executeOp(op,e.target)};form.addEventListener("invalid",e=>{const campo=e.target,rotulo=campo.closest("label")?.textContent?.trim()||form.querySelector(`label[for="${campo.id}"]`)?.textContent?.trim()||campo.name;if(!form.dataset.avisando){form.dataset.avisando="1";log(`${op[1]}: preencha ${rotulo.replace(/\s+/g," ")} antes de executar.`,"error");setTimeout(()=>delete form.dataset.avisando,0);}campo.scrollIntoView({block:"center",behavior:"smooth"});},true);$("[data-back]").onclick=()=>showTools();$("[data-add-function]").onclick=()=>window.gpApp.newFunction(id);updateComponentPlaceholder()}
+  function selectOp(id){if(!OPS.some(group=>group[1].some(op=>op[0]===id))){log(`Ferramenta ${id} não disponível nesta versão da bancada.`,"error");return;}activateToolsTab();state.selected=id;$$('[data-right-tab]').forEach(b=>b.classList.toggle("active",b.dataset.rightTab==="tools"));showEditor();const op=OPS.flatMap(x=>x[1]).find(x=>x[0]===id);const fields=FIELDS[id]||[];$("#gp-right-title").textContent=op[1];$("#gp-editor-view").innerHTML=`<div class="editor-head"><button class="icon-btn" data-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>${op[1]}</h2></div><form id="gp-op-form" data-op="${op[0]}"><div class="editor-body">${fields.length?fields.map(fieldHtml).join(""):`<div class="empty">O algoritmo está catalogado na stack, mas seu contrato de execução ainda não foi implementado no backend.</div>`}</div><div class="editor-actions"><button type="button" class="btn" data-add-function>Adicionar à função</button><button class="btn primary" ${!op[2]?"disabled":""}>Executar</button></div></form>`;icons();const form=$("#gp-op-form");configureOutputFields(form,RASTER_OUTPUT.has(id),op);configureSelectionScope(form);bindOutputNameAuto(form,op);window.gpCommands?.applyEnvironments(form);form.onsubmit=e=>{e.preventDefault();executeOp(op,e.target)};form.addEventListener("invalid",e=>{const campo=e.target,rotulo=campo.closest("label")?.textContent?.trim()||form.querySelector(`label[for="${campo.id}"]`)?.textContent?.trim()||campo.name;if(!form.dataset.avisando){form.dataset.avisando="1";log(`${op[1]}: preencha ${rotulo.replace(/\s+/g," ")} antes de executar.`,"error");setTimeout(()=>delete form.dataset.avisando,0);}campo.scrollIntoView({block:"center",behavior:"smooth"});},true);$("[data-back]").onclick=()=>showTools();$("[data-add-function]").onclick=()=>window.gpApp.newFunction(id);updateComponentPlaceholder()  }
+  function openSystemLoadForm(){
+    showTools();
+    $("#gp-tools-view").classList.remove("active");
+    const host=$("#gp-editor-view");
+    host.classList.add("active");
+    $("#gp-right-title").textContent="Carregar do sistema";
+    let referencias=[];
+    const render=(message="")=>{
+      const head=document.createElement("div");head.className="editor-head tool-parameter-head";
+      const back=document.createElement("button");back.type="button";back.className="icon-btn";back.title="Voltar";back.setAttribute("aria-label","Voltar às ferramentas");back.innerHTML='<i data-lucide="arrow-left"></i>';back.onclick=()=>showTools();
+      const title=document.createElement("h2");title.textContent="Carregar do sistema";head.append(back,title);
+      const form=document.createElement("form");form.id="gp-system-load-form";form.className="gp-load-form";
+      form.innerHTML='<div class="editor-body"><div class="field"><label class="required-label" for="gp-system-layer-name">Camada do sistema</label><div class="local-file-picker"><input id="gp-system-layer-name" class="readonly-active" type="text" placeholder="Selecione uma ou mais camadas" readonly required><button class="browse-btn" type="button" data-select-system-layer title="Procurar camadas do sistema" aria-label="Procurar camadas do sistema"><i data-lucide="folder-open"></i></button></div><p class="field-help">Escolha no explorador as camadas que serão carregadas na bancada.</p></div><p class="field-help" data-system-load-status role="status" aria-live="polite"></p></div><div class="editor-actions"><button class="btn primary" type="submit" disabled>Carregar camada</button></div>';
+      const input=form.querySelector("#gp-system-layer-name"),submit=form.querySelector('button[type="submit"]'),status=form.querySelector("[data-system-load-status]");
+      input.value=referencias.map(ref=>ref.nome||ref.arquivo||ref.id).join("; ");
+      status.textContent=message;
+      form.querySelector("[data-select-system-layer]").onclick=async event=>{
+        const browse=event.currentTarget;browse.disabled=true;
+        try{
+          const escolhidas=await window.gpArquivos.selecionarReferencias({onClose:()=>render()});
+          if(escolhidas)referencias=escolhidas;
+          render();
+        }catch(error){render(error.message);}
+      };
+      submit.disabled=referencias.length===0;
+      form.onsubmit=async event=>{
+        event.preventDefault();
+        if(!referencias.length)return;
+        submit.disabled=true;form.querySelector("[data-select-system-layer]").disabled=true;status.textContent=`Carregando ${referencias.length} camada(s)…`;
+        try{
+          const abertas=await window.gpArquivos.abrirReferencias([...referencias]);
+          status.textContent=abertas.length===referencias.length
+            ?`${abertas.length} camada(s) carregada(s) na bancada.`
+            :`${abertas.length} de ${referencias.length} camada(s) carregada(s). Consulte o histórico para detalhes.`;
+        }catch(error){status.textContent=error.message;}
+        finally{if(form.isConnected){submit.disabled=referencias.length===0;form.querySelector("[data-select-system-layer]").disabled=false;}}
+      };
+      host.replaceChildren(head,form);icons();
+    };
+    render();
+  }
   function configureSelectionScope(form){
     form?.querySelector("[data-selection-scope]")?.remove();
     if(!form)return;
@@ -627,10 +676,10 @@
         $("[data-escolher-pasta]").onclick=async()=>{const escolhida=await window.StoragePastas.escolher({inicial:pastaStorageEscolhida});if(escolhida)definirPasta(escolhida)};
         $("#gp-import-reproject").onchange=event=>$("#gp-import-target-crs").disabled=!event.target.checked;
         $("#gp-import-clip").onchange=event=>$("#gp-import-clip-layer").disabled=!event.target.checked;
-        input.onchange=async()=>{const file=input.files[0];inspectionToken="";name.value=file?.name||"";submit.disabled=true;suggestOutputName(form,op);const currentCrs=$("#gp-import-current-crs");if(currentCrs)currentCrs.value="";if(!file)return;const status=$("#gp-import-inspection");currentCrs.value="Identificando CRS…";const proc=window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:"Validando arquivo da bancada",subtitle:file.name,tasks:["Ler, extrair e validar"]});proc?.tarefaAtual("Ler, extrair e validar");if(!proc)status.textContent="Lendo, extraindo e validando…";try{const data=new FormData();data.append("arquivo",file);const response=await fetch(`${API}/importar_camadas/inspecionar`,{method:"POST",body:data,credentials:"include"}),body=await response.json().catch(()=>({}));if(input.files[0]!==file||!input.isConnected)return;if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);if(body.importavel===false)throw new Error(body.erro_validacao||"Arquivo sem feições para importação");inspectionToken=body.token_importacao||"";const detectedCrs=body.crs_identificado||body.crs_atual||body.camadas?.[0]?.crs_original||body.camadas?.[0]?.crs_final||"";const crsLabelled=detectedCrs?crsLabel(detectedCrs):"CRS não informado";currentCrs.value=crsLabelled;const invalidas=body.camadas.reduce((total,camada)=>total+Number(camada.geometrias_invalidas||0),0);status.textContent=`${body.categoria} · ${body.camadas.length} camada(s) importável(is) · CRS identificado: ${crsLabelled}${invalidas?` · ${invalidas} geometria(s) inválida(s) serão destacadas`:" · geometrias válidas"}`;if(proc){proc.concluirTarefa("Ler, extrair e validar","Arquivo inspecionado");proc.sucesso({_status:invalidas?"partial":undefined,title:invalidas?"Arquivo com geometrias inválidas":"Arquivo pronto para envio",message:status.textContent});status.textContent="";}submit.disabled=false}catch(error){if(input.files[0]!==file||!input.isConnected)return;const message=String(error?.message||"Falha na inspeção automática");const lower=message.toLocaleLowerCase("pt-BR");const validationError=lower.includes("sem fei")||lower.includes("inválido")||lower.includes("invalido")||lower.includes("pacote geoespacial misto");const authError=lower.includes("sessão inválida")||lower.includes("sessao invalida")||lower.includes("não autorizado")||lower.includes("nao autorizado")||lower.includes("http 401");status.textContent=authError?"Sessão expirada. Faça login novamente para inspecionar e importar.":message;if(proc){proc.erro({title:"Arquivo recusado",message:status.textContent});status.textContent="";}currentCrs.value="CRS não detectado";submit.disabled=validationError}};
+        input.onchange=async()=>{const file=input.files[0];inspectionToken="";name.value=file?.name||"";submit.disabled=true;suggestOutputName(form,op);const currentCrs=$("#gp-import-current-crs");if(currentCrs)currentCrs.value="";if(!file)return;const status=$("#gp-import-inspection");currentCrs.value="Identificando CRS…";const proc=window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:"Validando arquivo da bancada",subtitle:file.name,tasks:["Ler, extrair e validar"],host:form});proc?.tarefaAtual("Ler, extrair e validar");if(!proc)status.textContent="Lendo, extraindo e validando…";try{const data=new FormData();data.append("arquivo",file);const response=await fetch(`${API}/importar_camadas/inspecionar`,{method:"POST",body:data,credentials:"include"}),body=await response.json().catch(()=>({}));if(input.files[0]!==file||!input.isConnected)return;if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);if(body.importavel===false)throw new Error(body.erro_validacao||"Arquivo sem feições para importação");inspectionToken=body.token_importacao||"";const detectedCrs=body.crs_identificado||body.crs_atual||body.camadas?.[0]?.crs_original||body.camadas?.[0]?.crs_final||"";const crsLabelled=detectedCrs?crsLabel(detectedCrs):"CRS não informado";currentCrs.value=crsLabelled;const invalidas=body.camadas.reduce((total,camada)=>total+Number(camada.geometrias_invalidas||0),0);status.textContent=`${body.categoria} · ${body.camadas.length} camada(s) importável(is) · CRS identificado: ${crsLabelled}${invalidas?` · ${invalidas} geometria(s) inválida(s) serão destacadas`:" · geometrias válidas"}`;if(proc){proc.concluirTarefa("Ler, extrair e validar","Arquivo inspecionado");proc.sucesso({_status:invalidas?"partial":undefined,title:invalidas?"Arquivo com geometrias inválidas":"Arquivo pronto para envio",message:status.textContent});status.textContent="";}submit.disabled=false}catch(error){if(input.files[0]!==file||!input.isConnected)return;const message=String(error?.message||"Falha na inspeção automática");const lower=message.toLocaleLowerCase("pt-BR");const validationError=lower.includes("sem fei")||lower.includes("inválido")||lower.includes("invalido")||lower.includes("pacote geoespacial misto");const authError=lower.includes("sessão inválida")||lower.includes("sessao invalida")||lower.includes("não autorizado")||lower.includes("nao autorizado")||lower.includes("http 401");status.textContent=authError?"Sessão expirada. Faça login novamente para inspecionar e importar.":message;if(proc){proc.erro({title:"Arquivo recusado",message:status.textContent});status.textContent="";}currentCrs.value="CRS não detectado";submit.disabled=validationError}};
         submit.textContent="Enviar ao storage";submit.title="Gravar o arquivo no storage do SICARD e abri-lo no mapa";submit.disabled=true;
         suggestOutputName(form,op);
-        form.onsubmit=async event=>{event.preventDefault();const status=$("#gp-import-inspection");if(!input.files.length){if(window.gpFeedback)window.gpFeedback.Notify.warning("Envio de camada","Selecione um arquivo local para enviar.");else status.textContent="Selecione um arquivo local para enviar.";return}if(!inspectionToken){if(window.gpFeedback)window.gpFeedback.Notify.warning("Envio de camada","Aguarde a validação do arquivo antes de enviar.");else status.textContent="Aguarde a validação do arquivo antes de enviar.";return}const pasta=$("#gp-import-pasta").value;if(!pasta){if(window.gpFeedback)window.gpFeedback.Notify.warning("Envio de camada","Escolha a pasta de destino no storage.");else status.textContent="Escolha a pasta de destino no storage.";return}if($("#gp-import-clip").checked&&!$("#gp-import-clip-layer").value){if(window.gpFeedback)window.gpFeedback.Notify.warning("Envio de camada","Selecione a camada de máscara.");else status.textContent="Selecione a camada de máscara.";return}const confirmedToken=inspectionToken;if(!await window.gpFeedback.ProcessFeedback.confirmar({title:"Enviar arquivo ao storage",message:`Gravar ${input.files[0].name} em ${pasta}?`,warning:"O arquivo será persistido no storage e aberto na bancada.",confirmLabel:"Enviar"}))return;if(inspectionToken!==confirmedToken||!input.isConnected)return;state.activeImport=true;input.disabled=true;submit.disabled=true;submit.textContent="Enviando…";const progress=createExecutionProgress(form),file=input.files[0];try{const data=new FormData();data.append("token_importacao",inspectionToken);data.append("pasta",pasta);if($("#gp-import-reproject").checked)data.append("reprojetar_crs",$("#gp-import-target-crs").value);if($("#gp-import-clip").checked)data.append("recortar_camada_id",$("#gp-import-clip-layer").value);progress.note(`${file.name}: enviando ao storage (${pasta})`);const started=await fetch(`${API}/storage/upload/job`,{method:"POST",body:data,credentials:"include"});let job=await started.json().catch(()=>({}));if(!started.ok)throw new Error(job.detail||`HTTP ${started.status}`);job=await waitForJob(job,progress);const result=job.resultado||{};const vetores=(result.camadas||[]).filter(camada=>camada.tipo==="vetor");for(const camada of vetores){progress.note(`Abrindo no mapa: ${camada.nome}`);const aberto=await fetch(`${API}/extracao-atributos/arquivo-mapa`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({arquivo:camada.arquivo,id:camada.id})});const arquivo=await aberto.json().catch(()=>({}));if(!aberto.ok)throw new Error(arquivo.detail||`Gravado em ${camada.arquivo}, mas não pôde ser aberto no mapa`);window.gpArquivos?.adicionar({...arquivo,categoria:pasta})}status.textContent=`Gravado no storage em ${result.pasta}: ${(result.arquivos||[]).join(", ")}.`;if(window.gpFeedback)status.textContent="";progress.complete();log(`${file.name} gravado no storage em ${result.pasta}.`,"ok");inspectionToken="";input.value="";name.value="";$("#gp-import-current-crs").value=""}catch(error){if(!window.gpFeedback)status.textContent=error.message;progress.fail(`Falha: ${error.message}`);log(`${file.name}: ${error.message}`,"error");$("#gp-log").classList.add("open")}finally{state.activeImport=false;input.disabled=false;submit.textContent="Enviar ao storage";submit.disabled=false}};
+        form.onsubmit=async event=>{event.preventDefault();const status=$("#gp-import-inspection");if(!input.files.length){if(window.gpFeedback)window.gpFeedback.Notify.warning("Envio de camada","Selecione um arquivo local para enviar.");else status.textContent="Selecione um arquivo local para enviar.";return}if(!inspectionToken){if(window.gpFeedback)window.gpFeedback.Notify.warning("Envio de camada","Aguarde a validação do arquivo antes de enviar.");else status.textContent="Aguarde a validação do arquivo antes de enviar.";return}const pasta=$("#gp-import-pasta").value;if(!pasta){if(window.gpFeedback)window.gpFeedback.Notify.warning("Envio de camada","Escolha a pasta de destino no storage.");else status.textContent="Escolha a pasta de destino no storage.";return}if($("#gp-import-clip").checked&&!$("#gp-import-clip-layer").value){if(window.gpFeedback)window.gpFeedback.Notify.warning("Envio de camada","Selecione a camada de máscara.");else status.textContent="Selecione a camada de máscara.";return}const confirmedToken=inspectionToken;if(!await window.gpFeedback.ProcessFeedback.confirmar({title:"Enviar arquivo ao storage",message:`Gravar ${input.files[0].name} em ${pasta}?`,warning:"O arquivo será persistido no storage e aberto na bancada.",confirmLabel:"Enviar"}))return;if(inspectionToken!==confirmedToken||!input.isConnected)return;state.activeImport=true;input.disabled=true;submit.disabled=true;submit.textContent="Enviando…";const progress=createExecutionProgress({title:"Enviando arquivo ao storage"}),file=input.files[0];try{const data=new FormData();data.append("token_importacao",inspectionToken);data.append("pasta",pasta);if($("#gp-import-reproject").checked)data.append("reprojetar_crs",$("#gp-import-target-crs").value);if($("#gp-import-clip").checked)data.append("recortar_camada_id",$("#gp-import-clip-layer").value);progress.note(`${file.name}: enviando ao storage (${pasta})`);const started=await fetch(`${API}/storage/upload/job`,{method:"POST",body:data,credentials:"include"});let job=await started.json().catch(()=>({}));if(!started.ok)throw new Error(job.detail||`HTTP ${started.status}`);job=await waitForJob(job,progress);const result=job.resultado||{};const vetores=(result.camadas||[]).filter(camada=>camada.tipo==="vetor");for(const camada of vetores){progress.note(`Abrindo no mapa: ${camada.nome}`);if(String(camada.id||"").startsWith("storage:")&&window.gpArquivos?.preparar){let preparado;try{preparado=await window.gpArquivos.preparar({id:camada.id,arquivo:camada.arquivo,nome:camada.nome})}catch(error){throw new Error(`Gravado em ${camada.arquivo}, mas não pôde ser aberto no mapa: ${error.message}`)}window.gpArquivos.adicionar({...preparado,categoria:pasta});continue}const aberto=await fetch(`${API}/extracao-atributos/arquivo-mapa`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({arquivo:camada.arquivo,id:camada.id})});const arquivo=await aberto.json().catch(()=>({}));if(!aberto.ok)throw new Error(arquivo.detail||`Gravado em ${camada.arquivo}, mas não pôde ser aberto no mapa`);window.gpArquivos?.adicionar({...arquivo,categoria:pasta})}status.textContent=`Gravado no storage em ${result.pasta}: ${(result.arquivos||[]).join(", ")}.`;if(window.gpFeedback)status.textContent="";progress.complete();log(`${file.name} gravado no storage em ${result.pasta}.`,"ok");inspectionToken="";input.value="";name.value="";$("#gp-import-current-crs").value=""}catch(error){if(!window.gpFeedback)status.textContent=error.message;progress.fail(`Falha: ${error.message}`);log(`${file.name}: ${error.message}`,"error");$("#gp-log").classList.add("open")}finally{state.activeImport=false;input.disabled=false;submit.textContent="Enviar ao storage";submit.disabled=false}};
       }else{
         field.innerHTML=`<label class="required-label" for="gp-wfs-url">URL do serviço ou camada WFS</label><input id="gp-wfs-url" name="caminho_arquivo" type="url" placeholder="https://servidor.exemplo/wfs" required><p class="field-help">Informe a URL do serviço WFS ou uma requisição de camada compatível.</p>`;
         submit.textContent="Importar";submit.title="Importar a camada externa do serviço WFS";submit.disabled=false;
@@ -706,7 +755,7 @@
     log(`Executando ${op[1]}…`);
     const startedAt=Date.now();
     const controller=new AbortController(),submit=form.querySelector('.editor-actions .primary'),submitLabel=submit?.textContent;
-    let progress=createExecutionProgress(form);
+    let progress=createExecutionProgress({title:`Executando ${op[1]}`,onCancel:requestExecutionCancellation});
     progress.note(`Preparando ${op[1]} e enviando os parâmetros ao servidor.`);
     state.activeExecution=controller;state.activeJob=null;if(submit){submit.disabled=true;submit.textContent="Executando…"}
     try{
@@ -723,8 +772,7 @@
       state.history.unshift({at:new Date().toISOString(),op:op[0],name:op[1],status:"concluído",durationMs:Date.now()-startedAt,parameters:payload,result:body});
       save("gp-history",state.history.slice(0,100));
       emit("resultado",{algoritmo_id:op[0],resultado:body});
-      progress?.complete();
-      if(!resultId)showOperationResult(op[1],body);
+      progress?.complete({message:`${op[1]} concluído.`,onClose:resultId?undefined:()=>showOperationResult(op[1],body)});
     }catch(e){
       const cancelled=e.name==="AbortError",message=cancelled?"Execução cancelada pelo usuário.":e.message;
       log(`${op[1]} ${cancelled?"cancelado":"falhou"}: ${message}`,cancelled?"":"error");
@@ -733,34 +781,21 @@
       progress?.fail(cancelled?"Execução cancelada":`Falha: ${message}`);
     }finally{if(state.activeExecution===controller){state.activeExecution=null;state.activeJob=null;}if(submit){submit.disabled=false;submit.textContent=submitLabel||"Executar"}}
   }
-  function createExecutionProgress(host){
-    if(window.gpFeedback){
-      // ProcessFeedback (SIGMA) da página-mãe: tarefas, log e desfecho em modal.
-      const {ProcessFeedback:pf,Notify:aviso}=window.gpFeedback;
-      const proc=pf.iniciarCadastro({title:"Bancada de geoprocessamento"});
-      let total=0,done=0;
-      return {
-        set:(value,label)=>{if(label)proc.tarefaAtual(label);proc.progresso(value);},
-        configure(n,label){total=Number(n)||0;done=0;if(label)proc.tarefaAtual(label);proc.progresso(0);return true;},
-        advance(label){done++;if(label)proc.etapa(label);proc.progresso(total?done/total*100:0);},
-        sync(job){pf.acompanhar(job);},
-        note:label=>proc.etapa(label),remove:()=>proc.fechar(),
-        complete:()=>proc.sucesso({message:"Operação concluída."}),
-        fail:message=>{if(/cancelad/i.test(message)){proc.fechar();aviso.info("Bancada de geoprocessamento",message,{duration:5000});}else proc.erro({message});},
-      };
-    }
-    host.querySelector(".execution-progress")?.remove();
-    const actions=host.querySelector(".editor-actions");
-    const element=document.createElement("section");element.className="execution-progress";element.setAttribute("aria-live","polite");
-    element.innerHTML='<div class="execution-progress-head"><span data-progress-label>Preparando</span><strong data-progress-percent>0%</strong></div><div class="execution-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-progress-bar></span></div><ol class="execution-progress-log" data-progress-log></ol>';
-    if(actions)actions.before(element);else host.append(element);let value=0,total=0,completed=0;
-    const set=(next,label)=>{value=Math.max(0,Math.min(100,next));const displayed=Math.round(value);element.querySelector("[data-progress-label]").textContent=label;element.querySelector("[data-progress-percent]").textContent=`${displayed}%`;const track=element.querySelector("[role=progressbar]");track.setAttribute("aria-valuenow",String(displayed));element.querySelector("[data-progress-bar]").style.width=`${value}%`};
-    const configure=(nextTotal,label="Preparando nanotarefas")=>{total=Math.max(0,Number(nextTotal)||0);completed=0;value=0;element.classList.remove("complete","failed");element.querySelector("[data-progress-log]").innerHTML="";if(total<=3){element.remove();return false}set(0,`${label} · 0/${total} nanotarefas`);return true};
-    const advance=(label)=>{if(total<=3)return;completed=Math.min(total,completed+1);set((completed/total)*100,`${label} · ${completed}/${total} microtarefas`)};
-    const renderLogs=logs=>{const list=element.querySelector("[data-progress-log]");list.innerHTML=(logs||[]).map(item=>`<li class="${item.nivel==="erro"?"error":""}"><time>${escapeHtml(new Date(item.instante).toLocaleTimeString("pt-BR"))}</time><span>${escapeHtml(item.mensagem)}</span></li>`).join("");list.scrollTop=list.scrollHeight};
-    const sync=job=>{total=job.total;completed=job.concluidas;set(job.percentual,`${job.etapa_atual} · ${job.concluidas}/${job.total} nanotarefas`);renderLogs(job.logs)};
-    const note=label=>{const list=element.querySelector("[data-progress-log]"),item=document.createElement("li");item.innerHTML=`<time>${new Date().toLocaleTimeString("pt-BR")}</time><span>${escapeHtml(label)}</span>`;list.append(item);list.scrollTop=list.scrollHeight};
-    return{set,configure,advance,sync,note,remove(){element.remove()},complete(){set(100,"Concluído");element.classList.add("complete");setTimeout(()=>element.remove(),3500)},fail(label){element.classList.add("failed");element.querySelector("[data-progress-label]").textContent=label;note(label);setTimeout(()=>element.remove(),8000)}};
+  function createExecutionProgress({title="Processando",onCancel}={}){
+    const pf=window.gpFeedback?.ProcessFeedback;
+    if(!pf)throw new Error("O controlador unificado de feedback não está disponível.");
+    const proc=pf.iniciarCadastro({title,tasks:[],onCancel});
+    let total=0,done=0;
+    return{
+      set:(value,label)=>{if(label)proc.tarefaAtual(label);proc.progresso(value);},
+      configure:(count,label)=>{total=Number(count)||0;done=0;if(label)proc.tarefaAtual(label);proc.progresso(0);return true;},
+      advance:label=>{done++;if(label)proc.etapa(label);proc.progresso(total?done/total*100:0);},
+      sync:job=>pf.acompanhar(job),
+      note:label=>proc.etapa(label),
+      remove:()=>proc.fechar(),
+      complete:data=>proc.sucesso({message:"Operação concluída.",...data}),
+      fail:message=>{if(/cancelad/i.test(message))proc.confirmarCancelamento(message);else proc.erro({message});}
+    };
   }
   async function waitForJob(initial,progress=null,signal=null){
     let job=initial;if(progress){progress.configure(job.total,job.etapa_atual);progress.sync(job)}
@@ -772,14 +807,20 @@
     if(job.status==="erro")throw new Error(job.erro||"Falha no processamento");
     return job;
   }
+  async function requestExecutionCancellation(){
+    if(!state.activeJob)throw new Error("Aguarde o servidor registrar a execução antes de cancelar.");
+    const response=await fetch(`${API}/operacoes-jobs/status/${state.activeJob.id}/cancelar`,{method:"POST"});
+    const body=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
+    return body;
+  }
   async function cancelExecution(){
     if(state.activeImport){log("O envio ao storage está em andamento e não oferece interrupção segura. Aguarde a conclusão.","error");return true;}
     if(window.gpArquivos?.busy){log("A operação de arquivo está em andamento e não oferece interrupção segura. Aguarde a conclusão.","error");return true;}
     if(!state.activeExecution)return false;
     if(!state.activeJob){log("Aguarde o servidor registrar a execução antes de cancelar.","error");return true;}
     try{
-      const response=await fetch(`${API}/operacoes-jobs/status/${state.activeJob.id}/cancelar`,{method:"POST"});
-      const body=await response.json();if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
+      const body=await requestExecutionCancellation();
       log(body.status==="concluido"?"A execução já foi concluída.":"Cancelamento solicitado ao servidor.");
     }catch(error){log(error.message,"error");}
     return true;
@@ -1109,6 +1150,15 @@
   async function fetchSymFields(layerId){
     state.symbologyFieldsCache??={};
     if(state.symbologyFieldsCache[layerId])return state.symbologyFieldsCache[layerId];
+    const session=window.gpArquivos?.sessions.get(layerId);
+    if(session&&layerId.startsWith("storage:")){
+      const fields=(session.campos||[]).map(field=>{
+        const tipo=String(field.tipo||"");
+        return {...field,numerico:/int|float|real|double|numeric|decimal/i.test(tipo),n_distintos:null};
+      });
+      state.symbologyFieldsCache[layerId]=fields;
+      return fields;
+    }
     const response=await fetch(`${API}/camadas/${encodeURIComponent(layerId)}/simbologia/campos`);
     const body=await response.json();if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
     state.symbologyFieldsCache[layerId]=body.campos||[];return state.symbologyFieldsCache[layerId];
@@ -1294,7 +1344,16 @@
     ensureAttributesTab(layerId);
     $("#gp-editor-view").innerHTML='<div class="empty">Carregando atributos…</div>';
     try{
-      const file=window.gpArquivos?.sessions.get(layerId);
+      let file=window.gpArquivos?.sessions.get(layerId);
+      // Sessão exibida em tiles: a tabela é paginada no servidor (/bancada-arquivos/tabela);
+      // nunca materializa o GeoJSON integral só para listar atributos.
+      if(file?.representacao==="tiles"){
+        const body={revisao:file.revisao,colunas:(file.campos||[]).map(c=>({nome:c.nome,tipo:c.subtipo==="Boolean"?"bool":c.tipo})),registros:[],total:file.feicoes,offset:0,limite:100,remoto:true};
+        state.attributeTableCache??={};state.attributeTableCache[layerId]=body;state.activeAttributeLayerId=layerId;renderAttributeTable(layerId);
+        // O filtro nativo consulta FIDs no servidor; não bloqueia a abertura da tabela.
+        Promise.resolve(window.gpCommands?.refreshLayerFilter(layerId)).catch(error=>console.warn(error));
+        return;
+      }
       const local=file?.geojson||(layer?.destino==="memoria_local"?state.map.getSource(layerId)?._data:null);
       let body;
       if(local?.type==="FeatureCollection"){
@@ -1375,7 +1434,7 @@
     const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail||`Não foi possível excluir ${layerId}`);
     removeLayerFromMap(layerId,false);delete state.layerColors[layerId];save("gp-layer-colors",state.layerColors);log(`${layerId} excluída definitivamente do sistema.`,"ok");
   }
-  document.addEventListener("DOMContentLoaded",()=>{monitorFormAccessibility();initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.dataset.basemapToggle){setBasemap(e.target.dataset.basemapToggle,e.target.checked)}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest(".layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const legend=e.target.closest(".layer-legend");if(legend){const legendRow=legend.closest("[data-layer]");if(legendRow){e.stopPropagation();state.activeLayerId=legendRow.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===legendRow));openSymbology(legendRow.dataset.layer);return}}const editBtn=e.target.closest("[data-edit-layer]");if(editBtn){e.stopPropagation();toggleLayerEditing(editBtn.dataset.editLayer);return}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});document.addEventListener("click",e=>{const menu=$("#gp-symbology-menu");if(menu&&!menu.contains(e.target)&&!e.target.closest(".layer-symbol"))closeSymbologyMenu();if(!e.target.closest(".symbol-select"))$$(".symbol-select.open").forEach(o=>{o.classList.remove("open");const l=o.querySelector(".symbol-select-list");if(l)l.hidden=true;const t=o.querySelector(".symbol-select-trigger");if(t)t.setAttribute("aria-expanded","false")})});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSymbologyMenu()});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.","ok");emit("pronto",{api:API})});
+  document.addEventListener("DOMContentLoaded",()=>{monitorFormAccessibility();initMap();bind();showProperties(null);$("#gp-layer-list").addEventListener("change",e=>{if(e.target.dataset.basemapToggle){setBasemap(e.target.dataset.basemapToggle,e.target.checked)}});$("#gp-layer-list").addEventListener("click",e=>{const group=e.target.closest(".layer-group-title");if(group){const section=e.target.closest("[data-layer-group]"),collapsed=section.classList.toggle("collapsed");group.setAttribute("aria-expanded",String(!collapsed));state.layerGroups[section.dataset.layerGroup]=collapsed;save("gp-layer-groups",state.layerGroups);return}const legend=e.target.closest(".layer-legend");if(legend){const legendRow=legend.closest("[data-layer]");if(legendRow){e.stopPropagation();state.activeLayerId=legendRow.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===legendRow));openSymbology(legendRow.dataset.layer);return}}const editBtn=e.target.closest("[data-edit-layer]");if(editBtn){e.stopPropagation();toggleLayerEditing(editBtn.dataset.editLayer);return}const row=e.target.closest("[data-layer]");if(!row)return;state.activeLayerId=row.dataset.layer;$$('[data-layer]').forEach(x=>x.classList.toggle("active",x===row));showProperties(state.layers.find(x=>x.id===row.dataset.layer))});document.addEventListener("click",e=>{const menu=$("#gp-symbology-menu");if(menu&&!menu.contains(e.target)&&!e.target.closest(".layer-symbol"))closeSymbologyMenu();if(!e.target.closest(".symbol-select"))$$(".symbol-select.open").forEach(o=>{o.classList.remove("open");const l=o.querySelector(".symbol-select-list");if(l)l.hidden=true;const t=o.querySelector(".symbol-select-trigger");if(t)t.setAttribute("aria-expanded","false")})});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSymbologyMenu()});$("#gp-catalog-tree").addEventListener("click",e=>{const row=e.target.closest(".tree-row");if(!row)return;$$('.gp-catalog-tree .tree-row').forEach(x=>x.classList.toggle("active",x===row));showProperties({id:row.textContent.trim().toLowerCase().replaceAll(" ","_"),nome:row.textContent.trim(),tipo:"Recurso do projeto",origem:"Catálogo"})});icons();log("Ambiente de geoprocessamento inicializado.");emit("pronto",{api:API})});
   const TOOL_SUBGROUPS={"OP-01":"Importação e conexão","OP-02":"Qualidade e preparação","OP-02-CORR":"Qualidade e preparação","OP-03":"Qualidade e preparação","OP-04":"Geometria e proximidade","OP-05":"Sobreposição espacial","OP-05-IDENT":"Sobreposição espacial","OP-06":"Agregação vetorial","OP-07":"Consulta e seleção","OP-08":"Conversão de dados","OP-10":"Distância e custo","OP-11":"Distância e custo","OP-12":"Densidade e distribuição","OP-13":"Distância e custo","OP-14":"Interpolação e superfície","OP-15":"Agregação territorial","OP-16":"Criação de superfície","OP-17":"Álgebra de mapas","OP-20":"Normalização raster","OP-21":"Recorte e máscara","OP-22":"Estatística zonal","OP-23":"Amostragem raster","OP-24":"Extração zonal","OP-25":"Dados vetoriais","OP-26":"Dados raster"};
   Object.assign(TOOL_SUBGROUPS,{"OP-28":"Derivação geométrica","OP-29":"Derivação geométrica","OP-30":"Derivação geométrica","OP-31":"Generalização","OP-32":"Conversão geométrica","OP-33":"Recorte","OP-34":"Junção espacial","OP-35":"Mesclagem","OP-36":"Reprojeção","OP-37":"Medições","OP-38":"Medições","OP-39":"Reclassificação","OP-40":"Classificação binária","OP-41":"Transformação de valores","OP-42":"Estatística focal","OP-43":"Suavização"});
   renderToolbox=function(filter=""){
@@ -1476,5 +1535,67 @@
     if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
     if(!opts.lote) renderLayers();
   }
-  window.gpApp={state,showOperationResult,syncExecutionResults,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,consumePortalService,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,log,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer,carregarPorId,carregarPorIds,adicionarCamadaGeoJsonEmMemoria,aplicarCorPadraoCamada,openSymbology};
+  // Camada interna fixa do MVT gerado pelo servidor (layerName do driver MVT);
+  // não confundir com o parâmetro `camada`, que é a camada OGR do arquivo.
+  const STORAGE_TILE_SOURCE_LAYER="camada";
+  function tipoGeometriaBase(tipo){
+    const texto=String(tipo||"").toLowerCase();
+    if(texto.includes("polygon")||texto.includes("polígono"))return "Polygon";
+    if(texto.includes("line")||texto.includes("linha"))return "LineString";
+    if(texto.includes("point")||texto.includes("ponto"))return "Point";
+    return "";
+  }
+  function storageTileQuery(info){
+    const query=new URLSearchParams({caminho:info.caminho});
+    if(info.camada)query.set("camada",info.camada);
+    return query;
+  }
+  // Original do storage renderizado por tiles vetoriais: nenhum GeoJSON é baixado.
+  function adicionarCamadaStorageTiles(id,nome,info,opts={}){
+    if(!state.map){document.addEventListener("gp-modeler-state",()=>adicionarCamadaStorageTiles(id,nome,info,opts),{once:true});return}
+    if(!state.map.isStyleLoaded()&&!opts.estiloPreparado){state.map.once("idle",()=>adicionarCamadaStorageTiles(id,nome,info,opts));return}
+    if(!info?.caminho)throw new Error(`${nome||id}: caminho do arquivo no storage ausente.`);
+    const map=state.map,sourceAtual=map.getSource(id);
+    const atualizarFonte=sourceAtual?.type==="vector"&&typeof sourceAtual.setTiles==="function";
+    const base=tipoGeometriaBase(info.geometria_tipo);
+    state.geometryTypes[id]=base?[base]:[];
+    const color=layerColor(id,state.geometryTypes[id]);
+    const query=storageTileQuery(info);
+    if(info.revisao)query.set("v",info.revisao);
+    const source={type:"vector",tiles:[info.tiles_url||`${location.origin}${API}/storage/camada/tiles/{z}/{x}/{y}.pbf?${query}`],minzoom:0,maxzoom:22};
+    const b=info.bounds;
+    if(Array.isArray(b)&&b.length===4&&b.every(Number.isFinite))source.bounds=[Math.max(-180,b[0]),Math.max(-85.0511,b[1]),Math.min(180,b[2]),Math.min(85.0511,b[3])];
+    if(atualizarFonte)sourceAtual.setTiles(source.tiles);
+    else{
+      removeMapResource(id,{preserveSelection:true});
+      map.addSource(id,source);
+    }
+    const sourceLayer=STORAGE_TILE_SOURCE_LAYER;
+    if(!atualizarFonte){
+      map.addLayer({id,type:"fill",source:id,"source-layer":sourceLayer,paint:{"fill-color":color,"fill-opacity":.32,"fill-outline-color":color},filter:["match",["geometry-type"],["Polygon","MultiPolygon"],true,false]});
+      map.addLayer({id:id+"-line",type:"line",source:id,"source-layer":sourceLayer,paint:{"line-color":color,"line-width":2},filter:["match",["geometry-type"],["LineString","MultiLineString"],true,false]});
+      initPointLayer(id,color,true);
+    }
+    map.setFilter(id,["match",["geometry-type"],["Polygon","MultiPolygon"],true,false]);
+    map.setFilter(id+"-line",["match",["geometry-type"],["LineString","MultiLineString"],true,false]);
+    map.setFilter(id+"-point",["match",["geometry-type"],["Point","MultiPoint"],true,false]);
+    applySavedStyle(id);
+    const entry={id,nome:nome||id,tipo:"vetorial",origem:opts.origem||"Arquivo no storage",categoria:opts.categoria||"",destino:info.tiles_url?"arquivo_original":"storage_original",representacao:"tiles",arquivo:info.arquivo||info.caminho,crs:info.crs_arquivo||"",geometria_tipo:info.geometria_tipo||base||"",feicoes:info.feicoes,campo_fid_tile:info.campo_fid_tile};
+    const idx=state.layers.findIndex(l=>l.id===id);
+    if(idx>=0) state.layers[idx]=entry; else state.layers.push(entry);
+    if(!opts.lote){ajustarStorageBounds(id).catch(()=>{});renderLayers();}
+  }
+  async function ajustarStorageBounds(id){
+    const file=window.gpArquivos?.sessions.get(id);
+    let extent=file?.bounds;
+    if(!(Array.isArray(extent)&&extent.length===4)){
+      const {caminho,camada}=(()=>{const texto=String(id).replace(/^storage:/,""),corte=texto.indexOf("::");return corte<0?{caminho:texto,camada:null}:{caminho:texto.slice(0,corte),camada:texto.slice(corte+2)||null}})();
+      const response=await fetch(`${API}/storage/camada/bounds?${storageTileQuery({caminho,camada})}`);
+      if(!response.ok)return;
+      extent=(await response.json())?.bounds;
+    }
+    if(!(Array.isArray(extent)&&extent.length===4&&extent.every(Number.isFinite)))return;
+    state.map.fitBounds([[extent[0],extent[1]],[extent[2],extent[3]]],{padding:40,maxZoom:16});
+  }
+  window.gpApp={state,showOperationResult,syncExecutionResults,operationFields:FIELDS,operationLibraries:TOOL_LIBRARY,operations:OPS.flatMap(group=>group[1]).map(item=>({id:item[0],nome:item[1]})),selectOp,configureLoadOperation,openSystemLoadForm,cancelExecution,createTaskProgress:createExecutionProgress,waitForJob,applyLayerColor,consumePortalService,showTools,openToolboxScope,showBasemapPanel,showInfoPanel,newFunction,newFlow,showProperties,showAttributes,syncAttributeSelection,configureSelectionScope:()=>configureSelectionScope($("#gp-op-form")),showLibrary,showHistory,log,refreshLayers,renderLayers,setBasemap,renderToolbox,removeLayerFromMap,deleteLayerFromSystem,addCatalogLayerToMap,zoomToCatalogLayer,carregarPorId,carregarPorIds,adicionarCamadaGeoJsonEmMemoria,adicionarCamadaStorageTiles,ajustarStorageBounds,aplicarCorPadraoCamada,openSymbology};
 })();

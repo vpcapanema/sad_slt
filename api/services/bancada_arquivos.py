@@ -89,11 +89,11 @@ def salvar(arquivo, revisao, data, nome, user, camada_id=None):
     return _persistir(source, frame, data, user)
 
 
-def _persistir(source, frame, data, user):
+def _persistir(source, frame, data, user, incluir_geojson=True):
     arquivo, revisao = source['arquivo'], source['revisao']
     if source['id'].startswith('storage:'):
         from api.services.edicao_storage import gravar
-        return gravar(source, frame, data)
+        return gravar(source, frame, data, incluir_geojson=incluir_geojson)
     if source.get('coluna_fid'):
         ids = [int(f['id']) for f in source['geojson']['features'] if str(f['id']).isdigit()]
         next_id = max(ids, default=0) + 1
@@ -134,15 +134,132 @@ def _persistir(source, frame, data, user):
 
 
 def calcular_campo(arquivo, revisao, campo, expressao, user, camada_id=None,
-                   chaves_selecionadas=None, filtro=None):
+                   chaves_selecionadas=None, filtro=None, incluir_geojson=True):
     from api.services.calculo_campo import calcular
     source = abrir(arquivo, revisao, camada_id)
     features = source['geojson']['features']
     frame = gpd.GeoDataFrame.from_features(features, crs=4326).to_crs(source['crs_arquivo'])
     frame, count = calcular(frame, campo, expressao, chaves_selecionadas, filtro,
                             ids=[feature['id'] for feature in features])
-    result = _persistir(source, frame, source['geojson'], user)
+    result = _persistir(source, frame, source['geojson'], user, incluir_geojson)
+    if not incluir_geojson:
+        result.pop('geojson', None)
     return {**result, 'feicoes_atualizadas': count, 'campo_calculado': campo}
+
+
+REVISAO_OBSOLETA = 'O arquivo mudou desde a abertura. Reabra antes de salvar ou executar.'
+DRIVERS_ARQUIVO = ['GPKG', 'ESRI Shapefile', 'GeoJSON', 'FlatGeobuf', 'KML', 'LIBKML', 'GML']
+
+
+def _somente_geometrias(frame, nome):
+    frame = frame[frame.geometry.notna() & ~frame.geometry.is_empty]
+    if frame.empty:
+        raise ValueError(f'A camada {nome} não contém geometrias disponíveis para processamento.')
+    return frame
+
+
+def _carregar_storage(arquivo, revisao, ident):
+    """Lê o vetor do storage pelo GDAL/pyogrio, sem gerar GeoJSON de mapa."""
+    import pyogrio
+    from api.services import storage_geoespacial as storage, storage_pacotes
+    caminho, camada = storage.separar_id(ident)
+    if caminho != arquivo:
+        raise ValueError('O arquivo não corresponde à camada informada.')
+    alvo = storage.resolver(caminho)
+    def revisao_atual(item):
+        estado = item.stat()
+        return f'{estado.st_mtime_ns}-{estado.st_size}'
+    atual = revisao_atual(alvo)
+    if revisao is not None and atual != revisao:
+        raise ValueError(REVISAO_OBSOLETA)
+    if alvo.suffix.lower() in storage_pacotes.COMPACTADOS:
+        # Mesmo leitor em memória que carregar_gdf usa, sem reprojetar o original.
+        frame, meta = storage_pacotes.carregar(alvo, camada)
+        nome = meta.get('nome_camada') or alvo.stem
+    else:
+        crs = pyogrio.read_info(alvo, layer=camada)['crs']
+        if not crs:
+            raise ValueError('O arquivo não informa seu CRS. Defina o CRS antes de processar.')
+        camadas = pyogrio.list_layers(alvo)
+        nome = alvo.stem if len(camadas) == 1 else (camada or camadas[0][0])
+        # Leitura nativa: mantém Z, CRS e FIDs originais (carregar_gdf reprojeta e força 2D).
+        for encoding in (None, 'ISO-8859-1'):
+            try:
+                frame = gpd.read_file(alvo, layer=camada, engine='pyogrio', fid_as_index=True,
+                                      **({'encoding': encoding} if encoding else {}))
+                break
+            except UnicodeDecodeError:
+                if encoding is not None:
+                    raise ValueError('A tabela de atributos usa uma codificação que não foi possível '
+                                     'interpretar. Publique o arquivo com um .cpg.')
+        if frame.crs is None:
+            frame = frame.set_crs(crs)
+    if revisao_atual(storage.resolver(caminho)) != atual:
+        raise ValueError('O arquivo foi alterado durante a leitura. Abra novamente.')
+    frame = _somente_geometrias(frame, nome)
+    frame.index = [str(item) for item in frame.index]
+    return {'id': ident, 'nome': nome, 'arquivo': caminho, 'revisao': atual,
+            'crs_arquivo': frame.crs.to_wkt(), 'frame': frame}
+
+
+def _carregar_arquivo(arquivo, revisao):
+    """Lê o vetor do acervo local com os mesmos limites de raiz e drivers da visualização."""
+    from osgeo import gdal
+    from api.path_policy import relative_path
+    from api.routers.geoespacial import RAIZES_CARREGAVEIS
+    from api.services import visualizacao_arquivo as leitura
+    relative = relative_path(arquivo).as_posix()
+    root = next((leitura.project_path('data/geoespacial/' + area['caminho']).resolve()
+                 for area in RAIZES_CARREGAVEIS.values()
+                 if relative.startswith('data/geoespacial/' + area['caminho'] + '/')), None)
+    path = leitura.project_path(relative).resolve()
+    if root is None or not path.is_relative_to(root):
+        raise ValueError('Selecione um arquivo nas áreas permitidas do storage.')
+    if not path.is_file():
+        raise FileNotFoundError('Arquivo não encontrado no storage.')
+    atual = leitura.revisao_arquivo(path)
+    if revisao is not None and atual != revisao:
+        raise ValueError(REVISAO_OBSOLETA)
+    matches = leitura.camadas_dos_arquivos({relative})
+    if not matches:
+        raise ValueError('Este arquivo não possui vínculo disponível no catálogo.')
+    vinculo = max(matches, key=lambda row: (row.get('criado_em') is not None,
+                                            row.get('criado_em'), row.get('id')))
+    dataset = gdal.OpenEx(str(path), gdal.OF_VECTOR | gdal.OF_READONLY, allowed_drivers=DRIVERS_ARQUIVO)
+    if dataset is None:
+        raise ValueError('GDAL não conseguiu abrir este arquivo vetorial.')
+    try:
+        if dataset.GetLayerCount() != 1:
+            raise ValueError('O arquivo deve conter uma única camada vetorial para esta seleção.')
+        srs = dataset.GetLayer(0).GetSpatialRef()
+        if srs is None:
+            raise ValueError('O arquivo não informa seu CRS. Defina o CRS antes de processar.')
+        crs_wkt = srs.ExportToWkt()
+    finally:
+        dataset = None
+    for encoding in (None, 'ISO-8859-1'):
+        try:
+            frame = gpd.read_file(path, engine='pyogrio', fid_as_index=True,
+                                  **({'encoding': encoding} if encoding else {}))
+            break
+        except UnicodeDecodeError:
+            if encoding is not None:
+                raise ValueError('A tabela de atributos usa uma codificação que não foi possível '
+                                 'interpretar. Publique o arquivo com um .cpg.')
+    if leitura.revisao_arquivo(path) != atual:
+        raise ValueError('O arquivo foi alterado durante a leitura. Abra novamente.')
+    nome = vinculo.get('nome', path.stem)
+    frame = _somente_geometrias(frame, nome)
+    frame.index = [str(item) for item in frame.index]
+    return {'id': vinculo['id'], 'nome': nome, 'arquivo': relative, 'revisao': atual,
+            'crs_arquivo': crs_wkt, 'frame': frame}
+
+
+def carregar_para_execucao(arquivo, revisao=None, camada_id=None):
+    """Vetor original (CRS e FIDs do arquivo) para algoritmos, sem GeoJSON intermediário."""
+    if camada_id and camada_id.startswith('storage:') or arquivo.startswith(('base-geoespacial/', 'superficies-indices/')):
+        return _carregar_storage(arquivo, revisao, camada_id or 'storage:' + arquivo)
+    return _carregar_arquivo(arquivo, revisao)
 
 
 def executar(operacao, parametros, arquivos, user, progress=None):
@@ -158,8 +275,8 @@ def executar(operacao, parametros, arquivos, user, progress=None):
     sources = {}
     for ident, value in arquivos.items():
         report(f"Lendo e conferindo revisão: {value['arquivo']}",len(sources),len(arquivos))
-        sources[ident] = abrir(value['arquivo'], value['revisao'], ident if ident.startswith('storage:') else None)
-        report(f"Leitura concluída: {sources[ident]['nome']} — {len(sources[ident]['geojson']['features'])} feições",len(sources),len(arquivos))
+        sources[ident] = carregar_para_execucao(value['arquivo'], value['revisao'], ident if ident.startswith('storage:') else None)
+        report(f"Leitura concluída: {sources[ident]['nome']} — {len(sources[ident]['frame'])} feições",len(sources),len(arquivos))
     if any(value['id'] != ident for ident, value in sources.items()):
         raise ValueError('O arquivo não corresponde à camada informada.')
     execution = ciclo.iniciar(operacao, {**parametros, 'arquivos': arquivos}, str(user.id))
@@ -170,8 +287,7 @@ def executar(operacao, parametros, arquivos, user, progress=None):
         for ident, source in sources.items():
             key = 'arquivo_bancada_' + uuid4().hex
             temporary[ident] = key
-            geo._camadas[key] = gpd.GeoDataFrame.from_features(source['geojson']['features'], crs=4326).to_crs(source['crs_arquivo'])
-            geo._camadas[key].index = [str(feature['id']) for feature in source['geojson']['features']]
+            geo._camadas[key] = source['frame']
             geo._metadados[key] = {'id':key,'nome':source['nome'],'tipo':'vetorial','crs':source['crs_arquivo'],'destino':'memoria_local'}
         params = dict(parametros)
         for key, value in params.items():
@@ -244,3 +360,37 @@ def iniciar_execucao(operacao, parametros, arquivos, user):
             jobs._fail(ident, exc)
     jobs._executor.submit(run)
     return jobs.get(ident)
+
+
+def salvar_edicoes(arquivo, camada_id, revisao, edicoes, excluidos, user):
+    """Grava só atributos alterados e exclusões, indexados pelo FID original.
+
+    Restrito a sessões de arquivo nativo do storage: não há recuo para a
+    gravação da coleção GeoJSON completa (`salvar`).
+    """
+    from api.services import storage_geoespacial as storage, storage_pacotes
+    from api.services.edicao_storage import gravar_incremental
+    ident = camada_id or 'storage:' + arquivo
+    if not ident.startswith('storage:'):
+        raise ValueError('A edição incremental está disponível apenas para arquivos nativos do storage.')
+    caminho, _ = storage.separar_id(ident)
+    if caminho != arquivo:
+        raise ValueError('O arquivo não corresponde à camada informada.')
+    if any(caminho.lower().endswith(ext) for ext in storage_pacotes.COMPACTADOS):
+        raise ValueError('Pacotes compactados não são editáveis: descompacte o arquivo no storage.')
+    return gravar_incremental(ident, revisao, edicoes, excluidos, user)
+
+
+def salvar_geometrias(arquivo, camada_id, revisao, edicoes, excluidos, novas, user):
+    """Salva um lote de geometrias no arquivo nativo sem serializar a camada inteira."""
+    from api.services import storage_geoespacial as storage, storage_pacotes
+    from api.services.edicao_storage import gravar_geometrias
+    ident = camada_id or 'storage:' + arquivo
+    if not ident.startswith('storage:'):
+        raise ValueError('A edição geométrica está disponível apenas para arquivos nativos do storage.')
+    caminho, _ = storage.separar_id(ident)
+    if caminho != arquivo:
+        raise ValueError('O arquivo não corresponde à camada informada.')
+    if any(caminho.lower().endswith(ext) for ext in storage_pacotes.COMPACTADOS):
+        raise ValueError('Pacotes compactados não são editáveis: descompacte o arquivo no storage.')
+    return gravar_geometrias(ident, revisao, edicoes, excluidos, novas, user)

@@ -27,6 +27,7 @@ from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
 from api.services import extracao_atributos_exportacao as exportacao
+from api.services.feedback_operacao import operacao, contexto
 from api.services.ciclo_vida_arquivos import apelido
 from api.services.extracao_atributos_pacote import _para_gpkg
 
@@ -63,32 +64,34 @@ def escrever_gpkg(camadas: dict, entrada, dicionario: list[dict], path: Path, fi
         for nome, frame in item['camadas'].items():
             todas[f'{chave}_{nome}'] = (frame, nome)
     for nome, (frame, _) in {**todas, **({'entrada': (entrada, None)} if incluir_entrada else {})}.items():
-        _para_gpkg(frame.to_crs(4674)).to_file(path, driver='GPKG', layer=nome, engine='pyogrio', index=False,
-                                                promote_to_multi=not preservar_geometrias,
-                                                **({'geometry_type': 'Unknown'} if preservar_geometrias else {}))
+        with operacao(progress, f'Gravando camada {nome} no GeoPackage: {len(frame)} registros; percentual interno indisponível'):
+            _para_gpkg(frame.to_crs(4674)).to_file(path, driver='GPKG', layer=nome, engine='pyogrio', index=False,
+                                                    promote_to_multi=not preservar_geometrias,
+                                                    **({'geometry_type': 'Unknown'} if preservar_geometrias else {}))
     gdal.UseExceptions()
     fonte = ogr.Open(str(path), 1)
     try:
-        for nome, (_, origem) in todas.items():
-            camada = fonte.GetLayerByName(nome)
-            definicao = camada.GetLayerDefn()
-            apelidos_usados = set()
-            for item in dicionario:
-                if item['camada'] != origem or not item.get('apelido'):
-                    continue
-                indice = definicao.GetFieldIndex(item['campo'])
-                if indice < 0:
-                    continue
-                campo = ogr.FieldDefn(item['campo'], definicao.GetFieldDefn(indice).GetType())
-                apelido_campo = str(item['apelido'])[:255]
-                raiz_apelido, numero = apelido_campo, 2
-                while apelido_campo.casefold() in apelidos_usados:
-                    sufixo = f' ({numero})'
-                    apelido_campo = raiz_apelido[:255-len(sufixo)] + sufixo
-                    numero += 1
-                apelidos_usados.add(apelido_campo.casefold())
-                campo.SetAlternativeName(apelido_campo)
-                camada.AlterFieldDefn(indice, campo, ogr.ALTER_ALTERNATIVE_NAME_FLAG)
+        with operacao(progress, 'Gravando apelidos dos campos nas camadas do GeoPackage'):
+            for nome, (_, origem) in todas.items():
+                camada = fonte.GetLayerByName(nome)
+                definicao = camada.GetLayerDefn()
+                apelidos_usados = set()
+                for item in dicionario:
+                    if item['camada'] != origem or not item.get('apelido'):
+                        continue
+                    indice = definicao.GetFieldIndex(item['campo'])
+                    if indice < 0:
+                        continue
+                    campo = ogr.FieldDefn(item['campo'], definicao.GetFieldDefn(indice).GetType())
+                    apelido_campo = str(item['apelido'])[:255]
+                    raiz_apelido, numero = apelido_campo, 2
+                    while apelido_campo.casefold() in apelidos_usados:
+                        sufixo = f' ({numero})'
+                        apelido_campo = raiz_apelido[:255-len(sufixo)] + sufixo
+                        numero += 1
+                    apelidos_usados.add(apelido_campo.casefold())
+                    campo.SetAlternativeName(apelido_campo)
+                    camada.AlterFieldDefn(indice, campo, ogr.ALTER_ALTERNATIVE_NAME_FLAG)
     finally:
         fonte = None
 
@@ -101,7 +104,7 @@ def escrever_dicionario_csv(dicionario: list[dict], path: Path) -> None:
             escritor.writerow([exportacao.safe(item.get(c)) if item.get(c) is not None else '' for c in COLUNAS_DICIONARIO])
 
 
-def escrever_xlsx(camadas: dict, dicionario: list[dict], path: Path) -> None:
+def escrever_xlsx(camadas: dict, dicionario: list[dict], path: Path, progress=None) -> None:
     livro = Workbook()
     livro.remove(livro.active)
     apelidos = {(d['camada'], d['campo']): d.get('apelido') for d in dicionario}
@@ -116,17 +119,21 @@ def escrever_xlsx(camadas: dict, dicionario: list[dict], path: Path) -> None:
                 from openpyxl.comments import Comment
                 celula.comment = Comment(_texto_xlsx(dica), 'SICARD')
             folha.column_dimensions[get_column_letter(j)].width = min(max(len(coluna) * 0.9, 12), 45)
-        for i, linha in enumerate(exportacao.registros(frame), start=2):
-            for j, coluna in enumerate(colunas, start=1):
-                folha.cell(row=i, column=j, value=_texto_xlsx(linha.get(coluna)))
+        with operacao(progress, f'Preenchendo aba XLSX {nome}') as medir:
+            for i, linha in enumerate(exportacao.registros(frame), start=2):
+                for j, coluna in enumerate(colunas, start=1):
+                    folha.cell(row=i, column=j, value=_texto_xlsx(linha.get(coluna)))
+                medir(i - 1, len(frame), "registros")
         folha.freeze_panes = 'A2'
-    folha = livro.create_sheet('dicionario_campos')
-    folha.append(COLUNAS_DICIONARIO)
-    for celula in folha[1]:
-        celula.font = Font(bold=True)
-    for item in dicionario:
-        folha.append([_texto_xlsx(item.get(c)) for c in COLUNAS_DICIONARIO])
-    livro.save(path)
+    with operacao(progress, 'Preenchendo dicionário de campos da planilha XLSX'):
+        folha = livro.create_sheet('dicionario_campos')
+        folha.append(COLUNAS_DICIONARIO)
+        for celula in folha[1]:
+            celula.font = Font(bold=True)
+        for item in dicionario:
+            folha.append([_texto_xlsx(item.get(c)) for c in COLUNAS_DICIONARIO])
+    with operacao(progress, 'Gravando arquivo XLSX; percentual interno indisponível'):
+        livro.save(path)
 
 
 def montar_pacote(camadas: dict, entrada, dicionario: list[dict], configuracao: dict,
@@ -139,31 +146,35 @@ def montar_pacote(camadas: dict, entrada, dicionario: list[dict], configuracao: 
     with tempfile.TemporaryDirectory(prefix='sicard_enriquecimento_') as temporaria:
         pasta = Path(temporaria)
         report(f'{nome_saida}: gravando GeoPackage com {len(camadas)} camada(s)')
-        escrever_gpkg(camadas, entrada, dicionario, pasta / arquivos['gpkg'][0], finalidades, preservar_geometrias, incluir_entrada)
+        escrever_gpkg(camadas, entrada, dicionario, pasta / arquivos['gpkg'][0], finalidades, preservar_geometrias, incluir_entrada, progress=progress)
         for nome, frame in camadas.items():
-            report(f'{nome_saida}: exportando CSV de {nome}, {len(frame)} registros')
-            exportacao.escrever_csv(frame, pasta / arquivos[f'csv_{nome}'][0])
+            with operacao(progress, f'{nome_saida}: exportando CSV de {nome}, {len(frame)} registros; percentual interno indisponível'):
+                exportacao.escrever_csv(frame, pasta / arquivos[f'csv_{nome}'][0])
         for chave, item in (finalidades or {}).items():
             for nome, frame in item['camadas'].items():
-                exportacao.escrever_csv(frame, pasta / arquivos[f'csv_{chave}_{nome}'][0])
-        (pasta / arquivos['validacao'][0]).write_text(
-            json.dumps(validacao or {}, ensure_ascii=False, indent=2, default=str), encoding='utf-8')
+                with operacao(progress, f'{nome_saida}: exportando CSV da finalidade {chave}, camada {nome}'):
+                    exportacao.escrever_csv(frame, pasta / arquivos[f'csv_{chave}_{nome}'][0])
+        with operacao(progress, 'Gravando validação do resultado em JSON'):
+            (pasta / arquivos['validacao'][0]).write_text(
+                json.dumps(validacao or {}, ensure_ascii=False, indent=2, default=str), encoding='utf-8')
         report(f'{nome_saida}: gravando planilha XLSX e dicionário de atributos')
-        escrever_xlsx(camadas, dicionario, pasta / arquivos['xlsx'][0])
-        escrever_dicionario_csv(dicionario, pasta / arquivos['csv_dicionario'][0])
-        (pasta / arquivos['configuracao'][0]).write_text(
-            json.dumps(configuracao, ensure_ascii=False, indent=2, default=str), encoding='utf-8')
+        escrever_xlsx(camadas, dicionario, pasta / arquivos['xlsx'][0], progress=progress)
+        with operacao(progress, f'{nome_saida}: gravando dicionário de campos CSV'):
+            escrever_dicionario_csv(dicionario, pasta / arquivos['csv_dicionario'][0])
+        with operacao(progress, 'Gravando configuração e procedência em JSON'):
+            (pasta / arquivos['configuracao'][0]).write_text(
+                json.dumps(configuracao, ensure_ascii=False, indent=2, default=str), encoding='utf-8')
         manifesto = []
         memoria = io.BytesIO()
         with zipfile.ZipFile(memoria, 'w', zipfile.ZIP_DEFLATED) as pacote:
             for chave, (nome, descricao) in arquivos.items():
-                report(f'{nome_saida}: conferindo e compactando {nome}')
-                dados = (pasta / nome).read_bytes()
-                if not dados:
-                    raise ValueError(f'O arquivo {nome} do pacote saiu vazio.')
-                pacote.writestr(nome, dados)
-                manifesto.append({'chave': chave, 'nome': nome, 'descricao': descricao,
-                                  'tamanho_bytes': len(dados), 'sha256': sha256(dados).hexdigest()})
+                with operacao(progress, f'{nome_saida}: conferindo, calculando SHA-256 e compactando {nome}; percentual interno indisponível'):
+                    dados = (pasta / nome).read_bytes()
+                    if not dados:
+                        raise ValueError(f'O arquivo {nome} do pacote saiu vazio.')
+                    pacote.writestr(nome, dados)
+                    manifesto.append({'chave': chave, 'nome': nome, 'descricao': descricao,
+                                      'tamanho_bytes': len(dados), 'sha256': sha256(dados).hexdigest()})
     return memoria.getvalue(), f"{Path(arquivos['gpkg'][0]).stem}.zip", manifesto
 
 
@@ -188,7 +199,8 @@ def montar_lote(saida, configuracao, nome_saida, progress=None):
     memoria = io.BytesIO()
     manifesto = []
     def adicionar(pacote, chave, nome, dados, descricao):
-        pacote.writestr(nome, dados)
+        with operacao(progress, f'Compactando {nome} no pacote geral e calculando SHA-256; percentual interno indisponível'):
+            pacote.writestr(nome, dados)
         manifesto.append({'chave':chave,'nome':nome,'descricao':descricao,'tamanho_bytes':len(dados),'sha256':sha256(dados).hexdigest()})
     with zipfile.ZipFile(memoria,'w',zipfile.ZIP_DEFLATED) as geral:
         for item in saida['individuais']:
@@ -196,7 +208,8 @@ def montar_lote(saida, configuracao, nome_saida, progress=None):
             dic = [d for d in saida['dicionario'] if d['camada'] in camadas]
             # Camada auxiliar contém somente elementos vinculados, nunca a base integral.
             from api.services.extracao_saida_analitica import snapshot_saida
-            snapshot = snapshot_saida(camadas)
+            with operacao(progress, f"{item['nome']}: preparando análise descritiva dos elementos relacionados"):
+                snapshot = snapshot_saida(camadas)
             areas = [a for a in snapshot['areas'].values() if a.get('geometria')]
             if areas:
                 camadas = {**camadas, 'elementos_relacionados':gpd.GeoDataFrame.from_features([
@@ -209,7 +222,9 @@ def montar_lote(saida, configuracao, nome_saida, progress=None):
                 finalidades=fins,validacao=item['validacao'],preservar_geometrias=True,incluir_entrada=False,progress=progress)
             memoria_individual = io.BytesIO(conteudo)
             with zipfile.ZipFile(memoria_individual,'a',zipfile.ZIP_DEFLATED) as individual:
-                for arquivo,dados in arquivos_analiticos(snapshot).items(): individual.writestr(arquivo,dados)
+                with operacao(progress, f"{item['nome']}: gerando JSON e CSV analíticos e adicionando ao pacote"):
+                    for arquivo,dados in arquivos_analiticos(snapshot).items():
+                        individual.writestr(arquivo,dados)
             conteudo = memoria_individual.getvalue()
             adicionar(geral,item['chave'],f"{item['chave']}/{nome}",conteudo,'Pacote individual: '+item['nome'])
             with zipfile.ZipFile(io.BytesIO(conteudo)) as individual:
@@ -218,11 +233,14 @@ def montar_lote(saida, configuracao, nome_saida, progress=None):
                         adicionar(geral,item['chave']+'_gpkg',f"geopackages/{item['chave']}_{arq}",individual.read(arq),'GeoPackage individual')
         with tempfile.TemporaryDirectory(prefix='sicard_lote_') as tmp:
             path = Path(tmp)
-            escrever_xlsx(saida['camadas'],saida['dicionario'],path/'tabelas_unificadas.xlsx')
+            escrever_xlsx(saida['camadas'],saida['dicionario'],path/'tabelas_unificadas.xlsx', progress=contexto(progress, 'Tabelas unificadas'))
             adicionar(geral,'xlsx','unificado/tabelas.xlsx',(path/'tabelas_unificadas.xlsx').read_bytes(),'Tabelas de todas as saídas')
-            snapshot = snapshot_saida(saida['camadas'])
+            with operacao(progress, 'Preparando análise descritiva unificada das saídas'):
+                snapshot = snapshot_saida(saida['camadas'])
             from api.services.extracao_resultados_territoriais import consultar
-            for arquivo,dados in arquivos_analiticos(snapshot).items():
+            with operacao(progress, 'Gerando arquivos JSON e CSV analíticos unificados'):
+                analiticos = arquivos_analiticos(snapshot)
+            for arquivo,dados in analiticos.items():
                 adicionar(geral,'analitico_'+arquivo,'unificado/'+arquivo,dados,'Análise descritiva por demanda e elemento')
             ranking = consultar(snapshot,tamanho=max(1,sum(len(e['feicoes']) for e in snapshot['entradas'])))
             adicionar(geral,'analise','unificado/analise.json',json.dumps(ranking,ensure_ascii=False,default=str).encode(),'Análise descritiva unificada')

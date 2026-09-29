@@ -53,8 +53,11 @@ def test_processo_pode_ser_recolhido_sem_cancelar():
     """Ocultar o acompanhamento não cancela; CANCELAR só aparece com onCancel."""
     assert "q('#pfsProgressClose')?.addEventListener('click', () => _progressSystem?.fechar())" in FEEDBACK_JS
     assert "this.cancelBtn.hidden = !this.config.onCancel;" in FEEDBACK_JS
-    cancelar = FEEDBACK_JS.split("        cancelar() {", 1)[1].split("\n        }", 1)[0]
-    assert "this.config.onCancel()" in cancelar
+    cancelar = FEEDBACK_JS.split("        async cancelar() {", 1)[1].split("\n        }", 1)[0]
+    assert "await this.config.onCancel()" in cancelar
+    assert "this._cancelPending = true" in cancelar
+    assert "this._finalizado = true" not in cancelar
+    assert "this.fechar()" not in cancelar
 
 
 def test_semaforo_tem_as_tres_cores():
@@ -100,7 +103,7 @@ def test_sintetizar_nao_redireciona_sozinho():
     assert "window.location" not in trecho
     helper = FASE3_JS.split("async function executarAcao(", 1)[1].split("$(\"executar-fase3\")", 1)[0]
     assert 'action_label: "Ver ranking"' in helper
-    assert "/restrict/hierarquizacao/processos/ranking/?codigo=" in helper
+    assert "/restrict/hierarquizacao/ranking/?codigo=" in helper
 
 
 def test_upload_usa_as_rotas_com_log_real_do_servidor():
@@ -258,7 +261,8 @@ def test_overlay_de_progresso_segue_o_sigma():
     """Card da tarefa com passo, tarefas concluídas, log com hora, segmentos e barra."""
     for alvo in ('id="pfsTaskCard"', 'id="pfsCompletedList"', 'id="pfsLog"', 'id="pfsSegments"', 'id="pfsProgressFill"', 'data-pfs="task-step-num"'):
         assert alvo in FEEDBACK_JS
-    assert '<span class="pfs-log-time">${now()}</span>' in FEEDBACK_JS
+    assert 'const em = eventTime || new Date().toISOString()' in FEEDBACK_JS
+    assert '<span class="pfs-log-time">${esc(hora)}</span>' in FEEDBACK_JS
     for classe in ("pfs-segment--completed", "pfs-segment--active", "pfs-segment--error"):
         assert f".{classe}" in FEEDBACK_CSS
 
@@ -267,7 +271,8 @@ def test_log_do_servidor_entra_uma_vez_por_sequencia():
     corpo = FEEDBACK_JS.split("_aplicarLogs(p, st, job) {", 1)[1].split("\n        }\n", 1)[0]
     assert "if (seq <= st.seq || !msg) return;" in corpo
     assert "p.log(" in corpo
-    assert "job.progresso_tarefa===100" in FEEDBACK_JS
+    assert "job.tarefa_estado === 'concluido'" in FEEDBACK_JS
+    assert "!job.tarefa_estado && job.progresso_tarefa === 100" in FEEDBACK_JS
 
 
 def test_captura_do_sigma_para_respostas_do_servidor():
@@ -280,7 +285,8 @@ def test_captura_do_sigma_para_respostas_do_servidor():
         assert evento in FEEDBACK_JS
     # Erros do FastAPI (detail com loc/msg) viram linhas legíveis.
     assert "e.msg && e.loc" in FEEDBACK_JS
-    assert "Aguardando resposta do servidor..." in FEEDBACK_JS
+    assert "Date.now() - this._lastActivity" in FEEDBACK_JS
+    assert "Date.now() - this._lastContact" in FEEDBACK_JS
 
 
 

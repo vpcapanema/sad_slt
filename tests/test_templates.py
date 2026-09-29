@@ -44,6 +44,7 @@ def test_no_legacy_html_remains_outside_template_directory() -> None:
     static_html_allowlist = {
         Path("assets/_preview_atributos.html"),
         Path("documentacao/apresentacao_hierarquizacao/index.html"),
+        Path("documentacao/feedback-preview.html"),
         Path("preview/diagramas-hierarquizacao-opcoes.html"),
     }
     legacy_html = [

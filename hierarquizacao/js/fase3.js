@@ -161,7 +161,7 @@
           const subprocesses = irRanking ? [{
             name: "Ranking final", status: "success", detail: "Abra o ranking desta hierarquização.",
             action_label: "Ver ranking",
-            action_url: `/restrict/hierarquizacao/processos/ranking/?codigo=${encodeURIComponent(resultado.codigo)}`,
+            action_url: `/restrict/hierarquizacao/ranking/?codigo=${encodeURIComponent(resultado.codigo)}`,
           }] : [];
           proc.sucesso({ title: titulo1, message: resto.join("\n"), subprocesses });
           return { ok: true, resultado };

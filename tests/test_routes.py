@@ -526,20 +526,17 @@ def test_indice_restrito_nao_deixa_vao_nos_modulos() -> None:
 
 
 def test_paginas_descontinuadas_respondem_410() -> None:
-    """AHP e etapas avulsas da rodada foram desabilitados.
+    """AHP permanece descontinuado; etapas avulsas da rodada foram removidas.
 
     410 e não 404: o recurso existiu e foi retirado, e o cliente recebe o
     encaminhamento para o substituto em vez de um "não encontrado" genérico.
     """
-    from api.server import AHP_CLEAN_PAGES, HIERARQUIZACAO_PROCESS_PAGES
+    from api.server import AHP_CLEAN_PAGES
 
     client = TestClient(app)
 
     descontinuadas = ["/restrict/ahp/"]
     descontinuadas += [f"/restrict/ahp/{nome}/" for nome in AHP_CLEAN_PAGES]
-    descontinuadas += [
-        f"/restrict/hierarquizacao/processos/{nome}/" for nome in HIERARQUIZACAO_PROCESS_PAGES
-    ]
 
     for rota in descontinuadas:
         resposta = client.get(rota)
@@ -549,6 +546,10 @@ def test_paginas_descontinuadas_respondem_410() -> None:
     # O que continua de pé no entorno.
     for rota in (
         "/restrict/hierarquizacao/processos/",
+        "/restrict/hierarquizacao/fase-1/",
+        "/restrict/hierarquizacao/fase-2/",
+        "/restrict/hierarquizacao/fase-3/",
+        "/restrict/hierarquizacao/ranking/",
         "/restrict/analise-multicriterio/",
         "/public/ahp/colaborativa/",
     ):
@@ -556,3 +557,7 @@ def test_paginas_descontinuadas_respondem_410() -> None:
 
     # Nome inexistente segue 404, não 410.
     assert client.get("/restrict/ahp/inexistente/").status_code == 404
+    for etapa in ("nova", "objetos", "avaliacao", "ranking", "homologacao"):
+        assert client.get(f"/restrict/hierarquizacao/processos/{etapa}/").status_code == 404
+    for nome in ("step1-config", "step2-objetos", "step3-avaliacao", "step4-ranking", "step5-homologar"):
+        assert client.get(f"/restrict/hierarquizacao/{nome}.html", follow_redirects=False).status_code == 404

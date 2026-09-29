@@ -1,3 +1,4 @@
+import { log, falha } from './logger.js';
 import { $, el, options, feedback, camposCamada, exigirCampo } from "./ui.js";
 import { escolherArquivo } from './explorador.js';
 import { salvarRascunhoMunicipal } from './municipal.js';
@@ -70,10 +71,13 @@ export function criarConfiguracao(state, changed) {
     }
   }
   $("#ea-base-form").addEventListener("submit",event=>event.preventDefault());
-  $('#ea-municipal-open').addEventListener('click',event=>{
-    if(state.busy){event.preventDefault();return;}
-    try{salvarRascunhoMunicipal(state);}
-    catch(error){event.preventDefault();feedback('Não foi possível guardar a configuração para voltar da ferramenta. Salve a configuração antes de continuar.');}
+  $('#ea-municipal-open').addEventListener('click',async event=>{
+    event.preventDefault();
+    if(state.busy||state.uploading||state.loadingMap||state.validatingBases||state.loadingCatalog)return;
+    const destino=event.currentTarget.href;
+    window.SICARDExtracao.ocupar(true);
+    try{await salvarRascunhoMunicipal(state);log('municipal.rascunho_salvo',{entradas:state.bancadaEntradas.length,bases:state.bancadaBases.length,resultado:!!state.result});location.assign(destino);}
+    catch(error){falha('municipal_rascunho',error);feedback('Não foi possível guardar a análise neste navegador. A página foi mantida para preservar as camadas e os arquivos locais.','error');window.SICARDExtracao.ocupar(false);}
   });
   async function browse(target,categoriaAlvo){
     if(state.busy||state.uploading||state.validatingBases)return;
@@ -82,6 +86,7 @@ export function criarConfiguracao(state, changed) {
     if(target==='base'&&!category){exigirCampo($('#ea-category-select'),'Selecione a categoria da base antes de escolher o arquivo.');$('#ea-category-select').focus();return;}
     const selection=await escolherArquivo({catalog:state.catalog,excluded:[...(target==='base'?(state.listaBases?.itens||[]).map(b=>b.id):[...state.bases,...state.staging].map(b=>b.id)),...(target==='base'?[state.input,...state.entradasExtras.map(item=>item.id)]:[])],multiple:true,validar:target!=='base',acao:$(target==='base'?'#ea-base-browse':'#ea-input-browse').textContent.trim(),title:target==='base'?'Selecionar camadas base':'Selecionar camadas de entrada'});
     if(!selection)return;
+    log('selecao.camadas',{camadas:selection.length});
     for(const layer of selection){
       const atual=state.catalog.find(item=>item.id===layer.id);
       if(atual)Object.assign(atual,layer);else state.catalog.push(layer);

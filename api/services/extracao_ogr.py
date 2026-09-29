@@ -9,6 +9,7 @@ import uuid
 import weakref
 import geopandas as gpd
 from osgeo import ogr, osr, gdal
+from api.services.feedback_operacao import operacao
 
 ogr.UseExceptions()
 osr.UseExceptions()
@@ -145,22 +146,25 @@ def _check_coordinates(g, name, geographic=False):
         _check_coordinates(g.GetGeometryRef(i), name, geographic)
 
 
-def reproject(frame, target, name='Camada'):
+def reproject(frame, target, name='Camada', progress=None):
     if frame.crs is None: raise ValueError(f'{name}: CRS ausente.')
     try:
         source, dest = spatial_reference(frame.crs), spatial_reference(target)
         transform = None if source.IsSame(dest) else osr.CoordinateTransformation(source, dest)
-        converted = []
-        for value in frame.geometry:
-            g = geometry(value)
-            _check_coordinates(g, name, bool(source.IsGeographic()))
-            if g is not None:
-                # Não alterar geometrias OGR fornecidas pelo chamador.
-                g = g.Clone()
-                if transform is not None and not g.IsEmpty() and g.Transform(transform)!=0:
-                    raise ValueError(f'{name}: GDAL/OGR não conseguiu transformar a geometria.')
-                _check_coordinates(g, name, bool(dest.IsGeographic()))
-            converted.append(None if g is None else bytes(g.ExportToWkb()))
+        acao = f'Reprojetando cópia geométrica de {frame.crs} para {target}' if transform else f'Conferindo coordenadas no CRS {frame.crs}'
+        with operacao(progress, f'{name}: {acao}') as medir:
+            converted = []
+            for pos, value in enumerate(frame.geometry):
+                g = geometry(value)
+                _check_coordinates(g, name, bool(source.IsGeographic()))
+                if g is not None:
+                    # Não alterar geometrias OGR fornecidas pelo chamador.
+                    g = g.Clone()
+                    if transform is not None and not g.IsEmpty() and g.Transform(transform)!=0:
+                        raise ValueError(f'{name}: GDAL/OGR não conseguiu transformar a geometria.')
+                    _check_coordinates(g, name, bool(dest.IsGeographic()))
+                converted.append(None if g is None else bytes(g.ExportToWkb()))
+                medir(pos + 1, len(frame), "geometrias")
         result = frame.copy()
         result.geometry = gpd.GeoSeries.from_wkb(converted,index=frame.index,crs=target)
         return result.set_crs(target, allow_override=True)
@@ -175,34 +179,44 @@ class LayerOverlay:
     transfere geometrias e posições de linhas, sem selecionar envelopes ou
     implementar interseção/recorte. FIDs são posições, nunca índices do pandas.
     """
-    def __init__(self, geometries):
+    def __init__(self, geometries, progress=None):
+        self.progress = progress
         if ogr.GetGEOSVersionMajor() < 1:
             raise ValueError('GDAL/OGR precisa de suporte GEOS para overlay.')
         self.geometries = list(geometries)
         self.path = f'/vsimem/sicard-{uuid.uuid4().hex}.gpkg' if len(self.geometries)>256 else None
         self.dataset = ogr.GetDriverByName('GPKG' if self.path else 'Memory').CreateDataSource(self.path or '')
-        self.layer = self._layer(self.dataset, 'base', self.geometries, 'base_pos', indexed=bool(self.path))
+        try:
+            self.layer = self._layer(self.dataset, 'base', self.geometries, 'base_pos', indexed=bool(self.path), progress=progress)
+        except BaseException:
+            self.dataset = None
+            if self.path:
+                gdal.Unlink(self.path)
+            raise
         self._resources = {'layer':self.layer,'dataset':self.dataset,'path':self.path}
         self._finalizer = weakref.finalize(self, self._release, self._resources)
 
     @staticmethod
-    def _layer(dataset, name, values, field, indexed=False):
-        layer = dataset.CreateLayer(name, geom_type=ogr.wkbUnknown,
-                                    options=['SPATIAL_INDEX=YES'] if indexed else [])
-        layer.CreateField(ogr.FieldDefn(field, ogr.OFTInteger64))
-        if indexed: layer.StartTransaction()
-        for pos, value in enumerate(values):
-            g = geometry(value)
-            if g is None or g.IsEmpty(): continue
-            feature = ogr.Feature(layer.GetLayerDefn())
-            feature.SetFID(pos)
-            feature.SetField(field, pos)
-            feature.SetGeometry(g)
-            if layer.CreateFeature(feature) != ogr.OGRERR_NONE:
-                raise ValueError('GDAL/OGR: falha ao preparar camada para overlay.')
-        if indexed:
-            layer.CommitTransaction()
-            layer.SyncToDisk()
+    def _layer(dataset, name, values, field, indexed=False, progress=None):
+        with operacao(progress, f'Carregando geometrias de {name} para o overlay OGR') as medir:
+            layer = dataset.CreateLayer(name, geom_type=ogr.wkbUnknown,
+                                        options=['SPATIAL_INDEX=YES'] if indexed else [])
+            layer.CreateField(ogr.FieldDefn(field, ogr.OFTInteger64))
+            if indexed: layer.StartTransaction()
+            for pos, value in enumerate(values):
+                medir(pos, len(values), "geometrias")
+                g = geometry(value)
+                if g is None or g.IsEmpty(): continue
+                feature = ogr.Feature(layer.GetLayerDefn())
+                feature.SetFID(pos)
+                feature.SetField(field, pos)
+                feature.SetGeometry(g)
+                if layer.CreateFeature(feature) != ogr.OGRERR_NONE:
+                    raise ValueError('GDAL/OGR: falha ao preparar camada para overlay.')
+            if indexed:
+                layer.CommitTransaction()
+                layer.SyncToDisk()
+            medir(len(values), len(values), 'geometrias')
         return layer
 
     @staticmethod
@@ -224,20 +238,22 @@ class LayerOverlay:
             raise ValueError('Predicado espacial não suportado.')
         values = list(values)
         dataset = ogr.GetDriverByName('Memory').CreateDataSource('')
-        source = self._layer(dataset, 'entrada', values, 'entrada_pos')
+        source = self._layer(dataset, 'entrada', values, 'entrada_pos', progress=self.progress)
         result = dataset.CreateLayer('resultado', geom_type=ogr.wkbUnknown)
         try:
-            code = getattr(source, operation)(self.layer, result, options=[
-                'SKIP_FAILURES=NO', 'KEEP_LOWER_DIMENSION_GEOMETRIES=YES'])
-            if code != ogr.OGRERR_NONE:
-                raise ValueError(f'GDAL/OGR: Layer.{operation} falhou ({code}).')
-            rows = []
-            for feature in result:
-                left, right = feature.GetField('entrada_pos'), feature.GetField('base_pos')
-                if right is not None and predicate_name != 'intersects' and not predicate(values[left], self.geometries[right], predicate_name):
-                    continue
-                rows.append((left, right, external(feature.GetGeometryRef())))
-            return sorted(rows, key=lambda r: (r[0], r[1] is None, r[1] or 0))
+            with operacao(self.progress, f'Executando OGR {operation}; percentual interno indisponível'):
+                code = getattr(source, operation)(self.layer, result, options=[
+                    'SKIP_FAILURES=NO', 'KEEP_LOWER_DIMENSION_GEOMETRIES=YES'])
+                if code != ogr.OGRERR_NONE:
+                    raise ValueError(f'GDAL/OGR: Layer.{operation} falhou ({code}).')
+            with operacao(self.progress, f'Lendo geometrias do overlay e conferindo predicado {predicate_name}'):
+                rows = []
+                for feature in result:
+                    left, right = feature.GetField('entrada_pos'), feature.GetField('base_pos')
+                    if right is not None and predicate_name != 'intersects' and not predicate(values[left], self.geometries[right], predicate_name):
+                        continue
+                    rows.append((left, right, external(feature.GetGeometryRef())))
+                return sorted(rows, key=lambda r: (r[0], r[1] is None, r[1] or 0))
         except RuntimeError as exc:
             raise ValueError(f'GDAL/OGR: Layer.{operation}: {exc}') from exc
         finally:
@@ -251,23 +267,31 @@ class SpatialJoin:
     atributos originais da demanda permanecem no GeoDataFrame de saída.
     SpatiaLite executa o predicado espacial e consulta seu índice R-tree.
     """
-    def __init__(self, geometries):
+    def __init__(self, geometries, progress=None):
+        self.progress = progress
         self.dataset = ogr.GetDriverByName('SQLite').CreateDataSource(':memory:', options=['SPATIALITE=YES'])
-        self._write_layer('base', geometries, 'base_pos')
+        try:
+            self._write_layer('base', geometries, 'base_pos')
+        except BaseException:
+            self.close()
+            raise
 
     def _write_layer(self, name, geometries, field):
-        layer = self.dataset.CreateLayer(name, geom_type=ogr.wkbUnknown,
-                                        options=['GEOMETRY_NAME=geometry', 'SPATIAL_INDEX=YES'])
-        layer.CreateField(ogr.FieldDefn(field, ogr.OFTInteger64))
-        layer.StartTransaction()
-        for pos, value in enumerate(geometries):
-            feature = ogr.Feature(layer.GetLayerDefn())
-            feature.SetField(field, pos)
-            geom = geometry(value)
-            if geom is not None and not geom.IsEmpty(): feature.SetGeometry(geom)
-            if layer.CreateFeature(feature) != ogr.OGRERR_NONE:
-                raise ValueError('GDAL/OGR: falha ao carregar camada da junção espacial.')
-        layer.CommitTransaction()
+        with operacao(self.progress, f'Carregando {name} e preparando índice espacial SQLite') as medir:
+            layer = self.dataset.CreateLayer(name, geom_type=ogr.wkbUnknown,
+                                            options=['GEOMETRY_NAME=geometry', 'SPATIAL_INDEX=YES'])
+            layer.CreateField(ogr.FieldDefn(field, ogr.OFTInteger64))
+            layer.StartTransaction()
+            for pos, value in enumerate(geometries):
+                medir(pos, len(geometries), "geometrias")
+                feature = ogr.Feature(layer.GetLayerDefn())
+                feature.SetField(field, pos)
+                geom = geometry(value)
+                if geom is not None and not geom.IsEmpty(): feature.SetGeometry(geom)
+                if layer.CreateFeature(feature) != ogr.OGRERR_NONE:
+                    raise ValueError('GDAL/OGR: falha ao carregar camada da junção espacial.')
+            layer.CommitTransaction()
+            medir(len(geometries), len(geometries), 'geometrias')
 
     def pairs(self, geometries):
         """Inclui (posição da demanda, None) para feições sem correspondência."""
@@ -276,18 +300,19 @@ class SpatialJoin:
         self._write_layer('entrada', geometries, 'entrada_pos')
         result = None
         try:
-            result = self.dataset.ExecuteSQL("""
-                SELECT e.entrada_pos, b.base_pos
-                FROM entrada AS e
-                LEFT JOIN base AS b ON
-                    b.ROWID IN (SELECT ROWID FROM SpatialIndex
-                                WHERE f_table_name = 'base' AND search_frame = e.geometry)
-                    AND ST_Intersects(e.geometry, b.geometry) = 1
-                ORDER BY e.entrada_pos, b.base_pos
-            """)
-            if result is None:
-                raise ValueError('GDAL/OGR: a junção espacial não retornou resultado.')
-            return [(f.GetField('entrada_pos'), f.GetField('base_pos')) for f in result]
+            with operacao(self.progress, 'Consultando ST_Intersects no índice espacial; percentual interno indisponível'):
+                result = self.dataset.ExecuteSQL("""
+                    SELECT e.entrada_pos, b.base_pos
+                    FROM entrada AS e
+                    LEFT JOIN base AS b ON
+                        b.ROWID IN (SELECT ROWID FROM SpatialIndex
+                                    WHERE f_table_name = 'base' AND search_frame = e.geometry)
+                        AND ST_Intersects(e.geometry, b.geometry) = 1
+                    ORDER BY e.entrada_pos, b.base_pos
+                """)
+                if result is None:
+                    raise ValueError('GDAL/OGR: a junção espacial não retornou resultado.')
+                return [(f.GetField('entrada_pos'), f.GetField('base_pos')) for f in result]
         except RuntimeError as exc:
             raise ValueError(f'GDAL/OGR: falha na junção espacial esquerda: {exc}') from exc
         finally:

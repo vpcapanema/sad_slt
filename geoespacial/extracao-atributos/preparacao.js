@@ -47,8 +47,23 @@ export function enviarPrevia(s){
   return [{...e,config:structuredClone(e.config),layer}];
  });
  const prontas=[...s.bases,...s.staging].filter(b=>{const l=s.catalog.find(l=>l.id===b.id);return marcada(`base:${b.id}`)&&l?.geojson&&!l.erro&&l.tipo!=='raster'&&!entradas.some(e=>e.id===b.id);});
- s.bancadaEntradas=entradas;
- s.bancadaBases=prontas.map(b=>({...structuredClone(b),layer:copiar(s.catalog.find(l=>l.id===b.id))}));
+ // Enviar complementa a bancada; remoções continuam explícitas no painel.
+ const mesclar=(anteriores,novas)=>[...new Map([...anteriores,...novas].map(e=>[e.id,e])).values()];
+ const anteriores=s.bancadaEntradas||[];
+ const novas=entradas.map(e=>{
+  const anterior=anteriores.find(a=>a.id===e.id);
+  if(!anterior?.layer.camadas_bancada||!e.layer.camadas_bancada)return e;
+  const partes=mesclar(anterior.layer.camadas_bancada,e.layer.camadas_bancada);
+  const configsNovas=Object.fromEntries(e.layer.camadas_bancada.map(l=>[l.chave,e.config?.camadas?.[l.chave]||{}]));
+  return {...e,config:{...anterior.config,...e.config,camadas:{...anterior.config?.camadas,...configsNovas}},layer:{...e.layer,camadas_bancada:partes,
+   geojson:{type:'FeatureCollection',features:partes.flatMap(l=>l.geojson?.features||[])},
+   ...(e.layer.arquivo_local?{arquivo_local:{...e.layer.arquivo_local,camadas:partes.map(l=>l.chave)}}:{})}};
+ });
+ const entradasCompletas=mesclar(anteriores,novas);
+ const basesCompletas=mesclar(s.bancadaBases||[],prontas.map(b=>({...structuredClone(b),layer:copiar(s.catalog.find(l=>l.id===b.id))})));
+ if(basesCompletas.some(b=>entradasCompletas.some(e=>e.id===b.id)))throw new Error('Uma camada não pode ser entrada e base. Remova o papel anterior na bancada antes de alterá-lo.');
+ s.bancadaEntradas=entradasCompletas;
+ s.bancadaBases=basesCompletas;
  s.bases=prontas;s.staging=s.staging.filter(b=>!prontas.some(p=>p.id===b.id));
  return entradas.reduce((n,e)=>n+componentes(e.layer).length,0)+prontas.length;
 }

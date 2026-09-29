@@ -27,6 +27,17 @@ def test_cancelamento_antes_da_gravacao_e_rejeicao_apos_commit_iniciar():
     assert not c.snapshot()['cancelamento_solicitado']
 
 
+@pytest.mark.parametrize('status', ['erro', 'cancelado'])
+def test_encerramento_terminal_nao_preserva_estado_da_tarefa_anterior(status):
+    c = ControleProcessamento()
+    c.mensagem('Preparando saída')
+    c.concluir()
+    c.encerrar(status)
+    snapshot = c.snapshot()
+    assert snapshot['status'] == status
+    assert snapshot['tarefa_estado'] == status
+
+
 def test_cancelar_job_municipal_isolamento_e_nenhuma_publicacao(monkeypatch):
     from api.services import municipal_jobs as jobs
     entrou=Event();liberar=Event();publicados=[]

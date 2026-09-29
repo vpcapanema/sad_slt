@@ -431,3 +431,164 @@
 .pfs-progress-indeterminate .pfs-progress-fill{width:28%;animation:pfs-indeterminate 1.5s ease-in-out infinite;}
 @keyframes pfs-indeterminate{from{transform:translateX(-100%);}to{transform:translateX(400%);}}
 @media(prefers-reduced-motion:reduce){.pfs-progress-indeterminate .pfs-progress-fill{animation:none;transform:none;}}
+
+/* Mensagens prioritárias, resumo acessível e histórico com retenção explícita. */
+#pfsProgressBox { width: min(840px, 100%); }
+#pfsProgressBox .pfs-task-card { display: none; }
+.pfs-current { padding: 12px 14px; border-left: 4px solid var(--pfs-blue); background: var(--pfs-info-light); color: var(--pfs-deep); font-size: 14px; font-weight: 600; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+.pfs-contact, .pfs-history-note { font-size: 12px; line-height: 1.4; color: var(--pfs-gray-500); margin: 8px 0; }
+.pfs-contact:empty, .pfs-history-note:empty { display: none; }
+.pfs-log-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.pfs-log-tools button { border: 1px solid var(--pfs-gray-200); border-radius: 6px; padding: 8px 10px; background: white; color: var(--pfs-deep); cursor: pointer; }
+.pfs-log-tools button[aria-pressed="true"] { background: var(--pfs-info-light); border-color: var(--pfs-blue); }
+.pfs-log-tools button:focus-visible, .pfs-completed-details summary:focus-visible, .pfs-log:focus-visible { outline: 3px solid var(--pfs-blue); outline-offset: 2px; }
+#pfsProgressBox .pfs-log { max-height: 36vh; min-height: 100px; }
+.pfs-completed-details { margin-top: 12px; color: var(--pfs-gray-700); font-size: 12px; }
+.pfs-completed-details summary { padding: 8px 0; cursor: pointer; }
+.pfs-completed-name, .pfs-completed-msg { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+@media(max-width:640px) { .pfs-current { font-size: 13px; } .pfs-log-tools button { flex: 1; } #pfsProgressBox .pfs-log { max-height: 30vh; } }
+
+/* Modais compactos: as três famílias mantêm dimensões próprias e corpo rolável. */
+#pfsComponente .pfs-header { gap: 9px; padding: 9px 16px; }
+#pfsComponente .pfs-header-icon { width: 34px; height: 34px; border-radius: 8px; font-size: 17px; }
+#pfsComponente .pfs-header-text h3 { font-size: 1rem; }
+#pfsComponente .pfs-close { width: 30px; height: 30px; font-size: .9rem; }
+#pfsComponente .pfs-footer, #pfsComponente .pfs-progress-footer { gap: 8px; padding: 8px 16px; background: var(--pfs-gray-100); }
+#pfsComponente .pfs-btn { min-height: 34px; padding: 7px 16px; font-size: 13px; }
+#pfsComponente .pfs-confirm-input-wrap .pfs-credential-field > span { display: block; margin-bottom: 6px; font-size: .85rem; font-weight: 600; color: var(--pfs-gray-700); }
+#pfsComponente #pfsProgressBox, #pfsComponente #pfsSuccessBox,
+#pfsComponente #pfsPartialBox, #pfsComponente #pfsErrorBox {
+  width: min(540px, 100%); height: min(450px, calc(100dvh - 32px));
+}
+#pfsComponente #pfsConfirmBox { width: min(520px, 100%); height: min(255px, calc(100dvh - 32px)); }
+#pfsComponente #pfsCredentialBox { width: min(520px, 100%); height: min(390px, calc(100dvh - 32px)); }
+#pfsComponente #pfsSuccessBox .pfs-body, #pfsComponente #pfsPartialBox .pfs-body,
+#pfsComponente #pfsErrorBox .pfs-body { display: flex; flex-direction: column; }
+#pfsComponente #pfsSuccessBox .pfs-result-content, #pfsComponente #pfsPartialBox .pfs-result-content,
+#pfsComponente #pfsErrorBox .pfs-result-content { width: 100%; margin-block: auto; }
+#pfsComponente #pfsConfirmBox .pfs-body, #pfsComponente #pfsCredentialBox .pfs-body {
+  display: flex; flex-direction: column; justify-content: center;
+}
+#pfsComponente #pfsProgressBox .pfs-header-text p,
+#pfsComponente #pfsProgressBox .pfs-task-card,
+#pfsComponente #pfsProgressBox .pfs-progress-wrapper { display: none; }
+#pfsComponente #pfsProgressBox .pfs-body {
+  display: flex; flex-direction: column; gap: 16px;
+}
+#pfsComponente #pfsProgressBox .pfs-progress-icon {
+  margin: 0 auto; background: var(--pfs-info-light); color: var(--pfs-blue);
+}
+#pfsComponente #pfsProgressBox .pfs-progress-title { margin: 0; text-align: center; }
+#pfsComponente #pfsProgressBox .pfs-progress-description {
+  margin: 0; color: var(--pfs-gray-700); text-align: justify; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere;
+}
+#pfsComponente #pfsProgressBox .pfs-messages { order: 1; min-width: 0; }
+#pfsComponente #pfsProgressBox .pfs-task-progress { order: 2; padding: 0; }
+#pfsComponente #pfsProgressBox .pfs-active-details {
+  min-height: 64px; padding: 18px 16px; border: 1px solid var(--pfs-gray-200);
+  border-radius: 8px; background: var(--pfs-gray-100); color: var(--pfs-gray-700);
+  font: 13px/1.5 Consolas, Monaco, "Courier New", monospace; overflow-wrap: anywhere;
+}
+#pfsComponente #pfsProgressBox .pfs-active-details:empty { display: none; }
+#pfsComponente #pfsProgressBox .pfs-contact { margin: 4px 0; }
+#pfsComponente #pfsProgressBox .pfs-history-details { margin-top: 8px; font-size: 12px; color: var(--pfs-gray-500); }
+#pfsComponente #pfsProgressBox .pfs-history-details summary { cursor: pointer; }
+#pfsComponente #pfsProgressBox .pfs-log { max-height: 190px; }
+#pfsComponente .pfs-result-content { text-align: left; }
+#pfsComponente .pfs-result-icon, #pfsComponente .pfs-error-icon { margin: 0 auto 12px; }
+#pfsComponente .pfs-result-title, #pfsComponente .pfs-error-title { margin-bottom: 12px; text-align: center; }
+#pfsComponente .pfs-result-message, #pfsComponente .pfs-error-message { margin-bottom: 18px; text-align: justify; }
+#pfsComponente .pfs-detail-panel {
+  min-width: 0; padding: 14px; border: 1px solid var(--pfs-gray-200);
+  border-radius: 10px; background: var(--pfs-gray-100);
+}
+#pfsComponente .pfs-detail-panel[hidden], #pfsComponente .pfs-error-details[hidden] { display: none; }
+#pfsComponente .pfs-detail-panel > :last-child { margin-bottom: 0; }
+#pfsComponente #pfsSuccessBox .pfs-detail-panel { padding: 10px 12px; }
+#pfsComponente #pfsSuccessBox .pfs-file-summary {
+  display: flex; flex-wrap: wrap; gap: 2px 16px; margin: 0 0 8px; padding: 0 0 8px;
+  border: 0; border-bottom: 1px solid var(--pfs-gray-200); border-radius: 0;
+}
+#pfsComponente #pfsSuccessBox .pfs-file-summary:empty { display: none; }
+#pfsComponente #pfsSuccessBox .pfs-file-row { gap: 5px; padding: 1px 0; border: 0; }
+#pfsComponente #pfsSuccessBox .pfs-file-label { min-width: 0; max-width: none; }
+#pfsComponente #pfsSuccessBox .pfs-subprocess-list { gap: 4px; margin: 0; }
+#pfsComponente #pfsSuccessBox .pfs-sp-item {
+  grid-template-columns: 22px minmax(0, 1fr) 18px minmax(0, 1fr);
+  grid-template-rows: auto; gap: 6px; padding: 5px 8px;
+}
+#pfsComponente #pfsSuccessBox .pfs-sp-icon { grid-row: 1; width: 22px; height: 22px; font-size: 12px; }
+#pfsComponente #pfsSuccessBox .pfs-sp-detail { grid-column: 4; grid-row: 1; font-size: 11px; }
+#pfsComponente #pfsErrorBox .pfs-detail-panel .pfs-error-details { padding: 0; border: 0; }
+#pfsComponente #pfsErrorBox .pfs-detail-panel .pfs-solution { margin-top: 14px; }
+#pfsComponente .pfs-download-report { display: block; margin: 12px auto 0; border: 0; background: none; color: var(--pfs-blue); text-decoration: underline; cursor: pointer; }
+#pfsComponente .pfs-download-report:focus-visible { outline: 3px solid var(--pfs-blue); }
+#pfsComponente #pfsPartialBox .pfs-footer, #pfsComponente #pfsErrorBox .pfs-footer,
+#pfsComponente .pfs-progress-footer { justify-content: center; border-top: 1px solid var(--pfs-gray-200); }
+#pfsComponente #pfsProgressBox #pfsCancelBtn {
+  width: auto; justify-content: center; background: #761f1b; color: var(--pfs-white);
+}
+#pfsComponente #pfsProgressBox #pfsCancelBtn:hover { background: #601713; }
+
+@media (max-width: 560px) {
+  #pfsComponente .pfs-footer .pfs-btn { width: auto; justify-content: center; }
+  #pfsComponente #pfsSuccessBox .pfs-file-row { flex-direction: row; }
+  #pfsComponente #pfsSuccessBox .pfs-sp-item { grid-template-columns: 22px minmax(0, 1fr) 18px; }
+  #pfsComponente #pfsSuccessBox .pfs-sp-detail { grid-column: 2 / 4; grid-row: 2; }
+}
+@media (max-width: 560px), (max-height: 600px) {
+  #pfsComponente .pfs-overlay { padding: 8px; }
+  #pfsComponente .pfs-box { border-radius: 12px; }
+  #pfsComponente #pfsProgressBox, #pfsComponente #pfsSuccessBox,
+  #pfsComponente #pfsPartialBox, #pfsComponente #pfsErrorBox { height: min(350px, calc(100dvh - 16px)); }
+  #pfsComponente #pfsConfirmBox { height: min(245px, calc(100dvh - 16px)); }
+  #pfsComponente #pfsCredentialBox { height: min(340px, calc(100dvh - 16px)); }
+  #pfsComponente .pfs-header { gap: 7px; padding: 6px 10px; }
+  #pfsComponente .pfs-header-icon { width: 28px; height: 28px; font-size: 14px; }
+  #pfsComponente .pfs-header-text h3 { font-size: .9rem; }
+  #pfsComponente .pfs-close { width: 28px; height: 28px; }
+  #pfsComponente .pfs-body { padding: 12px; }
+  #pfsComponente .pfs-footer, #pfsComponente .pfs-progress-footer { gap: 6px; padding: 6px 10px; }
+  #pfsComponente .pfs-btn { min-height: 32px; padding: 6px 12px; font-size: 12px; }
+  #pfsComponente .pfs-result-content { padding: 4px 0 0; }
+  #pfsComponente .pfs-result-icon, #pfsComponente .pfs-error-icon,
+  #pfsComponente .pfs-credential-icon-area { width: 52px; height: 52px; margin-bottom: 8px; font-size: 25px; }
+  #pfsComponente .pfs-result-title, #pfsComponente .pfs-error-title { margin-bottom: 8px; font-size: 1.1rem; }
+  #pfsComponente .pfs-result-message, #pfsComponente .pfs-error-message,
+  #pfsComponente .pfs-confirm-message, #pfsComponente .pfs-credential-message { margin-bottom: 10px; font-size: .82rem; }
+  #pfsComponente #pfsProgressBox .pfs-body { gap: 10px; }
+  #pfsComponente #pfsProgressBox .pfs-progress-description { font-size: .82rem; }
+  #pfsComponente #pfsProgressBox .pfs-active-details { min-height: 42px; padding: 9px 10px; font-size: 11px; }
+  #pfsComponente #pfsProgressBox .pfs-progress-info { margin-bottom: 4px; font-size: 11px; }
+  #pfsComponente #pfsProgressBox .pfs-progress-bar { height: 6px; }
+  #pfsComponente .pfs-detail-panel { padding: 9px; }
+  #pfsComponente #pfsSuccessBox .pfs-detail-panel { padding: 8px; }
+  #pfsComponente .pfs-sp-item { gap: 2px 6px; padding: 6px 8px; }
+  #pfsComponente .pfs-sp-icon { width: 22px; height: 22px; font-size: 12px; }
+  #pfsComponente .pfs-sp-name, #pfsComponente .pfs-solution-text { font-size: 12px; }
+  #pfsComponente .pfs-sp-detail { font-size: 11px; }
+  #pfsComponente .pfs-file-label { font-size: 11px; }
+  #pfsComponente .pfs-file-value { font-size: 12px; }
+  #pfsComponente .pfs-error-details-header { margin-bottom: 6px; font-size: 12px; }
+  #pfsComponente .pfs-error-log { padding: 7px; font-size: 11px; }
+  #pfsComponente .pfs-solution { padding: 8px 10px; }
+  #pfsComponente .pfs-solution-title { font-size: 12px; }
+  #pfsComponente .pfs-confirm-warning { padding: 7px 10px; font-size: .78rem; }
+  #pfsComponente .pfs-confirm-prompt, #pfsComponente .pfs-credential-restricted-label { font-size: .9rem; }
+  #pfsComponente .pfs-confirm-input-wrap { margin-top: 8px; }
+  #pfsComponente .pfs-confirm-input, #pfsComponente .pfs-credential-input { padding: 7px 9px; font-size: .85rem; }
+  #pfsComponente .pfs-credential-field label,
+  #pfsComponente .pfs-confirm-input-wrap .pfs-credential-field > span { font-size: .78rem; }
+}
+@media (max-width: 360px), (max-height: 450px) {
+  #pfsComponente #pfsProgressBox, #pfsComponente #pfsSuccessBox,
+  #pfsComponente #pfsPartialBox, #pfsComponente #pfsErrorBox { height: min(310px, calc(100dvh - 16px)); }
+  #pfsComponente #pfsCredentialBox { height: min(320px, calc(100dvh - 16px)); }
+  #pfsComponente .pfs-body { padding: 8px 10px; }
+  #pfsComponente .pfs-result-icon, #pfsComponente .pfs-error-icon,
+  #pfsComponente .pfs-credential-icon-area { width: 42px; height: 42px; margin-bottom: 6px; font-size: 21px; }
+  #pfsComponente .pfs-result-title, #pfsComponente .pfs-error-title { margin-bottom: 6px; font-size: 1rem; }
+  #pfsComponente #pfsProgressBox .pfs-body { gap: 7px; }
+  #pfsComponente #pfsProgressBox .pfs-active-details { min-height: 34px; padding: 6px 8px; }
+  #pfsComponente .pfs-confirm-message, #pfsComponente .pfs-credential-message { margin-bottom: 7px; }
+}

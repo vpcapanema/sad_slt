@@ -119,6 +119,14 @@ export function criarMapa(aoMudarPainel) {
     if(ids.some(id=>!presentes.has(id)))throw new Error('Aguarde: nem todas as camadas selecionadas foram adicionadas à bancada.');
     if(editing())throw new Error('Salve ou cancele a edição na bancada. Para analisar uma nova versão salva, selecione esse arquivo na configuração.');
   }
+  function restaurarVisibilidade(painel){
+    const app=context()?.gpApp;if(!ready||!app)return;
+    syncing=true;
+    try{for(const item of painel)for(const suffix of ['','-line','-point'])if(app.state.map.getLayer(item.id+suffix))
+      app.state.map.setLayoutProperty(item.id+suffix,'visibility',item.visivel?'visible':'none');
+      app.renderLayers();
+    }finally{syncing=false;}
+  }
   const exibida=id=>[...mounted.values()].some(item=>item.id===id);
-  return {sync,assertReady,camadas,exibida};
+  return {sync,assertReady,camadas,exibida,restaurarVisibilidade};
 }

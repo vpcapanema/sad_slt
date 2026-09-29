@@ -5,6 +5,7 @@ sem passar pelo banco. Estes testes montam um storage mínimo em disco.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import mercantile
@@ -145,3 +146,135 @@ def test_inventario_somente_do_arquivo_confirmado(storage):
     result=storage_geoespacial.inventariar_arquivo('base-geoespacial/vetor/duas.gpkg')
     assert [c['camada'] for c in result['camadas']]==['rios','lagos']
     with pytest.raises(ValueError):storage_geoespacial.inventariar_arquivo('../segredo.gpkg')
+
+
+@pytest.fixture
+def vm(tmp_path, monkeypatch):
+    """Servidor local sem montagem: o storage é o da VM, lido pela API do SFTPGo."""
+    monkeypatch.setattr(storage_geoespacial, "diretorio_storage", lambda: tmp_path / "sem-montagem")
+    monkeypatch.setattr(storage_geoespacial.storage_remoto, "configurado", lambda: True)
+    monkeypatch.setattr(storage_geoespacial.storage_remoto, "preparar_gdal", lambda: None)
+    monkeypatch.setattr(storage_geoespacial.storage_remoto, "endereco_vsi",
+                        lambda caminho: f"/vsicurl/https://storage.exemplo/user/files?path=/{caminho}")
+    return monkeypatch
+
+
+def _vm_publica(monkeypatch, arquivos: dict[str, bytes], instante: float = 1_700_000_000.0):
+    """Faz a API do SFTPGo responder pelo conjunto de arquivos informado."""
+    def listar(pasta, estrito=False):
+        prefixo = f"{str(pasta).strip('/')}/"
+        filhos: dict[str, bool] = {}
+        for caminho in arquivos:
+            if caminho.startswith(prefixo):
+                resto = caminho[len(prefixo):].split("/")
+                filhos[resto[0]] = len(resto) > 1
+        if not filhos and estrito:
+            raise FileNotFoundError(pasta)
+        return [{"nome": nome, "pasta": pasta_filha, "modificado": instante,
+                 "tamanho": 0 if pasta_filha else len(arquivos[prefixo + nome])}
+                for nome, pasta_filha in filhos.items()]
+
+    def baixar(caminho):
+        if caminho not in arquivos:
+            raise FileNotFoundError(caminho)
+        return arquivos[caminho]
+
+    monkeypatch.setattr(storage_geoespacial.storage_remoto, "listar", listar)
+    monkeypatch.setattr(storage_geoespacial.storage_remoto, "baixar", baixar)
+
+
+def test_sem_montagem_a_navegacao_vem_do_storage_da_vm(vm):
+    _vm_publica(vm, {"superficies-indices/remoto/sub/x.gpkg": b"x",
+                     "superficies-indices/remoto/br.gpkg": b"y",
+                     "superficies-indices/remoto/leia-me.txt": b"z"})
+    lista = storage_geoespacial.navegar("superficies-indices/remoto", detalhar=False)
+
+    assert not storage_geoespacial.montado(), "no servidor local não há pasta montada"
+    assert lista["pai"] == "superficies-indices"
+    assert [p["caminho"] for p in lista["pastas"]] == ["superficies-indices/remoto/sub"]
+    assert [a["arquivo"] for a in lista["arquivos"]] == ["superficies-indices/remoto/br.gpkg"]
+    assert lista["arquivos"][0]["inventariar"], "o arquivo remoto só é aberto quando escolhido"
+    with pytest.raises(FileNotFoundError):
+        storage_geoespacial.navegar("superficies-indices/vazia")
+
+
+def test_arquivo_remoto_e_lido_na_origem_sem_copia_local(tmp_path, vm):
+    """O norte do desenho: nenhuma pasta de trabalho local, nem dentro nem fora do storage."""
+    _gpkg(tmp_path / "origem/uf_sp.gpkg")
+    dados = (tmp_path / "origem/uf_sp.gpkg").read_bytes()
+    alvo = "base-geoespacial/vetor/uf_sp.gpkg"
+    _vm_publica(vm, {alvo: dados})
+
+    arquivo = storage_geoespacial.resolver(alvo)
+
+    assert not isinstance(arquivo, Path), "o arquivo remoto não vira arquivo em disco"
+    assert os.fspath(arquivo).startswith("/vsicurl/"), "o GDAL abre o arquivo onde ele está"
+    assert arquivo.name == "uf_sp.gpkg" and arquivo.suffix == ".gpkg"
+    assert arquivo.stat().st_size == len(dados)
+    assert arquivo.read_bytes() == dados
+    assert not (tmp_path / "sem-montagem").exists(), "o ponto de montagem continua vazio"
+    assert [p.name for p in tmp_path.iterdir()] == ["origem"], "nenhuma pasta de trabalho é criada"
+
+
+def test_leitura_remota_nao_encurta_a_listagem_do_storage(tmp_path, vm):
+    """A regressão que motivou o desenho: nada local pode virar fonte da lista."""
+    _gpkg(tmp_path / "origem/uf_sp.gpkg")
+    dados = (tmp_path / "origem/uf_sp.gpkg").read_bytes()
+    _vm_publica(vm, {"base-geoespacial/vetor/uf_sp.gpkg": dados,
+                     "base-geoespacial/vetor/rios.gpkg": dados,
+                     "base-geoespacial/vetor/lagos.gpkg": dados})
+
+    storage_geoespacial.resolver("base-geoespacial/vetor/uf_sp.gpkg")
+    lista = storage_geoespacial.navegar("base-geoespacial/vetor", detalhar=False)
+
+    assert len(lista["arquivos"]) == 3, "a lista continua vindo do storage"
+
+
+def test_a_revisao_acompanha_a_origem(tmp_path, vm):
+    """A revisão vem do storage: é ela que invalida cache e barra gravação desatualizada."""
+    _gpkg(tmp_path / "origem/uf_sp.gpkg")
+    antes = (tmp_path / "origem/uf_sp.gpkg").read_bytes()
+    alvo = "base-geoespacial/vetor/uf_sp.gpkg"
+    _vm_publica(vm, {alvo: antes})
+    primeira = storage_geoespacial.resolver(alvo).stat()
+
+    _gpkg(tmp_path / "origem/duas.gpkg", ("rios", "lagos"))
+    depois = (tmp_path / "origem/duas.gpkg").read_bytes()
+    _vm_publica(vm, {alvo: depois}, instante=1_800_000_000.0)
+    segunda = storage_geoespacial.resolver(alvo).stat()
+
+    assert storage_geoespacial.resolver(alvo).read_bytes() == depois
+    assert (segunda.st_mtime_ns, segunda.st_size) != (primeira.st_mtime_ns, primeira.st_size)
+
+
+def test_shapefile_aponta_para_o_proprio_arquivo_no_storage(vm):
+    """O GDAL pede sozinho os acompanhantes trocando a extensão do endereço."""
+    _vm_publica(vm, {"base-geoespacial/vetor/limite.shp": b"x",
+                     "base-geoespacial/vetor/limite.shx": b"y",
+                     "base-geoespacial/vetor/limite.dbf": b"z"})
+    alvo = storage_geoespacial.resolver("base-geoespacial/vetor/limite.shp")
+
+    assert os.fspath(alvo).endswith("/base-geoespacial/vetor/limite.shp")
+    assert alvo.with_suffix(".shx").exists()
+    assert not alvo.with_suffix(".prj").exists()
+
+
+def test_sem_montagem_e_sem_credenciais_o_storage_responde_404(vm):
+    vm.setattr(storage_geoespacial.storage_remoto, "configurado", lambda: False)
+    with pytest.raises(FileNotFoundError):
+        storage_geoespacial.resolver("base-geoespacial/vetor/ausente.gpkg")
+    with pytest.raises(FileNotFoundError):
+        storage_geoespacial.navegar("base-geoespacial/ausente")
+
+
+def test_com_montagem_o_storage_e_lido_do_disco(storage, monkeypatch):
+    def proibido(*_args, **_kwargs):
+        raise AssertionError("com storage montado nada deve ser pedido à API")
+
+    monkeypatch.setattr(storage_geoespacial.storage_remoto, "configurado", lambda: True)
+    monkeypatch.setattr(storage_geoespacial.storage_remoto, "listar", proibido)
+    monkeypatch.setattr(storage_geoespacial.storage_remoto, "baixar", proibido)
+
+    assert storage_geoespacial.montado()
+    assert storage_geoespacial.resolver("base-geoespacial/vetor/uf_sp.gpkg").is_file()
+    assert storage_geoespacial.navegar("base-geoespacial")["pastas"]

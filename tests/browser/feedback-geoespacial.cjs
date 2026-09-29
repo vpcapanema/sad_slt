@@ -29,10 +29,12 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.equal(await page.locator('[data-pfs="error-header-title"]').innerText(),'Gerar camada territorial');
   assert.equal(await page.locator('[data-pfs="error-message"]').innerText(),'Falha de uma camada');
   await page.evaluate(()=>StatusFeedback.fechar());
-  // Cancelamento real: o botão só existe com onCancel e chama o serviço.
+  // Cancelamento real: aguarda confirmação do servidor sem fechar o acompanhamento.
   await page.evaluate(()=>{window.cancelou=false;ProcessFeedback.iniciarCadastro({title:'Validando',onCancel:()=>{window.cancelou=true;}});});
   await page.getByRole('button',{name:'CANCELAR',exact:true}).click();assert.equal(await page.evaluate(()=>cancelou),true);
-  assert.equal(await page.locator('#pfsProgressOverlay.pfs-active').count(),0);
+  assert.equal(await page.locator('#pfsProgressOverlay.pfs-active').count(),1);
+  assert.equal(await page.locator('#pfsCancelBtn').isDisabled(),true);
+  await page.evaluate(()=>{ProcessFeedback.atual.confirmarCancelamento('Cancelado pelo servidor');ProcessFeedback.fechar();});
   // Ação perigosa começa em Cancelar: Enter não confirma.
   await page.evaluate(()=>{window.decisao=ProcessFeedback.confirmar({message:'Excluir?',danger:true});});
   await page.waitForFunction(()=>document.activeElement?.id==='pfsConfirmCancel');

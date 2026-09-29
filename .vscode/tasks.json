@@ -7,15 +7,8 @@
       "command": "${workspaceFolder}/.venv/Scripts/python.exe",
       "args": [
         "-B",
-        "-m",
-        "uvicorn",
-        "api.server:app",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "8083",
-        "--env-file",
-        ".env"
+        "-u",
+        "${workspaceFolder}/scripts/start-local-task.py"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -29,7 +22,7 @@
         "panel": "dedicated",
         "clear": true
       },
-      "detail": "Inicia a aplicação no Windows em http://127.0.0.1:8083. Requer as conexões configuradas no .env. Ctrl+C encerra o servidor."
+      "detail": "Valida e supervisiona os bancos oficiais da VM, inicia http://127.0.0.1:8083 e abre Edge e Chrome externos com Console detalhado. Ctrl+C encerra servidor e túnel."
     },
     {
       "label": "SICARD: Verificar servidor local",
@@ -78,6 +71,32 @@
         "showReuseMessage": true
       },
       "detail": "Status > commit > fetch/merge/push main > deploy VM com logs > saude da API/banco > navegador externo. Para em qualquer falha."
+    },
+    {
+      "label": "SICARD: Acompanhar comandos do Codex",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "-B",
+        "-u",
+        "${workspaceFolder}/scripts/watch-codex-commands.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "runOptions": {
+        "instanceLimit": 1
+      },
+      "presentation": {
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "clear": false,
+        "showReuseMessage": false
+      },
+      "detail": "Espelha comandos, saidas e codigos de retorno do Codex em um terminal. Somente leitura; nao reexecuta comandos."
     }
   ]
 }

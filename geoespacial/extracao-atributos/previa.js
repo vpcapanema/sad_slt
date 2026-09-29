@@ -110,7 +110,9 @@ export function criarPrevia(state, changed){
   function render(){
     host.hidden=!pacote;$('#ea-layer-information').hidden=!pacote?.camadas.length;
     if(!pacote){desenho?.remove();desenho=null;atual=null;camadasMapa.clear();visiveis.clear();niveis=[];controles=[];botoes=[];lista.replaceChildren();dados.replaceChildren();node('preview-name').textContent='';node('preview-map-status').textContent='';selecionada=null;state.previaVisiveis=new Set();return;}
-    const anteriores=new Set(camadasMapa.keys()), ocultas=new Set([...anteriores].filter(id=>!visiveis.has(id)));atual=pacote;
+    const anteriores=new Set(camadasMapa.keys()), ocultas=new Set([...anteriores].filter(id=>!visiveis.has(id)));
+    if(!anteriores.size&&state.previaVisiveis?.size)for(const c of pacote.camadas)if(!state.previaVisiveis.has(c.chave))ocultas.add(c.chave);
+    atual=pacote;
     if(!mapa){
       mapa=window.L.map(mapaHost,{preferCanvas:true,scrollWheelZoom:true,zoomSnap:0.5,zoomDelta:0.5,maxZoom:22}).setView([-23.5,-46.6],7);
       window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{

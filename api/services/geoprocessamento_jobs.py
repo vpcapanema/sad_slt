@@ -64,7 +64,7 @@ class GeoprocessamentoJobs:
             "id": job_id, "tipo": kind, "status": "pendente",
             "microtarefas": tasks, "logs": [], "concluidas": 0,
             "total": len(tasks), "percentual": 0, "progresso_tarefa": None,
-            "etapa_atual": None, "tarefa_id": 0, "resultado": None, "erro": None,
+            "etapa_atual": None, "tarefa_id": 0, "tarefa_estado": "running", "revisao": 0, "resultado": None, "erro": None,
             "iniciado_em": datetime.now(timezone.utc).isoformat(),
             "parametros": {}, "entradas": [], "relatorio": [],
         }
@@ -86,6 +86,7 @@ class GeoprocessamentoJobs:
     def _publicar(self, job_id):
         canal = self._eventos.get(job_id)
         if canal:
+            self._jobs[job_id]['revisao'] += 1
             canal.publicar(self._jobs[job_id])
 
     def cancel(self, job_id: str, responsavel: str) -> dict[str, Any]:
@@ -115,7 +116,7 @@ class GeoprocessamentoJobs:
         """Mensagem ativa é emitida antes do trabalho; logs registram conclusões."""
         with self._lock:
             job = self._jobs[job_id]
-            job.update(etapa_atual=label, progresso_tarefa=None, status="executando",
+            job.update(etapa_atual=label, progresso_tarefa=None, tarefa_estado="running", status="executando",
                        tarefa_id=job["tarefa_id"] + 1)
             self._publicar(job_id)
 
@@ -129,11 +130,13 @@ class GeoprocessamentoJobs:
             if concluir_tarefa:
                 job["etapa_atual"] = None
                 job["progresso_tarefa"] = 100
+                job["tarefa_estado"] = "concluido"
             job["status"] = "executando"
             job["logs"].append({
                 "sequencia": len(job["logs"]) + 1,
-                "instante": datetime.now(timezone.utc).isoformat(),
+                "em": datetime.now(timezone.utc).isoformat(),
                 "nivel": "sucesso", "mensagem": label, "detalhes": details or {},
+                "tipo": "concluido" if concluir_tarefa else "detalhe", "tarefa_id": job["tarefa_id"],
             })
             self._publicar(job_id)
 
@@ -155,10 +158,11 @@ class GeoprocessamentoJobs:
             job = self._jobs[job_id]
             job["status"] = "cancelado" if isinstance(exc, OperacaoCancelada) else "erro"
             job["erro"] = str(exc)
+            job["tarefa_estado"] = job["status"]
             job["etapa_atual"] = "Processo interrompido"
             job["logs"].append({
                 "sequencia": len(job["logs"]) + 1,
-                "instante": datetime.now(timezone.utc).isoformat(),
+                "em": datetime.now(timezone.utc).isoformat(),
                 "nivel": "erro", "mensagem": str(exc), "detalhes": {},
             })
             self._publicar(job_id)

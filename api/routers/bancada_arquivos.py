@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -28,6 +30,8 @@ class Operacao(BaseModel):
 def resposta(fn, *args):
     try:
         return fn(*args)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
     except (ValueError, RuntimeError, KeyError, TypeError) as exc:
@@ -37,6 +41,49 @@ def resposta(fn, *args):
 @router.post('/salvar')
 def salvar(payload: Edicao, user: SessionUser = Depends(require_geospatial_access)):
     return resposta(service.salvar, payload.arquivo, payload.revisao, payload.geojson, payload.nome, user, payload.camada_id)
+
+
+class EdicaoFeicao(BaseModel):
+    fid: str | int
+    campos: dict[str, Any] = Field(default_factory=dict)
+
+
+class EdicoesIncrementais(Arquivo):
+    # Chave: FID original (texto numérico); valor: somente os campos alterados.
+    # Formato canônico: [{"fid": 7, "campos": {...}}]; o mapa {"7": {...}} também é aceito.
+    edicoes: list[EdicaoFeicao] | dict[str, dict[str, Any]] = Field(default_factory=list, max_length=50000)
+    excluidos: list[str | int] = Field(default_factory=list, max_length=50000)
+
+
+@router.post('/salvar-edicoes')
+def salvar_edicoes(payload: EdicoesIncrementais, user: SessionUser = Depends(require_geospatial_access)):
+    return resposta(service.salvar_edicoes, payload.arquivo, payload.camada_id, payload.revisao,
+                    [e.model_dump() if isinstance(e, BaseModel) else e for e in payload.edicoes] if isinstance(payload.edicoes, list) else payload.edicoes,
+                    payload.excluidos, user)
+
+
+class EdicaoGeometriaFeicao(BaseModel):
+    fid: str | int
+    geometry: dict[str, Any]
+    campos: dict[str, Any] = Field(default_factory=dict)
+
+
+class NovaGeometria(BaseModel):
+    geometry: dict[str, Any]
+    properties: dict[str, Any]
+
+
+class EdicoesGeometrias(Arquivo):
+    edicoes: list[EdicaoGeometriaFeicao] = Field(default_factory=list, max_length=100)
+    excluidos: list[str | int] = Field(default_factory=list, max_length=100)
+    novas: list[NovaGeometria] = Field(default_factory=list, max_length=100)
+
+
+@router.post('/salvar-geometrias')
+def salvar_geometrias(payload: EdicoesGeometrias, user: SessionUser = Depends(require_geospatial_access)):
+    return resposta(service.salvar_geometrias, payload.arquivo, payload.camada_id, payload.revisao,
+                    [edicao.model_dump() for edicao in payload.edicoes], payload.excluidos,
+                    [nova.model_dump() for nova in payload.novas], user)
 
 
 @router.post('/executar')
@@ -66,9 +113,11 @@ class CalculoCampo(Arquivo):
     expressao: str = Field(min_length=1, max_length=4000)
     chaves_selecionadas: list[str] | None = None
     filtro: str | None = Field(default=None, max_length=4000)
+    incluir_geojson: bool = True
 
 
 @router.post('/calcular-campo')
 def calcular_campo(payload: CalculoCampo, user: SessionUser = Depends(require_geospatial_access)):
     return resposta(service.calcular_campo, payload.arquivo, payload.revisao, payload.campo,
-                    payload.expressao, user, payload.camada_id, payload.chaves_selecionadas, payload.filtro)
+                    payload.expressao, user, payload.camada_id, payload.chaves_selecionadas,
+                    payload.filtro, payload.incluir_geojson)

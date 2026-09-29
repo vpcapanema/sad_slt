@@ -333,6 +333,16 @@
 .ea-storage-dialog .ea-storage-confirm-button:hover:not(:disabled) { background:var(--sicard-verde-escuro); border-color:var(--sicard-verde-escuro); color:#fff; }
 .ea-storage-status { padding:6px 16px; font-size:.76rem; }
 .ea-storage-dialog button:focus-visible,.ea-storage-dialog input:focus-visible { outline-color:var(--sicard-verde); }
+.gp-right-view .ea-storage-inline { width:100%; height:100%; max-height:100%; min-height:0; margin:0; padding:0; display:flex; flex-direction:column; border:0; border-radius:0; overflow:hidden; }
+.gp-right-view .ea-storage-inline > header { flex-shrink:0; padding:10px; }
+.gp-right-view .ea-storage-inline .ea-storage-toolbar { flex-shrink:0; padding:8px 10px; }
+.gp-right-view .ea-storage-inline .ea-storage-toolbar input { width:100%; min-width:0; }
+.gp-right-view .ea-storage-inline .ea-storage-body { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(105px,28%) minmax(0,1fr); }
+.gp-right-view .ea-storage-inline .ea-storage-body aside { min-height:0; border-right:0; border-bottom:1px solid #dce3ea; padding:7px 8px; }
+.gp-right-view .ea-storage-inline .ea-storage-tree { overflow:auto; }
+.gp-right-view .ea-storage-inline .ea-storage-pane { min-height:0; padding:8px; }
+.gp-right-view .ea-storage-inline .ea-storage-confirm { flex-shrink:0; gap:8px; padding:8px 10px; }
+.gp-right-view .ea-storage-inline .ea-storage-status { flex-shrink:0; max-height:72px; overflow:auto; padding:6px 10px; }
 
 /* Índice da extração de atributos: tabela no padrão admin-table, com a coluna Ação
    logo após a seleção (botões-ícone por linha) e as ações em lote abaixo da tabela. */
@@ -371,6 +381,7 @@
 /* Card 1: três subcards do mesmo tamanho (1.1 entrada, 1.2 bases, 1.3 saída).
    Campos estreitos para não cortar nem sobrepor conteúdo. */
 #ea-config .ea-config-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+#ea-config .ea-config-grid-3 > #ea-identificacao { grid-column: 1; grid-row: 2; min-width: 0; align-self: start; margin: 0; }
 #ea-config .ea-config-grid-3 > .ea-panel { display: flex; flex-direction: column; height: 100%; }
 #ea-config .ea-config-grid-3 > .ea-panel > .ea-config-card-title { min-height: 3.1rem; align-items: center; }
 #ea-config .ea-config-grid-3 .ea-config-card-body { flex: 1; display: flex; flex-direction: column; gap: .5rem; padding: .7rem .8rem; min-width: 0; }
@@ -752,7 +763,7 @@ button.ea-chart-row { cursor:pointer; }
 
 .ea-grupo-dinamico[hidden]{display:none!important;}
 /* Identificação e comparação descritiva. */
-#ea-identificacao select { max-width: 100%; min-width: 9rem; }
+#ea-identificacao select { max-width: 100%; min-width: 0; }
 #ea-panel-territorial .is-selected { background: var(--bg-hover, #edf5f8); }
 #ea-panel-territorial [data-ranking] { min-width: 0; }
 #ea-panel-territorial [data-role="selection-attributes"] { max-height: 340px; overflow: auto; overflow-wrap: anywhere; }
@@ -772,10 +783,13 @@ button.ea-chart-row { cursor:pointer; }
   #ea-panel-territorial .ea-chart-row { grid-template-columns: minmax(0, 1fr) minmax(60px, 1fr) auto; }
 }
 /* Identificação tem a mesma hierarquia e escala da lista de bases de 1.2. */
-#ea-identificacao { padding: .45rem .6rem; margin: 0 0 .6rem; }
-#ea-identificacao table { font-size: .72rem; width: 100%; min-width: 340px; }
-#ea-identificacao td { padding: .35rem .5rem; vertical-align: middle; }
-#ea-identificacao select { font: inherit; min-height: 28px; width: 100%; }
+#ea-identificacao { padding: .45rem .6rem; }
+#ea-identificacao .ea-table-wrap { max-width: 100%; overflow-x: auto; }
+#ea-identificacao table { font-size: .75rem; width: 100%; min-width: 480px; table-layout: fixed; }
+#ea-identificacao th { font-size: .75rem; padding: .35rem .4rem; white-space: normal; }
+#ea-identificacao td { font-size: .75rem; padding: .35rem .4rem; vertical-align: middle; overflow-wrap: anywhere; }
+#ea-identificacao th:first-child { width: 34%; }
+#ea-config .ea-config-grid-3 #ea-identificacao select { font-size: .75rem; min-width: 0; min-height: 28px; height: 28px; width: 100%; padding: .2rem .3rem; }
 #ea-run-selection .ea-table-wrap { margin: .4rem 0; }
 #ea-run-selection table { width: 100%; min-width: 340px; font-size: .78rem; }
 #ea-run-warning { color: #8b4513; }
@@ -806,3 +820,61 @@ button.ea-chart-row { cursor:pointer; }
 @media(max-width:700px) { .ea-checkup-tables { grid-template-columns:1fr; gap:.25rem; } }
 
 #ea-identificacao .ea-identificacao-erro { display:block; margin-top:.2rem; color:#8b4513; font-size:.7rem; max-width:30rem; }
+
+/* Os editores e o explorador mantêm sua área de trabalho, mas usam a moldura do feedback. */
+.extracao-page .ea-tool-dialog {
+  border:0;
+  border-radius:16px;
+  box-shadow:0 25px 50px -12px #003b5a47;
+}
+.extracao-page .ea-tool-dialog::backdrop {
+  background:#f0f0f1e0;
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+}
+.extracao-page .ea-tool-dialog:not(.ea-storage-dialog) {
+  padding:0 20px 18px;
+}
+.extracao-page .ea-tool-dialog:not(.ea-storage-dialog)>h2 {
+  position:sticky;
+  top:0;
+  z-index:1;
+  margin:0 -20px 16px;
+  padding:12px 20px;
+  background:linear-gradient(135deg,var(--pfs-navy,#1c3d59),var(--pfs-blue,#116593));
+  color:#fff;
+  font-size:1rem;
+  line-height:1.4;
+}
+.extracao-page .ea-tool-dialog:not(.ea-storage-dialog) :is(.ea-config-dialog-footer,.ea-dialog-actions) {
+  position:sticky;
+  bottom:-18px;
+  margin:18px -20px -18px;
+  padding:10px 20px;
+  border-top:1px solid var(--pfs-gray-200,#dfe6eb);
+  background:var(--pfs-gray-100,#f3f6f8);
+}
+.extracao-page .ea-storage-dialog>header {
+  border-bottom:0;
+  background:linear-gradient(135deg,var(--pfs-navy,#1c3d59),var(--pfs-blue,#116593));
+}
+.extracao-page .ea-storage-dialog.is-maximized { border-radius:0; }
+.extracao-page .ea-storage-confirm {
+  background:var(--pfs-gray-100,#f3f6f8);
+}
+.extracao-page .ea-storage-upload-dialog iframe {
+  height:min(60dvh,580px);
+  min-height:min(340px,48dvh);
+}
+@media(max-width:560px) {
+  .extracao-page .ea-tool-dialog { border-radius:12px; }
+  .extracao-page .ea-tool-dialog:not(.ea-storage-dialog) { padding:0 12px 12px; }
+  .extracao-page .ea-tool-dialog:not(.ea-storage-dialog)>h2 { margin:0 -12px 12px; padding:9px 12px; font-size:.9rem; }
+  .extracao-page .ea-tool-dialog:not(.ea-storage-dialog) :is(.ea-config-dialog-footer,.ea-dialog-actions) {
+    bottom:-12px;
+    margin:12px -12px -12px;
+    padding:8px 12px;
+  }
+  .extracao-page .ea-tool-dialog:not(.ea-storage-dialog) .ea-btn { padding:.45rem .7rem; font-size:.78rem; }
+  .extracao-page .ea-storage-dialog>header { padding:9px 12px; }
+}

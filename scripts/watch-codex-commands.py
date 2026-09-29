@@ -1,110 +1,144 @@
-#!/usr/bin/env python3
-"""Show Codex command calls and results in a VS Code task terminal."""
-
+"""Read-only mirror of Codex command records in a VS Code terminal."""
+import argparse
+import datetime
 import json
 import os
-import re
 from pathlib import Path
+import re
 import time
 
-ROOT = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")) / "sessions"
+ROOT = Path(os.environ.get('CODEX_HOME', Path.home() / '.codex')) / 'sessions'
 WORKSPACE = Path(__file__).resolve().parent.parent
-COMMAND_CALLS = set()
 
+def normalized(path):
+    return os.path.normcase(os.path.abspath(path))
 
-def latest_session():
-    matches = []
-    for path in ROOT.glob("*/*/*/rollout-*.jsonl"):
-        try:
-            with path.open(encoding="utf-8") as stream:
-                first = json.loads(stream.readline())
-            meta = first.get("payload", {})
-            if Path(meta.get("cwd", "")).resolve() == WORKSPACE and isinstance(meta.get("source"), str):
-                matches.append(path)
-        except (OSError, ValueError, json.JSONDecodeError):
-            continue
-    return max(matches, key=lambda item: item.name, default=None)
-
-
-def show(line):
+def render_output(value):
+    if isinstance(value, list):
+        for item in value:
+            if isinstance(item, dict) and item.get('type') in ('input_text', 'text'):
+                render_output(item.get('text', ''))
+        return
+    if isinstance(value, dict):
+        if 'output' in value:
+            render_output(value['output'])
+            if value.get('session_id') is not None:
+                print(f"[processo em andamento: {value['session_id']}]", flush=True)
+            if value.get('exit_code') is not None:
+                print(f"[codigo de saida: {value['exit_code']}]", flush=True)
+        elif 'result' in value:
+            render_output(value['result'].get('value', value['result']))
+        return
+    if not isinstance(value, str) or not value.strip():
+        return
     try:
-        item = json.loads(line)
-    except json.JSONDecodeError:
-        return
-    if item.get("type") != "response_item":
-        return
-    payload = item.get("payload", {})
-    kind = payload.get("type")
-    if kind == "custom_tool_call" and payload.get("name") == "exec":
-        source = payload.get("input", "")
-        if "tools.exec_command" in source:
-            COMMAND_CALLS.add(payload.get("call_id"))
-            commands = re.findall(r'\bcmd\s*:\s*("(?:\\.|[^"\\])*")', source)
-            print("\n$ Codex executou:", flush=True)
-            if commands:
-                for command in commands:
-                    try:
-                        print(json.loads(command), flush=True)
-                    except json.JSONDecodeError:
-                        print(command, flush=True)
-            else:
-                print(source, flush=True)
-    elif kind == "custom_tool_call_output" and payload.get("call_id") in COMMAND_CALLS:
-        COMMAND_CALLS.discard(payload.get("call_id"))
-        for part in payload.get("output", []):
-            if part.get("type") != "input_text":
-                continue
-            raw = part.get("text", "")
-            if not raw.strip():
-                continue
-            try:
-                data = json.loads(raw)
-            except json.JSONDecodeError:
-                if "\nOutput:\n" in raw:
-                    raw = raw.split("\nOutput:\n", 1)[1].strip()
-                    for line in raw.splitlines():
-                        try:
-                            nested = json.loads(line)
-                        except json.JSONDecodeError:
-                            print(line, flush=True)
-                            continue
-                        print(nested.get("output", line) if isinstance(nested, dict) else line, flush=True)
-                else:
-                    print(raw, flush=True)
-                continue
-            if isinstance(data, dict):
-                result = data.get("result", {}).get("value", {})
-                if isinstance(result, dict) and "output" in result:
-                    print(result["output"], flush=True)
-                    continue
-            print(raw, flush=True)
+        parsed = json.loads(value)
+    except (ValueError, TypeError):
+        print(value.rstrip(), flush=True)
+    else:
+        if parsed == value:
+            print(value, flush=True)
+        else:
+            render_output(parsed)
 
+class Session:
+    def __init__(self, path, session_id):
+        self.path = path
+        self.id = session_id[-12:]
+        self.calls = set()
+        self.cells = set()
+        self.offset = 0
+        self.pending = b''
+
+    def show(self, item):
+        if item.get('type') != 'response_item': return
+        p = item.get('payload', {})
+        kind = p.get('type', '')
+        name = p.get('name', '').split('.')[-1]
+        if kind in ('custom_tool_call', 'function_call'):
+            source = p.get('input', p.get('arguments', ''))
+            direct = name in ('exec_command', 'write_stdin')
+            orchestration = name == 'exec' and re.search(r'tools\.(exec_command|write_stdin)\s*\(', source)
+            polling = name == 'wait' and any(cell in source for cell in self.cells)
+            if not (direct or orchestration or polling): return
+            self.calls.add(p.get('call_id'))
+            timestamp = item.get('timestamp', '')
+            print(f'\n=== {self.id} | {timestamp} | {name} ===', flush=True)
+            if name in ('write_stdin', 'wait'):
+                print('[acompanhando processo em execucao]', flush=True)
+            elif direct:
+                try: print(json.loads(source).get('cmd', source), flush=True)
+                except ValueError: print(source, flush=True)
+            else:
+                # Keep the exact orchestration source: JS expressions and multiple
+                # command strings cannot be reliably decoded with a single regex.
+                print(source, flush=True)
+        elif kind in ('custom_tool_call_output', 'function_call_output') and p.get('call_id') in self.calls:
+            self.calls.discard(p.get('call_id'))
+            output = p.get('output', '')
+            self.cells.update(re.findall(r'Script running with cell ID ([\w-]+)', str(output)))
+            print(f'--- saida | {self.id} ---', flush=True)
+            render_output(output)
+
+    def read(self, initial=False):
+        with self.path.open('rb') as stream:
+            size = self.path.stat().st_size
+            if initial:
+                stream.seek(max(0, size - 65536))
+                if stream.tell(): stream.readline()
+            else:
+                if size < self.offset:
+                    self.offset = 0
+                    self.pending = b''
+                stream.seek(self.offset)
+            data = self.pending + stream.read()
+            self.offset = stream.tell()
+        *lines, self.pending = data.split(b'\n')
+        for line in lines:
+            try: self.show(json.loads(line))
+            except (ValueError, UnicodeError): pass
+
+def discover(extra_ids):
+    # Today and yesterday only: avoid scanning the entire history each second.
+    now = datetime.datetime.now()
+    for day in (now, now - datetime.timedelta(days=1)):
+        directory = ROOT / day.strftime('%Y/%m/%d')
+        for path in directory.glob('rollout-*.jsonl'):
+            try:
+                with path.open(encoding='utf-8') as stream:
+                    meta = json.loads(stream.readline()).get('payload', {})
+                if normalized(meta.get('cwd', '')) == normalized(WORKSPACE) or meta.get('id') in extra_ids:
+                    yield path, meta.get('id', path.stem)
+            except (OSError, ValueError): pass
+    # Explicitly linked sessions can be older than yesterday.
+    for session_id in extra_ids:
+        for path in ROOT.glob(f'*/*/*/rollout-*-{session_id}.jsonl'):
+            yield path, session_id
 
 def main():
-    print(f"Acompanhando comandos do Codex em {WORKSPACE}", flush=True)
-    current = None
-    stream = None
-    pending = ""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--once', action='store_true', help='Read current records and exit')
+    args = parser.parse_args()
+    config = WORKSPACE / '.git/info/codex-monitor.json'
+    extra_ids = json.loads(config.read_text(encoding='utf-8')).get('session_ids', []) if config.exists() else []
+    print('SICARD | Comandos do Codex\nMonitor somente de leitura; Ctrl+C encerra apenas o monitor.', flush=True)
+    print('As saidas chegam quando o Codex as registra; podem estar truncadas pela ferramenta.\n', flush=True)
+    sessions = {}
+    next_scan = 0
     while True:
-        path = latest_session()
-        if path != current:
-            if stream:
-                stream.close()
-            current = path
-            stream = path.open(encoding="utf-8") if path else None
-            pending = ""
-            if path:
-                stream.seek(0, os.SEEK_END)
-                print(f"\nSessão: {path.name}", flush=True)
-        if stream:
-            chunk = stream.read()
-            if chunk:
-                pending += chunk
-                *lines, pending = pending.split("\n")
-                for line in lines:
-                    show(line)
-        time.sleep(1)
+        if time.monotonic() >= next_scan:
+            for path, session_id in discover(extra_ids):
+                if path not in sessions:
+                    sessions[path] = Session(path, session_id)
+                    print(f'\nSessao conectada: {session_id}', flush=True)
+                    sessions[path].read(initial=True)
+            next_scan = time.monotonic() + 5
+        for session in sessions.values():
+            try: session.read()
+            except OSError: pass
+        if args.once: return
+        time.sleep(0.5)
 
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    try: main()
+    except KeyboardInterrupt: print('\nMonitor encerrado. Os comandos do Codex continuam normalmente.')

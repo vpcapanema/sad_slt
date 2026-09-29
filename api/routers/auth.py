@@ -8,12 +8,9 @@ from api.exceptions import AuthError, DatabaseUnavailableError
 from api.repositories import sigma_usuario_repository
 from api.schemas.auth import LoginRequestSchema, LoginResponseSchema, SessionUserSchema
 from api.services import auth_service
-from api.services.session_service import SessionUser, cookie_name
+from api.services.session_service import SessionUser, cookie_name, REMEMBER_TTL_SECONDS
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-_COOKIE_MAX_AGE = 60 * 60 * 8
-
 
 def _user_schema(user: SessionUser) -> SessionUserSchema:
     nome = user.nome
@@ -35,11 +32,12 @@ def _user_schema(user: SessionUser) -> SessionUserSchema:
     )
 
 
-def _set_session_cookie(response: Response, token: str) -> None:
+def _set_session_cookie(response: Response, token: str, *, permanecer_conectado: bool = False, secure: bool = False) -> None:
     response.set_cookie(
         key=cookie_name(),
         value=token,
-        max_age=_COOKIE_MAX_AGE,
+        max_age=REMEMBER_TTL_SECONDS if permanecer_conectado else None,
+        secure=secure,
         httponly=True,
         samesite="lax",
         path="/",
@@ -61,6 +59,7 @@ async def login(
         user, token = await auth_service.login_usuario(
             body.username,
             body.senha,
+            permanecer_conectado=body.permanecer_conectado,
             ip_address=meta["ip_address"],
             user_agent=meta["user_agent"],
         )
@@ -76,7 +75,9 @@ async def login(
             ),
         ) from exc
 
-    _set_session_cookie(response, token)
+    response.headers["Cache-Control"] = "no-store"
+    _set_session_cookie(response, token, permanecer_conectado=body.permanecer_conectado,
+                        secure=request.url.scheme == "https")
     return LoginResponseSchema(user=_user_schema(user))
 
 
@@ -86,8 +87,9 @@ def me(user: SessionUser = Depends(require_authenticated)):
 
 
 @router.get("/session")
-def session(user: SessionUser | None = Depends(get_optional_session)):
+def session(response: Response, user: SessionUser | None = Depends(get_optional_session)):
     """Consulta pública de sessão, sem transformar ausência de cookie em erro 401."""
+    response.headers["Cache-Control"] = "no-store"
     if not user:
         return {"authenticated": False, "user": None}
     return {"authenticated": True, "user": _user_schema(user)}

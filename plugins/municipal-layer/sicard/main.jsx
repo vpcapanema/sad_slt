@@ -99,15 +99,17 @@ function criarFeedbackSigma(){
         signal:new AbortController().signal,
         passo:message=>proc.tarefaAtual(TAREFA,message),
         acompanhar:job=>{if(pf.atual===proc)pf.acompanhar(job);},
-        definirCancelamento:fn=>{if(pf.atual===proc)pf.permitirCancelamento(fn?()=>{
-          fn().then(()=>notify.info(title,'Geração cancelada. Sua seleção foi mantida.',{duration:7000}))
-            .catch(error=>notify.error(title,error.message));
+        // Devolver a Promise permite ao modal tratar recusa/falha sem confirmar cancelamento.
+        definirCancelamento:fn=>{if(pf.atual===proc)pf.permitirCancelamento(fn?async()=>{
+          await fn();
+          proc.confirmarCancelamento('Geração cancelada. Sua seleção foi mantida.');
+          notify.info(title,'Geração cancelada. Sua seleção foi mantida.',{duration:7000});
         }:null);},
         concluir:({type='success',message}={})=>{
           if(type==='success'){proc.concluirTarefa(TAREFA,'Camada gerada');proc.sucesso({title:'Camada gerada',message});}
           else if(type==='warning')proc.sucesso({_status:'partial',message});
           // Cancelado pelo botão: o aviso vem da confirmação do servidor.
-          else if(type==='info'){const pelaInterface=proc._finalizado;proc.fechar();if(!pelaInterface)notify.info(title,message,{duration:7000});}
+          else if(type==='info'){const pelaInterface=proc._finalizado;proc.confirmarCancelamento(message);if(!pelaInterface)notify.info(title,message,{duration:7000});}
           else proc.erro({message});
         },
       };

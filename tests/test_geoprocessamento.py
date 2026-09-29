@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from uuid import uuid4
 
 import geopandas as gpd
 from fastapi.testclient import TestClient
@@ -198,14 +200,28 @@ class GeoprocessamentoApiTest(unittest.TestCase):
     def test_interface_padroniza_camadas_pelo_painel_de_conteudo(self) -> None:
         script = Path("geoespacial/geoprocessamento.js").read_text(encoding="utf-8")
         self.assertIn('CONTENT_INPUTS=new Set', script)
-        self.assertIn('[field[0],"Camada"', script)
+        # Todo campo que recebe camada do Painel de Conteúdo é rotulado a partir
+        # de "Camada", qualquer que seja o nome do parâmetro no backend
+        # (camada_id, raster_id, entrada, camada_mascara_id...). A tabela FIELDS
+        # declara cada rótulo literalmente; aqui se verifica que nenhum escapou
+        # do padrão, admitindo qualificadores como "Camada alvo".
+        rotulos = {
+            rotulo
+            for _, rotulo in re.findall(r'\["([a-z_]+)","([^"]+)","layers?"\]', script)
+        }
+        self.assertTrue(rotulos, "nenhum campo do tipo camada foi encontrado em FIELDS")
+        fora_do_padrao = sorted(r for r in rotulos if not r.startswith("Camada"))
+        self.assertEqual([], fora_do_padrao)
         self.assertIn('Origem: Painel de Conteúdo.', script)
         for label in ("Nome da saída", "CRS", "Destino", "Formato"):
             self.assertIn(label, script)
         self.assertIn('["memoria","storage"]', script)
         self.assertIn('destination.value==="memoria"?["JSON"]', script)
         self.assertIn('["GeoPackage","GeoJSON","Shapefile"]', script)
-        self.assertIn('raster?["GeoTIFF"]', script)
+        # Saída em arquivo bifurca por tipo: raster entrega GeoTIFF, vetor
+        # entrega os formatos vetoriais. A asserção ignora o nome da variável
+        # que carrega o tipo para não quebrar em refatoração.
+        self.assertIn('?["GeoTIFF"]:["GeoPackage","GeoJSON","Shapefile"]', script)
         self.assertIn('"crs_saida","CRS","select"', script)
         self.assertIn("Da camada de entrada — ${crsLabel(sourceCrs)}", script)
         for crs in ("EPSG:4674", "EPSG:4326", "EPSG:3857", "EPSG:31983", "EPSG:5880"):
@@ -355,7 +371,9 @@ class GeoprocessamentoApiTest(unittest.TestCase):
         self.assertIn('className="execution-progress"', script)
         self.assertIn('role="progressbar"', script)
         self.assertIn("job.concluidas}/${job.total} nanotarefas", script)
-        self.assertIn("if(job.total>3)", script)
+        # Execução curta não merece barra: com três nanotarefas ou menos o
+        # componente se remove em vez de piscar na tela.
+        self.assertIn("if(total<=3){element.remove();return false}", script)
         self.assertNotIn("selected.length*4", script)
         self.assertNotIn("configure(4", ribbon)
         self.assertIn("/importar_camadas", script)
@@ -416,11 +434,18 @@ class GeoprocessamentoApiTest(unittest.TestCase):
         filename = "teste_nanotarefas.geojson"
         upload_path = (Path("data/geoespacial/uploads/datastorage/vetor")
                        / upload_storage.PASTA_PADRAO / filename)
+        # O importador é idempotente por SHA-256: conteúdo já importado devolve o
+        # registro existente sem executar as nanotarefas que este teste inspeciona.
+        # O corpo precisa ser inédito a cada execução, senão o próprio teste (ou
+        # resíduo de outro) transforma a segunda rodada num atalho idempotente.
+        amostra = json.loads(self.sample.read_text(encoding="utf-8"))
+        amostra["features"][0]["properties"]["execucao"] = uuid4().hex
+        conteudo = json.dumps(amostra).encode("utf-8")
         homologated_id = None
         try:
             started = self.client.post(
                 "/api/geoespacial/camadas/importar-job",
-                files={"arquivo": (filename, self.sample.read_bytes(), "application/geo+json")},
+                files={"arquivo": (filename, conteudo, "application/geo+json")},
             )
             self.assertEqual(started.status_code, 202, started.text)
             self.assertGreater(started.json()["total"], 4)

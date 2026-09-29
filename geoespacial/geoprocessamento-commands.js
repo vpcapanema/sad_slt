@@ -23,9 +23,26 @@
   async function request(url, options = {}) {
     const response = await fetch(url, { headers: { Accept: "application/json", ...(options.headers || {}) }, ...options });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
+    if (!response.ok) { const error = new Error(body.detail || `HTTP ${response.status}`); error.status = response.status; error.detail = body.detail; throw error; }
     return body;
   }
+
+  // Sessões de arquivo nativo (tiles do original): nunca materializar GeoJSON integral.
+  const NATIVE_QUERY_LIMIT = 1000, NATIVE_GEOMETRY_LIMIT = 100;
+  // Sessão da bancada em tiles ou camada do storage montada por adicionarCamadaStorageTiles.
+  function nativeSession(id) {
+    const file = window.gpArquivos?.sessions.get(id);
+    if (file) return file.representacao === "tiles" ? file : null;
+    const layer = state().layers?.find(item => item.id === id);
+    return layer?.representacao === "tiles" ? layer : null;
+  }
+  function nativeFidField(file) {
+    const field = file?.campo_fid_tile;
+    if (!field) throw new Error(`${file?.nome || file?.id}: os tiles desta camada não trazem o FID original; filtro e seleção exatos estão indisponíveis. Nada foi aplicado.`);
+    return field;
+  }
+  function nativeFidClause(field, fids) { return ["in", ["to-string", ["get", field]], ["literal", fids]]; }
+  function nativeMapLayers(id) { return state().map.getStyle().layers.filter(layer => layer.source === id && !layer.id.startsWith("gp-selection")); }
 
   async function loadEnvironments() {
     const cached = JSON.parse(localStorage.getItem("gp-environments") || "{}");
@@ -48,8 +65,9 @@
       if (layer.tipo?.toLowerCase().includes("raster")) {
         const preview = await request(`${API}/camadas/${layer.id}/preview`); preview.coordinates.forEach(coord => bounds.extend(coord));
       } else {
-        const local=window.gpArquivos?.sessions.get(layer.id)?.geojson || state().map.getSource(layer.id)?._data;
-        if(local&&typeof local==='object')local.features?.forEach(feature=>walkCoordinates(feature.geometry?.coordinates,coord=>bounds.extend(coord)));
+        const native=nativeSession(layer.id),local=native?null:window.gpArquivos?.sessions.get(layer.id)?.geojson || state().map.getSource(layer.id)?._data;
+        if(native&&Array.isArray(native.bounds)&&native.bounds.length===4&&native.bounds.every(Number.isFinite)){bounds.extend(native.bounds.slice(0,2));bounds.extend(native.bounds.slice(2,4));}
+        else if(local&&typeof local==='object')local.features?.forEach(feature=>walkCoordinates(feature.geometry?.coordinates,coord=>bounds.extend(coord)));
         else {const data=await request(`${API}/camadas/${encodeURIComponent(layer.id)}/bounds`);if(data.bounds?.length===4){bounds.extend(data.bounds.slice(0,2));bounds.extend(data.bounds.slice(2,4));}}
       }
     }
@@ -57,7 +75,17 @@
   }
 
   function removeSelectionLayers() {
-    const map = state().map; ["gp-selection-point", "gp-selection-line", "gp-selection-fill"].forEach(id => { if (map.getLayer(id)) map.removeLayer(id); }); if (map.getSource("gp-selection")) map.removeSource("gp-selection");
+    const map = state().map; ["gp-selection-point", "gp-selection-line", "gp-selection-fill", ...(state().nativeSelectionLayers || [])].forEach(id => { if (map.getLayer(id)) map.removeLayer(id); }); if (map.getSource("gp-selection")) map.removeSource("gp-selection");
+    state().nativeSelectionLayers = [];
+  }
+  function clearNativeSelectionLayers(layerId) {
+    const map = state().map;
+    if (!map) return;
+    state().nativeSelectionLayers = (state().nativeSelectionLayers || []).filter(id => {
+      if (map.getLayer(id)?.source !== layerId) return true;
+      map.removeLayer(id);
+      return false;
+    });
   }
   function featureKey(properties = {}, featureId = null) {
     const identity = featureId ?? properties.OBJECTID ?? properties.ObjectID ?? properties.objectid ?? properties.FID ?? properties.fid ?? properties.id;
@@ -69,13 +97,24 @@
   }
   function renderSelection(data) {
     removeSelectionLayers(); state().selectedGeoJSON = data;
-    const map = state().map; map.addSource("gp-selection", { type: "geojson", data });
+    const map = state().map; map.addSource("gp-selection", { type: "geojson", data: { type: "FeatureCollection", features: data.features.filter(feature => feature.geometry) } });
     map.addLayer({ id: "gp-selection-fill", type: "fill", source: "gp-selection", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#00b7ff", "fill-opacity": .25, "fill-outline-color": "#00a1df" } });
     map.addLayer({ id: "gp-selection-line", type: "line", source: "gp-selection", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": "#00b7ff", "line-width": 4 } });
     map.addLayer({ id: "gp-selection-point", type: "circle", source: "gp-selection", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-color": "#00b7ff", "circle-radius": 7, "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
+    renderNativeSelection(data);
     $("#gp-selection").textContent = `${data.features.length} selecionada${data.features.length === 1 ? "" : "s"}`;
     window.gpApp.syncAttributeSelection?.();
     window.gpApp.configureSelectionScope?.();
+  }
+  // Destaque de feições nativas sobre os próprios tiles, pelo FID exato: sem geometria recortada.
+  function renderNativeSelection(data) {
+    const map = state().map, byLayer = new Map();
+    data.features.forEach(feature => { const id = feature.properties?.__gp_layer_id; if (nativeSession(id)?.campo_fid_tile && map.getSource(id)) (byLayer.get(id) || byLayer.set(id, []).get(id)).push(String(feature.properties.__gp_selection_key)); });
+    [...byLayer].forEach(([id, fids], index) => {
+      const sourceLayer = nativeMapLayers(id).find(layer => layer["source-layer"])?.["source-layer"] || "camada", clause = nativeFidClause(nativeSession(id).campo_fid_tile, fids), prefix = `gp-selection-native-${index}`;
+      const specs = [["fill", ["Polygon", "MultiPolygon"], { "fill-color": "#00b7ff", "fill-opacity": .25, "fill-outline-color": "#00a1df" }], ["line", ["LineString", "MultiLineString", "Polygon", "MultiPolygon"], { "line-color": "#00b7ff", "line-width": 4 }], ["circle", ["Point", "MultiPoint"], { "circle-color": "#00b7ff", "circle-radius": 7, "circle-stroke-color": "#fff", "circle-stroke-width": 2 }]];
+      specs.forEach(([type, geometries, paint]) => { const layerId = `${prefix}-${type}`; map.addLayer({ id: layerId, type, source: id, "source-layer": sourceLayer, filter: ["all", ["match", ["geometry-type"], geometries, true, false], clause], paint }); state().nativeSelectionLayers.push(layerId); });
+    });
   }
   function selectFeature(layerId,feature,add=false){
     const tagged=tagSelection({type:"FeatureCollection",features:[feature]},layerId).features;
@@ -89,7 +128,23 @@
     renderSelection({type:'FeatureCollection',features:[...others,...tagged.features]});
   }
   function clearSelection() { removeSelectionLayers(); state().selectedGeoJSON = { type: "FeatureCollection", features: [] }; $("#gp-selection").textContent = "0 selecionadas"; window.gpApp.syncAttributeSelection?.(); window.gpApp.configureSelectionScope?.(); }
-  function fitSelection() { const data = state().selectedGeoJSON; if (!data?.features?.length) return notify("Não há feições selecionadas."); fitGeoJSON(data); }
+  async function fitSelection() {
+    const data = state().selectedGeoJSON; if (!data?.features?.length) return notify("Não há feições selecionadas.");
+    const features = data.features.filter(feature => feature.geometry), pending = new Map();
+    data.features.filter(feature => !feature.geometry && nativeSession(feature.properties?.__gp_layer_id)).forEach(feature => { const id = feature.properties.__gp_layer_id; (pending.get(id) || pending.set(id, []).get(id)).push(String(feature.properties.__gp_selection_key)); });
+    const bounds = new maplibregl.LngLatBounds();
+    features.forEach(feature => walkCoordinates(feature.geometry?.coordinates, coord => bounds.extend(coord)));
+    try {
+      for (const [id, fids] of pending) {
+        const file = nativeSession(id), known = state().nativeSelectionBounds?.[id];
+        if (known && known.key === fids.join(",")) { bounds.extend(known.bounds.slice(0, 2)); bounds.extend(known.bounds.slice(2, 4)); continue; }
+        if (fids.length > NATIVE_GEOMETRY_LIMIT) return notify(`Ajuste à seleção indisponível: ${fids.length} feições nativas em ${file.nome || id} excedem o limite de ${NATIVE_GEOMETRY_LIMIT} geometrias por consulta.`);
+        const result = await request(`${API}/bancada-arquivos/geometrias`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, arquivo: file.arquivo, revisao: file.revisao, ids: fids }) });
+        result.features?.forEach(feature => walkCoordinates(feature.geometry?.coordinates, coord => bounds.extend(coord)));
+      }
+    } catch (error) { return notify(error.message); }
+    if (!bounds.isEmpty()) state().map.fitBounds(bounds, { padding: 40, maxZoom: 15 }); else notify("As feições selecionadas não têm geometria.");
+  }
   function setActiveMapTool(action) { $$('[data-action="explore"],[data-action="select"]').forEach(button => button.classList.toggle("active-tool", button.dataset.action === action)); }
 
   function stopMapHandlers() {
@@ -100,7 +155,8 @@
   }
   function popupHtml(feature, lngLat) {
     const layer = state().layers.find(item => item.id === feature.source), properties = feature.properties || {};
-    const rows = Object.entries(properties).filter(([key]) => !key.startsWith("__gp_")).map(([key, value]) => `<tr><th>${escapeHtml(key)}</th><td>${escapeHtml(value)}</td></tr>`).join("");
+    const fidField = nativeSession(feature.source)?.campo_fid_tile;
+    const rows = Object.entries(properties).filter(([key]) => !key.startsWith("__gp_") && key !== fidField).map(([key, value]) => `<tr><th>${escapeHtml(key)}</th><td>${escapeHtml(value)}</td></tr>`).join("");
     return `<section class="gp-identify-popup"><h3>${escapeHtml(layer?.nome || feature.source)}</h3><div class="gp-popup-attributes"><table><tbody>${rows || '<tr><td>Sem atributos.</td></tr>'}</tbody></table></div><p>${lngLat.lng.toFixed(6)}, ${lngLat.lat.toFixed(6)}</p></section>`;
   }
   function explore() {
@@ -123,6 +179,17 @@
       const allowed = new Set(state().layers.filter(layer=>!layer.tipo?.toLowerCase().includes('raster')).map(layer => layer.id));
       const hits=map.queryRenderedFeatures(box).filter(feature=>allowed.has(feature.source));
       const hit=hits.find(feature=>feature.source===state().activeLayerId)||hits[0];
+      const native=hit&&nativeSession(hit.source);
+      if(native){
+        // O tile traz geometria recortada/generalizada: seleciona só pelo FID original.
+        const field=native.campo_fid_tile,fid=field?hit.properties?.[field]:null;
+        if(fid==null||!/^\d+$/.test(String(fid)))return notify(`${native.nome||native.id}: os tiles desta camada não trazem o FID original; a seleção no mapa está indisponível.`);
+        const properties={...(hit.properties||{})};delete properties[field];
+        const tagged=tagSelection({type:'FeatureCollection',features:[{type:'Feature',id:String(fid),geometry:null,properties}]},hit.source).features;
+        const prior=event.originalEvent?.shiftKey?(state().selectedGeoJSON?.features||[]):[];
+        renderSelection({type:'FeatureCollection',features:[...new Map([...prior,...tagged].map(f=>[`${f.properties.__gp_layer_id}:${f.properties.__gp_selection_key}`,f])).values()]});
+        state().activeLayerId=hit.source;window.gpApp.showAttributes(hit.source);return;
+      }
       const local=hit&&(window.gpArquivos?.sessions.get(hit.source)?.geojson||map.getSource(hit.source)?._data);
       const full=hit&&(local?.features?.find(feature=>featureKey(feature.properties,feature.id)===featureKey(hit.properties,hit.id))||hit);
       const features=hit?tagSelection({type:'FeatureCollection',features:[{type:'Feature',id:full.id,geometry:full.geometry,properties:full.properties}]},hit.source).features:[];
@@ -177,6 +244,7 @@
   }
 
   function displayFilteredLayer(id,data){
+    if(nativeSession(id))throw new Error("Camada nativa em tiles não pode ser convertida em GeoJSON integral. Nada foi aplicado.");
     const map=state().map,source=map.getSource(id);
     if(!source)throw new Error("Adicione a camada ao mapa antes de filtrar.");
     if(source.setData){source.setData(data);return;}
@@ -186,7 +254,22 @@
     map.addSource(id,{type:"geojson",data});
     layers.forEach(layer=>{const copy={...layer};delete copy['source-layer'];map.addLayer(copy);});
   }
+  // Filtro de estilo por FID exato sobre os tiles; a fonte vetorial nunca vira GeoJSON.
+  function displayNativeFilter(id,fids){
+    const map=state().map,field=nativeFidField(nativeSession(id));
+    const layers=nativeMapLayers(id);if(!layers.length)throw new Error("Adicione a camada ao mapa antes de filtrar.");
+    state().nativeFilterStyles??={};const saved=state().nativeFilterStyles[id]||{};
+    layers.forEach(layer=>{
+      const current=map.getFilter(layer.id),record=saved[layer.id];
+      const base=record&&JSON.stringify(current)===JSON.stringify(record.applied)?record.base:current;
+      const applied=fids==null?base:(base?["all",base,nativeFidClause(field,fids)]:nativeFidClause(field,fids));
+      map.setFilter(layer.id,applied??null);
+      if(fids==null)delete saved[layer.id];else saved[layer.id]={base,applied};
+    });
+    if(fids==null)delete state().nativeFilterStyles[id];else state().nativeFilterStyles[id]=saved;
+  }
   async function restoreLayer(id){
+    if(nativeSession(id)){displayNativeFilter(id,null);return;}
     const file=window.gpArquivos?.sessions.get(id);
     if(file){displayFilteredLayer(id,file.geojson);return;}
     const map=state().map,original=state().filterSources?.[id];
@@ -209,9 +292,16 @@
         const filter=state().layerFilters?.[layer.id];
         const result=await queryLayer(layer.id,!filtering&&filter?`(${filter}) and (${expression})`:expression);
         if(filtering){
+          if(result.nativo){applyNativeLayerFilter(layer.id,result);state().layerFilters??={};state().layerFilters[layer.id]=expression;notify(`${result.total} feições exibidas no mapa e consideradas pelas ferramentas.${tableFilterNote(layer.id)}`);}
+          else{
           state().layerFilters??={};state().layerFilters[layer.id]=expression;
           applyLayerFilter(layer.id,result.geojson);
           notify(`${result.total} feições disponíveis no mapa, na tabela e nas ferramentas.`);
+          }
+        }else if(result.nativo){
+          setLayerSelection(layer.id,nativeFeatures(result.fids));
+          rememberNativeBounds(layer.id,result);
+          notify(`${result.total} feições selecionadas.`);
         }else{
           setLayerSelection(layer.id,result.geojson.features);
           notify(`${result.total} feições selecionadas.`);
@@ -219,10 +309,34 @@
       }catch(error){notify(error.message);}finally{submit.disabled=false;}
     };
     if(filtering)$('[data-clear-filter]').onclick=async()=>{
-      try{await restoreLayer(layer.id);delete state().layerFilters?.[layer.id];delete state().layerFilterFeatures?.[layer.id];window.gpAttributeTable?.applyLayerFilter(layer.id);form.elements.expression.value='';notify('Filtro removido.');}catch(error){notify(error.message);}
+      try{await restoreLayer(layer.id);delete state().layerFilters?.[layer.id];delete state().nativeFilterQueries?.[layer.id];delete state().layerFilterFeatures?.[layer.id];window.gpAttributeTable?.applyLayerFilter(layer.id);form.elements.expression.value='';notify('Filtro removido.');}catch(error){notify(error.message);}
     };
   }
+  async function queryNative(file,expression){
+    nativeFidField(file);
+    let result;
+    try{result=await request(`${API}/bancada-arquivos/consulta`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:file.id,arquivo:file.arquivo,revisao:file.revisao,expressao:expression,limite:NATIVE_QUERY_LIMIT,offset:0})});}
+    catch(error){
+      if(error.status===405||(error.status===404&&error.detail==='Not Found'))throw new Error('O servidor ainda não oferece consulta limitada sobre o arquivo original (/bancada-arquivos/consulta). Nada foi aplicado.');
+      throw error;
+    }
+    const fids=Array.isArray(result?.ids)?result.ids.map(String):null,total=Number(result?.total);
+    if(result?.id!==file.id||result?.revisao!==file.revisao||!fids||!Number.isInteger(total)||fids.some(fid=>!/^\d+$/.test(fid)))throw new Error('Resposta inválida ou desatualizada da consulta ao arquivo original. Nada foi aplicado.');
+    if(result.has_more||total>fids.length)throw new Error(`A expressão corresponde a ${total} feições; o limite para filtro ou seleção exatos em camada nativa é ${NATIVE_QUERY_LIMIT}. Refine a expressão. Nada foi aplicado.`);
+    return {nativo:true,total,fids,bounds:null,expression,revision:file.revisao??null};
+  }
+  function nativeFeatures(fids){return fids.map(fid=>({type:'Feature',id:fid,geometry:null,properties:{}}));}
+  function rememberNativeBounds(id,result){state().nativeSelectionBounds??={};if(result.bounds)state().nativeSelectionBounds[id]={key:result.fids.join(','),bounds:result.bounds};else delete state().nativeSelectionBounds[id];}
+  function tableFilterNote(id){try{window.gpAttributeTable?.applyLayerFilter(id);return '';}catch(error){return ' A tabela de atributos paginada não reflete este filtro.';}}
+  function applyNativeLayerFilter(id,result){
+    displayNativeFilter(id,result.fids);
+    state().nativeFilterQueries??={};state().nativeFilterQueries[id]={expression:result.expression,revision:result.revision};
+    state().layerFilterFeatures??={};state().layerFilterFeatures[id]={type:'FeatureCollection',features:nativeFeatures(result.fids)};
+    const keys=new Set(result.fids);
+    setLayerSelection(id,(state().selectedGeoJSON?.features||[]).filter(f=>f.properties.__gp_layer_id===id&&keys.has(String(f.properties.__gp_selection_key))));
+  }
   async function queryLayer(id,expression){
+    const native=nativeSession(id);if(native)return queryNative(native,expression);
     const file=window.gpArquivos?.sessions.get(id);
     return file?request(`${API}/bancada-arquivos/consultar`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({arquivo:file.arquivo,camada_id:id,revisao:file.revisao,expressao:expression})}):request(`${API}/camadas/${encodeURIComponent(id)}/consultar-atributos?${new URLSearchParams({expressao:expression})}`,{method:'POST'});
   }
@@ -235,7 +349,18 @@
   }
   async function refreshLayerFilter(id){
     const expression=state().layerFilters?.[id];if(!expression)return null;
-    const result=await queryLayer(id,expression);applyLayerFilter(id,result.geojson);return result.geojson;
+    const native=nativeSession(id);
+    if(native){
+      // Mesma expressão e mesma revisão: o filtro por FID do estilo continua válido; não reconsulta.
+      const applied=state().nativeFilterQueries?.[id];
+      if(applied&&applied.expression===expression&&applied.revision===(native.revisao??null)&&state().layerFilterFeatures?.[id])return state().layerFilterFeatures[id];
+      let result;
+      try{result=await queryNative(native,expression);}
+      catch(error){if(applied)error.message+=' O filtro exibido no mapa corresponde à revisão anterior da camada.';throw error;}
+      applyNativeLayerFilter(id,result);tableFilterNote(id);return state().layerFilterFeatures[id];
+    }
+    const result=await queryLayer(id,expression);
+    applyLayerFilter(id,result.geojson);return result.geojson;
   }
 
   async function refreshSource() {
@@ -259,5 +384,5 @@
     $("#gp-definition-command").onsubmit = async event => { event.preventDefault(); try { const [kind, ...parts] = event.target.definition.value.split(":"), id = parts.join(":"), entry = pool.find(value => value.kind === kind && value.item.id === id); if (!entry) throw new Error("Selecione uma definição"); const copy = structuredClone(entry.item); if (action === "duplicate") { copy.id = `${kind === "functions" ? "funcao" : "fluxo"}_${Date.now()}`; copy.nome = `${copy.nome} (cópia)`; const saved = await request(`${API}/${kind === "functions" ? "funcoes" : "fluxos"}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(copy) }); state()[kind].push(saved); window.gpApp.showLibrary(kind); notify("Definição duplicada."); } else { const blob = new Blob([JSON.stringify({ tipo: kind, definicao: copy }, null, 2)], { type: "application/json" }), url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = `${copy.id}.json`; link.click(); URL.revokeObjectURL(url); notify("Definição exportada."); } } catch (error) { notify(error.message); } };
   }
 
-  window.gpCommands = { refreshLayerFilter, calculationScope, featureKey, setLayerSelection, selectFeature, activeLayer, notify, openPanel, fitAllLayers, fitSelection, selectOnMap, explore, clearSelection, loadEnvironments, showEnvironments, applyEnvironments, calculateField, selectByAttribute: () => queryPanel("select"), filterLayer: () => queryPanel("filter"), refreshSource, duplicateDefinition: () => definitionCommand("duplicate"), importDefinition: () => definitionCommand("import"), exportDefinition: () => definitionCommand("export") };
+  window.gpCommands = { refreshLayerFilter, calculationScope, featureKey, setLayerSelection, clearNativeSelectionLayers, selectFeature, activeLayer, notify, openPanel, fitAllLayers, fitSelection, selectOnMap, explore, clearSelection, loadEnvironments, showEnvironments, applyEnvironments, calculateField, selectByAttribute: () => queryPanel("select"), filterLayer: () => queryPanel("filter"), refreshSource, duplicateDefinition: () => definitionCommand("duplicate"), importDefinition: () => definitionCommand("import"), exportDefinition: () => definitionCommand("export") };
 })();

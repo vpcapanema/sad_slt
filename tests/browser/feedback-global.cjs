@@ -45,12 +45,16 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.equal(await page.locator('.pfs-segment--completed').count(),1);assert.equal(await page.locator('.pfs-segment--active').count(),1);
   assert.equal(await page.locator('[data-pfs="progress-percent"]').innerText(),'33%');
   assert.equal(await page.locator('.pfs-log .pfs-log-spinner').count(),1,'Só a tarefa corrente gira');
-  assert.match(await page.locator('#pfsLog').innerText(),/Interseção municipal/);
-  // Ocultar não cancela; CANCELAR chama onCancel e fecha.
+  assert.match(await page.locator('#pfsLog').textContent(),/Interseção municipal/);
+  assert.equal(await page.locator('[data-pfs="active-detail"]').innerText(),'Interseção municipal');
+  await page.waitForFunction(()=>document.querySelector('[data-pfs="current-summary"]').textContent.includes('Cruzar'));
+  await page.evaluate(()=>ProcessFeedback.concluirTarefa('Cruzar'));
+  assert.equal(await page.locator('[data-pfs="active-detail"]').textContent(),'','Conclusão retira o micropasso');
+  // Ocultar não cancela; CANCELAR solicita e aguarda confirmação sem fechar.
   await page.locator('#pfsProgressClose').click();assert.equal(await ativo('#pfsProgressOverlay'),false);assert.equal(await page.evaluate(()=>cancelou),0);
   await page.evaluate(()=>ProcessFeedback.iniciarCadastro({title:'Com cancelamento',tasks:['A'],onCancel:()=>{cancelou++;}}));
   assert.equal(await page.locator('#pfsCancelBtn').isVisible(),true);
-  await page.locator('#pfsCancelBtn').click();assert.equal(await page.evaluate(()=>cancelou),1);assert.equal(await ativo('#pfsProgressOverlay'),false);
+  await page.locator('#pfsCancelBtn').click();assert.equal(await page.evaluate(()=>cancelou),1);assert.equal(await ativo('#pfsProgressOverlay'),true);assert.equal(await page.locator('#pfsCancelBtn').isDisabled(),true);
   await page.evaluate(()=>ProcessFeedback.iniciarCadastro({title:'Sem cancelamento'}));
   assert.equal(await page.locator('#pfsCancelBtn').isHidden(),true);
   await page.evaluate(()=>ProcessFeedback.permitirCancelamento(()=>{cancelou++;}));assert.equal(await page.locator('#pfsCancelBtn').isVisible(),true);
@@ -63,6 +67,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.equal(await page.locator('.pfs-completed-item').filter({hasText:'Gravando camada'}).count(),1);
   assert.equal(await page.locator('.pfs-log-entry--warning').filter({hasText:'CRS ausente'}).count(),1);
   assert.equal(await page.locator('[data-pfs="progress-percent"]').innerText(),'33%');
+  assert.equal(await page.locator('#pfsTaskProgressBar').getAttribute('aria-valuenow'),'33','Sem medição da tarefa, barra usa avanço real das etapas');
 
   // Medidas individuais e detalhes atualizam sem recriar a tarefa nem zerar a barra.
   await page.evaluate(()=>{ProcessFeedback.acompanhar({id:'medicao',tarefa_id:1,etapa:'Cruzar base',percentual:40,progresso_tarefa:32,tarefa_concluidas:32,tarefa_total:100,unidade_tarefa:'feições',logs:[{sequencia:1,mensagem:'32 feições processadas'}]});ProcessFeedback.acompanhar({id:'medicao',tarefa_id:1,etapa:'Cruzar base',detalhe:'12 correspondências',percentual:40,progresso_tarefa:32,tarefa_concluidas:32,tarefa_total:100,unidade_tarefa:'feições',logs:[{sequencia:1,mensagem:'32 feições processadas'}]});});
@@ -77,9 +82,12 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   assert.equal(await ativo('#pfsProgressOverlay'),false);
   assert.equal(await page.locator('[data-pfs="success-header-title"]').innerText(),'Sem cancelamento','Cabeçalho mantém o título da ação');
   assert.equal(await page.locator('[data-pfs="success-title"]').innerText(),'Fase 1 calculada');
+  assert.equal(await page.locator('#pfsSuccessDetails').isVisible(),false);
+  await page.waitForFunction(()=>document.activeElement?.id==='pfsSuccessOk','','OK recebe o foco');
+  await page.locator('#pfsSuccessBox .pfs-details-toggle').click();
+  assert.equal(await page.locator('#pfsSuccessDetails').isVisible(),true);
   assert.match(await page.locator('#pfsSuccessSummary').innerText(),/Demandas:\s*148/);
   assert.equal(await page.locator('.pfs-sp--warning').count(),1);
-  await page.waitForFunction(()=>document.activeElement?.id==='pfsSuccessOk','','OK recebe o foco');
   await page.getByRole('button',{name:'Ver resultados'}).click();
   assert.equal(await page.evaluate(()=>acionado),true);assert.equal(await ativo('#pfsStatusOverlay'),false);
 
@@ -87,15 +95,24 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   await page.evaluate(()=>StatusFeedback.parcial({actionTitle:'Enviar e homologar camada',title:'Importada, mas não homologada',message:'Ainda não publicada.'}));
   assert.equal(await page.locator('#pfsPartialBox').evaluate(n=>n.classList.contains('pfs-active')),true);
   assert.equal(await page.locator('[data-pfs="partial-header-title"]').innerText(),'Enviar e homologar camada');
+  assert.equal(await page.locator('#pfsPartialDetails').isVisible(),false);
+  await page.locator('#pfsPartialOk').click();
+  assert.equal(await page.locator('#pfsPartialDetails').isVisible(),true);
   await page.keyboard.press('Escape');assert.equal(await ativo('#pfsStatusOverlay'),false,'Esc fecha o resultado');
   await page.evaluate(()=>StatusFeedback.erro({actionTitle:'Exportar pacote',detail:[{loc:['body','formato'],msg:'valor inválido'},{loc:['body','atributos'],msg:'lista vazia'}]}));
   assert.equal(await page.locator('[data-pfs="error-message"]').innerText(),'formato: valor inválido');
   assert.equal(await page.locator('#pfsErrorLog > div').count(),2);
+  assert.equal(await page.locator('#pfsErrorDetails').isVisible(),false);
+  await page.locator('#pfsErrorOk').click();
   assert.equal(await page.locator('#pfsSolution').isVisible(),true);
-  const [download]=await Promise.all([page.waitForEvent('download'),page.locator('#pfsErrorOk').click()]);
+  const [download]=await Promise.all([page.waitForEvent('download'),page.locator('#pfsDownloadReport').click()]);
   assert.match(download.suggestedFilename(),/^sicard_erro_\d+\.txt$/);
   const relatorio=require('node:fs').readFileSync(await download.path(),'utf8');
   assert.match(relatorio,/RELATÓRIO DE ERRO — SICARD/);assert.match(relatorio,/atributos: lista vazia/);
+  await page.locator('#pfsErrorClose').click();assert.equal(await ativo('#pfsStatusOverlay'),false);
+  await page.evaluate(()=>StatusFeedback.erro({message:'Outra falha'}));
+  assert.equal(await page.locator('#pfsErrorDetails').isVisible(),false,'Reabertura recolhe detalhes');
+  await page.locator('#pfsErrorClose').click();
 
   // Um processo que termina não fecha o overlay de outro que já começou.
   await page.evaluate(()=>{const a=ProcessFeedback.iniciarCadastro({title:'Primeiro'});a.sucesso({message:'ok'});ProcessFeedback.iniciarCadastro({title:'Segundo'});});
@@ -133,6 +150,44 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   await page.setViewportSize({width:390,height:844});
   await page.evaluate(()=>{ProcessFeedback.iniciarCadastro({title:'Exportar seleção com um título bem longo para quebrar',tasks:['Consultar registros','Gravar']});ProcessFeedback.tarefa('Consultar registros','Registro A\nLendo atributos.');});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  for (const [width,height,expectedHeight] of [[1100,900,450],[375,667,350],[320,568,310]]) {
+    await page.setViewportSize({width,height});
+    const sizes=await page.evaluate(()=>{
+      const groups=[
+        ['pfsProgressOverlay','pfsProgressBox'],['pfsStatusOverlay','pfsSuccessBox'],
+        ['pfsStatusOverlay','pfsPartialBox'],['pfsStatusOverlay','pfsErrorBox'],
+        ['pfsConfirmOverlay','pfsConfirmBox'],['pfsCredentialOverlay','pfsCredentialBox']
+      ];
+      return groups.map(([overlayId,boxId])=>{
+        const overlay=document.getElementById(overlayId),box=document.getElementById(boxId);
+        const opened=overlay.classList.contains('pfs-active');
+        overlay.classList.add('pfs-active');box.classList.add('pfs-active');
+        box.style.animation='none';
+        const rect=box.getBoundingClientRect(),size=[rect.width,rect.height];
+        box.style.animation='';
+        box.classList.remove('pfs-active');if(!opened)overlay.classList.remove('pfs-active');
+        return size;
+      });
+    });
+    assert.deepEqual(sizes.slice(1,4),[sizes[0],sizes[0],sizes[0]],'Acompanhamento e resultados têm dimensões idênticas');
+    assert.equal(sizes[0][1],expectedHeight);
+    assert.ok(sizes.every(([w,h])=>w<=width-16&&h<=height-16),'Nenhum grupo ultrapassa a tela');
+    if(width===1100){assert.deepEqual(sizes[0],[540,450]);assert.deepEqual(sizes[4],[520,255]);assert.deepEqual(sizes[5],[520,390]);}
+  }
+  await page.evaluate(()=>{
+    ProcessFeedback.fechar();
+    StatusFeedback.sucesso({message:'Detalhes extensos',summary:Array.from({length:35},(_,i)=>({label:'Camada',value:i}))});
+  });
+  await page.locator('#pfsSuccessBox .pfs-details-toggle').click();
+  const scroll=await page.locator('#pfsSuccessBox').evaluate(box=>{
+    const body=box.querySelector('.pfs-body'),header=box.querySelector('.pfs-header'),footer=box.querySelector('.pfs-footer');
+    const before=[header.getBoundingClientRect().top,footer.getBoundingClientRect().top];
+    const overflows=body.scrollHeight>body.clientHeight;
+    body.scrollTop=body.scrollHeight;
+    return {overflows,stable:before[0]===header.getBoundingClientRect().top&&before[1]===footer.getBoundingClientRect().top};
+  });
+  assert.deepEqual(scroll,{overflows:true,stable:true});
+  await page.evaluate(()=>StatusFeedback.fechar());
   assert.deepEqual(errors,[]);
   console.log('PASS: confirmação (foco, Esc, Tab, entrada), progresso com tarefas e cancelamento, job do servidor, sucesso/parcial/erro com relatório, credencial, Notify seguro e diálogo nativo.');
  }finally{await browser.close();}

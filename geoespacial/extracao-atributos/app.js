@@ -1,3 +1,4 @@
+import { instalarLogs, log, falha, estado as registrarEstado, resultado as registrarResultado } from './logger.js';
 import {renderLote} from './lote.js';
 import {composicaoVisivel,validarComposicao,pedidoDaComposicao} from './composicao.js';
 import { $, feedback, camposCamada } from "./ui.js";
@@ -10,9 +11,11 @@ import { adaptador, json, esperar } from './api.js';
 import { confirmarExecucao, acompanharExecucao } from './processo.js';
 import { editarFinalidade, editarRegra, prefixoPadrao, categoriaBinaria } from './regras.js';
 import { renderDiagrama } from './diagramas.js';
-import { restaurarRetornoMunicipal } from './municipal.js';
+import { restaurarRetornoMunicipal, concluirRetornoMunicipal } from './municipal.js';
 
 import { componentes, removerPrevia } from './preparacao.js';
+
+instalarLogs();
 
 const OPCOES_OVERLAY=[
   ["promover_multipartes","Promover a multipartes","PROMOTE_TO_MULTI",true],
@@ -26,7 +29,7 @@ const state={bancadaEntradas:[],bancadaBases:[],catalog:[],categories:[],bases:[
   executarEmLote:false,camadaRecorte:"",nomeSaida:"",result:null,busy:false,uploading:false,loadingCatalog:false,catalogError:false,
   // Só no enriquecimento: configuração da entrada principal, entradas adicionais e finalidades.
   inputConfig:null,entradasExtras:[],finalidades:[]};
-const map=criarMapa(()=>{reconciliarPainel();controls();}),results=criarResultados();
+const map=criarMapa(()=>{reconciliarPainel();conferirResultadoAtual();controls();}),results=criarResultados();
 const config=criarConfiguracao(state,changed);
 // A seção 2 usa somente camadas presentes e visíveis na bancada.
 const componentesEntrada=componentes;
@@ -55,14 +58,14 @@ function renderSelecao() {
   for(const b of comp.bases)cut.append(new Option(b.layer.nome,b.id));
   cut.value=previous;cut.disabled=state.busy||!comp.bases.length;
   $('#ea-run-cut-field').hidden=state.operation!=='enriquecimento';
-  cut.onchange=()=>{state.camadaRecorte=cut.value;controls();};
+  cut.onchange=()=>{state.camadaRecorte=cut.value;conferirResultadoAtual();controls();};
   $('#ea-run-algorithm').textContent=$('#ea-operation').selectedOptions[0]?.textContent||'Selecione em 1.3';
   const inputs=$('#ea-run-inputs'),bases=$('#ea-run-bases');inputs.replaceChildren();bases.replaceChildren();
   const row=(name,value,category)=>{const r=$(category===undefined?'#ea-tpl-run-row':'#ea-tpl-run-input').content.firstElementChild.cloneNode(true);r.querySelector('[data-name]').textContent=name;r.querySelector('[data-value]').textContent=value;if(category!==undefined)r.querySelector('[data-category]').textContent=category;return r;};
   for(const e of comp.camadas)inputs.append(row(e.layer.nome,(e.config.campo_id==='__feicao__'?'ID da feição':e.config.campo_id||'Não definido')+(e.config.identificacao_confirmada?'':' · confirmar em 1.1'),e.config.categoria_demanda||e.config.categoria_pontos||'Sem categorização'));
   for(const b of comp.bases)bases.append(row(b.layer.nome,state.categories.find(c=>c.id===b.category)?.nome||b.category));
   $('#ea-run-count').textContent=`${comp.camadas.length} camada(s) de demanda e ${comp.bases.length} base(s) marcadas para ${state.executarEmLote?'execução em lote':'execução individual'}.`;
-  let warning='';try{validarComposicao(state,comp);}catch(e){warning=e.message;}
+  let warning='';try{validarComposicao(state,comp);validarFinalidades();}catch(e){warning=e.message;}
   $('#ea-run-warning').textContent=warning;$('#ea-run-warning').hidden=!warning;
   if(warning)$('#ea-run').disabled=true;
 }
@@ -79,16 +82,16 @@ function camposPrevistos() {
     {campo:"fid_origem",rotulo:"fid_origem · posição na entrada",grupo:"Identificação"},
     {campo:"id_origem",rotulo:"id_origem · identificador da feição",grupo:"Identificação"},
   ];
-  for(const entrada of entradasEnriquecimento()){
-    const camada=camadaEntrada(entrada.id);
+  for(const entrada of composicaoAtual().camadas){
+    const camada=entrada.layer;
     const config=entrada.config;
     const campos=camposCamada(camada);
-    for(const campo of campos)if(!itens.some(i=>i.campo===campo))itens.push({campo,rotulo:campo,grupo:`Entrada · ${nome(entrada.id)}`});
+    for(const campo of campos)if(!itens.some(i=>i.campo===campo))itens.push({campo,rotulo:campo,grupo:`Entrada · ${camada.nome}`});
   }
-  for(const base of state.bancadaBases){
+  for(const base of composicaoAtual().bases){
     const camada=base.layer;
     const prefixo=base.regra?.prefixo?(base.regra.prefixo.endsWith("_")?base.regra.prefixo:base.regra.prefixo+"_"):prefixoPadrao(nome(base.id));
-    const campos=camposCamada(camada);
+    const campos=camposCamada(camada).filter(c=>!base.regra?.campos||base.regra.campos.includes(c));
     const grupo=`Base · ${nome(base.id)}`;
     for(const campo of campos)itens.push({campo:prefixo+campo,rotulo:prefixo+campo,grupo});
     if(base.regra?.papel!=='recorte')itens.push({campo:`${prefixo}correspondencias`,rotulo:`${prefixo}correspondencias · todas as feições e atributos (JSON)`,grupo});
@@ -96,6 +99,13 @@ function camposPrevistos() {
     if(state.operation!=='estatisticas'&&(base.regra?.multiplicidade||'resumo')!=="resumo")itens.push({campo:`${prefixo}fid_base`,rotulo:`${prefixo}fid_base · feição escolhida`,grupo});
   }
   return itens;
+}
+function validarFinalidades(){
+  const disponiveis=new Set(camposPrevistos().map(c=>c.campo));
+  for(const finalidade of state.finalidades){
+    const ausentes=finalidade.campos.filter(c=>!disponiveis.has(c));
+    if(ausentes.length)throw new Error(`Finalidade “${finalidade.nome}”: revise os campos indisponíveis na composição marcada: ${ausentes.join(', ')}.`);
+  }
 }
 // O que o processamento enxerga e o que esta no painel da bancada. Se o usuario
 // remove uma camada la, ela sai das bases e da entrada aqui.
@@ -116,6 +126,7 @@ function reconciliarPainel() {
 }
 
 function controls() {
+  registrarEstado(state,composicaoAtual());
   config.marcarLista();
   $("#ea-municipal-open").setAttribute("aria-disabled",String(state.busy));
   $("#ea-recover").disabled=state.busy;
@@ -157,8 +168,14 @@ function syncMap() {
 // Leitura de arquivo no servidor custa uma conexao ao banco remoto: fila curta.
 const SIMULTANEAS=3, TENTATIVAS=3;
 let mapVersion=0,assinaturaExecucao="";
+function conferirResultadoAtual(){
+  if(!state.result||state.busy)return;
+  const assinatura=assinaturaDe(request());
+  if(assinatura!==assinaturaExecucao){invalidarResultado();assinaturaExecucao=assinatura;syncMap();}
+}
 function invalidarResultado(){
   if(!state.result)return;
+  log('resultado.invalidado');
   state.result=null;results.clear();
   feedback('A configuração mudou. Execute novamente para atualizar os resultados.');
 }
@@ -283,9 +300,9 @@ function request() {
 $("#ea-run").addEventListener("click",async()=>{
   reconciliarPainel();
   if(state.busy||state.uploading||state.validatingBases||state.loadingMap||state.loadingCatalog||!state.operation||!state.bancadaEntradas.length||!state.bancadaBases.length) return;
-  try{map.assertReady(composicaoAtual().ids);}catch(error){feedback(error.message,'error');return;}
+  try{map.assertReady(composicaoAtual().ids);}catch(error){falha('validacao',error);feedback(error.message,'error');return;}
   let pedido;
-  try{validarComposicao(state,composicaoAtual());pedido=request();}catch(error){feedback(error.message,'error');return;}
+  try{validarComposicao(state,composicaoAtual());validarFinalidades();pedido=request();}catch(error){falha('validacao',error);feedback(error.message,'error');return;}
   const confirmado=await confirmarExecucao({
     entrada:(pedido.entradas||[pedido.input]).map(e=>e.nome||e.id).join('; '),
     saida:pedido.nome_saida||`Extração de ${pedido.input.nome}`,
@@ -293,19 +310,21 @@ $("#ea-run").addEventListener("click",async()=>{
     totalCamadas:pedido.categorias.reduce((soma,c)=>soma+c.camadas.length,0),
     categorias:pedido.categorias,
   });
-  if(!confirmado){feedback("Execução cancelada. Nada foi processado.");return;}
+  if(!confirmado){log('execucao.confirmacao_cancelada');feedback("Execução cancelada. Nada foi processado.");return;}
   reconciliarPainel();
-  try{validarComposicao(state,composicaoAtual());map.assertReady(composicaoAtual().ids);if(!state.bancadaEntradas.length||!state.bancadaBases.length||assinaturaDe(request())!==assinaturaDe(pedido))throw new Error('A composição da bancada mudou. Confira e execute novamente.');}catch(error){feedback(error.message,'error');return;}
+  try{validarComposicao(state,composicaoAtual());validarFinalidades();map.assertReady(composicaoAtual().ids);if(!state.bancadaEntradas.length||!state.bancadaBases.length||assinaturaDe(request())!==assinaturaDe(pedido))throw new Error('A composição da bancada mudou. Confira e execute novamente.');}catch(error){falha('validacao',error);feedback(error.message,'error');return;}
+  log('execucao.inicio',{operacao:state.operation,entradas:pedido.entradas.length,bases:pedido.categorias.reduce((n,c)=>n+c.camadas.length,0),finalidades:pedido.finalidades.length});
   busy(true);state.result=null;results.clear();syncMap();
   const painel=acompanharExecucao();
   try {
     const value=validateResult(await chamar("executar",pedido,job=>painel.acompanhar(job)));
-    state.result=value;results.set(value);syncMap();
+    registrarResultado(value);state.result=value;assinaturaExecucao=assinaturaDe(request());results.set(value);syncMap();
     painel.concluir("Extração concluída. Os resultados estão na tela e o pacote de saída (.zip) está pronto para baixar.",
       ()=>$("#ea-results").scrollIntoView({behavior:"smooth",block:"start"}));
 
   } catch(error) {
     state.result=null;results.clear();syncMap();
+    falha('execucao',error);
     painel.falhar(error.message,error.name==='AbortError');
 
   }
@@ -320,10 +339,12 @@ $("#ea-export").addEventListener("click",async()=>{
   catch(error) {processo.erro({title:"Não foi possível baixar",message:error.message});} finally {busy(false);}
 });
 async function carregarCatalogo(){
+  log('catalogo.inicio');
   if(state.loadingCatalog)return;
   state.loadingCatalog=true;state.catalogError=false;controls();
   try{
   const catalog=await chamar('listarCatalogo');
+  log('catalogo.carregado',{camadas:catalog.camadas.length,categorias:catalog.categorias.length});
   const selecionadas=new Set([state.input,...state.bases.map(b=>b.id),...state.staging.map(b=>b.id),...state.entradasExtras.map(e=>e.id)]);
   state.catalog=[...catalog.camadas,...state.catalog.filter(l=>(l.origem==='local'||selecionadas.has(l.id))&&!catalog.camadas.some(c=>c.id===l.id))];
   const colors=['#1769aa','#52812e','#ad5b22','#8c4495','#217f83','#a34242','#58657a'];
@@ -333,7 +354,7 @@ async function carregarCatalogo(){
   if(!state.catalog.some(l=>l.id===state.input))state.input='';
   state.entradasExtras=state.entradasExtras.filter(e=>state.catalog.some(l=>l.id===e.id));
   config.render();syncMap();controls();
-  }catch(error){state.catalogError=true;throw error;}
+  }catch(error){falha('catalogo',error);state.catalogError=true;throw error;}
   finally{state.loadingCatalog=false;controls();}
 }
 window.addEventListener('extracao:integracao',async()=>{
@@ -341,11 +362,17 @@ window.addEventListener('extracao:integracao',async()=>{
   const versaoInicial=mapVersion;
   try{
     await carregarCatalogo();
-    const retorno=mapVersion===versaoInicial?restaurarRetornoMunicipal(state):null;
+    const retorno=mapVersion===versaoInicial?await restaurarRetornoMunicipal(state):null;
     if(retorno){
+      log('municipal.rascunho_restaurado',{entradas:state.bancadaEntradas.length,bases:state.bancadaBases.length,resultado:!!state.result});
       if(!['enriquecimento','estatisticas'].includes(state.operation))state.operation='';
       $('#ea-operation').value=state.operation;$('#ea-nome-saida').value=state.nomeSaida;
-      renderParametros();await changed();feedback(retorno);
+      const resultadoRestaurado=state.result;state.result=null;
+      renderParametros();await changed();await window.SICARDExtracao.aguardarBancada();
+      map.restaurarVisibilidade(state.painelRestaurado||[]);delete state.painelRestaurado;
+      assinaturaExecucao=assinaturaDe(request());
+      if(resultadoRestaurado){state.result=validateResult(resultadoRestaurado);results.set(state.result);syncMap();}
+      controls();await concluirRetornoMunicipal();feedback(retorno);
     }
   }catch(error){feedback(`Não foi possível carregar o catálogo: ${error.message}`,'error');}
   abrirExtracaoDaUrl();
@@ -355,7 +382,7 @@ window.SICARDExtracao={async aguardarBancada(){
     try{map.assertReady(idsDaComposicao());return;}catch(error){if(i===299)throw error;}
     await new Promise(resolve=>setTimeout(resolve,100));
   }
-},ocupar:busy,atualizarControles:controls,conectar:conectarIntegracao,renderParametros,renderSelecao,renderFinalidades,changed};
+},composicaoAtual,camadasNaBancada:()=>map.camadas(),ocupar:busy,atualizarControles:controls,conectar:conectarIntegracao,renderParametros,renderSelecao,renderFinalidades,changed};
 renderParametros();
 changed();
 conectarIntegracao(adaptador);
@@ -367,8 +394,8 @@ document.getElementById('ea-recover').addEventListener('click',async()=>{
   let id;try{id=sessionStorage.getItem('slt-extracao-ultima');}catch{feedback('O navegador bloqueou a sessão local. Use Ver todas as extrações para recuperar sua análise.');return;}if(!id){feedback('Nenhuma execução salva nesta sessão do navegador.');return;}
   if(state.busy)return;busy(true);
   const painel=acompanharExecucao('Recuperando análise');
-  try{const job=await json(`/extracao-atributos/execucoes/${id}`);state.result=validateResult(await esperar(job,id=>`/extracao-atributos/execucoes/${id}`,j=>painel.acompanhar(j)));results.set(state.result);syncMap();painel.concluir('Última análise recuperada.');}
-  catch(e){painel.falhar(e.message);}finally{busy(false);}
+  try{const job=await json(`/extracao-atributos/execucoes/${id}`);state.result=validateResult(await esperar(job,id=>`/extracao-atributos/execucoes/${id}`,j=>painel.acompanhar(j)));registrarResultado(state.result);results.set(state.result);syncMap();painel.concluir('Última análise recuperada.');}
+  catch(e){falha('recuperacao',e);painel.falhar(e.message);}finally{busy(false);}
 });
 
 // Aberta pelo índice (?execucao=<id>): mostra o resultado da extração já executada.
@@ -377,10 +404,10 @@ async function abrirExtracao(id){
   try{
     const job=await json(`/extracao-atributos/execucoes/${encodeURIComponent(id)}`);
     if(job.status!=='concluido'||!job.resultado)throw new Error('Esta extração não tem resultado disponível.');
-    state.result=validateResult(job.resultado);results.set(state.result);syncMap();
+    state.result=validateResult(job.resultado);registrarResultado(state.result);results.set(state.result);syncMap();
     $("#ea-results").scrollIntoView({behavior:"smooth",block:"start"});
     feedback(`Resultados de "${job.resultado.input_nome||'extração'}" abertos. O pacote de saída pode ser baixado na seção 03.`);
-  }catch(error){feedback(`Não foi possível abrir: ${error.message}`,'error');}finally{busy(false);}
+  }catch(error){falha('abrir_resultado',error);feedback(`Não foi possível abrir: ${error.message}`,'error');}finally{busy(false);}
 }
 const execucaoDaUrl=new URLSearchParams(location.search).get('execucao');
 let execucaoAberta=false;

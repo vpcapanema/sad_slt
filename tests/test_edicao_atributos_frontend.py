@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 JS = Path("geoespacial/geoprocessamento.js").read_text(encoding="utf-8")
+ATTR_JS = Path("geoespacial/geoprocessamento-atributos.js").read_text(encoding="utf-8")
 CSS = Path("assets/css/geoprocessamento.css").read_text(encoding="utf-8")
 
 
@@ -28,16 +29,16 @@ def test_toggle_liga_desliga_e_recusa_camada_homologada():
 def test_linha_sem_indice_ou_valor_complexo_fica_somente_leitura():
     """Seleção ainda não presente na página buscada não tem `_indice`; valor
     complexo (dict/lista) não pode virar texto livre sem risco de corromper."""
-    corpo = JS.split("const celula=(row,column)=>{", 1)[1].split("\n    };", 1)[0]
-    assert "row._indice!=null" in corpo
-    assert 'typeof row[column]!=="object"' in corpo
+    assert "editable:cell=>d.editing&&!d.readonly&&!d.busy" in ATTR_JS
+    assert "typeof cell.getValue()!=='object'" in ATTR_JS
 
 
 def test_edicao_usa_onchange_nao_oninput():
     """onchange só dispara ao confirmar (blur/Enter) — oninput dispararia a
     cada tecla, reconstruindo estado a cada caractere digitado."""
-    assert "$$('[data-edit-row]').forEach(input=>input.onchange=" in JS
-    assert "$$('[data-edit-row]').forEach(input=>input.oninput=" not in JS
+    assert "editTriggerEvent:'dblclick'" in ATTR_JS
+    assert "cellEdited" in ATTR_JS
+    assert "oninput" not in ATTR_JS
 
 
 def test_salvar_e_descartar_estao_ligados_ao_endpoint_correto():

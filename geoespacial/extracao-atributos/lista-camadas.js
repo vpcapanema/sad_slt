@@ -1,8 +1,9 @@
+import { log, falha } from './logger.js';
 /* Lista de montagem da subseção 1.2: o usuário escolhe uma categoria, marca suas
    camadas, troca de categoria e repete. Nada vai para a bancada antes de confirmar. */
 import { $, el, feedback } from './ui.js';
 import { base, json, post } from './api.js';
-import { entradasParaPrevia, entradasPreparadas, guardarPrevia, desfazerPrevia, enviarPrevia, limparPreparacao } from './preparacao.js';
+import { entradasParaPrevia, guardarPrevia, desfazerPrevia, enviarPrevia, limparPreparacao } from './preparacao.js';
 import { criarEditorListaBases } from './editor-lista-bases.js';
 
 const ROTULO = {
@@ -54,9 +55,11 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
   botoes.confirmar.addEventListener('click',async()=>{
     if(state.busy||state.uploading||state.loadingMap||state.validatingBases)return;
     const candidata={...state};
-    const total=enviarPrevia(candidata);
+    let total;
+    try{total=enviarPrevia(candidata);}catch(error){feedback(error.message,'error');return;}
     if(!total)return;
-    if(!await window.ProcessFeedback.confirmar({title:"Enviar camadas à bancada",message:`Compatibilizar ${total} camada(s) e inserir no mapa da bancada?`,confirmLabel:"Compatibilizar e abrir"}))return;
+    log('bancada.envio_preparado',{camadas:total,entradas:candidata.bancadaEntradas.length,bases:candidata.bancadaBases.length});
+    if(!await window.ProcessFeedback.confirmar({title:"Enviar camadas à bancada",message:`Adicionar ou atualizar ${total} camada(s), preservando as demais camadas da bancada?`,confirmLabel:"Compatibilizar e abrir"}))return;
     window.SICARDExtracao.ocupar(true);
     const COMPATIBILIZAR='Compatibilizar as camadas',MAPA='Inserir no mapa da bancada';
     const proc=window.ProcessFeedback.iniciarCadastro({title:'Enviando camadas à bancada',subtitle:`${total} camada(s)`,tasks:[COMPATIBILIZAR,MAPA]});
@@ -79,8 +82,9 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       window.SICARDExtracao.renderParametros();
       await changed();
       proc.concluirTarefa(MAPA,'Camadas na bancada');
+      log('bancada.envio_concluido',{camadas:total,entradas:state.bancadaEntradas.length,bases:state.bancadaBases.length});
       proc.sucesso({title:'Camadas enviadas à bancada',message:`${total} camada(s) enviada(s) à bancada. Compatibilidade espacial conferida; originais preservados.`});
-    }catch(error){proc.erro({title:'Não foi possível enviar à bancada',message:error.message});}
+    }catch(error){falha('envio_bancada',error);proc.erro({title:'Não foi possível enviar à bancada',message:error.message});}
     finally{window.SICARDExtracao.ocupar(false);render();}
   });
   botoes.limpar.addEventListener('click',()=>{
@@ -90,26 +94,29 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
 
   async function salvar(escopo='analise'){
     if (state.busy || state.validatingBases || (escopo==='bases'&&!paraSalvar().length)) return;
-    if(paraSalvar().some(item=>item.id.startsWith('local:'))){feedback('As bases locais são temporárias. Para salvar uma configuração reutilizável, cadastre as bases no storage e selecione-as novamente.');return;}
-    const nome = (escopo==='bases'&&editor.lista()?.nome)||await window.ProcessFeedback.confirmar({title:escopo==='bases'?'Salvar lista de bases':'Salvar configuração',message:escopo==='bases'?'Dê um nome à lista de bases e categorias.':'Dê um nome à configuração das três subseções.',input:{label:'Nome'},confirmLabel:'Salvar'});
+    const composicao=escopo==='analise'?window.SICARDExtracao.composicaoAtual():null;
+    if(composicao&&(!composicao.entradas.length||!composicao.bases.length)){feedback('Envie as entradas e bases à bancada e marque as camadas da análise antes de salvar.');return;}
+    if(composicao?.entradas.some(e=>e.id.startsWith('local:'))){feedback('A configuração não foi salva: entradas locais precisam ser cadastradas no storage para permitir repetição integral da análise.');return;}
+    const basesSalvas=composicao?composicao.bases:paraSalvar();
+    if(basesSalvas.some(item=>item.id.startsWith('local:'))){feedback('As bases locais são temporárias. Para salvar uma configuração reutilizável, cadastre as bases no storage e selecione-as novamente.');return;}
+    const nome = (escopo==='bases'&&editor.lista()?.nome)||await window.ProcessFeedback.confirmar({title:escopo==='bases'?'Salvar lista de bases':'Salvar configuração',message:escopo==='bases'?'Dê um nome à lista de bases e categorias.':'Dê um nome à composição marcada na bancada, com seu algoritmo, recorte e finalidades.',input:{label:'Nome'},confirmLabel:'Salvar'});
     if (!nome) return;
     if (!nome.trim()) { feedback('Informe um nome para a configuração.'); return; }
     botoes.salvar.disabled = true;
     try {
       // Listas guardam bases e categorias; configurações guardam as três subseções.
-      const grupos = state.categories.map(category=>({category,itens:paraSalvar().filter(item=>item.category===category.id)}))
+      const grupos = state.categories.map(category=>({category,itens:basesSalvas.filter(item=>item.category===category.id)}))
         .filter(grupo=>grupo.itens.length).map(({ category, itens }) => ({
         id: category.id, camadas: itens.map(item => item.id),
         regras: Object.fromEntries(itens.filter(item => item.regra).map(item => [item.id, item.regra])),
       }));
       // A análise inteira: bases com regra, entradas (identificador, filtro, campos) e finalidades.
-      const preparadas = entradasPreparadas(state);
-      const entradas = (preparadas.length?preparadas:state.bancadaEntradas||[])
-        .filter(item=>!item.id.startsWith('local:')).map(item=>({id:item.id,config:item.config||{}}));
+      const entradas = (composicao?.entradas||[]).map(item=>({id:item.id,config:item.config||{}}));
       const finalidades = (state.finalidades || []).map(f => ({ nome: f.nome, campos: [...f.campos] }));
       const resultado = await post('/extracao-atributos/configuracoes',
         { nome: nome.trim(), escopo, chave_lista:escopo==='bases'?editor.lista()?.chave:undefined, categorias: grupos, entradas:escopo==='bases'?[]:entradas, finalidades:escopo==='bases'?[]:finalidades,
           operacao:escopo==='bases'?'':state.operation,opcoes:escopo==='bases'?{}:state.opcoes,nome_saida:escopo==='bases'?'':state.nomeSaida, categoria_ativa:$('#ea-category-select').value });
+      log('configuracao.salva',{bases:resultado.camadas,categorias:resultado.categorias,entradas:resultado.entradas,finalidades:resultado.finalidades});
       if(escopo==='bases')editor.salva(resultado);
       feedback(`${escopo==='bases'?'Lista de bases':'Configuração'} "${resultado.nome}" salva: ${resultado.camadas} camada(s) em ${resultado.categorias} categoria(s),`
         + (escopo==='bases'?' Entradas, algoritmo e saída não são alterados.':` ${resultado.entradas} entrada(s) e ${resultado.finalidades} finalidade(s).`)
@@ -132,7 +139,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       const escolha = await escolherConfiguracao(configuracoes, explorador ? pastaDados.pasta : '',escopo);
       if (!escolha) return;
       const dados = await json(`/extracao-atributos/configuracoes/${encodeURIComponent(escolha)}?escopo=${escopo}${escopo==='bases'?'&lista=true':''}`);
-      if(escopo!=='bases'&&(state.input||state.bases.length||state.staging.length)&&!(await window.ProcessFeedback.confirmar({title:escopo==='bases'?'Carregar listas':'Carregar configuração',message:escopo==='bases'?'Substituir apenas as bases e categorias? Entradas e algoritmo serão mantidos.':'Substituir as escolhas das três subseções pela configuração salva?',warning:'Nenhuma camada ou resultado será apagado do banco.'})))return;
+      if(escopo!=='bases'&&(state.input||state.bases.length||state.staging.length||state.bancadaEntradas.length||state.bancadaBases.length)&&!(await window.ProcessFeedback.confirmar({title:escopo==='bases'?'Carregar listas':'Carregar configuração',message:escopo==='bases'?'Substituir apenas as bases e categorias? Entradas e algoritmo serão mantidos.':'Substituir a composição atual pela configuração salva? Confira a prévia e envie novamente à bancada.',warning:'Nenhuma camada ou resultado será apagado do banco.'})))return;
       // Restaurar integralmente evita executar regras diferentes das que foram salvas.
       const vindas = dados.categorias.flatMap(grupo => grupo.camadas.map(camada => {
         const noCatalogo = state.catalog.find(l => l.id === camada.id);
@@ -147,10 +154,13 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
         if(dados.categoria_ativa)$('#ea-category-select').value=dados.categoria_ativa;
         render();feedback(`Lista "${dados.nome}" carregada para edição. Confirme a lista para validar as camadas e enviá-las à prévia.`);return;
       }
+      state.bancadaEntradas=[];state.bancadaBases=[];state.bases=[];state.staging=[];state.camadaRecorte='';
       editor.carregar(vindas);
       state.input='';state.inputConfig=null;state.entradasExtras=[];
       // Entradas e finalidades vêm da configuração; a entrada principal é a primeira.
       const entradas = dados.entradas || [];
+      const recortes=[...new Set(entradas.flatMap(e=>[e.config,...Object.values(e.config?.camadas||{})]).map(c=>c?.camada_recorte).filter(Boolean))];
+      state.camadaRecorte=recortes.length===1&&vindas.some(b=>b.id===recortes[0])?recortes[0]:'';
       const idsEntrada=new Set(entradas.map(item=>item.id));
       state.bases=state.bases.filter(item=>!idsEntrada.has(item.id));
       state.staging=state.staging.filter(item=>!idsEntrada.has(item.id));
@@ -174,6 +184,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       if (dados.finalidades?.length) partes.push(`${dados.finalidades.length} finalidade(s) restaurada(s).`);
       if(!state.operation)partes.push('Escolha um dos dois algoritmos de enriquecimento e confira suas opções antes de executar.');
       if (dados.ausentes.length) partes.push(`${dados.ausentes.length} referência(s) não estão mais no catálogo: ${dados.ausentes.join(', ')}.`);
+      log('configuracao.carregada',{bases:vindas.length,entradas:entradas.length,finalidades:state.finalidades.length,recorte:!!state.camadaRecorte});
       feedback(partes.join(' '));
     } catch (error) {
       feedback(`Não foi possível carregar: ${error.message}`,'error');

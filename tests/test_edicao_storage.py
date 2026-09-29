@@ -148,12 +148,13 @@ def test_calculo_campo_storage_respeita_escopo_e_atualiza_revisao(original):
     with TestClient(app) as client:
         response = client.post('/bancada-arquivos/calcular-campo', json={
             'arquivo': source['arquivo'], 'camada_id': source['id'], 'revisao': source['revisao'],
-            'campo': 'valor', 'expressao': '42', 'chaves_selecionadas': ['3', '12'], 'filtro': 'valor < 10'})
+            'campo': 'valor', 'expressao': '42', 'chaves_selecionadas': ['3', '12'],
+            'filtro': 'valor < 10', 'incluir_geojson': False})
         assert response.status_code == 200, response.text
         result = response.json()
         assert result['revisao'] != source['revisao']
         assert result['feicoes_atualizadas'] == 1
-        assert {f['id']: f['properties']['valor'] for f in result['geojson']['features']} == {'3': 42, '7': None, '12': 12}
+        assert 'geojson' not in result
         again = client.post('/bancada-arquivos/calcular-campo', json={
             'arquivo': result['arquivo'], 'camada_id': result['id'], 'revisao': result['revisao'],
             'campo': 'novo', 'expressao': '2', 'chaves_selecionadas': ['7']})

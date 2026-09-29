@@ -5,11 +5,13 @@ import unittest
 from pathlib import Path
 
 
-# O nome do servidor UNC exige dois caracteres ou mais. Com um só, os escapes
-# que o JSON obriga (\\r, \\n, \\t) imitavam um caminho de rede e acusavam
-# arquivos de dados onde nao ha caminho nenhum.
+# O nome do servidor UNC exige dois caracteres ou mais e precisa comecar e
+# terminar em caractere de nome: os escapes que o JSON obriga (\\r, \\n, \\t)
+# imitavam um caminho de rede e acusavam arquivos de dados onde nao ha caminho
+# nenhum, inclusive quando o escape vinha colado a pontuacao ("\\t.\\r").
 WINDOWS_HOST_PATH = re.compile(
-    r"(?<![A-Za-z0-9])(?:[A-Za-z]:[\\/]|\\\\[A-Za-z0-9._-]{2,}[\\/])"
+    r"(?<![A-Za-z0-9])"
+    r"(?:[A-Za-z]:[\\/]|\\\\[A-Za-z0-9_-][A-Za-z0-9._-]*[A-Za-z0-9_-][\\/])"
 )
 UNIX_HOST_PATH = re.compile(
     r"(?<![A-Za-z0-9:])/(?:home|Users|opt|tmp|srv|mnt|workspace)/[A-Za-z0-9._~/-]+"
@@ -55,6 +57,14 @@ INTENTIONAL_FIXTURES = {
     # deploy-vm.ps1, listado acima.
     Path("tools/vscode-sicard-tunnel/extension.js"),
     Path("scripts/configure-vm-remote-explorer.ps1"),
+    # Contraparte do deploy-vm.ps1 para a tarefa do editor: localiza git e
+    # plink na maquina de quem edita e conduz o deploy no diretorio da VM.
+    Path("scripts/deploy-task.py"),
+    # Roteiros de validacao que registram o comando exatamente como foi rodado
+    # no Codespace ou no contêiner. O caminho e o assunto, como no README.md.
+    Path("documentacao/VALIDACAO_BANCADA.md"),
+    Path("plugins/municipal-layer/VALIDACAO.md"),
+    Path("skills/auditar-bancada/references/contratos.md"),
 }
 # Bundles minificados de terceiros ou gerados por build. Escapes como Ö
 # imitam um caminho UNC para a expressao regular, e nenhum deles e codigo desta

@@ -32,6 +32,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from api.services import extracao_ogr as espacial
+from api.services.feedback_operacao import operacao, contexto
 
 from api.repositories.camada_geoespacial_repository import _json_safe
 from api.services.extracao_atributos_analise import DIMENSIONS
@@ -65,49 +66,53 @@ def medida(geometria, dimensao):
     return espacial.measure(geometria, dimensao)
 
 
-def preparar(frame, nome, corrigir=True, separar=True, buffer_m=None):
+def preparar(frame, nome, corrigir=True, separar=True, buffer_m=None, progress=None):
     """Camada em EPSG:5880 separada por dimensão: ({dimensão: gdf}, estatísticas).
 
     Cada gdf leva ``__ea_fid`` com a posição original da feição na camada.
     """
     if frame.crs is None:
         raise ValueError(f'{nome}: a camada não tem sistema de referência (CRS).')
-    dados = espacial.reproject(frame, CRS_MEDIDA, nome).reset_index(drop=True)
+    dados = espacial.reproject(frame, CRS_MEDIDA, nome, progress=progress).reset_index(drop=True)
     geometria = dados.geometry.name
     dados[_FID] = np.arange(len(dados))
     estat = {'feicoes': len(dados), 'sem_geometria': 0, 'corrigidas': 0, 'colapsadas': 0}
     vazias = dados.geometry.isna() | dados.geometry.is_empty
     estat['sem_geometria'] = int(vazias.sum())
     dados = dados[~vazias]
-    invalidas = ~dados.geometry.map(espacial.is_valid)
+    with operacao(progress, f'{nome}: verificando validade das geometrias'):
+        invalidas = ~dados.geometry.map(espacial.is_valid)
     if invalidas.any():
         if not corrigir:
             raise ValueError(f'{nome}: há {int(invalidas.sum())} geometria(s) inválida(s) e a correção está desligada.')
         estat['corrigidas'] = int(invalidas.sum())
-    linhas = []
-    for _, feicao in dados.iterrows():
-        geom = feicao[geometria]
-        dimensao_original = _dimensao(geom)
-        if not espacial.is_valid(geom):
-            geom = espacial.make_valid(geom)
-        if buffer_m:
-            geom = espacial.buffer(geom, buffer_m)
-        por_dimensao = defaultdict(list)
-        for parte in _partes(geom):
-            por_dimensao[DIMENSIONS.get(parte.geom_type)].append(parte)
-        if not buffer_m and dimensao_original is not None and not separar:
-            por_dimensao = {dimensao_original: por_dimensao.get(dimensao_original, [])}
-        guardou = False
-        for dimensao, partes in por_dimensao.items():
-            if dimensao is None or not partes:
-                continue
-            junta = _na_dimensao(espacial.collect(partes), dimensao)
-            if junta is None or (dimensao > 0 and medida(junta, dimensao) <= 0):
-                continue
-            linhas.append({**feicao.drop(geometria).to_dict(), '__ea_dim': dimensao, geometria: junta})
-            guardou = True
-        if not guardou:
-            estat['colapsadas'] += 1
+    with operacao(progress, f'{nome}: preparando dimensões geométricas; correção={corrigir}, separação={separar}, buffer={buffer_m or 0} m') as medir:
+        linhas = []
+        for pos, (_, feicao) in enumerate(dados.iterrows()):
+            medir(pos, len(dados), "feições")
+            geom = feicao[geometria]
+            dimensao_original = _dimensao(geom)
+            if not espacial.is_valid(geom):
+                geom = espacial.make_valid(geom)
+            if buffer_m:
+                geom = espacial.buffer(geom, buffer_m)
+            por_dimensao = defaultdict(list)
+            for parte in _partes(geom):
+                por_dimensao[DIMENSIONS.get(parte.geom_type)].append(parte)
+            if not buffer_m and dimensao_original is not None and not separar:
+                por_dimensao = {dimensao_original: por_dimensao.get(dimensao_original, [])}
+            guardou = False
+            for dimensao, partes in por_dimensao.items():
+                if dimensao is None or not partes:
+                    continue
+                junta = _na_dimensao(espacial.collect(partes), dimensao)
+                if junta is None or (dimensao > 0 and medida(junta, dimensao) <= 0):
+                    continue
+                linhas.append({**feicao.drop(geometria).to_dict(), '__ea_dim': dimensao, geometria: junta})
+                guardou = True
+            if not guardou:
+                estat['colapsadas'] += 1
+        medir(len(dados), len(dados), 'feições')
     if not linhas:
         raise ValueError(f'{nome}: nenhuma geometria utilizável depois da preparação.')
     tabela = gpd.GeoDataFrame(linhas, geometry=geometria, crs=CRS_MEDIDA)
@@ -157,7 +162,7 @@ def _descricao_regra(regra):
 
 # ------------------------------------------------------------------ recorte
 
-def recortar(registros, dimensao, unidade, regra, nome_base, usados, dicionario, tema, on_match=None):
+def recortar(registros, dimensao, unidade, regra, nome_base, usados, dicionario, tema, on_match=None, progress=None):
     """Divide os registros nos limites da unidade; atributos da unidade vêm da interseção."""
     campos = _campos_da_base(unidade, regra, nome_base)
     prefixo = regra['prefixo']
@@ -176,7 +181,7 @@ def recortar(registros, dimensao, unidade, regra, nome_base, usados, dicionario,
                        'base': nome_base, 'campo_origem': None, 'regra': 'unidade de recorte'})
     geometria = registros.geometry.name
     unidades = unidade.reset_index(drop=True)
-    overlay = espacial.LayerOverlay(unidades.geometry)
+    overlay = espacial.LayerOverlay(unidades.geometry, progress=contexto(progress, nome_base))
     try:
         partes = overlay.records(registros.geometry, operation='Identity')
     finally:
@@ -185,27 +190,30 @@ def recortar(registros, dimensao, unidade, regra, nome_base, usados, dicionario,
     for reg, pos, geom in partes:
         por_entrada[reg].append((pos, geom))
         if on_match and pos is not None: on_match(reg, pos, geom)
-    linhas = []
-    for reg, (_, registro) in enumerate(registros.iterrows()):
-        base = registro.drop(geometria).to_dict()
-        encontrados = por_entrada.get(reg, [])
-        if dimensao == 0:
-            candidatos = sorted({pos for pos, _ in encontrados if pos is not None}, key=lambda pos: unidades.iloc[pos][_FID])
-            linha = {**base, col_n: len(candidatos), geometria: registro[geometria], col_vinculos:serializar([evidencia(unidades, pos, registro[geometria], fid=int(unidades.iloc[pos][_FID]), comum=geom) for pos,geom in encontrados if pos is not None])}
-            if candidatos:
-                escolhido = unidades.iloc[candidatos[0]]
-                linha.update({col_fid: int(escolhido[_FID]), **{nomes[c]: _valor(escolhido[c]) for c in campos}})
-            linhas.append(linha)
-            continue
-        for pos, geom in encontrados:
-            parte = _na_dimensao(geom, dimensao)
-            if parte is None or medida(parte, dimensao) <= (1e-6 if pos is None else 0):
+    with operacao(progress, f'{nome_base}: consolidando trechos recortados e atributos das unidades') as medir:
+        linhas = []
+        for reg, (_, registro) in enumerate(registros.iterrows()):
+            medir(reg, len(registros), "registros")
+            base = registro.drop(geometria).to_dict()
+            encontrados = por_entrada.get(reg, [])
+            if dimensao == 0:
+                candidatos = sorted({pos for pos, _ in encontrados if pos is not None}, key=lambda pos: unidades.iloc[pos][_FID])
+                linha = {**base, col_n: len(candidatos), geometria: registro[geometria], col_vinculos:serializar([evidencia(unidades, pos, registro[geometria], fid=int(unidades.iloc[pos][_FID]), comum=geom) for pos,geom in encontrados if pos is not None])}
+                if candidatos:
+                    escolhido = unidades.iloc[candidatos[0]]
+                    linha.update({col_fid: int(escolhido[_FID]), **{nomes[c]: _valor(escolhido[c]) for c in campos}})
+                linhas.append(linha)
                 continue
-            linha = {**base, col_n: int(pos is not None), geometria: parte, col_vinculos:serializar([] if pos is None else [evidencia(unidades, pos, registro[geometria], fid=int(unidades.iloc[pos][_FID]), comum=parte)])}
-            if pos is not None:
-                unidade_i = unidades.iloc[pos]
-                linha.update({col_fid: int(unidade_i[_FID]), **{nomes[c]: _valor(unidade_i[c]) for c in campos}})
-            linhas.append(linha)
+            for pos, geom in encontrados:
+                parte = _na_dimensao(geom, dimensao)
+                if parte is None or medida(parte, dimensao) <= (1e-6 if pos is None else 0):
+                    continue
+                linha = {**base, col_n: int(pos is not None), geometria: parte, col_vinculos:serializar([] if pos is None else [evidencia(unidades, pos, registro[geometria], fid=int(unidades.iloc[pos][_FID]), comum=parte)])}
+                if pos is not None:
+                    unidade_i = unidades.iloc[pos]
+                    linha.update({col_fid: int(unidade_i[_FID]), **{nomes[c]: _valor(unidade_i[c]) for c in campos}})
+                linhas.append(linha)
+        medir(len(registros), len(registros), 'registros')
     tabela = gpd.GeoDataFrame(linhas, geometry=geometria, crs=CRS_MEDIDA)
     for coluna in [col_fid, col_n, *nomes.values()]:
         if coluna not in tabela.columns:
@@ -217,12 +225,17 @@ def recortar(registros, dimensao, unidade, regra, nome_base, usados, dicionario,
 
 # ------------------------------------------------------------------ enriquecimento
 
-def _pares_localizacao(registros, dimensao, base, dimensao_base, predicado):
+def _pares_localizacao(registros, dimensao, base, dimensao_base, predicado, progress=None):
     """[(índice do registro, índice na base, medida em comum)] ordenados."""
-    overlay = espacial.LayerOverlay(base.geometry)
+    overlay = espacial.LayerOverlay(base.geometry, progress=progress)
     try:
-        return [(reg, pos, medida(comum, min(dimensao, dimensao_base)), comum)
-                for reg, pos, comum in overlay.records(registros.geometry, predicate_name=PREDICADOS[predicado])]
+        partes = overlay.records(registros.geometry, predicate_name=PREDICADOS[predicado])
+        with operacao(progress, 'Medindo sobreposições dos pares confirmados pelo predicado espacial') as medir:
+            pares = []
+            for i, (reg, pos, comum) in enumerate(partes):
+                pares.append((reg, pos, medida(comum, min(dimensao, dimensao_base)), comum))
+                medir(i + 1, len(partes), 'pares confirmados')
+            return pares
     finally:
         overlay.close()
 
@@ -249,6 +262,7 @@ def _pares_atributo(registros, base, regra, nome_base):
 def enriquecer_base(registros, dimensao, base, dimensao_base, regra, nome_base, usados, dicionario, tema, referencias=None, on_match=None, progress=None):
     from api.services.extracao_correspondencias import registro as evidencia, serializar
     from api.services.extracao_atributos_estatisticas import agregar
+    progress = contexto(progress, nome_base)
     campos = _campos_da_base(base, regra, nome_base)
     faltando = set(regra['estatisticas_campos']) - set(base.columns)
     if faltando:
@@ -256,11 +270,12 @@ def enriquecer_base(registros, dimensao, base, dimensao_base, regra, nome_base, 
     prefixo = regra['prefixo']
     multiplicidade = regra['multiplicidade']
     if regra['ligacao'] == 'atributo':
-        pares = [(*par, None) for par in _pares_atributo(registros, base, regra, nome_base)]
+        with operacao(progress, f"Associando registros por atributos {regra['chave_entrada']} e {regra['chave_base']}; percentual interno indisponível"):
+            pares = [(*par, None) for par in _pares_atributo(registros, base, regra, nome_base)]
         if multiplicidade == 'maior_sobreposicao':
             multiplicidade = 'primeira'
     else:
-        pares = _pares_localizacao(registros, dimensao, base, dimensao_base, regra['predicado'])
+        pares = _pares_localizacao(registros, dimensao, base, dimensao_base, regra['predicado'], progress=progress)
     nomes = {campo: _nome_livre(prefixo + str(campo), usados) for campo in campos}
     col_vinculos = _nome_livre(prefixo + 'correspondencias', usados)
     col_n = _nome_livre(prefixo + 'n_feicoes', usados)
@@ -289,48 +304,47 @@ def enriquecer_base(registros, dimensao, base, dimensao_base, regra, nome_base, 
     linhas = []
     com, multiplos = 0, 0
     if progress:
-        getattr(progress,'detalhe',progress)(f'{nome_base}: {len(pares)} correspondências candidatas; consolidando {len(registros)} registros e {len(campos)} campos.')
-    for reg, (_, registro) in enumerate(registros.iterrows()):
-        if progress and reg % 32 == 0:
-            if hasattr(progress,'tarefa'): progress.tarefa(reg,len(registros))
-            getattr(progress,'detalhe',progress)(f'{nome_base}: {reg}/{len(registros)} registros consolidados; {com} com correspondência, {multiplos} com múltiplas feições.')
-        lista = sorted(candidatos.get(reg, []))  # ordem da feição na base
-        com += bool(lista)
-        multiplos += len(lista) > 1
-        linha = {**registro.to_dict(), col_n: len(lista), col_vinculos: serializar([
-            evidencia(base, pos, registro[geometria], fid=fid, espacial=regra['ligacao']=='localizacao',
-                      demanda_original=(referencias or {}).get((registro.get('camada_origem'),registro.get('fid_origem'))), comum=comuns.get((reg,pos)))
-            for fid, pos, _ in lista])}
-        if not lista:
+        getattr(progress,'detalhe',progress)(f'{nome_base}: {len(pares)} pares confirmados; consolidando {len(registros)} registros e {len(campos)} campos.')
+    with operacao(progress, f'Consolidando vínculos e {len(campos)} campos; multiplicidade {multiplicidade}') as medir:
+        for reg, (_, registro) in enumerate(registros.iterrows()):
+            medir(reg, len(registros), 'registros', f'{reg}/{len(registros)} registros consolidados; {com} com correspondência, {multiplos} com múltiplas feições; {len(campos)} campos, regra {multiplicidade}.')
+            lista = sorted(candidatos.get(reg, []))  # ordem da feição na base
+            com += bool(lista)
+            multiplos += len(lista) > 1
+            linha = {**registro.to_dict(), col_n: len(lista), col_vinculos: serializar([
+                evidencia(base, pos, registro[geometria], fid=fid, espacial=regra['ligacao']=='localizacao',
+                          demanda_original=(referencias or {}).get((registro.get('camada_origem'),registro.get('fid_origem'))), comum=comuns.get((reg,pos)))
+                for fid, pos, _ in lista])}
+            if not lista:
+                linhas.append(linha)
+                continue
+            if multiplicidade == 'todas':
+                for fid, pos, _ in lista:
+                    feicao = base.iloc[pos]
+                    linhas.append({**linha, col_fid: fid, **{nomes[c]: _valor(feicao[c]) for c in campos}})
+                continue
+            if multiplicidade == 'resumo':
+                feicoes = [base.iloc[pos] for _, pos, _ in lista]
+                for campo in campos:
+                    linha[nomes[campo]] = agregar([feicao[campo] for feicao in feicoes],
+                        regra['estatisticas_campos'].get(campo, 'valores'))
+                linhas.append(linha)
+                continue
+            if multiplicidade == 'maior_sobreposicao':
+                escolhido = max(lista, key=lambda item: (item[2], -item[0]))
+            else:
+                escolhido = lista[0]
+            fid, pos, valor_medida = escolhido
+            feicao = base.iloc[pos]
+            linha.update({col_fid: fid, **{nomes[c]: _valor(feicao[c]) for c in campos}})
+            if col_medida:
+                linha[col_medida] = valor_medida
             linhas.append(linha)
-            continue
-        if multiplicidade == 'todas':
-            for fid, pos, _ in lista:
-                feicao = base.iloc[pos]
-                linhas.append({**linha, col_fid: fid, **{nomes[c]: _valor(feicao[c]) for c in campos}})
-            continue
-        if multiplicidade == 'resumo':
-            feicoes = [base.iloc[pos] for _, pos, _ in lista]
-            for campo in campos:
-                linha[nomes[campo]] = agregar([feicao[campo] for feicao in feicoes],
-                    regra['estatisticas_campos'].get(campo, 'valores'))
-            linhas.append(linha)
-            continue
-        if multiplicidade == 'maior_sobreposicao':
-            escolhido = max(lista, key=lambda item: (item[2], -item[0]))
-        else:
-            escolhido = lista[0]
-        fid, pos, valor_medida = escolhido
-        feicao = base.iloc[pos]
-        linha.update({col_fid: fid, **{nomes[c]: _valor(feicao[c]) for c in campos}})
-        if col_medida:
-            linha[col_medida] = valor_medida
-        linhas.append(linha)
+        medir(len(registros), len(registros), 'registros')
     tabela = gpd.GeoDataFrame(linhas, geometry=geometria, crs=CRS_MEDIDA)
     for coluna in [col_n, col_fid, col_medida, *nomes.values()]:
         if coluna and coluna not in tabela.columns:
             tabela[coluna] = None
-    if progress and hasattr(progress,'tarefa'): progress.tarefa(len(registros),len(registros))
     return tabela.reset_index(drop=True), {
         'base': nome_base, 'papel': 'atributos', 'ligacao': regra['ligacao'], 'multiplicidade': multiplicidade,
         'registros_com_correspondencia': com, 'registros_com_multiplas_feicoes': multiplos,
@@ -502,7 +516,7 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
         dados, estat = filtrar_entrada(item['frame'], config, item['nome'])
         campos_uniao.extend(c for c in dados.columns
                             if c not in (dados.geometry.name, _POS, _ID) and c not in campos_uniao)
-        partes, estat_prep = preparar(dados, item['nome'])
+        partes, estat_prep = preparar(dados, item['nome'], progress=progress)
         estat_entradas.append({'nome': item['nome'], **estat, 'preparacao': estat_prep})
         for dimensao, frame in partes.items():
             por_dimensao[dimensao].append(frame.drop(columns=_FID).assign(**{_ORIGEM: item['nome']}))
@@ -515,7 +529,7 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
             progress(f"Preparando a base {categoria['nome']} / {camada['nome']}")
             prep = regra['preparacao']
             partes, estat = preparar(camada['frame'], camada['nome'], corrigir=prep['corrigir_geometrias'],
-                                     separar=prep['separar_por_tipo'], buffer_m=prep['buffer_m'])
+                                     separar=prep['separar_por_tipo'], buffer_m=prep['buffer_m'], progress=progress)
             item = {'categoria_id':categoria.get('id',categoria['nome']), 'base_id':camada.get('id',camada['nome']), 'tema': categoria['nome'], 'nome': camada['nome'], 'regra': regra, 'partes': partes,
                     'preparacao': estat}
             if regra['papel'] == 'recorte':
@@ -556,7 +570,7 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
             progress(f"Recortando {nome_dim} pela unidade {recorte['nome']}")
             inicio_campos = len(dicionario)
             registros, info = recortar(registros, dimensao, recorte['partes'][2], recorte['regra'], recorte['nome'],
-                                       usados, dicionario, recorte['tema'])
+                                       usados, dicionario, recorte['tema'], progress=progress)
             for d in dicionario[inicio_campos:]:
                 d.update(categoria_id=recorte['categoria_id'], base_id=recorte['base_id'], ligacao_espacial=True)
             etapas.append(info)
@@ -580,11 +594,12 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
         registros = registros.reset_index(drop=True)
         registros.insert(0, 'id_registro', np.arange(1, len(registros) + 1))
         progress(f'Conferindo {nome_dim}')
-        validacao[nome_dim] = _conferir(registros, dimensao, referencia, recorte_conferencia, conferencias)
+        with operacao(progress, f'{nome_dim}: conferindo conservação geométrica e escolhas de correspondência'):
+            validacao[nome_dim] = _conferir(registros, dimensao, referencia, recorte_conferencia, conferencias)
         if not validacao[nome_dim]['aprovada']:
             raise ValueError(f'{nome_dim}: resultado reprovado na conferência geométrica; verifique sobreposição entre unidades de recorte e correspondências.')
         ordem = [d['campo'] for d in dicionario if d['campo'] in registros.columns]
-        registros = espacial.reproject(gpd.GeoDataFrame(registros[ordem], geometry=registros.geometry, crs=CRS_MEDIDA), CRS_SAIDA)
+        registros = espacial.reproject(gpd.GeoDataFrame(registros[ordem], geometry=registros.geometry, crs=CRS_MEDIDA), CRS_SAIDA, progress=progress)
         saidas[nome_dim] = registros
         relatorio_camadas[nome_dim] = {'feicoes_entrada': len(entrada_dim), 'registros': len(registros),
                                        'etapas': [{k: v for k, v in e.items() if k not in ('coluna_fid', 'coluna_correspondencias', 'predicado')}
@@ -592,7 +607,8 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
         dicionario_geral.extend({**d, 'camada': nome_dim} for d in dicionario)
     validacao['id_origem_repetidos'] = {e['nome']: e['id_origem_repetidos'] for e in estat_entradas}
     validacao['aprovada'] = all(v['aprovada'] for v in validacao.values() if isinstance(v, dict) and 'aprovada' in v)
-    materializar(saidas, dicionario_geral, categorias)
+    with operacao(progress, 'Materializando atributos analíticos e dicionário da saída'):
+        materializar(saidas, dicionario_geral, categorias)
     return {'intersecoes_territoriais':snapshot_saida(saidas), 'camadas': saidas, 'finalidades': _finalidades(saidas, finalidades), 'dicionario': dicionario_geral,
             'relatorio': {'geoprocessamento': espacial.provenance(), 'entradas': estat_entradas, 'camadas': relatorio_camadas, 'validacao': validacao,
                           'bases': [{'tema': b['tema'], 'nome': b['nome'], 'preparacao': b['preparacao']}

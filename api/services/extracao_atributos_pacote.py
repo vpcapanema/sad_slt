@@ -22,6 +22,7 @@ from api.services import extracao_atributos_aliases as aliases
 from api.services import extracao_atributos_exportacao as exportacao
 from api.services import extracao_atributos_relatorios as relatorios
 from api.services.ciclo_vida_arquivos import apelido
+from api.services.feedback_operacao import operacao
 
 # Chave -> (sufixo do arquivo, rótulo). A ordem é a ordem dentro do .zip.
 ARQUIVOS = {
@@ -185,19 +186,24 @@ def ambiente() -> dict[str, str]:
 
 
 def montar_pacote(result: dict, saida, entrada, proc: dict, bases=(), mapa_base: bool = True,
-                  intersecoes=None, incluir_entrada=True) -> tuple[bytes, str, list[dict]]:
+                  intersecoes=None, incluir_entrada=True, progress=None) -> tuple[bytes, str, list[dict]]:
     """Escreve os cinco arquivos, confere cada um e devolve (zip, nome do zip, manifesto)."""
     arquivos = nomes(proc['nome_saida'])
     with tempfile.TemporaryDirectory(prefix='sicard_extracao_') as temporaria:
         pasta = Path(temporaria)
-        escrever_gpkg(saida, entrada, pasta / arquivos['gpkg'], incluir_entrada)
+        with operacao(progress, 'Gravando GeoPackage de saída; percentual interno indisponível'):
+            escrever_gpkg(saida, entrada, pasta / arquivos['gpkg'], incluir_entrada)
         mapa = pasta / 'mapa_localizacao.png'
         # No mapa vão só as interseções: com entrada de pontos a tabela traz também os ausentes.
-        aviso_mapa = mapa_png(entrada, [(categoria, aliases.nome_camada(None, nome), frame) for categoria, nome, frame in bases],
-                              saida if intersecoes is None else intersecoes, mapa, mapa_base)
-        relatorios.pdf_analitico(result, saida, proc, pasta / arquivos['pdf_analitico'], mapa=mapa, aviso_mapa=aviso_mapa)
-        exportacao.escrever_xlsx(saida, result['tabela_saida'], pasta / arquivos['xlsx'])
-        exportacao.escrever_csv(saida, pasta / arquivos['csv'])
+        with operacao(progress, 'Renderizando mapa de localização e consultando mapa-base quando habilitado'):
+            aviso_mapa = mapa_png(entrada, [(categoria, aliases.nome_camada(None, nome), frame) for categoria, nome, frame in bases],
+                                  saida if intersecoes is None else intersecoes, mapa, mapa_base)
+        with operacao(progress, 'Gerando relatório analítico PDF'):
+            relatorios.pdf_analitico(result, saida, proc, pasta / arquivos['pdf_analitico'], mapa=mapa, aviso_mapa=aviso_mapa)
+        with operacao(progress, 'Gerando planilha XLSX de atributos'):
+            exportacao.escrever_xlsx(saida, result['tabela_saida'], pasta / arquivos['xlsx'])
+        with operacao(progress, 'Exportando tabela CSV de atributos'):
+            exportacao.escrever_csv(saida, pasta / arquivos['csv'])
         # O relatório de processamento sai por último para listar tamanho e SHA-256 dos demais arquivos.
         conteudo = []
         for chave, nome in arquivos.items():
@@ -206,18 +212,20 @@ def montar_pacote(result: dict, saida, entrada, proc: dict, bases=(), mapa_base:
             else:
                 dados = (pasta / nome).read_bytes()
                 conteudo.append((nome, ARQUIVOS[chave][1], len(dados), sha256(dados).hexdigest()))
-        relatorios.pdf_processamento(result, saida, {**proc, 'arquivos': arquivos},
-                                     pasta / arquivos['pdf_processamento'], conteudo)
+        with operacao(progress, 'Gerando relatório de processamento PDF'):
+            relatorios.pdf_processamento(result, saida, {**proc, 'arquivos': arquivos},
+                                         pasta / arquivos['pdf_processamento'], conteudo)
         manifesto = []
         memoria = io.BytesIO()
         with zipfile.ZipFile(memoria, 'w', zipfile.ZIP_DEFLATED) as pacote:
             for chave, nome in arquivos.items():
-                dados = (pasta / nome).read_bytes()
-                if not dados:
-                    raise ValueError(f'O arquivo {nome} do pacote saiu vazio.')
-                pacote.writestr(nome, dados)
-                manifesto.append({'chave': chave, 'nome': nome, 'descricao': ARQUIVOS[chave][1] if incluir_entrada or chave != 'gpkg' else 'GeoPackage com a geometria resultante (entrada local temporária não incluída)',
-                                  'tamanho_bytes': len(dados), 'sha256': sha256(dados).hexdigest()})
+                with operacao(progress, f'Conferindo, calculando SHA-256 e compactando {nome}'):
+                    dados = (pasta / nome).read_bytes()
+                    if not dados:
+                        raise ValueError(f'O arquivo {nome} do pacote saiu vazio.')
+                    pacote.writestr(nome, dados)
+                    manifesto.append({'chave': chave, 'nome': nome, 'descricao': ARQUIVOS[chave][1] if incluir_entrada or chave != 'gpkg' else 'GeoPackage com a geometria resultante (entrada local temporária não incluída)',
+                                      'tamanho_bytes': len(dados), 'sha256': sha256(dados).hexdigest()})
     return memoria.getvalue(), f"{Path(arquivos['gpkg']).stem}.zip", manifesto
 
 

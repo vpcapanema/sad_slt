@@ -2024,6 +2024,136 @@ def listar_fluxos(modulo: str | None = Query(None)) -> list[FluxoSchema]:
     return [FluxoSchema(**f) for f in fluxos]
 
 
+class PrepararCamadaOriginal(BaseModel):
+    id: str = Field(min_length=1, max_length=1200)
+    arquivo: str = Field(min_length=1, max_length=1000)
+
+
+class LerTabelaCamadaOriginal(PrepararCamadaOriginal):
+    revisao: str = Field(min_length=1, max_length=128)
+    offset: int = Field(default=0, ge=0, le=10_000_000)
+    limite: int = Field(default=100, ge=1, le=500)
+
+
+class LerGeometriasCamadaOriginal(PrepararCamadaOriginal):
+    revisao: str = Field(min_length=1, max_length=128)
+    ids: list[str] = Field(min_length=1, max_length=100)
+
+
+class ConsultarCamadaOriginal(PrepararCamadaOriginal):
+    revisao: str = Field(min_length=1, max_length=128)
+    expressao: str = Field(min_length=1, max_length=2000)
+    inverter_selecao: bool = False
+    offset: int = Field(default=0, ge=0, le=10_000_000)
+    limite: int = Field(default=100, ge=1, le=1000)
+
+
+def _erro_bancada_camada_original(exc: Exception) -> HTTPException:
+    if isinstance(exc, FileNotFoundError):
+        return HTTPException(404, str(exc))
+    if isinstance(exc, DatabaseUnavailableError):
+        return HTTPException(503, "Catálogo do banco indisponível")
+    if isinstance(exc, ValueError):
+        return HTTPException(422, str(exc))
+    logger.exception("Falha ao ler camada original da bancada", exc_info=exc)
+    return HTTPException(500, "Não foi possível ler a camada original")
+
+
+@router.post("/bancada-arquivos/preparar")
+async def preparar_camada_original(payload: PrepararCamadaOriginal) -> dict[str, Any]:
+    """Retorna metadados da camada original sem materializar GeoJSON."""
+    from api.services import bancada_camada_original
+
+    try:
+        return await run_in_threadpool(
+            bancada_camada_original.preparar, payload.id, payload.arquivo
+        )
+    except (FileNotFoundError, ValueError, DatabaseUnavailableError, RuntimeError) as exc:
+        raise _erro_bancada_camada_original(exc) from exc
+
+
+@router.post("/bancada-arquivos/tabela")
+async def ler_tabela_camada_original(payload: LerTabelaCamadaOriginal) -> dict[str, Any]:
+    """Lê uma página de atributos sem carregar geometrias nem GeoJSON."""
+    from api.services import bancada_camada_original
+
+    try:
+        return await run_in_threadpool(
+            bancada_camada_original.ler_tabela,
+            payload.id,
+            payload.arquivo,
+            payload.revisao,
+            payload.offset,
+            payload.limite,
+        )
+    except (FileNotFoundError, ValueError, DatabaseUnavailableError, RuntimeError) as exc:
+        raise _erro_bancada_camada_original(exc) from exc
+
+
+@router.post("/bancada-arquivos/geometrias")
+async def ler_geometrias_camada_original(
+    payload: LerGeometriasCamadaOriginal,
+) -> dict[str, Any]:
+    """Lê geometrias em EPSG:4326 apenas das feições solicitadas por FID."""
+    from api.services import bancada_camada_original
+
+    try:
+        return await run_in_threadpool(
+            bancada_camada_original.ler_geometrias,
+            payload.id,
+            payload.arquivo,
+            payload.revisao,
+            payload.ids,
+        )
+    except (FileNotFoundError, ValueError, DatabaseUnavailableError, RuntimeError) as exc:
+        raise _erro_bancada_camada_original(exc) from exc
+
+
+@router.post("/bancada-arquivos/consulta")
+async def consultar_camada_original(payload: ConsultarCamadaOriginal) -> dict[str, Any]:
+    """Filtra todos os registros por expressão e devolve uma página de FIDs."""
+    from api.services import bancada_camada_original
+
+    try:
+        return await run_in_threadpool(
+            bancada_camada_original.consultar,
+            payload.id,
+            payload.arquivo,
+            payload.revisao,
+            payload.expressao,
+            payload.inverter_selecao,
+            payload.offset,
+            payload.limite,
+        )
+    except (FileNotFoundError, ValueError, DatabaseUnavailableError, RuntimeError) as exc:
+        raise _erro_bancada_camada_original(exc) from exc
+
+
+@router.get("/bancada-arquivos/tiles/{z}/{x}/{y}.pbf")
+async def obter_tile_camada_original(
+    z: int,
+    x: int,
+    y: int,
+    id: str = Query(min_length=1, max_length=1200),
+    arquivo: str = Query(min_length=1, max_length=1000),
+    revisao: str = Query(min_length=1, max_length=128),
+) -> Response:
+    """Tile MVT do arquivo local registrado original; camada interna "camada"."""
+    from api.services import bancada_camada_original
+
+    try:
+        conteudo = await run_in_threadpool(
+            bancada_camada_original.tile_local, id, arquivo, revisao, z, x, y
+        )
+    except (FileNotFoundError, ValueError, DatabaseUnavailableError, RuntimeError) as exc:
+        raise _erro_bancada_camada_original(exc) from exc
+    return Response(
+        conteudo,
+        media_type="application/vnd.mapbox-vector-tile",
+        headers={"Cache-Control": "private, max-age=300"},
+    )
+
+
 router.include_router(conciliacao_router)
 from api.routers.extracao_atributos import router as extracao_router
 router.include_router(extracao_router)

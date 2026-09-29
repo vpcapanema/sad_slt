@@ -13,6 +13,7 @@ from api.config import get_settings
 
 _COOKIE_NAME = "slt_session"
 _TTL_SECONDS = 60 * 60 * 8  # 8 horas
+REMEMBER_TTL_SECONDS = 60 * 60 * 24 * 30  # prazo absoluto de 30 dias
 SIGMA_PROFILES = frozenset({"VISUALIZADOR", "OPERADOR", "ANALISTA", "GESTOR", "ADMIN"})
 
 
@@ -47,7 +48,7 @@ def _b64url_decode(raw: str) -> bytes:
     return base64.urlsafe_b64decode(raw + pad)
 
 
-def create_token(user: SessionUser) -> str:
+def create_token(user: SessionUser, *, permanecer_conectado: bool = False) -> str:
     settings = get_settings()
     payload = {
         "sub": user.id,
@@ -55,7 +56,7 @@ def create_token(user: SessionUser) -> str:
         "username": user.username,
         "nome": user.nome,
         "tipo": user.tipo_usuario,
-        "exp": int(time.time()) + _TTL_SECONDS,
+        "exp": int(time.time()) + (REMEMBER_TTL_SECONDS if permanecer_conectado else _TTL_SECONDS),
     }
     body = _b64url_encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
     sig = hmac.new(

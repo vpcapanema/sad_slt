@@ -3,6 +3,7 @@ from copy import deepcopy
 import json
 from api.services.extracao_atributos_regras import ConfigCamada
 from api.services.extracao_correspondencias import serializar
+from api.services.feedback_operacao import contexto
 
 
 def entradas_do_lote(entradas):
@@ -69,13 +70,9 @@ def executar(entradas, categorias, operacao, progress, finalidades=None):
             for c in bases:
                 for b in c['camadas']: b['regra']['papel'] = 'atributos'
         progress(f"Camada {i+1} de {len(entradas)}: {entry['nome']}")
-        def progresso_camada(message):
-            progress(f"Camada {i+1}/{len(entradas)} · {entry['nome']} — {message}")
-        if hasattr(progress,'tarefa'): progresso_camada.tarefa = progress.tarefa
-        if hasattr(progress,'detalhe'): progresso_camada.detalhe = lambda message: progress.detalhe(f"{entry['nome']} — {message}")
+        progresso_camada = contexto(progress, f"Camada {i+1}/{len(entradas)} · {entry['nome']}")
         if hasattr(progress,'progresso_fase'): progresso_camada.progresso_fase = lambda feitas,total: progress.progresso_fase(i + feitas / max(1,total),len(entradas))
         res = (join if modo=='estatisticas' else identity)(entradas=[entry],categorias=bases,progress=progresso_camada,finalidades=[])
-        if hasattr(progress,'tarefa'): progress.tarefa(1,1)
         if hasattr(progress,'progresso_fase'): progress.progresso_fase(i+1,len(entradas))
         remap = {n:f"{entry['chave']}_{n}" for n in res['camadas']}
         campos = [{**d,'camada':remap[d['camada']]} for d in res['dicionario']]
@@ -91,7 +88,11 @@ def executar(entradas, categorias, operacao, progress, finalidades=None):
         individuais.append({'chave':entry['chave'],'nome':entry['nome'],'nome_saida':config.get('nome_saida') or entry['nome'],
             'operacao':modo,'camadas':list(remap.values()),'validacao':res['relatorio']['validacao'], 'entrada':entry})
     # As finalidades são projeções tabulares; jamais removem atributos das saídas integrais.
+    disponiveis = set().union(*(set(df.columns) for df in camadas.values()))
     for i,f in enumerate(finalidades or []):
+        ausentes = sorted(set(f['campos']) - disponiveis)
+        if ausentes:
+            raise ValueError(f"Finalidade {f['nome']}: campos indisponíveis na composição atual: {', '.join(ausentes)}. Revise a finalidade antes de executar novamente.")
         targets = {n:df[[c for c in f['campos'] if c in df.columns]+[df.geometry.name]].copy()
                    for n,df in camadas.items() if any(c in df.columns for c in f['campos'])}
         fins[f'finalidade_{i+1}'] = {**f,'camadas':targets}

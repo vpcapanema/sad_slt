@@ -285,12 +285,6 @@ DESCONTINUADO_AHP = (
     "em /restrict/analise-multicriterio/."
 )
 
-DESCONTINUADO_PROCESSO = (
-    "As etapas avulsas da rodada foram descontinuadas. Use "
-    "/restrict/hierarquizacao/processos/."
-)
-
-
 @app.get("/restrict/ahp/", include_in_schema=False)
 @app.get("/restrict/ahp/{pagina}/", include_in_schema=False)
 def pagina_ahp_descontinuada(request: Request, pagina: str = "") -> Response:
@@ -334,25 +328,6 @@ def pagina_julgamento_multicriterio(
 @app.get("/public/analise-multicriterio/{token}/", include_in_schema=False)
 def pagina_formulario_multicriterio(request: Request, token: str) -> Response:
     return render_page(request, "paginas/analise_multicriterio/formulario.html", token=token)
-
-
-HIERARQUIZACAO_PROCESS_PAGES = {
-    "nova": "step1-config.html",
-    "objetos": "step2-objetos.html",
-    "avaliacao": "step3-avaliacao.html",
-    "ranking": "step4-ranking.html",
-    "homologacao": "step5-homologar.html",
-}
-
-
-@app.get("/restrict/hierarquizacao/processos/{pagina}/", include_in_schema=False)
-def pagina_processo_descontinuada(request: Request, pagina: str) -> Response:
-    """Etapas avulsas da rodada desabilitadas; ver `pagina_ahp_descontinuada`."""
-    from fastapi import HTTPException
-
-    if pagina not in HIERARQUIZACAO_PROCESS_PAGES:
-        raise HTTPException(status_code=404, detail="Etapa de hierarquização não encontrada")
-    raise HTTPException(status_code=410, detail=DESCONTINUADO_PROCESSO)
 
 
 @app.get("/restrict/{pagina}/", include_in_schema=False)
@@ -406,11 +381,6 @@ LEGACY_PAGE_REDIRECTS = {
     "/restrict/ahp/step5-comparacao.html": "/restrict/ahp/comparacao/",
     "/restrict/ahp/step6-resultados.html": "/restrict/ahp/resultados/",
     "/restrict/ahp/step7-alternativas.html": "/restrict/ahp/alternativas/",
-    "/restrict/hierarquizacao/step1-config.html": "/restrict/hierarquizacao/processos/nova/",
-    "/restrict/hierarquizacao/step2-objetos.html": "/restrict/hierarquizacao/processos/objetos/",
-    "/restrict/hierarquizacao/step3-avaliacao.html": "/restrict/hierarquizacao/processos/avaliacao/",
-    "/restrict/hierarquizacao/step4-ranking.html": "/restrict/hierarquizacao/processos/ranking/",
-    "/restrict/hierarquizacao/step5-homologar.html": "/restrict/hierarquizacao/processos/homologacao/",
     # A integração por navegação no portal SEI virou repositório de PDFs.
     "/restrict/sei-integracao/": "/restrict/sei-documentos/",
     "/restrict/hierarquizacao/index.html": "/restrict/hierarquizacao/",

@@ -44,7 +44,7 @@ assert.equal(await p.locator('#ea-staging').count(),0);
 assert.equal(await p.locator('#ea-config-carregar').evaluate(n=>n.compareDocumentPosition(document.querySelector('#ea-input-preview'))&Node.DOCUMENT_POSITION_FOLLOWING),4);
 assert.equal(await p.locator('#ea-municipal-open').evaluate(n=>n.closest('.ea-config-grid')===null),true);
 assert.deepEqual(await p.locator('#ea-base-form .ea-layer-actions button').evaluateAll(ns=>ns.map(n=>n.id)),['ea-refresh','ea-base-browse','ea-base-local-upload','ea-staging-carregar','ea-staging-salvar']);
-async function choose(button,id){await p.locator(button).click();const d=p.locator('dialog.ea-storage-dialog');await d.getByRole('button',{name:'Camadas cadastradas no banco',exact:true}).click();await d.locator(`[data-file="${id}"]`).click();await d.locator('.ea-storage-confirm-button').click();await d.waitFor({state:'detached'});}
+async function choose(button,id){await p.locator(button).click();const d=p.locator('dialog.ea-storage-dialog');await d.getByRole('button',{name:'Camadas cadastradas no banco',exact:true}).click();await d.locator(`[data-file="${id}"]`).click();await d.locator('.ea-storage-confirm-button').click();if(button==='#ea-input-browse'){await d.locator('#pfsConfirmBox.pfs-active').waitFor();await d.locator('#pfsConfirmOk').click();}await d.waitFor({state:'detached'});}
 await choose('#ea-input-browse','entrada');await p.selectOption('#ea-operation','estatisticas');await p.fill('#ea-nome-saida','Preservar saída');await p.selectOption('#ea-category-select','ambiental');await choose('#ea-base-browse','base');
 const tree=p.locator('#ea-input-preview-layers');
 await tree.getByRole('checkbox',{name:'Visibilidade no mapa: base',exact:true}).waitFor();

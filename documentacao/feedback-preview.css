@@ -1,0 +1,357 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #eef3f6;
+  color: #17314a;
+  font: 16px/1.5 "Segoe UI", Arial, sans-serif;
+}
+.preview { max-width: 1080px; margin: 0 auto; padding: 48px 24px 72px; }
+.preview-header { max-width: 720px; margin-bottom: 32px; }
+.preview-label { font-size: 0.83rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #116593; }
+.preview h1 { margin: 12px 0; font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.2; }
+.preview-header p { margin: 0; color: #485e6e; }
+.preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 16px; }
+.preview-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 142px;
+  padding: 22px;
+  border: 1px solid #cddbe5;
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  box-shadow: 0 4px 18px rgba(0, 59, 90, 0.06);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.preview-grid button:hover { border-color: #116593; box-shadow: 0 8px 24px rgba(0, 59, 90, 0.12); }
+.preview-grid button:focus-visible { outline: 3px solid #116593; outline-offset: 3px; }
+.preview-grid i { color: #116593; font-size: 1.4rem; }
+.preview-grid span { color: #5a6570; font-size: 0.9rem; }
+.preview-note { margin-top: 28px; padding: 16px; border-left: 4px solid #116593; background: #fff; font-size: 0.9rem; }
+
+/* Apenas a prévia: disposição compacta da referência, com o visual do componente SICARD. */
+#pfsComponente .pfs-header {
+  gap: 9px;
+  padding: 9px 16px;
+}
+#pfsComponente .pfs-header-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 17px;
+}
+#pfsComponente .pfs-header-text h3 { font-size: 1rem; }
+#pfsComponente .pfs-close {
+  width: 30px;
+  height: 30px;
+  font-size: 0.9rem;
+}
+#pfsComponente .pfs-footer,
+#pfsComponente .pfs-progress-footer {
+  gap: 8px;
+  padding: 8px 16px;
+}
+#pfsComponente .pfs-btn {
+  min-height: 34px;
+  padding: 7px 16px;
+  font-size: 13px;
+}
+#pfsComponente .pfs-confirm-input-wrap .pfs-credential-field > span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--pfs-gray-700);
+}
+#pfsComponente #pfsProgressBox,
+#pfsComponente #pfsSuccessBox,
+#pfsComponente #pfsPartialBox,
+#pfsComponente #pfsErrorBox {
+  width: min(540px, 100%);
+  height: min(450px, calc(100vh - 32px));
+}
+#pfsComponente #pfsConfirmBox {
+  width: min(520px, 100%);
+  height: min(255px, calc(100vh - 32px));
+}
+#pfsComponente #pfsCredentialBox {
+  width: min(520px, 100%);
+  height: min(390px, calc(100vh - 32px));
+}
+#pfsComponente #pfsSuccessBox .pfs-body,
+#pfsComponente #pfsPartialBox .pfs-body,
+#pfsComponente #pfsErrorBox .pfs-body {
+  display: flex;
+  flex-direction: column;
+}
+#pfsComponente #pfsSuccessBox .pfs-result-content,
+#pfsComponente #pfsPartialBox .pfs-result-content,
+#pfsComponente #pfsErrorBox .pfs-result-content {
+  width: 100%;
+  margin-block: auto;
+}
+#pfsComponente #pfsConfirmBox .pfs-body,
+#pfsComponente #pfsCredentialBox .pfs-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+#pfsComponente #pfsProgressBox .pfs-header-text p,
+#pfsComponente #pfsProgressBox .pfs-current,
+#pfsComponente #pfsProgressBox .pfs-contact,
+#pfsComponente #pfsProgressBox .pfs-log-tools,
+#pfsComponente #pfsProgressBox .pfs-log,
+#pfsComponente #pfsProgressBox .pfs-history-note,
+#pfsComponente #pfsProgressBox .pfs-completed-details,
+#pfsComponente #pfsProgressBox .pfs-progress-wrapper { display: none; }
+#pfsComponente #pfsProgressBox .pfs-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+#pfsComponente #pfsProgressBox .preview-progress-icon {
+  margin: 0 auto;
+  background: var(--pfs-info-light);
+  color: var(--pfs-blue);
+}
+#pfsComponente #pfsProgressBox .preview-progress-title {
+  margin: 0;
+  text-align: center;
+}
+#pfsComponente #pfsProgressBox .preview-progress-description {
+  margin: 0;
+  color: var(--pfs-gray-700);
+  text-align: justify;
+  line-height: 1.5;
+}
+#pfsComponente #pfsProgressBox .pfs-messages { min-width: 0; }
+#pfsComponente #pfsProgressBox .preview-active-details {
+  min-height: 64px;
+  padding: 18px 16px;
+  border: 1px solid var(--pfs-gray-200);
+  border-radius: 8px;
+  background: var(--pfs-gray-100);
+  color: var(--pfs-gray-700);
+  font: 13px/1.5 Consolas, Monaco, "Courier New", monospace;
+  overflow-wrap: anywhere;
+}
+#pfsComponente #pfsProgressBox .preview-active-details:empty,
+#pfsComponente #pfsProgressBox .pfs-progress-footer:has(#pfsCancelBtn[hidden]) { display: none; }
+#pfsComponente #pfsProgressBox .pfs-task-progress { padding: 0; }
+#pfsComponente #pfsProgressBox .pfs-progress-info { font-size: 13px; }
+#pfsComponente .pfs-result-content {
+  text-align: left;
+}
+#pfsComponente .pfs-result-icon,
+#pfsComponente .pfs-error-icon {
+  margin: 0 auto 12px;
+}
+#pfsComponente .pfs-result-title,
+#pfsComponente .pfs-error-title {
+  margin-bottom: 12px;
+  text-align: center;
+}
+#pfsComponente .pfs-result-message,
+#pfsComponente .pfs-error-message {
+  margin-bottom: 18px;
+  text-align: justify;
+}
+#pfsComponente .pfs-file-summary,
+#pfsComponente .pfs-error-details { border: 1px solid var(--pfs-gray-200); }
+#pfsComponente .pfs-file-summary[hidden],
+#pfsComponente .pfs-subprocess-list[hidden] { display: none; }
+#pfsComponente .preview-detail-panel {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--pfs-gray-200);
+  border-radius: 10px;
+  background: var(--pfs-gray-100);
+}
+#pfsComponente .preview-detail-panel[hidden] { display: none; }
+#pfsComponente .preview-detail-panel > :last-child { margin-bottom: 0; }
+#pfsComponente #pfsSuccessBox .preview-detail-panel {
+  padding: 10px 12px;
+}
+#pfsComponente #pfsSuccessBox .pfs-file-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  margin: 0 0 8px;
+  padding: 0 0 8px;
+  border: 0;
+  border-bottom: 1px solid var(--pfs-gray-200);
+  border-radius: 0;
+}
+#pfsComponente #pfsSuccessBox .pfs-file-summary:empty { display: none; }
+#pfsComponente #pfsSuccessBox .pfs-file-row {
+  gap: 5px;
+  padding: 1px 0;
+  border: 0;
+}
+#pfsComponente #pfsSuccessBox .pfs-file-label {
+  min-width: 0;
+  max-width: none;
+}
+#pfsComponente #pfsSuccessBox .pfs-subprocess-list {
+  gap: 4px;
+  margin: 0;
+}
+#pfsComponente #pfsSuccessBox .pfs-sp-item {
+  grid-template-columns: 22px minmax(0, 1fr) 18px minmax(0, 1fr);
+  grid-template-rows: auto;
+  gap: 6px;
+  padding: 5px 8px;
+}
+#pfsComponente #pfsSuccessBox .pfs-sp-icon {
+  grid-row: 1;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+}
+#pfsComponente #pfsSuccessBox .pfs-sp-detail {
+  grid-column: 4;
+  grid-row: 1;
+  font-size: 11px;
+}
+#pfsComponente #pfsErrorBox .preview-detail-panel .pfs-error-details {
+  padding: 0;
+  border: 0;
+}
+#pfsComponente #pfsErrorBox .preview-detail-panel .pfs-solution { margin-top: 14px; }
+#pfsComponente .pfs-footer {
+  justify-content: flex-end;
+  background: var(--pfs-gray-100);
+}
+#pfsComponente #pfsPartialBox .pfs-footer,
+#pfsComponente #pfsErrorBox .pfs-footer { justify-content: center; }
+#pfsComponente #pfsPartialBox .pfs-footer .pfs-btn,
+#pfsComponente #pfsErrorBox .pfs-footer .pfs-btn { width: auto; }
+#pfsComponente .pfs-progress-footer {
+  justify-content: center;
+  border-top: 1px solid var(--pfs-gray-200);
+  background: var(--pfs-gray-100);
+}
+#pfsComponente .pfs-progress-footer #pfsCancelBtn[hidden] { display: none; }
+#pfsComponente #pfsProgressBox .pfs-progress-footer #pfsCancelBtn {
+  width: auto;
+  justify-content: center;
+  background: #761f1b;
+  color: var(--pfs-white);
+}
+#pfsComponente #pfsProgressBox .pfs-progress-footer #pfsCancelBtn:hover { background: #601713; }
+
+@media (max-width: 560px) {
+  .preview { padding: 28px 16px 48px; }
+  #pfsComponente .pfs-footer .pfs-btn { width: auto; justify-content: center; }
+  #pfsComponente #pfsSuccessBox .pfs-file-row { flex-direction: row; }
+  #pfsComponente #pfsSuccessBox .pfs-sp-item {
+    grid-template-columns: 22px minmax(0, 1fr) 18px;
+  }
+  #pfsComponente #pfsSuccessBox .pfs-sp-detail {
+    grid-column: 2 / 4;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 560px), (max-height: 600px) {
+  #pfsComponente .pfs-overlay { padding: 8px; }
+  #pfsComponente .pfs-box { border-radius: 12px; }
+  #pfsComponente #pfsProgressBox,
+  #pfsComponente #pfsSuccessBox,
+  #pfsComponente #pfsPartialBox,
+  #pfsComponente #pfsErrorBox { height: min(350px, calc(100dvh - 16px)); }
+  #pfsComponente #pfsConfirmBox { height: min(245px, calc(100dvh - 16px)); }
+  #pfsComponente #pfsCredentialBox { height: min(340px, calc(100dvh - 16px)); }
+  #pfsComponente .pfs-header { gap: 7px; padding: 6px 10px; }
+  #pfsComponente .pfs-header-icon { width: 28px; height: 28px; font-size: 14px; }
+  #pfsComponente .pfs-header-text h3 { font-size: 0.9rem; }
+  #pfsComponente .pfs-close { width: 28px; height: 28px; }
+  #pfsComponente .pfs-body { padding: 12px; }
+  #pfsComponente .pfs-footer,
+  #pfsComponente .pfs-progress-footer { gap: 6px; padding: 6px 10px; }
+  #pfsComponente .pfs-btn { min-height: 32px; padding: 6px 12px; font-size: 12px; }
+  #pfsComponente .pfs-result-content { padding: 4px 0 0; }
+  #pfsComponente .pfs-result-icon,
+  #pfsComponente .pfs-error-icon,
+  #pfsComponente .pfs-credential-icon-area {
+    width: 52px;
+    height: 52px;
+    margin-bottom: 8px;
+    font-size: 25px;
+  }
+  #pfsComponente .pfs-result-title,
+  #pfsComponente .pfs-error-title { margin-bottom: 8px; font-size: 1.1rem; }
+  #pfsComponente .pfs-result-message,
+  #pfsComponente .pfs-error-message,
+  #pfsComponente .pfs-confirm-message,
+  #pfsComponente .pfs-credential-message { margin-bottom: 10px; font-size: 0.82rem; }
+  #pfsComponente #pfsProgressBox .pfs-body { gap: 10px; }
+  #pfsComponente #pfsProgressBox .preview-progress-description { font-size: 0.82rem; }
+  #pfsComponente #pfsProgressBox .preview-active-details {
+    min-height: 42px;
+    padding: 9px 10px;
+    font-size: 11px;
+  }
+  #pfsComponente #pfsProgressBox .pfs-progress-info { margin-bottom: 4px; font-size: 11px; }
+  #pfsComponente #pfsProgressBox .pfs-progress-bar { height: 6px; }
+  #pfsComponente .preview-detail-panel { padding: 9px; }
+  #pfsComponente #pfsSuccessBox .preview-detail-panel { padding: 8px; }
+  #pfsComponente .pfs-sp-item { gap: 2px 6px; padding: 6px 8px; }
+  #pfsComponente .pfs-sp-icon { width: 22px; height: 22px; font-size: 12px; }
+  #pfsComponente .pfs-sp-name,
+  #pfsComponente .pfs-solution-text { font-size: 12px; }
+  #pfsComponente .pfs-sp-detail { font-size: 11px; }
+  #pfsComponente .pfs-file-label { font-size: 11px; }
+  #pfsComponente .pfs-file-value { font-size: 12px; }
+  #pfsComponente .pfs-error-details-header { margin-bottom: 6px; font-size: 12px; }
+  #pfsComponente .pfs-error-log { padding: 7px; font-size: 11px; }
+  #pfsComponente .pfs-solution { padding: 8px 10px; }
+  #pfsComponente .pfs-solution-title { font-size: 12px; }
+  #pfsComponente .pfs-confirm-warning { padding: 7px 10px; font-size: 0.78rem; }
+  #pfsComponente .pfs-confirm-prompt,
+  #pfsComponente .pfs-credential-restricted-label { font-size: 0.9rem; }
+  #pfsComponente .pfs-confirm-input-wrap { margin-top: 8px; }
+  #pfsComponente .pfs-confirm-input,
+  #pfsComponente .pfs-credential-input { padding: 7px 9px; font-size: 0.85rem; }
+  #pfsComponente .pfs-credential-field label,
+  #pfsComponente .pfs-confirm-input-wrap .pfs-credential-field > span { font-size: 0.78rem; }
+}
+
+@media (max-width: 360px), (max-height: 450px) {
+  #pfsComponente #pfsProgressBox,
+  #pfsComponente #pfsSuccessBox,
+  #pfsComponente #pfsPartialBox,
+  #pfsComponente #pfsErrorBox { height: min(310px, calc(100dvh - 16px)); }
+  #pfsComponente #pfsCredentialBox { height: min(320px, calc(100dvh - 16px)); }
+  #pfsComponente .pfs-body { padding: 8px 10px; }
+  #pfsComponente .pfs-result-icon,
+  #pfsComponente .pfs-error-icon,
+  #pfsComponente .pfs-credential-icon-area {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 6px;
+    font-size: 21px;
+  }
+
+  /* A prévia usa os mesmos painéis e controles do componente publicado. */
+  #pfsComponente #pfsProgressBox .pfs-contact,
+  #pfsComponente #pfsProgressBox .pfs-history-details[open] .pfs-log-tools,
+  #pfsComponente #pfsProgressBox .pfs-history-details[open] .pfs-history-note,
+  #pfsComponente #pfsProgressBox .pfs-history-details[open] .pfs-log,
+  #pfsComponente #pfsProgressBox .pfs-history-details[open] .pfs-completed-details { display: revert; }
+  #pfsComponente #pfsProgressBox .pfs-contact:empty,
+  #pfsComponente #pfsProgressBox .pfs-history-details[open] .pfs-log:empty { display: none; }
+  #pfsComponente #pfsProgressBox .pfs-history-details[open] .pfs-log-tools { display: flex; }
+  #pfsComponente .pfs-result-title,
+  #pfsComponente .pfs-error-title { margin-bottom: 6px; font-size: 1rem; }
+  #pfsComponente #pfsProgressBox .pfs-body { gap: 7px; }
+  #pfsComponente #pfsProgressBox .preview-active-details { min-height: 34px; padding: 6px 8px; }
+  #pfsComponente .pfs-confirm-message,
+  #pfsComponente .pfs-credential-message { margin-bottom: 7px; }
+}

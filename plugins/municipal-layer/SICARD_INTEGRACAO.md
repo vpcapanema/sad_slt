@@ -42,3 +42,10 @@ O último comando compila React e o adaptador `sicard/` em `geoespacial/extracao
 A integração foi validada localmente. O banco e a malha do plugin devem ser provisionados junto ao servidor em qualquer implantação; os arquivos de dados são ignorados pelo Git do pacote. Esta tarefa não publicou uma versão do plugin nem implantou o sistema remoto.
 
 O exportador usa `plugins/municipal-layer/server/export_support.py` para o join, a comparação da camada reaberta e a geração das tabelas/relatório. Esse módulo precisa acompanhar a implantação do hospedeiro. O manifesto lista todos os arquivos do ZIP e o diagnóstico por indicador; a contagem de saída deve ser idêntica à entrada.
+
+
+### Acompanhamento e cancelamento (26/09/2026)
+
+A ponte de feedback devolve a Promise de cancelamento ao modal compartilhado. A confirmação só ocorre depois de o job responder `cancelado`; recusa ou falha de comunicação mantém o acompanhamento e permite nova tentativa. As mensagens detalhadas, retenção do histórico e separação entre contato e avanço seguem `documentacao/FEEDBACK_SICARD.md`. A validação desta alteração usa navegador isolado e respostas controladas, sem geração de camadas no banco oficial.
+
+Validação desta evolução: `npm run build` e build Vite SICARD concluídos; a ponte real de feedback passou cenário de recusa e confirmação em Chrome headless (`tests/browser/feedback-auditoria.cjs`). Os builds não executam geração/importação de dados e não houve deploy.

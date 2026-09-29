@@ -1,0 +1,4 @@
+interface:
+  display_name: "Auditor de fluxos da extração"
+  short_description: "Aponta falhas de fluxo para decisão do usuário"
+  default_prompt: "Use $auditar-fluxos-extracao para auditar a lógica dos fluxos da página de extração de atributos e salvar uma lista curta de problemas e decisões, sem aplicar correções."

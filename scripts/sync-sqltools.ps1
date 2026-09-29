@@ -87,9 +87,9 @@ connections = [
         password,
     ),
     pg_conn(
-        "AWS VM - SIGMA PLI (tunel 15433)",
+        "AWS VM - SIGMA PLI (tunel 15434)",
         "127.0.0.1",
-        15433,
+        15434,
         "sigma_pli_qr53",
         "sigma_user",
         password,

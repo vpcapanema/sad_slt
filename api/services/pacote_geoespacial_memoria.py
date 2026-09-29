@@ -1,16 +1,26 @@
 """Exploração recursiva de pacotes locais, sem extração em disco ou cadastro."""
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from pathlib import PurePosixPath
 from uuid import uuid4
 import bz2
 import gzip
 import io
 import lzma
+import tarfile
 import time
+import zipfile
+from types import SimpleNamespace
 
-import libarchive
+try:
+    import libarchive
+except (ImportError, OSError, TypeError):
+    # libarchive-c depends on a platform library that is not bundled by the
+    # Python package on Windows. Keep storage modules importable so unrelated
+    # flows and diagnostics can still start; component extraction reports the
+    # missing runtime dependency at the point where it is needed.
+    libarchive = None
 from osgeo import gdal, ogr
 
 COMPACTADOS = {'.zip', '.kmz', '.rar', '.7z', '.tar', '.tgz', '.tbz2', '.txz', '.gz', '.bz2', '.xz'}
@@ -21,6 +31,90 @@ RASTERS = {'.tif': 'GTiff', '.tiff': 'GTiff', '.img': 'HFA', '.asc': 'AAIGrid',
            '.jp2': 'JP2OpenJPEG', '.gpkg': 'GPKG', '.gdb': 'OpenFileGDB'}
 MAX_COMPONENTES = 2000
 MAX_PROFUNDIDADE = 5
+
+
+def _pacote_sem_libarchive(dados, extensao):
+    """Produz a mesma interface mínima do libarchive para formatos comuns."""
+    if extensao in {'.zip', '.kmz'}:
+        with zipfile.ZipFile(io.BytesIO(dados)) as arquivo:
+            itens = []
+            for info in arquivo.infolist():
+                modo = info.external_attr >> 16
+                bytes_item = b'' if info.is_dir() else arquivo.read(info)
+                itens.append(SimpleNamespace(
+                    pathname=info.filename,
+                    isdir=info.is_dir(),
+                    isfile=not info.is_dir(),
+                    issym=(modo & 0o170000) == 0o120000,
+                    islnk=False,
+                    size=len(bytes_item),
+                    get_blocks=lambda bytes_item=bytes_item: (bytes_item,),
+                ))
+            return itens
+    if extensao in {'.tar', '.tgz', '.tbz2', '.txz'}:
+        with tarfile.open(fileobj=io.BytesIO(dados), mode='r:*') as arquivo:
+            itens = []
+            for info in arquivo.getmembers():
+                bytes_item = b'' if not info.isfile() else arquivo.extractfile(info).read()
+                itens.append(SimpleNamespace(
+                    pathname=info.name,
+                    isdir=info.isdir(),
+                    isfile=info.isfile(),
+                    issym=info.issym(),
+                    islnk=info.islnk(),
+                    size=info.size,
+                    get_blocks=lambda bytes_item=bytes_item: (bytes_item,),
+                ))
+            return itens
+    if extensao == '.7z':
+        import py7zr
+        from py7zr.io import BytesIOFactory
+
+        with py7zr.SevenZipFile(io.BytesIO(dados)) as arquivo:
+            informacoes = arquivo.list()
+            # O py7zr 1.x extrai por fábrica de escritores; a de memória mantém
+            # o pacote inteiro em RAM, o que já é a premissa deste módulo.
+            necessario = sum(info.uncompressed or 0 for info in informacoes) + 1
+            fabrica = BytesIOFactory(necessario)
+            arquivo.extract(factory=fabrica)
+            produtos = fabrica.products
+            itens = []
+            for info in informacoes:
+                bytes_item = b''
+                fluxo = produtos.get(info.filename)
+                if fluxo is not None and not info.is_directory:
+                    fluxo.seek(0)
+                    bytes_item = fluxo.read()
+                itens.append(SimpleNamespace(
+                    pathname=info.filename,
+                    isdir=info.is_directory,
+                    isfile=not info.is_directory,
+                    issym=bool(getattr(info, 'is_symlink', False)),
+                    islnk=False,
+                    size=len(bytes_item),
+                    get_blocks=lambda bytes_item=bytes_item: (bytes_item,),
+                ))
+            return itens
+    if extensao == '.rar':
+        import rarfile
+
+        with rarfile.RarFile(io.BytesIO(dados)) as arquivo:
+            itens = []
+            for info in arquivo.infolist():
+                bytes_item = b'' if info.is_dir() else arquivo.read(info)
+                itens.append(SimpleNamespace(
+                    pathname=info.filename,
+                    isdir=info.is_dir(),
+                    isfile=not info.is_dir(),
+                    issym=bool(info.is_symlink()),
+                    islnk=False,
+                    size=len(bytes_item),
+                    get_blocks=lambda bytes_item=bytes_item: (bytes_item,),
+                ))
+            return itens
+    raise ValueError(
+        'A leitura deste formato compactado exige a biblioteca nativa libarchive.'
+    )
 
 
 def componentes(conteudo, nome, limite):
@@ -65,8 +159,13 @@ def componentes(conteudo, nome, limite):
             contabilizar(len(result))
             explorar(result, prefixo + PurePosixPath(nome).name[:-len(ext)], nivel + 1)
             return
-        with libarchive.memory_reader(dados) as pacote:
-            for item in pacote:
+        pacote = (
+            libarchive.memory_reader(dados)
+            if libarchive is not None
+            else nullcontext(_pacote_sem_libarchive(dados, ext))
+        )
+        with pacote as itens:
+            for item in itens:
                 verificar()
                 quantidade += 1
                 if quantidade > MAX_COMPONENTES:
@@ -90,7 +189,16 @@ def componentes(conteudo, nome, limite):
                 explorar(bytes(buffer), chave, nivel + 1)
     try:
         explorar(conteudo, nome)
-    except (libarchive.exception.ArchiveError, OSError, EOFError, lzma.LZMAError) as exc:
+    except (
+        (() if libarchive is None else (libarchive.exception.ArchiveError,))
+        + (
+            OSError,
+            EOFError,
+            lzma.LZMAError,
+            tarfile.ReadError,
+            zipfile.BadZipFile,
+        )
+    ) as exc:
         raise ValueError('Não foi possível descompactar o pacote. Verifique integridade, formato e senha; pacotes protegidos ou multipartidos não são aceitos.') from exc
     return saida
 

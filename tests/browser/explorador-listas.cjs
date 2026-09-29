@@ -23,6 +23,16 @@ assert.deepEqual(browse,['false']);assert.deepEqual(inventory,[]);assert.deepEqu
 await d.locator('[data-file]').click();assert.deepEqual(inventory,[]);
 const titulo=await p.locator('#ea-input-browse').innerText();
 await d.locator('.ea-storage-confirm-button').click();
+const confirmacao=d.locator('#pfsConfirmBox.pfs-active');
+await confirmacao.waitFor();
+assert.match(await confirmacao.innerText(),/Ler e validar 1 arquivo/);
+assert.deepEqual(inventory,[]);assert.deepEqual(reads,[]);
+assert.equal(await d.locator('#pfsProgressBox.pfs-active').count(),0);
+await confirmacao.locator('#pfsConfirmCancel').click();
+assert.equal(await d.locator('.ea-storage-confirm-button').isEnabled(),true);
+assert.deepEqual(inventory,[]);assert.deepEqual(reads,[]);
+await d.locator('.ea-storage-confirm-button').click();
+await d.locator('#pfsConfirmOk').click();
 await p.waitForFunction(()=>document.querySelector('[data-pfs="task-desc"]')?.textContent.includes('lagos'));
 // Overlay do ProcessFeedback (SIGMA), hospedado dentro do diálogo do storage.
 const painel=p.locator('dialog.ea-storage-dialog #pfsProgressBox.pfs-active');

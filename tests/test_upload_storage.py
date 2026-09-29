@@ -6,6 +6,7 @@ import json
 import tempfile
 import unittest
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -154,11 +155,22 @@ class StorageRemotoTest(unittest.TestCase):
             if pedido.url.params["path"] == "/ausente":
                 return httpx.Response(404, json={"message": "not found"})
             return httpx.Response(200, content=json.dumps([
-                {"name": "sub", "mode": 2147484141}, {"name": "a.gpkg", "mode": 420, "size": 3}]))
+                {"name": "sub", "mode": 2147484141},
+                {"name": "a.gpkg", "mode": 420, "size": 3,
+                 "last_modified": "2026-01-02T03:04:05Z"}]))
         with patch.object(storage_remoto, "_cliente", self._cliente(responder)):
-            self.assertEqual(storage_remoto.listar("base-geoespacial"),
-                             [{"nome": "sub", "pasta": True}, {"nome": "a.gpkg", "pasta": False}])
+            itens = storage_remoto.listar("base-geoespacial")
+            self.assertEqual([(i["nome"], i["pasta"]) for i in itens],
+                             [("sub", True), ("a.gpkg", False)])
+            # Tamanho e data sustentam a revalidação da cópia local no servidor
+            # local sem montagem: mudou na origem, a cópia é refeita.
+            self.assertEqual(itens[1]["tamanho"], 3)
+            self.assertEqual(itens[1]["modificado"],
+                             datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc).timestamp())
+            self.assertEqual(itens[0]["modificado"], 0.0)
             self.assertEqual(storage_remoto.listar("ausente"), [])
+            with self.assertRaises(FileNotFoundError):
+                storage_remoto.listar("ausente", estrito=True)
 
 
 if __name__ == "__main__":

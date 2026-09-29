@@ -216,7 +216,13 @@
       if (action === "import-wfs") {
         openOperation("OP-01", { tipo_entrada: "WFS" });
       }
-      if (action === "load-system") openSystemDirectory();
+      if (action === "load-system") {
+        if (typeof window.gpApp?.openSystemLoadForm !== "function") {
+          message("O carregador nativo de arquivos ainda não está disponível.");
+        } else {
+          window.gpApp.openSystemLoadForm();
+        }
+      }
       if (action === "basemap") {
         window.gpApp.showBasemapPanel();
       }

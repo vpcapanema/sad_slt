@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prévia dos modais de feedback — SICARD</title>
+  <link rel="stylesheet" href="../assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="../assets/css/process_feedback_system.css">
+  <link rel="stylesheet" href="./feedback-preview.css">
+</head>
+<body>
+  <main class="preview">
+    <header class="preview-header">
+      <span class="preview-label">SICARD · Prévia local</span>
+      <h1>Modais do sistema de feedback</h1>
+      <p>Estrutura inspirada na referência, com a identidade visual do SICARD. Os botões abrem uma prévia isolada, sem enviar operações ao servidor.</p>
+    </header>
+    <section class="preview-grid" aria-label="Escolher modal">
+      <button type="button" data-preview="progress"><i class="fas fa-spinner" aria-hidden="true"></i><strong>Em andamento</strong><span>Macropassos e atividades em sequência</span></button>
+      <button type="button" data-preview="success"><i class="fas fa-check-circle" aria-hidden="true"></i><strong>Sucesso</strong><span>Operação concluída</span></button>
+      <button type="button" data-preview="partial"><i class="fas fa-exclamation-circle" aria-hidden="true"></i><strong>Parcial</strong><span>Concluída com ressalvas</span></button>
+      <button type="button" data-preview="error"><i class="fas fa-times-circle" aria-hidden="true"></i><strong>Erro</strong><span>Detalhes e orientação</span></button>
+      <button type="button" data-preview="confirm"><i class="fas fa-question-circle" aria-hidden="true"></i><strong>Confirmação</strong><span>Continuar ou cancelar</span></button>
+      <button type="button" data-preview="danger"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i><strong>Ação crítica</strong><span>Confirmação com alerta</span></button>
+      <button type="button" data-preview="input"><i class="fas fa-pen" aria-hidden="true"></i><strong>Solicitar informação</strong><span>Confirmação com campo</span></button>
+      <button type="button" data-preview="manager"><i class="fas fa-user-tie" aria-hidden="true"></i><strong>Credencial de gestor</strong><span>Somente prévia visual</span></button>
+      <button type="button" data-preview="admin"><i class="fas fa-user-shield" aria-hidden="true"></i><strong>Credencial de administrador</strong><span>Somente prévia visual</span></button>
+    </section>
+    <p class="preview-note">Esta página é demonstrativa e não recebe eventos do servidor. Não insira senhas reais. Os modais de acompanhamento e resultado compartilham dimensões; os de confirmação formam outro grupo, assim como os de credencial. O corpo rola quando o conteúdo expandido excede a altura disponível. No acompanhamento, a mensagem abaixo do título mostra o macropasso em curso, e a caixa mostra seu micropasso atual; cada atividade ilustrativa avança a cada 2,5 segundos e a barra mede as atividades do macropasso. Ao terminar, o acompanhamento dá lugar ao modal de sucesso; os botões Parcial e Erro mostram os outros desfechos possíveis. Nos resultados, Ver detalhes expande a caixa de informações, e o X do erro fecha sem baixar arquivos. Clique em Em andamento para reiniciar; use o botão do cabeçalho para minimizar ou Cancelar no rodapé.</p>
+  </main>
+  <script src="../assets/js/process_feedback_unified.js"></script>
+  <script src="./feedback-preview.js"></script>
+</body>
+</html>

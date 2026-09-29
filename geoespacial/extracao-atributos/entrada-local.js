@@ -1,3 +1,4 @@
+import { log, falha, iniciarHttp, progresso, correlacaoAtual } from './logger.js';
 /* Originais permanecem na memória da página. Validar nunca confirma a bancada. */
 import { $, feedback } from './ui.js';
 import { base, json, post } from './api.js';
@@ -17,6 +18,7 @@ export function criarEntradaLocal(state,changed){
   window.SICARDExtracao?.atualizarControles?.();
  }
  async function cancelar(){
+  log('upload.cancelamento_solicitado',{job:job?.id});
   cancelando=true;
   try{
    if(iniciando)await iniciando;
@@ -32,20 +34,23 @@ export function criarEntradaLocal(state,changed){
  node('upload').addEventListener('click',()=>{if(!state.busy&&!ativo)arquivo.click();});
  node('upload-cancel').addEventListener('click',()=>{if(ativo)cancelar().catch(e=>feedback(e.message,'error'));});
  async function ler(files){
+  log('upload.validacao_inicio',{arquivos:files.length,bytes:files.reduce((n,f)=>n+f.size,0)});
   if(!await window.ProcessFeedback.confirmar({title:'Validar arquivos de entrada',message:`Enviar e validar ${files.length} arquivo(s)?`,warning:files.map(f=>`${f.name} · ${(f.size/1024/1024).toFixed(2)} MB`).join('\n'),confirmLabel:'Enviar e validar'}))return;
   ocupado(true);cancelando=false;job=null;
   const tarefa=file=>`Validar ${file.name}`;
-  processo=window.ProcessFeedback.iniciarCadastro({title:'Validando camadas de entrada',subtitle:`${files.length} arquivo(s)`,
-   tasks:files.map(tarefa),onCancel:()=>{cancelar().catch(e=>feedback(e.message,'error'));}});
+  const correlacao=correlacaoAtual();
+  processo=window.ProcessFeedback.iniciarCadastro({onProgressSnapshot:(snapshot,origem)=>progresso({...snapshot,id:job?.id},origem,correlacao),title:'Validando camadas de entrada',subtitle:`${files.length} arquivo(s)`,
+   tasks:files.map(tarefa),onCancel:cancelar});
   const resultados=[];
   try{
    for(const [indice,file] of files.entries()){
     if(cancelando)break;
     processo.tarefaAtual(tarefa(file),`Enviando para validação (${indice+1}/${files.length}).`);
     iniciando=(async()=>{
-     const response=await fetch(`${base}/extracao-atributos/entrada-local/jobs?nome=${encodeURIComponent(file.name)}`,{
-      method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:file,signal:AbortSignal.timeout(180000)});
-     const result=await response.json().catch(()=>null);
+     const rota=`/extracao-atributos/entrada-local/jobs?nome=${encodeURIComponent(file.name)}`,rastreio=iniciarHttp(rota,{method:'POST'});
+     let response;try{response=await fetch(base+rota,{
+      method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:file,signal:AbortSignal.timeout(180000)});}catch(error){rastreio.falhar(error);throw error;}
+     const result=await response.json().catch(()=>null);rastreio.concluir(response.status,result);
      if(!response.ok)throw new Error(typeof result?.detail==='string'?result.detail:`Falha na validação (HTTP ${response.status}).`);
      job=result;
     })();
@@ -55,6 +60,7 @@ export function criarEntradaLocal(state,changed){
      await dormir(350);job=await json(`/extracao-atributos/entrada-local/jobs/${job.id}`);
     }
     window.ProcessFeedback.acompanhar({...job,percentual:job.percentual==null?null:(indice+job.percentual/100)/files.length*100});
+    if(job.status==='concluido')cancelando=false;
     if(cancelando||job.status==='cancelado')break;
     if(job.status!=='concluido')throw new Error(job.erro||'A validação não foi concluída.');
     const result=job.resultado;
@@ -67,6 +73,7 @@ export function criarEntradaLocal(state,changed){
     processo.concluirTarefa(tarefa(file),`${result.resumo.total} camada(s), ${result.resumo.invalidas} não validada(s)`);
    }
    if(cancelando||job?.status==='cancelado'){
+    log('upload.cancelado',{job:job?.id,status:'cancelado'},'warn');
     processo.fechar();feedback('Validação cancelada. A prévia anterior foi mantida.');return;
    }
    guardarPrevia(state);
@@ -76,9 +83,10 @@ export function criarEntradaLocal(state,changed){
    state.previaLocal=null;
    await changed();
    const total=resultados.reduce((n,r)=>n+r.resumo.total,0),invalidas=resultados.reduce((n,r)=>n+r.resumo.invalidas,0);
+   log('upload.validacao_fim',{arquivos:resultados.length,camadas:total,valido:!invalidas});
    processo.sucesso({_status:invalidas?'partial':undefined,title:invalidas?'Validação com camadas recusadas':'Camadas validadas',
     message:`${total} camada(s) examinada(s) em ${resultados.length} arquivo(s); ${invalidas} não validada(s). Escolha o ID e a categoria em 1.1 e confirme a configuração para enviar as camadas válidas à prévia.`});
-  }catch(e){if(cancelando){processo.fechar();feedback('Validação cancelada. A prévia anterior foi mantida.');}else processo.erro({message:e.message,solution:'A prévia anterior foi mantida. Corrija o arquivo e envie de novo.'});}
+  }catch(e){falha('upload',e,{job:job?.id});if(job?.status==='cancelado'){processo.confirmarCancelamento('Validação cancelada. A prévia anterior foi mantida.');}else processo.erro({message:e.message,solution:'A prévia anterior foi mantida. Corrija o arquivo e envie de novo.'});}
   finally{iniciando=null;ocupado(false);}
  }
  arquivo.addEventListener('change',()=>{

@@ -105,6 +105,16 @@
             </div>
           </div>
 
+          <div class="auth-remember">
+            <label for="permanecer-conectado">
+              <input type="checkbox" id="permanecer-conectado" name="permanecer_conectado" aria-describedby="remember-help" />
+              Permanecer conectado
+            </label>
+            <small id="remember-help">Manter o acesso neste navegador por até 30 dias, ou até clicar em Sair.</small>
+          </div>
+          <p id="login-status" class="auth-status" role="status" aria-live="polite" aria-atomic="true" hidden></p>
+          <noscript>Ative o JavaScript para entrar no SICARD.</noscript>
+
           <p id="login-erro" class="auth-feedback hidden" role="alert"></p>
 
           <button

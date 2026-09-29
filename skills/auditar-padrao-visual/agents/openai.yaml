@@ -1,0 +1,4 @@
+interface:
+  display_name: "Especialista em padrão visual frontend"
+  short_description: "Audita templates, CSS e coerência dos componentes"
+  default_prompt: "Use $auditar-padrao-visual para analisar profundamente templates, CSS e JavaScript do SICARD, pesquisar boas práticas e propor uniformização visual em um relatório compacto com evidências."

@@ -107,16 +107,78 @@ def _absoluto(caminho: str) -> str:
     return "/" + str(caminho).strip().strip("/")
 
 
-def listar(pasta: str) -> list[dict[str, Any]]:
-    """Conteúdo de uma pasta do storage; pasta inexistente devolve lista vazia."""
+def _instante(valor: Any) -> float:
+    """`last_modified` do SFTPGo (ISO 8601) em epoch; 0.0 quando ausente."""
+    from datetime import datetime
+
+    try:
+        return datetime.fromisoformat(str(valor).replace("Z", "+00:00")).timestamp()
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def listar(pasta: str, estrito: bool = False) -> list[dict[str, Any]]:
+    """Conteúdo de uma pasta do storage; pasta inexistente devolve lista vazia.
+
+    Com `estrito`, a pasta inexistente vira FileNotFoundError — o que distingue
+    a pasta que não existe daquela que existe e está vazia.
+    """
     with _cliente() as cliente:
         resposta = _pedir(cliente, "GET", "/user/dirs", params={"path": _absoluto(pasta)})
     if resposta.status_code == 404:
+        if estrito:
+            raise FileNotFoundError(pasta)
         return []
     if resposta.status_code != 200:
         raise StorageIndisponivel(f"Não foi possível ler {pasta} no storage: {_mensagem(resposta)}")
-    return [{"nome": item.get("name"), "pasta": bool(int(item.get("mode") or 0) & _MODO_DIRETORIO)}
+    return [{"nome": item.get("name"), "pasta": bool(int(item.get("mode") or 0) & _MODO_DIRETORIO),
+             "tamanho": int(item.get("size") or 0),
+             "modificado": _instante(item.get("last_modified"))}
             for item in resposta.json() or []]
+
+
+def endereco_vsi(caminho: str) -> str:
+    """Arquivo do storage como caminho /vsicurl, lido pelo GDAL sem cópia local.
+
+    O GDAL busca por HTTP Range apenas os trechos de que precisa e resolve
+    sozinho os acompanhantes de um .shp trocando a extensão nesta mesma URL.
+    """
+    from urllib.parse import quote
+
+    url, _, _, _ = _config()
+    return f"/vsicurl/{url}/user/files?path={quote(_absoluto(caminho))}"
+
+
+def preparar_gdal() -> None:
+    """Credencial e ajustes que o /vsicurl precisa para falar com o SFTPGo."""
+    from osgeo import gdal
+
+    with _cliente() as cliente:
+        token = _obter_token(cliente)
+    _, _, _, verificar = _config()
+    ajustes = {
+        "GDAL_HTTP_HEADERS": f"Authorization: Bearer {token}",
+        "GDAL_HTTP_UNSAFESSL": "NO" if verificar else "YES",
+        # O SFTPGo não responde HEAD em /user/files; o tamanho vem do próprio GET.
+        "CPL_VSIL_CURL_USE_HEAD": "NO",
+        # Sem listagem de diretório por HTTP, o GDAL pede cada acompanhante direto.
+        "GDAL_DISABLE_READDIR_ON_OPEN": "EMPTY_DIR",
+    }
+    for chave, valor in ajustes.items():
+        gdal.SetConfigOption(chave, valor)
+        # O pyogrio carrega a própria cópia do GDAL: só o ambiente alcança as duas.
+        os.environ[chave] = valor
+
+
+def baixar(caminho: str) -> bytes:
+    """Conteúdo de um arquivo do storage; arquivo inexistente vira FileNotFoundError."""
+    with _cliente() as cliente:
+        resposta = _pedir(cliente, "GET", "/user/files", params={"path": _absoluto(caminho)})
+    if resposta.status_code == 404:
+        raise FileNotFoundError(caminho)
+    if resposta.status_code != 200:
+        raise StorageIndisponivel(f"Não foi possível ler {caminho} no storage: {_mensagem(resposta)}")
+    return resposta.content
 
 
 def enviar(destino: str, origem: Path) -> None:

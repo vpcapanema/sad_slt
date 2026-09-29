@@ -1,9 +1,57 @@
-import { escolherArquivo } from './extracao-atributos/explorador.js';
+import { escolherArquivo } from './extracao-atributos/explorador.js?v=detached-system-picker-roots';
 import { json, post } from './extracao-atributos/api.js';
 import { el } from './extracao-atributos/ui.js';
 
-const sessions=new Map();
+const sessions=new Map(),cargasCompletas=new Map();
 let editor=null,busy=false;
+const PREFIXO_STORAGE='storage:';
+const ehStorage=ref=>String(ref?.id||'').startsWith(PREFIXO_STORAGE);
+// `storage:<caminho>::<camada>`: a camada OGR segue no parâmetro `camada` do tile.
+// Não confundir com a camada interna do MVT (source-layer), definida pelo mapa.
+function separarIdStorage(id){
+  const texto=String(id).slice(PREFIXO_STORAGE.length),corte=texto.indexOf('::');
+  return corte<0?{caminho:texto,camada:null}:{caminho:texto.slice(0,corte),camada:texto.slice(corte+2)||null};
+}
+const FORMATOS_NATIVOS=new Set(['.gpkg','.shp','.geojson','.json','.fgb','.kml','.gml']);
+function ehArquivoLocalNativo(ref){
+  if(ehStorage(ref))return false;
+  const arquivo=String(ref?.arquivo||'').toLowerCase();
+  return FORMATOS_NATIVOS.has(arquivo.slice(arquivo.lastIndexOf('.')));
+}
+// Abertura leve do original: só metadados; a geometria vem em tiles.
+async function prepararOriginal(ref){
+  const info=await post('/bancada-arquivos/preparar',{id:ref.id,arquivo:ref.arquivo});
+  if(info.id!==ref.id||!info.arquivo||!info.revisao||!Array.isArray(info.campos))throw new Error(`${ref.nome||ref.id}: o servidor não devolveu os dados mínimos da camada.`);
+  const file={...info,representacao:'tiles'};delete file.geojson;
+  if(!ehStorage(file)){
+    const query=new URLSearchParams({id:file.id,arquivo:file.arquivo,revisao:file.revisao});
+    file.tiles_url=`${location.origin}/api/geoespacial/bancada-arquivos/tiles/{z}/{x}/{y}.pbf?${query}`;
+  }
+  if(ref.categoria&&!file.categoria)file.categoria=ref.categoria;
+  return file;
+}
+// Pacotes compactados do storage: /preparar e os tiles do original só abrem
+// arquivos que o GDAL lê diretamente. Mantém a leitura legada em memória
+// (arquivo-mapa, limite de 16 MB), explicitamente sinalizada como tal.
+const COMPACTADOS=['.zip','.kmz','.rar','.7z','.tar','.tgz','.tbz2','.txz','.gz','.bz2','.xz'];
+function ehPacoteStorage(ref){
+  if(!ehStorage(ref))return false;
+  const caminho=String(ref.arquivo||separarIdStorage(ref.id).caminho||'').toLowerCase();
+  return COMPACTADOS.some(ext=>caminho.endsWith(ext));
+}
+async function abrirPacoteLegado(ref){
+  const file=await post('/extracao-atributos/arquivo-mapa',{arquivo:ref.arquivo||undefined,id:ref.id});
+  if(!Array.isArray(file?.geojson?.features))throw new Error(`${ref.nome||ref.id}: o servidor não devolveu a geometria do pacote.`);
+  file.representacao='pacote_legado';
+  const metodo=file.metadados_local?.previa?.metodo;
+  file.geometria_aproximada=Boolean(metodo&&metodo!=='original');
+  if(ref.categoria&&!file.categoria)file.categoria=ref.categoria;
+  app().log(`${file.nome||ref.nome||ref.id}: pacote compactado sem visualização em tiles; aberto pela leitura integral em memória (até 16 MB)${file.geometria_aproximada?', com prévia aproximada da geometria':''}.`,'info');
+  return file;
+}
+const prepararStorage=prepararOriginal;
+const abrirStorage=ref=>ehPacoteStorage(ref)?abrirPacoteLegado(ref):prepararOriginal(ref);
+const releitura=file=>file.representacao==='tiles'?prepararOriginal(file):post('/extracao-atributos/arquivo-mapa',{arquivo:file.arquivo,...(ehStorage(file)?{id:file.id}:{})});
 const app=()=>window.gpApp;
 const active=()=>sessions.get(app().state.activeLayerId);
 const report=message=>app().log(message,'error');
@@ -31,14 +79,19 @@ function activateEditRibbon(){
 }
 
 function mount(file,opts={}){
+  const tiles=file.representacao==='tiles';
+  if(!tiles&&!Array.isArray(file.geojson?.features))throw new Error(`${file.nome||file.id}: a camada não trouxe geometria para exibir.`);
   sessions.set(file.id,file);
   const map=app().state.map;
   if(map&&!map.isStyleLoaded()&&!opts.estiloPreparado){
     map.once('idle',()=>{if(sessions.get(file.id)===file)mount(file,opts);});return;
   }
   // origem nomeia o subgrupo em Camadas operacionais; quem chama pode informar a categoria.
-  app().adicionarCamadaGeoJsonEmMemoria(file.id,file.nome,file.geojson,{tipo:'vetorial',origem:'Arquivo no storage',categoria:file.categoria||'',geometria_tipo:file.geojson.features[0]?.geometry?.type,lote:opts.lote,estiloPreparado:opts.estiloPreparado});
-  Object.assign(app().state.layers.find(layer=>layer.id===file.id)||{}, {arquivo:file.arquivo,origem_geometria:'storage'});
+  if(tiles){
+    const storage=ehStorage(file),{caminho,camada}=storage?separarIdStorage(file.id):{caminho:file.arquivo,camada:null};
+    app().adicionarCamadaStorageTiles(file.id,file.nome,{caminho:caminho||file.arquivo,camada,arquivo:file.arquivo,revisao:file.revisao,bounds:file.bounds,geometria_tipo:file.geometria_tipo,crs_arquivo:file.crs_arquivo,feicoes:file.feicoes,tiles_url:file.tiles_url},{origem:storage?'Arquivo no storage':'Arquivo registrado',categoria:file.categoria||'',lote:opts.lote,estiloPreparado:opts.estiloPreparado});
+  }else app().adicionarCamadaGeoJsonEmMemoria(file.id,file.nome,file.geojson,{tipo:'vetorial',origem:'Arquivo no storage',categoria:file.categoria||'',geometria_tipo:file.geojson.features[0]?.geometry?.type,lote:opts.lote,estiloPreparado:opts.estiloPreparado});
+  Object.assign(app().state.layers.find(layer=>layer.id===file.id)||{}, {arquivo:file.arquivo,origem_geometria:ehStorage(file)?'storage':'arquivo_registrado'});
   app().state.activeLayerId=file.id;
   if(!opts.lote)app().renderLayers();
   syncEditRibbon();
@@ -47,18 +100,29 @@ function mount(file,opts={}){
 // A gravação só termina na UI depois de reler a versão efetivamente persistida.
 async function sincronizarSalvamento(saved){
   const activeId=app().state.activeLayerId;
-  const reference=file=>({arquivo:file.arquivo,...(file.id.startsWith('storage:')?{id:file.id}:{})});
+  const anterior=sessions.get(saved.id);
   const related=[...sessions.values()].filter(file=>file.arquivo===saved.arquivo&&file.id!==saved.id);
-  // Preserve também a resposta da gravação se a releitura perder a conexão.
-  mount(saved);
+  // Sessão aberta em tiles continua em tiles; a resposta da gravação (GeoJSON
+  // completo e legítimo) só é exibida se a releitura perder a conexão.
+  const emTiles=anterior?.representacao==='tiles';
+  if(!emTiles)mount(saved);
   let latest=saved;
-  try{latest=await post('/extracao-atributos/arquivo-mapa',reference(saved));mount(latest);}
-  catch(error){app().log(`Alterações gravadas. Não foi possível reler a camada: ${error.message}`,'error');}
+  try{
+    latest=await releitura(emTiles?{...saved,representacao:'tiles',categoria:anterior.categoria}:saved);
+    if(emTiles&&latest.revisao===saved.revisao&&saved.geojson)latest.geojson=saved.geojson;
+    mount(latest);
+  }catch(error){
+    if(emTiles){
+      latest={...saved,representacao:'tiles',categoria:anterior.categoria};
+      mount(latest);
+    }
+    app().log(`Alterações gravadas. Não foi possível reler a camada: ${error.message}`,'error');
+  }
   window.gpAttributeTable?.atualizarArquivo(latest.id);
   window.dispatchEvent(new CustomEvent('gp-arquivo-atualizado',{detail:latest}));
   for(const file of related){
     try{
-      const refreshed=await post('/extracao-atributos/arquivo-mapa',reference(file));
+      const refreshed=await releitura(file);
       mount(refreshed,{lote:true});
       window.gpAttributeTable?.atualizarArquivo(refreshed.id);
       window.dispatchEvent(new CustomEvent('gp-arquivo-atualizado',{detail:refreshed}));
@@ -73,15 +137,144 @@ async function browse(){
   // nada enquanto houvesse edição aberta, sem dizer por quê.
   if(editor)throw new Error('Salve ou cancele a edição antes de abrir outro arquivo.');
   if(busy)throw new Error('Aguarde a operação em andamento terminar.');
-  const catalog=await json('/extracao-atributos/catalogo');
-  const files=await escolherArquivo({catalog:catalog.camadas,multiple:true,title:'Abrir arquivos na bancada'});
-  if(files)for(const file of files)mount(file);
+  app().showTools();
+  document.querySelector('#gp-tools-view').classList.remove('active');
+  const host=document.querySelector('#gp-editor-view');
+  host.classList.add('active');
+  document.querySelector('#gp-right-title').textContent='Carregar do sistema';
+  const mostrar=(titulo,mensagem,erros=[])=>{
+    const head=document.createElement('div');head.className='editor-head';
+    const back=document.createElement('button');back.type='button';back.className='icon-btn';back.textContent='←';back.setAttribute('aria-label','Voltar às ferramentas');back.onclick=()=>app().showTools();
+    const heading=document.createElement('h2');heading.textContent=titulo;head.append(back,heading);
+    const body=document.createElement('div');body.className='editor-body';
+    const status=document.createElement('p');status.className='field-help';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.textContent=mensagem;body.append(status);
+    if(erros.length){const list=document.createElement('ul');for(const error of erros){const item=document.createElement('li');item.textContent=error;list.append(item);}body.append(list);}
+    host.replaceChildren(head,body);
+  };
+  mostrar('Carregar do sistema','Consultando as camadas disponíveis no storage…');
+  try{
+    const catalog=await json('/extracao-atributos/catalogo');
+    // Só referências: o original do storage é preparado sem trafegar o GeoJSON inteiro.
+    const refs=await escolherArquivo({catalog:catalog.camadas,multiple:true,title:'Carregar do sistema',validar:false,host,onClose:()=>app().showTools()});
+    if(refs?.length)await abrirReferencias(refs,{host,feedback:false,onStatus:(mensagem,erros)=>mostrar('Carregar do sistema',mensagem,erros||[])});
+  }catch(error){mostrar('Carregar do sistema',`Não foi possível abrir o explorador: ${error.message}`);}
 }
 
-function openEditor(editing=false){
+async function selecionarReferencias({onClose}={}){
+  if(editor)throw new Error('Salve ou cancele a edição antes de selecionar outra camada.');
+  if(busy)throw new Error('Aguarde a operação em andamento terminar.');
+  const catalog=await json('/extracao-atributos/catalogo');
+  return escolherArquivo({
+    catalog:catalog.camadas,
+    multiple:true,
+    title:'Selecionar camadas do sistema',
+    validar:false,
+    onClose,
+  });
+}
+
+async function abrirReferencias(refs,extra={}){
+  const TAREFA='Preparar camadas para visualização';
+  const proc=extra.feedback===false?null:window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Abrir arquivos na bancada',tasks:[TAREFA],host:extra.host});
+  const atualizarStatus=mensagem=>{
+    if(extra.feedback!==false||!extra.host?.isConnected)return;
+    if(extra.onStatus){extra.onStatus(mensagem);return;}
+    const status=extra.host.querySelector('[data-file-open-status]');
+    if(status)status.textContent=mensagem;
+    else{
+      const title=document.createElement('h2');title.textContent='Carregar do sistema';
+      const paragraph=document.createElement('p');paragraph.className='field-help';paragraph.setAttribute('role','status');paragraph.setAttribute('aria-live','polite');paragraph.dataset.fileOpenStatus='';paragraph.textContent=mensagem;
+      extra.host.replaceChildren(title,paragraph);
+    }
+  };
+  proc?.tarefaAtual(TAREFA,`${refs.length} camada(s)`);
+  atualizarStatus(`Abrindo ${refs.length} camada(s) na bancada…`);
+  const abertos=[],erros=[];
+  busy=true;syncEditRibbon();
+  try{
+    for(const [indice,ref] of refs.entries()){
+      const rotulo=ref.nome||ref.arquivo||ref.id;
+      atualizarStatus(`Abrindo ${indice+1} de ${refs.length}: ${rotulo}`);
+      proc?.detalhe(`${rotulo} (${indice+1}/${refs.length})`);
+      try{
+        const file=ehStorage(ref)?await abrirStorage(ref):ehArquivoLocalNativo(ref)?await prepararOriginal(ref):await post('/extracao-atributos/arquivo-mapa',{arquivo:ref.arquivo||undefined,id:ref.id});
+        if(extra.categoria)file.categoria=extra.categoria;
+        mount(file,{lote:true});abertos.push(file);
+      }catch(error){erros.push(`${rotulo}: ${error.message}`);proc?.log(`${rotulo}: ${error.message}`,'error');}
+    }
+  }finally{busy=false;syncEditRibbon();}
+  if(abertos.length){
+    app().state.activeLayerId=abertos.at(-1).id;app().renderLayers();
+    await Promise.resolve(app().zoomToCatalogLayer(abertos.at(-1).id)).catch(()=>{});
+  }
+  if(!erros.length){atualizarStatus(`${abertos.length} camada(s) aberta(s) na bancada.`);proc?.concluirTarefa(TAREFA,`${abertos.length} camada(s) no mapa`);proc?.sucesso({message:`${abertos.length} camada(s) aberta(s) na bancada.`});proc?.fechar();return abertos;}
+  const mensagem=erros.join('\n');
+  if(!proc&&extra.feedback!==false)throw new Error(mensagem);
+  if(abertos.length)proc?.sucesso({message:`${abertos.length} camada(s) aberta(s); ${erros.length} com falha.`});else proc?.erro({message:mensagem});
+  const resumo=abertos.length?`${abertos.length} camada(s) aberta(s); ${erros.length} com falha.`:`Não foi possível abrir as camadas selecionadas: ${mensagem}`;
+  if(extra.onStatus)extra.onStatus(resumo,erros);else atualizarStatus(resumo);
+  if(extra.feedback===false)app().log(mensagem,'error');
+  return abertos;
+}
+
+// A geometria integral só é lida quando edição ou tabela exigem, nunca na abertura.
+// A representação em tiles é recortada e generalizada: não serve como geometria editável.
+async function garantirGeometria(id){
+  const file=sessions.get(id);
+  if(!file)throw new Error('Camada não está aberta na bancada.');
+  if(file.geojson)return file;
+  if(!cargasCompletas.has(id))cargasCompletas.set(id,(async()=>{
+    app().log(`${file.nome}: lendo a geometria completa do arquivo original.`,'info');
+    const full=await post('/extracao-atributos/arquivo-mapa',{arquivo:file.arquivo,id:file.id});
+    if(sessions.get(id)!==file)throw new Error(`${file.nome}: a camada foi atualizada durante a leitura. Tente novamente.`);
+    if(!Array.isArray(full?.geojson?.features))throw new Error(`${file.nome}: o servidor não devolveu a geometria completa.`);
+    if(full.revisao===file.revisao){file.geojson=full.geojson;if(Array.isArray(full.campos))file.campos=full.campos;return file;}
+    // O original mudou no storage depois da abertura: passa a exibir a revisão lida.
+    const {bounds,...base}=file;
+    const next={...base,nome:full.nome||file.nome,revisao:full.revisao,campos:full.campos||file.campos,crs_arquivo:full.crs_arquivo||file.crs_arquivo,geojson:full.geojson};
+    const ativa=app().state.activeLayerId;mount(next,{lote:true});app().state.activeLayerId=ativa;app().renderLayers();
+    window.gpAttributeTable?.atualizarArquivo(id);
+    app().log(`${file.nome}: o arquivo mudou no storage; a bancada passou a exibir a revisão atual.`,'error');
+    return next;
+  })().finally(()=>cargasCompletas.delete(id)));
+  return cargasCompletas.get(id);
+}
+
+async function openEditor(editing=false){
   const source=active();if(!source)throw new Error('Abra o arquivo pelo explorador da bancada.');
   if(editor){editor.table.scrollIntoView({block:'nearest'});return;}if(busy)return;
+  if(source.representacao==='tiles'&&ehStorage(source)){
+    if(editing&&(source.geometria_tem_z||source.geometria_tem_m))throw new Error('A edição geométrica não está disponível para camadas com coordenadas Z/M, pois o editor do mapa não preserva essas dimensões.');
+    busy=true;syncEditRibbon();
+    try{
+      const selected=(app().state.selectedGeoJSON?.features||[])
+        .filter(feature=>feature.properties?.__gp_layer_id===source.id)
+        .map(feature=>String(feature.properties.__gp_selection_key??feature.id))
+        .filter(fid=>/^\d+$/.test(fid));
+      const ids=[...new Set(selected)];
+      if(ids.length>100)throw new Error('Selecione no máximo 100 feições por vez para editar geometrias.');
+      const result=ids.length?await post('/bancada-arquivos/geometrias',{
+        id:source.id,arquivo:source.arquivo,revisao:source.revisao,ids,
+      }):{features:[]};
+      if(result.revisao&&result.revisao!==source.revisao)throw new Error('O arquivo mudou durante a leitura. Reabra a camada.');
+      const nativeSource={...source,geojson:{type:'FeatureCollection',features:result.features||[]}};
+      return abrirEditor(editing,nativeSource,true);
+    }finally{busy=false;syncEditRibbon();}
+  }
+  if(!source.geojson){
+    busy=true;syncEditRibbon();
+    try{await garantirGeometria(source.id);}finally{busy=false;syncEditRibbon();}
+    if(editor)return;
+    if(app().state.activeLayerId!==source.id)throw new Error(`${source.nome}: a camada ativa mudou durante a leitura.`);
+  }
+  return abrirEditor(editing);
+}
+
+function abrirEditor(editing,source=active(),nativeStorage=false){
+  if(source?.geometria_aproximada)throw new Error(`${source.nome}: o mapa exibe uma prévia aproximada do pacote compactado; a edição de geometria não está disponível para essa representação.`);
   if(source.geojson.features.some(f=>!['Point','MultiPoint','LineString','MultiLineString','Polygon','MultiPolygon'].includes(f.geometry?.type)))throw new Error('Este editor aceita pontos, linhas e polígonos.');
+  const tipoOriginal=String(source.geometria_tipo||'').toLowerCase();
+  const tipoMulti=nativeStorage&&tipoOriginal.includes('multi');
   const dialog=el('dialog',undefined,'gp-file-dialog'),header=el('header');
   header.append(el('h2',`${editing?'Editar':'Explorar'} — ${source.nome}`));
   const status=el('p',undefined,'gp-file-status');status.setAttribute('role','status');
@@ -175,13 +368,50 @@ function openEditor(editing=false){
   const save=button('Salvar alterações',async()=>{
     if(!await window.gpFeedback.ProcessFeedback.confirmar({title:'Salvar alterações',message:'Gravar as alterações no arquivo original do storage?',warning:source.arquivo,confirmLabel:'Salvar alterações'}))return;
     busy=true;save.disabled=true;syncEditRibbon();const proc=window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Salvando alterações',tasks:['Validar e gravar no storage']});proc?.tarefaAtual('Validar e gravar no storage');if(!proc)status.textContent='Validando e gravando no arquivo original…';
-    try{const file=await post('/bancada-arquivos/salvar',{arquivo:source.arquivo,camada_id:source.id,revisao:revisaoInicial,geojson:draft});closed();await sincronizarSalvamento(file);if(proc){proc.concluirTarefa('Validar e gravar no storage','Gravada');proc.sucesso({title:'Alterações salvas',message:'Alterações gravadas no arquivo original do storage.'});}else app().log('Alterações gravadas no arquivo original do storage.','ok');}
+    try{
+      let file;
+      if(nativeStorage){
+        const originals=new Map(snapshot.features.map(feature=>[String(feature.id),feature]));
+        const current=new Map(draft.features.map(feature=>[String(feature.id),feature]));
+        const edicoes=[],novas=[];
+        for(const feature of draft.features){
+          const fid=String(feature.id),original=originals.get(fid);
+          if(!original){
+            let geometry=feature.geometry;
+            if(tipoMulti&&!geometry.type.startsWith('Multi')){
+              const multi={Point:'MultiPoint',LineString:'MultiLineString',Polygon:'MultiPolygon'}[geometry.type];
+              if(!multi)throw new Error(`Não é possível criar ${geometry.type} em uma camada ${source.geometria_tipo}.`);
+              geometry={type:multi,coordinates:[geometry.coordinates]};
+            }
+            novas.push({geometry,properties:feature.properties});continue;
+          }
+          const campos=Object.fromEntries(Object.keys({...original.properties,...feature.properties})
+            .filter(name=>JSON.stringify(original.properties?.[name])!==JSON.stringify(feature.properties?.[name]))
+            .map(name=>[name,feature.properties?.[name]??null]));
+          if(JSON.stringify(original.geometry)!==JSON.stringify(feature.geometry)||Object.keys(campos).length)
+            edicoes.push({fid,geometry:feature.geometry,campos});
+        }
+        const excluidos=[...originals.keys()].filter(fid=>!current.has(fid));
+        file=await post('/bancada-arquivos/salvar-geometrias',{
+          arquivo:source.arquivo,camada_id:source.id,revisao:revisaoInicial,edicoes,excluidos,novas,
+        });
+      }else{
+        file=await post('/bancada-arquivos/salvar',{arquivo:source.arquivo,camada_id:source.id,revisao:revisaoInicial,geojson:draft});
+      }
+      closed();await sincronizarSalvamento(file);
+      if(proc){proc.concluirTarefa('Validar e gravar no storage','Gravada');proc.sucesso({title:'Alterações salvas',message:'Alterações gravadas no arquivo original do storage.'});}else app().log('Alterações gravadas no arquivo original do storage.','ok');
+    }
     catch(error){lastError=error.message;proc?.erro({message:error.message});}finally{busy=false;if(editor)render();else syncEditRibbon();}
   });
   if(!editing)footer.append(button('Fechar',cancel));
   filter.oninput=()=>{page=0;render();};only.onchange=()=>{page=0;render();};
   if(editing){
     const kinds=new Set(source.geojson.features.map(f=>f.geometry.type.replace('Multi','')));
+    if(nativeStorage&&!kinds.size){
+      const tipo=String(source.geometria_tipo||'').toLowerCase();
+      const base=tipo.includes('point')?'Point':tipo.includes('line')?'LineString':tipo.includes('polygon')?'Polygon':null;
+      if(base)kinds.add(base);
+    }
     Object.assign(L.drawLocal.draw.toolbar.buttons,{polygon:'Criar polígono',polyline:'Criar linha',marker:'Criar ponto'});
     Object.assign(L.drawLocal.edit.toolbar.buttons,{edit:'Editar vértices',editDisabled:'Sem feições para editar',remove:'Excluir feições',removeDisabled:'Sem feições para excluir'});
     Object.assign(L.drawLocal.edit.toolbar.actions.save,{title:'Aplicar ao rascunho',text:'Aplicar'});
@@ -244,9 +474,9 @@ async function calcularCampo(){
     try{
       if(window.gpAttributeTable?.hasPendingChanges?.(file.id))throw new Error('Salve ou descarte as edições da tabela antes de calcular um campo.');
       if(!await window.gpFeedback.ProcessFeedback.confirmar({title:'Calcular campo',message:`Atualizar ${form.campo.value} em ${file.nome}?`,warning:`${scope.description}. O arquivo original será alterado: ${file.arquivo}`,confirmLabel:'Calcular'}))return;
-      progress=app().createTaskProgress(form);
+      progress=app().createTaskProgress();
       progress.note(`Calculando ${form.campo.value}: ${scope.description}`);
-      const result=await post('/bancada-arquivos/calcular-campo',{arquivo:file.arquivo,camada_id:file.id,revisao:file.revisao,campo:form.campo.value,expressao:form.expressao.value,...scope.payload});
+      const result=await post('/bancada-arquivos/calcular-campo',{arquivo:file.arquivo,camada_id:file.id,revisao:file.revisao,campo:form.campo.value,expressao:form.expressao.value,...scope.payload,...(file.id.startsWith('storage:')?{incluir_geojson:false}:{})});
       progress.note(`${result.feicoes_atualizadas} feição(ões) gravadas; atualizando a sessão da bancada`);
       await sincronizarSalvamento(result);
       await window.gpCommands.refreshLayerFilter?.(file.id);
@@ -276,11 +506,18 @@ async function execute(form){
   params.filtros_camadas=Object.fromEntries(Object.entries(app().state.layerFilters||{}).filter(([id])=>Object.values(params).some(value=>value===id||Array.isArray(value)&&value.includes(id))));
   const files={};for(const [id,file] of sessions)if(Object.values(params).some(value=>value===id||Array.isArray(value)&&value.includes(id)))files[id]={arquivo:file.arquivo,revisao:file.revisao};
   if(!await window.gpFeedback.ProcessFeedback.confirmar({title:'Executar operação da bancada',message:`Iniciar ${form.dataset.op}?`,warning:JSON.stringify(params,null,2),confirmLabel:'Executar'}))return;
-  const proc=window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Processando arquivos da bancada',tasks:['Executar a operação no servidor']});proc?.tarefaAtual('Executar a operação no servidor');busy=true;const submit=form.querySelector('button[type=submit],button.primary');if(submit)submit.disabled=true;
+  let job=null,resultadoDetalhado=null;
+  const cancelar=async()=>{
+    if(!job?.id)throw new Error('Aguarde o servidor registrar a execução antes de cancelar.');
+    const response=await fetch(`/api/geoespacial/operacoes-jobs/status/${job.id}/cancelar`,{method:'POST',credentials:'same-origin'});
+    const body=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(body.detail||`HTTP ${response.status}`);
+  };
+  const proc=window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Executando operação da bancada',tasks:['Executar a operação no servidor'],onCancel:cancelar});proc?.tarefaAtual('Executar a operação no servidor');busy=true;const submit=form.querySelector('button[type=submit],button.primary');if(submit)submit.disabled=true;
   const startedAt=Date.now();
   const record=(status,result)=>{app().state.history.unshift({at:new Date().toISOString(),op:form.dataset.op,name:app().operations.find(op=>op.id===form.dataset.op)?.nome||form.dataset.op,status,durationMs:Date.now()-startedAt,parameters:params,result});localStorage.setItem('gp-history',JSON.stringify(app().state.history.slice(0,100)));};
-  try{let job=await post('/bancada-arquivos/executar-job',{operacao:form.dataset.op,parametros:params,arquivos:files});window.gpFeedback.ProcessFeedback.acompanhar(job);while(!['concluido','erro','cancelado'].includes(job.status)){await new Promise(resolve=>setTimeout(resolve,300));const response=await fetch(`/api/geoespacial/operacoes-jobs/status/${job.id}`,{credentials:'same-origin'});job=await response.json();if(!response.ok)throw new Error(job.detail||'Falha ao acompanhar operação');window.gpFeedback.ProcessFeedback.acompanhar(job);}if(job.status!=='concluido')throw new Error(job.erro||'Operação interrompida');const result=job.resultado;if(result.camada)mount(result.camada);else if(result.resultado?.raster_id||result.resultado?.camada_id){const id=result.resultado.camada_id||result.resultado.raster_id;await app().refreshLayers(true,[id],id);}else app().showOperationResult('Resultado da operação',result.resultado||result);record('concluído',result);if(proc){proc.concluirTarefa('Executar a operação no servidor','Concluída');proc.sucesso({title:'Execução concluída',message:`Execução ${result.execucao_id} concluída.`,summary:[{label:'Execução',value:result.execucao_id,icon:'fa-hashtag'}]});}else app().log(`Execução concluída: ${result.execucao_id}`,'ok');}
-  catch(error){record('erro',error.message);proc?.erro({message:error.message});throw error;}
+  try{job=await post('/bancada-arquivos/executar-job',{operacao:form.dataset.op,parametros:params,arquivos:files});window.gpFeedback.ProcessFeedback.acompanhar(job);while(!['concluido','erro','cancelado'].includes(job.status)){await new Promise(resolve=>setTimeout(resolve,300));const response=await fetch(`/api/geoespacial/operacoes-jobs/status/${job.id}`,{credentials:'same-origin'});job=await response.json();if(!response.ok)throw new Error(job.detail||'Falha ao acompanhar operação');window.gpFeedback.ProcessFeedback.acompanhar(job);}if(job.status!=='concluido')throw new Error(job.erro||'Operação interrompida');const result=job.resultado;if(result.camada)mount(result.camada);else if(result.resultado?.raster_id||result.resultado?.camada_id){const id=result.resultado.camada_id||result.resultado.raster_id;await app().refreshLayers(true,[id],id);}else resultadoDetalhado=result.resultado||result;record('concluído',result);if(proc){proc.concluirTarefa('Executar a operação no servidor','Concluída');proc.sucesso({title:'Execução concluída',message:`Execução ${result.execucao_id} concluída.`,summary:[{label:'Execução',value:result.execucao_id,icon:'fa-hashtag'}],onClose:resultadoDetalhado?()=>app().showOperationResult('Resultado da operação',resultadoDetalhado):undefined});}else{app().log(`Execução concluída: ${result.execucao_id}`,'ok');if(resultadoDetalhado)app().showOperationResult('Resultado da operação',resultadoDetalhado);}}
+  catch(error){const cancelado=job?.status==='cancelado';record(cancelado?'cancelado':'erro',error.message);if(cancelado)proc?.confirmarCancelamento(error.message);else proc?.erro({message:error.message});throw error;}
   finally{busy=false;if(submit)submit.disabled=false;}
 }
 
@@ -288,6 +525,7 @@ function init(){
   const previousZoom=app().zoomToCatalogLayer;
   app().zoomToCatalogLayer=async id=>{
     const file=sessions.get(id);if(!file)return previousZoom(id);
+    if(!file.geojson)return app().ajustarStorageBounds(id);
     const bounds=new maplibregl.LngLatBounds();
     const walk=coordinates=>{if(typeof coordinates[0]==='number')bounds.extend(coordinates);else coordinates.forEach(walk);};
     file.geojson.features.forEach(feature=>walk(feature.geometry.coordinates));
@@ -300,14 +538,14 @@ function init(){
   document.addEventListener('click',event=>{
     if(event.target.closest('[data-ribbon="editar"]')){event.preventDefault();event.stopImmediatePropagation();activateEditRibbon();return;}
     const action=event.target.closest('[data-action]')?.dataset.action,edit=event.target.closest('[data-edit-layer]');
-    if(action==='load-system'){event.preventDefault();event.stopImmediatePropagation();browse().catch(error=>report(error.message));}
+    if(action==='load-system'){event.preventDefault();event.stopImmediatePropagation();app().openSystemLoadForm();}
     else if((edit&&sessions.has(edit.dataset.editLayer))||active()&&['calculate-field','save-layer','save-result','refresh-source'].includes(action)){
       event.preventDefault();event.stopImmediatePropagation();
       if(busy)return;
       if(edit)app().state.activeLayerId=edit.dataset.editLayer;
       if(action==='calculate-field'){calcularCampo().catch(error=>report(error.message));return;}
-      if(action==='refresh-source'){const file=active();if(editor){report('Salve ou cancele a edição antes de atualizar a fonte.');return;}post('/extracao-atributos/arquivo-mapa',{arquivo:file.arquivo,...(file.id.startsWith('storage:')?{id:file.id}:{})}).then(async refreshed=>{mount(refreshed);window.gpAttributeTable?.atualizarArquivo(refreshed.id);window.dispatchEvent(new CustomEvent('gp-arquivo-atualizado',{detail:refreshed}));await window.gpCommands?.refreshLayerFilter?.(refreshed.id);}).catch(error=>report(error.message));return;}
-      try{openEditor(Boolean(edit)||['save-layer','save-result'].includes(action));}catch(error){report(error.message);}
+      if(action==='refresh-source'){const file=active();if(editor){report('Salve ou cancele a edição antes de atualizar a fonte.');return;}releitura(file).then(async refreshed=>{mount(refreshed);window.gpAttributeTable?.atualizarArquivo(refreshed.id);window.dispatchEvent(new CustomEvent('gp-arquivo-atualizado',{detail:refreshed}));await window.gpCommands?.refreshLayerFilter?.(refreshed.id);}).catch(error=>report(error.message));return;}
+      openEditor(Boolean(edit)||['save-layer','save-result'].includes(action)).catch(error=>report(error.message));
     }
   },true);
   document.addEventListener('submit',event=>{
@@ -317,6 +555,6 @@ function init(){
     event.preventDefault();event.stopImmediatePropagation();execute(event.target).catch(error=>report(error.message));
   },true);
   window.addEventListener('beforeunload',event=>{if(editor?.dirty||busy){event.preventDefault();event.returnValue='';}});
-  window.gpArquivos={get busy(){return busy;},abrir:browse,adicionar:mount,editar:()=>openEditor(true),tabela:()=>app().showAttributes(app().state.activeLayerId),sessions,sincronizarSalvamento};
+  window.gpArquivos={get busy(){return busy;},abrir:browse,selecionarReferencias,abrirReferencias,preparar:abrirStorage,adicionar:mount,garantirGeometria,editar:()=>openEditor(true),tabela:()=>app().showAttributes(app().state.activeLayerId),sessions,sincronizarSalvamento};
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();

@@ -190,6 +190,7 @@ async def login_usuario(
     *,
     ip_address: str | None = None,
     user_agent: str | None = None,
+    permanecer_conectado: bool = False,
 ) -> tuple[SessionUser, str]:
     """Autentica um operador pelo username SIGMA e deriva seu perfil do sufixo.
 
@@ -231,7 +232,7 @@ async def login_usuario(
                     user_agent=user_agent,
                 )
                 raise AuthError("Credenciais inválidas.")
-            token = create_token(user)
+            token = create_token(user, permanecer_conectado=permanecer_conectado)
             _audit_auth(
                 mensagem="Login admin realizado com sucesso (API SIGMA)",
                 sucesso=True,
@@ -246,6 +247,7 @@ async def login_usuario(
     return authenticate_usuario(
         login,
         password,
+        permanecer_conectado=permanecer_conectado,
         ip_address=ip_address,
         user_agent=user_agent,
     )
@@ -257,6 +259,7 @@ def authenticate_usuario(
     *,
     ip_address: str | None = None,
     user_agent: str | None = None,
+    permanecer_conectado: bool = False,
 ) -> tuple[SessionUser, str]:
     login = (username or "").strip()
     password = password or ""
@@ -322,7 +325,7 @@ def authenticate_usuario(
         tipo_usuario=profile,
     )
 
-    token = create_token(user)
+    token = create_token(user, permanecer_conectado=permanecer_conectado)
     _audit_auth(
         mensagem="Login admin realizado com sucesso",
         sucesso=True,

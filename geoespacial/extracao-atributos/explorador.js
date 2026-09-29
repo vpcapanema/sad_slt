@@ -7,9 +7,9 @@ import { json } from './api.js';
 //
 // Navegação: um clique abre a pasta; um clique marca ou desmarca a camada; na
 // escolha de uma única camada, o duplo clique já confirma. Backspace sobe uma pasta.
-const ROOT='base-geoespacial';
+const ROOT='@storage';
 const BANK='@banco';
-const ROOT_NAMES={'base-geoespacial':'Bases geoespaciais',[BANK]:'Camadas cadastradas no banco'};
+const ROOT_NAMES={[ROOT]:'Storage geoespacial','base-geoespacial':'Bases geoespaciais','superficies-indices':'Superfícies e índices',[BANK]:'Camadas cadastradas no banco'};
 // Ícone por formato, pela convenção mais comum: GeoPackage é um banco SQLite;
 // Shapefile, geometria vetorial; GeoJSON, texto estruturado; KML, o globo do
 // Google Earth; FlatGeobuf, arquivo binário; rasters, imagem.
@@ -30,13 +30,14 @@ function partesDoNome(item){
 }
 function rotulo(item){const p=partesDoNome(item);return `${p.radical}${p.extensao}${p.camada?` › ${p.camada}`:''}`;}
 
-export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=false,validar=true}) {
+export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=false,validar=true,host,onClose}) {
   return new Promise(resolve=>{
-    const dialog=el('dialog',undefined,'ea-tool-dialog ea-storage-dialog');
+    const inline=Boolean(host?.isConnected);
+    const dialog=el(inline?'section':'dialog',undefined,`ea-tool-dialog ea-storage-dialog${inline?' ea-storage-inline':''}`);
     const header=el('header'),heading=el('h2',title),close=icon('Fechar','fa-xmark',()=>finish());
     const minimize=icon('Minimizar','fa-window-minimize',()=>{const small=dialog.classList.toggle('is-minimized');setIcon(minimize,small?'Restaurar':'Minimizar',small?'fa-window-restore':'fa-window-minimize');});
     const maximize=icon('Maximizar','fa-window-maximize',()=>{dialog.classList.remove('is-minimized');setIcon(minimize,'Minimizar','fa-window-minimize');const full=dialog.classList.toggle('is-maximized');setIcon(maximize,full?'Restaurar tamanho':'Maximizar',full?'fa-window-restore':'fa-window-maximize');});
-    const windows=el('div',undefined,'ea-storage-window-controls');windows.append(minimize,maximize,close);
+    const windows=el('div',undefined,'ea-storage-window-controls');windows.append(...(inline?[close]:[minimize,maximize,close]));
     heading.id='ea-storage-title';dialog.setAttribute('aria-labelledby',heading.id);header.append(heading,windows);
     const toolbar=el('div',undefined,'ea-storage-toolbar'),up=icon('Subir um nível (Backspace)','fa-arrow-turn-up',()=>goUp());
     const trail=el('nav',undefined,'ea-storage-path');trail.setAttribute('aria-label','Caminho da pasta');
@@ -64,8 +65,10 @@ export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=f
     const confirm=button('Confirmar',()=>selectBatch(),'ea-btn ea-btn-primary ea-storage-confirm-button');confirm.disabled=true;
     confirmBar.append(selectionLabel,confirm);
     const status=el('p',undefined,'ea-storage-status');status.setAttribute('role','status');
-    dialog.append(header,toolbar,body,confirmBar,status);document.body.append(dialog);dialog.showModal();
-    const cache=new Map(),pending=new Map(),expanded=new Set([ROOT]);let current=ROOT,loading=false,browsing=false,navigation=0,closed=false,mode='list';
+    dialog.append(header,toolbar,body,confirmBar,status);
+    if(inline)host.replaceChildren(dialog);
+    else{document.body.append(dialog);dialog.showModal();}
+    const cache=new Map(),pending=new Map(),expanded=new Set([ROOT]),roots=new Set();let current=ROOT,loading=false,browsing=false,navigation=0,closed=false,mode='list';
     const picks=new Map(),loaded=new Map();let visibleFiles=[];
     function button(label,action,className='ea-btn'){const b=el('button',label,className);b.type='button';b.onclick=action;return b;}
     function setIcon(b,label,simbolo){b.title=label;b.setAttribute('aria-label',label);b.querySelector('i').className=`fa-solid ${simbolo}`;}
@@ -77,7 +80,7 @@ export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=f
       close.disabled=loading&&!browsing;up.disabled=loading&&!browsing||current===ROOT||current===BANK;
       selectionLabel.textContent=picks.size?`${picks.size} camada(s): ${[...picks.values()].map(rotulo).join(', ')}`:'Nenhuma camada selecionada.';
     }
-    function finish(value=null){if(loading&&!browsing)return;closed=true;navigation++;dialog.close();dialog.remove();resolve(value);}
+    function finish(value=null){if(loading&&!browsing)return;closed=true;navigation++;if(!inline)dialog.close();dialog.remove();if(!value)onClose?.();resolve(value);}
     dialog.addEventListener('cancel',event=>{event.preventDefault();finish();});
     // Sem isto, o segundo clique rápido seleciona o texto da linha.
     dialog.addEventListener('mousedown',event=>{if(event.detail>1&&!event.target.closest('input'))event.preventDefault();});
@@ -86,10 +89,22 @@ export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=f
       event.preventDefault();goUp();
     });
     function goUp(){if(current!==ROOT)navigate(cache.get(current)?.pai||ROOT);}
-    function valid(path){return path===BANK||path===ROOT||path.startsWith(ROOT+'/');}
+    function valid(path){return path===BANK||path===ROOT||[...roots].some(root=>path===root||path.startsWith(`${root}/`));}
     async function directory(path){
       if(!valid(path))throw new Error('Escolha uma pasta dentro das bases geoespaciais do storage.');
       if(path===BANK)return {caminho:BANK,pai:null,pastas:[],arquivos:catalog.filter(item=>!item.id.startsWith('storage:')&&!item.id.startsWith('local:'))};
+      if(path===ROOT){
+        if(!cache.has(path)){
+          if(!pending.has(path))pending.set(path,json('/storage/pastas?caminho=').then(data=>{
+            for(const folder of data.pastas||[])roots.add(folder.caminho);
+            const folders=(data.pastas||[]).map(folder=>({...folder,nome:ROOT_NAMES[folder.caminho]||folder.nome}));
+            cache.set(path,{caminho:ROOT,pai:null,pastas:folders,arquivos:[]});
+            return cache.get(path);
+          }).finally(()=>pending.delete(path)));
+          await pending.get(path);
+        }
+        return cache.get(path);
+      }
       if(!cache.has(path)){
         if(!pending.has(path))pending.set(path,json(`/storage/navegar?detalhar=false&caminho=${encodeURIComponent(path)}`).then(data=>{cache.set(path,data);return data;}).finally(()=>pending.delete(path)));
         await pending.get(path);
@@ -195,22 +210,29 @@ export function escolherArquivo({catalog,excluded=[],title,acao=title,multiple=f
     async function selectBatch(){
       if(loading||!picks.size)return;loading=true;controls();
       let files=[...picks.values()];const errors=[];let next=0,done=0;
+      if(validar&&!await window.ProcessFeedback.confirmar({
+        title:'Carregar camadas de entrada',
+        message:`Ler e validar ${files.length} arquivo(s) selecionado(s) para a camada de entrada?`,
+        warning:files.map(rotulo).join('\n'),
+        confirmLabel:'Carregar e validar',
+      })){loading=false;controls();return;}
       const INVENTARIO='Identificar camadas dos arquivos',CARREGAR='Carregar camadas selecionadas';
-      const processo=window.ProcessFeedback.iniciarCadastro({title:acao,tasks:[...(files.some(f=>f.inventariar)?[INVENTARIO]:[]),...(validar?[CARREGAR]:[])]});
+      const processo=validar?window.ProcessFeedback.iniciarCadastro({title:acao,tasks:[...(files.some(f=>f.inventariar)?[INVENTARIO]:[]),CARREGAR]}):null;
       try{
         const expandidos=[];
         for(const file of files){
           if(!file.inventariar){expandidos.push(file);continue;}
-          processo.tarefaAtual(INVENTARIO,`${rotulo(file)}\nConsultando as camadas disponíveis no arquivo.`);
+          if(processo)processo.tarefaAtual(INVENTARIO,`${rotulo(file)}\nConsultando as camadas disponíveis no arquivo.`);
+          else status.textContent=`Identificando camadas de ${rotulo(file)}…`;
           const resultado=await json(`/storage/camadas-arquivo?arquivo=${encodeURIComponent(file.arquivo)}`);
           expandidos.push(...resultado.camadas.filter(c=>!excluded.includes(c.id)));
         }
         files=[...new Map(expandidos.map(c=>[c.id,c])).values()];
         if(!files.length)throw new Error('Todas as camadas desses arquivos já estão selecionadas.');
-        if(files.length&&processo.tasks.some(t=>t.name===INVENTARIO))processo.concluirTarefa(INVENTARIO,`${files.length} camada(s)`);
-      }catch(error){loading=false;controls();processo.erro({message:error.message});return;}
+        if(processo&&files.length&&processo.tasks.some(t=>t.name===INVENTARIO))processo.concluirTarefa(INVENTARIO,`${files.length} camada(s)`);
+      }catch(error){loading=false;controls();if(processo)processo.erro({message:error.message});else status.textContent=`Não foi possível identificar as camadas: ${error.message}`;return;}
       // Só referências: a validação acontece ao confirmar a lista; não há desfecho a mostrar.
-      if(!validar){loading=false;controls();processo.fechar();finish(multiple?files:files[0]);return;}
+      if(!validar){loading=false;controls();finish(multiple?files:files[0]);return;}
       const ativas=new Map();
       const acompanhar=()=>{processo.detalhe([...ativas.values()].join('\n\n')||'Leitura encerrada.');processo.progresso(done/files.length*100);};
       processo.tarefaAtual(CARREGAR,`${files.length} camada(s)`);acompanhar();

@@ -2,7 +2,39 @@
 
 Página: `/restrict/geoespacial/extracao-atributos/` (prefixo `/sicard` na VM).
 
+## Preservação da composição (26/09/2026)
+
+- Enviar a prévia adiciona/atualiza camadas na bancada; não remove as anteriores. Para remover, use o painel da bancada.
+- Salvar configuração da análise guarda somente a composição marcada, com recorte e regras. Entradas locais precisam ser cadastradas no storage antes de salvar uma configuração reutilizável; não são omitidas silenciosamente. Carregar substitui a composição após confirmação e exige novo envio da prévia.
+- Abrir a ferramenta territorial guarda a sessão completa em IndexedDB, incluindo arquivos locais e resultado. Se a gravação falhar, a navegação é interrompida e os dados ficam na página.
+- Alterações de visibilidade/recorte invalidam o resultado apresentado. As execuções já persistidas continuam no histórico.
+- Finalidades com campos indisponíveis são bloqueadas; em lotes heterogêneos, um campo pode existir apenas em parte das saídas.
+
+## Logs de funcionamento no console
+
+A página registra por padrão em `console.info`, `console.warn` e `console.error`, com prefixo `[SICARD][Extração]`. Abra as ferramentas do navegador (F12 → Console) e filtre por esse prefixo. Os registros incluem ações, mudanças da composição, validação, HTTP (método/rota/status/duração), correlação de ação/requisição/job, suboperações reais, contadores, progresso recebido por SSE/polling, resultado, cancelamento, recuperação, upload e download.
+
+As descrições das suboperações são reconhecidas nas mensagens efetivas do motor e convertidas em um vocabulário seguro: consulta ST_Intersects, construção de índice SQLite, contagem de vértices, classificação de contatos, consolidação, GeoPackage/XLSX/CSV e compactação. Logs não incluem arquivos/base64, geometrias, nomes de camadas/arquivos/pessoas, atributos, cabeçalhos, cookies, tokens, parâmetros da URL nem corpos de requisição/resposta. IDs de jobs são referências locais (`job-1`, etc.); erros exibem classe/status, sem texto livre do servidor. Cada registro é um retrato independente, sem referências mutáveis aos dados.
+
+Controles opcionais no console:
+
+```javascript
+SICARDExtracaoLogs.status()            // Estado atual e sessão local de diagnóstico
+SICARDExtracaoLogs.desativar()         // Silencia novos registros
+SICARDExtracaoLogs.ativar()            // Reativa os registros
+SICARDExtracaoLogs.detalharHttp(true)  // Mostra também cada consulta de polling
+SICARDExtracaoLogs.detalharHttp(false) // Suprime polling idêntico novamente
+```
+
+Sem detalhamento HTTP, consultas repetidas e revisões sem mudança efetiva não repetem logs; transições, contadores alterados e erros continuam visíveis. O logger não intercepta `fetch`/`console` globalmente e não transmite diagnósticos a outro serviço. O componente compartilhado oferece um callback opcional para SSE; ele só é ativado pelos processos desta página e suas falhas não interrompem o processamento.
+
 ## Fluxo implementado
+
+Os diálogos de seleção, edição de regras/listas e upload mantêm a área de trabalho
+necessária para arquivos, formulários e mapas, mas compartilham com os modais
+de feedback a moldura arredondada, o cabeçalho azul compacto, o rodapé neutro
+e a redução de espaçamento em telas estreitas. O modal nativo do storage no
+iframe recebe o mesmo acabamento sem substituir suas rotinas de envio.
 
 1. Carregar categorias ativas de `dominios.categoria_extracao_atributos` e camadas
    vetoriais do catálogo. Resultados temporários/removidos não são oferecidos.
@@ -11,7 +43,11 @@ Página: `/restrict/geoespacial/extracao-atributos/` (prefixo `/sicard` na VM).
    (GeoPackage, Shapefile, GeoJSON, KML, FlatGeobuf) e só permite escolher camadas
    presentes no catálogo vetorial; rasters e arquivos sem registro não entram. Ele
    não cria nem renomeia pastas: as rotas `POST`/`PATCH /pastas` existem, mas esta
-   tela não as usa. Escolher a categoria antes da base. Uploads podem conter várias camadas de entrada.
+   tela não as usa. Na seção 1.1, Confirmar no explorador pede confirmação
+   antes de inventariar ou ler os arquivos; somente após a confirmação abre o
+   acompanhamento do carregamento. Cancelar mantém a seleção no explorador sem
+   ler arquivos. A seleção de bases na 1.2 apenas monta a lista, sem leitura
+   antecipada. Escolher a categoria antes da base. Uploads podem conter várias camadas de entrada.
    As camadas confirmadas são desenhadas na bancada embutida (seção 02). Uploads abrem seletores locais nesta página;
    cadastro de categorias abre sua página própria; o botão de atualização
    recarrega os seletores.
@@ -873,7 +909,10 @@ verificam a edição de operações e o detalhamento dos vínculos.
 
 Ao selecionar um arquivo, suas camadas aguardam na seção 1.1 a escolha do
 identificador e do atributo de categoria da demanda (ou “Sem categorização”).
-Um único botão confirma a configuração e envia as camadas à prévia. Alterar
+O card de identificação ocupa a largura da coluna da camada de entrada,
+diretamente abaixo dela; a tabela rola dentro do card quando necessário.
+No rodapé, **Limpar entrada** fica ao lado de **Confirmar configuração**.
+Confirmar envia as camadas à prévia. Alterar
 essas escolhas retira a camada da prévia até nova confirmação; a bancada
 preserva sua composição já confirmada. Enviar bases não descarta demandas
 ainda aguardando identificação.

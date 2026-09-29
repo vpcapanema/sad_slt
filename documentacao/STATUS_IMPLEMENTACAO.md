@@ -61,8 +61,10 @@ JSONB autocontido com cabeçalho, objetos e resultados das fases.
 - Homologação: fechamento e registro da rodada; o ciclo cadastral das demandas
   permanece sob o serviço próprio de transições de situação.
 
-Há também o fluxo clássico de portfólio em cinco telas: configuração, objetos,
-avaliação, ranking e homologação.
+As interfaces vigentes são a gestão das hierarquizações em `/restrict/hierarquizacao/processos/`,
+as três fases em `/restrict/hierarquizacao/fase-1/`, `/fase-2/` e `/fase-3/`
+e o ranking em `/restrict/hierarquizacao/ranking/`. As cinco telas antigas
+de etapas avulsas do portfólio foram removidas.
 
 As fases da rodada são selecionáveis e independentes. A Fase 1 preserva as
 interseções e usa o máximo dos valores restritivos e a média ponderada dos riscos.
@@ -147,9 +149,6 @@ esquema único `demandas`.
 
 ## Limites conhecidos
 
-- A integração ponta a ponta das três fases existe nos serviços e telas, mas
-  ainda há dois fluxos de interface: o fluxo metodológico em três fases e o
-  fluxo clássico de portfólio em cinco etapas.
 - A extração territorial da Fase 2 está operacional para projetos pontuais. Os
   métodos zonais previstos na metodologia dependem de geometrias lineares ou
   poligonais consolidadas no contrato das demandas.

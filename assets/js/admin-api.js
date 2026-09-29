@@ -237,16 +237,52 @@
     return request("/api/dominios/status-objeto-ahp");
   }
 
-  async function login(username, senha) {
-    return request("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, senha }),
-    });
+  async function authRequest(path, options = {}, observation = {}) {
+    const started = performance.now();
+    const timeout = AbortSignal.timeout(path.endsWith('/login') ? 45000 : 12000);
+    const signal = observation.signal ? AbortSignal.any([timeout, observation.signal]) : timeout;
+    const meta = { tentativa: observation.tentativa || 0, rota: path, metodo: options.method || 'GET' };
+    const report = (event, data, level = 'info') => {
+      try { observation.log?.(event, { ...meta, ...data }, level); } catch { /* observacao nao altera a requisicao */ }
+    };
+    report('http.inicio', {});
+    let status = 0;
+    try {
+      const response = await fetch(path, { credentials: 'include', cache: 'no-store', ...options, signal });
+      status = response.status;
+      const body = await response.json().catch(error => {
+        if (signal.aborted) throw error;
+        throw new Error('O servidor retornou uma resposta inválida. Tente novamente.');
+      });
+      if (!response.ok) {
+        const error = new Error(status === 401 ? 'Acesso negado. Usuário ou senha incorretos.' : status === 503
+          ? 'O serviço de autenticação está indisponível. Tente novamente em instantes.'
+          : status === 422 ? 'Confira o usuário e a senha informados.'
+          : 'Não foi possível concluir o acesso. Tente novamente.');
+        error.status = status;
+        throw error;
+      }
+      report('http.concluido', { status_http: status, duracao_ms: Math.round(performance.now() - started) });
+      return body;
+    } catch (cause) {
+      report('http.falhou', { status_http: status, duracao_ms: Math.round(performance.now() - started),
+        motivo: timeout.aborted ? 'timeout' : signal.aborted ? 'cancelado' : status ? 'resposta_rejeitada' : 'rede' }, signal.aborted && !timeout.aborted ? 'info' : 'error');
+      if (timeout.aborted) throw new Error('O servidor demorou para responder. Tente novamente. Se o login foi concluído, atualizar a página recupera a sessão.');
+      if (!status && !signal.aborted) throw new Error('Não foi possível conectar ao servidor. Confira a conexão e tente novamente.');
+      throw cause;
+    }
   }
 
-  async function fetchSession() {
-    return request("/api/auth/session");
+  async function login(username, senha, permanecer_conectado = false, observation = {}) {
+    return authRequest('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, senha, permanecer_conectado }),
+    }, observation);
+  }
+
+  async function fetchSession(observation = {}) {
+    return authRequest('/api/auth/session', {}, observation);
   }
 
   async function logout() {

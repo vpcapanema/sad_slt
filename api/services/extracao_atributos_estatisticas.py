@@ -13,6 +13,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from api.services import extracao_ogr as espacial
+from api.services.feedback_operacao import operacao, contexto
 
 from api.services.extracao_atributos_enriquecimento import (
     CRS_MEDIDA, CRS_SAIDA, DIMENSIONS, NOMES_DIMENSAO, _finalidades, _nome_livre, _texto, _valor,
@@ -57,12 +58,22 @@ def agregar(valores, estatistica):
     return resultado
 
 
-def _geometrias_trabalho(frame, nome):
+def _geometrias_trabalho(frame, nome, progress=None):
     if frame.crs is None:
         raise ValueError(f'{nome}: a camada não tem sistema de referência (CRS).')
-    geoms = espacial.reproject(frame, CRS_MEDIDA, nome).geometry.reset_index(drop=True)
-    invalidas = pd.Series([g is not None for g in geoms], dtype=bool) & ~geoms.map(espacial.is_valid)
-    geoms.loc[invalidas] = geoms.loc[invalidas].map(espacial.make_valid)
+    geoms = espacial.reproject(frame, CRS_MEDIDA, nome, progress=progress).geometry.reset_index(drop=True)
+    with operacao(progress, f'{nome}: verificando validade das geometrias de consulta') as medir:
+        flags = []
+        for i, geom in enumerate(geoms):
+            flags.append(geom is not None and not espacial.is_valid(geom))
+            medir(i + 1, len(geoms), 'geometrias')
+        invalidas = pd.Series(flags, dtype=bool)
+    total_invalidas = int(invalidas.sum())
+    if total_invalidas:
+        with operacao(progress, f'{nome}: corrigindo geometrias inválidas somente na cópia de consulta') as medir:
+            for i, pos in enumerate(invalidas[invalidas].index):
+                geoms.loc[pos] = espacial.make_valid(geoms.loc[pos])
+                medir(i + 1, total_invalidas, 'geometrias')
     return geoms, {'feicoes': len(frame), 'corrigidas_para_consulta': int(invalidas.sum()),
                    'sem_geometria': int((geoms.isna() | geoms.is_empty).sum())}
 
@@ -93,9 +104,9 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
         if config['campo_id'] and config['campo_id'] not in frame.columns:
             raise ValueError(f"{item['nome']}: campo identificador inexistente: {config['campo_id']}.")
         progress(f"Preparando a entrada {item['nome']} sem alterar a geometria original")
-        geoms, estat = _geometrias_trabalho(frame, item['nome'])
+        geoms, estat = _geometrias_trabalho(frame, item['nome'], progress)
         trabalho.extend(geoms)
-        original = espacial.reproject(frame, CRS_SAIDA, item['nome']).reset_index(drop=True)
+        original = espacial.reproject(frame, CRS_SAIDA, item['nome'], progress=progress).reset_index(drop=True)
         tabela = original.drop(columns=original.geometry.name).copy()
         for campo in tabela.columns:
             if campo not in nomes_entrada:
@@ -117,55 +128,70 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
     for categoria in categorias:
         for camada in categoria['camadas']:
             progress(f"Cruzando {categoria['nome']} / {camada['nome']}")
-            if hasattr(progress,'tarefa'): progress.tarefa(0,len(trabalho))
+            base_progress = contexto(progress, f"{categoria['nome']} / {camada['nome']}")
             base, regra = camada['frame'].reset_index(drop=True), camada['regra']
             campos = [c for c in base.columns if c != base.geometry.name]
             faltando = set(regra['estatisticas_campos']) - set(campos)
             if faltando:
                 raise ValueError(f"{camada['nome']}: campo(s) inexistente(s) nas estatísticas: {', '.join(sorted(faltando))}.")
-            geoms, estat = _geometrias_trabalho(base, camada['nome'])
-            indice = espacial.SpatialJoin(geoms)
+            geoms, estat = _geometrias_trabalho(base, camada['nome'], base_progress)
+            indice = espacial.SpatialJoin(geoms, progress=base_progress)
             nomes = {c: _nome_livre(regra['prefixo'] + str(c), usados) for c in campos}
             novas = {nome: [] for nome in nomes.values()}
             contagens, vinculos, bordas, interiores, pontuais = [], [], [], [], []
             base_consulta = base.set_geometry(geoms).set_crs(CRS_MEDIDA, allow_override=True)
             # Consultar e agregar cada lote antes de liberar seus candidatos.
             # Uma feição muito complexa vai sozinha, sem simplificar o original.
-            vertices = [espacial.vertex_count(g) for g in trabalho]
-            inicio = 0
-            while inicio < len(trabalho):
-                fim = inicio + 1
-                carga = int(vertices[inicio])
-                while fim < len(trabalho) and fim - inicio < 64 and carga + int(vertices[fim]) <= 200000:
-                    carga += int(vertices[fim]); fim += 1
-                pares = indice.pairs(trabalho.iloc[inicio:fim])
-                comuns = {}
-                correspondencias = [[] for _ in range(fim - inicio)]
-                for entrada_pos, base_pos in pares:
-                    if base_pos is None:
-                        continue
-                    # Medida descritiva de um par já associado pelo spatial join;
-                    # nunca produz feições de saída nem decide a correspondência.
-                    comum = espacial.intersection(trabalho.iloc[inicio+entrada_pos], geoms.iloc[base_pos])
-                    comuns[(entrada_pos, base_pos)] = comum
-                    correspondencias[int(entrada_pos)].append(int(base_pos))
-                correspondencias = [sorted(set(posicoes)) for posicoes in correspondencias]
-                contagens.extend(len(p) for p in correspondencias)
-                for local, posicoes in enumerate(correspondencias):
-                    evidencias = [registro(base_consulta, p, trabalho.iloc[inicio+local], comum=comuns[(local,p)]) for p in posicoes]
-                    vinculos.append(serializar(evidencias))
-                    bordas.append(sum(e['tipo'] == 'contato_borda' for e in evidencias))
-                    interiores.append(sum(e['tipo'] == 'intersecao_interior' for e in evidencias))
-                    pontuais.append(sum(e['tipo'] == 'cruzamento_pontual' for e in evidencias))
-                for campo, nome in nomes.items():
-                    medida = regra['estatisticas_campos'].get(campo, 'valores')
-                    novas[nome].extend(agregar(base[campo].iloc[posicoes], medida) if posicoes else None
-                                       for posicoes in correspondencias)
-                if hasattr(progress,'tarefa'): progress.tarefa(fim,len(trabalho))
-                getattr(progress,'detalhe',progress)(f"{camada['nome']}: {fim}/{len(trabalho)} feições analisadas; lote {inicio+1}–{fim}, {len(pares)} correspondências candidatas; atributos de {len(campos)} campos consolidados.")
-                inicio = fim
-                if hasattr(progress,'progresso_fase'): progress.progresso_fase(len(etapas) + fim / max(1,len(trabalho)), sum(len(c['camadas']) for c in categorias))
-            indice.close()
+            try:
+                with operacao(base_progress, 'Contando vértices para dimensionar lotes sem simplificar geometrias') as medir:
+                    vertices = []
+                    for pos, geom in enumerate(trabalho):
+                        vertices.append(espacial.vertex_count(geom))
+                        medir(pos + 1, len(trabalho), 'feições')
+                inicio = 0
+                while inicio < len(trabalho):
+                    fim = inicio + 1
+                    carga = int(vertices[inicio])
+                    while fim < len(trabalho) and fim - inicio < 64 and carga + int(vertices[fim]) <= 200000:
+                        carga += int(vertices[fim]); fim += 1
+                    lote_progress = contexto(base_progress, f'Lote {inicio+1}–{fim} de {len(trabalho)} feições')
+                    indice.progress = lote_progress
+                    pares = indice.pairs(trabalho.iloc[inicio:fim])
+                    confirmados = sum(base_pos is not None for _, base_pos in pares)
+                    sem_par = sum(base_pos is None for _, base_pos in pares)
+                    comuns = {}
+                    correspondencias = [[] for _ in range(fim - inicio)]
+                    with operacao(lote_progress, 'Calculando medidas descritivas das interseções confirmadas') as medir:
+                        feitos = 0
+                        for entrada_pos, base_pos in pares:
+                            if base_pos is None:
+                                continue
+                            comum = espacial.intersection(trabalho.iloc[inicio+entrada_pos], geoms.iloc[base_pos])
+                            comuns[(entrada_pos, base_pos)] = comum
+                            correspondencias[int(entrada_pos)].append(int(base_pos))
+                            feitos += 1
+                            medir(feitos, confirmados, 'pares confirmados')
+                    correspondencias = [sorted(set(posicoes)) for posicoes in correspondencias]
+                    contagens.extend(len(p) for p in correspondencias)
+                    with operacao(lote_progress, 'Classificando contatos e serializando vínculos com a base') as medir:
+                        for local, posicoes in enumerate(correspondencias):
+                            evidencias = [registro(base_consulta, p, trabalho.iloc[inicio+local], comum=comuns[(local,p)]) for p in posicoes]
+                            vinculos.append(serializar(evidencias))
+                            bordas.append(sum(e['tipo'] == 'contato_borda' for e in evidencias))
+                            interiores.append(sum(e['tipo'] == 'intersecao_interior' for e in evidencias))
+                            pontuais.append(sum(e['tipo'] == 'cruzamento_pontual' for e in evidencias))
+                            medir(local + 1, len(correspondencias), 'registros')
+                    for campo, nome in nomes.items():
+                        medida = regra['estatisticas_campos'].get(campo, 'valores')
+                        with operacao(lote_progress, f'Consolidando campo {campo}; regra {ROTULOS[medida]}') as medir:
+                            for local, posicoes in enumerate(correspondencias):
+                                novas[nome].append(agregar(base[campo].iloc[posicoes], medida) if posicoes else None)
+                                medir(local + 1, len(correspondencias), 'registros')
+                    getattr(base_progress, 'detalhe', base_progress)(f'Lote {inicio+1}–{fim} concluído: {fim}/{len(trabalho)} feições analisadas; {confirmados} pares confirmados; {sem_par} feições sem correspondência; {len(campos)} campos consolidados.')
+                    inicio = fim
+                    if hasattr(progress,'progresso_fase'): progress.progresso_fase(len(etapas) + fim / max(1,len(trabalho)), sum(len(c['camadas']) for c in categorias))
+            finally:
+                indice.close()
             for campo, nome in nomes.items():
                 medida = regra['estatisticas_campos'].get(campo, 'valores')
                 dicionario.append({'campo': nome, 'apelido': regra['apelidos'].get(campo), 'tema': categoria['nome'],
@@ -201,6 +227,7 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
     resultado = resultado[[*ordem, resultado.geometry.name]]
     dimensoes = resultado.geometry.map(lambda g: NOMES_DIMENSAO.get(DIMENSIONS.get(g.geom_type) if g is not None else None, 'geometrias'))
     saidas = {nome: resultado.loc[dimensoes == nome].reset_index(drop=True) for nome in dimensoes.unique()}
+    progress('Conferindo quantidade de registros e preservação das geometrias de saída')
     preservadas = len(resultado) == sum(len(e['frame']) for e in entradas) and resultado.geometry.to_wkb().equals(geometria_original.to_wkb())
     if not preservadas:
         raise ValueError('A conferência detectou alteração na quantidade ou nas geometrias da entrada.')
@@ -218,7 +245,8 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
              'registros_com_multiplas_feicoes': sum(contas[i] > 1 for i in posicoes)}
             for e, contas in zip(etapas, contagens_bases)]}
     dicionario = [{**d, 'camada':nome} for nome in saidas for d in dicionario]
-    materializar(saidas, dicionario, categorias)
+    with operacao(progress, 'Materializando atributos analíticos e dicionário da saída'):
+        materializar(saidas, dicionario, categorias)
     return {'intersecoes_territoriais':snapshot_saida(saidas), 'camadas': saidas, 'finalidades': _finalidades(saidas, normalizar_finalidades(finalidades)),
             'dicionario': dicionario,
             'relatorio': {'geoprocessamento': espacial.provenance(), 'entradas': estat_entradas, 'camadas': rel_camadas,
