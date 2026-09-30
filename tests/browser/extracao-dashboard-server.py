@@ -45,7 +45,7 @@ risk=gpd.GeoDataFrame({'nome':['Inundação do Rio Azul','Encosta do Bairro Nort
 social=gpd.GeoDataFrame({'nome':['Setor Central'],'populacao':[12500],'renda_media':[2450.75]},geometry=[box(x,y,x+15,y+15)],crs=5880)
 SNAPSHOT=None
 for name,points in [('Rodovias',[Point(x+1,y+1),Point(x+2,y+2),Point(x+8,y+8),Point(x+50,y)]),('Ferrovias',[Point(x+50,y)])]:
-    frame=gpd.GeoDataFrame({'codigo':list(range(len(points)))},geometry=points,crs=5880)
+    frame=gpd.GeoDataFrame({'codigo':list(range(len(points))), 'titulo':[f'{name} — demanda {i+1}' for i in range(len(points))]},geometry=points,crs=5880)
     cats=[{'id':'risco','nome':'Risco','camadas':[{'id':'r','nome':'Áreas de risco','frame':risk,'regra':{}}]},
           {'id':'restricao','nome':'Restrição','camadas':[{'id':'s','nome':'Áreas protegidas','frame':risk.iloc[:1],'regra':{}}]},
           {'id':'social','nome':'Social','camadas':[{'id':'social','nome':'Setores censitários','frame':social,'regra':{}}]}]

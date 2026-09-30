@@ -154,6 +154,25 @@ def agrupar_demandas(snapshot):
     return {**snapshot,'fonte':'camada_saida','entradas':entries}
 
 
+def nome_demanda(feature):
+    """Rótulo legível da feição; o FID permanece sua identidade independente."""
+    import unicodedata
+    attrs = feature.get('atributos') or {}
+    def normalizar(key):
+        return ''.join(c for c in unicodedata.normalize('NFKD', str(key).casefold()) if not unicodedata.combining(c)).replace(' ', '_')
+    campos = {normalizar(k): k for k in attrs}
+    prioridades = ('titulo', 'title', 'nome_demanda', 'nome_projeto', 'nome_participante', 'participante', 'nome', 'name', 'denominacao', 'descricao')
+    candidatos = [campos[k] for k in prioridades if k in campos]
+    candidatos += [k for k in attrs if k not in candidatos and any(t in normalizar(k) for t in ('titulo', 'nome', 'name', 'denomin'))]
+    for campo in candidatos:
+        value = attrs[campo]
+        if isinstance(value, str) and value.strip():
+            return value.strip(), campo
+    value = feature.get('identificador')
+    if not presente(value): value = feature.get('fid')
+    return str(value), None
+
+
 def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situacao='', busca='', pagina=0, tamanho=25, atributo='', agrupamento='feicao'):
     if agrupamento == 'camada':
         snapshot = agrupar_demandas(snapshot)
@@ -170,7 +189,8 @@ def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situaca
                 from collections import Counter
                 contagens = dict(Counter(snapshot['areas'][aid]['categoria']
                                          for aid in set(feature['areas']) if aid in snapshot['areas']))
-            all_items.append({**feature, 'entrada':entry['nome'], 'chave':chave([entry['nome'],feature.get('identificador') if snapshot.get('fonte')=='camada_saida' else feature['fid']]),
+            all_items.append({**feature, 'entrada':entry['nome'], 'chave':chave([entry['nome'],feature['fid']]),
+                'nome_demanda':nome_demanda(feature)[0], 'campo_nome_demanda':nome_demanda(feature)[1],
                 'contagens':contagens,
                 'estados':{t:estado(snapshot,feature,t) for t in TIPOS},
                 'representacao_mapa':entry.get('representacao_mapa', {}).get('metodo', 'original')})
@@ -256,7 +276,7 @@ def da_saida(tabelas):
             origin = row.get('camada_origem') or name
             fid = row.get('fid_origem', stored['ordem'])
             codigo = row.get('id_origem')
-            ident = str(codigo) if presente(codigo) else str(fid)
+            ident = str(fid)  # Uma feição original por demanda; fragmentos do mesmo FID ficam juntos.
             feature = entries.setdefault(origin, {}).setdefault(ident, {
                 'fid':fid, 'identificador':codigo if presente(codigo) else fid, 'atributos':{},
                 'areas':[], 'bases_intersectadas':[], 'relacoes':{}, 'flags':{},

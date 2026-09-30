@@ -1,3 +1,4 @@
+const nomeDemanda=item=>String(item.nome_demanda??item.identificador??item.fid);
 import {json,base as apiBase} from './api.js';
 import {numero} from './ui.js';
 import {clone,valor,opcoes,definicoes,texto} from './resultados-dom.js';
@@ -16,7 +17,7 @@ function metric(m){
  return parts.join(' · ')||m.situacao||'Correspondência registrada';
 }
 export function criarTerritorial(result){
- const initial=()=>({entrada:'',feicao:'',categoria:'',atributo:'',busca:'',pagina:0,agrupamento:'camada'});
+ const initial=()=>({entrada:'',feicao:'',categoria:'',atributo:'',busca:'',pagina:0,agrupamento:'feicao'});
  let state=initial(),host,controller,version=0,map,data,selectedKey=null,selectedArea=null,chartMetric='espacial';
  const atributosPorCategoria=new Map(),atributosAbertos=new Set();let ordenarPor='',crescente=true;
  const q=s=>host.querySelector(s),role=k=>q(`[data-role="${k}"]`);
@@ -48,7 +49,7 @@ export function criarTerritorial(result){
   role('detail').hidden=!item;role('attribute-controls').hidden=!item;
   if(!item){map?.destroy();map=null;return;}
   role('occurrences').replaceChildren();role('chart').replaceChildren();role('point-categories').replaceChildren();
-  role('selection-title').textContent=item?`${item.entrada} · ${(data.categorias||[]).find(c=>c[0]===state.categoria)?.[1]||'Todas as categorias'}`:'Selecione uma demanda nas tabelas';
+  role('selection-title').textContent=item?`${nomeDemanda(item)} · ${(data.categorias||[]).find(c=>c[0]===state.categoria)?.[1]||'Todas as categorias'}`:'Selecione uma demanda nas tabelas';
   const areas=item?item.areas.map(id=>data.areas[id]).filter(a=>a&&(!state.categoria||a.categoria===state.categoria)):[];
   role('empty').hidden=!!areas.length;role('empty').textContent=['nao_avaliado','nao_informado'].includes(item?.estados?.[state.categoria])?'Esta demanda não tem avaliação disponível nesta categoria.':'Nenhuma correspondência registrada nesta categoria.';
   const numeric=!!state.atributo&&!/(^id$|codigo|código|(^|_)cod($|_)|(^|_)id($|_)|fid|objectid)/i.test(state.atributo)&&areas.length>0&&areas.every(a=>typeof a.atributos[state.atributo]==='number'&&Number.isFinite(a.atributos[state.atributo]));
@@ -76,8 +77,8 @@ export function criarTerritorial(result){
   }
   const features=[];
   if(area?.geometria)features.push({type:'Feature',geometry:area.geometria,properties:{chave:`area:${area.id}`,papel:'area',categoria:area.categoria,rotulo:nomeArea(area)}});
-  for(const f of data.mapa_saida?.features||[])if(!item||f.properties.chave===item.chave)features.push({...f,properties:{...f.properties,papel:'entrada',rotulo:item?String(item.identificador):f.properties.chave}});
-  if(item?.geometria)features.push({type:'Feature',geometry:item.geometria,properties:{chave:item.chave,papel:'entrada',rotulo:String(item.identificador)}});
+  for(const f of data.mapa_saida?.features||[])if(!item||f.properties.chave===item.chave)features.push({...f,properties:{...f.properties,papel:'entrada',rotulo:item?nomeDemanda(item):f.properties.chave}});
+  if(item?.geometria)features.push({type:'Feature',geometry:item.geometria,properties:{chave:item.chave,papel:'entrada',rotulo:nomeDemanda(item)}});
   map?.destroy();map=desenharMapa(role('map'),features,key=>{if(key.startsWith('area:')){selectedArea=key.slice(5);detail();}});
   if(item)map.focus(item.chave);
   role('map-scope').textContent=data.mapa_saida_limitado?'Prévia limitada a 200 geometrias. Os cálculos e arquivos usam todos os registros.':(area?.representacao_mapa&&area.representacao_mapa!=='original'||data.representacao_saida?.metodo&&data.representacao_saida.metodo!=='original')?'Prévia simplificada para navegação. Métricas e arquivos usam geometrias integrais.':'Geometrias e atributos preservados na saída.';
@@ -106,10 +107,10 @@ export function criarTerritorial(result){
    const campos=atributosPorCategoria.get(id)||[];
    return campos.length?campos.map(c=>`${c}: ${[...new Set(areas.map(a=>labelValue(a.atributos[c])))].join(' · ')}`).join('\n'):'Escolher atributos';
   }
-  const ordered=[...data.linhas].sort((a,b)=>(crescente?1:-1)*(ordenarPor?cell(a,ordenarPor).localeCompare(cell(b,ordenarPor),'pt-BR',{numeric:true}):a.entrada.localeCompare(b.entrada,'pt-BR',{numeric:true})));
+  const ordered=[...data.linhas].sort((a,b)=>(crescente?1:-1)*(ordenarPor?cell(a,ordenarPor).localeCompare(cell(b,ordenarPor),'pt-BR',{numeric:true}):nomeDemanda(a).localeCompare(nomeDemanda(b),'pt-BR',{numeric:true})));
   for(const item of ordered){
-   const row=document.createElement('tr'),name=document.createElement('th');name.scope='row';name.textContent=item.entrada;row.append(name);
-   for(const [id,nome] of data.categorias||[]){const td=document.createElement('td'),b=document.createElement('button');b.className='ea-btn ea-matrix-cell';b.type='button';b.textContent=cell(item,id);b.setAttribute('aria-label',`${item.entrada} · ${nome}: ${b.textContent}`);b.setAttribute('aria-pressed',String(selectedKey===item.chave&&state.categoria===id));b.onclick=()=>selectDemand(item.chave,id);td.append(b);row.append(td);}
+   const row=document.createElement('tr'),name=document.createElement('th');name.scope='row';name.textContent=nomeDemanda(item);name.title=`${item.entrada} · FID ${item.fid}${item.campo_nome_demanda?' · '+item.campo_nome_demanda:''}`;row.append(name);
+   for(const [id,nome] of data.categorias||[]){const td=document.createElement('td'),b=document.createElement('button');b.className='ea-btn ea-matrix-cell';b.type='button';b.textContent=cell(item,id);b.setAttribute('aria-label',`${nomeDemanda(item)} · ${nome}: ${b.textContent}`);b.setAttribute('aria-pressed',String(selectedKey===item.chave&&state.categoria===id));b.onclick=()=>selectDemand(item.chave,id);td.append(b);row.append(td);}
    body.append(row);
   }
   role('pagination').textContent=`Página ${data.paginas?data.pagina+1:0} de ${data.paginas} · ${data.total} demandas`;

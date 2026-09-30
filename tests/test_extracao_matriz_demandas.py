@@ -32,3 +32,26 @@ def test_matriz_mantem_demandas_sem_correspondencia():
     data=consultar(snapshot,agrupamento='camada')
     assert {r['entrada']:r['estados']['risco'] for r in data['linhas']}=={'Sem contato':'sem','Sem avaliação':'nao_avaliado'}
     assert consultar(snapshot,agrupamento='camada',busca='contato')['total']==1
+
+
+def test_uma_demanda_por_feicao_mesmo_com_id_e_titulo_repetidos():
+    x,y=5000000,7500000
+    entrada=gpd.GeoDataFrame({'codigo':['mesmo','mesmo','outro'], 'titulo':['Projeto A','Projeto A','Projeto B'], 'nome':['Ignorar','Ignorar','Ignorar']},
+        geometry=[Point(x+1,y+1),Point(x+2,y+2),Point(x+8,y+8)],crs=5880)
+    base=gpd.GeoDataFrame({'nome':['Área de risco']},geometry=[box(x,y,x+4,y+4)],crs=5880)
+    categorias=[{'id':'risco','nome':'Risco','camadas':[{'id':'r','nome':'Riscos','frame':base,'regra':{}}]}]
+    result=enriquecer(entradas=[{'nome':'Pontos','frame':entrada,'config':{'campo_id':'codigo'}}],categorias=categorias)
+    data=consultar(snapshot_saida(result['camadas']))
+    assert data['total']==3
+    assert len({r['chave'] for r in data['linhas']})==3
+    assert sorted(r['nome_demanda'] for r in data['linhas'])==['Projeto A','Projeto A','Projeto B']
+    assert all(r['campo_nome_demanda']=='titulo' for r in data['linhas'])
+    assert sum(r['estados']['risco']=='com' for r in data['linhas'])==2
+    assert consultar(snapshot_saida(result['camadas']),busca='Projeto B')['total']==1
+
+
+def test_nome_demanda_com_acentos_e_fallback():
+    from api.services.extracao_resultados_territoriais import nome_demanda
+    assert nome_demanda({'atributos':{'TÍTULO':'Obra A','nome':'Outro'},'fid':0})==('Obra A','TÍTULO')
+    assert nome_demanda({'atributos':{'titulo':'  ','nome':'Obra B'},'fid':1})==('Obra B','nome')
+    assert nome_demanda({'atributos':{},'identificador':0,'fid':3})==('0',None)
