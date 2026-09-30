@@ -26,6 +26,17 @@ styles=['/assets/vendor/fontawesome/css/all.min.css','/assets/vendor/leaflet/lea
 scripts=['/assets/js/notification_system.js','/assets/js/process_feedback_unified.js','/assets/vendor/leaflet/leaflet.js','/assets/vendor/maplibre-gl/maplibre-gl.js','/assets/vendor/maplibre-gl/leaflet-maplibre-gl.js']
 html='<html><head><meta charset="utf-8">'+''.join(f'<link rel="stylesheet" href="{s}">' for s in styles)+'</head><body><main id="extracao-app" class="ea-main">'+content+'</main>'+''.join(f'<script src="{s}"></script>' for s in scripts)+'<script type="module" src="/restrict/geoespacial/extracao-atributos/app.js"></script></body></html>'
 
+# Bancadas da fixture usam armazenamento temporário, nunca o volume real.
+import tempfile
+from api.services import bancadas_salvas
+bancadas_temp = tempfile.TemporaryDirectory(prefix='sicard-bancadas-test-')
+bancadas_salvas.project_path = lambda _: Path(bancadas_temp.name)
+bancadas_salvas.salvar('fixture', 'Bancada de teste', {'versao':1,
+    'bancadaEntradas':[{'id':'entrada','layer':items[0],'config':{'campo_id':'__feicao__','identificacao_confirmada':True}}],
+    'bancadaBases':[{'id':'a','category':'social','layer':items[1]}], 'bancadaResultados':[], 'bancadaAdicionais':[],
+    'categories':catalog['categorias'],'operation':'estatisticas','opcoes':{},'nomeSaida':'','camadaRecorte':'','finalidades':[],
+    'painel':[{'id':'entrada','visivel':True},{'id':'a','visivel':False}]})
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self,*a,**kw):super().__init__(*a,directory=str(ROOT),**kw)
     def log_message(self,*a):pass
@@ -41,6 +52,8 @@ class Handler(SimpleHTTPRequestHandler):
         if '/previa-tiles/' in path:
             token,z,x,y=path.split('/previa-tiles/')[1].split('/')
             return self.send(preparo.tile(token,'fixture',int(z),int(x),int(y.split('.')[0])),'application/vnd.mapbox-vector-tile')
+        if path.endswith('/bancadas'):return self.send({'bancadas':bancadas_salvas.listar('fixture')})
+        if '/bancadas/' in path:return self.send(bancadas_salvas.carregar('fixture',path.rsplit('/',1)[1]))
         if path.endswith('/catalogo'):return self.send(catalog)
         if path.endswith('/configuracoes'):return self.send({'configuracoes':[{'chave':'teste','arquivo':'teste.json','nome':'Lista de teste','camadas':1,'categorias':1,'bytes':100}] if 'escopo=bases' in self.path else [], 'pasta':'listas de teste'})
         if path.endswith('/configuracoes/teste'):return self.send({'chave':'teste','nome':'Lista de teste','categorias':[{'id':'social','camadas':[{'id':'a','nome':'Base social'}]}],'ausentes':[],'categoria_ativa':'social'})
@@ -53,6 +66,7 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
     def do_POST(self):
         body=json.loads(self.rfile.read(int(self.headers.get('Content-Length',0))) or b'{}')
+        if self.path.endswith('/bancadas'):return self.send(bancadas_salvas.salvar('fixture',body['nome'],body['snapshot']))
         if self.path.endswith('/preparar-camada'):return self.send(next(i for i in items if i['id']==body['id']))
         if self.path.endswith('/compatibilizar'):return self.send({'compativel':True,'camadas':body['camadas'],'erros':[]})
         return self.send_error(404)

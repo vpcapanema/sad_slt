@@ -17,7 +17,7 @@ async function armazenar(chave,valor,apagar=false){
 }
 export async function salvarRascunhoMunicipal(state){
  const campos=['input','inputConfig','entradasExtras','finalidades','operation','opcoes','nomeSaida','camadaRecorte',
-  'bancadaResultados','bancadaEntradas','bancadaBases','bases','staging','catalog','categories','previaLocal','listaBases','result'];
+  'bancadaAdicionais','bancadaResultados','bancadaEntradas','bancadaBases','bases','staging','catalog','categories','previaLocal','listaBases','result'];
  const draft=Object.fromEntries(campos.map(key=>[key,state[key]]));
  const anterior=sessionStorage.getItem(KEY),chave=crypto.randomUUID();
  const snapshot=JSON.parse(JSON.stringify({...draft,categoria:document.querySelector('#ea-category-select').value,
@@ -41,7 +41,7 @@ export async function restaurarRetornoMunicipal(state){
   if(ref.versao===2){
    const atuais=state.catalog,categorias=state.categories;
    for(const key of ['input','inputConfig','entradasExtras','finalidades','operation','opcoes','nomeSaida','camadaRecorte',
-    'bancadaResultados','bancadaEntradas','bancadaBases','bases','staging','previaLocal','listaBases','result'])if(key in draft)state[key]=draft[key];
+    'bancadaAdicionais','bancadaResultados','bancadaEntradas','bancadaBases','bases','staging','previaLocal','listaBases','result'])if(key in draft)state[key]=draft[key];
    state.catalog=[...new Map([...atuais,...draft.catalog].map(l=>[l.id,l])).values()];
    state.categories=[...new Map([...draft.categories,...categorias].map(c=>[c.id,c])).values()];
    state.previaVisiveis=draft.previaVisiveis?new Set(draft.previaVisiveis):undefined;

@@ -470,3 +470,35 @@ def cancelar(ident: UUID, user: SessionUser = Depends(require_geospatial_access)
         raise HTTPException(404,str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(409,str(exc)) from exc
+
+
+@router.get('/bancadas')
+def listar_bancadas(user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import bancadas_salvas
+    return {'bancadas': bancadas_salvas.listar(user.id)}
+
+
+@router.post('/bancadas', status_code=201)
+async def salvar_bancada(request: Request, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import bancadas_salvas
+    from starlette.concurrency import run_in_threadpool
+    body = bytearray()
+    async for part in request.stream():
+        if len(body) + len(part) > bancadas_salvas.MAX_BYTES:
+            raise HTTPException(413, 'A bancada excede 64 MB.')
+        body.extend(part)
+    try:
+        data = json.loads(body)
+        if not isinstance(data, dict): raise ValueError('Formato da bancada inválido.')
+        return await run_in_threadpool(bancadas_salvas.salvar, user.id, data.get('nome', ''), data.get('snapshot'))
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.get('/bancadas/{ident}')
+def carregar_bancada(ident: UUID, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services import bancadas_salvas
+    try:
+        return bancadas_salvas.carregar(user.id, ident)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc

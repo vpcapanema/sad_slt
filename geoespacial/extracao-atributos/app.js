@@ -1,3 +1,4 @@
+import {criarBancadas} from './bancadas.js';
 import {copiarSaidas,limitesSaidas} from './saida-bancada.js';
 import {descritorOriginal} from './camada-validada.js';
 import { instalarLogs, log, falha, estado as registrarEstado, resultado as registrarResultado } from './logger.js';
@@ -11,7 +12,7 @@ import { criarResultados } from "./resultados.js";
 
 import { adaptador, json, esperar } from './api.js';
 import { confirmarExecucao, acompanharExecucao } from './processo.js';
-import { editarFinalidade, editarRegra, prefixoPadrao, categoriaBinaria } from './regras.js';
+import { editarFinalidade, editarRegra, editarEstatisticas, prefixoPadrao, categoriaBinaria } from './regras.js';
 import { renderDiagrama } from './diagramas.js';
 import { restaurarRetornoMunicipal, concluirRetornoMunicipal } from './municipal.js';
 
@@ -26,13 +27,25 @@ const OPCOES_OVERLAY=[
   ["geometrias_preparadas","Geometrias preparadas","USE_PREPARED_GEOMETRIES",true],
   ["pretestar_continencia","Pré-testar continência","PRETEST_CONTAINMENT",false],
 ];
-const state={bancadaResultados:[],bancadaEntradas:[],bancadaBases:[],catalog:[],categories:[],bases:[],staging:[],input:"",operation:"",
+let bancadas;
+const state={bancadaAdicionais:[],bancadaResultados:[],bancadaEntradas:[],bancadaBases:[],catalog:[],categories:[],bases:[],staging:[],input:"",operation:"",
   opcoes:Object.fromEntries(OPCOES_OVERLAY.map(([chave,,,padrao])=>[chave,padrao])),
   executarEmLote:false,camadaRecorte:"",nomeSaida:"",result:null,busy:false,uploading:false,loadingCatalog:false,catalogError:false,
   // Só no enriquecimento: configuração da entrada principal, entradas adicionais e finalidades.
   inputConfig:null,entradasExtras:[],finalidades:[]};
 const map=criarMapa(()=>{reconciliarPainel();conferirResultadoAtual();controls();}),results=criarResultados();
 const config=criarConfiguracao(state,changed);
+bancadas=criarBancadas(state,map,{ocupar:busy,reconciliar:reconciliarPainel,restaurar:async draft=>{
+  const mesclar=(a,b)=>[...new Map([...a,...b].map(item=>[item.id,item])).values()];
+  for(const campo of ['bancadaEntradas','bancadaBases','bancadaResultados','bancadaAdicionais'])state[campo]=mesclar(state[campo],draft[campo]||[]);
+  state.categories=mesclar(state.categories,draft.categories||[]);
+  state.catalog=mesclar(state.catalog,[...draft.bancadaEntradas,...draft.bancadaBases].map(e=>e.layer));
+  for(const campo of ['operation','opcoes','nomeSaida','camadaRecorte','finalidades'])if(campo in draft)state[campo]=draft[campo];
+  $('#ea-operation').value=state.operation;$('#ea-nome-saida').value=state.nomeSaida;
+  renderParametros();await changed();
+  const ids=(draft.painel||[]).map(l=>l.id);await map.enquadrar(ids);
+  map.restaurarVisual(draft.visual,draft.painel);renderSelecao();
+}});
 // A seção 2 usa somente camadas presentes e visíveis na bancada.
 const componentesEntrada=componentes;
 const camadaEntrada=id=>state.bancadaEntradas.find(e=>e.id===id)?.layer||state.catalog.find(l=>l.id===id);
@@ -115,6 +128,7 @@ function reconciliarPainel() {
  const noPainel=map.camadas();if(!noPainel||state.busy)return;
  const presentes=new Set(noPainel.map(l=>l.id)),saiu=id=>map.exibida(id)&&!presentes.has(id);
  state.bancadaResultados=state.bancadaResultados.filter(item=>!saiu(item.id));
+ state.bancadaAdicionais=state.bancadaAdicionais.filter(item=>!saiu(item.id));
  let alterou=false;
  state.bancadaEntradas=state.bancadaEntradas.filter(e=>{
   const l=e.layer;
@@ -129,6 +143,7 @@ function reconciliarPainel() {
 }
 
 function controls() {
+  bancadas?.marcar();
   registrarEstado(state,composicaoAtual());
   config.marcarLista();
   $("#ea-municipal-open").setAttribute("aria-disabled",String(state.busy));
@@ -165,7 +180,7 @@ function syncMap() {
     return {...layer,key:`base:${layer.id}`,grupo:category?.nome||base.category,papelExtracao:'base',color:category?.color};
   });
   for(const entrada of state.bancadaEntradas)for(const layer of componentesEntrada(entrada.layer))items.push({...layer,key:`input:${layer.id}`,grupo:'Input',papelExtracao:'entrada',arquivoGrupo:entrada.layer.arquivo_local?.nome||entrada.layer.arquivo||layer.arquivo||entrada.layer.nome,color:'#d6542b'});
-  items.push(...state.bancadaResultados);
+  items.push(...state.bancadaResultados,...state.bancadaAdicionais);
   // Compatibilidade com execuções antigas, anteriores aos descritores de saída.
   if(state.result?.geojson&&!Object.values(state.result.camadas||{}).some(c=>c.bancada))items.push({key:`resultado:${state.result.id}`,nome:'Geometria da extração',geojson:state.result.geojson,grupo:'Resultados',color:'#853eaf'});
   map.sync(items.filter(item=>item.representacao==='tiles'||item.geojson));
@@ -306,6 +321,19 @@ $("#ea-run").addEventListener("click",async()=>{
   reconciliarPainel();
   if(state.busy||state.uploading||state.validatingBases||state.loadingMap||state.loadingCatalog||!state.operation||!state.bancadaEntradas.length||!state.bancadaBases.length) return;
   try{map.assertReady(composicaoAtual().ids);}catch(error){falha('validacao',error);feedback(error.message,'error');return;}
+  const antiga=composicaoAtual().bases.find(base=>base.regra?.estatistica && base.regra.estatistica!=='valores');
+  if(antiga){
+    const layer=state.catalog.find(c=>c.id===antiga.id)||antiga.layer;
+    const revista=await editarEstatisticas({nomeBase:layer?.nome||antiga.id,regra:antiga.regra,camposDisponiveis:camposCamada(layer)});
+    if(revista){
+      for(const item of [...state.bancadaBases,...state.bases,...state.staging,...(state.listaBases?.itens||[])]){
+        if(item.id===antiga.id)item.regra=structuredClone(revista);
+      }
+      await changed();
+      feedback('Regra revisada. Clique em Executar extração para conferir as demais bases e confirmar o processamento. Salve a configuração para reutilizar esta revisão.');
+    }
+    return;
+  }
   let pedido;
   try{validarComposicao(state,composicaoAtual());validarFinalidades();pedido=request();}catch(error){falha('validacao',error);feedback(error.message,'error');return;}
   const confirmado=await confirmarExecucao({

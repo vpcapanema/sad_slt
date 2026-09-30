@@ -86,7 +86,7 @@ def enriquecer(entrada=None, categorias=(), nome_entrada='Entrada', progress=lam
     from api.services.extracao_atributos_regras import validar_agregacao
     for categoria in categorias:
         for camada in categoria['camadas']:
-            validar_agregacao(camada['regra'])
+            validar_agregacao(camada['regra'], camada.get('nome') or camada.get('id'))
     entradas = entradas if entradas is not None else [{'nome': nome_entrada, 'frame': entrada, 'config': {}}]
     if not entradas or len({e['nome'] for e in entradas}) != len(entradas):
         raise ValueError('Informe entradas com nomes distintos.')

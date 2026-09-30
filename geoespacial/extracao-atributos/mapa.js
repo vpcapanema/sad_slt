@@ -138,5 +138,13 @@ export function criarMapa(aoMudarPainel) {
     }
     if(bounds){const map=context().gpApp.state.map;map.resize();map.fitBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]],{padding:50,maxZoom:16});}
   }
-  return {sync,assertReady,camadas,exibida,restaurarVisibilidade,enquadrar};
+  function descritores(){return [...(context()?.gpArquivos?.sessions?.values()||[])];}
+  function visual(){const m=context()?.gpApp?.state.map;return m?{center:m.getCenter().toArray(),zoom:m.getZoom(),bearing:m.getBearing(),pitch:m.getPitch()}:null;}
+  function restaurarVisual(v,painel=[]){
+    const app=context()?.gpApp;if(!app)return;
+    for(const item of painel)if(typeof item.color==='string')app.applyLayerColor(item.id,item.color,false);
+    restaurarVisibilidade(painel);
+    if(v)app.state.map.jumpTo(v);
+  }
+  return {sync,assertReady,camadas,exibida,restaurarVisibilidade,enquadrar,descritores,visual,restaurarVisual};
 }
