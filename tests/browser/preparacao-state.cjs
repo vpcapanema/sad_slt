@@ -2,9 +2,9 @@ const assert=require('node:assert/strict'),fs=require('fs');
 (async()=>{
  const {entradasParaPrevia,enviarPrevia,removerPrevia,guardarPrevia,desfazerPrevia,limparPreparacao}=await import('data:text/javascript;base64,'+fs.readFileSync('geoespacial/extracao-atributos/preparacao.js').toString('base64'));
  const fc={type:'FeatureCollection',features:[]};
- const a={id:'local:a',chave:'a',representacao:'tiles',tiles_url:'https://fixture/tiles',status_validacao:'valida',tipo:'vetor'},b={id:'local:b',chave:'b',representacao:'tiles',tiles_url:'https://fixture/tiles',status_validacao:'valida',tipo:'vetor'};
- const input={id:'local:file',representacao:'tiles',tiles_url:'https://fixture/tiles',status_validacao:'valida',camadas_importadas:[a,b],camadas_bancada:[a,b],arquivo_local:{nome:'file.gpkg',camadas:['a','b']}};
- const s={input:input.id,inputConfig:{camadas:{a:{campo_id:'id',categoria_demanda:'tipo',identificacao_confirmada:true},b:{campo_id:'id',categoria_demanda:'tipo',identificacao_confirmada:true}}},entradasExtras:[],catalog:[input,{id:'base',representacao:'tiles',tiles_url:'https://fixture/tiles',status_validacao:'valida'}],bases:[],staging:[{id:'base',category:'social'}],bancadaEntradas:[],bancadaBases:[]};
+ const a={id:'local:a',chave:'a',representacao:'tiles',tiles_url:'https://fixture/tiles',status_validacao:'valida',revisao:'fixture',tipo:'vetor'},b={id:'local:b',chave:'b',representacao:'tiles',tiles_url:'https://fixture/tiles',status_validacao:'valida',revisao:'fixture',tipo:'vetor'};
+ const input={id:'local:file',representacao:'tiles',tiles_url:'https://fixture/tiles',status_validacao:'valida',revisao:'fixture',camadas_importadas:[a,b],camadas_bancada:[a,b],arquivo_local:{nome:'file.gpkg',camadas:['a','b']}};
+ const s={input:input.id,inputConfig:{camadas:{a:{campo_id:'id',categoria_demanda:'tipo',identificacao_confirmada:true,validacao_previa:'fixture'},b:{campo_id:'id',categoria_demanda:'tipo',identificacao_confirmada:true,validacao_previa:'fixture'}}},entradasExtras:[],catalog:[input,{id:'base',representacao:'tiles',tiles_url:'https://fixture/tiles',status_validacao:'valida',revisao:'fixture'}],bases:[],staging:[{id:'base',category:'social'}],bancadaEntradas:[],bancadaBases:[]};
  const pendente=structuredClone(s);pendente.inputConfig=null;
  assert.equal(entradasParaPrevia(pendente).length,0,'Seleção de arquivo não envia demandas à prévia');
  assert.equal(enviarPrevia(pendente),1,'Sem confirmação, só as bases podem ser enviadas');

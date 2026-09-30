@@ -1,3 +1,5 @@
+import {copiarSaidas,limitesSaidas} from './saida-bancada.js';
+import {descritorOriginal} from './camada-validada.js';
 import { instalarLogs, log, falha, estado as registrarEstado, resultado as registrarResultado } from './logger.js';
 import {renderLote} from './lote.js';
 import {composicaoVisivel,validarComposicao,pedidoDaComposicao} from './composicao.js';
@@ -24,7 +26,7 @@ const OPCOES_OVERLAY=[
   ["geometrias_preparadas","Geometrias preparadas","USE_PREPARED_GEOMETRIES",true],
   ["pretestar_continencia","Pré-testar continência","PRETEST_CONTAINMENT",false],
 ];
-const state={bancadaEntradas:[],bancadaBases:[],catalog:[],categories:[],bases:[],staging:[],input:"",operation:"",
+const state={bancadaResultados:[],bancadaEntradas:[],bancadaBases:[],catalog:[],categories:[],bases:[],staging:[],input:"",operation:"",
   opcoes:Object.fromEntries(OPCOES_OVERLAY.map(([chave,,,padrao])=>[chave,padrao])),
   executarEmLote:false,camadaRecorte:"",nomeSaida:"",result:null,busy:false,uploading:false,loadingCatalog:false,catalogError:false,
   // Só no enriquecimento: configuração da entrada principal, entradas adicionais e finalidades.
@@ -112,6 +114,7 @@ function validarFinalidades(){
 function reconciliarPainel() {
  const noPainel=map.camadas();if(!noPainel||state.busy)return;
  const presentes=new Set(noPainel.map(l=>l.id)),saiu=id=>map.exibida(id)&&!presentes.has(id);
+ state.bancadaResultados=state.bancadaResultados.filter(item=>!saiu(item.id));
  let alterou=false;
  state.bancadaEntradas=state.bancadaEntradas.filter(e=>{
   const l=e.layer;
@@ -162,7 +165,9 @@ function syncMap() {
     return {...layer,key:`base:${layer.id}`,grupo:category?.nome||base.category,papelExtracao:'base',color:category?.color};
   });
   for(const entrada of state.bancadaEntradas)for(const layer of componentesEntrada(entrada.layer))items.push({...layer,key:`input:${layer.id}`,grupo:'Input',papelExtracao:'entrada',arquivoGrupo:entrada.layer.arquivo_local?.nome||entrada.layer.arquivo||layer.arquivo||entrada.layer.nome,color:'#d6542b'});
-  if(state.result?.geojson) items.push({key:`resultado:${state.result.id}`,nome:"Geometria da extração",geojson:state.result.geojson,grupo:"Resultado",color:"#853eaf"});
+  items.push(...state.bancadaResultados);
+  // Compatibilidade com execuções antigas, anteriores aos descritores de saída.
+  if(state.result?.geojson&&!Object.values(state.result.camadas||{}).some(c=>c.bancada))items.push({key:`resultado:${state.result.id}`,nome:'Geometria da extração',geojson:state.result.geojson,grupo:'Resultados',color:'#853eaf'});
   map.sync(items.filter(item=>item.representacao==='tiles'||item.geojson));
 }
 // Leitura de arquivo no servidor custa uma conexao ao banco remoto: fila curta.
@@ -318,7 +323,15 @@ $("#ea-run").addEventListener("click",async()=>{
   const painel=acompanharExecucao();
   try {
     const value=validateResult(await chamar("executar",pedido,job=>painel.acompanhar(job)));
-    registrarResultado(value);state.result=value;assinaturaExecucao=assinaturaDe(request());results.set(value);syncMap();
+    registrarResultado(value);state.result=value;assinaturaExecucao=assinaturaDe(request());results.set(value);
+    try{
+      for(const saida of Object.values(value.camadas||{}))if(saida.bancada)descritorOriginal(saida.bancada);
+      state.bancadaResultados=copiarSaidas(value,state.bancadaResultados,['#d6542b',...(map.camadas()||[]).map(c=>c.color),...state.categories.map(c=>c.color),...state.bancadaResultados.map(c=>c.color)]);
+      syncMap();
+      const novas=state.bancadaResultados.filter(c=>c.execucaoId===value.id);
+      await map.enquadrar(novas.map(c=>c.id),limitesSaidas(novas));
+      $('#ea-workbench').scrollIntoView({behavior:'smooth',block:'start'});
+    }catch(error){falha('saida_bancada',error);feedback(`A extração foi concluída, mas não foi possível exibir a saída na bancada: ${error.message}`,'error');}
     painel.concluir("Extração concluída. Os resultados estão na tela e o pacote de saída (.zip) está pronto para baixar.",
       ()=>$("#ea-results").scrollIntoView({behavior:"smooth",block:"start"}));
 

@@ -9,6 +9,7 @@ extracao_atributos_pacote.
 """
 import csv
 import math
+from decimal import Decimal
 
 import pandas as pd
 from openpyxl import Workbook
@@ -77,7 +78,7 @@ def texto(valor):
     if isinstance(valor, bool):
         return 'sim' if valor else 'não'
     if isinstance(valor, float):
-        return f'{valor:.6f}'.rstrip('0').rstrip('.').replace('.', ',')
+        return format(Decimal(repr(valor)), 'f').replace('.', ',')
     return str(valor)
 
 

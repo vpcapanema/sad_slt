@@ -32,7 +32,7 @@ def normalizar_crs(frame, nome, destino=CRS_MEDIDA):
 
 def conferir(camadas, operacao=None):
     """Prepara cada fonte integral usando as mesmas rotinas dos dois algoritmos."""
-    from api.services.extracao_entrada_local import restaurar
+    from api.services.extracao_entrada_local import restaurar, exigir_geometrias_utilizaveis
     from api.services.municipal_layer import carregar_para_extracao
     from api.services.extracao_atributos_enriquecimento import preparar
     from api.services.extracao_atributos_estatisticas import _geometrias_trabalho
@@ -48,6 +48,7 @@ def conferir(camadas, operacao=None):
                 frame, _ = restaurar(camada['arquivo_local'])
             else:
                 frame = carregar_para_extracao(camada['id'])
+            exigir_geometrias_utilizaveis(frame)
             if frame.empty:
                 raise ValueError('A camada não contém feições.')
             if operacao == 'enriquecimento':

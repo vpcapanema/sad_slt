@@ -319,7 +319,9 @@ class SpatialJoin:
             if result is not None: self.dataset.ReleaseResultSet(result)
 
     def close(self):
-        self.dataset = None
+        if self.dataset is not None:
+            dataset, self.dataset = self.dataset, None
+            dataset.Close()
 
 
 def provenance():

@@ -42,7 +42,8 @@ class Handler(SimpleHTTPRequestHandler):
             token,z,x,y=path.split('/previa-tiles/')[1].split('/')
             return self.send(preparo.tile(token,'fixture',int(z),int(x),int(y.split('.')[0])),'application/vnd.mapbox-vector-tile')
         if path.endswith('/catalogo'):return self.send(catalog)
-        if path.endswith('/configuracoes'):return self.send({'configuracoes':[], 'pasta':'listas de teste'})
+        if path.endswith('/configuracoes'):return self.send({'configuracoes':[{'chave':'teste','arquivo':'teste.json','nome':'Lista de teste','camadas':1,'categorias':1,'bytes':100}] if 'escopo=bases' in self.path else [], 'pasta':'listas de teste'})
+        if path.endswith('/configuracoes/teste'):return self.send({'chave':'teste','nome':'Lista de teste','categorias':[{'id':'social','camadas':[{'id':'a','nome':'Base social'}]}],'ausentes':[],'categoria_ativa':'social'})
         if path.endswith('/storage/navegar'):return self.send({'caminho':'base-geoespacial','pastas':[],'arquivos':[]})
         if '/api/' in path:
             if '/auth/' in path:return self.send({'authenticated':True,'id':'fixture','nome':'Teste','username':'Teste','tipo_usuario':'ADMIN'})

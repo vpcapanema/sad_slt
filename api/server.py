@@ -5,7 +5,7 @@ SIGMA: somente LEITURA. Demandas: banco PostgreSQL SLT (demandas.projeto).
 """
 from __future__ import annotations
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
@@ -16,6 +16,7 @@ from api.exceptions import DatabaseUnavailableError
 from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.path_policy import project_path
 from api.routers import api_router
+from api.services import storage_remoto
 
 app = FastAPI(title="SLT — Apoio à Tomada de Decisão", version="1.1.0")
 templates = Jinja2Templates(directory=str(project_path("templates")))
@@ -58,6 +59,15 @@ app.add_middleware(
 app.add_middleware(SubpathRewriteMiddleware)
 
 app.include_router(api_router)
+
+
+@app.get("/sicard/storage/web/{area}/login", include_in_schema=False)
+def pagina_login_storage(area: str) -> RedirectResponse:
+    if area not in ("admin", "client"):
+        raise HTTPException(status_code=404)
+    storage_api_url = storage_remoto._config()[0]
+    storage_web_url = storage_api_url.removesuffix("/storage-api") + f"/storage/web/{area}/login"
+    return RedirectResponse(storage_web_url)
 
 
 @app.get("/favicon.ico", include_in_schema=False)

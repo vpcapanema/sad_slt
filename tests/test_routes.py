@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from api.exceptions import DatabaseUnavailableError
 from api.server import app
-from api.services import demanda_service
+from api.services import demanda_service, storage_remoto
 from api.services.session_service import SessionUser, cookie_name, create_token
 
 
@@ -49,6 +49,20 @@ def test_canonical_pages_are_available() -> None:
 
     for path in canonical_pages:
         assert client.get(path).status_code == 200, path
+
+
+def test_storage_login_links_redirect_to_configured_host(monkeypatch) -> None:
+    monkeypatch.setattr(storage_remoto, "_config", lambda: ("https://storage.example/sicard/storage-api", "", "", True))
+    client = TestClient(app)
+
+    for area in ("admin", "client"):
+        path = f"/sicard/storage/web/{area}/login"
+        assert path in client.get("/restrict/").text
+        response = client.get(path, follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers["location"] == f"https://storage.example/sicard/storage/web/{area}/login"
+
+    assert client.get("/sicard/storage/web/other/login").status_code == 404
 
 
 def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessamento() -> None:

@@ -22,7 +22,10 @@ export function criarEditorListaBases(state,changed,escolher,salvar){
   buttons.cancelar.disabled=state.busy||(!sessaoAberta&&!validando);
   buttons.excluir.disabled=bloqueado||!editando||!selecionadas.size;
   buttons.confirmar.disabled=bloqueado||!lista()?.itens.length||state.loadingMap;
-  buttons.confirmar.textContent=validando?'Validando…':'Confirmar';
+  const rotulo=validando?'Validando…':'Confirmar';
+  buttons.confirmar.title=rotulo;buttons.confirmar.setAttribute('aria-label',rotulo);
+  buttons.confirmar.querySelector('.ea-sr-only').textContent=rotulo;
+  buttons.confirmar.querySelector('i').className=validando?'fas fa-spinner fa-spin':'fas fa-check';
  }
  function render(){
   host.hidden=!lista();body.replaceChildren();marcar();if(!lista())return;

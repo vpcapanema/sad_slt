@@ -3,7 +3,7 @@ const load=async(path,transform=s=>s)=>import('data:text/javascript;base64,'+Buf
 (async()=>{
  const prep=await load('geoespacial/extracao-atributos/preparacao.js');
  const layer=id=>({id,nome:id,tipo:'vetor',representacao:'tiles',status_validacao:'valida',tiles_url:`https://fixture/${id}/{z}/{x}/{y}`,revisao:id,feicoes:1,campos:[]});
- const s={catalog:['entrada','a','b','c','d'].map(layer),input:'entrada',inputConfig:{identificacao_confirmada:true},entradasExtras:[],bases:[],staging:[{id:'a',category:'social'},{id:'b',category:'risco'}],bancadaEntradas:[],bancadaBases:[]};
+ const s={catalog:['entrada','a','b','c','d'].map(layer),input:'entrada',inputConfig:{identificacao_confirmada:true,validacao_previa:'entrada'},entradasExtras:[],bases:[],staging:[{id:'a',category:'social'},{id:'b',category:'risco'}],bancadaEntradas:[],bancadaBases:[]};
  assert.equal(prep.enviarPrevia(s),3);prep.limparPreparacao(s);
  s.staging=[{id:'c',category:'economico'}];s.previaVisiveis=new Set(['base:c']);assert.equal(prep.enviarPrevia(s),1);
  assert.deepEqual(s.bancadaBases.map(b=>[b.id,b.category]),[['a','social'],['b','risco'],['c','economico']]);

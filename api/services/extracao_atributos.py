@@ -368,6 +368,11 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
                                                                      linhagem=params,gravar_arquivo=False,
                                                                      preservar_geometrias=True),
                          'registros':len(frame),'campos':len(frame.columns)-1}
+        from api.services.extracao_preparacao import representar
+        from api.services.metadados_previa import descrever_vetor
+        camadas[nome]['bancada'] = {
+            'id':camadas[nome]['camada_resultado_id'], 'nome':nome_camada, 'tipo':'vetor',
+            **representar(frame, descrever_vetor(frame, formato='PostGIS'), params['responsavel'])}
         if hasattr(progress,'tarefa'): progress.tarefa(len(frame),len(frame),'registros')
         if hasattr(progress,'concluir'): progress.concluir()
         if hasattr(progress,'progresso_fase'): progress.progresso_fase(indice_saida+1,len(saida['camadas'])+2)

@@ -99,7 +99,7 @@ def legado(result, tabelas):
 
 def estado(snapshot, feature, tipo):
     if snapshot.get('fonte') == 'camada_saida':
-        return ('com' if feature['flags'][tipo] else 'sem') if tipo in feature.get('flags', {}) else 'nao_avaliado'
+        return ('com' if feature['flags'][tipo] else 'sem') if feature.get('flags', {}).get(tipo) is not None else 'nao_avaliado'
     bases = [b for b in snapshot['bases'] if b['categoria'] == tipo]
     if not bases:
         return 'nao_avaliado'
@@ -226,7 +226,13 @@ def da_saida(tabelas):
             campo_categoria = next((d['campo'] for d in fields if d.get('tema')=='Entrada' and d.get('campo_origem')==schema.get('campo_categoria_demanda',schema.get('campo_categoria_pontos'))),None)
             classe = row.get(campo_categoria) if campo_categoria else None
             for tipo in TIPOS:
-                if tipo in row: feature['flags'][tipo] = max(feature['flags'].get(tipo,0), int(row[tipo] or 0))
+                campo = f'intersecta_{tipo}' if f'intersecta_{tipo}' in row else tipo
+                if campo in row:
+                    valor = str(row[campo]).strip().casefold()
+                    flag = 1 if valor in ('sim','1','1.0','true') else 0 if valor in ('não','nao','0','0.0','false') else None
+                    anterior = feature['flags'].get(tipo)
+                    feature['flags'][tipo] = 1 if flag == 1 or anterior == 1 else None if flag is None or (tipo in feature['flags'] and anterior is None) else 0
+                    if flag is None: feature['geometria_disponivel'] = False
             for link in links:
                 tipo = link.get('tipo') or str(link['categoria_id'])
                 bid = f"{link['categoria_id']}:{link['base_id']}"

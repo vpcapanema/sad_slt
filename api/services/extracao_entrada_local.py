@@ -60,6 +60,27 @@ def _coordenadas_validas(geometrias, geograficas=False):
     return total > 0
 
 
+def geometria_utilizavel(geom):
+    if geom is None or geom.is_empty:
+        return False
+    try:
+        coords = shapely.get_coordinates(geom)
+        if not len(coords) or not np.isfinite(coords).all():
+            return False
+        corrigida = geom if geom.is_valid else shapely.make_valid(geom)
+        return not corrigida.is_empty and len(shapely.get_coordinates(corrigida)) > 0
+    except (ValueError, shapely.errors.GEOSException):
+        return False
+
+
+def exigir_geometrias_utilizaveis(frame):
+    problemas = [(pos, fid) for pos, (fid, geom) in enumerate(frame.geometry.items()) if not geometria_utilizavel(geom)]
+    if problemas:
+        referencias = ', '.join(f'linha {pos+1} (FID/índice {fid})' for pos, fid in problemas[:20])
+        restante = f'; mais {len(problemas)-20} registro(s)' if len(problemas)>20 else ''
+        raise ValueError(f'{len(problemas)} feição(ões) sem geometria utilizável: {referencias}{restante}. Corrija a camada original antes de enviar à prévia ou à bancada. Nenhum registro foi descartado.')
+
+
 def validar(frame, max_feicoes=MAX_FEICOES):
     if frame.crs is None:
         raise ValueError('A camada não informa o sistema de coordenadas. Inclua o .prj no ZIP ou defina o CRS no arquivo.')
@@ -71,6 +92,7 @@ def validar(frame, max_feicoes=MAX_FEICOES):
         raise ValueError('A entrada excede o limite de 2000 campos.')
     if not frame.columns.is_unique:
         raise ValueError('A camada contém nomes de campos repetidos.')
+    exigir_geometrias_utilizaveis(frame)
     geometrias = frame.geometry
     if not _coordenadas_validas(geometrias):
         raise ValueError('A camada não contém coordenadas válidas para visualização.')
@@ -78,12 +100,9 @@ def validar(frame, max_feicoes=MAX_FEICOES):
     if not _coordenadas_validas(mapa.geometry, geograficas=True):
         raise ValueError('As coordenadas não correspondem ao CRS declarado no arquivo.')
     invalidas = int(sum(g is not None and not g.is_empty and not g.is_valid for g in geometrias))
-    vazias = int(sum(g is None or g.is_empty for g in geometrias))
     avisos = []
     if invalidas:
         avisos.append(f'{invalidas} geometria(s) inválida(s). O original é preservado para análise; confira antes de executar e use as opções de correção do algoritmo.')
-    if vazias:
-        avisos.append(f'{vazias} feição(ões) sem geometria visível; seus registros foram mantidos.')
     return mapa, avisos
 
 

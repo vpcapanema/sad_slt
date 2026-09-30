@@ -1,0 +1,28 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+(async()=>{
+ const {copiarSaidas,limitesSaidas}=await import('../../geoespacial/extracao-atributos/saida-bancada.js');
+ const layer=(id,bounds)=>({id,nome:id,bounds,representacao:'tiles',tiles_url:'/tiles',revisao:id});
+ const result={id:'exec1',camadas:{pontos:{nome:'Pontos resultantes',bancada:layer('a',[0,0,1,1])},linhas:{nome:'Linhas resultantes',bancada:layer('b',[2,2,3,3])}}};
+ const before=[{key:'resultado:anterior',...layer('antigo',[-10,-10,-9,-9])}];
+ const items=copiarSaidas(result,before,['#d000d0']);
+ assert.equal(items.length,3);assert.equal(before.length,1);
+ assert.equal(copiarSaidas(result,items).length,3,'Repetir inclusão não duplica');
+ assert.equal(items[1].color,'#00a6a6');assert.equal(items[1].grupo,'Resultados');
+ assert.deepEqual(limitesSaidas(items.slice(1)),[0,0,3,3]);
+ assert(items.slice(1).every(i=>i.papelExtracao==='resultado'&&!i.geojson));
+ const calls=[];const map={isStyleLoaded:()=>true,on:()=>{},getSource:()=>null,getLayer:()=>null,getZoom:()=>10,resize:()=>{},fitBounds:(b)=>calls.push(['zoom',b])};
+ const app={state:{map,layers:[]},adicionarCamadaStorageTiles(id,nome,info){this.state.layers.push({id,nome});calls.push(['add',id,info.tiles_url]);},applyLayerColor:(id,c)=>calls.push(['color',id,c]),renderLayers(){},removeLayerFromMap(id){this.state.layers=this.state.layers.filter(l=>l.id!==id);}};
+ const frame={addEventListener(){},contentWindow:{gpApp:app,gpArquivos:{sessions:new Map()},document:{querySelector:()=>null,body:{classList:{contains:()=>true}}}}};
+ global.__saidaFixture={frame};
+ const code=fs.readFileSync('geoespacial/extracao-atributos/mapa.js','utf8').replace("import { $, feedback } from './ui.js';","const $=()=>globalThis.__saidaFixture.frame,feedback=()=>{};");
+ const {criarMapa}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+ const mapa=criarMapa();
+ mapa.sync([{key:'entrada',...layer('entrada',[0,0,1,1])}]);
+ mapa.sync([{key:'entrada',...layer('entrada',[0,0,1,1])},...items]);
+ await mapa.enquadrar(['a','b'],limitesSaidas(items.slice(1)));
+ assert.deepEqual(app.state.layers.map(l=>l.id),['entrada','antigo','a','b']);
+ assert(calls.some(c=>c[0]==='color'&&c[1]==='a'&&c[2]==='#00a6a6'));
+ assert.deepEqual(calls.at(-1),['zoom',[[0,0],[3,3]]]);
+ console.log('Saídas: adição cumulativa, tiles, cor, múltiplas camadas e zoom: OK');
+})().catch(e=>{console.error(e);process.exitCode=1;});

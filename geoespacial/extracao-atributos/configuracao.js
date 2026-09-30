@@ -36,7 +36,7 @@ export function criarConfiguracao(state, changed) {
     $("#ea-input-clear").hidden=!state.input;
     $("#ea-config-count").textContent=`${state.bases.length} ${state.bases.length===1?"base":"bases"} · ${state.categories.length} ${state.categories.length===1?"categoria":"categorias"}`;
     const input=state.catalog.find(item=>item.id===state.input);
-    $("#ea-input-info").textContent=input?`Entradas selecionadas: ${[state.input,...state.entradasExtras.map(e=>e.id)].map(id=>state.catalog.find(l=>l.id===id)?.nome||id).join(", ")}`:"Carregue as camadas e confira a prévia antes de enviá-las à bancada.";
+    $("#ea-input-info").textContent=input?`Entradas selecionadas: ${[state.input,...state.entradasExtras.map(e=>e.id)].map(id=>state.catalog.find(l=>l.id===id)?.nome||id).join(", ")}`:"";
     sincronizarAlternativas();
     // As camadas confirmadas são mostradas pelo painel da bancada, agrupadas por
     // categoria; não há segunda lista aqui.

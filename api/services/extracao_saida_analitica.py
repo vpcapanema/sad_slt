@@ -7,7 +7,7 @@ from api.services.extracao_intersecoes_territoriais import tipo_categoria
 
 CAMPO_VINCULOS = 'sicard_vinculos'
 CAMPO_ESQUEMA = 'sicard_esquema'
-CAMPOS_RESERVADOS = {'risco', 'restricao', CAMPO_VINCULOS, CAMPO_ESQUEMA, 'sicard_demanda'}
+CAMPOS_RESERVADOS = {'risco', 'restricao', 'intersecta_risco', 'intersecta_restricao', CAMPO_VINCULOS, CAMPO_ESQUEMA, 'sicard_demanda'}
 
 
 def materializar(camadas, dicionario, categorias):
@@ -21,6 +21,7 @@ def materializar(camadas, dicionario, categorias):
         frame['sicard_demanda'] = [g.wkb_hex if g is not None else None for g in metricas.geometry]
         fontes = [d for d in dicionario if d.get('camada') == nome and d.get('papel_analitico') == 'vinculos']
         registros, flags = [], {tipo:[] for tipo in tipos}
+        from api.services.extracao_entrada_local import geometria_utilizavel
         for _, row in frame.iterrows():
             vinculos = []
             for campo in fontes:
@@ -31,17 +32,22 @@ def materializar(camadas, dicionario, categorias):
                     'tipo':tipo_categoria(campo['categoria_id'], campo['tema']),
                     'espacial':campo.get('ligacao_espacial', True), 'fragmento':sha256(row.geometry.wkb).hexdigest() if row.geometry is not None else None, 'correspondencias':pares})
             registros.append(serializar(vinculos))
+            utilizavel = geometria_utilizavel(row.geometry)
             for tipo in tipos:
-                flags[tipo].append(int(any(v['tipo'] == tipo and v['espacial'] and v['correspondencias'] for v in vinculos)))
+                espaciais = [v for v in vinculos if v['tipo'] == tipo and v['espacial']]
+                valor = 'não avaliado' if not utilizavel or not espaciais else (
+                    'sim' if any(v['correspondencias'] for v in espaciais) else 'não')
+                flags[tipo].append(valor)
         frame[CAMPO_VINCULOS] = registros
         dicionario.append({'camada':nome, 'campo':CAMPO_VINCULOS, 'tema':'Resultado', 'base':None,
             'campo_origem':None, 'apelido':'Correspondências por base e categoria',
             'regra':'Vínculos preservados pelo geoprocesso; fonte autossuficiente do painel', 'papel_analitico':'linhagem'})
         for tipo, valores in flags.items():
-            frame[tipo] = valores
-            dicionario.append({'camada':nome, 'campo':tipo, 'tema':'Resultado', 'base':None,
-                'campo_origem':None, 'apelido':tipo.capitalize(), 'papel_analitico':'presenca_categoria',
-                'regra':'1: existe correspondência espacial na categoria; 0: nenhuma correspondência registrada'})
+            campo = f'intersecta_{tipo}'
+            frame[campo] = valores
+            dicionario.append({'camada':nome, 'campo':campo, 'tema':'Resultado', 'base':None,
+                'campo_origem':None, 'apelido':f'Intersecta {tipo}', 'papel_analitico':'presenca_categoria',
+                'regra':'sim: existe correspondência espacial na categoria; não: nenhuma correspondência registrada; não avaliado: geometria inutilizável ou sem avaliação espacial'})
         dicionario.append({'camada':nome,'campo':'sicard_demanda','tema':'Resultado','base':None,'campo_origem':None,'apelido':'Geometria de referência para métricas','papel_analitico':'geometria_tecnica'})
         dicionario.append({'camada':nome, 'campo':CAMPO_ESQUEMA, 'tema':'Resultado', 'base':None,
             'campo_origem':None, 'apelido':'Esquema analítico da saída', 'papel_analitico':'linhagem'})

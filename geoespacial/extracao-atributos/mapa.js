@@ -111,7 +111,7 @@ export function criarMapa(aoMudarPainel) {
     const app=context()?.gpApp;
     if(!ready||!app)return null;
     return app.state.layers.map(item=>({id:item.id,nome:item.nome,categoria:String(item.categoria||''),
-      visivel:camadaVisivel(app.state.map,item.id)}));
+      color:app.state.map.getLayer(item.id)?app.state.map.getPaintProperty?.(item.id,'fill-color'):null,visivel:camadaVisivel(app.state.map,item.id)}));
   }
   frame.addEventListener('load',connect);connect();
   function assertReady(ids=[]){
@@ -131,5 +131,12 @@ export function criarMapa(aoMudarPainel) {
     }finally{syncing=false;}
   }
   const exibida=id=>[...mounted.values()].some(item=>item.id===id);
-  return {sync,assertReady,camadas,exibida,restaurarVisibilidade};
+  async function enquadrar(ids,bounds){
+    for(let i=0;i<300;i++){
+      try{assertReady(ids);break;}catch(error){if(i===299)throw error;}
+      await new Promise(resolve=>setTimeout(resolve,100));
+    }
+    if(bounds){const map=context().gpApp.state.map;map.resize();map.fitBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]],{padding:50,maxZoom:16});}
+  }
+  return {sync,assertReady,camadas,exibida,restaurarVisibilidade,enquadrar};
 }

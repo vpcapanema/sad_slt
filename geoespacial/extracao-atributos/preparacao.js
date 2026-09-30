@@ -1,12 +1,13 @@
 // A prévia e a bancada têm estados independentes. Somente enviar() confirma a composição.
 export const entradasPreparadas=s=>[...(s.input?[{id:s.input,config:s.inputConfig}]:[]),...s.entradasExtras];
 export const camadaPronta=l=>Boolean(l&&!l.erro&&l.tipo!=='raster'&&l.status_validacao==='valida'&&l.representacao==='tiles'&&l.tiles_url);
+export const entradaConfirmada=(layer,config)=>camadaPronta(layer)&&Boolean(layer.revisao)&&config?.identificacao_confirmada===true&&config.validacao_previa===layer.revisao;
 export const componentes=l=>l?.camadas_bancada||(l?[l]:[]);
 export const configuracaoDaCamada=(entry,layer,item)=>layer.camadas_bancada?entry.config?.camadas?.[item.chave]:entry.config;
 export function entradasParaPrevia(s){
  return entradasPreparadas(s).flatMap(entry=>{
   const original=s.catalog.find(l=>l.id===entry.id);if(!original)return [];
-  const partes=componentes(original).filter(l=>camadaPronta(l)&&configuracaoDaCamada(entry,original,l)?.identificacao_confirmada);
+  const partes=componentes(original).filter(l=>entradaConfirmada(l,configuracaoDaCamada(entry,original,l)));
   if(!partes.length)return [];
   return [{...entry,layer:original.camadas_bancada?{...original,camadas_bancada:partes}:original}];
  });
@@ -68,7 +69,7 @@ export function enviarPrevia(s){
  return entradas.reduce((n,e)=>n+componentes(e.layer).length,0)+prontas.length;
 }
 export function limparPreparacao(s){
- const pendentes=entradasPreparadas(s).filter(e=>{const l=s.catalog.find(l=>l.id===e.id);return componentes(l).some(c=>!configuracaoDaCamada(e,l,c)?.identificacao_confirmada);});
+ const pendentes=entradasPreparadas(s).filter(e=>{const l=s.catalog.find(l=>l.id===e.id);return componentes(l).some(c=>!entradaConfirmada(c,configuracaoDaCamada(e,l,c)));});
  Object.assign(s,{input:'',inputConfig:null,entradasExtras:[],bases:[],staging:[],previaLocal:null,listaBases:null,undoPrevia:null,lastBase:null,editandoBases:false,previaVisiveis:new Set(),preparacaoConcluida:true});
  if(pendentes.length)Object.assign(s,{input:pendentes[0].id,inputConfig:pendentes[0].config,entradasExtras:pendentes.slice(1),preparacaoConcluida:false});
 }

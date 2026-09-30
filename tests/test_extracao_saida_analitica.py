@@ -21,7 +21,7 @@ def test_preserva_atributos_e_flags_independem_de_valores_nulos(motor):
     cats=[{'id':t,'nome':t,'camadas':[{'id':t,'nome':t,'frame':base,'regra':{'prefixo':t}}]} for t in ['risco','restricao']]
     res=motor(entrada,cats)
     frame=res['camadas']['pontos']
-    assert frame.risco.tolist()==[1,0] and frame.restricao.tolist()==[1,0]
+    assert frame.intersecta_risco.tolist()==['sim','não'] and frame.intersecta_restricao.tolist()==['sim','não']
     origem=next(d['campo'] for d in res['dicionario'] if d['tema']=='Entrada' and d['campo_origem']=='risco')
     assert frame[origem].tolist()==['original A','original B']
     assert json.loads(frame.iloc[0].risco_nome)==[None]
@@ -40,7 +40,7 @@ def test_flags_por_fragmento_do_identity_e_painel_da_saida():
     res=identity(entrada,[{'id':'territorio','nome':'Território','camadas':[{'id':'u','nome':'U','frame':unidades,'regra':{'papel':'recorte','prefixo':'u','campos':['codigo']}}]},
                          {'id':'risco','nome':'Risco','camadas':[{'id':'r','nome':'R','frame':risco,'regra':{'prefixo':'r'}}]}])
     frame=res['camadas']['linhas']
-    assert frame.risco.tolist()==[1,0]
+    assert frame.intersecta_risco.tolist()==['sim','não']
     assert frame.u_campo_extra.tolist()==[10,20]
     assert 'restricao' not in frame
     assert consultar(da_saida(tabelas(res)))['resumo']['risco']==1
@@ -75,7 +75,7 @@ def test_exportacao_e_dashboard_autossuficientes(tmp_path):
     path=tmp_path/'saida.gpkg'
     escrever_gpkg(res['camadas'],entrada,res['dicionario'],path,preservar_geometrias=True,incluir_entrada=False)
     frame=gpd.read_file(path,layer='pontos')
-    assert frame.risco.tolist()==[1,0]
+    assert frame.intersecta_risco.tolist()==['sim','não']
     assert json.loads(frame.iloc[0].sicard_vinculos)[0]['correspondencias'][0]['atributos']['nome'] is None
     loaded=[{'ordem':i,'propriedades':row.drop(frame.geometry.name).to_dict()} for i,(_,row) in enumerate(frame.iterrows())]
     def proibido():
