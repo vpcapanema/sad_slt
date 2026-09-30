@@ -33,13 +33,14 @@ def test_padrao_preserva_codigos_percentuais_nulos_e_pares(motor):
 
 
 @pytest.mark.parametrize('motor', [configuravel, estatistico])
-def test_calculo_so_no_campo_configurado_e_legado_exige_revisao(motor):
+def test_calculo_so_no_campo_configurado_e_legado_preserva_valores(motor):
     entrada=frame([Point(1,1)])
     base=frame([box(0,0,3,3),box(0,0,4,4)],codigo=['001','002'],quantidade=[2,5])
     saida=motor(entrada,categorias(base,{'estatisticas_campos':{'quantidade':'total'}}))['camadas']['pontos'].iloc[0]
     assert saida.b_quantidade==7 and json.loads(saida.b_codigo)==['001','002']
-    with pytest.raises(ValueError,match='Revise'):
-        motor(entrada,categorias(base,{'estatistica':'media'}))
+    legado=motor(entrada,categorias(base,{'estatistica':'media'}))['camadas']['pontos'].iloc[0]
+    assert json.loads(legado.b_codigo)==['001','002']
+    assert json.loads(legado.b_quantidade)==[2,5]
     with pytest.raises(ValueError,match='não numérico'):
         motor(entrada,categorias(base,{'estatisticas_campos':{'codigo':'media'}}))
 

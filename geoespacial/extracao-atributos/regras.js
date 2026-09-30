@@ -339,7 +339,7 @@ export function categoriaBinaria(categoria) {
 
 export function resumoEstatisticas(regra, categoria) {
   const quantidade = Object.keys(regra?.estatisticas_campos || {}).length;
-  return `${ESTATISTICAS[regra?.estatistica || 'valores']}${quantidade ? ` · ${quantidade} campo(s) personalizado(s)` : ''}`;
+  return `${ESTATISTICAS.valores}${quantidade ? ` · ${quantidade} campo(s) personalizado(s)` : ''}`;
 }
 
 // O editor antigo permanece intacto para o enriquecimento configurável.
@@ -357,7 +357,6 @@ export function editarEstatisticas({ nomeBase, regra, categoria, camposDisponive
     estatistica.name = 'estatistica';
     estatistica.append(new Option(ESTATISTICAS.valores, 'valores'));
     estatistica.value = 'valores';
-    if(regra?.estatistica&&regra.estatistica!=='valores')corpo.append(el('p', 'Esta configuração antiga aplicava '+(ESTATISTICAS[regra.estatistica]||regra.estatistica)+' a todos os campos. Revise as operações por campo; Aplicar passa a preservar valores nos demais.', 'ea-hint'));
     const porCampo = {...(regra?.estatisticas_campos || {})};
     if (binaria) {
       corpo.append(el('p', 'Os atributos originais e todas as áreas correspondentes são preservados. A presença Sim/Não é um campo separado. Contato na borda e interseção no interior são identificados; não representam gravidade ou impedimento.'));

@@ -256,5 +256,6 @@ def normalizar_estatisticas(categorias: list[dict]) -> list[dict]:
 
 
 def validar_agregacao(regra, nome_base=None):
-    if regra.get('estatistica', 'valores') != 'valores':
-        raise ValueError((f'Base "{nome_base}": ' if nome_base else '') + 'Revise a regra da base: estatísticas devem ser escolhidas por campo; o padrão deve preservar valores distintos. Configurações antigas não são convertidas automaticamente.')
+    # O padrão global antigo não autoriza cálculos em todos os campos.
+    # Operações explicitamente escolhidas por campo permanecem intactas.
+    regra['estatistica'] = 'valores'

@@ -90,6 +90,10 @@ step "Build/atualização do container (nativo ARM64 na própria VM)"
 git lfs pull --include="data/geoespacial/relatorios/mapas_fase2/**,data/geoespacial/relatorios/mapas_fase2_normalizados/**" --exclude=""
 docker compose -f "$COMPOSE_FILE" build --pull
 docker run --rm --entrypoint python3 sicard-app:latest scripts/validar_documentacao_favorabilidade.py
+# Preserva as prévias existentes na migração do cache temporário para o volume da VM.
+if docker inspect sicard_app >/dev/null 2>&1; then
+    docker exec sicard_app sh -c 'if [ -d /tmp/sicard-extracao-tiles ]; then mkdir -p /app/data/geoespacial/configuracoes/extracao-atributos/previas; cp -an /tmp/sicard-extracao-tiles/. /app/data/geoespacial/configuracoes/extracao-atributos/previas/; fi'
+fi
 docker compose -f "$COMPOSE_FILE" up -d --force-recreate
 ok "container sicard_app em execução"
 

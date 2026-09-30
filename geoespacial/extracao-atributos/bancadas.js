@@ -1,6 +1,6 @@
 import { $, el, feedback } from './ui.js';
 import { json, post } from './api.js';
-import { validarCamada, validarEntradaLocal } from './camada-validada.js';
+import { validarCamada, validarEntradaLocal, descritorOriginal } from './camada-validada.js';
 import { componentes } from './preparacao.js';
 import { validarEntradas } from './lote.js';
 
@@ -25,15 +25,20 @@ export async function renovarBancada(snapshot,validadores={validarCamada,validar
  const draft=structuredClone(snapshot);
  const entradas=draft.bancadaEntradas.flatMap(e=>componentes(e.layer).map(layer=>({layer,origem:e.layer,
    config:e.layer.camadas_bancada?((e.config.camadas||={})[layer.chave]||={}):(e.config||={})})));
- await validarEntradas(entradas,validadores,progresso);
+ const pendentes=entradas.filter(e=>!e.layer.previa_reutilizavel);
+ let alteradas=pendentes.length;
+ for(const entry of entradas)if(entry.layer.previa_reutilizavel)descritorOriginal(entry.layer);
+ await validarEntradas(pendentes,validadores,progresso);
  for(const item of [...draft.bancadaBases,...draft.bancadaResultados,...(draft.bancadaAdicionais||[])]){
-   const layer=item.layer||item;progresso(layer.nome||layer.id);
+   const layer=item.layer||item;
+   if(layer.previa_reutilizavel){descritorOriginal(layer);continue;}
+   alteradas++;progresso(layer.nome||layer.id);
    const atual=await validadores.validarCamada(layer);
    Object.assign(layer,atual,{id:layer.id,nome:layer.nome});
  }
  const camadas=[...draft.bancadaEntradas.map(e=>({id:e.id,nome:e.layer.nome,papel:'entrada',arquivo_local:e.layer.arquivo_local})),
    ...draft.bancadaBases.map(b=>({id:b.id,nome:b.layer.nome,papel:'base',arquivo_local:b.layer.arquivo_local,regra:b.regra}))];
- if(camadas.length){const r=await compatibilizar('/extracao-atributos/compatibilizar',{camadas,operacao:draft.operation||null});
+ if(alteradas&&camadas.length){const r=await compatibilizar('/extracao-atributos/compatibilizar',{camadas,operacao:draft.operation||null});
    if(r.compativel!==true)throw new Error((r.erros||[]).map(e=>`${e.nome}: ${e.motivo}`).join('; ')||'A bancada não passou pela compatibilização.');}
  return draft;
 }
@@ -80,7 +85,7 @@ export function criarBancadas(state,map,{ocupar,restaurar,reconciliar}){
      const saved=await json(`/extracao-atributos/bancadas/${encodeURIComponent(item.id)}`);
      const draft=await renovarBancada(saved.snapshot,undefined,undefined,nome=>proc.log(`Validando ${nome}`,'step'));
      await restaurar(draft);
-     proc.concluirTarefa('Restaurar camadas');proc.sucesso({title:'Bancada restaurada',message:'Camadas validadas e compatibilizadas. Os arquivos originais foram preservados.'});
+     proc.concluirTarefa('Restaurar camadas');proc.sucesso({title:'Bancada restaurada',message:'Bancada restaurada. Prévias salvas reutilizadas; somente origens alteradas ou sem prévia disponível exigem nova validação.'});
    }catch(error){if(proc)proc.erro({message:error.message});else feedback(`Não foi possível abrir a bancada: ${error.message}`,'error');}
    finally{ativo=false;ocupar(false);marcar();}
  };

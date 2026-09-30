@@ -12,7 +12,7 @@ import { criarResultados } from "./resultados.js";
 
 import { adaptador, json, esperar } from './api.js';
 import { confirmarExecucao, acompanharExecucao } from './processo.js';
-import { editarFinalidade, editarRegra, editarEstatisticas, prefixoPadrao, categoriaBinaria } from './regras.js';
+import { editarFinalidade, editarRegra, prefixoPadrao, categoriaBinaria } from './regras.js';
 import { renderDiagrama } from './diagramas.js';
 import { restaurarRetornoMunicipal, concluirRetornoMunicipal } from './municipal.js';
 
@@ -321,19 +321,6 @@ $("#ea-run").addEventListener("click",async()=>{
   reconciliarPainel();
   if(state.busy||state.uploading||state.validatingBases||state.loadingMap||state.loadingCatalog||!state.operation||!state.bancadaEntradas.length||!state.bancadaBases.length) return;
   try{map.assertReady(composicaoAtual().ids);}catch(error){falha('validacao',error);feedback(error.message,'error');return;}
-  const antiga=composicaoAtual().bases.find(base=>base.regra?.estatistica && base.regra.estatistica!=='valores');
-  if(antiga){
-    const layer=state.catalog.find(c=>c.id===antiga.id)||antiga.layer;
-    const revista=await editarEstatisticas({nomeBase:layer?.nome||antiga.id,regra:antiga.regra,camposDisponiveis:camposCamada(layer)});
-    if(revista){
-      for(const item of [...state.bancadaBases,...state.bases,...state.staging,...(state.listaBases?.itens||[])]){
-        if(item.id===antiga.id)item.regra=structuredClone(revista);
-      }
-      await changed();
-      feedback('Regra revisada. Clique em Executar extração para conferir as demais bases e confirmar o processamento. Salve a configuração para reutilizar esta revisão.');
-    }
-    return;
-  }
   let pedido;
   try{validarComposicao(state,composicaoAtual());validarFinalidades();pedido=request();}catch(error){falha('validacao',error);feedback(error.message,'error');return;}
   const confirmado=await confirmarExecucao({

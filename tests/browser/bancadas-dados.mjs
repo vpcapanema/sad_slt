@@ -19,3 +19,8 @@ assert.equal(local,1);assert.equal(compat,1);
 await assert.rejects(()=>renovarBancada(saved,{validarEntradaLocal:async()=>{throw Error('Original inválido');}}),/Original inválido/);
 assert.throws(()=>snapshotBancada(state,[...painel,{id:'nao-persistido',nome:'Memória'}]),/storage/);
 console.log('OK: originais, visibilidade, validação, compatibilização e restauração sem alterar snapshot.');
+
+for(const e of restored.bancadaEntradas)for(const l of e.layer.camadas_bancada)l.previa_reutilizavel=true;
+for(const b of restored.bancadaBases)b.layer.previa_reutilizavel=true;
+await renovarBancada(restored,{validarCamada:()=>{throw Error('Não deve revalidar');},validarEntradaLocal:()=>{throw Error('Não deve reenviar');}},()=>{throw Error('Não deve recompatibilizar');});
+console.log('OK: abertura de configuração inalterada não revalida nem compatibiliza.');

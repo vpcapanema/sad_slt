@@ -16,7 +16,8 @@ TTL = 24 * 60 * 60
 
 
 def _pasta(dono):
-    pasta = Path(gettempdir()) / 'sicard-extracao-tiles' / sha256(str(dono).encode()).hexdigest()
+    from api.path_policy import project_path
+    pasta = project_path('data/geoespacial/configuracoes/extracao-atributos/previas') / sha256(str(dono).encode()).hexdigest()
     pasta.mkdir(parents=True, exist_ok=True)
     return pasta
 
@@ -25,7 +26,7 @@ def representar(frame, meta, dono):
     """WKB -> GDAL: nenhuma serialização da camada para JSON."""
     pasta = _pasta(dono)
     for antigo in pasta.glob('*.gpkg'):
-        if time() - antigo.stat().st_mtime > TTL:
+        if time() - antigo.stat().st_mtime > TTL and not antigo.with_suffix('.pin').exists():
             try:
                 antigo.unlink()
             except OSError:
@@ -96,7 +97,7 @@ def tile(token, dono, z, x, y):
     if not re.fullmatch(r'[a-f0-9]{32}', token) or not 0 <= z <= 22 or not (0 <= x < 2**z and 0 <= y < 2**z):
         raise ValueError('Tile inválido.')
     path = _pasta(dono) / f'{token}.gpkg'
-    if not path.is_file() or time() - path.stat().st_mtime > TTL:
+    if not path.is_file() or (time() - path.stat().st_mtime > TTL and not path.with_suffix('.pin').exists()):
         raise FileNotFoundError('Prévia expirada. Valide a camada novamente.')
     from api.services.storage_geoespacial import _tile
     return _tile(str(path), 'camada', token, z, x, y)
