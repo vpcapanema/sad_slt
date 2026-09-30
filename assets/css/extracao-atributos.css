@@ -880,7 +880,15 @@ button.ea-chart-row { cursor:pointer; }
 }
 
 /* Listas e camadas: duas fileiras de três ações, com dimensões iguais. */
-#ea-config .ea-base-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.4rem; width:100%; }
-#ea-config .ea-base-actions > .ea-btn { width:100%; height:88px; min-height:88px; min-width:0; padding:.45rem .3rem; flex-direction:column; gap:.35rem; line-height:1.3; overflow-wrap:anywhere; }
+#ea-config .ea-card-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.4rem; width:100%; }
+#ea-config .ea-card-actions > .ea-btn { width:100%; height:88px; min-height:88px; min-width:0; padding:.45rem .3rem; flex-direction:column; gap:.35rem; line-height:1.3; overflow-wrap:anywhere; }
 #ea-config .ea-base-layers { margin-top:1.5rem; padding-top:1rem; border-top:1px solid #dce3ea; }
 #ea-config .ea-field-label { font-size:.875rem; font-weight:650; color:#3e5368; }
+
+/* Mesma estrutura vertical nos três cards de preparação. */
+#ea-config .ea-config-grid-3 .ea-config-card-body > .ea-hint { white-space:nowrap; font-size:.75rem; line-height:1.5; margin:0 0 .2rem; }
+#ea-config .ea-config-grid-3 .ea-primary-field { min-height:94px; gap:6px; }
+#ea-config .ea-config-grid-3 .ea-primary-field > small { margin:0; }
+#ea-config .ea-config-grid-3 .ea-field > label { line-height:20px; margin:0; }
+#ea-config .ea-campos-duplos { gap:.5rem; }
+#ea-config .ea-card-actions > .ea-btn.ea-layer-action { height:88px; min-height:88px; padding:.45rem .3rem; text-align:center; justify-content:center; line-height:1.3; }
