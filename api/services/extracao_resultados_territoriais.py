@@ -247,7 +247,16 @@ def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situaca
     def count(tipo):
         return sum(i['estados'][tipo] == 'com' for i in items) if not items or any(
             i['estados'][tipo] in ('com', 'sem') for i in items) else None
-    return {'campos_categorias':{cat:sorted({k for a in snapshot['areas'].values() if a['categoria']==cat for k in a['atributos']}) for cat in {b['categoria'] for b in bases.values()}}, 'rankings':rankings, 'categorias':list({b['categoria']:b.get('categoria_nome',b['categoria']) for b in bases.values()}.items()),
+    from api.services import extracao_atributos_aliases as aliases
+    aliases_categorias = {}
+    comuns = {'populacao':'População', 'renda_media':'Renda média', 'area':'Área', 'descricao':'Descrição', 'codigo':'Código', 'titulo':'Título'}
+    for a in snapshot['areas'].values():
+        b = bases.get(a['base_id'], {})
+        conhecidos = aliases.camada(b.get('origem_id'), b.get('nome'))['campos']
+        rotulos = aliases_categorias.setdefault(a['categoria'], {})
+        for campo in a['atributos']:
+            rotulos[campo] = b.get('apelidos', {}).get(campo) or conhecidos.get(campo) or comuns.get(campo.lower()) or aliases.automatico(campo)
+    return {'aliases_categorias':aliases_categorias, 'campos_categorias':{cat:sorted({k for a in snapshot['areas'].values() if a['categoria']==cat for k in a['atributos']}) for cat in {b['categoria'] for b in bases.values()}}, 'rankings':rankings, 'categorias':list({b['categoria']:b.get('categoria_nome',b['categoria']) for b in bases.values()}.items()),
         'legado':snapshot['versao'] == 0,
         'entradas':[{'nome':e['nome'],'total':len(e['feicoes'])} for e in snapshot['entradas']],
         'resumo_entradas':resumo_entradas,
@@ -300,7 +309,8 @@ def da_saida(tabelas):
                 tipo = link.get('tipo') or str(link['categoria_id'])
                 bid = f"{link['categoria_id']}:{link['base_id']}"
                 bases.setdefault(bid, {'id':bid,'nome':link['base'],'categoria':tipo,'categoria_nome':link['categoria'],
-                    'cobertura_completa':link['espacial']})
+                    'cobertura_completa':link['espacial'], 'origem_id':link['base_id'],
+                    'apelidos':{d['campo_origem']:d['apelido'] for d in fields if d.get('base')==link['base'] and d.get('campo_origem') and d.get('apelido')}})
                 if not link['espacial']: continue
                 for pair in link['correspondencias']:
                     aid = f"{bid}:{pair['fid_base']}"

@@ -33,7 +33,7 @@ export function criarTerritorial(result){
   opcoes(q('[data-filter="entrada"]'),[{id:'',nome:'Unificado · todas as demandas'},...data.entradas.map(e=>({id:e.nome,nome:e.nome}))],state.entrada);
   opcoes(q('[data-filter="categoria"]'),[{id:'',nome:'Todas as categorias'},...(data.categorias||[]).map(([id,nome])=>({id,nome}))],state.categoria);
   const fields=data.campos_categorias?.[state.categoria]||[...new Set(Object.values(data.areas).filter(a=>!state.categoria||a.categoria===state.categoria).flatMap(a=>Object.keys(a.atributos)))];
-  opcoes(q('[data-filter="atributo"]'),[{id:'',nome:'Nome do elemento'},...fields.map(id=>({id,nome:id}))],state.atributo);
+  opcoes(q('[data-filter="atributo"]'),[{id:'',nome:'Nome do elemento'},...fields.map(id=>({id,nome:data.aliases_categorias?.[state.categoria]?.[id]||id.replaceAll('_',' ')}))],state.atributo);
   q('[data-filter="busca"]').value=state.busca;
   const output=result.saidas_individuais?.find(e=>e.nome===state.entrada);
   role('download').href=`${apiBase}/extracao-atributos/execucoes/${encodeURIComponent(result.id)}/pacote${output?'?saida='+encodeURIComponent(output.chave):''}`;
@@ -68,7 +68,7 @@ export function criarTerritorial(result){
   role('element-title').textContent=area?`${nomeArea(area)} · ${area.base}`:'Selecione um elemento relacionado.';
   const attrs=Object.entries(area?.atributos||{}).filter(([,v])=>v!=null&&v!=='');
   attrs.sort(([a],[b])=>Number(/nome|name|codigo|class|descr|tipo|nm_/i.test(b))-Number(/nome|name|codigo|class|descr|tipo|nm_/i.test(a)));
-  definicoes(role('selection-attributes'),Object.fromEntries(attrs));
+  definicoes(role('selection-attributes'),Object.fromEntries(attrs.map(([k,v])=>[data.aliases_categorias?.[area?.categoria]?.[k]||k.replaceAll('_',' '),v])));
   const m=item?.relacoes?.[area?.id];
   if(m?.por_categoria&&Object.keys(m.por_categoria).some(k=>k!=='Sem categoria')){
    const unidade=({ponto:'pontos',linha:'m',poligono:'m²'})[m.representacao_entrada]||'';
@@ -87,30 +87,38 @@ export function criarTerritorial(result){
   filters();
   const matrix=role('matrix'),head=matrix.querySelector('thead tr'),body=matrix.querySelector('tbody');
   head.replaceChildren();body.replaceChildren();
-  function sortButton(label,id){const b=document.createElement('button');b.type='button';b.className='ea-btn';b.textContent=label+(ordenarPor===id?(crescente?' ↑':' ↓'):'');b.onclick=()=>{crescente=ordenarPor===id?!crescente:true;ordenarPor=id;draw();};return b;}
-  const th=document.createElement('th');th.scope='col';th.append(sortButton('Demanda',''));head.append(th);
-  for(const [id,nome] of data.categorias||[]){
-   const th=document.createElement('th');th.scope='col';th.append(sortButton(nome,id));
-   if(!['risco','restricao'].includes(id)){
-    const fields=data.campos_categorias?.[id]||[];
-    if(!atributosPorCategoria.has(id))atributosPorCategoria.set(id,fields.filter(f=>/nome|name|classe|tipo|grau/i.test(f)).slice(0,1).concat(fields.length&&!fields.some(f=>/nome|name|classe|tipo|grau/i.test(f))?[fields[0]]:[]));
-    const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Atributos de interesse';details.open=atributosAbertos.has(id);details.ontoggle=()=>{if(details.open)atributosAbertos.add(id);else atributosAbertos.delete(id);};details.append(summary);
-    for(const campo of fields){const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=atributosPorCategoria.get(id).includes(campo);check.setAttribute('aria-label',`${nome}: ${campo}`);check.onchange=()=>{const selected=atributosPorCategoria.get(id);atributosPorCategoria.set(id,check.checked?[...selected,campo]:selected.filter(c=>c!==campo));draw();};label.append(check,document.createTextNode(campo));details.append(label);}
-    th.append(details);
-   }
-   head.append(th);
+  const categorias=[...(data.categorias||[])].sort((a,b)=>(['restricao','risco'].indexOf(a[0])+1||3)-(['restricao','risco'].indexOf(b[0])+1||3));
+  const alias=(id,campo)=>data.aliases_categorias?.[id]?.[campo]||campo.replaceAll('_',' ').replace(/^./,c=>c.toUpperCase());
+  const columns=[];
+  function sortButton(label,id){const b=document.createElement('button');b.type='button';b.className='ea-matrix-sort';b.textContent=label+(ordenarPor===id?(crescente?' ↑':' ↓'):'');b.onclick=()=>{crescente=ordenarPor===id?!crescente:true;ordenarPor=id;draw();};return b;}
+  const th=document.createElement('th');th.scope='col';th.append(sortButton('Nome da demanda',''));head.append(th);
+  const selectors=role('matrix-fields');selectors.replaceChildren();
+  for(const [id,nome] of categorias){
+   if(['risco','restricao'].includes(id)){columns.push({id,nome,key:id,label:nome});continue;}
+   const fields=data.campos_categorias?.[id]||[];
+   if(!atributosPorCategoria.has(id))atributosPorCategoria.set(id,[fields.find(f=>/nome|name|classe|tipo|grau/i.test(f))||fields[0]].filter(Boolean));
+   const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent=nome;details.open=atributosAbertos.has(id);details.ontoggle=()=>{if(!details.isConnected)return;if(details.open)atributosAbertos.add(id);else atributosAbertos.delete(id);};details.append(summary);
+   const options=document.createElement('div');options.className='ea-matrix-options';
+   for(const campo of fields){const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=atributosPorCategoria.get(id).includes(campo);check.setAttribute('aria-label',`${nome}: ${alias(id,campo)}`);check.onchange=()=>{const selected=atributosPorCategoria.get(id);atributosPorCategoria.set(id,check.checked?[...selected,campo]:selected.filter(c=>c!==campo));draw();};label.append(check,document.createTextNode(alias(id,campo)));options.append(label);}
+   if(!fields.length)options.textContent='Sem atributos disponíveis';
+   details.append(options);selectors.append(details);
+   const selected=atributosPorCategoria.get(id)||[];
+   for(const campo of selected.length?selected:[null])columns.push({id,nome,campo,key:JSON.stringify([id,campo]),label:campo?alias(id,campo):nome});
   }
-  function cell(item,id){
-   if(['risco','restricao'].includes(id))return {com:'✓ Sim',sem:'Não',nao_avaliado:'Não avaliado',nao_informado:'Não informado'}[item.estados?.[id]]||'Não avaliado';
+  selectors.hidden=!selectors.children.length;
+  for(const col of columns){const th=document.createElement('th');th.scope='col';th.title=col.nome;th.append(sortButton(col.label,col.key));if(col.campo){const category=document.createElement('small');category.textContent=col.nome;th.append(category);}head.append(th);}
+  function cell(item,col){
+   const id=col.id;
+   if(['risco','restricao'].includes(id))return {com:'Sim',sem:'Não',nao_avaliado:'Não avaliado',nao_informado:'Não informado'}[item.estados?.[id]]||'Não avaliado';
    const areas=item.areas.map(a=>data.areas[a]).filter(a=>a?.categoria===id);
    if(!areas.length)return 'Sem correspondência';
-   const campos=atributosPorCategoria.get(id)||[];
-   return campos.length?campos.map(c=>`${c}: ${[...new Set(areas.map(a=>labelValue(a.atributos[c])))].join(' · ')}`).join('\n'):'Escolher atributos';
+   return col.campo?[...new Set(areas.map(a=>labelValue(a.atributos[col.campo])))].join(' · '):'—';
   }
-  const ordered=[...data.linhas].sort((a,b)=>(crescente?1:-1)*(ordenarPor?cell(a,ordenarPor).localeCompare(cell(b,ordenarPor),'pt-BR',{numeric:true}):nomeDemanda(a).localeCompare(nomeDemanda(b),'pt-BR',{numeric:true})));
+  const sortCol=columns.find(c=>c.key===ordenarPor);
+  const ordered=[...data.linhas].sort((a,b)=>(crescente?1:-1)*(sortCol?cell(a,sortCol).localeCompare(cell(b,sortCol),'pt-BR',{numeric:true}):nomeDemanda(a).localeCompare(nomeDemanda(b),'pt-BR',{numeric:true})));
   for(const item of ordered){
    const row=document.createElement('tr'),name=document.createElement('th');name.scope='row';name.textContent=nomeDemanda(item);name.title=`${item.entrada} · FID ${item.fid}${item.campo_nome_demanda?' · '+item.campo_nome_demanda:''}`;row.append(name);
-   for(const [id,nome] of data.categorias||[]){const td=document.createElement('td'),b=document.createElement('button');b.className='ea-btn ea-matrix-cell';b.type='button';b.textContent=cell(item,id);b.setAttribute('aria-label',`${nomeDemanda(item)} · ${nome}: ${b.textContent}`);b.setAttribute('aria-pressed',String(selectedKey===item.chave&&state.categoria===id));b.onclick=()=>selectDemand(item.chave,id);td.append(b);row.append(td);}
+   for(const col of columns){const td=document.createElement('td'),b=document.createElement('button');b.className='ea-matrix-cell';b.type='button';b.textContent=cell(item,col);b.title=b.textContent;b.setAttribute('aria-label',`${nomeDemanda(item)} · ${col.nome}${col.campo?' · '+col.label:''}: ${b.textContent}`);b.setAttribute('aria-pressed',String(selectedKey===item.chave&&state.categoria===col.id));b.onclick=()=>selectDemand(item.chave,col.id);td.append(b);row.append(td);}
    body.append(row);
   }
   role('pagination').textContent=`Página ${data.paginas?data.pagina+1:0} de ${data.paginas} · ${data.total} demandas`;
