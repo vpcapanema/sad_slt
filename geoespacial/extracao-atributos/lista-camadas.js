@@ -8,7 +8,7 @@ import { criarEditorListaBases } from './editor-lista-bases.js';
 
 const ROTULO = {
   confirmar: 'Enviar pra bancada',
-  salvar: 'Salvar somente a lista de bases e categorias',
+  salvar: 'Salvar listas',
   editar: 'Editar camadas da prévia',
   carregar: 'Carregar listas',
   limpar: 'Limpar camadas da prévia',
@@ -22,6 +22,8 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
   const bar = $('#ea-staging-actions');
   const botoes = Object.fromEntries(
     Object.keys(ROTULO).map(chave => [chave, $(`#ea-staging-${chave}`)]));
+  const listasSelect=$('#ea-listas-select'),listasRefresh=$('#ea-listas-refresh');
+  let atualizandoListas=false;
   let ancora = [];   // Cópia da lista no último confirmar, carregar ou limpar.
 
   const caminhoDe = item => item.arquivo || state.catalog.find(l => l.id === item.id)?.arquivo || '';
@@ -44,7 +46,9 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     botoes.editar.disabled = state.busy || !total;
     botoes.editar.setAttribute('aria-pressed', String(editando));
     botoes.editar.classList.toggle('is-active', editando);
-    botoes.carregar.disabled = state.busy;
+    botoes.carregar.disabled = state.busy || atualizandoListas;
+    listasRefresh.disabled = state.busy || atualizandoListas;
+    listasSelect.disabled = state.busy || atualizandoListas;
     configSalvar.disabled=state.busy;configCarregar.disabled=state.busy;
   }
 
@@ -117,7 +121,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
         { nome: nome.trim(), escopo, chave_lista:escopo==='bases'?editor.lista()?.chave:undefined, categorias: grupos, entradas:escopo==='bases'?[]:entradas, finalidades:escopo==='bases'?[]:finalidades,
           operacao:escopo==='bases'?'':state.operation,opcoes:escopo==='bases'?{}:state.opcoes,nome_saida:escopo==='bases'?'':state.nomeSaida, categoria_ativa:$('#ea-category-select').value });
       log('configuracao.salva',{bases:resultado.camadas,categorias:resultado.categorias,entradas:resultado.entradas,finalidades:resultado.finalidades});
-      if(escopo==='bases')editor.salva(resultado);
+      if(escopo==='bases'){editor.salva(resultado);await atualizarListas(false);listasSelect.value=resultado.chave||'';}
       feedback(`${escopo==='bases'?'Lista de bases':'Configuração'} "${resultado.nome}" salva: ${resultado.camadas} camada(s) em ${resultado.categorias} categoria(s),`
         + (escopo==='bases'?' Entradas, algoritmo e saída não são alterados.':` ${resultado.entradas} entrada(s) e ${resultado.finalidades} finalidade(s).`)
         + (escopo==='analise'&&state.input.startsWith('local:') ? ' A entrada local é temporária: selecione o arquivo novamente ao carregar esta configuração.' : '')
@@ -130,13 +134,13 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
   botoes.salvar.addEventListener('click',()=>salvar('bases'));
 
   // Um só caminho de carregamento; o explorador muda apenas a forma de escolher.
-  async function abrirSalva(explorador,escopo='analise') {
+  async function abrirSalva(explorador,escopo='analise',chaveSelecionada='') {
     if (state.busy) return;
     try {
       const pastaDados = await json(`/extracao-atributos/configuracoes?escopo=${escopo}`);
       const configuracoes = pastaDados.configuracoes;
       if (!configuracoes.length) { feedback(escopo==='bases'?`Nenhuma lista encontrada em ${pastaDados.pasta}. Arquivos salvos na VM ou em outro computador precisam estar disponíveis neste ambiente.`:'Nenhuma configuração salva ainda.'); return; }
-      const escolha = await escolherConfiguracao(configuracoes, explorador ? pastaDados.pasta : '',escopo);
+      const escolha = chaveSelecionada || await escolherConfiguracao(configuracoes, explorador ? pastaDados.pasta : '',escopo);
       if (!escolha) return;
       const dados = await json(`/extracao-atributos/configuracoes/${encodeURIComponent(escolha)}?escopo=${escopo}${escopo==='bases'?'&lista=true':''}`);
       if(escopo!=='bases'&&(state.input||state.bases.length||state.staging.length||state.bancadaEntradas.length||state.bancadaBases.length)&&!(await window.ProcessFeedback.confirmar({title:escopo==='bases'?'Carregar listas':'Carregar configuração',message:escopo==='bases'?'Substituir apenas as bases e categorias? Entradas e algoritmo serão mantidos.':'Substituir a composição atual pela configuração salva? Confira a prévia e envie novamente à bancada.',warning:'Nenhuma camada ou resultado será apagado do banco.'})))return;
@@ -196,7 +200,22 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     editando = !editando;
     render();changed();
   });
-  botoes.carregar.addEventListener('click', () => { botoes.carregar.disabled = true; abrirSalva(true,'bases'); });
+  async function atualizarListas(avisar=true){
+    if(atualizandoListas||state.busy)return;
+    atualizandoListas=true;marcar();
+    try{
+      const dados=await json('/extracao-atributos/configuracoes?escopo=bases');
+      const selecionada=listasSelect.value;
+      listasSelect.replaceChildren(new Option(dados.configuracoes.length?'Selecione uma lista':'Nenhuma lista salva',''));
+      for(const item of dados.configuracoes)listasSelect.add(new Option(item.nome,item.chave));
+      listasSelect.value=selecionada;
+      if(avisar)feedback('Listas atualizadas.');
+    }catch(error){feedback(`Não foi possível atualizar as listas: ${error.message}`,'error');}
+    finally{atualizandoListas=false;marcar();}
+  }
+  listasRefresh.addEventListener('click',()=>atualizarListas());
+  botoes.carregar.addEventListener('click', () => { botoes.carregar.disabled = true; abrirSalva(true,'bases',listasSelect.value); });
+  atualizarListas(false);
 
   configCarregar.addEventListener('click',()=>abrirSalva(true,'analise'));
 

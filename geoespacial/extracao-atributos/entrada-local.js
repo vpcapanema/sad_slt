@@ -2,6 +2,7 @@ import { log, falha, iniciarHttp, progresso, correlacaoAtual } from './logger.js
 /* Originais permanecem na memória da página. Validar nunca confirma a bancada. */
 import { $, feedback } from './ui.js';
 import { base, json, post } from './api.js';
+import {descritorOriginal} from './camada-validada.js';
 import { guardarPrevia } from './preparacao.js';
 const MAX_BYTES=16*1024*1024;
 const dormir=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -47,7 +48,7 @@ export function criarEntradaLocal(state,changed){
     if(cancelando)break;
     processo.tarefaAtual(tarefa(file),`Enviando para validação (${indice+1}/${files.length}).`);
     iniciando=(async()=>{
-     const rota=`/extracao-atributos/entrada-local/jobs?nome=${encodeURIComponent(file.name)}`,rastreio=iniciarHttp(rota,{method:'POST'});
+     const rota=`/extracao-atributos/entrada-local/jobs?original=true&nome=${encodeURIComponent(file.name)}`,rastreio=iniciarHttp(rota,{method:'POST'});
      let response;try{response=await fetch(base+rota,{
       method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream'},body:file,signal:AbortSignal.timeout(180000)});}catch(error){rastreio.falhar(error);throw error;}
      const result=await response.json().catch(()=>null);rastreio.concluir(response.status,result);
@@ -65,6 +66,7 @@ export function criarEntradaLocal(state,changed){
     if(job.status!=='concluido')throw new Error(job.erro||'A validação não foi concluída.');
     const result=job.resultado;
     if(!Array.isArray(result?.camadas)||!result.resumo)throw new Error('O servidor não retornou a validação de todas as camadas.');
+    result.camadas.forEach(descritorOriginal);
     const validas=result.camadas.filter(c=>c.status_validacao==='valida'&&c.tipo!=='raster');
     const entrada=result.entrada||{id:`previa:${crypto.randomUUID()}`,nome:file.name,origem:'local',tipo:'pacote'};
     Object.assign(entrada,{arquivo:file.name,camadas_importadas:result.camadas,camadas_bancada:validas});

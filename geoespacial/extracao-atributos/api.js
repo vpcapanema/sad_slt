@@ -62,8 +62,9 @@ export async function esperar(job,statusPath,aoAtualizar) {
 export const adaptador={
   listarCatalogo:()=>json('/extracao-atributos/catalogo'),
   async carregarCamada(layer){
-    const file=await post('/extracao-atributos/arquivo-mapa',{arquivo:layer.arquivo||undefined,id:layer.id});
-    Object.assign(layer,file);return file.geojson;
+    const {validarCamada}=await import('./camada-validada.js');
+    const file=await validarCamada(layer);
+    delete layer.geojson;delete layer.geojson_resumido;Object.assign(layer,file);return file;
   },
   async executar(request,aoAtualizar) {
     // O corpo tem que carregar tudo o que a 1.3 configura: o nome da saida e as

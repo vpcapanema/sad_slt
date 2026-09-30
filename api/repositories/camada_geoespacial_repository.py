@@ -404,6 +404,30 @@ def carregar_vetor(recurso_id: str) -> tuple[gpd.GeoDataFrame, dict[str, Any]] |
     return gdf, camada
 
 
+def carregar_vetor_bruto(recurso_id: str):
+    """Leitura binária do PostGIS, preservando precisão e atributos sem GeoJSON."""
+    import pandas as pd
+    import shapely
+    with get_connection() as conn:
+        found = _find_layer(conn, recurso_id)
+        if not found or found[1]['tipo'] != 'vetor':
+            return None
+        categoria, camada = found
+        rows = conn.execute(sql.SQL(
+            'SELECT propriedades, ST_AsBinary(geom) AS wkb FROM geoprocessamento.{} '
+            'WHERE camada_id=%s ORDER BY ordem'
+        ).format(sql.Identifier(STORAGES[categoria][1])), (camada['id'],)).fetchall()
+    tabela = pd.DataFrame([r['propriedades'] or {} for r in rows])
+    campo = '__geometria_original__'
+    while campo in tabela.columns:
+        campo += '_'
+    tabela[campo] = gpd.GeoSeries([shapely.from_wkb(bytes(r['wkb'])) if r['wkb'] is not None else None for r in rows], crs=4674)
+    frame = gpd.GeoDataFrame(tabela, geometry=campo, crs=4674)
+    if camada.get('crs') and str(camada['crs']).upper() != 'EPSG:4674' and not frame.empty:
+        frame = frame.to_crs(camada['crs'])
+    return frame, {**camada, 'categoria': categoria}
+
+
 def atributos_paginados(recurso_id: str, offset: int = 0, limite: int = 100) -> dict[str, Any] | None:
     """Tabela integral por páginas, sem carregar ou simplificar as geometrias."""
     with get_connection() as conn:

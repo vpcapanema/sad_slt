@@ -1,0 +1,42 @@
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const load=async(path,transform=s=>s)=>import('data:text/javascript;base64,'+Buffer.from(transform(fs.readFileSync(path,'utf8'))).toString('base64'));
+(async()=>{
+ const prep=await load('geoespacial/extracao-atributos/preparacao.js');
+ const layer=id=>({id,nome:id,tipo:'vetor',representacao:'tiles',status_validacao:'valida',tiles_url:`https://fixture/${id}/{z}/{x}/{y}`,revisao:id,feicoes:1,campos:[]});
+ const s={catalog:['entrada','a','b','c','d'].map(layer),input:'entrada',inputConfig:{identificacao_confirmada:true},entradasExtras:[],bases:[],staging:[{id:'a',category:'social'},{id:'b',category:'risco'}],bancadaEntradas:[],bancadaBases:[]};
+ assert.equal(prep.enviarPrevia(s),3);prep.limparPreparacao(s);
+ s.staging=[{id:'c',category:'economico'}];s.previaVisiveis=new Set(['base:c']);assert.equal(prep.enviarPrevia(s),1);
+ assert.deepEqual(s.bancadaBases.map(b=>[b.id,b.category]),[['a','social'],['b','risco'],['c','economico']]);
+ assert.equal(s.bancadaEntradas[0].id,'entrada');
+ prep.limparPreparacao(s);s.staging=[{id:'d',category:'social'}];s.previaVisiveis=new Set(['base:d']);prep.enviarPrevia(s);
+ assert.deepEqual(s.bancadaBases.map(b=>b.id),['a','b','c','d']);
+ assert(!JSON.stringify(s.bancadaBases).includes('geojson'));
+ // A camada territorial só entra na lista; nenhum atalho para a prévia/bancada.
+ global.location={search:'?retomar=municipal&camada_municipal=municipal&categoria=economico'};
+ global.document={querySelector:()=>({value:''})};global.sessionStorage={getItem:()=>null};
+ const municipal=await load('geoespacial/extracao-atributos/municipal.js');
+ s.categories=[{id:'economico'}];s.catalog.push(layer('municipal'));
+ s.listaBases={nome:'Minha lista',chave:'salva',itens:[{id:'a',category:'social'}]};
+ const before=structuredClone({bases:s.bancadaBases,staging:s.staging});
+ await municipal.restaurarRetornoMunicipal(s);
+ assert.equal(s.listaBases.nome,'Minha lista');assert.equal(s.listaBases.itens.length,2);
+ assert.equal(s.listaBases.itens[1].category,'economico');
+ assert.deepEqual(s.bancadaBases,before.bases);assert.deepEqual(s.staging,before.staging);
+ await municipal.restaurarRetornoMunicipal(s);assert.equal(s.listaBases.itens.length,2);
+ s.listaBases=null;await municipal.restaurarRetornoMunicipal(s);assert.equal(s.listaBases.itens.length,1);
+ // Adapter real: inclusões sucessivas preservam o painel e a visibilidade anterior.
+ const sources=new Map(),styles=new Map(),removed=[];
+ const map={isStyleLoaded:()=>true,on(){},resize(){},getSource:id=>sources.get(id),getLayer:id=>styles.get(id),getLayoutProperty:id=>styles.get(id)?.visibility,setLayoutProperty(id,k,v){styles.get(id)[k]=v},getZoom:()=>8};
+ const app={state:{map,layers:[]},renderLayers(){},applyLayerColor(){},removeLayerFromMap(id){removed.push(id);this.state.layers=this.state.layers.filter(l=>l.id!==id);sources.delete(id);styles.delete(id)},adicionarCamadaGeoJsonEmMemoria(){throw Error('Não deve montar GeoJSON')},adicionarCamadaStorageTiles(id,nome,info,opts){sources.set(id,{});styles.set(id,{visibility:'visible'});this.state.layers.push({id,nome,categoria:opts.categoria})}};
+ const frame={addEventListener(){},contentWindow:{gpApp:app,gpArquivos:{sessions:new Map()},document:{querySelector:()=>null,body:{classList:{contains:()=>true}}}}};
+ global.__frame=frame;
+ const {criarMapa}=await load('geoespacial/extracao-atributos/mapa.js',s=>s.replace("import { $, feedback } from './ui.js';","const $=()=>globalThis.__frame,feedback=message=>{throw Error(message)};"));
+ const adapter=criarMapa();const item=(id,category)=>({...layer(id),key:`base:${id}`,grupo:category,papelExtracao:'base'});
+ adapter.sync([item('a','Social'),item('b','Risco')]);styles.get('a').visibility='none';
+ adapter.sync([item('a','Social'),item('b','Risco'),item('c','Econômico')]);
+ assert.deepEqual(app.state.layers.map(l=>l.id),['a','b','c']);assert.deepEqual(removed,[]);
+ assert.equal(styles.get('a').visibility,'none');assert.equal(app.state.layers[2].categoria,'Econômico');
+ adapter.sync([item('a','Social'),item('b','Risco'),item('c','Econômico'),item('d','Social')]);
+ assert.equal(app.state.layers.length,4);assert.deepEqual(removed,[]);
+ console.log('OK: adição cumulativa, categorias, visibilidade, retorno territorial e montagem sem GeoJSON.');
+})().catch(e=>{console.error(e);process.exitCode=1});

@@ -12,7 +12,7 @@ export function composicaoVisivel(state, painel=[]){
   if(layer.camadas_bancada){
    config.camadas=Object.fromEntries(partes.map(l=>[l.chave,configurar(config.camadas?.[l.chave]||config)]));
    layer.camadas_bancada=partes;
-   layer.geojson={type:'FeatureCollection',features:partes.flatMap(l=>l.geojson?.features||[])};
+   delete layer.geojson;
    if(layer.arquivo_local)layer.arquivo_local={...layer.arquivo_local,camadas:partes.map(l=>l.chave)};
   }
   const ajustada={...entry,layer,config:configurar(config)};

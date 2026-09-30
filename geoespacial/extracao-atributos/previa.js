@@ -1,3 +1,4 @@
+import {camadaTiles} from './previa-tiles.js';
 import { $, el, feedback } from './ui.js';
 import { removerPrevia, entradasParaPrevia, componentes, configuracaoDaCamada } from './preparacao.js';
 const nomeArquivo=valor=>String(valor||'Arquivo sem nome').split(/[\\/]/).pop();
@@ -132,9 +133,9 @@ export function criarPrevia(state, changed){
     }
     desenho?.remove();desenho=window.L.featureGroup().addTo(mapa);camadasMapa.clear();visiveis.clear();niveis=[];
     pacote.camadas.forEach((item,index)=>{
-      if(item.status_validacao!=='valida'||!item.geojson)return;
+      if(item.status_validacao!=='valida'||(!item.tiles_url&&!item.geojson))return;
       const color=cores[index%cores.length];
-      const camada=window.L.geoJSON(item.geojson,{
+      const camada=item.tiles_url?camadaTiles(mapa,item,color):window.L.geoJSON(item.geojson,{
         style:{color,weight:3,fillOpacity:.18},pointToLayer:(_,latlng)=>window.L.circleMarker(latlng,{radius:5,color,fillOpacity:.8})});
       if(item.geojson_resumido)niveis.push({layer:item,camada,atual:item.geojson});
       camada.on('click',()=>selecionarCamada(item));
@@ -181,11 +182,11 @@ export function criarPrevia(state, changed){
       ['Validação',situacao],['Motivo',layer.erro||'Sem erro informado'],
       ['Visibilidade',visiveis.has(layer.chave)?'Visível no mapa':'Não exibida no mapa'],
       ['Bancada',layer.pendente?'Ainda não enviada':'Camada confirmada'],
-      ['Representação',({original:'Geometria integral',simplificada:'Prévia simplificada',limites:'Limites das feições (aproximação)'})[nivel?.metodo]||(layer.geojson?'Prévia carregada':'Indisponível')],
+      ['Representação',({tiles:'Visualização por tiles do original',original:'Geometria integral',simplificada:'Prévia simplificada',limites:'Limites das feições (aproximação)'})[layer.representacao==='tiles'?'tiles':nivel?.metodo]||(layer.geojson?'Prévia carregada':'Indisponível')],
       ['Processamento',layer.status_validacao!=='valida'?'Requer validação':raster?'Os algoritmos disponíveis exigem vetores':'Utiliza a geometria original, sem simplificação da prévia']]);
     grupo('Conteúdo geoespacial',[
       ['Tipo',raster?'Raster':'Vetor'],['Feições originais',numero(meta.feicoes??layer.feicoes)],
-      ['Feições na prévia',layer.geojson?numero(features.length):'Não disponível'],
+      ['Feições na prévia',layer.tiles_url?'Carregadas por região do mapa':layer.geojson?numero(features.length):'Não disponível'],
       ['Vértices originais',raster?'Não se aplica':numero(meta.vertices??representacao?.vertices_originais)],
       ['Geometrias',raster?'Não se aplica':unir(meta.tipos_geometria||[...new Set(features.map(f=>f.geometry?.type).filter(Boolean))])],
       ['Quantidade de campos',numero(meta.campos_total??nomesCampos.length)],['Campos',unir(nomesCampos)],
@@ -198,7 +199,7 @@ export function criarPrevia(state, changed){
     grupo('Sistema de coordenadas',[
       ['CRS original',meta.crs||layer.crs||layer.crs_arquivo],['Nome do CRS',meta.crs_nome],
       ['Unidade',({degree:'grau',metre:'metro'})[meta.unidade]||meta.unidade],
-      ['CRS da prévia',layer.geojson?'WGS 84 · EPSG:4326':'Prévia indisponível'],
+      ['CRS da prévia',layer.tiles_url?'Web Mercator · EPSG:3857':layer.geojson?'WGS 84 · EPSG:4326':'Prévia indisponível'],
       ['Limites O / S / L / N',meta.limites_wgs84?.map(n=>Number(n).toFixed(6)).join(' · ')]]);
     grupo('Localização cadastral',[
       ['UF',unir(local.ufs)],['Municípios / IBGE',local.municipios?.map(m=>`${m.nm_mun} (${m.cd_mun}) / ${m.sigla_uf}`).join('; ')||(local.status==='consultado'?'Nenhum município identificado na cobertura consultada':'Não confirmados')],
@@ -214,14 +215,14 @@ export function criarPrevia(state, changed){
       const {id,layer}=entry;
       for(const item of componentes(layer)){
         const identificacao=configuracaoDaCamada(entry,layer,item);
-        camadas.push({...item,identificacao,chave:`entrada:${id}:${item.chave||item.id}`,entradaId:id,chaveOriginal:item.chave,arquivoOrigem:layer.arquivo_local?.nome||layer.arquivo||item.arquivo,pendente:!state.bancadaEntradas.some(e=>e.id===id&&(!e.layer.camadas_bancada||e.layer.camadas_bancada.some(c=>c.chave===item.chave))),grupo:'entrada',status_validacao:item.status_validacao||(item.geojson?'valida':'pendente')});
+        camadas.push({...item,identificacao,chave:`entrada:${id}:${item.chave||item.id}`,entradaId:id,chaveOriginal:item.chave,arquivoOrigem:layer.arquivo_local?.nome||layer.arquivo||item.arquivo,pendente:!state.bancadaEntradas.some(e=>e.id===id&&(!e.layer.camadas_bancada||e.layer.camadas_bancada.some(c=>c.chave===item.chave))),grupo:'entrada',status_validacao:item.status_validacao||'pendente'});
       }
     }
     for(const base of [...state.bases,...state.staging]){
       const layer=state.catalog.find(c=>c.id===base.id);if(!layer)continue;
-      camadas.push({...layer,chave:`base:${layer.id}`,grupo:'base',categoriaId:base.category,arquivoOrigem:layer.arquivo_local?.nome||layer.arquivo,categoria:state.categories.find(c=>c.id===base.category)?.nome||base.category,pendente:!state.bancadaBases.some(b=>b.id===base.id),status_validacao:layer.erro?'invalida':layer.geojson?'valida':'pendente'});
+      camadas.push({...layer,chave:`base:${layer.id}`,grupo:'base',categoriaId:base.category,arquivoOrigem:layer.arquivo_local?.nome||layer.arquivo,categoria:state.categories.find(c=>c.id===base.category)?.nome||base.category,pendente:!state.bancadaBases.some(b=>b.id===base.id),status_validacao:layer.erro?'invalida':layer.status_validacao||'pendente'});
     }
-    const assinatura=[state.editandoBases,state.undoPrevia,state.busy,...camadas.flatMap(c=>[c.chave,c.geojson,c.geojson_resumido,c.metadados_local,c.nome,c.categoriaId,c.categoria,c.pendente,c.erro,c.identificacao?.campo_id,c.identificacao?.categoria_demanda])];
+    const assinatura=[state.editandoBases,state.undoPrevia,state.busy,...camadas.flatMap(c=>[c.chave,c.tiles_url,c.geojson,c.geojson_resumido,c.metadados_local,c.nome,c.categoriaId,c.categoria,c.pendente,c.erro,c.identificacao?.campo_id,c.identificacao?.categoria_demanda])];
     if(assinatura.length===assinaturaAnterior.length&&assinatura.every((v,i)=>v===assinaturaAnterior[i])){sincronizarVisibilidade();return;}
     assinaturaAnterior=assinatura;
     pacote=camadas.length||state.undoPrevia?{camadas}:null;

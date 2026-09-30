@@ -60,11 +60,13 @@ def _coordenadas_validas(geometrias, geograficas=False):
     return total > 0
 
 
-def validar(frame):
+def validar(frame, max_feicoes=MAX_FEICOES):
     if frame.crs is None:
         raise ValueError('A camada não informa o sistema de coordenadas. Inclua o .prj no ZIP ou defina o CRS no arquivo.')
-    if frame.empty or len(frame) > MAX_FEICOES:
-        raise ValueError(f'A entrada deve conter entre 1 e {MAX_FEICOES:,} feições.')
+    if max_feicoes is not None and (frame.empty or len(frame) > max_feicoes):
+        raise ValueError(f'A entrada deve conter entre 1 e {max_feicoes:,} feições.')
+    if frame.empty:
+        raise ValueError('A entrada deve conter ao menos uma feição.')
     if len(frame.columns) > 2001:
         raise ValueError('A entrada excede o limite de 2000 campos.')
     if not frame.columns.is_unique:
@@ -254,7 +256,7 @@ def _camada_previa(frame, meta, limite=MAX_VERTICES_PREVIA):
     return resultado
 
 
-def _lote(conteudo, nome, com_previa=True, selecionadas=None, progresso=None):
+def _lote(conteudo, nome, com_previa=True, selecionadas=None, progresso=None, dono_tiles=None):
     """Abre uma vez, valida todas e isola falhas sem descartar as outras camadas."""
     from api.services.pacote_geoespacial_memoria import abrir
     from pyproj.exceptions import ProjError
@@ -279,6 +281,8 @@ def _lote(conteudo, nome, com_previa=True, selecionadas=None, progresso=None):
                 if escolha.get('erro'):
                     raise ValueError(escolha['erro'])
                 if escolha['tipo'] == 'raster':
+                    if dono_tiles is not None:
+                        raise ValueError('Os algoritmos de extração exigem camadas vetoriais.')
                     previa = _previa_raster(escolha, nome, conteudo, componentes, [], raiz) if com_previa else None
                     if previa:
                         item.update(previa)
@@ -298,7 +302,12 @@ def _lote(conteudo, nome, com_previa=True, selecionadas=None, progresso=None):
                         frame_comum = frame.to_crs(vetores[0][0].crs)
                         if not _coordenadas_validas(frame_comum.geometry):
                             raise ValueError('Não foi possível transformar esta camada para o CRS comum da entrada.')
-                    if com_previa:
+                    if dono_tiles is not None:
+                        from api.services.extracao_preparacao import representar
+                        meta['localizacao'] = localizacao(frame)
+                        item.update(representar(frame, meta, dono_tiles))
+                        item.update(id=f'local:{uuid4().hex}', nome=meta['nome_camada'], origem='local', tipo='vetor')
+                    elif com_previa:
                         item.update(_camada_previa(frame, meta, limite_previa))
                     else:
                         item['metadados_local'] = meta
@@ -353,22 +362,23 @@ def _agrupar_vetores(vetores, nome):
     return conjunto, meta
 
 
-def previa(conteudo, nome, camada=None, progresso=None):
+def previa(conteudo, nome, camada=None, progresso=None, dono_tiles=None):
     # Compatibilidade com execuções antigas que identificam uma camada individual.
     if camada:
         frame, meta = ler(conteudo, nome, camada)
         return _camada_previa(frame, meta) if frame is not None else meta
-    itens, vetores, avisos = _lote(conteudo, nome, progresso=progresso)
+    itens, vetores, avisos = _lote(conteudo, nome, progresso=progresso, dono_tiles=dono_tiles)
     frame, meta = _agrupar_vetores(vetores, nome)
     entrada = None
     if frame is not None:
         entrada = {'id': f'local:{uuid4().hex}', 'nome': meta['nome_camada'], 'origem': 'local',
                    'tipo': 'vetor', 'origem_geometria': 'memoria', 'crs_arquivo': meta['crs'],
-                   'campos': meta['campos'], 'metadados_local': meta,
-                   'geojson': {'type': 'FeatureCollection', 'features': [
+                   'campos': meta['campos'], 'metadados_local': meta}
+        if dono_tiles is None:
+            entrada['geojson'] = {'type': 'FeatureCollection', 'features': [
                        {**f, 'properties': {**f['properties'], **({meta['campo_origem']: item['chave']} if meta.get('campo_origem') else {})}}
                        for item in itens if item.get('tipo') == 'vetor' and item.get('status_validacao') == 'valida'
-                       for f in item['geojson']['features']]}}
+                       for f in item['geojson']['features']]}
     validas = sum(i['status_validacao'] == 'valida' for i in itens)
     return {'arquivo': nome, 'camadas': itens, 'entrada': entrada, 'avisos': avisos,
             'resumo': {'total': len(itens), 'validas': validas, 'invalidas': len(itens)-validas,

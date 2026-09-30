@@ -22,7 +22,7 @@ const html=execFileSync(python,['-c',"from jinja2 import Environment,FileSystemL
   window.prep=await import('/geoespacial/extracao-atributos/preparacao.js');
   window.comp=await import('/geoespacial/extracao-atributos/composicao.js');
   const geojson={type:'FeatureCollection',features:[{type:'Feature',properties:{id:1},geometry:{type:'Point',coordinates:[0,0]}}]};
-  window.layer=id=>({id,nome:id,geojson:structuredClone(geojson)});
+  window.layer=id=>({id,nome:id,representacao:'tiles',status_validacao:'valida',tiles_url:'https://fixture/tiles'});
   window.state={input:'entrada',inputConfig:{identificacao_confirmada:true,campo_id:'id'},entradasExtras:[],catalog:['entrada','base','extra'].map(layer),categories:[{id:'c',nome:'Categoria'}],bases:[{id:'base',category:'c',regra:{prefixo:'base_'}}],staging:[],bancadaEntradas:[],bancadaBases:[],operation:'enriquecimento',opcoes:{},nomeSaida:'Saída',camadaRecorte:'base',finalidades:[],busy:false};
   prep.enviarPrevia(state);prep.limparPreparacao(state);
   state.staging=[{id:'extra',category:'c'}];state.previaVisiveis=new Set(['base:extra']);prep.enviarPrevia(state);prep.limparPreparacao(state);
@@ -50,7 +50,7 @@ const html=execFileSync(python,['-c',"from jinja2 import Environment,FileSystemL
   const m=await import('/geoespacial/extracao-atributos/municipal.js');
   window.state={catalog:[{id:'municipal',nome:'Gerada'}],categories:[{id:'c',nome:'Categoria'}]};
   const msg=await m.restaurarRetornoMunicipal(state);
-  const data={msg,entradas:state.bancadaEntradas.map(e=>e.id),bases:state.bancadaBases.map(b=>b.id),local:state.catalog.find(l=>l.id==='local:pacote').arquivo_local.conteudo_base64.length,recorte:state.camadaRecorte,painel:state.painelRestaurado,resultado:state.result.id,nova:state.staging[0].id};
+  const data={msg,entradas:state.bancadaEntradas.map(e=>e.id),bases:state.bancadaBases.map(b=>b.id),local:state.catalog.find(l=>l.id==='local:pacote').arquivo_local.conteudo_base64.length,recorte:state.camadaRecorte,painel:state.painelRestaurado,resultado:state.result.id,nova:state.listaBases.itens[0].id};
   await m.concluirRetornoMunicipal();return data;
  });
  assert.deepEqual(restored.entradas,['entrada','local:pacote']);assert.deepEqual(restored.bases,['base','extra']);assert.equal(restored.local,6*1024*1024);assert.equal(restored.recorte,'base');assert.equal(restored.resultado,'resultado');assert.equal(restored.nova,'municipal');assert.equal(restored.painel[1].visivel,false);

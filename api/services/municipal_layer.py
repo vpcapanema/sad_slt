@@ -184,4 +184,11 @@ def carregar_para_extracao(ident):
             raise ValueError('Camada municipal fora do acervo.')
         return gpd.read_file(path, engine='pyogrio')
     from api.services.geoespacial_service import geoespacial_service
-    return geoespacial_service.obter_camada_dados(ident).copy()
+    frame = geoespacial_service._ler_do_acervo(ident)
+    if frame is not None:
+        return frame.copy()
+    from api.repositories.camada_geoespacial_repository import carregar_vetor_bruto
+    loaded = carregar_vetor_bruto(ident)
+    if loaded is None:
+        raise ValueError('Camada não encontrada no catálogo.')
+    return loaded[0]

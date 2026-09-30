@@ -58,8 +58,12 @@ export async function restaurarRetornoMunicipal(state){
  document.querySelector('#ea-category-select').value=category||draft?.categoria||'';
  let message=draft?'Configuração e bancada da extração restauradas.':'';
  if(id){
-  if(![...state.bases,...state.staging,...state.bancadaBases].some(item=>item.id===id))state.staging.push({id,category});
-  message+=' Camada gerada adicionada à prévia. Envie à bancada para incluí-la na análise.';
+  state.listaBases??={itens:[],nome:'',chave:null,ausentes:[]};
+  const layer=state.catalog.find(l=>l.id===id);
+  const item={id,category,nome:layer.nome,arquivo:layer.arquivo||''};
+  const anterior=state.listaBases.itens.find(i=>i.id===id);
+  if(anterior)Object.assign(anterior,item);else state.listaBases.itens.push(item);
+  message+=' Camada gerada adicionada à lista de categorias. Confirme a lista para validar e enviar à prévia.';
  }
  // Só consome o rascunho após a montagem bem-sucedida, via concluirRetornoMunicipal.
  return message||'Escolha a entrada e as bases para iniciar uma extração.';

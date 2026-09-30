@@ -1,11 +1,12 @@
 // A prévia e a bancada têm estados independentes. Somente enviar() confirma a composição.
 export const entradasPreparadas=s=>[...(s.input?[{id:s.input,config:s.inputConfig}]:[]),...s.entradasExtras];
+export const camadaPronta=l=>Boolean(l&&!l.erro&&l.tipo!=='raster'&&l.status_validacao==='valida'&&l.representacao==='tiles'&&l.tiles_url);
 export const componentes=l=>l?.camadas_bancada||(l?[l]:[]);
 export const configuracaoDaCamada=(entry,layer,item)=>layer.camadas_bancada?entry.config?.camadas?.[item.chave]:entry.config;
 export function entradasParaPrevia(s){
  return entradasPreparadas(s).flatMap(entry=>{
   const original=s.catalog.find(l=>l.id===entry.id);if(!original)return [];
-  const partes=componentes(original).filter(l=>configuracaoDaCamada(entry,original,l)?.identificacao_confirmada);
+  const partes=componentes(original).filter(l=>camadaPronta(l)&&configuracaoDaCamada(entry,original,l)?.identificacao_confirmada);
   if(!partes.length)return [];
   return [{...entry,layer:original.camadas_bancada?{...original,camadas_bancada:partes}:original}];
  });
@@ -29,7 +30,7 @@ export function removerPrevia(s,item){
   source.camadas_importadas=source.camadas_importadas.filter(c=>c.chave!==item.chaveOriginal);
   source.camadas_bancada=source.camadas_bancada.filter(c=>c.chave!==item.chaveOriginal);
   if(source.arquivo_local)source.arquivo_local={...source.arquivo_local,camadas:source.camadas_bancada.map(c=>c.chave)};
-  source.geojson={type:'FeatureCollection',features:source.camadas_bancada.flatMap(c=>c.geojson?.features||[])};
+  delete source.geojson;
   if(source.camadas_importadas.length)return;
  }
  if(s.input===item.entradaId){const next=s.entradasExtras.shift();s.input=next?.id||'';s.inputConfig=next?.config||null;}
@@ -39,14 +40,14 @@ export function removerPrevia(s,item){
 export function enviarPrevia(s){
  const marcada=chave=>!s.previaVisiveis||s.previaVisiveis.has(chave);
  const entradas=entradasParaPrevia(s).flatMap(e=>{
-  const original=e.layer;if(!original?.geojson||original.erro)return [];
-  const partes=componentes(original).filter(l=>l.tipo!=='raster'&&!l.erro&&l.status_validacao!=='invalida'&&marcada(`entrada:${e.id}:${l.chave||l.id}`));
+  const original=e.layer;if(!original||original.erro)return [];
+  const partes=componentes(original).filter(l=>camadaPronta(l)&&l.status_validacao!=='invalida'&&marcada(`entrada:${e.id}:${l.chave||l.id}`));
   if(!partes.length)return [];
   const layer=copiar(original);
-  if(original.camadas_bancada){layer.camadas_bancada=partes;layer.geojson={type:'FeatureCollection',features:partes.flatMap(l=>l.geojson?.features||[])};if(layer.arquivo_local)layer.arquivo_local.camadas=partes.map(l=>l.chave);}
+  if(original.camadas_bancada){layer.camadas_bancada=partes;delete layer.geojson;if(layer.arquivo_local)layer.arquivo_local.camadas=partes.map(l=>l.chave);}
   return [{...e,config:structuredClone(e.config),layer}];
  });
- const prontas=[...s.bases,...s.staging].filter(b=>{const l=s.catalog.find(l=>l.id===b.id);return marcada(`base:${b.id}`)&&l?.geojson&&!l.erro&&l.tipo!=='raster'&&!entradas.some(e=>e.id===b.id);});
+ const prontas=[...s.bases,...s.staging].filter(b=>{const l=s.catalog.find(l=>l.id===b.id);return marcada(`base:${b.id}`)&&camadaPronta(l)&&!entradas.some(e=>e.id===b.id);});
  // Enviar complementa a bancada; remoções continuam explícitas no painel.
  const mesclar=(anteriores,novas)=>[...new Map([...anteriores,...novas].map(e=>[e.id,e])).values()];
  const anteriores=s.bancadaEntradas||[];
@@ -56,7 +57,6 @@ export function enviarPrevia(s){
   const partes=mesclar(anterior.layer.camadas_bancada,e.layer.camadas_bancada);
   const configsNovas=Object.fromEntries(e.layer.camadas_bancada.map(l=>[l.chave,e.config?.camadas?.[l.chave]||{}]));
   return {...e,config:{...anterior.config,...e.config,camadas:{...anterior.config?.camadas,...configsNovas}},layer:{...e.layer,camadas_bancada:partes,
-   geojson:{type:'FeatureCollection',features:partes.flatMap(l=>l.geojson?.features||[])},
    ...(e.layer.arquivo_local?{arquivo_local:{...e.layer.arquivo_local,camadas:partes.map(l=>l.chave)}}:{})}};
  });
  const entradasCompletas=mesclar(anteriores,novas);

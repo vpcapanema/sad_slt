@@ -38,6 +38,7 @@ async def validar_entrada_local(request: Request, nome: str = Query(min_length=1
 
 @router.post('/entrada-local/jobs', status_code=202)
 async def iniciar_previa(request: Request, nome: str = Query(min_length=1, max_length=200),
+                        original: bool = False,
                         user: SessionUser = Depends(require_geospatial_access)):
     from api.services import entrada_previa_jobs as jobs
     from api.services.extracao_entrada_local import MAX_ARQUIVO
@@ -47,7 +48,7 @@ async def iniciar_previa(request: Request, nome: str = Query(min_length=1, max_l
             raise HTTPException(413, 'O arquivo excede o limite de 16 MB para leitura em memória.')
         conteudo.extend(parte)
     try:
-        return jobs.iniciar(bytes(conteudo), nome, user.id)
+        return jobs.iniciar(bytes(conteudo), nome, user.id, original=original)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -161,6 +162,32 @@ def arquivo_mapa(payload: ArquivoMapa):
         raise HTTPException(404,str(exc)) from exc
     except (ValueError, RuntimeError) as exc:
         raise HTTPException(422,str(exc)) from exc
+
+
+@router.post('/preparar-camada')
+def preparar_camada(payload: ArquivoMapa, user: SessionUser = Depends(require_geospatial_access)):
+    from api.services.extracao_preparacao import preparar
+    try:
+        if not payload.id:
+            raise ValueError('Selecione uma camada do catálogo.')
+        return preparar(payload.id, user.id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.get('/previa-tiles/{token}/{z}/{x}/{y}.pbf')
+def previa_tile(token: str, z: int, x: int, y: int,
+                user: SessionUser = Depends(require_geospatial_access)):
+    from api.services.extracao_preparacao import tile
+    try:
+        return Response(tile(token, user.id, z, x, y), media_type='application/vnd.mapbox-vector-tile',
+                        headers={'Cache-Control': 'private, max-age=300'})
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @router.post('/pastas',status_code=201)

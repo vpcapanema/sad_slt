@@ -11,12 +11,12 @@ _pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix='previa')
 _TTL = 900
 
 
-def _validar(canal, conteudo, nome):
+def _validar(canal, conteudo, nome, dono=None, original=False):
     from api.services.extracao_entrada_local import previa
     try:
         def progresso(feitas, total, mensagem, tarefa=None):
             canal.send(('progresso', feitas, total, mensagem, tarefa))
-        canal.send(('resultado', previa(conteudo, nome, progresso=progresso)))
+        canal.send(('resultado', previa(conteudo, nome, progresso=progresso, dono_tiles=dono if original else None)))
     except Exception:
         canal.send(('erro', 'Não foi possível validar o arquivo. Confira o formato, a integridade e o sistema de coordenadas.'))
     finally:
@@ -50,7 +50,7 @@ def cancelar(ident, dono):
         return {'id': ident, 'status': 'cancelando'}
 
 
-def iniciar(conteudo, nome, dono):
+def iniciar(conteudo, nome, dono, original=False):
     from api.services.extracao_entrada_local import MAX_ARQUIVO, _nome
     nome = _nome(nome)
     if not conteudo or len(conteudo) > MAX_ARQUIVO:
@@ -70,14 +70,14 @@ def iniciar(conteudo, nome, dono):
                    status='pendente', cancelavel=True, percentual=None, progresso_tarefa=None,
                    etapas=[], etapa='Aguardando validação do arquivo')
         _jobs[ident] = job
-        _pool.submit(_executar, ident, conteudo, nome)
+        _pool.submit(_executar, ident, conteudo, nome, original)
         return _snapshot(job)
 
 
-def _executar(ident, conteudo, nome):
+def _executar(ident, conteudo, nome, original=False):
     contexto = get_context('spawn')
     receber, enviar = contexto.Pipe(duplex=False)
-    processo = contexto.Process(target=_validar, args=(enviar, conteudo, nome), daemon=True)
+    processo = contexto.Process(target=_validar, args=(enviar, conteudo, nome, _jobs[ident]['dono'], original), daemon=True)
     iniciado = False
     try:
         with _lock:

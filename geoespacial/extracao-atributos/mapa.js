@@ -33,20 +33,23 @@ export function criarMapa(aoMudarPainel) {
       }
       // Uma renderização do painel e um enquadramento só, no último item pendente.
       const pendentes=items.filter(item=>{const previous=mounted.get(item.key);
-        return !previous||previous.geojson!==item.geojson||!app.state.layers.some(layer=>layer.id===(item.id||item.key));});
+        return !previous||previous.geojson!==item.geojson||previous.revisao!==item.revisao||!app.state.layers.some(layer=>layer.id===(item.id||item.key));});
       const ultimo=pendentes[pendentes.length-1];
       let gruposAlterados=false;
       for(const item of items){
         const id=item.id||item.key,previous=mounted.get(item.key);
-        if(!previous||previous.geojson!==item.geojson||!app.state.layers.some(layer=>layer.id===id)){
+        if(!previous||previous.geojson!==item.geojson||previous.revisao!==item.revisao||!app.state.layers.some(layer=>layer.id===id)){
           const lote=item!==ultimo;
           const metodo=item.metadados_local?.previa?.metodo||item.representacao_previa?.metodo;const aproximada=metodo&&metodo!=='original';
           const nomeMapa=aproximada?`${item.nome} · prévia aproximada`:item.nome;
-          if(item.arquivo&&item.revisao&&item.campos)files.adicionar({...item,id,categoria:item.grupo},{lote,estiloPreparado:true});
+          if(item.representacao==='tiles'){
+            files.sessions.set(id,{...item,id});
+            app.adicionarCamadaStorageTiles(id,item.nome,{...item,caminho:item.arquivo||item.id},{categoria:item.grupo,lote,estiloPreparado:true});
+          }else if(item.arquivo&&item.revisao&&item.campos)files.adicionar({...item,id,categoria:item.grupo},{lote,estiloPreparado:true});
           else app.adicionarCamadaGeoJsonEmMemoria(id,nomeMapa,item.geojson,{categoria:item.grupo,lote,geometria_tipo:item.geojson.features[0]?.geometry?.type,estiloPreparado:true});
           if(!app.state.layers.some(layer=>layer.id===id))throw new Error(`${item.nome} ainda não foi adicionada ao painel. Tente novamente após o mapa carregar.`);
           app.state.layers.find(layer=>layer.id===id).previaAproximada=Boolean(aproximada);
-          mounted.set(item.key,{id,geojson:item.geojson,color:item.color});
+          mounted.set(item.key,{id,geojson:item.geojson,revisao:item.revisao,color:item.color});
           if(item.color)app.applyLayerColor(id,item.color,false);
         }else if(previous.color!==item.color){app.applyLayerColor(id,item.color,false);previous.color=item.color;}
         const registro=app.state.layers.find(l=>l.id===id);

@@ -116,7 +116,7 @@ function reconciliarPainel() {
  state.bancadaEntradas=state.bancadaEntradas.filter(e=>{
   const l=e.layer;
   if(l.camadas_bancada){const removidas=l.camadas_bancada.filter(c=>saiu(c.id));for(const c of removidas)removerPrevia(state,{grupo:'entrada',entradaId:e.id,chaveOriginal:c.chave});const restantes=l.camadas_bancada.filter(c=>!saiu(c.id));
-   if(restantes.length!==l.camadas_bancada.length){alterou=true;l.camadas_bancada=restantes;l.arquivo_local={...l.arquivo_local,camadas:restantes.map(c=>c.chave)};l.geojson={type:'FeatureCollection',features:restantes.flatMap(c=>c.geojson.features)};}
+   if(restantes.length!==l.camadas_bancada.length){alterou=true;l.camadas_bancada=restantes;l.arquivo_local={...l.arquivo_local,camadas:restantes.map(c=>c.chave)};delete l.geojson;}
    return restantes.length>0;
   }
   if(saiu(e.id)){removerPrevia(state,{grupo:'entrada',entradaId:e.id});alterou=true;return false;}return true;
@@ -163,7 +163,7 @@ function syncMap() {
   });
   for(const entrada of state.bancadaEntradas)for(const layer of componentesEntrada(entrada.layer))items.push({...layer,key:`input:${layer.id}`,grupo:'Input',papelExtracao:'entrada',arquivoGrupo:entrada.layer.arquivo_local?.nome||entrada.layer.arquivo||layer.arquivo||entrada.layer.nome,color:'#d6542b'});
   if(state.result?.geojson) items.push({key:`resultado:${state.result.id}`,nome:"Geometria da extração",geojson:state.result.geojson,grupo:"Resultado",color:"#853eaf"});
-  map.sync(items.filter(item=>item.geojson));
+  map.sync(items.filter(item=>item.representacao==='tiles'||item.geojson));
 }
 // Leitura de arquivo no servidor custa uma conexao ao banco remoto: fila curta.
 const SIMULTANEAS=3, TENTATIVAS=3;
@@ -193,7 +193,7 @@ async function changed(painel) {
     state.loadingMap=true;config.render();syncMap();controls();
     const selected=state.catalog.filter(l=>l.id===state.input||state.bases.some(b=>b.id===l.id)||state.staging.some(b=>b.id===l.id)
       ||state.entradasExtras.some(e=>e.id===l.id));
-    const pendentes=selected.filter(l=>!l.geojson&&l.origem!=='local');
+    const pendentes=selected.filter(l=>l.origem!=='local'&&(l.status_validacao!=='valida'||l.representacao!=='tiles'||!l.tiles_url));
     if(pendentes.length)painel?.etapa(`Lendo ${pendentes.length} arquivo(s) do storage, ${SIMULTANEAS} por vez.`);
     // Em paralelo sem limite, 18 camadas abriam 18 conexoes ao banco remoto e a
     // maioria estourava o tempo de conexao. Uma fila curta resolve, e uma camada
@@ -205,8 +205,8 @@ async function changed(painel) {
         for(let tentativa=1;tentativa<=TENTATIVAS;tentativa++){
           try{
             l.carregamento??=chamar('carregarCamada',l).finally(()=>{delete l.carregamento;});
-            l.geojson=await l.carregamento;delete l.erro;
-            painel?.etapa(`${l.nome}: ${l.geojson.features.length} feição(ões) no mapa. (${++concluidas}/${pendentes.length})`);
+            await l.carregamento;delete l.erro;
+            painel?.etapa(`${l.nome}: ${l.feicoes??l.geojson?.features?.length??0} feição(ões) no mapa. (${++concluidas}/${pendentes.length})`);
             break;
           }catch(error){
             const ultima=tentativa===TENTATIVAS;

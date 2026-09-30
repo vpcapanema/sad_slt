@@ -40,15 +40,23 @@
               <select id="ea-category-select" required><option value="">Selecione uma categoria</option></select>
               <a class="ea-category-link" target="_blank" rel="noopener" href="/restrict/admin/?menu=dominios&amp;esquema=dominios&amp;tabela=categoria_extracao_atributos">Cadastrar nova categoria <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
             </div>
-            <input id="ea-base-select" type="hidden">
-            <div class="ea-layer-actions" role="group" aria-label="Adicionar camadas base">
-            <button type="button" class="ea-btn ea-layer-action" id="ea-refresh"><i class="fas fa-rotate" aria-hidden="true"></i><span>Atualizar camadas e categorias</span></button>
-              <button id="ea-base-browse" type="button" class="ea-btn ea-layer-action"><i class="fas fa-folder-open" aria-hidden="true"></i><span>Selecionar bases existentes</span></button>
-              <button id="ea-base-local-upload" type="button" class="ea-btn ea-layer-action"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i><span>Enviar nova camada base</span></button>
+            <div class="ea-field">
+              <label for="ea-listas-select">Carregar listas</label>
+              <select id="ea-listas-select"><option value="">Selecione uma lista</option></select>
             </div>
-            <div class="ea-layer-actions" role="group" aria-label="Listas de bases e categorias">
-              <button type="button" class="ea-btn" id="ea-staging-carregar">Carregar listas</button>
-              <button type="button" class="ea-btn" id="ea-staging-salvar">Salvar lista de bases</button>
+            <div class="ea-layer-actions ea-base-actions" role="group" aria-label="Listas de bases e categorias">
+              <button type="button" class="ea-btn" id="ea-listas-refresh"><i class="fas fa-rotate" aria-hidden="true"></i><span>Atualizar listas</span></button>
+              <button type="button" class="ea-btn" id="ea-staging-carregar"><i class="fas fa-folder-open" aria-hidden="true"></i><span>Carregar listas</span></button>
+              <button type="button" class="ea-btn" id="ea-staging-salvar"><i class="fas fa-floppy-disk" aria-hidden="true"></i><span>Salvar listas</span></button>
+            </div>
+            <div class="ea-field ea-base-layers">
+              <span class="ea-field-label" id="ea-base-layers-label">Camadas de bases</span>
+              <input id="ea-base-select" type="hidden">
+              <div class="ea-layer-actions ea-base-actions" role="group" aria-labelledby="ea-base-layers-label">
+                <button type="button" class="ea-btn" id="ea-refresh"><i class="fas fa-rotate" aria-hidden="true"></i><span>Atualizar camadas</span></button>
+                <button id="ea-base-browse" type="button" class="ea-btn"><i class="fas fa-folder-open" aria-hidden="true"></i><span>Selecionar camadas</span></button>
+                <button id="ea-base-local-upload" type="button" class="ea-btn"><i class="fas fa-cloud-arrow-up" aria-hidden="true"></i><span>Novo upload de camadas</span></button>
+              </div>
             </div>
             <p id="ea-base-local-upload-status" class="ea-hint" role="status" aria-live="polite" hidden></p>
             <small>O envio grava no storage. Depois, escolha a categoria e confirme a lista para validar as camadas.</small>

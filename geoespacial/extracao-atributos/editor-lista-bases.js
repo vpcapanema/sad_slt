@@ -1,5 +1,5 @@
 import {$,el,feedback} from './ui.js';
-import {post} from './api.js';
+import {validarCamada} from './camada-validada.js';
 // Lista editável -> confirmação/validação -> prévia -> bancada.
 export function criarEditorListaBases(state,changed,escolher,salvar){
  const host=$('#ea-base-list-card'),body=$('#ea-base-list-body'),nome=$('#ea-base-list-name');
@@ -66,9 +66,8 @@ export function criarEditorListaBases(state,changed,escolher,salvar){
   const carregadas=[],falhas=[];let indice=0,feitas=0;
   async function worker(){while(indice<itens.length&&token===versao){const item=itens[indice++];
    proc.tarefaAtual(nomeDe(item),'Lendo a camada para verificar as feições da prévia.');try{
-   const layer=await post('/extracao-atributos/arquivo-mapa',{id:item.id,arquivo:item.arquivo||undefined});
-   if(!layer.geojson?.features?.length)throw new Error('A camada não contém feições disponíveis para a prévia.');
-   carregadas.push({...item,layer});proc.concluirTarefa(nomeDe(item),`${layer.geojson.features.length} feição(ões)`);
+   const layer=await validarCamada(item);
+   carregadas.push({...item,layer});proc.concluirTarefa(nomeDe(item),`${layer.feicoes} feição(ões)`);
   }catch(e){falhas.push({name:nomeDe(item),status:'error',detail:e.message});proc.log(`${nomeDe(item)}: ${e.message}`,'error');}
   feitas++;proc.progresso(feitas/itens.length*90);
   }}
@@ -77,7 +76,7 @@ export function criarEditorListaBases(state,changed,escolher,salvar){
    if(token!==versao){proc.fechar();feedback('Envio da lista cancelado. A prévia anterior foi mantida.');return;}
    if(falhas.length){proc.erro({title:'A lista não foi enviada à prévia',message:'Corrija ou remova as camadas com erro e confirme novamente.',details:falhas.map(f=>`${f.name}: ${f.detail}`)});return;}
    for(const {id,layer} of carregadas){const atual=state.catalog.find(c=>c.id===id);if(atual)Object.assign(atual,layer);else state.catalog.push({...layer,id});}
-   state.bases=[];state.staging=itens;editando=false;sessaoAberta=false;anterior=copia(lista());selecionadas.clear();
+   state.staging=[...new Map([...state.bases,...state.staging,...itens].map(i=>[i.id,i])).values()];state.bases=[];editando=false;sessaoAberta=false;anterior=copia(lista());selecionadas.clear();
    proc.tarefaAtual(PREVIA,'Disponibilizando as camadas validadas no mapa.');
    const errosMapa=await changed();
    if(errosMapa?.length)throw new Error(errosMapa.join('; '));
