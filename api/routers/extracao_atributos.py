@@ -395,7 +395,23 @@ def dashboard_resultado(ident: UUID, payload: ConsultaDashboard,
         raise HTTPException(422, str(exc)) from exc
 
 
+class FiltroMatriz(BaseModel):
+    campo: str = Field(default='', max_length=2000)
+    operador: Literal['valores', 'intervalo', 'vazio'] = 'valores'
+    valores: list[str | int | float | bool | None] = Field(default_factory=list, max_length=10000)
+    minimo: float | None = Field(default=None, allow_inf_nan=False)
+    maximo: float | None = Field(default=None, allow_inf_nan=False)
+
+    @model_validator(mode='after')
+    def intervalo_valido(self):
+        if self.operador == 'intervalo' and self.minimo is not None and self.maximo is not None and self.minimo > self.maximo:
+            raise ValueError('O mínimo deve ser menor ou igual ao máximo.')
+        return self
+
+
 class ConsultaIntersecoes(BaseModel):
+    filtros: list[FiltroMatriz] = Field(default_factory=list, max_length=2)
+    combinacao: Literal['e', 'ou'] = 'e'
     agrupamento: Literal['feicao', 'camada'] = 'feicao'
     entrada: str = Field(default='', max_length=500)
     feicao: str = Field(default='', max_length=2000)

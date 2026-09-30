@@ -1,3 +1,5 @@
+import {desenharFiltros} from './territorial-filtros.js';
+import {formatarValor} from './resultados-formatacao.js';
 const nomeDemanda=item=>String(item.nome_demanda??item.identificador??item.fid);
 import {json,base as apiBase} from './api.js';
 import {numero} from './ui.js';
@@ -17,7 +19,7 @@ function metric(m){
  return parts.join(' · ')||m.situacao||'Correspondência registrada';
 }
 export function criarTerritorial(result){
- const initial=()=>({entrada:'',feicao:'',categoria:'',atributo:'',busca:'',pagina:0,agrupamento:'feicao'});
+ const initial=()=>({entrada:'',feicao:'',categoria:'',atributo:'',busca:'',pagina:0,agrupamento:'feicao',filtros:[],combinacao:'e'});
  let state=initial(),host,controller,version=0,map,data,selectedKey=null,selectedArea=null,chartMetric='espacial';
  const atributosPorCategoria=new Map(),atributosAbertos=new Set();let ordenarPor='',crescente=true;
  const q=s=>host.querySelector(s),role=k=>q(`[data-role="${k}"]`);
@@ -60,15 +62,15 @@ export function criarTerritorial(result){
   const max=Math.max(1,...values.map(v=>Math.abs(v.v)));
   for(const {a,m,v,unit} of values){
    const row=clone('ea-tpl-occurrence-row');valor(row,'nome',nomeArea(a));valor(row,'base',a.base);
-   valor(row,'atributo',state.atributo?labelValue(a.atributos[state.atributo]):nomeArea(a));valor(row,'metrica',metric(m));
+   valor(row,'atributo',state.atributo?formatarValor(a.atributos[state.atributo],data.metadados_categorias?.[a.categoria]?.[state.atributo]):nomeArea(a));valor(row,'metrica',metric(m));
    const select=()=>{selectedArea=a.id;detail();};row.querySelector('button').onclick=select;row.classList.toggle('is-selected',a.id===selectedArea);role('occurrences').append(row);
-   bar(role('chart'),`${nomeArea(a)}${state.atributo?' · '+labelValue(a.atributos[state.atributo]):''}`,v,max,unit,select);
+   bar(role('chart'),`${nomeArea(a)}${state.atributo?' · '+formatarValor(a.atributos[state.atributo],data.metadados_categorias?.[a.categoria]?.[state.atributo]):''}`,v,max,unit,select);
   }
   const area=areas.find(a=>a.id===selectedArea)||areas[0];selectedArea=area?.id;
   role('element-title').textContent=area?`${nomeArea(area)} · ${area.base}`:'Selecione um elemento relacionado.';
   const attrs=Object.entries(area?.atributos||{}).filter(([,v])=>v!=null&&v!=='');
   attrs.sort(([a],[b])=>Number(/nome|name|codigo|class|descr|tipo|nm_/i.test(b))-Number(/nome|name|codigo|class|descr|tipo|nm_/i.test(a)));
-  definicoes(role('selection-attributes'),Object.fromEntries(attrs.map(([k,v])=>[data.aliases_categorias?.[area?.categoria]?.[k]||k.replaceAll('_',' '),v])));
+  definicoes(role('selection-attributes'),Object.fromEntries(attrs.map(([k,v])=>[data.aliases_categorias?.[area?.categoria]?.[k]||k.replaceAll('_',' '),formatarValor(v,data.metadados_categorias?.[area?.categoria]?.[k])])));
   const m=item?.relacoes?.[area?.id];
   if(m?.por_categoria&&Object.keys(m.por_categoria).some(k=>k!=='Sem categoria')){
    const unidade=({ponto:'pontos',linha:'m',poligono:'m²'})[m.representacao_entrada]||'';
@@ -85,6 +87,7 @@ export function criarTerritorial(result){
  }
  function draw(){
   filters();
+  desenharFiltros(role('matrix-filters'),data,state,values=>{selectedKey=null;change(values);});
   const matrix=role('matrix'),head=matrix.querySelector('thead tr'),body=matrix.querySelector('tbody');
   head.replaceChildren();body.replaceChildren();
   const categorias=[...(data.categorias||[])].sort((a,b)=>(['restricao','risco'].indexOf(a[0])+1||3)-(['restricao','risco'].indexOf(b[0])+1||3));
@@ -106,13 +109,13 @@ export function criarTerritorial(result){
    for(const campo of selected.length?selected:[null])columns.push({id,nome,campo,key:JSON.stringify([id,campo]),label:campo?alias(id,campo):nome});
   }
   selectors.hidden=!selectors.children.length;
-  for(const col of columns){const th=document.createElement('th');th.scope='col';th.title=col.nome;th.append(sortButton(col.label,col.key));if(col.campo){const category=document.createElement('small');category.textContent=col.nome;th.append(category);}head.append(th);}
+  for(const col of columns){const th=document.createElement('th');th.scope='col';th.title=col.campo?(data.metadados_categorias?.[col.id]?.[col.campo]?.descricao||col.label):col.nome;th.append(sortButton(col.label,col.key));if(col.campo){const category=document.createElement('small');category.textContent=col.nome;th.append(category);}head.append(th);}
   function cell(item,col){
    const id=col.id;
    if(['risco','restricao'].includes(id))return {com:'Sim',sem:'Não',nao_avaliado:'Não avaliado',nao_informado:'Não informado'}[item.estados?.[id]]||'Não avaliado';
    const areas=item.areas.map(a=>data.areas[a]).filter(a=>a?.categoria===id);
    if(!areas.length)return 'Sem correspondência';
-   return col.campo?[...new Set(areas.map(a=>labelValue(a.atributos[col.campo])))].join(' · '):'—';
+   return col.campo?[...new Set(areas.map(a=>formatarValor(a.atributos[col.campo],data.metadados_categorias?.[id]?.[col.campo])))].join(' · '):'—';
   }
   const sortCol=columns.find(c=>c.key===ordenarPor);
   const ordered=[...data.linhas].sort((a,b)=>(crescente?1:-1)*(sortCol?cell(a,sortCol).localeCompare(cell(b,sortCol),'pt-BR',{numeric:true}):nomeDemanda(a).localeCompare(nomeDemanda(b),'pt-BR',{numeric:true})));

@@ -173,7 +173,7 @@ def nome_demanda(feature):
     return str(value), None
 
 
-def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situacao='', busca='', pagina=0, tamanho=25, atributo='', agrupamento='feicao'):
+def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situacao='', busca='', pagina=0, tamanho=25, atributo='', agrupamento='feicao', filtros=None, combinacao='e'):
     if agrupamento == 'camada':
         snapshot = agrupar_demandas(snapshot)
     bases = {b['id']:b for b in snapshot['bases']}
@@ -211,6 +211,10 @@ def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situaca
                 return False
         return True
     items = sorted((item for item in all_items if selected(item)), key=lambda x:(x['entrada'],str(x.get('identificador') or ''),str(x['fid'])))
+    from api.services.extracao_resultados_filtros import aplicar, opcoes as opcoes_filtro
+    filtros = filtros or []
+    valores_filtro = opcoes_filtro(items, filtros, combinacao, snapshot['areas'])
+    items = aplicar(items, filtros, combinacao, snapshot['areas'])
     rankings = {}
     for tipo in TIPOS:
         ordered = sorted(items, key=lambda x:(-x.get('contagens',{}).get(tipo,0), x['entrada'],str(x.get('identificador'))))
@@ -248,15 +252,19 @@ def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situaca
         return sum(i['estados'][tipo] == 'com' for i in items) if not items or any(
             i['estados'][tipo] in ('com', 'sem') for i in items) else None
     from api.services import extracao_atributos_aliases as aliases
-    aliases_categorias = {}
+    from api.services.extracao_resultados_campos import metadado
+    aliases_categorias, metadados_categorias = {}, {}
     comuns = {'populacao':'População', 'renda_media':'Renda média', 'area':'Área', 'descricao':'Descrição', 'codigo':'Código', 'titulo':'Título'}
     for a in snapshot['areas'].values():
         b = bases.get(a['base_id'], {})
         conhecidos = aliases.camada(b.get('origem_id'), b.get('nome'))['campos']
         rotulos = aliases_categorias.setdefault(a['categoria'], {})
         for campo in a['atributos']:
-            rotulos[campo] = b.get('apelidos', {}).get(campo) or conhecidos.get(campo) or comuns.get(campo.lower()) or aliases.automatico(campo)
-    return {'aliases_categorias':aliases_categorias, 'campos_categorias':{cat:sorted({k for a in snapshot['areas'].values() if a['categoria']==cat for k in a['atributos']}) for cat in {b['categoria'] for b in bases.values()}}, 'rankings':rankings, 'categorias':list({b['categoria']:b.get('categoria_nome',b['categoria']) for b in bases.values()}.items()),
+            fallback = b.get('apelidos', {}).get(campo) or conhecidos.get(campo) or comuns.get(campo.lower()) or aliases.automatico(campo)
+            meta = metadado(campo, fallback)
+            metadados_categorias.setdefault(a['categoria'], {})[campo] = meta
+            rotulos[campo] = meta['alias']
+    return {'opcoes_filtro':valores_filtro, 'metadados_categorias':metadados_categorias, 'aliases_categorias':aliases_categorias, 'campos_categorias':{cat:sorted({k for a in snapshot['areas'].values() if a['categoria']==cat for k in a['atributos']}) for cat in {b['categoria'] for b in bases.values()}}, 'rankings':rankings, 'categorias':list({b['categoria']:b.get('categoria_nome',b['categoria']) for b in bases.values()}.items()),
         'legado':snapshot['versao'] == 0,
         'entradas':[{'nome':e['nome'],'total':len(e['feicoes'])} for e in snapshot['entradas']],
         'resumo_entradas':resumo_entradas,
