@@ -35,6 +35,29 @@ SNAPSHOT = {'versao':1,'bases':BASES,'areas':AREAS,'entradas':[
                           for i in range(n)]} for name,n in [('Rodovias',30),('Ferrovias',2)]]}
 
 
+# Saída calculada pelo motor real: pontos por demanda, duas áreas de risco e atributos sociais.
+import geopandas as gpd
+from shapely.geometry import Point, box, mapping
+from api.services.extracao_atributos_estatisticas import enriquecer
+from api.services.extracao_saida_analitica import snapshot_saida
+x,y=5000000,7500000
+risk=gpd.GeoDataFrame({'nome':['Inundação do Rio Azul','Encosta do Bairro Norte']},geometry=[box(x,y,x+5,y+5),box(x,y,x+10,y+10)],crs=5880)
+social=gpd.GeoDataFrame({'nome':['Setor Central'],'populacao':[12500],'renda_media':[2450.75]},geometry=[box(x,y,x+15,y+15)],crs=5880)
+SNAPSHOT=None
+for name,points in [('Rodovias',[Point(x+1,y+1),Point(x+2,y+2),Point(x+8,y+8),Point(x+50,y)]),('Ferrovias',[Point(x+50,y)])]:
+    frame=gpd.GeoDataFrame({'codigo':list(range(len(points)))},geometry=points,crs=5880)
+    cats=[{'id':'risco','nome':'Risco','camadas':[{'id':'r','nome':'Áreas de risco','frame':risk,'regra':{}}]},
+          {'id':'restricao','nome':'Restrição','camadas':[{'id':'s','nome':'Áreas protegidas','frame':risk.iloc[:1],'regra':{}}]},
+          {'id':'social','nome':'Social','camadas':[{'id':'social','nome':'Setores censitários','frame':social,'regra':{}}]}]
+    calculated=enriquecer(frame,cats,nome_entrada=name)
+    snap=snapshot_saida(calculated['camadas'])
+    for f in snap['entradas'][0]['feicoes']:
+        f['geometria']=mapping(frame.to_crs(4674).geometry.iloc[f['fid']])
+    if SNAPSHOT is None: SNAPSHOT=snap
+    else:
+        SNAPSHOT['entradas'].extend(snap['entradas']);SNAPSHOT['areas'].update(snap['areas'])
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)

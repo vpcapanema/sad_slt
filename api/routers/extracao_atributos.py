@@ -396,6 +396,7 @@ def dashboard_resultado(ident: UUID, payload: ConsultaDashboard,
 
 
 class ConsultaIntersecoes(BaseModel):
+    agrupamento: Literal['feicao', 'camada'] = 'feicao'
     entrada: str = Field(default='', max_length=500)
     feicao: str = Field(default='', max_length=2000)
     categoria: str = Field(default='', max_length=500)

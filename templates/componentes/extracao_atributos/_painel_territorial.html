@@ -8,33 +8,22 @@
   <p class="ea-hint" data-role="loading" role="status" hidden>Carregando as camadas de saída…</p>
   <div data-role="error" hidden><p role="alert"></p><button class="ea-btn" data-action="retry" type="button">Tentar novamente</button></div>
   <div data-role="body" hidden>
-    <div class="ea-kpis"><article><span>Demandas</span><strong data-kpi="feicoes">—</strong></article><article><span>Com restrição</span><strong data-kpi="restricao">—</strong></article><article><span>Com risco</span><strong data-kpi="risco">—</strong></article><article><span>Elementos relacionados</span><strong data-kpi="areas">—</strong></article></div>
-    <p class="ea-hint">Comparação descritiva: cada ocorrência corresponde a um elemento de base relacionado à demanda. Fragmentos do Identity não multiplicam ocorrências. A posição não indica gravidade ou viabilidade.</p>
-    <p data-role="legacy" class="ea-hint" hidden>Resultado histórico: informações e identificadores podem estar incompletos.</p>
-    <div class="ea-analytics-grid">
-      {% for tipo, titulo in [('restricao','Restrições'),('risco','Riscos')] %}
-      <section class="ea-analytics-card" data-ranking="{{ tipo }}"><h3>{{ titulo }}</h3><p class="ea-hint">Maior número de ocorrências primeiro; posições iguais nos empates.</p>
-        <div class="ea-table-wrap"><table><thead><tr><th>Posição</th><th>Demanda</th><th>Camada de origem</th><th>Ocorrências</th></tr></thead><tbody></tbody></table></div>
-        <p data-empty class="ea-hint" hidden>Categoria não avaliada neste lote.</p>
-      </section>
-      {% endfor %}
-    </div>
     <section class="ea-analytics-card"><h3>Demandas × categorias</h3>
-      <div class="ea-table-wrap"><table data-role="matrix"><thead><tr><th>Demanda</th><th>Origem</th></tr></thead><tbody></tbody></table></div>
-      <p class="ea-hint">Contagem dos elementos relacionados. Selecione uma célula para explorar a categoria.</p>
+      <div class="ea-table-wrap"><table data-role="matrix"><thead><tr><th>Demanda</th></tr></thead><tbody></tbody></table></div>
+      <p class="ea-hint">Cada linha representa uma camada de entrada. Selecione os atributos de cada categoria e clique numa célula para explorar as correspondências.</p>
     </section>
-    <section class="ea-analytics-card"><h3>Explorar os atributos das bases</h3>
+    <section class="ea-analytics-card" data-role="attribute-controls" hidden><h3>Explorar os atributos das bases</h3>
       <div class="ea-analytics-filters"><label class="ea-field">Categoria<select data-filter="categoria"><option value="">Selecione a categoria</option></select></label>
       <label class="ea-field">Atributo para apresentação<select data-filter="atributo"><option value="">Nome do elemento</option></select></label></div>
       <p class="ea-hint">Os atributos são apresentados como registrados na base. Contagens, comprimentos e áreas referem-se à relação espacial; valores numéricos da base não são proporcionalizados.</p>
     </section>
     <div class="ea-analytics-actions"><button class="ea-btn" type="button" data-action="previous" aria-label="Página anterior">‹</button><span data-role="pagination" role="status"></span><button class="ea-btn" type="button" data-action="next" aria-label="Próxima página">›</button></div>
-    <section class="ea-analytics-card" data-role="detail"><h3 data-role="selection-title">Selecione uma demanda nas tabelas</h3>
+    <section class="ea-analytics-card" data-role="detail" hidden><h3 data-role="selection-title">Selecione uma célula da matriz</h3>
       <div class="ea-analytics-map-grid"><div class="ea-analytics-map" data-role="map" aria-label="Demanda e elementos relacionados"></div>
       <aside class="ea-analytics-selection"><h4>Detalhes cadastrais do elemento</h4><p data-role="element-title">Selecione um elemento relacionado.</p><dl data-role="selection-attributes"></dl></aside></div>
       <p class="ea-hint">Demanda em azul, por cima; elemento de base por baixo. Métricas por demanda × elemento, sem somar percentuais entre elementos.</p>
       <p class="ea-hint" data-role="map-scope"></p>
-      <div class="ea-analytics-grid"><section><h4>Elementos relacionados</h4><div class="ea-table-wrap"><table><thead><tr><th>Elemento / camada base</th><th>Atributo escolhido</th><th>Métricas da relação</th></tr></thead><tbody data-role="occurrences"></tbody></table></div><p data-role="empty" class="ea-hint">Selecione uma demanda.</p></section>
+      <div class="ea-analytics-grid"><section><h4>Áreas e elementos relacionados</h4><div class="ea-table-wrap"><table><thead><tr><th>Elemento / camada base</th><th>Atributo escolhido</th><th>Métricas da relação</th></tr></thead><tbody data-role="occurrences"></tbody></table></div><p data-role="empty" class="ea-hint">Selecione uma demanda.</p></section>
       <section><h4 data-role="chart-title">Métricas por elemento</h4><label class="ea-field">Medida do gráfico<select data-role="chart-metric"><option value="espacial">Contagem / comprimento / área da relação</option><option value="atributo">Valor numérico do atributo da base</option></select></label><p class="ea-hint" data-role="attribute-note" hidden>Valor cadastral da feição de base, sem atribuir uma parcela à demanda.</p><div data-role="chart" class="ea-frequency-chart"></div><div data-role="point-categories"></div></section></div>
     </section>
   </div>

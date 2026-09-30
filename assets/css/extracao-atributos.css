@@ -917,3 +917,12 @@ button.ea-chart-row { cursor:pointer; }
 
 #ea-config .ea-cancel-icon > i { color:#c62828; }
 #ea-config #ea-identificacao input[type=checkbox] { width:16px; height:16px; min-height:16px; margin:0; padding:0; vertical-align:middle; }
+
+#ea-panel-territorial [data-role="matrix"] th { vertical-align:top; }
+#ea-panel-territorial [data-role="matrix"] th:first-child { position:sticky;left:0;background:#f4f9fc;z-index:1;min-width:180px; }
+#ea-panel-territorial [data-role="matrix"] details { margin-top:8px;font-size:.85rem;font-weight:400;min-width:180px; }
+#ea-panel-territorial [data-role="matrix"] details label { display:flex;gap:8px;align-items:center;padding:5px; }
+#ea-panel-territorial .ea-matrix-cell { white-space:pre-line;text-align:left;width:100%;min-height:44px;line-height:1.5; }
+#ea-panel-territorial .ea-matrix-cell[aria-pressed="true"] { background:#dceef7;border-color:#176b95;box-shadow:inset 3px 0 #176b95; }
+
+#ea-panel-territorial [data-role="matrix"] tbody th { text-transform:none;letter-spacing:normal;font-weight:600; }

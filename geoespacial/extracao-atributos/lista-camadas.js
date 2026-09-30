@@ -24,6 +24,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     Object.keys(ROTULO).map(chave => [chave, $(`#ea-staging-${chave}`)]));
   const listasRefresh=$('#ea-listas-refresh');
   let atualizandoListas=false;
+  let abrindoSalva=false;
   let ancora = [];   // Cópia da lista no último confirmar, carregar ou limpar.
 
   const caminhoDe = item => item.arquivo || state.catalog.find(l => l.id === item.id)?.arquivo || '';
@@ -46,9 +47,9 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     botoes.editar.disabled = state.busy || !total;
     botoes.editar.setAttribute('aria-pressed', String(editando));
     botoes.editar.classList.toggle('is-active', editando);
-    botoes.carregar.disabled = state.busy || atualizandoListas;
+    botoes.carregar.disabled = state.busy || atualizandoListas || abrindoSalva;
     listasRefresh.disabled = state.busy || atualizandoListas;
-    configSalvar.disabled=state.busy;configCarregar.disabled=state.busy;
+    configSalvar.disabled=state.busy;configCarregar.disabled=state.busy || abrindoSalva;
   }
 
   function render() {state.editandoBases=editando;marcar();editor.render();}
@@ -134,11 +135,11 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
 
   // Um só caminho de carregamento; o explorador muda apenas a forma de escolher.
   async function abrirSalva(explorador,escopo='analise') {
-    if (state.busy) return;
+    if (state.busy || abrindoSalva) return;
+    abrindoSalva=true;marcar();
     try {
       const pastaDados = await json(`/extracao-atributos/configuracoes?escopo=${escopo}`);
       const configuracoes = pastaDados.configuracoes;
-      if (!configuracoes.length) { feedback(escopo==='bases'?`Nenhuma lista encontrada em ${pastaDados.pasta}. Arquivos salvos na VM ou em outro computador precisam estar disponíveis neste ambiente.`:'Nenhuma configuração salva ainda.'); return; }
       const escolha = await escolherConfiguracao(configuracoes, explorador ? pastaDados.pasta : '',escopo);
       if (!escolha) return;
       const dados = await json(`/extracao-atributos/configuracoes/${encodeURIComponent(escolha)}?escopo=${escopo}${escopo==='bases'?'&lista=true':''}`);
@@ -191,7 +192,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
       feedback(partes.join(' '));
     } catch (error) {
       feedback(`Não foi possível carregar: ${error.message}`,'error');
-    } finally { marcar(); }
+    } finally { abrindoSalva=false;marcar(); }
   }
   botoes.editar.addEventListener('click', () => {
     if (state.busy) return;
@@ -209,7 +210,7 @@ export function criarListaCamadas(state, changed, escolherCamadas) {
     finally{atualizandoListas=false;marcar();}
   }
   listasRefresh.addEventListener('click',()=>atualizarListas());
-  botoes.carregar.addEventListener('click', () => { botoes.carregar.disabled = true; abrirSalva(true,'bases'); });
+  botoes.carregar.addEventListener('click', () => abrirSalva(true,'bases'));
 
   configCarregar.addEventListener('click',()=>abrirSalva(true,'analise'));
 
@@ -259,8 +260,9 @@ function escolherConfiguracao(configuracoes, pasta = '',escopo='analise') {
       lista.append(linha);
       return linha;
     });
-    const vazio = el('p', 'Nenhum nome corresponde ao filtro.', 'ea-empty-small');
-    vazio.hidden = true;
+    const mensagemVazia = escopo==='bases'?'Nenhuma lista salva neste ambiente.':'Nenhuma configuração salva neste ambiente.';
+    const vazio = el('p', configuracoes.length?'Nenhum nome corresponde ao filtro.':mensagemVazia, 'ea-empty-small');
+    vazio.hidden = configuracoes.length > 0;
     lista.append(vazio);
     filtro.addEventListener('input', () => {
       const termo = filtro.value.trim().toLocaleLowerCase('pt-BR');
@@ -272,6 +274,10 @@ function escolherConfiguracao(configuracoes, pasta = '',escopo='analise') {
         if (casa) visiveis++;
       });
       vazio.hidden = Boolean(visiveis);
+      if(escolhido && !configuracoes.some((item,i)=>item.chave===escolhido && !linhas[i].hidden)){
+        escolhido=null;confirmar.disabled=true;excluir.disabled=true;
+        linhas.forEach(linha=>linha.setAttribute('aria-pressed','false'));
+      }
     });
     const rodape = el('div', undefined, 'ea-config-dialog-footer');
     const cancelar = el('button', 'Cancelar', 'ea-btn');

@@ -113,7 +113,50 @@ def estado(snapshot, feature, tipo):
     return 'sem'
 
 
-def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situacao='', busca='', pagina=0, tamanho=25, atributo=''):
+def agrupar_demandas(snapshot):
+    """Uma linha por camada; agrega pares já calculados, sem novo cruzamento."""
+    from collections import Counter
+    entries = []
+    for entry in snapshot['entradas']:
+        features = entry['feicoes']
+        areas = list(dict.fromkeys(a for f in features for a in f['areas']))
+        relacoes = {}
+        for aid in areas:
+            pares = [f['relacoes'][aid] for f in features if aid in f.get('relacoes', {})]
+            metric = {'por_categoria':{}, 'feicoes_correspondentes':sum(aid in f['areas'] for f in features)}
+            for field in ('pontos','comprimento_m','area_m2','perimetro_m','comprimento_interior_m','comprimento_borda_m'):
+                values = [m[field] for m in pares if m.get(field) is not None]
+                metric[field] = sum(values) if values else None
+            for m in pares:
+                for categoria, value in m.get('por_categoria',{}).items():
+                    metric['por_categoria'][categoria] = metric['por_categoria'].get(categoria,0)+value
+            tipos = {m.get('representacao_entrada') for m in pares}
+            metric['representacao_entrada'] = next(iter(tipos)) if len(tipos)==1 else 'mista'
+            dim = {'ponto':0,'linha':1,'poligono':2}.get(metric['representacao_entrada'])
+            total = sum(f.get('metricas_totais',{}).get(dim, f.get('metricas_totais',{}).get(str(dim),0)) for f in features) if dim is not None else 0
+            num = metric.get({0:'pontos',1:'comprimento_m',2:'area_m2'}.get(dim,''))
+            metric['percentual_entrada'] = 100*num/total if total and num is not None else None
+            metric['situacao'] = 'correspondencia_espacial'
+            relacoes[aid] = metric
+        flags = {}
+        for tipo in TIPOS:
+            states = [estado(snapshot,f,tipo) for f in features]
+            flags[tipo] = 1 if 'com' in states else 0 if states and all(s=='sem' for s in states) else None
+        geometrias = [f['geometria'] for f in features if f.get('geometria')]
+        entries.append({'nome':entry['nome'],'feicoes':[{
+            'fid':entry['nome'],'identificador':entry['nome'],'atributos':{},'areas':areas,
+            'bases_intersectadas':list(dict.fromkeys(b for f in features for b in f['bases_intersectadas'])),
+            'flags':flags,'relacoes':relacoes,'total_registros':len(features),
+            'contagens':dict(Counter(snapshot['areas'][a]['categoria'] for a in areas)),
+            '_mapa':[ref for f in features for ref in f.get('_mapa',[])],
+            'geometria_disponivel':any(f.get('geometria_disponivel') for f in features),
+            **({'geometria':{'type':'GeometryCollection','geometries':geometrias}} if geometrias else {})}]})
+    return {**snapshot,'fonte':'camada_saida','entradas':entries}
+
+
+def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situacao='', busca='', pagina=0, tamanho=25, atributo='', agrupamento='feicao'):
+    if agrupamento == 'camada':
+        snapshot = agrupar_demandas(snapshot)
     bases = {b['id']:b for b in snapshot['bases']}
     if categoria and categoria not in {b['categoria'] for b in bases.values()}:
         raise ValueError('Categoria não encontrada nas saídas desta execução.')
@@ -261,6 +304,7 @@ def da_saida(tabelas):
                 for g in geo.parts_ogr(full):
                     dim = g.GetDimension()
                     if dim in totals: totals[dim] += 1 if dim==0 else g.Length() if dim==1 else g.GetArea()
+            feature['metricas_totais'] = totals
             for aid, rows in feature.pop('_pares').items():
                 metric = metricas_par(rows)
                 dim = {'ponto':0,'linha':1,'poligono':2}.get(metric.get('representacao_entrada'))
