@@ -42,7 +42,7 @@ from api.services.extracao_atributos_estatisticas import enriquecer
 from api.services.extracao_saida_analitica import snapshot_saida
 x,y=5000000,7500000
 risk=gpd.GeoDataFrame({'nome':['Inundação do Rio Azul','Encosta do Bairro Norte']},geometry=[box(x,y,x+5,y+5),box(x,y,x+10,y+10)],crs=5880)
-social=gpd.GeoDataFrame({'nome':['Setor Central'],'populacao':[12500],'renda_media':[2450.75], 'financas_publicas_i143223_2025':[306270685.0], 'financas_publicas_i143224_2025':[6733747.94], 'financas_publicas_i143225_2025':[299536937.06]},geometry=[box(x,y,x+15,y+15)],crs=5880)
+social=gpd.GeoDataFrame({'nome':['Setor Central'],'populacao':[12500],'renda_media':[2450.75], 'financas_publicas_i143223_2025':[306270685.0], 'financas_publicas_i143224_2025':[6733747.94], 'financas_publicas_i143225_2025':[299536937.06], 'financas_publicas_i165606_2025':[167000.0]},geometry=[box(x,y,x+15,y+15)],crs=5880)
 SNAPSHOT=None
 for name,points in [('Rodovias',[Point(x+1,y+1),Point(x+2,y+2),Point(x+8,y+8),Point(x+50,y)]),('Ferrovias',[Point(x+50,y)])]:
     frame=gpd.GeoDataFrame({'codigo':list(range(len(points))), 'titulo':[f'{name} — demanda {i+1}' for i in range(len(points))]},geometry=points,crs=5880)

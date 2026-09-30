@@ -109,7 +109,20 @@ export function criarTerritorial(result){
    for(const campo of selected.length?selected:[null])columns.push({id,nome,campo,key:JSON.stringify([id,campo]),label:campo?alias(id,campo):nome});
   }
   selectors.hidden=!selectors.children.length;
-  for(const col of columns){const th=document.createElement('th');th.scope='col';th.title=col.campo?(data.metadados_categorias?.[col.id]?.[col.campo]?.descricao||col.label):col.nome;th.append(sortButton(col.label,col.key));if(col.campo){const category=document.createElement('small');category.textContent=col.nome;th.append(category);}head.append(th);}
+  for(const col of columns){
+   const th=document.createElement('th');th.scope='col';
+   const meta=data.metadados_categorias?.[col.id]?.[col.campo];
+   th.title=meta?[meta.nome_original,meta.descricao,meta.fonte_original].filter(Boolean).join('\n'):col.nome;
+   th.append(sortButton(meta?.nome||col.label,col.key));
+   if(col.campo){
+    const context=document.createElement('small');context.textContent=[col.nome,meta?.ano,meta?.unidade?`(${meta.unidade})`:null].filter(Boolean).join(' · ');th.append(context);
+    const source=document.createElement(meta?.fonte_url&&/^https?:\/\//.test(meta.fonte_url)?'a':'small');
+    source.className='ea-matrix-source';source.textContent=`Fonte: ${meta?.fonte_nome||'não informada'}`;
+    if(source.tagName==='A'){source.href=meta.fonte_url;source.target='_blank';source.rel='noopener noreferrer';}
+    source.title=meta?.fonte_original||'A camada não informou a fonte deste atributo.';th.append(source);
+   }
+   head.append(th);
+  }
   function cell(item,col){
    const id=col.id;
    if(['risco','restricao'].includes(id))return {com:'Sim',sem:'Não',nao_avaliado:'Não avaliado',nao_informado:'Não informado'}[item.estados?.[id]]||'Não avaliado';

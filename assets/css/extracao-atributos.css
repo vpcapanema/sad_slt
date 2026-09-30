@@ -955,3 +955,6 @@ button.ea-chart-row { cursor:pointer; }
 #ea-panel-territorial .ea-filter-actions .ea-btn { min-height:30px; font-size:13px; padding:4px 8px; }
 #ea-panel-territorial [data-role=matrix] thead th { max-width:320px; min-width:110px; }
 #ea-panel-territorial .ea-matrix-sort { white-space:normal; line-height:17px; }
+
+#ea-panel-territorial [data-role=matrix] .ea-matrix-source { display:block; color:#d4e8f2; font:400 11px/15px Roboto,Arial,sans-serif; white-space:normal; margin-top:2px; }
+#ea-panel-territorial [data-role=matrix] a.ea-matrix-source { text-decoration:underline; text-underline-offset:2px; }
