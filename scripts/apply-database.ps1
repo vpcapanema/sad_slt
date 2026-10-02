@@ -247,7 +247,9 @@ $migrations = @(
     "112_infosiga_microdados_localizacao.sql",
     "113_corrigir_rais_indicadores_municipais.sql",
     "114_infosiga_indicadores_municipais.sql",
-    "115_restaurar_planos_estrategicos.sql"
+    "115_restaurar_planos_estrategicos.sql",
+    "116_corrigir_catalogo_zee_ugrhi.sql",
+    "117_demanda_arquivo_geometria_upload.sql"
 )
 
 if ($OnlyMigration) {
@@ -308,6 +310,10 @@ if (-not $OnlyMigration) {
         if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM demandas.plano WHERE codigo IN ('PLANO-PLI','PLANO-PEF') HAVING count(*) = 2);")) {
             $migrations += "115_restaurar_planos_estrategicos.sql"
             Write-Ok "Planos estrategicos PLI/PEF ausentes; aplicando migration 115"
+        }
+        if (-not (Test-SchemaReady "SELECT to_regclass('demandas.demanda_arquivo_geometria_upload') IS NOT NULL;")) {
+            $migrations += "117_demanda_arquivo_geometria_upload.sql"
+            Write-Ok "Arquivo original de geometria de demanda pendente; aplicando migration 117"
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

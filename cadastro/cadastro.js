@@ -810,8 +810,12 @@
     }
     if (step === 4) return true;
     if (step === 5) {
+      if (!document.querySelector('input[name="geometry-method"]:checked')) {
+        showToast("Escolha enviar um arquivo ou desenhar a geometria no mapa.");
+        return false;
+      }
       if (!getGeometria()) {
-        $("#map-error").textContent = "Indique a localização por ponto ou perímetro no mapa.";
+        $("#map-error").textContent = "Envie um arquivo ou informe a geometria por ponto, linha ou polígono.";
         $("#map-error").classList.remove("hidden");
         return false;
       }
@@ -1289,8 +1293,11 @@
 
   function labelGeometria(tipo) {
     if (tipo === "Point") return "Ponto";
-    if (tipo === "Polygon") return "Perímetro";
+    if (tipo === "MultiPoint") return "Conjunto de pontos";
+    if (tipo === "Polygon") return "Polígono";
+    if (tipo === "MultiPolygon") return "Conjunto de polígonos";
     if (tipo === "LineString") return "Linha";
+    if (tipo === "MultiLineString") return "Conjunto de linhas";
     return tipo || "—";
   }
 
@@ -1736,12 +1743,20 @@
     const regionalidades = SLTGeometria.getRegionalidades?.();
     const { principalHtml, outrosHtml } = formatProjetoEnquadramentoRows(regionalidades, null);
 
+    const coordenadasLabel = {
+      LineString: "Coordenadas do ponto na metade do comprimento acumulado da linha (latitude, longitude)",
+      Polygon: "Coordenadas do centroide do anel externo (latitude, longitude)",
+      MultiPoint: "Coordenadas do primeiro ponto (latitude, longitude)",
+      MultiLineString: "Coordenadas do ponto na metade do comprimento acumulado da linha com mais vértices (latitude, longitude)",
+      MultiPolygon: "Coordenadas do centroide do anel externo do primeiro polígono (latitude, longitude)",
+    }[geom?.tipo] || "Coordenadas (latitude, longitude)";
+
     const localizacaoMeta = [
+      reviewRow("Marcação no mapa", escapeHtml(geom ? labelGeometria(geom.tipo) : "—")),
       reviewRow(
-        "Coordenadas (latitude, longitude)",
+        coordenadasLabel,
         coords ? escapeHtml(`${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`) : "—"
       ),
-      reviewRow("Marcação no mapa", escapeHtml(geom ? labelGeometria(geom.tipo) : "—")),
     ].join("");
 
     const localizacaoBody = `${localizacaoMeta}${buildEnquadramentoBlocksHtml(
@@ -2138,7 +2153,7 @@
       const submitBtn = e.submitter || $("#form-cadastro").querySelector('[type="submit"]');
       if (submitBtn) submitBtn.disabled = true;
       try {
-        await SLTDemandasApi.createDemanda(demanda);
+        await SLTDemandasApi.createDemanda(demanda, SLTGeometria.getArquivoOriginal?.() || null);
         showToast("Demanda registrada com sucesso.");
         setTimeout(() => {
           window.location.href = "/public/painel/";

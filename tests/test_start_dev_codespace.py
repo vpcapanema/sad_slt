@@ -7,13 +7,13 @@ import sys
 
 import psycopg
 
-SCRIPT = (Path(__file__).resolve().parents[1] / 'scripts/start-dev-codespace.sh').read_text()
+SCRIPT = (Path(__file__).resolve().parents[1] / 'scripts/start-dev-codespace.sh').read_text(encoding='utf-8')
 PREFLIGHT = SCRIPT.split("<<'PY'\n", 1)[1].split('\nPY\n', 1)[0]
 
 
 def run_preflight(bridge=0, database_fails=False, dsn='postgresql://localhost:15433/test'):
     config = ModuleType('api.config')
-    config.get_settings = lambda: SimpleNamespace(slt_database_url=dsn)
+    config.__dict__['get_settings'] = lambda: SimpleNamespace(slt_database_url=dsn)
     connect = MagicMock()
     if database_fails:
         connect.side_effect = [psycopg.OperationalError('offline'), MagicMock()]
@@ -22,7 +22,7 @@ def run_preflight(bridge=0, database_fails=False, dsn='postgresql://localhost:15
          patch.object(psycopg, 'connect', connect), patch('time.sleep'):
         error = None
         try:
-            exec(compile(PREFLIGHT, '<preflight>', 'exec'), {})
+            exec(compile(PREFLIGHT, '<preflight>', 'exec'), {})  # pylint: disable=exec-used
         except SystemExit as exc:
             error = str(exc)
     return run, connect, error
@@ -30,6 +30,7 @@ def run_preflight(bridge=0, database_fails=False, dsn='postgresql://localhost:15
 
 def test_bridge_failure_preserves_server_and_does_not_probe_database():
     run, connect, error = run_preflight(bridge=1)
+    assert error is not None
     assert 'Ponte Windows indisponível' in error
     connect.assert_not_called()
     assert run.call_count == 1

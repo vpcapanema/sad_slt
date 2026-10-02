@@ -94,7 +94,7 @@
       "strings": false
     }
   },
-  "sqltools.useNodeRuntime": true,
+  "sqltools.useNodeRuntime": "node",
   "sqltools.disableReleaseNotifications": true,
   "sqltools.languageServer.enabled": true,
   "python.testing.pytestArgs": [

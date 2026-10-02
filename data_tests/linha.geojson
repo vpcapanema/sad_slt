@@ -1,0 +1,29 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "nome": "Teste sintetico - linha",
+        "sintetico": true
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -46.65,
+            -23.56
+          ],
+          [
+            -46.64,
+            -23.55
+          ],
+          [
+            -46.625,
+            -23.545
+          ]
+        ]
+      }
+    }
+  ]
+}

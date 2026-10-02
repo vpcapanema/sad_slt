@@ -15,7 +15,16 @@
     return body;
   }
 
-  async function createDemanda(payload) {
+  async function createDemanda(payload, arquivoGeometria = null) {
+    if (arquivoGeometria) {
+      const form = new FormData();
+      form.append("payload", JSON.stringify(payload));
+      form.append("arquivo_geometria", arquivoGeometria, arquivoGeometria.name);
+      return request("/api/demandas/com-arquivo-geometria", {
+        method: "POST",
+        body: form,
+      });
+    }
     return request("/api/demandas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

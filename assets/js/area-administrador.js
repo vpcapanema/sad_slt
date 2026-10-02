@@ -39,6 +39,8 @@
     configuracao: "Configuração", parametros: "Parâmetros", resultado: "Resultado",
     fase: "Fase", grupo: "Grupo", peso: "Peso", nota: "Nota", ranking: "Classificação resultante",
     latitude: "Latitude", longitude: "Longitude", municipio: "Município",
+    nome_arquivo: "Nome do arquivo", tipo_mime: "Tipo MIME", tamanho_bytes: "Tamanho (bytes)",
+    sha256: "Hash SHA-256", conteudo_binario: "Arquivo original",
     uf: "Unidade federativa", data: "Data", inicio: "Início", fim: "Fim", url: "URL",
     ativo_em: "Ativo em", excluido: "Excluído", excluido_em: "Excluído em",
     // Alinhados com os cabeçalhos de "Hierarquizações realizadas" (/restrict/hierarquizacao/)
@@ -145,6 +147,7 @@
     dom_atributo_objeto: "Atributos do Objeto",
     dom_status_hierarquizacao: "Status da Hierarquização",
     dom_status_hierarquizacao_transicao: "Transições de Status da Hierarquização",
+    demanda_arquivo_geometria_upload: "Arquivos originais das geometrias das demandas",
   };
   // Rótulo curto do esquema para a etiqueta ao lado do nome, no grupo de domínios.
   const ESQUEMA_BADGE = { hierarquizacao_demandas: "Hierarquização" };
@@ -488,7 +491,24 @@
           } else if (info.json) {
             td.append(el("span", { class: "admin-cell-json", title: info.texto }, info.texto));
           } else {
-            td.textContent = info.texto;
+            if (
+              state.esquema === "demandas" &&
+              state.tabela === "demanda_arquivo_geometria_upload" &&
+              c.nome === "conteudo_binario" &&
+              linha.id
+            ) {
+              td.append(
+                el("a", {
+                  class: "admin-download-file",
+                  href: `${API}/tabelas/demandas/demanda_arquivo_geometria_upload/${encodeURIComponent(linha.id)}/download`,
+                  title: "Baixar arquivo vetorial original",
+                  download: "",
+                }, el("i", { class: "fa-solid fa-download", "aria-hidden": "true" }), "Baixar original"),
+                el("span", { class: "admin-cell-binary-size" }, info.texto)
+              );
+            } else {
+              td.textContent = info.texto;
+            }
           }
           tr.append(td);
         }

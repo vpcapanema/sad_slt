@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><Placemark><name>Teste sintetico - linha</name><LineString><coordinates>-46.65000000,-23.56000000,0 -46.64000000,-23.55000000,0 -46.62500000,-23.54500000,0</coordinates></LineString></Placemark></Document></kml>

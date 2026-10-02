@@ -1,8 +1,10 @@
 """Sessão de arquivo da bancada: edição do arquivo original com rastreabilidade."""
 import asyncio
+from typing import Any
 from uuid import uuid4
 
 import geopandas as gpd
+import pandas as pd
 from osgeo import ogr
 
 from api.services import ciclo_vida_arquivos as ciclo
@@ -69,7 +71,7 @@ def frame_editado(source, data):
         features.append({**feature, 'properties': {
             name: json.dumps(value, ensure_ascii=False, allow_nan=False)
             if value is not None and (subtypes[name] == 'JSON' or
-                                     (fields[name] == 'String' and isinstance(value, (dict, list)))) else value
+                                      (fields[name] == 'String' and isinstance(value, (dict, list)))) else value
             for name, value in properties.items()}})
     frame = gpd.GeoDataFrame.from_features(features, crs=4326)
     for name, subtype in subtypes.items():
@@ -83,7 +85,8 @@ def frame_editado(source, data):
     return frame.to_crs(source['crs_arquivo'])
 
 
-def salvar(arquivo, revisao, data, nome, user, camada_id=None):
+def salvar(arquivo, revisao, data, _nome, user, camada_id=None):
+    del _nome
     source = abrir(arquivo, revisao, camada_id)
     frame = frame_editado(source, data)
     return _persistir(source, frame, data, user)
@@ -92,8 +95,8 @@ def salvar(arquivo, revisao, data, nome, user, camada_id=None):
 def _persistir(source, frame, data, user, incluir_geojson=True):
     arquivo, revisao = source['arquivo'], source['revisao']
     if source['id'].startswith('storage:'):
-        from api.services.edicao_storage import gravar
-        return gravar(source, frame, data, incluir_geojson=incluir_geojson)
+        from api.services.edicao_storage import gravar as gravar_storage
+        return gravar_storage(source, frame, data, incluir_geojson=incluir_geojson)
     if source.get('coluna_fid'):
         ids = [int(f['id']) for f in source['geojson']['features'] if str(f['id']).isdigit()]
         next_id = max(ids, default=0) + 1
@@ -104,8 +107,7 @@ def _persistir(source, frame, data, user, incluir_geojson=True):
             else:
                 kept.append(next_id)
                 next_id += 1
-        frame.index = kept
-        frame.index.name = source['coluna_fid']
+        frame.index = pd.Index(kept, name=source['coluna_fid'])
     params = {'camada_id': source['id'], 'arquivo': arquivo, 'revisao': revisao,
               'fids_origem': [f['id'] for f in data['features']]}
     ident = ciclo.iniciar('edicao_arquivo_bancada', params, str(user.id))
@@ -117,12 +119,13 @@ def _persistir(source, frame, data, user, incluir_geojson=True):
         metadata = geo._metadados.get(source['id'])
         if not metadata:
             raise ValueError('Camada não encontrada no catálogo.')
+
         def gravar():
             # Reconfere após obter o bloqueio do registro no banco.
             abrir(arquivo, revisao)
             geo._reescrever_arquivo_do_acervo(path, frame)
         repo.substituir_vetor(source['id'], frame, metadata,
-                             arquivo_editado=path, gravar_arquivo=gravar)
+                              arquivo_editado=path, gravar_arquivo=gravar)
         geo._camadas[source['id']] = frame
         ciclo.finalizar(ident)
         return {**ler_arquivo(source['arquivo']), 'execucao_id': ident}
@@ -166,6 +169,7 @@ def _carregar_storage(arquivo, revisao, ident):
     if caminho != arquivo:
         raise ValueError('O arquivo não corresponde à camada informada.')
     alvo = storage.resolver(caminho)
+
     def revisao_atual(item):
         estado = item.stat()
         return f'{estado.st_mtime_ns}-{estado.st_size}'
@@ -183,21 +187,26 @@ def _carregar_storage(arquivo, revisao, ident):
         camadas = pyogrio.list_layers(alvo)
         nome = alvo.stem if len(camadas) == 1 else (camada or camadas[0][0])
         # Leitura nativa: mantém Z, CRS e FIDs originais (carregar_gdf reprojeta e força 2D).
+        read_file: Any = gpd.read_file
         for encoding in (None, 'ISO-8859-1'):
             try:
-                frame = gpd.read_file(alvo, layer=camada, engine='pyogrio', fid_as_index=True,
-                                      **({'encoding': encoding} if encoding else {}))
+                options: dict[str, Any] = {'layer': camada, 'engine': 'pyogrio', 'fid_as_index': True}
+                if encoding:
+                    options['encoding'] = encoding
+                frame = read_file(alvo, **options)
                 break
-            except UnicodeDecodeError:
+            except UnicodeDecodeError as exc:
                 if encoding is not None:
                     raise ValueError('A tabela de atributos usa uma codificação que não foi possível '
-                                     'interpretar. Publique o arquivo com um .cpg.')
+                                     'interpretar. Publique o arquivo com um .cpg.') from exc
         if frame.crs is None:
             frame = frame.set_crs(crs)
     if revisao_atual(storage.resolver(caminho)) != atual:
         raise ValueError('O arquivo foi alterado durante a leitura. Abra novamente.')
     frame = _somente_geometrias(frame, nome)
     frame.index = [str(item) for item in frame.index]
+    if frame.crs is None:
+        raise ValueError('O arquivo não informa seu CRS. Defina o CRS antes de processar.')
     return {'id': ident, 'nome': nome, 'arquivo': caminho, 'revisao': atual,
             'crs_arquivo': frame.crs.to_wkt(), 'frame': frame}
 
@@ -220,11 +229,13 @@ def _carregar_arquivo(arquivo, revisao):
     atual = leitura.revisao_arquivo(path)
     if revisao is not None and atual != revisao:
         raise ValueError(REVISAO_OBSOLETA)
-    matches = leitura.camadas_dos_arquivos({relative})
+    matches: list[dict[str, Any]] = leitura.camadas_dos_arquivos({relative})
     if not matches:
         raise ValueError('Este arquivo não possui vínculo disponível no catálogo.')
-    vinculo = max(matches, key=lambda row: (row.get('criado_em') is not None,
-                                            row.get('criado_em'), row.get('id')))
+    vinculo: dict[str, Any] = max(
+        matches,
+        key=lambda row: (row.get('criado_em') is not None, row.get('criado_em'), row.get('id')),
+    )
     dataset = gdal.OpenEx(str(path), gdal.OF_VECTOR | gdal.OF_READONLY, allowed_drivers=DRIVERS_ARQUIVO)
     if dataset is None:
         raise ValueError('GDAL não conseguiu abrir este arquivo vetorial.')
@@ -237,15 +248,18 @@ def _carregar_arquivo(arquivo, revisao):
         crs_wkt = srs.ExportToWkt()
     finally:
         dataset = None
+    read_file: Any = gpd.read_file
     for encoding in (None, 'ISO-8859-1'):
         try:
-            frame = gpd.read_file(path, engine='pyogrio', fid_as_index=True,
-                                  **({'encoding': encoding} if encoding else {}))
+            options: dict[str, Any] = {'engine': 'pyogrio', 'fid_as_index': True}
+            if encoding:
+                options['encoding'] = encoding
+            frame = read_file(path, **options)
             break
-        except UnicodeDecodeError:
+        except UnicodeDecodeError as exc:
             if encoding is not None:
                 raise ValueError('A tabela de atributos usa uma codificação que não foi possível '
-                                 'interpretar. Publique o arquivo com um .cpg.')
+                                 'interpretar. Publique o arquivo com um .cpg.') from exc
     if leitura.revisao_arquivo(path) != atual:
         raise ValueError('O arquivo foi alterado durante a leitura. Abra novamente.')
     nome = vinculo.get('nome', path.stem)
@@ -265,8 +279,10 @@ def carregar_para_execucao(arquivo, revisao=None, camada_id=None):
 def executar(operacao, parametros, arquivos, user, progress=None):
     def report(message, feitas=None, total=None):
         if progress:
-            if total is None: progress(message)
-            else: progress(message, feitas, total)
+            if total is None:
+                progress(message)
+            else:
+                progress(message, feitas, total)
     from api.services.geoprocessamento_jobs import _input_references, INPUT_KEYS
     from api.services.geoprocessamento_engine import geoprocessamento_engine
     references = _input_references(parametros)
@@ -274,9 +290,9 @@ def executar(operacao, parametros, arquivos, user, progress=None):
         raise ValueError('Os arquivos informados devem corresponder às entradas da operação.')
     sources = {}
     for ident, value in arquivos.items():
-        report(f"Lendo e conferindo revisão: {value['arquivo']}",len(sources),len(arquivos))
+        report(f"Lendo e conferindo revisão: {value['arquivo']}", len(sources), len(arquivos))
         sources[ident] = carregar_para_execucao(value['arquivo'], value['revisao'], ident if ident.startswith('storage:') else None)
-        report(f"Leitura concluída: {sources[ident]['nome']} — {len(sources[ident]['frame'])} feições",len(sources),len(arquivos))
+        report(f"Leitura concluída: {sources[ident]['nome']} — {len(sources[ident]['frame'])} feições", len(sources), len(arquivos))
     if any(value['id'] != ident for ident, value in sources.items()):
         raise ValueError('O arquivo não corresponde à camada informada.')
     execution = ciclo.iniciar(operacao, {**parametros, 'arquivos': arquivos}, str(user.id))
@@ -288,7 +304,13 @@ def executar(operacao, parametros, arquivos, user, progress=None):
             key = 'arquivo_bancada_' + uuid4().hex
             temporary[ident] = key
             geo._camadas[key] = source['frame']
-            geo._metadados[key] = {'id':key,'nome':source['nome'],'tipo':'vetorial','crs':source['crs_arquivo'],'destino':'memoria_local'}
+            geo._metadados[key] = {
+                'id': key,
+                'nome': source['nome'],
+                'tipo': 'vetorial',
+                'crs': source['crs_arquivo'],
+                'destino': 'memoria_local',
+            }
         params = dict(parametros)
         for key, value in params.items():
             if key in INPUT_KEYS:
@@ -299,18 +321,19 @@ def executar(operacao, parametros, arquivos, user, progress=None):
         report(f'Executando algoritmo {operacao}: {len(sources)} arquivo(s) de entrada')
         result = asyncio.run(geoprocessamento_engine.execute(operacao, params, **({'progress': report} if progress else {})))
         resource_id = result.get('camada_id') or result.get('raster_id')
-        if resource_id and params.get('destino') == 'storage' and operacao not in {'OP-25','OP-26','OP-27'}:
+        if resource_id and params.get('destino') == 'storage' and operacao not in {'OP-25', 'OP-26', 'OP-27'}:
             report('Gravando o resultado no storage')
             filename, output_format = geoprocessamento_engine._canonical_output_file(params)
             output_crs = params.get('crs_saida', 'entrada')
-            result['arquivo_saida'] = asyncio.run(geo.salvar_camada(resource_id, 'data/geoespacial/outputs', filename,
-                                                    'auto' if output_crs == 'entrada' else output_crs, output_format))
+            result['arquivo_saida'] = asyncio.run(geo.salvar_camada(
+                resource_id, 'data/geoespacial/outputs', filename,
+                'auto' if output_crs == 'entrada' else output_crs, output_format))
         for original, transient in temporary.items():
             if result.get('camada_id') == transient:
                 result['camada_id'] = original
         ciclo.finalizar(execution)
         result_id = result.get('camada_id')
-        metadata = geo._metadados.get(result_id) or {}
+        metadata = geo._metadados.get(result_id) or {} if result_id else {}
         path = metadata.get('caminho_arquivo')
         report('Preparando a camada resultante para visualização')
         return {'resultado': result, 'execucao_id': execution,
@@ -343,15 +366,16 @@ def iniciar_execucao(operacao, parametros, arquivos, user):
     ident = jobs._new('bancada-arquivos', ['Executar operação'])
     with jobs._lock:
         jobs._jobs[ident].update(responsavel=str(user.id), cancelavel=False)
+
     def run():
         def report(message, feitas=None, total=None):
             # A duração do algoritmo nativo é desconhecida: não inventar percentual.
             with jobs._lock:
                 job = jobs._jobs[ident]
-                job['logs'].append({'sequencia':len(job['logs'])+1,'mensagem':message,'nivel':'info'})
-                job.update(status='executando',etapa_atual=message,tarefa_id=job['tarefa_id']+1,
-                           percentual=None,progresso_tarefa=feitas/total*100 if total else None,
-                           tarefa_concluidas=feitas,tarefa_total=total,unidade_tarefa='arquivos')
+                job['logs'].append({'sequencia': len(job['logs']) + 1, 'mensagem': message, 'nivel': 'info'})
+                job.update(status='executando', etapa_atual=message, tarefa_id=job['tarefa_id'] + 1,
+                           percentual=None, progresso_tarefa=feitas / total * 100 if total else None,
+                           tarefa_concluidas=feitas, tarefa_total=total, unidade_tarefa='arquivos')
                 jobs._publicar(ident)
         try:
             result = executar(operacao, parametros, arquivos, user, progress=report)

@@ -61,6 +61,7 @@ def test_external_browser_arguments_and_missing_browser(tmp_path, monkeypatch):
 
 def test_browser_opens_only_after_this_server_and_homepage_ready(monkeypatch):
     import io
+
     def response(body, content_type):
         value = io.BytesIO(body)
         value.status = 200

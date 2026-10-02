@@ -1,0 +1,19 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "nome": "Teste sintetico - ponto",
+        "sintetico": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -46.6333,
+          -23.5505
+        ]
+      }
+    }
+  ]
+}

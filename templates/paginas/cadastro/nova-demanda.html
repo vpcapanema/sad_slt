@@ -307,33 +307,68 @@
       <!-- Passo 5 — localização e revisão -->
       <section class="card-1-localizacao-geografica secao-1-localizacao-geografica card step-panel cadastro-section" data-step="5">
         <h2><span class="cadastro-sec-num">5</span>. <span data-section-title>Localização geográfica</span></h2>
-        <p class="step-intro">Indique a localização por ponto ou perímetro e confira a latitude e a longitude informadas.</p>
+        <div class="form-subsection" id="project-geometry-subsection">
+          <h3><span class="cadastro-subsec-num">5.1</span> <span data-subsection-title>Geometria do projeto</span></h3>
+        <p class="step-intro">Envie o vetor do projeto ou desenhe sua geometria no mapa. A prévia não será cadastrada até o envio da demanda.</p>
         <div class="form-grid">
-          <div class="full map-toolbar">
-            <button type="button" class="btn btn-ghost active" id="btn-modo-ponto">Ponto</button>
-            <button type="button" class="btn btn-ghost" id="btn-modo-perimetro">Perímetro</button>
-            <button type="button" class="btn btn-secondary" id="btn-limpar-mapa">Limpar</button>
+          <div class="full geometry-method-choice">
+            <fieldset class="geometry-source-selector">
+              <legend>Como deseja informar a geometria?</legend>
+              <div class="geometry-source-options">
+                <label class="geometry-source-card">
+                  <input type="radio" name="geometry-method" value="upload">
+                  <span class="geometry-source-copy">
+                    <strong>Enviar arquivo</strong>
+                    <span>KMZ, KML, GeoPackage, ZIP com shapefile ou GeoJSON.</span>
+                  </span>
+                </label>
+                <label class="geometry-source-card">
+                  <input type="radio" name="geometry-method" value="desenhar">
+                  <span class="geometry-source-copy">
+                    <strong>Desenhar no mapa</strong>
+                    <span>Indique um ponto ou desenhe uma linha ou um polígono.</span>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
           </div>
-          <div>
-            <label for="lat">Latitude <span class="req">*</span></label>
-            <input type="number" id="lat" step="any" placeholder="-23.550520" required>
+          <div class="full hidden" id="geometry-upload-panel">
+            <label for="upload-geometria">Arquivo vetorial do projeto</label>
+            <input type="file" id="upload-geometria" accept=".kmz,.kml,.gpkg,.zip,.geojson,application/vnd.google-earth.kmz,application/vnd.google-earth.kml+xml,application/geo+json,application/zip">
+            <p class="field-help">O arquivo será processado para exibir a geometria completa no mapa.</p>
           </div>
-          <div>
-            <label for="lng">Longitude <span class="req">*</span></label>
-            <input type="number" id="lng" step="any" placeholder="-46.633308" required>
-          </div>
-          <div class="full" id="bloco-ponto">
-            <div class="field-help-row">
-              <button type="button" class="btn btn-ghost" id="btn-apontar-mapa">Apontar no mapa</button>
+          <div class="full hidden" id="geometry-draw-panel">
+            <div class="geometry-draw-controls">
+              <span class="geometry-control-label">Tipo de geometria</span>
+              <div class="geometry-type-selector" role="group" aria-label="Tipo de geometria a desenhar">
+                <button type="button" class="btn btn-ghost active" data-geometria-tipo="Point" aria-pressed="true">Ponto</button>
+                <button type="button" class="btn btn-ghost" data-geometria-tipo="LineString" aria-pressed="false">Linha</button>
+                <button type="button" class="btn btn-ghost" data-geometria-tipo="Polygon" aria-pressed="false">Polígono</button>
+              </div>
             </div>
-            <p class="field-help">Digite as coordenadas, clique no mapa ou use o botão acima para apontar o local.</p>
+            <div class="geometry-point-coordinates form-grid hidden" id="geometry-point-coordinates">
+              <div>
+                <label for="lat">Latitude <span class="req">*</span></label>
+                <input type="number" id="lat" step="any" placeholder="-23.550520" required>
+              </div>
+              <div>
+                <label for="lng">Longitude <span class="req">*</span></label>
+                <input type="number" id="lng" step="any" placeholder="-46.633308" required>
+              </div>
+            </div>
+            <div class="geometry-draw-actions">
+              <button type="button" class="btn btn-ghost" id="btn-iniciar-desenho" aria-controls="geometry-map-tools" aria-expanded="false">Desenhar no mapa</button>
+            </div>
           </div>
-          <div class="full hidden" id="bloco-perimetro">
-            <label for="upload-perimetro">Arquivo do perímetro</label>
-            <input type="file" id="upload-perimetro" accept=".zip,.gpkg,application/zip">
-            <p class="field-help">Envie um shapefile (.zip) ou GeoPackage (.gpkg). As coordenadas serão preenchidas automaticamente.</p>
-          </div>
-          <div class="full">
+          <div class="full hidden" id="geometry-map-section">
+            <div class="map-toolbar">
+              <div id="geometry-map-tools" class="geometry-map-tools hidden" role="group" aria-label="Ferramentas de geometria">
+                <button type="button" class="btn btn-ghost geometry-icon-button" id="btn-nova-geometria" title="Nova geometria" aria-label="Nova geometria"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-ghost geometry-icon-button" id="btn-concluir-desenho" title="Confirmar geometria" aria-label="Confirmar geometria" disabled><i class="fas fa-check" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-ghost geometry-icon-button" id="btn-limpar-mapa" title="Limpar geometria" aria-label="Limpar geometria"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
+              </div>
+              <span id="geometry-file-name" class="field-help hidden"></span>
+            </div>
             <p id="map-parent-hint" class="field-help abrangencia-parent-hint hidden" aria-live="polite"></p>
             <div id="map"></div>
             <p id="map-status" class="field-help">Localização ainda não definida.</p>
@@ -347,9 +382,10 @@
             </div>
           </div>
         </div>
+        </div>
 
         <div class="form-subsection">
-          <h3><span class="cadastro-subsec-num">5.1</span> <span data-subsection-title>Revisão</span></h3>
+          <h3><span class="cadastro-subsec-num">5.2</span> <span data-subsection-title>Revisão</span></h3>
           <p class="step-intro">Confira todos os dados informados nas seções anteriores e clique em Enviar demanda para concluir o cadastro.</p>
           <div id="review" class="review-panel" aria-live="polite"></div>
         </div>

@@ -111,6 +111,7 @@ def test_carregar_devolve_o_contrato_que_a_bancada_consome(cliente, monkeypatch,
     monkeypatch.setattr(geoespacial, "project_path", lambda *a, **k: arquivo)
     monkeypatch.setattr(geoespacial, "_recurso_catalogado", lambda path: {
         "recurso_sessao_id": "registro-teste", "nome": "Registrado", "tipo": "vetor"})
+
     async def carregar(recurso_id):
         assert recurso_id == "registro-teste"
     monkeypatch.setattr(geoespacial.geoespacial_service, "carregar_recurso", carregar)

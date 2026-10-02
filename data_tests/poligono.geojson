@@ -1,0 +1,39 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "nome": "Teste sintetico - poligono",
+        "sintetico": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -46.64,
+              -23.555
+            ],
+            [
+              -46.63,
+              -23.555
+            ],
+            [
+              -46.63,
+              -23.545
+            ],
+            [
+              -46.64,
+              -23.545
+            ],
+            [
+              -46.64,
+              -23.555
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

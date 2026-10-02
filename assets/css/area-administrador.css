@@ -358,6 +358,26 @@
   display: inline-block;
   vertical-align: middle;
 }
+.admin-download-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--admin-link, #1769aa);
+  font-weight: 600;
+  text-decoration: none;
+}
+.admin-download-file:hover { text-decoration: underline; }
+.admin-download-file:focus-visible {
+  outline: 2px solid var(--admin-focus, #1769aa);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.admin-cell-binary-size {
+  display: block;
+  margin-top: 0.2rem;
+  color: #6b7a89;
+  font-size: 0.72rem;
+}
 .admin-data-table td.cell-datahora,
 .admin-data-table td.cell-usuario {
   text-align: center;

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from api.geometria_parser import parse_upload
+from api.geometria_parser import MAX_GEOMETRIA_UPLOAD_BYTES, parse_upload
 
 router = APIRouter(tags=["geometria"])
 
@@ -11,7 +11,7 @@ router = APIRouter(tags=["geometria"])
 @router.post("/geometria/parse")
 def api_geometria_parse(file: UploadFile = File(...)):
     content = file.file.read()
-    if len(content) > 50 * 1024 * 1024:
+    if len(content) > MAX_GEOMETRIA_UPLOAD_BYTES:
         raise HTTPException(413, "Arquivo maior que 50 MB.")
     try:
         return parse_upload(file.filename or "", content)

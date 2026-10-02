@@ -137,8 +137,30 @@ _INSERT_SQL = """
     RETURNING id
 """
 
+_INSERT_ARQUIVO_GEOMETRIA_UPLOAD_SQL = """
+    INSERT INTO demandas.demanda_arquivo_geometria_upload (
+        projeto_id,
+        nome_arquivo,
+        extensao,
+        tipo_mime,
+        geometria_tipo,
+        tamanho_bytes,
+        sha256,
+        conteudo_binario
+    ) VALUES (
+        %(projeto_id)s,
+        %(nome_arquivo)s,
+        %(extensao)s,
+        %(tipo_mime)s,
+        %(geometria_tipo)s,
+        %(tamanho_bytes)s,
+        %(sha256)s,
+        %(conteudo_binario)s
+    )
+"""
 
-def insert(row: dict[str, Any]) -> dict[str, Any]:
+
+def insert(row: dict[str, Any], *, arquivo_geometria: dict[str, Any] | None = None) -> dict[str, Any]:
     """Insere uma demanda e retorna a linha persistida."""
     row = {
         "maturidade": None,
@@ -155,6 +177,11 @@ def insert(row: dict[str, Any]) -> dict[str, Any]:
             if not inserted:
                 raise RuntimeError("Insert de demanda não retornou id.")
             inserted_id = inserted["id"]
+            if arquivo_geometria is not None:
+                conn.execute(
+                    _INSERT_ARQUIVO_GEOMETRIA_UPLOAD_SQL,
+                    {"projeto_id": inserted_id, **arquivo_geometria},
+                )
             conn.commit()
         except errors.UniqueViolation as exc:
             conn.rollback()

@@ -91,7 +91,7 @@ def test_content_elements_have_semantic_canonical_classes() -> None:
             assert "conteudo-principal" in _classes(tag), (path, tag)
         for tag in re.findall(r"<section\b[^>]*>", content, re.I):
             assert any(name.startswith("secao-") for name in _classes(tag)), (path, tag)
-        for tag in re.findall(r"<[a-z][^>]*class=[""'][^""']*[""'][^>]*>", content, re.I):
+        for tag in re.findall(r"""<[a-z][^>]*class=["'][^"']*["'][^>]*>""", content, re.I):
             classes = _classes(tag)
             if "card" in classes or "module-card" in classes:
                 assert any(name.startswith("card-") for name in classes), (path, tag)
@@ -119,6 +119,24 @@ def test_demandante_classification_precedes_demand_category() -> None:
     assert demandante < categoria
     assert 'data-demandante="institucional"' in template
     assert 'data-demandante="privada"' in template
+
+
+def test_project_geometry_section_offers_upload_and_map_drawing() -> None:
+    template = (PAGES_ROOT / "cadastro/nova-demanda.html").read_text(encoding="utf-8")
+    assert template.index('class="geometry-source-selector"') < template.index('id="upload-geometria"')
+    assert 'value="upload"' in template
+    assert 'value="desenhar"' in template
+    assert 'accept=".kmz,.kml,.gpkg,.zip,.geojson' in template
+    for geometry_type in ("Point", "LineString", "Polygon"):
+        assert f'data-geometria-tipo="{geometry_type}"' in template
+    assert 'id="geometry-point-coordinates"' in template
+    assert 'id="geometry-map-section"' in template
+    assert 'id="btn-concluir-desenho"' in template
+    assert 'id="btn-apontar-mapa"' not in template
+    assert '>Desenhar no mapa</button>' in template
+    assert template.index('id="btn-nova-geometria"') < template.index('id="btn-concluir-desenho"') < template.index('id="btn-limpar-mapa"')
+    for command in ("Nova geometria", "Confirmar geometria", "Limpar geometria"):
+        assert f'aria-label="{command}"' in template
 
 
 def _canonical_pages() -> list[str]:

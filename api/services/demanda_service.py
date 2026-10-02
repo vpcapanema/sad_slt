@@ -194,7 +194,12 @@ def _build_persist_row(payload: DemandaCreateSchema, codigo: str) -> dict[str, A
     return demanda_repository.prepare_insert_params(row)
 
 
-def criar_demanda(payload: DemandaCreateSchema, *, origem: str = "") -> DemandaResponseSchema:
+def criar_demanda(
+    payload: DemandaCreateSchema,
+    *,
+    origem: str = "",
+    arquivo_geometria: dict[str, Any] | None = None,
+) -> DemandaResponseSchema:
     """``origem`` marca o código gerado (ex.: ``origem="SEI"`` -> ``I-PRJ-SEI-XXXXXXXX``)
 
     quando a criação vem de um fluxo externo, como a integração com o SEI-SP.
@@ -205,7 +210,12 @@ def criar_demanda(payload: DemandaCreateSchema, *, origem: str = "") -> DemandaR
         demanda_repository.get_by_codigo,
     )
     try:
-        row = demanda_repository.insert(_build_persist_row(payload, codigo))
+        persist_row = _build_persist_row(payload, codigo)
+        row = (
+            demanda_repository.insert(persist_row, arquivo_geometria=arquivo_geometria)
+            if arquivo_geometria is not None
+            else demanda_repository.insert(persist_row)
+        )
     except errors.UniqueViolation as exc:
         raise DemandaValidationError("Não foi possível gerar código único para o projeto.", field="id") from exc
     return _row_to_response(row)

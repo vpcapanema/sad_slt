@@ -5,7 +5,6 @@ temporária contém somente geometria para desenhar tiles, nunca para os cálcul
 """
 from hashlib import sha256
 from pathlib import Path
-from tempfile import gettempdir
 from time import time
 from uuid import uuid4
 import re

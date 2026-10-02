@@ -9,6 +9,7 @@ from typing import Any, Iterable
 import geopandas as gpd
 import psycopg
 from psycopg.types.json import Jsonb
+from shapely.ops import unary_union
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -38,6 +39,15 @@ def _clean(value: Any) -> Any:
     if isinstance(value, float) and math.isnan(value):
         return None
     return value
+
+
+def _repair_mojibake(value: Any) -> Any:
+    if not isinstance(value, str) or not any(marker in value for marker in ("Ã", "Â", "â€")):
+        return value
+    try:
+        return value.encode("latin1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return value
 
 
 def _code(value: Any) -> str:
@@ -71,7 +81,7 @@ def _rows(
             continue
         codigo = _code(row[code_column])
         metadata = {
-            column.lower(): _clean(row[column])
+            column.lower(): _repair_mojibake(_clean(row[column]))
             for column in metadata_columns
             if _clean(row[column]) is not None
         }
@@ -79,13 +89,54 @@ def _rows(
             (
                 tipo,
                 codigo,
-                str(row[name_column]),
+                _repair_mojibake(str(row[name_column])),
                 codigo if municipality_code else None,
                 Jsonb(metadata),
                 geometry.wkb,
             )
         )
     return result
+
+
+def _zee_rows_from_frame(frame: gpd.GeoDataFrame) -> list[tuple[Any, ...]]:
+    frame = frame.to_crs("EPSG:4326").copy()
+    frame["_codigo_ra"] = frame["GID_RA"].map(_code)
+    zonas = (
+        ("I", (5, 2, 6, 11)),
+        ("II", (3, 8, 9)),
+        ("III", (1, 14)),
+        ("IV", (7, 13)),
+        ("V", (4,)),
+        ("VI", (16,)),
+        ("VII", (12,)),
+        ("VIII", (10,)),
+        ("IX", (15,)),
+    )
+    rows = []
+    for numero, codigos in zonas:
+        selecionadas = frame[frame["_codigo_ra"].isin({str(codigo) for codigo in codigos})]
+        if len(selecionadas) != len(codigos):
+            raise ValueError(f"Não foi possível compor a Zona ZEE {numero}: regiões administrativas ausentes.")
+        geometria = unary_union(selecionadas.geometry)
+        ras = sorted(_repair_mojibake(str(nome)) for nome in selecionadas["RA"])
+        rows.append(
+            (
+                "zona_zee",
+                numero,
+                f"Zona de Gestão {numero}",
+                None,
+                Jsonb({"zona": len(rows) + 1, "gid_ras": list(codigos), "ras": ras}),
+                geometria.wkb,
+            )
+        )
+    return rows
+
+
+def _zee_rows() -> list[tuple[Any, ...]]:
+    frame = gpd.read_file(
+        project_path("database/geo/raw/regiao_administrativa/regiao_administrativa.shp")
+    )
+    return _zee_rows_from_frame(frame)
 
 
 def load_catalog() -> dict[str, int]:
@@ -153,6 +204,7 @@ def load_catalog() -> dict[str, int]:
                 filter_value="SP",
             ),
         ),
+        ("zona_zee", _zee_rows()),
     ]
 
     counts: dict[str, int] = {}

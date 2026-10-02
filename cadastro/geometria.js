@@ -1,11 +1,14 @@
 (function (global) {
-  let map, drawnItems, markerLayer, drawControl;
+  let map, drawControl, previewLayer;
   let parentLayer = null;
   let parentFc = null;
   let parentBounds = null;
   let parentLabel = "";
-  let modo = "ponto";
+  let metodoGeometria = "";
+  let tipoDesenho = "Point";
   let geometria = null;
+  let arquivoOriginal = null;
+  let ferramentasAtivas = false;
 
   const PARENT_STYLE = {
     color: "#b45309",
@@ -157,31 +160,15 @@
   }
 
   function collectUserBounds() {
-    const boxes = [];
-    if (drawnItems) {
-      drawnItems.eachLayer((l) => {
-        if (typeof l.getBounds === "function") {
-          const b = l.getBounds();
-          if (b.isValid()) boxes.push(b);
-        }
-      });
-    }
-    if (markerLayer) {
-      markerLayer.eachLayer((l) => {
-        if (l instanceof L.Marker || l instanceof L.CircleMarker) {
-          const ll = l.getLatLng();
-          boxes.push(L.latLngBounds([ll, ll]));
-        }
-      });
-    }
-    return boxes;
+    if (!previewLayer) return [];
+    const bounds = previewLayer.getBounds();
+    return bounds.isValid() ? [bounds] : [];
   }
 
   function fitMapView() {
     if (!map) return;
-    const boxes = [];
-    if (parentBounds?.isValid()) boxes.push(parentBounds);
-    boxes.push(...collectUserBounds());
+    const boxes = collectUserBounds();
+    if (!boxes.length && parentBounds?.isValid()) boxes.push(parentBounds);
     if (!boxes.length) {
       map.setView([-22.5, -48.5], 7);
       return;
@@ -189,7 +176,7 @@
     // extend() altera o objeto; copiar evita que parentBounds acumule extensões antigas.
     const combined = L.latLngBounds(boxes[0].getSouthWest(), boxes[0].getNorthEast());
     for (let i = 1; i < boxes.length; i++) combined.extend(boxes[i]);
-    map.fitBounds(combined.pad(0.1));
+    map.fitBounds(combined.pad(0.1), { maxZoom: 18 });
   }
 
   function renderParentReference() {
@@ -261,17 +248,17 @@
     const lngEl = document.getElementById("lng");
     if (latEl) {
       latEl.value = "";
-      latEl.readOnly = modo !== "ponto";
+      latEl.readOnly = metodoGeometria !== "desenhar" || tipoDesenho !== "Point";
     }
     if (lngEl) {
       lngEl.value = "";
-      lngEl.readOnly = modo !== "ponto";
+      lngEl.readOnly = metodoGeometria !== "desenhar" || tipoDesenho !== "Point";
     }
   }
 
   function clearLayers() {
-    if (drawnItems) drawnItems.clearLayers();
-    if (markerLayer) markerLayer.clearLayers();
+    if (previewLayer && map?.hasLayer(previewLayer)) map.removeLayer(previewLayer);
+    previewLayer = null;
   }
 
   function disableDrawControl() {
@@ -286,6 +273,7 @@
     if (parentLayer && typeof parentLayer.bringToBack === "function") {
       parentLayer.bringToBack();
     }
+    previewLayer?.bringToFront();
   }
 
   function ringCentroid(ring) {
@@ -349,12 +337,22 @@
   }
 
   function referenciaFromGeom(tipo, coordinates) {
-    if (tipo === "Point") {
-      const [lng, lat] = coordinates;
+    if (tipo === "Point" || tipo === "MultiPoint") {
+      const point = tipo === "Point" ? coordinates : coordinates?.[0];
+      if (!point) return null;
+      const [lng, lat] = point;
       return { lat, lng };
     }
     if (tipo === "Polygon") return polygonCentroid(coordinates);
+    if (tipo === "MultiPolygon") return polygonCentroid(coordinates?.[0]);
     if (tipo === "LineString") return lineMidpoint(coordinates);
+    if (tipo === "MultiLineString") {
+      const longest = (coordinates || []).reduce(
+        (best, line) => line.length > (best?.length || 0) ? line : best,
+        null
+      );
+      return lineMidpoint(longest);
+    }
     return null;
   }
 
@@ -376,58 +374,29 @@
 
     const ref = referenciaFromGeom(geom.tipo, geom.coordinates);
     if (ref) setCoordInputs(ref.lat, ref.lng, { readonly: geom.tipo !== "Point" });
-
-    if (geom.tipo === "Point") {
-      const [lng, lat] = geom.coordinates;
-      const marker = L.marker([lat, lng], { pane: "userGeometryPane" });
-      markerLayer.addLayer(marker);
-      stackUserGeometryAboveParent();
-      fitMapView();
-      setStatus(`Ponto: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-    } else if (geom.tipo === "Polygon") {
-      const latlngs = geom.coordinates[0].map(([lng, lat]) => [lat, lng]);
-      const poly = L.polygon(latlngs, { ...USER_POLY_STYLE, pane: "userGeometryPane" });
-      drawnItems.addLayer(poly);
-      stackUserGeometryAboveParent();
-      fitMapView();
-      const n = geom.coordinates[0].length - 1;
-      if (ref) {
-        const cm = L.circleMarker([ref.lat, ref.lng], {
-          radius: 6,
-          color: "#c0392b",
-          fillColor: "#e74c3c",
-          fillOpacity: 0.9,
-          weight: 2,
-          pane: "userGeometryPane",
-        });
-        markerLayer.addLayer(cm);
-        setStatus(
-          `Perímetro com ${n} vértices. Coordenadas: ${ref.lat.toFixed(5)}, ${ref.lng.toFixed(5)}`
-        );
-      } else {
-        setStatus(`Perímetro importado — ${n} vértices.`);
-      }
-    } else if (geom.tipo === "LineString") {
-      const latlngs = geom.coordinates.map(([lng, lat]) => [lat, lng]);
-      const line = L.polyline(latlngs, { ...USER_LINE_STYLE, pane: "userGeometryPane" });
-      drawnItems.addLayer(line);
-      stackUserGeometryAboveParent();
-      fitMapView();
-      if (ref) {
-        const cm = L.circleMarker([ref.lat, ref.lng], {
-          radius: 6,
-          color: "#c0392b",
-          fillColor: "#e74c3c",
-          fillOpacity: 0.9,
-          weight: 2,
-          pane: "userGeometryPane",
-        });
-        markerLayer.addLayer(cm);
-        setStatus(
-          `Linha com ${geom.coordinates.length} vértices. Coordenadas: ${ref.lat.toFixed(5)}, ${ref.lng.toFixed(5)}`
-        );
-      }
-    }
+    const feature = {
+      type: "Feature",
+      properties: {},
+      geometry: { type: geom.tipo, coordinates: geom.coordinates },
+    };
+    previewLayer = L.geoJSON(feature, {
+      pane: "userGeometryPane",
+      style: (item) => item.geometry.type.includes("Line") ? USER_LINE_STYLE : USER_POLY_STYLE,
+      pointToLayer: (_item, latlng) => L.marker(latlng, { pane: "userGeometryPane" }),
+    }).addTo(map);
+    stackUserGeometryAboveParent();
+    fitMapView();
+    const labels = {
+      Point: "Ponto",
+      MultiPoint: "Pontos",
+      LineString: "Linha",
+      MultiLineString: "Linhas",
+      Polygon: "Polígono",
+      MultiPolygon: "Polígonos",
+    };
+    setStatus(`Prévia carregada: ${labels[geom.tipo] || "geometria"}.`);
+    const confirmButton = document.getElementById("btn-concluir-desenho");
+    if (confirmButton) confirmButton.disabled = metodoGeometria !== "desenhar";
     setError("");
     regionalidades = null;
     notifyAnalysisChange();
@@ -459,58 +428,109 @@
   }
 
   function syncPointFromInputs() {
-    if (modo !== "ponto") return;
+    if (metodoGeometria !== "desenhar" || tipoDesenho !== "Point") return;
     const lat = parseFloat(document.getElementById("lat")?.value);
     const lng = parseFloat(document.getElementById("lng")?.value);
     if (!Number.isNaN(lat) && !Number.isNaN(lng)) setPointFromLatLng(lat, lng);
   }
 
-  function enableMapClick() {
-    disableDrawControl();
-    map.off("click", onMapClick);
-    map.on("click", onMapClick);
-  }
-
-  function onMapClick(e) {
-    if (modo !== "ponto") return;
-    setPointFromLatLng(e.latlng.lat, e.latlng.lng);
-  }
-
-  function enableDrawMarker() {
-    map.off("click", onMapClick);
-    disableDrawControl();
-    drawControl = new L.Draw.Marker(map, {
-      shapeOptions: { color: "#116593", pane: "userGeometryPane" },
-    });
-    drawControl.enable();
-  }
-
-  function setModo(novo) {
-    modo = novo;
+  function clearGeometry() {
     geometria = null;
+    arquivoOriginal = null;
     disableDrawControl();
     clearLayers();
     clearCoordInputs();
-    const upload = document.getElementById("upload-perimetro");
+    const upload = document.getElementById("upload-geometria");
     if (upload) upload.value = "";
+    const fileName = document.getElementById("geometry-file-name");
+    if (fileName) {
+      fileName.textContent = "";
+      fileName.classList.add("hidden");
+    }
+    const confirmButton = document.getElementById("btn-concluir-desenho");
+    if (confirmButton) confirmButton.disabled = true;
     setError("");
     resetAnalise();
     setStatus(
       parentFc?.features?.length
-        ? "Indique a localização no mapa. A área tracejada laranja é a abrangência do vínculo."
-        : "Nenhuma geometria definida."
+        ? "Indique a localização. A área tracejada laranja é a abrangência do vínculo."
+        : "Localização ainda não definida."
     );
-
-    const blocoPonto = document.getElementById("bloco-ponto");
-    const blocoPerimetro = document.getElementById("bloco-perimetro");
-    blocoPonto?.classList.toggle("hidden", modo !== "ponto");
-    blocoPerimetro?.classList.toggle("hidden", modo !== "perimetro");
-
-    document.getElementById("btn-modo-ponto")?.classList.toggle("active", modo === "ponto");
-    document.getElementById("btn-modo-perimetro")?.classList.toggle("active", modo === "perimetro");
-
-    if (modo === "ponto") enableMapClick();
     fitMapView();
+  }
+
+  function updateDrawControls() {
+    const isPoint = tipoDesenho === "Point";
+    const pointControls = document.getElementById("geometry-point-coordinates");
+    pointControls?.classList.toggle("hidden", metodoGeometria !== "desenhar" || !isPoint);
+    const showTools = metodoGeometria === "upload" || ferramentasAtivas;
+    document.getElementById("geometry-map-tools")?.classList.toggle("hidden", !showTools);
+    document.getElementById("btn-nova-geometria")?.classList.toggle("hidden", metodoGeometria !== "desenhar");
+    document.getElementById("btn-concluir-desenho")?.classList.toggle("hidden", metodoGeometria !== "desenhar");
+    document.getElementById("btn-iniciar-desenho")?.setAttribute("aria-expanded", String(ferramentasAtivas));
+    clearCoordInputs();
+  }
+
+  function setGeometryType(type) {
+    if (!["Point", "LineString", "Polygon"].includes(type)) return;
+    tipoDesenho = type;
+    document.querySelectorAll("[data-geometria-tipo]").forEach((button) => {
+      const active = button.dataset.geometriaTipo === type;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    updateDrawControls();
+    if (metodoGeometria === "desenhar") {
+      clearGeometry();
+    }
+  }
+
+  function setGeometrySource(method) {
+    metodoGeometria = method === "upload" || method === "desenhar" ? method : "";
+    ferramentasAtivas = false;
+    document.getElementById("geometry-upload-panel")?.classList.toggle("hidden", metodoGeometria !== "upload");
+    document.getElementById("geometry-draw-panel")?.classList.toggle("hidden", metodoGeometria !== "desenhar");
+    document.getElementById("geometry-map-section")?.classList.toggle("hidden", !metodoGeometria);
+    clearGeometry();
+    updateDrawControls();
+    if (metodoGeometria) {
+      requestAnimationFrame(() => {
+        map.invalidateSize({ pan: false });
+        renderParentReference();
+        fitMapView();
+      });
+    }
+  }
+
+  function startGeometryDrawing() {
+    if (metodoGeometria !== "desenhar" || !ferramentasAtivas) return;
+    clearGeometry();
+    if (tipoDesenho === "Point") {
+      drawControl = new L.Draw.Marker(map);
+    } else if (tipoDesenho === "LineString") {
+      drawControl = new L.Draw.Polyline(map, { shapeOptions: USER_LINE_STYLE });
+    } else {
+      drawControl = new L.Draw.Polygon(map, { shapeOptions: USER_POLY_STYLE });
+    }
+    drawControl.enable();
+    document.getElementById("btn-concluir-desenho").disabled = tipoDesenho === "Point";
+  }
+
+  function confirmGeometry() {
+    if (metodoGeometria !== "desenhar") return;
+    if (drawControl && tipoDesenho !== "Point") {
+      const vertices = drawControl._markers?.length || 0;
+      if (vertices < (tipoDesenho === "Polygon" ? 3 : 2)) {
+        setError(tipoDesenho === "Polygon" ? "Marque ao menos três vértices para o polígono." : "Marque ao menos dois vértices para a linha.");
+        return;
+      }
+      drawControl.completeShape();
+    }
+    if (!geometria) return;
+    disableDrawControl();
+    document.getElementById("btn-concluir-desenho").disabled = true;
+    setError("");
+    setStatus("Geometria confirmada.");
   }
 
   async function parseUpload(file) {
@@ -520,7 +540,11 @@
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.detail || "Falha ao processar arquivo.");
     const geom = body.geojson?.geometry || { type: body.tipo, coordinates: body.coordinates };
+    arquivoOriginal = file;
     applyGeometria(buildGeometriaPayload(geom.type, geom.coordinates));
+    map.stop();
+    map.invalidateSize({ pan: false });
+    map.fitBounds(previewLayer.getBounds(), { padding: [24, 24], maxZoom: 18, animate: false });
     setError("");
   }
 
@@ -535,9 +559,6 @@
       maxZoom: 19,
     }).addTo(map);
 
-    drawnItems = new L.FeatureGroup().addTo(map);
-    markerLayer = new L.FeatureGroup().addTo(map);
-
     const mapElement = document.getElementById("map");
     if (global.ResizeObserver && mapElement) {
       const resizeObserver = new ResizeObserver(() => {
@@ -549,56 +570,50 @@
     setTimeout(() => map.invalidateSize({ pan: false }), 0);
 
     map.on(L.Draw.Event.CREATED, (e) => {
-      if (!(e.layer instanceof L.Marker)) return;
-      const ll = e.layer.getLatLng();
       if (e.layer._map) e.layer._map.removeLayer(e.layer);
       disableDrawControl();
-      setPointFromLatLng(ll.lat, ll.lng);
-      enableMapClick();
+      const drawn = e.layer.toGeoJSON().geometry;
+      applyGeometria(buildGeometriaPayload(drawn.type, drawn.coordinates));
     });
 
     document.getElementById("lat")?.addEventListener("change", syncPointFromInputs);
     document.getElementById("lng")?.addEventListener("change", syncPointFromInputs);
-
-    document.getElementById("btn-apontar-mapa")?.addEventListener("click", enableDrawMarker);
-
-    document.getElementById("btn-limpar-mapa")?.addEventListener("click", () => {
-      geometria = null;
-      clearLayers();
-      clearCoordInputs();
-      document.getElementById("upload-perimetro").value = "";
-      resetAnalise();
-      setStatus(
-        parentFc?.features?.length
-          ? "Indique a localização no mapa. A área tracejada laranja é a abrangência do vínculo."
-          : "Localização ainda não definida."
-      );
-      setError("");
-      fitMapView();
-      if (modo === "ponto") enableMapClick();
+    document.querySelectorAll('input[name="geometry-method"]').forEach((input) => {
+      input.addEventListener("change", (event) => setGeometrySource(event.target.value));
     });
+    document.querySelectorAll("[data-geometria-tipo]").forEach((button) => {
+      button.addEventListener("click", () => setGeometryType(button.dataset.geometriaTipo));
+    });
+    document.getElementById("btn-iniciar-desenho")?.addEventListener("click", () => {
+      ferramentasAtivas = true;
+      document.getElementById("geometry-map-tools")?.classList.remove("hidden");
+      document.getElementById("btn-iniciar-desenho")?.setAttribute("aria-expanded", "true");
+    });
+    document.getElementById("btn-nova-geometria")?.addEventListener("click", startGeometryDrawing);
+    document.getElementById("btn-concluir-desenho")?.addEventListener("click", confirmGeometry);
+    document.getElementById("btn-limpar-mapa")?.addEventListener("click", clearGeometry);
 
-    document.getElementById("upload-perimetro")?.addEventListener("change", async (e) => {
+    document.getElementById("upload-geometria")?.addEventListener("change", async (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
       setError("");
       setStatus("Processando arquivo…");
       try {
         await parseUpload(file);
+        const fileName = document.getElementById("geometry-file-name");
+        if (fileName) {
+          fileName.textContent = `Arquivo: ${file.name}`;
+          fileName.classList.remove("hidden");
+        }
       } catch (err) {
-        geometria = null;
-        clearLayers();
-        clearCoordInputs();
-        resetAnalise();
+        clearGeometry();
         setStatus("Localização ainda não definida.");
         setError(err.message);
       }
     });
 
-    document.getElementById("btn-modo-ponto")?.addEventListener("click", () => setModo("ponto"));
-    document.getElementById("btn-modo-perimetro")?.addEventListener("click", () => setModo("perimetro"));
-
-    setModo("ponto");
+    setGeometryType("Point");
+    setGeometrySource("");
     renderParentReference();
   }
 
@@ -613,6 +628,10 @@
 
   function getGeometria() {
     return geometria;
+  }
+
+  function getArquivoOriginal() {
+    return arquivoOriginal;
   }
 
   function getCoordenadas() {
@@ -632,9 +651,10 @@
     init,
     invalidateSize,
     getGeometria,
+    getArquivoOriginal,
     getCoordenadas,
     hasLocalizacaoValida,
-    setModo,
+    setModo: setGeometrySource,
     setParentReference,
     clearParentReference,
     isOutsideParent,

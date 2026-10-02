@@ -71,7 +71,7 @@ WITH user_g AS (
 user_geom AS (
     SELECT ST_MakeValid(
         CASE
-            WHEN ST_GeometryType(src) IN ('ST_Point', 'ST_LineString')
+            WHEN ST_GeometryType(src) IN ('ST_Point', 'ST_MultiPoint', 'ST_LineString', 'ST_MultiLineString')
                 THEN ST_Buffer(src::geography, 1)::geometry
             ELSE src
         END
@@ -171,7 +171,8 @@ _LOCATE_SQL = """
 WITH user_geom AS (
     SELECT ST_MakeValid(
         CASE
-            WHEN ST_GeometryType(ST_SetSRID(ST_GeomFromGeoJSON(%(geom)s::text), 4326)) IN ('ST_Point', 'ST_LineString')
+              WHEN ST_GeometryType(ST_SetSRID(ST_GeomFromGeoJSON(%(geom)s::text), 4326))
+                  IN ('ST_Point', 'ST_MultiPoint', 'ST_LineString', 'ST_MultiLineString')
                 THEN ST_Buffer(ST_SetSRID(ST_GeomFromGeoJSON(%(geom)s::text), 4326)::geography, 1)::geometry
             ELSE ST_SetSRID(ST_GeomFromGeoJSON(%(geom)s::text), 4326)
         END

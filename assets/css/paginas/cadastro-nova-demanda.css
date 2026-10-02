@@ -179,10 +179,187 @@
   font-size: var(--font-control);
 }
 
+.geometry-source-selector {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.geometry-source-selector legend {
+  margin-bottom: 0.65rem;
+  color: var(--pli-deep);
+  font-size: var(--font-subsection);
+  font-weight: 700;
+}
+
+.geometry-source-options {
+  --geometry-column-gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--geometry-column-gap);
+}
+
+.geometry-source-card {
+  display: flex;
+  min-height: 5.5rem;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  border: 1px solid var(--pli-border);
+  border-radius: var(--pli-radius);
+  background: var(--pli-white);
+  cursor: pointer;
+}
+
+.geometry-source-card:has(input:checked) {
+  border-color: var(--pli-blue);
+  box-shadow: inset 0 0 0 1px var(--pli-blue);
+}
+
+.geometry-source-card input {
+  flex: 0 0 auto;
+  margin: 0.2rem 0 0;
+  accent-color: var(--pli-blue);
+}
+
+.geometry-source-copy {
+  display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  gap: 0.3rem;
+}
+
+.geometry-source-copy strong {
+  color: var(--pli-deep);
+  font-size: var(--font-control);
+}
+
+.geometry-source-copy > span {
+  color: var(--pli-muted);
+  font-size: var(--font-help);
+}
+
+.geometry-draw-controls {
+  display: grid;
+  justify-items: start;
+  gap: 0.65rem;
+}
+
+.geometry-draw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.geometry-control-label {
+  color: var(--pli-deep);
+  font-size: var(--font-control);
+  font-weight: 600;
+}
+
+.geometry-type-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  max-width: 25rem;
+  gap: 0.4rem;
+}
+
+.cadastro-page .geometry-type-selector .btn {
+  min-width: 0;
+  padding: 0.55rem 0.45rem;
+  white-space: nowrap;
+}
+
+.geometry-type-selector .btn[aria-pressed="true"] {
+  background: var(--pli-blue);
+  border-color: var(--pli-blue);
+  color: var(--pli-white);
+}
+
+.cadastro-page .geometry-point-coordinates {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.8rem;
+}
+
+.geometry-point-coordinates > div,
+.geometry-point-coordinates input {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.geometry-draw-actions {
+  margin-top: 0.8rem;
+}
+
+.geometry-draw-actions .field-help {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+#geometry-map-section .map-toolbar {
+  justify-content: flex-start;
+  margin-bottom: 0.65rem;
+}
+
+.geometry-map-tools {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.cadastro-page .geometry-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border-radius: 4px;
+}
+
+.geometry-icon-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#geometry-file-name {
+  overflow-wrap: anywhere;
+}
+
 .tipo-demandante-selector {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
+}
+
+@media (max-width: 600px) {
+  .geometry-source-options {
+    --geometry-column-gap: 0.5rem;
+  }
+
+  .cadastro-page .geometry-point-coordinates {
+    gap: 0.5rem;
+  }
+
+  .geometry-source-card {
+    padding: 0.55rem;
+    gap: 0.4rem;
+  }
+
+  .geometry-type-selector {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.35fr);
+    gap: 0.25rem;
+  }
+
+  .cadastro-page .geometry-type-selector .btn {
+    padding-inline: 0.1rem;
+  }
 }
 
 .demandante-card {

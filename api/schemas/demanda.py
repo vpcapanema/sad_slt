@@ -14,7 +14,7 @@ class RepresentanteSchema(BaseModel):
 
 
 class GeometriaSchema(BaseModel):
-    tipo: str = Field(..., description="Point, LineString ou Polygon")
+    tipo: str = Field(..., description="Point, MultiPoint, LineString, MultiLineString, Polygon ou MultiPolygon")
     coordinates: Any
 
 

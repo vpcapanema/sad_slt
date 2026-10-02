@@ -11,8 +11,10 @@ import re
 import unicodedata
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
+from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response
 from psycopg import sql
 from psycopg.types.json import Jsonb
 
@@ -259,6 +261,42 @@ def listar_esquemas(_user: SessionUser = Depends(require_admin)) -> dict[str, An
                 })
             resultado.append({"esquema": esquema, "tabelas": tabelas})
     return {"esquemas": resultado}
+
+
+@router.get("/tabelas/demandas/demanda_arquivo_geometria_upload/{arquivo_id}/download")
+def baixar_arquivo_geometria_upload(
+    arquivo_id: str,
+    _user: SessionUser = Depends(require_admin),
+) -> Response:
+    """Baixa, somente para administradores, o arquivo vetorial original enviado."""
+    try:
+        arquivo_uuid = UUID(arquivo_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Arquivo de geometria não encontrado.") from exc
+
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT nome_arquivo, tipo_mime, conteudo_binario
+            FROM demandas.demanda_arquivo_geometria_upload
+            WHERE id = %s
+            """,
+            (arquivo_uuid,),
+        ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Arquivo de geometria não encontrado.")
+
+    nome = str(row["nome_arquivo"])
+    fallback = re.sub(r"[^A-Za-z0-9._-]", "_", nome).strip("._") or "geometria"
+    return Response(
+        content=bytes(row["conteudo_binario"]),
+        media_type=row["tipo_mime"] or "application/octet-stream",
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(nome, safe='')}" ,
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.get("/tabelas/{esquema}/{tabela}")

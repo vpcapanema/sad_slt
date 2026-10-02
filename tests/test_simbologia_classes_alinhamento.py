@@ -43,7 +43,6 @@ def test_linhas_de_classe_tem_modificador_por_tipo():
 
 
 def test_celulas_do_intervalo_tem_largura_fixa():
-    bloco = CSS.split(".sym-class-range{", 1)[1]
     assert "flex:0 0 auto;width:158px" in CSS.split(".sym-class-range{", 1)[1][:80]
     assert ".sym-class-range>:nth-child(1){flex:0 0 56px" in CSS
     assert ".sym-class-range>:nth-child(3){flex:0 0 82px" in CSS

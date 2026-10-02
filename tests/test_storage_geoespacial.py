@@ -132,20 +132,23 @@ def test_pagina_renomeada_e_rota_antiga_redireciona():
 
 
 def test_listagem_rapida_nao_abre_arquivos_nem_pacotes(storage, monkeypatch):
-    (storage/'base-geoespacial/vetor/pacote.zip').write_bytes(b'conteudo-nao-lido')
+    (storage / 'base-geoespacial/vetor/pacote.zip').write_bytes(b'conteudo-nao-lido')
+
     def proibido(*args):
         pytest.fail('Navegar não deve abrir ou descompactar arquivos')
-    monkeypatch.setattr(storage_geoespacial,'_itens_do_arquivo',proibido)
-    lista=storage_geoespacial.navegar('base-geoespacial/vetor',detalhar=False)
-    assert len(lista['arquivos'])==3
+
+    monkeypatch.setattr(storage_geoespacial, '_itens_do_arquivo', proibido)
+    lista = storage_geoespacial.navegar('base-geoespacial/vetor', detalhar=False)
+    assert len(lista['arquivos']) == 3
     assert all(a['inventariar'] for a in lista['arquivos'])
-    assert {a['arquivo'].split('/')[-1] for a in lista['arquivos']}=={'duas.gpkg','uf_sp.gpkg','pacote.zip'}
+    assert {a['arquivo'].split('/')[-1] for a in lista['arquivos']} == {'duas.gpkg', 'uf_sp.gpkg', 'pacote.zip'}
 
 
 def test_inventario_somente_do_arquivo_confirmado(storage):
-    result=storage_geoespacial.inventariar_arquivo('base-geoespacial/vetor/duas.gpkg')
-    assert [c['camada'] for c in result['camadas']]==['rios','lagos']
-    with pytest.raises(ValueError):storage_geoespacial.inventariar_arquivo('../segredo.gpkg')
+    result = storage_geoespacial.inventariar_arquivo('base-geoespacial/vetor/duas.gpkg')
+    assert [c['camada'] for c in result['camadas']] == ['rios', 'lagos']
+    with pytest.raises(ValueError):
+        storage_geoespacial.inventariar_arquivo('../segredo.gpkg')
 
 
 @pytest.fixture
