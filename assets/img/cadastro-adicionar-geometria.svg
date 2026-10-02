@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="1056"
+   height="1056"
+   viewBox="480 12 1056 1056"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="adicionar_editar-botao_PRONTO.svg"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <defs
+     id="defs5" />
+  <sodipodi:namedview
+     id="namedview5"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.56157407"
+     inkscape:cx="532.43199"
+     inkscape:cy="577.84007"
+     inkscape:window-width="2560"
+     inkscape:window-height="1494"
+     inkscape:window-x="-11"
+     inkscape:window-y="-11"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg5" />
+  <title
+     id="title1">adicionar editar — azul escuro acinzentado</title>
+  <g
+     fill="none"
+     stroke="#3d4b5c"
+     stroke-width="0.74"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     id="g3"
+     transform="matrix(13.441223,0,0,16.257488,774.37483,301.33026)"
+     style="fill:#3d4b5c;fill-opacity:0.14;stroke-width:1.02271;stroke-dasharray:none">
+    <g
+       id="g6"
+       style="fill:#3d4b5c;fill-opacity:0.14;stroke-width:1.02271;stroke-dasharray:none">
+      <path
+         d="M 2,9 9.0189613,19.570486 23.018961,6.5704864 M 8.9979754,19.559684 16.979014,27.811127"
+         id="path2-0"
+         style="display:inline;fill:#3d4b5c;fill-opacity:0.14;stroke-width:1.02271;stroke-dasharray:none"
+         sodipodi:nodetypes="ccccc" />
+      <path
+         d="m 2,2 h 32 l 0.05936,4.4074608 -10.862325,0.015045 0.178071,5.9657872 1.929101,8.176628 4.065953,3.84357 L 34,28 H 2 Z"
+         id="path3-9"
+         style="display:inline;fill:#3d4b5c;fill-opacity:0.14;stroke-width:1.02271;stroke-dasharray:none"
+         sodipodi:nodetypes="cccccccccc" />
+    </g>
+  </g>
+  <g
+     fill="#3d4b5c"
+     id="g5"
+     transform="matrix(24.037638,0,0,26.75762,647.52234,106.27111)"
+     style="display:none">
+    <circle
+       cx="11.132729"
+       cy="9.6529264"
+       r="2.05"
+       id="circle3" />
+    <circle
+       cx="5.963726"
+       cy="23.314922"
+       r="2.05"
+       id="circle4" />
+    <circle
+       cx="20.589447"
+       cy="22.730421"
+       r="2.05"
+       id="circle5" />
+  </g>
+  <rect
+     x="506.44937"
+     y="38.449368"
+     width="1003.1013"
+     height="1003.1013"
+     rx="123.8924"
+     fill="none"
+     stroke="#3d4b5c"
+     stroke-width="22.2152"
+     id="rect1" />
+  <g
+     fill="none"
+     stroke="#3d4b5c"
+     stroke-width="27"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     id="g4"
+     transform="matrix(0.46893716,0,0,0.49924912,1008.0508,-124.73165)"
+     style="stroke-width:31.2451;stroke-dasharray:none;stroke:#004be3;stroke-opacity:1">
+    <path
+       d="M 486,380 V 655 M 347,518 h 276"
+       id="path2"
+       style="stroke-width:31.2451;stroke-dasharray:none;stroke:#004be3;stroke-opacity:1" />
+    <g
+       id="g7"
+       style="opacity:1;fill:none;fill-opacity:0.15;stroke-width:31.2451;stroke-dasharray:none;stroke:#004be3;stroke-opacity:1">
+      <path
+         d="M 524,768 812,474 q 32,-29 63,0 l 41,42 q 29,32 0,62 L 631,873 499,903 Z"
+         id="path3"
+         style="display:inline;fill:none;fill-opacity:0.15;stroke-width:31.2451;stroke-dasharray:none;stroke:#004be3;stroke-opacity:1" />
+      <path
+         d="M 784,505 888,611 M 524,768 631,873 M 624,770 766,628"
+         id="path4"
+         style="display:inline;fill:none;fill-opacity:0.15;stroke-width:31.2451;stroke-dasharray:none;stroke:#004be3;stroke-opacity:1" />
+    </g>
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer4"
+     inkscape:label="POLIGONO" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>adicionar editar — azul escuro acinzentado</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>

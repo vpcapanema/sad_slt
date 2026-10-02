@@ -10,6 +10,9 @@
   let arquivoOriginal = null;
   let ferramentasAtivas = false;
   let geometryState = "finalizada";
+  let editControl = null;
+  let editingLayer = null;
+  const SAO_PAULO_BOUNDS = [[-25.32, -53.12], [-19.78, -44.16]];
 
   const PARENT_STYLE = {
     color: "#b45309",
@@ -26,7 +29,8 @@
   function userGeometryStyle() {
     const statusStyle = global.SLTStatusColors.leafletPathStyle("analise_em_avaliacao", "demanda", "projeto");
     const color = geometryState === "selecionada" ? SKETCH_COLORS.selected
-      : geometryState === "invalida" ? SKETCH_COLORS.error : statusStyle.color;
+      : geometryState === "invalida" ? SKETCH_COLORS.error
+      : geometryState === "edicao" ? SKETCH_COLORS.line : statusStyle.color;
     return { ...statusStyle, color, fillColor: color, weight: GEOMETRY_WEIGHT, fillOpacity: POLYGON_FILL_OPACITY };
   }
 
@@ -184,7 +188,7 @@
     const boxes = collectUserBounds();
     if (!boxes.length && parentBounds?.isValid()) boxes.push(parentBounds);
     if (!boxes.length) {
-      map.setView([-22.5, -48.5], 7);
+      homeMapView();
       return;
     }
     // extend() altera o objeto; copiar evita que parentBounds acumule extensões antigas.
@@ -271,6 +275,7 @@
   }
 
   function clearLayers() {
+    cancelGeometryEditing();
     if (previewLayer && map?.hasLayer(previewLayer)) map.removeLayer(previewLayer);
     previewLayer = null;
   }
@@ -280,6 +285,57 @@
       drawControl.disable();
       drawControl = null;
     }
+    map?.getContainer().classList.remove("is-geometry-drawing");
+  }
+
+  function cancelGeometryEditing() {
+    if (editControl) {
+      editControl.revertLayers();
+      editControl.disable();
+      editControl = null;
+      editingLayer = null;
+    }
+    map?.getContainer().classList.remove("is-geometry-editing");
+  }
+
+  function startGeometryEditing(layer) {
+    if (drawControl || editControl || !layer?.editing) return;
+    ferramentasAtivas = true;
+    editingLayer = layer;
+    editControl = new L.EditToolbar.Edit(map, {
+      featureGroup: L.featureGroup([layer]),
+      poly: { allowIntersection: false },
+      selectedPathOptions: { color: SKETCH_COLORS.line, fillColor: SKETCH_COLORS.line, weight: GEOMETRY_WEIGHT, opacity: 1, fillOpacity: POLYGON_FILL_OPACITY },
+    });
+    map.getContainer().classList.add("is-geometry-editing");
+    setGeometryState("edicao");
+    editControl.enable();
+    document.getElementById("btn-concluir-desenho").disabled = false;
+    setError("");
+  }
+
+  function finishGeometryEditing() {
+    if (editingLayer?.intersects?.()) {
+      setGeometryState("invalida");
+      setError("A geometria contém arestas que se cruzam. Corrija os vértices antes de concluir.");
+      return false;
+    }
+    const features = previewLayer.toGeoJSON().features;
+    const type = features[0].geometry.type;
+    const coordinates = features.map((feature) => feature.geometry.coordinates);
+    const payload = buildGeometriaPayload(features.length === 1 ? type : `Multi${type}`, features.length === 1 ? coordinates[0] : coordinates);
+    editControl.save();
+    editControl.disable();
+    editControl = null;
+    editingLayer = null;
+    map.getContainer().classList.remove("is-geometry-editing");
+    arquivoOriginal = null;
+    const fileName = document.getElementById("geometry-file-name");
+    if (fileName) fileName.classList.add("hidden");
+    applyGeometria(payload);
+    document.getElementById("btn-concluir-desenho").disabled = true;
+    setStatus("Geometria confirmada.");
+    return true;
   }
 
   /** Ordem visual: panes (user 450 > parent 350) + referência do vínculo ao fundo. */
@@ -389,11 +445,12 @@
 
     const ref = referenciaFromGeom(geom.tipo, geom.coordinates);
     if (ref) setCoordInputs(ref.lat, ref.lng, { readonly: geom.tipo !== "Point" });
-    const feature = {
-      type: "Feature",
-      properties: {},
-      geometry: { type: geom.tipo, coordinates: geom.coordinates },
-    };
+    const isMultiple = geom.tipo.startsWith("Multi");
+    const parts = isMultiple ? geom.coordinates : [geom.coordinates];
+    const feature = { type: "FeatureCollection", features: parts.map((coordinates) => ({
+      type: "Feature", properties: {},
+      geometry: { type: geom.tipo.replace(/^Multi/, ""), coordinates },
+    })) };
     previewLayer = L.geoJSON(feature, {
       pane: "userGeometryPane",
       bubblingMouseEvents: false,
@@ -402,7 +459,11 @@
     }).addTo(map);
     previewLayer.on("click", (event) => {
       L.DomEvent.stopPropagation(event.originalEvent);
-      setGeometryState("selecionada");
+      if (!drawControl && !editControl) setGeometryState("selecionada");
+    });
+    previewLayer.on("dblclick", (event) => {
+      L.DomEvent.stopPropagation(event.originalEvent);
+      startGeometryEditing(event.layer || event.propagatedFrom);
     });
     stackUserGeometryAboveParent();
     fitMapView();
@@ -546,6 +607,7 @@
 
   function startGeometryDrawing() {
     if (metodoGeometria !== "desenhar" || !ferramentasAtivas) return;
+    if (editControl && !finishGeometryEditing()) return;
     if (geometria && geometria.tipo.replace(/^Multi/, "") !== tipoDesenho) {
       setError("Adicione geometrias do mesmo tipo. Para mudar de tipo, limpe a geometria existente.");
       return;
@@ -574,10 +636,15 @@
       }
     }
     drawControl.enable();
+    map.getContainer().classList.add("is-geometry-drawing");
     document.getElementById("btn-concluir-desenho").disabled = tipoDesenho === "Point";
   }
 
   function confirmGeometry() {
+    if (editControl) {
+      finishGeometryEditing();
+      return;
+    }
     if (metodoGeometria !== "desenhar") return;
     if (drawControl && tipoDesenho !== "Point") {
       const vertices = drawControl._markers?.length || 0;
@@ -665,8 +732,39 @@
     updateHeight();
   }
 
+  function homeMapView() {
+    if (!map) return;
+    map.stop();
+    map.fitBounds(SAO_PAULO_BOUNDS, { padding: [24, 24], animate: false });
+  }
+
+  function addHomeControl() {
+    const HomeControl = L.Control.extend({
+      options: { position: "topleft" },
+      onAdd() {
+        const container = L.DomUtil.create("div", "leaflet-bar geometry-map-home");
+        const button = L.DomUtil.create("button", "geometry-map-home-button", container);
+        button.type = "button";
+        button.title = "Centralizar no estado de São Paulo";
+        button.setAttribute("aria-label", button.title);
+        button.innerHTML = '<i class="fas fa-house" aria-hidden="true"></i>';
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.disableScrollPropagation(container);
+        L.DomEvent.on(button, "click", (event) => {
+          L.DomEvent.stop(event);
+          homeMapView();
+        });
+        return container;
+      },
+    });
+    const control = new HomeControl().addTo(map);
+    const zoom = map.zoomControl.getContainer();
+    zoom.parentNode.insertBefore(control.getContainer(), zoom);
+  }
+
   function init() {
-    map = L.map("map").setView([-22.5, -48.5], 7);
+    map = L.map("map", { doubleClickZoom: false }).setView([-22.5, -48.5], 7);
+    addHomeControl();
     map.createPane("parentReferencePane");
     map.getPane("parentReferencePane").style.zIndex = 350;
     map.createPane("userGeometryPane");
@@ -698,7 +796,26 @@
       setError("");
     });
     map.on("click", () => {
-      if (!drawControl && geometryState === "selecionada") setGeometryState("finalizada");
+      if (!drawControl && !editControl && geometryState === "selecionada") setGeometryState("finalizada");
+    });
+    mapElement.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      if (drawControl || editControl) confirmGeometry();
+    });
+    for (const type of ["mousedown", "mouseup", "pointerdown", "pointerup"]) {
+      mapElement.addEventListener(type, (event) => {
+        if (event.button !== 2 || (!drawControl && !editControl)) return;
+        event.preventDefault();
+        event.stopPropagation();
+      }, true);
+    }
+    map.on("dragstart", () => map.getContainer().classList.add("is-panning"));
+    map.on("dragend", () => map.getContainer().classList.remove("is-panning"));
+    map.on(L.Draw.Event.EDITVERTEX, () => {
+      if (editControl && !editingLayer?.intersects?.()) {
+        setGeometryState("edicao");
+        setError("");
+      }
     });
 
     document.getElementById("lat")?.addEventListener("change", syncPointFromInputs);

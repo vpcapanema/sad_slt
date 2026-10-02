@@ -354,6 +354,59 @@
   box-sizing: border-box;
 }
 
+.cadastro-page #map.leaflet-container {
+  cursor: help;
+}
+
+.cadastro-page #map .leaflet-interactive {
+  cursor: pointer;
+}
+
+.cadastro-page #map.is-geometry-drawing,
+.cadastro-page #map.is-geometry-editing,
+.cadastro-page #map.is-geometry-editing .leaflet-interactive {
+  cursor: crosshair;
+}
+
+.cadastro-page #map.is-panning,
+.cadastro-page #map.is-panning * {
+  cursor: grabbing !important;
+}
+
+.cadastro-page #map.is-geometry-editing .leaflet-editing-icon {
+  width: 8px !important;
+  height: 8px !important;
+  margin-left: -4px !important;
+  margin-top: -4px !important;
+  background: #ffffff;
+  border: 2px solid #ff0000;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+.geometry-map-home-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: #ffffff;
+  color: #333333;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.geometry-map-home-button:hover {
+  background: #f4f4f4;
+}
+
+.geometry-map-home-button:focus-visible {
+  outline: 2px solid var(--pli-blue);
+  outline-offset: -2px;
+}
+
 .cadastro-page #map .geometry-sketch-vertex:hover {
   border-color: #a00000;
 }
@@ -372,7 +425,40 @@
   width: 2.5rem;
   height: 2.5rem;
   padding: 0;
+  border: 1px solid #cbd5df;
+  background: #ffffff;
+  color: #3d4b5c;
+  font-size: 1.35rem;
   border-radius: 4px;
+}
+
+.cadastro-page .geometry-icon-button:hover:not(:disabled) {
+  background: #edf2f7;
+  border-color: #8294a8;
+  filter: none;
+}
+
+.geometry-button-symbol {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  pointer-events: none;
+}
+
+.geometry-button-symbol .geometry-button-badge {
+  position: absolute;
+  right: -0.25rem;
+  bottom: -0.2rem;
+  display: grid;
+  place-items: center;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 2px;
+  background: #ffffff;
+  color: #1764c0;
+  font-size: 0.65rem;
 }
 
 .geometry-icon-button:disabled {
