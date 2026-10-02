@@ -9,12 +9,15 @@ from api.services.calculo_campo import calcular
 
 @pytest.fixture
 def frame():
-    return gpd.GeoDataFrame({'valor': [2, 4, 8], 'grupo': ['A', 'A', 'B']},
-                           geometry=[Point(i, 0) for i in range(3)], crs=4326)
+    return gpd.GeoDataFrame(
+        {'valor': [2, 4, 8], 'grupo': ['A', 'A', 'B']},
+        geometry=[Point(i, 0) for i in range(3)],
+        crs=4326,
+    )
 
 
 def test_selecao_e_filtro_intersectam_sem_alterar_demais(frame):
-    result, count = calcular(frame, 'valor', 'valor * 10', ['b', 'c'], "grupo == 'A'", ['a', 'b', 'c'])
+    result, count = calcular(frame, 'valor', 'valor * 10', ['1', '2'], "grupo == 'A'", ['0', '1', '2'])
     assert count == 1
     assert result.valor.tolist() == [2, 40, 8]
     assert frame.valor.tolist() == [2, 4, 8]
@@ -43,17 +46,31 @@ def test_arquivo_calcula_e_grava_original_com_revisao(frame, monkeypatch):
     source = {'id': 'storage:base-geoespacial/a.geojson', 'arquivo': 'base-geoespacial/a.geojson',
               'revisao': 'r1', 'crs_arquivo': 'EPSG:4326', 'geojson': frame.__geo_interface__}
     seen = {}
+
     def abrir(arquivo, revisao, camada):
         assert (arquivo, revisao, camada) == (source['arquivo'], 'r1', source['id'])
         return source
-    def persistir(original, result, data, user):
+
+    def persistir(original, result, data, user, incluir_geojson):
         seen['frame'] = result
         assert original is source
+        assert user.id == 1
+        assert data is source['geojson']
+        assert incluir_geojson is True
         return {**source, 'revisao': 'r2'}
+
     monkeypatch.setattr(service, 'abrir', abrir)
     monkeypatch.setattr(service, '_persistir', persistir)
-    result = service.calcular_campo(source['arquivo'], 'r1', 'valor', 'valor * 3', SimpleNamespace(id=1),
-                                    source['id'], ['1'], "grupo == 'A'")
+    result = service.calcular_campo(
+        arquivo=source['arquivo'],
+        revisao='r1',
+        campo='valor',
+        expressao='valor * 3',
+        user=SimpleNamespace(id=1),
+        camada_id=source['id'],
+        chaves_selecionadas=['1'],
+        filtro="grupo == 'A'",
+    )
     assert result['revisao'] == 'r2'
     assert result['feicoes_atualizadas'] == 1
     assert seen['frame'].valor.tolist() == [2, 12, 8]

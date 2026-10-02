@@ -41,12 +41,16 @@ def test_lote_metricas_ranking_e_pacotes(tmp_path):
     assert len(res['camadas']['entrada_1_pontos'])==4
     snap=snapshot_saida(res['camadas'])
     data=consultar(snap)
-    assert data['resumo']['feicoes']==4 # dois códigos em pontos, um em linhas e um em polígonos
-    a=next(i for i in data['linhas'] if i['entrada']=='Pontos' and i['identificador']=='A')
+    assert data['resumo']['feicoes']==6
+    pontos_a=[i for i in data['linhas'] if i['entrada']=='Pontos' and i['identificador']=='A']
+    assert len(pontos_a)==3
+    assert len({i['fid'] for i in pontos_a})==3
+    assert next(i for i in pontos_a if i['fid']==2)['contagens'].get('restricao',0)==0
+    a=next(i for i in pontos_a if i['fid']==0)
     assert a['contagens']['restricao']==1
     rel=a['relacoes']['restricao:base:0']
-    assert rel['pontos']==2 and rel['por_categoria']['Escola']==2
-    assert rel['percentual_entrada']==pytest.approx(200/3)
+    assert rel['pontos']==1 and rel['por_categoria']['Escola']==1
+    assert rel['percentual_entrada']==pytest.approx(100)
     line=next(i for i in data['linhas'] if i['entrada']=='Linhas')
     assert line['contagens']['restricao']==2
     assert line['relacoes']['restricao:base:0']['comprimento_m']==pytest.approx(5)
@@ -111,7 +115,7 @@ def test_categoria_demanda_percorre_algoritmos_saida_e_resultados():
         schema = json.loads(frame.iloc[0]['sicard_esquema'])
         assert schema['campo_categoria_demanda'] == 'categoria'
     result = consultar(snapshot_saida(res['camadas']))
-    for nome, esperado in [('Pontos', 2), ('Linhas', 5), ('Áreas', 50)]:
+    for nome, esperado in [('Pontos', 1), ('Linhas', 5), ('Áreas', 50)]:
         item = next(i for i in result['linhas'] if i['entrada'] == nome and i['identificador'] in ('A', 'P'))
         assert item['relacoes']['restricao:base:0']['por_categoria']['Transporte'] == pytest.approx(esperado)
     entries[0]['config']['categoria_demanda'] = 'inexistente'

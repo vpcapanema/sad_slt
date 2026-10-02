@@ -98,7 +98,7 @@
   "sqltools.disableReleaseNotifications": true,
   "sqltools.languageServer.enabled": true,
   "python.testing.pytestArgs": [
-    "geoespacial"
+    "tests"
   ],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,

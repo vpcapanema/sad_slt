@@ -27,7 +27,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
 $Plink = "C:\Program Files\PuTTY\plink.exe"
-$Key = Join-Path $Root "SRV-SISTEMA-30001480.ppk"
+$Key = Join-Path $Root ".deploy/SRV-SISTEMA-30001480.ppk"
 $HostKey = "SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0"
 $Vm = "ubuntu@56.125.163.194"
 $AppDirVm = "/opt/sicard"

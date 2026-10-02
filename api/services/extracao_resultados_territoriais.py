@@ -181,9 +181,9 @@ def nome_demanda(feature):
         if isinstance(value, str) and value.strip():
             return value.strip(), campo
     value = feature.get('identificador')
-    if not presente(value):
-        value = feature.get('fid')
-    return str(value), None
+    if presente(value):
+        return str(value), 'identificador'
+    return str(feature.get('fid')), 'fid'
 
 
 def consultar(snapshot, *, entrada='', feicao='', categoria='', base='', situacao='', busca='', pagina=0, tamanho=25, atributo='', agrupamento='feicao', filtros=None, combinacao='e'):
@@ -311,7 +311,7 @@ def da_saida(tabelas):
             origin = row.get('camada_origem') or name
             fid = row.get('fid_origem', stored['ordem'])
             codigo = row.get('id_origem')
-            ident = str(codigo) if presente(codigo) else str(fid)
+            ident = str(fid)
             feature = entries.setdefault(origin, {}).setdefault(ident, {
                 'fid': fid, 'identificador': codigo if presente(codigo) else fid, 'atributos': {},
                 'areas': [], 'bases_intersectadas': [], 'relacoes': {}, 'flags': {},
