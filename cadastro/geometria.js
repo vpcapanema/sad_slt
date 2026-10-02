@@ -9,6 +9,7 @@
   let geometria = null;
   let arquivoOriginal = null;
   let ferramentasAtivas = false;
+  let geometryState = "finalizada";
 
   const PARENT_STYLE = {
     color: "#b45309",
@@ -18,8 +19,21 @@
     fillOpacity: 0.14,
   };
 
-  const USER_POLY_STYLE = { color: "#116593", weight: 3, fillOpacity: 0.32, fillColor: "#116593" };
-  const USER_LINE_STYLE = { color: "#116593", weight: 3 };
+  const SKETCH_COLORS = { line: "#008000", selected: "#00ffff", error: "#ff0000" };
+  const GEOMETRY_WEIGHT = 2;
+  const POLYGON_FILL_OPACITY = 0.15;
+
+  function userGeometryStyle() {
+    const statusStyle = global.SLTStatusColors.leafletPathStyle("analise_em_avaliacao", "demanda", "projeto");
+    const color = geometryState === "selecionada" ? SKETCH_COLORS.selected
+      : geometryState === "invalida" ? SKETCH_COLORS.error : statusStyle.color;
+    return { ...statusStyle, color, fillColor: color, weight: GEOMETRY_WEIGHT, fillOpacity: POLYGON_FILL_OPACITY };
+  }
+
+  function setGeometryState(state) {
+    geometryState = state;
+    previewLayer?.setStyle(userGeometryStyle());
+  }
   let spatialOutside = false;
   let lastContainment = null;
   let regionalidades = null;
@@ -358,6 +372,7 @@
 
   function applyGeometria(geom) {
     geometria = geom;
+    geometryState = "finalizada";
     clearLayers();
     if (!geom || !map) {
       resetSpatialAck();
@@ -381,9 +396,14 @@
     };
     previewLayer = L.geoJSON(feature, {
       pane: "userGeometryPane",
-      style: (item) => item.geometry.type.includes("Line") ? USER_LINE_STYLE : USER_POLY_STYLE,
-      pointToLayer: (_item, latlng) => L.marker(latlng, { pane: "userGeometryPane" }),
+      bubblingMouseEvents: false,
+      style: userGeometryStyle,
+      pointToLayer: (_item, latlng) => L.circleMarker(latlng, { ...userGeometryStyle(), radius: 6, pane: "userGeometryPane", bubblingMouseEvents: false }),
     }).addTo(map);
+    previewLayer.on("click", (event) => {
+      L.DomEvent.stopPropagation(event.originalEvent);
+      setGeometryState("selecionada");
+    });
     stackUserGeometryAboveParent();
     fitMapView();
     const labels = {
@@ -415,6 +435,22 @@
       lat: ref?.lat ?? null,
       lng: ref?.lng ?? null,
     };
+  }
+
+  function appendGeometria(tipo, coordinates) {
+    if (!geometria) {
+      applyGeometria(buildGeometriaPayload(tipo, coordinates));
+      return;
+    }
+    const existingType = geometria.tipo.replace(/^Multi/, "");
+    const addedType = tipo.replace(/^Multi/, "");
+    if (existingType !== addedType) {
+      setError("Adicione geometrias do mesmo tipo. Para mudar de tipo, limpe a geometria existente.");
+      return;
+    }
+    const existing = geometria.tipo.startsWith("Multi") ? geometria.coordinates : [geometria.coordinates];
+    const added = tipo.startsWith("Multi") ? coordinates : [coordinates];
+    applyGeometria(buildGeometriaPayload(`Multi${existingType}`, [...existing, ...added]));
   }
 
   function setPointFromLatLng(lat, lng) {
@@ -468,7 +504,12 @@
     document.getElementById("btn-nova-geometria")?.classList.toggle("hidden", metodoGeometria !== "desenhar");
     document.getElementById("btn-concluir-desenho")?.classList.toggle("hidden", metodoGeometria !== "desenhar");
     document.getElementById("btn-iniciar-desenho")?.setAttribute("aria-expanded", String(ferramentasAtivas));
-    clearCoordInputs();
+    if (geometria) {
+      const ref = referenciaFromGeom(geometria.tipo, geometria.coordinates);
+      if (ref) setCoordInputs(ref.lat, ref.lng, { readonly: geometria.tipo !== "Point" });
+    } else {
+      clearCoordInputs();
+    }
   }
 
   function setGeometryType(type) {
@@ -481,7 +522,8 @@
     });
     updateDrawControls();
     if (metodoGeometria === "desenhar") {
-      clearGeometry();
+      disableDrawControl();
+      document.getElementById("btn-concluir-desenho").disabled = !geometria;
     }
   }
 
@@ -504,13 +546,32 @@
 
   function startGeometryDrawing() {
     if (metodoGeometria !== "desenhar" || !ferramentasAtivas) return;
-    clearGeometry();
+    if (geometria && geometria.tipo.replace(/^Multi/, "") !== tipoDesenho) {
+      setError("Adicione geometrias do mesmo tipo. Para mudar de tipo, limpe a geometria existente.");
+      return;
+    }
+    disableDrawControl();
+    setError("");
     if (tipoDesenho === "Point") {
       drawControl = new L.Draw.Marker(map);
-    } else if (tipoDesenho === "LineString") {
-      drawControl = new L.Draw.Polyline(map, { shapeOptions: USER_LINE_STYLE });
     } else {
-      drawControl = new L.Draw.Polygon(map, { shapeOptions: USER_POLY_STYLE });
+      const options = {
+        icon: L.divIcon({ className: "leaflet-div-icon leaflet-editing-icon geometry-sketch-vertex", iconSize: [8, 8], iconAnchor: [4, 4] }),
+        touchIcon: L.divIcon({ className: "leaflet-div-icon leaflet-editing-icon geometry-sketch-vertex", iconSize: [10, 10], iconAnchor: [5, 5] }),
+        guidelineDistance: 6,
+        allowIntersection: false,
+        drawError: { color: SKETCH_COLORS.error, timeout: 2500 },
+        shapeOptions: { color: SKETCH_COLORS.line, weight: GEOMETRY_WEIGHT, opacity: 1, fillColor: SKETCH_COLORS.line, fillOpacity: POLYGON_FILL_OPACITY },
+      };
+      drawControl = tipoDesenho === "LineString" ? new L.Draw.Polyline(map, options) : new L.Draw.Polygon(map, options);
+      for (const method of ["_showErrorTooltip", "_hideErrorTooltip"]) {
+        const original = drawControl[method];
+        drawControl[method] = function (...args) {
+          const result = original.apply(this, args);
+          this._poly?.setStyle({ fillColor: this._errorShown ? SKETCH_COLORS.error : SKETCH_COLORS.line });
+          return result;
+        };
+      }
     }
     drawControl.enable();
     document.getElementById("btn-concluir-desenho").disabled = tipoDesenho === "Point";
@@ -521,6 +582,7 @@
     if (drawControl && tipoDesenho !== "Point") {
       const vertices = drawControl._markers?.length || 0;
       if (vertices < (tipoDesenho === "Polygon" ? 3 : 2)) {
+        drawControl._poly?.setStyle({ color: SKETCH_COLORS.error, fillColor: SKETCH_COLORS.error });
         setError(tipoDesenho === "Polygon" ? "Marque ao menos três vértices para o polígono." : "Marque ao menos dois vértices para a linha.");
         return;
       }
@@ -528,6 +590,7 @@
     }
     if (!geometria) return;
     disableDrawControl();
+    setGeometryState("finalizada");
     document.getElementById("btn-concluir-desenho").disabled = true;
     setError("");
     setStatus("Geometria confirmada.");
@@ -548,6 +611,60 @@
     setError("");
   }
 
+  function configureMapResize(mapElement) {
+    const handle = document.getElementById("geometry-map-resize");
+    const frame = mapElement?.parentElement;
+    if (!handle || !frame) return;
+    const initialHeight = parseFloat(getComputedStyle(frame).getPropertyValue("--geometry-map-min-height")) || 480;
+    let preferredHeight = initialHeight;
+    let drag = null;
+
+    function updateHeight(height = preferredHeight) {
+      const maximum = Math.floor(frame.getBoundingClientRect().width);
+      if (maximum <= 0) return;
+      const minimum = Math.min(initialHeight, maximum);
+      const current = Math.round(Math.max(minimum, Math.min(height, maximum)));
+      mapElement.style.height = `${current}px`;
+      handle.setAttribute("aria-valuemin", String(minimum));
+      handle.setAttribute("aria-valuemax", String(maximum));
+      handle.setAttribute("aria-valuenow", String(current));
+      handle.setAttribute("aria-valuetext", `${current} pixels`);
+      requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+      return current;
+    }
+
+    handle.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || drag) return;
+      event.preventDefault();
+      drag = { pointerId: event.pointerId, y: event.clientY, height: mapElement.getBoundingClientRect().height };
+      handle.setPointerCapture(event.pointerId);
+      handle.classList.add("is-resizing");
+    });
+    handle.addEventListener("pointermove", (event) => {
+      if (drag?.pointerId !== event.pointerId) return;
+      preferredHeight = updateHeight(drag.height + event.clientY - drag.y) ?? preferredHeight;
+    });
+    function stopResize(event) {
+      if (drag?.pointerId !== event.pointerId) return;
+      drag = null;
+      handle.classList.remove("is-resizing");
+      if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+    }
+    handle.addEventListener("pointerup", stopResize);
+    handle.addEventListener("pointercancel", stopResize);
+    handle.addEventListener("lostpointercapture", stopResize);
+    handle.addEventListener("keydown", (event) => {
+      const current = mapElement.getBoundingClientRect().height;
+      const heights = { ArrowDown: current + 24, ArrowUp: current - 24, Home: initialHeight, End: frame.getBoundingClientRect().width };
+      if (!(event.key in heights)) return;
+      event.preventDefault();
+      preferredHeight = updateHeight(heights[event.key]) ?? preferredHeight;
+    });
+    if (global.ResizeObserver) new ResizeObserver(() => updateHeight()).observe(frame);
+    else global.addEventListener("resize", () => updateHeight());
+    updateHeight();
+  }
+
   function init() {
     map = L.map("map").setView([-22.5, -48.5], 7);
     map.createPane("parentReferencePane");
@@ -560,6 +677,7 @@
     }).addTo(map);
 
     const mapElement = document.getElementById("map");
+    configureMapResize(mapElement);
     if (global.ResizeObserver && mapElement) {
       const resizeObserver = new ResizeObserver(() => {
         if (!map || mapElement.offsetWidth === 0 || mapElement.offsetHeight === 0) return;
@@ -573,7 +691,14 @@
       if (e.layer._map) e.layer._map.removeLayer(e.layer);
       disableDrawControl();
       const drawn = e.layer.toGeoJSON().geometry;
-      applyGeometria(buildGeometriaPayload(drawn.type, drawn.coordinates));
+      appendGeometria(drawn.type, drawn.coordinates);
+    });
+    map.on(L.Draw.Event.DRAWVERTEX, () => {
+      drawControl?._poly?.setStyle({ color: SKETCH_COLORS.line, fillColor: SKETCH_COLORS.line });
+      setError("");
+    });
+    map.on("click", () => {
+      if (!drawControl && geometryState === "selecionada") setGeometryState("finalizada");
     });
 
     document.getElementById("lat")?.addEventListener("change", syncPointFromInputs);

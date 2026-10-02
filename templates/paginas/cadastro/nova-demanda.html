@@ -363,14 +363,17 @@
           <div class="full hidden" id="geometry-map-section">
             <div class="map-toolbar">
               <div id="geometry-map-tools" class="geometry-map-tools hidden" role="group" aria-label="Ferramentas de geometria">
-                <button type="button" class="btn btn-ghost geometry-icon-button" id="btn-nova-geometria" title="Nova geometria" aria-label="Nova geometria"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-ghost geometry-icon-button" id="btn-nova-geometria" title="Adicionar geometria" aria-label="Adicionar geometria"><i class="fas fa-plus" aria-hidden="true"></i></button>
                 <button type="button" class="btn btn-ghost geometry-icon-button" id="btn-concluir-desenho" title="Confirmar geometria" aria-label="Confirmar geometria" disabled><i class="fas fa-check" aria-hidden="true"></i></button>
                 <button type="button" class="btn btn-ghost geometry-icon-button" id="btn-limpar-mapa" title="Limpar geometria" aria-label="Limpar geometria"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
               </div>
               <span id="geometry-file-name" class="field-help hidden"></span>
             </div>
             <p id="map-parent-hint" class="field-help abrangencia-parent-hint hidden" aria-live="polite"></p>
-            <div id="map"></div>
+            <div class="geometry-map-frame">
+              <div id="map"></div>
+              <div id="geometry-map-resize" role="separator" aria-label="Ajustar altura do mapa" aria-orientation="horizontal" aria-controls="map" tabindex="0" title="Ajustar altura do mapa"></div>
+            </div>
             <p id="map-status" class="field-help">Localização ainda não definida.</p>
             <p id="map-error" class="error-msg hidden"></p>
             <div id="map-spatial-ack-row" class="spatial-ack-row hidden">
@@ -793,6 +796,7 @@
 {% block scripts_pagina %}
   <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
   <script src="/assets/vendor/leaflet-draw/leaflet.draw.js" crossorigin=""></script>
+  <script src="/assets/js/status-colors.js"></script>
   <script src="/assets/js/sigma-read.js"></script>
   <script src="/assets/js/storage.js"></script>
   <script src="/assets/js/demandas-api.js"></script>

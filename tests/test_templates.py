@@ -135,8 +135,22 @@ def test_project_geometry_section_offers_upload_and_map_drawing() -> None:
     assert 'id="btn-apontar-mapa"' not in template
     assert '>Desenhar no mapa</button>' in template
     assert template.index('id="btn-nova-geometria"') < template.index('id="btn-concluir-desenho"') < template.index('id="btn-limpar-mapa"')
-    for command in ("Nova geometria", "Confirmar geometria", "Limpar geometria"):
+    for command in ("Adicionar geometria", "Confirmar geometria", "Limpar geometria"):
         assert f'aria-label="{command}"' in template
+
+
+def test_project_geometry_map_has_accessible_resize_handle() -> None:
+    template = (PAGES_ROOT / "cadastro/nova-demanda.html").read_text(encoding="utf-8")
+    handle = re.search(r'<div\b[^>]*id="geometry-map-resize"[^>]*>', template)
+    assert handle is not None
+    for attribute in ('role="separator"', 'aria-orientation="horizontal"', 'aria-controls="map"', 'tabindex="0"'):
+        assert attribute in handle.group()
+    assert template.index('id="map"') < template.index('id="geometry-map-resize"') < template.index('id="map-status"')
+
+
+def test_project_geometry_loads_status_palette_before_drawing() -> None:
+    template = (PAGES_ROOT / "cadastro/nova-demanda.html").read_text(encoding="utf-8")
+    assert template.index('src="/assets/js/status-colors.js"') < template.index('src="/public/cadastro/geometria.js"')
 
 
 def _canonical_pages() -> list[str]:
