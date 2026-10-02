@@ -176,19 +176,19 @@
       <div class="pfs-header-text"><h3 id="pfsCredentialTitle" data-pfs="credential-title">Confirmação de Credencial</h3></div>
       <button type="button" class="pfs-close" id="pfsCredentialClose" aria-label="Fechar"><i class="fas fa-times" aria-hidden="true"></i></button>
     </div>
-    <div class="pfs-body pfs-credential-body" id="pfsCredentialAuthorized">
+    <form class="pfs-body pfs-credential-body" id="pfsCredentialAuthorized" method="post" novalidate>
       <div class="pfs-credential-icon-area" id="pfsCredentialIconArea"><i class="fas fa-lock" aria-hidden="true"></i></div>
       <p class="pfs-credential-restricted-label" id="pfsCredentialRestrictedLabel">Ação Restrita!</p>
       <p class="pfs-credential-message" data-pfs="credential-message"></p>
       <div class="pfs-credential-field">
         <label for="pfsCredentialPassword" data-pfs="credential-label">Senha</label>
-        <input type="password" class="pfs-credential-input" id="pfsCredentialPassword" autocomplete="current-password">
+        <input type="password" class="pfs-credential-input" id="pfsCredentialPassword" name="password" autocomplete="current-password">
         <p class="pfs-credential-error" id="pfsCredentialErrorInline" role="alert"></p>
       </div>
-    </div>
+    </form>
     <div class="pfs-footer" id="pfsCredentialFooter">
       <button type="button" class="pfs-btn pfs-btn--secondary" id="pfsCredentialCancel"><span data-pfs="credential-cancel-label">Cancelar</span></button>
-      <button type="button" class="pfs-btn" id="pfsCredentialOk"><span data-pfs="credential-confirm-label">Confirmar</span></button>
+    <button type="submit" form="pfsCredentialAuthorized" class="pfs-btn" id="pfsCredentialOk"><span data-pfs="credential-confirm-label">Confirmar</span></button>
     </div>
   </div>
 </div>`;
@@ -1015,9 +1015,11 @@
 
             this.closeBtn.addEventListener('click', () => this._dismiss(false));
             this.cancelBtn.addEventListener('click', () => this._dismiss(false));
-            this.okBtn.addEventListener('click', () => this._onConfirm());
+            this.bodyEl.addEventListener('submit', (event) => {
+                event.preventDefault();
+                this._onConfirm();
+            });
             this.overlay.addEventListener('click', (e) => { if (e.target === this.overlay) this._dismiss(false); });
-            this.passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._onConfirm(); });
             this._bound = true;
         }
 

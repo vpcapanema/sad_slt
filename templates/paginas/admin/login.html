@@ -4,7 +4,7 @@
 {% set requer_autenticacao = false %}
 
 {% block titulo %}Entrar no SICARD{% endblock %}
-{% block classes_body %}{% endblock %}
+{% block classes_body %}login-page{% endblock %}
 {% block base_url %}<base href="/public/login/" />{% endblock %}
 
 {% block conteudo %}
@@ -21,9 +21,8 @@
           <h2 class="auth-card-title">Acesso Restrito</h2>
           <p class="auth-area-badge">Cadastro e área restrita</p>
           <p class="auth-card-intro">
-            Use o mesmo username e senha do SIGMA-PLI. Todos os perfis internos
-            reconhecidos acessam a área restrita do SICARD. Para cadastrar Plano,
-            Programa ou Projeto, é necessário perfil Operador.
+            Use seu username e senha do SIGMA-PLI.
+            Para cadastrar Plano, Programa ou Projeto, entre com o perfil Operador.
           </p>
         </header>
 
@@ -149,7 +148,7 @@
           rel="noopener noreferrer"
           >Criar conta com perfil Operador no SIGMA-PLI</a
         >
-        <p class="field-help">No cadastro unificado, selecione o perfil Operador. Para entrar, use o username do perfil, não o e-mail.</p>
+        <p class="field-help">No SIGMA-PLI, escolha o perfil Operador. Use o username, não o e-mail.</p>
       </section>
     </main>
 {% endblock %}

@@ -9,6 +9,7 @@ servidor. Foco, componentes e cancelamento são exercitados no navegador.
 from __future__ import annotations
 
 import inspect
+import re
 from pathlib import Path
 
 from api.services.geoprocessamento_jobs import geoprocessamento_jobs
@@ -31,6 +32,18 @@ TEMPLATES_DAS_CINCO_PAGINAS = [
     # Serve as duas páginas de cadastro/upload (elegibilidade e favorabilidade).
     "legado/templates/paginas/hierarquizacao/cadastro-upload-camada.html",
 ]
+
+
+def test_credential_password_belongs_to_native_form():
+    form = re.search(r'<form\b[^>]*id="pfsCredentialAuthorized"[^>]*>.*?</form>', FEEDBACK_JS, re.S)
+    assert form is not None
+    assert 'id="pfsCredentialPassword"' in form.group()
+    assert 'name="password"' in form.group()
+    assert 'method="post"' in form.group()
+    assert 'type="submit" form="pfsCredentialAuthorized"' in FEEDBACK_JS
+    assert "this.bodyEl.addEventListener('submit'" in FEEDBACK_JS
+    assert "event.preventDefault();" in FEEDBACK_JS
+    assert "this.passwordInput.addEventListener('keydown'" not in FEEDBACK_JS
 
 
 def test_feedback_expoe_os_tres_estagios():

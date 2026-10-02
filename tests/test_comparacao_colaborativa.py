@@ -76,12 +76,12 @@ def test_atualiza_todos_os_campos_da_configuracao_do_preenchimento(monkeypatch) 
     monkeypatch.setattr(repo, "update_ambiente", fake_update)
     service.atualizar_ambiente(
         AMBIENTE_ID,
-        AmbienteColaborativoUpdateSchema(
-            config_tipo="avulsa",
-            config_id=CONFIG_ID,
-            convites=[{"email": "novo@x.gov.br"}],
-            valido_ate="2031-01-31T23:59:59+00:00",
-        ),
+        AmbienteColaborativoUpdateSchema.model_validate({
+            "config_tipo": "avulsa",
+            "config_id": CONFIG_ID,
+            "convites": [{"email": "novo@x.gov.br"}],
+            "valido_ate": "2031-01-31T23:59:59+00:00",
+        }),
     )
 
     assert captured["config_tipo"] == "avulsa"
@@ -128,7 +128,7 @@ def test_atualiza_ambiente_a_partir_da_hierarquizacao_selecionada(monkeypatch) -
     monkeypatch.setattr(repo, "update_ambiente", fake_update)
     resposta = service.atualizar_ambiente(
         AMBIENTE_ID,
-        AmbienteColaborativoUpdateSchema(hierarquizacao_id=nova_hierarquizacao_id),
+        AmbienteColaborativoUpdateSchema.model_validate({"hierarquizacao_id": nova_hierarquizacao_id}),
     )
 
     assert captured["hierarquizacao_id"] == nova_hierarquizacao_id
@@ -399,7 +399,7 @@ def test_rota_atualiza_resposta_inline(monkeypatch) -> None:
 def test_rotas_excluem_registro_colaborativo(monkeypatch, recurso, identificador) -> None:
     chamado = []
     nome = "excluir_ambiente" if recurso == "ambientes" else "excluir_resposta"
-    monkeypatch.setattr(service, nome, lambda registro_id: chamado.append(registro_id))
+    monkeypatch.setattr(service, nome, chamado.append)
     resp = _client_autenticado().delete(
         f"/api/ahp/comparacao-colaborativa/{recurso}/{identificador}"
     )

@@ -248,6 +248,14 @@ def test_restricted_home_group_headers_have_complete_structure() -> None:
         assert re.search(r'<p class="platform-group__description">[^<]+</p>', header)
 
 
+def test_phase_navigation_excludes_operational_tools_bar() -> None:
+    content = templates.env.get_template("componentes/navegacao_fases_hierarquizacao.html").render(fase_ativa=2)
+    assert "hier-link-bar--tools" not in content
+    assert content.count("<nav ") == 1
+    assert 'aria-label="Fluxo canônico da hierarquização"' in content
+    assert '/restrict/hierarquizacao/fase-2/" class="active" aria-current="page"' in content
+
+
 def _canonical_pages() -> list[str]:
     pages = [
         "/public/",
