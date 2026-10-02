@@ -79,7 +79,7 @@
     ("auditoria", "Trilha de auditoria", "Histórico das operações registradas pelo sistema. Apoia a rastreabilidade de alterações e decisões ao longo do processo."),
     ("perfil", "Perfil de acesso", "Papel associado ao usuário que participa da definição das permissões. O SICARD distingue visualizador, operador, analista, gestor e administrador; a autorização efetiva é verificada pelo backend."),
     ("visualizador", "Visualizador", "Perfil destinado à consulta das informações para as quais possui autorização."),
-    ("operador", "Operador", "Perfil relacionado às operações de cadastro e processamento, conforme as permissões aplicáveis."),
+    ("operador", "Operador", "Perfil mínimo para cadastrar planos, programas e projetos. Requer cadastro de pessoa e usuário no SIGMA-PLI e autenticação no SICARD com o username e a senha do perfil. Visualizador não pode cadastrar demandas."),
     ("analista", "Analista", "Perfil relacionado à análise e à aprovação de demandas, conforme as permissões do fluxo."),
     ("gestor", "Gestor", "Perfil relacionado à análise, à homologação e à supervisão do processo."),
     ("administrador", "Administrador", "Perfil de administração técnica. Não herda automaticamente as decisões reservadas aos perfis de analista ou gestor.")

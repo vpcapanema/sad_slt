@@ -35,7 +35,7 @@ const STATIC_ROUTES = new Map([
   ["paginas/ahp/respostas-colaborativas.html", "/restrict/ahp/respostas-colaborativas/"],
   ["paginas/ahp/step6-resultados.html", "/restrict/ahp/resultados/"],
   ["paginas/ahp/step7-alternativas.html", "/restrict/ahp/alternativas/"],
-  ["paginas/ahp/colaborativa.html", "/public/ahp/colaborativa/"],
+  ["paginas/analise_multicriterio/formulario.html", "/public/analise-multicriterio/token-de-teste/"],
   ["paginas/geoespacial/index.html", "/restrict/geoespacial/"]
 ]);
 

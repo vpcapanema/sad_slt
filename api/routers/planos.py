@@ -14,7 +14,10 @@ router = APIRouter(prefix="/planos", tags=["planos"])
 
 
 @router.post("", response_model=PlanoResponseSchema, status_code=201)
-def criar_plano(body: PlanoCreateSchema) -> PlanoResponseSchema:
+def criar_plano(
+    body: PlanoCreateSchema,
+    _user: SessionUser = Depends(require_operator),
+) -> PlanoResponseSchema:
     """Cadastra um novo plano (nível 1)."""
     try:
         return plano_service.criar_plano(body)

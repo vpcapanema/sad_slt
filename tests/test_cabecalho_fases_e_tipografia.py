@@ -61,18 +61,17 @@ def test_fase2_mantem_titulo_e_texto_proprios_de_favorabilidade():
 
 def test_componente_slt_usa_o_texto_parametrizado_e_o_botao_padrao():
     js = Path("assets/js/componentes/geoprocessamento-slt.js").read_text(encoding="utf-8")
-    assert "upload-label" in js
-    assert "uploadLabel" in js
+    assert "upload-label" not in js
+    assert "uploadLabel" not in js
     assert "btn btn-primary" in js
     assert "btn--primary" not in js
 
 
-def test_botao_de_upload_fica_fora_do_preview_reescrito():
-    """Dentro do preview ele sumia assim que uma camada era selecionada."""
+def test_botao_de_upload_desativado_nao_aparece_no_componente():
     js = Path("assets/js/componentes/geoprocessamento-slt.js").read_text(encoding="utf-8")
     depois_do_preview = js.split('id="${saidaId}"></div>', 1)[1]
-    assert 'class="fase1-op-ou">ou<' in depois_do_preview
-    assert "fase1-op-upload" in depois_do_preview
+    assert "uploadHref" not in depois_do_preview
+    assert "uploadLabel" not in depois_do_preview
 
 
 @pytest.mark.parametrize("regra,rotulo_regex", [
@@ -80,7 +79,7 @@ def test_botao_de_upload_fica_fora_do_preview_reescrito():
      r'\.cadastro-campo \{[^}]*font-size:\s*([\d.]+)rem'),
 ])
 def test_input_da_pagina_de_cadastro_nao_supera_o_rotulo(regra, rotulo_regex):
-    css = Path("assets/css/cadastro-upload-camada.css").read_text(encoding="utf-8")
+    css = Path("legado/assets/css/cadastro-upload-camada.css").read_text(encoding="utf-8")
     campo = float(re.search(regra, css).group(1))
     rotulo = float(re.search(rotulo_regex, css).group(1))
     assert campo <= rotulo, f"input a {campo}rem, rótulo a {rotulo}rem"

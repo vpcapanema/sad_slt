@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 from fastapi.testclient import TestClient
@@ -196,6 +197,59 @@ def test_anonymous_user_cannot_access_internal_hierarchy_api() -> None:
 def test_anonymous_user_cannot_access_geospatial_api() -> None:
     response = TestClient(app).get("/api/geoespacial/algoritmos")
     assert response.status_code == 401
+
+
+def test_demand_registration_requires_authentication() -> None:
+    client = TestClient(app)
+    for route in ("/api/demandas", "/api/demandas/com-arquivo-geometria", "/api/planos", "/api/programas"):
+        assert client.post(route, json={}).status_code == 401
+
+
+def test_viewer_cannot_register_demand() -> None:
+    client = TestClient(app)
+    client.cookies.set(cookie_name(), create_token(_user("VISUALIZADOR")))
+    for route in ("/api/demandas", "/api/demandas/com-arquivo-geometria", "/api/planos", "/api/programas"):
+        assert client.post(route, json={}).status_code == 403
+
+
+def test_operator_profiles_pass_demand_registration_authorization() -> None:
+    for profile in ("OPERADOR", "ANALISTA", "GESTOR", "ADMIN"):
+        client = TestClient(app)
+        client.cookies.set(cookie_name(), create_token(_user(profile)))
+        for route in ("/api/demandas", "/api/demandas/com-arquivo-geometria", "/api/planos", "/api/programas"):
+            assert client.post(route, json={}).status_code == 422
+
+
+def test_demand_form_redirects_anonymous_to_login() -> None:
+    route = "/public/cadastro/nova-demanda/"
+    response = TestClient(app).get(route, follow_redirects=False)
+    assert response.status_code == 303
+    location = urlsplit(response.headers["location"])
+    assert location.path == "/public/login/"
+    assert parse_qs(location.query)["next"] == [route]
+
+
+def test_demand_form_redirect_preserves_production_prefix() -> None:
+    route = "/public/cadastro/nova-demanda/?embed=1"
+    response = TestClient(app).get(route, headers={"x-forwarded-prefix": "/sicard"}, follow_redirects=False)
+    assert response.status_code == 303
+    location = urlsplit(response.headers["location"])
+    assert location.path == "/sicard/public/login/"
+    assert parse_qs(location.query)["next"] == ["/sicard" + route]
+
+
+def test_demand_form_requires_operator_profile() -> None:
+    for profile in ("VISUALIZADOR", "OPERADOR", "ANALISTA", "GESTOR", "ADMIN"):
+        client = TestClient(app)
+        client.cookies.set(cookie_name(), create_token(_user(profile)))
+        response = client.get("/public/cadastro/nova-demanda/")
+        assert response.status_code == (403 if profile == "VISUALIZADOR" else 200)
+        if profile == "VISUALIZADOR":
+            assert "Seu perfil não permite cadastrar demandas" in response.text
+            assert "https://56.125.163.194/cadastro/sigma" in response.text
+            assert 'id="form-cadastro"' not in response.text
+        else:
+            assert 'data-requer-autenticacao="true"' in response.text
 
 
 def test_auth_redirect_rejects_different_host() -> None:

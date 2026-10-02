@@ -602,6 +602,22 @@ def _instalar_fake_repo(monkeypatch) -> _FakeRepo:
     return fake
 
 
+def test_invitation_uses_active_form_with_production_prefix(monkeypatch) -> None:
+    _instalar_fake_repo(monkeypatch)
+    response = _client_autenticado("ANALISTA").post(
+        "/api/ahp/comparacao-colaborativa/ambientes",
+        headers={"x-forwarded-prefix": "/sicard"},
+        json={
+            "hierarquizacao_id": HIERARQUIZACAO_ID,
+            "convites": [{"email": "a@x.gov.br"}],
+            "valido_ate": "2030-12-31T23:59:59+00:00",
+        },
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["url_publica"] == f"http://testserver/sicard/public/analise-multicriterio/{body['token']}/"
+
+
 def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     fake = _instalar_fake_repo(monkeypatch)
     gestor = _client_autenticado("ANALISTA")
@@ -619,7 +635,8 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     ambiente = resp.json()
     token = ambiente["token"]
     assert ambiente["status"] == "ativa"
-    assert f"?token={token}" in ambiente["url_publica"]
+    assert ambiente["url_publica"].endswith(f"/public/analise-multicriterio/{token}/")
+    assert TestClient(app).get(f"/public/analise-multicriterio/{token}/").status_code == 200
 
     # O módulo lista e permite ajustar participantes e prazo do julgamento aberto.
     resp = gestor.get("/api/ahp/comparacao-colaborativa/ambientes")

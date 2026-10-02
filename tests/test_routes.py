@@ -8,6 +8,36 @@ from api.services import demanda_service, storage_remoto
 from api.services.session_service import SessionUser, cookie_name, create_token
 
 
+def test_retired_layer_registration_pages_are_gone() -> None:
+    client = TestClient(app)
+    for route in (
+        "/restrict/hierarquizacao/cadastro-upload-elegibilidade/",
+        "/restrict/hierarquizacao/cadastro-upload-favorabilidade/",
+    ):
+        assert client.get(route, follow_redirects=False).status_code == 410
+
+
+def test_retired_layer_registration_assets_are_not_served() -> None:
+    client = TestClient(app)
+    for route in (
+        "/assets/css/cadastro-upload-camada.css",
+        "/assets/js/paginas/cadastro-upload-camada.js",
+        "/legado/assets/css/cadastro-upload-camada.css",
+        "/legado/templates/paginas/hierarquizacao/cadastro-upload-camada.html",
+    ):
+        assert client.get(route, follow_redirects=False).status_code == 404
+
+
+def test_active_specialist_form_is_public_and_legacy_html_is_not_served() -> None:
+    client = TestClient(app)
+    response = client.get("/public/analise-multicriterio/token-de-teste/", follow_redirects=False)
+    assert response.status_code == 200
+    assert 'id="colab-email"' in response.text
+    assert 'id="btn-enviar-resposta"' in response.text
+    assert 'data-requer-autenticacao="true"' not in response.text
+    assert client.get("/legados/templates/paginas/ahp/colaborativa.html").status_code == 404
+
+
 def test_all_router_modules_are_exposed_by_openapi() -> None:
     paths = TestClient(app).get("/openapi.json").json()["paths"]
 
@@ -37,7 +67,6 @@ def test_canonical_pages_are_available() -> None:
     canonical_pages = (
         "/public/",
         "/public/cadastro/",
-        "/public/ahp/colaborativa/",
         "/public/analise-multicriterio/token-de-teste/",
         "/restrict/analise-multicriterio/",
         "/restrict/analise-multicriterio/julgamentos/22222222-2222-2222-2222-222222222222/",
@@ -73,13 +102,15 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "/restrict/analise-multicriterio/?modo=formulario" in html
     trecho_mad = html.split('id="group-mad"', 1)[1].split('id="group-resultados"', 1)[0]
     trecho_geo = html.split('id="group-geoprocessamento"', 1)[1].split('id="group-ahp-restrict"', 1)[0]
-    assert "Hierarquização e Ranking" in trecho_geo
+    assert "Hierarquização e Ranking" not in trecho_geo
     assert "Produtos geoespaciais" in trecho_geo
-    assert trecho_geo.index("Hierarquização e Ranking") < trecho_geo.index("Central geoespacial")
+    assert trecho_geo.index("Central geoespacial") < trecho_geo.index("Visualizadores online de camadas")
+    assert "Ferramentas de geoprocessamento" in trecho_geo
+    assert "Documentação oficial do ranqueamento" in trecho_geo
     assert trecho_mad.index("/restrict/hierarquizacao/processos/") < trecho_mad.index("?modo=espaco") < trecho_mad.index("?modo=julgamentos")
     assert "Central de julgamentos" in trecho_mad
     assert "Central de respostas" in trecho_mad
-    assert "Módulo de apoio à decisão, análise multicritérios interativa e hierarquização colaborativa." in trecho_mad
+    assert "Apoio à decisão e hierarquização" in trecho_mad
     assert "/restrict/geoespacial/visualizador-bases-geoespaciais/" in trecho_geo
     assert "/restrict/geoespacial/gerador-risco-restricao/" in trecho_geo
     assert "/restrict/geoespacial/gerador-favorabilidade/" in trecho_geo
@@ -90,7 +121,7 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "Análise Multicritério Interativa" not in html
     assert "id=\"group-ahp-restrict\"" not in html, "grupo AHP foi descontinuado"
     assert "id=\"group-processo\"" not in html, "grupo PROCESSO foi descontinuado"
-    assert html.count('class="platform-tile ') == html.count('target="_blank" rel="noopener noreferrer"')
+    assert html.count('<a class="platform-tile ') == html.count('target="_blank" rel="noopener noreferrer"')
     index_css = __import__("pathlib").Path("admin/index.css").read_text(encoding="utf-8")
     # MAD absorveu o antigo card FASES como subcard "Ranqueamento", ao lado do
     # subcard "Análise Multicritério (AHP)": não há mais uma grade única para
@@ -100,9 +131,10 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     bloco_ranqueamento = index_css.split(".subgroup-ranqueamento .platform-grid", 1)[1].split("}", 1)[0]
     assert "--itens-por-linha: 2" in bloco_ranqueamento
     bloco_geo = index_css.split(".secao-platform-geoprocessamento .platform-grid", 1)[1].split("}", 1)[0]
-    assert "--itens-por-linha: 5" in bloco_geo
-    assert ".secao-platform-geoprocessamento { grid-column: 1 / -1; }" in index_css
-    assert ".secao-platform-administracao { grid-column: span 4; }" in index_css
+    assert "--itens-por-linha: 2" in bloco_geo
+    assert ".secao-platform-geoprocessamento { grid-column: span 6; }" in index_css
+    assert ".secao-platform-documentacao-ranqueamento { grid-column: span 3; }" in index_css
+    assert ".secao-platform-administracao { grid-column: 1 / -1; }" in index_css
     assert ".secao-platform-mad { grid-column: span 4; }" in index_css
     # ADMIN usa o mesmo desenho de subcards: tabelas do banco e storage.
     bloco_subcard = index_css.split(".secao-platform-administracao .platform-subgroup {", 1)[1].split("}", 1)[0]
@@ -467,7 +499,7 @@ def test_indice_restrito_nao_deixa_vao_nos_modulos() -> None:
     itens_por_subgrupo = {
         subgrupo: int(valor)
         for subgrupo, valor in re.findall(
-            r"\.subgroup-([\w-]+) \.platform-grid \{ --itens-por-linha: (\d+); \}", css
+            r"\.subgroup-([\w-]+)\s+\.platform-grid\s*\{\s*--itens-por-linha:\s*(\d+);\s*\}", css
         )
     }
 
@@ -524,6 +556,10 @@ def test_indice_restrito_nao_deixa_vao_nos_modulos() -> None:
         if len(fileiras) == 1:
             continue
         secoes_do_grupo = {s for s, _ in grupo}
+        if secoes_do_grupo <= {"publico", "catalogos", "operador"}:
+            assert "align-content: stretch;" in css
+            assert "align-items: stretch;" in css
+            continue
         if "mad" in secoes_do_grupo and max(fileiras) - min(fileiras) <= 1:
             # MAD hospeda dois subcards lado a lado (Análise Multicritério: 4
             # itens; Ranqueamento: 6). Não existe --itens-por-linha comum aos
@@ -549,7 +585,7 @@ def test_paginas_descontinuadas_respondem_410() -> None:
 
     client = TestClient(app)
 
-    descontinuadas = ["/restrict/ahp/"]
+    descontinuadas = ["/restrict/ahp/", "/public/ahp/colaborativa/", "/ahp/colaborativa.html", "/public/ahp/colaborativa.html"]
     descontinuadas += [f"/restrict/ahp/{nome}/" for nome in AHP_CLEAN_PAGES]
 
     for rota in descontinuadas:
@@ -565,7 +601,7 @@ def test_paginas_descontinuadas_respondem_410() -> None:
         "/restrict/hierarquizacao/fase-3/",
         "/restrict/hierarquizacao/ranking/",
         "/restrict/analise-multicriterio/",
-        "/public/ahp/colaborativa/",
+        "/public/analise-multicriterio/token-de-teste/",
     ):
         assert client.get(rota).status_code == 200, rota
 

@@ -19,8 +19,8 @@ from api.repositories.camada_geoespacial_repository import (
 
 FASE1_JS = Path("hierarquizacao/js/fases.js").read_text(encoding="utf-8")
 FASE2_JS = Path("hierarquizacao/js/fase2.js").read_text(encoding="utf-8")
-UPLOAD_HTML = Path("templates/paginas/hierarquizacao/cadastro-upload-camada.html").read_text(encoding="utf-8")
-UPLOAD_JS = Path("assets/js/paginas/cadastro-upload-camada.js").read_text(encoding="utf-8")
+UPLOAD_HTML = Path("legado/templates/paginas/hierarquizacao/cadastro-upload-camada.html").read_text(encoding="utf-8")
+UPLOAD_JS = Path("legado/assets/js/paginas/cadastro-upload-camada.js").read_text(encoding="utf-8")
 
 
 def test_cada_fase_le_a_biblioteca_do_proprio_modulo():

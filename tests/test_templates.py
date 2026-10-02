@@ -57,6 +57,8 @@ def test_no_legacy_html_remains_outside_template_directory() -> None:
         # plugins/ é sub-projeto de front-end próprio (build do vite) e captura
         # de páginas de fonte de dados; nada ali é página servida pela aplicação.
         and "plugins" not in path.parts
+        and "legado" not in path.parts
+        and "legados" not in path.parts
         and path not in static_html_allowlist
     ]
     assert legacy_html == []
@@ -153,6 +155,99 @@ def test_project_geometry_loads_status_palette_before_drawing() -> None:
     assert template.index('src="/assets/js/status-colors.js"') < template.index('src="/public/cadastro/geometria.js"')
 
 
+def test_public_registration_guidance_requires_operator_and_links_sigma() -> None:
+    client = TestClient(app)
+    for route in ("/public/cadastro/", "/public/documentacao/", "/public/login/"):
+        response = client.get(route)
+        assert response.status_code == 200
+        assert "Operador" in response.text
+        assert "https://56.125.163.194/cadastro/sigma" in response.text
+    for route in ("/public/cadastro/", "/public/documentacao/"):
+        content = client.get(route).text
+        assert "https://56.125.163.194/cadastro/instituicao" in content
+        assert "/public/login/?next=/public/cadastro/nova-demanda/" in content
+
+
+def test_restricted_home_groups_operator_and_territorial_actions() -> None:
+    content = TestClient(app).get("/restrict/").text
+
+    def group(identifier: str) -> str:
+        match = re.search(r'<section\b[^>]*aria-labelledby="' + identifier + r'"[^>]*>.*?</section>', content, re.S)
+        assert match is not None
+        return match.group()
+
+    operator = group("group-operador")
+    mocad = group("group-mocad")
+    public = group("group-publico")
+    mad = group("group-mad")
+    assert "Cadastrar Nova Demanda" in operator
+    assert "Complementação de cadastro" in operator
+    assert content.index('id="group-operador"') > content.index('id="group-publico"')
+    assert content.index('id="group-operador"') > content.index('id="group-catalogos"')
+    assert "Complementação de cadastro" not in mocad
+    assert "Instruções para cadastro de demanda" in public
+    assert "/public/cadastro/nova-demanda/" not in public
+    assert "Formulário colaborativo AHP" not in public
+    assert "/public/ahp/colaborativa/" not in mad
+    ahp = mad.split("subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos", 1)[1].split("subgroup-ranqueamento", 1)[0]
+    assert re.findall(r'class="platform-tile__label">([^<]+)</span>', ahp) == [
+        "Central de hierarquização",
+        "Central de julgamentos",
+        "Central de respostas",
+        "Formulário colaborativo - Especialistas",
+    ]
+    assert mad.index("Agrupamento de Demandas e Extração de atributos") < mad.index("Análise Multicritério (AHP)") < mad.index("Ranqueamento")
+    ranking = mad.split("subgroup-ranqueamento", 1)[1]
+    assert set(re.findall(r'href="([^"]+)"', ranking)) == {
+        "/restrict/hierarquizacao/metodologia/",
+        "/restrict/hierarquizacao/fase-1/",
+        "/restrict/hierarquizacao/fase-2/",
+        "/restrict/hierarquizacao/fase-3/",
+    }
+    assert "Documentação metodológica" in ranking
+    assert "cadastro-upload-" not in content
+    assert 'href="/restrict/geoespacial/extracoes-atributos/"' in mad
+    assert 'href="/restrict/geoespacial/gerador-camadas-territoriais/"' in mad
+    assert "Extração de atributos" not in group("group-geoprocessamento")
+    assert re.search(r'<button\b[^>]*disabled[^>]*>.*?Agrupamento de demandas.*?</button>', mad, re.S)
+
+
+def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> None:
+    content = TestClient(app).get("/restrict/").text
+    match = re.search(r'<section\b[^>]*aria-labelledby="group-geoprocessamento"[^>]*>.*?</section>', content, re.S)
+    assert match is not None
+    geo = match.group()
+    label_pattern = r'class="platform-tile__label">([^<]+)</span>'
+    accesses = geo.split('class="platform-subgroups"', 1)[0]
+    assert re.findall(label_pattern, accesses) == ["Central geoespacial", "Bancada de geoprocessamento"]
+    groups = {
+        name: re.findall(label_pattern, markup)
+        for name, markup in re.findall(r'class="platform-subgroup subgroup-([\w-]+)">(.*?)</div>\s*</div>', geo, re.S)
+    }
+    assert groups == {
+        "visualizadores-online-camadas": ["Produtos geoespaciais", "Bases geoespaciais", "Camadas de Superfícies-índice"],
+        "ferramentas-geoprocessamento": ["Gerador de risco e restrição", "Gerador de favorabilidade", "Configurador da Priorização por atributos"],
+    }
+    documentation = re.search(r'<section\b[^>]*aria-labelledby="group-documentacao-ranqueamento"[^>]*>.*?</section>', content, re.S)
+    assert documentation is not None
+    assert re.findall(label_pattern, documentation.group()) == [
+        "Arcabouço teórico-conceitual de Risco e Restrição",
+        "Arcabouço teórico-conceitual e metodológico do índice de favorabilidade espacial à execução de demandas",
+    ]
+    assert "/restrict/hierarquizacao/" not in geo
+
+
+def test_restricted_home_group_headers_have_complete_structure() -> None:
+    content = TestClient(app).get("/restrict/").text
+    headers = re.findall(r'<div class="platform-group__heading">\s*<div>(.*?)</div>\s*</div>', content, re.S)
+    assert len(headers) == content.count('class="platform-group secao-platform-')
+    assert headers
+    for header in headers:
+        assert re.search(r'<h2 id="group-[^"]+">[^<]+</h2>', header)
+        assert re.search(r'<p class="platform-group__subtitle">[^<]+</p>', header)
+        assert re.search(r'<p class="platform-group__description">[^<]+</p>', header)
+
+
 def _canonical_pages() -> list[str]:
     pages = [
         "/public/",
@@ -161,7 +256,7 @@ def _canonical_pages() -> list[str]:
         "/public/documentacao/",
         "/public/transparencia/",
         "/public/login/",
-        "/public/ahp/colaborativa/",
+        "/public/analise-multicriterio/token-de-teste/",
         "/restrict/",
         "/restrict/hierarquizacao/",
         "/restrict/hierarquizacao/processos/",
@@ -181,6 +276,13 @@ def _canonical_pages() -> list[str]:
 
 def test_all_page_runtime_assets_are_local_and_available() -> None:
     client = TestClient(app)
+    client.cookies.set(cookie_name(), create_token(SessionUser(
+        id="00000000-0000-0000-0000-000000000010",
+        email="operador@example.org",
+        username="teste_operador",
+        nome="Operador de teste",
+        tipo_usuario="OPERADOR",
+    )))
     assets: set[str] = set()
 
     for page in _canonical_pages():

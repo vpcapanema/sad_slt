@@ -44,7 +44,7 @@ Implementados:
 - submissão e consulta das respostas dos colaboradores.
 
 A página pública de colaboração é
-`/public/ahp/colaborativa/?token=...`. O cálculo do servidor é a fonte da
+`/public/analise-multicriterio/{token}/`. O cálculo do servidor é a fonte da
 verdade para os resultados persistidos.
 
 ### Hierarquização

@@ -5,7 +5,9 @@ SIGMA: somente LEITURA. Demandas: banco PostgreSQL SLT (demandas.projeto).
 """
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException, Request
+from urllib.parse import urlencode
+
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
@@ -13,10 +15,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from api.exceptions import DatabaseUnavailableError
+from api.deps.auth import get_optional_session, require_operator
 from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.path_policy import project_path
 from api.routers import api_router
 from api.services import storage_remoto
+from api.services.session_service import SessionUser
 
 app = FastAPI(title="SLT — Apoio à Tomada de Decisão", version="1.1.0")
 templates = Jinja2Templates(directory=str(project_path("templates")))
@@ -136,11 +140,33 @@ def pagina_indice_cadastro(request: Request) -> Response:
 
 
 @app.get("/public/cadastro/{pagina}/", include_in_schema=False)
-def pagina_publica_cadastro(request: Request, pagina: str) -> Response:
+def pagina_publica_cadastro(
+    request: Request,
+    pagina: str,
+    user: SessionUser | None = Depends(get_optional_session),
+) -> Response:
     arquivo = PUBLIC_CADASTRO_PAGES.get(pagina)
     if not arquivo:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Página pública não encontrada")
+    if pagina == "nova-demanda":
+        if user is None:
+            prefix = request.headers.get("x-forwarded-prefix", "").rstrip("/")
+            destination = prefix + request.url.path
+            if request.url.query:
+                destination += "?" + request.url.query
+            return RedirectResponse(
+                "/public/login/?" + urlencode({"next": destination}),
+                status_code=303,
+                headers={"Cache-Control": "no-store"},
+            )
+        try:
+            require_operator(user)
+        except HTTPException as exc:
+            if exc.status_code != 403:
+                raise
+            response = render_page(request, "paginas/cadastro/index.html", cadastro_acesso_negado=True)
+            response.status_code = 403
+            return response
     return render_page(request, f"paginas/cadastro/{arquivo}")
 
 
@@ -234,39 +260,9 @@ def pagina_documentacao_favorabilidade(request: Request) -> Response:
 
 
 @app.get("/restrict/hierarquizacao/cadastro-upload-favorabilidade/", include_in_schema=False)
-def pagina_cadastro_upload_favorabilidade(request: Request) -> Response:
-    return render_page(
-        request, "paginas/hierarquizacao/cadastro-upload-camada.html",
-        modulo="fase2",
-        fase_ativa=2,
-        titulo_modulo="Favorabilidade Territorial",
-        descricao_modulo=(
-            "Publique camadas com índices de favorabilidade de grade e de rede. "
-            "O arquivo é conferido antes de entrar no acervo."
-        ),
-        rotulo_tipo="Tipo de camada de favorabilidade",
-        tipos_camada=TIPOS_CAMADA_FAVORABILIDADE,
-        voltar_href="/restrict/hierarquizacao/fase-2/",
-        voltar_rotulo="Favorabilidade de grade e da rede",
-    )
-
-
 @app.get("/restrict/hierarquizacao/cadastro-upload-elegibilidade/", include_in_schema=False)
-def pagina_cadastro_upload_elegibilidade(request: Request) -> Response:
-    return render_page(
-        request, "paginas/hierarquizacao/cadastro-upload-camada.html",
-        modulo="fase1",
-        fase_ativa=1,
-        titulo_modulo="Elegibilidade territorial",
-        descricao_modulo=(
-            "Publique camadas de restrição e risco que compõem o filtro de "
-            "elegibilidade. O arquivo é conferido antes de entrar no acervo."
-        ),
-        rotulo_tipo="Tipo de camada de elegibilidade",
-        tipos_camada=TIPOS_CAMADA_ELEGIBILIDADE,
-        voltar_href="/restrict/hierarquizacao/fase-1/",
-        voltar_rotulo="Elegibilidade territorial",
-    )
+def pagina_cadastro_upload_legada() -> Response:
+    raise HTTPException(status_code=410, detail="Esta página de cadastro e upload foi desativada.")
 
 
 @app.get("/restrict/hierarquizacao/fase-3/", include_in_schema=False)
@@ -311,9 +307,10 @@ def pagina_ahp_descontinuada(request: Request, pagina: str = "") -> Response:
 
 
 @app.get("/public/ahp/colaborativa/", include_in_schema=False)
-def pagina_ahp_colaborativa_publica(request: Request) -> Response:
-    """Formulário público acessado pelo token de um convite AHP."""
-    return render_page(request, "paginas/ahp/colaborativa.html")
+@app.get("/ahp/colaborativa.html", include_in_schema=False)
+@app.get("/public/ahp/colaborativa.html", include_in_schema=False)
+def pagina_ahp_colaborativa_publica() -> Response:
+    raise HTTPException(status_code=410, detail="Este formulário AHP foi descontinuado. Use o formulário colaborativo de especialistas da Análise Multicritério.")
 
 
 @app.get("/restrict/analise-multicriterio/", include_in_schema=False)
@@ -381,8 +378,6 @@ LEGACY_PAGE_REDIRECTS = {
     "/restrict/demandas.html": "/restrict/demandas/",
     "/restrict/demanda.html": "/restrict/demanda/",
     "/restrict/revisao-status.html": "/restrict/revisao-status/",
-    "/ahp/colaborativa.html": "/public/ahp/colaborativa/",
-    "/public/ahp/colaborativa.html": "/public/ahp/colaborativa/",
     "/restrict/ahp/index.html": "/restrict/ahp/analise/",
     "/restrict/ahp/step1-configuracao.html": "/restrict/ahp/configuracao/",
     "/restrict/ahp/step2-criterios.html": "/restrict/ahp/criterios/",

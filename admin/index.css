@@ -407,26 +407,17 @@
    RESULTADOS) continuam lado a lado: 3 + 4 + 2 fecham as 9 colunas sem sobra,
    com MAD mais largo por hospedar dois subcards.*/
 .secao-platform-mocad { grid-column: span 3; }
+.secao-platform-operador { grid-column: span 3; }
 .secao-platform-mad { grid-column: span 4; }
 .secao-platform-resultados { grid-column: span 2; }
-.secao-platform-administracao { grid-column: span 4; }
-.secao-platform-geoprocessamento { grid-column: 1 / -1; }
+.secao-platform-administracao { grid-column: 1 / -1; }
+.secao-platform-geoprocessamento { grid-column: span 6; }
+.secao-platform-documentacao-ranqueamento { grid-column: span 3; }
 .secao-platform-ami { grid-column: 1 / -1; }
 
-/* Portal público e catálogos dividem a última linha com a administração
-   (4 + 3 + 2 das 9 colunas). */
+/* Público, catálogos e ações do operador dividem a última linha. */
 .secao-platform-publico { grid-column: span 3; }
-.secao-platform-catalogos { grid-column: span 2; }
-
-/* Sem permissão de administração o bloco ADMIN some; os dois restantes
-   assumem as colunas que sobrariam vazias. */
-.restrict-platform-groups:has(.secao-platform-administracao[hidden]) .secao-platform-publico {
-  grid-column: span 5;
-}
-
-.restrict-platform-groups:has(.secao-platform-administracao[hidden]) .secao-platform-catalogos {
-  grid-column: span 4;
-}
+.secao-platform-catalogos { grid-column: span 3; }
 
 /* `.platform-group` declara `display:flex`, que vence o atributo `hidden` —
    sem isto o bloco restrito à administração aparece para qualquer perfil. */
@@ -434,22 +425,65 @@
   display: none;
 }
 
+.restrict-platform-groups .platform-group {
+  gap: 1rem;
+  padding: 1rem;
+}
+
 .restrict-platform-groups .platform-group__heading {
   width: 100%;
   min-height: 4.8rem;
   justify-content: center;
   text-align: center;
+  margin-bottom: 0;
 }
 
 .restrict-platform-groups .platform-group__heading > div {
   width: 100%;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.restrict-platform-groups .platform-group__heading h2 {
+  margin: 0;
+  color: #102a43;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .restrict-platform-groups .platform-group__subtitle {
-  margin-top: 0.25rem;
+  margin: 0;
   color: #314e68;
-  font-size: 0.86rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.restrict-platform-groups .platform-group__description {
+  margin: 0;
+  color: #63758b;
+  font-size: 0.76rem;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.restrict-platform-groups .platform-group__subtitle,
+.restrict-platform-groups .platform-group__description {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.restrict-platform-groups .geoprocessamento-acessos {
+  flex: 0 0 auto;
 }
 
 /* Grade interna em flex, e não em grid de colunas fixas, por um motivo: numa
@@ -479,8 +513,10 @@
 }
 
 .secao-platform-mocad .platform-grid { --itens-por-linha: 3; }
+.secao-platform-operador .platform-grid { --itens-por-linha: 2; }
 .secao-platform-resultados .platform-grid { --itens-por-linha: 1; }
-.secao-platform-geoprocessamento .platform-grid { --itens-por-linha: 5; }
+.secao-platform-geoprocessamento .platform-grid { --itens-por-linha: 2; }
+.secao-platform-documentacao-ranqueamento .platform-grid { --itens-por-linha: 1; }
 .secao-platform-administracao .platform-grid { --itens-por-linha: 5; }
 .secao-platform-publico .platform-grid { --itens-por-linha: 3; }
 .secao-platform-catalogos .platform-grid { --itens-por-linha: 2; }
@@ -492,23 +528,25 @@
    misturar "Análise Multicritério" com "Ranqueamento" numa massa única de
    blocos sem contorno. */
 .secao-platform-mad .platform-subgroups,
+.secao-platform-geoprocessamento .platform-subgroups,
 .secao-platform-administracao .platform-subgroups {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 0.7rem;
+  gap: 1rem;
   width: 100%;
   align-items: stretch;
 }
 
 .secao-platform-mad .platform-subgroup,
+.secao-platform-geoprocessamento .platform-subgroup,
 .secao-platform-administracao .platform-subgroup {
   flex: 1 1 14rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.7rem 0.8rem 0.8rem;
+  gap: 0.75rem;
+  padding: 0.75rem;
   border: 1px solid #dce5ef;
   border-radius: 12px;
   background: #fff;
@@ -516,13 +554,15 @@
 }
 
 .secao-platform-mad .platform-subgroup__title,
+.secao-platform-geoprocessamento .platform-subgroup__title,
 .secao-platform-administracao .platform-subgroup__title {
   margin: 0;
   font-size: 0.76rem;
   font-weight: 700;
   color: #314e68;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
+  line-height: 1.4;
   text-align: center;
 }
 
@@ -530,6 +570,25 @@
    dois itens por linha em ambos, senão os rótulos ficam espremidos demais. */
 .subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos .platform-grid { --itens-por-linha: 2; }
 .subgroup-ranqueamento .platform-grid { --itens-por-linha: 2; }
+.subgroup-visualizadores-online-camadas .platform-grid { --itens-por-linha: 2; }
+.subgroup-ferramentas-geoprocessamento .platform-grid { --itens-por-linha: 2; }
+
+.secao-platform-mad .subgroup-agrupamento-demandas-extracao-atributos {
+  flex: 1 1 100%;
+}
+
+.secao-platform-mad .subgroup-agrupamento-demandas-extracao-atributos .platform-grid {
+  --itens-por-linha: 3;
+}
+
+.restrict-platform-groups button.platform-tile {
+  font: inherit;
+}
+
+.restrict-platform-groups button.platform-tile:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
 
 /* ADMIN divide a linha com PÚBLICO e CATÁLOGOS, que têm duas fileiras: as
    tabelas (7 itens, 4 por linha) e o storage (2 itens, 1 por linha) também
@@ -542,25 +601,43 @@
 .subgroup-storage-de-dados-geoespaciais .platform-grid { --itens-por-linha: 1; }
 
 .restrict-platform-groups .platform-tile {
+  --tile-accent: #2c6fa6;
   flex: 1 1 calc((100% - (var(--itens-por-linha) - 1) * var(--vao)) / var(--itens-por-linha));
   width: auto;
   min-width: 0;
   height: auto;
   min-height: 78px;
   aspect-ratio: auto;
-  border-color: #b8c5d1;
-  background: #edf1f5;
+  border-color: color-mix(in srgb, var(--tile-accent) 35%, white);
+  background: color-mix(in srgb, var(--tile-accent) 8%, white);
   box-shadow: 0 2px 5px rgba(18, 48, 77, 0.07);
+}
+
+.restrict-platform-groups .platform-tile--blue { --tile-accent: #2c6fa6; }
+.restrict-platform-groups .platform-tile--amber { --tile-accent: #c47b22; }
+.restrict-platform-groups .platform-tile--green { --tile-accent: #19866d; }
+.restrict-platform-groups .platform-tile--violet { --tile-accent: #7259a9; }
+.restrict-platform-groups .platform-tile--navy { --tile-accent: #21476c; }
+.restrict-platform-groups .platform-tile--teal { --tile-accent: #197c89; }
+
+.restrict-platform-groups .subgroup-agrupamento-demandas-extracao-atributos .platform-tile {
+  --tile-accent: #3159a7;
+}
+
+.restrict-platform-groups .platform-tile__icon {
+  background: var(--tile-accent);
 }
 
 .restrict-platform-groups .platform-tile:hover,
 .restrict-platform-groups .platform-tile:focus-visible {
-  border-color: #568fa0;
-  background: #e4ebf1;
+  border-color: var(--tile-accent);
+  background: color-mix(in srgb, var(--tile-accent) 15%, white);
 }
 
 .restrict-platform-groups .platform-tile__label {
-  font-size: 0.66rem;
+  font-size: 0.726rem;
+  -webkit-line-clamp: unset;
+  overflow-wrap: anywhere;
 }
 
 /* Abaixo de 1050px dois módulos lado a lado espremem os blocos de dez itens

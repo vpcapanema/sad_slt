@@ -618,7 +618,9 @@
     var urlBase = resolverUrlPublica(amb.url_publica) || amb.url_publica;
     var links = (amb.convites || [])
       .map(function (c) {
-        var url = urlBase + "&email=" + encodeURIComponent(c.email);
+        var invitationUrl = new URL(urlBase, global.location.href);
+        invitationUrl.searchParams.set("email", c.email);
+        var url = invitationUrl.href;
         return (
           "<li><strong>" +
           escapeHtml(c.email) +

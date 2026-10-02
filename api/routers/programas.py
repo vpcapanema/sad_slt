@@ -14,7 +14,10 @@ router = APIRouter(prefix="/programas", tags=["programas"])
 
 
 @router.post("", response_model=ProgramaResponseSchema, status_code=201)
-def criar_programa(body: ProgramaCreateSchema) -> ProgramaResponseSchema:
+def criar_programa(
+    body: ProgramaCreateSchema,
+    _user: SessionUser = Depends(require_operator),
+) -> ProgramaResponseSchema:
     """Cadastra um novo programa (nível 2)."""
     try:
         return programa_service.criar_programa(body)

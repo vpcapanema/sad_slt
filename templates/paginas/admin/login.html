@@ -1,9 +1,9 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Acesso administrativo" %}
+{% set subtitulo = "Acesso ao SICARD" %}
 {% set navegacao = "publica" %}
 {% set requer_autenticacao = false %}
 
-{% block titulo %}Acesso Restrito — Administração SLT{% endblock %}
+{% block titulo %}Entrar no SICARD{% endblock %}
 {% block classes_body %}{% endblock %}
 {% block base_url %}<base href="/public/login/" />{% endblock %}
 
@@ -19,10 +19,11 @@
             height="56"
           />
           <h2 class="auth-card-title">Acesso Restrito</h2>
-          <p class="auth-area-badge">Administração</p>
+          <p class="auth-area-badge">Cadastro e área restrita</p>
           <p class="auth-card-intro">
             Use o mesmo username e senha do SIGMA-PLI. Todos os perfis internos
-            reconhecidos acessam a área restrita do SICARD.
+            reconhecidos acessam a área restrita do SICARD. Para cadastrar Plano,
+            Programa ou Projeto, é necessário perfil Operador.
           </p>
         </header>
 
@@ -48,7 +49,7 @@
                 id="login"
                 name="login"
                 class="auth-input"
-                placeholder="exemplo_analista"
+                placeholder="exemplo_operador"
                 required
                 autocomplete="username"
                 autofocus
@@ -146,14 +147,16 @@
           href="https://56.125.163.194/cadastro/sigma"
           target="_blank"
           rel="noopener noreferrer"
-          >Criar conta no SIGMA-PLI</a
+          >Criar conta com perfil Operador no SIGMA-PLI</a
         >
+        <p class="field-help">No cadastro unificado, selecione o perfil Operador. Para entrar, use o username do perfil, não o e-mail.</p>
       </section>
     </main>
 {% endblock %}
 
 {% block scripts_pagina %}
   <script src="/assets/js/admin-api.js"></script>
+  <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/js/admin-ui.js"></script>
   <script src="/restrict/login.js"></script>
 {% endblock %}

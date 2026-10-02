@@ -14,19 +14,10 @@
       const modelo = this.getAttribute("modelo") || `fluxo_${fase}`;
       const modeloLabel = this.getAttribute("modelo-label") || fase;
       const botaoLabel = this.getAttribute("botao-label") || "Executar cálculo isolado";
-      // Cada fase publica na sua própria página de cadastro e upload.
-      const uploadHref = this.getAttribute("upload-href")
-        || (fase === "fase1"
-            ? "/restrict/hierarquizacao/cadastro-upload-elegibilidade/"
-            : "/restrict/hierarquizacao/cadastro-upload-favorabilidade/");
       // Mesma alternativa do card de camadas, aplicada ao insumo do outro card:
       // ou se escolhe uma hierarquização já cadastrada, ou se cadastra uma.
       const hierarquizacaoHref = this.getAttribute("hierarquizacao-href")
         || "/restrict/hierarquizacao/processos/";
-      const uploadLabel = this.getAttribute("upload-label")
-        || (fase === "fase1"
-            ? "Upload de camadas de elegibilidade territorial"
-            : "Upload de camadas de favorabilidade de grade e da rede");
 
       this.innerHTML = `
         <div class="fase1-operational">
@@ -46,12 +37,6 @@
             <div class="fase1-op-card-body">
               <div class="fase1-op-controls" id="${saidaId}-ctrl"></div>
               <div class="fase1-op-preview" id="${saidaId}"></div>
-              <!-- Fora do preview de propósito: o preview é reescrito a cada
-                   seleção de camada, e o caminho para o upload sumia junto. -->
-              <div class="fase1-op-alternativa">
-                <p class="fase1-op-ou">ou</p>
-                <a class="btn btn-secondary fase1-op-upload" href="${uploadHref}"><i class="fas fa-cloud-arrow-up"></i> ${uploadLabel}</a>
-              </div>
             </div>
           </div>
         </div>

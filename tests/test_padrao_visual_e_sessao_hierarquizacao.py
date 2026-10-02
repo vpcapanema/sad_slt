@@ -23,8 +23,6 @@ PAGINAS = [
     "/restrict/hierarquizacao/fase-1/",
     "/restrict/hierarquizacao/fase-2/",
     "/restrict/hierarquizacao/fase-3/",
-    "/restrict/hierarquizacao/cadastro-upload-elegibilidade/",
-    "/restrict/hierarquizacao/cadastro-upload-favorabilidade/",
     "/restrict/geoespacial/documentacao-favorabilidade/",
 ]
 
@@ -69,24 +67,22 @@ def test_pagina_restrita_carrega_o_guarda_de_sessao(cliente, rota):
     assert "/assets/js/admin-auth.js" in html, rota
 
 
-@pytest.mark.parametrize("rota", PAGINAS[3:5])
-def test_upload_numera_cada_campo_do_formulario(cliente, rota):
+def test_upload_legado_numera_cada_campo_do_formulario():
     """O índice é do campo, não do grupo: cada rótulo carrega o próprio número."""
-    html = cliente.get(rota).text
+    html = Path("legado/templates/paginas/hierarquizacao/cadastro-upload-camada.html").read_text(encoding="utf-8")
     for numero, rotulo in (("1.2", "Nome de publicação"), ("1.3", "Versão"),
                            ("1.6", "Produto de origem"), ("2.1", "Arquivo da camada")):
-        assert f'<span class="cadastro-subsec-num">{numero}</span>{rotulo}' in html, (rota, numero)
+        assert f'<span class="cadastro-subsec-num">{numero}</span>{rotulo}' in html, numero
     # Os grupos que dividem o formulário não competem com a numeração dos campos.
     assert "<h3>Identificação</h3>" in html
     assert "<h3>Contexto e origem</h3>" in html
 
 
-@pytest.mark.parametrize("rota", PAGINAS[3:5])
-def test_cards_do_upload_nao_abrem_com_paragrafo_de_texto(cliente, rota):
+def test_cards_do_upload_legado_nao_abrem_com_paragrafo_de_texto():
     """O primeiro elemento de cada card é o conteúdo, não um texto explicativo."""
-    html = cliente.get(rota).text
+    html = Path("legado/templates/paginas/hierarquizacao/cadastro-upload-camada.html").read_text(encoding="utf-8")
     for corpo in re.findall(r'<div class="ahp-section-body">\s*(<[a-z]+)', html):
-        assert corpo != "<p", f"{rota} voltou a abrir card com parágrafo"
+        assert corpo != "<p", "O upload legado voltou a abrir card com parágrafo"
 
 
 def test_quem_homologou_vem_da_sessao_e_nao_do_formulario():
@@ -96,15 +92,13 @@ def test_quem_homologou_vem_da_sessao_e_nao_do_formulario():
         assinatura = inspect.signature(rota)
         assert "user" in assinatura.parameters, rota.__name__
         assert "_responsavel_pela_homologacao" in inspect.getsource(rota), rota.__name__
-    html = Path("templates/paginas/hierarquizacao/cadastro-upload-camada.html").read_text(encoding="utf-8")
+    html = Path("legado/templates/paginas/hierarquizacao/cadastro-upload-camada.html").read_text(encoding="utf-8")
     assert 'name="homologado_por"' not in html
 
 SUBSECOES_ESPERADAS = {
     "/restrict/hierarquizacao/fase-1/": ["2.1", "2.2"],
     "/restrict/hierarquizacao/fase-2/": ["2.1", "2.2"],
     "/restrict/hierarquizacao/fase-3/": ["1.1", "1.2", "3.1", "3.2", "4.1", "4.2", "5.1", "5.2"],
-    "/restrict/hierarquizacao/cadastro-upload-elegibilidade/": ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "2.1", "2.2", "2.3"],
-    "/restrict/hierarquizacao/cadastro-upload-favorabilidade/": ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "2.1", "2.2", "2.3"],
     "/restrict/geoespacial/documentacao-favorabilidade/": ["1.1", "1.2", "2.1", "2.2"],
 }
 
@@ -133,7 +127,7 @@ def test_alternativa_some_quando_ha_selecao_no_card():
     """O "ou + botão" é a saída de quem ainda não tem o insumo: escolhido algo no
     card, ele dá lugar ao conteúdo da seleção."""
     js = Path("assets/js/componentes/geoprocessamento-slt.js").read_text(encoding="utf-8")
-    assert js.count('class="fase1-op-alternativa"') == 2, "os dois cards precisam do bloco"
+    assert js.count('class="fase1-op-alternativa"') == 1, "apenas o cadastro de hierarquização mantém a alternativa"
     corpo = js.split("function sincronizarAlternativas(raiz) {", 1)[1].split("\n  }", 1)[0]
     assert '.fase1-op-controls select' in corpo
     assert "some((select) => Boolean(select.value))" in corpo

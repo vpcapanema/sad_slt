@@ -655,7 +655,7 @@
   function deadlineEndOfDay() { return endOfDayIso($("ami-deadline").value); }
   function persistentPublicUrl(judgment) {
     if (!judgment || !judgment.url_publica) return "";
-    try { var url = new URL(String(judgment.url_publica), location.origin); return /^https?:$/.test(url.protocol) && url.searchParams.get("token") ? url.href : ""; }
+    try { var url = new URL(String(judgment.url_publica), location.origin); return /^https?:$/.test(url.protocol) && /\/public\/analise-multicriterio\/[^/]+\/?$/.test(url.pathname) ? url.href : ""; }
     catch (_error) { return ""; }
   }
   function invitationLines(judgment) {

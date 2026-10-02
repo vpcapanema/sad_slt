@@ -1,7 +1,7 @@
 {% extends "bases/base_conteudo.html" %}
 {% set subtitulo = "Nova demanda" %}
-{% set navegacao = "publica" %}
-{% set requer_autenticacao = false %}
+{% set navegacao = "restrita" %}
+{% set requer_autenticacao = true %}
 
 {% block titulo %}Nova demanda — SICARD{% endblock %}
 {% block classes_body %}cadastro-page{% if request.query_params is defined and request.query_params.get('embed') %} cadastro-embed{% endif %}{% endblock %}
@@ -16,9 +16,11 @@
 {% endblock %}
 
 {% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="conteudo-principal app-main">
     <section class="card-nova-demanda secao-nova-demanda card">
       <h2>Nova demanda</h2>
+      <p class="field-help">O cadastro de Plano, Programa e Projeto exige usuário autenticado com perfil Operador ou superior. Use a conta do perfil Operador criada no SIGMA-PLI.</p>
       <p class="step-intro">
         Primeiro classifique a demanda quanto ao demandante. Depois escolha sua categoria.
       </p>
@@ -794,6 +796,8 @@
 {% endblock %}
 
 {% block scripts_pagina %}
+  <script src="/assets/js/admin-api.js"></script>
+  <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
   <script src="/assets/vendor/leaflet-draw/leaflet.draw.js" crossorigin=""></script>
   <script src="/assets/js/status-colors.js"></script>

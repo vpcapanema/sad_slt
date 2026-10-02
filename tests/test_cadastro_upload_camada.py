@@ -7,11 +7,12 @@ divergirem com o tempo.
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
-from api.server import app
+from api.server import app, templates
 from api.services.session_service import SessionUser, cookie_name, create_token
 
 PAGINAS = {
@@ -34,19 +35,32 @@ def cliente():
     return cliente
 
 
+def _legacy_html(rota):
+    phase = 1 if "elegibilidade" in rota else 2
+    title, label = PAGINAS[rota]
+    source = Path("legado/templates/paginas/hierarquizacao/cadastro-upload-camada.html").read_text(encoding="utf-8")
+    return templates.env.from_string(source).render(
+        request=SimpleNamespace(url=SimpleNamespace(path=rota)),
+        titulo_modulo=title, rotulo_tipo=label, modulo=f"fase{phase}",
+        fase_ativa=phase, tipos_camada=[], descricao_modulo="",
+        voltar_href=f"/restrict/hierarquizacao/fase-{phase}/", voltar_rotulo=title,
+    )
+
+
 @pytest.mark.parametrize("rota,esperado", PAGINAS.items())
 def test_pagina_responde_com_titulo_proprio(cliente, rota, esperado):
     titulo, rotulo_tipo = esperado
     resposta = cliente.get(rota)
-    assert resposta.status_code == 200, resposta.text
-    assert f"Cadastro e upload — {titulo}" in resposta.text
-    assert rotulo_tipo in resposta.text
+    assert resposta.status_code == 410, resposta.text
+    html = _legacy_html(rota)
+    assert f"Cadastro e upload — {titulo}" in html
+    assert rotulo_tipo in html
 
 
 @pytest.mark.parametrize("rota", PAGINAS)
 def test_secao_1_traz_os_campos_que_o_sistema_nao_preenche(cliente, rota):
     """CRS, geometria, formato e hash saem do arquivo — não se pede ao usuário."""
-    html = cliente.get(rota).text
+    html = _legacy_html(rota)
     for campo in ("nome_publicacao", "versao", "modulo_consumidor",
                   "finalidade", "produto_id"):
         assert f'name="{campo}"' in html, f"falta o campo {campo}"
@@ -59,7 +73,7 @@ def test_secao_1_traz_os_campos_que_o_sistema_nao_preenche(cliente, rota):
 
 @pytest.mark.parametrize("rota", PAGINAS)
 def test_tipo_de_camada_e_o_primeiro_campo(cliente, rota):
-    html = cliente.get(rota).text
+    html = _legacy_html(rota)
     posicao_tipo = html.index('id="campo-tipo"')
     posicao_nome = html.index('id="campo-nome-publicacao"')
     assert posicao_tipo < posicao_nome
@@ -67,7 +81,7 @@ def test_tipo_de_camada_e_o_primeiro_campo(cliente, rota):
 
 @pytest.mark.parametrize("rota", PAGINAS)
 def test_secao_2_tem_previa_metadados_e_as_duas_acoes(cliente, rota):
-    html = cliente.get(rota).text
+    html = _legacy_html(rota)
     assert 'id="campo-arquivo"' in html
     # A ordem importa: mapa, depois metadados, depois os botões.
     assert html.index('id="mapa-previa"') < html.index('id="card-metadados"')
@@ -76,12 +90,10 @@ def test_secao_2_tem_previa_metadados_e_as_duas_acoes(cliente, rota):
     assert "leaflet.js" in html
 
 
-def test_link_de_upload_aponta_para_a_pagina_da_fase():
+def test_componente_nao_aponta_para_paginas_desativadas():
     script = Path("assets/js/componentes/geoprocessamento-slt.js").read_text(encoding="utf-8")
-    assert "Upload de camadas de elegibilidade territorial" in script
-    assert "Upload de camadas de favorabilidade de grade e da rede" in script
-    assert "cadastro-upload-elegibilidade" in script
-    assert "cadastro-upload-favorabilidade" in script
+    assert "cadastro-upload-elegibilidade" not in script
+    assert "cadastro-upload-favorabilidade" not in script
 
 
 def test_previa_nao_consome_a_inspecao():
@@ -116,7 +128,7 @@ def test_pagina_segue_o_padrao_visual_da_fase(cliente, rota):
     app-main.ahp-main.fase-execucao-page com card.fase-titulo-card e
     card.ahp-step-section, e é isso que esta página precisa reproduzir.
     """
-    html = cliente.get(rota).text
+    html = _legacy_html(rota)
     assert 'ahp-module-page' in html.split("<body", 1)[1][:80]
     assert "app-main ahp-main fase-execucao-page" in html
     assert "standard-page-hero" in html
@@ -138,7 +150,7 @@ def test_pagina_segue_o_padrao_visual_da_fase(cliente, rota):
 ])
 def test_pagina_inclui_a_navegacao_de_fases_com_a_fase_certa_ativa(cliente, rota, fase):
     """A página pertence ao fluxo de fases — precisa se orientar nele."""
-    html = cliente.get(rota).text
+    html = _legacy_html(rota)
     assert "hier-phase-navigation" in html
     outra_fase = 2 if fase == 1 else 1
     href_ativa = f'/restrict/hierarquizacao/fase-{fase}/"'

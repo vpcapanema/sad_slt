@@ -49,7 +49,9 @@ def listar_respostas_central(
 
 
 def _base_url(request: Request) -> str:
-    return str(request.base_url).rstrip("/")
+    base = str(request.base_url).rstrip("/")
+    prefix = request.headers.get("x-forwarded-prefix", "").rstrip("/")
+    return base if not prefix or base.endswith(prefix) else base + prefix
 
 
 @router.get("/ambientes", response_model=list[AmbienteColaborativoResponseSchema])

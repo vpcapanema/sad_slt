@@ -21,7 +21,10 @@ router = APIRouter(prefix="/demandas", tags=["demandas"])
 
 
 @router.post("", response_model=DemandaResponseSchema, status_code=201)
-def criar_demanda(body: DemandaCreateSchema) -> DemandaResponseSchema:
+def criar_demanda(
+    body: DemandaCreateSchema,
+    _user: SessionUser = Depends(require_operator),
+) -> DemandaResponseSchema:
     """Cria uma nova demanda de projeto."""
     try:
         return demanda_service.criar_demanda(body)
@@ -35,6 +38,7 @@ def criar_demanda(body: DemandaCreateSchema) -> DemandaResponseSchema:
 async def criar_demanda_com_arquivo_geometria(
     payload: str = Form(...),
     arquivo_geometria: UploadFile = File(...),
+    _user: SessionUser = Depends(require_operator),
 ) -> DemandaResponseSchema:
     """Cria um projeto e preserva seu arquivo vetorial original na mesma transação."""
     try:

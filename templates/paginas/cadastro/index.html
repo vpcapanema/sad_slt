@@ -17,7 +17,10 @@
     <section class="secao-cadastro-de-demandas module-hero" aria-labelledby="module-title">
       <p class="module-eyebrow">MOCAD · Cadastro de demandas</p>
       <h1 id="module-title">Cadastre ou consulte uma demanda</h1>
-      <p>Registre um plano, programa ou projeto para análise técnica ou consulte as demandas já disponibilizadas pelo SICARD.</p>
+      {% if cadastro_acesso_negado %}
+      <p class="error-msg" role="alert">Seu perfil não permite cadastrar demandas. Entre com uma conta de perfil Operador ou superior. Consulte abaixo como criar esse perfil no SIGMA-PLI.</p>
+      {% endif %}
+      <p>Para cadastrar Plano, Programa ou Projeto, entre com uma conta do SIGMA-PLI com perfil Operador ou superior. A consulta das demandas publicadas continua aberta ao público.</p>
     </section>
 
     <section aria-labelledby="module-services-title" class="secao-o-que-voce-deseja-fazer action-section">
@@ -35,7 +38,7 @@
             <span class="module-action-kicker">Nova solicitação</span>
             <strong>Cadastrar nova demanda</strong>
             <span>Registre um plano, programa ou projeto para avaliação técnica.</span>
-            <small>Tenha em mãos os dados do demandante, do responsável e a localização da demanda.</small>
+            <small>O acesso exige login e perfil Operador. Tenha em mãos os dados do demandante, do responsável e a localização.</small>
           </span>
           <span class="module-action-link">Iniciar cadastro <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
         </a>
@@ -59,7 +62,11 @@
           <h2 id="preparation-title">Antes de iniciar o cadastro</h2>
         </div>
       </div>
-      <p class="section-intro">Confira o que será solicitado para evitar interrupções durante o preenchimento.</p>
+      <p class="section-intro">Se ainda não possui acesso, faça o cadastro de pessoa e usuário no SIGMA-PLI e selecione o perfil Operador. Depois entre no SICARD com o username e a senha desse perfil. O login não aceita e-mail.</p>
+      <div class="module-link-list">
+        <a href="https://56.125.163.194/cadastro/sigma" target="_blank" rel="noopener"><span><strong>Criar conta com perfil Operador no SIGMA-PLI</strong><small>Cadastre a pessoa e o usuário e escolha o perfil Operador.</small></span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+        <a href="/public/login/?next=/public/cadastro/nova-demanda/"><span><strong>Entrar para cadastrar uma demanda</strong><small>Use o username do perfil, como nome_operador, e sua senha do SIGMA-PLI.</small></span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+      </div>
       <div class="preparation-grid">
         <article>
           <span class="preparation-icon"><i class="fa-solid fa-sitemap" aria-hidden="true"></i></span>
@@ -116,7 +123,7 @@
       </div>
       <div class="module-link-list">
         <a href="/public/documentacao/"><span><strong>Consultar a documentação do SICARD</strong><small>Entenda conceitos, perfis e regras do sistema.</small></span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
-        <a href="https://56.125.163.194/cadastro/sigma" target="_blank" rel="noopener"><span><strong>Cadastrar pessoa e usuário no SIGMA-PLI</strong><small>Faça o cadastro antes de iniciar, caso ainda não possua registro.</small></span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+        <a href="https://56.125.163.194/cadastro/sigma" target="_blank" rel="noopener"><span><strong>Cadastrar pessoa e usuário Operador no SIGMA-PLI</strong><small>Selecione o perfil Operador para poder cadastrar demandas no SICARD.</small></span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
         <a href="https://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener"><span><strong>Cadastrar instituição no SIGMA-PLI</strong><small>Inclua a instituição interessada se ela ainda não estiver disponível.</small></span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
       </div>
     </section>

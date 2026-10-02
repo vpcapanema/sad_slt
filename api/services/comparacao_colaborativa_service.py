@@ -8,6 +8,7 @@ import base64
 import binascii
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import quote
 from uuid import UUID
 
 from api.exceptions import DemandaValidationError
@@ -134,9 +135,7 @@ def _consolidacao_from_row(row: dict[str, Any]) -> ConsolidacaoColaborativaSchem
 
 def _ambiente_to_response(row: dict[str, Any], *, base_url: str = "") -> AmbienteColaborativoResponseSchema:
     token = row["token"]
-    url = f"{base_url.rstrip('/')}/public/ahp/colaborativa/?token={token}" if base_url else (
-        f"/public/ahp/colaborativa/?token={token}"
-    )
+    url = f"{base_url.rstrip('/')}/public/analise-multicriterio/{quote(str(token), safe='')}/"
     return AmbienteColaborativoResponseSchema(
         id=str(row["id"]),
         hierarquizacao_id=str(row["hierarquizacao_id"]) if row.get("hierarquizacao_id") else None,

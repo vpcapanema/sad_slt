@@ -20,7 +20,7 @@ MONITOR_JS = Path("assets/js/ahp-process-monitor.js").read_text(encoding="utf-8"
 FASE1_JS = Path("hierarquizacao/js/fases.js").read_text(encoding="utf-8")
 FASE2_JS = Path("hierarquizacao/js/fase2.js").read_text(encoding="utf-8")
 FASE3_JS = Path("hierarquizacao/js/fase3.js").read_text(encoding="utf-8")
-UPLOAD_JS = Path("assets/js/paginas/cadastro-upload-camada.js").read_text(encoding="utf-8")
+UPLOAD_JS = Path("legado/assets/js/paginas/cadastro-upload-camada.js").read_text(encoding="utf-8")
 SEI_JS = Path("admin/sei_documentos.js").read_text(encoding="utf-8")
 SEI_HTML = Path("templates/paginas/admin/sei_documentos.html").read_text(encoding="utf-8")
 
@@ -29,7 +29,7 @@ TEMPLATES_DAS_CINCO_PAGINAS = [
     "templates/paginas/hierarquizacao/fase2-favorabilidade.html",
     "templates/paginas/hierarquizacao/fase3-ajuste-fino.html",
     # Serve as duas páginas de cadastro/upload (elegibilidade e favorabilidade).
-    "templates/paginas/hierarquizacao/cadastro-upload-camada.html",
+    "legado/templates/paginas/hierarquizacao/cadastro-upload-camada.html",
 ]
 
 

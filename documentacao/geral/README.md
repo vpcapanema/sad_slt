@@ -103,7 +103,7 @@ Rotas públicas principais:
 | `/public/transparencia/` | Transparência e resultados |
 | `/public/documentacao/` | Documentação funcional |
 | `/public/login/` | Entrada da área restrita |
-| `/public/ahp/colaborativa/` | Resposta a convite AHP por token |
+| `/public/analise-multicriterio/{token}/` | Formulário colaborativo de especialistas por token |
 
 Rotas restritas principais:
 

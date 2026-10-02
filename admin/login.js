@@ -9,6 +9,12 @@
         .replace(/\/+$/, "")
         .endsWith("/public/login");
       if (target.origin !== location.origin || isLoginPage) return "/restrict/";
+      const segments = location.pathname.split("/");
+      const publicIndex = segments.lastIndexOf("public");
+      const prefix = publicIndex > 1 ? segments.slice(0, publicIndex).join("/") : "";
+      if (prefix && !target.pathname.startsWith(prefix + "/") && ["public", "restrict"].includes(target.pathname.split("/")[1])) {
+        target.pathname = prefix + target.pathname;
+      }
       return `${target.pathname}${target.search}${target.hash}`;
     } catch {
       return "/restrict/";
@@ -16,6 +22,12 @@
   }
 
   const next = safeNext(params.get("next"));
+  const registrationTarget = new URL(next, location.href).pathname.replace(/\/+$/, "").endsWith("/cadastro/nova-demanda");
+  const registrationDenied = "Para cadastrar demandas, entre com o perfil Operador ou superior. Crie ou selecione esse perfil no SIGMA-PLI.";
+
+  function canOpenNext(session) {
+    return !registrationTarget || Boolean(globalThis.SLTAdminAuth?.can("operate", session.user));
+  }
 
   const EYE_OPEN =
     '<path d="M12 5C7 5 2.7 8.1 1 12c1.7 3.9 6 7 11 7s9.3-3.1 11-7c-1.7-3.9-6-7-11-7zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/>';
@@ -91,6 +103,7 @@
         progress('Credenciais aceitas. Confirmando o cookie e a sessão restrita…');
         const session = await SLTAdminApi.fetchSession({ log, tentativa });
         if (!session?.authenticated) throw new Error('O login foi aceito, mas a sessão não foi confirmada. Verifique se o navegador permite cookies deste site e tente novamente.');
+        if (!canOpenNext(session)) throw new Error(registrationDenied);
         progress('Sessão confirmada. Abrindo a área restrita…');
         log('sessao.confirmada', { tentativa, duracao_ms: Math.round(performance.now() - started) });
         senhaInput.value = '';
@@ -114,6 +127,10 @@
       const session = await SLTAdminApi.fetchSession({ log, tentativa: 0, signal: initialCheck.signal });
       if (initialCheck.signal.aborted || submitting || attempt) return;
       if (session?.authenticated) {
+        if (!canOpenNext(session)) {
+          failure(registrationDenied);
+          return;
+        }
         show('Sessão existente confirmada. Abrindo a área restrita…');
         log('sessao.restaurada');
         navigated = true;

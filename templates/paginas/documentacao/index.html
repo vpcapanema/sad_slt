@@ -44,7 +44,7 @@
           <span class="documentation-subcard-icon"><i class="fa-regular fa-square-plus" aria-hidden="true"></i></span>
           <strong>MOCAD</strong>
           <span>Cadastro e análise de demandas</span>
-          <small>Registre planos, programas e projetos.</small>
+          <small>Registre planos, programas e projetos com login e perfil Operador ou superior.</small>
           <span class="documentation-subcard-action">Acessar módulo <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
         </a>
         <a class="documentation-subcard" href="/restrict/hierarquizacao/">
@@ -91,7 +91,7 @@
         <article class="documentation-subcard">
           <span class="documentation-subcard-icon"><i class="fa-regular fa-keyboard" aria-hidden="true"></i></span>
           <strong>Operador</strong>
-          <span>Cadastra, complementa e corrige dados.</span>
+          <span>Perfil mínimo para cadastrar Plano, Programa e Projeto. Exige conta e login no SIGMA-PLI.</span>
         </article>
         <article class="documentation-subcard">
           <span class="documentation-subcard-icon"><i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i></span>
@@ -114,13 +114,20 @@
     <section class="secao-sigma-pli module-info-section">
       <div class="module-section-heading">
         <div>
-          <p class="module-eyebrow">Cadastros auxiliares</p>
+          <p class="module-eyebrow">Cadastro e autenticação</p>
           <h2>SIGMA-PLI</h2>
         </div>
       </div>
+      <ol class="module-flow">
+        <li><strong>Crie sua conta</strong><span>No cadastro unificado do SIGMA-PLI, informe os dados da pessoa e do usuário e selecione o perfil Operador.</span></li>
+        <li><strong>Entre no SICARD</strong><span>Use o username do perfil Operador, como nome_operador, e a senha do SIGMA-PLI. Não use o e-mail no campo Usuário.</span></li>
+        <li><strong>Cadastre a demanda</strong><span>Escolha Plano, Programa ou Projeto. Cadastre também a instituição no SIGMA-PLI quando ela ainda não estiver disponível. Visualizador pode consultar, mas não cadastrar.</span></li>
+      </ol>
+      <p>Analista, Gestor e Administrador também podem cadastrar demandas. A autenticação não torna públicas as informações do cadastro: a consulta pública permanece limitada às demandas autorizadas para publicação.</p>
       <div class="module-link-list">
-        <a href="https://56.125.163.194/cadastro/sigma" target="_blank" rel="noopener"><span>Cadastro unificado de pessoa e usuário</span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+        <a href="https://56.125.163.194/cadastro/sigma" target="_blank" rel="noopener"><span>Criar pessoa e usuário com perfil Operador no SIGMA-PLI</span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
         <a href="https://56.125.163.194/cadastro/instituicao" target="_blank" rel="noopener"><span>Cadastro de instituição</span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+        <a href="/public/login/?next=/public/cadastro/nova-demanda/"><span>Entrar no SICARD para cadastrar uma demanda</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
       </div>
     </section>
   </main>

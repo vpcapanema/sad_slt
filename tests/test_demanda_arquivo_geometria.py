@@ -11,7 +11,7 @@ from api.repositories import demanda_repository
 from api.routers import admin_tabelas, demandas as demandas_router
 from api.schemas.demanda import DemandaResponseSchema, RepresentanteSchema
 from api.server import app
-from api.services.session_service import SessionUser
+from api.services.session_service import SessionUser, cookie_name, create_token
 
 
 KML_POINT = b"""<kml xmlns=\"http://www.opengis.net/kml/2.2\"><Placemark><Point>
@@ -46,6 +46,18 @@ def _response():
     )
 
 
+def _operator_client():
+    client = TestClient(app)
+    client.cookies.set(cookie_name(), create_token(SessionUser(
+        id="00000000-0000-0000-0000-000000000010",
+        email="operador@example.org",
+        username="teste_operador",
+        nome="Operador de teste",
+        tipo_usuario="OPERADOR",
+    )))
+    return client
+
+
 def test_upload_endpoint_passes_original_bytes_and_metadata(monkeypatch):
     captured = {}
 
@@ -55,7 +67,7 @@ def test_upload_endpoint_passes_original_bytes_and_metadata(monkeypatch):
         return _response()
 
     monkeypatch.setattr(demandas_router.demanda_service, "criar_demanda", create)
-    response = TestClient(app).post(
+    response = _operator_client().post(
         "/api/demandas/com-arquivo-geometria",
         data={"payload": json.dumps(_payload())},
         files={"arquivo_geometria": ("pasta\\ponto.kml", KML_POINT, "application/vnd.google-earth.kml+xml")},
@@ -83,7 +95,7 @@ def test_upload_endpoint_rejects_file_that_does_not_match_payload(monkeypatch):
         return _response()
 
     monkeypatch.setattr(demandas_router.demanda_service, "criar_demanda", create)
-    response = TestClient(app).post(
+    response = _operator_client().post(
         "/api/demandas/com-arquivo-geometria",
         data={"payload": json.dumps(_payload((-46.7, -23.5)))},
         files={"arquivo_geometria": ("ponto.kml", KML_POINT, "application/vnd.google-earth.kml+xml")},
