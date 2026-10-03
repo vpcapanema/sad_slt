@@ -1,0 +1,125 @@
+{% extends "bases/base_painel_mapa.html" %}
+{% set subtitulo = "Área do Operador" %}
+{% set navegacao = "operador" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Área do Operador — SICARD{% endblock %}
+{% block classes_body %}operador-home-page escala-revisada{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/sidebar-layout.css">
+  <link rel="stylesheet" href="/restrict/index.css?v=20261003-operador">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/escala-tipografica.css">
+{% endblock %}
+
+{% macro link_card(href, icon, title, tone='blue') %}
+  <a class="platform-tile platform-tile--{{ tone }}" href="{{ href }}" title="{{ title }}">
+    <span class="platform-tile__icon"><i class="{{ icon }}" aria-hidden="true"></i></span>
+    <span class="platform-tile__label">{{ title }}</span>
+  </a>
+{% endmacro %}
+
+{% macro group_heading(identifier, title, subtitle, description) %}
+  <div class="platform-group__heading">
+    <div>
+      <h2 id="{{ identifier }}">{{ title }}</h2>
+      <p class="platform-group__subtitle">{{ subtitle }}</p>
+      <p class="platform-group__description">{{ description }}</p>
+    </div>
+  </div>
+{% endmacro %}
+
+{% block barra_lateral %}
+  <nav class="operator-sidebar-nav" aria-label="Navegação do Operador">
+    <p class="operator-sidebar-label">Operação</p>
+    <a href="/restrict/operador/" aria-current="page"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Início</span></a>
+    <a href="/public/cadastro/nova-demanda/"><i class="fa-solid fa-file-circle-plus" aria-hidden="true"></i><span>Cadastrar demanda</span></a>
+    <a href="/restrict/painel/"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>Painel de demandas</span></a>
+    <a href="/restrict/demandas/"><i class="fa-solid fa-table-list" aria-hidden="true"></i><span>Tabela de demandas</span></a>
+    <a href="/restrict/complementacao/"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i><span>Complementação</span></a>
+    <p class="operator-sidebar-label">Referências</p>
+    <a href="/public/"><i class="fa-solid fa-globe" aria-hidden="true"></i><span>Portal público</span></a>
+    <a href="/public/cadastro/catalogo-diretorias/"><i class="fa-solid fa-sitemap" aria-hidden="true"></i><span>Catálogos</span></a>
+  </nav>
+{% endblock %}
+
+{% block painel %}
+  <div class="layout-main-scroll operator-main-scroll">
+    <main class="conteudo-principal app-main restrict-index operator-home-content">
+      <section class="secao-modulos-do-sicard restrict-index-heading" aria-labelledby="operator-home-title">
+        <p class="restrict-index-eyebrow">Área restrita · Operador</p>
+        <h1 id="operator-home-title">Suas demandas</h1>
+        <p>Acompanhe os protocolos que você registrou e as pendências disponíveis para complementação.</p>
+      </section>
+
+      <section class="secao-painel-estatistico themed-stats" aria-labelledby="operator-stats-title">
+        <div class="themed-stats-heading">
+          <p class="restrict-index-eyebrow">Seu fluxo</p>
+          <h2 id="operator-stats-title">Indicadores das suas demandas</h2>
+        </div>
+        <div class="themed-stats-grid operator-stats-grid" aria-live="polite">
+          <article class="card-gestao-de-demandas stats-theme">
+            <h3><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> Aprovações</h3>
+            <div class="stats-theme-values">
+              <div class="operator-stat-ratio">
+                <strong id="stat-aprovadas">—</strong><span aria-hidden="true">/</span><strong id="stat-protocoladas">—</strong>
+                <span>Aprovadas / protocoladas por você</span>
+              </div>
+            </div>
+          </article>
+          <article class="card-hierarquizacao-e-ranking stats-theme">
+            <h3><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Aguardando complementação</h3>
+            <div class="stats-theme-values">
+              <div><strong id="stat-complementacao">—</strong><span>Itens que você pode completar</span></div>
+            </div>
+          </article>
+          <article class="card-resultados-e-transparencia stats-theme">
+            <h3><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> Em análise</h3>
+            <div class="stats-theme-values">
+              <div><strong id="stat-em-analise">—</strong><span>Aguardando parecer da equipe</span></div>
+            </div>
+          </article>
+        </div>
+        <p id="operator-stats-error" class="operator-stats-error" role="status" hidden></p>
+      </section>
+
+      <div class="platform-groups-grid restrict-platform-groups operator-platform-groups">
+        <section class="platform-group secao-platform-operador" aria-labelledby="group-operador">
+          {{ group_heading('group-operador', 'Ações do operador', 'Cadastro e complementação', 'Registro e atualização de demandas.') }}
+          <div class="platform-grid">
+            {{ link_card('/public/cadastro/nova-demanda/', 'fa-solid fa-file-circle-plus', 'Cadastrar Nova Demanda', 'blue') }}
+            {{ link_card('/restrict/complementacao/', 'fa-solid fa-pen-to-square', 'Complementação de cadastro', 'blue') }}
+          </div>
+        </section>
+
+        <section class="platform-group secao-platform-publico" aria-labelledby="group-publico">
+          {{ group_heading('group-publico', 'PÚBLICO', 'Portal aberto ao cidadão', 'Consulta pública do SICARD.') }}
+          <div class="platform-grid">
+            {{ link_card('/public/', 'fa-solid fa-house', 'Portal público', 'blue') }}
+            {{ link_card('/public/cadastro/', 'fa-solid fa-folder-open', 'Instruções para cadastro de demanda', 'blue') }}
+            {{ link_card('/public/painel/', 'fa-solid fa-map-location-dot', 'Painel público de demandas', 'blue') }}
+            {{ link_card('/restrict/revisao-status/', 'fa-solid fa-arrows-rotate', 'Revisão de status', 'blue') }}
+            {{ link_card('/public/documentacao/', 'fa-solid fa-circle-info', 'Documentação', 'blue') }}
+          </div>
+        </section>
+
+        <section class="platform-group secao-platform-catalogos" aria-labelledby="group-catalogos">
+          {{ group_heading('group-catalogos', 'CATÁLOGOS', 'Referências do cadastro', 'Diretorias, planos, frentes e eixos.') }}
+          <div class="platform-grid">
+            {{ link_card('/public/cadastro/catalogo-diretorias/', 'fa-solid fa-sitemap', 'Diretorias', 'navy') }}
+            {{ link_card('/public/cadastro/catalogo-planos/', 'fa-solid fa-clipboard-list', 'Planos', 'navy') }}
+            {{ link_card('/public/cadastro/catalogo-frentes-pli/', 'fa-solid fa-road', 'Frentes do PLI', 'navy') }}
+            {{ link_card('/public/cadastro/catalogo-eixos-pef/', 'fa-solid fa-compass', 'Eixos do PEF', 'navy') }}
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-api.js"></script>
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/paginas/operador-index.js"></script>
+{% endblock %}

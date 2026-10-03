@@ -21,12 +21,22 @@
     }
   }
 
+  const hasExplicitNext = params.has("next");
   const next = safeNext(params.get("next"));
   const registrationTarget = new URL(next, location.href).pathname.replace(/\/+$/, "").endsWith("/cadastro/nova-demanda");
   const registrationDenied = "Para cadastrar demandas, entre com o perfil Operador ou superior. Crie ou selecione esse perfil no SIGMA-PLI.";
 
   function canOpenNext(session) {
     return !registrationTarget || Boolean(globalThis.SLTAdminAuth?.can("operate", session.user));
+  }
+
+  function destination(session) {
+    const profile = String(session?.user?.tipo_usuario || "").toUpperCase();
+    const nextPath = new URL(next, location.href).pathname.replace(/\/+$/, "");
+    const isRestrictedHome = nextPath.endsWith("/restrict") || nextPath.endsWith("/restrict/index.html");
+    return profile === "OPERADOR" && (!hasExplicitNext || isRestrictedHome)
+      ? "/restrict/operador/"
+      : next;
   }
 
   const EYE_OPEN =
@@ -108,7 +118,7 @@
         log('sessao.confirmada', { tentativa, duracao_ms: Math.round(performance.now() - started) });
         senhaInput.value = '';
         navigated = true;
-        location.replace(next);
+        location.replace(destination(session));
       } catch (error) {
         failure(error.status === 401
           ? 'Acesso negado. Usuário ou senha incorretos.'
@@ -134,7 +144,7 @@
         show('Sessão existente confirmada. Abrindo a área restrita…');
         log('sessao.restaurada');
         navigated = true;
-        location.replace(next);
+        location.replace(destination(session));
       } else { show('Informe suas credenciais para entrar.', 'idle'); }
     } catch {
       if (!initialCheck.signal.aborted && !submitting && !attempt)

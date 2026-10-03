@@ -42,3 +42,9 @@ class PainelDemandaSchema(BaseModel):
     publico_alvo: str | None = None
     orgao_responsavel: str | None = None
     justificativa: str | None = None
+
+
+class EstatisticasOperadorSchema(BaseModel):
+    aprovadas: int
+    protocoladas: int
+    em_analise: int

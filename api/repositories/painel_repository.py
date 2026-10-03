@@ -154,3 +154,34 @@ def list_all() -> list[dict[str, Any]]:
         programas = list(conn.execute(_PROGRAMAS_SQL).fetchall())
         projetos = list(conn.execute(_PROJETOS_SQL).fetchall())
     return planos + programas + projetos
+
+
+def estatisticas_operador(usuario_id: str) -> dict[str, int]:
+    """Agrega registros protocolados pela conta SIGMA autenticada."""
+    query = """
+        WITH registros AS (
+            SELECT status, aprovado_em
+            FROM demandas.plano
+            WHERE criado_por = %(usuario_id)s
+            UNION ALL
+            SELECT status, aprovado_em
+            FROM demandas.programa
+            WHERE criado_por = %(usuario_id)s
+            UNION ALL
+            SELECT status, aprovado_em
+            FROM demandas.projeto
+            WHERE criado_por = %(usuario_id)s
+        )
+        SELECT
+            count(*)::int AS protocoladas,
+            count(*) FILTER (WHERE aprovado_em IS NOT NULL)::int AS aprovadas,
+            count(*) FILTER (WHERE status = 'analise_em_avaliacao')::int AS em_analise
+        FROM registros
+    """
+    with get_connection() as conn:
+        row = conn.execute(query, {"usuario_id": usuario_id}).fetchone()
+    return {
+        "aprovadas": int(row["aprovadas"]),
+        "protocoladas": int(row["protocoladas"]),
+        "em_analise": int(row["em_analise"]),
+    }

@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.deps.auth import require_authenticated
+from api.deps.auth import require_authenticated, require_operator
 from api.exceptions import DatabaseUnavailableError
-from api.schemas.painel import PainelDemandaSchema
+from api.schemas.painel import EstatisticasOperadorSchema, PainelDemandaSchema
 from api.services import painel_service
+from api.services.session_service import SessionUser
 
 router = APIRouter(prefix="/painel", tags=["painel"])
 
@@ -27,5 +28,15 @@ def listar_demandas_painel_interno(
     """Lista interna completa para os operadores autenticados."""
     try:
         return painel_service.listar_demandas_painel(public_only=False)
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/operador/estatisticas", response_model=EstatisticasOperadorSchema)
+def estatisticas_operador(
+    user: SessionUser = Depends(require_operator),
+) -> EstatisticasOperadorSchema:
+    try:
+        return EstatisticasOperadorSchema(**painel_service.estatisticas_operador(user.id))
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

@@ -417,7 +417,7 @@ def test_legacy_page_redirect_preserves_query_string() -> None:
 
 
 def test_unhandled_database_error_is_returned_as_service_unavailable(monkeypatch) -> None:
-    def unavailable():
+    def unavailable(**_kwargs):
         raise DatabaseUnavailableError("Banco temporariamente indisponível.")
 
     monkeypatch.setattr(demanda_service, "listar_demandas", unavailable)

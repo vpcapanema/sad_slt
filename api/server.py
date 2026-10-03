@@ -200,6 +200,24 @@ def pagina_inicial_restrita(request: Request) -> Response:
     return render_page(request, "paginas/admin/index.html")
 
 
+@app.get("/restrict/operador/", include_in_schema=False)
+def pagina_inicial_operador(
+    request: Request,
+    user: SessionUser | None = Depends(get_optional_session),
+) -> Response:
+    if user is None:
+        prefix = request.headers.get("x-forwarded-prefix", "").rstrip("/")
+        destination = prefix + request.url.path
+        return RedirectResponse(
+            "/public/login/?" + urlencode({"next": destination}),
+            status_code=303,
+            headers={"Cache-Control": "no-store"},
+        )
+    if user.tipo_usuario.strip().upper() != "OPERADOR":
+        raise HTTPException(status_code=403, detail="Esta página exige perfil Operador.")
+    return render_page(request, "paginas/admin/operador.html")
+
+
 @app.get("/restrict/admin/", include_in_schema=False)
 def pagina_area_administrador(request: Request) -> Response:
     return render_page(request, "paginas/admin/area-administrador.html")

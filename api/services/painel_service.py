@@ -90,3 +90,7 @@ def listar_demandas_painel(*, public_only: bool = False) -> list[PainelDemandaSc
             for row in rows
         ]
     return [_row_to_item(row) for row in rows]
+
+
+def estatisticas_operador(usuario_id: str) -> dict[str, int]:
+    return painel_repository.estatisticas_operador(usuario_id)

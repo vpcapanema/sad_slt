@@ -378,6 +378,104 @@
   }
 }
 
+body.operador-home-page {
+  background: var(--pli-bg);
+}
+
+.operator-main-scroll {
+  padding: 1.25rem;
+}
+
+.operator-home-content {
+  width: min(100%, 1440px);
+  max-width: none;
+}
+
+.operator-sidebar-nav {
+  display: grid;
+  align-content: start;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 1rem 0.85rem;
+  overflow-y: auto;
+}
+
+.operator-sidebar-label {
+  margin: 0.65rem 0 0.25rem;
+  color: var(--sb-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.operator-sidebar-nav a {
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: center;
+  min-width: 0;
+  min-height: 2.65rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--sb-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-decoration: none;
+}
+
+.operator-sidebar-nav a i {
+  color: var(--sb-green);
+  text-align: center;
+}
+
+.operator-sidebar-nav a:hover,
+.operator-sidebar-nav a[aria-current="page"] {
+  border-color: var(--sb-border);
+  color: var(--sb-text);
+  background: var(--sb-surface-hover);
+}
+
+.operator-sidebar-nav a:focus-visible {
+  outline: 3px solid var(--sb-green);
+  outline-offset: 2px;
+}
+
+.operator-stat-ratio {
+  grid-template-columns: auto auto auto;
+  grid-template-rows: auto auto;
+  column-gap: 0.5rem;
+  align-items: center;
+}
+
+.operator-stat-ratio > span:last-child {
+  grid-column: 1 / -1;
+}
+
+.operator-stats-error {
+  margin: 0;
+  color: var(--pli-error);
+  font-size: 0.8rem;
+}
+
+.operator-platform-groups .secao-platform-operador,
+.operator-platform-groups .secao-platform-publico,
+.operator-platform-groups .secao-platform-catalogos {
+  grid-column: span 3;
+}
+
+@media (max-width: 600px) {
+  .operator-main-scroll {
+    padding: 0.75rem;
+  }
+
+  .operator-home-content {
+    width: 100%;
+  }
+}
+
 /* Grade uniforme: três módulos na primeira linha e dois na segunda. */
 .restrict-platform-groups {
   display: grid;
