@@ -57,7 +57,7 @@ _SELECT_NOMES = """
         COALESCE(p.nome_completo, u.username) AS nome_pessoa
     FROM usuarios.usuario u
     LEFT JOIN cadastro.pessoa p ON p.id = u.pessoa_id
-    WHERE u.id = ANY(%(ids)s)
+    WHERE u.id = ANY(%(ids)s::uuid[])
 """
 
 

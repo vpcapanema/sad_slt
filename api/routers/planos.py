@@ -16,11 +16,11 @@ router = APIRouter(prefix="/planos", tags=["planos"])
 @router.post("", response_model=PlanoResponseSchema, status_code=201)
 def criar_plano(
     body: PlanoCreateSchema,
-    _user: SessionUser = Depends(require_operator),
+    user: SessionUser = Depends(require_operator),
 ) -> PlanoResponseSchema:
     """Cadastra um novo plano (nível 1)."""
     try:
-        return plano_service.criar_plano(body)
+        return plano_service.criar_plano(body, usuario_id=user.id)
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
@@ -49,7 +49,7 @@ def listar_planos_vinculaveis() -> list[PlanoResponseSchema]:
 def listar_planos_internos(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[PlanoResponseSchema]:
-    return plano_service.listar_planos()
+    return plano_service.listar_planos(incluir_auditoria=True)
 
 
 @router.get("/internas/{codigo}", response_model=PlanoResponseSchema)
@@ -57,7 +57,7 @@ def obter_plano_interno(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> PlanoResponseSchema:
-    return plano_service.obter_plano(codigo)
+    return plano_service.obter_plano(codigo, incluir_auditoria=True)
 
 
 @router.get("/{codigo}", response_model=PlanoResponseSchema)
@@ -82,7 +82,7 @@ def aprovar_plano(
 ) -> PlanoResponseSchema:
     """Promove o plano ao universo AHP (transição de status in-place)."""
     motivo = body.motivo if body else None
-    aprovado_por = (body.aprovado_por if body else None) or user.id
+    aprovado_por = user.id
     try:
         return plano_service.aprovar_plano(codigo, motivo=motivo, aprovado_por=aprovado_por)
     except DemandaNotFoundError as exc:
@@ -104,7 +104,7 @@ def reprovar_plano(
         return plano_service.reprovar_plano(
             codigo,
             justificativa=body.justificativa,
-            reprovado_por=body.reprovado_por or user.id,
+            reprovado_por=user.id,
         )
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -118,11 +118,11 @@ def reprovar_plano(
 def atualizar_plano(
     codigo: str,
     body: PlanoUpdateSchema,
-    _user: SessionUser = Depends(require_operator),
+    user: SessionUser = Depends(require_operator),
 ) -> PlanoResponseSchema:
     """Atualiza um plano existente."""
     try:
-        return plano_service.atualizar_plano(codigo, body)
+        return plano_service.atualizar_plano(codigo, body, usuario_id=user.id)
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:

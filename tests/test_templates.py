@@ -212,6 +212,29 @@ def test_restricted_home_groups_operator_and_territorial_actions() -> None:
     assert re.search(r'<button\b[^>]*disabled[^>]*>.*?Agrupamento de demandas.*?</button>', mad, re.S)
 
 
+def test_restricted_demands_table_exposes_audit_names_and_timestamps() -> None:
+    response = TestClient(app).get("/restrict/demandas/")
+    assert response.status_code == 200
+    for label in (
+        "Criado por",
+        "Cadastro",
+        "Atualizado por",
+        "Atualização",
+        "Aprovado por",
+        "Aprovação",
+        "Reprovado por",
+        "Reprovação",
+    ):
+        assert response.text.count(f'<th scope="col">{label}</th>') == 3
+
+    script = Path("admin/demandas.js").read_text(encoding="utf-8")
+    assert "d.criadoPorNome" in script
+    assert "d.atualizadoPorNome" in script
+    assert "d.aprovadoPorNome" in script
+    assert "d.reprovadoPorNome" in script
+    assert "d.criado_por" not in script
+
+
 def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> None:
     content = TestClient(app).get("/restrict/").text
     match = re.search(r'<section\b[^>]*aria-labelledby="group-geoprocessamento"[^>]*>.*?</section>', content, re.S)

@@ -61,8 +61,9 @@ def _operator_client():
 def test_upload_endpoint_passes_original_bytes_and_metadata(monkeypatch):
     captured = {}
 
-    def create(payload, *, arquivo_geometria=None):
+    def create(payload, *, usuario_id, arquivo_geometria=None):
         captured["payload"] = payload
+        captured["usuario_id"] = usuario_id
         captured["arquivo"] = arquivo_geometria
         return _response()
 
@@ -74,6 +75,7 @@ def test_upload_endpoint_passes_original_bytes_and_metadata(monkeypatch):
     )
 
     assert response.status_code == 201, response.text
+    assert captured["usuario_id"] == "00000000-0000-0000-0000-000000000010"
     assert captured["payload"].geometria.tipo == "Point"
     assert captured["arquivo"] == {
         "nome_arquivo": "ponto.kml",

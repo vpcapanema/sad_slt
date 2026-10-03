@@ -16,11 +16,11 @@ router = APIRouter(prefix="/programas", tags=["programas"])
 @router.post("", response_model=ProgramaResponseSchema, status_code=201)
 def criar_programa(
     body: ProgramaCreateSchema,
-    _user: SessionUser = Depends(require_operator),
+    user: SessionUser = Depends(require_operator),
 ) -> ProgramaResponseSchema:
     """Cadastra um novo programa (nível 2)."""
     try:
-        return programa_service.criar_programa(body)
+        return programa_service.criar_programa(body, usuario_id=user.id)
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
@@ -49,7 +49,7 @@ def listar_programas_vinculaveis() -> list[ProgramaResponseSchema]:
 def listar_programas_internos(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[ProgramaResponseSchema]:
-    return programa_service.listar_programas()
+    return programa_service.listar_programas(incluir_auditoria=True)
 
 
 @router.get("/internas/{codigo}", response_model=ProgramaResponseSchema)
@@ -57,7 +57,7 @@ def obter_programa_interno(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> ProgramaResponseSchema:
-    return programa_service.obter_programa(codigo)
+    return programa_service.obter_programa(codigo, incluir_auditoria=True)
 
 
 @router.get("/{codigo}", response_model=ProgramaResponseSchema)
@@ -82,7 +82,7 @@ def aprovar_programa(
 ) -> ProgramaResponseSchema:
     """Promove o programa ao universo AHP (transição de status in-place)."""
     motivo = body.motivo if body else None
-    aprovado_por = (body.aprovado_por if body else None) or user.id
+    aprovado_por = user.id
     try:
         return programa_service.aprovar_programa(codigo, motivo=motivo, aprovado_por=aprovado_por)
     except DemandaNotFoundError as exc:
@@ -104,7 +104,7 @@ def reprovar_programa(
         return programa_service.reprovar_programa(
             codigo,
             justificativa=body.justificativa,
-            reprovado_por=body.reprovado_por or user.id,
+            reprovado_por=user.id,
         )
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -118,11 +118,11 @@ def reprovar_programa(
 def atualizar_programa(
     codigo: str,
     body: ProgramaUpdateSchema,
-    _user: SessionUser = Depends(require_operator),
+    user: SessionUser = Depends(require_operator),
 ) -> ProgramaResponseSchema:
     """Atualiza um programa existente."""
     try:
-        return programa_service.atualizar_programa(codigo, body)
+        return programa_service.atualizar_programa(codigo, body, usuario_id=user.id)
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:

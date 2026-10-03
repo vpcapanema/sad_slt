@@ -149,11 +149,17 @@ def criar_demanda(documento_id: str, body: SeiCriarDemandaSchema, user: SessionU
             # O status inicial é regra do serviço, não escolha do payload.
             campos.pop('status', None)
             if body.tipo_demanda == 'plano':
-                resultado = plano_service.criar_plano(PlanoCreateSchema.model_validate(campos), origem='SEI')
+                resultado = plano_service.criar_plano(
+                    PlanoCreateSchema.model_validate(campos), usuario_id=user.id, origem='SEI'
+                )
             elif body.tipo_demanda == 'programa':
-                resultado = programa_service.criar_programa(ProgramaCreateSchema.model_validate(campos), origem='SEI')
+                resultado = programa_service.criar_programa(
+                    ProgramaCreateSchema.model_validate(campos), usuario_id=user.id, origem='SEI'
+                )
             else:
-                resultado = demanda_service.criar_demanda(DemandaCreateSchema.model_validate(campos), origem='SEI')
+                resultado = demanda_service.criar_demanda(
+                    DemandaCreateSchema.model_validate(campos), usuario_id=user.id, origem='SEI'
+                )
             identificador = resultado['id'] if isinstance(resultado, dict) else resultado.id
             documentos.registrar_demanda(documento_id, identificador)
             return resultado

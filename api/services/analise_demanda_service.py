@@ -404,11 +404,17 @@ def _aplicar_transicao(
 
     # Demais destinos (ex.: analise_suspensa) usam o PATCH, que já valida a matriz.
     if tipo == "plano":
-        plano_service.atualizar_plano(codigo, PlanoUpdateSchema(status=destino))
+        plano_service.atualizar_plano(
+            codigo, PlanoUpdateSchema.model_validate({"status": destino}), usuario_id=avaliador_id
+        )
     elif tipo == "programa":
-        programa_service.atualizar_programa(codigo, ProgramaUpdateSchema(status=destino))
+        programa_service.atualizar_programa(
+            codigo, ProgramaUpdateSchema.model_validate({"status": destino}), usuario_id=avaliador_id
+        )
     else:
-        demanda_service.atualizar_demanda(codigo, DemandaUpdateSchema(status=destino))
+        demanda_service.atualizar_demanda(
+            codigo, DemandaUpdateSchema.model_validate({"status": destino}), usuario_id=avaliador_id
+        )
     return destino
 
 

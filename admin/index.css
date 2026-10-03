@@ -512,7 +512,7 @@
   gap: var(--vao);
 }
 
-.secao-platform-mocad .platform-grid { --itens-por-linha: 3; }
+.secao-platform-mocad .platform-grid { --itens-por-linha: 2; }
 .secao-platform-operador .platform-grid { --itens-por-linha: 2; }
 .secao-platform-resultados .platform-grid { --itens-por-linha: 1; }
 .secao-platform-geoprocessamento .platform-grid { --itens-por-linha: 2; }

@@ -23,11 +23,11 @@ router = APIRouter(prefix="/demandas", tags=["demandas"])
 @router.post("", response_model=DemandaResponseSchema, status_code=201)
 def criar_demanda(
     body: DemandaCreateSchema,
-    _user: SessionUser = Depends(require_operator),
+    user: SessionUser = Depends(require_operator),
 ) -> DemandaResponseSchema:
     """Cria uma nova demanda de projeto."""
     try:
-        return demanda_service.criar_demanda(body)
+        return demanda_service.criar_demanda(body, usuario_id=user.id)
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
@@ -38,7 +38,7 @@ def criar_demanda(
 async def criar_demanda_com_arquivo_geometria(
     payload: str = Form(...),
     arquivo_geometria: UploadFile = File(...),
-    _user: SessionUser = Depends(require_operator),
+    user: SessionUser = Depends(require_operator),
 ) -> DemandaResponseSchema:
     """Cria um projeto e preserva seu arquivo vetorial original na mesma transação."""
     try:
@@ -84,7 +84,9 @@ async def criar_demanda_com_arquivo_geometria(
         "conteudo_binario": conteudo,
     }
     try:
-        return demanda_service.criar_demanda(body, arquivo_geometria=arquivo)
+        return demanda_service.criar_demanda(
+            body, usuario_id=user.id, arquivo_geometria=arquivo
+        )
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
@@ -104,7 +106,7 @@ def listar_demandas() -> list[DemandaResponseSchema]:
 def listar_demandas_internas(
     _user: SessionUser = Depends(require_authenticated),
 ) -> list[DemandaResponseSchema]:
-    return demanda_service.listar_demandas()
+    return demanda_service.listar_demandas(incluir_auditoria=True)
 
 
 @router.get("/internas/{codigo}", response_model=DemandaResponseSchema)
@@ -112,7 +114,7 @@ def obter_demanda_interna(
     codigo: str,
     _user: SessionUser = Depends(require_authenticated),
 ) -> DemandaResponseSchema:
-    return demanda_service.obter_demanda(codigo)
+    return demanda_service.obter_demanda(codigo, incluir_auditoria=True)
 
 
 @router.get("/{codigo}", response_model=DemandaResponseSchema)
@@ -137,7 +139,7 @@ def aprovar_demanda(
 ) -> ObjetoAhpResponseSchema:
     """Aprova demanda e insere objeto em ahp.objeto_ahp (única fonte do módulo AHP)."""
     motivo = body.motivo if body else None
-    aprovado_por = (body.aprovado_por if body else None) or user.id
+    aprovado_por = user.id
     try:
         return objeto_ahp_service.aprovar_demanda(
             codigo,
@@ -163,7 +165,7 @@ def reprovar_demanda(
         return demanda_service.reprovar_demanda(
             codigo,
             justificativa=body.justificativa,
-            reprovado_por=body.reprovado_por or user.id,
+            reprovado_por=user.id,
         )
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -177,11 +179,11 @@ def reprovar_demanda(
 def atualizar_demanda(
     codigo: str,
     body: DemandaUpdateSchema,
-    _user: SessionUser = Depends(require_operator),
+    user: SessionUser = Depends(require_operator),
 ) -> DemandaResponseSchema:
     """Atualiza uma demanda existente."""
     try:
-        return demanda_service.atualizar_demanda(codigo, body)
+        return demanda_service.atualizar_demanda(codigo, body, usuario_id=user.id)
     except DemandaNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DemandaValidationError as exc:

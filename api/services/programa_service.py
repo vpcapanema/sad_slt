@@ -10,7 +10,12 @@ from api.constants import CODIGO_PROGRAMA_OUTROS, CODIGOS_SENTINELA_HIERARQUIA
 from api.constants import STATUS_INICIAL_DEMANDA, STATUS_PRE_APROVACAO, STATUS_PRE_REPROVACAO
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import demanda_repository, dominio_repository, programa_repository
-from api.services.campos_demanda import extrair_atributos_nativos, mesclar_atributos_nativos, normalizar_programa
+from api.services.campos_demanda import (
+    extrair_atributos_nativos,
+    mesclar_atributos_nativos,
+    normalizar_programa,
+    resolver_nomes_registros,
+)
 from api.services.hierarquia_outros import resolve_plano_pai_id
 from api.services.patch_helpers import apply_instituicao, apply_representante
 from api.services.reprovacao import validar_reprovacao
@@ -39,20 +44,34 @@ def _representante_from_row(row: dict[str, Any]) -> RepresentanteSchema | None:
         return None
     return RepresentanteSchema(
         pessoa_id=str(row["sigma_pessoa_id"]) if row.get("sigma_pessoa_id") else None,
-        nome=row.get("representante_nome") or "",
+        nome=row.get("representante_nome_completo") or row.get("representante_nome") or "",
         email=row.get("representante_email"),
         telefone=row.get("representante_telefone"),
     )
 
 
-def _row_to_response(row: dict[str, Any]) -> ProgramaResponseSchema:
+def _row_to_response(
+    row: dict[str, Any], *, incluir_auditoria: bool = False, nomes_resolvidos: bool = False
+) -> ProgramaResponseSchema:
+    if incluir_auditoria and not nomes_resolvidos:
+        row = resolver_nomes_registros([row])[0]
     valor = row.get("valor_global")
     rep = _representante_from_row(row)
     return ProgramaResponseSchema(
         id=row["codigo"],
         status=row["status"],
         criadoEm=_iso(row.get("criado_em")) or "",
+        atualizadoEm=_iso(row.get("atualizado_em")),
+        criado_por=str(row["criado_por"]) if incluir_auditoria and row.get("criado_por") else None,
+        criadoPorNome=row.get("criado_por_nome") if incluir_auditoria else None,
+        atualizado_por=str(row["atualizado_por"]) if incluir_auditoria and row.get("atualizado_por") else None,
+        atualizadoPorNome=row.get("atualizado_por_nome") if incluir_auditoria else None,
+        aprovadoEm=_iso(row.get("aprovado_em")),
+        aprovado_por=str(row["aprovado_por"]) if incluir_auditoria and row.get("aprovado_por") else None,
+        aprovadoPorNome=row.get("aprovado_por_nome") if incluir_auditoria else None,
         reprovadoEm=_iso(row.get("reprovado_em")),
+        reprovado_por=str(row["reprovado_por"]) if incluir_auditoria and row.get("reprovado_por") else None,
+        reprovadoPorNome=row.get("reprovado_por_nome") if incluir_auditoria else None,
         motivo_reprovacao=row.get("motivo_reprovacao"),
         plano_id=str(row["plano_id"]) if row.get("plano_id") else None,
         plano_codigo=row.get("plano_codigo"),
@@ -92,7 +111,9 @@ def _resolve_instituicao_id(payload: ProgramaCreateSchema) -> str:
     return _parse_uuid(str(payload.instituicao_id), "instituicao_id")
 
 
-def criar_programa(payload: ProgramaCreateSchema, *, origem: str = "") -> ProgramaResponseSchema:
+def criar_programa(
+    payload: ProgramaCreateSchema, *, usuario_id: str, origem: str = ""
+) -> ProgramaResponseSchema:
     """``origem="SEI"`` marca o código gerado (``I-PRO-SEI-XXXXXXXX``) quando a
     criação vem da integração com o SEI-SP. Vazio por padrão."""
     if payload.vinculo_institucional and not (payload.plano_codigo or "").strip():
@@ -134,20 +155,26 @@ def criar_programa(payload: ProgramaCreateSchema, *, origem: str = "") -> Progra
         "representante_telefone": payload.representante.telefone,
         "status": STATUS_INICIAL_DEMANDA,
     }
-    normalizar_programa(row, pessoa_id=pessoa_id)
+    normalizar_programa(row, pessoa_id=pessoa_id, usuario_id=usuario_id)
     inserted = programa_repository.insert(row, payload.unidades_espaciais)
-    return _row_to_response(inserted)
+    return _row_to_response(inserted, incluir_auditoria=True)
 
 
-def listar_programas() -> list[ProgramaResponseSchema]:
-    return [_row_to_response(row) for row in programa_repository.list_all()]
+def listar_programas(*, incluir_auditoria: bool = False) -> list[ProgramaResponseSchema]:
+    rows = programa_repository.list_all()
+    if incluir_auditoria:
+        rows = resolver_nomes_registros(rows)
+    return [
+        _row_to_response(row, incluir_auditoria=incluir_auditoria, nomes_resolvidos=incluir_auditoria)
+        for row in rows
+    ]
 
 
-def obter_programa(codigo: str) -> ProgramaResponseSchema:
+def obter_programa(codigo: str, *, incluir_auditoria: bool = False) -> ProgramaResponseSchema:
     row = programa_repository.get_by_codigo(codigo)
     if not row:
         raise DemandaNotFoundError(codigo)
-    return _row_to_response(row)
+    return _row_to_response(row, incluir_auditoria=incluir_auditoria)
 
 
 def aprovar_programa(codigo: str, *, motivo: str | None = None,
@@ -165,7 +192,7 @@ def aprovar_programa(codigo: str, *, motivo: str | None = None,
         raise DemandaValidationError(
             f"Programa {codigo} não pôde ser aprovado (status alterado).", field="status"
         )
-    return _row_to_response(updated)
+    return _row_to_response(updated, incluir_auditoria=True)
 
 
 def reprovar_programa(
@@ -191,15 +218,17 @@ def reprovar_programa(
         raise DemandaValidationError(
             f"Programa {codigo} não pôde ser reprovado (status alterado).", field="status"
         )
-    return _row_to_response(updated)
+    return _row_to_response(updated, incluir_auditoria=True)
 
 
-def atualizar_programa(codigo: str, payload: ProgramaUpdateSchema) -> ProgramaResponseSchema:
+def atualizar_programa(
+    codigo: str, payload: ProgramaUpdateSchema, *, usuario_id: str | None
+) -> ProgramaResponseSchema:
     if not programa_repository.get_by_codigo(codigo):
         raise DemandaNotFoundError(codigo)
     data = payload.model_dump(exclude_unset=True)
     if not data:
-        return obter_programa(codigo)
+        return obter_programa(codigo, incluir_auditoria=True)
 
     if "status" in data:
         row = programa_repository.get_by_codigo(codigo)
@@ -226,11 +255,12 @@ def atualizar_programa(codigo: str, payload: ProgramaUpdateSchema) -> ProgramaRe
     for key in ("instituicao_id", "instituicao_label", "pessoa_id", "representante"):
         data.pop(key, None)
     extrair_atributos_nativos(data)
+    data["atualizado_por"] = usuario_id
 
     row = programa_repository.update(codigo, data)
     if not row:
         raise DemandaNotFoundError(codigo)
-    return _row_to_response(row)
+    return _row_to_response(row, incluir_auditoria=True)
 
 
 def excluir_programa(codigo: str) -> None:

@@ -16,7 +16,12 @@ from api.codigos_demanda import (
 from api.constants import CODIGO_PLANO_OUTROS, STATUS_INICIAL_DEMANDA, STATUS_PRE_REPROVACAO
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import demanda_repository, dominio_repository, plano_repository
-from api.services.campos_demanda import extrair_atributos_nativos, mesclar_atributos_nativos, normalizar_projeto
+from api.services.campos_demanda import (
+    extrair_atributos_nativos,
+    mesclar_atributos_nativos,
+    normalizar_projeto,
+    resolver_nomes_registros,
+)
 from api.services.hierarquia_outros import resolve_programa_pai_id
 from api.services.patch_helpers import apply_instituicao, apply_representante
 from api.services.reprovacao import validar_reprovacao
@@ -51,7 +56,11 @@ def _geometria_to_geojson_str(geometria: dict[str, Any] | None) -> tuple[str | N
     return tipo, json.dumps({"type": tipo, "coordinates": coords})
 
 
-def _row_to_response(row: dict[str, Any]) -> DemandaResponseSchema:
+def _row_to_response(
+    row: dict[str, Any], *, incluir_auditoria: bool = False, nomes_resolvidos: bool = False
+) -> DemandaResponseSchema:
+    if incluir_auditoria and not nomes_resolvidos:
+        row = resolver_nomes_registros([row])[0]
     geometria = None
     raw_geo = row.get("geometria_geojson")
     if raw_geo:
@@ -70,7 +79,17 @@ def _row_to_response(row: dict[str, Any]) -> DemandaResponseSchema:
         tipo_demandante=tipo_demandante_do_codigo(row["codigo"]),
         status=row["status"],
         criadoEm=criado_em,
+        atualizadoEm=_iso_date(row.get("atualizado_em")),
+        criado_por=str(row["criado_por"]) if incluir_auditoria and row.get("criado_por") else None,
+        criadoPorNome=row.get("criado_por_nome") if incluir_auditoria else None,
+        atualizado_por=str(row["atualizado_por"]) if incluir_auditoria and row.get("atualizado_por") else None,
+        atualizadoPorNome=row.get("atualizado_por_nome") if incluir_auditoria else None,
+        aprovadoEm=_iso_date(row.get("aprovado_em")),
+        aprovado_por=str(row["aprovado_por"]) if incluir_auditoria and row.get("aprovado_por") else None,
+        aprovadoPorNome=row.get("aprovado_por_nome") if incluir_auditoria else None,
         reprovadoEm=_iso_date(row.get("reprovado_em")),
+        reprovado_por=str(row["reprovado_por"]) if incluir_auditoria and row.get("reprovado_por") else None,
+        reprovadoPorNome=row.get("reprovado_por_nome") if incluir_auditoria else None,
         motivo_reprovacao=row.get("motivo_reprovacao"),
         instituicao_id=str(row["sigma_instituicao_id"]),
         instituicao_label=row.get("instituicao_nome"),
@@ -80,7 +99,7 @@ def _row_to_response(row: dict[str, Any]) -> DemandaResponseSchema:
         lng=float(row["longitude"]),
         representante=RepresentanteSchema(
             pessoa_id=str(row["sigma_pessoa_id"]) if row.get("sigma_pessoa_id") else None,
-            nome=row.get("representante_nome") or "",
+            nome=row.get("representante_nome_completo") or row.get("representante_nome") or "",
             email=row.get("representante_email"),
             telefone=row.get("representante_telefone"),
         ),
@@ -114,7 +133,9 @@ def _validate_payload(payload: DemandaCreateSchema) -> None:
         raise DemandaValidationError("Coordenadas fora do intervalo válido.", field="lat")
 
 
-def _build_persist_row(payload: DemandaCreateSchema, codigo: str) -> dict[str, Any]:
+def _build_persist_row(
+    payload: DemandaCreateSchema, codigo: str, usuario_id: str
+) -> dict[str, Any]:
     _validate_payload(payload)
     pessoa_id = payload.pessoa_id or payload.representante.pessoa_id
     geom_tipo, geom_json = _geometria_to_geojson_str(
@@ -190,13 +211,14 @@ def _build_persist_row(payload: DemandaCreateSchema, codigo: str) -> dict[str, A
         "valor_global": payload.valor_global,
         "atributos_cadastrais": payload.atributos_cadastrais,
     }
-    normalizar_projeto(row, pessoa_id=str(pessoa_id))
+    normalizar_projeto(row, pessoa_id=str(pessoa_id), usuario_id=usuario_id)
     return demanda_repository.prepare_insert_params(row)
 
 
 def criar_demanda(
     payload: DemandaCreateSchema,
     *,
+    usuario_id: str,
     origem: str = "",
     arquivo_geometria: dict[str, Any] | None = None,
 ) -> DemandaResponseSchema:
@@ -210,7 +232,7 @@ def criar_demanda(
         demanda_repository.get_by_codigo,
     )
     try:
-        persist_row = _build_persist_row(payload, codigo)
+        persist_row = _build_persist_row(payload, codigo, usuario_id)
         row = (
             demanda_repository.insert(persist_row, arquivo_geometria=arquivo_geometria)
             if arquivo_geometria is not None
@@ -218,18 +240,24 @@ def criar_demanda(
         )
     except errors.UniqueViolation as exc:
         raise DemandaValidationError("Não foi possível gerar código único para o projeto.", field="id") from exc
-    return _row_to_response(row)
+    return _row_to_response(row, incluir_auditoria=True)
 
 
-def listar_demandas() -> list[DemandaResponseSchema]:
-    return [_row_to_response(row) for row in demanda_repository.list_all()]
+def listar_demandas(*, incluir_auditoria: bool = False) -> list[DemandaResponseSchema]:
+    rows = demanda_repository.list_all()
+    if incluir_auditoria:
+        rows = resolver_nomes_registros(rows)
+    return [
+        _row_to_response(row, incluir_auditoria=incluir_auditoria, nomes_resolvidos=incluir_auditoria)
+        for row in rows
+    ]
 
 
-def obter_demanda(codigo: str) -> DemandaResponseSchema:
+def obter_demanda(codigo: str, *, incluir_auditoria: bool = False) -> DemandaResponseSchema:
     row = demanda_repository.get_by_codigo(codigo)
     if not row:
         raise DemandaNotFoundError(codigo)
-    return _row_to_response(row)
+    return _row_to_response(row, incluir_auditoria=incluir_auditoria)
 
 
 def reprovar_demanda(
@@ -255,20 +283,22 @@ def reprovar_demanda(
         raise DemandaValidationError(
             f"Demanda {codigo} não pôde ser reprovada (status alterado).", field="status"
         )
-    return _row_to_response(updated)
+    return _row_to_response(updated, incluir_auditoria=True)
 
 
 def _status_demanda_validos() -> set[str]:
     return {row["codigo"] for row in dominio_repository.list_status_demanda()}
 
 
-def atualizar_demanda(codigo: str, payload: DemandaUpdateSchema) -> DemandaResponseSchema:
+def atualizar_demanda(
+    codigo: str, payload: DemandaUpdateSchema, *, usuario_id: str | None
+) -> DemandaResponseSchema:
     if not demanda_repository.get_by_codigo(codigo):
         raise DemandaNotFoundError(codigo)
 
     data = payload.model_dump(exclude_unset=True)
     if not data:
-        return obter_demanda(codigo)
+        return obter_demanda(codigo, incluir_auditoria=True)
 
     if "status" in data and data["status"] not in _status_demanda_validos():
         raise DemandaValidationError(f"Status inválido: {data['status']}.", field="status")
@@ -309,10 +339,11 @@ def atualizar_demanda(codigo: str, payload: DemandaUpdateSchema) -> DemandaRespo
     if lng is not None and not (-180 <= lng <= 180):
         raise DemandaValidationError("Longitude fora do intervalo válido.", field="lng")
 
+    data["atualizado_por"] = usuario_id
     row = demanda_repository.update(codigo, data)
     if not row:
         raise DemandaNotFoundError(codigo)
-    return _row_to_response(row)
+    return _row_to_response(row, incluir_auditoria=True)
 
 
 def excluir_demanda(codigo: str) -> None:

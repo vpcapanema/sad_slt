@@ -61,7 +61,17 @@ class DemandaResponseSchema(BaseModel):
     tipo_demandante: Literal["institucional", "privada"] = "institucional"
     status: str
     criadoEm: str
+    atualizadoEm: str | None = None
+    criado_por: str | None = None
+    criadoPorNome: str | None = None
+    atualizado_por: str | None = None
+    atualizadoPorNome: str | None = None
+    aprovadoEm: str | None = None
+    aprovado_por: str | None = None
+    aprovadoPorNome: str | None = None
     reprovadoEm: str | None = None
+    reprovado_por: str | None = None
+    reprovadoPorNome: str | None = None
     motivo_reprovacao: str | None = None
     instituicao_id: str
     instituicao_label: str | None = None

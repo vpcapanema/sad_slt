@@ -12,7 +12,12 @@ from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import dominio_repository, plano_repository, programa_repository
 from api.schemas.demanda import RepresentanteSchema
 from api.schemas.plano import PlanoCreateSchema, PlanoResponseSchema, PlanoUpdateSchema
-from api.services.campos_demanda import extrair_atributos_nativos, mesclar_atributos_nativos, normalizar_plano
+from api.services.campos_demanda import (
+    extrair_atributos_nativos,
+    mesclar_atributos_nativos,
+    normalizar_plano,
+    resolver_nomes_registros,
+)
 from api.services.patch_helpers import apply_instituicao, apply_representante
 from api.services.reprovacao import validar_reprovacao
 from api.services.status_transicoes import validar_transicao_status
@@ -38,20 +43,34 @@ def _representante_from_row(row: dict[str, Any]) -> RepresentanteSchema | None:
         return None
     return RepresentanteSchema(
         pessoa_id=str(row["sigma_pessoa_id"]) if row.get("sigma_pessoa_id") else None,
-        nome=row.get("representante_nome") or "",
+        nome=row.get("representante_nome_completo") or row.get("representante_nome") or "",
         email=row.get("representante_email"),
         telefone=row.get("representante_telefone"),
     )
 
 
-def _row_to_response(row: dict[str, Any]) -> PlanoResponseSchema:
+def _row_to_response(
+    row: dict[str, Any], *, incluir_auditoria: bool = False, nomes_resolvidos: bool = False
+) -> PlanoResponseSchema:
+    if incluir_auditoria and not nomes_resolvidos:
+        row = resolver_nomes_registros([row])[0]
     valor = row.get("valor_global")
     rep = _representante_from_row(row)
     return PlanoResponseSchema(
         id=row["codigo"],
         status=row["status"],
         criadoEm=_iso(row.get("criado_em")) or "",
+        atualizadoEm=_iso(row.get("atualizado_em")),
+        criado_por=str(row["criado_por"]) if incluir_auditoria and row.get("criado_por") else None,
+        criadoPorNome=row.get("criado_por_nome") if incluir_auditoria else None,
+        atualizado_por=str(row["atualizado_por"]) if incluir_auditoria and row.get("atualizado_por") else None,
+        atualizadoPorNome=row.get("atualizado_por_nome") if incluir_auditoria else None,
+        aprovadoEm=_iso(row.get("aprovado_em")),
+        aprovado_por=str(row["aprovado_por"]) if incluir_auditoria and row.get("aprovado_por") else None,
+        aprovadoPorNome=row.get("aprovado_por_nome") if incluir_auditoria else None,
         reprovadoEm=_iso(row.get("reprovado_em")),
+        reprovado_por=str(row["reprovado_por"]) if incluir_auditoria and row.get("reprovado_por") else None,
+        reprovadoPorNome=row.get("reprovado_por_nome") if incluir_auditoria else None,
         motivo_reprovacao=row.get("motivo_reprovacao"),
         diretoria_id=row["diretoria_id"],
         nome=row["nome"],
@@ -86,7 +105,9 @@ def _resolve_instituicao_id(payload: PlanoCreateSchema) -> str:
     return _parse_uuid(str(payload.instituicao_id), "instituicao_id")
 
 
-def criar_plano(payload: PlanoCreateSchema, *, origem: str = "") -> PlanoResponseSchema:
+def criar_plano(
+    payload: PlanoCreateSchema, *, usuario_id: str, origem: str = ""
+) -> PlanoResponseSchema:
     """``origem="SEI"`` marca o código gerado (``I-PLA-SEI-XXXXXXXX``) quando a
     criação vem da integração com o SEI-SP. Vazio por padrão."""
     codigo = gerar_codigo_unico(
@@ -118,20 +139,26 @@ def criar_plano(payload: PlanoCreateSchema, *, origem: str = "") -> PlanoRespons
         "atributos_cadastrais": payload.atributos_cadastrais,
         "status": STATUS_INICIAL_DEMANDA,
     }
-    normalizar_plano(row, pessoa_id=pessoa_id)
+    normalizar_plano(row, pessoa_id=pessoa_id, usuario_id=usuario_id)
     inserted = plano_repository.insert(row, payload.unidades_espaciais)
-    return _row_to_response(inserted)
+    return _row_to_response(inserted, incluir_auditoria=True)
 
 
-def listar_planos() -> list[PlanoResponseSchema]:
-    return [_row_to_response(row) for row in plano_repository.list_all()]
+def listar_planos(*, incluir_auditoria: bool = False) -> list[PlanoResponseSchema]:
+    rows = plano_repository.list_all()
+    if incluir_auditoria:
+        rows = resolver_nomes_registros(rows)
+    return [
+        _row_to_response(row, incluir_auditoria=incluir_auditoria, nomes_resolvidos=incluir_auditoria)
+        for row in rows
+    ]
 
 
-def obter_plano(codigo: str) -> PlanoResponseSchema:
+def obter_plano(codigo: str, *, incluir_auditoria: bool = False) -> PlanoResponseSchema:
     row = plano_repository.get_by_codigo(codigo)
     if not row:
         raise DemandaNotFoundError(codigo)
-    return _row_to_response(row)
+    return _row_to_response(row, incluir_auditoria=incluir_auditoria)
 
 
 def aprovar_plano(codigo: str, *, motivo: str | None = None,
@@ -149,7 +176,7 @@ def aprovar_plano(codigo: str, *, motivo: str | None = None,
         raise DemandaValidationError(
             f"Plano {codigo} não pôde ser aprovado (status alterado).", field="status"
         )
-    return _row_to_response(updated)
+    return _row_to_response(updated, incluir_auditoria=True)
 
 
 def reprovar_plano(
@@ -175,15 +202,17 @@ def reprovar_plano(
         raise DemandaValidationError(
             f"Plano {codigo} não pôde ser reprovado (status alterado).", field="status"
         )
-    return _row_to_response(updated)
+    return _row_to_response(updated, incluir_auditoria=True)
 
 
-def atualizar_plano(codigo: str, payload: PlanoUpdateSchema) -> PlanoResponseSchema:
+def atualizar_plano(
+    codigo: str, payload: PlanoUpdateSchema, *, usuario_id: str | None
+) -> PlanoResponseSchema:
     if not plano_repository.get_by_codigo(codigo):
         raise DemandaNotFoundError(codigo)
     data = payload.model_dump(exclude_unset=True)
     if not data:
-        return obter_plano(codigo)
+        return obter_plano(codigo, incluir_auditoria=True)
 
     if "status" in data:
         row = plano_repository.get_by_codigo(codigo)
@@ -199,11 +228,12 @@ def atualizar_plano(codigo: str, payload: PlanoUpdateSchema) -> PlanoResponseSch
     for key in ("instituicao_id", "instituicao_label", "pessoa_id", "representante"):
         data.pop(key, None)
     extrair_atributos_nativos(data)
+    data["atualizado_por"] = usuario_id
 
     row = plano_repository.update(codigo, data)
     if not row:
         raise DemandaNotFoundError(codigo)
-    return _row_to_response(row)
+    return _row_to_response(row, incluir_auditoria=True)
 
 
 def excluir_plano(codigo: str) -> None:

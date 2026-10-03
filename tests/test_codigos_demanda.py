@@ -121,12 +121,18 @@ def test_servico_usa_demandante_ao_gerar_codigo_do_projeto(
         }
     )
     monkeypatch.setattr(demanda_service.demanda_repository, "get_by_codigo", lambda _codigo: None)
-    monkeypatch.setattr(
-        demanda_service,
-        "_build_persist_row",
-        lambda _payload, codigo: {"codigo": codigo},
-    )
-    monkeypatch.setattr(demanda_service.demanda_repository, "insert", lambda row: row)
-    monkeypatch.setattr(demanda_service, "_row_to_response", lambda row: row["codigo"])
+    persisted = {}
 
-    assert demanda_service.criar_demanda(payload).startswith(prefixo)
+    def build(_payload, codigo, usuario_id):
+        persisted["usuario_id"] = usuario_id
+        return {"codigo": codigo}
+
+    monkeypatch.setattr(demanda_service, "_build_persist_row", build)
+    monkeypatch.setattr(demanda_service.demanda_repository, "insert", lambda row: row)
+    monkeypatch.setattr(
+        demanda_service, "_row_to_response", lambda row, **_kwargs: row["codigo"]
+    )
+
+    usuario_id = "00000000-0000-0000-0000-000000000010"
+    assert demanda_service.criar_demanda(payload, usuario_id=usuario_id).startswith(prefixo)
+    assert persisted["usuario_id"] == usuario_id

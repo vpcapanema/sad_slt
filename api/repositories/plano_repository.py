@@ -35,10 +35,15 @@ _SELECT_BASE = """
         p.prazo_referencia_meses,
         p.base_estimativa_prazo,
         p.status,
+        p.aprovado_em,
+        p.aprovado_por,
         p.reprovado_em,
+        p.reprovado_por,
         p.motivo_reprovacao,
         p.criado_em,
         p.atualizado_em,
+        p.criado_por,
+        p.atualizado_por,
         COALESCE(
             (
                 SELECT array_agg(pue.unidade_espacial_id::text ORDER BY ue.nome)
@@ -151,6 +156,7 @@ _APROVAR_SQL = """
        SET status = %(pos_aprovacao)s,
            aprovado_em = CURRENT_TIMESTAMP,
            aprovado_por = %(aprovado_por)s,
+           atualizado_por = %(aprovado_por)s,
            motivo_aprovacao = COALESCE(%(motivo)s, '')
      WHERE codigo = %(codigo)s
        AND status = ANY(%(pre)s)
@@ -180,6 +186,7 @@ _REPROVAR_SQL = """
        SET status = %(status_reprovado)s,
            reprovado_em = CURRENT_TIMESTAMP,
            reprovado_por = %(reprovado_por)s,
+           atualizado_por = %(reprovado_por)s,
            motivo_reprovacao = %(justificativa)s
      WHERE codigo = %(codigo)s
        AND status = ANY(%(pre)s)

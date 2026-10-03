@@ -1,7 +1,6 @@
 (function () {
   const {
     escapeHtml,
-    formatDate,
     formatMoney,
     formatVigencia,
     truncate,
@@ -41,6 +40,27 @@
     return SLTAdminLabels.statusBadgeHtml(d.status, tipo);
   }
 
+  function formatDateTime(value) {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(date);
+  }
+
+  const auditColumns = [
+    { label: "Criado por", value: (d) => escapeHtml(d.criadoPorNome || "Não registrado") },
+    { label: "Cadastro", value: (d) => escapeHtml(formatDateTime(d.criadoEm)) },
+    { label: "Atualizado por", value: (d) => escapeHtml(d.atualizadoPorNome || "Não registrado") },
+    { label: "Atualização", value: (d) => escapeHtml(formatDateTime(d.atualizadoEm)) },
+    { label: "Aprovado por", value: (d) => escapeHtml(d.aprovadoPorNome || "—") },
+    { label: "Aprovação", value: (d) => escapeHtml(formatDateTime(d.aprovadoEm)) },
+    { label: "Reprovado por", value: (d) => escapeHtml(d.reprovadoPorNome || "—") },
+    { label: "Reprovação", value: (d) => escapeHtml(formatDateTime(d.reprovadoEm)) },
+  ];
+
   const COLUMNS = {
     projeto: [
       { label: "Status", value: statusCell, editable: "status" },
@@ -70,7 +90,7 @@
         editable: "complementos",
       },
       { label: "Geometria", value: (d) => escapeHtml(geometriaResumo(d.geometria)) },
-      { label: "Cadastro", value: (d) => escapeHtml(formatDate(d.criadoEm)) },
+      ...auditColumns,
     ],
     programa: [
       { label: "Status", value: statusCell, editable: "status" },
@@ -92,7 +112,7 @@
       { label: "Objetivo", value: (d) => escapeHtml(truncate(d.objetivo, 80)) },
       { label: "Valor global", value: (d) => escapeHtml(formatMoney(d.valor_global)) },
       { label: "Abrangência", value: (d) => escapeHtml(abrangenciaLabel(d.unidades_espaciais)) },
-      { label: "Cadastro", value: (d) => escapeHtml(formatDate(d.criadoEm)) },
+      ...auditColumns,
     ],
     plano: [
       { label: "Status", value: statusCell, editable: "status" },
@@ -105,7 +125,7 @@
       { label: "Vigência", value: (d) => escapeHtml(formatVigencia(d.vigencia_inicio, d.vigencia_fim)) },
       { label: "Valor global", value: (d) => escapeHtml(formatMoney(d.valor_global)) },
       { label: "Abrangência", value: (d) => escapeHtml(abrangenciaLabel(d.unidades_espaciais)) },
-      { label: "Cadastro", value: (d) => escapeHtml(formatDate(d.criadoEm)) },
+      ...auditColumns,
     ],
   };
 
