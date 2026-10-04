@@ -122,10 +122,40 @@ async function openCurrentTemplate(resource) {
   );
 }
 
+async function refreshSourceControl() {
+  try {
+    const gitExtension = vscode.extensions.getExtension("vscode.git");
+    if (!gitExtension) throw new Error("Extensão Git do VS Code indisponível.");
+    const git = await gitExtension.activate();
+    const api = git.getAPI(1);
+    const folders = (vscode.workspace.workspaceFolders || []).map((folder) =>
+      path.resolve(folder.uri.fsPath).toLowerCase()
+    );
+    const repositories = api.repositories.filter((repository) => {
+      const root = path.resolve(repository.rootUri.fsPath).toLowerCase();
+      return folders.some((folder) => root === folder || root.startsWith(`${folder}${path.sep}`));
+    });
+    if (!repositories.length) {
+      vscode.window.showWarningMessage("SICARD: nenhum repositório Git aberto para atualizar.");
+      return "sem-repositorios";
+    }
+    await Promise.all(repositories.map((repository) => repository.status()));
+    vscode.window.showInformationMessage(
+      `SICARD: Source Control atualizado (${repositories.length} repositório(s)).`
+    );
+    return "source-control-atualizado";
+  } catch (error) {
+    vscode.window.showWarningMessage(`SICARD: não foi possível atualizar o Source Control: ${error.message}`);
+    return "source-control-indisponivel";
+  }
+}
+
 function activate(context) {
   context.subscriptions.push(
     vscode.commands.registerCommand("sicardPreview.openCurrentTemplate", (resource) =>
       openCurrentTemplate(resource).catch((error) => vscode.window.showErrorMessage(`SICARD Preview: ${error.message}`))
+    ),
+    vscode.commands.registerCommand("sicardPreview.refreshSourceControl", refreshSourceControl
     )
   );
 }

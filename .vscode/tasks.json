@@ -48,7 +48,7 @@
       "detail": "Consulta /api/health/ready do servidor já iniciado e exibe o resultado."
     },
     {
-      "label": "SICARD: Commit, sincronizar e deploy na VM",
+      "label": "SICARD: Commit, sincronizar e deploy na VM (execução)",
       "type": "process",
       "command": "${workspaceFolder}/.venv/Scripts/python.exe",
       "args": [
@@ -71,6 +71,43 @@
         "showReuseMessage": true
       },
       "detail": "Status > commit > fetch/merge/push main > deploy VM com logs > saude da API/banco > navegador externo. Para em qualquer falha."
+    },
+    {
+      "label": "SICARD: Atualizar controle de código",
+      "type": "shell",
+      "command": "echo",
+      "args": ["${command:sicardPreview.refreshSourceControl}"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "hide": true,
+      "detail": "Atualiza o Source Control e notifica após um deploy concluído."
+    },
+    {
+      "label": "SICARD: Commit, sincronizar e deploy na VM",
+      "dependsOn": [
+        "SICARD: Commit, sincronizar e deploy na VM (execução)",
+        "SICARD: Atualizar controle de código"
+      ],
+      "dependsOrder": "sequence",
+      "runOptions": {
+        "instanceLimit": 1
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "clear": false,
+        "showReuseMessage": true
+      },
+      "detail": "Executa commit, sincronização e deploy; depois atualiza o Source Control e exibe notificação."
     },
     {
       "label": "SICARD: Acompanhar comandos do Codex",

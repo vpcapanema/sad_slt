@@ -2,7 +2,7 @@
     "name":  "sicard-template-preview",
     "displayName":  "SICARD Template Preview",
     "description":  "Abre templates Jinja do SICARD renderizados pelo servidor local.",
-    "version":  "0.1.2",
+    "version":  "0.1.3",
     "publisher":  "vpcapanema",
     "engines":  {
                     "vscode":  "^1.85.0"
@@ -17,6 +17,11 @@
                                              "command":  "sicardPreview.openCurrentTemplate",
                                              "title":  "SICARD: abrir página renderizada no editor",
                                              "icon":  "$(open-preview)"
+                                         },
+                                         {
+                                             "command":  "sicardPreview.refreshSourceControl",
+                                             "title":  "SICARD: Atualizar controle de código",
+                                             "icon":  "$(refresh)"
                                          }
                                      ],
                         "menus":  {
