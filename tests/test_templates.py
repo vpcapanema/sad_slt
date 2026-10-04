@@ -69,12 +69,23 @@ def test_all_page_templates_compile_and_render() -> None:
     page_templates = sorted(PAGES_ROOT.rglob("*.html"))
     # Guarda contra varredura vazia (que faria o teste passar sem renderizar
     # nada); o número exato mudava a cada página nova e só dava falso alarme.
-    assert len(page_templates) >= 50
+    assert len(page_templates) >= 35
 
     for path in page_templates:
         name = path.relative_to(TEMPLATES_ROOT).as_posix()
         rendered = templates.env.get_template(name).render(request=request)
         assert "<!DOCTYPE html>" in rendered, name
+
+def test_deprecated_ahp_templates_and_exclusive_scripts_are_archived() -> None:
+    runtime_pages = Path("templates/paginas/ahp")
+    archived_pages = Path("legado/templates/paginas/ahp")
+    archived_scripts = Path("legado/assets/js/paginas")
+    runtime_scripts = Path("assets/js/paginas")
+
+    assert not runtime_pages.exists()
+    assert len(list(archived_pages.glob("*.html"))) == 10
+    assert len(list(archived_scripts.glob("ahp-*.js"))) == 12
+    assert not list(runtime_scripts.glob("ahp-*.js"))
 
 
 def test_templates_have_no_inline_css_or_javascript() -> None:
@@ -209,7 +220,8 @@ def test_restricted_home_groups_operator_and_territorial_actions() -> None:
     assert 'href="/restrict/geoespacial/extracoes-atributos/"' in mad
     assert 'href="/restrict/geoespacial/gerador-camadas-territoriais/"' in mad
     assert "Extração de atributos" not in group("group-geoprocessamento")
-    assert re.search(r'<button\b[^>]*disabled[^>]*>.*?Agrupamento de demandas.*?</button>', mad, re.S)
+    assert 'href="/restrict/agrupamento-demandas/"' in mad
+    assert "Agrupamento de demandas" in mad
 
 
 def test_restricted_demands_table_exposes_audit_names_and_timestamps() -> None:
@@ -248,14 +260,14 @@ def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> N
         for name, markup in re.findall(r'class="platform-subgroup subgroup-([\w-]+)">(.*?)</div>\s*</div>', geo, re.S)
     }
     assert groups == {
-        "visualizadores-online-camadas": ["Produtos geoespaciais", "Bases geoespaciais", "Camadas de Superfícies-índice"],
-        "ferramentas-geoprocessamento": ["Gerador de risco e restrição", "Gerador de favorabilidade", "Configurador da Priorização por atributos"],
+        "visualizadores-online-camadas": ["Visualizador de camadas"],
+        "ferramentas-geoprocessamento": ["Tributação de camadas territoriais", "Nova extração de atributos", "Histórico de extrações"],
     }
     documentation = re.search(r'<section\b[^>]*aria-labelledby="group-documentacao-ranqueamento"[^>]*>.*?</section>', content, re.S)
     assert documentation is not None
     assert re.findall(label_pattern, documentation.group()) == [
-        "Arcabouço teórico-conceitual de Risco e Restrição",
-        "Arcabouço teórico-conceitual e metodológico do índice de favorabilidade espacial à execução de demandas",
+        "Documentação metodológica da hierarquização",
+        "Glossário técnico-conceitual",
     ]
     assert "/restrict/hierarquizacao/" not in geo
 
@@ -291,6 +303,7 @@ def _canonical_pages() -> list[str]:
         "/restrict/",
         "/restrict/hierarquizacao/",
         "/restrict/hierarquizacao/processos/",
+        "/restrict/agrupamento-demandas/",
         "/restrict/hierarquizacao/metodologia/",
         "/restrict/hierarquizacao/fase-1/",
         "/restrict/hierarquizacao/fase-2/",
@@ -299,8 +312,7 @@ def _canonical_pages() -> list[str]:
     ]
     pages.extend(f"/public/cadastro/{name}/" for name in PUBLIC_CADASTRO_PAGES)
     pages.extend(f"/restrict/{name}/" for name in RESTRICTED_PAGES)
-    # AHP e as etapas avulsas da rodada foram descontinuados (410); os templates
-    # seguem versionados, mas as rotas não servem mais página.
+    # AHP e as etapas avulsas foram descontinuados (410) e arquivados fora de templates/.
     pages.extend(f"/restrict/geoespacial/{name}/" for name in GEOSPATIAL_PAGES)
     return sorted(set(pages))
 

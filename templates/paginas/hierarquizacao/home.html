@@ -31,7 +31,7 @@
         </h1>
         <p class="standard-page-hero__eyebrow">Análise Multicritério Interativa</p>
         <p class="standard-page-hero__description">
-          Defina o universo de cada rodada e acompanhe as hierarquizações registradas no MAD.
+          Selecione um agrupamento de demandas salvo para criar uma rodada e acompanhe as hierarquizações registradas no MAD.
         </p>
       </section>
 
@@ -132,7 +132,29 @@
               </div>
             </article>
 
-            <article class="card-universo-da-hierarquizacao ahp-subcard cadastro-card">
+            <article class="card-agrupamento-da-hierarquizacao ahp-subcard cadastro-card">
+              <div class="ahp-subsection-title">
+                <i class="fas fa-object-group" aria-hidden="true"></i>
+                <h2>Agrupamento de demandas</h2>
+              </div>
+              <p class="ahp-info-note"><i class="fas fa-circle-info" aria-hidden="true"></i><span>As demandas são selecionadas e salvas na página Agrupamento de Demandas. Escolha aqui o grupo que será usado como universo desta hierarquização.</span></p>
+              <p><a class="btn btn-secondary btn-sm" href="/restrict/agrupamento-demandas/"><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i> Gerenciar agrupamentos</a></p>
+              <div class="admin-form-grid">
+                <div class="form-field span-2">
+                  <label for="hier-agrupamento">Agrupamento salvo *</label>
+                  <select id="hier-agrupamento" required><option value="">Carregando agrupamentos…</option></select>
+                </div>
+              </div>
+              <p id="hier-agrupamento-resumo" class="ahp-universo-preview">Selecione um agrupamento salvo.</p>
+              <div class="admin-table-wrap">
+                <table class="admin-table hier-resumo-table">
+                  <thead><tr><th>Código</th><th>Nome</th><th>Situação</th></tr></thead>
+                  <tbody id="hier-agrupamento-demandas"><tr><td colspan="3">Selecione um agrupamento salvo.</td></tr></tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="card-universo-da-hierarquizacao ahp-subcard cadastro-card" hidden>
               <div class="ahp-subsection-title">
                 <i class="fas fa-folder-tree"></i>
                 <h2>Universo da hierarquização</h2>

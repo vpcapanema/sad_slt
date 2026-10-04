@@ -33,6 +33,11 @@
   const BASE_O = "/api/ahp/objetos";
 
   global.HierApi = {
+    // --- Agrupamentos reutilizáveis de demandas ---
+    listarAgrupamentos() { return request("/api/agrupamentos-demandas"); },
+    obterAgrupamento(id) { return request(`/api/agrupamentos-demandas/${encodeURIComponent(id)}`); },
+    criarAgrupamento(payload) { return request("/api/agrupamentos-demandas", jsonOpts("POST", payload)); },
+
     // --- Hierarquizações ---
     criar(payload) {
       return request(BASE_H, jsonOpts("POST", payload));

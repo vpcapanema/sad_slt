@@ -54,6 +54,8 @@ body.page-admin-demanda {
 }
 
 .admin-demand-body {
+  display: grid;
+  gap: 1.25rem;
   margin-left: 0.875rem;
   padding-left: 0.675rem;
   border-left: 1px solid rgba(0, 59, 90, 0.18);

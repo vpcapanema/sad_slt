@@ -27,6 +27,8 @@ def _db_row(dados: dict) -> dict:
         "descricao": None,
         "tipo_demanda_id": 3,
         "grupo_id": None,
+        "grupo_demanda_id": "9ccbb5b5-3d60-4f25-8f3f-bdef08a48e73",
+        "grupo_demanda_codigo": "GRU-TESTE",
         "status": "em_julgamento",
         "objetos": [],
         "julgamento_projetos": None,
@@ -84,24 +86,85 @@ def _mock_persistencia(monkeypatch: pytest.MonkeyPatch, row: dict) -> None:
 
 
 def test_rodada_pode_executar_somente_fase_1(monkeypatch: pytest.MonkeyPatch) -> None:
+    from uuid import UUID
+
     captured = {}
+    grupo_id = UUID("9ccbb5b5-3d60-4f25-8f3f-bdef08a48e73")
+    objeto = {"id": "1", "codigo": "P-1", "nome": "Projeto"}
+    monkeypatch.setattr(
+        service.agrupamento_demanda_repository,
+        "get_by_id",
+        lambda _id: {"id": grupo_id, "codigo": "GRU-TESTE", "tipo_demanda_id": 3, "objetos": [objeto]},
+    )
 
     def insert(data: dict) -> dict:
         captured.update(deepcopy(data))
-        return _db_row(data["dados_hierarquizacao"])
+        row = _db_row(data["dados_hierarquizacao"])
+        row.update({"grupo_demanda_id": str(grupo_id), "objetos": [objeto]})
+        return row
 
     monkeypatch.setattr(service.repo, "insert", insert)
     result = service.criar_hierarquizacao(
         HierarquizacaoCreateSchema(
             nome="Triagem territorial",
-            tipo_demanda="projeto",
-            objetos=[{"id": "1", "codigo": "P-1", "nome": "Projeto"}],
+            grupo_demanda_id=grupo_id,
             fases_a_executar=[1],
         )
     )
 
     assert result.dados_hierarquizacao["cabecalho_grupo"]["fases_a_executar"] == [1]
     assert captured["status"] == "em_julgamento"
+    assert captured["grupo_demanda_id"] == grupo_id
+    assert "objetos" not in captured
+
+
+def test_criacao_usa_o_universo_do_agrupamento_salvo(monkeypatch: pytest.MonkeyPatch) -> None:
+    from uuid import uuid4
+
+    grupo_demanda_id = uuid4()
+    objeto = {
+        "id": str(uuid4()),
+        "codigo": "PROG-001",
+        "nome": "Programa agrupado",
+        "descricao": "Snapshot do agrupamento",
+        "status": "analise_aprovada",
+    }
+    agrupamento = {
+        "id": grupo_demanda_id,
+        "codigo": "GRU-001",
+        "tipo_demanda_id": 2,
+        "objetos": [objeto],
+    }
+    captured = {}
+
+    monkeypatch.setattr(
+        service.agrupamento_demanda_repository,
+        "get_by_id",
+        lambda _id: agrupamento,
+    )
+
+    def insert(data: dict, **_kwargs) -> dict:
+        captured.update(deepcopy(data))
+        row = _db_row(data["dados_hierarquizacao"])
+        row.update({"id": str(uuid4()), "tipo_demanda_id": 2, "grupo_demanda_id": str(grupo_demanda_id), "grupo_demanda_codigo": "GRU-001", "objetos": [objeto]})
+        return row
+
+    monkeypatch.setattr(service.repo, "insert", insert)
+    result = service.criar_hierarquizacao(
+        HierarquizacaoCreateSchema(
+            nome="Rodada do grupo salvo",
+            grupo_demanda_id=grupo_demanda_id,
+            fases_a_executar=[1],
+        )
+    )
+
+    assert captured["tipo_demanda_id"] == 2
+    assert captured["grupo_demanda_id"] == grupo_demanda_id
+    assert "objetos" not in captured
+    assert captured["dados_hierarquizacao"]["cabecalho_grupo"]["grupo_demanda_id"] == str(grupo_demanda_id)
+    assert result.grupo_demanda_id == str(grupo_demanda_id)
+    assert result.grupo_demanda_codigo == "GRU-001"
+    assert result.dados_hierarquizacao["objetos"][0]["cabecalho_objeto"]["codigo"] == "PROG-001"
 
 
 def test_fase_3_renormaliza_pesos_quando_atributo_opcional_ausente(

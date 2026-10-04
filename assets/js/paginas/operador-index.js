@@ -22,6 +22,7 @@
   async function carregarIndicadores() {
     const user = await window.SLTAdminAuth.requireAuth();
     if (!user) return;
+    $("operator-home-title").textContent = `Bem-vindo, ${user.nome || "Operador"}`;
 
     const resultados = await Promise.allSettled([
       getJson("/api/painel/operador/estatisticas"),

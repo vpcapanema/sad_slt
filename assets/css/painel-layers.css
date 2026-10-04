@@ -113,13 +113,17 @@
 }
 
 /* Nível 1 — tipo (PLANO | PROGRAMA | PROJETOS) */
-.demandas-tree > .layer-group--tipo > .layer-group-header--tipo {
+.demandas-tree > .layer-group--tipo > .layer-group-header-row--tipo {
   margin-left: var(--tree-step);
+}
+
+.demandas-tree > .layer-group--tipo > .layer-group-header-row--tipo > .layer-group-header--tipo {
+  margin-left: 0;
   padding-left: 0.3rem;
 }
 
-.demandas-tree > .layer-group--tipo > .layer-group-header--tipo::before,
-.demandas-tree > .layer-group--tipo > .layer-group-header--tipo::after {
+.demandas-tree > .layer-group--tipo > .layer-group-header-row--tipo > .layer-group-header--tipo::before,
+.demandas-tree > .layer-group--tipo > .layer-group-header-row--tipo > .layer-group-header--tipo::after {
   display: none;
 }
 

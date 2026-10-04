@@ -12,29 +12,19 @@ const STATIC_ROUTES = new Map([
   ["paginas/transparencia/index.html", "/public/transparencia/"],
   ["paginas/admin/login.html", "/public/login/"],
   ["paginas/admin/index.html", "/restrict/"],
+  ["paginas/admin/operador.html", "/restrict/"],
   ["paginas/admin/area-administrador.html", "/restrict/admin/"],
   ["paginas/admin/painel.html", "/restrict/painel/"],
   ["paginas/admin/demandas.html", "/restrict/demandas/"],
   ["paginas/admin/analise_demanda.html", "/restrict/demanda/"],
   ["paginas/admin/revisao-status.html", "/restrict/revisao-status/"],
   ["paginas/admin/complementacao.html", "/restrict/complementacao/"],
-  ["paginas/hierarquizacao/index.html", "/restrict/hierarquizacao/"],
   ["paginas/hierarquizacao/home.html", "/restrict/hierarquizacao/processos/"],
   ["paginas/hierarquizacao/apresentacao-processo-hierarquizacao.html", "/restrict/hierarquizacao/metodologia/"],
   ["paginas/hierarquizacao/fase1-elegibilidade.html", "/restrict/hierarquizacao/fase-1/"],
   ["paginas/hierarquizacao/fase2-favorabilidade.html", "/restrict/hierarquizacao/fase-2/"],
   ["paginas/hierarquizacao/fase3-ajuste-fino.html", "/restrict/hierarquizacao/fase-3/"],
   ["paginas/hierarquizacao/ranking-privado.html", "/restrict/hierarquizacao/ranking/"],
-  ["paginas/ahp/home.html", "/restrict/ahp/"],
-  ["paginas/ahp/index.html", "/restrict/ahp/analise/"],
-  ["paginas/ahp/step1-configuracao.html", "/restrict/ahp/configuracao/"],
-  ["paginas/ahp/step2-criterios.html", "/restrict/ahp/criterios/"],
-  ["paginas/ahp/step3-nomes.html", "/restrict/ahp/nomes/"],
-  ["paginas/ahp/step4-metodo.html", "/restrict/ahp/metodo/"],
-  ["paginas/ahp/step5-comparacao.html", "/restrict/ahp/comparacao/"],
-  ["paginas/ahp/respostas-colaborativas.html", "/restrict/ahp/respostas-colaborativas/"],
-  ["paginas/ahp/step6-resultados.html", "/restrict/ahp/resultados/"],
-  ["paginas/ahp/step7-alternativas.html", "/restrict/ahp/alternativas/"],
   ["paginas/analise_multicriterio/formulario.html", "/public/analise-multicriterio/token-de-teste/"],
   ["paginas/geoespacial/index.html", "/restrict/geoespacial/"]
 ]);
@@ -75,7 +65,7 @@ const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
 
 async function startServer(workspace) {
   const config = vscode.workspace.getConfiguration("sicardPreview", workspace.uri);
-  const taskName = config.get("startTask", "SICARD: Iniciar ambiente de desenvolvimento");
+  const taskName = config.get("startTask", "SICARD: Iniciar servidor local");
   const tasks = await vscode.tasks.fetchTasks();
   const task = tasks.find((candidate) => candidate.name === taskName);
   if (!task) throw new Error(`Tarefa não encontrada: ${taskName}`);
@@ -127,7 +117,7 @@ async function openCurrentTemplate(resource) {
         }
       }
       progress.report({ message: "abrindo a página…" });
-      await vscode.env.openExternal(vscode.Uri.parse(`${baseUrl}${route}`));
+      await vscode.commands.executeCommand("simpleBrowser.show", `${baseUrl}${route}`);
     }
   );
 }

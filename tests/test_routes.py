@@ -51,6 +51,7 @@ def test_all_router_modules_are_exposed_by_openapi() -> None:
         "/api/ahp/configuracoes",
         "/api/ahp/comparacao-colaborativa/",
         "/api/ahp/hierarquizacoes",
+        "/api/agrupamentos-demandas",
         "/api/ahp/objetos",
         "/api/ahp/universo/",
         "/api/painel/",
@@ -71,6 +72,8 @@ def test_canonical_pages_are_available() -> None:
         "/restrict/analise-multicriterio/",
         "/restrict/analise-multicriterio/julgamentos/22222222-2222-2222-2222-222222222222/",
         "/restrict/hierarquizacao/processos/",
+        "/restrict/agrupamento-demandas/",
+        "/restrict/agrupamento-demandas/",
         "/restrict/geoespacial/",
         "/restrict/geoespacial/bancada/",
         "/restrict/complementacao/",
@@ -78,6 +81,13 @@ def test_canonical_pages_are_available() -> None:
 
     for path in canonical_pages:
         assert client.get(path).status_code == 200, path
+
+
+def test_archived_hierarquizacao_index_redirects_to_processes() -> None:
+    response = TestClient(app).get("/restrict/hierarquizacao/", follow_redirects=False)
+
+    assert response.status_code == 308
+    assert response.headers["location"] == "/restrict/hierarquizacao/processos/"
 
 
 def test_storage_login_links_redirect_to_configured_host(monkeypatch) -> None:
@@ -95,7 +105,8 @@ def test_storage_login_links_redirect_to_configured_host(monkeypatch) -> None:
 
 
 def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessamento() -> None:
-    html = TestClient(app).get("/restrict/").text
+    client = TestClient(app)
+    html = client.get("/restrict/").text
 
     assert "/restrict/analise-multicriterio/?modo=julgamentos" in html
     assert "/restrict/analise-multicriterio/?modo=espaco" in html
@@ -103,21 +114,28 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     trecho_mad = html.split('id="group-mad"', 1)[1].split('id="group-resultados"', 1)[0]
     trecho_geo = html.split('id="group-geoprocessamento"', 1)[1].split('id="group-ahp-restrict"', 1)[0]
     assert "Hierarquização e Ranking" not in trecho_geo
-    assert "Produtos geoespaciais" in trecho_geo
+    assert "Visualizador de camadas" in trecho_geo
     assert trecho_geo.index("Central geoespacial") < trecho_geo.index("Visualizadores online de camadas")
     assert "Ferramentas de geoprocessamento" in trecho_geo
-    assert "Documentação oficial do ranqueamento" in trecho_geo
+    assert "Documentação técnica" in html
     assert trecho_mad.index("/restrict/hierarquizacao/processos/") < trecho_mad.index("?modo=espaco") < trecho_mad.index("?modo=julgamentos")
     assert "Central de julgamentos" in trecho_mad
     assert "Central de respostas" in trecho_mad
     assert "Apoio à decisão e hierarquização" in trecho_mad
-    assert "/restrict/geoespacial/visualizador-bases-geoespaciais/" in trecho_geo
-    assert "/restrict/geoespacial/gerador-risco-restricao/" in trecho_geo
-    assert "/restrict/geoespacial/gerador-favorabilidade/" in trecho_geo
-    assert "/restrict/geoespacial/configuracao-risco-restricao/" in trecho_geo
-    assert "/restrict/geoespacial/produtos/" in trecho_geo
+    assert "/restrict/geoespacial/visualizador-bases-geoespaciais/" not in trecho_geo
+    assert "/restrict/geoespacial/visualizador-camadas/" in trecho_geo
+    assert "/restrict/geoespacial/gerador-risco-restricao/" not in trecho_geo
+    assert "/restrict/geoespacial/gerador-favorabilidade/" not in trecho_geo
+    assert "/restrict/geoespacial/configuracao-risco-restricao/" not in trecho_geo
+    assert "/restrict/geoespacial/produtos/" not in trecho_geo
     assert "/restrict/geoespacial/bancada/" in trecho_geo
-    assert "/restrict/geoespacial/configurador-ajuste/" in trecho_geo
+    assert "/restrict/geoespacial/configurador-ajuste/" not in trecho_geo
+    assert client.get("/restrict/geoespacial/gerador-risco-restricao/").status_code == 410
+    assert client.get("/restrict/geoespacial/gerador-favorabilidade/").status_code == 410
+    assert client.get("/restrict/geoespacial/configurador-ajuste/").status_code == 410
+    assert client.get("/restrict/geoespacial/produtos/", follow_redirects=False).headers["location"] == "/restrict/geoespacial/visualizador-camadas/"
+    assert client.get("/restrict/geoespacial/configuracao-risco-restricao/", follow_redirects=False).headers["location"] == "/public/documentacao/"
+    assert client.get("/restrict/geoespacial/documentacao-favorabilidade/", follow_redirects=False).headers["location"] == "/public/documentacao/"
     assert "Análise Multicritério Interativa" not in html
     assert "id=\"group-ahp-restrict\"" not in html, "grupo AHP foi descontinuado"
     assert "id=\"group-processo\"" not in html, "grupo PROCESSO foi descontinuado"
@@ -576,7 +594,7 @@ def test_indice_restrito_nao_deixa_vao_nos_modulos() -> None:
 
 
 def test_paginas_descontinuadas_respondem_410() -> None:
-    """AHP permanece descontinuado; etapas avulsas da rodada foram removidas.
+    """AHP permanece descontinuado; templates antigos ficam fora do runtime.
 
     410 e não 404: o recurso existiu e foi retirado, e o cliente recebe o
     encaminhamento para o substituto em vez de um "não encontrado" genérico.

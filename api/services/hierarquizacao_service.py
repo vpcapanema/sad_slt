@@ -28,6 +28,7 @@ from api.exceptions import (
 )
 from api.matriz_colunas import extrair_colunas
 from api.repositories import camada_geoespacial_repository as camada_repo
+from api.repositories import agrupamento_demanda_repository
 from api.repositories import config_multicriterio_repository as config_repo
 from api.repositories import hierarquizacao_repository as repo
 from api.repositories import sigma_usuario_repository
@@ -82,6 +83,7 @@ def _codigo() -> str:
 def _response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
     tid = row.get("tipo_demanda_id")
     tipo_demanda = TIPO_DEMANDA_ID_TO_COD.get(tid) if isinstance(tid, int) else None
+    dados_hierarquizacao = row.get("dados_hierarquizacao") or {}
     homologado_por = str(row["homologado_por"]) if row.get("homologado_por") else None
     criado_por = str(row["criado_por"]) if row.get("criado_por") else None
     nomes = _nomes_usuarios([homologado_por, criado_por])
@@ -96,6 +98,8 @@ def _response(row: dict[str, Any]) -> HierarquizacaoResponseSchema:
         tipo_demanda=tipo_demanda,
         tipo_demanda_id=tid,
         grupo_id=row.get("grupo_id"),
+        grupo_demanda_id=str(row["grupo_demanda_id"]) if row.get("grupo_demanda_id") else None,
+        grupo_demanda_codigo=row.get("grupo_demanda_codigo"),
         status=row["status"],
         objetos=row.get("objetos") or [],
         julgamento_projetos=row.get("julgamento_projetos"),
@@ -449,17 +453,22 @@ def _atributos_fase3(colunas: list[dict[str, Any]], cadastro: dict[str, Any]) ->
 def criar_hierarquizacao(
     payload: HierarquizacaoCreateSchema, *, criado_por: str | None = None
 ) -> HierarquizacaoResponseSchema:
-    if not payload.objetos:
-        raise DemandaValidationError("Selecione ao menos uma demanda.", field="objetos")
-    tid = TIPO_DEMANDA_COD_TO_ID.get(payload.tipo_demanda or "")
+    grupo_demanda = agrupamento_demanda_repository.get_by_id(payload.grupo_demanda_id)
+    if not grupo_demanda:
+        raise DemandaValidationError("Grupo de demandas selecionado não encontrado.", field="grupo_demanda_id")
+    tid = int(grupo_demanda["tipo_demanda_id"])
+    tipo_demanda = TIPO_DEMANDA_ID_TO_COD.get(tid)
+    objetos_selecionados = grupo_demanda.get("objetos") or []
+    if not objetos_selecionados:
+        raise DemandaValidationError("O grupo selecionado não contém demandas.", field="grupo_demanda_id")
     config = None
     if payload.config_codigo:
         config = config_repo.get_by_codigo("portfolio", payload.config_codigo)
         if not config:
             raise ConfigMulticriterioNotFoundError(payload.config_codigo)
-        tid = config.get("tipo_demanda_id")
-    if tid is None:
-        raise DemandaValidationError("Tipo de demanda inválido.", field="tipo_demanda")
+        config_tipo_id = config.get("tipo_demanda_id")
+        if config_tipo_id is not None and int(config_tipo_id) != tid:
+            raise DemandaValidationError("A configuração não corresponde ao tipo do grupo salvo.", field="config_codigo")
     f2, f3 = _criterios(
         payload.matriz_premissas_criterios,
         fases_a_executar=payload.fases_a_executar,
@@ -467,11 +476,11 @@ def criar_hierarquizacao(
     colunas_f3 = extrair_colunas(payload.matriz_premissas_criterios)
     codigo = _codigo()
     objetos_doc = []
-    for idx, o in enumerate(payload.objetos):
+    for idx, o in enumerate(objetos_selecionados):
         cabecalho = _normalizar_objeto_contrato(
             o,
             indice=idx,
-            tipo_demanda=payload.tipo_demanda,
+            tipo_demanda=tipo_demanda,
             grupo_id=payload.grupo_id,
         )
         cabecalho["atributos_fase3"] = _atributos_fase3(
@@ -516,7 +525,8 @@ def criar_hierarquizacao(
             "codigo": codigo,
             "nome": payload.nome.strip(),
             "descricao": payload.descricao,
-            "tipo_demanda": payload.tipo_demanda,
+            "tipo_demanda": tipo_demanda,
+            "grupo_demanda_id": str(payload.grupo_demanda_id),
             "quantidade_objetos": len(objetos_doc),
             "matriz_premissas_criterios": payload.matriz_premissas_criterios,
             "fases_a_executar": payload.fases_a_executar,
@@ -531,8 +541,8 @@ def criar_hierarquizacao(
         "descricao": payload.descricao,
         "tipo_demanda_id": tid,
         "grupo_id": payload.grupo_id,
+        "grupo_demanda_id": payload.grupo_demanda_id,
         "status": "em_julgamento",
-        "objetos": payload.objetos,
         "dados_hierarquizacao": dados,
     }
     if config:
@@ -540,8 +550,8 @@ def criar_hierarquizacao(
     uid = _uuid(criado_por)
     if uid:
         data["criado_por"] = uid
-    tabela = {"plano": "plano", "programa": "programa", "projeto": "projeto"}.get(payload.tipo_demanda or "")
-    ids_universo = [o.get("id") for o in payload.objetos if o.get("id")]
+    tabela = {"plano": "plano", "programa": "programa", "projeto": "projeto"}.get(tipo_demanda or "")
+    ids_universo = [o.get("id") for o in objetos_selecionados if o.get("id")]
     transicao = None
     if tabela and ids_universo:
         transicao = {"tabela": ("demandas", tabela), "ids": ids_universo,
@@ -623,7 +633,6 @@ def atualizar_hierarquizacao(
         "nome",
         "descricao",
         "status",
-        "objetos",
         "julgamento_projetos",
         "dados_hierarquizacao",
     }:

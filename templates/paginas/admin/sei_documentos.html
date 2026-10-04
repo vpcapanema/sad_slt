@@ -18,20 +18,19 @@
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 
   <main class="conteudo-principal app-main admin-main">
+    <section class="secao-cabecalho-sei card-cabecalho-sei card standard-page-hero" aria-labelledby="sei-title">
+      <h1 class="standard-page-hero__title" id="sei-title"><i class="fas fa-file-arrow-up" aria-hidden="true"></i><span>Enviar PDFs recebidos pelo SEI</span></h1>
+      <p class="standard-page-hero__eyebrow">Admin — Contribuições do SEI</p>
+      <p class="standard-page-hero__description">
+        Envie o PDF da solicitação que chegou pelo Sistema Eletrônico de
+        Informações (SEI). O documento fica guardado neste repositório e o
+        sistema interpreta texto, digitalizações, tabelas e estrutura das
+        páginas para sugerir o preenchimento. Toda sugestão conserva sua
+        evidência e o que não estiver sustentado permanece em branco.
+      </p>
+    </section>
     <section class="card-tipo-tabs secao-tipo-tabs card admin-card">
-      <div class="pli-section-label">
-        <i class="fas fa-file-arrow-up" aria-hidden="true"></i>
-        <span class="pli-section-title">Enviar PDFs recebidos pelo SEI</span>
-      </div>
       <div class="admin-card-body">
-        <p class="step-intro">
-          Envie o PDF da solicitação que chegou pelo Sistema Eletrônico de
-          Informações (SEI). O documento fica guardado neste repositório e o
-          sistema interpreta texto, digitalizações, tabelas e estrutura das
-          páginas para sugerir o preenchimento. Toda sugestão conserva sua
-          evidência e o que não estiver sustentado permanece em branco.
-        </p>
-
         <form id="sei-upload-form" class="form-grid sei-form" autocomplete="off">
           <div class="form-field sei-full">
             <label for="sei-arquivos">Arquivos PDF</label>

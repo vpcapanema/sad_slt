@@ -20,6 +20,8 @@ _SELECT_BASE = """
         h.id,
         h.codigo,
         h.config_id,
+        h.grupo_demanda_id,
+        g.codigo AS grupo_demanda_codigo,
         c.codigo AS config_codigo,
         (SELECT a.id
            FROM ahp.comparacao_colaborativa_ambiente a
@@ -32,7 +34,7 @@ _SELECT_BASE = """
         h.tipo_demanda_id,
         h.grupo_id,
         h.status,
-        h.objetos,
+        g.objetos AS objetos,
         h.julgamento_projetos,
         h.pesos_projetos,
         h.ranking,
@@ -48,6 +50,7 @@ _SELECT_BASE = """
         h.atualizado_em
     FROM hierarquizacao_demandas.hierarquizacao_portfolio h
     LEFT JOIN ahp.config_multicriterio_portfolio c ON c.id = h.config_id
+    JOIN demandas.grupos_demandas g ON g.id = h.grupo_demanda_id
 """
 
 
@@ -73,7 +76,7 @@ def get_transicao_status_hierarquizacao(origem: str, destino: str) -> dict[str, 
     return dict(row) if row else None
 
 _JSON_FIELDS = {
-    "objetos", "julgamento_projetos", "pesos_projetos", "ranking", "dados_hierarquizacao",
+    "julgamento_projetos", "pesos_projetos", "ranking", "dados_hierarquizacao",
     "relatorio_fase1", "relatorio_fase2", "relatorio_fase3", "relatorio_consolidado",
 }
 
@@ -193,12 +196,17 @@ def _liberar_demandas_universo(conn: Any, transicao: dict[str, Any]) -> None:
         return
     schema, table = transicao["tabela"]
     tbl = sql.Identifier(schema, table)
-    # Uma demanda pode pertencer a várias rodadas. Só liberamos quando não
-    # restar nenhuma outra hierarquização contendo o ID no snapshot JSONB.
+    # Só liberamos quando nenhuma outra hierarquização usar um grupo que contenha o ID.
     liberaveis = []
     for demanda_id in ids:
         restante = conn.execute(
-            sql.SQL("SELECT 1 FROM {hier_table} WHERE jsonb_path_exists(COALESCE(objetos, '[]'::jsonb), %s::jsonpath) LIMIT 1").format(hier_table=_TABLE),
+                        sql.SQL("""
+                                SELECT 1
+                                    FROM {hier_table} h
+                                    JOIN demandas.grupos_demandas g ON g.id = h.grupo_demanda_id
+                                 WHERE jsonb_path_exists(COALESCE(g.objetos, '[]'::jsonb), %s::jsonpath)
+                                 LIMIT 1
+                        """).format(hier_table=_TABLE),
             (f'$[*] ? (@.id == "{demanda_id}")',),
         ).fetchone()
         if not restante:

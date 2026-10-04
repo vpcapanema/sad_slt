@@ -127,10 +127,10 @@
             <div class="platform-subgroup subgroup-agrupamento-demandas-extracao-atributos">
               <h3 class="platform-subgroup__title">Agrupamento de Demandas e Extração de atributos</h3>
               <div class="platform-grid">
-                <button type="button" class="platform-tile platform-tile--teal" title="Agrupamento de demandas" disabled>
+                <a href="/restrict/agrupamento-demandas/" class="platform-tile platform-tile--teal" title="Agrupamento de demandas">
                   <span class="platform-tile__icon"><i class="fa-solid fa-object-group" aria-hidden="true"></i></span>
                   <span class="platform-tile__label">Agrupamento de demandas</span>
-                </button>
+                </a>
                 {{ link_card('/restrict/geoespacial/extracoes-atributos/', 'fa-solid fa-layer-group', 'Extração de atributos', 'teal') }}
                 {{ link_card('/restrict/geoespacial/gerador-camadas-territoriais/', 'fa-solid fa-city', 'Tributação de camadas territoriais', 'teal') }}
               </div>
@@ -178,26 +178,24 @@
               <div class="platform-subgroup subgroup-visualizadores-online-camadas">
                 <h3 class="platform-subgroup__title">Visualizadores online de camadas</h3>
                 <div class="platform-grid">
-                  {{ link_card('/restrict/geoespacial/produtos/', 'fa-solid fa-layer-group', 'Produtos geoespaciais', 'blue') }}
-                  {{ link_card('/restrict/geoespacial/visualizador-bases-geoespaciais/', 'fa-solid fa-folder-tree', 'Bases geoespaciais', 'blue') }}
-                  {{ link_card('/restrict/geoespacial/produtos/', 'fa-solid fa-layer-group', 'Camadas de Superfícies-índice', 'blue') }}
+                  {{ link_card('/restrict/geoespacial/visualizador-camadas/', 'fa-solid fa-map-location-dot', 'Visualizador de camadas', 'blue') }}
                 </div>
               </div>
               <div class="platform-subgroup subgroup-ferramentas-geoprocessamento">
                 <h3 class="platform-subgroup__title">Ferramentas de geoprocessamento</h3>
                 <div class="platform-grid">
-                  {{ link_card('/restrict/geoespacial/gerador-risco-restricao/', 'fa-solid fa-shield-halved', 'Gerador de risco e restrição', 'green') }}
-                  {{ link_card('/restrict/geoespacial/gerador-favorabilidade/', 'fa-solid fa-map', 'Gerador de favorabilidade', 'green') }}
-                  {{ link_card('/restrict/geoespacial/configurador-ajuste/', 'fa-solid fa-sliders', 'Configurador da Priorização por atributos', 'green') }}
+                  {{ link_card('/restrict/geoespacial/gerador-camadas-territoriais/', 'fa-solid fa-city', 'Tributação de camadas territoriais', 'green') }}
+                  {{ link_card('/restrict/geoespacial/extracao-atributos/', 'fa-solid fa-layer-group', 'Nova extração de atributos', 'green') }}
+                  {{ link_card('/restrict/geoespacial/extracoes-atributos/', 'fa-solid fa-table-list', 'Histórico de extrações', 'green') }}
                 </div>
               </div>
             </div>
           </section>
           <section class="platform-group secao-platform-documentacao-ranqueamento" aria-labelledby="group-documentacao-ranqueamento">
-            {{ group_heading('group-documentacao-ranqueamento', 'Documentação oficial do ranqueamento', 'Referências do ranqueamento', 'Risco, restrição e favorabilidade.') }}
+            {{ group_heading('group-documentacao-ranqueamento', 'Documentação técnica', 'Referências metodológicas', 'Fundamentos do ranqueamento territorial.') }}
             <div class="platform-grid">
-              {{ link_card('/restrict/geoespacial/configuracao-risco-restricao/', 'fa-solid fa-book', 'Arcabouço teórico-conceitual de Risco e Restrição', 'navy') }}
-              {{ link_card('/restrict/geoespacial/documentacao-favorabilidade/', 'fa-solid fa-book-atlas', 'Arcabouço teórico-conceitual e metodológico do índice de favorabilidade espacial à execução de demandas', 'navy') }}
+              {{ link_card('/public/documentacao/', 'fa-solid fa-book-open', 'Documentação metodológica da hierarquização', 'navy') }}
+              {{ link_card('/public/documentacao/glossario/', 'fa-solid fa-spell-check', 'Glossário técnico-conceitual', 'navy') }}
             </div>
           </section>
         </div>

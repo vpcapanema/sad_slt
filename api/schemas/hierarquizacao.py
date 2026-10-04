@@ -7,19 +7,19 @@ aprovados (``demandas.projeto``).
 from __future__ import annotations
 
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
 
 class HierarquizacaoCreateSchema(BaseModel):
     config_codigo: str | None = Field(None, description="Configuração AHP; pode ser vinculada depois")
+    grupo_demanda_id: UUID = Field(..., description="Grupo salvo usado como universo da hierarquização")
     nome: str = Field(..., min_length=1, max_length=200)
     descricao: str | None = None
-    tipo_demanda: str | None = Field(None, description="plano | programa | projeto")
     grupo_id: str | None = Field(
         None, max_length=64, description="Conjunto comparável (pai): diretoria/plano/programa"
     )
-    objetos: list[dict[str, Any]] | None = None
     matriz_premissas_criterios: dict[str, Any] | list[Any] | None = None
     # Omitir o campo significa "a rodada percorre as três fases". O default
     # anterior era uma lista vazia, que `_exigir_fase` lê como "nenhuma fase" e
@@ -41,7 +41,6 @@ class HierarquizacaoUpdateSchema(BaseModel):
     nome: str | None = Field(None, min_length=1, max_length=200)
     descricao: str | None = None
     status: str | None = None
-    objetos: list[dict[str, Any]] | None = None
     julgamento_projetos: list[dict[str, Any]] | None = None
     dados_hierarquizacao: dict[str, Any] | None = None
     config_codigo: str | None = None
@@ -123,6 +122,8 @@ class HierarquizacaoResponseSchema(BaseModel):
     tipo_demanda: str | None = None
     tipo_demanda_id: int | None = None
     grupo_id: str | None = None
+    grupo_demanda_id: str
+    grupo_demanda_codigo: str | None = None
     status: str
     objetos: list[dict[str, Any]] = []
     julgamento_projetos: list[dict[str, Any]] | None = None

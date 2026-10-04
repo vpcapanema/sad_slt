@@ -16,6 +16,10 @@
   gap: var(--process-space-4);
 }
 
+#nova-hierarquizacao > .card-universo-da-hierarquizacao[hidden] {
+  display: none !important;
+}
+
 /* Primeiro nível contido. */
 #nova-hierarquizacao > .cadastro-card {
   display: grid;

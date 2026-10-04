@@ -15,7 +15,7 @@
                         "commands":  [
                                          {
                                              "command":  "sicardPreview.openCurrentTemplate",
-                                             "title":  "SICARD: iniciar e abrir pÃƒÂ¡gina atual",
+                                             "title":  "SICARD: abrir página renderizada no editor",
                                              "icon":  "$(open-preview)"
                                          }
                                      ],
@@ -45,7 +45,7 @@
                                                                                            },
                                                                  "sicardPreview.startTask":  {
                                                                                                  "type":  "string",
-                                                                                                 "default":  "SICARD: Iniciar ambiente de desenvolvimento",
+                                                                                                 "default":  "SICARD: Iniciar servidor local",
                                                                                                  "description":  "Tarefa do workspace usada para iniciar o servidor."
                                                                                              },
                                                                  "sicardPreview.startTimeoutSeconds":  {

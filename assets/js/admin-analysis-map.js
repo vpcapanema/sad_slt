@@ -79,6 +79,7 @@
       container._sltPreviewMap.remove();
       container._sltPreviewMap = null;
     }
+    container._sltPreviewMapLayers = [];
     container.style.height = "";
     const mapBox = container.closest(".admin-info-map");
     if (mapBox) mapBox.style.height = "";
@@ -137,6 +138,11 @@
     }
 
     container._sltPreviewMap = map;
+    container._sltPreviewMapLayers = mapLayers;
+    container._sltPreviewMapVisible = options?.visible !== false;
+    if (!container._sltPreviewMapVisible) {
+      mapLayers.forEach((layer) => map.removeLayer(layer));
+    }
 
     const refresh = () => {
       syncInfoMapHeight(container);
@@ -161,9 +167,26 @@
     return map;
   }
 
+  function setPreviewMapVisibility(containerId, visible) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const map = container._sltPreviewMap;
+    const nextVisible = Boolean(visible);
+    container._sltPreviewMapVisible = nextVisible;
+    if (!map) return;
+    (container._sltPreviewMapLayers || []).forEach((layer) => {
+      if (nextVisible) {
+        if (!map.hasLayer(layer)) layer.addTo(map);
+      } else if (map.hasLayer(layer)) {
+        map.removeLayer(layer);
+      }
+    });
+  }
+
   global.SLTAdminAnalysisMap = {
     initPreviewMap,
     destroyMap,
+    setPreviewMapVisibility,
     coordsFromRecord,
     syncInfoMapHeight,
   };

@@ -9,7 +9,7 @@
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
 <main class="conteudo-principal app-main ahp-main ami-main" data-julgamento-id="{{ julgamento_id }}" id="ami-workspace">
-  <section class="secao-cabecalho-julgamento ami-hero"><div><a href="/restrict/analise-multicriterio/" class="ami-back">← Julgamentos</a><p class="ami-eyebrow">Espaço de trabalho</p><h1 id="ami-title">Carregando julgamento…</h1><p id="ami-subtitle"></p></div><span class="ami-status" id="ami-status"></span></section>
+  <section class="secao-cabecalho-julgamento ami-hero standard-page-hero"><div><a href="/restrict/analise-multicriterio/" class="ami-back">← Julgamentos</a><h1 class="standard-page-hero__title" id="ami-title">Carregando julgamento…</h1><p class="ami-eyebrow standard-page-hero__eyebrow">Espaço de trabalho</p><p class="standard-page-hero__description" id="ami-subtitle"></p></div><span class="ami-status" id="ami-status"></span></section>
   {% set tabela_colaborativa_id = "ami-workspace-database" %}{% include "componentes/_tabela_colaborativa.html" %}
   <nav class="ami-tabs" role="tablist"><button class="is-active" data-tab="config">Configuração</button><button data-tab="participants">Participantes</button><button data-tab="responses">Respostas</button><button data-tab="consolidation">Consolidação</button></nav>
   <section class="secao-configuracao-julgamento ami-panel ami-tab" id="tab-config"><h2>Configuração</h2><div class="ami-detail-grid" id="ami-config-details"></div><h3>Critérios do julgamento</h3><div class="ami-chips" id="ami-criteria"></div></section>

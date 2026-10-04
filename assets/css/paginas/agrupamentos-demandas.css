@@ -1,0 +1,60 @@
+.agrupamentos-demandas-main {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.agrupamentos-demandas-hero {
+  text-align: left;
+}
+
+.agrupamentos-demandas-hero .standard-page-hero__title,
+.agrupamentos-demandas-hero .standard-page-hero__eyebrow,
+.agrupamentos-demandas-hero .standard-page-hero__description {
+  justify-content: flex-start;
+  margin-left: 0;
+  text-align: left;
+}
+
+.agrupamentos-table {
+  min-width: 46rem;
+}
+
+.agrupamento-editor > .ahp-section-body,
+.agrupamento-editor form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.agrupamento-universo .hier-universo-table {
+  min-width: 72rem;
+}
+
+.agrupamento-universo .admin-table-wrap {
+  overflow-x: auto;
+}
+
+.agrupamento-identificacao .process-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.agrupamento-identificacao .process-field--wide {
+  grid-column: 1 / -1;
+}
+
+.agrupamentos-empty {
+  padding: 1rem;
+  color: var(--pli-muted);
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .agrupamento-identificacao .process-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .agrupamento-identificacao .process-field--wide {
+    grid-column: auto;
+  }
+}

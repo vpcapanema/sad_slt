@@ -1,4 +1,4 @@
-{% extends "bases/base_painel_mapa.html" %}
+{% extends "bases/base_conteudo.html" %}
 {% set subtitulo = "Área do Operador" %}
 {% set navegacao = "operador" %}
 {% set requer_autenticacao = true %}
@@ -7,7 +7,7 @@
 {% block classes_body %}operador-home-page escala-revisada{% endblock %}
 
 {% block estilos_pagina %}
-  <link rel="stylesheet" href="/assets/css/sidebar-layout.css">
+  <link rel="stylesheet" href="/restrict/hierarquizacao/platform-map.css?v=20260814-1">
   <link rel="stylesheet" href="/restrict/index.css?v=20261003-operador">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/escala-tipografica.css">
@@ -30,26 +30,11 @@
   </div>
 {% endmacro %}
 
-{% block barra_lateral %}
-  <nav class="operator-sidebar-nav" aria-label="Navegação do Operador">
-    <p class="operator-sidebar-label">Operação</p>
-    <a href="/restrict/operador/" aria-current="page"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Início</span></a>
-    <a href="/public/cadastro/nova-demanda/"><i class="fa-solid fa-file-circle-plus" aria-hidden="true"></i><span>Cadastrar demanda</span></a>
-    <a href="/restrict/painel/"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i><span>Painel de demandas</span></a>
-    <a href="/restrict/demandas/"><i class="fa-solid fa-table-list" aria-hidden="true"></i><span>Tabela de demandas</span></a>
-    <a href="/restrict/complementacao/"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i><span>Complementação</span></a>
-    <p class="operator-sidebar-label">Referências</p>
-    <a href="/public/"><i class="fa-solid fa-globe" aria-hidden="true"></i><span>Portal público</span></a>
-    <a href="/public/cadastro/catalogo-diretorias/"><i class="fa-solid fa-sitemap" aria-hidden="true"></i><span>Catálogos</span></a>
-  </nav>
-{% endblock %}
-
-{% block painel %}
-  <div class="layout-main-scroll operator-main-scroll">
+{% block conteudo %}
     <main class="conteudo-principal app-main restrict-index operator-home-content">
       <section class="secao-modulos-do-sicard restrict-index-heading" aria-labelledby="operator-home-title">
+        <h1 id="operator-home-title">Bem-vindo</h1>
         <p class="restrict-index-eyebrow">Área restrita · Operador</p>
-        <h1 id="operator-home-title">Suas demandas</h1>
         <p>Acompanhe os protocolos que você registrou e as pendências disponíveis para complementação.</p>
       </section>
 
@@ -115,7 +100,6 @@
         </section>
       </div>
     </main>
-  </div>
 {% endblock %}
 
 {% block scripts_pagina %}

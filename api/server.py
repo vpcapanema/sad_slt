@@ -196,7 +196,12 @@ def pagina_login_publico(request: Request) -> Response:
 
 
 @app.get("/restrict/", include_in_schema=False)
-def pagina_inicial_restrita(request: Request) -> Response:
+def pagina_inicial_restrita(
+    request: Request,
+    user: SessionUser | None = Depends(get_optional_session),
+) -> Response:
+    if user and user.tipo_usuario.strip().upper() == "OPERADOR":
+        return render_page(request, "paginas/admin/operador.html")
     return render_page(request, "paginas/admin/index.html")
 
 
@@ -225,7 +230,7 @@ def pagina_area_administrador(request: Request) -> Response:
 
 @app.get("/restrict/hierarquizacao/", include_in_schema=False)
 def pagina_indice_hierarquizacao_restrita(request: Request) -> Response:
-    return render_page(request, "paginas/hierarquizacao/index.html")
+    return RedirectResponse("/restrict/hierarquizacao/processos/", status_code=308)
 
 
 @app.get("/restrict/hierarquizacao/processos/", include_in_schema=False)
@@ -233,9 +238,14 @@ def pagina_processos_hierarquizacao(request: Request) -> Response:
     return render_page(request, "paginas/hierarquizacao/home.html")
 
 
+@app.get("/restrict/agrupamento-demandas/", include_in_schema=False)
+def pagina_agrupamento_demandas(request: Request) -> Response:
+    return render_page(request, "paginas/hierarquizacao/agrupamentos.html")
+
+
 @app.get("/restrict/hierarquizacao/metodologia/", include_in_schema=False)
 def pagina_metodologia_hierarquizacao(request: Request) -> Response:
-    return render_page(request, "paginas/hierarquizacao/apresentacao-processo-hierarquizacao.html")
+    return RedirectResponse("/public/documentacao/", status_code=308)
 
 
 @app.get("/restrict/hierarquizacao/fase-1/", include_in_schema=False)
@@ -267,14 +277,7 @@ TIPOS_CAMADA_ELEGIBILIDADE = [
 
 @app.get("/restrict/geoespacial/documentacao-favorabilidade/", include_in_schema=False)
 def pagina_documentacao_favorabilidade(request: Request) -> Response:
-    """Biblioteca da favorabilidade: da premissa ao índice, com os mapas gerados."""
-    from api.services.documentacao_favorabilidade import montar_contexto
-
-    return render_page(
-        request, "paginas/geoespacial/documentacao-favorabilidade.html",
-        fase_ativa=2,
-        **montar_contexto(),
-    )
+    return RedirectResponse("/public/documentacao/", status_code=308)
 
 
 @app.get("/restrict/hierarquizacao/cadastro-upload-favorabilidade/", include_in_schema=False)
@@ -312,7 +315,7 @@ DESCONTINUADO_AHP = (
 @app.get("/restrict/ahp/", include_in_schema=False)
 @app.get("/restrict/ahp/{pagina}/", include_in_schema=False)
 def pagina_ahp_descontinuada(request: Request, pagina: str = "") -> Response:
-    """As páginas do AHP foram desabilitadas; os templates seguem versionados.
+    """As páginas do AHP foram desabilitadas; os templates ficam em legado/.
 
     Responde 410 (e não 404) para distinguir "existiu e foi retirado" de
     "nunca existiu", e para que links antigos deem uma mensagem útil.
@@ -333,7 +336,7 @@ def pagina_ahp_colaborativa_publica() -> Response:
 
 @app.get("/restrict/analise-multicriterio/", include_in_schema=False)
 def pagina_julgamentos_multicriterio(request: Request) -> Response:
-    return render_page(request, "paginas/analise_multicriterio/julgamentos.html")
+    return render_page(request, "paginas/analise_multicriterio/central-respostas.html")
 
 
 @app.get(
@@ -345,7 +348,7 @@ def pagina_julgamento_multicriterio(
 ) -> Response:
     return render_page(
         request,
-        "paginas/analise_multicriterio/julgamento.html",
+        "paginas/analise_multicriterio/espaco-trabalho-julgamento.html",
         julgamento_id=julgamento_id,
     )
 
@@ -461,14 +464,14 @@ GEOSPATIAL_PAGES = {
     "extracao-atributos": "extracao-atributos.html",
     "extracoes-atributos": "extracoes-atributos.html",
     "visualizador-camadas": "visualizador-camadas.html",
-    "gerador-risco-restricao": "gerador-risco-restricao.html",
-    "configuracao-risco-restricao": "configuracao-risco-restricao.html",
-    "gerador-favorabilidade": "gerador-favorabilidade.html",
     "visualizador-bases-geoespaciais": "visualizador-inputs.html",
     "bancada": "_geoprocessamento.html",
-    "produtos": "produtos.html",
-    "configurador-ajuste": "verificacao-fase3.html",
 }
+GEOSPATIAL_RETIRED_PAGES = frozenset({
+    "gerador-risco-restricao",
+    "gerador-favorabilidade",
+    "configurador-ajuste",
+})
 
 HIERARQUIZACAO_DOCUMENTS = {
     "ESPINHA_DORSAL_SISTEMA_HIERARQUIZACAO.md",
@@ -486,9 +489,14 @@ def pagina_indice_geoespacial(request: Request) -> Response:
 
 @app.get("/restrict/geoespacial/{pagina}/", include_in_schema=False)
 def pagina_geoespacial(request: Request, pagina: str) -> Response:
+    if pagina in GEOSPATIAL_RETIRED_PAGES:
+        raise HTTPException(status_code=410, detail="Esta página geoespacial foi arquivada.")
+    if pagina == "produtos":
+        return RedirectResponse("/restrict/geoespacial/visualizador-camadas/", status_code=308)
+    if pagina == "configuracao-risco-restricao":
+        return RedirectResponse("/public/documentacao/", status_code=308)
     arquivo = GEOSPATIAL_PAGES.get(pagina)
     if not arquivo:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Página geoespacial não encontrada")
     if arquivo == "_geoprocessamento.html":
         return render_page(request, "componentes/_geoprocessamento.html")

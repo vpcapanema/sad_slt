@@ -31,17 +31,22 @@
             <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--apply" aria-label="Aplicar filtro"><span aria-hidden="true">✓</span></button>
             <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--clear" aria-label="Limpar filtro"><span aria-hidden="true">✕</span></button>
           </div>          <div id="records-root" class="layer-group layer-group--root">
-            <button
-              type="button"
-              class="layer-group-header layer-group-header--section"
-              id="toggle-records-root"
-              aria-expanded="true"
-              aria-controls="records-list"
-            >
-              <span class="layer-group-toggle" aria-hidden="true">▼</span>
-              <span class="layer-group-name">Demandas</span>
-              <span id="records-count" class="layer-group-active-count"></span>
-            </button>
+            <div class="layer-group-header-row layer-group-header-row--root">
+              <label class="layer-visibility-toggle" title="Visibilidade no mapa de todas as demandas">
+                <input id="toggle-records-visibility" type="checkbox" class="layer-visibility-input layer-visibility-input--root" aria-label="Exibir no mapa todos os tipos de demanda" checked>
+              </label>
+              <button
+                type="button"
+                class="layer-group-header layer-group-header--section"
+                id="toggle-records-root"
+                aria-expanded="true"
+                aria-controls="records-list"
+              >
+                <span class="layer-group-toggle" aria-hidden="true">▼</span>
+                <span class="layer-group-name">Demandas</span>
+                <span id="records-count" class="layer-group-active-count"></span>
+              </button>
+            </div>
             <div id="records-list" class="layer-group-body layers-container admin-records-list demandas-tree">{% include "componentes/_painel_sidebar_loading.html" %}</div>
           </div>
         </div>

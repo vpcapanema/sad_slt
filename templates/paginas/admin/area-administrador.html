@@ -15,12 +15,13 @@
 
 {% block conteudo %}
 <main class="conteudo-principal admin-area">
+  <section class="secao-area-administrador card-area-administrador card standard-page-hero" aria-labelledby="admin-area-title">
+    <h1 class="standard-page-hero__title" id="admin-area-title">Área do Administrador</h1>
+    <p class="standard-page-hero__eyebrow">Administração de dados</p>
+    <p class="standard-page-hero__description">Tabelas de domínio e tabelas operacionais organizadas por esquema</p>
+  </section>
   <div class="admin-area-shell">
     <aside class="admin-sidebar" aria-label="Esquemas e tabelas do banco">
-      <div class="admin-sidebar-head">
-        <h1>Área do Administrador</h1>
-        <p>Tabelas de domínio e tabelas operacionais organizadas por esquema</p>
-      </div>
       <nav id="admin-menu" class="admin-menu" aria-live="polite">
         <p class="admin-menu-loading">Carregando esquemas…</p>
       </nav>

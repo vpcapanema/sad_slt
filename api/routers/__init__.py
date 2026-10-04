@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from api.routers.auth import router as auth_router
 from api.routers.admin_tabelas import router as admin_tabelas_router
+from api.routers.agrupamentos_demandas import router as agrupamentos_demandas_router
 from api.routers.analise_demanda import router as analise_demanda_router
 from api.routers.atributos_objetos import router as atributos_objetos_router
 from api.routers.comparacao_colaborativa import router as comparacao_colaborativa_router
@@ -30,6 +31,7 @@ api_router = APIRouter(prefix="/api")
 api_router.include_router(health_router)
 api_router.include_router(auth_router)
 api_router.include_router(admin_tabelas_router)
+api_router.include_router(agrupamentos_demandas_router)
 api_router.include_router(sigma_router)
 api_router.include_router(geometria_router)
 api_router.include_router(geo_router)

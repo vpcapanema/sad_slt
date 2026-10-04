@@ -22,7 +22,7 @@
 .admin-dashboard-layout {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 1.25rem;
   min-width: 0;
 }
 

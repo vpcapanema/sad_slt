@@ -1,6 +1,9 @@
 """Prefixo /sicard nos arquivos de configuração servidos em /config/."""
 from fastapi.testclient import TestClient
+from fastapi import FastAPI
+from fastapi.responses import Response
 
+from api.middleware.subpath_rewrite import SubpathRewriteMiddleware
 from api.server import app
 
 PREFIXO = {"X-Forwarded-Prefix": "/sicard"}
@@ -16,9 +19,15 @@ def test_catalogo_recebe_o_prefixo_da_sub_rota():
 
 
 def test_texto_que_so_comeca_com_config_nao_e_prefixado():
-    # O AHP compara location.pathname com "/configuracao/"; prefixar esse
-    # texto quebraria a detecção da etapa sob /sicard/.
-    js = TestClient(app).get("/restrict/ahp/js/ahp-config-formfill.js", headers=PREFIXO).text
+    # O texto é testado isoladamente porque os templates AHP antigos foram arquivados.
+    probe = FastAPI()
+    probe.add_middleware(SubpathRewriteMiddleware)
+
+    @probe.get("/probe.js")
+    def source():
+        return Response('const step = "/configuracao/";', media_type="application/javascript")
+
+    js = TestClient(probe).get("/probe.js", headers=PREFIXO).text
     assert '"/configuracao/"' in js
     assert '/sicard/configuracao/' not in js
 

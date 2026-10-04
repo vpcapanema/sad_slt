@@ -59,9 +59,37 @@ def test_operator_home_contains_only_requested_groups_in_order() -> None:
     assert 'id="group-resultados"' not in content
     assert 'id="group-geoprocessamento"' not in content
     assert 'aria-label="Navegação do Operador"' in content
+    assert "layout-sidebar" not in content
+    assert 'href="/restrict/painel/"' not in content
+    assert 'href="/restrict/demandas/"' not in content
+    assert content.index("/restrict/hierarquizacao/platform-map.css") < content.index("/restrict/index.css")
     assert 'id="stat-aprovadas"' in content
     assert 'id="stat-complementacao"' in content
     assert 'id="stat-em-analise"' in content
+    assert '<h1 id="operator-home-title">Bem-vindo</h1>' in content
+    script = Path("assets/js/paginas/operador-index.js").read_text(encoding="utf-8")
+    assert 'textContent = `Bem-vindo, ${user.nome || "Operador"}`' in script
+
+
+def test_restricted_root_selects_operator_home_for_operator_session() -> None:
+    response = _client().get("/restrict/")
+
+    assert response.status_code == 200
+    assert 'id="group-operador"' in response.text
+    assert 'id="group-publico"' in response.text
+    assert 'id="group-catalogos"' in response.text
+    assert 'id="group-geoprocessamento"' not in response.text
+    assert 'id="group-mad"' not in response.text
+    assert 'href="/restrict/painel/"' not in response.text
+    assert 'href="/restrict/demandas/"' not in response.text
+
+
+def test_restricted_root_preserves_existing_home_for_other_profiles() -> None:
+    response = _client("ANALISTA").get("/restrict/")
+
+    assert response.status_code == 200
+    assert 'id="group-mad"' in response.text
+    assert 'id="group-geoprocessamento"' in response.text
 
 
 def test_operator_stats_are_scoped_to_session_user(monkeypatch) -> None:

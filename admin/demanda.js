@@ -33,10 +33,12 @@
     ],
     plano: [
       { id: "sec-info", label: "Informações do Plano" },
+      { id: "sec-analise", label: "Análise" },
       { id: "sec-acoes", label: "Ações" },
     ],
     programa: [
       { id: "sec-info", label: "Informações do Programa" },
+      { id: "sec-analise", label: "Análise" },
       { id: "sec-acoes", label: "Ações" },
     ],
   };
@@ -73,6 +75,7 @@
   let layerFilterApi = null;
   let complementoSalvo = "";
   const lists = { projeto: [], programa: [], plano: [] };
+  const groupVisibility = { projeto: true, programa: true, plano: true };
 
   function $(sel, root) {
     return (root || document).querySelector(sel);
@@ -265,7 +268,9 @@
   function mountAnalysisMap(d, demandTipo) {
     const record = { ...d, tipo: demandTipo };
     const render = (payload) => {
-      SLTAdminAnalysisMap.initPreviewMap("admin-preview-map-wrap", payload);
+      SLTAdminAnalysisMap.initPreviewMap("admin-preview-map-wrap", payload, {
+        visible: groupVisibility[demandTipo] !== false,
+      });
     };
 
     if (record.geometria?.tipo && record.geometria.coordinates) {
@@ -497,6 +502,23 @@
         ${decisionButtons}
       </div>`;
   }
+
+    function analiseSectionHtml(d) {
+      return `
+        <section id="sec-analise" class="card admin-dashboard-section">
+          <h2>Análise</h2>
+          <div class="admin-analise-stack">
+            ${criteriosSectionHtml()}
+            ${parecerSectionHtml()}
+            <section id="sec-acoes" class="admin-analise-subcard admin-dashboard-section">
+              <h3>Ações</h3>
+              <div class="admin-form-grid">
+                ${analiseActionsHtml(d, { withDecisions: canApprove(d.status) })}
+              </div>
+            </section>
+          </div>
+        </section>`;
+    }
 
   function criterioRowHtml(criterio, editavel) {
     const nome = `crit-${criterio.campo}`;
@@ -767,22 +789,7 @@
         ${demandHeadHtml(d)}
         <div class="admin-demand-body">
         ${projectInfoHtml(d)}
-
-        <section id="sec-analise" class="card admin-dashboard-section">
-          <h2>Análise</h2>
-          <div class="admin-analise-stack">
-              ${criteriosSectionHtml()}
-
-              ${parecerSectionHtml()}
-
-              <section id="sec-acoes" class="admin-analise-subcard admin-dashboard-section">
-                <h3>Ações</h3>
-                <div class="admin-form-grid">
-                  ${analiseActionsHtml(d, { withDecisions: canApprove(d.status) })}
-                </div>
-              </section>
-          </div>
-        </section>
+        ${analiseSectionHtml(d)}
         </div>
       </div>`;
   }
@@ -962,12 +969,7 @@
           </div>
         </section>
 
-        <section id="sec-acoes" class="card admin-dashboard-section">
-          <h3>Ações</h3>
-          <div class="admin-form-grid">
-            ${actionsHtml(d, { withApprove: canApprove(d.status), withReject: canReject(d.status) })}
-          </div>
-        </section>
+        ${analiseSectionHtml(d)}
         </div>
       </div>`;
   }
@@ -981,6 +983,7 @@
     );
     $("#fld-diretoria").value = d.diretoria_id || "";
     mountAnalysisMap(d, "plano");
+    bindAnalise(d);
   }
 
   function collectPlano() {
@@ -1056,18 +1059,14 @@
           </div>
         </section>
 
-        <section id="sec-acoes" class="card admin-dashboard-section">
-          <h3>Ações</h3>
-          <div class="admin-form-grid">
-            ${actionsHtml(d, { withApprove: canApprove(d.status), withReject: canReject(d.status) })}
-          </div>
-        </section>
+        ${analiseSectionHtml(d)}
         </div>
       </div>`;
   }
 
   function bindPrograma(d) {
     mountAnalysisMap(d, "programa");
+    bindAnalise(d);
   }
 
   function collectPrograma() {
@@ -1228,6 +1227,19 @@
     }));
     SLTAdminDashboard.renderGroupedRecordsSidebar({
       groups,
+      visibility: {
+        isGroupVisible: (groupId) => groupVisibility[groupId] !== false,
+        isRecordVisible: () => true,
+      },
+      showRecordVisibility: false,
+      onGroupVisibilityChange: (groupId, visible) => {
+        if (!Object.prototype.hasOwnProperty.call(groupVisibility, groupId)) return;
+        groupVisibility[groupId] = visible;
+        syncRootVisibilityCheckbox();
+        if (selectedId && findTipoOf(selectedId) === groupId) {
+          SLTAdminAnalysisMap.setPreviewMapVisibility("admin-preview-map-wrap", visible);
+        }
+      },
       forceExpandGroupIds: gruposEmAnalise(groups),
       selectedId,
       getRecordId: (r) => r.id,
@@ -1236,6 +1248,36 @@
       sectionsFor: (r) => SECTIONS[r.__tipo] || SECTIONS.projeto,
       emptyMessage: "Nenhuma demanda registrada.",
       onSelect: (id) => onSelectFromSidebar(id),
+    });
+    syncRootVisibilityCheckbox();
+  }
+
+  function syncRootVisibilityCheckbox() {
+    const checkbox = $("#toggle-records-visibility");
+    if (!checkbox) return;
+    const visibleCount = TIPOS.filter((item) => groupVisibility[item.id] !== false).length;
+    checkbox.checked = visibleCount === TIPOS.length;
+    checkbox.indeterminate = visibleCount > 0 && visibleCount < TIPOS.length;
+    checkbox.setAttribute("aria-checked", checkbox.indeterminate ? "mixed" : String(checkbox.checked));
+  }
+
+  function bindRootVisibilityCheckbox() {
+    const checkbox = $("#toggle-records-visibility");
+    if (!checkbox || checkbox.dataset.visibilityBound === "1") return;
+    checkbox.dataset.visibilityBound = "1";
+    checkbox.addEventListener("click", (event) => event.stopPropagation());
+    checkbox.addEventListener("change", () => {
+      TIPOS.forEach((item) => {
+        groupVisibility[item.id] = checkbox.checked;
+        const group = [...document.querySelectorAll("#records-list .layer-group--tipo")]
+          .find((element) => element.dataset.groupId === item.id);
+        if (!group) return;
+        const groupCheckbox = group.querySelector(".layer-visibility-input--group");
+        if (groupCheckbox) groupCheckbox.checked = checkbox.checked;
+        group.classList.toggle("is-map-hidden", !checkbox.checked);
+      });
+      syncRootVisibilityCheckbox();
+      SLTAdminAnalysisMap.setPreviewMapVisibility("admin-preview-map-wrap", checkbox.checked);
     });
   }
 
@@ -1377,6 +1419,7 @@
     await SLTAdminLabels.init("../");
     initLayerFilter();
     SLTAdminDashboard.initRecordsRootCollapse({});
+    bindRootVisibilityCheckbox();
     await refreshLists();
     await boot();
   }

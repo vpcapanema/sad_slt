@@ -22,6 +22,7 @@
     paginaDemandas = 1,
     universoRequestId = 0;
   let listaCache = [],
+    agrupamentosCache = [],
     hierEditMode = false,
     matrizAtual = null;
   const selecionadasHier = new Set();
@@ -289,18 +290,54 @@
   }
   function mostrarCadastroNovo() {
     setCadastroReadonly(false); $("nova-hierarquizacao").reset();
-    selecionados.clear(); confirmados.clear(); selecionadosResumo.clear(); grupoFechado = false; renderDemandas(); renderResumo();
+    selecionados.clear(); confirmados.clear(); selecionadosResumo.clear(); grupoFechado = false;
+    carregarAgrupamentos();
     $("hier-create-section").classList.remove("hidden");
     $("hier-create-section").scrollIntoView({ behavior: "smooth", block: "start" }); $("hier-nome").focus();
   }
+
+  async function carregarAgrupamentos(selecionado = "", objetosLegados = []) {
+    const select = $("hier-agrupamento");
+    if (!select) return;
+    try {
+      agrupamentosCache = await HierApi.listarAgrupamentos();
+      select.innerHTML = '<option value="">Selecione um agrupamento salvo</option>' + agrupamentosCache
+        .map((grupo) => `<option value="${esc(grupo.id)}">${esc(grupo.nome)} — ${esc(grupo.codigo)}</option>`)
+        .join("");
+      select.value = selecionado || "";
+      if (select.value) await renderResumoAgrupamento(select.value);
+      else if (objetosLegados.length) renderResumoAgrupamentoLegado(objetosLegados);
+      else renderResumoAgrupamentoLegado([]);
+    } catch (error) {
+      select.innerHTML = '<option value="">Não foi possível carregar agrupamentos</option>';
+      renderResumoAgrupamentoLegado(objetosLegados, error.message);
+    }
+  }
+
+  function renderResumoAgrupamentoLegado(objetos, mensagem = "") {
+    const resumo = $("hier-agrupamento-resumo");
+    const tbody = $("hier-agrupamento-demandas");
+    if (resumo) resumo.textContent = mensagem || (objetos.length ? `${objetos.length} demanda(s) neste universo legado.` : "Selecione um agrupamento salvo.");
+    if (tbody) tbody.innerHTML = objetos.length
+      ? objetos.map((item) => `<tr><td><code>${esc(item.codigo || item.id || "—")}</code></td><td>${esc(item.nome || "—")}</td><td>${esc(item.status || "—")}</td></tr>`).join("")
+      : '<tr><td colspan="3">Selecione um agrupamento salvo.</td></tr>';
+  }
+
+  async function renderResumoAgrupamento(id) {
+    const grupo = await HierApi.obterAgrupamento(id);
+    const tipo = { plano: "Plano", programa: "Programa", projeto: "Projeto" }[grupo.tipo_demanda] || grupo.tipo_demanda;
+    const resumo = $("hier-agrupamento-resumo");
+    const tbody = $("hier-agrupamento-demandas");
+    if (resumo) resumo.textContent = `${tipo} · ${grupo.quantidade_demandas} demanda(s) · ${grupo.codigo}`;
+    if (tbody) tbody.innerHTML = (grupo.objetos || []).map((item) => `<tr><td><code>${esc(item.codigo || item.id || "—")}</code></td><td>${esc(item.nome || "—")}</td><td>${esc(item.status || "—")}</td></tr>`).join("") || '<tr><td colspan="3">O agrupamento não contém demandas.</td></tr>';
+  }
+
   async function visualizarHierarquizacaoSelecionada() {
     if (selecionadasHier.size !== 1) return;
     const codigo = [...selecionadasHier][0], h = listaCache.find((item) => item.codigo === codigo); if (!h) return;
     $("nova-hierarquizacao").reset(); $("hier-nome").value = h.nome || ""; $("hier-descricao").value = h.descricao || "";
-    $("hier-tipo").value = h.tipo_demanda || ({ 1: "plano", 2: "programa", 3: "projeto" }[h.tipo_demanda_id] || "");
-    await carregarUniverso();
-    confirmados = new Set((h.objetos || []).map((o) => String(o.id || o.demanda_id || "")).filter(Boolean)); grupoFechado = true;
-    renderDemandas(); renderResumo(); setCadastroReadonly(true); $("hier-create-section").classList.remove("hidden");
+    await carregarAgrupamentos(h.grupo_demanda_id || "", h.objetos || []);
+    setCadastroReadonly(true); $("hier-create-section").classList.remove("hidden");
     $("hier-create-section").scrollIntoView({ behavior: "smooth", block: "start" });
   }
   // Visualizador de JSON em árvore LAZY: renderiza os filhos só ao expandir,
@@ -1063,18 +1100,13 @@
     carregarUniverso({ preservarSelecao: true });
   $("nova-hierarquizacao").onsubmit = async (e) => {
     e.preventDefault();
-    if (!confirmados.size)
-      return erro("Adicione ao menos uma demanda apta ao grupo.");
-    if (!grupoFechado)
-      return erro("Confirme o grupo antes de enviar a hierarquização.");
+    if (!$("hier-agrupamento").value)
+      return erro("Selecione um agrupamento salvo antes de criar a hierarquização.");
     try {
       await HierApi.criar({
         nome: $("hier-nome").value.trim(),
         descricao: $("hier-descricao").value.trim() || null,
-        tipo_demanda: $("hier-tipo").value,
-        objetos: universo.filter(
-          (o) => elegivel(o) && confirmados.has(o.id),
-        ),
+        grupo_demanda_id: $("hier-agrupamento").value,
       });
       location.reload();
     } catch (err) {
@@ -1139,6 +1171,13 @@
     };
   }
   if ($("hier-new")) $("hier-new").onclick = mostrarCadastroNovo;
+  if ($("hier-agrupamento")) {
+    $("hier-agrupamento").onchange = () => {
+      const id = $("hier-agrupamento").value;
+      if (id) renderResumoAgrupamento(id).catch((error) => renderResumoAgrupamentoLegado([], error.message));
+      else renderResumoAgrupamentoLegado([]);
+    };
+  }
   if ($("hier-filter-column")) {
     $("hier-filter-column").insertAdjacentHTML("beforeend", HIER_FILTER_COLUMNS.map(([value, label]) => `<option value="${value}">${label}</option>`).join(""));
     $("hier-filter-column").onchange = () => { $("hier-filter-value").value = ""; atualizarOpcoesFiltroHier(); renderTabela(); };
@@ -1146,11 +1185,9 @@
   }
   async function iniciar() {
     carregarLista();
-    carregarUniverso();
+    carregarAgrupamentos();
     try {
       await window.SLTAdminLabels?.init?.("/restrict/");
-      renderDemandas();
-      renderResumo();
     } catch (e) {
       console.warn("Não foi possível carregar todos os aliases administrativos.", e);
     }

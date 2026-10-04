@@ -55,7 +55,7 @@
           </nav>`
       : "";
 
-    const visHtml = visibility
+    const visHtml = visibility && options.showRecordVisibility !== false
       ? visibilityToggleHtml(
           "record",
           { "record-id": id, "group-id": groupId },
@@ -107,23 +107,28 @@
   }
 
   function bindVisibilityControls(container, options) {
-    if (!options.visibility || !options.onGroupVisibilityChange || !options.onRecordVisibilityChange) return;
+    if (!options.visibility) return;
 
-    container.querySelectorAll(".layer-visibility-input--group").forEach((input) => {
-      input.addEventListener("click", (ev) => ev.stopPropagation());
-      input.addEventListener("change", (ev) => {
-        ev.stopPropagation();
-        options.onGroupVisibilityChange(input.dataset.groupId, input.checked);
+    if (options.onGroupVisibilityChange) {
+      container.querySelectorAll(".layer-visibility-input--group").forEach((input) => {
+        input.addEventListener("click", (ev) => ev.stopPropagation());
+        input.addEventListener("change", (ev) => {
+          ev.stopPropagation();
+          input.closest(".layer-group--tipo")?.classList.toggle("is-map-hidden", !input.checked);
+          options.onGroupVisibilityChange(input.dataset.groupId, input.checked);
+        });
       });
-    });
+    }
 
-    container.querySelectorAll(".layer-visibility-input--record").forEach((input) => {
-      input.addEventListener("click", (ev) => ev.stopPropagation());
-      input.addEventListener("change", (ev) => {
-        ev.stopPropagation();
-        options.onRecordVisibilityChange(input.dataset.groupId, input.dataset.recordId, input.checked);
+    if (options.onRecordVisibilityChange) {
+      container.querySelectorAll(".layer-visibility-input--record").forEach((input) => {
+        input.addEventListener("click", (ev) => ev.stopPropagation());
+        input.addEventListener("change", (ev) => {
+          ev.stopPropagation();
+          options.onRecordVisibilityChange(input.dataset.groupId, input.dataset.recordId, input.checked);
+        });
       });
-    });
+    }
   }
 
   function bindRecordReorder(container, options) {

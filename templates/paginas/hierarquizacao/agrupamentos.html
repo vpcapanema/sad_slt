@@ -1,0 +1,104 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Agrupamento de Demandas" %}
+{% set navegacao = "restrita" %}
+{% set bloco_modulo = "mad" %}
+{% set requer_autenticacao = true %}
+
+{% block titulo %}Agrupamento de Demandas — SICARD{% endblock %}
+{% block classes_body %}ahp-module-page agrupamentos-demandas-page{% endblock %}
+{% block base_url %}<base href="/restrict/">{% endblock %}
+
+{% block estilos_pagina %}
+  <link rel="stylesheet" href="/assets/css/ahp-module.css">
+  <link rel="stylesheet" href="/restrict/hierarquizacao/processos.css">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/page-title-standard.css">
+  <link rel="stylesheet" href="/assets/css/paginas/agrupamentos-demandas.css">
+{% endblock %}
+
+{% block conteudo %}
+<div id="admin-session-bar" class="admin-session-bar hidden"></div>
+<main class="conteudo-principal app-main ahp-main agrupamentos-demandas-main">
+  <section class="secao-agrupamentos-demandas card card-agrupamentos-demandas-hero standard-page-hero agrupamentos-demandas-hero">
+    <h1 class="standard-page-hero__title"><i class="fa-solid fa-object-group" aria-hidden="true"></i><span>Agrupamento de Demandas</span></h1>
+    <p class="standard-page-hero__eyebrow">Análise Multicritério Interativa</p>
+    <p class="standard-page-hero__description">Organize conjuntos de demandas para reutilizá-los na criação de hierarquizações.</p>
+  </section>
+
+  <section class="secao-agrupamentos-realizados card card-agrupamentos-realizados ahp-step-section agrupamentos-list-section" aria-labelledby="agrupamentos-list-title">
+    <div class="ahp-section-label"><i class="fa-solid fa-table" aria-hidden="true"></i><span id="agrupamentos-list-title">Agrupamentos realizados</span></div>
+    <div class="ahp-section-body">
+      <div class="standard-section-action-row">
+        <button type="button" class="btn btn-primary" id="agrupamento-new"><i class="fa-solid fa-plus" aria-hidden="true"></i> Novo agrupamento</button>
+      </div>
+      <p id="agrupamentos-error" class="ahp-info-note ahp-info-note--error hidden" role="alert"></p>
+      <div class="hier-table-shell">
+        <table class="admin-table agrupamentos-table">
+          <thead><tr><th>Código</th><th>Nome</th><th>Tipo de demanda</th><th>Demandas</th><th>Criado em</th><th>Ações</th></tr></thead>
+          <tbody id="agrupamentos-tbody"><tr><td colspan="6">Carregando agrupamentos…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="agrupamento-editor" class="secao-editor-agrupamento card card-editor-agrupamento ahp-step-section agrupamento-editor hidden" aria-labelledby="agrupamento-editor-title">
+    <div class="ahp-section-label"><i class="fa-solid fa-folder-plus" aria-hidden="true"></i><span id="agrupamento-editor-title">Novo agrupamento</span></div>
+    <div class="ahp-section-body">
+      <form id="agrupamento-form">
+        <article class="ahp-subcard card-agrupamento-identificacao agrupamento-identificacao">
+          <div class="ahp-subsection-title"><i class="fa-solid fa-address-card" aria-hidden="true"></i><h2>Informações do agrupamento</h2></div>
+          <div class="process-grid">
+            <label class="process-field"><span>Nome *</span><input id="agrupamento-nome" maxlength="200" required></label>
+            <label class="process-field process-field--wide"><span>Descrição</span><textarea id="agrupamento-descricao" rows="3"></textarea></label>
+          </div>
+        </article>
+
+        <article class="card-universo-da-hierarquizacao ahp-subcard cadastro-card agrupamento-universo">
+          <div class="ahp-subsection-title"><i class="fa-solid fa-folder-tree" aria-hidden="true"></i><h2>Universo da Demanda</h2></div>
+          <p class="ahp-info-note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Escolha um tipo de demanda e selecione as demandas que farão parte deste agrupamento. O agrupamento pode ser reutilizado ao criar uma hierarquização.</span></p>
+          <div class="ahp-subcard">
+            <div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">I</span><span>Tipo de demanda</span></div>
+            <div class="admin-toolbar hier-tipo-toolbar mad-filter mad-filter--single">
+              <div class="form-field ahp-universo-objeto"><label for="agrupamento-tipo">Tipo de demanda *</label><select id="agrupamento-tipo" required><option value="">Selecione…</option><option value="plano">Plano</option><option value="programa">Programa</option><option value="projeto">Projeto</option></select></div>
+            </div>
+          </div>
+          <div class="ahp-subcard">
+            <div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">II</span><span>Tabela de demandas do universo</span></div>
+            <div class="admin-toolbar hier-universo-filtros mad-filter mad-filter--fields">
+              <div class="form-field admin-toolbar-search"><label for="agrupamento-busca">Pesquisar</label><input id="agrupamento-busca" placeholder="Código, nome ou descrição" autocomplete="off"></div>
+              <div class="form-field"><label for="agrupamento-campo">Atributo</label><select id="agrupamento-campo"><option value="">Todos os atributos</option></select></div>
+              <div class="form-field"><label for="agrupamento-valor">Valor do atributo</label><select id="agrupamento-valor" disabled><option value="">Selecione primeiro um atributo</option></select></div>
+            </div>
+            <p id="agrupamento-contagem" class="ahp-universo-preview">Selecione o tipo de demanda.</p>
+            <div class="admin-table-wrap">
+              <table class="admin-table hier-universo-table"><thead id="agrupamento-head"></thead><tbody id="agrupamento-rows"><tr><td>Selecione o tipo de demanda.</td></tr></tbody></table>
+            </div>
+            <div class="hier-demand-pagination" aria-label="Paginação das demandas">
+              <button type="button" class="btn btn-secondary btn-sm" id="agrupamento-anterior"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i> Anterior</button>
+              <span id="agrupamento-pagina-info" aria-live="polite">Página 1 de 1</span>
+              <button type="button" class="btn btn-secondary btn-sm" id="agrupamento-proxima">Próxima <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+            </div>
+          </div>
+          <p id="agrupamento-selecao-resumo" class="ahp-universo-preview" aria-live="polite">Nenhuma demanda selecionada.</p>
+        </article>
+        <p id="agrupamento-form-error" class="ahp-info-note ahp-info-note--error hidden" role="alert"></p>
+        <div class="process-actions">
+          <button type="submit" class="btn btn--primary"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Salvar agrupamento</button>
+          <button type="button" class="btn btn-secondary" id="agrupamento-cancel">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts_pagina %}
+  <script src="/assets/js/admin-auth.js"></script>
+  <script src="/assets/js/admin-api.js"></script>
+  <script src="/assets/js/sigma-read.js"></script>
+  <script src="/assets/js/catalog.js"></script>
+  <script src="/assets/js/status-colors.js"></script>
+  <script src="/assets/js/admin-labels.js"></script>
+  <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
+  <script src="/assets/js/paginas/agrupamentos-demandas.js"></script>
+{% endblock %}
