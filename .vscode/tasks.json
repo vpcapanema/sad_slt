@@ -16,6 +16,7 @@
       "runOptions": {
         "instanceLimit": 1
       },
+      "hide": true,
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",

@@ -15,13 +15,58 @@ ROOT = Path(__file__).resolve().parents[1]
 URL = "https://56.125.163.194/sicard"
 HOST_KEY = "SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0"
 LOG = None
+CURRENT_STAGE = ""
+CURRENT_STAGE_FINISHED = True
+_ANSI_RESET = "\x1b[0m"
+_ANSI_COLORS = {"cyan": "\x1b[36m", "blue": "\x1b[34m", "magenta": "\x1b[35m", "green": "\x1b[32m", "yellow": "\x1b[33m", "red": "\x1b[31m"}
 
-def say(message):
-    line = f"[{dt.datetime.now():%H:%M:%S}] {message}"
-    print(line, flush=True)
+
+def color_enabled():
+    return not os.getenv("NO_COLOR") and (
+        sys.stdout.isatty()
+        or os.getenv("TERM_PROGRAM") == "vscode"
+        or bool(os.getenv("WT_SESSION"))
+    )
+
+
+def write_line(message, color=None, *, blank_before=False):
+    if blank_before:
+        print(flush=True)
+        if LOG:
+            LOG.write("\n")
+    stamp = dt.datetime.now().strftime("%H:%M:%S")
+    line = f"[{stamp}] {message}"
+    if color and color_enabled():
+        print(f"{_ANSI_COLORS[color]}{line}{_ANSI_RESET}", flush=True)
+    else:
+        print(line, flush=True)
     if LOG:
         LOG.write(line + "\n")
         LOG.flush()
+
+def say(message):
+    write_line(message)
+
+
+def begin_stage(name, color):
+    global CURRENT_STAGE, CURRENT_STAGE_FINISHED
+    CURRENT_STAGE = name
+    CURRENT_STAGE_FINISHED = False
+    write_line(f"===== {name} =====", color, blank_before=True)
+
+
+def finish_stage(message):
+    global CURRENT_STAGE_FINISHED
+    write_line(f"SUCESSO: {message}", "green")
+    CURRENT_STAGE_FINISHED = True
+
+
+def warn(message):
+    write_line(f"AVISO: {message}", "yellow")
+
+
+def fail(message):
+    write_line(f"FALHA: {message}", "red")
 
 def run(args, capture=False, timeout=None):
     # List arguments, never interpolate local shell commands. Stream deploy output.
@@ -67,7 +112,7 @@ def check_web():
             say("HTTPS, pagina inicial, API, SIGMA e banco SLT: OK")
             return
         except Exception as exc:
-            say(f"Saude: tentativa {attempt}/12 falhou ({type(exc).__name__}).")
+            warn(f"Saúde: tentativa {attempt}/12 falhou ({type(exc).__name__}).")
             if attempt == 12:
                 raise RuntimeError("Saude final nao confirmada; navegador nao sera aberto.") from exc
             time.sleep(5)
@@ -87,6 +132,7 @@ def main():
     log_path = logs / (dt.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log")
     LOG = log_path.open("a", encoding="utf-8")
     say(f"Log detalhado: {log_path}")
+    begin_stage("PRÉ-REQUISITOS", "cyan")
     say("1/7 - Pre-requisitos e status do Git")
     branch = g("branch", "--show-current", capture=True)
     if branch != "main":
@@ -106,18 +152,24 @@ def main():
     say("Verificando acesso SSH e ferramentas da VM (sem deploy)...")
     run([*ssh, "cd /opt/sicard && test -f .env && test -z \"$(git status --porcelain --untracked-files=no)\" && git --version && git lfs version && docker compose version && command -v flock && sudo -n nginx -t"], capture=True, timeout=40)
     if args.check:
-        say("Pre-requisitos e acesso SSH OK. Nenhum commit, push ou deploy executado.")
+        finish_stage("pré-requisitos e acesso SSH validados; nenhum commit, push ou deploy executado")
         return
+    finish_stage("pré-requisitos locais e acesso SSH validados")
     # Use the repository Git identity without interactive questions.
     g("var", "GIT_AUTHOR_IDENT", capture=True)
     g("var", "GIT_COMMITTER_IDENT", capture=True)
+    begin_stage("COMMIT", "cyan")
     say("2/7 - Commit das alteracoes visiveis (ignorados e exclusoes locais preservados)")
+    commit_summary = "Commit local criado."
     if g("status", "--porcelain", capture=True):
         g("add", "-A")
         g("diff", "--cached", "--stat")
         g("commit", "-m", args.message.strip() or f"chore: atualizacao SICARD {dt.datetime.now():%Y-%m-%d %H:%M}")
     else:
-        say("Nenhuma alteracao para commitar.")
+        warn("Nenhuma alteração local para commitar; mantendo o commit atual.")
+        commit_summary = "nenhum commit novo necessário"
+    finish_stage(commit_summary)
+    begin_stage("SINCRONIZAÇÃO", "blue")
     say("3/7 - Sincronizacao com origin/main")
     g("fetch", "origin", "main")
     protected_file = git_dir / "info/local-only-reports.json"
@@ -135,6 +187,8 @@ def main():
     remote = g("ls-remote", "origin", "refs/heads/main", capture=True).split()[0]
     if remote != sha:
         raise RuntimeError("GitHub mudou durante a publicacao; execute novamente.")
+    finish_stage(f"GitHub atualizado em {sha[:12]}")
+    begin_stage("DEPLOY", "magenta")
     say(f"4/7 - Deploy da revisao {sha}; build e reinicio com saida ao vivo")
     # Fetch the committed deploy script, not an outdated copy in the VM checkout.
     command = ("set -eu; cd /opt/sicard; exec 9>/opt/sicard/.git/sicard-deploy.lock; "
@@ -158,12 +212,15 @@ def main():
     say(f"6/7 - Concluido: local, GitHub e VM na revisao {sha}")
     say("7/7 - Abrindo pagina inicial no navegador externo padrao")
     os.startfile(URL + "/public/")
+    finish_stage(f"VM saudável e revisão {sha[:12]} publicada")
     say("Fluxo finalizado com sucesso.")
 
 if __name__ == "__main__":
     try:
         main()
     except (Exception, KeyboardInterrupt) as exc:
+        if CURRENT_STAGE and not CURRENT_STAGE_FINISHED:
+            fail(f"{CURRENT_STAGE}: {exc or 'cancelado pelo usuario'}")
         say(f"INTERROMPIDO: {exc or 'cancelado pelo usuario'}. Etapas seguintes nao executadas.")
         sys.exit(1)
     finally:
