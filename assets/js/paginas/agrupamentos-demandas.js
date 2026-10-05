@@ -12,7 +12,6 @@
   let campos = [];
   let pagina = 1;
   let grupos = [];
-  let grupoExpandido = null;
 
   function escapar(valor) {
     return String(valor ?? "").replace(/[&<>"']/g, (c) => ({
@@ -166,25 +165,28 @@
 
   function renderGrupos() {
     const tbody = $("#agrupamentos-tbody");
-    tbody.innerHTML = grupos.length ? grupos.map((grupo) => `<tr data-agrupamento-id="${escapar(grupo.id)}"><td><code>${escapar(grupo.codigo)}</code></td><td>${escapar(grupo.nome)}</td><td>${escapar(ROTULOS[grupo.tipo_demanda] || grupo.tipo_demanda)}</td><td>${Number(grupo.quantidade_demandas || 0)}</td><td>${escapar(formatarData(grupo.criado_em))}</td><td><button type="button" class="btn btn-secondary btn-sm" data-ver-agrupamento="${escapar(grupo.id)}">Ver demandas</button></td></tr>${grupoExpandido === grupo.id ? `<tr class="agrupamento-detalhe-row"><td colspan="6"><ul>${(grupo.objetos || []).map((item) => `<li><code>${escapar(item.codigo)}</code> — ${escapar(item.nome)}</li>`).join("")}</ul></td></tr>` : ""}`).join("") : '<tr><td colspan="6" class="agrupamentos-empty">Nenhum agrupamento cadastrado.</td></tr>';
-    tbody.querySelectorAll("[data-ver-agrupamento]").forEach((button) => {
-      button.onclick = async () => {
-        const id = button.dataset.verAgrupamento;
-        if (grupoExpandido === id) { grupoExpandido = null; renderGrupos(); return; }
+    tbody.innerHTML = grupos.length ? grupos.map((grupo) => `<tr data-ver-agrupamento="${escapar(grupo.id)}" tabindex="0" aria-label="Visualizar demandas do agrupamento ${escapar(grupo.codigo)}" title="Selecionar para visualizar as demandas"><td><code>${escapar(grupo.codigo)}</code></td><td>${escapar(grupo.nome)}</td><td>${escapar(ROTULOS[grupo.tipo_demanda] || grupo.tipo_demanda)}</td><td>${Number(grupo.quantidade_demandas || 0)}</td><td>${escapar(formatarData(grupo.criado_em))}</td></tr>`).join("") : '<tr><td colspan="5" class="agrupamentos-empty">Nenhum agrupamento cadastrado.</td></tr>';
+    tbody.querySelectorAll("[data-ver-agrupamento]").forEach((row) => {
+      const visualizar = async () => {
         try {
-          const grupo = await HierApi.obterAgrupamento(id);
-          grupoExpandido = id;
-          grupos = grupos.map((item) => item.id === id ? { ...item, objetos: grupo.objetos } : item);
-          renderGrupos();
+          const grupo = await HierApi.obterAgrupamento(row.dataset.verAgrupamento);
+          const conteudo = window.SLTDemandasGrupo.render(grupo.objetos);
+          window.SLTDemandasGrupo.showModal("modal-objetos", `Demandas do grupo — ${grupo.codigo}`, conteudo);
         } catch (error) { erro(error.message, "#agrupamentos-error"); }
+      };
+      row.onclick = visualizar;
+      row.onkeydown = (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        visualizar();
       };
     });
   }
 
   async function carregarGrupos() {
-    $("#agrupamentos-tbody").innerHTML = '<tr><td colspan="6">Carregando agrupamentos…</td></tr>';
+    $("#agrupamentos-tbody").innerHTML = '<tr><td colspan="5">Carregando agrupamentos…</td></tr>';
     try { grupos = await HierApi.listarAgrupamentos(); renderGrupos(); }
-    catch (error) { erro(error.message, "#agrupamentos-error"); $("#agrupamentos-tbody").innerHTML = '<tr><td colspan="6">Não foi possível carregar os agrupamentos.</td></tr>'; }
+    catch (error) { erro(error.message, "#agrupamentos-error"); $("#agrupamentos-tbody").innerHTML = '<tr><td colspan="5">Não foi possível carregar os agrupamentos.</td></tr>'; }
   }
 
   function iniciar() {
@@ -205,6 +207,7 @@
     $("#agrupamento-valor").onchange = () => { pagina = 1; renderDemandas(); };
     $("#agrupamento-anterior").onclick = () => { pagina -= 1; renderDemandas(); };
     $("#agrupamento-proxima").onclick = () => { pagina += 1; renderDemandas(); };
+    window.SLTDemandasGrupo.bindModalClosures();
     $("#agrupamento-form").onsubmit = async (event) => {
       event.preventDefault();
       limparErro();

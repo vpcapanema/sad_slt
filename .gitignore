@@ -1,3 +1,5 @@
+# Credenciais locais de agentes SIGMA
+credencias_sigma_agentes.txt
 .env
 .dev-server.log
 .dev-server*.log

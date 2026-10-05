@@ -246,6 +246,53 @@
 .hier-register-table tr.is-editing td { background: #fffdf3; }
 .json-modal-head-actions { display: flex; align-items: center; gap: 0.5rem; }
 
+.json-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 1.2rem;
+  background: rgba(8, 30, 45, 0.7);
+}
+.json-modal {
+  display: flex;
+  width: min(1050px, 96vw);
+  max-height: 90vh;
+  flex-direction: column;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+.json-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.2rem;
+  color: #fff;
+  background: var(--pli-deep, #123e56);
+  border-radius: 12px 12px 0 0;
+}
+.json-modal-head h2 { margin: 0; font-size: 1.05rem; }
+.json-modal-close {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  background: transparent;
+}
+.json-modal-body { overflow: auto; padding: 1rem; }
+.json-tree { width: 100%; border-collapse: collapse; }
+.json-tree th,
+.json-tree td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid #e4e9ec;
+  text-align: left;
+  vertical-align: top;
+}
+.json-tree th { width: 34%; color: var(--pli-deep, #123e56); }
+
 /* Visualizador de JSON em árvore (lazy) — leve e estilizado */
 .jv-root { font-size: 0.8rem; color: #334155; }
 .jv-list { list-style: none; margin: 0; padding-left: 1.1rem; border-left: 1px solid var(--pli-border); }
