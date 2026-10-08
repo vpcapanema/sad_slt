@@ -6,7 +6,7 @@ Cadeia que precisa dizer a mesma coisa, de ponta a ponta:
                          ->  config/geoespacial/classificacao_fase1.json
                          ->  este módulo  ->  camada consolidada
 
-A página ``/restrict/geoespacial/configuracao-risco-restricao/`` é a doutrina:
+A página ``/public/documentacao/risco-restricao/`` é a doutrina:
 sete camadas de restrição e treze de risco, categoria da CAMADA oficial e não do
 atributo de cada feição. A tabela é a fonte editável e versionada por migração;
 o JSON é a cópia de contingência, regerada a partir dela, usada quando o banco

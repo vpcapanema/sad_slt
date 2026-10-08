@@ -16,7 +16,7 @@ from api.server import app
 from api.services.documentacao_favorabilidade import montar_contexto
 from api.services.session_service import SessionUser, cookie_name, create_token
 
-ROTA = "/restrict/geoespacial/documentacao-favorabilidade/"
+ROTA = "/public/documentacao/favorabilidade/"
 
 
 @pytest.fixture()
@@ -82,6 +82,15 @@ def test_declara_o_metodo_de_normalizacao_e_agregacao(cliente):
     assert "média simples" in html.lower()
 
 
+def test_pagina_e_publica_sem_sessao():
+    """Documentação é pública: abre sem cookie de sessão e sem guarda de autenticação."""
+    html = TestClient(app).get(ROTA)
+    assert html.status_code == 200
+    assert 'data-requer-autenticacao="true"' not in html.text
+    assert "/assets/js/admin-auth.js" not in html.text
+    assert 'data-navegacao="publica"' in html.text
+
+
 def test_pagina_segue_o_padrao_visual_da_fase(cliente):
     """Mesma família visual de fase-1/fase-2, e não mais o esquema próprio
     (ahp-module/ahp-card) que a primeira versão desta página inventou."""
@@ -92,11 +101,12 @@ def test_pagina_segue_o_padrao_visual_da_fase(cliente):
     assert '"ahp-card"' not in html
     assert 'class="ahp-module doc-favorabilidade"' not in html
     assert 'class="ahp-module-header"' not in html
-    assert "hier-phase-navigation" in html
+    # Página pública não carrega a navegação entre fases restritas.
+    assert "hier-phase-navigation" not in html
 
 
 def test_texto_do_cabecalho_e_curto():
-    html = Path("templates/paginas/geoespacial/documentacao-favorabilidade.html").read_text(encoding="utf-8")
+    html = Path("templates/paginas/documentacao/favorabilidade.html").read_text(encoding="utf-8")
     bloco = re.search(r'<p class="standard-page-hero__description">(.*?)</p>', html, re.S)
     assert bloco, "cabeçalho sem parágrafo curto de descrição"
     texto = re.sub(r"<[^>]+>", "", bloco.group(1)).strip()

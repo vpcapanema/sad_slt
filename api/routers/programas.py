@@ -1,13 +1,15 @@
 """Rotas HTTP — programas (nível 2)."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from pydantic import ValidationError
 
 from api.deps.auth import require_analyst, require_authenticated, require_gestor, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.objeto_ahp import AprovarDemandaSchema, ReprovarDemandaSchema
 from api.schemas.programa import ProgramaCreateSchema, ProgramaResponseSchema, ProgramaUpdateSchema
 from api.services import programa_service
+from api.services.arquivo_geometria import receber_arquivo_geometria
 from api.services.session_service import SessionUser
 
 router = APIRouter(prefix="/programas", tags=["programas"])
@@ -21,6 +23,26 @@ def criar_programa(
     """Cadastra um novo programa (nível 2)."""
     try:
         return programa_service.criar_programa(body, usuario_id=user.id)
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/com-arquivo-geometria", response_model=ProgramaResponseSchema, status_code=201)
+async def criar_programa_com_arquivo_geometria(
+    payload: str = Form(...),
+    arquivo_geometria: UploadFile = File(...),
+    user: SessionUser = Depends(require_operator),
+) -> ProgramaResponseSchema:
+    """Cadastra um programa e preserva o arquivo vetorial original da sua geometria."""
+    try:
+        body = ProgramaCreateSchema.model_validate_json(payload)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors()) from exc
+    arquivo = await receber_arquivo_geometria(arquivo_geometria, body.geometria)
+    try:
+        return programa_service.criar_programa(body, usuario_id=user.id, arquivo_geometria=arquivo)
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:

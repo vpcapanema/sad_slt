@@ -263,7 +263,7 @@ def listar_esquemas(_user: SessionUser = Depends(require_admin)) -> dict[str, An
     return {"esquemas": resultado}
 
 
-@router.get("/tabelas/demandas/demanda_arquivo_geometria_upload/{arquivo_id}/download")
+@router.get("/tabelas/demandas/projeto_geometria_historico/{arquivo_id}/download")
 def baixar_arquivo_geometria_upload(
     arquivo_id: str,
     _user: SessionUser = Depends(require_admin),
@@ -278,8 +278,8 @@ def baixar_arquivo_geometria_upload(
         row = conn.execute(
             """
             SELECT nome_arquivo, tipo_mime, conteudo_binario
-            FROM demandas.demanda_arquivo_geometria_upload
-            WHERE id = %s
+            FROM demandas.projeto_geometria_historico
+            WHERE id = %s AND conteudo_binario IS NOT NULL
             """,
             (arquivo_uuid,),
         ).fetchone()

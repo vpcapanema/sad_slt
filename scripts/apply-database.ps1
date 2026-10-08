@@ -249,7 +249,9 @@ $migrations = @(
     "114_infosiga_indicadores_municipais.sql",
     "115_restaurar_planos_estrategicos.sql",
     "116_corrigir_catalogo_zee_ugrhi.sql",
-    "117_demanda_arquivo_geometria_upload.sql"
+    "117_demanda_arquivo_geometria_upload.sql",
+    "120_projeto_geometria_historico.sql",
+    "121_geometria_plano_programa.sql"
 )
 
 if ($OnlyMigration) {
@@ -311,9 +313,17 @@ if (-not $OnlyMigration) {
             $migrations += "115_restaurar_planos_estrategicos.sql"
             Write-Ok "Planos estrategicos PLI/PEF ausentes; aplicando migration 115"
         }
-        if (-not (Test-SchemaReady "SELECT to_regclass('demandas.demanda_arquivo_geometria_upload') IS NOT NULL;")) {
+        if (-not (Test-SchemaReady "SELECT to_regclass('demandas.demanda_arquivo_geometria_upload') IS NOT NULL OR to_regclass('demandas.projeto_geometria_historico') IS NOT NULL;")) {
             $migrations += "117_demanda_arquivo_geometria_upload.sql"
             Write-Ok "Arquivo original de geometria de demanda pendente; aplicando migration 117"
+        }
+        if (-not (Test-SchemaReady "SELECT to_regclass('demandas.projeto_geometria_historico') IS NOT NULL;")) {
+            $migrations += "120_projeto_geometria_historico.sql"
+            Write-Ok "Historico de geometrias de demanda pendente; aplicando migration 120"
+        }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='programa' AND column_name='geometria');")) {
+            $migrations += "121_geometria_plano_programa.sql"
+            Write-Ok "Geometria de plano e programa pendente; aplicando migration 121"
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

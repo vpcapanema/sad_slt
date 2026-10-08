@@ -175,19 +175,31 @@ class VmDatabaseTunnel:
         )
         deadline = time.monotonic() + 20
         last_error: Exception | None = None
-        while time.monotonic() < deadline:
-            if self.process.poll() is not None:
-                raise RuntimeError(f"O túnel da VM encerrou com código {self.process.returncode}.")
-            if self._port_open():
-                try:
-                    counts = self.validate()
-                    self.pid_file.write_text(str(self.process.pid), encoding="ascii")
-                    self.report("Túnel direto Windows → VM validado nos bancos oficiais.")
-                    return counts
-                except Exception as error:
-                    last_error = error
-            time.sleep(0.4)
-        raise RuntimeError("O túnel abriu, mas os bancos oficiais não responderam.") from last_error
+        port_opened = False
+        try:
+            while time.monotonic() < deadline:
+                if self.process.poll() is not None:
+                    raise RuntimeError(f"O túnel da VM encerrou com código {self.process.returncode}.")
+                if self._port_open():
+                    port_opened = True
+                    try:
+                        counts = self.validate()
+                        self.pid_file.write_text(str(self.process.pid), encoding="ascii")
+                        self.report("Túnel direto Windows → VM validado nos bancos oficiais.")
+                        return counts
+                    except Exception as error:
+                        last_error = error
+                time.sleep(0.4)
+            if not port_opened:
+                raise RuntimeError(
+                    f"A conexão SSH com {VM_HOST}:{VM_SSH_PORT} não abriu o túnel "
+                    f"local {LOCAL_DATABASE_PORT}. Verifique a rede e o log "
+                    ".deploy/database-tunnel-windows-error.local.log."
+                )
+            raise RuntimeError("O túnel abriu, mas os bancos oficiais não responderam.") from last_error
+        except Exception:
+            self.stop()
+            raise
 
     def _ping(self) -> bool:
         """Consulta mínima pelo túnel, usada como sinal de vida e como keepalive.

@@ -22,7 +22,7 @@
         "panel": "dedicated",
         "clear": true
       },
-      "detail": "Valida e supervisiona os bancos oficiais da VM, inicia http://127.0.0.1:8083 e abre Edge e Chrome externos com Console detalhado. Ctrl+C encerra servidor e túnel."
+      "detail": "Valida e supervisiona os bancos oficiais da VM, inicia http://127.0.0.1:8083 com auto-reload (alteracoes em api/ reiniciam o servidor) e abre Edge e Chrome externos com Console detalhado. Ctrl+C encerra servidor e túnel."
     },
     {
       "label": "SICARD: Verificar servidor local",

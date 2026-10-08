@@ -449,8 +449,9 @@ body.operador-home-page {
 .secao-platform-mad { grid-column: span 4; }
 .secao-platform-resultados { grid-column: span 2; }
 .secao-platform-administracao { grid-column: 1 / -1; }
-.secao-platform-geoprocessamento { grid-column: span 6; }
-.secao-platform-documentacao-ranqueamento { grid-column: span 3; }
+/* Documentação técnica virou subcard de Geoprocessamento; o módulo ocupa a
+   linha inteira. */
+.secao-platform-geoprocessamento { grid-column: 1 / -1; }
 .secao-platform-ami { grid-column: 1 / -1; }
 
 /* Público, catálogos e ações do operador dividem a última linha. */
@@ -554,7 +555,6 @@ body.operador-home-page {
 .secao-platform-operador .platform-grid { --itens-por-linha: 2; }
 .secao-platform-resultados .platform-grid { --itens-por-linha: 1; }
 .secao-platform-geoprocessamento .platform-grid { --itens-por-linha: 2; }
-.secao-platform-documentacao-ranqueamento .platform-grid { --itens-por-linha: 1; }
 .secao-platform-administracao .platform-grid { --itens-por-linha: 5; }
 .secao-platform-publico .platform-grid { --itens-por-linha: 3; }
 .secao-platform-catalogos .platform-grid { --itens-por-linha: 2; }
@@ -608,8 +608,10 @@ body.operador-home-page {
    dois itens por linha em ambos, senão os rótulos ficam espremidos demais. */
 .subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos .platform-grid { --itens-por-linha: 2; }
 .subgroup-ranqueamento .platform-grid { --itens-por-linha: 2; }
-.subgroup-visualizadores-online-camadas .platform-grid { --itens-por-linha: 2; }
-.subgroup-ferramentas-geoprocessamento .platform-grid { --itens-por-linha: 2; }
+/* Geoprocessamento e Documentação técnica: dois subcards lado a lado, cada um
+   com três acessos empilhados numa coluna. */
+.subgroup-geoprocessamento .platform-grid { --itens-por-linha: 1; }
+.subgroup-documentacao-tecnica .platform-grid { --itens-por-linha: 1; }
 
 .secao-platform-mad .subgroup-agrupamento-demandas-extracao-atributos {
   flex: 1 1 100%;

@@ -18,6 +18,7 @@ from api.services.campos_demanda import (
     normalizar_plano,
     resolver_nomes_registros,
 )
+from api.services.demanda_service import geometria_desenhada_geojson
 from api.services.patch_helpers import apply_instituicao, apply_representante
 from api.services.reprovacao import validar_reprovacao
 from api.services.status_transicoes import validar_transicao_status
@@ -106,10 +107,17 @@ def _resolve_instituicao_id(payload: PlanoCreateSchema) -> str:
 
 
 def criar_plano(
-    payload: PlanoCreateSchema, *, usuario_id: str, origem: str = ""
+    payload: PlanoCreateSchema,
+    *,
+    usuario_id: str,
+    origem: str = "",
+    arquivo_geometria: dict[str, Any] | None = None,
 ) -> PlanoResponseSchema:
     """``origem="SEI"`` marca o código gerado (``I-PLA-SEI-XXXXXXXX``) quando a
-    criação vem da integração com o SEI-SP. Vazio por padrão."""
+    criação vem da integração com o SEI-SP. Vazio por padrão.
+
+    ``arquivo_geometria`` é o arquivo vetorial original quando a geometria veio
+    de upload; vai para o histórico de geometrias na mesma transação."""
     codigo = gerar_codigo_unico(
         lambda: gerar_codigo_plano(origem=origem), plano_repository.get_by_codigo
     )
@@ -140,7 +148,12 @@ def criar_plano(
         "status": STATUS_INICIAL_DEMANDA,
     }
     normalizar_plano(row, pessoa_id=pessoa_id, usuario_id=usuario_id)
-    inserted = plano_repository.insert(row, payload.unidades_espaciais)
+    inserted = plano_repository.insert(
+        row,
+        payload.unidades_espaciais,
+        geometria_geojson=geometria_desenhada_geojson(payload.geometria),
+        arquivo_geometria=arquivo_geometria,
+    )
     return _row_to_response(inserted, incluir_auditoria=True)
 
 

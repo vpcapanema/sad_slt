@@ -5,9 +5,10 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi.testclient import TestClient
+from psycopg.types.json import Jsonb
 
 from api.deps.auth import require_admin
-from api.repositories import demanda_repository
+from api.repositories import demanda_repository, geometria_historico_repository
 from api.routers import admin_tabelas, demandas as demandas_router
 from api.schemas.demanda import DemandaResponseSchema, RepresentanteSchema
 from api.server import app
@@ -124,8 +125,8 @@ def test_project_and_original_file_are_inserted_before_same_commit(monkeypatch):
             if query == demanda_repository._INSERT_SQL:
                 events.append(("projeto", params))
                 return Cursor({"id": projeto_id})
-            if query == demanda_repository._INSERT_ARQUIVO_GEOMETRIA_UPLOAD_SQL:
-                events.append(("arquivo", params))
+            if query == geometria_historico_repository._INSERT_UPLOAD_SQL:
+                events.append(("historico", params))
                 return Cursor()
             raise AssertionError("SQL inesperado")
 
@@ -142,13 +143,37 @@ def test_project_and_original_file_are_inserted_before_same_commit(monkeypatch):
     monkeypatch.setattr(demanda_repository, "get_connection", connection)
     monkeypatch.setattr(demanda_repository, "get_by_uuid", lambda _id: {"id": projeto_id})
     archive = {"nome_arquivo": "ponto.kml", "conteudo_binario": KML_POINT}
+    row = {
+        "codigo": "I-PRJ-TESTE",
+        "geometria_geojson": '{"type": "Point", "coordinates": [-46.6, -23.5]}',
+        "latitude": -23.5,
+        "longitude": -46.6,
+        "complementos": Jsonb({"modal_id": None, "regionalidades": {"municipio": ["São Paulo"]}}),
+        "criado_por": "00000000-0000-0000-0000-000000000010",
+    }
 
-    result = demanda_repository.insert({"codigo": "I-PRJ-TESTE"}, arquivo_geometria=archive)
+    result = demanda_repository.insert(row, arquivo_geometria=archive)
 
     assert result["id"] == projeto_id
-    assert [event[0] for event in events] == ["projeto", "arquivo", "commit"]
-    assert events[1][1]["projeto_id"] == projeto_id
-    assert events[1][1]["conteudo_binario"] == KML_POINT
+    assert [event[0] for event in events] == ["projeto", "historico", "commit"]
+    historico = events[1][1]
+    assert historico["projeto_id"] == projeto_id
+    assert historico["plano_id"] is None and historico["programa_id"] is None
+    assert historico["conteudo_binario"] == KML_POINT
+    # A linha de histórico descreve a versão completa, não só o arquivo.
+    assert historico["geometria_geojson"] == row["geometria_geojson"]
+    assert (historico["latitude"], historico["longitude"]) == (-23.5, -46.6)
+    assert historico["regionalidades"].obj == {"municipio": ["São Paulo"]}
+    assert historico["criado_por"] == row["criado_por"]
+    assert "'upload'" in geometria_historico_repository._INSERT_UPLOAD_SQL
+    assert "demandas.projeto_geometria_historico" in geometria_historico_repository._INSERT_UPLOAD_SQL
+
+
+def test_historico_sem_regionalidades_grava_nulo():
+    regionalidades_de = geometria_historico_repository.regionalidades_de
+    assert regionalidades_de(None) is None
+    assert regionalidades_de(Jsonb({"modal_id": "x"})) is None
+    assert regionalidades_de({"regionalidades": {"ugrhi": ["6"]}}).obj == {"ugrhi": ["6"]}
 
 
 def test_admin_can_download_original_with_original_name_and_bytes(monkeypatch):
@@ -164,7 +189,8 @@ def test_admin_can_download_original_with_original_name_and_bytes(monkeypatch):
 
     class Connection:
         def execute(self, query, params):
-            assert "demanda_arquivo_geometria_upload" in query
+            assert "demandas.projeto_geometria_historico" in query
+            assert "conteudo_binario IS NOT NULL" in query
             assert params == (UUID(arquivo_id),)
             return Cursor()
 
@@ -183,7 +209,7 @@ def test_admin_can_download_original_with_original_name_and_bytes(monkeypatch):
     )
     try:
         response = TestClient(app).get(
-            f"/api/admin/tabelas/demandas/demanda_arquivo_geometria_upload/{arquivo_id}/download"
+            f"/api/admin/tabelas/demandas/projeto_geometria_historico/{arquivo_id}/download"
         )
     finally:
         if previous is None:
@@ -200,7 +226,8 @@ def test_admin_can_download_original_with_original_name_and_bytes(monkeypatch):
 def test_admin_table_names_original_archive_and_renders_download_action():
     script = Path("assets/js/area-administrador.js").read_text(encoding="utf-8")
 
-    assert 'demanda_arquivo_geometria_upload: "Arquivos originais das geometrias das demandas"' in script
+    assert 'projeto_geometria_historico: "Histórico de geometrias das demandas"' in script
+    assert 'demanda_arquivo_geometria_upload' not in script
     assert 'nome_arquivo: "Nome do arquivo"' in script
     assert 'conteudo_binario: "Arquivo original"' in script
     assert 'class: "admin-download-file"' in script

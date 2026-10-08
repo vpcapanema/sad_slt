@@ -56,6 +56,14 @@ def _geometria_to_geojson_str(geometria: dict[str, Any] | None) -> tuple[str | N
     return tipo, json.dumps({"type": tipo, "coordinates": coords})
 
 
+def geometria_desenhada_geojson(geometria: Any) -> str | None:
+    """GeoJSON validado de uma geometria opcional do payload (plano/programa/projeto)."""
+    if geometria is None:
+        return None
+    dados = geometria.model_dump() if hasattr(geometria, "model_dump") else geometria
+    return _geometria_to_geojson_str(dados)[1]
+
+
 def _row_to_response(
     row: dict[str, Any], *, incluir_auditoria: bool = False, nomes_resolvidos: bool = False
 ) -> DemandaResponseSchema:

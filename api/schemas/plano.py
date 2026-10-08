@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from api.schemas.demanda import RepresentanteSchema, RepresentanteUpdateSchema
+from api.schemas.demanda import GeometriaSchema, RepresentanteSchema, RepresentanteUpdateSchema
 
 
 class InstituicaoFormSchema(BaseModel):
@@ -43,6 +43,9 @@ class PlanoCreateSchema(BaseModel):
     vigencia_fim: str | None = None
     valor_global: float | None = None
     unidades_espaciais: list[str] = Field(default_factory=list)
+    geometria: GeometriaSchema | None = Field(
+        None, description="Geometria desenhada em tela; quando ausente, usa-se a união das unidades espaciais"
+    )
     atributos_cadastrais: dict[str, Any] = Field(default_factory=dict)
 
 

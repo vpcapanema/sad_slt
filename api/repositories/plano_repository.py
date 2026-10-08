@@ -7,6 +7,7 @@ from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
+from api.repositories import geometria_historico_repository
 from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO, STATUS_PRE_REPROVACAO, STATUS_REPROVACAO
 
 _SELECT_BASE = """
@@ -85,9 +86,39 @@ _INSERT_UE_SQL = """
     ON CONFLICT DO NOTHING
 """
 
+# Geometria materializada do plano: cópia fiel da união das unidades
+# espaciais selecionadas, ou a geometria desenhada em tela quando enviada.
+_SET_GEOMETRIA_UNIDADES_SQL = """
+    UPDATE demandas.plano p
+       SET geometria = u.geom,
+           geometria_origem = 'unidades_espaciais'
+      FROM (
+            SELECT ST_Multi(ST_Union(ue.geom)) AS geom
+              FROM demandas.plano_unidade_espacial pue
+              JOIN geo.unidade_espacial ue ON ue.id = pue.unidade_espacial_id
+             WHERE pue.plano_id = %(id)s
+           ) u
+     WHERE p.id = %(id)s AND u.geom IS NOT NULL
+"""
 
-def insert(row: dict[str, Any], unidades: list[str] | None = None) -> dict[str, Any]:
-    """Insere um plano e seus vínculos de abrangência espacial."""
+_SET_GEOMETRIA_DESENHO_SQL = """
+    UPDATE demandas.plano
+       SET geometria = ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s::text), 4326),
+           geometria_origem = 'desenho'
+     WHERE id = %(id)s
+"""
+
+
+def insert(
+    row: dict[str, Any],
+    unidades: list[str] | None = None,
+    geometria_geojson: str | None = None,
+    arquivo_geometria: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Insere um plano, seus vínculos de abrangência espacial e a geometria materializada.
+
+    Com ``arquivo_geometria`` (upload), a versão e o arquivo original vão para
+    o histórico de geometrias na mesma transação."""
     row = {
         "maturidade": None,
         "prazo_referencia_meses": None,
@@ -103,6 +134,19 @@ def insert(row: dict[str, Any], unidades: list[str] | None = None) -> dict[str, 
         new_id = inserted["id"]
         for ue in unidades or []:
             conn.execute(_INSERT_UE_SQL, (new_id, ue))
+        if geometria_geojson:
+            conn.execute(_SET_GEOMETRIA_DESENHO_SQL, {"id": new_id, "geojson": geometria_geojson})
+        elif unidades:
+            conn.execute(_SET_GEOMETRIA_UNIDADES_SQL, {"id": new_id})
+        if arquivo_geometria is not None:
+            geometria_historico_repository.insert_upload(
+                conn,
+                alvo="plano",
+                alvo_id=new_id,
+                geometria_geojson=geometria_geojson,
+                arquivo=arquivo_geometria,
+                criado_por=row.get("criado_por"),
+            )
         conn.commit()
     found = get_by_codigo(row["codigo"])
     if not found:

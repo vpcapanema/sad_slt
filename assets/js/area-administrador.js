@@ -41,6 +41,8 @@
     latitude: "Latitude", longitude: "Longitude", municipio: "Município",
     nome_arquivo: "Nome do arquivo", tipo_mime: "Tipo MIME", tamanho_bytes: "Tamanho (bytes)",
     sha256: "Hash SHA-256", conteudo_binario: "Arquivo original",
+    origem: "Origem", regionalidades: "Regionalidades", motivo_substituicao: "Motivo da substituição",
+    substituido_em: "Substituído em", substituido_por: "Substituído por",
     uf: "Unidade federativa", data: "Data", inicio: "Início", fim: "Fim", url: "URL",
     ativo_em: "Ativo em", excluido: "Excluído", excluido_em: "Excluído em",
     // Alinhados com os cabeçalhos de "Hierarquizações realizadas" (/restrict/hierarquizacao/)
@@ -147,7 +149,7 @@
     dom_atributo_objeto: "Atributos do Objeto",
     dom_status_hierarquizacao: "Status da Hierarquização",
     dom_status_hierarquizacao_transicao: "Transições de Status da Hierarquização",
-    demanda_arquivo_geometria_upload: "Arquivos originais das geometrias das demandas",
+    projeto_geometria_historico: "Histórico de geometrias das demandas",
   };
   // Rótulo curto do esquema para a etiqueta ao lado do nome, no grupo de domínios.
   const ESQUEMA_BADGE = { hierarquizacao_demandas: "Hierarquização" };
@@ -493,14 +495,15 @@
           } else {
             if (
               state.esquema === "demandas" &&
-              state.tabela === "demanda_arquivo_geometria_upload" &&
+              state.tabela === "projeto_geometria_historico" &&
               c.nome === "conteudo_binario" &&
-              linha.id
+              linha.id &&
+              linha.conteudo_binario != null
             ) {
               td.append(
                 el("a", {
                   class: "admin-download-file",
-                  href: `${API}/tabelas/demandas/demanda_arquivo_geometria_upload/${encodeURIComponent(linha.id)}/download`,
+                  href: `${API}/tabelas/demandas/projeto_geometria_historico/${encodeURIComponent(linha.id)}/download`,
                   title: "Baixar arquivo vetorial original",
                   download: "",
                 }, el("i", { class: "fa-solid fa-download", "aria-hidden": "true" }), "Baixar original"),

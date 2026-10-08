@@ -185,6 +185,23 @@ def pagina_glossario_publico(request: Request) -> Response:
     return render_page(request, "paginas/documentacao/glossario.html")
 
 
+@app.get("/public/documentacao/risco-restricao/", include_in_schema=False)
+def pagina_documentacao_risco_restricao(request: Request) -> Response:
+    """Arcabouço teórico-conceitual de risco e restrição da Fase 1."""
+    return render_page(request, "paginas/documentacao/risco-restricao.html")
+
+
+@app.get("/public/documentacao/favorabilidade/", include_in_schema=False)
+def pagina_documentacao_favorabilidade(request: Request) -> Response:
+    """Documentação da favorabilidade: da premissa ao índice, com os mapas gerados."""
+    from api.services.documentacao_favorabilidade import montar_contexto
+
+    return render_page(
+        request, "paginas/documentacao/favorabilidade.html",
+        **montar_contexto(),
+    )
+
+
 @app.get("/public/transparencia/", include_in_schema=False)
 def pagina_transparencia_publica(request: Request) -> Response:
     return render_page(request, "paginas/transparencia/index.html")
@@ -273,11 +290,6 @@ TIPOS_CAMADA_ELEGIBILIDADE = [
     {"valor": "risco", "rotulo": "Risco"},
     {"valor": "area_estudo", "rotulo": "Área de estudo"},
 ]
-
-
-@app.get("/restrict/geoespacial/documentacao-favorabilidade/", include_in_schema=False)
-def pagina_documentacao_favorabilidade(request: Request) -> Response:
-    return RedirectResponse("/public/documentacao/", status_code=308)
 
 
 @app.get("/restrict/hierarquizacao/cadastro-upload-favorabilidade/", include_in_schema=False)
@@ -420,8 +432,8 @@ LEGACY_PAGE_REDIRECTS = {
     "/geoespacial/index.html": "/restrict/geoespacial/",
     "/geoespacial/gerador-risco-restricao": "/restrict/geoespacial/gerador-risco-restricao/",
     "/geoespacial/gerador-risco-restricao.html": "/restrict/geoespacial/gerador-risco-restricao/",
-    "/geoespacial/configuracao-risco-restricao": "/restrict/geoespacial/configuracao-risco-restricao/",
-    "/geoespacial/configuracao-risco-restricao.html": "/restrict/geoespacial/configuracao-risco-restricao/",
+    "/geoespacial/configuracao-risco-restricao": "/public/documentacao/risco-restricao/",
+    "/geoespacial/configuracao-risco-restricao.html": "/public/documentacao/risco-restricao/",
     "/geoespacial/gerador-favorabilidade": "/restrict/geoespacial/gerador-favorabilidade/",
     "/geoespacial/gerador-favorabilidade.html": "/restrict/geoespacial/gerador-favorabilidade/",
     "/restrict/geoespacial/visualizador-insumos-geoespaciais/": "/restrict/geoespacial/visualizador-bases-geoespaciais/",
@@ -437,7 +449,7 @@ LEGACY_PAGE_REDIRECTS = {
     "/geoespacial/verificacao-fase3.html": "/restrict/geoespacial/configurador-ajuste/",
     "/restrict/geoespacial/index.html": "/restrict/geoespacial/",
     "/restrict/geoespacial/gerador-risco-restricao.html": "/restrict/geoespacial/gerador-risco-restricao/",
-    "/restrict/geoespacial/configuracao-risco-restricao.html": "/restrict/geoespacial/configuracao-risco-restricao/",
+    "/restrict/geoespacial/configuracao-risco-restricao.html": "/public/documentacao/risco-restricao/",
     "/restrict/geoespacial/gerador-favorabilidade.html": "/restrict/geoespacial/gerador-favorabilidade/",
     "/restrict/geoespacial/visualizador-inputs.html": "/restrict/geoespacial/visualizador-bases-geoespaciais/",
     "/restrict/geoespacial/_geoprocessamento.html": "/restrict/geoespacial/bancada/",
@@ -493,8 +505,6 @@ def pagina_geoespacial(request: Request, pagina: str) -> Response:
         raise HTTPException(status_code=410, detail="Esta página geoespacial foi arquivada.")
     if pagina == "produtos":
         return RedirectResponse("/restrict/geoespacial/visualizador-camadas/", status_code=308)
-    if pagina == "configuracao-risco-restricao":
-        return RedirectResponse("/public/documentacao/", status_code=308)
     arquivo = GEOSPATIAL_PAGES.get(pagina)
     if not arquivo:
         raise HTTPException(status_code=404, detail="Página geoespacial não encontrada")

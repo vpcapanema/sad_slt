@@ -31,6 +31,32 @@ class _ProcessoVivo:
         return None
 
 
+@pytest.mark.parametrize("port_opened", [False, True])
+def test_failed_start_cleans_up_and_distinguishes_ssh_from_database(tmp_path, monkeypatch, port_opened):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    tunnel = VmDatabaseTunnel(tmp_path, lambda message: None)
+    tunnel.plink.parent.mkdir(parents=True)
+    tunnel.plink.touch()
+    tunnel.key.parent.mkdir(parents=True)
+    tunnel.key.touch()
+    ports = iter([False, port_opened])
+    monkeypatch.setattr(tunnel, "_port_open", lambda: next(ports, port_opened))
+    clock = iter([0, 0, 21])
+    monkeypatch.setattr("scripts.local_vm_tunnel.time.monotonic", lambda: next(clock))
+    monkeypatch.setattr("scripts.local_vm_tunnel.time.sleep", lambda seconds: None)
+    monkeypatch.setattr("scripts.local_vm_tunnel.subprocess.Popen", lambda *args, **kwargs: _ProcessoVivo())
+    cause = RuntimeError("database unavailable")
+    monkeypatch.setattr(tunnel, "validate", lambda: (_ for _ in ()).throw(cause))
+    cleanup = []
+    monkeypatch.setattr(tunnel, "stop", lambda: cleanup.append(True) or tunnel._close_files())
+    expected = "bancos oficiais não responderam" if port_opened else "não abriu o túnel"
+    with pytest.raises(RuntimeError, match=expected) as result:
+        tunnel.ensure()
+    assert cleanup == [True]
+    assert tunnel._stdout is None and tunnel._stderr is None
+    assert result.value.__cause__ is (cause if port_opened else None)
+
+
 def test_tunnel_is_loopback_only_and_pins_vm_host_key(tmp_path, monkeypatch):
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
     tunnel = VmDatabaseTunnel(tmp_path)

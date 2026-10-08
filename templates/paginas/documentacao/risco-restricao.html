@@ -1,12 +1,11 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "Regra booleana" %}
-{% set navegacao = "restrita" %}
-{% set bloco_modulo = "geoprocessamento" %}
-{% set requer_autenticacao = true %}
+{% set subtitulo = "Documentação do sistema" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
 
 {% block titulo %}Arcabouço Teórico-Conceitual de Risco e Restrição — SICARD{% endblock %}
+{% block descricao %}Fundamentos conceituais de risco e restrição que orientam a triagem territorial da elegibilidade no SICARD.{% endblock %}
 {% block classes_body %}gerador-page biblioteca-risco-page{% endblock %}
-{% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/gerador-insumos.css" />
@@ -17,8 +16,8 @@
       <section class="secao-biblioteca-canonica-de-risco-e-restricao gerador-section gerador-intro">
         <div class="gerador-section__body">
           <div class="gerador-breadcrumb">
-            <a href="/restrict/">Início</a> ›
-            <a href="/restrict/geoespacial/">Geoespacial</a> › Arcabouço teórico-conceitual
+            <a href="/public/">Início</a> ›
+            <a href="/public/documentacao/">Documentação</a> › Arcabouço teórico-conceitual
           </div>
           <h1 class="gerador-title">
             Arcabouço Teórico-Conceitual de Risco e Restrição

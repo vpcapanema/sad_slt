@@ -23,8 +23,10 @@ PAGINAS = [
     "/restrict/hierarquizacao/fase-1/",
     "/restrict/hierarquizacao/fase-2/",
     "/restrict/hierarquizacao/fase-3/",
-    "/restrict/geoespacial/documentacao-favorabilidade/",
 ]
+# Documentação pública da favorabilidade segue o mesmo desenho das fases,
+# mas não exige sessão: entra só nas checagens de padrão visual.
+PAGINAS_VISUAL = PAGINAS + ["/public/documentacao/favorabilidade/"]
 
 
 @pytest.fixture()
@@ -37,7 +39,7 @@ def cliente():
     return cliente
 
 
-@pytest.mark.parametrize("rota", PAGINAS)
+@pytest.mark.parametrize("rota", PAGINAS_VISUAL)
 def test_cabecalho_segue_o_hero_padrao(cliente, rota):
     html = cliente.get(rota).text
     assert "standard-page-hero__title" in html, rota
@@ -46,7 +48,7 @@ def test_cabecalho_segue_o_hero_padrao(cliente, rota):
     assert "fase-titulo-card" not in html, rota
 
 
-@pytest.mark.parametrize("rota", PAGINAS)
+@pytest.mark.parametrize("rota", PAGINAS_VISUAL)
 def test_secoes_numeradas_em_medalhao(cliente, rota):
     html = cliente.get(rota).text
     medalhoes = re.findall(
@@ -99,7 +101,7 @@ SUBSECOES_ESPERADAS = {
     "/restrict/hierarquizacao/fase-1/": ["2.1", "2.2"],
     "/restrict/hierarquizacao/fase-2/": ["2.1", "2.2"],
     "/restrict/hierarquizacao/fase-3/": ["1.1", "1.2", "3.1", "3.2", "4.1", "4.2", "5.1", "5.2"],
-    "/restrict/geoespacial/documentacao-favorabilidade/": ["1.1", "1.2", "2.1", "2.2"],
+    "/public/documentacao/favorabilidade/": ["1.1", "1.2", "2.1", "2.2"],
 }
 
 

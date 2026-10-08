@@ -26,6 +26,7 @@ data/geoespacial/relatorios/*.log
 # Segredos/cache Fase2 (nao versionar)
 tmp/tomtom_key.txt
 tmp/tomtom_flow_cache.csv
+documentacao/saidas_modelos/tomtomAPIkey.txt
 
 # Chaves SSH / deploy (nunca versionar)
 *.ppk
@@ -56,3 +57,23 @@ documentacao/geoespacial/entregas/
 
 # Documentos de trabalho soltos na raiz (relatórios, planilhas do cliente): fora do Git.
 /*.docx
+
+# Estudos dos agentes: publicar somente as paginas finais e seus recursos de exibicao.
+# Insumos, caches de API, pipelines, testes, planilhas, vetores e capturas ficam locais.
+/documentacao/saidas_modelos/**
+!/documentacao/saidas_modelos/*/
+!/documentacao/saidas_modelos/*/index.html
+!/documentacao/saidas_modelos/*/*.css
+!/documentacao/saidas_modelos/*/*.js
+!/documentacao/saidas_modelos/*/mapas/
+!/documentacao/saidas_modelos/*/mapas/*.png
+!/documentacao/saidas_modelos/*/mapas/*.svg
+!/documentacao/saidas_modelos/*/img/
+!/documentacao/saidas_modelos/*/img/*.png
+!/documentacao/saidas_modelos/*/img/*.jpg
+!/documentacao/saidas_modelos/*/img/*.jpeg
+!/documentacao/saidas_modelos/*/img/*.svg
+!/documentacao/saidas_modelos/*/img/*.webp
+
+# Logs e capturas da automacao de navegador nao fazem parte da entrega HTML.
+/.playwright-mcp/

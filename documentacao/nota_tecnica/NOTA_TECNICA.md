@@ -18,8 +18,8 @@
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Título**                 | Metodologia do Sistema de Hierarquização de Demandas — SICARD                                                                                                         |
 | **Número**                 | NT-SICARD-001/2026                                                                                                                                                       |
-| **Versão**                 | 1.10                                                                                                                                                                      |
-| **Data de emissão**        | 26/09/2026                                                                                                                                                               |
+| **Versão**                 | 1.12                                                                                                                                                                      |
+| **Data de emissão**        | 05/10/2026                                                                                                                                                               |
 | **Classificação**         | Documento técnico-metodológico de entrega ao cliente                                                                                                                   |
 | **Sistema**                 | SICARD — Sistema de Apoio à Tomada de Decisão                                                                                                                         |
 | **Domínio de aplicação** | Logística e transportes. Concebido no âmbito do Plano de Logística Integrada do Estado de São Paulo (PLI-SP), aplica-se a qualquer objeto de demanda desse domínio. |
@@ -44,6 +44,8 @@
 | 1.9     | 14/08/2026 | `[preencher]` | Formalização do preenchimento colaborativo da matriz de comparação pareada do AHP: coleta de julgamentos individuais de especialistas convidados, com exigência de razão de consistência inferior a 0,10 por resposta, e consolidação do julgamento do grupo por média geométrica elemento a elemento das matrizes individuais (agregação de julgamentos individuais — AIJ), com registro da matriz consolidada, dos pesos resultantes e dos indicadores de consistência. |
 
 | 1.10    | 26/09/2026 | `[preencher]` | Registro dos operadores nativos da extração geoespacial, preservação das correspondências na saída e distinção entre atributo nulo e ausência de incidência territorial. |
+| 1.11    | 05/10/2026 | `[preencher]` | Registro do cenário exploratório municipal segregado, com matriz retificada, superfícies por média simples, preservação de ausências e bloqueio de uso do TomTom com cobertura observada inferior a 95%, sem substituição da metodologia operacional vigente. |
+| 1.12    | 05/10/2026 | `[preencher]` | Retificação do cenário exploratório: favorabilidade da rede calculada por trecho DER, mantendo o território municipal; registro da coleta real TomTom, cobertura insuficiente e exclusão do componente da síntese. |
 
 ---
 
@@ -721,6 +723,51 @@ tecnicamente coerente é:
 
 Assim, a grade é uma camada estruturante do modelo, mas não substitui a análise de rede
 nem os atributos intrínsecos dos objetos de demanda.
+
+### 10.13 Cenário exploratório territorial e por trecho DER
+
+O [estudo de favorabilidade territorial e por trecho DER](../saidas_modelos/gpt_61_sol/index.html)
+constitui um cenário experimental independente, não homologado, que preserva a
+separação entre contexto territorial, indicadores de rede e atributos do objeto
+de demanda. A matriz retificada mantém a rastreabilidade dos 50 critérios de origem;
+apenas quatro são calculados nesta rodada. Os demais permanecem classificados como
+triagem, atributos de projeto ou pendências de insumo e validação.
+
+O cenário utiliza 645 municípios, com PIB municipal de 2023 e componentes sociais
+do Censo 2022, sem desagregação por setor censitário. A superfície territorial
+combina massa econômica e um indicador exploratório de privação educacional e de
+coleta domiciliar; este último não equivale a um índice validado de vulnerabilidade.
+A superfície de rede utiliza 4.782 trechos lineares da malha DER, preservados
+em snapshot disponível no repositório, com rodovia, subtrecho e quilometragem.
+São normalizados os atributos modelados de demanda e volume/capacidade
+previamente associados a cada trecho, sem agregação ou redistribuição municipal.
+Há 4.496 trechos com índice completo e 286 sem nota. O ano-base e a calibração
+dos atributos modelados não foram comprovados nesta tarefa.
+
+Os critérios são orientados e normalizados por min–max antes da síntese por média
+simples, mantendo as duas superfícies separadas. Trechos com indicadores ausentes
+não recebem valor zero. As médias exigem todos os critérios ativos e não
+renormalizam pesos localmente para encobrir ausências. A ponderação posterior por
+AHP depende de julgamentos documentados, verificação de consistência e análise de
+sensibilidade, incluindo a dependência entre demanda e volume/capacidade.
+
+Neste cenário, qualquer cálculo baseado no TomTom exige cobertura observada mínima
+de 95%, simultaneamente em amostras e extensão elegível, além de comparabilidade
+temporal e qualidade geométrica. Imputação não constitui observação para esse
+requisito. Com a chave informada, foram realizadas 2.580 consultas instantâneas
+em pontos médios dos trechos DER, com 2.339 amostras válidas. A cobertura do
+universo é de 48,91% em pontos e 48,90% em extensão representada. As respostas
+inválidas superaram 5% do universo; mantendo-as, o teto possível mesmo com todas
+as consultas restantes válidas seria de 94,96%, motivando a interrupção desta
+tentativa. A extensão representada por pontos médios não comprova medição
+contínua de toda a geometria, e a amostra instantânea não caracteriza recorrência.
+O critério permanece bloqueado e não participa dos índices. Essa regra experimental não altera
+retroativamente os procedimentos descritos nas versões anteriores da nota técnica.
+
+Os insumos, hashes, equações, valores brutos, mapas e testes encontram-se segregados
+na pasta do estudo. As superfícies não constituem ranking final de investimentos
+nem comprovam benefício incremental de intervenções. Não houve substituição da
+matriz operacional, dos operadores ou da síntese vigente do sistema.
 
 ---
 

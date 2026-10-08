@@ -1,13 +1,15 @@
 """Rotas HTTP — planos (nível 1)."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from pydantic import ValidationError
 
 from api.deps.auth import require_analyst, require_authenticated, require_gestor, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.objeto_ahp import AprovarDemandaSchema, ReprovarDemandaSchema
 from api.schemas.plano import PlanoCreateSchema, PlanoResponseSchema, PlanoUpdateSchema
 from api.services import plano_service
+from api.services.arquivo_geometria import receber_arquivo_geometria
 from api.services.session_service import SessionUser
 
 router = APIRouter(prefix="/planos", tags=["planos"])
@@ -21,6 +23,26 @@ def criar_plano(
     """Cadastra um novo plano (nível 1)."""
     try:
         return plano_service.criar_plano(body, usuario_id=user.id)
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/com-arquivo-geometria", response_model=PlanoResponseSchema, status_code=201)
+async def criar_plano_com_arquivo_geometria(
+    payload: str = Form(...),
+    arquivo_geometria: UploadFile = File(...),
+    user: SessionUser = Depends(require_operator),
+) -> PlanoResponseSchema:
+    """Cadastra um plano e preserva o arquivo vetorial original da sua geometria."""
+    try:
+        body = PlanoCreateSchema.model_validate_json(payload)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors()) from exc
+    arquivo = await receber_arquivo_geometria(arquivo_geometria, body.geometria)
+    try:
+        return plano_service.criar_plano(body, usuario_id=user.id, arquivo_geometria=arquivo)
     except DemandaValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:

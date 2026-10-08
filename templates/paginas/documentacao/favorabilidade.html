@@ -1,11 +1,11 @@
 {% extends "bases/base_conteudo.html" %}
-{% set subtitulo = "" %}
-{% set navegacao = "restrita" %}
-{% set requer_autenticacao = true %}
+{% set subtitulo = "Documentação do sistema" %}
+{% set navegacao = "publica" %}
+{% set requer_autenticacao = false %}
 
-{% block titulo %}Biblioteca — Favorabilidade de grade e da rede{% endblock %}
+{% block titulo %}Documentação da favorabilidade de grade e da rede — SICARD{% endblock %}
+{% block descricao %}Como as superfícies de favorabilidade territorial foram construídas: premissas, critérios, dados, espacialização, normalização e índices.{% endblock %}
 {% block classes_body %}ahp-module-page{% endblock %}
-{% block base_url %}<base href="/restrict/geoespacial/">{% endblock %}
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/ahp-module.css">
@@ -27,9 +27,7 @@
 {% set superficies = superficies | default([], true) %}
 {% set manifesto_brutos = manifesto_brutos | default({}, true) %}
 {% set manifesto_normalizados = manifesto_normalizados | default({}, true) %}
-<div id="admin-session-bar" class="admin-session-bar hidden"></div>
 <main class="conteudo-principal app-main ahp-main fase-execucao-page doc-favorabilidade">
-  {% include "componentes/navegacao_fases_hierarquizacao.html" %}
 
   <section class="secao-favorabilidade-de-grade-e-da-rede card ahp-step-intro standard-page-hero card-favorabilidade-de-grade-e-da-rede">
     <h1 class="standard-page-hero__title"><i class="fa-solid fa-book-atlas"></i> Favorabilidade de grade e da rede</h1>
@@ -280,5 +278,4 @@
 {% endblock %}
 
 {% block scripts_pagina %}
-  <script src="/assets/js/admin-auth.js"></script>
 {% endblock %}

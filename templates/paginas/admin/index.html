@@ -9,7 +9,7 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/restrict/hierarquizacao/platform-map.css?v=20260814-1">
-  <link rel="stylesheet" href="/restrict/index.css?v=20260914-subcards-2" />
+  <link rel="stylesheet" href="/restrict/index.css?v=20261008-geodoc-2" />
   <link
       rel="stylesheet"
       href="/assets/vendor/fontawesome/css/all.min.css"
@@ -141,7 +141,6 @@
                 {{ link_card('/restrict/hierarquizacao/processos/', 'fa-solid fa-diagram-project', 'Central de hierarquização', 'amber') }}
                 {{ link_card('/restrict/analise-multicriterio/?modo=espaco', 'fa-solid fa-people-group', 'Central de julgamentos', 'amber') }}
                 {{ link_card('/restrict/analise-multicriterio/?modo=julgamentos', 'fa-solid fa-list-check', 'Central de respostas', 'amber') }}
-                {{ link_card('/restrict/analise-multicriterio/?modo=formulario', 'fa-solid fa-clipboard-question', 'Formulário colaborativo - Especialistas', 'amber') }}
               </div>
             </div>
             <div class="platform-subgroup subgroup-ranqueamento">
@@ -150,7 +149,6 @@
                 {{ link_card('/restrict/hierarquizacao/fase-1/', 'fa-solid fa-filter-circle-xmark', 'Elegibilidade territorial', 'green') }}
                 {{ link_card('/restrict/hierarquizacao/fase-2/', 'fa-solid fa-mountain-sun', 'Favorabilidade de grade e da rede', 'green') }}
                 {{ link_card('/restrict/hierarquizacao/fase-3/', 'fa-solid fa-sliders', 'Priorização por atributos', 'green') }}
-                {{ link_card('/restrict/hierarquizacao/metodologia/', 'fa-solid fa-book-open', 'Documentação metodológica', 'green') }}
               </div>
             </div>
           </div>
@@ -169,33 +167,24 @@
       </div>
         <div class="restrict-platform-row restrict-platform-row--geoprocessamento">
           <section class="platform-group secao-platform-geoprocessamento" aria-labelledby="group-geoprocessamento">
-            {{ group_heading('group-geoprocessamento', 'Geoprocessamento', 'Processamento territorial', 'Camadas, visualizadores e cálculos.') }}
-            <div class="platform-grid geoprocessamento-acessos">
-              {{ link_card('/restrict/geoespacial/', 'fa-solid fa-earth-americas', 'Central geoespacial', 'green') }}
-              {{ link_card('/restrict/geoespacial/bancada/', 'fa-solid fa-screwdriver-wrench', 'Bancada de geoprocessamento', 'green') }}
-            </div>
+            {{ group_heading('group-geoprocessamento', 'Ferramentas de geoprocessamento e documentação', 'Processamento territorial e referências', 'Camadas, visualizadores e fundamentos metodológicos.') }}
             <div class="platform-subgroups">
-              <div class="platform-subgroup subgroup-visualizadores-online-camadas">
-                <h3 class="platform-subgroup__title">Visualizadores online de camadas</h3>
+              <div class="platform-subgroup subgroup-geoprocessamento">
+                <h3 class="platform-subgroup__title">Geoprocessamento</h3>
                 <div class="platform-grid">
-                  {{ link_card('/restrict/geoespacial/visualizador-camadas/', 'fa-solid fa-map-location-dot', 'Visualizador de camadas', 'blue') }}
+                  {{ link_card('/restrict/geoespacial/', 'fa-solid fa-earth-americas', 'Central geoespacial', 'green') }}
+                  {{ link_card('/restrict/geoespacial/visualizador-camadas/', 'fa-solid fa-map-location-dot', 'Visualizador de camadas', 'green') }}
+                  {{ link_card('/restrict/geoespacial/bancada/', 'fa-solid fa-screwdriver-wrench', 'Bancada de geoprocessamento', 'green') }}
                 </div>
               </div>
-              <div class="platform-subgroup subgroup-ferramentas-geoprocessamento">
-                <h3 class="platform-subgroup__title">Ferramentas de geoprocessamento</h3>
+              <div class="platform-subgroup subgroup-documentacao-tecnica">
+                <h3 class="platform-subgroup__title">Documentação técnica</h3>
                 <div class="platform-grid">
-                  {{ link_card('/restrict/geoespacial/gerador-camadas-territoriais/', 'fa-solid fa-city', 'Tributação de camadas territoriais', 'green') }}
-                  {{ link_card('/restrict/geoespacial/extracao-atributos/', 'fa-solid fa-layer-group', 'Nova extração de atributos', 'green') }}
-                  {{ link_card('/restrict/geoespacial/extracoes-atributos/', 'fa-solid fa-table-list', 'Histórico de extrações', 'green') }}
+                  {{ link_card('/public/documentacao/risco-restricao/', 'fa-solid fa-book-open', 'Arcabouço teórico-conceitual de risco e restrição', 'navy') }}
+                  {{ link_card('/public/documentacao/favorabilidade/', 'fa-solid fa-book-atlas', 'Documentação da favorabilidade', 'navy') }}
+                  {{ link_card('/public/documentacao/glossario/', 'fa-solid fa-spell-check', 'Glossário técnico-conceitual', 'navy') }}
                 </div>
               </div>
-            </div>
-          </section>
-          <section class="platform-group secao-platform-documentacao-ranqueamento" aria-labelledby="group-documentacao-ranqueamento">
-            {{ group_heading('group-documentacao-ranqueamento', 'Documentação técnica', 'Referências metodológicas', 'Fundamentos do ranqueamento territorial.') }}
-            <div class="platform-grid">
-              {{ link_card('/public/documentacao/', 'fa-solid fa-book-open', 'Documentação metodológica da hierarquização', 'navy') }}
-              {{ link_card('/public/documentacao/glossario/', 'fa-solid fa-spell-check', 'Glossário técnico-conceitual', 'navy') }}
             </div>
           </section>
         </div>

@@ -9,6 +9,7 @@ import subprocess
 import sys
 import threading
 import time
+from types import SimpleNamespace
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -157,24 +158,36 @@ def main():
     if not proprio:
         say('Túnel mantido pelo supervisor autônomo; esta tarefa não o administra.')
     import uvicorn
-    # Mesmos argumentos da tarefa original: sem reload, migrations ou processos extras de servidor.
-    server = uvicorn.Server(uvicorn.Config('api.server:app', host='127.0.0.1', port=8083, env_file='.env'))
+    from uvicorn.supervisors import ChangeReload
+    # Sem migrations ou processos extras de servidor. O auto-reload observa
+    # apenas o codigo Python da aplicacao: os templates ja recarregam pelo Jinja
+    # e vigiar a arvore inteira (dados, .venv, saidas) dispararia reinicios.
+    config = uvicorn.Config(
+        'api.server:app', host='127.0.0.1', port=8083, env_file='.env',
+        reload=True, reload_dirs=[str(ROOT / 'api')],
+    )
+    # Vincular a porta antes de supervisionar: se outro processo ja a ocupa, o
+    # erro aparece aqui, e nao como um reinicio silencioso do trabalhador.
+    sock = config.bind_socket()
+    server = uvicorn.Server(config)
+    # Com reload, quem atende e o processo trabalhador; a porta ja e desta
+    # instancia, entao a prontidao e decidida apenas pelas sondagens HTTP.
+    instancia = SimpleNamespace(started=True)
     stopped = threading.Event()
-    monitor = threading.Thread(target=open_when_ready, args=(server, stopped), daemon=True)
+    monitor = threading.Thread(target=open_when_ready, args=(instancia, stopped), daemon=True)
     tunnel_monitor = threading.Thread(target=tunnel.monitor, args=(stopped,), daemon=True)
     monitor.start()
     if proprio:
         tunnel_monitor.start()
+    say('Auto-reload ativo: alteracoes em api/ reiniciam o servidor.')
     try:
-        server.run()
+        ChangeReload(config, target=server.run, sockets=[sock]).run()
     finally:
         stopped.set()
         monitor.join(timeout=7)
         if proprio:
             tunnel_monitor.join(timeout=7)
             tunnel.stop()
-    if not server.started:
-        raise SystemExit(1)
 
 
 if __name__ == '__main__':

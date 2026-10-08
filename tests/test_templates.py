@@ -205,17 +205,16 @@ def test_restricted_home_groups_operator_and_territorial_actions() -> None:
         "Central de hierarquização",
         "Central de julgamentos",
         "Central de respostas",
-        "Formulário colaborativo - Especialistas",
     ]
+    assert "?modo=formulario" not in mad
     assert mad.index("Agrupamento de Demandas e Extração de atributos") < mad.index("Análise Multicritério (AHP)") < mad.index("Ranqueamento")
     ranking = mad.split("subgroup-ranqueamento", 1)[1]
     assert set(re.findall(r'href="([^"]+)"', ranking)) == {
-        "/restrict/hierarquizacao/metodologia/",
         "/restrict/hierarquizacao/fase-1/",
         "/restrict/hierarquizacao/fase-2/",
         "/restrict/hierarquizacao/fase-3/",
     }
-    assert "Documentação metodológica" in ranking
+    assert "Documentação metodológica" not in ranking
     assert "cadastro-upload-" not in content
     assert 'href="/restrict/geoespacial/extracoes-atributos/"' in mad
     assert 'href="/restrict/geoespacial/gerador-camadas-territoriais/"' in mad
@@ -254,21 +253,31 @@ def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> N
     geo = match.group()
     label_pattern = r'class="platform-tile__label">([^<]+)</span>'
     accesses = geo.split('class="platform-subgroups"', 1)[0]
-    assert re.findall(label_pattern, accesses) == ["Central geoespacial", "Bancada de geoprocessamento"]
+    assert re.findall(label_pattern, accesses) == [], "todos os acessos vivem nos subcards"
     groups = {
         name: re.findall(label_pattern, markup)
         for name, markup in re.findall(r'class="platform-subgroup subgroup-([\w-]+)">(.*?)</div>\s*</div>', geo, re.S)
     }
     assert groups == {
-        "visualizadores-online-camadas": ["Visualizador de camadas"],
-        "ferramentas-geoprocessamento": ["Tributação de camadas territoriais", "Nova extração de atributos", "Histórico de extrações"],
+        "geoprocessamento": ["Central geoespacial", "Visualizador de camadas", "Bancada de geoprocessamento"],
+        "documentacao-tecnica": [
+            "Arcabouço teórico-conceitual de risco e restrição",
+            "Documentação da favorabilidade",
+            "Glossário técnico-conceitual",
+        ],
     }
-    documentation = re.search(r'<section\b[^>]*aria-labelledby="group-documentacao-ranqueamento"[^>]*>.*?</section>', content, re.S)
-    assert documentation is not None
-    assert re.findall(label_pattern, documentation.group()) == [
-        "Documentação metodológica da hierarquização",
-        "Glossário técnico-conceitual",
-    ]
+    index_css = Path("admin/index.css").read_text(encoding="utf-8")
+    assert ".subgroup-geoprocessamento .platform-grid { --itens-por-linha: 1; }" in index_css
+    assert ".subgroup-documentacao-tecnica .platform-grid { --itens-por-linha: 1; }" in index_css
+    # Os três acessos antigos de "Ferramentas de geoprocessamento" migraram para
+    # o MAD; a documentação técnica deixou de ser módulo próprio.
+    for href in (
+        "/restrict/geoespacial/gerador-camadas-territoriais/",
+        "/restrict/geoespacial/extracao-atributos/",
+        "/restrict/geoespacial/extracoes-atributos/",
+    ):
+        assert href not in geo
+    assert 'aria-labelledby="group-documentacao-ranqueamento"' not in content
     assert "/restrict/hierarquizacao/" not in geo
 
 

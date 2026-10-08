@@ -110,14 +110,16 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
 
     assert "/restrict/analise-multicriterio/?modo=julgamentos" in html
     assert "/restrict/analise-multicriterio/?modo=espaco" in html
-    assert "/restrict/analise-multicriterio/?modo=formulario" in html
+    assert "/restrict/analise-multicriterio/?modo=formulario" not in html
     trecho_mad = html.split('id="group-mad"', 1)[1].split('id="group-resultados"', 1)[0]
     trecho_geo = html.split('id="group-geoprocessamento"', 1)[1].split('id="group-ahp-restrict"', 1)[0]
     assert "Hierarquização e Ranking" not in trecho_geo
     assert "Visualizador de camadas" in trecho_geo
-    assert trecho_geo.index("Central geoespacial") < trecho_geo.index("Visualizadores online de camadas")
-    assert "Ferramentas de geoprocessamento" in trecho_geo
-    assert "Documentação técnica" in html
+    assert trecho_geo.index("Central geoespacial") < trecho_geo.index("Visualizador de camadas") < trecho_geo.index("Bancada de geoprocessamento")
+    assert "Ferramentas de geoprocessamento e documentação" in trecho_geo
+    assert "Documentação técnica" in trecho_geo
+    assert "/public/documentacao/favorabilidade/" in trecho_geo
+    assert "/public/documentacao/risco-restricao/" in trecho_geo
     assert trecho_mad.index("/restrict/hierarquizacao/processos/") < trecho_mad.index("?modo=espaco") < trecho_mad.index("?modo=julgamentos")
     assert "Central de julgamentos" in trecho_mad
     assert "Central de respostas" in trecho_mad
@@ -127,6 +129,7 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "/restrict/geoespacial/gerador-risco-restricao/" not in trecho_geo
     assert "/restrict/geoespacial/gerador-favorabilidade/" not in trecho_geo
     assert "/restrict/geoespacial/configuracao-risco-restricao/" not in trecho_geo
+    assert "/restrict/geoespacial/documentacao-favorabilidade/" not in trecho_geo
     assert "/restrict/geoespacial/produtos/" not in trecho_geo
     assert "/restrict/geoespacial/bancada/" in trecho_geo
     assert "/restrict/geoespacial/configurador-ajuste/" not in trecho_geo
@@ -134,8 +137,14 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert client.get("/restrict/geoespacial/gerador-favorabilidade/").status_code == 410
     assert client.get("/restrict/geoespacial/configurador-ajuste/").status_code == 410
     assert client.get("/restrict/geoespacial/produtos/", follow_redirects=False).headers["location"] == "/restrict/geoespacial/visualizador-camadas/"
-    assert client.get("/restrict/geoespacial/configuracao-risco-restricao/", follow_redirects=False).headers["location"] == "/public/documentacao/"
-    assert client.get("/restrict/geoespacial/documentacao-favorabilidade/", follow_redirects=False).headers["location"] == "/public/documentacao/"
+    # Documentação pública, servida direto (sem redirecionamento) e sem sessão.
+    for rota in ("/public/documentacao/risco-restricao/", "/public/documentacao/favorabilidade/"):
+        resposta = client.get(rota, follow_redirects=False)
+        assert resposta.status_code == 200, rota
+        assert 'data-navegacao="publica"' in resposta.text, rota
+        assert 'data-requer-autenticacao="true"' not in resposta.text, rota
+    assert client.get("/restrict/geoespacial/configuracao-risco-restricao/").status_code == 404
+    assert client.get("/restrict/geoespacial/documentacao-favorabilidade/").status_code == 404
     assert "Análise Multicritério Interativa" not in html
     assert "id=\"group-ahp-restrict\"" not in html, "grupo AHP foi descontinuado"
     assert "id=\"group-processo\"" not in html, "grupo PROCESSO foi descontinuado"
@@ -150,8 +159,8 @@ def test_indice_organiza_analise_multicriterio_no_mad_e_recursos_no_geoprocessam
     assert "--itens-por-linha: 2" in bloco_ranqueamento
     bloco_geo = index_css.split(".secao-platform-geoprocessamento .platform-grid", 1)[1].split("}", 1)[0]
     assert "--itens-por-linha: 2" in bloco_geo
-    assert ".secao-platform-geoprocessamento { grid-column: span 6; }" in index_css
-    assert ".secao-platform-documentacao-ranqueamento { grid-column: span 3; }" in index_css
+    assert ".secao-platform-geoprocessamento { grid-column: 1 / -1; }" in index_css
+    assert ".secao-platform-documentacao-ranqueamento" not in index_css
     assert ".secao-platform-administracao { grid-column: 1 / -1; }" in index_css
     assert ".secao-platform-mad { grid-column: span 4; }" in index_css
     # ADMIN usa o mesmo desenho de subcards: tabelas do banco e storage.

@@ -17,6 +17,7 @@ from api.services.campos_demanda import (
     resolver_nomes_registros,
 )
 from api.services.hierarquia_outros import resolve_plano_pai_id
+from api.services.demanda_service import geometria_desenhada_geojson
 from api.services.patch_helpers import apply_instituicao, apply_representante
 from api.services.reprovacao import validar_reprovacao
 from api.services.status_transicoes import validar_transicao_status
@@ -112,7 +113,11 @@ def _resolve_instituicao_id(payload: ProgramaCreateSchema) -> str:
 
 
 def criar_programa(
-    payload: ProgramaCreateSchema, *, usuario_id: str, origem: str = ""
+    payload: ProgramaCreateSchema,
+    *,
+    usuario_id: str,
+    origem: str = "",
+    arquivo_geometria: dict[str, Any] | None = None,
 ) -> ProgramaResponseSchema:
     """``origem="SEI"`` marca o código gerado (``I-PRO-SEI-XXXXXXXX``) quando a
     criação vem da integração com o SEI-SP. Vazio por padrão."""
@@ -156,7 +161,12 @@ def criar_programa(
         "status": STATUS_INICIAL_DEMANDA,
     }
     normalizar_programa(row, pessoa_id=pessoa_id, usuario_id=usuario_id)
-    inserted = programa_repository.insert(row, payload.unidades_espaciais)
+    inserted = programa_repository.insert(
+        row,
+        payload.unidades_espaciais,
+        geometria_geojson=geometria_desenhada_geojson(payload.geometria),
+        arquivo_geometria=arquivo_geometria,
+    )
     return _row_to_response(inserted, incluir_auditoria=True)
 
 

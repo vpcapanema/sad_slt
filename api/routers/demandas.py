@@ -1,20 +1,15 @@
 """Rotas HTTP — demandas."""
 from __future__ import annotations
 
-import hashlib
-from pathlib import PurePosixPath
-
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import ValidationError
-from shapely import normalize
-from shapely.geometry import shape
 
 from api.deps.auth import require_analyst, require_authenticated, require_gestor, require_operator
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
-from api.geometria_parser import MAX_GEOMETRIA_UPLOAD_BYTES, parse_upload
 from api.schemas.demanda import DemandaCreateSchema, DemandaResponseSchema, DemandaUpdateSchema
 from api.schemas.objeto_ahp import AprovarDemandaSchema, ObjetoAhpResponseSchema, ReprovarDemandaSchema
 from api.services import demanda_service, objeto_ahp_service
+from api.services.arquivo_geometria import receber_arquivo_geometria
 from api.services.session_service import SessionUser
 
 router = APIRouter(prefix="/demandas", tags=["demandas"])
@@ -45,44 +40,7 @@ async def criar_demanda_com_arquivo_geometria(
         body = DemandaCreateSchema.model_validate_json(payload)
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=exc.errors()) from exc
-    if body.geometria is None:
-        raise HTTPException(status_code=422, detail="O arquivo exige uma geometria no cadastro.")
-
-    conteudo = await arquivo_geometria.read(MAX_GEOMETRIA_UPLOAD_BYTES + 1)
-    if len(conteudo) > MAX_GEOMETRIA_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail="Arquivo maior que 50 MB.")
-
-    nome_arquivo = PurePosixPath((arquivo_geometria.filename or "").replace("\\", "/")).name
-    extensao = PurePosixPath(nome_arquivo).suffix.lower().lstrip(".")
-    try:
-        parsed = parse_upload(nome_arquivo, conteudo)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Erro ao processar arquivo: {exc}") from exc
-
-    submitted_geometry = {
-        "type": body.geometria.tipo,
-        "coordinates": body.geometria.coordinates,
-    }
-    uploaded_geometry = parsed["geojson"]["geometry"]
-    if not normalize(shape(submitted_geometry)).equals_exact(
-        normalize(shape(uploaded_geometry)), tolerance=1e-8
-    ):
-        raise HTTPException(
-            status_code=422,
-            detail="A geometria do cadastro não corresponde ao arquivo vetorial enviado.",
-        )
-
-    arquivo = {
-        "nome_arquivo": nome_arquivo,
-        "extensao": extensao,
-        "tipo_mime": arquivo_geometria.content_type or "application/octet-stream",
-        "geometria_tipo": parsed["tipo"],
-        "tamanho_bytes": len(conteudo),
-        "sha256": hashlib.sha256(conteudo).hexdigest(),
-        "conteudo_binario": conteudo,
-    }
+    arquivo = await receber_arquivo_geometria(arquivo_geometria, body.geometria)
     try:
         return demanda_service.criar_demanda(
             body, usuario_id=user.id, arquivo_geometria=arquivo

@@ -1,6 +1,6 @@
 """O arcabouço teórico-conceitual é a fonte da classificação da Fase 1.
 
-Página: /restrict/geoespacial/configuracao-risco-restricao/, seções 2 e 3.
+Página: /public/documentacao/risco-restricao/, seções 2 e 3.
 A categoria é da CAMADA oficial — sete de restrição, treze de risco — e tudo que
 classifica a Fase 1 precisa dizer o mesmo que ela.
 """
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-PAGINA = Path("templates/paginas/geoespacial/configuracao-risco-restricao.html")
+PAGINA = Path("templates/paginas/documentacao/risco-restricao.html")
 BIBLIOTECA = Path("config/geoespacial/biblioteca_criterios_risco_restricao.json")
 REGRAS_JSON = Path("config/geoespacial/classificacao_fase1.json")
 
