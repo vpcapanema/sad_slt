@@ -7,10 +7,10 @@ from api.db.connection import get_connection
 
 _ABRANGENCIA_GEO = """
     CASE
-        WHEN abr.geom_union IS NOT NULL THEN ST_AsGeoJSON(abr.geom_union)::jsonb
+        WHEN {alias}.geometria IS NOT NULL THEN ST_AsGeoJSON({alias}.geometria)::jsonb
     END AS geometria_geojson,
-    ST_Y(ST_Centroid(abr.geom_union)) AS latitude,
-    ST_X(ST_Centroid(abr.geom_union)) AS longitude,
+    ST_Y(ST_Centroid({alias}.geometria)) AS latitude,
+    ST_X(ST_Centroid({alias}.geometria)) AS longitude,
     abr.abrangencia_nomes
 """
 
@@ -46,11 +46,10 @@ _PLANOS_SQL = f"""
         NULL::text AS publico_alvo,
         NULL::text AS orgao_responsavel,
         NULL::text AS justificativa,
-        {_ABRANGENCIA_GEO}
+        {_ABRANGENCIA_GEO.format(alias="p")}
     FROM demandas.plano p
     LEFT JOIN LATERAL (
-        SELECT ST_Union(ue.geom) AS geom_union,
-               array_agg(ue.nome ORDER BY ue.nome) AS abrangencia_nomes
+        SELECT array_agg(ue.nome ORDER BY ue.nome) AS abrangencia_nomes
         FROM demandas.plano_unidade_espacial pu
         JOIN geo.unidade_espacial ue ON ue.id = pu.unidade_espacial_id
         WHERE pu.plano_id = p.id
@@ -90,12 +89,11 @@ _PROGRAMAS_SQL = f"""
         pg.publico_alvo,
         pg.orgao_responsavel,
         pg.justificativa,
-        {_ABRANGENCIA_GEO}
+        {_ABRANGENCIA_GEO.format(alias="pg")}
     FROM demandas.programa pg
     LEFT JOIN demandas.plano pl ON pl.id = pg.plano_id
     LEFT JOIN LATERAL (
-        SELECT ST_Union(ue.geom) AS geom_union,
-               array_agg(ue.nome ORDER BY ue.nome) AS abrangencia_nomes
+        SELECT array_agg(ue.nome ORDER BY ue.nome) AS abrangencia_nomes
         FROM demandas.programa_unidade_espacial pgu
         JOIN geo.unidade_espacial ue ON ue.id = pgu.unidade_espacial_id
         WHERE pgu.programa_id = pg.id

@@ -138,39 +138,6 @@
     }
   }
 
-  function openHomologation() {
-    const id = activeLayerId();
-    const layer = window.gpApp.state.layers.find((item) => item.id === id);
-    if (!layer) return message("Selecione a camada que será homologada.");
-    openPanel("Homologar camada", `<div class="editor-head"><button class="icon-btn" data-homologation-back title="Voltar"><i data-lucide="arrow-left"></i></button><h2>Publicar na biblioteca</h2></div><form id="gp-homologation-form"><div class="editor-body"><p class="field-help">A publicação torna a camada e seu conteúdo imutáveis. As fases 1 e 2 poderão apenas consultá-la.</p><div class="field"><label>Camada</label><input value="${escapeHtml(layer.nome)}" readonly></div><div class="field"><label>Nome de publicação</label><input name="nome_publicacao" value="${escapeHtml(layer.nome)}" required></div><div class="field"><label>Módulo consumidor</label><select name="modulo_consumidor"><option value="ambos">Fases 1 e 2</option><option value="fase1">Elegibilidade territorial</option><option value="fase2">Favorabilidade de grade e da rede</option></select></div><div class="field"><label>Versão</label><input name="versao" value="v1" required></div><div class="field"><label>Finalidade</label><input name="finalidade"></div><div class="field"><label>Homologado por</label><input name="homologado_por"></div></div><div class="editor-actions"><button class="btn primary">Homologar definitivamente</button></div></form>`);
-    $("[data-homologation-back]").onclick = () => window.gpApp.showTools();
-    $("#gp-homologation-form").onsubmit = async (event) => {
-      event.preventDefault();
-      const submit = event.submitter; submit.disabled = true;
-      const payload = Object.fromEntries(new FormData(event.target));
-      payload.metadados = {};
-      const progress = window.gpApp.createTaskProgress(event.target);
-      try {
-        let job = await request(`/api/geoespacial/camadas/${encodeURIComponent(id)}/homologar-job`, {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
-        });
-        job = await window.gpApp.waitForJob(job, progress);
-        const publication = job.resultado;
-        progress.note(`Snapshot homologado confirmado: ${publication.id}`);
-        progress.complete();
-        window.gpApp.log(`Camada homologada e sincronizada — banco + ${publication.arquivo_biblioteca_canonica}`, "ok");
-        message("Camada publicada (banco e biblioteca canônica).");
-        setTimeout(() => openSystemDirectory(), 900);
-      } catch (error) {
-        progress.fail(`Falha: ${error.message}`);
-        window.gpApp.log(`Homologação não concluída: ${error.message}`, "error");
-        document.querySelector("#gp-log")?.classList.add("open");
-        message(error.message);
-        submit.disabled = false;
-      }
-    };
-  }
-
   function openOperation(id, values = {}) {
     openToolbox();
     window.gpApp.selectOp(id);
@@ -277,7 +244,6 @@
       if (action === "select-attribute") window.gpCommands.selectByAttribute();
       if (action === "filter-layer") window.gpCommands.filterLayer();
       if (action === "refresh-source") window.gpCommands.refreshSource();
-      if (action === "homologate-layer") openHomologation();
       if (action === "export") {
         const layer = window.gpApp.state.layers.find(item => item.id === activeLayerId());
         if (layer) openOperation(layer.tipo.toLowerCase().includes("raster") ? "OP-26" : "OP-25", {

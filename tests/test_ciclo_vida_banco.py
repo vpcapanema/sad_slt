@@ -22,6 +22,10 @@ pytestmark = pytest.mark.skipif(os.getenv('SLT_TEST_CICLO_BANCO') != '1', reason
 @pytest.fixture
 def database(monkeypatch, tmp_path):
     conn = psycopg.connect(get_settings().slt_database_url, row_factory=dict_row, connect_timeout=5)
+    if os.getenv('SLT_TEST_STORAGE_FINAL') == '1':
+        from pathlib import Path
+        migration=Path('database/124_concluir_saidas_storage.sql').read_text(encoding='utf8')
+        conn.execute(migration.replace('BEGIN;','',1).rsplit('COMMIT;',1)[0])
     class Transaction:
         def execute(self, *args, **kwargs): return conn.execute(*args, **kwargs)
         def cursor(self): return conn.cursor()
@@ -31,7 +35,17 @@ def database(monkeypatch, tmp_path):
         yield Transaction()
     monkeypatch.setattr(ciclo, 'get_connection', connection)
     monkeypatch.setattr(repo, 'get_connection', connection)
+    from api.repositories import saidas_geoespaciais_repository as catalogo
+    monkeypatch.setattr(catalogo,'get_connection',connection)
     monkeypatch.setattr(ciclo, 'project_path', lambda p: tmp_path / p)
+    from api.services import storage_remoto
+    def enviar(caminho, source):
+        target=tmp_path/caminho
+        target.parent.mkdir(parents=True,exist_ok=True)
+        target.write_bytes(source.read_bytes())
+    monkeypatch.setattr(storage_remoto,'enviar',enviar)
+    monkeypatch.setattr(storage_remoto,'baixar',lambda caminho:(tmp_path/caminho).read_bytes())
+    monkeypatch.setattr(storage_remoto,'apagar_arquivo',lambda caminho:(tmp_path/caminho).unlink())
     try:
         yield conn, tmp_path
     finally:
@@ -51,6 +65,34 @@ def make_result():
 
 
     return resource, execution
+
+
+def test_saida_nao_duplica_geometria_no_banco(database):
+    conn,root=database
+    resource,execution=make_result()
+    row=conn.execute('SELECT id,storage_caminho FROM geoprocessamento.camada_processada WHERE recurso_sessao_id=%s',(resource,)).fetchone()
+    assert (root/row['storage_caminho']).is_file()
+    if conn.execute("SELECT to_regclass('geoprocessamento.camada_processada_feicao') AS tabela").fetchone()['tabela']:
+        assert conn.execute('SELECT count(*) AS total FROM geoprocessamento.camada_processada_feicao WHERE camada_id=%s',(row['id'],)).fetchone()['total']==0
+    frame,_=repo.carregar_vetor(resource)
+    assert frame.valor.tolist()==[7]
+    assert frame.geometry.iloc[0].equals_exact(Point(-46,-23),0)
+
+
+def test_exportacao_aparece_no_catalogo_com_hash_e_destino_oficial(database):
+    from api.repositories import saidas_geoespaciais_repository as catalogo
+    conn,root=database
+    resource,execution=make_result()
+    ciclo.finalizar(execution)
+    frame,_=repo.carregar_vetor(resource)
+    output=ciclo.caminho_exportacao('exportacao.gpkg','vetor')
+    frame.to_file(output,engine='pyogrio',index=False)
+    record=ciclo.registrar_exportacao(output,resource,'vetor')
+    rows=catalogo.listar(record['execucao_id'])
+    assert len(rows)==1 and rows[0]['fonte']=='saida_arquivo'
+    assert rows[0]['arquivo']==record['caminho'] and rows[0]['tipo']=='vetor'
+    reference=catalogo.referencia(record['caminho'])
+    assert reference['sha256']==ciclo.digest(root/record['caminho'])
 
 
 def test_extracao_persiste_recupera_e_exporta_com_proprietario(database,monkeypatch):
@@ -85,7 +127,7 @@ def test_extracao_persiste_recupera_e_exporta_com_proprietario(database,monkeypa
     assert nome_pacote.endswith('.zip') and pacote
     relatorio,_=service.arquivo_do_pacote(job['id'],user,'pdf_processamento')
     assert relatorio.startswith(b'%PDF')
-    with pytest.raises(LookupError):service.consultar(job['id'],SimpleNamespace(id='outro_usuario'),completo=True)
+    with pytest.raises(LookupError):service.consultar(job['id'],SimpleNamespace(id='outro_usuario',tipo_usuario='USUARIO'),completo=True)
 
 
 def test_publicacao_imutavel_sem_duplicar(database):

@@ -6,9 +6,8 @@ execução se perdia. Foi assim que os produtos ``identity_*.gpkg`` chegaram ao
 acervo sem que fosse possível reconstruir com quais parâmetros, entradas e
 versões de biblioteca haviam sido gerados.
 
-Cada job passa a gravar um relatório JSON em ``outputs/relatorios/`` e, quando
-a execução produz arquivo, uma cópia ``<arquivo>.relatorio.json`` ao lado do
-próprio produto — de modo que o produto nunca viaje sem sua procedência.
+Cada job grava um relatório no destino oficial do Sicard Storage,
+na pasta da execução, sem cópias permanentes na aplicação.
 """
 from __future__ import annotations
 
@@ -102,6 +101,9 @@ def construir(job: dict[str, Any]) -> dict[str, Any]:
             "bytes": caminho.stat().st_size,
             "sha256": _sha256_arquivo(caminho),
         })
+    if job.get('execucao_id'):
+        from api.repositories.saidas_geoespaciais_repository import arquivos_execucao
+        saidas.extend(arquivos_execucao(job['execucao_id']))
 
     return {
         "esquema": "slt.geoprocessamento.relatorio/1",
@@ -129,30 +131,28 @@ def construir(job: dict[str, Any]) -> dict[str, Any]:
 
 
 def salvar(job: dict[str, Any]) -> list[str]:
-    """Grava o relatório canônico e um sidecar junto de cada arquivo produzido.
-
-    Nunca propaga exceção: um relatório que falha não pode derrubar o
-    geoprocesso que já terminou.
-    """
+    """Grava a proveniência no mesmo Storage das camadas e registra a referência."""
+    from api.services import ciclo_vida_arquivos as ciclo, saidas_storage
+    from api.repositories import saidas_geoespaciais_repository as catalogo
+    execution = job.get('execucao_id') or (job.get('resultado') or {}).get('execucao_id')
+    own = execution is None
     try:
-        relatorio = construir(job)
-        conteudo = json.dumps(relatorio, ensure_ascii=False, indent=2, default=str)
-
-        pasta = PROJECT_ROOT / RELATORIOS_DIRNAME
-        pasta.mkdir(parents=True, exist_ok=True)
-        carimbo = (relatorio["tempo"]["finalizado_em"] or "")[:19].replace(":", "").replace("-", "")
-        nome = f"{carimbo}_{job.get('tipo', 'job')}_{job.get('id', 'sem_id')}.json"
-        canonico = pasta / nome
-        canonico.write_text(conteudo, encoding="utf-8")
-        gravados = [_relativo(canonico)]
-
-        for saida in relatorio["saidas"]:
-            sidecar = PROJECT_ROOT / (saida["caminho"] + SIDECAR_SUFFIX)
+        if own:
+            execution = ciclo.iniciar('relatorio_' + str(job.get('tipo', 'job')),
+                                      {'job_id':job.get('id')}, job.get('responsavel'))
+        report = construir(job)
+        item = saidas_storage.enviar_json(str(execution), 'relatorio_execucao.json', report)
+        catalogo.registrar_documento(str(execution), str(job.get('id')), item,
+                                     validacao={'json':True,'tipo':'relatorio_execucao'})
+        if own:
+            ciclo.finalizar(str(execution), job.get('erro'))
+        return [item['caminho']]
+    except Exception as exc:
+        # A falha fica explícita no job; não retorna um falso caminho local.
+        job['erro_relatorio'] = str(exc)
+        if own and execution:
             try:
-                sidecar.write_text(conteudo, encoding="utf-8")
-                gravados.append(_relativo(sidecar))
-            except OSError:
-                continue
-        return gravados
-    except Exception:
+                ciclo.finalizar(str(execution), str(exc))
+            except Exception:
+                pass  # A indisponibilidade do banco não derruba o geoprocesso concluído.
         return []

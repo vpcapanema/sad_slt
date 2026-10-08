@@ -8,6 +8,7 @@ import unicodedata
 from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
+from tempfile import mkdtemp
 
 import geopandas as gpd
 import rasterio
@@ -28,7 +29,7 @@ def caminho_exportacao(nome: str, categoria: str) -> Path:
     from api.path_policy import geo_output_path
     validated = geo_output_path(nome, categoria=categoria, label='saída')
     # A pasta leva o nome do que foi exportado; o UUID nao diz nada a quem abre.
-    base = project_path('data/geoespacial/outputs/exportacoes')
+    base = project_path('tmp/saidas-exportacao')
     pasta = base / f'{apelido(validated.stem, 48) or "exportacao"}_{uuid4().hex[:8]}'
     pasta.mkdir(parents=True, exist_ok=False)
     return pasta / validated.name
@@ -42,24 +43,102 @@ def registrar_exportacao(path: Path, recurso: str, tipo: str) -> dict:
         with rasterio.open(path) as raster:
             for _, window in raster.block_windows(1):
                 raster.read(window=window)
-            validation = {'largura':raster.width,'altura':raster.height,'reaberto_gdal':True}
-    root = project_path('.').resolve()
-    components = [{'caminho':p.relative_to(root).as_posix(),'sha256':digest(p),'bytes':p.stat().st_size}
-                  for p in sorted(path.parent.iterdir()) if p.is_file()]
+            validation = {'largura':raster.width,'altura':raster.height,'crs':str(raster.crs),'reaberto_gdal':True}
+    validation['nome']=path.stem
     execution = execucao_atual.get()
     own = execution is None
     if own:
         execution = iniciar('exportacao_direta', {'entrada':recurso})
     ident = str(uuid4())
-    relative = path.relative_to(root).as_posix()
-    with get_connection() as conn:
-        conn.execute('''INSERT INTO geoprocessamento.arquivo_exportado
-            (id,execucao_id,recurso_origem,caminho,componentes,validacao) VALUES (%s,%s,%s,%s,%s,%s)''',
-            (ident,execution,recurso,relative,Jsonb(components),Jsonb(validation)))
-        registrar_uso(conn,recurso,'entrada',str(execution))
+    from api.services import saidas_storage
+    created = []
+    # Um único prefixo mantém .shp, .shx, .dbf e .prj associados.
+    stem = f'{apelido(path.stem, 60) or "saida"}_{uuid4().hex[:12]}'
+    try:
+        for component in sorted(path.parent.iterdir()):
+            if component.is_file():
+                target = f'{saidas_storage.RAIZ}/execucoes/{execution}/camadas/{stem}{component.name[len(path.stem):]}'
+                item = saidas_storage.enviar_arquivo(execution, 'camadas', component, caminho=target)
+                item['nome'] = component.name
+                created.append(item)
+        relative = next(x['caminho'] for x in created if x['nome']==path.name)
+        components = created
+    except Exception:
+        for item in created:
+            saidas_storage.remover(item['caminho'])
+        raise
+    committing=False
+    try:
+        with get_connection() as conn:
+            conn.execute('''INSERT INTO geoprocessamento.arquivo_exportado
+                (id,execucao_id,recurso_origem,caminho,componentes,validacao) VALUES (%s,%s,%s,%s,%s,%s)''',
+                (ident,execution,recurso,relative,Jsonb(components),Jsonb(validation)))
+            registrar_uso(conn,recurso,'entrada',str(execution))
+            committing=True
+            conn.commit()
+    except Exception as exc:
+        if not committing:
+            for item in created:
+                saidas_storage.remover(item['caminho'])
+        if own:
+            try:
+                finalizar(execution,erro=str(exc))
+            except Exception:
+                pass
+        raise
     if own:
         finalizar(execution)
-    return {'arquivo_exportado_id':ident,'execucao_id':execution}
+    for component in list(path.parent.iterdir()):
+        if component.is_file():
+            component.unlink()
+    path.parent.rmdir()
+    return {'arquivo_exportado_id':ident,'execucao_id':execution,'caminho':relative,
+            'destino':str(Path(relative).parent),'componentes':components}
+
+
+def migrar_exportacao(ident: str, raiz_arquivos: Path | None = None) -> dict:
+    """Copia a exportação legada com todos os acompanhantes, conservando seu registro."""
+    from api.services import saidas_storage
+    root=(raiz_arquivos or project_path('.')).resolve()
+    uploaded=[]
+    committing=False
+    with get_connection() as conn:
+        row=conn.execute('SELECT * FROM geoprocessamento.arquivo_exportado WHERE id=%s FOR UPDATE',(ident,)).fetchone()
+        if not row:
+            raise ValueError('Exportação não encontrada.')
+        if row['caminho'].startswith(saidas_storage.RAIZ+'/'):
+            for item in row['componentes']:
+                saidas_storage.conferir(item['caminho'],item['sha256'])
+            return dict(row)
+        sources=[]
+        for item in row['componentes']:
+            relative=Path(item['caminho'])
+            if relative.is_absolute() or '..' in relative.parts or not relative.as_posix().startswith('data/geoespacial/outputs/'):
+                raise ValueError('Componente fora do destino legado de saídas.')
+            source=(root/relative).resolve()
+            if not source.is_relative_to(root) or digest(source)!=item['sha256']:
+                raise ValueError('Arquivo legado ausente ou divergente do hash registrado.')
+            sources.append((item,source))
+        name=Path(row['caminho']).stem
+        stem=apelido(name,60)+'_'+uuid4().hex[:12]
+        try:
+            for item,source in sources:
+                destination=f"{saidas_storage.RAIZ}/execucoes/{row['execucao_id']}/camadas/{stem}{source.name[len(name):]}"
+                record=saidas_storage.enviar_arquivo(str(row['execucao_id']),'camadas',source,caminho=destination)
+                record['nome']=source.name
+                uploaded.append(record)
+            primary=next(item['caminho'] for item in uploaded if item['nome']==Path(row['caminho']).name)
+            validation={**row['validacao'],'nome':name,'migracao_storage':True}
+            conn.execute('UPDATE geoprocessamento.arquivo_exportado SET caminho=%s,componentes=%s,validacao=%s WHERE id=%s',
+                         (primary,Jsonb(uploaded),Jsonb(validation),ident))
+            committing=True
+            conn.commit()
+        except Exception:
+            if not committing:
+                for item in uploaded:
+                    saidas_storage.remover(item['caminho'])
+            raise
+    return {'id':ident,'caminho':primary,'componentes':uploaded,'validacao':validation}
 
 
 def exigir_editavel(recurso: str) -> None:
@@ -113,17 +192,19 @@ def iniciar(operacao: str, parametros: dict, responsavel: str | None = None) -> 
                 JOIN geoprocessamento.camada_processada c ON c.id=a.camada_id
                 WHERE c.recurso_sessao_id=%s FOR UPDATE OF a''', (ref,)).fetchone()
             registrar_uso(conn, ref, 'entrada', ident)
-            if row and (not project_path(row['caminho']).is_file() or digest(project_path(row['caminho'])) != row['sha256']):
-                raise ValueError('Uma entrada está sem arquivo íntegro. Concilie antes de executar.')
+            if row:
+                from api.services import saidas_storage
+                if row['caminho'].startswith(saidas_storage.RAIZ + '/'):
+                    saidas_storage.conferir(row['caminho'], row['sha256'])
+                elif not project_path(row['caminho']).is_file() or digest(project_path(row['caminho'])) != row['sha256']:
+                    raise ValueError('Uma entrada está sem arquivo íntegro. Concilie antes de executar.')
             snapshots.append({'recurso_id':ref,'arquivo_id':str(row['id']) if row else None,
                               'sha256':row['sha256'] if row else None})
             if not row:
                 source = conn.execute('''SELECT id,crs,hash_arquivo AS hash,metadados,'importadas' AS categoria
                     FROM geoprocessamento.camada_importada WHERE recurso_sessao_id=%s
-                    UNION ALL SELECT id,crs,hash_conteudo AS hash,metadados,'homologadas'
-                    FROM geoprocessamento.camada_homologada WHERE recurso_sessao_id=%s
                     UNION ALL SELECT id,crs,NULL,metadados,'processadas'
-                    FROM geoprocessamento.camada_processada WHERE recurso_sessao_id=%s''',(ref,ref,ref)).fetchone()
+                    FROM geoprocessamento.camada_processada WHERE recurso_sessao_id=%s''',(ref,ref)).fetchone()
                 if source:
                     snapshots[-1].update(camada_id=str(source['id']),crs=source['crs'],
                         hash_origem=source['hash'],categoria=source['categoria'],metadados=source['metadados'])
@@ -178,7 +259,7 @@ def pasta_de_saida(nome: str | None, referencia: str) -> Path:
     """
     base = apelido(nome, 48) or 'saida'
     curto = re.sub(r'[^0-9a-f]', '', str(referencia).lower())[:8] or uuid4().hex[:8]
-    raiz = project_path('data/geoespacial/outputs')
+    raiz = project_path('tmp/saidas-trabalho')
     alvo = raiz / f'{base}_{curto}'
     conta = 1
     while alvo.exists():
@@ -200,15 +281,19 @@ def _nome_de_arquivo(pasta: Path, nome: str | None, extensao: str) -> Path:
 
 
 def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=None,
-           regularizacao: bool = False, responsavel: str | None = None) -> dict:
+           regularizacao: bool = False, responsavel: str | None = None,
+           execucao_id: str | None = None, caminho_destino: str | None = None) -> dict:
     """Usa a transação do chamador. Arquivo único; nunca sobrescreve outra saída."""
     existing = conn.execute('SELECT * FROM geoprocessamento.arquivo_resultado WHERE camada_id=%s FOR UPDATE',(camada_id,)).fetchone()
-    if existing:
-        path = project_path(existing['caminho'])
-        if existing['estado']=='removido' or not path.is_file() or digest(path)!=existing['sha256']:
-            raise ValueError('Arquivo já registrado está ausente, removido ou divergente; concilie antes de continuar.')
+    from api.services import saidas_storage
+    if existing and existing['caminho'].startswith(saidas_storage.RAIZ + '/'):
+        if existing['estado']=='removido':
+            raise ValueError('Arquivo retirado pela retenção.')
+        saidas_storage.conferir(existing['caminho'], existing['sha256'])
         return dict(existing)
-    execution = execucao_atual.get()
+    if existing and not regularizacao:
+        raise ValueError('Migre a saída legada para o storage antes de reutilizá-la.')
+    execution = str(existing['execucao_id']) if existing else (execucao_id or execucao_atual.get())
     if execution is None:
         execution = str(uuid4())
         conn.execute('''INSERT INTO geoprocessamento.execucao_arquivo(id,operacao,status,finalizado_em,responsavel,parametros)
@@ -217,10 +302,10 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
                                     Jsonb({'linhagem_original':metadata.get('linhagem'), 'regularizacao':regularizacao})))
     # ident e a chave primaria de arquivo_resultado, tem de continuar UUID.
     # O nome do arquivo em disco e outra coisa: leva o nome da camada.
-    ident = str(uuid4())
-    pasta = pasta_de_saida(metadata.get('nome'), execution)
+    ident = str(existing['id']) if existing else str(uuid4())
+    pasta = Path(mkdtemp(prefix='sicard-saida-'))
     path = _nome_de_arquivo(pasta, metadata.get('nome'), '.gpkg' if frame is not None else '.tif')
-    relative = path.resolve().relative_to(project_path('.').resolve()).as_posix()
+    remote_path = None
     try:
         if frame is not None:
             # Nome de geometria padronizado só no arquivo, sem mudar o objeto de entrada.
@@ -258,25 +343,34 @@ def gravar(conn, camada_id: str, metadata: dict, *, frame=None, raster_bytes=Non
                 raise ValueError('O GeoTIFF exportado difere do conteúdo original.')
             format_name='GTiff'
         checksum=digest(path)
+        uploaded = saidas_storage.enviar_arquivo(execution, 'camadas', path, caminho=caminho_destino)
+        relative = remote_path = uploaded['caminho']
         state='temporario' if execucao_atual.get() else 'resultado'
         conn.execute('''INSERT INTO geoprocessamento.arquivo_resultado
             (id,camada_id,execucao_id,caminho,sha256,tamanho_bytes,formato,validacao,estado)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (camada_id) DO UPDATE SET caminho=EXCLUDED.caminho,
+                sha256=EXCLUDED.sha256,tamanho_bytes=EXCLUDED.tamanho_bytes,
+                formato=EXCLUDED.formato,validacao=EXCLUDED.validacao''',
             (ident,camada_id,execution,relative,checksum,path.stat().st_size,format_name,Jsonb(validation),state))
-        updated={**metadata,'caminho_arquivo':relative,'arquivo_resultado_id':ident,'execucao_id':execution}
+        updated={**metadata,'caminho_arquivo':relative,'arquivo_resultado_id':ident,'execucao_id':execution,
+                 'sha256':checksum,'origem_armazenamento':'storage'}
         updated['campos_json_arquivo'] = validation.get('campos_json', [])
         updated['metadados']={**(updated.get('metadados') or {}),'caminho_arquivo':relative}
         updated['metadados']['campos_json_arquivo'] = updated['campos_json_arquivo']
         updated['metadados']['arquivo_resultado_id'] = ident
         updated['metadados']['execucao_id'] = execution
         from api.repositories.camada_geoespacial_repository import _jsonb
-        conn.execute('UPDATE geoprocessamento.camada_processada SET metadados=%s WHERE id=%s',(_jsonb(updated),camada_id))
+        conn.execute('UPDATE geoprocessamento.camada_processada SET metadados=%s,storage_caminho=%s,formato=%s WHERE id=%s',(_jsonb(updated),relative,format_name,camada_id))
         metadata.update(updated)
         return {'id':ident,'caminho':relative,'sha256':checksum,'execucao_id':execution,'estado':state}
     except Exception:
-        # Apenas o arquivo UUID criado por esta chamada; nenhum diretório é apagado.
-        path.unlink(missing_ok=True)
+        if remote_path:
+            saidas_storage.remover(remote_path)
         raise
+    finally:
+        path.unlink(missing_ok=True)
+        pasta.rmdir()
 
 
 def gravar_e_confirmar(conn, camada_id, metadata, **kwargs):
@@ -299,6 +393,12 @@ def regularizar(recurso_id: str, responsavel: str | None = None) -> dict:
         row=conn.execute('SELECT * FROM geoprocessamento.camada_processada WHERE recurso_sessao_id=%s FOR UPDATE',(recurso_id,)).fetchone()
         if not row:
             raise ValueError('Camada processada não encontrada.')
+        if row.get('storage_caminho'):
+            from api.services.saidas_storage import conferir
+            item = conn.execute('SELECT * FROM geoprocessamento.arquivo_resultado WHERE camada_id=%s',(row['id'],)).fetchone()
+            conferir(item['caminho'],item['sha256'])
+            return dict(item)
+        row['metadados'] = {**(row['metadados'] or {}), 'nome':row['nome']}
         if row['tipo']=='vetor':
             features = conn.execute('''SELECT propriedades,ST_AsEWKB(geom) AS geometria
                 FROM geoprocessamento.camada_processada_feicao WHERE camada_id=%s ORDER BY ordem''',(row['id'],)).fetchall()
@@ -331,9 +431,8 @@ def publicar(recurso_id: str, responsavel: str) -> dict:
             WHERE c.recurso_sessao_id=%s AND e.status IN ('concluido','regularizacao') FOR UPDATE OF a''',(recurso_id,)).fetchone()
         if not row or row['estado'] not in {'resultado','acervo'}:
             raise ValueError('Somente um resultado concluído pode ser publicado.')
-        path=project_path(row['caminho'])
-        if not path.is_file() or digest(path)!=row['sha256']:
-            raise ValueError('Arquivo ausente ou com integridade divergente.')
+        from api.services.saidas_storage import conferir
+        conferir(row['caminho'],row['sha256'])
         conn.execute("UPDATE geoprocessamento.arquivo_resultado SET estado='acervo',publicado_em=COALESCE(publicado_em,now()),publicado_por=COALESCE(publicado_por,%s) WHERE id=%s",(responsavel,row['id']))
         return {'arquivo':row['caminho'],'estado':'acervo'}
 
@@ -372,13 +471,14 @@ def limpar(responsavel: str, executar=False) -> dict:
                 WHERE arquivo_id=%s LIMIT 1''',(row['id'],)).fetchone()
             if protected:
                 continue
-            path=project_path(row['caminho']).resolve()
-            if not path.is_relative_to(project_path('data/geoespacial/outputs').resolve()):
-                raise ValueError('Caminho de limpeza fora do storage de resultados.')
-            if path.exists() and digest(path)!=row['sha256']:
+            from api.services import saidas_storage
+            saidas_storage.validar(row['caminho'])
+            try:
+                saidas_storage.conferir(row['caminho'],row['sha256'])
+            except ValueError:
                 continue
             if executar:
-                path.unlink(missing_ok=True)
+                saidas_storage.remover(row['caminho'])
                 conn.execute("UPDATE geoprocessamento.arquivo_resultado SET estado='removido',removido_em=now(),removido_por=%s WHERE id=%s",(responsavel,row['id']))
             removed.append(row['caminho'])
     return {'executado':executar,'arquivos':removed,'quantidade':len(removed)}

@@ -251,68 +251,46 @@ def delete_by_codigo(
 
 
 def intersecoes_camada(camada_id: str, *, longitude: float, latitude: float) -> list[dict[str, Any]]:
-    query = """
-        SELECT h.id::text AS camada_id, h.nome_publicacao AS camada_origem,
-               h.versao, h.finalidade, f.ordem, f.propriedades,
-               ST_AsGeoJSON(ST_Transform(f.geom, 4326))::jsonb AS geometria
-        FROM geoprocessamento.camada_homologada h
-        JOIN geoprocessamento.camada_homologada_feicao f ON f.camada_id = h.id
-        WHERE h.id = %s::uuid
-          AND ST_Intersects(
-              f.geom,
-              CASE WHEN ST_SRID(f.geom) IN (0, 4326)
-                   THEN ST_SetSRID(ST_MakePoint(%s, %s), ST_SRID(f.geom))
-                   ELSE ST_Transform(ST_SetSRID(ST_MakePoint(%s, %s), 4326), ST_SRID(f.geom))
-              END
-          )
-        ORDER BY f.ordem
-    """
-    with get_connection() as conn:
-        return list(conn.execute(query, (camada_id, longitude, latitude, longitude, latitude)).fetchall())
+    from api.repositories import camada_geoespacial_repository as camadas
+    from shapely.geometry import Point, mapping
+    loaded = camadas.carregar_vetor(camada_id)
+    if not loaded:
+        return []
+    frame, metadata = loaded
+    spatial = frame.to_crs(4326)
+    indices = spatial.sindex.query(Point(longitude,latitude), predicate='intersects')
+    return [{'camada_id':str(metadata['id']), 'camada_origem':metadata['nome'],
+             'versao':'', 'finalidade':(metadata.get('metadados') or {}).get('finalidade'),
+             'ordem':int(index), 'propriedades':camadas._json_safe(spatial.drop(columns=spatial.geometry.name).iloc[index].to_dict()),
+             'geometria':mapping(spatial.geometry.iloc[index])} for index in sorted(indices)]
 
 
 def conjuntos_camada(camada_id: str) -> list[str]:
-    """Valores distintos de ``conjunto`` nas feições da camada consolidada.
-
-    A consolidação por Identity grava em cada feição a que conjunto ela pertence
-    ("RESTRIÇÃO" ou "RISCO"). É a marcação autoritativa do tipo da camada, usada
-    quando ``camada_homologada.finalidade`` está vazia — hoje o caso de 25 das 29
-    camadas homologadas.
-    """
-    query = """
-        SELECT DISTINCT propriedades->>'conjunto' AS conjunto
-        FROM geoprocessamento.camada_homologada_feicao
-        WHERE camada_id = %s::uuid AND propriedades ? 'conjunto'
-    """
-    with get_connection() as conn:
-        linhas = conn.execute(query, (camada_id,)).fetchall()
-    return [linha["conjunto"] for linha in linhas if linha["conjunto"]]
+    from api.repositories.camada_geoespacial_repository import carregar_vetor
+    loaded = carregar_vetor(camada_id)
+    if not loaded or 'conjunto' not in loaded[0]:
+        return []
+    return sorted(str(value) for value in loaded[0]['conjunto'].dropna().unique())
 
 
 def camada_homologada(camada_id: str) -> dict[str, Any] | None:
-    query = """SELECT id::text AS id, nome_publicacao AS nome, versao, finalidade, metadados
-               FROM geoprocessamento.camada_homologada WHERE id=%s::uuid"""
+    """Nome legado do contrato; resolve uma saída do catálogo no Storage."""
+    from api.repositories.saidas_geoespaciais_repository import listar
+    for row in listar():
+        if camada_id in {row['id'],str((row.get('metadados') or {}).get('id_banco',''))}:
+            return {**row,'versao':'','finalidade':(row.get('metadados') or {}).get('finalidade')}
+    from api.repositories import camada_geoespacial_repository as camadas
     with get_connection() as conn:
-        return conn.execute(query, (camada_id,)).fetchone()
+        found=camadas._find_layer(conn,camada_id)
+    if not found or found[0]!='processadas':
+        return None
+    row=found[1]
+    return {**row,'id':str(row['id']),'versao':'','finalidade':(row.get('metadados') or {}).get('finalidade')}
 
 
 def listar_pacotes_homologados(modulo: str) -> list[dict[str, Any]]:
-    query = """
-        SELECT p.id::text AS pacote_id,p.codigo,p.nome,p.versao,p.status,p.crs_saida,
-               p.metadados,p.atualizado_em,
-               COALESCE(jsonb_agg(jsonb_build_object(
-                   'id',h.id::text,'nome',h.nome_publicacao,'tipo',h.tipo,
-                   'finalidade',h.finalidade,'versao',h.versao,'hash',h.hash_conteudo,
-                   'metadados',h.metadados
-               ) ORDER BY h.homologado_em) FILTER (WHERE h.id IS NOT NULL),'[]'::jsonb) AS camadas
-        FROM geoprocessamento.produto p
-        LEFT JOIN geoprocessamento.camada_homologada h ON h.produto_id=p.id
-        WHERE p.modulo=%s AND p.status IN ('homologado','publicado')
-          AND COALESCE(p.metadados->>'origem','') <> 'upload_automatico'
-        GROUP BY p.id ORDER BY p.atualizado_em DESC
-    """
-    with get_connection() as conn:
-        return list(conn.execute(query, (modulo,)).fetchall())
+    """Pacotes de homologação descontinuados; nenhum novo snapshot é criado."""
+    return []
 
 
 def obter_pacote_homologado(pacote_id: str, modulo: str) -> dict[str, Any] | None:
@@ -357,10 +335,11 @@ def salvar_fatiamento_fase1(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def raster_homologado(camada_id: str) -> dict[str, Any] | None:
-    query = """SELECT h.id::text AS id,h.nome_publicacao AS nome,h.versao,h.hash_conteudo,
-                      h.metadados,r.dados_geotiff,r.nodata,r.perfil
-               FROM geoprocessamento.camada_homologada h
-               JOIN geoprocessamento.camada_homologada_raster r ON r.camada_id=h.id
-               WHERE h.id=%s::uuid"""
-    with get_connection() as conn:
-        return conn.execute(query, (camada_id,)).fetchone()
+    """Contrato de leitura legado, agora servido pelo arquivo no Storage."""
+    from api.repositories.camada_geoespacial_repository import carregar_raster
+    loaded=carregar_raster(camada_id)
+    if not loaded:
+        return None
+    content,metadata=loaded
+    return {**metadata,'id':str(metadata['id']),'versao':'','dados_geotiff':content,
+            'hash_conteudo':metadata.get('sha256'),'perfil':metadata.get('perfil',{})}

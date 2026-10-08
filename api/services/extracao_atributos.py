@@ -12,6 +12,7 @@ from api.db.connection import get_connection
 from api.path_policy import project_path
 from api.repositories import camada_geoespacial_repository as repo
 from api.services import ciclo_vida_arquivos as ciclo
+from api.services import saidas_storage
 from api.services.extracao_atributos_analise import analisar
 from api.services.feedback_operacao import operacao
 from api.services.geoespacial_service import geoespacial_service as geo
@@ -274,7 +275,7 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
         controle.fase(3, 'Salvando saídas e preparando o pacote', cancelavel=False)
         progress('Gravando a geometria resultante no banco')
         nome_saida = params.get('nome_saida') or f"Extração de {params['input_nome']}"
-        # Só no banco: o GeoPackage da saída viaja no pacote, não em data/geoespacial/outputs.
+        # A geometria de saída e o pacote usam o destino oficial no Storage.
         layer_id = geo.registrar_camada(saida,nome_saida,'OP-05',linhagem=params,gravar_arquivo=False)
         from osgeo import gdal
         result.update(id=ident,camada_resultado_id=layer_id,input_id=params['camada_id'],input_nome=params['input_nome'],
@@ -303,14 +304,16 @@ def _execute(ident, params, entrada_local=None, bases_locais=None, entradas_loca
         progress('Persistindo pacote, relatório e referências da execução; percentual interno indisponível')
         with _lock: etapas = list(_progress.get(ident) or [])
         from hashlib import sha256
+        pacote_ref, relatorio_ref = _guardar_saida(ident, nome_pacote, pacote, result)
         with get_connection() as conn:
             conn.execute('''INSERT INTO geoprocessamento.extracao_atributos
-                (execucao_id,nome_saida,operacao,responsavel,entrada,entrada_geojson,bases,camada_resultado_id,
-                 relatorio,etapas,pacote,pacote_nome,pacote_sha256,pacote_tamanho_bytes,pacote_arquivos)
+                (execucao_id,nome_saida,operacao,responsavel,entrada,bases,camada_resultado_id,
+                 relatorio,etapas,pacote_nome,pacote_sha256,pacote_tamanho_bytes,pacote_arquivos,pacote_caminho,relatorio_caminho)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
                 (ident,nome_saida,params['operacao'],params.get('responsavel'),Jsonb(entrada),
-                 Jsonb({'type':'FeatureCollection','features':[]} if params.get('entrada_local') else json.loads(source.to_crs(4674).to_json(default=str))),Jsonb(bases),layer_id,
-                 Jsonb(result),Jsonb(etapas),pacote,nome_pacote,sha256(pacote).hexdigest(),len(pacote),Jsonb(manifesto)))
+                 Jsonb(bases),layer_id,
+                 Jsonb({**_resumo_saida(result),'relatorio_sha256':relatorio_ref['sha256']}),Jsonb(etapas),nome_pacote,sha256(pacote).hexdigest(),len(pacote),Jsonb(manifesto),
+                 pacote_ref['caminho'],relatorio_ref['caminho']))
             ciclo.registrar_uso(conn,layer_id,'relatorio',ident)
         ciclo.finalizar(ident)
         controle.encerrar('concluido')
@@ -413,18 +416,33 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
     getattr(progress, 'detalhe', progress)(f'Pacote gerado: {nome_pacote} ({len(pacote)} bytes)')
     progress('Persistindo pacote, relatório e referências da execução; percentual interno indisponível')
     with _lock: etapas = list(_progress.get(ident) or [])
+    pacote_ref, relatorio_ref = _guardar_saida(ident, nome_pacote, pacote, result)
     with get_connection() as conn:
         conn.execute('''INSERT INTO geoprocessamento.extracao_atributos
-            (execucao_id,nome_saida,operacao,responsavel,entrada,entrada_geojson,bases,camada_resultado_id,
-             relatorio,etapas,pacote,pacote_nome,pacote_sha256,pacote_tamanho_bytes,pacote_arquivos)
+            (execucao_id,nome_saida,operacao,responsavel,entrada,bases,camada_resultado_id,
+             relatorio,etapas,pacote_nome,pacote_sha256,pacote_tamanho_bytes,pacote_arquivos,pacote_caminho,relatorio_caminho)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
             (ident,nome_saida,params['operacao'],params.get('responsavel'),Jsonb(_jsonavel(entrada)),
-             Jsonb({'type':'FeatureCollection','features':[]} if params.get('entrada_local') else json.loads(source.to_crs(4674).to_json(default=str))),Jsonb(_jsonavel(bases)),
-             result['camada_resultado_id'],Jsonb(_jsonavel(result)),Jsonb(etapas),pacote,nome_pacote,
-             sha256(pacote).hexdigest(),len(pacote),Jsonb(manifesto)))
+             Jsonb(_jsonavel(bases)),
+             result['camada_resultado_id'],Jsonb({**_resumo_saida(result),'relatorio_sha256':relatorio_ref['sha256']}),Jsonb(etapas),nome_pacote,
+             sha256(pacote).hexdigest(),len(pacote),Jsonb(manifesto),pacote_ref['caminho'],relatorio_ref['caminho']))
         for item in camadas.values():
             ciclo.registrar_uso(conn,item['camada_resultado_id'],'relatorio',ident)
     ciclo.finalizar(ident)
+
+
+def _resumo_saida(resultado):
+    return _jsonavel({key:resultado[key] for key in ['resumo','input_nome','camada_resultado_id','camadas','modo','operacao'] if key in resultado})
+
+
+def _guardar_saida(ident, nome, pacote, resultado):
+    package = saidas_storage.enviar_bytes(ident, 'pacotes', nome, pacote)
+    try:
+        report = saidas_storage.enviar_json(ident, 'resultado.json', _jsonavel(resultado))
+    except Exception:
+        saidas_storage.remover(package['caminho'])
+        raise
+    return package, report
 
 
 def consultar(ident, user, completo=False):
@@ -448,11 +466,12 @@ def consultar(ident, user, completo=False):
                          else 'Processamento em execução' if row['status'] == 'executando' else row['status'])
     if row['status']=='concluido' and completo:
         with get_connection() as conn:
-            linha = conn.execute('''SELECT nome_saida,relatorio,pacote_nome,pacote_tamanho_bytes,pacote_arquivos
+            linha = conn.execute('''SELECT nome_saida,relatorio,relatorio_caminho,pacote_nome,pacote_tamanho_bytes,pacote_arquivos
                 FROM geoprocessamento.extracao_atributos WHERE execucao_id=%s''',(ident,)).fetchone()
         if linha:
             response['nome_saida'] = linha['nome_saida']
-            response['resultado'] = linha['relatorio']
+            response['resultado'] = json.loads(saidas_storage.conferir(linha['relatorio_caminho'],
+                (linha.get('relatorio') or {}).get('relatorio_sha256'))) if linha.get('relatorio_caminho') else linha['relatorio']
             response['pacote'] = {'nome':linha['pacote_nome'],'tamanho_bytes':linha['pacote_tamanho_bytes'],
                                   'arquivos':linha['pacote_arquivos']}
         else:
@@ -604,11 +623,11 @@ def arquivo_do_pacote(ident, user, formato):
         raise LookupError('Arquivo inexistente no pacote.')
     ident = consultar(ident,user)['id']
     with get_connection() as conn:
-        linha = conn.execute('''SELECT pacote,pacote_nome,pacote_arquivos
+        linha = conn.execute('''SELECT pacote_caminho,pacote_sha256,pacote_nome,pacote_arquivos
             FROM geoprocessamento.extracao_atributos WHERE execucao_id=%s''',(ident,)).fetchone()
     if not linha:
         raise LookupError('Esta extração não tem pacote de saída.')
-    pacote = bytes(linha['pacote'])
+    pacote = saidas_storage.conferir(linha['pacote_caminho'],linha['pacote_sha256'])
     if formato == 'zip':
         return pacote, linha['pacote_nome']
     item = next((a for a in linha['pacote_arquivos'] if a['chave']==formato),None)
@@ -639,7 +658,7 @@ def excluir_execucao(ident, user):
     # com a execução (ON DELETE CASCADE).
     ident = consultar(ident,user)['id']
     with get_connection() as conn:
-        linha = conn.execute('''SELECT camada_resultado_id,relatorio->'camadas' AS camadas
+        linha = conn.execute('''SELECT camada_resultado_id,relatorio->'camadas' AS camadas,pacote_caminho,relatorio_caminho
             FROM geoprocessamento.extracao_atributos WHERE execucao_id=%s''',(ident,)).fetchone()
     if not linha:
         raise LookupError('Esta extração não tem pacote de saída.')
@@ -652,6 +671,9 @@ def excluir_execucao(ident, user):
     with get_connection() as conn:
         conn.execute('DELETE FROM geoprocessamento.arquivo_resultado_uso WHERE referencia=%s',(ident,))
         conn.execute("DELETE FROM geoprocessamento.execucao_arquivo WHERE id=%s AND operacao='extracao_atributos'",(ident,))
+    for key in ['pacote_caminho','relatorio_caminho']:
+        if linha.get(key):
+            saidas_storage.remover(linha[key])
 
 
 def cancelar(ident, user):

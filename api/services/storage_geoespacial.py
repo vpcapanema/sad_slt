@@ -34,8 +34,10 @@ from api.path_policy import project_path
 
 gdal.UseExceptions()
 
-# Pastas do storage que o sistema publica. Outras (base-geodatabase) ficam fora.
+# Pastas do storage que o sistema publica para escrita (upload, criação de
+# pastas). base-geodatabase guarda fontes brutas e só é lida pelo visualizador.
 RAIZES: tuple[str, ...] = ("base-geoespacial", "superficies-indices")
+RAIZES_LEITURA: tuple[str, ...] = ("base-geodatabase", *RAIZES, "saidas-geoespaciais")
 
 EXTENSOES_VETOR = {".gpkg", ".geojson", ".json", ".fgb", ".shp", ".kml"}
 EXTENSOES_RASTER = {".tif", ".tiff", ".img"}
@@ -170,7 +172,7 @@ def resolver(caminho: str) -> Path | ArquivoStorage:
     """Caminho relativo ao storage -> arquivo, recusando fuga e raízes não publicadas."""
     bruto = str(caminho or "").strip().replace("\\", "/")
     partes = PurePosixPath(bruto).parts
-    if not partes or bruto.startswith("/") or ".." in partes or partes[0] not in RAIZES:
+    if not partes or bruto.startswith("/") or ".." in partes or partes[0] not in RAIZES_LEITURA:
         raise ValueError("Caminho de camada inválido")
     if _via_api():
         relativo = "/".join(partes)
@@ -267,7 +269,7 @@ def _grupo(relativo: str) -> dict[str, Any]:
 
 def arvore(raiz: str) -> dict[str, Any]:
     """Pastas (grupos) e camadas de uma raiz publicada do storage."""
-    if raiz not in RAIZES:
+    if raiz not in RAIZES_LEITURA:
         raise ValueError("Pasta do storage não publicada")
     if not _existe_pasta(raiz):
         return {"nome": raiz, "caminho": raiz, "grupos": [], "camadas": [], "disponivel": False}
@@ -337,7 +339,7 @@ def navegar(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
     """Uma pasta do storage: subpastas e camadas vetoriais, para o explorador."""
     relativo = str(caminho or "").strip().replace("\\", "/").strip("/") or RAIZES[0]
     partes = PurePosixPath(relativo).parts
-    if ".." in partes or partes[0] not in RAIZES:
+    if ".." in partes or partes[0] not in RAIZES_LEITURA:
         raise ValueError("Pasta do storage inválida")
     pastas, arquivos = [], []
     for item in _listar(relativo):
@@ -362,6 +364,26 @@ def navegar(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
                             if not c.get("erro"))
     pai = PurePosixPath(relativo).parent.as_posix() if len(partes) > 1 else None
     return {"caminho": relativo, "pai": pai, "pastas": pastas, "arquivos": arquivos}
+
+
+def contagens(raiz: str) -> dict[str, int]:
+    """Total de camadas vetoriais de cada pasta, incluindo suas subpastas.
+
+    Usa o mesmo inventário da navegação, sem carregar feições no mapa.
+    As camadas de um GeoPackage ou pacote contam individualmente.
+    """
+    if raiz not in RAIZES_LEITURA:
+        raise ValueError("Pasta do storage não publicada")
+    resultado: dict[str, int] = {}
+
+    def contar(caminho: str) -> int:
+        dados = navegar(caminho)
+        total = len(dados["arquivos"]) + sum(contar(pasta["caminho"]) for pasta in dados["pastas"])
+        resultado[caminho] = total
+        return total
+
+    contar(raiz)
+    return resultado
 
 
 def inventariar_arquivo(caminho: str) -> dict[str, Any]:

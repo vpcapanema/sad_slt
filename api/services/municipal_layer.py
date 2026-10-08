@@ -25,7 +25,7 @@ from api.path_policy import project_path
 from api.services import base_municipal as dados
 from api.services import ciclo_vida_arquivos as ciclo
 
-DESTINO = 'data/geoespacial/uploads/datastorage/vetor'
+DESTINO = 'saidas-geoespaciais'
 _lock = threading.Lock()
 
 
@@ -137,33 +137,32 @@ def gerar(codigo, payload, nome, user, controle=None):
         # O nome sai antes da exportação: é ele que batiza a pasta e os arquivos.
         name = nome.strip()[:200] or nome_padrao(category, dados.selection(payload['attributes']))
         base = base_arquivos(name)
-        folder = project_path(f'{DESTINO}/{base}')
-        folder.mkdir(parents=True, exist_ok=False)
-        package, path, manifest, frame = materializar(payload, folder, base, controle) if controle else materializar(payload, folder, base)
-        relative = path.relative_to(project_path('.').resolve()).as_posix()
-        ident = 'camada_' + uuid4().hex
-        metadata = {'caminho_arquivo': relative, 'origem': 'municipal-layer', 'base_arquivos': base,
-                    'categoria_extracao': category, 'execucao_id': execution, 'manifesto': manifest,
-                    'feicoes': 645, 'colunas': list(frame.columns), 'sha256': ciclo.digest(path),
-                    'componentes': [{'arquivo': p.relative_to(project_path('.')).as_posix(),
-                                    'sha256': ciclo.digest(p)} for p in folder.iterdir() if p.is_file()]}
-        # O banco guarda o catálogo e a procedência; as feições permanecem no arquivo.
-        if controle:controle.fase(3,'Registrando a camada validada no acervo',cancelavel=False)
-        registering = True
-        with get_connection() as conn:
-            conn.execute('''INSERT INTO geoprocessamento.camada_importada
-                (recurso_sessao_id,nome,tipo,geometria_tipo,crs,formato,metadados,envelope)
-                VALUES (%s,%s,'vetor','MultiPolygon','EPSG:4674',%s,%s,ST_MakeEnvelope(%s,%s,%s,%s,4674))''',
-                (ident, name, payload['format'], Jsonb(metadata), *[float(v) for v in frame.total_bounds]))
-            conn.execute("UPDATE geoprocessamento.execucao_arquivo SET status='concluido',finalizado_em=now() WHERE id=%s", (execution,))
-        return package, {'id': ident, 'arquivo': relative, 'execucao_id': execution, 'nome': name}
+        from tempfile import TemporaryDirectory
+        from api.repositories import camada_geoespacial_repository as camadas, saidas_geoespaciais_repository as catalogo
+        from api.services import saidas_storage
+        with TemporaryDirectory(prefix='sicard-municipal-') as temporary:
+            folder = Path(temporary)
+            package, path, manifest, frame = materializar(payload, folder, base, controle) if controle else materializar(payload, folder, base)
+            ident = 'camada_' + uuid4().hex
+            metadata = {'origem_ferramenta':'municipal-layer', 'base_arquivos':base,
+                        'categoria_extracao':category, 'execucao_id':execution,
+                        'manifesto':manifest, 'feicoes':len(frame), 'colunas':list(frame.columns)}
+            if controle:controle.fase(3,'Registrando a camada validada no Sicard Storage',cancelavel=False)
+            registering = True
+            token = ciclo.execucao_atual.set(execution)
+            try:
+                camadas.salvar_vetor(recurso_id=ident,nome=name,origem='OP-MUNICIPAL',
+                                     gdf=frame,metadados=metadata,preservar_geometrias=True)
+            finally:
+                ciclo.execucao_atual.reset(token)
+            archive = saidas_storage.enviar_bytes(execution,'pacotes',base+'.zip',package)
+            catalogo.registrar_documento(execution,ident,archive,validacao={'pacote_municipal':True})
+            report = saidas_storage.enviar_json(execution,base+'_metadados.json',manifest)
+            catalogo.registrar_documento(execution,ident,report,validacao={'json':True,'tipo':'metadados_municipais'})
+            ciclo.finalizar(execution)
+            return package, {'id':ident,'arquivo':metadata['caminho_arquivo'],
+                             'pacote_caminho':archive['caminho'],'execucao_id':execution,'nome':name}
     except Exception as exc:
-        # Em COMMIT ambíguo, preservar o arquivo permite conciliação sem perder dados.
-        if not registering and folder and folder.is_dir() and folder.resolve().is_relative_to(project_path(DESTINO).resolve()):
-            for child in folder.iterdir():
-                if child.is_file():
-                    child.unlink()
-            folder.rmdir()
         if execution:
             ciclo.finalizar(execution, erro=str(exc))
         raise
@@ -180,7 +179,7 @@ def carregar_para_extracao(ident):
     metadata = (row or {}).get('metadados') or {}
     if metadata.get('origem') == 'municipal-layer':
         path = project_path(metadata['caminho_arquivo']).resolve()
-        if not path.is_relative_to(project_path(DESTINO).resolve()):
+        if not path.is_relative_to(project_path('data/geoespacial/uploads/datastorage/vetor').resolve()):
             raise ValueError('Camada municipal fora do acervo.')
         return gpd.read_file(path, engine='pyogrio')
     from api.services.geoespacial_service import geoespacial_service

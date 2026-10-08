@@ -77,3 +77,6 @@ documentacao/geoespacial/entregas/
 
 # Logs e capturas da automacao de navegador nao fazem parte da entrega HTML.
 /.playwright-mcp/
+
+# Inventario de dados e evidencias de trabalho: arquivos locais, sem publicar no Git.
+/outputs/inventario-saidas-20261008/

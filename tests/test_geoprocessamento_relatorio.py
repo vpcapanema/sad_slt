@@ -14,6 +14,22 @@ from api.path_policy import PROJECT_ROOT
 from api.services import geoprocessamento_relatorio as rel
 
 
+@pytest.fixture(autouse=True)
+def storage_relatorio(monkeypatch, tmp_path):
+    from api.services import storage_remoto, ciclo_vida_arquivos as ciclo
+    from api.repositories import saidas_geoespaciais_repository as catalogo
+    from uuid import uuid4
+    monkeypatch.setattr(ciclo,'iniciar',lambda *args:str(uuid4()))
+    monkeypatch.setattr(ciclo,'finalizar',lambda *args:None)
+    monkeypatch.setattr(catalogo,'registrar_documento',lambda *args,**kwargs:None)
+    def enviar(caminho,path):
+        target=tmp_path/caminho
+        target.parent.mkdir(parents=True,exist_ok=True)
+        target.write_bytes(path.read_bytes())
+    monkeypatch.setattr(storage_remoto,'enviar',enviar)
+    monkeypatch.setattr(storage_remoto,'baixar',lambda caminho:(tmp_path/caminho).read_bytes())
+
+
 @pytest.fixture()
 def job_concluido() -> dict:
     return {
@@ -50,7 +66,7 @@ def test_relatorio_e_gravado_e_relegivel(job_concluido, tmp_path, monkeypatch):
     assert conteudo["job"]["id"] == "job_teste"
 
 
-def test_arquivo_produzido_recebe_sidecar_ao_lado(job_concluido, tmp_path, monkeypatch):
+def test_relatorio_no_storage_preserva_proveniencia_sem_sidecar_local(job_concluido, tmp_path, monkeypatch):
     monkeypatch.setattr(rel, "PROJECT_ROOT", tmp_path)
     produto = tmp_path / "data" / "geoespacial" / "outputs" / "vetor" / "saida.gpkg"
     produto.parent.mkdir(parents=True, exist_ok=True)
@@ -60,11 +76,11 @@ def test_arquivo_produzido_recebe_sidecar_ao_lado(job_concluido, tmp_path, monke
     gravados = rel.salvar(job_concluido)
 
     sidecar = produto.with_name(produto.name + rel.SIDECAR_SUFFIX)
-    assert sidecar.exists(), "o produto não pode viajar sem sua procedência"
-    conteudo = json.loads(sidecar.read_text(encoding="utf-8"))
+    assert not sidecar.exists(), "não deve criar outra cópia permanente na aplicação"
+    assert len(gravados)==1 and gravados[0].startswith('saidas-geoespaciais/execucoes/')
+    conteudo = json.loads((tmp_path/gravados[0]).read_text(encoding="utf-8"))
     assert conteudo["saidas"][0]["sha256"], "a saída deve ser identificada por hash"
     assert conteudo["saidas"][0]["bytes"] == len(b"conteudo do produto")
-    assert any(rel.SIDECAR_SUFFIX in caminho for caminho in gravados)
 
 
 def test_falha_tambem_gera_relatorio(job_concluido, tmp_path, monkeypatch):
@@ -78,7 +94,9 @@ def test_falha_tambem_gera_relatorio(job_concluido, tmp_path, monkeypatch):
 
 def test_relatorio_nunca_derruba_o_geoprocesso(monkeypatch):
     monkeypatch.setattr(rel, "construir", lambda job: (_ for _ in ()).throw(RuntimeError("falhou")))
-    assert rel.salvar({"id": "x"}) == []
+    job={'id':'x'}
+    assert rel.salvar(job) == []
+    assert job['erro_relatorio']=='falhou'
 
 
 def test_jobs_gravam_relatorio_ao_concluir_e_ao_falhar():

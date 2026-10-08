@@ -64,13 +64,41 @@ def test_pastas_aninhadas_de_superficies_indices(storage):
     assert [grupo["nome"] for grupo in hierarquizacao["grupos"]] == ["elegibilidade"]
 
 
-@pytest.mark.parametrize("raiz", ["base-geodatabase", "..", "outra"])
+def test_contagens_incluem_camadas_de_subpastas_e_arquivos_multicamadas(storage):
+    totais = storage_geoespacial.contagens("base-geoespacial")
+    assert totais == {
+        "base-geoespacial/raster": 0,
+        "base-geoespacial/vetor": 3,
+        "base-geoespacial": 3,
+    }
+    assert storage_geoespacial.contagens("base-geodatabase") == {"base-geodatabase": 0}
+
+
+def test_contagens_mostram_zero_em_todos_os_niveis_vazios(storage):
+    assert storage_geoespacial.contagens("superficies-indices") == {
+        "superficies-indices/hierarquizacao/elegibilidade": 0,
+        "superficies-indices/hierarquizacao": 0,
+        "superficies-indices": 0,
+    }
+    with pytest.raises(ValueError):
+        storage_geoespacial.contagens("../fora")
+
+
+@pytest.mark.parametrize("raiz", ["..", "outra", "uploads"])
 def test_so_as_pastas_publicadas_sao_listadas(storage, raiz):
     with pytest.raises(ValueError):
         storage_geoespacial.arvore(raiz)
 
 
-@pytest.mark.parametrize("caminho", ["../fora.gpkg", "/etc/passwd", "base-geoespacial/../../x.gpkg", "base-geodatabase/a.gpkg"])
+def test_base_geodatabase_e_legivel_mas_nao_publicada_para_escrita(storage):
+    """O visualizador lê as fontes brutas; upload e criação de pastas continuam
+    restritos às raízes publicadas."""
+    assert storage_geoespacial.arvore("base-geodatabase")["disponivel"] is True
+    assert "base-geodatabase" not in storage_geoespacial.RAIZES
+    assert storage_geoespacial.RAIZES_LEITURA[0] == "base-geodatabase"
+
+
+@pytest.mark.parametrize("caminho", ["../fora.gpkg", "/etc/passwd", "base-geoespacial/../../x.gpkg", "uploads/a.gpkg"])
 def test_caminho_de_camada_nao_sai_do_storage(storage, caminho):
     with pytest.raises(ValueError):
         storage_geoespacial.resolver(caminho)
@@ -126,8 +154,8 @@ def test_pagina_renomeada_e_rota_antiga_redireciona():
     assert antiga.headers["location"] == "/restrict/geoespacial/visualizador-bases-geoespaciais/"
 
     indice = Path("templates/paginas/geoespacial/index.html").read_text(encoding="utf-8")
-    assert "Visualizador de bases geoespaciais" in indice
-    assert "Camadas de Superfícies-índice" in indice
+    assert "Visualizador de camadas" in indice
+    assert 'href="/restrict/geoespacial/visualizador-camadas/"' in indice
     assert "insumos geoespaciais" not in indice.lower()
 
 

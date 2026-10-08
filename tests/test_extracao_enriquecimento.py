@@ -5,6 +5,18 @@ from shapely.geometry import LineString, Point, Polygon, box
 
 from api.services.extracao_atributos_enriquecimento import enriquecer, medida, preparar
 
+
+@pytest.fixture(autouse=True)
+def storage_isolado(monkeypatch,tmp_path):
+    from api.services import storage_remoto
+    def enviar(caminho,arquivo):
+        target=tmp_path/caminho
+        target.parent.mkdir(parents=True,exist_ok=True)
+        target.write_bytes(arquivo.read_bytes())
+    monkeypatch.setattr(storage_remoto,'enviar',enviar)
+    monkeypatch.setattr(storage_remoto,'baixar',lambda caminho:(tmp_path/caminho).read_bytes())
+    monkeypatch.setattr(storage_remoto,'apagar_arquivo',lambda caminho:(tmp_path/caminho).unlink())
+
 X, Y = 5_000_000, 7_500_000
 
 
@@ -196,14 +208,15 @@ def test_execucao_do_servico_grava_camadas_pacote_e_finaliza_sem_erro(monkeypatc
     sql, valores = inseridos[-1]
     assert 'INSERT INTO geoprocessamento.extracao_atributos' in sql and valores[2] == modo
     if entrada_memoria:
-        assert valores[5].obj == {'type':'FeatureCollection','features':[]}
         assert valores[4].obj['origem']=='memoria'
-    relatorio = valores[8].obj
+    assert 'entrada_geojson' not in sql and ',pacote,' not in sql
+    relatorio = valores[7].obj
     assert relatorio['operacao'] == modo
     if modo == 'estatisticas':
         assert sum(n for _, n in gravadas) == len(entrada)
     assert relatorio['modo'] == 'enriquecimento' and set(relatorio['camadas']) == {'entrada_1_linhas', 'entrada_1_pontos'}
-    assert relatorio['resumo']['camadas_intersectadas'] >= 1 and valores[11].endswith('.zip')
+    assert relatorio['resumo']['camadas_intersectadas'] >= 1 and valores[9].endswith('.zip')
+    assert valores[13].startswith('saidas-geoespaciais/') and valores[14].startswith('saidas-geoespaciais/')
 
 
 def test_varias_entradas_com_identificador_filtro_e_campos():

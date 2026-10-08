@@ -1902,8 +1902,8 @@ class GeoespacialService:
     ) -> dict[str, Any]:
         """Persiste camada ou raster, inferindo o formato pela extensão da saída.
 
-        Independente do valor recebido em ``destino``, a gravação ocorre sempre
-        em ``data/geoespacial/outputs`` — destino único de saídas geoprocessadas.
+        Independente do valor recebido em ``destino``, a gravação definitiva
+        ocorre no Sicard Storage, na pasta da execução.
         A categoria do dado (``vetor`` ou ``raster``) é determinada pela natureza
         do recurso em memória e validada contra a extensão do arquivo ANTES de
         qualquer I/O; ela qualifica o dado, mas não cria subpasta.
@@ -1968,8 +1968,8 @@ class GeoespacialService:
             tipo = "raster"
 
         record = registrar_exportacao(caminho, entrada, tipo)
-        return {**record, "operacao": "salvar_camada", "entrada": entrada, "destino": pasta_relativa,
-                "saida": caminho.name, "caminho": project_relative(caminho), "tipo": tipo,
+        return {**record, "operacao": "salvar_camada", "entrada": entrada,
+                "saida": caminho.name, "tipo": tipo,
                 "categoria": categoria_dado,
                 "crs": crs_final, "formato": formato_final}
 

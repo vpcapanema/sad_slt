@@ -1,4 +1,4 @@
-"""Persistência física segregada de camadas importadas, processadas e homologadas."""
+"""Entradas no PostGIS; saídas no Storage com catálogo de metadados no banco."""
 from __future__ import annotations
 
 import json
@@ -28,9 +28,6 @@ STORAGES: dict[str, tuple[str, str, str]] = {
     ),
     "processadas": (
         "camada_processada", "camada_processada_feicao", "camada_processada_raster"
-    ),
-    "homologadas": (
-        "camada_homologada", "camada_homologada_feicao", "camada_homologada_raster"
     ),
 }
 
@@ -121,12 +118,7 @@ def salvar_vetor(
     gravar_arquivo: bool = True,
     preservar_geometrias: bool = False,
 ) -> str:
-    """Grava vetor na tabela física correspondente à sua etapa.
-
-    `gravar_arquivo=False`: saída processada fica só no banco, sem o GeoPackage em
-    data/geoespacial/outputs. É o caso da extração de atributos, cujo arquivo
-    viaja no pacote guardado em geoprocessamento.extracao_atributos.
-    """
+    """Importadas mantêm conteúdo no banco; processadas sempre geram arquivo no Storage."""
     categoria = _categoria_origem(origem)
     catalog, features, _ = STORAGES[categoria]
     # O geom sempre acaba gravado em EPSG:4674 (ver _feature_rows) —
@@ -135,8 +127,13 @@ def salvar_vetor(
     crs = "EPSG:4674"
     geometry_types = sorted(set(gdf.geometry.geom_type.dropna().astype(str)))
     geometry_type = ",".join(geometry_types) or None
-    rows = _feature_rows(gdf, usar_wkb=preservar_geometrias)
     metadata = {**metadados, "origem": origem, "categoria_armazenamento": categoria}
+    if categoria == 'processadas':
+        ident = _salvar_saida(recurso_id, nome, origem, gdf=gdf, metadados=metadata,
+                             geometria_tipo=geometry_type, crs=crs)
+        metadados.update(metadata)
+        return ident
+    rows = _feature_rows(gdf, usar_wkb=preservar_geometrias)
     with get_connection() as conn:
         if categoria == "importadas":
             camada = conn.execute(
@@ -193,6 +190,12 @@ def salvar_raster(
     categoria = _categoria_origem(origem)
     catalog, _, rasters = STORAGES[categoria]
     metadata = {**metadados, "origem": origem, "categoria_armazenamento": categoria}
+    if categoria == 'processadas':
+        metadata.update(perfil=perfil, largura=largura, altura=altura, dtype=dtype, nodata=nodata)
+        ident = _salvar_saida(recurso_id, nome, origem, raster_bytes=dados_geotiff,
+                             metadados=metadata, geometria_tipo='Raster', crs=crs)
+        metadados.update(metadata)
+        return ident
     with get_connection() as conn:
         if categoria == "importadas":
             camada = conn.execute(
@@ -235,6 +238,32 @@ def salvar_raster(
         return database_id
 
 
+def _salvar_saida(recurso_id, nome, origem, *, metadados, geometria_tipo, crs,
+                  gdf=None, raster_bytes=None):
+    """Catálogo no banco; conteúdo vetorial/raster exclusivamente no storage."""
+    metadados.update(nome=nome)
+    with get_connection() as conn:
+        from api.services import ciclo_vida_arquivos as ciclo, saidas_storage
+        execution=ciclo.execucao_atual.get()
+        if execution is None:
+            execution=str(uuid4())
+            conn.execute('''INSERT INTO geoprocessamento.execucao_arquivo
+                (id,operacao,status,finalizado_em,parametros)
+                VALUES (%s,%s,'concluido',now(),%s)''',
+                (execution,origem,_jsonb({'linhagem_original':metadados.get('linhagem')})))
+        destino=saidas_storage.destino(execution,'camadas',nome+('.gpkg' if gdf is not None else '.tif'))
+        row = conn.execute('''INSERT INTO geoprocessamento.camada_processada
+            (recurso_sessao_id,nome,tipo,geometria_tipo,crs,formato,operacao_origem,linhagem,metadados,storage_caminho)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id''',
+            (recurso_id,nome,'vetor' if gdf is not None else 'raster',geometria_tipo,crs,
+             'GPKG' if gdf is not None else 'GTiff',origem,_jsonb(metadados.get('linhagem',{})),_jsonb(metadados),destino)).fetchone()
+        from api.services.ciclo_vida_arquivos import gravar_e_confirmar
+        frame = (gdf.to_crs(crs) if gdf.crs else gdf.set_crs(crs)) if gdf is not None else None
+        gravar_e_confirmar(conn,str(row['id']),metadados,frame=frame,raster_bytes=raster_bytes,
+                          execucao_id=execution,caminho_destino=destino)
+    return str(row['id'])
+
+
 def _find_working_layer(conn: Any, recurso_id: str) -> tuple[str, dict[str, Any]] | None:
     for categoria in ("processadas", "importadas"):
         catalog = STORAGES[categoria][0]
@@ -260,7 +289,7 @@ def obter_importada_por_hash(hash_arquivo: str) -> dict[str, Any] | None:
 
 
 def _find_layer(conn: Any, recurso_id: str) -> tuple[str, dict[str, Any]] | None:
-    for categoria in ("homologadas", "processadas", "importadas"):
+    for categoria in ("processadas", "importadas"):
         catalog = STORAGES[categoria][0]
         row = conn.execute(
             sql.SQL("SELECT * FROM geoprocessamento.{} WHERE recurso_sessao_id=%s").format(
@@ -270,16 +299,16 @@ def _find_layer(conn: Any, recurso_id: str) -> tuple[str, dict[str, Any]] | None
         ).fetchone()
         if row:
             return categoria, dict(row)
-    # Fallback: aceita camada_homologada.id (UUID) como identificador.
+    from uuid import UUID
     try:
-        row = conn.execute(
-            "SELECT * FROM geoprocessamento.camada_homologada WHERE id=%s::uuid",
-            (recurso_id,),
-        ).fetchone()
-    except Exception:
-        row = None
-    if row:
-        return "homologadas", dict(row)
+        ident = UUID(recurso_id)
+    except (ValueError, TypeError):
+        return None
+    for categoria in ("processadas", "importadas"):
+        row = conn.execute(sql.SQL('SELECT * FROM geoprocessamento.{} WHERE id=%s')
+                           .format(sql.Identifier(STORAGES[categoria][0])),(ident,)).fetchone()
+        if row:
+            return categoria,dict(row)
     return None
 
 
@@ -292,6 +321,8 @@ def substituir_vetor(recurso_id: str, gdf: gpd.GeoDataFrame, metadados: dict[str
         if not found or found[1]["tipo"] != "vetor":
             raise RuntimeError(f"Camada de trabalho {recurso_id} não encontrada")
         categoria, camada = found
+        if categoria == 'processadas':
+            raise ValueError('Saídas são imutáveis. Gere uma nova camada para editar seu conteúdo.')
         catalog, features, _ = STORAGES[categoria]
         database_id = str(camada["id"])
         if (arquivo_editado is None) != (gravar_arquivo is None):
@@ -379,6 +410,9 @@ def carregar_vetor(recurso_id: str) -> tuple[gpd.GeoDataFrame, dict[str, Any]] |
         if not found or found[1]["tipo"] != "vetor":
             return None
         categoria, camada = found
+        if categoria == 'processadas' and camada.get('storage_caminho'):
+            from api.services.saidas_storage import vetor
+            return vetor(camada), {**camada, 'categoria': categoria}
         features = STORAGES[categoria][1]
         rows = conn.execute(
             sql.SQL("""SELECT propriedades,ST_AsGeoJSON(geom)::jsonb AS geometria
@@ -413,6 +447,9 @@ def carregar_vetor_bruto(recurso_id: str):
         if not found or found[1]['tipo'] != 'vetor':
             return None
         categoria, camada = found
+        if categoria == 'processadas' and camada.get('storage_caminho'):
+            from api.services.saidas_storage import vetor
+            return vetor(camada), {**camada, 'categoria': categoria}
         rows = conn.execute(sql.SQL(
             'SELECT propriedades, ST_AsBinary(geom) AS wkb FROM geoprocessamento.{} '
             'WHERE camada_id=%s ORDER BY ordem'
@@ -435,6 +472,12 @@ def atributos_paginados(recurso_id: str, offset: int = 0, limite: int = 100) -> 
         if not found or found[1]['tipo'] != 'vetor':
             return None
         categoria, camada = found
+        if categoria == 'processadas' and camada.get('storage_caminho'):
+            from api.services.saidas_storage import vetor
+            frame = vetor(camada)
+            fields = [c for c in frame.columns if c != frame.geometry.name]
+            return {'campos':fields,'linhas':_json_safe(frame.iloc[offset:offset+limite][fields].to_dict('records')),
+                    'total':len(frame),'offset':offset,'limite':limite}
         tabela = sql.Identifier(STORAGES[categoria][1])
         total = conn.execute(sql.SQL('SELECT count(*) AS total FROM geoprocessamento.{} WHERE camada_id=%s').format(tabela),
                              (camada['id'],)).fetchone()['total']
@@ -455,6 +498,11 @@ def atributos_dashboard(recurso_id: str) -> list[dict] | None:
         if not found or found[1]['tipo'] != 'vetor':
             return None
         categoria, camada = found
+        if categoria == 'processadas' and camada.get('storage_caminho'):
+            from api.services.saidas_storage import vetor
+            frame = vetor(camada)
+            fields = [c for c in frame.columns if c != frame.geometry.name]
+            return [{'ordem':i,'propriedades':_json_safe(row)} for i,row in enumerate(frame[fields].to_dict('records'))]
         return conn.execute(sql.SQL('SELECT ordem,propriedades FROM geoprocessamento.{} '
                                     'WHERE camada_id=%s ORDER BY ordem').format(sql.Identifier(STORAGES[categoria][1])),
                             (camada['id'],)).fetchall()
@@ -467,6 +515,11 @@ def geometrias_dashboard(recurso_id: str, ordens: list[int]):
         if not found or found[1]['tipo'] != 'vetor':
             raise LookupError('Camada de saída não encontrada.')
         categoria, camada = found
+        if categoria == 'processadas' and camada.get('storage_caminho'):
+            from api.services.saidas_storage import vetor
+            frame = vetor(camada).to_crs(4674)
+            return [{'ordem':i,'geometria':mapping(frame.geometry.iloc[i]) if frame.geometry.iloc[i] is not None else None}
+                    for i in sorted(set(ordens)) if 0 <= i < len(frame)]
         rows = conn.execute(sql.SQL('SELECT ordem,ST_AsGeoJSON(geom)::jsonb AS geometria '
                                     'FROM geoprocessamento.{} WHERE camada_id=%s AND ordem=ANY(%s) ORDER BY ordem')
                             .format(sql.Identifier(STORAGES[categoria][1])), (camada['id'], ordens)).fetchall()
@@ -480,6 +533,9 @@ def carregar_vetor_geojson(recurso_id: str) -> dict[str, Any] | None:
         if not found or found[1]["tipo"] != "vetor":
             return None
         categoria, camada = found
+        if categoria == 'processadas' and camada.get('storage_caminho'):
+            from api.services.saidas_storage import vetor
+            return json.loads(vetor(camada).to_crs(4674).to_json(default=str))
         features = STORAGES[categoria][1]
         row = conn.execute(
             sql.SQL("""SELECT jsonb_build_object(
@@ -504,6 +560,9 @@ def obter_vetor_bounds(recurso_id: str) -> list[float] | None:
         if not found or found[1]["tipo"] != "vetor":
             return None
         categoria, camada = found
+        if categoria == 'processadas' and camada.get('storage_caminho'):
+            from api.services.storage_geoespacial import bounds
+            return bounds(camada['storage_caminho'], 'resultado')
         features = STORAGES[categoria][1]
         row = conn.execute(
             sql.SQL("""SELECT ST_XMin(extent) AS xmin,ST_YMin(extent) AS ymin,
@@ -526,6 +585,9 @@ def carregar_vetor_mvt(recurso_id: str, z: int, x: int, y: int) -> bytes | None:
         if not found or found[1]["tipo"] != "vetor":
             return None
         categoria, camada = found
+        if categoria == 'processadas' and camada.get('storage_caminho'):
+            from api.services.storage_geoespacial import tile
+            return tile(camada['storage_caminho'], 'resultado', z, x, y)
         features = STORAGES[categoria][1]
         row = conn.execute(
             sql.SQL("""WITH tile_bounds AS (
@@ -555,6 +617,10 @@ def carregar_raster(recurso_id: str) -> tuple[bytes, dict[str, Any]] | None:
         if not found or found[1]["tipo"] != "raster":
             return None
         categoria, camada = found
+        if categoria == 'processadas' and camada.get('storage_caminho'):
+            from api.services.saidas_storage import conferir
+            metadata = camada.get('metadados') or {}
+            return conferir(camada['storage_caminho'], metadata.get('sha256')), {**camada, **metadata, 'categoria':categoria}
         rasters = STORAGES[categoria][2]
         row = conn.execute(
             sql.SQL("SELECT * FROM geoprocessamento.{} WHERE camada_id=%s").format(
@@ -570,6 +636,10 @@ def carregar_raster(recurso_id: str) -> tuple[bytes, dict[str, Any]] | None:
 
 def _remover_arquivo_de_saida(caminho: str) -> None:
     """Apaga o arquivo de um resultado retirado, sem sair de outputs."""
+    from api.services import saidas_storage
+    if caminho.startswith(saidas_storage.RAIZ + '/'):
+        saidas_storage.remover(caminho)
+        return
     raiz = project_path("data/geoespacial/outputs").resolve()
     try:
         alvo = project_path(caminho).resolve()
@@ -581,11 +651,6 @@ def _remover_arquivo_de_saida(caminho: str) -> None:
 
 def excluir(recurso_id: str) -> bool:
     with get_connection() as conn:
-        if conn.execute(
-            "SELECT 1 FROM geoprocessamento.camada_homologada WHERE recurso_sessao_id=%s",
-            (recurso_id,),
-        ).fetchone():
-            raise ValueError("Camada homologada é somente leitura")
         # arquivo_resultado referencia camada_processada com ON DELETE RESTRICT:
         # sem retirar antes o registro do arquivo e seus usos, a exclusão da
         # camada falha no banco e o endpoint devolvia um 409 enganoso.
@@ -636,320 +701,27 @@ def excluir(recurso_id: str) -> bool:
         return removido
 
 
-_CANONICAL_ROOT = "data/geoespacial/biblioteca_canonica"
-
-
-def _slugify(value: str) -> str:
-    normalized = unicodedata.normalize("NFKD", str(value)).encode("ascii", "ignore").decode("ascii")
-    slug = re.sub(r"[^A-Za-z0-9]+", "_", normalized).strip("_").lower()
-    return slug or "camada"
-
-
-def _snapshot_gdf(conn: Any, snapshot_id: Any, crs: Any) -> gpd.GeoDataFrame:
-    """Monta o GeoDataFrame do snapshot homologado lendo feições na transação atual."""
-    rows = conn.execute(
-        sql.SQL(
-            "SELECT propriedades, ST_AsGeoJSON(geom)::jsonb AS geometria"
-            " FROM geoprocessamento.camada_homologada_feicao WHERE camada_id=%s ORDER BY ordem"
-        ),
-        (snapshot_id,),
-    ).fetchall()
-    features = [
-        {"type": "Feature", "properties": row["propriedades"], "geometry": row["geometria"]}
-        for row in rows
-    ]
-    gdf = (
-        gpd.GeoDataFrame.from_features(features, crs="EPSG:4674")
-        if features else gpd.GeoDataFrame(geometry=[], crs="EPSG:4674")
-    )
-    if crs and str(crs).upper() != "EPSG:4674" and not gdf.empty:
-        gdf = gdf.to_crs(crs)
-    return gdf
-
-
-def _exportar_para_biblioteca_canonica(
-    *,
-    modulo_consumidor: str,
-    nome_publicacao: str,
-    versao: str,
-    tipo: str,
-    gdf: gpd.GeoDataFrame | None = None,
-    raster_bytes: Any = None,
-    progress: Callable[[str], None] | None = None,
-) -> tuple[str | None, Path | None]:
-    """Materializa a camada homologada em arquivo dentro de data/geoespacial/biblioteca_canonica."""
-    subdir = project_path(f"{_CANONICAL_ROOT}/{_slugify(modulo_consumidor)}")
-    subdir.mkdir(parents=True, exist_ok=True)
-    base = f"{_slugify(nome_publicacao)}_{_slugify(versao)}"
-    if tipo == "vetor":
-        if gdf is None or gdf.empty:
-            return None, None
-        destino = subdir / f"{base}.gpkg"
-        destino.unlink(missing_ok=True)  # evita append de camada em GPKG preexistente
-        try:
-            gdf.to_file(destino, driver="GPKG", layer=_slugify(nome_publicacao))
-        except Exception:
-            destino.unlink(missing_ok=True)  # não deixa arquivo parcial
-            raise
-    else:
-        if not raster_bytes:
-            return None, None
-        destino = subdir / f"{base}.tif"
-        destino.unlink(missing_ok=True)
-        try:
-            destino.write_bytes(bytes(raster_bytes))
-        except Exception:
-            destino.unlink(missing_ok=True)
-            raise
-    relativo = destino.relative_to(project_path(".")).as_posix()
-    if progress:
-        progress(f"Arquivo exportado para biblioteca canônica: {relativo}")
-    return relativo, destino
-
-
 def esta_homologada(recurso_id: str) -> bool:
-    with get_connection() as conn:
-        return conn.execute(
-            "SELECT 1 FROM geoprocessamento.camada_homologada WHERE recurso_sessao_id=%s",
-            (recurso_id,),
-        ).fetchone() is not None
+    """Compatibilidade: o conceito de camada homologada foi retirado."""
+    return False
 
 
 def resolver_recurso_id(identificador: str) -> str | None:
-    """Aceita `recurso_sessao_id` ou `camada_homologada.id` (UUID) e devolve o `recurso_sessao_id`."""
     if not identificador:
         return None
     with get_connection() as conn:
-        row = conn.execute(
-            "SELECT recurso_sessao_id FROM geoprocessamento.camada_homologada WHERE recurso_sessao_id=%s",
-            (identificador,),
-        ).fetchone()
-        if row:
-            return row["recurso_sessao_id"]
-        try:
-            row = conn.execute(
-                "SELECT recurso_sessao_id FROM geoprocessamento.camada_homologada WHERE id=%s::uuid",
-                (identificador,),
-            ).fetchone()
-        except Exception:
-            return None
-        return row["recurso_sessao_id"] if row else None
+        found = _find_layer(conn, identificador)
+        return found[1]['recurso_sessao_id'] if found else None
 
 
-_PRODUTOS_AUTOMATICOS = {
-    "fase1": ("AUTO-FASE1-CAMADAS-HOMOLOGADAS", "Camadas homologadas por upload — Elegibilidade territorial"),
-    "fase2": ("AUTO-FASE2-CAMADAS-HOMOLOGADAS", "Camadas homologadas por upload — Favorabilidade de grade e da rede"),
-}
-
-
-def _produto_automatico(conn: Any, modulo_consumidor: str) -> str:
-    """Produto de registro das camadas homologadas pelas telas de upload.
-
-    Existe para a camada nunca ficar com `produto_id` nulo — não para formar par.
-    Emparelhar por produto aqui seria errado: as camadas de um par sobem uma de
-    cada vez, então o pacote passaria por um estado pela metade, e vários pares
-    no mesmo produto se misturariam (a Fase 1 filtra os riscos *dentro* do
-    pacote, e ofereceria o risco de outro par). Por isso `listar_pacotes_homologados`
-    ignora este produto pela marca `origem=upload_automatico`, e as camadas
-    enviadas por upload aparecem na Fase 1 como opções avulsas, livremente
-    combináveis em qualquer ordem de envio.
-
-    `ambos` cai no produto da Fase 1 porque `produto.modulo` só aceita fase1 ou
-    fase2 e a camada tem um único `produto_id`; na Fase 2 ela continua visível
-    pela biblioteca canônica, que não depende de produto.
-    """
-    modulo = modulo_consumidor if modulo_consumidor in _PRODUTOS_AUTOMATICOS else "fase1"
-    codigo, nome = _PRODUTOS_AUTOMATICOS[modulo]
-    existente = conn.execute(
-        "SELECT id::text AS id FROM geoprocessamento.produto WHERE codigo=%s", (codigo,)
-    ).fetchone()
-    if existente:
-        conn.execute(
-            "UPDATE geoprocessamento.produto SET status='homologado',atualizado_em=CURRENT_TIMESTAMP"
-            " WHERE id=%s::uuid AND status NOT IN ('homologado','publicado')",
-            (existente["id"],),
-        )
-        return existente["id"]
-    criado = conn.execute(
-        """INSERT INTO geoprocessamento.produto (codigo,modulo,nome,descricao,versao,status,crs_saida,metadados)
-           VALUES (%s,%s,%s,%s,'v1','homologado','EPSG:4674',%s) RETURNING id::text AS id""",
-        (codigo, modulo, nome,
-         "Criado automaticamente para agrupar as camadas enviadas pelas telas de cadastro e upload.",
-         _jsonb({"origem": "upload_automatico"})),
-    ).fetchone()
-    if modulo == "fase1":
-        conn.execute(
-            "INSERT INTO geoprocessamento.produto_fase1 (produto_id) VALUES (%s::uuid)",
-            (criado["id"],),
-        )
-    else:
-        conn.execute(
-            """INSERT INTO geoprocessamento.produto_fase2 (produto_id,resolucao,regra_nodata)
-               VALUES (%s::uuid,50,'bloquear')""",
-            (criado["id"],),
-        )
-    return criado["id"]
-
-
-def homologar(
-    recurso_id: str, *, modulo_consumidor: str, nome_publicacao: str, versao: str,
-    finalidade: str | None, homologado_por: str | None, produto_id: str | None,
-    metadados: dict[str, Any],
-    progress: Callable[[str], None] | None = None,
-) -> dict[str, Any]:
-    """Cria um snapshot físico completo e independente na biblioteca oficial."""
-    homologada_recurso_id = f"homologada_{uuid4().hex}"
-    with get_connection() as conn:
-        found = _find_working_layer(conn, recurso_id)
-        if not found:
-            raise ValueError(f"Camada de trabalho {recurso_id} não encontrada")
-        if progress:
-            progress("Camada de origem localizada no armazenamento de trabalho")
-        categoria, source = found
-        from api.services.ciclo_vida_arquivos import registrar_uso
-        registrar_uso(conn, recurso_id, "homologacao", homologada_recurso_id)
-        source_features = STORAGES[categoria][1]
-        source_rasters = STORAGES[categoria][2]
-        if source["tipo"] == "vetor":
-            hash_row = conn.execute(
-                sql.SQL("""SELECT md5(COALESCE(string_agg(
-                        ordem::text || propriedades::text ||
-                        COALESCE(encode(ST_AsEWKB(geom),'hex'),''), '' ORDER BY ordem
-                    ),'')) AS hash
-                    FROM geoprocessamento.{} WHERE camada_id=%s""").format(
-                    sql.Identifier(source_features)
-                ),
-                (source["id"],),
-            ).fetchone()
-        else:
-            hash_row = conn.execute(
-                sql.SQL(
-                    "SELECT md5(dados_geotiff) AS hash "
-                    "FROM geoprocessamento.{} WHERE camada_id=%s"
-                ).format(sql.Identifier(source_rasters)),
-                (source["id"],),
-            ).fetchone()
-        if progress:
-            progress("Hash do conteúdo geoespacial calculado")
-        content_hash = hash_row["hash"] if hash_row else None
-        # O relato sai sempre, com produto informado ou não: a lista de
-        # nanotarefas declarada pelo job é fixa, e um passo condicional a
-        # deixaria fora de sincronia com os logs emitidos.
-        informado = bool(produto_id)
-        if not produto_id:
-            produto_id = _produto_automatico(conn, modulo_consumidor)
-        if progress:
-            progress(
-                f"Produto {produto_id} vinculado"
-                + (" (informado no cadastro)" if informado else " automaticamente")
-            )
-        metadata = {
-            **(source.get("metadados") or {}), **metadados,
-            "origem": "homologada", "snapshot_de": recurso_id,
-            "categoria_armazenamento": "homologadas",
-        }
-        snapshot = conn.execute(
-            """INSERT INTO geoprocessamento.camada_homologada
-               (camada_id,recurso_sessao_id,origem_categoria,origem_camada_id,
-                origem_recurso_id,produto_id,modulo_consumidor,nome_publicacao,nome,
-                versao,finalidade,metadados,homologado_por,tipo,geometria_tipo,crs,
-                formato,envelope,hash_conteudo)
-               VALUES (NULL,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-               RETURNING *""",
-            (
-                homologada_recurso_id, categoria, source["id"], recurso_id,
-                produto_id, modulo_consumidor, nome_publicacao, nome_publicacao,
-                versao, finalidade, _jsonb(metadata), homologado_por, source["tipo"],
-                source.get("geometria_tipo"), source.get("crs"), source.get("formato"),
-                source.get("envelope"), content_hash,
-            ),
-        ).fetchone()
-        if not snapshot:
-            raise RuntimeError("Homologação não retornou o snapshot")
-        if progress:
-            progress("Registro imutável criado no catálogo homologado")
-        if source["tipo"] == "vetor":
-            conn.execute(
-                sql.SQL("""INSERT INTO geoprocessamento.camada_homologada_feicao
-                    (camada_id,ordem,propriedades,geom)
-                    SELECT %s,ordem,propriedades,geom
-                    FROM geoprocessamento.{} WHERE camada_id=%s""").format(
-                    sql.Identifier(source_features)
-                ),
-                (snapshot["id"], source["id"]),
-            )
-            if progress:
-                progress("Feições copiadas para o armazenamento homologado")
-        else:
-            conn.execute(
-                sql.SQL("""INSERT INTO geoprocessamento.camada_homologada_raster
-                    (camada_id,dados_geotiff,largura,altura,bandas,dtype,nodata,perfil)
-                    SELECT %s,dados_geotiff,largura,altura,bandas,dtype,nodata,perfil
-                    FROM geoprocessamento.{} WHERE camada_id=%s""").format(
-                    sql.Identifier(source_rasters)
-                ),
-                (snapshot["id"], source["id"]),
-            )
-            if progress:
-                progress("Bloco raster copiado para o armazenamento homologado")
-        result = dict(snapshot)
-        result["homologacao_id"] = str(result["id"])
-        result["id"] = homologada_recurso_id
-        # Atomicidade: a camada só se torna canônica se o arquivo em disco também
-        # for gravado. Exporta lendo o snapshot na própria transação (antes do commit);
-        # se falhar, a exceção provoca rollback e nenhum registro persiste.
-        if source["tipo"] == "vetor":
-            export_gdf = _snapshot_gdf(conn, snapshot["id"], source.get("crs"))
-            export_raster = None
-        else:
-            export_gdf = None
-            raster_row = conn.execute(
-                sql.SQL(
-                    "SELECT dados_geotiff FROM geoprocessamento.camada_homologada_raster"
-                    " WHERE camada_id=%s"
-                ),
-                (snapshot["id"],),
-            ).fetchone()
-            export_raster = raster_row["dados_geotiff"] if raster_row else None
-        arquivo_relativo, destino = _exportar_para_biblioteca_canonica(
-            modulo_consumidor=modulo_consumidor, nome_publicacao=nome_publicacao,
-            versao=versao, tipo=source["tipo"], gdf=export_gdf,
-            raster_bytes=export_raster, progress=progress,
-        )
-        if not arquivo_relativo:
-            raise RuntimeError(
-                "Homologação abortada: a cópia na biblioteca canônica não pôde ser"
-                " gerada (camada sem conteúdo)."
-            )
-        try:
-            conn.commit()
-        except Exception:
-            if destino is not None:
-                destino.unlink(missing_ok=True)  # remove arquivo órfão sem registro
-            raise
-        if progress:
-            progress("Transação de homologação confirmada no banco")
-        result["arquivo_biblioteca_canonica"] = arquivo_relativo
-        return result
+def homologar(*args, **kwargs):
+    raise ValueError('Homologação de camadas descontinuada. As saídas estão no Sicard Storage.')
 
 
 def listar_biblioteca(modulo: str | None = None) -> list[dict[str, Any]]:
-    filter_clause = (
-        sql.SQL(" WHERE modulo_consumidor IN (%s,'ambos')")
-        if modulo else sql.SQL("")
-    )
-    query = sql.SQL("""SELECT id AS homologacao_id,recurso_sessao_id AS id,
-                      origem_categoria,origem_camada_id,origem_recurso_id,
-                      modulo_consumidor,nome_publicacao,nome,versao,finalidade,
-                      homologado_por,homologado_em,metadados AS homologacao_metadados,
-                      tipo,geometria_tipo,crs,formato,metadados
-               FROM geoprocessamento.camada_homologada{}
-               ORDER BY nome_publicacao,versao,homologado_em DESC""").format(
-        filter_clause
-    )
-    params: tuple[Any, ...] = (modulo,) if modulo else ()
-    with get_connection() as conn:
-        return [dict(row) for row in conn.execute(query, params).fetchall()]
+    from api.repositories.saidas_geoespaciais_repository import listar as saidas
+    return [{**row, 'nome_publicacao':row['nome'], 'homologacao_id':None,
+             'versao':'', 'modulo_consumidor':None} for row in saidas()]
 
 
 def _directory_rows(categoria: str) -> list[dict[str, Any]]:
@@ -979,69 +751,8 @@ def listar_diretorio() -> dict[str, list[dict[str, Any]]]:
     return {categoria: _directory_rows(categoria) for categoria in STORAGES}
 
 
-_CANONICAL_ACCEPTED = {
-    ".shp", ".geojson", ".json", ".kml", ".gml", ".fgb", ".gpkg",
-    ".tif", ".tiff", ".img", ".asc", ".vrt", ".jp2",
-}
-
-
 def listar_biblioteca_canonica_arquivos(modulo: str | None = None) -> list[dict[str, Any]]:
-    """Lista TODOS os arquivos de camada em data/geoespacial/biblioteca_canonica (recursivo).
-
-    Casa cada arquivo com seu registro homologado (quando existir) para carregar o
-    identificador utilizável pela bancada/cálculo; arquivos órfãos ainda são listados.
-    """
-    raiz = project_path(_CANONICAL_ROOT)
-    base = project_path(".")
-    por_caminho: dict[str, dict[str, Any]] = {}
-    try:
-        for row in listar_biblioteca(None):
-            ext = ".tif" if row.get("tipo") == "raster" else ".gpkg"
-            rel = (
-                f"{_CANONICAL_ROOT}/{_slugify(row.get('modulo_consumidor'))}/"
-                f"{_slugify(row.get('nome_publicacao'))}_{_slugify(row.get('versao'))}{ext}"
-            )
-            por_caminho[rel] = row
-    except Exception:
-        por_caminho = {}
-
-    itens: list[dict[str, Any]] = []
-    if not raiz.exists():
-        return itens
-    arquivos = sorted(
-        (p for p in raiz.rglob("*") if p.is_file() and p.suffix.lower() in _CANONICAL_ACCEPTED),
-        key=lambda p: p.as_posix().lower(),
-    )
-    for path in arquivos:
-        relativo = path.relative_to(base).as_posix()
-        subdir = path.parent.relative_to(raiz).as_posix()
-        row = por_caminho.get(relativo)
-        # O `tipo_camada` escolhido no cadastro entra no contexto: sem ele, uma
-        # camada de restrição nomeada "Áreas protegidas" não seria reconhecida
-        # como restrição e sumiria do seletor da Fase 1.
-        contexto = (
-            f"{path.stem.lower()} {subdir.lower()} "
-            f"{str((row or {}).get('finalidade') or '').lower()} "
-            f"{str((row or {}).get('metadados') or '').lower()}"
-        )
-        if "restri" in contexto:
-            finalidade = "restricao"
-        elif "risco" in contexto:
-            finalidade = "risco"
-        else:
-            finalidade = None
-        if modulo and row and str(row.get("modulo_consumidor")) not in {modulo, "ambos"}:
-            continue
-        itens.append({
-            "id": (row or {}).get("id"),
-            "homologacao_id": (row or {}).get("homologacao_id"),
-            "arquivo": relativo,
-            "nome": (row or {}).get("nome_publicacao") or (row or {}).get("nome") or path.stem,
-            "nome_publicacao": (row or {}).get("nome_publicacao") or path.stem,
-            "subdiretorio": subdir,
-            "versao": (row or {}).get("versao") or "",
-            "formato": path.suffix.removeprefix(".").upper(),
-            "finalidade": finalidade,
-            "registrada": bool(row),
-        })
-    return itens
+    """Compatibilidade de leitura: lista exclusivamente o catálogo no Storage."""
+    return [{**row, 'registrada':True, 'subdiretorio':row['ferramenta'],
+             'nome_publicacao':row['nome'], 'versao':'', 'homologacao_id':None}
+            for row in listar_biblioteca(modulo)]

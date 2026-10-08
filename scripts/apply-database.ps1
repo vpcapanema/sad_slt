@@ -251,7 +251,9 @@ $migrations = @(
     "116_corrigir_catalogo_zee_ugrhi.sql",
     "117_demanda_arquivo_geometria_upload.sql",
     "120_projeto_geometria_historico.sql",
-    "121_geometria_plano_programa.sql"
+    "121_geometria_plano_programa.sql",
+    "122_remover_tabelas_geoprocessamento_obsoletas.sql",
+    "123_saidas_geoespaciais_storage.sql"
 )
 
 if ($OnlyMigration) {
@@ -324,6 +326,14 @@ if (-not $OnlyMigration) {
         if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='programa' AND column_name='geometria');")) {
             $migrations += "121_geometria_plano_programa.sql"
             Write-Ok "Geometria de plano e programa pendente; aplicando migration 121"
+        }
+        if (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='geoprocessamento' AND table_name IN ('camada_feicao','camada_vetor','camada_raster','mensagem_execucao','execucao_etapa','produto_homologado_fase1'));" ) {
+            $migrations += "122_remover_tabelas_geoprocessamento_obsoletas.sql"
+            Write-Ok "Estruturas obsoletas de geoprocessamento pendentes; aplicando migration 122"
+        }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='geoprocessamento' AND table_name='camada_processada' AND column_name='storage_caminho');")) {
+            $migrations += "123_saidas_geoespaciais_storage.sql"
+            Write-Ok "Destino de saidas no Storage pendente; aplicando migration 123"
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

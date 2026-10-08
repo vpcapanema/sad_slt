@@ -31,6 +31,14 @@ class Connection:
 @pytest.fixture
 def storage(monkeypatch, tmp_path):
     monkeypatch.setattr(ciclo, 'project_path', lambda path: tmp_path / path)
+    from api.services import storage_remoto
+    def enviar(caminho, source):
+        target = tmp_path / caminho
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(source.read_bytes())
+    monkeypatch.setattr(storage_remoto, 'enviar', enviar)
+    monkeypatch.setattr(storage_remoto, 'baixar', lambda caminho:(tmp_path/caminho).read_bytes())
+    monkeypatch.setattr(storage_remoto, 'apagar_arquivo', lambda caminho:(tmp_path/caminho).unlink())
     return tmp_path
 
 
@@ -85,7 +93,7 @@ def test_reexecucao_nao_sobrescreve_e_rejeita_divergencia(storage):
     result = ciclo.gravar(Connection(),str(uuid4()),{},frame=frame)
     assert ciclo.gravar(Connection(result),str(uuid4()),{},frame=frame) == result
     (storage / result['caminho']).write_bytes(b'alterado')
-    with pytest.raises(ValueError, match='divergente'):
+    with pytest.raises(ValueError, match='diverge'):
         ciclo.gravar(Connection(result),str(uuid4()),{},frame=frame)
 
 

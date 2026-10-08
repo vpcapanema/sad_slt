@@ -224,7 +224,7 @@ def test_visualizador_de_camadas_aponta_para_a_tabela_de_extracoes():
     assert pagina.status_code==200
     assert 'href="/restrict/geoespacial/extracoes-atributos/"' in pagina.text
     assert 'geoespacial-visualizador-camadas.js' in pagina.text
-    assert '/restrict/geoespacial/visualizador-bases-geoespaciais/' not in pagina.text.split('geo-sidebar-mini-nav',1)[1].split('</nav>',1)[0]
+    assert 'geo-sidebar-mini-nav' not in pagina.text
 
 
 def test_aliases_usam_biblioteca_dicionario_e_regra_automatica():

@@ -11,7 +11,7 @@ def test_snapshot_nao_utiliza_arquivo_original(tmp_path):
            "versao": "v1", "modulo_consumidor": "fase1", "tipo": "vetor",
            "metadados": {"caminho_arquivo": original.relative_to(tmp_path).as_posix()}}
     report = conciliar({"homologadas": [row]}, tmp_path)
-    assert report["camadas"][0]["situacao"] == "arquivo_nao_localizado"
+    assert report["camadas"][0]["situacao"] == "sem_vinculo_arquivo"
     assert not report["arquivos"][0]["registrada"]
 
 

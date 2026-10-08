@@ -17,6 +17,32 @@ HOST_KEY = "SHA256:eaE7ZPAGxV4DfSDRZyi09s5LkeRgJcrA8qvMSCCxnf0"
 LOG = None
 CURRENT_STAGE = ""
 CURRENT_STAGE_FINISHED = True
+AUTHORIZED_DELETIONS = (
+    'data/geoespacial/biblioteca_canonica/fase1/restricao_juridico_ambiental_v1.gpkg',
+    'data/geoespacial/biblioteca_canonica/fase1/restricao_juridico_ambiental_v1.gpkg.relatorio.json',
+    'data/geoespacial/biblioteca_canonica/fase1/risco_juridico_ambiental_v1.gpkg',
+    'data/geoespacial/biblioteca_canonica/fase1/risco_juridico_ambiental_v1.gpkg.relatorio.json',
+)
+
+
+def remote_worktree_guard(deleted, revision=None):
+    """Accept only matching local deletions; never discard remote edits."""
+    import shlex
+    code = (
+        "import subprocess,sys; "
+        "rows=subprocess.check_output(['git','status','--porcelain','--untracked-files=no'],text=True).splitlines(); "
+        f"allowed={set(deleted)!r}; "
+        "bad=[r for r in rows if r[:3]!=' D ' or r[3:] not in allowed]; "
+        "print('Alteracoes inesperadas na VM: '+repr(bad)) if bad else None; "
+        "sys.exit(1) if bad else None; "
+    )
+    if revision:
+        code += (
+            f"present=[p for p in allowed if subprocess.run(['git','cat-file','-e',{revision!r}+':'+p],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0]; "
+            "print('Exclusoes ausentes do commit publicado: '+repr(present)) if present else None; "
+            "sys.exit(bool(present))"
+        )
+    return 'python3 -c ' + shlex.quote(code)
 _ANSI_RESET = "\x1b[0m"
 _ANSI_COLORS = {"cyan": "\x1b[36m", "blue": "\x1b[34m", "magenta": "\x1b[35m", "green": "\x1b[32m", "yellow": "\x1b[33m", "red": "\x1b[31m"}
 
@@ -74,7 +100,7 @@ def run(args, capture=False, timeout=None):
         result = subprocess.run(args, cwd=ROOT, text=True, encoding="utf-8",
                                 errors="replace", capture_output=True, timeout=timeout)
         if result.returncode:
-            raise RuntimeError(f"{Path(args[0]).name} falhou ({result.returncode}): {result.stderr.strip()}")
+            raise RuntimeError(f"{Path(args[0]).name} falhou ({result.returncode}): {(result.stderr.strip() or result.stdout.strip() or 'sem mensagem; consulte os pre-requisitos')}")
         return result.stdout.strip()
     proc = subprocess.Popen(args, cwd=ROOT, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
@@ -150,7 +176,8 @@ def main():
         raise RuntimeError("Plink ou chave .deploy/SRV-SISTEMA-30001480.ppk ausente.")
     ssh = [plink, "-ssh", "-batch", "-T", "-no-antispoof", "-hostkey", HOST_KEY, "-i", str(key), "ubuntu@56.125.163.194"]
     say("Verificando acesso SSH e ferramentas da VM (sem deploy)...")
-    run([*ssh, "cd /opt/sicard && test -f .env && test -z \"$(git status --porcelain --untracked-files=no)\" && git --version && git lfs version && docker compose version && command -v flock && sudo -n nginx -t"], capture=True, timeout=40)
+    deleted = tuple(p for p in AUTHORIZED_DELETIONS if not (ROOT / p).exists())
+    run([*ssh, "cd /opt/sicard && test -f .env && " + remote_worktree_guard(deleted) + " && git --version && git lfs version && docker compose version && command -v flock && sudo -n nginx -t"], capture=True, timeout=40)
     if args.check:
         finish_stage("pré-requisitos e acesso SSH validados; nenhum commit, push ou deploy executado")
         return
@@ -193,9 +220,9 @@ def main():
     # Fetch the committed deploy script, not an outdated copy in the VM checkout.
     command = ("set -eu; cd /opt/sicard; exec 9>/opt/sicard/.git/sicard-deploy.lock; "
                "flock -n 9 || { echo 'Outro deploy esta em andamento'; exit 1; }; "
-               "test -z \"$(git status --porcelain --untracked-files=no)\"; "
                "git fetch origin main; "
                f"test \"$(git rev-parse origin/main)\" = {sha}; "
+               + remote_worktree_guard(deleted, sha) + "; "
                "f=$(mktemp); trap 'rm -f \"$f\"' EXIT; "
                f"git show {sha}:.deploy/update_vm.sh >\"$f\"; "
                f"BUILDKIT_PROGRESS=plain bash \"$f\" main {sha}; "

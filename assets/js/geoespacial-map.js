@@ -153,10 +153,19 @@
       return mapLayerIds;
     },
 
+    addRasterImageLayer: function(layerId, preview) {
+      const sourceId = `source-${layerId}`, id = `layer-${layerId}-raster`;
+      this.map.addSource(sourceId, {type:"image", url:preview.image, coordinates:preview.coordinates});
+      this.map.addLayer({id, type:"raster", source:sourceId, paint:{"raster-opacity":.8}});
+      const [west,north] = preview.coordinates[0], [east,south] = preview.coordinates[2];
+      this.layers.set(layerId,{sourceId, mapLayerIds:[id], visible:true, raster:true, bounds:[west,south,east,north]});
+      this.layerIds.push(layerId);
+    },
+
     removeLayer: function (layerId) {
       const layerInfo = this.layers.get(layerId);
       if (layerInfo && this.map) {
-        if (this.map.getLayer(layerInfo.labelLayerId)) this.map.removeLayer(layerInfo.labelLayerId);
+        if (layerInfo.labelLayerId && this.map.getLayer(layerInfo.labelLayerId)) this.map.removeLayer(layerInfo.labelLayerId);
         layerInfo.mapLayerIds.forEach((id) => { if (this.map.getLayer(id)) this.map.removeLayer(id); });
         if (this.map.getSource(layerInfo.sourceId)) {
           this.map.removeSource(layerInfo.sourceId);
@@ -171,7 +180,7 @@
       if (layerInfo && this.map) {
         layerInfo.mapLayerIds.forEach((id) => { if (this.map.getLayer(id)) this.map.setLayoutProperty(id, "visibility", visible ? "visible" : "none"); });
         layerInfo.visible = visible;
-        if (this.map.getLayer(layerInfo.labelLayerId)) this.map.setLayoutProperty(layerInfo.labelLayerId, "visibility", visible && layerInfo.labelsVisible ? "visible" : "none");
+        if (layerInfo.labelLayerId && this.map.getLayer(layerInfo.labelLayerId)) this.map.setLayoutProperty(layerInfo.labelLayerId, "visibility", visible && layerInfo.labelsVisible ? "visible" : "none");
       }
     },
 
@@ -179,7 +188,7 @@
       const layerInfo = this.layers.get(layerId);
       if (!layerInfo || !this.map) return;
       layerInfo.labelsVisible = visible;
-      if (this.map.getLayer(layerInfo.labelLayerId)) this.map.setLayoutProperty(layerInfo.labelLayerId, "visibility", visible && layerInfo.visible ? "visible" : "none");
+      if (layerInfo.labelLayerId && this.map.getLayer(layerInfo.labelLayerId)) this.map.setLayoutProperty(layerInfo.labelLayerId, "visibility", visible && layerInfo.visible ? "visible" : "none");
     },
 
     clearLayers: function () {

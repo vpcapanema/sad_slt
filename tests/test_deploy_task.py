@@ -6,12 +6,34 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import types
+import shlex
 
 spec = importlib.util.spec_from_file_location('deploy_task', Path(__file__).resolve().parents[1] / 'scripts/deploy-task.py')
 deploy = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(deploy)
 
 class DeployTests(unittest.TestCase):
+    def test_remote_guard_accepts_only_matching_deletions(self):
+        path = deploy.AUTHORIZED_DELETIONS[0]
+        code = shlex.split(deploy.remote_worktree_guard([path]))[-1]
+        with patch.object(deploy.subprocess, 'check_output', return_value=' D ' + path + '\n'):
+            exec(code, {})
+        for unexpected in (' M ' + path, ' D other.py', 'D  ' + path):
+            with patch.object(deploy.subprocess, 'check_output', return_value=unexpected + '\n'):
+                with self.assertRaises(SystemExit) as raised:
+                    exec(code, {})
+                self.assertEqual(raised.exception.code, 1)
+
+    def test_remote_guard_requires_deletion_in_published_revision(self):
+        path = deploy.AUTHORIZED_DELETIONS[0]
+        code = shlex.split(deploy.remote_worktree_guard([path], 'a' * 40))[-1]
+        for returncode, expected in ((0, 1), (1, 0)):
+            with patch.object(deploy.subprocess, 'check_output', return_value=' D ' + path + '\n'), \
+                 patch.object(deploy.subprocess, 'run', return_value=types.SimpleNamespace(returncode=returncode)):
+                with self.assertRaises(SystemExit) as raised:
+                    exec(code, {})
+                self.assertEqual(raised.exception.code, expected)
+
     def test_health_requires_real_database_and_all_integrations(self):
         healthy = {'ok': True, 'checks': {name: {'ok': True} for name in
                    ('api', 'sigma_instituicoes', 'sigma_pessoas', 'slt_database')}}

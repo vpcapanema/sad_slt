@@ -970,10 +970,28 @@ def camadas_arquivo_storage(arquivo: str) -> dict[str, Any]:
 
 @router.get("/storage/navegar")
 def navegar_storage(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
-    """Uma pasta do storage (subpastas e camadas vetoriais), para o explorador da extração."""
+    """Uma pasta do storage (subpastas e camadas vetoriais), para o explorador da extração.
+
+    Cada camada leva ``alias``: o nome amigável da biblioteca de critérios/dicionário
+    da extração, ou a regra automática quando não há registro."""
+    from api.services import extracao_atributos_aliases, storage_geoespacial
+    try:
+        resultado = storage_geoespacial.navegar(caminho, detalhar)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    for item in resultado.get("arquivos", []):
+        item["alias"] = extracao_atributos_aliases.nome_camada(item.get("id"), item.get("nome"))
+    return resultado
+
+
+@router.get("/storage/{raiz}/contagens")
+def obter_contagens_storage(raiz: str) -> dict[str, Any]:
+    """Contagens recursivas para grupos recolhidos no visualizador."""
     from api.services import storage_geoespacial
     try:
-        return storage_geoespacial.navegar(caminho, detalhar)
+        return {"contagens": storage_geoespacial.contagens(raiz)}
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     except FileNotFoundError as exc:
@@ -988,6 +1006,18 @@ def listar_arvore_storage(raiz: str) -> dict[str, Any]:
         return storage_geoespacial.arvore(raiz)
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
+
+
+@router.get("/cadastro-geometrias/{tipo}")
+def listar_geometrias_cadastro(tipo: str) -> dict[str, Any]:
+    """Geometrias materializadas de planos, programas ou projetos (PostGIS) para o visualizador."""
+    from api.repositories import cadastro_geometria_repository
+    if tipo not in cadastro_geometria_repository._TABELAS:
+        raise HTTPException(404, "Tipo de cadastro desconhecido")
+    try:
+        return {"tipo": tipo, "itens": cadastro_geometria_repository.listar(tipo)}
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(503, "Banco de cadastro indisponível") from exc
 
 
 def _erro_camada_storage(exc: Exception) -> HTTPException:
@@ -1237,22 +1267,7 @@ def homologar_camada(
     body: HomologarCamadaSchema,
     user: SessionUser = Depends(require_geospatial_access),
 ) -> dict:
-    """Publica uma camada na biblioteca imutável."""
-    if body.modulo_consumidor not in {"fase1", "fase2", "ambos"}:
-        raise HTTPException(status_code=422, detail="Módulo consumidor inválido")
-    try:
-        return camada_geoespacial_repository.homologar(
-            camada_id,
-            modulo_consumidor=body.modulo_consumidor,
-            nome_publicacao=body.nome_publicacao,
-            versao=body.versao,
-            finalidade=body.finalidade,
-            homologado_por=_responsavel_pela_homologacao(body, user),
-            produto_id=str(body.produto_id) if body.produto_id else None,
-            metadados=body.metadados,
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    raise HTTPException(status_code=410, detail="Homologação de camadas descontinuada. Utilize as saídas no Sicard Storage.")
 
 
 @router.post("/camadas/{camada_id}/homologar-job", status_code=status.HTTP_202_ACCEPTED)
@@ -1261,10 +1276,7 @@ def iniciar_homologacao_com_logs(
     body: HomologarCamadaSchema,
     user: SessionUser = Depends(require_geospatial_access),
 ) -> dict:
-    """Homologa por job com log granular de persistência e verificação."""
-    payload = body.model_dump(mode="json")
-    payload["homologado_por"] = _responsavel_pela_homologacao(body, user)
-    return geoprocessamento_jobs.create_homologation(camada_id, payload)
+    raise HTTPException(status_code=410, detail="Homologação de camadas descontinuada. Utilize as saídas no Sicard Storage.")
 
 
 @router.get("/biblioteca-camadas")
@@ -1273,6 +1285,57 @@ def listar_biblioteca_camadas(modulo: str | None = None) -> list[dict]:
     if modulo and modulo not in {"fase1", "fase2"}:
         raise HTTPException(status_code=422, detail="Módulo consumidor inválido")
     return camada_geoespacial_repository.listar_biblioteca(modulo)
+
+
+@router.get('/saidas')
+def listar_saidas_geoespaciais(execucao_id: str | None = None,
+                              user: SessionUser = Depends(require_geospatial_access)) -> list[dict]:
+    from api.repositories.saidas_geoespaciais_repository import listar
+    from uuid import UUID
+    if execucao_id:
+        try:
+            UUID(execucao_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail='Execução inválida.') from exc
+    return listar(execucao_id)
+
+
+@router.get('/saidas/arquivo')
+def baixar_saida_geoespacial(caminho: str,
+                             user: SessionUser = Depends(require_geospatial_access)) -> Response:
+    from api.repositories.saidas_geoespaciais_repository import referencia
+    from api.services.saidas_storage import validar, conferir
+    from pathlib import PurePosixPath
+    from urllib.parse import quote
+    try:
+        caminho = validar(caminho)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    arquivo = referencia(caminho)
+    if not arquivo:
+        raise HTTPException(status_code=404, detail='Saída não encontrada no catálogo.')
+    from api.services.session_service import is_gestor
+    if arquivo['privado'] and arquivo['responsavel'] and arquivo['responsavel'] != str(user.id) and not is_gestor(user):
+        raise HTTPException(status_code=404, detail='Saída não encontrada no catálogo.')
+    return Response(conferir(caminho, arquivo['sha256']),media_type='application/octet-stream',
+                    headers={'Content-Disposition':"attachment; filename*=UTF-8''" + quote(PurePosixPath(caminho).name)})
+
+
+@router.get('/saidas/raster-preview')
+def preview_saida_raster(caminho: str,
+                        user: SessionUser = Depends(require_geospatial_access)) -> dict:
+    from api.services.saidas_storage import validar,preview_raster
+    from api.repositories.saidas_geoespaciais_repository import referencia
+    from api.services.session_service import is_gestor
+    try:
+        caminho=validar(caminho)
+        arquivo=referencia(caminho)
+        if not arquivo or (arquivo['privado'] and arquivo['responsavel']
+                and arquivo['responsavel']!=str(user.id) and not is_gestor(user)):
+            raise HTTPException(status_code=404,detail='Saída não encontrada no catálogo.')
+        return preview_raster(caminho,arquivo['sha256'])
+    except ValueError as exc:
+        raise HTTPException(status_code=422,detail=str(exc)) from exc
 
 
 @router.get("/biblioteca-canonica/arquivos")

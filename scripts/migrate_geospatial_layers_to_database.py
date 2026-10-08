@@ -12,6 +12,12 @@ from api.repositories.camada_geoespacial_repository import migrar_vetor_existent
 
 def main() -> int:
     with get_connection() as conn:
+        legado = conn.execute(
+            "SELECT to_regclass('geoprocessamento.camada_vetor') AS tabela"
+        ).fetchone()
+        if legado["tabela"] is None:
+            print("Armazenamento legado já retirado; nenhuma camada a internalizar.")
+            return 0
         rows = list(conn.execute(
             """SELECT c.id,c.uri FROM geoprocessamento.camada c
                WHERE c.tipo='vetor' AND NOT EXISTS (

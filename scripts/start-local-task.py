@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import socket
 import subprocess
 import sys
 import threading
@@ -157,6 +158,26 @@ def main():
     say(f"Banco oficial confirmado: slt_db ({counts['slt_db']} projetos) e SIGMA ({counts['sigma_pli_qr53']} usuários).")
     if not proprio:
         say('Túnel mantido pelo supervisor autônomo; esta tarefa não o administra.')
+    try:
+        with socket.create_connection(('127.0.0.1', 8083), timeout=1):
+            occupied = True
+    except OSError:
+        occupied = False
+    if occupied:
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        try:
+            with opener.open(URL + '/api/health', timeout=5) as response:
+                healthy = response.status == 200 and json.load(response).get('status') == 'ok'
+            with opener.open(URL + '/assets/js/admin-api.js', timeout=5) as response:
+                healthy = healthy and response.status == 200 and b'authRequest' in response.read()
+        except (OSError, ValueError):
+            healthy = False
+        if healthy:
+            say('Servidor SICARD já disponível na porta 8083; reutilizando a instância existente.')
+            say('Esta execução não administra nem encerra a instância existente.')
+            open_browsers()
+            return
+        raise SystemExit('Porta 8083 ocupada por um serviço que não respondeu como SICARD saudável. Encerre esse serviço antes de iniciar a task.')
     import uvicorn
     from uvicorn.supervisors import ChangeReload
     # Sem migrations ou processos extras de servidor. O auto-reload observa

@@ -152,6 +152,8 @@ class GeoprocessamentoJobs:
             self._publicar(job_id)
             snapshot = deepcopy(job)
         job["relatorio"] = geoprocessamento_relatorio.salvar(snapshot)
+        if snapshot.get('erro_relatorio'):
+            job['erro_relatorio'] = snapshot['erro_relatorio']
 
     def _fail(self, job_id: str, exc: Exception) -> None:
         with self._lock:
@@ -168,6 +170,8 @@ class GeoprocessamentoJobs:
             self._publicar(job_id)
             snapshot = deepcopy(job)
         job["relatorio"] = geoprocessamento_relatorio.salvar(snapshot)
+        if snapshot.get('erro_relatorio'):
+            job['erro_relatorio'] = snapshot['erro_relatorio']
 
     def create(self, operation_id: str, params: dict[str, Any], responsavel: str | None = None) -> dict[str, Any]:
         op_id = operation_id.upper()
@@ -455,56 +459,7 @@ class GeoprocessamentoJobs:
             self._fail(job_id, exc)
 
     def create_homologation(self, resource_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        # A homologação materializa o snapshot também como arquivo na biblioteca
-        # canônica (_exportar_para_biblioteca_canonica emite o progresso), etapa
-        # que faltava nesta lista: eram 12 nanotarefas declaradas para 13
-        # efetivamente executadas.
-        tasks = ["Solicitação registrada", "Módulo consumidor validado", "Nome validado", "Versão validada",
-                 "Origem localizada", "Hash calculado",
-                 # Sem produto vinculado a camada homologada não forma pacote, e a
-                 # Fase 1 não emparelha restrição com risco: a homologação resolve
-                 # isso sozinha quando o cadastro não informou um.
-                 "Produto agrupador vinculado",
-                 "Snapshot criado", "Conteúdo copiado",
-                 "Arquivo exportado para a biblioteca canônica",
-                 "Transação confirmada", "Biblioteca consultada", "Publicação confirmada", "Processo finalizado"]
-        job_id = self._new("homologacao", tasks)
-        self._advance(job_id, "Solicitação de homologação registrada", {"id": resource_id})
-        self._executor.submit(self._run_homologation, job_id, resource_id, deepcopy(payload))
-        return self.get(job_id) or {}
-
-    def _run_homologation(self, job_id: str, resource_id: str, payload: dict[str, Any]) -> None:
-        try:
-            if payload.get("modulo_consumidor") not in {"fase1", "fase2", "ambos"}:
-                raise ValueError("Módulo consumidor inválido")
-            self._advance(job_id, "Módulo consumidor validado")
-            if not str(payload.get("nome_publicacao", "")).strip():
-                raise ValueError("Nome de publicação obrigatório")
-            self._advance(job_id, "Nome de publicação validado")
-            if not str(payload.get("versao", "")).strip():
-                raise ValueError("Versão obrigatória")
-            self._advance(job_id, "Versão da publicação validada")
-            callback: Callable[[str], None] = lambda label: self._advance(job_id, label, concluir_tarefa=False)
-            self._start(job_id, "Homologando e publicando a camada")
-            result = camada_geoespacial_repository.homologar(
-                resource_id,
-                modulo_consumidor=payload["modulo_consumidor"],
-                nome_publicacao=payload["nome_publicacao"],
-                versao=payload["versao"],
-                finalidade=payload.get("finalidade"),
-                homologado_por=payload.get("homologado_por"),
-                produto_id=str(payload["produto_id"]) if payload.get("produto_id") else None,
-                metadados=payload.get("metadados") or {}, progress=callback,
-            )
-            self._start(job_id, "Consultando a biblioteca homologada")
-            library = camada_geoespacial_repository.listar_biblioteca()
-            self._advance(job_id, "Biblioteca homologada consultada", {"itens": len(library)})
-            if not any(item["id"] == result["id"] for item in library):
-                raise RuntimeError("Snapshot não localizado na biblioteca homologada")
-            self._advance(job_id, "Publicação confirmada na biblioteca somente leitura")
-            self._complete(job_id, result)
-        except Exception as exc:
-            self._fail(job_id, exc)
+        raise ValueError('Homologação de camadas descontinuada. Utilize o catálogo de saídas no Storage.')
 
 
 geoprocessamento_jobs = GeoprocessamentoJobs()

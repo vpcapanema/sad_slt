@@ -94,3 +94,38 @@
 
 /* Pastas do storage dentro de um grupo: recuo e guia como os demais níveis. */
 .geoespacial-map-sidebar .geo-storage-group > .layer-group-body { margin-left: var(--tree-step, 1.125rem); padding-left: .45rem; border-left: 1px solid var(--tree-guide, rgba(255,255,255,.14)); }
+
+/* Árvore de pastas (PostGIS e SICARD Storage): cada pasta é um subnível
+   recolhível; o corpo recua e ganha guia vertical para marcar a hierarquia. */
+.geoespacial-map-sidebar .geo-layer-folder > .layer-group-header-row .layer-group-header--pasta { min-height: 25px; padding: .2rem .3rem !important; color: #fff; }
+.geoespacial-map-sidebar .geo-layer-folder > .layer-group-header-row .geo-layer-copy { display: flex; align-items: center; gap: .35rem; }
+.geoespacial-map-sidebar .geo-layer-folder > .layer-group-header-row .layer-group-name { color: #fff !important; font-size: var(--sb-layer-record-name, .7rem); font-weight: 650; }
+.geoespacial-map-sidebar .geo-layer-folder-icon { color: #e3c56a; font-size: .68rem; }
+.geoespacial-map-sidebar .geo-layer-folder.collapsed > .layer-group-header-row .geo-layer-folder-icon::before { content: "\f07b"; }
+.geoespacial-map-sidebar .geo-layer-folder:not(.collapsed) > .layer-group-header-row .geo-layer-folder-icon::before { content: "\f07c"; }
+.geoespacial-map-sidebar .geo-layer-folder-count { margin-left: auto; color: rgba(255,255,255,.6); font-size: .62rem; }
+.geoespacial-map-sidebar .geo-layer-folder-count:empty { display: none; }
+.geoespacial-map-sidebar .geo-layer-folder > .layer-group-header-row .layer-group-toggle { transition: transform .15s ease; }
+.geoespacial-map-sidebar .geo-layer-folder.collapsed > .layer-group-header-row .layer-group-toggle { transform: rotate(-90deg); }
+.geoespacial-map-sidebar .geo-layer-folder.collapsed > .geo-layer-folder-body { display: none; }
+.geoespacial-map-sidebar .geo-layer-folder-body { margin-left: var(--tree-step, 1.125rem); padding-left: .45rem; border-left: 1px solid var(--tree-guide, rgba(255,255,255,.14)); }
+.geoespacial-map-sidebar .geo-layer-record .badge-status { justify-self: start; font-size: .56rem; line-height: 1.2; padding: .08rem .4rem; }
+
+/* Só o nome dos grupos principais inicia o reposicionamento. */
+.geoespacial-viewer-page .geo-group-drag-handle { cursor: grab; user-select: none; }
+.geoespacial-viewer-page .geo-groups-reordering,
+.geoespacial-viewer-page .geo-groups-reordering .geo-group-drag-handle { cursor: grabbing; user-select: none; }
+.geoespacial-viewer-page .geo-group-dragging > .layer-group-header-row { background: rgba(74, 222, 128, .16); outline: 1px dashed #4ade80; outline-offset: -1px; }
+
+.geoespacial-viewer-page .geo-context-panel { left: 14px; right: auto; max-height: calc(100% - 28px); }
+.geoespacial-viewer-page .geo-context-panel.is-collapsed { width: min(200px, calc(100% - 28px)); }
+.geoespacial-viewer-page .geo-context-panel.is-collapsed .geo-context-body { display: none; }
+.geo-context-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; padding: 0 6px 0 12px; flex-shrink: 0; color: #40544a; background: #f3f6f8; font-size: .7rem; font-weight: 700; cursor: grab; user-select: none; touch-action: none; }
+.geo-context-header span { display: flex; align-items: center; gap: 8px; }
+.geo-context-header button { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 4px; color: #176b47; background: transparent; cursor: pointer; }
+.geo-context-header button:hover { background: #dcebe2; }
+.geo-context-panel.is-dragging .geo-context-header { cursor: grabbing; }
+.geo-context-body { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+.geoespacial-viewer-page .geoespacial-map-sidebar .layer-group-active-count { color: var(--sb-green, #4ade80); background: transparent; font-size: var(--sb-layer-count-size); }
+.geoespacial-viewer-page #toggle-operational-labels[hidden] { display: none !important; }

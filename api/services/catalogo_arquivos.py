@@ -33,11 +33,7 @@ def referencias(row: dict, categoria: str) -> list[str]:
     """O snapshot homologado não usa o arquivo da camada que lhe deu origem."""
     metadata = row.get("metadados") or {}
     if categoria == "homologadas":
-        return [
-            f"data/geoespacial/biblioteca_canonica/{repo._slugify(row.get('modulo_consumidor'))}/"
-            f"{repo._slugify(row.get('nome_publicacao'))}_{repo._slugify(row.get('versao'))}"
-            + (".tif" if row.get("tipo") == "raster" else ".gpkg")
-        ]
+        return []
     nested = metadata.get("metadados") or {}
     # arquivo_original pode ser pacote/pasta de origem, não o dataset atual.
     values = [metadata.get("caminho_arquivo"), nested.get("caminho_arquivo")]
@@ -47,10 +43,24 @@ def referencias(row: dict, categoria: str) -> list[str]:
 def conciliar(directory: dict, root: Path, *, inventariar: bool = True) -> dict:
     layers, files, errors = [], [], []
     linked: dict[str, list[str]] = {}
+    remote_folders = {}
+    from api.services import saidas_storage, storage_remoto
+    def presente(value):
+        if not value.startswith(saidas_storage.RAIZ + '/'):
+            return bool((path := caminho_seguro(root,value)) and path.is_file())
+        try:
+            value = saidas_storage.validar(value)
+            folder = str(Path(value).parent).replace('\\','/')
+            if folder not in remote_folders:
+                remote_folders[folder] = {item['nome'] for item in storage_remoto.listar(folder) if not item['pasta']}
+            return Path(value).name in remote_folders[folder]
+        except Exception as exc:
+            errors.append(f'Não foi possível conferir a saída no Storage: {exc}')
+            return False
     for category, rows in directory.items():
         for row in rows:
             refs = referencias(row, category)
-            present = [p for p in refs if (q := caminho_seguro(root, p)) and q.is_file()]
+            present = [p for p in refs if presente(p)]
             status = "disponivel" if present else "arquivo_nao_localizado" if refs else "sem_vinculo_arquivo"
             current = present[0] if present else (refs[0] if refs else None)
             layer = {**row, "categoria_catalogo": category, "arquivo": current,
@@ -194,6 +204,10 @@ def listar_diretorio() -> dict:
             result['operacionais'].append({**layer,'origem_diretorio':'operacionais','pasta':'Resultados publicados'})
             continue
         path = layer["arquivo"]
+        if path.startswith('saidas-geoespaciais/'):
+            result['saidas_processadas'].append({**layer,'origem_diretorio':'saidas_processadas',
+                                                'pasta':(layer.get('metadados') or {}).get('origem')})
+            continue
         for group, base in ROOTS.items():
             if path.startswith(base + "/"):
                 parts = Path(path).relative_to(base).parts
