@@ -88,7 +88,7 @@ def _listar(relativo: str) -> list[dict[str, Any]]:
         pasta = diretorio_storage().joinpath(*PurePosixPath(relativo).parts)
         if not pasta.is_dir():
             raise FileNotFoundError("Pasta não encontrada no storage")
-        itens = [{"nome": i.name, "pasta": i.is_dir()} for i in pasta.iterdir()]
+        itens = [{"nome": i.name, "pasta": i.is_dir(), "tamanho": i.stat().st_size, "modificado": i.stat().st_mtime} for i in pasta.iterdir()]
     return sorted((i for i in itens if not str(i.get("nome") or "").startswith(".")),
                   key=lambda i: str(i.get("nome") or "").lower())
 
@@ -190,6 +190,17 @@ def resolver(caminho: str) -> Path | ArquivoStorage:
     return alvo
 
 
+def _resolver_listado(relativo: str, item: dict[str, Any]) -> Path | ArquivoStorage:
+    """Reutiliza os metadados da listagem, sem pedir a mesma pasta por arquivo.
+
+    Chamado somente com entradas de _listar e caminhos já validados pela
+    navegação/árvore; não mantém cache de diretórios que possa ocultar alterações.
+    """
+    if _via_api() and "tamanho" in item and "modificado" in item:
+        return ArquivoStorage(relativo, item["tamanho"], item["modificado"])
+    return resolver(relativo)
+
+
 def _srs(camada: ogr.Layer | None = None, epsg: int | None = None) -> osr.SpatialReference | None:
     srs = camada.GetSpatialRef() if camada is not None else osr.SpatialReference()
     if srs is None:
@@ -263,7 +274,7 @@ def _grupo(relativo: str) -> dict[str, Any]:
         if item["pasta"]:
             grupos.append(_grupo(item_relativo))
         elif PurePosixPath(item["nome"]).suffix.lower() in EXTENSOES_VETOR | EXTENSOES_RASTER:
-            camadas.extend(_itens_do_arquivo(resolver(item_relativo), item_relativo))
+            camadas.extend(_itens_do_arquivo(_resolver_listado(item_relativo, item), item_relativo))
     return {"nome": PurePosixPath(relativo).name, "caminho": relativo,
             "grupos": grupos, "camadas": camadas}
 
@@ -352,16 +363,16 @@ def navegar(caminho: str = "", detalhar: bool = True) -> dict[str, Any]:
         elif not detalhar and sufixo in EXTENSOES_VETOR | storage_pacotes.COMPACTADOS:
             arquivos.append({'id': f'storage:{item_relativo}', 'nome': PurePosixPath(nome).stem,
                              'arquivo': item_relativo, 'formato': sufixo.lstrip('.').upper(),
-                             'inventariar': True})
+                             'inventariar': True, 'tamanho_bytes': item.get('tamanho'), 'modificado_em': item.get('modificado')})
         elif sufixo in storage_pacotes.COMPACTADOS:
             try:
-                arquivos.extend(c for c in _itens_do_arquivo(resolver(item_relativo), item_relativo)
+                arquivos.extend(c for c in _itens_do_arquivo(_resolver_listado(item_relativo, item), item_relativo)
                                 if c.get("tipo") == "vetor" and not c.get("erro"))
             except (ValueError, OSError, RuntimeError):
                 continue
         elif sufixo in EXTENSOES_VETOR:
             arquivos.extend({**c, "formato": sufixo.lstrip(".").upper()}
-                            for c in _itens_do_arquivo(resolver(item_relativo), item_relativo)
+                            for c in _itens_do_arquivo(_resolver_listado(item_relativo, item), item_relativo)
                             if not c.get("erro"))
     pai = PurePosixPath(relativo).parent.as_posix() if len(partes) > 1 else None
     return {"caminho": relativo, "pai": pai, "pastas": pastas, "arquivos": arquivos}

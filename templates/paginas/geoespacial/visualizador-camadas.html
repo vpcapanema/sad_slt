@@ -12,17 +12,28 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/geoespacial.css">
-  <link rel="stylesheet" href="/assets/css/geoespacial-painel-mapa.css?v=20261008-5">
+  <link rel="stylesheet" href="/assets/css/geoespacial-painel-mapa.css?v=20261009-explorer-1">
   <link rel="stylesheet" href="/assets/vendor/maplibre-gl/maplibre-gl.css">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/restrict/geoespacial/visualizador-progresso.css?v=20261009-explorer-1">
+  <style>.viewer-layer-filter { grid-template-columns: auto minmax(0,1.1fr) minmax(0,1.1fr) auto auto auto; } .viewer-layer-filter button:disabled { opacity: .5; }</style>
 {% endblock %}
 
 {% block barra_lateral %}
+  <div id="viewer-layer-filter" class="painel-layer-filter viewer-layer-filter" aria-label="Filtros e controles de camadas">
+    <span class="painel-layer-filter-icon" aria-hidden="true"></span>
+    <select class="painel-layer-filter-field" aria-label="Campo do filtro"><option value="">Selecione um campo</option></select>
+    <select class="painel-layer-filter-value" aria-label="Valor do filtro"><option value="">Selecione um valor</option></select>
+    <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--apply" aria-label="Aplicar filtro" title="Aplicar filtro"><span aria-hidden="true">✓</span></button>
+    <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--clear" aria-label="Limpar filtro" title="Limpar filtro"><span aria-hidden="true">✕</span></button>
+    <button type="button" id="viewer-refresh" class="painel-layer-filter-btn" aria-label="Atualizar camadas" title="Atualizar camadas"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i></button>
+  </div>
+  <p id="viewer-refresh-status" class="hint" role="status" hidden></p>
   <section class="secao-camadas-do-visualizador nav-section painel-layers-section">
     <div class="layer-group layer-group--root layers-container demandas-tree" id="geo-layers-root">
       <div class="layer-group layer-group--tipo" id="geo-postgis-group">
         <div class="layer-group-header-row layer-group-header-row--tipo">
-          <label class="layer-visibility-toggle" for="toggle-postgis-group" title="Exibir ou ocultar as camadas de demandas"><input id="toggle-postgis-group" class="layer-visibility-input" type="checkbox" checked></label>
+          <label class="layer-visibility-toggle" for="toggle-postgis-group" title="Exibir ou ocultar as camadas de demandas"><input id="toggle-postgis-group" class="layer-visibility-input" type="checkbox"></label>
           <button type="button" class="layer-group-header layer-group-header--section layer-group-header--tipo" aria-expanded="true">
             <span class="layer-group-toggle" aria-hidden="true">▼</span><span class="layer-group-name layer-group-name--tipo">DEMANDAS</span><span id="postgis-layer-count" class="layer-group-active-count">0</span>
           </button>
@@ -31,7 +42,7 @@
       </div>
       <div class="layer-group layer-group--tipo" id="geo-storage-group">
         <div class="layer-group-header-row layer-group-header-row--tipo">
-          <label class="layer-visibility-toggle" for="toggle-storage-group" title="Exibir ou ocultar as camadas do storage"><input id="toggle-storage-group" class="layer-visibility-input" type="checkbox" checked></label>
+          <label class="layer-visibility-toggle" for="toggle-storage-group" title="Exibir ou ocultar as camadas do storage"><input id="toggle-storage-group" class="layer-visibility-input" type="checkbox"></label>
           <button type="button" class="layer-group-header layer-group-header--section layer-group-header--tipo" aria-expanded="true">
             <span class="layer-group-toggle" aria-hidden="true">▼</span><span class="layer-group-name layer-group-name--tipo">SICARD Storage</span><span id="storage-layer-count" class="layer-group-active-count">0</span>
           </button>
@@ -40,7 +51,7 @@
       </div>
       <div class="layer-group layer-group--tipo" id="geo-operational-group">
         <div class="layer-group-header-row layer-group-header-row--tipo">
-          <label class="layer-visibility-toggle" for="toggle-operational-group" title="Exibir ou ocultar a geometria de saída"><input id="toggle-operational-group" class="layer-visibility-input" type="checkbox" checked></label>
+          <label class="layer-visibility-toggle" for="toggle-operational-group" title="Exibir ou ocultar a geometria de saída"><input id="toggle-operational-group" class="layer-visibility-input" type="checkbox"></label>
           <button type="button" class="layer-group-header layer-group-header--section layer-group-header--tipo" aria-expanded="true">
             <span class="layer-group-toggle" aria-hidden="true">▼</span><span class="layer-group-name layer-group-name--tipo">Geometrias de saída</span><span id="viewer-layer-count" class="layer-group-active-count">0</span>
           </button>
@@ -62,7 +73,7 @@
 {% block painel %}
   <main class="conteudo-principal geo-map-workspace" aria-label="Mapa da geometria de saída">
     <div id="map-geoespacial" class="geoespacial-map"><div class="painel-map-loading" role="status" aria-live="polite"><span class="painel-loading-spinner" aria-hidden="true"></span><span>Preparando mapa e camadas…</span></div></div>
-    <div class="geoespacial-map-caption"><i class="fa-solid fa-circle-info"></i> Saídas geoespaciais da plataforma, demandas cadastradas e camadas do Sicard Storage.</div>
+    <div id="viewer-feedback" class="geoespacial-map-caption" role="status" aria-live="polite" aria-atomic="true"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Clique numa feição para consultar seus atributos. Segure e arraste para mover o mapa.</span></div>
     <aside class="geo-context-panel is-collapsed" aria-label="Legenda e detalhes da camada">
       <header class="geo-context-header" data-context-drag title="Arraste para reposicionar o quadro">
         <span><i class="fa-solid fa-grip-vertical" aria-hidden="true"></i> Legenda e detalhes</span>
@@ -88,7 +99,9 @@
 
 {% block scripts_pagina %}
   <script src="/assets/vendor/maplibre-gl/maplibre-gl.js"></script>
-  <script src="/assets/js/geoespacial-map.js?v=20260722-10"></script>
+  <script src="/assets/js/geoespacial-map.js?v=20261009-explorer-1"></script>
   <script src="/assets/js/status-colors.js"></script>
-  <script src="/restrict/geoespacial/geoespacial-visualizador-camadas.js?v=20261008-5"></script>
+  <script src="/assets/js/painel-layer-filter.js"></script>
+  <script src="/restrict/geoespacial/visualizador-progresso.js?v=20261009-explorer-1"></script>
+  <script src="/restrict/geoespacial/geoespacial-visualizador-camadas.js?v=20261009-explorer-1"></script>
 {% endblock %}

@@ -80,3 +80,4 @@ documentacao/geoespacial/entregas/
 
 # Inventario de dados e evidencias de trabalho: arquivos locais, sem publicar no Git.
 /outputs/inventario-saidas-20261008/
+/outputs/migracao-demandas/

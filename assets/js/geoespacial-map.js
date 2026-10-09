@@ -112,6 +112,7 @@
         this.map.addSource(sourceId, {
           type: "geojson",
           data: geojsonData,
+          ...(options.tolerance != null ? {tolerance:options.tolerance} : {}),
         });
       }
 
@@ -177,7 +178,7 @@
 
     toggleLayer: function (layerId, visible) {
       const layerInfo = this.layers.get(layerId);
-      if (layerInfo && this.map) {
+      if (layerInfo && this.map && layerInfo.visible !== visible) {
         layerInfo.mapLayerIds.forEach((id) => { if (this.map.getLayer(id)) this.map.setLayoutProperty(id, "visibility", visible ? "visible" : "none"); });
         layerInfo.visible = visible;
         if (layerInfo.labelLayerId && this.map.getLayer(layerInfo.labelLayerId)) this.map.setLayoutProperty(layerInfo.labelLayerId, "visibility", visible && layerInfo.labelsVisible ? "visible" : "none");

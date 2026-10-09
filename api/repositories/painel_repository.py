@@ -154,6 +154,24 @@ def list_all() -> list[dict[str, Any]]:
     return planos + programas + projetos
 
 
+def list_filter_metadata() -> list[dict[str, Any]]:
+    """Campos dos seis filtros, sem geometria, descrições ou dados pessoais.
+
+    A projeção externa deixa o PostgreSQL eliminar os cálculos espaciais das
+    consultas compartilhadas, mantendo as mesmas relações e valores do painel.
+    """
+    projection = """codigo AS id, tipo, status, nome, plano_id, plano_codigo,
+        plano_nome, programa_id::text AS programa_id, programa_nome,
+        COALESCE(abrangencia_nomes, ARRAY[]::text[]) AS abrangencia,
+        sigma_instituicao_id::text AS instituicao_id, instituicao_nome AS instituicao_label"""
+    query = " UNION ALL ".join(
+        f"SELECT {projection} FROM ({sql}) AS dados"
+        for sql in (_PLANOS_SQL, _PROGRAMAS_SQL, _PROJETOS_SQL)
+    )
+    with get_connection() as conn:
+        return list(conn.execute(query).fetchall())
+
+
 def estatisticas_operador(usuario_id: str) -> dict[str, int]:
     """Agrega registros protocolados pela conta SIGMA autenticada."""
     query = """

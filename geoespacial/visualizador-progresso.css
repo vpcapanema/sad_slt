@@ -1,0 +1,137 @@
+/* Barras e ações individuais do SIGMA WebGIS. */
+.layer-item__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.layer-health,
+.layer-reload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  line-height: 1;
+}
+
+.layer-health {
+  border: 1px solid transparent;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.layer-health--ok {
+  color: #15803d;
+  background: rgba(34, 197, 94, 0.16);
+  border-color: rgba(21, 128, 61, 0.22);
+}
+
+.layer-health--error {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.13);
+  border-color: rgba(185, 28, 28, 0.22);
+}
+
+.layer-health--loading {
+  color: #116593;
+  background: rgba(17, 101, 147, 0.12);
+  border-color: rgba(17, 101, 147, 0.22);
+}
+
+.layer-health--hidden {
+  display: none;
+}
+
+.layer-reload-btn {
+  border: 1px solid rgba(17, 101, 147, 0.2);
+  color: #116593;
+  background: #ffffff;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.layer-reload-btn:hover:not(:disabled) {
+  color: #ffffff;
+  background: #116593;
+  border-color: #116593;
+}
+
+.layer-reload-btn:disabled {
+  color: #cbd5e1;
+  cursor: not-allowed;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.layer-item__loading {
+  display: none;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.layer-item__loading--visible {
+  display: grid;
+}
+
+.layer-item__loading-bar {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.28);
+}
+
+.layer-item__loading-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #fde047 0%, #fbbf24 100%);
+  transition: width 0.18s ease;
+}
+
+.layer-item__loading-text {
+  font-size: 0.54rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+
+/* Mesma disposição do Sigma, aplicada também às pastas e grupos SICARD. */
+#geo-layers-root .layer-item__loading { margin:4px 6px 4px 26px; }
+#geo-layers-root .layer-item__actions { margin-left:auto; flex-shrink:0; }
+#geo-layers-root .layer-item__loading-text { max-width:110px; overflow:hidden; text-overflow:ellipsis; }
+#geo-layers-root .layer-item__loading-bar.is-indeterminate .layer-item__loading-fill { animation:sicard-item-pending 1.4s ease-in-out infinite; }
+@keyframes sicard-item-pending { from {transform:translateX(-110%);} to {transform:translateX(300%);} }
+@media(prefers-reduced-motion:reduce) { #geo-layers-root .layer-item__loading-fill {animation:none!important;transition:none;} }
+
+/* Contraste dos mesmos indicadores sobre a sidebar escura do SICARD. */
+.geoespacial-map-sidebar .layer-item__loading-text { color:#cbd5e1; }
+.geoespacial-map-sidebar .layer-health--ok { background:#dcfce7; }
+.geoespacial-map-sidebar .layer-health--error { background:#fee2e2; }
+.geoespacial-map-sidebar .layer-health--loading { background:#e2edf2; }
+
+/* Espaçamento apenas entre grupos principais, inclusive após reordenar. */
+#geo-layers-root > .layer-group--tipo + .layer-group--tipo { margin-top: 14px; }
+
+/* Gradiente claro com contraste sobre o fundo escuro da sidebar. */
+#geo-layers-root .layer-item__loading-fill { background: linear-gradient(90deg, #fde047 0%, #fbbf24 100%); }
+
+/* Actions occupy their own column; names never overlap controls. */
+#geo-layers-root .layer-group-header-row { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:4px; min-width:0; }
+#geo-layers-root .layer-group-header-row > .layer-group-header { width:auto; min-width:0; overflow:hidden; }
+#geo-layers-root .geo-layer-copy { width:100%; min-width:0; overflow:hidden; }
+#geo-layers-root .layer-group-name { min-width:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#geo-layers-root .geo-layer-folder .geo-layer-copy > .layer-group-name { flex:1 1 auto; }
+#geo-layers-root .geo-layer-folder-icon, #geo-layers-root .layer-group-active-count { flex:0 0 auto; }
+#geo-layers-root .layer-item__loading { grid-template-columns:minmax(0,1fr) auto; min-width:0; }
+.geoespacial-viewer-page .painel-layers-section { overflow-x:hidden; }

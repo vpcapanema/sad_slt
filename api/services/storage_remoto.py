@@ -221,3 +221,29 @@ def apagar_arquivo(caminho: str) -> None:
         resposta = _pedir(cliente, "DELETE", "/user/files", params={"path": _absoluto(caminho)})
     if resposta.status_code not in (200, 204, 404):
         raise StorageIndisponivel(f"O storage recusou remover {Path(caminho).name}: {_mensagem(resposta)}")
+
+
+def copiar_para(caminho: str, destino) -> str:
+    """Copia por blocos para um stream, sem manter o arquivo inteiro na memória."""
+    from hashlib import sha256
+    resumo = sha256()
+    with _cliente() as cliente:
+        for tentativa in (0,1):
+            token=_obter_token(cliente,renovar=bool(tentativa))
+            try:
+                with cliente.stream("GET","/user/files",params={"path":_absoluto(caminho)},
+                                    headers={"Authorization":f"Bearer {token}"}) as resposta:
+                    if resposta.status_code==401 and not tentativa:
+                        continue
+                    if resposta.status_code==404:
+                        raise FileNotFoundError("Arquivo não encontrado no Storage")
+                    if resposta.status_code!=200:
+                        resposta.read()
+                        raise StorageIndisponivel(f"Falha no download: {_mensagem(resposta)}")
+                    for bloco in resposta.iter_bytes(1024*1024):
+                        resumo.update(bloco)
+                        destino.write(bloco)
+                    return resumo.hexdigest()
+            except httpx.HTTPError as exc:
+                raise StorageIndisponivel("Não foi possível concluir a leitura do Storage") from exc
+    raise StorageIndisponivel("O Storage recusou a autenticação")

@@ -476,6 +476,7 @@ GEOSPATIAL_PAGES = {
     "extracao-atributos": "extracao-atributos.html",
     "extracoes-atributos": "extracoes-atributos.html",
     "visualizador-camadas": "visualizador-camadas.html",
+    "explorador-camadas": "explorador-camadas.html",
     "visualizador-bases-geoespaciais": "visualizador-inputs.html",
     "bancada": "_geoprocessamento.html",
 }

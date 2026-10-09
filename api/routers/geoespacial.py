@@ -1008,15 +1008,23 @@ def listar_arvore_storage(raiz: str) -> dict[str, Any]:
         raise HTTPException(404, str(exc)) from exc
 
 
+@router.get("/cadastro-filtros")
+def listar_filtros_cadastro() -> list[dict[str, Any]]:
+    """Metadados dos filtros compartilhados com o painel, sem repetir geometrias."""
+    from api.repositories.painel_repository import list_filter_metadata
+    return list_filter_metadata()
+
+
 @router.get("/cadastro-geometrias/{tipo}")
-def listar_geometrias_cadastro(tipo: str) -> dict[str, Any]:
+def listar_geometrias_cadastro(tipo: str, codigo: str | None = None) -> dict[str, Any]:
     """Geometrias materializadas de planos, programas ou projetos (PostGIS) para o visualizador."""
     from api.repositories import cadastro_geometria_repository
     if tipo not in cadastro_geometria_repository._TABELAS:
         raise HTTPException(404, "Tipo de cadastro desconhecido")
     try:
-        return {"tipo": tipo, "itens": cadastro_geometria_repository.listar(tipo)}
+        return {"tipo": tipo, "itens": cadastro_geometria_repository.listar(tipo, codigo)}
     except DatabaseUnavailableError as exc:
+        logger.exception("Falha ao consultar geometrias do cadastro: %s", tipo)
         raise HTTPException(503, "Banco de cadastro indisponível") from exc
 
 
@@ -2222,3 +2230,6 @@ from api.routers.extracao_atributos import router as extracao_router
 router.include_router(extracao_router)
 from api.routers.bancada_arquivos import router as bancada_arquivos_router
 router.include_router(bancada_arquivos_router)
+
+from api.routers.explorador_camadas import router as explorador_router
+router.include_router(explorador_router)

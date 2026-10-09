@@ -1,0 +1,49 @@
+.geo-explorer-main { max-width:1440px; margin:auto; }
+.geo-explorer { padding:20px; margin:18px 0; }
+#explorer-breadcrumb { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding-bottom:14px; border-bottom:1px solid #dbe4e9; }
+#explorer-breadcrumb button { border:0; background:none; color:#116593; font-weight:600; cursor:pointer; padding:4px; }
+.geo-explorer-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:12px 0; border-bottom:1px solid #dbe4e9; }
+.geo-explorer-toolbar[hidden] { display:none; }
+.geo-explorer button { cursor:pointer; }
+.geo-explorer-toolbar button,.geo-explorer-actions button,.geo-explorer-actions a { display:inline-grid; place-items:center; border:1px solid #cad8df; border-radius:6px; background:white; color:#116593; width:34px; height:34px; text-decoration:none; }
+.geo-explorer-toolbar button[aria-pressed=true] { background:#116593; color:white; }
+.geo-explorer-toolbar button:disabled { opacity:.45; cursor:default; }
+.geo-explorer-views { display:flex; gap:4px; }
+.geo-explorer-search { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.geo-explorer-search input { padding:8px 12px; min-width:0; border:1px solid #cad8df; border-radius:6px; }
+#explorer-status { color:#64748b; min-height:20px; margin:12px 0; }
+#explorer-status[data-error=true] { color:#b91c1c; }
+.geo-explorer-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:18px; }
+.geo-explorer-card { display:flex; align-items:center; gap:16px; min-height:125px; padding:22px; border:1px solid #dbe4e9; background:#f8fafc; border-radius:12px; text-align:left; color:#183f50; font-size:1rem; font-weight:700; }
+.geo-explorer-card:hover { border-color:#116593; background:#eef7fb; }
+.geo-explorer-card > i { color:#e3ad36; font-size:2.8rem; flex-shrink:0; }
+.geo-explorer-card span { min-width:0; overflow-wrap:anywhere; }
+.geo-explorer-table-wrap { overflow-x:auto; }
+.geo-explorer-table { width:100%; border-collapse:collapse; font-size:.84rem; }
+.geo-explorer-table th { text-align:left; background:#f1f5f9; white-space:nowrap; }
+.geo-explorer-table th button { color:inherit; font:inherit; font-weight:700; border:0; background:none; }
+.geo-explorer-table td,.geo-explorer-table th { padding:10px; border-bottom:1px solid #e2e8f0; vertical-align:middle; }
+.geo-explorer-name { border:0; background:none; color:#116593; text-align:left; font:inherit; padding:0; display:flex; align-items:center; gap:8px; }
+.geo-explorer-name span { overflow-wrap:anywhere; }
+.geo-explorer-name i { color:#d4a039; }
+.geo-explorer-actions { display:flex; align-items:center; gap:5px; white-space:nowrap; }
+.geo-explorer-list { display:grid; gap:8px; }
+.geo-explorer-list .geo-explorer-item { display:flex; align-items:center; justify-content:space-between; gap:16px; border-bottom:1px solid #e2e8f0; padding:12px; }
+.geo-explorer-icons { display:grid; grid-template-columns:repeat(auto-fill,minmax(175px,1fr)); gap:14px; }
+.geo-explorer-icons .geo-explorer-item { padding:18px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; }
+.geo-explorer-icons .geo-explorer-name { flex-direction:column; width:100%; text-align:center; min-height:90px; }
+.geo-explorer-icons .geo-explorer-name i { font-size:2.6rem; }
+.geo-explorer-icons .geo-explorer-actions { margin-top:12px; justify-content:center; }
+#explorer-details { border:1px solid #cbd5e1; border-radius:12px; width:min(760px,90vw); max-height:85vh; padding:20px; }
+#explorer-details::backdrop { background:#0f172a88; }
+#explorer-details header { display:flex; align-items:center; justify-content:space-between; gap:15px; }
+#explorer-details h2 { font-size:1.2rem; margin:0; }
+#explorer-details header button { width:34px; height:34px; border:0; background:#f1f5f9; border-radius:5px; cursor:pointer; }
+#explorer-details-body { overflow:auto; max-height:65vh; margin-top:18px; }
+#explorer-details dl { display:grid; grid-template-columns:minmax(100px,1fr) minmax(0,2fr); gap:10px 18px; }
+#explorer-details dt { font-weight:700; color:#475569; }
+#explorer-details dd { margin:0; overflow-wrap:anywhere; }
+#explorer-details pre { white-space:pre-wrap; font-size:.8rem; margin:0; }
+@media(max-width:650px) { .geo-explorer {padding:12px;} .geo-explorer-search {margin-left:0;width:100%;} .geo-explorer-search input {width:100%;} .geo-explorer-cards {grid-template-columns:1fr;} }
+
+.geo-explorer-name small { display:block; color:#64748b; font-size:.72rem; font-weight:400; margin-top:3px; }

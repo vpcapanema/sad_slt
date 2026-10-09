@@ -1,0 +1,36 @@
+{% extends "bases/base_conteudo.html" %}
+{% set subtitulo = "Camadas geoespaciais" %}
+{% set navegacao = "restrita" %}
+{% set bloco_modulo = "geoprocessamento" %}
+{% set requer_autenticacao = true %}
+{% block titulo %}Explorador de camadas geoespaciais — SICARD{% endblock %}
+{% block classes_body %}geo-explorer-page{% endblock %}
+{% block estilos_pagina %}
+<link rel="stylesheet" href="/assets/css/geoespacial.css">
+<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/restrict/geoespacial/explorador-camadas.css?v=20261009-1">
+{% endblock %}
+{% block conteudo %}
+<main class="conteudo-principal app-main geo-explorer-main">
+  <nav class="geoespacial-breadcrumb"><a href="/restrict/geoespacial/">Central geoespacial</a><span>›</span><span>Camadas geoespaciais</span></nav>
+  <header class="standard-page-hero"><h1>Camadas geoespaciais</h1><p>Explore as fontes da plataforma e consulte, visualize ou baixe suas camadas.</p></header>
+  <section class="card geo-explorer" aria-label="Explorador de camadas">
+    <nav id="explorer-breadcrumb" aria-label="Caminho atual"></nav>
+    <div id="explorer-toolbar" class="geo-explorer-toolbar" hidden>
+      <button type="button" data-action="back" title="Voltar" aria-label="Voltar"><i class="fa-solid fa-arrow-left"></i></button>
+      <button type="button" data-action="up" title="Pasta acima" aria-label="Pasta acima"><i class="fa-solid fa-arrow-up"></i></button>
+      <button type="button" data-action="refresh" title="Atualizar" aria-label="Atualizar"><i class="fa-solid fa-arrows-rotate"></i></button>
+      <div class="geo-explorer-views" role="group" aria-label="Modo de visualização">
+        <button type="button" data-view="details" title="Detalhes" aria-label="Detalhes"><i class="fa-solid fa-table-list"></i></button>
+        <button type="button" data-view="list" title="Lista" aria-label="Lista"><i class="fa-solid fa-list"></i></button>
+        <button type="button" data-view="icons" title="Ícones grandes" aria-label="Ícones grandes"><i class="fa-solid fa-grip"></i></button>
+      </div>
+      <label class="geo-explorer-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="explorer-search" type="search" placeholder="Pesquisar nesta pasta" aria-label="Pesquisar nesta pasta"></label>
+    </div>
+    <p id="explorer-status" role="status" aria-live="polite"></p>
+    <div id="explorer-content" aria-busy="true"></div>
+  </section>
+  <dialog id="explorer-details" aria-labelledby="explorer-details-title"><header><h2 id="explorer-details-title">Metadados</h2><form method="dialog"><button aria-label="Fechar" title="Fechar"><i class="fa-solid fa-xmark"></i></button></form></header><div id="explorer-details-body"></div></dialog>
+</main>
+{% endblock %}
+{% block scripts_pagina %}<script src="/restrict/geoespacial/explorador-camadas.js?v=20261009-1"></script>{% endblock %}
