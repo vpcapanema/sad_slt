@@ -202,6 +202,13 @@ def pagina_documentacao_favorabilidade(request: Request) -> Response:
     )
 
 
+@app.get("/public/documentacao/limite-maritimo/", include_in_schema=False)
+def pagina_documentacao_limite_maritimo(request: Request) -> Response:
+    """Fontes, método e resultados do recorte marítimo operacional de São Paulo."""
+    from api.services.documentacao_limite_maritimo import montar_contexto
+    return render_page(request, "paginas/documentacao/limite-maritimo.html", **montar_contexto())
+
+
 @app.get("/public/transparencia/", include_in_schema=False)
 def pagina_transparencia_publica(request: Request) -> Response:
     return render_page(request, "paginas/transparencia/index.html")

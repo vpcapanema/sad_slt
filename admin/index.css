@@ -585,10 +585,10 @@ body.operador-home-page {
   flex-direction: column;
   gap: 0.75rem;
   padding: 0.75rem;
-  border: 1px solid #dce5ef;
+  border: 1px solid #8fa4b8;
   border-radius: 12px;
   background: #fff;
-  box-shadow: 0 3px 10px rgba(18, 48, 77, 0.05);
+  box-shadow: 0 3px 0 rgba(18, 48, 77, 0.18), 0 6px 14px rgba(18, 48, 77, 0.18);
 }
 
 .secao-platform-mad .platform-subgroup__title,
@@ -608,10 +608,21 @@ body.operador-home-page {
    dois itens por linha em ambos, senão os rótulos ficam espremidos demais. */
 .subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos .platform-grid { --itens-por-linha: 2; }
 .subgroup-ranqueamento .platform-grid { --itens-por-linha: 2; }
-/* Geoprocessamento e Documentação técnica: dois subcards lado a lado, cada um
-   com três acessos empilhados numa coluna. */
-.subgroup-geoprocessamento .platform-grid { --itens-por-linha: 1; }
-.subgroup-documentacao-tecnica .platform-grid { --itens-por-linha: 1; }
+/* Acessos reorganizados dentro de cada subgrupo: duas colunas, com o
+   último acesso ocupando a linha quando a quantidade é ímpar. */
+.secao-platform-geoprocessamento .platform-subgroup .platform-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+.secao-platform-geoprocessamento .platform-subgroup .platform-tile:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+@media (max-width: 480px) {
+  .secao-platform-geoprocessamento .platform-subgroup .platform-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 .secao-platform-mad .subgroup-agrupamento-demandas-extracao-atributos {
   flex: 1 1 100%;
@@ -722,4 +733,34 @@ body.operador-home-page {
   .restrict-platform-groups .subgroup-storage-de-dados-geoespaciais .platform-grid {
     --itens-por-linha: 2;
   }
+}
+
+
+/* Cores por subgrupo aplicadas exclusivamente aos cards botão. */
+.restrict-platform-groups .subgroup-agrupamento-demandas-extracao-atributos { --subgroup-accent: #164ea3; }
+.restrict-platform-groups .subgroup-analise-multicriterio-ahp-e-obtencao-de-pesos { --subgroup-accent: #984900; }
+.restrict-platform-groups .subgroup-ranqueamento { --subgroup-accent: #6c2892; }
+.restrict-platform-groups .subgroup-geoprocessamento { --subgroup-accent: #006b48; }
+.restrict-platform-groups .subgroup-documentacao-tecnica { --subgroup-accent: #1748a0; }
+.restrict-platform-groups .secao-platform-administracao { --subgroup-accent: #7f1d1d; }
+.restrict-platform-groups .platform-subgroup .platform-tile {
+  --tile-accent: var(--subgroup-accent, #314e68);
+  color: var(--tile-accent);
+  border-color: color-mix(in srgb, var(--tile-accent) 60%, white);
+  background: color-mix(in srgb, var(--tile-accent) 12%, white);
+}
+.restrict-platform-groups .platform-subgroup .platform-tile__label {
+  color: var(--subgroup-accent, #314e68);
+}
+.restrict-platform-groups .platform-subgroup .platform-tile:hover,
+.restrict-platform-groups .platform-subgroup .platform-tile:focus-visible {
+  background: color-mix(in srgb, var(--tile-accent) 20%, white);
+  border-color: var(--tile-accent);
+}
+.restrict-platform-groups .secao-platform-administracao .platform-tile {
+  --tile-accent: #7f1d1d;
+}
+.restrict-platform-groups .secao-platform-administracao .platform-tile__icon {
+  background: #7f1d1d;
+  color: #fff;
 }

@@ -1,0 +1,24 @@
+{
+  "fontes": [
+    "https://imagem.camara.leg.br/Imagem/d/pdf/295anc19ago1988.pdf",
+    "https://royaltiesdopetroleo.ucam-campos.br/wp-content/uploads/2017/05/Guia_Royalties.pdf",
+    "https://geoftp.ibge.gov.br/informacoes_ambientais/estudos_ambientais/biomas/vetores/SistCostMar_AmAz_2024.zip",
+    "https://geomaps.anp.gov.br/geoserver/wfs?service=WFS&version=1.0.0&request=GetFeature&typeName=sisroc:estado_view_geoanp&outputFormat=application/json&srsName=EPSG:4326"
+  ],
+  "pontos_azimutes": [
+    {
+      "divisa": "RJ/SP",
+      "longitude": -44.72269444444445,
+      "latitude": -23.370416666666667,
+      "azimute_tabela": 327.48529722222224
+    },
+    {
+      "divisa": "SP/PR",
+      "longitude": -48.08222222222223,
+      "latitude": -25.319444444444443,
+      "azimute_tabela": 311.7397888888889
+    }
+  ],
+  "sha256": "9249ccef2a7bfa4278325ec72a7ded347a70e7571f6afa3cc73c6eda3715b413",
+  "limitacoes": "Estimativa operacional a partir de tabela histórica, não arquivo oficial de divisas. Coordenadas históricas tratadas como geográficas WGS84 para aproximação; datum não informado na tabela. Projeções cartográficas retas não reproduzem exatamente as geodésicas jurídicas. Não usar para demarcação, royalties ou licenciamento."
+}

@@ -7,6 +7,7 @@ from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from api.db.connection import get_connection
+from api.services.autoria_demanda import validar_autor
 from api.repositories import geometria_historico_repository
 from api.constants import STATUS_POS_APROVACAO, STATUS_PRE_APROVACAO, STATUS_PRE_REPROVACAO, STATUS_REPROVACAO
 
@@ -127,6 +128,7 @@ def insert(
 
     Com ``arquivo_geometria`` (upload), a versão e o arquivo original vão para
     o histórico de geometrias na mesma transação."""
+    row = dict(row, criado_por=validar_autor(row.get("criado_por")))
     row = {
         "maturidade": None,
         "capex_estimado": None,
@@ -212,7 +214,6 @@ _APROVAR_SQL = """
        SET status = %(pos_aprovacao)s,
            aprovado_em = CURRENT_TIMESTAMP,
            aprovado_por = %(aprovado_por)s,
-           atualizado_por = %(aprovado_por)s,
            motivo_aprovacao = COALESCE(%(motivo)s, '')
      WHERE codigo = %(codigo)s
        AND status = ANY(%(pre)s)
@@ -242,7 +243,6 @@ _REPROVAR_SQL = """
        SET status = %(status_reprovado)s,
            reprovado_em = CURRENT_TIMESTAMP,
            reprovado_por = %(reprovado_por)s,
-           atualizado_por = %(reprovado_por)s,
            motivo_reprovacao = %(justificativa)s
      WHERE codigo = %(codigo)s
        AND status = ANY(%(pre)s)

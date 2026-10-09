@@ -23,7 +23,7 @@
 .geo-explorer-table th { text-align:left; background:#f1f5f9; white-space:nowrap; }
 .geo-explorer-table th button { color:inherit; font:inherit; font-weight:700; border:0; background:none; }
 .geo-explorer-table td,.geo-explorer-table th { padding:10px; border-bottom:1px solid #e2e8f0; vertical-align:middle; }
-.geo-explorer-name { border:0; background:none; color:#116593; text-align:left; font:inherit; padding:0; display:flex; align-items:center; gap:8px; }
+.geo-explorer-name { border:0; background:none; color:#116593; text-align:left; font:inherit; padding:0; display:flex; align-items:baseline; gap:8px; }
 .geo-explorer-name span { overflow-wrap:anywhere; }
 .geo-explorer-name i { color:#d4a039; }
 .geo-explorer-actions { display:flex; align-items:center; gap:5px; white-space:nowrap; }
@@ -47,3 +47,21 @@
 @media(max-width:650px) { .geo-explorer {padding:12px;} .geo-explorer-search {margin-left:0;width:100%;} .geo-explorer-search input {width:100%;} .geo-explorer-cards {grid-template-columns:1fr;} }
 
 .geo-explorer-name small { display:block; color:#64748b; font-size:.72rem; font-weight:400; margin-top:3px; }
+
+/* Marca da fonte usada diretamente como ícone da pasta. */
+.geo-explorer-folder-icon { display:inline-block; width:1.5em; height:1.5em; object-fit:contain; flex:0 0 auto; vertical-align:middle; }
+.geo-explorer-card > .geo-explorer-folder-icon { width:64px; height:64px; }
+.geo-explorer-icons .geo-explorer-folder-icon { width:64px; height:64px; }
+.geo-explorer-icons .geo-explorer-name { align-items:center; }
+
+.geo-explorer-file-icon { display:block; width:28px; height:34px; object-fit:contain; flex:0 0 auto; align-self:flex-start; }
+.geo-explorer-icons .geo-explorer-file-icon { width:64px; height:76px; align-self:center; }
+
+/* Ícone e alias compartilham a linha principal; nome bruto fica abaixo. */
+.geo-explorer-name { display:grid; grid-template-columns:minmax(0,1fr); gap:3px; }
+.geo-explorer-primary { display:flex; align-items:center; gap:8px; min-width:0; }
+.geo-explorer-name > small { margin:0 0 0 36px; }
+.geo-explorer-file-icon { align-self:center; }
+.geo-explorer-icons .geo-explorer-primary { flex-direction:column; text-align:center; width:100%; }
+.geo-explorer-icons .geo-explorer-name > small { margin:0; }
+.geo-explorer-actions button:disabled { opacity:.4; cursor:default; }

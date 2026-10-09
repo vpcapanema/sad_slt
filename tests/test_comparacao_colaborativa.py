@@ -730,3 +730,21 @@ def test_fluxo_colaborativo_completo(monkeypatch) -> None:
     assert cons["consistente"] is True
     assert fake.ambientes[ambiente_id]["status"] == "consolidada"
     assert fake.ambientes[ambiente_id]["hierarquizacao_data_persistida"]["comparacao_colaborativa"]["modo_preenchimento"] == "colaborativo"
+
+
+def test_julgamento_usa_matriz_cadastrada_ignora_matriz_enviada(monkeypatch):
+    fake = _instalar_fake_repo(monkeypatch)
+    criteria = [{"criterio":"Oficial A","premissa":"Premissa preservada"},{"criterio":"Oficial B"}]
+    monkeypatch.setattr(service.hierarq_repo,"get_by_id",lambda _: {"codigo":"H-1","nome":"Hierarquização","dados_hierarquizacao":{"cabecalho_grupo":{"matriz_premissas_criterios":{"arquivo":"original.xlsx","linhas":criteria}}}})
+    response = _client_autenticado().post("/api/ahp/comparacao-colaborativa/ambientes",json={"hierarquizacao_id":HIERARQUIZACAO_ID,"matriz_premissas_criterios":[{"criterio":"Injetado A"},{"criterio":"Injetado B"}],"convites":[{"email":"a@x.gov.br"}],"valido_ate":"2030-12-31T23:59:59+00:00"})
+    assert response.status_code == 201, response.text
+    saved = fake.ambientes[response.json()["id"]]
+    assert saved["criterios"] == criteria
+    assert saved["arquivo_matriz_nome"] == "original.xlsx"
+
+
+def test_julgamento_sem_matriz_na_hierarquizacao_nao_aceita_upload_alternativo(monkeypatch):
+    _instalar_fake_repo(monkeypatch)
+    monkeypatch.setattr(service.hierarq_repo,"get_by_id",lambda _: {"codigo":"H-1","nome":"Sem matriz","dados_hierarquizacao":{}})
+    response = _client_autenticado().post("/api/ahp/comparacao-colaborativa/ambientes",json={"hierarquizacao_id":HIERARQUIZACAO_ID,"matriz_premissas_criterios":[{"criterio":"Outro A"},{"criterio":"Outro B"}],"convites":[{"email":"a@x.gov.br"}],"valido_ate":"2030-12-31T23:59:59+00:00"})
+    assert response.status_code == 422, response.text

@@ -8,6 +8,9 @@ from typing import Any
 from api.codigos_demanda import gerar_codigo_plano, gerar_codigo_unico
 from api.constants import CODIGOS_SENTINELA_HIERARQUIA
 from api.constants import STATUS_INICIAL_DEMANDA, STATUS_PRE_APROVACAO, STATUS_PRE_REPROVACAO
+from api.services.campos_demanda import apenas_alteracoes
+from api.services.autoria_demanda import resolver_autor
+from api.services.status_transicoes import status_inicial_sei
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import dominio_repository, plano_repository, programa_repository
 from api.schemas.demanda import RepresentanteSchema
@@ -118,6 +121,8 @@ def criar_plano(
 
     ``arquivo_geometria`` é o arquivo vetorial original quando a geometria veio
     de upload; vai para o histórico de geometrias na mesma transação."""
+    autor_id = resolver_autor(usuario_id, origem)
+    status_sei = status_inicial_sei() if origem.upper() == "SEI" else None
     codigo = gerar_codigo_unico(
         lambda: gerar_codigo_plano(origem=origem), plano_repository.get_by_codigo
     )
@@ -145,9 +150,11 @@ def criar_plano(
         "vigencia_fim": payload.vigencia_fim or None,
         "valor_global": payload.valor_global,
         "atributos_cadastrais": payload.atributos_cadastrais,
-        "status": STATUS_INICIAL_DEMANDA,
+        "status": status_sei or STATUS_INICIAL_DEMANDA,
     }
     normalizar_plano(row, pessoa_id=pessoa_id, usuario_id=usuario_id)
+    row["criado_por"] = autor_id
+    row["atualizado_por"] = autor_id
     inserted = plano_repository.insert(
         row,
         payload.unidades_espaciais,
@@ -241,6 +248,12 @@ def atualizar_plano(
     for key in ("instituicao_id", "instituicao_label", "pessoa_id", "representante"):
         data.pop(key, None)
     extrair_atributos_nativos(data)
+    existing = plano_repository.get_by_codigo(codigo)
+    if not existing:
+        raise DemandaNotFoundError(codigo)
+    data = apenas_alteracoes(data, existing)
+    if not data:
+        return obter_plano(codigo, incluir_auditoria=True)
     data["atualizado_por"] = usuario_id
 
     row = plano_repository.update(codigo, data)

@@ -75,7 +75,7 @@ def _via_api() -> bool:
     return not montado() and storage_remoto.configurado()
 
 
-def _listar(relativo: str) -> list[dict[str, Any]]:
+def _listar(relativo: str, *, incluir_ocultos: bool = False) -> list[dict[str, Any]]:
     """Conteúdo de uma pasta do storage, venha ela da montagem ou da API."""
     if _via_api():
         try:
@@ -89,7 +89,7 @@ def _listar(relativo: str) -> list[dict[str, Any]]:
         if not pasta.is_dir():
             raise FileNotFoundError("Pasta não encontrada no storage")
         itens = [{"nome": i.name, "pasta": i.is_dir(), "tamanho": i.stat().st_size, "modificado": i.stat().st_mtime} for i in pasta.iterdir()]
-    return sorted((i for i in itens if not str(i.get("nome") or "").startswith(".")),
+    return sorted((i for i in itens if incluir_ocultos or not str(i.get("nome") or "").startswith(".")),
                   key=lambda i: str(i.get("nome") or "").lower())
 
 

@@ -89,3 +89,23 @@ def validar_transicao_status(*, de: str, para: str) -> None:
             f"Transição de status inválida: «{origem}» → «{destino}».",
             field="status",
         )
+
+
+def status_inicial_sei() -> str:
+    """Confirmação do cadastro: rascunho -> análise, conforme os domínios oficiais.
+
+    Consulta sem cache para respeitar alterações da matriz a cada criação.
+    A criação não permite saltar diretamente para aprovação ou hierarquização.
+    """
+    from api.constants import STATUS_INICIAL_DEMANDA
+    ativos = {r["codigo"] for r in dominio_repository.list_status_demanda()}
+    origem = "analise_rascunho"
+    destino = STATUS_INICIAL_DEMANDA
+    arestas = dominio_repository.list_transicoes_status_demanda(patch_only=True)
+    if origem not in ativos or destino not in ativos or not any(
+        r["status_origem"] == origem and r["status_destino"] == destino for r in arestas
+    ):
+        raise DemandaValidationError(
+            "O domínio oficial não permite encaminhar o cadastro SEI para análise.", field="status"
+        )
+    return destino

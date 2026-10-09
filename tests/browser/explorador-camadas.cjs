@@ -23,11 +23,11 @@ const {chromium}=require('playwright');const fs=require('node:fs'),http=require(
  try{
   const page=await browser.newPage({viewport:{width:1400,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.route('https://**/*',r=>r.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}/restrict/geoespacial/explorador-camadas/`);
-  await page.waitForSelector('.geo-explorer-card');assert.equal(await page.locator('.geo-explorer-card').count(),3);assert.deepEqual(await page.locator('.geo-explorer-card span').allTextContents(),['DEMANDAS','SICARD Storage','Geometrias de saída']);assert.equal(await page.locator('#explorer-toolbar').isVisible(),false);
+  await page.waitForSelector('.geo-explorer-card');assert.equal(await page.locator('.geo-explorer-card').count(),3);assert.deepEqual(await page.locator('.geo-explorer-card > span:not(.geo-explorer-folder-icon)').allTextContents(),['Demandas','SICARD Storage','Outputs']);assert.equal(await page.locator('#explorer-toolbar').isVisible(),false);
   await page.getByRole('button',{name:'SICARD Storage',exact:true}).click();await page.getByRole('button',{name:'Base-Geoespacial',exact:true}).click();
   await page.waitForSelector('tbody');assert.equal(await page.locator('#explorer-toolbar').isVisible(),true);
   await page.getByRole('button',{name:'Ícones grandes',exact:true}).click();await page.waitForSelector('.geo-explorer-icons');
-  await page.getByRole('button',{name:'Pasta vetorial',exact:true}).click();await page.waitForSelector('tbody');
+  await page.getByRole('button',{name:'Pasta Vetorial',exact:true}).click();await page.waitForSelector('tbody');
   assert.equal(await page.locator('[data-view=icons]').isDisabled(),true);assert.equal(await page.locator('th').last().textContent(),'Ações');assert.match(await page.locator('tbody').textContent(),/GPKG/);assert.match(await page.locator('tbody').textContent(),/2 KB/);
   const mapHref=await page.getByRole('link',{name:'Visualizar Camada teste no mapa'}).getAttribute('href');assert.equal(new URL(mapHref,'http://localhost').searchParams.get('camada'),file.id);
   const download=await page.getByRole('link',{name:'Baixar Camada teste em ZIP'}).getAttribute('href');assert.equal(new URL(download,'http://localhost').searchParams.get('id'),file.id);

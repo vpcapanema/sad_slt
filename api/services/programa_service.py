@@ -8,6 +8,9 @@ from typing import Any
 from api.codigos_demanda import gerar_codigo_programa, gerar_codigo_unico
 from api.constants import CODIGO_PROGRAMA_OUTROS, CODIGOS_SENTINELA_HIERARQUIA
 from api.constants import STATUS_INICIAL_DEMANDA, STATUS_PRE_APROVACAO, STATUS_PRE_REPROVACAO
+from api.services.campos_demanda import apenas_alteracoes
+from api.services.autoria_demanda import resolver_autor
+from api.services.status_transicoes import status_inicial_sei
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import demanda_repository, dominio_repository, programa_repository
 from api.services.campos_demanda import (
@@ -121,6 +124,8 @@ def criar_programa(
 ) -> ProgramaResponseSchema:
     """``origem="SEI"`` marca o código gerado (``I-PRO-SEI-XXXXXXXX``) quando a
     criação vem da integração com o SEI-SP. Vazio por padrão."""
+    autor_id = resolver_autor(usuario_id, origem)
+    status_sei = status_inicial_sei() if origem.upper() == "SEI" else None
     if payload.vinculo_institucional and not (payload.plano_codigo or "").strip():
         raise DemandaValidationError(
             "Selecione o plano cadastrado ou indique que não há vínculo institucional.",
@@ -158,9 +163,11 @@ def criar_programa(
         "representante_nome": (payload.representante.nome or "").strip(),
         "representante_email": payload.representante.email,
         "representante_telefone": payload.representante.telefone,
-        "status": STATUS_INICIAL_DEMANDA,
+        "status": status_sei or STATUS_INICIAL_DEMANDA,
     }
     normalizar_programa(row, pessoa_id=pessoa_id, usuario_id=usuario_id)
+    row["criado_por"] = autor_id
+    row["atualizado_por"] = autor_id
     inserted = programa_repository.insert(
         row,
         payload.unidades_espaciais,
@@ -265,6 +272,12 @@ def atualizar_programa(
     for key in ("instituicao_id", "instituicao_label", "pessoa_id", "representante"):
         data.pop(key, None)
     extrair_atributos_nativos(data)
+    existing = programa_repository.get_by_codigo(codigo)
+    if not existing:
+        raise DemandaNotFoundError(codigo)
+    data = apenas_alteracoes(data, existing)
+    if not data:
+        return obter_programa(codigo, incluir_auditoria=True)
     data["atualizado_por"] = usuario_id
 
     row = programa_repository.update(codigo, data)

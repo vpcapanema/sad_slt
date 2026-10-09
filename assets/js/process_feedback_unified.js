@@ -177,6 +177,7 @@
       <button type="button" class="pfs-close" id="pfsCredentialClose" aria-label="Fechar"><i class="fas fa-times" aria-hidden="true"></i></button>
     </div>
     <form class="pfs-body pfs-credential-body" id="pfsCredentialAuthorized" method="post" novalidate>
+      <input type="text" id="pfsCredentialUsername" name="username" autocomplete="username" aria-label="Usuário" hidden>
       <div class="pfs-credential-icon-area" id="pfsCredentialIconArea"><i class="fas fa-lock" aria-hidden="true"></i></div>
       <p class="pfs-credential-restricted-label" id="pfsCredentialRestrictedLabel">Ação Restrita!</p>
       <p class="pfs-credential-message" data-pfs="credential-message"></p>
@@ -1007,6 +1008,7 @@
             this.iconArea = q('#pfsCredentialIconArea');
             this.bodyEl = q('#pfsCredentialAuthorized');
             this.passwordInput = q('#pfsCredentialPassword');
+            this.usernameInput = q('#pfsCredentialUsername');
             this.errorInline = q('#pfsCredentialErrorInline');
             this.footer = q('#pfsCredentialFooter');
             this.closeBtn = q('#pfsCredentialClose');
@@ -1054,6 +1056,7 @@
             pfsText('credential-cancel-label', opts.cancelLabel || 'Cancelar');
             pfsText('credential-confirm-label', opts.confirmLabel || 'Confirmar');
 
+            this.usernameInput.value = opts.username || window.SLTAdminAuth?.currentUser?.email || '';
             this.passwordInput.value = '';
             this.passwordInput.className = 'pfs-credential-input ' + (isGestor ? 'pfs-credential-input--gestor' : 'pfs-credential-input--admin');
             this.errorInline.textContent = '';

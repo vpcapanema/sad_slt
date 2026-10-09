@@ -5,6 +5,7 @@ from typing import Any
 
 from api.constants import SISTEMA_REPRESENTANTE_EMAIL, SISTEMA_REPRESENTANTE_NOME, SISTEMA_SIGMA_PESSOA_ID
 from api.exceptions import DatabaseUnavailableError
+from api.services.autoria_demanda import validar_autor
 from api.repositories import sigma_cadastro_repository, sigma_usuario_repository
 
 _CAMPOS_AUTORIA = ("criado_por", "atualizado_por", "aprovado_por", "reprovado_por")
@@ -54,10 +55,11 @@ def aplicar_auditoria_usuario(
     row: dict[str, Any], pessoa_id: str, usuario_id: str
 ) -> dict[str, Any]:
     """Mantém o representante legal separado da conta que executou a ação."""
+    autor = validar_autor(usuario_id)
     pid = _pessoa_uuid(pessoa_id)
     row["sigma_pessoa_id"] = pid
-    row["criado_por"] = _pessoa_uuid(usuario_id)
-    row["atualizado_por"] = _pessoa_uuid(usuario_id)
+    row["criado_por"] = autor
+    row["atualizado_por"] = autor
     return row
 
 
@@ -173,3 +175,8 @@ def dados_representante_sistema() -> dict[str, str]:
         "criado_por": SISTEMA_SIGMA_PESSOA_ID,
         "atualizado_por": SISTEMA_SIGMA_PESSOA_ID,
     }
+
+
+def apenas_alteracoes(data: dict, existing: dict) -> dict:
+    """Remove campos normalizados que já possuem o valor enviado."""
+    return {key: value for key, value in data.items() if value != existing.get(key)}

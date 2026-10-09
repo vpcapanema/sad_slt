@@ -71,6 +71,7 @@
 
   let tipo = "projeto";
   let record = null;
+  let originalFormPayload = null;
   let selectedId = null;
   let layerFilterApi = null;
   let complementoSalvo = "";
@@ -411,6 +412,8 @@
                 <button type="button" class="btn btn-secondary" id="btn-editar">Editar</button>
                 <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
                 <button type="button" class="btn btn-secondary" id="btn-cancelar-edicao" hidden>Cancelar</button>
+                <button type="button" class="btn btn-secondary" id="btn-geometria" hidden>Enviar/substituir geometria</button>
+                <input type="file" id="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
               </div>`
                   : ""
               }
@@ -962,6 +965,13 @@
               <span class="field-help">Cadastrado em ${escapeHtml(formatDate(d.criadoEm))}.</span>
             </div>
           </div>
+            ${SLTAdminAuth.can("operate") ? `<div class="admin-dashboard-actions" id="info-edit-actions">
+              <button type="button" class="btn btn-secondary" id="btn-editar">Editar</button>
+              <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
+              <button type="button" class="btn btn-secondary" id="btn-cancelar-edicao" hidden>Cancelar</button>
+                <button type="button" class="btn btn-secondary" id="btn-geometria" hidden>Enviar/substituir geometria</button>
+                <input type="file" id="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
+            </div>` : ""}
             </div>
             <div class="admin-dashboard-col">
               ${analysisMapColumnHtml(d)}
@@ -1052,6 +1062,13 @@
               <span class="field-help">Cadastrado em ${escapeHtml(formatDate(d.criadoEm))}.</span>
             </div>
           </div>
+            ${SLTAdminAuth.can("operate") ? `<div class="admin-dashboard-actions" id="info-edit-actions">
+              <button type="button" class="btn btn-secondary" id="btn-editar">Editar</button>
+              <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
+              <button type="button" class="btn btn-secondary" id="btn-cancelar-edicao" hidden>Cancelar</button>
+                <button type="button" class="btn btn-secondary" id="btn-geometria" hidden>Enviar/substituir geometria</button>
+                <input type="file" id="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
+            </div>` : ""}
             </div>
             <div class="admin-dashboard-col">
               ${analysisMapColumnHtml(d)}
@@ -1128,6 +1145,7 @@
     alterna("#btn-editar", !ligado);
     alterna("#btn-salvar", ligado);
     alterna("#btn-cancelar-edicao", ligado);
+    alterna("#btn-geometria", ligado);
   }
 
   function bindEvents(d) {
@@ -1135,12 +1153,15 @@
     if (tipo === "plano") bindPlano(d);
     if (tipo === "programa") bindPrograma(d);
     attachCurrencyMask($("#fld-valor"));
-    if (tipo === "projeto") {
+    originalFormPayload = structuredClone(collectPayload());
+    {
       setInfoEditMode(false);
       $("#btn-editar")?.addEventListener("click", () => setInfoEditMode(true));
       $("#btn-cancelar-edicao")?.addEventListener("click", () => renderPage(record));
     }
     $("#btn-salvar")?.addEventListener("click", () => saveRecord());
+    $("#btn-geometria")?.addEventListener("click", () => $("#arquivo-nova-geometria")?.click());
+    $("#arquivo-nova-geometria")?.addEventListener("change", uploadReplacementGeometry);
     $("#btn-aprovar")?.addEventListener("click", () => approveRecord());
     $("#btn-reprovar")?.addEventListener("click", () => rejectRecord());
     $("#fld-justificativa-reprov")?.addEventListener("input", (event) => {
@@ -1336,9 +1357,62 @@
     lists.plano = plano.map((r) => ({ ...r, __tipo: "plano" }));
   }
 
+  async function uploadReplacementGeometry(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (JSON.stringify(collectPayload()) !== JSON.stringify(originalFormPayload)) {
+      SLTAdminUi.showToast("Salve ou cancele as alterações do formulário antes de substituir a geometria.", true);
+      event.target.value = "";
+      return;
+    }
+    const selectedTipo = tipo, selectedCode = record.id;
+    const button = $("#btn-geometria");
+    button.disabled = true;
+    async function send(path, token) {
+      const form = new FormData(); form.append("file", file);
+      if (token) form.append("confirmacao", token);
+      const response = await fetch(`/api/geometria/${path}/${selectedTipo}/${encodeURIComponent(selectedCode)}`, {
+        method: "POST", credentials: "include", body: form,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Falha na conferência ou substituição da geometria.");
+      return data;
+    }
+    try {
+      button.textContent = "Conferindo localização…";
+      const check = await send("conferir");
+      const confirmed = await SLTAdminUi.showConfirm({
+        title: check.permitido ? "Confirmar localização da geometria" : "Conferência territorial",
+        message: check.mensagem,
+        confirmLabel: check.permitido ? "Confirmar e substituir" : "Entendi",
+        cancelLabel: "Enviar outra geometria",
+      });
+      if (!check.permitido || !confirmed) return;
+      button.textContent = "Processando geometria…";
+      await send("substituir", check.confirmacao);
+      SLTAdminUi.showToast("Geometria substituída. Arquivo original preservado.");
+      if (tipo === selectedTipo && record.id === selectedCode) renderPage(await API[selectedTipo].get(selectedCode));
+      await refreshLists();
+    } catch (error) {
+      SLTAdminUi.showToast(error.message, true);
+    } finally {
+      event.target.value = "";
+      button.disabled = false; button.textContent = "Enviar/substituir geometria";
+    }
+  }
+
   async function saveRecord() {
     try {
-      const updated = await API[tipo].update(record.id, collectPayload());
+      const current = collectPayload();
+      const changes = Object.fromEntries(Object.entries(current).filter(
+        ([key, value]) => JSON.stringify(value) !== JSON.stringify(originalFormPayload?.[key])
+      ));
+      if (!Object.keys(changes).length) {
+        SLTAdminUi.showToast("Nenhuma alteração foi feita.");
+        setInfoEditMode(false);
+        return;
+      }
+      const updated = await API[tipo].update(record.id, changes);
       SLTAdminUi.showToast("Alterações salvas.");
       await refreshLists();
       renderPage(updated);

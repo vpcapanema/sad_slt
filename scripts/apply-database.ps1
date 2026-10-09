@@ -254,7 +254,11 @@ $migrations = @(
     "121_geometria_plano_programa.sql",
     "122_remover_tabelas_geoprocessamento_obsoletas.sql",
     "123_saidas_geoespaciais_storage.sql",
-    "125_original_geometria_storage.sql"
+    "125_original_geometria_storage.sql",
+    "127_autoria_obrigatoria_novas_demandas.sql",
+    "128_autoria_atualizacao_sei.sql",
+    "129_autoria_sessao_sei.sql",
+    "130_separar_auditoria_decisao.sql"
 )
 
 if ($OnlyMigration) {
@@ -339,6 +343,22 @@ if (-not $OnlyMigration) {
         if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='projeto_geometria_historico' AND column_name='storage_caminho');")) {
             $migrations += "125_original_geometria_storage.sql"
             Write-Ok "Originais de demandas no Storage pendente; aplicando migration 125"
+        }
+        if (-not (Test-SchemaReady "SELECT count(*) = 3 FROM pg_trigger t JOIN pg_class r ON r.oid=t.tgrelid JOIN pg_namespace n ON n.oid=r.relnamespace WHERE n.nspname='demandas' AND t.tgname IN ('trg_plano_exigir_autor_criacao','trg_programa_exigir_autor_criacao','trg_projeto_exigir_autor_criacao');")) {
+            $migrations += "127_autoria_obrigatoria_novas_demandas.sql"
+            Write-Ok "Autoria obrigatoria de demandas pendente; aplicando migration 127"
+        }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='demandas' AND p.proname='fn_exigir_autor_criacao' AND (pg_get_functiondef(p.oid) LIKE '%NEW.atualizado_por :=%' OR obj_description(p.oid, 'pg_proc') = '129: autoria da sessão ativa na criação'))")) {
+            $migrations += "128_autoria_atualizacao_sei.sql"
+            Write-Ok "Migração 128 pendente: autoria de atualização SEI."
+        }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='demandas' AND p.proname='fn_exigir_autor_criacao' AND obj_description(p.oid, 'pg_proc') = '129: autoria da sessão ativa na criação')")) {
+            $migrations += "129_autoria_sessao_sei.sql"
+            Write-Ok "Migração 129 pendente: autoria da sessão ativa."
+        }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='demandas' AND p.proname='fn_touch_atualizado_em' AND obj_description(p.oid, 'pg_proc') = '130: decisões separadas de edição cadastral')")) {
+            $migrations += "130_separar_auditoria_decisao.sql"
+            Write-Ok "Migração 130 pendente: separar decisão e edição."
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

@@ -92,7 +92,6 @@ def aprovar(
         SET status = %(pos_aprovacao)s,
             aprovado_em = CURRENT_TIMESTAMP,
             aprovado_por = %(aprovado_por)s,
-            atualizado_por = %(aprovado_por)s,
             motivo_aprovacao = COALESCE(%(motivo)s, '')
         WHERE codigo = %(codigo)s AND status = ANY(%(pre)s)
         RETURNING id

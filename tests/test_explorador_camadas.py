@@ -127,3 +127,43 @@ def test_remote_copy_streams_chunks_without_full_download(monkeypatch):
     assert digest==sha256(content).hexdigest()
     assert b''.join(seen)==content
     assert len(seen)>1 and max(map(len,seen))<=1024*1024
+
+
+def test_explorer_lists_every_physical_file_including_hidden_and_sidecars(client,mounted):
+    parent=mounted/'base-geoespacial/vetor'
+    names=['dados.shp','dados.shx','dados.dbf','dados.prj','dados.cpg','imagem.tif','leia-me.txt','.oculto','sem_extensao','desconhecido.xyz']
+    for name in names:(parent/name).write_bytes(b'original')
+    response=client.get('/api/geoespacial/explorador/navegar',params={'fonte':'storage','caminho':'base-geoespacial/vetor'})
+    assert response.status_code==200
+    items=response.json()['itens']
+    assert {item['nome_arquivo'] for item in items}==set(names)
+    assert len(items)==len(names)
+    assert next(x for x in items if x['nome_arquivo']=='dados.shx')['mapeavel'] is False
+    assert next(x for x in items if x['nome_arquivo']=='imagem.tif')['mapeavel'] is True
+    assert '.oculto' not in {x['nome'] for x in storage._listar('base-geoespacial/vetor')}
+
+
+def test_generic_file_details_and_download_preserve_bytes(client,mounted):
+    path=mounted/'base-geoespacial/vetor/dados.dbf';path.write_bytes(b'original-dbf')
+    query={'fonte':'storage','id':'storage:base-geoespacial/vetor/dados.dbf'}
+    details=client.get('/api/geoespacial/explorador/detalhes',params=query)
+    assert details.status_code==200 and details.json()['extensao']=='DBF'
+    download=client.get('/api/geoespacial/explorador/download',params=query)
+    assert download.status_code==200
+    with ZipFile(BytesIO(download.content)) as archive:
+        assert archive.namelist()==['dados.dbf'] and archive.read('dados.dbf')==b'original-dbf'
+
+
+def test_outputs_include_uncatalogued_companions_and_keep_access_checks(client,mounted,monkeypatch):
+    execution=str(uuid4());parent=mounted/f'saidas-geoespaciais/execucoes/{execution}/camadas';parent.mkdir(parents=True)
+    (parent/'dados.shp').write_bytes(b'shp');(parent/'dados.dbf').write_bytes(b'dbf')
+    relative=f'saidas-geoespaciais/execucoes/{execution}/camadas/dados.shp'
+    row=dict(id='output',arquivo=relative,nome='Resultado',execucao_id=execution,ferramenta='Teste')
+    monkeypatch.setattr(explorer.saidas,'listar',lambda:[row])
+    tool=explorer.navegar('saidas')['itens'][0]
+    folder=explorer.navegar('saidas',tool['caminho'])['itens'][0]
+    files=explorer.navegar('saidas',folder['caminho'])['itens']
+    assert {x['nome_arquivo'] for x in files}=={'dados.shp','dados.dbf'}
+    companion=next(x for x in files if x['nome_arquivo']=='dados.dbf')
+    monkeypatch.setattr(explorer.saidas,'referencia',lambda path:dict(privado=True,responsavel='another-user'))
+    assert client.get('/api/geoespacial/explorador/download',params={'fonte':'saidas','id':companion['id']}).status_code==403

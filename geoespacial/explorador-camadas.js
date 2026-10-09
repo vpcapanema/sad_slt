@@ -2,7 +2,7 @@
   'use strict';
   const API='/api/geoespacial/explorador';
   const content=document.getElementById('explorer-content'),status=document.getElementById('explorer-status'),toolbar=document.getElementById('explorer-toolbar'),dialog=document.getElementById('explorer-details');
-  const roots={demandas:'DEMANDAS',storage:'SICARD Storage',saidas:'Geometrias de saída'};
+  const roots={demandas:'Demandas',storage:'SICARD Storage',saidas:'Outputs'};
   const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   let detailRevision=0;
   let source='',path='',items=[],leaf=false,controller,view='details',sort='nome',direction=1,labels={};
@@ -11,13 +11,30 @@
   function tell(message,error=false){status.textContent=message;status.dataset.error=String(error);}
   function byteSize(size){if(size==null)return '—';if(size===0)return '0 B';const power=Math.min(3,Math.floor(Math.log(size)/Math.log(1024)));return new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1}).format(size/(1024**power))+' '+['B','KB','MB','GB'][power];}
   function date(value){if(!value)return '—';const d=new Date(typeof value==='number'?value*1000:value);return Number.isNaN(d.getTime())?'—':d.toLocaleString('pt-BR');}
-  function icon(item){return item.pasta?'folder':item.geometria_tipo==='Raster'||item.tipo==='raster'?'file-image':'file-lines';}
-  function actions(item,index){if(item.pasta)return '';const query=new URLSearchParams({fonte:item.fonte,id:item.id});return `<div class="geo-explorer-actions"><button data-action="details" data-index="${index}" title="Detalhes" aria-label="Detalhes de ${escape(item.nome)}"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button><a href="/restrict/geoespacial/visualizador-camadas/?${new URLSearchParams({camada:item.id})}" title="Visualizar no mapa" aria-label="Visualizar ${escape(item.nome)} no mapa"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></a><a href="${API}/download?${query}" data-action="download" download title="Download ZIP" aria-label="Baixar ${escape(item.nome)} em ZIP"><i class="fa-solid fa-download" aria-hidden="true"></i></a></div>`;}
-  function name(item,index){return `<button class="geo-explorer-name" data-action="${item.pasta?'folder':'details'}" data-index="${index}" title="${escape(item.arquivo||item.nome)}"><i class="fa-solid fa-${icon(item)}" aria-hidden="true"></i><span>${escape(item.nome)}${item.nome_arquivo&&item.nome_arquivo!==item.nome?`<small>${escape(item.nome_arquivo)}</small>`:""}</span></button>`;}
+  function folderLabel(value){
+    const acronyms=new Set('sicard sp aprm uc ibama cetesb iphan condephaat sigam uf ig mma pli pef zee ugrhi ra rg rm sma idesp sicg cecav incra'.split(' '));
+    const small=new Set('de da do das dos e'.split(' '));
+    return String(value).replace(/[\p{L}]+/gu,(word,offset)=>{const lower=word.toLocaleLowerCase('pt-BR');return acronyms.has(lower)?lower.toUpperCase():lower==='ucs'?'UCs':small.has(lower)&&offset>0?lower:lower[0].toLocaleUpperCase('pt-BR')+lower.slice(1);});
+  }
+  function icon(item){
+    if(item.pasta){
+      if(source || item.caminho)return '<i class="fa-solid fa-folder" aria-hidden="true"></i>';
+      const service=item.fonte==='storage'?'sftpgo':'postgis';
+      return `<img class="geo-explorer-folder-icon" src="/assets/img/brand/${service}.${service==='sftpgo'?'png':'webp'}" alt="" aria-hidden="true">`;
+    }
+    const extension=String(item.extensao||item.nome_arquivo?.split('.').pop()||'').toUpperCase();
+    return window.SLTFileIcons.render(extension);
+  }
+  function actions(item,index){if(item.pasta)return '';const query=new URLSearchParams({fonte:item.fonte,id:item.id});return `<div class="geo-explorer-actions"><button data-action="details" data-index="${index}" title="Detalhes" aria-label="Detalhes de ${escape(item.nome)}"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>${item.mapeavel===false?'<button disabled title="Este arquivo não é uma camada visualizável" aria-label="Visualização no mapa indisponível"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></button>':`<a href="/restrict/geoespacial/visualizador-camadas/?${new URLSearchParams({camada:item.id})}" title="Visualizar no mapa" aria-label="Visualizar ${escape(item.nome)} no mapa"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></a>`}<a href="${API}/download?${query}" data-action="download" download title="Download ZIP" aria-label="Baixar ${escape(item.nome)} em ZIP"><i class="fa-solid fa-download" aria-hidden="true"></i></a></div>`;}
+  function name(item,index){
+    const extension=String(item.extensao||'').toLowerCase();
+    const label=item.pasta||!extension||String(item.nome).toLowerCase().endsWith('.'+extension)?item.nome:item.nome+'.'+extension;
+    return `<button class="geo-explorer-name" data-action="${item.pasta?'folder':'details'}" data-index="${index}" title="${escape(item.arquivo||item.nome)}"><span class="geo-explorer-primary">${icon(item)}<span>${escape(label)}</span></span>${item.nome_arquivo&&item.nome_arquivo!==label?`<small>${escape(item.nome_arquivo)}</small>`:''}</button>`;
+  }
   function crumbs(){
     const parts=path.split('/').filter(Boolean);let html='<button data-source="" data-path="">Camadas geoespaciais</button>';
     if(source)html+=`<span aria-hidden="true">›</span><button data-source="${source}" data-path="">${escape(roots[source]||source)}</button>`;
-    parts.forEach((part,index)=>{const p=parts.slice(0,index+1).join('/');const title=labels[key(source,p)]||({plano:'Plano',programa:'Programa',projeto:'Projeto','base-geodatabase':'Base-Geodatabase','base-geoespacial':'Base-Geoespacial','superficies-indices':'Superfícies-Índice'}[part])||part;html+=`<span aria-hidden="true">›</span><button data-source="${escape(source)}" data-path="${escape(p)}" ${index===parts.length-1?'aria-current="page"':''}>${escape(title)}</button>`;});
+    parts.forEach((part,index)=>{const p=parts.slice(0,index+1).join('/');const title=labels[key(source,p)]||({plano:'Plano',programa:'Programa',projeto:'Projeto','base-geodatabase':'Base-Geodatabase','base-geoespacial':'Base-Geoespacial','superficies-indices':'Superfícies-Índice'}[part])||part;html+=`<span aria-hidden="true">›</span><button data-source="${escape(source)}" data-path="${escape(p)}" ${index===parts.length-1?'aria-current="page"':''}>${escape(folderLabel(title))}</button>`;});
     document.getElementById('explorer-breadcrumb').innerHTML=html;
     toolbar.hidden=!source||!path;
     toolbar.querySelectorAll('[data-view]').forEach(button=>{button.disabled=leaf;button.setAttribute('aria-pressed',String(button.dataset.view===(leaf?'details':view)));});
@@ -28,7 +45,7 @@
     if(source&&path)visible.sort((a,b)=>Number(b.item.pasta)-Number(a.item.pasta)||direction*(sort==='tamanho_bytes'?(a.item[sort]??-1)-(b.item[sort]??-1):String(a.item[sort]??'').localeCompare(String(b.item[sort]??''),'pt-BR',{numeric:true})));
     crumbs();
     if(!visible.length){content.innerHTML='<p class="hint">'+(search?'Nenhum item corresponde à pesquisa.':'Esta pasta está vazia.')+'</p>';return;}
-    if(!source||!path){content.innerHTML='<div class="geo-explorer-cards">'+visible.map(({item,index})=>`<button class="geo-explorer-card" data-action="folder" data-index="${index}"><i class="fa-solid fa-folder-open" aria-hidden="true"></i><span>${escape(item.nome)}</span></button>`).join('')+'</div>';return;}
+    if(!source||!path){content.innerHTML='<div class="geo-explorer-cards">'+visible.map(({item,index})=>`<button class="geo-explorer-card" data-action="folder" data-index="${index}">${icon(item)}<span>${escape(item.nome)}</span></button>`).join('')+'</div>';return;}
     if(leaf||view==='details'){
       content.innerHTML='<div class="geo-explorer-table-wrap"><table class="geo-explorer-table"><thead><tr>'+[['nome','Nome do arquivo'],['extensao','Extensão'],['tamanho_bytes','Tamanho'],['modificado_em','Última modificação'],['geometria_tipo','Geometria'],['camada','Camada interna']].map(([field,title])=>`<th scope="col"><button data-sort="${field}">${title}${field===sort?(direction===1?' ↑':' ↓'):''}</button></th>`).join('')+'<th scope="col">Ações</th></tr></thead><tbody>'+visible.map(({item,index})=>`<tr><td>${name(item,index)}</td><td>${item.pasta?'Pasta':escape(item.extensao)}</td><td>${item.pasta?'—':item.fonte==='demandas'?'Virtual':byteSize(item.tamanho_bytes)}</td><td>${date(item.modificado_em)}</td><td>${escape(item.geometria_tipo||'—')}</td><td>${escape(item.camada||'—')}</td><td>${actions(item,index)}</td></tr>`).join('')+'</tbody></table></div>';
     }else content.innerHTML=`<div class="geo-explorer-${view==='icons'?'icons':'list'}">`+visible.map(({item,index})=>`<div class="geo-explorer-item">${name(item,index)}${actions(item,index)}</div>`).join('')+'</div>';
@@ -41,7 +58,7 @@
     try{
       const response=await fetch(`${API}/navegar?${new URLSearchParams({fonte:s,caminho:p})}`,{signal:current.signal,cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.detail||'Não foi possível abrir esta pasta.');
       if(current!==controller)return;
-      items=data.itens;leaf=!!data.folha;
+      items=data.itens.map(item=>item.pasta?{...item,nome:!item.caminho&&roots[item.fonte]?roots[item.fonte]:folderLabel(item.nome)}:item);leaf=!!data.folha;
       items.filter(x=>x.pasta).forEach(item=>labels[key(item.fonte,item.caminho)]=item.nome);
       try{sessionStorage.setItem('geo-explorer-labels',JSON.stringify(labels));}catch{}
       render();tell(`${items.length} item(ns)${leaf?' · Arquivos exibidos em detalhes':''}`);

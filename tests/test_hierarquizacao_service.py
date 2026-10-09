@@ -109,6 +109,7 @@ def test_rodada_pode_executar_somente_fase_1(monkeypatch: pytest.MonkeyPatch) ->
             nome="Triagem territorial",
             grupo_demanda_id=grupo_id,
             fases_a_executar=[1],
+            matriz_premissas_criterios=[{"criterio":"C1","etapa":"Elegibilidade territorial"},{"criterio":"C2","etapa":"Elegibilidade territorial"}],
         )
     )
 
@@ -155,6 +156,7 @@ def test_criacao_usa_o_universo_do_agrupamento_salvo(monkeypatch: pytest.MonkeyP
             nome="Rodada do grupo salvo",
             grupo_demanda_id=grupo_demanda_id,
             fases_a_executar=[1],
+            matriz_premissas_criterios=[{"criterio":"C1","etapa":"Elegibilidade territorial"},{"criterio":"C2","etapa":"Elegibilidade territorial"}],
         )
     )
 
@@ -565,3 +567,10 @@ def test_classificacao_fase1_cai_no_json_sem_banco() -> None:
         fase1_classificacao._regras_do_banco = original
 
     assert origem.startswith("classificacao_fase1.json@")
+
+
+@pytest.mark.parametrize("matrix", [None, [], {}, {"linhas":[{"criterio":"Único"}]}])
+def test_cadastro_exige_matriz_com_dois_criterios(matrix):
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        HierarquizacaoCreateSchema(nome="Nova",grupo_demanda_id="9ccbb5b5-3d60-4f25-8f3f-bdef08a48e73",matriz_premissas_criterios=matrix)

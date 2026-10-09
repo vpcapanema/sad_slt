@@ -14,6 +14,9 @@ from api.codigos_demanda import (
     tipo_demandante_do_codigo,
 )
 from api.constants import CODIGO_PLANO_OUTROS, STATUS_INICIAL_DEMANDA, STATUS_PRE_REPROVACAO
+from api.services.campos_demanda import apenas_alteracoes
+from api.services.autoria_demanda import resolver_autor
+from api.services.status_transicoes import status_inicial_sei
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import demanda_repository, dominio_repository, plano_repository
 from api.services.campos_demanda import (
@@ -237,12 +240,18 @@ def criar_demanda(
     quando a criação vem de um fluxo externo, como a integração com o SEI-SP.
     Vazio por padrão — não altera o comportamento do cadastro normal.
     """
+    autor_id = resolver_autor(usuario_id, origem)
+    status_sei = status_inicial_sei() if origem.upper() == "SEI" else None
     codigo = gerar_codigo_unico(
         lambda: gerar_codigo_projeto(payload.tipo_demandante, origem=origem),
         demanda_repository.get_by_codigo,
     )
     try:
         persist_row = _build_persist_row(payload, codigo, usuario_id)
+        if status_sei is not None:
+            persist_row["status"] = status_sei
+        persist_row["criado_por"] = autor_id
+        persist_row["atualizado_por"] = autor_id
         row = (
             demanda_repository.insert(persist_row, arquivo_geometria=arquivo_geometria)
             if arquivo_geometria is not None
@@ -349,6 +358,12 @@ def atualizar_demanda(
     if lng is not None and not (-180 <= lng <= 180):
         raise DemandaValidationError("Longitude fora do intervalo válido.", field="lng")
 
+    existing = demanda_repository.get_by_codigo(codigo)
+    if not existing:
+        raise DemandaNotFoundError(codigo)
+    data = apenas_alteracoes(data, existing)
+    if not data:
+        return obter_demanda(codigo, incluir_auditoria=True)
     data["atualizado_por"] = usuario_id
     row = demanda_repository.update(codigo, data)
     if not row:

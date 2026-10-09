@@ -155,7 +155,7 @@ for settings_path in settings_paths:
     existing = data.get("sqltools.connections") or []
     existing = [c for c in existing if c.get("name") not in desired_names]
     data["sqltools.connections"] = existing + connections
-    data["sqltools.useNodeRuntime"] = True
+    data["sqltools.useNodeRuntime"] = str(Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "nodejs" / "node.exe")
 
     text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     settings_path.write_text(text, encoding="utf-8")

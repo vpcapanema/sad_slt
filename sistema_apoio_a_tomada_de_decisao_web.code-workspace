@@ -8,7 +8,7 @@
   "settings": {
     "python.terminal.useEnvFile": true,
     "python.analysis.extraPaths": ["${workspaceFolder}"],
-    "sqltools.useNodeRuntime": "node",
+    "sqltools.useNodeRuntime": "C:\\Program Files\\nodejs\\node.exe",
     "sqltools.languageServer.enabled": true,
     "djlint.showInstallError": false,
     "files.associations": {

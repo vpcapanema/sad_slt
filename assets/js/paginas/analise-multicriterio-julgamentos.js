@@ -42,15 +42,6 @@
   }
   function matrixRows(matrix) { if (Array.isArray(matrix)) return matrix.filter(function (row) { return row && typeof row === "object"; }); if (!matrix || typeof matrix !== "object") return []; var rows = matrix.linhas || matrix.rows || matrix.criterios || matrix.dados || []; return Array.isArray(rows) ? rows.filter(function (row) { return row && typeof row === "object"; }) : []; }
   function matrixSummary(message, isError) { var node = $("ami-criteria-matrix-summary"); node.textContent = message || ""; node.classList.toggle("hidden", !message); node.classList.toggle("ahp-info-note--error", Boolean(isError)); }
-  function normalizeSheetName(value) { return String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
-  async function readCriteriaMatrix(file) {
-    var ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (ext === "json") return JSON.parse(await file.text());
-    if (ext === "csv") { var lines = (await file.text()).split(/\r?\n/).filter(function (line) { return line.trim(); }); if (!lines.length) throw new Error("O arquivo CSV está vazio."); var separator = lines[0].includes(";") ? ";" : ",", headers = lines.shift().split(separator).map(function (value) { return value.trim(); }); return { arquivo: file.name, linhas: lines.map(function (line) { return Object.fromEntries(line.split(separator).map(function (value, index) { return [headers[index], value.trim()]; })); }) }; }
-    if (ext === "xlsx" && window.XLSX) { var workbook = XLSX.read(await file.arrayBuffer(), { type: "array" }), auxiliary = new Set(["instrucoes", "_listas", "etapas", "dimensoes de criterios", "criterios"]); var hasMatrixColumns = function (name) { var header = (XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: "" })[0] || []).map(normalizeSheetName); return header.some(function (value) { return value.includes("crit"); }) && header.some(function (value) { return value.includes("etapa"); }); }; var sheet = ["Matriz Crit Premissas v3", "Matriz Crit Premissas v2"].find(function (name) { return workbook.SheetNames.includes(name); }) || workbook.SheetNames.find(function (name) { return !auxiliary.has(normalizeSheetName(name)) && hasMatrixColumns(name); }) || workbook.SheetNames.find(function (name) { return !auxiliary.has(normalizeSheetName(name)); }) || workbook.SheetNames[0]; return { arquivo: file.name, aba: sheet, linhas: XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { defval: "" }) }; }
-    throw new Error("Formato não suportado. Use JSON, CSV ou XLSX.");
-  }
-  async function fileToBase64(file) { var bytes = new Uint8Array(await file.arrayBuffer()), binary = "", block = 0x8000; for (var index = 0; index < bytes.length; index += block) binary += String.fromCharCode.apply(null, bytes.subarray(index, index + block)); return btoa(binary); }
   function statusLabel(status) { return { ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[status] || status; }
   function actionLinks(j) { return { workspace: appUrl("restrict", "/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/"), public: appUrl("public", "/analise-multicriterio/" + encodeURIComponent(j.token) + "/") }; }
   function filteredRows() {
@@ -640,7 +631,7 @@
     if (!selectedHierarchy || !selectedHierarchy.dataset.hierarquizacaoId) { feedbackNode.textContent = "Selecione a hierarquização."; return; }
     feedbackNode.textContent = "Salvando alterações…";
     $("ami-environment-save").disabled = true;
-    var updatePayload = { hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, matriz_premissas_criterios: criteriaMatrix, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }; if (criteriaMatrixFileBase64) { updatePayload.arquivo_matriz_base64 = criteriaMatrixFileBase64; updatePayload.arquivo_matriz_nome = criteriaMatrixFileName; }
+    var updatePayload = { hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }; if (criteriaMatrixFileBase64) { updatePayload.arquivo_matriz_base64 = criteriaMatrixFileBase64; updatePayload.arquivo_matriz_nome = criteriaMatrixFileName; }
     api("/api/ahp/comparacao-colaborativa/ambientes/" + encodeURIComponent(judgment.id), { method: "PATCH", body: JSON.stringify(updatePayload) }).then(function (updated) {
       var index = julgamentos.findIndex(function (item) { return item.id === updated.id; });
       if (index >= 0) julgamentos[index] = updated;
@@ -900,17 +891,17 @@
     $("ami-deadline").addEventListener("change", renderDraftEmails);
     $("ami-select-all").addEventListener("change", function () { var checked = this.checked; $("ami-email-list").querySelectorAll("[data-draft-index]").forEach(function (checkbox) { checkbox.checked = checked; }); updateDraftControls(); });
     $("ami-delete-emails").addEventListener("click", function () { var selected = Array.from($("ami-email-list").querySelectorAll("[data-draft-index]:checked")).map(function (checkbox) { return Number(checkbox.dataset.draftIndex); }); draftEmails = draftEmails.filter(function (_email, index) { return !selected.includes(index); }); renderDraftEmails(); });
-    $("ami-hierarchy").addEventListener("change", function () { var option = $("ami-hierarchy").selectedOptions[0], h = option && hierarquizacoes.find(function (item) { return item.id === option.dataset.hierarquizacaoId; }); $("ami-hierarchy-summary").textContent = h ? "Grupo selecionado: " + h.nome + " — " + h.codigo : ""; });
-    $("ami-criteria-matrix").addEventListener("change", async function (event) { var file = event.target.files && event.target.files[0]; criteriaMatrix = null; criteriaMatrixFileBase64 = null; criteriaMatrixFileName = null; if (!file) { matrixSummary(""); return; } matrixSummary("Lendo " + file.name + "…"); try { var results = await Promise.all([readCriteriaMatrix(file), fileToBase64(file)]), parsed = results[0], rows = matrixRows(parsed); if (rows.length < 2) throw new Error("A matriz deve conter ao menos dois critérios."); criteriaMatrix = parsed; criteriaMatrixFileBase64 = results[1]; criteriaMatrixFileName = file.name; matrixSummary(file.name + " · " + rows.length + " critério(s) carregado(s)"); } catch (error) { event.target.value = ""; matrixSummary(error.message, true); } });
+    $("ami-hierarchy").addEventListener("change", function () { var option = $("ami-hierarchy").selectedOptions[0], h = option && hierarquizacoes.find(function (item) { return item.id === option.dataset.hierarquizacaoId; }); $("ami-hierarchy-summary").textContent = h ? "Grupo selecionado: " + h.nome + " — " + h.codigo : ""; criteriaMatrix = h && h.dados_hierarquizacao && h.dados_hierarquizacao.cabecalho_grupo && h.dados_hierarquizacao.cabecalho_grupo.matriz_premissas_criterios; criteriaMatrixFileBase64 = null; criteriaMatrixFileName = null; matrixSummary(h ? (matrixRows(criteriaMatrix).length >= 2 ? "Matriz da hierarquização: " + matrixRows(criteriaMatrix).length + " critérios carregados." : "Esta hierarquização não possui matriz cadastrada. Regularize o cadastro antes de criar o julgamento.") : "", h && matrixRows(criteriaMatrix).length < 2); });
+
     $("ami-create-form").addEventListener("submit", function (event) {
       event.preventDefault();
       var feedback = $("ami-create-feedback");
       if (!draftEmails.length) { feedback.textContent = "Adicione ao menos um colaborador à lista."; return; }
       if (!$("ami-deadline").value) { feedback.textContent = "Informe a data limite da coleta."; return; }
-      if (matrixRows(criteriaMatrix).length < 2) { feedback.textContent = "Carregue a matriz de premissas e critérios com ao menos dois critérios."; return; }
+      if (matrixRows(criteriaMatrix).length < 2) { feedback.textContent = "Selecione uma hierarquização com matriz cadastrada de ao menos dois critérios."; return; }
       feedback.textContent = "Criando ambiente colaborativo…";
       var selectedHierarchy = $("ami-hierarchy").selectedOptions[0];
-      api("/api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, matriz_premissas_criterios: criteriaMatrix, arquivo_matriz_base64: criteriaMatrixFileBase64, arquivo_matriz_nome: criteriaMatrixFileName, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }) }).then(function (j) {
+      api("/api/ahp/comparacao-colaborativa/ambientes", { method: "POST", body: JSON.stringify({ hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId, convites: draftEmails.map(function (convite) { return { email: convite.email, nome: convite.nome }; }), valido_ate: deadlineEndOfDay() }) }).then(function (j) {
         julgamentos.unshift(j); currentPage = 1; selectedIds.clear(); selectedIds.add(j.id); updateSelectedId(); render();
         var links = actionLinks(j);
         $("ami-create-status").className = "ami-create-success";

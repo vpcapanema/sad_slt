@@ -81,3 +81,15 @@ documentacao/geoespacial/entregas/
 # Inventario de dados e evidencias de trabalho: arquivos locais, sem publicar no Git.
 /outputs/inventario-saidas-20261008/
 /outputs/migracao-demandas/
+
+# Ambiente descartável e evidências locais das validações de outubro.
+/.tmp/
+/artifacts/admin-vermelho-escuro.png
+/artifacts/hier-matriz-cadastro.png
+/artifacts/hier-matriz.html
+/artifacts/julgamento-matriz-cadastro.png
+/artifacts/julgamento-matriz.html
+/artifacts/limite-maritimo-desktop.png
+/artifacts/limite-maritimo-mobile.png
+/artifacts/restrict-cores.html
+/artifacts/subgrupos-contraste.png

@@ -7,13 +7,14 @@
 {% block classes_body %}geo-explorer-page{% endblock %}
 {% block estilos_pagina %}
 <link rel="stylesheet" href="/assets/css/geoespacial.css">
+<link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
 <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
-<link rel="stylesheet" href="/restrict/geoespacial/explorador-camadas.css?v=20261009-1">
+<link rel="stylesheet" href="/restrict/geoespacial/explorador-camadas.css?v=20261009-all-files-1">
 {% endblock %}
 {% block conteudo %}
 <main class="conteudo-principal app-main geo-explorer-main">
   <nav class="geoespacial-breadcrumb"><a href="/restrict/geoespacial/">Central geoespacial</a><span>›</span><span>Camadas geoespaciais</span></nav>
-  <header class="standard-page-hero"><h1>Camadas geoespaciais</h1><p>Explore as fontes da plataforma e consulte, visualize ou baixe suas camadas.</p></header>
+  <header class="card standard-page-hero"><h1 class="standard-page-hero__title"><i class="fa-solid fa-folder-open" aria-hidden="true"></i><span>Camadas geoespaciais</span></h1><p class="standard-page-hero__description">Explore as fontes da plataforma e consulte, visualize ou baixe suas camadas.</p></header>
   <section class="card geo-explorer" aria-label="Explorador de camadas">
     <nav id="explorer-breadcrumb" aria-label="Caminho atual"></nav>
     <div id="explorer-toolbar" class="geo-explorer-toolbar" hidden>
@@ -33,4 +34,4 @@
   <dialog id="explorer-details" aria-labelledby="explorer-details-title"><header><h2 id="explorer-details-title">Metadados</h2><form method="dialog"><button aria-label="Fechar" title="Fechar"><i class="fa-solid fa-xmark"></i></button></form></header><div id="explorer-details-body"></div></dialog>
 </main>
 {% endblock %}
-{% block scripts_pagina %}<script src="/restrict/geoespacial/explorador-camadas.js?v=20261009-1"></script>{% endblock %}
+{% block scripts_pagina %}<script src="/assets/js/file-icons.js?v=20261009-all-files-1"></script><script src="/restrict/geoespacial/explorador-camadas.js?v=20261009-all-files-1"></script>{% endblock %}

@@ -16,3 +16,6 @@ data/geoespacial/outputs/*
 !data/geoespacial/outputs/normalizacao_favorabilidade_fase2.json
 data/geoespacial/local/
 docker-compose*.yml
+
+.tmp/
+artifacts/

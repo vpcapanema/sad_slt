@@ -58,7 +58,7 @@ def test_geometria_copiada_da_uniao_das_unidades(monkeypatch, repo):
     monkeypatch.setattr(repo, "get_connection", _fake_connection(repo, events))
     monkeypatch.setattr(repo, "get_by_codigo", lambda codigo: {"codigo": codigo})
 
-    repo.insert({"codigo": "X-1"}, ["ue-a", "ue-b"])
+    repo.insert({"codigo": "X-1", "criado_por": "00000000-0000-0000-0000-000000000010"}, ["ue-a", "ue-b"])
 
     assert [e[0] for e in events] == ["insert", "unidade", "unidade", "geometria_unidades", "commit"]
     assert events[3][1] == {"id": "00000000-0000-0000-0000-000000000077"}
@@ -73,7 +73,7 @@ def test_geometria_desenhada_prevalece_sobre_unidades(monkeypatch, repo):
     monkeypatch.setattr(repo, "get_by_codigo", lambda codigo: {"codigo": codigo})
     geojson = '{"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}'
 
-    repo.insert({"codigo": "X-2"}, ["ue-a"], geometria_geojson=geojson)
+    repo.insert({"codigo": "X-2", "criado_por": "00000000-0000-0000-0000-000000000010"}, ["ue-a"], geometria_geojson=geojson)
 
     assert [e[0] for e in events] == ["insert", "unidade", "geometria_desenho", "commit"]
     assert events[2][1]["geojson"] == geojson
@@ -86,7 +86,7 @@ def test_sem_unidades_nem_desenho_nao_grava_geometria(monkeypatch, repo):
     monkeypatch.setattr(repo, "get_connection", _fake_connection(repo, events))
     monkeypatch.setattr(repo, "get_by_codigo", lambda codigo: {"codigo": codigo})
 
-    repo.insert({"codigo": "X-3"}, [])
+    repo.insert({"codigo": "X-3", "criado_por": "00000000-0000-0000-0000-000000000010"}, [])
 
     assert [e[0] for e in events] == ["insert", "commit"]
 
@@ -100,7 +100,7 @@ def test_upload_grava_arquivo_e_versao_no_historico_na_mesma_transacao(monkeypat
     arquivo = {"nome_arquivo": "ponto.kml", "conteudo_binario": b"<kml/>"}
 
     repo.insert(
-        {"codigo": "X-4", "criado_por": "u-1"}, [], geometria_geojson=geojson, arquivo_geometria=arquivo
+        {"codigo": "X-4", "criado_por": "00000000-0000-0000-0000-000000000010"}, [], geometria_geojson=geojson, arquivo_geometria=arquivo
     )
 
     assert [e[0] for e in events] == ["insert", "geometria_desenho", "historico", "commit"]
@@ -109,7 +109,7 @@ def test_upload_grava_arquivo_e_versao_no_historico_na_mesma_transacao(monkeypat
     outros = {"projeto_id", "plano_id", "programa_id"} - {f"{alvo}_id"}
     assert all(historico[c] is None for c in outros)
     assert historico["geometria_geojson"] == geojson
-    assert historico["criado_por"] == "u-1"
+    assert historico["criado_por"] == "00000000-0000-0000-0000-000000000010"
     assert historico["conteudo_binario"] is None
     assert historico["storage_caminho"].startswith(f"demandas/originais/{alvo}/")
 

@@ -34,13 +34,14 @@ def _output_key(row):
 
 def _file(row, source):
     path=row.get("arquivo") or ""
-    extension=PurePosixPath(path).suffix.removeprefix('.').upper() or row.get("formato") or "GEOJSON"
+    extension=PurePosixPath(path).suffix.removeprefix('.').upper() or row.get("formato") or ("GEOJSON" if not path else "")
     return {"id":row["id"],"nome":row.get("alias") or row.get("nome") or PurePosixPath(path).name,
         "pasta":False,"fonte":source,"arquivo":path,"extensao":extension,
         "nome_arquivo":PurePosixPath(path).name if path else str(row.get("codigo") or row["id"])+".geojson",
         "tamanho_bytes":row.get("tamanho_bytes"),"modificado_em":row.get("modificado_em") or row.get("criado_em"),
         "camada":row.get("camada"),"geometria_tipo":str(row.get("geometria_tipo") or "").removeprefix("ST_") or None,
-        "status":row.get("status"),"tipo":row.get("tipo"),"inventariar":row.get("inventariar",False)}
+        "status":row.get("status"),"tipo":row.get("tipo"),"inventariar":row.get("inventariar",False),
+        "mapeavel":row.get("mapeavel",not path or PurePosixPath(path).suffix.lower() in storage.EXTENSOES_VETOR | storage.EXTENSOES_RASTER | storage.storage_pacotes.COMPACTADOS)}
 
 
 def _parts(path):
@@ -65,11 +66,20 @@ def navegar(source="", path=""):
         if not parts:
             items=[_folder(label,key,source) for key,label in STORAGE_ROOTS]
         elif parts[0] in dict(STORAGE_ROOTS):
-            # Fontes brutas são inventariadas ao abrir o arquivo, como no visualizador.
-            data=storage.navegar(path,detalhar=parts[0]!="base-geodatabase")
+            if not storage._via_api() and not storage.diretorio_storage().joinpath(*parts).resolve().is_relative_to(storage.diretorio_storage().resolve()):
+                raise ValueError("Pasta fora do Storage")
+            entries=storage._listar(path,incluir_ocultos=True)
             from api.services.extracao_atributos_aliases import nome_camada
-            items=[_folder(_friendly(row["nome"]),row["caminho"],source) for row in data["pastas"]]
-            items += [_file(dict(row,alias=nome_camada(row.get("id"),row.get("nome"))),source) for row in data["arquivos"]]
+            items=[]
+            for entry in entries:
+                relative=f"{path}/{entry['nome']}"
+                if entry["pasta"]:
+                    items.append(_folder(_friendly(entry["nome"]),relative,source))
+                else:
+                    ident=f"storage:{relative}"
+                    items.append(_file(dict(id=ident,arquivo=relative,
+                        alias=nome_camada(ident,_friendly(PurePosixPath(entry["nome"]).stem)),
+                        tamanho_bytes=entry.get("tamanho"),modificado_em=entry.get("modificado")),source))
         else: raise ValueError("Pasta do Storage inválida")
     elif source=="saidas":
         rows=saidas.listar()
@@ -88,7 +98,7 @@ def navegar(source="", path=""):
                 from api.services.saidas_storage import validar
                 for row in selected: validar(row["arquivo"])
                 try:
-                    for entry in storage._listar(parent):
+                    for entry in storage._listar(parent,incluir_ocultos=True):
                         if not entry["pasta"]: metadata[f"{parent}/{entry['nome']}"]=entry
                 except FileNotFoundError: pass
             items=[]
@@ -101,6 +111,14 @@ def navegar(source="", path=""):
                         file=storage.resolver(row["arquivo"]);stat=file.stat();item.update(tamanho_bytes=stat.st_size,modificado_em=stat.st_mtime)
                     except FileNotFoundError: pass
                 items.append(item)
+            catalogued={row["arquivo"] for row in selected}
+            for relative,meta in metadata.items():
+                if relative in catalogued: continue
+                anchor=next(row for row in selected if PurePosixPath(row["arquivo"]).parent==PurePosixPath(relative).parent)
+                items.append(_file(dict(id=f"arquivo-saida:{anchor['id']}::{relative}",arquivo=relative,
+                    nome=_friendly(PurePosixPath(relative).stem),tamanho_bytes=meta.get("tamanho"),
+                    modificado_em=meta.get("modificado"),mapeavel=False),source))
+
         else: raise ValueError("Pasta de saídas inválida")
     else: raise ValueError("Repositório desconhecido")
     return {"itens":items,"folha":bool(parts) and not any(item["pasta"] for item in items)}
@@ -111,14 +129,17 @@ def _storage_identity(ident):
     parts=_parts(path)
     if not parts or parts[0] not in dict(STORAGE_ROOTS): raise ValueError("Arquivo fora dos repositórios do explorador")
     file=storage.resolver(path)
-    if file.suffix.lower() not in storage.EXTENSOES_VETOR | storage.storage_pacotes.COMPACTADOS:
-        raise ValueError("Arquivo não publicado como camada no explorador")
     if isinstance(file,Path) and not file.resolve().is_relative_to(storage.diretorio_storage().resolve()):
         raise ValueError("Arquivo fora do Storage")
     return path,layer,file
 
 
 def _output(ident,user):
+    extra=None
+    if ident.startswith("arquivo-saida:"):
+        ident,separator,extra=ident[len("arquivo-saida:"):].partition("::")
+        if not separator: raise ValueError("Arquivo de saída inválido")
+        _parts(extra)
     row=next((row for row in saidas.listar() if str(row["id"])==ident),None)
     if not row: raise FileNotFoundError("Saída não encontrada")
     ref=saidas.referencia(row["arquivo"])
@@ -127,6 +148,16 @@ def _output(ident,user):
         raise PermissionError("Você não tem acesso a este arquivo")
     from api.services.saidas_storage import validar
     validar(row["arquivo"])
+    if extra:
+        if PurePosixPath(extra).parent!=PurePosixPath(row["arquivo"]).parent:
+            raise ValueError("Arquivo fora da pasta da saída")
+        file=storage.resolver(extra)
+        if isinstance(file,Path) and not file.resolve().is_relative_to(storage.diretorio_storage().resolve()):
+            raise ValueError("Arquivo fora do Storage")
+        stat=file.stat()
+        row=dict(row,id=f"arquivo-saida:{ident}::{extra}",arquivo=extra,nome=PurePosixPath(extra).name,
+                 tamanho_bytes=stat.st_size,modificado_em=stat.st_mtime,mapeavel=False)
+        ref=dict(ref,sha256=None)
     return row,ref
 
 
@@ -140,13 +171,15 @@ def detalhes(source,ident,user):
                     observacao="Geometria cadastrada no PostGIS. O ZIP exporta a geometria no CRS cadastral; não é o arquivo original enviado no cadastro.")
     if source=="storage":
         path,layer,file=_storage_identity(ident)
-        result=storage.inventariar_arquivo(path)
-        if layer:
-            result["camadas"]=[row for row in result["camadas"] if row.get("camada")==layer]
-            if not result["camadas"]: raise FileNotFoundError("Camada interna não encontrada")
         stat=file.stat()
-        return dict(result,tamanho_bytes=stat.st_size,modificado_em=stat.st_mtime,
-                    observacao="O download preserva o arquivo original e suas camadas internas.")
+        result={"arquivo":path,"nome":file.name,"extensao":file.suffix.lstrip('.').upper(),
+                "tamanho_bytes":stat.st_size,"modificado_em":stat.st_mtime}
+        if file.suffix.lower() in storage.EXTENSOES_VETOR | storage.EXTENSOES_RASTER | storage.storage_pacotes.COMPACTADOS:
+            result["camadas"]=storage._itens_do_arquivo(file,path)
+            if layer:
+                result["camadas"]=[row for row in result["camadas"] if row.get("camada")==layer]
+                if not result["camadas"]: raise FileNotFoundError("Camada interna não encontrada")
+        return dict(result,observacao="O download preserva o arquivo original; SHP inclui seus componentes associados.")
     if source=="saidas":
         row,ref=_output(ident,user)
         return dict(row,sha256=ref.get("sha256"))

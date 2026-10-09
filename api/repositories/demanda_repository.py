@@ -10,6 +10,7 @@ from psycopg.types.json import Jsonb
 
 from api.constants import STATUS_PRE_REPROVACAO, STATUS_REPROVACAO
 from api.db.connection import get_connection
+from api.services.autoria_demanda import validar_autor
 from api.repositories import geometria_historico_repository
 
 _SELECT_BASE = """
@@ -146,6 +147,7 @@ _INSERT_SQL = """
 
 def insert(row: dict[str, Any], *, arquivo_geometria: dict[str, Any] | None = None) -> dict[str, Any]:
     """Insere uma demanda e retorna a linha persistida."""
+    row = dict(row, criado_por=validar_autor(row.get("criado_por")))
     row = {
         "maturidade": None,
         "capex_estimado": None,
@@ -209,7 +211,6 @@ _REPROVAR_SQL = """
        SET status = %(status_reprovado)s,
            reprovado_em = CURRENT_TIMESTAMP,
            reprovado_por = %(reprovado_por)s,
-           atualizado_por = %(reprovado_por)s,
            motivo_reprovacao = %(justificativa)s
      WHERE codigo = %(codigo)s
        AND status = ANY(%(pre)s)

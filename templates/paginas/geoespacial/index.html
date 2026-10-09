@@ -10,6 +10,7 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/geoespacial.css">
+  <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
   <style>.geoespacial-hub-page .geoespacial-module-grid {grid-template-columns:repeat(3,minmax(0,1fr));} @media(max-width:1000px){.geoespacial-hub-page .geoespacial-module-grid {grid-template-columns:1fr;}}</style>
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
@@ -17,11 +18,13 @@
 {% block conteudo %}
 <main class="conteudo-principal app-main geoespacial-hub-main">
     <nav class="geoespacial-breadcrumb" aria-label="Breadcrumb"><a href="/restrict/">Início</a><span>›</span><span aria-current="page">Bloco de Geoprocessamento</span></nav>
-    <section class="card-processamento-e-produtos-geoespaciais secao-processamento-e-produtos-geoespaciais card geoespacial-hub-intro standard-page-hero">
-      <div class="geoespacial-hub-heading"><div><h1 class="standard-page-hero__title">Processamento geoespacial</h1><p class="geoespacial-eyebrow standard-page-hero__eyebrow">Módulo de Apoio à Decisão (MAD)</p><p class="standard-page-hero__description">Explore os repositórios da plataforma, visualize camadas e execute geoprocessamentos.</p></div><span class="geoespacial-hub-mark" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span></div>
+    <section class="card standard-page-hero">
+      <h1 class="standard-page-hero__title"><i class="fa-solid fa-layer-group" aria-hidden="true"></i><span>Central geoespacial</span></h1>
+      <p class="standard-page-hero__eyebrow">Módulo de Apoio à Decisão (MAD)</p>
+      <p class="standard-page-hero__description">Explore os repositórios da plataforma, visualize camadas e execute geoprocessamentos.</p>
     </section>
     <section class="geoespacial-module-grid" aria-label="Funcionalidades geoespaciais">
-      <a href="/restrict/geoespacial/explorador-camadas/" class="geoespacial-module-card"><span class="geoespacial-module-card__index">01</span><span class="geoespacial-module-card__icon"><i class="fa-solid fa-folder-open" aria-hidden="true"></i></span><div><h2>Camadas geoespaciais</h2><p>Explore Demandas, Sicard Storage e Geometrias de saída, organizadas em pastas.</p></div><i class="fa-solid fa-arrow-right geoespacial-module-card__arrow" aria-hidden="true"></i></a>
+      <a href="/restrict/geoespacial/explorador-camadas/" class="geoespacial-module-card"><span class="geoespacial-module-card__index">01</span><span class="geoespacial-module-card__icon"><i class="fa-solid fa-folder-open" aria-hidden="true"></i></span><div><h2>Camadas geoespaciais</h2><p>Explore Demandas, SICARD Storage e Outputs, organizadas em pastas.</p></div><i class="fa-solid fa-arrow-right geoespacial-module-card__arrow" aria-hidden="true"></i></a>
       <a href="/restrict/geoespacial/visualizador-camadas/" class="geoespacial-module-card"><span class="geoespacial-module-card__index">02</span><span class="geoespacial-module-card__icon"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></span><div><h2>Visualizador de camadas geoespaciais</h2><p>Abra, selecione e consulte suas camadas no mapa.</p></div><i class="fa-solid fa-arrow-right geoespacial-module-card__arrow" aria-hidden="true"></i></a>
       <a href="/restrict/geoespacial/bancada/" class="geoespacial-module-card"><span class="geoespacial-module-card__index">03</span><span class="geoespacial-module-card__icon"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i></span><div><h2>Bancada de geoprocessamento</h2><p>Prepare camadas e execute operações de geoprocessamento.</p></div><i class="fa-solid fa-arrow-right geoespacial-module-card__arrow" aria-hidden="true"></i></a>
     </section>

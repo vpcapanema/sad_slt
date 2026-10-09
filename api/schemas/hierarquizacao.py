@@ -20,11 +20,19 @@ class HierarquizacaoCreateSchema(BaseModel):
     grupo_id: str | None = Field(
         None, max_length=64, description="Conjunto comparável (pai): diretoria/plano/programa"
     )
-    matriz_premissas_criterios: dict[str, Any] | list[Any] | None = None
+    matriz_premissas_criterios: dict[str, Any] | list[Any]
     # Omitir o campo significa "a rodada percorre as três fases". O default
     # anterior era uma lista vazia, que `_exigir_fase` lê como "nenhuma fase" e
     # que inviabilizava executar qualquer fase da rodada recém-criada.
     fases_a_executar: list[int] = Field(default_factory=lambda: [1, 2, 3])
+
+    @field_validator("matriz_premissas_criterios")
+    @classmethod
+    def validar_matriz(cls, value):
+        rows = value if isinstance(value, list) else next((value[k] for k in ("linhas", "rows", "criterios", "dados") if isinstance(value.get(k), list)), []) if isinstance(value, dict) else []
+        if len([row for row in rows if isinstance(row, dict) and row]) < 2:
+            raise ValueError("Anexe uma matriz de premissas e critérios com ao menos dois critérios.")
+        return {**value, "linhas": rows} if isinstance(value, dict) else value
 
     @field_validator("fases_a_executar")
     @classmethod

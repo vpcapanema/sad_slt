@@ -62,6 +62,11 @@ def _carregar_hierarquizacao(hierarq_id: UUID) -> dict[str, Any]:
     return row
 
 
+def _nome_arquivo_hierarquizacao(hierarq: dict[str, Any]) -> str | None:
+    matriz = ((hierarq.get("dados_hierarquizacao") or {}).get("cabecalho_grupo") or {}).get("matriz_premissas_criterios")
+    return matriz.get("arquivo") if isinstance(matriz, dict) else None
+
+
 def _criterios_from_hierarquizacao(hierarq: dict[str, Any]) -> list[dict[str, Any]]:
     """Extrai a lista de critérios da matriz de premissas e critérios da hierarquização."""
     dados = hierarq.get("dados_hierarquizacao") or {}
@@ -199,10 +204,7 @@ def criar_ambiente(
         hierarq = None
     elif payload.hierarquizacao_id:
         hierarq = _carregar_hierarquizacao(payload.hierarquizacao_id)
-        criterios = _criterios_from_matriz(payload.matriz_premissas_criterios)
-        if not criterios:
-            # Compatibilidade com hierarquizações cadastradas antes da separação dos componentes.
-            criterios = _criterios_from_hierarquizacao(hierarq)
+        criterios = _criterios_from_hierarquizacao(hierarq)
         config = None
     else:
         raise DemandaValidationError("Selecione uma configuração multicritério.", field="config_id")
@@ -249,8 +251,8 @@ def criar_ambiente(
             "config_nome": config.get("nome") if config else None,
             "criterios": criterios,
             "n_criterios": len(nomes_criterios),
-            "arquivo_excel_matriz_criterios_premissas": _arquivo_matriz(payload.arquivo_matriz_base64),
-            "arquivo_matriz_nome": payload.arquivo_matriz_nome,
+            "arquivo_excel_matriz_criterios_premissas": None if hierarq else _arquivo_matriz(payload.arquivo_matriz_base64),
+            "arquivo_matriz_nome": _nome_arquivo_hierarquizacao(hierarq) if hierarq else payload.arquivo_matriz_nome,
             "token": token,
             "convites": convites,
             "valido_ate": valido_ate,
@@ -312,6 +314,8 @@ def atualizar_ambiente(
         )
     data: dict[str, Any] = {}
     if payload.arquivo_matriz_base64 is not None:
+        if atual.get("hierarquizacao_id") or payload.hierarquizacao_id:
+            raise DemandaValidationError("O arquivo da matriz pertence ao cadastro da hierarquização.", field="arquivo_matriz_base64")
         if int(atual.get("total_respostas") or 0) > 0:
             raise DemandaValidationError(
                 "O arquivo da matriz não pode ser alterado após o recebimento de respostas.",
@@ -331,14 +335,14 @@ def atualizar_ambiente(
         )
     if payload.hierarquizacao_id is not None:
         hierarq = _carregar_hierarquizacao(payload.hierarquizacao_id)
-        criterios = _criterios_from_matriz(payload.matriz_premissas_criterios)
-        if not criterios:
-            criterios = _criterios_from_hierarquizacao(hierarq)
+        criterios = _criterios_from_hierarquizacao(hierarq)
         if len(criterios) < 2:
             raise DemandaValidationError(
                 "A hierarquização deve possuir ao menos dois critérios.",
                 field="hierarquizacao_id",
             )
+        if int(atual.get("total_respostas") or 0) > 0 and criterios != atual.get("criterios"):
+            raise DemandaValidationError("A matriz não pode mudar após o recebimento de respostas.", field="criterios")
         origem_alterada = str(atual.get("hierarquizacao_id") or "") != str(payload.hierarquizacao_id)
         if origem_alterada and int(atual.get("total_respostas") or 0) > 0:
             raise DemandaValidationError(
@@ -371,6 +375,8 @@ def atualizar_ambiente(
             }
         )
     elif payload.matriz_premissas_criterios is not None:
+        if atual.get("hierarquizacao_id"):
+            raise DemandaValidationError("A matriz deve ser definida no cadastro da hierarquização.", field="matriz_premissas_criterios")
         criterios = _criterios_from_matriz(payload.matriz_premissas_criterios)
         if len(criterios) < 2:
             raise DemandaValidationError(

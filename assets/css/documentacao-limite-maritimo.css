@@ -1,0 +1,11 @@
+.doc-maritimo .doc-figura { margin: 1.2rem 0; }
+.doc-maritimo .doc-figura img { max-height: none; }
+.doc-maritimo .doc-table-scroll { overflow-x: auto; }
+.doc-maritimo .ahp-section-body p { line-height: 1.75; }
+.doc-maritimo .doc-ficha dd { overflow-wrap: anywhere; }
+.doc-maritimo .doc-referencias li { margin-bottom: .9rem; }
+.doc-maritimo .doc-figura figcaption a { margin-left: .4rem; }
+@media(max-width: 600px) {
+ .doc-maritimo .doc-duas-colunas { grid-template-columns: 1fr; }
+ .doc-maritimo .doc-ficha > div { grid-template-columns: 1fr; gap: .15rem; }
+}

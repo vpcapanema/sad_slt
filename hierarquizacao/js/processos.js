@@ -24,7 +24,9 @@
   let listaCache = [],
     agrupamentosCache = [],
     hierEditMode = false,
-    matrizAtual = null;
+    matrizAtual = null,
+    matrizCadastro = null,
+    matrizLeitura = 0;
   const selecionadasHier = new Set();
   const HIER_FILTER_COLUMNS = [
     ["status", "Situação"], ["codigo", "Código da hierarquização"], ["julgamento_id", "ID Julgamento"],
@@ -251,6 +253,7 @@
   }
   function mostrarCadastroNovo() {
     setCadastroReadonly(false); $("nova-hierarquizacao").reset();
+    matrizCadastro = null; matrizLeitura++; $("hier-criteria-matrix-summary").textContent = "";
     selecionados.clear(); confirmados.clear(); selecionadosResumo.clear(); grupoFechado = false;
     carregarAgrupamentos();
     $("hier-create-section").classList.remove("hidden");
@@ -297,6 +300,10 @@
     if (selecionadasHier.size !== 1) return;
     const codigo = [...selecionadasHier][0], h = listaCache.find((item) => item.codigo === codigo); if (!h) return;
     $("nova-hierarquizacao").reset(); $("hier-nome").value = h.nome || ""; $("hier-descricao").value = h.descricao || "";
+    matrizCadastro = null; matrizLeitura++;
+    const matrix = matrizDaHier(h);
+    $("hier-criteria-matrix-summary").classList.remove("hidden");
+    $("hier-criteria-matrix-summary").textContent = matrix ? "Matriz cadastrada nesta hierarquização. Consulte e baixe pelo botão Ver matriz na tabela." : "Esta hierarquização não possui matriz cadastrada.";
     await carregarAgrupamentos(h.grupo_demanda_id || "", h.objetos || []);
     setCadastroReadonly(true); $("hier-create-section").classList.remove("hidden");
     $("hier-create-section").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -864,15 +871,32 @@
   $("demanda-resumo-cancelar").onclick = cancelarGrupo;
   $("demanda-resumo-atualizar").onclick = () =>
     carregarUniverso({ preservarSelecao: true });
+  $("hier-criteria-matrix").addEventListener("change", async (event) => {
+    const file = event.target.files[0], request = ++matrizLeitura;
+    matrizCadastro = null;
+    const summary = $("hier-criteria-matrix-summary");
+    summary.classList.remove("hidden"); summary.textContent = file ? "Lendo matriz…" : "Selecione uma matriz.";
+    if (!file) return;
+    try {
+      const parsed = await window.SLTMatrizArquivo.ler(file);
+      if (request !== matrizLeitura) return;
+      const rows = Array.isArray(parsed) ? parsed : (parsed.linhas || parsed.rows || parsed.criterios || parsed.dados || []);
+      if (!Array.isArray(rows) || rows.filter(row => row && typeof row === "object" && !Array.isArray(row)).length < 2) throw new Error("A matriz deve conter ao menos dois critérios.");
+      matrizCadastro = { ...(Array.isArray(parsed) ? {} : parsed), arquivo: file.name, linhas: rows };
+      summary.textContent = `${file.name} · ${rows.length} critérios carregados.`;
+    } catch (err) { if (request !== matrizLeitura) return; event.target.value = ""; summary.textContent = err.message; }
+  });
   $("nova-hierarquizacao").onsubmit = async (e) => {
     e.preventDefault();
     if (!$("hier-agrupamento").value)
       return erro("Selecione um agrupamento salvo antes de criar a hierarquização.");
+    if (!matrizCadastro) return erro("Anexe e aguarde a leitura da matriz de premissas e critérios.");
     try {
       await HierApi.criar({
         nome: $("hier-nome").value.trim(),
         descricao: $("hier-descricao").value.trim() || null,
         grupo_demanda_id: $("hier-agrupamento").value,
+        matriz_premissas_criterios: matrizCadastro,
       });
       location.reload();
     } catch (err) {

@@ -45,7 +45,7 @@
     form.classList.remove("hidden");
     salvar.disabled = !item.pode_editar;
     salvar.classList.toggle("hidden", !item.pode_editar);
-    resumo.textContent = `${item.tipo_demanda} · ${item.atributos_preenchidos} de ${item.total_atributos} atributos preenchidos · ${item.hierarquizacao_nome || item.hierarquizacao_codigo} · ${item.pode_editar ? "Sua demanda — edição permitida" : "Demanda de outro responsável — somente leitura"}`;
+    resumo.textContent = `${item.tipo_demanda} · ${item.situacao_complementacao === "complementada" ? "Complementada" : "Em complementação"} · ${item.atributos_preenchidos} de ${item.total_atributos} atributos preenchidos · ${item.hierarquizacao_nome || item.hierarquizacao_codigo} · ${item.pode_editar ? "Sua demanda — edição permitida" : "Somente leitura"}`;
     status.className = "complementacao-status";
     status.textContent = item.pode_editar ? "" : "Você pode consultar esta demanda, mas somente o responsável pode complementá-la.";
     for (const coluna of item.colunas) {
@@ -91,7 +91,7 @@
 
   api("/api/complementacao/objetos").then((dados) => {
     itens = dados;
-    select.innerHTML = '<option value="">— Selecione —</option>' + dados.map((item, indice) => `<option value="${indice}">${item.pode_editar ? "Minha demanda" : "Somente leitura"} · ${esc(item.objeto_codigo)} — ${esc(item.objeto_nome)} (${item.atributos_preenchidos}/${item.total_atributos})</option>`).join("");
+    select.innerHTML = '<option value="">— Selecione —</option>' + dados.map((item, indice) => `<option value="${indice}">${item.situacao_complementacao === "complementada" ? "Complementada" : "Em complementação"} · ${esc(item.objeto_codigo)} — ${esc(item.objeto_nome)} (${item.atributos_preenchidos}/${item.total_atributos})</option>`).join("");
     if (!dados.length) resumo.textContent = "Nenhuma demanda complementável disponível.";
   }).catch((erro) => {
     select.innerHTML = '<option value="">Falha ao carregar</option>';

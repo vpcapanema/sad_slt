@@ -154,6 +154,16 @@
               </div>
             </article>
 
+    <section class="ahp-subcard cadastro-card card-matriz-de-premissas-e-criterios">
+      <div class="ahp-subsection-title"><span class="ahp-subsection-num">3</span><span>Matriz de premissas e critérios</span></div>
+      <div class="ahp-section-body">
+        <p class="step-intro">Anexe a matriz que define o contexto, as premissas e os critérios desta hierarquização. Os julgamentos associados utilizarão esta matriz cadastrada.</p>
+        <p><a href="/public/documentacao/matrizes/Modelo_Matriz_Criterios_Premissas_SLT.xlsx" download="Modelo_Matriz_Criterios_Premissas_SLT.xlsx" class="ahp-template-download-btn"><i class="fas fa-file-excel"></i> Baixar modelo XLSX</a></p>
+        <label class="process-field" for="hier-criteria-matrix"><span>Arquivo JSON, CSV ou XLSX</span><input id="hier-criteria-matrix" type="file" accept=".json,.csv,.xlsx" required aria-describedby="hier-criteria-matrix-summary"></label>
+        <div id="hier-criteria-matrix-summary" class="ahp-info-note hidden" role="status"></div>
+      </div>
+    </section>
+
             <article class="card-universo-da-hierarquizacao ahp-subcard cadastro-card" hidden>
               <div class="ahp-subsection-title">
                 <i class="fas fa-folder-tree"></i>
@@ -373,6 +383,8 @@
   <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
   <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
   <script src="/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1"></script>
-  <script src="/restrict/hierarquizacao/js/processos.js?v=20261004-demandas-grupo"></script>
+  <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
+  <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
+  <script src="/restrict/hierarquizacao/js/processos.js?v=20261009-matriz-cadastro"></script>
   <script src="/assets/js/paginas/hierarquizacao-home-inline-1.js"></script>
 {% endblock %}
