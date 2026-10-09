@@ -32,7 +32,7 @@ def test_line_length_is_calculated_in_kilometres() -> None:
 def test_polygon_area_hectares_and_perimeter_are_calculated() -> None:
     frame = gpd.GeoDataFrame(
         {"Área Teste": [1], "geometry": [Polygon([(0, 0), (1000, 0), (1000, 1000), (0, 1000)])]},
-        crs="EPSG:31983",
+        crs="EPSG:5880",
     )
     result, _ = validate_vector(frame, target_crs=None, clip_frame=None)
     assert result.iloc[0]["area_km2"] == pytest.approx(1.0)
@@ -45,7 +45,7 @@ def test_multipolygon_is_valid_complex_geometry() -> None:
         Polygon([(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)]),
         Polygon([(20, 20), (30, 20), (30, 30), (20, 30), (20, 20)]),
     ])
-    frame = gpd.GeoDataFrame({"geometry": [geometry]}, crs="EPSG:31983")
+    frame = gpd.GeoDataFrame({"geometry": [geometry]}, crs="EPSG:5880")
 
     result, metadata = validate_vector(frame, target_crs=None, clip_frame=None)
 
@@ -60,7 +60,7 @@ def test_polygon_with_hole_is_valid_complex_geometry() -> None:
         [(0, 0), (20, 0), (20, 20), (0, 20), (0, 0)],
         holes=[[(5, 5), (5, 15), (15, 15), (15, 5), (5, 5)]],
     )
-    frame = gpd.GeoDataFrame({"geometry": [geometry]}, crs="EPSG:31983")
+    frame = gpd.GeoDataFrame({"geometry": [geometry]}, crs="EPSG:5880")
 
     result, metadata = validate_vector(frame, target_crs=None, clip_frame=None)
 

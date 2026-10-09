@@ -13,6 +13,7 @@ A tabela é a geometria gravada no banco e no GeoPackage, e é dela que saem o
 CSV, o XLSX e o relatório analítico.
 """
 from __future__ import annotations
+from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import json
 
@@ -83,7 +84,7 @@ def montar(result: dict, intersecoes, entrada) -> tuple[gpd.GeoDataFrame, dict]:
 
     if dimensao == 0:
         # Os ids da análise são a ordem dos pontos depois de individualizar multipartes.
-        pontos = prepare(entrada, 'Entrada')[0].to_crs(5880).explode(index_parts=False).reset_index(drop=True)
+        pontos = _gdal_reproject(prepare(entrada, 'Entrada')[0], 5880).explode(index_parts=False).reset_index(drop=True)
         presentes = {}
         for categoria in result['categorias']:
             for camada in categoria['camadas']:

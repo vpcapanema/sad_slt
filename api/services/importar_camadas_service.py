@@ -1,5 +1,6 @@
 """Pipeline transacional do endpoint importar_camadas."""
 from __future__ import annotations
+from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import json
 import re
@@ -245,15 +246,8 @@ def _geometry_family(frame: gpd.GeoDataFrame) -> str:
 
 
 def _metric_frame(frame: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    crs = CRS.from_user_input(frame.crs)
-    if crs.is_projected:
-        factor = float(crs.axis_info[0].unit_conversion_factor or 1.0)
-        if abs(factor - 1.0) < 1e-12:
-            return frame
-    metric_crs: CRS | None = frame.estimate_utm_crs()
-    if metric_crs is None:
-        raise ValueError("Não foi possível determinar um CRS métrico para os cálculos")
-    return frame.to_crs(metric_crs)
+    from api.services.extracao_ogr import reproject
+    return reproject(frame, 5880)
 
 
 def validate_vector(
@@ -272,12 +266,12 @@ def validate_vector(
     result = _annotate_geometry_validation(_normalize_fields(frame.copy()))
     if target_crs:
         CRS.from_user_input(target_crs)
-        result = result.to_crs(target_crs)
+        result = _gdal_reproject(result, target_crs)
     if clip_frame is not None:
         result_crs = result.crs
         if result_crs is None:
             raise ValueError("Camada vetorial sem CRS após o processamento")
-        mask_frame = clip_frame.to_crs(result_crs) if clip_frame.crs != result_crs else clip_frame
+        mask_frame = _gdal_reproject(clip_frame, result_crs) if clip_frame.crs != result_crs else clip_frame
         result = gpd.clip(result, mask_frame)
         if result.empty:
             raise ValueError("O recorte não produziu nenhuma feição")
@@ -294,12 +288,15 @@ def validate_vector(
         result["long"] = points.x
     else:
         metric = _metric_frame(result)
+        from api.services import extracao_ogr as espacial
+        lengths = np.array([espacial.length(g) for g in metric.geometry])
         if family == "linha":
-            result["extensao_km"] = metric.length.to_numpy() / 1000.0
+            result["extensao_km"] = lengths / 1000.0
         else:
-            result["area_km2"] = metric.area.to_numpy() / 1_000_000.0
-            result["area_ha"] = metric.area.to_numpy() / 10_000.0
-            result["perimetro_m"] = metric.length.to_numpy()
+            areas = np.array([espacial.area(g) for g in metric.geometry])
+            result["area_km2"] = areas / 1_000_000.0
+            result["area_ha"] = areas / 10_000.0
+            result["perimetro_m"] = lengths
 
     bounds = [float(value) for value in result.total_bounds]
     metadata = {
@@ -356,7 +353,7 @@ def validate_raster(
         transform = source_transform
         if clip_frame is not None:
             geometries = []
-            mask_source = clip_frame.to_crs(source_crs)
+            mask_source = _gdal_reproject(clip_frame, source_crs)
             for geometry in mask_source.geometry:
                 if geometry is not None and not geometry.is_empty:
                     geometries.append(geometry.__geo_interface__)
@@ -636,7 +633,7 @@ def previa_da_inspecao(token: str) -> dict[str, Any]:
 
     camadas = []
     for nome, frame, metadata in ticket.vector_results:
-        quadro = frame if frame.crs is None else frame.to_crs("EPSG:4326")
+        quadro = frame if frame.crs is None else _gdal_reproject(frame, "EPSG:4326")
         total = len(quadro)
         recorte = quadro.head(PREVIA_MAX_FEICOES)
         # Tolerância proporcional à extensão: preserva a forma e corta vértice.

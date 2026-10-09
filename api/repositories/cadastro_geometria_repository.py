@@ -1,6 +1,6 @@
 """Acesso a dados — geometrias materializadas do cadastro para o mapa.
 
-Plano, programa e projeto guardam a própria geometria em EPSG:4326; aqui cada
+Plano, programa e projeto guardam a própria geometria no CRS cadastral (padrão EPSG:4674); aqui cada
 registro vira uma camada candidata do visualizador, com o GeoJSON pronto.
 """
 from __future__ import annotations
@@ -23,9 +23,9 @@ _SQL = """
         t.nome,
         t.status,
         t.criado_em,
-        ST_AsGeoJSON(t.geometria)::jsonb AS geometria,
+        ST_AsGeoJSON(ST_Transform(t.geometria,4326))::jsonb AS geometria,
         ST_GeometryType(t.geometria) AS geometria_tipo,
-        ARRAY[ST_XMin(t.geometria), ST_YMin(t.geometria), ST_XMax(t.geometria), ST_YMax(t.geometria)] AS bounds
+        ARRAY[ST_XMin(ST_Transform(t.geometria,4326)), ST_YMin(ST_Transform(t.geometria,4326)), ST_XMax(ST_Transform(t.geometria,4326)), ST_YMax(ST_Transform(t.geometria,4326))] AS bounds
     FROM {tabela} t
     WHERE t.geometria IS NOT NULL
     ORDER BY t.criado_em DESC

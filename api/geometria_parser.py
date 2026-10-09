@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import io
-import importlib
+from contextvars import ContextVar
 import json
 import shutil
 import tempfile
@@ -12,64 +12,52 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Sequence
 
 from fastapi import HTTPException
-import shapely.geometry
-from shapely.geometry import GeometryCollection, mapping, shape as to_shape
-from shapely.geometry.base import BaseGeometry
+from osgeo import ogr, gdal
+from api.services.normalizacao_demanda import reprojetar
 
 MAX_GEOMETRIA_UPLOAD_BYTES = 50 * 1024 * 1024
+_SOURCE_CRS = ContextVar('demanda_source_crs', default=None)
 
 
 def _geojson_from_geometries(
-    geoms: Sequence[BaseGeometry | dict[str, Any]],
+    geoms: Sequence[Any],
     properties: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Consolida geometrias suportadas em uma única feature GeoJSON."""
-    shapes: list[BaseGeometry] = []
+    shapes = []
     for geom in geoms:
-        parsed_geom: BaseGeometry
-        if isinstance(geom, BaseGeometry):
+        if isinstance(geom, ogr.Geometry):
             parsed_geom = geom
         else:
-            parsed_geom = shapely.geometry.shape(geom)
+            parsed_geom = ogr.CreateGeometryFromJson(json.dumps(geom))
+        if parsed_geom is None or parsed_geom.IsEmpty():
+            continue
 
         pending = [parsed_geom]
         while pending:
             current = pending.pop()
-            if isinstance(current, GeometryCollection):
-                pending.extend(current.geoms)
-            elif current.geom_type in (
-                "Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon"
-            ):
+            kind = ogr.GT_Flatten(current.GetGeometryType())
+            if kind in (ogr.wkbGeometryCollection, ogr.wkbMultiPoint, ogr.wkbMultiLineString, ogr.wkbMultiPolygon):
+                pending.extend(current.GetGeometryRef(i).Clone() for i in range(current.GetGeometryCount()))
+            elif kind in (ogr.wkbPoint, ogr.wkbLineString, ogr.wkbPolygon):
                 shapes.append(current)
     if not shapes:
         raise HTTPException(400, "O arquivo não contém pontos, linhas ou polígonos válidos.")
 
-    dimensions = {
-        "Point" if s.geom_type in ("Point", "MultiPoint") else
-        "LineString" if s.geom_type in ("LineString", "MultiLineString") else
-        "Polygon"
-        for s in shapes
-    }
+    dimensions = {s.GetDimension() for s in shapes}
     if len(dimensions) != 1:
         raise HTTPException(400, "O arquivo deve conter apenas pontos, linhas ou polígonos, não uma mistura.")
 
-    dimension = next(iter(dimensions))
-    if dimension == "Point":
-        components = [part for geom in shapes for part in (geom.geoms if geom.geom_type == "MultiPoint" else [geom])]
-    elif dimension == "LineString":
-        components = [part for geom in shapes for part in (geom.geoms if geom.geom_type == "MultiLineString" else [geom])]
+    if len(shapes) == 1:
+        merged = shapes[0]
     else:
-        components = [part for geom in shapes for part in (geom.geoms if geom.geom_type == "MultiPolygon" else [geom])]
-    merged = components[0] if len(components) == 1 else getattr(shapely.geometry, f"Multi{dimension}")(components)
-
-    if merged.geom_type not in (
-        "Point", "MultiPoint", "Polygon", "MultiPolygon", "LineString", "MultiLineString"
-    ):
-        raise HTTPException(400, f"Geometria não suportada: {merged.geom_type}.")
+        merged = ogr.Geometry({0:ogr.wkbMultiPoint,1:ogr.wkbMultiLineString,2:ogr.wkbMultiPolygon}[next(iter(dimensions))])
+        for geom in shapes:
+            merged.AddGeometry(geom)
     return {
         "type": "Feature",
         "properties": properties[0] if properties else {},
-        "geometry": mapping(merged),
+        "geometry": json.loads(merged.ExportToJson()),
     }
 
 
@@ -97,39 +85,42 @@ def parse_shapefile_zip(content: bytes) -> dict[str, Any]:
             with archive.open(member) as source, destination.open("wb") as target:
                 shutil.copyfileobj(source, target)
 
-        gpd = importlib.import_module("geopandas")
-        geometries: list[BaseGeometry] = []
+        geometries = []
         for shp_name in shp_names:
             relative = PurePosixPath(shp_name.replace("\\", "/"))
             source_path = Path(extract_dir).joinpath(*relative.parts)
-            geometries.extend(_wgs84_geometries(gpd.read_file(source_path)))
+            geometries.extend(_read_ogr(source_path))
         return _geojson_from_geometries(geometries)
 
 
-def _wgs84_geometries(frame: Any) -> list[BaseGeometry]:
-    if frame.crs is None:
-        raise HTTPException(400, "O arquivo vetorial precisa informar seu sistema de coordenadas (CRS).")
-    converted = frame.to_crs("EPSG:4326")
-    return [geom for geom in converted.geometry if geom is not None and not geom.is_empty]
+def _read_ogr(path):
+    dataset = gdal.OpenEx(str(path), gdal.OF_VECTOR)
+    if dataset is None:
+        raise HTTPException(400, 'GDAL não conseguiu abrir o arquivo vetorial.')
+    layer = dataset.GetLayer(0)
+    reference = layer.GetSpatialRef()
+    if reference is None:
+        raise HTTPException(400, 'O arquivo vetorial precisa informar seu sistema de coordenadas (CRS).')
+    sources = _SOURCE_CRS.get()
+    if sources is not None:
+        sources.append(reference.ExportToWkt())
+    geometries = []
+    for feature in layer:
+        geom = feature.GetGeometryRef()
+        if geom is not None and not geom.IsEmpty():
+            geometries.append(reprojetar(geom, reference.ExportToWkt(), 4326))
+    return geometries
 
 
 def parse_geopackage(content: bytes) -> dict[str, Any]:
     """Lê todas as feições de GeoPackage e converte seu CRS para WGS84."""
-    try:
-        gpd = importlib.import_module("geopandas")
-    except ImportError as e:
-        raise HTTPException(
-            501,
-            "GeoPackage requer geopandas no servidor. Instale: pip install geopandas",
-        ) from e
-
     with tempfile.TemporaryDirectory() as tmp_dir:
         path = Path(tmp_dir) / "upload.gpkg"
         path.write_bytes(content)
-        frame = gpd.read_file(path)
-        if frame.empty:
+        geometries = _read_ogr(path)
+        if not geometries:
             raise HTTPException(400, "GeoPackage vazio.")
-        return _geojson_from_geometries(_wgs84_geometries(frame))
+        return _geojson_from_geometries(geometries)
 
 
 def _local_name(tag: str) -> str:
@@ -145,16 +136,16 @@ def _kml_coordinates(element: ET.Element) -> list[tuple[float, float]]:
     return points
 
 
-def _kml_geometries(element: ET.Element) -> list[BaseGeometry]:
+def _kml_geometries(element: ET.Element) -> list[Any]:
     kind = _local_name(element.tag)
     if kind == "Point":
         coordinates = next((node for node in element.iter() if _local_name(node.tag) == "coordinates"), None)
         points = _kml_coordinates(coordinates) if coordinates is not None else []
-        return [shapely.geometry.Point(points[0])] if points else []
+        return [{'type':'Point','coordinates':points[0]}] if points else []
     if kind == "LineString":
         coordinates = next((node for node in element.iter() if _local_name(node.tag) == "coordinates"), None)
         points = _kml_coordinates(coordinates) if coordinates is not None else []
-        return [shapely.geometry.LineString(points)] if len(points) >= 2 else []
+        return [{'type':'LineString','coordinates':points}] if len(points) >= 2 else []
     if kind == "Polygon":
         boundaries = [node for node in element.iter() if _local_name(node.tag) in ("outerBoundaryIs", "innerBoundaryIs")]
         rings = []
@@ -163,7 +154,7 @@ def _kml_geometries(element: ET.Element) -> list[BaseGeometry]:
             points = _kml_coordinates(coordinates) if coordinates is not None else []
             if len(points) >= 4:
                 rings.append(points)
-        return [shapely.geometry.Polygon(rings[0], rings[1:])] if rings else []
+        return [{'type':'Polygon','coordinates':rings}] if rings else []
     geometries = []
     for child in element:
         geometries.extend(_kml_geometries(child))
@@ -210,10 +201,21 @@ def parse_geojson(content: bytes) -> dict[str, Any]:
         geometries = [data.get("geometry")] if data.get("geometry") else []
     else:
         geometries = [data]
-    return _geojson_from_geometries(geometries)
+    feature = _geojson_from_geometries(geometries)
+    declared = (data.get('crs') or {}).get('properties', {}).get('name')
+    if declared:
+        try:
+            geom = ogr.CreateGeometryFromJson(json.dumps(feature['geometry']))
+            feature['geometry'] = json.loads(reprojetar(geom, declared, 4326).ExportToJson())
+        except Exception as exc:
+            raise HTTPException(400, 'CRS declarado no GeoJSON inválido.') from exc
+    sources = _SOURCE_CRS.get()
+    if sources is not None:
+        sources.append(declared or 'EPSG:4326')
+    return feature
 
 
-def parse_upload(filename: str, content: bytes) -> dict[str, Any]:
+def _parse_upload(filename: str, content: bytes) -> dict[str, Any]:
     """Despacha o parser adequado conforme a extensão do arquivo enviado."""
     name = (filename or "").lower()
     if name.endswith(".zip"):
@@ -234,3 +236,13 @@ def parse_upload(filename: str, content: bytes) -> dict[str, Any]:
         "geojson": feature,
         "coordinates": geom["coordinates"],
     }
+
+
+def parse_upload(filename: str, content: bytes) -> dict[str, Any]:
+    token = _SOURCE_CRS.set([])
+    try:
+        result = _parse_upload(filename, content)
+        result['crs_origem'] = sorted(set(_SOURCE_CRS.get())) or ['EPSG:4326']
+        return result
+    finally:
+        _SOURCE_CRS.reset(token)

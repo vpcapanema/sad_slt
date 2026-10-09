@@ -50,7 +50,7 @@ _SELECT_BASE = """
         d.geometria_tipo,
         CASE
             WHEN d.geometria IS NULL THEN NULL
-            ELSE ST_AsGeoJSON(d.geometria)::jsonb
+            ELSE ST_AsGeoJSON(ST_Transform(d.geometria,4326))::jsonb
         END AS geometria_geojson,
         d.classificacao,
         d.complementos,
@@ -126,7 +126,7 @@ _INSERT_SQL = """
         %(latitude)s,
         %(longitude)s,
         %(geometria_tipo)s,
-        ST_SetSRID(ST_GeomFromGeoJSON(%(geometria_geojson)s::text), 4326),
+        ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(%(geometria_geojson)s::text), 4326), Find_SRID('demandas','projeto','geometria')),
         %(classificacao)s,
         %(complementos)s,
         %(vigencia_inicio)s,

@@ -1,6 +1,7 @@
 """Acesso a dados — hierarquizacao_demandas.hierarquizacao_portfolio."""
 
 from __future__ import annotations
+from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import json
 from datetime import date, datetime
@@ -257,7 +258,7 @@ def intersecoes_camada(camada_id: str, *, longitude: float, latitude: float) -> 
     if not loaded:
         return []
     frame, metadata = loaded
-    spatial = frame.to_crs(4326)
+    spatial = _gdal_reproject(frame, 4326)
     indices = spatial.sindex.query(Point(longitude,latitude), predicate='intersects')
     return [{'camada_id':str(metadata['id']), 'camada_origem':metadata['nome'],
              'versao':'', 'finalidade':(metadata.get('metadados') or {}).get('finalidade'),

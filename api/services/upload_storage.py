@@ -11,6 +11,7 @@ sobe já extraído). Com reprojeção ou recorte, sobe o resultado: GeoPackage p
 vetor, GeoTIFF para raster. Arquivo que já existe na pasta não é sobrescrito.
 """
 from __future__ import annotations
+from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import os
 import re
@@ -92,9 +93,9 @@ def _arquivo_transformado(ticket, pasta_tmp: Path, target_crs: str | None,
         if frame.crs is None:
             raise ValueError(f"A camada {nome} não informa seu CRS")
         if target_crs:
-            frame = frame.to_crs(target_crs)
+            frame = _gdal_reproject(frame, target_crs)
         if mascara is not None:
-            frame = gpd.clip(frame, mascara.to_crs(frame.crs))
+            frame = gpd.clip(frame, _gdal_reproject(mascara, frame.crs))
             if frame.empty:
                 raise ValueError(f"O recorte não deixou nenhuma feição em {nome}")
         frame.to_file(destino, layer=str(nome), driver="GPKG", engine="pyogrio")

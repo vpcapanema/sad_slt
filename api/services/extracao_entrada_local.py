@@ -5,6 +5,7 @@ O navegador conserva o arquivo original e o reenvia na execução. GDAL usa
 compartilhado nem de arquivos temporários em disco.
 """
 from __future__ import annotations
+from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import base64
 import binascii
@@ -96,7 +97,7 @@ def validar(frame, max_feicoes=MAX_FEICOES):
     geometrias = frame.geometry
     if not _coordenadas_validas(geometrias):
         raise ValueError('A camada não contém coordenadas válidas para visualização.')
-    mapa = frame.to_crs(4326)
+    mapa = _gdal_reproject(frame, 4326)
     if not _coordenadas_validas(mapa.geometry, geograficas=True):
         raise ValueError('As coordenadas não correspondem ao CRS declarado no arquivo.')
     invalidas = int(sum(g is not None and not g.is_empty and not g.is_valid for g in geometrias))
@@ -190,7 +191,7 @@ def _ler_vetor(escolha, nome, conteudo, componentes, avisos_pacote, progresso=No
 
 def localizacao(frame):
     """Consulta espacial somente de leitura, com cobertura explicitamente informada."""
-    geometrias = frame.to_crs(4674).geometry
+    geometrias = _gdal_reproject(frame, 4674).geometry
     validas = [shapely.make_valid(g) if not g.is_valid else g for g in geometrias if g is not None and not g.is_empty]
     consulta = shapely.GeometryCollection(validas).wkb
     resultado = {'fonte': 'IBGE · Malha municipal 2022', 'cobertura': 'Estado de São Paulo',
@@ -198,7 +199,7 @@ def localizacao(frame):
     try:
         import pyogrio
         from api.path_policy import project_path
-        estados = pyogrio.read_dataframe(project_path('database/geo/raw/uf/uf.shp'), bbox=tuple(frame.to_crs(4674).total_bounds))
+        estados = pyogrio.read_dataframe(project_path('database/geo/raw/uf/uf.shp'), bbox=tuple(_gdal_reproject(frame, 4674).total_bounds))
         geometria = shapely.GeometryCollection(validas)
         encontrados = estados.loc[estados.geometry.intersects(geometria)]
         resultado['ufs'] = sorted(set(encontrados['sigla']))
@@ -224,7 +225,7 @@ def localizacao(frame):
 
 def _representacao_mapa(frame, limite):
     """Reduz somente uma cópia em WGS84. Nunca usada pelos algoritmos de análise."""
-    mapa = frame.to_crs(4326).copy()
+    mapa = _gdal_reproject(frame, 4326).copy()
     originais = mapa.geometry.values
     total = int(shapely.get_num_coordinates(originais).sum())
     # Não eliminar registros para cumprir o orçamento de desenho.
@@ -318,7 +319,7 @@ def _lote(conteudo, nome, com_previa=True, selecionadas=None, progresso=None, do
                         raise ValueError('O conjunto ultrapassa 1999 atributos mais o campo de origem. Esta camada não foi incluída.')
                     # Compatibilidade das camadas no CRS comum também faz parte da validação.
                     if vetores:
-                        frame_comum = frame.to_crs(vetores[0][0].crs)
+                        frame_comum = _gdal_reproject(frame, vetores[0][0].crs)
                         if not _coordenadas_validas(frame_comum.geometry):
                             raise ValueError('Não foi possível transformar esta camada para o CRS comum da entrada.')
                     if dono_tiles is not None:
@@ -361,7 +362,7 @@ def _agrupar_vetores(vetores, nome):
     frames = []
     crs = vetores[0][0].crs
     for frame, meta in vetores:
-        frame = frame.to_crs(crs).copy()
+        frame = _gdal_reproject(frame, crs).copy()
         if frame.geometry.name != geometria:
             frame = frame.rename_geometry(geometria)
         frame[origem] = meta['camada']
@@ -374,7 +375,7 @@ def _agrupar_vetores(vetores, nome):
             'campos_total': len(conjunto.columns)-1,
             'campos': [{'nome': c, 'tipo': str(conjunto[c].dtype)} for c in conjunto.columns if c != geometria],
             'tipos_geometria': sorted(set(conjunto.geom_type.dropna())),
-            'limites_wgs84': conjunto.to_crs(4326).total_bounds.tolist(),
+            'limites_wgs84': _gdal_reproject(conjunto, 4326).total_bounds.tolist(),
             'camadas_origem': [{'camada': m['camada'], 'nome': m['nome_camada'], 'crs': m['crs'], 'feicoes': len(f)} for f,m in vetores]}
     conjunto.attrs['sicard_campo_origem'] = origem
     conjunto.attrs['sicard_partes'] = [{'chave':m['camada'], 'nome':m['nome_camada'], 'campos':[c for c in f.columns if c != f.geometry.name]} for f,m in vetores]
@@ -455,7 +456,7 @@ def _previa_raster(escolha, nome, conteudo, componentes, avisos, raiz):
         corners = [gdal.ApplyGeoTransform(transform, x, y) for x,y in
                    [(0,0),(raster.RasterXSize,0),(raster.RasterXSize,raster.RasterYSize),(0,raster.RasterYSize)]]
         frame = gpd.GeoDataFrame(geometry=[Polygon(corners)], crs=crs)
-        mapa = frame.to_crs(4326)
+        mapa = _gdal_reproject(frame, 4326)
         if not np.isfinite(mapa.total_bounds).all():
             raise ValueError('Extensão ou CRS inválido no raster.')
         meta['limites_wgs84'] = mapa.total_bounds.tolist()

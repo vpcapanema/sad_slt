@@ -14,7 +14,12 @@ def api_geometria_parse(file: UploadFile = File(...)):
     if len(content) > MAX_GEOMETRIA_UPLOAD_BYTES:
         raise HTTPException(413, "Arquivo maior que 50 MB.")
     try:
-        return parse_upload(file.filename or "", content)
+        parsed = parse_upload(file.filename or "", content)
+        from api.services.normalizacao_demanda import normalizar
+        geom = normalizar(parsed['geojson']['geometry'], crs_saida=4326)
+        return {**parsed, 'tipo_original': parsed['tipo'], 'tipo': geom['type'],
+                'coordinates': geom['coordinates'], 'geojson': {**parsed['geojson'], 'geometry': geom},
+                'crs_armazenamento': 'EPSG:4674', 'buffer_ponto_m': 50, 'buffer_linha_m': 25}
     except HTTPException:
         raise
     except Exception as exc:

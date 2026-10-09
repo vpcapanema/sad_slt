@@ -114,7 +114,12 @@ def collect(values, dim=None):
     kind = {0:ogr.wkbMultiPoint,1:ogr.wkbMultiLineString,2:ogr.wkbMultiPolygon}.get(dim,ogr.wkbGeometryCollection)
     result = ogr.Geometry(kind)
     for g in geoms:
-        result.AddGeometry(g)
+        if dim is not None:
+            for part in parts_ogr(g):
+                if part.GetDimension() == dim:
+                    result.AddGeometry(part)
+        else:
+            result.AddGeometry(g)
     if dim==2:
         result = result.UnionCascaded()
         if result is None: raise ValueError('GDAL/OGR: falha na união de polígonos.')
@@ -141,12 +146,14 @@ def _check_coordinates(g, name, geographic=False):
         if not all(math.isfinite(v) for v in point):
             raise ValueError(f'{name}: coordenadas não finitas na fonte ou transformação.')
         if geographic and (abs(point[0])>180 or abs(point[1])>90):
-            raise ValueError(f'{name}: coordenadas incompatíveis com o CRS geográfico declarado.')
+            raise ValueError(f'{name}: coordenadas incompatíveis com o CRS declarado (geográfico).')
     for i in range(g.GetGeometryCount()):
         _check_coordinates(g.GetGeometryRef(i), name, geographic)
 
 
-def reproject(frame, target, name='Camada', progress=None):
+def reproject(frame, target=None, name='Camada', progress=None, *, epsg=None, crs=None):
+    target = target if target is not None else epsg if epsg is not None else crs
+    if target is None: raise ValueError('CRS de destino ausente.')
     if frame.crs is None: raise ValueError(f'{name}: CRS ausente.')
     try:
         source, dest = spatial_reference(frame.crs), spatial_reference(target)
@@ -165,6 +172,8 @@ def reproject(frame, target, name='Camada', progress=None):
                     _check_coordinates(g, name, bool(dest.IsGeographic()))
                 converted.append(None if g is None else bytes(g.ExportToWkb()))
                 medir(pos + 1, len(frame), "geometrias")
+        if isinstance(frame, gpd.GeoSeries):
+            return gpd.GeoSeries.from_wkb(converted, index=frame.index, crs=target, name=frame.name)
         result = frame.copy()
         result.geometry = gpd.GeoSeries.from_wkb(converted,index=frame.index,crs=target)
         return result.set_crs(target, allow_override=True)

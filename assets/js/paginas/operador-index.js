@@ -8,15 +8,16 @@
   }
 
   function contarComplementacoes(items) {
-    const pendentes = new Set();
+    const registros = new Map();
     for (const item of items) {
       const total = Number(item.total_atributos || 0);
       const preenchidos = Number(item.atributos_preenchidos || 0);
-      if (item.pode_editar && preenchidos < total) {
-        pendentes.add(item.objeto_codigo);
+      if (item.pode_editar && total > 0 && item.objeto_codigo) {
+        const completo = preenchidos >= total;
+        registros.set(item.objeto_codigo, (registros.get(item.objeto_codigo) ?? true) && completo);
       }
     }
-    return pendentes.size;
+    return { total: registros.size, concluidas: [...registros.values()].filter(Boolean).length };
   }
 
   async function carregarIndicadores() {
@@ -34,13 +35,16 @@
       const stats = resultados[0].value;
       $("stat-aprovadas").textContent = Number(stats.aprovadas).toLocaleString("pt-BR");
       $("stat-protocoladas").textContent = Number(stats.protocoladas).toLocaleString("pt-BR");
-      $("stat-em-analise").textContent = Number(stats.em_analise).toLocaleString("pt-BR");
+      $("stat-analises-concluidas").textContent = Number(stats.analises_concluidas).toLocaleString("pt-BR");
+      $("stat-analises-total").textContent = Number(stats.analises_total).toLocaleString("pt-BR");
     } else {
       avisos.push("Não foi possível carregar o resumo dos seus protocolos.");
     }
 
     if (resultados[1].status === "fulfilled") {
-      $("stat-complementacao").textContent = contarComplementacoes(resultados[1].value).toLocaleString("pt-BR");
+      const complementacoes = contarComplementacoes(resultados[1].value);
+      $("stat-complementacao").textContent = complementacoes.concluidas.toLocaleString("pt-BR");
+      $("stat-complementacao-total").textContent = complementacoes.total.toLocaleString("pt-BR");
     } else {
       avisos.push("Não foi possível consultar a fila de complementação.");
     }

@@ -8,7 +8,7 @@
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/restrict/hierarquizacao/platform-map.css?v=20260814-1">
-  <link rel="stylesheet" href="/restrict/index.css?v=20261003-operador">
+  <link rel="stylesheet" href="/restrict/index.css?v=20261009-minicards">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/escala-tipografica.css">
 {% endblock %}
@@ -31,6 +31,7 @@
 {% endmacro %}
 
 {% block conteudo %}
+    <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
     <main class="conteudo-principal app-main restrict-index operator-home-content">
       <section class="secao-modulos-do-sicard restrict-index-heading" aria-labelledby="operator-home-title">
         <h1 id="operator-home-title">Bem-vindo</h1>
@@ -47,22 +48,22 @@
           <article class="card-gestao-de-demandas stats-theme">
             <h3><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> Aprovações</h3>
             <div class="stats-theme-values">
-              <div class="operator-stat-ratio">
-                <strong id="stat-aprovadas">—</strong><span aria-hidden="true">/</span><strong id="stat-protocoladas">—</strong>
-                <span>Aprovadas / protocoladas por você</span>
-              </div>
+              <div><strong id="stat-aprovadas">—</strong><span>Aprovadas</span></div>
+              <div><strong id="stat-protocoladas">—</strong><span>Total protocolado por você</span></div>
             </div>
           </article>
           <article class="card-hierarquizacao-e-ranking stats-theme">
-            <h3><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Aguardando complementação</h3>
+            <h3><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Complementações</h3>
             <div class="stats-theme-values">
-              <div><strong id="stat-complementacao">—</strong><span>Itens que você pode completar</span></div>
+              <div><strong id="stat-complementacao">—</strong><span>Concluídas</span></div>
+              <div><strong id="stat-complementacao-total">—</strong><span>Total solicitado a você</span></div>
             </div>
           </article>
           <article class="card-resultados-e-transparencia stats-theme">
-            <h3><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> Em análise</h3>
+            <h3><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> Análises</h3>
             <div class="stats-theme-values">
-              <div><strong id="stat-em-analise">—</strong><span>Aguardando parecer da equipe</span></div>
+              <div><strong id="stat-analises-concluidas">—</strong><span>Concluídas</span></div>
+              <div><strong id="stat-analises-total">—</strong><span>Total encaminhado à análise</span></div>
             </div>
           </article>
         </div>

@@ -7,10 +7,10 @@ from api.db.connection import get_connection
 
 _ABRANGENCIA_GEO = """
     CASE
-        WHEN {alias}.geometria IS NOT NULL THEN ST_AsGeoJSON({alias}.geometria)::jsonb
+        WHEN {alias}.geometria IS NOT NULL THEN ST_AsGeoJSON(ST_Transform({alias}.geometria,4326))::jsonb
     END AS geometria_geojson,
-    ST_Y(ST_Centroid({alias}.geometria)) AS latitude,
-    ST_X(ST_Centroid({alias}.geometria)) AS longitude,
+    ST_Y(ST_Centroid(ST_Transform({alias}.geometria,4326))) AS latitude,
+    ST_X(ST_Centroid(ST_Transform({alias}.geometria,4326))) AS longitude,
     abr.abrangencia_nomes
 """
 
@@ -135,7 +135,7 @@ _PROJETOS_SQL = """
         NULL::text AS justificativa,
         CASE
             WHEN d.geometria IS NULL THEN NULL
-            ELSE ST_AsGeoJSON(d.geometria)::jsonb
+            ELSE ST_AsGeoJSON(ST_Transform(d.geometria,4326))::jsonb
         END AS geometria_geojson,
         d.latitude,
         d.longitude,
@@ -158,23 +158,26 @@ def estatisticas_operador(usuario_id: str) -> dict[str, int]:
     """Agrega registros protocolados pela conta SIGMA autenticada."""
     query = """
         WITH registros AS (
-            SELECT status, aprovado_em
+            SELECT codigo, status, aprovado_em
             FROM demandas.plano
             WHERE criado_por = %(usuario_id)s
             UNION ALL
-            SELECT status, aprovado_em
+            SELECT codigo, status, aprovado_em
             FROM demandas.programa
             WHERE criado_por = %(usuario_id)s
             UNION ALL
-            SELECT status, aprovado_em
+            SELECT codigo, status, aprovado_em
             FROM demandas.projeto
             WHERE criado_por = %(usuario_id)s
         )
         SELECT
             count(*)::int AS protocoladas,
             count(*) FILTER (WHERE aprovado_em IS NOT NULL)::int AS aprovadas,
-            count(*) FILTER (WHERE status = 'analise_em_avaliacao')::int AS em_analise
-        FROM registros
+            count(*) FILTER (WHERE status = 'analise_em_avaliacao')::int AS em_analise,
+            count(*) FILTER (WHERE aprovado_em IS NOT NULL OR status IN ('analise_aprovada', 'analise_reprovada') OR a.decisao IS NOT NULL)::int AS analises_concluidas,
+            count(*) FILTER (WHERE aprovado_em IS NOT NULL OR status NOT IN ('analise_rascunho', 'rascunho') OR a.id IS NOT NULL)::int AS analises_total
+        FROM registros r
+        LEFT JOIN demandas.analise_demanda a ON a.demanda_codigo = r.codigo
     """
     with get_connection() as conn:
         row = conn.execute(query, {"usuario_id": usuario_id}).fetchone()
@@ -182,4 +185,6 @@ def estatisticas_operador(usuario_id: str) -> dict[str, int]:
         "aprovadas": int(row["aprovadas"]),
         "protocoladas": int(row["protocoladas"]),
         "em_analise": int(row["em_analise"]),
+        "analises_concluidas": int(row["analises_concluidas"]),
+        "analises_total": int(row["analises_total"]),
     }

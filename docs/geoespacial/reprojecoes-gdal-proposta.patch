@@ -1,0 +1,607 @@
+--- api/repositories/camada_geoespacial_repository.py
++++ api/repositories/camada_geoespacial_repository.py
+@@ -1,5 +1,6 @@
+ """Entradas no PostGIS; saídas no Storage com catálogo de metadados no banco."""
+ from __future__ import annotations
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ 
+ import json
+ import math
+@@ -65,7 +66,7 @@
+ def _feature_rows(gdf: gpd.GeoDataFrame, *, usar_wkb: bool = False) -> list[tuple[int, Jsonb, str | bytes | None]]:
+     # EPSG:4674 (SIRGAS 2000) é o CRS de armazenamento do sistema — ver
+     # migração 100_padronizar_geometria_sirgas2000.sql.
+-    spatial = gdf.to_crs("EPSG:4674") if gdf.crs else gdf.set_crs("EPSG:4674")
++    spatial = _gdal_reproject(gdf, "EPSG:4674") if gdf.crs else gdf.set_crs("EPSG:4674")
+     geometry_name = str(spatial.geometry.name)
+     rows: list[tuple[int, Jsonb, str | bytes | None]] = []
+     for order, (_, feature) in enumerate(spatial.iterrows()):
+@@ -173,7 +174,7 @@
+         )
+         if categoria == "processadas" and gravar_arquivo:
+             from api.services.ciclo_vida_arquivos import gravar_e_confirmar
+-            spatial = gdf.to_crs(crs) if gdf.crs else gdf.set_crs(crs)
++            spatial = _gdal_reproject(gdf, crs) if gdf.crs else gdf.set_crs(crs)
+             gravar_e_confirmar(conn, database_id, metadata, frame=spatial)
+             metadados.update(metadata)
+         else:
+@@ -258,7 +259,7 @@
+             (recurso_id,nome,'vetor' if gdf is not None else 'raster',geometria_tipo,crs,
+              'GPKG' if gdf is not None else 'GTiff',origem,_jsonb(metadados.get('linhagem',{})),_jsonb(metadados),destino)).fetchone()
+         from api.services.ciclo_vida_arquivos import gravar_e_confirmar
+-        frame = (gdf.to_crs(crs) if gdf.crs else gdf.set_crs(crs)) if gdf is not None else None
++        frame = (_gdal_reproject(gdf, crs) if gdf.crs else gdf.set_crs(crs)) if gdf is not None else None
+         gravar_e_confirmar(conn,str(row['id']),metadados,frame=frame,raster_bytes=raster_bytes,
+                           execucao_id=execution,caminho_destino=destino)
+     return str(row['id'])
+@@ -433,7 +434,7 @@
+         if feature_collection else gpd.GeoDataFrame(geometry=[], crs="EPSG:4674")
+     )
+     if camada.get("crs") and str(camada["crs"]).upper() != "EPSG:4674" and not gdf.empty:
+-        gdf = gdf.to_crs(camada["crs"])
++        gdf = _gdal_reproject(gdf, camada["crs"])
+     camada["categoria"] = categoria
+     return gdf, camada
+ 
+@@ -461,7 +462,7 @@
+     tabela[campo] = gpd.GeoSeries([shapely.from_wkb(bytes(r['wkb'])) if r['wkb'] is not None else None for r in rows], crs=4674)
+     frame = gpd.GeoDataFrame(tabela, geometry=campo, crs=4674)
+     if camada.get('crs') and str(camada['crs']).upper() != 'EPSG:4674' and not frame.empty:
+-        frame = frame.to_crs(camada['crs'])
++        frame = _gdal_reproject(frame, camada['crs'])
+     return frame, {**camada, 'categoria': categoria}
+ 
+ 
+@@ -517,7 +518,7 @@
+         categoria, camada = found
+         if categoria == 'processadas' and camada.get('storage_caminho'):
+             from api.services.saidas_storage import vetor
+-            frame = vetor(camada).to_crs(4674)
++            frame = _gdal_reproject(vetor(camada), 4674)
+             return [{'ordem':i,'geometria':mapping(frame.geometry.iloc[i]) if frame.geometry.iloc[i] is not None else None}
+                     for i in sorted(set(ordens)) if 0 <= i < len(frame)]
+         rows = conn.execute(sql.SQL('SELECT ordem,ST_AsGeoJSON(geom)::jsonb AS geometria '
+@@ -535,7 +536,7 @@
+         categoria, camada = found
+         if categoria == 'processadas' and camada.get('storage_caminho'):
+             from api.services.saidas_storage import vetor
+-            return json.loads(vetor(camada).to_crs(4674).to_json(default=str))
++            return json.loads(_gdal_reproject(vetor(camada), 4674).to_json(default=str))
+         features = STORAGES[categoria][1]
+         row = conn.execute(
+             sql.SQL("""SELECT jsonb_build_object(
+--- api/repositories/hierarquizacao_repository.py
++++ api/repositories/hierarquizacao_repository.py
+@@ -1,6 +1,7 @@
+ """Acesso a dados — hierarquizacao_demandas.hierarquizacao_portfolio."""
+ 
+ from __future__ import annotations
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ 
+ import json
+ from datetime import date, datetime
+@@ -257,7 +258,7 @@
+     if not loaded:
+         return []
+     frame, metadata = loaded
+-    spatial = frame.to_crs(4326)
++    spatial = _gdal_reproject(frame, 4326)
+     indices = spatial.sindex.query(Point(longitude,latitude), predicate='intersects')
+     return [{'camada_id':str(metadata['id']), 'camada_origem':metadata['nome'],
+              'versao':'', 'finalidade':(metadata.get('metadados') or {}).get('finalidade'),
+--- api/services/bancada_arquivos.py
++++ api/services/bancada_arquivos.py
+@@ -1,4 +1,5 @@
+ """Sessão de arquivo da bancada: edição do arquivo original com rastreabilidade."""
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ import asyncio
+ from typing import Any
+ from uuid import uuid4
+@@ -82,7 +83,7 @@
+     west, south, east, north = frame.total_bounds
+     if not (-180 <= west <= east <= 180 and -90 <= south <= north <= 90):
+         raise ValueError('As coordenadas de edição devem estar em longitude/latitude.')
+-    return frame.to_crs(source['crs_arquivo'])
++    return _gdal_reproject(frame, source['crs_arquivo'])
+ 
+ 
+ def salvar(arquivo, revisao, data, _nome, user, camada_id=None):
+@@ -141,7 +142,7 @@
+     from api.services.calculo_campo import calcular
+     source = abrir(arquivo, revisao, camada_id)
+     features = source['geojson']['features']
+-    frame = gpd.GeoDataFrame.from_features(features, crs=4326).to_crs(source['crs_arquivo'])
++    frame = _gdal_reproject(gpd.GeoDataFrame.from_features(features, crs=4326), source['crs_arquivo'])
+     frame, count = calcular(frame, campo, expressao, chaves_selecionadas, filtro,
+                             ids=[feature['id'] for feature in features])
+     result = _persistir(source, frame, source['geojson'], user, incluir_geojson)
+--- api/services/compatibilidade_espacial.py
++++ api/services/compatibilidade_espacial.py
+@@ -1,4 +1,5 @@
+ """Compatibilização espacial em cópias, sem cadastrar ou modificar as fontes."""
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ import numpy as np
+ import shapely
+ 
+@@ -20,7 +21,7 @@
+                 raise ValueError(f'{nome}: coordenadas não finitas na fonte.')
+             if origem.is_geographic and len(coords) and (np.abs(coords[:, 0]).max() > 180 or np.abs(coords[:, 1]).max() > 90):
+                 raise ValueError(f'{nome}: coordenadas incompatíveis com o CRS geográfico declarado.')
+-        resultado = frame.to_crs(destino).copy()
++        resultado = _gdal_reproject(frame, destino).copy()
+         for inicio in range(0, len(resultado), 256):
+             coords = shapely.get_coordinates(resultado.geometry.iloc[inicio:inicio+256].values)
+             if not np.isfinite(coords).all():
+--- api/services/extracao_atributos.py
++++ api/services/extracao_atributos.py
+@@ -1,4 +1,5 @@
+ """Catálogo, execução persistida e recuperação das extrações de atributos."""
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ import logging
+ from concurrent.futures import ThreadPoolExecutor
+ from datetime import datetime, timezone
+@@ -389,7 +390,7 @@
+     registros = sum(item['registros'] for item in camadas.values())
+     fim = datetime.now(timezone.utc)
+     from osgeo import gdal
+-    geojson = json.loads(pd.concat([frame[[frame.geometry.name]].assign(camada=nome).to_crs(4326)
++    geojson = json.loads(pd.concat([_gdal_reproject(frame[[frame.geometry.name]].assign(camada=nome), 4326)
+                                     for nome, frame in saida['camadas'].items()]).to_json(default=str))
+     result = {'id':ident,'modo':'enriquecimento','operacao':params['operacao'],'input_id':params['camada_id'],
+               'input_nome':params['input_nome'],'criado_em':fim.isoformat(),'gdal':gdal.VersionInfo('RELEASE_NAME'),
+--- api/services/extracao_atributos_pacote.py
++++ api/services/extracao_atributos_pacote.py
+@@ -7,6 +7,7 @@
+ escritos; nada fica no disco. Os relatórios vêm de extracao_atributos_relatorios.
+ """
+ from __future__ import annotations
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ 
+ import io
+ import json
+@@ -57,7 +58,7 @@
+ 
+ def escrever_gpkg(saida, entrada, path: Path, incluir_entrada=True) -> None:
+     for camada, frame in ([('resultado', saida), ('entrada', entrada)] if incluir_entrada else [('resultado', saida)]):
+-        data = _para_gpkg(frame.to_crs(4674))
++        data = _para_gpkg(_gdal_reproject(frame, 4674))
+         extras = {'geometry_type': 'Unknown'} if data.empty else {}
+         # Polígonos simples e multipartes na mesma camada gravavam o tipo como
+         # "Unknown"; promovidos a multi, a camada tem um tipo só no QGIS.
+@@ -102,7 +103,7 @@
+     from matplotlib.lines import Line2D
+     from matplotlib.patches import Patch
+ 
+-    web = entrada.to_crs(3857)
++    web = _gdal_reproject(entrada, 3857)
+     minx, miny, maxx, maxy = web.total_bounds
+     folga = max(maxx - minx, maxy - miny, 2000) * 0.3
+     centro_x, centro_y = (minx + maxx) / 2, (miny + maxy) / 2
+@@ -126,7 +127,7 @@
+ 
+     for indice, (categoria, nome, frame) in enumerate(bases):
+         cor = PALETA[indice % len(PALETA)]
+-        recorte = frame.to_crs(3857).cx[x0:x1, y0:y1]
++        recorte = _gdal_reproject(frame, 3857).cx[x0:x1, y0:y1]
+         if not recorte.empty:
+             recorte.plot(ax=ax, facecolor=cor, edgecolor=cor, alpha=.3, linewidth=.7, markersize=12, zorder=10 + indice)
+         legenda.append(Patch(facecolor=cor, edgecolor=cor, alpha=.55,
+@@ -137,7 +138,7 @@
+     marcador = max(2.0, min(20.0, 6000 / max(len(web), 1)))
+     if saida is not None and not saida.empty:
+         # Pontos atingidos vão por cima da entrada; partes de linha ou polígono ficam abaixo do contorno.
+-        saida.to_crs(3857).plot(ax=ax, facecolor='#d62728', edgecolor='#8b0000', alpha=.85 if pontos else .6,
++        _gdal_reproject(saida, 3857).plot(ax=ax, facecolor='#d62728', edgecolor='#8b0000', alpha=.85 if pontos else .6,
+                                 linewidth=.8, markersize=marcador * 1.6, zorder=47 if pontos else 40)
+         legenda.append(Patch(facecolor='#d62728', edgecolor='#8b0000', alpha=.75,
+                              label='Pontos dentro de alguma base' if pontos else 'Partes atingidas (interseção)'))
+--- api/services/extracao_atributos_pacote_enriquecimento.py
++++ api/services/extracao_atributos_pacote_enriquecimento.py
+@@ -12,6 +12,7 @@
+   o processamento.
+ """
+ from __future__ import annotations
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ 
+ import csv
+ import io
+@@ -65,7 +66,7 @@
+             todas[f'{chave}_{nome}'] = (frame, nome)
+     for nome, (frame, _) in {**todas, **({'entrada': (entrada, None)} if incluir_entrada else {})}.items():
+         with operacao(progress, f'Gravando camada {nome} no GeoPackage: {len(frame)} registros; percentual interno indisponível'):
+-            _para_gpkg(frame.to_crs(4674)).to_file(path, driver='GPKG', layer=nome, engine='pyogrio', index=False,
++            _para_gpkg(_gdal_reproject(frame, 4674)).to_file(path, driver='GPKG', layer=nome, engine='pyogrio', index=False,
+                                                     promote_to_multi=not preservar_geometrias,
+                                                     **({'geometry_type': 'Unknown'} if preservar_geometrias else {}))
+     gdal.UseExceptions()
+--- api/services/extracao_atributos_saida.py
++++ api/services/extracao_atributos_saida.py
+@@ -13,6 +13,7 @@
+ CSV, o XLSX e o relatório analítico.
+ """
+ from __future__ import annotations
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ 
+ import json
+ 
+@@ -83,7 +84,7 @@
+ 
+     if dimensao == 0:
+         # Os ids da análise são a ordem dos pontos depois de individualizar multipartes.
+-        pontos = prepare(entrada, 'Entrada')[0].to_crs(5880).explode(index_parts=False).reset_index(drop=True)
++        pontos = _gdal_reproject(prepare(entrada, 'Entrada')[0], 5880).explode(index_parts=False).reset_index(drop=True)
+         presentes = {}
+         for categoria in result['categorias']:
+             for camada in categoria['camadas']:
+--- api/services/extracao_entrada_local.py
++++ api/services/extracao_entrada_local.py
+@@ -5,6 +5,7 @@
+ compartilhado nem de arquivos temporários em disco.
+ """
+ from __future__ import annotations
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ 
+ import base64
+ import binascii
+@@ -96,7 +97,7 @@
+     geometrias = frame.geometry
+     if not _coordenadas_validas(geometrias):
+         raise ValueError('A camada não contém coordenadas válidas para visualização.')
+-    mapa = frame.to_crs(4326)
++    mapa = _gdal_reproject(frame, 4326)
+     if not _coordenadas_validas(mapa.geometry, geograficas=True):
+         raise ValueError('As coordenadas não correspondem ao CRS declarado no arquivo.')
+     invalidas = int(sum(g is not None and not g.is_empty and not g.is_valid for g in geometrias))
+@@ -190,7 +191,7 @@
+ 
+ def localizacao(frame):
+     """Consulta espacial somente de leitura, com cobertura explicitamente informada."""
+-    geometrias = frame.to_crs(4674).geometry
++    geometrias = _gdal_reproject(frame, 4674).geometry
+     validas = [shapely.make_valid(g) if not g.is_valid else g for g in geometrias if g is not None and not g.is_empty]
+     consulta = shapely.GeometryCollection(validas).wkb
+     resultado = {'fonte': 'IBGE · Malha municipal 2022', 'cobertura': 'Estado de São Paulo',
+@@ -198,7 +199,7 @@
+     try:
+         import pyogrio
+         from api.path_policy import project_path
+-        estados = pyogrio.read_dataframe(project_path('database/geo/raw/uf/uf.shp'), bbox=tuple(frame.to_crs(4674).total_bounds))
++        estados = pyogrio.read_dataframe(project_path('database/geo/raw/uf/uf.shp'), bbox=tuple(_gdal_reproject(frame, 4674).total_bounds))
+         geometria = shapely.GeometryCollection(validas)
+         encontrados = estados.loc[estados.geometry.intersects(geometria)]
+         resultado['ufs'] = sorted(set(encontrados['sigla']))
+@@ -224,7 +225,7 @@
+ 
+ def _representacao_mapa(frame, limite):
+     """Reduz somente uma cópia em WGS84. Nunca usada pelos algoritmos de análise."""
+-    mapa = frame.to_crs(4326).copy()
++    mapa = _gdal_reproject(frame, 4326).copy()
+     originais = mapa.geometry.values
+     total = int(shapely.get_num_coordinates(originais).sum())
+     # Não eliminar registros para cumprir o orçamento de desenho.
+@@ -318,7 +319,7 @@
+                         raise ValueError('O conjunto ultrapassa 1999 atributos mais o campo de origem. Esta camada não foi incluída.')
+                     # Compatibilidade das camadas no CRS comum também faz parte da validação.
+                     if vetores:
+-                        frame_comum = frame.to_crs(vetores[0][0].crs)
++                        frame_comum = _gdal_reproject(frame, vetores[0][0].crs)
+                         if not _coordenadas_validas(frame_comum.geometry):
+                             raise ValueError('Não foi possível transformar esta camada para o CRS comum da entrada.')
+                     if dono_tiles is not None:
+@@ -361,7 +362,7 @@
+     frames = []
+     crs = vetores[0][0].crs
+     for frame, meta in vetores:
+-        frame = frame.to_crs(crs).copy()
++        frame = _gdal_reproject(frame, crs).copy()
+         if frame.geometry.name != geometria:
+             frame = frame.rename_geometry(geometria)
+         frame[origem] = meta['camada']
+@@ -374,7 +375,7 @@
+             'campos_total': len(conjunto.columns)-1,
+             'campos': [{'nome': c, 'tipo': str(conjunto[c].dtype)} for c in conjunto.columns if c != geometria],
+             'tipos_geometria': sorted(set(conjunto.geom_type.dropna())),
+-            'limites_wgs84': conjunto.to_crs(4326).total_bounds.tolist(),
++            'limites_wgs84': _gdal_reproject(conjunto, 4326).total_bounds.tolist(),
+             'camadas_origem': [{'camada': m['camada'], 'nome': m['nome_camada'], 'crs': m['crs'], 'feicoes': len(f)} for f,m in vetores]}
+     conjunto.attrs['sicard_campo_origem'] = origem
+     conjunto.attrs['sicard_partes'] = [{'chave':m['camada'], 'nome':m['nome_camada'], 'campos':[c for c in f.columns if c != f.geometry.name]} for f,m in vetores]
+@@ -455,7 +456,7 @@
+         corners = [gdal.ApplyGeoTransform(transform, x, y) for x,y in
+                    [(0,0),(raster.RasterXSize,0),(raster.RasterXSize,raster.RasterYSize),(0,raster.RasterYSize)]]
+         frame = gpd.GeoDataFrame(geometry=[Polygon(corners)], crs=crs)
+-        mapa = frame.to_crs(4326)
++        mapa = _gdal_reproject(frame, 4326)
+         if not np.isfinite(mapa.total_bounds).all():
+             raise ValueError('Extensão ou CRS inválido no raster.')
+         meta['limites_wgs84'] = mapa.total_bounds.tolist()
+--- api/services/geoespacial_service.py
++++ api/services/geoespacial_service.py
+@@ -1,5 +1,6 @@
+ """Service — Módulo Geoespacial."""
+ from __future__ import annotations
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ 
+ import json
+ import base64
+@@ -622,7 +623,7 @@
+         if gdf.crs is None:
+             gdf = gdf.set_crs("EPSG:4326")
+         elif str(gdf.crs).upper() != "EPSG:4326":
+-            gdf = gdf.to_crs("EPSG:4326")
++            gdf = _gdal_reproject(gdf, "EPSG:4326")
+         # `default=str` cobre colunas de data/hora: o arquivo do acervo chega
+         # com Timestamp do pandas, que o codificador padrão do `.to_json()`
+         # não serializa — o caminho antigo (PostGIS) não sofria disso porque
+@@ -644,7 +645,7 @@
+         for posicao, registro in enumerate(registros):
+             registro["_indice"] = offset + posicao
+         pagina = gdf.iloc[offset:offset + limite]
+-        pagina = pagina.set_crs("EPSG:4326") if pagina.crs is None else pagina.to_crs("EPSG:4326")
++        pagina = pagina.set_crs("EPSG:4326") if pagina.crs is None else _gdal_reproject(pagina, "EPSG:4326")
+         feicoes = json.loads(pagina.to_json(default=str))["features"]
+         for registro, feicao in zip(registros, feicoes):
+             registro["__gp_feature"] = feicao
+@@ -970,7 +971,7 @@
+         """Serializa um GeoDataFrame em GeoJSON pela via nativa do GDAL (pyogrio),
+         que trata datas, nulos e demais tipos sem conversão manual."""
+         if gdf.crs is not None and not gdf.crs.equals("EPSG:4326"):
+-            gdf = gdf.to_crs("EPSG:4326")
++            gdf = _gdal_reproject(gdf, "EPSG:4326")
+         buffer = BytesIO()
+         gdf.to_file(buffer, driver="GeoJSON")
+         return json.loads(buffer.getvalue().decode("utf-8"))
+@@ -983,7 +984,7 @@
+             selecionadas = selecionar(gdf, expressao, inverter_selecao)
+         except Exception as exc:
+             raise ValueError(f"Consulta inválida: {exc}") from exc
+-        return {"camada_id": camada_id, "total": len(selecionadas), "geojson": json.loads((selecionadas.to_crs(4326) if selecionadas.crs is not None else selecionadas).to_json(default=str))}
++        return {"camada_id": camada_id, "total": len(selecionadas), "geojson": json.loads((_gdal_reproject(selecionadas, 4326) if selecionadas.crs is not None else selecionadas).to_json(default=str))}
+ 
+     async def atualizar_fonte(self, camada_id: str) -> dict[str, Any]:
+         """Relê a fonte externa preservando o identificador da camada."""
+@@ -1404,7 +1405,7 @@
+ 
+         # Reprojetar CRS
+         if gdf.crs and str(gdf.crs) != crs_destino:
+-            gdf = gdf.to_crs(crs_destino)
++            gdf = _gdal_reproject(gdf, crs_destino)
+             operacoes.append(f"Reprojetado para {crs_destino}")
+ 
+         if corrigir_geometrias_invalidas:
+@@ -1417,7 +1418,7 @@
+             if area_estudo.startswith("camada_"):
+                 mascara = self.obter_camada_dados(area_estudo)
+                 if gdf.crs and mascara.crs and gdf.crs != mascara.crs:
+-                    mascara = mascara.to_crs(gdf.crs)
++                    mascara = _gdal_reproject(mascara, gdf.crs)
+                 gdf = gpd.clip(gdf, mascara)
+             else:
+                 try:
+@@ -1531,7 +1532,7 @@
+         gdf1 = self.obter_camada_dados(camada_id_1)
+         gdf2 = self.obter_camada_dados(camada_id_2)
+         if gdf1.crs and gdf2.crs and gdf1.crs != gdf2.crs:
+-            gdf2 = gdf2.to_crs(gdf1.crs)
++            gdf2 = _gdal_reproject(gdf2, gdf1.crs)
+ 
+         # Só a camada que ENTRA é prefixada. Prefixar também a de base quebraria
+         # o encadeamento: num consolidador a base é a saída da volta anterior, e
+@@ -1613,7 +1614,7 @@
+             progress("Feições vetoriais carregadas para exportação")
+ 
+         if crs_saida and gdf.crs:
+-            gdf = gdf.to_crs(crs_saida)
++            gdf = _gdal_reproject(gdf, crs_saida)
+         if progress:
+             progress("Sistema de referência da saída conferido")
+ 
+@@ -1790,7 +1791,7 @@
+         gdf = self.obter_camada_dados(camada_id).copy()
+         gdf_ref = self.obter_camada_dados(camada_ref_id)
+         if gdf.crs and gdf_ref.crs and gdf.crs != gdf_ref.crs:
+-            gdf_ref = gdf_ref.to_crs(gdf.crs)
++            gdf_ref = _gdal_reproject(gdf_ref, gdf.crs)
+ 
+         # Spatial join
+         resultado = gpd.sjoin(gdf, gdf_ref, how="inner", predicate=tipo_selecao)
+@@ -1934,7 +1935,7 @@
+             camada = self.obter_camada_dados(entrada)
+             crs_final = str(camada.crs) if crs == "auto" else crs
+             if crs != "auto":
+-                camada = camada.to_crs(crs)
++                camada = _gdal_reproject(camada, crs)
+             camada.to_file(caminho, driver=driver)
+             tipo = "vetor"
+         else:
+--- api/services/geoprocessamento_engine.py
++++ api/services/geoprocessamento_engine.py
+@@ -1,6 +1,7 @@
+ """Registro e orquestrador dos algoritmos geoespaciais da stack."""
+ 
+ from __future__ import annotations
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ 
+ import json
+ from pathlib import Path
+@@ -647,7 +648,7 @@
+         gdf = self._layer(p["camada_id"]).copy()
+         resolution = float(p.get("resolucao_raster", 50))
+         if p.get("crs_destino"):
+-            gdf = gdf.to_crs(p["crs_destino"])
++            gdf = _gdal_reproject(gdf, p["crs_destino"])
+         transform, width, height = self._grid(gdf, resolution)
+         field = p.get("atributo_rasterizacao")
+         values = gdf[field] if field else np.ones(len(gdf))
+@@ -857,7 +858,7 @@
+     async def clip(self, p: dict[str, Any]) -> dict[str, Any]:
+         data = self._raster(p["raster_id"])
+         profile = self.profiles[p["raster_id"]]
+-        zones = self._layer(p["camada_mascara_id"]).to_crs(profile["crs"])
++        zones = _gdal_reproject(self._layer(p["camada_mascara_id"]), profile["crs"])
+         mask = geometry_mask(
+             zones.geometry,
+             out_shape=data.shape,
+@@ -870,7 +871,7 @@
+     async def zonal(self, p: dict[str, Any]) -> dict[str, Any]:
+         data = self._raster(p["raster_id"])
+         profile = self.profiles[p["raster_id"]]
+-        zones = self._layer(p["camada_zona_id"]).to_crs(profile["crs"])
++        zones = _gdal_reproject(self._layer(p["camada_zona_id"]), profile["crs"])
+         output = []
+         for idx, geom in zones.geometry.items():
+             mask = geometry_mask(
+@@ -895,7 +896,7 @@
+     async def sample(self, p: dict[str, Any]) -> dict[str, Any]:
+         data = self._raster(p["raster_id"])
+         profile = self.profiles[p["raster_id"]]
+-        points = self._layer(p["camada_pontos_id"]).to_crs(profile["crs"])
++        points = _gdal_reproject(self._layer(p["camada_pontos_id"]), profile["crs"])
+         out = []
+         for geom in points.geometry:
+             row, col = rowcol(profile["transform"], geom.centroid.x, geom.centroid.y)
+@@ -1030,7 +1031,7 @@
+         mask = self._layer(p["camada_mascara_id"])
+         if mask.crs is None:
+             raise ValueError("A camada de máscara não possui CRS definido")
+-        mask = mask.to_crs(frame_crs)
++        mask = _gdal_reproject(mask, frame_crs)
+         result = gpd.clip(
+             frame, mask, keep_geom_type=bool(p.get("manter_tipo_geometria", True))
+         )
+@@ -1044,7 +1045,7 @@
+         right = self._layer(p["camada_ref_id"])
+         if right.crs is None:
+             raise ValueError("A camada de referência não possui CRS definido")
+-        right = right.to_crs(left_crs)
++        right = _gdal_reproject(right, left_crs)
+         how_value = str(p.get("tipo_juncao", "inner"))
+         if how_value not in {"left", "right", "inner"}:
+             raise ValueError("Tipo de junção deve ser left, right ou inner")
+@@ -1069,7 +1070,7 @@
+             raise ValueError("A primeira camada não possui CRS definido")
+         if any(frame.crs is None for frame in frames[1:]):
+             raise ValueError("Todas as camadas devem possuir CRS definido")
+-        aligned = [frame.to_crs(crs) if frame.crs != crs else frame for frame in frames]
++        aligned = [_gdal_reproject(frame, crs) if frame.crs != crs else frame for frame in frames]
+         result = gpd.GeoDataFrame(pd.concat(aligned, ignore_index=True), crs=crs)
+         return self._new_layer(
+             result, p.get("nome_saida", "Camadas mescladas"), "OP-35"
+--- api/services/importar_camadas_service.py
++++ api/services/importar_camadas_service.py
+@@ -1,5 +1,6 @@
+ """Pipeline transacional do endpoint importar_camadas."""
+ from __future__ import annotations
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ 
+ import json
+ import re
+@@ -265,12 +266,12 @@
+     result = _annotate_geometry_validation(_normalize_fields(frame.copy()))
+     if target_crs:
+         CRS.from_user_input(target_crs)
+-        result = result.to_crs(target_crs)
++        result = _gdal_reproject(result, target_crs)
+     if clip_frame is not None:
+         result_crs = result.crs
+         if result_crs is None:
+             raise ValueError("Camada vetorial sem CRS após o processamento")
+-        mask_frame = clip_frame.to_crs(result_crs) if clip_frame.crs != result_crs else clip_frame
++        mask_frame = _gdal_reproject(clip_frame, result_crs) if clip_frame.crs != result_crs else clip_frame
+         result = gpd.clip(result, mask_frame)
+         if result.empty:
+             raise ValueError("O recorte não produziu nenhuma feição")
+@@ -352,7 +353,7 @@
+         transform = source_transform
+         if clip_frame is not None:
+             geometries = []
+-            mask_source = clip_frame.to_crs(source_crs)
++            mask_source = _gdal_reproject(clip_frame, source_crs)
+             for geometry in mask_source.geometry:
+                 if geometry is not None and not geometry.is_empty:
+                     geometries.append(geometry.__geo_interface__)
+@@ -632,7 +633,7 @@
+ 
+     camadas = []
+     for nome, frame, metadata in ticket.vector_results:
+-        quadro = frame if frame.crs is None else frame.to_crs("EPSG:4326")
++        quadro = frame if frame.crs is None else _gdal_reproject(frame, "EPSG:4326")
+         total = len(quadro)
+         recorte = quadro.head(PREVIA_MAX_FEICOES)
+         # Tolerância proporcional à extensão: preserva a forma e corta vértice.
+--- api/services/metadados_previa.py
++++ api/services/metadados_previa.py
+@@ -1,4 +1,5 @@
+ """Ficha descritiva calculada sobre a camada integral, nunca sobre sua simplificação."""
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ from pathlib import Path
+ import geopandas as gpd
+ import shapely
+@@ -26,7 +27,7 @@
+                 parts = [p for p in path.parent.iterdir() if p.stem == path.stem and p.suffix.lower() in {'.shp','.shx','.dbf','.prj','.cpg','.qpj'}]
+             meta['bytes_descompactados'] = sum(p.stat().st_size for p in parts)
+     if crs and geometrias:
+-        mapa = frame.to_crs(4326)
++        mapa = _gdal_reproject(frame, 4326)
+         meta['limites_wgs84'] = mapa.total_bounds.tolist()
+         geod = CRS.from_epsg(4326).get_geod()
+         area, comprimento = 0., 0.
+@@ -63,7 +64,7 @@
+     # antes de montar a ficha. Não usa a prévia de camadas simplificadas.
+     frame = gpd.GeoDataFrame.from_features(data['geojson']['features'], crs=4326)
+     if data.get('crs_arquivo'):
+-        frame = frame.to_crs(data['crs_arquivo'])
++        frame = _gdal_reproject(frame, data['crs_arquivo'])
+     meta = descrever_vetor(frame, arquivo=arquivo, formato=formato, componente=componente, campos=data.get('campos'))
+     if camada_ogr is not None:
+         camada_ogr.ResetReading()
+--- api/services/storage_geoespacial.py
++++ api/services/storage_geoespacial.py
+@@ -16,6 +16,7 @@
+ onde ele está, por /vsicurl, buscando só os trechos de que precisa.
+ """
+ from __future__ import annotations
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ 
+ import json
+ import os
+@@ -407,7 +408,7 @@
+     arquivo = resolver(caminho)
+     if arquivo.suffix.lower() in storage_pacotes.COMPACTADOS:
+         frame,_ = storage_pacotes.carregar(arquivo, camada)
+-        frame=frame.to_crs("EPSG:4674")
++        frame=_gdal_reproject(frame, "EPSG:4674")
+         frame.geometry=shapely.force_2d(frame.geometry.values)
+         return frame
+     if arquivo.suffix.lower() not in EXTENSOES_VETOR:
+@@ -420,7 +421,7 @@
+     if frame.crs is None:
+         raise ValueError(f"A camada {arquivo.name} não informa seu CRS")
+     if frame.crs.to_epsg() != 4674:
+-        frame = frame.to_crs("EPSG:4674")
++        frame = _gdal_reproject(frame, "EPSG:4674")
+     frame.geometry = shapely.force_2d(frame.geometry.values)
+     return frame
+ 
+--- api/services/upload_storage.py
++++ api/services/upload_storage.py
+@@ -11,6 +11,7 @@
+ vetor, GeoTIFF para raster. Arquivo que já existe na pasta não é sobrescrito.
+ """
+ from __future__ import annotations
++from api.services.extracao_ogr import reproject as _gdal_reproject
+ 
+ import os
+ import re
+@@ -92,9 +93,9 @@
+         if frame.crs is None:
+             raise ValueError(f"A camada {nome} não informa seu CRS")
+         if target_crs:
+-            frame = frame.to_crs(target_crs)
++            frame = _gdal_reproject(frame, target_crs)
+         if mascara is not None:
+-            frame = gpd.clip(frame, mascara.to_crs(frame.crs))
++            frame = gpd.clip(frame, _gdal_reproject(mascara, frame.crs))
+             if frame.empty:
+                 raise ValueError(f"O recorte não deixou nenhuma feição em {nome}")
+         frame.to_file(destino, layer=str(nome), driver="GPKG", engine="pyogrio")

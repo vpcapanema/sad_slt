@@ -65,7 +65,7 @@ def test_operator_home_contains_only_requested_groups_in_order() -> None:
     assert content.index("/restrict/hierarquizacao/platform-map.css") < content.index("/restrict/index.css")
     assert 'id="stat-aprovadas"' in content
     assert 'id="stat-complementacao"' in content
-    assert 'id="stat-em-analise"' in content
+    assert 'id="stat-analises-concluidas"' in content
     assert '<h1 id="operator-home-title">Bem-vindo</h1>' in content
     script = Path("assets/js/paginas/operador-index.js").read_text(encoding="utf-8")
     assert 'textContent = `Bem-vindo, ${user.nome || "Operador"}`' in script
@@ -97,20 +97,20 @@ def test_operator_stats_are_scoped_to_session_user(monkeypatch) -> None:
 
     def stats(usuario_id: str) -> dict[str, int]:
         captured["usuario_id"] = usuario_id
-        return {"aprovadas": 2, "protocoladas": 5, "em_analise": 1}
+        return {"aprovadas": 2, "protocoladas": 5, "em_analise": 1, "analises_concluidas": 3, "analises_total": 4}
 
     monkeypatch.setattr(painel_router.painel_service, "estatisticas_operador", stats)
     response = _client().get("/api/painel/operador/estatisticas")
 
     assert response.status_code == 200
-    assert response.json() == {"aprovadas": 2, "protocoladas": 5, "em_analise": 1}
+    assert response.json() == {"aprovadas": 2, "protocoladas": 5, "em_analise": 1, "analises_concluidas": 3, "analises_total": 4}
     assert captured["usuario_id"] == "00000000-0000-0000-0000-000000000021"
 
 
 def test_operator_stats_query_filters_each_demand_type_by_user(monkeypatch) -> None:
     class Cursor:
         def fetchone(self):
-            return {"aprovadas": 2, "protocoladas": 5, "em_analise": 1}
+            return {"aprovadas": 2, "protocoladas": 5, "em_analise": 1, "analises_concluidas": 3, "analises_total": 4}
 
     class Connection:
         def execute(self, query, params):
@@ -126,7 +126,7 @@ def test_operator_stats_query_filters_each_demand_type_by_user(monkeypatch) -> N
 
     result = painel_repository.estatisticas_operador("00000000-0000-0000-0000-000000000021")
 
-    assert result == {"aprovadas": 2, "protocoladas": 5, "em_analise": 1}
+    assert result == {"aprovadas": 2, "protocoladas": 5, "em_analise": 1, "analises_concluidas": 3, "analises_total": 4}
 
 
 def test_login_redirects_operator_only_when_next_is_implicit() -> None:

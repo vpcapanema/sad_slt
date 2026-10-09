@@ -1,4 +1,5 @@
 """Sessão de arquivo da bancada: edição do arquivo original com rastreabilidade."""
+from api.services.extracao_ogr import reproject as _gdal_reproject
 import asyncio
 from typing import Any
 from uuid import uuid4
@@ -82,7 +83,7 @@ def frame_editado(source, data):
     west, south, east, north = frame.total_bounds
     if not (-180 <= west <= east <= 180 and -90 <= south <= north <= 90):
         raise ValueError('As coordenadas de edição devem estar em longitude/latitude.')
-    return frame.to_crs(source['crs_arquivo'])
+    return _gdal_reproject(frame, source['crs_arquivo'])
 
 
 def salvar(arquivo, revisao, data, _nome, user, camada_id=None):
@@ -141,7 +142,7 @@ def calcular_campo(arquivo, revisao, campo, expressao, user, camada_id=None,
     from api.services.calculo_campo import calcular
     source = abrir(arquivo, revisao, camada_id)
     features = source['geojson']['features']
-    frame = gpd.GeoDataFrame.from_features(features, crs=4326).to_crs(source['crs_arquivo'])
+    frame = _gdal_reproject(gpd.GeoDataFrame.from_features(features, crs=4326), source['crs_arquivo'])
     frame, count = calcular(frame, campo, expressao, chaves_selecionadas, filtro,
                             ids=[feature['id'] for feature in features])
     result = _persistir(source, frame, source['geojson'], user, incluir_geojson)

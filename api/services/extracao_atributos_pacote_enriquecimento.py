@@ -12,6 +12,7 @@ Conteúdo do .zip:
   o processamento.
 """
 from __future__ import annotations
+from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import csv
 import io
@@ -65,7 +66,7 @@ def escrever_gpkg(camadas: dict, entrada, dicionario: list[dict], path: Path, fi
             todas[f'{chave}_{nome}'] = (frame, nome)
     for nome, (frame, _) in {**todas, **({'entrada': (entrada, None)} if incluir_entrada else {})}.items():
         with operacao(progress, f'Gravando camada {nome} no GeoPackage: {len(frame)} registros; percentual interno indisponível'):
-            _para_gpkg(frame.to_crs(4674)).to_file(path, driver='GPKG', layer=nome, engine='pyogrio', index=False,
+            _para_gpkg(_gdal_reproject(frame, 4674)).to_file(path, driver='GPKG', layer=nome, engine='pyogrio', index=False,
                                                     promote_to_multi=not preservar_geometrias,
                                                     **({'geometry_type': 'Unknown'} if preservar_geometrias else {}))
     gdal.UseExceptions()

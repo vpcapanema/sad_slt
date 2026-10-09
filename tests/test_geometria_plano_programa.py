@@ -1,3 +1,4 @@
+import json
 """Plano e programa materializam a própria geometria no cadastro.
 
 A coluna copia fielmente a união das unidades espaciais selecionadas, ou
@@ -109,13 +110,23 @@ def test_upload_grava_arquivo_e_versao_no_historico_na_mesma_transacao(monkeypat
     assert all(historico[c] is None for c in outros)
     assert historico["geometria_geojson"] == geojson
     assert historico["criado_por"] == "u-1"
-    assert historico["conteudo_binario"] == b"<kml/>"
+    assert historico["conteudo_binario"] is None
+    assert historico["storage_caminho"].startswith(f"demandas/originais/{alvo}/")
 
 
 def test_geometria_desenhada_geojson_valida_tipo():
     assert geometria_desenhada_geojson(None) is None
-    assert geometria_desenhada_geojson(GeometriaSchema(tipo="Point", coordinates=[-46.6, -23.5])) == (
-        '{"type": "Point", "coordinates": [-46.6, -23.5]}'
-    )
+    assert json.loads(geometria_desenhada_geojson(GeometriaSchema(tipo="Point", coordinates=[-46.6, -23.5])))["type"] == "Polygon"
     with pytest.raises(DemandaValidationError):
         geometria_desenhada_geojson(GeometriaSchema(tipo="Circle", coordinates=[0, 0]))
+
+import pytest
+from api.services import storage_remoto
+
+@pytest.fixture(autouse=True)
+def storage_isolado(monkeypatch):
+    files = {}
+    monkeypatch.setattr(storage_remoto, 'enviar', lambda path, source: files.__setitem__(path, source.read_bytes()))
+    monkeypatch.setattr(storage_remoto, 'baixar', lambda path: files[path])
+    monkeypatch.setattr(storage_remoto, 'apagar_arquivo', lambda path: files.pop(path, None))
+    return files

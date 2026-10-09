@@ -277,9 +277,9 @@ def baixar_arquivo_geometria_upload(
     with get_connection() as conn:
         row = conn.execute(
             """
-            SELECT nome_arquivo, tipo_mime, conteudo_binario
+            SELECT nome_arquivo, tipo_mime, conteudo_binario, storage_caminho, sha256
             FROM demandas.projeto_geometria_historico
-            WHERE id = %s AND conteudo_binario IS NOT NULL
+            WHERE id = %s AND (conteudo_binario IS NOT NULL OR storage_caminho IS NOT NULL)
             """,
             (arquivo_uuid,),
         ).fetchone()
@@ -287,9 +287,17 @@ def baixar_arquivo_geometria_upload(
         raise HTTPException(status_code=404, detail="Arquivo de geometria não encontrado.")
 
     nome = str(row["nome_arquivo"])
+    if row.get('storage_caminho'):
+        import hashlib
+        from api.services import storage_remoto
+        content = storage_remoto.baixar(row['storage_caminho'])
+        if hashlib.sha256(content).hexdigest() != row['sha256']:
+            raise HTTPException(503, 'O arquivo original diverge do hash registrado.')
+    else:
+        content = bytes(row['conteudo_binario'])
     fallback = re.sub(r"[^A-Za-z0-9._-]", "_", nome).strip("._") or "geometria"
     return Response(
-        content=bytes(row["conteudo_binario"]),
+        content=content,
         media_type=row["tipo_mime"] or "application/octet-stream",
         headers={
             "Content-Disposition": f"attachment; filename=\"{fallback}\"; filename*=UTF-8''{quote(nome, safe='')}" ,

@@ -676,6 +676,11 @@
     map.invalidateSize({ pan: false });
     map.fitBounds(previewLayer.getBounds(), { padding: [24, 24], maxZoom: 18, animate: false });
     setError("");
+    if (body.tipo_original === "Point" || body.tipo_original === "MultiPoint") {
+      setStatus("Polígono gerado com raio de 50 m ao redor dos pontos. O arquivo original será preservado.");
+    } else if (body.tipo_original === "LineString" || body.tipo_original === "MultiLineString") {
+      setStatus("Polígono gerado com 25 m de cada lado das linhas. O arquivo original será preservado.");
+    }
   }
 
   function configureMapResize(mapElement) {

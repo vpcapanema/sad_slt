@@ -30,13 +30,15 @@ _INSERT_UPLOAD_SQL = """
         tipo_mime,
         tamanho_bytes,
         sha256,
-        conteudo_binario
+        conteudo_binario,
+        storage_caminho,
+        processamento
     ) VALUES (
         %(projeto_id)s,
         %(plano_id)s,
         %(programa_id)s,
         'upload',
-        ST_SetSRID(ST_GeomFromGeoJSON(%(geometria_geojson)s::text), 4326),
+        ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(%(geometria_geojson)s::text), 4326), Find_SRID('demandas','projeto_geometria_historico','geometria')),
         %(geometria_tipo)s,
         %(latitude)s,
         %(longitude)s,
@@ -47,7 +49,9 @@ _INSERT_UPLOAD_SQL = """
         %(tipo_mime)s,
         %(tamanho_bytes)s,
         %(sha256)s,
-        %(conteudo_binario)s
+        %(conteudo_binario)s,
+        %(storage_caminho)s,
+        %(processamento)s
     )
 """
 
@@ -73,6 +77,25 @@ def insert_upload(
     criado_por: Any = None,
 ) -> None:
     """Registra, na transação corrente, a versão enviada por upload e seu arquivo original."""
+    import hashlib, json
+    from pathlib import Path
+    from tempfile import TemporaryDirectory
+    from uuid import uuid4
+    from api.services import storage_remoto
+    content = arquivo['conteudo_binario']
+    checksum = hashlib.sha256(content).hexdigest()
+    if arquivo.get('sha256', checksum) != checksum:
+        raise ValueError('Hash do original incompatível com o conteúdo recebido.')
+    suffix = Path(arquivo['nome_arquivo']).suffix.lower()
+    destination = f'demandas/originais/{alvo}/{alvo_id}/{uuid4().hex}{suffix}'
+    with TemporaryDirectory(prefix='sicard-original-demanda-') as folder:
+        original = Path(folder) / ('original' + suffix)
+        original.write_bytes(content)
+        storage_remoto.enviar(destination, original)
+    remote = storage_remoto.baixar(destination)
+    if remote != content or hashlib.sha256(remote).hexdigest() != checksum:
+        storage_remoto.apagar_arquivo(destination)
+        raise ValueError('O original armazenado diverge do arquivo recebido.')
     params = {
         "projeto_id": None,
         "plano_id": None,
@@ -84,5 +107,16 @@ def insert_upload(
         "regionalidades": regionalidades,
         "criado_por": criado_por,
         **arquivo,
+        'conteudo_binario': None,
+        'storage_caminho': destination,
+        'sha256': checksum,
+        'geometria_tipo': json.loads(geometria_geojson)['type'] if geometria_geojson else arquivo.get('geometria_tipo'),
+        'processamento': Jsonb({'crs_destino': 'EPSG:4674', 'crs_origem': arquivo.get('crs_origem'), 'tipo_original': arquivo.get('geometria_tipo'),
+                               'crs_calculo': 'EPSG:5880', 'motor': 'GDAL/OGR', 'buffer_ponto_m': 50, 'buffer_linha_m': 25,
+                               'regra': 'gdal_ogr_epsg5880_buffer_e_reprojecao'}),
     }
-    conn.execute(_INSERT_UPLOAD_SQL, params)
+    try:
+        conn.execute(_INSERT_UPLOAD_SQL, params)
+    except Exception:
+        storage_remoto.apagar_arquivo(destination)
+        raise

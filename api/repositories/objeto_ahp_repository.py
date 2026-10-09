@@ -37,7 +37,7 @@ _SELECT_BASE = """
         o.geometria_tipo,
         CASE
             WHEN o.geometria IS NULL THEN NULL
-            ELSE ST_AsGeoJSON(o.geometria)::jsonb
+            ELSE ST_AsGeoJSON(ST_Transform(o.geometria,4326))::jsonb
         END AS geometria_geojson,
         o.aprovado_em,
         o.aprovado_por,

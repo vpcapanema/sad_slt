@@ -16,6 +16,7 @@ tempo. Nesse modo não existe pasta de trabalho local: o GDAL abre o arquivo
 onde ele está, por /vsicurl, buscando só os trechos de que precisa.
 """
 from __future__ import annotations
+from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import json
 import os
@@ -407,7 +408,7 @@ def carregar_gdf(ident: str):
     arquivo = resolver(caminho)
     if arquivo.suffix.lower() in storage_pacotes.COMPACTADOS:
         frame,_ = storage_pacotes.carregar(arquivo, camada)
-        frame=frame.to_crs("EPSG:4674")
+        frame=_gdal_reproject(frame, "EPSG:4674")
         frame.geometry=shapely.force_2d(frame.geometry.values)
         return frame
     if arquivo.suffix.lower() not in EXTENSOES_VETOR:
@@ -420,7 +421,7 @@ def carregar_gdf(ident: str):
     if frame.crs is None:
         raise ValueError(f"A camada {arquivo.name} não informa seu CRS")
     if frame.crs.to_epsg() != 4674:
-        frame = frame.to_crs("EPSG:4674")
+        frame = _gdal_reproject(frame, "EPSG:4674")
     frame.geometry = shapely.force_2d(frame.geometry.values)
     return frame
 

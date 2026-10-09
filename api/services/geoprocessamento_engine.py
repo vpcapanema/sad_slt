@@ -1,6 +1,7 @@
 """Registro e orquestrador dos algoritmos geoespaciais da stack."""
 
 from __future__ import annotations
+from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import json
 from pathlib import Path
@@ -647,7 +648,7 @@ class GeoprocessamentoEngine:
         gdf = self._layer(p["camada_id"]).copy()
         resolution = float(p.get("resolucao_raster", 50))
         if p.get("crs_destino"):
-            gdf = gdf.to_crs(p["crs_destino"])
+            gdf = _gdal_reproject(gdf, p["crs_destino"])
         transform, width, height = self._grid(gdf, resolution)
         field = p.get("atributo_rasterizacao")
         values = gdf[field] if field else np.ones(len(gdf))
@@ -665,22 +666,13 @@ class GeoprocessamentoEngine:
         return {"raster_id": rid, "shape": list(data.shape), "resolucao": resolution}
 
     def _distance_crs(self, params):
-        from pyproj import CRS
         frame = self._layer(params['camada_id'])
         if frame.crs is None:
             raise ValueError('Defina o CRS da camada antes de calcular distâncias.')
         unit = params.get('unidade_distancia', 'metros')
-        if unit == 'graus':
-            return 'EPSG:4326'
         if unit != 'metros':
-            raise ValueError('Unidade de distância deve ser metros ou graus.')
-        crs = CRS.from_user_input(frame.crs)
-        if crs.is_projected and all(abs(axis.unit_conversion_factor - 1) < 1e-9 for axis in crs.axis_info[:2]):
-            return crs
-        target = frame.estimate_utm_crs()
-        if target is None:
-            raise ValueError('Não foi possível definir um CRS métrico para a camada.')
-        return target
+            raise ValueError('Distâncias usam metros em EPSG:5880.')
+        return 'EPSG:5880'
 
     async def distance(self, p: dict[str, Any]) -> dict[str, Any]:
         q = dict(p)
@@ -857,7 +849,7 @@ class GeoprocessamentoEngine:
     async def clip(self, p: dict[str, Any]) -> dict[str, Any]:
         data = self._raster(p["raster_id"])
         profile = self.profiles[p["raster_id"]]
-        zones = self._layer(p["camada_mascara_id"]).to_crs(profile["crs"])
+        zones = _gdal_reproject(self._layer(p["camada_mascara_id"]), profile["crs"])
         mask = geometry_mask(
             zones.geometry,
             out_shape=data.shape,
@@ -870,7 +862,7 @@ class GeoprocessamentoEngine:
     async def zonal(self, p: dict[str, Any]) -> dict[str, Any]:
         data = self._raster(p["raster_id"])
         profile = self.profiles[p["raster_id"]]
-        zones = self._layer(p["camada_zona_id"]).to_crs(profile["crs"])
+        zones = _gdal_reproject(self._layer(p["camada_zona_id"]), profile["crs"])
         output = []
         for idx, geom in zones.geometry.items():
             mask = geometry_mask(
@@ -895,7 +887,7 @@ class GeoprocessamentoEngine:
     async def sample(self, p: dict[str, Any]) -> dict[str, Any]:
         data = self._raster(p["raster_id"])
         profile = self.profiles[p["raster_id"]]
-        points = self._layer(p["camada_pontos_id"]).to_crs(profile["crs"])
+        points = _gdal_reproject(self._layer(p["camada_pontos_id"]), profile["crs"])
         out = []
         for geom in points.geometry:
             row, col = rowcol(profile["transform"], geom.centroid.x, geom.centroid.y)
@@ -1030,7 +1022,7 @@ class GeoprocessamentoEngine:
         mask = self._layer(p["camada_mascara_id"])
         if mask.crs is None:
             raise ValueError("A camada de máscara não possui CRS definido")
-        mask = mask.to_crs(frame_crs)
+        mask = _gdal_reproject(mask, frame_crs)
         result = gpd.clip(
             frame, mask, keep_geom_type=bool(p.get("manter_tipo_geometria", True))
         )
@@ -1044,7 +1036,7 @@ class GeoprocessamentoEngine:
         right = self._layer(p["camada_ref_id"])
         if right.crs is None:
             raise ValueError("A camada de referência não possui CRS definido")
-        right = right.to_crs(left_crs)
+        right = _gdal_reproject(right, left_crs)
         how_value = str(p.get("tipo_juncao", "inner"))
         if how_value not in {"left", "right", "inner"}:
             raise ValueError("Tipo de junção deve ser left, right ou inner")
@@ -1069,26 +1061,31 @@ class GeoprocessamentoEngine:
             raise ValueError("A primeira camada não possui CRS definido")
         if any(frame.crs is None for frame in frames[1:]):
             raise ValueError("Todas as camadas devem possuir CRS definido")
-        aligned = [frame.to_crs(crs) if frame.crs != crs else frame for frame in frames]
+        aligned = [_gdal_reproject(frame, crs) if frame.crs != crs else frame for frame in frames]
         result = gpd.GeoDataFrame(pd.concat(aligned, ignore_index=True), crs=crs)
         return self._new_layer(
             result, p.get("nome_saida", "Camadas mescladas"), "OP-35"
         )
 
     async def reproject_layer(self, p: dict[str, Any]) -> dict[str, Any]:
-        result = self._layer(p["camada_id"]).to_crs(str(p["crs_destino"]))
+        from api.services.extracao_ogr import reproject
+        result = reproject(self._layer(p["camada_id"]), str(p["crs_destino"]))
         return self._new_layer(
             result, p.get("nome_saida", "Camada reprojetada"), "OP-36"
         )
 
     async def calculate_area(self, p: dict[str, Any]) -> dict[str, Any]:
         frame = self._layer(p["camada_id"]).copy()
-        frame[str(p.get("campo_saida", "area"))] = frame.geometry.area
+        from api.services import extracao_ogr as espacial
+        metric = espacial.reproject(frame, 5880)
+        frame[str(p.get("campo_saida", "area"))] = [espacial.area(g) for g in metric.geometry]
         return self._new_layer(frame, p.get("nome_saida", "Área calculada"), "OP-37")
 
     async def calculate_length(self, p: dict[str, Any]) -> dict[str, Any]:
         frame = self._layer(p["camada_id"]).copy()
-        frame[str(p.get("campo_saida", "comprimento"))] = frame.geometry.length
+        from api.services import extracao_ogr as espacial
+        metric = espacial.reproject(frame, 5880)
+        frame[str(p.get("campo_saida", "comprimento"))] = [espacial.length(g) for g in metric.geometry]
         return self._new_layer(
             frame, p.get("nome_saida", "Comprimento calculado"), "OP-38"
         )

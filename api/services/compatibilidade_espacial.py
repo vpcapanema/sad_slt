@@ -1,4 +1,5 @@
 """Compatibilização espacial em cópias, sem cadastrar ou modificar as fontes."""
+from api.services.extracao_ogr import reproject as _gdal_reproject
 import numpy as np
 import shapely
 
@@ -20,7 +21,7 @@ def normalizar_crs(frame, nome, destino=CRS_MEDIDA):
                 raise ValueError(f'{nome}: coordenadas não finitas na fonte.')
             if origem.is_geographic and len(coords) and (np.abs(coords[:, 0]).max() > 180 or np.abs(coords[:, 1]).max() > 90):
                 raise ValueError(f'{nome}: coordenadas incompatíveis com o CRS geográfico declarado.')
-        resultado = frame.to_crs(destino).copy()
+        resultado = _gdal_reproject(frame, destino).copy()
         for inicio in range(0, len(resultado), 256):
             coords = shapely.get_coordinates(resultado.geometry.iloc[inicio:inicio+256].values)
             if not np.isfinite(coords).all():

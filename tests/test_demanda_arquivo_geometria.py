@@ -86,6 +86,7 @@ def test_upload_endpoint_passes_original_bytes_and_metadata(monkeypatch):
         "tamanho_bytes": len(KML_POINT),
         "sha256": hashlib.sha256(KML_POINT).hexdigest(),
         "conteudo_binario": KML_POINT,
+        "crs_origem": ['EPSG:4326'],
     }
 
 
@@ -159,7 +160,8 @@ def test_project_and_original_file_are_inserted_before_same_commit(monkeypatch):
     historico = events[1][1]
     assert historico["projeto_id"] == projeto_id
     assert historico["plano_id"] is None and historico["programa_id"] is None
-    assert historico["conteudo_binario"] == KML_POINT
+    assert historico["conteudo_binario"] is None
+    assert historico["storage_caminho"].startswith("demandas/originais/projeto/")
     # A linha de histórico descreve a versão completa, não só o arquivo.
     assert historico["geometria_geojson"] == row["geometria_geojson"]
     assert (historico["latitude"], historico["longitude"]) == (-23.5, -46.6)
@@ -232,3 +234,14 @@ def test_admin_table_names_original_archive_and_renders_download_action():
     assert 'conteudo_binario: "Arquivo original"' in script
     assert 'class: "admin-download-file"' in script
     assert "/download" in script
+
+import pytest
+from api.services import storage_remoto
+
+@pytest.fixture(autouse=True)
+def storage_isolado(monkeypatch):
+    files = {}
+    monkeypatch.setattr(storage_remoto, 'enviar', lambda path, source: files.__setitem__(path, source.read_bytes()))
+    monkeypatch.setattr(storage_remoto, 'baixar', lambda path: files[path])
+    monkeypatch.setattr(storage_remoto, 'apagar_arquivo', lambda path: files.pop(path, None))
+    return files

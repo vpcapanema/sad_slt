@@ -1,5 +1,6 @@
 """Entradas no PostGIS; saídas no Storage com catálogo de metadados no banco."""
 from __future__ import annotations
+from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import json
 import math
@@ -65,7 +66,7 @@ def _jsonb(value: Any) -> Jsonb:
 def _feature_rows(gdf: gpd.GeoDataFrame, *, usar_wkb: bool = False) -> list[tuple[int, Jsonb, str | bytes | None]]:
     # EPSG:4674 (SIRGAS 2000) é o CRS de armazenamento do sistema — ver
     # migração 100_padronizar_geometria_sirgas2000.sql.
-    spatial = gdf.to_crs("EPSG:4674") if gdf.crs else gdf.set_crs("EPSG:4674")
+    spatial = _gdal_reproject(gdf, "EPSG:4674") if gdf.crs else gdf.set_crs("EPSG:4674")
     geometry_name = str(spatial.geometry.name)
     rows: list[tuple[int, Jsonb, str | bytes | None]] = []
     for order, (_, feature) in enumerate(spatial.iterrows()):
@@ -173,7 +174,7 @@ def salvar_vetor(
         )
         if categoria == "processadas" and gravar_arquivo:
             from api.services.ciclo_vida_arquivos import gravar_e_confirmar
-            spatial = gdf.to_crs(crs) if gdf.crs else gdf.set_crs(crs)
+            spatial = _gdal_reproject(gdf, crs) if gdf.crs else gdf.set_crs(crs)
             gravar_e_confirmar(conn, database_id, metadata, frame=spatial)
             metadados.update(metadata)
         else:
@@ -258,7 +259,7 @@ def _salvar_saida(recurso_id, nome, origem, *, metadados, geometria_tipo, crs,
             (recurso_id,nome,'vetor' if gdf is not None else 'raster',geometria_tipo,crs,
              'GPKG' if gdf is not None else 'GTiff',origem,_jsonb(metadados.get('linhagem',{})),_jsonb(metadados),destino)).fetchone()
         from api.services.ciclo_vida_arquivos import gravar_e_confirmar
-        frame = (gdf.to_crs(crs) if gdf.crs else gdf.set_crs(crs)) if gdf is not None else None
+        frame = (_gdal_reproject(gdf, crs) if gdf.crs else gdf.set_crs(crs)) if gdf is not None else None
         gravar_e_confirmar(conn,str(row['id']),metadados,frame=frame,raster_bytes=raster_bytes,
                           execucao_id=execution,caminho_destino=destino)
     return str(row['id'])
@@ -433,7 +434,7 @@ def carregar_vetor(recurso_id: str) -> tuple[gpd.GeoDataFrame, dict[str, Any]] |
         if feature_collection else gpd.GeoDataFrame(geometry=[], crs="EPSG:4674")
     )
     if camada.get("crs") and str(camada["crs"]).upper() != "EPSG:4674" and not gdf.empty:
-        gdf = gdf.to_crs(camada["crs"])
+        gdf = _gdal_reproject(gdf, camada["crs"])
     camada["categoria"] = categoria
     return gdf, camada
 
@@ -461,7 +462,7 @@ def carregar_vetor_bruto(recurso_id: str):
     tabela[campo] = gpd.GeoSeries([shapely.from_wkb(bytes(r['wkb'])) if r['wkb'] is not None else None for r in rows], crs=4674)
     frame = gpd.GeoDataFrame(tabela, geometry=campo, crs=4674)
     if camada.get('crs') and str(camada['crs']).upper() != 'EPSG:4674' and not frame.empty:
-        frame = frame.to_crs(camada['crs'])
+        frame = _gdal_reproject(frame, camada['crs'])
     return frame, {**camada, 'categoria': categoria}
 
 
@@ -517,7 +518,7 @@ def geometrias_dashboard(recurso_id: str, ordens: list[int]):
         categoria, camada = found
         if categoria == 'processadas' and camada.get('storage_caminho'):
             from api.services.saidas_storage import vetor
-            frame = vetor(camada).to_crs(4674)
+            frame = _gdal_reproject(vetor(camada), 4674)
             return [{'ordem':i,'geometria':mapping(frame.geometry.iloc[i]) if frame.geometry.iloc[i] is not None else None}
                     for i in sorted(set(ordens)) if 0 <= i < len(frame)]
         rows = conn.execute(sql.SQL('SELECT ordem,ST_AsGeoJSON(geom)::jsonb AS geometria '
@@ -535,7 +536,7 @@ def carregar_vetor_geojson(recurso_id: str) -> dict[str, Any] | None:
         categoria, camada = found
         if categoria == 'processadas' and camada.get('storage_caminho'):
             from api.services.saidas_storage import vetor
-            return json.loads(vetor(camada).to_crs(4674).to_json(default=str))
+            return json.loads(_gdal_reproject(vetor(camada), 4674).to_json(default=str))
         features = STORAGES[categoria][1]
         row = conn.execute(
             sql.SQL("""SELECT jsonb_build_object(

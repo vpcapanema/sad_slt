@@ -1,4 +1,5 @@
 """Ficha descritiva calculada sobre a camada integral, nunca sobre sua simplificação."""
+from api.services.extracao_ogr import reproject as _gdal_reproject
 from pathlib import Path
 import geopandas as gpd
 import shapely
@@ -26,7 +27,7 @@ def descrever_vetor(frame, *, arquivo=None, formato=None, componente=None, campo
                 parts = [p for p in path.parent.iterdir() if p.stem == path.stem and p.suffix.lower() in {'.shp','.shx','.dbf','.prj','.cpg','.qpj'}]
             meta['bytes_descompactados'] = sum(p.stat().st_size for p in parts)
     if crs and geometrias:
-        mapa = frame.to_crs(4326)
+        mapa = _gdal_reproject(frame, 4326)
         meta['limites_wgs84'] = mapa.total_bounds.tolist()
         geod = CRS.from_epsg(4326).get_geod()
         area, comprimento = 0., 0.
@@ -63,7 +64,7 @@ def descrever_geojson(data, *, arquivo=None, formato=None, componente=None, cama
     # antes de montar a ficha. Não usa a prévia de camadas simplificadas.
     frame = gpd.GeoDataFrame.from_features(data['geojson']['features'], crs=4326)
     if data.get('crs_arquivo'):
-        frame = frame.to_crs(data['crs_arquivo'])
+        frame = _gdal_reproject(frame, data['crs_arquivo'])
     meta = descrever_vetor(frame, arquivo=arquivo, formato=formato, componente=componente, campos=data.get('campos'))
     if camada_ogr is not None:
         camada_ogr.ResetReading()

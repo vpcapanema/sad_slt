@@ -53,7 +53,9 @@ def _geometria_to_geojson_str(geometria: dict[str, Any] | None) -> tuple[str | N
         raise DemandaValidationError("Geometria incompleta.", field="geometria")
     if tipo not in _ALLOWED_GEOM:
         raise DemandaValidationError(f"Tipo de geometria não suportado: {tipo}.", field="geometria")
-    return tipo, json.dumps({"type": tipo, "coordinates": coords})
+    from api.services.normalizacao_demanda import normalizar
+    geometry = normalizar({"type": tipo, "coordinates": coords}, crs_saida=4326)
+    return geometry['type'], json.dumps(geometry)
 
 
 def geometria_desenhada_geojson(geometria: Any) -> str | None:

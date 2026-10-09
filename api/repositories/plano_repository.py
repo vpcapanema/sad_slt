@@ -90,7 +90,7 @@ _INSERT_UE_SQL = """
 # espaciais selecionadas, ou a geometria desenhada em tela quando enviada.
 _SET_GEOMETRIA_UNIDADES_SQL = """
     UPDATE demandas.plano p
-       SET geometria = u.geom,
+       SET geometria = ST_Transform(u.geom, Find_SRID('demandas','plano','geometria')),
            geometria_origem = 'unidades_espaciais'
       FROM (
             SELECT ST_Multi(ST_Union(ue.geom)) AS geom
@@ -103,7 +103,7 @@ _SET_GEOMETRIA_UNIDADES_SQL = """
 
 _SET_GEOMETRIA_DESENHO_SQL = """
     UPDATE demandas.plano
-       SET geometria = ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s::text), 4326),
+       SET geometria = ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s::text), 4326), Find_SRID('demandas','plano','geometria')),
            geometria_origem = 'desenho'
      WHERE id = %(id)s
 """

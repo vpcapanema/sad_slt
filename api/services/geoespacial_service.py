@@ -1,5 +1,6 @@
 """Service — Módulo Geoespacial."""
 from __future__ import annotations
+from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import json
 import base64
@@ -622,7 +623,7 @@ class GeoespacialService:
         if gdf.crs is None:
             gdf = gdf.set_crs("EPSG:4326")
         elif str(gdf.crs).upper() != "EPSG:4326":
-            gdf = gdf.to_crs("EPSG:4326")
+            gdf = _gdal_reproject(gdf, "EPSG:4326")
         # `default=str` cobre colunas de data/hora: o arquivo do acervo chega
         # com Timestamp do pandas, que o codificador padrão do `.to_json()`
         # não serializa — o caminho antigo (PostGIS) não sofria disso porque
@@ -644,7 +645,7 @@ class GeoespacialService:
         for posicao, registro in enumerate(registros):
             registro["_indice"] = offset + posicao
         pagina = gdf.iloc[offset:offset + limite]
-        pagina = pagina.set_crs("EPSG:4326") if pagina.crs is None else pagina.to_crs("EPSG:4326")
+        pagina = pagina.set_crs("EPSG:4326") if pagina.crs is None else _gdal_reproject(pagina, "EPSG:4326")
         feicoes = json.loads(pagina.to_json(default=str))["features"]
         for registro, feicao in zip(registros, feicoes):
             registro["__gp_feature"] = feicao
@@ -970,7 +971,7 @@ class GeoespacialService:
         """Serializa um GeoDataFrame em GeoJSON pela via nativa do GDAL (pyogrio),
         que trata datas, nulos e demais tipos sem conversão manual."""
         if gdf.crs is not None and not gdf.crs.equals("EPSG:4326"):
-            gdf = gdf.to_crs("EPSG:4326")
+            gdf = _gdal_reproject(gdf, "EPSG:4326")
         buffer = BytesIO()
         gdf.to_file(buffer, driver="GeoJSON")
         return json.loads(buffer.getvalue().decode("utf-8"))
@@ -983,7 +984,7 @@ class GeoespacialService:
             selecionadas = selecionar(gdf, expressao, inverter_selecao)
         except Exception as exc:
             raise ValueError(f"Consulta inválida: {exc}") from exc
-        return {"camada_id": camada_id, "total": len(selecionadas), "geojson": json.loads((selecionadas.to_crs(4326) if selecionadas.crs is not None else selecionadas).to_json(default=str))}
+        return {"camada_id": camada_id, "total": len(selecionadas), "geojson": json.loads((_gdal_reproject(selecionadas, 4326) if selecionadas.crs is not None else selecionadas).to_json(default=str))}
 
     async def atualizar_fonte(self, camada_id: str) -> dict[str, Any]:
         """Relê a fonte externa preservando o identificador da camada."""
@@ -1404,7 +1405,7 @@ class GeoespacialService:
 
         # Reprojetar CRS
         if gdf.crs and str(gdf.crs) != crs_destino:
-            gdf = gdf.to_crs(crs_destino)
+            gdf = _gdal_reproject(gdf, crs_destino)
             operacoes.append(f"Reprojetado para {crs_destino}")
 
         if corrigir_geometrias_invalidas:
@@ -1417,7 +1418,7 @@ class GeoespacialService:
             if area_estudo.startswith("camada_"):
                 mascara = self.obter_camada_dados(area_estudo)
                 if gdf.crs and mascara.crs and gdf.crs != mascara.crs:
-                    mascara = mascara.to_crs(gdf.crs)
+                    mascara = _gdal_reproject(mascara, gdf.crs)
                 gdf = gpd.clip(gdf, mascara)
             else:
                 try:
@@ -1473,23 +1474,23 @@ class GeoespacialService:
         """Cria buffer espacial ao redor de geometrias."""
         gdf = self.obter_camada_dados(camada_id).copy()
         crs_original = gdf.crs
-        if unidade_buffer == "metros" and gdf.crs and gdf.crs.is_geographic:
-            crs_trabalho = gdf.estimate_utm_crs()
-            if not crs_trabalho:
-                raise ValueError("Não foi possível determinar CRS métrico para o buffer")
-            gdf = gdf.to_crs(crs_trabalho)
+        from api.services import extracao_ogr as espacial
+        if unidade_buffer != "metros":
+            raise ValueError("Buffers usam metros em EPSG:5880.")
+        gdf = espacial.reproject(gdf, 5880)
         gdf_original = gdf.copy()
-        gdf["geometry"] = gdf.geometry.buffer(distancia_buffer)
+        gdf["geometry"] = [espacial.buffer(g, distancia_buffer) for g in gdf.geometry]
 
         # Buffer externo (subtrair geometria original)
         if tipo_buffer == "externo":
-            gdf["geometry"] = gdf["geometry"].difference(gdf_original["geometry"])
+            gdf["geometry"] = [espacial.difference(g, original) for g, original in zip(gdf.geometry, gdf_original.geometry)]
 
         # Dissolver
         if dissolver_geometrias:
-            gdf = gdf.dissolve()
+            combined = espacial.collect(gdf.geometry, dim=2)
+            gdf = gpd.GeoDataFrame({'geometry': [combined]}, crs=5880)
         if crs_original and gdf.crs != crs_original:
-            gdf = gdf.to_crs(crs_original)
+            gdf = espacial.reproject(gdf, crs_original)
 
         nova_camada_id = self.registrar_camada(gdf, f"Buffer de {camada_id}", "OP-04")
 
@@ -1531,7 +1532,7 @@ class GeoespacialService:
         gdf1 = self.obter_camada_dados(camada_id_1)
         gdf2 = self.obter_camada_dados(camada_id_2)
         if gdf1.crs and gdf2.crs and gdf1.crs != gdf2.crs:
-            gdf2 = gdf2.to_crs(gdf1.crs)
+            gdf2 = _gdal_reproject(gdf2, gdf1.crs)
 
         # Só a camada que ENTRA é prefixada. Prefixar também a de base quebraria
         # o encadeamento: num consolidador a base é a saída da volta anterior, e
@@ -1613,7 +1614,7 @@ class GeoespacialService:
             progress("Feições vetoriais carregadas para exportação")
 
         if crs_saida and gdf.crs:
-            gdf = gdf.to_crs(crs_saida)
+            gdf = _gdal_reproject(gdf, crs_saida)
         if progress:
             progress("Sistema de referência da saída conferido")
 
@@ -1790,7 +1791,7 @@ class GeoespacialService:
         gdf = self.obter_camada_dados(camada_id).copy()
         gdf_ref = self.obter_camada_dados(camada_ref_id)
         if gdf.crs and gdf_ref.crs and gdf.crs != gdf_ref.crs:
-            gdf_ref = gdf_ref.to_crs(gdf.crs)
+            gdf_ref = _gdal_reproject(gdf_ref, gdf.crs)
 
         # Spatial join
         resultado = gpd.sjoin(gdf, gdf_ref, how="inner", predicate=tipo_selecao)
@@ -1934,7 +1935,7 @@ class GeoespacialService:
             camada = self.obter_camada_dados(entrada)
             crs_final = str(camada.crs) if crs == "auto" else crs
             if crs != "auto":
-                camada = camada.to_crs(crs)
+                camada = _gdal_reproject(camada, crs)
             camada.to_file(caminho, driver=driver)
             tipo = "vetor"
         else:

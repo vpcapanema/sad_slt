@@ -253,7 +253,8 @@ $migrations = @(
     "120_projeto_geometria_historico.sql",
     "121_geometria_plano_programa.sql",
     "122_remover_tabelas_geoprocessamento_obsoletas.sql",
-    "123_saidas_geoespaciais_storage.sql"
+    "123_saidas_geoespaciais_storage.sql",
+    "125_original_geometria_storage.sql"
 )
 
 if ($OnlyMigration) {
@@ -334,6 +335,10 @@ if (-not $OnlyMigration) {
         if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='geoprocessamento' AND table_name='camada_processada' AND column_name='storage_caminho');")) {
             $migrations += "123_saidas_geoespaciais_storage.sql"
             Write-Ok "Destino de saidas no Storage pendente; aplicando migration 123"
+        }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='projeto_geometria_historico' AND column_name='storage_caminho');")) {
+            $migrations += "125_original_geometria_storage.sql"
+            Write-Ok "Originais de demandas no Storage pendente; aplicando migration 125"
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

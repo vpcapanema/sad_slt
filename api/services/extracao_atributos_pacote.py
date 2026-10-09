@@ -7,6 +7,7 @@ XLSX e tabela CSV. Os arquivos só passam por uma pasta temporária enquanto sã
 escritos; nada fica no disco. Os relatórios vêm de extracao_atributos_relatorios.
 """
 from __future__ import annotations
+from api.services.extracao_ogr import reproject as _gdal_reproject
 
 import io
 import json
@@ -57,7 +58,7 @@ def _para_gpkg(frame):
 
 def escrever_gpkg(saida, entrada, path: Path, incluir_entrada=True) -> None:
     for camada, frame in ([('resultado', saida), ('entrada', entrada)] if incluir_entrada else [('resultado', saida)]):
-        data = _para_gpkg(frame.to_crs(4674))
+        data = _para_gpkg(_gdal_reproject(frame, 4674))
         extras = {'geometry_type': 'Unknown'} if data.empty else {}
         # Polígonos simples e multipartes na mesma camada gravavam o tipo como
         # "Unknown"; promovidos a multi, a camada tem um tipo só no QGIS.
@@ -102,7 +103,7 @@ def mapa_png(entrada, bases, saida, path: Path, mapa_base: bool = True) -> str |
     from matplotlib.lines import Line2D
     from matplotlib.patches import Patch
 
-    web = entrada.to_crs(3857)
+    web = _gdal_reproject(entrada, 3857)
     minx, miny, maxx, maxy = web.total_bounds
     folga = max(maxx - minx, maxy - miny, 2000) * 0.3
     centro_x, centro_y = (minx + maxx) / 2, (miny + maxy) / 2
@@ -126,7 +127,7 @@ def mapa_png(entrada, bases, saida, path: Path, mapa_base: bool = True) -> str |
 
     for indice, (categoria, nome, frame) in enumerate(bases):
         cor = PALETA[indice % len(PALETA)]
-        recorte = frame.to_crs(3857).cx[x0:x1, y0:y1]
+        recorte = _gdal_reproject(frame, 3857).cx[x0:x1, y0:y1]
         if not recorte.empty:
             recorte.plot(ax=ax, facecolor=cor, edgecolor=cor, alpha=.3, linewidth=.7, markersize=12, zorder=10 + indice)
         legenda.append(Patch(facecolor=cor, edgecolor=cor, alpha=.55,
@@ -137,7 +138,7 @@ def mapa_png(entrada, bases, saida, path: Path, mapa_base: bool = True) -> str |
     marcador = max(2.0, min(20.0, 6000 / max(len(web), 1)))
     if saida is not None and not saida.empty:
         # Pontos atingidos vão por cima da entrada; partes de linha ou polígono ficam abaixo do contorno.
-        saida.to_crs(3857).plot(ax=ax, facecolor='#d62728', edgecolor='#8b0000', alpha=.85 if pontos else .6,
+        _gdal_reproject(saida, 3857).plot(ax=ax, facecolor='#d62728', edgecolor='#8b0000', alpha=.85 if pontos else .6,
                                 linewidth=.8, markersize=marcador * 1.6, zorder=47 if pontos else 40)
         legenda.append(Patch(facecolor='#d62728', edgecolor='#8b0000', alpha=.75,
                              label='Pontos dentro de alguma base' if pontos else 'Partes atingidas (interseção)'))

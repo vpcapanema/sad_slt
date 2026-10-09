@@ -8,7 +8,7 @@ import geopandas as gpd
 import pandas as pd
 import numpy as np
 from shapely.geometry import GeometryCollection
-from shapely.ops import unary_union
+from api.services import extracao_ogr as espacial
 
 from api.repositories.camada_geoespacial_repository import _json_safe
 from api.services.geoespacial_service import _overlay_ogr
@@ -37,7 +37,7 @@ def prepare(frame, name):
     dimensions = {DIMENSIONS.get(t) for t in frame.geom_type}
     if None in dimensions or len(dimensions) != 1:
         raise ValueError(f'{name}: use uma camada de pontos, linhas ou polígonos de dimensão homogênea.')
-    return frame.to_crs(4674).reset_index(drop=True), dimensions.pop()
+    return espacial.reproject(frame, 4674).reset_index(drop=True), dimensions.pop()
 
 
 def measure(geometry, dimension):
@@ -50,12 +50,20 @@ def measure(geometry, dimension):
     if dimension == 0:
         return 1.0
     if dimension == 1:
-        return float(geometry.length)
-    return float(geometry.area)
+        return espacial.length(geometry)
+    return espacial.area(geometry)
 
 
 def union(geometries):
-    return unary_union(geometries) if geometries else GeometryCollection()
+    if not geometries:
+        return GeometryCollection()
+    dimension = max(DIMENSIONS.get(g.geom_type, -1) for g in geometries)
+    if dimension == 2:
+        return espacial.collect(geometries, dimension)
+    result = espacial.geometry(geometries[0]).Clone()
+    for geom in geometries[1:]:
+        result = result.Union(espacial.geometry(geom))
+    return espacial.external(result)
 
 
 def aggregate(geometries, by_input, source, dimension, denominator, occurrences):
@@ -86,7 +94,7 @@ def analisar(input_frame, categories, operation='intersection', progress=lambda 
     # O rotulo do seletor manda no operador do OGR: Identity chama Identity.
     operador = 'identity' if operation == 'identity' else 'intersection'
     source, dimension = prepare(input_frame,'Entrada')
-    source = source.to_crs(5880)
+    source = espacial.reproject(source, 5880)
     if dimension == 0:
         source = source.explode(index_parts=False).reset_index(drop=True)
     input_properties = [_json_safe(dict(row.drop(source.geometry.name))) for _,row in source.iterrows()]
@@ -104,7 +112,7 @@ def analisar(input_frame, categories, operation='intersection', progress=lambda 
         for base in category['camadas']:
             progress(f"Interseção: {category['nome']} / {base['nome']}")
             frame, _ = prepare(base['frame'],base['nome'])
-            frame = frame.to_crs(5880)
+            frame = espacial.reproject(frame, 5880)
             properties = [_json_safe(dict(row.drop(frame.geometry.name))) for _,row in frame.iterrows()]
             right = gpd.GeoDataFrame({'ea_base':[str(i) for i in range(len(frame))]},geometry=frame.geometry,crs=5880)
             intersection = _overlay_ogr(left,right,operador,**opcoes,**({'progresso':progress.tarefa} if hasattr(progress,'tarefa') else {}))
@@ -171,5 +179,5 @@ def analisar(input_frame, categories, operation='intersection', progress=lambda 
     for coluna in ('externo','dentro'):
         if coluna in frame.columns:
             frame[coluna] = frame[coluna].fillna(False).astype(bool)
-    result['geojson'] = json.loads(frame.to_crs(4326).to_json(default=str))
+    result['geojson'] = json.loads(espacial.reproject(frame, 4326).to_json(default=str))
     return result, frame

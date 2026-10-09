@@ -1,4 +1,5 @@
 """Catálogo, execução persistida e recuperação das extrações de atributos."""
+from api.services.extracao_ogr import reproject as _gdal_reproject
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -389,7 +390,7 @@ def _executar_enriquecimento(ident, params, source, categories, progress, inicio
     registros = sum(item['registros'] for item in camadas.values())
     fim = datetime.now(timezone.utc)
     from osgeo import gdal
-    geojson = json.loads(pd.concat([frame[[frame.geometry.name]].assign(camada=nome).to_crs(4326)
+    geojson = json.loads(pd.concat([_gdal_reproject(frame[[frame.geometry.name]].assign(camada=nome), 4326)
                                     for nome, frame in saida['camadas'].items()]).to_json(default=str))
     result = {'id':ident,'modo':'enriquecimento','operacao':params['operacao'],'input_id':params['camada_id'],
               'input_nome':params['input_nome'],'criado_em':fim.isoformat(),'gdal':gdal.VersionInfo('RELEASE_NAME'),

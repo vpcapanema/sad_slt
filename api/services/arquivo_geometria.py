@@ -11,8 +11,8 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from fastapi import HTTPException, UploadFile
-from shapely import normalize
-from shapely.geometry import shape
+import json
+from osgeo import ogr
 
 from api.geometria_parser import MAX_GEOMETRIA_UPLOAD_BYTES, parse_upload
 
@@ -39,7 +39,10 @@ async def receber_arquivo_geometria(
 
     enviada = {"type": geometria.tipo, "coordinates": geometria.coordinates}
     do_arquivo = parsed["geojson"]["geometry"]
-    if not normalize(shape(enviada)).equals_exact(normalize(shape(do_arquivo)), tolerance=1e-8):
+    from api.services.normalizacao_demanda import normalizar
+    padronizada = normalizar(do_arquivo, crs_saida=4326)
+    enviada_ogr = ogr.CreateGeometryFromJson(json.dumps(enviada))
+    if not any(enviada_ogr.Equals(ogr.CreateGeometryFromJson(json.dumps(candidate))) for candidate in (do_arquivo, padronizada)):
         raise HTTPException(
             status_code=422,
             detail="A geometria do cadastro não corresponde ao arquivo vetorial enviado.",
@@ -53,4 +56,5 @@ async def receber_arquivo_geometria(
         "tamanho_bytes": len(conteudo),
         "sha256": hashlib.sha256(conteudo).hexdigest(),
         "conteudo_binario": conteudo,
+        "crs_origem": parsed['crs_origem'],
     }

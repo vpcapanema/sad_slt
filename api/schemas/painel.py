@@ -48,3 +48,5 @@ class EstatisticasOperadorSchema(BaseModel):
     aprovadas: int
     protocoladas: int
     em_analise: int
+    analises_concluidas: int = 0
+    analises_total: int = 0
