@@ -243,6 +243,10 @@ def main():
     say("Fluxo finalizado com sucesso.")
 
 if __name__ == "__main__":
+    # Logs remotos incluem símbolos Unicode; consoles Windows podem usar cp1252.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     try:
         main()
     except (Exception, KeyboardInterrupt) as exc:
