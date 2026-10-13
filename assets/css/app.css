@@ -1474,6 +1474,11 @@ body.admin-data-page .admin-toolbar-search {
   min-width: 220px;
 }
 
+body.admin-data-page .admin-toolbar-column-filter {
+  flex: 1 1 190px;
+  min-width: 190px;
+}
+
 body.admin-data-page .admin-toolbar-back {
   align-self: flex-end;
 }

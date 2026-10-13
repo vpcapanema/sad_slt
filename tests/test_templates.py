@@ -267,6 +267,19 @@ def test_restricted_demands_table_exposes_audit_names_and_timestamps() -> None:
     assert "d.criado_por" not in script
 
 
+def test_restricted_demands_table_has_dependent_column_and_value_filters() -> None:
+    response = TestClient(app).get("/restrict/demandas/")
+    assert response.status_code == 200
+    assert '<label for="filtro-coluna">Filtrar por coluna</label>' in response.text
+    assert '<label for="filtro-valor">Valor da coluna</label>' in response.text
+    assert 'id="filtro-valor" disabled' in response.text
+
+    script = Path("admin/demandas.js").read_text(encoding="utf-8")
+    assert "COLUMNS[tipo].forEach((column, index)" in script
+    assert "updateColumnValueFilter" in script
+    assert "columnDisplayValue(column, d)" in script
+
+
 def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> None:
     content = TestClient(app).get("/restrict/").text
     match = re.search(r'<section\b[^>]*aria-labelledby="group-geoprocessamento"[^>]*>.*?</section>', content, re.S)

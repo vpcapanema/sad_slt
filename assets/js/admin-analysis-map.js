@@ -108,7 +108,7 @@
     const mapEl = document.getElementById(mapId);
     const map = L.map(mapEl, {
       zoomControl: true,
-      scrollWheelZoom: false,
+      scrollWheelZoom: true,
       attributionControl: true,
     });
 

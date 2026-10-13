@@ -27,6 +27,7 @@
   let rows = [];
   let currentPage = 1;
   let editMode = false;
+  let columnFilterOptions = [];
   const selected = new Set();
   const cache = { projeto: null, programa: null, plano: null };
   let refPlanos = [];
@@ -178,12 +179,72 @@
       .toLowerCase();
   }
 
+  function columnDisplayValue(column, row) {
+    const value = document.createElement("span");
+    value.innerHTML = column.value(row);
+    return (value.textContent || "").replace(/\s+/g, " ").trim();
+  }
+
+  function fillColumnFilter() {
+    const columnSelect = $("#filtro-coluna");
+    const valueSelect = $("#filtro-valor");
+    columnSelect.innerHTML = '<option value="">Selecione uma coluna</option>';
+    COLUMNS[tipo].forEach((column, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = column.label;
+      columnSelect.appendChild(option);
+    });
+    valueSelect.innerHTML = '<option value="">Selecione uma coluna primeiro</option>';
+    valueSelect.disabled = true;
+    columnFilterOptions = [];
+  }
+
+  function updateColumnValueFilter() {
+    const columnSelect = $("#filtro-coluna");
+    const valueSelect = $("#filtro-valor");
+    const columnIndex = columnSelect.value === "" ? -1 : Number(columnSelect.value);
+    const column = COLUMNS[tipo][columnIndex];
+
+    valueSelect.innerHTML = "";
+    columnFilterOptions = [];
+    if (!column) {
+      valueSelect.add(new Option("Selecione uma coluna primeiro", ""));
+      valueSelect.disabled = true;
+      return;
+    }
+
+    valueSelect.add(new Option("Todos os valores", ""));
+    const uniqueValues = new Map();
+    rows.forEach((row) => {
+      const value = columnDisplayValue(column, row);
+      const key = value.toLocaleLowerCase("pt-BR");
+      if (!uniqueValues.has(key)) uniqueValues.set(key, value);
+    });
+    columnFilterOptions = [...uniqueValues.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    columnFilterOptions.forEach((value, index) => {
+      valueSelect.add(new Option(value || "Sem valor", String(index + 1)));
+    });
+    valueSelect.disabled = false;
+  }
+
   function filteredRows() {
     const status = $("#filtro-status").value;
     const q = ($("#filtro-busca").value || "").trim().toLowerCase();
+    const columnIndex = $("#filtro-coluna").value === "" ? -1 : Number($("#filtro-coluna").value);
+    const column = COLUMNS[tipo][columnIndex];
+    const valueIndex = $("#filtro-valor").value === "" ? -1 : Number($("#filtro-valor").value) - 1;
+    const columnValue = columnFilterOptions[valueIndex];
     return rows
       .filter((d) => {
         if (status && d.status !== status) return false;
+        if (
+          column &&
+          columnValue !== undefined &&
+          columnDisplayValue(column, d).toLocaleLowerCase("pt-BR") !== columnValue.toLocaleLowerCase("pt-BR")
+        ) {
+          return false;
+        }
         if (!q) return true;
         return searchHaystack(d).includes(q);
       })
@@ -757,6 +818,7 @@
     rows = cache[tipo];
     await ensureRefs();
     fillStatusFilter();
+    fillColumnFilter();
     renderStatusLegend();
     renderTable();
   }
@@ -792,6 +854,17 @@
       });
     });
     $("#filtro-status").addEventListener("change", () => {
+      currentPage = 1;
+      resetSelection();
+      renderTable();
+    });
+    $("#filtro-coluna").addEventListener("change", () => {
+      updateColumnValueFilter();
+      currentPage = 1;
+      resetSelection();
+      renderTable();
+    });
+    $("#filtro-valor").addEventListener("change", () => {
       currentPage = 1;
       resetSelection();
       renderTable();
