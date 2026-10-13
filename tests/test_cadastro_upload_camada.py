@@ -115,7 +115,7 @@ def test_previa_limita_e_simplifica():
     fonte = inspect.getsource(servico.previa_da_inspecao)
     assert "PREVIA_MAX_FEICOES" in fonte
     assert "simplify" in fonte
-    assert 'to_crs("EPSG:4326")' in fonte, "Leaflet espera graus"
+    assert '_gdal_reproject(frame, "EPSG:4326")' in fonte, "Leaflet espera graus"
 
 
 @pytest.mark.parametrize("rota", PAGINAS)

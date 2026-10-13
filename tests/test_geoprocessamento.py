@@ -402,7 +402,6 @@ class GeoprocessamentoApiTest(unittest.TestCase):
         amostra = json.loads(self.sample.read_text(encoding="utf-8"))
         amostra["features"][0]["properties"]["execucao"] = uuid4().hex
         conteudo = json.dumps(amostra).encode("utf-8")
-        homologated_id = None
         try:
             started = self.client.post(
                 "/api/geoespacial/camadas/importar-job",
@@ -444,60 +443,7 @@ class GeoprocessamentoApiTest(unittest.TestCase):
             self.assertGreater(loaded["total"], 4)
             self.assertEqual(len(loaded["logs"]), loaded["total"])
 
-            homologation_started = self.client.post(
-                f"/api/geoespacial/camadas/{camada_id}/homologar-job",
-                json={
-                    "modulo_consumidor": "ambos",
-                    "nome_publicacao": "Teste de nanotarefas",
-                    "versao": "v1",
-                    "metadados": {},
-                },
-            )
-            self.assertEqual(homologation_started.status_code, 202, homologation_started.text)
-            homologation_id = homologation_started.json()["id"]
-            for _ in range(200):
-                homologation_status = self.client.get(
-                    f"/api/geoespacial/operacoes-jobs/status/{homologation_id}"
-                )
-                if homologation_status.json()["status"] in {"concluido", "erro"}:
-                    break
-                time.sleep(0.05)
-            homologated = homologation_status.json()
-            self.assertEqual(homologated["status"], "concluido", homologation_status.text)
-            self.assertGreater(homologated["total"], 4)
-            self.assertEqual(len(homologated["logs"]), homologated["total"])
-            self.assertTrue(any(
-                "Transação de homologação" in item["mensagem"]
-                for item in homologated["logs"]
-            ))
-            homologated_id = homologated["resultado"]["id"]
         finally:
-            # A limpeza não depende de o teste ter chegado ao fim: se uma
-            # asserção falhar no meio, a homologação já ocorreu e precisa ser
-            # desfeita do mesmo jeito. Gatilho nenhum é desabilitado aqui — a
-            # 085 autorizou a manutenção administrativa da biblioteca e a 097
-            # removeu o último bloqueio. Os ALTER TABLE que existiam neste ponto
-            # miravam gatilhos já derrubados, estouravam dentro do `finally` e
-            # abortavam a limpeza: foi assim que 28 registros e 28 arquivos de
-            # "Teste de nanotarefas" ficaram órfãos.
-            with get_connection() as conn:
-                conn.execute(
-                    """DELETE FROM geoprocessamento.camada_homologada_feicao
-                       WHERE camada_id IN (SELECT id FROM geoprocessamento.camada_homologada
-                                           WHERE nome_publicacao='Teste de nanotarefas')"""
-                )
-                conn.execute(
-                    """DELETE FROM geoprocessamento.camada_homologada_raster
-                       WHERE camada_id IN (SELECT id FROM geoprocessamento.camada_homologada
-                                           WHERE nome_publicacao='Teste de nanotarefas')"""
-                )
-                conn.execute("DELETE FROM geoprocessamento.camada_homologada WHERE nome_publicacao='Teste de nanotarefas'")
-                conn.commit()
-            # A homologação materializa o arquivo na biblioteca canônica; sem
-            # remover, cada execução da suíte deixa lixo no diretório de dados.
-            canonica = Path("data/geoespacial/biblioteca_canonica/ambos")
-            for residuo in canonica.glob("teste_de_nanotarefas_v1.gpkg*"):
-                residuo.unlink(missing_ok=True)
             upload_path.unlink(missing_ok=True)
 
     def test_camada_homologada_rejeita_mutacao(self) -> None:
@@ -589,8 +535,8 @@ class GeoprocessamentoApiTest(unittest.TestCase):
         with get_connection() as conn:
             processado = conn.execute(
                 """SELECT 1 FROM geoprocessamento.camada_processada p
-                   JOIN geoprocessamento.camada_processada_raster r ON r.camada_id=p.id
-                   WHERE p.recurso_sessao_id=%s""",
+                   JOIN geoprocessamento.arquivo_resultado a ON a.camada_id=p.id
+                   WHERE p.recurso_sessao_id=%s AND a.estado='resultado'""",
                 (raster_final,),
             ).fetchone()
         self.assertIsNotNone(processado)
@@ -719,7 +665,7 @@ class GeoprocessamentoUiTest(unittest.TestCase):
         self.assertNotIn("configure(4", ribbon)
         self.assertIn("/importar_camadas", script)
         self.assertNotIn("carregar-job", ribbon)
-        self.assertIn("homologar-job", ribbon)
+        self.assertNotIn("homologar-job", ribbon)
         self.assertIn("this._aplicarLogs(p, st, job)", feedback)
         self.assertIn("job.logs || job.etapas || []", feedback)
         self.assertIn("p.log(detalhes ?", feedback)

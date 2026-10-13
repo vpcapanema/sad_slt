@@ -214,8 +214,8 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert '(h.nome || "Sem nome") + " — " + (h.codigo || "Sem código")' in julgamentos_js
     assert "hierarquizacao_id: selectedHierarchy.dataset.hierarquizacaoId" in julgamentos_js
     assert 'id="ami-interactive-analysis-component"' in html
-    assert 'id="ami-criteria-matrix"' in html
-    assert "matriz_premissas_criterios: criteriaMatrix" in julgamentos_js
+    assert 'id="ami-criteria-matrix-summary"' in html
+    assert "cabecalho_grupo.matriz_premissas_criterios" in julgamentos_js
     assert 'id="ami-pairwise-matrix-component"' in html
     assert 'id="ami-pairwise-form-component"' in html
     assert 'h.descricao || "Sem descrição"' not in julgamentos_js
@@ -413,7 +413,7 @@ def test_julgamentos_reusam_tabela_padrao_e_origem_das_hierarquizacoes() -> None
     assert ">3</span><span>Ambiente colaborativo" in html
     assert ">3.1</span><span>Análise Multicritério Interativa" in html
     assert ">3.1.1</span><span>Configuração do preenchimento" in html
-    assert ">3.1.2</span><span>Matriz de premissas e critérios" in html
+    assert 'id="ami-criteria-matrix-summary"' in html
     assert ">3.2</span><span>Status do ambiente colaborativo" in html
     assert ">3.3</span><span>Sugestão de mensagem de e-mail" in html
     assert html.count("ami-config-field") == 3
@@ -567,9 +567,18 @@ def test_indice_restrito_nao_deixa_vao_nos_modulos() -> None:
             assert subgrupos, f"{secao} sem subcards"
             fileiras_sub = []
             for nome, sub_corpo in subgrupos:
-                assert nome in itens_por_subgrupo, f"subgroup-{nome} não declara --itens-por-linha"
                 cartoes_sub = len(re.findall(r'class="platform-tile platform-tile--', sub_corpo))
-                fileiras_sub.append(math.ceil(cartoes_sub / itens_por_subgrupo[nome]))
+                if nome in itens_por_subgrupo:
+                    itens = itens_por_subgrupo[nome]
+                elif secao == "geoprocessamento":
+                    assert (
+                        ".secao-platform-geoprocessamento .platform-subgroup .platform-grid" in css
+                        and "grid-template-columns: repeat(2, minmax(0, 1fr));" in css
+                    ), f"subgrupo-{nome} precisa manter duas colunas no desktop"
+                    itens = 2
+                else:
+                    raise AssertionError(f"subgroup-{nome} não declara --itens-por-linha")
+                fileiras_sub.append(math.ceil(cartoes_sub / itens))
             linha.append((secao, max(fileiras_sub)))
         else:
             cartoes = len(re.findall(r'class="platform-tile platform-tile--', corpo))

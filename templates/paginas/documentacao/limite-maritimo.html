@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
 {% endblock %}
 {% macro section(n, id, title) %}
-<section class="card ahp-step-section" id="{{ id }}">
+<section class="secao-limite-maritimo card-limite-maritimo card ahp-step-section" id="{{ id }}">
 <div class="ahp-section-label"><span class="ahp-section-index-icon" aria-hidden="true">{{ n }}</span><span>{{ title }}</span></div>
 <div class="ahp-section-body">{{ caller() }}</div></section>
 {% endmacro %}
@@ -22,7 +22,7 @@
 {% endmacro %}
 {% block conteudo %}
 <main class="conteudo-principal app-main ahp-main fase-execucao-page doc-favorabilidade doc-maritimo">
-<section class="card ahp-step-intro standard-page-hero">
+<section class="secao-limite-maritimo-intro card-limite-maritimo-intro card ahp-step-intro standard-page-hero">
 <h1 class="standard-page-hero__title"><i class="fa-solid fa-water" aria-hidden="true"></i> Limite marítimo de referência de São Paulo</h1>
 <p class="standard-page-hero__eyebrow">Documentação metodológica · versão de 9 de outubro de 2026</p>
 <p class="standard-page-hero__description">Fundamentação e construção do recorte operacional utilizado para conferir geometrias de demandas terrestres, costeiras e marítimas, com fontes, parâmetros, mapas, testes e limites de interpretação.</p>

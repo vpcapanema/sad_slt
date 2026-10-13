@@ -637,6 +637,9 @@
 /* Hub geoespacial — identidade visual da aplicação */
 .geoespacial-hub-page,
 .geoespacial-viewer-page { min-height: 100vh; background: #eef2f6; color: #253242; }
+.geoespacial-hub-page .geoespacial-module-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.viewer-layer-filter { grid-template-columns: auto minmax(0,1.1fr) minmax(0,1.1fr) auto auto auto; }
+.viewer-layer-filter button:disabled { opacity: .5; }
 .geoespacial-hub-main { max-width: 1280px; }
 .geoespacial-hub-intro { padding: 24px 28px; margin-bottom: 18px; overflow: hidden; position: relative; }
 .geoespacial-breadcrumb { display: flex; gap: 8px; align-items: center; margin-bottom: 13px; color: #697586; font-size: .82rem; }

@@ -3,12 +3,19 @@ import json
 import pytest
 
 from api.services import configuracao_bancada as configuracao
-from api.services.extracao_atributos import catalogo
+from api.services import extracao_atributos
 
 
 @pytest.fixture
 def sem_arquivos(tmp_path, monkeypatch):
     monkeypatch.setattr(configuracao, 'raiz', lambda: tmp_path)
+    monkeypatch.setattr(extracao_atributos, 'catalogo', lambda: {
+        'categorias': [{'id': 'categoria-teste', 'nome': 'Categoria de teste'}],
+        'camadas': [
+            {'id': 'camada-1', 'nome': 'Camada 1', 'arquivo': 'camada-1.gpkg'},
+            {'id': 'camada-2', 'nome': 'Camada 2', 'arquivo': 'camada-2.gpkg'},
+        ],
+    })
     return tmp_path
 
 
@@ -17,11 +24,7 @@ class Usuario:
 
 
 def duas_camadas():
-    dados = catalogo()
-    categoria = dados['categorias'][0]['id']
-    camadas = [item['id'] for item in dados['camadas'][:2]]
-    assert len(camadas) == 2
-    return categoria, camadas
+    return 'categoria-teste', ['camada-1', 'camada-2']
 
 
 def test_salvar_listar_e_carregar(sem_arquivos):

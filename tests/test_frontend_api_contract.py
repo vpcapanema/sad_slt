@@ -6,6 +6,7 @@ literal ``/api/...`` dos arquivos JS com o contrato publicado no OpenAPI.
 """
 from __future__ import annotations
 
+import ast
 import os
 import re
 from pathlib import Path
@@ -46,7 +47,7 @@ def _called_paths() -> dict[str, set[str]]:
     chamadas: dict[str, set[str]] = {}
     for path in _js_files():
         for bruto in API_LITERAL.findall(path.read_text(encoding="utf-8")):
-            url = TEMPLATE_SLOT.sub("*", bruto).rstrip("*").rstrip("/")
+            url = TEMPLATE_SLOT.sub("*", bruto).rstrip("/")
             if url:
                 chamadas.setdefault(url, set()).add(path.as_posix())
     return chamadas
@@ -65,8 +66,17 @@ def _prefixo_de(url: str, rota: str) -> bool:
 
 
 def _atendida(url: str, registradas: set[str]) -> bool:
+    if url.endswith("*"):
+        prefixo = url[:-1]
+        if any(rota.startswith(prefixo) for rota in registradas):
+            return True
     for rota in registradas:
-        if re.fullmatch(re.escape(rota).replace(r"\*", "[^/]+"), url):
+        segmentos_url = url.split("/")
+        segmentos_rota = rota.split("/")
+        if len(segmentos_url) == len(segmentos_rota) and all(
+            chamada in ("*", rota_seg) or rota_seg == "*"
+            for chamada, rota_seg in zip(segmentos_url, segmentos_rota)
+        ):
             return True
         if _prefixo_de(url, rota):
             return True
@@ -141,12 +151,27 @@ def _para_disco(url: str) -> Path | None:
     return None
 
 
-def _referencias_dos_templates() -> dict[str, list[str]]:
+def _referencias_dos_templates(*, incluir_arquivados: bool = False) -> dict[str, list[str]]:
     referencias: dict[str, list[str]] = {}
-    for template in sorted(Path("templates").rglob("*.html")):
-        conteudo = template.read_text(encoding="utf-8")
-        for url in re.findall(r'(?:src|href)="(/[^"]+)"', conteudo):
-            referencias.setdefault(url, []).append(template.as_posix())
+    template_roots = (Path("templates"),)
+    if incluir_arquivados:
+        template_roots += (Path("legado/templates"), Path("legados/templates"))
+    for root in template_roots:
+        for template in sorted(root.rglob("*.html")):
+            conteudo = template.read_text(encoding="utf-8")
+            for url in re.findall(r'(?:src|href)="(/[^"]+)"', conteudo):
+                if "{{" in url or "{%" in url:
+                    continue
+                referencias.setdefault(url, []).append(template.as_posix())
+            css_list = re.search(r"{%\s*for\s+css\s+in\s+(\[[^\]]+\])\s*%}", conteudo)
+            if css_list:
+                for nome in ast.literal_eval(css_list.group(1)):
+                    url = f"/assets/css/{nome}.css"
+                    referencias.setdefault(url, []).append(template.as_posix())
+            for nome in re.findall(r"\{\{\s*figure\('([^']+)'", conteudo):
+                for extensao in ("svg", "png"):
+                    url = f"/assets/images/documentacao/limite-maritimo/{nome}.{extensao}"
+                    referencias.setdefault(url, []).append(template.as_posix())
     return referencias
 
 
@@ -170,7 +195,7 @@ def test_no_orphan_stylesheets_or_scripts() -> None:
     alcancaveis: set[str] = set()
     fila = [
         destino.as_posix()
-        for url in _referencias_dos_templates()
+        for url in _referencias_dos_templates(incluir_arquivados=True)
         if (destino := _para_disco(url)) is not None
     ]
     fila.extend(ROTAS_DEDICADAS)

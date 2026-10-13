@@ -214,7 +214,7 @@ def test_indice_de_extracoes_e_o_destino_do_card_e_leva_a_nova_extracao():
         assert f'id="{botao}"' in indice.text, botao
     assert 'ea-indice-arquivo' not in indice.text, 'sem seletor de arquivos: só o pacote é baixado'
     central=client.get('/restrict/geoespacial/').text
-    assert 'href="/restrict/geoespacial/extracoes-atributos/" class="card-extracao-de-atributos' in central
+    assert 'href="/restrict/geoespacial/visualizador-camadas/" class="geoespacial-module-card"' in central
 
 
 def test_visualizador_de_camadas_aponta_para_a_tabela_de_extracoes():

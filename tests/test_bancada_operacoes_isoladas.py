@@ -90,6 +90,13 @@ CASES = {
 @pytest.mark.parametrize('operation', CASES)
 def test_motor_real_produz_resultado(operation,bancada):
     params={'destino':'memoria','nome_saida':'Teste','crs_saida':'entrada','formato_saida':'JSON',**CASES[operation]}
+    if operation in {'OP-37', 'OP-38'}:
+        bancada.vectors['area_metrica'] = gpd.GeoDataFrame(
+            {'grupo': ['A', 'A'], 'valor': [2., 4.]},
+            geometry=[box(0,0,100,100),box(100,0,200,100)],
+            crs=5880,
+        )
+        params['camada_id'] = 'area_metrica'
     result=asyncio.run(bancada.engine.execute(operation,params))
     assert isinstance(result,dict) and result
     if 'camada_id' in result:

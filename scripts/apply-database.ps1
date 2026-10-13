@@ -258,7 +258,8 @@ $migrations = @(
     "127_autoria_obrigatoria_novas_demandas.sql",
     "128_autoria_atualizacao_sei.sql",
     "129_autoria_sessao_sei.sql",
-    "130_separar_auditoria_decisao.sql"
+    "130_separar_auditoria_decisao.sql",
+    "131_geometria_historico_storage_metadata.sql"
 )
 
 if ($OnlyMigration) {
@@ -360,6 +361,10 @@ if (-not $OnlyMigration) {
             $migrations += "130_separar_auditoria_decisao.sql"
             Write-Ok "Migração 130 pendente: separar decisão e edição."
         }
+        if (-not (Test-SchemaReady "SELECT count(*) = 2 FROM pg_constraint c JOIN pg_class r ON r.oid=c.conrelid JOIN pg_namespace n ON n.oid=r.relnamespace WHERE n.nspname='demandas' AND r.relname='projeto_geometria_historico' AND c.conname IN ('ck_projeto_geometria_historico_arquivo_completo','ck_projeto_geometria_historico_arquivo_por_origem') AND obj_description(c.oid, 'pg_constraint') LIKE '131:%'")) {
+            $migrations += "131_geometria_historico_storage_metadata.sql"
+            Write-Ok "Migração 131 pendente: originais de geometria exclusivamente no Storage."
+        }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"
         $migrations = $migrations | Where-Object { [int]$_.Substring(0, 3) -ge 91 }
@@ -435,13 +440,15 @@ try {
         exit 1
     }
 
-    $GeoLoader = Join-Path $Root "scripts\load_geo_catalog.py"
-    $VenvPython = Join-Path $Root ".venv\Scripts\python.exe"
-    $PythonExe = if (Test-Path $VenvPython) { $VenvPython } else { "python" }
-    Write-Step "Carregando catalogo territorial em geo.unidade_espacial"
-    & $PythonExe $GeoLoader
-    if ($LASTEXITCODE -ne 0) { throw "Falha ao carregar catalogo geografico" }
-    Write-Ok "Catalogo territorial e vinculos espaciais atualizados"
+    if (-not $OnlyMigration) {
+        $GeoLoader = Join-Path $Root "scripts\load_geo_catalog.py"
+        $VenvPython = Join-Path $Root ".venv\Scripts\python.exe"
+        $PythonExe = if (Test-Path $VenvPython) { $VenvPython } else { "python" }
+        Write-Step "Carregando catalogo territorial em geo.unidade_espacial"
+        & $PythonExe $GeoLoader
+        if ($LASTEXITCODE -ne 0) { throw "Falha ao carregar catalogo geografico" }
+        Write-Ok "Catalogo territorial e vinculos espaciais atualizados"
+    }
 
     Write-Host ""
     Write-Host "========================================" -ForegroundColor White

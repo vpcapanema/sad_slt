@@ -28,6 +28,17 @@ def test_gravacao_atualiza_registro_existente_e_hash(tmp_path, monkeypatch, cate
     monkeypatch.setattr(repo, 'project_path', lambda _: path)
     monkeypatch.setattr(repo, '_insert_features', lambda *a: None)
     frame = gpd.GeoDataFrame({'nome': ['Alterado']}, geometry=[Point(0, 0)], crs=4326)
+    if categoria == 'processadas':
+        with pytest.raises(ValueError, match='Saídas são imutáveis'):
+            repo.substituir_vetor(
+                'sessao-existente',
+                frame,
+                {},
+                arquivo_editado=path,
+                gravar_arquivo=lambda: pytest.fail('Saídas processadas não podem ser substituídas'),
+            )
+        assert not conn.committed
+        return
     repo.substituir_vetor('sessao-existente', frame, {}, arquivo_editado=path,
                          gravar_arquivo=lambda: path.write_bytes(b'alterado'))
     assert conn.committed

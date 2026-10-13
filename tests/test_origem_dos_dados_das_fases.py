@@ -12,10 +12,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from api.repositories.camada_geoespacial_repository import (
-    _CANONICAL_ROOT,
-    listar_biblioteca_canonica_arquivos,
-)
+from api.repositories import camada_geoespacial_repository
 
 FASE1_JS = Path("hierarquizacao/js/fases.js").read_text(encoding="utf-8")
 FASE2_JS = Path("hierarquizacao/js/fase2.js").read_text(encoding="utf-8")
@@ -49,8 +46,17 @@ def test_arquivo_sem_homologacao_nao_vira_opcao_selecionavel():
     assert "sem homologação registrada" in corpo
 
 
-def test_biblioteca_canonica_e_o_diretorio_que_as_fases_leem():
-    assert _CANONICAL_ROOT == "data/geoespacial/biblioteca_canonica"
-    # Não depende de haver camada publicada: só garante que a listagem responde
-    # a partir desse diretório sem estourar quando ele está vazio.
-    assert isinstance(listar_biblioteca_canonica_arquivos("fase1"), list)
+def test_biblioteca_canonica_expoe_o_catalogo_atual_do_storage(monkeypatch):
+    camada = {"id": "camada-1", "nome": "Restrição", "ferramenta": "fase1"}
+    monkeypatch.setattr(camada_geoespacial_repository, "listar_biblioteca", lambda modulo: [camada])
+
+    arquivos = camada_geoespacial_repository.listar_biblioteca_canonica_arquivos("fase1")
+
+    assert arquivos == [{
+        **camada,
+        "registrada": True,
+        "subdiretorio": "fase1",
+        "nome_publicacao": "Restrição",
+        "versao": "",
+        "homologacao_id": None,
+    }]

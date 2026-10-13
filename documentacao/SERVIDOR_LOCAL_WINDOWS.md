@@ -1,5 +1,21 @@
 # Servidor local no Windows
 
+## Ambiente Python
+
+O projeto usa um ambiente virtual local em `.venv`, que não deve ser copiado
+entre máquinas nem versionado. Se a instalação-base mudar ou deixar de existir,
+recrie o ambiente com um Python 3.12 instalado:
+
+```powershell
+Remove-Item -LiteralPath .venv -Recurse -Force
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+```
+
+`requirements-dev.txt` inclui as dependências da aplicação e o pytest. O GDAL
+para Windows/Python 3.12 é instalado pelo wheel binário definido em
+`requirements.txt`.
+
 No VS Code, execute **Terminal → Executar tarefa → SICARD: Iniciar servidor local**.
 A tarefa usa `.venv/Scripts/python.exe` e `scripts/start-local-task.py`, mantendo
 `api.server:app`, `.env`, host `127.0.0.1` e porta `8083`. `Ctrl+C` encerra o servidor.

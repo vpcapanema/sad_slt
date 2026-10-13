@@ -37,7 +37,7 @@ def test_geojson_da_camada_reprojeta_para_4326():
     import api.services.geoespacial_service as modulo
 
     fonte = inspect.getsource(modulo.GeoespacialService.camada_geojson)
-    assert 'to_crs("EPSG:4326")' in fonte
+    assert '_gdal_reproject(gdf, "EPSG:4326")' in fonte
     assert 'set_crs("EPSG:4326")' in fonte
 
 

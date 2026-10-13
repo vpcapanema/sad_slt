@@ -1361,43 +1361,128 @@
     const file = event.target.files?.[0];
     if (!file) return;
     if (JSON.stringify(collectPayload()) !== JSON.stringify(originalFormPayload)) {
-      SLTAdminUi.showToast("Salve ou cancele as alterações do formulário antes de substituir a geometria.", true);
+      const message = "Salve ou cancele as alterações do formulário antes de substituir a geometria.";
+      if (window.StatusFeedback) {
+        window.StatusFeedback.erro({
+          actionTitle: "Substituir geometria",
+          message,
+          solution: "Salve as alterações do formulário ou cancele a edição e selecione o arquivo novamente.",
+        });
+      } else {
+        SLTAdminUi.showToast(message, true);
+      }
       event.target.value = "";
       return;
     }
     const selectedTipo = tipo, selectedCode = record.id;
     const button = $("#btn-geometria");
+    const input = event.target;
+    const CHECK = "Conferir a geometria e sua abrangência territorial";
+    const REPLACE = "Substituir a geometria e preservar o arquivo original";
     button.disabled = true;
+    button.textContent = "Conferindo geometria…";
     async function send(path, token) {
       const form = new FormData(); form.append("file", file);
       if (token) form.append("confirmacao", token);
       const response = await fetch(`/api/geometria/${path}/${selectedTipo}/${encodeURIComponent(selectedCode)}`, {
         method: "POST", credentials: "include", body: form,
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Falha na conferência ou substituição da geometria.");
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        const detail = data?.detail;
+        const message = typeof detail === "string"
+          ? detail
+          : Array.isArray(detail)
+            ? detail.map((item) => item.msg || item.message || JSON.stringify(item)).join("; ")
+            : "Falha na conferência ou substituição da geometria.";
+        const error = new Error(message);
+        error.status = response.status;
+        error.detail = detail;
+        throw error;
+      }
       return data;
     }
+    const proc = ProcessFeedback.iniciarCadastro({
+      title: "Substituir geometria",
+      subtitle: file.name,
+      tasks: [CHECK, REPLACE],
+    });
+    proc.tarefaAtual(CHECK, "Enviando o arquivo para conferência territorial…");
     try {
-      button.textContent = "Conferindo localização…";
       const check = await send("conferir");
-      const confirmed = await SLTAdminUi.showConfirm({
-        title: check.permitido ? "Confirmar localização da geometria" : "Conferência territorial",
+      proc.concluirTarefa(CHECK, check.permitido ? "Abrangência territorial confirmada" : "Geometria fora da abrangência");
+      if (!check.permitido) {
+        proc.sucesso({
+          _status: "partial",
+          title: "Geometria não substituída",
+          message: check.mensagem || "A geometria não passou na conferência territorial.",
+          subprocesses: [
+            { name: "Conferência territorial", status: "warning", detail: check.fonte || "A localização não foi autorizada." },
+            { name: "Substituição", status: "skip", detail: "Nenhuma alteração foi feita na demanda." },
+          ],
+        });
+        return;
+      }
+
+      const confirmed = await ProcessFeedback.confirmar({
+        title: "Confirmar localização da geometria",
         message: check.mensagem,
-        confirmLabel: check.permitido ? "Confirmar e substituir" : "Entendi",
+        warning: "A conferência avalia a geometria original. Ao confirmar, ela substituirá a geometria atual e o arquivo original será preservado no histórico.",
+        confirmLabel: "Confirmar e substituir",
         cancelLabel: "Enviar outra geometria",
       });
-      if (!check.permitido || !confirmed) return;
-      button.textContent = "Processando geometria…";
+      if (!confirmed) {
+        proc.sucesso({
+          _status: "partial",
+          title: "Substituição cancelada",
+          message: "A conferência territorial foi concluída, mas a geometria da demanda não foi alterada.",
+          subprocesses: [
+            { name: "Conferência territorial", status: "success", detail: check.fonte || "Localização dentro da abrangência." },
+            { name: "Substituição", status: "skip", detail: "Cancelada pelo usuário; nenhum dado foi alterado." },
+          ],
+        });
+        return;
+      }
+
+      proc.tarefaAtual(REPLACE, "Validando a confirmação e gravando a nova geometria e o arquivo original…");
+      button.textContent = "Substituindo geometria…";
       await send("substituir", check.confirmacao);
-      SLTAdminUi.showToast("Geometria substituída. Arquivo original preservado.");
-      if (tipo === selectedTipo && record.id === selectedCode) renderPage(await API[selectedTipo].get(selectedCode));
-      await refreshLists();
+      proc.concluirTarefa(REPLACE, "Geometria atualizada; arquivo original preservado no histórico");
+      try {
+        const updated = await API[selectedTipo].get(selectedCode);
+        if (tipo === selectedTipo && record.id === selectedCode) renderPage(updated);
+        await refreshLists();
+        proc.sucesso({
+          title: "Geometria substituída",
+          message: "A demanda foi atualizada e o arquivo original foi preservado no histórico.",
+          summary: [
+            { label: "Demanda", value: selectedCode },
+            { label: "Tipo", value: selectedTipo },
+            { label: "Arquivo original", value: file.name },
+          ],
+        });
+      } catch (refreshError) {
+        proc.sucesso({
+          _status: "partial",
+          title: "Geometria substituída; tela não atualizada",
+          message: "O servidor confirmou a substituição e preservou o arquivo original, mas a tela não conseguiu recarregar os dados. Recarregue a demanda antes de continuar.",
+          subprocesses: [
+            { name: "Substituição no servidor", status: "success", detail: "Geometria atualizada e original preservado." },
+            { name: "Atualização da tela", status: "warning", detail: refreshError.message },
+          ],
+        });
+      }
     } catch (error) {
-      SLTAdminUi.showToast(error.message, true);
+      proc.erro({
+        title: "Não foi possível substituir a geometria",
+        message: error.message,
+        details: error.detail ? [error.detail] : [],
+        solution: "A conferência não altera a demanda. Se a falha ocorreu durante a substituição ou houve interrupção de conexão, confira a geometria atual e o histórico antes de tentar novamente.",
+      });
     } finally {
-      event.target.value = "";
-      button.disabled = false; button.textContent = "Enviar/substituir geometria";
+      input.value = "";
+      button.disabled = false;
+      button.textContent = "Enviar/substituir geometria";
     }
   }
 

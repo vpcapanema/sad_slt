@@ -26,7 +26,11 @@ TEXT_SUFFIXES = {
 # deploy nao o publica. Sem ele aqui, o teste acusava artefatos da maquina de
 # quem edita, que nao estao no repositorio e nunca chegam a VM.
 # O teste vigia o codigo da aplicacao, onde caminho absoluto e defeito de fato.
-IGNORED_PARTS = {".git", ".venv", "node_modules", "__pycache__", "tmp", ".vscode", "entregas"}
+IGNORED_PARTS = {".git", ".tmp", ".venv", "node_modules", "__pycache__", "tmp", ".vscode", "entregas"}
+IGNORED_ROOTS = {
+    Path("outputs/inventario-saidas-20261008"),
+    Path("outputs/migracao-demandas"),
+}
 # Arquivos em que o caminho absoluto e o proprio conteudo, e nao um vazamento:
 # o script que fala com a VM, a doc que a descreve e registros/artefatos que
 # gravaram o diretorio da maquina que os gerou. Nenhum e codigo de aplicacao.
@@ -57,6 +61,9 @@ INTENTIONAL_FIXTURES = {
     # deploy-vm.ps1, listado acima.
     Path("tools/vscode-sicard-tunnel/extension.js"),
     Path("scripts/configure-vm-remote-explorer.ps1"),
+    # O fallback aponta para a instalação padrão do Node em Windows quando a
+    # variável ProgramFiles não está definida; esse caminho de sistema é intencional.
+    Path("scripts/sync-sqltools.ps1"),
     # Contraparte do deploy-vm.ps1 para a tarefa do editor: localiza git e
     # plink na maquina de quem edita e conduz o deploy no diretorio da VM.
     Path("scripts/deploy-task.py"),
@@ -76,14 +83,21 @@ VENDORED_ROOTS = (
 )
 
 
-class NoAbsolutePathsTest(unittest.TestCase):
+class TestNoAbsolutePaths(unittest.TestCase):
     def test_repositorio_nao_contem_caminhos_absolutos_de_host(self) -> None:
         violations: list[str] = []
         for file_path in Path(".").rglob("*"):
-            if not file_path.is_file() or any(part in IGNORED_PARTS for part in file_path.parts):
+            if (
+                file_path.name == "desktop.ini"
+                or any(part in IGNORED_PARTS for part in file_path.parts)
+            ):
+                continue
+            if not file_path.is_file():
                 continue
             relative = Path(*file_path.parts[1:]) if file_path.parts[:1] == (".",) else file_path
             if relative in INTENTIONAL_FIXTURES:
+                continue
+            if any(relative.is_relative_to(root) for root in IGNORED_ROOTS):
                 continue
             if any(relative.is_relative_to(root) for root in VENDORED_ROOTS):
                 continue

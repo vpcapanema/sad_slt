@@ -8,14 +8,12 @@ e deixava o registro divergir de quem realmente executou a publicação.
 """
 from __future__ import annotations
 
-import inspect
 import re
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from api.routers import geoespacial as router_geo
 from api.server import app
 from api.services.session_service import SessionUser, cookie_name, create_token
 
@@ -87,15 +85,18 @@ def test_cards_do_upload_legado_nao_abrem_com_paragrafo_de_texto():
         assert corpo != "<p", "O upload legado voltou a abrir card com parágrafo"
 
 
-def test_quem_homologou_vem_da_sessao_e_nao_do_formulario():
-    fonte = inspect.getsource(router_geo._responsavel_pela_homologacao)
-    assert "user.nome" in fonte
-    for rota in (router_geo.homologar_camada, router_geo.iniciar_homologacao_com_logs):
-        assinatura = inspect.signature(rota)
-        assert "user" in assinatura.parameters, rota.__name__
-        assert "_responsavel_pela_homologacao" in inspect.getsource(rota), rota.__name__
-    html = Path("legado/templates/paginas/hierarquizacao/cadastro-upload-camada.html").read_text(encoding="utf-8")
-    assert 'name="homologado_por"' not in html
+def test_homologacao_legada_direciona_para_saidas_do_storage(cliente):
+    payload = {
+        "modulo_consumidor": "ambos",
+        "nome_publicacao": "Publicação legada",
+    }
+    for endpoint in ("homologar", "homologar-job"):
+        response = cliente.post(
+            f"/api/geoespacial/camadas/camada-inexistente/{endpoint}",
+            json=payload,
+        )
+        assert response.status_code == 410
+        assert "saídas no Sicard Storage" in response.json()["detail"]
 
 SUBSECOES_ESPERADAS = {
     "/restrict/hierarquizacao/fase-1/": ["2.1", "2.2"],

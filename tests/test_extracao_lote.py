@@ -93,10 +93,11 @@ def test_download_individual_exige_execucao_autorizada(monkeypatch):
     monkeypatch.setattr(service,'consultar',lambda ident,user: calls.append((ident,user)) or {'id':'execucao'})
     class Conn:
         def execute(self,*args):return self
-        def fetchone(self):return {'pacote':memory.getvalue(),'pacote_nome':'lote.zip','pacote_arquivos':[{'chave':'entrada_1','nome':'entrada_1/pontos.zip'}]}
+        def fetchone(self):return {'pacote_caminho':'lote.zip','pacote_sha256':'hash','pacote_nome':'lote.zip','pacote_arquivos':[{'chave':'entrada_1','nome':'entrada_1/pontos.zip'}]}
     @contextmanager
     def connection():yield Conn()
     monkeypatch.setattr(service,'get_connection',connection)
+    monkeypatch.setattr(service.saidas_storage,'conferir',lambda *_args:memory.getvalue())
     assert service.arquivo_do_pacote('execucao','usuario','entrada_1')==(b'zip individual','entrada_1/pontos.zip')
     assert calls==[('execucao','usuario')]
     with pytest.raises(LookupError):service.arquivo_do_pacote('execucao','usuario','../entrada_1')

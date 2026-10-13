@@ -6,9 +6,22 @@ from api.services.extracao_resultados_territoriais import consultar, legado
 
 
 def snapshot():
-    entrada = gpd.GeoDataFrame({'codigo':['A','A','B','C']},geometry=[Point(1,1),Point(4,4),Point(20,20),None],crs=5880)
-    risco = gpd.GeoDataFrame({'nome':['Inundação','Encosta']},geometry=[box(0,0,2,2),box(1,1,5,5)],crs=5880)
-    restricao = gpd.GeoDataFrame({'nome':['Área protegida']},geometry=[box(3,3,6,6)],crs=5880)
+    x, y = 330000, 7400000
+    entrada = gpd.GeoDataFrame(
+        {'codigo':['A','A','B','C']},
+        geometry=[Point(x+1,y+1),Point(x+4,y+4),Point(x+20,y+20),None],
+        crs=5880,
+    )
+    risco = gpd.GeoDataFrame(
+        {'nome':['Inundação','Encosta']},
+        geometry=[box(x,y,x+2,y+2),box(x+1,y+1,x+5,y+5)],
+        crs=5880,
+    )
+    restricao = gpd.GeoDataFrame(
+        {'nome':['Área protegida']},
+        geometry=[box(x+3,y+3,x+6,y+6)],
+        crs=5880,
+    )
     return registrar([{'nome':'Demandas','frame':entrada,'config':{'campo_id':'codigo'}},
                       {'nome':'Outra entrada','frame':entrada.iloc[:1],'config':{'campo_id':'codigo'}}],
                      [{'id':'risco','nome':'Risco','camadas':[{'id':'r','nome':'Riscos','frame':risco}]},
@@ -37,7 +50,8 @@ def test_pares_originais_borda_multiplas_areas_e_ids_repetidos():
 
 
 def test_filtro_preserva_posicao_original_e_nao_inventa_areas_para_pontos():
-    frame=gpd.GeoDataFrame({'id':['a','b']},geometry=[Point(0,0),Point(10,10)],crs=5880)
+    x, y = 330000, 7400000
+    frame=gpd.GeoDataFrame({'id':['a','b']},geometry=[Point(x,y),Point(x+10,y+10)],crs=5880)
     saved=registrar([{'nome':'Entrada','frame':frame,'config':{'campo_id':'id','filtro':{'campo':'id','operador':'igual','valor':'b'}}}],
                     [{'id':'risco','nome':'Risco','camadas':[{'id':'p','nome':'Pontos','frame':frame}]}])
     assert saved['entradas'][0]['feicoes'][0]['fid']==1

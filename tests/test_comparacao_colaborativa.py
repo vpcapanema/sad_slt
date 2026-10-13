@@ -204,7 +204,7 @@ def test_media_geometrica_sem_matrizes_e_erro() -> None:
 def test_resposta_usa_snapshot_de_criterios_e_ambiente_correto(monkeypatch) -> None:
     gravado: dict = {}
     monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _token: _ambiente_row())
-    monkeypatch.setattr(repo, "resposta_existe", lambda _ambiente, _email: False)
+    monkeypatch.setattr(repo, "get_resposta_by_ambiente_email", lambda _ambiente, _email: None)
     monkeypatch.setattr(
         service.hierarq_repo,
         "get_by_id",
@@ -238,7 +238,7 @@ def test_resposta_usa_snapshot_de_criterios_e_ambiente_correto(monkeypatch) -> N
 ))
 def test_resposta_rejeita_matriz_ahp_invalida(monkeypatch, matriz) -> None:
     monkeypatch.setattr(repo, "get_ambiente_by_token", lambda _token: _ambiente_row())
-    monkeypatch.setattr(repo, "resposta_existe", lambda _ambiente, _email: False)
+    monkeypatch.setattr(repo, "get_resposta_by_ambiente_email", lambda _ambiente, _email: None)
     payload = service.RespostaColaborativaCreateSchema.model_validate({
         "identificacao": {
             "nome_completo": "Ana",

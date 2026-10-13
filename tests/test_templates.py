@@ -40,6 +40,19 @@ def test_shared_template_contract_is_complete() -> None:
     assert all(path.is_file() for path in expected)
 
 
+def test_feedback_templates_load_fontawesome_icons() -> None:
+    stylesheet_patterns = (
+        r'(?:(?:/|\.{0,2}/)?assets/vendor/fontawesome/css/all\.min\.css(?:\?[^"\']*)?)',
+        r'(?:(?:/|\.{0,2}/)?assets/vendor/fontawesome/css/fontawesome\.min\.css(?:\?[^"\']*)?)',
+    )
+    for template in (
+        TEMPLATES_ROOT / "bases/base_conteudo.html",
+        TEMPLATES_ROOT / "bases/base_painel_mapa.html",
+    ):
+        content = template.read_text(encoding="utf-8")
+        assert any(re.search(pattern, content, re.I) for pattern in stylesheet_patterns), template
+
+
 def test_no_legacy_html_remains_outside_template_directory() -> None:
     static_html_allowlist = {
         Path("assets/_preview_atributos.html"),
@@ -51,14 +64,22 @@ def test_no_legacy_html_remains_outside_template_directory() -> None:
         path
         for path in Path(".").rglob("*.html")
         if ".venv" not in path.parts
+        and "node_modules" not in path.parts
         and "templates" not in path.parts
-        # tmp/ e rascunho versionado fora do git: relatorio, captura, inventario.
+        # Artefatos de validação e rascunhos locais não são páginas servidas.
+        and ".tmp" not in path.parts
         and "tmp" not in path.parts
+        and "artifacts" not in path.parts
+        and Path("outputs/inventario-saidas-20261008") not in path.parents
+        and Path("outputs/migracao-demandas") not in path.parents
         # plugins/ é sub-projeto de front-end próprio (build do vite) e captura
         # de páginas de fonte de dados; nada ali é página servida pela aplicação.
         and "plugins" not in path.parts
         and "legado" not in path.parts
         and "legados" not in path.parts
+        # documentação e previews são materiais de apoio, não páginas runtime.
+        and "documentacao" not in path.parts
+        and "preview" not in path.parts
         and path not in static_html_allowlist
     ]
     assert legacy_html == []
@@ -263,12 +284,14 @@ def test_restricted_home_geoprocessing_subgroups_and_independent_accesses() -> N
         "documentacao-tecnica": [
             "Arcabouço teórico-conceitual de risco e restrição",
             "Documentação da favorabilidade",
+            "Limite marítimo de referência de São Paulo",
             "Glossário técnico-conceitual",
         ],
     }
     index_css = Path("admin/index.css").read_text(encoding="utf-8")
-    assert ".subgroup-geoprocessamento .platform-grid { --itens-por-linha: 1; }" in index_css
-    assert ".subgroup-documentacao-tecnica .platform-grid { --itens-por-linha: 1; }" in index_css
+    assert ".secao-platform-geoprocessamento .platform-subgroup .platform-grid {" in index_css
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in index_css
+    assert "grid-template-columns: 1fr;" in index_css
     # Os três acessos antigos de "Ferramentas de geoprocessamento" migraram para
     # o MAD; a documentação técnica deixou de ser módulo próprio.
     for href in (
