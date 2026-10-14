@@ -19,19 +19,59 @@ def test_confirmacao_valida():
 def test_substituicao_preserva_autorias_de_decisao_e_criacao(monkeypatch,tipo):
     calls=[]
     class Conn:
+        rowcount=0
         def execute(self,sql,params):
             calls.append((sql,params));return self
-        def fetchone(self):return {"id":"ID","srid":4674}
+        def fetchone(self):return {"id":"ID","srid":4674,"geometria_geojson":None}
     @contextmanager
     def connection():yield Conn()
     monkeypatch.setattr(svc,"get_connection",connection)
     monkeypatch.setattr(svc,"insert_upload",lambda *args,**kw:calls.append(("historico",kw)))
     svc.substituir(tipo,"COD",{"type":"Point","coordinates":[-46.63,-23.55]}, {},"00000000-0000-0000-0000-000000000010")
     sql,params=calls[-1]
-    assert "atualizado_por=" in sql
-    assert "criado_por=" not in sql and "aprovado_por=" not in sql and "reprovado_por=" not in sql
-    assert ("geometria_tipo=" in sql)==(tipo=="projeto")
+    assert "atualizado_por=" in str(sql)
+    assert "criado_por=" not in str(sql) and "aprovado_por=" not in str(sql) and "reprovado_por=" not in str(sql)
+    assert ("geometria_tipo=" in str(sql))==(tipo=="projeto")
     assert calls[-2][1]["alvo"]==tipo
+
+
+def test_substituicao_cria_snapshot_sem_inventar_origem_quando_historico_nao_existe(monkeypatch):
+    calls=[]
+    class Conn:
+        rowcount=0
+        def execute(self,sql,params):
+            calls.append((sql,params))
+            return self
+        def fetchone(self):
+            return {
+                "id":"ID",
+                "srid":4674,
+                "geometria_geojson":'{"type":"Point","coordinates":[-46.63,-23.55]}',
+                "geometria_tipo":"Point",
+                "latitude":-23.55,
+                "longitude":-46.63,
+                "regionalidades":{"regionalidades":{"municipio":"Município"}},
+                "criado_por":"00000000-0000-0000-0000-000000000010",
+            }
+    @contextmanager
+    def connection():yield Conn()
+    monkeypatch.setattr(svc,"get_connection",connection)
+    monkeypatch.setattr(svc,"insert_upload",lambda *args,**kw:None)
+
+    svc.substituir("projeto","COD",{"type":"Point","coordinates":[-46.63,-23.55]}, {},
+                   "00000000-0000-0000-0000-000000000020")
+
+    snapshot = next((query, params) for query, params in calls
+                    if "INSERT INTO demandas.projeto_geometria_historico" in str(query))
+    snapshot_index = next(index for index, (query, _) in enumerate(calls)
+                          if "INSERT INTO demandas.projeto_geometria_historico" in str(query))
+    assert "'nao_identificada'" in str(snapshot[0])
+    assert snapshot[1]["geometria_tipo"]=="Point"
+    assert snapshot[1]["latitude"]==-23.55
+    assert snapshot[1]["regionalidades"].obj=={"municipio":"Município"}
+    assert any("SET substituido_em = CURRENT_TIMESTAMP" in str(query)
+               for query, _ in calls[snapshot_index + 1:])
+
 
 @pytest.mark.parametrize("coordinates,allowed",[
     ([-45.5,-25.0],True), ([-46.3,-24.1],True),

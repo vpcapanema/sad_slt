@@ -97,9 +97,9 @@ Não confunda limitações do ambiente do agente com o estado do Codespace intei
 
 ### Desenvolvimento no Windows
 
-No Windows, `scripts/start-dev.ps1` usa o ambiente Python local, verifica
-banco/migrations e inicia a aplicação na porta 8080 por padrão. Esse fluxo é
-separado do script Linux acima. O Docker local é apenas contingência.
+No Windows, a tarefa **SICARD: Iniciar servidor local** usa o ambiente Python
+local e acessa os bancos oficiais pelo gateway TLS da porta 443, sem túnel SSH.
+A VM não usa esse gateway. O Docker local é apenas contingência.
 O terminal compartilhado é descrito em
 [PowerShell compartilhado](documentacao/TERMINAL_POWERSHELL_COMPARTILHADO.md).
 

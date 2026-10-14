@@ -20,6 +20,7 @@ _SELECT_BASE = """
            parecer_texto,
            parecer_complemento,
            decisao,
+           avaliacao_geometria,
            avaliador_id,
            avaliador_nome,
            (parecer_pdf IS NOT NULL) AS tem_parecer_pdf,
@@ -39,6 +40,7 @@ _UPSERT_ALLOWED = (
     "parecer_texto",
     "parecer_complemento",
     "decisao",
+    "avaliacao_geometria",
     "avaliador_id",
     "avaliador_nome",
 )

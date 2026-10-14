@@ -37,8 +37,8 @@ from pathlib import Path
 
 settings_paths = [Path(p) for p in os.environ["SLT_SQLTOOLS_SETTINGS"].split(os.pathsep) if p]
 
-host = os.environ["SIGMA_POSTGRES_HOST"]
-port = int(os.environ["SIGMA_POSTGRES_PORT"])
+host = "56.125.163.194"
+port = 5433
 user = os.environ["SIGMA_POSTGRES_USER"]
 password = os.environ["SIGMA_POSTGRES_PASSWORD"]
 sslmode = os.environ.get("SIGMA_POSTGRES_SSLMODE", "disable")
@@ -87,9 +87,9 @@ connections = [
         password,
     ),
     pg_conn(
-        "AWS VM - SIGMA PLI (tunel 15434)",
-        "127.0.0.1",
-        15434,
+        "AWS VM - SIGMA PLI (gateway TLS 443)",
+        "pg-pli.pli.internal",
+        443,
         "sigma_pli_qr53",
         "sigma_user",
         password,
@@ -103,9 +103,9 @@ connections = [
         password,
     ),
     pg_conn(
-        "Postgres - SLT VM (slt_db)",
-        host,
-        port,
+        "Postgres - SLT VM (gateway TLS 443)",
+        "pg-pli.pli.internal",
+        443,
         "slt_db",
         user,
         password,

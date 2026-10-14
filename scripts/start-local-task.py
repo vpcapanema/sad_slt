@@ -143,21 +143,43 @@ def open_when_ready(server, stopped, timeout=180):
         say('Pagina inicial nao respondeu no prazo; abertura automatica cancelada. Consulte o terminal.')
 
 
+def confirmar_bancos():
+    from dotenv import dotenv_values
+    import psycopg
+
+    values = dotenv_values(ROOT / '.env')
+    consultas = {
+        'slt_db': (values.get('SLT_DATABASE_URL') or '', 'demandas', 'projeto'),
+        'sigma_pli_qr53': (values.get('SIGMA_DATABASE_URL') or '', 'usuarios', 'usuario'),
+    }
+    counts = {}
+    for nome, (url, schema, table) in consultas.items():
+        if 'pg-pli.pli.internal' not in url or 'sslmode=verify-full' not in url:
+            raise SystemExit(f'O acesso local de {nome} não usa o gateway TLS persistente.')
+        with psycopg.connect(url, autocommit=True) as connection:
+            connection.execute('SET default_transaction_read_only = on')
+            database, read_only = connection.execute(
+                "SELECT current_database(), current_setting('transaction_read_only')"
+            ).fetchone()
+            if database != nome or read_only != 'on':
+                raise SystemExit(f'A conexão de {nome} não está no banco oficial em modo somente leitura.')
+            exists = connection.execute(
+                'SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema=%s AND table_name=%s)',
+                (schema, table),
+            ).fetchone()[0]
+            if not exists:
+                raise SystemExit(f'A tabela esperada de {nome} não foi encontrada.')
+            counts[nome] = connection.execute(f'SELECT count(*) FROM "{schema}"."{table}"').fetchone()[0]
+    return counts
+
+
 def main():
     if sys.platform != 'win32':
         raise SystemExit('Esta tarefa e destinada ao Windows.')
     os.chdir(ROOT)
     sys.path.insert(0, str(ROOT))
-    from scripts.local_vm_tunnel import VmDatabaseTunnel
-    tunnel = VmDatabaseTunnel(ROOT, say)
-    counts = tunnel.ensure()
-    # Quando o supervisor autônomo (scripts/tunnel_daemon.py) já mantém o túnel,
-    # esta tarefa apenas o usa: supervisionar em paralelo faria as duas partes
-    # disputarem o mesmo plink a cada sondagem.
-    proprio = tunnel.process is not None
-    say(f"Banco oficial confirmado: slt_db ({counts['slt_db']} projetos) e SIGMA ({counts['sigma_pli_qr53']} usuários).")
-    if not proprio:
-        say('Túnel mantido pelo supervisor autônomo; esta tarefa não o administra.')
+    counts = confirmar_bancos()
+    say(f"Banco oficial confirmado por TLS: slt_db ({counts['slt_db']} projetos) e SIGMA ({counts['sigma_pli_qr53']} usuários).")
     try:
         with socket.create_connection(('127.0.0.1', 8083), timeout=1):
             occupied = True
@@ -196,19 +218,13 @@ def main():
     instancia = SimpleNamespace(started=True)
     stopped = threading.Event()
     monitor = threading.Thread(target=open_when_ready, args=(instancia, stopped), daemon=True)
-    tunnel_monitor = threading.Thread(target=tunnel.monitor, args=(stopped,), daemon=True)
     monitor.start()
-    if proprio:
-        tunnel_monitor.start()
     say('Auto-reload ativo: alteracoes em api/ reiniciam o servidor.')
     try:
         ChangeReload(config, target=server.run, sockets=[sock]).run()
     finally:
         stopped.set()
         monitor.join(timeout=7)
-        if proprio:
-            tunnel_monitor.join(timeout=7)
-            tunnel.stop()
 
 
 if __name__ == '__main__':

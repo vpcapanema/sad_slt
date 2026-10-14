@@ -119,7 +119,9 @@ body.page-admin-demanda {
   transition: background 0.18s ease, color 0.18s ease;
 }
 
-.analise-criterio > label {
+.analise-criterio > label,
+.analise-criterio > .analise-criterio-rotulo {
+  display: block;
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--admin-label-color, #003b5a);
@@ -209,6 +211,10 @@ body.page-admin-demanda {
   background: #d4574f;
 }
 
+.analise-opcao--neutra:has(input:checked) {
+  background: #62788a;
+}
+
 .analise-opcao:has(input:focus-visible) {
   outline: 2px solid var(--admin-label-color, #003b5a);
   outline-offset: 2px;
@@ -260,6 +266,116 @@ body.page-admin-demanda {
 .analise-resultado-placar {
   font-size: 0.75rem;
   color: var(--pli-muted, #5a7184);
+}
+
+.analise-geometria,
+.analise-geometria-historico {
+  margin-top: 1.1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--admin-blue-border, #cfe0ea);
+}
+
+.analise-geometria h4,
+.analise-geometria-historico h4 {
+  margin: 0 0 0.35rem;
+  color: var(--admin-label-color, #003b5a);
+  font-size: 0.86rem;
+}
+
+.analise-geometria > .field-help,
+.analise-geometria-historico > .field-help {
+  margin: 0 0 0.7rem;
+  line-height: 1.45;
+}
+
+.analise-geometria-criterio::before {
+  content: none;
+  counter-increment: none;
+}
+
+.analise-geometria-resumo,
+.analise-geometria-salvamento {
+  margin: 0.45rem 0 0.65rem;
+  color: var(--pli-muted, #5a7184);
+  font-size: 0.74rem;
+}
+
+.analise-geometria-observacao {
+  margin-top: 0.55rem;
+}
+
+.analise-geometria-observacao textarea {
+  width: 100%;
+}
+
+.analise-geometria-historico-lista {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.analise-geometria-versao {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--admin-blue-border, #cfe0ea);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.analise-geometria-versao.is-vigente {
+  border-left: 3px solid var(--pli-green, #3ec26e);
+}
+
+.analise-geometria-versao-cabecalho,
+.analise-geometria-versao dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.2rem 0.75rem;
+}
+
+.analise-geometria-versao-cabecalho {
+  color: var(--admin-label-color, #003b5a);
+  font-size: 0.75rem;
+}
+
+.analise-geometria-versao time,
+.analise-geometria-versao dd,
+.analise-geometria-vazio,
+.analise-geometria-erro {
+  color: var(--pli-muted, #5a7184);
+  font-size: 0.72rem;
+}
+
+.analise-geometria-versao dl {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.5rem 0 0;
+}
+
+.analise-geometria-versao dt {
+  font-weight: 600;
+}
+
+.analise-geometria-versao dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.analise-geometria-vazio,
+.analise-geometria-erro,
+.analise-geometria-aviso {
+  margin: 0.5rem 0;
+  color: var(--pli-muted, #5a7184);
+  font-size: 0.72rem;
+}
+
+.analise-geometria-aviso {
+  padding: 0.5rem 0.65rem;
+  border-left: 3px solid #d8a643;
+  background: #fff8e7;
 }
 
 .admin-dashboard-page #sec-parecer .analise-parecer {

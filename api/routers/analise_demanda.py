@@ -9,10 +9,14 @@ from api.deps.auth import require_analyst, require_authenticated
 from api.exceptions import DatabaseUnavailableError, DemandaNotFoundError, DemandaValidationError
 from api.schemas.analise_demanda import (
     AnaliseDemandaResponseSchema,
+    AvaliacaoGeometriaSchema,
     ComplementoParecerSchema,
     CriteriosAnaliseSchema,
     DecisaoAnaliseResponseSchema,
     DecisaoAnaliseSchema,
+    GeometriaHistoricoResponseSchema,
+    SituacaoAnaliseResponseSchema,
+    SituacaoAnaliseSchema,
 )
 from api.services import analise_demanda_service
 from api.services.session_service import SessionUser
@@ -53,6 +57,31 @@ def salvar_criterios(
         raise _erro_http(exc) from exc
 
 
+@router.put("/{codigo}/geometria", response_model=AnaliseDemandaResponseSchema)
+def salvar_avaliacao_geometria(
+    codigo: str,
+    body: AvaliacaoGeometriaSchema,
+    user: SessionUser = Depends(require_analyst),
+) -> AnaliseDemandaResponseSchema:
+    """Grava a avaliação informativa da geometria, sem alterar o resultado."""
+    try:
+        return analise_demanda_service.salvar_avaliacao_geometria(codigo, body, user=user)
+    except (DemandaNotFoundError, DemandaValidationError, DatabaseUnavailableError) as exc:
+        raise _erro_http(exc) from exc
+
+
+@router.get("/{codigo}/geometria/historico", response_model=GeometriaHistoricoResponseSchema)
+def obter_historico_geometria(
+    codigo: str,
+    _user: SessionUser = Depends(require_authenticated),
+) -> GeometriaHistoricoResponseSchema:
+    """Lista as versões registradas da geometria da demanda."""
+    try:
+        return analise_demanda_service.obter_historico_geometria(codigo)
+    except (DemandaNotFoundError, DemandaValidationError, DatabaseUnavailableError) as exc:
+        raise _erro_http(exc) from exc
+
+
 @router.put("/{codigo}/complemento", response_model=AnaliseDemandaResponseSchema)
 def salvar_complemento(
     codigo: str,
@@ -64,6 +93,26 @@ def salvar_complemento(
         return analise_demanda_service.salvar_complemento(codigo, body.complemento, user=user)
     except (DemandaNotFoundError, DemandaValidationError, DatabaseUnavailableError) as exc:
         raise _erro_http(exc) from exc
+
+
+@router.post("/{codigo}/situacao", response_model=SituacaoAnaliseResponseSchema)
+def alterar_situacao(
+    codigo: str,
+    body: SituacaoAnaliseSchema,
+    user: SessionUser = Depends(require_analyst),
+) -> SituacaoAnaliseResponseSchema:
+    """Muda o status intermediário da análise, sem decisão final nem PDF."""
+    try:
+        anterior, atual, rotulo = analise_demanda_service.alterar_situacao(
+            codigo, body.acao, user=user
+        )
+    except (DemandaNotFoundError, DemandaValidationError, DatabaseUnavailableError) as exc:
+        raise _erro_http(exc) from exc
+    return SituacaoAnaliseResponseSchema(
+        status_anterior=anterior,
+        status_atual=atual,
+        rotulo_status=rotulo,
+    )
 
 
 @router.post("/{codigo}/decidir", response_model=DecisaoAnaliseResponseSchema)

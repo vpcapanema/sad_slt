@@ -25,10 +25,12 @@ if (Test-Path -LiteralPath $envFile) {
     }
 }
 
-$dbUser = [Uri]::EscapeDataString($env:SIGMA_POSTGRES_USER)
-$dbPassword = [Uri]::EscapeDataString($env:SIGMA_POSTGRES_PASSWORD)
-$sslMode = [Uri]::EscapeDataString($env:SIGMA_POSTGRES_SSLMODE)
-$env:SLT_DATABASE_URL = "postgresql://${dbUser}:${dbPassword}@$($env:SIGMA_POSTGRES_HOST):$($env:SIGMA_POSTGRES_PORT)/slt_db?sslmode=${sslMode}"
+if (-not $env:SLT_DATABASE_URL) {
+    $dbUser = [Uri]::EscapeDataString($env:SIGMA_POSTGRES_USER)
+    $dbPassword = [Uri]::EscapeDataString($env:SIGMA_POSTGRES_PASSWORD)
+    $sslMode = [Uri]::EscapeDataString($env:SIGMA_POSTGRES_SSLMODE)
+    $env:SLT_DATABASE_URL = "postgresql://${dbUser}:${dbPassword}@$($env:SIGMA_POSTGRES_HOST):$($env:SIGMA_POSTGRES_PORT)/slt_db?sslmode=${sslMode}"
+}
 $env:SLT_SEED_FILE = $SeedPath
 $python = Join-Path $ProjectRoot ".venv/Scripts/python.exe"
 $runner = Join-Path $PSScriptRoot "seed_demandas_teste.py"

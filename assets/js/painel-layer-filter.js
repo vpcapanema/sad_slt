@@ -131,7 +131,18 @@
     root.setAttribute("role", "combobox");
     root.setAttribute("aria-haspopup", "listbox");
     root.setAttribute("aria-expanded", "false");
-    if (cfg.ariaLabel) root.setAttribute("aria-label", cfg.ariaLabel);
+    if (originalEl.id) {
+      root.id = originalEl.id;
+      const rotulo = document.querySelector(`label[for="${CSS.escape(originalEl.id)}"]`);
+      if (rotulo) {
+        if (!rotulo.id) rotulo.id = `${originalEl.id}-rotulo`;
+        root.setAttribute("aria-labelledby", rotulo.id);
+      }
+    }
+    if (originalEl.name) root.setAttribute("name", originalEl.name);
+    if (!root.hasAttribute("aria-labelledby") && cfg.ariaLabel) {
+      root.setAttribute("aria-label", cfg.ariaLabel);
+    }
     root.innerHTML =
       `<span class="slt-dd-label"></span>` +
       `<span class="slt-dd-arrow" aria-hidden="true"></span>` +

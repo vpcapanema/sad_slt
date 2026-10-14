@@ -12,18 +12,25 @@ from datetime import datetime
 from io import BytesIO
 from typing import Any
 
+from psycopg.types.json import Jsonb
+
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import (
     analise_demanda_repository,
     demanda_repository,
     dominio_repository,
+    geometria_historico_repository,
     plano_repository,
     programa_repository,
 )
 from api.schemas.analise_demanda import (
+    AvaliacaoGeometriaResponseSchema,
+    AvaliacaoGeometriaSchema,
     AnaliseDemandaResponseSchema,
     CriterioAvaliadoSchema,
     CriteriosAnaliseSchema,
+    GeometriaHistoricoItemSchema,
+    GeometriaHistoricoResponseSchema,
 )
 from api.schemas.demanda import DemandaUpdateSchema
 from api.schemas.plano import PlanoUpdateSchema
@@ -85,6 +92,18 @@ DECISAO_ROTULO: dict[str, str] = {
     "aprovada": "Aprovar",
     "ressalvas": "Aprovar com ressalvas",
     "reprovada": "Reprovar",
+}
+
+# Ações intermediárias: mudam o status visível no mapa sem decisão nem PDF.
+SITUACAO_STATUS: dict[str, str] = {
+    "suspender": "analise_suspensa",
+    "complementar": "analise_aguardando_complementacao",
+    "retomar": "analise_em_avaliacao",
+}
+SITUACAO_ORIGENS: dict[str, frozenset[str]] = {
+    "suspender": frozenset({"analise_em_avaliacao"}),
+    "complementar": frozenset({"analise_em_avaliacao"}),
+    "retomar": frozenset({"analise_suspensa", "analise_aguardando_complementacao"}),
 }
 
 
@@ -257,10 +276,20 @@ def _montar_resposta(
         parecer_complemento=(analise or {}).get("parecer_complemento"),
         decisao=(analise or {}).get("decisao"),
         avaliador_nome=(analise or {}).get("avaliador_nome"),
+        avaliacao_geometria=_avaliacao_geometria(analise),
         tem_parecer_pdf=bool((analise or {}).get("tem_parecer_pdf")),
         parecer_pdf_gerado_em=_iso((analise or {}).get("parecer_pdf_gerado_em")),
         atualizado_em=_iso((analise or {}).get("atualizado_em")),
     )
+
+
+def _avaliacao_geometria(
+    analise: dict[str, Any] | None,
+) -> AvaliacaoGeometriaResponseSchema | None:
+    dados = (analise or {}).get("avaliacao_geometria")
+    if not isinstance(dados, dict):
+        return None
+    return AvaliacaoGeometriaResponseSchema.model_validate(dados)
 
 
 def _avaliador_id(user: SessionUser | None) -> str | None:
@@ -316,6 +345,76 @@ def salvar_criterios(
         },
     )
     return _montar_resposta(codigo=demanda["codigo"], tipo=tipo, demanda=demanda, analise=analise)
+
+
+def salvar_avaliacao_geometria(
+    codigo: str,
+    payload: AvaliacaoGeometriaSchema,
+    *,
+    user: SessionUser | None = None,
+) -> AnaliseDemandaResponseSchema:
+    tipo, demanda = _localizar_demanda(codigo)
+    avaliacao = payload.model_dump()
+    avaliacao["observacao"] = (avaliacao["observacao"] or "").strip() or None
+    avaliacao.update(
+        avaliada_por=_avaliador_nome(user),
+        avaliada_em=datetime.now().astimezone().isoformat(),
+    )
+    analise = analise_demanda_repository.upsert(
+        demanda_codigo=demanda["codigo"],
+        demanda_tipo=tipo,
+        campos={"avaliacao_geometria": Jsonb(avaliacao)},
+    )
+    return _montar_resposta(codigo=demanda["codigo"], tipo=tipo, demanda=demanda, analise=analise)
+
+
+def obter_historico_geometria(codigo: str) -> GeometriaHistoricoResponseSchema:
+    tipo, demanda = _localizar_demanda(codigo)
+    registros = geometria_historico_repository.listar(tipo, demanda["id"])
+    ativos_sem_sinalizacao = [
+        item
+        for item in registros
+        if item.get("substituido_em") is None
+        and not (
+            isinstance(item.get("processamento"), dict)
+            and item["processamento"].get("substituicao_nao_registrada")
+        )
+    ]
+    quantidade_ativos = len(ativos_sem_sinalizacao)
+    itens = [
+        GeometriaHistoricoItemSchema(
+            id=str(item["id"]),
+            origem=item["origem"],
+            geometria_tipo=item.get("geometria_tipo"),
+            nome_arquivo=item.get("nome_arquivo"),
+            criado_em=_iso(item.get("criado_em")) or "",
+            autor_id=str(item["criado_por"]) if item.get("criado_por") else None,
+            substituido_em=_iso(item.get("substituido_em")),
+            substituido_por_id=(
+                str(item["substituido_por"]) if item.get("substituido_por") else None
+            ),
+            motivo_substituicao=item.get("motivo_substituicao"),
+            vigente=(
+                item.get("substituido_em") is None
+                and quantidade_ativos == 1
+                and not (
+                    isinstance(item.get("processamento"), dict)
+                    and item["processamento"].get("substituicao_nao_registrada")
+                )
+            ),
+            substituicao_nao_registrada=(
+                isinstance(item.get("processamento"), dict)
+                and bool(item["processamento"].get("substituicao_nao_registrada"))
+            ),
+        )
+        for item in registros
+    ]
+    aviso = any(item.substituicao_nao_registrada for item in itens) or quantidade_ativos > 1
+    return GeometriaHistoricoResponseSchema(
+        itens=itens,
+        tem_historico=bool(itens),
+        aviso_historico_incompleto=aviso,
+    )
 
 
 def salvar_complemento(
@@ -416,6 +515,35 @@ def _aplicar_transicao(
             codigo, DemandaUpdateSchema.model_validate({"status": destino}), usuario_id=avaliador_id
         )
     return destino
+
+
+def alterar_situacao(
+    codigo: str,
+    acao: str,
+    *,
+    user: SessionUser | None = None,
+) -> tuple[str, str, str]:
+    """Suspende, pede complementação ou retoma a análise pela matriz oficial."""
+    destino = SITUACAO_STATUS.get(acao)
+    if not destino:
+        raise DemandaValidationError(f"Ação inválida: «{acao}».", field="acao")
+
+    _tipo, demanda = _localizar_demanda(codigo)
+    status_anterior = demanda.get("status") or ""
+    if status_anterior not in SITUACAO_ORIGENS[acao]:
+        raise DemandaValidationError(
+            f"A ação «{acao}» não se aplica ao status «{status_anterior}».",
+            field="status",
+        )
+
+    status_atual = _aplicar_transicao(
+        tipo=_tipo,
+        codigo=demanda["codigo"],
+        status_atual=status_anterior,
+        destino=destino,
+        avaliador_id=_avaliador_id(user),
+    )
+    return status_anterior, status_atual, _rotulo_status(status_atual)
 
 
 def decidir(

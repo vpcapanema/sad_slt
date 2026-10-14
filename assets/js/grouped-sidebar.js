@@ -11,13 +11,18 @@
     return escapeHtml(value).replace(/'/g, "&#39;");
   }
 
-  function visibilityToggleHtml(scope, attrs, checked) {
+  function visibilityToggleHtml(scope, attrs, checked, labelText) {
     const scopeClass = scope === "group" ? "layer-visibility-input--group" : "layer-visibility-input--record";
     const attrPairs = Object.entries(attrs || {})
       .map(([k, v]) => ` data-${k}="${escapeAttr(v)}"`)
       .join("");
-    return `<label class="layer-visibility-toggle" title="Visibilidade no mapa">
-      <input type="checkbox" class="layer-visibility-input ${scopeClass}"${attrPairs}${checked ? " checked" : ""} aria-label="Visível no mapa">
+    const idSource = [scope, attrs?.["group-id"], attrs?.["record-id"]].filter(Boolean).join("-");
+    const inputId = `vis-${String(idSource).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+    const inputName = scope === "group" ? "visibilidade_grupo" : "visibilidade_demanda";
+    const text = labelText || "Visível no mapa";
+    return `<label class="layer-visibility-toggle" for="${escapeAttr(inputId)}" title="Visibilidade no mapa">
+      <input id="${escapeAttr(inputId)}" name="${inputName}" type="checkbox" class="layer-visibility-input ${scopeClass}"${attrPairs}${checked ? " checked" : ""}>
+      <span class="sr-only">${escapeHtml(text)}</span>
     </label>`;
   }
 
@@ -59,7 +64,8 @@
       ? visibilityToggleHtml(
           "record",
           { "record-id": id, "group-id": groupId },
-          recordVisible && groupVisible
+          recordVisible && groupVisible,
+          `Exibir ${getRecordLabel(record)} no mapa`
         )
       : "";
 
@@ -328,7 +334,12 @@
         const open = expandState[group.id] === true;
         const groupVisible = visibility ? visibility.isGroupVisible(group.id) : true;
         const visHtml = visibility
-          ? visibilityToggleHtml("group", { "group-id": group.id }, groupVisible)
+          ? visibilityToggleHtml(
+              "group",
+              { "group-id": group.id },
+              groupVisible,
+              `Exibir ${group.label || group.nome || group.id} no mapa`
+            )
           : "";
         const body = records.length
           ? records

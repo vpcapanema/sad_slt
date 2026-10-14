@@ -43,19 +43,47 @@
     ],
   };
 
+  /** Situação intermediária -> status visível no mapa, sem decisão final. */
+  const SITUACOES = [
+    {
+      id: "suspender",
+      label: "Suspender análise",
+      status: "analise_suspensa",
+      statusLabel: "Análise suspensa",
+      from: ["analise_em_avaliacao"],
+      message: "Suspender a análise? A demanda passará para «Análise suspensa» e o mapa deixará de destacá-la como em análise.",
+    },
+    {
+      id: "complementar",
+      label: "Solicitar complementação",
+      status: "analise_aguardando_complementacao",
+      statusLabel: "Aguardando complementação",
+      from: ["analise_em_avaliacao"],
+      message: "Solicitar complementação? A demanda passará para «Aguardando complementação» e o mapa passará a usar a cor deste status.",
+    },
+    {
+      id: "retomar",
+      label: "Retomar análise",
+      status: "analise_em_avaliacao",
+      statusLabel: "Em análise",
+      from: ["analise_suspensa", "analise_aguardando_complementacao"],
+      message: "Retomar a análise? A demanda voltará para «Em análise» e o mapa voltará a destacá-la.",
+    },
+  ];
+
   /** Desfecho da análise -> rótulo do botão e confirmação. */
   const DECISOES = [
     {
       id: "aprovada",
       label: "Aprovar demanda",
-      btnClass: "btn-primary",
+      status: "analise_aprovada",
       statusLabel: "Aprovada na análise",
       danger: false,
     },
     {
       id: "ressalvas",
       label: "Aprovar com ressalvas",
-      btnClass: "btn-secondary",
+      status: "analise_aprovada",
       statusLabel: "Aprovada com ressalvas",
       danger: false,
       requerComplemento: true,
@@ -63,7 +91,7 @@
     {
       id: "reprovada",
       label: "Reprovar demanda",
-      btnClass: "btn-danger",
+      status: "analise_reprovada",
       statusLabel: "Reprovada na análise",
       danger: true,
     },
@@ -75,6 +103,9 @@
   let selectedId = null;
   let layerFilterApi = null;
   let complementoSalvo = "";
+  let geometriaSaveTimer = null;
+  let geometriaSaveQueue = Promise.resolve();
+  let geometriaSaveRevision = 0;
   const lists = { projeto: [], programa: [], plano: [] };
   const groupVisibility = { projeto: true, programa: true, plano: true };
 
@@ -413,7 +444,8 @@
                 <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
                 <button type="button" class="btn btn-secondary" id="btn-cancelar-edicao" hidden>Cancelar</button>
                 <button type="button" class="btn btn-secondary" id="btn-geometria" hidden>Enviar/substituir geometria</button>
-                <input type="file" id="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
+                <label class="sr-only" for="arquivo-nova-geometria">Arquivo da nova geometria</label>
+                <input type="file" id="arquivo-nova-geometria" name="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
               </div>`
                   : ""
               }
@@ -438,6 +470,33 @@
             <span class="field-help">Carregando critérios…</span>
           </div>
         </div>
+        <section class="analise-geometria" aria-labelledby="geometria-avaliacao-titulo">
+          <h4 id="geometria-avaliacao-titulo">6. Geometria — avaliação informativa</h4>
+          <p class="field-help">
+            Registre se a geometria está adequada para compreender a intervenção.
+            Esta avaliação é independente e não altera o resultado dos cinco critérios de admissibilidade.
+          </p>
+          <div class="analise-geometria-resumo" id="geometria-avaliacao-resumo" aria-live="polite"></div>
+          <div class="admin-form-grid" id="geometria-criterios-grid">
+            <div class="form-field span-2"><span class="field-help">Carregando avaliação…</span></div>
+          </div>
+          <div class="form-field analise-geometria-observacao">
+            <label for="fld-avaliacao-geometria-observacao">Observação sobre a geometria</label>
+            <textarea id="fld-avaliacao-geometria-observacao" rows="3" maxlength="3000"
+              placeholder="Registre uma observação objetiva, se necessário."></textarea>
+          </div>
+          <p class="analise-geometria-salvamento" id="geometria-avaliacao-salvamento" role="status"></p>
+        </section>
+        <section class="analise-geometria-historico" aria-labelledby="geometria-historico-titulo">
+          <h4 id="geometria-historico-titulo">Histórico de versões da geometria</h4>
+          <p class="field-help">
+            O histórico informa as versões registradas no sistema. Geometrias anteriores sem registro
+            não podem ser reconstruídas; a origem desconhecida é identificada como tal.
+          </p>
+          <div id="geometria-historico-lista" aria-live="polite">
+            <span class="field-help">Carregando histórico…</span>
+          </div>
+        </section>
       </section>`;
   }
 
@@ -448,8 +507,8 @@
         <h3>Parecer técnico</h3>
         <div class="admin-form-grid">
           <div class="form-field span-2">
-            <label>Resultado da análise</label>
-            <p class="analise-resultado" id="analise-resultado">
+            <span class="analise-criterio-rotulo" id="analise-resultado-rotulo">Resultado da análise</span>
+            <p class="analise-resultado" id="analise-resultado" aria-labelledby="analise-resultado-rotulo">
               <span class="analise-resultado-badge is-pendente">Pendente</span>
               <span class="analise-resultado-placar">Responda os cinco critérios para apurar o resultado.</span>
             </p>
@@ -481,9 +540,17 @@
       withDecisions && canAnalyze
         ? DECISOES.map(
             (dec) =>
-              `<button type="button" class="btn ${dec.btnClass}" data-decisao="${dec.id}">${escapeHtml(dec.label)}</button>`,
+              `<button type="button" class="btn btn-status" data-status="${escapeHtml(dec.status)}" data-decisao="${dec.id}">${escapeHtml(dec.label)}</button>`,
           ).join("\n          ")
         : "";
+    const situacaoButtons = canAnalyze
+      ? SITUACOES.filter((acao) => acao.from.includes(d.status))
+          .map(
+            (acao) =>
+              `<button type="button" class="btn btn-status" data-status="${escapeHtml(acao.status)}" data-situacao="${acao.id}">${escapeHtml(acao.label)}</button>`,
+          )
+          .join("\n          ")
+      : "";
     const rejectionRecord = d.motivo_reprovacao
       ? `
       <div class="form-field span-2">
@@ -502,6 +569,7 @@
       </div>
       <div class="admin-dashboard-actions span-2">
         <a href="/restrict/demandas/" class="btn btn-secondary">Voltar à lista</a>
+        ${situacaoButtons}
         ${decisionButtons}
       </div>`;
   }
@@ -529,15 +597,15 @@
     const desabilitado = editavel ? "" : " disabled";
     return `
       <div class="form-field span-2 analise-criterio" data-campo="${escapeHtml(criterio.campo)}">
-        <label>${escapeHtml(criterio.rotulo)}</label>
+        <span class="analise-criterio-rotulo" id="${nome}-rotulo">${escapeHtml(criterio.rotulo)}</span>
         <span class="field-help">${escapeHtml(criterio.pergunta)}</span>
-        <div class="analise-criterio-opcoes" role="radiogroup" aria-label="${escapeHtml(criterio.rotulo)}">
-          <label class="analise-opcao analise-opcao--sim">
-            <input type="radio" name="${nome}" value="sim"${marcado(true)}${desabilitado}>
+        <div class="analise-criterio-opcoes" role="radiogroup" aria-labelledby="${nome}-rotulo">
+          <label class="analise-opcao analise-opcao--sim" for="${nome}-sim">
+            <input type="radio" id="${nome}-sim" name="${nome}" value="sim"${marcado(true)}${desabilitado}>
             <span>Sim</span>
           </label>
-          <label class="analise-opcao analise-opcao--nao">
-            <input type="radio" name="${nome}" value="nao"${marcado(false)}${desabilitado}>
+          <label class="analise-opcao analise-opcao--nao" for="${nome}-nao">
+            <input type="radio" id="${nome}-nao" name="${nome}" value="nao"${marcado(false)}${desabilitado}>
             <span>Não</span>
           </label>
         </div>
@@ -546,12 +614,194 @@
 
   function collectCriterios() {
     const respostas = {};
-    document.querySelectorAll(".analise-criterio").forEach((row) => {
+    document.querySelectorAll("#criterios-grid .analise-criterio").forEach((row) => {
       const campo = row.dataset.campo;
       const marcado = row.querySelector("input[type=radio]:checked");
       respostas[campo] = marcado ? marcado.value === "sim" : null;
     });
     return respostas;
+  }
+
+  const GEOMETRIA_CRITERIOS = [
+    {
+      campo: "delimitacao_intervencao",
+      rotulo: "Delimitação da intervenção",
+      pergunta: "A geometria delimita a implantação física da intervenção descrita?",
+    },
+    {
+      campo: "correspondencia_local_dimensoes",
+      rotulo: "Correspondência com a demanda",
+      pergunta: "A localização e a extensão desenhadas correspondem ao local e às dimensões informados na demanda?",
+    },
+    {
+      campo: "area_influencia_direta",
+      rotulo: "Área de influência direta",
+      pergunta: "A geometria representa a área de influência direta necessária para avaliar a intervenção?",
+      naoSeAplica: true,
+    },
+    {
+      campo: "precisao_localizacao",
+      rotulo: "Precisão da localização",
+      pergunta: "A representação espacial permite identificar com precisão suficiente o trecho, a área ou o equipamento relacionado à demanda?",
+    },
+  ];
+
+  function geometriaCriterioHtml(criterio, respostas, editavel) {
+    const nome = `geometria-${criterio.campo}`;
+    const opcoes = [
+      { valor: "atende", rotulo: "Atende", classe: "analise-opcao--sim" },
+      { valor: "ajuste", rotulo: "Precisa de ajuste", classe: "analise-opcao--nao" },
+      ...(criterio.naoSeAplica
+        ? [{ valor: "nao_se_aplica", rotulo: "Não se aplica", classe: "analise-opcao--neutra" }]
+        : []),
+    ];
+    return `
+      <div class="form-field span-2 analise-criterio analise-geometria-criterio" data-geometria-campo="${criterio.campo}">
+        <span class="analise-criterio-rotulo" id="${nome}-rotulo">${escapeHtml(criterio.rotulo)}</span>
+        <span class="field-help">${escapeHtml(criterio.pergunta)}</span>
+        <div class="analise-criterio-opcoes" role="radiogroup" aria-labelledby="${nome}-rotulo">
+          ${opcoes.map((opcao) => `
+            <label class="analise-opcao ${opcao.classe}" for="${nome}-${opcao.valor}">
+              <input type="radio" id="${nome}-${opcao.valor}" name="${nome}" value="${opcao.valor}"${respostas[criterio.campo] === opcao.valor ? " checked" : ""}${editavel ? "" : " disabled"}>
+              <span>${escapeHtml(opcao.rotulo)}</span>
+            </label>`).join("")}
+        </div>
+      </div>`;
+  }
+
+  function collectAvaliacaoGeometria() {
+    const avaliacao = {};
+    GEOMETRIA_CRITERIOS.forEach(({ campo }) => {
+      const marcado = document.querySelector(
+        `[data-geometria-campo="${campo}"] input[type=radio]:checked`,
+      );
+      avaliacao[campo] = marcado?.value || null;
+    });
+    avaliacao.observacao = $("#fld-avaliacao-geometria-observacao")?.value.trim() || null;
+    return avaliacao;
+  }
+
+  function renderResumoAvaliacaoGeometria(avaliacao) {
+    const resumo = $("#geometria-avaliacao-resumo");
+    if (!resumo) return;
+    const respostas = GEOMETRIA_CRITERIOS.map(({ campo }) => avaliacao[campo]);
+    const atendem = respostas.filter((resposta) => resposta === "atende").length;
+    const ajustes = respostas.filter((resposta) => resposta === "ajuste").length;
+    const naoSeAplicam = respostas.filter((resposta) => resposta === "nao_se_aplica").length;
+    const pendentes = respostas.filter((resposta) => !resposta).length;
+    const itens = [
+      atendem && `${atendem} atendem`,
+      ajustes && `${ajustes} precisam de ajuste`,
+      naoSeAplicam && `${naoSeAplicam} não se aplicam`,
+      pendentes && `${pendentes} sem resposta`,
+    ].filter(Boolean);
+    resumo.textContent = itens.length
+      ? `${itens.join(" · ")}. Não integra o resultado de admissibilidade.`
+      : "Esta avaliação é informativa e não integra o resultado de admissibilidade.";
+  }
+
+  function renderAvaliacaoGeometria(data, editavel) {
+    const avaliacao = data.avaliacao_geometria || {};
+    const grid = $("#geometria-criterios-grid");
+    if (grid) {
+      grid.innerHTML = GEOMETRIA_CRITERIOS
+        .map((criterio) => geometriaCriterioHtml(criterio, avaliacao, editavel))
+        .join("");
+      grid.querySelectorAll("input[type=radio]").forEach((input) => {
+        input.addEventListener("change", () => onAvaliacaoGeometriaChange());
+      });
+    }
+    const observacao = $("#fld-avaliacao-geometria-observacao");
+    if (observacao) {
+      observacao.value = avaliacao.observacao || "";
+      observacao.disabled = !editavel;
+      observacao.addEventListener("input", () => onAvaliacaoGeometriaChange());
+    }
+    renderResumoAvaliacaoGeometria(avaliacao);
+    const status = $("#geometria-avaliacao-salvamento");
+    if (status) {
+      if (!editavel) {
+        status.textContent = "Avaliação somente para consulta: a demanda já saiu da etapa de análise.";
+      } else if (avaliacao.avaliada_em) {
+        const autor = avaliacao.avaliada_por ? ` por ${avaliacao.avaliada_por}` : "";
+        status.textContent = `Último salvamento: ${formatGeometryDate(avaliacao.avaliada_em)}${autor}.`;
+      } else {
+        status.textContent = "As respostas e observações são salvas automaticamente.";
+      }
+    }
+  }
+
+  function formatGeometryDate(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "data não registrada" : date.toLocaleString("pt-BR");
+  }
+
+  function onAvaliacaoGeometriaChange() {
+    const payload = collectAvaliacaoGeometria();
+    renderResumoAvaliacaoGeometria(payload);
+    const status = $("#geometria-avaliacao-salvamento");
+    if (status) status.textContent = "Alterações pendentes de salvamento…";
+    const revision = ++geometriaSaveRevision;
+    const codigo = record?.id;
+    clearTimeout(geometriaSaveTimer);
+    geometriaSaveTimer = setTimeout(() => {
+      geometriaSaveQueue = geometriaSaveQueue
+        .then(async () => {
+          if (revision !== geometriaSaveRevision || !codigo) return;
+          const atualizada = await SLTAdminApi.saveAnaliseAvaliacaoGeometria(codigo, payload);
+          if (revision !== geometriaSaveRevision || record?.id !== codigo) return;
+          const salvo = atualizada.avaliacao_geometria || {};
+          if (status) {
+            const autor = salvo.avaliada_por ? ` por ${salvo.avaliada_por}` : "";
+            status.textContent = `Salvo às ${formatGeometryDate(salvo.avaliada_em)}${autor}.`;
+          }
+        })
+        .catch((err) => {
+          if (revision !== geometriaSaveRevision || record?.id !== codigo) return;
+          if (status) status.textContent = "Não foi possível salvar a avaliação geométrica.";
+          reportarErroAnalise(err.message, "Avaliação da geometria");
+        });
+    }, 350);
+  }
+
+  function renderHistoricoGeometria(data) {
+    const alvo = $("#geometria-historico-lista");
+    if (!alvo) return;
+    if (!data.tem_historico || !data.itens?.length) {
+      alvo.innerHTML = '<p class="analise-geometria-vazio">Não há versões registradas para esta demanda. Versões anteriores sem registro não podem ser recuperadas.</p>';
+      return;
+    }
+    const origens = {
+      desenho: "Desenho no mapa",
+      upload: "Arquivo enviado",
+      coordenadas: "Coordenadas informadas",
+      nao_identificada: "Origem não registrada",
+    };
+    const aviso = data.aviso_historico_incompleto
+      ? '<p class="analise-geometria-aviso">Há versões antigas sem registro de substituição. O sistema não informa uma data ou um responsável que não foram registrados.</p>'
+      : "";
+    alvo.innerHTML = `${aviso}<ol class="analise-geometria-historico-lista">${data.itens.map((item) => `
+      <li class="analise-geometria-versao${item.vigente ? " is-vigente" : ""}">
+        <div class="analise-geometria-versao-cabecalho">
+          <strong>${item.vigente
+            ? "Versão vigente"
+            : item.substituido_em
+              ? "Versão substituída"
+              : item.substituicao_nao_registrada
+                ? "Substituição não registrada"
+                : "Vigência não confirmada"}</strong>
+          <span>Registrada em <time datetime="${escapeHtml(item.criado_em)}">${formatGeometryDate(item.criado_em)}</time></span>
+        </div>
+        <dl>
+          <div><dt>Origem</dt><dd>${origens[item.origem] || "Origem não identificada"}</dd></div>
+          ${item.geometria_tipo ? `<div><dt>Geometria</dt><dd>${escapeHtml(item.geometria_tipo)}</dd></div>` : ""}
+          ${item.nome_arquivo ? `<div><dt>Arquivo original</dt><dd>${escapeHtml(item.nome_arquivo)}</dd></div>` : ""}
+          ${item.autor_id ? `<div><dt>Autor registrado (ID)</dt><dd>${escapeHtml(item.autor_id)}</dd></div>` : ""}
+          ${item.substituido_em ? `<div><dt>Substituída em</dt><dd>${formatGeometryDate(item.substituido_em)}</dd></div>` : ""}
+          ${item.substituido_por_id ? `<div><dt>Substituída por (ID)</dt><dd>${escapeHtml(item.substituido_por_id)}</dd></div>` : ""}
+          ${item.substituido_em ? `<div><dt>Motivo</dt><dd>${escapeHtml(item.motivo_substituicao || "Não registrado.")}</dd></div>` : ""}
+        </dl>
+      </li>`).join("")}</ol>`;
   }
 
   /** Média simples de 5 critérios: nunca empata (3+ Sim aprova, 3+ Não reprova). */
@@ -609,6 +859,7 @@
       completo: !!data.completo,
       resultado: data.resultado || null,
     });
+    renderAvaliacaoGeometria(data, editavel);
 
     const parecer = $("#fld-parecer");
     if (parecer) {
@@ -696,6 +947,49 @@
     else SLTAdminUi.showToast(texto, true);
   }
 
+  async function alterarSituacao(acaoId) {
+    const acao = SITUACOES.find((item) => item.id === acaoId);
+    if (!acao || !record) return;
+    const ok = await SLTAdminUi.showConfirm({
+      title: acao.label,
+      message: acao.message,
+      confirmLabel: acao.label,
+      cancelLabel: "Cancelar",
+      danger: false,
+    });
+    if (!ok) return;
+
+    try {
+      await SLTAdminApi.alterarSituacaoAnalise(record.id, acao.id);
+      try {
+        await refreshLists();
+        renderPage(await API[tipo].get(record.id));
+      } catch (err) {
+        if (window.StatusFeedback) {
+          window.StatusFeedback.parcial({
+            actionTitle: acao.label,
+            title: "Status alterado, tela desatualizada",
+            message: `A demanda passou para «${acao.statusLabel}», mas a tela não foi atualizada: ${err.message}`,
+          });
+        } else {
+          SLTAdminUi.showToast(`Status alterado, mas a tela não foi atualizada: ${err.message}`, true);
+        }
+        return;
+      }
+      if (window.StatusFeedback) {
+        window.StatusFeedback.sucesso({
+          actionTitle: acao.label,
+          title: "Status atualizado",
+          message: `A demanda passou para «${acao.statusLabel}». O mapa passa a usar a cor deste status.`,
+        });
+      } else {
+        SLTAdminUi.showToast(`Demanda atualizada para «${acao.statusLabel}».`);
+      }
+    } catch (err) {
+      reportarErroAnalise(err.message, acao.label);
+    }
+  }
+
   async function decideRecord(decisaoId) {
     const decisao = DECISOES.find((item) => item.id === decisaoId);
     if (!decisao) return;
@@ -759,6 +1053,8 @@
   }
 
   function bindAnalise(d) {
+    clearTimeout(geometriaSaveTimer);
+    geometriaSaveRevision += 1;
     $("#btn-complementar")?.addEventListener("click", () => {
       abrirComplemento();
       $("#fld-parecer-complemento")?.focus();
@@ -775,13 +1071,28 @@
     document.querySelectorAll("[data-decisao]").forEach((btn) => {
       btn.addEventListener("click", () => decideRecord(btn.dataset.decisao));
     });
+    document.querySelectorAll("[data-situacao]").forEach((btn) => {
+      btn.addEventListener("click", () => alterarSituacao(btn.dataset.situacao));
+    });
 
     SLTAdminApi.getAnalise(d.id)
-      .then((data) => renderAnalise(data))
+      .then((data) => {
+        if (record?.id === d.id) renderAnalise(data);
+      })
       .catch((err) => {
         const grid = $("#criterios-grid");
         if (grid) {
           grid.innerHTML = `<div class="form-field span-2"><span class="field-help">Não foi possível carregar os critérios: ${escapeHtml(err.message)}</span></div>`;
+        }
+      });
+    SLTAdminApi.getAnaliseGeometriaHistorico(d.id)
+      .then((data) => {
+        if (record?.id === d.id) renderHistoricoGeometria(data);
+      })
+      .catch((err) => {
+        const historico = $("#geometria-historico-lista");
+        if (historico && record?.id === d.id) {
+          historico.innerHTML = `<p class="analise-geometria-erro">Não foi possível carregar o histórico: ${escapeHtml(err.message)}</p>`;
         }
       });
   }
@@ -970,7 +1281,8 @@
               <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
               <button type="button" class="btn btn-secondary" id="btn-cancelar-edicao" hidden>Cancelar</button>
                 <button type="button" class="btn btn-secondary" id="btn-geometria" hidden>Enviar/substituir geometria</button>
-                <input type="file" id="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
+                <label class="sr-only" for="arquivo-nova-geometria">Arquivo da nova geometria</label>
+                <input type="file" id="arquivo-nova-geometria" name="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
             </div>` : ""}
             </div>
             <div class="admin-dashboard-col">
@@ -1067,7 +1379,8 @@
               <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
               <button type="button" class="btn btn-secondary" id="btn-cancelar-edicao" hidden>Cancelar</button>
                 <button type="button" class="btn btn-secondary" id="btn-geometria" hidden>Enviar/substituir geometria</button>
-                <input type="file" id="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
+                <label class="sr-only" for="arquivo-nova-geometria">Arquivo da nova geometria</label>
+                <input type="file" id="arquivo-nova-geometria" name="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
             </div>` : ""}
             </div>
             <div class="admin-dashboard-col">

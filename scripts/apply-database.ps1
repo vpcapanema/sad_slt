@@ -259,7 +259,9 @@ $migrations = @(
     "128_autoria_atualizacao_sei.sql",
     "129_autoria_sessao_sei.sql",
     "130_separar_auditoria_decisao.sql",
-    "131_geometria_historico_storage_metadata.sql"
+    "131_geometria_historico_storage_metadata.sql",
+    "132_solicitacao_complementacao_demanda.sql",
+    "133_avaliacao_geometria_historico.sql"
 )
 
 if ($OnlyMigration) {
@@ -364,6 +366,14 @@ if (-not $OnlyMigration) {
         if (-not (Test-SchemaReady "SELECT count(*) = 2 FROM pg_constraint c JOIN pg_class r ON r.oid=c.conrelid JOIN pg_namespace n ON n.oid=r.relnamespace WHERE n.nspname='demandas' AND r.relname='projeto_geometria_historico' AND c.conname IN ('ck_projeto_geometria_historico_arquivo_completo','ck_projeto_geometria_historico_arquivo_por_origem') AND obj_description(c.oid, 'pg_constraint') LIKE '131:%'")) {
             $migrations += "131_geometria_historico_storage_metadata.sql"
             Write-Ok "Migração 131 pendente: originais de geometria exclusivamente no Storage."
+        }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM demandas.dom_status_demanda WHERE codigo='analise_aguardando_complementacao' AND ativo) AND EXISTS (SELECT 1 FROM demandas.dom_status_demanda_transicao WHERE status_origem='analise_aguardando_complementacao' AND status_destino='analise_em_avaliacao' AND via_aprovar=FALSE);")) {
+            $migrations += "132_solicitacao_complementacao_demanda.sql"
+            Write-Ok "Migração 132 pendente: complementação da análise e retorno à avaliação."
+        }
+        if (-not (Test-SchemaReady "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='demandas' AND table_name='analise_demanda' AND column_name='avaliacao_geometria') AND EXISTS (SELECT 1 FROM pg_constraint c JOIN pg_class r ON r.oid=c.conrelid JOIN pg_namespace n ON n.oid=r.relnamespace WHERE n.nspname='demandas' AND r.relname='projeto_geometria_historico' AND c.conname='ck_projeto_geometria_historico_origem' AND pg_get_constraintdef(c.oid) LIKE '%nao_identificada%');")) {
+            $migrations += "133_avaliacao_geometria_historico.sql"
+            Write-Ok "Migração 133 pendente: avaliação informativa e origem histórica indeterminada."
         }
     } elseif (Test-SchemaReady $schema090Query) {
         Write-Ok "Schema ja esta na migration 090; aplicando somente migrations pendentes (>= 091)"

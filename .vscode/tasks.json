@@ -22,7 +22,7 @@
         "panel": "dedicated",
         "clear": true
       },
-      "detail": "Valida e supervisiona os bancos oficiais da VM, inicia http://127.0.0.1:8083 com auto-reload (alteracoes em api/ reiniciam o servidor) e abre Edge e Chrome externos com Console detalhado. Ctrl+C encerra servidor e túnel."
+      "detail": "Valida os bancos oficiais pelo gateway TLS, inicia http://127.0.0.1:8083 com auto-reload (alteracoes em api/ reiniciam o servidor) e abre Edge e Chrome externos com Console detalhado."
     },
     {
       "label": "SICARD: Verificar servidor local",
@@ -49,7 +49,7 @@
     },
     {
       "label": "SICARD: Commit, sincronizar e deploy na VM (execução)",
-      "type": "process",
+            "type": "process",
       "command": "${workspaceFolder}/.venv/Scripts/python.exe",
       "args": [
         "-B",
@@ -71,7 +71,7 @@
         "clear": true,
         "showReuseMessage": true
       },
-      "detail": "Status > commit > fetch/merge/push main > deploy VM com logs > saude da API/banco > navegador externo. Para em qualquer falha."
+      "detail": "Status > commit > fetch/merge/push main > deploy VM com logs > saude da API/banco > navegador externo. Para em qualquer falha. Não altera o acesso ao banco da VM."
     },
     {
       "label": "SICARD: Atualizar controle de código",

@@ -17,50 +17,24 @@ para Windows/Python 3.12 é instalado pelo wheel binário definido em
 `requirements.txt`.
 
 No VS Code, execute **Terminal → Executar tarefa → SICARD: Iniciar servidor local**.
-A tarefa usa `.venv/Scripts/python.exe` e `scripts/start-local-task.py`, mantendo
-`api.server:app`, `.env`, host `127.0.0.1` e porta `8083`. `Ctrl+C` encerra o servidor.
+A tarefa usa `.venv/Scripts/python.exe` e `scripts/start-local-task.py`,
+mantendo `api.server:app`, `.env`, host `127.0.0.1` e porta `8083`. `Ctrl+C`
+encerra somente o servidor.
 
-Antes do servidor, o script cria e supervisiona um túnel SSH direto do Windows
-para a VM. A porta local `127.0.0.1:15434` encaminha ao PostgreSQL oficial da VM;
-o host SSH e sua chave pública são fixados no código e a chave privada permanece
-em `.deploy`, ignorada pelo Git. O Plink portátil fica fora do repositório em
-`%LOCALAPPDATA%/SICARD/tools/plink.exe`.
+## Acesso local aos bancos oficiais
 
-A porta é exclusiva do SICARD por decisão deliberada: o projeto SIGMA-PLI
-encaminha a mesma VM na `15433`. Quando dois projetos disputam a mesma porta,
-quem sobe depois fica com um encaminhamento morto, e o encerramento de um
-derruba o banco do outro.
+No Windows, a aplicação não abre túnel SSH. Os DSNs privados de `slt_db` e
+`sigma_pli_qr53` usam o gateway TLS já aprovado: SNI `pg-pli.pli.internal`,
+porta `443` e `hostaddr` do balanceador. A negociação é direta
+(`sslnegotiation=direct`), com `sslmode=verify-full` e a CA local do pgAdmin.
+As credenciais continuam no `.env`, que não é versionado.
+
+Esse caminho é exclusivo do desenvolvimento local. A VM continua acessando o
+PostgreSQL pela rede interna e não deve ser alterada para usar o gateway.
 
 O startup só continua depois de validar, em transações somente leitura, os bancos
 `slt_db` e `sigma_pli_qr53` e suas tabelas esperadas. Essa validação não altera
-registros. Durante a execução, o túnel é monitorado e reconectado se cair; `Ctrl+C`
-encerra tanto o servidor quanto o túnel criado pela tarefa.
-
-## Túnel permanente, independente do editor
-
-Para que o banco fique alcançável o tempo todo — inclusive para testes e scripts
-rodados fora da tarefa, e depois que ela é encerrada — registre o supervisor
-autônomo, uma vez por máquina:
-
-```powershell
-.\scripts\install-tunnel-autostart.ps1
-```
-
-O comando registra a tarefa agendada `SICARD - Tunel do banco` no logon do
-usuário atual, sem exigir privilégio de administrador, e a inicia na hora. O
-supervisor é `scripts/tunnel_daemon.py`: abre o túnel, sonda o PostgreSQL a cada
-15 segundos e o refaz quando a sessão SSH cai, registrando tudo em
-`.deploy/database-tunnel-daemon.local.log`. Uma única instância roda por vez, e
-tentar iniciar outra apenas registra que já existe supervisor ativo.
-
-Com ele ativo, a tarefa do servidor encontra o túnel pronto, não o administra e
-não o derruba ao terminar — a supervisão continua sendo de quem o criou. Sem ele,
-o comportamento permanece o de antes: a tarefa abre o túnel e o encerra junto com
-o servidor. Para desinstalar:
-
-```powershell
-.\scripts\install-tunnel-autostart.ps1 -Remover
-```
+registros.
 
 O storage geoespacial não é montado no Windows, porque a montagem usada no
 Codespace depende de FUSE. O storage continua sendo um só — o SFTPGo da VM — e é

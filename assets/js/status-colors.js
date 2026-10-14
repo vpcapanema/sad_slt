@@ -19,6 +19,13 @@
       row: "#ffecb3",
       halo: "rgba(109, 76, 65, 0.4)",
     },
+    analise_aguardando_complementacao: {
+      nome: "Aguardando complementação",
+      bg: "#f3e8fd",
+      text: "#4a148c",
+      row: "#e1bee7",
+      halo: "rgba(74, 20, 140, 0.4)",
+    },
     analise_aprovada: {
       nome: "Aprovada",
       bg: "#e8f5e9",
@@ -122,6 +129,7 @@
       codes: [
         "analise_rascunho",
         "analise_em_avaliacao",
+        "analise_aguardando_complementacao",
         "analise_aprovada",
         "analise_reprovada",
         "analise_suspensa",
@@ -162,7 +170,7 @@
     ].map((c) => [c, STATUS_DEMANDA[c]])
   );
 
-  /** Status que exigem ação imediata do gestor (linha + badge piscam). */
+  /** Status que exigem atenção do gestor; na tabela, o badge de status pisca. */
   const STATUS_ACAO_GESTOR = new Set(["analise_em_avaliacao"]);
 
   const TIPO_DEMANDA = {
@@ -635,6 +643,12 @@
         `.badge-status.${codigo}{background:var(--status-${codigo}-bg);color:var(--status-${codigo}-text);}`
       );
       rules.push(
+        `.btn.btn-status[data-status="${codigo}"]{background:${legendStrongFill(c)};color:var(--pli-navy);box-shadow:inset 0 0 0 2px ${c.text};}`
+      );
+      rules.push(
+        `.btn.btn-status[data-status="${codigo}"]:focus-visible{outline:2px solid ${c.text};outline-offset:2px;}`
+      );
+      rules.push(
         `.admin-table tbody tr[data-status="${codigo}"] td{background-color:var(--status-${codigo}-row);}`
       );
       rules.push(
@@ -647,7 +661,7 @@
 
     [...STATUS_ACAO_GESTOR].forEach((codigo) => {
       rules.push(
-        `.admin-table tbody tr.status-acao-gestor[data-status="${codigo}"] td{--slt-pulse-accent:var(--status-${codigo}-text);--slt-pulse-row:var(--status-${codigo}-row);}`
+        `.admin-table tbody tr.status-acao-gestor[data-status="${codigo}"] td:nth-child(2) .badge-status{--slt-pulse-accent:var(--status-${codigo}-text);animation:slt-status-pulse 0.8s ease-in-out infinite,slt-status-badge-glow 0.8s ease-in-out infinite;}`
       );
     });
 
@@ -660,28 +674,14 @@
   0%, 100% { box-shadow: 0 0 0 0 rgba(192, 86, 33, 0.55); transform: scale(1); }
   50% { box-shadow: 0 0 0 5px rgba(192, 86, 33, 0.2); transform: scale(1.03); }
 }
-@keyframes slt-status-row-glow {
-  0%, 100% {
-    box-shadow: inset 4px 0 0 var(--slt-pulse-accent, #c05621);
-    background-color: color-mix(in srgb, var(--slt-pulse-row, #fdebd0) 100%, transparent);
-  }
-  50% {
-    box-shadow: inset 7px 0 0 var(--slt-pulse-accent, #c05621), inset 0 0 28px rgba(192, 86, 33, 0.28);
-    background-color: color-mix(in srgb, var(--slt-pulse-row, #fdebd0) 72%, #fff);
-  }
-}
-.status-acao-gestor.badge-status {
-  animation: slt-status-pulse 0.8s ease-in-out infinite, slt-status-badge-glow 0.8s ease-in-out infinite;
-}
-.admin-table tbody tr.status-acao-gestor td {
-  animation: slt-status-pulse 0.8s ease-in-out infinite;
-}
-.admin-table tbody tr.status-acao-gestor td:first-child {
-  animation: slt-status-row-glow 0.8s ease-in-out infinite;
-}
 .slt-geom-acao-gestor { animation: slt-status-pulse 0.8s ease-in-out infinite; }
 .painel-pin-wrap.status-acao-gestor .painel-pin-halo {
   animation: painel-halo-gradient-pulse 0.9s ease-out infinite, slt-status-pulse 0.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-table tbody tr.status-acao-gestor[data-status] td:nth-child(2) .badge-status {
+    animation: none;
+  }
 }`;
 
     style.textContent = `:root{\n${rootVars.join("\n")}\n}\n${rules.join("\n")}\n${pulseCss}`;

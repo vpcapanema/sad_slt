@@ -26,8 +26,10 @@
           <div id="painel-layers-root" class="layer-group layer-group--root">
             <div id="painel-layer-filter" class="painel-layer-filter" aria-label="Filtro de camadas">
               <span class="painel-layer-filter-icon" aria-hidden="true"></span>
-              <select class="painel-layer-filter-field" aria-label="Campo do filtro"><option value="">Selecione um campo</option></select>
-              <select class="painel-layer-filter-value" aria-label="Valor do filtro"><option value="">Selecione um valor</option></select>
+              <label class="sr-only" id="painel-layer-filter-field-rotulo" for="painel-layer-filter-field">Campo do filtro</label>
+              <select id="painel-layer-filter-field" name="campo_filtro" class="painel-layer-filter-field" aria-labelledby="painel-layer-filter-field-rotulo"><option value="">Selecione um campo</option></select>
+              <label class="sr-only" id="painel-layer-filter-value-rotulo" for="painel-layer-filter-value">Valor do filtro</label>
+              <select id="painel-layer-filter-value" name="valor_filtro" class="painel-layer-filter-value" aria-labelledby="painel-layer-filter-value-rotulo"><option value="">Selecione um valor</option></select>
               <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--apply" aria-label="Aplicar filtro"><span aria-hidden="true">✓</span></button>
               <button type="button" class="painel-layer-filter-btn painel-layer-filter-btn--clear" aria-label="Limpar filtro"><span aria-hidden="true">✕</span></button>
             </div>

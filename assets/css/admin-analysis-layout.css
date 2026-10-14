@@ -331,7 +331,8 @@
 }
 
 /* Labels e inputs — área de edição */
-.admin-dashboard-page .admin-form-grid .form-field label {
+.admin-dashboard-page .admin-form-grid .form-field label,
+.admin-dashboard-page .admin-form-grid .form-field > .analise-criterio-rotulo {
   display: block;
   margin-bottom: 0.2rem;
   font-size: 0.68rem;

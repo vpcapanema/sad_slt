@@ -78,11 +78,31 @@
     });
   }
 
+  async function saveAnaliseAvaliacaoGeometria(codigo, avaliacao) {
+    return request(analisePath(codigo, "/geometria"), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(avaliacao),
+    });
+  }
+
+  async function getAnaliseGeometriaHistorico(codigo) {
+    return request(analisePath(codigo, "/geometria/historico"));
+  }
+
   async function saveAnaliseComplemento(codigo, complemento) {
     return request(analisePath(codigo, "/complemento"), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ complemento }),
+    });
+  }
+
+  async function alterarSituacaoAnalise(codigo, acao) {
+    return request(analisePath(codigo, "/situacao"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ acao }),
     });
   }
 
@@ -299,7 +319,10 @@
     reprovarDemanda,
     getAnalise,
     saveAnaliseCriterios,
+    saveAnaliseAvaliacaoGeometria,
+    getAnaliseGeometriaHistorico,
     saveAnaliseComplemento,
+    alterarSituacaoAnalise,
     decidirAnalise,
     fetchAnaliseParecerPdf,
     listPlanos,

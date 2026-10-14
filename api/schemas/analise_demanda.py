@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 DecisaoAnalise = Literal["aprovada", "ressalvas", "reprovada"]
 ResultadoAnalise = Literal["aprovado", "reprovado"]
+RespostaGeometria = Literal["atende", "ajuste"]
 
 
 class CriteriosAnaliseSchema(BaseModel):
@@ -27,8 +28,56 @@ class ComplementoParecerSchema(BaseModel):
     complemento: str | None = Field(None, max_length=5000)
 
 
+class AvaliacaoGeometriaSchema(BaseModel):
+    """Avaliação informativa da geometria, separada da decisão de admissibilidade."""
+
+    delimitacao_intervencao: RespostaGeometria | None = None
+    correspondencia_local_dimensoes: RespostaGeometria | None = None
+    area_influencia_direta: RespostaGeometria | Literal["nao_se_aplica"] | None = None
+    precisao_localizacao: RespostaGeometria | None = None
+    observacao: str | None = Field(None, max_length=3000)
+
+
+class AvaliacaoGeometriaResponseSchema(AvaliacaoGeometriaSchema):
+    avaliada_por: str | None = None
+    avaliada_em: str | None = None
+
+
+class GeometriaHistoricoItemSchema(BaseModel):
+    id: str
+    origem: str
+    geometria_tipo: str | None = None
+    nome_arquivo: str | None = None
+    criado_em: str
+    autor_id: str | None = None
+    substituido_em: str | None = None
+    substituido_por_id: str | None = None
+    motivo_substituicao: str | None = None
+    vigente: bool = False
+    substituicao_nao_registrada: bool = False
+
+
+class GeometriaHistoricoResponseSchema(BaseModel):
+    itens: list[GeometriaHistoricoItemSchema] = Field(default_factory=list)
+    tem_historico: bool = False
+    aviso_historico_incompleto: bool = False
+
+
 class DecisaoAnaliseSchema(BaseModel):
     decisao: DecisaoAnalise
+
+
+SituacaoAnalise = Literal["suspender", "complementar", "retomar"]
+
+
+class SituacaoAnaliseSchema(BaseModel):
+    acao: SituacaoAnalise
+
+
+class SituacaoAnaliseResponseSchema(BaseModel):
+    status_anterior: str
+    status_atual: str
+    rotulo_status: str
 
 
 class CriterioAvaliadoSchema(BaseModel):
@@ -54,6 +103,7 @@ class AnaliseDemandaResponseSchema(BaseModel):
     parecer_complemento: str | None = None
     decisao: DecisaoAnalise | None = None
     avaliador_nome: str | None = None
+    avaliacao_geometria: AvaliacaoGeometriaResponseSchema | None = None
     tem_parecer_pdf: bool = False
     parecer_pdf_gerado_em: str | None = None
     atualizado_em: str | None = None
