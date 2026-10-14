@@ -18,7 +18,7 @@ const fs=require('node:fs'),http=require('node:http'),assert=require('node:asser
    await page.addStyleTag({path:'assets/css/process_feedback_system.css'});
    await page.addScriptTag({content:fs.readFileSync('assets/js/process_feedback_unified.js','utf8')});
    await page.addScriptTag({content:fs.readFileSync('assets/js/admin-ui.js','utf8')});
-   await page.evaluate(tipo=>{window.tipo=tipo;window.record={id:'COD'};window.$=s=>document.querySelector(s);window.collectPayload=()=>({nome:'Teste'});window.originalFormPayload={nome:'Teste'};window.API={[tipo]:{get:async()=>({id:'COD'})}};window.renderPage=()=>{};window.refreshLists=async()=>{}},tipo);
+   await page.evaluate(tipo=>{window.tipo=tipo;window.record={id:'COD'};window.$=s=>document.querySelector(s);window.salvarGeometriaAntesDaAcao=async()=>{};window.collectPayload=()=>({nome:'Teste'});window.originalFormPayload={nome:'Teste'};window.API={[tipo]:{get:async()=>({id:'COD'})}};window.renderPage=()=>{};window.refreshLists=async()=>{}},tipo);
    await page.addScriptTag({content:handler+'\ndocument.querySelector("input").addEventListener("change",uploadReplacementGeometry);'});
    await page.locator('#arquivo-nova-geometria').setInputFiles({name:'mar.geojson',mimeType:'application/json',buffer:Buffer.from('{}')});
    await page.locator('#pfsConfirmOverlay.pfs-active').waitFor();assert.equal(calls.length,1);
@@ -41,7 +41,7 @@ const fs=require('node:fs'),http=require('node:http'),assert=require('node:asser
   await page.addStyleTag({path:'assets/css/process_feedback_system.css'});
   await page.addScriptTag({content:fs.readFileSync('assets/js/process_feedback_unified.js','utf8')});
   await page.addScriptTag({content:fs.readFileSync('assets/js/admin-ui.js','utf8')});
-  await page.evaluate(()=>{window.tipo='projeto';window.record={id:'COD'};window.$=s=>document.querySelector(s);window.collectPayload=()=>({nome:'Teste'});window.originalFormPayload={nome:'Teste'};window.API={projeto:{get:async()=>({id:'COD'})}};window.renderPage=()=>{};window.refreshLists=async()=>{}});
+  await page.evaluate(()=>{window.tipo='projeto';window.record={id:'COD'};window.$=s=>document.querySelector(s);window.salvarGeometriaAntesDaAcao=async()=>{};window.collectPayload=()=>({nome:'Teste'});window.originalFormPayload={nome:'Teste'};window.API={projeto:{get:async()=>({id:'COD'})}};window.renderPage=()=>{};window.refreshLists=async()=>{}});
   await page.addScriptTag({content:handler+'\ndocument.querySelector("input").addEventListener("change",uploadReplacementGeometry);'});
   await page.locator('#arquivo-nova-geometria').setInputFiles({name:'mar.geojson',mimeType:'application/json',buffer:Buffer.from('{}')});
   if(decisao==='fora'){

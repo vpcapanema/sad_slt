@@ -31,6 +31,9 @@ class ComplementoParecerSchema(BaseModel):
 class AvaliacaoGeometriaSchema(BaseModel):
     """Avaliação informativa da geometria, separada da decisão de admissibilidade."""
 
+    adequada: bool | None = None
+    confirmada: bool = False
+    encaminhamento: Literal["complementacao", "substituicao"] | None = None
     delimitacao_intervencao: RespostaGeometria | None = None
     correspondencia_local_dimensoes: RespostaGeometria | None = None
     area_influencia_direta: RespostaGeometria | Literal["nao_se_aplica"] | None = None
@@ -39,6 +42,8 @@ class AvaliacaoGeometriaSchema(BaseModel):
 
 
 class AvaliacaoGeometriaResponseSchema(AvaliacaoGeometriaSchema):
+    tipo_complementacao: Literal["ajuste_geometria"] | None = None
+    substituicoes: list[dict] = Field(default_factory=list)
     avaliada_por: str | None = None
     avaliada_em: str | None = None
 

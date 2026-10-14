@@ -72,7 +72,9 @@ def upsert(
     }
 
     atualizacoes = [
-        sql.SQL("{} = EXCLUDED.{}").format(sql.Identifier(col), sql.Identifier(col))
+        (sql.SQL("avaliacao_geometria = COALESCE(analise_demanda.avaliacao_geometria, '{}'::jsonb) || EXCLUDED.avaliacao_geometria")
+         if col == "avaliacao_geometria" else
+         sql.SQL("{} = EXCLUDED.{}").format(sql.Identifier(col), sql.Identifier(col)))
         for col in ("demanda_tipo", *dados)
     ]
 

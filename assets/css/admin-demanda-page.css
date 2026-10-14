@@ -74,8 +74,7 @@ body.page-admin-demanda {
 }
 
 /* `.btn` é inline-flex e venceria o [hidden] do agente de usuário. */
-.page-admin-demanda #sec-parecer [hidden],
-.page-admin-demanda #sec-acoes [hidden] {
+.page-admin-demanda .admin-dashboard-section [hidden] {
   display: none !important;
 }
 
@@ -268,7 +267,6 @@ body.page-admin-demanda {
   color: var(--pli-muted, #5a7184);
 }
 
-.analise-geometria,
 .analise-geometria-historico {
   margin-top: 1.1rem;
   padding-top: 0.85rem;
@@ -385,44 +383,90 @@ body.page-admin-demanda {
   white-space: pre-wrap;
 }
 
-/* Card de Ações — botões centralizados */
-.admin-dashboard-page #sec-acoes .admin-dashboard-actions {
-  justify-content: center;
+/* Ações da página: uma única medida, inclusive nos controles condicionais. */
+.page-admin-demanda .admin-dashboard-section .admin-dashboard-actions {
+  justify-content: flex-start;
+  align-items: center;
   gap: 0.5rem;
-  padding-top: 0.15rem;
+  margin: 0;
+  padding: 0;
 }
 
-.admin-dashboard-page #sec-acoes .admin-dashboard-actions .btn {
-  padding: 0.45rem 1.1rem;
-  font-size: 0.75rem;
+.page-admin-demanda .admin-dashboard-section .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  max-width: 100%;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 13.3px;
   font-weight: 600;
-  border-radius: 999px;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  white-space: normal;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.admin-dashboard-page #sec-acoes .admin-dashboard-actions .btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 59, 90, 0.18);
-  filter: brightness(1.04);
+.page-admin-demanda .admin-dashboard-section .btn-secondary {
+  border-color: var(--admin-blue-border);
 }
 
-.admin-dashboard-page #sec-acoes .admin-dashboard-actions .btn:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(0, 59, 90, 0.16);
+.page-admin-demanda .admin-dashboard-section .btn:hover:not(:disabled) {
+  box-shadow: 0 2px 6px rgba(0, 59, 90, 0.14);
 }
 
-.admin-dashboard-page #sec-acoes .admin-dashboard-actions .btn:focus-visible {
+.page-admin-demanda .admin-dashboard-section .btn:focus-visible {
   outline: 2px solid var(--admin-label-color, #003b5a);
   outline-offset: 2px;
 }
 
+.page-admin-demanda .admin-dashboard-section .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .admin-dashboard-page #sec-acoes .admin-dashboard-actions .btn,
+  .page-admin-demanda .admin-dashboard-section .btn,
   .analise-criterio,
   .analise-opcao {
     transition: none;
   }
-  .admin-dashboard-page #sec-acoes .admin-dashboard-actions .btn:hover {
-    transform: none;
+}
+
+/* O sexto item usa o mesmo cartão e a mesma numeração dos critérios. */
+.analise-geometria { margin-top: 0.75rem; }
+.analise-geometria::before { content: "6"; counter-increment: none; }
+#geometria-encaminhamento { margin-top: 0.65rem; }
+.geometria-actions:not(:has(.btn:not([hidden]))) { display: none; }
+.page-admin-demanda .geometria-actions .btn { min-width: min(15rem, 100%); }
+.page-admin-demanda #geometria-complementacao-tipo { margin-top: 0.65rem; }
+
+.geometria-respostas { display: flex; gap: 2rem; margin: 0.4rem 0 0.65rem; }
+.geometria-respostas label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+.admin-dashboard-page .geometria-respostas input[type="radio"] {
+  position: static; width: 1rem; height: 1rem; min-width: 1rem; margin: 0;
+  opacity: 1; pointer-events: auto; appearance: auto;
+}
+.analise-geometria:has(input[value="sim"]:checked):not(.is-confirmada) {
+  border-left-color: var(--admin-blue-border, #cfe0ea);
+}
+.analise-geometria:has(input[value="sim"]:checked):not(.is-confirmada)::before {
+  background: var(--admin-blue-100, #eaf3f8); color: var(--admin-label-color, #003b5a);
+}
+#geometria-confirmada { color: var(--pli-green-dark, #2aa358); font-weight: 600; }
+.page-admin-demanda .admin-dashboard-section [data-geometria-encaminhamento][aria-pressed="true"] {
+  background: var(--admin-blue-100);
+  border-color: var(--admin-label-color);
+  box-shadow: inset 0 0 0 1px var(--admin-label-color);
+}
+
+@media (max-width: 600px) {
+  .page-admin-demanda .admin-dashboard-section .admin-dashboard-actions .btn {
+    width: 100%;
   }
 }

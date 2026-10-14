@@ -4,31 +4,59 @@
 {% set bloco_modulo = "mocad" %}
 {% set requer_autenticacao = true %}
 {% block titulo %}Complementação de cadastro — SICARD{% endblock %}
-{% block classes_body %}complementacao-page escala-revisada{% endblock %}
-{% block estilos_pagina %}<link rel="stylesheet" href="/assets/css/complementacao.css">{% endblock %}
+{% block classes_body %}complementacao-page admin-data-page escala-revisada{% endblock %}
+{% block estilos_pagina %}
+<link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/assets/css/admin-analysis-layout.css">
+<link rel="stylesheet" href="/assets/css/complementacao.css?v=20261014-tabela">
+<link rel="stylesheet" href="/assets/css/escala-tipografica.css">
+{% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden" aria-label="Usuário conectado"></div>
-<main class="conteudo-principal app-main">
+<main class="conteudo-principal app-main admin-main">
   <section class="secao-complementacao-introducao card card-complementacao-introducao standard-page-hero" aria-labelledby="complementacao-title">
     <h1 class="standard-page-hero__title" id="complementacao-title">Complementação de cadastro</h1>
-    <p class="standard-page-hero__description">Informe os atributos adicionais requeridos pela matriz de critérios e premissas vigente. Os campos variam conforme a hierarquização e o objeto selecionado.</p>
+    <p class="standard-page-hero__description">Selecione uma demanda aguardando complementação e escolha entre dados cadastrais, geometria ou atributos da demanda.</p>
   </section>
-  <section class="secao-complementacao-objeto card card-complementacao-objeto">
-    <h2>1. Selecionar objeto</h2>
-    <label for="complementacao-objeto">Demanda complementável</label>
-    <select id="complementacao-objeto"><option value="">Carregando objetos…</option></select>
+  {% set modo_complementacao = true %}
+  {% include "componentes/tabela_demandas.html" %}
+  <section id="complementacao-editor" class="secao-complementacao-editor card-complementacao-editor card hidden" aria-labelledby="complementacao-editor-titulo">
+    <h2 id="complementacao-editor-titulo"></h2>
     <p id="complementacao-resumo" class="field-help" aria-live="polite"></p>
+    <form id="complementacao-cadastro" class="admin-dashboard-page hidden">
+      <div id="complementacao-cadastro-campos"></div>
+      <div class="btn-row"><button type="submit" class="btn btn-primary">Salvar dados cadastrais</button></div>
+    </form>
+    <div id="complementacao-geometria" class="hidden">
+      <p class="field-help">Envie a geometria corrigida. O arquivo original e as versões anteriores serão preservados no histórico.</p>
+      <label for="complementacao-arquivo">Arquivo da geometria</label>
+      <input type="file" id="complementacao-arquivo" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json">
+      <div class="btn-row"><button type="button" class="btn btn-primary" id="complementacao-enviar">Enviar/substituir geometria</button></div>
+    </div>
+    <div id="complementacao-atributos" class="hidden">
+      <label for="complementacao-hierarquizacao">Hierarquização</label>
+      <select id="complementacao-hierarquizacao"></select>
+      <p id="complementacao-sem-atributos" class="field-help hidden">Esta demanda não possui atributos adicionais em uma matriz vigente.</p>
+      <form id="complementacao-form" class="card-complementacao-atributos hidden">
+        <h3>Atributos da demanda</h3>
+        <div id="complementacao-campos" class="complementacao-grid"></div>
+        <div class="btn-row"><button type="submit" class="btn btn-primary">Salvar complementação</button></div>
+      </form>
+    </div>
   </section>
-  <form id="complementacao-form" class="card card-complementacao-atributos hidden">
-    <h2>2. Atributos adicionais</h2>
-    <div id="complementacao-campos" class="complementacao-grid"></div>
-    <div class="btn-row"><button type="submit" class="btn btn-primary">Salvar complementação</button></div>
-  </form>
   <p id="complementacao-status" class="complementacao-status" aria-live="polite"></p>
 </main>
-  <link rel="stylesheet" href="/assets/css/escala-tipografica.css">
 {% endblock %}
 {% block scripts_pagina %}
+<script src="/assets/js/admin-api.js"></script>
 <script src="/assets/js/admin-auth.js"></script>
-<script src="/assets/js/complementacao.js?v=20261009-acesso-complementacao"></script>
+<script src="/assets/js/sigma-read.js"></script>
+<script src="/assets/js/catalog.js"></script>
+<script src="/assets/js/status-colors.js"></script>
+<script src="/assets/js/admin-labels.js"></script>
+<script src="/assets/js/admin-ui.js"></script>
+<script src="/assets/js/admin-analysis-info.js?v=20261014-cadastro"></script>
+<script src="/assets/js/project-form.js?v=20261014-completo"></script>
+<script src="/assets/js/complementacao.js?v=20261014-completo"></script>
+<script src="/restrict/demandas.js?v=20261014-complementacao"></script>
 {% endblock %}

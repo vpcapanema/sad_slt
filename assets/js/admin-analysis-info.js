@@ -87,7 +87,38 @@
       ${infoSingle(...(f.extra || []))}`;
   }
 
+  function projectCadastroHtml(d) {
+    return infoSubcard(
+      "Cadastro",
+      `
+      <div class="admin-form-grid">
+        <div class="form-field">
+          <label for="fld-nome">Nome do Projeto</label>
+          <input type="text" id="fld-nome" name="nome" maxlength="200" value="${escapeHtml(d.nome)}">
+        </div>
+        <div class="form-field">
+          <label for="fld-codigo">Código</label>
+          <input type="text" id="fld-codigo" class="admin-field-readonly" value="${escapeHtml(d.id)}" readonly aria-readonly="true">
+        </div>
+        <div class="form-field span-2">
+          <label for="fld-descricao">Descrição</label>
+          <textarea id="fld-descricao" name="descricao" rows="3">${escapeHtml(d.descricao || "")}</textarea>
+        </div>
+        <div class="form-field">
+          <label for="fld-data-cadastro">Data de Cadastro</label>
+          <input type="text" id="fld-data-cadastro" class="admin-field-readonly admin-field-readonly--plain" value="${escapeHtml(global.SLTAdminLabels.formatDate(d.criadoEm))}" readonly aria-readonly="true">
+        </div>
+        <div class="form-field">
+          <span class="admin-info-label">Status</span>
+          <div class="admin-info-value">${global.SLTAdminLabels.statusBadgeHtml(d.status, "projeto")}</div>
+        </div>
+      </div>`,
+    );
+
+  }
+
   global.SLTAdminAnalysisInfo = {
+    projectCadastroHtml,
     infoItem,
     infoRow,
     infoSubcard,

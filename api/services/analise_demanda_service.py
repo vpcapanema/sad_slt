@@ -272,7 +272,7 @@ def _montar_resposta(
         nao=nao,
         completo=respondidos == len(CRITERIOS),
         resultado=calcular_resultado(respostas),
-        parecer_texto=(analise or {}).get("parecer_texto"),
+        parecer_texto=_parecer_com_geometria(analise or {}),
         parecer_complemento=(analise or {}).get("parecer_complemento"),
         decisao=(analise or {}).get("decisao"),
         avaliador_nome=(analise or {}).get("avaliador_nome"),
@@ -290,6 +290,30 @@ def _avaliacao_geometria(
     if not isinstance(dados, dict):
         return None
     return AvaliacaoGeometriaResponseSchema.model_validate(dados)
+
+
+def _parecer_com_geometria(analise: dict) -> str | None:
+    texto = analise.get("parecer_texto") or ""
+    avaliacao = analise.get("avaliacao_geometria") or {}
+    linhas = []
+    if avaliacao.get("adequada") is True and avaliacao.get("confirmada") is True:
+        linhas.append("A geometria apresentada foi aprovada como suficientemente adequada para representar o objeto da demanda.")
+    elif avaliacao.get("adequada") is True:
+        linhas.append("A geometria foi considerada adequada; a confirmação pelo botão Aprovar geometria está pendente.")
+    elif avaliacao.get("adequada") is False:
+        linhas.append("A geometria apresentada foi considerada insuficientemente adequada para representar o objeto da demanda.")
+        if avaliacao.get("encaminhamento") == "complementacao":
+            linhas.append("Encaminhamento: solicitar complementação do interessado. Tipo: Ajuste de geometria.")
+        elif avaliacao.get("encaminhamento") == "substituicao":
+            linhas.append("Encaminhamento: envio de nova geometria pelo analista.")
+    for evento in avaliacao.get("substituicoes") or []:
+        linhas.append(
+            f"Uma nova geometria foi inserida em {evento.get('em')} pelo usuário {evento.get('por')}. "
+            f"Arquivo: {evento.get('arquivo')}. A versão anterior e o arquivo original foram preservados no histórico."
+        )
+    if avaliacao.get("observacao"):
+        linhas.append(f"Observação sobre a geometria: {avaliacao['observacao']}")
+    return (texto + "\n\nGeometria\n" + "\n".join(linhas)).strip() if linhas else texto or None
 
 
 def _avaliador_id(user: SessionUser | None) -> str | None:
@@ -354,7 +378,16 @@ def salvar_avaliacao_geometria(
     user: SessionUser | None = None,
 ) -> AnaliseDemandaResponseSchema:
     tipo, demanda = _localizar_demanda(codigo)
-    avaliacao = payload.model_dump()
+    avaliacao = payload.model_dump(exclude_unset=True)
+    avaliacao.setdefault("adequada", None)
+    avaliacao.setdefault("encaminhamento", None)
+    avaliacao.setdefault("observacao", None)
+    avaliacao["confirmada"] = payload.confirmada and avaliacao["adequada"] is True
+    if avaliacao["adequada"] is not False:
+        avaliacao["encaminhamento"] = None
+    avaliacao["tipo_complementacao"] = (
+        "ajuste_geometria" if avaliacao["encaminhamento"] == "complementacao" else None
+    )
     avaliacao["observacao"] = (avaliacao["observacao"] or "").strip() or None
     avaliacao.update(
         avaliada_por=_avaliador_nome(user),
@@ -807,7 +840,7 @@ def gerar_pdf(
     )
 
     fluxo.append(Paragraph("Parecer técnico", secao))
-    for paragrafo in (analise.get("parecer_texto") or "").split("\n"):
+    for paragrafo in (_parecer_com_geometria(analise) or "").split("\n"):
         if paragrafo.strip():
             fluxo.append(Paragraph(escapar(paragrafo), corpo))
         else:

@@ -115,4 +115,17 @@ def substituir(tipo,codigo,geometry,arquivo,usuario):
             sql.SQL(",").join(fields),
         )
         conn.execute(atualizar,params)
+        # O registro do parecer participa da mesma transação da substituição.
+        # O cliente não pode declarar um envio bem-sucedido sem esta gravação.
+        conn.execute("""
+            INSERT INTO demandas.analise_demanda (demanda_codigo, demanda_tipo, avaliacao_geometria)
+            VALUES (%s, %s, jsonb_build_object('substituicoes', jsonb_build_array(
+                jsonb_build_object('em', CURRENT_TIMESTAMP, 'por', %s::text, 'arquivo', %s::text))))
+            ON CONFLICT (demanda_codigo) DO UPDATE SET avaliacao_geometria =
+                COALESCE(analise_demanda.avaliacao_geometria, '{}'::jsonb) ||
+                jsonb_build_object('confirmada', false, 'adequada', NULL, 'encaminhamento', NULL, 'tipo_complementacao', NULL) ||
+                jsonb_build_object('substituicoes',
+                    COALESCE(analise_demanda.avaliacao_geometria->'substituicoes', '[]'::jsonb)
+                    || (EXCLUDED.avaliacao_geometria->'substituicoes'))
+        """, (codigo, tipo, usuario, arquivo.get('nome_arquivo')))
     return {'codigo':codigo,'tipo':tipo,'mensagem':'Geometria substituída; original preservado no histórico.'}

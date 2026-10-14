@@ -28,11 +28,13 @@ def test_substituicao_preserva_autorias_de_decisao_e_criacao(monkeypatch,tipo):
     monkeypatch.setattr(svc,"get_connection",connection)
     monkeypatch.setattr(svc,"insert_upload",lambda *args,**kw:calls.append(("historico",kw)))
     svc.substituir(tipo,"COD",{"type":"Point","coordinates":[-46.63,-23.55]}, {},"00000000-0000-0000-0000-000000000010")
-    sql,params=calls[-1]
+    sql,params=calls[-2]
     assert "atualizado_por=" in str(sql)
     assert "criado_por=" not in str(sql) and "aprovado_por=" not in str(sql) and "reprovado_por=" not in str(sql)
     assert ("geometria_tipo=" in str(sql))==(tipo=="projeto")
-    assert calls[-2][1]["alvo"]==tipo
+    assert calls[-3][1]["alvo"]==tipo
+    assert "INSERT INTO demandas.analise_demanda" in calls[-1][0]
+    assert calls[-1][1][:3] == ("COD", tipo, "00000000-0000-0000-0000-000000000010")
 
 
 def test_substituicao_cria_snapshot_sem_inventar_origem_quando_historico_nao_existe(monkeypatch):

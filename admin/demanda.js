@@ -208,79 +208,6 @@
   // ===========================================================================
   // PROJETO (detalhe completo — mantém o comportamento atual)
   // ===========================================================================
-  function buildClassificacaoFields(planoId) {
-    if (planoId === PLANO_PLI) {
-      return `
-        <div class="form-field">
-          <label for="fld-frente">Frente PLI</label>
-          <select id="fld-frente"></select>
-        </div>`;
-    }
-    if (planoId === PLANO_PEF) {
-      return `
-        <div class="form-field">
-          <label for="fld-eixo">Eixo Ferroviário</label>
-          <select id="fld-eixo"></select>
-        </div>
-        <div class="form-field span-2" id="wrap-tic">
-          <label for="fld-tic">Corredor TIC</label>
-          <select id="fld-tic"></select>
-        </div>`;
-    }
-    return `
-      <div class="form-field">
-        <span class="field-help">Classificação disponível para planos PLI ou PEF.</span>
-      </div>`;
-  }
-
-  function populateClassificacaoSelects(d) {
-    const planoId = $("#fld-plano")?.value || d.plano_id;
-    if (planoId === PLANO_PLI) {
-      const sel = $("#fld-frente");
-      if (!sel) return;
-      fillSelect(
-        sel,
-        SLTCatalog.frentesPorPlano(planoId),
-        "id",
-        (f) => f.nome_oficial,
-      );
-      sel.value = d.classificacao?.frente_id || "";
-    } else if (planoId === PLANO_PEF) {
-      const selEixo = $("#fld-eixo");
-      if (!selEixo) return;
-      fillSelect(
-        selEixo,
-        SLTCatalog.eixosPorPlano(planoId),
-        "id",
-        (e) => e.nome_oficial,
-      );
-      selEixo.value = d.classificacao?.eixo_id || "";
-      refreshTicSelect(d);
-    }
-  }
-
-  function refreshTicSelect(d) {
-    const eixoId = $("#fld-eixo")?.value;
-    const wrap = $("#wrap-tic");
-    const sel = $("#fld-tic");
-    if (!wrap || !sel) return;
-    const tics = SLTCatalog.ticsPorEixo(eixoId);
-    wrap.style.display = tics.length ? "" : "none";
-    fillSelect(sel, tics, "id", (t) => t.nome_oficial, "— Não especificado —");
-    sel.value = d?.classificacao?.corredor_tic_id || "";
-  }
-
-  function refreshClassificacaoFields(d) {
-    const container = $("#classificacao-fields");
-    if (!container) return;
-    const planoId = $("#fld-plano")?.value || d.plano_id;
-    container.innerHTML = buildClassificacaoFields(planoId);
-    populateClassificacaoSelects(d);
-    $("#fld-eixo")?.addEventListener("change", () =>
-      refreshTicSelect({ classificacao: {} }),
-    );
-  }
-
   function catalogLabel(list, id) {
     return labelById(list, id, "nome");
   }
@@ -334,99 +261,8 @@
     const { infoSubcard } = SLTAdminAnalysisInfo;
     const rep = d.representante || {};
 
-    const cadastro = infoSubcard(
-      "Cadastro",
-      `
-      <div class="admin-form-grid">
-        <div class="form-field">
-          <label for="fld-nome">Nome do Projeto</label>
-          <input type="text" id="fld-nome" maxlength="200" value="${escapeHtml(d.nome)}">
-        </div>
-        <div class="form-field">
-          <label for="fld-codigo">Código</label>
-          <input type="text" id="fld-codigo" class="admin-field-readonly" value="${escapeHtml(d.id)}" readonly aria-readonly="true">
-        </div>
-        <div class="form-field span-2">
-          <label for="fld-descricao">Descrição</label>
-          <textarea id="fld-descricao" rows="3">${escapeHtml(d.descricao || "")}</textarea>
-        </div>
-        <div class="form-field">
-          <label for="fld-data-cadastro">Data de Cadastro</label>
-          <input type="text" id="fld-data-cadastro" class="admin-field-readonly admin-field-readonly--plain" value="${escapeHtml(formatDate(d.criadoEm))}" readonly aria-readonly="true">
-        </div>
-        <div class="form-field">
-          <span class="admin-info-label">Status</span>
-          <div class="admin-info-value">${statusBadgeHtml(d.status, tipo)}</div>
-        </div>
-      </div>`,
-    );
+    const campos = SLTProjectForm.html(d);
 
-    const institucional = infoSubcard(
-      "Institucional e Projeto",
-      `
-      <div class="admin-form-grid">
-        <div class="form-field">
-          <label for="fld-instituicao">Instituição interessada</label>
-          <input type="text" id="fld-instituicao" class="admin-field-readonly admin-field-readonly--plain" value="${escapeHtml(instituicaoLabel(d))}" readonly aria-readonly="true">
-        </div>
-        <div class="form-field">
-          <label for="fld-cnpj">CNPJ</label>
-          <input type="text" id="fld-cnpj" class="admin-field-readonly admin-field-readonly--plain" value="${escapeHtml(formatCnpj(d.instituicao_cnpj))}" readonly aria-readonly="true">
-        </div>
-        <div class="form-field span-2">
-          <label for="fld-diretoria">Diretoria</label>
-          <select id="fld-diretoria"></select>
-        </div>
-        <div class="form-field">
-          <label for="fld-plano">Plano</label>
-          <select id="fld-plano"></select>
-        </div>
-        <div id="classificacao-fields" class="admin-form-grid" style="display: contents;">
-          ${buildClassificacaoFields(d.plano_id)}
-        </div>
-        <div class="admin-form-grid admin-form-grid--3 span-2">
-          <div class="form-field">
-            <label for="fld-modal">Modal</label>
-            <select id="fld-modal"></select>
-          </div>
-          <div class="form-field">
-            <label for="fld-tipologia">Tipologia</label>
-            <select id="fld-tipologia"></select>
-          </div>
-          <div class="form-field">
-            <label for="fld-carteira">Carteira</label>
-            <select id="fld-carteira"></select>
-          </div>
-        </div>
-        <div class="form-field">
-          <label for="fld-lat">Latitude</label>
-          <input type="number" step="any" id="fld-lat" value="${d.lat ?? ""}">
-        </div>
-        <div class="form-field">
-          <label for="fld-lng">Longitude</label>
-          <input type="number" step="any" id="fld-lng" value="${d.lng ?? ""}">
-        </div>
-      </div>`,
-    );
-
-    const representante = infoSubcard(
-      "Representante Legal",
-      `
-      <div class="admin-form-grid">
-        <div class="form-field span-2">
-          <label for="fld-rep-nome">Nome Completo</label>
-          <input type="text" id="fld-rep-nome" value="${escapeHtml(rep.nome || "")}">
-        </div>
-        <div class="form-field">
-          <label for="fld-rep-email">E-mail</label>
-          <input type="email" id="fld-rep-email" value="${escapeHtml(rep.email || "")}">
-        </div>
-        <div class="form-field">
-          <label for="fld-rep-tel">Telefone</label>
-          <input type="text" id="fld-rep-tel" value="${escapeHtml(rep.telefone || "")}">
-        </div>
-      </div>`,
-    );
 
     return `
       <section id="sec-info" class="card admin-dashboard-section">
@@ -434,18 +270,14 @@
         <div class="admin-dashboard-columns">
           <div class="admin-dashboard-col">
             <div class="admin-info-fields">
-              ${cadastro}
-              ${institucional}
-              ${representante}
+              ${campos}
               ${
                 SLTAdminAuth.can("operate")
                   ? `<div class="admin-dashboard-actions" id="info-edit-actions">
                 <button type="button" class="btn btn-secondary" id="btn-editar">Editar</button>
                 <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
                 <button type="button" class="btn btn-secondary" id="btn-cancelar-edicao" hidden>Cancelar</button>
-                <button type="button" class="btn btn-secondary" id="btn-geometria" hidden>Enviar/substituir geometria</button>
-                <label class="sr-only" for="arquivo-nova-geometria">Arquivo da nova geometria</label>
-                <input type="file" id="arquivo-nova-geometria" name="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
+
               </div>`
                   : ""
               }
@@ -470,20 +302,27 @@
             <span class="field-help">Carregando critérios…</span>
           </div>
         </div>
-        <section class="analise-geometria" aria-labelledby="geometria-avaliacao-titulo">
-          <h4 id="geometria-avaliacao-titulo">6. Geometria — avaliação informativa</h4>
-          <p class="field-help">
-            Registre se a geometria está adequada para compreender a intervenção.
-            Esta avaliação é independente e não altera o resultado dos cinco critérios de admissibilidade.
-          </p>
-          <div class="analise-geometria-resumo" id="geometria-avaliacao-resumo" aria-live="polite"></div>
-          <div class="admin-form-grid" id="geometria-criterios-grid">
-            <div class="form-field span-2"><span class="field-help">Carregando avaliação…</span></div>
+        <section class="analise-criterio analise-geometria" aria-labelledby="geometria-avaliacao-titulo">
+          <span class="analise-criterio-rotulo" id="geometria-avaliacao-titulo">Geometria</span>
+          <span class="field-help" id="geometria-pergunta">A geometria apresentada é suficientemente adequada para representar o objeto da demanda?</span>
+          <div id="geometria-criterios-grid"></div>
+          <div class="admin-dashboard-actions geometria-actions">
+            <button type="button" class="btn btn-primary" id="btn-aprovar-geometria" hidden>Aprovar geometria</button>
+          </div>
+          <p id="geometria-confirmada" role="status" hidden>Geometria confirmada. Item 6 concluído.</p>
+          <div id="geometria-encaminhamento" hidden>
+            <span class="field-help" id="geometria-encaminhamento-rotulo">Como a geometria será ajustada?</span>
+            <div class="admin-dashboard-actions geometria-actions" role="group" aria-labelledby="geometria-encaminhamento-rotulo">
+              <button type="button" class="btn btn-secondary" data-geometria-encaminhamento="complementacao" aria-pressed="false">Solicitar complementação</button>
+              <button type="button" class="btn btn-secondary" id="btn-geometria" data-geometria-encaminhamento="substituicao" aria-pressed="false">Enviar/substituir geometria</button>
+            </div>
+            <p class="field-help" id="geometria-complementacao-tipo" hidden>Tipo de complementação: Ajuste de geometria. Conclua pelo botão Solicitar complementação no bloco Ações.</p>
+            <label class="sr-only" for="arquivo-nova-geometria">Arquivo da nova geometria</label>
+            <input type="file" id="arquivo-nova-geometria" name="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
           </div>
           <div class="form-field analise-geometria-observacao">
             <label for="fld-avaliacao-geometria-observacao">Observação sobre a geometria</label>
-            <textarea id="fld-avaliacao-geometria-observacao" rows="3" maxlength="3000"
-              placeholder="Registre uma observação objetiva, se necessário."></textarea>
+            <textarea id="fld-avaliacao-geometria-observacao" rows="3" maxlength="3000" placeholder="Registre uma observação objetiva, se necessário."></textarea>
           </div>
           <p class="analise-geometria-salvamento" id="geometria-avaliacao-salvamento" role="status"></p>
         </section>
@@ -622,95 +461,87 @@
     return respostas;
   }
 
-  const GEOMETRIA_CRITERIOS = [
-    {
-      campo: "delimitacao_intervencao",
-      rotulo: "Delimitação da intervenção",
-      pergunta: "A geometria delimita a implantação física da intervenção descrita?",
-    },
-    {
-      campo: "correspondencia_local_dimensoes",
-      rotulo: "Correspondência com a demanda",
-      pergunta: "A localização e a extensão desenhadas correspondem ao local e às dimensões informados na demanda?",
-    },
-    {
-      campo: "area_influencia_direta",
-      rotulo: "Área de influência direta",
-      pergunta: "A geometria representa a área de influência direta necessária para avaliar a intervenção?",
-      naoSeAplica: true,
-    },
-    {
-      campo: "precisao_localizacao",
-      rotulo: "Precisão da localização",
-      pergunta: "A representação espacial permite identificar com precisão suficiente o trecho, a área ou o equipamento relacionado à demanda?",
-    },
-  ];
-
-  function geometriaCriterioHtml(criterio, respostas, editavel) {
-    const nome = `geometria-${criterio.campo}`;
-    const opcoes = [
-      { valor: "atende", rotulo: "Atende", classe: "analise-opcao--sim" },
-      { valor: "ajuste", rotulo: "Precisa de ajuste", classe: "analise-opcao--nao" },
-      ...(criterio.naoSeAplica
-        ? [{ valor: "nao_se_aplica", rotulo: "Não se aplica", classe: "analise-opcao--neutra" }]
-        : []),
-    ];
-    return `
-      <div class="form-field span-2 analise-criterio analise-geometria-criterio" data-geometria-campo="${criterio.campo}">
-        <span class="analise-criterio-rotulo" id="${nome}-rotulo">${escapeHtml(criterio.rotulo)}</span>
-        <span class="field-help">${escapeHtml(criterio.pergunta)}</span>
-        <div class="analise-criterio-opcoes" role="radiogroup" aria-labelledby="${nome}-rotulo">
-          ${opcoes.map((opcao) => `
-            <label class="analise-opcao ${opcao.classe}" for="${nome}-${opcao.valor}">
-              <input type="radio" id="${nome}-${opcao.valor}" name="${nome}" value="${opcao.valor}"${respostas[criterio.campo] === opcao.valor ? " checked" : ""}${editavel ? "" : " disabled"}>
-              <span>${escapeHtml(opcao.rotulo)}</span>
-            </label>`).join("")}
-        </div>
-      </div>`;
-  }
-
   function collectAvaliacaoGeometria() {
-    const avaliacao = {};
-    GEOMETRIA_CRITERIOS.forEach(({ campo }) => {
-      const marcado = document.querySelector(
-        `[data-geometria-campo="${campo}"] input[type=radio]:checked`,
-      );
-      avaliacao[campo] = marcado?.value || null;
-    });
-    avaliacao.observacao = $("#fld-avaliacao-geometria-observacao")?.value.trim() || null;
-    return avaliacao;
+    const resposta = document.querySelector('[name="geometria-adequada"]:checked')?.value;
+    return {
+      adequada: resposta ? resposta === "sim" : null,
+      confirmada: resposta === "sim" && $("#geometria-criterios-grid").dataset.confirmada === "true",
+      encaminhamento: resposta === "nao" ? document.querySelector('[data-geometria-encaminhamento][aria-pressed="true"]')?.dataset.geometriaEncaminhamento || null : null,
+      observacao: $("#fld-avaliacao-geometria-observacao")?.value.trim() || null,
+    };
   }
 
   function renderResumoAvaliacaoGeometria(avaliacao) {
-    const resumo = $("#geometria-avaliacao-resumo");
-    if (!resumo) return;
-    const respostas = GEOMETRIA_CRITERIOS.map(({ campo }) => avaliacao[campo]);
-    const atendem = respostas.filter((resposta) => resposta === "atende").length;
-    const ajustes = respostas.filter((resposta) => resposta === "ajuste").length;
-    const naoSeAplicam = respostas.filter((resposta) => resposta === "nao_se_aplica").length;
-    const pendentes = respostas.filter((resposta) => !resposta).length;
-    const itens = [
-      atendem && `${atendem} atendem`,
-      ajustes && `${ajustes} precisam de ajuste`,
-      naoSeAplicam && `${naoSeAplicam} não se aplicam`,
-      pendentes && `${pendentes} sem resposta`,
-    ].filter(Boolean);
-    resumo.textContent = itens.length
-      ? `${itens.join(" · ")}. Não integra o resultado de admissibilidade.`
-      : "Esta avaliação é informativa e não integra o resultado de admissibilidade.";
+    const confirmada = avaliacao.adequada === true && avaliacao.confirmada === true;
+    $("#btn-aprovar-geometria").hidden = avaliacao.adequada !== true || confirmada;
+    $("#geometria-confirmada").hidden = !confirmada;
+    document.querySelector('.analise-geometria').classList.toggle('is-confirmada', confirmada);
+    $("#geometria-encaminhamento").hidden = avaliacao.adequada !== false;
+    $("#geometria-complementacao-tipo").hidden = avaliacao.encaminhamento !== "complementacao";
+  }
+
+  async function salvarGeometriaAntesDaAcao() {
+    clearTimeout(geometriaSaveTimer);
+    geometriaSaveRevision += 1;
+    await geometriaSaveQueue;
+    if (!canApprove(record?.status)) return;
+    const data = await SLTAdminApi.saveAnaliseAvaliacaoGeometria(record.id, collectAvaliacaoGeometria());
+    if (data.parecer_texto) $("#fld-parecer").value = data.parecer_texto;
   }
 
   function renderAvaliacaoGeometria(data, editavel) {
     const avaliacao = data.avaliacao_geometria || {};
     const grid = $("#geometria-criterios-grid");
     if (grid) {
-      grid.innerHTML = GEOMETRIA_CRITERIOS
-        .map((criterio) => geometriaCriterioHtml(criterio, avaliacao, editavel))
-        .join("");
-      grid.querySelectorAll("input[type=radio]").forEach((input) => {
-        input.addEventListener("change", () => onAvaliacaoGeometriaChange());
-      });
+      grid.dataset.confirmada = String(avaliacao.confirmada === true);
+      grid.innerHTML = `<div class="geometria-respostas" role="radiogroup" aria-labelledby="geometria-pergunta">
+        <label><input type="radio" name="geometria-adequada" value="sim"${avaliacao.adequada === true ? " checked" : ""}${editavel ? "" : " disabled"}><span>Sim</span></label>
+        <label><input type="radio" name="geometria-adequada" value="nao"${avaliacao.adequada === false ? " checked" : ""}${editavel ? "" : " disabled"}><span>Não</span></label>
+      </div>`;
     }
+    document.querySelectorAll('[data-geometria-encaminhamento]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.geometriaEncaminhamento === avaliacao.encaminhamento));
+      button.disabled = !editavel;
+      button.onclick = () => {
+        document.querySelectorAll('[data-geometria-encaminhamento]').forEach(option => {
+          option.setAttribute('aria-pressed', String(option === button));
+        });
+        onAvaliacaoGeometriaChange();
+      };
+    });
+    document.querySelectorAll('.analise-geometria input[type=radio]').forEach(input => {
+      input.onchange = () => {
+        grid.dataset.confirmada = "false";
+        document.querySelectorAll('[data-geometria-encaminhamento]').forEach(button => button.setAttribute('aria-pressed', 'false'));
+        onAvaliacaoGeometriaChange();
+      };
+    });
+    const aprovar = $("#btn-aprovar-geometria");
+    aprovar.disabled = !editavel;
+    aprovar.onclick = async () => {
+      aprovar.disabled = true;
+      const codigo = record.id;
+      clearTimeout(geometriaSaveTimer);
+      geometriaSaveRevision += 1;
+      document.querySelectorAll('[name="geometria-adequada"]').forEach(input => { input.disabled = true; });
+      try {
+        await geometriaSaveQueue;
+        const payload = {...collectAvaliacaoGeometria(), confirmada: true};
+        const atualizada = await SLTAdminApi.saveAnaliseAvaliacaoGeometria(codigo, payload);
+        if (record?.id !== codigo) return;
+        grid.dataset.confirmada = String(atualizada.avaliacao_geometria?.confirmada === true);
+        renderResumoAvaliacaoGeometria(collectAvaliacaoGeometria());
+        if (atualizada.parecer_texto) $("#fld-parecer").value = atualizada.parecer_texto;
+        $("#geometria-avaliacao-salvamento").textContent = "Aprovação da geometria salva.";
+      } catch (err) {
+        reportarErroAnalise(err.message, "Aprovar geometria");
+      } finally {
+        aprovar.disabled = !editavel;
+        grid.querySelectorAll('input').forEach(input => { input.disabled = !editavel; });
+      }
+    };
+    $("#btn-geometria").disabled = !editavel || !SLTAdminAuth.can("operate");
+    $("#arquivo-nova-geometria").disabled = !editavel || !SLTAdminAuth.can("operate");
     const observacao = $("#fld-avaliacao-geometria-observacao");
     if (observacao) {
       observacao.value = avaliacao.observacao || "";
@@ -750,6 +581,7 @@
           if (revision !== geometriaSaveRevision || !codigo) return;
           const atualizada = await SLTAdminApi.saveAnaliseAvaliacaoGeometria(codigo, payload);
           if (revision !== geometriaSaveRevision || record?.id !== codigo) return;
+          if (atualizada.parecer_texto) $("#fld-parecer").value = atualizada.parecer_texto;
           const salvo = atualizada.avaliacao_geometria || {};
           if (status) {
             const autor = salvo.avaliada_por ? ` por ${salvo.avaliada_por}` : "";
@@ -960,6 +792,7 @@
     if (!ok) return;
 
     try {
+      await salvarGeometriaAntesDaAcao();
       await SLTAdminApi.alterarSituacaoAnalise(record.id, acao.id);
       try {
         await refreshLists();
@@ -1035,6 +868,7 @@
     if (!ok) return;
 
     try {
+      await salvarGeometriaAntesDaAcao();
       await SLTAdminApi.decidirAnalise(record.id, decisao.id);
       SLTAdminUi.showToast("Decisão registrada. Baixando o parecer em PDF…");
       try {
@@ -1109,119 +943,12 @@
   }
 
   function bindProjeto(d) {
-    fillSelect(
-      $("#fld-diretoria"),
-      SLTCatalog.ativos(SLTCatalog.catalog.diretorias),
-      "id",
-      (x) => x.nome_oficial,
-    );
-    $("#fld-diretoria").value = d.diretoria_id;
-
-    fillSelect(
-      $("#fld-plano"),
-      SLTCatalog.planosPorDiretoria($("#fld-diretoria").value),
-      "id",
-      (p) => `${p.sigla} — ${p.nome_oficial}`,
-    );
-    $("#fld-plano").value = d.plano_id;
-
-    fillSelect(
-      $("#fld-modal"),
-      SLTCatalog.ativos(SLTCatalog.catalog.modais),
-      "id",
-      (m) => m.nome,
-    );
-    fillSelect(
-      $("#fld-tipologia"),
-      SLTCatalog.ativos(SLTCatalog.catalog.tipologias),
-      "id",
-      (t) => t.nome,
-    );
-    fillSelect(
-      $("#fld-carteira"),
-      SLTCatalog.carteirasPorPlano($("#fld-plano").value),
-      "id",
-      (c) => c.nome,
-    );
-
-    $("#fld-modal").value = d.complementos?.modal_id || "";
-    $("#fld-tipologia").value = d.complementos?.tipologia_id || "";
-    $("#fld-carteira").value = d.complementos?.carteira_id || "";
-
-    populateClassificacaoSelects(d);
-
-    $("#fld-diretoria").addEventListener("change", () => {
-      fillSelect(
-        $("#fld-plano"),
-        SLTCatalog.planosPorDiretoria($("#fld-diretoria").value),
-        "id",
-        (p) => `${p.sigla} — ${p.nome_oficial}`,
-      );
-      fillSelect(
-        $("#fld-carteira"),
-        SLTCatalog.carteirasPorPlano($("#fld-plano").value),
-        "id",
-        (c) => c.nome,
-      );
-    });
-
-    $("#fld-plano").addEventListener("change", () => {
-      refreshClassificacaoFields({
-        ...d,
-        classificacao: {},
-        plano_id: $("#fld-plano").value,
-      });
-      fillSelect(
-        $("#fld-carteira"),
-        SLTCatalog.carteirasPorPlano($("#fld-plano").value),
-        "id",
-        (c) => c.nome,
-      );
-    });
-
-    $("#fld-eixo")?.addEventListener("change", () =>
-      refreshTicSelect({ classificacao: {} }),
-    );
-
+    SLTProjectForm.bind(d);
     mountAnalysisMap(d, "projeto");
     bindAnalise(d);
   }
 
-  function collectProjeto() {
-    const planoId = $("#fld-plano").value;
-    let classificacao = null;
-    if (planoId === PLANO_PLI && $("#fld-frente")?.value) {
-      classificacao = { tipo: "frente_pli", frente_id: $("#fld-frente").value };
-    } else if (planoId === PLANO_PEF && $("#fld-eixo")?.value) {
-      classificacao = {
-        tipo: "eixo_pef",
-        eixo_id: $("#fld-eixo").value,
-        corredor_tic_id: $("#fld-tic")?.value || null,
-      };
-    }
-    const complementos = {};
-    if ($("#fld-modal").value) complementos.modal_id = $("#fld-modal").value;
-    if ($("#fld-tipologia").value)
-      complementos.tipologia_id = $("#fld-tipologia").value;
-    if ($("#fld-carteira").value)
-      complementos.carteira_id = $("#fld-carteira").value;
-
-    return {
-      nome: $("#fld-nome").value.trim(),
-      descricao: $("#fld-descricao").value.trim() || null,
-      diretoria_id: $("#fld-diretoria").value,
-      plano_id: planoId,
-      classificacao,
-      complementos: Object.keys(complementos).length ? complementos : null,
-      lat: parseFloat($("#fld-lat").value),
-      lng: parseFloat($("#fld-lng").value),
-      representante: {
-        nome: $("#fld-rep-nome").value.trim(),
-        email: $("#fld-rep-email").value.trim() || null,
-        telefone: $("#fld-rep-tel").value.trim() || null,
-      },
-    };
-  }
+  function collectProjeto() { return SLTProjectForm.collect(); }
 
   // ===========================================================================
   // PLANO
@@ -1280,9 +1007,7 @@
               <button type="button" class="btn btn-secondary" id="btn-editar">Editar</button>
               <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
               <button type="button" class="btn btn-secondary" id="btn-cancelar-edicao" hidden>Cancelar</button>
-                <button type="button" class="btn btn-secondary" id="btn-geometria" hidden>Enviar/substituir geometria</button>
-                <label class="sr-only" for="arquivo-nova-geometria">Arquivo da nova geometria</label>
-                <input type="file" id="arquivo-nova-geometria" name="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
+
             </div>` : ""}
             </div>
             <div class="admin-dashboard-col">
@@ -1378,9 +1103,7 @@
               <button type="button" class="btn btn-secondary" id="btn-editar">Editar</button>
               <button type="button" class="btn btn-primary" id="btn-salvar" hidden>Salvar alterações</button>
               <button type="button" class="btn btn-secondary" id="btn-cancelar-edicao" hidden>Cancelar</button>
-                <button type="button" class="btn btn-secondary" id="btn-geometria" hidden>Enviar/substituir geometria</button>
-                <label class="sr-only" for="arquivo-nova-geometria">Arquivo da nova geometria</label>
-                <input type="file" id="arquivo-nova-geometria" name="arquivo-nova-geometria" accept=".zip,.gpkg,.kml,.kmz,.geojson,.json" hidden>
+
             </div>` : ""}
             </div>
             <div class="admin-dashboard-col">
@@ -1458,7 +1181,7 @@
     alterna("#btn-editar", !ligado);
     alterna("#btn-salvar", ligado);
     alterna("#btn-cancelar-edicao", ligado);
-    alterna("#btn-geometria", ligado);
+
   }
 
   function bindEvents(d) {
@@ -1722,6 +1445,7 @@
     });
     proc.tarefaAtual(CHECK, "Enviando o arquivo para conferência territorial…");
     try {
+      await salvarGeometriaAntesDaAcao();
       const check = await send("conferir");
       proc.concluirTarefa(CHECK, check.permitido ? "Abrangência territorial confirmada" : "Geometria fora da abrangência");
       if (!check.permitido) {

@@ -4,14 +4,44 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, File, Form, UploadFile
+from pydantic import ValidationError
 
 from api.deps.auth import require_operator
 from api.matriz_colunas import extrair_colunas
 from api.repositories import hierarquizacao_repository, sigma_usuario_repository, demanda_repository, plano_repository, programa_repository
 from api.services.session_service import SessionUser
+from api.services import demanda_service, plano_service, programa_service
+from api.services.campos_demanda import resolver_nomes_registros
+from api.schemas.demanda import DemandaUpdateSchema
+from api.schemas.plano import PlanoUpdateSchema
+from api.schemas.programa import ProgramaUpdateSchema
+from api.exceptions import DemandaValidationError
 
 router = APIRouter(prefix="/complementacao", tags=["complementacao"])
+STATUS_COMPLEMENTACAO = "analise_aguardando_complementacao"
+CADASTROS = {
+    "projeto": (demanda_repository, demanda_service, DemandaUpdateSchema, demanda_service.atualizar_demanda),
+    "plano": (plano_repository, plano_service, PlanoUpdateSchema, plano_service.atualizar_plano),
+    "programa": (programa_repository, programa_service, ProgramaUpdateSchema, programa_service.atualizar_programa),
+}
+
+
+def _visivel(demanda: dict, user: SessionUser, pessoa_id: str | None) -> bool:
+    if demanda.get("status") != STATUS_COMPLEMENTACAO:
+        return False
+    return user.tipo_usuario.strip().upper() in {"ANALISTA", "GESTOR", "ADMIN"} or _pode_editar(
+        {}, pessoa_id=pessoa_id, usuario_id=str(user.id), demanda=demanda
+    )
+
+
+def _demanda_autorizada(tipo: str, codigo: str, user: SessionUser) -> dict:
+    if tipo not in CADASTROS:
+        raise HTTPException(422, "Tipo de demanda inválido.")
+    demanda = CADASTROS[tipo][0].get_by_codigo(codigo)
+    if not demanda or not _visivel(demanda, user, _pessoa_id(user)):
+        raise HTTPException(403, "Demanda indisponível para complementação por este usuário.")
+    return demanda
 
 
 def _pessoa_id(user: SessionUser) -> str | None:
@@ -47,13 +77,11 @@ def _acesso(cab: dict[str, Any], user: SessionUser, pessoa_id: str | None,
             cadastros: dict[str, dict[str, Any]]) -> bool:
     # Não utiliza a cópia histórica do agrupamento como fonte de autorização.
     demanda = cadastros.get(str(cab.get("codigo")))
-    return bool(demanda and _pode_editar(cab, pessoa_id=pessoa_id, usuario_id=user.id, demanda=demanda))
+    return bool(demanda and _visivel(demanda, user, pessoa_id))
 
 
 def _pode_listar(item: dict[str, Any], user: SessionUser) -> bool:
-    if user.tipo_usuario.strip().upper() in {"GESTOR", "ADMIN", "ANALISTA"}:
-        return True
-    return item["pode_editar"] and item["situacao_complementacao"] == "em_complementacao"
+    return item["pode_editar"]
 
 
 def _matriz(row: dict[str, Any]) -> Any:
@@ -86,6 +114,52 @@ def _item(row: dict[str, Any], obj: dict[str, Any], *, pode_editar: bool) -> dic
         "colunas": colunas,
         "valores": slots,
     }
+
+
+@router.get("/demandas/{tipo}")
+def listar_demandas_complementaveis(tipo: str, user: SessionUser = Depends(require_operator)):
+    if tipo not in CADASTROS:
+        raise HTTPException(422, "Tipo de demanda inválido.")
+    repo, service, _, _ = CADASTROS[tipo]
+    pessoa_id = _pessoa_id(user)
+    rows = [row for row in repo.list_all() if _visivel(row, user, pessoa_id)]
+    rows = resolver_nomes_registros(rows)
+    return [service._row_to_response(row, incluir_auditoria=True, nomes_resolvidos=True) for row in rows]
+
+
+@router.get("/demandas/{tipo}/{codigo}")
+def obter_demanda_complementavel(tipo: str, codigo: str, user: SessionUser = Depends(require_operator)):
+    row = _demanda_autorizada(tipo, codigo, user)
+    return CADASTROS[tipo][1]._row_to_response(row, incluir_auditoria=True)
+
+
+@router.patch("/demandas/{tipo}/{codigo}/cadastro")
+def salvar_cadastro(tipo: str, codigo: str, body: dict = Body(...), user: SessionUser = Depends(require_operator)):
+    _demanda_autorizada(tipo, codigo, user)
+    _, _, schema, atualizar = CADASTROS[tipo]
+    permitidos = set(schema.model_fields) - {"status"}
+    if set(body) - permitidos:
+        raise HTTPException(422, "Campo não permitido na complementação cadastral.")
+    try:
+        return atualizar(codigo, schema.model_validate(body), usuario_id=user.id)
+    except (ValidationError, DemandaValidationError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.post("/demandas/{tipo}/{codigo}/geometria/conferir")
+async def conferir_geometria_complementacao(tipo: str, codigo: str, file: UploadFile = File(...),
+                                           user: SessionUser = Depends(require_operator)):
+    _demanda_autorizada(tipo, codigo, user)
+    from api.routers.geometria import conferir_geometria
+    return await conferir_geometria(tipo, codigo, file, user)
+
+
+@router.post("/demandas/{tipo}/{codigo}/geometria/substituir")
+async def substituir_geometria_complementacao(tipo: str, codigo: str, confirmacao: str = Form(...),
+                                             file: UploadFile = File(...), user: SessionUser = Depends(require_operator)):
+    _demanda_autorizada(tipo, codigo, user)
+    from api.routers.geometria import substituir_geometria
+    return await substituir_geometria(tipo, codigo, confirmacao, file, user)
 
 
 @router.get("/objetos")

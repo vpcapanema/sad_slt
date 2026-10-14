@@ -1,1 +1,23 @@
 .complementacao-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.complementacao-campo{padding:1rem;border:1px solid var(--pli-border);border-radius:var(--pli-radius);background:#f8fafb}.complementacao-campo.is-readonly{background:#f1f3f4}.complementacao-campo label{font-family:Montserrat,sans-serif}.complementacao-meta{margin:.25rem 0 .7rem;color:var(--pli-muted);font-size:var(--font-help)}.complementacao-premissa{margin:.55rem 0 0;color:var(--pli-muted);font-size:var(--font-help);line-height:1.45}.complementacao-status{min-height:1.5rem;color:var(--pli-deep);font-weight:600}.complementacao-status.is-error{color:var(--pli-error)}@media(max-width:720px){.complementacao-grid{grid-template-columns:1fr}}
+.complementacao-page .complementacao-controles {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 1rem;
+}
+.complementacao-page .complementacao-controles .btn {
+  min-height: 2.5rem; padding: 0.5rem 0.9rem; border: 1px solid var(--pli-border); border-radius: 6px;
+}
+.complementacao-page .complementacao-controles .btn[aria-pressed="true"] {
+  background: var(--pli-deep); color: white;
+}
+.complementacao-page .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.complementacao-page [hidden], .complementacao-page .hidden { display: none !important; }
+.complementacao-page #complementacao-editor { margin-top: 1rem; }
+.complementacao-page .complementacao-grid .form-field { min-width: 0; }
+.complementacao-page #complementacao-hierarquizacao { margin-bottom: 1rem; }
+.complementacao-page #complementacao-form { margin-top: 1rem; }
+.complementacao-page .admin-table tr:has(.row-select:checked) { outline: 2px solid var(--pli-blue); outline-offset: -2px; }
+@media(max-width:720px) {
+  .complementacao-page .app-header-inner { flex-direction: column; align-items: stretch; }
+  body.complementacao-page .app-header .app-header-brand { flex: 0 0 auto; width: 100%; }
+  .complementacao-page .app-nav { justify-content: flex-start; }
+  .complementacao-page .complementacao-controles .btn { width: 100%; }
+}

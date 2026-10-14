@@ -125,3 +125,44 @@ def test_historico_mantem_origem_e_estado_de_vigencia(monkeypatch):
     assert history.itens[2].substituicao_nao_registrada
     assert not history.itens[2].vigente
     assert history.aviso_historico_incompleto
+
+
+def test_parecer_distingue_intencao_de_envio_e_substituicao_efetiva():
+    analise = {"parecer_texto": "Parecer base.", "avaliacao_geometria": {
+        "adequada": False, "encaminhamento": "substituicao"}}
+    assert "Uma nova geometria foi inserida" not in service._parecer_com_geometria(analise)
+    analise["avaliacao_geometria"]["substituicoes"] = [
+        {"em": "2026-10-14", "por": "analista-1", "arquivo": "nova.geojson"}]
+    texto = service._parecer_com_geometria(analise)
+    assert "Uma nova geometria foi inserida" in texto
+    assert "nova.geojson" in texto and "analista-1" in texto
+    assert "preservados no histórico" in texto
+
+
+def test_sim_so_aprova_geometria_depois_de_confirmar():
+    analise = {"avaliacao_geometria": {"adequada": True, "confirmada": False}}
+    assert "está pendente" in service._parecer_com_geometria(analise)
+    assert "foi aprovada" not in service._parecer_com_geometria(analise)
+    analise["avaliacao_geometria"]["confirmada"] = True
+    assert "foi aprovada" in service._parecer_com_geometria(analise)
+
+
+@pytest.mark.parametrize("adequada,encaminhamento,tipo_esperado", [
+    (False, "complementacao", "ajuste_geometria"),
+    (False, "substituicao", None),
+    (True, "complementacao", None),
+])
+def test_encaminhamento_de_geometria_define_tipo_de_complementacao(monkeypatch, adequada, encaminhamento, tipo_esperado):
+    monkeypatch.setattr(service, "_localizar_demanda", lambda codigo: ("projeto", {"codigo": codigo}))
+    saved = {}
+    def upsert(**kwargs):
+        saved.update(kwargs["campos"]["avaliacao_geometria"].obj)
+        return {"avaliacao_geometria": saved}
+    monkeypatch.setattr(service.analise_demanda_repository, "upsert", upsert)
+    result = service.salvar_avaliacao_geometria("COD", AvaliacaoGeometriaSchema(
+        adequada=adequada, encaminhamento=encaminhamento))
+    assert saved["tipo_complementacao"] == tipo_esperado
+    if adequada:
+        assert saved["encaminhamento"] is None
+    if tipo_esperado:
+        assert "Tipo: Ajuste de geometria" in result.parecer_texto

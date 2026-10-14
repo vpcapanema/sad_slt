@@ -23,6 +23,7 @@
   } = SLTAdminLabels;
 
   const PAGE_SIZE = 15;
+  const complementacao = window.SLTComplementacaoTabela;
   let tipo = "projeto";
   let rows = [];
   let currentPage = 1;
@@ -266,6 +267,10 @@
   }
 
   function updateBulkButtons() {
+    if (complementacao) {
+      complementacao.selecionar(tipo, rows.filter(row => selected.has(row.id)));
+      return;
+    }
     const hasSel = selected.size > 0;
     $("#btn-bulk-edit").disabled = !hasSel || editMode;
     $("#btn-bulk-cancel").disabled = !editMode;
@@ -280,6 +285,7 @@
   }
 
   async function ensureRefs() {
+    if (complementacao) return;
     await SLTCatalog.loadCatalog("../");
     if (!refPlanos.length) {
       refPlanos = (await SLTAdminApi.listPlanos()).filter((p) => p.id !== CODIGO_PLANO_OUTROS);
@@ -619,6 +625,12 @@
       tr.addEventListener("click", (ev) => {
         if (editMode) return;
         if (ev.target.closest("input, select, button, a, label")) return;
+        if (complementacao) {
+          selected.clear();
+          selected.add(tr.dataset.codigo);
+          renderTable();
+          return;
+        }
         location.href = `/restrict/demanda/?tipo=${encodeURIComponent(tipo)}&id=${encodeURIComponent(tr.dataset.codigo)}`;
       });
     });
@@ -813,7 +825,7 @@
       btn.setAttribute("aria-selected", String(active));
     });
     if (forceReload || !cache[tipo]) {
-      cache[tipo] = await SLTAdminApi.listDemandasByTipo(tipo);
+      cache[tipo] = await (complementacao ? complementacao.listar(tipo) : SLTAdminApi.listDemandasByTipo(tipo));
     }
     rows = cache[tipo];
     await ensureRefs();
@@ -825,6 +837,11 @@
 
   function fillStatusFilter() {
     const sel = $("#filtro-status");
+    if (complementacao) {
+      sel.innerHTML = '<option value="analise_aguardando_complementacao">Aguardando complementação</option>';
+      sel.disabled = true;
+      return;
+    }
     sel.innerHTML = '<option value="">Todos</option>';
     SLTAdminLabels.statusDemanda.forEach((s) => {
       const opt = document.createElement("option");
@@ -884,13 +901,16 @@
       resetSelection();
       renderTable();
     });
-    $("#btn-bulk-edit").addEventListener("click", enterEditMode);
-    $("#btn-bulk-cancel").addEventListener("click", cancelEditMode);
-    $("#btn-bulk-save").addEventListener("click", () => {
+    $("#btn-bulk-edit")?.addEventListener("click", enterEditMode);
+    $("#btn-bulk-cancel")?.addEventListener("click", cancelEditMode);
+    $("#btn-bulk-save")?.addEventListener("click", () => {
       saveSelected().catch((err) => SLTAdminUi.showToast(err.message, true));
     });
-    $("#btn-bulk-delete").addEventListener("click", () => {
+    $("#btn-bulk-delete")?.addEventListener("click", () => {
       deleteSelected().catch((err) => SLTAdminUi.showToast(err.message, true));
+    });
+    document.addEventListener('complementacao-salva', () => {
+      loadTipo(tipo, true).catch(err => SLTAdminUi.showToast(err.message, true));
     });
     await loadTipo("projeto");
   }
