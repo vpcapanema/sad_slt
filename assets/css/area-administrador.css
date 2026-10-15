@@ -7,7 +7,7 @@
 }
 
 .admin-area {
-  padding: 0;
+  padding: 1.5rem 0 0;
   max-width: none;
 }
 .admin-area-shell {
@@ -190,6 +190,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 12px;
 }
 .admin-content-head h2 {
   margin: 0;
@@ -203,8 +204,14 @@
   font-family: "Consolas", "Courier New", monospace;
 }
 .admin-table-host {
-  margin-top: 14px;
+  margin-top: 0;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.admin-area-page .admin-table-host > :is(.admin-filter-bar, .admin-table-wrap, .admin-actions, .admin-pagination, .admin-table-summary, .admin-feedback, .admin-placeholder) {
+  margin-block: 0;
 }
 .admin-placeholder {
   padding: 40px 20px;
@@ -254,6 +261,37 @@
   z-index: 2;
   background: var(--admin-deep);
   color: #fff;
+}
+
+/* Mesma densidade das linhas de agrupamentos, sem alterar o cabecalho. */
+.admin-area-page .admin-data-table tbody td {
+  height: 1.7rem;
+  padding: 0.18rem 0.55rem;
+  font-size: 0.74rem;
+  line-height: 1.1;
+}
+.admin-area-page .admin-data-table tbody input[type="checkbox"] {
+  width: 0.9rem;
+  height: 0.9rem;
+  min-height: 0;
+  margin: 0;
+  vertical-align: middle;
+}
+.admin-area-page .admin-data-table tbody td :is(.admin-cell-linha1, .admin-cell-linha2, .admin-cell-binary-size) {
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+.admin-area-page .admin-data-table tbody td :is(.admin-cell-linha2, .admin-cell-binary-size)::before {
+  content: " · ";
+}
+.admin-area-page .admin-data-table tbody td.cell-editable :is(input, select, textarea) {
+  height: 1.2rem;
+  min-height: 0;
+  padding: 0 0.25rem;
+  font-size: inherit;
+  line-height: 1.1;
 }
 .admin-data-table thead .admin-col-alias {
   display: block;
@@ -565,12 +603,16 @@
 
 /* Conceitos extensos mantêm a leitura e a edição dentro da tabela de categorias. */
 .admin-data-table[data-tabela="categoria_extracao_atributos"] td:nth-child(4) {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
   min-width: 280px;
   max-width: 520px;
   text-align: left;
-  line-height: 1.5;
+}
+.admin-data-table .admin-cell-conceito {
+  display: block;
+  max-width: 520px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .admin-data-table[data-tabela="categoria_extracao_atributos"] textarea {
   min-width: 280px;

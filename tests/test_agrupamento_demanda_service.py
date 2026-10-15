@@ -124,3 +124,31 @@ def test_listar_resolve_nome_da_pessoa_do_usuario_em_lote(monkeypatch):
     assert result[1]["criado_por_nome"] is None
     assert len(calls) == 1
     assert rows[0]["criado_por"] == usuario
+
+
+def test_atualizar_preserva_identidade_e_autor(monkeypatch):
+    grupo_id, autor = uuid4(), uuid4()
+    item = _universe_item("PRJ-1")
+    original = {"id": grupo_id, "codigo": "AGR-1", "criado_por": autor, "tipo_demanda_id": 3}
+    monkeypatch.setattr(service.repo, "get_by_id", lambda id: original)
+    monkeypatch.setattr(service.universo_service, "listar_universo", lambda tipo: [item])
+    def atualizar(id, data):
+        assert id == grupo_id
+        assert "codigo" not in data and "criado_por" not in data
+        return {**original, **data}
+    monkeypatch.setattr(service.repo, "update", atualizar)
+    payload = AgrupamentoDemandaCreateSchema(nome="Editado", tipo_demanda="projeto", demanda_ids=[item.id])
+    result = service.atualizar(grupo_id, payload, user=_user())
+    assert result["id"] == str(grupo_id)
+    assert result["codigo"] == "AGR-1"
+    assert result["criado_por"] == autor
+    assert result["objetos"][0]["id"] == item.id
+
+
+def test_atualizar_rejeita_demanda_inelegivel(monkeypatch):
+    monkeypatch.setattr(service.repo, "get_by_id", lambda id: {"id": id})
+    monkeypatch.setattr(service.universo_service, "listar_universo", lambda tipo: [])
+    monkeypatch.setattr(service.repo, "update", lambda *a: pytest.fail("nao deve atualizar"))
+    payload = AgrupamentoDemandaCreateSchema(nome="Editado", tipo_demanda="projeto", demanda_ids=[str(uuid4())])
+    with pytest.raises(DemandaValidationError):
+        service.atualizar(uuid4(), payload, user=_user())

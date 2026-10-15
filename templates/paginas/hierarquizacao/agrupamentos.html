@@ -14,7 +14,8 @@
   <link rel="stylesheet" href="/restrict/hierarquizacao/processos.css?v=20261004-shared-modal">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/page-title-standard.css">
-  <link rel="stylesheet" href="/assets/css/paginas/agrupamentos-demandas.css?v=20261015-visual-autoria">
+  <link rel="stylesheet" href="/assets/css/admin-table-controls.css?v=20261015-clique-espacamento">
+  <link rel="stylesheet" href="/assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento">
 {% endblock %}
 
 {% block conteudo %}
@@ -34,12 +35,18 @@
     <div class="ahp-section-label"><i class="fa-solid fa-table" aria-hidden="true"></i><span id="agrupamentos-list-title">Agrupamentos realizados</span></div>
     <div class="ahp-section-body">
       <p id="agrupamentos-error" class="ahp-info-note ahp-info-note--error hidden" role="alert"></p>
-      <div class="hier-table-shell">
+      {% set filtro_prefixo = "grupos-filtro" %}
+      {% set filtro_rotulo = "Filtrar agrupamentos" %}
+      {% include "componentes/filtro_tabela.html" %}
+      <div class="hier-table-shell admin-table-wrap">
         <table class="admin-table agrupamentos-table">
-          <thead><tr><th>Código</th><th>Nome</th><th>Tipo de demanda</th><th>Demandas</th><th>Criado em</th><th>Agrupado por</th></tr></thead>
-          <tbody id="agrupamentos-tbody"><tr><td colspan="6">Carregando agrupamentos…</td></tr></tbody>
+          <thead><tr><th class="col-select"><input type="checkbox" id="grupos-selecionar-todos" aria-label="Selecionar agrupamentos filtrados"></th><th>Código</th><th>Nome</th><th>Tipo de demanda</th><th>Demandas</th><th>Criado em</th><th>Agrupado por</th></tr></thead>
+          <tbody id="agrupamentos-tbody"><tr><td colspan="7">Carregando agrupamentos…</td></tr></tbody>
         </table>
       </div>
+      <div id="grupos-controles" class="admin-actions" aria-label="Controles dos agrupamentos"></div>
+      <div id="grupos-paginacao" class="admin-pagination" aria-label="Paginar agrupamentos"></div>
+      <p id="grupos-selecao" class="agrupamento-section-footer" aria-live="polite"></p>
     </div>
   </section>
 
@@ -66,26 +73,40 @@
           </div>
           <div class="ahp-subcard">
             <div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">II</span><span>Tabela de demandas do universo</span></div>
-            <div class="admin-toolbar hier-universo-filtros mad-filter mad-filter--fields">
-              <div class="form-field admin-toolbar-search"><label for="agrupamento-busca">Pesquisar</label><input id="agrupamento-busca" placeholder="Código, nome ou descrição" autocomplete="off"></div>
-              <div class="form-field"><label for="agrupamento-campo">Atributo</label><select id="agrupamento-campo"><option value="">Todos os atributos</option></select></div>
-              <div class="form-field"><label for="agrupamento-valor">Valor do atributo</label><select id="agrupamento-valor" disabled><option value="">Selecione primeiro um atributo</option></select></div>
-            </div>
-            <p id="agrupamento-contagem" class="ahp-universo-preview">Selecione o tipo de demanda.</p>
+            {% set filtro_prefixo = "universo-filtro" %}
+            {% set filtro_rotulo = "Filtrar demandas do universo" %}
+            {% include "componentes/filtro_tabela.html" %}
             <div class="admin-table-wrap">
               <table class="admin-table hier-universo-table"><thead id="agrupamento-head"></thead><tbody id="agrupamento-rows"><tr><td>Selecione o tipo de demanda.</td></tr></tbody></table>
             </div>
-            <div class="hier-demand-pagination" aria-label="Paginação das demandas">
-              <button type="button" class="btn btn-secondary btn-sm" id="agrupamento-anterior"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i> Anterior</button>
-              <span id="agrupamento-pagina-info" aria-live="polite">Página 1 de 1</span>
-              <button type="button" class="btn btn-secondary btn-sm" id="agrupamento-proxima">Próxima <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+            <div class="admin-actions" aria-label="Controles das demandas do universo">
+              <button type="button" class="admin-icon-btn add" id="grupo-adicionar" title="Adicionar à tabela de demandas do grupo" aria-label="Adicionar à tabela de demandas do grupo" disabled><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
             </div>
+            <div id="universo-paginacao" class="admin-pagination" aria-label="Paginação das demandas">
+              <button type="button" id="agrupamento-anterior" title="Anterior" aria-label="Página anterior">‹</button>
+              <span id="agrupamento-pagina-info" aria-live="polite">Página 1 de 1</span>
+              <button type="button" id="agrupamento-proxima" title="Próxima" aria-label="Próxima página">›</button>
+            </div>
+            <p id="agrupamento-contagem" class="agrupamento-section-footer">Selecione o tipo de demanda.</p>
           </div>
-          <p id="agrupamento-selecao-resumo" class="ahp-universo-preview" aria-live="polite">Nenhuma demanda selecionada.</p>
+          <div class="ahp-subcard hidden" id="grupo-composicao">
+            <div class="ahp-subsection-title ahp-subsection-title--roman"><span class="ahp-subsection-num ahp-subsection-num--roman">III</span><span id="grupo-composicao-titulo">Tabela de demandas do grupo</span></div>
+            {% set filtro_prefixo = "composicao-filtro" %}
+            {% set filtro_rotulo = "Filtrar demandas do grupo" %}
+            {% include "componentes/filtro_tabela.html" %}
+            <div class="admin-table-wrap"><table class="admin-table hier-universo-table"><thead id="grupo-composicao-head"></thead><tbody id="grupo-composicao-rows"></tbody></table></div>
+            <div class="admin-actions" aria-label="Controles da composição do grupo">
+              <button type="button" class="admin-icon-btn save" id="grupo-confirmar" title="Confirmar registros do grupo" aria-label="Confirmar registros do grupo" disabled><i class="fa-solid fa-check" aria-hidden="true"></i></button>
+              <button type="button" class="admin-icon-btn edit" id="grupo-editar" title="Editar registros do grupo" aria-label="Editar registros do grupo" disabled><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+              <button type="button" class="admin-icon-btn delete" id="grupo-remover" title="Excluir registros selecionados do grupo" aria-label="Excluir registros selecionados do grupo" disabled><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+            </div>
+            <div id="composicao-paginacao" class="admin-pagination" aria-label="Paginar demandas do grupo"></div>
+            <p id="agrupamento-selecao-resumo" class="agrupamento-section-footer" aria-live="polite">Adicione as demandas selecionadas no universo.</p>
+          </div>
         </article>
         <p id="agrupamento-form-error" class="ahp-info-note ahp-info-note--error hidden" role="alert"></p>
         <div class="process-actions">
-          <button type="submit" class="btn btn--primary"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Salvar agrupamento</button>
+          <button type="submit" class="btn btn--primary" id="agrupamento-salvar" disabled><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Salvar agrupamento</button>
           <button type="button" class="btn btn-secondary" id="agrupamento-cancel">Cancelar</button>
         </div>
       </form>
@@ -103,7 +124,7 @@
   <script src="/assets/js/status-colors.js"></script>
   <script src="/assets/js/admin-labels.js"></script>
   <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
-  <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
+  <script src="/restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao"></script>
   <script src="/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1"></script>
-  <script src="/assets/js/paginas/agrupamentos-demandas.js?v=20261015-visual-autoria"></script>
+  <script src="/assets/js/paginas/agrupamentos-demandas.js?v=20261015-icone-editar"></script>
 {% endblock %}

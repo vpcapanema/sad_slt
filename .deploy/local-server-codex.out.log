@@ -1,72 +1,1070 @@
-INFO:     127.0.0.1:50419 - "GET /public/login/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57210 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50419 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:49673 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:52703 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:63102 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50527 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50419 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:49673 - "GET /assets/js/admin-auth.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:52703 - "GET /assets/js/admin-ui.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:63102 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57783 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57210 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52703 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50527 - "GET /restrict/login.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49673 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:63102 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:63102 - "GET /api/auth/session HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50527 - "GET /api/auth/session HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50527 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:61052 - "GET /api/health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61053 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53810 - "GET / HTTP/1.1" 308 Permanent Redirect
-INFO:     127.0.0.1:53810 - "GET /public/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65095 - "GET /assets/css/app.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61892 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60482 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50256 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53691 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59995 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65095 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61892 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50256 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53691 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60482 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59995 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52941 - "GET /api/auth/session HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65133 - "GET /assets/vendor/fontawesome/webfonts/fa-regular-400.woff2 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58571 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58571 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58567 - "GET /public/login/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58567 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:52751 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:65460 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:56232 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:64216 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58567 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58529 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52751 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:56232 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65460 - "GET /assets/js/admin-ui.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64216 - "GET /restrict/login.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52751 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58567 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58529 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:65460 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:65460 - "GET /api/auth/session HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58529 - "GET /api/auth/session HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62973 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:62597 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:62597 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:63890 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:63890 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:56741 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:56741 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:56741 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56741 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:58129 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:60977 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:53208 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:54395 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:64346 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58567 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50587 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_atributo_objeto HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50587 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50609 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52880 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51236 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63075 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59032 - "GET /assets/css/area-administrador.css?v=20261015-paginacao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52880 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51236 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63075 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50587 - "GET /assets/css/admin-table-controls.css?v=20261015-paginacao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50609 - "GET /assets/js/area-administrador.js?v=20261015-paginacao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51236 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63075 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59032 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59032 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63075 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59032 - "GET /api/admin/esquemas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59032 - "GET /api/admin/tabelas/demandas/dom_atributo_objeto?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64489 - "GET /api/admin/tabelas/dominios/categoria_extracao_atributos?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64489 - "GET /api/admin/tabelas/demandas/dom_status_demanda?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57459 - "GET /api/admin/tabelas/demandas/dom_status_demanda?pagina=2&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57459 - "GET /api/admin/tabelas/demandas/dom_status_demanda?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57459 - "GET /api/admin/tabelas/demandas/dom_status_demanda_transicao?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64523 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64523 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54742 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58614 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63312 - "GET /assets/css/ahp-module.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60607 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65046 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64523 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58614 - "GET /assets/css/page-title-standard.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60607 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54742 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65046 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63312 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64523 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60607 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58614 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54742 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63312 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65046 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60607 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65046 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58614 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54742 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64523 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63312 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65046 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60607 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54742 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54742 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54742 - "GET /config/catalogo-slt.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54742 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62628 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62628 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53537 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51595 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64663 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57254 - "GET /assets/css/ahp-module.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63632 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62628 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62628 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51595 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53537 - "GET /assets/css/page-title-standard.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64663 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63632 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57254 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53537 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51595 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63632 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57254 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64663 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62628 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53537 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63632 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57254 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64663 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51595 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53537 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62628 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51595 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51595 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51595 - "GET /config/catalogo-slt.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51595 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64639 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64639 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59832 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52461 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59893 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63115 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63231 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59832 - "GET /assets/css/ahp-module.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64639 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52461 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59893 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59832 - "GET /assets/css/page-title-standard.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64639 - "GET /assets/js/admin-auth.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52461 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59832 - "GET /assets/js/catalog.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59893 - "GET /assets/js/status-colors.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64639 - "GET /assets/js/sigma-read.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63231 - "GET /assets/js/admin-labels.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63115 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52461 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64639 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63115 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59832 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59893 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63231 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59832 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63115 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59893 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64639 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64639 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59893 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59893 - "GET /config/catalogo-slt.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63115 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63231 - "GET /api/instituicoes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /api/pessoas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59893 - "GET /api/dominios/status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64639 - "GET /api/dominios/status-objeto-ahp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50655 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_status_demanda_transicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60301 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50655 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59652 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54058 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63587 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57312 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50655 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60301 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59652 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57312 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54058 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63587 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60301 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57312 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57312 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57312 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64639 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_status_demanda_transicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64639 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52461 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63115 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59893 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63231 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64639 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52461 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59893 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63115 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64639 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63115 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63231 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59893 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52461 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52461 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59893 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52461 - "GET /api/admin/esquemas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /api/admin/tabelas/demandas/dom_status_demanda_transicao?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_status_demanda_transicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60842 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65219 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55856 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51037 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60842 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65219 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55856 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51037 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65219 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51037 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55856 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60842 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60842 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60842 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_status_demanda_transicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54858 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65219 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60842 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55856 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60842 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54858 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65219 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55856 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54858 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65219 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55856 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60842 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55856 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55856 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_status_demanda_transicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55856 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65219 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50060 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54858 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55856 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54858 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55856 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65219 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50060 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55856 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50060 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65219 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65219 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /api/admin/esquemas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52461 - "GET /api/admin/tabelas/demandas/dom_status_demanda_transicao?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59832 - "GET /api/dominios/transicoes-status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59832 - "GET /api/agrupamentos-demandas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49677 - "GET /api/agrupamentos-demandas/2daa37e3-3b8a-4b64-a066-e00b3fec8486 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49677 - "GET /assets/vendor/leaflet/images/marker-icon.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:65027 - "GET /assets/vendor/leaflet/images/marker-icon-2x.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64100 - "GET /assets/vendor/leaflet/images/marker-shadow.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63733 - "GET /api/agrupamentos-demandas/fbc7ce9c-e3ac-428e-868b-c128bdc2d350 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_status_demanda_transicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64728 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56445 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59098 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54565 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61002 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63066 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56445 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64728 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61002 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54565 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63066 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59098 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54565 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59098 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54565 - "GET /api/admin/esquemas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54565 - "GET /api/admin/tabelas/demandas/dom_status_demanda_transicao?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54565 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_status_demanda_transicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54565 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59098 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61002 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64728 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56445 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54565 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56445 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59098 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61002 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64728 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54565 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59098 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_status_demanda_transicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56445 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64728 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53113 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54565 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61002 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56445 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54565 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64728 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53113 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61002 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54565 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64728 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_status_demanda_transicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61002 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49249 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64728 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56445 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53113 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64728 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61002 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56445 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53113 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49249 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63066 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61002 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53113 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53113 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61002 - "GET /api/admin/esquemas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61002 - "GET /api/admin/tabelas/demandas/dom_status_demanda_transicao?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57882 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57883 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53879 - "GET /public/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53879 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53879 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52640 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49365 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60133 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60035 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58751 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53879 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49365 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52640 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60133 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60133 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52640 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60133 - "GET /assets/vendor/fontawesome/webfonts/fa-regular-400.woff2 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60133 - "GET /api/auth/session HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /public/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59048 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63212 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54053 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63212 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59048 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54053 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/vendor/fontawesome/webfonts/fa-regular-400.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59048 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /public/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63212 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54053 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54053 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/vendor/fontawesome/webfonts/fa-regular-400.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54053 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /public/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59007 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59007 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59007 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/vendor/fontawesome/webfonts/fa-regular-400.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59007 - "GET /public/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59007 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59007 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/vendor/fontawesome/webfonts/fa-regular-400.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58536 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /public/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58482 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59007 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58482 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59007 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58482 - "GET /assets/vendor/fontawesome/webfonts/fa-regular-400.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /public/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58324 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59007 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58324 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59007 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/vendor/fontawesome/webfonts/fa-regular-400.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59007 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /public/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58324 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50068 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58324 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50068 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /assets/vendor/fontawesome/webfonts/fa-regular-400.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50068 - "GET /api/auth/session HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50068 - "GET /restrict/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58324 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50068 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52333 - "GET /restrict/hierarquizacao/platform-map.css?v=20260814-1 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55180 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50977 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61112 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50068 - "GET /assets/css/escala-tipografica.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50068 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58324 - "GET /restrict/index.css?v=20261009-fronteiras-subgrupos HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50977 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55180 - "GET /assets/js/paginas/admin-index-inline-1.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61112 - "GET /assets/js/admin-auth.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52333 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50068 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61112 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50977 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55180 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55180 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50977 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /api/ahp/objetos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61112 - "GET /api/planos/internas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50068 - "GET /api/programas/internas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55180 - "GET /api/demandas/internas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62322 - "GET /restrict/admin/?menu=__dominios__ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62322 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53846 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52856 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50922 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61318 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61947 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:62322 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53846 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50922 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61318 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61947 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52856 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:62322 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:62322 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:62322 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:62322 - "GET /api/admin/esquemas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /restrict/admin/?menu=__dominios__ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51625 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63759 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49675 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55271 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63759 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51625 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55271 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49675 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55271 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49675 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49675 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49675 - "GET /restrict/admin/?menu=__dominios__ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57619 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63759 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51625 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49675 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57619 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49675 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51625 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63759 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51625 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49675 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /restrict/admin/?menu=__dominios__ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51625 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63759 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57619 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60978 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57619 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51625 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63759 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60978 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63759 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /restrict/admin/?menu=__dominios__ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51625 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57619 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49182 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60978 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49182 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51625 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57619 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60978 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54973 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51625 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57619 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58041 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57619 - "GET /api/admin/esquemas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57619 - "GET /api/admin/tabelas/demandas/dom_atributo_objeto?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52158 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52158 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52009 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59704 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60630 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60681 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53390 - "GET /assets/css/ahp-module.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52158 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59704 - "GET /assets/css/page-title-standard.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52009 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60630 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53390 - "GET /assets/js/admin-auth.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60681 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52158 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52009 - "GET /assets/js/sigma-read.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59704 - "GET /assets/js/catalog.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60681 - "GET /assets/js/status-colors.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53390 - "GET /assets/js/admin-labels.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52158 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60630 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52009 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59704 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60681 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52158 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53390 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52009 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60630 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59704 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59704 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59704 - "GET /config/catalogo-slt.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60630 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53390 - "GET /api/dominios/transicoes-status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52009 - "GET /api/dominios/status-objeto-ahp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59704 - "GET /api/dominios/status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52158 - "GET /api/instituicoes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/pessoas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60681 - "GET /api/agrupamentos-demandas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54424 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_atributo_objeto HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54424 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60056 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50841 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53539 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59414 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49255 - "GET /assets/css/area-administrador.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54424 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60056 - "GET /assets/js/area-administrador.js?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53539 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59414 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50841 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49255 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54424 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59414 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54424 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59414 - "GET /api/admin/esquemas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59414 - "GET /api/admin/tabelas/demandas/dom_atributo_objeto?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61819 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_status_demanda_transicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61819 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51815 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62724 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64792 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51916 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52552 - "GET /assets/css/area-administrador.css?v=20261015-hero-topo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51916 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64792 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61819 - "GET /assets/css/admin-table-controls.css?v=20261015-hero-topo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51815 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62724 - "GET /assets/js/area-administrador.js?v=20261015-hero-topo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52552 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51815 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62724 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62724 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62724 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60214 - "GET /restrict/admin/?menu=__dominios__&esquema=demandas&tabela=dom_atributo_objeto HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60214 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51242 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50174 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56791 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60718 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:65458 - "GET /assets/css/area-administrador.css?v=20261015-hero-topo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50174 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60718 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56791 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60214 - "GET /assets/css/admin-table-controls.css?v=20261015-hero-topo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51242 - "GET /assets/js/area-administrador.js?v=20261015-hero-topo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65458 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60718 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56791 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60718 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56791 - "GET /api/admin/esquemas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56791 - "GET /api/admin/tabelas/demandas/dom_atributo_objeto?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53465 - "GET /api/admin/tabelas/ahp/comparacao_colaborativa_ambiente?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53465 - "GET /api/admin/tabelas/ahp/comparacao_colaborativa_ambiente?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53465 - "GET /api/admin/tabelas/ahp/comparacao_colaborativa_analise?pagina=1&por_pagina=15 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49932 - "GET /api/agrupamentos-demandas/2daa37e3-3b8a-4b64-a066-e00b3fec8486 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58676 - "GET /api/ahp/universo/projeto/campos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49932 - "GET /api/ahp/universo/projeto?status=todas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60191 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60191 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49154 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52522 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56330 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55270 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57953 - "GET /assets/css/ahp-module.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60191 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56330 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49154 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52522 - "GET /assets/css/page-title-standard.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55270 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57953 - "GET /assets/vendor/leaflet/leaflet.js.map HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63661 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63661 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57324 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63180 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54780 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63661 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53678 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63413 - "GET /assets/css/ahp-module.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57324 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53678 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54780 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63180 - "GET /assets/css/page-title-standard.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63661 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63413 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57324 - "GET /assets/js/admin-auth.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63413 - "GET /assets/js/sigma-read.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63180 - "GET /assets/js/status-colors.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63661 - "GET /assets/js/catalog.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54780 - "GET /assets/js/admin-labels.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51915 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57324 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63661 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63180 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54780 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51915 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63413 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57324 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51915 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63413 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51915 - "GET /assets/vendor/leaflet/leaflet.js.map HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63413 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63413 - "GET /config/catalogo-slt.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57324 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51915 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54780 - "GET /api/dominios/transicoes-status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63180 - "GET /api/instituicoes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63661 - "GET /api/pessoas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63413 - "GET /api/dominios/status-objeto-ahp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57324 - "GET /api/dominios/status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57324 - "GET /api/agrupamentos-demandas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52009 - "GET /api/agrupamentos-demandas/2daa37e3-3b8a-4b64-a066-e00b3fec8486 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53043 - "GET /api/ahp/universo/projeto/campos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52009 - "GET /api/ahp/universo/projeto?status=todas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65001 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65001 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64121 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53519 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57270 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64735 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56861 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50799 - "GET /assets/css/ahp-module.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64121 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53519 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64735 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56861 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57270 - "GET /assets/css/page-title-standard.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50799 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53519 - "GET /assets/js/admin-auth.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56861 - "GET /assets/js/status-colors.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50799 - "GET /assets/js/sigma-read.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57270 - "GET /assets/js/catalog.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64735 - "GET /assets/js/admin-labels.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64121 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53519 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64735 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57270 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50799 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56861 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64121 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53519 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57270 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64735 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64735 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57270 - "GET /assets/vendor/leaflet/leaflet.js.map HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64735 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64735 - "GET /config/catalogo-slt.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64735 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57270 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64121 - "GET /api/dominios/transicoes-status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64735 - "GET /api/dominios/status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53519 - "GET /api/dominios/status-objeto-ahp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56861 - "GET /api/instituicoes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50799 - "GET /api/pessoas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50799 - "GET /api/agrupamentos-demandas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55159 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55159 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58606 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60492 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52211 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55319 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56370 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59435 - "GET /assets/css/ahp-module.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60492 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58606 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55319 - "GET /assets/css/page-title-standard.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52211 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56370 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59435 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58606 - "GET /assets/js/admin-auth.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56370 - "GET /assets/js/catalog.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59435 - "GET /assets/js/sigma-read.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52211 - "GET /assets/js/status-colors.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55319 - "GET /assets/js/admin-labels.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60492 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58606 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60492 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55319 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56370 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52211 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59435 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56370 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58606 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52211 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52211 - "GET /assets/vendor/leaflet/leaflet.js.map HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52211 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52211 - "GET /config/catalogo-slt.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56370 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58606 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59435 - "GET /api/dominios/transicoes-status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55319 - "GET /api/instituicoes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60492 - "GET /api/pessoas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56370 - "GET /api/dominios/status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52211 - "GET /api/dominios/status-objeto-ahp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52211 - "GET /api/agrupamentos-demandas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52211 - "GET /api/agrupamentos-demandas/2daa37e3-3b8a-4b64-a066-e00b3fec8486 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56370 - "GET /api/ahp/universo/projeto/campos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52211 - "GET /api/ahp/universo/projeto?status=todas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62605 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61383 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62605 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55627 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55404 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52601 - "GET /assets/css/ahp-module.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62605 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61383 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55627 - "GET /assets/css/page-title-standard.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55404 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52601 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62605 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55627 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61383 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55404 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52601 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61383 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55627 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62605 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52601 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55404 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62733 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62605 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55627 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55627 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55627 - "GET /config/catalogo-slt.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55627 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54718 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54718 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64070 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63337 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49763 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/css/ahp-module.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63337 - "GET /assets/css/page-title-standard.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49763 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63337 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49763 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49763 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63337 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63337 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49763 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63337 - "GET /assets/vendor/leaflet/leaflet.js.map HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62575 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57266 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51629 - "GET /assets/css/ahp-module.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55640 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55640 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51629 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/css/page-title-standard.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55640 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51629 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51629 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55640 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55640 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51629 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55640 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/vendor/leaflet/leaflet.js.map HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55640 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55169 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57064 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59222 - "GET /assets/css/ahp-module.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/css/page-title-standard.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59222 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57064 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59222 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57064 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59222 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57064 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59222 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57266 - "GET /assets/css/ahp-module.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57064 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59222 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59222 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/css/page-title-standard.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57064 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57064 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59222 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59222 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57064 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59222 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /assets/vendor/leaflet/leaflet.js.map HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59222 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64070 - "GET /config/catalogo-slt.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64070 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55169 - "GET /api/dominios/transicoes-status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57266 - "GET /api/dominios/status-objeto-ahp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59222 - "GET /api/dominios/status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62575 - "GET /api/pessoas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57064 - "GET /api/instituicoes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57064 - "GET /api/agrupamentos-demandas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49804 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49804 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61130 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65171 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51702 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61380 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59876 - "GET /assets/css/ahp-module.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61130 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51702 - "GET /assets/css/page-title-standard.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65171 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49804 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61380 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59876 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61130 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51702 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65171 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49804 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61380 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59876 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51702 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61380 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49804 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65171 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61130 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59876 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49804 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61380 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65171 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65171 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65171 - "GET /config/catalogo-slt.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65171 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52375 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52375 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55652 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60271 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:65349 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50710 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53860 - "GET /assets/css/ahp-module.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52375 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55652 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53860 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65349 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50710 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60271 - "GET /assets/css/page-title-standard.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52375 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55652 - "GET /assets/js/admin-auth.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60271 - "GET /assets/js/catalog.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52375 - "GET /assets/js/sigma-read.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50710 - "GET /assets/js/status-colors.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:65349 - "GET /assets/js/admin-labels.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63472 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55652 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52375 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60271 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50710 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:65349 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63472 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50710 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60271 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55652 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60271 - "GET /assets/vendor/leaflet/leaflet.js.map HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55652 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50710 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55652 - "GET /config/catalogo-slt.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60271 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50710 - "GET /api/dominios/transicoes-status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65349 - "GET /api/pessoas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63472 - "GET /api/instituicoes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60271 - "GET /api/dominios/status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55652 - "GET /api/dominios/status-objeto-ahp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55652 - "GET /api/agrupamentos-demandas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54464 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54464 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59985 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51657 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49674 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63125 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64355 - "GET /assets/css/ahp-module.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51657 - "GET /assets/css/page-title-standard.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54464 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59985 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63125 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49674 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64355 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59985 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51657 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54464 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63125 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64355 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49674 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51657 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63125 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54464 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59985 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-composicao-visibilidade HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49674 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64355 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51657 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63125 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59985 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59985 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59985 - "GET /config/catalogo-slt.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59985 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49676 - "GET /restrict/agrupamento-demandas/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49676 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59633 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59575 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55471 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55773 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51639 - "GET /assets/css/ahp-module.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49676 - "GET /assets/vendor/leaflet/leaflet.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59633 - "GET /restrict/hierarquizacao/processos.css?v=20261004-shared-modal HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59575 - "GET /assets/css/page-title-standard.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55773 - "GET /assets/css/paginas/agrupamentos-demandas.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55471 - "GET /assets/css/admin-table-controls.css?v=20261015-clique-espacamento HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51639 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59633 - "GET /assets/js/admin-auth.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55471 - "GET /assets/js/catalog.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51639 - "GET /assets/js/sigma-read.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59575 - "GET /assets/js/admin-labels.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55773 - "GET /assets/js/status-colors.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49676 - "GET /assets/vendor/leaflet/leaflet.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:59633 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59575 - "GET /restrict/hierarquizacao/js/hier-api.js?v=20261015-edicao HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49676 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51639 - "GET /restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55471 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55773 - "GET /assets/js/paginas/agrupamentos-demandas.js?v=20261015-composicao-visibilidade HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59633 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55471 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51639 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49676 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49676 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49676 - "GET /config/catalogo-slt.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49676 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51639 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59633 - "GET /api/dominios/transicoes-status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55773 - "GET /api/instituicoes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59575 - "GET /api/pessoas HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55471 - "GET /api/dominios/status-objeto-ahp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49676 - "GET /api/dominios/status-demanda HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49676 - "GET /api/agrupamentos-demandas HTTP/1.1" 200 OK

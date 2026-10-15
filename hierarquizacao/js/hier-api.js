@@ -36,6 +36,7 @@
     // --- Agrupamentos reutilizáveis de demandas ---
     listarAgrupamentos() { return request("/api/agrupamentos-demandas"); },
     obterAgrupamento(id) { return request(`/api/agrupamentos-demandas/${encodeURIComponent(id)}`); },
+    atualizarAgrupamento(id, payload) { return request(`/api/agrupamentos-demandas/${encodeURIComponent(id)}`, jsonOpts("PUT", payload)); },
     criarAgrupamento(payload) { return request("/api/agrupamentos-demandas", jsonOpts("POST", payload)); },
 
     // --- Hierarquizações ---

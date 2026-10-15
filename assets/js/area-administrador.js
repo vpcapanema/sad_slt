@@ -302,6 +302,7 @@
       Object.assign(state, {
         colunas: data.colunas, chavePrimaria: data.chave_primaria,
         linhas: data.linhas, total: data.total, paginas: data.paginas, dominio: data.dominio,
+        totalTabela: data.total_tabela ?? data.total,
         usuariosNomes: data.usuarios_nomes || {},
       });
       refs.sub.textContent = `${state.esquema}.${state.tabela} · ${data.total} registro(s) · chave primária: ${data.chave_primaria.join(", ") || "—"}`;
@@ -352,15 +353,23 @@
     }
     valSelect.onchange = () => aoSelecionarValor(valSelect.value);
 
-    const inverter = el("label", { class: "admin-filter-inv" },
-      el("input", { type: "checkbox", ...(f.inverter ? { checked: "checked" } : {}), onchange: (e) => aoInverter(e.target.checked) }),
-      el("span", {}, "Inverter seleção"));
+    const inverter = el("button", {
+      class: "admin-icon-btn admin-filter-inv", type: "button", "aria-label": "Inverter seleção",
+      "aria-pressed": String(f.inverter),
+      title: f.inverter ? "Seleção invertida — clique para desativar" : "Inverter seleção",
+      onclick: () => {
+        const ativo = !state.filtro.inverter;
+        inverter.setAttribute('aria-pressed', String(ativo));
+        inverter.title = ativo ? 'Seleção invertida — clique para desativar' : 'Inverter seleção';
+        aoInverter(ativo);
+      },
+    }, el("i", {class: "fa-solid fa-right-left", "aria-hidden": "true"}));
 
-    const limpar = el("button", { class: "admin-btn", type: "button", onclick: limparFiltro }, "Limpar");
+    const limpar = el("button", { class: "admin-icon-btn", type: "button", title: "Limpar filtros", "aria-label": "Limpar", onclick: limparFiltro }, el("i", {class: "fa-solid fa-filter-circle-xmark", "aria-hidden": "true"}));
 
     return el("div", { class: "admin-filter-bar" },
       el("span", { class: "admin-filter-label" }, "Filtro:"),
-      colSelect, valSelect, inverter, f.coluna ? limpar : "");
+      colSelect, valSelect, inverter, limpar);
   }
   async function aoSelecionarColuna(coluna) {
     state.filtro = { coluna: coluna || null, tipo: "valor", valor: null, inverter: state.filtro.inverter };
@@ -510,7 +519,11 @@
                 el("span", { class: "admin-cell-binary-size" }, info.texto)
               );
             } else {
-              td.textContent = info.texto;
+              if (state.tabela === "categoria_extracao_atributos" && c.nome === "conceito") {
+                td.append(el("span", { class: "admin-cell-conceito", title: info.texto }, info.texto));
+              } else {
+                td.textContent = info.texto;
+              }
             }
           }
           tr.append(td);
@@ -522,7 +535,7 @@
     wrap.append(table);
 
     refs.host.innerHTML = "";
-    refs.host.append(montarFiltro(), wrap, montarAcoes(), montarPaginacao());
+    refs.host.append(montarFiltro(), wrap, montarAcoes(), montarPaginacao(), el("p", {class: "admin-table-summary", "aria-live": "polite"}));
     atualizarBotoes();
   }
 
@@ -563,6 +576,8 @@
       el("i", { class: `fa-solid ${icon}`, "aria-hidden": "true" }));
   }
   function atualizarBotoes() {
+    const resumo = $(".admin-table-summary", refs.host);
+    if (resumo) resumo.textContent = `${state.selecao.size} selecionados / ${state.linhas.length} na página / ${state.totalTabela} no total`;
     const btnEdit = $(".admin-icon-btn.edit", refs.host);
     const btnDel = $(".admin-icon-btn.delete", refs.host);
     if (btnEdit) btnEdit.disabled = state.selecao.size !== 1 || !state.chavePrimaria.length;
@@ -585,7 +600,7 @@
     const next = el("button", { type: "button", title: "Próxima", onclick: () => { if (state.pagina < state.paginas) { state.pagina++; state.selecao.clear(); carregarTabela(); } } }, "›");
     prev.disabled = state.pagina <= 1;
     next.disabled = state.pagina >= state.paginas;
-    nav.append(prev, el("span", {}, `Página ${state.pagina} de ${state.paginas} · ${state.total} registro(s)`), next);
+    nav.append(prev, el("span", {}, `Página ${state.pagina} de ${state.paginas}`), next);
     return nav;
   }
 

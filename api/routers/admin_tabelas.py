@@ -351,6 +351,9 @@ def obter_tabela(
             total = conn.execute(
                 sql.SQL("SELECT count(*) AS total FROM {}{}").format(alvo, where), params
             ).fetchone()["total"]
+            total_tabela = conn.execute(
+                sql.SQL("SELECT count(*) AS total FROM {}").format(alvo)
+            ).fetchone()["total"] if filtro_ativo else total
 
             dir_sql = sql.SQL("DESC") if str(direcao).lower() == "desc" else sql.SQL("ASC")
             if ordenar and ordenar in colunas_map and _coluna_editavel(colunas_map[ordenar]):
@@ -406,6 +409,7 @@ def obter_tabela(
                 "linhas": linhas_dict,
                 "usuarios_nomes": usuarios_nomes,
                 "total": total,
+                "total_tabela": total_tabela,
                 "pagina": pagina,
                 "por_pagina": por_pagina,
                 "paginas": max(1, (total + por_pagina - 1) // por_pagina),

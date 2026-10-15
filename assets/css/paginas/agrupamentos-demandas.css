@@ -1,5 +1,40 @@
 .agrupamentos-demandas-main {
   display: block;
+  --admin-border: var(--pli-border, #cbd5e1);
+  --admin-accent: #1683c4;
+}
+
+.agrupamentos-list-section .admin-filter-bar { margin-bottom: 0; }
+.agrupamentos-list-section .admin-actions { margin-top: 0; }
+.agrupamentos-list-section #grupos-selecao { margin: 0; }
+.agrupamento-universo .admin-filter-bar { margin: 0; }
+.agrupamento-universo .admin-actions { margin: 0; flex-wrap: wrap; }
+#agrupamento-form .admin-filter-bar select {
+  height: 34px;
+  min-height: 0;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+}
+#agrupamento-form .admin-filter-bar input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  min-height: 0;
+  margin: 0;
+}
+#agrupamento-form .admin-filter-bar label > span {
+  font-size: inherit;
+  font-weight: inherit;
+}
+.agrupamento-universo #grupo-adicionar {
+  max-width: 100%;
+  white-space: normal;
+}
+.agrupamentos-table .col-select { width: 2.5rem; }
+.agrupamentos-table input[type="checkbox"] {
+  width: 0.9rem; height: 0.9rem; min-height: 0; margin: 0; vertical-align: middle;
+}
+.agrupamentos-table #grupo-nome-edicao {
+  min-height: 0; height: 1.2rem; padding: 0 0.25rem; font: inherit;
 }
 
 .agrupamentos-demandas-hero {
@@ -234,6 +269,21 @@
   padding: 1rem;
   color: var(--pli-muted);
   text-align: center;
+}
+
+.agrupamentos-demandas-page .agrupamento-section-footer {
+  margin: 0;
+  padding: 0.4rem 0 0;
+  border: 0;
+  border-top: 1px solid #e1e8ee;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: right;
 }
 
 @media (max-width: 700px) {

@@ -35,7 +35,7 @@ def obter(grupo_demanda_id: UUID) -> dict[str, Any]:
     return _serializar(resolver_nomes_registros([row])[0], resumo=False)
 
 
-def criar(payload: Any, *, user: SessionUser) -> dict[str, Any]:
+def _objetos_validados(payload: Any) -> list[dict[str, Any]]:
     if payload.tipo_demanda not in _TIPOS_VALIDOS:
         raise DemandaValidationError("Tipo de demanda inválido.", field="tipo_demanda")
     ids = [str(value) for value in payload.demanda_ids]
@@ -56,7 +56,11 @@ def criar(payload: Any, *, user: SessionUser) -> dict[str, Any]:
             field="demanda_ids",
         )
 
-    objetos = [por_id[codigo] for codigo in ids]
+    return [por_id[codigo] for codigo in ids]
+
+
+def criar(payload: Any, *, user: SessionUser) -> dict[str, Any]:
+    objetos = _objetos_validados(payload)
     data = repo.insert({
         "codigo": f"AGR-{uuid4().hex[:16].upper()}",
         "nome": payload.nome.strip(),
@@ -66,3 +70,17 @@ def criar(payload: Any, *, user: SessionUser) -> dict[str, Any]:
         "criado_por": user.id,
     })
     return _serializar(data, resumo=False)
+
+def atualizar(agrupamento_id: UUID, payload: Any, *, user: SessionUser) -> dict[str, Any]:
+    if not repo.get_by_id(agrupamento_id):
+        raise DemandaNotFoundError(str(agrupamento_id))
+    objetos = _objetos_validados(payload)
+    row = repo.update(agrupamento_id, {
+        "nome": payload.nome.strip(),
+        "descricao": payload.descricao.strip() or None if payload.descricao else None,
+        "tipo_demanda_id": TIPO_DEMANDA_COD_TO_ID[payload.tipo_demanda],
+        "objetos": objetos,
+    })
+    if not row:
+        raise DemandaNotFoundError(str(agrupamento_id))
+    return _serializar(row, resumo=False)

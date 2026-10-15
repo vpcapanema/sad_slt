@@ -52,3 +52,18 @@ def criar_agrupamento(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except DatabaseUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+@router.put("/{agrupamento_id}", response_model=AgrupamentoDemandaSchema)
+def atualizar_agrupamento(
+    agrupamento_id: UUID,
+    body: AgrupamentoDemandaCreateSchema,
+    user: SessionUser = Depends(require_operator),
+) -> AgrupamentoDemandaSchema:
+    try:
+        return service.atualizar(agrupamento_id, body, user=user)
+    except DemandaNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DemandaValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except DatabaseUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

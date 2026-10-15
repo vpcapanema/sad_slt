@@ -53,3 +53,16 @@ def insert(data: dict[str, Any]) -> dict[str, Any]:
     if not row:
         raise RuntimeError("A gravação do agrupamento não retornou um registro.")
     return row
+
+def update(agrupamento_id: UUID, data: dict[str, Any]) -> dict[str, Any] | None:
+    params = dict(data, id=agrupamento_id)
+    params["objetos"] = Jsonb(data["objetos"], dumps=lambda value: json.dumps(value, ensure_ascii=False))
+    with get_connection() as conn:
+        return conn.execute(f"""
+            UPDATE {_TABLE}
+               SET nome=%(nome)s, descricao=%(descricao)s,
+                   tipo_demanda_id=%(tipo_demanda_id)s, objetos=%(objetos)s,
+                   atualizado_em=CURRENT_TIMESTAMP
+             WHERE id=%(id)s
+             RETURNING *, jsonb_array_length(objetos) AS quantidade_demandas
+        """, params).fetchone()
