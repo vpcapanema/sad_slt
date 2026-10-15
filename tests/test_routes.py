@@ -472,13 +472,17 @@ def test_gestao_hierarquizacoes_adota_tabela_inicial_filtro_novo_e_visualizar() 
     assert 'class="btn btn-primary" id="hier-new"' in html
     assert html.index('class="standard-section-action-row"') < html.index('id="hier-new"')
     assert html.index('id="hier-new"') < html.index("Hierarquizações realizadas")
-    assert html.index('id="hier-new"') < html.index('class="card-hier-loading')
-    assert 'id="hier-filter-column"' in html
-    assert 'id="hier-filter-value"' in html
-    assert 'class="hier-composite-filter mad-filter mad-filter--composite"' in html
-    assert 'class="admin-toolbar hier-tipo-toolbar mad-filter mad-filter--single"' in html
-    assert 'class="admin-toolbar hier-universo-filtros mad-filter mad-filter--fields"' in html
-    assert '/assets/css/mad-filter-standard.css?v=20260820-1' in html
+    assert html.index('id="hier-new"') < html.index('id="hier-loading"')
+    assert 'id="hier-filter-coluna"' in html
+    assert 'id="hier-filter-valor"' in html
+    assert '/assets/css/table-standard.css' in html
+    assert 'id="hier-agrupamento"' in html
+    assert 'id="hier-criteria-matrix"' in html
+    assert 'id="hier-tipo"' not in html
+    assert 'card-universo-da-hierarquizacao' not in html
+    assert 'listarUniverso' not in processos_js
+    assert 'listarCamposUniverso' not in processos_js
+    assert 'grupo_demanda_id: $("hier-agrupamento").value' in processos_js
     assert 'id="hier-bulk-view"' in html
     assert 'id="hier-create-section"' in html and 'ahp-step-section hidden' in html
     assert "function hierarquizacoesFiltradas()" in processos_js

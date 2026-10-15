@@ -44,26 +44,36 @@
   function matrixSummary(message, isError) { var node = $("ami-criteria-matrix-summary"); node.textContent = message || ""; node.classList.toggle("hidden", !message); node.classList.toggle("ahp-info-note--error", Boolean(isError)); }
   function statusLabel(status) { return { ativa: "Aberto", consolidada: "Consolidado", encerrada: "Encerrado" }[status] || status; }
   function actionLinks(j) { return { workspace: appUrl("restrict", "/analise-multicriterio/julgamentos/" + encodeURIComponent(j.id) + "/"), public: appUrl("public", "/analise-multicriterio/" + encodeURIComponent(j.token) + "/") }; }
+  function filterValue(j, column) {
+    var h = hierarquizacoes.find(function (item) { return item.id === (j.config_id || j.hierarquizacao_id); });
+    return String(Object.assign({}, j, { status: statusLabel(j.status), hierarquizacao_nome: j.hierarquizacao_nome || h && h.nome })[column] ?? '');
+  }
+  var ordenarJulgamentos = SLTTable.sorting($('ami-judgments').closest('table'), function () {
+    if (modo === 'julgamentos') return [null, j=>statusLabel(j.status), j=>j.id, j=>(j.convites||[]).length,
+      j=>(j.total_respostas||0)+(j.respostas_em_preenchimento||0), j=>j.respostas_em_preenchimento||0,
+      j=>j.total_respostas||0, j=>j.respostas_consistentes||0, j=>j.valido_ate, j=>j.atualizadoEm];
+    return [null, j=>statusLabel(j.status), j=>j.id, j=>j.hierarquizacao_id, j=>j.hierarquizacao_nome||j.hierarquizacao_codigo,
+      j=>(j.total_respostas||0)/Math.max(1,(j.convites||[]).length), j=>j.valido_ate, j=>j.criadoEm, j=>j.atualizadoEm,
+      j=>j.n_criterios, j=>j.token, ...['lambda_max','indice_consistencia','indice_aleatorio','razao_consistencia'].map(key=>j=>j.consolidacao?.[key]),
+      j=>JSON.stringify(j.consolidacao?.matriz_consolidada), j=>JSON.stringify(j.consolidacao?.pesos_consolidados)];
+  }, function () { currentPage=1; selectedIds.clear(); render(); }, function () { return !editingId; });
   function filteredRows() {
-    var query = (($("ami-filter-value") || $("ami-search")).value || "").toLowerCase(), filterColumn = $("ami-filter-column") && $("ami-filter-column").value;
-    if (modo === "julgamentos") return respostasCentral.filter(function (r) { return [r.status, r.id, r.hierarquizacao_codigo, r.hierarquizacao_nome].join(" ").toLowerCase().includes(query); });
-    return julgamentos.filter(function (j) {
-      var h = hierarquizacoes.find(function (item) { return item.id === (j.config_id || j.hierarquizacao_id); });
-      var values = Object.assign({}, j, { status: statusLabel(j.status), hierarquizacao_nome: j.hierarquizacao_nome || h && h.nome });
-      return (filterColumn ? values[filterColumn] : Object.values(values)).toString().toLowerCase().includes(query);
-    });
+    var column = $("ami-filter-coluna").value, value = $("ami-filter-valor").value;
+    return ordenarJulgamentos((modo === 'julgamentos' ? respostasCentral : julgamentos).filter(function (j) {
+      return SLTTable.matches('ami-filter', filterValue(j, column) === (value === '__empty__' ? '' : value), Boolean(column && value));
+    }));
   }
   function syncEnvironmentFilterOptions() {
-    if (!$("ami-filter-column")) return;
-    var column = $("ami-filter-column").value, values = new Set();
-    julgamentos.forEach(function (j) { var h = hierarquizacoes.find(function (item) { return item.id === j.hierarquizacao_id; }), value = column ? Object.assign({}, j, { status: statusLabel(j.status), hierarquizacao_nome: j.hierarquizacao_nome || h && h.nome })[column] : null; if (value != null && value !== "") values.add(String(value)); });
-    $("ami-filter-options").innerHTML = Array.from(values).sort().map(function (value) { return '<option value="' + escapeHtml(value) + '"></option>'; }).join("");
+    var column = $("ami-filter-coluna").value;
+    SLTTable.values($("ami-filter-valor"), modo === 'julgamentos' ? respostasCentral : julgamentos, function (j) { return filterValue(j, column); });
+    $("ami-filter-valor").disabled = !column;
   }
   function setupEnvironmentFilters() {
-    if (!$("ami-filter-column")) return;
-    $("ami-filter-column").insertAdjacentHTML("beforeend", environmentFilterColumns.map(function (entry) { return '<option value="' + entry[0] + '">' + entry[1] + "</option>"; }).join(""));
-    $("ami-filter-column").addEventListener("change", function () { $("ami-filter-value").value = ""; syncEnvironmentFilterOptions(); currentPage = 1; render(); });
-    $("ami-filter-value").addEventListener("input", function () { currentPage = 1; render(); });
+    $("ami-filter-coluna").insertAdjacentHTML("beforeend", environmentFilterColumns.map(function (entry) { return '<option value="' + entry[0] + '">' + entry[1] + '</option>'; }).join(''));
+    function change() { currentPage = 1; selectedIds.clear(); editingId = null; render(); }
+    $("ami-filter-coluna").onchange = function () { $("ami-filter-valor").value = ''; syncEnvironmentFilterOptions(); change(); };
+    $("ami-filter-valor").onchange = change;
+    SLTTable.bindFilter('ami-filter', change, function () { $("ami-filter-coluna").value = ''; $("ami-filter-valor").value = ''; syncEnvironmentFilterOptions(); });
   }
   function updateSelectedId() { selectedId = selectedIds.size === 1 ? Array.from(selectedIds)[0] : null; }
   function changeRowSelection(id, checked) {
@@ -98,7 +108,8 @@
     }
     syncPairwiseButtons();
     syncViewButton();
-    syncSelectAll(rows);
+    syncSelectAll(pageRows);
+    SLTTable.summary("ami-count", selectedIds.size, pageRows.length, source.length);
     var pagination = $("ami-judgments-pagination");
     pagination.querySelector("[data-page-label]").textContent = "Página " + currentPage + " de " + pageCount;
     pagination.querySelector("[data-page-prev]").disabled = currentPage <= 1;
@@ -852,7 +863,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     setupMode();
     $("ami-select-all-rows").addEventListener("change", function () {
-      var rows = filteredRows();
+      var rows = filteredRows().slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
       if ($("ami-select-all-rows").checked) rows.forEach(function (item) { selectedIds.add(item.id); });
       else rows.forEach(function (item) { selectedIds.delete(item.id); });
       updateSelectedId();
@@ -861,7 +872,7 @@
     createViewButton();
     setupEnvironmentFilters();
     if (modo === "julgamentos") {
-      api(ambientesSourceUrl).then(function (values) { respostasCentral = values; render(); }).catch(function (err) { $("ami-judgments").innerHTML = '<tr><td colspan="10" class="ami-empty">' + escapeHtml(err.message) + "</td></tr>"; });
+      api(ambientesSourceUrl).then(function (values) { respostasCentral = values; syncEnvironmentFilterOptions(); render(); }).catch(function (err) { $("ami-judgments").innerHTML = '<tr><td colspan="10" class="ami-empty">' + escapeHtml(err.message) + "</td></tr>"; });
     } else {
       api(ambientesSourceUrl).then(function (values) { julgamentos = values; syncEnvironmentFilterOptions(); render(); }).catch(function (err) { $("ami-judgments").innerHTML = '<tr><td colspan="17" class="ami-empty">' + escapeHtml(err.message) + "</td></tr>"; });
       api(hierarquizacoesSourceUrl).then(function (values) {
@@ -872,8 +883,8 @@
     }
 
     if ($("ami-search")) $("ami-search").addEventListener("input", function () { currentPage = 1; render(); });
-    $("ami-judgments-pagination").querySelector("[data-page-prev]").addEventListener("click", function () { if (currentPage > 1) { currentPage -= 1; render(); } });
-    $("ami-judgments-pagination").querySelector("[data-page-next]").addEventListener("click", function () { currentPage += 1; render(); });
+    $("ami-judgments-pagination").querySelector("[data-page-prev]").addEventListener("click", function () { if (currentPage > 1) { currentPage -= 1; selectedIds.clear(); editingId = null; render(); } });
+    $("ami-judgments-pagination").querySelector("[data-page-next]").addEventListener("click", function () { currentPage += 1; selectedIds.clear(); editingId = null; render(); });
     if ($("ami-new")) $("ami-new").addEventListener("click", showCreateSection);
     if ($("ami-judgments-matrix-action")) $("ami-judgments-matrix-action").addEventListener("click", function () { openPairwise("matrix"); });
     if ($("ami-judgments-form-action")) $("ami-judgments-form-action").addEventListener("click", function () { openPairwise("form"); });

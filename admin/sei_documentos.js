@@ -101,32 +101,48 @@
     return acoesDoc.map(botaoIcone).join('');
   }
 
+  let documentosTabela = [], paginaTabela = 1;
+  const selecionadosTabela = new Set();
+  const colunasTabela = [['nome_arquivo', 'Arquivo'], ['numero_processo', 'Processo'], ['usuario_nome', 'Enviado por'], ['criado_em', 'Recebido em'], ['status', 'Situação']];
+  function valorTabela(doc, key) { return key === 'status' ? SITUACAO[doc.status] || doc.status : key === 'criado_em' ? dataHora(doc.criado_em) : doc[key] || '—'; }
+  function valoresTabela() {
+    const column = q('sei-filter-coluna').value;
+    SLTTable.values(q('sei-filter-valor'), documentosTabela, doc => valorTabela(doc, column));
+    q('sei-filter-valor').disabled = !column;
+  }
+  const ordenarDocumentos = SLTTable.sorting(q('sei-documentos-table'), () => [null,...colunasTabela.map(([key])=>doc=>valorTabela(doc,key))], () => { paginaTabela=1; selecionadosTabela.clear(); renderDocumentos(); });
+  function renderDocumentos() {
+    const column = q('sei-filter-coluna').value, value = q('sei-filter-valor').value;
+    const filtered = ordenarDocumentos(documentosTabela.filter(doc => SLTTable.matches('sei-filter', String(valorTabela(doc, column)) === value, Boolean(column && value))));
+    const result = SLTTable.paginate('sei-pagination', filtered, paginaTabela, page => { paginaTabela = page; selecionadosTabela.clear(); renderDocumentos(); });
+    paginaTabela = result.page;
+    q('sei-documentos-body').replaceChildren();
+    q('sei-documentos-vazio').classList.toggle('hidden', !!filtered.length);
+    for (const doc of result.rows) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="col-select"><input type="checkbox" data-sei-select="${esc(doc.id)}" aria-label="Selecionar ${esc(doc.nome_arquivo)}" ${selecionadosTabela.has(doc.id) ? 'checked' : ''}></td>` + colunasTabela.map(([key]) => `<td title="${esc(key === 'nome_arquivo' && doc.aviso ? doc.nome_arquivo + ' - ' + doc.aviso : valorTabela(doc, key))}">${esc(valorTabela(doc, key))}${key === 'status' && doc.demanda_id ? ' (' + esc(doc.demanda_id) + ')' : ''}</td>`).join('');
+      tr.querySelector('input').onchange = event => { event.target.checked ? selecionadosTabela.add(doc.id) : selecionadosTabela.delete(doc.id); renderDocumentos(); };
+      q('sei-documentos-body').append(tr);
+    }
+    const all = q('sei-select-all');
+    all.checked = result.rows.length > 0 && result.rows.every(doc => selecionadosTabela.has(doc.id));
+    all.indeterminate = !all.checked && result.rows.some(doc => selecionadosTabela.has(doc.id));
+    all.onchange = () => { result.rows.forEach(doc => all.checked ? selecionadosTabela.add(doc.id) : selecionadosTabela.delete(doc.id)); renderDocumentos(); };
+    const doc = selecionadosTabela.size === 1 ? documentosTabela.find(doc => selecionadosTabela.has(doc.id)) : null;
+    q('sei-table-actions').innerHTML = doc ? acoes(doc) : Object.keys(ICONES).map(botaoIcone).join('');
+    q('sei-table-actions').querySelectorAll('button').forEach(button => { button.classList.add('admin-icon-btn'); button.disabled = !doc; button.onclick = () => executar(button, doc, button.dataset.acao); });
+    SLTTable.summary('sei-summary', selecionadosTabela.size, result.rows.length, documentosTabela.length);
+  }
   async function listar() {
     q('sei-btn-atualizar').disabled = true;
     aviso('sei-lista-aviso', 'Carregando documentos…');
     try {
-      const documentos = await request(API);
-      q('sei-documentos-body').replaceChildren();
-      q('sei-documentos-vazio').classList.toggle('hidden', !!documentos.length);
+      documentosTabela = await request(API);
+      selecionadosTabela.clear();
+      valoresTabela(); renderDocumentos();
       aviso('sei-lista-aviso', '');
-      for (const doc of documentos) {
-        const tr = document.createElement('tr');
-        const situacao = SITUACAO[doc.status] || doc.status;
-        const demanda = doc.demanda_id ? ` (${esc(doc.demanda_id)})` : '';
-        tr.innerHTML = `<td>${esc(doc.nome_arquivo)}${doc.aviso ? `<br><span class="hint">${esc(doc.aviso)}</span>` : ''}</td>
-          <td>${esc(doc.numero_processo || '—')}</td>
-          <td>${esc(doc.usuario_nome || '—')}</td>
-          <td>${esc(dataHora(doc.criado_em))}</td>
-          <td>${esc(situacao)}${demanda}</td>
-          <td class="sei-acoes">${acoes(doc)}</td>`;
-        tr.querySelectorAll('button[data-acao]').forEach(botao => {
-          botao.onclick = () => executar(botao, doc, botao.dataset.acao);
-        });
-        q('sei-documentos-body').append(tr);
-      }
-    } catch (e) {
-      aviso('sei-lista-aviso', e.message);
-    } finally { q('sei-btn-atualizar').disabled = false; }
+    } catch (e) { aviso('sei-lista-aviso', e.message); }
+    finally { q('sei-btn-atualizar').disabled = false; }
   }
 
   async function executar(botao, doc, acao) {
@@ -611,6 +627,11 @@
 
   async function init() {
     if (!await SLTAdminAuth.requireAuth()) return;
+    colunasTabela.forEach(([key, label]) => q('sei-filter-coluna').add(new Option(label, key)));
+    const change = () => { paginaTabela = 1; selecionadosTabela.clear(); renderDocumentos(); };
+    q('sei-filter-coluna').onchange = () => { q('sei-filter-valor').value = ''; valoresTabela(); change(); };
+    q('sei-filter-valor').onchange = change;
+    SLTTable.bindFilter('sei-filter', change, () => { q('sei-filter-coluna').value = ''; q('sei-filter-valor').value = ''; valoresTabela(); });
     q('sei-upload-form').onsubmit = enviar;
     q('sei-btn-atualizar').onclick = listar;
     q('sei-btn-confirmar').onclick = confirmar;

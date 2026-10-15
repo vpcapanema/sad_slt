@@ -1,4 +1,4 @@
-    <section class="card-tipo-tabs secao-tipo-tabs card admin-card">
+    <section class="card-tipo-tabs secao-tipo-tabs card admin-card standard-table-section">
       <div class="admin-card-body">
         <div class="admin-tabs" id="tipo-tabs" role="tablist" aria-label="Tipo de demanda">
           <button type="button" class="admin-tab" data-tipo="plano" role="tab" aria-selected="false">Plano</button>
@@ -6,31 +6,9 @@
           <button type="button" class="admin-tab is-active" data-tipo="projeto" role="tab" aria-selected="true">Projeto</button>
         </div>
 
-        <div class="admin-toolbar">
-          <div class="form-field admin-toolbar-column-filter">
-            <label for="filtro-coluna">Filtrar por coluna</label>
-            <select id="filtro-coluna">
-              <option value="">Selecione uma coluna</option>
-            </select>
-          </div>
-          <div class="form-field admin-toolbar-column-filter">
-            <label for="filtro-valor">Valor da coluna</label>
-            <select id="filtro-valor" disabled>
-              <option value="">Selecione uma coluna primeiro</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label for="filtro-status">Status</label>
-            <select id="filtro-status">
-              <option value="">Todos</option>
-            </select>
-          </div>
-          <div class="form-field admin-toolbar-search">
-            <label for="filtro-busca">Buscar</label>
-            <input type="text" id="filtro-busca" placeholder="Nome, código ou instituição…" autocomplete="off">
-          </div>
-          <a href="/restrict/" class="btn btn-secondary admin-toolbar-back">Voltar</a>
-        </div>
+        {% set filtro_prefixo = "filtro" %}
+        {% set filtro_rotulo = "Filtrar demandas" %}
+        {% include "componentes/filtro_tabela.html" %}
 
         <div class="admin-table-wrap">
           <table class="admin-table" data-demandas-table="plano" hidden>
@@ -75,25 +53,17 @@
             <tbody data-demandas-body="projeto"></tbody>
           </table>
         </div>
-        <nav id="demandas-pagination" class="admin-pagination hidden" aria-label="Paginação das demandas">
-          <button type="button" id="pagination-prev" title="Página anterior" aria-label="Página anterior">
-            <i class="fas fa-chevron-left" aria-hidden="true"></i>
-          </button>
-          <span id="pagination-info" aria-live="polite"></span>
-          <button type="button" id="pagination-next" title="Próxima página" aria-label="Próxima página">
-            <i class="fas fa-chevron-right" aria-hidden="true"></i>
-          </button>
-        </nav>
+
 
         {% if modo_complementacao %}
-        <div class="complementacao-controles" role="group" aria-label="Tipo de complementação">
-          <button type="button" class="btn btn-secondary" data-complementacao="cadastro" disabled>Dados cadastrais</button>
-          <button type="button" class="btn btn-secondary" data-complementacao="geometria" disabled>Geometria</button>
-          <button type="button" class="btn btn-secondary" data-complementacao="atributos" disabled>Atributo de demanda</button>
+        <div class="complementacao-controles standard-table-actions" role="group" aria-label="Tipo de complementação">
+          <button type="button" class="admin-icon-btn" data-complementacao="cadastro" title="Dados cadastrais" aria-label="Dados cadastrais" disabled><i class="fa-solid fa-address-card" aria-hidden="true"></i><span class="sr-only">Dados cadastrais</span></button>
+          <button type="button" class="admin-icon-btn" data-complementacao="geometria" title="Geometria" aria-label="Geometria" disabled><i class="fa-solid fa-draw-polygon" aria-hidden="true"></i><span class="sr-only">Geometria</span></button>
+          <button type="button" class="admin-icon-btn" data-complementacao="atributos" title="Atributo de demanda" aria-label="Atributo de demanda" disabled><i class="fa-solid fa-list" aria-hidden="true"></i><span class="sr-only">Atributo de demanda</span></button>
         </div>
         <p id="complementacao-selecao" class="field-help" aria-live="polite">Selecione uma demanda na tabela para complementar.</p>
         {% else %}
-        <div class="admin-bulk-actions" id="bulk-actions" aria-label="Ações em lote">
+        <div class="admin-bulk-actions standard-table-actions" id="bulk-actions" aria-label="Ações em lote">
           <button type="button" class="admin-icon-btn" id="btn-bulk-edit" title="Editar selecionados" disabled>
             <i class="fas fa-pen" aria-hidden="true"></i>
             <span class="sr-only">Editar</span>
@@ -113,8 +83,18 @@
         </div>
         {% endif %}
 
-        <div id="status-legend" class="status-color-legend-host" aria-label="Legenda de cores por status"></div>
 
         <p id="lista-vazia" class="hint hidden">Nenhuma demanda encontrada.</p>
+        <nav id="demandas-pagination" class="admin-pagination" aria-label="Paginação das demandas">
+          <button type="button" id="pagination-prev" title="Página anterior" aria-label="Página anterior">
+            ‹
+          </button>
+          <span id="pagination-info" aria-live="polite"></span>
+          <button type="button" id="pagination-next" title="Próxima página" aria-label="Próxima página">
+            ›
+          </button>
+        </nav>
+        <p id="demandas-summary" class="admin-table-summary" aria-live="polite"></p>
       </div>
     </section>
+    <div id="status-legend" class="status-color-legend-host" aria-label="Legenda de cores por status"></div>

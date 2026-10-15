@@ -364,6 +364,14 @@
   cursor: pointer;
   font-size: 0.85rem;
 }
+.agrupamentos-demandas-page .admin-actions .admin-icon-btn {
+  width: 2.35rem;
+  height: 2.35rem;
+  min-width: 2.35rem;
+  padding: 0;
+  border-radius: 6px;
+}
+
 .admin-btn.primary {
   background: var(--admin-accent);
   border-color: var(--admin-accent);

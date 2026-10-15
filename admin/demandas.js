@@ -187,16 +187,17 @@
   }
 
   function fillColumnFilter() {
+    SLTTable.inversion($("#filtro-inverter"), false);
     const columnSelect = $("#filtro-coluna");
     const valueSelect = $("#filtro-valor");
-    columnSelect.innerHTML = '<option value="">Selecione uma coluna</option>';
+    columnSelect.innerHTML = '<option value="">— Coluna —</option>';
     COLUMNS[tipo].forEach((column, index) => {
       const option = document.createElement("option");
       option.value = String(index);
       option.textContent = column.label;
       columnSelect.appendChild(option);
     });
-    valueSelect.innerHTML = '<option value="">Selecione uma coluna primeiro</option>';
+    valueSelect.innerHTML = '<option value="">— selecione a coluna —</option>';
     valueSelect.disabled = true;
     columnFilterOptions = [];
   }
@@ -210,7 +211,7 @@
     valueSelect.innerHTML = "";
     columnFilterOptions = [];
     if (!column) {
-      valueSelect.add(new Option("Selecione uma coluna primeiro", ""));
+      valueSelect.add(new Option("— selecione a coluna —", ""));
       valueSelect.disabled = true;
       return;
     }
@@ -229,31 +230,22 @@
     valueSelect.disabled = false;
   }
 
+  const ordenadores = {};
   function filteredRows() {
-    const status = $("#filtro-status").value;
-    const q = ($("#filtro-busca").value || "").trim().toLowerCase();
     const columnIndex = $("#filtro-coluna").value === "" ? -1 : Number($("#filtro-coluna").value);
     const column = COLUMNS[tipo][columnIndex];
     const valueIndex = $("#filtro-valor").value === "" ? -1 : Number($("#filtro-valor").value) - 1;
     const columnValue = columnFilterOptions[valueIndex];
-    return rows
+    const result = rows
       .filter((d) => {
-        if (status && d.status !== status) return false;
-        if (
-          column &&
-          columnValue !== undefined &&
-          columnDisplayValue(column, d).toLocaleLowerCase("pt-BR") !== columnValue.toLocaleLowerCase("pt-BR")
-        ) {
-          return false;
-        }
-        if (!q) return true;
-        return searchHaystack(d).includes(q);
+        return SLTTable.matches('filtro', column && columnDisplayValue(column, d).toLocaleLowerCase('pt-BR') === columnValue?.toLocaleLowerCase('pt-BR'), Boolean(column && columnValue !== undefined));
       })
       .sort((a, b) => {
         const dataA = Date.parse(a.criadoEm || "") || 0;
         const dataB = Date.parse(b.criadoEm || "") || 0;
         return dataB - dataA;
       });
+    return ordenadores[tipo] ? ordenadores[tipo](result) : result;
   }
 
   function paginatedRows(data) {
@@ -267,6 +259,7 @@
   }
 
   function updateBulkButtons() {
+    SLTTable.summary("demandas-summary", selected.size, paginatedRows().length, rows.length);
     if (complementacao) {
       complementacao.selecionar(tipo, rows.filter(row => selected.has(row.id)));
       return;
@@ -641,8 +634,8 @@
   function renderPagination(total, totalPages) {
     const pagination = $("#demandas-pagination");
     if (!pagination) return;
-    pagination.classList.toggle("hidden", total === 0);
-    $("#pagination-info").textContent = `Página ${currentPage} de ${totalPages} · ${total} registro${total === 1 ? "" : "s"}`;
+    pagination.classList.remove("hidden");
+    $("#pagination-info").textContent = `Página ${currentPage} de ${totalPages}`;
     $("#pagination-prev").disabled = currentPage <= 1;
     $("#pagination-next").disabled = currentPage >= totalPages;
   }
@@ -829,26 +822,9 @@
     }
     rows = cache[tipo];
     await ensureRefs();
-    fillStatusFilter();
     fillColumnFilter();
     renderStatusLegend();
     renderTable();
-  }
-
-  function fillStatusFilter() {
-    const sel = $("#filtro-status");
-    if (complementacao) {
-      sel.innerHTML = '<option value="analise_aguardando_complementacao">Aguardando complementação</option>';
-      sel.disabled = true;
-      return;
-    }
-    sel.innerHTML = '<option value="">Todos</option>';
-    SLTAdminLabels.statusDemanda.forEach((s) => {
-      const opt = document.createElement("option");
-      opt.value = s.codigo;
-      opt.textContent = SLTAdminLabels.statusDemandaLabel(s.codigo, tipo);
-      sel.appendChild(opt);
-    });
   }
 
   function renderStatusLegend() {
@@ -860,21 +836,20 @@
   }
 
   async function init() {
+    for (const kind of ['plano','programa','projeto']) {
+      ordenadores[kind] = SLTTable.sorting(document.querySelector(`[data-demandas-table="${kind}"]`), () => [null, ...COLUMNS[kind].map(column => row => columnDisplayValue(column,row))], () => { currentPage=1; resetSelection(); renderTable(); }, () => !editMode);
+    }
     const user = await SLTAdminAuth.requireAuth();
     if (!user) return;
     await SLTAdminLabels.init("../");
-    fillStatusFilter();
     renderStatusLegend();
     document.querySelectorAll("#tipo-tabs .admin-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
         loadTipo(btn.dataset.tipo).catch((err) => SLTAdminUi.showToast(err.message, true));
       });
     });
-    $("#filtro-status").addEventListener("change", () => {
-      currentPage = 1;
-      resetSelection();
-      renderTable();
-    });
+
+    SLTTable.bindFilter('filtro', () => { currentPage = 1; resetSelection(); renderTable(); }, () => { fillColumnFilter(); });
     $("#filtro-coluna").addEventListener("change", () => {
       updateColumnValueFilter();
       currentPage = 1;
@@ -886,11 +861,7 @@
       resetSelection();
       renderTable();
     });
-    $("#filtro-busca").addEventListener("input", () => {
-      currentPage = 1;
-      resetSelection();
-      renderTable();
-    });
+
     $("#pagination-prev").addEventListener("click", () => {
       currentPage = Math.max(1, currentPage - 1);
       resetSelection();

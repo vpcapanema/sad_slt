@@ -10,7 +10,8 @@
 <link rel="stylesheet" href="/assets/css/ahp-module.css">
 <link rel="stylesheet" href="/assets/css/mad-filter-standard.css?v=20260820-1">
 <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3">
-<link rel="stylesheet" href="/assets/css/extracao-atributos.css">
+<link rel="stylesheet" href="/assets/css/extracao-atributos.css?v=20261015-tabela">
+<link rel="stylesheet" href="/assets/css/table-standard.css?v=20261015-fontes-ordem">
 {% endblock %}
 {% block conteudo %}
 <div id="admin-session-bar" class="admin-session-bar hidden"></div>
@@ -24,14 +25,12 @@
   <div class="standard-section-action-row">
     <a class="btn btn-primary" id="ea-indice-nova" href="/restrict/geoespacial/extracao-atributos/"><i class="fas fa-plus" aria-hidden="true"></i> Nova extração</a>
   </div>
-  <section class="card-extracoes-executadas secao-extracoes-executadas card ahp-step-section">
+  <section class="card-extracoes-executadas secao-extracoes-executadas card ahp-step-section standard-table-section">
     <div class="ahp-section-label"><i class="fas fa-table" aria-hidden="true"></i><span>Extrações executadas</span></div>
     <div class="ahp-section-body">
-      <div class="ea-indice-filtro mad-filter mad-filter--composite" role="search" aria-label="Filtrar extrações executadas">
-        <label for="ea-indice-coluna">Coluna</label><select id="ea-indice-coluna"><option value="">Todas as colunas</option></select>
-        <label for="ea-indice-valor">Valor</label><input id="ea-indice-valor" type="search" list="ea-indice-opcoes" placeholder="Selecione ou digite um valor"><datalist id="ea-indice-opcoes"></datalist>
-        <span id="ea-indice-contagem" aria-live="polite"></span>
-      </div>
+      {% set filtro_prefixo = "ea-indice" %}
+      {% set filtro_rotulo = "Filtrar extrações executadas" %}
+      {% include "componentes/filtro_tabela.html" %}
       <div class="admin-table-wrap">
         <table class="admin-table ea-indice-tabela">
           <thead>
@@ -54,18 +53,21 @@
           </tbody>
         </table>
       </div>
-      <div class="admin-bulk-actions" id="ea-indice-bulk-actions" aria-label="Ações em lote sobre as extrações selecionadas">
+      <div class="admin-bulk-actions standard-table-actions" id="ea-indice-bulk-actions" aria-label="Ações em lote sobre as extrações selecionadas">
         <button type="button" class="admin-icon-btn" id="ea-indice-bulk-edit" title="Editar o nome das extrações selecionadas" disabled><i class="fas fa-pen" aria-hidden="true"></i><span class="sr-only">Editar</span></button>
         <button type="button" class="admin-icon-btn" id="ea-indice-bulk-cancel" title="Cancelar edição" disabled><i class="fas fa-xmark" aria-hidden="true"></i><span class="sr-only">Cancelar</span></button>
         <button type="button" class="admin-icon-btn admin-icon-btn-primary" id="ea-indice-bulk-save" title="Salvar alterações" disabled><i class="fas fa-floppy-disk" aria-hidden="true"></i><span class="sr-only">Salvar</span></button>
         <button type="button" class="admin-icon-btn admin-icon-btn-danger" id="ea-indice-bulk-delete" title="Excluir as extrações selecionadas" disabled><i class="fas fa-trash" aria-hidden="true"></i><span class="sr-only">Excluir</span></button>
       </div>
+      <nav id="ea-indice-pagination" class="admin-pagination" aria-label="Paginar extrações"></nav>
+      <p id="ea-indice-contagem" class="admin-table-summary" aria-live="polite"></p>
     </div>
   </section>
   <p id="ea-feedback" class="ea-feedback" role="status" aria-live="polite"></p>
 </main>
 {% endblock %}
 {% block scripts_pagina %}
+<script src="/assets/js/table-standard.js?v=20261015-fontes-ordem"></script>
 <script src="/assets/js/admin-auth.js"></script>
-<script type="module" src="/restrict/geoespacial/extracao-atributos/indice.js"></script>
+<script type="module" src="/restrict/geoespacial/extracao-atributos/indice.js?v=20261015-fontes-ordem"></script>
 {% endblock %}

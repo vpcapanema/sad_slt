@@ -349,6 +349,7 @@
 .ea-indice-tabela .col-acao { width:1%; white-space:nowrap; }
 .ea-acoes-linha { display:flex; align-items:center; gap:.3rem; }
 .ea-acoes-linha .admin-icon-btn { width:2rem; height:2rem; font-size:.82rem; }
+.standard-table-section .ea-acoes-linha .admin-icon-btn { width:1.25rem; height:1.25rem; min-height:0; padding:0; border-radius:4px; font-size:.7rem; }
 .ea-indice-tabela input[data-k] { width:100%; min-width:16rem; min-height:2rem; padding:.3rem .5rem; border:1px solid #cbd6dd; border-radius:.35rem; font:inherit; font-size:.82rem; }
 .standard-section-action-row a.btn { text-decoration:none; }
 

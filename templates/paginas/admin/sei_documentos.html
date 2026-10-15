@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/paginas/admin-sei-documentos.css">
   <link rel="stylesheet" href="/assets/css/escala-tipografica.css">
+  <link rel="stylesheet" href="/assets/css/table-standard.css?v=20261015-fontes-ordem">
 {% endblock %}
 
 {% block conteudo %}
@@ -54,31 +55,36 @@
       </div>
     </section>
 
-    <section class="card-tipo-tabs secao-tipo-tabs card admin-card" id="sei-documentos-section">
+    <section class="card-tipo-tabs secao-tipo-tabs card admin-card standard-table-section" id="sei-documentos-section">
       <div class="pli-section-label">
         <i class="fas fa-folder-open" aria-hidden="true"></i>
         <span class="pli-section-title">Documentos no repositório</span>
       </div>
       <div class="admin-card-body">
         <p class="step-intro">Abra um documento no formulário para revisar o que foi extraído e criar a demanda. A criação usa os mesmos cadastros de plano, programa e projeto.</p>
-        <button type="button" class="btn btn-secondary" id="sei-btn-atualizar">Atualizar lista</button>
+        {% set filtro_prefixo = "sei-filter" %}{% set filtro_rotulo = "Filtrar documentos" %}{% include "componentes/filtro_tabela.html" %}
         <p id="sei-lista-aviso" class="hint hidden" role="status"></p>
         <div class="admin-table-wrap">
           <table class="admin-table" id="sei-documentos-table">
             <thead>
               <tr>
-                <th scope="col">Arquivo</th>
+                <th class="col-select" scope="col"><input type="checkbox" id="sei-select-all" aria-label="Selecionar documentos da página"></th><th scope="col">Arquivo</th>
                 <th scope="col">Processo</th>
                 <th scope="col">Enviado por</th>
                 <th scope="col">Recebido em</th>
                 <th scope="col">Situação</th>
-                <th scope="col">Ações</th>
               </tr>
             </thead>
             <tbody id="sei-documentos-body"></tbody>
           </table>
         </div>
+        <div class="standard-table-actions" aria-label="Controles dos documentos">
+          <button type="button" class="admin-icon-btn" id="sei-btn-atualizar" title="Atualizar lista" aria-label="Atualizar lista"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i></button>
+          <span id="sei-table-actions" class="standard-table-actions"></span>
+        </div>
         <p id="sei-documentos-vazio" class="hint hidden">Nenhum documento enviado até agora.</p>
+        <nav id="sei-pagination" class="admin-pagination" aria-label="Paginar documentos"></nav>
+        <p id="sei-summary" class="admin-table-summary" aria-live="polite"></p>
       </div>
     </section>
 
@@ -103,8 +109,9 @@
 {% endblock %}
 
 {% block scripts_pagina %}
+  <script src="/assets/js/table-standard.js?v=20261015-fontes-ordem"></script>
   <script src="/assets/js/admin-api.js"></script>
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/js/admin-ui.js"></script>
-  <script src="/restrict/sei_documentos.js"></script>
+  <script src="/restrict/sei_documentos.js?v=20261015-fontes-ordem"></script>
 {% endblock %}

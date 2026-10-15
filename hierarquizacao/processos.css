@@ -16,10 +16,6 @@
   gap: var(--process-space-4);
 }
 
-#nova-hierarquizacao > .card-universo-da-hierarquizacao[hidden] {
-  display: none !important;
-}
-
 /* Primeiro nível contido. */
 #nova-hierarquizacao > .cadastro-card {
   display: grid;
@@ -47,27 +43,6 @@
   font-size: 0.8rem;
 }
 
-/* Segundo nível: menor que o card que o contém. */
-#nova-hierarquizacao > .cadastro-card > .ahp-subcard {
-  display: grid;
-  gap: var(--process-space-2);
-  margin: 0;
-  padding: var(--process-space-2);
-  border-radius: 6px;
-  font-size: 0.82rem;
-}
-
-#nova-hierarquizacao > .cadastro-card > .ahp-subcard .ahp-subsection-title {
-  min-height: auto;
-  margin: 0;
-  gap: var(--process-space-1);
-  font-size: 0.7rem;
-}
-
-#nova-hierarquizacao > .cadastro-card > .ahp-subcard .ahp-subsection-num {
-  font-size: 0.72rem;
-}
-
 /* Composição de cores dos cards internos: superfícies claras e neutras; o
    cabeçalho fica em barra clara com texto escuro (abaixo, na hierarquia, do
    cabeçalho escuro do container). Escopo restrito ao formulário. */
@@ -87,21 +62,9 @@
   color: var(--pli-blue);
 }
 
-#nova-hierarquizacao > .cadastro-card > .ahp-subcard {
-  background: #f6f9fb;
-  border: 1px solid #e1e8ee;
-}
-
-#nova-hierarquizacao > .cadastro-card > .ahp-subcard .ahp-subsection-title {
-  background: #e7eef4;
-  color: var(--pli-deep);
-  border-bottom: 1px solid #d6e0e8;
-}
-
 /* Escala única de espaçamento interno. */
 #nova-hierarquizacao p,
-#nova-hierarquizacao .ahp-info-note,
-#nova-hierarquizacao .ahp-universo-objeto {
+#nova-hierarquizacao .ahp-info-note {
   margin: 0;
 }
 
@@ -177,27 +140,6 @@
 #nova-hierarquizacao .process-actions {
   margin: 0;
   gap: var(--process-space-2);
-}
-
-#nova-hierarquizacao .ahp-resumo-table {
-  font-size: 0.76rem;
-}
-
-#nova-hierarquizacao .ahp-resumo-table th {
-  padding: 0.45rem 0.55rem;
-}
-
-#nova-hierarquizacao .ahp-resumo-table tbody td {
-  height: 1.75rem;
-  padding: 0.12rem 0.45rem;
-  font-size: 0.7rem;
-  line-height: 1.15;
-}
-
-#nova-hierarquizacao .ahp-resumo-table tbody input[type="checkbox"] {
-  width: 0.8rem;
-  height: 0.8rem;
-  margin: 0;
 }
 
 .hier-register-table {

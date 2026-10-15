@@ -47,7 +47,7 @@
       return row.cells.length === headers.length &&
         Array.from(row.cells).every((cell) => cell.colSpan === 1 && cell.rowSpan === 1);
     });
-    if (!rows.length) return false;
+    if (!rows.length && !table.sltSortSource) return false;
     if (rows.some((row) => row.querySelector(":scope > th"))) return false;
     return true;
   }
@@ -176,6 +176,10 @@
   }
 
   function sortTable(table, columnIndex, direction) {
+    if (table.sltSortSource) {
+      table.sltSortSource.onChange();
+      return;
+    }
     const headers = headerCells(table);
     rememberOriginalRows(table);
     if (direction === "none") {
@@ -202,6 +206,7 @@
   }
 
   function columnHasSortableValues(table, index) {
+    if (table.sltSortSource) return typeof table.sltSortSource.columns()[index] === 'function';
     const cells = bodyRows(table).map((row) => cellAt(row, index)).filter(Boolean);
     if (!cells.length) return false;
     return cells.some((cell) => {
@@ -249,11 +254,12 @@
     if (!header.classList.contains("slt-sortable-column")) return false;
     headers.forEach((item) => item.setAttribute("aria-sort", "none"));
     header.setAttribute("aria-sort", state.direction);
-    if (state.direction !== "none") sortTable(table, columnIndex, state.direction);
+    if (state.direction !== "none" && !table.sltSortSource) sortTable(table, columnIndex, state.direction);
     return true;
   }
 
   function applyDefaultSort(table, headers) {
+    if (table.sltSortSource) return;
     if (table.dataset.defaultSort === "off") return;
     const configuredIndex = Number.parseInt(table.dataset.defaultSortColumn || "", 10);
     const columnIndex = Number.isInteger(configuredIndex)
@@ -282,6 +288,7 @@
     header.title = `Ordenar por ${(header.textContent || `coluna ${index + 1}`).trim()}`;
 
     const order = () => {
+      if (table.sltSortSource?.canSort && !table.sltSortSource.canSort()) return;
       const direction = nextDirection(header.getAttribute("aria-sort"));
       headers.forEach((item) => {
         if (item !== header) item.setAttribute("aria-sort", "none");
@@ -338,7 +345,17 @@
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  global.SLTTableSort = { enhanceTable, enhanceWithin, sortTable, parseDate, parseNumber, detectType, defaultCreationColumn };
+  function sortRows(table, rows) {
+    const state = sortStates.get(table);
+    if (!state || state.direction === 'none' || !table.sltSortSource) return rows;
+    const index = headerCells(table).findIndex(header => normalizedHeaderText(header) === state.column);
+    const value = table.sltSortSource.columns()[index];
+    if (!value) return rows;
+    const entries = rows.map((row, position) => ({ row, position, value: String(value(row) ?? '') }));
+    const type = detectType(entries.map(entry => entry.value));
+    return entries.sort((a, b) => compareValues(a.value, b.value, type, state.direction) || a.position - b.position).map(entry => entry.row);
+  }
+  global.SLTTableSort = { enhanceTable, enhanceWithin, sortTable, sortRows, parseDate, parseNumber, detectType, defaultCreationColumn };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
 })(window);

@@ -5,20 +5,20 @@
 {% set requer_autenticacao = true %}
 
 {% block titulo %}Gestão das hierarquizações — SICARD{% endblock %}
-{% block classes_body %}ahp-module-page{% endblock %}
+{% block classes_body %}ahp-module-page hier-processos-page{% endblock %}
 {% block base_url %}<base href="/restrict/hierarquizacao/" />{% endblock %}
 
 {% block estilos_pagina %}
   <link rel="stylesheet" href="/assets/css/ahp-module.css" />
   <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" crossorigin="" />
-  <link rel="stylesheet" href="/restrict/hierarquizacao/processos.css?v=20261004-shared-modal" />
+  <link rel="stylesheet" href="/restrict/hierarquizacao/processos.css?v=20261015-fluxo-atual" />
   <link
       rel="stylesheet"
       href="/assets/vendor/fontawesome/css/all.min.css"
     />
-  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-home-inline-1.css?v=20261004-shared-modal">
-  <link rel="stylesheet" href="/assets/css/mad-filter-standard.css?v=20260820-1" />
+  <link rel="stylesheet" href="/assets/css/paginas/hierarquizacao-home-inline-1.css?v=20261015-botao-centralizado">
   <link rel="stylesheet" href="/assets/css/page-title-standard.css?v=20260820-3" />
+  <link rel="stylesheet" href="/assets/css/table-standard.css?v=20261015-fontes-ordem">
 {% endblock %}
 
 {% block conteudo %}
@@ -38,16 +38,12 @@
       <div class="standard-section-action-row">
         <button type="button" class="btn btn-primary" id="hier-new"><i class="fas fa-plus" aria-hidden="true"></i> Nova hierarquização</button>
       </div>
-      <section class="card-hier-loading secao-hier-loading card ahp-step-section">
+      <section class="standard-table-section card-hier-loading secao-hier-loading card ahp-step-section">
         <div class="ahp-section-label">
           <i class="fas fa-table" aria-hidden="true"></i><span>Hierarquizações realizadas</span>
         </div>
         <div class="ahp-section-body">
-          <div class="hier-composite-filter mad-filter mad-filter--composite" role="search" aria-label="Filtrar hierarquizações realizadas">
-            <label for="hier-filter-column">Coluna</label><select id="hier-filter-column"><option value="">Todas as colunas</option></select>
-            <label for="hier-filter-value">Valor</label><input id="hier-filter-value" type="search" list="hier-filter-options" placeholder="Selecione ou digite um valor"><datalist id="hier-filter-options"></datalist>
-            <span id="hier-filter-count" aria-live="polite"></span>
-          </div>
+          {% set filtro_prefixo = "hier-filter" %}{% set filtro_rotulo = "Filtrar hierarquizações" %}{% include "componentes/filtro_tabela.html" %}
           <div id="hier-loading">Carregando…</div>
           <div
             id="hier-error"
@@ -91,7 +87,7 @@
               </tbody>
             </table>
           </div>
-          <div class="admin-bulk-actions hier-bulk-actions" id="hier-bulk-actions" aria-label="Ações em lote sobre as hierarquizações">
+          <div class="admin-bulk-actions hier-bulk-actions standard-table-actions" id="hier-bulk-actions" aria-label="Ações em lote sobre as hierarquizações">
             <button type="button" class="admin-icon-btn" id="hier-bulk-view" title="Visualizar selecionada" aria-label="Visualizar selecionada" disabled><i class="fas fa-eye" aria-hidden="true"></i><span class="sr-only">Visualizar</span></button>
             <button type="button" class="admin-icon-btn" id="hier-bulk-edit" title="Editar selecionadas" disabled>
               <i class="fas fa-pen" aria-hidden="true"></i><span class="sr-only">Editar</span>
@@ -106,6 +102,8 @@
               <i class="fas fa-trash" aria-hidden="true"></i><span class="sr-only">Excluir</span>
             </button>
           </div>
+          <nav id="hier-pagination" class="admin-pagination" aria-label="Paginar hierarquizações"></nav>
+          <p id="hier-filter-count" class="admin-table-summary" aria-live="polite"></p>
         </div>
       </section>
 
@@ -118,13 +116,13 @@
           <form id="nova-hierarquizacao">
             <article class="card-informacoes-cadastrais ahp-subcard cadastro-card">
               <div class="ahp-subsection-title">
-                <i class="fas fa-address-card"></i>
+                <span class="ahp-subsection-num">1</span>
                 <h2>Informações cadastrais</h2>
               </div>
               <div class="process-grid">
                 <label class="process-field"
                   ><span>Nome *</span
-                  ><input id="hier-nome" maxlength="200" required /></label
+                  ><input id="hier-nome" type="text" maxlength="200" required /></label
                 ><label class="process-field process-field--wide"
                   ><span>Descrição</span
                   ><textarea id="hier-descricao" rows="3"></textarea>
@@ -132,224 +130,50 @@
               </div>
             </article>
 
-            <article class="card-agrupamento-da-hierarquizacao ahp-subcard cadastro-card">
+            <article class="card-agrupamento-da-hierarquizacao ahp-subcard cadastro-card" aria-labelledby="hier-agrupamento-titulo">
               <div class="ahp-subsection-title">
-                <i class="fas fa-object-group" aria-hidden="true"></i>
-                <h2>Agrupamento de demandas</h2>
+                <span class="ahp-subsection-num">2</span>
+                <h2 id="hier-agrupamento-titulo">Agrupamento</h2>
               </div>
-              <p class="ahp-info-note"><i class="fas fa-circle-info" aria-hidden="true"></i><span>As demandas são selecionadas e salvas na página Agrupamento de Demandas. Escolha aqui o grupo que será usado como universo desta hierarquização.</span></p>
-              <p><a class="btn btn-secondary btn-sm" href="/restrict/agrupamento-demandas/"><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i> Gerenciar agrupamentos</a></p>
-              <div class="admin-form-grid">
-                <div class="form-field span-2">
-                  <label for="hier-agrupamento">Agrupamento salvo *</label>
+              <p class="step-intro">As demandas são selecionadas e salvas na página Agrupamento de Demandas. Escolha aqui o grupo que será usado como universo desta hierarquização.</p>
+              <div class="hier-agrupamento-controles">
+                <label class="process-field" for="hier-agrupamento">
+                  <span>Selecione um agrupamento *</span>
                   <select id="hier-agrupamento" required><option value="">Carregando agrupamentos…</option></select>
-                </div>
+                </label>
+                <a class="btn btn-secondary btn-sm" href="/restrict/agrupamento-demandas/"><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i> Gerenciar agrupamentos</a>
               </div>
-              <p id="hier-agrupamento-resumo" class="ahp-universo-preview">Selecione um agrupamento salvo.</p>
+              <div id="hier-agrupamento-resumo" class="hier-agrupamento-resumo-card" aria-live="polite" hidden></div>
+            </article>
+
+            <article class="card-tabela-demandas ahp-subcard cadastro-card standard-table-section" aria-labelledby="hier-tabela-demandas-titulo">
+              <div class="ahp-subsection-title">
+                <i class="fas fa-table" aria-hidden="true"></i>
+                <h2 id="hier-tabela-demandas-titulo">Tabela de demandas</h2>
+              </div>
+              {% set filtro_prefixo = "hier-grupo" %}{% set filtro_rotulo = "Filtrar demandas do agrupamento" %}{% include "componentes/filtro_tabela.html" %}
               <div class="admin-table-wrap">
                 <table class="admin-table hier-resumo-table">
                   <thead><tr><th>Código</th><th>Nome</th><th>Situação</th></tr></thead>
                   <tbody id="hier-agrupamento-demandas"><tr><td colspan="3">Selecione um agrupamento salvo.</td></tr></tbody>
                 </table>
               </div>
+              <nav id="hier-grupo-pagination" class="admin-pagination" aria-label="Paginar demandas do agrupamento"></nav>
+              <p id="hier-grupo-summary" class="admin-table-summary" aria-live="polite"></p>
             </article>
 
     <section class="ahp-subcard cadastro-card card-matriz-de-premissas-e-criterios secao-matriz-de-premissas-e-criterios">
-      <div class="ahp-subsection-title"><span class="ahp-subsection-num">3</span><span>Matriz de premissas e critérios</span></div>
+      <div class="ahp-subsection-title"><span class="ahp-subsection-num">3</span><h2>Matriz de premissas e critérios</h2></div>
       <div class="ahp-section-body">
         <p class="step-intro">Anexe a matriz que define o contexto, as premissas e os critérios desta hierarquização. Os julgamentos associados utilizarão esta matriz cadastrada.</p>
-        <p><a href="/public/documentacao/matrizes/Modelo_Matriz_Criterios_Premissas_SLT.xlsx" download="Modelo_Matriz_Criterios_Premissas_SLT.xlsx" class="ahp-template-download-btn"><i class="fas fa-file-excel"></i> Baixar modelo XLSX</a></p>
-        <label class="process-field" for="hier-criteria-matrix"><span>Arquivo JSON, CSV ou XLSX</span><input id="hier-criteria-matrix" type="file" accept=".json,.csv,.xlsx" required aria-describedby="hier-criteria-matrix-summary"></label>
+        <div class="hier-matriz-controles">
+          <label class="process-field" for="hier-criteria-matrix"><span>Matriz de premissas e critérios</span><input id="hier-criteria-matrix" type="file" accept=".json,.csv,.xlsx" required aria-describedby="hier-criteria-matrix-formats hier-criteria-matrix-summary"></label>
+          <a href="/public/documentacao/matrizes/Modelo_Matriz_Criterios_Premissas_SLT.xlsx" download="Modelo_Matriz_Criterios_Premissas_SLT.xlsx" class="btn btn-secondary btn-sm"><i class="fas fa-file-excel" aria-hidden="true"></i> Baixar modelo XLSX</a>
+        </div>
+        <p id="hier-criteria-matrix-formats" class="hier-field-help">Formatos aceitos: JSON, CSV ou XLSX.</p>
         <div id="hier-criteria-matrix-summary" class="ahp-info-note hidden" role="status"></div>
       </div>
     </section>
-
-            <article class="card-universo-da-hierarquizacao ahp-subcard cadastro-card" hidden>
-              <div class="ahp-subsection-title">
-                <i class="fas fa-folder-tree"></i>
-                <h2>Universo da hierarquização</h2>
-              </div>
-              <p class="ahp-info-note">
-                <i class="fas fa-circle-info"></i
-                ><span
-                  >O tipo de demanda delimita o universo: planos, programas e projetos
-                  não são misturados na mesma hierarquização.
-                  Utilize os filtros para formar o conjunto e confirme marcando
-                  as demandas que participarão da rodada.</span
-                >
-              </p>
-              <div class="ahp-subcard">
-                <div class="ahp-subsection-title ahp-subsection-title--roman">
-                  <span class="ahp-subsection-num ahp-subsection-num--roman"
-                    >I</span
-                  ><span>Tipo de demanda</span>
-                </div>
-                <p class="ahp-help-text">
-                  Escolha uma única categoria para compor esta hierarquização.
-                </p>
-                <div class="admin-toolbar hier-tipo-toolbar mad-filter mad-filter--single">
-                  <div class="form-field ahp-universo-objeto">
-                    <label for="hier-tipo">Tipo de demanda *</label
-                    ><select id="hier-tipo" required>
-                      <option value="">Selecione…</option>
-                      <option value="plano">Plano</option>
-                      <option value="programa">Programa</option>
-                      <option value="projeto" selected>Projeto</option>
-                    </select>
-                  </div>
-                </div>
-                <strong id="universo-objeto-valor" class="hidden" aria-hidden="true">—</strong>
-              </div>
-              <div class="ahp-subcard">
-                <div class="ahp-subsection-title ahp-subsection-title--roman">
-                  <span class="ahp-subsection-num ahp-subsection-num--roman"
-                    >II</span
-                  ><span>Tabela de demandas do universo</span>
-                </div>
-                <div
-                  class="admin-tabs hier-demand-tabs"
-                  id="hier-tipo-tabs"
-                  role="tablist"
-                  aria-label="Tipo de demanda"
-                >
-                  <button type="button" class="admin-tab" data-tipo="plano" role="tab" aria-selected="false">Planos</button>
-                  <button type="button" class="admin-tab" data-tipo="programa" role="tab" aria-selected="false">Programas</button>
-                  <button type="button" class="admin-tab is-active" data-tipo="projeto" role="tab" aria-selected="true">Projetos</button>
-                </div>
-                <p class="ahp-help-text">
-                  Pesquise livremente ou filtre pelos atributos disponíveis para
-                  o tipo escolhido.
-                </p>
-                <div class="admin-toolbar hier-universo-filtros mad-filter mad-filter--fields">
-                  <div class="form-field admin-toolbar-search">
-                    <label for="demanda-busca">Pesquisar</label>
-                    <input
-                      id="demanda-busca"
-                      placeholder="Código, nome ou descrição"
-                      autocomplete="off" />
-                  </div>
-                  <div class="form-field">
-                    <label for="demanda-campo">Atributo</label>
-                    <select id="demanda-campo">
-                      <option value="">Todos os atributos</option>
-                    </select>
-                  </div>
-                  <div class="form-field">
-                    <label for="demanda-valor">Valor do atributo</label>
-                    <select id="demanda-valor" disabled>
-                      <option value="">Selecione primeiro um atributo</option>
-                    </select>
-                  </div>
-                </div>
-                <p id="demanda-contagem" class="ahp-universo-preview">
-                  Selecione o tipo de demanda.
-                </p>
-                <div class="admin-table-wrap">
-                  <table class="admin-table hier-universo-table" data-universo-table="plano" hidden>
-                    <thead><tr>
-                      <th class="col-select" scope="col"><input type="checkbox" class="demanda-todos" aria-label="Selecionar planos visíveis"></th>
-                      <th scope="col">Status</th><th scope="col">Código</th><th scope="col">Plano</th>
-                      <th scope="col">Diretoria</th><th scope="col">Instituição</th><th scope="col">Representante</th>
-                      <th scope="col">Objetivo estratégico</th><th scope="col">Vigência</th><th scope="col">Valor global</th>
-                      <th scope="col">Abrangência</th><th scope="col">Cadastro</th>
-                    </tr></thead><tbody data-universo-body="plano"></tbody>
-                  </table>
-                  <table class="admin-table hier-universo-table" data-universo-table="programa" hidden>
-                    <thead><tr>
-                      <th class="col-select" scope="col"><input type="checkbox" class="demanda-todos" aria-label="Selecionar programas visíveis"></th>
-                      <th scope="col">Status</th><th scope="col">Código</th><th scope="col">Programa</th>
-                      <th scope="col">Plano vinculado</th><th scope="col">Vínculo institucional</th><th scope="col">Diretoria</th>
-                      <th scope="col">Instituição</th><th scope="col">Representante</th><th scope="col">Órgão responsável</th>
-                      <th scope="col">Objetivo</th><th scope="col">Valor global</th><th scope="col">Abrangência</th>
-                      <th scope="col">Cadastro</th>
-                    </tr></thead><tbody data-universo-body="programa"></tbody>
-                  </table>
-                  <table class="admin-table hier-universo-table" data-universo-table="projeto">
-                    <thead><tr>
-                      <th class="col-select" scope="col"><input type="checkbox" class="demanda-todos" aria-label="Selecionar projetos visíveis"></th>
-                      <th scope="col">Status</th><th scope="col">Código</th><th scope="col">Projeto</th>
-                      <th scope="col">Diretoria</th><th scope="col">Plano estratégico</th><th scope="col">Vínculo institucional</th>
-                      <th scope="col">Programa vinculado</th><th scope="col">Instituição</th><th scope="col">Representante</th>
-                      <th scope="col">Classificação</th><th scope="col">Complementos</th><th scope="col">Geometria</th>
-                      <th scope="col">Cadastro</th>
-                    </tr></thead><tbody data-universo-body="projeto"></tbody>
-                  </table>
-                </div>
-                <div class="hier-demand-pagination" aria-label="Paginação da tabela de demandas">
-                  <button type="button" class="btn btn-secondary btn-sm" id="demanda-pagina-anterior"><i class="fas fa-chevron-left" aria-hidden="true"></i> Anterior</button>
-                  <span id="demanda-pagina-info" aria-live="polite">Página 1 de 1</span>
-                  <button type="button" class="btn btn-secondary btn-sm" id="demanda-pagina-proxima">Próxima <i class="fas fa-chevron-right" aria-hidden="true"></i></button>
-                </div>
-                <div class="admin-bulk-actions hier-demand-actions" aria-label="Ações da seleção">
-                  <button type="button" class="admin-icon-btn admin-icon-btn-primary" id="demanda-confirmar" title="Confirmar seleção">
-                    <i class="fas fa-check" aria-hidden="true"></i>
-                    <span class="sr-only">Confirmar seleção</span>
-                  </button>
-                  <button type="button" class="admin-icon-btn" id="demanda-limpar" title="Limpar seleção">
-                    <i class="fas fa-eraser" aria-hidden="true"></i>
-                    <span class="sr-only">Limpar seleção</span>
-                  </button>
-                  <button type="button" class="admin-icon-btn" id="demanda-atualizar" title="Atualizar tabela">
-                    <i class="fas fa-rotate" aria-hidden="true"></i>
-                    <span class="sr-only">Atualizar tabela</span>
-                  </button>
-                  <button type="button" class="admin-icon-btn" id="demanda-cancelar" title="Cancelar seleção e voltar ao início">
-                    <i class="fas fa-xmark" aria-hidden="true"></i>
-                    <span class="sr-only">Cancelar</span>
-                  </button>
-                </div>
-              </div>
-              <div class="ahp-subcard">
-                <div class="ahp-subsection-title ahp-subsection-title--roman">
-                  <span class="ahp-subsection-num ahp-subsection-num--roman"
-                    >III</span
-                  ><span>Tabela de resumo</span>
-                </div>
-                <p id="demanda-resumo-contagem" class="ahp-universo-preview">
-                  Nenhuma demanda confirmada.
-                </p>
-                <div class="admin-table-wrap">
-                  <table class="admin-table hier-resumo-table">
-                    <thead>
-                      <tr>
-                        <th class="col-select">
-                          <input type="checkbox" id="demanda-resumo-todos" aria-label="Selecionar todos os registros do grupo">
-                        </th>
-                        <th>Status</th>
-                        <th>Código</th>
-                        <th>Nome</th>
-                        <th>Grupo comparável</th>
-                      </tr>
-                    </thead>
-                    <tbody id="demanda-resumo-tbody">
-                      <tr><td colspan="5" class="process-empty-row">Confirme uma seleção para formar o grupo.</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div class="admin-bulk-actions hier-resumo-actions" aria-label="Ações do grupo">
-                  <button type="button" class="admin-icon-btn" id="demanda-resumo-excluir" title="Excluir selecionados do grupo" disabled>
-                    <i class="fas fa-trash" aria-hidden="true"></i>
-                    <span class="sr-only">Excluir</span>
-                  </button>
-                  <button type="button" class="admin-icon-btn admin-icon-btn-primary" id="demanda-resumo-confirmar" title="Confirmar e fechar grupo" disabled>
-                    <i class="fas fa-lock" aria-hidden="true"></i>
-                    <span class="sr-only">Confirmar grupo</span>
-                  </button>
-                  <button type="button" class="admin-icon-btn" id="demanda-resumo-editar" title="Editar grupo" disabled>
-                    <i class="fas fa-pen" aria-hidden="true"></i>
-                    <span class="sr-only">Editar grupo</span>
-                  </button>
-                  <button type="button" class="admin-icon-btn" id="demanda-resumo-cancelar" title="Cancelar e voltar ao estágio inicial">
-                    <i class="fas fa-xmark" aria-hidden="true"></i>
-                    <span class="sr-only">Cancelar</span>
-                  </button>
-                  <button type="button" class="admin-icon-btn" id="demanda-resumo-atualizar" title="Atualizar registros">
-                    <i class="fas fa-rotate" aria-hidden="true"></i>
-                    <span class="sr-only">Atualizar</span>
-                  </button>
-                </div>
-              </div>
-            </article>
 
             <div
               id="form-error"
@@ -374,6 +198,7 @@
 {% endblock %}
 
 {% block scripts_pagina %}
+  <script src="/assets/js/table-standard.js?v=20261015-fontes-ordem"></script>
   <script src="/assets/js/admin-auth.js"></script>
   <script src="/assets/js/admin-api.js"></script>
   <script src="/assets/js/sigma-read.js"></script>
@@ -385,6 +210,6 @@
   <script src="/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1"></script>
   <script src="/assets/vendor/xlsx/xlsx-0.18.5.min.js"></script>
   <script src="/assets/js/matriz-criterios-arquivo.js?v=20261009"></script>
-  <script src="/restrict/hierarquizacao/js/processos.js?v=20261009-matriz-cadastro"></script>
+  <script src="/restrict/hierarquizacao/js/processos.js?v=20261015-resumo-grid"></script>
   <script src="/assets/js/paginas/hierarquizacao-home-inline-1.js"></script>
 {% endblock %}

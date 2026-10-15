@@ -94,7 +94,7 @@
 
   function renderComposicao() {
     atualizarFiltroDemandas('composicao-filtro', [...membrosGrupo.values()]);
-    const lista = filtrarDemandas([...membrosGrupo.values()], 'composicao-filtro');
+    const lista = ordenarComposicao(filtrarDemandas([...membrosGrupo.values()], 'composicao-filtro'));
     paginaComposicao = paginar('composicao', lista, paginaComposicao, p => { paginaComposicao = p; membrosSelecionados.clear(); renderComposicao(); });
     const visiveis = recorte(lista, paginaComposicao);
     const nome = $('#agrupamento-nome').value.trim();
@@ -167,14 +167,17 @@
     return String(grupo[campo] ?? '');
   }
 
+  const ordenarGrupos = SLTTable.sorting($('#agrupamentos-tbody').closest('table'), () => [null,...Object.keys(colunasGrupo).map(key=>g=>valorGrupo(g,key))], () => { paginaGrupos=1; gruposSelecionados.clear(); renderGrupos(); }, () => !ocupado && !grupoEditando);
+  const ordenarUniverso = SLTTable.sorting($('#agrupamento-rows').closest('table'), () => [null,...colunas().map(col=>item=>SLTTable.plainText(formatarValor(item,col.campo)))], () => { pagina=1; SELECIONADOS.clear(); renderDemandas(); });
+  const ordenarComposicao = SLTTable.sorting($('#grupo-composicao-rows').closest('table'), () => [null,...colunas().map(col=>item=>SLTTable.plainText(formatarValor(item,col.campo)))], () => { paginaComposicao=1; membrosSelecionados.clear(); renderComposicao(); });
   function gruposFiltrados() {
     const campo = $('#grupos-filtro-coluna').value;
     const valor = $('#grupos-filtro-valor').value;
-    if (!campo || !valor) return grupos;
-    return grupos.filter(g => {
+    if (!campo || !valor) return ordenarGrupos(grupos);
+    return ordenarGrupos(grupos.filter(g => {
       const igual = valor === '__vazias__' ? !valorGrupo(g, campo) : valorGrupo(g, campo) === valor;
       return inversaoAtiva($('#grupos-filtro-inverter')) ? !igual : igual;
-    });
+    }));
   }
 
   function valoresFiltroGrupo() {
@@ -286,7 +289,7 @@
   }
 
   function filtrados() {
-    return filtrarDemandas(universo.filter(elegivel), 'universo-filtro');
+    return ordenarUniverso(filtrarDemandas(universo.filter(elegivel), 'universo-filtro'));
   }
 
   function renderDemandas() {

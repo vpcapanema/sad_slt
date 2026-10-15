@@ -270,9 +270,12 @@ def test_restricted_demands_table_exposes_audit_names_and_timestamps() -> None:
 def test_restricted_demands_table_has_dependent_column_and_value_filters() -> None:
     response = TestClient(app).get("/restrict/demandas/")
     assert response.status_code == 200
-    assert '<label for="filtro-coluna">Filtrar por coluna</label>' in response.text
-    assert '<label for="filtro-valor">Valor da coluna</label>' in response.text
-    assert 'id="filtro-valor" disabled' in response.text
+    assert 'class="admin-filter-bar"' in response.text
+    assert 'id="filtro-coluna" aria-label="Coluna do filtro"' in response.text
+    assert 'id="filtro-valor" aria-label="Valor do filtro" disabled' in response.text
+    assert 'id="filtro-inverter"' in response.text
+    assert 'id="filtro-limpar"' in response.text
+    assert 'id="filtro-busca"' not in response.text
 
     script = Path("admin/demandas.js").read_text(encoding="utf-8")
     assert "COLUMNS[tipo].forEach((column, index)" in script
