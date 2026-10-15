@@ -1,264 +1,72 @@
-[SICARD local] Banco oficial confirmado por TLS: slt_db (94 projetos) e SIGMA (21 usuários).
-[SICARD local] Auto-reload ativo: alteracoes em api/ reiniciam o servidor.
-INFO:     127.0.0.1:59811 - "GET /api/health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59813 - "GET / HTTP/1.1" 308 Permanent Redirect
-INFO:     127.0.0.1:53175 - "GET /api/health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59814 - "GET /public/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53176 - "GET /api/auth/session HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53177 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
-[SICARD local] Servidor e pagina inicial disponiveis. Abrindo navegadores externos.
-[SICARD local] Edge: perfil SICARD ja aberto; reutilizando a configuracao existente.
-[SICARD local] Edge: abertura solicitada com Console e todos os niveis. Perfil: C:\Users\Vinicius\AppData\Local\SICARD\BrowserProfiles-Isolated\Edge
-[SICARD local] Chrome: perfil SICARD ja aberto; reutilizando a configuracao existente.
-[SICARD local] Chrome: abertura solicitada com Console e todos os niveis. Perfil: C:\Users\Vinicius\AppData\Local\SICARD\BrowserProfiles-Isolated\Chrome
-INFO:     127.0.0.1:62056 - "GET /public/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62650 - "GET /public/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62056 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62650 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:61915 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:54675 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50239 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57357 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:60231 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:61123 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:64747 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62056 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62650 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:64747 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:60231 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:54675 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:61915 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50239 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:61123 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62650 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:61123 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57357 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62650 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57357 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:61123 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62650 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50239 - "GET /assets/vendor/fontawesome/webfonts/fa-regular-400.woff2 HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:61915 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:61915 - "GET /api/auth/session HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61123 - "GET /assets/vendor/fontawesome/webfonts/fa-regular-400.woff2 HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57357 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62650 - "GET /api/auth/session HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57357 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62650 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:61123 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:61123 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62650 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57357 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:57357 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:61915 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:60231 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:54675 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:50239 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:64747 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:62056 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:64747 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:57354 - "GET /restrict/complementacao/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /assets/css/app.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64402 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59958 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56653 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54685 - "GET /assets/css/admin-analysis-layout.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59958 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:56653 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/css/complementacao.css?v=20261014-tabela HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /assets/css/escala-tipografica.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64402 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54685 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61428 - "GET /assets/css/painel-shared.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64402 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56653 - "GET /assets/js/admin-ui.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54685 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61428 - "GET /assets/js/admin-analysis-info.js?v=20261014-cadastro HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64402 - "GET /assets/js/project-form.js?v=20261014-completo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/js/complementacao.js?v=20261014-completo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /restrict/demandas.js?v=20261014-complementacao HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56653 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61428 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54685 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64402 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /restrict/complementacao/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54738 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54685 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56653 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/css/app.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/css/admin-analysis-layout.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56653 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54685 - "GET /assets/css/escala-tipografica.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54738 - "GET /assets/css/complementacao.css?v=20261014-tabela HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/css/painel-shared.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56653 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:54685 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54738 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56087 - "GET /assets/js/admin-ui.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/js/admin-analysis-info.js?v=20261014-cadastro HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54685 - "GET /assets/js/project-form.js?v=20261014-completo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54738 - "GET /assets/js/complementacao.js?v=20261014-completo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /restrict/demandas.js?v=20261014-complementacao HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56087 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54685 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54738 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54738 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /restrict/complementacao/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56087 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65149 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/css/app.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55740 - "GET /assets/css/admin-analysis-layout.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55740 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56087 - "GET /assets/css/complementacao.css?v=20261014-tabela HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65149 - "GET /assets/css/escala-tipografica.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/css/painel-shared.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56087 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:57354 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65149 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51929 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/js/admin-ui.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55740 - "GET /assets/js/admin-analysis-info.js?v=20261014-cadastro HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65149 - "GET /assets/js/complementacao.js?v=20261014-completo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /restrict/demandas.js?v=20261014-complementacao HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/js/project-form.js?v=20261014-completo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51929 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55740 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65149 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57354 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /restrict/complementacao/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55740 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /assets/css/app.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63553 - "GET /assets/css/admin-analysis-layout.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51929 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61665 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62935 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:55740 - "GET /assets/css/complementacao.css?v=20261014-tabela HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61665 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/css/escala-tipografica.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63553 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51929 - "GET /assets/css/painel-shared.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56666 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55740 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63553 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51929 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56666 - "GET /assets/js/admin-ui.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55740 - "GET /assets/js/admin-analysis-info.js?v=20261014-cadastro HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61665 - "GET /assets/js/project-form.js?v=20261014-completo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63553 - "GET /restrict/demandas.js?v=20261014-complementacao HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/js/complementacao.js?v=20261014-completo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51929 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56666 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55740 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61665 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63553 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63553 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55740 - "GET /api/auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61665 - "GET /api/auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55740 - "GET /config/catalogo-slt.json HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:56666 - "GET /api/pessoas HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52560 - "GET /api/instituicoes HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55740 - "GET /api/dominios/status-demanda HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61665 - "GET /api/dominios/status-objeto-ahp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63553 - "GET /api/dominios/transicoes-status-demanda HTTP/1.1" 200 OK
-INFO:     127.0.0.1:63553 - "GET /api/complementacao/demandas/projeto HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59919 - "GET /api/complementacao/demandas/projeto/I-PRJ-SEI-10BF8DEB HTTP/1.1" 200 OK
-INFO:     127.0.0.1:64231 - "GET /api/complementacao/demandas/projeto/I-PRJ-SEI-10BF8DEB HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62433 - "GET /api/complementacao/demandas/projeto/I-PRJ-SEI-10BF8DEB HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62433 - "GET /api/complementacao/objetos HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60920 - "GET /restrict/complementacao/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60909 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60920 - "GET /assets/css/app.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62759 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51580 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55562 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53797 - "GET /assets/css/admin-analysis-layout.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51580 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:55562 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60909 - "GET /assets/css/complementacao.css?v=20261014-tabela HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62759 - "GET /assets/css/escala-tipografica.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60920 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53797 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /assets/css/painel-shared.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60909 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62759 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60920 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53797 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /assets/js/admin-ui.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55562 - "GET /assets/js/admin-analysis-info.js?v=20261014-cadastro HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60909 - "GET /assets/js/project-form.js?v=20261014-completo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62759 - "GET /assets/js/complementacao.js?v=20261014-completo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60920 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53797 - "GET /restrict/demandas.js?v=20261014-complementacao HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55562 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60909 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
-INFO:     127.0.0.1:62759 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /restrict/complementacao/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /assets/css/app.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53797 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60920 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55562 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54111 - "GET /assets/css/admin-analysis-layout.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53226 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54111 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:55562 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /assets/css/complementacao.css?v=20261014-tabela HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53797 - "GET /assets/css/escala-tipografica.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60920 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53226 - "GET /assets/css/painel-shared.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50060 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /assets/js/status-colors.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53797 - "GET /assets/js/sigma-read.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60920 - "GET /assets/js/catalog.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53226 - "GET /assets/js/admin-labels.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55562 - "GET /assets/js/admin-analysis-info.js?v=20261014-cadastro HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50060 - "GET /assets/js/admin-ui.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60920 - "GET /assets/js/project-form.js?v=20261014-completo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53797 - "GET /assets/js/complementacao.js?v=20261014-completo HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53226 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /restrict/demandas.js?v=20261014-complementacao HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50060 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55562 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53797 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55562 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53797 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /api/auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55562 - "GET /api/auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55562 - "GET /config/catalogo-slt.json HTTP/1.1" 304 Not Modified
-INFO:     127.0.0.1:53797 - "GET /api/dominios/transicoes-status-demanda HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55562 - "GET /api/dominios/status-demanda HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53226 - "GET /api/pessoas HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50060 - "GET /api/instituicoes HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /api/dominios/status-objeto-ahp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /api/complementacao/demandas/projeto HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /api/complementacao/demandas/projeto/I-PRJ-SEI-10BF8DEB HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /api/complementacao/demandas/projeto/I-PRJ-SEI-10BF8DEB HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /api/complementacao/demandas/projeto/I-PRJ-SEI-10BF8DEB HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57633 - "GET /api/complementacao/objetos HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50419 - "GET /public/login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57210 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50419 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:49673 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52703 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63102 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50527 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50419 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49673 - "GET /assets/js/admin-auth.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52703 - "GET /assets/js/admin-ui.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63102 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57783 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:57210 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52703 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:50527 - "GET /restrict/login.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49673 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63102 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:63102 - "GET /api/auth/session HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50527 - "GET /api/auth/session HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50527 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61052 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61053 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53810 - "GET / HTTP/1.1" 308 Permanent Redirect
+INFO:     127.0.0.1:53810 - "GET /public/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65095 - "GET /assets/css/app.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61892 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60482 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50256 - "GET /assets/css/template-conteudo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53691 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59995 - "GET /public/cadastro/index.css?v=20260727-7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65095 - "GET /assets/js/table-sort.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61892 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50256 - "GET /assets/js/notification_system.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53691 - "GET /assets/js/template-base.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60482 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59995 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52941 - "GET /api/auth/session HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65133 - "GET /assets/vendor/fontawesome/webfonts/fa-regular-400.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58571 - "GET /assets/vendor/fontawesome/webfonts/fa-solid-900.woff2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58571 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58567 - "GET /public/login/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58567 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52751 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:65460 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56232 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64216 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58567 - "GET /assets/img/brand/sicard-simbolo.png HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58529 - "GET /assets/js/admin-api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52751 - "GET /assets/js/table-sort.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56232 - "GET /assets/js/admin-auth.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65460 - "GET /assets/js/admin-ui.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64216 - "GET /restrict/login.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52751 - "GET /assets/js/template-base.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58567 - "GET /assets/js/process_feedback_unified.js?v=20261009-username HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58529 - "GET /assets/js/notification_system.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:65460 - "GET /assets/js/ahp-process-monitor.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:65460 - "GET /api/auth/session HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58529 - "GET /api/auth/session HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62973 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:62597 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:62597 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63890 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63890 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56741 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56741 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:56741 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56741 - "GET /assets/css/app.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:58129 - "GET /assets/css/template-conteudo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60977 - "GET /assets/vendor/fontawesome/css/all.min.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53208 - "GET /assets/css/process_feedback_system.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:54395 - "GET /assets/css/navbar-modulo.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:64346 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized

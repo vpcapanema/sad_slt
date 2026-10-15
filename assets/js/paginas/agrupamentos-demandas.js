@@ -165,7 +165,7 @@
 
   function renderGrupos() {
     const tbody = $("#agrupamentos-tbody");
-    tbody.innerHTML = grupos.length ? grupos.map((grupo) => `<tr data-ver-agrupamento="${escapar(grupo.id)}" tabindex="0" aria-label="Visualizar demandas do agrupamento ${escapar(grupo.codigo)}" title="Selecionar para visualizar as demandas"><td><code>${escapar(grupo.codigo)}</code></td><td>${escapar(grupo.nome)}</td><td>${escapar(ROTULOS[grupo.tipo_demanda] || grupo.tipo_demanda)}</td><td>${Number(grupo.quantidade_demandas || 0)}</td><td>${escapar(formatarData(grupo.criado_em))}</td></tr>`).join("") : '<tr><td colspan="5" class="agrupamentos-empty">Nenhum agrupamento cadastrado.</td></tr>';
+    tbody.innerHTML = grupos.length ? grupos.map((grupo) => `<tr data-ver-agrupamento="${escapar(grupo.id)}" tabindex="0" aria-label="Visualizar demandas do agrupamento ${escapar(grupo.codigo)}" title="Selecionar para visualizar as demandas"><td><code>${escapar(grupo.codigo)}</code></td><td>${escapar(grupo.nome)}</td><td>${escapar(ROTULOS[grupo.tipo_demanda] || grupo.tipo_demanda)}</td><td>${Number(grupo.quantidade_demandas || 0)}</td><td>${escapar(formatarData(grupo.criado_em))}</td><td>${escapar(grupo.criado_por_nome || "\u2014")}</td></tr>`).join("") : '<tr><td colspan="6" class="agrupamentos-empty">Nenhum agrupamento cadastrado.</td></tr>';
     tbody.querySelectorAll("[data-ver-agrupamento]").forEach((row) => {
       const visualizar = async () => {
         try {
@@ -184,9 +184,9 @@
   }
 
   async function carregarGrupos() {
-    $("#agrupamentos-tbody").innerHTML = '<tr><td colspan="5">Carregando agrupamentos…</td></tr>';
+    $("#agrupamentos-tbody").innerHTML = '<tr><td colspan="6">Carregando agrupamentos…</td></tr>';
     try { grupos = await HierApi.listarAgrupamentos(); renderGrupos(); }
-    catch (error) { erro(error.message, "#agrupamentos-error"); $("#agrupamentos-tbody").innerHTML = '<tr><td colspan="5">Não foi possível carregar os agrupamentos.</td></tr>'; }
+    catch (error) { erro(error.message, "#agrupamentos-error"); $("#agrupamentos-tbody").innerHTML = '<tr><td colspan="6">Não foi possível carregar os agrupamentos.</td></tr>'; }
   }
 
   function iniciar() {

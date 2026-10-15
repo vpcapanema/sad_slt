@@ -1,13 +1,19 @@
 .agrupamentos-demandas-main {
-  display: grid;
-  gap: 0.25rem;
+  display: block;
 }
 
 .agrupamentos-demandas-hero {
   text-align: center;
 }
 
-  grid-template-columns: minmax(0, 1fr);
+.agrupamentos-demandas-main > .standard-section-action-row .btn {
+  line-height: 1.5;
+}
+
+.agrupamentos-list-section > .ahp-section-body {
+  padding: 0;
+}
+
 .agrupamentos-table {
   min-width: 46rem;
   font-size: 0.74rem;

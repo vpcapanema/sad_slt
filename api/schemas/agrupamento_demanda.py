@@ -22,6 +22,7 @@ class AgrupamentoDemandaSummarySchema(BaseModel):
     descricao: str | None = None
     tipo_demanda: Literal["plano", "programa", "projeto"]
     quantidade_demandas: int
+    criado_por_nome: str | None = None
     criado_em: datetime
     atualizado_em: datetime
 

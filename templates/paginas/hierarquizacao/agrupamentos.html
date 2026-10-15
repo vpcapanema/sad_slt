@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/restrict/hierarquizacao/processos.css?v=20261004-shared-modal">
   <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
   <link rel="stylesheet" href="/assets/css/page-title-standard.css">
-  <link rel="stylesheet" href="/assets/css/paginas/agrupamentos-demandas.css?v=20261004-grid-match">
+  <link rel="stylesheet" href="/assets/css/paginas/agrupamentos-demandas.css?v=20261015-visual-autoria">
 {% endblock %}
 
 {% block conteudo %}
@@ -36,8 +36,8 @@
       <p id="agrupamentos-error" class="ahp-info-note ahp-info-note--error hidden" role="alert"></p>
       <div class="hier-table-shell">
         <table class="admin-table agrupamentos-table">
-          <thead><tr><th>Código</th><th>Nome</th><th>Tipo de demanda</th><th>Demandas</th><th>Criado em</th></tr></thead>
-          <tbody id="agrupamentos-tbody"><tr><td colspan="5">Carregando agrupamentos…</td></tr></tbody>
+          <thead><tr><th>Código</th><th>Nome</th><th>Tipo de demanda</th><th>Demandas</th><th>Criado em</th><th>Agrupado por</th></tr></thead>
+          <tbody id="agrupamentos-tbody"><tr><td colspan="6">Carregando agrupamentos…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -105,5 +105,5 @@
   <script src="/assets/vendor/leaflet/leaflet.js" crossorigin=""></script>
   <script src="/restrict/hierarquizacao/js/hier-api.js"></script>
   <script src="/restrict/hierarquizacao/js/demandas-grupo.js?v=20261004-1"></script>
-  <script src="/assets/js/paginas/agrupamentos-demandas.js?v=20261004-row-activation"></script>
+  <script src="/assets/js/paginas/agrupamentos-demandas.js?v=20261015-visual-autoria"></script>
 {% endblock %}

@@ -16,7 +16,7 @@ def list_all() -> list[dict[str, Any]]:
     query = f"""
         SELECT id, codigo, nome, descricao, tipo_demanda_id,
                jsonb_array_length(objetos) AS quantidade_demandas,
-               criado_em, atualizado_em
+               criado_em, atualizado_em, criado_por
           FROM {_TABLE}
          ORDER BY criado_em DESC, codigo DESC
     """
@@ -28,7 +28,7 @@ def get_by_id(agrupamento_id: UUID) -> dict[str, Any] | None:
     query = f"""
         SELECT id, codigo, nome, descricao, tipo_demanda_id, objetos,
                jsonb_array_length(objetos) AS quantidade_demandas,
-               criado_em, atualizado_em
+               criado_em, atualizado_em, criado_por
           FROM {_TABLE}
          WHERE id = %s
     """
@@ -44,7 +44,7 @@ def insert(data: dict[str, Any]) -> dict[str, Any]:
                 %(objetos)s, %(criado_por)s)
         RETURNING id, codigo, nome, descricao, tipo_demanda_id, objetos,
                   jsonb_array_length(objetos) AS quantidade_demandas,
-                  criado_em, atualizado_em
+                  criado_em, atualizado_em, criado_por
     """
     params = dict(data)
     params["objetos"] = Jsonb(data["objetos"], dumps=lambda value: json.dumps(value, ensure_ascii=False))

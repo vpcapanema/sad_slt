@@ -106,3 +106,21 @@ def test_obter_serializa_id_e_retorna_objetos(monkeypatch: pytest.MonkeyPatch) -
     assert result["id"] == str(agrupamento_id)
     assert result["tipo_demanda"] == "plano"
     assert result["objetos"] == row["objetos"]
+
+def test_listar_resolve_nome_da_pessoa_do_usuario_em_lote(monkeypatch):
+    from api.services import campos_demanda
+    usuario = uuid4()
+    rows = [{"id": uuid4(), "tipo_demanda_id": 1, "criado_por": usuario},
+            {"id": uuid4(), "tipo_demanda_id": 1, "criado_por": None}]
+    monkeypatch.setattr(service.repo, "list_all", lambda: rows)
+    calls = []
+    def nomes(ids):
+        calls.append(ids)
+        return {str(usuario): "Maria Silva"}
+    monkeypatch.setattr(campos_demanda.sigma_usuario_repository, "nomes_por_ids", nomes)
+    monkeypatch.setattr(campos_demanda.sigma_cadastro_repository, "nomes_pessoas_por_ids", lambda ids: {})
+    result = service.listar()
+    assert result[0]["criado_por_nome"] == "Maria Silva"
+    assert result[1]["criado_por_nome"] is None
+    assert len(calls) == 1
+    assert rows[0]["criado_por"] == usuario

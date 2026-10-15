@@ -1,4 +1,4 @@
-"""Servidor Windows e navegadores externos com Console detalhado."""
+"""Servidor Windows e pagina inicial no perfil atual do Chrome."""
 from __future__ import annotations
 
 import json
@@ -15,23 +15,6 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 URL = 'http://127.0.0.1:8083'
-CONSOLE = {
-    'message-level-filters': {'verbose': True, 'info': True, 'warning': True, 'error': True},
-    'console.text-filter': '',
-    'console.sidebar-selected-filter': 'message',
-    'preserve-console-log': True,
-    'console-timestamps-enabled': True,
-    'console-group-similar': False,
-    'selected-context-filter-enabled': False,
-    'network-messages': True,
-    'hide-network-messages': False,
-    'console-shows-cors-errors': True,
-    'monitoring-xhr-enabled': True,
-    'panel-selected-tab': 'console',
-    'currentDockState': 'bottom',
-}
-
-
 def say(message):
     print(f'[SICARD local] {message}', flush=True)
 
@@ -48,73 +31,20 @@ def browser_executable(name):
     return Path(found) if found else None
 
 
-def configure_profile(profile):
-    """Nunca modifica um perfil de navegador aberto; preserva demais preferencias."""
-    desired = {k: json.dumps(v, separators=(',', ':')) for k, v in CONSOLE.items()}
-    path = profile / 'Default' / 'Preferences'
-    original = path.read_bytes() if path.exists() else None
-    data = json.loads(original) if original else {}
-    # Uma queda anterior nao deve restaurar abas locais antes de o novo servidor
-    # estar pronto. Este perfil e exclusivo da tarefa SICARD.
-    profile_settings = data.setdefault('profile', {})
-    profile_settings['exit_type'] = 'Normal'
-    profile_settings['exited_cleanly'] = True
-    data.setdefault('session', {})['restore_on_startup'] = 5
-    devtools = data.setdefault('devtools', {})
-    prefs = devtools.setdefault('preferences', {})
-    before = json.dumps(data, sort_keys=True)
-    prefs.update(desired)
-    for store in ('synced_preferences_sync_enabled', 'synced_preferences_sync_disabled'):
-        if isinstance(devtools.get(store), dict):
-            for key in ('preserve-console-log', 'monitoring-xhr-enabled'):
-                devtools[store][key] = desired[key]
-    if before == json.dumps(data, sort_keys=True) and original is not None:
-        return
-    # Chromium Windows mantem este arquivo aberto sem compartilhamento.
-    lock = profile / 'lockfile'
-    if lock.exists():
-        with lock.open('r+b'):
-            pass
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if original is not None:
-        if path.read_bytes() != original:
-            raise RuntimeError('Preferencias mudaram durante a leitura; feche este perfil e repita.')
-        path.with_name('Preferences.before-console.bak').write_bytes(original)
-    temporary = path.with_name('Preferences.sicard.tmp')
-    temporary.write_text(json.dumps(data, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
-    os.replace(temporary, path)
-    if json.loads(path.read_bytes()) != data:
-        raise RuntimeError('Falha ao verificar preferencias do Console.')
-
-
 def open_browsers(url=URL + '/'):
-    root = Path(os.environ['LOCALAPPDATA']) / 'SICARD' / 'BrowserProfiles-Isolated'
-    for name in ('Edge', 'Chrome'):
-        executable = browser_executable(name)
-        if not executable:
-            say(f'{name} nao encontrado. Servidor continua em {url}')
-            continue
-        profile = root / name
-        try:
-            try:
-                configure_profile(profile)
-            except PermissionError:
-                # O Chromium bloqueia Preferences enquanto o perfil esta aberto.
-                # Como este diretorio e exclusivo da tarefa, a configuracao ja
-                # aplicada pode ser reutilizada e a nova URL ainda deve abrir.
-                say(f'{name}: perfil SICARD ja aberto; reutilizando a configuracao existente.')
-            subprocess.Popen([
-                str(executable), f'--user-data-dir={profile}', '--profile-directory=Default',
-                '--no-first-run', '--no-default-browser-check',
-                '--disable-extensions', '--disable-background-mode',
-                '--disable-session-crashed-bubble',
-                '--auto-open-devtools-for-tabs', '--new-window', url,
-            ], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            say(f'{name}: abertura solicitada com Console e todos os niveis. Perfil: {profile}')
-        except (OSError, ValueError, RuntimeError) as error:
-            say(f'{name}: nao foi possivel preparar/abrir ({type(error).__name__}). '
-                'Feche as janelas SICARD local deste navegador e reinicie a tarefa. '
-                f'Servidor continua em {url}')
+    """Delega ao Chrome a abertura no perfil atual, sem criar ou alterar perfis."""
+    executable = browser_executable('Chrome')
+    if not executable:
+        say(f'Chrome nao encontrado. Servidor continua em {url}')
+        return
+    try:
+        subprocess.Popen(
+            [str(executable), url],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        say('Pagina inicial enviada ao Chrome, usando o perfil atual.')
+    except OSError as error:
+        say(f'Nao foi possivel abrir o Chrome ({type(error).__name__}). Servidor continua em {url}')
 
 
 def open_when_ready(server, stopped, timeout=180):
@@ -133,7 +63,7 @@ def open_when_ready(server, stopped, timeout=180):
                 with opener.open(URL + '/assets/js/admin-api.js', timeout=3) as response:
                     login_script = response.status == 200 and b'authRequest' in response.read()
                 if healthy and homepage and session_endpoint and login_script and not stopped.is_set():
-                    say('Servidor e pagina inicial disponiveis. Abrindo navegadores externos.')
+                    say('Servidor e pagina inicial disponiveis. Abrindo no Chrome com o perfil atual.')
                     open_browsers()
                     return
             except (OSError, ValueError):

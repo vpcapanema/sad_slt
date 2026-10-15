@@ -8,6 +8,7 @@ from api.constants import STATUS_EM_HIERARQUIZACAO, STATUS_POS_APROVACAO, TIPO_D
 from api.exceptions import DemandaNotFoundError, DemandaValidationError
 from api.repositories import agrupamento_demanda_repository as repo
 from api.services import universo_service
+from api.services.campos_demanda import resolver_nomes_registros
 from api.services.session_service import SessionUser
 
 _TIPOS_VALIDOS = {"plano", "programa", "projeto"}
@@ -24,14 +25,14 @@ def _serializar(row: dict[str, Any], *, resumo: bool) -> dict[str, Any]:
 
 
 def listar() -> list[dict[str, Any]]:
-    return [_serializar(row, resumo=True) for row in repo.list_all()]
+    return [_serializar(row, resumo=True) for row in resolver_nomes_registros(repo.list_all())]
 
 
 def obter(grupo_demanda_id: UUID) -> dict[str, Any]:
     row = repo.get_by_id(grupo_demanda_id)
     if not row:
         raise DemandaNotFoundError(str(grupo_demanda_id))
-    return _serializar(row, resumo=False)
+    return _serializar(resolver_nomes_registros([row])[0], resumo=False)
 
 
 def criar(payload: Any, *, user: SessionUser) -> dict[str, Any]:
