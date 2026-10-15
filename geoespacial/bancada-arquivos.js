@@ -103,7 +103,7 @@ function mount(file,opts={}){
   sessions.set(file.id,file);
   const map=app().state.map;
   if(map&&!map.isStyleLoaded()&&!opts.estiloPreparado){
-    map.once('idle',()=>{if(sessions.get(file.id)===file)mount(file,opts);});return;
+    map.once('idle',()=>{if(sessions.get(file.id)===file)mount(file,{...opts,estiloPreparado:true,lote:false});});return;
   }
   // origem nomeia o subgrupo em Camadas operacionais; quem chama pode informar a categoria.
   if(tiles){
@@ -192,7 +192,22 @@ async function selecionarReferencias({onClose}={}){
   });
 }
 
+// One GeoPackage selection opens every internal vector layer, once per file.
+async function expandirGeoPackages(refs){
+  const arquivos=new Map(),camadas=new Map();
+  for(const ref of refs){
+    const caminho=ehStorage(ref)?separarIdStorage(ref.id).caminho:'';
+    if(!/\.gpkg$/i.test(caminho)){camadas.set(ref.id,ref);continue;}
+    if(!arquivos.has(caminho))arquivos.set(caminho,await json(`/storage/camadas-arquivo?arquivo=${encodeURIComponent(caminho)}`));
+    const inventario=arquivos.get(caminho);
+    if(!inventario.camadas?.length)throw new Error(`${ref.nome||caminho}: nenhuma camada legível no GeoPackage.`);
+    for(const camada of inventario.camadas)camadas.set(camada.id,{...camada,categoria:ref.categoria||camada.categoria||''});
+  }
+  return [...camadas.values()];
+}
+
 async function abrirReferencias(refs,extra={}){
+  refs=await expandirGeoPackages(refs);
   const TAREFA='Preparar camadas para visualização';
   const proc=extra.feedback===false?null:window.gpFeedback?.ProcessFeedback.iniciarCadastro({title:'Abrir arquivos na bancada',tasks:[TAREFA],host:extra.host});
   const atualizarStatus=mensagem=>{
@@ -560,15 +575,14 @@ function init(){
   document.addEventListener('gp-modeler-state',event=>{if(editTab.classList.contains('active')){event.stopImmediatePropagation();editRibbon();}},true);
   document.addEventListener('click',event=>{
     if(event.target.closest('[data-ribbon="editar"]')){event.preventDefault();event.stopImmediatePropagation();activateEditRibbon();return;}
-    const action=event.target.closest('[data-action]')?.dataset.action,edit=event.target.closest('[data-edit-layer]');
+    const action=event.target.closest('[data-action]')?.dataset.action;
     if(action==='load-system'){event.preventDefault();event.stopImmediatePropagation();app().openSystemLoadForm();}
-    else if((edit&&sessions.has(edit.dataset.editLayer))||active()&&['calculate-field','save-layer','save-result','refresh-source'].includes(action)){
+    else if(active()&&['calculate-field','save-layer','save-result','refresh-source'].includes(action)){
       event.preventDefault();event.stopImmediatePropagation();
       if(busy)return;
-      if(edit)app().state.activeLayerId=edit.dataset.editLayer;
       if(action==='calculate-field'){calcularCampo().catch(error=>report(error.message));return;}
       if(action==='refresh-source'){const file=active();if(editor||window.gpAttributeTable?.hasPendingChanges?.(file.id)){report('Salve ou descarte a edição antes de atualizar a fonte.');return;}releitura(file).then(async refreshed=>{mount(refreshed);window.gpAttributeTable?.atualizarArquivo(refreshed.id);window.dispatchEvent(new CustomEvent('gp-arquivo-atualizado',{detail:refreshed}));await window.gpCommands?.refreshLayerFilter?.(refreshed.id);}).catch(error=>report(error.message));return;}
-      openEditor(Boolean(edit)||['save-layer','save-result'].includes(action)).catch(error=>report(error.message));
+      openEditor(['save-layer','save-result'].includes(action)).catch(error=>report(error.message));
     }
   },true);
   document.addEventListener('submit',event=>{

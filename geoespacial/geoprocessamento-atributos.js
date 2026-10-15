@@ -248,5 +248,16 @@
   hookApp(window.gpApp);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&root?.classList.contains('attribute-maximized'))maximize();});
   window.addEventListener('beforeunload',event=>{if([...drafts.values()].some(d=>changed(d))){event.preventDefault();event.returnValue='';}});
-  window.gpAttributeTable={render,sync,applyLayerFilter(id){if(ready&&current?.id===id&&root?.isConnected)applyView();},hasPendingChanges(id){const draft=drafts.get(id);return Boolean(draft&&changed(draft));},atualizarArquivo(id){const draft=drafts.get(id);if(draft&&changed(draft))return false;drafts.delete(id);if(app().state.attributeTableCache)delete app().state.attributeTableCache[id];return true;},get grid(){return grid;}};
+  async function editarCamada(id) {
+    app().state.activeLayerId=id;
+    await app().showAttributes(id);
+    if(current?.id!==id||!root?.isConnected)throw new Error('Não foi possível abrir a tabela de atributos da camada.');
+    if(current.readonly){status(current.readonlyReason||'Camada somente leitura.',true);return;}
+    current.editing=true;
+    app().state.editingLayers.add(id);
+    controls();
+    status('Duplo clique na célula para editar. Salve ao terminar.');
+    app().renderLayers();
+  }
+  window.gpAttributeTable={editarCamada,render,sync,applyLayerFilter(id){if(ready&&current?.id===id&&root?.isConnected)applyView();},hasPendingChanges(id){const draft=drafts.get(id);return Boolean(draft&&changed(draft));},atualizarArquivo(id){const draft=drafts.get(id);if(draft&&changed(draft))return false;drafts.delete(id);if(app().state.attributeTableCache)delete app().state.attributeTableCache[id];return true;},get grid(){return grid;}};
 })();

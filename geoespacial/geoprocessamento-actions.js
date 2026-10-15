@@ -92,12 +92,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    $("#gp-layer-list").addEventListener("click", (event) => {
-      const zoom = event.target.closest("[data-zoom-layer]");
-      if (!zoom) return;
-      event.stopPropagation();
-      window.gpApp.zoomToCatalogLayer(zoom.dataset.zoomLayer).catch(error=>window.gpApp.log(error.message,"error"));
-    });
+
 
     $("#gp-catalog-tree").addEventListener("click", (event) => {
       const operation = event.target.closest("[data-open-operation]");
