@@ -21,12 +21,12 @@
     page = Math.max(1, Math.min(page, count));
     const nav = get(id);
     nav.replaceChildren();
-    const prev = document.createElement('button'), next = document.createElement('button'), label = document.createElement('span');
-    for (const [button, text, title, disabled, target] of [[prev, '‹', 'Página anterior', page <= 1, page - 1], [next, '›', 'Próxima página', page >= count, page + 1]]) {
+    const first = document.createElement('button'), last = document.createElement('button'), prev = document.createElement('button'), next = document.createElement('button'), label = document.createElement('span');
+    for (const [button, text, title, disabled, target] of [[first, '<<', 'Primeira página', page <= 1, 1], [prev, '<', 'Página anterior', page <= 1, page - 1], [next, '>', 'Próxima página', page >= count, page + 1], [last, '>>', 'Última página', page >= count, count]]) {
       button.type = 'button'; button.textContent = text; button.title = title; button.setAttribute('aria-label', title); button.disabled = disabled; button.onclick = () => change(target);
     }
     label.textContent = `Página ${page} de ${count}`; label.setAttribute('aria-live', 'polite');
-    nav.append(prev, label, next);
+    nav.append(first, prev, label, next, last);
     return { page, rows: rows.slice((page - 1) * 15, page * 15) };
   }
   function values(select, rows, value) {

@@ -4,7 +4,7 @@
   --admin-accent: #1683c4;
 }
 
-.agrupamentos-demandas-page :is(button, .btn, [role="button"], input[type="button"], input[type="submit"]) {
+.agrupamentos-demandas-page :is(button, .btn, [role="button"], input[type="button"], input[type="submit"]):not(.admin-pagination button) {
   border: 1px solid currentColor !important;
 }
 

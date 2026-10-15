@@ -9,7 +9,7 @@
   flex-shrink: 0;
   color: var(--pli-blue);
 }
-.hier-processos-page :is(button, .btn, [role="button"], input[type="button"], input[type="submit"]) {
+.hier-processos-page :is(button, .btn, [role="button"], input[type="button"], input[type="submit"]):not(.admin-pagination button) {
   border: 1px solid currentColor !important;
 }
 .hier-processos-page input[type="file"]::file-selector-button {

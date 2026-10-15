@@ -3406,3 +3406,43 @@ body.admin-data-page .app-header--restricted .admin-session-bar-inner {
 .auth-remember label { display: flex; align-items: center; gap: .5rem; cursor: pointer; }
 .auth-remember input { width: 1rem; height: 1rem; flex: 0 0 auto; }
 .auth-remember small { display: block; margin-top: .35rem; color: #475569; line-height: 1.4; }
+
+/* Table pagination: borderless navigation controls. */
+.admin-pagination button,
+.standard-table-section .admin-pagination button,
+.ami-espaco-page #ami-emails-pagination button { border: 0; font-weight: 700; }
+
+/* Shared table footer: pagination centered, record count at the right edge. */
+body .admin-table-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 6px;
+  border-top: 1px solid #e1e8ee;
+}
+body .admin-table-footer > .admin-pagination,
+body.ami-espaco-page .admin-table-footer > #ami-emails-pagination {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+  white-space: nowrap;
+}
+body .admin-table-footer > :is(.admin-table-summary, .agrupamento-section-footer),
+body.ami-espaco-page .admin-table-footer > #ami-emails-count {
+  grid-column: 3;
+  grid-row: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  text-align: right;
+  justify-self: end;
+}
+@media (max-width: 800px) {
+  body .admin-table-footer { grid-template-columns: 1fr; }
+  body .admin-table-footer > .admin-pagination,
+  body.ami-espaco-page .admin-table-footer > #ami-emails-pagination { grid-column: 1; }
+  body .admin-table-footer > :is(.admin-table-summary, .agrupamento-section-footer),
+  body.ami-espaco-page .admin-table-footer > #ami-emails-count { grid-column: 1; grid-row: 2; }
+}

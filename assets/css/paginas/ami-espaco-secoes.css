@@ -211,3 +211,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Table pagination: borderless navigation controls. */
+.admin-pagination button,
+.standard-table-section .admin-pagination button,
+.ami-espaco-page #ami-emails-pagination button { border: 0; font-weight: 700; }

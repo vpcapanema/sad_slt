@@ -85,16 +85,16 @@
 
 
         <p id="lista-vazia" class="hint hidden">Nenhuma demanda encontrada.</p>
-        <nav id="demandas-pagination" class="admin-pagination" aria-label="Paginação das demandas">
-          <button type="button" id="pagination-prev" title="Página anterior" aria-label="Página anterior">
-            ‹
+        <div class="admin-table-footer"><nav id="demandas-pagination" class="admin-pagination" aria-label="Paginação das demandas">
+          <button type="button" id="pagination-first" title="Primeira página" aria-label="Primeira página" disabled>&lt;&lt;</button><button type="button" id="pagination-prev" title="Página anterior" aria-label="Página anterior">
+            &lt;
           </button>
           <span id="pagination-info" aria-live="polite"></span>
           <button type="button" id="pagination-next" title="Próxima página" aria-label="Próxima página">
-            ›
-          </button>
+            &gt;
+          </button><button type="button" id="pagination-last" title="Última página" aria-label="Última página" disabled>&gt;&gt;</button>
         </nav>
-        <p id="demandas-summary" class="admin-table-summary" aria-live="polite"></p>
+        <p id="demandas-summary" class="admin-table-summary" aria-live="polite"></p></div>
       </div>
     </section>
     <div id="status-legend" class="status-color-legend-host" aria-label="Legenda de cores por status"></div>

@@ -45,8 +45,8 @@
         </table>
       </div>
       <div id="grupos-controles" class="admin-actions" aria-label="Controles dos agrupamentos"></div>
-      <div id="grupos-paginacao" class="admin-pagination" aria-label="Paginar agrupamentos"></div>
-      <p id="grupos-selecao" class="agrupamento-section-footer" aria-live="polite"></p>
+      <div class="admin-table-footer"><div id="grupos-paginacao" class="admin-pagination" aria-label="Paginar agrupamentos"></div>
+      <p id="grupos-selecao" class="agrupamento-section-footer" aria-live="polite"></p></div>
     </div>
   </section>
 
@@ -82,12 +82,12 @@
             <div class="admin-actions" aria-label="Controles das demandas do universo">
               <button type="button" class="admin-icon-btn add" id="grupo-adicionar" title="Adicionar à tabela de demandas do grupo" aria-label="Adicionar à tabela de demandas do grupo" disabled><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
             </div>
-            <div id="universo-paginacao" class="admin-pagination" aria-label="Paginação das demandas">
-              <button type="button" id="agrupamento-anterior" title="Anterior" aria-label="Página anterior">‹</button>
+            <div class="admin-table-footer"><div id="universo-paginacao" class="admin-pagination" aria-label="Paginação das demandas">
+              <button type="button" id="agrupamento-primeira" title="Primeira página" aria-label="Primeira página" disabled>&lt;&lt;</button><button type="button" id="agrupamento-anterior" title="Anterior" aria-label="Página anterior">&lt;</button>
               <span id="agrupamento-pagina-info" aria-live="polite">Página 1 de 1</span>
-              <button type="button" id="agrupamento-proxima" title="Próxima" aria-label="Próxima página">›</button>
+              <button type="button" id="agrupamento-proxima" title="Próxima" aria-label="Próxima página">&gt;</button><button type="button" id="agrupamento-ultima" title="Última página" aria-label="Última página" disabled>&gt;&gt;</button>
             </div>
-            <p id="agrupamento-contagem" class="agrupamento-section-footer">Selecione o tipo de demanda.</p>
+            <p id="agrupamento-contagem" class="agrupamento-section-footer">Selecione o tipo de demanda.</p></div>
           </div>
           <div class="ahp-subcard hidden" id="grupo-composicao">
             <div class="ahp-subsection-title"><span class="ahp-subsection-num">2.3</span><span id="grupo-composicao-titulo">Tabela de demandas do grupo</span></div>
@@ -100,8 +100,8 @@
               <button type="button" class="admin-icon-btn edit" id="grupo-editar" title="Editar registros do grupo" aria-label="Editar registros do grupo" disabled><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
               <button type="button" class="admin-icon-btn delete" id="grupo-remover" title="Excluir registros selecionados do grupo" aria-label="Excluir registros selecionados do grupo" disabled><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
             </div>
-            <div id="composicao-paginacao" class="admin-pagination" aria-label="Paginar demandas do grupo"></div>
-            <p id="agrupamento-selecao-resumo" class="agrupamento-section-footer" aria-live="polite">Adicione as demandas selecionadas no universo.</p>
+            <div class="admin-table-footer"><div id="composicao-paginacao" class="admin-pagination" aria-label="Paginar demandas do grupo"></div>
+            <p id="agrupamento-selecao-resumo" class="agrupamento-section-footer" aria-live="polite">Adicione as demandas selecionadas no universo.</p></div>
           </div>
         </article>
         <p id="agrupamento-form-error" class="ahp-info-note ahp-info-note--error hidden" role="alert"></p>

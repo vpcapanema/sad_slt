@@ -536,7 +536,7 @@
     wrap.append(table);
 
     refs.host.innerHTML = "";
-    refs.host.append(montarFiltro(), wrap, montarAcoes(), montarPaginacao(), el("p", {class: "admin-table-summary", "aria-live": "polite"}));
+    refs.host.append(montarFiltro(), wrap, montarAcoes(), el("div", {class: "admin-table-footer"}, montarPaginacao(), el("p", {class: "admin-table-summary", "aria-live": "polite"})));
     atualizarBotoes();
   }
 
@@ -597,11 +597,15 @@
 
   function montarPaginacao() {
     const nav = el("div", { class: "admin-pagination" });
-    const prev = el("button", { type: "button", title: "Anterior", onclick: () => { if (state.pagina > 1) { state.pagina--; state.selecao.clear(); carregarTabela(); } } }, "‹");
-    const next = el("button", { type: "button", title: "Próxima", onclick: () => { if (state.pagina < state.paginas) { state.pagina++; state.selecao.clear(); carregarTabela(); } } }, "›");
+    const prev = el("button", { type: "button", title: "Anterior", onclick: () => { if (state.pagina > 1) { state.pagina--; state.selecao.clear(); carregarTabela(); } } }, "<");
+    const next = el("button", { type: "button", title: "Próxima", onclick: () => { if (state.pagina < state.paginas) { state.pagina++; state.selecao.clear(); carregarTabela(); } } }, ">");
     prev.disabled = state.pagina <= 1;
     next.disabled = state.pagina >= state.paginas;
-    nav.append(prev, el("span", {}, `Página ${state.pagina} de ${state.paginas}`), next);
+    const first = el("button", { type: "button", title: "Primeira página", "aria-label": "Primeira página", onclick: () => { state.pagina = 1; state.selecao.clear(); carregarTabela(); } }, "<<");
+    const last = el("button", { type: "button", title: "Última página", "aria-label": "Última página", onclick: () => { state.pagina = state.paginas; state.selecao.clear(); carregarTabela(); } }, ">>");
+    first.disabled = prev.disabled;
+    last.disabled = next.disabled;
+    nav.append(first, prev, el("span", {}, `Página ${state.pagina} de ${state.paginas}`), next, last);
     return nav;
   }
 

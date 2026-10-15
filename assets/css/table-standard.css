@@ -101,3 +101,8 @@ body.escala-revisada .standard-table-section { zoom: calc(1 / var(--escala, 1));
 .standard-table-section .ami-table-feedback:empty { display: none; }
 .standard-table-section .admin-table .ami-ratio { display: inline-flex; align-items: center; gap: .35rem; line-height: 1.1; }
 .standard-table-section .standard-table-actions .standard-table-actions { margin: 0; }
+
+/* Table pagination: borderless navigation controls. */
+.admin-pagination button,
+.standard-table-section .admin-pagination button,
+.ami-espaco-page #ami-emails-pagination button { border: 0; font-weight: 700; }

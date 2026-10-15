@@ -656,8 +656,8 @@
     if (!pagination) return;
     pagination.classList.remove("hidden");
     $("#pagination-info").textContent = `Página ${currentPage} de ${totalPages}`;
-    $("#pagination-prev").disabled = currentPage <= 1;
-    $("#pagination-next").disabled = currentPage >= totalPages;
+    $("#pagination-first").disabled = $("#pagination-prev").disabled = currentPage <= 1;
+    $("#pagination-last").disabled = $("#pagination-next").disabled = currentPage >= totalPages;
   }
 
   function val(tr, field) {
@@ -905,6 +905,8 @@
       renderTable();
     });
 
+    $("#pagination-first").addEventListener("click", () => { currentPage = 1; resetSelection(); renderTable(); });
+    $("#pagination-last").addEventListener("click", () => { currentPage = Math.max(1, Math.ceil(filteredRows().length / PAGE_SIZE)); resetSelection(); renderTable(); });
     $("#pagination-prev").addEventListener("click", () => {
       currentPage = Math.max(1, currentPage - 1);
       resetSelection();

@@ -117,8 +117,8 @@
     SLTTable.summary("ami-count", selectedIds.size, pageRows.length, source.length);
     var pagination = $("ami-judgments-pagination");
     pagination.querySelector("[data-page-label]").textContent = "Página " + currentPage + " de " + pageCount;
-    pagination.querySelector("[data-page-prev]").disabled = currentPage <= 1;
-    pagination.querySelector("[data-page-next]").disabled = currentPage >= pageCount;
+    pagination.querySelector("[data-page-first]").disabled = pagination.querySelector("[data-page-prev]").disabled = currentPage <= 1;
+    pagination.querySelector("[data-page-last]").disabled = pagination.querySelector("[data-page-next]").disabled = currentPage >= pageCount;
   }
   function renderAnalysisRounds(rows) {
     $("ami-judgments").innerHTML = rows.map(function (j) { var selected = selectedIds.has(j.id), convidados = (j.convites || []).length, finalizadas = j.total_respostas || 0, preenchendo = j.respostas_em_preenchimento || 0, consistentes = j.respostas_consistentes || 0, recebidas = finalizadas + preenchendo; return '<tr class="collab-round-row ' + (selected ? "is-selected" : "") + '"><td class="col-select"><input type="checkbox" class="ami-row-select" data-analysis-round="' + escapeHtml(j.id) + '" ' + (selected ? "checked" : "") + '></td><td>' + escapeHtml(statusLabel(j.status)) + '</td><td class="ami-cell-id">' + escapeHtml(j.id) + '</td><td>' + ratioLabel(convidados, convidados) + '</td><td>' + ratioLabel(recebidas, convidados) + '</td><td>' + ratioLabel(preenchendo, convidados) + '</td><td>' + ratioLabel(finalizadas, convidados) + '</td><td>' + ratioLabel(consistentes, convidados) + '</td><td>' + escapeHtml(deadlineLabel(j.valido_ate)) + '</td><td>' + escapeHtml(deadlineLabel(j.atualizadoEm)) + '</td></tr>'; }).join("") || '<tr><td colspan="10" class="ami-empty">Nenhum julgamento encontrado.</td></tr>';
@@ -978,6 +978,8 @@
     }
 
     if ($("ami-search")) $("ami-search").addEventListener("input", function () { currentPage = 1; render(); });
+    $("ami-judgments-pagination").querySelector("[data-page-first]").addEventListener("click", function () { currentPage = 1; selectedIds.clear(); editingId = null; render(); });
+    $("ami-judgments-pagination").querySelector("[data-page-last]").addEventListener("click", function () { currentPage = Math.max(1, Math.ceil(filteredRows().length / PAGE_SIZE)); selectedIds.clear(); editingId = null; render(); });
     $("ami-judgments-pagination").querySelector("[data-page-prev]").addEventListener("click", function () { if (currentPage > 1) { currentPage -= 1; selectedIds.clear(); editingId = null; render(); } });
     $("ami-judgments-pagination").querySelector("[data-page-next]").addEventListener("click", function () { currentPage += 1; selectedIds.clear(); editingId = null; render(); });
     if ($("ami-new")) $("ami-new").addEventListener("click", showCreateSection);

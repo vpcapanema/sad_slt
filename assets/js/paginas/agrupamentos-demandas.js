@@ -22,9 +22,8 @@
     const paginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
     atual = Math.max(1, Math.min(atual, paginas));
     const alvo = $(`#${prefixo}-paginacao`);
-    alvo.innerHTML = `<button type="button" aria-label="Página anterior" title="Anterior" ${atual <= 1 || bloqueado ? 'disabled' : ''}>‹</button><span>Página ${atual} de ${paginas}</span><button type="button" aria-label="Próxima página" title="Próxima" ${atual >= paginas || bloqueado ? 'disabled' : ''}>›</button>`;
-    alvo.firstElementChild.onclick = () => mudar(atual - 1);
-    alvo.lastElementChild.onclick = () => mudar(atual + 1);
+    SLTTable.paginate(alvo.id, lista, atual, mudar);
+    if (bloqueado) alvo.querySelectorAll('button').forEach(button => { button.disabled = true; });
     return atual;
   }
 
@@ -301,6 +300,7 @@
       tbody.innerHTML = '<tr><td>Selecione o tipo de demanda.</td></tr>';
       $("#agrupamento-contagem").textContent = resumoTabela(0, 0, 0);
       $("#agrupamento-pagina-info").textContent = "Página 1 de 1";
+      $("#universo-paginacao").querySelectorAll("button").forEach(button => { button.disabled = true; });
       atualizarComposicao();
       return;
     }
@@ -314,8 +314,8 @@
     tbody.innerHTML = visiveis.length ? visiveis.map((item) => `<tr data-id="${escapar(item.id)}"><td class="col-select"><input type="checkbox" data-demanda-id="${escapar(item.id)}" aria-label="Selecionar ${escapar(item.codigo)}"${SELECIONADOS.has(String(item.id)) ? " checked" : ""}></td>${cols.map((col) => `<td>${formatarValor(item, col.campo)}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${cols.length + 1}" class="process-empty-row">Nenhuma demanda elegível encontrada.</td></tr>`;
     $("#agrupamento-contagem").textContent = resumoTabela(SELECIONADOS.size, visiveis.length, universo.filter(elegivel).length);
     $("#agrupamento-pagina-info").textContent = `Página ${pagina} de ${totalPaginas}`;
-    $("#agrupamento-anterior").disabled = pagina <= 1;
-    $("#agrupamento-proxima").disabled = pagina >= totalPaginas;
+    $("#agrupamento-primeira").disabled = $("#agrupamento-anterior").disabled = pagina <= 1;
+    $("#agrupamento-ultima").disabled = $("#agrupamento-proxima").disabled = pagina >= totalPaginas;
     const selectAll = $("#agrupamento-selecionar-pagina");
     selectAll.checked = visiveis.length > 0 && visiveis.every((item) => SELECIONADOS.has(String(item.id)));
     selectAll.indeterminate = visiveis.some((item) => SELECIONADOS.has(String(item.id))) && !selectAll.checked;
@@ -453,6 +453,8 @@
     };
     $("#agrupamento-cancel").onclick = () => { abrir.classList.add("hidden"); limparErro(); };
     $("#agrupamento-tipo").onchange = carregarUniverso;
+    $("#agrupamento-primeira").onclick = () => { pagina = 1; SELECIONADOS.clear(); renderDemandas(); };
+    $("#agrupamento-ultima").onclick = () => { pagina = Math.max(1, Math.ceil(filtrados().length / POR_PAGINA)); SELECIONADOS.clear(); renderDemandas(); };
     $("#agrupamento-anterior").onclick = () => { pagina -= 1; SELECIONADOS.clear(); renderDemandas(); };
     $("#agrupamento-proxima").onclick = () => { pagina += 1; SELECIONADOS.clear(); renderDemandas(); };
     window.SLTDemandasGrupo.bindModalClosures();
