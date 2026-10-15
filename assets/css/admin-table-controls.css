@@ -14,8 +14,7 @@
   color: #33475b;
   font-size: 0.85rem;
 }
-.admin-filter-bar select,
-.admin-filter-bar .filter-value-input {
+.admin-filter-bar select {
   height: 34px;
   min-width: 170px;
   max-width: 320px;
