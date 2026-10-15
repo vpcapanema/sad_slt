@@ -202,6 +202,26 @@ def pagina_documentacao_favorabilidade(request: Request) -> Response:
     )
 
 
+@app.get("/documentacao_favorabilidade_v2/", include_in_schema=False)
+@app.get("/public/documentacao_favorabilidade_v2/", name="documentacao_favorabilidade_v2", include_in_schema=False)
+def pagina_documentacao_favorabilidade_v2() -> Response:
+    """Relatório de favorabilidade territorial e da rede, preservando seus mapas."""
+    import re
+    from urllib.parse import urljoin
+
+    pasta = "/public/documentacao/saidas_modelos/claude_fable5_1/"
+    html = project_path("documentacao/saidas_modelos/claude_fable5_1/index.html").read_text(encoding="utf-8")
+
+    def recurso(match: re.Match) -> str:
+        atributo, aspas, valor = match.groups()
+        if valor.startswith(("#", "/", "http:", "https:", "data:", "mailto:")):
+            return match.group(0)
+        return f"{atributo}={aspas}{urljoin(pasta, valor)}{aspas}"
+
+    html = re.sub(r"(src|href)=([\"'])(.*?)\2", recurso, html)
+    return Response(html, media_type="text/html", headers={"Cache-Control": "no-store"})
+
+
 @app.get("/public/documentacao/limite-maritimo/", include_in_schema=False)
 def pagina_documentacao_limite_maritimo(request: Request) -> Response:
     """Fontes, método e resultados do recorte marítimo operacional de São Paulo."""

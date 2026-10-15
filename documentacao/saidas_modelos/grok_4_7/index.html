@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Favorabilidade municipal retificada — SICARD</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Roboto:wght@400;500&display=swap">
+  <style>
+    :root { --pli-navy:#1c3d59; --pli-deep:#003b5a; --pli-blue:#116593; --pli-green:#3ec26e; --pli-bg:#f0f0f1; --pli-text:#212529; --pli-muted:#5a6570; --pli-border:#d8dee4; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Roboto,Arial,sans-serif; color:var(--pli-text); background:var(--pli-bg); line-height:1.5; }
+    h1,h2,h3,.marca { font-family:Montserrat,Verdana,sans-serif; }
+    a { color:var(--pli-blue); }
+    header { background:linear-gradient(135deg,var(--pli-deep),var(--pli-navy)); color:#fff; padding:1.2rem 1.5rem; }
+    .cabecalho { width:90%; margin:0 auto; display:flex; gap:1rem; align-items:center; }
+    .marca small { display:block; font-family:Roboto,Arial,sans-serif; font-weight:400; opacity:.85; }
+    main { width:min(1180px,92%); margin:1.5rem auto 3rem; }
+    nav.indice { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1rem; }
+    nav.indice a { background:#fff; border:1px solid var(--pli-border); border-radius:8px; padding:.35rem .7rem; text-decoration:none; font-size:.85rem; }
+    section { background:#fff; border:1px solid var(--pli-border); border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,.06); padding:1.25rem 1.4rem; margin:0 0 1rem; }
+    h2 { margin:.1rem 0 .8rem; color:var(--pli-navy); font-size:1.15rem; }
+    h3 { color:var(--pli-deep); font-size:.95rem; margin:1.1rem 0 .4rem; }
+    p,li { font-size:.92rem; }
+    .nota { color:var(--pli-muted); font-size:.82rem; }
+    table { width:100%; border-collapse:collapse; font-size:.78rem; }
+    th { background:#1f4e5f; color:#fff; text-align:left; padding:.45rem; position:sticky; top:0; }
+    td { border-bottom:1px solid var(--pli-border); padding:.4rem; vertical-align:top; }
+    .rolagem { overflow:auto; max-height:520px; border:1px solid var(--pli-border); border-radius:8px; }
+    .grade { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; }
+    figure { margin:0; background:#f7f8f9; border-radius:8px; padding:.6rem; }
+        figure img { width:100%; height:auto; }
+        header img { width:42px; height:42px; flex:0 0 42px; }
+    figcaption { font-size:.78rem; color:var(--pli-muted); }
+    pre { background:#f7f8f9; border-left:3px solid var(--pli-blue); padding:.7rem .9rem; overflow:auto; font-size:.82rem; }
+    .selo { display:inline-block; background:#e7f6ee; color:#1d6b3d; border-radius:99px; padding:.1rem .5rem; font-size:.75rem; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="cabecalho">
+    <img src="img/sicard-simbolo.png" alt="" width="42" height="42">
+    <div class="marca"><strong>SICARD</strong><small>Retificação municipal da favorabilidade rodoviária — modelo grok-4.7</small></div>
+  </div>
+</header>
+<main>
+  <nav class="indice" aria-label="Seções">
+    <a href="#escopo">Escopo</a><a href="#objetivos">Objetivos</a><a href="#matriz">Matriz</a>
+    <a href="#variaveis">Variáveis</a><a href="#criterios">Critérios</a><a href="#indice">Índice</a>
+    <a href="#trechos">Trechos</a><a href="#resultados">Resultados</a><a href="#referencias">Referências</a>
+  </nav>
+  <section id="escopo">
+    <h2>Contextualização e escopo</h2>
+    <p>O objeto é a priorização da atenção à infraestrutura rodoviária estadual no PLI-SP. O predomínio da rede não é vício de método: é o modal sob questionamento. A superfície territorial usa o município, <span class="selo">645 municípios</span>. A superfície de rede usa o subtrecho do painel DER, 6.922 subtrechos. Não há desagregação por setor censitário.</p>
+    <p>O que se mede é necessidade e pressão observadas, não o benefício esperado de um projeto. Ausência de observação não vira zero. O atraso TomTom entra na média do subtrecho porque a cobertura da extensão chegou a 95,3%. É um instantâneo de 11:10–11:12 de 5 de outubro de 2026, não um perfil típico. InfoSiga não entra: o microdado não está acessível aqui e não foi substituído por estimativa.</p>
+    <p class="nota">Esta página é saída de modelo em <code>documentacao/saidas_modelos/grok_4_7</code>. Não altera a nota técnica homologada nem os pesos do sistema em produção.</p>
+  </section>
+  <section id="objetivos">
+    <h2>Objetivos</h2>
+    <ul>
+      <li>Separar pressão operacional da malha estadual, no subtrecho DER, e necessidade territorial, no município, sem fundi-las numa média.</li>
+      <li>Manter um fator latente por critério da média, com variável, equação, cobertura e fonte rastreáveis.</li>
+      <li>Produzir as duas superfícies por média simples, deixando o AHP como intervenção posterior de pesos.</li>
+    </ul>
+  </section>
+  <section id="matriz">
+    <h2>Matriz de critérios e premissas</h2>
+    <div class="rolagem"><table>
+      <thead><tr><th>Dimensão</th><th>Critério</th><th>Premissa</th><th>Métrica</th><th>Unidade</th><th>Relação</th><th>Fonte</th><th>Na média</th></tr></thead>
+      <tbody><tr><td>Técnica</td><td>Pressão de demanda da malha estadual</td><td>Município cuja malha estadual observada carrega maior volume diário concentra maior pressão de uso rodoviário. Não mede benefício de um projeto.</td><td>Média de VDM ponderada pela extensão intersectada</td><td>veículos/dia</td><td>↑</td><td>DER-SP, painel de capacidade rodoviária (cap_rodo_painel)</td><td>Mapeada; fora da média por colinearidade com V/C</td></tr><tr><td>Técnica</td><td>Saturação da malha estadual</td><td>Volume alto com capacidade folgada não equivale a saturação. A relação V/C acrescenta a capacidade que o VDM não contém.</td><td>Média de V/C ponderada pela extensão, com cobertura ≥ 95% da extensão municipal</td><td>adimensional</td><td>↑</td><td>DER-SP, painel de capacidade rodoviária</td><td>Sim</td></tr><tr><td>Técnica</td><td>Restrição geométrica da malha</td><td>Relevo ondulado ou montanhoso restringe a geometria operacional da rodovia. A velocidade livre é parâmetro do mesmo modelo de capacidade, não uma velocidade observada; permanece mapeada e fora da média.</td><td>Média ponderada de 0, 0,5 e 1</td><td>índice 0–1</td><td>↑</td><td>DER-SP, painel de capacidade rodoviária</td><td>Sim</td></tr><tr><td>Territorial</td><td>Conflito urbano-rodoviário</td><td>Trecho estadual em entorno urbano ou periurbano concentra travessia, acesso local e conflito de passagem.</td><td>Fração da extensão em entorno urbano ou periurbano</td><td>fração</td><td>↑</td><td>DER-SP, painel de capacidade rodoviária</td><td>Sim</td></tr><tr><td>Social</td><td>Pressão demográfica</td><td>A densidade mede intensidade de demanda local. A população absoluta apenas reproduz o tamanho do município e não entra na média.</td><td>População / área</td><td>hab./km²</td><td>↑</td><td>IBGE, Censo 2022, tabela 4714; malha municipal do repositório</td><td>Sim</td></tr><tr><td>Econômica</td><td>Dependência intermunicipal de trabalho</td><td>Quem trabalha em outro município depende de deslocamento, em grande parte rodoviário. É o indicador de mobilidade que a matriz original não tinha.</td><td>Percentual oficial de ocupados</td><td>%</td><td>↑</td><td>IBGE, Censo 2022, amostra, campo V16000065</td><td>Sim</td></tr><tr><td>Vulnerabilidade</td><td>Déficit de esgotamento sanitário</td><td>Esgotamento rudimentar, lançamento em corpo hídrico, outra forma ou ausência de banheiro medem déficit de acesso atual. Não substitui renda nem PIB.</td><td>Soma dos percentuais oficiais das quatro categorias inadequadas</td><td>%</td><td>↑</td><td>IBGE, Censo 2022, universo, campos V04000094, V04000095, V04000096 e V04000098</td><td>Sim</td></tr><tr><td>Logística</td><td>Afastamento do modo alternativo mais próximo</td><td>Quanto mais distante o porto, o aeroporto público, a ferrovia ou a hidrovia, maior a dependência prática da rodovia. Quatro distâncias separadas repetiriam o mesmo fator.</td><td>Mínimo das distâncias ao ponto representativo do município</td><td>km</td><td>↑</td><td>ANTAQ; ANAC 2021; malha ferroviária do bloco B; instalações da hidrovia Tietê</td><td>Sim</td></tr></tbody>
+    </table></div>
+    <p class="nota">A planilha completa, com operador e dado, está em Matriz_Criterios_Premissas_municipal_retificada.xlsx.</p>
+  </section>
+  <section id="variaveis">
+    <h2>Variáveis espacializadas</h2>
+    <p>Cada mapa é a variável bruta no município. Cinza: sem malha estadual suficiente ou atributo com cobertura inferior a 95% da extensão intersectada. Extensão mínima: 1 km.</p>
+    <div class="grade">
+      <figure><img src="mapas/vdm.png" alt="Mapa do VDM municipal"><figcaption>VDM médio ponderado pela extensão (veíc./dia).</figcaption></figure>
+      <figure><img src="mapas/vc.png" alt="Mapa da relação volume-capacidade"><figcaption>V/C médio ponderado pela extensão.</figcaption></figure>
+      <figure><img src="mapas/relevo.png" alt="Mapa do índice de relevo"><figcaption>Relevo: plana = 0, ondulada = 0,5, montanhosa = 1.</figcaption></figure>
+      <figure><img src="mapas/v0.png" alt="Mapa da velocidade livre"><figcaption>Velocidade livre, variável de apoio. Não entra na média.</figcaption></figure>
+      <figure><img src="mapas/conflito.png" alt="Mapa do conflito urbano"><figcaption>Fração da extensão em entorno urbano ou periurbano.</figcaption></figure>
+      <figure><img src="mapas/densidade.png" alt="Mapa da densidade"><figcaption>Habitantes por km², Censo 2022 / área da malha.</figcaption></figure>
+      <figure><img src="mapas/trabalho_outro_mun.png" alt="Mapa do trabalho intermunicipal"><figcaption>Percentual de ocupados com trabalho em outro município.</figcaption></figure>
+      <figure><img src="mapas/esgoto_inadequado.png" alt="Mapa do esgotamento inadequado"><figcaption>Soma dos percentuais de esgotamento inadequado.</figcaption></figure>
+      <figure><img src="mapas/dist_modo_km.png" alt="Mapa da distância modal"><figcaption>Distância ao porto, aeroporto público, ferrovia ou hidrovia mais próximos.</figcaption></figure>
+      <figure><img src="mapas/renda_mediana.png" alt="Mapa da renda mediana"><figcaption>Rendimento mediano do trabalho. Mapeado para discussão; fora da média.</figcaption></figure>
+      <figure><img src="mapas/pib_per_capita.png" alt="Mapa do PIB per capita"><figcaption>PIB per capita 2023, em reais. Fora da média por conflito de construto.</figcaption></figure>
+    </div>
+  </section>
+  <section id="criterios">
+    <h2>Premissa, critério e espacialização</h2>
+    <h3>Rede — agregação comum</h3>
+    <pre>x̄ₘ = Σᵢ (xᵢ · Lᵢ) / Σᵢ Lᵢ
+válido se Σ Lᵢ ≥ 1.000 m e a extensão com x observado / Σ Lᵢ ≥ 0,95</pre>
+    <p>Lᵢ é o comprimento do pedaço de subtrecho dentro do município, em SIRGAS 2000 / Brazil Polyconic. A interseção evita o atributo <code>nm_mun</code> do painel, que não coincide com o município da geometria.</p>
+    <h3>R1 — demanda</h3>
+    <p>Premissa: maior VDM, maior pressão de uso. Equação: x = vol_inter. Este critério sai da média e permanece apenas como variável, porque a correlação atingiu o limiar. Spearman VDM × V/C = 0,915.</p>
+    <figure><img src="mapas/n_vdm.png" alt="Critério de demanda normalizado"><figcaption>R1 normalizado. Escala 0–1, percentis 5 e 95.</figcaption></figure>
+    <h3>R2 — saturação</h3>
+    <pre>R2ₘ = Σᵢ (V/Cᵢ · Lᵢ) / Σᵢ Lᵢ</pre>
+    <figure><img src="mapas/n_vc.png" alt="Critério de saturação normalizado"><figcaption>R2. Mantido porque introduz capacidade, não só volume.</figcaption></figure>
+    <h3>R3 — geometria</h3>
+    <pre>s(plana)=0; s(ondulada)=0,5; s(montanhosa)=1
+R3ₘ = Σᵢ (sᵢ · Lᵢ) / Σᵢ Lᵢ</pre>
+    <p>Spearman relevo × velocidade livre = -0,269. A correlação municipal não atinge o limiar de redundância. Ainda assim a velocidade livre fica fora da média: no painel ela é parâmetro do modelo de capacidade, não uma velocidade observada independente. Contá-la de novo somaria o modelo a si mesmo.</p>
+    <figure><img src="mapas/n_relevo.png" alt="Critério de geometria normalizado"><figcaption>R3 normalizado.</figcaption></figure>
+    <h3>R4 — conflito urbano</h3>
+    <pre>R4ₘ = Σᵢ (1[entorno urbano ou periurbano] · Lᵢ) / Σᵢ Lᵢ</pre>
+    <figure><img src="mapas/n_conflito.png" alt="Critério de conflito urbano normalizado"><figcaption>R4 normalizado.</figcaption></figure>
+    <h3>T1 — densidade</h3>
+    <pre>T1ₘ = população residente₂₀₂₂ / áreaₘ</pre>
+    <figure><img src="mapas/n_densidade.png" alt="Critério de densidade normalizado"><figcaption>T1. População absoluta não entra.</figcaption></figure>
+    <h3>T2 — dependência de trabalho</h3>
+    <pre>T2ₘ = V16000065ₘ</pre>
+    <p>Percentual oficial, sexo total, classe de rendimento total, retorno semanal total. É estimativa de amostra, não contagem de universo.</p>
+    <figure><img src="mapas/n_trabalho.png" alt="Critério de trabalho intermunicipal normalizado"><figcaption>T2 normalizado.</figcaption></figure>
+    <h3>T3 — esgotamento inadequado</h3>
+    <pre>T3ₘ = fossa rudimentar + corpo hídrico + outra forma + sem banheiro</pre>
+    <p>Percentuais oficiais do universo, categorias exclusivas. A categoria IBGE “rede geral, rede pluvial ou fossa ligada à rede” mistura galeria pluvial com rede sanitária; por isso o déficit usa as categorias inadequadas, não o complemento daquela categoria. Spearman com renda mediana = -0,459. A renda não entra na média.</p>
+    <figure><img src="mapas/n_esgoto.png" alt="Critério de esgotamento normalizado"><figcaption>T3 normalizado.</figcaption></figure>
+    <h3>T4 — afastamento modal</h3>
+    <pre>T4ₘ = min(d_porto, d_aeroporto público, d_ferrovia, d_hidrovia) / 1.000</pre>
+    <p>Portos ativos em SP: 37. Aeroportos públicos ANAC 2021: 72. Trechos ferroviários: 1865. Instalações da hidrovia: 48. Aeródromo privado não é polo logístico e foi excluído.</p>
+    <figure><img src="mapas/n_distancia.png" alt="Critério de afastamento modal normalizado"><figcaption>T4 normalizado. Maior distância, maior dependência rodoviária.</figcaption></figure>
+  </section>
+
+
+
+
+  <section id="trechos">
+    <h2>Rede por trecho do DER</h2>
+    <p>A superfície de rede é o subtrecho do painel de capacidade, não o município. São 6922 subtrechos e 18601 km. O município continua sendo a unidade só da superfície territorial. Sem casamento não se atribui zero.</p>
+    <p>O TomTom é o tile vetorial de fluxo relativo, zoom 11, linha mais próxima até 100 m, classes viárias compatíveis com rodovia. O raio cobre a generalização do tile e a divergência entre o eixo do DER e o eixo TomTom. A 60 m a extensão coberta era 93,1%; a 100 m, o ganho ainda é conflação; acima disso o acréscimo praticamente para. O <code>traffic_level</code> publicado é a razão entre a velocidade corrente e a livre: 1 é fluxo livre. A pressão usada é o complemento, 1 − traffic_level. A coleta é o instante 2026-10-05 11:10–11:12 BRT, não um perfil típico. Fechamento de via, quando a tag existe, entra como atraso 1.</p>
+    <pre>amostrasᵢ = pontos a cada 50 m, incluindo as extremidades
+cobertoᵢ = amostras a ≤ 100 m de linha TomTom válida / amostrasᵢ
+atrasoᵢ = média dos níveis das amostras casadas, só se cobertoᵢ ≥ 0,95
+cobertura da malha = Σ Lᵢ com atraso observado / Σ Lᵢ</pre>
+    <p>Cobertura da extensão: 95,3%. Subtrechos observados: 6722 de 6922. O atraso entra na média do trecho. Spearman VDM × V/C no subtrecho = 0,895. VDM não entra na média. No instante da coleta a massa da malha está em fluxo livre. O p5–p95 comprime essa massa em zero e leva a cauda de atraso a 1: o critério separa trecho livre de trecho com atraso mensurável, e não ordena a intensidade dentro da cauda.</p>
+    <div class="grade">
+      <figure><img src="mapas/trecho_vc.png" alt="V/C por subtrecho"><figcaption>V/C do subtrecho DER.</figcaption></figure>
+      <figure><img src="mapas/trecho_relevo.png" alt="Relevo por subtrecho"><figcaption>Relevo: plana = 0, ondulada = 0,5, montanhosa = 1.</figcaption></figure>
+      <figure><img src="mapas/trecho_conflito.png" alt="Conflito urbano por subtrecho"><figcaption>Entorno urbano ou periurbano.</figcaption></figure>
+      <figure><img src="mapas/trecho_atraso.png" alt="Atraso TomTom por subtrecho"><figcaption>Atraso TomTom no instante da coleta. Cinza: sem casamento de 95% do comprimento.</figcaption></figure>
+      <figure><img src="mapas/trecho_n_vc.png" alt="Saturação normalizada"><figcaption>R2 normalizado no subtrecho.</figcaption></figure>
+      <figure><img src="mapas/trecho_n_relevo.png" alt="Geometria normalizada"><figcaption>R3 normalizado no subtrecho.</figcaption></figure>
+      <figure><img src="mapas/trecho_n_conflito.png" alt="Conflito normalizado"><figcaption>R4 normalizado no subtrecho.</figcaption></figure>
+      <figure><img src="mapas/trecho_n_atraso.png" alt="Atraso normalizado"><figcaption>Atraso normalizado. Só compõe a média se a malha tiver cobertura ≥ 95%.</figcaption></figure>
+      <figure><img src="mapas/trecho_fav.png" alt="Favorabilidade da rede por subtrecho"><figcaption>Favorabilidade da rede por subtrecho. Média simples dos critérios retidos.</figcaption></figure>
+    </div>
+  </section>
+  <section id="indice">
+    <h2>Índice de favorabilidade</h2>
+    <p>A normalização é feita antes da média porque as unidades não são comparáveis: veículos/dia, V/C, fração, hab./km², percentual e quilômetro. Sem ela, o VDM determinaria a superfície. O min–máx entre p5 e p95 reduz o efeito da cauda sem inverter a ordem interna do miolo.</p>
+    <pre>z(x) = clip((x − P5) / (P95 − P5), 0, 1)
+F_trecho = média simples dos z dos critérios retidos no subtrecho DER
+F_territorial = (zT1 + zT2 + zT3 + zT4) / 4</pre>
+    <p>A média da rede só existe se todos os critérios retidos tiverem valor. Não se redistribui peso para critério ausente. Os pesos são iguais. Uma rodada AHP pode gerar pesos wᵢ e substituir a média simples por Σ wᵢzᵢ / Σ wᵢ, na mesma álgebra de mapas, sem recalcular as variáveis.</p>
+    <h3>Colinearidade observada</h3>
+    <table><thead><tr><th>Par</th><th>Spearman</th></tr></thead><tbody><tr><td>vdm_vc</td><td>0,915</td></tr><tr><td>relevo_v0</td><td>-0,269</td></tr><tr><td>densidade_renda</td><td>0,552</td></tr><tr><td>densidade_pib</td><td>0,213</td></tr><tr><td>esgoto_renda</td><td>-0,459</td></tr><tr><td>densidade_esgoto</td><td>-0,370</td></tr><tr><td>trabalho_densidade</td><td>0,040</td></tr></tbody></table>
+    <p class="nota">Limiar prévio para retirar critério redundante da média: |ρ| ≥ 0,85, quando os dois medem o mesmo fenômeno. Densidade e esgoto podem correlacionar sem serem o mesmo construto; ambos permanecem.</p>
+  </section>
+  <section id="resultados">
+    <h2>Resultados</h2>
+    <p>A superfície de rede mostrada é a dos 6922 subtrechos do painel DER, não a média municipal. Cobertura TomTom da extensão: 95,3%. O atraso entra na média do trecho. A superfície territorial permanece municipal e não foi somada à rede.</p>
+    <p>A superfície territorial cobre os 645 municípios. A de rede cobre os subtrechos do painel DER com os quatro critérios retidos completos. As duas não foram somadas.</p>
+    <div class="grade">
+      <figure><img src="mapas/trecho_fav.png" alt="Favorabilidade da rede por subtrecho"><figcaption>Favorabilidade da rede por subtrecho DER. Média simples, escala 0–1.</figcaption></figure>
+      <figure><img src="mapas/fav_territorio.png" alt="Superfície de favorabilidade territorial"><figcaption>Favorabilidade territorial. Média simples, escala 0–1.</figcaption></figure>
+    </div>
+    <h3>Maior favorabilidade de rede, por subtrecho</h3>
+    <table><thead><tr><th>#</th><th>Rodovia</th><th>Município</th><th>V/C</th><th>Atraso</th><th>Índice</th></tr></thead><tbody><tr><td>1</td><td>SP 228</td><td>Itapecerica da Serra</td><td>1,742</td><td>0,034</td><td>1,000</td></tr><tr><td>2</td><td>SP 031</td><td>Suzano</td><td>1,635</td><td>0,005</td><td>1,000</td></tr><tr><td>3</td><td>SP 147</td><td>Piracicaba</td><td>1,526</td><td>0,008</td><td>1,000</td></tr><tr><td>4</td><td>SP 312</td><td>Santana de Parnaíba</td><td>1,523</td><td>0,040</td><td>1,000</td></tr><tr><td>5</td><td>SP 332</td><td>Jundiaí</td><td>1,427</td><td>0,063</td><td>1,000</td></tr><tr><td>6</td><td>SP 075</td><td>Itu</td><td>1,253</td><td>0,083</td><td>1,000</td></tr><tr><td>7</td><td>SP 062</td><td>Guaratinguetá</td><td>1,228</td><td>0,012</td><td>1,000</td></tr><tr><td>8</td><td>SP 075</td><td>Salto</td><td>1,110</td><td>0,023</td><td>1,000</td></tr></tbody></table>
+    <h3>Maior favorabilidade territorial</h3>
+    <table><thead><tr><th>#</th><th>Município</th><th>RA</th><th>Índice</th></tr></thead><tbody><tr><td>1</td><td>Embu das Artes</td><td>Região Metropolitana de São Paulo</td><td>0,710</td></tr><tr><td>2</td><td>Francisco Morato</td><td>Região Metropolitana de São Paulo</td><td>0,668</td></tr><tr><td>3</td><td>Itaquaquecetuba</td><td>Região Metropolitana de São Paulo</td><td>0,635</td></tr><tr><td>4</td><td>Itapecerica da Serra</td><td>Região Metropolitana de São Paulo</td><td>0,618</td></tr><tr><td>5</td><td>Franco da Rocha</td><td>Região Metropolitana de São Paulo</td><td>0,618</td></tr><tr><td>6</td><td>Vargem</td><td>RA de Campinas</td><td>0,613</td></tr><tr><td>7</td><td>Pirapora do Bom Jesus</td><td>Região Metropolitana de São Paulo</td><td>0,610</td></tr><tr><td>8</td><td>Ferraz de Vasconcelos</td><td>Região Metropolitana de São Paulo</td><td>0,591</td></tr></tbody></table>
+    <p>Os resultados podem ser recalculados de forma iterativa: a técnica AHP define pesos dos critérios e a aplicação usa média ponderada com álgebra de mapas. Enquanto os pesos não forem homologados, a leitura válida é a média simples acima.</p>
+  </section>
+  <section id="referencias">
+    <h2>Referências</h2>
+    <ul>
+      <li>TomTom. Traffic Flow vector tiles, estilo relative, zoom 11. Coleta instantânea em 2026-10-05 11:10–11:12 BRT. traffic_level = corrente/livre; a pressão é 1 − traffic_level. Chave não publicada. Documentação: https://docs.tomtom.com/traffic-api/documentation/tomtom-maps/v1/traffic-flow/vector-flow-tiles</li>
+      <li>DER-SP. Painel de capacidade da rede rodoviária estadual. Arquivo local <code>cap_rodo_painel.shp</code>. Atributos vol_inter, v_c, v0, relevo, pavim e entorno.</li>
+      <li>IBGE. Censo Demográfico 2022, resultados do universo. Tabela 4714, população residente; características dos domicílios, tipo de esgotamento sanitário. SIDRA: https://sidra.ibge.gov.br/pesquisa/censo-demografico/demografico-2022/inicial</li>
+      <li>IBGE. Censo Demográfico 2022, amostra. Local de exercício do trabalho principal. Campo de entrega V16000065.</li>
+      <li>IBGE. Produto Interno Bruto dos Municípios, série revisada, 2023. PIB e PIB per capita.</li>
+      <li>IBGE. Malha municipal, usada como geometria de espacialização em <code>database/geo/raw/municipio</code>.</li>
+      <li>ANTAQ. Instalações portuárias georreferenciadas. Filtro: São Paulo e autorização não extinta, não renunciada e não cassada.</li>
+      <li>ANAC. Aeródromos, 2021. Usados apenas os de tipo público.</li>
+      <li>Malha ferroviária e instalações da hidrovia Tietê integrantes do bloco de acessibilidade do repositório, com geometria verificada nesta execução.</li>
+    </ul>
+    <p class="nota">InfoSiga não entra nesta rodada. O TomTom entra só na superfície de trecho, com a cobertura medida na seção de trechos.</p>
+  </section>
+</main>
+</body>
+</html>

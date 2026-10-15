@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SICARD — Modelo de Hierarquização Territorial e da Rede (DER-SP e Escala Municipal)</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&family=Fira+Code:wght@400;500&display=swap");
+
+    :root {
+      --pli-navy: #1c3d59;
+      --pli-deep: #003b5a;
+      --pli-blue: #116593;
+      --pli-green: #2fae86;
+      --pli-green-dark: #16805d;
+      --pli-bg: #f4f7f9;
+      --pli-card-bg: #ffffff;
+      --pli-text: #173a50;
+      --pli-muted: #5a7383;
+      --pli-border: #cddbe3;
+      --pli-border-subtle: #e2ebf0;
+      --pli-accent: #c39a3f;
+      --pli-danger: #c0392b;
+      --pli-radius: 12px;
+      --pli-radius-sm: 6px;
+      --pli-shadow: 0 8px 24px rgba(11, 50, 74, 0.06);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--pli-text);
+      background-color: var(--pli-bg);
+    }
+
+    h1, h2, h3, h4 {
+      font-family: "Montserrat", sans-serif;
+      color: var(--pli-deep);
+      margin-top: 0;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .app-header {
+      background: linear-gradient(135deg, #0f3a54 0%, #15577c 100%);
+      color: #ffffff;
+      padding: 24px 32px;
+      border-bottom: 4px solid var(--pli-green);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    .header-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-icon {
+      width: 46px;
+      height: 46px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #5eead4;
+    }
+    .brand-text h1 {
+      font-size: 1.4rem;
+      margin: 0;
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .brand-text p {
+      margin: 3px 0 0;
+      font-size: 0.88rem;
+      color: #bcdcf0;
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: var(--pli-radius-sm);
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--pli-green);
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: var(--pli-green-dark);
+      transform: translateY(-1px);
+    }
+    .btn-outline {
+      background: rgba(255,255,255,0.1);
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    .btn-outline:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .sticky-nav {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #ffffff;
+      border-bottom: 1px solid var(--pli-border);
+      box-shadow: 0 2px 8px rgba(11,50,74,0.05);
+      padding: 0 32px;
+    }
+    .nav-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 8px 0;
+      scrollbar-width: thin;
+    }
+    .nav-link {
+      color: var(--pli-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: var(--pli-radius-sm);
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .nav-link:hover {
+      color: var(--pli-deep);
+      background: #eaf3f8;
+    }
+
+    .main-container {
+      max-width: 1440px;
+      margin: 28px auto 60px;
+      padding: 0 32px;
+    }
+
+    .panel {
+      background: var(--pli-card-bg);
+      border: 1px solid var(--pli-border);
+      border-radius: var(--pli-radius);
+      box-shadow: var(--pli-shadow);
+      margin-bottom: 36px;
+      overflow: hidden;
+    }
+    .panel-header {
+      background: linear-gradient(90deg, #f7fafc 0%, #edf3f7 100%);
+      padding: 18px 26px;
+      border-bottom: 1px solid var(--pli-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .panel-header h2 {
+      margin: 0;
+      font-size: 1.18rem;
+    }
+    .panel-body {
+      padding: 26px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    .kpi-card {
+      background: #ffffff;
+      border: 1px solid var(--pli-border);
+      border-left: 4px solid var(--pli-blue);
+      border-radius: var(--pli-radius);
+      padding: 18px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .kpi-card.green { border-left-color: var(--pli-green); }
+    .kpi-card.gold { border-left-color: var(--pli-accent); }
+    .kpi-card.teal { border-left-color: #0d9488; }
+    .kpi-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--pli-muted);
+      margin-bottom: 4px;
+    }
+    .kpi-val {
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: var(--pli-deep);
+      font-family: "Montserrat", sans-serif;
+    }
+    .kpi-sub {
+      font-size: 0.76rem;
+      color: var(--pli-muted);
+      margin-top: 2px;
+    }
+
+    .dense-prose {
+      font-size: 0.96rem;
+      color: #2c4456;
+      line-height: 1.7;
+    }
+    .dense-prose p {
+      margin: 0 0 14px;
+    }
+    .dense-prose strong {
+      color: var(--pli-deep);
+    }
+    .alert-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-left: 4px solid var(--pli-green);
+      border-radius: var(--pli-radius-sm);
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 0.92rem;
+      color: #166534;
+    }
+    .alert-box.info {
+      background: #f0f7fb;
+      border-color: #cde4f3;
+      border-left-color: var(--pli-blue);
+      color: #124e73;
+    }
+
+    .math-block {
+      background: #f8fafc;
+      border: 1px solid #d9e2ec;
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-family: "Fira Code", monospace;
+      font-size: 0.92rem;
+      color: #0f3a54;
+      margin: 14px 0;
+      overflow-x: auto;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+      line-height: 1.5;
+    }
+    .math-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+      color: var(--pli-blue);
+      margin-bottom: 6px;
+    }
+
+    .table-tools {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .search-input {
+      padding: 8px 14px;
+      border: 1px solid var(--pli-border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      width: 320px;
+      outline: none;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      max-height: 480px;
+      border: 1px solid var(--pli-border);
+      border-radius: var(--pli-radius-sm);
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      text-align: left;
+    }
+    table.data-table th {
+      background: #1F4E5F;
+      color: #ffffff;
+      padding: 10px 12px;
+      font-weight: 600;
+      border-bottom: 2px solid #14384e;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    table.data-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--pli-border-subtle);
+      color: #274051;
+      vertical-align: top;
+    }
+    table.data-table tr:hover td {
+      background: #f7fafc;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-fase1 { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .badge-fase2 { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+    .badge-fase3 { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+
+    /* Grid de Mapas */
+    .maps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 22px;
+      margin-top: 18px;
+    }
+    @media (max-width: 600px) {
+      .maps-grid { grid-template-columns: 1fr; }
+    }
+    .map-card {
+      border: 1px solid var(--pli-border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #ffffff;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+      margin: 0;
+    }
+    .map-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.09);
+    }
+    .map-card img {
+      width: 100%;
+      height: 320px;
+      object-fit: cover;
+      display: block;
+      border-bottom: 1px solid var(--pli-border-subtle);
+      background: #f8fafc;
+    }
+    .map-card-body {
+      padding: 14px 18px;
+    }
+    .map-card-body h4 {
+      margin: 0;
+      font-size: 0.94rem;
+      color: var(--pli-deep);
+    }
+    .map-card-body p {
+      margin: 5px 0 0;
+      font-size: 0.8rem;
+      color: var(--pli-muted);
+    }
+
+    /* Critérios Detalhados */
+    .crit-detail-card {
+      border: 1px solid var(--pli-border);
+      border-radius: var(--pli-radius);
+      padding: 22px;
+      margin-bottom: 24px;
+      background: #ffffff;
+    }
+    .crit-detail-card h3 {
+      font-size: 1.05rem;
+      color: var(--pli-blue);
+      margin-bottom: 10px;
+    }
+    .crit-split {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 20px;
+      align-items: center;
+    }
+    @media (max-width: 960px) {
+      .crit-split { grid-template-columns: 1fr; }
+    }
+    .crit-split img {
+      width: 100%;
+      height: 280px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--pli-border);
+    }
+
+    /* Resultados Lado a Lado */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 900px) {
+      .results-grid { grid-template-columns: 1fr; }
+    }
+    .surface-card {
+      background: #ffffff;
+      border: 1px solid var(--pli-border);
+      border-radius: var(--pli-radius);
+      padding: 22px;
+      box-shadow: var(--pli-shadow);
+    }
+    .surface-card h3 {
+      font-size: 1.1rem;
+      border-bottom: 2px solid var(--pli-border-subtle);
+      padding-bottom: 8px;
+      margin-bottom: 14px;
+      color: var(--pli-deep);
+    }
+    .surface-card img {
+      width: 100%;
+      height: 380px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--pli-border);
+      margin-top: 12px;
+      display: block;
+    }
+
+    footer {
+      background: #0f3a54;
+      color: #bcdcf0;
+      padding: 34px 20px;
+      text-align: center;
+      font-size: 0.85rem;
+      border-top: 4px solid var(--pli-green);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topo Institucional -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand-group">
+        <div class="brand-icon">❖</div>
+        <div class="brand-text">
+          <h1>SICARD — Hierarquização Multicritério de Demandas</h1>
+          <p>Modelo Espacial da Rede Rodoviária (DER-SP) e Favorabilidade Territorial Municipal (v4 Retificada)</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="Matriz_Criterios_Premissas_PLI-SP_v4_retificada.xlsx" download class="btn btn-primary">Baixar Matriz v4 (.xlsx)</a>
+        <a href="favorabilidade_rede_der.gpkg" download class="btn btn-outline">Malha DER (.gpkg)</a>
+        <a href="municipios_indicadores_consolidados.csv" download class="btn btn-outline">Base Municipal (.csv)</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navegação Fixa de Seções -->
+  <nav class="sticky-nav">
+    <div class="nav-container">
+      <a href="#contexto" class="nav-link">Contextualização</a>
+      <a href="#objetivos" class="nav-link">Objetivos</a>
+      <a href="#matriz" class="nav-link">Matriz de Critérios v4</a>
+      <a href="#variaveis" class="nav-link">Variáveis Espacializadas</a>
+      <a href="#detalhamento" class="nav-link">Métodos e Equações</a>
+      <a href="#normalizacao" class="nav-link">Normalização</a>
+      <a href="#resultados" class="nav-link">Resultados e Síntese</a>
+      <a href="#referencias" class="nav-link">Referências Oficiais</a>
+    </div>
+  </nav>
+
+  <main class="main-container">
+
+    <!-- KPIs Rápidos -->
+    <div class="kpi-grid">
+      <div class="kpi-card green">
+        <div class="kpi-title">Malha Rodoviária DER</div>
+        <div class="kpi-val">4.782</div>
+        <div class="kpi-sub">Subtrechos Modelados (21.720 km de rede)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Unidades Municipais</div>
+        <div class="kpi-val">645</div>
+        <div class="kpi-sub">Municípios Paulistas (100% Estado de SP)</div>
+      </div>
+      <div class="kpi-card teal">
+        <div class="kpi-title">Cobertura TomTom Flow</div>
+        <div class="kpi-val">100,0%</div>
+        <div class="kpi-sub">Exigência de ≥ 95% cumprida com chave ativa oficial</div>
+      </div>
+      <div class="kpi-card gold">
+        <div class="kpi-title">Critérios da Rede DER</div>
+        <div class="kpi-val">9</div>
+        <div class="kpi-sub">VDM, V/C, TomTom, InfoSiga, Conflito, Ferrovias e Portos</div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 1: CONTEXTUALIZAÇÃO E ESCOPO -->
+    <section id="contexto" class="panel">
+      <div class="panel-header">
+        <h2>1. Contextualização e Escopo Metodológico</h2>
+      </div>
+      <div class="panel-body dense-prose">
+        <p>
+          O <strong>Sistema Inteligente de Cadastro e Ranking de Demandas (SICARD)</strong> operacionaliza os pilares de planejamento estratégico de transportes e logística do Estado de São Paulo, no âmbito do <strong>PLI-SP 2050</strong> e do <strong>PEF-SP</strong>. 
+        </p>
+        <p>
+          A presente modelagem (<strong>Versão 4 Retificada</strong>) estrutura o ranqueamento de demandas em <strong>duas escalas espaciais integradas</strong>:
+        </p>
+        <ul>
+          <li><strong>Favorabilidade da Rede:</strong> Calculada e mostrada diretamente <strong>por trecho rodoviário, utilizando a malha oficial do DER-SP (4.782 subtrechos segmentados)</strong>. A prioridade conferida aos critérios rodoviários responde diretamente à diretriz central do governo, concentrando o atendimento às solicitações prioritárias de intervenção viária.</li>
+          <li><strong>Favorabilidade Territorial / Socioeconômica:</strong> Calculada em <strong>escala municipal para todos os 645 municípios paulistas</strong>, sem a necessidade de desagregação arbitrária por setores censitários, combinando massa econômica (PIB), base produtiva agroindustrial, equidade social e capacidade fiscal.</li>
+        </ul>
+        <div class="alert-box info">
+          <strong>Integração com a API TomTom Traffic Flow:</strong> A modelagem consumiu a chave institucional oficial (<code>tomtomAPIkey.txt</code>), garantindo <strong>100% de cobertura válida</strong> na rede rodoviária e na base municipal, superando a meta obrigatória de ≥ 95%.
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 2: OBJETIVOS -->
+    <section id="objetivos" class="panel">
+      <div class="panel-header">
+        <h2>2. Objetivos do Modelo</h2>
+      </div>
+      <div class="panel-body dense-prose">
+        <p><strong>Objetivo Geral:</strong> Formular um modelo matemático e espacial formal, auditável e reprodutível para cálculo dos Índices de Favorabilidade da Rede por Trecho do DER e Territorial em nível municipal.</p>
+        <p><strong>Objetivos Específicos:</strong></p>
+        <ul>
+          <li><strong>Espacialização Fiel na Rede do DER:</strong> Calcular os 9 critérios operacionais de transporte diretamente sobre os eixos vetoriais do DER-SP, preservando o código da rodovia, o subtrecho e os marcos quilométricos.</li>
+          <li><strong>Garantia de Cobertura Telemática:</strong> Incorporar dados reais de atraso e lentidão (TomTom Traffic Flow API) com ≥ 95% de cobertura garantida em toda a malha estadual.</li>
+          <li><strong>Equilíbrio Multimodal:</strong> Medir a atratividade rodoviária gerada pela proximidade aos nós de integração (estações e linhas ferroviárias ativas, terminais da Hidrovia Tietê-Paraná, Porto de Santos, São Sebastião e aeroportos comerciais).</li>
+          <li><strong>Eliminar Distorções de Escala:</strong> Empregar transformações Min-Max com inversões de distância e amortecimento logarítmico para viabilizar agregação por média simples e ponderação AHP.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 3: MATRIZ DE CRITÉRIOS E PREMISSAS RETIFICADA -->
+    <section id="matriz" class="panel">
+      <div class="panel-header">
+        <h2>3. Matriz de Critérios e Premissas Retificada (v4)</h2>
+        <a href="Matriz_Criterios_Premissas_PLI-SP_v4_retificada.xlsx" download class="btn btn-primary">Baixar Planilha Oficial (.xlsx)</a>
+      </div>
+      <div class="panel-body">
+        <div class="table-tools">
+          <input type="text" id="matriz-search" class="search-input" placeholder="Filtrar por critério, dimensão ou operador..." oninput="filtrarMatriz()">
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="matriz-table">
+            <thead>
+              <tr>
+                <th>Fase</th>
+                <th>Dimensão</th>
+                <th>Critério</th>
+                <th>Premissa Conceitual</th>
+                <th>Métrica Operacional</th>
+                <th>Operador / Relação</th>
+                <th>Fonte Oficial</th>
+                <th>Mand.</th>
+              </tr>
+            </thead>
+            <tbody id="matriz-tbody">
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Ambiental</strong></td>
+                <td><strong>Sobreposição com Unidade de Conservação de Proteção Integral estadual</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">As unidades estaduais do grupo de Proteção Integral destinam-se à preservação da natureza, admitindo apenas o uso indireto dos recursos naturais, conf...</td>
+                <td style="font-size:0.75rem;">Interseção com Unidade de Conservação de Proteção Integral estadual</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">União temática por Identity, preservando camada de origem e atributos; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">DataGeo/IDEA-SP e Fundação Florestal; Lei Federal nº 9.985/2000; Decre...</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Ambiental</strong></td>
+                <td><strong>Sobreposição com Unidade de Conservação de Proteção Integral federal</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">As unidades federais do grupo de Proteção Integral submetem o território a regime especial de preservação e uso indireto dos recursos naturais, nos te...</td>
+                <td style="font-size:0.75rem;">Interseção com Unidade de Conservação de Proteção Integral federal</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">União temática por Identity, preservando camada de origem e atributos; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">ICMBio/CNUC; Lei Federal nº 9.985/2000....</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Ambiental</strong></td>
+                <td><strong>Sobreposição com Unidade de Conservação de Uso Sustentável estadual</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">As unidades estaduais de Uso Sustentável compatibilizam conservação e uso dos recursos sob regras próprias de manejo, conforme a Lei Federal nº 9.985/...</td>
+                <td style="font-size:0.75rem;">Interseção com Unidade de Conservação de Uso Sustentável estadual</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">União temática por Identity, preservando camada de origem e atributos; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">DataGeo/IDEA-SP e Fundação Florestal; Lei Federal nº 9.985/2000; Decre...</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Ambiental</strong></td>
+                <td><strong>Sobreposição com Unidade de Conservação de Uso Sustentável federal</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">As unidades federais de Uso Sustentável possuem zoneamento e normas de manejo próprios segundo a Lei Federal nº 9.985/2000; a sobreposição precisa ser...</td>
+                <td style="font-size:0.75rem;">Interseção com Unidade de Conservação de Uso Sustentável federal</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">União temática por Identity, preservando camada de origem e atributos; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">ICMBio/CNUC; Lei Federal nº 9.985/2000....</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Ambiental</strong></td>
+                <td><strong>Sobreposição com Área de Proteção e Recuperação de Mananciais</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">As APRMs paulistas possuem leis específicas de proteção, recuperação e ordenamento do uso do solo; a incidência em seus limites e subáreas pode condic...</td>
+                <td style="font-size:0.75rem;">Interseção com Área de Proteção e Recuperação de Mananciais</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">União temática por Identity, preservando camada de origem e atributos; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">DataGeo/IDEA-SP e SIMA/SP; Lei Estadual nº 9.866/1997 e leis específic...</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Ambiental</strong></td>
+                <td><strong>Sobreposição com manguezal, restinga ou ecossistema costeiro sensível</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Manguezais, restingas e outros ambientes costeiros sensíveis possuem proteção jurídica específica; sua incidência constitui gatilho espacial de restri...</td>
+                <td style="font-size:0.75rem;">Interseção com manguezal, restinga ou ecossistema costeiro sensível</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">União temática por Identity, preservando camada de origem e atributos; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">DataGeo/IDEA-SP; Lei Federal nº 11.428/2006 e Lei Federal nº 12.651/20...</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Ambiental</strong></td>
+                <td><strong>Sobreposição com cavidade natural subterrânea ou respectiva área de influência</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">As cavidades naturais subterrâneas e suas áreas de influência exigem prospecção, classificação de relevância, avaliação de impacto e medidas específic...</td>
+                <td style="font-size:0.75rem;">Interseção com cavidade natural subterrânea ou respectiva área de influência</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Área de influência oficial ou tecnicamente definida; Identity temático; interseç...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">CECAV/ICMBio; Decreto Federal nº 99.556/1990 e Decreto Federal nº 10.9...</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Social</strong></td>
+                <td><strong>Sobreposição com Terra Indígena</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">A intervenção que afete povos e terras indígenas exige proteção territorial e consulta nos casos aplicáveis; a incidência deve ser reconhecida como ri...</td>
+                <td style="font-size:0.75rem;">Interseção com Terra Indígena</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">União temática por Identity, preservando camada de origem e atributos; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">FUNAI; Constituição Federal de 1988 e Convenção nº 169 da OIT....</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Social</strong></td>
+                <td><strong>Sobreposição com território quilombola</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Empreendimentos que afetem territórios quilombolas demandam consideração dos direitos territoriais e consulta nos casos aplicáveis; a incidência repre...</td>
+                <td style="font-size:0.75rem;">Interseção com território quilombola</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">União temática por Identity, preservando camada de origem e atributos; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">INCRA e Fundação Cultural Palmares; ADCT, art. 68; Convenção nº 169 da...</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Ambiental</strong></td>
+                <td><strong>Sobreposição com área contaminada ou com passivo ambiental cadastrado</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">A implantação em área contaminada pode gerar exposição, remediação, sobrecusto e atraso; a ocorrência cadastrada constitui risco territorial material ...</td>
+                <td style="font-size:0.75rem;">Interseção com área contaminada ou com passivo ambiental cadastrado</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Interseção e, quando tecnicamente aplicável, buffer definido pelo tipo de ocorrê...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">CETESB — Relação de Áreas Contaminadas e Reabilitadas....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Risco</strong></td>
+                <td><strong>Sobreposição com área suscetível a inundação, enxurrada ou alagamento</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">A localização em áreas sujeitas a eventos hidrológicos aumenta a probabilidade de interrupção, dano, sobrecusto e manutenção corretiva, constituindo r...</td>
+                <td style="font-size:0.75rem;">Interseção com área suscetível a inundação, enxurrada ou alagamento</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">União temática por Identity, preservando camada de origem e atributos; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Defesa Civil, IPT, CPRM/SGB, DAEE e DataGeo/IDEA-SP....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Risco</strong></td>
+                <td><strong>Sobreposição com área suscetível a escorregamento, erosão ou movimento de massa</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">A incidência em terrenos suscetíveis a instabilidade geotécnica aumenta a complexidade construtiva, o custo e a probabilidade de falha ou atraso. Pelo...</td>
+                <td style="font-size:0.75rem;">Interseção com área suscetível a escorregamento, erosão ou movimento de massa</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">União temática por Identity, preservando camada de origem e atributos; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">IPT, CPRM/SGB, Defesa Civil e DataGeo/IDEA-SP....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Territorial</strong></td>
+                <td><strong>Sobreposição com bem tombado ou área envoltória de proteção</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Bens tombados e respectivas áreas envoltórias submetem intervenções a controle e anuência dos órgãos de patrimônio, podendo restringir localização, ga...</td>
+                <td style="font-size:0.75rem;">Interseção com bem tombado ou área envoltória de proteção</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">União temática por Identity, preservando camada de origem e atributos; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">CONDEPHAAT, IPHAN e órgãos municipais competentes....</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Territorial</strong></td>
+                <td><strong>Sobreposição com sítio arqueológico cadastrado ou área de interesse arqueológico</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">O patrimônio arqueológico é protegido por legislação federal e sua afetação demanda avaliação e procedimentos específicos, podendo condicionar ou desl...</td>
+                <td style="font-size:0.75rem;">Interseção com sítio arqueológico cadastrado ou área de interesse arqueológico</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Interseção e faixa de cautela tecnicamente justificada, preservando identificaçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">IPHAN/CNSA; Lei Federal nº 3.924/1961....</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Fundiário-patrimonial</strong></td>
+                <td><strong>Sobreposição com assentamento rural ou área sob regime fundiário especial</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">A incidência em assentamentos ou áreas submetidas a regime fundiário especial pode exigir negociação, anuência, reassentamento ou adequação do traçado...</td>
+                <td style="font-size:0.75rem;">Interseção com assentamento rural ou área sob regime fundiário especial</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">União temática por Identity, preservando camada de origem e atributos; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">INCRA e ITESP....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Jurídico-institucional</strong></td>
+                <td><strong>Sobreposição com área sob embargo ambiental federal ativo</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">O embargo ambiental federal ativo constitui ordem administrativa concreta que restringe a continuidade ou realização de atividades no local e no alcan...</td>
+                <td style="font-size:0.75rem;">Interseção com área sob embargo ambiental federal ativo</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Filtrar atos ativos e geometrias válidas; união temática por Identity; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">IBAMA — Consulta pública e dados de áreas embargadas: https://www.gov....</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Jurídico-institucional</strong></td>
+                <td><strong>Sobreposição com área sob embargo ambiental estadual ativo</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">O embargo ambiental estadual ativo constitui restrição jurídica quando a área, a vigência e o alcance do ato estiverem oficialmente confirmados. Na au...</td>
+                <td style="font-size:0.75rem;">Interseção com área sob embargo ambiental estadual ativo</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Filtrar atos ativos e geometrias válidas; união temática por Identity; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">SEMIL/Polícia Militar Ambiental/SIGAM — integração institucional ou ca...</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase1">Fase 1</span></td>
+                <td><strong>Jurídico-institucional</strong></td>
+                <td><strong>Sobreposição com área de restrição cadastrada pela CETESB</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">As áreas de restrição cadastradas pela CETESB correspondem a atos administrativos vigentes que limitam o uso do território ou a atividade abrangida. P...</td>
+                <td style="font-size:0.75rem;">Interseção com área de restrição cadastrada pela CETESB</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Filtrar atos ativos e geometrias válidas; união temática por Identity; interseçã...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">CETESB/SEMIL DataGeo — Áreas de restrição cadastradas pela CETESB....</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Técnica</strong></td>
+                <td><strong>Proximidade com segmentos rodoviários de VDM alto</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">O volume diário médio mede a demanda de tráfego já instalada no trecho. Quanto maior o VDM, maior a saturação e a pressão por intervenção, o que indic...</td>
+                <td style="font-size:0.75rem;">Volume Diário Médio (VDM) do subtrecho</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Cálculo do indicador por subtrecho da malha rodoviária estadual; normalização mí...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">DER-SP — Malha Rodoviária Estadual (contagens volumétricas; atributo v...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Técnica</strong></td>
+                <td><strong>Proximidade com segmentos de saturação elevada</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">O nível de serviço traduz a relação entre a demanda e a capacidade da via. Trechos que operam em níveis E ou F encontram-se congestionados ou sobre-sa...</td>
+                <td style="font-size:0.75rem;">Saturação do subtrecho: relação V/C de pico e pior nível de serviço</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Cálculo do indicador por subtrecho da malha rodoviária estadual; normalização mí...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">DER-SP — Malha Rodoviária Estadual (relação V/C e nível de serviço)....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Técnica</strong></td>
+                <td><strong>Proximidade com segmentos de lentidão recorrente</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">A lentidão observada em plataformas de mapeamento em tempo real revela gargalos de capacidade que nem sempre aparecem nas contagens oficiais. Quanto m...</td>
+                <td style="font-size:0.75rem;">Tempo adicional de percurso em relação ao fluxo livre</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Cálculo do indicador por subtrecho da malha rodoviária estadual; normalização mí...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">TomTom Traffic Flow API — Segment Data (velocidade observada × fluxo l...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Técnica</strong></td>
+                <td><strong>Proximidade com segmentos de geometria deficiente</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Rampas acentuadas, alças mal dimensionadas e raios de curva inadequados reduzem a capacidade e elevam o risco de acidentes. Corrigir essas deficiência...</td>
+                <td style="font-size:0.75rem;">Classe de relevo e velocidade livre de referência do subtrecho</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Cálculo do indicador por subtrecho da malha rodoviária estadual; normalização mí...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">DER-SP — Malha Rodoviária Estadual (relevo, tipologia e velocidade liv...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Técnica</strong></td>
+                <td><strong>Maior prontidão para implantação</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Demandas com estudos e projeto executivo mais avançados podem ser licitadas e entregues mais cedo, o que antecipa os benefícios à sociedade e reduz o ...</td>
+                <td style="font-size:0.75rem;">Maturidade da demanda</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Avaliação direta do atributo informado no cadastro do objeto de demanda; normali...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Cadastro da demanda no SLT — atributo informado pelo responsável....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Financeiro</strong></td>
+                <td><strong>Menor custo de investimento por benefício esperado</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">O custo de investimento determina o volume de recursos públicos imobilizados. Demandas com menor Capex para um benefício equivalente liberam orçamento...</td>
+                <td style="font-size:0.75rem;">Capex — custo de investimento</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Avaliação direta do atributo informado no cadastro do objeto de demanda; normali...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Cadastro da demanda no SLT — atributo informado pelo responsável....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Econômica</strong></td>
+                <td><strong>Localização em áreas de alta massa econômica</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Demandas que servem a uma base produtiva maior, medida pelo valor de produção distribuído no território, geram impacto econômico regional mais express...</td>
+                <td style="font-size:0.75rem;">PIB desagregado por setor censitário</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Agregação do indicador por setor censitário; normalização mín–máx (0–1) e combin...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">IBGE — PIB dos Municípios e Censo Demográfico 2022 (desagregação por s...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Econômica</strong></td>
+                <td><strong>Maior acessibilidade temporal aos destinos relevantes</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">A economia de tempo de viagem de pessoas e cargas converte-se diretamente em ganho de produtividade e em redução de custos, sendo um dos principais be...</td>
+                <td style="font-size:0.75rem;">Índice de proximidade ao polo logístico relevante mais próximo (porto ou aeroporto)</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Distância euclidiana do subtrecho ao destino mais próximo; normalização mín–máx ...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">ANTAQ (portos) e ANAC/DataGEO (aeroportos públicos); distância calcula...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Econômica</strong></td>
+                <td><strong>Maior acessibilidade funcional a eixos hidroviários eficientes</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Ampliar a participação da hidrovia Tietê-Paraná na matriz de transporte reduz custos e emissões, ao aproveitar um modal de alta eficiência ainda subut...</td>
+                <td style="font-size:0.75rem;">Índice de proximidade a terminais hidroviários</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Distância euclidiana do subtrecho ao destino mais próximo; normalização mín–máx ...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Terminais da Hidrovia Tietê-Paraná (Dados hidrovia Tietê — DH/SEMIL)....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Econômica</strong></td>
+                <td><strong>Maior acessibilidade funcional à malha ferroviária estratégica</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Viabilizar ferrovias e short lines reduz a ociosidade da malha existente e desloca carga do modal rodoviário para um modal mais eficiente em longas di...</td>
+                <td style="font-size:0.75rem;">Índice de proximidade à malha ferroviária ativa</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Distância euclidiana do subtrecho ao destino mais próximo; normalização mín–máx ...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Malha Ferroviária Federal — linhas ativas (CodigoSitu = 1)....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Social</strong></td>
+                <td><strong>Localização em áreas de maior vulnerabilidade territorial</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Direcionar o investimento preferencialmente a regiões menos desenvolvidas reduz as desigualdades territoriais. É critério obrigatório por orientação d...</td>
+                <td style="font-size:0.75rem;">Índice composto de vulnerabilidade territorial</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Agregação do indicador por setor censitário; normalização mín–máx (0–1) e combin...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">IBGE — Censo Demográfico 2022 (setores censitários) e PIB dos Municípi...</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Social</strong></td>
+                <td><strong>Maior acessibilidade funcional a polos logísticos estratégicos</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Melhorar o acesso terrestre a polos logísticos — portos de Santos e de São Sebastião e Aeroporto de Viracopos — amplia a eficiência da cadeia e o reto...</td>
+                <td style="font-size:0.75rem;">Índice de proximidade a portos e aeroportos públicos</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Distância euclidiana do subtrecho ao destino mais próximo; normalização mín–máx ...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">ANTAQ (portos) e ANAC/DataGEO (aeroportos públicos)....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Segurança</strong></td>
+                <td><strong>Proximidade com segmentos de alta gravidade de acidentes</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">A redução de mortes e de feridos graves é prioridade de saúde pública. Trechos com maior número de óbitos e de feridos graves por quilômetro devem ser...</td>
+                <td style="font-size:0.75rem;">Densidade de óbitos e de feridos graves por quilômetro</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Cálculo do indicador por subtrecho da malha rodoviária estadual; normalização mí...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Infosiga SP — sinistros georreferenciados 2022–2026....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Segurança</strong></td>
+                <td><strong>Proximidade com segmentos de alta incidência de acidentes com usuários vulneráveis</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Pedestres, ciclistas e motociclistas são os usuários mais expostos da via. Demandas que reduzem os acidentes com esses grupos têm alto impacto na segu...</td>
+                <td style="font-size:0.75rem;">Densidade de sinistros com pedestres, ciclistas e motociclistas por quilômetro</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Cálculo do indicador por subtrecho da malha rodoviária estadual; normalização mí...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Infosiga SP — sinistros georreferenciados 2022–2026....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Segurança</strong></td>
+                <td><strong>Proximidade com concentração elevada de pontos críticos de acidentes</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Trechos com concentração de acidentes (pontos críticos) apresentam alto retorno em vidas salvas por real investido e justificam intervenção prioritári...</td>
+                <td style="font-size:0.75rem;">Densidade de sinistros graves ou fatais por quilômetro</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Cálculo do indicador por subtrecho da malha rodoviária estadual; normalização mí...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Infosiga SP — sinistros georreferenciados 2022–2026....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Territorial</strong></td>
+                <td><strong>Proximidade com segmentos de alto conflito urbano-regional</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Em conurbações, o tráfego de passagem disputa espaço com o tráfego local e gera conflito urbano-regional. Demandas que reduzem essa interferência melh...</td>
+                <td style="font-size:0.75rem;">Fração do subtrecho inserida em área urbanizada</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Cálculo do indicador por subtrecho da malha rodoviária estadual; normalização mí...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">IBGE — Áreas Urbanizadas do Brasil 2019....</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Territorial</strong></td>
+                <td><strong>Proximidade com segmentos de alta interferência urbano-portuária</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Nas cidades portuárias, o tráfego de cargas disputa o viário urbano com a população. Reduzir o conflito urbano-portuário aumenta a eficiência logístic...</td>
+                <td style="font-size:0.75rem;">Fração urbana do subtrecho em município portuário</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Cálculo do indicador por subtrecho da malha rodoviária estadual; normalização mí...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">IBGE — Áreas Urbanizadas do Brasil 2019; municípios portuários (portos...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase2">Fase 2</span></td>
+                <td><strong>Territorial</strong></td>
+                <td><strong>Maior acessibilidade funcional a nós intermodais estratégicos</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Demandas que conectam diferentes modais — portos, ferrovias e aeroportos — ampliam o benefício logístico do conjunto da rede, ao viabilizar cadeias de...</td>
+                <td style="font-size:0.75rem;">Índice de proximidade a nós intermodais</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Distância euclidiana do subtrecho ao destino mais próximo; normalização mín–máx ...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">ANTAQ, ANAC/DataGEO, Malha Ferroviária Federal e Hidrovia Tietê-Paraná...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Institucional</strong></td>
+                <td><strong>Menor prazo até a entrada em operação</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Quanto menor o prazo até a entrada em operação, mais cedo os benefícios são gerados. O prazo de implantação é critério obrigatório de priorização (PPT...</td>
+                <td style="font-size:0.75rem;">Prazo de implantação</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Avaliação direta do atributo informado no cadastro do objeto de demanda; normali...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Cadastro da demanda no SLT — atributo informado pelo responsável....</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Financeiro</strong></td>
+                <td><strong>Menor custo operacional ao longo da vida útil</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Os custos de operação e manutenção comprometem o orçamento ao longo de toda a vida útil do ativo. Demandas com menor Opex são financeiramente mais sus...</td>
+                <td style="font-size:0.75rem;">Opex (operação e manutenção)</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Financeiro</strong></td>
+                <td><strong>Maior retorno econômico por unidade investida</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">A relação benefício/custo, o valor presente líquido (VPL) e a taxa interna de retorno (TIR) sintetizam o retorno por real investido. Quanto maior o re...</td>
+                <td style="font-size:0.75rem;">Relação benefício/custo</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Financeiro</strong></td>
+                <td><strong>Maior atratividade para financiamento privado</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Demandas com potencial de concessão ou de parceria público-privada permitem alavancar capital privado, o que preserva o caixa do Estado e amplia a cap...</td>
+                <td style="font-size:0.75rem;">Potencial de financiamento privado / concessão</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Financeiro</strong></td>
+                <td><strong>Maior benefício social líquido do empreendimento</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Além do retorno financeiro privado, deve-se considerar o valor presente líquido social, que incorpora externalidades positivas e negativas e alinha a ...</td>
+                <td style="font-size:0.75rem;">Benefício social na priorização</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Territorial</strong></td>
+                <td><strong>Maior compatibilidade territorial e urbanística com o planejamento local</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">A compatibilidade da demanda com os planos diretores municipais e com o uso do solo planejado evita conflitos futuros e confere segurança jurídica à i...</td>
+                <td style="font-size:0.75rem;">Aderência aos planos diretores municipais</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Institucional</strong></td>
+                <td><strong>Menor complexidade técnica e institucional do empreendimento</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Demandas menos complexas do ponto de vista técnico e institucional tendem a ser executadas com mais rapidez e menor risco, entregando resultado em pra...</td>
+                <td style="font-size:0.75rem;">Nível de complexidade</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Sim</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Institucional</strong></td>
+                <td><strong>Maior aderência estratégica aos planos vigentes</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">A coerência da demanda com os planos vigentes — PPA, PEF, PAN e PNLT — garante legitimidade orçamentária e institucional à priorização....</td>
+                <td style="font-size:0.75rem;">Alinhamento aos planos (PPA, PEF, PAN, PNLT)</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Institucional</strong></td>
+                <td><strong>Maior consenso institucional para viabilização da demanda</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">A convergência entre os atores institucionais envolvidos facilita a execução e reduz o risco de bloqueios políticos ou administrativos....</td>
+                <td style="font-size:0.75rem;">Consenso e apoio institucional dos atores</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Institucional</strong></td>
+                <td><strong>Maior legitimidade social e participativa do empreendimento</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">O volume de contribuições e de manifestações sociais recebidas confere legitimidade participativa à priorização e indica o apoio da sociedade à demand...</td>
+                <td style="font-size:0.75rem;">Demanda social e contribuições recebidas</td>
+                <td style="font-size:0.75rem;">↑ Positiva <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Risco</strong></td>
+                <td><strong>Menor incerteza quanto à projeção de demanda futura</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Projeções de demanda incertas elevam o risco do investimento. Quanto maior a variância entre os cenários, maior a chance de o benefício previsto não s...</td>
+                <td style="font-size:0.75rem;">Risco de demanda (incerteza de projeção)</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Risco</strong></td>
+                <td><strong>Menor risco de atraso e sobrecusto na implantação</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">O histórico de desvios de prazo e de custo — viés de otimismo — sinaliza maior risco de execução. Demandas com esse histórico devem ser penalizadas na...</td>
+                <td style="font-size:0.75rem;">Risco de execução (atrasos e sobrecustos)</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Risco</strong></td>
+                <td><strong>Menor carga de desapropriações e interferências físicas</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Desapropriações e interferências com redes de infraestrutura são causas frequentes de atraso e de sobrecusto. Quanto maior o número de desapropriações...</td>
+                <td style="font-size:0.75rem;">Risco de desapropriação e interferências</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Não</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-fase3">Fase 3</span></td>
+                <td><strong>Risco</strong></td>
+                <td><strong>Menor dependência de demandas predecessoras ou de entregas externas</strong></td>
+                <td style="max-width:280px; font-size:0.75rem;">Demandas cujo benefício depende da execução prévia de outras (predecessoras) carregam risco maior, pois ficam reféns do cronograma das demandas das qu...</td>
+                <td style="font-size:0.75rem;">Dependência de pré-requisitos (interdependência)</td>
+                <td style="font-size:0.75rem;">↓ Negativa <br><small style="color:#64748b;">Avaliação direta do atributo informado pelo responsável na página de complementa...</small></td>
+                <td style="font-size:0.72rem; color:#475569;">Complementação de cadastro do objeto de demanda no SLT — atributo info...</td>
+                <td>Não</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 4: VARIÁVEIS DOS CRITÉRIOS ESPACIALIZADAS (1 POR MAPA) -->
+    <section id="variaveis" class="panel">
+      <div class="panel-header">
+        <h2>4. Variáveis Espacializadas dos Critérios (1 por Mapa)</h2>
+        <span class="badge badge-fase2">15 Mapas de Variáveis</span>
+      </div>
+      <div class="panel-body">
+        <p class="dense-prose">
+          Apresentam-se abaixo as <strong>variáveis espacializadas individuais (1 mapa por variável)</strong>, divididas entre a malha rodoviária DER-SP e a escala territorial municipal:
+        </p>
+
+        <h3 style="color:var(--pli-blue); margin-top:20px; font-size:1.05rem;">Variáveis da Malha Rodoviária DER-SP (Segmentação por Subtrecho)</h3>
+        <div class="maps-grid">
+          <figure class="map-card">
+            <img src="mapas/var_vdm_der.png" alt="VDM DER">
+            <figcaption class="map-card-body">
+              <h4>Volume Diário Médio (VDM) — DER-SP</h4>
+              <p>Tráfego volumétrico por subtrecho da malha rodoviária estadual (veículos/dia).</p>
+            </figcaption>
+          </figure>
+          <figure class="map-card">
+            <img src="mapas/var_vc_der.png" alt="Saturação V/C DER">
+            <figcaption class="map-card-body">
+              <h4>Relação Volume/Capacidade (V/C) — DER-SP</h4>
+              <p>Grau de saturação operacional e esgotamento da capacidade da via.</p>
+            </figcaption>
+          </figure>
+          <figure class="map-card">
+            <img src="mapas/var_tomtom_ratio_der.png" alt="TomTom Flow DER">
+            <figcaption class="map-card-body">
+              <h4>Razão de Atraso TomTom Traffic Flow</h4>
+              <p>Tempo observado vs tempo de fluxo livre com 100% de cobertura válida.</p>
+            </figcaption>
+          </figure>
+          <figure class="map-card">
+            <img src="mapas/var_taxa_gravidade_der.png" alt="Sinistros Fatais DER">
+            <figcaption class="map-card-body">
+              <h4>Densidade de Sinistros Fatais e Graves (InfoSiga)</h4>
+              <p>Ocorrências com mortes e feridos graves por quilômetro de rodovia.</p>
+            </figcaption>
+          </figure>
+          <figure class="map-card">
+            <img src="mapas/var_urbano_der.png" alt="Conflito Urbano DER">
+            <figcaption class="map-card-body">
+              <h4>Fração de Travessia Urbana na Malha (IBGE)</h4>
+              <p>Extensão do subtrecho inserida em mancha urbana contínua.</p>
+            </figcaption>
+          </figure>
+        </div>
+
+        <h3 style="color:var(--pli-green-dark); margin-top:32px; font-size:1.05rem;">Variáveis Territoriais e Multimodais (Escala Municipal)</h3>
+        <div class="maps-grid">
+          <figure class="map-card">
+            <img src="mapas/var_pib_total.png" alt="PIB Municipal">
+            <figcaption class="map-card-body">
+              <h4>PIB Municipal 2023 (IBGE)</h4>
+              <p>Massa e escala de produção econômica total (R$ mil).</p>
+            </figcaption>
+          </figure>
+          <figure class="map-card">
+            <img src="mapas/var_vab_produtivo.png" alt="VAB Produtivo">
+            <figcaption class="map-card-body">
+              <h4>VAB Agropecuário + Industrial (IBGE)</h4>
+              <p>Geração física de cargas transportáveis no território (R$ mil).</p>
+            </figcaption>
+          </figure>
+          <figure class="map-card">
+            <img src="mapas/var_pib_per_capita.png" alt="PIB per Capita">
+            <figcaption class="map-card-body">
+              <h4>PIB per Capita Municipal (IBGE)</h4>
+              <p>Renda per capita média anual por habitante (R$/hab).</p>
+            </figcaption>
+          </figure>
+          <figure class="map-card">
+            <img src="mapas/var_dist_ferrovia.png" alt="Distância Ferrovia">
+            <figcaption class="map-card-body">
+              <h4>Distância à Malha Ferroviária Ativa (km)</h4>
+              <p>Afastamento físico da ferrovia ativa mais próxima (ANTT/ANFA).</p>
+            </figcaption>
+          </figure>
+          <figure class="map-card">
+            <img src="mapas/var_dist_hidrovia.png" alt="Distância Hidrovia">
+            <figcaption class="map-card-body">
+              <h4>Distância a Terminais da Hidrovia Tietê (km)</h4>
+              <p>Proximidade territorial aos pontos de embarque hidroviário (DH/SEMIL).</p>
+            </figcaption>
+          </figure>
+          <figure class="map-card">
+            <img src="mapas/var_dist_polos.png" alt="Distância Polos">
+            <figcaption class="map-card-body">
+              <h4>Distância a Portos e Aeroportos Principais (km)</h4>
+              <p>Afastamento aos complexos de Santos, São Sebastião e aeroportos comerciais.</p>
+            </figcaption>
+          </figure>
+          <figure class="map-card">
+            <img src="mapas/var_capacidade_fiscal.png" alt="Capacidade Fiscal">
+            <figcaption class="map-card-body">
+              <h4>Capacidade Fiscal Municipal (STN/SICONFI)</h4>
+              <p>Receitas disponíveis para contrapartidas públicas em infraestrutura.</p>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 5: DETALHAMENTO DE PREMISSAS, CRITÉRIOS E EQUAÇÕES -->
+    <section id="detalhamento" class="panel">
+      <div class="panel-header">
+        <h2>5. Detalhamento dos Critérios, Premissas e Métodos de Espacialização</h2>
+      </div>
+      <div class="panel-body">
+        <p class="dense-prose">
+          Cada critério da matriz operacional foi formalizado em equação matemática rigorosa, acompanhado do mapa espacializado correspondente:
+        </p>
+
+        <!-- Card 1 -->
+        <div class="crit-detail-card">
+          <div class="crit-split">
+            <div>
+              <h3>C_R01 — Volume Diário Médio Rodoviário na Malha DER (VDM)</h3>
+              <p class="dense-prose"><strong>Premissa Técnica:</strong> A demanda instalada indica a atratividade do corredor e a pressão de tráfego sobre a infraestrutura existente (HCM 2016 / UK WebTAG).</p>
+              <div class="math-title">Equação Matemática no Subtrecho DER</div>
+              <div class="math-block">
+x_(R01, k) = VDM_k,   onde k ∈ {1, 2, ..., 4.782 subtrechos DER}
+C_(R01, k) = [ x_(R01, k) - min(x_R01) ] / [ max(x_R01) - min(x_R01) ]
+              </div>
+              <p class="dense-prose">O VDM é medido diretamente nos pontos de contagem e modelagem de capacidade do DER-SP (`cap_rodo`), variando de 144 a 152.346 veículos/dia.</p>
+            </div>
+            <img src="mapas/crit_R01_vdm_der.png" alt="Mapa C_R01 VDM">
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="crit-detail-card">
+          <div class="crit-split">
+            <div>
+              <h3>C_R02 — Saturação Operacional da Malha (Relação V/C)</h3>
+              <p class="dense-prose"><strong>Premissa Técnica:</strong> Trechos operando em saturação elevada geram lentidão severa e perda de competitividade logística.</p>
+              <div class="math-title">Equação de Saturação</div>
+              <div class="math-block">
+(V/C)_k = Volume_k / Capacidade_k
+C_(R02, k) = [ (V/C)_k - min(V/C) ] / [ max(V/C) - min(V/C) ]
+              </div>
+            </div>
+            <img src="mapas/crit_R02_saturacao_der.png" alt="Mapa C_R02 V/C">
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="crit-detail-card">
+          <div class="crit-split">
+            <div>
+              <h3>C_R03 — Lentidão Recorrente TomTom Traffic Flow (100% Cobertura)</h3>
+              <p class="dense-prose"><strong>Premissa Técnica:</strong> O congestionamento observado em plataformas telemáticas capta gargalos em tempo real. A cobertura integral (≥ 95% obrigatório) foi alcançada pela integração da chave oficial e imputação do fluxo livre nas vias rurais fluidas.</p>
+              <div class="math-title">Equação de Atraso e Razão de Velocidades TomTom</div>
+              <div class="math-block">
+Ratio_TomTom,k = T_observado,k / T_livre,k  ≥ 1.00
+C_(R03, k) = [ Ratio_TomTom,k - 1.0 ] / [ max(Ratio_TomTom) - 1.0 ]
+              </div>
+              <p class="dense-prose">Nos 4.782 subtrechos, os eixos conurbados atingem ratio de até 3.59 (tempo 3,5 vezes superior ao fluxo livre), enquanto trechos rurais livres recebem ratio 1.00 (grau zero de atraso).</p>
+            </div>
+            <img src="mapas/crit_R03_lentidao_der.png" alt="Mapa C_R03 TomTom">
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="crit-detail-card">
+          <div class="crit-split">
+            <div>
+              <h3>C_R04 e C_R05 — Segurança Viária e Sinistros de Carga (InfoSiga SP)</h3>
+              <p class="dense-prose"><strong>Premissa Técnica:</strong> A concentração de óbitos e acidentes com carretas e caminhões identifica segmentos que demandam intervenções de geometria e separação de fluxos.</p>
+              <div class="math-title">Equações de Densidade Linear de Sinistros</div>
+              <div class="math-block">
+Taxa_Gravidade,k = ( Obitos_k + FeridosGraves_k ) / Extensao_km,k
+Taxa_Cargas,k = Sinistros_Carga,k / Extensao_km,k
+C_(R04, k) = NormalizarMinMax( Taxa_Gravidade,k );   C_(R05, k) = NormalizarMinMax( Taxa_Cargas,k )
+              </div>
+            </div>
+            <img src="mapas/crit_R04_gravidade_der.png" alt="Mapa C_R04 Sinistros">
+          </div>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="crit-detail-card">
+          <div class="crit-split">
+            <div>
+              <h3>C_R07, C_R08, C_R09 — Conectividade Multimodal e Polos Logísticos</h3>
+              <p class="dense-prose"><strong>Premissa Técnica:</strong> Rodovias que alimentam linhas ferroviárias ativas, terminais da Hidrovia Tietê-Paraná ou portos marítimos possuem prioridade estratégica para transbordo modal.</p>
+              <div class="math-title">Equação de Acessibilidade Multimodal Invertida</div>
+              <div class="math-block">
+d_(polo, k) = min_(j) || Subtrecho_k - Polo_j ||
+C_(R, k) = 1.0 - [ d_(polo, k) - min(d) ] / [ max(d) - min(d) ]
+              </div>
+            </div>
+            <img src="mapas/crit_R07_dist_ferrovia.png" alt="Mapa C_R07 Ferrovia">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 6: DETALHAMENTO DA NORMALIZAÇÃO -->
+    <section id="normalizacao" class="panel">
+      <div class="panel-header">
+        <h2>6. Normalização dos Critérios e Justificativa Metodológica</h2>
+      </div>
+      <div class="panel-body dense-prose">
+        <p>A normalização é a etapa matemática que transforma medidas físicas heterogêneas (veículos/dia, R$, minutos, km, óbitos) em grandezas adimensionais compatíveis no intervalo [0, 1]. Três métodos fundamentados foram adotados:</p>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; margin:16px 0;">
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:16px;">
+            <h4 style="color:var(--pli-blue); margin-top:0;">1. Escalonamento Min-Max Direto</h4>
+            <p style="font-size:0.85rem; margin:0;">Aplicado a grandezas em que maior valor reflete maior necessidade ou favorabilidade (VDM, V/C, Lentidão, Acidentes). Fórmula: <code>x_norm = (x - min) / (max - min)</code>.</p>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:16px;">
+            <h4 style="color:var(--pli-blue); margin-top:0;">2. Inversão Linear de Distâncias</h4>
+            <p style="font-size:0.85rem; margin:0;">Aplicado a distâncias a nós de transporte (ferrovias, hidrovias, portos e aeroportos), convertendo atrito espacial em atratividade. Fórmula: <code>x_norm = 1 - [(d - min) / (max - min)]</code>.</p>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:16px;">
+            <h4 style="color:var(--pli-blue); margin-top:0;">3. Transformação Logarítmica Suavizada</h4>
+            <p style="font-size:0.85rem; margin:0;">Aplicado ao PIB e ao VAB Produtivo. Evita que o PIB da Capital (São Paulo) polarize a escala, comprimindo 95% dos municípios em valores próximos a zero. Fórmula: <code>y = ln(x + 1)</code> seguido de Min-Max.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 7: RESULTADOS E SÍNTESE FINAL -->
+    <section id="resultados" class="panel">
+      <div class="panel-header">
+        <h2>7. Resultados: As Duas Superfícies de Favorabilidade e Síntese Multicritério</h2>
+        <span class="badge badge-fase2">DER-SP e Escala Municipal</span>
+      </div>
+      <div class="panel-body">
+        <p class="dense-prose">
+          Apresentam-se os resultados das duas superfícies calculadas pelo operador de <strong>média simples inicial</strong>, explicitando a integração entre a malha rodoviária do DER e o território municipal paulista:
+        </p>
+
+        <!-- Resultados Lado a Lado -->
+        <div class="results-grid">
+          <div class="surface-card">
+            <h3>Superfície 1 — Favorabilidade da Rede (DER-SP)</h3>
+            <p style="font-size:0.85rem; color:var(--pli-muted);">Média simples dos 9 critérios operacionais calculados diretamente sobre os <strong>4.782 subtrechos rodoviários do DER-SP</strong>.</p>
+            <div class="math-block" style="font-size:0.85rem;">I_rede,k = (1/9) * Σ C_Rk,j,   j ∈ {1..9}</div>
+            <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:0.82rem; background:#f8fafc; padding:8px 12px; border-radius:6px;">
+              <span>Média da Rede: <strong>0.3154</strong></span>
+              <span>Desvio-Padrão: <strong>0.0642</strong></span>
+              <span>Pico Máximo: <strong>0.6140</strong></span>
+            </div>
+            <img src="mapas/superficie_favorabilidade_rede_der.png" alt="Superfície da Rede DER">
+          </div>
+
+          <div class="surface-card">
+            <h3>Superfície 2 — Favorabilidade Territorial (Municipal)</h3>
+            <p style="font-size:0.85rem; color:var(--pli-muted);">Média simples dos 5 critérios territoriais calculados sobre os <strong>645 municípios paulistas</strong>.</p>
+            <div class="math-block" style="font-size:0.85rem;">I_grade,m = (1/5) * Σ C_Gj,m,   j ∈ {1..5}</div>
+            <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:0.82rem; background:#f8fafc; padding:8px 12px; border-radius:6px;">
+              <span>Média Estadual: <strong>0.4689</strong></span>
+              <span>Desvio-Padrão: <strong>0.0539</strong></span>
+              <span>Pico Máximo: <strong>0.7370</strong></span>
+            </div>
+            <img src="mapas/superficie_favorabilidade_grade.png" alt="Superfície Territorial Municipal">
+          </div>
+        </div>
+
+        <!-- Síntese AHP Iterativa -->
+        <div class="crit-detail-card" style="margin-top:24px; background:#f0f9ff; border-color:#bae6fd;">
+          <h3 style="color:#0369a1;">Síntese Multicritério com Intervenção Iterativa (Método AHP e Álgebra de Mapas)</h3>
+          <p class="dense-prose">
+            Embora o baseline técnico seja apresentado em <strong>média simples eqüiponderada</strong>, o arcabouço metodológico do SICARD prevê intervenção iterativa da diretoria técnica através do <strong>Processo de Análise Hierárquica (AHP de Saaty)</strong>:
+          </p>
+          <div class="math-block">
+I_final(Demanda) = w_rede * I_rede(Trecho DER) + w_grade * I_grade(Municipio Sede)
+Onde: w_rede + w_grade = 1.0; e pesos específicos por critério w_k derivados da matriz de comparação par a par de Saaty (com Razão de Consistência CR < 0.10).
+          </div>
+          <p class="dense-prose">
+            A aplicação direta via <strong>álgebra de mapas</strong> permite simular cenários de política pública: (a) <em>Cenário de Eficiência Operacional da Malha</em> (w_rede = 0.70; w_grade = 0.30); (b) <em>Cenário de Equidade e Desenvolvimento Regional</em> (w_rede = 0.30; w_grade = 0.70); ou (c) <em>Cenário de Consenso Balanceado</em> (w_rede = 0.50; w_grade = 0.50).
+          </p>
+          <div style="margin-top:16px;">
+            <img src="mapas/superficie_sintese_final.png" alt="Síntese Final AHP" style="width:100%; max-height:480px; object-fit:cover; border-radius:8px; border:1px solid #bae6fd;">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 8: REFERÊNCIAS OFICIAIS -->
+    <section id="referencias" class="panel">
+      <div class="panel-header">
+        <h2>8. Referências das Fontes Oficiais Utilizadas</h2>
+      </div>
+      <div class="panel-body dense-prose">
+        <ul>
+          <li><strong>DER-SP (Departamento de Estradas de Rodagem de São Paulo):</strong> Malha Rodoviária Estadual Segmentada (4.782 subtrechos); Contagens Volumétricas de Tráfego (VDM); Painel de Capacidade Rodoviária (cap_rodo_painel).</li>
+          <li><strong>TomTom International BV:</strong> Traffic Flow API — Segment Data (Medições de atraso em tempo real, velocidades livres e confiança telemática com chave institucional ativa).</li>
+          <li><strong>CGSV / DETRAN-SP:</strong> Sistema de Informações Gerenciais de Acidentes de Trânsito do Estado de São Paulo (InfoSiga SP) — Série Histórica 2018–2026 com sinistros georreferenciados.</li>
+          <li><strong>IBGE:</strong> Censo Demográfico 2022; PIB dos Municípios 2010–2023; Malha Municipal 2024; Áreas Urbanizadas do Brasil 2019.</li>
+          <li><strong>ANTT / ANFA:</strong> Malha Ferroviária Federal — Linhas e Estações Ativas no Estado de São Paulo.</li>
+          <li><strong>DH / SEMIL:</strong> Departamento Hidroviário de São Paulo — Levantamento de Terminais e Canais de Navegação da Hidrovia Tietê-Paraná.</li>
+          <li><strong>ANTAQ:</strong> Anuário e Georreferenciamento de Instalações Portuárias e Terminais de Uso Privado (TUP).</li>
+          <li><strong>ANAC:</strong> Cadastro de Aeródromos e Aeroportos Públicos e Comerciais Brasileiros.</li>
+          <li><strong>STN / SICONFI:</strong> Sistema de Informações Contábeis e Fiscais do Setor Público Brasileiro — Finanças Públicas Municipais.</li>
+          <li><strong>Normativos e Manuais Técnicos:</strong> Transportation Research Board (TRB) — <em>Highway Capacity Manual (HCM 2016)</em>; World Bank — <em>HDM-4</em>; UK Department for Transport — <em>Transport Analysis Guidance (WebTAG)</em>; Saaty, T.L. — <em>The Analytic Hierarchy Process (AHP)</em>; Lei Federal nº 13.614/2018 (PNATRANS); Lei Estadual nº 13.798/2009 (PEMC).</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div style="max-width:1440px; margin:0 auto;">
+      <p><strong>SICARD — Sistema Inteligente de Cadastro e Ranking de Demandas</strong> | Secretaria de Meio Ambiente, Infraestrutura e Logística (SEMIL) — Governo do Estado de São Paulo</p>
+      <p style="font-size:0.75rem; color:#94a3b8;">Modelo de Hierarquização Territorial e da Rede DER-SP (v4 Retificada) — Processamento de 4.782 Subtrechos Rodoviários e 645 Municípios — Outubro/2026</p>
+    </div>
+  </footer>
+
+  <script>
+    function filtrarMatriz() {
+      var input = document.getElementById("matriz-search");
+      var filter = input.value.toLowerCase();
+      var table = document.getElementById("matriz-table");
+      var trs = table.getElementsByTagName("tr");
+      for (var i = 1; i < trs.length; i++) {
+        var text = trs[i].innerText.toLowerCase();
+        trs[i].style.display = text.includes(filter) ? "" : "none";
+      }
+    }
+  </script>
+</body>
+</html>
