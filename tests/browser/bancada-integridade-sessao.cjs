@@ -124,6 +124,14 @@ const root=path.resolve(__dirname,'../..');
   });
   assert.deepEqual(await page.evaluate(()=>gpApp.state.map.getFilter('polygon-line')),['match',['geometry-type'],['LineString','Polygon'],true,false]);
   assert.equal(await page.evaluate(()=>gpApp.state.map.getPaintProperty('polygon','fill-outline-color')),'transparent');
+  const symbols=await page.evaluate(()=>{
+    gpApp.state.layerStyles.polygon={lineWidth:6,lineTexture:'dashed',fillTexture:'outline'};gpApp.applyLayerColor('polygon','#123456',false);
+    gpApp.adicionarCamadaGeoJsonEmMemoria('point-style','Point',{type:'FeatureCollection',features:[{type:'Feature',geometry:{type:'Point',coordinates:[-46,-23]},properties:{}}]},{estiloPreparado:true,lote:true});
+    gpApp.state.layerStyles['point-style']={fillOpacity:0,borderOpacity:1,lineWidth:3};gpApp.applyLayerColor('point-style','#abcdef',false);
+    const map=gpApp.state.map,name=map.getLayoutProperty('point-style-point','icon-image'),image=map.getImage(name).data;
+    return {line:map.getPaintProperty('polygon-line','line-width'),dash:map.getPaintProperty('polygon-line','line-dasharray'),fill:map.getPaintProperty('polygon','fill-opacity'),pointOpacity:map.getPaintProperty('point-style-point','icon-opacity'),center:image.data[(Math.floor(image.height/2)*image.width+Math.floor(image.width/2))*4+3],border:Math.max(...image.data.filter((_,i)=>i%4===3))};
+  });
+  assert.deepEqual(symbols,{line:6,dash:[3,2],fill:0,pointOpacity:1,center:0,border:255});
   assert.equal(errors.length,0,errors.join('\n'));
   console.log(JSON.stringify({draftPreserved:{before,after},catalogRefresh:{sourceBefore,presentAfter},errors}));
  }finally{

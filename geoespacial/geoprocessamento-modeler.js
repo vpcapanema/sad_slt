@@ -521,7 +521,7 @@
     return editor.type==="function"?{...base,passos:steps,saidas}:{...base,itens:steps,saidas};
   }
   function processFeedback(editor,action){
-    if(window.gpFeedback){const verbos={save:"Salvar",validate:"Validar",run:"Executar"},proc=window.gpFeedback.ProcessFeedback.iniciarCadastro({title:editor.title,subtitle:`${verbos[action]} ${editor.type==="function"?"função":"fluxo"}`});return {
+    if(window.gpFeedback){const verbos={save:"Salvar",validate:"Validar",run:"Executar"},proc=window.gpFeedback.ProcessFeedback.iniciarCadastro({title:editor.title,onCancel:action==="run"?cancelModelExecution:undefined,subtitle:`${verbos[action]} ${editor.type==="function"?"função":"fluxo"}`});return {
       step:(message,status)=>status==="success"||status==="error"?proc.log(message,status):proc.tarefaAtual(message),
       sync:job=>proc.sync(job),cancel:message=>proc.confirmarCancelamento(message),complete:message=>proc.sucesso({message}),fail:message=>proc.erro({message})};}
     document.querySelector(".model-process-backdrop")?.remove();

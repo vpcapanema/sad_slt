@@ -236,7 +236,7 @@
       state.map.setLayoutProperty(`${id}-point`,"icon-image",pointIconImage(id,next,shape,border,borderW));
       state.map.setLayoutProperty(`${id}-point`,"icon-size",pointRadius/MARKER_BASE);
       state.map.setLayoutProperty(`${id}-point`,"icon-allow-overlap",true);
-      state.map.setPaintProperty(`${id}-point`,"icon-opacity",fillOpacity);
+      state.map.setPaintProperty(`${id}-point`,"icon-opacity",1);
     }
   }
   function replaceLayerStyle(id,style,persist=true){
@@ -312,15 +312,15 @@
     else if(shape==="star"){for(let i=0;i<10;i++){const ang=-Math.PI/2+i*Math.PI/5,rr=i%2?r*0.45:r;const x=cx+Math.cos(ang)*rr,y=cy+Math.sin(ang)*rr;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.closePath()}
     else{ctx.arc(cx,cy,r,0,2*Math.PI)}
   }
-  function markerImageName(o){return`slt-mk-${o.shape}-${o.fill.replace("#","")}-${o.border.replace("#","")}-${Math.round((o.borderW||0)*10)}`}
+  function markerImageName(o){return`slt-mk-${o.shape}-${o.fill.replace("#","")}-${o.border.replace("#","")}-${Math.round((o.borderW||0)*10)}-${o.fillOpacity??1}-${o.borderOpacity??1}`}
   function ensureMarkerImage(map,o){
     const name=markerImageName(o);if(!map||map.hasImage(name))return name;
     const pixelRatio=Math.max(2,Math.ceil((window.devicePixelRatio||1)*2)),pad=6,size=MARKER_BASE*2+pad*2;
     const canvas=document.createElement("canvas");canvas.width=size*pixelRatio;canvas.height=size*pixelRatio;
     const ctx=canvas.getContext("2d");ctx.scale(pixelRatio,pixelRatio);
     shapePath(ctx,o.shape,size/2,size/2,MARKER_BASE);
-    ctx.fillStyle=o.fill;ctx.fill();
-    if((o.borderW||0)>0){ctx.lineWidth=o.borderW;ctx.strokeStyle=o.border;ctx.lineJoin="round";ctx.stroke()}
+    ctx.globalAlpha=o.fillOpacity??1;ctx.fillStyle=o.fill;ctx.fill();
+    if((o.borderW||0)>0){ctx.globalAlpha=o.borderOpacity??1;ctx.lineWidth=o.borderW;ctx.strokeStyle=o.border;ctx.lineJoin="round";ctx.stroke()}
     map.addImage(name,ctx.getImageData(0,0,canvas.width,canvas.height),{pixelRatio});return name;
   }
   function initPointLayer(id,color,vectorTile=false){
@@ -333,19 +333,20 @@
   }
   function pointIconImage(id,next,shape,border,borderW){
     const fill=next.fillColor||layerColor(id),r=next.renderer;
+    const marker=fill=>ensureMarkerImage(state.map,{shape,fill,border,borderW,fillOpacity:next.fillOpacity??.32,borderOpacity:next.borderOpacity??1});
     if(r&&r.tipo==="categorizado"&&r.campo&&(r.categorias||[]).length){
       const expr=["match",["to-string",["get",r.campo]]];
-      r.categorias.forEach(c=>expr.push(String(c.valor),["image",ensureMarkerImage(state.map,{shape,fill:c.cor||"#888",border,borderW})]));
-      expr.push(["image",ensureMarkerImage(state.map,{shape,fill:r.corOutros||"#cccccc",border,borderW})]);
+      r.categorias.forEach(c=>expr.push(String(c.valor),["image",marker(c.cor||"#888")]));
+      expr.push(["image",marker(r.corOutros||"#cccccc")]);
       return expr;
     }
     if(r&&r.tipo==="graduado"&&r.campo&&(r.fatias||[]).length){
       const val=["to-number",["get",r.campo]];
-      const expr=["step",val,["image",ensureMarkerImage(state.map,{shape,fill:r.fatias[0].cor,border,borderW})]];
-      for(let i=1;i<r.fatias.length;i++)expr.push(Number(r.fatias[i].de),["image",ensureMarkerImage(state.map,{shape,fill:r.fatias[i].cor,border,borderW})]);
+      const expr=["step",val,["image",marker(r.fatias[0].cor)]];
+      for(let i=1;i<r.fatias.length;i++)expr.push(Number(r.fatias[i].de),["image",marker(r.fatias[i].cor)]);
       return expr;
     }
-    return ensureMarkerImage(state.map,{shape,fill,border,borderW});
+    return marker(fill);
   }
 
   function ribbon(tab="mapa"){
@@ -912,8 +913,13 @@
           if(tipo==="json"){inputs[chave]=el.value.trim()?JSON.parse(el.value):null;continue}
           inputs[chave]=el.value;
         }
-        const body=await window.gpModeler.executeDefinition(kind,item,inputs);
-        log(`${isFn?"Função":"Fluxo"} executado com sucesso.`,"ok");await syncExecutionResults(body);showLibrary(kind);
+        if(state.activeExecution)throw new Error('Aguarde a execução atual terminar.');
+        const progress=createExecutionProgress({title:`Executando ${item.nome}`,onCancel:requestExecutionCancellation});
+        try{
+          const body=await window.gpModeler.executeDefinition(kind,item,inputs,{sync:progress.sync});
+          await syncExecutionResults(body);progress.complete();
+          log(`${isFn?"Função":"Fluxo"} executado com sucesso.`,"ok");showLibrary(kind);
+        }catch(error){progress.fail(error.name==='AbortError'?'Execução cancelada':error.message);throw error;}
       }catch(error){log(error.message,"error");$("#gp-log").classList.add("open")}
     };
   }
@@ -1251,7 +1257,7 @@
   }
   function renderGraduatedBody(layerId){
     const fields=(state.symbologyFieldsCache?.[layerId]||[]).filter(field=>field.numerico),renderer=state.symDraft.draft.renderer||{};
-    const metodos=[["intervalos_iguais","Intervalos iguais"],["quantis","Quantis"],["desvio_padrao","Desvio padrão"],["quebras_naturais","Quebras naturais (Jenks)"],["manual","Manual"]];
+    const metodos=[["intervalos_iguais","Intervalos iguais"],["quantis","Quantis"],["desvio_padrao","Desvio padrão"],["quebras_naturais","Quebras naturais (aproximação)"],["manual","Manual"]];
     const metodoOpts=metodos.map(([value,rotulo])=>`<option value="${value}" ${value===(renderer.metodo||"intervalos_iguais")?"selected":""}>${rotulo}</option>`).join("");
     const modo=renderer.modo||"discreto",classes=renderer.classes||5;
     const fatias=renderer.tipo==="graduado"?(renderer.fatias||[]):[],quebras=renderer.quebras||[];

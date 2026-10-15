@@ -23,6 +23,17 @@ const root=path.resolve(__dirname,'../..');
   assert.equal(await page.locator('[data-system-input]').evaluate(el=>el.multiple),false);
   await page.evaluate(()=>{const d=gpModeler._debug,e=d.activeEditor(),n=d.addNode(e,'algorithm','OP-35','Merge');n.params.camada_ids=['vector','raster'];d.render(e)});
   assert.deepEqual(await page.locator('[data-contract-param="camada_ids"]').evaluate(el=>[...el.selectedOptions].map(o=>o.value)),['vector','raster']);
+  const variable=await page.evaluate(()=>{
+    gpApp.operationFields['OP-04']=[['distancia','Distance','number',100]];
+    const d=gpModeler._debug,e=d.activeEditor(),v=d.addNode(e,'variable','variavel_valor','Distance variable');v.params.valor=5;
+    const n=d.addNode(e,'algorithm','OP-04','Buffer');e.edges.push({id:'numeric-edge',from:v.id,to:n.id,parameter:'distancia'});d.render(e);window.numericNode=n;return '$'+v.ref;
+  });
+  const number=page.locator('[data-contract-param="distancia"]');
+  await number.fill('12.5');assert.equal(await page.evaluate(()=>numericNode.params.distancia),12.5);
+  await number.fill(variable);assert.equal(await page.evaluate(()=>numericNode.params.distancia),variable);
+  assert.equal(await number.evaluate(el=>el.checkValidity()),true);
+  await number.fill('Infinity');assert.equal(await number.evaluate(el=>el.checkValidity()),false);
+  await number.fill('42');assert.equal(await page.evaluate(()=>numericNode.params.distancia),42);
   const result=await page.evaluate(()=>gpModeler.executeDefinition('functions',{id:'demo'},{}));
   assert.equal(result.camada_id,'result');assert(posts.some(url=>url.endsWith('/funcoes/demo/executar-job')));
   assert.equal(await page.evaluate(()=>gpApp.state.activeExecution),false);

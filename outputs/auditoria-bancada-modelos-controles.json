@@ -116,7 +116,7 @@
     "Late catalog and portal responses no longer overwrite a newer panel.",
     "Catalog search reapplied after loading a tab.",
     "Ribbon cancellation rejection reported; absent layer.tipo does not crash export.",
-    "Function run confirmation now says Executar fun??o; confirmation errors release editor busy state.",
+    "Function run confirmation now says Executar função; confirmation errors release editor busy state.",
     "Worker lifecycle explicitly records responsible user and execution context; context reset verified.",
     "POST bancada-arquivos/classificacao and local/classificacao read only requested field and reuse classification logic; revisions checked before/after."
   ],

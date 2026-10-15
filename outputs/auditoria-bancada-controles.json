@@ -1,0 +1,698 @@
+{
+  "scope": "templates\\componentes\\_geoprocessamento.html",
+  "method": "Leitura de fontes próprias distribuída entre agentes; rastreamento rótulo/handler/API; testes sintéticos de regressão. Não significa teste manual de toda combinação ou auditoria de bibliotecas vendor.",
+  "static_template_buttons": [
+    {
+      "attributes": {
+        "class": "active",
+        "data-ribbon": "mapa"
+      },
+      "text": "Mapa"
+    },
+    {
+      "attributes": {
+        "data-ribbon": "analise"
+      },
+      "text": "Análise"
+    },
+    {
+      "attributes": {
+        "data-ribbon": "modelo"
+      },
+      "text": "Modelo"
+    },
+    {
+      "attributes": {
+        "data-ribbon": "dados"
+      },
+      "text": "Dados"
+    },
+    {
+      "attributes": {
+        "id": "gp-view-menu-button",
+        "type": "button",
+        "aria-haspopup": "true",
+        "aria-expanded": "false"
+      },
+      "text": "Exibir"
+    },
+    {
+      "attributes": {
+        "id": "gp-tab-contents",
+        "class": "active",
+        "role": "tab",
+        "aria-selected": "true",
+        "aria-controls": "gp-panel-contents",
+        "data-left-pane": "contents"
+      },
+      "text": "Conteúdo"
+    },
+    {
+      "attributes": {
+        "id": "gp-tab-catalog",
+        "role": "tab",
+        "aria-selected": "false",
+        "aria-controls": "gp-panel-catalog",
+        "data-left-pane": "catalog"
+      },
+      "text": "Catálogo"
+    },
+    {
+      "attributes": {
+        "class": "gp-dock-open",
+        "data-open-left": null,
+        "title": "Reabrir painel"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "class": "gp-dock-collapse",
+        "data-collapse": "left",
+        "title": "Recolher sidebar"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "class": "icon-btn",
+        "data-collapse": "left",
+        "title": "Recolher painéis"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "class": "active",
+        "data-catalog-tab": "projeto",
+        "title": "Projeto"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "data-catalog-tab": "portal",
+        "title": "Portal"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "data-catalog-tab": "favoritos",
+        "title": "Favoritos"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "class": "active",
+        "data-left-tab": "drawing",
+        "title": "Ordem de desenho"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "data-left-tab": "source",
+        "title": "Por fonte"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "class": "gp-restore gp-restore-left",
+        "data-restore": "left",
+        "title": "Expandir Conteúdo"
+      },
+      "text": "Conteúdo"
+    },
+    {
+      "attributes": {
+        "class": "active",
+        "data-document-tab": "mapa"
+      },
+      "text": "Mapa"
+    },
+    {
+      "attributes": {
+        "class": "icon-btn",
+        "id": "gp-home",
+        "title": "Extensão inicial"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "class": "icon-btn",
+        "id": "gp-fit",
+        "title": "Ajustar às camadas"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "class": "active",
+        "role": "tab",
+        "aria-selected": "true",
+        "data-right-tab": "properties"
+      },
+      "text": "Propriedades"
+    },
+    {
+      "attributes": {
+        "role": "tab",
+        "aria-selected": "false",
+        "data-right-tab": "tools"
+      },
+      "text": "Geoprocessamento"
+    },
+    {
+      "attributes": {
+        "role": "tab",
+        "aria-selected": "false",
+        "data-right-tab": "functions"
+      },
+      "text": "Funções"
+    },
+    {
+      "attributes": {
+        "role": "tab",
+        "aria-selected": "false",
+        "data-right-tab": "flows"
+      },
+      "text": "Fluxos"
+    },
+    {
+      "attributes": {
+        "role": "tab",
+        "aria-selected": "false",
+        "data-right-tab": "history"
+      },
+      "text": "Histórico"
+    },
+    {
+      "attributes": {
+        "role": "tab",
+        "aria-selected": "false",
+        "data-right-tab": "model-properties",
+        "data-model-panel": "properties",
+        "hidden": null
+      },
+      "text": "Propriedades do modelo"
+    },
+    {
+      "attributes": {
+        "class": "icon-btn gp-right-collapse",
+        "data-collapse": "right",
+        "title": "Recolher painel",
+        "aria-label": "Recolher painel"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "class": "gp-restore gp-restore-right",
+        "data-restore": "right",
+        "title": "Expandir Propriedades"
+      },
+      "text": "Propriedades"
+    },
+    {
+      "attributes": {
+        "class": "icon-btn",
+        "id": "gp-log-toggle",
+        "title": "Exibir mensagens"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "class": "btn",
+        "id": "gp-operation-result-download"
+      },
+      "text": "Baixar JSON"
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "class": "btn primary",
+        "id": "gp-operation-result-close"
+      },
+      "text": "Fechar"
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "data-at-action": "maximize",
+        "data-at-maximize": null,
+        "aria-expanded": "false",
+        "class": "attribute-icon-button",
+        "title": "Maximizar tabela",
+        "aria-label": "Maximizar tabela"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "data-at-action": "all",
+        "class": "attribute-icon-button",
+        "title": "Selecionar todos os registros visíveis",
+        "aria-label": "Selecionar todos os registros visíveis"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "data-at-action": "clear",
+        "class": "attribute-icon-button",
+        "title": "Limpar seleção",
+        "aria-label": "Limpar seleção"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "data-at-action": "zoom",
+        "class": "attribute-icon-button",
+        "title": "Zoom na seleção",
+        "aria-label": "Zoom na seleção"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "data-at-action": "invert",
+        "class": "attribute-icon-button",
+        "title": "Inverter seleção em todos os registros da camada",
+        "aria-label": "Inverter seleção"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "class": "attribute-icon-button",
+        "data-at-action": "only",
+        "data-at-only": null,
+        "aria-pressed": "false",
+        "title": "Mostrar somente selecionados",
+        "aria-label": "Mostrar somente selecionados"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "data-at-action": "edit",
+        "data-at-edit": null,
+        "aria-pressed": "false",
+        "class": "attribute-icon-button",
+        "title": "Editar registros",
+        "aria-label": "Editar registros"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "data-at-action": "delete",
+        "data-at-delete": null,
+        "class": "attribute-icon-button",
+        "title": "Excluir registros selecionados",
+        "aria-label": "Excluir registros selecionados"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "data-at-action": "undo",
+        "class": "attribute-icon-button",
+        "title": "Desfazer",
+        "aria-label": "Desfazer"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "data-at-action": "redo",
+        "class": "attribute-icon-button",
+        "title": "Refazer",
+        "aria-label": "Refazer"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "data-at-action": "csv",
+        "class": "attribute-icon-button",
+        "title": "Exportar CSV",
+        "aria-label": "Exportar CSV"
+      },
+      "text": ""
+    },
+    {
+      "attributes": {
+        "type": "submit"
+      },
+      "text": "Selecionar"
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "data-at-action": "discard",
+        "data-at-discard": null
+      },
+      "text": "Descartar"
+    },
+    {
+      "attributes": {
+        "type": "button",
+        "data-at-action": "save",
+        "data-at-save": null
+      },
+      "text": "Salvar alterações"
+    }
+  ],
+  "linked_own_scripts": [
+    {
+      "file": "assets/js/notification_system.js",
+      "lines": 860,
+      "control_attributes": [
+        "data-pli-front-layer"
+      ]
+    },
+    {
+      "file": "assets/js/process_feedback_unified.js",
+      "lines": 1429,
+      "control_attributes": []
+    },
+    {
+      "file": "geoespacial/bancada-feedback.js",
+      "lines": 36,
+      "control_attributes": []
+    },
+    {
+      "file": "assets/js/status-colors.js",
+      "lines": 895,
+      "control_attributes": []
+    },
+    {
+      "file": "geoespacial/geoprocessamento-atributos.js",
+      "lines": 252,
+      "control_attributes": [
+        "data-at-action",
+        "data-at-delete",
+        "data-at-edit",
+        "data-at-field",
+        "data-at-layers",
+        "data-at-save",
+        "data-right-tab",
+        "data-tab-close",
+        "data-tab-icon"
+      ]
+    },
+    {
+      "file": "geoespacial/geoprocessamento.js",
+      "lines": 1637,
+      "control_attributes": [
+        "data-action",
+        "data-back",
+        "data-back-bottom",
+        "data-basemap-panel-toggle",
+        "data-basemap-toggle",
+        "data-delete",
+        "data-edit-definition",
+        "data-edit-layer",
+        "data-layer",
+        "data-layer-group",
+        "data-layer-group-toggle",
+        "data-model-command",
+        "data-option",
+        "data-param",
+        "data-remove",
+        "data-right-tab",
+        "data-run-definition",
+        "data-select-local",
+        "data-select-system-layer",
+        "data-selection-scope",
+        "data-step-params",
+        "data-sym-apply",
+        "data-sym-cancel",
+        "data-sym-remove",
+        "data-sym-save",
+        "data-sym-type",
+        "data-tab-close",
+        "data-tab-icon",
+        "data-zoom-layer"
+      ]
+    },
+    {
+      "file": "geoespacial/geoprocessamento-modeler.js",
+      "lines": 626,
+      "control_attributes": [
+        "data-add-parameter",
+        "data-close-model",
+        "data-contract-param",
+        "data-create-back",
+        "data-ctx-action",
+        "data-delete-node",
+        "data-document-tab",
+        "data-model-command",
+        "data-model-panel",
+        "data-output-field",
+        "data-parameter-key",
+        "data-parameter-row",
+        "data-parameter-value",
+        "data-process-close",
+        "data-remove-parameter",
+        "data-right-tab",
+        "data-variable-type"
+      ]
+    },
+    {
+      "file": "geoespacial/geoprocessamento-docks.js",
+      "lines": 211,
+      "control_attributes": [
+        "data-action",
+        "data-dynamic-tab",
+        "data-left-close",
+        "data-left-panel",
+        "data-panel-toggle",
+        "data-right-tab",
+        "data-tab-close"
+      ]
+    },
+    {
+      "file": "geoespacial/geoprocessamento-actions.js",
+      "lines": 174,
+      "control_attributes": [
+        "data-catalog-tab",
+        "data-layer",
+        "data-layer-group",
+        "data-left-tab",
+        "data-zoom-layer"
+      ]
+    },
+    {
+      "file": "geoespacial/geoprocessamento-portal.js",
+      "lines": 180,
+      "control_attributes": [
+        "data-portal-back"
+      ]
+    },
+    {
+      "file": "geoespacial/geoprocessamento-toolbox.js",
+      "lines": 38,
+      "control_attributes": []
+    },
+    {
+      "file": "geoespacial/geoprocessamento-commands.js",
+      "lines": 390,
+      "control_attributes": [
+        "data-action",
+        "data-command-back",
+        "data-layer",
+        "data-right-tab"
+      ]
+    },
+    {
+      "file": "geoespacial/geoprocessamento-ribbon.js",
+      "lines": 256,
+      "control_attributes": [
+        "data-action",
+        "data-directory-back",
+        "data-layer",
+        "data-right-tab"
+      ]
+    },
+    {
+      "file": "geoespacial/geoespacial-storage-pastas.js",
+      "lines": 189,
+      "control_attributes": []
+    },
+    {
+      "file": "geoespacial/bancada-arquivos.js",
+      "lines": 583,
+      "control_attributes": [
+        "data-action",
+        "data-edit-layer",
+        "data-file-action"
+      ]
+    }
+  ],
+  "reviewed_groups": [
+    {
+      "group": "Mapa e camadas",
+      "controls": [
+        "import-file",
+        "import-wfs",
+        "load-system",
+        "basemap",
+        "explore",
+        "select",
+        "clear",
+        "fit",
+        "fit-selection",
+        "attributes",
+        "properties",
+        "remove",
+        "delete-layer",
+        "layer/group visibility",
+        "layer zoom"
+      ],
+      "expected": "Importar requer confirmação de persistência; carregar/visualizar não cadastra implicitamente; explorar identifica sem selecionar; remover só retira do mapa; excluir atua apenas no catálogo e exige confirmação.",
+      "actual": "Handlers main/actions/ribbon/commands/bancada-arquivos. Remover/excluir bloqueados com rascunho. Temporários usam fonte privada por token; raster do storage tem prévia própria. WFS preenche campo após criar formulário."
+    },
+    {
+      "group": "Tabela de atributos",
+      "controls": [
+        "maximize",
+        "all",
+        "clear",
+        "zoom",
+        "invert",
+        "only",
+        "edit",
+        "delete",
+        "undo",
+        "redo",
+        "csv",
+        "discard",
+        "save",
+        "query",
+        "layer tabs",
+        "pagination"
+      ],
+      "expected": "Seleção sincronizada por identidade estável; edição sem gravação até Salvar; Descartar restaura; seleção/inversão/CSV devem anunciar alcance real.",
+      "actual": "Tabulator: arquivos nativos paginados, seleção de outras páginas preservada; rótulos declaram página. Consulta global da faixa Dados permanece separada. Editar/excluir bloqueados em temporários e fontes não editáveis. Descartar pede confirmação; atualização não apaga rascunhos; undo/redo restaura exclusões por FID."
+    },
+    {
+      "group": "Geometria",
+      "controls": [
+        "start",
+        "save",
+        "cancel",
+        "Point",
+        "LineString",
+        "Polygon",
+        "vertices",
+        "delete",
+        "apply",
+        "revert",
+        "undo",
+        "redo"
+      ],
+      "expected": "Separar esboço da edição persistida; Salvar grava original com revisão; cancelar/descartar não grava; não editar geometria generalizada de tile.",
+      "actual": "bancada-arquivos abre geometria integral selecionada; revisão protege gravação; temporários exigem importação para edição; edição de atributos pendente impede atualização/calculadora."
+    },
+    {
+      "group": "Ferramentas e resultados",
+      "controls": [
+        "run",
+        "cancel",
+        "validate",
+        "repair",
+        "reproject",
+        "export",
+        "save-result",
+        "add-result",
+        "history",
+        "environments",
+        "calculate-field",
+        "select-attribute",
+        "filter-layer",
+        "refresh-source",
+        "download-json",
+        "close-result"
+      ],
+      "expected": "Parâmetros coerentes com tipo da camada e escopo; cancelamento real; resultados concluídos preservados.",
+      "actual": "Motor/API reais exercitados com dados sintéticos. Jobs de modelos/fluxos cancelam entre etapas e preservam resultados parciais, responsável e execução. Upload não anuncia cancelamento seguro inexistente. Atualizar exige resolver edições pendentes."
+    },
+    {
+      "group": "Simbologia",
+      "controls": [
+        "symbol type",
+        "field",
+        "ramp",
+        "classify",
+        "category remove",
+        "class colors/labels/breaks",
+        "apply",
+        "save",
+        "cancel"
+      ],
+      "expected": "Contorno de polígono obedece espessura/tracejado; classificação lê fonte correta; cancelar restaura; persistência deve ser identificada.",
+      "actual": "Contorno usa camada line inclusive Polygon; opacidade rotulada corretamente; classificação autenticada para storage/temporários lê só atributo; respostas antigas descartadas; Salvar informa navegador; método aproximado não anuncia Jenks exato."
+    },
+    {
+      "group": "Pastas do storage",
+      "controls": [
+        "criar",
+        "renomear",
+        "excluir",
+        "atualizar",
+        "salvar",
+        "cancelar",
+        "breadcrumbs",
+        "open folder",
+        "keyboard navigation"
+      ],
+      "expected": "Escolher pasta não grava arquivo; mutações apenas pasta indicada, confirmar exclusão; resultado atrasado não muda destino atual.",
+      "actual": "Botão Selecionar pasta explicita retorno; gerações descartam respostas atrasadas; envio duplicado bloqueado; backend existente valida pasta vazia para renomear/excluir."
+    },
+    {
+      "group": "Modelos, catálogo, portal, painéis",
+      "controls_reference": "outputs/auditoria-bancada-modelos-controles.json",
+      "actual": "Inventário complementar contém seletores e controles dinâmicos. Inputs numéricos aceitam literal finito ou referência anterior; seleção múltipla preservada; operações assíncronas têm tratamento de erro."
+    },
+    {
+      "group": "Feedback compartilhado",
+      "controls_reference": "outputs/bancada-feedback-auditoria.md",
+      "actual": "Ocultar conserva acompanhamento; fechar encerra; baixar relatório continua funcional após primeiro clique; confirmar/cancelar segue estado da operação."
+    }
+  ],
+  "arcgis_references": [
+    "https://doc.esri.com/en/arcgis-pro/latest/help/editing/save-or-discard-edits.html",
+    "https://doc.esri.com/en/arcgis-pro/latest/help/data/databases/unique-identifier-fields-in-database-tables.html",
+    "https://pro.arcgis.com/en/pro-app/3.0/help/data/tables/select-records-in-a-table-interactively.htm",
+    "https://pro.arcgis.com/en/pro-app/3.6/help/data/tables/view-all-or-only-the-selected-records.htm",
+    "https://pro.arcgis.com/en/pro-app/3.3/help/mapping/layer-properties/polygon-symbols.htm",
+    "https://pro.arcgis.com/en/pro-app/3.6/help/analysis/geoprocessing/modelbuilder/run-a-model.htm"
+  ],
+  "limits": [
+    "Documentação consultada por fluxo; não toda a documentação ArcGIS Pro.",
+    "Nenhum deploy e nenhuma gravação no banco oficial durante testes.",
+    "Temporários locais são leitura; importar explicitamente antes de editar/calcular na bancada.",
+    "Ações da tabela nativa operam na página anunciada; consulta global na faixa Dados limita resultados a 1000 e recusa truncamento.",
+    "Cancelar modelo aguarda algoritmo em andamento; não reverte saídas concluídas.",
+    "Disponibilidade de portais externos não foi exercitada ao vivo."
+  ]
+}

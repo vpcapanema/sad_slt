@@ -200,7 +200,11 @@
       option.textContent = column.label;
       columnSelect.appendChild(option);
     });
-    valueSelect.innerHTML = '<option value="">— selecione a coluna —</option>';
+    if (valueSelect.tagName === "INPUT") {
+      valueSelect.value = "";
+      valueSelect.placeholder = "Selecione a coluna";
+      $("#filtro-valores").replaceChildren();
+    } else valueSelect.innerHTML = '<option value="">— selecione a coluna —</option>';
     valueSelect.disabled = true;
     columnFilterOptions = [];
   }
@@ -211,15 +215,20 @@
     const columnIndex = columnSelect.value === "" ? -1 : Number(columnSelect.value);
     const column = COLUMNS[tipo][columnIndex];
 
-    valueSelect.innerHTML = "";
+    const digitavel = valueSelect.tagName === "INPUT";
+    const options = digitavel ? $("#filtro-valores") : valueSelect;
+    options.innerHTML = "";
+    valueSelect.value = "";
     columnFilterOptions = [];
     if (!column) {
-      valueSelect.add(new Option("— selecione a coluna —", ""));
+      if (digitavel) valueSelect.placeholder = "Selecione a coluna";
+      else valueSelect.add(new Option("— selecione a coluna —", ""));
       valueSelect.disabled = true;
       return;
     }
 
-    valueSelect.add(new Option("Todos os valores", ""));
+    if (digitavel) valueSelect.placeholder = "Digite ou selecione um valor";
+    else valueSelect.add(new Option("Todos os valores", ""));
     const uniqueValues = new Map();
     rows.forEach((row) => {
       const value = columnDisplayValue(column, row);
@@ -228,7 +237,7 @@
     });
     columnFilterOptions = [...uniqueValues.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
     columnFilterOptions.forEach((value, index) => {
-      valueSelect.add(new Option(value || "Sem valor", String(index + 1)));
+      options.appendChild(new Option(value || "Sem valor", digitavel ? value : String(index + 1)));
     });
     valueSelect.disabled = false;
   }
@@ -237,11 +246,16 @@
   function filteredRows() {
     const columnIndex = $("#filtro-coluna").value === "" ? -1 : Number($("#filtro-coluna").value);
     const column = COLUMNS[tipo][columnIndex];
-    const valueIndex = $("#filtro-valor").value === "" ? -1 : Number($("#filtro-valor").value) - 1;
-    const columnValue = columnFilterOptions[valueIndex];
+    const input = $("#filtro-valor");
+    const digitavel = input.tagName === "INPUT";
+    const valueIndex = input.value === "" ? -1 : Number(input.value) - 1;
+    const columnValue = digitavel ? input.value.trim() : columnFilterOptions[valueIndex];
+    const normalizar = valor => String(valor || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
+    const termo = normalizar(columnValue);
+    const exato = !digitavel || columnFilterOptions.some(v => normalizar(v) === termo);
     const result = rows
       .filter((d) => {
-        return SLTTable.matches('filtro', column && columnDisplayValue(column, d).toLocaleLowerCase('pt-BR') === columnValue?.toLocaleLowerCase('pt-BR'), Boolean(column && columnValue !== undefined));
+        return SLTTable.matches('filtro', column && (exato ? normalizar(columnDisplayValue(column, d)) === termo : normalizar(columnDisplayValue(column, d)).includes(termo)), Boolean(column && termo));
       })
       .sort((a, b) => {
         const dataA = Date.parse(a.criadoEm || "") || 0;
@@ -850,6 +864,21 @@
   }
 
   async function init() {
+    if (!complementacao) {
+      const select = $("#filtro-valor");
+      const input = document.createElement("input");
+      input.id = select.id;
+      input.type = "search";
+      input.className = "filter-value-input";
+      input.setAttribute("aria-label", "Valor do filtro");
+      input.setAttribute("list", "filtro-valores");
+      input.autocomplete = "off";
+      input.disabled = true;
+      const list = document.createElement("datalist");
+      list.id = "filtro-valores";
+      select.replaceWith(input, list);
+      input.addEventListener("input", () => { currentPage = 1; resetSelection(); renderTable(); });
+    }
     for (const kind of ['plano','programa','projeto']) {
       ordenadores[kind] = SLTTable.sorting(document.querySelector(`[data-demandas-table="${kind}"]`), () => [null, ...COLUMNS[kind].map(column => row => columnDisplayValue(column,row))], () => { currentPage=1; resetSelection(); renderTable(); }, () => !editMode);
     }
